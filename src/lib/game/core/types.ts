@@ -88,7 +88,7 @@ export interface GameState {
   worldMap: WorldTile[][];
   discoveredLocations: Location[];
   currentResearch?: ResearchProject;
-  buildings: Building[];
+  buildingCounts: Record<string, number>; // Replace buildings: Building[]
   buildingQueue: BuildingInProgress[];
   maxPopulation: number;
 }

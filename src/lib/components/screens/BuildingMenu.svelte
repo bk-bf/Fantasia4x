@@ -10,10 +10,10 @@
 
   let resourcesMap: Record<string, number> = {};
   let race: any = null;
-  let buildings: any[] = [];
+  let buildingCounts: Record<string, number> = {};
   let buildingQueue: any[] = [];
-  let maxPopulation = 0; // Don't hardcode, get from store
-  let currentTurnValue = 0; // Add this to track turn changes
+  let maxPopulation = 0;
+  let currentTurnValue = 0;
 
   $: getResourceAmount = (resourceId: string): number => {
     return resourcesMap[resourceId] || 0;
@@ -22,9 +22,11 @@
   $: getResourcesObject = (): Record<string, number> => {
     return { ...resourcesMap };
   };
+
   $: getBuildingCount = (buildingId: string): number => {
-    return buildings.filter((b) => b.id === buildingId).length;
+    return buildingCounts[buildingId] || 0;
   };
+
   // Make these functions reactive so they update when resources change
   $: canAfford = (building: any): boolean => {
     const canAffordResult = Object.entries(building.cost).every(([resourceId, cost]) => {
@@ -56,16 +58,16 @@
   });
 
   const unsubscribeGame = gameState.subscribe((state) => {
-    buildings = state.buildings || [];
+    buildingCounts = state.buildingCounts || {};
     buildingQueue = state.buildingQueue || [];
-    maxPopulation = state.maxPopulation; // Get from central store
+    maxPopulation = state.maxPopulation;
   });
 
   onDestroy(() => {
     unsubscribeResources();
     unsubscribeRace();
     unsubscribeGame();
-    unsubscribeTurn(); // Add this cleanup
+    unsubscribeTurn();
   });
 
   function startBuilding(building: any) {
@@ -78,8 +80,7 @@
       // Deduct resources more carefully
       const newResources = state.resources.map((resource) => {
         const cost = building.cost[resource.id] || 0;
-        const newAmount = Math.max(0, resource.amount - cost); // Prevent negative resources
-        console.log(`${resource.id}: ${resource.amount} - ${cost} = ${newAmount}`);
+        const newAmount = Math.max(0, resource.amount - cost);
         return { ...resource, amount: newAmount };
       });
 
@@ -90,11 +91,6 @@
         startedAt: state.turn
       };
 
-      console.log('Building started:', building.name, 'Queue:', [
-        ...(state.buildingQueue || []),
-        newBuildingInProgress
-      ]);
-
       return {
         ...state,
         resources: newResources,
@@ -102,6 +98,7 @@
       };
     });
   }
+
   function cancelBuilding(queueIndex: number) {
     if (queueIndex < 0 || queueIndex >= buildingQueue.length) return;
 
@@ -118,8 +115,6 @@
       // Remove from queue
       const newQueue = [...(state.buildingQueue || [])];
       newQueue.splice(queueIndex, 1);
-
-      console.log(`Canceled ${building.name}, refunded resources`);
 
       return {
         ...state,
@@ -205,9 +200,11 @@
             <div class="building-card-header">
               <span class="building-icon">{getCategoryIcon(building.category)}</span>
               <h4>{building.name}</h4>
-              <div class="building-count">
-                {getBuildingCount(building.id)}x
-              </div>
+              {#if getBuildingCount(building.id) > 0}
+                <div class="building-count">
+                  {getBuildingCount(building.id)}x
+                </div>
+              {/if}
             </div>
 
             <p class="building-description">{building.description}</p>
@@ -321,8 +318,9 @@
     margin: 0;
     font-style: italic;
   }
+
   .empty-queue {
-    padding: 5px;
+    padding: 20px;
     text-align: center;
     color: #888;
     font-style: italic;
@@ -330,6 +328,7 @@
     border-radius: 4px;
     border: 2px dashed #555;
   }
+
   .building-content {
     display: flex;
     flex-direction: column;
@@ -392,8 +391,24 @@
     border-radius: 4px;
   }
 
-  .queue-progress {
+  .cancel-btn {
     margin-left: auto;
+    padding: 4px 8px;
+    background: #d32f2f;
+    border: 1px solid #f44336;
+    color: white;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8em;
+    transition: all 0.2s ease;
+  }
+
+  .cancel-btn:hover {
+    background: #f44336;
+    transform: scale(1.1);
+  }
+
+  .queue-progress {
     color: #ffa726;
     font-weight: bold;
   }
@@ -430,12 +445,6 @@
     align-items: center;
     gap: 10px;
     margin-bottom: 10px;
-  }
-  .building-card-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 10px;
     position: relative;
   }
 
@@ -456,42 +465,8 @@
     border: 2px solid #1a1a1a;
   }
 
-  .building-count:empty {
-    display: none;
-  }
-
   .building-icon {
     font-size: 1.5em;
-  }
-  .queue-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px;
-    background: #333;
-    border-radius: 4px;
-  }
-
-  .cancel-btn {
-    margin-left: auto;
-    padding: 4px 8px;
-    background: #d32f2f;
-    border: 1px solid #f44336;
-    color: white;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.8em;
-    transition: all 0.2s ease;
-  }
-
-  .cancel-btn:hover {
-    background: #f44336;
-    transform: scale(1.1);
-  }
-
-  .queue-progress {
-    color: #ffa726;
-    font-weight: bold;
   }
 
   .building-card h4 {

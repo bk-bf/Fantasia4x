@@ -8,7 +8,7 @@ export const AVAILABLE_BUILDINGS: Building[] = [
     cost: { wood: 15, stone: 5 },
     buildTime: 3,
     populationRequired: 0,
-    effects: { maxPopulation: 3 },
+    effects: { maxPopulation: 2 },
     category: 'housing'
   },
   {

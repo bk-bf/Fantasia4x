@@ -4,6 +4,11 @@ import { writable, derived } from 'svelte/store';
 import type { GameState } from '$lib/game/core/types';
 import { generateRace } from '$lib/game/core/Race';
 import { BASIC_RESOURCES } from '$lib/game/core/Resources'; // Add this import
+  import {
+    AVAILABLE_BUILDINGS,
+    canAffordBuilding,
+    canBuildWithPopulation
+  } from '$lib/game/core/Buildings';
 
 // Game timing configuration
 const TURN_INTERVAL = 3000;
@@ -11,14 +16,14 @@ let gameInterval: number | null = null;
 
 // Export the initial state for easy access
 export const initialGameState: GameState = {
-  turn: 0,
+ turn: 0,
   race: generateRace(),
   resources: [...BASIC_RESOURCES],
   heroes: [],
   knowledge: 0,
   worldMap: [],
   discoveredLocations: [],
-  buildings: [],
+  buildingCounts: {}, // Replace buildings: []
   buildingQueue: [],
   maxPopulation: 1
 };
@@ -106,29 +111,33 @@ function advanceTurn() {
       return updated;
     }).filter(item => item.turnsRemaining > 0);
     
-    // Apply completed building effects
-    let newMaxPopulation = newState.maxPopulation || 5;
+    // Update building counts and calculate effects
+    const newBuildingCounts = { ...newState.buildingCounts };
+    let newMaxPopulation = 1; // Base population
+    let woodBonus = 0;
+    let stoneBonus = 0;
+    
     completedBuildings.forEach(building => {
-      if (building.effects.maxPopulation) {
-        newMaxPopulation += building.effects.maxPopulation;
+      newBuildingCounts[building.id] = (newBuildingCounts[building.id] || 0) + 1;
+    });
+    
+    // Calculate effects from all buildings
+    Object.entries(newBuildingCounts).forEach(([buildingId, count]) => {
+      const building = AVAILABLE_BUILDINGS.find(b => b.id === buildingId);
+      if (building && count > 0) {
+        newMaxPopulation += (building.effects.maxPopulation || 0) * count;
+        woodBonus += (building.effects.woodProduction || 0) * count;
+        stoneBonus += (building.effects.stoneProduction || 0) * count;
       }
     });
     
     newState.buildingQueue = updatedQueue;
-    newState.buildings = [...(newState.buildings || []), ...completedBuildings];
+    newState.buildingCounts = newBuildingCounts;
     newState.maxPopulation = newMaxPopulation;
     
     // Generate knowledge and resources (existing code)
     const knowledgeGain = Math.floor((state.race.baseStats.intelligence + state.race.baseStats.wisdom) / 10);
     newState.knowledge += knowledgeGain;
-    
-    // Calculate production bonuses from buildings
-    let woodBonus = 0;
-    let stoneBonus = 0;
-    newState.buildings.forEach(building => {
-      woodBonus += building.effects.woodProduction || 0;
-      stoneBonus += building.effects.stoneProduction || 0;
-    });
     
     newState.resources = newState.resources.map(resource => {
       let production = 0;
