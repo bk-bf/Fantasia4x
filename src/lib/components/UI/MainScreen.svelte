@@ -28,27 +28,7 @@
 ~~~~~~~~~~~~~~~~~~~~..                                  
 ~~~~~~~~~~~~~~~~~~~~..                                  
 ......................                                  
-           
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Legend:                                                 
-. = Explored Land    ♦ = Forest    ▲ = Mountains        
-~ = Water           🏰 = Your Capital                    
-? = Unexplored      ⚔ = Combat     📍 = Point of Interest
+        
   `.trim();
 
   onMount(() => {
