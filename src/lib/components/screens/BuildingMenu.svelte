@@ -320,7 +320,7 @@
   }
 
   .empty-queue {
-    padding: 20px;
+    padding: 5px;
     text-align: center;
     color: #888;
     font-style: italic;
