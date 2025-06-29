@@ -1,0 +1,22 @@
+/* Global reset and game styles */
+html, body {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background-color: #1a1a1a;
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Remove any default margins/padding from all elements */
+* {
+  margin: 0;
+  padding: 0;
+}

@@ -1,0 +1,8 @@
+{
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "dbaeumer.vscode-eslint",
+  "[svelte]": {
+    "editor.defaultFormatter": "svelte.svelte-vscode"
+  },
+  "eslint.validate": ["javascript", "typescript", "svelte"]
+}
