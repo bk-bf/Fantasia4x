@@ -6,6 +6,7 @@
   import MainScreen from '$lib/components/UI/MainScreen.svelte';
   import ResourceSidebar from '$lib/components/UI/ResourceSidebar.svelte';
   import RaceScreen from '$lib/components/screens/RaceScreen.svelte';
+  import BuildingMenu from '$lib/components/screens/BuildingMenu.svelte';
 
   onMount(() => {
     console.log('Fantasia4x initialized with left sidebar');
@@ -37,6 +38,8 @@
         <MainScreen />
       {:else if currentScreen === 'race'}
         <RaceScreen />
+      {:else if currentScreen === 'building'}
+        <BuildingMenu />
       {/if}
     </div>
   </div>

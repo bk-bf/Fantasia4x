@@ -9,6 +9,21 @@ import { BASIC_RESOURCES } from '$lib/game/core/Resources'; // Add this import
 const TURN_INTERVAL = 3000;
 let gameInterval: number | null = null;
 
+// Export the initial state for easy access
+export const initialGameState: GameState = {
+  turn: 0,
+  race: generateRace(),
+  resources: [...BASIC_RESOURCES],
+  heroes: [],
+  knowledge: 0,
+  worldMap: [],
+  discoveredLocations: [],
+  buildings: [],
+  buildingQueue: [],
+  maxPopulation: 1
+};
+
+
 function createGameState() {
   // Remove the duplicate initialResources array entirely
 
@@ -35,18 +50,8 @@ function createGameState() {
 
   const savedState = loadFromLocalStorage();
 
-  const initialState: GameState = savedState || {
-    turn: 0,
-    race: generateRace(),
-    resources: [...BASIC_RESOURCES], // Use the imported resources with spread operator
-    heroes: [],
-    knowledge: 0,
-    worldMap: [],
-    discoveredLocations: []
-  };
 
-
-const { subscribe, set, update } = writable(initialState);
+const { subscribe, set, update } = writable(initialGameState);
 
 // Wrap the original update to include auto-save
 const updateWithSave = (updater: (state: GameState) => GameState) => {
@@ -86,36 +91,66 @@ const updateWithSave = (updater: (state: GameState) => GameState) => {
     }
   }
 
-  function advanceTurn() {
-    update(state => {
-      const newState = { ...state, turn: state.turn + 1 };
-      
-      // Generate knowledge based on race intelligence
-      const knowledgeGain = Math.floor((state.race.baseStats.intelligence + state.race.baseStats.wisdom) / 10);
-      newState.knowledge += knowledgeGain;
-      
-      // Resource generation per turn (static wood/stone, food scales with population)
-      newState.resources = newState.resources.map(resource => {
-        let production = 0;
-        
-        switch (resource.id) {
-          case 'food':
-            production = state.race.population * 3; // 3 food per population
-            break;
-          case 'wood':
-            production = 2; // Static production
-            break;
-          case 'stone':
-            production = 1; // Static production
-            break;
-        }
-        
-        return { ...resource, amount: resource.amount + production };
-      });
-
-      return newState;
+  // Update the advanceTurn function to process building queue
+function advanceTurn() {
+  updateWithSave(state => {
+    const newState = { ...state, turn: state.turn + 1 };
+    
+    // Process building queue
+    const completedBuildings: any[] = [];
+    const updatedQueue = (newState.buildingQueue || []).map(item => {
+      const updated = { ...item, turnsRemaining: item.turnsRemaining - 1 };
+      if (updated.turnsRemaining <= 0) {
+        completedBuildings.push(updated.building);
+      }
+      return updated;
+    }).filter(item => item.turnsRemaining > 0);
+    
+    // Apply completed building effects
+    let newMaxPopulation = newState.maxPopulation || 5;
+    completedBuildings.forEach(building => {
+      if (building.effects.maxPopulation) {
+        newMaxPopulation += building.effects.maxPopulation;
+      }
     });
-  }
+    
+    newState.buildingQueue = updatedQueue;
+    newState.buildings = [...(newState.buildings || []), ...completedBuildings];
+    newState.maxPopulation = newMaxPopulation;
+    
+    // Generate knowledge and resources (existing code)
+    const knowledgeGain = Math.floor((state.race.baseStats.intelligence + state.race.baseStats.wisdom) / 10);
+    newState.knowledge += knowledgeGain;
+    
+    // Calculate production bonuses from buildings
+    let woodBonus = 0;
+    let stoneBonus = 0;
+    newState.buildings.forEach(building => {
+      woodBonus += building.effects.woodProduction || 0;
+      stoneBonus += building.effects.stoneProduction || 0;
+    });
+    
+    newState.resources = newState.resources.map(resource => {
+      let production = 0;
+      
+      switch (resource.id) {
+        case 'food':
+          production = state.race.population * 3;
+          break;
+        case 'wood':
+          production = 2 + woodBonus;
+          break;
+        case 'stone':
+          production = 1 + stoneBonus;
+          break;
+      }
+      
+      return { ...resource, amount: resource.amount + production };
+    });
+
+    return newState;
+  });
+}
 
   function pauseGame() {
     isPaused.set(true);

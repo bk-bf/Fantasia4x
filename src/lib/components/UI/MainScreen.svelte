@@ -98,6 +98,9 @@ Legend:
   <div class="map-controls">
     <div class="view-controls">
       <button class="control-btn" on:click={() => uiState.setScreen('race')}>👑 Race Info</button>
+      <button class="control-btn" on:click={() => uiState.setScreen('building')}
+        >🏗️ Buildings</button
+      >
     </div>
   </div>
 </div>

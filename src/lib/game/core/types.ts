@@ -18,7 +18,22 @@ export interface Race {
   statVariation: string;
   implications: Record<string, string>;
 }
+export interface Building {
+  id: string;
+  name: string;
+  description: string;
+  cost: Record<string, number>;
+  buildTime: number; // in turns/days
+  populationRequired: number;
+  effects: Record<string, number>;
+  category: 'housing' | 'production' | 'research' | 'military';
+}
 
+export interface BuildingInProgress {
+  building: Building;
+  turnsRemaining: number;
+  startedAt: number;
+}
 
 export interface Hero {
   id: string;
@@ -73,6 +88,9 @@ export interface GameState {
   worldMap: WorldTile[][];
   discoveredLocations: Location[];
   currentResearch?: ResearchProject;
+  buildings: Building[];
+  buildingQueue: BuildingInProgress[];
+  maxPopulation: number;
 }
 
 export interface ResearchProject {
