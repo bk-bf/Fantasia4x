@@ -98,7 +98,6 @@ Legend:
   <div class="map-controls">
     <div class="view-controls">
       <button class="control-btn" on:click={() => uiState.setScreen('race')}>👑 Race Info</button>
-      <button class="control-btn">📍 Find Capital</button>
     </div>
   </div>
 </div>

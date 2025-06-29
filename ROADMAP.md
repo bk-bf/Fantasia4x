@@ -8,10 +8,10 @@ x - Auto turn advancement with pause button that updates resources
 x - **Test**: Can advance turns and see resource changes
 
 **Milestone 1.2: Race Generation & Display**
-- Implement race generation with procedural stats
-- Create race screen showing generated stats and traits
-- Add race name generation
-- **Test**: Generate different races and view their unique characteristics
+x - Implement race generation with procedural stats
+x - Create race screen showing generated stats and traits
+x - Add race name generation
+x - **Test**: Generate different races and view their unique characteristics
 
 **Milestone 1.3: Basic World Map**
 - Generate simple ASCII world map (20x20 grid)
