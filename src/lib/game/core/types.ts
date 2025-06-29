@@ -1,3 +1,5 @@
+// src/lib/game/core/types.ts
+
 export interface RaceStats {
   strength: number;
   dexterity: number;

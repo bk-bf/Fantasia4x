@@ -79,7 +79,7 @@
   <div class="turn-info">
     <span class="turn-label">Day:</span>
     <span class="turn-number">{currentTurnValue}</span>
-    <div class="turn-status">
+    <div class="turn-status" style="min-width: 210px; display: flex; align-items: center;">
       {#if !isPaused}
         <span class="status-indicator running">●</span>
         <span class="status-text">Resources harvesting...</span>
@@ -88,30 +88,35 @@
         <span class="status-text">Production paused</span>
       {/if}
     </div>
-  </div>
+    <div class="control-buttons">
+      <button
+        class="pause-btn"
+        class:paused={isPaused}
+        on:click={gameState.togglePause}
+        title="Press SPACE to toggle"
+        style="min-width: 80px;"
+      >
+        <span style="display: inline-block; width: 2.5em; text-align: center;">
+          {isPaused ? '▶️' : '⏸️'}
+        </span>
+        <span style="display: inline-block; width: 5em; text-align: left;">
+          {isPaused ? 'Resume' : 'Pause'}
+        </span>
+      </button>
 
-  <div class="control-buttons">
-    <button
-      class="pause-btn"
-      class:paused={isPaused}
-      on:click={gameState.togglePause}
-      title="Press SPACE to toggle"
-    >
-      {isPaused ? '▶️ Resume' : '⏸️ Pause'}
-    </button>
-
-    <div class="speed-controls">
-      <span class="speed-label">Speed:</span>
-      {#each [1, 2, 4] as speed}
-        <button
-          class="speed-btn"
-          class:active={gameSpeed === speed}
-          on:click={() => handleSpeedChange(speed)}
-          title="{speed}x speed"
-        >
-          {speed}x
-        </button>
-      {/each}
+      <div class="speed-controls">
+        <span class="speed-label">Speed:</span>
+        {#each [1, 2, 4] as speed}
+          <button
+            class="speed-btn"
+            class:active={gameSpeed === speed}
+            on:click={() => handleSpeedChange(speed)}
+            title="{speed} speed"
+          >
+            {speed}
+          </button>
+        {/each}
+      </div>
     </div>
   </div>
 
@@ -120,15 +125,6 @@
       <button class="control-btn" on:click={saveGame}>💾 Save</button>
       <button class="control-btn" on:click={loadGame}>📁 Load</button>
       <button class="control-btn danger-btn" on:click={wipeSave}>🗑️ Wipe Save</button>
-    </div>
-    <div style="width: 20px;"></div>
-    <div class="next-turn-timer">
-      {#if !isPaused}
-        <span class="timer-label">Next day in:</span>
-        <span class="timer-value">3s</span>
-      {:else}
-        <span class="timer-label">Game paused</span>
-      {/if}
     </div>
   </div>
 </div>
@@ -208,7 +204,7 @@
   .pause-btn {
     padding: 10px 20px;
     background: #444;
-    border: 2px solid #666;
+    border: 2px solid #4caf50;
     color: #e0e0e0;
     border-radius: 6px;
     cursor: pointer;
@@ -225,8 +221,8 @@
   }
 
   .pause-btn.paused {
-    background: #d32f2f;
-    border-color: #f44336;
+    background: #4caf50;
+    border-color: #4caf50;
     color: white;
   }
 

@@ -1,3 +1,4 @@
+// src/lib/game/world/WorldGenerator.ts
 import type { WorldTile, Location } from '../core/types';
 
 export function generateWorld(width: number, height: number): WorldTile[][] {

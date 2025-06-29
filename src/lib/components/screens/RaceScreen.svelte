@@ -1,3 +1,4 @@
+<!-- src/lib/components/screens/RaceScreen.svelte -->
 <script lang="ts">
   import { currentRace } from '$lib/stores/gameState';
   import { uiState } from '$lib/stores/uiState';

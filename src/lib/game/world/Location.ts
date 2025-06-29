@@ -1,3 +1,4 @@
+// src/lib/game/world/Location.ts
 import type { Location, Resource } from '../core/types';
 import { createMagicalResource } from '../core/Resources';
 

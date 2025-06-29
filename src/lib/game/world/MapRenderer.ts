@@ -1,3 +1,4 @@
+// src/lib/game/world/MapRenderer.ts
 import type { WorldTile } from '../core/types';
 
 export function renderASCIIMap(worldMap: WorldTile[][], viewX: number, viewY: number, viewWidth: number, viewHeight: number): string {

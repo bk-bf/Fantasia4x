@@ -1,3 +1,4 @@
+// src/lib/game/core/Hero.ts
 import type { Hero, RaceStats } from './types';
 
 export function createHero(name: string, baseStats: RaceStats): Hero {

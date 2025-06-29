@@ -1,3 +1,4 @@
+// src/lib/game/core/GameState.ts
 import type { GameState } from './types.ts';
 
 export class GameStateManager {

@@ -100,7 +100,7 @@
     <h4>📦 Resources</h4>
 
     <div class="resource-list">
-      {#each resources as resource}
+      {#each resources.filter((resource) => resource.amount > 0) as resource}
         <div class="resource-item" style="--resource-color: {getResourceColor(resource.id)}">
           <div class="resource-header">
             <span class="resource-icon">{getResourceIcon(resource.id)}</span>

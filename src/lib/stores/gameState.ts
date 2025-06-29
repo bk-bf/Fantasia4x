@@ -1,52 +1,50 @@
+// src/lib/stores/gameState.ts
 import { browser } from '$app/environment';
 import { writable, derived } from 'svelte/store';
-import type { GameState, Resource } from '$lib/game/core/types';
+import type { GameState } from '$lib/game/core/types';
 import { generateRace } from '$lib/game/core/Race';
+import { BASIC_RESOURCES } from '$lib/game/core/Resources'; // Add this import
 
 // Game timing configuration
-const TURN_INTERVAL = 3000; // 3 seconds per turn for better visibility
+const TURN_INTERVAL = 3000;
 let gameInterval: number | null = null;
 
-
 function createGameState() {
-  const initialResources: Resource[] = [
-    { id: 'food', name: 'Food', amount: 100, type: 'basic' },
-    { id: 'wood', name: 'Wood', amount: 50, type: 'basic' },
-    { id: 'stone', name: 'Stone', amount: 30, type: 'basic' }
-  ];
+  // Remove the duplicate initialResources array entirely
 
-// Add these functions before the return statement
-function saveToLocalStorage(state: GameState) {
-  if (browser) {
-    localStorage.setItem('fantasia4x-save', JSON.stringify(state));
-  }
-}
-
-function loadFromLocalStorage(): GameState | null {
-  if (browser) {
-    const saved = localStorage.getItem('fantasia4x-save');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.warn('Failed to load save data:', e);
-      }
+  // Add these functions before the return statement
+  function saveToLocalStorage(state: GameState) {
+    if (browser) {
+      localStorage.setItem('fantasia4x-save', JSON.stringify(state));
     }
   }
-  return null;
-}
 
-// Update the initial state creation:
-const savedState = loadFromLocalStorage();
-const initialState: GameState = savedState || {
-  turn: 0,
-  race: generateRace(),
-  resources: initialResources,
-  heroes: [],
-  knowledge: 0,
-  worldMap: [],
-  discoveredLocations: []
-};
+  function loadFromLocalStorage(): GameState | null {
+    if (browser) {
+      const saved = localStorage.getItem('fantasia4x-save');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {
+          console.warn('Failed to load save data:', e);
+        }
+      }
+    }
+    return null;
+  }
+
+  const savedState = loadFromLocalStorage();
+
+  const initialState: GameState = savedState || {
+    turn: 0,
+    race: generateRace(),
+    resources: [...BASIC_RESOURCES], // Use the imported resources with spread operator
+    heroes: [],
+    knowledge: 0,
+    worldMap: [],
+    discoveredLocations: []
+  };
+
 
 const { subscribe, set, update } = writable(initialState);
 

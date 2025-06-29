@@ -1,3 +1,4 @@
+// src/lib/stores/uiState.ts
 import { writable } from 'svelte/store';
 
 interface UIState {

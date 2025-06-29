@@ -1,10 +1,11 @@
+// src/lib/game/core/Resources.ts
 import type { Resource } from './types';
 
 export const BASIC_RESOURCES: Resource[] = [
-  { id: 'food', name: 'Food', amount: 100, type: 'basic' },
-  { id: 'wood', name: 'Wood', amount: 50, type: 'basic' },
-  { id: 'stone', name: 'Stone', amount: 30, type: 'basic' },
-  { id: 'iron', name: 'Iron', amount: 10, type: 'basic' }
+  { id: 'food', name: 'Food', amount: 0, type: 'basic' },
+  { id: 'wood', name: 'Wood', amount: 0, type: 'basic' },
+  { id: 'stone', name: 'Stone', amount: 0, type: 'basic' },
+  { id: 'iron', name: 'Iron', amount: 0, type: 'basic' }
 ];
 
 export function createMagicalResource(): Resource {
