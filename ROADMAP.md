@@ -13,11 +13,43 @@ x - Create race screen showing generated stats and traits
 x - Add race name generation
 x - **Test**: Generate different races and view their unique characteristics
 
-**Milestone 1.3: Basic World Map**
-- Generate simple ASCII world map (20x20 grid)
-- Implement map rendering with discovered/undiscovered tiles
-- Add player starting position marker
-- **Test**: View ASCII map with starting position visible
+**Milestone 1.3: Building Menu System**
+- Create building menu interface with resource costs and requirements
+- Implement building queue with time-based construction
+- Add population cap validation for building placement
+- **Test**: Queue buildings and see resource deduction with construction progress
+
+**Milestone 1.4: Population Growth System**
+- Implement exponential population growth based on current population size
+- Add randomness factor (±10-20%) to growth calculations
+- Create population cap system that limits growth
+- **Test**: Watch population grow organically and hit caps
+
+**Milestone 1.5: Core Buildings**
+- **Woodland Shelter**: Increases max population by 3, requires 15 wood, 5 stone
+- **Craftsmen's Workshop**: Unlocks tool crafting, requires 20 wood, 10 stone, 2 population
+- **Sage's Library**: +25% knowledge generation, requires 25 wood, 15 stone, 1 population
+- **Test**: Build each structure and verify effects on gameplay
+
+## **Phase 2: Event-Driven Gameplay (Week 4-5)**
+
+**Milestone 2.1: Event System Foundation**
+- Create procedural event generator with weighted probability
+- Implement event log display in sidebar
+- Add event categories (resource, population, discovery, crisis)
+- **Test**: Generate random events and display in event log
+
+**Milestone 2.2: Event Integration**
+- Connect events to game state changes (resource gains/losses, population effects)
+- Add player choice events with multiple outcomes
+- Implement event cooldowns and prerequisites
+- **Test**: Make event choices and see immediate game state impacts
+
+**Milestone 2.3: Event-Driven Resource Discovery**
+- Replace manual exploration with event-based resource discovery
+- Add "Scouts Report" events that reveal new resource types
+- Implement building unlock events through discoveries
+- **Test**: Receive discovery events that unlock new gameplay options
 
 ## **Phase 2: Exploration Loop (Week 3-4)**
 
@@ -58,6 +90,12 @@ x - **Test**: Generate different races and view their unique characteristics
 - Add scouting range improvements
 - Implement basic building unlocks
 - **Test**: Research improvements affect gameplay
+
+**Milestone 3.4: Basic World Map**
+- Generate simple ASCII world map (20x20 grid)
+- Implement map rendering with discovered/undiscovered tiles
+- Add player starting position marker
+- **Test**: View ASCII map with starting position visible
 
 ## **Phase 4: Hero System (Week 7-8)**
 
