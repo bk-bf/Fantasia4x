@@ -11,11 +11,12 @@ export interface Race {
   id: string;
   name: string;
   baseStats: RaceStats;
-  traits: string[];
+  traits: any[]; // Changed from string[] to any[]
   population: number;
-  statVariation: string; // Changed from number to string
-  implications: Record<string, string>; // Add this
+  statVariation: string;
+  implications: Record<string, string>;
 }
+
 
 export interface Hero {
   id: string;

@@ -2,10 +2,47 @@ import type { Race, RaceStats } from './types';
 
 // Trait database
 const TRAIT_DATABASE = [
-  'Mighty', 'Scholarly', 'Diplomatic', 'Hardy', 'Swift', 'Mystical',
-  'Resilient', 'Cunning', 'Noble', 'Fierce', 'Ancient', 'Adaptive',
-  'Proud', 'Nomadic', 'Industrious', 'Spiritual', 'Warlike', 'Peaceful',
-  'Inventive', 'Traditional', 'Mercantile', 'Artistic', 'Stoic', 'Passionate'
+  {
+    name: "Mighty", 
+    description: "Strong and powerful warriors.",
+    effects: {
+      combatDamage: 1.1, // 10% bonus
+      physicalPower: 2
+    }
+  },
+  {
+    name: "Scholarly", 
+    description: "Highly intelligent and quick learners.",
+    effects: {
+      researchSpeed: 1.15,
+      knowledgeGain: 1.1
+    }
+  },
+  {
+    name: "Diplomatic", 
+    description: "Skilled negotiators and peacekeepers.",
+    effects: {
+      diplomaticSuccess: 1.2,
+      tradeBonus: 1.1
+    }
+  },
+  {
+    name: "Hardy", 
+    description: "Resilient and tough against hardships.",
+    effects: {
+      healthBonus: 1.1,
+      diseaseResistance: 0.5
+    }
+  },
+  {
+    name: "Industrious", 
+    description: "Hardworking and efficient builders.",
+    effects: {
+      productionSpeed: 1.15,
+      buildingCost: 0.9
+    }
+  }
+  // Add more as needed
 ];
 
 const IMPLICATION_DATABASE = {
@@ -38,13 +75,10 @@ const IMPLICATION_DATABASE = {
     'Peaceful conflict resolution'
   ]
 };
-
 export function generateRace(): Race {
-  // Generate random stat variation range
-  const minVariation = Math.floor(Math.random() * 21) - 10; // -10 to 10
-  const maxVariation = Math.floor(Math.random() * 21) - 10; // -10 to 10
-  const statVariationMin = Math.min(minVariation, maxVariation);
-  const statVariationMax = Math.max(minVariation, maxVariation);
+  // Simple random stat variation range
+  const statVariationMin = Math.floor(Math.random() * 10) - 10; // -10 to -1
+  const statVariationMax = Math.floor(Math.random() * 11); // 0 to 10
 
   const baseStats: RaceStats = {
     strength: rollStatInRange(statVariationMin, statVariationMax),
@@ -66,6 +100,7 @@ export function generateRace(): Race {
   };
 }
 
+
 function rollStatInRange(min: number, max: number): number {
   const baseRoll = Math.floor(Math.random() * 10) + 8; // 8-17 base
   const variation = Math.floor(Math.random() * (max - min + 1)) + min;
@@ -79,8 +114,8 @@ function generateRaceName(): string {
          suffixes[Math.floor(Math.random() * suffixes.length)];
 }
 
-function generateTraits(stats: RaceStats): string[] {
-  const traits: string[] = [];
+function generateTraits(stats: RaceStats): any[] {
+  const traits: any[] = [];
   const numTraits = Math.floor(Math.random() * 4) + 1; // 1-4 traits
   
   // Get random traits from database

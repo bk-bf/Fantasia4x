@@ -84,111 +84,134 @@
   {#if race}
     <div class="race-content">
       <!-- Race Overview -->
-      <div class="race-overview">
+      <div class="race-overview" id="overview">
         <div class="race-info-card">
           <h3>🏛️ Civilization Overview</h3>
-          <!-- Update the overview section -->
-          <div class="overview-item">
-            <span class="overview-label">Stat Range:</span>
-            <span class="overview-value">{race.statVariation}</span>
-          </div>
-        </div>
-
-        <!-- Base Stats -->
-        <div class="stats-section">
-          <h3>📊 Racial Base Stats</h3>
-          <div class="stats-grid">
-            {#each Object.entries(race.baseStats) as [statName, statValue]}
-              <div class="stat-card">
-                <div class="stat-header">
-                  <span class="stat-name"
-                    >{statName.charAt(0).toUpperCase() + statName.slice(1)}</span
-                  >
-                  <span class="stat-value" style="color: {getStatColor(Number(statValue))}"
-                    >{statValue}</span
-                  >
-                </div>
-                <div class="stat-bar">
-                  <div
-                    class="stat-fill"
-                    style="width: {(Number(statValue) / 20) *
-                      100}%; background-color: {getStatColor(Number(statValue))}"
-                  ></div>
-                </div>
-                <p class="stat-description">
-                  {getStatDescription(statName as StatKey, Number(statValue))}
-                </p>
-              </div>
-            {/each}
-          </div>
-        </div>
-
-        <!-- Racial Traits -->
-        <div class="traits-section">
-          <h3>✨ Racial Traits</h3>
-          {#if race.traits && race.traits.length > 0}
-            <div class="traits-grid">
-              {#each race.traits as trait}
-                <div class="trait-card">
-                  <span class="trait-icon">⭐</span>
-                  <span class="trait-name">{trait}</span>
-                </div>
-              {/each}
+          <div class="overview-stats">
+            <div class="overview-item">
+              <span class="overview-label">Population:</span>
+              <span class="overview-value">{race.population}</span>
             </div>
-          {:else}
-            <div class="no-traits">
-              <p>
-                This race has no special traits yet. Traits may develop over time based on their
-                experiences.
-              </p>
-            </div>
-          {/if}
-        </div>
-
-        <!-- Stat Implications -->
-        <div class="implications-section">
-          <!-- Update the implications section -->
-          <div class="implications-section">
-            <h3>🎯 What This Means</h3>
-            <div class="implications-grid">
-              <div class="implication-card">
-                <h4>🧠 Knowledge Generation</h4>
-                <p>
-                  +{Math.floor((race.baseStats.intelligence + race.baseStats.wisdom) / 10)} per day
-                </p>
-                <small>{race.implications.knowledge}</small>
-              </div>
-              <div class="implication-card">
-                <h4>🌾 Food Production</h4>
-                <p>{race.population * 3} per day (3 per citizen)</p>
-                <small>{race.implications.food}</small>
-              </div>
-              <div class="implication-card">
-                <h4>💪 Combat Potential</h4>
-                <p>
-                  {race.baseStats.strength >= 15
-                    ? 'High'
-                    : race.baseStats.strength >= 12
-                      ? 'Medium'
-                      : 'Low'} physical prowess
-                </p>
-                <small>{race.implications.combat}</small>
-              </div>
-              <div class="implication-card">
-                <h4>🤝 Diplomacy</h4>
-                <p>
-                  {race.baseStats.charisma >= 15
-                    ? 'Excellent'
-                    : race.baseStats.charisma >= 12
-                      ? 'Good'
-                      : 'Average'} at negotiations
-                </p>
-                <small>{race.implications.diplomacy}</small>
-              </div>
+            <div class="overview-item">
+              <span class="overview-label">Stat Range:</span>
+              <span class="overview-value">{race.statVariation}</span>
             </div>
           </div>
         </div>
       </div>
+
+      <!-- Base Stats -->
+      <div class="stats-section" id="stats">
+        <h3>📊 Racial Base Stats</h3>
+        <div class="stats-grid">
+          {#each Object.entries(race.baseStats) as [statName, statValue]}
+            <div class="stat-card">
+              <div class="stat-header">
+                <span class="stat-name">{statName.charAt(0).toUpperCase() + statName.slice(1)}</span
+                >
+                <span class="stat-value" style="color: {getStatColor(Number(statValue))}"
+                  >{statValue}</span
+                >
+              </div>
+              <div class="stat-bar">
+                <div
+                  class="stat-fill"
+                  style="width: {(Number(statValue) / 20) * 100}%; background-color: {getStatColor(
+                    Number(statValue)
+                  )}"
+                ></div>
+              </div>
+              <p class="stat-description">
+                {getStatDescription(statName as StatKey, Number(statValue))}
+              </p>
+            </div>
+          {/each}
+        </div>
+      </div>
+
+      <!-- Racial Traits -->
+      <div class="traits-section" id="traits">
+        <h3>✨ Racial Traits</h3>
+        {#if race.traits && race.traits.length > 0}
+          <div class="traits-grid">
+            {#each race.traits as trait}
+              <div class="trait-card">
+                <div class="trait-header">
+                  <span class="trait-icon">⭐</span>
+                  <span class="trait-name">{trait.name}</span>
+                </div>
+                <div class="trait-effects">
+                  {#each Object.entries(trait.effects) as [effectName, effectValue]}
+                    <div class="trait-effect">
+                      {effectName}:
+                      {#if typeof effectValue === 'number'}
+                        {effectValue > 1
+                          ? `+${Math.round((effectValue - 1) * 100)}%`
+                          : effectValue < 1
+                            ? `-${Math.round((1 - effectValue) * 100)}%`
+                            : `${effectValue}`}
+                      {:else}
+                        {String(effectValue)}
+                      {/if}
+                    </div>
+                  {/each}
+                </div>
+                <div class="trait-description">{trait.description}</div>
+              </div>
+            {/each}
+          </div>
+        {:else}
+          <div class="no-traits">
+            <p>
+              This race has no special traits yet. Traits may develop over time based on their
+              experiences.
+            </p>
+          </div>
+        {/if}
+      </div>
+
+      <!-- Stat Implications -->
+      {#if race.implications}
+        <div class="implications-section" id="implications">
+          <h3>🎯 What This Means</h3>
+          <div class="implications-grid">
+            <div class="implication-card">
+              <h4>🧠 Knowledge Generation</h4>
+              <p>
+                +{Math.floor((race.baseStats.intelligence + race.baseStats.wisdom) / 10)} per day
+              </p>
+              <small>{race.implications.knowledge}</small>
+            </div>
+            <div class="implication-card">
+              <h4>🌾 Food Production</h4>
+              <p>{race.population * 3} per day (3 per citizen)</p>
+              <small>{race.implications.food}</small>
+            </div>
+            <div class="implication-card">
+              <h4>💪 Combat Potential</h4>
+              <p>
+                {race.baseStats.strength >= 15
+                  ? 'High'
+                  : race.baseStats.strength >= 12
+                    ? 'Medium'
+                    : 'Low'} physical prowess
+              </p>
+              <small>{race.implications.combat}</small>
+            </div>
+            <div class="implication-card">
+              <h4>🤝 Diplomacy</h4>
+              <p>
+                {race.baseStats.charisma >= 15
+                  ? 'Excellent'
+                  : race.baseStats.charisma >= 12
+                    ? 'Good'
+                    : 'Average'} at negotiations
+              </p>
+              <small>{race.implications.diplomacy}</small>
+            </div>
+          </div>
+        </div>
+      {/if}
     </div>
   {:else}
     <div class="loading">
@@ -198,6 +221,57 @@
 </div>
 
 <style>
+  .traits-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 15px;
+  }
+
+  .trait-card {
+    background: #2a2a2a;
+    border: 1px solid #4caf50;
+    border-radius: 8px;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .trait-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .trait-name {
+    color: #4caf50;
+    font-weight: bold;
+    font-size: 1.1em;
+  }
+
+  .trait-effects {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .trait-effect {
+    color: #ffa726;
+    font-weight: bold;
+    font-size: 0.9em;
+    padding: 2px 6px;
+    background: #333;
+    border-radius: 4px;
+    font-family: monospace;
+  }
+
+  .trait-description {
+    color: #888;
+    font-size: 0.85em;
+    font-style: italic;
+    margin-top: 4px;
+  }
+
   .race-screen {
     padding: 20px;
     background: #1a1a1a;
