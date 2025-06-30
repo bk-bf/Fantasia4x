@@ -51,7 +51,7 @@ export const RESEARCH_DATABASE: ResearchProject[] = [
     knowledgeCost: 300,
     prerequisites: ['military_organization'],
     buildingRequired: 'military_academy',
-    toolRequired: 'siege_hammer',
+    toolRequirement: 'siege_hammer',
     canBypassWithLore: false,
     unlocks: {
       effects: { siegeBonus: 0.4 }
@@ -68,7 +68,7 @@ export const RESEARCH_DATABASE: ResearchProject[] = [
     tier: 1,
     knowledgeCost: 280,
     prerequisites: ['construction_techniques'],
-    toolRequired: 'stone_hammer',
+    toolRequirement: 'stone_hammer',
     canBypassWithLore: true,
     loreItemRequired: 'builders_codex',
     unlocks: {
@@ -344,7 +344,7 @@ export function getAvailableResearch(
     if (research.buildingRequired && !availableBuildings.includes(research.buildingRequired)) return false;
     
     // Tool requirements
-    if (research.toolRequired && !availableTools.includes(research.toolRequired)) return false;
+    if (research.toolRequirement && !availableTools.includes(research.toolRequirement)) return false;
     
     // NEW: Resource requirements
     if (research.resourceRequirement) {

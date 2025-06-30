@@ -7,7 +7,25 @@
   let race: any = null;
   let knowledge = 0;
 
+  // Track resource changes for animation
+  let itemChanges: Record<string, number> = {};
+
   const unsubscribeItems = currentItem.subscribe((newItems) => {
+    // Track changes for animation
+    newItems.forEach((newItem) => {
+      const oldItem = items.find((i) => i.id === newItem.id);
+      if (oldItem && oldItem.amount !== newItem.amount) {
+        const change = newItem.amount - oldItem.amount;
+        if (change > 0) {
+          itemChanges[newItem.id] = change;
+          // Clear animation after 2 seconds
+          setTimeout(() => {
+            itemChanges[newItem.id] = 0;
+          }, 2000);
+        }
+      }
+    });
+
     items = newItems;
   });
 
@@ -58,7 +76,12 @@
                 <span class="resource-icon">{getItemIcon(item.id)}</span>
                 <div class="resource-info">
                   <span class="resource-label">{item.name}</span>
-                  <span class="resource-amount">{Math.floor(item.amount)}</span>
+                  <div class="resource-amount-container">
+                    <span class="resource-amount">{Math.floor(item.amount)}</span>
+                    {#if itemChanges[item.id] > 0}
+                      <span class="resource-change">+{Math.floor(itemChanges[item.id])}</span>
+                    {/if}
+                  </div>
                 </div>
               </div>
               <div class="resource-bar">
@@ -259,6 +282,40 @@
     border-radius: 2px;
   }
 
+  .resource-amount-container {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    position: relative;
+  }
+
+  .resource-change {
+    color: #4caf50;
+    font-size: 0.6em;
+    font-weight: bold;
+    animation: fadeInOut 2s ease-in-out;
+    position: absolute;
+    right: -28px;
+    top: -11px;
+    background: none;
+    padding: 0 2px;
+    border: none;
+  }
+
+  @keyframes fadeInOut {
+    0% {
+      opacity: 0;
+      transform: translateY(-5px);
+    }
+    50% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(-5px);
+    }
+  }
   /* Responsive adjustments */
   @media (max-width: 280px) {
     .resource-grid {

@@ -1,6 +1,8 @@
 <script lang="ts">
   import { gameState, currentItem, currentRace } from '$lib/stores/gameState';
+  import CurrentTask from '$lib/components/UI/CurrentTask.svelte';
   import { uiState } from '$lib/stores/uiState';
+  import TaskContainer from '$lib/components/UI/TaskContainer.svelte';
   import {
     getCraftableItems,
     canCraftItem,
@@ -42,6 +44,8 @@
     currentPopulation,
     selectedItemType === 'all' ? undefined : selectedItemType
   );
+  // Get first crafting item for CurrentTask component
+  $: firstCraftingInProgress = craftingQueue.length > 0 ? craftingQueue[0] : null;
 
   const unsubscribeItem = currentItem.subscribe((items) => {
     itemMap = {};
@@ -152,6 +156,10 @@
         return '💊';
       case 'metal':
         return '🔩';
+      case 'processed':
+        return '🔩';
+      case 'basic':
+        return '📦';
       default:
         return '🛠️';
     }
@@ -232,31 +240,38 @@
     </div>
 
     <!-- Crafting Queue -->
-    <div class="crafting-queue">
-      <h3>⚒️ Crafting Queue</h3>
-      {#if craftingQueue.length > 0}
-        <div class="queue-list">
-          {#each craftingQueue as queueItem, index}
-            <div class="queue-item">
-              <span class="queue-icon">🔨</span>
-              <span class="queue-name">{queueItem.item.name}</span>
-              <span class="queue-progress">{queueItem.turnsRemaining} days remaining</span>
-              <button
-                class="cancel-btn"
-                on:click={() => cancelCrafting(index)}
-                title="Cancel crafting and refund materials"
-              >
-                ❌
-              </button>
-            </div>
-          {/each}
-        </div>
-      {:else}
-        <div class="empty-queue">
-          <p>No crafting in progress</p>
+    <!-- For multiple crafting tasks in a row -->
+    {#if craftingQueue.length > 0}
+      <TaskContainer layout="horizontal">
+        {#each craftingQueue.slice(0, 3) as queueItem, index}
+          <CurrentTask
+            title=""
+            icon={getCategoryIcon(queueItem.item.category)}
+            name={queueItem.item.name}
+            description={queueItem.item.description || 'Crafting in progress...'}
+            progress={(queueItem.item.craftingTime - queueItem.turnsRemaining) /
+              queueItem.item.craftingTime}
+            timeRemaining="{queueItem.turnsRemaining} days"
+            onCancel={() => cancelCrafting(index)}
+            cancelTitle="Cancel crafting and refund materials"
+            accentColor="#ff9800"
+            compact={true}
+            showDescription={false}
+          />
+        {/each}
+      </TaskContainer>
+
+      <!-- Show remaining items if more than 3 -->
+      {#if craftingQueue.length > 3}
+        <div class="remaining-items">
+          <p>+{craftingQueue.length - 3} more items in queue</p>
         </div>
       {/if}
-    </div>
+    {:else}
+      <div class="empty-queue">
+        <p>No crafting in progress</p>
+      </div>
+    {/if}
 
     <!-- Available Craftable Items -->
     <div class="available-recipes">
@@ -531,7 +546,7 @@
 
   .empty-inventory,
   .empty-queue {
-    padding: 20px;
+    padding: 4px;
     text-align: center;
     color: #888;
     font-style: italic;

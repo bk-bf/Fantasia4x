@@ -137,6 +137,7 @@ export interface ResearchProject {
   
   // Resource gating
   resourceRequirement?: Record<string, number>;
+  toolRequirement?: string; // Fixed: was toolRequired, now more consistent
   
   // Existing gates
   statRequirements?: {

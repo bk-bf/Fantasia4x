@@ -186,29 +186,33 @@ function createGameState() {
     };
   }
 
-  function processCraftingQueue(state: GameState): GameState {
-    const completedCrafting: any[] = [];
-    const updatedQueue = (state.craftingQueue || []).map(item => {
-      const updated = { ...item, turnsRemaining: item.turnsRemaining - 1 };
-      if (updated.turnsRemaining <= 0) {
-        completedCrafting.push(updated);
-      }
-      return updated;
-    }).filter(item => item.turnsRemaining > 0);
+// Fixed: Process crafting queue with new CraftingInProgress interface
+function processCraftingQueue(state: GameState): GameState {
+  const completedCrafting: any[] = [];
+  const updatedQueue = (state.craftingQueue || []).map(craftingItem => {
+    const updated = { ...craftingItem, turnsRemaining: craftingItem.turnsRemaining - 1 };
+    if (updated.turnsRemaining <= 0) {
+      completedCrafting.push(updated);
+    }
+    return updated;
+  }).filter(craftingItem => craftingItem.turnsRemaining > 0);
 
-    const newInventory = { ...state.inventory };
-    completedCrafting.forEach(craftingItem => {
-      Object.entries(craftingItem.recipe.outputs).forEach(([itemId, amount]) => {
-        newInventory[itemId] = (newInventory[itemId] || 0) + Number(amount);
-      });
-    });
+  // Add completed items to inventory
+  const newInventory = { ...state.inventory };
+  completedCrafting.forEach(craftingItem => {
+    // Fixed: Use item.id and quantity instead of recipe.outputs
+    const itemId = craftingItem.item.id;
+    const quantity = craftingItem.quantity || 1;
+    newInventory[itemId] = (newInventory[itemId] || 0) + quantity;
+  });
 
-    return {
-      ...state,
-      craftingQueue: updatedQueue,
-      inventory: newInventory
-    };
-  }
+  return {
+    ...state,
+    craftingQueue: updatedQueue,
+    inventory: newInventory
+  };
+}
+
 
   function generateItems(state: GameState): GameState {
     const woodBonus = state._woodBonus || 0;
