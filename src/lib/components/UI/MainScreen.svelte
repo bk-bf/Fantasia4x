@@ -6,12 +6,17 @@
   let mapContainer: HTMLElement;
   let currentTurn = 0;
   let raceName = '';
+  let buildingCounts: Record<string, number> = {};
 
   // Subscribe to game state
   const unsubscribe = gameState.subscribe((state) => {
     currentTurn = state.turn;
     raceName = state.race.name;
+    buildingCounts = state.buildingCounts || {};
   });
+
+  // Check if research screen should be available
+  $: hasLibrary = (buildingCounts['sages_library'] || 0) > 0;
 
   // Placeholder ASCII map - will be replaced with actual world generation
   const placeholderMap = `                                        
@@ -63,7 +68,6 @@
     </div>
   </div>
 
-  <!-- Rest of your component remains the same -->
   <div
     class="ascii-map"
     bind:this={mapContainer}
@@ -81,6 +85,17 @@
       <button class="control-btn" on:click={() => uiState.setScreen('building')}
         >🏗️ Buildings</button
       >
+      <button
+        class="control-btn"
+        class:disabled={!hasLibrary}
+        on:click={() => hasLibrary && uiState.setScreen('research')}
+        disabled={!hasLibrary}
+        title={hasLibrary
+          ? 'Access research projects'
+          : "Build a Sage's Library to unlock research"}
+      >
+        📚 Research
+      </button>
     </div>
   </div>
 </div>
@@ -121,17 +136,6 @@
     text-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
   }
 
-  .turn-display {
-    background: #333;
-    padding: 8px 16px;
-    border-radius: 4px;
-    border: 1px solid #4caf50;
-    font-weight: bold;
-    color: #4caf50;
-  }
-
-  /* Rest of your styles remain the same */
-
   .ascii-map {
     flex: 1;
     background-color: #000;
@@ -144,8 +148,6 @@
     font-family: 'Courier New', monospace;
     color: #4caf50;
   }
-
-  /* Remove .map-container styles entirely */
 
   .ascii-map:hover {
     border-color: #66bb6a;
@@ -167,7 +169,6 @@
     border-top: 1px solid #444;
   }
 
-  .zoom-controls,
   .view-controls {
     display: flex;
     gap: 10px;
@@ -185,30 +186,22 @@
     transition: all 0.2s ease;
   }
 
-  .control-btn:hover {
+  .control-btn:hover:not(.disabled) {
     background: #444;
     border-color: #4caf50;
     color: #4caf50;
   }
 
-  .control-btn:active {
+  .control-btn:active:not(.disabled) {
     background: #555;
     transform: translateY(1px);
   }
 
-  .action-hints {
-    padding: 10px 20px;
-    background: #1e1e1e;
-    border-top: 1px solid #333;
-    font-size: 0.85em;
-    color: #888;
-  }
-
-  .action-hints p {
-    margin: 5px 0;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+  .control-btn.disabled {
+    background: #222;
+    border-color: #333;
+    color: #666;
+    cursor: not-allowed;
   }
 
   /* Responsive adjustments */
@@ -223,7 +216,6 @@
       gap: 10px;
     }
 
-    .zoom-controls,
     .view-controls {
       justify-content: center;
     }

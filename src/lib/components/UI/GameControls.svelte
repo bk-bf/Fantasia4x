@@ -227,7 +227,7 @@
   }
 
   .pause-btn.paused:hover {
-    background: #f44336;
+    background: #4caf50;
   }
 
   .speed-controls {

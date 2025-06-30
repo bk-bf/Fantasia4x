@@ -7,13 +7,29 @@
     canBuildWithPopulation
   } from '$lib/game/core/Buildings';
   import { onDestroy } from 'svelte';
+  import CancelButton from '$lib/components/UI/CancelButton.svelte';
+  import CurrentTask from '../UI/CurrentTask.svelte';
+  import type { BuildingInProgress } from '$lib/game/core/types';
 
   let resourcesMap: Record<string, number> = {};
   let race: any = null;
   let buildingCounts: Record<string, number> = {};
-  let buildingQueue: any[] = [];
+  let currentBuilding: BuildingInProgress[] = [];
   let maxPopulation = 0;
   let currentTurnValue = 0;
+  let completedResearch: string[] = []; // Add this
+
+  // The first building in progress, or a default object if none
+  $: firstBuildingInProgress = currentBuilding.length > 0 ? currentBuilding[0] : null;
+
+  // Filter buildings based on completed research
+  $: availableBuildings = AVAILABLE_BUILDINGS.filter((building) => {
+    // Always show buildings with no research requirement
+    if (!building.researchRequired) return true;
+
+    // Only show if research is completed
+    return completedResearch.includes(building.researchRequired);
+  });
 
   $: getResourceAmount = (resourceId: string): number => {
     return resourcesMap[resourceId] || 0;
@@ -59,8 +75,9 @@
 
   const unsubscribeGame = gameState.subscribe((state) => {
     buildingCounts = state.buildingCounts || {};
-    buildingQueue = state.buildingQueue || [];
+    currentBuilding = state.currentBuilding || [];
     maxPopulation = state.maxPopulation;
+    completedResearch = state.completedResearch || []; // Add this line
   });
 
   onDestroy(() => {
@@ -94,15 +111,15 @@
       return {
         ...state,
         resources: newResources,
-        buildingQueue: [...(state.buildingQueue || []), newBuildingInProgress]
+        currentBuilding: [...(state.currentBuilding || []), newBuildingInProgress]
       };
     });
   }
 
   function cancelBuilding(queueIndex: number) {
-    if (queueIndex < 0 || queueIndex >= buildingQueue.length) return;
+    if (queueIndex < 0 || queueIndex >= currentBuilding.length) return;
 
-    const canceledItem = buildingQueue[queueIndex];
+    const canceledItem = currentBuilding[queueIndex];
     const building = canceledItem.building;
 
     gameState.update((state) => {
@@ -113,13 +130,13 @@
       });
 
       // Remove from queue
-      const newQueue = [...(state.buildingQueue || [])];
+      const newQueue = [...(state.currentBuilding || [])];
       newQueue.splice(queueIndex, 1);
 
       return {
         ...state,
         resources: refundedResources,
-        buildingQueue: newQueue
+        currentBuilding: newQueue
       };
     });
   }
@@ -134,6 +151,10 @@
         return '📚';
       case 'military':
         return '⚔️';
+      case 'exploration':
+        return '🗺️';
+      case 'social':
+        return '👥';
       default:
         return '🏗️';
     }
@@ -146,7 +167,6 @@
     <h2>🏗️ Construction Planning</h2>
     <p class="building-subtitle">Expand your civilization</p>
   </div>
-
   <div class="building-content">
     <!-- Population Status -->
     <div class="population-status">
@@ -159,39 +179,29 @@
         </span>
       </div>
     </div>
-
-    <!-- Building Queue -->
-    <div class="building-queue">
-      <h3>🔨 Construction Queue</h3>
-      {#if buildingQueue.length > 0}
-        <div class="queue-list">
-          {#each buildingQueue as item, index}
-            <div class="queue-item">
-              <span class="queue-icon">{getCategoryIcon(item.building.category)}</span>
-              <span class="queue-name">{item.building.name}</span>
-              <span class="queue-progress">{item.turnsRemaining} days remaining</span>
-              <button
-                class="cancel-btn"
-                on:click={() => cancelBuilding(index)}
-                title="Cancel construction and refund resources"
-              >
-                ❌
-              </button>
-            </div>
-          {/each}
-        </div>
-      {:else}
-        <div class="empty-queue">
-          <p>No buildings currently under construction</p>
-        </div>
-      {/if}
-    </div>
+    <!-- Building Queue (Current Construction Only, Single Card) -->
+    {#if firstBuildingInProgress}
+      <CurrentTask
+        title="🏗️ Current Construction"
+        icon={getCategoryIcon(firstBuildingInProgress.building.category)}
+        name={firstBuildingInProgress.building.name}
+        description={firstBuildingInProgress.building.description}
+        progress={(firstBuildingInProgress.building.buildTime -
+          firstBuildingInProgress.turnsRemaining) /
+          firstBuildingInProgress.building.buildTime}
+        timeRemaining="{firstBuildingInProgress.turnsRemaining} days remaining"
+        onCancel={() => cancelBuilding(0)}
+        cancelTitle="Cancel construction and refund resources"
+      />
+    {:else}
+      <div class="empty-queue">No buildings are currently under construction.</div>
+    {/if}
 
     <!-- Available Buildings -->
     <div class="available-buildings">
       <h3>🏗️ Available Buildings</h3>
       <div class="buildings-grid">
-        {#each AVAILABLE_BUILDINGS as building}
+        {#each availableBuildings as building}
           <div
             class="building-card"
             class:affordable={canAfford(building)}
@@ -202,7 +212,7 @@
               <h4>{building.name}</h4>
               {#if getBuildingCount(building.id) > 0}
                 <div class="building-count">
-                  {getBuildingCount(building.id)}x
+                  {getBuildingCount(building.id)}
                 </div>
               {/if}
             </div>
@@ -320,7 +330,7 @@
   }
 
   .empty-queue {
-    padding: 5px;
+    padding: 20px;
     text-align: center;
     color: #888;
     font-style: italic;
@@ -379,7 +389,58 @@
   .queue-list {
     display: flex;
     flex-direction: column;
+    gap: 16px;
+  }
+
+  .queue-progress-card {
+    background: #2a2a2a;
+    border-radius: 8px;
+    padding: 20px;
+    border-left: 4px solid #ffa726;
+    margin-bottom: 0;
+  }
+
+  .progress-header {
+    display: flex;
+    align-items: center;
     gap: 10px;
+    margin-bottom: 10px;
+    position: relative;
+  }
+
+  .progress-icon {
+    font-size: 1.5em;
+  }
+
+  .progress-name {
+    flex: 1;
+    font-weight: bold;
+    color: #ffa726;
+  }
+
+  .progress-time {
+    color: #ffa726;
+    font-size: 0.9em;
+  }
+
+  .progress-bar {
+    height: 8px;
+    background: #555;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 10px;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: #ffa726;
+    transition: width 0.5s ease;
+  }
+
+  .progress-description {
+    color: #888;
+    font-style: italic;
+    margin: 0;
   }
 
   .queue-item {
@@ -389,23 +450,6 @@
     padding: 10px;
     background: #333;
     border-radius: 4px;
-  }
-
-  .cancel-btn {
-    margin-left: auto;
-    padding: 4px 8px;
-    background: #d32f2f;
-    border: 1px solid #f44336;
-    color: white;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.8em;
-    transition: all 0.2s ease;
-  }
-
-  .cancel-btn:hover {
-    background: #f44336;
-    transform: scale(1.1);
   }
 
   .queue-progress {
@@ -420,8 +464,9 @@
 
   .buildings-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(375.5px, 0px));
     gap: 20px;
+    justify-items: start; /* Align cards to the left */
   }
 
   .building-card {
@@ -430,6 +475,8 @@
     padding: 20px;
     border-left: 4px solid #555;
     transition: all 0.3s ease;
+    max-width: 375.5px; /* Set a fixed max width */
+    /* Remove any margin: 0 auto; if present */
   }
 
   .building-card.affordable {

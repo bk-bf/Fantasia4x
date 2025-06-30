@@ -1,12 +1,14 @@
 <!-- src/routes/+page.svelte -->
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { uiState } from '$lib/stores/uiState';
-  import GameControls from '$lib/components/UI/GameControls.svelte';
   import MainScreen from '$lib/components/UI/MainScreen.svelte';
-  import ResourceSidebar from '$lib/components/UI/ResourceSidebar.svelte';
   import RaceScreen from '$lib/components/screens/RaceScreen.svelte';
   import BuildingMenu from '$lib/components/screens/BuildingMenu.svelte';
+  import ResearchScreen from '$lib/components/screens/ResearchScreen.svelte';
+  import ResourceSidebar from '$lib/components/UI/ResourceSidebar.svelte';
+  import GameControls from '$lib/components/UI/GameControls.svelte';
+  import { uiState } from '$lib/stores/uiState';
+  import { gameState } from '$lib/stores/gameState';
+  import { onMount } from 'svelte';
 
   onMount(() => {
     console.log('Fantasia4x initialized with left sidebar');
@@ -40,6 +42,8 @@
         <RaceScreen />
       {:else if currentScreen === 'building'}
         <BuildingMenu />
+      {:else if currentScreen === 'research'}
+        <ResearchScreen />
       {/if}
     </div>
   </div>

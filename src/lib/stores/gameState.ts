@@ -9,6 +9,7 @@ import { BASIC_RESOURCES } from '$lib/game/core/Resources'; // Add this import
     canAffordBuilding,
     canBuildWithPopulation
   } from '$lib/game/core/Buildings';
+import { calculateKnowledgeGeneration } from '$lib/game/core/Research';
 
 // Game timing configuration
 const TURN_INTERVAL = 3000;
@@ -24,8 +25,13 @@ export const initialGameState: GameState = {
   worldMap: [],
   discoveredLocations: [],
   buildingCounts: {}, // Replace buildings: []
-  buildingQueue: [],
-  maxPopulation: 1
+  currentBuilding: [],
+  maxPopulation: 1, 
+  availableResearch: [],
+  completedResearch: [],
+  currentResearch: undefined,
+  discoveredLore: [],
+  knowledgeGeneration: 1
 };
 
 
@@ -98,67 +104,98 @@ const updateWithSave = (updater: (state: GameState) => GameState) => {
 
   // Update the advanceTurn function to process building queue
 function advanceTurn() {
-  updateWithSave(state => {
-    const newState = { ...state, turn: state.turn + 1 };
-    
-    // Process building queue
-    const completedBuildings: any[] = [];
-    const updatedQueue = (newState.buildingQueue || []).map(item => {
-      const updated = { ...item, turnsRemaining: item.turnsRemaining - 1 };
-      if (updated.turnsRemaining <= 0) {
-        completedBuildings.push(updated.building);
-      }
-      return updated;
-    }).filter(item => item.turnsRemaining > 0);
-    
-    // Update building counts and calculate effects
-    const newBuildingCounts = { ...newState.buildingCounts };
-    let newMaxPopulation = 1; // Base population
-    let woodBonus = 0;
-    let stoneBonus = 0;
-    
-    completedBuildings.forEach(building => {
-      newBuildingCounts[building.id] = (newBuildingCounts[building.id] || 0) + 1;
-    });
-    
-    // Calculate effects from all buildings
-    Object.entries(newBuildingCounts).forEach(([buildingId, count]) => {
-      const building = AVAILABLE_BUILDINGS.find(b => b.id === buildingId);
-      if (building && count > 0) {
-        newMaxPopulation += (building.effects.maxPopulation || 0) * count;
-        woodBonus += (building.effects.woodProduction || 0) * count;
-        stoneBonus += (building.effects.stoneProduction || 0) * count;
-      }
-    });
-    
-    newState.buildingQueue = updatedQueue;
-    newState.buildingCounts = newBuildingCounts;
-    newState.maxPopulation = newMaxPopulation;
-    
-    // Generate knowledge and resources (existing code)
-    const knowledgeGain = Math.floor((state.race.baseStats.intelligence + state.race.baseStats.wisdom) / 10);
-    newState.knowledge += knowledgeGain;
-    
-    newState.resources = newState.resources.map(resource => {
-      let production = 0;
-      
-      switch (resource.id) {
-        case 'food':
-          production = state.race.population * 3;
-          break;
-        case 'wood':
-          production = 2 + woodBonus;
-          break;
-        case 'stone':
-          production = 1 + stoneBonus;
-          break;
-      }
-      
-      return { ...resource, amount: resource.amount + production };
-    });
+	updateWithSave(state => {
+		const newState = { ...state, turn: state.turn + 1 };
 
-    return newState;
-  });
+		// Calculate knowledge generation
+		newState.knowledgeGeneration = calculateKnowledgeGeneration(
+			state.race.baseStats,
+			state.completedResearch || [],
+			state.buildingCounts || {}
+		);
+
+		// Add knowledge
+		newState.knowledge += newState.knowledgeGeneration;
+
+		// Process current research
+		if (newState.currentResearch) {
+			newState.currentResearch.currentProgress = (newState.currentResearch.currentProgress || 0) + 1;
+
+			// Check if research completed
+			if (newState.currentResearch.currentProgress >= newState.currentResearch.researchTime) {
+				// Complete research
+				newState.completedResearch = [...(newState.completedResearch || []), newState.currentResearch.id];
+
+				// Apply research effects
+				if (newState.currentResearch.unlocks.effects) {
+					Object.entries(newState.currentResearch.unlocks.effects).forEach(([effect, value]) => {
+						if (effect === 'knowledgeMultiplier') {
+							newState.knowledgeGeneration = Math.floor(newState.knowledgeGeneration * value);
+						}
+						// Add more effect types as needed
+					});
+				}
+
+        // Clear current research
+        newState.currentResearch = undefined;
+			}
+		}
+
+		// Process building queue
+		const completedBuildings: any[] = [];
+		const updatedQueue = (newState.currentBuilding || []).map(item => {
+			const updated = { ...item, turnsRemaining: item.turnsRemaining - 1 };
+			if (updated.turnsRemaining <= 0) {
+				completedBuildings.push(updated.building);
+			}
+			return updated;
+		}).filter(item => item.turnsRemaining > 0);
+
+		// Update building counts and calculate effects
+		const newBuildingCounts = { ...newState.buildingCounts };
+		let newMaxPopulation = 1; // Base population
+		let woodBonus = 0;
+		let stoneBonus = 0;
+
+		completedBuildings.forEach(building => {
+			newBuildingCounts[building.id] = (newBuildingCounts[building.id] || 0) + 1;
+		});
+
+		// Calculate effects from all buildings
+		Object.entries(newBuildingCounts).forEach(([buildingId, count]) => {
+			const building = AVAILABLE_BUILDINGS.find(b => b.id === buildingId);
+			if (building && count > 0) {
+				newMaxPopulation += (building.effects.maxPopulation || 0) * count;
+				woodBonus += (building.effects.woodProduction || 0) * count;
+				stoneBonus += (building.effects.stoneProduction || 0) * count;
+			}
+		});
+
+		newState.currentBuilding = updatedQueue;
+		newState.buildingCounts = newBuildingCounts;
+		newState.maxPopulation = newMaxPopulation;
+
+		// Generate resources
+		newState.resources = newState.resources.map(resource => {
+			let production = 0;
+
+			switch (resource.id) {
+				case 'food':
+					production = state.race.population * 3;
+					break;
+				case 'wood':
+					production = 2 + woodBonus;
+					break;
+				case 'stone':
+					production = 1 + stoneBonus;
+					break;
+			}
+
+			return { ...resource, amount: resource.amount + production };
+		});
+
+		return newState;
+	});
 }
 
   function pauseGame() {
