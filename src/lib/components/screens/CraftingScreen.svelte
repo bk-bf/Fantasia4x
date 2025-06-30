@@ -200,7 +200,7 @@
   </div>
 
   <div class="crafting-content">
-    <!-- Item Type Filter -->
+    <!-- Item Type Filter (compact) -->
     <div class="item-filters">
       <h3>📦 Item Categories</h3>
       <div class="filter-buttons">
@@ -209,13 +209,19 @@
             class="filter-btn"
             class:active={selectedItemType === itemType}
             on:click={() => (selectedItemType = itemType)}
+            title={itemType.charAt(0).toUpperCase() + itemType.slice(1)}
           >
-            {#if itemType === 'all'}📦 All
-            {:else if itemType === 'tool'}🔧 Tools
-            {:else if itemType === 'weapon'}⚔️ Weapons
-            {:else if itemType === 'armor'}🛡️ Armor
-            {:else if itemType === 'consumable'}🧪 Consumables
-            {:else}📋 Materials{/if}
+            {itemType === 'all'
+              ? '📦'
+              : itemType === 'tool'
+                ? '🔧'
+                : itemType === 'weapon'
+                  ? '⚔️'
+                  : itemType === 'armor'
+                    ? '🛡️'
+                    : itemType === 'consumable'
+                      ? '🧪'
+                      : '📋'}
           </button>
         {/each}
       </div>

@@ -158,7 +158,7 @@ export interface ResearchProject {
     armyLevel?: number;
     weaponLevel?: number;
     buildings?: string[];
-    screens?: string[]; // Fixed: was ability
+    ability?: string[]; // Fixed: was ability
     effects?: Record<string, number>;
   };
   researchTime: number;
