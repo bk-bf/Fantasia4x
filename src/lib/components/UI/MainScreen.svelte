@@ -81,10 +81,8 @@
 
   <div class="map-controls">
     <div class="view-controls">
-      <button class="control-btn" on:click={() => uiState.setScreen('race')}>👑 Race Info</button>
-      <button class="control-btn" on:click={() => uiState.setScreen('building')}
-        >🏗️ Buildings</button
-      >
+      <button class="control-btn" on:click={() => uiState.setScreen('race')}>👑 Race</button>
+      <button class="control-btn" on:click={() => uiState.setScreen('building')}>🏗️ Build</button>
       <button
         class="control-btn"
         class:disabled={!hasLibrary}
