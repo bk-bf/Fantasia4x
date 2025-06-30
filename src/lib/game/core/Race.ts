@@ -76,17 +76,18 @@ const IMPLICATION_DATABASE = {
   ]
 };
 export function generateRace(): Race {
-  // Simple random stat variation range
+  // statVariationMin: random integer from -10 to -1
   const statVariationMin = Math.floor(Math.random() * 10) - 10; // -10 to -1
+  // statVariationMax: random integer from 0 to 10
   const statVariationMax = Math.floor(Math.random() * 11); // 0 to 10
 
   const baseStats: RaceStats = {
-    strength: rollStatInRange(statVariationMin, statVariationMax),
-    dexterity: rollStatInRange(statVariationMin, statVariationMax),
-    intelligence: rollStatInRange(statVariationMin, statVariationMax),
-    wisdom: rollStatInRange(statVariationMin, statVariationMax),
-    charisma: rollStatInRange(statVariationMin, statVariationMax),
-    constitution: rollStatInRange(statVariationMin, statVariationMax)
+    strength: 10 + rollStatVariation(statVariationMin, statVariationMax),
+    dexterity: 10 + rollStatVariation(statVariationMin, statVariationMax),
+    intelligence: 10 + rollStatVariation(statVariationMin, statVariationMax),
+    wisdom: 10 + rollStatVariation(statVariationMin, statVariationMax),
+    charisma: 10 + rollStatVariation(statVariationMin, statVariationMax),
+    constitution: 10 + rollStatVariation(statVariationMin, statVariationMax)
   };
 
   return {
@@ -100,11 +101,9 @@ export function generateRace(): Race {
   };
 }
 
-
-function rollStatInRange(min: number, max: number): number {
-  const baseRoll = Math.floor(Math.random() * 10) + 8; // 8-17 base
-  const variation = Math.floor(Math.random() * (max - min + 1)) + min;
-  return Math.max(1, Math.min(20, baseRoll + variation)); // Clamp between 1-20
+// This function rolls a random integer between min and max (inclusive)
+function rollStatVariation(min: number, max: number): number {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
 function generateRaceName(): string {
