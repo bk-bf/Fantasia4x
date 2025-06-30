@@ -1,14 +1,14 @@
 <script lang="ts">
-  import { currentResources, currentRace, currentKnowledge } from '$lib/stores/gameState';
+  import { currentItem, currentRace, currentKnowledge } from '$lib/stores/gameState';
   import { onDestroy } from 'svelte';
-  import { getResourceIcon, getResourceColor } from '$lib/game/core/Resources';
+  import { getItemIcon, getItemColor } from '$lib/game/core/Items';
 
-  let resources: any[] = [];
+  let items: any[] = [];
   let race: any = null;
   let knowledge = 0;
 
-  const unsubscribeResources = currentResources.subscribe((newResources) => {
-    resources = newResources;
+  const unsubscribeItems = currentItem.subscribe((newItems) => {
+    items = newItems;
   });
 
   const unsubscribeRace = currentRace.subscribe((value) => {
@@ -20,7 +20,7 @@
   });
 
   onDestroy(() => {
-    unsubscribeResources();
+    unsubscribeItems();
     unsubscribeRace();
     unsubscribeKnowledge();
   });
@@ -52,19 +52,19 @@
       <div class="resources-section" style="text-align: left; margin-top: 8px;">
         <h4 style="margin-left: auto; margin-right: auto; display: inline-block;">📦 Resources</h4>
         <div class="resource-grid">
-          {#each resources.filter((resource) => resource.amount > 0) as resource}
-            <div class="resource-mini" style="--resource-color: {getResourceColor(resource.id)}">
+          {#each items.filter((item) => item.amount > 0 && item.type === 'material') as item}
+            <div class="resource-mini" style="--resource-color: {getItemColor(item.id)}">
               <div class="resource-content">
-                <span class="resource-icon">{getResourceIcon(resource.id)}</span>
+                <span class="resource-icon">{getItemIcon(item.id)}</span>
                 <div class="resource-info">
-                  <span class="resource-label">{resource.name}</span>
-                  <span class="resource-amount">{Math.floor(resource.amount)}</span>
+                  <span class="resource-label">{item.name}</span>
+                  <span class="resource-amount">{Math.floor(item.amount)}</span>
                 </div>
               </div>
               <div class="resource-bar">
                 <div
                   class="resource-fill"
-                  style="width: {Math.min(100, (resource.amount / 500) * 100)}%"
+                  style="width: {Math.min(100, (item.amount / 500) * 100)}%"
                 ></div>
               </div>
             </div>
@@ -118,6 +118,7 @@
     box-shadow: 0 4px 16px 0 rgba(76, 175, 80, 0.08);
     transform: scale(1.04);
   }
+
   .sidebar-header,
   .screen-header {
     background: #000000;
@@ -125,6 +126,7 @@
     padding: 4px 8px;
     margin: 0;
   }
+
   /* For both .sidebar-header h3 and .screen-header h3 */
   .sidebar-header h3,
   .screen-header h3 {
@@ -192,11 +194,6 @@
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 4px;
-  }
-
-  .resource-mini:hover {
-    box-shadow: 0 4px 16px 0 rgba(76, 175, 80, 0.08);
-    transform: scale(1.04);
   }
 
   .resource-content {

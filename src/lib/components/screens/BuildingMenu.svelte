@@ -1,17 +1,17 @@
 <script lang="ts">
-  import { gameState, currentResources, currentRace, currentTurn } from '$lib/stores/gameState';
+  import { gameState, currentItem, currentRace, currentTurn } from '$lib/stores/gameState';
   import { uiState } from '$lib/stores/uiState';
   import {
     AVAILABLE_BUILDINGS,
     canAffordBuilding,
     canBuildWithPopulation
   } from '$lib/game/core/Buildings';
-  import { getResourceIcon, getResourceColor } from '$lib/game/core/Resources';
+  import { getItemIcon, getItemColor } from '$lib/game/core/Items';
   import { onDestroy } from 'svelte';
   import CurrentTask from '../UI/CurrentTask.svelte';
   import type { BuildingInProgress } from '$lib/game/core/types';
 
-  let resourcesMap: Record<string, number> = {};
+  let itemsMap: Record<string, number> = {};
   let race: any = null;
   let buildingCounts: Record<string, number> = {};
   let buildingQueue: BuildingInProgress[] = [];
@@ -31,22 +31,22 @@
     return completedResearch.includes(building.researchRequired);
   });
 
-  $: getResourceAmount = (resourceId: string): number => {
-    return resourcesMap[resourceId] || 0;
+  $: getItemAmount = (itemId: string): number => {
+    return itemsMap[itemId] || 0;
   };
 
-  $: getResourcesObject = (): Record<string, number> => {
-    return { ...resourcesMap };
+  $: getItemsObject = (): Record<string, number> => {
+    return { ...itemsMap };
   };
 
   $: getBuildingCount = (buildingId: string): number => {
     return buildingCounts[buildingId] || 0;
   };
 
-  // Make these functions reactive so they update when resources change
+  // Make these functions reactive so they update when items change
   $: canAfford = (building: any): boolean => {
-    const canAffordResult = Object.entries(building.cost).every(([resourceId, cost]) => {
-      const available = resourcesMap[resourceId] || 0;
+    const canAffordResult = Object.entries(building.cost).every(([itemId, cost]) => {
+      const available = itemsMap[itemId] || 0;
       return available >= Number(cost);
     });
     return canAffordResult;
@@ -62,10 +62,10 @@
     currentTurnValue = turn;
   });
 
-  const unsubscribeResources = currentResources.subscribe((resources) => {
-    resourcesMap = {};
-    resources.forEach((resource) => {
-      resourcesMap[resource.id] = Math.floor(resource.amount);
+  const unsubscribeitems = currentItem.subscribe((item) => {
+    itemsMap = {};
+    item.forEach((item) => {
+      itemsMap[item.id] = Math.floor(item.amount);
     });
   });
 
@@ -81,7 +81,7 @@
   });
 
   onDestroy(() => {
-    unsubscribeResources();
+    unsubscribeitems();
     unsubscribeRace();
     unsubscribeGame();
     unsubscribeTurn();
@@ -94,11 +94,11 @@
     }
 
     gameState.update((state) => {
-      // Deduct resources more carefully
-      const newResources = state.resources.map((resource) => {
-        const cost = building.cost[resource.id] || 0;
-        const newAmount = Math.max(0, resource.amount - cost);
-        return { ...resource, amount: newAmount };
+      // Deduct items more carefully
+      const newitems = state.item.map((item) => {
+        const cost = building.cost[item.id] || 0;
+        const newAmount = Math.max(0, item.amount - cost);
+        return { ...item, amount: newAmount };
       });
 
       // Add to building queue
@@ -110,7 +110,7 @@
 
       return {
         ...state,
-        resources: newResources,
+        items: newitems,
         buildingQueue: [...(state.buildingQueue || []), newBuildingInProgress]
       };
     });
@@ -124,9 +124,9 @@
 
     gameState.update((state) => {
       // Calculate refund (full refund since construction hasn't started yet)
-      const refundedResources = state.resources.map((resource) => {
-        const refund = building.cost[resource.id] || 0;
-        return { ...resource, amount: resource.amount + refund };
+      const refundeditems = state.item.map((item) => {
+        const refund = building.cost[item.id] || 0;
+        return { ...item, amount: item.amount + refund };
       });
 
       // Remove from queue
@@ -135,7 +135,7 @@
 
       return {
         ...state,
-        resources: refundedResources,
+        items: refundeditems,
         buildingQueue: newQueue
       };
     });
@@ -198,7 +198,7 @@
           firstBuildingInProgress.building.buildTime}
         timeRemaining="{firstBuildingInProgress.turnsRemaining} days remaining"
         onCancel={() => cancelBuilding(0)}
-        cancelTitle="Cancel construction and refund resources"
+        cancelTitle="Cancel construction and refund items"
       />
     {:else}
       <div class="empty-queue">No buildings are currently under construction.</div>
@@ -235,12 +235,12 @@
             <div class="building-costs">
               <h5>Cost:</h5>
               <div class="cost-list">
-                {#each Object.entries(building.cost) as [resourceId, cost]}
-                  <div class="cost-item" class:insufficient={getResourceAmount(resourceId) < cost}>
-                    <span class="cost-icon">{getResourceIcon(resourceId)}</span>
+                {#each Object.entries(building.cost) as [itemId, cost]}
+                  <div class="cost-item" class:insufficient={getItemAmount(itemId) < cost}>
+                    <span class="cost-icon">{getItemIcon(itemId)}</span>
                     <span class="cost-amount">{cost}</span>
-                    <span class="cost-resource">{resourceId}</span>
-                    <span class="cost-available">({getResourceAmount(resourceId)} available)</span>
+                    <span class="cost-item">{itemId}</span>
+                    <span class="cost-available">({getItemAmount(itemId)} available)</span>
                   </div>
                 {/each}
               </div>
@@ -280,7 +280,7 @@
               disabled={!canBuild(building)}
             >
               {#if !canAfford(building)}
-                Insufficient Resources
+                Insufficient items
               {:else if !canBuildWithPopulation(building, race?.population || 0, maxPopulation)}
                 Population Requirements Not Met
               {:else}

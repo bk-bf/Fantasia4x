@@ -1,7 +1,79 @@
-import type { Item, CraftingRecipe } from './types';
+import type { Item } from './types';
 
 export const ITEMS_DATABASE: Item[] = [
-  // TOOLS (existing + expanded)
+  // BASIC MATERIALS (formerly BASIC_RESOURCES)
+  {
+    id: 'food',
+    name: 'Food',
+    description: 'Essential sustenance for population growth',
+    type: 'material',
+    category: 'basic',
+    level: 0,
+    rarity: 'common',
+    effects: {},
+    researchRequired: null,
+    emoji: '🌾',
+    color: '#FFA726',
+    amount: 0
+  },
+  {
+    id: 'wood',
+    name: 'Wood',
+    description: 'Basic building material from trees',
+    type: 'material',
+    category: 'basic',
+    level: 0,
+    rarity: 'common',
+    effects: {},
+    researchRequired: null,
+    emoji: '🪵',
+    color: '#8BC34A',
+    amount: 0
+  },
+  {
+    id: 'stone',
+    name: 'Stone',
+    description: 'Sturdy material for construction',
+    type: 'material',
+    category: 'basic',
+    level: 0,
+    rarity: 'common',
+    effects: {},
+    researchRequired: null,
+    emoji: '🪨',
+    color: '#9E9E9E',
+    amount: 0
+  },
+  {
+    id: 'iron',
+    name: 'Iron',
+    description: 'Raw iron ore for metalworking',
+    type: 'material',
+    category: 'basic',
+    level: 0,
+    rarity: 'common',
+    effects: {},
+    researchRequired: null,
+    emoji: '⛓️',
+    color: '#4CAF50',
+    amount: 0
+  },
+  {
+    id: 'herbs',
+    name: 'Herbs',
+    description: 'Medicinal plants for healing and research',
+    type: 'material',
+    category: 'basic',
+    level: 0,
+    rarity: 'common',
+    effects: {},
+    researchRequired: null,
+    emoji: '🌿',
+    color: '#4CAF50',
+    amount: 0
+  },
+
+  // TOOLS (with embedded crafting requirements)
   {
     id: 'stone_axe',
     name: 'Stone Axe',
@@ -15,10 +87,40 @@ export const ITEMS_DATABASE: Item[] = [
     effects: { woodProduction: 0.2 },
     researchRequired: null,
     emoji: '🪓',
-    color: '#8BC34A'
+    color: '#8BC34A',
+    amount: 0,
+    // Embedded crafting requirements
+    craftingCost: { wood: 5, stone: 3 },
+    craftingTime: 2,
+    toolLevelRequired: 0,
+    buildingRequired: null,
+    populationRequired: 0
   },
   
-  // WEAPONS
+  {
+    id: 'iron_axe',
+    name: 'Iron Axe',
+    description: 'Improved axe for efficient wood harvesting',
+    type: 'tool',
+    category: 'harvesting',
+    level: 1,
+    rarity: 'uncommon',
+    durability: 200,
+    maxDurability: 200,
+    effects: { woodProduction: 0.5 },
+    researchRequired: 'basic_metallurgy',
+    emoji: '🪓',
+    color: '#4CAF50',
+    amount: 0,
+    // Embedded crafting requirements
+    craftingCost: { wood: 8, iron: 5 },
+    craftingTime: 4,
+    toolLevelRequired: 1,
+    buildingRequired: 'iron_forge',
+    populationRequired: 1
+  },
+  
+  // WEAPONS (with embedded crafting requirements)
   {
     id: 'stone_spear',
     name: 'Stone Spear',
@@ -37,7 +139,14 @@ export const ITEMS_DATABASE: Item[] = [
       damage: 8,
       attackSpeed: 1.2,
       range: 2
-    }
+    },
+    amount: 0,
+    // Embedded crafting requirements
+    craftingCost: { wood: 8, stone: 4 },
+    craftingTime: 3,
+    toolLevelRequired: 0,
+    buildingRequired: null,
+    populationRequired: 0
   },
   
   {
@@ -58,10 +167,17 @@ export const ITEMS_DATABASE: Item[] = [
       damage: 15,
       attackSpeed: 1.0,
       range: 1
-    }
+    },
+    amount: 0,
+    // Embedded crafting requirements
+    craftingCost: { wood: 5, iron_ingot: 3 },
+    craftingTime: 6,
+    toolLevelRequired: 1,
+    buildingRequired: 'iron_forge',
+    populationRequired: 2
   },
   
-  // ARMOR
+  // ARMOR (with embedded crafting requirements)
   {
     id: 'leather_cap',
     name: 'Leather Cap',
@@ -80,7 +196,14 @@ export const ITEMS_DATABASE: Item[] = [
       defense: 3,
       armorType: 'light',
       slot: 'head'
-    }
+    },
+    amount: 0,
+    // Embedded crafting requirements
+    craftingCost: { leather: 3, thread: 1 },
+    craftingTime: 2,
+    toolLevelRequired: 0,
+    buildingRequired: null,
+    populationRequired: 0
   },
   
   {
@@ -101,10 +224,17 @@ export const ITEMS_DATABASE: Item[] = [
       defense: 8,
       armorType: 'heavy',
       slot: 'head'
-    }
+    },
+    amount: 0,
+    // Embedded crafting requirements
+    craftingCost: { iron_ingot: 4, leather: 2 },
+    craftingTime: 5,
+    toolLevelRequired: 1,
+    buildingRequired: 'iron_forge',
+    populationRequired: 2
   },
   
-  // CONSUMABLES
+  // CONSUMABLES (with embedded crafting requirements)
   {
     id: 'healing_herb',
     name: 'Healing Herb',
@@ -120,26 +250,40 @@ export const ITEMS_DATABASE: Item[] = [
     consumableProperties: {
       uses: 1,
       consumeTime: 1
-    }
+    },
+    amount: 0,
+    // Embedded crafting requirements (gathered, not crafted)
+    craftingCost: {},
+    craftingTime: 0,
+    toolLevelRequired: 0,
+    buildingRequired: null,
+    populationRequired: 0
   },
   
-  // MATERIALS
+  // PROCESSED MATERIALS (with embedded crafting requirements)
   {
     id: 'iron_ingot',
     name: 'Iron Ingot',
     description: 'Refined iron ready for crafting',
     type: 'material',
-    category: 'metal',
+    category: 'processed',
     level: 1,
     rarity: 'common',
     effects: {},
     researchRequired: 'basic_metallurgy',
     emoji: '🔩',
-    color: '#607D8B'
+    color: '#607D8B',
+    amount: 0,
+    // Embedded crafting requirements
+    craftingCost: { iron: 2 },
+    craftingTime: 2,
+    toolLevelRequired: 1,
+    buildingRequired: 'iron_forge',
+    populationRequired: 1
   }
 ];
 
-// Helper functions following the search results pattern
+// Helper functions following building system pattern
 export function getItemsByType(itemType: string): Item[] {
   return ITEMS_DATABASE.filter(item => item.type === itemType);
 }
@@ -148,40 +292,24 @@ export function getItemsByCategory(category: string): Item[] {
   return ITEMS_DATABASE.filter(item => item.category === category);
 }
 
-export function getAvailableRecipes(
-  completedResearch: string[],
-  availableBuildings: string[],
-  currentToolLevel: number
-): CraftingRecipe[] {
-  return CRAFTING_RECIPES.filter(recipe => {
-    // Check tool level requirement
-    if (recipe.toolLevelRequired > currentToolLevel) return false;
-    
-    // Check building requirement
-    if (recipe.buildingRequired && !availableBuildings.includes(recipe.buildingRequired)) return false;
-    
-    // Check research requirement
-    if (recipe.researchRequired && !completedResearch.includes(recipe.researchRequired)) return false;
-    
-    return true;
-  });
-}
-
-export function canCraftRecipe(
-  recipe: CraftingRecipe,
-  currentResources: Record<string, number>
-): boolean {
-  return Object.entries(recipe.inputs).every(([resourceId, amount]) => 
-    (currentResources[resourceId] || 0) >= amount
+// Get basic materials (formerly BASIC_RESOURCES)
+export function getBasicMaterials(): Item[] {
+  return ITEMS_DATABASE.filter(item => 
+    item.type === 'material' && item.category === 'basic'
   );
 }
 
-export function getAvailableItems(
+// Get craftable items (items with crafting requirements)
+export function getCraftableItems(
   completedResearch: string[],
   availableBuildings: string[],
+  currentToolLevel: number,
+  currentPopulation: number,
   itemType?: string
 ): Item[] {
-  let items = ITEMS_DATABASE;
+  let items = ITEMS_DATABASE.filter(item => 
+    item.craftingCost && Object.keys(item.craftingCost).length > 0
+  );
   
   // Filter by type if specified
   if (itemType) {
@@ -189,14 +317,55 @@ export function getAvailableItems(
   }
   
   return items.filter(item => {
-    // Always show items with no research requirement
-    if (!item.researchRequired) return true;
+    // Research requirements
+    if (item.researchRequired && !completedResearch.includes(item.researchRequired)) return false;
     
-    // Only show if research is completed
-    return completedResearch.includes(item.researchRequired);
+    // Tool level requirements
+    if (item.toolLevelRequired && item.toolLevelRequired > currentToolLevel) return false;
+    
+    // Building requirements
+    if (item.buildingRequired && !availableBuildings.includes(item.buildingRequired)) return false;
+    
+    // Population requirements
+    if (item.populationRequired && item.populationRequired > currentPopulation) return false;
+    
+    return true;
   });
 }
 
+// Check if item can be crafted (similar to canAffordBuilding)
+export function canCraftItem(item: Item, currentInventory: Record<string, number>): boolean {
+  if (!item.craftingCost) return false;
+  
+  return Object.entries(item.craftingCost).every(([itemId, amount]) => 
+    (currentInventory[itemId] || 0) >= amount
+  );
+}
+
+// Check if item can be crafted with current game state (similar to canBuildWithPopulation)
+export function canCraftWithRequirements(
+  item: Item, 
+  currentToolLevel: number,
+  availableBuildings: string[],
+  currentPopulation: number,
+  completedResearch: string[]
+): boolean {
+  // Research requirements
+  if (item.researchRequired && !completedResearch.includes(item.researchRequired)) return false;
+  
+  // Tool level requirements
+  if (item.toolLevelRequired && item.toolLevelRequired > currentToolLevel) return false;
+  
+  // Building requirements
+  if (item.buildingRequired && !availableBuildings.includes(item.buildingRequired)) return false;
+  
+  // Population requirements
+  if (item.populationRequired && item.populationRequired > currentPopulation) return false;
+  
+  return true;
+}
+
+// Unified icon/color functions
 export function getItemIcon(itemId: string): string {
   const item = ITEMS_DATABASE.find(i => i.id === itemId);
   return item?.emoji || '📦';
@@ -218,39 +387,31 @@ export function getItemRarityColor(rarity: string): string {
   }
 }
 
-// Updated crafting recipes to use unified items
-export const CRAFTING_RECIPES: CraftingRecipe[] = [
-  {
-    id: 'craft_stone_spear',
-    name: 'Craft Stone Spear',
-    description: 'Create a basic weapon for hunting',
-    inputs: { wood: 8, stone: 4 },
-    outputs: { stone_spear: 1 },
-    craftingTime: 3,
-    toolLevelRequired: 0,
-    researchRequired: null
-  },
+// Magical resource creation (now creates magical materials)
+export function createMagicalMaterial(): Item {
+  const magicalTypes = ['Crystal', 'Essence', 'Rune', 'Shard'];
+  const properties = ['Fire', 'Ice', 'Lightning', 'Shadow', 'Light'];
   
-  {
-    id: 'craft_iron_sword',
-    name: 'Craft Iron Sword',
-    description: 'Forge a reliable combat weapon',
-    inputs: { wood: 5, iron_ingot: 3 },
-    outputs: { iron_sword: 1 },
-    craftingTime: 6,
-    toolLevelRequired: 1,
-    buildingRequired: 'iron_forge',
-    researchRequired: 'basic_metallurgy'
-  },
+  const type = magicalTypes[Math.floor(Math.random() * magicalTypes.length)];
+  const property = properties[Math.floor(Math.random() * properties.length)];
   
-  {
-    id: 'craft_leather_cap',
-    name: 'Craft Leather Cap',
-    description: 'Create basic head protection',
-    inputs: { leather: 3, thread: 1 },
-    outputs: { leather_cap: 1 },
-    craftingTime: 2,
+  return {
+    id: `${property.toLowerCase()}_${type.toLowerCase()}`,
+    name: `${property} ${type}`,
+    description: `Magical ${type.toLowerCase()} infused with ${property.toLowerCase()} energy`,
+    type: 'material',
+    category: 'magical',
+    level: 2,
+    rarity: 'rare',
+    effects: { magicalPower: Math.floor(Math.random() * 10) + 1 },
+    researchRequired: null,
+    emoji: '🔮',
+    color: '#9C27B0',
+    amount: 0,
+    craftingCost: {},
+    craftingTime: 0,
     toolLevelRequired: 0,
-    researchRequired: null
-  }
-];
+    buildingRequired: null,
+    populationRequired: 0
+  };
+}

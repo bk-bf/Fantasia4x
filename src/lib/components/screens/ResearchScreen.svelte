@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { gameState, currentResources, currentRace } from '$lib/stores/gameState';
+  import { gameState, currentItem, currentRace } from '$lib/stores/gameState';
   import { uiState } from '$lib/stores/uiState';
   import {
     getAvailableResearch,
@@ -10,7 +10,7 @@
   import CancelButton from '$lib/components/UI/CancelButton.svelte';
   import CurrentTask from '$lib/components/UI/CurrentTask.svelte';
   import { AVAILABLE_BUILDINGS } from '$lib/game/core/Buildings';
-  import { getResourceIcon, getResourceColor } from '$lib/game/core/Resources'; // Add this import
+  import { getItemIcon, getItemColor } from '$lib/game/core/Items'; // Add this import
 
   let race: any = null;
   let knowledge = 0;
@@ -19,26 +19,26 @@
   let completedResearch: string[] = [];
   let currentResearch: any = null;
   let discoveredLore: any[] = [];
-  let resourcesMap: Record<string, number> = {}; // Add this
+  let itemMap: Record<string, number> = {}; // Add this
 
-  // Add the resource fetching methods from BuildingMenu
-  $: getResourceAmount = (resourceId: string): number => {
-    return resourcesMap[resourceId] || 0;
+  // Add the item fetching methods from BuildingMenu
+  $: getitemAmount = (itemId: string): number => {
+    return itemMap[itemId] || 0;
   };
 
-  $: getResourcesObject = (): Record<string, number> => {
-    return { ...resourcesMap };
+  $: getitemObject = (): Record<string, number> => {
+    return { ...itemMap };
   };
 
   const unsubscribeRace = currentRace.subscribe((value) => {
     race = value;
   });
 
-  // Add the resources subscription from BuildingMenu
-  const unsubscribeResources = currentResources.subscribe((resources) => {
-    resourcesMap = {};
-    resources.forEach((resource) => {
-      resourcesMap[resource.id] = Math.floor(resource.amount);
+  // Add the item subscription from BuildingMenu
+  const unsubscribeitem = currentItem.subscribe((item) => {
+    itemMap = {};
+    item.forEach((item) => {
+      itemMap[item.id] = Math.floor(item.amount);
     });
   });
 
@@ -55,10 +55,10 @@
     // Gather current population
     const currentPopulation = state.race?.population || 0;
 
-    // Gather current resources as a map
-    const currentResources: Record<string, number> = {};
-    (state.resources || []).forEach((resource) => {
-      currentResources[resource.id] = resource.amount;
+    // Gather current item as a map
+    const currentitem: Record<string, number> = {};
+    (state.item || []).forEach((item) => {
+      currentitem[item.id] = item.amount;
     });
 
     // Gather available buildings
@@ -74,7 +74,7 @@
         completedResearch,
         currentStats,
         currentPopulation,
-        currentResources,
+        currentitem,
         availableBuildings,
         availableTools,
         discoveredLore
@@ -84,7 +84,7 @@
 
   onDestroy(() => {
     unsubscribeRace();
-    unsubscribeResources(); // Add this cleanup
+    unsubscribeitem(); // Add this cleanup
     unsubscribeGame();
   });
 
@@ -92,16 +92,16 @@
     const canAfford = knowledge >= research.knowledgeCost;
     const hasLoreBypass = canUnlockWithLore(research.id, discoveredLore);
 
-    // Check resource requirements
-    let hasResources = true;
-    if (research.resourceRequirement) {
-      hasResources = Object.entries(research.resourceRequirement).every(
-        ([resourceId, amount]) => getResourceAmount(resourceId) >= (amount as number)
+    // Check item requirements
+    let hasitem = true;
+    if (research.itemRequirement) {
+      hasitem = Object.entries(research.itemRequirement).every(
+        ([itemId, amount]) => getitemAmount(itemId) >= (amount as number)
       );
     }
 
     if (!canAfford && !hasLoreBypass) return;
-    if (!hasResources && !hasLoreBypass) return;
+    if (!hasitem && !hasLoreBypass) return;
 
     gameState.update((state) => {
       const newState = { ...state };
@@ -110,11 +110,11 @@
       if (!hasLoreBypass) {
         newState.knowledge -= research.knowledgeCost;
 
-        // NEW: Deduct resource costs
-        if (research.resourceRequirement) {
-          newState.resources = newState.resources.map((resource) => {
-            const cost = research.resourceRequirement[resource.id] || 0;
-            return { ...resource, amount: resource.amount - cost };
+        // NEW: Deduct item costs
+        if (research.itemRequirement) {
+          newState.item = newState.item.map((item) => {
+            const cost = research.itemRequirement[item.id] || 0;
+            return { ...item, amount: item.amount - cost };
           });
         }
       }
@@ -280,19 +280,19 @@
               <div class="research-cost">💡 {research.knowledgeCost} Knowledge</div>
               <div class="research-time">⏰ {research.researchTime} turns</div>
 
-              <!-- Resource requirements display -->
-              {#if research.resourceRequirement}
-                <div class="resource-requirements">
-                  📦 Resources needed:
-                  {#each Object.entries(research.resourceRequirement) as [resourceId, amount]}
+              <!-- item requirements display -->
+              {#if research.itemRequirement}
+                <div class="item-requirements">
+                  📦 item needed:
+                  {#each Object.entries(research.itemRequirement) as [itemId, amount]}
                     <div
-                      class="resource-req-item"
-                      class:insufficient={getResourceAmount(resourceId) < (amount as number)}
+                      class="item-req-item"
+                      class:insufficient={getitemAmount(itemId) < (amount as number)}
                     >
-                      {getResourceIcon(resourceId)}
+                      {getItemIcon(itemId)}
                       {amount}
-                      {resourceId}
-                      ({getResourceAmount(resourceId)} available)
+                      {itemId}
+                      ({getitemAmount(itemId)} available)
                     </div>
                   {/each}
                 </div>

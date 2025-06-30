@@ -35,7 +35,7 @@ export class GameStateManager {
   }
 
   addResource(resourceId: string, amount: number): void {
-    const resource = this.state.resources.find(r => r.id === resourceId);
+    const resource = this.state.item.find(r => r.id === resourceId);
     if (resource) {
       resource.amount += amount;
     }

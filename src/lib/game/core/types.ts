@@ -1,7 +1,7 @@
 export interface GameState {
 	turn: number;
 	race: Race;
-	resources: Resource[];
+	item: Item[];
 	heroes: Hero[];
 	knowledge: number;
 	worldMap: WorldTile[][];
@@ -16,7 +16,7 @@ export interface GameState {
 	knowledgeGeneration: number; // Per-turn knowledge gain
 	_woodBonus?: number;
 	_stoneBonus?: number;
-	inventory: Record<string, number>; // itemId -> quantity (unified for all item types)
+	inventory: Record<string, number>; // resourceId -> quantity
 	equippedItems: {
 		weapon: string | null;
 		head: string | null;
@@ -33,26 +33,37 @@ export interface GameState {
 export interface Item {
   id: string;
   name: string;
-  description: string;
-  type: 'tool' | 'weapon' | 'armor' | 'consumable' | 'material';
-  category: string; // harvesting, combat, head, chest, etc.
-  level: number;
-  rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
+  amount: number;
+  description?: string; // Optional description for lore or flavor text
+  properties?: Record<string, any>;
+  
+  // Unified categorization
+  type: 'material' | 'tool' | 'weapon' | 'armor' | 'consumable' | 'currency';
+  category: string; // wood, iron, harvesting, combat, head, etc.
   
   // Visual
-  emoji: string;
-  color: string;
+  emoji?: string;
+  color?: string;
   
-  // Durability (for tools/weapons/armor)
+  // Resource properties (from search results pattern)
+  maxValue?: number; // Stack limit
+  passiveGeneration?: number; // Auto-generation rate
+  
+  // Embedded crafting requirements (like building system)
+  craftingCost?: Record<string, number>;
+  craftingTime?: number;
+  toolLevelRequired?: number;
+  buildingRequired?: string | null;
+  populationRequired?: number;
+  // Item properties (durability, effects, etc.)
   durability?: number;
   maxDurability?: number;
-  
-  // Effects (unified for all item types)
-  effects: Record<string, number>;
+  effects?: Record<string, number>;
   
   // Requirements
-  researchRequired: string | null;
-  levelRequired?: number;
+  researchRequired?: string | null;
+  level?: number;
+  rarity?: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
   
   // Item-specific properties
   weaponProperties?: {
@@ -73,21 +84,10 @@ export interface Item {
   };
 }
 
-export interface CraftingRecipe {
-  id: string;
-  name: string;
-  description: string;
-  inputs: Record<string, number>;
-  outputs: Record<string, number>;
-  craftingTime: number;
-  toolLevelRequired: number;
-  buildingRequired?: string;
-  researchRequired: string | null;
-}
-
 // Added: Missing CraftingInProgress interface
 export interface CraftingInProgress {
-  recipe: CraftingRecipe;
+  item: Item; // The item being crafted
+  quantity: number; // How many are being crafted
   turnsRemaining: number;
   startedAt: number;
 }
@@ -197,16 +197,6 @@ export interface Equipment {
   magical?: boolean;
 }
 
-export interface Resource {
-  id: string;
-  name: string;
-  amount: number;
-  type: string;
-  emoji?: string;
-  color?: string;
-  properties?: Record<string, any>;
-}
-
 export interface Location {
   id: string;
   name: string;
@@ -214,7 +204,7 @@ export interface Location {
   x: number;
   y: number;
   discovered: boolean;
-  resources?: Resource[];
+  item?: Item[];
 }
 
 export interface WorldTile {

@@ -1,75 +1,58 @@
 <script lang="ts">
-  import { gameState, currentResources, currentRace } from '$lib/stores/gameState';
+  import { gameState, currentItem, currentRace } from '$lib/stores/gameState';
   import { uiState } from '$lib/stores/uiState';
   import {
-    getAvailableItems,
-    getAvailableRecipes,
-    canCraftRecipe,
+    getCraftableItems,
+    canCraftItem,
+    canCraftWithRequirements,
     getItemIcon,
     getItemColor,
     getItemRarityColor,
-    ITEMS_DATABASE,
-    CRAFTING_RECIPES
+    ITEMS_DATABASE
   } from '$lib/game/core/Items';
-  import { getResourceIcon, getResourceColor } from '$lib/game/core/Resources';
   import { onDestroy } from 'svelte';
 
-  let resourcesMap: Record<string, number> = {};
+  let itemMap: Record<string, number> = {};
   let race: any = null;
   let inventory: Record<string, number> = {};
   let craftingQueue: any[] = [];
   let completedResearch: string[] = [];
   let availableBuildings: string[] = [];
   let currentToolLevel = 0;
+  let currentPopulation = 0;
 
   // Item type filter
   let selectedItemType = 'all';
   let itemTypes = ['all', 'tool', 'weapon', 'armor', 'consumable', 'material'];
 
-  // Reuse resource fetching pattern from BuildingMenu
-  $: getResourceAmount = (resourceId: string): number => {
-    return resourcesMap[resourceId] || 0;
+  // Reuse item fetching pattern from BuildingMenu
+  $: getItemAmount = (itemId: string): number => {
+    return itemMap[itemId] || 0;
   };
 
-  $: getItemAmount = (itemId: string): number => {
+  $: getInventoryAmount = (itemId: string): number => {
     return inventory[itemId] || 0;
   };
 
-  // Filter available recipes based on current state
-  $: availableRecipes = getAvailableRecipes(
+  // Filter craftable items based on current state
+  $: availableCraftableItems = getCraftableItems(
     completedResearch,
     availableBuildings,
-    currentToolLevel
-  );
-
-  // Filter available items based on research and type
-  $: availableItems = getAvailableItems(
-    completedResearch,
-    availableBuildings,
+    currentToolLevel,
+    currentPopulation,
     selectedItemType === 'all' ? undefined : selectedItemType
   );
 
-  // Filter recipes by selected item type
-  $: filteredRecipes =
-    selectedItemType === 'all'
-      ? availableRecipes
-      : availableRecipes.filter((recipe: any) => {
-          // Check if recipe outputs match selected type
-          return Object.keys(recipe.outputs).some((itemId) => {
-            const item = ITEMS_DATABASE.find((i) => i.id === itemId);
-            return item?.type === selectedItemType;
-          });
-        });
-
-  const unsubscribeResources = currentResources.subscribe((resources) => {
-    resourcesMap = {};
-    resources.forEach((resource) => {
-      resourcesMap[resource.id] = Math.floor(resource.amount);
+  const unsubscribeItem = currentItem.subscribe((items) => {
+    itemMap = {};
+    items.forEach((item) => {
+      itemMap[item.id] = Math.floor(item.amount);
     });
   });
 
   const unsubscribeRace = currentRace.subscribe((value) => {
     race = value;
+    currentPopulation = value?.population || 0;
   });
 
   const unsubscribeGame = gameState.subscribe((state) => {
@@ -85,41 +68,36 @@
   });
 
   onDestroy(() => {
-    unsubscribeResources();
+    unsubscribeItem();
     unsubscribeRace();
     unsubscribeGame();
   });
 
-  // TODO: [REFACTOR] Extract shared availability/requirement checking functions to a utils file
-  // - Move getAvailableItems, meetsRequirements, canAfford to shared utils
-  // - Update Buildings.ts, Research.ts, Items.ts to use shared functions
-  // - Eliminates code duplication across all production systems
-  // Priority: Medium (improves maintainability, no functional impact)
-
-  function startCrafting(recipe: any) {
-    if (!canCraftRecipe(recipe, resourcesMap)) {
-      console.log('Cannot craft:', recipe.name);
+  function startCrafting(item: any) {
+    if (!canCraftItem(item, itemMap)) {
+      console.log('Cannot craft:', item.name);
       return;
     }
 
     gameState.update((state) => {
-      // Deduct resources (reuse pattern from BuildingMenu)
-      const newResources = state.resources.map((resource) => {
-        const cost = recipe.inputs[resource.id] || 0;
-        const newAmount = Math.max(0, resource.amount - cost);
-        return { ...resource, amount: newAmount };
+      // Deduct items (reuse pattern from BuildingMenu)
+      const newItems = state.item.map((stateItem) => {
+        const cost = item.craftingCost?.[stateItem.id] || 0;
+        const newAmount = Math.max(0, stateItem.amount - cost);
+        return { ...stateItem, amount: newAmount };
       });
 
-      // Add to crafting queue
+      // Add to crafting queue with new interface
       const newCraftingInProgress = {
-        recipe,
-        turnsRemaining: recipe.craftingTime,
+        item: item,
+        quantity: 1,
+        turnsRemaining: item.craftingTime || 1,
         startedAt: state.turn
       };
 
       return {
         ...state,
-        resources: newResources,
+        item: newItems,
         craftingQueue: [...(state.craftingQueue || []), newCraftingInProgress]
       };
     });
@@ -129,13 +107,13 @@
     if (queueIndex < 0 || queueIndex >= craftingQueue.length) return;
 
     const canceledItem = craftingQueue[queueIndex];
-    const recipe = canceledItem.recipe;
+    const item = canceledItem.item;
 
     gameState.update((state) => {
-      // Refund resources (reuse pattern from BuildingMenu)
-      const refundedResources = state.resources.map((resource) => {
-        const refund = recipe.inputs[resource.id] || 0;
-        return { ...resource, amount: resource.amount + refund };
+      // Refund items (reuse pattern from BuildingMenu)
+      const refundedItems = state.item.map((stateItem) => {
+        const refund = item.craftingCost?.[stateItem.id] || 0;
+        return { ...stateItem, amount: stateItem.amount + refund };
       });
 
       // Remove from queue
@@ -144,7 +122,7 @@
 
       return {
         ...state,
-        resources: refundedResources,
+        item: refundedItems,
         craftingQueue: newQueue
       };
     });
@@ -184,11 +162,6 @@
       .replace(/([A-Z])/g, ' $1')
       .replace(/^./, (match) => match.toUpperCase())
       .trim();
-  }
-
-  function getItemName(itemId: string): string {
-    const item = ITEMS_DATABASE.find((i) => i.id === itemId);
-    return item ? item.name : itemId;
   }
 </script>
 
@@ -238,7 +211,7 @@
               {#if item}
                 <div
                   class="inventory-item"
-                  style="--rarity-color: {getItemRarityColor(item.rarity)}"
+                  style="--rarity-color: {getItemRarityColor(item.rarity ?? 'common')}"
                 >
                   <span class="item-icon">{getItemIcon(itemId)}</span>
                   <div class="item-details">
@@ -258,20 +231,20 @@
       {/if}
     </div>
 
-    <!-- Crafting Queue (reuse pattern from BuildingMenu) -->
+    <!-- Crafting Queue -->
     <div class="crafting-queue">
       <h3>⚒️ Crafting Queue</h3>
       {#if craftingQueue.length > 0}
         <div class="queue-list">
-          {#each craftingQueue as item, index}
+          {#each craftingQueue as queueItem, index}
             <div class="queue-item">
               <span class="queue-icon">🔨</span>
-              <span class="queue-name">{item.recipe.name}</span>
-              <span class="queue-progress">{item.turnsRemaining} days remaining</span>
+              <span class="queue-name">{queueItem.item.name}</span>
+              <span class="queue-progress">{queueItem.turnsRemaining} days remaining</span>
               <button
                 class="cancel-btn"
                 on:click={() => cancelCrafting(index)}
-                title="Cancel crafting and refund resources"
+                title="Cancel crafting and refund materials"
               >
                 ❌
               </button>
@@ -285,90 +258,113 @@
       {/if}
     </div>
 
-    <!-- Available Recipes (reuse pattern from BuildingMenu) -->
+    <!-- Available Craftable Items -->
     <div class="available-recipes">
-      <h3>📋 Available Recipes</h3>
+      <h3>📋 Available Items to Craft</h3>
       <div class="recipes-grid">
-        {#each filteredRecipes as recipe}
-          <div class="recipe-card" class:affordable={canCraftRecipe(recipe, resourcesMap)}>
+        {#each availableCraftableItems as item}
+          <div class="recipe-card" class:affordable={canCraftItem(item, itemMap)}>
             <div class="recipe-card-header">
-              <span class="recipe-icon">🔨</span>
-              <h4>{recipe.name}</h4>
+              <span class="recipe-icon">{getItemIcon(item.id)}</span>
+              <h4>{item.name}</h4>
+              <div
+                class="item-rarity"
+                style="--rarity-color: {getItemRarityColor(item.rarity || 'common')}"
+              >
+                {item.rarity}
+              </div>
             </div>
 
-            <p class="recipe-description">{recipe.description}</p>
+            <p class="recipe-description">{item.description}</p>
 
             <div class="recipe-requirements">
-              <div class="craft-time">⏰ {recipe.craftingTime} days</div>
-              {#if recipe.toolLevelRequired > 0}
+              <div class="craft-time">⏰ {item.craftingTime || 1} days</div>
+              {#if item.toolLevelRequired && item.toolLevelRequired > 0}
                 <div class="tool-level-required">
-                  🔧 Requires Tool Level {recipe.toolLevelRequired}
+                  🔧 Requires Tool Level {item.toolLevelRequired}
                 </div>
               {/if}
-              {#if recipe.buildingRequired}
-                <div class="building-required">🏗️ Requires {recipe.buildingRequired}</div>
+              {#if item.buildingRequired}
+                <div class="building-required">🏗️ Requires {item.buildingRequired}</div>
               {/if}
-              {#if recipe.researchRequired}
-                <div class="research-required">📚 Requires {recipe.researchRequired}</div>
+              {#if item.researchRequired}
+                <div class="research-required">📚 Requires {item.researchRequired}</div>
+              {/if}
+              {#if item.populationRequired && item.populationRequired > 0}
+                <div class="population-required">
+                  👥 Requires {item.populationRequired} population
+                </div>
               {/if}
             </div>
 
             <div class="recipe-inputs">
               <h5>Materials:</h5>
               <div class="inputs-list">
-                {#each Object.entries(recipe.inputs) as [resourceId, amount]}
-                  <div
-                    class="input-item"
-                    class:insufficient={getResourceAmount(resourceId) < (amount as number)}
-                  >
-                    <span class="input-icon">{getResourceIcon(resourceId)}</span>
-                    <span class="input-amount">{amount}</span>
-                    <span class="input-resource">{resourceId}</span>
-                    <span class="input-available">({getResourceAmount(resourceId)} available)</span>
-                  </div>
-                {/each}
+                {#if item.craftingCost && Object.keys(item.craftingCost).length > 0}
+                  {#each Object.entries(item.craftingCost) as [itemId, amount]}
+                    <div class="input-item" class:insufficient={getItemAmount(itemId) < amount}>
+                      <span class="input-icon">{getItemIcon(itemId)}</span>
+                      <span class="input-amount">{amount}</span>
+                      <span class="input-name">{itemId}</span>
+                      <span class="input-available">({getItemAmount(itemId)} available)</span>
+                    </div>
+                  {/each}
+                {:else}
+                  <div class="no-materials">No materials required (gathered item)</div>
+                {/if}
               </div>
             </div>
 
             <div class="recipe-outputs">
               <h5>Creates:</h5>
               <div class="outputs-list">
-                {#each Object.entries(recipe.outputs) as [itemId, amount]}
-                  {@const item = ITEMS_DATABASE.find((i) => i.id === itemId)}
-                  {#if item}
-                    <div
-                      class="output-item"
-                      style="--rarity-color: {getItemRarityColor(item.rarity)}"
-                    >
-                      <span class="output-icon">{getItemIcon(itemId)}</span>
-                      <span class="output-amount">{amount}x</span>
-                      <span class="output-name">{item.name}</span>
-                      <span class="output-rarity">({item.rarity})</span>
-                    </div>
+                <div
+                  class="output-item"
+                  style="--rarity-color: {getItemRarityColor(item.rarity || 'common')}"
+                >
+                  <span class="output-icon">{getItemIcon(item.id)}</span>
+                  <span class="output-amount">1x</span>
+                  <span class="output-name">{item.name}</span>
+                  <span class="output-rarity">({item.rarity})</span>
+                </div>
 
-                    <!-- Show item effects -->
-                    {#if Object.keys(item.effects).length > 0}
-                      <div class="item-effects">
-                        {#each Object.entries(item.effects) as [effect, value]}
-                          <div class="effect-item">
-                            +{value}
-                            {formatEffectName(effect)}
-                          </div>
-                        {/each}
+                <!-- Show item effects -->
+                {#if item.effects && Object.keys(item.effects).length > 0}
+                  <div class="item-effects">
+                    {#each Object.entries(item.effects) as [effect, value]}
+                      <div class="effect-item">
+                        +{value}
+                        {formatEffectName(effect)}
                       </div>
-                    {/if}
-                  {/if}
-                {/each}
+                    {/each}
+                  </div>
+                {/if}
               </div>
             </div>
 
             <button
               class="craft-btn"
-              class:disabled={!canCraftRecipe(recipe, resourcesMap)}
-              on:click={() => startCrafting(recipe)}
-              disabled={!canCraftRecipe(recipe, resourcesMap)}
+              class:disabled={!canCraftItem(item, itemMap) ||
+                !canCraftWithRequirements(
+                  item,
+                  currentToolLevel,
+                  availableBuildings,
+                  currentPopulation,
+                  completedResearch
+                )}
+              on:click={() => startCrafting(item)}
+              disabled={!canCraftItem(item, itemMap) ||
+                !canCraftWithRequirements(
+                  item,
+                  currentToolLevel,
+                  availableBuildings,
+                  currentPopulation,
+                  completedResearch
+                )}
             >
-              {#if !canCraftRecipe(recipe, resourcesMap)}
+              {#if !canCraftWithRequirements(item, currentToolLevel, availableBuildings, currentPopulation, completedResearch)}
+                Requirements Not Met
+              {:else if !canCraftItem(item, itemMap)}
                 Insufficient Materials
               {:else}
                 Begin Crafting
@@ -600,7 +596,7 @@
 
   .recipes-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(375px, 1fr));
     gap: 20px;
   }
 
@@ -610,6 +606,7 @@
     padding: 20px;
     border-left: 4px solid #555;
     transition: all 0.3s ease;
+    box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.18);
   }
 
   .recipe-card.affordable {
@@ -621,6 +618,7 @@
     align-items: center;
     gap: 10px;
     margin-bottom: 10px;
+    position: relative;
   }
 
   .recipe-icon {
@@ -631,6 +629,17 @@
     color: #ff9800;
     margin: 0;
     font-size: 1.2em;
+    flex: 1;
+  }
+
+  .item-rarity {
+    background: var(--rarity-color);
+    color: #000;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.8em;
+    font-weight: bold;
+    text-transform: capitalize;
   }
 
   .recipe-description {
@@ -684,6 +693,12 @@
     color: #888;
     font-size: 0.8em;
     margin-left: auto;
+  }
+
+  .no-materials {
+    color: #888;
+    font-style: italic;
+    font-size: 0.9em;
   }
 
   .output-item {
