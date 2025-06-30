@@ -9,16 +9,16 @@ Fantasia4x's core gameplay loop is built around **immediate procedural variety**
 ### **Race Generation System**
 ```
 1. Roll Random Stat Range:
-   - Min: Random(-10 to -1)
-   - Max: Random(0 to 10)
+   - Min: -10 to -1
+   - Max: 0 to 10
    
 2. Roll Each Stat Within Range:
-   - Strength: Random(min, max)
-   - Dexterity: Random(min, max)
-   - Intelligence: Random(min, max)
-   - Wisdom: Random(min, max)
-   - Charisma: Random(min, max)
-   - Constitution: Random(min, max)
+   - Strength: 10(min, max)
+   - Dexterity: 10(min, max)
+   - Intelligence: 10(min, max)
+   - Wisdom: 10(min, max)
+   - Charisma: 10(min, max)
+   - Constitution: 10(min, max)
 
 3. Generate Conditional Traits:
    - High-stat traits (e.g., "Extremely Muscular" requires 15+ Strength)
