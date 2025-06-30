@@ -6,8 +6,8 @@
     canAffordBuilding,
     canBuildWithPopulation
   } from '$lib/game/core/Buildings';
+  import { getResourceIcon, getResourceColor } from '$lib/game/core/Resources';
   import { onDestroy } from 'svelte';
-  import CancelButton from '$lib/components/UI/CancelButton.svelte';
   import CurrentTask from '../UI/CurrentTask.svelte';
   import type { BuildingInProgress } from '$lib/game/core/types';
 
@@ -159,6 +159,13 @@
         return '🏗️';
     }
   }
+
+  function formatEffectName(camelCaseStr: string): string {
+    return camelCaseStr
+      .replace(/([A-Z])/g, ' $1') // Add space before capital letters
+      .replace(/^./, (match) => match.toUpperCase()) // Capitalize first letter
+      .trim(); // Remove any leading/trailing spaces
+  }
 </script>
 
 <div class="building-menu">
@@ -220,17 +227,17 @@
             <p class="building-description">{building.description}</p>
 
             <div class="building-requirements">
-              <div class="build-time">⏰ {building.buildTime} days</div>
+              <div class="build-time">⏳ {building.buildTime} days</div>
               {#if building.populationRequired > 0}
                 <div class="pop-required">👥 Requires {building.populationRequired} population</div>
               {/if}
             </div>
-
             <div class="building-costs">
               <h5>Cost:</h5>
               <div class="cost-list">
                 {#each Object.entries(building.cost) as [resourceId, cost]}
                   <div class="cost-item" class:insufficient={getResourceAmount(resourceId) < cost}>
+                    <span class="cost-icon">{getResourceIcon(resourceId)}</span>
                     <span class="cost-amount">{cost}</span>
                     <span class="cost-resource">{resourceId}</span>
                     <span class="cost-available">({getResourceAmount(resourceId)} available)</span>
@@ -247,11 +254,19 @@
                     {#if effect === 'maxPopulation'}
                       +{value} population capacity
                     {:else if effect.includes('Production')}
-                      +{value} {effect.replace('Production', '')} per day
+                      +{value} {formatEffectName(effect.replace('Production', ''))} per day
                     {:else if effect.includes('Multiplier')}
-                      +{Math.round((value - 1) * 100)}% {effect.replace('Multiplier', '')}
+                      +{Math.round((value - 1) * 100)}% {formatEffectName(
+                        effect.replace('Multiplier', '')
+                      )}
+                    {:else if effect.includes('Level')}
+                      +{value} {formatEffectName(effect.replace('Level', ''))} level
+                    {:else if effect.includes('Bonus')}
+                      +{Math.round((value - 1) * 100)}% {formatEffectName(
+                        effect.replace('Bonus', '')
+                      )} bonus
                     {:else}
-                      +{value} {effect}
+                      +{value} {formatEffectName(effect)}
                     {/if}
                   </div>
                 {/each}

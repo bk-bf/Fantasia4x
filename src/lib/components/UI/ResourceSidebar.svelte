@@ -1,6 +1,7 @@
 <script lang="ts">
   import { currentResources, currentRace, currentKnowledge } from '$lib/stores/gameState';
   import { onDestroy } from 'svelte';
+  import { getResourceIcon, getResourceColor } from '$lib/game/core/Resources';
 
   let resources: any[] = [];
   let race: any = null;
@@ -41,32 +42,6 @@
     unsubscribeRace();
     unsubscribeKnowledge();
   });
-
-  function getResourceIcon(resourceId: string): string {
-    switch (resourceId) {
-      case 'food':
-        return '🌾';
-      case 'wood':
-        return '🪵';
-      case 'stone':
-        return '🪨';
-      default:
-        return '📦';
-    }
-  }
-
-  function getResourceColor(resourceId: string): string {
-    switch (resourceId) {
-      case 'food':
-        return '#FFA726';
-      case 'wood':
-        return '#8BC34A';
-      case 'stone':
-        return '#9E9E9E';
-      default:
-        return '#4CAF50';
-    }
-  }
 </script>
 
 <div class="resource-sidebar">

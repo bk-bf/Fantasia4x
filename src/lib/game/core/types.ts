@@ -119,8 +119,10 @@ export interface Resource {
   id: string;
   name: string;
   amount: number;
-  type: 'basic' | 'magical' | 'legendary';
-  properties?: Record<string, unknown>;
+  type: string;
+  emoji?: string;
+  color?: string;
+  properties?: Record<string, any>; // Additional properties for magical resources
 }
 
 export interface Location {

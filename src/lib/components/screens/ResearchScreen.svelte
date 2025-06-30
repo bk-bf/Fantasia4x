@@ -213,7 +213,7 @@
 
             <div class="research-requirements">
               <div class="research-cost">🧠 {research.knowledgeCost} Knowledge</div>
-              <div class="research-time">⏰ {research.researchTime} turns</div>
+              <div class="research-time">⏳ {research.researchTime} turns</div>
 
               {#if research.statRequirements}
                 <div class="stat-requirements">
