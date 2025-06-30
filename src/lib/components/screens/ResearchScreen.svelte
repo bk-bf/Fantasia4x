@@ -30,54 +30,6 @@
     return { ...itemMap };
   };
 
-  $: allResearch = RESEARCH_DATABASE.filter((research) => {
-    // Check prerequisites
-    const hasPrereqs = research.prerequisites.every((prereq) => completedResearch.includes(prereq));
-    if (!hasPrereqs) return false;
-
-    // Check stat requirements
-    if (research.statRequirements && race) {
-      const { minStats, maxStats } = research.statRequirements;
-
-      if (minStats) {
-        const meetsMin = Object.entries(minStats).every(
-          ([stat, min]) => race.baseStats[stat as keyof typeof race.baseStats] >= min
-        );
-        if (!meetsMin) return false;
-      }
-
-      if (maxStats) {
-        const meetsMax = Object.entries(maxStats).every(
-          ([stat, max]) => race.baseStats[stat as keyof typeof race.baseStats] <= max
-        );
-        if (!meetsMax) return false;
-      }
-    }
-
-    return true;
-  });
-  // Helper function to check if research is completed
-  function isResearchCompleted(researchId: string): boolean {
-    return completedResearch.includes(researchId);
-  }
-
-  // Helper function to check if research can be started
-  function canStartResearch(research: any): boolean {
-    if (isResearchCompleted(research.id)) return false;
-    if (currentResearch) return false;
-
-    const canAfford = knowledge >= research.knowledgeCost;
-    const hasLoreBypass = canUnlockWithLore(research.id, discoveredLore);
-
-    let hasItems = true;
-    if (research.itemRequirement) {
-      hasItems = Object.entries(research.itemRequirement).every(
-        ([itemId, amount]) => getitemAmount(itemId) >= (amount as number)
-      );
-    }
-
-    return (canAfford || hasLoreBypass) && (hasItems || hasLoreBypass);
-  }
   const unsubscribeRace = currentRace.subscribe((value) => {
     race = value;
   });
@@ -266,121 +218,157 @@
         </div>
       </div>
     </div>
-  </div>
-  <div class="available-research">
-    <h3>🔬 Research Projects</h3>
-    <div class="research-grid">
-      {#each allResearch as research}
-        {@const isCompleted = isResearchCompleted(research.id)}
-        <div
-          class="research-card"
-          class:completed={isCompleted}
-          style="--tier-color: {getTierColor(research.tier)}"
-        >
-          <div class="research-card-header">
-            <span class="research-icon">{getCategoryIcon(research.category)}</span>
-            <h4>{research.name}</h4>
-            <div class="research-tier">Tier {research.tier}</div>
-            {#if isCompleted}
-              <div class="completed-badge">✓ Researched</div>
-            {/if}
-          </div>
 
-          <p class="research-description">{research.description}</p>
+    <!-- Current Research -->
+    {#if currentResearch}
+      <CurrentTask
+        title="🔬 Current Research"
+        icon={getCategoryIcon(currentResearch.category)}
+        name={currentResearch.name}
+        description={currentResearch.description}
+        progress={(currentResearch.currentProgress || 0) / currentResearch.researchTime}
+        timeRemaining="{currentResearch.researchTime -
+          (currentResearch.currentProgress || 0)} turns remaining"
+        onCancel={cancelCurrentResearch}
+        cancelTitle="Cancel research and refund knowledge"
+        accentColor="#2196f3"
+      />
+    {:else}
+      <div class="empty-queue">No research in progress. Select a project below to begin.</div>
+    {/if}
 
-          <div class="research-requirements">
-            <div class="research-cost">💡 {research.knowledgeCost} Knowledge</div>
-            <div class="research-time">⏰ {research.researchTime} turns</div>
+    <!-- Discovered Lore -->
+    {#if discoveredLore.length > 0}
+      <div class="discovered-lore">
+        <h3>📜 Discovered Lore</h3>
+        <div class="lore-grid">
+          {#each discoveredLore as lore}
+            <div class="lore-item">
+              <span class="lore-icon">
+                {#if lore.type === 'scroll'}📜
+                {:else if lore.type === 'tome'}📖
+                {:else if lore.type === 'artifact'}🏺
+                {:else if lore.type === 'manual'}📋
+                {:else}🔍{/if}
+              </span>
+              <div class="lore-details">
+                <h4>{lore.name}</h4>
+                <p>{lore.description}</p>
+                <small>Unlocks: {lore.researchUnlocks.join(', ')}</small>
+              </div>
+            </div>
+          {/each}
+        </div>
+      </div>
+    {/if}
 
-            <!-- item toolRequirement display -->
-            {#if research.toolRequirement}
-              <div class="item-requirements">
-                📦 Items needed:
-                {#each Object.entries(research.toolRequirement) as [itemId, amount]}
-                  <div
-                    class="item-req-item"
-                    class:insufficient={!isCompleted && getitemAmount(itemId) < Number(amount)}
-                  >
-                    {getItemIcon(itemId)}
-                    {amount}
-                    {itemId}
-                    {#if !isCompleted}
+    <!-- Available Research -->
+    <div class="available-research">
+      <h3>🔬 Available Research Projects</h3>
+      <div class="research-grid">
+        {#each availableResearch as research}
+          <div class="research-card" style="--tier-color: {getTierColor(research.tier)}">
+            <div class="research-card-header">
+              <span class="research-icon">{getCategoryIcon(research.category)}</span>
+              <h4>{research.name}</h4>
+              <div class="research-tier">Tier {research.tier}</div>
+            </div>
+
+            <p class="research-description">{research.description}</p>
+
+            <div class="research-requirements">
+              <div class="research-cost">💡 {research.knowledgeCost} Knowledge</div>
+              <div class="research-time">⏰ {research.researchTime} turns</div>
+
+              <!-- item requirements display -->
+              {#if research.itemRequirement}
+                <div class="item-requirements">
+                  📦 item needed:
+                  {#each Object.entries(research.itemRequirement) as [itemId, amount]}
+                    <div
+                      class="item-req-item"
+                      class:insufficient={getitemAmount(itemId) < (amount as number)}
+                    >
+                      {getItemIcon(itemId)}
+                      {amount}
+                      {itemId}
                       ({getitemAmount(itemId)} available)
-                    {/if}
-                  </div>
-                {/each}
-              </div>
-            {/if}
-
-            {#if research.populationRequired}
-              <div class="pop-requirements">
-                👥 Requires: {research.populationRequired} population
-              </div>
-            {/if}
-
-            {#if research.statRequirements}
-              <div class="stat-requirements">
-                📊 Requires: {formatStatRequirement(research.statRequirements)}
-              </div>
-            {/if}
-
-            {#if research.prerequisites.length > 0}
-              <div class="prerequisites">
-                🔗 Requires: {research.prerequisites.join(', ')}
-              </div>
-            {/if}
-          </div>
-
-          <div class="research-unlocks">
-            <h5>Unlocks:</h5>
-            <div class="unlocks-list">
-              {#if research.unlocks.toolLevel}
-                <div class="unlock-item">⚒️ Tool Level {research.unlocks.toolLevel}</div>
-              {/if}
-              {#if research.unlocks.buildingLevel}
-                <div class="unlock-item">🏗️ Building Level {research.unlocks.buildingLevel}</div>
-              {/if}
-              {#if research.unlocks.buildings}
-                <div class="unlock-item">
-                  🏠 Buildings: {research.unlocks.buildings
-                    .map((id: string) => getBuildingName(id))
-                    .join(', ')}
+                    </div>
+                  {/each}
                 </div>
               {/if}
-              {#if research.unlocks.ability}
-                <div class="unlock-item">✨ Ability: {research.unlocks.ability.join(', ')}</div>
+
+              {#if research.populationRequired}
+                <div class="pop-requirements">
+                  👥 Requires: {research.populationRequired} population
+                </div>
               {/if}
-              {#if research.unlocks.effects}
-                {#each Object.entries(research.unlocks.effects) as [effect, value]}
-                  <div class="unlock-item">✨ {effect}: +{value}</div>
-                {/each}
+
+              {#if research.statRequirements}
+                <div class="stat-requirements">
+                  📊 Requires: {formatStatRequirement(research.statRequirements)}
+                </div>
+              {/if}
+
+              {#if research.prerequisites.length > 0}
+                <div class="prerequisites">
+                  🔗 Requires: {research.prerequisites.join(', ')}
+                </div>
               {/if}
             </div>
-          </div>
 
-          <button
-            class="research-btn"
-            class:completed={isCompleted}
-            class:affordable={!isCompleted && knowledge >= research.knowledgeCost}
-            class:lore-bypass={!isCompleted && canUnlockWithLore(research.id, discoveredLore)}
-            class:disabled={!canStartResearch(research)}
-            on:click={() => !isCompleted && startResearch(research)}
-            disabled={!canStartResearch(research)}
-          >
-            {#if isCompleted}
-              ✓ Researched
-            {:else if currentResearch}
-              Research in Progress
-            {:else if canUnlockWithLore(research.id, discoveredLore)}
-              Unlock with Lore
-            {:else if knowledge >= research.knowledgeCost}
-              Begin Research
-            {:else}
-              Insufficient Knowledge
-            {/if}
-          </button>
-        </div>
-      {/each}
+            <div class="research-unlocks">
+              <h5>Unlocks:</h5>
+              <div class="unlocks-list">
+                {#if research.unlocks.toolLevel}
+                  <div class="unlock-item">⚒️ Tool Level {research.unlocks.toolLevel}</div>
+                {/if}
+                {#if research.unlocks.buildingLevel}
+                  <div class="unlock-item">🏗️ Building Level {research.unlocks.buildingLevel}</div>
+                {/if}
+                {#if research.unlocks.buildings}
+                  <div class="unlock-item">
+                    🏠 Buildings: {research.unlocks.buildings
+                      .map((id: string) => getBuildingName(id))
+                      .join(', ')}
+                  </div>
+                {/if}
+                {#if research.unlocks.screens}
+                  <div class="unlock-item">✨ Abiltiy: {research.unlocks.screens.join(', ')}</div>
+                {/if}
+                {#if research.unlocks.effects}
+                  {#each Object.entries(research.unlocks.effects) as [effect, value]}
+                    <div class="unlock-item">✨ {effect}: +{value}</div>
+                  {/each}
+                {/if}
+              </div>
+            </div>
+
+            <button
+              class="research-btn"
+              class:affordable={knowledge >= research.knowledgeCost}
+              class:lore-bypass={canUnlockWithLore(research.id, discoveredLore)}
+              class:disabled={!currentResearch &&
+                knowledge < research.knowledgeCost &&
+                !canUnlockWithLore(research.id, discoveredLore)}
+              on:click={() => startResearch(research)}
+              disabled={currentResearch ||
+                (knowledge < research.knowledgeCost &&
+                  !canUnlockWithLore(research.id, discoveredLore))}
+            >
+              {#if currentResearch}
+                Research in Progress
+              {:else if canUnlockWithLore(research.id, discoveredLore)}
+                Unlock with Lore
+              {:else if knowledge >= research.knowledgeCost}
+                Begin Research
+              {:else}
+                Insufficient Knowledge
+              {/if}
+            </button>
+          </div>
+        {/each}
+      </div>
     </div>
   </div>
 </div>
