@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { gameState, currentRace } from '$lib/stores/gameState';
+  import { gameState, currentResources, currentRace } from '$lib/stores/gameState';
   import { uiState } from '$lib/stores/uiState';
   import {
     getAvailableResearch,
@@ -10,6 +10,7 @@
   import CancelButton from '$lib/components/UI/CancelButton.svelte';
   import CurrentTask from '$lib/components/UI/CurrentTask.svelte';
   import { AVAILABLE_BUILDINGS } from '$lib/game/core/Buildings';
+  import { getResourceIcon, getResourceColor } from '$lib/game/core/Resources'; // Add this import
 
   let race: any = null;
   let knowledge = 0;
@@ -18,9 +19,27 @@
   let completedResearch: string[] = [];
   let currentResearch: any = null;
   let discoveredLore: any[] = [];
+  let resourcesMap: Record<string, number> = {}; // Add this
+
+  // Add the resource fetching methods from BuildingMenu
+  $: getResourceAmount = (resourceId: string): number => {
+    return resourcesMap[resourceId] || 0;
+  };
+
+  $: getResourcesObject = (): Record<string, number> => {
+    return { ...resourcesMap };
+  };
 
   const unsubscribeRace = currentRace.subscribe((value) => {
     race = value;
+  });
+
+  // Add the resources subscription from BuildingMenu
+  const unsubscribeResources = currentResources.subscribe((resources) => {
+    resourcesMap = {};
+    resources.forEach((resource) => {
+      resourcesMap[resource.id] = Math.floor(resource.amount);
+    });
   });
 
   const unsubscribeGame = gameState.subscribe((state) => {
@@ -30,13 +49,42 @@
     currentResearch = state.currentResearch || null;
     discoveredLore = state.discoveredLore || [];
 
+    // Gather current stats from race
+    const currentStats = state.race?.baseStats || {};
+
+    // Gather current population
+    const currentPopulation = state.race?.population || 0;
+
+    // Gather current resources as a map
+    const currentResources: Record<string, number> = {};
+    (state.resources || []).forEach((resource) => {
+      currentResources[resource.id] = resource.amount;
+    });
+
+    // Gather available buildings
+    const availableBuildings = Object.keys(state.buildingCounts || {}).filter(
+      (buildingId) => (state.buildingCounts || {})[buildingId] > 0
+    );
+
+    // Gather available tools - placeholder implementation
+    const availableTools: any[] = []; // TODO: Replace with actual tools when implemented
+
     if (race) {
-      availableResearch = getAvailableResearch(completedResearch, race.baseStats, discoveredLore);
+      availableResearch = getAvailableResearch(
+        completedResearch,
+        currentStats,
+        currentPopulation,
+        currentResources,
+        availableBuildings,
+        availableTools,
+        discoveredLore
+      );
     }
   });
 
   onDestroy(() => {
     unsubscribeRace();
+    unsubscribeResources(); // Add this cleanup
     unsubscribeGame();
   });
 
@@ -44,7 +92,16 @@
     const canAfford = knowledge >= research.knowledgeCost;
     const hasLoreBypass = canUnlockWithLore(research.id, discoveredLore);
 
+    // Check resource requirements
+    let hasResources = true;
+    if (research.resourceRequirement) {
+      hasResources = Object.entries(research.resourceRequirement).every(
+        ([resourceId, amount]) => getResourceAmount(resourceId) >= (amount as number)
+      );
+    }
+
     if (!canAfford && !hasLoreBypass) return;
+    if (!hasResources && !hasLoreBypass) return;
 
     gameState.update((state) => {
       const newState = { ...state };
@@ -52,6 +109,14 @@
       // Deduct knowledge cost (unless bypassed with lore)
       if (!hasLoreBypass) {
         newState.knowledge -= research.knowledgeCost;
+
+        // NEW: Deduct resource costs
+        if (research.resourceRequirement) {
+          newState.resources = newState.resources.map((resource) => {
+            const cost = research.resourceRequirement[resource.id] || 0;
+            return { ...resource, amount: resource.amount - cost };
+          });
+        }
       }
 
       // Start research
@@ -212,8 +277,32 @@
             <p class="research-description">{research.description}</p>
 
             <div class="research-requirements">
-              <div class="research-cost">🧠 {research.knowledgeCost} Knowledge</div>
-              <div class="research-time">⏳ {research.researchTime} turns</div>
+              <div class="research-cost">💡 {research.knowledgeCost} Knowledge</div>
+              <div class="research-time">⏰ {research.researchTime} turns</div>
+
+              <!-- Resource requirements display -->
+              {#if research.resourceRequirement}
+                <div class="resource-requirements">
+                  📦 Resources needed:
+                  {#each Object.entries(research.resourceRequirement) as [resourceId, amount]}
+                    <div
+                      class="resource-req-item"
+                      class:insufficient={getResourceAmount(resourceId) < (amount as number)}
+                    >
+                      {getResourceIcon(resourceId)}
+                      {amount}
+                      {resourceId}
+                      ({getResourceAmount(resourceId)} available)
+                    </div>
+                  {/each}
+                </div>
+              {/if}
+
+              {#if research.populationRequired}
+                <div class="pop-requirements">
+                  👥 Requires: {research.populationRequired} population
+                </div>
+              {/if}
 
               {#if research.statRequirements}
                 <div class="stat-requirements">
@@ -287,7 +376,7 @@
 <style>
   .research-screen {
     padding: 20px;
-    background: #1a1a1a;
+    background: #000000;
     color: #e0e0e0;
     font-family: 'Courier New', monospace;
     height: 100%;
@@ -307,7 +396,7 @@
     top: 0;
     right: 0;
     padding: 8px 16px;
-    background: #333;
+    background: #000000;
     border: 1px solid #9c27b0;
     color: #9c27b0;
     border-radius: 4px;
@@ -341,7 +430,7 @@
   }
 
   .knowledge-status {
-    background: #2a2a2a;
+    background: #0c0c0c;
     border-radius: 8px;
     padding: 20px;
     border-left: 4px solid #9c27b0;
@@ -379,7 +468,7 @@
     text-align: center;
     color: #888;
     font-style: italic;
-    background: #333;
+    background: #000000;
     border-radius: 4px;
     border: 2px dashed #555;
     margin-bottom: 20px;
@@ -423,7 +512,7 @@
   }
 
   .discovered-lore {
-    background: #2a2a2a;
+    background: #000000;
     border-radius: 8px;
     padding: 20px;
     border-left: 4px solid #ff9800;
@@ -444,7 +533,7 @@
     display: flex;
     gap: 10px;
     padding: 10px;
-    background: #333;
+    background: #0c0c0c;
     border-radius: 4px;
   }
 
@@ -482,7 +571,7 @@
   }
 
   .research-card {
-    background: #2a2a2a;
+    background: #0c0c0c;
     max-width: 375.5px; /* Keep this for safety */
     border-radius: 8px;
     padding: 20px;
@@ -607,7 +696,7 @@
   }
 
   .research-screen::-webkit-scrollbar-track {
-    background: #1a1a1a;
+    background: #000000;
   }
 
   .research-screen::-webkit-scrollbar-thumb {

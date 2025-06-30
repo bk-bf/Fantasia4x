@@ -1,21 +1,97 @@
-// src/lib/game/core/types.ts
 export interface GameState {
-  turn: number;
-  race: Race;
-  resources: Resource[];
-  heroes: Hero[];
-  knowledge: number;
-  worldMap: WorldTile[][];
-  discoveredLocations: Location[];
-  buildingCounts: Record<string, number>; // Replace buildings: Building[]
-  currentBuilding: BuildingInProgress[];
-  maxPopulation: number;
-  availableResearch: string[]; // Research IDs player can start
-  completedResearch: string[]; // Research IDs already finished
-  currentResearch?: ResearchProject; // Currently researching
-  discoveredLore: LoreItem[]; // Found lore items
-  knowledgeGeneration: number; // Per-turn knowledge gain
+	turn: number;
+	race: Race;
+	resources: Resource[];
+	heroes: Hero[];
+	knowledge: number;
+	worldMap: WorldTile[][];
+	discoveredLocations: Location[];
+	buildingCounts: Record<string, number>; // Replace buildings: Building[]
+	buildingQueue: BuildingInProgress[];
+	maxPopulation: number;
+	availableResearch: string[]; // Research IDs player can start
+	completedResearch: string[]; // Research IDs already finished
+	currentResearch?: ResearchProject; // Currently researching
+	discoveredLore: LoreItem[]; // Found lore items
+	knowledgeGeneration: number; // Per-turn knowledge gain
+	_woodBonus?: number;
+	_stoneBonus?: number;
+	inventory: Record<string, number>; // itemId -> quantity (unified for all item types)
+	equippedItems: {
+		weapon: string | null;
+		head: string | null;
+		chest: string | null;
+		legs: string | null;
+		feet: string | null;
+		hands: string | null;
+	};
+	craftingQueue: CraftingInProgress[];
+	currentToolLevel: number;
 }
+
+// Fixed: Remove duplicate Tool interface - Item interface covers this
+export interface Item {
+  id: string;
+  name: string;
+  description: string;
+  type: 'tool' | 'weapon' | 'armor' | 'consumable' | 'material';
+  category: string; // harvesting, combat, head, chest, etc.
+  level: number;
+  rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
+  
+  // Visual
+  emoji: string;
+  color: string;
+  
+  // Durability (for tools/weapons/armor)
+  durability?: number;
+  maxDurability?: number;
+  
+  // Effects (unified for all item types)
+  effects: Record<string, number>;
+  
+  // Requirements
+  researchRequired: string | null;
+  levelRequired?: number;
+  
+  // Item-specific properties
+  weaponProperties?: {
+    damage: number;
+    attackSpeed: number;
+    range: number;
+  };
+  
+  armorProperties?: {
+    defense: number;
+    armorType: 'light' | 'medium' | 'heavy';
+    slot: 'head' | 'chest' | 'legs' | 'feet' | 'hands';
+  };
+  
+  consumableProperties?: {
+    uses: number;
+    consumeTime: number;
+  };
+}
+
+export interface CraftingRecipe {
+  id: string;
+  name: string;
+  description: string;
+  inputs: Record<string, number>;
+  outputs: Record<string, number>;
+  craftingTime: number;
+  toolLevelRequired: number;
+  buildingRequired?: string;
+  researchRequired: string | null;
+}
+
+// Added: Missing CraftingInProgress interface
+export interface CraftingInProgress {
+  recipe: CraftingRecipe;
+  turnsRemaining: number;
+  startedAt: number;
+}
+
 export interface RaceStats {
   strength: number;
   dexterity: number;
@@ -29,11 +105,12 @@ export interface Race {
   id: string;
   name: string;
   baseStats: RaceStats;
-  traits: any[]; // Changed from string[] to any[]
+  traits: any[];
   population: number;
   statVariation: string;
   implications: Record<string, string>;
 }
+
 export interface Building {
   id: string;
   name: string;
@@ -43,7 +120,7 @@ export interface Building {
   populationRequired: number;
   effects: Record<string, number>;
   category: 'housing' | 'production' | 'research' | 'military' | 'exploration' | 'social';
-  researchRequired?: string | null; // Add this field
+  researchRequired: string | null; // Fixed: removed optional
 }
 
 export interface ResearchProject {
@@ -51,35 +128,40 @@ export interface ResearchProject {
   name: string;
   description: string;
   category: 'crafting' | 'building' | 'military' | 'exploration' | 'social';
-  tier: number; // 0 = always available, 1+ = advanced
+  tier: number;
+  currentProgress?: number;
   
   // Unlock Requirements
   knowledgeCost: number;
-  prerequisites: string[]; // Other research IDs required
+  prerequisites: string[];
   
-  // Stat-based gating
+  // Resource gating
+  resourceRequirement?: Record<string, number>;
+  
+  // Existing gates
   statRequirements?: {
     minStats?: Partial<RaceStats>;
     maxStats?: Partial<RaceStats>;
   };
+  populationRequired?: number;
+  buildingRequired?: string;
+  toolRequired?: string;
   
-  // Lore item requirements (optional bypass)
+  // Lore bypass
   loreItemRequired?: string;
   canBypassWithLore: boolean;
   
-  // What this research unlocks
+  // Unlocks and timing
   unlocks: {
     toolLevel?: number;
     buildingLevel?: number;
+    armyLevel?: number;
     weaponLevel?: number;
-    buildings?: string[]; // Specific building IDs
-    ability?: string[]; // Screen access
-    effects?: Record<string, number>; // Passive bonuses
+    buildings?: string[];
+    screens?: string[]; // Fixed: was ability
+    effects?: Record<string, number>;
   };
-  
-  // Research progress
-  researchTime: number; // Turns to complete
-  currentProgress?: number;
+  researchTime: number;
 }
 
 export interface LoreItem {
@@ -87,8 +169,8 @@ export interface LoreItem {
   name: string;
   description: string;
   type: 'scroll' | 'tome' | 'artifact' | 'manual' | 'fragment';
-  researchUnlocks: string[]; // Research IDs this item can unlock
-  discoveryWeight: number; // Rarity factor
+  researchUnlocks: string[];
+  discoveryWeight: number;
 }
 
 export interface BuildingInProgress {
@@ -122,7 +204,7 @@ export interface Resource {
   type: string;
   emoji?: string;
   color?: string;
-  properties?: Record<string, any>; // Additional properties for magical resources
+  properties?: Record<string, any>;
 }
 
 export interface Location {
@@ -142,6 +224,3 @@ export interface WorldTile {
   discovered: boolean;
   ascii: string;
 }
-
-
-

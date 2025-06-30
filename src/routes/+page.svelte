@@ -4,6 +4,7 @@
   import RaceScreen from '$lib/components/screens/RaceScreen.svelte';
   import BuildingMenu from '$lib/components/screens/BuildingMenu.svelte';
   import ResearchScreen from '$lib/components/screens/ResearchScreen.svelte';
+  import CraftingScreen from '$lib/components/screens/CraftingScreen.svelte';
   import ResourceSidebar from '$lib/components/UI/ResourceSidebar.svelte';
   import GameControls from '$lib/components/UI/GameControls.svelte';
   import { uiState } from '$lib/stores/uiState';
@@ -44,7 +45,8 @@
         <BuildingMenu />
       {:else if currentScreen === 'research'}
         <ResearchScreen />
-      {/if}
+      {:else if currentScreen === 'crafting'}
+        <CraftingScreen />{/if}
     </div>
   </div>
 </div>
@@ -53,7 +55,7 @@
   .game-container {
     height: 100vh;
     width: 100vw;
-    background: #1a1a1a;
+    background: #000000;
     color: #e0e0e0;
     font-family: 'Courier New', monospace;
     display: flex;
@@ -78,7 +80,7 @@
   .sidebar-container {
     flex-shrink: 0;
     width: 300px;
-    background: #2a2a2a;
+    background: #000000;
     border-right: 2px solid #4caf50;
     overflow-y: auto;
   }
@@ -86,7 +88,7 @@
   .main-content {
     flex: 1;
     overflow: hidden;
-    background: #1a1a1a;
+    background: #000000;
     display: flex; /* Add this */
     flex-direction: column; /* Add this */
   }

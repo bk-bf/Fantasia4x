@@ -61,10 +61,9 @@
 </script>
 
 <div class="main-screen">
-  <div class="screen-header">
-    <div class="header-spacer"></div>
+  <div class="screen-header" style="justify-content: center;">
     <div class="header-content">
-      <h2>World of {raceName}</h2>
+      <h3>World of {raceName}</h3>
     </div>
   </div>
 
@@ -83,6 +82,8 @@
     <div class="view-controls">
       <button class="control-btn" on:click={() => uiState.setScreen('race')}>👑 Race</button>
       <button class="control-btn" on:click={() => uiState.setScreen('building')}>🏗️ Build</button>
+      <button class="control-btn" on:click={() => uiState.setScreen('crafting')}>⚒️ Crafting</button
+      >
       <button
         class="control-btn"
         class:disabled={!hasLibrary}
@@ -105,7 +106,7 @@
     height: 100%;
     font-family: 'Courier New', monospace;
     color: #e0e0e0;
-    background-color: #1a1a1a;
+    background-color: #000000;
   }
 
   .screen-header {
@@ -113,10 +114,27 @@
     justify-content: space-between;
     align-items: center;
     padding: 15px 20px;
-    background: linear-gradient(135deg, #2a2a2a, #1e1e1e);
+    background: linear-gradient(135deg, #000000, #1e1e1e);
     border-bottom: 2px solid #4caf50;
   }
-
+  /* For both .sidebar-header h3 and .screen-header h3 */
+  .sidebar-header h3,
+  .screen-header h3 {
+    font-size: 1.2em;
+    margin: 0;
+    font-weight: bold;
+    color: #4caf50;
+    text-align: center;
+    text-shadow: 0 0 8px rgba(76, 175, 80, 0.3);
+    line-height: 1.2;
+  }
+  .sidebar-header,
+  .screen-header {
+    background: #000000;
+    padding: 4px 8px;
+    border-bottom: 2px solid #4caf50;
+    margin: 0;
+  }
   .header-spacer {
     flex: 1;
   }
@@ -163,7 +181,7 @@
     display: flex;
     justify-content: space-between;
     padding: 15px 20px;
-    background: #2a2a2a;
+    background: #000000;
     border-top: 1px solid #444;
   }
 
@@ -174,7 +192,7 @@
 
   .control-btn {
     padding: 8px 16px;
-    background: #333;
+    background: #000000;
     border: 1px solid #555;
     color: #e0e0e0;
     border-radius: 4px;
@@ -197,7 +215,7 @@
 
   .control-btn.disabled {
     background: #222;
-    border-color: #333;
+    border-color: #000000;
     color: #666;
     cursor: not-allowed;
   }

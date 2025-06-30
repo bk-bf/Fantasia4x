@@ -2,11 +2,13 @@ import type { Resource } from './types';
 
 // Resource display data
 export const BASIC_RESOURCES: Resource[] = [
-	{ id: 'food', name: 'Food', amount: 0, type: 'basic', emoji: '🌾', color: '#FFA726' },
-	{ id: 'wood', name: 'Wood', amount: 0, type: 'basic', emoji: '🪵', color: '#8BC34A' },
-	{ id: 'stone', name: 'Stone', amount: 0, type: 'basic', emoji: '🪨', color: '#9E9E9E' },
-	{ id: 'iron', name: 'Iron', amount: 0, type: 'basic', emoji: '⛓️', color: '#4CAF50' }
+  { id: 'food', name: 'Food', amount: 0, type: 'basic', emoji: '🌾', color: '#FFA726' },
+  { id: 'wood', name: 'Wood', amount: 0, type: 'basic', emoji: '🪵', color: '#8BC34A' },
+  { id: 'stone', name: 'Stone', amount: 0, type: 'basic', emoji: '🪨', color: '#9E9E9E' },
+  { id: 'iron', name: 'Iron', amount: 0, type: 'basic', emoji: '⛓️', color: '#4CAF50' },
+  { id: 'herbs', name: 'Herbs', amount: 0, type: 'basic', emoji: '🌿', color: '#4CAF50' }
 ];
+
 
 // Helper to get display data by id
 export function getResourceDisplayData(resourceId: string): Resource | undefined {

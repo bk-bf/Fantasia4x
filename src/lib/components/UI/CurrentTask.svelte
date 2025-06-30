@@ -28,7 +28,7 @@
 
 <style>
   .current-task {
-    background: #2a2a2a;
+    background: #0c0c0c;
     border-radius: 8px;
     padding: 20px;
     border-left: 4px solid var(--accent, #ffa726);

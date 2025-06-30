@@ -122,8 +122,6 @@
 
   <div class="game-info">
     <div class="save-controls">
-      <button class="control-btn" on:click={saveGame}>💾 Save</button>
-      <button class="control-btn" on:click={loadGame}>📁 Load</button>
       <button class="control-btn danger-btn" on:click={wipeSave}>🗑️ Wipe Save</button>
     </div>
   </div>
@@ -146,7 +144,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 15px 20px;
-    background: linear-gradient(135deg, #2a2a2a, #1e1e1e);
+    background: linear-gradient(135deg, #000000, #000000);
     border-bottom: 2px solid #4caf50;
     font-family: 'Courier New', monospace;
     color: #e0e0e0;
@@ -203,7 +201,7 @@
 
   .pause-btn {
     padding: 10px 20px;
-    background: #444;
+    background: #0c0c0c;
     border: 2px solid #4caf50;
     color: #e0e0e0;
     border-radius: 6px;
@@ -214,7 +212,7 @@
   }
 
   .pause-btn:hover {
-    background: #555;
+    background: #0c0c0c;
     border-color: #4caf50;
     transform: translateY(-1px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
@@ -243,7 +241,7 @@
 
   .speed-btn {
     padding: 6px 12px;
-    background: #333;
+    background: #000000;
     border: 1px solid #555;
     color: #e0e0e0;
     border-radius: 4px;
@@ -274,7 +272,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    background: #333;
+    background: #000000;
     padding: 8px 12px;
     border-radius: 4px;
     border: 1px solid #555;

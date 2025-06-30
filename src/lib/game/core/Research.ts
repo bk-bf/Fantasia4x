@@ -1,7 +1,10 @@
 import type { ResearchProject, LoreItem, RaceStats } from './types';
 
+
+// interface can be found at src/lib/game/core/types.ts ResearchProject 
+// and possibly has to be updated with each modification of this database
 export const RESEARCH_DATABASE: ResearchProject[] = [
-  // Tier 0 - Always Available
+  // Tier 0 - Always Available (existing)
   {
     id: 'basic_metallurgy',
     name: 'Basic Metallurgy',
@@ -36,7 +39,179 @@ export const RESEARCH_DATABASE: ResearchProject[] = [
     researchTime: 12
   },
 
-  // Stat-Gated Specializations
+  // Tier 1 - Gated Research (10 new options)
+  
+  // 1. Building + Tool Locked (10% = 1 option)
+  {
+    id: 'siege_engineering',
+    name: 'Siege Engineering',
+    description: 'Develop advanced siege weapons and tactics',
+    category: 'military',
+    tier: 1,
+    knowledgeCost: 300,
+    prerequisites: ['military_organization'],
+    buildingRequired: 'military_academy',
+    toolRequired: 'siege_hammer',
+    canBypassWithLore: false,
+    unlocks: {
+      effects: { siegeBonus: 0.4 }
+    },
+    researchTime: 20
+  },
+
+  // 2-3. Building OR Tool Locked (20% = 2 options)
+  {
+    id: 'advanced_construction',
+    name: 'Advanced Construction',
+    description: 'Innovative building techniques for durability and speed',
+    category: 'building',
+    tier: 1,
+    knowledgeCost: 280,
+    prerequisites: ['construction_techniques'],
+    toolRequired: 'stone_hammer',
+    canBypassWithLore: true,
+    loreItemRequired: 'builders_codex',
+    unlocks: {
+      buildingLevel: 2,
+      buildings: ['engineering_hall']
+    },
+    researchTime: 16
+  },
+
+  {
+    id: 'navigation',
+    name: 'Navigation',
+    description: 'Improve exploration and travel efficiency',
+    category: 'exploration',
+    tier: 1,
+    knowledgeCost: 200,
+    prerequisites: ['exploration_techniques'],
+    buildingRequired: 'explorers_guild',
+    canBypassWithLore: true,
+    loreItemRequired: 'explorers_journal',
+    unlocks: {
+      effects: { explorationRange: 3 }
+    },
+    researchTime: 12
+  },
+
+  // 4-6. Population Locked (30% = 3 options)
+  {
+    id: 'guild_systems',
+    name: 'Guild Systems',
+    description: 'Organize specialized labor through guilds',
+    category: 'social',
+    tier: 1,
+    knowledgeCost: 220,
+    prerequisites: ['construction_techniques'],
+    populationRequired: 5,
+    canBypassWithLore: false,
+    unlocks: {
+      effects: { productionBonus: 0.2 }
+    },
+    researchTime: 12
+  },
+
+  {
+    id: 'military_organization',
+    name: 'Military Organization',
+    description: 'Establish professional armies and tactics',
+    category: 'military',
+    tier: 1,
+    knowledgeCost: 250,
+    prerequisites: ['construction_techniques'],
+    populationRequired: 4,
+    canBypassWithLore: false,
+    unlocks: {
+      armyLevel: 1,
+      buildings: ['military_academy']
+    },
+    researchTime: 14
+  },
+  
+ {
+  id: 'herbal_medicine',
+  name: 'Herbal Medicine',
+  description: 'Improve population health and recovery using medicinal herbs',
+  category: 'social',
+  tier: 1,
+  knowledgeCost: 180,
+  prerequisites: [],
+  populationRequired: 3,
+  resourceRequirement: { herbs: 50 }, // NEW: Resource gate
+  canBypassWithLore: false,
+  unlocks: {
+    effects: { healthBonus: 0.15 }
+  },
+  researchTime: 10
+},
+
+  // 7-10. Knowledge Locked (40% = 4 options)
+  {
+    id: 'advanced_metallurgy',
+    name: 'Advanced Metallurgy',
+    description: 'Refine steel production and unlock superior tools',
+    category: 'crafting',
+    tier: 1,
+    knowledgeCost: 300,
+    prerequisites: ['basic_metallurgy'],
+    canBypassWithLore: true,
+    loreItemRequired: 'ancient_forge_manual',
+    unlocks: {
+      toolLevel: 2,
+      buildings: ['steel_foundry']
+    },
+    researchTime: 15
+  },
+
+  {
+    id: 'alchemy',
+    name: 'Alchemy',
+    description: 'Unlock magical crafting and resource enhancement',
+    category: 'crafting',
+    tier: 1,
+    knowledgeCost: 270,
+    prerequisites: ['basic_metallurgy'],
+    canBypassWithLore: true,
+    loreItemRequired: 'arcane_tome',
+    unlocks: {
+      effects: { magicalCrafting: 1 }
+    },
+    researchTime: 18
+  },
+
+  {
+    id: 'diplomatic_mastery',
+    name: 'Diplomatic Mastery',
+    description: 'Enhance trade and alliances through diplomacy',
+    category: 'social',
+    tier: 1,
+    knowledgeCost: 210,
+    prerequisites: ['guild_systems'],
+    canBypassWithLore: false,
+    unlocks: {
+      effects: { diplomaticBonus: 0.25 }
+    },
+    researchTime: 14
+  },
+
+  {
+    id: 'advanced_scouting',
+    name: 'Advanced Scouting',
+    description: 'Improve scouting efficiency and map awareness',
+    category: 'exploration',
+    tier: 1,
+    knowledgeCost: 220,
+    prerequisites: ['exploration_techniques'],
+    canBypassWithLore: true,
+    loreItemRequired: 'explorers_journal',
+    unlocks: {
+      effects: { scoutingBonus: 0.3 }
+    },
+    researchTime: 14
+  },
+
+  // Existing Stat-Gated Options
   {
     id: 'leverage_engineering',
     name: 'Leverage Engineering',
@@ -46,7 +221,7 @@ export const RESEARCH_DATABASE: ResearchProject[] = [
     knowledgeCost: 200,
     prerequisites: ['basic_metallurgy'],
     statRequirements: {
-      maxStats: { strength: 8 } // Only available to weak races
+      maxStats: { strength: 8 }
     },
     canBypassWithLore: false,
     unlocks: {
@@ -64,7 +239,7 @@ export const RESEARCH_DATABASE: ResearchProject[] = [
     knowledgeCost: 180,
     prerequisites: ['construction_techniques'],
     statRequirements: {
-      minStats: { strength: 15 } // Only available to strong races
+      minStats: { strength: 15 }
     },
     canBypassWithLore: false,
     unlocks: {
@@ -89,6 +264,7 @@ export const RESEARCH_DATABASE: ResearchProject[] = [
     researchTime: 20
   }
 ];
+
 
 export const LORE_DATABASE: LoreItem[] = [
   {
@@ -128,33 +304,31 @@ export const LORE_DATABASE: LoreItem[] = [
   }
 ];
 
-// Research availability logic
 export function getAvailableResearch(
   completedResearch: string[],
   currentStats: RaceStats,
+  currentPopulation: number,
+  currentResources: Record<string, number>, // NEW parameter
+  availableBuildings: string[],
+  availableTools: string[],
   discoveredLore: LoreItem[]
 ): ResearchProject[] {
   return RESEARCH_DATABASE.filter(research => {
     // Already completed
     if (completedResearch.includes(research.id)) return false;
     
-    // Check prerequisites
-    const hasPrereqs = research.prerequisites.every(prereq => 
-      completedResearch.includes(prereq)
-    );
-    if (!hasPrereqs) return false;
+    // Prerequisites check
+    if (!research.prerequisites.every(prereq => completedResearch.includes(prereq))) return false;
     
-    // Check stat requirements
+    // Stat requirements
     if (research.statRequirements) {
       const { minStats, maxStats } = research.statRequirements;
-      
       if (minStats) {
         const meetsMin = Object.entries(minStats).every(([stat, min]) => 
           currentStats[stat as keyof RaceStats] >= min
         );
         if (!meetsMin) return false;
       }
-      
       if (maxStats) {
         const meetsMax = Object.entries(maxStats).every(([stat, max]) => 
           currentStats[stat as keyof RaceStats] <= max
@@ -163,9 +337,27 @@ export function getAvailableResearch(
       }
     }
     
+    // Population requirements
+    if (research.populationRequired && currentPopulation < research.populationRequired) return false;
+    
+    // Building requirements
+    if (research.buildingRequired && !availableBuildings.includes(research.buildingRequired)) return false;
+    
+    // Tool requirements
+    if (research.toolRequired && !availableTools.includes(research.toolRequired)) return false;
+    
+    // NEW: Resource requirements
+    if (research.resourceRequirement) {
+      const hasResources = Object.entries(research.resourceRequirement).every(([resourceId, amount]) => 
+        (currentResources[resourceId] || 0) >= amount
+      );
+      if (!hasResources) return false;
+    }
+    
     return true;
   });
 }
+
 
 // Check if research can be unlocked with lore
 export function canUnlockWithLore(

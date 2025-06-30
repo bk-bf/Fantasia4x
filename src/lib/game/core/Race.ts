@@ -128,6 +128,13 @@ function generateTraits(stats: RaceStats): any[] {
   return traits;
 }
 
+// This file provides functions for generating a new Race, including random base stats, a random name,
+// a set of random traits, and "implications"—flavor text snippets for knowledge, food, combat, and diplomacy.
+// Currently, the implication descriptions are picked randomly from fixed arrays in IMPLICATION_DATABASE,
+// regardless of the actual stats of the race. 
+// TODO: Rework the implication generation so that the descriptions are more varied and are divided into
+// subcategories or weighted pools, allowing the function to selectively draw implications based on the race's stats.
+// This will make the generated flavor text more meaningful and tailored to each race.
 function generateImplications(stats: RaceStats): Record<string, string> {
   return {
     knowledge: IMPLICATION_DATABASE.knowledge[Math.floor(Math.random() * IMPLICATION_DATABASE.knowledge.length)],

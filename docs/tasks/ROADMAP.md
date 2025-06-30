@@ -40,17 +40,17 @@ Based on the search results showing your current roadmap and the missing craftin
 *Knowledge-driven technology progression and unlocks*
 
 ### **Milestone 2.1: Research System Architecture**
-- [ ] Design research database schema (projects, prerequisites, unlocks)
-- [ ] Implement knowledge accumulation based on race intelligence
-- [ ] Create research queue and progression mechanics
-- [ ] Build research screen interface
-- [ ] **Test**: Knowledge accumulates, research projects can be queued
+- [x] Design research database schema (projects, prerequisites, unlocks)
+- [x] Implement knowledge accumulation based on race intelligence
+- [x] Create research queue and progression mechanics
+- [x] Build research screen interface
+- [x] **Test**: Knowledge accumulates, research projects can be queued
 
 ### **Milestone 2.2: Research Database Population**
-- [ ] Populate research database with 15 basic research projects
-- [ ] Define research categories (Crafting, Building, Military, Exploration)
-- [ ] Add research prerequisites and unlock chains
-- [ ] **Test**: Research projects unlock in proper sequence
+- [x] Populate research database with 15 basic research projects
+- [x] Define research categories (Crafting, Building, Military, Exploration)
+- [x] Add research prerequisites and unlock chains
+- [x] **Test**: Research projects unlock in proper sequence
 
 ### **Milestone 2.3: Research-Gated Level System**
 - [ ] Implement level progression (Tool Level, Building Level, etc.)

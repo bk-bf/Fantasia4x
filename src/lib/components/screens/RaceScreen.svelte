@@ -229,7 +229,7 @@
   }
 
   .trait-card {
-    background: #2a2a2a;
+    background: #0c0c0c;
     border: 1px solid #4caf50;
     border-radius: 8px;
     padding: 15px;
@@ -261,7 +261,7 @@
     font-weight: bold;
     font-size: 0.9em;
     padding: 2px 6px;
-    background: #333;
+    background: #000000;
     border-radius: 4px;
     font-family: monospace;
   }
@@ -275,7 +275,7 @@
 
   .race-screen {
     padding: 20px;
-    background: #1a1a1a;
+    background: #000000;
     color: #e0e0e0;
     font-family: 'Courier New', monospace;
     flex: 1; /* Change from height: 100% */
@@ -312,7 +312,7 @@
   }
 
   .race-overview {
-    background: #2a2a2a;
+    background: #0c0c0c;
     border-radius: 8px;
     padding: 20px;
     border-left: 4px solid #4caf50;
@@ -357,7 +357,7 @@
   }
 
   .stat-card {
-    background: #2a2a2a;
+    background: #0c0c0c;
     border-radius: 8px;
     padding: 15px;
     border-left: 4px solid #555;
@@ -383,7 +383,7 @@
 
   .nav-btn {
     padding: 6px 12px;
-    background: #333;
+    background: #000000;
     border: 1px solid #4caf50;
     color: #4caf50;
     border-radius: 4px;
@@ -421,7 +421,7 @@
     top: 0;
     right: 0; /* Position on the right side */
     padding: 8px 16px;
-    background: #333;
+    background: #000000;
     border: 1px solid #4caf50;
     color: #4caf50;
     border-radius: 4px;
@@ -454,7 +454,7 @@
   }
 
   .trait-card {
-    background: #2a2a2a;
+    background: #0c0c0c;
     border: 1px solid #4caf50;
     border-radius: 20px;
     padding: 8px 16px;
@@ -473,7 +473,7 @@
   }
 
   .no-traits {
-    background: #2a2a2a;
+    background: #000000;
     border-radius: 8px;
     padding: 20px;
     text-align: center;
@@ -500,7 +500,7 @@
   }
 
   .implication-card {
-    background: #2a2a2a;
+    background: #0c0910;
     border-radius: 8px;
     padding: 15px;
     border-left: 4px solid #9c27b0;
@@ -530,7 +530,7 @@
   }
 
   .race-screen::-webkit-scrollbar-track {
-    background: #1a1a1a;
+    background: #000000;
   }
 
   .race-screen::-webkit-scrollbar-thumb {

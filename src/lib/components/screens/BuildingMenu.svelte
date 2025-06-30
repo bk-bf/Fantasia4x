@@ -14,13 +14,13 @@
   let resourcesMap: Record<string, number> = {};
   let race: any = null;
   let buildingCounts: Record<string, number> = {};
-  let currentBuilding: BuildingInProgress[] = [];
+  let buildingQueue: BuildingInProgress[] = [];
   let maxPopulation = 0;
   let currentTurnValue = 0;
   let completedResearch: string[] = []; // Add this
 
   // The first building in progress, or a default object if none
-  $: firstBuildingInProgress = currentBuilding.length > 0 ? currentBuilding[0] : null;
+  $: firstBuildingInProgress = buildingQueue.length > 0 ? buildingQueue[0] : null;
 
   // Filter buildings based on completed research
   $: availableBuildings = AVAILABLE_BUILDINGS.filter((building) => {
@@ -75,7 +75,7 @@
 
   const unsubscribeGame = gameState.subscribe((state) => {
     buildingCounts = state.buildingCounts || {};
-    currentBuilding = state.currentBuilding || [];
+    buildingQueue = state.buildingQueue || [];
     maxPopulation = state.maxPopulation;
     completedResearch = state.completedResearch || []; // Add this line
   });
@@ -111,15 +111,15 @@
       return {
         ...state,
         resources: newResources,
-        currentBuilding: [...(state.currentBuilding || []), newBuildingInProgress]
+        buildingQueue: [...(state.buildingQueue || []), newBuildingInProgress]
       };
     });
   }
 
   function cancelBuilding(queueIndex: number) {
-    if (queueIndex < 0 || queueIndex >= currentBuilding.length) return;
+    if (queueIndex < 0 || queueIndex >= buildingQueue.length) return;
 
-    const canceledItem = currentBuilding[queueIndex];
+    const canceledItem = buildingQueue[queueIndex];
     const building = canceledItem.building;
 
     gameState.update((state) => {
@@ -130,13 +130,13 @@
       });
 
       // Remove from queue
-      const newQueue = [...(state.currentBuilding || [])];
+      const newQueue = [...(state.buildingQueue || [])];
       newQueue.splice(queueIndex, 1);
 
       return {
         ...state,
         resources: refundedResources,
-        currentBuilding: newQueue
+        buildingQueue: newQueue
       };
     });
   }
@@ -297,7 +297,7 @@
 <style>
   .building-menu {
     padding: 20px;
-    background: #1a1a1a;
+    background: #000000;
     color: #e0e0e0;
     font-family: 'Courier New', monospace;
     height: 100%;
@@ -317,7 +317,7 @@
     top: 0;
     right: 0;
     padding: 8px 16px;
-    background: #333;
+    background: #000000;
     border: 1px solid #4caf50;
     color: #4caf50;
     border-radius: 4px;
@@ -349,7 +349,7 @@
     text-align: center;
     color: #888;
     font-style: italic;
-    background: #333;
+    background: #000000;
     border-radius: 4px;
     border: 2px dashed #555;
   }
@@ -361,7 +361,7 @@
   }
 
   .population-status {
-    background: #2a2a2a;
+    background: #0c0c0c;
     border-radius: 8px;
     padding: 20px;
     border-left: 4px solid #4caf50;
@@ -390,7 +390,7 @@
   }
 
   .building-queue {
-    background: #2a2a2a;
+    background: #000000;
     border-radius: 8px;
     padding: 20px;
     border-left: 4px solid #ffa726;
@@ -408,7 +408,7 @@
   }
 
   .queue-progress-card {
-    background: #2a2a2a;
+    background: #0c0c0c;
     border-radius: 8px;
     padding: 20px;
     border-left: 4px solid #ffa726;
@@ -463,7 +463,7 @@
     align-items: center;
     gap: 10px;
     padding: 10px;
-    background: #333;
+    background: #000000;
     border-radius: 4px;
   }
 
@@ -485,7 +485,7 @@
   }
 
   .building-card {
-    background: #2a2a2a;
+    background: #0c0c0c;
     border-radius: 8px;
     padding: 20px;
     border-left: 4px solid #555;
@@ -524,7 +524,7 @@
     justify-content: center;
     font-size: 0.8em;
     font-weight: bold;
-    border: 2px solid #1a1a1a;
+    border: 2px solid #000000;
   }
 
   .building-icon {
@@ -621,7 +621,7 @@
   }
 
   .building-menu::-webkit-scrollbar-track {
-    background: #1a1a1a;
+    background: #000000;
   }
 
   .building-menu::-webkit-scrollbar-thumb {
