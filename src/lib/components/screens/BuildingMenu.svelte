@@ -4,12 +4,16 @@
   import {
     AVAILABLE_BUILDINGS,
     canAffordBuilding,
-    canBuildWithPopulation
+    canBuildWithRequirements,
+    getBuildingIcon,
+    getBuildingColor,
+    getBuildingRarityColor
   } from '$lib/game/core/Buildings';
-  import { getItemIcon, getItemColor } from '$lib/game/core/Items';
+  import { getItemIcon, getItemColor, getItemInfo } from '$lib/game/core/Items';
   import { onDestroy } from 'svelte';
   import CurrentTask from '../UI/CurrentTask.svelte';
   import type { BuildingInProgress } from '$lib/game/core/types';
+  import type { Building } from '$lib/game/core/types';
 
   let itemsMap: Record<string, number> = {};
   let race: any = null;
@@ -17,44 +21,68 @@
   let buildingQueue: BuildingInProgress[] = [];
   let maxPopulation = 0;
   let currentTurnValue = 0;
-  let completedResearch: string[] = []; // Add this
+  let completedResearch: string[] = [];
+  let currentToolLevel = 0;
+
+  // Building category filter
+  let selectedCategory = 'all';
+  let buildingCategories = [
+    'all',
+    'housing',
+    'production',
+    'knowledge',
+    'military',
+    'food',
+    'commerce',
+    'magical',
+    'exploration',
+    'social'
+  ];
 
   // The first building in progress, or a default object if none
   $: firstBuildingInProgress = buildingQueue.length > 0 ? buildingQueue[0] : null;
 
-  // Filter buildings based on completed research
+  // Enhanced building filtering with category and requirements
   $: availableBuildings = AVAILABLE_BUILDINGS.filter((building) => {
-    // Always show buildings with no research requirement
-    if (!building.researchRequired) return true;
+    // Category filter
+    if (selectedCategory !== 'all' && building.category !== selectedCategory) return false;
 
-    // Only show if research is completed
-    return completedResearch.includes(building.researchRequired);
+    // Research requirements
+    if (building.researchRequired && !completedResearch.includes(building.researchRequired))
+      return false;
+
+    return true;
   });
 
   $: getItemAmount = (itemId: string): number => {
     return itemsMap[itemId] || 0;
   };
 
-  $: getItemsObject = (): Record<string, number> => {
-    return { ...itemsMap };
-  };
-
   $: getBuildingCount = (buildingId: string): number => {
     return buildingCounts[buildingId] || 0;
   };
 
-  // Make these functions reactive so they update when items change
-  $: canAfford = (building: any): boolean => {
-    const canAffordResult = Object.entries(building.cost).every(([itemId, cost]) => {
+  // Enhanced affordability check using new interface
+  $: canAfford = (building: Building): boolean => {
+    if (!building.buildingCost) return false;
+    return Object.entries(building.buildingCost).every(([itemId, cost]) => {
       const available = itemsMap[itemId] || 0;
       return available >= Number(cost);
     });
-    return canAffordResult;
   };
 
-  $: canBuild = (building: any): boolean => {
+  // Enhanced build check with new requirements
+  $: canBuild = (building: Building): boolean => {
     if (!race) return false;
-    return canBuildWithPopulation(building, race.population, maxPopulation) && canAfford(building);
+    return (
+      canBuildWithRequirements(
+        building,
+        race.population,
+        maxPopulation,
+        currentToolLevel,
+        completedResearch
+      ) && canAfford(building)
+    );
   };
 
   // Subscribe to turn changes to force reactivity
@@ -62,7 +90,7 @@
     currentTurnValue = turn;
   });
 
-  const unsubscribeitems = currentItem.subscribe((item) => {
+  const unsubscribeItems = currentItem.subscribe((item) => {
     itemsMap = {};
     item.forEach((item) => {
       itemsMap[item.id] = Math.floor(item.amount);
@@ -77,26 +105,27 @@
     buildingCounts = state.buildingCounts || {};
     buildingQueue = state.buildingQueue || [];
     maxPopulation = state.maxPopulation;
-    completedResearch = state.completedResearch || []; // Add this line
+    completedResearch = state.completedResearch || [];
+    currentToolLevel = state.currentToolLevel || 0;
   });
 
   onDestroy(() => {
-    unsubscribeitems();
+    unsubscribeItems();
     unsubscribeRace();
     unsubscribeGame();
     unsubscribeTurn();
   });
 
-  function startBuilding(building: any) {
+  function startBuilding(building: Building) {
     if (!canBuild(building)) {
       console.log('Cannot build:', building.name);
       return;
     }
 
     gameState.update((state) => {
-      // Deduct items more carefully
-      const newitems = state.item.map((item) => {
-        const cost = building.cost[item.id] || 0;
+      // Deduct items using new buildingCost property
+      const newItems = state.item.map((item) => {
+        const cost = building.buildingCost[item.id] || 0;
         const newAmount = Math.max(0, item.amount - cost);
         return { ...item, amount: newAmount };
       });
@@ -110,7 +139,7 @@
 
       return {
         ...state,
-        items: newitems,
+        item: newItems,
         buildingQueue: [...(state.buildingQueue || []), newBuildingInProgress]
       };
     });
@@ -123,9 +152,9 @@
     const building = canceledItem.building;
 
     gameState.update((state) => {
-      // Calculate refund (full refund since construction hasn't started yet)
-      const refundeditems = state.item.map((item) => {
-        const refund = building.cost[item.id] || 0;
+      // Calculate refund using buildingCost
+      const refundedItems = state.item.map((item) => {
+        const refund = building.buildingCost[item.id] || 0;
         return { ...item, amount: item.amount + refund };
       });
 
@@ -135,7 +164,7 @@
 
       return {
         ...state,
-        items: refundeditems,
+        item: refundedItems,
         buildingQueue: newQueue
       };
     });
@@ -147,10 +176,16 @@
         return '🏠';
       case 'production':
         return '⚒️';
-      case 'research':
+      case 'knowledge':
         return '📚';
       case 'military':
         return '⚔️';
+      case 'food':
+        return '🍖';
+      case 'commerce':
+        return '🏪';
+      case 'magical':
+        return '🔮';
       case 'exploration':
         return '🗺️';
       case 'social':
@@ -162,9 +197,59 @@
 
   function formatEffectName(camelCaseStr: string): string {
     return camelCaseStr
-      .replace(/([A-Z])/g, ' $1') // Add space before capital letters
-      .replace(/^./, (match) => match.toUpperCase()) // Capitalize first letter
-      .trim(); // Remove any leading/trailing spaces
+      .replace(/([A-Z])/g, ' $1')
+      .replace(/^./, (match) => match.toUpperCase())
+      .trim();
+  }
+
+  function getBuildingRequirements(building: Building): string[] {
+    const requirements = [];
+
+    if (building.toolTierRequired && building.toolTierRequired > 0) {
+      requirements.push(`🔧 Tool Level ${building.toolTierRequired}`);
+    }
+
+    if (building.researchRequired) {
+      requirements.push(`📚 ${building.researchRequired}`);
+    }
+
+    if (building.populationRequired > 0) {
+      requirements.push(`👥 ${building.populationRequired} population`);
+    }
+
+    return requirements;
+  }
+
+  function getBuildingSpecialProperties(building: Building): string[] {
+    const properties = [];
+
+    if (building.buildingProperties) {
+      const props = building.buildingProperties;
+
+      if (props.populationCapacity) properties.push(`🏠 +${props.populationCapacity} housing`);
+      if (props.knowledgeGeneration)
+        properties.push(`📚 +${props.knowledgeGeneration} knowledge/day`);
+      if (props.foodProduction) properties.push(`🍖 +${props.foodProduction} food/day`);
+      if (props.defensiveStrength) properties.push(`🛡️ +${props.defensiveStrength} defense`);
+      if (props.craftingSpeed)
+        properties.push(`⚡ +${Math.round((props.craftingSpeed - 1) * 100)}% crafting speed`);
+      if (props.tradeBonus)
+        properties.push(`💰 +${Math.round((props.tradeBonus - 1) * 100)}% trade value`);
+      if (props.magicalPower) properties.push(`🔮 +${props.magicalPower} magical power`);
+    }
+
+    return properties;
+  }
+
+  function getUpkeepInfo(building: Building): string[] {
+    if (!building.upkeepCost || Object.keys(building.upkeepCost).length === 0) {
+      return ['No upkeep required'];
+    }
+
+    return Object.entries(building.upkeepCost).map(([itemId, amount]) => {
+      const item = getItemInfo(itemId);
+      return `${item?.name || itemId}: ${amount}/day`;
+    });
   }
 </script>
 
@@ -172,25 +257,47 @@
   <div class="building-header">
     <button class="back-btn" on:click={() => uiState.setScreen('main')}>← Back to Map</button>
     <h2>🏗️ Construction Planning</h2>
-    <p class="building-subtitle">Expand your civilization</p>
+    <p class="building-subtitle">Expand your civilization with specialized buildings</p>
   </div>
+
   <div class="building-content">
+    <!-- Building Category Filter -->
+    <div class="building-filters">
+      <h3>🏷️ Building Categories</h3>
+      <div class="filter-buttons">
+        {#each buildingCategories as category}
+          <button
+            class="filter-btn"
+            class:active={selectedCategory === category}
+            on:click={() => (selectedCategory = category)}
+            title={category.charAt(0).toUpperCase() + category.slice(1)}
+          >
+            {getCategoryIcon(category)}
+            <span class="filter-label">{category === 'all' ? 'All' : category}</span>
+          </button>
+        {/each}
+      </div>
+    </div>
+
     <!-- Population Status -->
     <div class="population-status">
       <h3>👥 Population Status</h3>
       <div class="pop-info">
         <span>Current: {race?.population || 0}</span>
         <span>Maximum: {maxPopulation}</span>
+        <span>Tool Level: {currentToolLevel}</span>
         <span class="pop-warning" class:visible={race?.population >= maxPopulation}>
           ⚠️ At capacity! Build housing to expand.
         </span>
       </div>
     </div>
-    <!-- Building Queue (Current Construction Only, Single Card) -->
+
+    <!-- Building Queue -->
     {#if firstBuildingInProgress}
       <CurrentTask
         title="🏗️ Current Construction"
-        icon={getCategoryIcon(firstBuildingInProgress.building.category)}
+        icon={firstBuildingInProgress.building.emoji ||
+          getCategoryIcon(firstBuildingInProgress.building.category)}
         name={firstBuildingInProgress.building.name}
         description={firstBuildingInProgress.building.description}
         progress={(firstBuildingInProgress.building.buildTime -
@@ -198,7 +305,8 @@
           firstBuildingInProgress.building.buildTime}
         timeRemaining="{firstBuildingInProgress.turnsRemaining} days remaining"
         onCancel={() => cancelBuilding(0)}
-        cancelTitle="Cancel construction and refund items"
+        cancelTitle="Cancel construction and refund materials"
+        accentColor="#4caf50"
       />
     {:else}
       <div class="empty-queue">No buildings are currently under construction.</div>
@@ -206,17 +314,32 @@
 
     <!-- Available Buildings -->
     <div class="available-buildings">
-      <h3>🏗️ Available Buildings</h3>
+      <h3>🏗️ Available Buildings ({availableBuildings.length})</h3>
       <div class="buildings-grid">
         {#each availableBuildings as building}
           <div
             class="building-card"
             class:affordable={canAfford(building)}
             class:buildable={canBuild(building)}
+            style="--rarity-color: {getBuildingRarityColor(building.rarity || 'common')}"
           >
             <div class="building-card-header">
-              <span class="building-icon">{getCategoryIcon(building.category)}</span>
-              <h4>{building.name}</h4>
+              <span class="building-icon"
+                >{building.emoji || getCategoryIcon(building.category)}</span
+              >
+              <div class="building-title">
+                <h4>{building.name}</h4>
+                <div class="building-meta">
+                  <span class="building-category">{building.category}</span>
+                  <span class="building-tier">Tier {building.tier}</span>
+                </div>
+              </div>
+              <div
+                class="building-rarity"
+                style="--rarity-color: {getBuildingRarityColor(building.rarity || 'common')}"
+              >
+                {building.rarity}
+              </div>
               {#if getBuildingCount(building.id) > 0}
                 <div class="building-count">
                   {getBuildingCount(building.id)}
@@ -226,32 +349,57 @@
 
             <p class="building-description">{building.description}</p>
 
+            <!-- Requirements Section -->
             <div class="building-requirements">
-              <div class="build-time">⏳ {building.buildTime} days</div>
-              {#if building.populationRequired > 0}
-                <div class="pop-required">👥 Requires {building.populationRequired} population</div>
-              {/if}
+              <div class="build-time">⏰ {building.buildTime} days</div>
+              {#each getBuildingRequirements(building) as requirement}
+                <div class="requirement-item">{requirement}</div>
+              {/each}
             </div>
+
+            <!-- Special Properties -->
+            {#if getBuildingSpecialProperties(building).length > 0}
+              <div class="special-properties">
+                <h5>Properties:</h5>
+                {#each getBuildingSpecialProperties(building) as property}
+                  <div class="property-item">{property}</div>
+                {/each}
+              </div>
+            {/if}
+
+            <!-- Construction Costs -->
             <div class="building-costs">
-              <h5>Cost:</h5>
+              <h5>Construction Cost:</h5>
               <div class="cost-list">
-                {#each Object.entries(building.cost) as [itemId, cost]}
+                {#each Object.entries(building.buildingCost) as [itemId, cost]}
+                  {@const item = getItemInfo(itemId)}
                   <div class="cost-item" class:insufficient={getItemAmount(itemId) < cost}>
-                    <span class="cost-icon">{getItemIcon(itemId)}</span>
+                    <span class="cost-icon">{item?.emoji || getItemIcon(itemId)}</span>
                     <span class="cost-amount">{cost}</span>
-                    <span class="cost-item">{itemId}</span>
+                    <span class="cost-name">{item?.name || itemId}</span>
                     <span class="cost-available">({getItemAmount(itemId)} available)</span>
                   </div>
                 {/each}
               </div>
             </div>
 
+            <!-- Upkeep Costs -->
+            <div class="upkeep-info">
+              <h5>Upkeep:</h5>
+              <div class="upkeep-list">
+                {#each getUpkeepInfo(building) as upkeep}
+                  <div class="upkeep-item">{upkeep}</div>
+                {/each}
+              </div>
+            </div>
+
+            <!-- Building Effects -->
             <div class="building-effects">
               <h5>Effects:</h5>
               <div class="effects-list">
                 {#each Object.entries(building.effects) as [effect, value]}
                   <div class="effect-item">
-                    {#if effect === 'maxPopulation'}
+                    {#if effect === 'populationCapacity'}
                       +{value} population capacity
                     {:else if effect.includes('Production')}
                       +{value} {formatEffectName(effect.replace('Production', ''))} per day
@@ -259,8 +407,6 @@
                       +{Math.round((value - 1) * 100)}% {formatEffectName(
                         effect.replace('Multiplier', '')
                       )}
-                    {:else if effect.includes('Level')}
-                      +{value} {formatEffectName(effect.replace('Level', ''))} level
                     {:else if effect.includes('Bonus')}
                       +{Math.round((value - 1) * 100)}% {formatEffectName(
                         effect.replace('Bonus', '')
@@ -273,6 +419,20 @@
               </div>
             </div>
 
+            <!-- Storage Capacity -->
+            {#if building.storageCapacity && Object.keys(building.storageCapacity).length > 0}
+              <div class="storage-info">
+                <h5>Storage:</h5>
+                <div class="storage-list">
+                  {#each Object.entries(building.storageCapacity) as [category, capacity]}
+                    <div class="storage-item">
+                      {category}: {capacity} items
+                    </div>
+                  {/each}
+                </div>
+              </div>
+            {/if}
+
             <button
               class="build-btn"
               class:disabled={!canBuild(building)}
@@ -280,9 +440,9 @@
               disabled={!canBuild(building)}
             >
               {#if !canAfford(building)}
-                Insufficient items
-              {:else if !canBuildWithPopulation(building, race?.population || 0, maxPopulation)}
-                Population Requirements Not Met
+                Insufficient Materials
+              {:else if !canBuildWithRequirements(building, race?.population || 0, maxPopulation, currentToolLevel, completedResearch)}
+                Requirements Not Met
               {:else}
                 Begin Construction
               {/if}
@@ -295,6 +455,113 @@
 </div>
 
 <style>
+  .building-filters {
+    background: #000000;
+    border-radius: 8px;
+    padding: 20px;
+    border-left: 4px solid #4caf50;
+    margin-bottom: 20px;
+  }
+
+  .building-filters h3 {
+    color: #4caf50;
+    margin: 0 0 15px 0;
+  }
+
+  .filter-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .filter-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: #000000;
+    border: 1px solid #555;
+    color: #e0e0e0;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+    transition: all 0.2s ease;
+  }
+
+  .filter-btn:hover {
+    background: #0c0c0c;
+    border-color: #4caf50;
+  }
+
+  .filter-btn.active {
+    background: #4caf50;
+    border-color: #4caf50;
+    color: #000;
+  }
+
+  .filter-label {
+    text-transform: capitalize;
+  }
+
+  .building-title {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .building-meta {
+    display: flex;
+    gap: 8px;
+    font-size: 0.8em;
+    color: #888;
+  }
+
+  .building-category,
+  .building-tier {
+    text-transform: capitalize;
+  }
+
+  .building-rarity {
+    background: var(--rarity-color);
+    color: #000;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.8em;
+    font-weight: bold;
+    text-transform: capitalize;
+  }
+
+  .special-properties,
+  .upkeep-info,
+  .storage-info {
+    margin-bottom: 15px;
+  }
+
+  .special-properties h5,
+  .upkeep-info h5,
+  .storage-info h5 {
+    color: #e0e0e0;
+    margin: 0 0 8px 0;
+    font-size: 1em;
+  }
+
+  .property-item,
+  .upkeep-item,
+  .storage-item {
+    color: #2196f3;
+    font-size: 0.9em;
+    margin-bottom: 2px;
+  }
+
+  .upkeep-item {
+    color: #ff9800;
+  }
+
+  .storage-item {
+    color: #9c27b0;
+  }
   .building-menu {
     padding: 20px;
     background: #000000;

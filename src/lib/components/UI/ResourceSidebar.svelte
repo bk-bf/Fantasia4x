@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { currentItem, currentRace, currentKnowledge } from '$lib/stores/gameState';
+  import { currentItem, currentRace } from '$lib/stores/gameState';
   import { onDestroy } from 'svelte';
   import { getItemIcon, getItemColor } from '$lib/game/core/Items';
 
@@ -34,14 +34,9 @@
     race = value;
   });
 
-  const unsubscribeKnowledge = currentKnowledge.subscribe((value) => {
-    knowledge = value;
-  });
-
   onDestroy(() => {
     unsubscribeItems();
     unsubscribeRace();
-    unsubscribeKnowledge();
   });
 </script>
 
@@ -61,10 +56,6 @@
         <span class="stat-item" style="margin-left: 12px;">
           <span class="stat-icon">👥</span>
           <span class="stat-value">{race.population}</span>
-        </span>
-        <span class="stat-item" style="margin-left: 8px;">
-          <span class="stat-icon">🧠</span>
-          <span class="stat-value">{Math.floor(knowledge)}</span>
         </span>
       </div>
       <!-- Ultra-Compact Resources INSIDE Kingdom Status Card -->

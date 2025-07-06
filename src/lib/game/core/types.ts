@@ -29,6 +29,139 @@ export interface GameState {
 	currentToolLevel: number;
 }
 
+export interface Building {
+  id: string;
+  name: string;
+  description: string;
+  
+  // Visual representation
+  emoji?: string;
+  color?: string;
+  
+  // Construction requirements
+  buildingCost: Record<string, number>; // Renamed from 'cost' to match item system
+  buildTime: number;
+  toolTierRequired: number; // Matches item system progression
+  populationRequired: number;
+  
+  // Prerequisites
+  researchRequired: string | null;
+  tier: number; // Technology level (0-2) matching item progression
+  rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
+  
+  // Building categories - expanded for comprehensive system
+  category: 'housing' | 'production' | 'knowledge' | 'military' | 'food' | 'commerce' | 'magical' | 'exploration' | 'social';
+  
+  // Operational costs and maintenance
+  upkeepCost: Record<string, number>; // Daily/periodic resource consumption
+  
+  // Building effects and bonuses
+  effects: Record<string, number>; // General effects (populationCapacity, weatherProtection, etc.)
+  productionBonus: Record<string, number>; // Specific item production bonuses
+  
+  // Storage capabilities
+  storageCapacity: Record<string, number>; // Storage for different item categories
+  
+  // Building-specific properties
+  buildingProperties?: {
+    // Housing properties
+    populationCapacity?: number;
+    weatherProtection?: number;
+    morale?: number;
+    defenseBonus?: number;
+    
+    // Production properties
+    craftingSpeed?: number;
+    qualityBonus?: number;
+    efficiency?: number;
+    specialization?: string[]; // What this building specializes in
+    
+    // Knowledge properties
+    knowledgeGeneration?: number;
+    researchSpeed?: number;
+    scholarCapacity?: number;
+    
+    // Military properties
+    defensiveStrength?: number;
+    troopCapacity?: number;
+    militaryTraining?: number;
+    
+    // Food properties
+    foodProduction?: number;
+    preservationBonus?: number;
+    nutritionBonus?: number;
+    
+    // Commerce properties
+    tradeBonus?: number;
+    wealthGeneration?: number;
+    marketCapacity?: number;
+    
+    // Magical properties
+    magicalPower?: number;
+    spellcasting?: number;
+    enchantmentBonus?: number;
+    
+    // Environmental effects
+    temperatureControl?: number;
+    weatherResistance?: number;
+    naturalHarmony?: number;
+    
+    // Special abilities
+    uniqueAbilities?: string[];
+    passiveEffects?: Record<string, number>;
+    activeAbilities?: Record<string, any>;
+  };
+  
+  // Upgrade system
+  upgradeOptions?: {
+    upgradeTo?: string; // ID of upgraded building
+    upgradeCost?: Record<string, number>;
+    upgradeTime?: number;
+    upgradeRequirements?: {
+      research?: string;
+      population?: number;
+      toolLevel?: number;
+    };
+  };
+  
+  // Building interactions
+  synergies?: {
+    adjacencyBonus?: Record<string, number>; // Bonuses when built near specific buildings
+    networkEffects?: Record<string, number>; // Bonuses based on number of similar buildings
+    chainBonus?: string[]; // Buildings that enhance this one's effects
+  };
+  
+  // Conditional requirements and effects
+  conditionalEffects?: {
+    condition: string; // e.g., "population > 50", "has_building:marketplace"
+    effects: Record<string, number>;
+  }[];
+  
+  // Building state management
+  buildingState?: {
+    isUnique?: boolean; // Can only build one
+    maxCount?: number; // Maximum number allowed
+    requiresLocation?: string; // Specific terrain/location requirements
+    environmentalNeeds?: string[]; // Environmental requirements
+  };
+  
+  // Integration with item system
+  itemInteractions?: {
+    consumes?: Record<string, number>; // Items consumed during operation
+    produces?: Record<string, number>; // Items produced over time
+    transforms?: Record<string, string>; // Item transformation recipes
+    requires?: string[]; // Specific items needed for operation
+  };
+  
+  // Event system integration
+  eventTriggers?: {
+    onConstruction?: string[]; // Events triggered when built
+    onOperation?: string[]; // Events triggered during operation
+    onUpgrade?: string[]; // Events triggered when upgraded
+    onDestruction?: string[]; // Events triggered when destroyed
+  };
+}
+
 // Fixed: Remove duplicate Tool interface - Item interface covers this
 export interface Item {
   id: string;
@@ -52,9 +185,10 @@ export interface Item {
   // Embedded crafting requirements (like building system)
   craftingCost?: Record<string, number>;
   craftingTime?: number;
-  toolLevelRequired?: number;
+  toolTierRequired?: number;
   buildingRequired?: string | null;
   populationRequired?: number;
+  
   // Item properties (durability, effects, etc.)
   durability?: number;
   maxDurability?: number;
@@ -74,8 +208,37 @@ export interface Item {
   
   armorProperties?: {
     defense: number;
-    armorType: 'light' | 'medium' | 'heavy';
-    slot: 'head' | 'chest' | 'legs' | 'feet' | 'hands';
+    armorType: 'light' | 'medium' | 'heavy' | 'shield';
+    slot: 'head' | 'chest' | 'legs' | 'feet' | 'hands' | 'offhand';
+    movementPenalty: number; // 0.0 to 1.0, where 0.3 = 30% movement penalty
+    
+    // Resistance properties
+    slashResistance?: number;
+    crushResistance?: number;
+    pierceResistance?: number;
+    
+    // Combat bonuses
+    parryChance?: number;
+    bashDamage?: number;
+    kickDamage?: number;
+    
+    // Special properties
+    flexibility?: number;
+    visionProtection?: number;
+    fullBodyProtection?: number;
+    
+    // Environmental bonuses
+    coldResistance?: number;
+    stealthBonus?: number;
+    terrainBonus?: number;
+    
+    // Social effects
+    prestigeBonus?: number;
+    intimidation?: number;
+    
+    // Movement effects
+    mobility?: number;
+    chargeBonus?: number;
   };
   
   consumableProperties?: {
@@ -83,8 +246,11 @@ export interface Item {
     consumeTime: number;
   };
 }
-
-// Added: Missing CraftingInProgress interface
+export interface BuildingInProgress {
+  building: Building;
+  turnsRemaining: number;
+  startedAt: number;
+}
 export interface CraftingInProgress {
   item: Item; // The item being crafted
   quantity: number; // How many are being crafted
@@ -110,58 +276,54 @@ export interface Race {
   statVariation: string;
   implications: Record<string, string>;
 }
-
-export interface Building {
-  id: string;
-  name: string;
-  description: string;
-  cost: Record<string, number>;
-  buildTime: number;
-  populationRequired: number;
-  effects: Record<string, number>;
-  category: 'housing' | 'production' | 'research' | 'military' | 'exploration' | 'social';
-  researchRequired: string | null; // Fixed: removed optional
-}
-
 export interface ResearchProject {
   id: string;
   name: string;
   description: string;
-  category: 'crafting' | 'building' | 'military' | 'exploration' | 'social';
+  category: 'knowledge' | 'crafting' | 'building' | 'military' | 'exploration' | 'social';
   tier: number;
   currentProgress?: number;
   
-  // Unlock Requirements
-  knowledgeCost: number;
+  // Prerequisites
   prerequisites: string[];
   
-  // Resource gating
-  resourceRequirement?: Record<string, number>;
-  toolRequirement?: string; // Fixed: was toolRequired, now more consistent
+  // Scroll Requirements (replaces knowledgeCost)
+  scrollRequirement?: Record<string, number>; // bark_scrolls, hide_scrolls, parchment, etc.
   
-  // Existing gates
+  // Material Requirements (actual crafting materials)
+  materialRequirement?: Record<string, number>; // copper_ingot, iron_ore, etc.
+  
+  // Building and Tool Requirements
+  buildingRequired?: string;
+  toolRequirement?: string;
+  toolTierRequired?: number; // Matches item system
+  
+  // Population Requirements
+  populationRequired?: number;
+  
+  // Stat Requirements
   statRequirements?: {
     minStats?: Partial<RaceStats>;
     maxStats?: Partial<RaceStats>;
   };
-  populationRequired?: number;
-  buildingRequired?: string;
-  toolRequired?: string;
   
-  // Lore bypass
+  // Lore bypass system
   loreItemRequired?: string;
   canBypassWithLore: boolean;
   
-  // Unlocks and timing
+  // What this research unlocks
   unlocks: {
-    toolLevel?: number;
+    toolTierRequired?: number; // Matches item system naming
     buildingLevel?: number;
     armyLevel?: number;
     weaponLevel?: number;
     buildings?: string[];
-    ability?: string[]; // Fixed: was ability
-    effects?: Record<string, number>;
+    items?: string[]; // Items unlocked by this research
+    abilities?: string[]; // Abilities unlocked
+    effects?: Record<string, number>; // Stat bonuses and effects
   };
+  
+  // Research timing
   researchTime: number;
 }
 
@@ -172,12 +334,6 @@ export interface LoreItem {
   type: 'scroll' | 'tome' | 'artifact' | 'manual' | 'fragment';
   researchUnlocks: string[];
   discoveryWeight: number;
-}
-
-export interface BuildingInProgress {
-  building: Building;
-  turnsRemaining: number;
-  startedAt: number;
 }
 
 export interface Hero {

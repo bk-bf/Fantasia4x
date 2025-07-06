@@ -1,5 +1,6 @@
 <script lang="ts">
   import { gameState } from '$lib/stores/gameState';
+  import { hasBuildings } from '$lib/game/core/Buildings';
   import { uiState } from '$lib/stores/uiState';
   import { onMount } from 'svelte';
 
@@ -15,8 +16,8 @@
     buildingCounts = state.buildingCounts || {};
   });
 
-  // Check if research screen should be available
-  $: hasLibrary = (buildingCounts['sages_library'] || 0) > 0;
+  // Simple check: if any knowledge building exists, unlock research screen
+  $: hasResearchCapability = hasBuildings(buildingCounts, 'knowledge');
 
   // Placeholder ASCII map - will be replaced with actual world generation
   const placeholderMap = `                                        
@@ -86,12 +87,12 @@
       >
       <button
         class="control-btn"
-        class:disabled={!hasLibrary}
-        on:click={() => hasLibrary && uiState.setScreen('research')}
-        disabled={!hasLibrary}
-        title={hasLibrary
+        class:disabled={!hasResearchCapability}
+        on:click={() => hasResearchCapability && uiState.setScreen('research')}
+        disabled={!hasResearchCapability}
+        title={hasResearchCapability
           ? 'Access research projects'
-          : "Build a Sage's Library to unlock research"}
+          : 'Build a knowledge building to unlock research'}
       >
         📚 Research
       </button>

@@ -13,6 +13,7 @@
     ITEMS_DATABASE
   } from '$lib/game/core/Items';
   import { onDestroy } from 'svelte';
+  import type { Item } from '$lib/game/core/types';
 
   let itemMap: Record<string, number> = {};
   let race: any = null;
@@ -23,9 +24,23 @@
   let currentToolLevel = 0;
   let currentPopulation = 0;
 
-  // Item type filter
+  // Enhanced item type filter with new categories
   let selectedItemType = 'all';
-  let itemTypes = ['all', 'tool', 'weapon', 'armor', 'consumable', 'material'];
+  let itemTypes = ['all', 'material', 'tool', 'weapon', 'armor', 'consumable', 'currency'];
+
+  // Enhanced category filter for more granular control
+  let selectedCategory = 'all';
+  let categories = [
+    'all',
+    'harvesting',
+    'crafting',
+    'woodworking',
+    'stoneworking',
+    'metalworking',
+    'leatherworking',
+    'cooking',
+    'magical'
+  ];
 
   // Reuse item fetching pattern from BuildingMenu
   $: getItemAmount = (itemId: string): number => {
@@ -36,14 +51,16 @@
     return inventory[itemId] || 0;
   };
 
-  // Filter craftable items based on current state
+  // Enhanced filtering with both type and category
   $: availableCraftableItems = getCraftableItems(
     completedResearch,
     availableBuildings,
     currentToolLevel,
     currentPopulation,
-    selectedItemType === 'all' ? undefined : selectedItemType
+    selectedItemType === 'all' ? undefined : selectedItemType,
+    selectedCategory === 'all' ? undefined : selectedCategory
   );
+
   // Get first crafting item for CurrentTask component
   $: firstCraftingInProgress = craftingQueue.length > 0 ? craftingQueue[0] : null;
 
@@ -77,7 +94,7 @@
     unsubscribeGame();
   });
 
-  function startCrafting(item: any) {
+  function startCrafting(item: Item) {
     if (!canCraftItem(item, itemMap)) {
       console.log('Cannot craft:', item.name);
       return;
@@ -132,34 +149,63 @@
     });
   }
 
+  function getTypeIcon(type: string): string {
+    switch (type) {
+      case 'material':
+        return '📦';
+      case 'tool':
+        return '🔧';
+      case 'weapon':
+        return '⚔️';
+      case 'armor':
+        return '🛡️';
+      case 'consumable':
+        return '🧪';
+      case 'currency':
+        return '💰';
+      default:
+        return '📋';
+    }
+  }
+
   function getCategoryIcon(category: string): string {
     switch (category) {
       case 'harvesting':
         return '🌲';
-      case 'construction':
-        return '🏗️';
-      case 'mining':
-        return '⛏️';
-      case 'combat':
-        return '⚔️';
       case 'crafting':
-        return '🔧';
+        return '🔨';
+      case 'woodworking':
+        return '🪚';
+      case 'stoneworking':
+        return '🗿';
+      case 'metalworking':
+        return '⚒️';
+      case 'leatherworking':
+        return '🦬';
+      case 'cooking':
+        return '🍲';
+      case 'magical':
+        return '🔮';
+      case 'light':
+        return '🧥';
+      case 'medium':
+        return '🦺';
+      case 'heavy':
+        return '🛡️';
+      case 'shield':
+        return '🛡️';
       case 'melee':
         return '⚔️';
       case 'ranged':
         return '🏹';
-      case 'light':
-        return '🧥';
-      case 'heavy':
-        return '🛡️';
       case 'healing':
         return '💊';
-      case 'metal':
-        return '🔩';
-      case 'processed':
-        return '🔩';
-      case 'basic':
-        return '📦';
+      case 'meal':
+        return '🍖';
+      case 'medical':
+        return '💉';
+      case 'alchemical':
+        return '⚗️';
       default:
         return '🛠️';
     }
@@ -171,40 +217,104 @@
       .replace(/^./, (match) => match.toUpperCase())
       .trim();
   }
+
+  function getItemRequirements(item: Item): string[] {
+    const requirements = [];
+
+    if (item.toolTierRequired && item.toolTierRequired > 0) {
+      requirements.push(`🔧 Tool Level ${item.toolTierRequired}`);
+    }
+
+    if (item.buildingRequired) {
+      requirements.push(`🏗️ ${item.buildingRequired}`);
+    }
+
+    if (item.researchRequired) {
+      requirements.push(`📚 ${item.researchRequired}`);
+    }
+
+    if (item.populationRequired && item.populationRequired > 0) {
+      requirements.push(`👥 ${item.populationRequired} population`);
+    }
+
+    return requirements;
+  }
+
+  function getItemSpecialProperties(item: Item): string[] {
+    const properties = [];
+
+    // Weapon properties
+    if (item.weaponProperties) {
+      properties.push(`⚔️ ${item.weaponProperties.damage} damage`);
+      properties.push(`⚡ ${item.weaponProperties.attackSpeed} speed`);
+      properties.push(`📏 ${item.weaponProperties.range} range`);
+    }
+
+    // Armor properties
+    if (item.armorProperties) {
+      properties.push(`🛡️ ${item.armorProperties.defense} defense`);
+      properties.push(`👕 ${item.armorProperties.armorType} armor`);
+      properties.push(`📍 ${item.armorProperties.slot} slot`);
+
+      if (item.armorProperties.movementPenalty > 0) {
+        properties.push(`🐌 ${Math.round(item.armorProperties.movementPenalty * 100)}% slower`);
+      }
+    }
+
+    // Consumable properties
+    if (item.consumableProperties) {
+      properties.push(`🔄 ${item.consumableProperties.uses} uses`);
+      properties.push(`⏱️ ${item.consumableProperties.consumeTime} time`);
+    }
+
+    return properties;
+  }
 </script>
 
 <div class="crafting-screen">
   <div class="crafting-header">
     <button class="back-btn" on:click={() => uiState.setScreen('main')}>← Back to Map</button>
     <h2>🔨 Crafting Workshop</h2>
-    <p class="crafting-subtitle">Create tools, weapons, and equipment</p>
+    <p class="crafting-subtitle">Create tools, weapons, armor, and consumables</p>
   </div>
 
   <div class="crafting-content">
-    <!-- Item Type Filter (compact) -->
-    <div class="item-filters">
-      <h3>📦 Item Categories</h3>
-      <div class="filter-buttons">
-        {#each itemTypes as itemType}
-          <button
-            class="filter-btn"
-            class:active={selectedItemType === itemType}
-            on:click={() => (selectedItemType = itemType)}
-            title={itemType.charAt(0).toUpperCase() + itemType.slice(1)}
-          >
-            {itemType === 'all'
-              ? '📦'
-              : itemType === 'tool'
-                ? '🔧'
-                : itemType === 'weapon'
-                  ? '⚔️'
-                  : itemType === 'armor'
-                    ? '🛡️'
-                    : itemType === 'consumable'
-                      ? '🧪'
-                      : '📋'}
-          </button>
-        {/each}
+    <!-- Enhanced Filters -->
+    <div class="crafting-filters">
+      <!-- Item Type Filter -->
+      <div class="filter-section">
+        <h3>📦 Item Types</h3>
+        <div class="filter-buttons">
+          {#each itemTypes as itemType}
+            <button
+              class="filter-btn"
+              class:active={selectedItemType === itemType}
+              on:click={() => (selectedItemType = itemType)}
+              title={itemType.charAt(0).toUpperCase() + itemType.slice(1)}
+            >
+              {getTypeIcon(itemType)}
+              <span class="filter-label">{itemType === 'all' ? 'All' : itemType}</span>
+            </button>
+          {/each}
+        </div>
+      </div>
+
+      <!-- Category Filter -->
+      <div class="filter-section">
+        <h3>🏷️ Categories</h3>
+        <div class="filter-buttons">
+          {#each categories as category}
+            <button
+              class="filter-btn"
+              class:active={selectedCategory === category}
+              on:click={() => (selectedCategory = category)}
+              title={category.charAt(0).toUpperCase() + category.slice(1)}
+            >
+              {getCategoryIcon(category)}
+              <span class="filter-label">{category === 'all' ? 'All' : category}</span>
+            </button>
+          {/each}
+        </div>
       </div>
     </div>
 
@@ -221,10 +331,15 @@
                   class="inventory-item"
                   style="--rarity-color: {getItemRarityColor(item.rarity ?? 'common')}"
                 >
-                  <span class="item-icon">{getItemIcon(itemId)}</span>
+                  <span class="item-icon">{item.emoji || getItemIcon(itemId)}</span>
                   <div class="item-details">
                     <span class="item-name">{item.name}</span>
-                    <span class="item-type">{item.type} • {item.rarity}</span>
+                    <span class="item-type">{item.type} • {item.category} • {item.rarity}</span>
+                    {#if item.durability && item.maxDurability}
+                      <span class="item-durability">
+                        Durability: {item.durability}/{item.maxDurability}
+                      </span>
+                    {/if}
                   </div>
                   <span class="item-quantity">x{quantity}</span>
                 </div>
@@ -240,33 +355,35 @@
     </div>
 
     <!-- Crafting Queue -->
-    <!-- For multiple crafting tasks in a row -->
     {#if craftingQueue.length > 0}
-      <TaskContainer layout="horizontal">
-        {#each craftingQueue.slice(0, 3) as queueItem, index}
-          <CurrentTask
-            title=""
-            icon={getCategoryIcon(queueItem.item.category)}
-            name={queueItem.item.name}
-            description={queueItem.item.description || 'Crafting in progress...'}
-            progress={(queueItem.item.craftingTime - queueItem.turnsRemaining) /
-              queueItem.item.craftingTime}
-            timeRemaining="{queueItem.turnsRemaining} days"
-            onCancel={() => cancelCrafting(index)}
-            cancelTitle="Cancel crafting and refund materials"
-            accentColor="#ff9800"
-            compact={true}
-            showDescription={false}
-          />
-        {/each}
-      </TaskContainer>
+      <div class="crafting-queue">
+        <h3>⚙️ Crafting in Progress</h3>
+        <TaskContainer layout="horizontal">
+          {#each craftingQueue.slice(0, 3) as queueItem, index}
+            <CurrentTask
+              title=""
+              icon={queueItem.item.emoji || getCategoryIcon(queueItem.item.category)}
+              name={queueItem.item.name}
+              description={queueItem.item.description || 'Crafting in progress...'}
+              progress={(queueItem.item.craftingTime - queueItem.turnsRemaining) /
+                queueItem.item.craftingTime}
+              timeRemaining="{queueItem.turnsRemaining} days"
+              onCancel={() => cancelCrafting(index)}
+              cancelTitle="Cancel crafting and refund materials"
+              accentColor="#ff9800"
+              compact={true}
+              showDescription={false}
+            />
+          {/each}
+        </TaskContainer>
 
-      <!-- Show remaining items if more than 3 -->
-      {#if craftingQueue.length > 3}
-        <div class="remaining-items">
-          <p>+{craftingQueue.length - 3} more items in queue</p>
-        </div>
-      {/if}
+        <!-- Show remaining items if more than 3 -->
+        {#if craftingQueue.length > 3}
+          <div class="remaining-items">
+            <p>+{craftingQueue.length - 3} more items in queue</p>
+          </div>
+        {/if}
+      </div>
     {:else}
       <div class="empty-queue">
         <p>No crafting in progress</p>
@@ -275,13 +392,19 @@
 
     <!-- Available Craftable Items -->
     <div class="available-recipes">
-      <h3>📋 Available Items to Craft</h3>
+      <h3>📋 Available Items to Craft ({availableCraftableItems.length})</h3>
       <div class="recipes-grid">
         {#each availableCraftableItems as item}
           <div class="recipe-card" class:affordable={canCraftItem(item, itemMap)}>
             <div class="recipe-card-header">
-              <span class="recipe-icon">{getItemIcon(item.id)}</span>
-              <h4>{item.name}</h4>
+              <span class="recipe-icon">{item.emoji || getItemIcon(item.id)}</span>
+              <div class="recipe-title">
+                <h4>{item.name}</h4>
+                <div class="recipe-meta">
+                  <span class="item-type">{item.type}</span>
+                  <span class="item-category">{item.category}</span>
+                </div>
+              </div>
               <div
                 class="item-rarity"
                 style="--rarity-color: {getItemRarityColor(item.rarity || 'common')}"
@@ -292,35 +415,35 @@
 
             <p class="recipe-description">{item.description}</p>
 
+            <!-- Requirements Section -->
             <div class="recipe-requirements">
               <div class="craft-time">⏰ {item.craftingTime || 1} days</div>
-              {#if item.toolLevelRequired && item.toolLevelRequired > 0}
-                <div class="tool-level-required">
-                  🔧 Requires Tool Level {item.toolLevelRequired}
-                </div>
-              {/if}
-              {#if item.buildingRequired}
-                <div class="building-required">🏗️ Requires {item.buildingRequired}</div>
-              {/if}
-              {#if item.researchRequired}
-                <div class="research-required">📚 Requires {item.researchRequired}</div>
-              {/if}
-              {#if item.populationRequired && item.populationRequired > 0}
-                <div class="population-required">
-                  👥 Requires {item.populationRequired} population
-                </div>
-              {/if}
+              {#each getItemRequirements(item) as requirement}
+                <div class="requirement-item">{requirement}</div>
+              {/each}
             </div>
 
+            <!-- Special Properties -->
+            {#if getItemSpecialProperties(item).length > 0}
+              <div class="special-properties">
+                <h5>Properties:</h5>
+                {#each getItemSpecialProperties(item) as property}
+                  <div class="property-item">{property}</div>
+                {/each}
+              </div>
+            {/if}
+
+            <!-- Materials Required -->
             <div class="recipe-inputs">
               <h5>Materials:</h5>
               <div class="inputs-list">
                 {#if item.craftingCost && Object.keys(item.craftingCost).length > 0}
                   {#each Object.entries(item.craftingCost) as [itemId, amount]}
+                    {@const materialItem = ITEMS_DATABASE.find((i) => i.id === itemId)}
                     <div class="input-item" class:insufficient={getItemAmount(itemId) < amount}>
-                      <span class="input-icon">{getItemIcon(itemId)}</span>
+                      <span class="input-icon">{materialItem?.emoji || getItemIcon(itemId)}</span>
                       <span class="input-amount">{amount}</span>
-                      <span class="input-name">{itemId}</span>
+                      <span class="input-name">{materialItem?.name || itemId}</span>
                       <span class="input-available">({getItemAmount(itemId)} available)</span>
                     </div>
                   {/each}
@@ -330,32 +453,20 @@
               </div>
             </div>
 
-            <div class="recipe-outputs">
-              <h5>Creates:</h5>
-              <div class="outputs-list">
-                <div
-                  class="output-item"
-                  style="--rarity-color: {getItemRarityColor(item.rarity || 'common')}"
-                >
-                  <span class="output-icon">{getItemIcon(item.id)}</span>
-                  <span class="output-amount">1x</span>
-                  <span class="output-name">{item.name}</span>
-                  <span class="output-rarity">({item.rarity})</span>
+            <!-- Item Effects -->
+            {#if item.effects && Object.keys(item.effects).length > 0}
+              <div class="recipe-outputs">
+                <h5>Effects:</h5>
+                <div class="item-effects">
+                  {#each Object.entries(item.effects) as [effect, value]}
+                    <div class="effect-item">
+                      +{value}
+                      {formatEffectName(effect)}
+                    </div>
+                  {/each}
                 </div>
-
-                <!-- Show item effects -->
-                {#if item.effects && Object.keys(item.effects).length > 0}
-                  <div class="item-effects">
-                    {#each Object.entries(item.effects) as [effect, value]}
-                      <div class="effect-item">
-                        +{value}
-                        {formatEffectName(effect)}
-                      </div>
-                    {/each}
-                  </div>
-                {/if}
               </div>
-            </div>
+            {/if}
 
             <button
               class="craft-btn"
@@ -393,6 +504,98 @@
 </div>
 
 <style>
+  .crafting-filters {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    background: #000000;
+    border-radius: 8px;
+    padding: 20px;
+    border-left: 4px solid #9c27b0;
+  }
+
+  .filter-section h3 {
+    color: #9c27b0;
+    margin: 0 0 15px 0;
+  }
+
+  .filter-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: #000000;
+    border: 1px solid #555;
+    color: #e0e0e0;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+    transition: all 0.2s ease;
+  }
+
+  .filter-label {
+    text-transform: capitalize;
+  }
+
+  .recipe-title {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .recipe-meta {
+    display: flex;
+    gap: 8px;
+    font-size: 0.8em;
+    color: #888;
+  }
+
+  .item-type,
+  .item-category {
+    text-transform: capitalize;
+  }
+
+  .special-properties {
+    margin-bottom: 15px;
+  }
+
+  .special-properties h5 {
+    color: #e0e0e0;
+    margin: 0 0 8px 0;
+    font-size: 1em;
+  }
+
+  .property-item {
+    color: #2196f3;
+    font-size: 0.9em;
+    margin-bottom: 2px;
+  }
+
+  .item-durability {
+    color: #ff9800;
+    font-size: 0.8em;
+  }
+
+  .crafting-queue {
+    background: #000000;
+    border-radius: 8px;
+    padding: 20px;
+    border-left: 4px solid #2196f3;
+  }
+
+  .crafting-queue h3 {
+    color: #2196f3;
+    margin: 0 0 15px 0;
+  }
+
+  .remaining-items {
+    text-align: center;
+    color: #888;
+    font-style: italic;
+    margin-top: 10px;
+  }
   .crafting-screen {
     padding: 20px;
     background: #000000;

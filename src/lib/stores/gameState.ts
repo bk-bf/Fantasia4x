@@ -9,7 +9,6 @@ import {
   canAffordBuilding,
   canBuildWithPopulation
 } from '$lib/game/core/Buildings';
-import { calculateKnowledgeGeneration } from '$lib/game/core/Research';
 
 // Game timing configuration
 const TURN_INTERVAL = 3000;
@@ -19,9 +18,9 @@ let gameInterval: number | null = null;
 export const initialGameState: GameState = {
   turn: 0,
   race: generateRace(),
-  item: getBasicMaterials().map(item => ({ ...item, amount: 0 })), // Fixed: using 'item' not 'items'
+  item: getBasicMaterials().map(item => ({ ...item, amount: 0 })),
   heroes: [],
-  knowledge: 0,
+  knowledge: 0, // Added missing property
   worldMap: [],
   discoveredLocations: [],
   buildingCounts: {},
@@ -31,7 +30,9 @@ export const initialGameState: GameState = {
   completedResearch: [],
   currentResearch: undefined,
   discoveredLore: [],
-  knowledgeGeneration: 1,
+  knowledgeGeneration: 0, // Added missing property (set to 0 since we removed knowledge system)
+  _woodBonus: 0, // Added missing optional property with default value
+  _stoneBonus: 0, // Added missing optional property with default value
   inventory: {},
   equippedItems: {
     weapon: null,
@@ -108,18 +109,10 @@ function createGameState() {
     updateWithSave(state => {
       let newState = { ...state, turn: state.turn + 1 };
 
-      newState.knowledgeGeneration = calculateKnowledgeGeneration(
-        state.race.baseStats,
-        state.completedResearch || [],
-        state.buildingCounts || {}
-      );
-
-      newState.knowledge += newState.knowledgeGeneration;
-
       newState = processResearch(newState);
       newState = processBuildingQueue(newState);
       newState = processCraftingQueue(newState);
-      newState = generateItems(newState); // Fixed function name
+      newState = generateItems(newState);
 
       return newState;
     });
@@ -133,15 +126,18 @@ function createGameState() {
     newState.currentResearch.currentProgress = (newState.currentResearch.currentProgress || 0) + 1;
 
     if (newState.currentResearch.currentProgress >= newState.currentResearch.researchTime) {
+      // Research completed - add to completed research
       newState.completedResearch = [...(newState.completedResearch || []), newState.currentResearch.id];
 
-      if (newState.currentResearch.unlocks.effects) {
-        Object.entries(newState.currentResearch.unlocks.effects).forEach(([effect, value]) => {
-          if (effect === 'knowledgeMultiplier') {
-            newState.knowledgeGeneration = Math.floor(newState.knowledgeGeneration * value);
-          }
-        });
+      // Apply research unlocks (buildings, items, tool levels, etc.)
+      if (newState.currentResearch.unlocks.toolTierRequired) {
+        newState.currentToolLevel = Math.max(
+          newState.currentToolLevel, 
+          newState.currentResearch.unlocks.toolTierRequired
+        );
       }
+
+      // Clear current research
       newState.currentResearch = undefined;
     }
 
@@ -170,7 +166,7 @@ function createGameState() {
     Object.entries(newBuildingCounts).forEach(([buildingId, count]) => {
       const building = AVAILABLE_BUILDINGS.find(b => b.id === buildingId);
       if (building && count > 0) {
-        newMaxPopulation += (building.effects.maxPopulation || 0) * count;
+        newMaxPopulation += (building.effects.populationCapacity || 0) * count;
         woodBonus += (building.effects.woodProduction || 0) * count;
         stoneBonus += (building.effects.stoneProduction || 0) * count;
       }
@@ -186,39 +182,36 @@ function createGameState() {
     };
   }
 
-// Fixed: Process crafting queue with new CraftingInProgress interface
-function processCraftingQueue(state: GameState): GameState {
-  const completedCrafting: any[] = [];
-  const updatedQueue = (state.craftingQueue || []).map(craftingItem => {
-    const updated = { ...craftingItem, turnsRemaining: craftingItem.turnsRemaining - 1 };
-    if (updated.turnsRemaining <= 0) {
-      completedCrafting.push(updated);
-    }
-    return updated;
-  }).filter(craftingItem => craftingItem.turnsRemaining > 0);
+  function processCraftingQueue(state: GameState): GameState {
+    const completedCrafting: any[] = [];
+    const updatedQueue = (state.craftingQueue || []).map(craftingItem => {
+      const updated = { ...craftingItem, turnsRemaining: craftingItem.turnsRemaining - 1 };
+      if (updated.turnsRemaining <= 0) {
+        completedCrafting.push(updated);
+      }
+      return updated;
+    }).filter(craftingItem => craftingItem.turnsRemaining > 0);
 
-  // Add completed items to inventory
-  const newInventory = { ...state.inventory };
-  completedCrafting.forEach(craftingItem => {
-    // Fixed: Use item.id and quantity instead of recipe.outputs
-    const itemId = craftingItem.item.id;
-    const quantity = craftingItem.quantity || 1;
-    newInventory[itemId] = (newInventory[itemId] || 0) + quantity;
-  });
+    // Add completed items to inventory
+    const newInventory = { ...state.inventory };
+    completedCrafting.forEach(craftingItem => {
+      const itemId = craftingItem.item.id;
+      const quantity = craftingItem.quantity || 1;
+      newInventory[itemId] = (newInventory[itemId] || 0) + quantity;
+    });
 
-  return {
-    ...state,
-    craftingQueue: updatedQueue,
-    inventory: newInventory
-  };
-}
-
+    return {
+      ...state,
+      craftingQueue: updatedQueue,
+      inventory: newInventory
+    };
+  }
 
   function generateItems(state: GameState): GameState {
     const woodBonus = state._woodBonus || 0;
     const stoneBonus = state._stoneBonus || 0;
 
-    const item = state.item.map(singleItem => { // Fixed: using 'item' not 'items'
+    const item = state.item.map(singleItem => {
       let production = 0;
       switch (singleItem.id) {
         case 'food':
@@ -238,7 +231,7 @@ function processCraftingQueue(state: GameState): GameState {
 
     return {
       ...rest,
-      item // Fixed: using 'item' not 'items'
+      item
     };
   }
 
@@ -290,7 +283,7 @@ function processCraftingQueue(state: GameState): GameState {
     addItem: (itemId: string, amount: number) => 
       update(state => ({
         ...state,
-        item: state.item.map(i => // Fixed: using 'item' not 'items'
+        item: state.item.map(i =>
           i.id === itemId ? { ...i, amount: i.amount + amount } : i
         )
       }))
@@ -301,7 +294,6 @@ export const gameState = createGameState();
 
 // Derived stores for computed values
 export const currentTurn = derived(gameState, $gameState => $gameState.turn);
-export const currentKnowledge = derived(gameState, $gameState => $gameState.knowledge);
-export const currentItem = derived(gameState, $gameState => $gameState.item); // Fixed: using 'item'
+export const currentItem = derived(gameState, $gameState => $gameState.item);
 export const currentRace = derived(gameState, $gameState => $gameState.race);
 export const currentInventory = derived(gameState, $gameState => $gameState.inventory);
