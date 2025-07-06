@@ -1,33 +1,158 @@
-// Locations.ts - Complete Location Database
+// Locations.ts - Complete Location Database with Randomized Resource Tracking
 import type { Location } from '$lib/game/core/types';
 
-// LOCATIONS DATABASE - Complete Resource Integration
-export const LOCATIONS_DATABASE: Location[] = [
+// Resource Node Template for randomization
+export interface ResourceNodeTemplate {
+  id: string;
+  currentAmountRange: [number, number]; // [min, max] for current amount
+  maxAmountRange: [number, number];     // [min, max] for max capacity
+  renewalRate: number; // Amount renewed per turn (0 for non-renewable)
+  renewalType: 'none' | 'slow' | 'fast' | 'seasonal';
+  depletion: number; // How much is lost per extraction (usually 1)
+}
+
+// Actual Resource Node with generated values
+export interface ResourceNode {
+  id: string;
+  currentAmount: number;
+  maxAmount: number;
+  renewalRate: number;
+  renewalType: 'none' | 'slow' | 'fast' | 'seasonal';
+  depletion: number;
+}
+
+// Location Template for generation
+export interface LocationTemplate extends Omit<Location, 'resourceNodes'> {
+  resourceTemplates: Record<string, ResourceNodeTemplate>;
+}
+
+// Generated Location with actual resource nodes
+export interface LocationWithResources extends Location {
+  resourceNodes: Record<string, ResourceNode>;
+}
+
+// Function to generate actual resource node from template
+function generateResourceNode(template: ResourceNodeTemplate): ResourceNode {
+  const [minCurrent, maxCurrent] = template.currentAmountRange;
+  const [minMax, maxMax] = template.maxAmountRange;
+  
+  const maxAmount = Math.floor(Math.random() * (maxMax - minMax + 1)) + minMax;
+  const currentAmount = Math.min(
+    Math.floor(Math.random() * (maxCurrent - minCurrent + 1)) + minCurrent,
+    maxAmount
+  );
+  
+  return {
+    id: template.id,
+    currentAmount,
+    maxAmount,
+    renewalRate: template.renewalRate,
+    renewalType: template.renewalType,
+    depletion: template.depletion
+  };
+}
+
+// LOCATION TEMPLATES - Will be randomized when discovered
+export const LOCATION_TEMPLATES: LocationTemplate[] = [
   // TIER 0 - STARTING LOCATIONS (Always Available)
   {
     id: 'plains',
     name: 'Plains',
-    description: 'Gentle grasslands where your civilization first took roots',
+    description: 'Gentle grasslands where your civilization first took root',
     type: 'plains',
     tier: 0,
     rarity: 'common',
     discovered: true,
     
+    // Legacy format for compatibility
     availableResources: {
-      tier0: [
-        // Basic wood types
-        'pine_wood', 'fir_wood',
-        // Basic food
-        'wild_berries', 'wild_oats', 'wild_barley',
-        // Basic animals
-        'rabbit_carcass',
-        // Basic materials
-        'plant_fiber', 'common_clay',
-        // Basic stone
-        'sandstone', 'flint'
-      ],
+      tier0: ['pine_wood', 'fir_wood', 'wild_berries', 'wild_oats', 'wild_barley', 'rabbit_carcass', 'plant_fiber', 'common_clay', 'sandstone', 'flint'],
       tier1: [],
       tier2: []
+    },
+    
+    // Resource templates for randomization
+    resourceTemplates: {
+      'pine_wood': {
+        id: 'pine_wood',
+        currentAmountRange: [100, 200],
+        maxAmountRange: [150, 250],
+        renewalRate: 3,
+        renewalType: 'slow',
+        depletion: 1
+      },
+      'fir_wood': {
+        id: 'fir_wood',
+        currentAmountRange: [80, 160],
+        maxAmountRange: [120, 200],
+        renewalRate: 2,
+        renewalType: 'slow',
+        depletion: 1
+      },
+      'wild_berries': {
+        id: 'wild_berries',
+        currentAmountRange: [50, 120],
+        maxAmountRange: [80, 150],
+        renewalRate: 5,
+        renewalType: 'seasonal',
+        depletion: 1
+      },
+      'wild_oats': {
+        id: 'wild_oats',
+        currentAmountRange: [40, 80],
+        maxAmountRange: [60, 100],
+        renewalRate: 4,
+        renewalType: 'seasonal',
+        depletion: 1
+      },
+      'wild_barley': {
+        id: 'wild_barley',
+        currentAmountRange: [30, 70],
+        maxAmountRange: [50, 90],
+        renewalRate: 3,
+        renewalType: 'seasonal',
+        depletion: 1
+      },
+      'rabbit_carcass': {
+        id: 'rabbit_carcass',
+        currentAmountRange: [15, 35],
+        maxAmountRange: [25, 50],
+        renewalRate: 2,
+        renewalType: 'fast',
+        depletion: 1
+      },
+      'plant_fiber': {
+        id: 'plant_fiber',
+        currentAmountRange: [80, 150],
+        maxAmountRange: [120, 200],
+        renewalRate: 8,
+        renewalType: 'fast',
+        depletion: 1
+      },
+      'common_clay': {
+        id: 'common_clay',
+        currentAmountRange: [150, 250],
+        maxAmountRange: [150, 250],
+        renewalRate: 0,
+        renewalType: 'none',
+        depletion: 1
+      },
+      'sandstone': {
+        id: 'sandstone',
+        currentAmountRange: [200, 400],
+        maxAmountRange: [200, 400],
+        renewalRate: 0,
+        renewalType: 'none',
+        depletion: 1
+      },
+      'flint': {
+        id: 'flint',
+        currentAmountRange: [50, 120],
+        maxAmountRange: [50, 120],
+        renewalRate: 0,
+        renewalType: 'none',
+        depletion: 1
+      }
     },
     
     workModifiers: {
@@ -53,16 +178,68 @@ export const LOCATIONS_DATABASE: Location[] = [
     discovered: false,
     
     availableResources: {
-      tier0: [
-        // Stone types
-        'sandstone', 'limestone', 'flint',
-        // Wood
-        'pine_wood', 'fir_wood',
-        // Plants
-        'herbs', 'plant_fiber'
-      ],
+      tier0: ['sandstone', 'limestone', 'flint', 'pine_wood', 'fir_wood', 'herbs', 'plant_fiber'],
       tier1: [],
       tier2: []
+    },
+    
+    resourceTemplates: {
+      'sandstone': {
+        id: 'sandstone',
+        currentAmountRange: [400, 600],
+        maxAmountRange: [400, 600],
+        renewalRate: 0,
+        renewalType: 'none',
+        depletion: 1
+      },
+      'limestone': {
+        id: 'limestone',
+        currentAmountRange: [300, 500],
+        maxAmountRange: [300, 500],
+        renewalRate: 0,
+        renewalType: 'none',
+        depletion: 1
+      },
+      'flint': {
+        id: 'flint',
+        currentAmountRange: [100, 200],
+        maxAmountRange: [100, 200],
+        renewalRate: 0,
+        renewalType: 'none',
+        depletion: 1
+      },
+      'pine_wood': {
+        id: 'pine_wood',
+        currentAmountRange: [50, 120],
+        maxAmountRange: [80, 150],
+        renewalRate: 1,
+        renewalType: 'slow',
+        depletion: 1
+      },
+      'fir_wood': {
+        id: 'fir_wood',
+        currentAmountRange: [40, 100],
+        maxAmountRange: [60, 130],
+        renewalRate: 1,
+        renewalType: 'slow',
+        depletion: 1
+      },
+      'herbs': {
+        id: 'herbs',
+        currentAmountRange: [25, 60],
+        maxAmountRange: [40, 80],
+        renewalRate: 3,
+        renewalType: 'seasonal',
+        depletion: 1
+      },
+      'plant_fiber': {
+        id: 'plant_fiber',
+        currentAmountRange: [50, 100],
+        maxAmountRange: [70, 130],
+        renewalRate: 5,
+        renewalType: 'fast',
+        depletion: 1
+      }
     },
     
     workModifiers: {
@@ -81,7 +258,6 @@ export const LOCATIONS_DATABASE: Location[] = [
     color: '#8D6E63'
   },
 
-  // TIER 1 - INTERMEDIATE LOCATIONS
   {
     id: 'old_forest',
     name: 'Old Forest',
@@ -92,23 +268,100 @@ export const LOCATIONS_DATABASE: Location[] = [
     discovered: false,
     
     availableResources: {
-      tier0: [
-        // Basic woods
-        'pine_wood', 'fir_wood',
-        // Basic food
-        'wild_berries'
-      ],
-      tier1: [
-        // Advanced woods
-        'oak_wood', 'ash_wood', 'birch_wood',
-        // Advanced animals
-        'deer_carcass',
-        // Advanced plants
-        'rare_herbs', 'medicinal_plants',
-        // Tree products
-        'tree_sap', 'oak_bark'
-      ],
+      tier0: ['pine_wood', 'fir_wood', 'wild_berries'],
+      tier1: ['oak_wood', 'ash_wood', 'birch_wood', 'deer_carcass', 'rare_herbs', 'medicinal_plants', 'tree_sap', 'oak_bark'],
       tier2: []
+    },
+    
+    resourceTemplates: {
+      'pine_wood': {
+        id: 'pine_wood',
+        currentAmountRange: [200, 400],
+        maxAmountRange: [300, 500],
+        renewalRate: 5,
+        renewalType: 'slow',
+        depletion: 1
+      },
+      'fir_wood': {
+        id: 'fir_wood',
+        currentAmountRange: [180, 350],
+        maxAmountRange: [250, 450],
+        renewalRate: 4,
+        renewalType: 'slow',
+        depletion: 1
+      },
+      'oak_wood': {
+        id: 'oak_wood',
+        currentAmountRange: [150, 300],
+        maxAmountRange: [200, 400],
+        renewalRate: 2,
+        renewalType: 'slow',
+        depletion: 1
+      },
+      'ash_wood': {
+        id: 'ash_wood',
+        currentAmountRange: [100, 250],
+        maxAmountRange: [150, 350],
+        renewalRate: 2,
+        renewalType: 'slow',
+        depletion: 1
+      },
+      'birch_wood': {
+        id: 'birch_wood',
+        currentAmountRange: [120, 280],
+        maxAmountRange: [180, 380],
+        renewalRate: 3,
+        renewalType: 'slow',
+        depletion: 1
+      },
+      'deer_carcass': {
+        id: 'deer_carcass',
+        currentAmountRange: [8, 25],
+        maxAmountRange: [15, 35],
+        renewalRate: 1,
+        renewalType: 'slow',
+        depletion: 1
+      },
+      'wild_berries': {
+        id: 'wild_berries',
+        currentAmountRange: [80, 180],
+        maxAmountRange: [120, 220],
+        renewalRate: 8,
+        renewalType: 'seasonal',
+        depletion: 1
+      },
+      'rare_herbs': {
+        id: 'rare_herbs',
+        currentAmountRange: [15, 50],
+        maxAmountRange: [25, 70],
+        renewalRate: 2,
+        renewalType: 'seasonal',
+        depletion: 1
+      },
+      'medicinal_plants': {
+        id: 'medicinal_plants',
+        currentAmountRange: [10, 40],
+        maxAmountRange: [20, 60],
+        renewalRate: 1,
+        renewalType: 'slow',
+        depletion: 1
+      },
+      'tree_sap': {
+        id: 'tree_sap',
+        currentAmountRange: [40, 100],
+        maxAmountRange: [60, 120],
+        renewalRate: 4,
+        renewalType: 'seasonal',
+        depletion: 1
+      },
+      'oak_bark': {
+        id: 'oak_bark',
+        currentAmountRange: [25, 70],
+        maxAmountRange: [40, 90],
+        renewalRate: 2,
+        renewalType: 'slow',
+        depletion: 1
+      }
     },
     
     workModifiers: {
@@ -139,17 +392,76 @@ export const LOCATIONS_DATABASE: Location[] = [
     discovered: false,
     
     availableResources: {
-      tier0: [
-        // Basic stones
-        'granite', 'sandstone', 'limestone', 'flint'
-      ],
-      tier1: [
-        // Ores
-        'copper_ore', 'tin_ore', 'iron_ore',
-        // Fuel
-        'charcoal'
-      ],
+      tier0: ['granite', 'sandstone', 'limestone', 'flint'],
+      tier1: ['copper_ore', 'tin_ore', 'iron_ore', 'charcoal'],
       tier2: []
+    },
+    
+    resourceTemplates: {
+      'granite': {
+        id: 'granite',
+        currentAmountRange: [600, 1000],
+        maxAmountRange: [600, 1000],
+        renewalRate: 0,
+        renewalType: 'none',
+        depletion: 1
+      },
+      'sandstone': {
+        id: 'sandstone',
+        currentAmountRange: [400, 800],
+        maxAmountRange: [400, 800],
+        renewalRate: 0,
+        renewalType: 'none',
+        depletion: 1
+      },
+      'limestone': {
+        id: 'limestone',
+        currentAmountRange: [300, 700],
+        maxAmountRange: [300, 700],
+        renewalRate: 0,
+        renewalType: 'none',
+        depletion: 1
+      },
+      'flint': {
+        id: 'flint',
+        currentAmountRange: [150, 300],
+        maxAmountRange: [150, 300],
+        renewalRate: 0,
+        renewalType: 'none',
+        depletion: 1
+      },
+      'copper_ore': {
+        id: 'copper_ore',
+        currentAmountRange: [80, 200],
+        maxAmountRange: [80, 200],
+        renewalRate: 0,
+        renewalType: 'none',
+        depletion: 1
+      },
+      'tin_ore': {
+        id: 'tin_ore',
+        currentAmountRange: [40, 120],
+        maxAmountRange: [40, 120],
+        renewalRate: 0,
+        renewalType: 'none',
+        depletion: 1
+      },
+      'iron_ore': {
+        id: 'iron_ore',
+        currentAmountRange: [60, 180],
+        maxAmountRange: [60, 180],
+        renewalRate: 0,
+        renewalType: 'none',
+        depletion: 1
+      },
+      'charcoal': {
+        id: 'charcoal',
+        currentAmountRange: [20, 80],
+        maxAmountRange: [50, 150],
+        renewalRate: 0,
+        renewalType: 'none',
+        depletion: 1
+      }
     },
     
     workModifiers: {
@@ -179,21 +491,60 @@ export const LOCATIONS_DATABASE: Location[] = [
     discovered: false,
     
     availableResources: {
-      tier0: [
-        // Fish
-        'common_carp',
-        // Clay
-        'common_clay'
-      ],
-      tier1: [
-        // Better fish
-        'river_trout',
-        // Advanced clay
-        'fire_clay',
-        // River materials
-        'river_stones', 'water_plants'
-      ],
+      tier0: ['common_carp', 'common_clay'],
+      tier1: ['river_trout', 'fire_clay', 'river_stones', 'water_plants'],
       tier2: []
+    },
+    
+    resourceTemplates: {
+      'common_carp': {
+        id: 'common_carp',
+        currentAmountRange: [30, 80],
+        maxAmountRange: [50, 120],
+        renewalRate: 4,
+        renewalType: 'fast',
+        depletion: 1
+      },
+      'river_trout': {
+        id: 'river_trout',
+        currentAmountRange: [20, 60],
+        maxAmountRange: [35, 90],
+        renewalRate: 3,
+        renewalType: 'seasonal',
+        depletion: 1
+      },
+      'common_clay': {
+        id: 'common_clay',
+        currentAmountRange: [100, 300],
+        maxAmountRange: [100, 300],
+        renewalRate: 0,
+        renewalType: 'none',
+        depletion: 1
+      },
+      'fire_clay': {
+        id: 'fire_clay',
+        currentAmountRange: [50, 150],
+        maxAmountRange: [50, 150],
+        renewalRate: 0,
+        renewalType: 'none',
+        depletion: 1
+      },
+      'river_stones': {
+        id: 'river_stones',
+        currentAmountRange: [80, 200],
+        maxAmountRange: [80, 200],
+        renewalRate: 0,
+        renewalType: 'none',
+        depletion: 1
+      },
+      'water_plants': {
+        id: 'water_plants',
+        currentAmountRange: [40, 100],
+        maxAmountRange: [60, 140],
+        renewalRate: 6,
+        renewalType: 'fast',
+        depletion: 1
+      }
     },
     
     workModifiers: {
@@ -212,418 +563,159 @@ export const LOCATIONS_DATABASE: Location[] = [
     specialFeatures: ['rich_fishing', 'clay_deposits'],
     emoji: '🏞️',
     color: '#4FC3F7'
-  },
-
-  {
-    id: 'ancient_ruins',
-    name: 'Ancient Ruins',
-    description: 'Crumbling structures from a long-lost civilization',
-    type: 'ruins',
-    tier: 1,
-    rarity: 'rare',
-    discovered: false,
-    
-    availableResources: {
-      tier0: [],
-      tier1: [
-        // Processed materials
-        'worked_stone', 'ancient_metals',
-        // Research materials
-        'ancient_ink'
-      ],
-      tier2: [
-        // Magical/rare
-        'mysterious_artifacts', 'ancient_knowledge', 'magical_components'
-      ]
-    },
-    
-    workModifiers: {
-      archaeology: 2.0,
-      research: 1.5
-    },
-    
-    explorationRequirements: {
-      population: 10,
-      tools: ['bronze_tools'],
-      research: ['scholarly_methods']
-    },
-    
-    hazards: ['unstable_structures', 'ancient_traps', 'cursed_artifacts'],
-    specialFeatures: ['ancient_library', 'hidden_chambers', 'magical_inscriptions'],
-    emoji: '🏛️',
-    color: '#9C27B0'
-  },
-
-  {
-    id: 'dangerous_swampland',
-    name: 'Dangerous Swampland',
-    description: 'Treacherous wetlands hiding rare resources and dangerous creatures',
-    type: 'swamp',
-    tier: 1,
-    rarity: 'uncommon',
-    discovered: false,
-    
-    availableResources: {
-      tier0: [
-        // Basic swamp resources
-        'common_clay'
-      ],
-      tier1: [
-        // Swamp animals
-        'wild_boar_carcass',
-        // Special clay
-        'porcelain_clay',
-        // Swamp plants
-        'medicinal_plants', 'rare_herbs',
-        // Special materials
-        'peat', 'bog_iron'
-      ],
-      tier2: []
-    },
-    
-    workModifiers: {
-      hunting: 0.8,
-      herbalism: 1.8,
-      pottery: 1.6
-    },
-    
-    explorationRequirements: {
-      population: 8,
-      tools: ['bronze_weapons'],
-      research: ['organized_hunting']
-    },
-    
-    hazards: ['disease', 'poisonous_gas', 'swamp_monsters', 'quicksand'],
-    specialFeatures: ['rare_clay_deposits', 'medicinal_springs'],
-    emoji: '🐊',
-    color: '#4E342E'
-  },
-
-  // TIER 2 - ADVANCED LOCATIONS
-  {
-    id: 'deep_mountains',
-    name: 'Deep Mountains',
-    description: 'Treacherous peaks hiding the most precious minerals',
-    type: 'mountains',
-    tier: 2,
-    rarity: 'rare',
-    discovered: false,
-    
-    availableResources: {
-      tier0: [],
-      tier1: [
-        // Advanced ores
-        'iron_ore', 'silver_ore'
-      ],
-      tier2: [
-        // Precious materials
-        'gold_ore', 'precious_gems', 'mithril_ore', 'adamantine',
-        // Advanced stones
-        'marble'
-      ]
-    },
-    
-    workModifiers: {
-      mining: 3.0,
-      metalworking: 1.8
-    },
-    
-    explorationRequirements: {
-      population: 15,
-      tools: ['iron_pick', 'climbing_gear'],
-      research: ['iron_working', 'mountain_exploration'],
-      buildings: ['mountain_base_camp']
-    },
-    
-    hazards: ['avalanches', 'extreme_cold', 'mountain_monsters', 'altitude_sickness'],
-    specialFeatures: ['precious_veins', 'crystal_caves', 'ancient_mines'],
-    emoji: '🗻',
-    color: '#37474F'
-  },
-
-  {
-    id: 'enchanted_grove',
-    name: 'Enchanted Grove',
-    description: 'Mystical forest where magic flows through every leaf',
-    type: 'magical_forest',
-    tier: 2,
-    rarity: 'epic',
-    discovered: false,
-    
-    availableResources: {
-      tier0: [],
-      tier1: [
-        // Magical plants
-        'rare_herbs', 'master_herbs'
-      ],
-      tier2: [
-        // Magical woods
-        'yew_wood', 'elder_wood',
-        // Magical materials
-        'moonstone', 'fairy_dust', 'unicorn_hair',
-        // Crystal materials
-        'crystal', 'crystal_essence'
-      ]
-    },
-    
-    workModifiers: {
-      magical_research: 2.5,
-      alchemy: 2.0,
-      enchanting: 1.8
-    },
-    
-    explorationRequirements: {
-      population: 12,
-      tools: ['silver_tools'],
-      research: ['basic_alchemy', 'nature_magic'],
-      buildings: ['magical_laboratory']
-    },
-    
-    hazards: ['magical_storms', 'fey_creatures', 'reality_distortions'],
-    specialFeatures: ['ley_line_nexus', 'fairy_ring', 'world_tree_sapling'],
-    emoji: '🧚',
-    color: '#E1BEE7'
-  },
-
-  {
-    id: 'underground_caverns',
-    name: 'Underground Caverns',
-    description: 'Vast subterranean network hiding ancient secrets',
-    type: 'caves',
-    tier: 2,
-    rarity: 'rare',
-    discovered: false,
-    
-    availableResources: {
-      tier0: [],
-      tier1: [
-        // Cave materials
-        'cave_crystals', 'underground_water'
-      ],
-      tier2: [
-        // Rare cave resources
-        'rare_minerals', 'cave_pearls', 'crystalline_formations', 'deep_mushrooms',
-        // Advanced crystals
-        'crystal', 'obsidian'
-      ]
-    },
-    
-    workModifiers: {
-      mining: 2.5,
-      crystal_working: 2.0
-    },
-    
-    explorationRequirements: {
-      population: 20,
-      tools: ['iron_tools', 'torches', 'rope'],
-      research: ['underground_exploration', 'crystal_working'],
-      buildings: ['cave_entrance_fortification']
-    },
-    
-    hazards: ['cave_ins', 'underground_rivers', 'cave_monsters', 'toxic_gases'],
-    specialFeatures: ['crystal_formations', 'underground_lake', 'ancient_cave_paintings'],
-    emoji: '🕳️',
-    color: '#263238'
-  },
-
-  {
-    id: 'volcanic_region',
-    name: 'Volcanic Region',
-    description: 'Active volcanic area with extreme heat and rare materials',
-    type: 'volcanic',
-    tier: 2,
-    rarity: 'rare',
-    discovered: false,
-    
-    availableResources: {
-      tier0: [],
-      tier1: [
-        // Volcanic materials
-        'sulfur', 'pumice'
-      ],
-      tier2: [
-        // Rare volcanic materials
-        'obsidian', 'volcanic_glass', 'fire_crystals',
-        // Heat-resistant materials
-        'salamander_scale', 'fire_clay'
-      ]
-    },
-    
-    workModifiers: {
-      fire_magic: 2.5,
-      glass_working: 2.0,
-      heat_resistance: 1.8
-    },
-    
-    explorationRequirements: {
-      population: 18,
-      tools: ['fire_protection_gear', 'heat_resistant_tools'],
-      research: ['fire_magic', 'heat_resistance'],
-      buildings: ['volcanic_outpost']
-    },
-    
-    hazards: ['lava_flows', 'toxic_gases', 'extreme_heat', 'volcanic_eruptions'],
-    specialFeatures: ['natural_forge', 'fire_crystal_veins', 'obsidian_fields'],
-    emoji: '🌋',
-    color: '#D32F2F'
-  },
-
-  {
-    id: 'dragon_peaks',
-    name: 'Dragon Peaks',
-    description: 'Legendary mountain peaks where dragons once nested',
-    type: 'legendary_mountains',
-    tier: 2,
-    rarity: 'legendary',
-    discovered: false,
-    
-    availableResources: {
-      tier0: [],
-      tier1: [],
-      tier2: [
-        // Dragon materials
-        'dragon_scales', 'dragon_bones', 'dragon_blood',
-        // Legendary materials
-        'volcanic_glass', 'fire_crystals', 'ancient_gold',
-        // Ultimate materials
-        'adamantine', 'mithril_ore'
-      ]
-    },
-    
-    workModifiers: {
-      legendary_crafting: 3.0,
-      fire_magic: 2.5
-    },
-    
-    explorationRequirements: {
-      population: 25,
-      tools: ['steel_tools', 'fire_protection_gear'],
-      research: ['steel_making', 'dragon_lore', 'fire_magic'],
-      buildings: ['dragon_expedition_base']
-    },
-    
-    hazards: ['dragon_fire', 'volcanic_activity', 'ancient_guardians', 'extreme_heat'],
-    specialFeatures: ['dragon_hoard', 'volcanic_forge', 'ancient_dragon_nest'],
-    emoji: '🐉',
-    color: '#D32F2F'
-  },
-
-  // SPECIAL SEASONAL/EVENT LOCATIONS
-  {
-    id: 'wandering_merchant_camp',
-    name: 'Wandering Merchant Camp',
-    description: 'Temporary trading post that appears and disappears mysteriously',
-    type: 'special',
-    tier: 1,
-    rarity: 'uncommon',
-    discovered: false,
-    
-    availableResources: {
-      tier0: [],
-      tier1: [
-        // Trade goods
-        'exotic_spices', 'foreign_tools', 'rare_textiles'
-      ],
-      tier2: [
-        // Legendary trade items
-        'legendary_artifacts', 'ancient_maps', 'divine_relics'
-      ]
-    },
-    
-    workModifiers: {
-      trading: 3.0,
-      diplomacy: 1.5
-    },
-    
-    explorationRequirements: {
-      population: 5,
-      research: ['commerce']
-    },
-    
-    hazards: [],
-    specialFeatures: ['exotic_trader', 'rare_goods', 'cultural_exchange'],
-    emoji: '🏕️',
-    color: '#FF9800'
-  },
-
-  {
-    id: 'seasonal_hunting_grounds',
-    name: 'Seasonal Hunting Grounds',
-    description: 'Rich hunting area that appears during certain seasons',
-    type: 'seasonal',
-    tier: 1,
-    rarity: 'uncommon',
-    discovered: false,
-    
-    availableResources: {
-      tier0: [
-        // Basic animals
-        'rabbit_carcass'
-      ],
-      tier1: [
-        // Seasonal animals
-        'deer_carcass', 'wild_boar_carcass',
-      ],
-      tier2: [
-        // Rare animals
-        'bear_carcass', 'wolf_carcass', 'elk_carcass'
-      ]
-    },
-    
-    workModifiers: {
-      hunting: 2.8,
-      tracking: 2.0,
-      meat_processing: 1.6
-    },
-    
-    explorationRequirements: {
-      population: 6,
-      tools: ['bronze_weapons'],
-      research: ['organized_hunting']
-    },
-    
-    hazards: ['dangerous_predators', 'harsh_weather'],
-    specialFeatures: ['animal_migration_routes', 'natural_salt_licks'],
-    emoji: '🦌',
-    color: '#8D6E63'
   }
 ];
 
+// Generated locations database (will be populated when locations are discovered)
+export let LOCATIONS_DATABASE: LocationWithResources[] = [];
+
+// Initialize location from template
+export function initializeLocation(template: LocationTemplate): LocationWithResources {
+  const resourceNodes: Record<string, ResourceNode> = {};
+  
+  Object.entries(template.resourceTemplates).forEach(([id, template]) => {
+    resourceNodes[id] = generateResourceNode(template);
+  });
+  
+  const { resourceTemplates, ...locationData } = template;
+  
+  return {
+    ...locationData,
+    resourceNodes
+  };
+}
+
+// Initialize all locations (call this at game start)
+export function initializeAllLocations(): void {
+  LOCATIONS_DATABASE = LOCATION_TEMPLATES.map(template => initializeLocation(template));
+}
+
+// Helper function to evaluate resource richness
+export function evaluateResourceRichness(
+  currentAmountRange: [number, number], 
+  maxAmountRange: [number, number]
+): string {
+  const currentMid = (currentAmountRange[0] + currentAmountRange[1]) / 2;
+  const maxMid = (maxAmountRange[0] + maxAmountRange[1]) / 2;
+  const ratio = maxMid > 0 ? currentMid / maxMid : 0;
+  
+  if (ratio < 0.2) return 'sparse';
+  else if (ratio < 0.4) return 'scarce';
+  else if (ratio < 0.6) return 'moderate';
+  else if (ratio < 0.9) return 'rich';
+  else return 'abundant';
+}
+
+// Helper function to get richness color for UI
+export function getRichnessColor(richness: string): string {
+  switch (richness) {
+    case 'sparse': return '#F44336';
+    case 'scarce': return '#FF9800';
+    case 'moderate': return '#FFC107';
+    case 'rich': return '#8BC34A';
+    case 'abundant': return '#4CAF50';
+    default: return '#9E9E9E';
+  }
+}
+
+// Helper function to get richness emoji for UI
+export function getRichnessEmoji(richness: string): string {
+  switch (richness) {
+    case 'sparse': return '🔴';
+    case 'scarce': return '🟠';
+    case 'moderate': return '🟡';
+    case 'rich': return '🟢';
+    case 'abundant': return '💚';
+    default: return '⚪';
+  }
+}
+
+// Enhanced function to evaluate all resources in a location template
+export function evaluateLocationRichness(locationTemplate: LocationTemplate): Record<string, string> {
+  const richness: Record<string, string> = {};
+  
+  Object.entries(locationTemplate.resourceTemplates).forEach(([resourceId, template]) => {
+    richness[resourceId] = evaluateResourceRichness(
+      template.currentAmountRange,
+      template.maxAmountRange
+    );
+  });
+  
+  return richness;
+}
+
+// Resource Management Functions
+export function processResourceRenewal(location: LocationWithResources): void {
+  Object.values(location.resourceNodes).forEach(node => {
+    if (node.renewalRate > 0 && node.currentAmount < node.maxAmount) {
+      const renewal = Math.min(node.renewalRate, node.maxAmount - node.currentAmount);
+      node.currentAmount += renewal;
+    }
+  });
+}
+
+export function extractResource(location: LocationWithResources, resourceId: string, amount: number): number {
+  const node = location.resourceNodes[resourceId];
+  if (!node) return 0;
+  
+  const extractable = Math.min(amount, node.currentAmount);
+  node.currentAmount -= extractable * node.depletion;
+  
+  return extractable;
+}
+
+export function getResourceAvailability(location: LocationWithResources, resourceId: string): {
+  available: number;
+  maxAmount: number;
+  renewalRate: number;
+  isRenewable: boolean;
+} {
+  const node = location.resourceNodes[resourceId];
+  if (!node) {
+    return { available: 0, maxAmount: 0, renewalRate: 0, isRenewable: false };
+  }
+  
+  return {
+    available: node.currentAmount,
+    maxAmount: node.maxAmount,
+    renewalRate: node.renewalRate,
+    isRenewable: node.renewalType !== 'none'
+  };
+}
+
 // Helper functions following the same pattern as Items.ts and Buildings.ts
-export function getLocationsByType(locationType: string): Location[] {
+export function getLocationsByType(locationType: string): LocationWithResources[] {
   return LOCATIONS_DATABASE.filter(location => location.type === locationType);
 }
 
-export function getLocationsByTier(tier: number): Location[] {
+export function getLocationsByTier(tier: number): LocationWithResources[] {
   return LOCATIONS_DATABASE.filter(location => location.tier === tier);
 }
 
-export function getDiscoveredLocations(): Location[] {
+export function getDiscoveredLocations(): LocationWithResources[] {
   return LOCATIONS_DATABASE.filter(location => location.discovered);
 }
 
-export function getUndiscoveredLocations(): Location[] {
+export function getUndiscoveredLocations(): LocationWithResources[] {
   return LOCATIONS_DATABASE.filter(location => !location.discovered);
 }
 
-export function getLocationInfo(locationId: string): Location | undefined {
+export function getLocationInfo(locationId: string): LocationWithResources | undefined {
   return LOCATIONS_DATABASE.find(l => l.id === locationId);
 }
 
 export function canExploreLocation(
-  location: Location,
+  location: LocationWithResources,
   currentPopulation: number,
   availableTools: string[],
   completedResearch: string[],
   availableBuildings: string[]
 ): boolean {
-  // Population requirement
   if (location.explorationRequirements.population && 
       currentPopulation < location.explorationRequirements.population) {
     return false;
   }
   
-  // Tool requirements
   if (location.explorationRequirements.tools) {
     const hasRequiredTools = location.explorationRequirements.tools.every(tool => 
       availableTools.includes(tool)
@@ -631,7 +723,6 @@ export function canExploreLocation(
     if (!hasRequiredTools) return false;
   }
   
-  // Research requirements
   if (location.explorationRequirements.research) {
     const hasRequiredResearch = location.explorationRequirements.research.every(research => 
       completedResearch.includes(research)
@@ -639,7 +730,6 @@ export function canExploreLocation(
     if (!hasRequiredResearch) return false;
   }
   
-  // Building requirements
   if (location.explorationRequirements.buildings) {
     const hasRequiredBuildings = location.explorationRequirements.buildings.every(building => 
       availableBuildings.includes(building)
@@ -650,7 +740,13 @@ export function canExploreLocation(
   return true;
 }
 
-export function getAvailableResourcesFromLocation(location: Location): string[] {
+export function getAvailableResourcesFromLocation(location: LocationWithResources): string[] {
+  if (location.resourceNodes) {
+    return Object.keys(location.resourceNodes).filter(resourceId => 
+      location.resourceNodes[resourceId].currentAmount > 0
+    );
+  }
+  // Fallback to legacy format
   return [
     ...location.availableResources.tier0,
     ...location.availableResources.tier1,
@@ -667,4 +763,32 @@ export function getLocationRarityColor(rarity: string): string {
     case 'legendary': return '#FF9800';
     default: return '#9E9E9E';
   }
+}
+
+// Discover a new location (converts template to actual location)
+export function discoverLocation(locationId: string): boolean {
+  const template = LOCATION_TEMPLATES.find(t => t.id === locationId);
+  if (!template) return false;
+  
+  const existingIndex = LOCATIONS_DATABASE.findIndex(l => l.id === locationId);
+  if (existingIndex !== -1) {
+    LOCATIONS_DATABASE[existingIndex].discovered = true;
+  } else {
+    const newLocation = initializeLocation(template);
+    newLocation.discovered = true;
+    LOCATIONS_DATABASE.push(newLocation);
+  }
+  
+  return true;
+}
+
+// Enhanced location initialization with richness evaluation
+export function initializeLocationWithRichness(template: LocationTemplate): LocationWithResources & { resourceRichness: Record<string, string> } {
+  const location = initializeLocation(template);
+  const resourceRichness = evaluateLocationRichness(template);
+  
+  return {
+    ...location,
+    resourceRichness
+  };
 }

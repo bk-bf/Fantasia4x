@@ -8,7 +8,12 @@
     getDiscoveredLocations,
     getLocationInfo,
     canExploreLocation,
-    getLocationRarityColor
+    getLocationRarityColor,
+    getResourceAvailability,
+    evaluateResourceRichness,
+    getRichnessColor,
+    getRichnessEmoji,
+    LOCATION_TEMPLATES
   } from '$lib/game/core/Locations';
   import { getItemIcon, getItemInfo } from '$lib/game/core/Items';
 
@@ -66,6 +71,50 @@
     unsubscribeGame();
   });
 
+  // Get resource richness for discovered locations
+  function getLocationResourceRichness(
+    location: any
+  ): Record<string, { richness: string; availability: any }> {
+    const resourceRichness: Record<string, { richness: string; availability: any }> = {};
+
+    if (location.resourceNodes) {
+      // For discovered locations with actual resource nodes
+      Object.entries(location.resourceNodes).forEach(([resourceId, node]: [string, any]) => {
+        const availability = getResourceAvailability(location, resourceId);
+        // Calculate richness based on current vs max amounts
+        const currentRange: [number, number] = [node.currentAmount, node.currentAmount];
+        const maxRange: [number, number] = [node.maxAmount, node.maxAmount];
+        const richness = evaluateResourceRichness(currentRange, maxRange);
+
+        resourceRichness[resourceId] = { richness, availability };
+      });
+    } else {
+      // For locations without resource nodes, use template data
+      const template = LOCATION_TEMPLATES.find((t: any) => t.id === location.id);
+      if (template?.resourceTemplates) {
+        Object.entries(template.resourceTemplates).forEach(
+          ([resourceId, template]: [string, any]) => {
+            const richness = evaluateResourceRichness(
+              template.currentAmountRange,
+              template.maxAmountRange
+            );
+            resourceRichness[resourceId] = {
+              richness,
+              availability: {
+                available: 'Unknown',
+                maxAmount: 'Unknown',
+                renewalRate: template.renewalRate,
+                isRenewable: template.renewalType !== 'none'
+              }
+            };
+          }
+        );
+      }
+    }
+
+    return resourceRichness;
+  }
+
   function generateAvailableExplorations(state: any): any[] {
     // This would be populated from your exploration missions database
     const allMissions = [
@@ -85,7 +134,7 @@
 
         requirements: {
           population: 3,
-          discoveredLocations: ['starting_plains']
+          discoveredLocations: ['plains']
         }
       },
       {
@@ -313,6 +362,7 @@
       <h3>🏞️ Known Locations ({discoveredLocations.length})</h3>
       <div class="locations-grid">
         {#each discoveredLocations as location}
+          {@const resourceRichness = getLocationResourceRichness(location)}
           <div
             class="location-card discovered"
             style="--rarity-color: {getLocationRarityColor(location.rarity)}"
@@ -324,16 +374,41 @@
             </div>
 
             <p class="location-description">{location.description}</p>
-
             <div class="location-resources">
               <h5>Available Resources:</h5>
-              <div class="resource-list">
-                {#each [...location.availableResources.tier0, ...location.availableResources.tier1, ...location.availableResources.tier2] as resourceId}
+              <div class="resource-grid">
+                {#each Object.entries(resourceRichness) as [resourceId, data]}
                   {@const item = getItemInfo(resourceId)}
-                  <span class="resource-item">
-                    {item?.emoji || getItemIcon(resourceId)}
-                    {item?.name || resourceId}
-                  </span>
+                  <div
+                    class="resource-item-card"
+                    style="--richness-color: {getRichnessColor(data.richness)}"
+                  >
+                    <div class="resource-content">
+                      <span class="resource-icon">{item?.emoji || getItemIcon(resourceId)}</span>
+                      <span class="resource-label">
+                        {item?.name || resourceId}
+                        <span class="richness-indicator" title={data.richness}>
+                          {getRichnessEmoji(data.richness)}
+                        </span>
+                      </span>
+                    </div>
+                    <div class="resource-details">
+                      <span class="resource-amount"
+                        >{data.availability.available !== 'Unknown'
+                          ? data.availability.available
+                          : '?'}</span
+                      >
+                      <span class="resource-slash">/</span>
+                      <span class="resource-max"
+                        >{data.availability.maxAmount !== 'Unknown'
+                          ? data.availability.maxAmount
+                          : '?'}</span
+                      >
+                      <span class="richness-text" style="color: {getRichnessColor(data.richness)}"
+                        >{data.richness}</span
+                      >
+                    </div>
+                  </div>
                 {/each}
               </div>
             </div>
@@ -507,18 +582,124 @@
     font-family: 'Courier New', monospace;
     font-size: 0.9em;
   }
-
   .back-btn:hover {
     background: #2196f3;
     color: #000;
   }
 
-  .exploration-header h2 {
-    color: #2196f3;
-    margin: 0 0 10px 0;
-    font-size: 2em;
-    text-shadow: 0 0 10px rgba(33, 150, 243, 0.3);
+  .resource-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 10px;
+    margin-bottom: 8px;
   }
+
+  .resource-item-card {
+    background: #0c0c0c;
+    border-radius: 5px;
+    padding: 8px 10px;
+    border-left: 2px solid var(--richness-color);
+    box-shadow: 0 1px 4px 0 rgba(0, 0, 0, 0.12);
+    min-height: 64px; /* increase this for more height */
+    height: 64px; /* or set a fixed height */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    margin: 0;
+    width: 100%;
+    transition:
+      box-shadow 0.2s,
+      transform 0.2s;
+    box-sizing: border-box;
+  }
+  .resource-item-card:hover {
+    box-shadow: 0 4px 16px 0 rgba(76, 175, 80, 0.08);
+    transform: scale(1.03);
+  }
+
+  .resource-content {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    width: 100%;
+  }
+
+  .resource-label {
+    color: #e0e0e0;
+    font-size: 1em; /* was 0.65em */
+    font-weight: bold;
+    flex: 1;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .resource-icon {
+    font-size: 1.2em; /* was 0.8em */
+    flex-shrink: 0;
+  }
+
+  .richness-indicator {
+    font-size: 0.3em;
+    margin-left: 4px;
+    vertical-align: left;
+    flex-shrink: 0;
+  }
+
+  .resource-details {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 4px;
+    font-size: 0.9em; /* was 0.6em */
+    color: #888;
+  }
+
+  .resource-amount {
+    color: var(--richness-color);
+    font-weight: bold;
+    font-size: 1em; /* new, for emphasis */
+  }
+
+  .richness-text {
+    font-weight: bold;
+    text-transform: capitalize;
+    font-size: 1em; /* was 0.7em */
+    margin-left: 6px;
+  }
+
+  .resource-slash {
+    color: #666;
+    margin: 0 1px;
+  }
+
+  .resource-max {
+    color: #888;
+    font-weight: normal;
+  }
+
+  .richness-text {
+    font-weight: bold;
+    text-transform: capitalize;
+    font-size: 0.7em;
+    margin-left: 4px;
+  }
+
+  /* Responsive: 2 columns on small screens */
+  @media (max-width: 700px) {
+    .resource-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  @media (max-width: 400px) {
+    .resource-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* --- Keep the rest of your styles for other sections as they are --- */
 
   .exploration-subtitle {
     color: #888;

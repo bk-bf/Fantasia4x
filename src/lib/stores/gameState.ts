@@ -4,6 +4,7 @@ import { writable, derived } from 'svelte/store';
 import type { GameState } from '$lib/game/core/types';
 import { generateRace } from '$lib/game/core/Race';
 import { getBasicMaterials } from '$lib/game/core/Items';
+import { initializeAllLocations } from '$lib/game/core/Locations';
 import {
   AVAILABLE_BUILDINGS,
   canAffordBuilding,
@@ -42,30 +43,38 @@ export const initialGameState: GameState = {
   },
   craftingQueue: [],
   currentToolLevel: 0,
-  activeExplorationMissions: [] // Added empty array for exploration missions
+  activeExplorationMissions: [], // Added empty array for exploration missions
+  
+  // Work System additions
+  workAssignments: {}, // Empty work assignments initially
+  productionTargets: [], // No production targets initially
+  pawns: [] // No pawns initially - will be generated based on population
 };
 
-
-function createGameState() {
-  function saveToLocalStorage(state: GameState) {
+function saveToLocalStorage(state: GameState) {
     if (browser) {
       localStorage.setItem('fantasia4x-save', JSON.stringify(state));
     }
   }
 
-  function loadFromLocalStorage(): GameState | null {
-    if (browser) {
-      const saved = localStorage.getItem('fantasia4x-save');
-      if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch (e) {
-          console.warn('Failed to load save data:', e);
-        }
-      }
-    }
-    return null;
-  }
+	function loadFromLocalStorage(): GameState | null {
+	if (browser) {
+		const saved = localStorage.getItem('fantasia4x-save');
+		if (saved) {
+		try {
+			return JSON.parse(saved);
+		} catch (e) {
+			console.warn('Failed to load save data:', e);
+		}
+		}
+	}
+	return null;
+	}
+
+function createGameState() {
+
+   // Initialize locations at game start
+  initializeAllLocations();
 
   const savedState = loadFromLocalStorage();
   const { subscribe, set, update } = writable(savedState || initialGameState);
@@ -268,7 +277,7 @@ function createGameState() {
   return {
     subscribe,
     set,
-    update: updateWithSave,
+    update,
     isPaused: { subscribe: isPaused.subscribe },
     gameSpeed: { subscribe: gameSpeed.subscribe },
     
@@ -281,12 +290,12 @@ function createGameState() {
     
     advanceTurn,
     addItem: (itemId: string, amount: number) => 
-      update(state => ({
-        ...state,
-        item: state.item.map(i =>
-          i.id === itemId ? { ...i, amount: i.amount + amount } : i
-        )
-      }))
+     updateWithSave(state => ({  // Use updateWithSave only for internal functions
+      ...state,
+      item: state.item.map(i =>
+        i.id === itemId ? { ...i, amount: i.amount + amount } : i
+      )
+    }))
   };
 }
 

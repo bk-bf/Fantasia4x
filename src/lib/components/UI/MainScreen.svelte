@@ -82,6 +82,7 @@
   <div class="map-controls">
     <div class="view-controls">
       <button class="control-btn" on:click={() => uiState.setScreen('race')}>👑 Race</button>
+      <button class="control-btn" on:click={() => uiState.setScreen('work')}>👷 Work</button>
       <button class="control-btn" on:click={() => uiState.setScreen('building')}>🏗️ Build</button>
       <button class="control-btn" on:click={() => uiState.setScreen('crafting')}>⚒️ Crafting</button
       >

@@ -6,6 +6,7 @@
   import ResearchScreen from '$lib/components/screens/ResearchScreen.svelte';
   import CraftingScreen from '$lib/components/screens/CraftingScreen.svelte';
   import ExplorationScreen from '$lib/components/screens/ExplorationScreen.svelte';
+  import WorkScreen from '$lib/components/screens/WorkScreen.svelte';
   import ResourceSidebar from '$lib/components/UI/ResourceSidebar.svelte';
   import GameControls from '$lib/components/UI/GameControls.svelte';
   import { uiState } from '$lib/stores/uiState';
@@ -50,6 +51,8 @@
         <CraftingScreen />
       {:else if currentScreen === 'exploration'}
         <ExplorationScreen />
+      {:else if currentScreen === 'work'}
+        <WorkScreen />
       {/if}
     </div>
   </div>

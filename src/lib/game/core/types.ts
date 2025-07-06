@@ -26,6 +26,42 @@ export interface GameState {
 	craftingQueue: CraftingInProgress[];
 	currentToolLevel: number;
 	activeExplorationMissions: ExplorationMissionInProgress[]; // Added exploration missions
+	
+	// Work System additions
+	workAssignments: Record<string, WorkAssignment>; // pawnId -> WorkAssignment
+	productionTargets: ProductionTarget[]; // Production targets by location and work type
+	pawns: Pawn[]; // Individual population members
+}
+export interface WorkAssignment {
+  pawnId: string;
+  workPriorities: Record<string, number>; // workCategoryId -> priority (0-10)
+  authorizedLocations: string[]; // Location IDs where pawn can work
+  activeLocation?: string; // Currently working location
+  currentWork?: string; // Current work category
+}
+
+export interface ProductionTarget {
+  id: string; // Unique identifier
+  workCategoryId: string;
+  locationId: string;
+  resourceTargets: Record<string, number>; // resourceId -> percentage (0-100)
+  assignedPawns: string[]; // Pawn IDs assigned to this production
+}
+
+export interface Pawn {
+  id: string;
+  name: string;
+  stats: {
+    strength: number;
+    dexterity: number;
+    intelligence: number;
+    wisdom: number;
+    constitution: number;
+    charisma: number;
+  };
+  skills: Record<string, number>; // skillId -> level
+  currentWork?: string; // Current work category
+  workLocation?: string; // Current work location
 }
 
 export interface Building {

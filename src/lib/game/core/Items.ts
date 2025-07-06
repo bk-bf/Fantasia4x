@@ -59,6 +59,21 @@ color: '#D4AF37',
 amount: 0
 },
 {
+id: 'herbs',
+name: 'Herbs',
+description: 'Various wild herbs used for flavoring purposes',
+type: 'material',
+category: 'food',
+level: 0,
+rarity: 'common',
+effects: { nutritionValue: 0.5, healthBonus: 0.15, flavorEnhancement: 0.2 },
+researchRequired: null,
+emoji: '🌿',
+color: '#4CAF50',
+amount: 0
+},
+
+{
 id: 'river_trout',
 name: 'River Trout',
 description: 'Delicate freshwater fish prized for its flavor',
@@ -72,6 +87,21 @@ emoji: '🐟',
 color: '#FF8A65',
 amount: 0
 },
+{
+id: 'rabbit_carcass',	
+name: 'Rabbits',
+description: 'Freshly hunted rabbit, ready for processing',
+type: 'material',
+category: 'food',
+level: 0,
+rarity: 'common',
+effects: { nutritionValue: 1.5, proteinBonus: 0.3 },
+researchRequired: null,
+emoji: '🐇',
+color: '#8D4E85',
+amount: 0,
+},
+
   // BUTCHERY PROCESSING - Converting Carcasses to Materials
 {
   id: 'rabbit_meat',
