@@ -25,6 +25,7 @@ export interface GameState {
 	};
 	craftingQueue: CraftingInProgress[];
 	currentToolLevel: number;
+	activeExplorationMissions: ExplorationMissionInProgress[]; // Added exploration missions
 }
 
 export interface Building {
@@ -385,6 +386,23 @@ export interface Location {
   color: string;
 }
 
+export interface ExplorationMissionInProgress {
+  id: string;
+  name: string;
+  description: string;
+  targetLocation: string;
+  explorersRequired: number;
+  toolsRequired: string[];
+  suppliesRequired: Record<string, number>;
+  duration: number;
+  successChance: number;
+  riskLevel: 'low' | 'medium' | 'high' | 'extreme';
+  
+  // Progress tracking
+  startedAt: number; // Turn when mission started
+  turnsRemaining: number;
+  progress: number; // 0-1 completion percentage
+}
 
 export interface WorldTile {
   x: number;

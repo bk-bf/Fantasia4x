@@ -85,6 +85,9 @@
       <button class="control-btn" on:click={() => uiState.setScreen('building')}>🏗️ Build</button>
       <button class="control-btn" on:click={() => uiState.setScreen('crafting')}>⚒️ Crafting</button
       >
+      <button class="control-btn" on:click={() => uiState.setScreen('exploration')}
+        >🗺️ Explore</button
+      >
       <button
         class="control-btn"
         class:disabled={!hasResearchCapability}
@@ -100,6 +103,7 @@
   </div>
 </div>
 
+<!-- Keep all existing styles -->
 <style>
   .main-screen {
     display: flex;

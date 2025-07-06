@@ -41,8 +41,10 @@ export const initialGameState: GameState = {
     hands: null
   },
   craftingQueue: [],
-  currentToolLevel: 0
+  currentToolLevel: 0,
+  activeExplorationMissions: [] // Added empty array for exploration missions
 };
+
 
 function createGameState() {
   function saveToLocalStorage(state: GameState) {

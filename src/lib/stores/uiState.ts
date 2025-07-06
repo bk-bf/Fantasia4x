@@ -2,7 +2,7 @@
 import { writable } from 'svelte/store';
 
 interface UIState {
-  currentScreen: 'main' | 'race' |'building' | 'crafting' | 'research' | 'army' | 'hero';
+  currentScreen: 'main' | 'race' |'building' | 'crafting' | 'research' | 'exploration';
   showNotifications: boolean;
   lastEvent: string | null;
 }

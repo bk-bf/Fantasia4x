@@ -5,9 +5,9 @@ import type { Location } from '$lib/game/core/types';
 export const LOCATIONS_DATABASE: Location[] = [
   // TIER 0 - STARTING LOCATIONS (Always Available)
   {
-    id: 'starting_plains',
-    name: 'Starting Plains',
-    description: 'Gentle grasslands where your civilization first took root',
+    id: 'plains',
+    name: 'Plains',
+    description: 'Gentle grasslands where your civilization first took roots',
     type: 'plains',
     tier: 0,
     rarity: 'common',
