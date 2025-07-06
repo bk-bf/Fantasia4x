@@ -53,26 +53,26 @@ Based on the search results showing your current roadmap and the missing craftin
 - [x] **Test**: Research projects unlock in proper sequence
 
 ### **Milestone 2.3: Research-Gated Level System**
-- [ ] Implement level progression (Tool Level, Building Level, etc.)
-- [ ] Connect research completion to level unlocks
-- [ ] Add level-gated content in existing screens
-- [ ] **Test**: Research unlocks new capabilities in other systems
+- [x] Implement level progression (Tool Level, Building Level, etc.)
+- [x] Connect research completion to level unlocks
+- [x] Add level-gated content in existing screens
+- [x] **Test**: Research unlocks new capabilities in other systems
 
 ### **Milestone 2.4: Research Integration**
-- [ ] Connect research to building unlocks
-- [ ] Add research-gated screen access (Research Screen via Sage's Library)
-- [ ] Implement research bonuses and multipliers
-- [ ] **Test**: Research creates meaningful strategic choices
+- [x] Connect research to building unlocks
+- [x] Add research-gated screen access (Research Screen via Sage's Library)
+- [x] Implement research bonuses and multipliers
+- [x] **Test**: Research creates meaningful strategic choices
 
 ## 📅 **Phase 3: Crafting & Tool System (Week 7-9)**
 *Complex crafting chains and job specialization*
 
 ### **Milestone 3.1: Crafting System Architecture**
-- [ ] Design tool database schema (requirements, effects, durability, levels)
-- [ ] Design crafting recipe database (inputs, outputs, tool requirements)
-- [ ] Implement crafting mechanics and validation
-- [ ] Build crafting screen interface
-- [ ] **Test**: Tools can be crafted using available resources
+- [x] Design tool database schema (requirements, effects, durability, levels)
+- [x] Design crafting recipe database (inputs, outputs, tool requirements)
+- [x] Implement crafting mechanics and validation
+- [x] Build crafting screen interface
+- [x] **Test**: Tools can be crafted using available resources
 
 ### **Milestone 3.2: Tool Database Population**
 - [ ] Populate tool database with 20+ tools across 4 tech levels
