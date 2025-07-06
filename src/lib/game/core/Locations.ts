@@ -563,8 +563,6 @@ export const LOCATIONS_DATABASE: Location[] = [
       tier1: [
         // Seasonal animals
         'deer_carcass', 'wild_boar_carcass',
-        // Animal products
-        'sinew', 'bone', 'hide', 'quality_hide'
       ],
       tier2: [
         // Rare animals
