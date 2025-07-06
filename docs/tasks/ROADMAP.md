@@ -75,10 +75,10 @@ Based on the search results showing your current roadmap and the missing craftin
 - [x] **Test**: Tools can be crafted using available resources
 
 ### **Milestone 3.2: Tool Database Population**
-- [ ] Populate tool database with 20+ tools across 4 tech levels
-- [ ] Add tool categories (Harvesting, Combat, Crafting, Magical)
-- [ ] Define tool effects on production and capabilities
-- [ ] **Test**: Tools provide meaningful gameplay benefits
+- [x] Populate tool database with 20+ tools across 4 tech levels
+- [x] Add tool categories (Harvesting, Combat, Crafting, Magical)
+- [x] Define tool effects on production and capabilities
+- [x] **Test**: Tools provide meaningful gameplay benefits
 
 ### **Milestone 3.3: Job Assignment System**
 - [ ] Design job database schema (requirements, bonuses, tool dependencies)
