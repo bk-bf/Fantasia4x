@@ -11,16 +11,17 @@
   let itemChanges: Record<string, number> = {};
 
   const unsubscribeItems = currentItem.subscribe((newItems) => {
+    newItems = newItems || [];
     // Track changes for animation
-    newItems.forEach((newItem) => {
-      const oldItem = items.find((i) => i.id === newItem.id);
-      if (oldItem && oldItem.amount !== newItem.amount) {
-        const change = newItem.amount - oldItem.amount;
+    newItems.forEach((newItems) => {
+      const oldItem = items.find((i) => i.id === newItems.id);
+      if (oldItem && oldItem.amount !== newItems.amount) {
+        const change = newItems.amount - oldItem.amount;
         if (change > 0) {
-          itemChanges[newItem.id] = change;
+          itemChanges[newItems.id] = change;
           // Clear animation after 2 seconds
           setTimeout(() => {
-            itemChanges[newItem.id] = 0;
+            itemChanges[newItems.id] = 0;
           }, 2000);
         }
       }
