@@ -349,16 +349,42 @@ export interface Equipment {
   stats: Partial<RaceStats>;
   magical?: boolean;
 }
-
 export interface Location {
   id: string;
   name: string;
-  type: 'forest' | 'ruins' | 'mine' | 'settlement';
-  x: number;
-  y: number;
+  description: string;
+  type: 'plains' | 'hills' | 'forest' | 'swamp' | 'mountains' | 'river' | 'ruins' | 'caves' | 'magical_forest' | 'legendary_mountains' | 'special' | 'volcanic' | 'seasonal';
+  tier: number; // 0-2, matching item/building progression
+  rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
   discovered: boolean;
-  item?: Item[];
+  
+  // Available resources by tier
+  availableResources: {
+    tier0: string[]; // Basic materials
+    tier1: string[]; // Advanced materials
+    tier2: string[]; // Rare/legendary materials
+  };
+  
+  // Work efficiency modifiers
+  workModifiers: Record<string, number>; // jobType -> multiplier
+  
+  // Exploration requirements
+  explorationRequirements: {
+    population?: number;
+    tools?: string[];
+    research?: string[];
+    buildings?: string[];
+  };
+  
+  // Dangers and features
+  hazards: string[];
+  specialFeatures: string[];
+  
+  // Visual representation
+  emoji: string;
+  color: string;
 }
+
 
 export interface WorldTile {
   x: number;

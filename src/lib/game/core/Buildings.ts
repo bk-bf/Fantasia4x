@@ -77,6 +77,40 @@ export const AVAILABLE_BUILDINGS: Building[] = [
 
 // CRAFTING & PRODUCTION - Level 0-2
 {
+  id: 'simple_butchery',
+  name: 'Simple Butchery',
+  description: 'Wooden table for processing animal carcasses into meat and hide',
+  category: 'food',
+  tier: 0,
+  rarity: 'common',
+  effects: { 
+    meatProcessing: 1.5,
+    hideProcessing: 1.3,
+    wasteReduction: 0.8
+  },
+  researchRequired: null,
+  emoji: '🔪',
+  color: '#8D6E63',
+  buildingCost: { 
+    oak_wood: 8, 
+    flint: 4, 
+    sinew: 2 
+  },
+  buildTime: 3,
+  toolTierRequired: 0,
+  populationRequired: 1,
+  upkeepCost: {},
+  productionBonus: { 
+    meat_processing: 1.5,
+    hide_processing: 1.3
+  },
+  storageCapacity: { 
+    carcasses: 20, 
+    processed_meat: 30, 
+    hides: 15 
+  }
+},
+{
   id: 'craftsmens_workshop',
   name: 'Craftsmens Workshop',
   description: 'Basic workshop with stone tools and oak workbenches',
