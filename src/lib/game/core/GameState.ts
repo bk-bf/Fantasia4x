@@ -1,5 +1,5 @@
 // src/lib/game/core/GameState.ts
-import type { GameState } from './types.ts';
+import type { GameState, ResearchProject, Building, Item } from './types.ts';
 
 export class GameStateManager {
   private state: GameState;
@@ -18,20 +18,84 @@ export class GameStateManager {
 
   advanceTurn(): void {
     this.state.turn += 1;
-    this.generateKnowledge();
     this.processResources();
-  }
-
-  private generateKnowledge(): void {
-    const { intelligence, wisdom } = this.state.race.baseStats;
-    const knowledgeGain = Math.floor((intelligence + wisdom) / 10);
-    this.state.knowledge += knowledgeGain;
+    this.processBuildings();
+    this.processCrafting();
+    this.processResearch();
   }
 
   private processResources(): void {
     // Basic resource generation logic
     const foodProduction = this.state.race.population * 2;
     this.addResource('food', foodProduction);
+    
+    // Add wood and stone production
+    const woodProduction = 2 + (this.state._woodBonus || 0);
+    const stoneProduction = 1 + (this.state._stoneBonus || 0);
+    
+    this.addResource('wood', woodProduction);
+    this.addResource('stone', stoneProduction);
+  }
+
+  private processBuildings(): void {
+    // Process building queue - buildings under construction
+    if (this.state.buildingQueue.length > 0) {
+      this.state.buildingQueue = this.state.buildingQueue.map(building => ({
+        ...building,
+        turnsRemaining: building.turnsRemaining - 1
+      })).filter(building => {
+        if (building.turnsRemaining <= 0) {
+          // Building completed - add to building counts
+          this.state.buildingCounts[building.building.id] = 
+            (this.state.buildingCounts[building.building.id] || 0) + 1;
+          return false;
+        }
+        return true;
+      });
+    }
+  }
+
+  private processCrafting(): void {
+    // Process crafting queue - items being crafted
+    if (this.state.craftingQueue.length > 0) {
+      this.state.craftingQueue = this.state.craftingQueue.map(crafting => ({
+        ...crafting,
+        turnsRemaining: crafting.turnsRemaining - 1
+      })).filter(crafting => {
+        if (crafting.turnsRemaining <= 0) {
+          // Crafting completed - add to inventory
+          const itemId = crafting.item.id;
+          const quantity = crafting.quantity || 1;
+          this.state.inventory[itemId] = (this.state.inventory[itemId] || 0) + quantity;
+          return false;
+        }
+        return true;
+      });
+    }
+  }
+
+  private processResearch(): void {
+    // Process current research - scroll-based progression
+    if (this.state.currentResearch) {
+      this.state.currentResearch.currentProgress = 
+        (this.state.currentResearch.currentProgress || 0) + 1;
+      
+      if (this.state.currentResearch.currentProgress >= this.state.currentResearch.researchTime) {
+        // Research completed
+        this.state.completedResearch.push(this.state.currentResearch.id);
+        
+        // Apply research unlocks
+        if (this.state.currentResearch.unlocks.toolTierRequired) {
+          this.state.currentToolLevel = Math.max(
+            this.state.currentToolLevel,
+            this.state.currentResearch.unlocks.toolTierRequired
+          );
+        }
+        
+        // Clear current research
+        this.state.currentResearch = undefined;
+      }
+    }
   }
 
   addResource(resourceId: string, amount: number): void {
@@ -39,5 +103,56 @@ export class GameStateManager {
     if (resource) {
       resource.amount += amount;
     }
+  }
+
+  addToInventory(itemId: string, amount: number): void {
+    this.state.inventory[itemId] = (this.state.inventory[itemId] || 0) + amount;
+  }
+
+  removeFromInventory(itemId: string, amount: number): boolean {
+    const currentAmount = this.state.inventory[itemId] || 0;
+    if (currentAmount >= amount) {
+      this.state.inventory[itemId] = currentAmount - amount;
+      return true;
+    }
+    return false;
+  }
+
+  startResearch(research: ResearchProject): boolean {
+    // Check if research can be started (scroll requirements, etc.)
+    if (this.state.currentResearch) {
+      return false; // Already researching something
+    }
+    
+    // Set current research
+    this.state.currentResearch = {
+      ...research,
+      currentProgress: 0
+    };
+    
+    return true;
+  }
+
+  startBuilding(building: Building): boolean {
+    // Add building to construction queue
+    this.state.buildingQueue.push({
+      building,
+      turnsRemaining: building.buildTime,
+      startedAt: this.state.turn
+    });
+    
+    return true;
+  }
+
+  startCrafting(item: Item, quantity: number = 1): boolean {
+    // Add item to crafting queue
+    this.state.craftingQueue.push({
+      item,
+      quantity,
+      turnsRemaining: item.craftingTime || 1,
+      startedAt: this.state.turn
+    });
+    
+    return true;
   }
 }

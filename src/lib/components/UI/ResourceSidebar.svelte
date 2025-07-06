@@ -5,7 +5,6 @@
 
   let items: any[] = [];
   let race: any = null;
-  let knowledge = 0;
 
   // Track resource changes for animation
   let itemChanges: Record<string, number> = {};

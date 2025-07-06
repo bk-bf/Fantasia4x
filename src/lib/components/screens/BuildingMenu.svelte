@@ -220,6 +220,7 @@
     return requirements;
   }
 
+  // Buildings special properties
   function getBuildingSpecialProperties(building: Building): string[] {
     const properties = [];
 

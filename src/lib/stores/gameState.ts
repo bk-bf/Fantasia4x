@@ -20,7 +20,6 @@ export const initialGameState: GameState = {
   race: generateRace(),
   item: getBasicMaterials().map(item => ({ ...item, amount: 0 })),
   heroes: [],
-  knowledge: 0, // Added missing property
   worldMap: [],
   discoveredLocations: [],
   buildingCounts: {},
@@ -30,9 +29,8 @@ export const initialGameState: GameState = {
   completedResearch: [],
   currentResearch: undefined,
   discoveredLore: [],
-  knowledgeGeneration: 0, // Added missing property (set to 0 since we removed knowledge system)
-  _woodBonus: 0, // Added missing optional property with default value
-  _stoneBonus: 0, // Added missing optional property with default value
+  _woodBonus: 0,
+  _stoneBonus: 0,
   inventory: {},
   equippedItems: {
     weapon: null,

@@ -3,7 +3,6 @@ export interface GameState {
 	race: Race;
 	item: Item[];
 	heroes: Hero[];
-	knowledge: number;
 	worldMap: WorldTile[][];
 	discoveredLocations: Location[];
 	buildingCounts: Record<string, number>; // Replace buildings: Building[]
@@ -13,7 +12,6 @@ export interface GameState {
 	completedResearch: string[]; // Research IDs already finished
 	currentResearch?: ResearchProject; // Currently researching
 	discoveredLore: LoreItem[]; // Found lore items
-	knowledgeGeneration: number; // Per-turn knowledge gain
 	_woodBonus?: number;
 	_stoneBonus?: number;
 	inventory: Record<string, number>; // resourceId -> quantity
@@ -257,25 +255,6 @@ export interface CraftingInProgress {
   turnsRemaining: number;
   startedAt: number;
 }
-
-export interface RaceStats {
-  strength: number;
-  dexterity: number;
-  intelligence: number;
-  wisdom: number;
-  charisma: number;
-  constitution: number;
-}
-
-export interface Race {
-  id: string;
-  name: string;
-  baseStats: RaceStats;
-  traits: any[];
-  population: number;
-  statVariation: string;
-  implications: Record<string, string>;
-}
 export interface ResearchProject {
   id: string;
   name: string;
@@ -334,6 +313,23 @@ export interface LoreItem {
   type: 'scroll' | 'tome' | 'artifact' | 'manual' | 'fragment';
   researchUnlocks: string[];
   discoveryWeight: number;
+}
+export interface RaceStats {
+  strength: number;
+  dexterity: number;
+  intelligence: number;
+  wisdom: number;
+  charisma: number;
+  constitution: number;
+}
+export interface Race {
+  id: string;
+  name: string;
+  baseStats: RaceStats;
+  traits: any[];
+  population: number;
+  statVariation: string;
+  implications: Record<string, string>;
 }
 
 export interface Hero {
