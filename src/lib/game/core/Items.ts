@@ -18,7 +18,7 @@ amount: 0
 },
 {
 id: 'common_carp',
-name: 'Common Carp',
+name: 'Carp',
 description: 'Freshwater fish commonly found in rivers and lakes',
 type: 'material',
 category: 'food',

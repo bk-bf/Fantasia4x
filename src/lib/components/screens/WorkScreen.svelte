@@ -24,6 +24,7 @@
   let selectedPawn: string | null = null;
   let selectedLocation: string | null = null;
   let selectedWorkCategory: string | null = null;
+  let priorityWarning: string | null = null;
 
   const unsubscribeGame = gameState.subscribe((state) => {
     pawns = state.pawns || [];
@@ -52,6 +53,26 @@
     unsubscribeGame();
   });
 
+  function getNextAvailablePriority(
+    pawnId: string,
+    currentWorkId: string,
+    direction: 1 | -1
+  ): number {
+    const used = new Set(
+      Object.entries(workAssignments[pawnId]?.workPriorities || {})
+        .filter(([wid, _]) => wid !== currentWorkId)
+        .map(([_, p]) => Number(p))
+    );
+    let priority = getPawnWorkPriority(pawnId, currentWorkId);
+    do {
+      priority += direction;
+    } while (priority > 0 && priority <= 10 && used.has(priority));
+    // Clamp between 0 and 10
+    if (priority < 0) priority = 0;
+    if (priority > 10) priority = 10;
+    return priority;
+  }
+
   function updatePawnWorkPriority(pawnId: string, workId: string, priority: number) {
     gameState.update((state) => {
       const newAssignments = { ...state.workAssignments };
@@ -62,8 +83,23 @@
           authorizedLocations: discoveredLocations.map((loc) => loc.id)
         };
       }
-      newAssignments[pawnId].workPriorities[workId] = priority;
 
+      // Check for duplicate priority (except 0)
+      if (priority > 0) {
+        for (const [otherWorkId, otherPriority] of Object.entries(
+          newAssignments[pawnId].workPriorities
+        )) {
+          if (otherWorkId !== workId && otherPriority === priority) {
+            // Show warning and abort
+            priorityWarning = `Priority ${priority} is already assigned to another work.`;
+            return state;
+          }
+        }
+      }
+
+      // No conflict, clear warning and update
+      priorityWarning = null;
+      newAssignments[pawnId].workPriorities[workId] = priority;
       return {
         ...state,
         workAssignments: newAssignments
@@ -73,13 +109,10 @@
 
   function getExpectedHarvest(pawnId: string, workType: string): number {
     const pawn = pawns.find((p) => p.id === pawnId);
-    const priority = getPawnWorkPriority(pawnId, workType);
-
-    if (!pawn || priority === 0) return 0;
-
-    // Use the same calculation as the harvesting system
+    if (!pawn) return 0;
     const state = get(gameState);
-    return calculateHarvestAmount(pawn, workType, priority, state);
+    // Always pass 1 for priority, or remove if not needed
+    return calculateHarvestAmount(pawn, workType, 1, state);
   }
 
   function getPawnWorkPriority(pawnId: string, workId: string): number {
@@ -293,12 +326,33 @@
                   </div>
 
                   <div class="priority-controls">
+                    <!-- Harvest Information -->
+                    {#if priority > 0}
+                      <div class="work-feedback">
+                        <div class="harvest-prediction">
+                          <span class="harvest-amount">+{expectedHarvest}/turn</span>
+                          <span
+                            class="efficiency-indicator"
+                            style="color: {getWorkEfficiencyColor(efficiency)}"
+                          >
+                            {efficiency >= 12
+                              ? 'Excellent'
+                              : efficiency >= 10
+                                ? 'Good'
+                                : efficiency >= 8
+                                  ? 'Average'
+                                  : 'Poor'} efficiency
+                          </span>
+                        </div>
+                      </div>
+                    {/if}
                     <button
                       class="priority-btn decrease"
                       class:disabled={priority <= 0}
                       on:click={() => {
                         if (priority > 0) {
-                          updatePawnWorkPriority(pawn.id, workCategory.id, priority - 1);
+                          const next = getNextAvailablePriority(pawn.id, workCategory.id, -1);
+                          updatePawnWorkPriority(pawn.id, workCategory.id, next);
                         }
                       }}
                       disabled={priority <= 0}
@@ -327,13 +381,13 @@
                         />
                       </div>
                     </div>
-
                     <button
                       class="priority-btn increase"
                       class:disabled={priority >= 10}
                       on:click={() => {
                         if (priority < 10) {
-                          updatePawnWorkPriority(pawn.id, workCategory.id, priority + 1);
+                          const next = getNextAvailablePriority(pawn.id, workCategory.id, 1);
+                          updatePawnWorkPriority(pawn.id, workCategory.id, next);
                         }
                       }}
                       disabled={priority >= 10}
@@ -342,27 +396,6 @@
                       ▶
                     </button>
                   </div>
-
-                  <!-- Harvest Information -->
-                  {#if priority > 0}
-                    <div class="work-feedback">
-                      <div class="harvest-prediction">
-                        <span class="harvest-amount">+{expectedHarvest}/turn</span>
-                        <span
-                          class="efficiency-indicator"
-                          style="color: {getWorkEfficiencyColor(efficiency)}"
-                        >
-                          {efficiency >= 12
-                            ? 'Excellent'
-                            : efficiency >= 10
-                              ? 'Good'
-                              : efficiency >= 8
-                                ? 'Average'
-                                : 'Poor'} efficiency
-                        </span>
-                      </div>
-                    </div>
-                  {/if}
                 </div>
               {/each}
             </div>

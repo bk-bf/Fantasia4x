@@ -215,28 +215,29 @@ export function processWorkHarvesting(state: GameState): GameState {
       return;
     }
 
-    const sortedWork = Object.entries(workAssignment.workPriorities)
+    // Get all works with priority > 0, sorted by priority (1, 2, 3, ...)
+    const sortedWorks = Object.entries(workAssignment.workPriorities)
       .filter(([_, priority]) => priority > 0)
-      .sort(([_, a], [__, b]) => b - a);
+      .sort(([, a], [, b]) => a - b);
 
-    if (sortedWork.length === 0) {
+    if (sortedWorks.length === 0) {
       console.log(`[Work] No work priorities for pawn ${pawn.id}`);
       return;
     }
 
-    const [topWorkType, priority] = sortedWork[0];
-    console.log(`[Work] Pawn ${pawn.id} doing ${topWorkType} with priority ${priority}`);
+    sortedWorks.forEach(([workType, priority]) => {
+      console.log(`[Work] Pawn ${pawn.id} doing ${workType} with priority ${priority}`);
+      const harvestAmount = calculateHarvestAmount(pawn, workType, priority, state);
+      console.log(`[Work] Calculated harvest amount: ${harvestAmount}`);
 
-    const harvestAmount = calculateHarvestAmount(pawn, topWorkType, priority, state);
-    console.log(`[Work] Calculated harvest amount: ${harvestAmount}`);
-
-    if (harvestAmount > 0) {
-      const resourceType = getResourceFromWorkType(topWorkType);
-      console.log(`[Work] Resource type for work: ${resourceType}`);
-      if (resourceType) {
-        harvestedResources[resourceType] = (harvestedResources[resourceType] || 0) + harvestAmount;
+      if (harvestAmount > 0) {
+        const resourceType = getResourceFromWorkType(workType);
+        console.log(`[Work] Resource type for work: ${resourceType}`);
+        if (resourceType) {
+          harvestedResources[resourceType] = (harvestedResources[resourceType] || 0) + harvestAmount;
+        }
       }
-    }
+    });
   });
 
   console.log('[Work] Harvested resources this turn:', harvestedResources);
