@@ -18,6 +18,8 @@ import { calculateHarvestAmount } from '$lib/game/core/Work';
 import { processWorkHarvesting as sharedProcessWorkHarvesting } from '$lib/game/core/Work';
 import { syncPawnInventoryWithGlobal, syncAllPawnInventories } from '$lib/game/core/PawnEquipment';
 import { calculatePawnAbilities } from '$lib/game/core/Pawns';
+import { eventSystem } from '$lib/game/core/Events';
+import { triggerEvent } from '$lib/stores/eventStore';
 // Game timing configuration
 const TURN_INTERVAL = 3000;
 let gameInterval: number | null = null;
@@ -199,11 +201,17 @@ function advanceTurn() {
     // AUTO-SYNC: Use the centralized sync function
     newState = syncAllPawnInventories(newState);
     
-    // UPDATE ABILITIES: Recalculate all pawn abilities
-    newState = updatePawnAbilities(newState);
-    pawnAbilities
+    // UPDATE ABILITIES: Recalculate all pawn abilities (if implemented)
+    // newState = updatePawnAbilities(newState);
+    
     renewAllLocationResources();
     newState = generateItems(newState);
+
+    // EVENT GENERATION: Try to generate an event
+    const event = eventSystem.generateEvent(newState);
+    if (event) {
+      triggerEvent(event);
+    }
 
     return newState;
   });
@@ -364,11 +372,11 @@ return {
       }, newInterval);
     }
   }
-
   return {
     subscribe,
     set,
     update,
+    updateWithSave, // ADD THIS LINE - export updateWithSave
     isPaused: { subscribe: isPaused.subscribe },
     gameSpeed: { subscribe: gameSpeed.subscribe },
 
@@ -395,6 +403,7 @@ return {
 export const gameState = createGameState();
 
 // Derived stores - removed currentInventory
+export const { updateWithSave } = gameState;
 export const currentTurn = derived(gameState, $gameState => $gameState.turn);
 export const currentItem = derived(gameState, $gameState => $gameState.item);
 export const currentRace = derived(gameState, $gameState => $gameState.race);
