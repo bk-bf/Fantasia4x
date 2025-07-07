@@ -13,14 +13,13 @@
   import { getDiscoveredLocations, getLocationInfo } from '$lib/game/core/Locations';
   import { getItemIcon, getItemInfo } from '$lib/game/core/Items';
   import { get } from 'svelte/store';
-  import Progressbar from '$lib/components/UI/ProgressBar.svelte';
 
   let race: any = null;
   let pawns: any[] = [];
   let discoveredLocations: any[] = [];
   let workAssignments: Record<string, any> = {};
   let productionTargets: any[] = [];
-
+  let currentJobIndex: Record<string, number> = {};
   // Track current job for each pawn (RimWorld-style cycling)
   let pawnCurrentJobs: Record<string, { workId: string; priority: number; startTime: number }> = {};
   let jobCycleInterval: number;
@@ -37,6 +36,7 @@
     discoveredLocations = getDiscoveredLocations();
     workAssignments = state.workAssignments || {};
     productionTargets = state.productionTargets || [];
+    currentJobIndex = state.currentJobIndex || {};
 
     // Initialize current jobs for new pawns
     pawns.forEach((pawn) => {
@@ -86,29 +86,18 @@
   }
 
   function getCurrentJobForPawn(pawnId: string): { workId: string; priority: number } | null {
-    const currentJob = pawnCurrentJobs[pawnId];
-    if (!currentJob) return null;
-
-    // Verify the job is still assigned
     const assignments = workAssignments[pawnId];
-    if (
-      !assignments ||
-      !assignments.workPriorities[currentJob.workId] ||
-      assignments.workPriorities[currentJob.workId] === 0
-    ) {
-      // Job no longer assigned, get next job
-      const nextJob = getNextJobForPawn(pawnId);
-      if (nextJob) {
-        pawnCurrentJobs[pawnId] = {
-          ...nextJob,
-          startTime: Date.now()
-        };
-        return nextJob;
-      }
-      return null;
-    }
+    if (!assignments) return null;
 
-    return currentJob;
+    const sortedWork = Object.entries(assignments.workPriorities)
+      .filter(([_, priority]) => Number(priority) > 0)
+      .sort(([_, a], [__, b]) => Number(a) - Number(b))
+      .map(([workId, priority]) => ({ workId, priority: Number(priority) }));
+
+    if (sortedWork.length === 0) return null;
+
+    const idx = currentJobIndex[pawnId] ?? 0;
+    return sortedWork[idx % sortedWork.length];
   }
 
   onMount(() => {
@@ -367,16 +356,6 @@
                     {/each}
                   </div>
 
-                  <Progressbar
-                    progress={getWorkProgress(pawn.id, currentJob.workId)}
-                    color={getWorkEfficiencyColor(efficiency)}
-                    size="h-3"
-                    labelInside
-                    animate
-                    precision={0}
-                    tweenDuration={500}
-                  />
-
                   <div class="harvest-info">
                     <span class="harvest-rate">+{expectedHarvest}/turn</span>
                     <span class="efficiency-rating">Efficiency: {efficiency}</span>
@@ -449,14 +428,6 @@
                 <div class="category-production">
                   <span class="total-harvest">Total: +{totalHarvest}/turn</span>
                 </div>
-
-                <Progressbar
-                  progress={Math.min(100, (assignedPawns.length / pawns.length) * 100)}
-                  color="blue"
-                  size="h-2"
-                  animate
-                  tweenDuration={300}
-                />
               {/if}
             </div>
           </div>
@@ -525,21 +496,7 @@
                       <span class="priority-value">{priority}</span>
 
                       <!-- Enhanced Progress Bar -->
-                      <div class="priority-progress">
-                        <Progressbar
-                          progress={getWorkProgress(pawn.id, workCategory.id)}
-                          color={getWorkEfficiencyColor(efficiency)}
-                          size="h-4"
-                          labelInside
-                          animate
-                          precision={0}
-                          tweenDuration={300}
-                          classes={{
-                            labelInsideDiv:
-                              'text-xs font-medium text-center p-0 leading-none rounded-full'
-                          }}
-                        />
-                      </div>
+                      <div class="priority-progress"></div>
                     </div>
                     <button
                       class="priority-btn increase"

@@ -2,6 +2,7 @@
 import type { GameState, ResearchProject, Building, Item } from './types';
 import { getItemInfo } from './Items';
 import { calculateHarvestAmount, getResourceFromWorkType } from './Work';
+import { processWorkHarvesting as sharedProcessWorkHarvesting } from './Work';
 
 export class GameStateManager {
   private state: GameState;
@@ -24,7 +25,7 @@ export class GameStateManager {
     this.processBuildings();
     this.processCrafting();
     this.processResearch();
-    this.processWorkHarvesting(); // Now properly integrated
+    this.state = sharedProcessWorkHarvesting(this.state);// Now properly integrated
   }
 
   private processResources(): void {
@@ -99,43 +100,6 @@ export class GameStateManager {
         this.state.currentResearch = undefined;
       }
     }
-  }
-
-  // NEW: Work harvesting system integration
-  private processWorkHarvesting(): void {
-    if (!this.state.pawns || this.state.pawns.length === 0) return;
-
-    const harvestedResources: Record<string, number> = {};
-
-    // Process each pawn's work assignments
-    this.state.pawns.forEach(pawn => {
-      const workAssignment = this.state.workAssignments[pawn.id];
-      if (!workAssignment) return;
-
-      // Find the highest priority work for this pawn
-      const sortedWork = Object.entries(workAssignment.workPriorities)
-        .filter(([_, priority]) => priority > 0)
-        .sort(([_, a], [__, b]) => b - a);
-
-      if (sortedWork.length === 0) return;
-
-      const [topWorkType, priority] = sortedWork[0];
-
-      // Calculate harvesting based on priority and pawn stats
-      const harvestAmount = calculateHarvestAmount(pawn, topWorkType, priority, this.state);
-
-      if (harvestAmount > 0) {
-        const resourceType = getResourceFromWorkType(topWorkType);
-        if (resourceType) {
-          harvestedResources[resourceType] = (harvestedResources[resourceType] || 0) + harvestAmount;
-        }
-      }
-    });
-
-    // Apply harvested resources to items array
-    Object.entries(harvestedResources).forEach(([resourceId, amount]) => {
-      this.addToItemArray(resourceId, amount);
-    });
   }
 
   // UPDATED: Use items array instead of separate resource tracking

@@ -29,6 +29,7 @@ export interface GameState {
   workAssignments: Record<string, WorkAssignment>;
   productionTargets: ProductionTarget[];
   pawns: Pawn[];
+  currentJobIndex: Record<string, number>;
 }
 export interface WorkAssignment {
   pawnId: string;

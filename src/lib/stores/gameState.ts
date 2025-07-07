@@ -11,6 +11,7 @@ import {
   canBuildWithPopulation
 } from '$lib/game/core/Buildings';
 import { calculateHarvestAmount, getResourceFromWorkType } from '$lib/game/core/Work';
+import { processWorkHarvesting as sharedProcessWorkHarvesting } from '$lib/game/core/Work';
 
 // Game timing configuration
 const TURN_INTERVAL = 3000;
@@ -47,6 +48,7 @@ export const initialGameState: GameState = {
   activeExplorationMissions: [],
   workAssignments: {},
   productionTargets: [],
+  currentJobIndex: {}
 };
 
 function saveToLocalStorage(state: GameState) {
@@ -129,67 +131,13 @@ function advanceTurn() {
     newState = processResearch(newState);
     newState = processBuildingQueue(newState);
     newState = processCraftingQueue(newState);
-    newState = processWorkHarvesting(newState); // <-- Should log from above
+    // Use the shared function:
+    newState = sharedProcessWorkHarvesting(newState);
     newState = generateItems(newState);
 
     return newState;
   });
 }
-
-  // Fixed work harvesting to use items array only
-  function processWorkHarvesting(state: GameState): GameState {
-    if (!state.pawns || state.pawns.length === 0) return state;
-
-    const newState = { ...state };
-    const harvestedResources: Record<string, number> = {};
-
-    // Process each pawn's work assignments
-    state.pawns.forEach(pawn => {
-      const workAssignment = state.workAssignments[pawn.id];
-      if (!workAssignment) return;
-
-      // Find the highest priority work for this pawn
-      const sortedWork = Object.entries(workAssignment.workPriorities)
-        .filter(([_, priority]) => priority > 0)
-        .sort(([_, a], [__, b]) => b - a);
-
-      if (sortedWork.length === 0) return;
-
-      const [topWorkType, priority] = sortedWork[0];
-
-      // Calculate harvesting based on priority and pawn stats
-      const harvestAmount = calculateHarvestAmount(pawn, topWorkType, priority, state);
-
-      if (harvestAmount > 0) {
-        const resourceType = getResourceFromWorkType(topWorkType);
-        if (resourceType) {
-          harvestedResources[resourceType] = (harvestedResources[resourceType] || 0) + harvestAmount;
-        }
-      }
-    });
-
-    // Apply harvested resources to items array (immutable updates)
-    Object.entries(harvestedResources).forEach(([resourceId, amount]) => {
-      const itemIndex = newState.item.findIndex(item => item.id === resourceId);
-      if (itemIndex !== -1) {
-        // Update existing item immutably
-        const item = newState.item[itemIndex];
-        newState.item = [
-          ...newState.item.slice(0, itemIndex),
-          { ...item, amount: item.amount + amount },
-          ...newState.item.slice(itemIndex + 1)
-        ];
-      } else {
-        // Add new item if it doesn't exist
-        const itemInfo = getItemInfo(resourceId);
-        if (itemInfo) {
-          newState.item = [...newState.item, { ...itemInfo, amount }];
-        }
-      }
-    });
-
-    return newState;
-  }
 
   function processResearch(state: GameState): GameState {
     if (!state.currentResearch) return state;

@@ -205,27 +205,34 @@ export function processWorkHarvesting(state: GameState): GameState {
   const newState = { ...state };
   const harvestedResources: Record<string, number> = {};
 
+  // Ensure currentJobIndex exists
+  if (!newState.currentJobIndex) newState.currentJobIndex = {};
+
   state.pawns.forEach(pawn => {
     const workAssignment = state.workAssignments[pawn.id];
     if (!workAssignment) return;
 
-    // Get all works with priority > 0, sorted by priority (1, 2, 3, ...)
     const sortedWorks = Object.entries(workAssignment.workPriorities)
       .filter(([_, priority]) => priority > 0)
       .sort(([, a], [, b]) => a - b);
 
-    sortedWorks.forEach(([workType]) => {
-      const harvestAmount = calculateHarvestAmount(pawn, workType, 1, state); // priority does NOT affect output
-      if (harvestAmount > 0) {
-        const resourceType = getResourceFromWorkType(workType);
-        if (resourceType) {
-          harvestedResources[resourceType] = (harvestedResources[resourceType] || 0) + harvestAmount;
-        }
-      }
-    });
-  });
+    if (sortedWorks.length === 0) return;
 
-  console.log('[Work] Harvested resources this turn:', harvestedResources);
+    // Get current job index for this pawn, default to 0
+    const idx = newState.currentJobIndex[pawn.id] ?? 0;
+    const [workType] = sortedWorks[idx % sortedWorks.length];
+
+    const harvestAmount = calculateHarvestAmount(pawn, workType, 1, state);
+    if (harvestAmount > 0) {
+      const resourceType = getResourceFromWorkType(workType);
+      if (resourceType) {
+        harvestedResources[resourceType] = (harvestedResources[resourceType] || 0) + harvestAmount;
+      }
+    }
+
+    // Advance to next job for next turn
+    newState.currentJobIndex[pawn.id] = (idx + 1) % sortedWorks.length;
+  });
 
   Object.entries(harvestedResources).forEach(([resourceId, amount]) => {
     newState.item = newState.item.map(item =>
@@ -233,18 +240,11 @@ export function processWorkHarvesting(state: GameState): GameState {
         ? { ...item, amount: item.amount + amount }
         : item
     );
-
     const existingItem = newState.item.find(item => item.id === resourceId);
     if (!existingItem) {
       const itemInfo = getItemInfo(resourceId);
       if (itemInfo) {
-        console.log(`[Work] Adding new item to array: ${resourceId} with amount ${amount}`);
-        newState.item.push({
-          ...itemInfo,
-          amount: amount
-        });
-      } else {
-        console.log(`[Work] getItemInfo failed for ${resourceId}`);
+        newState.item.push({ ...itemInfo, amount });
       }
     }
   });
@@ -426,7 +426,7 @@ export function calculateHarvestAmount(
   if (!workCategory) return 0;
   
   // Base harvest rate per priority point
-  const baseHarvestRate = 2;
+  const baseHarvestRate = 0;
   
   // Calculate efficiency based on pawn stats
   const primaryStat = pawn.stats[workCategory.primaryStat] || 10;
