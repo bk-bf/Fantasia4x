@@ -1,26 +1,62 @@
 <script lang="ts">
-  import { currentItem, currentRace } from '$lib/stores/gameState';
+  import { currentItem, currentRace, gameState } from '$lib/stores/gameState'; // Remove currentInventory
   import { onDestroy } from 'svelte';
   import { getItemIcon, getItemColor } from '$lib/game/core/Items';
+  import { getResourceFromWorkType, calculateHarvestAmount } from '$lib/game/core/Work';
+  import { get } from 'svelte/store';
 
   let items: any[] = [];
   let race: any = null;
 
   // Track resource changes for animation
   let itemChanges: Record<string, number> = {};
-
+  $: {
+    console.log('[Sidebar] items:', items);
+    console.log('[Sidebar] allResources:', allResources);
+  }
+  // --- DEBUG LOGGING ---
+  $: {
+    const state = get(gameState);
+    if (state && state.pawns && state.workAssignments) {
+      console.log('[Sidebar DEBUG] Pawns:', state.pawns);
+      state.pawns.forEach((pawn: any) => {
+        const assignment = state.workAssignments[pawn.id];
+        if (assignment) {
+          const priorities = assignment.workPriorities;
+          const sorted = Object.entries(priorities)
+            .filter(([_, p]) => p > 0)
+            .sort((a, b) => b[1] - a[1]);
+          if (sorted.length > 0) {
+            const [workType, priority] = sorted[0];
+            const resource = getResourceFromWorkType(workType);
+            const expected = calculateHarvestAmount(pawn, workType, Number(priority), state);
+            console.log(
+              `[Sidebar DEBUG] Pawn ${pawn.name} assigned to ${workType} (priority ${priority}), should produce ${expected} ${resource}/turn`
+            );
+          } else {
+            console.log(`[Sidebar DEBUG] Pawn ${pawn.name} has no work assigned`);
+          }
+        } else {
+          console.log(`[Sidebar DEBUG] Pawn ${pawn.name} has no work assignment`);
+        }
+      });
+    } else {
+      console.log('[Sidebar DEBUG] No pawns or work assignments in state');
+    }
+  }
+  // --- END DEBUG LOGGING ---
   const unsubscribeItems = currentItem.subscribe((newItems) => {
     newItems = newItems || [];
+
     // Track changes for animation
-    newItems.forEach((newItems) => {
-      const oldItem = items.find((i) => i.id === newItems.id);
-      if (oldItem && oldItem.amount !== newItems.amount) {
-        const change = newItems.amount - oldItem.amount;
+    newItems.forEach((newItem) => {
+      const oldItem = items.find((i) => i.id === newItem.id);
+      if (oldItem && oldItem.amount !== newItem.amount) {
+        const change = newItem.amount - oldItem.amount;
         if (change > 0) {
-          itemChanges[newItems.id] = change;
-          // Clear animation after 2 seconds
+          itemChanges[newItem.id] = change;
           setTimeout(() => {
-            itemChanges[newItems.id] = 0;
+            itemChanges[newItem.id] = 0;
           }, 2000);
         }
       }
@@ -33,6 +69,9 @@
     race = value;
   });
 
+  // Simplified - only use items array
+  $: allResources = items.filter((item) => item.amount > 0);
+
   onDestroy(() => {
     unsubscribeItems();
     unsubscribeRace();
@@ -40,7 +79,6 @@
 </script>
 
 <div class="resource-sidebar">
-  <!-- Compact Kingdom Overview (Single Row) -->
   {#if race}
     <div class="section kingdom-overview">
       <div
@@ -57,11 +95,11 @@
           <span class="stat-value">{race.population}</span>
         </span>
       </div>
-      <!-- Ultra-Compact Resources INSIDE Kingdom Status Card -->
+
       <div class="resources-section" style="text-align: left; margin-top: 8px;">
         <h4 style="margin-left: auto; margin-right: auto; display: inline-block;">📦 Resources</h4>
         <div class="resource-grid">
-          {#each items.filter((item) => item.amount > 0 && item.type === 'material') as item}
+          {#each allResources as item}
             <div class="resource-mini" style="--resource-color: {getItemColor(item.id)}">
               <div class="resource-content">
                 <span class="resource-icon">{getItemIcon(item.id)}</span>

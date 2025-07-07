@@ -1,5 +1,7 @@
 // src/lib/game/core/GameState.ts
-import type { GameState, ResearchProject, Building, Item } from './types.ts';
+import type { GameState, ResearchProject, Building, Item } from './types';
+import { getItemInfo } from './Items';
+import { calculateHarvestAmount, getResourceFromWorkType } from './Work';
 
 export class GameStateManager {
   private state: GameState;
@@ -22,19 +24,20 @@ export class GameStateManager {
     this.processBuildings();
     this.processCrafting();
     this.processResearch();
+    this.processWorkHarvesting(); // Now properly integrated
   }
 
   private processResources(): void {
-    // Basic resource generation logic
+    // Basic resource generation logic using items array
     const foodProduction = this.state.race.population * 2;
-    this.addResource('food', foodProduction);
+    this.addToItemArray('food', foodProduction);
     
     // Add wood and stone production
     const woodProduction = 2 + (this.state._woodBonus || 0);
     const stoneProduction = 1 + (this.state._stoneBonus || 0);
     
-    this.addResource('wood', woodProduction);
-    this.addResource('stone', stoneProduction);
+    this.addToItemArray('wood', woodProduction);
+    this.addToItemArray('stone', stoneProduction);
   }
 
   private processBuildings(): void {
@@ -63,10 +66,10 @@ export class GameStateManager {
         turnsRemaining: crafting.turnsRemaining - 1
       })).filter(crafting => {
         if (crafting.turnsRemaining <= 0) {
-          // Crafting completed - add to inventory
+          // Crafting completed - add to items array (not inventory)
           const itemId = crafting.item.id;
           const quantity = crafting.quantity || 1;
-          this.state.inventory[itemId] = (this.state.inventory[itemId] || 0) + quantity;
+          this.addToItemArray(itemId, quantity);
           return false;
         }
         return true;
@@ -98,28 +101,90 @@ export class GameStateManager {
     }
   }
 
-  addResource(resourceId: string, amount: number): void {
-    const resource = this.state.item.find(r => r.id === resourceId);
-    if (resource) {
-      resource.amount += amount;
+  // NEW: Work harvesting system integration
+  private processWorkHarvesting(): void {
+    if (!this.state.pawns || this.state.pawns.length === 0) return;
+
+    const harvestedResources: Record<string, number> = {};
+
+    // Process each pawn's work assignments
+    this.state.pawns.forEach(pawn => {
+      const workAssignment = this.state.workAssignments[pawn.id];
+      if (!workAssignment) return;
+
+      // Find the highest priority work for this pawn
+      const sortedWork = Object.entries(workAssignment.workPriorities)
+        .filter(([_, priority]) => priority > 0)
+        .sort(([_, a], [__, b]) => b - a);
+
+      if (sortedWork.length === 0) return;
+
+      const [topWorkType, priority] = sortedWork[0];
+
+      // Calculate harvesting based on priority and pawn stats
+      const harvestAmount = calculateHarvestAmount(pawn, topWorkType, priority, this.state);
+
+      if (harvestAmount > 0) {
+        const resourceType = getResourceFromWorkType(topWorkType);
+        if (resourceType) {
+          harvestedResources[resourceType] = (harvestedResources[resourceType] || 0) + harvestAmount;
+        }
+      }
+    });
+
+    // Apply harvested resources to items array
+    Object.entries(harvestedResources).forEach(([resourceId, amount]) => {
+      this.addToItemArray(resourceId, amount);
+    });
+  }
+
+  // UPDATED: Use items array instead of separate resource tracking
+  private addToItemArray(itemId: string, amount: number): void {
+    const itemIndex = this.state.item.findIndex(item => item.id === itemId);
+    if (itemIndex !== -1) {
+      // Update existing item immutably
+      this.state.item[itemIndex] = {
+        ...this.state.item[itemIndex],
+        amount: this.state.item[itemIndex].amount + amount
+      };
+    } else {
+      // Add new item if it doesn't exist
+      const itemInfo = getItemInfo(itemId);
+      if (itemInfo) {
+        this.state.item.push({ ...itemInfo, amount });
+      }
     }
   }
 
-  addToInventory(itemId: string, amount: number): void {
-    this.state.inventory[itemId] = (this.state.inventory[itemId] || 0) + amount;
+  // DEPRECATED: Remove inventory methods
+  // addToInventory and removeFromInventory are no longer needed
+
+  // UPDATED: Use items array for resource management
+  addResource(resourceId: string, amount: number): void {
+    this.addToItemArray(resourceId, amount);
   }
 
-  removeFromInventory(itemId: string, amount: number): boolean {
-    const currentAmount = this.state.inventory[itemId] || 0;
-    if (currentAmount >= amount) {
-      this.state.inventory[itemId] = currentAmount - amount;
+  // NEW: Get item amount from items array
+  getItemAmount(itemId: string): number {
+    const item = this.state.item.find(i => i.id === itemId);
+    return item ? item.amount : 0;
+  }
+
+  // NEW: Remove item amount from items array
+  removeItemAmount(itemId: string, amount: number): boolean {
+    const itemIndex = this.state.item.findIndex(item => item.id === itemId);
+    if (itemIndex !== -1 && this.state.item[itemIndex].amount >= amount) {
+      this.state.item[itemIndex] = {
+        ...this.state.item[itemIndex],
+        amount: this.state.item[itemIndex].amount - amount
+      };
       return true;
     }
     return false;
   }
 
   startResearch(research: ResearchProject): boolean {
-    // Check if research can be started (scroll requirements, etc.)
+    // Check if research can be started
     if (this.state.currentResearch) {
       return false; // Already researching something
     }

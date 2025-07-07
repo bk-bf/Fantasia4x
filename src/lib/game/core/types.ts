@@ -1,36 +1,34 @@
 export interface GameState {
-	turn: number;
-	race: Race;
-	item: Item[];
-	heroes: Hero[];
-	worldMap: WorldTile[][];
-	discoveredLocations: Location[];
-	buildingCounts: Record<string, number>; // Replace buildings: Building[]
-	buildingQueue: BuildingInProgress[];
-	maxPopulation: number;
-	availableResearch: string[]; // Research IDs player can start
-	completedResearch: string[]; // Research IDs already finished
-	currentResearch?: ResearchProject; // Currently researching
-	discoveredLore: LoreItem[]; // Found lore items
-	_woodBonus?: number;
-	_stoneBonus?: number;
-	inventory: Record<string, number>; // resourceId -> quantity
-	equippedItems: {
-		weapon: string | null;
-		head: string | null;
-		chest: string | null;
-		legs: string | null;
-		feet: string | null;
-		hands: string | null;
-	};
-	craftingQueue: CraftingInProgress[];
-	currentToolLevel: number;
-	activeExplorationMissions: ExplorationMissionInProgress[]; // Added exploration missions
-	
-	// Work System additions
-	workAssignments: Record<string, WorkAssignment>; // pawnId -> WorkAssignment
-	productionTargets: ProductionTarget[]; // Production targets by location and work type
-	pawns: Pawn[]; // Individual population members
+  turn: number;
+  race: Race;
+  item: Item[];
+  heroes: Hero[];
+  worldMap: WorldTile[][];
+  discoveredLocations: Location[];
+  buildingCounts: Record<string, number>;
+  buildingQueue: BuildingInProgress[];
+  maxPopulation: number;
+  availableResearch: string[];
+  completedResearch: string[];
+  currentResearch?: ResearchProject;
+  discoveredLore: LoreItem[];
+  _woodBonus?: number;
+  _stoneBonus?: number;
+  // inventory: Record<string, number>; // REMOVE THIS LINE
+  equippedItems: {
+    weapon: string | null;
+    head: string | null;
+    chest: string | null;
+    legs: string | null;
+    feet: string | null;
+    hands: string | null;
+  };
+  craftingQueue: CraftingInProgress[];
+  currentToolLevel: number;
+  activeExplorationMissions: ExplorationMissionInProgress[];
+  workAssignments: Record<string, WorkAssignment>;
+  productionTargets: ProductionTarget[];
+  pawns: Pawn[];
 }
 export interface WorkAssignment {
   pawnId: string;

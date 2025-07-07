@@ -1,15 +1,16 @@
-// src/lib/stores/gameState.ts
 import { browser } from '$app/environment';
 import { writable, derived } from 'svelte/store';
 import type { GameState } from '$lib/game/core/types';
+import { generatePawns } from '$lib/game/core/Pawns';
 import { generateRace } from '$lib/game/core/Race';
-import { getBasicMaterials } from '$lib/game/core/Items';
+import { getBasicMaterials, getItemInfo } from '$lib/game/core/Items';
 import { initializeAllLocations } from '$lib/game/core/Locations';
 import {
   AVAILABLE_BUILDINGS,
   canAffordBuilding,
   canBuildWithPopulation
 } from '$lib/game/core/Buildings';
+import { calculateHarvestAmount, getResourceFromWorkType } from '$lib/game/core/Work';
 
 // Game timing configuration
 const TURN_INTERVAL = 3000;
@@ -19,20 +20,20 @@ let gameInterval: number | null = null;
 export const initialGameState: GameState = {
   turn: 0,
   race: generateRace(),
+  pawns: [],
   item: getBasicMaterials().map(item => ({ ...item, amount: 0 })),
   heroes: [],
   worldMap: [],
   discoveredLocations: [],
   buildingCounts: {},
   buildingQueue: [],
-  maxPopulation: 1, 
+  maxPopulation: 1,
   availableResearch: [],
   completedResearch: [],
   currentResearch: undefined,
   discoveredLore: [],
   _woodBonus: 0,
   _stoneBonus: 0,
-  inventory: {},
   equippedItems: {
     weapon: null,
     head: null,
@@ -43,41 +44,47 @@ export const initialGameState: GameState = {
   },
   craftingQueue: [],
   currentToolLevel: 0,
-  activeExplorationMissions: [], // Added empty array for exploration missions
-  
-  // Work System additions
-  workAssignments: {}, // Empty work assignments initially
-  productionTargets: [], // No production targets initially
-  pawns: [] // No pawns initially - will be generated based on population
+  activeExplorationMissions: [],
+  workAssignments: {},
+  productionTargets: [],
 };
 
 function saveToLocalStorage(state: GameState) {
-    if (browser) {
-      localStorage.setItem('fantasia4x-save', JSON.stringify(state));
+  if (browser) {
+    localStorage.setItem('fantasia4x-save', JSON.stringify(state));
+  }
+}
+
+function loadFromLocalStorage(): GameState | null {
+  if (browser) {
+    const saved = localStorage.getItem('fantasia4x-save');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.warn('Failed to load save data:', e);
+      }
     }
   }
-
-	function loadFromLocalStorage(): GameState | null {
-	if (browser) {
-		const saved = localStorage.getItem('fantasia4x-save');
-		if (saved) {
-		try {
-			return JSON.parse(saved);
-		} catch (e) {
-			console.warn('Failed to load save data:', e);
-		}
-		}
-	}
-	return null;
-	}
+  return null;
+}
 
 function createGameState() {
-
-   // Initialize locations at game start
+  // Initialize locations at game start
   initializeAllLocations();
 
   const savedState = loadFromLocalStorage();
-  const { subscribe, set, update } = writable(savedState || initialGameState);
+  let baseState = savedState || initialGameState;
+
+  // If no pawns, generate them from the race
+  if (!baseState.pawns || baseState.pawns.length === 0) {
+    baseState = {
+      ...baseState,
+      pawns: generatePawns(baseState.race)
+    };
+  }
+  
+  const { subscribe, set, update } = writable(baseState);
 
   const updateWithSave = (updater: (state: GameState) => GameState) => {
     update(state => {
@@ -92,15 +99,15 @@ function createGameState() {
 
   function startAutoTurns() {
     if (!browser) return;
-    
+
     if (gameInterval) clearInterval(gameInterval);
-    
+
     gameInterval = setInterval(() => {
       let currentlyPaused = false;
       isPaused.subscribe(paused => {
         currentlyPaused = paused;
       })();
-      
+
       if (!currentlyPaused) {
         advanceTurn();
       }
@@ -114,17 +121,74 @@ function createGameState() {
     }
   }
 
-  function advanceTurn() {
-    updateWithSave(state => {
-      let newState = { ...state, turn: state.turn + 1 };
+function advanceTurn() {
+  updateWithSave(state => {
+    let newState = { ...state, turn: state.turn + 1 };
+    console.log('[Turn] Advancing turn:', newState.turn);
 
-      newState = processResearch(newState);
-      newState = processBuildingQueue(newState);
-      newState = processCraftingQueue(newState);
-      newState = generateItems(newState);
+    newState = processResearch(newState);
+    newState = processBuildingQueue(newState);
+    newState = processCraftingQueue(newState);
+    newState = processWorkHarvesting(newState); // <-- Should log from above
+    newState = generateItems(newState);
 
-      return newState;
+    return newState;
+  });
+}
+
+  // Fixed work harvesting to use items array only
+  function processWorkHarvesting(state: GameState): GameState {
+    if (!state.pawns || state.pawns.length === 0) return state;
+
+    const newState = { ...state };
+    const harvestedResources: Record<string, number> = {};
+
+    // Process each pawn's work assignments
+    state.pawns.forEach(pawn => {
+      const workAssignment = state.workAssignments[pawn.id];
+      if (!workAssignment) return;
+
+      // Find the highest priority work for this pawn
+      const sortedWork = Object.entries(workAssignment.workPriorities)
+        .filter(([_, priority]) => priority > 0)
+        .sort(([_, a], [__, b]) => b - a);
+
+      if (sortedWork.length === 0) return;
+
+      const [topWorkType, priority] = sortedWork[0];
+
+      // Calculate harvesting based on priority and pawn stats
+      const harvestAmount = calculateHarvestAmount(pawn, topWorkType, priority, state);
+
+      if (harvestAmount > 0) {
+        const resourceType = getResourceFromWorkType(topWorkType);
+        if (resourceType) {
+          harvestedResources[resourceType] = (harvestedResources[resourceType] || 0) + harvestAmount;
+        }
+      }
     });
+
+    // Apply harvested resources to items array (immutable updates)
+    Object.entries(harvestedResources).forEach(([resourceId, amount]) => {
+      const itemIndex = newState.item.findIndex(item => item.id === resourceId);
+      if (itemIndex !== -1) {
+        // Update existing item immutably
+        const item = newState.item[itemIndex];
+        newState.item = [
+          ...newState.item.slice(0, itemIndex),
+          { ...item, amount: item.amount + amount },
+          ...newState.item.slice(itemIndex + 1)
+        ];
+      } else {
+        // Add new item if it doesn't exist
+        const itemInfo = getItemInfo(resourceId);
+        if (itemInfo) {
+          newState.item = [...newState.item, { ...itemInfo, amount }];
+        }
+      }
+    });
+
+    return newState;
   }
 
   function processResearch(state: GameState): GameState {
@@ -135,18 +199,15 @@ function createGameState() {
     newState.currentResearch.currentProgress = (newState.currentResearch.currentProgress || 0) + 1;
 
     if (newState.currentResearch.currentProgress >= newState.currentResearch.researchTime) {
-      // Research completed - add to completed research
       newState.completedResearch = [...(newState.completedResearch || []), newState.currentResearch.id];
 
-      // Apply research unlocks (buildings, items, tool levels, etc.)
       if (newState.currentResearch.unlocks.toolTierRequired) {
         newState.currentToolLevel = Math.max(
-          newState.currentToolLevel, 
+          newState.currentToolLevel,
           newState.currentResearch.unlocks.toolTierRequired
         );
       }
 
-      // Clear current research
       newState.currentResearch = undefined;
     }
 
@@ -191,6 +252,7 @@ function createGameState() {
     };
   }
 
+  // Fixed crafting to use items array only
   function processCraftingQueue(state: GameState): GameState {
     const completedCrafting: any[] = [];
     const updatedQueue = (state.craftingQueue || []).map(craftingItem => {
@@ -201,18 +263,24 @@ function createGameState() {
       return updated;
     }).filter(craftingItem => craftingItem.turnsRemaining > 0);
 
-    // Add completed items to inventory
-    const newInventory = { ...state.inventory };
+    // Add completed items to items array (immutable updates)
+    const newItems = [...state.item];
     completedCrafting.forEach(craftingItem => {
-      const itemId = craftingItem.item.id;
-      const quantity = craftingItem.quantity || 1;
-      newInventory[itemId] = (newInventory[itemId] || 0) + quantity;
+      const itemIndex = newItems.findIndex(item => item.id === craftingItem.item.id);
+      if (itemIndex !== -1) {
+        // Update existing item
+        const item = newItems[itemIndex];
+        newItems[itemIndex] = { ...item, amount: item.amount + (craftingItem.quantity || 1) };
+      } else {
+        // Add new item
+        newItems.push({ ...craftingItem.item, amount: craftingItem.quantity || 1 });
+      }
     });
 
     return {
       ...state,
       craftingQueue: updatedQueue,
-      inventory: newInventory
+      item: newItems
     };
   }
 
@@ -220,7 +288,7 @@ function createGameState() {
     const woodBonus = state._woodBonus || 0;
     const stoneBonus = state._stoneBonus || 0;
 
-    const item = state.item.map(singleItem => {
+    const newItems = state.item.map(singleItem => {
       let production = 0;
       switch (singleItem.id) {
         case 'food':
@@ -236,11 +304,9 @@ function createGameState() {
       return { ...singleItem, amount: singleItem.amount + production };
     });
 
-    const { _woodBonus, _stoneBonus, ...rest } = state;
-
     return {
-      ...rest,
-      item
+      ...state,
+      item: newItems
     };
   }
 
@@ -266,7 +332,7 @@ function createGameState() {
         isPaused.subscribe(paused => {
           currentlyPaused = paused;
         })();
-        
+
         if (!currentlyPaused) {
           advanceTurn();
         }
@@ -280,29 +346,28 @@ function createGameState() {
     update,
     isPaused: { subscribe: isPaused.subscribe },
     gameSpeed: { subscribe: gameSpeed.subscribe },
-    
+
     startAutoTurns,
     stopAutoTurns,
     pauseGame,
     unpauseGame,
     togglePause,
     setGameSpeed,
-    
+
     advanceTurn,
-    addItem: (itemId: string, amount: number) => 
-     updateWithSave(state => ({  // Use updateWithSave only for internal functions
-      ...state,
-      item: state.item.map(i =>
-        i.id === itemId ? { ...i, amount: i.amount + amount } : i
-      )
-    }))
+    addItem: (itemId: string, amount: number) =>
+      updateWithSave(state => ({
+        ...state,
+        item: state.item.map(i =>
+          i.id === itemId ? { ...i, amount: i.amount + amount } : i
+        )
+      }))
   };
 }
 
 export const gameState = createGameState();
 
-// Derived stores for computed values
+// Derived stores - removed currentInventory
 export const currentTurn = derived(gameState, $gameState => $gameState.turn);
 export const currentItem = derived(gameState, $gameState => $gameState.item);
 export const currentRace = derived(gameState, $gameState => $gameState.race);
-export const currentInventory = derived(gameState, $gameState => $gameState.inventory);

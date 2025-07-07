@@ -1,5 +1,5 @@
 // Work.ts - Work Assignment and Priority System
-import type { Pawn, Location } from '$lib/game/core/types';
+import type { Pawn, Location, GameState } from '$lib/game/core/types';
 import { getDiscoveredLocations, getLocationInfo } from './Locations';
 import { getItemInfo } from './Items';
 
@@ -198,6 +198,77 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     baseEfficiency: 1.0
   }
 ];
+// In Work.ts - Fix the harvesting function
+export function processWorkHarvesting(state: GameState): GameState {
+  if (!state.pawns || state.pawns.length === 0) {
+    console.log('[Work] No pawns to process');
+    return state;
+  }
+
+  const newState = { ...state };
+  const harvestedResources: Record<string, number> = {};
+
+  state.pawns.forEach(pawn => {
+    const workAssignment = state.workAssignments[pawn.id];
+    if (!workAssignment) {
+      console.log(`[Work] No work assignment for pawn ${pawn.id}`);
+      return;
+    }
+
+    const sortedWork = Object.entries(workAssignment.workPriorities)
+      .filter(([_, priority]) => priority > 0)
+      .sort(([_, a], [__, b]) => b - a);
+
+    if (sortedWork.length === 0) {
+      console.log(`[Work] No work priorities for pawn ${pawn.id}`);
+      return;
+    }
+
+    const [topWorkType, priority] = sortedWork[0];
+    console.log(`[Work] Pawn ${pawn.id} doing ${topWorkType} with priority ${priority}`);
+
+    const harvestAmount = calculateHarvestAmount(pawn, topWorkType, priority, state);
+    console.log(`[Work] Calculated harvest amount: ${harvestAmount}`);
+
+    if (harvestAmount > 0) {
+      const resourceType = getResourceFromWorkType(topWorkType);
+      console.log(`[Work] Resource type for work: ${resourceType}`);
+      if (resourceType) {
+        harvestedResources[resourceType] = (harvestedResources[resourceType] || 0) + harvestAmount;
+      }
+    }
+  });
+
+  console.log('[Work] Harvested resources this turn:', harvestedResources);
+
+  Object.entries(harvestedResources).forEach(([resourceId, amount]) => {
+    // Log before updating
+    console.log(`[Work] Adding ${amount} to resource ${resourceId}`);
+    newState.item = newState.item.map(item => {
+      if (item.id === resourceId) {
+        console.log(`[Work] Found item ${item.id}, old amount: ${item.amount}, new amount: ${item.amount + amount}`);
+        return { ...item, amount: item.amount + amount };
+      }
+      return item;
+    });
+
+    const existingItem = newState.item.find(item => item.id === resourceId);
+    if (!existingItem) {
+      const itemInfo = getItemInfo(resourceId);
+      if (itemInfo) {
+        console.log(`[Work] Adding new item to array: ${resourceId} with amount ${amount}`);
+        newState.item.push({
+          ...itemInfo,
+          amount: amount
+        });
+      } else {
+        console.log(`[Work] getItemInfo failed for ${resourceId}`);
+      }
+    }
+  });
+
+  return newState;
+}
 
 // Helper Functions
 export function getWorkCategory(workId: string): WorkCategory | undefined {
@@ -341,4 +412,63 @@ export function processWorkProduction(
   });
   
   return production;
+}
+export const WORK_TO_RESOURCE_MAPPING: Record<string, string[]> = {
+  'foraging': ['wild_berries', 'wild_oats', 'wild_barley', 'herbs'],
+  'woodcutting': ['pine_wood', 'oak_wood', 'ash_wood', 'birch_wood'],
+  'mining': ['sandstone', 'limestone', 'granite', 'copper_ore', 'iron_ore'],
+  'hunting': ['rabbit_carcass', 'deer_carcass', 'wild_boar_carcass'],
+  'fishing': ['common_carp', 'river_trout'],
+  'pottery': ['common_clay', 'fire_clay'],
+  'crafting': [], // Crafting consumes resources rather than harvesting
+  'research': [], // Research uses scrolls rather than harvesting
+  'construction': [] // Construction consumes materials
+};
+
+export function getResourceFromWorkType(workType: string): string | null {
+  const resources = WORK_TO_RESOURCE_MAPPING[workType];
+  if (!resources || resources.length === 0) return null;
+  
+  // For now, return the first resource type
+  // Later this could be based on location availability or player preferences
+  return resources[0];
+}
+// Add to Work.ts
+export function calculateHarvestAmount(
+  pawn: Pawn, 
+  workType: string, 
+  priority: number, 
+  gameState: GameState
+): number {
+  const workCategory = getWorkCategory(workType);
+  if (!workCategory) return 0;
+  
+  // Base harvest rate per priority point
+  const baseHarvestRate = 2;
+  
+  // Calculate efficiency based on pawn stats
+  const primaryStat = pawn.stats[workCategory.primaryStat] || 10;
+  const statMultiplier = primaryStat / 10; // 10 is average stat
+  
+  // Calculate secondary stat bonus
+  let secondaryBonus = 1;
+  if (workCategory.secondaryStat) {
+    const secondaryStat = pawn.stats[workCategory.secondaryStat] || 10;
+    secondaryBonus = 1 + (secondaryStat - 10) / 50; // Small bonus from secondary stat
+  }
+  
+  // Calculate skill bonus (if skills are implemented)
+  const skillLevel = pawn.skills?.[workType] || 0;
+  const skillMultiplier = 1 + (skillLevel / 20); // 20 is max skill level
+  
+  // Calculate final harvest amount
+  const harvestAmount = Math.floor(
+    priority * 
+    baseHarvestRate * 
+    statMultiplier * 
+    secondaryBonus * 
+    skillMultiplier
+  );
+  
+  return Math.max(1, harvestAmount); // Minimum 1 resource per turn if working
 }

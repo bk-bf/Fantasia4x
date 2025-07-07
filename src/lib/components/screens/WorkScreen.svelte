@@ -7,11 +7,13 @@
     getWorkCategory,
     getWorkCategoriesByLocation,
     getAvailableResourcesForWork,
-    calculateWorkEfficiency
+    calculateWorkEfficiency,
+    calculateHarvestAmount
   } from '$lib/game/core/Work';
   import { getDiscoveredLocations, getLocationInfo } from '$lib/game/core/Locations';
   import { getItemIcon, getItemInfo } from '$lib/game/core/Items';
-
+  import { get } from 'svelte/store';
+  import Progressbar from '$lib/components/UI/ProgressBar.svelte';
   let race: any = null;
   let pawns: any[] = [];
   let discoveredLocations: any[] = [];
@@ -23,29 +25,9 @@
   let selectedLocation: string | null = null;
   let selectedWorkCategory: string | null = null;
 
-  const unsubscribeRace = currentRace.subscribe((value) => {
-    race = value;
-    // For now, create mock pawns based on population
-    if (race) {
-      pawns = Array.from({ length: Math.min(race.population, 10) }, (_, i) => ({
-        id: `pawn_${i}`,
-        name: `Worker ${i + 1}`,
-        stats: {
-          strength: 8 + Math.floor(Math.random() * 8),
-          dexterity: 8 + Math.floor(Math.random() * 8),
-          intelligence: 8 + Math.floor(Math.random() * 8),
-          wisdom: 8 + Math.floor(Math.random() * 8),
-          constitution: 8 + Math.floor(Math.random() * 8),
-          charisma: 8 + Math.floor(Math.random() * 8)
-        },
-        skills: {},
-        currentWork: null,
-        workLocation: null
-      }));
-    }
-  });
-
   const unsubscribeGame = gameState.subscribe((state) => {
+    pawns = state.pawns || [];
+    race = state.race;
     discoveredLocations = getDiscoveredLocations();
     workAssignments = state.workAssignments || {};
     productionTargets = state.productionTargets || [];
@@ -66,7 +48,7 @@
   });
 
   onDestroy(() => {
-    unsubscribeRace();
+    // unsubscribeRace();
     unsubscribeGame();
   });
 
@@ -88,48 +70,16 @@
       };
     });
   }
-  function updateProductionTarget(targetId: string, resourceId: string, percentage: number) {
-    gameState.update((state) => {
-      // Create new productionTargets array (immutable update)
-      const newProductionTargets = (state.productionTargets || []).map((target) => {
-        if (target.id === targetId) {
-          // Create new target object with updated resourceTargets
-          return {
-            ...target,
-            resourceTargets: {
-              ...target.resourceTargets,
-              [resourceId]: percentage
-            }
-          };
-        }
-        return target;
-      });
 
-      return {
-        ...state,
-        productionTargets: newProductionTargets
-      };
-    });
-  }
+  function getExpectedHarvest(pawnId: string, workType: string): number {
+    const pawn = pawns.find((p) => p.id === pawnId);
+    const priority = getPawnWorkPriority(pawnId, workType);
 
-  function assignPawnToProduction(pawnId: string, targetId: string) {
-    gameState.update((state) => {
-      const newTargets =
-        state.productionTargets?.map((target) => {
-          if (target.id === targetId) {
-            const assignedPawns = target.assignedPawns.includes(pawnId)
-              ? target.assignedPawns.filter((id: string) => id !== pawnId)
-              : [...target.assignedPawns, pawnId];
-            return { ...target, assignedPawns };
-          }
-          return target;
-        }) || [];
+    if (!pawn || priority === 0) return 0;
 
-      return {
-        ...state,
-        productionTargets: newTargets
-      };
-    });
+    // Use the same calculation as the harvesting system
+    const state = get(gameState);
+    return calculateHarvestAmount(pawn, workType, priority, state);
   }
 
   function getPawnWorkPriority(pawnId: string, workId: string): number {
@@ -145,6 +95,28 @@
     const work = getWorkCategory(workId);
     return work?.color || '#9E9E9E';
   }
+  function getWorkProgress(pawnId: string, workType: string): number {
+    const priority = getPawnWorkPriority(pawnId, workType);
+    return (priority / 10) * 100; // Convert 0-10 priority to 0-100 percentage
+  }
+
+  function getWorkEfficiencyColor(efficiency: number): string {
+    if (efficiency >= 8) return 'green';
+    if (efficiency >= 6) return 'blue';
+    if (efficiency >= 4) return 'yellow';
+    if (efficiency >= 2) return 'orange';
+    return 'red';
+  }
+
+  function getPawnWorkEfficiency(pawnId: string, workType: string): number {
+    const pawn = pawns.find((p) => p.id === pawnId);
+    const workCategory = getWorkCategory(workType);
+
+    if (!pawn || !workCategory) return 0;
+
+    const primaryStat = pawn.stats[workCategory.primaryStat] || 10;
+    return Math.round(primaryStat); // Simplified efficiency based on primary stat
+  }
 </script>
 
 <div class="work-screen">
@@ -155,11 +127,14 @@
   </div>
 
   <div class="work-content">
-    <!-- Population Overview -->
+    <!-- Population Overview with Progress Bars -->
     <div class="population-overview">
       <h3>👥 Available Workers ({pawns.length})</h3>
       <div class="pawns-grid">
         {#each pawns as pawn}
+          {@const topWork = Object.entries(workAssignments[pawn.id]?.workPriorities || {})
+            .filter(([_, priority]) => Number(priority) > 0)
+            .sort(([_, a], [__, b]) => Number(b) - Number(a))[0]}
           <div
             class="pawn-card"
             class:selected={selectedPawn === pawn.id}
@@ -187,6 +162,43 @@
                 <span>😊 {pawn.stats.charisma}</span>
               </div>
             </div>
+
+            <!-- Work Progress Indicator -->
+            {#if topWork}
+              {@const [workType, priority] = topWork}
+              {@const workCategory = getWorkCategory(workType)}
+              {@const efficiency = getPawnWorkEfficiency(pawn.id, workType)}
+              {@const expectedHarvest = getExpectedHarvest(pawn.id, workType)}
+
+              <div class="work-progress-section">
+                <div class="work-progress-header">
+                  <span class="work-emoji">{workCategory?.emoji}</span>
+                  <span class="work-label">{workCategory?.name}</span>
+                </div>
+
+                <Progressbar
+                  progress={getWorkProgress(pawn.id, workType)}
+                  color={getWorkEfficiencyColor(efficiency)}
+                  size="h-3"
+                  labelInside
+                  animate
+                  precision={0}
+                  tweenDuration={500}
+                  classes={{
+                    labelInsideDiv: 'text-xs font-medium text-center p-0 leading-none rounded-full'
+                  }}
+                />
+
+                <div class="harvest-info">
+                  <span class="harvest-rate">+{expectedHarvest}/turn</span>
+                  <span class="efficiency-rating">Efficiency: {efficiency}</span>
+                </div>
+              </div>
+            {:else}
+              <div class="no-work-assigned">
+                <span class="idle-indicator">💤 Idle</span>
+              </div>
+            {/if}
           </div>
         {/each}
       </div>
@@ -197,6 +209,13 @@
       <h3>🔧 Work Categories</h3>
       <div class="categories-grid">
         {#each WORK_CATEGORIES as workCategory}
+          {@const assignedPawns = pawns.filter((p) => {
+            const topWork = Object.entries(workAssignments[p.id]?.workPriorities || {})
+              .filter(([_, priority]) => Number(priority) > 0)
+              .sort(([_, a], [__, b]) => Number(b) - Number(a))[0];
+            return topWork && topWork[0] === workCategory.id;
+          })}
+
           <div
             class="category-card"
             style="--category-color: {workCategory.color}"
@@ -222,14 +241,37 @@
               {/if}
             </div>
 
-            <div class="assigned-workers">
-              {pawns.filter((p) => p.currentWork === workCategory.id).length} workers assigned
+            <!-- Category Progress Overview -->
+            <div class="category-progress">
+              <div class="assigned-workers">
+                {assignedPawns.length} workers assigned
+              </div>
+
+              {#if assignedPawns.length > 0}
+                {@const totalHarvest = assignedPawns.reduce(
+                  (sum, pawn) => sum + getExpectedHarvest(pawn.id, workCategory.id),
+                  0
+                )}
+
+                <div class="category-production">
+                  <span class="total-harvest">Total: +{totalHarvest}/turn</span>
+                </div>
+
+                <Progressbar
+                  progress={Math.min(100, (assignedPawns.length / pawns.length) * 100)}
+                  color="blue"
+                  size="h-2"
+                  animate
+                  tweenDuration={300}
+                />
+              {/if}
             </div>
           </div>
         {/each}
       </div>
     </div>
-    <!-- Simplified Work Management - Only Pawn Priorities -->
+
+    <!-- Individual Pawn Work Priorities with Enhanced Progress -->
     <div class="pawn-work-management">
       {#if selectedPawn}
         {@const pawn = pawns.find((p) => p.id === selectedPawn)}
@@ -238,6 +280,10 @@
             <h3>👤 {pawn.name} - Work Priorities</h3>
             <div class="priorities-grid">
               {#each WORK_CATEGORIES as workCategory}
+                {@const priority = getPawnWorkPriority(pawn.id, workCategory.id)}
+                {@const efficiency = getPawnWorkEfficiency(pawn.id, workCategory.id)}
+                {@const expectedHarvest = getExpectedHarvest(pawn.id, workCategory.id)}
+
                 <div class="priority-setting">
                   <div class="work-info">
                     <span class="work-icon" style="color: {workCategory.color}">
@@ -249,48 +295,74 @@
                   <div class="priority-controls">
                     <button
                       class="priority-btn decrease"
-                      class:disabled={getPawnWorkPriority(pawn.id, workCategory.id) <= 0}
+                      class:disabled={priority <= 0}
                       on:click={() => {
-                        const currentPriority = getPawnWorkPriority(pawn.id, workCategory.id);
-                        if (currentPriority > 0) {
-                          updatePawnWorkPriority(pawn.id, workCategory.id, currentPriority - 1);
+                        if (priority > 0) {
+                          updatePawnWorkPriority(pawn.id, workCategory.id, priority - 1);
                         }
                       }}
-                      disabled={getPawnWorkPriority(pawn.id, workCategory.id) <= 0}
+                      disabled={priority <= 0}
                       title="Decrease priority"
                     >
                       ◀
                     </button>
 
                     <div class="priority-display">
-                      <span class="priority-value">
-                        {getPawnWorkPriority(pawn.id, workCategory.id)}
-                      </span>
-                      <div class="priority-bars">
-                        {#each Array(10) as _, i}
-                          <div
-                            class="priority-bar"
-                            class:active={i < getPawnWorkPriority(pawn.id, workCategory.id)}
-                          ></div>
-                        {/each}
+                      <span class="priority-value">{priority}</span>
+
+                      <!-- Enhanced Progress Bar -->
+                      <div class="priority-progress">
+                        <Progressbar
+                          progress={getWorkProgress(pawn.id, workCategory.id)}
+                          color={getWorkEfficiencyColor(efficiency)}
+                          size="h-4"
+                          labelInside
+                          animate
+                          precision={0}
+                          tweenDuration={300}
+                          classes={{
+                            labelInsideDiv:
+                              'text-xs font-medium text-center p-0 leading-none rounded-full'
+                          }}
+                        />
                       </div>
                     </div>
 
                     <button
                       class="priority-btn increase"
-                      class:disabled={getPawnWorkPriority(pawn.id, workCategory.id) >= 10}
+                      class:disabled={priority >= 10}
                       on:click={() => {
-                        const currentPriority = getPawnWorkPriority(pawn.id, workCategory.id);
-                        if (currentPriority < 10) {
-                          updatePawnWorkPriority(pawn.id, workCategory.id, currentPriority + 1);
+                        if (priority < 10) {
+                          updatePawnWorkPriority(pawn.id, workCategory.id, priority + 1);
                         }
                       }}
-                      disabled={getPawnWorkPriority(pawn.id, workCategory.id) >= 10}
+                      disabled={priority >= 10}
                       title="Increase priority"
                     >
                       ▶
                     </button>
                   </div>
+
+                  <!-- Harvest Information -->
+                  {#if priority > 0}
+                    <div class="work-feedback">
+                      <div class="harvest-prediction">
+                        <span class="harvest-amount">+{expectedHarvest}/turn</span>
+                        <span
+                          class="efficiency-indicator"
+                          style="color: {getWorkEfficiencyColor(efficiency)}"
+                        >
+                          {efficiency >= 12
+                            ? 'Excellent'
+                            : efficiency >= 10
+                              ? 'Good'
+                              : efficiency >= 8
+                                ? 'Average'
+                                : 'Poor'} efficiency
+                        </span>
+                      </div>
+                    </div>
+                  {/if}
                 </div>
               {/each}
             </div>
@@ -955,7 +1027,101 @@
     color: #ff9800;
     font-weight: bold;
   }
+  .work-progress-section {
+    margin-top: 10px;
+    padding: 8px;
+    background: #0a0a0a;
+    border-radius: 4px;
+  }
 
+  .work-progress-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+
+  .work-emoji {
+    font-size: 1.2em;
+  }
+
+  .work-label {
+    font-size: 0.8em;
+    color: #e0e0e0;
+    font-weight: bold;
+  }
+
+  .harvest-info {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 4px;
+    font-size: 0.7em;
+  }
+
+  .harvest-rate {
+    color: #4caf50;
+    font-weight: bold;
+  }
+
+  .efficiency-rating {
+    color: #888;
+  }
+
+  .no-work-assigned {
+    margin-top: 10px;
+    text-align: center;
+    padding: 8px;
+    background: #0a0a0a;
+    border-radius: 4px;
+  }
+
+  .idle-indicator {
+    color: #666;
+    font-size: 0.9em;
+  }
+
+  .category-progress {
+    margin-top: 10px;
+  }
+
+  .category-production {
+    margin: 5px 0;
+  }
+
+  .total-harvest {
+    color: #4caf50;
+    font-weight: bold;
+    font-size: 0.9em;
+  }
+
+  .priority-progress {
+    width: 80px;
+    margin: 4px 0;
+  }
+
+  .work-feedback {
+    margin-top: 8px;
+    padding: 6px;
+    background: #0a0a0a;
+    border-radius: 4px;
+  }
+
+  .harvest-prediction {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .harvest-amount {
+    color: #4caf50;
+    font-weight: bold;
+    font-size: 0.9em;
+  }
+
+  .efficiency-indicator {
+    font-size: 0.8em;
+    font-weight: bold;
+  }
   /* Scrollbar styling */
   .work-screen::-webkit-scrollbar {
     width: 8px;

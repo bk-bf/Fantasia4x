@@ -46,7 +46,6 @@
     completedResearch = state.completedResearch || [];
     currentResearch = state.currentResearch || null;
     discoveredLore = state.discoveredLore || [];
-    inventory = state.inventory || {};
     buildingCounts = state.buildingCounts || {};
 
     // Gather current stats from race
