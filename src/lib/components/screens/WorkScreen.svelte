@@ -1,7 +1,7 @@
 <script lang="ts">
+  import { onMount, onDestroy } from 'svelte';
   import { gameState, currentItem, currentRace } from '$lib/stores/gameState';
   import { uiState } from '$lib/stores/uiState';
-  import { onDestroy } from 'svelte';
   import {
     WORK_CATEGORIES,
     getWorkCategory,
@@ -14,11 +14,16 @@
   import { getItemIcon, getItemInfo } from '$lib/game/core/Items';
   import { get } from 'svelte/store';
   import Progressbar from '$lib/components/UI/ProgressBar.svelte';
+
   let race: any = null;
   let pawns: any[] = [];
   let discoveredLocations: any[] = [];
   let workAssignments: Record<string, any> = {};
   let productionTargets: any[] = [];
+
+  // Track current job for each pawn (RimWorld-style cycling)
+  let pawnCurrentJobs: Record<string, { workId: string; priority: number; startTime: number }> = {};
+  let jobCycleInterval: number;
 
   // UI State
   let selectedPawn: string | null = null;
@@ -33,24 +38,125 @@
     workAssignments = state.workAssignments || {};
     productionTargets = state.productionTargets || [];
 
-    // Initialize default production targets for discovered locations
-    if (productionTargets.length === 0 && discoveredLocations.length > 0) {
-      productionTargets = discoveredLocations.flatMap((location) => {
-        const availableWork = getWorkCategoriesByLocation(location.id);
-        return availableWork.map((work) => ({
-          id: `${location.id}_${work.id}`,
-          workCategoryId: work.id,
-          locationId: location.id,
-          resourceTargets: {},
-          assignedPawns: []
-        }));
-      });
+    // Initialize current jobs for new pawns
+    pawns.forEach((pawn) => {
+      if (!pawnCurrentJobs[pawn.id]) {
+        const nextJob = getNextJobForPawn(pawn.id);
+        if (nextJob) {
+          pawnCurrentJobs[pawn.id] = {
+            workId: nextJob.workId,
+            priority: nextJob.priority,
+            startTime: Date.now()
+          };
+        }
+      }
+    });
+  });
+
+  // RimWorld-style job cycling system
+  function getNextJobForPawn(pawnId: string): { workId: string; priority: number } | null {
+    const assignments = workAssignments[pawnId];
+    if (!assignments) return null;
+
+    // Get all assigned work sorted by priority (1 = highest, 12 = lowest)
+    const sortedWork = Object.entries(assignments.workPriorities)
+      .filter(([_, priority]) => Number(priority) > 0)
+      .sort(([_, a], [__, b]) => Number(a) - Number(b)) // Sort by priority ascending (1, 2, 3...)
+      .map(([workId, priority]) => ({ workId, priority: Number(priority) }));
+
+    if (sortedWork.length === 0) return null;
+
+    const currentJob = pawnCurrentJobs[pawnId];
+    if (!currentJob) {
+      // No current job, start with highest priority (lowest number)
+      return sortedWork[0];
     }
+
+    // Find current job in sorted list
+    const currentIndex = sortedWork.findIndex((work) => work.workId === currentJob.workId);
+
+    if (currentIndex === -1) {
+      // Current job no longer assigned, start over
+      return sortedWork[0];
+    }
+
+    // Move to next job in priority order, cycling back to start
+    const nextIndex = (currentIndex + 1) % sortedWork.length;
+    return sortedWork[nextIndex];
+  }
+
+  function getCurrentJobForPawn(pawnId: string): { workId: string; priority: number } | null {
+    const currentJob = pawnCurrentJobs[pawnId];
+    if (!currentJob) return null;
+
+    // Verify the job is still assigned
+    const assignments = workAssignments[pawnId];
+    if (
+      !assignments ||
+      !assignments.workPriorities[currentJob.workId] ||
+      assignments.workPriorities[currentJob.workId] === 0
+    ) {
+      // Job no longer assigned, get next job
+      const nextJob = getNextJobForPawn(pawnId);
+      if (nextJob) {
+        pawnCurrentJobs[pawnId] = {
+          ...nextJob,
+          startTime: Date.now()
+        };
+        return nextJob;
+      }
+      return null;
+    }
+
+    return currentJob;
+  }
+
+  onMount(() => {
+    // Job cycling timer - like RimWorld's task switching
+    jobCycleInterval = setInterval(() => {
+      pawns.forEach((pawn) => {
+        const currentJob = pawnCurrentJobs[pawn.id];
+        if (currentJob) {
+          // Check if job has been running long enough to switch (2-5 seconds based on priority)
+          const jobDuration = Date.now() - currentJob.startTime;
+          const switchTime = Math.max(2000, 6000 - currentJob.priority * 400); // Higher priority = longer duration
+
+          if (jobDuration >= switchTime) {
+            const nextJob = getNextJobForPawn(pawn.id);
+            if (nextJob && nextJob.workId !== currentJob.workId) {
+              pawnCurrentJobs[pawn.id] = {
+                ...nextJob,
+                startTime: Date.now()
+              };
+            } else if (nextJob) {
+              // Same job, reset timer
+              pawnCurrentJobs[pawn.id] = {
+                ...currentJob,
+                startTime: Date.now()
+              };
+            }
+          }
+        } else {
+          // No current job, assign one
+          const nextJob = getNextJobForPawn(pawn.id);
+          if (nextJob) {
+            pawnCurrentJobs[pawn.id] = {
+              ...nextJob,
+              startTime: Date.now()
+            };
+          }
+        }
+      });
+    }, 500); // Check every 500ms
+
+    return () => {
+      if (jobCycleInterval) clearInterval(jobCycleInterval);
+    };
   });
 
   onDestroy(() => {
-    // unsubscribeRace();
     unsubscribeGame();
+    if (jobCycleInterval) clearInterval(jobCycleInterval);
   });
 
   function getNextAvailablePriority(
@@ -66,10 +172,9 @@
     let priority = getPawnWorkPriority(pawnId, currentWorkId);
     do {
       priority += direction;
-    } while (priority > 0 && priority <= 10 && used.has(priority));
-    // Clamp between 0 and 10
+    } while (priority > 0 && priority <= 12 && used.has(priority));
     if (priority < 0) priority = 0;
-    if (priority > 10) priority = 10;
+    if (priority > 12) priority = 12;
     return priority;
   }
 
@@ -90,16 +195,28 @@
           newAssignments[pawnId].workPriorities
         )) {
           if (otherWorkId !== workId && otherPriority === priority) {
-            // Show warning and abort
             priorityWarning = `Priority ${priority} is already assigned to another work.`;
             return state;
           }
         }
       }
 
-      // No conflict, clear warning and update
       priorityWarning = null;
       newAssignments[pawnId].workPriorities[workId] = priority;
+
+      // Reset current job when priorities change
+      if (pawnCurrentJobs[pawnId]) {
+        const nextJob = getNextJobForPawn(pawnId);
+        if (nextJob) {
+          pawnCurrentJobs[pawnId] = {
+            ...nextJob,
+            startTime: Date.now()
+          };
+        } else {
+          delete pawnCurrentJobs[pawnId];
+        }
+      }
+
       return {
         ...state,
         workAssignments: newAssignments
@@ -110,27 +227,23 @@
   function getExpectedHarvest(pawnId: string, workType: string): number {
     const pawn = pawns.find((p) => p.id === pawnId);
     if (!pawn) return 0;
+    const priority = getPawnWorkPriority(pawnId, workType);
     const state = get(gameState);
-    // Always pass 1 for priority, or remove if not needed
-    return calculateHarvestAmount(pawn, workType, 1, state);
+    return calculateHarvestAmount(pawn, workType, priority, state);
   }
 
   function getPawnWorkPriority(pawnId: string, workId: string): number {
     return workAssignments[pawnId]?.workPriorities[workId] || 0;
   }
 
-  function isPawnAssignedToTarget(pawnId: string, targetId: string): boolean {
-    const target = productionTargets.find((t) => t.id === targetId);
-    return target?.assignedPawns.includes(pawnId) || false;
-  }
-
   function getWorkCategoryColor(workId: string): string {
     const work = getWorkCategory(workId);
     return work?.color || '#9E9E9E';
   }
+
   function getWorkProgress(pawnId: string, workType: string): number {
     const priority = getPawnWorkPriority(pawnId, workType);
-    return (priority / 10) * 100; // Convert 0-10 priority to 0-100 percentage
+    return (priority / 12) * 100; // Convert 0-12 priority to 0-100 percentage
   }
 
   function getWorkEfficiencyColor(efficiency: number): string {
@@ -148,7 +261,24 @@
     if (!pawn || !workCategory) return 0;
 
     const primaryStat = pawn.stats[workCategory.primaryStat] || 10;
-    return Math.round(primaryStat); // Simplified efficiency based on primary stat
+    return Math.round(primaryStat);
+  }
+
+  // Get all assigned work for a pawn in priority order
+  function getPawnWorkQueue(
+    pawnId: string
+  ): Array<{ workId: string; priority: number; workCategory: any }> {
+    const assignments = workAssignments[pawnId];
+    if (!assignments) return [];
+
+    return Object.entries(assignments.workPriorities)
+      .filter(([_, priority]) => Number(priority) > 0)
+      .sort(([_, a], [__, b]) => Number(a) - Number(b))
+      .map(([workId, priority]) => ({
+        workId,
+        priority: Number(priority),
+        workCategory: getWorkCategory(workId)
+      }));
   }
 </script>
 
@@ -168,10 +298,20 @@
           {@const topWork = Object.entries(workAssignments[pawn.id]?.workPriorities || {})
             .filter(([_, priority]) => Number(priority) > 0)
             .sort(([_, a], [__, b]) => Number(b) - Number(a))[0]}
-          <div
+          <button
+            type="button"
             class="pawn-card"
             class:selected={selectedPawn === pawn.id}
+            aria-pressed={selectedPawn === pawn.id}
+            aria-label="Select worker {pawn.name}"
             on:click={() => (selectedPawn = selectedPawn === pawn.id ? null : pawn.id)}
+            on:keydown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                selectedPawn = selectedPawn === pawn.id ? null : pawn.id;
+              }
+            }}
+            role="button"
+            tabindex="0"
           >
             <div class="pawn-header">
               <span class="pawn-icon">👤</span>
@@ -197,42 +337,62 @@
             </div>
 
             <!-- Work Progress Indicator -->
-            {#if topWork}
-              {@const [workType, priority] = topWork}
-              {@const workCategory = getWorkCategory(workType)}
-              {@const efficiency = getPawnWorkEfficiency(pawn.id, workType)}
-              {@const expectedHarvest = getExpectedHarvest(pawn.id, workType)}
+            {#if getCurrentJobForPawn(pawn.id)}
+              {@const currentJob = getCurrentJobForPawn(pawn.id)}
+              {#if currentJob}
+                {@const workCategory = getWorkCategory(currentJob.workId)}
+                {@const efficiency = getPawnWorkEfficiency(pawn.id, currentJob.workId)}
+                {@const expectedHarvest = getExpectedHarvest(pawn.id, currentJob.workId)}
+                {@const workQueue = getPawnWorkQueue(pawn.id)}
 
-              <div class="work-progress-section">
-                <div class="work-progress-header">
-                  <span class="work-emoji">{workCategory?.emoji}</span>
-                  <span class="work-label">{workCategory?.name}</span>
+                <div class="work-progress-section">
+                  <div class="work-progress-header">
+                    <span class="work-emoji">{workCategory?.emoji}</span>
+                    <span class="work-label"
+                      >{workCategory?.name} (Priority {currentJob.priority})</span
+                    >
+                  </div>
+
+                  <!-- Show work queue like RimWorld -->
+                  <div class="work-queue">
+                    {#each workQueue as queuedWork}
+                      <div
+                        class="queue-item"
+                        class:active={queuedWork.workId === currentJob.workId}
+                        style="--work-color: {queuedWork.workCategory?.color || '#9E9E9E'}"
+                      >
+                        <span class="queue-emoji">{queuedWork.workCategory?.emoji}</span>
+                        <span class="queue-priority">{queuedWork.priority}</span>
+                      </div>
+                    {/each}
+                  </div>
+
+                  <Progressbar
+                    progress={getWorkProgress(pawn.id, currentJob.workId)}
+                    color={getWorkEfficiencyColor(efficiency)}
+                    size="h-3"
+                    labelInside
+                    animate
+                    precision={0}
+                    tweenDuration={500}
+                  />
+
+                  <div class="harvest-info">
+                    <span class="harvest-rate">+{expectedHarvest}/turn</span>
+                    <span class="efficiency-rating">Efficiency: {efficiency}</span>
+                  </div>
                 </div>
-
-                <Progressbar
-                  progress={getWorkProgress(pawn.id, workType)}
-                  color={getWorkEfficiencyColor(efficiency)}
-                  size="h-3"
-                  labelInside
-                  animate
-                  precision={0}
-                  tweenDuration={500}
-                  classes={{
-                    labelInsideDiv: 'text-xs font-medium text-center p-0 leading-none rounded-full'
-                  }}
-                />
-
-                <div class="harvest-info">
-                  <span class="harvest-rate">+{expectedHarvest}/turn</span>
-                  <span class="efficiency-rating">Efficiency: {efficiency}</span>
+              {:else}
+                <div class="no-work-assigned">
+                  <span class="idle-indicator">💤 Idle</span>
                 </div>
-              </div>
+              {/if}
             {:else}
               <div class="no-work-assigned">
                 <span class="idle-indicator">💤 Idle</span>
               </div>
             {/if}
-          </div>
+          </button>
         {/each}
       </div>
     </div>
@@ -383,14 +543,14 @@
                     </div>
                     <button
                       class="priority-btn increase"
-                      class:disabled={priority >= 10}
+                      class:disabled={priority >= 12}
                       on:click={() => {
-                        if (priority < 10) {
+                        if (priority < 12) {
                           const next = getNextAvailablePriority(pawn.id, workCategory.id, 1);
                           updatePawnWorkPriority(pawn.id, workCategory.id, next);
                         }
                       }}
-                      disabled={priority >= 10}
+                      disabled={priority >= 12}
                       title="Increase priority"
                     >
                       ▶
@@ -848,7 +1008,48 @@
     font-size: 0.9em;
     margin: 0 0 10px 0;
   }
-
+  .assigned-works-row {
+    display: flex;
+    gap: 10px;
+    margin: 8px 0;
+  }
+  .assigned-work {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: #181818;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 0.85em;
+  }
+  .work-priority {
+    color: #ff9800;
+    font-weight: bold;
+    margin-left: 2px;
+  }
+  .job-ticker-bar {
+    display: flex;
+    height: 6px;
+    margin: 4px 0 8px 0;
+    background: #222;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .job-tick {
+    background: #444;
+    transition: background 0.3s;
+  }
+  .job-tick.active {
+    background: #ff9800;
+  }
+  .active-job-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 4px 0 0 0;
+    font-size: 0.95em;
+    color: #ff9800;
+  }
   .category-stats {
     font-size: 0.8em;
     color: #666;
@@ -1073,7 +1274,41 @@
     gap: 6px;
     margin-bottom: 6px;
   }
+  .work-queue {
+    display: flex;
+    gap: 4px;
+    margin: 4px 0;
+    flex-wrap: wrap;
+  }
 
+  .queue-item {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 2px 6px;
+    background: #222;
+    border-radius: 3px;
+    border-left: 2px solid var(--work-color);
+    font-size: 0.8em;
+    transition: all 0.3s ease;
+  }
+
+  .queue-item.active {
+    background: var(--work-color);
+    color: #000;
+    font-weight: bold;
+    transform: scale(1.1);
+  }
+
+  .queue-emoji {
+    font-size: 1em;
+  }
+
+  .queue-priority {
+    font-weight: bold;
+    min-width: 12px;
+    text-align: center;
+  }
   .work-emoji {
     font-size: 1.2em;
   }

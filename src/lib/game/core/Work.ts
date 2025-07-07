@@ -200,39 +200,24 @@ export const WORK_CATEGORIES: WorkCategory[] = [
 ];
 // In Work.ts - Fix the harvesting function
 export function processWorkHarvesting(state: GameState): GameState {
-  if (!state.pawns || state.pawns.length === 0) {
-    console.log('[Work] No pawns to process');
-    return state;
-  }
+  if (!state.pawns || state.pawns.length === 0) return state;
 
   const newState = { ...state };
   const harvestedResources: Record<string, number> = {};
 
   state.pawns.forEach(pawn => {
     const workAssignment = state.workAssignments[pawn.id];
-    if (!workAssignment) {
-      console.log(`[Work] No work assignment for pawn ${pawn.id}`);
-      return;
-    }
+    if (!workAssignment) return;
 
     // Get all works with priority > 0, sorted by priority (1, 2, 3, ...)
     const sortedWorks = Object.entries(workAssignment.workPriorities)
       .filter(([_, priority]) => priority > 0)
       .sort(([, a], [, b]) => a - b);
 
-    if (sortedWorks.length === 0) {
-      console.log(`[Work] No work priorities for pawn ${pawn.id}`);
-      return;
-    }
-
-    sortedWorks.forEach(([workType, priority]) => {
-      console.log(`[Work] Pawn ${pawn.id} doing ${workType} with priority ${priority}`);
-      const harvestAmount = calculateHarvestAmount(pawn, workType, priority, state);
-      console.log(`[Work] Calculated harvest amount: ${harvestAmount}`);
-
+    sortedWorks.forEach(([workType]) => {
+      const harvestAmount = calculateHarvestAmount(pawn, workType, 1, state); // priority does NOT affect output
       if (harvestAmount > 0) {
         const resourceType = getResourceFromWorkType(workType);
-        console.log(`[Work] Resource type for work: ${resourceType}`);
         if (resourceType) {
           harvestedResources[resourceType] = (harvestedResources[resourceType] || 0) + harvestAmount;
         }
@@ -243,15 +228,11 @@ export function processWorkHarvesting(state: GameState): GameState {
   console.log('[Work] Harvested resources this turn:', harvestedResources);
 
   Object.entries(harvestedResources).forEach(([resourceId, amount]) => {
-    // Log before updating
-    console.log(`[Work] Adding ${amount} to resource ${resourceId}`);
-    newState.item = newState.item.map(item => {
-      if (item.id === resourceId) {
-        console.log(`[Work] Found item ${item.id}, old amount: ${item.amount}, new amount: ${item.amount + amount}`);
-        return { ...item, amount: item.amount + amount };
-      }
-      return item;
-    });
+    newState.item = newState.item.map(item =>
+      item.id === resourceId
+        ? { ...item, amount: item.amount + amount }
+        : item
+    );
 
     const existingItem = newState.item.find(item => item.id === resourceId);
     if (!existingItem) {

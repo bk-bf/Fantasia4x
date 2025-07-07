@@ -37,31 +37,21 @@
 </script>
 
 <div class="progress-container" style="height: {progressHeight}">
-  <div
-    class="progress-bar"
-    class:animate
-    style="
-      width: {clampedProgress}%;
-      background-color: {progressColor};
-      transition: {animate ? `width ${tweenDuration}ms ease` : 'none'};
-    "
-  >
-    {#if labelInside}
-      <div
-        class="progress-label-inside {classes.labelInsideDiv || ''}"
-        style="line-height: {progressHeight};"
-      >
-        {displayProgress}%
-      </div>
-    {/if}
-  </div>
-
-  {#if !labelInside}
-    <div class="progress-label-outside">
+  {#if labelInside}
+    <div
+      class="progress-label-inside {classes.labelInsideDiv || ''}"
+      style="line-height: {progressHeight};"
+    >
       {displayProgress}%
     </div>
   {/if}
 </div>
+
+{#if !labelInside}
+  <div class="progress-label-outside">
+    {displayProgress}%
+  </div>
+{/if}
 
 <style>
   .progress-container {

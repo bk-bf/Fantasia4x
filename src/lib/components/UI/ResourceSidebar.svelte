@@ -29,7 +29,7 @@
           if (sorted.length > 0) {
             const [workType, priority] = sorted[0];
             const resource = getResourceFromWorkType(workType);
-            const expected = calculateHarvestAmount(pawn, workType, Number(priority), state);
+            const expected = calculateHarvestAmount(pawn, workType, 1, state);
             console.log(
               `[Sidebar DEBUG] Pawn ${pawn.name} assigned to ${workType} (priority ${priority}), should produce ${expected} ${resource}/turn`
             );
