@@ -2,7 +2,8 @@
   import { currentItem, currentRace, gameState } from '$lib/stores/gameState'; // Remove currentInventory
   import { onDestroy } from 'svelte';
   import { getItemIcon, getItemColor } from '$lib/game/core/Items';
-  import { getResourceFromWorkType, calculateHarvestAmount } from '$lib/game/core/Work';
+  import { getAvailableResourceIdsForWork, calculateHarvestAmount } from '$lib/game/core/Work';
+  import { getItemInfo } from '$lib/game/core/Items';
   import { get } from 'svelte/store';
 
   let items: any[] = [];
@@ -14,6 +15,7 @@
     console.log('[Sidebar] items:', items);
     console.log('[Sidebar] allResources:', allResources);
   }
+
   // --- DEBUG LOGGING ---
   $: {
     const state = get(gameState);
@@ -28,11 +30,15 @@
             .sort((a, b) => b[1] - a[1]);
           if (sorted.length > 0) {
             const [workType, priority] = sorted[0];
-            const resource = getResourceFromWorkType(workType);
-            const expected = calculateHarvestAmount(pawn, workType, 1, state);
-            console.log(
-              `[Sidebar DEBUG] Pawn ${pawn.name} assigned to ${workType} (priority ${priority}), should produce ${expected} ${resource}/turn`
-            );
+            // NEW: Show all available resources for this work type
+            const availableResources = getAvailableResourceIdsForWork(state, workType);
+            availableResources.forEach((resourceId) => {
+              const expected = calculateHarvestAmount(pawn, workType, 1, state);
+              const item = getItemInfo(resourceId);
+              console.log(
+                `[Sidebar DEBUG] Pawn ${pawn.name} assigned to ${workType} (priority ${priority}), should produce ${expected} ${item?.name || resourceId}/turn`
+              );
+            });
           } else {
             console.log(`[Sidebar DEBUG] Pawn ${pawn.name} has no work assigned`);
           }
@@ -45,6 +51,7 @@
     }
   }
   // --- END DEBUG LOGGING ---
+
   const unsubscribeItems = currentItem.subscribe((newItems) => {
     newItems = newItems || [];
 

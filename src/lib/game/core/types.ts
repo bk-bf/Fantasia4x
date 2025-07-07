@@ -203,6 +203,7 @@ export interface Item {
   amount: number;
   description?: string; // Optional description for lore or flavor text
   properties?: Record<string, any>;
+  workTypes?: string[]; // Work categories this item can be used in
   
   // Unified categorization
   type: 'material' | 'tool' | 'weapon' | 'armor' | 'consumable' | 'currency';

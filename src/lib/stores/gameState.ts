@@ -10,7 +10,7 @@ import {
   canAffordBuilding,
   canBuildWithPopulation
 } from '$lib/game/core/Buildings';
-import { calculateHarvestAmount, getResourceFromWorkType } from '$lib/game/core/Work';
+import { calculateHarvestAmount } from '$lib/game/core/Work';
 import { processWorkHarvesting as sharedProcessWorkHarvesting } from '$lib/game/core/Work';
 
 // Game timing configuration

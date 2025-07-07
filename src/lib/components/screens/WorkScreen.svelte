@@ -6,7 +6,6 @@
     WORK_CATEGORIES,
     getWorkCategory,
     getWorkCategoriesByLocation,
-    getAvailableResourcesForWork,
     calculateWorkEfficiency,
     calculateHarvestAmount
   } from '$lib/game/core/Work';
@@ -372,65 +371,6 @@
               </div>
             {/if}
           </button>
-        {/each}
-      </div>
-    </div>
-
-    <!-- Work Categories Overview -->
-    <div class="work-categories">
-      <h3>🔧 Work Categories</h3>
-      <div class="categories-grid">
-        {#each WORK_CATEGORIES as workCategory}
-          {@const assignedPawns = pawns.filter((p) => {
-            const topWork = Object.entries(workAssignments[p.id]?.workPriorities || {})
-              .filter(([_, priority]) => Number(priority) > 0)
-              .sort(([_, a], [__, b]) => Number(b) - Number(a))[0];
-            return topWork && topWork[0] === workCategory.id;
-          })}
-
-          <div
-            class="category-card"
-            style="--category-color: {workCategory.color}"
-            class:selected={selectedWorkCategory === workCategory.id}
-            on:click={() =>
-              (selectedWorkCategory =
-                selectedWorkCategory === workCategory.id ? null : workCategory.id)}
-          >
-            <div class="category-header">
-              <span class="category-icon">{workCategory.emoji}</span>
-              <h4>{workCategory.name}</h4>
-            </div>
-            <p class="category-description">{workCategory.description}</p>
-
-            <div class="category-stats">
-              <div class="primary-stat">
-                Primary: {workCategory.primaryStat}
-              </div>
-              {#if workCategory.secondaryStat}
-                <div class="secondary-stat">
-                  Secondary: {workCategory.secondaryStat}
-                </div>
-              {/if}
-            </div>
-
-            <!-- Category Progress Overview -->
-            <div class="category-progress">
-              <div class="assigned-workers">
-                {assignedPawns.length} workers assigned
-              </div>
-
-              {#if assignedPawns.length > 0}
-                {@const totalHarvest = assignedPawns.reduce(
-                  (sum, pawn) => sum + getExpectedHarvest(pawn.id, workCategory.id),
-                  0
-                )}
-
-                <div class="category-production">
-                  <span class="total-harvest">Total: +{totalHarvest}/turn</span>
-                </div>
-              {/if}
-            </div>
-          </div>
         {/each}
       </div>
     </div>

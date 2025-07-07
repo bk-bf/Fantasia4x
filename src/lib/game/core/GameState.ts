@@ -1,7 +1,7 @@
 // src/lib/game/core/GameState.ts
 import type { GameState, ResearchProject, Building, Item } from './types';
 import { getItemInfo } from './Items';
-import { calculateHarvestAmount, getResourceFromWorkType } from './Work';
+import { calculateHarvestAmount } from './Work';
 import { processWorkHarvesting as sharedProcessWorkHarvesting } from './Work';
 
 export class GameStateManager {

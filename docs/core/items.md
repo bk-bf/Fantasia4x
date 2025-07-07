@@ -1,0 +1,4532 @@
+import type { Item } from './types';
+
+export const ITEMS_DATABASE: Item[] = [
+// FOOD MATERIALS (Level 0 - Gathered/Hunted)
+{
+id: 'wild_berries',
+name: 'Wild Berries',
+description: 'Foraged berries providing basic sustenance',
+type: 'material',
+category: 'food',
+level: 0,
+rarity: 'common',
+effects: { nutritionValue: 1.0 },
+researchRequired: null,
+emoji: '🫐',
+color: '#673AB7',
+amount: 0
+},
+{
+id: 'common_carp',
+name: 'Carp',
+description: 'Freshwater fish commonly found in rivers and lakes',
+type: 'material',
+category: 'food',
+level: 0,
+rarity: 'common',
+effects: { nutritionValue: 1.6, healthBonus: 0.25 },
+researchRequired: null,
+emoji: '🐟',
+color: '#4FC3F7',
+amount: 0
+},
+{
+id: 'wild_oats',
+name: 'Wild Oats',
+description: 'Seeds from wild oat grasses, an early grain',
+type: 'material',
+category: 'food',
+level: 0,
+rarity: 'common',
+effects: { nutritionValue: 1.3, storageStability: 0.85 },
+researchRequired: null,
+emoji: '🌾',
+color: '#FFA726',
+amount: 0
+},
+{
+id: 'wild_barley',
+name: 'Wild Barley',
+description: 'Hardy wild grain that grows in harsh conditions',
+type: 'material',
+category: 'food',
+level: 0,
+rarity: 'common',
+effects: { nutritionValue: 1.4, coldResistance: 0.3, storageStability: 0.9 },
+researchRequired: null,
+emoji: '🌾',
+color: '#D4AF37',
+amount: 0
+},
+{
+id: 'herbs',
+name: 'Herbs',
+description: 'Various wild herbs used for flavoring purposes',
+type: 'material',
+category: 'food',
+level: 0,
+rarity: 'common',
+effects: { nutritionValue: 0.5, healthBonus: 0.15, flavorEnhancement: 0.2 },
+researchRequired: null,
+emoji: '🌿',
+color: '#4CAF50',
+amount: 0
+},
+
+{
+id: 'river_trout',
+name: 'River Trout',
+description: 'Delicate freshwater fish prized for its flavor',
+type: 'material',
+category: 'food',
+level: 0,
+rarity: 'uncommon',
+effects: { nutritionValue: 1.8, healthBonus: 0.4, moralBonus: 0.2 },
+researchRequired: null,
+emoji: '🐟',
+color: '#FF8A65',
+amount: 0
+},
+{
+id: 'rabbit_carcass',	
+name: 'Rabbits',
+description: 'Freshly hunted rabbit, ready for processing',
+type: 'material',
+category: 'food',
+level: 0,
+rarity: 'common',
+effects: { nutritionValue: 1.5, proteinBonus: 0.3 },
+researchRequired: null,
+emoji: '🐇',
+color: '#8D4E85',
+amount: 0,
+},
+
+  // BUTCHERY PROCESSING - Converting Carcasses to Materials
+{
+  id: 'rabbit_meat',
+  name: 'Rabbit Meat',
+  description: 'Fresh meat from processed rabbit carcass',
+  type: 'material',
+  category: 'food',
+  level: 0,
+  rarity: 'common',
+  effects: { nutritionValue: 1.8, proteinBonus: 0.4 },
+  researchRequired: null,
+  emoji: '🥩',
+  color: '#8D4E85',
+  amount: 0,
+  craftingCost: { rabbit_carcass: 1 },
+  craftingTime: 1,
+  toolTierRequired: 0,
+  buildingRequired: 'butchery_table',
+  populationRequired: 1
+},
+{
+  id: 'venison',
+  name: 'Venison',
+  description: 'High-quality meat from deer carcass',
+  type: 'material',
+  category: 'food',
+  level: 0,
+  rarity: 'uncommon',
+  effects: { nutritionValue: 2.5, proteinBonus: 0.6, morale: 0.2 },
+  researchRequired: null,
+  emoji: '🥩',
+  color: '#8D4E85',
+  amount: 0,
+  craftingCost: { deer_carcass: 1 },
+  craftingTime: 2,
+  toolTierRequired: 0,
+  buildingRequired: 'butchery_table',
+  populationRequired: 1
+},
+{
+	id: 'sinew',
+	name: 'Sinew',
+	description: 'Animal tendons, excellent for bowstrings',
+	type: 'material',
+	category: 'organic',
+	level: 0,
+	rarity: 'uncommon',
+	effects: { elasticity: 2.0, tensileStrength: 1.8 },
+	researchRequired: null,
+	emoji: '🦴',
+	color: '#F5F5DC',
+	amount: 0
+},
+{
+	id: 'bone',
+	name: 'Bone',
+	description: 'Animal bones from hunted game, useful for tools and weapons',
+	type: 'material',
+	category: 'organic',
+	level: 0,
+	rarity: 'common',
+	effects: { hardness: 1.2, workability: 1.1, lightWeight: 0.8 },
+	researchRequired: null,
+	emoji: '🦴',
+	color: '#F5F5DC',
+	amount: 0
+},
+{
+	id: 'hide',
+	name: 'Raw Hide',
+	description: 'Untreated animal skin from hunted game',
+	type: 'material',
+	category: 'organic',
+	level: 0,
+	rarity: 'common',
+	effects: { flexibility: 0.6, durability: 0.8 },
+	researchRequired: null,
+	emoji: '🦬',
+	color: '#8D6E63',
+	amount: 0
+},
+{
+  id: 'quality_hide',
+  name: 'Quality Hide',
+  description: 'Premium hide from large game animals',
+  type: 'material',
+  category: 'organic',
+  level: 0,
+  rarity: 'uncommon',
+  effects: { leatherQuality: 1.5, durability: 1.3 },
+  researchRequired: null,
+  emoji: '🦬',
+  color: '#8D6E63',
+  amount: 0,
+  craftingCost: { deer_carcass: 1 },
+  craftingTime: 2,
+  toolTierRequired: 0,
+  buildingRequired: 'butchery_table',
+  populationRequired: 1
+},
+// RESEARCH MATERIALS - Knowledge & Documentation Items
+{
+  id: 'bark_scrolls',
+  name: 'Bark Scrolls',
+  description: 'Basic writing material made from birch bark and plant fiber',
+  type: 'material',
+  category: 'research',
+  level: 0,
+  rarity: 'common',
+  effects: { knowledgeStorage: 1.0, basicResearch: 1.2 },
+  researchRequired: 'basic_writing',
+  emoji: '📜',
+  color: '#8D6E63',
+  amount: 0,
+  craftingCost: { birch_wood: 2, plant_fiber: 3 },
+  craftingTime: 2,
+  toolTierRequired: 0,
+  buildingRequired: 'scroll_hut',
+  populationRequired: 1
+},
+{
+  id: 'hide_scrolls',
+  name: 'Hide Scrolls',
+  description: 'Durable writing material made from processed animal hide',
+  type: 'material',
+  category: 'research',
+  level: 0,
+  rarity: 'common',
+  effects: { knowledgeStorage: 1.5, durability: 1.3 },
+  researchRequired: 'basic_writing',
+  emoji: '📜',
+  color: '#8D6E63',
+  amount: 0,
+  craftingCost: { hide: 3, sinew: 2, plant_fiber: 2 },
+  craftingTime: 3,
+  toolTierRequired: 0,
+  buildingRequired: 'scroll_hut',
+  populationRequired: 1
+},
+{
+  id: 'parchment',
+  name: 'Parchment',
+  description: 'High-quality writing material made from specially prepared hide',
+  type: 'material',
+  category: 'research',
+  level: 1,
+  rarity: 'uncommon',
+  effects: { knowledgeStorage: 2.0, advancedResearch: 1.5, durability: 1.8 },
+  researchRequired: 'advanced_writing',
+  emoji: '📃',
+  color: '#F5F5DC',
+  amount: 0,
+  craftingCost: { leather: 2, lime: 1, oak_bark: 2, sinew: 1 },
+  craftingTime: 6,
+  toolTierRequired: 1,
+  buildingRequired: 'learning_hall',
+  populationRequired: 2
+},
+{
+  id: 'scholars_ink',
+  name: 'Scholars Ink',
+  description: 'Special ink made from charcoal, tree sap, and bronze vessels',
+  type: 'material',
+  category: 'research',
+  level: 1,
+  rarity: 'uncommon',
+  effects: { writingQuality: 1.8, knowledgePreservation: 1.4 },
+  researchRequired: 'advanced_writing',
+  emoji: '🖋️',
+  color: '#212121',
+  amount: 0,
+  craftingCost: { charcoal: 2, tree_sap: 3, bronze_vessel: 1, herbs: 1 },
+  craftingTime: 4,
+  toolTierRequired: 1,
+  buildingRequired: 'learning_hall',
+  populationRequired: 2
+},
+{
+  id: 'research_notes',
+  name: 'Research Notes',
+  description: 'Detailed documentation of experimental procedures and findings',
+  type: 'material',
+  category: 'research',
+  level: 2,
+  rarity: 'rare',
+  effects: { knowledgeStorage: 3.0, experimentalResearch: 2.0, scientificMethod: 1.5 },
+  researchRequired: 'scholarly_methods',
+  emoji: '📋',
+  color: '#3F51B5',
+  amount: 0,
+  craftingCost: { parchment: 5, scholars_ink: 3, bronze_tools: 1 },
+  craftingTime: 8,
+  toolTierRequired: 2,
+  buildingRequired: 'scholars_workshop',
+  populationRequired: 3
+},
+  // SPECIFIC WOOD TYPES (Level 0-1)
+  {
+    id: 'pine_wood',
+    name: 'Pine Wood',
+    description: 'Softwood from pine trees, easy to work with but less durable',
+    type: 'material',
+    category: 'wood',
+    level: 0,
+    rarity: 'common',
+    effects: { workability: 1.6, durability: 0.6, resinContent: 0.3 },
+    researchRequired: null,
+    emoji: '🌲',
+    color: '#4CAF50',
+    amount: 0
+  },
+  {
+    id: 'fir_wood',
+    name: 'Fir Wood',
+    description: 'Softwood from fir trees, commonly used for construction',
+    type: 'material',
+    category: 'wood',
+    level: 0,
+    rarity: 'common',
+    effects: { workability: 1.5, durability: 0.7, resinContent: 0.25 },
+    researchRequired: null,
+    emoji: '🌲',
+    color: '#4CAF50',
+    amount: 0
+  },
+  {
+    id: 'oak_wood',
+    name: 'Oak Wood',
+    description: 'Hardwood from oak trees, durable and strong',
+    type: 'material',
+    category: 'wood',
+    level: 0,
+    rarity: 'uncommon',
+    effects: { workability: 0.9, durability: 1.5, tanninContent: 0.4 },
+    researchRequired: null,
+    emoji: '🌳',
+    color: '#8BC34A',
+    amount: 0
+  },
+  {
+    id: 'ash_wood',
+    name: 'Ash Wood',
+    description: 'Hardwood from ash trees, strong and flexible',
+    type: 'material',
+    category: 'wood',
+    level: 0,
+    rarity: 'uncommon',
+    effects: { workability: 1.0, durability: 1.3, flexibility: 0.4 },
+    researchRequired: null,
+    emoji: '🌳',
+    color: '#8BC34A',
+    amount: 0
+  },
+  {
+    id: 'birch_wood',
+    name: 'Birch Wood',
+    description: 'Light hardwood with fine grain, excellent for detailed work',
+    type: 'material',
+    category: 'wood',
+    level: 0,
+    rarity: 'uncommon',
+    effects: { workability: 1.2, durability: 1.1, fineCrafting: 0.5 },
+    researchRequired: null,
+    emoji: '🌳',
+    color: '#F5F5DC',
+    amount: 0
+  },
+  {
+    id: 'yew_wood',
+    name: 'Yew Wood',
+    description: 'Dense, flexible wood prized for bow-making',
+    type: 'material',
+    category: 'wood',
+    level: 1,
+    rarity: 'rare',
+    effects: { workability: 0.7, durability: 1.8, elasticity: 2.0, bowBonus: 1.5 },
+    researchRequired: 'advanced_forestry',
+    emoji: '🌲',
+    color: '#8B4513',
+    amount: 0
+  },
+
+  // STONE TYPES (Level 0-2)
+  {
+    id: 'sandstone',
+    name: 'Sandstone',
+    description: 'Soft sedimentary rock, easy to quarry and carve',
+    type: 'material',
+    category: 'stone',
+    level: 0,
+    rarity: 'common',
+    effects: { workability: 1.5, durability: 0.8, beauty: 0.3 },
+    researchRequired: null,
+    emoji: '🏜️',
+    color: '#FFCC80',
+    amount: 0
+  },
+  {
+    id: 'limestone',
+    name: 'Limestone',
+    description: 'Versatile building stone, good for general construction',
+    type: 'material',
+    category: 'stone',
+    level: 0,
+    rarity: 'common',
+    effects: { workability: 1.2, durability: 1.1, mortarBonus: 0.5 },
+    researchRequired: null,
+    emoji: '🪨',
+    color: '#E0E0E0',
+    amount: 0
+  },
+  {
+    id: 'granite',
+    name: 'Granite',
+    description: 'Extremely hard igneous rock, excellent for fortifications',
+    type: 'material',
+    category: 'stone',
+    level: 1,
+    rarity: 'uncommon',
+    effects: { workability: 0.6, durability: 2.2, defenseBonus: 0.8 },
+    researchRequired: 'stone_masonry',
+    emoji: '⛰️',
+    color: '#9E9E9E',
+    amount: 0
+  },
+  {
+    id: 'marble',
+    name: 'Marble',
+    description: 'Beautiful metamorphic stone, prized for art and decoration',
+    type: 'material',
+    category: 'stone',
+    level: 1,
+    rarity: 'rare',
+    effects: { workability: 1.0, durability: 1.3, beauty: 2.0, tradeValue: 1.5 },
+    researchRequired: 'stone_masonry',
+    emoji: '🏛️',
+    color: '#F5F5F5',
+    amount: 0
+  },
+  {
+	id: 'flint',
+	name: 'Flint',
+	description: 'Hard sedimentary rock, used for tools and weapons',
+	type: 'material',
+	category: 'stone',
+	level: 0,
+	rarity: 'common',
+	effects: { sharpness: 1.5, workability: 1.2, toolQuality: 1.0 },
+	researchRequired: null,
+	emoji: '🪨',
+	color: '#757575',
+	amount: 0
+  },
+  {
+    id: 'obsidian',
+    name: 'Obsidian',
+    description: 'Volcanic glass, creates incredibly sharp edges',
+    type: 'material',
+    category: 'stone',
+    level: 0,
+    rarity: 'rare',
+    effects: { sharpness: 2.5, fragility: 1.8, toolQuality: 1.3 },
+    researchRequired: null,
+    emoji: '🌋',
+    color: '#212121',
+    amount: 0
+  },
+
+  // CLAY TYPES (Level 0-1)
+  {
+    id: 'common_clay',
+    name: 'Common Clay',
+    description: 'Basic clay suitable for simple pottery',
+    type: 'material',
+    category: 'clay',
+    level: 0,
+    rarity: 'common',
+    effects: { plasticity: 1.0, fireResistance: 0.7 },
+    researchRequired: null,
+    emoji: '🧱',
+    color: '#8D6E63',
+    amount: 0
+  },
+  {
+    id: 'fire_clay',
+    name: 'Fire Clay',
+    description: 'Heat-resistant clay for kilns and furnaces',
+    type: 'material',
+    category: 'clay',
+    level: 1,
+    rarity: 'uncommon',
+    effects: { plasticity: 0.8, fireResistance: 2.0, furnaceBonus: 0.5 },
+    researchRequired: 'advanced_pottery',
+    emoji: '🔥',
+    color: '#FF5722',
+    amount: 0
+  },
+  {
+    id: 'porcelain_clay',
+    name: 'Porcelain Clay',
+    description: 'Fine white clay for delicate ceramics',
+    type: 'material',
+    category: 'clay',
+    level: 1,
+    rarity: 'rare',
+    effects: { plasticity: 1.5, beauty: 1.8, tradeValue: 2.0 },
+    researchRequired: 'fine_ceramics',
+    emoji: '🏺',
+    color: '#FAFAFA',
+    amount: 0
+  },
+
+  // METAL PROGRESSION (Level 0-2)
+  {
+    id: 'native_copper',
+    name: 'Native Copper',
+    description: 'Pure copper found naturally, soft and malleable',
+    type: 'material',
+    category: 'metal',
+    level: 0,
+    rarity: 'uncommon',
+    effects: { workability: 2.0, durability: 0.6, conductivity: 1.5 },
+    researchRequired: null,
+    emoji: '🟫',
+    color: '#FF7043',
+    amount: 0
+  },
+  {
+    id: 'copper_ore',
+    name: 'Copper Ore',
+    description: 'Malachite and azurite containing copper',
+    type: 'material',
+    category: 'ore',
+    level: 0,
+    rarity: 'common',
+    effects: { smeltYield: 0.4 },
+    researchRequired: null,
+    emoji: '💎',
+    color: '#4CAF50',
+    amount: 0
+  },
+  {
+    id: 'tin_ore',
+    name: 'Tin Ore',
+    description: 'Cassiterite ore containing tin for bronze making',
+    type: 'material',
+    category: 'ore',
+    level: 0,
+    rarity: 'rare',
+    effects: { smeltYield: 0.3, bronzeAlloy: 1.0 },
+    researchRequired: null,
+    emoji: '⚪',
+    color: '#B0BEC5',
+    amount: 0
+  },
+  {
+    id: 'iron_ore',
+    name: 'Iron Ore',
+    description: 'Hematite and magnetite containing iron',
+    type: 'material',
+    category: 'ore',
+    level: 1,
+    rarity: 'common',
+    effects: { smeltYield: 0.5, carbonSteel: 1.0 },
+    researchRequired: 'iron_smelting',
+    emoji: '⛓️',
+    color: '#795548',
+    amount: 0
+  },
+
+  // ORGANIC MATERIALS (Level 0-1)
+  {
+    id: 'plant_fiber',
+    name: 'Plant Fiber',
+    description: 'Fibrous material from plants for cordage',
+    type: 'material',
+    category: 'organic',
+    level: 0,
+    rarity: 'common',
+    effects: { flexibility: 1.2, tensileStrength: 0.8 },
+    researchRequired: null,
+    emoji: '🌾',
+    color: '#8BC34A',
+    amount: 0
+  },
+  {
+    id: 'charcoal',
+    name: 'Charcoal',
+    description: 'Carbonized wood for high-temperature fuel',
+    type: 'material',
+    category: 'fuel',
+    level: 1,
+    rarity: 'common',
+    effects: { heatValue: 2.0, smeltingBonus: 1.5 },
+    researchRequired: 'charcoal_making',
+    emoji: '⚫',
+    color: '#212121',
+    amount: 0,
+    craftingCost: { oak_wood: 3 },
+    craftingTime: 4,
+    toolTierRequired: 0,
+    buildingRequired: 'charcoal_kiln',
+    populationRequired: 1
+  },
+
+  // REFINED METALS (Level 1-2)
+  {
+    id: 'copper_ingot',
+    name: 'Copper Ingot',
+    description: 'Pure copper refined from ore',
+    type: 'material',
+    category: 'refined_metal',
+    level: 1,
+    rarity: 'common',
+    effects: { purity: 1.0, workability: 1.8 },
+    researchRequired: 'copper_smelting',
+    emoji: '🟫',
+    color: '#FF7043',
+    amount: 0,
+    craftingCost: { copper_ore: 3, charcoal: 1 },
+    craftingTime: 2,
+    toolTierRequired: 0,
+    buildingRequired: 'smelting_furnace',
+    populationRequired: 1
+  },
+  {
+    id: 'tin_ingot',
+    name: 'Tin Ingot',
+    description: 'Pure tin for bronze alloy creation',
+    type: 'material',
+    category: 'refined_metal',
+    level: 1,
+    rarity: 'uncommon',
+    effects: { purity: 1.0, alloyBonus: 1.5 },
+    researchRequired: 'tin_smelting',
+    emoji: '⚪',
+    color: '#B0BEC5',
+    amount: 0,
+    craftingCost: { tin_ore: 4, charcoal: 2 },
+    craftingTime: 3,
+    toolTierRequired: 1,
+    buildingRequired: 'smelting_furnace',
+    populationRequired: 1
+  },
+  {
+    id: 'bronze_ingot',
+    name: 'Bronze Ingot',
+    description: 'Copper-tin alloy, harder than pure copper',
+    type: 'material',
+    category: 'refined_metal',
+    level: 1,
+    rarity: 'uncommon',
+    effects: { hardness: 1.8, durability: 1.6, workability: 1.2 },
+    researchRequired: 'bronze_working',
+    emoji: '🥉',
+    color: '#CD7F32',
+    amount: 0,
+    craftingCost: { copper_ingot: 9, tin_ingot: 1 },
+    craftingTime: 4,
+    toolTierRequired: 1,
+    buildingRequired: 'bronze_foundry',
+    populationRequired: 2
+  },
+  {
+    id: 'wrought_iron',
+    name: 'Wrought Iron',
+    description: 'Low-carbon iron, tough and malleable',
+    type: 'material',
+    category: 'refined_metal',
+    level: 2,
+    rarity: 'uncommon',
+    effects: { toughness: 2.0, workability: 1.0, corrosionResistance: 0.8 },
+    researchRequired: 'iron_working',
+    emoji: '⚫',
+    color: '#424242',
+    amount: 0,
+    craftingCost: { iron_ore: 3, charcoal: 2 },
+    craftingTime: 5,
+    toolTierRequired: 2,
+    buildingRequired: 'iron_forge',
+    populationRequired: 2
+  },
+  {
+    id: 'steel_ingot',
+    name: 'Steel Ingot',
+    description: 'Carbon-enriched iron, extremely hard and durable',
+    type: 'material',
+    category: 'refined_metal',
+    level: 2,
+    rarity: 'rare',
+    effects: { hardness: 2.5, durability: 2.2, sharpness: 1.8 },
+    researchRequired: 'steel_making',
+    emoji: '⚙️',
+    color: '#607D8B',
+    amount: 0,
+    craftingCost: { wrought_iron: 2, charcoal: 3 },
+    craftingTime: 8,
+    toolTierRequired: 2,
+    buildingRequired: 'blast_furnace',
+    populationRequired: 3
+  },
+
+  // PROCESSED MATERIALS
+  {
+    id: 'leather',
+    name: 'Tanned Leather',
+    description: 'Processed hide using oak tannins',
+    type: 'material',
+    category: 'processed',
+    level: 1,
+    rarity: 'common',
+    effects: { flexibility: 1.5, durability: 1.4, waterResistance: 1.2 },
+    researchRequired: 'leather_working',
+    emoji: '🦬',
+    color: '#8D6E63',
+    amount: 0,
+    craftingCost: { hide: 2, oak_wood: 1, plant_fiber: 1 },
+    craftingTime: 3,
+    toolTierRequired: 0,
+    buildingRequired: 'tannery',
+    populationRequired: 1
+  },
+
+  // CLAY PRODUCTION ITEMS
+  {
+    id: 'earthenware_pot',
+    name: 'Earthenware Pot',
+    description: 'Basic fired clay vessel for food storage',
+    type: 'material',
+    category: 'processed',
+    level: 0,
+    rarity: 'common',
+    effects: { foodStorage: 1.2, cookingBonus: 0.1 },
+    researchRequired: null,
+    emoji: '🏺',
+    color: '#8D6E63',
+    amount: 0,
+    craftingCost: { common_clay: 3 },
+    craftingTime: 2,
+    toolTierRequired: 0,
+    buildingRequired: 'craftsmens_workshop',
+    populationRequired: 1
+  },
+  {
+    id: 'fire_bricks',
+    name: 'Fire Bricks',
+    description: 'Heat-resistant bricks for furnace construction',
+    type: 'material',
+    category: 'processed',
+    level: 1,
+    rarity: 'uncommon',
+    effects: { furnaceEfficiency: 1.5, heatResistance: 2.0 },
+    researchRequired: 'advanced_pottery',
+    emoji: '🔥',
+    color: '#FF5722',
+    amount: 0,
+    craftingCost: { fire_clay: 3 },
+    craftingTime: 4,
+    toolTierRequired: 1,
+    buildingRequired: 'advanced_kiln',
+    populationRequired: 2
+  },
+  {
+    id: 'porcelain_vessels',
+    name: 'Porcelain Vessels',
+    description: 'Delicate white ceramic vessels for trade',
+    type: 'material',
+    category: 'processed',
+    level: 1,
+    rarity: 'rare',
+    effects: { tradeValue: 2.5, prestigeBonus: 1.8, beauty: 2.0 },
+    researchRequired: 'fine_ceramics',
+    emoji: '🏺',
+    color: '#FAFAFA',
+    amount: 0,
+    craftingCost: { porcelain_clay: 2 },
+    craftingTime: 6,
+    toolTierRequired: 1,
+    buildingRequired: 'porcelain_workshop',
+    populationRequired: 3
+  },
+
+// SPEAR PROGRESSION - Wood -> Copper -> Bronze -> Iron
+{
+  id: 'pine_spear',
+  name: 'Pine Spear',
+  description: 'Lightweight spear with sharpened pine tip and plant fiber binding',
+  type: 'weapon',
+  category: 'combat',
+  level: 0,
+  rarity: 'common',
+  durability: 30,
+  maxDurability: 30,
+  effects: { combatPower: 3, huntingBonus: 1.1 },
+  researchRequired: null,
+  emoji: '🔱',
+  color: '#4CAF50',
+  weaponProperties: {
+    damage: 4,
+    attackSpeed: 1.6,
+    range: 2
+  },
+  amount: 0,
+  craftingCost: { pine_wood: 4, plant_fiber: 2 },
+  craftingTime: 1,
+  toolTierRequired: 0,
+  buildingRequired: null,
+  populationRequired: 0
+},
+{
+  id: 'oak_spear',
+  name: 'Oak Spear',
+  description: 'Heavy hardwood spear with fire-hardened oak tip',
+  type: 'weapon',
+  category: 'combat',
+  level: 0,
+  rarity: 'common',
+  durability: 50,
+  maxDurability: 50,
+  effects: { combatPower: 5, huntingBonus: 1.2 },
+  researchRequired: null,
+  emoji: '🔱',
+  color: '#8BC34A',
+  weaponProperties: {
+    damage: 7,
+    attackSpeed: 1.1,
+    range: 2
+  },
+  amount: 0,
+  craftingCost: { oak_wood: 3, plant_fiber: 2 },
+  craftingTime: 2,
+  toolTierRequired: 0,
+  buildingRequired: null,
+  populationRequired: 0
+},
+{
+  id: 'ash_spear',
+  name: 'Ash Spear',
+  description: 'Flexible ash shaft with fire-hardened tip, ideal balance',
+  type: 'weapon',
+  category: 'combat',
+  level: 0,
+  rarity: 'uncommon',
+  durability: 45,
+  maxDurability: 45,
+  effects: { combatPower: 4, huntingBonus: 1.4, throwingBonus: 1.3 },
+  researchRequired: null,
+  emoji: '🔱',
+  color: '#8BC34A',
+  weaponProperties: {
+    damage: 6,
+    attackSpeed: 1.4,
+    range: 2
+  },
+  amount: 0,
+  craftingCost: { ash_wood: 3, plant_fiber: 2 },
+  craftingTime: 2,
+  toolTierRequired: 0,
+  buildingRequired: null,
+  populationRequired: 0
+},
+{
+  id: 'bone_spear',
+  name: 'Bone Spear',
+  description: 'Sharpened bone tip bound to pine shaft with sinew',
+  type: 'weapon',
+  category: 'combat',
+  level: 0,
+  rarity: 'common',
+  durability: 40,
+  maxDurability: 40,
+  effects: { combatPower: 4, huntingBonus: 1.3 },
+  researchRequired: null,
+  emoji: '🔱',
+  color: '#F5F5DC',
+  weaponProperties: {
+    damage: 6,
+    attackSpeed: 1.3,
+    range: 2
+  },
+  amount: 0,
+  craftingCost: { pine_wood: 3, bone: 2, sinew: 2 },
+  craftingTime: 2,
+  toolTierRequired: 0,
+  buildingRequired: null,
+  populationRequired: 0
+},
+{
+  id: 'obsidian_spear',
+  name: 'Obsidian Spear',
+  description: 'Razor-sharp volcanic glass spearhead on flexible ash shaft',
+  type: 'weapon',
+  category: 'combat',
+  level: 0,
+  rarity: 'uncommon',
+  durability: 25,
+  maxDurability: 25,
+  effects: { combatPower: 8, armorPiercing: 1.5 },
+  researchRequired: null,
+  emoji: '🔱',
+  color: '#212121',
+  weaponProperties: {
+    damage: 12,
+    attackSpeed: 1.1,
+    range: 2
+  },
+  amount: 0,
+  craftingCost: { obsidian: 3, ash_wood: 2, sinew: 1 },
+  craftingTime: 3,
+  toolTierRequired: 0,
+  buildingRequired: null,
+  populationRequired: 0
+},
+
+// COPPER SPEARS
+{
+  id: 'copper_pine_spear',
+  name: 'Copper Pine Spear',
+  description: 'Copper spearhead on lightweight pine shaft with sinew binding',
+  type: 'weapon',
+  category: 'combat',
+  level: 1,
+  rarity: 'common',
+  durability: 80,
+  maxDurability: 80,
+  effects: { combatPower: 6, huntingBonus: 1.2 },
+  researchRequired: 'copper_smelting',
+  emoji: '🔱',
+  color: '#FF7043',
+  weaponProperties: {
+    damage: 8,
+    attackSpeed: 1.5,
+    range: 2
+  },
+  amount: 0,
+  craftingCost: { copper_ingot: 2, pine_wood: 3, sinew: 2, plant_fiber: 1 },
+  craftingTime: 3,
+  toolTierRequired: 1,
+  buildingRequired: 'smelting_furnace',
+  populationRequired: 1
+},
+{
+  id: 'copper_ash_spear',
+  name: 'Copper Ash Spear',
+  description: 'Copper spearhead on flexible ash shaft with leather grip',
+  type: 'weapon',
+  category: 'combat',
+  level: 1,
+  rarity: 'uncommon',
+  durability: 90,
+  maxDurability: 90,
+  effects: { combatPower: 7, huntingBonus: 1.3, throwingBonus: 1.4 },
+  researchRequired: 'copper_smelting',
+  emoji: '🔱',
+  color: '#FF7043',
+  weaponProperties: {
+    damage: 9,
+    attackSpeed: 1.3,
+    range: 2
+  },
+  amount: 0,
+  craftingCost: { copper_ingot: 2, ash_wood: 3, sinew: 2, leather: 1 },
+  craftingTime: 4,
+  toolTierRequired: 1,
+  buildingRequired: 'smelting_furnace',
+  populationRequired: 1
+},
+
+// BRONZE SPEARS
+{
+  id: 'bronze_oak_spear',
+  name: 'Bronze Oak Spear',
+  description: 'Bronze spearhead on sturdy oak shaft with leather and sinew binding',
+  type: 'weapon',
+  category: 'combat',
+  level: 1,
+  rarity: 'uncommon',
+  durability: 120,
+  maxDurability: 120,
+  effects: { combatPower: 10, huntingBonus: 1.4, armorPiercing: 1.2 },
+  researchRequired: 'bronze_working',
+  emoji: '🔱',
+  color: '#CD7F32',
+  weaponProperties: {
+    damage: 13,
+    attackSpeed: 1.0,
+    range: 2
+  },
+  amount: 0,
+  craftingCost: { bronze_ingot: 3, oak_wood: 2, sinew: 2, leather: 1, plant_fiber: 1 },
+  craftingTime: 5,
+  toolTierRequired: 1,
+  buildingRequired: 'bronze_foundry',
+  populationRequired: 2
+},
+{
+  id: 'bronze_ash_spear',
+  name: 'Bronze Ash Spear',
+  description: 'Bronze spearhead on flexible ash shaft, perfectly balanced',
+  type: 'weapon',
+  category: 'combat',
+  level: 1,
+  rarity: 'rare',
+  durability: 110,
+  maxDurability: 110,
+  effects: { combatPower: 9, huntingBonus: 1.5, throwingBonus: 1.6 },
+  researchRequired: 'bronze_working',
+  emoji: '🔱',
+  color: '#CD7F32',
+  weaponProperties: {
+    damage: 12,
+    attackSpeed: 1.2,
+    range: 2
+  },
+  amount: 0,
+  craftingCost: { bronze_ingot: 3, ash_wood: 2, sinew: 3, leather: 1, plant_fiber: 1 },
+  craftingTime: 5,
+  toolTierRequired: 1,
+  buildingRequired: 'bronze_foundry',
+  populationRequired: 2
+},
+
+// IRON SPEARS
+{
+  id: 'iron_oak_spear',
+  name: 'Iron Oak Spear',
+  description: 'Iron spearhead on oak shaft with complex leather and sinew wrapping',
+  type: 'weapon',
+  category: 'combat',
+  level: 2,
+  rarity: 'rare',
+  durability: 180,
+  maxDurability: 180,
+  effects: { combatPower: 14, huntingBonus: 1.5, armorPiercing: 1.5 },
+  researchRequired: 'iron_working',
+  emoji: '🔱',
+  color: '#424242',
+  weaponProperties: {
+    damage: 18,
+    attackSpeed: 0.9,
+    range: 2
+  },
+  amount: 0,
+  craftingCost: { wrought_iron: 3, oak_wood: 2, sinew: 3, leather: 2, plant_fiber: 2 },
+  craftingTime: 7,
+  toolTierRequired: 2,
+  buildingRequired: 'iron_forge',
+  populationRequired: 2
+},
+
+// BOW PROGRESSION - Each wood type
+{
+  id: 'pine_bow',
+  name: 'Pine Bow',
+  description: 'Simple bow made from flexible pine with plant fiber string',
+  type: 'weapon',
+  category: 'combat',
+  level: 0,
+  rarity: 'common',
+  durability: 40,
+  maxDurability: 40,
+  effects: { combatPower: 3, huntingBonus: 1.2, range: 1.1 },
+  researchRequired: null,
+  emoji: '🏹',
+  color: '#4CAF50',
+  weaponProperties: {
+    damage: 5,
+    attackSpeed: 0.9,
+    range: 3
+  },
+  amount: 0,
+  craftingCost: { pine_wood: 4, plant_fiber: 3 },
+  craftingTime: 2,
+  toolTierRequired: 0,
+  buildingRequired: null,
+  populationRequired: 0
+},
+{
+  id: 'oak_bow',
+  name: 'Oak Bow',
+  description: 'Heavy oak bow with plant fiber string, high draw weight',
+  type: 'weapon',
+  category: 'combat',
+  level: 0,
+  rarity: 'uncommon',
+  durability: 80,
+  maxDurability: 80,
+  effects: { combatPower: 6, huntingBonus: 1.3, armorPiercing: 1.1 },
+  researchRequired: null,
+  emoji: '🏹',
+  color: '#8BC34A',
+  weaponProperties: {
+    damage: 9,
+    attackSpeed: 0.6,
+    range: 3
+  },
+  amount: 0,
+  craftingCost: { oak_wood: 3, plant_fiber: 4 },
+  craftingTime: 3,
+  toolTierRequired: 0,
+  buildingRequired: null,
+  populationRequired: 0
+},
+{
+  id: 'ash_bow',
+  name: 'Ash Bow',
+  description: 'Flexible ash bow with sinew string, excellent balance',
+  type: 'weapon',
+  category: 'combat',
+  level: 0,
+  rarity: 'uncommon',
+  durability: 70,
+  maxDurability: 70,
+  effects: { combatPower: 5, huntingBonus: 1.4, range: 1.2 },
+  researchRequired: null,
+  emoji: '🏹',
+  color: '#8BC34A',
+  weaponProperties: {
+    damage: 7,
+    attackSpeed: 0.8,
+    range: 4
+  },
+  amount: 0,
+  craftingCost: { ash_wood: 3, sinew: 3, plant_fiber: 2 },
+  craftingTime: 3,
+  toolTierRequired: 0,
+  buildingRequired: null,
+  populationRequired: 0
+},
+{
+  id: 'yew_bow',
+  name: 'Yew Bow',
+  description: 'Superior bow made from flexible yew wood with sinew string',
+  type: 'weapon',
+  category: 'combat',
+  level: 1,
+  rarity: 'rare',
+  durability: 200,
+  maxDurability: 200,
+  effects: { combatPower: 8, huntingBonus: 1.8, range: 1.5 },
+  researchRequired: 'advanced_forestry',
+  emoji: '🏹',
+  color: '#8B4513',
+  weaponProperties: {
+    damage: 10,
+    attackSpeed: 0.7,
+    range: 4
+  },
+  amount: 0,
+  craftingCost: { yew_wood: 3, sinew: 4, leather: 1 },
+  craftingTime: 8,
+  toolTierRequired: 1,
+  buildingRequired: 'advanced_workshop',
+  populationRequired: 2
+},
+
+// COPPER REINFORCED BOWS
+{
+  id: 'copper_ash_bow',
+  name: 'Copper-Reinforced Ash Bow',
+  description: 'Ash bow with copper reinforcements and sinew string',
+  type: 'weapon',
+  category: 'combat',
+  level: 1,
+  rarity: 'uncommon',
+  durability: 120,
+  maxDurability: 120,
+  effects: { combatPower: 7, huntingBonus: 1.5, range: 1.3, armorPiercing: 1.1 },
+  researchRequired: 'copper_smelting',
+  emoji: '🏹',
+  color: '#FF7043',
+  weaponProperties: {
+    damage: 9,
+    attackSpeed: 0.8,
+    range: 4
+  },
+  amount: 0,
+  craftingCost: { ash_wood: 3, copper_ingot: 1, sinew: 3, leather: 1, plant_fiber: 1 },
+  craftingTime: 5,
+  toolTierRequired: 1,
+  buildingRequired: 'smelting_furnace',
+  populationRequired: 1
+},
+{
+  id: 'copper_yew_bow',
+  name: 'Copper-Reinforced Yew Bow',
+  description: 'Yew bow with copper fittings and leather-wrapped grip',
+  type: 'weapon',
+  category: 'combat',
+  level: 1,
+  rarity: 'rare',
+  durability: 180,
+  maxDurability: 180,
+  effects: { combatPower: 10, huntingBonus: 1.9, range: 1.6, armorPiercing: 1.2 },
+  researchRequired: 'advanced_forestry',
+  emoji: '🏹',
+  color: '#FF7043',
+  weaponProperties: {
+    damage: 12,
+    attackSpeed: 0.7,
+    range: 5
+  },
+  amount: 0,
+  craftingCost: { yew_wood: 3, copper_ingot: 2, sinew: 4, leather: 2, plant_fiber: 1 },
+  craftingTime: 8,
+  toolTierRequired: 1,
+  buildingRequired: 'smelting_furnace',
+  populationRequired: 2
+},
+
+// BRONZE COMPOSITE BOWS
+{
+  id: 'bronze_composite_bow',
+  name: 'Bronze Composite Bow',
+  description: 'Advanced bow combining yew, bronze, and sinew for maximum power',
+  type: 'weapon',
+  category: 'combat',
+  level: 1,
+  rarity: 'epic',
+  durability: 250,
+  maxDurability: 250,
+  effects: { combatPower: 12, huntingBonus: 2.0, range: 1.8, armorPiercing: 1.4 },
+  researchRequired: 'bronze_working',
+  emoji: '🏹',
+  color: '#CD7F32',
+  weaponProperties: {
+    damage: 15,
+    attackSpeed: 0.6,
+    range: 5
+  },
+  amount: 0,
+  craftingCost: { yew_wood: 2, bronze_ingot: 3, sinew: 5, leather: 2, plant_fiber: 2 },
+  craftingTime: 10,
+  toolTierRequired: 1,
+  buildingRequired: 'bronze_foundry',
+  populationRequired: 3
+},
+// BLUNT WEAPONS - Complete Progression
+{
+  id: 'wooden_club',
+  name: 'Wooden Club',
+  description: 'Simple oak club, the most basic blunt weapon',
+  type: 'weapon',
+  category: 'combat',
+  level: 0,
+  rarity: 'common',
+  durability: 50,
+  maxDurability: 50,
+  effects: { combatPower: 3, stunChance: 1.2 },
+  researchRequired: null,
+  emoji: '🏏',
+  color: '#8BC34A',
+  weaponProperties: {
+    damage: 5,
+    attackSpeed: 1.4,
+    range: 1
+  },
+  amount: 0,
+  craftingCost: { oak_wood: 3 },
+  craftingTime: 1,
+  toolTierRequired: 0,
+  buildingRequired: null,
+  populationRequired: 0
+},
+{
+  id: 'stone_mace',
+  name: 'Stone Mace',
+  description: 'Heavy stone head bound to ash handle with sinew',
+  type: 'weapon',
+  category: 'combat',
+  level: 0,
+  rarity: 'common',
+  durability: 80,
+  maxDurability: 80,
+  effects: { combatPower: 6, stunChance: 1.4, armorCrushing: 1.2 },
+  researchRequired: null,
+  emoji: '🔨',
+  color: '#9E9E9E',
+  weaponProperties: {
+    damage: 9,
+    attackSpeed: 0.9,
+    range: 1
+  },
+  amount: 0,
+  craftingCost: { limestone: 4, ash_wood: 2, sinew: 2 },
+  craftingTime: 2,
+  toolTierRequired: 0,
+  buildingRequired: null,
+  populationRequired: 0
+},
+{
+  id: 'bone_club',
+  name: 'Bone Club',
+  description: 'Large bone bound to oak handle, intimidating and effective',
+  type: 'weapon',
+  category: 'combat',
+  level: 0,
+  rarity: 'uncommon',
+  durability: 60,
+  maxDurability: 60,
+  effects: { combatPower: 5, stunChance: 1.3, intimidation: 1.5 },
+  researchRequired: null,
+  emoji: '🦴',
+  color: '#F5F5DC',
+  weaponProperties: {
+    damage: 7,
+    attackSpeed: 1.1,
+    range: 1
+  },
+  amount: 0,
+  craftingCost: { bone: 3, oak_wood: 2, sinew: 1 },
+  craftingTime: 2,
+  toolTierRequired: 0,
+  buildingRequired: null,
+  populationRequired: 0
+},
+{
+  id: 'copper_mace',
+  name: 'Copper Mace',
+  description: 'Copper head on oak handle with leather grip and plant fiber wrap',
+  type: 'weapon',
+  category: 'combat',
+  level: 1,
+  rarity: 'common',
+  durability: 120,
+  maxDurability: 120,
+  effects: { combatPower: 8, stunChance: 1.5, armorCrushing: 1.3 },
+  researchRequired: 'copper_smelting',
+  emoji: '🔨',
+  color: '#FF7043',
+  weaponProperties: {
+    damage: 12,
+    attackSpeed: 0.8,
+    range: 1
+  },
+  amount: 0,
+  craftingCost: { copper_ingot: 3, oak_wood: 2, leather: 1, plant_fiber: 2 },
+  craftingTime: 4,
+  toolTierRequired: 1,
+  buildingRequired: 'smelting_furnace',
+  populationRequired: 1
+},
+{
+  id: 'copper_war_hammer',
+  name: 'Copper War Hammer',
+  description: 'Two-handed copper hammer with ash handle and sinew binding',
+  type: 'weapon',
+  category: 'combat',
+  level: 1,
+  rarity: 'uncommon',
+  durability: 140,
+  maxDurability: 140,
+  effects: { combatPower: 10, stunChance: 1.6, armorCrushing: 1.5, reach: 1.1 },
+  researchRequired: 'copper_smelting',
+  emoji: '🔨',
+  color: '#FF7043',
+  weaponProperties: {
+    damage: 15,
+    attackSpeed: 0.6,
+    range: 1
+  },
+  amount: 0,
+  craftingCost: { copper_ingot: 4, ash_wood: 3, sinew: 2, leather: 1, plant_fiber: 1 },
+  craftingTime: 5,
+  toolTierRequired: 1,
+  buildingRequired: 'smelting_furnace',
+  populationRequired: 2
+},
+{
+  id: 'bronze_mace',
+  name: 'Bronze Mace',
+  description: 'Bronze flanged mace with oak handle and leather-wrapped grip',
+  type: 'weapon',
+  category: 'combat',
+  level: 1,
+  rarity: 'uncommon',
+  durability: 160,
+  maxDurability: 160,
+  effects: { combatPower: 11, stunChance: 1.6, armorCrushing: 1.4 },
+  researchRequired: 'bronze_working',
+  emoji: '🔨',
+  color: '#CD7F32',
+  weaponProperties: {
+    damage: 16,
+    attackSpeed: 0.8,
+    range: 1
+  },
+  amount: 0,
+  craftingCost: { bronze_ingot: 3, oak_wood: 2, leather: 2, sinew: 1, plant_fiber: 1 },
+  craftingTime: 5,
+  toolTierRequired: 1,
+  buildingRequired: 'bronze_foundry',
+  populationRequired: 2
+},
+{
+  id: 'bronze_war_hammer',
+  name: 'Bronze War Hammer',
+  description: 'Heavy two-handed bronze hammer with ash handle and bronze fittings',
+  type: 'weapon',
+  category: 'combat',
+  level: 1,
+  rarity: 'rare',
+  durability: 180,
+  maxDurability: 180,
+  effects: { combatPower: 14, stunChance: 1.8, armorCrushing: 1.7, reach: 1.2 },
+  researchRequired: 'bronze_working',
+  emoji: '🔨',
+  color: '#CD7F32',
+  weaponProperties: {
+    damage: 20,
+    attackSpeed: 0.5,
+    range: 1
+  },
+  amount: 0,
+  craftingCost: { bronze_ingot: 6, ash_wood: 3, leather: 2, sinew: 2, plant_fiber: 1 },
+  craftingTime: 7,
+  toolTierRequired: 1,
+  buildingRequired: 'bronze_foundry',
+  populationRequired: 3
+},
+{
+  id: 'bronze_flail',
+  name: 'Bronze Flail',
+  description: 'Bronze head on chain with oak handle, devastating but unwieldy',
+  type: 'weapon',
+  category: 'combat',
+  level: 1,
+  rarity: 'rare',
+  durability: 150,
+  maxDurability: 150,
+  effects: { combatPower: 12, stunChance: 1.7, armorCrushing: 1.8, unpredictable: 1.3 },
+  researchRequired: 'bronze_working',
+  emoji: '⛓️',
+  color: '#CD7F32',
+  weaponProperties: {
+    damage: 18,
+    attackSpeed: 0.7,
+    range: 1
+  },
+  amount: 0,
+  craftingCost: { bronze_ingot: 5, oak_wood: 2, leather: 2, sinew: 3, plant_fiber: 2 },
+  craftingTime: 8,
+  toolTierRequired: 1,
+  buildingRequired: 'bronze_foundry',
+  populationRequired: 3
+},
+{
+  id: 'iron_mace',
+  name: 'Iron Mace',
+  description: 'Iron flanged mace with ash handle, bronze fittings, and leather grip',
+  type: 'weapon',
+  category: 'combat',
+  level: 2,
+  rarity: 'uncommon',
+  durability: 220,
+  maxDurability: 220,
+  effects: { combatPower: 14, stunChance: 1.7, armorCrushing: 1.6 },
+  researchRequired: 'iron_working',
+  emoji: '🔨',
+  color: '#424242',
+  weaponProperties: {
+    damage: 20,
+    attackSpeed: 0.8,
+    range: 1
+  },
+  amount: 0,
+  craftingCost: { wrought_iron: 3, ash_wood: 2, bronze_ingot: 1, leather: 2, sinew: 2, plant_fiber: 1 },
+  craftingTime: 6,
+  toolTierRequired: 2,
+  buildingRequired: 'iron_forge',
+  populationRequired: 2
+},
+{
+  id: 'iron_war_hammer',
+  name: 'Iron War Hammer',
+  description: 'Massive two-handed iron hammer with oak handle and bronze reinforcements',
+  type: 'weapon',
+  category: 'combat',
+  level: 2,
+  rarity: 'rare',
+  durability: 250,
+  maxDurability: 250,
+  effects: { combatPower: 17, stunChance: 1.9, armorCrushing: 1.9, reach: 1.3 },
+  researchRequired: 'iron_working',
+  emoji: '🔨',
+  color: '#424242',
+  weaponProperties: {
+    damage: 25,
+    attackSpeed: 0.5,
+    range: 1
+  },
+  amount: 0,
+  craftingCost: { wrought_iron: 5, oak_wood: 3, bronze_ingot: 2, leather: 3, sinew: 3, plant_fiber: 2 },
+  craftingTime: 9,
+  toolTierRequired: 2,
+  buildingRequired: 'iron_forge',
+  populationRequired: 3
+},
+{
+  id: 'iron_flail',
+  name: 'Iron Flail',
+  description: 'Iron spiked head on bronze chain with yew handle and leather wrap',
+  type: 'weapon',
+  category: 'combat',
+  level: 2,
+  rarity: 'rare',
+  durability: 200,
+  maxDurability: 200,
+  effects: { combatPower: 15, stunChance: 1.8, armorCrushing: 2.0, unpredictable: 1.4 },
+  researchRequired: 'iron_working',
+  emoji: '⛓️',
+  color: '#424242',
+  weaponProperties: {
+    damage: 22,
+    attackSpeed: 0.7,
+    range: 1
+  },
+  amount: 0,
+  craftingCost: { wrought_iron: 4, yew_wood: 2, bronze_ingot: 2, leather: 3, sinew: 4, plant_fiber: 2 },
+  craftingTime: 10,
+  toolTierRequired: 2,
+  buildingRequired: 'iron_forge',
+  populationRequired: 3
+},
+{
+  id: 'steel_war_hammer',
+  name: 'Steel War Hammer',
+  description: 'Masterwork steel hammer with yew handle, bronze fittings, and ornate leather grip',
+  type: 'weapon',
+  category: 'combat',
+  level: 2,
+  rarity: 'epic',
+  durability: 300,
+  maxDurability: 300,
+  effects: { combatPower: 20, stunChance: 2.0, armorCrushing: 2.2, reach: 1.4, prestigeBonus: 1.3 },
+  researchRequired: 'steel_making',
+  emoji: '🔨',
+  color: '#607D8B',
+  weaponProperties: {
+    damage: 30,
+    attackSpeed: 0.5,
+    range: 1
+  },
+  amount: 0,
+  craftingCost: { steel_ingot: 4, yew_wood: 2, bronze_ingot: 3, leather: 4, sinew: 4, plant_fiber: 3 },
+  craftingTime: 12,
+  toolTierRequired: 2,
+  buildingRequired: 'blast_furnace',
+  populationRequired: 4
+},
+// SWORDS - Complete Progression
+{
+  id: 'copper_dagger',
+  name: 'Copper Dagger',
+  description: 'Short copper blade with pine handle, first metal weapon',
+  type: 'weapon',
+  category: 'combat',
+  level: 1,
+  rarity: 'common',
+  durability: 90,
+  maxDurability: 90,
+  effects: { combatPower: 6, concealable: 1.5, craftingBonus: 0.2 },
+  researchRequired: 'copper_smelting',
+  emoji: '🗡️',
+  color: '#FF7043',
+  weaponProperties: {
+    damage: 8,
+    attackSpeed: 1.4,
+    range: 1
+  },
+  amount: 0,
+  craftingCost: { copper_ingot: 2, pine_wood: 1, plant_fiber: 2 },
+  craftingTime: 3,
+  toolTierRequired: 1,
+  buildingRequired: 'smelting_furnace',
+  populationRequired: 1
+},
+{
+  id: 'copper_sword',
+  name: 'Copper Sword',
+  description: 'Full-length copper blade with oak handle and plant fiber wrap',
+  type: 'weapon',
+  category: 'combat',
+  level: 1,
+  rarity: 'common',
+  durability: 120,
+  maxDurability: 120,
+  effects: { combatPower: 8, versatility: 1.2 },
+  researchRequired: 'copper_smelting',
+  emoji: '🗡️',
+  color: '#FF7043',
+  weaponProperties: {
+    damage: 11,
+    attackSpeed: 1.1,
+    range: 1
+  },
+  amount: 0,
+  craftingCost: { copper_ingot: 3, oak_wood: 1, plant_fiber: 3 },
+  craftingTime: 4,
+  toolTierRequired: 1,
+  buildingRequired: 'smelting_furnace',
+  populationRequired: 1
+},
+{
+  id: 'bronze_dagger',
+  name: 'Bronze Dagger',
+  description: 'Sharp bronze dagger with birch handle and leather sheath',
+  type: 'weapon',
+  category: 'combat',
+  level: 1,
+  rarity: 'uncommon',
+  durability: 140,
+  maxDurability: 140,
+  effects: { combatPower: 8, concealable: 1.6, craftingBonus: 0.3 },
+  researchRequired: 'bronze_working',
+  emoji: '🗡️',
+  color: '#CD7F32',
+  weaponProperties: {
+    damage: 12,
+    attackSpeed: 1.3,
+    range: 1
+  },
+  amount: 0,
+  craftingCost: { bronze_ingot: 2, birch_wood: 1, leather: 1, sinew: 1 },
+  craftingTime: 4,
+  toolTierRequired: 1,
+  buildingRequired: 'bronze_foundry',
+  populationRequired: 2
+},
+{
+  id: 'bronze_shortsword',
+  name: 'Bronze Shortsword',
+  description: 'Balanced bronze blade with ash handle and leather grip',
+  type: 'weapon',
+  category: 'combat',
+  level: 1,
+  rarity: 'uncommon',
+  durability: 160,
+  maxDurability: 160,
+  effects: { combatPower: 10, versatility: 1.3, mobility: 1.1 },
+  researchRequired: 'bronze_working',
+  emoji: '🗡️',
+  color: '#CD7F32',
+  weaponProperties: {
+    damage: 14,
+    attackSpeed: 1.1,
+    range: 1
+  },
+  amount: 0,
+  craftingCost: { bronze_ingot: 3, ash_wood: 1, leather: 1, sinew: 1, plant_fiber: 1 },
+  craftingTime: 5,
+  toolTierRequired: 1,
+  buildingRequired: 'bronze_foundry',
+  populationRequired: 2
+},
+{
+  id: 'bronze_sword',
+  name: 'Bronze Sword',
+  description: 'Full bronze blade with oak handle, leather grip, and bronze pommel',
+  type: 'weapon',
+  category: 'combat',
+  level: 1,
+  rarity: 'uncommon',
+  durability: 180,
+  maxDurability: 180,
+  effects: { combatPower: 12, versatility: 1.4 },
+  researchRequired: 'bronze_working',
+  emoji: '🗡️',
+  color: '#CD7F32',
+  weaponProperties: {
+    damage: 16,
+    attackSpeed: 1.0,
+    range: 1
+  },
+  amount: 0,
+  craftingCost: { bronze_ingot: 4, oak_wood: 1, leather: 2, sinew: 1, plant_fiber: 1 },
+  craftingTime: 6,
+  toolTierRequired: 1,
+  buildingRequired: 'bronze_foundry',
+  populationRequired: 2
+},
+{
+  id: 'bronze_longsword',
+  name: 'Bronze Longsword',
+  description: 'Extended bronze blade with two-handed oak grip and bronze crossguard',
+  type: 'weapon',
+  category: 'combat',
+  level: 1,
+  rarity: 'rare',
+  durability: 200,
+  maxDurability: 200,
+  effects: { combatPower: 14, versatility: 1.5, reach: 1.2 },
+  researchRequired: 'bronze_working',
+  emoji: '🗡️',
+  color: '#CD7F32',
+  weaponProperties: {
+    damage: 18,
+    attackSpeed: 0.8,
+    range: 1
+  },
+  amount: 0,
+  craftingCost: { bronze_ingot: 5, oak_wood: 2, leather: 2, sinew: 2, plant_fiber: 1 },
+  craftingTime: 8,
+  toolTierRequired: 1,
+  buildingRequired: 'bronze_foundry',
+  populationRequired: 3
+},
+{
+  id: 'iron_dagger',
+  name: 'Iron Dagger',
+  description: 'Sharp iron dagger with birch handle and leather-wrapped grip',
+  type: 'weapon',
+  category: 'combat',
+  level: 2,
+  rarity: 'uncommon',
+  durability: 180,
+  maxDurability: 180,
+  effects: { combatPower: 10, concealable: 1.7, craftingBonus: 0.4, armorPiercing: 1.1 },
+  researchRequired: 'iron_working',
+  emoji: '🗡️',
+  color: '#424242',
+  weaponProperties: {
+    damage: 15,
+    attackSpeed: 1.3,
+    range: 1
+  },
+  amount: 0,
+  craftingCost: { wrought_iron: 2, birch_wood: 1, leather: 1, sinew: 1, plant_fiber: 1 },
+  craftingTime: 5,
+  toolTierRequired: 2,
+  buildingRequired: 'iron_forge',
+  populationRequired: 2
+},
+{
+  id: 'iron_shortsword',
+  name: 'Iron Shortsword',
+  description: 'Balanced iron blade with ash handle and bronze fittings',
+  type: 'weapon',
+  category: 'combat',
+  level: 2,
+  rarity: 'uncommon',
+  durability: 220,
+  maxDurability: 220,
+  effects: { combatPower: 13, versatility: 1.4, mobility: 1.2, armorPiercing: 1.2 },
+  researchRequired: 'iron_working',
+  emoji: '🗡️',
+  color: '#424242',
+  weaponProperties: {
+    damage: 18,
+    attackSpeed: 1.1,
+    range: 1
+  },
+  amount: 0,
+  craftingCost: { wrought_iron: 3, ash_wood: 1, bronze_ingot: 1, leather: 1, sinew: 1, plant_fiber: 1 },
+  craftingTime: 6,
+  toolTierRequired: 2,
+  buildingRequired: 'iron_forge',
+  populationRequired: 2
+},
+{
+  id: 'iron_broadsword',
+  name: 'Iron Broadsword',
+  description: 'Iron blade with ash handle, leather grip, and bronze crossguard',
+  type: 'weapon',
+  category: 'combat',
+  level: 2,
+  rarity: 'rare',
+  durability: 250,
+  maxDurability: 250,
+  effects: { combatPower: 16, versatility: 1.6, armorPiercing: 1.3 },
+  researchRequired: 'iron_working',
+  emoji: '🗡️',
+  color: '#424242',
+  weaponProperties: {
+    damage: 22,
+    attackSpeed: 0.9,
+    range: 1
+  },
+  amount: 0,
+  craftingCost: { wrought_iron: 4, ash_wood: 1, bronze_ingot: 1, leather: 2, sinew: 2, plant_fiber: 1 },
+  craftingTime: 8,
+  toolTierRequired: 2,
+  buildingRequired: 'iron_forge',
+  populationRequired: 3
+},
+{
+  id: 'iron_longsword',
+  name: 'Iron Longsword',
+  description: 'Two-handed iron blade with oak grip, bronze pommel, and leather wrapping',
+  type: 'weapon',
+  category: 'combat',
+  level: 2,
+  rarity: 'rare',
+  durability: 280,
+  maxDurability: 280,
+  effects: { combatPower: 18, versatility: 1.7, reach: 1.3, armorPiercing: 1.4 },
+  researchRequired: 'iron_working',
+  emoji: '🗡️',
+  color: '#424242',
+  weaponProperties: {
+    damage: 26,
+    attackSpeed: 0.7,
+    range: 1
+  },
+  amount: 0,
+  craftingCost: { wrought_iron: 5, oak_wood: 2, bronze_ingot: 2, leather: 3, sinew: 3, plant_fiber: 2 },
+  craftingTime: 10,
+  toolTierRequired: 2,
+  buildingRequired: 'iron_forge',
+  populationRequired: 3
+},
+{
+  id: 'steel_sword',
+  name: 'Steel Sword',
+  description: 'Superior steel blade with yew handle, bronze fittings, and masterwork leather grip',
+  type: 'weapon',
+  category: 'combat',
+  level: 2,
+  rarity: 'epic',
+  durability: 350,
+  maxDurability: 350,
+  effects: { combatPower: 20, versatility: 1.8, armorPiercing: 1.6, prestigeBonus: 1.5 },
+  researchRequired: 'steel_making',
+  emoji: '🗡️',
+  color: '#607D8B',
+  weaponProperties: {
+    damage: 30,
+    attackSpeed: 0.9,
+    range: 1
+  },
+  amount: 0,
+  craftingCost: { steel_ingot: 4, yew_wood: 1, bronze_ingot: 2, leather: 3, sinew: 3, plant_fiber: 2 },
+  craftingTime: 12,
+  toolTierRequired: 2,
+  buildingRequired: 'blast_furnace',
+  populationRequired: 4
+},
+// ARMOR SYSTEM - Complete Progression Using Specific Materials
+
+// LIGHT ARMOR - Hide and Leather Progression
+{
+  id: 'hide_cap',
+  name: 'Hide Cap',
+  description: 'Simple raw hide cap bound with plant fiber',
+  type: 'armor',
+  category: 'light',
+  level: 0,
+  rarity: 'common',
+  durability: 30,
+  maxDurability: 30,
+  effects: { defense: 1, coldResistance: 0.2 },
+  researchRequired: null,
+  emoji: '🧢',
+  color: '#8D6E63',
+  armorProperties: {
+    defense: 1,
+    armorType: 'light',
+    slot: 'head',
+    movementPenalty: 0.0
+  },
+  amount: 0,
+  craftingCost: { hide: 2, plant_fiber: 1 },
+  craftingTime: 1,
+  toolTierRequired: 0,
+  buildingRequired: null,
+  populationRequired: 0
+},
+{
+  id: 'hide_vest',
+  name: 'Hide Vest',
+  description: 'Raw hide vest bound with plant fiber for basic protection',
+  type: 'armor',
+  category: 'light',
+  level: 0,
+  rarity: 'common',
+  durability: 40,
+  maxDurability: 40,
+  effects: { defense: 2, coldResistance: 0.3 },
+  researchRequired: null,
+  emoji: '🦺',
+  color: '#8D6E63',
+  armorProperties: {
+    defense: 2,
+    armorType: 'light',
+    slot: 'chest',
+    movementPenalty: 0.0
+  },
+  amount: 0,
+  craftingCost: { hide: 3, plant_fiber: 2 },
+  craftingTime: 2,
+  toolTierRequired: 0,
+  buildingRequired: null,
+  populationRequired: 0
+},
+{
+  id: 'hide_leggings',
+  name: 'Hide Leggings',
+  description: 'Raw hide leg protection with sinew binding',
+  type: 'armor',
+  category: 'light',
+  level: 0,
+  rarity: 'common',
+  durability: 35,
+  maxDurability: 35,
+  effects: { defense: 1, mobility: 1.05 },
+  researchRequired: null,
+  emoji: '👖',
+  color: '#8D6E63',
+  armorProperties: {
+    defense: 1,
+    armorType: 'light',
+    slot: 'legs',
+    movementPenalty: 0.0
+  },
+  amount: 0,
+  craftingCost: { hide: 2, sinew: 2 },
+  craftingTime: 1,
+  toolTierRequired: 0,
+  buildingRequired: null,
+  populationRequired: 0
+},
+{
+  id: 'hide_boots',
+  name: 'Hide Boots',
+  description: 'Simple hide footwear with plant fiber laces',
+  type: 'armor',
+  category: 'light',
+  level: 0,
+  rarity: 'common',
+  durability: 25,
+  maxDurability: 25,
+  effects: { defense: 1, terrainBonus: 0.1 },
+  researchRequired: null,
+  emoji: '🥾',
+  color: '#8D6E63',
+  armorProperties: {
+    defense: 1,
+    armorType: 'light',
+    slot: 'feet',
+    movementPenalty: 0.0
+  },
+  amount: 0,
+  craftingCost: { hide: 2, plant_fiber: 2 },
+  craftingTime: 1,
+  toolTierRequired: 0,
+  buildingRequired: null,
+  populationRequired: 0
+},
+
+// LEATHER ARMOR - Tanned Hide Progression
+{
+  id: 'leather_hood',
+  name: 'Leather Hood',
+  description: 'Tanned leather hood with sinew stitching',
+  type: 'armor',
+  category: 'light',
+  level: 1,
+  rarity: 'common',
+  durability: 80,
+  maxDurability: 80,
+  effects: { defense: 3, stealthBonus: 0.2 },
+  researchRequired: 'leather_working',
+  emoji: '🧢',
+  color: '#8D6E63',
+  armorProperties: {
+    defense: 3,
+    armorType: 'light',
+    slot: 'head',
+    movementPenalty: 0.0
+  },
+  amount: 0,
+  craftingCost: { leather: 2, sinew: 1 },
+  craftingTime: 2,
+  toolTierRequired: 1,
+  buildingRequired: 'tannery',
+  populationRequired: 1
+},
+{
+  id: 'leather_armor',
+  name: 'Leather Armor',
+  description: 'Properly tanned leather armor with reinforced stitching',
+  type: 'armor',
+  category: 'light',
+  level: 1,
+  rarity: 'common',
+  durability: 100,
+  maxDurability: 100,
+  effects: { defense: 4, mobility: 1.1 },
+  researchRequired: 'leather_working',
+  emoji: '🦺',
+  color: '#8D6E63',
+  armorProperties: {
+    defense: 4,
+    armorType: 'light',
+    slot: 'chest',
+    movementPenalty: 0.0
+  },
+  amount: 0,
+  craftingCost: { leather: 4, sinew: 2 },
+  craftingTime: 4,
+  toolTierRequired: 1,
+  buildingRequired: 'tannery',
+  populationRequired: 1
+},
+{
+  id: 'leather_pants',
+  name: 'Leather Pants',
+  description: 'Flexible leather leg protection with reinforced knees',
+  type: 'armor',
+  category: 'light',
+  level: 1,
+  rarity: 'common',
+  durability: 90,
+  maxDurability: 90,
+  effects: { defense: 3, mobility: 1.1 },
+  researchRequired: 'leather_working',
+  emoji: '👖',
+  color: '#8D6E63',
+  armorProperties: {
+    defense: 3,
+    armorType: 'light',
+    slot: 'legs',
+    movementPenalty: 0.0
+  },
+  amount: 0,
+  craftingCost: { leather: 3, sinew: 2 },
+  craftingTime: 3,
+  toolTierRequired: 1,
+  buildingRequired: 'tannery',
+  populationRequired: 1
+},
+{
+  id: 'leather_boots',
+  name: 'Leather Boots',
+  description: 'Sturdy leather boots with reinforced soles',
+  type: 'armor',
+  category: 'light',
+  level: 1,
+  rarity: 'common',
+  durability: 70,
+  maxDurability: 70,
+  effects: { defense: 2, terrainBonus: 0.2, stealthBonus: 0.1 },
+  researchRequired: 'leather_working',
+  emoji: '🥾',
+  color: '#8D6E63',
+  armorProperties: {
+    defense: 2,
+    armorType: 'light',
+    slot: 'feet',
+    movementPenalty: 0.0
+  },
+  amount: 0,
+  craftingCost: { leather: 2, sinew: 1, plant_fiber: 1 },
+  craftingTime: 2,
+  toolTierRequired: 1,
+  buildingRequired: 'tannery',
+  populationRequired: 1
+},
+
+// STUDDED LEATHER - Leather with Metal Reinforcement
+{
+  id: 'studded_leather_cap',
+  name: 'Studded Leather Cap',
+  description: 'Leather cap reinforced with copper studs',
+  type: 'armor',
+  category: 'light',
+  level: 1,
+  rarity: 'uncommon',
+  durability: 120,
+  maxDurability: 120,
+  effects: { defense: 4, prestigeBonus: 1.1 },
+  researchRequired: 'copper_smelting',
+  emoji: '🧢',
+  color: '#FF7043',
+  armorProperties: {
+    defense: 4,
+    armorType: 'light',
+    slot: 'head',
+    movementPenalty: 0.05
+  },
+  amount: 0,
+  craftingCost: { leather: 2, copper_ingot: 1, sinew: 1 },
+  craftingTime: 3,
+  toolTierRequired: 1,
+  buildingRequired: 'smelting_furnace',
+  populationRequired: 1
+},
+{
+  id: 'studded_leather_armor',
+  name: 'Studded Leather Armor',
+  description: 'Leather armor reinforced with copper studs and bronze rings',
+  type: 'armor',
+  category: 'light',
+  level: 1,
+  rarity: 'uncommon',
+  durability: 150,
+  maxDurability: 150,
+  effects: { defense: 6, mobility: 1.05 },
+  researchRequired: 'bronze_working',
+  emoji: '🦺',
+  color: '#CD7F32',
+  armorProperties: {
+    defense: 6,
+    armorType: 'light',
+    slot: 'chest',
+    movementPenalty: 0.1
+  },
+  amount: 0,
+  craftingCost: { leather: 4, bronze_ingot: 2, sinew: 2, plant_fiber: 1 },
+  craftingTime: 5,
+  toolTierRequired: 1,
+  buildingRequired: 'bronze_foundry',
+  populationRequired: 2
+},
+
+// MEDIUM ARMOR - Metal Reinforced
+{
+  id: 'copper_helmet',
+  name: 'Copper Helmet',
+  description: 'Hammered copper helmet with leather padding',
+  type: 'armor',
+  category: 'medium',
+  level: 1,
+  rarity: 'common',
+  durability: 140,
+  maxDurability: 140,
+  effects: { defense: 5, prestigeBonus: 1.1 },
+  researchRequired: 'copper_smelting',
+  emoji: '⛑️',
+  color: '#FF7043',
+  armorProperties: {
+    defense: 5,
+    armorType: 'medium',
+    slot: 'head',
+    movementPenalty: 0.1
+  },
+  amount: 0,
+  craftingCost: { copper_ingot: 3, leather: 2, plant_fiber: 1 },
+  craftingTime: 4,
+  toolTierRequired: 1,
+  buildingRequired: 'smelting_furnace',
+  populationRequired: 1
+},
+{
+  id: 'bronze_helmet',
+  name: 'Bronze Helmet',
+  description: 'Bronze helmet with leather padding and chin strap',
+  type: 'armor',
+  category: 'medium',
+  level: 1,
+  rarity: 'uncommon',
+  durability: 180,
+  maxDurability: 180,
+  effects: { defense: 6, prestigeBonus: 1.2 },
+  researchRequired: 'bronze_working',
+  emoji: '⛑️',
+  color: '#CD7F32',
+  armorProperties: {
+    defense: 6,
+    armorType: 'medium',
+    slot: 'head',
+    movementPenalty: 0.1
+  },
+  amount: 0,
+  craftingCost: { bronze_ingot: 3, leather: 2, sinew: 1 },
+  craftingTime: 5,
+  toolTierRequired: 1,
+  buildingRequired: 'bronze_foundry',
+  populationRequired: 2
+},
+{
+  id: 'bronze_scale_armor',
+  name: 'Bronze Scale Armor',
+  description: 'Leather base with overlapping bronze scales',
+  type: 'armor',
+  category: 'medium',
+  level: 1,
+  rarity: 'uncommon',
+  durability: 200,
+  maxDurability: 200,
+  effects: { defense: 8, flexibility: 0.9 },
+  researchRequired: 'bronze_working',
+  emoji: '🦺',
+  color: '#CD7F32',
+  armorProperties: {
+    defense: 8,
+    armorType: 'medium',
+    slot: 'chest',
+    movementPenalty: 0.15
+  },
+  amount: 0,
+  craftingCost: { bronze_ingot: 5, leather: 3, sinew: 3, plant_fiber: 2 },
+  craftingTime: 7,
+  toolTierRequired: 1,
+  buildingRequired: 'bronze_foundry',
+  populationRequired: 2
+},
+{
+  id: 'bronze_chainmail',
+  name: 'Bronze Chainmail',
+  description: 'Interlocked bronze rings over leather backing',
+  type: 'armor',
+  category: 'medium',
+  level: 1,
+  rarity: 'rare',
+  durability: 220,
+  maxDurability: 220,
+  effects: { defense: 9, flexibility: 1.0, slashResistance: 1.3 },
+  researchRequired: 'bronze_working',
+  emoji: '🦺',
+  color: '#CD7F32',
+  armorProperties: {
+    defense: 9,
+    armorType: 'medium',
+    slot: 'chest',
+    movementPenalty: 0.2
+  },
+  amount: 0,
+  craftingCost: { bronze_ingot: 6, leather: 2, sinew: 4, plant_fiber: 2 },
+  craftingTime: 10,
+  toolTierRequired: 1,
+  buildingRequired: 'bronze_foundry',
+  populationRequired: 3
+},
+{
+  id: 'bronze_greaves',
+  name: 'Bronze Greaves',
+  description: 'Bronze leg armor with leather straps and padding',
+  type: 'armor',
+  category: 'medium',
+  level: 1,
+  rarity: 'uncommon',
+  durability: 160,
+  maxDurability: 160,
+  effects: { defense: 5, kickDamage: 1.2 },
+  researchRequired: 'bronze_working',
+  emoji: '🦵',
+  color: '#CD7F32',
+  armorProperties: {
+    defense: 5,
+    armorType: 'medium',
+    slot: 'legs',
+    movementPenalty: 0.15
+  },
+  amount: 0,
+  craftingCost: { bronze_ingot: 4, leather: 2, sinew: 2 },
+  craftingTime: 6,
+  toolTierRequired: 1,
+  buildingRequired: 'bronze_foundry',
+  populationRequired: 2
+},
+{
+  id: 'bronze_sabatons',
+  name: 'Bronze Sabatons',
+  description: 'Bronze foot armor with articulated joints',
+  type: 'armor',
+  category: 'medium',
+  level: 1,
+  rarity: 'uncommon',
+  durability: 140,
+  maxDurability: 140,
+  effects: { defense: 4, kickDamage: 1.3, terrainBonus: 0.1 },
+  researchRequired: 'bronze_working',
+  emoji: '🥾',
+  color: '#CD7F32',
+  armorProperties: {
+    defense: 4,
+    armorType: 'medium',
+    slot: 'feet',
+    movementPenalty: 0.1
+  },
+  amount: 0,
+  craftingCost: { bronze_ingot: 3, leather: 1, sinew: 2 },
+  craftingTime: 5,
+  toolTierRequired: 1,
+  buildingRequired: 'bronze_foundry',
+  populationRequired: 2
+},
+
+// HEAVY ARMOR - Iron and Steel
+{
+  id: 'iron_helmet',
+  name: 'Iron Helmet',
+  description: 'Forged iron helmet with bronze fittings and leather padding',
+  type: 'armor',
+  category: 'heavy',
+  level: 2,
+  rarity: 'uncommon',
+  durability: 250,
+  maxDurability: 250,
+  effects: { defense: 8, prestigeBonus: 1.3 },
+  researchRequired: 'iron_working',
+  emoji: '⛑️',
+  color: '#424242',
+  armorProperties: {
+    defense: 8,
+    armorType: 'heavy',
+    slot: 'head',
+    movementPenalty: 0.15
+  },
+  amount: 0,
+  craftingCost: { wrought_iron: 3, bronze_ingot: 1, leather: 2, sinew: 1 },
+  craftingTime: 6,
+  toolTierRequired: 2,
+  buildingRequired: 'iron_forge',
+  populationRequired: 2
+},
+{
+  id: 'iron_bascinet',
+  name: 'Iron Bascinet',
+  description: 'Advanced iron helmet with hinged visor and mail aventail',
+  type: 'armor',
+  category: 'heavy',
+  level: 2,
+  rarity: 'rare',
+  durability: 280,
+  maxDurability: 280,
+  effects: { defense: 10, visionProtection: 1.5, prestigeBonus: 1.4 },
+  researchRequired: 'iron_working',
+  emoji: '⛑️',
+  color: '#424242',
+  armorProperties: {
+    defense: 10,
+    armorType: 'heavy',
+    slot: 'head',
+    movementPenalty: 0.2
+  },
+  amount: 0,
+  craftingCost: { wrought_iron: 4, bronze_ingot: 2, leather: 3, sinew: 2, plant_fiber: 1 },
+  craftingTime: 8,
+  toolTierRequired: 2,
+  buildingRequired: 'iron_forge',
+  populationRequired: 3
+},
+{
+  id: 'iron_chainmail',
+  name: 'Iron Chainmail',
+  description: 'Iron chain links over leather backing with bronze reinforcements',
+  type: 'armor',
+  category: 'heavy',
+  level: 2,
+  rarity: 'uncommon',
+  durability: 300,
+  maxDurability: 300,
+  effects: { defense: 12, flexibility: 0.9, slashResistance: 1.5 },
+  researchRequired: 'iron_working',
+  emoji: '🦺',
+  color: '#424242',
+  armorProperties: {
+    defense: 12,
+    armorType: 'heavy',
+    slot: 'chest',
+    movementPenalty: 0.25
+  },
+  amount: 0,
+  craftingCost: { wrought_iron: 6, bronze_ingot: 2, leather: 3, sinew: 4, plant_fiber: 2 },
+  craftingTime: 12,
+  toolTierRequired: 2,
+  buildingRequired: 'iron_forge',
+  populationRequired: 3
+},
+{
+  id: 'iron_plate_armor',
+  name: 'Iron Plate Armor',
+  description: 'Articulated iron plates with leather joints and bronze buckles',
+  type: 'armor',
+  category: 'heavy',
+  level: 2,
+  rarity: 'rare',
+  durability: 350,
+  maxDurability: 350,
+  effects: { defense: 15, crushResistance: 1.4, prestigeBonus: 1.5 },
+  researchRequired: 'iron_working',
+  emoji: '🦺',
+  color: '#424242',
+  armorProperties: {
+    defense: 15,
+    armorType: 'heavy',
+    slot: 'chest',
+    movementPenalty: 0.3
+  },
+  amount: 0,
+  craftingCost: { wrought_iron: 8, bronze_ingot: 3, leather: 4, sinew: 3, plant_fiber: 2 },
+  craftingTime: 15,
+  toolTierRequired: 2,
+  buildingRequired: 'iron_forge',
+  populationRequired: 4
+},
+{
+  id: 'iron_leg_armor',
+  name: 'Iron Leg Armor',
+  description: 'Iron plate leg protection with articulated knee joints',
+  type: 'armor',
+  category: 'heavy',
+  level: 2,
+  rarity: 'uncommon',
+  durability: 280,
+  maxDurability: 280,
+  effects: { defense: 8, kickDamage: 1.4, chargeBonus: 1.2 },
+  researchRequired: 'iron_working',
+  emoji: '🦵',
+  color: '#424242',
+  armorProperties: {
+    defense: 8,
+    armorType: 'heavy',
+    slot: 'legs',
+    movementPenalty: 0.2
+  },
+  amount: 0,
+  craftingCost: { wrought_iron: 5, bronze_ingot: 1, leather: 3, sinew: 2 },
+  craftingTime: 8,
+  toolTierRequired: 2,
+  buildingRequired: 'iron_forge',
+  populationRequired: 2
+},
+{
+  id: 'iron_sabatons',
+  name: 'Iron Sabatons',
+  description: 'Heavy iron foot armor with spiked toes and ankle protection',
+  type: 'armor',
+  category: 'heavy',
+  level: 2,
+  rarity: 'uncommon',
+  durability: 220,
+  maxDurability: 220,
+  effects: { defense: 6, kickDamage: 1.5, terrainBonus: 0.05 },
+  researchRequired: 'iron_working',
+  emoji: '🥾',
+  color: '#424242',
+  armorProperties: {
+    defense: 6,
+    armorType: 'heavy',
+    slot: 'feet',
+    movementPenalty: 0.15
+  },
+  amount: 0,
+  craftingCost: { wrought_iron: 4, bronze_ingot: 1, leather: 2, sinew: 1 },
+  craftingTime: 6,
+  toolTierRequired: 2,
+  buildingRequired: 'iron_forge',
+  populationRequired: 2
+},
+
+// MASTERWORK STEEL ARMOR
+{
+  id: 'steel_great_helm',
+  name: 'Steel Great Helm',
+  description: 'Masterwork steel helmet with breathing holes and padded interior',
+  type: 'armor',
+  category: 'heavy',
+  level: 2,
+  rarity: 'epic',
+  durability: 400,
+  maxDurability: 400,
+  effects: { defense: 12, visionProtection: 2.0, prestigeBonus: 1.8, intimidation: 1.3 },
+  researchRequired: 'steel_making',
+  emoji: '⛑️',
+  color: '#607D8B',
+  armorProperties: {
+    defense: 12,
+    armorType: 'heavy',
+    slot: 'head',
+    movementPenalty: 0.25
+  },
+  amount: 0,
+  craftingCost: { steel_ingot: 4, bronze_ingot: 2, leather: 3, sinew: 2, plant_fiber: 1 },
+  craftingTime: 10,
+  toolTierRequired: 2,
+  buildingRequired: 'blast_furnace',
+  populationRequired: 4
+},
+{
+  id: 'steel_plate_armor',
+  name: 'Steel Plate Armor',
+  description: 'Full steel plate with articulated joints, bronze fittings, and leather backing',
+  type: 'armor',
+  category: 'heavy',
+  level: 2,
+  rarity: 'epic',
+  durability: 500,
+  maxDurability: 500,
+  effects: { defense: 20, crushResistance: 1.6, slashResistance: 1.4, prestigeBonus: 2.0 },
+  researchRequired: 'steel_making',
+  emoji: '🦺',
+  color: '#607D8B',
+  armorProperties: {
+    defense: 20,
+    armorType: 'heavy',
+    slot: 'chest',
+    movementPenalty: 0.35
+  },
+  amount: 0,
+  craftingCost: { steel_ingot: 10, bronze_ingot: 4, leather: 5, sinew: 4, plant_fiber: 3 },
+  craftingTime: 20,
+  toolTierRequired: 2,
+  buildingRequired: 'blast_furnace',
+  populationRequired: 5
+},
+
+// SHIELDS - Complete Progression
+{
+  id: 'hide_buckler',
+  name: 'Hide Buckler',
+  description: 'Small round shield made from stretched hide over pine frame',
+  type: 'armor',
+  category: 'shield',
+  level: 0,
+  rarity: 'common',
+  durability: 50,
+  maxDurability: 50,
+  effects: { defense: 2, parryChance: 1.1 },
+  researchRequired: null,
+  emoji: '🛡️',
+  color: '#8D6E63',
+  armorProperties: {
+    defense: 2,
+    armorType: 'shield',
+    slot: 'offhand',
+    movementPenalty: 0.0
+  },
+  amount: 0,
+  craftingCost: { hide: 2, pine_wood: 3, plant_fiber: 2 },
+  craftingTime: 2,
+  toolTierRequired: 0,
+  buildingRequired: null,
+  populationRequired: 0
+},
+{
+  id: 'wooden_shield',
+  name: 'Wooden Shield',
+  description: 'Oak planks bound with sinew and reinforced with bronze studs',
+  type: 'armor',
+  category: 'shield',
+  level: 0,
+  rarity: 'common',
+  durability: 80,
+  maxDurability: 80,
+  effects: { defense: 3, parryChance: 1.2, bashDamage: 1.1 },
+  researchRequired: null,
+  emoji: '🛡️',
+  color: '#8BC34A',
+  armorProperties: {
+    defense: 3,
+    armorType: 'shield',
+    slot: 'offhand',
+    movementPenalty: 0.05
+  },
+  amount: 0,
+  craftingCost: { oak_wood: 4, sinew: 2, plant_fiber: 2 },
+  craftingTime: 3,
+  toolTierRequired: 0,
+  buildingRequired: null,
+  populationRequired: 0
+},
+{
+  id: 'bronze_reinforced_shield',
+  name: 'Bronze-Reinforced Shield',
+  description: 'Oak shield with bronze rim and central boss',
+  type: 'armor',
+  category: 'shield',
+  level: 1,
+  rarity: 'uncommon',
+  durability: 150,
+  maxDurability: 150,
+  effects: { defense: 5, parryChance: 1.3, bashDamage: 1.3, prestigeBonus: 1.1 },
+  researchRequired: 'bronze_working',
+  emoji: '🛡️',
+  color: '#CD7F32',
+  armorProperties: {
+    defense: 5,
+    armorType: 'shield',
+    slot: 'offhand',
+    movementPenalty: 0.1
+  },
+  amount: 0,
+  craftingCost: { oak_wood: 3, bronze_ingot: 3, leather: 2, sinew: 2 },
+  craftingTime: 5,
+  toolTierRequired: 1,
+  buildingRequired: 'bronze_foundry',
+  populationRequired: 2
+},
+{
+  id: 'bronze_shield',
+  name: 'Bronze Shield',
+  description: 'Full bronze shield with leather grip and decorative patterns',
+  type: 'armor',
+  category: 'shield',
+  level: 1,
+  rarity: 'rare',
+  durability: 200,
+  maxDurability: 200,
+  effects: { defense: 7, parryChance: 1.4, bashDamage: 1.5, prestigeBonus: 1.3 },
+  researchRequired: 'bronze_working',
+  emoji: '🛡️',
+  color: '#CD7F32',
+  armorProperties: {
+    defense: 7,
+    armorType: 'shield',
+    slot: 'offhand',
+    movementPenalty: 0.15
+  },
+  amount: 0,
+  craftingCost: { bronze_ingot: 6, oak_wood: 1, leather: 3, sinew: 2 },
+  craftingTime: 8,
+  toolTierRequired: 1,
+  buildingRequired: 'bronze_foundry',
+  populationRequired: 3
+},
+{
+  id: 'iron_shield',
+  name: 'Iron Shield',
+  description: 'Iron shield with bronze reinforcements and leather backing',
+  type: 'armor',
+  category: 'shield',
+  level: 2,
+  rarity: 'rare',
+  durability: 280,
+  maxDurability: 280,
+  effects: { defense: 9, parryChance: 1.5, bashDamage: 1.7, prestigeBonus: 1.5 },
+  researchRequired: 'iron_working',
+  emoji: '🛡️',
+  color: '#424242',
+  armorProperties: {
+    defense: 9,
+    armorType: 'shield',
+    slot: 'offhand',
+    movementPenalty: 0.2
+  },
+  amount: 0,
+  craftingCost: { wrought_iron: 5, bronze_ingot: 2, oak_wood: 1, leather: 3, sinew: 2 },
+  craftingTime: 10,
+  toolTierRequired: 2,
+  buildingRequired: 'iron_forge',
+  populationRequired: 3
+},
+{
+  id: 'steel_tower_shield',
+  name: 'Steel Tower Shield',
+  description: 'Massive steel shield providing full body protection',
+  type: 'armor',
+  category: 'shield',
+  level: 2,
+  rarity: 'epic',
+  durability: 400,
+  maxDurability: 400,
+  effects: { defense: 12, parryChance: 1.6, bashDamage: 2.0, fullBodyProtection: 1.3, prestigeBonus: 2.0 },
+  researchRequired: 'steel_making',
+  emoji: '🛡️',
+  color: '#607D8B',
+  armorProperties: {
+    defense: 12,
+    armorType: 'shield',
+    slot: 'offhand',
+    movementPenalty: 0.3
+  },
+  amount: 0,
+  craftingCost: { steel_ingot: 8, bronze_ingot: 3, yew_wood: 2, leather: 4, sinew: 3 },
+  craftingTime: 15,
+  toolTierRequired: 2,
+  buildingRequired: 'blast_furnace',
+  populationRequired: 4
+},
+// TOOLS - Complete Progression
+// HARVESTING TOOLS - Using Specific Materials
+// FORAGING & GATHERING
+{
+  id: 'woven_basket',
+  name: 'Woven Basket',
+  description: 'Plant fiber basket for gathering food and berries',
+  type: 'tool',
+  category: 'harvesting',
+  level: 0,
+  rarity: 'common',
+  durability: 60,
+  maxDurability: 60,
+  effects: { foodGathering: 1.3, berryBonus: 1.5, plantGathering: 1.2 },
+  researchRequired: null,
+  emoji: '🧺',
+  color: '#8D6E63',
+  amount: 0,
+  craftingCost: { plant_fiber: 4, birch_wood: 2 },
+  craftingTime: 1,
+  toolTierRequired: 0,
+  buildingRequired: null,
+  populationRequired: 0
+},
+
+// WOODCUTTING TOOLS
+{
+  id: 'stone_axe',
+  name: 'Stone Axe',
+  description: 'Stone axe with pine handle for cutting softwood',
+  type: 'tool',
+  category: 'harvesting',
+  level: 0,
+  rarity: 'common',
+  durability: 80,
+  maxDurability: 80,
+  effects: { pineBonus: 1.6, firBonus: 1.4, hardwoodPenalty: 0.7 },
+  researchRequired: null,
+  emoji: '🪓',
+  color: '#8D6E63',
+  amount: 0,
+  craftingCost: { sandstone: 4, pine_wood: 3, plant_fiber: 2 },
+  craftingTime: 2,
+  toolTierRequired: 0,
+  buildingRequired: null,
+  populationRequired: 0
+},
+{
+  id: 'bronze_axe',
+  name: 'Bronze Axe',
+  description: 'Metal axe with oak handle for hardwood trees',
+  type: 'tool',
+  category: 'harvesting',
+  level: 1,
+  rarity: 'uncommon',
+  durability: 200,
+  maxDurability: 200,
+  effects: { oakBonus: 1.4, ashBonus: 1.3, yewCapable: 1.0 },
+  researchRequired: 'bronze_working',
+  emoji: '🪓',
+  color: '#CD7F32',
+  amount: 0,
+  craftingCost: { bronze_ingot: 3, oak_wood: 2, leather: 1 },
+  craftingTime: 4,
+  toolTierRequired: 1,
+  buildingRequired: 'bronze_foundry',
+  populationRequired: 1
+},
+{
+  id: 'iron_felling_axe',
+  name: 'Iron Felling Axe',
+  description: 'Heavy iron axe designed for large tree felling',
+  type: 'tool',
+  category: 'harvesting',
+  level: 2,
+  rarity: 'uncommon',
+  durability: 300,
+  maxDurability: 300,
+  effects: { allWoodBonus: 1.8, yewBonus: 1.5, hickoryBonus: 1.4 },
+  researchRequired: 'iron_working',
+  emoji: '🪓',
+  color: '#424242',
+  amount: 0,
+  craftingCost: { wrought_iron: 4, hickory_wood: 2, leather: 1 },
+  craftingTime: 6,
+  toolTierRequired: 2,
+  buildingRequired: 'iron_forge',
+  populationRequired: 2
+},
+
+// MINING TOOLS
+{
+  id: 'antler_pick',
+  name: 'Antler Pick',
+  description: 'Bone antler head bound to ash handle with sinew',
+  type: 'tool',
+  category: 'harvesting',
+  level: 0,
+  rarity: 'common',
+  durability: 60,
+  maxDurability: 60,
+  effects: { sandstoneBonus: 1.4, limestoneBonus: 1.1, graniteIncapable: 0.0 },
+  researchRequired: null,
+  emoji: '⛏️',
+  color: '#F5F5DC',
+  amount: 0,
+  craftingCost: { bone: 3, ash_wood: 2, sinew: 1 },
+  craftingTime: 2,
+  toolTierRequired: 0,
+  buildingRequired: null,
+  populationRequired: 0
+},
+{
+  id: 'copper_pick',
+  name: 'Copper Pick',
+  description: 'Metal pick with oak handle for medium stones',
+  type: 'tool',
+  category: 'harvesting',
+  level: 1,
+  rarity: 'common',
+  durability: 150,
+  maxDurability: 150,
+  effects: { limestoneBonus: 1.5, graniteCapable: 0.8, oreExtraction: 1.2 },
+  researchRequired: 'copper_smelting',
+  emoji: '⛏️',
+  color: '#FF7043',
+  amount: 0,
+  craftingCost: { copper_ingot: 3, oak_wood: 2, leather: 1 },
+  craftingTime: 3,
+  toolTierRequired: 1,
+  buildingRequired: 'smelting_furnace',
+  populationRequired: 1
+},
+{
+  id: 'iron_mining_pick',
+  name: 'Iron Mining Pick',
+  description: 'Heavy iron pick for deep mining and hard stone',
+  type: 'tool',
+  category: 'harvesting',
+  level: 2,
+  rarity: 'uncommon',
+  durability: 250,
+  maxDurability: 250,
+  effects: { graniteBonus: 1.6, oreExtraction: 1.8, deepMining: 1.3 },
+  researchRequired: 'iron_working',
+  emoji: '⛏️',
+  color: '#424242',
+  amount: 0,
+  craftingCost: { wrought_iron: 4, hickory_wood: 2, bronze_ingot: 1 },
+  craftingTime: 5,
+  toolTierRequired: 2,
+  buildingRequired: 'iron_forge',
+  populationRequired: 2
+},
+
+// FISHING TOOLS
+{
+  id: 'bone_fishhook',
+  name: 'Bone Fishhook',
+  description: 'Carved bone hook for catching river fish',
+  type: 'tool',
+  category: 'harvesting',
+  level: 0,
+  rarity: 'common',
+  durability: 30,
+  maxDurability: 30,
+  effects: { fishingBonus: 1.8, carpBonus: 1.5, troutBonus: 1.3 },
+  researchRequired: null,
+  emoji: '🎣',
+  color: '#F5F5DC',
+  amount: 0,
+  craftingCost: { bone: 1, sinew: 1 },
+  craftingTime: 1,
+  toolTierRequired: 0,
+  buildingRequired: null,
+  populationRequired: 0
+},
+{
+  id: 'bronze_fishing_net',
+  name: 'Bronze Fishing Net',
+  description: 'Woven net with bronze weights for large catches',
+  type: 'tool',
+  category: 'harvesting',
+  level: 1,
+  rarity: 'uncommon',
+  durability: 120,
+  maxDurability: 120,
+  effects: { fishingBonus: 2.5, massCapture: 1.8, deepWaterFishing: 1.4 },
+  researchRequired: 'bronze_working',
+  emoji: '🕸️',
+  color: '#CD7F32',
+  amount: 0,
+  craftingCost: { bronze_ingot: 2, plant_fiber: 8, sinew: 4 },
+  craftingTime: 4,
+  toolTierRequired: 1,
+  buildingRequired: 'bronze_foundry',
+  populationRequired: 1
+},
+
+// HUNTING TOOLS
+{
+  id: 'obsidian_skinning_knife',
+  name: 'Obsidian Skinning Knife',
+  description: 'Razor-sharp volcanic glass blade for precise hide processing',
+  type: 'tool',
+  category: 'harvesting',
+  level: 0,
+  rarity: 'uncommon',
+  durability: 30,
+  maxDurability: 30,
+  effects: { hideProcessing: 1.8, meatYield: 1.3, boneExtraction: 1.4 },
+  researchRequired: null,
+  emoji: '🔪',
+  color: '#212121',
+  amount: 0,
+  craftingCost: { obsidian: 2, ash_wood: 1, sinew: 1 },
+  craftingTime: 2,
+  toolTierRequired: 0,
+  buildingRequired: null,
+  populationRequired: 0
+},
+// CRAFTING TOOLS - Complete Progression
+// BASIC CRAFTING TOOLS
+{
+  id: 'sandstone_hammer',
+  name: 'Sandstone Hammer',
+  description: 'Basic hammer with sandstone head and pine handle',
+  type: 'tool',
+  category: 'crafting',
+  level: 0,
+  rarity: 'common',
+  durability: 120,
+  maxDurability: 120,
+  effects: { craftingSpeed: 0.1, buildingSpeed: 0.1 },
+  researchRequired: null,
+  emoji: '🔨',
+  color: '#FFCC80',
+  amount: 0,
+  craftingCost: { pine_wood: 4, sandstone: 5 },
+  craftingTime: 2,
+  toolTierRequired: 0,
+  buildingRequired: null,
+  populationRequired: 0
+},
+{
+  id: 'bronze_hammer',
+  name: 'Bronze Hammer',
+  description: 'Bronze hammer with balanced weight and ash wood handle',
+  type: 'tool',
+  category: 'crafting',
+  level: 1,
+  rarity: 'uncommon',
+  durability: 220,
+  maxDurability: 220,
+  effects: { craftingSpeed: 0.25, buildingSpeed: 0.2, durabilityBonus: 0.1 },
+  researchRequired: 'bronze_working',
+  emoji: '🔨',
+  color: '#CD7F32',
+  amount: 0,
+  craftingCost: { ash_wood: 2, bronze_ingot: 3, leather: 1 },
+  craftingTime: 4,
+  toolTierRequired: 1,
+  buildingRequired: 'bronze_foundry',
+  populationRequired: 2
+},
+{
+  id: 'steel_hammer',
+  name: 'Steel Hammer',
+  description: 'Masterwork steel hammer with perfect balance and yew handle',
+  type: 'tool',
+  category: 'crafting',
+  level: 2,
+  rarity: 'rare',
+  durability: 400,
+  maxDurability: 400,
+  effects: { craftingSpeed: 0.5, buildingSpeed: 0.4, durabilityBonus: 0.3, qualityBonus: 0.2 },
+  researchRequired: 'steel_making',
+  emoji: '🔨',
+  color: '#607D8B',
+  amount: 0,
+  craftingCost: { yew_wood: 2, steel_ingot: 4, bronze_ingot: 1, leather: 1 },
+  craftingTime: 8,
+  toolTierRequired: 2,
+  buildingRequired: 'blast_furnace',
+  populationRequired: 4
+},
+// WOODWORKING TOOLS
+{
+  id: 'wooden_mallet',
+  name: 'Wooden Mallet',
+  description: 'Heavy oak mallet for construction and shaping work',
+  type: 'tool',
+  category: 'woodworking',
+  level: 0,
+  rarity: 'common',
+  durability: 110,
+  maxDurability: 110,
+  effects: { woodworkingBonus: 0.3, joineryBonus: 0.4 },
+  researchRequired: null,
+  emoji: '🔨',
+  color: '#8BC34A',
+  amount: 0,
+  craftingCost: { oak_wood: 6, plant_fiber: 2 },
+  craftingTime: 2,
+  toolTierRequired: 0,
+  buildingRequired: null,
+  populationRequired: 0
+},
+{
+  id: 'bronze_saw',
+  name: 'Bronze Saw',
+  description: 'Serrated bronze blade with wooden frame for cutting',
+  type: 'tool',
+  category: 'woodworking',
+  level: 1,
+  rarity: 'uncommon',
+  durability: 200,
+  maxDurability: 200,
+  effects: { woodworkingBonus: 0.8, precisionCuts: 0.5, plankProduction: 1.3 },
+  researchRequired: 'bronze_working',
+  emoji: '🪚',
+  color: '#CD7F32',
+  amount: 0,
+  craftingCost: { bronze_ingot: 4, ash_wood: 3, sinew: 2 },
+  craftingTime: 5,
+  toolTierRequired: 1,
+  buildingRequired: 'bronze_foundry',
+  populationRequired: 2
+},
+{
+  id: 'iron_plane',
+  name: 'Iron Plane',
+  description: 'Iron blade in wooden body for smoothing wood surfaces',
+  type: 'tool',
+  category: 'woodworking',
+  level: 2,
+  rarity: 'uncommon',
+  durability: 280,
+  maxDurability: 280,
+  effects: { woodworkingBonus: 1.2, surfaceFinish: 1.5, qualityBonus: 0.3 },
+  researchRequired: 'iron_working',
+  emoji: '🪚',
+  color: '#424242',
+  amount: 0,
+  craftingCost: { wrought_iron: 3, hickory_wood: 4, bronze_ingot: 1 },
+  craftingTime: 6,
+  toolTierRequired: 2,
+  buildingRequired: 'iron_forge',
+  populationRequired: 2
+},
+// STONEWORKING TOOLS
+{
+  id: 'stone_chisel',
+  name: 'Stone Chisel',
+  description: 'Flint chisel with wooden handle for carving and shaping',
+  type: 'tool',
+  category: 'stoneworking',
+  level: 0,
+  rarity: 'common',
+  durability: 90,
+  maxDurability: 90,
+  effects: { stoneworkingBonus: 0.4, carving: 0.3 },
+  researchRequired: null,
+  emoji: '🪚',
+  color: '#8D6E63',
+  amount: 0,
+  craftingCost: { flint: 2, pine_wood: 3, plant_fiber: 1 },
+  craftingTime: 1,
+  toolTierRequired: 0,
+  buildingRequired: null,
+  populationRequired: 0
+},
+{
+  id: 'copper_chisel_set',
+  name: 'Copper Chisel Set',
+  description: 'Set of copper chisels for detailed stonework and carving',
+  type: 'tool',
+  category: 'stoneworking',
+  level: 1,
+  rarity: 'uncommon',
+  durability: 200,
+  maxDurability: 200,
+  effects: { stoneworkingBonus: 0.6, precisionBonus: 0.4, sculptingBonus: 0.5 },
+  researchRequired: 'copper_smelting',
+  emoji: '🪚',
+  color: '#FF7043',
+  amount: 0,
+  craftingCost: { copper_ingot: 4, oak_wood: 3, leather: 2 },
+  craftingTime: 4,
+  toolTierRequired: 1,
+  buildingRequired: 'smelting_furnace',
+  populationRequired: 1
+},
+{
+  id: 'iron_mason_tools',
+  name: 'Iron Mason Tools',
+  description: 'Professional iron chisels and hammers for stonework',
+  type: 'tool',
+  category: 'stoneworking',
+  level: 2,
+  rarity: 'uncommon',
+  durability: 280,
+  maxDurability: 280,
+  effects: { stoneworkingBonus: 1.0, precisionBonus: 0.8, blockCutting: 1.4 },
+  researchRequired: 'iron_working',
+  emoji: '🧰',
+  color: '#424242',
+  amount: 0,
+  craftingCost: { wrought_iron: 5, hickory_wood: 3, leather: 2 },
+  craftingTime: 7,
+  toolTierRequired: 2,
+  buildingRequired: 'iron_forge',
+  populationRequired: 2
+},
+// METALWORKING TOOLS
+{
+  id: 'copper_tongs',
+  name: 'Copper Tongs',
+  description: 'Copper tongs for handling hot materials and precise work',
+  type: 'tool',
+  category: 'metalworking',
+  level: 1,
+  rarity: 'common',
+  durability: 150,
+  maxDurability: 150,
+  effects: { smeltingBonus: 0.5, heatResistance: 0.8, metalHandling: 1.2 },
+  researchRequired: 'copper_smelting',
+  emoji: '🔧',
+  color: '#FF7043',
+  amount: 0,
+  craftingCost: { copper_ingot: 3, oak_wood: 1 },
+  craftingTime: 3,
+  toolTierRequired: 1,
+  buildingRequired: 'smelting_furnace',
+  populationRequired: 1
+},
+{
+  id: 'bronze_anvil',
+  name: 'Bronze Anvil',
+  description: 'Small bronze anvil for metalworking and shaping',
+  type: 'tool',
+  category: 'metalworking',
+  level: 1,
+  rarity: 'rare',
+  durability: 400,
+  maxDurability: 400,
+  effects: { metalworkingBonus: 1.0, qualityBonus: 0.2, forgingBonus: 1.3 },
+  researchRequired: 'bronze_working',
+  emoji: '🔨',
+  color: '#CD7F32',
+  amount: 0,
+  craftingCost: { bronze_ingot: 8, stone: 10, oak_wood: 4 },
+  craftingTime: 8,
+  toolTierRequired: 1,
+  buildingRequired: 'bronze_foundry',
+  populationRequired: 3
+},
+{
+  id: 'steel_anvil',
+  name: 'Steel Anvil',
+  description: 'Master craftsmans steel anvil with hardened face and bronze details',
+  type: 'tool',
+  category: 'metalworking',
+  level: 2,
+  rarity: 'epic',
+  durability: 600,
+  maxDurability: 600,
+  effects: { 
+    metalworkingBonus: 2.0, 
+    qualityBonus: 0.5,
+    durabilityBonus: 0.4,
+    prestigeBonus: 1.5,
+    forgingBonus: 1.8
+  },
+  researchRequired: 'steel_making',
+  emoji: '🔨',
+  color: '#607D8B',
+  amount: 0,
+  craftingCost: { steel_ingot: 15, bronze_ingot: 5, granite: 12, yew_wood: 8, leather: 2 },
+  craftingTime: 20,
+  toolTierRequired: 2,
+  buildingRequired: 'blast_furnace',
+  populationRequired: 6
+},
+// LEATHERWORKING TOOLS
+{
+  id: 'bone_awl',
+  name: 'Bone Awl',
+  description: 'Sharpened bone tool for piercing and detailed leather work',
+  type: 'tool',
+  category: 'leatherworking',
+  level: 0,
+  rarity: 'common',
+  durability: 100,
+  maxDurability: 100,
+  effects: { leatherworkingBonus: 0.3, precisionBonus: 0.2, piercing: 1.4 },
+  researchRequired: null,
+  emoji: '🪡',
+  color: '#F5F5DC',
+  amount: 0,
+  craftingCost: { bone: 2, flint: 1, plant_fiber: 1 },
+  craftingTime: 1,
+  toolTierRequired: 0,
+  buildingRequired: null,
+  populationRequired: 0
+},
+{
+  id: 'bone_needle',
+  name: 'Bone Needle',
+  description: 'Sharpened bone needle for sewing and detailed leather work',
+  type: 'tool',
+  category: 'leatherworking',
+  level: 0,
+  rarity: 'common',
+  durability: 50,
+  maxDurability: 50,
+  effects: { leatherworking: 1.4, fineCrafting: 1.2, sewing: 1.6 },
+  researchRequired: null,
+  emoji: '🪡',
+  color: '#F5F5DC',
+  amount: 0,
+  craftingCost: { bone: 1 },
+  craftingTime: 1,
+  toolTierRequired: 0,
+  buildingRequired: null,
+  populationRequired: 0
+},
+{
+  id: 'bronze_leather_knife',
+  name: 'Bronze Leather Knife',
+  description: 'Sharp bronze blade specifically designed for leather cutting',
+  type: 'tool',
+  category: 'leatherworking',
+  level: 1,
+  rarity: 'common',
+  durability: 180,
+  maxDurability: 180,
+  effects: { leatherworkingBonus: 0.6, precisionBonus: 0.4, cleanCuts: 1.3 },
+  researchRequired: 'bronze_working',
+  emoji: '🔪',
+  color: '#CD7F32',
+  amount: 0,
+  craftingCost: { bronze_ingot: 2, ash_wood: 1, leather: 1 },
+  craftingTime: 3,
+  toolTierRequired: 1,
+  buildingRequired: 'bronze_foundry',
+  populationRequired: 1
+},
+{
+  id: 'leather_working_kit',
+  name: 'Leather Working Kit',
+  description: 'Complete kit with bronze awls, needles, and cutting tools',
+  type: 'tool',
+  category: 'leatherworking',
+  level: 1,
+  rarity: 'uncommon',
+  durability: 200,
+  maxDurability: 200,
+  effects: { 
+    leatherworkingBonus: 1.5, 
+    precisionBonus: 0.8,
+    armorCraftingBonus: 0.4,
+    tanningBonus: 0.6
+  },
+  researchRequired: 'leather_working',
+  emoji: '🧰',
+  color: '#CD7F32',
+  amount: 0,
+  craftingCost: { bronze_ingot: 3, bone: 4, ash_wood: 2, sinew: 3 },
+  craftingTime: 6,
+  toolTierRequired: 1,
+  buildingRequired: 'tannery',
+  populationRequired: 2
+},
+// COOKING TOOLS
+// FIRE COOKING
+{
+  id: 'clay_pot',
+  name: 'Clay Pot',
+  description: 'Simple fired clay vessel for boiling and stewing',
+  type: 'tool',
+  category: 'cooking',
+  level: 0,
+  rarity: 'common',
+  durability: 80,
+  maxDurability: 80,
+  effects: { cookingBonus: 1.3, stewBonus: 1.5, nutritionBonus: 0.2 },
+  researchRequired: null,
+  emoji: '🍲',
+  color: '#8D6E63',
+  amount: 0,
+  craftingCost: { clay: 4, plant_fiber: 2 },
+  craftingTime: 2,
+  toolTierRequired: 0,
+  buildingRequired: null,
+  populationRequired: 0
+},
+{
+  id: 'iron_cauldron',
+  name: 'Iron Cauldron',
+  description: 'Large iron cauldron for cooking large quantities',
+  type: 'tool',
+  category: 'cooking',
+  level: 2,
+  rarity: 'uncommon',
+  durability: 300,
+  maxDurability: 300,
+  effects: { cookingBonus: 2.0, massProduction: 1.8, nutritionBonus: 0.4 },
+  researchRequired: 'iron_working',
+  emoji: '🍲',
+  color: '#424242',
+  amount: 0,
+  craftingCost: { wrought_iron: 6, bronze_ingot: 2 },
+  craftingTime: 8,
+  toolTierRequired: 2,
+  buildingRequired: 'iron_forge',
+  populationRequired: 3
+},
+
+// BAKING
+{
+  id: 'stone_oven',
+  name: 'Stone Oven',
+  description: 'Stone-lined oven for baking bread and pastries',
+  type: 'tool',
+  category: 'cooking',
+  level: 1,
+  rarity: 'uncommon',
+  durability: 400,
+  maxDurability: 400,
+  effects: { bakingBonus: 2.5, breadProduction: 2.0, heatRetention: 1.6 },
+  researchRequired: 'masonry',
+  emoji: '🔥',
+  color: '#8D6E63',
+  amount: 0,
+  craftingCost: { limestone: 12, clay: 8, bronze_ingot: 2 },
+  craftingTime: 10,
+  toolTierRequired: 1,
+  buildingRequired: 'bakery',
+  populationRequired: 3
+},
+
+// BREWING
+{
+  id: 'clay_brewing_vat',
+  name: 'Clay Brewing Vat',
+  description: 'Large clay vessel for fermenting beverages',
+  type: 'tool',
+  category: 'cooking',
+  level: 0,
+  rarity: 'common',
+  durability: 200,
+  maxDurability: 200,
+  effects: { brewingBonus: 1.8, fermentationBonus: 1.5, alcoholProduction: 1.4 },
+  researchRequired: null,
+  emoji: '🍺',
+  color: '#8D6E63',
+  amount: 0,
+  craftingCost: { clay: 8, plant_fiber: 4, wild_berries: 2 },
+  craftingTime: 4,
+  toolTierRequired: 0,
+  buildingRequired: null,
+  populationRequired: 1
+},
+{
+  id: 'bronze_distillery',
+  name: 'Bronze Distillery',
+  description: 'Bronze apparatus for distilling spirits and essences',
+  type: 'tool',
+  category: 'cooking',
+  level: 1,
+  rarity: 'rare',
+  durability: 350,
+  maxDurability: 350,
+  effects: { brewingBonus: 3.0, distillationBonus: 2.5, purityBonus: 1.8 },
+  researchRequired: 'distillation',
+  emoji: '⚗️',
+  color: '#CD7F32',
+  amount: 0,
+  craftingCost: { bronze_ingot: 8, clay: 6, crystal: 1 },
+  craftingTime: 12,
+  toolTierRequired: 1,
+  buildingRequired: 'brewery',
+  populationRequired: 4
+},
+// MAGICAL TOOLS
+{
+  id: 'birch_staff',
+  name: 'Birch Staff',
+  description: 'Carved birch staff for channeling magical energy',
+  type: 'tool',
+  category: 'magical',
+  level: 0,
+  rarity: 'common',
+  durability: 100,
+  maxDurability: 100,
+  effects: { magicalPower: 0.1, knowledgeGeneration: 0.05, ritualBonus: 1.2 },
+  researchRequired: null,
+  emoji: '🪄',
+  color: '#F5F5DC',
+  amount: 0,
+  craftingCost: { birch_wood: 3, wild_berries: 2, plant_fiber: 1 },
+  craftingTime: 3,
+  toolTierRequired: 0,
+  buildingRequired: null,
+  populationRequired: 1
+},
+{
+  id: 'crystal_focus',
+  name: 'Crystal Focus',
+  description: 'Crystal lens for focusing magical energies',
+  type: 'tool',
+  category: 'magical',
+  level: 1,
+  rarity: 'uncommon',
+  durability: 150,
+  maxDurability: 150,
+  effects: { magicalPower: 0.3, knowledgeGeneration: 0.1, spellFocus: 1.5 },
+  researchRequired: 'crystal_working',
+  emoji: '🔮',
+  color: '#9C27B0',
+  amount: 0,
+  craftingCost: { crystal: 2, bronze_ingot: 1, birch_wood: 2 },
+  craftingTime: 5,
+  toolTierRequired: 1,
+  buildingRequired: 'crystal_workshop',
+  populationRequired: 2
+},
+
+// CONSUMABLES
+// MEAL CONSUMABLES
+// BASIC MEALS - Level 0
+{
+  id: 'wild_berry_meal',
+  name: 'Wild Berry Meal',
+  description: 'Simple meal of gathered wild berries and nuts',
+  type: 'consumable',
+  category: 'meal',
+  level: 0,
+  rarity: 'common',
+  effects: { healthRestore: 15, energyBoost: 1.2, morale: 0.1 },
+  researchRequired: null,
+  emoji: '🫐',
+  color: '#8E24AA',
+  consumableProperties: {
+    uses: 1,
+    consumeTime: 1
+  },
+  amount: 0,
+  craftingCost: { wild_berries: 3, nuts: 2 },
+  craftingTime: 1,
+  toolTierRequired: 0,
+  buildingRequired: null,
+  populationRequired: 0
+},
+{
+  id: 'grilled_fish',
+  name: 'Grilled Fish',
+  description: 'Fresh fish cooked over an open fire',
+  type: 'consumable',
+  category: 'meal',
+  level: 0,
+  rarity: 'common',
+  effects: { healthRestore: 20, energyBoost: 1.3, proteinBonus: 0.2 },
+  researchRequired: null,
+  emoji: '🐟',
+  color: '#FF7043',
+  consumableProperties: {
+    uses: 1,
+    consumeTime: 2
+  },
+  amount: 0,
+  craftingCost: { fish: 2, pine_wood: 1 },
+  craftingTime: 2,
+  toolTierRequired: 0,
+  buildingRequired: null,
+  populationRequired: 0
+},
+{
+  id: 'roasted_meat',
+  name: 'Roasted Meat',
+  description: 'Game meat roasted over fire with wild herbs',
+  type: 'consumable',
+  category: 'meal',
+  level: 0,
+  rarity: 'common',
+  effects: { healthRestore: 30, energyBoost: 1.5, strengthBonus: 0.3 },
+  researchRequired: null,
+  emoji: '🍖',
+  color: '#8D6E63',
+  consumableProperties: {
+    uses: 1,
+    consumeTime: 2
+  },
+  amount: 0,
+  craftingCost: { meat: 2, wild_berries: 1, oak_wood: 1 },
+  craftingTime: 3,
+  toolTierRequired: 0,
+  buildingRequired: null,
+  populationRequired: 0
+},
+
+// COOKED MEALS - Level 1
+{
+  id: 'hearty_stew',
+  name: 'Hearty Stew',
+  description: 'Rich stew cooked in clay pot with vegetables and meat',
+  type: 'consumable',
+  category: 'meal',
+  level: 1,
+  rarity: 'uncommon',
+  effects: { healthRestore: 45, energyBoost: 1.8, morale: 0.3, enduranceBonus: 0.4 },
+  researchRequired: 'cooking',
+  emoji: '🍲',
+  color: '#FF6F00',
+  consumableProperties: {
+    uses: 1,
+    consumeTime: 3
+  },
+  amount: 0,
+  craftingCost: { meat: 2, vegetables: 3, clay_pot: 1, salt: 1 },
+  craftingTime: 4,
+  toolTierRequired: 1,
+  buildingRequired: 'kitchen',
+  populationRequired: 1
+},
+{
+  id: 'fresh_bread',
+  name: 'Fresh Bread',
+  description: 'Warm bread baked in stone oven with grain flour',
+  type: 'consumable',
+  category: 'meal',
+  level: 1,
+  rarity: 'common',
+  effects: { healthRestore: 25, energyBoost: 1.6, morale: 0.4, carbohydrateBonus: 0.5 },
+  researchRequired: 'baking',
+  emoji: '🍞',
+  color: '#FFCC80',
+  consumableProperties: {
+    uses: 1,
+    consumeTime: 2
+  },
+  amount: 0,
+  craftingCost: { grain: 4, salt: 1, yeast: 1 },
+  craftingTime: 6,
+  toolTierRequired: 1,
+  buildingRequired: 'bakery',
+  populationRequired: 1
+},
+{
+  id: 'cheese_wheel',
+  name: 'Aged Cheese',
+  description: 'Rich aged cheese made from milk and herbs',
+  type: 'consumable',
+  category: 'meal',
+  level: 1,
+  rarity: 'uncommon',
+  effects: { healthRestore: 35, energyBoost: 1.4, morale: 0.5, calciumBonus: 0.6 },
+  researchRequired: 'dairy_processing',
+  emoji: '🧀',
+  color: '#FFF176',
+  consumableProperties: {
+    uses: 3,
+    consumeTime: 1
+  },
+  amount: 0,
+  craftingCost: { milk: 6, salt: 2, herbs: 1 },
+  craftingTime: 12,
+  toolTierRequired: 1,
+  buildingRequired: 'dairy',
+  populationRequired: 2
+},
+
+// FINE MEALS - Level 2
+{
+  id: 'feast_platter',
+  name: 'Royal Feast Platter',
+  description: 'Elaborate meal with multiple courses and rare spices',
+  type: 'consumable',
+  category: 'meal',
+  level: 2,
+  rarity: 'rare',
+  effects: { 
+    healthRestore: 60, 
+    energyBoost: 2.5, 
+    morale: 1.0, 
+    prestigeBonus: 0.8,
+    allStatsBonus: 0.3
+  },
+  researchRequired: 'fine_cuisine',
+  emoji: '🍽️',
+  color: '#9C27B0',
+  consumableProperties: {
+    uses: 1,
+    consumeTime: 5
+  },
+  amount: 0,
+  craftingCost: { meat: 3, vegetables: 4, spices: 2, wine: 1, honey: 1 },
+  craftingTime: 8,
+  toolTierRequired: 2,
+  buildingRequired: 'royal_kitchen',
+  populationRequired: 3
+},
+
+// BEVERAGES
+{
+  id: 'herbal_tea',
+  name: 'Herbal Tea',
+  description: 'Soothing tea brewed from medicinal herbs',
+  type: 'consumable',
+  category: 'meal',
+  level: 0,
+  rarity: 'common',
+  effects: { healthRestore: 10, energyBoost: 1.1, calmingEffect: 0.3 },
+  researchRequired: null,
+  emoji: '🍵',
+  color: '#4CAF50',
+  consumableProperties: {
+    uses: 1,
+    consumeTime: 2
+  },
+  amount: 0,
+  craftingCost: { herbs: 2, water: 1 },
+  craftingTime: 2,
+  toolTierRequired: 0,
+  buildingRequired: null,
+  populationRequired: 0
+},
+{
+  id: 'berry_wine',
+  name: 'Berry Wine',
+  description: 'Fermented berry wine with mild intoxicating effects',
+  type: 'consumable',
+  category: 'meal',
+  level: 1,
+  rarity: 'uncommon',
+  effects: { healthRestore: 15, energyBoost: 1.3, morale: 0.6, courage: 0.4 },
+  researchRequired: 'fermentation',
+  emoji: '🍷',
+  color: '#8E24AA',
+  consumableProperties: {
+    uses: 2,
+    consumeTime: 1
+  },
+  amount: 0,
+  craftingCost: { wild_berries: 8, honey: 2, yeast: 1 },
+  craftingTime: 10,
+  toolTierRequired: 1,
+  buildingRequired: 'brewery',
+  populationRequired: 2
+},
+{
+  id: 'distilled_spirits',
+  name: 'Distilled Spirits',
+  description: 'Potent distilled alcohol with powerful effects',
+  type: 'consumable',
+  category: 'meal',
+  level: 2,
+  rarity: 'rare',
+  effects: { 
+    healthRestore: 20, 
+    energyBoost: 1.8, 
+    courage: 1.0, 
+    painResistance: 0.8,
+    temperatureResistance: 0.5
+  },
+  researchRequired: 'distillation',
+  emoji: '🥃',
+  color: '#FF8F00',
+  consumableProperties: {
+    uses: 3,
+    consumeTime: 1
+  },
+  amount: 0,
+  craftingCost: { grain: 6, honey: 3, copper_distillery: 1 },
+  craftingTime: 15,
+  toolTierRequired: 2,
+  buildingRequired: 'distillery',
+  populationRequired: 3
+},
+// MEDICAL CONSUMABLES
+// BASIC REMEDIES - Level 0
+{
+  id: 'healing_herb',
+  name: 'Healing Herb',
+  description: 'Wild medicinal herbs that restore health',
+  type: 'consumable',
+  category: 'medical',
+  level: 0,
+  rarity: 'common',
+  effects: { healthRestore: 25 },
+  researchRequired: null,
+  emoji: '🌿',
+  color: '#4CAF50',
+  consumableProperties: {
+    uses: 1,
+    consumeTime: 1
+  },
+  amount: 0,
+  craftingCost: {}, // Gathered, not crafted
+  craftingTime: 0,
+  toolTierRequired: 0,
+  buildingRequired: null,
+  populationRequired: 0
+},
+{
+  id: 'willow_bark_tea',
+  name: 'Willow Bark Tea',
+  description: 'Pain-relieving tea brewed from willow bark',
+  type: 'consumable',
+  category: 'medical',
+  level: 0,
+  rarity: 'common',
+  effects: { healthRestore: 15, painRelief: 0.8, inflammationReduction: 0.6 },
+  researchRequired: null,
+  emoji: '🍵',
+  color: '#8D6E63',
+  consumableProperties: {
+    uses: 1,
+    consumeTime: 3
+  },
+  amount: 0,
+  craftingCost: { willow_bark: 2, water: 1 },
+  craftingTime: 2,
+  toolTierRequired: 0,
+  buildingRequired: null,
+  populationRequired: 0
+},
+{
+  id: 'honey_salve',
+  name: 'Honey Salve',
+  description: 'Healing salve made from honey and herbs for wounds',
+  type: 'consumable',
+  category: 'medical',
+  level: 0,
+  rarity: 'common',
+  effects: { healthRestore: 20, woundHealing: 1.5, infectionResistance: 0.7 },
+  researchRequired: null,
+  emoji: '🍯',
+  color: '#FFC107',
+  consumableProperties: {
+    uses: 3,
+    consumeTime: 2
+  },
+  amount: 0,
+  craftingCost: { honey: 2, herbs: 3, beeswax: 1 },
+  craftingTime: 3,
+  toolTierRequired: 0,
+  buildingRequired: null,
+  populationRequired: 0
+},
+
+// PREPARED MEDICINES - Level 1
+{
+  id: 'healing_potion',
+  name: 'Healing Potion',
+  description: 'Concentrated herbal remedy brewed in bronze vessels',
+  type: 'consumable',
+  category: 'medical',
+  level: 1,
+  rarity: 'uncommon',
+  effects: { healthRestore: 50, regeneration: 1.3, vitality: 0.5 },
+  researchRequired: 'herbalism',
+  emoji: '🧪',
+  color: '#E91E63',
+  consumableProperties: {
+    uses: 1,
+    consumeTime: 2
+  },
+  amount: 0,
+  craftingCost: { herbs: 4, honey: 2, crystal_water: 1, bronze_vessel: 1 },
+  craftingTime: 6,
+  toolTierRequired: 1,
+  buildingRequired: 'apothecary',
+  populationRequired: 2
+},
+{
+  id: 'antidote_vial',
+  name: 'Antidote Vial',
+  description: 'Potent antidote against poisons and toxins',
+  type: 'consumable',
+  category: 'medical',
+  level: 1,
+  rarity: 'uncommon',
+  effects: { poisonCure: 1.0, toxinResistance: 1.5, immunityBoost: 0.8 },
+  researchRequired: 'toxicology',
+  emoji: '🧪',
+  color: '#4CAF50',
+  consumableProperties: {
+    uses: 1,
+    consumeTime: 1
+  },
+  amount: 0,
+  craftingCost: { rare_herbs: 3, snake_venom: 1, crystal_water: 1, glass_vial: 1 },
+  craftingTime: 8,
+  toolTierRequired: 1,
+  buildingRequired: 'apothecary',
+  populationRequired: 2
+},
+{
+  id: 'strength_elixir',
+  name: 'Strength Elixir',
+  description: 'Alchemical brew that temporarily enhances physical power',
+  type: 'consumable',
+  category: 'medical',
+  level: 1,
+  rarity: 'rare',
+  effects: { strengthBonus: 1.5, enduranceBonus: 1.3, duration: 10 },
+  researchRequired: 'alchemy',
+  emoji: '💪',
+  color: '#FF5722',
+  consumableProperties: {
+    uses: 1,
+    consumeTime: 2
+  },
+  amount: 0,
+  craftingCost: { rare_herbs: 2, monster_essence: 1, distilled_spirits: 1, bronze_vessel: 1 },
+  craftingTime: 10,
+  toolTierRequired: 1,
+  buildingRequired: 'alchemist_lab',
+  populationRequired: 3
+},
+
+// ADVANCED MEDICINES - Level 2
+{
+  id: 'philosophers_remedy',
+  name: 'Philosophers Remedy',
+  description: 'Legendary healing elixir that restores body and mind',
+  type: 'consumable',
+  category: 'medical',
+  level: 2,
+  rarity: 'epic',
+  effects: { 
+    healthRestore: 100, 
+    regeneration: 2.0, 
+    mentalClarity: 1.5,
+    ageResistance: 0.3,
+    allStatsBonus: 0.5
+  },
+  researchRequired: 'advanced_alchemy',
+  emoji: '⚗️',
+  color: '#9C27B0',
+  consumableProperties: {
+    uses: 1,
+    consumeTime: 5
+  },
+  amount: 0,
+  craftingCost: { 
+    philosophers_stone: 1, 
+    rare_herbs: 5, 
+    crystal_water: 3, 
+    dragon_blood: 1,
+    gold_vessel: 1
+  },
+  craftingTime: 20,
+  toolTierRequired: 2,
+  buildingRequired: 'grand_laboratory',
+  populationRequired: 5
+},
+{
+  id: 'resurrection_draught',
+  name: 'Resurrection Draught',
+  description: 'Miraculous potion that can revive the recently fallen',
+  type: 'consumable',
+  category: 'medical',
+  level: 2,
+  rarity: 'legendary',
+  effects: { 
+    reviveChance: 0.8, 
+    healthRestore: 75, 
+    traumaHealing: 1.0,
+    soulBinding: 1.0
+  },
+  researchRequired: 'necromancy',
+  emoji: '💀',
+  color: '#424242',
+  consumableProperties: {
+    uses: 1,
+    consumeTime: 10
+  },
+  amount: 0,
+  craftingCost: { 
+    phoenix_feather: 1, 
+    unicorn_horn: 1, 
+    life_essence: 3,
+    crystal_water: 5,
+    platinum_vessel: 1
+  },
+  craftingTime: 30,
+  toolTierRequired: 2,
+  buildingRequired: 'temple_of_healing',
+  populationRequired: 8
+},
+
+// ALCHEMICAL CONSUMABLES
+// BASIC ALCHEMICAL PREPARATIONS - Level 0
+{
+  id: 'stamina_herb',
+  name: 'Stamina Herb',
+  description: 'Dried herbs that boost physical endurance for work',
+  type: 'consumable',
+  category: 'alchemical',
+  level: 0,
+  rarity: 'common',
+  effects: { harvestingSpeed: 1.3, workEndurance: 1.2, fatigueReduction: 0.4 },
+  researchRequired: null,
+  emoji: '🌿',
+  color: '#4CAF50',
+  consumableProperties: {
+    uses: 1,
+    consumeTime: 1
+  },
+  amount: 0,
+  craftingCost: { herbs: 2, honey: 1 },
+  craftingTime: 2,
+  toolTierRequired: 0,
+  buildingRequired: null,
+  populationRequired: 0
+},
+{
+  id: 'sharpening_paste',
+  name: 'Sharpening Paste',
+  description: 'Abrasive paste that temporarily enhances tool effectiveness',
+  type: 'consumable',
+  category: 'alchemical',
+  level: 0,
+  rarity: 'common',
+  effects: { toolEfficiency: 1.4, craftingSpeed: 1.2, toolDurability: 1.1 },
+  researchRequired: null,
+  emoji: '🪨',
+  color: '#8D6E63',
+  consumableProperties: {
+    uses: 3,
+    consumeTime: 1
+  },
+  amount: 0,
+  craftingCost: { sandstone_dust: 2, plant_oil: 1, bone_ash: 1 },
+  craftingTime: 2,
+  toolTierRequired: 0,
+  buildingRequired: null,
+  populationRequired: 0
+},
+{
+  id: 'courage_tonic',
+  name: 'Courage Tonic',
+  description: 'Bitter tonic that steels nerves for dangerous tasks',
+  type: 'consumable',
+  category: 'alchemical',
+  level: 0,
+  rarity: 'common',
+  effects: { combatBonus: 1.3, fearResistance: 0.6, morale: 0.4 },
+  researchRequired: null,
+  emoji: '🍶',
+  color: '#FF5722',
+  consumableProperties: {
+    uses: 1,
+    consumeTime: 2
+  },
+  amount: 0,
+  craftingCost: { bitter_herbs: 3, wild_berries: 2, water: 1 },
+  craftingTime: 3,
+  toolTierRequired: 0,
+  buildingRequired: null,
+  populationRequired: 0
+},
+
+// CRAFTED POTIONS - Level 1
+{
+  id: 'miners_elixir',
+  name: 'Miners Elixir',
+  description: 'Copper-infused potion that enhances mining efficiency',
+  type: 'consumable',
+  category: 'alchemical',
+  level: 1,
+  rarity: 'uncommon',
+  effects: { 
+    miningBonus: 1.6, 
+    stoneExtractionBonus: 1.4, 
+    oreDetection: 1.3,
+    duration: 4
+  },
+  researchRequired: 'basic_alchemy',
+  emoji: '⛏️',
+  color: '#FF7043',
+  consumableProperties: {
+    uses: 1,
+    consumeTime: 2
+  },
+  amount: 0,
+  craftingCost: { 
+    copper_shavings: 2, 
+    stamina_herb: 1, 
+    crystal_water: 1,
+    bronze_vessel: 1
+  },
+  craftingTime: 6,
+  toolTierRequired: 1,
+  buildingRequired: 'alchemist_lab',
+  populationRequired: 2
+},
+{
+  id: 'woodcutters_draught',
+  name: 'Woodcutters Draught',
+  description: 'Tree sap-based potion that improves forestry work',
+  type: 'consumable',
+  category: 'alchemical',
+  level: 1,
+  rarity: 'uncommon',
+  effects: { 
+    woodcuttingBonus: 1.5, 
+    axeEfficiency: 1.3, 
+    treeYield: 1.2,
+    duration: 5
+  },
+  researchRequired: 'forestry_alchemy',
+  emoji: '🪓',
+  color: '#8BC34A',
+  consumableProperties: {
+    uses: 1,
+    consumeTime: 2
+  },
+  amount: 0,
+  craftingCost: { 
+    tree_sap: 3, 
+    oak_bark: 2, 
+    honey: 1,
+    clay_vessel: 1
+  },
+  craftingTime: 5,
+  toolTierRequired: 1,
+  buildingRequired: 'herbalist_hut',
+  populationRequired: 1
+},
+{
+  id: 'crafters_focus',
+  name: 'Crafters Focus',
+  description: 'Mind-sharpening potion that improves crafting precision',
+  type: 'consumable',
+  category: 'alchemical',
+  level: 1,
+  rarity: 'uncommon',
+  effects: { 
+    craftingSpeed: 1.4, 
+    qualityBonus: 1.3, 
+    precisionBonus: 1.5,
+    materialWaste: 0.8,
+    duration: 6
+  },
+  researchRequired: 'crafting_enhancement',
+  emoji: '🔨',
+  color: '#9C27B0',
+  consumableProperties: {
+    uses: 1,
+    consumeTime: 3
+  },
+  amount: 0,
+  craftingCost: { 
+    focus_herbs: 2, 
+    crystal_dust: 1, 
+    distilled_water: 1,
+    bronze_vessel: 1
+  },
+  craftingTime: 8,
+  toolTierRequired: 1,
+  buildingRequired: 'alchemist_lab',
+  populationRequired: 2
+},
+{
+  id: 'warriors_brew',
+  name: 'Warriors Brew',
+  description: 'Fortifying drink that enhances combat prowess',
+  type: 'consumable',
+  category: 'alchemical',
+  level: 1,
+  rarity: 'uncommon',
+  effects: { 
+    combatDamage: 1.5, 
+    armorEffectiveness: 1.2, 
+    battleEndurance: 1.4,
+    woundResistance: 0.7,
+    duration: 3
+  },
+  researchRequired: 'combat_alchemy',
+  emoji: '⚔️',
+  color: '#F44336',
+  consumableProperties: {
+    uses: 1,
+    consumeTime: 2
+  },
+  amount: 0,
+  craftingCost: { 
+    iron_filings: 1, 
+    courage_tonic: 1, 
+    bear_fat: 1,
+    strong_alcohol: 1
+  },
+  craftingTime: 7,
+  toolTierRequired: 1,
+  buildingRequired: 'war_camp',
+  populationRequired: 2
+},
+{
+  id: 'scholars_mixture',
+  name: 'Scholars Mixture',
+  description: 'Intellectual stimulant that accelerates learning and research',
+  type: 'consumable',
+  category: 'alchemical',
+  level: 1,
+  rarity: 'rare',
+  effects: { 
+    knowledgeGeneration: 1.8, 
+    researchSpeed: 1.5, 
+    memoryRetention: 1.4,
+    insightChance: 0.3,
+    duration: 8
+  },
+  researchRequired: 'scholarly_alchemy',
+  emoji: '📚',
+  color: '#3F51B5',
+  consumableProperties: {
+    uses: 1,
+    consumeTime: 4
+  },
+  amount: 0,
+  craftingCost: { 
+    sage_leaves: 3, 
+    crystal_essence: 1, 
+    ancient_ink: 1,
+    silver_vessel: 1
+  },
+  craftingTime: 10,
+  toolTierRequired: 1,
+  buildingRequired: 'library',
+  populationRequired: 3
+},
+
+// ADVANCED ELIXIRS - Level 2
+{
+  id: 'master_crafters_elixir',
+  name: 'Master Crafters Elixir',
+  description: 'Potent elixir that grants temporary mastery over all crafts',
+  type: 'consumable',
+  category: 'alchemical',
+  level: 2,
+  rarity: 'rare',
+  effects: { 
+    allCraftingBonus: 2.0, 
+    masterworkChance: 0.4, 
+    resourceEfficiency: 1.6,
+    toolMastery: 1.8,
+    duration: 10
+  },
+  researchRequired: 'master_alchemy',
+  emoji: '🧙',
+  color: '#FFD700',
+  consumableProperties: {
+    uses: 1,
+    consumeTime: 5
+  },
+  amount: 0,
+  craftingCost: { 
+    crafters_focus: 2, 
+    steel_essence: 1, 
+    master_herbs: 3,
+    gold_vessel: 1
+  },
+  craftingTime: 15,
+  toolTierRequired: 2,
+  buildingRequired: 'grand_laboratory',
+  populationRequired: 4
+},
+{
+  id: 'berserkers_fury',
+  name: 'Berserkers Fury',
+  description: 'Dangerous combat stimulant that unleashes primal fighting power',
+  type: 'consumable',
+  category: 'alchemical',
+  level: 2,
+  rarity: 'rare',
+  effects: { 
+    combatDamage: 2.5, 
+    attackSpeed: 1.8, 
+    painIgnorance: 0.9,
+    recklessness: 1.5,
+    duration: 2
+  },
+  researchRequired: 'berserker_alchemy',
+  emoji: '😤',
+  color: '#B71C1C',
+  consumableProperties: {
+    uses: 1,
+    consumeTime: 1
+  },
+  amount: 0,
+  craftingCost: { 
+    warriors_brew: 2, 
+    wolf_blood: 1, 
+    rage_mushrooms: 2,
+    iron_vessel: 1
+  },
+  craftingTime: 12,
+  toolTierRequired: 2,
+  buildingRequired: 'battle_laboratory',
+  populationRequired: 3
+},
+{
+  id: 'harvest_kings_blessing',
+  name: 'Harvest Kings Blessing',
+  description: 'Legendary potion that grants dominion over natural resources',
+  type: 'consumable',
+  category: 'alchemical',
+  level: 2,
+  rarity: 'epic',
+  effects: { 
+    allHarvestingBonus: 2.2, 
+    resourceDiscovery: 1.5, 
+    naturalHarmony: 1.8,
+    abundanceAura: 1.4,
+    duration: 12
+  },
+  researchRequired: 'nature_mastery',
+  emoji: '🌾',
+  color: '#4CAF50',
+  consumableProperties: {
+    uses: 1,
+    consumeTime: 8
+  },
+  amount: 0,
+  craftingCost: { 
+    miners_elixir: 1, 
+    woodcutters_draught: 1, 
+    earth_essence: 2,
+    nature_crown: 1,
+    platinum_vessel: 1
+  },
+  craftingTime: 20,
+  toolTierRequired: 2,
+  buildingRequired: 'nature_sanctuary',
+  populationRequired: 5
+},
+
+// UTILITY POTIONS
+{
+  id: 'night_vision_drops',
+  name: 'Night Vision Drops',
+  description: 'Eye drops that allow clear vision in darkness',
+  type: 'consumable',
+  category: 'alchemical',
+  level: 1,
+  rarity: 'uncommon',
+  effects: { 
+    nightVision: 1.0, 
+    darknessBonus: 1.5, 
+    explorationRange: 1.3,
+    duration: 6
+  },
+  researchRequired: 'vision_enhancement',
+  emoji: '👁️',
+  color: '#424242',
+  consumableProperties: {
+    uses: 2,
+    consumeTime: 1
+  },
+  amount: 0,
+  craftingCost: { 
+    cat_eyes: 2, 
+    moonstone_dust: 1, 
+    clear_water: 1
+  },
+  craftingTime: 4,
+  toolTierRequired: 1,
+  buildingRequired: 'alchemist_lab',
+  populationRequired: 1
+},
+{
+  id: 'fire_resistance_salve',
+  name: 'Fire Resistance Salve',
+  description: 'Protective ointment that shields against heat and flames',
+  type: 'consumable',
+  category: 'alchemical',
+  level: 1,
+  rarity: 'uncommon',
+  effects: { 
+    fireResistance: 0.8, 
+    heatProtection: 1.4, 
+    smeltingBonus: 1.3,
+    duration: 5
+  },
+  researchRequired: 'fire_protection',
+  emoji: '🔥',
+  color: '#FF5722',
+  consumableProperties: {
+    uses: 3,
+    consumeTime: 2
+  },
+  amount: 0,
+  craftingCost: { 
+    salamander_oil: 1, 
+    clay: 2, 
+    cooling_herbs: 2
+  },
+  craftingTime: 5,
+  toolTierRequired: 1,
+  buildingRequired: 'apothecary',
+  populationRequired: 1
+},
+{
+  id: 'beast_communication_brew',
+  name: 'Beast Communication Brew',
+  description: 'Mystical brew that allows understanding of animal speech',
+  type: 'consumable',
+  category: 'alchemical',
+  level: 2,
+  rarity: 'rare',
+  effects: { 
+    animalCommunication: 1.0, 
+    huntingBonus: 1.6, 
+    tamingChance: 0.4,
+    wildlifeHarmony: 1.3,
+    duration: 8
+  },
+  researchRequired: 'beast_speech',
+  emoji: '🐺',
+  color: '#8D6E63',
+  consumableProperties: {
+    uses: 1,
+    consumeTime: 3
+  },
+  amount: 0,
+  craftingCost: { 
+    wolf_tongue: 1, 
+    eagle_feather: 1, 
+    spirit_herbs: 3,
+    bone_vessel: 1
+  },
+  craftingTime: 18,
+  toolTierRequired: 2,
+  buildingRequired: 'druid_grove',
+  populationRequired: 4
+}  
+];
+
+// Helper functions following building system pattern
+export function getItemsByType(itemType: string): Item[] {
+  return ITEMS_DATABASE.filter(item => item.type === itemType);
+}
+
+export function getItemsByCategory(category: string): Item[] {
+  return ITEMS_DATABASE.filter(item => item.category === category);
+}
+
+// Get basic materials (formerly BASIC_RESOURCES)
+export function getBasicMaterials(): Item[] {
+  return ITEMS_DATABASE.filter(item => 
+    item.type === 'material' && item.category === 'basic'
+  );
+}
+
+// Enhanced getCraftableItems with category filtering
+export function getCraftableItems(
+  completedResearch: string[],
+  availableBuildings: string[],
+  currentToolLevel: number,
+  currentPopulation: number,
+  itemType?: string,
+  category?: string
+): Item[] {
+  let items = ITEMS_DATABASE.filter(item => 
+    item.craftingCost && Object.keys(item.craftingCost).length > 0
+  );
+  
+  // Filter by type if specified
+  if (itemType) {
+    items = items.filter(item => item.type === itemType);
+  }
+  
+  // Filter by category if specified
+  if (category) {
+    items = items.filter(item => item.category === category);
+  }
+  
+  return items.filter(item => {
+    // Research requirements
+    if (item.researchRequired && !completedResearch.includes(item.researchRequired)) return false;
+    
+    // Tool level requirements
+    if (item.toolTierRequired && item.toolTierRequired > currentToolLevel) return false;
+    
+    // Building requirements
+    if (item.buildingRequired && !availableBuildings.includes(item.buildingRequired)) return false;
+    
+    // Population requirements
+    if (item.populationRequired && item.populationRequired > currentPopulation) return false;
+    
+    return true;
+  });
+}
+
+// Additional helper for getting items by both type and category
+export function getItemsByTypeAndCategory(itemType?: string, category?: string): Item[] {
+  let items = ITEMS_DATABASE;
+  
+  if (itemType) {
+    items = items.filter(item => item.type === itemType);
+  }
+  
+  if (category) {
+    items = items.filter(item => item.category === category);
+  }
+  
+  return items;
+}
+
+// Get all available categories for a given type
+export function getCategoriesForType(itemType: string): string[] {
+  const categories = new Set<string>();
+  ITEMS_DATABASE
+    .filter(item => item.type === itemType)
+    .forEach(item => categories.add(item.category));
+  return Array.from(categories).sort();
+}
+
+// Get all available types
+export function getAllItemTypes(): string[] {
+  const types = new Set<string>();
+  ITEMS_DATABASE.forEach(item => types.add(item.type));
+  return Array.from(types).sort();
+}
+
+// Get all available categories
+export function getAllItemCategories(): string[] {
+  const categories = new Set<string>();
+  ITEMS_DATABASE.forEach(item => categories.add(item.category));
+  return Array.from(categories).sort();
+}
+
+// Check if item can be crafted (similar to canAffordBuilding)
+export function canCraftItem(item: Item, currentInventory: Record<string, number>): boolean {
+  if (!item.craftingCost) return false;
+  
+  return Object.entries(item.craftingCost).every(([itemId, amount]) => 
+    (currentInventory[itemId] || 0) >= amount
+  );
+}
+
+// Check if item can be crafted with current game state (similar to canBuildWithPopulation)
+export function canCraftWithRequirements(
+  item: Item, 
+  currentToolLevel: number,
+  availableBuildings: string[],
+  currentPopulation: number,
+  completedResearch: string[]
+): boolean {
+  // Research requirements
+  if (item.researchRequired && !completedResearch.includes(item.researchRequired)) return false;
+  
+  // Tool level requirements
+  if (item.toolTierRequired && item.toolTierRequired > currentToolLevel) return false;
+  
+  // Building requirements
+  if (item.buildingRequired && !availableBuildings.includes(item.buildingRequired)) return false;
+  
+  // Population requirements
+  if (item.populationRequired && item.populationRequired > currentPopulation) return false;
+  
+  return true;
+}
+
+// Enhanced item information helpers
+export function getItemInfo(itemId: string): Item | undefined {
+  return ITEMS_DATABASE.find(i => i.id === itemId);
+}
+
+export function getItemsByLevel(level: number): Item[] {
+  return ITEMS_DATABASE.filter(item => item.level === level);
+}
+
+export function getItemsByRarity(rarity: string): Item[] {
+  return ITEMS_DATABASE.filter(item => item.rarity === rarity);
+}
+
+// Unified icon/color functions
+export function getItemIcon(itemId: string): string {
+  const item = ITEMS_DATABASE.find(i => i.id === itemId);
+  return item?.emoji || '📦';
+}
+
+export function getItemColor(itemId: string): string {
+  const item = ITEMS_DATABASE.find(i => i.id === itemId);
+  return item?.color || '#4CAF50';
+}
+
+export function getItemRarityColor(rarity: string): string {
+  switch (rarity) {
+    case 'common': return '#9E9E9E';
+    case 'uncommon': return '#4CAF50';
+    case 'rare': return '#2196F3';
+    case 'epic': return '#9C27B0';
+    case 'legendary': return '#FF9800';
+    default: return '#9E9E9E';
+  }
+}
+
+// Helper for getting crafting chain dependencies
+export function getCraftingDependencies(itemId: string): string[] {
+  const item = ITEMS_DATABASE.find(i => i.id === itemId);
+  if (!item?.craftingCost) return [];
+  
+  return Object.keys(item.craftingCost);
+}
+
+// Helper for getting items that use this item as a material
+export function getItemUsages(itemId: string): Item[] {
+  return ITEMS_DATABASE.filter(item => 
+    item.craftingCost && Object.keys(item.craftingCost).includes(itemId)
+  );
+}
+
+// Helper for calculating total crafting time including dependencies
+export function getTotalCraftingTime(itemId: string, depth: number = 0): number {
+  if (depth > 10) return 0; // Prevent infinite recursion
+  
+  const item = ITEMS_DATABASE.find(i => i.id === itemId);
+  if (!item) return 0;
+  
+  let totalTime = item.craftingTime || 0;
+  
+  if (item.craftingCost) {
+    const dependencyTimes = Object.keys(item.craftingCost).map(depId => 
+      getTotalCraftingTime(depId, depth + 1)
+    );
+    totalTime += Math.max(...dependencyTimes, 0);
+  }
+  
+  return totalTime;
+}
+
+
+// Magical resource creation (now creates magical materials)
+export function createMagicalMaterial(): Item {
+  const magicalTypes = ['Crystal', 'Essence', 'Rune', 'Shard'];
+  const properties = ['Fire', 'Ice', 'Lightning', 'Shadow', 'Light'];
+  
+  const type = magicalTypes[Math.floor(Math.random() * magicalTypes.length)];
+  const property = properties[Math.floor(Math.random() * properties.length)];
+  
+  return {
+    id: `${property.toLowerCase()}_${type.toLowerCase()}`,
+    name: `${property} ${type}`,
+    description: `Magical ${type.toLowerCase()} infused with ${property.toLowerCase()} energy`,
+    type: 'material',
+    category: 'magical',
+    level: 2,
+    rarity: 'rare',
+    effects: { magicalPower: Math.floor(Math.random() * 10) + 1 },
+    researchRequired: null,
+    emoji: '🔮',
+    color: '#9C27B0',
+    amount: 0,
+    craftingCost: {},
+    craftingTime: 0,
+    toolTierRequired: 0,
+    buildingRequired: null,
+    populationRequired: 0
+  };
+}

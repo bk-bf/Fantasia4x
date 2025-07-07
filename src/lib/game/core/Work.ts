@@ -1,7 +1,7 @@
 // Work.ts - Work Assignment and Priority System
 import type { Pawn, Location, GameState } from '$lib/game/core/types';
-import { getDiscoveredLocations, getLocationInfo } from './Locations';
 import { getItemInfo } from './Items';
+import { getDiscoveredLocations, getAvailableResourcesFromLocation, getLocationInfo } from './Locations';
 
 export interface WorkCategory {
   id: string;
@@ -9,9 +9,6 @@ export interface WorkCategory {
   description: string;
   emoji: string;
   color: string;
-  
-  // What this work category can produce
-  produces: string[]; // Item IDs that can be harvested/produced
   
   // Requirements
   toolsRequired?: string[];
@@ -50,7 +47,6 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     description: 'Gather berries, nuts, and edible plants from the wild',
     emoji: '🫐',
     color: '#4CAF50',
-    produces: ['wild_berries', 'wild_oats', 'wild_barley', 'nuts', 'herbs'],
     locationTypesRequired: ['plains', 'forest'],
     primaryStat: 'wisdom',
     secondaryStat: 'constitution',
@@ -62,7 +58,6 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     description: 'Harvest wood from trees in forests and groves',
     emoji: '🪓',
     color: '#8D6E63',
-    produces: ['pine_wood', 'fir_wood', 'oak_wood', 'ash_wood', 'birch_wood', 'yew_wood'],
     toolsRequired: ['axe'],
     locationTypesRequired: ['forest', 'plains'],
     primaryStat: 'strength',
@@ -75,7 +70,6 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     description: 'Extract stone, ore, and minerals from quarries and mines',
     emoji: '⛏️',
     color: '#607D8B',
-    produces: ['sandstone', 'limestone', 'granite', 'flint', 'copper_ore', 'tin_ore', 'iron_ore'],
     toolsRequired: ['pick'],
     locationTypesRequired: ['hills', 'mountains', 'caves'],
     primaryStat: 'strength',
@@ -88,7 +82,6 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     description: 'Hunt animals for meat, hide, and other materials',
     emoji: '🏹',
     color: '#8D4E85',
-    produces: ['rabbit_carcass', 'deer_carcass', 'wild_boar_carcass'],
     toolsRequired: ['weapon'],
     locationTypesRequired: ['forest', 'plains', 'hills'],
     primaryStat: 'dexterity',
@@ -101,7 +94,6 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     description: 'Catch fish from rivers, lakes, and streams',
     emoji: '🎣',
     color: '#4FC3F7',
-    produces: ['common_carp', 'river_trout'],
     toolsRequired: ['fishing_gear'],
     locationTypesRequired: ['river'],
     primaryStat: 'dexterity',
@@ -116,7 +108,6 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     description: 'Create tools, weapons, and basic equipment',
     emoji: '🔨',
     color: '#FF9800',
-    produces: ['tools', 'weapons', 'basic_equipment'],
     toolsRequired: ['hammer'],
     primaryStat: 'dexterity',
     secondaryStat: 'intelligence',
@@ -128,7 +119,6 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     description: 'Smelt ores and forge metal items',
     emoji: '⚒️',
     color: '#FF5722',
-    produces: ['copper_ingot', 'bronze_ingot', 'iron_ingot', 'steel_ingot'],
     toolsRequired: ['hammer', 'tongs'],
     primaryStat: 'strength',
     secondaryStat: 'intelligence',
@@ -140,19 +130,17 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     description: 'Process hides into leather and create leather goods',
     emoji: '🦬',
     color: '#8D6E63',
-    produces: ['leather', 'leather_armor', 'leather_goods'],
     toolsRequired: ['knife'],
     primaryStat: 'dexterity',
     secondaryStat: 'intelligence',
     baseEfficiency: 1.0
   },
   {
-    id: 'pottery',
-    name: 'Pottery',
-    description: 'Shape clay into vessels, containers, and decorative items',
-    emoji: '🏺',
+    id: 'digging',
+    name: 'Digging',
+    description: 'Excavate soil, clay, and minerals from the ground',
+    emoji: '🪏',
     color: '#8D6E63',
-    produces: ['clay_pot', 'ceramic_goods', 'porcelain_vessels'],
     locationTypesRequired: ['river'], // Need clay deposits
     primaryStat: 'dexterity',
     secondaryStat: 'intelligence',
@@ -166,7 +154,6 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     description: 'Study scrolls, conduct experiments, and advance knowledge',
     emoji: '📚',
     color: '#9C27B0',
-    produces: ['research_progress', 'knowledge_advancement'],
     skillRequired: 'scholarship',
     primaryStat: 'intelligence',
     secondaryStat: 'wisdom',
@@ -178,7 +165,6 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     description: 'Build structures, roads, and infrastructure',
     emoji: '🏗️',
     color: '#4CAF50',
-    produces: ['building_progress'],
     toolsRequired: ['hammer'],
     primaryStat: 'strength',
     secondaryStat: 'intelligence',
@@ -190,7 +176,6 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     description: 'Create potions, elixirs, and magical compounds',
     emoji: '⚗️',
     color: '#9C27B0',
-    produces: ['potions', 'elixirs', 'alchemical_compounds'],
     toolsRequired: ['alchemical_apparatus'],
     skillRequired: 'alchemy',
     primaryStat: 'intelligence',
@@ -205,7 +190,6 @@ export function processWorkHarvesting(state: GameState): GameState {
   const newState = { ...state };
   const harvestedResources: Record<string, number> = {};
 
-  // Ensure currentJobIndex exists
   if (!newState.currentJobIndex) newState.currentJobIndex = {};
 
   state.pawns.forEach(pawn => {
@@ -222,13 +206,16 @@ export function processWorkHarvesting(state: GameState): GameState {
     const idx = newState.currentJobIndex[pawn.id] ?? 0;
     const [workType] = sortedWorks[idx % sortedWorks.length];
 
-    const harvestAmount = calculateHarvestAmount(pawn, workType, 1, state);
-    if (harvestAmount > 0) {
-      const resourceType = getResourceFromWorkType(workType);
-      if (resourceType) {
-        harvestedResources[resourceType] = (harvestedResources[resourceType] || 0) + harvestAmount;
+    // Get all available resource IDs for this work type
+    const availableResourceIds = getAvailableResourceIdsForWork(state, workType);
+
+    // For each available resource, increment it
+    availableResourceIds.forEach(resourceId => {
+      const harvestAmount = calculateHarvestAmount(pawn, workType, 1, state);
+      if (harvestAmount > 0) {
+        harvestedResources[resourceId] = (harvestedResources[resourceId] || 0) + harvestAmount;
       }
-    }
+    });
 
     // Advance to next job for next turn
     newState.currentJobIndex[pawn.id] = (idx + 1) % sortedWorks.length;
@@ -252,6 +239,20 @@ export function processWorkHarvesting(state: GameState): GameState {
   return newState;
 }
 
+export function getAvailableResourceIdsForWork(state: GameState, workType: string): string[] {
+  const resourceIds = new Set<string>();
+  for (const location of getDiscoveredLocations()) {
+    const availableResourceIds = getAvailableResourcesFromLocation(location);
+    for (const resourceId of availableResourceIds) {
+      const item = getItemInfo(resourceId);
+      if (item && item.workTypes && item.workTypes.includes(workType)) {
+        resourceIds.add(resourceId);
+      }
+    }
+  }
+  return Array.from(resourceIds);
+}
+
 // Helper Functions
 export function getWorkCategory(workId: string): WorkCategory | undefined {
   return WORK_CATEGORIES.find(work => work.id === workId);
@@ -267,26 +268,6 @@ export function getWorkCategoriesByLocation(locationId: string): WorkCategory[] 
   );
 }
 
-export function getAvailableResourcesForWork(
-  workCategoryId: string, 
-  locationId: string
-): string[] {
-  const workCategory = getWorkCategory(workCategoryId);
-  const location = getLocationInfo(locationId);
-  
-  if (!workCategory || !location) return [];
-  
-  // Get intersection of what work can produce and what location has
-  const locationResources = [
-    ...location.availableResources.tier0,
-    ...location.availableResources.tier1,
-    ...location.availableResources.tier2
-  ];
-  
-  return workCategory.produces.filter(resource => 
-    locationResources.includes(resource)
-  );
-}
 
 export function calculateWorkEfficiency(
   pawn: Pawn,
@@ -363,26 +344,28 @@ export function getOptimalWorkAssignment(
 export function processWorkProduction(
   assignments: Record<string, WorkAssignment>,
   pawns: Pawn[],
-  productionTargets: ProductionTarget[]
+  productionTargets: ProductionTarget[],
+  state: GameState // pass the full state for resource lookup
 ): Record<string, number> {
   const production: Record<string, number> = {};
-  
+
   productionTargets.forEach(target => {
     const workCategory = getWorkCategory(target.workCategoryId);
     const location = getLocationInfo(target.locationId);
-    
+
     if (!workCategory || !location) return;
-    
+
     // Calculate total production from assigned pawns
     target.assignedPawns.forEach(pawnId => {
       const pawn = pawns.find(p => p.id === pawnId);
       const assignment = assignments[pawnId];
-      
+
       if (!pawn || !assignment || assignment.currentWork !== target.workCategoryId) return;
-      
+
       const efficiency = calculateWorkEfficiency(pawn, workCategory, location);
-      const availableResources = getAvailableResourcesForWork(target.workCategoryId, target.locationId);
-      
+      // Use the new function:
+      const availableResources = getAvailableResourceIdsForWork(state, target.workCategoryId);
+
       // Distribute production based on target percentages
       Object.entries(target.resourceTargets).forEach(([resourceId, percentage]) => {
         if (availableResources.includes(resourceId)) {
@@ -392,29 +375,10 @@ export function processWorkProduction(
       });
     });
   });
-  
+
   return production;
 }
-export const WORK_TO_RESOURCE_MAPPING: Record<string, string[]> = {
-  'foraging': ['wild_berries', 'wild_oats', 'wild_barley', 'herbs'],
-  'woodcutting': ['pine_wood', 'oak_wood', 'ash_wood', 'birch_wood'],
-  'mining': ['sandstone', 'limestone', 'granite', 'copper_ore', 'iron_ore'],
-  'hunting': ['rabbit_carcass', 'deer_carcass', 'wild_boar_carcass'],
-  'fishing': ['common_carp', 'river_trout'],
-  'pottery': ['common_clay', 'fire_clay'],
-  'crafting': [], // Crafting consumes resources rather than harvesting
-  'research': [], // Research uses scrolls rather than harvesting
-  'construction': [] // Construction consumes materials
-};
 
-export function getResourceFromWorkType(workType: string): string | null {
-  const resources = WORK_TO_RESOURCE_MAPPING[workType];
-  if (!resources || resources.length === 0) return null;
-  
-  // For now, return the first resource type
-  // Later this could be based on location availability or player preferences
-  return resources[0];
-}
 // Add to Work.ts
 export function calculateHarvestAmount(
   pawn: Pawn, 
