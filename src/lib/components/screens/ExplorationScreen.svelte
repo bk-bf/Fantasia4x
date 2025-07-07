@@ -50,7 +50,6 @@
   });
 
   const unsubscribeGame = gameState.subscribe((state) => {
-    inventory = state.inventory || {};
     discoveredLocations = getDiscoveredLocations();
     activeExplorationMissions = state.activeExplorationMissions || [];
     completedResearch = state.completedResearch || [];
@@ -279,14 +278,6 @@
           const newAmount = Math.max(0, item.amount - cost);
           return { ...item, amount: newAmount };
         });
-
-        // Also deduct from inventory
-        Object.entries(mission.suppliesRequired).forEach(([itemId, amount]) => {
-          const inventoryCost = Math.min(newState.inventory[itemId] || 0, amount as number);
-          if (inventoryCost > 0) {
-            newState.inventory[itemId] = (newState.inventory[itemId] || 0) - inventoryCost;
-          }
-        });
       }
 
       // Add to active missions
@@ -395,7 +386,7 @@
                     <div class="resource-details">
                       <span class="resource-amount"
                         >{data.availability.available !== 'Unknown'
-                          ? data.availability.available
+                          ? Math.floor(data.availability.available)
                           : '?'}</span
                       >
                       <span class="resource-slash">/</span>

@@ -4,7 +4,11 @@ import type { GameState } from '$lib/game/core/types';
 import { generatePawns } from '$lib/game/core/Pawns';
 import { generateRace } from '$lib/game/core/Race';
 import { getBasicMaterials, getItemInfo } from '$lib/game/core/Items';
-import { initializeAllLocations } from '$lib/game/core/Locations';
+import { 
+  initializeAllLocations,
+  getDiscoveredLocations,
+  processResourceRenewal
+} from '$lib/game/core/Locations';
 import {
   AVAILABLE_BUILDINGS,
   canAffordBuilding,
@@ -131,74 +135,86 @@ function advanceTurn() {
     newState = processResearch(newState);
     newState = processBuildingQueue(newState);
     newState = processCraftingQueue(newState);
-    // Use the shared function:
+    // Extract resources from locations
     newState = sharedProcessWorkHarvesting(newState);
+    
+    // NEW: Renew resources after extraction
+    renewAllLocationResources();
+    
+    // Generate basic resources (food, wood, stone)
     newState = generateItems(newState);
 
     return newState;
   });
 }
 
-  function processResearch(state: GameState): GameState {
-    if (!state.currentResearch) return state;
+// Rename this helper function to avoid naming conflict
+function renewAllLocationResources() {
+  getDiscoveredLocations().forEach(location => {
+    processResourceRenewal(location); 
+  });
+}
 
-    const newState = { ...state };
-    newState.currentResearch = { ...state.currentResearch };
-    newState.currentResearch.currentProgress = (newState.currentResearch.currentProgress || 0) + 1;
+function processResearch(state: GameState): GameState {
+	if (!state.currentResearch) return state;
 
-    if (newState.currentResearch.currentProgress >= newState.currentResearch.researchTime) {
-      newState.completedResearch = [...(newState.completedResearch || []), newState.currentResearch.id];
+	const newState = { ...state };
+	newState.currentResearch = { ...state.currentResearch };
+	newState.currentResearch.currentProgress = (newState.currentResearch.currentProgress || 0) + 1;
 
-      if (newState.currentResearch.unlocks.toolTierRequired) {
-        newState.currentToolLevel = Math.max(
-          newState.currentToolLevel,
-          newState.currentResearch.unlocks.toolTierRequired
-        );
-      }
+	if (newState.currentResearch.currentProgress >= newState.currentResearch.researchTime) {
+		newState.completedResearch = [...(newState.completedResearch || []), newState.currentResearch.id];
 
-      newState.currentResearch = undefined;
-    }
+		if (newState.currentResearch.unlocks.toolTierRequired) {
+		newState.currentToolLevel = Math.max(
+			newState.currentToolLevel,
+			newState.currentResearch.unlocks.toolTierRequired
+		);
+		}
 
-    return newState;
-  }
+		newState.currentResearch = undefined;
+}
 
-  function processBuildingQueue(state: GameState): GameState {
-    const completedBuildings: any[] = [];
-    const updatedQueue = (state.buildingQueue || []).map(item => {
-      const updated = { ...item, turnsRemaining: item.turnsRemaining - 1 };
-      if (updated.turnsRemaining <= 0) {
-        completedBuildings.push(updated.building);
-      }
-      return updated;
-    }).filter(item => item.turnsRemaining > 0);
+return newState;
+}
 
-    const newBuildingCounts = { ...state.buildingCounts };
-    let newMaxPopulation = 1;
-    let woodBonus = 0;
-    let stoneBonus = 0;
+function processBuildingQueue(state: GameState): GameState {
+	const completedBuildings: any[] = [];
+	const updatedQueue = (state.buildingQueue || []).map(item => {
+		const updated = { ...item, turnsRemaining: item.turnsRemaining - 1 };
+		if (updated.turnsRemaining <= 0) {
+		completedBuildings.push(updated.building);
+		}
+		return updated;
+	}).filter(item => item.turnsRemaining > 0);
 
-    completedBuildings.forEach(building => {
-      newBuildingCounts[building.id] = (newBuildingCounts[building.id] || 0) + 1;
-    });
+	const newBuildingCounts = { ...state.buildingCounts };
+	let newMaxPopulation = 1;
+	let woodBonus = 0;
+	let stoneBonus = 0;
 
-    Object.entries(newBuildingCounts).forEach(([buildingId, count]) => {
-      const building = AVAILABLE_BUILDINGS.find(b => b.id === buildingId);
-      if (building && count > 0) {
-        newMaxPopulation += (building.effects.populationCapacity || 0) * count;
-        woodBonus += (building.effects.woodProduction || 0) * count;
-        stoneBonus += (building.effects.stoneProduction || 0) * count;
-      }
-    });
+	completedBuildings.forEach(building => {
+		newBuildingCounts[building.id] = (newBuildingCounts[building.id] || 0) + 1;
+	});
 
-    return {
-      ...state,
-      buildingQueue: updatedQueue,
-      buildingCounts: newBuildingCounts,
-      maxPopulation: newMaxPopulation,
-      _woodBonus: woodBonus,
-      _stoneBonus: stoneBonus
-    };
-  }
+	Object.entries(newBuildingCounts).forEach(([buildingId, count]) => {
+		const building = AVAILABLE_BUILDINGS.find(b => b.id === buildingId);
+		if (building && count > 0) {
+		newMaxPopulation += (building.effects.populationCapacity || 0) * count;
+		woodBonus += (building.effects.woodProduction || 0) * count;
+		stoneBonus += (building.effects.stoneProduction || 0) * count;
+		}
+});
+
+return {
+	...state,
+	buildingQueue: updatedQueue,
+	buildingCounts: newBuildingCounts,
+	maxPopulation: newMaxPopulation,
+	_woodBonus: woodBonus,
+	_stoneBonus: stoneBonus
+};
+}
 
   // Fixed crafting to use items array only
   function processCraftingQueue(state: GameState): GameState {

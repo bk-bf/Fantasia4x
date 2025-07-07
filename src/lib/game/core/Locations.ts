@@ -73,87 +73,88 @@ export const LOCATION_TEMPLATES: LocationTemplate[] = [
     
     // Resource templates for randomization
     resourceTemplates: {
-      'pine_wood': {
-        id: 'pine_wood',
-        currentAmountRange: [100, 200],
-        maxAmountRange: [150, 250],
-        renewalRate: 3,
-        renewalType: 'slow',
-        depletion: 1
-      },
-      'fir_wood': {
-        id: 'fir_wood',
-        currentAmountRange: [80, 160],
-        maxAmountRange: [120, 200],
-        renewalRate: 2,
-        renewalType: 'slow',
-        depletion: 1
-      },
-      'wild_berries': {
-        id: 'wild_berries',
-        currentAmountRange: [50, 120],
-        maxAmountRange: [80, 150],
-        renewalRate: 5,
-        renewalType: 'seasonal',
-        depletion: 1
-      },
-      'wild_oats': {
-        id: 'wild_oats',
-        currentAmountRange: [40, 80],
-        maxAmountRange: [60, 100],
-        renewalRate: 4,
-        renewalType: 'seasonal',
-        depletion: 1
-      },
-      'wild_barley': {
-        id: 'wild_barley',
-        currentAmountRange: [30, 70],
-        maxAmountRange: [50, 90],
-        renewalRate: 3,
-        renewalType: 'seasonal',
-        depletion: 1
-      },
-      'rabbit_carcass': {
-        id: 'rabbit_carcass',
-        currentAmountRange: [15, 35],
-        maxAmountRange: [25, 50],
-        renewalRate: 2,
-        renewalType: 'fast',
-        depletion: 1
-      },
-      'plant_fiber': {
-        id: 'plant_fiber',
-        currentAmountRange: [80, 150],
-        maxAmountRange: [120, 200],
-        renewalRate: 8,
-        renewalType: 'fast',
-        depletion: 1
-      },
-      'common_clay': {
-        id: 'common_clay',
-        currentAmountRange: [150, 250],
-        maxAmountRange: [150, 250],
-        renewalRate: 0,
-        renewalType: 'none',
-        depletion: 1
-      },
-      'sandstone': {
-        id: 'sandstone',
-        currentAmountRange: [200, 400],
-        maxAmountRange: [200, 400],
-        renewalRate: 0,
-        renewalType: 'none',
-        depletion: 1
-      },
-      'flint': {
-        id: 'flint',
-        currentAmountRange: [50, 120],
-        maxAmountRange: [50, 120],
-        renewalRate: 0,
-        renewalType: 'none',
-        depletion: 1
-      }
+    'pine_wood': {
+      id: 'pine_wood',
+      currentAmountRange: [1000, 1500],
+      maxAmountRange: [500, 1500],
+      renewalRate: 0.02, // Was 3, now very slow tree growth
+      renewalType: 'slow',
+      depletion: 1
     },
+    'fir_wood': {
+      id: 'fir_wood',
+      currentAmountRange: [300, 1000],
+      maxAmountRange: [600, 1000],
+      renewalRate: 0.02, // Was 2, now very slow
+      renewalType: 'slow',
+      depletion: 1
+    },
+    'wild_berries': {
+      id: 'wild_berries',
+      currentAmountRange: [500, 1200],
+      maxAmountRange: [800, 1500],
+      renewalRate: 0.3, // Was 5, now seasonal/slow growth
+      renewalType: 'seasonal',
+      depletion: 1
+    },
+    'wild_oats': {
+      id: 'wild_oats',
+      currentAmountRange: [400, 800],
+      maxAmountRange: [600, 1000],
+      renewalRate: 0.2, // Was 4, now slow plant growth
+      renewalType: 'seasonal',
+      depletion: 1
+    },
+    'wild_barley': {
+      id: 'wild_barley',
+      currentAmountRange: [300, 700],
+      maxAmountRange: [500, 900],
+      renewalRate: 0.15, // Was 3, now slow
+      renewalType: 'seasonal',
+      depletion: 1
+    },
+    'rabbit_carcass': {
+      id: 'rabbit_carcass',
+      currentAmountRange: [150, 350],
+      maxAmountRange: [250, 500],
+      renewalRate: 0.05, // Was 2, now slow animal reproduction
+      renewalType: 'fast',
+      depletion: 1
+    },
+    'plant_fiber': {
+      id: 'plant_fiber',
+      currentAmountRange: [800, 1500],
+      maxAmountRange: [1200, 2000],
+      renewalRate: 0.4, // Was 8, now moderate plant growth
+      renewalType: 'fast',
+      depletion: 1
+    },
+    // Non-renewable resources stay at 0
+    'common_clay': {
+      id: 'common_clay',
+      currentAmountRange: [500, 800],
+      maxAmountRange: [300, 1000],
+      renewalRate: 0, // Stays 0 (non-renewable)
+      renewalType: 'none',
+      depletion: 1
+    },
+    'sandstone': {
+      id: 'sandstone',
+      currentAmountRange: [200, 400],
+      maxAmountRange: [200, 400],
+      renewalRate: 0, // Stays 0 (non-renewable)
+      renewalType: 'none',
+      depletion: 1
+    },
+    'flint': {
+      id: 'flint',
+      currentAmountRange: [200, 400],
+      maxAmountRange: [400, 500],
+      renewalRate: 0, // Stays 0 (non-renewable)
+      renewalType: 'none',
+      depletion: 1
+    }
+  },
     
     workModifiers: {
       hunting: 1.2,
@@ -276,33 +277,33 @@ export const LOCATION_TEMPLATES: LocationTemplate[] = [
     resourceTemplates: {
       'pine_wood': {
         id: 'pine_wood',
-        currentAmountRange: [200, 400],
-        maxAmountRange: [300, 500],
-        renewalRate: 5,
+        currentAmountRange: [2000, 4000],
+        maxAmountRange: [3000, 5000],
+        renewalRate: 0.03,
         renewalType: 'slow',
         depletion: 1
       },
       'fir_wood': {
         id: 'fir_wood',
-        currentAmountRange: [180, 350],
-        maxAmountRange: [250, 450],
-        renewalRate: 4,
+        currentAmountRange: [1800, 3500],
+        maxAmountRange: [2500, 4500],
+        renewalRate: 0.03,
         renewalType: 'slow',
         depletion: 1
       },
       'oak_wood': {
         id: 'oak_wood',
-        currentAmountRange: [150, 300],
-        maxAmountRange: [200, 400],
-        renewalRate: 2,
+        currentAmountRange: [1500, 3000],
+        maxAmountRange: [2000, 4000],
+        renewalRate: 0.03,
         renewalType: 'slow',
         depletion: 1
       },
       'ash_wood': {
         id: 'ash_wood',
-        currentAmountRange: [100, 250],
-        maxAmountRange: [150, 350],
-        renewalRate: 2,
+        currentAmountRange: [1000, 2500],
+        maxAmountRange: [1500, 3500],
+        renewalRate: 0.03,
         renewalType: 'slow',
         depletion: 1
       },
@@ -310,55 +311,55 @@ export const LOCATION_TEMPLATES: LocationTemplate[] = [
         id: 'birch_wood',
         currentAmountRange: [120, 280],
         maxAmountRange: [180, 380],
-        renewalRate: 3,
+        renewalRate: 0.03,
         renewalType: 'slow',
         depletion: 1
       },
       'deer_carcass': {
         id: 'deer_carcass',
-        currentAmountRange: [8, 25],
-        maxAmountRange: [15, 35],
-        renewalRate: 1,
+        currentAmountRange: [80, 250],
+        maxAmountRange: [150, 350],
+        renewalRate: 0.02,
         renewalType: 'slow',
         depletion: 1
       },
       'wild_berries': {
         id: 'wild_berries',
-        currentAmountRange: [80, 180],
-        maxAmountRange: [120, 220],
-        renewalRate: 8,
+        currentAmountRange: [800, 1800],
+        maxAmountRange: [1200, 2200],
+        renewalRate: 0.4,
         renewalType: 'seasonal',
         depletion: 1
       },
       'rare_herbs': {
         id: 'rare_herbs',
-        currentAmountRange: [15, 50],
-        maxAmountRange: [25, 70],
-        renewalRate: 2,
+        currentAmountRange: [50, 150],
+        maxAmountRange: [250, 300],
+        renewalRate: 0.1,
         renewalType: 'seasonal',
         depletion: 1
       },
       'medicinal_plants': {
         id: 'medicinal_plants',
-        currentAmountRange: [10, 40],
-        maxAmountRange: [20, 60],
-        renewalRate: 1,
+        currentAmountRange: [100, 400],
+        maxAmountRange: [200, 400],
+        renewalRate: 0.1,
         renewalType: 'slow',
         depletion: 1
       },
       'tree_sap': {
         id: 'tree_sap',
-        currentAmountRange: [40, 100],
-        maxAmountRange: [60, 120],
-        renewalRate: 4,
+        currentAmountRange: [400, 1000],
+        maxAmountRange: [600, 1200],
+        renewalRate: 0.4,
         renewalType: 'seasonal',
         depletion: 1
       },
       'oak_bark': {
         id: 'oak_bark',
-        currentAmountRange: [25, 70],
-        maxAmountRange: [40, 90],
-        renewalRate: 2,
+        currentAmountRange: [1500, 3000],
+        maxAmountRange: [1500, 3000],
+        renewalRate: 0.03,
         renewalType: 'slow',
         depletion: 1
       }
@@ -454,7 +455,7 @@ export const LOCATION_TEMPLATES: LocationTemplate[] = [
         renewalType: 'none',
         depletion: 1
       },
-      'charcoal': {
+      'coal': {
         id: 'charcoal',
         currentAmountRange: [20, 80],
         maxAmountRange: [50, 150],
@@ -499,48 +500,48 @@ export const LOCATION_TEMPLATES: LocationTemplate[] = [
     resourceTemplates: {
       'common_carp': {
         id: 'common_carp',
-        currentAmountRange: [30, 80],
-        maxAmountRange: [50, 120],
-        renewalRate: 4,
+        currentAmountRange: [300, 80],
+        maxAmountRange: [500, 1200],
+        renewalRate: 0.05,
         renewalType: 'fast',
         depletion: 1
       },
       'river_trout': {
         id: 'river_trout',
-        currentAmountRange: [20, 60],
-        maxAmountRange: [35, 90],
-        renewalRate: 3,
+        currentAmountRange: [200, 600],
+        maxAmountRange: [350, 900],
+        renewalRate: 0.05,
         renewalType: 'seasonal',
         depletion: 1
       },
       'common_clay': {
         id: 'common_clay',
-        currentAmountRange: [100, 300],
-        maxAmountRange: [100, 300],
+        currentAmountRange: [1000, 3000],
+        maxAmountRange: [1000, 3000],
         renewalRate: 0,
         renewalType: 'none',
         depletion: 1
       },
       'fire_clay': {
         id: 'fire_clay',
-        currentAmountRange: [50, 150],
-        maxAmountRange: [50, 150],
+        currentAmountRange: [500, 1500],
+        maxAmountRange: [500, 1500],
         renewalRate: 0,
         renewalType: 'none',
         depletion: 1
       },
       'river_stones': {
         id: 'river_stones',
-        currentAmountRange: [80, 200],
-        maxAmountRange: [80, 200],
+        currentAmountRange: [800, 2000],
+        maxAmountRange: [800, 2000],
         renewalRate: 0,
         renewalType: 'none',
         depletion: 1
       },
       'water_plants': {
         id: 'water_plants',
-        currentAmountRange: [40, 100],
-        maxAmountRange: [60, 140],
+        currentAmountRange: [400, 1000],
+        maxAmountRange: [600, 1400],
         renewalRate: 6,
         renewalType: 'fast',
         depletion: 1

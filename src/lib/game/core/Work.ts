@@ -1,7 +1,7 @@
 // Work.ts - Work Assignment and Priority System
 import type { Pawn, Location, GameState } from '$lib/game/core/types';
 import { getItemInfo } from './Items';
-import { getDiscoveredLocations, getAvailableResourcesFromLocation, getLocationInfo } from './Locations';
+import { getDiscoveredLocations, getAvailableResourcesFromLocation, getLocationInfo, extractResource } from './Locations';
 
 export interface WorkCategory {
   id: string;
@@ -209,11 +209,28 @@ export function processWorkHarvesting(state: GameState): GameState {
     // Get all available resource IDs for this work type
     const availableResourceIds = getAvailableResourceIdsForWork(state, workType);
 
-    // For each available resource, increment it
+    // For each available resource, try to extract it from locations
     availableResourceIds.forEach(resourceId => {
       const harvestAmount = calculateHarvestAmount(pawn, workType, 1, state);
       if (harvestAmount > 0) {
-        harvestedResources[resourceId] = (harvestedResources[resourceId] || 0) + harvestAmount;
+        
+        // NEW: Extract from location resource nodes
+        let totalExtracted = 0;
+        for (const location of getDiscoveredLocations()) {
+          const availableInLocation = getAvailableResourcesFromLocation(location);
+          if (availableInLocation.includes(resourceId)) {
+            const extracted = extractResource(location, resourceId, harvestAmount - totalExtracted);
+            totalExtracted += extracted;
+            
+            // Stop if we've extracted enough
+            if (totalExtracted >= harvestAmount) break;
+          }
+        }
+        
+        // Only add to player inventory what was actually extracted
+        if (totalExtracted > 0) {
+          harvestedResources[resourceId] = (harvestedResources[resourceId] || 0) + totalExtracted;
+        }
       }
     });
 
@@ -221,6 +238,7 @@ export function processWorkHarvesting(state: GameState): GameState {
     newState.currentJobIndex[pawn.id] = (idx + 1) % sortedWorks.length;
   });
 
+  // Add extracted resources to player inventory
   Object.entries(harvestedResources).forEach(([resourceId, amount]) => {
     newState.item = newState.item.map(item =>
       item.id === resourceId
