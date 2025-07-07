@@ -229,8 +229,8 @@
 
       if (props.populationCapacity) properties.push(`🏠 +${props.populationCapacity} housing`);
       if (props.knowledgeGeneration)
-        properties.push(`📚 +${props.knowledgeGeneration} knowledge/day`);
-      if (props.foodProduction) properties.push(`🍖 +${props.foodProduction} food/day`);
+        properties.push(`📚 +${props.knowledgeGeneration} knowledge/hour`);
+      if (props.foodProduction) properties.push(`🍖 +${props.foodProduction} food/hour`);
       if (props.defensiveStrength) properties.push(`🛡️ +${props.defensiveStrength} defense`);
       if (props.craftingSpeed)
         properties.push(`⚡ +${Math.round((props.craftingSpeed - 1) * 100)}% crafting speed`);
@@ -249,7 +249,7 @@
 
     return Object.entries(building.upkeepCost).map(([itemId, amount]) => {
       const item = getItemInfo(itemId);
-      return `${item?.name || itemId}: ${amount}/day`;
+      return `${item?.name || itemId}: ${amount}/hour`;
     });
   }
 </script>
@@ -304,7 +304,7 @@
         progress={(firstBuildingInProgress.building.buildTime -
           firstBuildingInProgress.turnsRemaining) /
           firstBuildingInProgress.building.buildTime}
-        timeRemaining="{firstBuildingInProgress.turnsRemaining} days remaining"
+        timeRemaining="{firstBuildingInProgress.turnsRemaining} hours remaining"
         onCancel={() => cancelBuilding(0)}
         cancelTitle="Cancel construction and refund materials"
         accentColor="#4caf50"
@@ -352,7 +352,7 @@
 
             <!-- Requirements Section -->
             <div class="building-requirements">
-              <div class="build-time">⏰ {building.buildTime} days</div>
+              <div class="build-time">⏰ {building.buildTime} hours</div>
               {#each getBuildingRequirements(building) as requirement}
                 <div class="requirement-item">{requirement}</div>
               {/each}
@@ -403,7 +403,7 @@
                     {#if effect === 'populationCapacity'}
                       +{value} population capacity
                     {:else if effect.includes('Production')}
-                      +{value} {formatEffectName(effect.replace('Production', ''))} per day
+                      +{value} {formatEffectName(effect.replace('Production', ''))} per hour
                     {:else if effect.includes('Multiplier')}
                       +{Math.round((value - 1) * 100)}% {formatEffectName(
                         effect.replace('Multiplier', '')

@@ -440,7 +440,7 @@
               name={mission.name}
               description="Exploring {mission.targetLocation}"
               progress={(mission.duration - mission.turnsRemaining) / mission.duration}
-              timeRemaining="{mission.turnsRemaining} days remaining"
+              timeRemaining="{mission.turnsRemaining} hours remaining"
               onCancel={() => recallExplorers(index)}
               cancelTitle="Recall explorers (50% supply refund)"
               accentColor="#2196f3"
@@ -482,7 +482,7 @@
 
               <div class="mission-requirements">
                 <div class="explorers-needed">👥 {mission.explorersRequired} explorers</div>
-                <div class="mission-duration">⏰ {mission.duration} days</div>
+                <div class="mission-duration">⏰ {mission.duration} hours</div>
                 <div class="success-chance">✅ {mission.successChance}% success chance</div>
 
                 {#if mission.toolsRequired && mission.toolsRequired.length > 0}

@@ -77,7 +77,7 @@
 
 <div class="game-controls">
   <div class="turn-info">
-    <span class="turn-label">Day:</span>
+    <span class="turn-label">Hour:</span>
     <span class="turn-number">{currentTurnValue}</span>
     <div class="turn-status" style="min-width: 210px; display: flex; align-items: center;">
       {#if !isPaused}

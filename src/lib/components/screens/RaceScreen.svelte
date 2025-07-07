@@ -179,13 +179,13 @@
             <div class="implication-card">
               <h4>🧠 Knowledge Generation</h4>
               <p>
-                +{Math.floor((race.baseStats.intelligence + race.baseStats.wisdom) / 10)} per day
+                +{Math.floor((race.baseStats.intelligence + race.baseStats.wisdom) / 10)} per hour
               </p>
               <small>{race.implications.knowledge}</small>
             </div>
             <div class="implication-card">
               <h4>🌾 Food Production</h4>
-              <p>{race.population * 3} per day (3 per citizen)</p>
+              <p>{race.population * 3} per hour (3 per citizen)</p>
               <small>{race.implications.food}</small>
             </div>
             <div class="implication-card">

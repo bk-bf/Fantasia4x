@@ -367,7 +367,7 @@
               description={queueItem.item.description || 'Crafting in progress...'}
               progress={(queueItem.item.craftingTime - queueItem.turnsRemaining) /
                 queueItem.item.craftingTime}
-              timeRemaining="{queueItem.turnsRemaining} days"
+              timeRemaining="{queueItem.turnsRemaining} hours"
               onCancel={() => cancelCrafting(index)}
               cancelTitle="Cancel crafting and refund materials"
               accentColor="#ff9800"
@@ -417,7 +417,7 @@
 
             <!-- Requirements Section -->
             <div class="recipe-requirements">
-              <div class="craft-time">⏰ {item.craftingTime || 1} days</div>
+              <div class="craft-time">⏰ {item.craftingTime || 1} hours</div>
               {#each getItemRequirements(item) as requirement}
                 <div class="requirement-item">{requirement}</div>
               {/each}

@@ -250,13 +250,15 @@
 
   .resource-content {
     display: flex;
-    align-items: center;
+    align-items: flex-start; /* Align children to the top */
     gap: 3px;
   }
 
   .resource-icon {
     font-size: 0.8em;
     flex-shrink: 0;
+    line-height: 1;
+    margin-top: 1px; /* Optional: tweak for perfect alignment */
   }
 
   .resource-info {
@@ -275,11 +277,14 @@
 
   .resource-label {
     color: #e0e0e0;
-    font-size: 0.6em;
-    line-height: 1;
+    font-size: 0.7em;
+    line-height: 1.1;
     text-overflow: ellipsis;
     overflow: hidden;
-    white-space: nowrap;
+    white-space: normal; /* Allow wrapping */
+    word-break: break-word; /* Break long words if needed */
+    hyphens: auto;
+    margin-bottom: 4px; /* Add margin below the label */
   }
 
   .resource-bar {
@@ -310,7 +315,6 @@
     background: #4caf50;
     border-radius: 2px;
   }
-
   .resource-amount-container {
     display: flex;
     align-items: center;
@@ -323,12 +327,11 @@
     font-size: 0.6em;
     font-weight: bold;
     animation: fadeInOut 2s ease-in-out;
-    position: absolute;
-    right: -28px;
-    top: -11px;
+    position: static; /* Remove absolute positioning */
     background: none;
     padding: 0 2px;
     border: none;
+    margin-left: 2px; /* Add a little space from the amount */
   }
 
   @keyframes fadeInOut {
