@@ -2,6 +2,8 @@
 import type { Pawn, Location, GameState } from '$lib/game/core/types';
 import { getItemInfo } from './Items';
 import { getDiscoveredLocations, getAvailableResourcesFromLocation, getLocationInfo, extractResource } from './Locations';
+import { get } from 'svelte/store';
+import { pawnAbilities } from '$lib/stores/gameState';
 
 export interface WorkCategory {
   id: string;
@@ -286,7 +288,7 @@ export function getWorkCategoriesByLocation(locationId: string): WorkCategory[] 
   );
 }
 
-
+// Update calculateWorkEfficiency to use stored abilities
 export function calculateWorkEfficiency(
   pawn: Pawn,
   workCategory: WorkCategory,
@@ -294,14 +296,23 @@ export function calculateWorkEfficiency(
 ): number {
   let efficiency = workCategory.baseEfficiency;
   
-  // Primary stat bonus
-  const primaryStatValue = pawn.stats[workCategory.primaryStat] || 10;
-  efficiency *= (primaryStatValue / 10);
+  // Get stored abilities for this pawn
+  const pawnAbilitiesStore = get(pawnAbilities) as Record<string, Record<string, any>>;
+  const storedAbilities = pawnAbilitiesStore[pawn.id] || {};
   
-  // Secondary stat bonus (smaller effect)
-  if (workCategory.secondaryStat) {
-    const secondaryStatValue = pawn.stats[workCategory.secondaryStat] || 10;
-    efficiency *= (1 + (secondaryStatValue - 10) / 50);
+  // Use work efficiency from abilities if available
+  const workEfficiencyAbility = storedAbilities[`${workCategory.id}Efficiency`];
+  if (workEfficiencyAbility) {
+    efficiency = workEfficiencyAbility.value;
+  } else {
+    // Fallback to stat-based calculation
+    const primaryStatValue = pawn.stats[workCategory.primaryStat] || 10;
+    efficiency *= (primaryStatValue / 10);
+    
+    if (workCategory.secondaryStat) {
+      const secondaryStatValue = pawn.stats[workCategory.secondaryStat] || 10;
+      efficiency *= (1 + (secondaryStatValue - 10) / 50);
+    }
   }
   
   // Location work modifiers
@@ -309,12 +320,7 @@ export function calculateWorkEfficiency(
     efficiency *= location.workModifiers[workCategory.id];
   }
   
-  // Tool bonuses (simplified - would check pawn's equipped tools)
-  // if (pawn.hasRequiredTools(workCategory.toolsRequired)) {
-  //   efficiency *= 1.2;
-  // }
-  
-  return Math.max(0.1, efficiency); // Minimum 10% efficiency
+  return Math.max(0.1, efficiency);
 }
 
 export function getOptimalWorkAssignment(
@@ -397,7 +403,7 @@ export function processWorkProduction(
   return production;
 }
 
-// Add to Work.ts
+// Update calculateHarvestAmount to use stored abilities
 export function calculateHarvestAmount(
   pawn: Pawn, 
   workType: string, 
@@ -407,32 +413,31 @@ export function calculateHarvestAmount(
   const workCategory = getWorkCategory(workType);
   if (!workCategory) return 0;
   
+  // Get stored abilities for this pawn
+  const pawnAbilitiesRecord = gameState.pawnAbilities as Record<string, Record<string, any>> | undefined;
+  const storedAbilities: Record<string, any> = pawnAbilitiesRecord?.[pawn.id] || {};
+  
+  // Use work efficiency from stored abilities
+  const efficiencyAbility = storedAbilities[`${workType}Efficiency`];
+  let efficiency = efficiencyAbility ? efficiencyAbility.value : 1.0;
+  
   // Base harvest rate per priority point
-  const baseHarvestRate = 0;
+  const baseHarvestRate = 2; // Increase base rate
   
-  // Calculate efficiency based on pawn stats
-  const primaryStat = pawn.stats[workCategory.primaryStat] || 10;
-  const statMultiplier = primaryStat / 10; // 10 is average stat
+  // Calculate final harvest amount using stored efficiency
+  const harvestAmount = Math.floor(priority * baseHarvestRate * efficiency);
   
-  // Calculate secondary stat bonus
-  let secondaryBonus = 1;
-  if (workCategory.secondaryStat) {
-    const secondaryStat = pawn.stats[workCategory.secondaryStat] || 10;
-    secondaryBonus = 1 + (secondaryStat - 10) / 50; // Small bonus from secondary stat
+  return Math.max(1, harvestAmount);
+}
+// Add function to get work efficiency description for UI
+export function getWorkEfficiencyDescription(pawn: Pawn, workType: string, gameState: GameState): string {
+const pawnAbilitiesRecord = gameState.pawnAbilities as Record<string, Record<string, any>> | undefined;
+const storedAbilities: Record<string, any> = pawnAbilitiesRecord?.[pawn.id] || {};
+  const efficiencyAbility = storedAbilities[`${workType}Efficiency`];
+  
+  if (efficiencyAbility) {
+    return `${(efficiencyAbility.value * 100).toFixed(0)}% efficiency (${efficiencyAbility.sources.join(', ')})`;
   }
   
-  // Calculate skill bonus (if skills are implemented)
-  const skillLevel = pawn.skills?.[workType] || 0;
-  const skillMultiplier = 1 + (skillLevel / 20); // 20 is max skill level
-  
-  // Calculate final harvest amount
-  const harvestAmount = Math.floor(
-    priority * 
-    baseHarvestRate * 
-    statMultiplier * 
-    secondaryBonus * 
-    skillMultiplier
-  );
-  
-  return Math.max(1, harvestAmount); // Minimum 1 resource per turn if working
+  return 'No efficiency data available';
 }

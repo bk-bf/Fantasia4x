@@ -1,7 +1,7 @@
 import { browser } from '$app/environment';
 import { writable, derived } from 'svelte/store';
-import type { GameState } from '$lib/game/core/types';
-import { generatePawns } from '$lib/game/core/Pawns';
+import type { GameState, Pawn } from '$lib/game/core/types';
+import { generatePawns, processPawnTurn, } from '$lib/game/core/Pawns';
 import { generateRace } from '$lib/game/core/Race';
 import { getBasicMaterials, getItemInfo } from '$lib/game/core/Items';
 import { 
@@ -16,7 +16,8 @@ import {
 } from '$lib/game/core/Buildings';
 import { calculateHarvestAmount } from '$lib/game/core/Work';
 import { processWorkHarvesting as sharedProcessWorkHarvesting } from '$lib/game/core/Work';
-
+import { syncPawnInventoryWithGlobal, syncAllPawnInventories } from '$lib/game/core/PawnEquipment';
+import { calculatePawnAbilities } from '$lib/game/core/Pawns';
 // Game timing configuration
 const TURN_INTERVAL = 3000;
 let gameInterval: number | null = null;
@@ -27,7 +28,6 @@ export const initialGameState: GameState = {
   race: generateRace(),
   pawns: [],
   item: getBasicMaterials().map(item => ({ ...item, amount: 0 })),
-  heroes: [],
   worldMap: [],
   discoveredLocations: [],
   buildingCounts: {},
@@ -52,8 +52,25 @@ export const initialGameState: GameState = {
   activeExplorationMissions: [],
   workAssignments: {},
   productionTargets: [],
-  currentJobIndex: {}
+  currentJobIndex: {},
+  // ADD THIS:
+  pawnAbilities: {} // Record<pawnId, Record<abilityName, { value: number, sources: string[] }>>
 };
+
+
+// Add this function to update pawn abilities in game state
+function updatePawnAbilities(state: GameState): GameState {
+  const newPawnAbilities: Record<string, Record<string, { value: number, sources: string[] }>> = {};
+  
+  state.pawns.forEach(pawn => {
+    newPawnAbilities[pawn.id] = calculatePawnAbilities(pawn);
+  });
+  
+  return {
+    ...state,
+    pawnAbilities: newPawnAbilities
+  };
+}
 
 function saveToLocalStorage(state: GameState) {
   if (browser) {
@@ -127,6 +144,47 @@ function createGameState() {
     }
   }
 
+// Add function to consume item from global storage
+function consumeGlobalItem(itemId: string, quantity: number = 1) {
+  updateWithSave(state => {
+    const itemIndex = state.item.findIndex(item => item.id === itemId);
+    if (itemIndex !== -1 && state.item[itemIndex].amount >= quantity) {
+      const updatedItems = [...state.item];
+      updatedItems[itemIndex] = {
+        ...updatedItems[itemIndex],
+        amount: updatedItems[itemIndex].amount - quantity
+      };
+      
+      // Remove item if amount becomes 0
+      if (updatedItems[itemIndex].amount <= 0) {
+        updatedItems.splice(itemIndex, 1);
+      }
+      
+      return {
+        ...state,
+        item: updatedItems
+      };
+    }
+    return state;
+  });
+}
+
+// Add function to get all equipped items across all pawns
+function getAllEquippedItems(pawns: Pawn[]): Set<string> {
+  const equippedItems = new Set<string>();
+  
+  pawns.forEach(pawn => {
+    Object.values(pawn.equipment).forEach(equipped => {
+      if (equipped) {
+        equippedItems.add(equipped.itemId);
+      }
+    });
+  });
+  
+  return equippedItems;
+}
+
+// Update advanceTurn to sync inventories with equipped item filtering
 function advanceTurn() {
   updateWithSave(state => {
     let newState = { ...state, turn: state.turn + 1 };
@@ -135,13 +193,16 @@ function advanceTurn() {
     newState = processResearch(newState);
     newState = processBuildingQueue(newState);
     newState = processCraftingQueue(newState);
-    // Extract resources from locations
     newState = sharedProcessWorkHarvesting(newState);
+    newState = processPawnTurn(newState);
     
-    // NEW: Renew resources after extraction
+    // AUTO-SYNC: Use the centralized sync function
+    newState = syncAllPawnInventories(newState);
+    
+    // UPDATE ABILITIES: Recalculate all pawn abilities
+    newState = updatePawnAbilities(newState);
+    pawnAbilities
     renewAllLocationResources();
-    
-    // Generate basic resources (food, wood, stone)
     newState = generateItems(newState);
 
     return newState;
@@ -325,9 +386,11 @@ return {
         item: state.item.map(i =>
           i.id === itemId ? { ...i, amount: i.amount + amount } : i
         )
-      }))
+      })),
+    consumeGlobalItem
   };
 }
+
 
 export const gameState = createGameState();
 
@@ -335,3 +398,4 @@ export const gameState = createGameState();
 export const currentTurn = derived(gameState, $gameState => $gameState.turn);
 export const currentItem = derived(gameState, $gameState => $gameState.item);
 export const currentRace = derived(gameState, $gameState => $gameState.race);
+export const pawnAbilities = derived(gameState, $gameState => $gameState.pawnAbilities || {});

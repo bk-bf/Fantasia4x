@@ -2,6 +2,7 @@
 <script lang="ts">
   import MainScreen from '$lib/components/UI/MainScreen.svelte';
   import RaceScreen from '$lib/components/screens/RaceScreen.svelte';
+  import PawnScreen from '$lib/components/screens/PawnScreen.svelte';
   import BuildingMenu from '$lib/components/screens/BuildingMenu.svelte';
   import ResearchScreen from '$lib/components/screens/ResearchScreen.svelte';
   import CraftingScreen from '$lib/components/screens/CraftingScreen.svelte';
@@ -43,6 +44,8 @@
         <MainScreen />
       {:else if currentScreen === 'race'}
         <RaceScreen />
+      {:else if currentScreen === 'pawns'}
+        <PawnScreen />
       {:else if currentScreen === 'building'}
         <BuildingMenu />
       {:else if currentScreen === 'research'}

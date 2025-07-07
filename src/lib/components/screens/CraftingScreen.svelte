@@ -77,7 +77,6 @@
   });
 
   const unsubscribeGame = gameState.subscribe((state) => {
-    inventory = state.inventory || {};
     craftingQueue = state.craftingQueue || [];
     completedResearch = state.completedResearch || [];
     currentToolLevel = state.currentToolLevel || 0;

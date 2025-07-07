@@ -2,7 +2,6 @@ export interface GameState {
   turn: number;
   race: Race;
   item: Item[];
-  heroes: Hero[];
   worldMap: WorldTile[][];
   discoveredLocations: Location[];
   buildingCounts: Record<string, number>;
@@ -30,6 +29,7 @@ export interface GameState {
   productionTargets: ProductionTarget[];
   pawns: Pawn[];
   currentJobIndex: Record<string, number>;
+  pawnAbilities: {} // Record<pawnId, Record<abilityName, { value: number, sources: string[] }>>
 }
 export interface WorkAssignment {
   pawnId: string;
@@ -46,23 +46,70 @@ export interface ProductionTarget {
   resourceTargets: Record<string, number>; // resourceId -> percentage (0-100)
   assignedPawns: string[]; // Pawn IDs assigned to this production
 }
+// NEW: Individual pawn interfaces
+export interface PawnNeeds {
+  hunger: number;          // 0-100, 100 = starving
+  fatigue: number;         // 0-100, 100 = exhausted
+  sleep: number;           // 0-100, 100 = must sleep
+  lastSleep: number;       // turn when last slept
+  lastMeal: number;        // turn when last ate
+}
+
+export interface PawnState {
+  mood: number;            // 0-100, affects work efficiency
+  health: number;          // 0-100, affects everything
+  isWorking: boolean;
+  isSleeping: boolean;
+  isEating: boolean;
+}
 
 export interface Pawn {
   id: string;
   name: string;
-  stats: {
-    strength: number;
-    dexterity: number;
-    intelligence: number;
-    wisdom: number;
-    constitution: number;
-    charisma: number;
+  inventory: PawnInventory;
+  equipment: PawnEquipment;
+  // Individual stats (rolled from race ranges)
+  stats: RaceStats;
+  
+  // NEW: Individual physical traits
+  physicalTraits: {
+    height: number;        // in cm
+    weight: number;        // in kg
+    size: string;          // inherited from race
   };
+  
+  // NEW: Needs and state tracking
+  needs: PawnNeeds;
+  state: PawnState;
+  
+  // Reference to racial traits for bonuses
+  racialTraits: RacialTrait[];
+  
   skills: Record<string, number>; // skillId -> level
   currentWork?: string; // Current work category
   workLocation?: string; // Current work location
 }
 
+export interface PawnInventory {
+  items: Record<string, number>; // itemId -> quantity
+  maxSlots: number;
+  currentSlots: number;
+}
+
+export interface PawnEquipment {
+  weapon?: EquippedItem;
+  armor?: EquippedItem;
+  tool?: EquippedItem;
+  accessory?: EquippedItem;
+}
+
+export interface EquippedItem {
+  itemId: string;
+  durability: number;
+  maxDurability: number;
+  bonuses?: Record<string, number>; // Applied bonuses
+}
+export type EquipmentSlot = 'weapon' | 'armor' | 'tool' | 'accessory';
 export interface Building {
   id: string;
   name: string;
@@ -359,25 +406,103 @@ export interface RaceStats {
   charisma: number;
   constitution: number;
 }
+
+export interface RacialTrait {
+  name: string;
+  description: string;
+  icon: string; // NEW: Add icon property
+  effects: {
+    // Stat bonuses/penalties
+    strengthBonus?: number;
+    dexterityBonus?: number;
+    intelligenceBonus?: number;
+    wisdomBonus?: number;
+    charismaBonus?: number;
+    constitutionBonus?: number;
+    strengthPenalty?: number;
+    dexterityPenalty?: number;
+    intelligencePenalty?: number;
+    wisdomPenalty?: number;
+    charismaPenalty?: number;
+    constitutionPenalty?: number;
+    
+    // Work efficiency modifiers
+    workEfficiency?: Record<string, number>; // workType -> multiplier
+    
+    // Needs modifiers
+    hungerRate?: number;
+    fatigueRate?: number;
+    sleepEfficiency?: number;
+    
+    // Resistances and special abilities
+    fireResistance?: number;
+    coldResistance?: number;
+    poisonResistance?: number;
+    diseaseResistance?: number;
+    magicResistance?: number;
+    damageReduction?: number;
+    
+    // Movement and physical
+    movementSpeed?: number;
+    swimmingSpeed?: number;
+    fallDamageReduction?: number;
+    
+    // Special abilities
+    nightVision?: number;
+    tremorsense?: number;
+    waterBreathing?: number;
+    telepathicRange?: number;
+    
+    // Social and mental
+    intimidation?: number;
+    groupBonus?: number;
+    groupPenalty?: number;
+    isolationPenalty?: number;
+    
+    // Misc effects
+    healingRate?: number;
+    experienceGain?: number;
+    productionBonus?: number;
+    adaptability?: number;
+    memoryBonus?: number;
+    errorReduction?: number;
+    dangerSense?: number;
+    
+    // Time-based effects
+    daytimePenalty?: number;
+    sunlightDependency?: number;
+    
+    // Combat effects
+    combatRage?: number;
+    
+    // Environmental dependencies
+    heatSensitivity?: number;
+    coldImmunity?: number;
+  };
+}
+
 export interface Race {
   id: string;
   name: string;
-  baseStats: RaceStats;
-  traits: any[];
+  
+  // NEW: Stat ranges instead of fixed stats
+  statRanges: Record<string, [number, number]>; // stat name -> [min, max]
+  
+  // NEW: Physical trait ranges
+  physicalTraits: {
+    heightRange: [number, number]; // in cm
+    weightRange: [number, number]; // in kg
+    size: 'tiny' | 'small' | 'medium' | 'large' | 'huge';
+  };
+  
+  // NEW: Typed racial traits
+  racialTraits: RacialTrait[];
+  
   population: number;
-  statVariation: string;
   implications: Record<string, string>;
 }
 
-export interface Hero {
-  id: string;
-  name: string;
-  stats: RaceStats;
-  level: number;
-  equipment: Equipment[];
-  abilities: string[];
-  location?: string;
-}
+
 
 export interface Equipment {
   id: string;
