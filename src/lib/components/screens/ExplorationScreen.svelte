@@ -589,7 +589,7 @@
 
   .resource-grid {
     display: grid;
-    grid-template-columns: repeat(8, 1fr);
+    grid-template-columns: repeat(7, 1fr);
     gap: 10px;
     margin-bottom: 8px;
   }
