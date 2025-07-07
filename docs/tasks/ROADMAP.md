@@ -1,247 +1,325 @@
-Based on the search results showing your current roadmap and the missing crafting/research systems, here's the updated roadmap with the dedicated phases:
+# 🛣️ Fantasia4x Development Roadmap v6.0
+*Strategic Refactoring & Foundation-First Development Plan*
 
-# 🛣️ Fantasia4x Development Roadmap v4.0
+## 🎯 **Current State Analysis**
+**Game Evolution**: Originally conceived as a 4X strategy game, Fantasia4x has evolved into a **text-based colony simulation** with Dwarf Fortress/RimWorld-style depth and Aurora 4x complexity. This evolution is natural and should be embraced.
 
-## 📅 **Phase 1: Core Foundation (Week 1-3)**
-*Complete basic gameplay loop with proper data architecture*
+**Technical Debt Assessment**: 
+- ✅ **Core Systems Implemented**: Race generation, pawn management, work assignments, crafting, research, building, exploration
+- ⚠️ **Critical Architecture Issues**: 100+ abilities creating maintenance nightmare, complex databases overwhelming development, system integration conflicts
+- 🐛 **Known Issues**: Visual bugs, data flow problems, component state synchronization, over-engineered systems before gameplay clarity
+- 📊 **Architecture Strain**: Premature complexity in content databases preventing clear system design and efficient development
 
-### **Milestone 1.1: Database Architecture Setup**
-- [x] Design and implement Race database schema (stats, traits, effects)
-- [x] Design Building database schema (costs, effects, prerequisites)
-- [ ] Design Event database schema (triggers, outcomes, choices)
-- [x] Create Resource database schema (types, properties, production)
-- [ ] **Test**: Database connections work, schemas are valid, empty tables accessible
+## 📅 **COMPLETED SYSTEMS ANALYSIS**
+*What has already been implemented based on commit history and codebase*
 
-### **Milestone 1.2: Race Generation System**
-- [x] Implement race generation logic with stat ranges (-10 to +10)
-- [x] Create trait selection algorithms with stat prerequisites
-- [x] Build race display interface
-- [x] **Test**: Generate 100 races, verify stat distributions and trait logic
+### **✅ Core Foundation (COMPLETED)**
+- [x] **Race Generation System**: Complete with stat ranges (-10 to +10), trait selection algorithms, and race display interface
+- [x] **Resource Management**: Unified item system replacing separate resource tracking
+- [x] **Building System**: Construction mechanics, resource cost validation, building queue system
+- [x] **Population Management**: Pawn generation based on race population with ability calculations
 
-### **Milestone 1.3: Race Database Population**
-- [x] Populate trait database with 5+ traits and their mechanical effects
-- [ ] Add trait prerequisites and stat requirements
-- [x] Connect race generation to live database
-- [ ] **Test**: Generated races use database traits, effects apply correctly
+### **✅ Research & Knowledge System (COMPLETED)**
+- [x] **Research Database**: 15+ research projects with categories (Crafting, Building, Military, Exploration)
+- [x] **Knowledge Accumulation**: Intelligence-based research progression
+- [x] **Research Integration**: Unlocks building levels, tool levels, and screen access
+- [x] **Lore System**: Lore items that unlock specific research projects
 
-### **Milestone 1.4: Building System Logic**
-- [x] Implement building construction mechanics
-- [x] Create resource cost validation
-- [x] Build construction queue system
-- [x] **Test**: Queue buildings, verify resource deduction and time progression
+### **✅ Crafting & Tool System (COMPLETED)**
+- [x] **Tool Database**: 20+ tools across 4 tech levels with categories (Harvesting, Combat, Crafting, Magical)
+- [x] **Crafting Mechanics**: Recipe system with tool requirements and validation
+- [x] **Crafting Queue**: Time-based crafting progression
+- [x] **Tool Effects**: Tools provide meaningful gameplay benefits and production bonuses
 
-### **Milestone 1.5: Building Database Population**
-- [x] Populate building database with 3 core buildings
-- [x] Define building effects and prerequisites
-- [x] Connect building system to live database
-- [x] **Test**: All buildings construct properly, effects apply as designed
+### **✅ Work Assignment System (COMPLETED)**
+- [x] **Work Categories**: Comprehensive work system with harvesting mechanics
+- [x] **Pawn Assignment**: Population job assignment with efficiency calculations
+- [x] **Production System**: Resource generation based on work assignments and priorities
+- [x] **Progress Tracking**: Visual indicators for work progress and efficiency
 
-## 📅 **Phase 2: Research & Knowledge System (Week 4-6)**
-*Knowledge-driven technology progression and unlocks*
+### **✅ Exploration System (COMPLETED)**
+- [x] **Location Database**: Comprehensive locations with resource integration
+- [x] **Mission System**: Exploration missions with requirements and rewards
+- [x] **Discovery Mechanics**: Location discovery through exploration missions
+- [x] **Risk/Reward**: Different exploration difficulty levels and success chances
 
-### **Milestone 2.1: Research System Architecture**
-- [x] Design research database schema (projects, prerequisites, unlocks)
-- [x] Implement knowledge accumulation based on race intelligence
-- [x] Create research queue and progression mechanics
-- [x] Build research screen interface
-- [x] **Test**: Knowledge accumulates, research projects can be queued
+### **✅ Event System (COMPLETED)**
+- [x] **Event Generation**: Comprehensive event system with weighted probability
+- [x] **Event Consequences**: Resource effects, pawn impacts, and building effects
+- [x] **Activity Logging**: Comprehensive logging system for all game activities
+- [x] **Event UI**: Modal system for displaying events and player choices
 
-### **Milestone 2.2: Research Database Population**
-- [x] Populate research database with 15 basic research projects
-- [x] Define research categories (Crafting, Building, Military, Exploration)
-- [x] Add research prerequisites and unlock chains
-- [x] **Test**: Research projects unlock in proper sequence
+### **✅ Inventory & Equipment (COMPLETED)**
+- [x] **Shared Inventory**: Unified inventory system for all pawns
+- [x] **Equipment System**: Pawn equipment with stat bonuses and durability
+- [x] **Item Synchronization**: Inventory synchronization with global item storage
+- [x] **Equipment Effects**: Damage handling and stat modifications
 
-### **Milestone 2.3: Research-Gated Level System**
-- [x] Implement level progression (Tool Level, Building Level, etc.)
-- [x] Connect research completion to level unlocks
-- [x] Add level-gated content in existing screens
-- [x] **Test**: Research unlocks new capabilities in other systems
+### **🔧 Systems Needing Critical Refactoring**
+- ⚠️ **Pawn Abilities**: 100+ abilities creating maintenance nightmare, combat system undefined making abilities premature
+- ⚠️ **Content Databases**: Complex buildings, items, research overwhelming development before core systems are stable
+- ⚠️ **Event System**: Message log is visually unpolished, cannot be unhidden once hidden, and currently does not display any messages due to a bug
+- ⚠️ **System Integration**: Manual mapping between abilities/buildings/items/research creating tedious maintenance
+- ⚠️ **Pawn Behavior**: Pawns track needs but don't act on them (no eating/sleeping behavior), no consequences for unfulfilled needs
 
-### **Milestone 2.4: Research Integration**
-- [x] Connect research to building unlocks
-- [x] Add research-gated screen access (Research Screen via Sage's Library)
-- [x] Implement research bonuses and multipliers
-- [x] **Test**: Research creates meaningful strategic choices
+## 📅 **Phase 1: Foundation Stabilization (Week 1-3)**
+*Goal: Create a stable, simplified foundation through radical content reduction and clean architecture*
 
-## 📅 **Phase 3: Crafting & Tool System (Week 7-9)**
-*Complex crafting chains and job specialization*
+### **Week 1: Content Simplification & System Reduction**
+**Priority: Radical database simplification to enable clear system design**
 
-### **Milestone 3.1: Crafting System Architecture**
-- [x] Design tool database schema (requirements, effects, durability, levels)
-- [x] Design crafting recipe database (inputs, outputs, tool requirements)
-- [x] Implement crafting mechanics and validation
-- [x] Build crafting screen interface
-- [x] **Test**: Tools can be crafted using available resources
+#### **Milestone 1.1: Content Database Simplification**
+- [ ] **Create minimal debug databases** (5-10 entries each):
+  - **Abilities**: Essential work skills (mining, crafting, research, construction) + basic survival (health, carry capacity, movement speed)
+  - **Buildings**: Basic shelter, workshop, storage facility, research lab, food source
+  - **Items**: Food, basic tools, raw materials, simple equipment
+  - **Research**: 3-4 core technologies that unlock debug buildings/items
+- [ ] **Archive full content databases** to `/archive/` folder (preserve for later restoration)
+- [ ] **Update all system references** to work with simplified content
+- [ ] **Verify core game loops** function with minimal content
+- [ ] **Document what was removed** for future reintegration planning
 
-### **Milestone 3.2: Tool Database Population**
-- [x] Populate tool database with 20+ tools across 4 tech levels
-- [x] Add tool categories (Harvesting, Combat, Crafting, Magical)
-- [x] Define tool effects on production and capabilities
-- [x] **Test**: Tools provide meaningful gameplay benefits
+#### **Success Criteria:**
+- Game runs stable with simplified content (5 abilities, 4 buildings, 6 items)
+- All core gameplay loops functional
+- No missing reference errors
+- Turn processing works smoothly
 
-### **Milestone 3.3: Job Assignment System**
-- [ ] Design job database schema (requirements, bonuses, tool dependencies)
-- [ ] Implement population job assignment mechanics
-- [ ] Create job screen interface
-- [ ] **Test**: Population can be assigned to specialized roles
+### **Week 2: System Flow Documentation & Architecture Design**
+**Priority: Map current chaos and design clean system interactions**
 
-### **Milestone 3.4: Job Database Population**
-- [ ] Populate job database with 15+ job types
-- [ ] Connect jobs to tool requirements and production bonuses
-- [ ] Add job efficiency based on race stats and tools
-- [ ] **Test**: Job assignments significantly affect resource production
+#### **Milestone 2.1: System Analysis & Documentation**
+- [ ] **Map current data flow** through all major systems
+- [ ] **Identify integration pain points** where systems conflict
+- [ ] **Document system dependencies** (what needs what, when)
+- [ ] **Analyze state management patterns** across components
+- [ ] **Catalog all system integration points** and potential conflicts
 
-## 📅 **Phase 4: Event-Driven Gameplay (Week 10-12)**
-*Dynamic events with proper data management*
+#### **Milestone 2.2: Clean Architecture Design**
+- [ ] **Create system hierarchy diagram** (primary vs secondary systems)
+- [ ] **Design clean integration interfaces**:
+  - Pawns ↔ Work assignments
+  - Work ↔ Buildings ↔ Production
+  - Events ↔ All other systems
+  - Inventory ↔ Equipment ↔ Pawns
+- [ ] **Define data flow standards** for component communication
+- [ ] **Plan state management consistency** patterns
+- [ ] **Design automated modifier system** to eliminate manual ability/building/item mapping
 
-### **Milestone 4.1: Event System Architecture**
-- [ ] Implement event generation engine with weighted probability
-- [ ] Create event outcome processing system
-- [ ] Build event log interface
-- [ ] **Test**: Event system generates events, processes outcomes correctly
+#### **Deliverables:**
+- Complete system flow diagram
+- Integration interface specifications
+- Refactoring priority list
+- Architecture decision document
 
-### **Milestone 4.2: Event Database Population**
-- [ ] Populate event database with 50 basic events
-- [ ] Define event triggers, outcomes, and prerequisites
-- [ ] Add resource gain/loss events with player choices
-- [ ] **Test**: Events fire correctly, choices have proper consequences
+### **Week 3: Core System Refactoring**
+**Priority: Implement clean architecture with simplified content**
 
-### **Milestone 4.3: Resource Discovery System**
-- [ ] Implement magical resource generation logic
-- [ ] Create procedural resource property system
-- [ ] Build resource discovery event integration
-- [ ] **Test**: Discover new resources, properties affect gameplay
+#### **Milestone 3.1: Pawn System Overhaul**
+- [ ] **Ability System Reduction**: Cut 100+ abilities down to ~15 essential ones
+- [ ] **Automated Modifier System**: Create auto-generation of work efficiencies from Buildings/Items
+- [ ] **Basic Needs Behavior**: Implement eating/sleeping/resting actions
+  - If hunger > 90%, pawns eat automatically
+  - If sleep > 90%, pawns sleep automatically
+  - If fatigue > 80%, pawns rest automatically
+- [ ] **Simple Morale Consequences**: Work refusal at low morale, efficiency penalties
 
-### **Milestone 4.4: Resource Database Expansion**
-- [ ] Expand resource database with magical resource templates
-- [ ] Add procedural property generation rules
-- [ ] Connect discovery system to live database
-- [ ] **Test**: Magical resources generate with proper properties
+#### **Milestone 3.2: System Integration Refactoring**
+- [ ] **Inventory/Equipment synchronization**: Resolve shared vs individual item conflicts
+- [ ] **Event system integration**: Connect events to pawn states with automatic triggers
+- [ ] **State management consistency**: Standardize GameState update patterns
+- [ ] **Work-Production pipeline**: Fix core game loop with simplified systems
 
-## 📅 **Phase 5: Population Evolution & Advanced Systems (Week 13-15)**
-*Complex population mechanics and strategic depth*
+#### **Success Criteria:**
+- All core systems work together without conflicts
+- Clean data flow between components
+- No architectural inconsistencies
+- Stable turn processing with automated systems
 
-### **Milestone 5.1: Population Evolution Logic**
-- [ ] Implement population stat variation system
-- [ ] Create race average calculation mechanics
-- [ ] Build population growth with mutation
-- [ ] **Test**: Population stats evolve over time, averages shift correctly
+## 📅 **Phase 2: Bug Elimination & UI Polish (Week 4-5)**
+*Goal: Create a polished, bug-free experience with simplified systems*
 
-### **Milestone 5.2: Advanced Building Effects**
-- [ ] Implement building effect stacking
-- [ ] Create building prerequisite chains
-- [ ] Add research-gated building unlocks
-- [ ] **Test**: Complex building strategies work, prerequisites enforced
+### **Week 4: Backend Bug Fixes**
+**Priority: Eliminate systemic issues revealed by refactoring**
 
-### **Milestone 5.3: Hero System Architecture**
-- [ ] Design hero database schema (stats, abilities, equipment)
-- [ ] Implement hero generation and management logic
-- [ ] Create hero assignment and experience systems
-- [ ] **Test**: Heroes generate, gain experience, affect gameplay
+#### **Milestone 4.1: Critical Bug Resolution**
+- [ ] **Data synchronization bugs**: Component state inconsistencies, GameState update conflicts
+- [ ] **Event system bugs**: Message log functionality, event trigger reliability, consequence application
+- [ ] **Work assignment bugs**: Efficiency calculations, progress tracking accuracy, task completion logic
+- [ ] **Save/load stability**: State persistence integrity, component restoration, version compatibility
 
-### **Milestone 5.4: Hero Database Population**
-- [ ] Populate hero ability database with 25+ abilities
-- [ ] Add hero equipment and stat progression
-- [ ] Connect hero system to live database
-- [ ] **Test**: Heroes use database abilities, progression works
+#### **Milestone 4.2: System Stability Validation**
+- [ ] **Automated testing** for core loops
+- [ ] **Extended play sessions** (50+ turns without errors)
+- [ ] **Edge case validation** with simplified content
+- [ ] **Performance profiling** and optimization
 
-## 📅 **Phase 6: Combat & Territory (Week 16-18)**
-*Military systems and territorial expansion*
+#### **Success Criteria:**
+- No backend errors for 50+ consecutive game turns
+- All core systems stable and reliable
+- Clean error handling and recovery
 
-### **Milestone 6.1: Threat & Defense System**
-- [ ] Implement raid mechanics and defense calculations
-- [ ] Create military building effects
-- [ ] Add threat escalation based on progress
-- [ ] **Test**: Raids threaten player, defenses provide protection
+### **Week 5: UI/UX Cleanup**
+**Priority: Polish user-facing experience**
 
-### **Milestone 6.2: Location & Territory System**
-- [ ] Design location database schema (types, resources, dangers)
-- [ ] Implement location discovery and management
-- [ ] Create expedition and territory mechanics
-- [ ] **Test**: Locations discovered, expeditions return results
+#### **Milestone 5.1: Visual Polish**
+- [ ] **Visual glitches**: Animation synchronization, display inconsistencies, layout stability
+- [ ] **Component state management**: Standardize UI update patterns, fix reactive data binding
+- [ ] **Information display**: Clear system status indicators, intuitive data presentation
+- [ ] **User experience flow**: Smooth interactions, predictable behavior, graceful error handling
 
-### **Milestone 6.3: Location Database Population**
-- [ ] Populate location database with 50+ location types
-- [ ] Add location-specific events and resources
-- [ ] Connect territory system to live database
-- [ ] **Test**: Location variety creates strategic choices
+#### **Milestone 5.2: Interface Consistency**
+- [ ] Standardize component state management patterns
+- [ ] Fix resource tracking animations and display inconsistencies
+- [ ] Consolidate similar UI patterns (TaskContainer, progress displays, etc.)
+- [ ] Implement consistent error handling across all screens
 
-### **Milestone 6.4: Army & Combat System**
-- [ ] Implement army formation and combat mechanics
-- [ ] Create military unit types and equipment
-- [ ] Add combat resolution and experience systems
-- [ ] **Test**: Military units fight effectively, gain experience
+#### **Success Criteria:**
+- No visual glitches during normal gameplay
+- Responsive and predictable UI
+- Clear information presentation
+- Professional user experience
 
-## 📅 **Phase 7: Diplomatic Complexity (Week 19-20)**
-*Multi-faction interactions and advanced diplomacy*
+## 📅 **Phase 3: Controlled System Development (Week 6-10)**
+*Goal: Systematically expand functionality while maintaining architectural integrity*
 
-### **Milestone 7.1: Diplomatic System Architecture**
-- [ ] Design faction database schema (relations, traits, behaviors)
-- [ ] Implement diplomatic interaction mechanics
-- [ ] Create trade and alliance systems
-- [ ] **Test**: Diplomatic actions affect faction relations
+### **Week 6-7: System Integration Validation**
+**Priority: Prove architecture scales before adding complexity**
 
-### **Milestone 7.2: Complete Database Integration**
-- [ ] Populate faction database with AI civilizations
-- [ ] Add diplomatic event chains and consequences
-- [ ] Integrate all systems with full database
-- [ ] **Test**: Complete game systems interact properly
+#### **Milestone 6.1: Gradual Content Reintroduction**
+- [ ] **Controlled expansion testing**:
+  - Add 10-15 abilities back from archive
+  - Introduce 5-8 additional buildings
+  - Expand item database to 20-25 items
+  - Test stability with each addition
+- [ ] **System interaction validation**: Verify new content doesn't break architecture
+- [ ] **Integration stress testing**: Extended gameplay sessions, multiple pawn management
 
-### **Milestone 7.3: Event Database Expansion**
-- [ ] Expand event database to 200+ events
-- [ ] Add multi-turn event chains
-- [ ] Implement complex event prerequisites
-- [ ] **Test**: Event variety increases, chains work properly
+#### **Milestone 6.2: Architecture Scaling Validation**
+- [ ] **Performance testing** with increased complexity
+- [ ] **Edge case validation** with expanded content
+- [ ] **Integration pattern verification**: Ensure clean system interfaces maintained
+- [ ] **Automated system testing**: Validate modifier generation and system interactions
 
-### **Milestone 7.4: Victory Conditions**
-- [ ] Implement multiple victory paths (Economic, Knowledge, Military, Diplomatic)
-- [ ] Add victory condition tracking and progression
-- [ ] Create endgame scenarios and challenges
-- [ ] **Test**: All victory conditions achievable through different strategies
+#### **Success Criteria:**
+- Architecture handles increased complexity gracefully (20+ abilities, 10+ buildings)
+- No performance degradation
+- All systems remain stable
+- Clean integration patterns maintained
 
-## 📅 **Phase 8: Polish & Balance (Week 21-24)**
-*Refinement and optimization*
+### **Week 8-10: Feature Development & Content Expansion**
+**Priority: Implement remaining roadmap features with architectural discipline**
 
-### **Milestone 8.1: Balance & Tuning**
-- [ ] Analyze gameplay data and balance issues
-- [ ] Adjust database values for optimal gameplay
-- [ ] Implement dynamic difficulty scaling
-- [ ] **Test**: Game remains challenging and fair
+#### **Milestone 8.1: Enhanced Pawn Depth**
+- [ ] **Advanced Needs System**: Complex needs fulfillment with consequences
+- [ ] **Skill Development**: Implement learning curves and expertise specialization
+- [ ] **Personality Traits**: Add traits affecting work preferences and social interactions
+- [ ] **Social Relationships**: Basic friendship and rivalry systems between pawns
 
-### **Milestone 8.2: UI/UX Excellence**
-- [ ] Polish all interfaces for clarity and usability
-- [ ] Add comprehensive tooltips and help systems
-- [ ] Implement accessibility features
-- [ ] **Test**: New players can learn and enjoy immediately
+#### **Milestone 8.2: Advanced Colony Management**
+- [ ] **Resource Scarcity**: Implement supply/demand mechanics and resource depletion
+- [ ] **Storage & Logistics**: Add stockpile management and transportation systems
+- [ ] **Automation Controls**: Add work priority templates and automation rules
+- [ ] **Room & Zone System**: Create specialized areas with environmental effects
 
-### **Milestone 8.3: Performance Optimization**
-- [ ] Optimize database queries and game logic
-- [ ] Implement caching for frequently accessed data
-- [ ] Add performance monitoring and metrics
-- [ ] **Test**: Game runs smoothly with large datasets
+#### **Milestone 8.3: Emergent Storytelling Enhancement**
+- [ ] **Story Memory System**: Track colony history and reference past events
+- [ ] **Dynamic Event Chains**: Multi-turn event sequences with meaningful choices
+- [ ] **Consequence Systems**: Long-term effects of player decisions
+- [ ] **Achievement Narratives**: Unlock story elements based on colony achievements
 
-### **Milestone 8.4: Modding Framework**
-- [ ] Create JSON export/import for database content
-- [ ] Build content modification tools
-- [ ] Add community content integration
-- [ ] **Test**: Custom content can be created and shared
+#### **Success Criteria:**
+- New features integrate seamlessly with existing architecture
+- No regression bugs introduced
+- Enhanced gameplay depth without complexity overwhelm
+- Clear progression and story emergence
 
-## 🔧 **Key Additions**
+## 📅 **Phase 4: Polish & Balance (Week 11-13)**
+*Goal: Refinement for release readiness*
 
-### **Research System Integration**
-- Research unlocks building levels, tool levels, and screen access
-- Knowledge generation drives technological progression
-- Research prerequisites create strategic planning depth
+### **Week 11-12: User Experience Excellence**
 
-### **Crafting Chain Complexity**
-- Tools enable jobs, jobs boost production
-- Multi-tier crafting with tool level requirements
-- Durability and upgrade systems for long-term planning
+#### **Milestone 11.1: Content Restoration & Balance**
+- [ ] **Full content database restoration**: Systematically reintroduce archived content
+- [ ] **Balance refinement**: Ensure all abilities, buildings, items provide viable gameplay paths
+- [ ] **Economic balance**: Resource production/consumption creates meaningful choices
+- [ ] **Difficulty scaling**: Multiple difficulty options that scale appropriately
 
-### **Level-Gated Progression**
-```
-Research → Unlock Building → Build Structure → Unlock Screen Level → Access New Content
-```
+#### **Milestone 11.2: Performance & Accessibility**
+- [ ] **Performance optimization**: Smooth gameplay with 50+ pawns and 500+ items
+- [ ] **Accessibility features**: Color blind support, keyboard navigation, screen reader compatibility
+- [ ] **Information architecture**: Streamline UI for complex information display
+- [ ] **Save system robustness**: Backwards compatibility and corruption prevention
 
-This roadmap now includes dedicated phases for the research and crafting systems that are central to your game's strategic depth and Aurora 4x-level complexity.
+### **Week 13: Release Preparation**
+
+#### **Milestone 13.1: Release Readiness**
+- [ ] **Documentation**: Complete player manual and modding guides
+- [ ] **Community features**: Save sharing, screenshot tools, colony showcases
+- [ ] **Marketing materials**: Gameplay videos, feature highlights, developer blog
+- [ ] **Distribution setup**: Steam/itch.io integration, update delivery systems
+
+#### **Success Criteria:**
+- Game provides 20+ hours of engaging gameplay
+- New players can learn and enjoy within 30 minutes
+- Expert players find optimal strategies, casual players have fun
+- Game ready for public release
+
+## 🔧 **CRITICAL SUCCESS FACTORS**
+
+### **🛑 Strict Discipline Checkpoints**
+- **After Week 1**: If simplification breaks core gameplay, stop and fix before proceeding
+- **After Week 3**: If refactoring introduces new bugs, resolve before Phase 2
+- **After Week 5**: Game must feel stable and polished before complexity expansion
+- **After Week 7**: Architecture must handle moderate complexity before full feature development
+
+### **📊 Success Metrics Per Phase**
+- **Phase 1**: Game runs with 5 abilities, 4 buildings, 6 items; complete system flow diagram; all core loops work without architectural conflicts
+- **Phase 2**: No backend errors for 50+ turns; UI feels responsive and professional
+- **Phase 3**: Game handles 20+ abilities, 10+ buildings without issues; new features integrate seamlessly
+- **Phase 4**: Game ready for public release with full content restored
+
+### **🎯 Development Principles**
+- **Architecture-first approach**: New features must fit clean system design
+- **Incremental complexity**: Add features one at a time with full testing
+- **Integration validation**: Each feature must have clear system interfaces
+- **Content discipline**: Resist adding complexity until architecture is proven
+
+### **⚠️ Risk Mitigation**
+- **Content temptation**: Resist adding complexity until architecture is proven (Week 6+)
+- **Feature creep**: New ideas must wait until current phase is complete
+- **Perfectionism**: Good enough is better than perfect but incomplete
+- **Scope expansion**: Stick to simplified content until validation phases
+
+## 🚨 **MANDATORY PHASE GATES**
+
+### **End of Phase 1 Gate**: 
+- [ ] Game runs stable with simplified content (5 abilities, 4 buildings, 6 items)
+- [ ] Complete system flow diagram exists and is implementable
+- [ ] All core loops work without bugs or architectural conflicts
+- [ ] Clean architecture can support planned expansions
+- **🚫 Cannot proceed to Phase 2 until these are met**
+
+### **End of Phase 2 Gate**:
+- [ ] No backend errors for 50+ consecutive game turns
+- [ ] UI feels responsive and professional with no visual glitches
+- [ ] All existing features work without bugs or synchronization issues
+- [ ] Code architecture validated through extended testing
+- **🚫 Cannot proceed to Phase 3 until these are met**
+
+### **End of Phase 3 Gate**:
+- [ ] Architecture handles 20+ abilities, 10+ buildings without performance issues
+- [ ] All new features integrate without regression bugs
+- [ ] Game provides 10+ hours of engaging gameplay
+- [ ] System scaling validated through stress testing
+- **🚫 Cannot proceed to Phase 4 until these are met**
+
+## 🌟 **CORE PHILOSOPHY**
+
+**From Complex Chaos to Simple Excellence**: This roadmap transforms Fantasia4x from a complex, fragile system into a robust, scalable foundation through radical simplification followed by controlled expansion.
+
+**Key Insight**: A simple system that works perfectly is infinitely more valuable than a complex system that barely functions. By Week 8, you'll have clean, maintainable architecture that can handle any feature addition with confidence.
+
+**Success Mantra**: Make it work simply, make it work reliably, then make it work completely.
+
+The patience and discipline required in Phases 1-2 will pay massive dividends in Phases 3-4, where feature development becomes fast, reliable, and enjoyable rather than a constant battle against technical debt.
