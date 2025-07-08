@@ -69,26 +69,6 @@
 - **Week 2:** Map data flow, document dependencies, design clean integration interfaces, and plan state management.
 - **Week 3:** Refactor pawn system (reduce abilities, add basic needs/behavior), automate modifiers, standardize state management, and fix integration.
 
-### **Week 1: Content Simplification & System Reduction**
-**Priority: Radical database simplification to enable clear system design**
-
-#### **Milestone 1.1: Content Database Simplification**
-- [ ] **Create minimal debug databases** (5-10 entries each):
-  - **Abilities**: Essential work skills (mining, crafting, research, construction) + basic survival (health, carry capacity, movement speed)
-  - **Buildings**: Basic shelter, workshop, storage facility, research lab, food source
-  - **Items**: Food, basic tools, raw materials, simple equipment
-  - **Research**: 3-4 core technologies that unlock debug buildings/items
-- [ ] **Archive full content databases** to `/archive/` folder (preserve for later restoration)
-- [ ] **Update all system references** to work with simplified content
-- [ ] **Verify core game loops** function with minimal content
-- [ ] **Document what was removed** for future reintegration planning
-
-#### **Success Criteria:**
-- Game runs stable with simplified content (5 abilities, 4 buildings, 6 items)
-- All core gameplay loops functional
-- No missing reference errors
-- Turn processing works smoothly
-
 ### **Week 2: System Flow Documentation & Architecture Design**
 **Priority: Map current chaos and design clean system interactions**
 

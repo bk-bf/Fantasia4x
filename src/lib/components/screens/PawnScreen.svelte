@@ -17,7 +17,7 @@
     calculatePawnAbilities,
     categorizeAbilities,
     getAbilityDescription
-  } from '$lib/game/core/Pawns';
+  } from '$lib/game/entities/Pawns';
 
   let pawns: Pawn[] = [];
   let selectedPawn: Pawn | null = null;
