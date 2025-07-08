@@ -63,7 +63,11 @@
 - ⚠️ **Pawn Behavior**: Pawns track needs but don't act on them (no eating/sleeping behavior), no consequences for unfulfilled needs
 
 ## 📅 **Phase 1: Foundation Stabilization (Week 1-3)**
-*Goal: Create a stable, simplified foundation through radical content reduction and clean architecture*
+*Goal: Simplify content and architecture for a stable base.*
+
+- **Week 1:** Reduce databases to minimal debug entries (5-10 per type), archive full content, update references, verify core loops, and document removals.
+- **Week 2:** Map data flow, document dependencies, design clean integration interfaces, and plan state management.
+- **Week 3:** Refactor pawn system (reduce abilities, add basic needs/behavior), automate modifiers, standardize state management, and fix integration.
 
 ### **Week 1: Content Simplification & System Reduction**
 **Priority: Radical database simplification to enable clear system design**
@@ -136,8 +140,13 @@
 - No architectural inconsistencies
 - Stable turn processing with automated systems
 
+**Gate:** Game must run with minimal content, clean architecture, and no core bugs before proceeding.
+
 ## 📅 **Phase 2: Bug Elimination & UI Polish (Week 4-5)**
 *Goal: Create a polished, bug-free experience with simplified systems*
+
+- **Week 4:** Fix backend bugs (sync, event, work assignment, save/load), validate stability with automated and extended testing.
+- **Week 5:** Polish UI/UX (visual glitches, state management, info display, error handling, interface consistency).
 
 ### **Week 4: Backend Bug Fixes**
 **Priority: Eliminate systemic issues revealed by refactoring**
@@ -180,11 +189,22 @@
 - Clear information presentation
 - Professional user experience
 
-## 📅 **Phase 3: Controlled System Development (Week 6-10)**
-*Goal: Systematically expand functionality while maintaining architectural integrity*
+
+**Gate:** No backend errors for 50+ turns, responsive UI, and stable features required to proceed.
+
+
+# Modified Roadmap: Phase 3 & Phase 4 with Combat System Implementation
+
+## 📅 **Phase 3: Controlled System Development & Combat Foundation (Week 6-10)**
+*Goal: Gradually reintroduce content and implement core combat.*
+
+- **Weeks 6-7:** Gradually expand content (abilities, buildings, items), stress-test integration and performance.
+- **Week 8:** Build core turn-based combat (state management, ASCII grid, movement, attacks, equipment integration, basic UI).
+- **Week 9:** Add tactical depth (cover, flanking, formations, status effects, equipment effects), implement basic AI.
+- **Week 10:** Integrate combat with colony systems (injuries, morale, events, squad selection, experience), polish and balance.
 
 ### **Week 6-7: System Integration Validation**
-**Priority: Prove architecture scales before adding complexity**
+**Priority: Prove architecture scales before adding combat complexity**
 
 #### **Milestone 6.1: Gradual Content Reintroduction**
 - [ ] **Controlled expansion testing**:
@@ -207,119 +227,292 @@
 - All systems remain stable
 - Clean integration patterns maintained
 
-### **Week 8-10: Feature Development & Content Expansion**
-**Priority: Implement remaining roadmap features with architectural discipline**
+### **Week 8: Combat System Foundation**
+**Priority: Implement core tactical combat engine**
 
-#### **Milestone 8.1: Enhanced Pawn Depth**
-- [ ] **Advanced Needs System**: Complex needs fulfillment with consequences
-- [ ] **Skill Development**: Implement learning curves and expertise specialization
-- [ ] **Personality Traits**: Add traits affecting work preferences and social interactions
-- [ ] **Social Relationships**: Basic friendship and rivalry systems between pawns
+#### **Milestone 8.1: Combat Engine Core**
+- [ ] **Turn-based combat state management**
+  - Implement `CombatState` class with turn order tracking
+  - Create initiative calculation system based on pawn speed stats
+  - Build action point allocation and tracking
+  - Add combat round progression logic
 
-#### **Milestone 8.2: Advanced Colony Management**
-- [ ] **Resource Scarcity**: Implement supply/demand mechanics and resource depletion
-- [ ] **Storage & Logistics**: Add stockpile management and transportation systems
-- [ ] **Automation Controls**: Add work priority templates and automation rules
-- [ ] **Room & Zone System**: Create specialized areas with environmental effects
+- [ ] **ASCII Grid Rendering System**
+  - Create 12x8 battlefield grid component in React
+  - Implement coordinate system (A1-L8) for positioning
+  - Add basic terrain rendering (open ground, trees, water)
+  - Build unit placement and movement visualization
 
-#### **Milestone 8.3: Emergent Storytelling Enhancement**
-- [ ] **Story Memory System**: Track colony history and reference past events
-- [ ] **Dynamic Event Chains**: Multi-turn event sequences with meaningful choices
-- [ ] **Consequence Systems**: Long-term effects of player decisions
-- [ ] **Achievement Narratives**: Unlock story elements based on colony achievements
+- [ ] **Basic Combat Mechanics**
+  - Implement movement system with AP costs
+  - Create basic attack calculations (hit chance, damage)
+  - Add line-of-sight calculations for ranged attacks
+  - Build target selection and validation
 
-#### **Success Criteria:**
-- New features integrate seamlessly with existing architecture
-- No regression bugs introduced
-- Enhanced gameplay depth without complexity overwhelm
-- Clear progression and story emergence
+#### **Milestone 8.2: Equipment Integration**
+- [ ] **Weapon-Based Abilities**
+  - Connect existing item system to combat abilities
+  - Implement weapon-specific actions (sword slash, bow shot, etc.)
+  - Create ability cost calculations based on equipment
+  - Add weapon range and damage modifiers
 
-## 📅 **Phase 4: Polish & Balance (Week 11-13)**
-*Goal: Refinement for release readiness*
-
-### **Week 11-12: User Experience Excellence**
-
-#### **Milestone 11.1: Content Restoration & Balance**
-- [ ] **Full content database restoration**: Systematically reintroduce archived content
-- [ ] **Balance refinement**: Ensure all abilities, buildings, items provide viable gameplay paths
-- [ ] **Economic balance**: Resource production/consumption creates meaningful choices
-- [ ] **Difficulty scaling**: Multiple difficulty options that scale appropriately
-
-#### **Milestone 11.2: Performance & Accessibility**
-- [ ] **Performance optimization**: Smooth gameplay with 50+ pawns and 500+ items
-- [ ] **Accessibility features**: Color blind support, keyboard navigation, screen reader compatibility
-- [ ] **Information architecture**: Streamline UI for complex information display
-- [ ] **Save system robustness**: Backwards compatibility and corruption prevention
-
-### **Week 13: Release Preparation**
-
-#### **Milestone 13.1: Release Readiness**
-- [ ] **Documentation**: Complete player manual and modding guides
-- [ ] **Community features**: Save sharing, screenshot tools, colony showcases
-- [ ] **Marketing materials**: Gameplay videos, feature highlights, developer blog
-- [ ] **Distribution setup**: Steam/itch.io integration, update delivery systems
+- [ ] **Combat UI Foundation**
+  - Build combat interface with turn order display
+  - Create action selection buttons (Move, Attack, Defend, Wait)
+  - Implement target highlighting and range indicators
+  - Add health bars and AP displays for all units
 
 #### **Success Criteria:**
-- Game provides 20+ hours of engaging gameplay
-- New players can learn and enjoy within 30 minutes
-- Expert players find optimal strategies, casual players have fun
-- Game ready for public release
+- Basic 1v1 combat functional with movement and attacks
+- ASCII grid renders properly with unit positioning
+- Equipment determines available combat actions
+- Turn-based flow works without bugs
 
-## 🔧 **CRITICAL SUCCESS FACTORS**
+### **Week 9: Tactical Depth & AI**
+**Priority: Add tactical mechanics and enemy AI**
 
-### **🛑 Strict Discipline Checkpoints**
-- **After Week 1**: If simplification breaks core gameplay, stop and fix before proceeding
-- **After Week 3**: If refactoring introduces new bugs, resolve before Phase 2
-- **After Week 5**: Game must feel stable and polished before complexity expansion
-- **After Week 7**: Architecture must handle moderate complexity before full feature development
+#### **Milestone 9.1: Advanced Combat Mechanics**
+- [ ] **Formation and Positioning**
+  - Implement cover bonuses from terrain (+15% defense)
+  - Add flanking mechanics (+20% damage from sides/rear)
+  - Create formation bonuses (front line +damage, back line +defense)
+  - Build opportunity attack system for movement
 
-### **📊 Success Metrics Per Phase**
-- **Phase 1**: Game runs with 5 abilities, 4 buildings, 6 items; complete system flow diagram; all core loops work without architectural conflicts
-- **Phase 2**: No backend errors for 50+ turns; UI feels responsive and professional
-- **Phase 3**: Game handles 20+ abilities, 10+ buildings without issues; new features integrate seamlessly
-- **Phase 4**: Game ready for public release with full content restored
+- [ ] **Status Effects System**
+  - Create status effect framework (wounded, stunned, buffed)
+  - Implement status effect duration tracking
+  - Add visual indicators for active effects
+  - Build status effect application and removal logic
 
-### **🎯 Development Principles**
-- **Architecture-first approach**: New features must fit clean system design
-- **Incremental complexity**: Add features one at a time with full testing
-- **Integration validation**: Each feature must have clear system interfaces
-- **Content discipline**: Resist adding complexity until architecture is proven
+- [ ] **Equipment Effects in Combat**
+  - Add armor damage reduction calculations
+  - Implement weapon durability and degradation
+  - Create equipment-specific special abilities
+  - Build equipment loss mechanics for defeated units
 
-### **⚠️ Risk Mitigation**
-- **Content temptation**: Resist adding complexity until architecture is proven (Week 6+)
-- **Feature creep**: New ideas must wait until current phase is complete
-- **Perfectionism**: Good enough is better than perfect but incomplete
-- **Scope expansion**: Stick to simplified content until validation phases
+#### **Milestone 9.2: Enemy AI Implementation**
+- [ ] **Basic AI Behaviors**
+  - Implement aggressive AI (always attacks nearest enemy)
+  - Create defensive AI (maintains position, attacks when approached)
+  - Add opportunist AI (targets weak/isolated pawns)
+  - Build support AI (buffs allies, avoids direct combat)
 
-## 🚨 **MANDATORY PHASE GATES**
+- [ ] **AI Decision System**
+  - Create threat assessment algorithms
+  - Implement target prioritization logic
+  - Add positioning evaluation (cover, flanking opportunities)
+  - Build action selection with personality-based weighting
 
-### **End of Phase 1 Gate**: 
-- [ ] Game runs stable with simplified content (5 abilities, 4 buildings, 6 items)
-- [ ] Complete system flow diagram exists and is implementable
-- [ ] All core loops work without bugs or architectural conflicts
-- [ ] Clean architecture can support planned expansions
-- **🚫 Cannot proceed to Phase 2 until these are met**
+#### **Success Criteria:**
+- Tactical positioning provides meaningful advantages
+- Status effects work correctly with duration tracking
+- AI provides challenging but fair opposition
+- Combat feels strategic rather than random
 
-### **End of Phase 2 Gate**:
-- [ ] No backend errors for 50+ consecutive game turns
-- [ ] UI feels responsive and professional with no visual glitches
-- [ ] All existing features work without bugs or synchronization issues
-- [ ] Code architecture validated through extended testing
-- **🚫 Cannot proceed to Phase 3 until these are met**
+### **Week 10: Combat Integration & Polish**
+**Priority: Integrate combat with colony systems and polish experience**
 
-### **End of Phase 3 Gate**:
-- [ ] Architecture handles 20+ abilities, 10+ buildings without performance issues
-- [ ] All new features integrate without regression bugs
-- [ ] Game provides 10+ hours of engaging gameplay
-- [ ] System scaling validated through stress testing
-- **🚫 Cannot proceed to Phase 4 until these are met**
+#### **Milestone 10.1: Colony System Integration**
+- [ ] **Combat Consequences**
+  - Implement injury system affecting work efficiency
+  - Create PTSD/morale effects from combat stress
+  - Add equipment loss impact on colony production
+  - Build pawn death consequences for colony workforce
 
-## 🌟 **CORE PHILOSOPHY**
+- [ ] **Event System Integration**
+  - Connect combat outcomes to event triggers
+  - Create victory/defeat events with appropriate consequences
+  - Implement heroic action events for exceptional performance
+  - Add mourning events for pawn casualties
 
-**From Complex Chaos to Simple Excellence**: This roadmap transforms Fantasia4x from a complex, fragile system into a robust, scalable foundation through radical simplification followed by controlled expansion.
+- [ ] **Pre/Post Combat Systems**
+  - Build squad selection interface for combat missions
+  - Create equipment preparation and assignment
+  - Implement injury treatment and recovery mechanics
+  - Add experience gain system for combat participants
 
-**Key Insight**: A simple system that works perfectly is infinitely more valuable than a complex system that barely functions. By Week 8, you'll have clean, maintainable architecture that can handle any feature addition with confidence.
+#### **Milestone 10.2: Combat Polish & Balance**
+- [ ] **Performance Optimization**
+  - Optimize combat calculations for 20-50 unit battles
+  - Implement efficient pathfinding algorithms
+  - Add combat state caching for faster turn processing
+  - Profile and optimize rendering performance
 
-**Success Mantra**: Make it work simply, make it work reliably, then make it work completely.
+- [ ] **User Experience Polish**
+  - Add combat tutorial for new players
+  - Implement helpful tooltips and information displays
+  - Create clear feedback for all player actions
+  - Add combat log for tracking battle events
 
-The patience and discipline required in Phases 1-2 will pay massive dividends in Phases 3-4, where feature development becomes fast, reliable, and enjoyable rather than a constant battle against technical debt.
+- [ ] **Balance Testing**
+  - Test combat with various pawn configurations
+  - Balance weapon effectiveness and ability costs
+  - Adjust AI difficulty scaling
+  - Validate combat duration targets (10-30 minutes)
+
+#### **Success Criteria:**
+- Combat integrates seamlessly with colony simulation
+- Performance remains smooth with large battles
+- New players can learn combat within 3 encounters
+- Combat outcomes feel fair and consequential
+
+**Gates:** 
+- End of Week 8: Basic combat and grid must work bug-free.
+- End of Week 10: Combat must integrate with colony, AI must be fair, and performance must be smooth.
+
+## 📅 **Phase 4: Combat Enhancement & Visual Evolution (Week 11-15)**
+*Goal: Advanced combat features and graphics implementation*
+
+- **Weeks 11-12:** Implement squad-based commands, advanced tactics, large-scale battles, enhanced AI, and adaptive difficulty.
+- **Weeks 13-14:** Add sprite-based graphics, animation system, and dual-mode rendering.
+- **Week 15:** Finalize combat features, balance, documentation, accessibility, and modding support.
+
+### **Week 11-12: Advanced Combat Features**
+**Priority: Implement sophisticated tactical mechanics**
+
+#### **Milestone 11.1: Squad-Based Command System**
+- [ ] **Squad Organization**
+  - Implement squad creation and management interface
+  - Create squad leader mechanics with command bonuses
+  - Add squad-based order system (attack target, hold position, etc.)
+  - Build squad formation templates and coordination
+
+- [ ] **Advanced Tactical Mechanics**
+  - Implement combo attacks between coordinated pawns
+  - Create environmental hazards (fire, poison, traps)
+  - Add siege mechanics for defensive structures
+  - Build morale system affecting combat performance
+
+- [ ] **Large-Scale Battle Management**
+  - Create battle zone system for 50+ pawn conflicts
+  - Implement automated vs manual control toggles
+  - Add strategic overview mode for large engagements
+  - Build reinforcement and retreat mechanics
+
+#### **Milestone 11.2: Enhanced AI & Difficulty**
+- [ ] **Tactical AI Improvements**
+  - Implement coordinated AI squad behaviors
+  - Create adaptive AI that responds to player tactics
+  - Add AI use of environmental hazards and terrain
+  - Build AI formation and positioning strategies
+
+- [ ] **Dynamic Difficulty System**
+  - Implement adaptive difficulty based on player performance
+  - Create multiple AI intelligence levels
+  - Add encounter scaling based on colony strength
+  - Build optional hardcore mode with permadeath consequences
+
+#### **Success Criteria:**
+- Squad-based combat feels natural and strategic
+- Large battles (30+ pawns) remain manageable and engaging
+- AI provides consistent tactical challenge
+- Difficulty scales appropriately with player skill
+
+### **Week 13-14: Graphics Foundation Implementation**
+**Priority: Implement Caves of Qud-style visual system**
+
+#### **Milestone 13.1: Sprite Rendering System**
+- [ ] **Graphics Architecture**
+  - Implement dual-mode rendering (ASCII/Sprites toggle)
+  - Create tile-based rendering system (32x32 pixels)
+  - Build layered rendering pipeline (terrain → units → effects → UI)
+  - Add zoom levels for tactical overview vs detail view
+
+- [ ] **Asset Pipeline Creation**
+  - Design sprite sheet organization and loading system
+  - Create asset management for different unit types
+  - Implement dynamic sprite selection based on equipment
+  - Build sprite animation framework for combat actions
+
+- [ ] **Basic Sprite Implementation**
+  - Create placeholder sprites for all pawn types
+  - Implement basic enemy sprites with type differentiation
+  - Add terrain tile sprites for all battlefield elements
+  - Build equipment visualization on pawn sprites
+
+#### **Milestone 13.2: Animation System**
+- [ ] **Combat Animations**
+  - Implement attack animation sequences
+  - Create movement animations with smooth transitions
+  - Add death and injury animation effects
+  - Build ability effect animations (magic, special attacks)
+
+- [ ] **UI Animation Integration**
+  - Add smooth camera movement and zoom
+  - Implement selection highlighting and targeting indicators
+  - Create health bar and status effect animations
+  - Build turn transition animations and effects
+
+#### **Success Criteria:**
+- Graphics mode provides clear tactical information
+- Animations enhance rather than distract from gameplay
+- Performance remains smooth with full graphics enabled
+- Visual style maintains text-based game aesthetic
+
+### **Week 15: Polish, Balance & Release Preparation**
+**Priority: Final polish and combat system completion**
+
+#### **Milestone 15.1: Combat System Completion**
+- [ ] **Advanced Features Integration**
+  - Implement all planned weapon types and abilities
+  - Complete status effect system with full variety
+  - Add environmental interaction mechanics
+  - Build complete enemy type roster with unique behaviors
+
+- [ ] **Balance & Tuning**
+  - Comprehensive balance testing across all difficulty levels
+  - Fine-tune combat duration and pacing
+  - Adjust equipment effectiveness and progression
+  - Validate AI challenge across different player skill levels
+
+#### **Milestone 15.2: Documentation & Accessibility**
+- [ ] **Player Documentation**
+  - Create comprehensive combat tutorial system
+  - Build in-game help system for all combat mechanics
+  - Add tooltips and contextual information displays
+  - Create combat strategy guide and tips
+
+- [ ] **Accessibility & Polish**
+  - Implement colorblind-friendly visual indicators
+  - Add keyboard-only combat control options
+  - Create screen reader compatibility for combat UI
+  - Build customizable interface options
+
+- [ ] **Modding Support Foundation**
+  - Create JSON-based combat configuration system
+  - Implement custom sprite loading capabilities
+  - Add scripting hooks for custom AI behaviors
+  - Build documentation for combat system modding
+
+#### **Success Criteria:**
+- Combat system feels complete and polished
+- All accessibility requirements met
+- Documentation enables easy player onboarding
+- Foundation exists for community content creation
+
+**Gate:** Advanced combat and large battles must be stable before graphics implementation.
+
+*Strategic Refactoring & Foundation-First Development Plan*
+
+## 🎯 **Current State Analysis**
+Fantasia4x has evolved from a 4X strategy game into a text-based colony simulation with deep, complex systems. This evolution is positive but has led to technical debt and architectural strain, especially from excessive abilities, complex databases, and premature system integration.
+
+## 📅 **COMPLETED SYSTEMS**
+- **Core Foundation**: Race generation, unified resource management, building, population, research, crafting, work assignment, exploration, event, inventory, and equipment systems are implemented and stable.
+- **Critical Issues**: 100+ abilities (maintenance nightmare), over-complex content databases, system integration conflicts, visual bugs, and incomplete pawn behavior.
+
+## 🚦 **Mandatory Phase Gates & Success Metrics**
+- **Phase 1:** Minimal content, stable core, clean architecture.
+- **Phase 2:** No backend errors, polished UI, stable features.
+- **Phase 3:** Handles expanded content, integrated combat, 10+ hours gameplay.
+- **Phase 4:** Ready for release, full content, accessible, moddable.
+
+## 🌟 **Core Principles**
+- **Architecture-first:** Every feature must fit cleanly.
+- **Incremental complexity:** Add/test one feature at a time.
+- **Integration validation:** Maintain clear interfaces.
+- **Content discipline:** Resist complexity until proven.
+- **Strict phase gates:** Do not proceed with unresolved issues.
+
+**Key Insight:** Simple, reliable systems are more valuable than complex, fragile ones. Discipline in early phases enables rapid, confident expansion later.
+
