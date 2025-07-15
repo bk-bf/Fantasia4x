@@ -1,5 +1,5 @@
-import type {GameState, Pawn, PawnNeeds ,PawnState, Race, RaceStats, RacialTrait } from './types';
-import { createPawnInventory, createPawnEquipment, getEquipmentBonuses } from './PawnEquipment';
+import type {GameState, Pawn, PawnNeeds ,PawnState, Race, RaceStats, RacialTrait } from '../core/types';
+import { createPawnInventory, createPawnEquipment, getEquipmentBonuses } from '../core/PawnEquipment';
 
 
 // Update generatePawns function

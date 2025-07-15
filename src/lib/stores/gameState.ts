@@ -1,7 +1,7 @@
 import { browser } from '$app/environment';
 import { writable, derived } from 'svelte/store';
 import type { GameState, Pawn } from '$lib/game/core/types';
-import { generatePawns, processPawnTurn, } from '$lib/game/core/Pawns';
+import { generatePawns, processPawnTurn } from '$lib/game/entities/Pawns';
 import { generateRace } from '$lib/game/core/Race';
 import { getBasicMaterials, getItemInfo } from '$lib/game/core/Items';
 import { 
@@ -17,7 +17,7 @@ import {
 import { calculateHarvestAmount } from '$lib/game/core/Work';
 import { processWorkHarvesting as sharedProcessWorkHarvesting } from '$lib/game/core/Work';
 import { syncPawnInventoryWithGlobal, syncAllPawnInventories } from '$lib/game/core/PawnEquipment';
-import { calculatePawnAbilities } from '$lib/game/core/Pawns';
+import { calculatePawnAbilities } from '$lib/game/entities/Pawns';
 import { eventSystem } from '$lib/game/core/Events';
 import { triggerEvent } from '$lib/stores/eventStore';
 // Game timing configuration

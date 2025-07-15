@@ -5,25 +5,7 @@ import { getDiscoveredLocations, getAvailableResourcesFromLocation, getLocationI
 import { get } from 'svelte/store';
 import { pawnAbilities } from '$lib/stores/gameState';
 
-export interface WorkCategory {
-  id: string;
-  name: string;
-  description: string;
-  emoji: string;
-  color: string;
-  
-  // Requirements
-  toolsRequired?: string[];
-  skillRequired?: string;
-  locationTypesRequired?: string[]; // Location types where this work can be done
-  
-  // Efficiency modifiers
-  primaryStat: 'strength' | 'dexterity' | 'intelligence' | 'wisdom' | 'charisma' | 'constitution';
-  secondaryStat?: 'strength' | 'dexterity' | 'intelligence' | 'wisdom' | 'charisma' | 'constitution';
-  
-  // Base efficiency
-  baseEfficiency: number;
-}
+import type { WorkCategory } from './types';
 
 export interface WorkAssignment {
   pawnId: string;

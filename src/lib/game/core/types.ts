@@ -31,6 +31,26 @@ export interface GameState {
   currentJobIndex: Record<string, number>;
   pawnAbilities: {} // Record<pawnId, Record<abilityName, { value: number, sources: string[] }>>
 }
+export interface WorkCategory {
+  id: string;
+  name: string;
+  description: string;
+  emoji: string;
+  color: string;
+  
+  // Requirements
+  toolsRequired?: string[];
+  skillRequired?: string;
+  locationTypesRequired?: string[]; // Location types where this work can be done
+  
+  // Efficiency modifiers
+  primaryStat: keyof RaceStats;
+  secondaryStat?: keyof RaceStats;
+  
+  // Base efficiency
+  baseEfficiency: number;
+}
+
 export interface WorkAssignment {
   pawnId: string;
   workPriorities: Record<string, number>; // workCategoryId -> priority (0-10)
