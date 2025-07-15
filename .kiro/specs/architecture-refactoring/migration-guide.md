@@ -1,156 +1,87 @@
-## Refactoring & Migration Task List
+# Architecture Refactoring Migration Guide
 
-A prioritized roadmap for refactoring your codebase with central database files.
+## Overview
 
----
+This guide provides detailed migration procedures for refactoring the Fantasia4x architecture from monolithic files with scattered business logic to a clean service layer pattern with GameEngine coordination.
 
-### 🎯 Phase 1: Extract Logic from Database Files (Week 1-2)
+## Migration Strategy
+
+### Phase 1: Extract Logic from Database Files (Week 1-2)
 **Priority: Critical** — Separate data from business logic.
 
-#### **Priority 1A: Items System Refactor**
-- [ ] **Reorganize `Items.ts` internally:**
+#### Priority 1A: Items System Refactor
+- **Reorganize `Items.ts` internally:**
   - Group items by tech progression (Stone Age → Copper Age → etc.)
   - Add clear section headers and navigation comments
   - Keep all item data in single file for easy balancing
-- [ ] **Extract functions from `Items.ts` into `ItemService.ts`:**
+- **Extract functions from `Items.ts` into `ItemService.ts`:**
   - Move `getItemsByType()`, `getCraftableItems()`, `canCraftItem()` etc.
   - Keep `ITEMS_DATABASE` as pure data export
   - Create clean query interface
-- [ ] **Update all imports** across components to use `ItemService`
+- **Update all imports** across components to use `ItemService`
 
-#### **Priority 1B: Buildings System Refactor**
-- [ ] **Reorganize `Buildings.ts` internally:**
+#### Priority 1B: Buildings System Refactor
+- **Reorganize `Buildings.ts` internally:**
   - Group by building type (Housing → Production → Military → Knowledge)
   - Add progression chains (Basic Workshop → Advanced Workshop)
   - Keep central building database for mod compatibility
-- [ ] **Extract functions into `BuildingService.ts`:**
+- **Extract functions into `BuildingService.ts`:**
   - Move building query functions
   - Building cost/requirement checking
   - Construction logic
-- [ ] **Update `BuildingMenu.svelte`** to use service layer
+- **Update `BuildingMenu.svelte`** to use service layer
 
----
-
-### 🏗️ Phase 2: Create Service Layer (Week 2-3)
+### Phase 2: Create Service Layer (Week 2-3)
 **Priority: High** — Enable clean data access patterns.
 
-#### **Priority 2A: Core Services**
-- [ ] **Create `WorkService.ts`**
+#### Priority 2A: Core Services
+- **Create `WorkService.ts`**
   - Extract work category logic from `Work.ts`
   - Keep work data centralized in reorganized `Work.ts`
   - Clean query interface for work assignments
-- [ ] **Create `ResearchService.ts`**
+- **Create `ResearchService.ts`**
   - Extract research logic from `Research.ts`
   - Keep technology trees in central `Research.ts`
   - Standardize research progression logic
-- [ ] **Create `LocationService.ts`**
+- **Create `LocationService.ts`**
   - Extract location logic from `Locations.ts`
   - Keep location templates centralized
   - Clean exploration and travel interfaces
 
-#### **Priority 2B: Entity Classes**
-- [ ] `src/lib/game/entities/Pawn.ts` — Clean pawn entity with methods
-- [ ] `src/lib/game/entities/Item.ts` — Item entity with crafting logic  
-- [ ] `src/lib/game/entities/Building.ts` — Building entity with effects
+#### Priority 2B: Entity Classes
+- `src/lib/game/entities/Pawn.ts` — Clean pawn entity with methods
+- `src/lib/game/entities/Item.ts` — Item entity with crafting logic  
+- `src/lib/game/entities/Building.ts` — Building entity with effects
 
----
+### Phase 3: System Architecture (Week 3-4)
+**Priority: High** — Implement GameEngine pattern.
 
-### ⚙️ Phase 3: System Architecture (Week 3-4)
-**Priority: High** — Implement your GameEngine pattern.
-
-#### **Priority 3A: Central Game Engine**
-- [ ] **Create `GameEngine.ts`** as proposed
+#### Priority 3A: Central Game Engine
+- **Create `GameEngine.ts`** as proposed
   - Central coordinator for all system interactions
   - Unified efficiency calculations using services
   - Single source of truth for bonuses
-- [ ] **Create `AbilitySystem.ts`**
+- **Create `AbilitySystem.ts`**
   - Extract ability calculations from scattered locations
   - Centralize stat/trait/equipment bonus logic
-- [ ] **Create `CraftingSystem.ts`**
+- **Create `CraftingSystem.ts`**
   - Move crafting logic from `CraftingScreen.svelte`
   - Use `ItemService` for item queries
   - Clean crafting queue management
 
-#### **Priority 3B: Specialized Systems**
-- [ ] **Create `WorkSystem.ts`**
+#### Priority 3B: Specialized Systems
+- **Create `WorkSystem.ts`**
   - Extract work assignment logic
   - Use `WorkService` for work category queries
   - Clean pawn-to-work-to-resource flow
-- [ ] **Create `EquipmentSystem.ts`**
+- **Create `EquipmentSystem.ts`**
   - Extract equipment logic from `PawnEquipment.ts`
   - Use `ItemService` for equipment queries
   - Centralize equipment bonus calculations
-- [ ] **Create `EventSystem.ts`**
+- **Create `EventSystem.ts`**
   - Clean up event triggering and consequence application
 
----
-
-### 🎮 Phase 4: State Management Refactor (Week 4-5)
-**Priority: Medium** — Clean up data flow.
-
-#### **Priority 4A: Unified State**
-- [ ] **Create `StateManager.ts`**
-  - Centralize all GameState mutations
-  - Clean persistence patterns
-- [ ] **Refactor `gameState.ts` store**
-  - Use GameEngine as single source of truth
-  - Remove scattered state management
-- [ ] **Update all components** to use GameEngine store pattern
-
-#### **Priority 4B: Component Architecture**
-- [ ] **Move components to clean structure:**
-  - `core` — Reusable UI components
-  - `game` — Game-specific components  
-  - `screens` — Full screen components
-
----
-
-### 🧹 Phase 5: Cleanup & Polish (Week 5-6)
-**Priority: Low** — Final organization.
-
-#### **Priority 5A: Utilities & Documentation**
-- [ ] **Create utility modules:**
-  - `src/lib/utils/calculations.ts` — Math utilities
-  - `src/lib/utils/formatting.ts` — Display formatting
-  - `src/lib/utils/validation.ts` — Input validation
-- [ ] **Update documentation:**
-  - System architecture docs
-  - Data structure documentation
-  - Integration guides
-
-#### **Priority 5B: Remove Legacy Code**
-- [ ] **Clean up unused functions** from database files
-- [ ] **Standardize exports** from database files
-- [ ] **Add progression chain exports** for balancing tools
-
----
-
-### 🚧 Migration Strategy Per File
-
-#### **For `Items.ts` (Highest Priority):**
-```bash
-# 1. Backup original file
-cp src/lib/game/core/Items.ts src/lib/game/core/Items.ts.backup
-
-# 2. Reorganize Items.ts internally (keep all data)
-# 3. Create ItemService.ts
-touch src/lib/game/services/ItemService.ts
-
-# 4. Move functions from Items.ts to ItemService.ts
-# 5. Update imports one component at a time
-# 6. Test each migration step
-```
-
-**Critical Success Metrics:**
-- [ ] **Week 2:** `ItemService` working, `Items.ts` reorganized internally
-- [ ] **Week 3:** All services created, components using service layer
-- [ ] **Week 4:** GameEngine operational, centralized system interactions
-- [ ] **Week 5:** All components use clean architecture
-- [ ] **Week 6:** Documentation complete, legacy functions removed
-
----
-
-## Revised Directory Structure
+## Target Directory Structure
 
 ```text
 src/
@@ -169,7 +100,7 @@ src/
 │   │   │   ├── Item.ts
 │   │   │   ├── Building.ts
 │   │   │   └── Location.ts
-│   │   ├── systems/                 # Game systems (your GameEngine)
+│   │   ├── systems/                 # Game systems (GameEngine)
 │   │   │   ├── GameEngine.ts        # Central coordinator
 │   │   │   ├── AbilitySystem.ts
 │   │   │   ├── CraftingSystem.ts
@@ -199,13 +130,30 @@ src/
 │       ├── calculations.ts
 │       ├── formatting.ts
 │       └── validation.ts
-└── docs/
-    ├── architecture/
-    ├── data/
-    └── tasks/
 ```
 
----
+## Migration Procedures
+
+### For `Items.ts` (Highest Priority):
+```bash
+# 1. Backup original file
+cp src/lib/game/core/Items.ts src/lib/game/core/Items.ts.backup
+
+# 2. Reorganize Items.ts internally (keep all data)
+# 3. Create ItemService.ts
+touch src/lib/game/services/ItemService.ts
+
+# 4. Move functions from Items.ts to ItemService.ts
+# 5. Update imports one component at a time
+# 6. Test each migration step
+```
+
+## Critical Success Metrics:
+- **Week 2:** `ItemService` working, `Items.ts` reorganized internally
+- **Week 3:** All services created, components using service layer
+- **Week 4:** GameEngine operational, centralized system interactions
+- **Week 5:** All components use clean architecture
+- **Week 6:** Documentation complete, legacy functions removed
 
 ## Key Benefits of This Approach:
 

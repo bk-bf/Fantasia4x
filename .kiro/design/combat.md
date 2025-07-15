@@ -42,13 +42,13 @@ Example Turn Order:
 ### **Action Point System**
 Each pawn receives **Action Points (AP)** per turn based on their stats:
 
-| Action Type | AP Cost | Notes |
-|-------------|---------|-------|
-| Move 1 Tile | 1 AP | Basic movement |
-| Basic Attack | 2-3 AP | Varies by weapon |
-| Special Ability | 3-5 AP | Equipment/skill dependent |
-| Defend/Wait | 1 AP | Gain defensive bonuses |
-| Use Item | 2 AP | Healing, buffs, etc. |
+| Action Type     | AP Cost | Notes                     |
+| --------------- | ------- | ------------------------- |
+| Move 1 Tile     | 1 AP    | Basic movement            |
+| Basic Attack    | 2-3 AP  | Varies by weapon          |
+| Special Ability | 3-5 AP  | Equipment/skill dependent |
+| Defend/Wait     | 1 AP    | Gain defensive bonuses    |
+| Use Item        | 2 AP    | Healing, buffs, etc.      |
 
 **AP Calculation**: `Base AP = 6 + (Speed/20) + Equipment Modifiers`
 

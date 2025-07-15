@@ -104,23 +104,24 @@ Analysis of your codebase against your roadmap and design documents reveals that
 
 ## 🎯 Why Current Architecture Prevents Roadmap Success
 
-| **Phase 1 Goals**              | **Current Blocker**                        |
-|--------------------------------|--------------------------------------------|
-| Clean integration interfaces   | No service layer exists                    |
-| Simplified content             | 100+ abilities, 2000+ line files           |
-| Stable base                    | Circular dependencies, scattered logic     |
+| **Phase 1 Goals**            | **Current Blocker**                    |
+| ---------------------------- | -------------------------------------- |
+| Clean integration interfaces | No service layer exists                |
+| Simplified content           | 100+ abilities, 2000+ line files       |
+| Stable base                  | Circular dependencies, scattered logic |
 
-| **Phase 3 Combat Goals**       | **Architectural Requirement**              | **Current State**                       |
-|--------------------------------|--------------------------------------------|-----------------------------------------|
-| Equipment-driven abilities     | Clean Item → Ability mapping               | Logic scattered across 5+ files         |
-| Unified efficiency system      | Central calculation authority              | Multiple conflicting implementations    |
-| Colony integration             | Clear system boundaries                    | Circular dependencies                   |
+| **Phase 3 Combat Goals**   | **Architectural Requirement** | **Current State**                    |
+| -------------------------- | ----------------------------- | ------------------------------------ |
+| Equipment-driven abilities | Clean Item → Ability mapping  | Logic scattered across 5+ files      |
+| Unified efficiency system  | Central calculation authority | Multiple conflicting implementations |
+| Colony integration         | Clear system boundaries       | Circular dependencies                |
 
-| **Phase 4 Graphics Goals**     | **Required Foundation**                    | **Current Blocker**                     |
-|--------------------------------|--------------------------------------------|-----------------------------------------|
-| Dual-mode rendering            | Clean separation of logic/display          | UI components contain business logic    |
-| Performance optimization       | Efficient data access                      | Monolithic files create overhead        |
-| Modding support                | Clean data/logic separation                | Everything entangled                    |
+| **Phase 4 Graphics Goals** | **Required Foundation**           | **Current Blocker**                  |
+| -------------------------- | --------------------------------- | ------------------------------------ |
+| Dual-mode rendering        | Clean separation of logic/display | UI components contain business logic |
+| Performance optimization   | Efficient data access             | Monolithic files create overhead     |
+| Performance optimization   | Efficient data access             | Monolithic files create overhead     |
+| Modding support            | Clean data/logic separation       | Everything entangled                 |
 
 ---
 
