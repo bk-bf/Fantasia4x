@@ -31,11 +31,37 @@
   - WorkService for work assignment logic
   - ResearchService for research progression
   - _Requirements: 1.1, 1.2, 1.3, 1.4_
-- [ ] **Plan GameEngine pattern implementation**
-  - Central coordinator for system interactions
-  - Unified efficiency calculations
-  - Single source of truth for bonuses
-  - _Requirements: 2.1, 2.2, 2.3_
+- [x] **Plan GameEngine pattern implementation**
+- [ ] **Define GameEngine core interface**
+  - Create GameEngine TypeScript interface with method signatures
+  - Define system coordination methods (processGameTurn, coordinateSystemInteractions)
+  - Define unified calculation methods (calculatePawnEfficiency, calculateBuildingEffects)
+  - Define state management methods (getGameState, updateGameState)
+  - _Requirements: 2.1, 2.2_
+- [ ] **Design service integration architecture**
+  - Define ServiceRegistry interface for managing all services
+  - Plan how GameEngine will inject and coordinate services
+  - Design service communication patterns through GameEngine
+  - Create service lifecycle management strategy
+  - _Requirements: 2.1, 2.3_
+- [ ] **Plan unified calculation system**
+  - Design single source of truth for all bonus calculations
+  - Plan modifier aggregation system (equipment + buildings + research)
+  - Design efficiency calculation pipeline for work assignments
+  - Create calculation caching strategy for performance
+  - _Requirements: 2.2, 4.1, 4.2_
+- [ ] **Design system interaction protocols**
+  - Define how systems request data from other systems through GameEngine
+  - Plan event propagation system for system-to-system communication
+  - Design state consistency validation mechanisms
+  - Create error handling and recovery protocols
+  - _Requirements: 2.1, 2.3, 7.1_
+- [ ] **Plan GameEngine implementation phases**
+  - Define incremental implementation strategy
+  - Plan backward compatibility during transition
+  - Design testing approach for each implementation phase
+  - Create rollback procedures for each phase
+  - _Requirements: 2.1, 9.3, 9.5_
 - [ ] **Design automated modifier system**
   - Auto-generate work efficiencies from Buildings/Items
   - Eliminate manual ability/building/item mapping
