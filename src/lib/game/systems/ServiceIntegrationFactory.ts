@@ -443,11 +443,28 @@ class EventServiceImpl {
     getEventHistory(): any[] { return []; }
 }
 
+// Import the system interaction protocol types
+import type {
+    SystemInteractionCoordinator,
+    SystemDataRequest,
+    SystemDataResponse,
+    SystemEvent,
+    EventProcessingResult,
+    StateUpdateRequest,
+    StateUpdateResult,
+    SystemError,
+    RecoveryResult,
+    InteractionProtocolConfig
+} from './SystemInteractionProtocols';
+
+import { SystemInteractionCoordinatorImpl } from './SystemInteractionCoordinatorImpl';
+
 // Placeholder GameEngine implementation
 class GameEngineImpl implements GameEngine {
     private services?: ServiceRegistry;
     private gameState?: GameState;
     private initialized = false;
+    private interactionCoordinator?: SystemInteractionCoordinator;
 
     constructor(private config: GameEngineConfig) { }
 
@@ -482,10 +499,47 @@ class GameEngineImpl implements GameEngine {
     // Service Integration
     integrateServices(services: ServiceRegistry): void {
         this.services = services;
+        // Initialize interaction coordinator when services are integrated
+        if (this.gameState && !this.interactionCoordinator) {
+            this.interactionCoordinator = new SystemInteractionCoordinatorImpl(
+                services,
+                this.gameState
+            );
+        }
     }
 
     getServices(): ServiceRegistry {
         return this.services!;
+    }
+
+    // System Interaction Protocols
+    getInteractionCoordinator(): SystemInteractionCoordinator {
+        if (!this.interactionCoordinator) {
+            throw new Error('Interaction coordinator not initialized. Call initialize() first.');
+        }
+        return this.interactionCoordinator;
+    }
+
+    async processDataRequest(request: SystemDataRequest): Promise<SystemDataResponse> {
+        return this.getInteractionCoordinator().processDataRequest(request);
+    }
+
+    async propagateEvent(event: SystemEvent): Promise<EventProcessingResult> {
+        return this.getInteractionCoordinator().propagateEvent(event);
+    }
+
+    async coordinateStateUpdate(update: StateUpdateRequest): Promise<StateUpdateResult> {
+        return this.getInteractionCoordinator().coordinateStateUpdate(update);
+    }
+
+    async handleSystemError(error: SystemError): Promise<RecoveryResult> {
+        return this.getInteractionCoordinator().handleSystemError(error);
+    }
+
+    configureInteractionProtocols(config: Partial<InteractionProtocolConfig>): void {
+        // Configuration would be applied to the interaction coordinator
+        // For now, this is a placeholder
+        console.log('Configuring interaction protocols:', config);
     }
 
     // System Lifecycle
@@ -493,11 +547,19 @@ class GameEngineImpl implements GameEngine {
         this.gameState = initialState;
         this.services = services;
         this.initialized = true;
+
+        // Initialize interaction coordinator
+        this.interactionCoordinator = new SystemInteractionCoordinatorImpl(
+            services,
+            initialState
+        );
+
         return { success: true };
     }
 
     shutdown(): any {
         this.initialized = false;
+        this.interactionCoordinator = undefined;
         return { success: true };
     }
 

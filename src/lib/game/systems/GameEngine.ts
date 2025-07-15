@@ -8,8 +8,20 @@
  * Requirements: 2.1, 2.2
  */
 
-import type { GameState, Pawn, Building, Item, WorkAssignment } from '../core/types';
-import type { ServiceRegistry } from '../services';
+import type { GameState, WorkAssignment } from '../core/types';
+import type { ServiceRegistry } from './ServiceIntegration';
+import type {
+    SystemInteractionCoordinator,
+    SystemDataRequest,
+    SystemDataResponse,
+    SystemEvent,
+    EventProcessingResult,
+    StateUpdateRequest,
+    StateUpdateResult,
+    SystemError,
+    RecoveryResult,
+    InteractionProtocolConfig
+} from './SystemInteractionProtocols';
 
 /**
  * Building effects interface for unified calculation results
@@ -258,6 +270,72 @@ export interface GameEngine {
      * @returns The integrated service registry
      */
     getServices(): ServiceRegistry;
+
+    // ===== SYSTEM INTERACTION PROTOCOLS =====
+
+    /**
+     * Get the system interaction coordinator
+     * 
+     * Provides access to the coordinator that handles data requests,
+     * event propagation, state consistency, and error recovery.
+     * 
+     * @returns The system interaction coordinator
+     */
+    getInteractionCoordinator(): SystemInteractionCoordinator;
+
+    /**
+     * Process data request between systems
+     * 
+     * Handles standardized data requests between systems through
+     * the interaction coordinator.
+     * 
+     * @param request - The data request to process
+     * @returns Response with requested data or error
+     */
+    processDataRequest(request: SystemDataRequest): Promise<SystemDataResponse>;
+
+    /**
+     * Propagate event to target systems
+     * 
+     * Handles event propagation through the interaction coordinator,
+     * ensuring proper event handling and cascade management.
+     * 
+     * @param event - The event to propagate
+     * @returns Result of event processing
+     */
+    propagateEvent(event: SystemEvent): Promise<EventProcessingResult>;
+
+    /**
+     * Coordinate state update across systems
+     * 
+     * Handles coordinated state updates with validation and
+     * consistency checking through the interaction coordinator.
+     * 
+     * @param update - The state update request
+     * @returns Result of state update coordination
+     */
+    coordinateStateUpdate(update: StateUpdateRequest): Promise<StateUpdateResult>;
+
+    /**
+     * Handle system error with recovery
+     * 
+     * Handles system errors through the interaction coordinator,
+     * attempting automatic recovery when possible.
+     * 
+     * @param error - The system error to handle
+     * @returns Result of error handling and recovery
+     */
+    handleSystemError(error: SystemError): Promise<RecoveryResult>;
+
+    /**
+     * Configure interaction protocols
+     * 
+     * Updates the configuration for system interaction protocols,
+     * allowing runtime adjustment of protocol behavior.
+     * 
+     * @param config - New protocol configuration
+     */
+    configureInteractionProtocols(config: Partial<InteractionProtocolConfig>): void;
 
     // ===== SYSTEM LIFECYCLE =====
 

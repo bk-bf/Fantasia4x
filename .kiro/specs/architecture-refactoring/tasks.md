@@ -44,19 +44,19 @@
   - Design service communication patterns through GameEngine
   - Create service lifecycle management strategy
   - _Requirements: 2.1, 2.3_
-- [ ] **Plan unified calculation system**
+- [x] **Plan unified calculation system**
   - Design single source of truth for all bonus calculations
   - Plan modifier aggregation system (equipment + buildings + research)
   - Design efficiency calculation pipeline for work assignments
   - Create calculation caching strategy for performance
   - _Requirements: 2.2, 4.1, 4.2_
-- [ ] **Design system interaction protocols**
+- [x] **Design system interaction protocols**
   - Define how systems request data from other systems through GameEngine
   - Plan event propagation system for system-to-system communication
   - Design state consistency validation mechanisms
   - Create error handling and recovery protocols
   - _Requirements: 2.1, 2.3, 7.1_
-- [ ] **Plan GameEngine implementation phases**
+- [x] **Plan GameEngine implementation phases**
   - Define incremental implementation strategy
   - Plan backward compatibility during transition
   - Design testing approach for each implementation phase
