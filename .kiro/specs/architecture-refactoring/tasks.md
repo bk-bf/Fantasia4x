@@ -32,13 +32,13 @@
   - ResearchService for research progression
   - _Requirements: 1.1, 1.2, 1.3, 1.4_
 - [x] **Plan GameEngine pattern implementation**
-- [ ] **Define GameEngine core interface**
+- [x] **Define GameEngine core interface**
   - Create GameEngine TypeScript interface with method signatures
   - Define system coordination methods (processGameTurn, coordinateSystemInteractions)
   - Define unified calculation methods (calculatePawnEfficiency, calculateBuildingEffects)
   - Define state management methods (getGameState, updateGameState)
   - _Requirements: 2.1, 2.2_
-- [ ] **Design service integration architecture**
+- [x] **Design service integration architecture**
   - Define ServiceRegistry interface for managing all services
   - Plan how GameEngine will inject and coordinate services
   - Design service communication patterns through GameEngine
@@ -78,17 +78,17 @@
 **Priority: HIGH - Implement clean architecture**
 
 #### Service Layer Creation
-- [ ] **Extract ItemService.ts from Items.ts**
+- [x] **Extract ItemService.ts from Items.ts**
   - Move `getItemsByType()`, `getCraftableItems()`, `canCraftItem()`
   - Keep `ITEMS_DATABASE` as pure data export
   - Update all component imports to use ItemService
   - _Requirements: 1.1, 4.1, 4.3_
-- [ ] **Extract BuildingService.ts from Buildings.ts**
+- [x] **Extract BuildingService.ts from Buildings.ts**
   - Move building query functions
   - Move building cost/requirement checking
   - Move construction logic
   - _Requirements: 1.2, 4.1, 4.3_
-- [ ] **Create WorkService.ts**
+- [x] **Create WorkService.ts**
   - Extract work category logic from Work.ts
   - Clean pawn-to-work-to-resource flow
   - Standardize work assignment interfaces

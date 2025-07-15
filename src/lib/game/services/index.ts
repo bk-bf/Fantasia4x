@@ -24,9 +24,10 @@ import type { WorkService } from './WorkService';
 import type { ResearchService } from './ResearchService';
 
 /**
- * Service Registry - Central access point for all services
+ * Basic Service Registry - Simple access point for core services
+ * Note: The full ServiceRegistry interface is defined in systems/ServiceIntegration.ts
  */
-export interface ServiceRegistry {
+export interface BasicServiceRegistry {
   itemService: ItemService;
   buildingService: BuildingService;
   workService: WorkService;
@@ -35,8 +36,9 @@ export interface ServiceRegistry {
 
 /**
  * Default service registry with singleton instances
+ * Note: This is a basic registry. For full service integration, use ServiceIntegrationFactory
  */
-export const serviceRegistry: ServiceRegistry = {
+export const basicServiceRegistry: BasicServiceRegistry = {
   itemService,
   buildingService,
   workService,
