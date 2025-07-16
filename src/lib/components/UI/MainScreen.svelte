@@ -5,14 +5,13 @@
   import { onMount } from 'svelte';
   // Update imports for new activity log system
   import { recentActivity, workActivity, eventActivity, criticalActivity } from '$lib/stores/Log';
-  import EventModal from '$lib/components/UI/EventModal.svelte';
+  import ActivityLogOverlay from '$lib/components/UI/ActivityLogOverlay.svelte';
 
   let mapContainer: HTMLElement;
   let currentTurn = 0;
   let raceName = '';
   let buildingCounts: Record<string, number> = {};
-  let showActivityLog = true; // Start expanded
-  let logFilter: 'all' | 'work' | 'events' | 'critical' = 'all'; // Activity filter
+  let showActivityLog = false; // Control overlay visibility
 
   // Subscribe to game state
   const unsubscribe = gameState.subscribe((state) => {
@@ -23,20 +22,6 @@
 
   // Simple check: if any knowledge building exists, unlock research screen
   $: hasResearchCapability = buildingService.hasBuildings(buildingCounts, 'knowledge');
-
-  // Get appropriate activity log based on filter
-  $: currentActivityLog = (() => {
-    switch (logFilter) {
-      case 'work':
-        return $workActivity;
-      case 'events':
-        return $eventActivity;
-      case 'critical':
-        return $criticalActivity;
-      default:
-        return $recentActivity;
-    }
-  })();
 
   // Placeholder ASCII map
   const placeholderMap = `                                        
@@ -77,82 +62,6 @@
       });
       mapContainer.dispatchEvent(simulatedEvent);
     }
-  }
-
-  function toggleActivityLog() {
-    showActivityLog = !showActivityLog;
-  }
-
-  function formatActivityTime(timestamp: Date): string {
-    return new Intl.DateTimeFormat('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    }).format(timestamp);
-  }
-
-  function getSeverityIcon(severity: string): string {
-    switch (severity) {
-      case 'info':
-        return '📝';
-      case 'success':
-        return '✅';
-      case 'warning':
-        return '⚠️';
-      case 'error':
-        return '❌';
-      case 'critical':
-        return '💀';
-      default:
-        return '📄';
-    }
-  }
-
-  function getSeverityColor(severity: string): string {
-    switch (severity) {
-      case 'info':
-        return '#4caf50';
-      case 'success':
-        return '#8bc34a';
-      case 'warning':
-        return '#ff9800';
-      case 'error':
-        return '#f44336';
-      case 'critical':
-        return '#d32f2f';
-      default:
-        return '#666';
-    }
-  }
-
-  function getTypeColor(type: string): string {
-    switch (type) {
-      case 'work':
-        return '#2196f3';
-      case 'building':
-        return '#ff9800';
-      case 'crafting':
-        return '#9c27b0';
-      case 'event':
-        return '#f44336';
-      case 'pawn_action':
-        return '#4caf50';
-      case 'research':
-        return '#673ab7';
-      case 'exploration':
-        return '#795548';
-      case 'system':
-        return '#607d8b';
-      default:
-        return '#666';
-    }
-  }
-
-  function getPawnName(pawnId: string): string {
-    if (pawnId === 'system') return 'System';
-    const state = $gameState;
-    const pawn = state.pawns.find((p) => p.id === pawnId);
-    return pawn ? pawn.name : `Pawn ${pawnId.slice(0, 4)}`;
   }
 </script>
 
@@ -205,72 +114,10 @@
         </div>
       </div>
     </div>
-
-    <!-- Right side: Activity Log -->
-    <div class="activity-log-section" class:collapsed={!showActivityLog}>
-      <div class="activity-log-header">
-        <h4>📋 Settlement Chronicle</h4>
-        <div class="header-controls">
-          <select bind:value={logFilter} class="filter-select">
-            <option value="all">All Activity</option>
-            <option value="work">Work Only</option>
-            <option value="events">Events Only</option>
-            <option value="critical">Critical Only</option>
-          </select>
-          <button class="toggle-btn" on:click={toggleActivityLog}>
-            {showActivityLog ? '👁️' : '👁️‍🗨️'}
-          </button>
-        </div>
-      </div>
-
-      {#if showActivityLog}
-        <div class="activity-log-content">
-          {#if currentActivityLog.length === 0}
-            <div class="no-activity">
-              <p>📭 No activity recorded yet</p>
-              <p class="subtitle">Settlement activity will appear here...</p>
-            </div>
-          {:else}
-            <div class="activity-list">
-              {#each currentActivityLog as entry}
-                <div
-                  class="activity-entry"
-                  class:critical={entry.severity === 'critical'}
-                  class:warning={entry.severity === 'warning'}
-                  class:error={entry.severity === 'error'}
-                >
-                  <div class="activity-header">
-                    <span class="severity-icon" style="color: {getSeverityColor(entry.severity)}">
-                      {getSeverityIcon(entry.severity)}
-                    </span>
-                    <span class="activity-type" style="color: {getTypeColor(entry.type)}">
-                      {entry.type.toUpperCase()}
-                    </span>
-                    <span class="activity-turn">T{entry.turn}</span>
-                    <span class="activity-time">{formatActivityTime(entry.timestamp)}</span>
-                  </div>
-
-                  <div class="activity-details">
-                    <div class="activity-actor">
-                      <strong>{getPawnName(entry.actor || 'system')}</strong>
-                    </div>
-                    <div class="activity-action">
-                      {entry.action}
-                      {#if entry.target}
-                        <span class="activity-target">→ {entry.target}</span>
-                      {/if}
-                    </div>
-                    <div class="activity-result">{entry.result}</div>
-                  </div>
-                </div>
-              {/each}
-            </div>
-          {/if}
-        </div>
-      {/if}
-    </div>
   </div>
 </div>
+<!-- Activity Log Overlay -->
+<ActivityLogOverlay bind:isOpen={showActivityLog} />
 
 <style>
   .main-screen {

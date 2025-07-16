@@ -5,13 +5,18 @@ import { gameState, currentItem } from '$lib/stores/gameState';
 import { modifierSystem } from './ModifierSystem';
 import { workService } from '../services/WorkService';
 import { itemService } from '../services/ItemService';
-import { locationService } from '../services/LocationServices'; // ADD THIS IMPORT
+import { locationService } from '../services/LocationServices';
+
 // import {
 // 	getDiscoveredLocations,
 // 	getAvailableResourcesFromLocation,
 // 	extractResource
 // } from '../core/Locations';
 import type { BuildingEffectResult } from './ModifierSystem';
+// Add these imports at the top with the existing imports
+import { WORK_CATEGORIES } from '../core/Work';
+import type { WorkCategory } from '../core/types';
+import type { Pawn } from '../core/types';
 
 export class GameEngineImpl implements GameEngine {
 
@@ -393,6 +398,106 @@ export class GameEngineImpl implements GameEngine {
 			pendingOperations: 0,
 			errors: []
 		};
+	}
+	/**
+ * Debug command to test work efficiency balance
+ */
+	debugWorkBalance(pawnId?: string, workType?: string): void {
+		if (!this.gameState) {
+			console.log('No game state available');
+			return;
+		}
+
+		const testPawnId = pawnId || this.gameState.pawns[0]?.id;
+		const testWorkType = workType || 'crafting';
+
+		if (!testPawnId) {
+			console.log('No pawns available for testing');
+			return;
+		}
+
+		console.log('\n🔍 WORK EFFICIENCY BALANCE TEST');
+		console.log('================================');
+
+		// Test current state
+		modifierSystem.debugWorkEfficiency(testPawnId, testWorkType, this.gameState);
+
+		// Test balance scenarios
+		modifierSystem.testBalanceScenarios(this.gameState);
+
+		// Test all work types for this pawn
+		console.log(`\n--- All Work Types for Pawn ${testPawnId} ---`);
+		WORK_CATEGORIES.forEach((work: WorkCategory) => {
+			const efficiency = modifierSystem.calculateWorkEfficiency(testPawnId, work.id, this.gameState!);
+			console.log(`${work.id}: ${efficiency.totalValue.toFixed(2)}x (${efficiency.sources.length} sources)`);
+		});
+	}
+
+	validateGameBalance(): void {
+		if (!this.gameState) return;
+
+		const validation = modifierSystem.validateEfficiencyBalance(this.gameState);
+
+		console.log('\n🎯 GAME BALANCE VALIDATION');
+		console.log('==========================');
+		console.log(`Overall Balance: ${validation.isBalanced ? '✅ BALANCED' : '❌ NEEDS ADJUSTMENT'}`);
+
+		if (validation.issues.length > 0) {
+			console.log('\n🚨 Issues Found:');
+			validation.issues.forEach((issue, index) => {
+				console.log(`  ${index + 1}. ${issue}`);
+			});
+		}
+
+		if (validation.recommendations.length > 0) {
+			console.log('\n💡 Recommendations:');
+			validation.recommendations.forEach((rec, index) => {
+				console.log(`  ${index + 1}. ${rec}`);
+			});
+		}
+	}
+	/**
+	 * Quick balance check for all pawns
+	 */
+	checkAllPawnEfficiencies(): void {
+		if (!this.gameState) return;
+
+		console.log('\n📊 ALL PAWN EFFICIENCY SUMMARY');
+		console.log('==============================');
+
+		this.gameState.pawns.forEach((pawn: Pawn) => {
+			console.log(`\nPawn: ${pawn.name} (${pawn.id})`);
+
+			const efficiencies = WORK_CATEGORIES.map((work: WorkCategory) => {
+				const result = modifierSystem.calculateWorkEfficiency(pawn.id, work.id, this.gameState!);
+				return {
+					workType: work.id,
+					efficiency: result.totalValue,
+					sources: result.sources.length
+				};
+			});
+
+			// Show top 3 and bottom 3 efficiencies
+			efficiencies.sort((a, b) => b.efficiency - a.efficiency);
+
+			console.log('  Top 3:');
+			efficiencies.slice(0, 3).forEach(e => {
+				console.log(`    ${e.workType}: ${e.efficiency.toFixed(2)}x (${e.sources} sources)`);
+			});
+
+			if (efficiencies.length > 6) {
+				console.log('  Bottom 3:');
+				efficiencies.slice(-3).forEach(e => {
+					console.log(`    ${e.workType}: ${e.efficiency.toFixed(2)}x (${e.sources} sources)`);
+				});
+			}
+
+			// Flag concerning efficiencies
+			const overpowered = efficiencies.filter(e => e.efficiency > 5.0);
+			if (overpowered.length > 0) {
+				console.warn(`    ⚠️  Overpowered: ${overpowered.map(e => `${e.workType}(${e.efficiency.toFixed(1)}x)`).join(', ')}`);
+			}
+		});
 	}
 }
 

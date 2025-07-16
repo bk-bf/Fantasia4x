@@ -9,6 +9,7 @@ import type {
 import { WORK_CATEGORIES } from '../core/Work';
 import { itemService } from './ItemService';
 import { locationService } from './LocationServices';
+import { buildingService } from './BuildingService';
 
 // Lazy import to avoid circular dependency
 let gameEngineInstance: any = null;
@@ -247,35 +248,13 @@ export class WorkServiceImpl implements WorkService {
 		location?: Location,
 		gameState?: GameState
 	): number {
-		// Simple efficiency calculation without modifier system dependency
-		if (gameState) {
-			// Basic efficiency calculation based on pawn skills
-			let efficiency = 1.0;
-
-			// Apply pawn skill bonuses
-			if (pawn.skills && workCategory.id in pawn.skills) {
-				efficiency += pawn.skills[workCategory.id] / 100;
-			}
-
-			return efficiency;
+		// Delegate to GameEngine's unified calculation system
+		if (this.gameEngine) {
+			return this.gameEngine.calculatePawnEfficiency(pawn.id, workCategory.id);
 		}
 
-		// Fallback to basic calculation when no game state available
-		let efficiency = workCategory.baseEfficiency;
-		const primaryStatValue = pawn.stats[workCategory.primaryStat] || 10;
-		efficiency *= primaryStatValue / 10;
-
-		if (workCategory.secondaryStat) {
-			const secondaryStatValue = pawn.stats[workCategory.secondaryStat] || 10;
-			efficiency *= 1 + (secondaryStatValue - 10) / 50;
-		}
-
-		// Location work modifiers
-		if (location?.workModifiers && location.workModifiers[workCategory.id]) {
-			efficiency *= location.workModifiers[workCategory.id];
-		}
-
-		return Math.max(0.1, efficiency);
+		// Minimal fallback only
+		return workCategory.baseEfficiency;
 	}
 
 	calculateResourceProduction(
@@ -294,15 +273,24 @@ export class WorkServiceImpl implements WorkService {
 		const efficiency = this.calculateWorkEfficiency(pawn, workCategory, undefined, gameState);
 		const availableResources = this.getAvailableResourceIdsForWork(
 			gameState,
-			workAssignment.currentWork
+			workAssignment.currentWork,
+			workAssignment.activeLocation
 		);
 
-		// Calculate base production for each available resource
-		availableResources.forEach((resourceId) => {
-			const priority = workAssignment.workPriorities[workAssignment.currentWork!] || 1;
-			const baseProduction = efficiency * priority * 0.5; // Base production rate
-			production[resourceId] = (production[resourceId] || 0) + baseProduction;
-		});
+		if (availableResources.length === 0) return production;
+
+		// SIMPLE: Base rate 1, no Math.floor()
+		const baseHarvestRate = 1;
+		const totalProduction = baseHarvestRate * efficiency;
+
+		if (workAssignment.currentWork === 'foraging' || availableResources.length > 1) {
+			const selectedResource = availableResources[Math.floor(Math.random() * availableResources.length)];
+			production[selectedResource] = totalProduction;
+		} else {
+			availableResources.forEach((resourceId) => {
+				production[resourceId] = totalProduction;
+			});
+		}
 
 		return production;
 	}
@@ -317,10 +305,10 @@ export class WorkServiceImpl implements WorkService {
 		if (!workCategory) return 0;
 
 		const efficiency = this.calculateWorkEfficiency(pawn, workCategory, undefined, gameState);
-		const baseHarvestRate = 2; // Base harvest rate
+		const baseHarvestRate = 1; // SAME rate as calculateResourceProduction
 
-		const harvestAmount = Math.floor(priority * baseHarvestRate * efficiency);
-		return Math.max(1, harvestAmount);
+		const harvestAmount = baseHarvestRate * efficiency;
+		return Math.max(0.1, harvestAmount); // Show decimals in WorkScreen
 	}
 
 	canPawnDoWork(pawn: Pawn, workCategory: WorkCategory, gameState: GameState): boolean {
@@ -370,14 +358,11 @@ export class WorkServiceImpl implements WorkService {
 
 		gameState.pawns.forEach((pawn) => {
 			const workAssignment = gameState.workAssignments[pawn.id];
-			if (!workAssignment) {
-				console.log(`[WorkService] No work assignment for pawn: ${pawn.name}`);
-				return;
-			}
+			if (!workAssignment) return;
 
 			const sortedWorks = Object.entries(workAssignment.workPriorities)
 				.filter(([_, priority]) => priority > 0)
-				.sort(([, a], [, b]) => b - a); // Sort by priority descending
+				.sort(([, a], [, b]) => a - b); // FIXED: Sort by priority ascending (1 = highest, 12 = lowest)
 
 			if (sortedWorks.length === 0) {
 				console.log(`[WorkService] No prioritized work for pawn: ${pawn.name}`);
@@ -390,27 +375,27 @@ export class WorkServiceImpl implements WorkService {
 
 			console.log(`[WorkService] Pawn ${pawn.name} doing ${workType} with priority ${priority} at ${workAssignment.activeLocation}`);
 
-			// CHANGE: Get available resource IDs for this work type AT THIS LOCATION
-			const availableResourceIds = this.getAvailableResourceIdsForWork(
-				gameState,
-				workType,
-				workAssignment.activeLocation ?? ''  // ← ADD THE LOCATION! (fallback to empty string)
-			);
+			// Create a temporary work assignment for this specific work type
+			const currentWorkAssignment = {
+				...workAssignment,
+				currentWork: workType
+			};
 
-			if (availableResourceIds.length === 0) {
+			// FIXED: Use calculateResourceProduction instead of separate logic
+			const production = this.calculateResourceProduction(currentWorkAssignment, gameState);
+
+			if (Object.keys(production).length === 0) {
 				console.log(`[WorkService] No resources available for ${workType} at ${workAssignment.activeLocation}`);
-				return;
 			}
 
-			// For each available resource, calculate harvest amount
-			availableResourceIds.forEach((resourceId) => {
-				const harvestAmount = this.calculateHarvestAmount(pawn, workType, priority, gameState);
-				if (harvestAmount > 0) {
+			// Process the production results
+			Object.entries(production).forEach(([resourceId, amount]) => {
+				if (amount > 0) {
 					// EXTRACT from location (this will deplete the resource)
 					const actualHarvested = locationService.extractResource(
 						workAssignment.activeLocation ?? '',
 						resourceId,
-						harvestAmount
+						amount
 					);
 
 					if (actualHarvested > 0) {
@@ -420,21 +405,15 @@ export class WorkServiceImpl implements WorkService {
 				}
 			});
 
-			// Add harvested resources to player inventory
-			Object.entries(harvestedResources).forEach(([resourceId, amount]) => {
-				console.log(`[WorkService] Adding ${amount} ${resourceId} to game state`);
-				newState = itemService.addItems({ [resourceId]: amount }, newState);
-			});
-
 			// Advance to next job for next turn
 			newState.currentJobIndex[pawn.id] = (idx + 1) % sortedWorks.length;
 		});
 
-		// Add harvested resources to player inventory
-		Object.entries(harvestedResources).forEach(([resourceId, amount]) => {
-			console.log(`[WorkService] Adding ${amount} ${resourceId} to game state`);
-			newState = itemService.addItems({ [resourceId]: amount }, newState);
-		});
+		// Add all harvested resources to player inventory ONCE at the end
+		if (Object.keys(harvestedResources).length > 0) {
+			console.log(`[WorkService] Adding harvested resources to game state:`, harvestedResources);
+			newState = itemService.addItems(harvestedResources, newState);
+		}
 
 		console.log('[WorkService] Harvest processing completed');
 		return newState;
