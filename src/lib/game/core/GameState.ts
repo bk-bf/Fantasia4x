@@ -1,8 +1,7 @@
 // src/lib/game/core/GameState.ts
 import type { GameState, ResearchProject, Building, Item } from './types';
 import { itemService } from '../services/ItemService';
-import { calculateHarvestAmount } from './Work';
-import { processWorkHarvesting as sharedProcessWorkHarvesting } from './Work';
+import { workService } from '../services/WorkService';
 
 export class GameStateManager {
   private state: GameState;
@@ -25,7 +24,7 @@ export class GameStateManager {
     this.processBuildings();
     this.processCrafting();
     this.processResearch();
-    this.state = sharedProcessWorkHarvesting(this.state); // Now properly integrated
+    this.state = workService.processWorkHarvesting(this.state); // Now properly integrated
   }
 
   private processResources(): void {

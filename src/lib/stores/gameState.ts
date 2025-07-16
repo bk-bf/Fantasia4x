@@ -10,8 +10,7 @@ import {
   processResourceRenewal
 } from '$lib/game/core/Locations';
 import { buildingService } from '$lib/game/services/BuildingService';
-import { calculateHarvestAmount } from '$lib/game/core/Work';
-import { processWorkHarvesting as sharedProcessWorkHarvesting } from '$lib/game/core/Work';
+import { workService } from '$lib/game/services/WorkService';
 import { syncPawnInventoryWithGlobal, syncAllPawnInventories } from '$lib/game/core/PawnEquipment';
 import { calculatePawnAbilities } from '$lib/game/entities/Pawns';
 import { eventSystem } from '$lib/game/core/Events';
@@ -190,7 +189,7 @@ function createGameState() {
       newState = processResearch(newState);
       newState = processBuildingQueue(newState);
       newState = processCraftingQueue(newState);
-      newState = sharedProcessWorkHarvesting(newState);
+      newState = workService.processWorkHarvesting(newState);
       newState = processPawnTurn(newState);
 
       // AUTO-SYNC: Use the centralized sync function

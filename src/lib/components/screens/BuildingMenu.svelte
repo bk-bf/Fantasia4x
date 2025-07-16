@@ -87,7 +87,26 @@
       buildingCounts,
       turn: currentTurnValue,
       race: race,
-      buildingQueue: buildingQueue
+      buildingQueue: buildingQueue,
+      // Required properties with default values
+      worldMap: [],
+      discoveredLocations: [],
+      availableResearch: [],
+      discoveredLore: [],
+      equippedItems: {
+        weapon: null,
+        head: null,
+        chest: null,
+        legs: null,
+        feet: null,
+        hands: null
+      },
+      craftingQueue: [],
+      activeExplorationMissions: [],
+      workAssignments: {},
+      productionTargets: [],
+      currentJobIndex: {},
+      pawnAbilities: {}
     };
 
     return buildingService.canBuildBuilding(building.id, gameStateForCheck) && canAfford(building);

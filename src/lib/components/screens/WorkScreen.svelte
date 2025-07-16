@@ -2,15 +2,10 @@
   import { onMount, onDestroy } from 'svelte';
   import { gameState, currentItem, currentRace } from '$lib/stores/gameState';
   import { uiState } from '$lib/stores/uiState';
-  import {
-    WORK_CATEGORIES,
-    getWorkCategory,
-    getWorkCategoriesByLocation,
-    calculateWorkEfficiency,
-    calculateHarvestAmount
-  } from '$lib/game/core/Work';
+  import { WORK_CATEGORIES } from '$lib/game/core/Work';
   import { getDiscoveredLocations, getLocationInfo } from '$lib/game/core/Locations';
   import { itemService } from '$lib/game/services/ItemService';
+  import { workService } from '$lib/game/services/WorkService';
   import { get } from 'svelte/store';
 
   let race: any = null;
@@ -217,7 +212,7 @@
     if (!pawn) return 0;
     const priority = getPawnWorkPriority(pawnId, workType);
     const state = get(gameState);
-    return calculateHarvestAmount(pawn, workType, priority, state);
+    return workService.calculateHarvestAmount(pawn, workType, priority, state);
   }
 
   function getPawnWorkPriority(pawnId: string, workId: string): number {
@@ -225,7 +220,7 @@
   }
 
   function getWorkCategoryColor(workId: string): string {
-    const work = getWorkCategory(workId);
+    const work = workService.getWorkCategory(workId);
     return work?.color || '#9E9E9E';
   }
 
@@ -244,7 +239,7 @@
 
   function getPawnWorkEfficiency(pawnId: string, workType: string): number {
     const pawn = pawns.find((p) => p.id === pawnId);
-    const workCategory = getWorkCategory(workType);
+    const workCategory = workService.getWorkCategory(workType);
 
     if (!pawn || !workCategory) return 0;
 
@@ -265,7 +260,7 @@
       .map(([workId, priority]) => ({
         workId,
         priority: Number(priority),
-        workCategory: getWorkCategory(workId)
+        workCategory: workService.getWorkCategory(workId)
       }));
   }
 </script>
@@ -306,7 +301,7 @@
               <h4>{pawn.name}</h4>
               {#if pawn.currentWork}
                 <span class="current-work" style="color: {getWorkCategoryColor(pawn.currentWork)}">
-                  {getWorkCategory(pawn.currentWork)?.emoji}
+                  {workService.getWorkCategory(pawn.currentWork)?.emoji}
                 </span>
               {/if}
             </div>
@@ -328,7 +323,7 @@
             {#if getCurrentJobForPawn(pawn.id)}
               {@const currentJob = getCurrentJobForPawn(pawn.id)}
               {#if currentJob}
-                {@const workCategory = getWorkCategory(currentJob.workId)}
+                {@const workCategory = workService.getWorkCategory(currentJob.workId)}
                 {@const efficiency = getPawnWorkEfficiency(pawn.id, currentJob.workId)}
                 {@const expectedHarvest = getExpectedHarvest(pawn.id, currentJob.workId)}
                 {@const workQueue = getPawnWorkQueue(pawn.id)}

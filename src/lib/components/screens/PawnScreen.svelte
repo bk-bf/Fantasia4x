@@ -835,7 +835,7 @@
                   {#if selectedPawn.equipment && selectedPawn.equipment[slot as EquipmentSlot]}
                     {@const equippedItem = selectedPawn.equipment[slot as EquipmentSlot]}
                     {#if equippedItem}
-                      {@const itemInfo = getItemInfo(equippedItem.itemId)}
+                      {@const itemInfo = itemService.getItemById(equippedItem.itemId)}
                       <div class="equipped-item">
                         <span class="item-icon">{itemInfo?.emoji || '📦'}</span>
                         <div class="item-details">
@@ -871,7 +871,7 @@
             <h4>Available Items:</h4>
             <div class="inventory-grid">
               {#each Object.entries(selectedPawn.inventory.items || {}) as [itemId, quantity]}
-                {@const itemInfo = getItemInfo(itemId)}
+                {@const itemInfo = itemService.getItemById(itemId)}
                 {#if itemInfo && quantity > 0 && itemInfo.type !== 'material'}
                   <div class="inventory-item" data-type={itemInfo.type}>
                     <div class="item-header">

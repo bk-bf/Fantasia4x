@@ -121,7 +121,7 @@ _Based on ROADMAP.md v6.0 and Steering Documents_
   - Keep only `AVAILABLE_BUILDINGS` export
   - Update all component imports to use BuildingService
   - Test that all functionality still works
-- [ ] **Phase 2C: Remove business logic from Work.ts**
+- [-] **Phase 2C: Remove business logic from Work.ts**
   - Remove all `export function` declarations from Work.ts
   - Keep only `WORK_CATEGORIES` export
   - Update all component imports to use WorkService
