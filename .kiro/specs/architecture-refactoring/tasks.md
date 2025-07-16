@@ -69,10 +69,14 @@
   - _Requirements: 4.1, 4.2_
 
 #### Deliverables
-- [ ] **Complete system flow diagram**
-- [ ] **Integration interface specifications**
-- [ ] **Refactoring priority list**
-- [ ] **Architecture decision document**
+- [x] **Complete system flow diagram**
+- [x] **Integration interface specifications**
+- [x] **Refactoring priority list**
+- [x] **Architecture decision document**
+- [x] **Update all documentation to reflect the state of the codebase**
+  - ✅ Updated the documentation, ensured no redundancy across documents or outdated docs
+  - ✅ Written a comprehensive glossary to help devs new to the codebase understand how to navigate and reference the documentation and how it is connected
+  - ✅ Updated the tasklist to reflect the state of the codebase according to the documentation
 
 ### Week 2: Core System Refactoring
 **Priority: HIGH - Implement clean architecture**
