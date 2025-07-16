@@ -17,6 +17,10 @@ export { BuildingServiceImpl, buildingService } from './BuildingService';
 export { WorkServiceImpl, workService } from './WorkService';
 export { ResearchServiceImpl, researchService } from './ResearchService';
 
+// System Implementations
+export { modifierSystem } from '../systems/ModifierSystem';
+export { gameEngine } from '../systems/GameEngineImpl';
+
 // Import types for registry
 import type { ItemService } from './ItemService';
 import type { BuildingService } from './BuildingService';
