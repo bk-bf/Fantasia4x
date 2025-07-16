@@ -230,11 +230,11 @@
   }
 
   function getWorkEfficiencyColor(efficiency: number): string {
-    if (efficiency >= 8) return 'green';
-    if (efficiency >= 6) return 'blue';
-    if (efficiency >= 4) return 'yellow';
-    if (efficiency >= 2) return 'orange';
-    return 'red';
+    if (efficiency >= 12) return '#9c27b0'; // Purple for excellent
+    if (efficiency >= 10) return '#8bc34a'; // Light green for good
+    if (efficiency >= 8) return '#ffeb3b'; // Yellow for average
+    if (efficiency >= 6) return '#ff9800'; // Orange for below average
+    return '#f44336'; // Red for poor
   }
 
   function getPawnWorkEfficiency(pawnId: string, workType: string): number {
@@ -349,10 +349,14 @@
                       </div>
                     {/each}
                   </div>
-
                   <div class="harvest-info">
-                    <span class="harvest-rate">+{expectedHarvest}/turn</span>
-                    <span class="efficiency-rating">Efficiency: {efficiency}</span>
+                    <span class="harvest-rate">+{expectedHarvest.toFixed(2)}/turn</span>
+                    <span
+                      class="efficiency-rating"
+                      style="color: {getWorkEfficiencyColor(efficiency)}"
+                    >
+                      Efficiency: {efficiency}
+                    </span>
                   </div>
                 </div>
               {:else}
@@ -383,6 +387,8 @@
                 {@const efficiency = getPawnWorkEfficiency(pawn.id, workCategory.id)}
                 {@const expectedHarvest = getExpectedHarvest(pawn.id, workCategory.id)}
 
+                <!-- In the priorities-grid section, around line 384, update this part: -->
+
                 <div class="priority-setting">
                   <div class="work-info">
                     <span class="work-icon" style="color: {workCategory.color}">
@@ -392,26 +398,27 @@
                   </div>
 
                   <div class="priority-controls">
-                    <!-- Harvest Information -->
-                    {#if priority > 0}
-                      <div class="work-feedback">
-                        <div class="harvest-prediction">
-                          <span class="harvest-amount">+{expectedHarvest}/turn</span>
-                          <span
-                            class="efficiency-indicator"
-                            style="color: {getWorkEfficiencyColor(efficiency)}"
-                          >
-                            {efficiency >= 12
-                              ? 'Excellent'
-                              : efficiency >= 10
-                                ? 'Good'
-                                : efficiency >= 8
-                                  ? 'Average'
-                                  : 'Poor'} efficiency
-                          </span>
-                        </div>
+                    <!-- MOVE: Work feedback ALWAYS shown now -->
+                    <div class="work-feedback">
+                      <div class="harvest-prediction">
+                        <span class="harvest-amount">
+                          {priority > 0 ? `+${expectedHarvest.toFixed(2)}/turn` : '+0/turn'}
+                        </span>
+                        <span
+                          class="efficiency-indicator"
+                          style="color: {getWorkEfficiencyColor(efficiency)}"
+                        >
+                          {efficiency >= 12
+                            ? 'Excellent'
+                            : efficiency >= 10
+                              ? 'Good'
+                              : efficiency >= 8
+                                ? 'Average'
+                                : 'Poor'} efficiency ({efficiency})
+                        </span>
                       </div>
-                    {/if}
+                    </div>
+
                     <button
                       class="priority-btn decrease"
                       class:disabled={priority <= 0}
@@ -429,10 +436,9 @@
 
                     <div class="priority-display">
                       <span class="priority-value">{priority}</span>
-
-                      <!-- Enhanced Progress Bar -->
                       <div class="priority-progress"></div>
                     </div>
+
                     <button
                       class="priority-btn increase"
                       class:disabled={priority >= 12}
@@ -1260,27 +1266,36 @@
   }
 
   .work-feedback {
-    margin-top: 8px;
-    padding: 6px;
+    margin-right: 12px;
+    padding: 4px 8px;
     background: #0a0a0a;
     border-radius: 4px;
+    min-width: 140px;
   }
 
   .harvest-prediction {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 0.8em;
   }
 
   .harvest-amount {
     color: #4caf50;
     font-weight: bold;
-    font-size: 0.9em;
   }
 
   .efficiency-indicator {
-    font-size: 0.8em;
     font-weight: bold;
+    font-size: 0.75em;
+  }
+
+  /* Update priority-controls to accommodate always-visible feedback */
+  .priority-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
   }
   /* Scrollbar styling */
   .work-screen::-webkit-scrollbar {

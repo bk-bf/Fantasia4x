@@ -68,7 +68,7 @@
 <div class="main-screen">
   <div class="screen-header" style="justify-content: center;">
     <div class="header-content">
-      <h3>World of {raceName} - Turn {currentTurn}</h3>
+      <h3>World of {raceName}</h3>
     </div>
   </div>
 
