@@ -1,6 +1,7 @@
 # Project Structure & Organization
 
 ## Root Structure
+
 ```
 fantasia4x/
 ├── src/                    # Source code
@@ -11,9 +12,11 @@ fantasia4x/
 ```
 
 ## Current Architecture Issues
+
 **⚠️ CRITICAL: The project suffers from missing central coordination and circular dependencies that prevent clean system integration.**
 
 ### Major Problems
+
 - **Missing GameEngine**: No central coordinator for system interactions and unified calculations
 - **Circular Dependencies**: Pawns → Items → Work → Pawns creating integration chaos
 - **Scattered Business Logic**: Functions mixed with data in monolithic files
@@ -22,6 +25,7 @@ fantasia4x/
 ## Current Source Organization (`src/lib/`)
 
 ### Existing Structure (Problematic)
+
 ```
 lib/
 ├── components/           # Svelte components
@@ -41,6 +45,7 @@ lib/
 ## Target Architecture (Post-Refactoring)
 
 ### Planned Clean Structure
+
 ```
 lib/
 ├── game/
@@ -92,17 +97,20 @@ lib/
 ## Refactoring Strategy
 
 ### Phase 1: Extract Logic from Database Files
+
 1. **Keep all data centralized** in reorganized core files
 2. **Extract business logic** into service layer
 3. **Maintain mod compatibility** by keeping single-file databases
 4. **Enable clean queries** through service interfaces
 
 ### Phase 2: Create Service Layer
+
 - Clean separation between data access and business logic
 - Unified interfaces for system interactions
 - Elimination of circular dependencies
 
 ### Phase 3: Implement GameEngine Pattern
+
 - Central coordinator for all system interactions
 - Unified efficiency calculations
 - Single source of truth for bonuses and modifiers
@@ -110,17 +118,20 @@ lib/
 ## Key Benefits of Target Architecture
 
 ### Central Database Benefits
+
 - **Easy balancing**: See all weapon damage in one file
 - **Mod-friendly**: Single file for modders to understand
 - **Search efficiency**: Ctrl+F finds anything instantly
 - **No category ambiguity**: Clear where everything belongs
 
 ### Clean Logic Separation
+
 - **Service layer**: Clean queries and business logic
 - **System layer**: Coordinated game mechanics
 - **Pure data files**: Easy to edit, version control friendly
 
 ### Migration Safety
+
 - **No breaking changes**: Data stays in same files
 - **Incremental**: Move logic piece by piece
 - **Testable**: Each service can be tested independently
@@ -129,18 +140,21 @@ lib/
 ## Current Development Guidelines
 
 ### Immediate Priorities (Phase 1)
+
 1. **DO NOT** add new content to monolithic files
 2. **DO** extract functions from Items.ts/Buildings.ts into services
 3. **DO** reorganize existing files internally by progression/type
 4. **DO** maintain backward compatibility during refactoring
 
 ### Code Patterns to Follow
+
 - Use `$lib` alias for internal imports
 - Group imports: external libraries first, then internal modules
 - Maintain strict TypeScript typing throughout refactoring
 - Document all architectural changes in migration logs
 
 ## Documentation Structure (`docs/`)
+
 ```
 docs/
 ├── core/               # Core gameplay documentation
@@ -149,6 +163,7 @@ docs/
 ```
 
 ## Critical Reading
+
 - **Architecture_Analysis_08.25.md**: Detailed analysis of current problems
 - **Refactoring.md**: Step-by-step migration plan
 - **ROADMAP.md**: Updated development priorities focusing on stability

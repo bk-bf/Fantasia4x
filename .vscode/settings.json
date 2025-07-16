@@ -4,11 +4,7 @@
   "[svelte]": {
     "editor.defaultFormatter": "svelte.svelte-vscode"
   },
-  "eslint.validate": [
-    "javascript",
-    "typescript",
-    "svelte"
-  ],
+  "eslint.validate": ["javascript", "typescript", "svelte"],
   "[markdown]": {
     "editor.defaultFormatter": "yzhang.markdown-all-in-one"
   },

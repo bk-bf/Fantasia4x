@@ -3,16 +3,16 @@ export interface EventConsequence {
   description: string;
   probability: number; // 0.0 to 1.0
   effects: {
-    resources?: Record<string, { min: number, max: number }>;
+    resources?: Record<string, { min: number; max: number }>;
     pawnEffects?: {
       targetType: 'all' | 'random' | 'specific' | 'percentage';
       count?: number;
       percentage?: number; // For percentage-based targeting
       effects: {
-        healthChange?: { min: number, max: number };
-        moodChange?: { min: number, max: number };
-        statChanges?: Record<string, { min: number, max: number }>;
-        skillChanges?: Record<string, { min: number, max: number }>;
+        healthChange?: { min: number; max: number };
+        moodChange?: { min: number; max: number };
+        statChanges?: Record<string, { min: number; max: number }>;
+        skillChanges?: Record<string, { min: number; max: number }>;
         addTrait?: string[];
         removeTrait?: string[];
         injuryChance?: number; // 0.0 to 1.0
@@ -21,7 +21,7 @@ export interface EventConsequence {
     };
     buildingEffects?: {
       damageChance?: number;
-      damageAmount?: { min: number, max: number };
+      damageAmount?: { min: number; max: number };
       destroyChance?: number;
       targetBuilding?: string | 'random';
       targetCount?: number;
@@ -41,7 +41,7 @@ export interface EventConsequence {
     combatPlaceholder?: {
       enemyType: 'bandits' | 'wildlife' | 'monsters' | 'rival_faction';
       threatLevel: 'minor' | 'moderate' | 'major' | 'extreme';
-      enemyCount: { min: number, max: number };
+      enemyCount: { min: number; max: number };
       lootPotential: string[];
     };
   };
@@ -57,7 +57,16 @@ export interface GameEvent {
   id: string;
   title: string;
   description: string;
-  category: 'environmental' | 'discovery' | 'social' | 'disaster' | 'opportunity' | 'wildlife' | 'weather' | 'supernatural' | 'political';
+  category:
+    | 'environmental'
+    | 'discovery'
+    | 'social'
+    | 'disaster'
+    | 'opportunity'
+    | 'wildlife'
+    | 'weather'
+    | 'supernatural'
+    | 'political';
   severity: 'trivial' | 'minor' | 'moderate' | 'major' | 'critical' | 'catastrophic';
   rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
   weight: number;
@@ -67,7 +76,7 @@ export interface GameEvent {
     maxTurn?: number;
     requiredBuildings?: string[];
     requiredResources?: Record<string, number>;
-    populationRange?: { min: number, max: number };
+    populationRange?: { min: number; max: number };
     seasonSpecific?: 'spring' | 'summer' | 'autumn' | 'winter';
     cooldown?: number;
     prerequisites?: string[]; // Other events that must have occurred
@@ -79,7 +88,15 @@ export interface ActivityLogEntry {
   id: string;
   turn: number;
   timestamp: Date;
-  type: 'work' | 'building' | 'crafting' | 'event' | 'pawn_action' | 'research' | 'exploration' | 'system';
+  type:
+    | 'work'
+    | 'building'
+    | 'crafting'
+    | 'event'
+    | 'pawn_action'
+    | 'research'
+    | 'exploration'
+    | 'system';
   actor?: string; // Pawn ID or 'system'
   action: string;
   target?: string;
@@ -95,7 +112,7 @@ export class EventSystem {
   private eventHistory: string[] = [];
   private lastEventTurn = 0;
 
-  generateEvent(gameState: any): { event: GameEvent, consequences: EventConsequence[] } | null {
+  generateEvent(gameState: any): { event: GameEvent; consequences: EventConsequence[] } | null {
     // Reduce frequency for more meaningful events
     if (gameState.turn - this.lastEventTurn < Math.floor(Math.random() * 3) + 2) return null;
 
@@ -103,7 +120,7 @@ export class EventSystem {
     if (availableEvents.length === 0) return null;
 
     // Weighted selection with rarity modifiers
-    const weightedEvents = availableEvents.map(event => ({
+    const weightedEvents = availableEvents.map((event) => ({
       event,
       adjustedWeight: this.calculateAdjustedWeight(event, gameState)
     }));
@@ -140,7 +157,10 @@ export class EventSystem {
     }
 
     // Ensure at least one consequence for major+ events
-    if (rolledConsequences.length === 0 && ['major', 'critical', 'catastrophic'].includes(event.severity)) {
+    if (
+      rolledConsequences.length === 0 &&
+      ['major', 'critical', 'catastrophic'].includes(event.severity)
+    ) {
       const forcedConsequence = event.consequences[0]; // Take first as fallback
       if (forcedConsequence) {
         rolledConsequences.push(forcedConsequence);
@@ -155,11 +175,11 @@ export class EventSystem {
 
     // Rarity modifiers
     const rarityMultipliers = {
-      'common': 1.0,
-      'uncommon': 0.7,
-      'rare': 0.4,
-      'epic': 0.2,
-      'legendary': 0.05
+      common: 1.0,
+      uncommon: 0.7,
+      rare: 0.4,
+      epic: 0.2,
+      legendary: 0.05
     };
     weight *= rarityMultipliers[event.rarity];
 
@@ -174,8 +194,8 @@ export class EventSystem {
 
     // Building modifiers
     if (event.triggers.requiredBuildings) {
-      const hasAllBuildings = event.triggers.requiredBuildings.every(building => 
-        gameState.buildingCounts[building] > 0
+      const hasAllBuildings = event.triggers.requiredBuildings.every(
+        (building) => gameState.buildingCounts[building] > 0
       );
       if (hasAllBuildings) {
         weight *= 2.0; // Double chance if all required buildings present
@@ -204,7 +224,7 @@ export class EventSystem {
         const resourceEffect = consequence.effects.resources![item.id];
         if (resourceEffect) {
           const change = this.rollBetween(resourceEffect.min, resourceEffect.max);
-          const scaledChange = consequence.modifiers?.populationScaling 
+          const scaledChange = consequence.modifiers?.populationScaling
             ? Math.floor(change * Math.sqrt(newState.pawns.length))
             : change;
           return { ...item, amount: Math.max(0, item.amount + scaledChange) };
@@ -263,7 +283,7 @@ export class EventSystem {
     // Apply building effects
     if (consequence.effects.buildingEffects) {
       const buildingEffect = consequence.effects.buildingEffects;
-      
+
       if (buildingEffect.destroyChance && Math.random() < buildingEffect.destroyChance) {
         const targetBuilding = buildingEffect.targetBuilding || 'house';
         if (newState.buildingCounts[targetBuilding] > 0) {
@@ -301,7 +321,7 @@ export class EventSystem {
   }
 
   private getAvailableEvents(gameState: any): GameEvent[] {
-    return EVENT_DATABASE.filter(event => {
+    return EVENT_DATABASE.filter((event) => {
       // Check cooldown
       const cooldownEnd = this.eventCooldowns.get(event.id);
       if (cooldownEnd && gameState.turn < cooldownEnd) return false;
@@ -313,13 +333,16 @@ export class EventSystem {
       // Check population requirements
       const population = gameState.pawns.length;
       if (event.triggers.populationRange) {
-        if (population < event.triggers.populationRange.min || 
-            population > event.triggers.populationRange.max) return false;
+        if (
+          population < event.triggers.populationRange.min ||
+          population > event.triggers.populationRange.max
+        )
+          return false;
       }
 
       // Check prerequisites
       if (event.triggers.prerequisites) {
-        const hasPrerequisites = event.triggers.prerequisites.every(prereq => 
+        const hasPrerequisites = event.triggers.prerequisites.every((prereq) =>
           this.eventHistory.includes(prereq)
         );
         if (!hasPrerequisites) return false;
@@ -327,7 +350,7 @@ export class EventSystem {
 
       // Check mutual exclusivity
       if (event.triggers.mutuallyExclusive) {
-        const hasConflict = event.triggers.mutuallyExclusive.some(exclusive => 
+        const hasConflict = event.triggers.mutuallyExclusive.some((exclusive) =>
           this.eventHistory.includes(exclusive)
         );
         if (hasConflict) return false;
@@ -344,7 +367,8 @@ export const EVENT_DATABASE: GameEvent[] = [
   {
     id: 'harsh_winter_storm',
     title: 'Harsh Winter Storm',
-    description: 'A severe blizzard batters your settlement for days. The cold seeps through every crack, and food stores dwindle as hunting becomes impossible.',
+    description:
+      'A severe blizzard batters your settlement for days. The cold seeps through every crack, and food stores dwindle as hunting becomes impossible.',
     category: 'weather',
     severity: 'major',
     rarity: 'uncommon',
@@ -361,7 +385,7 @@ export const EVENT_DATABASE: GameEvent[] = [
         description: 'Food consumption increases significantly due to the cold',
         probability: 0.9,
         effects: {
-          resources: { 'food': { min: -25, max: -40 } }
+          resources: { food: { min: -25, max: -40 } }
         },
         modifiers: { populationScaling: true }
       },
@@ -399,7 +423,8 @@ export const EVENT_DATABASE: GameEvent[] = [
   {
     id: 'ancient_library_ruins',
     title: 'Ancient Library Discovered',
-    description: 'Your explorers stumble upon the ruins of an ancient library. Weathered stone tablets and mysterious artifacts lie scattered among the rubble, whispering secrets of forgotten civilizations.',
+    description:
+      'Your explorers stumble upon the ruins of an ancient library. Weathered stone tablets and mysterious artifacts lie scattered among the rubble, whispering secrets of forgotten civilizations.',
     category: 'discovery',
     severity: 'moderate',
     rarity: 'rare',
@@ -415,7 +440,7 @@ export const EVENT_DATABASE: GameEvent[] = [
         description: 'Scholars decipher valuable knowledge from the ruins',
         probability: 0.8,
         effects: {
-          resources: { 'knowledge': { min: 40, max: 80 } },
+          resources: { knowledge: { min: 40, max: 80 } },
           discoveryEffects: {
             advanceResearch: 'random_tech'
           }
@@ -431,8 +456,8 @@ export const EVENT_DATABASE: GameEvent[] = [
             count: 1,
             effects: {
               statChanges: {
-                'intelligence': { min: 1, max: 2 },
-                'wisdom': { min: 1, max: 2 }
+                intelligence: { min: 1, max: 2 },
+                wisdom: { min: 1, max: 2 }
               }
             }
           }
@@ -460,7 +485,8 @@ export const EVENT_DATABASE: GameEvent[] = [
   {
     id: 'megafauna_migration',
     title: 'Great Beast Migration',
-    description: 'A herd of massive creatures thunders past your settlement. These ancient beasts could provide enormous amounts of food and materials, but hunting them is extremely dangerous.',
+    description:
+      'A herd of massive creatures thunders past your settlement. These ancient beasts could provide enormous amounts of food and materials, but hunting them is extremely dangerous.',
     category: 'wildlife',
     severity: 'major',
     rarity: 'epic',
@@ -476,17 +502,17 @@ export const EVENT_DATABASE: GameEvent[] = [
         description: 'Skilled hunters manage to bring down one of the great beasts',
         probability: 0.4,
         effects: {
-          resources: { 
-            'food': { min: 100, max: 200 },
-            'leather': { min: 50, max: 80 },
-            'bone': { min: 30, max: 50 }
+          resources: {
+            food: { min: 100, max: 200 },
+            leather: { min: 50, max: 80 },
+            bone: { min: 30, max: 50 }
           },
           pawnEffects: {
             targetType: 'random',
             count: 2,
             effects: {
               skillChanges: {
-                'hunting': { min: 2, max: 4 }
+                hunting: { min: 2, max: 4 }
               },
               moodChange: { min: 10, max: 20 }
             }
@@ -520,7 +546,7 @@ export const EVENT_DATABASE: GameEvent[] = [
               moodChange: { min: 5, max: 10 }
             }
           },
-          resources: { 'knowledge': { min: 10, max: 20 } }
+          resources: { knowledge: { min: 10, max: 20 } }
         }
       }
     ]
@@ -530,7 +556,8 @@ export const EVENT_DATABASE: GameEvent[] = [
   {
     id: 'refugee_caravan',
     title: 'Refugee Caravan Arrives',
-    description: 'A group of desperate refugees arrives at your gates, fleeing from some distant catastrophe. They carry little but stories of horror and loss, seeking sanctuary in your growing settlement.',
+    description:
+      'A group of desperate refugees arrives at your gates, fleeing from some distant catastrophe. They carry little but stories of horror and loss, seeking sanctuary in your growing settlement.',
     category: 'social',
     severity: 'moderate',
     rarity: 'common',
@@ -546,8 +573,8 @@ export const EVENT_DATABASE: GameEvent[] = [
         description: 'Some refugees decide to join your settlement',
         probability: 0.7,
         effects: {
-          resources: { 
-            'food': { min: -20, max: -35 } // Initial strain on resources
+          resources: {
+            food: { min: -20, max: -35 } // Initial strain on resources
           }
           // TODO: Add actual population increase when pawn generation is improved
         }
@@ -572,7 +599,7 @@ export const EVENT_DATABASE: GameEvent[] = [
         description: 'Refugees share knowledge of distant lands',
         probability: 0.5,
         effects: {
-          resources: { 'knowledge': { min: 15, max: 30 } },
+          resources: { knowledge: { min: 15, max: 30 } },
           discoveryEffects: {
             newLocation: 'refugee_homeland'
           }
@@ -585,7 +612,8 @@ export const EVENT_DATABASE: GameEvent[] = [
   {
     id: 'earthquake',
     title: 'Devastating Earthquake',
-    description: 'The ground shakes violently as a powerful earthquake rocks your settlement. Buildings creak and groan, people scream in terror, and the very earth seems to rebel against your presence.',
+    description:
+      'The ground shakes violently as a powerful earthquake rocks your settlement. Buildings creak and groan, people scream in terror, and the very earth seems to rebel against your presence.',
     category: 'disaster',
     severity: 'critical',
     rarity: 'rare',
@@ -630,9 +658,9 @@ export const EVENT_DATABASE: GameEvent[] = [
         probability: 0.8,
         effects: {
           resources: {
-            'food': { min: -50, max: -80 },
-            'wood': { min: -30, max: -60 },
-            'stone': { min: -20, max: -40 }
+            food: { min: -50, max: -80 },
+            wood: { min: -30, max: -60 },
+            stone: { min: -20, max: -40 }
           }
         }
       },
@@ -641,9 +669,9 @@ export const EVENT_DATABASE: GameEvent[] = [
         description: 'The earthquake reveals hidden underground chambers',
         probability: 0.15,
         effects: {
-          resources: { 
-            'metal': { min: 20, max: 50 },
-            'knowledge': { min: 30, max: 60 }
+          resources: {
+            metal: { min: 20, max: 50 },
+            knowledge: { min: 30, max: 60 }
           },
           discoveryEffects: {
             newLocation: 'underground_caves'
@@ -657,7 +685,8 @@ export const EVENT_DATABASE: GameEvent[] = [
   {
     id: 'merchant_guild_arrival',
     title: 'Merchant Guild Caravan',
-    description: 'A well-organized merchant caravan from the Guild arrives with exotic goods and hungry purses. Their leader, a shrewd trader, eyes your settlement\'s potential.',
+    description:
+      "A well-organized merchant caravan from the Guild arrives with exotic goods and hungry purses. Their leader, a shrewd trader, eyes your settlement's potential.",
     category: 'opportunity',
     severity: 'minor',
     rarity: 'common',
@@ -688,7 +717,8 @@ export const EVENT_DATABASE: GameEvent[] = [
   {
     id: 'bandit_raid',
     title: 'Bandit Raid',
-    description: 'A group of desperate bandits has spotted your settlement and decided it looks like easy pickings. They approach under cover of darkness, weapons ready.',
+    description:
+      'A group of desperate bandits has spotted your settlement and decided it looks like easy pickings. They approach under cover of darkness, weapons ready.',
     category: 'disaster',
     severity: 'major',
     rarity: 'uncommon',

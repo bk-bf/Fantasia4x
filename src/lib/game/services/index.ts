@@ -1,6 +1,6 @@
 /**
  * Service Layer Index - Clean Architecture Implementation
- * 
+ *
  * This module exports all service interfaces and implementations,
  * providing a clean separation between business logic and data definitions.
  */
@@ -21,11 +21,15 @@ export { ResearchServiceImpl, researchService } from './ResearchService';
 export { modifierSystem } from '../systems/ModifierSystem';
 export { gameEngine } from '../systems/GameEngineImpl';
 
-// Import types for registry
+// Import types and instances for registry
 import type { ItemService } from './ItemService';
 import type { BuildingService } from './BuildingService';
 import type { WorkService } from './WorkService';
 import type { ResearchService } from './ResearchService';
+import { itemService } from './ItemService';
+import { buildingService } from './BuildingService';
+import { workService } from './WorkService';
+import { researchService } from './ResearchService';
 
 /**
  * Basic Service Registry - Simple access point for core services
@@ -54,7 +58,7 @@ export const basicServiceRegistry: BasicServiceRegistry = {
 
 /**
  * Service Layer Benefits:
- * 
+ *
  * 1. Clean Separation: Business logic separated from data definitions
  * 2. Testability: Each service can be unit tested independently
  * 3. Consistency: Unified interfaces for similar operations

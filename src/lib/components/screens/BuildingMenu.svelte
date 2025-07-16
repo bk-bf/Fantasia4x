@@ -1,15 +1,8 @@
 <script lang="ts">
   import { gameState, currentItem, currentRace, currentTurn } from '$lib/stores/gameState';
   import { uiState } from '$lib/stores/uiState';
-  import {
-    AVAILABLE_BUILDINGS,
-    canAffordBuilding,
-    canBuildWithRequirements,
-    getBuildingIcon,
-    getBuildingColor,
-    getBuildingRarityColor
-  } from '$lib/game/core/Buildings';
-  import { getItemIcon, getItemColor, getItemInfo } from '$lib/game/core/Items';
+  import { itemService } from '$lib/game/services/ItemService';
+  import { buildingService } from '$lib/game/services/BuildingService';
   import { onDestroy } from 'svelte';
   import CurrentTask from '../UI/CurrentTask.svelte';
   import type { BuildingInProgress } from '$lib/game/core/types';
@@ -43,10 +36,20 @@
   $: firstBuildingInProgress = buildingQueue.length > 0 ? buildingQueue[0] : null;
 
   // Enhanced building filtering with category and requirements
-  $: availableBuildings = AVAILABLE_BUILDINGS.filter((building) => {
-    // Category filter
-    if (selectedCategory !== 'all' && building.category !== selectedCategory) return false;
-
+  $: availableBuildings = (
+    selectedCategory === 'all'
+      ? buildingService
+          .getBuildingsByCategory('housing')
+          .concat(buildingService.getBuildingsByCategory('production'))
+          .concat(buildingService.getBuildingsByCategory('knowledge'))
+          .concat(buildingService.getBuildingsByCategory('military'))
+          .concat(buildingService.getBuildingsByCategory('food'))
+          .concat(buildingService.getBuildingsByCategory('commerce'))
+          .concat(buildingService.getBuildingsByCategory('magical'))
+          .concat(buildingService.getBuildingsByCategory('exploration'))
+          .concat(buildingService.getBuildingsByCategory('social'))
+      : buildingService.getBuildingsByCategory(selectedCategory)
+  ).filter((building) => {
     // Research requirements
     if (building.researchRequired && !completedResearch.includes(building.researchRequired))
       return false;
@@ -74,15 +77,20 @@
   // Enhanced build check with new requirements
   $: canBuild = (building: Building): boolean => {
     if (!race) return false;
-    return (
-      canBuildWithRequirements(
-        building,
-        race.population,
-        maxPopulation,
-        currentToolLevel,
-        completedResearch
-      ) && canAfford(building)
-    );
+
+    const gameStateForCheck = {
+      pawns: Array(race.population).fill({}),
+      maxPopulation,
+      currentToolLevel,
+      completedResearch,
+      item: Object.entries(itemsMap).map(([id, amount]) => ({ id, amount })),
+      buildingCounts,
+      turn: currentTurnValue,
+      race: race,
+      buildingQueue: buildingQueue
+    };
+
+    return buildingService.canBuildBuilding(building.id, gameStateForCheck) && canAfford(building);
   };
 
   // Subscribe to turn changes to force reactivity
@@ -248,7 +256,7 @@
     }
 
     return Object.entries(building.upkeepCost).map(([itemId, amount]) => {
-      const item = getItemInfo(itemId);
+      const item = itemService.getItemById(itemId);
       return `${item?.name || itemId}: ${amount}/hour`;
     });
   }
@@ -322,7 +330,9 @@
             class="building-card"
             class:affordable={canAfford(building)}
             class:buildable={canBuild(building)}
-            style="--rarity-color: {getBuildingRarityColor(building.rarity || 'common')}"
+            style="--rarity-color: {buildingService.getBuildingRarityColor(
+              building.rarity || 'common'
+            )}"
           >
             <div class="building-card-header">
               <span class="building-icon"
@@ -337,7 +347,9 @@
               </div>
               <div
                 class="building-rarity"
-                style="--rarity-color: {getBuildingRarityColor(building.rarity || 'common')}"
+                style="--rarity-color: {buildingService.getBuildingRarityColor(
+                  building.rarity || 'common'
+                )}"
               >
                 {building.rarity}
               </div>
@@ -373,9 +385,9 @@
               <h5>Construction Cost:</h5>
               <div class="cost-list">
                 {#each Object.entries(building.buildingCost) as [itemId, cost]}
-                  {@const item = getItemInfo(itemId)}
+                  {@const item = itemService.getItemById(itemId)}
                   <div class="cost-item" class:insufficient={getItemAmount(itemId) < cost}>
-                    <span class="cost-icon">{item?.emoji || getItemIcon(itemId)}</span>
+                    <span class="cost-icon">{item?.emoji || '📦'}</span>
                     <span class="cost-amount">{cost}</span>
                     <span class="cost-name">{item?.name || itemId}</span>
                     <span class="cost-available">({getItemAmount(itemId)} available)</span>
@@ -442,7 +454,7 @@
             >
               {#if !canAfford(building)}
                 Insufficient Materials
-              {:else if !canBuildWithRequirements(building, race?.population || 0, maxPopulation, currentToolLevel, completedResearch)}
+              {:else if !canBuild(building)}
                 Requirements Not Met
               {:else}
                 Begin Construction

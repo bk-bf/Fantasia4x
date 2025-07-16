@@ -70,16 +70,16 @@ interface GameEngine {
   // System Coordination
   processGameTurn(): void;
   coordinateSystemInteractions(): void;
-  
+
   // Unified Calculations
   calculatePawnEfficiency(pawnId: string, workType: string): number;
   calculateBuildingEffects(buildingId: string): BuildingEffects;
   calculateCraftingTime(itemId: string, pawnId: string): number;
-  
+
   // State Management
   getGameState(): GameState;
   updateGameState(updates: Partial<GameState>): void;
-  
+
   // System Integration
   integrateServices(services: ServiceRegistry): void;
   validateSystemConsistency(): boolean;
@@ -93,6 +93,7 @@ Each service provides clean, focused interfaces for specific game systems:
 **Implementation Status:** Core services (Item, Building, Work, Research) are fully implemented. PawnService and EventService need completion.
 
 #### ItemService ✅ FULLY IMPLEMENTED
+
 ```typescript
 interface ItemService {
   // Query Methods
@@ -100,12 +101,12 @@ interface ItemService {
   getItemsByType(type: ItemType): Item[];
   getItemsByCategory(category: string): Item[];
   getCraftableItems(pawnId: string): Item[];
-  
+
   // Validation Methods
   canCraftItem(itemId: string, pawnId: string): boolean;
   hasRequiredMaterials(itemId: string): boolean;
   hasRequiredTools(itemId: string, pawnId: string): boolean;
-  
+
   // Calculation Methods
   calculateCraftingTime(itemId: string, pawnId: string): number;
   calculateCraftingCost(itemId: string): Record<string, number>;
@@ -114,18 +115,19 @@ interface ItemService {
 ```
 
 #### BuildingService ✅ FULLY IMPLEMENTED
+
 ```typescript
 interface BuildingService {
   // Query Methods
   getBuildingById(id: string): Building | undefined;
   getBuildingsByCategory(category: string): Building[];
   getAvailableBuildings(gameState: GameState): Building[];
-  
+
   // Validation Methods
   canBuildBuilding(buildingId: string, gameState: GameState): boolean;
   hasRequiredResources(buildingId: string, gameState: GameState): boolean;
   hasRequiredResearch(buildingId: string, gameState: GameState): boolean;
-  
+
   // Calculation Methods
   calculateBuildingCost(buildingId: string): Record<string, number>;
   calculateBuildingEffects(buildingId: string): BuildingEffects;
@@ -134,16 +136,17 @@ interface BuildingService {
 ```
 
 #### WorkService ✅ FULLY IMPLEMENTED
+
 ```typescript
 interface WorkService {
   // Assignment Methods
   assignPawnToWork(pawnId: string, workType: string, locationId: string): boolean;
   getOptimalWorkAssignment(pawnId: string): WorkAssignment[];
-  
+
   // Calculation Methods
   calculateWorkEfficiency(pawnId: string, workType: string): number;
   calculateResourceProduction(workAssignment: WorkAssignment): Record<string, number>;
-  
+
   // Query Methods
   getWorkCategories(): WorkCategory[];
   getAvailableWork(locationId: string): WorkCategory[];
@@ -152,16 +155,17 @@ interface WorkService {
 ```
 
 #### PawnService ⚠️ PLACEHOLDER IMPLEMENTATION
+
 ```typescript
 interface PawnService {
   // Behavior Management
   processPawnNeeds(pawnId: string): void;
   updatePawnMorale(pawnId: string, factors: MoraleFactors): void;
-  
+
   // Stat Calculations
   calculateEffectiveStats(pawnId: string): RaceStats;
   calculateWorkBonus(pawnId: string, workType: string): number;
-  
+
   // Equipment Integration
   equipItem(pawnId: string, itemId: string, slot: EquipmentSlot): boolean;
   calculateEquipmentBonuses(pawnId: string): StatBonuses;
@@ -179,9 +183,9 @@ export const ITEMS_DATABASE: Item[] = [
     id: 'oak_wood',
     name: 'Oak Wood',
     type: 'material',
-    category: 'wood',
+    category: 'wood'
     // ... data properties only
-  },
+  }
   // ... more items
 ];
 
@@ -247,6 +251,7 @@ interface SystemInteraction {
 ## Error Handling
 
 ### Service Layer Error Handling
+
 ```typescript
 interface ServiceResult<T> {
   success: boolean;
@@ -269,6 +274,7 @@ if (!result.success) {
 ```
 
 ### GameEngine Error Recovery
+
 ```typescript
 interface GameEngine {
   validateSystemState(): ValidationResult;
@@ -280,6 +286,7 @@ interface GameEngine {
 ## Testing Strategy
 
 ### Unit Testing Approach
+
 ```typescript
 // Service Layer Testing
 describe('ItemService', () => {
@@ -301,12 +308,14 @@ describe('GameEngine Integration', () => {
 ```
 
 ### Integration Testing Strategy
+
 1. **Service Integration**: Test service interactions through GameEngine
 2. **State Consistency**: Validate state remains consistent across operations
 3. **Error Recovery**: Test system recovery from various error conditions
 4. **Performance**: Validate performance with realistic data loads
 
 ### End-to-End Testing
+
 1. **Complete Game Loops**: Test full turn processing
 2. **Save/Load Cycles**: Validate state persistence
 3. **Extended Sessions**: Test stability over 50+ turns
@@ -315,24 +324,28 @@ describe('GameEngine Integration', () => {
 ## Migration Strategy
 
 ### Phase 1: Service Layer Extraction ✅ COMPLETED
+
 1. ✅ Create service interfaces and implementations
 2. ✅ Extract business logic from data files
 3. ✅ Update imports to use services
 4. ✅ Maintain backward compatibility during transition
 
 ### Phase 2: GameEngine Implementation ✅ COMPLETED
+
 1. ✅ Create GameEngine class with core coordination methods
 2. ✅ Integrate services into GameEngine
 3. ⚠️ Update components to use GameEngine (partially complete)
 4. ⚠️ Remove direct service access from components (mostly complete)
 
 ### Phase 3: Dependency Cleanup ⚠️ MOSTLY COMPLETED
+
 1. ✅ Eliminate most circular imports
 2. ✅ Standardize dependency flow
 3. ✅ Update TypeScript configurations
 4. ✅ Validate clean compilation
 
 ### Phase 4: Testing and Validation ✅ COMPLETED
+
 1. ✅ Implement comprehensive test suite (ModifierSystem tested)
 2. ✅ Validate system stability
 3. ✅ Performance optimization (caching implemented)
@@ -341,12 +354,14 @@ describe('GameEngine Integration', () => {
 ## Performance Considerations
 
 ### Service Layer Optimization
+
 - **Caching**: Cache frequently accessed data
 - **Lazy Loading**: Load data only when needed
 - **Batch Operations**: Group related operations
 - **Memory Management**: Proper cleanup of temporary objects
 
 ### GameEngine Efficiency
+
 - **Event Batching**: Process multiple events together
 - **State Diffing**: Only update changed state portions
 - **Calculation Caching**: Cache expensive calculations
@@ -355,12 +370,14 @@ describe('GameEngine Integration', () => {
 ## Security Considerations
 
 ### Data Validation
+
 - Validate all inputs at service boundaries
 - Sanitize data before processing
 - Implement type checking at runtime
 - Prevent injection attacks through proper validation
 
 ### State Protection
+
 - Immutable state updates
 - Controlled access through services
 - Audit trail for state changes

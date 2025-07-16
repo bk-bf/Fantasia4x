@@ -1,6 +1,6 @@
 <script lang="ts">
   import { gameState } from '$lib/stores/gameState';
-  import { hasBuildings } from '$lib/game/core/Buildings';
+  import { buildingService } from '$lib/game/services/BuildingService';
   import { uiState } from '$lib/stores/uiState';
   import { onMount } from 'svelte';
   // Update imports for new activity log system
@@ -22,7 +22,7 @@
   });
 
   // Simple check: if any knowledge building exists, unlock research screen
-  $: hasResearchCapability = hasBuildings(buildingCounts, 'knowledge');
+  $: hasResearchCapability = buildingService.hasBuildings(buildingCounts, 'knowledge');
 
   // Get appropriate activity log based on filter
   $: currentActivityLog = (() => {

@@ -7,6 +7,7 @@ Fantasia4x is a **text-based colony simulation** with **emergent tactical combat
 ## 🎲 Game Start: Procedural Race Foundation
 
 ### **Race Generation System (Current Implementation)**
+
 ```
 1. Generate Stat Ranges (Per Stat):
    - Base range: 8-15 with random variation
@@ -33,6 +34,7 @@ Fantasia4x is a **text-based colony simulation** with **emergent tactical combat
 ```
 
 ### **Individual Pawn Generation**
+
 ```
 When Population Grows:
 1. Roll each stat within race's stat ranges
@@ -44,19 +46,21 @@ When Population Grows:
 ```
 
 ### **Immediate Strategic Impact**
+
 - **Specialist Races**: Extreme stat ranges (6-8 in weak areas, 15-18 in strong)
 - **Balanced Races**: Consistent 10-13 ranges across all stats
 - **Trait-Driven Races**: Average stats but powerful racial abilities
 - **Adaptive Races**: Moderate stats with flexible trait combinations
 
 **Example Race Variations:**
+
 ```
 Race A: "Crystalline-Eyed Stargazers"
 → Stat Ranges: Str 6-9, Dex 8-12, Int 15-18, Wis 13-16, Cha 9-12, Con 7-10
 → Traits: Crystalline Eyes (+2 Wis, +1 Int), Stargazer (+3 Wis, +1 Int)
 → Strategy: Research powerhouse, physically vulnerable
 
-Race B: "Iron-Skinned Berserkers"  
+Race B: "Iron-Skinned Berserkers"
 → Stat Ranges: Str 14-17, Dex 10-13, Int 6-9, Wis 8-11, Cha 7-10, Con 15-18
 → Traits: Iron Skin (+3 Con), Berserker Blood (+3 Str, +1 Con)
 → Strategy: Combat-focused, research struggles
@@ -70,14 +74,16 @@ Race C: "Industrious Generalists"
 ## 👥 Population & Colony Evolution
 
 ### **Population Growth & Pawn System**
+
 ```
-Starting Population: 1 
+Starting Population: 1
 Growth Rate: Dynamic, influenced by key events (e.g., discoveries, crises, celebrations), available colony infrastructure (housing, nurseries, medical facilities), and critical resources/items (food surplus, rare fertility boosters, cultural artifacts). Population growth accelerates or slows in response to these factors rather than following a fixed curve.
 Pawn Generation: Each new pawn rolls within race stat ranges + trait bonuses
 Individual Variation: Each pawn unique within racial parameters
 ```
 
 ### **Simplified Ability System (15 Core Categories)**
+
 ```
 Work Efficiencies (Auto-calculated from stats + traits + equipment):
 - Mining, Woodcutting, Crafting, Research, Construction
@@ -105,10 +111,11 @@ Special Abilities (Trait-dependent):
 ```
 
 ### **Needs & Behavior System**
+
 ```
 Automatic Needs Tracking:
 - Hunger (0-100): Auto-eat when critical (90+)
-- Sleep (0-100): Auto-sleep when exhausted (95+)  
+- Sleep (0-100): Auto-sleep when exhausted (95+)
 - Fatigue (0-100): Auto-rest when tired (80+)
 - Morale (0-100): Affects all work efficiency
 
@@ -127,14 +134,16 @@ Behavioral Responses:
 #### **Three-Tier Research Framework**
 
 **Tier 1: Knowledge Accumulation (Time-Based)**
+
 ```
 Basic Metallurgy: 100 knowledge-items → Unlocks basic metal tools
-Stone Masonry: 150 knowledge-items → Unlocks stone buildings  
+Stone Masonry: 150 knowledge-items → Unlocks stone buildings
 Guild Systems: 200 knowledge-items → Unlocks advanced job assignments
 Advanced Metallurgy: 300 knowledge-items + "Ancient Forge Manual" → Steel tools
 ```
 
 **Tier 2: Lore Item Discovery (Exploration Rewards)**
+
 ```
 📜 "Ancient Forge Manual" → Unlocks Master Metallurgy (bypasses requirement)
 📖 "Dwarven Architecture Tome" → Unlocks Stone Masonry Secrets
@@ -144,6 +153,7 @@ Advanced Metallurgy: 300 knowledge-items + "Ancient Forge Manual" → Steel tool
 ```
 
 **Tier 3: Stat-Gated Specializations (Race Adaptation)**
+
 ```
 Low Strength Races (Average Str < 8):
 - "Mechanical Advantage" → Pulley systems multiply weak labor
@@ -163,6 +173,7 @@ High Intelligence Races (Average Int > 15):
 ```
 
 ### **Automated Production Chain**
+
 ```
 1. Research Phase:
    - Scholars generate knowledge-items (Intelligence-based efficiency)
@@ -188,9 +199,11 @@ High Intelligence Races (Average Int > 15):
 ## ⚔️ Tactical Combat System
 
 ### **Combat Philosophy**
+
 **Battle Brothers-inspired tactical combat** with **Caves of Qud-style graphics evolution**. Start with ASCII tactical grid, evolve to sprite-based rendering while maintaining text-based accessibility.
 
 ### **Combat Triggers & Scale**
+
 ```
 Combat Scenarios:
 - Exploration encounters (3-8 pawns vs enemies)
@@ -200,6 +213,7 @@ Combat Scenarios:
 ```
 
 ### **Racial Combat Variations**
+
 ```
 High Strength Races:
 - Natural melee bonuses, heavy weapon proficiency
@@ -223,6 +237,7 @@ Specialized Trait Combinations:
 ```
 
 ### **Equipment-Driven Combat Abilities**
+
 ```
 Base Combat Stats (from racial traits + stats):
 - Combat Power = Strength + racial bonuses
@@ -235,11 +250,12 @@ Equipment Abilities (unlocked by equipped items):
 
 Racial Combat Synergies:
 - "Venomous" trait + weapons = Poison damage
-- "Regenerative" + armor = Enhanced survivability  
+- "Regenerative" + armor = Enhanced survivability
 - "Shapeshifter" + equipment = Adaptive combat forms
 ```
 
 ### **Integration with Colony Simulation**
+
 ```
 Pre-Combat Preparation:
 - Squad selection based on pawn stats and equipment
@@ -256,6 +272,7 @@ Post-Combat Consequences:
 ## 🖥️ Menu Screen Ecosystem
 
 ### **Research-Gated Screen Progression**
+
 ```
 0. Main Screen (Always Available)
    ├── Resource Sidebar with production rates
@@ -296,6 +313,7 @@ Post-Combat Consequences:
 ### **Racial Strategy Examples**
 
 **"Crystalline-Eyed Stargazers" Playthrough:**
+
 ```
 Early Game: Rush Scroll Hut for research advantages
 → High Intelligence = faster knowledge accumulation
@@ -314,6 +332,7 @@ Late Game: Magical/technological hybrid civilization
 ```
 
 **"Iron-Skinned Berserkers" Playthrough:**
+
 ```
 Early Game: Focus on mining and construction
 → High Strength = superior resource extraction
@@ -332,6 +351,7 @@ Late Game: Military empire with tributary colonies
 ```
 
 **"Industrious Generalists" Playthrough:**
+
 ```
 Early Game: Balanced development across all systems
 → "Industrious" trait = 15% efficiency boost to all work
@@ -352,6 +372,7 @@ Late Game: Optimized, well-rounded civilization
 ## 🔄 Strategic Depth Through Racial Diversity
 
 ### **No Fixed Optimal Strategies**
+
 - **50+ racial traits** create thousands of possible combinations
 - **Random stat ranges** ensure each race faces different challenges
 - **Trait synergies** enable unique strategic approaches
@@ -359,6 +380,7 @@ Late Game: Optimized, well-rounded civilization
 - **Population evolution** changes civilization identity over time
 
 ### **Emergent Racial Narratives**
+
 ```
 Physical Adaptation Stories:
 - "Amphibious" + coastal starting location = aquatic civilization
@@ -377,6 +399,7 @@ Social Development Stories:
 ```
 
 ### **Dynamic Racial Identity**
+
 ```
 Population Growth Effects:
 - New pawns roll within racial ranges but with individual variation
@@ -395,16 +418,18 @@ Cultural Evolution:
 
 **🎯 Core Principle**: Every race combination creates a unique civilization with distinct strengths, weaknesses, and cultural identity that emerges through gameplay rather than predetermined paths.
 
-**🔄 Adaptive Complexity**: 
+**🔄 Adaptive Complexity**:
+
 - Simple race generation rules create complex strategic variety
 - Racial traits interact with game systems to produce emergent strategies
 - No "correct" way to play any race - adaptation and creativity rewarded
 - System mastery comes from understanding racial synergies
 
-**🎲 Procedural Identity**: 
+**🎲 Procedural Identity**:
+
 - Race generation creates immediate strategic constraints and opportunities
 - Cultural implications provide narrative flavor for player imagination
 - Trait combinations suggest unique civilization personalities
 - Population evolution allows civilizations to grow and change over time
 
-*🌟 "Every race tells a different story, every trait combination opens new strategic paths, every civilization develops its own unique identity through the choices and challenges it faces." 🌟*
+_🌟 "Every race tells a different story, every trait combination opens new strategic paths, every civilization develops its own unique identity through the choices and challenges it faces." 🌟_

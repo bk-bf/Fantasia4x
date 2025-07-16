@@ -10,8 +10,8 @@
   } from '$lib/game/core/Research';
   import { onDestroy } from 'svelte';
   import CurrentTask from '$lib/components/UI/CurrentTask.svelte';
-  import { AVAILABLE_BUILDINGS } from '$lib/game/core/Buildings';
-  import { getItemIcon, getItemInfo } from '$lib/game/core/Items';
+  import { buildingService } from '$lib/game/services/BuildingService';
+  import { itemService } from '$lib/game/services/ItemService';
 
   let race: any = null;
   let availableResearch: any[] = [];
@@ -165,7 +165,7 @@
   }
 
   function getBuildingName(buildingId: string): string {
-    const building = AVAILABLE_BUILDINGS.find((b) => b.id === buildingId);
+    const building = buildingService.getBuildingById(buildingId);
     return building ? building.name : buildingId;
   }
 
@@ -209,10 +209,10 @@
       <div class="materials-grid">
         {#each ['bark_scrolls', 'hide_scrolls', 'parchment', 'scholars_ink', 'research_notes'] as materialId}
           {@const amount = getInventoryAmount(materialId)}
-          {@const item = getItemInfo(materialId)}
+          {@const item = itemService.getItemById(materialId)}
           {#if amount > 0 || item}
             <div class="material-item">
-              <span class="material-icon">{item?.emoji || getItemIcon(materialId)}</span>
+              <span class="material-icon">{item?.emoji || '📦'}</span>
               <div class="material-details">
                 <span class="material-name">{item?.name || materialId}</span>
                 <span class="material-amount">x{amount}</span>
@@ -288,12 +288,12 @@
                 <div class="scroll-requirements">
                   <h5>📜 Study Materials Required:</h5>
                   {#each Object.entries(research.scrollRequirement) as [scrollId, amount]}
-                    {@const item = getItemInfo(scrollId)}
+                    {@const item = itemService.getItemById(scrollId)}
                     <div
                       class="requirement-item"
                       class:insufficient={getInventoryAmount(scrollId) < (amount as number)}
                     >
-                      <span class="req-icon">{item?.emoji || getItemIcon(scrollId)}</span>
+                      <span class="req-icon">{item?.emoji || '📦'}</span>
                       <span class="req-amount">{amount}</span>
                       <span class="req-name">{item?.name || scrollId}</span>
                       <span class="req-available">({getInventoryAmount(scrollId)} available)</span>
@@ -307,12 +307,12 @@
                 <div class="material-requirements">
                   <h5>🔧 Materials Required:</h5>
                   {#each Object.entries(research.materialRequirement) as [materialId, amount]}
-                    {@const item = getItemInfo(materialId)}
+                    {@const item = itemService.getItemById(materialId)}
                     <div
                       class="requirement-item"
                       class:insufficient={getItemAmount(materialId) < (amount as number)}
                     >
-                      <span class="req-icon">{item?.emoji || getItemIcon(materialId)}</span>
+                      <span class="req-icon">{item?.emoji || '📦'}</span>
                       <span class="req-amount">{amount}</span>
                       <span class="req-name">{item?.name || materialId}</span>
                       <span class="req-available">({getItemAmount(materialId)} available)</span>

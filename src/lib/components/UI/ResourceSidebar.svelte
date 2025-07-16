@@ -1,9 +1,8 @@
 <script lang="ts">
   import { currentItem, currentRace, gameState } from '$lib/stores/gameState'; // Remove currentInventory
   import { onDestroy } from 'svelte';
-  import { getItemIcon, getItemColor } from '$lib/game/core/Items';
   import { getAvailableResourceIdsForWork, calculateHarvestAmount } from '$lib/game/core/Work';
-  import { getItemInfo } from '$lib/game/core/Items';
+  import { itemService } from '$lib/game/services/ItemService';
   import { get } from 'svelte/store';
 
   let items: any[] = [];
@@ -34,7 +33,7 @@
             const availableResources = getAvailableResourceIdsForWork(state, workType);
             availableResources.forEach((resourceId) => {
               const expected = calculateHarvestAmount(pawn, workType, 1, state);
-              const item = getItemInfo(resourceId);
+              const item = itemService.getItemById(resourceId);
               console.log(
                 `[Sidebar DEBUG] Pawn ${pawn.name} assigned to ${workType} (priority ${priority}), should produce ${expected} ${item?.name || resourceId}/turn`
               );
@@ -107,9 +106,9 @@
         <h4 style="margin-left: auto; margin-right: auto; display: inline-block;">📦 Resources</h4>
         <div class="resource-grid">
           {#each allResources as item}
-            <div class="resource-mini" style="--resource-color: {getItemColor(item.id)}">
+            <div class="resource-mini" style="--resource-color: {item.color || '#4CAF50'}">
               <div class="resource-content">
-                <span class="resource-icon">{getItemIcon(item.id)}</span>
+                <span class="resource-icon">{item.emoji || '📦'}</span>
                 <div class="resource-info">
                   <span class="resource-label">{item.name}</span>
                   <div class="resource-amount-container">

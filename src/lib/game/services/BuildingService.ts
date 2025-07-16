@@ -34,27 +34,32 @@ export interface BuildingService {
     upkeep: Record<string, number>;
     requirements: string[];
   };
+
+  // UI Helper Methods
+  getBuildingIcon(buildingId: string): string;
+  getBuildingColor(buildingId: string): string;
+  getBuildingRarityColor(rarity: string): string;
+  hasBuildings(buildingCounts: Record<string, number>, category: string): boolean;
 }
 
 /**
  * BuildingService Implementation
  */
 export class BuildingServiceImpl implements BuildingService {
-
   getBuildingById(id: string): Building | undefined {
-    return AVAILABLE_BUILDINGS.find(building => building.id === id);
+    return AVAILABLE_BUILDINGS.find((building) => building.id === id);
   }
 
   getBuildingsByCategory(category: string): Building[] {
-    return AVAILABLE_BUILDINGS.filter(building => building.category === category);
+    return AVAILABLE_BUILDINGS.filter((building) => building.category === category);
   }
 
   getBuildingsByTier(tier: number): Building[] {
-    return AVAILABLE_BUILDINGS.filter(building => building.tier === tier);
+    return AVAILABLE_BUILDINGS.filter((building) => building.tier === tier);
   }
 
   getBuildingsByRarity(rarity: string): Building[] {
-    return AVAILABLE_BUILDINGS.filter(building => building.rarity === rarity);
+    return AVAILABLE_BUILDINGS.filter((building) => building.rarity === rarity);
   }
 
   getAvailableBuildings(gameState: GameState, category?: string): Building[] {
@@ -62,12 +67,10 @@ export class BuildingServiceImpl implements BuildingService {
 
     // Filter by category if specified
     if (category) {
-      buildings = buildings.filter(building => building.category === category);
+      buildings = buildings.filter((building) => building.category === category);
     }
 
-    return buildings.filter(building =>
-      this.canBuildBuilding(building.id, gameState)
-    );
+    return buildings.filter((building) => this.canBuildBuilding(building.id, gameState));
   }
 
   canBuildBuilding(buildingId: string, gameState: GameState): boolean {
@@ -75,11 +78,13 @@ export class BuildingServiceImpl implements BuildingService {
     if (!building) return false;
 
     // Check all requirements
-    return this.hasRequiredResources(buildingId, gameState) &&
+    return (
+      this.hasRequiredResources(buildingId, gameState) &&
       this.hasRequiredResearch(buildingId, gameState) &&
       this.hasRequiredPopulation(buildingId, gameState) &&
       this.hasRequiredTools(buildingId, gameState) &&
-      this.meetsStateRestrictions(buildingId, gameState);
+      this.meetsStateRestrictions(buildingId, gameState)
+    );
   }
 
   hasRequiredResources(buildingId: string, gameState: GameState): boolean {
@@ -87,7 +92,7 @@ export class BuildingServiceImpl implements BuildingService {
     if (!building?.buildingCost) return true;
 
     return Object.entries(building.buildingCost).every(([resourceId, cost]) => {
-      const available = gameState.item.find(item => item.id === resourceId)?.amount || 0;
+      const available = gameState.item.find((item) => item.id === resourceId)?.amount || 0;
       return available >= cost;
     });
   }
@@ -132,7 +137,8 @@ export class BuildingServiceImpl implements BuildingService {
     if (building.buildingState.isUnique && currentCount > 0) return false;
 
     // Check maximum count
-    if (building.buildingState.maxCount && currentCount >= building.buildingState.maxCount) return false;
+    if (building.buildingState.maxCount && currentCount >= building.buildingState.maxCount)
+      return false;
 
     return true;
   }
@@ -162,16 +168,8 @@ export class BuildingServiceImpl implements BuildingService {
   }
 
   calculateBuildingEfficiency(buildingId: string, gameState: GameState): number {
-    // Use the automated modifier system for building effects
-    const modifierSystem = require('../systems/ModifierSystem').modifierSystem;
-    const result = modifierSystem.calculateBuildingEffects(buildingId, gameState);
-
-    // Extract general efficiency from building effects
+    // Simple efficiency calculation without modifier system dependency
     let efficiency = 1.0;
-
-    if (result.effects.efficiency) {
-      efficiency = result.effects.efficiency.totalValue;
-    }
 
     // Apply network effects from synergies
     const building = this.getBuildingById(buildingId);
@@ -207,7 +205,7 @@ export class BuildingServiceImpl implements BuildingService {
   }
 
   getBuildingUnlocks(buildingId: string): Building[] {
-    return AVAILABLE_BUILDINGS.filter(building => {
+    return AVAILABLE_BUILDINGS.filter((building) => {
       // Check if this building is required for construction
       if (building.researchRequired === buildingId) return true;
 
@@ -237,6 +235,56 @@ export class BuildingServiceImpl implements BuildingService {
     }
 
     return { upkeep, requirements };
+  }
+
+  getBuildingIcon(buildingId: string): string {
+    const building = this.getBuildingById(buildingId);
+    if (building?.emoji) return building.emoji;
+
+    // Fallback icons based on category
+    const categoryIcons: Record<string, string> = {
+      housing: '🏠',
+      production: '🔨',
+      food: '🍖',
+      knowledge: '📜',
+      military: '⚔️',
+      magical: '⚗️',
+      commerce: '🏪'
+    };
+
+    return categoryIcons[building?.category || 'production'] || '🏗️';
+  }
+
+  getBuildingColor(buildingId: string): string {
+    const building = this.getBuildingById(buildingId);
+    return building?.color || '#4CAF50';
+  }
+
+  getBuildingRarityColor(rarity: string): string {
+    switch (rarity) {
+      case 'common':
+        return '#9E9E9E';
+      case 'uncommon':
+        return '#4CAF50';
+      case 'rare':
+        return '#2196F3';
+      case 'epic':
+        return '#9C27B0';
+      case 'legendary':
+        return '#FF9800';
+      default:
+        return '#9E9E9E';
+    }
+  }
+
+  hasBuildings(buildingCounts: Record<string, number>, category: string): boolean {
+    return Object.entries(buildingCounts).some(([buildingId, count]) => {
+      if (count > 0) {
+        const building = this.getBuildingById(buildingId);
+        return building?.category === category;
+      }
+      return false;
+    });
   }
 }
 

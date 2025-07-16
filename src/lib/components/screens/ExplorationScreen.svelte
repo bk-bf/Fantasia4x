@@ -15,7 +15,7 @@
     getRichnessEmoji,
     LOCATION_TEMPLATES
   } from '$lib/game/core/Locations';
-  import { getItemIcon, getItemInfo } from '$lib/game/core/Items';
+  import { itemService } from '$lib/game/services/ItemService';
 
   let race: any = null;
   let itemMap: Record<string, number> = {};
@@ -369,13 +369,13 @@
               <h5>Available Resources:</h5>
               <div class="resource-grid">
                 {#each Object.entries(resourceRichness) as [resourceId, data]}
-                  {@const item = getItemInfo(resourceId)}
+                  {@const item = itemService.getItemById(resourceId)}
                   <div
                     class="resource-item-card"
                     style="--richness-color: {getRichnessColor(data.richness)}"
                   >
                     <div class="resource-content">
-                      <span class="resource-icon">{item?.emoji || getItemIcon(resourceId)}</span>
+                      <span class="resource-icon">{item?.emoji || '📦'}</span>
                       <span class="resource-label">
                         {item?.name || resourceId}
                         <span class="richness-indicator" title={data.richness}>
@@ -480,9 +480,9 @@
                   <div class="tools-required">
                     <h5>🔧 Tools Required:</h5>
                     {#each mission.toolsRequired as tool}
-                      {@const item = getItemInfo(tool)}
+                      {@const item = itemService.getItemById(tool)}
                       <span class="requirement-item">
-                        {item?.emoji || getItemIcon(tool)}
+                        {item?.emoji || '📦'}
                         {item?.name || tool}
                       </span>
                     {/each}
@@ -493,13 +493,13 @@
                   <div class="supplies-required">
                     <h5>📦 Supplies Required:</h5>
                     {#each Object.entries(mission.suppliesRequired) as [itemId, amount]}
-                      {@const item = getItemInfo(itemId)}
+                      {@const item = itemService.getItemById(itemId)}
                       <div
                         class="requirement-item"
                         class:insufficient={getItemAmount(itemId) + getInventoryAmount(itemId) <
                           (amount as number)}
                       >
-                        <span class="req-icon">{item?.emoji || getItemIcon(itemId)}</span>
+                        <span class="req-icon">{item?.emoji || '📦'}</span>
                         <span class="req-amount">{amount}</span>
                         <span class="req-name">{item?.name || itemId}</span>
                         <span class="req-available"

@@ -6,9 +6,7 @@ export const eventLog = writable<EventLog[]>([]);
 export const showEventModal = writable<boolean>(false);
 
 // Derived store for recent events (last 10)
-export const recentEvents = derived(eventLog, $eventLog => 
-  $eventLog.slice(-10).reverse()
-);
+export const recentEvents = derived(eventLog, ($eventLog) => $eventLog.slice(-10).reverse());
 
 // Function to add event to log
 export function addEventToLog(event: GameEvent, choiceMade?: string, outcome?: string) {
@@ -22,8 +20,8 @@ export function addEventToLog(event: GameEvent, choiceMade?: string, outcome?: s
     outcome: outcome || 'Auto-resolved',
     timestamp: new Date()
   };
-  
-  eventLog.update(log => [...log, logEntry]);
+
+  eventLog.update((log) => [...log, logEntry]);
 }
 
 // Function to trigger event modal

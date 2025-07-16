@@ -1,6 +1,6 @@
 // src/lib/game/core/GameState.ts
 import type { GameState, ResearchProject, Building, Item } from './types';
-import { getItemInfo } from './Items';
+import { itemService } from '../services/ItemService';
 import { calculateHarvestAmount } from './Work';
 import { processWorkHarvesting as sharedProcessWorkHarvesting } from './Work';
 
@@ -25,18 +25,18 @@ export class GameStateManager {
     this.processBuildings();
     this.processCrafting();
     this.processResearch();
-    this.state = sharedProcessWorkHarvesting(this.state);// Now properly integrated
+    this.state = sharedProcessWorkHarvesting(this.state); // Now properly integrated
   }
 
   private processResources(): void {
     // Basic resource generation logic using items array
     const foodProduction = this.state.race.population * 2;
     this.addToItemArray('food', foodProduction);
-    
+
     // Add wood and stone production
     const woodProduction = 2 + (this.state._woodBonus || 0);
     const stoneProduction = 1 + (this.state._stoneBonus || 0);
-    
+
     this.addToItemArray('wood', woodProduction);
     this.addToItemArray('stone', stoneProduction);
   }
@@ -44,50 +44,54 @@ export class GameStateManager {
   private processBuildings(): void {
     // Process building queue - buildings under construction
     if (this.state.buildingQueue.length > 0) {
-      this.state.buildingQueue = this.state.buildingQueue.map(building => ({
-        ...building,
-        turnsRemaining: building.turnsRemaining - 1
-      })).filter(building => {
-        if (building.turnsRemaining <= 0) {
-          // Building completed - add to building counts
-          this.state.buildingCounts[building.building.id] = 
-            (this.state.buildingCounts[building.building.id] || 0) + 1;
-          return false;
-        }
-        return true;
-      });
+      this.state.buildingQueue = this.state.buildingQueue
+        .map((building) => ({
+          ...building,
+          turnsRemaining: building.turnsRemaining - 1
+        }))
+        .filter((building) => {
+          if (building.turnsRemaining <= 0) {
+            // Building completed - add to building counts
+            this.state.buildingCounts[building.building.id] =
+              (this.state.buildingCounts[building.building.id] || 0) + 1;
+            return false;
+          }
+          return true;
+        });
     }
   }
 
   private processCrafting(): void {
     // Process crafting queue - items being crafted
     if (this.state.craftingQueue.length > 0) {
-      this.state.craftingQueue = this.state.craftingQueue.map(crafting => ({
-        ...crafting,
-        turnsRemaining: crafting.turnsRemaining - 1
-      })).filter(crafting => {
-        if (crafting.turnsRemaining <= 0) {
-          // Crafting completed - add to items array (not inventory)
-          const itemId = crafting.item.id;
-          const quantity = crafting.quantity || 1;
-          this.addToItemArray(itemId, quantity);
-          return false;
-        }
-        return true;
-      });
+      this.state.craftingQueue = this.state.craftingQueue
+        .map((crafting) => ({
+          ...crafting,
+          turnsRemaining: crafting.turnsRemaining - 1
+        }))
+        .filter((crafting) => {
+          if (crafting.turnsRemaining <= 0) {
+            // Crafting completed - add to items array (not inventory)
+            const itemId = crafting.item.id;
+            const quantity = crafting.quantity || 1;
+            this.addToItemArray(itemId, quantity);
+            return false;
+          }
+          return true;
+        });
     }
   }
 
   private processResearch(): void {
     // Process current research - scroll-based progression
     if (this.state.currentResearch) {
-      this.state.currentResearch.currentProgress = 
+      this.state.currentResearch.currentProgress =
         (this.state.currentResearch.currentProgress || 0) + 1;
-      
+
       if (this.state.currentResearch.currentProgress >= this.state.currentResearch.researchTime) {
         // Research completed
         this.state.completedResearch.push(this.state.currentResearch.id);
-        
+
         // Apply research unlocks
         if (this.state.currentResearch.unlocks.toolTierRequired) {
           this.state.currentToolLevel = Math.max(
@@ -95,7 +99,7 @@ export class GameStateManager {
             this.state.currentResearch.unlocks.toolTierRequired
           );
         }
-        
+
         // Clear current research
         this.state.currentResearch = undefined;
       }
@@ -104,7 +108,7 @@ export class GameStateManager {
 
   // UPDATED: Use items array instead of separate resource tracking
   private addToItemArray(itemId: string, amount: number): void {
-    const itemIndex = this.state.item.findIndex(item => item.id === itemId);
+    const itemIndex = this.state.item.findIndex((item) => item.id === itemId);
     if (itemIndex !== -1) {
       // Update existing item immutably
       this.state.item[itemIndex] = {
@@ -113,7 +117,7 @@ export class GameStateManager {
       };
     } else {
       // Add new item if it doesn't exist
-      const itemInfo = getItemInfo(itemId);
+      const itemInfo = itemService.getItemById(itemId);
       if (itemInfo) {
         this.state.item.push({ ...itemInfo, amount });
       }
@@ -130,13 +134,13 @@ export class GameStateManager {
 
   // NEW: Get item amount from items array
   getItemAmount(itemId: string): number {
-    const item = this.state.item.find(i => i.id === itemId);
+    const item = this.state.item.find((i) => i.id === itemId);
     return item ? item.amount : 0;
   }
 
   // NEW: Remove item amount from items array
   removeItemAmount(itemId: string, amount: number): boolean {
-    const itemIndex = this.state.item.findIndex(item => item.id === itemId);
+    const itemIndex = this.state.item.findIndex((item) => item.id === itemId);
     if (itemIndex !== -1 && this.state.item[itemIndex].amount >= amount) {
       this.state.item[itemIndex] = {
         ...this.state.item[itemIndex],
@@ -152,13 +156,13 @@ export class GameStateManager {
     if (this.state.currentResearch) {
       return false; // Already researching something
     }
-    
+
     // Set current research
     this.state.currentResearch = {
       ...research,
       currentProgress: 0
     };
-    
+
     return true;
   }
 
@@ -169,7 +173,7 @@ export class GameStateManager {
       turnsRemaining: building.buildTime,
       startedAt: this.state.turn
     });
-    
+
     return true;
   }
 
@@ -181,7 +185,7 @@ export class GameStateManager {
       turnsRemaining: item.craftingTime || 1,
       startedAt: this.state.turn
     });
-    
+
     return true;
   }
 }

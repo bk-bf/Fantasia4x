@@ -1029,3 +1029,341 @@ export const AVAILABLE_BUILDINGS: Building[] = [
     storageCapacity: {}
   }
 ];
+
+// Helper functions for building management
+export function canAffordBuilding(building: Building, resources: Record<string, number>): boolean {
+  if (!building.buildingCost) return false;
+  return Object.entries(building.buildingCost).every(
+    ([resourceId, cost]) => (resources[resourceId] || 0) >= cost
+  );
+}
+
+// Enhanced population and requirements check
+export function canBuildWithPopulation(
+  building: Building,
+  currentPop: number,
+  maxPop: number
+): boolean {
+  // Check minimum population requirement
+  if (currentPop < building.populationRequired) return false;
+
+  // Check if building would exceed max population (for non-housing buildings)
+  if (building.category !== 'housing' && currentPop >= maxPop) return false;
+
+  return true;
+}
+
+// Comprehensive requirements check
+export function canBuildWithRequirements(
+  building: Building,
+  currentPop: number,
+  maxPop: number,
+  currentToolLevel: number,
+  completedResearch: string[]
+): boolean {
+  // Population requirements
+  if (!canBuildWithPopulation(building, currentPop, maxPop)) return false;
+
+  // Tool level requirements
+  if (building.toolTierRequired && building.toolTierRequired > currentToolLevel) return false;
+
+  // Research requirements
+  if (building.researchRequired && !completedResearch.includes(building.researchRequired))
+    return false;
+
+  return true;
+}
+
+// Check building state restrictions
+export function canBuildWithState(
+  building: Building,
+  existingBuildings: Record<string, number>
+): boolean {
+  if (!building.buildingState) return true;
+
+  const currentCount = existingBuildings[building.id] || 0;
+
+  // Check if building is unique and already exists
+  if (building.buildingState.isUnique && currentCount > 0) return false;
+
+  // Check maximum count
+  if (building.buildingState.maxCount && currentCount >= building.buildingState.maxCount)
+    return false;
+
+  return true;
+}
+
+// Complete build validation
+export function canBuild(
+  building: Building,
+  resources: Record<string, number>,
+  currentPop: number,
+  maxPop: number,
+  currentToolLevel: number,
+  completedResearch: string[],
+  existingBuildings: Record<string, number>
+): boolean {
+  return (
+    canAffordBuilding(building, resources) &&
+    canBuildWithRequirements(building, currentPop, maxPop, currentToolLevel, completedResearch) &&
+    canBuildWithState(building, existingBuildings)
+  );
+}
+
+// Check if any buildings of a specific category exist
+export function hasBuildings(buildingCounts: Record<string, number>, category: string): boolean {
+  return Object.entries(buildingCounts).some(([buildingId, count]) => {
+    if (count > 0) {
+      const building = getBuildingInfo(buildingId);
+      return building?.category === category;
+    }
+    return false;
+  });
+}
+
+// Get buildings by category
+export function getBuildingsByCategory(category: string): Building[] {
+  return AVAILABLE_BUILDINGS.filter((building) => building.category === category);
+}
+
+// Get buildings by tier
+export function getBuildingsByTier(tier: number): Building[] {
+  return AVAILABLE_BUILDINGS.filter((building) => building.tier === tier);
+}
+
+// Get buildings by rarity
+export function getBuildingsByRarity(rarity: string): Building[] {
+  return AVAILABLE_BUILDINGS.filter((building) => building.rarity === rarity);
+}
+
+// Get available buildings based on current game state
+export function getAvailableBuildings(
+  completedResearch: string[],
+  currentToolLevel: number,
+  currentPop: number,
+  maxPop: number,
+  resources: Record<string, number>,
+  existingBuildings: Record<string, number>,
+  category?: string
+): Building[] {
+  let buildings = AVAILABLE_BUILDINGS;
+
+  // Filter by category if specified
+  if (category) {
+    buildings = buildings.filter((building) => building.category === category);
+  }
+
+  return buildings.filter((building) =>
+    canBuild(
+      building,
+      resources,
+      currentPop,
+      maxPop,
+      currentToolLevel,
+      completedResearch,
+      existingBuildings
+    )
+  );
+}
+
+// Get building dependencies (what research/buildings are needed)
+export function getBuildingDependencies(building: Building): string[] {
+  const dependencies = [];
+
+  if (building.researchRequired) {
+    dependencies.push(`Research: ${building.researchRequired}`);
+  }
+
+  if (building.toolTierRequired && building.toolTierRequired > 0) {
+    dependencies.push(`Tool Level: ${building.toolTierRequired}`);
+  }
+
+  if (building.populationRequired > 0) {
+    dependencies.push(`Population: ${building.populationRequired}`);
+  }
+
+  return dependencies;
+}
+
+// Get buildings that this building unlocks or enhances
+export function getBuildingUnlocks(buildingId: string): Building[] {
+  return AVAILABLE_BUILDINGS.filter((building) => {
+    // Check if this building is required for construction
+    if (building.researchRequired === buildingId) return true;
+
+    // Check synergies
+    if (building.synergies?.chainBonus?.includes(buildingId)) return true;
+
+    return false;
+  });
+}
+
+// Calculate total construction cost including upgrades
+export function getTotalBuildingCost(
+  building: Building,
+  includeUpgrades: boolean = false
+): Record<string, number> {
+  let totalCost = { ...building.buildingCost };
+
+  if (includeUpgrades && building.upgradeOptions?.upgradeCost) {
+    Object.entries(building.upgradeOptions.upgradeCost).forEach(([resource, cost]) => {
+      totalCost[resource] = (totalCost[resource] || 0) + cost;
+    });
+  }
+
+  return totalCost;
+}
+
+// Calculate building efficiency based on synergies
+export function getBuildingEfficiency(
+  building: Building,
+  existingBuildings: Record<string, number>,
+  adjacentBuildings?: string[]
+): number {
+  let efficiency = 1.0;
+
+  if (!building.synergies) return efficiency;
+
+  // Network effects (based on number of similar buildings)
+  if (building.synergies.networkEffects) {
+    const count = existingBuildings[building.id] || 0;
+    Object.entries(building.synergies.networkEffects).forEach(([effect, bonus]) => {
+      efficiency += bonus * count;
+    });
+  }
+
+  // Adjacency bonuses
+  if (building.synergies.adjacencyBonus && adjacentBuildings) {
+    Object.entries(building.synergies.adjacencyBonus).forEach(([requiredBuilding, bonus]) => {
+      if (adjacentBuildings.includes(requiredBuilding)) {
+        efficiency += bonus;
+      }
+    });
+  }
+
+  return efficiency;
+}
+
+// Get building maintenance requirements
+export function getBuildingMaintenanceNeeds(building: Building): {
+  upkeep: Record<string, number>;
+  requirements: string[];
+} {
+  const upkeep = building.upkeepCost || {};
+  const requirements = [];
+
+  if (building.itemInteractions?.requires) {
+    requirements.push(...building.itemInteractions.requires);
+  }
+
+  if (building.buildingState?.environmentalNeeds) {
+    requirements.push(...building.buildingState.environmentalNeeds);
+  }
+
+  return { upkeep, requirements };
+}
+
+// Visual and UI helpers
+export function getBuildingIcon(buildingId: string): string {
+  const building = AVAILABLE_BUILDINGS.find((b) => b.id === buildingId);
+  if (building?.emoji) return building.emoji;
+
+  // Fallback based on category
+  switch (building?.category) {
+    case 'housing':
+      return '🏠';
+    case 'production':
+      return '⚒️';
+    case 'knowledge':
+      return '📚';
+    case 'military':
+      return '⚔️';
+    case 'food':
+      return '🍖';
+    case 'commerce':
+      return '🏪';
+    case 'magical':
+      return '🔮';
+    case 'exploration':
+      return '🗺️';
+    case 'social':
+      return '👥';
+    default:
+      return '🏗️';
+  }
+}
+
+export function getBuildingColor(buildingId: string): string {
+  const building = AVAILABLE_BUILDINGS.find((b) => b.id === buildingId);
+  return building?.color || '#4CAF50';
+}
+
+export function getBuildingRarityColor(rarity: string): string {
+  switch (rarity) {
+    case 'common':
+      return '#9E9E9E';
+    case 'uncommon':
+      return '#4CAF50';
+    case 'rare':
+      return '#2196F3';
+    case 'epic':
+      return '#9C27B0';
+    case 'legendary':
+      return '#FF9800';
+    default:
+      return '#9E9E9E';
+  }
+}
+
+// Get building information
+export function getBuildingInfo(buildingId: string): Building | undefined {
+  return AVAILABLE_BUILDINGS.find((b) => b.id === buildingId);
+}
+
+// Calculate building impact on game state
+export function calculateBuildingImpact(building: Building): {
+  populationChange: number;
+  resourceProduction: Record<string, number>;
+  storageIncrease: Record<string, number>;
+  specialEffects: Record<string, number>;
+} {
+  const impact = {
+    populationChange: 0,
+    resourceProduction: {},
+    storageIncrease: building.storageCapacity || {},
+    specialEffects: building.effects || {}
+  };
+
+  // Calculate population impact
+  if (building.effects.populationCapacity) {
+    impact.populationChange = building.effects.populationCapacity;
+  }
+
+  // Calculate resource production
+  if (building.itemInteractions?.produces) {
+    impact.resourceProduction = building.itemInteractions.produces;
+  }
+
+  return impact;
+}
+
+// Event integration helpers
+export function getBuildingEvents(
+  building: Building,
+  eventType: 'construction' | 'operation' | 'upgrade' | 'destruction'
+): string[] {
+  if (!building.eventTriggers) return [];
+
+  switch (eventType) {
+    case 'construction':
+      return building.eventTriggers.onConstruction || [];
+    case 'operation':
+      return building.eventTriggers.onOperation || [];
+    case 'upgrade':
+      return building.eventTriggers.onUpgrade || [];
+    case 'destruction':
+      return building.eventTriggers.onDestruction || [];
+    default:
+      return [];
+  }
+}

@@ -5,7 +5,7 @@ import type { Location } from '$lib/game/core/types';
 export interface ResourceNodeTemplate {
   id: string;
   currentAmountRange: [number, number]; // [min, max] for current amount
-  maxAmountRange: [number, number];     // [min, max] for max capacity
+  maxAmountRange: [number, number]; // [min, max] for max capacity
   renewalRate: number; // Amount renewed per turn (0 for non-renewable)
   renewalType: 'none' | 'slow' | 'fast' | 'seasonal';
   depletion: number; // How much is lost per extraction (usually 1)
@@ -35,13 +35,13 @@ export interface LocationWithResources extends Location {
 function generateResourceNode(template: ResourceNodeTemplate): ResourceNode {
   const [minCurrent, maxCurrent] = template.currentAmountRange;
   const [minMax, maxMax] = template.maxAmountRange;
-  
+
   const maxAmount = Math.floor(Math.random() * (maxMax - minMax + 1)) + minMax;
   const currentAmount = Math.min(
     Math.floor(Math.random() * (maxCurrent - minCurrent + 1)) + minCurrent,
     maxAmount
   );
-  
+
   return {
     id: template.id,
     currentAmount,
@@ -63,105 +63,116 @@ export const LOCATION_TEMPLATES: LocationTemplate[] = [
     tier: 0,
     rarity: 'common',
     discovered: true,
-    
+
     // Legacy format for compatibility
     availableResources: {
-      tier0: ['pine_wood', 'fir_wood', 'wild_berries', 'wild_oats', 'wild_barley', 'rabbit_carcass', 'plant_fiber', 'common_clay', 'sandstone', 'flint'],
+      tier0: [
+        'pine_wood',
+        'fir_wood',
+        'wild_berries',
+        'wild_oats',
+        'wild_barley',
+        'rabbit_carcass',
+        'plant_fiber',
+        'common_clay',
+        'sandstone',
+        'flint'
+      ],
       tier1: [],
       tier2: []
     },
-    
+
     // Resource templates for randomization
     resourceTemplates: {
-    'pine_wood': {
-      id: 'pine_wood',
-      currentAmountRange: [1000, 1500],
-      maxAmountRange: [500, 1500],
-      renewalRate: 0.02, // Was 3, now very slow tree growth
-      renewalType: 'slow',
-      depletion: 1
+      pine_wood: {
+        id: 'pine_wood',
+        currentAmountRange: [1000, 1500],
+        maxAmountRange: [500, 1500],
+        renewalRate: 0.02, // Was 3, now very slow tree growth
+        renewalType: 'slow',
+        depletion: 1
+      },
+      fir_wood: {
+        id: 'fir_wood',
+        currentAmountRange: [300, 1000],
+        maxAmountRange: [600, 1000],
+        renewalRate: 0.02, // Was 2, now very slow
+        renewalType: 'slow',
+        depletion: 1
+      },
+      wild_berries: {
+        id: 'wild_berries',
+        currentAmountRange: [500, 1200],
+        maxAmountRange: [800, 1500],
+        renewalRate: 0.3, // Was 5, now seasonal/slow growth
+        renewalType: 'seasonal',
+        depletion: 1
+      },
+      wild_oats: {
+        id: 'wild_oats',
+        currentAmountRange: [400, 800],
+        maxAmountRange: [600, 1000],
+        renewalRate: 0.2, // Was 4, now slow plant growth
+        renewalType: 'seasonal',
+        depletion: 1
+      },
+      wild_barley: {
+        id: 'wild_barley',
+        currentAmountRange: [300, 700],
+        maxAmountRange: [500, 900],
+        renewalRate: 0.15, // Was 3, now slow
+        renewalType: 'seasonal',
+        depletion: 1
+      },
+      rabbit_carcass: {
+        id: 'rabbit_carcass',
+        currentAmountRange: [150, 350],
+        maxAmountRange: [250, 500],
+        renewalRate: 0.05, // Was 2, now slow animal reproduction
+        renewalType: 'fast',
+        depletion: 1
+      },
+      plant_fiber: {
+        id: 'plant_fiber',
+        currentAmountRange: [800, 1500],
+        maxAmountRange: [1200, 2000],
+        renewalRate: 0.4, // Was 8, now moderate plant growth
+        renewalType: 'fast',
+        depletion: 1
+      },
+      // Non-renewable resources stay at 0
+      common_clay: {
+        id: 'common_clay',
+        currentAmountRange: [500, 800],
+        maxAmountRange: [300, 1000],
+        renewalRate: 0, // Stays 0 (non-renewable)
+        renewalType: 'none',
+        depletion: 1
+      },
+      sandstone: {
+        id: 'sandstone',
+        currentAmountRange: [200, 400],
+        maxAmountRange: [200, 400],
+        renewalRate: 0, // Stays 0 (non-renewable)
+        renewalType: 'none',
+        depletion: 1
+      },
+      flint: {
+        id: 'flint',
+        currentAmountRange: [200, 400],
+        maxAmountRange: [400, 500],
+        renewalRate: 0, // Stays 0 (non-renewable)
+        renewalType: 'none',
+        depletion: 1
+      }
     },
-    'fir_wood': {
-      id: 'fir_wood',
-      currentAmountRange: [300, 1000],
-      maxAmountRange: [600, 1000],
-      renewalRate: 0.02, // Was 2, now very slow
-      renewalType: 'slow',
-      depletion: 1
-    },
-    'wild_berries': {
-      id: 'wild_berries',
-      currentAmountRange: [500, 1200],
-      maxAmountRange: [800, 1500],
-      renewalRate: 0.3, // Was 5, now seasonal/slow growth
-      renewalType: 'seasonal',
-      depletion: 1
-    },
-    'wild_oats': {
-      id: 'wild_oats',
-      currentAmountRange: [400, 800],
-      maxAmountRange: [600, 1000],
-      renewalRate: 0.2, // Was 4, now slow plant growth
-      renewalType: 'seasonal',
-      depletion: 1
-    },
-    'wild_barley': {
-      id: 'wild_barley',
-      currentAmountRange: [300, 700],
-      maxAmountRange: [500, 900],
-      renewalRate: 0.15, // Was 3, now slow
-      renewalType: 'seasonal',
-      depletion: 1
-    },
-    'rabbit_carcass': {
-      id: 'rabbit_carcass',
-      currentAmountRange: [150, 350],
-      maxAmountRange: [250, 500],
-      renewalRate: 0.05, // Was 2, now slow animal reproduction
-      renewalType: 'fast',
-      depletion: 1
-    },
-    'plant_fiber': {
-      id: 'plant_fiber',
-      currentAmountRange: [800, 1500],
-      maxAmountRange: [1200, 2000],
-      renewalRate: 0.4, // Was 8, now moderate plant growth
-      renewalType: 'fast',
-      depletion: 1
-    },
-    // Non-renewable resources stay at 0
-    'common_clay': {
-      id: 'common_clay',
-      currentAmountRange: [500, 800],
-      maxAmountRange: [300, 1000],
-      renewalRate: 0, // Stays 0 (non-renewable)
-      renewalType: 'none',
-      depletion: 1
-    },
-    'sandstone': {
-      id: 'sandstone',
-      currentAmountRange: [200, 400],
-      maxAmountRange: [200, 400],
-      renewalRate: 0, // Stays 0 (non-renewable)
-      renewalType: 'none',
-      depletion: 1
-    },
-    'flint': {
-      id: 'flint',
-      currentAmountRange: [200, 400],
-      maxAmountRange: [400, 500],
-      renewalRate: 0, // Stays 0 (non-renewable)
-      renewalType: 'none',
-      depletion: 1
-    }
-  },
-    
+
     workModifiers: {
       hunting: 1.2,
       foraging: 1.3,
       farming: 1.1
     },
-    
+
     explorationRequirements: {},
     hazards: [],
     specialFeatures: ['fertile_soil'],
@@ -177,15 +188,15 @@ export const LOCATION_TEMPLATES: LocationTemplate[] = [
     tier: 0,
     rarity: 'common',
     discovered: false,
-    
+
     availableResources: {
       tier0: ['sandstone', 'limestone', 'flint', 'pine_wood', 'fir_wood', 'herbs', 'plant_fiber'],
       tier1: [],
       tier2: []
     },
-    
+
     resourceTemplates: {
-      'sandstone': {
+      sandstone: {
         id: 'sandstone',
         currentAmountRange: [400, 600],
         maxAmountRange: [400, 600],
@@ -193,7 +204,7 @@ export const LOCATION_TEMPLATES: LocationTemplate[] = [
         renewalType: 'none',
         depletion: 1
       },
-      'limestone': {
+      limestone: {
         id: 'limestone',
         currentAmountRange: [300, 500],
         maxAmountRange: [300, 500],
@@ -201,7 +212,7 @@ export const LOCATION_TEMPLATES: LocationTemplate[] = [
         renewalType: 'none',
         depletion: 1
       },
-      'flint': {
+      flint: {
         id: 'flint',
         currentAmountRange: [100, 200],
         maxAmountRange: [100, 200],
@@ -209,7 +220,7 @@ export const LOCATION_TEMPLATES: LocationTemplate[] = [
         renewalType: 'none',
         depletion: 1
       },
-      'pine_wood': {
+      pine_wood: {
         id: 'pine_wood',
         currentAmountRange: [50, 120],
         maxAmountRange: [80, 150],
@@ -217,7 +228,7 @@ export const LOCATION_TEMPLATES: LocationTemplate[] = [
         renewalType: 'slow',
         depletion: 1
       },
-      'fir_wood': {
+      fir_wood: {
         id: 'fir_wood',
         currentAmountRange: [40, 100],
         maxAmountRange: [60, 130],
@@ -225,7 +236,7 @@ export const LOCATION_TEMPLATES: LocationTemplate[] = [
         renewalType: 'slow',
         depletion: 1
       },
-      'herbs': {
+      herbs: {
         id: 'herbs',
         currentAmountRange: [25, 60],
         maxAmountRange: [40, 80],
@@ -233,7 +244,7 @@ export const LOCATION_TEMPLATES: LocationTemplate[] = [
         renewalType: 'seasonal',
         depletion: 1
       },
-      'plant_fiber': {
+      plant_fiber: {
         id: 'plant_fiber',
         currentAmountRange: [50, 100],
         maxAmountRange: [70, 130],
@@ -242,17 +253,17 @@ export const LOCATION_TEMPLATES: LocationTemplate[] = [
         depletion: 1
       }
     },
-    
+
     workModifiers: {
       mining: 1.3,
       stoneworking: 1.2
     },
-    
+
     explorationRequirements: {
       population: 3,
       tools: ['stone_tools']
     },
-    
+
     hazards: ['loose_rocks'],
     specialFeatures: ['stone_quarry'],
     emoji: '⛰️',
@@ -267,15 +278,24 @@ export const LOCATION_TEMPLATES: LocationTemplate[] = [
     tier: 1,
     rarity: 'uncommon',
     discovered: false,
-    
+
     availableResources: {
       tier0: ['pine_wood', 'fir_wood', 'wild_berries'],
-      tier1: ['oak_wood', 'ash_wood', 'birch_wood', 'deer_carcass', 'rare_herbs', 'medicinal_plants', 'tree_sap', 'oak_bark'],
+      tier1: [
+        'oak_wood',
+        'ash_wood',
+        'birch_wood',
+        'deer_carcass',
+        'rare_herbs',
+        'medicinal_plants',
+        'tree_sap',
+        'oak_bark'
+      ],
       tier2: []
     },
-    
+
     resourceTemplates: {
-      'pine_wood': {
+      pine_wood: {
         id: 'pine_wood',
         currentAmountRange: [2000, 4000],
         maxAmountRange: [3000, 5000],
@@ -283,7 +303,7 @@ export const LOCATION_TEMPLATES: LocationTemplate[] = [
         renewalType: 'slow',
         depletion: 1
       },
-      'fir_wood': {
+      fir_wood: {
         id: 'fir_wood',
         currentAmountRange: [1800, 3500],
         maxAmountRange: [2500, 4500],
@@ -291,7 +311,7 @@ export const LOCATION_TEMPLATES: LocationTemplate[] = [
         renewalType: 'slow',
         depletion: 1
       },
-      'oak_wood': {
+      oak_wood: {
         id: 'oak_wood',
         currentAmountRange: [1500, 3000],
         maxAmountRange: [2000, 4000],
@@ -299,7 +319,7 @@ export const LOCATION_TEMPLATES: LocationTemplate[] = [
         renewalType: 'slow',
         depletion: 1
       },
-      'ash_wood': {
+      ash_wood: {
         id: 'ash_wood',
         currentAmountRange: [1000, 2500],
         maxAmountRange: [1500, 3500],
@@ -307,7 +327,7 @@ export const LOCATION_TEMPLATES: LocationTemplate[] = [
         renewalType: 'slow',
         depletion: 1
       },
-      'birch_wood': {
+      birch_wood: {
         id: 'birch_wood',
         currentAmountRange: [120, 280],
         maxAmountRange: [180, 380],
@@ -315,7 +335,7 @@ export const LOCATION_TEMPLATES: LocationTemplate[] = [
         renewalType: 'slow',
         depletion: 1
       },
-      'deer_carcass': {
+      deer_carcass: {
         id: 'deer_carcass',
         currentAmountRange: [80, 250],
         maxAmountRange: [150, 350],
@@ -323,7 +343,7 @@ export const LOCATION_TEMPLATES: LocationTemplate[] = [
         renewalType: 'slow',
         depletion: 1
       },
-      'wild_berries': {
+      wild_berries: {
         id: 'wild_berries',
         currentAmountRange: [800, 1800],
         maxAmountRange: [1200, 2200],
@@ -331,7 +351,7 @@ export const LOCATION_TEMPLATES: LocationTemplate[] = [
         renewalType: 'seasonal',
         depletion: 1
       },
-      'rare_herbs': {
+      rare_herbs: {
         id: 'rare_herbs',
         currentAmountRange: [50, 150],
         maxAmountRange: [250, 300],
@@ -339,7 +359,7 @@ export const LOCATION_TEMPLATES: LocationTemplate[] = [
         renewalType: 'seasonal',
         depletion: 1
       },
-      'medicinal_plants': {
+      medicinal_plants: {
         id: 'medicinal_plants',
         currentAmountRange: [100, 400],
         maxAmountRange: [200, 400],
@@ -347,7 +367,7 @@ export const LOCATION_TEMPLATES: LocationTemplate[] = [
         renewalType: 'slow',
         depletion: 1
       },
-      'tree_sap': {
+      tree_sap: {
         id: 'tree_sap',
         currentAmountRange: [400, 1000],
         maxAmountRange: [600, 1200],
@@ -355,7 +375,7 @@ export const LOCATION_TEMPLATES: LocationTemplate[] = [
         renewalType: 'seasonal',
         depletion: 1
       },
-      'oak_bark': {
+      oak_bark: {
         id: 'oak_bark',
         currentAmountRange: [1500, 3000],
         maxAmountRange: [1500, 3000],
@@ -364,19 +384,19 @@ export const LOCATION_TEMPLATES: LocationTemplate[] = [
         depletion: 1
       }
     },
-    
+
     workModifiers: {
       woodcutting: 1.8,
       hunting: 1.1,
       herbalism: 1.6
     },
-    
+
     explorationRequirements: {
       population: 5,
       tools: ['bronze_axe'],
       research: ['advanced_forestry']
     },
-    
+
     hazards: ['wild_animals', 'getting_lost'],
     specialFeatures: ['ancient_tree', 'hidden_grove'],
     emoji: '🌲',
@@ -391,15 +411,15 @@ export const LOCATION_TEMPLATES: LocationTemplate[] = [
     tier: 1,
     rarity: 'uncommon',
     discovered: false,
-    
+
     availableResources: {
       tier0: ['granite', 'sandstone', 'limestone', 'flint'],
       tier1: ['copper_ore', 'tin_ore', 'iron_ore', 'charcoal'],
       tier2: []
     },
-    
+
     resourceTemplates: {
-      'granite': {
+      granite: {
         id: 'granite',
         currentAmountRange: [600, 1000],
         maxAmountRange: [600, 1000],
@@ -407,7 +427,7 @@ export const LOCATION_TEMPLATES: LocationTemplate[] = [
         renewalType: 'none',
         depletion: 1
       },
-      'sandstone': {
+      sandstone: {
         id: 'sandstone',
         currentAmountRange: [400, 800],
         maxAmountRange: [400, 800],
@@ -415,7 +435,7 @@ export const LOCATION_TEMPLATES: LocationTemplate[] = [
         renewalType: 'none',
         depletion: 1
       },
-      'limestone': {
+      limestone: {
         id: 'limestone',
         currentAmountRange: [300, 700],
         maxAmountRange: [300, 700],
@@ -423,7 +443,7 @@ export const LOCATION_TEMPLATES: LocationTemplate[] = [
         renewalType: 'none',
         depletion: 1
       },
-      'flint': {
+      flint: {
         id: 'flint',
         currentAmountRange: [150, 300],
         maxAmountRange: [150, 300],
@@ -431,7 +451,7 @@ export const LOCATION_TEMPLATES: LocationTemplate[] = [
         renewalType: 'none',
         depletion: 1
       },
-      'copper_ore': {
+      copper_ore: {
         id: 'copper_ore',
         currentAmountRange: [80, 200],
         maxAmountRange: [80, 200],
@@ -439,7 +459,7 @@ export const LOCATION_TEMPLATES: LocationTemplate[] = [
         renewalType: 'none',
         depletion: 1
       },
-      'tin_ore': {
+      tin_ore: {
         id: 'tin_ore',
         currentAmountRange: [40, 120],
         maxAmountRange: [40, 120],
@@ -447,7 +467,7 @@ export const LOCATION_TEMPLATES: LocationTemplate[] = [
         renewalType: 'none',
         depletion: 1
       },
-      'iron_ore': {
+      iron_ore: {
         id: 'iron_ore',
         currentAmountRange: [60, 180],
         maxAmountRange: [60, 180],
@@ -455,7 +475,7 @@ export const LOCATION_TEMPLATES: LocationTemplate[] = [
         renewalType: 'none',
         depletion: 1
       },
-      'coal': {
+      coal: {
         id: 'charcoal',
         currentAmountRange: [20, 80],
         maxAmountRange: [50, 150],
@@ -464,18 +484,18 @@ export const LOCATION_TEMPLATES: LocationTemplate[] = [
         depletion: 1
       }
     },
-    
+
     workModifiers: {
       mining: 2.0,
       stoneworking: 1.5
     },
-    
+
     explorationRequirements: {
       population: 8,
       tools: ['copper_pick', 'bronze_tools'],
       research: ['basic_metallurgy']
     },
-    
+
     hazards: ['rockslides', 'cave_ins'],
     specialFeatures: ['mineral_vein', 'natural_caves'],
     emoji: '🏔️',
@@ -490,15 +510,15 @@ export const LOCATION_TEMPLATES: LocationTemplate[] = [
     tier: 1,
     rarity: 'uncommon',
     discovered: false,
-    
+
     availableResources: {
       tier0: ['common_carp', 'common_clay'],
       tier1: ['river_trout', 'fire_clay', 'river_stones', 'water_plants'],
       tier2: []
     },
-    
+
     resourceTemplates: {
-      'common_carp': {
+      common_carp: {
         id: 'common_carp',
         currentAmountRange: [300, 80],
         maxAmountRange: [500, 1200],
@@ -506,7 +526,7 @@ export const LOCATION_TEMPLATES: LocationTemplate[] = [
         renewalType: 'fast',
         depletion: 1
       },
-      'river_trout': {
+      river_trout: {
         id: 'river_trout',
         currentAmountRange: [200, 600],
         maxAmountRange: [350, 900],
@@ -514,7 +534,7 @@ export const LOCATION_TEMPLATES: LocationTemplate[] = [
         renewalType: 'seasonal',
         depletion: 1
       },
-      'common_clay': {
+      common_clay: {
         id: 'common_clay',
         currentAmountRange: [1000, 3000],
         maxAmountRange: [1000, 3000],
@@ -522,7 +542,7 @@ export const LOCATION_TEMPLATES: LocationTemplate[] = [
         renewalType: 'none',
         depletion: 1
       },
-      'fire_clay': {
+      fire_clay: {
         id: 'fire_clay',
         currentAmountRange: [500, 1500],
         maxAmountRange: [500, 1500],
@@ -530,7 +550,7 @@ export const LOCATION_TEMPLATES: LocationTemplate[] = [
         renewalType: 'none',
         depletion: 1
       },
-      'river_stones': {
+      river_stones: {
         id: 'river_stones',
         currentAmountRange: [800, 2000],
         maxAmountRange: [800, 2000],
@@ -538,7 +558,7 @@ export const LOCATION_TEMPLATES: LocationTemplate[] = [
         renewalType: 'none',
         depletion: 1
       },
-      'water_plants': {
+      water_plants: {
         id: 'water_plants',
         currentAmountRange: [400, 1000],
         maxAmountRange: [600, 1400],
@@ -547,19 +567,19 @@ export const LOCATION_TEMPLATES: LocationTemplate[] = [
         depletion: 1
       }
     },
-    
+
     workModifiers: {
       fishing: 2.5,
       farming: 1.8,
       pottery: 1.4
     },
-    
+
     explorationRequirements: {
       population: 6,
       tools: ['fishing_gear'],
       research: ['fishing_techniques']
     },
-    
+
     hazards: ['flooding', 'river_predators'],
     specialFeatures: ['rich_fishing', 'clay_deposits'],
     emoji: '🏞️',
@@ -573,13 +593,13 @@ export let LOCATIONS_DATABASE: LocationWithResources[] = [];
 // Initialize location from template
 export function initializeLocation(template: LocationTemplate): LocationWithResources {
   const resourceNodes: Record<string, ResourceNode> = {};
-  
+
   Object.entries(template.resourceTemplates).forEach(([id, template]) => {
     resourceNodes[id] = generateResourceNode(template);
   });
-  
+
   const { resourceTemplates, ...locationData } = template;
-  
+
   return {
     ...locationData,
     resourceNodes
@@ -588,18 +608,18 @@ export function initializeLocation(template: LocationTemplate): LocationWithReso
 
 // Initialize all locations (call this at game start)
 export function initializeAllLocations(): void {
-  LOCATIONS_DATABASE = LOCATION_TEMPLATES.map(template => initializeLocation(template));
+  LOCATIONS_DATABASE = LOCATION_TEMPLATES.map((template) => initializeLocation(template));
 }
 
 // Helper function to evaluate resource richness
 export function evaluateResourceRichness(
-  currentAmountRange: [number, number], 
+  currentAmountRange: [number, number],
   maxAmountRange: [number, number]
 ): string {
   const currentMid = (currentAmountRange[0] + currentAmountRange[1]) / 2;
   const maxMid = (maxAmountRange[0] + maxAmountRange[1]) / 2;
   const ratio = maxMid > 0 ? currentMid / maxMid : 0;
-  
+
   if (ratio < 0.2) return 'sparse';
   else if (ratio < 0.4) return 'scarce';
   else if (ratio < 0.6) return 'moderate';
@@ -610,44 +630,58 @@ export function evaluateResourceRichness(
 // Helper function to get richness color for UI
 export function getRichnessColor(richness: string): string {
   switch (richness) {
-    case 'sparse': return '#F44336';
-    case 'scarce': return '#FF9800';
-    case 'moderate': return '#FFC107';
-    case 'rich': return '#8BC34A';
-    case 'abundant': return '#4CAF50';
-    default: return '#9E9E9E';
+    case 'sparse':
+      return '#F44336';
+    case 'scarce':
+      return '#FF9800';
+    case 'moderate':
+      return '#FFC107';
+    case 'rich':
+      return '#8BC34A';
+    case 'abundant':
+      return '#4CAF50';
+    default:
+      return '#9E9E9E';
   }
 }
 
 // Helper function to get richness emoji for UI
 export function getRichnessEmoji(richness: string): string {
   switch (richness) {
-    case 'sparse': return '🔴';
-    case 'scarce': return '🟠';
-    case 'moderate': return '🟡';
-    case 'rich': return '🟢';
-    case 'abundant': return '💚';
-    default: return '⚪';
+    case 'sparse':
+      return '🔴';
+    case 'scarce':
+      return '🟠';
+    case 'moderate':
+      return '🟡';
+    case 'rich':
+      return '🟢';
+    case 'abundant':
+      return '💚';
+    default:
+      return '⚪';
   }
 }
 
 // Enhanced function to evaluate all resources in a location template
-export function evaluateLocationRichness(locationTemplate: LocationTemplate): Record<string, string> {
+export function evaluateLocationRichness(
+  locationTemplate: LocationTemplate
+): Record<string, string> {
   const richness: Record<string, string> = {};
-  
+
   Object.entries(locationTemplate.resourceTemplates).forEach(([resourceId, template]) => {
     richness[resourceId] = evaluateResourceRichness(
       template.currentAmountRange,
       template.maxAmountRange
     );
   });
-  
+
   return richness;
 }
 
 // Resource Management Functions
 export function processResourceRenewal(location: LocationWithResources): void {
-  Object.values(location.resourceNodes).forEach(node => {
+  Object.values(location.resourceNodes).forEach((node) => {
     if (node.renewalRate > 0 && node.currentAmount < node.maxAmount) {
       const renewal = Math.min(node.renewalRate, node.maxAmount - node.currentAmount);
       node.currentAmount += renewal;
@@ -655,17 +689,24 @@ export function processResourceRenewal(location: LocationWithResources): void {
   });
 }
 
-export function extractResource(location: LocationWithResources, resourceId: string, amount: number): number {
+export function extractResource(
+  location: LocationWithResources,
+  resourceId: string,
+  amount: number
+): number {
   const node = location.resourceNodes[resourceId];
   if (!node) return 0;
-  
+
   const extractable = Math.min(amount, node.currentAmount);
   node.currentAmount -= extractable * node.depletion;
-  
+
   return extractable;
 }
 
-export function getResourceAvailability(location: LocationWithResources, resourceId: string): {
+export function getResourceAvailability(
+  location: LocationWithResources,
+  resourceId: string
+): {
   available: number;
   maxAmount: number;
   renewalRate: number;
@@ -675,7 +716,7 @@ export function getResourceAvailability(location: LocationWithResources, resourc
   if (!node) {
     return { available: 0, maxAmount: 0, renewalRate: 0, isRenewable: false };
   }
-  
+
   return {
     available: node.currentAmount,
     maxAmount: node.maxAmount,
@@ -686,23 +727,23 @@ export function getResourceAvailability(location: LocationWithResources, resourc
 
 // Helper functions following the same pattern as Items.ts and Buildings.ts
 export function getLocationsByType(locationType: string): LocationWithResources[] {
-  return LOCATIONS_DATABASE.filter(location => location.type === locationType);
+  return LOCATIONS_DATABASE.filter((location) => location.type === locationType);
 }
 
 export function getLocationsByTier(tier: number): LocationWithResources[] {
-  return LOCATIONS_DATABASE.filter(location => location.tier === tier);
+  return LOCATIONS_DATABASE.filter((location) => location.tier === tier);
 }
 
 export function getDiscoveredLocations(): LocationWithResources[] {
-  return LOCATIONS_DATABASE.filter(location => location.discovered);
+  return LOCATIONS_DATABASE.filter((location) => location.discovered);
 }
 
 export function getUndiscoveredLocations(): LocationWithResources[] {
-  return LOCATIONS_DATABASE.filter(location => !location.discovered);
+  return LOCATIONS_DATABASE.filter((location) => !location.discovered);
 }
 
 export function getLocationInfo(locationId: string): LocationWithResources | undefined {
-  return LOCATIONS_DATABASE.find(l => l.id === locationId);
+  return LOCATIONS_DATABASE.find((l) => l.id === locationId);
 }
 
 export function canExploreLocation(
@@ -712,39 +753,41 @@ export function canExploreLocation(
   completedResearch: string[],
   availableBuildings: string[]
 ): boolean {
-  if (location.explorationRequirements.population && 
-      currentPopulation < location.explorationRequirements.population) {
+  if (
+    location.explorationRequirements.population &&
+    currentPopulation < location.explorationRequirements.population
+  ) {
     return false;
   }
-  
+
   if (location.explorationRequirements.tools) {
-    const hasRequiredTools = location.explorationRequirements.tools.every(tool => 
+    const hasRequiredTools = location.explorationRequirements.tools.every((tool) =>
       availableTools.includes(tool)
     );
     if (!hasRequiredTools) return false;
   }
-  
+
   if (location.explorationRequirements.research) {
-    const hasRequiredResearch = location.explorationRequirements.research.every(research => 
+    const hasRequiredResearch = location.explorationRequirements.research.every((research) =>
       completedResearch.includes(research)
     );
     if (!hasRequiredResearch) return false;
   }
-  
+
   if (location.explorationRequirements.buildings) {
-    const hasRequiredBuildings = location.explorationRequirements.buildings.every(building => 
+    const hasRequiredBuildings = location.explorationRequirements.buildings.every((building) =>
       availableBuildings.includes(building)
     );
     if (!hasRequiredBuildings) return false;
   }
-  
+
   return true;
 }
 
 export function getAvailableResourcesFromLocation(location: LocationWithResources): string[] {
   if (location.resourceNodes) {
-    return Object.keys(location.resourceNodes).filter(resourceId => 
-      location.resourceNodes[resourceId].currentAmount > 0
+    return Object.keys(location.resourceNodes).filter(
+      (resourceId) => location.resourceNodes[resourceId].currentAmount > 0
     );
   }
   // Fallback to legacy format
@@ -757,21 +800,27 @@ export function getAvailableResourcesFromLocation(location: LocationWithResource
 
 export function getLocationRarityColor(rarity: string): string {
   switch (rarity) {
-    case 'common': return '#9E9E9E';
-    case 'uncommon': return '#4CAF50';
-    case 'rare': return '#2196F3';
-    case 'epic': return '#9C27B0';
-    case 'legendary': return '#FF9800';
-    default: return '#9E9E9E';
+    case 'common':
+      return '#9E9E9E';
+    case 'uncommon':
+      return '#4CAF50';
+    case 'rare':
+      return '#2196F3';
+    case 'epic':
+      return '#9C27B0';
+    case 'legendary':
+      return '#FF9800';
+    default:
+      return '#9E9E9E';
   }
 }
 
 // Discover a new location (converts template to actual location)
 export function discoverLocation(locationId: string): boolean {
-  const template = LOCATION_TEMPLATES.find(t => t.id === locationId);
+  const template = LOCATION_TEMPLATES.find((t) => t.id === locationId);
   if (!template) return false;
-  
-  const existingIndex = LOCATIONS_DATABASE.findIndex(l => l.id === locationId);
+
+  const existingIndex = LOCATIONS_DATABASE.findIndex((l) => l.id === locationId);
   if (existingIndex !== -1) {
     LOCATIONS_DATABASE[existingIndex].discovered = true;
   } else {
@@ -779,15 +828,17 @@ export function discoverLocation(locationId: string): boolean {
     newLocation.discovered = true;
     LOCATIONS_DATABASE.push(newLocation);
   }
-  
+
   return true;
 }
 
 // Enhanced location initialization with richness evaluation
-export function initializeLocationWithRichness(template: LocationTemplate): LocationWithResources & { resourceRichness: Record<string, string> } {
+export function initializeLocationWithRichness(
+  template: LocationTemplate
+): LocationWithResources & { resourceRichness: Record<string, string> } {
   const location = initializeLocation(template);
   const resourceRichness = evaluateLocationRichness(template);
-  
+
   return {
     ...location,
     resourceRichness

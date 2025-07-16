@@ -3,15 +3,8 @@
   import CurrentTask from '$lib/components/UI/CurrentTask.svelte';
   import { uiState } from '$lib/stores/uiState';
   import TaskContainer from '$lib/components/UI/TaskContainer.svelte';
-  import {
-    getCraftableItems,
-    canCraftItem,
-    canCraftWithRequirements,
-    getItemIcon,
-    getItemColor,
-    getItemRarityColor,
-    ITEMS_DATABASE
-  } from '$lib/game/core/Items';
+  import { ITEMS_DATABASE } from '$lib/game/core/Items';
+  import { itemService } from '$lib/game/services/ItemService';
   import { onDestroy } from 'svelte';
   import type { Item } from '$lib/game/core/types';
 
@@ -52,14 +45,22 @@
   };
 
   // Enhanced filtering with both type and category
-  $: availableCraftableItems = getCraftableItems(
-    completedResearch,
-    availableBuildings,
-    currentToolLevel,
-    currentPopulation,
-    selectedItemType === 'all' ? undefined : selectedItemType,
-    selectedCategory === 'all' ? undefined : selectedCategory
-  );
+  $: availableCraftableItems = (() => {
+    if (!$gameState) return [];
+    let items = itemService.getCraftableItems($gameState);
+
+    // Filter by type if specified
+    if (selectedItemType !== 'all') {
+      items = items.filter((item) => item.type === selectedItemType);
+    }
+
+    // Filter by category if specified
+    if (selectedCategory !== 'all') {
+      items = items.filter((item) => item.category === selectedCategory);
+    }
+
+    return items;
+  })();
 
   // Get first crafting item for CurrentTask component
   $: firstCraftingInProgress = craftingQueue.length > 0 ? craftingQueue[0] : null;
@@ -94,7 +95,7 @@
   });
 
   function startCrafting(item: Item) {
-    if (!canCraftItem(item, itemMap)) {
+    if (!$gameState || !itemService.canCraftItem(item.id, $gameState)) {
       console.log('Cannot craft:', item.name);
       return;
     }
@@ -328,9 +329,9 @@
               {#if item}
                 <div
                   class="inventory-item"
-                  style="--rarity-color: {getItemRarityColor(item.rarity ?? 'common')}"
+                  style="--rarity-color: {itemService.getItemRarityColor(item.rarity ?? 'common')}"
                 >
-                  <span class="item-icon">{item.emoji || getItemIcon(itemId)}</span>
+                  <span class="item-icon">{item.emoji || itemService.getItemIcon(itemId)}</span>
                   <div class="item-details">
                     <span class="item-name">{item.name}</span>
                     <span class="item-type">{item.type} • {item.category} • {item.rarity}</span>
@@ -394,9 +395,12 @@
       <h3>📋 Available Items to Craft ({availableCraftableItems.length})</h3>
       <div class="recipes-grid">
         {#each availableCraftableItems as item}
-          <div class="recipe-card" class:affordable={canCraftItem(item, itemMap)}>
+          <div
+            class="recipe-card"
+            class:affordable={$gameState && itemService.canCraftItem(item.id, $gameState)}
+          >
             <div class="recipe-card-header">
-              <span class="recipe-icon">{item.emoji || getItemIcon(item.id)}</span>
+              <span class="recipe-icon">{item.emoji || itemService.getItemIcon(item.id)}</span>
               <div class="recipe-title">
                 <h4>{item.name}</h4>
                 <div class="recipe-meta">
@@ -406,7 +410,7 @@
               </div>
               <div
                 class="item-rarity"
-                style="--rarity-color: {getItemRarityColor(item.rarity || 'common')}"
+                style="--rarity-color: {itemService.getItemRarityColor(item.rarity || 'common')}"
               >
                 {item.rarity}
               </div>
@@ -440,7 +444,9 @@
                   {#each Object.entries(item.craftingCost) as [itemId, amount]}
                     {@const materialItem = ITEMS_DATABASE.find((i) => i.id === itemId)}
                     <div class="input-item" class:insufficient={getItemAmount(itemId) < amount}>
-                      <span class="input-icon">{materialItem?.emoji || getItemIcon(itemId)}</span>
+                      <span class="input-icon"
+                        >{materialItem?.emoji || itemService.getItemIcon(itemId)}</span
+                      >
                       <span class="input-amount">{amount}</span>
                       <span class="input-name">{materialItem?.name || itemId}</span>
                       <span class="input-available">({getItemAmount(itemId)} available)</span>
@@ -469,28 +475,12 @@
 
             <button
               class="craft-btn"
-              class:disabled={!canCraftItem(item, itemMap) ||
-                !canCraftWithRequirements(
-                  item,
-                  currentToolLevel,
-                  availableBuildings,
-                  currentPopulation,
-                  completedResearch
-                )}
+              class:disabled={!$gameState || !itemService.canCraftItem(item.id, $gameState)}
               on:click={() => startCrafting(item)}
-              disabled={!canCraftItem(item, itemMap) ||
-                !canCraftWithRequirements(
-                  item,
-                  currentToolLevel,
-                  availableBuildings,
-                  currentPopulation,
-                  completedResearch
-                )}
+              disabled={!$gameState || !itemService.canCraftItem(item.id, $gameState)}
             >
-              {#if !canCraftWithRequirements(item, currentToolLevel, availableBuildings, currentPopulation, completedResearch)}
-                Requirements Not Met
-              {:else if !canCraftItem(item, itemMap)}
-                Insufficient Materials
+              {#if !$gameState || !itemService.canCraftItem(item.id, $gameState)}
+                Cannot Craft
               {:else}
                 Begin Crafting
               {/if}

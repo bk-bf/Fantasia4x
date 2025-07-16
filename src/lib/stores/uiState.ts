@@ -2,7 +2,15 @@
 import { writable } from 'svelte/store';
 
 interface UIState {
-  currentScreen: 'main' | 'pawns' | 'race' |'building' | 'crafting' | 'research' | 'exploration' | 'work';
+  currentScreen:
+    | 'main'
+    | 'pawns'
+    | 'race'
+    | 'building'
+    | 'crafting'
+    | 'research'
+    | 'exploration'
+    | 'work';
   showNotifications: boolean;
   lastEvent: string | null;
 }
@@ -20,15 +28,13 @@ function createUIState() {
     subscribe,
     set,
     update,
-    
-    setScreen: (screen: UIState['currentScreen']) => 
-      update(state => ({ ...state, currentScreen: screen })),
-    
-    addEvent: (event: string) =>
-      update(state => ({ ...state, lastEvent: event })),
-    
-    clearEvent: () =>
-      update(state => ({ ...state, lastEvent: null }))
+
+    setScreen: (screen: UIState['currentScreen']) =>
+      update((state) => ({ ...state, currentScreen: screen })),
+
+    addEvent: (event: string) => update((state) => ({ ...state, lastEvent: event })),
+
+    clearEvent: () => update((state) => ({ ...state, lastEvent: null }))
   };
 }
 

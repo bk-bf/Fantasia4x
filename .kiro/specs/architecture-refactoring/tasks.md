@@ -1,13 +1,17 @@
 # Fantasia4x Architecture Refactoring Implementation Plan
-*Based on ROADMAP.md v6.0 and Steering Documents*
+
+_Based on ROADMAP.md v6.0 and Steering Documents_
 
 ## 🚨 PHASE 1: FOUNDATION STABILIZATION (Weeks 1-2)
+
 **CRITICAL: Must complete before any new features**
 
 ### Week 1: Architecture Analysis & Design
+
 **Priority: HIGH - Map current chaos and design clean interfaces**
 
 #### System Flow Documentation
+
 - [x] **Map current data flow** through all major systems
   - Document Pawns → Work → Resources → Buildings flow
   - Identify circular dependencies (Pawns → Items → Work → Pawns)
@@ -25,6 +29,7 @@
   - _Requirements: 2.1, 2.4_
 
 #### Clean Architecture Design
+
 - [x] **Design service layer interfaces**
   - ItemService for clean item queries
   - BuildingService for building validation
@@ -69,6 +74,7 @@
   - _Requirements: 4.1, 4.2_
 
 #### Deliverables
+
 - [x] **Complete system flow diagram**
 - [x] **Integration interface specifications**
 - [x] **Refactoring priority list**
@@ -79,29 +85,53 @@
   - ✅ Updated the tasklist to reflect the state of the codebase according to the documentation
 
 ### Week 2: Core System Refactoring
+
 **Priority: HIGH - Implement clean architecture**
 
 #### Service Layer Creation
-- [x] **Extract ItemService.ts from Items.ts**
-  - Move `getItemsByType()`, `getCraftableItems()`, `canCraftItem()`
-  - Keep `ITEMS_DATABASE` as pure data export
-  - Update all component imports to use ItemService
+
+- [x] **Create ItemService.ts interface and implementation**
+  - ✅ Service interface defined
+  - ✅ Service implementation created
+  - ❌ **CRITICAL: Business logic NOT removed from Items.ts**
+  - ❌ **CRITICAL: Components still import from Items.ts, not ItemService**
   - _Requirements: 1.1, 4.1, 4.3_
-- [x] **Extract BuildingService.ts from Buildings.ts**
-  - Move building query functions
-  - Move building cost/requirement checking
-  - Move construction logic
+- [x] **Create BuildingService.ts interface and implementation**
+  - ✅ Service interface defined
+  - ✅ Service implementation created
+  - ❌ **CRITICAL: Business logic NOT removed from Buildings.ts**
+  - ❌ **CRITICAL: Components still import from Buildings.ts, not BuildingService**
   - _Requirements: 1.2, 4.1, 4.3_
-- [x] **Create WorkService.ts**
-  - Extract work category logic from Work.ts
-  - Clean pawn-to-work-to-resource flow
-  - Standardize work assignment interfaces
+- [x] **Create WorkService.ts interface and implementation**
+  - ✅ Service interface defined
+  - ✅ Service implementation created
+  - ❌ **CRITICAL: Business logic NOT removed from Work.ts**
+  - ❌ **CRITICAL: Components still import from Work.ts, not WorkService**
   - _Requirements: 1.3, 4.1, 4.3_
 
+#### Complete the Business Logic Extraction
+
+- [x] **Phase 2A: Remove business logic from Items.ts**
+  - Remove all `export function` declarations from Items.ts
+  - Keep only `ITEMS_DATABASE` export
+  - Update all component imports to use ItemService
+  - Test that all functionality still works
+- [x] **Phase 2B: Remove business logic from Buildings.ts**
+  - Remove all `export function` declarations from Buildings.ts
+  - Keep only `AVAILABLE_BUILDINGS` export
+  - Update all component imports to use BuildingService
+  - Test that all functionality still works
+- [ ] **Phase 2C: Remove business logic from Work.ts**
+  - Remove all `export function` declarations from Work.ts
+  - Keep only `WORK_CATEGORIES` export
+  - Update all component imports to use WorkService
+  - Test that all functionality still works
+
 #### Pawn System Overhaul
+
 - [ ] **Implement basic needs behavior**
   - If hunger > 90%, pawns eat automatically
-  - If sleep > 90%, pawns sleep automatically  
+  - If sleep > 90%, pawns sleep automatically
   - If fatigue > 80%, pawns rest automatically
   - _Requirements: 6.1, 6.2, 6.3_
 - [ ] **Add simple morale consequences**
@@ -114,6 +144,7 @@
   - _Requirements: 4.2, 4.4_
 
 #### System Integration Fixes
+
 - [ ] **Resolve inventory/equipment synchronization**
   - Fix shared vs individual item conflicts
   - Standardize item access patterns
@@ -132,12 +163,15 @@
 ---
 
 ## 🐛 PHASE 2: BUG ELIMINATION & UI POLISH (Weeks 3-4)
+
 **Priority: HIGH - Create polished, bug-free experience**
 
 ### Week 3: Backend Bug Fixes
+
 **Priority: CRITICAL - Eliminate systemic issues**
 
 #### Critical Bug Resolution
+
 - [ ] **Fix data synchronization bugs**
   - Component state inconsistencies
   - GameState update conflicts
@@ -160,6 +194,7 @@
   - _Requirements: 7.2, 7.3, 8.5_
 
 #### System Stability Validation
+
 - [ ] **Implement automated testing** for core loops
   - _Requirements: 9.3, 9.4_
 - [ ] **Conduct extended play sessions** (50+ turns without errors)
@@ -170,9 +205,11 @@
   - _Requirements: 8.3, 8.6_
 
 ### Week 4: UI/UX Cleanup
+
 **Priority: MEDIUM - Polish user-facing experience**
 
 #### Visual Polish
+
 - [ ] **Fix visual glitches**
   - Animation synchronization issues
   - Display inconsistencies
@@ -189,6 +226,7 @@
   - _Requirements: 8.2, 8.4_
 
 #### Interface Consistency
+
 - [ ] **Consolidate similar UI patterns**
   - Standardize TaskContainer usage
   - Consistent progress displays
@@ -205,12 +243,15 @@
 ---
 
 ## ⚔️ PHASE 3: COMBAT SYSTEM IMPLEMENTATION (Weeks 5-9)
+
 **Priority: MEDIUM - Core combat functionality**
 
 ### Week 5-6: System Integration Validation
+
 **Priority: HIGH - Prove architecture scales**
 
 #### GameEngine Implementation
+
 - [ ] **Create GameEngine.ts as central coordinator**
   - Implement unified system interactions
   - Create single source of truth for bonuses
@@ -223,6 +264,7 @@
   - _Requirements: 2.3, 2.6_
 
 #### Architecture Scaling Tests
+
 - [ ] **Performance testing** with current content
   - _Requirements: 8.3, 8.4_
 - [ ] **Extended gameplay sessions** with new architecture
@@ -233,9 +275,11 @@
   - _Requirements: 2.6, 10.1_
 
 ### Week 7: Combat System Foundation
+
 **Priority: MEDIUM - Core tactical combat engine**
 
 #### Combat Engine Core
+
 - [ ] **Implement CombatState class**
   - Turn order tracking
   - Initiative calculation system
@@ -256,6 +300,7 @@
   - _Requirements: 10.1, 10.2_
 
 #### Equipment Integration
+
 - [ ] **Connect item system to combat abilities**
   - Weapon-specific actions
   - Ability cost calculations
@@ -269,9 +314,11 @@
   - _Requirements: 10.1, 10.6_
 
 ### Week 8: Tactical Depth & AI
+
 **Priority: MEDIUM - Advanced combat mechanics**
 
 #### Advanced Combat Mechanics
+
 - [ ] **Implement positioning bonuses**
   - Cover bonuses from terrain (+15% defense)
   - Flanking mechanics (+20% damage)
@@ -292,6 +339,7 @@
   - _Requirements: 10.2, 10.5_
 
 #### Enemy AI Implementation
+
 - [ ] **Build basic AI behaviors**
   - Aggressive AI (attacks nearest)
   - Defensive AI (holds position)
@@ -306,9 +354,11 @@
   - _Requirements: 10.1, 10.5_
 
 ### Week 9: Combat Integration & Polish
+
 **Priority: MEDIUM - Colony system integration**
 
 #### Colony System Integration
+
 - [ ] **Implement combat consequences**
   - Injury system affecting work efficiency
   - PTSD/morale effects from combat
@@ -328,6 +378,7 @@
   - _Requirements: 10.1, 10.3_
 
 #### Combat Polish & Balance
+
 - [ ] **Optimize performance** for 20-50 unit battles
   - _Requirements: 8.3, 8.4_
 - [ ] **Add combat tutorial** for new players
@@ -342,21 +393,25 @@
 ---
 
 ## 🎨 PHASE 4: ADVANCED FEATURES & VISUAL EVOLUTION (Weeks 10-14)
+
 **Priority: LOW - Enhancement and polish**
 
 ### Week 10-11: Advanced Combat Features
+
 - [ ] **Squad-based command system**
 - [ ] **Advanced tactical mechanics** (combo attacks, environmental hazards)
 - [ ] **Large-scale battle management** (50+ pawns)
 - [ ] **Enhanced AI & difficulty scaling**
 
 ### Week 12-13: Graphics Foundation
+
 - [ ] **Dual-mode rendering** (ASCII/Sprites toggle)
 - [ ] **Sprite rendering system** (32x32 tiles)
 - [ ] **Asset pipeline creation**
 - [ ] **Animation system** for combat
 
 ### Week 14: Final Polish
+
 - [ ] **Combat system completion**
 - [ ] **Balance & tuning**
 - [ ] **Documentation & accessibility**
@@ -367,6 +422,7 @@
 ## 🔧 ONGOING MAINTENANCE TASKS
 
 ### Code Quality
+
 - [ ] **Run `npm run lint:fix`** before each commit
   - _Requirements: 9.1, 9.2_
 - [ ] **Maintain TypeScript strict mode** throughout refactoring
@@ -377,6 +433,7 @@
   - _Requirements: 9.5, 9.6_
 
 ### Testing & Validation
+
 - [ ] **Test core game loop** after each major change
   - _Requirements: 8.1, 8.2_
 - [ ] **Validate save/load functionality** regularly
@@ -387,6 +444,7 @@
   - _Requirements: 3.1, 3.6_
 
 ### Documentation
+
 - [ ] **Update steering documents** as architecture evolves
   - _Requirements: 9.6_
 - [ ] **Maintain refactoring decision log**
@@ -401,24 +459,28 @@
 ## ⚠️ CRITICAL SUCCESS CRITERIA
 
 ### Phase 1 Gates
+
 - ✅ Service layer extracting business logic from data files
 - ✅ GameEngine implemented as central coordinator
 - ✅ Clean architecture with no circular dependencies
 - ✅ Core game loop stable with existing content
 
-### Phase 2 Gates  
+### Phase 2 Gates
+
 - ✅ No backend errors for 50+ consecutive turns
 - ✅ All visual glitches resolved
 - ✅ Responsive and predictable UI
 - ✅ Stable save/load functionality
 
 ### Phase 3 Gates
+
 - ✅ Basic combat functional with equipment integration
 - ✅ AI provides fair tactical challenge
 - ✅ Combat integrates seamlessly with colony systems
 - ✅ Performance smooth with expanded content
 
 ### Phase 4 Gates
+
 - ✅ Advanced combat features complete
 - ✅ Graphics system functional
 - ✅ Full accessibility compliance
@@ -429,16 +491,19 @@
 ## Risk Mitigation
 
 ### Backup Strategy
+
 - Create full backup of current codebase before starting
 - Implement incremental backups after each major task
 - Maintain rollback procedures for each refactoring phase
 
 ### Testing Strategy
+
 - Test each service extraction independently
 - Validate game functionality after each component update
 - Run extended gameplay sessions after major changes
 
 ### Integration Strategy
+
 - Implement services one at a time
 - Maintain backward compatibility during transition
 - Update components incrementally to use new architecture

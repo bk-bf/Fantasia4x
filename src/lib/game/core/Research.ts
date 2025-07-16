@@ -3,7 +3,7 @@ import type { ResearchProject, LoreItem, RaceStats } from './types';
 // RESEARCH DATABASE - Complete Integration with Items and Buildings
 export const RESEARCH_DATABASE: ResearchProject[] = [
   // TIER 0 - FOUNDATION RESEARCH (Basic Survival Technologies)
-  
+
   // Basic Knowledge & Writing
   {
     id: 'basic_writing',
@@ -738,7 +738,7 @@ export const LORE_DATABASE: LoreItem[] = [
     researchUnlocks: ['copper_smelting', 'bronze_working', 'iron_smelting', 'iron_working'],
     discoveryWeight: 0.3
   },
-  
+
   {
     id: 'builders_codex',
     name: "Builder's Codex",
@@ -747,10 +747,10 @@ export const LORE_DATABASE: LoreItem[] = [
     researchUnlocks: ['stone_masonry', 'masonry'],
     discoveryWeight: 0.25
   },
-  
+
   {
     id: 'explorers_journal',
-    name: "Explorer's Journal", 
+    name: "Explorer's Journal",
     description: 'Personal notes from a legendary pathfinder',
     type: 'scroll',
     researchUnlocks: ['fishing_techniques', 'organized_hunting', 'advanced_forestry'],
@@ -786,66 +786,65 @@ export function getAvailableResearch(
   availableTools: string[],
   discoveredLore: LoreItem[]
 ): ResearchProject[] {
-  return RESEARCH_DATABASE.filter(research => {
+  return RESEARCH_DATABASE.filter((research) => {
     // Already completed
     if (completedResearch.includes(research.id)) return false;
-    
+
     // Prerequisites check
-    if (!research.prerequisites.every(prereq => completedResearch.includes(prereq))) return false;
-    
+    if (!research.prerequisites.every((prereq) => completedResearch.includes(prereq))) return false;
+
     // Population requirements
-    if (research.populationRequired && currentPopulation < research.populationRequired) return false;
-    
+    if (research.populationRequired && currentPopulation < research.populationRequired)
+      return false;
+
     // Building requirements
-    if (research.buildingRequired && !availableBuildings.includes(research.buildingRequired)) return false;
-    
+    if (research.buildingRequired && !availableBuildings.includes(research.buildingRequired))
+      return false;
+
     // Tool requirements
-    if (research.toolRequirement && !availableTools.includes(research.toolRequirement)) return false;
-    
+    if (research.toolRequirement && !availableTools.includes(research.toolRequirement))
+      return false;
+
     // Scroll requirements (must have scrolls available)
     if (research.scrollRequirement) {
-      const hasScrolls = Object.entries(research.scrollRequirement).every(([scrollId, amount]) => 
-        (currentResources[scrollId] || 0) >= amount
+      const hasScrolls = Object.entries(research.scrollRequirement).every(
+        ([scrollId, amount]) => (currentResources[scrollId] || 0) >= amount
       );
       if (!hasScrolls) return false;
     }
-    
+
     // Material requirements (for actual crafting materials)
     if (research.materialRequirement) {
-      const hasMaterials = Object.entries(research.materialRequirement).every(([materialId, amount]) => 
-        (currentResources[materialId] || 0) >= amount
+      const hasMaterials = Object.entries(research.materialRequirement).every(
+        ([materialId, amount]) => (currentResources[materialId] || 0) >= amount
       );
       if (!hasMaterials) return false;
     }
-    
+
     return true;
   });
 }
 
 // Check if research can be unlocked with lore
-export function canUnlockWithLore(
-  researchId: string,
-  discoveredLore: LoreItem[]
-): boolean {
-  const research = RESEARCH_DATABASE.find(r => r.id === researchId);
+export function canUnlockWithLore(researchId: string, discoveredLore: LoreItem[]): boolean {
+  const research = RESEARCH_DATABASE.find((r) => r.id === researchId);
   if (!research?.canBypassWithLore) return false;
-  
-  return discoveredLore.some(lore => 
-    lore.researchUnlocks.includes(researchId)
-  );
+
+  return discoveredLore.some((lore) => lore.researchUnlocks.includes(researchId));
 }
 
 // Get research requirements for display
 export function getResearchRequirements(researchId: string): {
-  scrolls: Record<string, number>,
-  materials: Record<string, number>,
-  buildings: string[],
-  population: number,
-  prerequisites: string[]
+  scrolls: Record<string, number>;
+  materials: Record<string, number>;
+  buildings: string[];
+  population: number;
+  prerequisites: string[];
 } {
-  const research = RESEARCH_DATABASE.find(r => r.id === researchId);
-  if (!research) return { scrolls: {}, materials: {}, buildings: [], population: 0, prerequisites: [] };
-  
+  const research = RESEARCH_DATABASE.find((r) => r.id === researchId);
+  if (!research)
+    return { scrolls: {}, materials: {}, buildings: [], population: 0, prerequisites: [] };
+
   return {
     scrolls: research.scrollRequirement || {},
     materials: research.materialRequirement || {},
@@ -860,17 +859,17 @@ export function calculateResearchProgress(
   researchId: string,
   availableItems: Record<string, number>
 ): {
-  canStart: boolean,
-  scrollsNeeded: Record<string, number>,
-  materialsNeeded: Record<string, number>
+  canStart: boolean;
+  scrollsNeeded: Record<string, number>;
+  materialsNeeded: Record<string, number>;
 } {
-  const research = RESEARCH_DATABASE.find(r => r.id === researchId);
+  const research = RESEARCH_DATABASE.find((r) => r.id === researchId);
   if (!research) return { canStart: false, scrollsNeeded: {}, materialsNeeded: {} };
-  
+
   const scrollsNeeded: Record<string, number> = {};
   const materialsNeeded: Record<string, number> = {};
   let canStart = true;
-  
+
   // Check scroll requirements
   if (research.scrollRequirement) {
     Object.entries(research.scrollRequirement).forEach(([scrollId, required]) => {
@@ -881,7 +880,7 @@ export function calculateResearchProgress(
       }
     });
   }
-  
+
   // Check material requirements
   if (research.materialRequirement) {
     Object.entries(research.materialRequirement).forEach(([materialId, required]) => {
@@ -892,7 +891,7 @@ export function calculateResearchProgress(
       }
     });
   }
-  
+
   return {
     canStart,
     scrollsNeeded,

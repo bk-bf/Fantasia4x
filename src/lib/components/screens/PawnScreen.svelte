@@ -12,7 +12,7 @@
     canEquipItem,
     syncAllPawnInventories
   } from '$lib/game/core/PawnEquipment';
-  import { getItemInfo } from '$lib/game/core/Items';
+  import { itemService } from '$lib/game/services/ItemService';
   import {
     calculatePawnAbilities,
     categorizeAbilities,
@@ -387,7 +387,7 @@
         amount: updatedState.item[globalItemIndex].amount + quantity
       };
     } else {
-      const itemInfo = getItemInfo(itemId);
+      const itemInfo = itemService.getItemById(itemId);
       if (itemInfo) {
         updatedState.item.push({ ...itemInfo, amount: quantity });
       }

@@ -1,5 +1,14 @@
-import type { GameState, Pawn, EquippedItem, EquipmentSlot, Item, PawnEquipment, PawnInventory, RaceStats } from './types';
-import { getItemInfo } from './Items';
+import type {
+  GameState,
+  Pawn,
+  EquippedItem,
+  EquipmentSlot,
+  Item,
+  PawnEquipment,
+  PawnInventory,
+  RaceStats
+} from './types';
+import { itemService } from '../services/ItemService';
 
 export function createPawnInventory(baseSlots: number = 10): PawnInventory {
   return {
@@ -21,45 +30,47 @@ export function createPawnEquipment(): PawnEquipment {
 export function syncPawnInventoryWithGlobal(pawn: Pawn, globalItems: Item[]): Pawn {
   const updatedPawn = { ...pawn };
   const sharedItems: Record<string, number> = {};
-  
+
   // Get list of items currently equipped by this pawn
   const equippedItemIds = Object.values(pawn.equipment)
-    .filter(equipped => equipped !== undefined)
-    .map(equipped => equipped!.itemId);
-  
+    .filter((equipped) => equipped !== undefined)
+    .map((equipped) => equipped!.itemId);
+
   // Copy all global items to pawn inventory, excluding materials and equipped items
-  globalItems.forEach(globalItem => {
-    if (globalItem.amount > 0 && 
-        globalItem.type !== 'material' && 
-        !equippedItemIds.includes(globalItem.id)) {
+  globalItems.forEach((globalItem) => {
+    if (
+      globalItem.amount > 0 &&
+      globalItem.type !== 'material' &&
+      !equippedItemIds.includes(globalItem.id)
+    ) {
       sharedItems[globalItem.id] = Math.floor(globalItem.amount);
     }
   });
-  
+
   updatedPawn.inventory = {
     ...updatedPawn.inventory,
     items: sharedItems
   };
-  
+
   return updatedPawn;
 }
 // Add immediate sync function
 export function syncAllPawnInventories(gameState: GameState): GameState {
   const equippedItems = getAllEquippedItems(gameState.pawns);
-  
+
   // Create filtered global items (remove equipped items and reduce quantity)
-  const filteredGlobalItems = gameState.item.map(globalItem => {
+  const filteredGlobalItems = gameState.item.map((globalItem) => {
     if (equippedItems.has(globalItem.id)) {
       // Count how many times this item is equipped
       let equippedCount = 0;
-      gameState.pawns.forEach(pawn => {
-        Object.values(pawn.equipment).forEach(equipped => {
+      gameState.pawns.forEach((pawn) => {
+        Object.values(pawn.equipment).forEach((equipped) => {
           if (equipped && equipped.itemId === globalItem.id) {
             equippedCount++;
           }
         });
       });
-      
+
       // Return item with reduced amount
       return {
         ...globalItem,
@@ -68,12 +79,12 @@ export function syncAllPawnInventories(gameState: GameState): GameState {
     }
     return globalItem;
   });
-  
+
   // Sync all pawns with filtered items
-  const updatedPawns = gameState.pawns.map(pawn => 
+  const updatedPawns = gameState.pawns.map((pawn) =>
     syncPawnInventoryWithGlobal(pawn, filteredGlobalItems)
   );
-  
+
   return {
     ...gameState,
     pawns: updatedPawns
@@ -83,20 +94,20 @@ export function syncAllPawnInventories(gameState: GameState): GameState {
 // Helper function to get all equipped items
 function getAllEquippedItems(pawns: Pawn[]): Set<string> {
   const equippedItems = new Set<string>();
-  
-  pawns.forEach(pawn => {
-    Object.values(pawn.equipment).forEach(equipped => {
+
+  pawns.forEach((pawn) => {
+    Object.values(pawn.equipment).forEach((equipped) => {
       if (equipped) {
         equippedItems.add(equipped.itemId);
       }
     });
   });
-  
+
   return equippedItems;
 }
 // Update canEquipItem to work with shared inventory
 export function canEquipItem(pawn: Pawn, itemId: string): boolean {
-  const item = getItemInfo(itemId);
+  const item = itemService.getItemById(itemId);
   if (!item) return false;
 
   // Check if item type can be equipped
@@ -108,15 +119,19 @@ export function canEquipItem(pawn: Pawn, itemId: string): boolean {
 }
 export function getEquipmentSlot(item: Item): EquipmentSlot | null {
   switch (item.type) {
-    case 'weapon': return 'weapon';
-    case 'armor': return 'armor';
-    case 'tool': return 'tool';
-    default: return null;
+    case 'weapon':
+      return 'weapon';
+    case 'armor':
+      return 'armor';
+    case 'tool':
+      return 'tool';
+    default:
+      return null;
   }
 }
 
 export function equipItem(pawn: Pawn, itemId: string): Pawn {
-  const item = getItemInfo(itemId);
+  const item = itemService.getItemById(itemId);
   if (!item || !canEquipItem(pawn, itemId)) return pawn;
 
   const slot = getEquipmentSlot(item);
@@ -131,7 +146,7 @@ export function equipItem(pawn: Pawn, itemId: string): Pawn {
 
   // DON'T remove from inventory - just equip it
   // (The syncPawnInventoryWithGlobal will handle hiding it from available items)
-  
+
   // Equip the item
   updatedPawn.equipment = {
     ...updatedPawn.equipment,
@@ -183,7 +198,7 @@ export function calculateItemBonuses(item: Item): Record<string, number> {
         case 'armorPiercing':
           bonuses.armorPiercing = value;
           break;
-          
+
         // Crafting effects
         case 'craftingSpeed':
           bonuses.craftingBonus = value;
@@ -191,18 +206,18 @@ export function calculateItemBonuses(item: Item): Record<string, number> {
         case 'workability':
           bonuses.toolEfficiency = value;
           break;
-          
+
         // Defense effects
         case 'defense':
           bonuses.constitutionBonus = Math.floor(value / 3);
           bonuses.defenseRating = value;
           break;
-          
+
         // Movement effects
         case 'movementSpeed':
           bonuses.dexterityBonus = Math.floor(value * 2);
           break;
-          
+
         // Direct stat bonuses
         case 'strengthBonus':
         case 'dexterityBonus':
@@ -212,27 +227,26 @@ export function calculateItemBonuses(item: Item): Record<string, number> {
         case 'constitutionBonus':
           bonuses[effect] = value;
           break;
-          
+
         // Resistance effects
         case 'fireResistance':
         case 'coldResistance':
         case 'crushResistance':
           bonuses[effect] = value;
           break;
-          
+
         // Special effects
         case 'magicalPower':
           bonuses.intelligenceBonus = Math.floor(value / 2);
           bonuses.wisdomBonus = Math.floor(value / 3);
           break;
-          
+
         default:
           // Pass through any other numeric effects
           bonuses[effect] = value;
       }
     }
   });
-
 
   // Weapon-specific bonuses
   if (item.type === 'weapon' && item.weaponProperties) {
@@ -252,7 +266,7 @@ export function calculateItemBonuses(item: Item): Record<string, number> {
 
 export function addItemToInventory(pawn: Pawn, itemId: string, quantity: number = 1): Pawn {
   const updatedPawn = { ...pawn };
-  
+
   updatedPawn.inventory = {
     ...updatedPawn.inventory,
     items: {
@@ -292,13 +306,13 @@ export function removeItemFromInventory(pawn: Pawn, itemId: string, quantity: nu
 
 // Update useConsumable to consume from global storage
 export function useConsumable(pawn: Pawn, itemId: string): Pawn {
-  const item = getItemInfo(itemId);
+  const item = itemService.getItemById(itemId);
   if (!item || item.type !== 'consumable') return pawn;
   if ((pawn.inventory.items[itemId] || 0) < 1) return pawn;
 
   let updatedPawn = { ...pawn };
 
-  // Apply consumable effects (don't remove from inventory here - 
+  // Apply consumable effects (don't remove from inventory here -
   // let the game state handle global inventory reduction)
   Object.entries(item.effects || {}).forEach(([effect, value]) => {
     if (typeof value === 'number') {
@@ -323,7 +337,7 @@ export function useConsumable(pawn: Pawn, itemId: string): Pawn {
 export function getEquipmentBonuses(pawn: Pawn): Record<string, number> {
   const totalBonuses: Record<string, number> = {};
 
-  Object.values(pawn.equipment).forEach(equippedItem => {
+  Object.values(pawn.equipment).forEach((equippedItem) => {
     if (equippedItem?.bonuses) {
       Object.entries(equippedItem.bonuses).forEach(([bonus, value]) => {
         totalBonuses[bonus] = (totalBonuses[bonus] || 0) + (value as number);
@@ -355,22 +369,29 @@ export function getWorkEfficiency(pawn: Pawn, workType: string): number {
   let efficiency = 1.0;
 
   // Apply general bonuses
-  if (equipmentBonuses.craftingBonus && ['crafting', 'metalworking', 'leatherworking'].includes(workType)) {
-    efficiency *= (1 + equipmentBonuses.craftingBonus);
+  if (
+    equipmentBonuses.craftingBonus &&
+    ['crafting', 'metalworking', 'leatherworking'].includes(workType)
+  ) {
+    efficiency *= 1 + equipmentBonuses.craftingBonus;
   }
 
   if (equipmentBonuses.huntingEfficiency && workType === 'hunting') {
     efficiency *= equipmentBonuses.huntingEfficiency;
   }
 
-  if (equipmentBonuses.toolEfficiency && ['woodcutting', 'mining', 'construction'].includes(workType)) {
+  if (
+    equipmentBonuses.toolEfficiency &&
+    ['woodcutting', 'mining', 'construction'].includes(workType)
+  ) {
     efficiency *= equipmentBonuses.toolEfficiency;
   }
 
   // Apply racial trait bonuses
-  pawn.racialTraits.forEach(trait => {
+  pawn.racialTraits.forEach((trait) => {
     if (trait.effects.workEfficiency) {
-      const workBonus = trait.effects.workEfficiency[workType] || trait.effects.workEfficiency['all'];
+      const workBonus =
+        trait.effects.workEfficiency[workType] || trait.effects.workEfficiency['all'];
       if (workBonus) {
         efficiency *= workBonus;
       }
@@ -406,4 +427,3 @@ export function damageEquipment(pawn: Pawn, slot: EquipmentSlot, damage: number 
 
   return updatedPawn;
 }
-

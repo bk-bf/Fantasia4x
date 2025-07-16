@@ -10,7 +10,7 @@
     calculateHarvestAmount
   } from '$lib/game/core/Work';
   import { getDiscoveredLocations, getLocationInfo } from '$lib/game/core/Locations';
-  import { getItemIcon, getItemInfo } from '$lib/game/core/Items';
+  import { itemService } from '$lib/game/services/ItemService';
   import { get } from 'svelte/store';
 
   let race: any = null;
