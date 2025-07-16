@@ -8,6 +8,7 @@ import type {
 } from '../core/types';
 import { WORK_CATEGORIES } from '../core/Work';
 import { itemService } from './ItemService';
+import { locationService } from './LocationServices';
 
 // Lazy import to avoid circular dependency
 let gameEngineInstance: any = null;
@@ -393,7 +394,7 @@ export class WorkServiceImpl implements WorkService {
 			const availableResourceIds = this.getAvailableResourceIdsForWork(
 				gameState,
 				workType,
-				workAssignment.activeLocation  // ← ADD THE LOCATION!
+				workAssignment.activeLocation ?? ''  // ← ADD THE LOCATION! (fallback to empty string)
 			);
 
 			if (availableResourceIds.length === 0) {
@@ -405,9 +406,24 @@ export class WorkServiceImpl implements WorkService {
 			availableResourceIds.forEach((resourceId) => {
 				const harvestAmount = this.calculateHarvestAmount(pawn, workType, priority, gameState);
 				if (harvestAmount > 0) {
-					harvestedResources[resourceId] = (harvestedResources[resourceId] || 0) + harvestAmount;
-					console.log(`[WorkService] ${pawn.name} harvested ${harvestAmount} ${resourceId} from ${workAssignment.activeLocation}`);
+					// EXTRACT from location (this will deplete the resource)
+					const actualHarvested = locationService.extractResource(
+						workAssignment.activeLocation ?? '',
+						resourceId,
+						harvestAmount
+					);
+
+					if (actualHarvested > 0) {
+						harvestedResources[resourceId] = (harvestedResources[resourceId] || 0) + actualHarvested;
+						console.log(`[WorkService] ${pawn.name} harvested ${actualHarvested} ${resourceId} from ${workAssignment.activeLocation}`);
+					}
 				}
+			});
+
+			// Add harvested resources to player inventory
+			Object.entries(harvestedResources).forEach(([resourceId, amount]) => {
+				console.log(`[WorkService] Adding ${amount} ${resourceId} to game state`);
+				newState = itemService.addItems({ [resourceId]: amount }, newState);
 			});
 
 			// Advance to next job for next turn

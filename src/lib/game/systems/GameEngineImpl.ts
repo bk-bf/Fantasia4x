@@ -62,6 +62,7 @@ export class GameEngineImpl implements GameEngine {
 			this.processBuildings();
 			this.processCrafting();
 			this.processResearch();
+			this.processLocationRenewal();
 
 			// DEBUG: Check work assignments AFTER our processing
 			console.log('[GameEngine] AFTER our processing - Work assignments:', Object.keys(this.gameState.workAssignments || {}));
@@ -164,6 +165,11 @@ export class GameEngineImpl implements GameEngine {
 
 		console.log(`[GameEngine] Filtered resources for ${workType}:`, filteredResources);
 		return filteredResources;
+	}
+
+	private processLocationRenewal(): void {
+		console.log('[GameEngine] Processing location resource renewal');
+		locationService.processAllLocationRenewal();
 	}
 
 	/**
