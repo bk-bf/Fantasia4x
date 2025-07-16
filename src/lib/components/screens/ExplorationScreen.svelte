@@ -4,17 +4,8 @@
   import { onDestroy } from 'svelte';
   import CurrentTask from '$lib/components/UI/CurrentTask.svelte';
   import TaskContainer from '$lib/components/UI/TaskContainer.svelte';
-  import {
-    getDiscoveredLocations,
-    getLocationInfo,
-    canExploreLocation,
-    getLocationRarityColor,
-    getResourceAvailability,
-    evaluateResourceRichness,
-    getRichnessColor,
-    getRichnessEmoji,
-    LOCATION_TEMPLATES
-  } from '$lib/game/core/Locations';
+  import { locationService } from '$lib/game/services/LocationServices';
+  import { LOCATION_TEMPLATES } from '$lib/game/core/Locations';
   import { itemService } from '$lib/game/services/ItemService';
 
   let race: any = null;
@@ -50,7 +41,7 @@
   });
 
   const unsubscribeGame = gameState.subscribe((state) => {
-    discoveredLocations = getDiscoveredLocations();
+    discoveredLocations = locationService.getDiscoveredLocations();
     activeExplorationMissions = state.activeExplorationMissions || [];
     completedResearch = state.completedResearch || [];
     buildingCounts = state.buildingCounts || {};
@@ -79,11 +70,21 @@
     if (location.resourceNodes) {
       // For discovered locations with actual resource nodes
       Object.entries(location.resourceNodes).forEach(([resourceId, node]: [string, any]) => {
-        const availability = getResourceAvailability(location, resourceId);
+        // CHANGE THIS LINE:
+        // const availability = getResourceAvailability(location, resourceId);
+
+        // TO THIS:
+        const availability = locationService.getResourceAvailability(location.id, resourceId);
+
         // Calculate richness based on current vs max amounts
         const currentRange: [number, number] = [node.currentAmount, node.currentAmount];
         const maxRange: [number, number] = [node.maxAmount, node.maxAmount];
-        const richness = evaluateResourceRichness(currentRange, maxRange);
+
+        // CHANGE THIS LINE:
+        // const richness = evaluateResourceRichness(currentRange, maxRange);
+
+        // TO THIS:
+        const richness = locationService.evaluateResourceRichness(currentRange, maxRange);
 
         resourceRichness[resourceId] = { richness, availability };
       });
@@ -93,10 +94,18 @@
       if (template?.resourceTemplates) {
         Object.entries(template.resourceTemplates).forEach(
           ([resourceId, template]: [string, any]) => {
-            const richness = evaluateResourceRichness(
+            // CHANGE THIS LINE:
+            // const richness = evaluateResourceRichness(
+            //   template.currentAmountRange,
+            //   template.maxAmountRange
+            // );
+
+            // TO THIS:
+            const richness = locationService.evaluateResourceRichness(
               template.currentAmountRange,
               template.maxAmountRange
             );
+
             resourceRichness[resourceId] = {
               richness,
               availability: {
@@ -201,7 +210,7 @@
     // Filter missions based on current game state
     return allMissions.filter((mission) => {
       // Check if target location is already discovered
-      const targetLocation = getLocationInfo(mission.targetLocation);
+      const targetLocation = locationService.getLocationById(mission.targetLocation);
       if (targetLocation?.discovered) return false;
 
       // Check population requirement
@@ -337,6 +346,31 @@
     return Object.entries(location.workModifiers).map(
       ([work, modifier]) => `${work}: +${Math.round(((modifier as number) - 1) * 100)}%`
     );
+  }
+
+  function getLocationRarityColor(rarity: string): string {
+    switch (rarity) {
+      case 'common':
+        return '#4CAF50';
+      case 'uncommon':
+        return '#2196F3';
+      case 'rare':
+        return '#9C27B0';
+      case 'epic':
+        return '#FF9800';
+      case 'legendary':
+        return '#F44336';
+      default:
+        return '#9E9E9E';
+    }
+  }
+
+  function getRichnessColor(richness: string): string {
+    return locationService.getRichnessColor(richness);
+  }
+
+  function getRichnessEmoji(richness: string): string {
+    return locationService.getRichnessEmoji(richness);
   }
 </script>
 

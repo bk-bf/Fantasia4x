@@ -83,7 +83,13 @@
       maxPopulation,
       currentToolLevel,
       completedResearch,
-      item: Object.entries(itemsMap).map(([id, amount]) => ({ id, amount })),
+      item: Object.entries(itemsMap)
+        .map(([id, amount]) => {
+          const itemObj = itemService.getItemById(id);
+          if (!itemObj) return null;
+          return { ...itemObj, amount };
+        })
+        .filter((item): item is NonNullable<typeof item> => item !== null),
       buildingCounts,
       turn: currentTurnValue,
       race: race,

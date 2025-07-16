@@ -1,17 +1,11 @@
 <script lang="ts">
   import { gameState, currentItem, currentRace } from '$lib/stores/gameState';
   import { uiState } from '$lib/stores/uiState';
-  import {
-    getAvailableResearch,
-    canUnlockWithLore,
-    getResearchRequirements,
-    calculateResearchProgress,
-    RESEARCH_DATABASE
-  } from '$lib/game/core/Research';
-  import { onDestroy } from 'svelte';
-  import CurrentTask from '$lib/components/UI/CurrentTask.svelte';
+  import { researchService } from '$lib/game/services/ResearchService';
   import { buildingService } from '$lib/game/services/BuildingService';
   import { itemService } from '$lib/game/services/ItemService';
+  import { onDestroy } from 'svelte';
+  import CurrentTask from '$lib/components/UI/CurrentTask.svelte';
 
   let race: any = null;
   let availableResearch: any[] = [];
@@ -48,33 +42,9 @@
     discoveredLore = state.discoveredLore || [];
     buildingCounts = state.buildingCounts || {};
 
-    // Gather current stats from race
-    const currentStats = state.race?.baseStats || {};
-
-    // Gather current population
-    const currentPopulation = state.race?.population || 0;
-
-    // Combine item amounts and inventory for research requirements
-    const allResources: Record<string, number> = { ...itemMap, ...inventory };
-
-    // Gather available buildings
-    const availableBuildings = Object.keys(buildingCounts).filter(
-      (buildingId) => buildingCounts[buildingId] > 0
-    );
-
-    // Gather available tools - placeholder implementation
-    const availableTools: any[] = []; // TODO: Replace with actual tools when implemented
-
     if (race) {
-      availableResearch = getAvailableResearch(
-        completedResearch,
-        currentStats,
-        currentPopulation,
-        allResources,
-        availableBuildings,
-        availableTools,
-        discoveredLore
-      );
+      // ✅ Use service method instead
+      availableResearch = researchService.getAvailableResearch(state);
     }
   });
 
@@ -85,40 +55,9 @@
   });
 
   function startResearch(research: any) {
-    const hasLoreBypass = canUnlockWithLore(research.id, discoveredLore);
-
-    // Check scroll requirements
-    let hasScrolls = true;
-    if (research.scrollRequirement && !hasLoreBypass) {
-      hasScrolls = Object.entries(research.scrollRequirement).every(
-        ([scrollId, amount]) => getInventoryAmount(scrollId) >= (amount as number)
-      );
-    }
-
-    // Check material requirements
-    let hasMaterials = true;
-    if (research.materialRequirement && !hasLoreBypass) {
-      hasMaterials = Object.entries(research.materialRequirement).every(
-        ([materialId, amount]) => getItemAmount(materialId) >= (amount as number)
-      );
-    }
-
-    if (!hasScrolls && !hasLoreBypass) return;
-    if (!hasMaterials && !hasLoreBypass) return;
-
+    // ✅ Use service for research starting
     gameState.update((state) => {
-      const newState = { ...state };
-
-      // Note: Scrolls and materials are NOT consumed - they're just required to be available
-      // This is realistic: you need books to study, but studying doesn't destroy books
-
-      // Start research
-      newState.currentResearch = {
-        ...research,
-        currentProgress: 0
-      };
-
-      return newState;
+      return researchService.startResearch(research.id, state);
     });
   }
 
@@ -172,26 +111,8 @@
   function canStartResearch(research: any): boolean {
     if (currentResearch) return false;
 
-    const hasLoreBypass = canUnlockWithLore(research.id, discoveredLore);
-    if (hasLoreBypass) return true;
-
-    // Check scroll requirements
-    if (research.scrollRequirement) {
-      const hasScrolls = Object.entries(research.scrollRequirement).every(
-        ([scrollId, amount]) => getInventoryAmount(scrollId) >= (amount as number)
-      );
-      if (!hasScrolls) return false;
-    }
-
-    // Check material requirements
-    if (research.materialRequirement) {
-      const hasMaterials = Object.entries(research.materialRequirement).every(
-        ([materialId, amount]) => getItemAmount(materialId) >= (amount as number)
-      );
-      if (!hasMaterials) return false;
-    }
-
-    return true;
+    // ✅ Use service method
+    return researchService.canStartResearch(research.id, $gameState);
   }
 </script>
 
@@ -369,14 +290,14 @@
             <button
               class="research-btn"
               class:can-start={canStartResearch(research)}
-              class:lore-bypass={canUnlockWithLore(research.id, discoveredLore)}
+              class:lore-bypass={researchService.canUnlockWithLore(research.id, $gameState)}
               class:disabled={!canStartResearch(research)}
               on:click={() => startResearch(research)}
               disabled={!canStartResearch(research)}
             >
               {#if currentResearch}
                 Research in Progress
-              {:else if canUnlockWithLore(research.id, discoveredLore)}
+              {:else if researchService.canUnlockWithLore(research.id, $gameState)}
                 Unlock with Lore
               {:else if canStartResearch(research)}
                 Begin Research

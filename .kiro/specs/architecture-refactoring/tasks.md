@@ -116,16 +116,68 @@ _Based on ROADMAP.md v6.0 and Steering Documents_
   - Keep only `ITEMS_DATABASE` export
   - Update all component imports to use ItemService
   - Test that all functionality still works
+
 - [x] **Phase 2B: Remove business logic from Buildings.ts**
   - Remove all `export function` declarations from Buildings.ts
   - Keep only `AVAILABLE_BUILDINGS` export
   - Update all component imports to use BuildingService
   - Test that all functionality still works
-- [-] **Phase 2C: Remove business logic from Work.ts**
+
+- [x] **Phase 2C: Remove business logic from Work.ts**
   - Remove all `export function` declarations from Work.ts
   - Keep only `WORK_CATEGORIES` export
   - Update all component imports to use WorkService
   - Test that all functionality still works
+
+- [x] **Phase 2D: Remove business logic from Research.ts**
+  - Remove all `export function` declarations from Research.ts
+  - Keep only `RESEARCH_DATABASE` and `LORE_DATABASE` exports
+  - Update all component imports to use ResearchService
+  - Fix ResearchScreen.svelte to use `researchService.canUnlockWithLore()` instead of direct function calls
+  - Test that all research functionality still works
+
+- [ ] **Phase 2E: GameEngine Implementation & Store Integration Fix**
+    
+    **CRITICAL ISSUE IDENTIFIED:** Current architecture has GameState doing business logic instead of GameEngine coordination pattern specified in documentation. This causes store synchronization failures and resource generation issues.
+
+    - **Implement GameEngine as Central Coordinator (ADR-001 Compliance)**
+        - Create GameEngineImpl.ts that implements the documented GameEngine interface
+        - Move all turn processing logic from GameState.advanceTurn() to GameEngine.processGameTurn()
+        - Implement GameEngine.updateStores() method to handle all Svelte store synchronization
+        - Route all system coordination through GameEngine instead of direct GameState calls
+        - **FIXES:** Resource generation not appearing in UI, store synchronization failures
+
+    - **Refactor GameState to Pure Data Storage (ADR-006 Compliance)**
+        - Remove all process* methods from GameStateManager (processResources, processBuildings, etc.)
+        - Keep only data management: getState(), updateState(), addToItemArray(), removeItemAmount()
+        - Remove store update logic from GameState (GameEngine handles this now)
+        - Convert GameState to pure data container as documented in architecture specs
+        - **FIXES:** Separation of concerns, eliminates business logic in data layer
+
+    - **Fix Store Synchronization Through GameEngine**
+        - Import gameState and currentItem stores in GameEngineImpl only
+        - Implement proper store.set() calls in GameEngine after state updates
+        - Remove all store imports and updates from GameState.ts
+        - Test that ResourceSidebar displays resources after GameEngine processes turns
+        - **FIXES:** Resources not appearing in sidebar, store desynchronization
+
+    - **Integrate Services Through GameEngine Coordination**
+        - Route workService.processWorkHarvesting() through GameEngine, not GameState
+        - Coordinate all service calls through GameEngine.processGameTurn()
+        - Implement service result aggregation in GameEngine before state updates
+        - Test that location-based resource extraction works through service coordination
+        - **FIXES:** Proper service layer integration as documented
+
+    - **Architecture Validation & Testing**
+        - Verify GameEngine → Services → GameState → UI data flow works
+        - Test that turn advancement generates resources and updates UI correctly
+        - Validate that all services integrate through GameEngine coordination pattern
+        - Confirm store synchronization works reliably through GameEngine
+        - **ENSURES:** Architecture matches documentation specifications
+
+    - **Legacy Cleanup & Documentation**
+        - Mark old GameState business logic methods as deprecated
+        - Update component imports to
 
 #### Pawn System Overhaul
 

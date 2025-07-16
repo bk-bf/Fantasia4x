@@ -3,7 +3,7 @@
   import { gameState, currentItem, currentRace } from '$lib/stores/gameState';
   import { uiState } from '$lib/stores/uiState';
   import { WORK_CATEGORIES } from '$lib/game/core/Work';
-  import { getDiscoveredLocations, getLocationInfo } from '$lib/game/core/Locations';
+  import { locationService } from '$lib/game/services/LocationServices';
   import { itemService } from '$lib/game/services/ItemService';
   import { workService } from '$lib/game/services/WorkService';
   import { get } from 'svelte/store';
@@ -27,7 +27,7 @@
   const unsubscribeGame = gameState.subscribe((state) => {
     pawns = state.pawns || [];
     race = state.race;
-    discoveredLocations = getDiscoveredLocations();
+    discoveredLocations = locationService.getDiscoveredLocations();
     workAssignments = state.workAssignments || {};
     productionTargets = state.productionTargets || [];
     currentJobIndex = state.currentJobIndex || {};

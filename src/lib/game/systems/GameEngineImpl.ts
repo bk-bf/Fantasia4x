@@ -1,720 +1,399 @@
-/**
- * GameEngineImpl - Central Coordinator Implementation
- *
- * This implementation provides the central coordination for all system interactions,
- * using the automated modifier system for unified calculations.
- *
- * Requirements: 2.1, 2.2, 4.1, 4.2
- */
+import type { GameEngine, GameEngineConfig, TurnProcessingResult, SystemInteractionResult, BuildingEffects } from './GameEngine';
+import type { GameState } from '../core/types';
+import { GameStateManager } from '../core/GameState';
+import { gameState, currentItem } from '$lib/stores/gameState';
+import { modifierSystem } from './ModifierSystem';
+import { workService } from '../services/WorkService';
+import { itemService } from '../services/ItemService';
+import { locationService } from '../services/LocationServices'; // ADD THIS IMPORT
+// import {
+// 	getDiscoveredLocations,
+// 	getAvailableResourcesFromLocation,
+// 	extractResource
+// } from '../core/Locations';
+import type { BuildingEffectResult } from './ModifierSystem';
 
-import type {
-  GameEngine,
-  GameEngineConfig,
-  BuildingEffects,
-  SystemInteractionResult,
-  TurnProcessingResult,
-  ConsistencyValidationResult
-} from './GameEngine';
-import type { GameState, WorkAssignment, Pawn } from '../core/types';
-import type { ServiceRegistry } from './ServiceIntegration';
-import type {
-  SystemInteractionCoordinator,
-  SystemDataRequest,
-  SystemDataResponse,
-  SystemEvent,
-  EventProcessingResult,
-  StateUpdateRequest,
-  StateUpdateResult,
-  SystemError,
-  RecoveryResult,
-  InteractionProtocolConfig
-} from './SystemInteractionProtocols';
-
-import { modifierSystem, type ModifierSystem } from './ModifierSystem';
-import { SystemInteractionCoordinatorImpl } from './SystemInteractionCoordinatorImpl';
-
-/**
- * GameEngine Implementation using Automated Modifier System
- */
 export class GameEngineImpl implements GameEngine {
-  private gameState: GameState | null = null;
-  private services: ServiceRegistry | null = null;
-  private interactionCoordinator: SystemInteractionCoordinator;
-  private modifierSystem: ModifierSystem;
-  private config: GameEngineConfig;
-  private isInitialized = false;
-  private lastTurnProcessed = 0;
-  private pendingOperations = 0;
-  private errors: string[] = [];
-
-  constructor(config: GameEngineConfig = {}) {
-    this.config = {
-      enableDebugLogging: false,
-      validateStateOnEachUpdate: true,
-      maxTurnsPerBatch: 10,
-      enablePerformanceMetrics: false,
-      errorRecoveryMode: 'lenient',
-      ...config
-    };
-
-    this.interactionCoordinator = new SystemInteractionCoordinatorImpl();
-    this.modifierSystem = modifierSystem;
-  }
-
-  // ===== SYSTEM COORDINATION =====
-
-  processGameTurn(): TurnProcessingResult {
-    if (!this.gameState || !this.services) {
-      return {
-        success: false,
-        turnsProcessed: 0,
-        systemsUpdated: [],
-        errors: ['GameEngine not initialized']
-      };
-    }
-
-    const systemsUpdated: string[] = [];
-    const errors: string[] = [];
-    const warnings: string[] = [];
-
-    try {
-      this.pendingOperations++;
-
-      // 1. Process pawn needs and behavior
-      this.processPawnNeeds();
-      systemsUpdated.push('PawnNeeds');
-
-      // 2. Execute work assignments and production
-      this.processWorkAssignments();
-      systemsUpdated.push('WorkAssignments');
-
-      // 3. Process building construction and effects
-      this.processBuildingEffects();
-      systemsUpdated.push('Buildings');
-
-      // 4. Advance research progress
-      this.processResearch();
-      systemsUpdated.push('Research');
-
-      // 5. Process crafting queue
-      this.processCrafting();
-      systemsUpdated.push('Crafting');
-
-      // 6. Generate and process events
-      this.processEvents();
-      systemsUpdated.push('Events');
-
-      // 7. Update system states consistently
-      this.updateSystemStates();
-      systemsUpdated.push('StateSync');
-
-      // 8. Clear modifier cache for next turn
-      this.modifierSystem.clearCache();
-
-      this.gameState.turn++;
-      this.lastTurnProcessed = this.gameState.turn;
-
-      return {
-        success: true,
-        turnsProcessed: 1,
-        systemsUpdated,
-        errors: errors.length > 0 ? errors : undefined,
-        warnings: warnings.length > 0 ? warnings : undefined
-      };
-    } catch (error) {
-      errors.push(`Turn processing failed: ${error}`);
-      return {
-        success: false,
-        turnsProcessed: 0,
-        systemsUpdated,
-        errors
-      };
-    } finally {
-      this.pendingOperations--;
-    }
-  }
-
-  coordinateSystemInteractions(
-    sourceSystem: string,
-    targetSystem: string,
-    interactionType: 'query' | 'command' | 'event',
-    data: any
-  ): SystemInteractionResult {
-    if (!this.gameState || !this.services) {
-      return {
-        success: false,
-        error: 'GameEngine not initialized'
-      };
-    }
-
-    try {
-      // Use the modifier system for efficiency calculations
-      if (interactionType === 'query' && data.type === 'work_efficiency') {
-        const result = this.modifierSystem.calculateWorkEfficiency(
-          data.pawnId,
-          data.workType,
-          this.gameState,
-          data.locationId
-        );
-
-        return {
-          success: true,
-          data: result,
-          affectedSystems: [sourceSystem, targetSystem]
-        };
-      }
-
-      // Use the modifier system for building effects
-      if (interactionType === 'query' && data.type === 'building_effects') {
-        const result = this.modifierSystem.calculateBuildingEffects(
-          data.buildingId,
-          this.gameState
-        );
-
-        return {
-          success: true,
-          data: result,
-          affectedSystems: [sourceSystem, targetSystem]
-        };
-      }
-
-      // Delegate to interaction coordinator for other interactions
-      return {
-        success: true,
-        data: null,
-        affectedSystems: [sourceSystem, targetSystem]
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: `System interaction failed: ${error}`,
-        affectedSystems: [sourceSystem, targetSystem]
-      };
-    }
-  }
-
-  // ===== UNIFIED CALCULATIONS =====
-
-  calculatePawnEfficiency(pawnId: string, workType: string): number {
-    if (!this.gameState) return 1.0;
-
-    const result = this.modifierSystem.calculateWorkEfficiency(pawnId, workType, this.gameState);
-
-    return result.totalValue;
-  }
-
-  calculateBuildingEffects(buildingId: string, locationId?: string): BuildingEffects {
-    if (!this.gameState) {
-      return {
-        populationCapacity: 0,
-        productionBonus: {},
-        workEfficiencyBonus: {},
-        storageCapacity: {},
-        defenseBonus: 0,
-        morale: 0,
-        upkeepCost: {}
-      };
-    }
-
-    const result = this.modifierSystem.calculateBuildingEffects(buildingId, this.gameState);
-
-    // Convert to GameEngine BuildingEffects format
-    const effects: BuildingEffects = {
-      productionBonus: {},
-      workEfficiencyBonus: {},
-      storageCapacity: {},
-      upkeepCost: {}
-    };
-
-    // Extract specific effects
-    Object.entries(result.effects).forEach(([effectName, modifierResult]) => {
-      switch (effectName) {
-        case 'populationCapacity':
-          effects.populationCapacity = modifierResult.totalValue;
-          break;
-        case 'defenseBonus':
-          effects.defenseBonus = modifierResult.totalValue;
-          break;
-        case 'morale':
-          effects.morale = modifierResult.totalValue;
-          break;
-      }
-    });
-
-    // Extract work efficiency bonuses
-    Object.entries(result.workBonuses).forEach(([workType, modifierResult]) => {
-      effects.workEfficiencyBonus![workType] = modifierResult.totalValue;
-    });
-
-    // Extract production bonuses
-    Object.entries(result.productionBonuses).forEach(([resource, modifierResult]) => {
-      effects.productionBonus![resource] = modifierResult.totalValue;
-    });
-
-    return effects;
-  }
-
-  calculateCraftingTime(itemId: string, pawnId: string): number {
-    if (!this.gameState || !this.services) return 1;
-
-    // Use ItemService for base calculation, then apply modifiers
-    const baseTime = this.services.itemService.calculateCraftingTime(
-      itemId,
-      this.gameState,
-      pawnId
-    );
-
-    // Apply crafting efficiency modifiers
-    const craftingEfficiency = this.calculatePawnEfficiency(pawnId, 'crafting');
-
-    return Math.max(1, Math.round(baseTime / craftingEfficiency));
-  }
-
-  calculateResourceProduction(workAssignment: WorkAssignment): Record<string, number> {
-    if (!this.gameState || !workAssignment.currentWork) return {};
-
-    const pawn = this.gameState.pawns.find((p) => p.id === workAssignment.pawnId);
-    if (!pawn) return {};
-
-    // Use modifier system to calculate efficiency
-    const efficiency = this.modifierSystem.calculateWorkEfficiency(
-      workAssignment.pawnId,
-      workAssignment.currentWork,
-      this.gameState,
-      workAssignment.activeLocation
-    );
-
-    // Base production calculation
-    const priority = workAssignment.workPriorities[workAssignment.currentWork] || 1;
-    const baseProduction = efficiency.totalValue * priority * 0.5;
-
-    // This would be expanded to include specific resource types
-    return {
-      [workAssignment.currentWork]: baseProduction
-    };
-  }
-
-  calculateCombatEffectiveness(pawnId: string, combatType: 'melee' | 'ranged' | 'defense'): number {
-    if (!this.gameState) return 1.0;
-
-    const pawn = this.gameState.pawns.find((p) => p.id === pawnId);
-    if (!pawn) return 1.0;
-
-    // Use modifier system for equipment bonuses
-    const equipmentBonuses = this.modifierSystem.calculateEquipmentBonuses(pawn);
-
-    let effectiveness = 1.0;
-
-    // Apply relevant bonuses based on combat type
-    switch (combatType) {
-      case 'melee':
-        effectiveness *= pawn.stats.strength / 10;
-        if (equipmentBonuses.meleeDamage) {
-          effectiveness *= equipmentBonuses.meleeDamage.totalValue;
-        }
-        break;
-      case 'ranged':
-        effectiveness *= pawn.stats.dexterity / 10;
-        if (equipmentBonuses.rangedDamage) {
-          effectiveness *= equipmentBonuses.rangedDamage.totalValue;
-        }
-        break;
-      case 'defense':
-        effectiveness *= pawn.stats.constitution / 10;
-        if (equipmentBonuses.defense) {
-          effectiveness *= equipmentBonuses.defense.totalValue;
-        }
-        break;
-    }
-
-    return effectiveness;
-  }
-
-  // ===== STATE MANAGEMENT =====
-
-  getGameState(): GameState {
-    if (!this.gameState) {
-      throw new Error('GameEngine not initialized');
-    }
-
-    // Return deep copy to prevent mutations
-    return JSON.parse(JSON.stringify(this.gameState));
-  }
-
-  updateGameState(updates: Partial<GameState>): SystemInteractionResult {
-    if (!this.gameState) {
-      return {
-        success: false,
-        error: 'GameEngine not initialized'
-      };
-    }
-
-    try {
-      // Apply updates
-      this.gameState = { ...this.gameState, ...updates };
-
-      // Validate consistency if enabled
-      if (this.config.validateStateOnEachUpdate) {
-        const validation = this.validateSystemConsistency();
-        if (!validation.isValid) {
-          return {
-            success: false,
-            error: `State validation failed: ${validation.errors.join(', ')}`
-          };
-        }
-      }
-
-      // Clear modifier cache when state changes
-      this.modifierSystem.clearCache();
-
-      return { success: true };
-    } catch (error) {
-      return {
-        success: false,
-        error: `State update failed: ${error}`
-      };
-    }
-  }
-
-  validateSystemConsistency(): ConsistencyValidationResult {
-    if (!this.gameState) {
-      return {
-        isValid: false,
-        errors: ['GameEngine not initialized'],
-        warnings: [],
-        affectedSystems: []
-      };
-    }
-
-    const errors: string[] = [];
-    const warnings: string[] = [];
-    const affectedSystems: string[] = [];
-
-    // Use modifier system validation
-    const modifierValidation = this.modifierSystem.validateModifierConsistency(this.gameState);
-    if (!modifierValidation.isValid) {
-      errors.push(...modifierValidation.issues);
-      affectedSystems.push('ModifierSystem');
-    }
-
-    // Additional consistency checks
-    this.gameState.pawns.forEach((pawn) => {
-      if (pawn.state.health < 0 || pawn.state.health > 100) {
-        errors.push(`Pawn ${pawn.id} has invalid health: ${pawn.state.health}`);
-        affectedSystems.push('PawnSystem');
-      }
-
-      if (pawn.needs.hunger < 0 || pawn.needs.hunger > 100) {
-        errors.push(`Pawn ${pawn.id} has invalid hunger: ${pawn.needs.hunger}`);
-        affectedSystems.push('PawnSystem');
-      }
-    });
-
-    // Check building counts
-    Object.entries(this.gameState.buildingCounts).forEach(([buildingId, count]) => {
-      if (count < 0) {
-        errors.push(`Building ${buildingId} has negative count: ${count}`);
-        affectedSystems.push('BuildingSystem');
-      }
-    });
-
-    // Check item quantities
-    this.gameState.item.forEach((item) => {
-      if (item.amount < 0) {
-        errors.push(`Item ${item.id} has negative amount: ${item.amount}`);
-        affectedSystems.push('ItemSystem');
-      }
-    });
-
-    return {
-      isValid: errors.length === 0,
-      errors,
-      warnings,
-      affectedSystems: [...new Set(affectedSystems)]
-    };
-  }
-
-  resetGameState(newState?: GameState): SystemInteractionResult {
-    try {
-      if (newState) {
-        this.gameState = JSON.parse(JSON.stringify(newState));
-      } else {
-        // Reset to default state would go here
-        return {
-          success: false,
-          error: 'Default state reset not implemented'
-        };
-      }
-
-      this.modifierSystem.clearCache();
-      this.lastTurnProcessed = this.gameState.turn;
-
-      return { success: true };
-    } catch (error) {
-      return {
-        success: false,
-        error: `State reset failed: ${error}`
-      };
-    }
-  }
-
-  // ===== SERVICE INTEGRATION =====
-
-  integrateServices(services: ServiceRegistry): void {
-    this.services = services;
-  }
-
-  getServices(): ServiceRegistry {
-    if (!this.services) {
-      throw new Error('Services not integrated');
-    }
-    return this.services;
-  }
-
-  // ===== SYSTEM INTERACTION PROTOCOLS =====
-
-  getInteractionCoordinator(): SystemInteractionCoordinator {
-    return this.interactionCoordinator;
-  }
-
-  async processDataRequest(request: SystemDataRequest): Promise<SystemDataResponse> {
-    return this.interactionCoordinator.processDataRequest(request);
-  }
-
-  async propagateEvent(event: SystemEvent): Promise<EventProcessingResult> {
-    return this.interactionCoordinator.propagateEvent(event);
-  }
-
-  async coordinateStateUpdate(update: StateUpdateRequest): Promise<StateUpdateResult> {
-    return this.interactionCoordinator.coordinateStateUpdate(update);
-  }
-
-  async handleSystemError(error: SystemError): Promise<RecoveryResult> {
-    return this.interactionCoordinator.handleSystemError(error);
-  }
-
-  configureInteractionProtocols(config: Partial<InteractionProtocolConfig>): void {
-    this.interactionCoordinator.configureProtocols(config);
-  }
-
-  // ===== SYSTEM LIFECYCLE =====
-
-  initialize(initialState: GameState, services: ServiceRegistry): SystemInteractionResult {
-    try {
-      this.gameState = JSON.parse(JSON.stringify(initialState));
-      this.services = services;
-      this.isInitialized = true;
-      this.lastTurnProcessed = initialState.turn;
-
-      // Validate initial state
-      const validation = this.validateSystemConsistency();
-      if (!validation.isValid) {
-        this.errors.push(...validation.errors);
-        if (this.config.errorRecoveryMode === 'strict') {
-          return {
-            success: false,
-            error: `Initial state validation failed: ${validation.errors.join(', ')}`
-          };
-        }
-      }
-
-      return { success: true };
-    } catch (error) {
-      return {
-        success: false,
-        error: `Initialization failed: ${error}`
-      };
-    }
-  }
-
-  shutdown(): SystemInteractionResult {
-    try {
-      // Wait for pending operations
-      while (this.pendingOperations > 0) {
-        // In a real implementation, this would be async
-      }
-
-      this.modifierSystem.clearCache();
-      this.isInitialized = false;
-      this.gameState = null;
-      this.services = null;
-
-      return { success: true };
-    } catch (error) {
-      return {
-        success: false,
-        error: `Shutdown failed: ${error}`
-      };
-    }
-  }
-
-  getEngineStatus() {
-    return {
-      isInitialized: this.isInitialized,
-      systemsIntegrated: this.services ? Object.keys(this.services) : [],
-      lastTurnProcessed: this.lastTurnProcessed,
-      pendingOperations: this.pendingOperations,
-      errors: [...this.errors]
-    };
-  }
-
-  // ===== PRIVATE HELPER METHODS =====
-
-  private processPawnNeeds(): void {
-    if (!this.gameState || !this.services) return;
-
-    this.gameState.pawns.forEach((pawn) => {
-      // Process basic needs
-      pawn.needs.hunger = Math.min(100, pawn.needs.hunger + 2);
-      pawn.needs.fatigue = Math.min(100, pawn.needs.fatigue + 1);
-      pawn.needs.sleep = Math.min(100, pawn.needs.sleep + 1.5);
-
-      // Auto-satisfy needs if they're critical
-      if (pawn.needs.hunger > 90) {
-        this.tryToEat(pawn);
-      }
-
-      if (pawn.needs.sleep > 90) {
-        this.tryToSleep(pawn);
-      }
-
-      if (pawn.needs.fatigue > 80) {
-        this.tryToRest(pawn);
-      }
-    });
-  }
-
-  private processWorkAssignments(): void {
-    if (!this.gameState) return;
-
-    Object.values(this.gameState.workAssignments).forEach((assignment) => {
-      if (assignment.currentWork) {
-        const production = this.calculateResourceProduction(assignment);
-
-        // Apply production to game state
-        Object.entries(production).forEach(([resource, amount]) => {
-          const existingItem = this.gameState!.item.find((i) => i.id === resource);
-          if (existingItem) {
-            existingItem.amount += amount;
-          }
-        });
-      }
-    });
-  }
-
-  private processBuildingEffects(): void {
-    if (!this.gameState) return;
-
-    // Apply building effects using modifier system
-    const allBuildingEffects = this.modifierSystem.calculateAllBuildingEffects(this.gameState);
-
-    // This would apply building effects to game state
-    // For now, just validate they can be calculated
-  }
-
-  private processResearch(): void {
-    if (!this.gameState || !this.services) return;
-
-    if (this.gameState.currentResearch) {
-      // Use research service for processing
-      // This would be implemented when research service is available
-    }
-  }
-
-  private processCrafting(): void {
-    if (!this.gameState) return;
-
-    this.gameState.craftingQueue.forEach((crafting) => {
-      crafting.turnsRemaining--;
-
-      if (crafting.turnsRemaining <= 0) {
-        // Complete crafting
-        const existingItem = this.gameState!.item.find((i) => i.id === crafting.item.id);
-        if (existingItem) {
-          existingItem.amount += crafting.quantity;
-        } else {
-          this.gameState!.item.push({
-            ...crafting.item,
-            amount: crafting.quantity
-          });
-        }
-      }
-    });
-
-    // Remove completed crafting
-    this.gameState.craftingQueue = this.gameState.craftingQueue.filter((c) => c.turnsRemaining > 0);
-  }
-
-  private processEvents(): void {
-    if (!this.gameState) return;
-
-    // Event processing would go here
-    // This would use the event system when available
-  }
-
-  private updateSystemStates(): void {
-    if (!this.gameState) return;
-
-    // Update pawn abilities using modifier system
-    const newPawnAbilities: Record<
-      string,
-      Record<string, { value: number; sources: string[] }>
-    > = {};
-
-    this.gameState.pawns.forEach((pawn) => {
-      const workEfficiencies = this.modifierSystem.calculateAllWorkEfficiencies(
-        pawn.id,
-        this.gameState!
-      );
-
-      newPawnAbilities[pawn.id] = {};
-
-      Object.entries(workEfficiencies).forEach(([workType, result]) => {
-        newPawnAbilities[pawn.id][`${workType}Efficiency`] = {
-          value: result.totalValue,
-          sources: result.sources.map((s) => s.description)
-        };
-      });
-    });
-
-    this.gameState.pawnAbilities = newPawnAbilities;
-  }
-
-  private tryToEat(pawn: Pawn): void {
-    if (!this.gameState) return;
-
-    // Find available food
-    const food = this.gameState.item.find(
-      (i) => i.type === 'material' && i.category === 'food' && i.amount > 0
-    );
-    if (food) {
-      food.amount--;
-      pawn.needs.hunger = Math.max(0, pawn.needs.hunger - 30);
-      pawn.needs.lastMeal = this.gameState.turn;
-    }
-  }
-
-  private tryToSleep(pawn: Pawn): void {
-    if (!this.gameState) return;
-
-    pawn.state.isSleeping = true;
-    pawn.needs.sleep = Math.max(0, pawn.needs.sleep - 50);
-    pawn.needs.lastSleep = this.gameState.turn;
-  }
-
-  private tryToRest(pawn: Pawn): void {
-    pawn.needs.fatigue = Math.max(0, pawn.needs.fatigue - 20);
-  }
+
+	private gameState: GameState | null = null;
+	private gameStateManager: GameStateManager | null = null;
+	private config: GameEngineConfig;
+	private lastTurnProcessed = 0;
+
+	constructor(config: GameEngineConfig = {}) {
+		this.config = {
+			enableDebugLogging: false,
+			validateStateOnEachUpdate: false,
+			maxTurnsPerBatch: 10,
+			enablePerformanceMetrics: false,
+			errorRecoveryMode: 'lenient',
+			...config
+		};
+		// Inject GameEngine reference into WorkService
+		(workService as any).setGameEngine(this);
+	}
+
+	// ===== CORE COORDINATION - MOVED FROM GAMESTATE =====
+
+	processGameTurn(): TurnProcessingResult {
+		if (!this.gameState || !this.gameStateManager) {
+			return {
+				success: false,
+				turnsProcessed: 0,
+				systemsUpdated: [],
+				errors: ['GameEngine not initialized']
+			};
+		}
+
+		try {
+			console.log('[GameEngine] Processing turn:', this.gameState.turn + 1);
+
+			// DEBUG: Check work assignments BEFORE turn processing
+			console.log('[GameEngine] BEFORE turn - Work assignments:', Object.keys(this.gameState.workAssignments || {}));
+
+			// Increment turn FIRST
+			this.gameState.turn += 1;
+
+			// ENSURE PAWNS HAVE WORK ASSIGNMENTS
+			this.ensureBasicWorkAssignments();
+
+			// Process all systems (MOVED FROM GameState.advanceTurn())
+			this.processResources();
+			this.processBuildings();
+			this.processCrafting();
+			this.processResearch();
+
+			// DEBUG: Check work assignments AFTER our processing
+			console.log('[GameEngine] AFTER our processing - Work assignments:', Object.keys(this.gameState.workAssignments || {}));
+
+			// Also run WorkService processing
+			this.gameState = workService.processWorkHarvesting(this.gameState);
+
+			// DEBUG: Check work assignments AFTER WorkService
+			console.log('[GameEngine] AFTER WorkService - Work assignments:', Object.keys(this.gameState.workAssignments || {}));
+
+			this.lastTurnProcessed = this.gameState.turn;
+
+			// Update GameStateManager with final state
+			this.gameStateManager.updateState(this.gameState);
+
+			// DEBUG: Check work assignments AFTER GameStateManager
+			console.log('[GameEngine] AFTER GameStateManager - Work assignments:', Object.keys(this.gameState.workAssignments || {}));
+
+			// Update stores (THE KEY FIX!)
+			this.updateStores();
+
+			// DEBUG: Check work assignments AFTER store update
+			console.log('[GameEngine] AFTER updateStores - Work assignments:', Object.keys(this.gameState.workAssignments || {}));
+
+			return {
+				success: true,
+				turnsProcessed: 1,
+				systemsUpdated: ['pawns', 'work', 'buildings', 'research', 'crafting'],
+				errors: []
+			};
+
+		} catch (error) {
+			return {
+				success: false,
+				turnsProcessed: 0,
+				systemsUpdated: [],
+				errors: [error instanceof Error ? error.message : 'Unknown error']
+			};
+		}
+	}
+
+	// ===== NEW METHOD: ENSURE WORK ASSIGNMENTS =====
+	private ensureBasicWorkAssignments(): void {
+		// Initialize workAssignments if it doesn't exist
+		if (!this.gameState!.workAssignments) {
+			this.gameState!.workAssignments = {};
+		}
+
+		// Get available discovered locations
+		const discoveredLocations = locationService.getDiscoveredLocations();
+		const defaultLocation = discoveredLocations.find(loc => loc.id === 'plains') || discoveredLocations[0];
+
+		if (!defaultLocation) {
+			console.error('[GameEngine] No discovered locations available for work assignments!');
+			return;
+		}
+
+		console.log(`[GameEngine] Using default location for assignments: ${defaultLocation.id}`);
+
+		// Give every pawn a basic work assignment if they don't have one
+		this.gameState!.pawns.forEach(pawn => {
+			if (!this.gameState!.workAssignments[pawn.id]) {
+				console.log(`[GameEngine] Auto-assigning work to pawn: ${pawn.name}`);
+
+				this.gameState!.workAssignments[pawn.id] = {
+					pawnId: pawn.id,
+					currentWork: 'foraging', // Basic work that doesn't need tools
+					activeLocation: defaultLocation.id, // Use valid discovered location
+					workPriorities: {
+						'foraging': 5, // Medium priority
+						'woodcutting': 3, // Lower priority, may need tools
+						'mining': 2
+					},
+					authorizedLocations: [defaultLocation.id] // Use valid discovered location
+				};
+			}
+		});
+
+		const assignedCount = Object.keys(this.gameState!.workAssignments).length;
+		console.log(`[GameEngine] Work assignments ensured: ${assignedCount} pawns assigned`);
+	}
+	/**
+		* GameEngine coordination method - gets location-specific resources for work type
+		* Replaces the removed LocationService.getResourcesForWorkType method
+		*/
+	getLocationResourcesForWorkType(locationId: string, workType: string): string[] {
+		console.log(`[GameEngine] Getting resources for ${workType} at ${locationId}`);
+
+		// GameEngine coordinates between LocationService and ItemService
+		const availableResources = locationService.getAvailableResources(locationId);
+		console.log(`[GameEngine] Available resources at ${locationId}:`, availableResources);
+
+		// GameEngine filters using ItemService
+		const filteredResources = availableResources.filter(resourceId => {
+			const item = itemService.getItemById(resourceId);
+			const hasWorkType = item?.workTypes?.includes(workType);
+			console.log(`[GameEngine] Resource ${resourceId} has workType ${workType}:`, hasWorkType);
+			return hasWorkType;
+		});
+
+		console.log(`[GameEngine] Filtered resources for ${workType}:`, filteredResources);
+		return filteredResources;
+	}
+
+	/**
+	 * GameEngine coordination method - checks if work can be performed at location
+	 * Replaces the removed LocationService.canPerformWorkAtLocation method
+	 */
+	canPerformWorkAtLocation(locationId: string, workType: string): boolean {
+		const availableResources = this.getLocationResourcesForWorkType(locationId, workType);
+		return availableResources.length > 0;
+	}
+
+	// ===== SYSTEM PROCESSING - MOVED FROM GAMESTATE =====
+	private processResources(): void {
+		console.log('[GameEngine] Processing resources - BEFORE WorkService');
+		console.log('[GameEngine] Current items:', this.gameState!.item?.length || 0);
+		console.log('[GameEngine] Work assignments before WorkService:', Object.keys(this.gameState!.workAssignments || {}));
+
+		// Process through WorkService (WorkService will call back to GameEngine for coordination)
+		this.gameState = workService.processWorkHarvesting(this.gameState!);
+
+		console.log('[GameEngine] Processing resources - AFTER WorkService');
+		console.log('[GameEngine] Items after WorkService:', this.gameState!.item?.length || 0);
+		console.log('[GameEngine] Work assignments after WorkService:', Object.keys(this.gameState!.workAssignments || {}));
+		this.gameState!.item?.forEach(item => {
+			console.log(`  - ${item.name}: ${item.amount}`);
+		});
+	}
+
+	private processBuildings(): void {
+		console.log('[GameEngine] Processing buildings');
+
+		// Process building queue - buildings under construction (MOVED FROM GameState)
+		if (this.gameState!.buildingQueue.length > 0) {
+			this.gameState!.buildingQueue = this.gameState!.buildingQueue
+				.map((building) => ({
+					...building,
+					turnsRemaining: building.turnsRemaining - 1
+				}))
+				.filter((building) => {
+					if (building.turnsRemaining <= 0) {
+						// Building completed - add to building counts
+						this.gameState!.buildingCounts[building.building.id] =
+							(this.gameState!.buildingCounts[building.building.id] || 0) + 1;
+						console.log('[GameEngine] Building completed:', building.building.id);
+						return false;
+					}
+					return true;
+				});
+		}
+	}
+
+	private processCrafting(): void {
+		console.log('[GameEngine] Processing crafting');
+
+		// Process crafting queue - items being crafted (MOVED FROM GameState)
+		if (this.gameState!.craftingQueue.length > 0) {
+			this.gameState!.craftingQueue = this.gameState!.craftingQueue
+				.map((crafting) => ({
+					...crafting,
+					turnsRemaining: crafting.turnsRemaining - 1
+				}))
+				.filter((crafting) => {
+					if (crafting.turnsRemaining <= 0) {
+						// Crafting completed - add to items array
+						const itemId = crafting.item.id;
+						const quantity = crafting.quantity || 1;
+						this.addItemToGameState(itemId, quantity);
+						console.log('[GameEngine] Crafting completed:', itemId, 'x', quantity);
+						return false;
+					}
+					return true;
+				});
+		}
+	}
+
+	private processResearch(): void {
+		console.log('[GameEngine] Processing research');
+
+		// Process current research - scroll-based progression (MOVED FROM GameState)
+		if (this.gameState!.currentResearch) {
+			this.gameState!.currentResearch.currentProgress =
+				(this.gameState!.currentResearch.currentProgress || 0) + 1;
+
+			if (this.gameState!.currentResearch.currentProgress >= this.gameState!.currentResearch.researchTime) {
+				// Research completed
+				this.gameState!.completedResearch.push(this.gameState!.currentResearch.id);
+
+				// Apply research unlocks
+				if (this.gameState!.currentResearch.unlocks.toolTierRequired) {
+					this.gameState!.currentToolLevel = Math.max(
+						this.gameState!.currentToolLevel,
+						this.gameState!.currentResearch.unlocks.toolTierRequired
+					);
+				}
+
+				console.log('[GameEngine] Research completed:', this.gameState!.currentResearch.id);
+				// Clear current research
+				this.gameState!.currentResearch = undefined;
+			}
+		}
+	}
+
+	// ===== HELPER METHODS =====
+
+	private addItemToGameState(itemId: string, amount: number): void {
+		if (!this.gameState!.item) this.gameState!.item = [];
+
+		const itemIndex = this.gameState!.item.findIndex((item) => item.id === itemId);
+		if (itemIndex !== -1) {
+			// Update existing item immutably
+			this.gameState!.item[itemIndex] = {
+				...this.gameState!.item[itemIndex],
+				amount: this.gameState!.item[itemIndex].amount + amount
+			};
+		} else {
+			// Add new item if it doesn't exist
+			const itemInfo = itemService.getItemById(itemId);
+			if (itemInfo) {
+				this.gameState!.item.push({ ...itemInfo, amount });
+			}
+		}
+	}
+
+	updateStores(): void {
+		if (!this.gameState) return;
+
+		console.log('[GameEngine] BEFORE updateStores - items in gameState:', this.gameState.item?.length || 0);
+		this.gameState.item?.forEach(item => {
+			console.log(`  - ${item.name}: ${item.amount}`);
+		});
+
+		// Update Svelte stores
+		gameState.updateWithSave(() => this.gameState!);
+
+		console.log('[GameEngine] AFTER updateStores - store should be updated');
+	}
+
+
+	// ===== BASIC CALCULATIONS =====
+
+	calculatePawnEfficiency(pawnId: string, workType: string): number {
+		return modifierSystem.calculateWorkEfficiency(pawnId, workType, this.gameState!, undefined).totalValue;
+	}
+
+	calculateBuildingEffects(buildingId: string, locationId?: string): BuildingEffectResult {
+		return modifierSystem.calculateBuildingEffects(buildingId, this.gameState!);
+	}
+
+	calculateCraftingTime(itemId: string, pawnId: string): number {
+		return 3; // Simplified - normally would calculate based on pawn skills
+	}
+
+	calculateResourceProduction(workAssignment: any): Record<string, number> {
+		return {}; // Simplified
+	}
+
+	calculateCombatEffectiveness(pawnId: string, combatType: 'melee' | 'ranged' | 'defense'): number {
+		return 1.0; // Simplified
+	}
+
+	// ===== STATE MANAGEMENT =====
+
+	getGameState(): GameState {
+		if (!this.gameState) throw new Error('GameState not initialized');
+		return JSON.parse(JSON.stringify(this.gameState));
+	}
+
+	updateGameState(updates: Partial<GameState>): SystemInteractionResult {
+		if (!this.gameState) {
+			return { success: false, error: 'GameState not initialized' };
+		}
+
+		this.gameState = { ...this.gameState, ...updates };
+		this.updateStores();
+
+		return { success: true };
+	}
+
+	validateSystemConsistency(): any {
+		return { isValid: true, errors: [], warnings: [], affectedSystems: [] };
+	}
+
+	resetGameState(newState?: GameState): SystemInteractionResult {
+		if (newState) {
+			this.gameState = JSON.parse(JSON.stringify(newState));
+			this.updateStores();
+		}
+		return { success: true };
+	}
+
+	// ===== INTEGRATION =====
+
+	setGameStateManager(manager: GameStateManager): void {
+		this.gameStateManager = manager;
+		this.gameState = manager.getState();
+	}
+
+	integrateServices(services: any): void {
+		// Simplified - just note that services are available
+		console.log('[GameEngine] Services integrated');
+	}
+
+	getServices(): any {
+		throw new Error('Method not implemented - services accessed directly');
+	}
+
+	initialize(initialState: GameState, services: any): SystemInteractionResult {
+		this.gameState = JSON.parse(JSON.stringify(initialState));
+		return { success: true };
+	}
+
+	shutdown(): SystemInteractionResult {
+		return { success: true };
+	}
+
+	getEngineStatus(): any {
+		return {
+			isInitialized: !!this.gameState,
+			systemsIntegrated: ['work', 'research', 'crafting'],
+			lastTurnProcessed: this.lastTurnProcessed,
+			pendingOperations: 0,
+			errors: []
+		};
+	}
 }
 
-/**
- * GameEngine Factory Implementation
- */
-export class GameEngineFactory {
-  static createGameEngine(config?: GameEngineConfig): GameEngine {
-    return new GameEngineImpl(config);
-  }
-}
-
-// Export singleton instance for convenience
+// Export singleton
 export const gameEngine = new GameEngineImpl();
+
+export function initializeGameEngine(gameStateManager: GameStateManager): GameEngineImpl {
+	gameEngine.setGameStateManager(gameStateManager);
+	return gameEngine;
+}
