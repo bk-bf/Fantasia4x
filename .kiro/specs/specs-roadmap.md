@@ -17,7 +17,14 @@ _Must complete before any feature development_
 - **Blocks**: All other development until complete
 - **Files**: requirements.md, design.md, tasks.md, migration-guide.md
 
-#### 2. 🔄 **research-enhancement** (Week 3-4)
+#### 2. 🔄 **pawn-screen-refactoring** (Week 2-3)
+
+- **Status**: Complete and ready for implementation
+- **Purpose**: Break down massive PawnScreen component into focused, maintainable components
+- **Dependencies**: None (UI refactoring independent of architecture changes)
+- **Files**: requirements.md ✅, design.md ✅, tasks.md ✅, refactoring-guide.md ✅
+
+#### 3. 🔄 **research-enhancement** (Week 3-4)
 
 - **Status**: Requirements started, needs design and tasks
 - **Purpose**: Implement three-tier research system (knowledge, lore items, stat-gated)
