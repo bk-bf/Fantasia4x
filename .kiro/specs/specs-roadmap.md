@@ -1,18 +1,21 @@
-# Fantasia4x Specs Development Roadmap
+# Fantasia4x Development Roadmap
 
 ## 🎉 Major Milestone Achieved: Game Almost Playable!
 
 **BREAKING**: Hunger and rest systems are now fully functional! The game has reached a major milestone where the core survival loop works perfectly. Pawns automatically eat and sleep with realistic mechanics, making the game almost playable.
 
-## 📋 **Updated Development Priority (Post-Hunger/Rest Success)**
+**CRITICAL MISSING**: Adverse consequences for unmet needs (starvation death, fatigue collapse) - identified as essential for realistic survival gameplay.
 
-### 🚨 **Phase 1: Production Chain Completion (Weeks 1-3)**
+## 📋 **CORRECTED Development Priority (Real Order)**
 
-_Complete the survival → production → building → bonus cycle_
+### 🚨 **Phase 1: Foundation Cleanup (Weeks 1-4)**
+
+_Fix architecture and screen bloat before adding features_
 
 #### 1. ✅ **COMPLETE: Hunger/Rest System** 
 
 - **Status**: ✅ **COMPLETE AND WORKING**
+- **Missing**: ⚠️ **Adverse consequences for unmet needs** (Week 6)
 - **Achievements**: 
   - Realistic food consumption with direct nutrition mapping
   - Smart sleep duration balancing hunger vs fatigue
@@ -21,271 +24,204 @@ _Complete the survival → production → building → bonus cycle_
   - Work assignment display properly synchronized
 - **Impact**: Game is now almost playable with functional survival mechanics
 
-#### 2. ⚠️ **architecture-refactoring** (Week 1 - URGENT)
+#### 2. ⚠️ **gameengine-refactoring** (Week 1 - PARTIAL: 50%)
 
 - **Status**: ⚠️ **CRITICAL: GameEngine Too Large (900+ lines)**
-- **Purpose**: Extract pawn logic from GameEngine to PawnService for maintainability
-- **Blocks**: All future development (architectural debt growing)
-- **Priority Tasks**:
+- **Purpose**: Extract most pressing pawn logic from GameEngine (not everything)
+- **Scope**: **PARTIAL** - only the most critical architectural debt
+- **Priority Tasks** (50% completion):
   - Move automatic eating/sleeping logic to PawnService
   - Move work sync coordination to proper services  
-  - Reduce GameEngine to coordination-only (~400 lines)
-- **Files**: requirements.md ✅, design.md ✅, tasks.md ✅, migration-guide.md ✅
+  - Reduce GameEngine from 900+ lines to ~600 lines (manageable)
+- **Skip**: Service completion, circular dependency elimination (not urgent)
+- **Files**: requirements.md ✅, design.md ✅, tasks.md ✅ (update to 50% scope)
 
-#### 3. 🏗️ **production-chain-integration** (Week 2-3 - HIGH PRIORITY)
+#### 3. 🖥️ **screen-refactoring** (Week 2-3 - URGENT)
 
-- **Status**: ⚠️ **NEW PRIORITY: Complete gameplay loop**
+- **Status**: ❌ **NEW CRITICAL SPEC: Screens are bloated like PawnScreen was**
+- **Purpose**: Break down 1-3 most convoluted screens (especially WorkScreen for next tasks)
+- **Target Screens**:
+  - **WorkScreen.svelte**: 1314 lines - needs healthcare, cooking jobs
+  - **CraftingScreen.svelte**: Likely massive, needed for production chains
+  - **BuildingMenu.svelte**: Needed for building bonuses
+- **Pattern**: Same as pawn-screen-refactoring - directory per screen with components
+- **Priority**: **WorkScreen first** (needed for healthcare/cooking jobs)
+- **Dependencies**: None (UI refactoring independent)
+- **Files**: requirements.md ❌, design.md ❌, tasks.md ❌ (new spec needed)
+
+---
+
+### 🏗️ **Phase 2: Production Chain (Weeks 4-5)**
+
+_Complete the survival → production → building → bonus cycle_
+
+#### 4. 🏗️ **production-chain-integration** (Week 4 - HIGH PRIORITY)
+
+- **Status**: ❌ **Complete gameplay loop needed**
 - **Purpose**: Implement resource → craft → build → bonus → better resources cycle
 - **Key Features**:
   - **Building work bonuses**: Kitchen +40% cooking, Workshop +25% crafting
   - **Tool progression**: Wood → Stone → Iron tools with efficiency multipliers
   - **Research unlocks**: Metallurgy → Smelter → Iron tools
-  - **Production chains**: Complete incentive loop for building and crafting
-- **Dependencies**: architecture-refactoring (clean service separation)
-- **Impact**: This completes the core gameplay loop making game fully playable
+  - **New jobs**: Healthcare and cooking (via WorkScreen refactoring)
+- **Dependencies**: screen-refactoring (needs WorkScreen components for new jobs)
+- **Impact**: Complete core gameplay loop making game fully playable
 
 ---
 
-### 🎮 **Phase 2: Enhanced Gameplay Systems (Weeks 4-8)**
+### 💀 **Phase 3: Death & Stakes (Weeks 5-6)**
 
-_Build on the complete production chain for advanced features_
+_Add realistic survival consequences_
 
-#### 4. � **pawn-screen-refactoring** (Week 4)
+#### 5. 💀 **survival-consequences** (Week 5 - HIGH PRIORITY)
 
-- **Status**: ✅ Complete and ready for implementation  
-- **Purpose**: Break down massive PawnScreen component into focused, maintainable components
-- **Dependencies**: None (UI refactoring independent of other systems)
-- **Priority**: Medium (improves maintainability but doesn't block gameplay)
-- **Files**: requirements.md ✅, design.md ✅, tasks.md ✅, refactoring-guide.md ✅
-
-#### 5. 🔄 **research-enhancement** (Week 5)
-
-- **Status**: Requirements started, needs design and tasks
-- **Purpose**: Implement three-tier research system (knowledge, lore items, stat-gated)  
-- **Dependencies**: architecture-refactoring (needs clean ResearchService)
-- **Priority**: Medium (enhances but doesn't complete core gameplay)
-- **Files**: requirements.md ✅, design.md ❌, tasks.md ❌
-
-#### 6. 📋 **advanced-pawn-behavior** (Week 6-7)
-
-- **Status**: Not started
-- **Purpose**: Enhanced pawn AI, morale consequences, personality systems
+- **Status**: ❌ **Missing survival stakes**
+- **Purpose**: Implement realistic adverse consequences for unmet needs
 - **Key Features**:
-  - Work refusal and efficiency penalties from low morale
-  - Individual pawn personality and behavior patterns
-  - Equipment bonuses and advanced stat calculations
-  - Social interactions and relationship systems
-- **Dependencies**: production-chain-integration (builds on completed survival mechanics)
-- **Priority**: Low (polish and depth features)
+  - **Starvation Disease**: Progressive debuff system (200-300 turns to death)
+  - **Random Death Rolls**: Increasing chance every 50 turns (realistic/fun randomness)
+  - **Fatigue Collapse**: Forced rest at 100% fatigue (no choice override)
+  - **Death Mechanics**: Permanent pawn loss with grief/morale consequences
+- **Dependencies**: architecture-refactoring (needs clean HealthService/DiseaseService)
+- **Impact**: Makes food production critically important - failure has real consequences
 
-#### 7. 🎲 **advanced-events** (Week 8)
+#### 6. ⚔️ **basic-combat-auto-resolve** (Week 6 - MEDIUM PRIORITY)
 
-- **Status**: Not started  
-- **Purpose**: Dynamic event generation, choice consequences, narrative depth
+- **Status**: ❌ **Simple auto-resolve combat only**
+- **Purpose**: Basic combat resolution without tactical grid (auto-resolve)
 - **Key Features**:
-  - Procedural event generation based on game state
-  - Meaningful player choices with lasting consequences
-  - Event chains and narrative progression
-- **Dependencies**: Complete production chain for meaningful event impacts
-- **Priority**: Low (content and narrative depth)
-  - Procedural location generation
-  - Exploration missions with risk/reward
-  - Resource discovery and lore item finding
-  - Environmental hazards and challenges
-- **Dependencies**: research-enhancement (lore items), pawn-behavior-system
-- **Design Reference**: gameplay.md "Discovery-Based Research System"
+  - **Fatigue Combat Penalties**: Tired pawns fight poorly
+  - **Simple Combat Resolution**: Attack/defend with modifiers, no tactics
+  - **Equipment Integration**: Tools as weapons (pickaxe, bow, sword)
+  - **Combat Death**: Second death vector beyond starvation
+- **Dependencies**: survival-consequences (death mechanics), production-chain (weapon crafting)
+- **Scope**: **NOT** tactical combat - just auto-resolve with stats + equipment
 
 ---
 
----
+### 🎮 **Phase 4: Core Systems (Weeks 7-12)**
 
-### 🎯 **Phase 3: Optional Advanced Systems (Future)**
+_Complete fundamental game systems_
 
-_Advanced features to add depth after core gameplay is complete_
+#### 7. 🖥️ **finish-pawn-screen-refactoring** (Week 7)
 
-#### 8. 🗺️ **exploration-system** (Future)
+- **Status**: ✅ Spec complete, implementation needed
+- **Purpose**: Finish PawnScreen component breakdown
+- **Scope**: **Remove useless tasks** like error logging (console works fine)
+- **Priority**: Medium (maintainability improvement)
 
-- **Status**: Not started
-- **Purpose**: Location discovery, mission system, world interaction
+#### 8. 🗺️ **exploration-system** (Week 8-9 - MEDIUM IMPLEMENTATION)
+
+- **Status**: ❌ **Medium-grade implementation needed**
+- **Purpose**: Location discovery, resource node exploration, mission system
+- **Scope**: **Not basic, not polished** - solid medium implementation
 - **Key Features**:
-  - Location discovery and exploration missions
-  - Resource node discovery and exploitation
-  - Environmental hazards and discovery events
-- **Dependencies**: Complete production chain
-- **Priority**: Future (exploration enhances but doesn't complete core loop)
+  - Location discovery with meaningful rewards
+  - Resource node exploitation
+  - Basic mission/expedition system
+- **Dependencies**: production-chain (need rewards worth exploring for)
 
-#### 9. ⚔️ **combat-system** (Future)
+#### 9. 🎲 **basic-events** (Week 10)
 
-- **Status**: Not started  
-- **Purpose**: Tactical combat as ultimate challenge system
+- **Status**: ❌ **Events currently don't work at all**
+- **Purpose**: Get event system functional again
+- **Scope**: Basic event triggering and resolution
 - **Key Features**:
-  - Turn-based combat with initiative system
-  - Action Point system for movement and abilities
-  - 12x8 ASCII battlefield grid with tactical positioning
-  - Equipment-driven combat abilities and AI opponents
-- **Dependencies**: Complete production chain + advanced pawn behavior
-- **Priority**: Future (combat is advanced challenge system, not core survival)
+  - Random events that can disrupt gameplay
+  - Player choices with consequences
+  - Integration with production/survival systems
+- **Dependencies**: Functional main game loop (needs production + survival)
 
----
+#### 10. 🔄 **finish-research** (Week 11)
 
-## � **Current Development Focus Summary**
+- **Status**: ❌ **If not covered by production chains**
+- **Purpose**: Complete research system gaps not handled by production
+- **Scope**: Only if production chains don't cover research needs
+- **Dependencies**: production-chain-integration completion assessment
 
-### **IMMEDIATE PRIORITIES (Next 3 Weeks):**
+#### 11. 🧠 **advanced-pawn-behavior** (Week 12)
 
-1. **Week 1**: Extract pawn logic from GameEngine → PawnService (architectural health)
-2. **Week 2**: Building work bonuses + basic tool crafting (immediate gameplay impact)  
-3. **Week 3**: Research → building chains (complete production loop)
-
-### **SUCCESS METRICS:**
-- **GameEngine**: Reduced from 900+ lines to ~400 lines (coordination only)
-- **Production Loop**: resource harvesting → crafting/building → bonuses → better harvesting
-- **Player Incentives**: Clear progression through tool/building upgrades
-- **Game State**: Fully playable with complete survival and production mechanics
-
-**After 3 weeks: Game will have complete production chain and be fully playable for extended sessions!**
-
----
-
-### 🎨 **Phase 4: Advanced Features (Weeks 21-28)**
-
-_Polish and advanced functionality_
-
-#### 10. 👥 **squad-command-system** (Week 21-23)
-
-- **Status**: Not started
-- **Purpose**: Advanced tactical combat with squad coordination
-- **Key Features**:
-  - Squad-based command and control
-  - Combo attacks and coordinated abilities
-  - Large-scale battle management (50+ pawns)
-  - Formation templates and tactical presets
-- **Dependencies**: combat-integration
-- **Design Reference**: combat.md "Advanced Combat Features"
-
-#### 11. 🎨 **graphics-evolution** (Week 24-26)
-
-- **Status**: Not started
-- **Purpose**: Caves of Qud-style sprite system with dual-mode rendering
-- **Key Features**:
-  - ASCII/Sprites toggle system
-  - 32x32 tile-based rendering
-  - Animation system for combat actions
-  - Equipment visualization on sprites
-- **Dependencies**: combat-integration, squad-command-system
-- **Design Reference**: combat.md "Visual Evolution: ASCII to Graphics"
-
-#### 12. 🔧 **modding-system** (Week 27-28)
-
-- **Status**: Not started
-- **Purpose**: Comprehensive modding support and tools
-- **Key Features**:
-  - JSON-based configuration system
-  - Custom sprite loading
-  - Scripted AI behaviors
-  - Campaign and scenario editor
-- **Dependencies**: graphics-evolution
-- **Design Reference**: combat.md "Modding Support"
+- **Status**: ❌ **Enhanced pawn AI and personality**
+- **Purpose**: Individual pawn personalities, social interactions, advanced behavior
+- **Dependencies**: survival-consequences (grief affects behavior)
+- **Priority**: Polish after core systems work
 
 ---
 
-## 📊 Spec Development Guidelines
+### ⚔️ **Phase 5: Advanced Combat (Weeks 13-16)**
 
-### Spec Creation Process
+_Moving toward Battle Brothers-style tactical combat_
 
-1. **Requirements Phase**: Define user stories and acceptance criteria in EARS format
-2. **Design Phase**: Create technical architecture, data models, and component structure
-3. **Tasks Phase**: Break down into discrete, manageable coding tasks
-4. **Implementation**: Execute tasks with proper testing and validation
+#### 12. ⚔️ **tactical-combat-system** (Week 13-16)
 
-### Dependency Management
+- **Status**: ❌ **Full tactical combat from combat.md design**
+- **Purpose**: Implement Battle Brothers-style tactical combat system
+- **Key Features**:
+  - **Turn-based tactical grid**: 12x8 ASCII battlefield
+  - **Action Point system**: Movement and abilities cost AP
+  - **Equipment-driven abilities**: Weapons determine combat options
+  - **Formation mechanics**: Positioning matters tactically
+  - **AI behaviors**: 5 AI personality types (Aggressive, Defensive, etc.)
+- **Reference**: combat.md specification (comprehensive design exists)
+- **Dependencies**: basic-combat-auto-resolve, advanced-pawn-behavior
+- **Scope**: **Major system** - Battle Brothers-level tactical depth
 
-- **Hard Dependencies**: Must complete before starting dependent spec
-- **Soft Dependencies**: Can start in parallel but may need coordination
-- **Integration Points**: Identify where specs interact and plan accordingly
+---
 
-### Quality Gates
+### 🎯 **Phase 6: Content & Polish (Weeks 17-24)**
 
-- **Requirements Review**: User stories complete and acceptance criteria clear
-- **Design Review**: Technical approach sound and integrates with existing architecture
-- **Tasks Review**: Implementation plan is actionable and properly sequenced
-- **Implementation Review**: Code complete, tested, and meets requirements
+_Advanced content and polish systems_
 
-## 🎯 Critical Success Factors
+#### 13. 🌟 **magic-materials-items** (Week 17-18)
 
-### Phase 1 Success Criteria
+- **Status**: ❌ **High-value shiny things to fight for**
+- **Purpose**: Advanced materials, magical items, rare equipment
+- **Rationale**: Production chains won't cover high-end aspirational content
+- **Key Features**:
+  - Rare magical materials and components
+  - Legendary equipment with special properties
+  - High-tier crafting recipes and research
+- **Dependencies**: exploration-system, tactical-combat-system
 
-- ✅ Clean architecture with no circular dependencies
-- ✅ Service layer operational for all core systems
-- ✅ Enhanced research system with three-tier progression
-- ✅ All foundation systems stable and tested
+#### 14. 🗺️ **polish-exploration** (Week 19)
 
-### Phase 2 Success Criteria
+- **Status**: ❌ **Polish the medium exploration implementation**
+- **Purpose**: Enhance exploration system to polished state
+- **Dependencies**: exploration-system, magic-materials-items
 
-- ✅ Pawns behave autonomously with needs satisfaction
-- ✅ Buildings provide meaningful bonuses and synergies
-- ✅ Events create dynamic, choice-driven narratives
-- ✅ Exploration provides discovery and progression
+#### 15. 🎲 **advanced-events** (Week 20-21)
 
-### Phase 3 Success Criteria
+- **Status**: ❌ **Finish the event system**
+- **Purpose**: Complete event system with depth and consequences
+- **Dependencies**: basic-events, all core systems functional
 
-- ✅ Tactical combat functional with equipment integration
-- ✅ AI provides challenging but fair opposition
-- ✅ Combat consequences integrate with colony simulation
-- ✅ Performance smooth with large battles
+#### 16. � **sound** (Week 22)
 
-### Phase 4 Success Criteria
+- **Status**: ❌ **Audio implementation**
+- **Purpose**: Sound effects and ambient audio
+- **Dependencies**: Core gameplay complete
 
-- ✅ Advanced combat features complete and polished
-- ✅ Graphics system provides dual-mode rendering
-- ✅ Modding system enables community content
-- ✅ Game ready for release with full feature set
+#### 17. 🎨 **graphics-enhancement** (Week 23)
 
-## 📋 Next Steps
+- **Status**: ❌ **Visual improvements**
+- **Purpose**: Enhanced ASCII or basic sprite graphics
+- **Dependencies**: All core systems complete
 
-### Immediate Actions (This Week)
+#### 18. ✨ **polish** (Week 24)
 
-1. **Complete research-enhancement spec**:
-   - Create design.md based on gameplay.md research system
-   - Create tasks.md with implementation plan
-   - Review and approve spec before implementation
+- **Status**: ❌ **Final polish pass**
+- **Purpose**: Bug fixes, balance, UX improvements
+- **Dependencies**: All systems implemented
 
-2. **Begin pawn-behavior-system spec**:
-   - Create requirements.md for automated pawn behavior
-   - Focus on needs satisfaction and morale systems
-   - Plan integration with existing pawn system
+---
 
-### Medium Term (Next 2-4 Weeks)
+### 🎯 **Phase 7: Future (Post-Launch)**
 
-1. **Continue spec development** following the roadmap priority order
-2. **Maintain dependency awareness** - don't start specs that depend on incomplete ones
-3. **Regular reviews** - ensure each spec is complete before moving to implementation
-4. **Integration planning** - identify cross-spec coordination needs
+#### 19. 🔧 **modding** (Future)
 
-### Long Term (Next 3-6 Months)
+- **Status**: ❌ **Modding support** 
+- **Purpose**: Player modification tools and systems
+- **Priority**: Post-launch only
 
-1. **Follow the roadmap** - resist the temptation to jump ahead to "fun" features
-2. **Quality over speed** - better to have fewer, complete systems than many incomplete ones
-3. **Regular architecture reviews** - ensure new specs don't break the clean architecture
-4. **User feedback integration** - test and refine systems as they're completed
+---
 
-## 🚨 Critical Warnings
-
-### Don't Skip Foundation
-
-- **Architecture refactoring MUST be complete** before starting any other implementation
-- **Research enhancement** provides the foundation for all progression systems
-- **Pawn behavior** is essential for autonomous gameplay
-
-### Avoid Feature Creep
-
-- **Stick to the roadmap** - new ideas should be evaluated against current priorities
-- **Complete specs fully** before moving to the next one
-- **Test thoroughly** - each system must be stable before building on it
-
-### Maintain Integration Focus
-
-- **Every spec must integrate cleanly** with the GameEngine architecture
-- **Cross-system effects** must be planned and documented
-- **Performance considerations** must be evaluated at each phase
-
-**Remember**: The goal is a complete, polished game - not a collection of half-finished features. Follow the roadmap, complete each spec fully, and build a solid foundation for long-term success.
