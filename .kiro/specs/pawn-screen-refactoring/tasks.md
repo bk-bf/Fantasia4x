@@ -1,5 +1,8 @@
 # Implementation Plan
 
+> **Phase 1 – Critical Importance:**  
+> The following tasks are essential for the successful refactoring of the PawnScreen. Complete these items before proceeding to non-critical improvements.
+
 - [x] 1. Create PawnOverview component
   - Extract basic pawn info display (name, height, weight, size) from PawnScreen
   - Move mood and health status display with existing color formatting
@@ -42,7 +45,8 @@
   - Keep only pawn selection logic and navigation in main component
   - _Requirements: 1.1, 1.3, 1.4_
 
----
+  > **Phase 2 – Non-critical Importance:**  
+  > Most of these tasks can be verified and archived simply by playing the game, rather than through dedicated manual testing or documentation. Proceed with these items as time allows, prioritizing core gameplay experience over exhaustive validation.
 
 - [ ] 8. Add simple error handling to components
   - Add fallback displays for missing pawn data in each component

@@ -1,561 +1,140 @@
-# Fantasia4x Architecture Refactoring Implementation Plan
+# Architecture Refactoring Tasks
 
-_Based on ROADMAP.md v6.0 and Steering Documents_
+## Overview
+Complete the data/logic separation following the pawn-screen-refactoring model. Focus on extracting business logic from data files and centralizing coordination through GameEngineImpl.ts.
 
-## 🚨 PHASE 1: FOUNDATION STABILIZATION (Weeks 1-2)
+## Core Tasks (Applying Pawn-Screen Principles)
 
-**CRITICAL: Must complete before any new features**
+### Task 1: Complete Data/Logic Separation ⚠️ IN PROGRESS
 
-### Week 1: Architecture Analysis & Design
+**Goal**: Extract all business logic from data files, just like extracting UI logic from PawnScreen.svelte
 
-**Priority: HIGH - Map current chaos and design clean interfaces**
+#### 1.1 Clean Up Data Files ⚠️ PARTIAL
+- [x] **Work.ts**: Remove all calculation functions, keep only `WORK_CATEGORIES` export
+- [x] **Items.ts**: Remove all business logic, keep only `ITEMS_DATABASE` export  
+- [x] **Buildings.ts**: Remove all calculation functions, keep only `AVAILABLE_BUILDINGS` export
+- [x] **Research.ts**: Remove all business logic, keep only `RESEARCH_DATABASE` export
 
-#### System Flow Documentation
+#### 1.2 Complete Service Implementations ⚠️ PARTIAL
+- [x] **WorkService.ts**: All work calculations and assignments ✅ COMPLETE
+- [x] **ItemService.ts**: All item operations and crafting ✅ COMPLETE
+- [x] **BuildingService.ts**: All building placement and effects ✅ COMPLETE
+- [x] **ResearchService.ts**: All research progression logic ✅ COMPLETE
+- [ ] **PawnService.ts**: Complete pawn behavior and need management
+- [ ] **EventService.ts**: Complete event generation and logging
 
-- [x] **Map current data flow** through all major systems
-  - Document Pawns → Work → Resources → Buildings flow
-  - Identify circular dependencies (Pawns → Items → Work → Pawns)
-  - Catalog all system integration points
-  - _Requirements: 3.1, 3.2, 9.1_
-- [x] **Analyze state management patterns** across components
-  - Document GameState update patterns
-  - Identify component state synchronization issues
-  - Map reactive data binding problems
-  - _Requirements: 7.1, 7.4, 9.2_
-- [x] **Create system hierarchy diagram**
-  - Define primary systems (Pawns, Work, Resources)
-  - Define secondary systems (Events, Research, Exploration)
-  - Document system dependencies and interaction points
-  - _Requirements: 2.1, 2.4_
+#### 1.3 Update All Imports ⚠️ PARTIAL
+- [ ] **UI Components**: Replace direct data file imports with GameEngine calls
+- [ ] **Services**: Ensure services only import data files, not other services
+- [ ] **GameEngine**: Coordinate all service interactions
 
-#### Clean Architecture Design
+### Task 2: Complete GameEngine Coordination ⚠️ IN PROGRESS
 
-- [x] **Design service layer interfaces**
-  - ItemService for clean item queries
-  - BuildingService for building validation
-  - WorkService for work assignment logic
-  - ResearchService for research progression
-  - _Requirements: 1.1, 1.2, 1.3, 1.4_
-- [x] **Plan GameEngine pattern implementation**
-- [x] **Define GameEngine core interface**
-  - Create GameEngine TypeScript interface with method signatures
-  - Define system coordination methods (processGameTurn, coordinateSystemInteractions)
-  - Define unified calculation methods (calculatePawnEfficiency, calculateBuildingEffects)
-  - Define state management methods (getGameState, updateGameState)
-  - _Requirements: 2.1, 2.2_
-- [x] **Design service integration architecture**
-  - Define ServiceRegistry interface for managing all services
-  - Plan how GameEngine will inject and coordinate services
-  - Design service communication patterns through GameEngine
-  - Create service lifecycle management strategy
-  - _Requirements: 2.1, 2.3_
-- [x] **Plan unified calculation system**
-  - Design single source of truth for all bonus calculations
-  - Plan modifier aggregation system (equipment + buildings + research)
-  - Design efficiency calculation pipeline for work assignments
-  - Create calculation caching strategy for performance
-  - _Requirements: 2.2, 4.1, 4.2_
-- [x] **Design system interaction protocols**
-  - Define how systems request data from other systems through GameEngine
-  - Plan event propagation system for system-to-system communication
-  - Design state consistency validation mechanisms
-  - Create error handling and recovery protocols
-  - _Requirements: 2.1, 2.3, 7.1_
-- [x] **Plan GameEngine implementation phases**
-  - Define incremental implementation strategy
-  - Plan backward compatibility during transition
-  - Design testing approach for each implementation phase
-  - Create rollback procedures for each phase
-  - _Requirements: 2.1, 9.3, 9.5_
-- [x] **Design automated modifier system**
-  - Auto-generate work efficiencies from Buildings/Items
-  - Eliminate manual ability/building/item mapping
-  - Create clean bonus calculation pipeline
-  - _Requirements: 4.1, 4.2_
+**Goal**: Make GameEngineImpl.ts the central coordinator like PawnScreen.svelte coordinates components
 
-#### Deliverables
+#### 2.1 Service Coordination ✅ COMPLETE
+- [x] **Service Registry**: All services registered in GameEngine
+- [x] **Service Dependencies**: Services injected via constructor
+- [x] **Unified Interface**: Components access services through GameEngine only
 
-- [x] **Complete system flow diagram**
-- [x] **Integration interface specifications**
-- [x] **Refactoring priority list**
-- [x] **Architecture decision document**
-- [x] **Update all documentation to reflect the state of the codebase**
-  - ✅ Updated the documentation, ensured no redundancy across documents or outdated docs
-  - ✅ Written a comprehensive glossary to help devs new to the codebase understand how to navigate and reference the documentation and how it is connected
-  - ✅ Updated the tasklist to reflect the state of the codebase according to the documentation
+#### 2.2 State Management ✅ COMPLETE
+- [x] **Central Updates**: All state changes flow through GameEngine
+- [x] **Store Updates**: Single `updateStores()` method for consistency
+- [x] **Turn Processing**: Coordinated turn processing through GameEngine
 
-### Week 2: Core System Refactoring
+#### 2.3 Method Completion ⚠️ PARTIAL
+- [ ] **Pawn Methods**: Complete pawn management methods in GameEngine
+- [ ] **Event Methods**: Complete event handling methods in GameEngine
+- [ ] **Need Processing**: Automatic pawn need satisfaction
 
-**Priority: HIGH - Implement clean architecture**
+### Task 3: Eliminate Remaining Dependencies ⚠️ MINOR
 
-#### Service Layer Creation
+**Goal**: Achieve zero circular dependencies like the clean component hierarchy
 
-- [x] **Create ItemService.ts interface and implementation**
-  - ✅ Service interface defined
-  - ✅ Service implementation created
-  - ❌ **CRITICAL: Business logic NOT removed from Items.ts**
-  - ❌ **CRITICAL: Components still import from Items.ts, not ItemService**
-  - _Requirements: 1.1, 4.1, 4.3_
-- [x] **Create BuildingService.ts interface and implementation**
-  - ✅ Service interface defined
+#### 3.1 Import Cleanup ⚠️ MINOR
+- [x] **Core Systems**: No circular imports between major systems ✅ MOSTLY COMPLETE
+- [ ] **Minor Dependencies**: Clean up remaining minor circular imports
+- [x] **TypeScript Compilation**: Clean compilation without dependency warnings ✅ COMPLETE
+
+#### 3.2 Component Migration ⚠️ PARTIAL
+- [ ] **Remove Direct Imports**: Components should not import services directly
+- [ ] **GameEngine Interface**: All components use GameEngine methods only
+- [ ] **Clean Hierarchy**: UI → GameEngine → Services → Data
+
+### Task 4: Complete Missing Services ⚠️ HIGH PRIORITY
+
+**Goal**: Finish the service layer just like completing all component extractions
+
+#### 4.1 PawnService Completion ⚠️ HIGH PRIORITY
+```typescript
+class PawnService {
+  // High Priority: Automatic need satisfaction
+  processNeedsAutomatically(pawnId: string): void;
+  
+  // High Priority: Behavior management  
+  updateMorale(pawnId: string): void;
+  
+  // Medium Priority: Advanced features
+  calculateEffectiveStats(pawnId: string): RaceStats;
+}
+```
+
+#### 4.2 EventService Completion ⚠️ MEDIUM PRIORITY
+```typescript
+class EventService {
+  // Medium Priority: Event logging
+  logPawnActivity(pawn: Pawn, activity: string): void;
+  
+  // Medium Priority: Building events
+  logBuildingCompletion(building: Building): void;
+  
+  // Low Priority: Event history
+  getRecentEvents(): GameEvent[];
+}
+```
+
+## Success Metrics (Following Pawn-Screen Model)
+
+### File Organization Success:
+- **Data files**: 50%+ smaller (business logic extracted) ⚠️ PARTIAL
+- **Service files**: Focused, single-purpose under 200 lines each ✅ COMPLETE
+- **GameEngine**: Clean coordination under 500 lines ✅ COMPLETE
+
+### Architecture Success:
+- **Zero circular dependencies**: ✅ MOSTLY COMPLETE (minor issues remain)
+- **Services testable in isolation**: ✅ COMPLETE
+- **GameEngine coordination hub**: ✅ COMPLETE
+- **UI uses GameEngine only**: ⚠️ PARTIAL (some components still import directly)
+
+### Ready for Complex Features:
+- **Combat system integration**: ✅ READY (architecture supports it)
+- **Diplomacy system**: ✅ READY (service layer ready)
+- **Advanced AI**: ✅ READY (clean data/logic separation)
+
+## Current Status Summary
+
+### ✅ COMPLETE
+- GameEngine central coordination
+- Core service implementations (Work, Item, Building, Research)
+- Service registry and dependency injection
+- Turn processing coordination
+- Most circular dependency elimination
+
+### ⚠️ IN PROGRESS  
+- Data file cleanup (business logic extraction)
+- Component migration to GameEngine interface
+- PawnService completion
+- EventService completion
+
+### 🎯 SUCCESS CRITERIA
+Following the pawn-screen-refactoring success:
+- **Data files**: Pure exports only (like extracting UI components)
+- **Service files**: Focused business logic (like component-specific logic)
+- **GameEngine**: Central coordinator (like PawnScreen orchestrates components)
+- **Components**: Clean GameEngine interface usage (like clean component interfaces)
+
+This transforms the business logic architecture from mixed concerns to clean separation, enabling complex feature development just like the UI transformation enabled complex interface features.
   - ✅ Service implementation created
   - ❌ **CRITICAL: Business logic NOT removed from Buildings.ts**
   - ❌ **CRITICAL: Components still import from Buildings.ts, not BuildingService**
-  - _Requirements: 1.2, 4.1, 4.3_
-- [x] **Create WorkService.ts interface and implementation**
-  - ✅ Service interface defined
-  - ✅ Service implementation created
-  - ❌ **CRITICAL: Business logic NOT removed from Work.ts**
-  - ❌ **CRITICAL: Components still import from Work.ts, not WorkService**
-  - _Requirements: 1.3, 4.1, 4.3_
 
-#### Complete the Business Logic Extraction
-
-- [x] **Phase 2A: Remove business logic from Items.ts**
-  - Remove all `export function` declarations from Items.ts
-  - Keep only `ITEMS_DATABASE` export
-  - Update all component imports to use ItemService
-  - Test that all functionality still works
-
-- [x] **Phase 2B: Remove business logic from Buildings.ts**
-  - Remove all `export function` declarations from Buildings.ts
-  - Keep only `AVAILABLE_BUILDINGS` export
-  - Update all component imports to use BuildingService
-  - Test that all functionality still works
-
-- [x] **Phase 2C: Remove business logic from Work.ts**
-  - Remove all `export function` declarations from Work.ts
-  - Keep only `WORK_CATEGORIES` export
-  - Update all component imports to use WorkService
-  - Test that all functionality still works
-
-- [x] **Phase 2D: Remove business logic from Research.ts**
-  - Remove all `export function` declarations from Research.ts
-  - Keep only `RESEARCH_DATABASE` and `LORE_DATABASE` exports
-  - Update all component imports to use ResearchService
-  - Fix ResearchScreen.svelte to use `researchService.canUnlockWithLore()` instead of direct function calls
-  - Test that all research functionality still works
-
-- [ ] **Phase 2E: GameEngine Implementation & Store Integration Fix**
-    
-    **CRITICAL ISSUE IDENTIFIED:** Current architecture has GameState doing business logic instead of GameEngine coordination pattern specified in documentation. This causes store synchronization failures and resource generation issues.
-
-    - **Implement GameEngine as Central Coordinator (ADR-001 Compliance)**
-        - Create GameEngineImpl.ts that implements the documented GameEngine interface
-        - Move all turn processing logic from GameState.advanceTurn() to GameEngine.processGameTurn()
-        - Implement GameEngine.updateStores() method to handle all Svelte store synchronization
-        - Route all system coordination through GameEngine instead of direct GameState calls
-        - **FIXES:** Resource generation not appearing in UI, store synchronization failures
-
-    - **Refactor GameState to Pure Data Storage (ADR-006 Compliance)**
-        - Remove all process* methods from GameStateManager (processResources, processBuildings, etc.)
-        - Keep only data management: getState(), updateState(), addToItemArray(), removeItemAmount()
-        - Remove store update logic from GameState (GameEngine handles this now)
-        - Convert GameState to pure data container as documented in architecture specs
-        - **FIXES:** Separation of concerns, eliminates business logic in data layer
-
-    - **Fix Store Synchronization Through GameEngine**
-        - Import gameState and currentItem stores in GameEngineImpl only
-        - Implement proper store.set() calls in GameEngine after state updates
-        - Remove all store imports and updates from GameState.ts
-        - Test that ResourceSidebar displays resources after GameEngine processes turns
-        - **FIXES:** Resources not appearing in sidebar, store desynchronization
-
-    - **Integrate Services Through GameEngine Coordination**
-        - Route workService.processWorkHarvesting() through GameEngine, not GameState
-        - Coordinate all service calls through GameEngine.processGameTurn()
-        - Implement service result aggregation in GameEngine before state updates
-        - Test that location-based resource extraction works through service coordination
-        - **FIXES:** Proper service layer integration as documented
-
-    - **Architecture Validation & Testing**
-        - Verify GameEngine → Services → GameState → UI data flow works
-        - Test that turn advancement generates resources and updates UI correctly
-        - Validate that all services integrate through GameEngine coordination pattern
-        - Confirm store synchronization works reliably through GameEngine
-        - **ENSURES:** Architecture matches documentation specifications
-
-    - **Legacy Cleanup & Documentation**
-        - Mark old GameState business logic methods as deprecated
-        - Update component imports to
-
-#### Pawn System Overhaul
-
-- [ ] **Implement basic needs behavior**
-  - If hunger > 90%, pawns eat automatically
-  - If sleep > 90%, pawns sleep automatically
-  - If fatigue > 80%, pawns rest automatically
-  - _Requirements: 6.1, 6.2, 6.3_
-- [ ] **Add simple morale consequences**
-  - Work refusal at low morale
-  - Efficiency penalties for unhappy pawns
-  - _Requirements: 6.4, 6.5_
-- [ ] **Create automated modifier system**
-  - Auto-generate work efficiencies from Buildings/Items
-  - Eliminate manual mapping between systems
-  - _Requirements: 4.2, 4.4_
-
-#### System Integration Fixes
-
-- [ ] **Resolve inventory/equipment synchronization**
-  - Fix shared vs individual item conflicts
-  - Standardize item access patterns
-  - _Requirements: 7.2, 7.3_
-- [ ] **Fix event system integration**
-  - Connect events to pawn states with automatic triggers
-  - Repair message log functionality
-  - _Requirements: 5.1, 5.2, 5.3_
-- [ ] **Standardize GameState update patterns**
-  - Consistent state mutation approaches
-  - Fix component state synchronization
-  - _Requirements: 7.1, 7.4_
-
-**GATE: Game must run with clean architecture, service layer implemented, and no circular dependencies**
-
----
-
-## 🐛 PHASE 2: BUG ELIMINATION & UI POLISH (Weeks 3-4)
-
-**Priority: HIGH - Create polished, bug-free experience**
-
-### Week 3: Backend Bug Fixes
-
-**Priority: CRITICAL - Eliminate systemic issues**
-
-#### Critical Bug Resolution
-
-- [ ] **Fix data synchronization bugs**
-  - Component state inconsistencies
-  - GameState update conflicts
-  - Reactive data binding issues
-  - _Requirements: 7.1, 7.2, 8.5_
-- [ ] **Repair event system bugs**
-  - Message log functionality (currently not displaying)
-  - Event trigger reliability
-  - Consequence application accuracy
-  - _Requirements: 5.1, 5.2, 5.4_
-- [ ] **Fix work assignment bugs**
-  - Efficiency calculation errors
-  - Progress tracking accuracy
-  - Task completion logic issues
-  - _Requirements: 1.3, 4.2_
-- [ ] **Stabilize save/load system**
-  - State persistence integrity
-  - Component restoration after load
-  - Version compatibility handling
-  - _Requirements: 7.2, 7.3, 8.5_
-
-#### System Stability Validation
-
-- [ ] **Implement automated testing** for core loops
-  - _Requirements: 9.3, 9.4_
-- [ ] **Conduct extended play sessions** (50+ turns without errors)
-  - _Requirements: 8.1, 8.2_
-- [ ] **Validate edge cases** with current content
-  - _Requirements: 8.3, 8.4_
-- [ ] **Profile and optimize performance**
-  - _Requirements: 8.3, 8.6_
-
-### Week 4: UI/UX Cleanup
-
-**Priority: MEDIUM - Polish user-facing experience**
-
-#### Visual Polish
-
-- [ ] **Fix visual glitches**
-  - Animation synchronization issues
-  - Display inconsistencies
-  - Layout stability problems
-  - _Requirements: 8.2, 8.4_
-- [ ] **Standardize component state management**
-  - Fix reactive data binding
-  - Consistent UI update patterns
-  - _Requirements: 7.1, 7.4_
-- [ ] **Improve information display**
-  - Clear system status indicators
-  - Intuitive data presentation
-  - Better progress visualization
-  - _Requirements: 8.2, 8.4_
-
-#### Interface Consistency
-
-- [ ] **Consolidate similar UI patterns**
-  - Standardize TaskContainer usage
-  - Consistent progress displays
-  - Unified button and input styles
-  - _Requirements: 7.4, 8.4_
-- [ ] **Implement consistent error handling**
-  - Graceful error recovery
-  - User-friendly error messages
-  - Consistent error display patterns
-  - _Requirements: 8.5, 9.4_
-
-**GATE: No backend errors for 50+ turns, responsive UI, stable features**
-
----
-
-## ⚔️ PHASE 3: COMBAT SYSTEM IMPLEMENTATION (Weeks 5-9)
-
-**Priority: MEDIUM - Core combat functionality**
-
-### Week 5-6: System Integration Validation
-
-**Priority: HIGH - Prove architecture scales**
-
-#### GameEngine Implementation
-
-- [ ] **Create GameEngine.ts as central coordinator**
-  - Implement unified system interactions
-  - Create single source of truth for bonuses
-  - Establish clean system boundaries
-  - _Requirements: 2.1, 2.2, 2.4_
-- [ ] **Validate system interactions**
-  - Test service layer with existing content
-  - Verify modifier generation system works
-  - Validate clean integration patterns
-  - _Requirements: 2.3, 2.6_
-
-#### Architecture Scaling Tests
-
-- [ ] **Performance testing** with current content
-  - _Requirements: 8.3, 8.4_
-- [ ] **Extended gameplay sessions** with new architecture
-  - _Requirements: 8.1, 8.2_
-- [ ] **Edge case validation** with multiple systems active
-  - _Requirements: 8.3, 8.5_
-- [ ] **Integration pattern verification**
-  - _Requirements: 2.6, 10.1_
-
-### Week 7: Combat System Foundation
-
-**Priority: MEDIUM - Core tactical combat engine**
-
-#### Combat Engine Core
-
-- [ ] **Implement CombatState class**
-  - Turn order tracking
-  - Initiative calculation system
-  - Action point allocation
-  - Combat round progression
-  - _Requirements: 10.1, 10.2_
-- [ ] **Create ASCII grid rendering**
-  - 12x8 battlefield grid component
-  - Coordinate system (A1-L8)
-  - Basic terrain rendering
-  - Unit placement visualization
-  - _Requirements: 10.1, 10.3_
-- [ ] **Build basic combat mechanics**
-  - Movement system with AP costs
-  - Basic attack calculations
-  - Line-of-sight for ranged attacks
-  - Target selection and validation
-  - _Requirements: 10.1, 10.2_
-
-#### Equipment Integration
-
-- [ ] **Connect item system to combat abilities**
-  - Weapon-specific actions
-  - Ability cost calculations
-  - Weapon range and damage modifiers
-  - _Requirements: 10.2, 10.5_
-- [ ] **Build combat UI foundation**
-  - Turn order display
-  - Action selection buttons
-  - Target highlighting
-  - Health bars and AP displays
-  - _Requirements: 10.1, 10.6_
-
-### Week 8: Tactical Depth & AI
-
-**Priority: MEDIUM - Advanced combat mechanics**
-
-#### Advanced Combat Mechanics
-
-- [ ] **Implement positioning bonuses**
-  - Cover bonuses from terrain (+15% defense)
-  - Flanking mechanics (+20% damage)
-  - Formation bonuses
-  - Opportunity attacks
-  - _Requirements: 10.2, 10.5_
-- [ ] **Create status effects system**
-  - Status effect framework
-  - Duration tracking
-  - Visual indicators
-  - Application/removal logic
-  - _Requirements: 10.3, 10.6_
-- [ ] **Add equipment effects in combat**
-  - Armor damage reduction
-  - Weapon durability
-  - Equipment-specific abilities
-  - Equipment loss mechanics
-  - _Requirements: 10.2, 10.5_
-
-#### Enemy AI Implementation
-
-- [ ] **Build basic AI behaviors**
-  - Aggressive AI (attacks nearest)
-  - Defensive AI (holds position)
-  - Opportunist AI (targets weak pawns)
-  - Support AI (buffs allies)
-  - _Requirements: 10.1, 10.2_
-- [ ] **Create AI decision system**
-  - Threat assessment algorithms
-  - Target prioritization logic
-  - Positioning evaluation
-  - Action selection with personality weighting
-  - _Requirements: 10.1, 10.5_
-
-### Week 9: Combat Integration & Polish
-
-**Priority: MEDIUM - Colony system integration**
-
-#### Colony System Integration
-
-- [ ] **Implement combat consequences**
-  - Injury system affecting work efficiency
-  - PTSD/morale effects from combat
-  - Equipment loss impact on production
-  - Pawn death consequences
-  - _Requirements: 10.3, 10.4_
-- [ ] **Connect combat to event system**
-  - Victory/defeat events
-  - Heroic action events
-  - Mourning events for casualties
-  - _Requirements: 10.4, 10.6_
-- [ ] **Build pre/post combat systems**
-  - Squad selection interface
-  - Equipment preparation
-  - Injury treatment and recovery
-  - Experience gain system
-  - _Requirements: 10.1, 10.3_
-
-#### Combat Polish & Balance
-
-- [ ] **Optimize performance** for 20-50 unit battles
-  - _Requirements: 8.3, 8.4_
-- [ ] **Add combat tutorial** for new players
-  - _Requirements: 10.1, 10.6_
-- [ ] **Implement helpful tooltips** and information displays
-  - _Requirements: 10.6_
-- [ ] **Balance test** with various pawn configurations
-  - _Requirements: 10.2, 10.5_
-
-**GATE: Basic combat functional, integrates with colony, AI provides fair challenge**
-
----
-
-## 🎨 PHASE 4: ADVANCED FEATURES & VISUAL EVOLUTION (Weeks 10-14)
-
-**Priority: LOW - Enhancement and polish**
-
-### Week 10-11: Advanced Combat Features
-
-- [ ] **Squad-based command system**
-- [ ] **Advanced tactical mechanics** (combo attacks, environmental hazards)
-- [ ] **Large-scale battle management** (50+ pawns)
-- [ ] **Enhanced AI & difficulty scaling**
-
-### Week 12-13: Graphics Foundation
-
-- [ ] **Dual-mode rendering** (ASCII/Sprites toggle)
-- [ ] **Sprite rendering system** (32x32 tiles)
-- [ ] **Asset pipeline creation**
-- [ ] **Animation system** for combat
-
-### Week 14: Final Polish
-
-- [ ] **Combat system completion**
-- [ ] **Balance & tuning**
-- [ ] **Documentation & accessibility**
-- [ ] **Modding support foundation**
-
----
-
-## 🔧 ONGOING MAINTENANCE TASKS
-
-### Code Quality
-
-- [ ] **Run `npm run lint:fix`** before each commit
-  - _Requirements: 9.1, 9.2_
-- [ ] **Maintain TypeScript strict mode** throughout refactoring
-  - _Requirements: 9.1, 9.2_
-- [ ] **Update imports** to use service layer pattern
-  - _Requirements: 3.1, 3.2, 3.3_
-- [ ] **Document architectural changes** in migration logs
-  - _Requirements: 9.5, 9.6_
-
-### Testing & Validation
-
-- [ ] **Test core game loop** after each major change
-  - _Requirements: 8.1, 8.2_
-- [ ] **Validate save/load functionality** regularly
-  - _Requirements: 7.2, 7.3_
-- [ ] **Monitor performance** during content expansion
-  - _Requirements: 8.3, 8.4_
-- [ ] **Check for circular dependencies** in new code
-  - _Requirements: 3.1, 3.6_
-
-### Documentation
-
-- [ ] **Update steering documents** as architecture evolves
-  - _Requirements: 9.6_
-- [ ] **Maintain refactoring decision log**
-  - _Requirements: 9.5_
-- [ ] **Document service layer interfaces**
-  - _Requirements: 9.6_
-- [ ] **Keep migration guides current**
-  - _Requirements: 9.5_
-
----
-
-## ⚠️ CRITICAL SUCCESS CRITERIA
-
-### Phase 1 Gates
-
-- ✅ Service layer extracting business logic from data files
-- ✅ GameEngine implemented as central coordinator
-- ✅ Clean architecture with no circular dependencies
-- ✅ Core game loop stable with existing content
-
-### Phase 2 Gates
-
-- ✅ No backend errors for 50+ consecutive turns
-- ✅ All visual glitches resolved
-- ✅ Responsive and predictable UI
-- ✅ Stable save/load functionality
-
-### Phase 3 Gates
-
-- ✅ Basic combat functional with equipment integration
-- ✅ AI provides fair tactical challenge
-- ✅ Combat integrates seamlessly with colony systems
-- ✅ Performance smooth with expanded content
-
-### Phase 4 Gates
-
-- ✅ Advanced combat features complete
-- ✅ Graphics system functional
-- ✅ Full accessibility compliance
-- ✅ Modding foundation established
-
-**KEY PRINCIPLE: Do not proceed to next phase until all gates are met. Simple, reliable systems are more valuable than complex, fragile ones.**
-
-## Risk Mitigation
-
-### Backup Strategy
-
-- Create full backup of current codebase before starting
-- Implement incremental backups after each major task
-- Maintain rollback procedures for each refactoring phase
-
-### Testing Strategy
-
-- Test each service extraction independently
-- Validate game functionality after each component update
-- Run extended gameplay sessions after major changes
-
-### Integration Strategy
-
-- Implement services one at a time
-- Maintain backward compatibility during transition
-- Update components incrementally to use new architecture
