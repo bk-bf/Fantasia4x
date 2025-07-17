@@ -61,36 +61,69 @@ Complete the data/logic separation following the pawn-screen-refactoring model. 
 - [ ] **GameEngine Interface**: All components use GameEngine methods only
 - [ ] **Clean Hierarchy**: UI → GameEngine → Services → Data
 
-### Task 4: Complete Missing Services ⚠️ HIGH PRIORITY
+### Task 4: **URGENT: Extract Pawn Logic from GameEngine** ⚠️ NEW PRIORITY
 
-**Goal**: Finish the service layer just like completing all component extractions
+**Goal**: Move pawn behavior logic to PawnService to keep GameEngine focused on coordination
 
-#### 4.1 PawnService Completion ⚠️ HIGH PRIORITY
+#### 4.1 Move Automatic Needs to PawnService ⚠️ URGENT
 ```typescript
-class PawnService {
-  // High Priority: Automatic need satisfaction
-  processNeedsAutomatically(pawnId: string): void;
-  
-  // High Priority: Behavior management  
-  updateMorale(pawnId: string): void;
-  
-  // Medium Priority: Advanced features
-  calculateEffectiveStats(pawnId: string): RaceStats;
-}
+// MOVE FROM GameEngine TO PawnService:
+- tryAutomaticEating(pawn: Pawn): Pawn
+- tryAutomaticSleeping(pawn: Pawn): Pawn  
+- processAutomaticPawnNeeds(): void
+- shouldPawnSleep(pawn: Pawn): boolean
+- clearTemporaryPawnStates(): void
+
+// GameEngine should only call:
+gameState = pawnService.processAutomaticNeeds(gameState);
 ```
 
-#### 4.2 EventService Completion ⚠️ MEDIUM PRIORITY
+#### 4.2 Move Food/Rest Logic to PawnService ⚠️ URGENT
 ```typescript
-class EventService {
-  // Medium Priority: Event logging
-  logPawnActivity(pawn: Pawn, activity: string): void;
-  
-  // Medium Priority: Building events
-  logBuildingCompletion(building: Building): void;
-  
-  // Low Priority: Event history
-  getRecentEvents(): GameEvent[];
-}
+// MOVE FROM GameEngine TO PawnService:
+- findAvailableFood(): any[]
+- selectBestFood(availableFood: any[]): any
+- consumeFoodFromInventory(foodId: string, amount: number): void
+- calculateFoodRecovery(pawn: Pawn, food: any): number
+- calculateRestRecovery(pawn: Pawn): number
+```
+
+#### 4.3 Coordinate Work Sync Through Services ⚠️ HIGH
+```typescript
+// GameEngine coordination:
+this.gameState = workService.syncPawnWorkStates(this.gameState);
+this.gameState = pawnService.processAutomaticNeeds(this.gameState);
+
+// NOT: Hundreds of lines of pawn logic in GameEngine
+```
+
+### Task 5: **Production Chain Implementation** ⚠️ NEW PRIORITY
+
+**Goal**: Complete the survival loop: resource harvesting → crafting/building → needs + productivity bonus
+
+#### 5.1 Building Effects on Work ⚠️ HIGH PRIORITY
+```typescript
+// Buildings should boost work efficiency automatically:
+- Kitchen: +40% cooking efficiency (affects food recovery)
+- Workshop: +25% crafting efficiency  
+- Smelter: +50% metalworking efficiency
+// Via ModifierSystem, NOT hardcoded in GameEngine
+```
+
+#### 5.2 Tool Crafting System ⚠️ HIGH PRIORITY  
+```typescript
+// Crafting unlocks progression:
+- Wood tools → Stone tools → Iron tools → Steel tools
+- Better tools = higher work efficiency
+- Research unlocks tool recipes
+```
+
+#### 5.3 Research → Building → Crafting Chain ⚠️ MEDIUM
+```typescript
+// Research progression:
+- Basic Metallurgy → Unlocks Smelter building
+- Smelter building → Enables iron tool crafting  
+- Iron tools → 2x work efficiency vs stone tools
 ```
 
 ## Success Metrics (Following Pawn-Screen Model)
@@ -113,18 +146,66 @@ class EventService {
 
 ## Current Status Summary
 
-### ✅ COMPLETE
-- GameEngine central coordination
-- Core service implementations (Work, Item, Building, Research)
-- Service registry and dependency injection
-- Turn processing coordination
-- Most circular dependency elimination
+### ✅ COMPLETE 
+- GameEngine central coordination ✅
+- Core service implementations (Work, Item, Building, Research) ✅
+- Service registry and dependency injection ✅
+- Turn processing coordination ✅
+- **HUNGER/REST SYSTEM** ✅ **NEW: COMPLETE**
+- **Work assignment display** ✅ **NEW: COMPLETE**
+- **Automatic need satisfaction** ✅ **NEW: COMPLETE**
+- Most circular dependency elimination ✅
 
-### ⚠️ IN PROGRESS  
-- Data file cleanup (business logic extraction)
-- Component migration to GameEngine interface
-- PawnService completion
-- EventService completion
+### ⚠️ CRITICAL: GameEngine Too Large
+- **GameEngine**: 900+ lines, needs **pawn logic extraction**
+- **Needs system**: Should be in PawnService, not GameEngine
+- **Work sync logic**: Should be in WorkService coordination
+
+### 🎯 NEXT PRIORITIES (Production Chain Focus)
+
+#### PRIORITY 1: Move Pawn Logic to PawnService ⚠️ URGENT
+- **Extract eating/sleeping logic** from GameEngine → PawnService
+- **Extract work state sync** from GameEngine → WorkService coordination
+- **Keep GameEngine under 400 lines** (coordination only)
+
+#### PRIORITY 2: Production Chain Completion ⚠️ HIGH 
+- **Building effects on work efficiency** (kitchen → cooking bonus)
+- **Crafting unlocks better tools** (stone axe → iron axe)
+- **Research unlocks buildings/crafting** (metallurgy → smelter)
+
+#### PRIORITY 3: Balance & Polish ⚠️ MEDIUM
+- **Tool requirements enforcement** (can't mine without pick)
+- **Building placement system** (construct buildings at locations)
+- **Research progression** (knowledge items + lore discovery)
+
+### 🎯 IMMEDIATE ROADMAP (Next Development Phase)
+
+**The game is almost playable! Here's the clear chronological order:**
+
+#### WEEK 1: Architecture Cleanup (Foundation)
+1. **Extract GameEngine Pawn Logic** → PawnService (Task 4.1-4.2)
+   - Move automatic eating/sleeping to PawnService
+   - Move work sync coordination to proper services
+   - Reduce GameEngine from 900+ lines to ~400 lines
+
+#### WEEK 2: Production Chain Core (Gameplay)  
+2. **Building Effects System** (Task 5.1)
+   - Kitchen → +40% cooking efficiency  
+   - Workshop → +25% crafting efficiency
+   - Buildings provide tangible gameplay benefits
+
+3. **Basic Tool Crafting** (Task 5.2)
+   - Wood tools → Stone tools → Iron tools progression
+   - Tools boost work efficiency significantly
+   - Crafting gives progression rewards
+
+#### WEEK 3: Strategic Depth (Complete Loop)
+4. **Research → Building Chain** (Task 5.3)
+   - Research unlocks building types
+   - Buildings enable advanced crafting
+   - Complete: resource → craft → build → bonus → better resources
+
+**After these 3 weeks: Complete production loop game ready for additional features!**
 
 ### 🎯 SUCCESS CRITERIA
 Following the pawn-screen-refactoring success:

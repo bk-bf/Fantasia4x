@@ -1,83 +1,93 @@
 # Fantasia4x Specs Development Roadmap
 
-## Overview
+## 🎉 Major Milestone Achieved: Game Almost Playable!
 
-This roadmap outlines all the specifications needed to complete Fantasia4x based on the design documents in `.kiro/design/`. Each spec represents a major system or feature that requires dedicated requirements, design, and implementation planning.
+**BREAKING**: Hunger and rest systems are now fully functional! The game has reached a major milestone where the core survival loop works perfectly. Pawns automatically eat and sleep with realistic mechanics, making the game almost playable.
 
-## 📋 Spec Development Priority Order
+## 📋 **Updated Development Priority (Post-Hunger/Rest Success)**
 
-### 🚨 **Phase 1: Foundation (Weeks 1-4)**
+### 🚨 **Phase 1: Production Chain Completion (Weeks 1-3)**
 
-_Must complete before any feature development_
+_Complete the survival → production → building → bonus cycle_
 
-#### 1. ✅ **architecture-refactoring** (CURRENT - Week 1-2)
+#### 1. ✅ **COMPLETE: Hunger/Rest System** 
 
-- **Status**: Complete and ready for implementation
-- **Purpose**: Eliminate circular dependencies, implement GameEngine, create service layer
-- **Blocks**: All other development until complete
-- **Files**: requirements.md, design.md, tasks.md, migration-guide.md
+- **Status**: ✅ **COMPLETE AND WORKING**
+- **Achievements**: 
+  - Realistic food consumption with direct nutrition mapping
+  - Smart sleep duration balancing hunger vs fatigue
+  - 5 fatigue recovery per turn with multi-turn sleep sessions
+  - Automatic need satisfaction integrated with turn processing
+  - Work assignment display properly synchronized
+- **Impact**: Game is now almost playable with functional survival mechanics
 
-#### 2. 🔄 **pawn-screen-refactoring** (Week 2-3)
+#### 2. ⚠️ **architecture-refactoring** (Week 1 - URGENT)
 
-- **Status**: Complete and ready for implementation
-- **Purpose**: Break down massive PawnScreen component into focused, maintainable components
-- **Dependencies**: None (UI refactoring independent of architecture changes)
-- **Files**: requirements.md ✅, design.md ✅, tasks.md ✅, refactoring-guide.md ✅
+- **Status**: ⚠️ **CRITICAL: GameEngine Too Large (900+ lines)**
+- **Purpose**: Extract pawn logic from GameEngine to PawnService for maintainability
+- **Blocks**: All future development (architectural debt growing)
+- **Priority Tasks**:
+  - Move automatic eating/sleeping logic to PawnService
+  - Move work sync coordination to proper services  
+  - Reduce GameEngine to coordination-only (~400 lines)
+- **Files**: requirements.md ✅, design.md ✅, tasks.md ✅, migration-guide.md ✅
 
-#### 3. 🔄 **research-enhancement** (Week 3-4)
+#### 3. 🏗️ **production-chain-integration** (Week 2-3 - HIGH PRIORITY)
 
-- **Status**: Requirements started, needs design and tasks
-- **Purpose**: Implement three-tier research system (knowledge, lore items, stat-gated)
-- **Dependencies**: architecture-refactoring (needs clean ResearchService)
-- **Files**: requirements.md ✅, design.md ❌, tasks.md ❌
+- **Status**: ⚠️ **NEW PRIORITY: Complete gameplay loop**
+- **Purpose**: Implement resource → craft → build → bonus → better resources cycle
+- **Key Features**:
+  - **Building work bonuses**: Kitchen +40% cooking, Workshop +25% crafting
+  - **Tool progression**: Wood → Stone → Iron tools with efficiency multipliers
+  - **Research unlocks**: Metallurgy → Smelter → Iron tools
+  - **Production chains**: Complete incentive loop for building and crafting
+- **Dependencies**: architecture-refactoring (clean service separation)
+- **Impact**: This completes the core gameplay loop making game fully playable
 
 ---
 
-### 🎮 **Phase 2: Core Gameplay Systems (Weeks 5-12)**
+### 🎮 **Phase 2: Enhanced Gameplay Systems (Weeks 4-8)**
 
-_Essential systems for complete gameplay experience_
+_Build on the complete production chain for advanced features_
 
-#### 3. 📋 **pawn-behavior-system** (Week 5-6)
+#### 4. � **pawn-screen-refactoring** (Week 4)
+
+- **Status**: ✅ Complete and ready for implementation  
+- **Purpose**: Break down massive PawnScreen component into focused, maintainable components
+- **Dependencies**: None (UI refactoring independent of other systems)
+- **Priority**: Medium (improves maintainability but doesn't block gameplay)
+- **Files**: requirements.md ✅, design.md ✅, tasks.md ✅, refactoring-guide.md ✅
+
+#### 5. 🔄 **research-enhancement** (Week 5)
+
+- **Status**: Requirements started, needs design and tasks
+- **Purpose**: Implement three-tier research system (knowledge, lore items, stat-gated)  
+- **Dependencies**: architecture-refactoring (needs clean ResearchService)
+- **Priority**: Medium (enhances but doesn't complete core gameplay)
+- **Files**: requirements.md ✅, design.md ❌, tasks.md ❌
+
+#### 6. 📋 **advanced-pawn-behavior** (Week 6-7)
 
 - **Status**: Not started
-- **Purpose**: Automated needs satisfaction, morale consequences, individual pawn AI
+- **Purpose**: Enhanced pawn AI, morale consequences, personality systems
 - **Key Features**:
-  - Automatic eating/sleeping/resting when needs critical
   - Work refusal and efficiency penalties from low morale
   - Individual pawn personality and behavior patterns
-  - Equipment bonuses and stat calculations
-- **Dependencies**: architecture-refactoring (needs PawnService)
-- **Design Reference**: gameplay.md "Needs & Behavior System"
+  - Equipment bonuses and advanced stat calculations
+  - Social interactions and relationship systems
+- **Dependencies**: production-chain-integration (builds on completed survival mechanics)
+- **Priority**: Low (polish and depth features)
 
-#### 4. 🏗️ **building-enhancement** (Week 7-8)
+#### 7. 🎲 **advanced-events** (Week 8)
 
-- **Status**: Not started
-- **Purpose**: Advanced building effects, synergies, upgrade paths
-- **Key Features**:
-  - Building synergies and adjacency bonuses
-  - Upgrade paths and building evolution
-  - Environmental requirements and location-specific buildings
-  - Production chain integration
-- **Dependencies**: architecture-refactoring (needs BuildingService)
-- **Design Reference**: gameplay.md "Building Construction"
-
-#### 5. 🎲 **event-system-enhancement** (Week 9-10)
-
-- **Status**: Not started
+- **Status**: Not started  
 - **Purpose**: Dynamic event generation, choice consequences, narrative depth
 - **Key Features**:
   - Procedural event generation based on game state
   - Meaningful player choices with lasting consequences
   - Event chains and narrative progression
-  - Integration with all other systems
-- **Dependencies**: architecture-refactoring (needs EventService)
-- **Design Reference**: gameplay.md "Event-Driven Gameplay"
-
-#### 6. 🗺️ **exploration-system** (Week 11-12)
-
-- **Status**: Not started
-- **Purpose**: Location discovery, mission system, world interaction
-- **Key Features**:
+- **Dependencies**: Complete production chain for meaningful event impacts
+- **Priority**: Low (content and narrative depth)
   - Procedural location generation
   - Exploration missions with risk/reward
   - Resource discovery and lore item finding
@@ -87,46 +97,52 @@ _Essential systems for complete gameplay experience_
 
 ---
 
-### ⚔️ **Phase 3: Combat Implementation (Weeks 13-20)**
+---
 
-_Tactical combat system as designed_
+### 🎯 **Phase 3: Optional Advanced Systems (Future)**
 
-#### 7. 🎯 **combat-foundation** (Week 13-15)
+_Advanced features to add depth after core gameplay is complete_
+
+#### 8. 🗺️ **exploration-system** (Future)
 
 - **Status**: Not started
-- **Purpose**: Core tactical combat engine with ASCII grid
+- **Purpose**: Location discovery, mission system, world interaction
+- **Key Features**:
+  - Location discovery and exploration missions
+  - Resource node discovery and exploitation
+  - Environmental hazards and discovery events
+- **Dependencies**: Complete production chain
+- **Priority**: Future (exploration enhances but doesn't complete core loop)
+
+#### 9. ⚔️ **combat-system** (Future)
+
+- **Status**: Not started  
+- **Purpose**: Tactical combat as ultimate challenge system
 - **Key Features**:
   - Turn-based combat with initiative system
-  - Action Point (AP) system for movement and abilities
-  - 12x8 ASCII battlefield grid
-  - Basic attack mechanics and line-of-sight
-  - Equipment-driven combat abilities
-- **Dependencies**: architecture-refactoring, pawn-behavior-system
-- **Design Reference**: combat.md "Combat Mechanics Specification"
+  - Action Point system for movement and abilities
+  - 12x8 ASCII battlefield grid with tactical positioning
+  - Equipment-driven combat abilities and AI opponents
+- **Dependencies**: Complete production chain + advanced pawn behavior
+- **Priority**: Future (combat is advanced challenge system, not core survival)
 
-#### 8. 🤖 **combat-ai-system** (Week 16-17)
+---
 
-- **Status**: Not started
-- **Purpose**: Enemy AI behaviors and tactical decision making
-- **Key Features**:
-  - 5 AI personality types (Aggressive, Defensive, Opportunist, Support, Tactical)
-  - Threat assessment and target prioritization
-  - Formation and positioning AI
-  - Difficulty scaling system
-- **Dependencies**: combat-foundation
-- **Design Reference**: combat.md "Enemy AI System"
+## � **Current Development Focus Summary**
 
-#### 9. 🏛️ **combat-integration** (Week 18-20)
+### **IMMEDIATE PRIORITIES (Next 3 Weeks):**
 
-- **Status**: Not started
-- **Purpose**: Integration with colony systems and consequences
-- **Key Features**:
-  - Injury system affecting work efficiency
-  - PTSD and morale effects from combat
-  - Equipment loss and durability
-  - Pre/post combat systems (squad selection, recovery)
-- **Dependencies**: combat-foundation, combat-ai-system, event-system-enhancement
-- **Design Reference**: combat.md "Integration with Existing Systems"
+1. **Week 1**: Extract pawn logic from GameEngine → PawnService (architectural health)
+2. **Week 2**: Building work bonuses + basic tool crafting (immediate gameplay impact)  
+3. **Week 3**: Research → building chains (complete production loop)
+
+### **SUCCESS METRICS:**
+- **GameEngine**: Reduced from 900+ lines to ~400 lines (coordination only)
+- **Production Loop**: resource harvesting → crafting/building → bonuses → better harvesting
+- **Player Incentives**: Clear progression through tool/building upgrades
+- **Game State**: Fully playable with complete survival and production mechanics
+
+**After 3 weeks: Game will have complete production chain and be fully playable for extended sessions!**
 
 ---
 

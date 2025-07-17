@@ -9,7 +9,8 @@ import type {
 } from '../core/types';
 import {
 	createPawnInventory,
-	createPawnEquipment
+	createPawnEquipment,
+	getEquipmentBonuses
 } from '../core/PawnEquipment';
 import { modifierSystem } from '../systems/ModifierSystem';
 
@@ -414,31 +415,137 @@ function rollPhysicalTraits(racePhysicalTraits: any): any {
 		size: size
 	};
 }
+
 function generatePawnName(): string {
-	const firstNames = [
+	const names = [
 		'Aria', 'Brom', 'Celia', 'Dain', 'Enna', 'Finn', 'Greta', 'Hale',
 		'Ivy', 'Jax', 'Kira', 'Lark', 'Mira', 'Nix', 'Opal', 'Pike',
-		'Quinn', 'Ren', 'Sage', 'Thea', 'Uma', 'Vale', 'Wren', 'Xara', 'Yuki', 'Zara',
-		'Axel', 'Blair', 'Clay', 'Dawn', 'Echo', 'Frost', 'Gage', 'Haven',
-		'Indigo', 'Jade', 'Knox', 'Luna', 'Moss', 'Nova', 'Onyx', 'Petra',
-		'Quest', 'River', 'Storm', 'Thorn', 'Unity', 'Vex', 'Wolf', 'Zephyr'
+		'Quinn', 'Ren', 'Sage', 'Thea', 'Uma', 'Vale', 'Wren', 'Xara', 'Yuki', 'Zara'
 	];
-
-	const surnames = [
-		'Ashbrook', 'Blackwood', 'Clearwater', 'Darkstone', 'Emberfall', 'Frostborn',
-		'Goldleaf', 'Hawthorne', 'Ironforge', 'Jadeheart', 'Kindred', 'Lightbringer',
-		'Moonwhisper', 'Nightfall', 'Oakheart', 'Proudfoot', 'Quicksilver', 'Ravenclaw',
-		'Starweaver', 'Thornfield', 'Underhill', 'Valorheart', 'Wildstorm', 'Wyvernheart',
-		'Brightblade', 'Copperstone', 'Driftwood', 'Earthsong', 'Fireforge', 'Graymane',
-		'Healingsong', 'Ironback', 'Jewelcrest', 'Keenblade', 'Littlewater', 'Miralake'
-	];
-
-	const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
-	const surname = surnames[Math.floor(Math.random() * surnames.length)];
-
-	return `${firstName} ${surname}`;
+	return names[Math.floor(Math.random() * names.length)];
 }
 
+// --- Needs and State Management (unchanged) ---
 
-// --- Business logic moved to PawnService.ts ---
-// All need management, state updates, and turn processing now handled by PawnService
+export function updatePawnNeeds(pawn: Pawn, currentTurn: number): Pawn {
+	const updatedPawn = { ...pawn };
+
+	// Increase needs each turn
+	updatedPawn.needs = {
+		...pawn.needs,
+		hunger: Math.min(100, pawn.needs.hunger + getHungerIncreasePerTurn(pawn)),
+		fatigue: Math.min(100, pawn.needs.fatigue + getFatigueIncreasePerTurn(pawn)),
+		sleep: Math.min(100, pawn.needs.sleep + getSleepIncreasePerTurn(pawn))
+	};
+
+	// Update state based on current activity
+	updatedPawn.state = updatePawnStatePerTurn(updatedPawn.state, updatedPawn.needs, currentTurn);
+
+	return updatedPawn;
+}
+
+function getHungerIncreasePerTurn(pawn: Pawn): number {
+	let baseHunger = 2; // Base hunger increase per turn
+
+	// Apply racial trait modifiers
+	pawn.racialTraits.forEach((trait) => {
+		if (trait.effects.hungerRate) {
+			baseHunger *= trait.effects.hungerRate;
+		}
+	});
+
+	// Constitution affects hunger rate
+	const constitutionModifier = (pawn.stats.constitution - 10) * 0.1;
+	baseHunger *= 1 - constitutionModifier;
+
+	return Math.max(0.5, baseHunger);
+}
+
+function getFatigueIncreasePerTurn(pawn: Pawn): number {
+	let baseFatigue = 1.5; // Base fatigue increase per turn
+
+	// Working increases fatigue more
+	if (pawn.state.isWorking) {
+		baseFatigue *= 2;
+	}
+
+	// Racial trait modifiers
+	pawn.racialTraits.forEach((trait) => {
+		if (trait.effects.fatigueRate) {
+			baseFatigue *= trait.effects.fatigueRate;
+		}
+	});
+
+	return Math.max(0.5, baseFatigue);
+}
+
+function getSleepIncreasePerTurn(pawn: Pawn): number {
+	let baseSleep = 1; // Base sleep need increase per turn
+
+	// Nocturnal pawns have different sleep patterns
+	pawn.racialTraits.forEach((trait) => {
+		if (trait.name === 'Nocturnal') {
+			// Adjust based on time of day (would need game time tracking)
+			baseSleep *= 0.8; // Less sleep need overall
+		}
+	});
+
+	return baseSleep;
+}
+
+function updatePawnStatePerTurn(
+	state: PawnState,
+	needs: PawnNeeds,
+	currentTurn: number
+): PawnState {
+	const newState = { ...state };
+
+	// Critical needs override everything
+	if (needs.hunger > 90) {
+		newState.isWorking = false;
+		newState.isSleeping = false;
+		newState.isEating = true;
+		newState.mood = Math.max(0, newState.mood - 5);
+	} else if (needs.sleep > 95) {
+		newState.isWorking = false;
+		newState.isEating = false;
+		newState.isSleeping = true;
+		newState.mood = Math.max(0, newState.mood - 3);
+	}
+
+	// Process current activities
+	if (newState.isEating) {
+		newState.mood += 2;
+	} else if (newState.isSleeping) {
+		newState.mood += 1;
+	} else if (newState.isWorking && needs.fatigue < 80) {
+		newState.mood += 1;
+	}
+
+	// Health regeneration
+	if (newState.health < 100) {
+		newState.health = Math.min(100, newState.health + getHealthRegenPerTurn(needs));
+	}
+
+	return newState;
+}
+
+function getHealthRegenPerTurn(needs: PawnNeeds): number {
+	let regen = 0.5; // Base health regen per turn
+
+	// Well-fed and rested pawns regenerate faster
+	if (needs.hunger < 30 && needs.fatigue < 30) {
+		regen *= 2;
+	}
+
+	return regen;
+}
+
+export function processPawnTurn(state: GameState): GameState {
+	const updatedPawns = state.pawns.map((pawn) => updatePawnNeeds(pawn, state.turn));
+
+	return {
+		...state,
+		pawns: updatedPawns
+	};
+}

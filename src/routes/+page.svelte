@@ -89,7 +89,7 @@
 
   .sidebar-container {
     flex-shrink: 0;
-    width: 300px;
+    width: 350px;
     background: #000000;
     border-right: 2px solid #4caf50;
     overflow-y: auto;

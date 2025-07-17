@@ -3,7 +3,8 @@ import { writable, derived } from 'svelte/store';
 import { GameStateManager } from '$lib/game/core/GameState';
 import { gameEngine } from '$lib/game/systems/GameEngineImpl';
 import type { GameState, Pawn } from '$lib/game/core/types';
-import { generatePawns, processPawnTurn } from '$lib/game/entities/Pawns';
+import { generatePawns } from '$lib/game/entities/Pawns';
+import { pawnService } from '$lib/game/services/PawnService';
 import { generateRace } from '$lib/game/core/Race';
 import { itemService } from '$lib/game/services/ItemService';
 import { locationService } from '$lib/game/services/LocationServices';
@@ -29,7 +30,10 @@ export const initialGameState: GameState = {
 	turn: 0,
 	race: generateRace(),
 	pawns: [],
-	item: itemService.getItemsByCategory('basic').map((item) => ({ ...item, amount: 0 })),
+	// REVERTED: Back to original - no starter food added
+	item: [
+		...itemService.getItemsByCategory('basic').map((item) => ({ ...item, amount: 0 }))
+	].filter(item => item !== undefined),
 	worldMap: [],
 	discoveredLocations: [],
 	buildingCounts: {},

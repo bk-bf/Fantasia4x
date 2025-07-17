@@ -70,7 +70,6 @@
 
     items = newItems;
   });
-
   const unsubscribeRace = currentRace.subscribe((value) => {
     race = value;
   });
@@ -114,7 +113,8 @@
                   <div class="resource-amount-container">
                     <span class="resource-amount">{Math.floor(item.amount)}</span>
                     {#if itemChanges[item.id] > 0}
-                      <span class="resource-change">+{Math.floor(itemChanges[item.id])}</span>
+                      <!-- UPDATED: Show 1 decimal place for resource changes -->
+                      <span class="resource-change">+{itemChanges[item.id].toFixed(1)}</span>
                     {/if}
                   </div>
                 </div>
