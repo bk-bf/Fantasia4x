@@ -27,6 +27,12 @@ export interface PawnService {
 	// Turn Processing (PawnService coordination)
 	processPawnTurn(gameState: GameState): GameState;
 
+	// Automatic Eating Logic (extracted from GameEngine)
+	processAutomaticEating(gameState: GameState): GameState;
+
+	// Automatic Sleeping Logic (extracted from GameEngine)
+	processAutomaticSleeping(gameState: GameState): GameState;
+
 	// Need Calculations (PawnService internal logic)
 	calculateNeedDecay(pawnId: string, gameState: GameState): { hunger: number; rest: number };
 	getPawnNeedStatus(pawnId: string, gameState: GameState): { critical: string[]; warning: string[]; normal: string[] };
@@ -278,6 +284,211 @@ export class PawnServiceImpl implements PawnService {
 		});
 
 		return newState;
+	}
+
+	// ===== AUTOMATIC EATING LOGIC (EXTRACTED FROM GAMEENGINE) =====
+
+	processAutomaticEating(gameState: GameState): GameState {
+		console.log('[PawnService] Processing automatic eating for all pawns');
+
+		let updatedGameState = { ...gameState };
+
+		// Process each pawn for automatic eating
+		gameState.pawns.forEach((pawn, index) => {
+			// PRIORITY 1: Critical hunger (must eat immediately)
+			if (pawn.needs.hunger >= 85) {
+				console.log(`[PawnService] ${pawn.name} critically hungry (${pawn.needs.hunger}), must eat now`);
+
+				const fedPawn = this.tryAutomaticEating(pawn, updatedGameState);
+				if (fedPawn !== pawn) {
+					updatedGameState.pawns[index] = fedPawn;
+					console.log(`[PawnService] ${pawn.name} ate due to critical hunger, hunger now: ${fedPawn.needs.hunger}`);
+				}
+			}
+			// PRIORITY 2: Moderate hunger (eat when not sleeping)
+			else if (pawn.needs.hunger >= 70 && !pawn.state.isSleeping) {
+				console.log(`[PawnService] ${pawn.name} moderately hungry (${pawn.needs.hunger}), attempting to eat`);
+
+				const fedPawn = this.tryAutomaticEating(pawn, updatedGameState);
+				if (fedPawn !== pawn) {
+					updatedGameState.pawns[index] = fedPawn;
+					console.log(`[PawnService] ${pawn.name} ate due to moderate hunger, hunger now: ${fedPawn.needs.hunger}`);
+				}
+			}
+		});
+
+		return updatedGameState;
+	}
+
+	// ===== AUTOMATIC SLEEPING LOGIC (EXTRACTED FROM GAMEENGINE) =====
+
+	processAutomaticSleeping(gameState: GameState): GameState {
+		console.log('[PawnService] Processing automatic sleeping for all pawns');
+
+		let updatedGameState = { ...gameState };
+
+		// Process each pawn for automatic sleeping
+		gameState.pawns.forEach((pawn, index) => {
+			let updatedPawn = { ...pawn };
+			let needsUpdate = false;
+
+			// Sleep decision based on hunger/fatigue balance
+			if (this.shouldPawnSleep(updatedPawn)) {
+				console.log(`[PawnService] ${pawn.name} should sleep (fatigue: ${updatedPawn.needs.fatigue}, hunger: ${updatedPawn.needs.hunger})`);
+
+				const restedPawn = this.tryAutomaticSleeping(updatedPawn, updatedGameState);
+				if (restedPawn !== updatedPawn) {
+					updatedPawn = restedPawn;
+					needsUpdate = true;
+					console.log(`[PawnService] ${pawn.name} is sleeping, fatigue now: ${updatedPawn.needs.fatigue}`);
+				}
+			}
+
+			// Update pawn in gameState if changes were made
+			if (needsUpdate) {
+				updatedGameState.pawns[index] = updatedPawn;
+			}
+		});
+
+		return updatedGameState;
+	}
+
+	// ===== EXTRACTED SLEEPING METHODS FROM GAMEENGINE =====
+
+	private shouldPawnSleep(pawn: Pawn): boolean {
+		const fatigue = pawn.needs.fatigue;
+		const hunger = pawn.needs.hunger;
+
+		// Don't sleep if already sleeping
+		if (pawn.state.isSleeping) {
+			// Continue sleeping if still tired, unless getting very hungry
+			const shouldContinueSleeping = fatigue > 15 && hunger < 80; // LOWERED: Wake at 15 fatigue (was 30)
+			console.log(`[PawnService] ${pawn.name} sleeping: fatigue=${fatigue}, hunger=${hunger}, continue=${shouldContinueSleeping}`);
+			return shouldContinueSleeping;
+		}
+
+		// Start sleeping based on hunger/fatigue balance
+		if (hunger < 30) {
+			// Well fed: sleep until almost fully rested (fatigue < 15)
+			return fatigue >= 40; // LOWERED: Start at 40 fatigue (was 50)
+		} else if (hunger < 60) {
+			// Moderately fed: sleep until moderately rested (fatigue < 20)
+			return fatigue >= 60; // LOWERED: Start at 60 fatigue (was 70)
+		} else if (hunger < 80) {
+			// Getting hungry: only sleep when very tired (fatigue < 30)
+			return fatigue >= 80; // LOWERED: Start at 80 fatigue (was 85)
+		} else {
+			// Very hungry: don't sleep, eat instead
+			return false;
+		}
+	}
+
+	private tryAutomaticSleeping(pawn: Pawn, gameState: GameState): Pawn {
+		// Calculate rest recovery
+		const recovery = this.calculateRestRecovery(pawn);
+
+		// Update pawn
+		const updatedPawn = { ...pawn };
+		updatedPawn.needs = {
+			...pawn.needs,
+			fatigue: Math.max(0, pawn.needs.fatigue - recovery),
+			lastSleep: gameState.turn
+		};
+		updatedPawn.state = {
+			...pawn.state,
+			isSleeping: true,
+			isWorking: false, // Stop working to sleep
+			isEating: false
+		};
+
+		console.log(`[PawnService] ${pawn.name} sleeping: fatigue ${pawn.needs.fatigue} → ${updatedPawn.needs.fatigue} (recovery: ${recovery})`);
+		return updatedPawn;
+	}
+
+	private calculateRestRecovery(pawn: Pawn): number {
+		return 5; // Simple fixed rest recovery
+	}
+
+	// ===== EXTRACTED EATING METHODS FROM GAMEENGINE =====
+
+	private tryAutomaticEating(pawn: Pawn, gameState: GameState): Pawn {
+		// Find available food in gameState
+		const availableFood = this.findAvailableFood(gameState);
+
+		if (availableFood.length === 0) {
+			console.log(`[PawnService] No food available for ${pawn.name}`);
+			return pawn; // No food available
+		}
+
+		// Sort food by nutrition value (highest first)
+		const sortedFood = availableFood.sort((a, b) => (b.nutrition || 0) - (a.nutrition || 0));
+
+		let totalHungerReduction = 0;
+		let updatedPawn = { ...pawn };
+
+		// EAT AS MUCH FOOD AS POSSIBLE until hunger is satisfied or no more food
+		for (const food of sortedFood) {
+			// Stop if hunger is already low enough
+			if (updatedPawn.needs.hunger <= 10) break;
+
+			// Calculate how much of this food we can/should eat
+			const maxFoodToEat = Math.min(food.amount, Math.ceil(updatedPawn.needs.hunger / (food.nutrition || 1)));
+
+			if (maxFoodToEat > 0) {
+				// Consume the food from inventory
+				this.consumeFoodFromInventory(gameState, food.id, maxFoodToEat);
+
+				// Calculate hunger reduction
+				const hungerReduction = this.calculateFoodRecovery(updatedPawn, food) * maxFoodToEat;
+				totalHungerReduction += hungerReduction;
+
+				// Update pawn's hunger
+				updatedPawn.needs = {
+					...updatedPawn.needs,
+					hunger: Math.max(0, updatedPawn.needs.hunger - hungerReduction),
+					lastMeal: gameState.turn
+				};
+
+				console.log(`[PawnService] ${pawn.name} ate ${maxFoodToEat}x ${food.name}, hunger reduced by ${hungerReduction}`);
+			}
+		}
+
+		// Set eating state but ensure it gets cleared
+		updatedPawn.state = {
+			...pawn.state,
+			isEating: totalHungerReduction > 0, // Only set eating if actually ate something
+			isWorking: false, // Stop working to eat
+			isSleeping: false,
+			mood: Math.min(100, pawn.state.mood + Math.floor(totalHungerReduction * 0.1)) // Small mood boost
+		};
+
+		console.log(`[PawnService] ${pawn.name} total eating result: hunger ${pawn.needs.hunger} → ${updatedPawn.needs.hunger} (reduced by ${totalHungerReduction.toFixed(1)})`);
+		return updatedPawn;
+	}
+
+	private consumeFoodFromInventory(gameState: GameState, foodId: string, amount: number): void {
+		if (!gameState.item) return;
+
+		const foodIndex = gameState.item.findIndex(item => item.id === foodId);
+		if (foodIndex !== -1) {
+			gameState.item[foodIndex] = {
+				...gameState.item[foodIndex],
+				amount: Math.max(0, gameState.item[foodIndex].amount - amount)
+			};
+
+			// Remove item if amount reaches 0
+			if (gameState.item[foodIndex].amount <= 0) {
+				gameState.item.splice(foodIndex, 1);
+			}
+
+			console.log(`[PawnService] Consumed ${amount}x ${foodId} from inventory`);
+		}
+	}
+
+	private calculateFoodRecovery(pawn: Pawn, food: any): number {
+		// Simple: Direct nutrition value mapping - no bonuses for now
+		const nutritionValue = food.nutrition || 1.0;
+		return nutritionValue; // 1 nutrition = 1 hunger reduction
 	}
 
 	// ===== PRIVATE HELPER METHODS =====

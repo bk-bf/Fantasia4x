@@ -3,7 +3,7 @@
 > **Phase 1 – Critical Importance:**  
 > The following tasks are essential for extracting pawn logic from GameEngine and achieving manageable architectural debt. Complete these items before proceeding to production chain development.
 
-- [ ] 1. Extract automatic eating logic from GameEngine to PawnService
+- [x] 1. Extract automatic eating logic from GameEngine to PawnService
   - Move tryAutomaticEating(pawn: Pawn): Pawn from GameEngineImpl to PawnService
   - Move findAvailableFood() and selectBestFood() functions to PawnService
   - Move consumeFoodFromInventory() and calculateFoodRecovery() to PawnService
