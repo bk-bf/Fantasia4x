@@ -32,6 +32,11 @@ export interface PawnService {
 
 	// Automatic Sleeping Logic (extracted from GameEngine)
 	processAutomaticSleeping(gameState: GameState): GameState;
+	shouldPawnSleep(pawn: Pawn): boolean;
+
+	// Automatic Sleeping Logic (extracted from GameEngine)
+	processAutomaticSleeping(gameState: GameState): GameState;
+	shouldPawnSleep(pawn: Pawn): boolean;
 
 	// Need Calculations (PawnService internal logic)
 	calculateNeedDecay(pawnId: string, gameState: GameState): { hunger: number; rest: number };
@@ -355,7 +360,7 @@ export class PawnServiceImpl implements PawnService {
 
 	// ===== EXTRACTED SLEEPING METHODS FROM GAMEENGINE =====
 
-	private shouldPawnSleep(pawn: Pawn): boolean {
+	shouldPawnSleep(pawn: Pawn): boolean {
 		const fatigue = pawn.needs.fatigue;
 		const hunger = pawn.needs.hunger;
 

@@ -387,7 +387,7 @@ export class GameEngineImpl implements GameEngine {
 
 			// Only clear sleeping state if pawn should wake up
 			if (pawn.state.isSleeping) {
-				const shouldWakeUp = !this.shouldPawnSleep(pawn);
+				const shouldWakeUp = !pawnService.shouldPawnSleep(pawn);
 				if (shouldWakeUp) {
 					shouldClearStates = true;
 					console.log(`[GameEngine] Waking up ${pawn.name} (fatigue: ${pawn.needs.fatigue}, hunger: ${pawn.needs.hunger})`);

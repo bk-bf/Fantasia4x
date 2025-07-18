@@ -10,7 +10,7 @@
   - Update GameEngine to call pawnService.processAutomaticEating(gameState)
   - _Requirements: 1.1, 1.2, 2.1_
 
-- [ ] 2. Extract automatic sleeping logic from GameEngine to PawnService
+- [x] 2. Extract automatic sleeping logic from GameEngine to PawnService
   - Move tryAutomaticSleeping(pawn: Pawn): Pawn from GameEngineImpl to PawnService
   - Move shouldPawnSleep(pawn: Pawn): boolean to PawnService
   - Move calculateRestRecovery(pawn: Pawn): number to PawnService

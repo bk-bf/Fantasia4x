@@ -70,20 +70,12 @@
     if (location.resourceNodes) {
       // For discovered locations with actual resource nodes
       Object.entries(location.resourceNodes).forEach(([resourceId, node]: [string, any]) => {
-        // CHANGE THIS LINE:
-        // const availability = getResourceAvailability(location, resourceId);
-
-        // TO THIS:
         const availability = locationService.getResourceAvailability(location.id, resourceId);
 
         // Calculate richness based on current vs max amounts
         const currentRange: [number, number] = [node.currentAmount, node.currentAmount];
         const maxRange: [number, number] = [node.maxAmount, node.maxAmount];
 
-        // CHANGE THIS LINE:
-        // const richness = evaluateResourceRichness(currentRange, maxRange);
-
-        // TO THIS:
         const richness = locationService.evaluateResourceRichness(currentRange, maxRange);
 
         resourceRichness[resourceId] = { richness, availability };
@@ -94,13 +86,6 @@
       if (template?.resourceTemplates) {
         Object.entries(template.resourceTemplates).forEach(
           ([resourceId, template]: [string, any]) => {
-            // CHANGE THIS LINE:
-            // const richness = evaluateResourceRichness(
-            //   template.currentAmountRange,
-            //   template.maxAmountRange
-            // );
-
-            // TO THIS:
             const richness = locationService.evaluateResourceRichness(
               template.currentAmountRange,
               template.maxAmountRange
@@ -614,7 +599,7 @@
 
   .resource-grid {
     display: grid;
-    grid-template-columns: repeat(7, 1fr);
+    grid-template-columns: repeat(6, 1fr);
     gap: 10px;
     margin-bottom: 8px;
   }
