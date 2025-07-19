@@ -54,12 +54,12 @@
   const unsubscribeItems = currentItem.subscribe((newItems) => {
     newItems = newItems || [];
 
-    // Track changes for animation
+    // Track changes for animation (both positive and negative)
     newItems.forEach((newItem) => {
       const oldItem = items.find((i) => i.id === newItem.id);
       if (oldItem && oldItem.amount !== newItem.amount) {
         const change = newItem.amount - oldItem.amount;
-        if (change > 0) {
+        if (change !== 0) {
           itemChanges[newItem.id] = change;
           setTimeout(() => {
             itemChanges[newItem.id] = 0;
@@ -112,9 +112,14 @@
                   <span class="resource-label">{item.name}</span>
                   <div class="resource-amount-container">
                     <span class="resource-amount">{Math.floor(item.amount)}</span>
-                    {#if itemChanges[item.id] > 0}
-                      <!-- UPDATED: Show 1 decimal place for resource changes -->
-                      <span class="resource-change">+{itemChanges[item.id].toFixed(1)}</span>
+                    {#if itemChanges[item.id] && itemChanges[item.id] !== 0}
+                      <span
+                        class="resource-change"
+                        class:positive={itemChanges[item.id] > 0}
+                        class:negative={itemChanges[item.id] < 0}
+                      >
+                        {itemChanges[item.id] > 0 ? '+' : ''}{itemChanges[item.id].toFixed(1)}
+                      </span>
                     {/if}
                   </div>
                 </div>
@@ -329,7 +334,6 @@
   }
 
   .resource-change {
-    color: #4caf50;
     font-size: 0.6em;
     font-weight: bold;
     animation: fadeInOut 2s ease-in-out;
@@ -338,6 +342,14 @@
     padding: 0 2px;
     border: none;
     margin-left: 2px; /* Add a little space from the amount */
+  }
+
+  .resource-change.positive {
+    color: #4caf50;
+  }
+
+  .resource-change.negative {
+    color: #f44336;
   }
 
   @keyframes fadeInOut {
