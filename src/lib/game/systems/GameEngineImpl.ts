@@ -359,13 +359,13 @@ export class GameEngineImpl implements GameEngine {
 		console.log('[GameEngine] Processing pawn needs and activities');
 
 		// FIRST: Clear temporary eating/sleeping states from previous turn
-		this.clearTemporaryPawnStates();
+		this.gameState = pawnService.clearTemporaryPawnStates(this.gameState!);
 
 		// SECOND: Sync working states with work assignments
 		this.syncPawnWorkingStates();
 
-		// THIRD: Process automatic need-based activities (eating, sleeping)
-		this.processAutomaticPawnNeeds();
+		// THIRD: Process automatic need-based activities (eating, sleeping) through PawnService
+		this.gameState = pawnService.processAutomaticNeeds(this.gameState!);
 
 		// FOURTH: Process regular pawn turn logic
 		this.gameState = pawnService.processPawnTurn(this.gameState!);
@@ -373,53 +373,6 @@ export class GameEngineImpl implements GameEngine {
 		// FIFTH: Re-sync working states after pawn processing
 		this.syncPawnWorkingStates();
 	}
-
-	// UPDATED: Clear temporary states only when pawns should wake up
-	private clearTemporaryPawnStates(): void {
-		this.gameState!.pawns.forEach((pawn, index) => {
-			let shouldClearStates = false;
-
-			// Clear eating state after one turn (eating is always one turn)
-			if (pawn.state.isEating) {
-				shouldClearStates = true;
-				console.log(`[GameEngine] Clearing eating state for ${pawn.name}`);
-			}
-
-			// Only clear sleeping state if pawn should wake up
-			if (pawn.state.isSleeping) {
-				const shouldWakeUp = !pawnService.shouldPawnSleep(pawn);
-				if (shouldWakeUp) {
-					shouldClearStates = true;
-					console.log(`[GameEngine] Waking up ${pawn.name} (fatigue: ${pawn.needs.fatigue}, hunger: ${pawn.needs.hunger})`);
-				} else {
-					console.log(`[GameEngine] ${pawn.name} continues sleeping (fatigue: ${pawn.needs.fatigue}, hunger: ${pawn.needs.hunger})`);
-				}
-			}
-
-			if (shouldClearStates) {
-				this.gameState!.pawns[index] = {
-					...pawn,
-					state: {
-						...pawn.state,
-						isEating: false,
-						isSleeping: pawn.state.isSleeping && !shouldClearStates // Only clear sleeping if should wake up
-					}
-				};
-			}
-		});
-	}
-
-	// UPDATED: Handle automatic eating and sleeping through services
-	private processAutomaticPawnNeeds(): void {
-		console.log('[GameEngine] Processing automatic pawn needs through services');
-
-		// Process automatic eating through PawnService
-		this.gameState = pawnService.processAutomaticEating(this.gameState!);
-
-		// Process automatic sleeping through PawnService
-		this.gameState = pawnService.processAutomaticSleeping(this.gameState!);
-	}
-
 
 	private processBuildings(): void {
 		console.log('[GameEngine] Processing buildings');

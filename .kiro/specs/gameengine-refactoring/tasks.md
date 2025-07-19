@@ -17,7 +17,7 @@
   - Update GameEngine to call pawnService.processAutomaticSleeping(gameState)
   - _Requirements: 1.1, 1.2, 2.1_
 
-- [ ] 3. Extract pawn needs coordination from GameEngine to PawnService
+- [x] 3. Extract pawn needs coordination from GameEngine to PawnService
   - Move processAutomaticPawnNeeds(): void from GameEngineImpl to PawnService
   - Move clearTemporaryPawnStates(): void to PawnService
   - Create single pawnService.processAutomaticNeeds(gameState) method
