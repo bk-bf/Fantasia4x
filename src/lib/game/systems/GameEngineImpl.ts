@@ -7,7 +7,7 @@ import { workService } from '../services/WorkService';
 import { itemService } from '../services/ItemService';
 import { locationService } from '../services/LocationServices';
 import { pawnService } from '../services/PawnService';
-import { WORK_CATEGORIES } from '../core/Work'; // ADD THIS IMPORT
+import { WORK_CATEGORIES } from '../core/Work';
 
 import type { BuildingEffectResult } from './ModifierSystem';
 import type { WorkCategory } from '../core/types';
@@ -211,94 +211,8 @@ export class GameEngineImpl implements GameEngine {
 	}
 
 	private syncPawnWorkingStates(): void {
-		console.log('[GameEngine] Syncing pawn working states with work assignments');
-
-		this.gameState!.pawns.forEach((pawn, index) => {
-			const workAssignment = this.gameState!.workAssignments[pawn.id];
-
-			if (workAssignment) {
-				// FIXED: Update currentWork based on highest priority work the pawn can actually do
-				const availableWork = this.getAvailableWorkForPawn(pawn, workAssignment);
-				if (availableWork && availableWork !== workAssignment.currentWork) {
-					console.log(`[GameEngine] Updating ${pawn.name} work from ${workAssignment.currentWork} to ${availableWork}`);
-					workAssignment.currentWork = availableWork;
-				}
-			}
-
-			// Determine if pawn should be working
-			const shouldBeWorking = workAssignment &&
-				workAssignment.currentWork &&
-				!pawn.state.isEating &&
-				!pawn.state.isSleeping;
-
-			// Update pawn state if it doesn't match
-			if (pawn.state.isWorking !== shouldBeWorking) {
-				this.gameState!.pawns[index] = {
-					...pawn,
-					state: {
-						...pawn.state,
-						isWorking: shouldBeWorking || false
-					}
-				};
-
-				console.log(`[GameEngine] Updated ${pawn.name} working state: ${pawn.state.isWorking} → ${shouldBeWorking} (doing ${workAssignment?.currentWork})`);
-			}
-		});
-	}
-
-	// NEW: Determine what work a pawn should actually be doing based on priorities and availability
-	private getAvailableWorkForPawn(pawn: Pawn, workAssignment: any): string | null {
-		if (!workAssignment.workPriorities) {
-			return 'foraging'; // Default fallback
-		}
-
-		// Get work types sorted by priority (highest first)
-		const sortedWork = Object.entries(workAssignment.workPriorities)
-			.filter(([_, priority]) => (priority as number) > 0)
-			.sort((a, b) => (b[1] as number) - (a[1] as number));
-
-		console.log(`[GameEngine] ${pawn.name} work priorities:`, sortedWork);
-
-		// Find the highest priority work that the pawn can actually do
-		for (const [workType, priority] of sortedWork) {
-			if (this.canPawnDoWork(pawn, workType, workAssignment)) {
-				console.log(`[GameEngine] ${pawn.name} should do ${workType} (priority ${priority})`);
-				return workType;
-			}
-		}
-
-		// Fallback to foraging if nothing else is available
-		return 'foraging';
-	}
-
-	private canPawnDoWork(pawn: Pawn, workType: string, workAssignment: any): boolean {
-		// Get work category info
-		const workCategory = WORK_CATEGORIES.find(w => w.id === workType);
-		if (!workCategory) {
-			console.log(`[GameEngine] Unknown work type: ${workType}`);
-			return false;
-		}
-
-		// Check if pawn has required tools (simplified check)
-		if (workCategory.toolsRequired && workCategory.toolsRequired.length > 0) {
-			// For now, assume pawns can do work if they have basic tools
-			// This would need to be expanded to check actual equipment
-			console.log(`[GameEngine] ${workType} requires tools: ${workCategory.toolsRequired.join(', ')}`);
-		}
-
-		// Check if location supports this work type
-		if (workCategory.locationTypesRequired && workCategory.locationTypesRequired.length > 0) {
-			const currentLocation = workAssignment.activeLocation;
-			const location = locationService.getLocationById(currentLocation);
-
-			if (location && !workCategory.locationTypesRequired.includes(location.type)) {
-				console.log(`[GameEngine] ${workType} not available at ${location.type} location`);
-				return false;
-			}
-		}
-
-		console.log(`[GameEngine] ${pawn.name} can do ${workType}`);
-		return true;
+		// Delegate to WorkService for work state synchronization
+		this.gameState = workService.syncPawnWorkingStates(this.gameState!);
 	}
 
 	/**

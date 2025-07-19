@@ -70,6 +70,11 @@ export interface WorkService {
 	processWorkHarvesting(gameState: GameState): GameState;
 	getAvailableResourceIdsForWork(gameState: GameState, workType: string, locationId?: string): string[];
 
+	// Work State Synchronization Methods
+	syncPawnWorkingStates(gameState: GameState): GameState;
+	getAvailableWorkForPawn(pawn: Pawn, workAssignment: WorkAssignment, gameState: GameState): string | null;
+	canPawnDoWorkByType(pawn: Pawn, workType: string, workAssignment: WorkAssignment, gameState: GameState): boolean;
+
 	// UI Helper Methods
 	getWorkEfficiencyDescription(pawn: Pawn, workType: string, gameState: GameState): string;
 }
@@ -439,6 +444,111 @@ export class WorkServiceImpl implements WorkService {
 
 		const sourceText = sources.length > 0 ? ` (${sources.join(', ')})` : '';
 		return `${efficiencyPercent}% efficiency${sourceText}`;
+	}
+
+	// ============ Work State Synchronization Methods ============
+
+	syncPawnWorkingStates(gameState: GameState): GameState {
+		console.log('[WorkService] Syncing pawn working states with work assignments');
+
+		const updatedPawns = gameState.pawns.map((pawn) => {
+			const workAssignment = gameState.workAssignments[pawn.id];
+
+			if (workAssignment) {
+				// Update currentWork based on highest priority work the pawn can actually do
+				const availableWork = this.getAvailableWorkForPawn(pawn, workAssignment, gameState);
+				if (availableWork && availableWork !== workAssignment.currentWork) {
+					console.log(`[WorkService] Updating ${pawn.name} work from ${workAssignment.currentWork} to ${availableWork}`);
+					workAssignment.currentWork = availableWork;
+				}
+			}
+
+			// Determine if pawn should be working
+			const shouldBeWorking = workAssignment &&
+				workAssignment.currentWork &&
+				!pawn.state.isEating &&
+				!pawn.state.isSleeping;
+
+			// Update pawn state if it doesn't match
+			if (pawn.state.isWorking !== shouldBeWorking) {
+				const updatedPawn = {
+					...pawn,
+					state: {
+						...pawn.state,
+						isWorking: shouldBeWorking || false
+					}
+				};
+
+				console.log(`[WorkService] Updated ${pawn.name} working state: ${pawn.state.isWorking} → ${shouldBeWorking} (doing ${workAssignment?.currentWork})`);
+				return updatedPawn;
+			}
+
+			return pawn;
+		});
+
+		return {
+			...gameState,
+			pawns: updatedPawns
+		};
+	}
+
+	getAvailableWorkForPawn(pawn: Pawn, workAssignment: WorkAssignment, gameState: GameState): string | null {
+		if (!workAssignment.workPriorities) {
+			return 'foraging'; // Default fallback
+		}
+
+		// Get work types sorted by priority (highest first)
+		const sortedWork = Object.entries(workAssignment.workPriorities)
+			.filter(([_, priority]) => (priority as number) > 0)
+			.sort((a, b) => (b[1] as number) - (a[1] as number));
+
+		console.log(`[WorkService] ${pawn.name} work priorities:`, sortedWork);
+
+		// Find the highest priority work that the pawn can actually do
+		for (const [workType, priority] of sortedWork) {
+			if (this.canPawnDoWorkByType(pawn, workType, workAssignment, gameState)) {
+				console.log(`[WorkService] ${pawn.name} should do ${workType} (priority ${priority})`);
+				return workType;
+			}
+		}
+
+		// Fallback to foraging if nothing else is available
+		return 'foraging';
+	}
+
+	canPawnDoWorkByType(pawn: Pawn, workType: string, workAssignment: WorkAssignment, gameState: GameState): boolean {
+		// Get work category info
+		const workCategory = WORK_CATEGORIES.find(w => w.id === workType);
+		if (!workCategory) {
+			console.log(`[WorkService] Unknown work type: ${workType}`);
+			return false;
+		}
+
+		// Check if pawn has required tools (simplified check)
+		if (workCategory.toolsRequired && workCategory.toolsRequired.length > 0) {
+			// For now, assume pawns can do work if they have basic tools
+			// This would need to be expanded to check actual equipment
+			console.log(`[WorkService] ${workType} requires tools: ${workCategory.toolsRequired.join(', ')}`);
+		}
+
+		// Check if location supports this work type
+		if (workCategory.locationTypesRequired && workCategory.locationTypesRequired.length > 0) {
+			const currentLocation = workAssignment.activeLocation;
+			if (!currentLocation) {
+				console.log(`[WorkService] No active location for ${pawn.name}, cannot do ${workType}`);
+				return false;
+			}
+
+			const location = locationService.getLocationById(currentLocation);
+
+			if (location && !workCategory.locationTypesRequired.includes(location.type)) {
+				console.log(`[WorkService] ${workType} not available at ${location.type} location`);
+				return false;
+			}
+		}
+
+		console.log(`[WorkService] ${pawn.name} can do ${workType}`);
+		return true;
 	}
 }
 
