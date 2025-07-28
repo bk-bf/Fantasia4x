@@ -7,6 +7,8 @@ import { workService } from '../services/WorkService';
 import { itemService } from '../services/ItemService';
 import { locationService } from '../services/LocationServices';
 import { pawnService } from '../services/PawnService';
+import { buildingService } from '../services/BuildingService';
+import { researchService } from '../services/ResearchService';
 import { WORK_CATEGORIES } from '../core/Work';
 
 import type { BuildingEffectResult } from './ModifierSystem';
@@ -102,8 +104,8 @@ export class GameEngineImpl implements GameEngine {
 			// Increment turn FIRST
 			this.gameState.turn += 1;
 
-			// ENSURE PAWNS HAVE WORK ASSIGNMENTS
-			this.ensureBasicWorkAssignments();
+			// ENSURE PAWNS HAVE WORK ASSIGNMENTS - delegate to WorkService
+			this.gameState = workService.ensureBasicWorkAssignments(this.gameState);
 
 			// Process all systems (MOVED FROM GameState.advanceTurn())
 			this.processResources();
@@ -151,63 +153,6 @@ export class GameEngineImpl implements GameEngine {
 				errors: [error instanceof Error ? error.message : 'Unknown error']
 			};
 		}
-	}
-
-	// ===== NEW METHOD: ENSURE WORK ASSIGNMENTS =====
-	private ensureBasicWorkAssignments(): void {
-		// Initialize workAssignments if it doesn't exist
-		if (!this.gameState!.workAssignments) {
-			this.gameState!.workAssignments = {};
-		}
-
-		// Get available discovered locations
-		const discoveredLocations = locationService.getDiscoveredLocations();
-		const defaultLocation = discoveredLocations.find(loc => loc.id === 'plains') || discoveredLocations[0];
-
-		if (!defaultLocation) {
-			console.error('[GameEngine] No discovered locations available for work assignments!');
-			return;
-		}
-
-		console.log(`[GameEngine] Using default location for assignments: ${defaultLocation.id}`);
-
-		// Give every pawn a basic work assignment if they don't have one
-		this.gameState!.pawns.forEach((pawn, index) => {
-			if (!this.gameState!.workAssignments[pawn.id]) {
-				console.log(`[GameEngine] Auto-assigning work to pawn: ${pawn.name}`);
-
-				this.gameState!.workAssignments[pawn.id] = {
-					pawnId: pawn.id,
-					currentWork: 'foraging', // Basic work that doesn't need tools
-					activeLocation: defaultLocation.id, // Use valid discovered location
-					workPriorities: {
-						'foraging': 5, // Medium priority
-						'woodcutting': 3, // Lower priority, may need tools
-						'mining': 2
-					},
-					authorizedLocations: [defaultLocation.id] // Use valid discovered location
-				};
-			}
-
-			// SYNC PAWN STATE WITH WORK ASSIGNMENT
-			const workAssignment = this.gameState!.workAssignments[pawn.id];
-			if (workAssignment && workAssignment.currentWork) {
-				// Mark pawn as working if they have a work assignment and aren't eating/sleeping
-				if (!pawn.state.isEating && !pawn.state.isSleeping) {
-					this.gameState!.pawns[index] = {
-						...pawn,
-						state: {
-							...pawn.state,
-							isWorking: true
-						}
-					};
-					console.log(`[GameEngine] Marked ${pawn.name} as working (${workAssignment.currentWork})`);
-				}
-			}
-		});
-
-		const assignedCount = Object.keys(this.gameState!.workAssignments).length;
-		console.log(`[GameEngine] Work assignments ensured: ${assignedCount} pawns assigned`);
 	}
 
 	private syncPawnWorkingStates(): void {
@@ -289,99 +234,21 @@ export class GameEngineImpl implements GameEngine {
 	}
 
 	private processBuildings(): void {
-		console.log('[GameEngine] Processing buildings');
-
-		// Process building queue - buildings under construction (MOVED FROM GameState)
-		if (this.gameState!.buildingQueue.length > 0) {
-			this.gameState!.buildingQueue = this.gameState!.buildingQueue
-				.map((building) => ({
-					...building,
-					turnsRemaining: building.turnsRemaining - 1
-				}))
-				.filter((building) => {
-					if (building.turnsRemaining <= 0) {
-						// Building completed - add to building counts
-						this.gameState!.buildingCounts[building.building.id] =
-							(this.gameState!.buildingCounts[building.building.id] || 0) + 1;
-						console.log('[GameEngine] Building completed:', building.building.id);
-						return false;
-					}
-					return true;
-				});
-		}
+		console.log('[GameEngine] Processing buildings through BuildingService');
+		this.gameState = buildingService.processBuildingQueue(this.gameState!);
 	}
 
 	private processCrafting(): void {
-		console.log('[GameEngine] Processing crafting');
-
-		// Process crafting queue - items being crafted (MOVED FROM GameState)
-		if (this.gameState!.craftingQueue.length > 0) {
-			this.gameState!.craftingQueue = this.gameState!.craftingQueue
-				.map((crafting) => ({
-					...crafting,
-					turnsRemaining: crafting.turnsRemaining - 1
-				}))
-				.filter((crafting) => {
-					if (crafting.turnsRemaining <= 0) {
-						// Crafting completed - add to items array
-						const itemId = crafting.item.id;
-						const quantity = crafting.quantity || 1;
-						this.addItemToGameState(itemId, quantity);
-						console.log('[GameEngine] Crafting completed:', itemId, 'x', quantity);
-						return false;
-					}
-					return true;
-				});
-		}
+		console.log('[GameEngine] Processing crafting through ItemService');
+		this.gameState = itemService.processCraftingQueue(this.gameState!);
 	}
 
 	private processResearch(): void {
-		console.log('[GameEngine] Processing research');
-
-		// Process current research - scroll-based progression (MOVED FROM GameState)
-		if (this.gameState!.currentResearch) {
-			this.gameState!.currentResearch.currentProgress =
-				(this.gameState!.currentResearch.currentProgress || 0) + 1;
-
-			if (this.gameState!.currentResearch.currentProgress >= this.gameState!.currentResearch.researchTime) {
-				// Research completed
-				this.gameState!.completedResearch.push(this.gameState!.currentResearch.id);
-
-				// Apply research unlocks
-				if (this.gameState!.currentResearch.unlocks.toolTierRequired) {
-					this.gameState!.currentToolLevel = Math.max(
-						this.gameState!.currentToolLevel,
-						this.gameState!.currentResearch.unlocks.toolTierRequired
-					);
-				}
-
-				console.log('[GameEngine] Research completed:', this.gameState!.currentResearch.id);
-				// Clear current research
-				this.gameState!.currentResearch = undefined;
-			}
-		}
+		console.log('[GameEngine] Processing research through ResearchService');
+		this.gameState = researchService.processCurrentResearch(this.gameState!);
 	}
 
 	// ===== HELPER METHODS =====
-
-	private addItemToGameState(itemId: string, amount: number): void {
-		if (!this.gameState!.item) this.gameState!.item = [];
-
-		const itemIndex = this.gameState!.item.findIndex((item) => item.id === itemId);
-		if (itemIndex !== -1) {
-			// Update existing item immutably
-			this.gameState!.item[itemIndex] = {
-				...this.gameState!.item[itemIndex],
-				amount: this.gameState!.item[itemIndex].amount + amount
-			};
-		} else {
-			// Add new item if it doesn't exist
-			const itemInfo = itemService.getItemById(itemId);
-			if (itemInfo) {
-				this.gameState!.item.push({ ...itemInfo, amount });
-			}
-		}
-	}
 
 	updateStores(): void {
 		if (!this.gameState) return;

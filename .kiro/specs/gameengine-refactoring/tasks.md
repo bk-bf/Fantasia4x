@@ -1,4 +1,9 @@
-# GameEngine Refactoring Implementation Plan
+# GameEngine Refactoring Implement- [x] 5. Reduce GameEngine to coordination-only role
+  - Remove all pawn behavior implementation from GameEngineImpl
+  - Keep only service coordination calls in GameEngine
+  - Ensure turn processing coordinates services without implementing logic
+  - Target: Reduce GameEngine from 900+ lines to ~600 lines
+  - _Requirements: 1.1, 1.2, 2.1_Plan
 
 > **Phase 1 – Critical Importance:**  
 > The following tasks are essential for extracting pawn logic from GameEngine and achieving manageable architectural debt. Complete these items before proceeding to production chain development.
@@ -28,7 +33,8 @@
   - Move syncPawnWorkingStates() logic from GameEngineImpl to WorkService
   - Create workService.syncPawnWorkStates(gameState) method
   - Update GameEngine to call workService instead of implementing sync logic
-  - Ensure work assignment display remains synchronized
+  - Ensure work assignment display r
+  emains synchronized
   - _Requirements: 1.1, 2.1, 2.2_
 
 - [ ] 5. Reduce GameEngine to coordination-only role

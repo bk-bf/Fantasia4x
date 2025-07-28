@@ -35,6 +35,9 @@ export interface BuildingService {
 		requirements: string[];
 	};
 
+	// Building Queue Processing
+	processBuildingQueue(gameState: GameState): GameState;
+
 	// UI Helper Methods
 	getBuildingIcon(buildingId: string): string;
 	getBuildingColor(buildingId: string): string;
@@ -235,6 +238,36 @@ export class BuildingServiceImpl implements BuildingService {
 		}
 
 		return { upkeep, requirements };
+	}
+
+	processBuildingQueue(gameState: GameState): GameState {
+		console.log('[BuildingService] Processing building queue');
+
+		// Process building queue - buildings under construction
+		if (gameState.buildingQueue.length > 0) {
+			const updatedBuildingQueue = gameState.buildingQueue
+				.map((building) => ({
+					...building,
+					turnsRemaining: building.turnsRemaining - 1
+				}))
+				.filter((building) => {
+					if (building.turnsRemaining <= 0) {
+						// Building completed - add to building counts
+						gameState.buildingCounts[building.building.id] =
+							(gameState.buildingCounts[building.building.id] || 0) + 1;
+						console.log('[BuildingService] Building completed:', building.building.id);
+						return false;
+					}
+					return true;
+				});
+
+			return {
+				...gameState,
+				buildingQueue: updatedBuildingQueue
+			};
+		}
+
+		return gameState;
 	}
 
 	getBuildingIcon(buildingId: string): string {

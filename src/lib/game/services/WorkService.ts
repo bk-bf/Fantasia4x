@@ -75,6 +75,9 @@ export interface WorkService {
 	getAvailableWorkForPawn(pawn: Pawn, workAssignment: WorkAssignment, gameState: GameState): string | null;
 	canPawnDoWorkByType(pawn: Pawn, workType: string, workAssignment: WorkAssignment, gameState: GameState): boolean;
 
+	// Work Assignment Initialization
+	ensureBasicWorkAssignments(gameState: GameState): GameState;
+
 	// UI Helper Methods
 	getWorkEfficiencyDescription(pawn: Pawn, workType: string, gameState: GameState): string;
 }
@@ -485,6 +488,72 @@ export class WorkServiceImpl implements WorkService {
 
 			return pawn;
 		});
+
+		return {
+			...gameState,
+			pawns: updatedPawns
+		};
+	}
+
+	ensureBasicWorkAssignments(gameState: GameState): GameState {
+		console.log('[WorkService] Ensuring basic work assignments for all pawns');
+
+		// Initialize workAssignments if it doesn't exist
+		if (!gameState.workAssignments) {
+			gameState.workAssignments = {};
+		}
+
+		// Get available discovered locations
+		const discoveredLocations = locationService.getDiscoveredLocations();
+		const defaultLocation = discoveredLocations.find(loc => loc.id === 'plains') || discoveredLocations[0];
+
+		if (!defaultLocation) {
+			console.error('[WorkService] No discovered locations available for work assignments!');
+			return gameState;
+		}
+
+		console.log(`[WorkService] Using default location for assignments: ${defaultLocation.id}`);
+
+		// Give every pawn a basic work assignment if they don't have one
+		const updatedPawns = gameState.pawns.map((pawn, index) => {
+			if (!gameState.workAssignments[pawn.id]) {
+				console.log(`[WorkService] Auto-assigning work to pawn: ${pawn.name}`);
+
+				gameState.workAssignments[pawn.id] = {
+					pawnId: pawn.id,
+					currentWork: 'foraging', // Basic work that doesn't need tools
+					activeLocation: defaultLocation.id, // Use valid discovered location
+					workPriorities: {
+						'foraging': 5, // Medium priority
+						'woodcutting': 3, // Lower priority, may need tools
+						'mining': 2
+					},
+					authorizedLocations: [defaultLocation.id] // Use valid discovered location
+				};
+			}
+
+			// SYNC PAWN STATE WITH WORK ASSIGNMENT
+			const workAssignment = gameState.workAssignments[pawn.id];
+			if (workAssignment && workAssignment.currentWork) {
+				// Mark pawn as working if they have a work assignment and aren't eating/sleeping
+				if (!pawn.state.isEating && !pawn.state.isSleeping) {
+					const updatedPawn = {
+						...pawn,
+						state: {
+							...pawn.state,
+							isWorking: true
+						}
+					};
+					console.log(`[WorkService] Marked ${pawn.name} as working (${workAssignment.currentWork})`);
+					return updatedPawn;
+				}
+			}
+
+			return pawn;
+		});
+
+		const assignedCount = Object.keys(gameState.workAssignments).length;
+		console.log(`[WorkService] Work assignments ensured: ${assignedCount} pawns assigned`);
 
 		return {
 			...gameState,
