@@ -37,14 +37,6 @@ Each discovery opens new strategic possibilities unique to your playthrough.
 
 ## 🏰 Building Your Legacy
 
-### Meaningful Construction
-
-Your buildings evolve beyond simple stat boosts:
-
-- **Woodland Shelters** become the heart of growing communities
-- **Craftsmen's Workshops** develop into centers of innovation
-- **Sage's Libraries** accumulate wisdom that unlocks your race's hidden potential
-
 ### Real-Time Development
 
 Construction unfolds over **real time** as your civilization develops naturally. Plan your **building queues** strategically, balancing immediate needs against long-term vision while watching settlements grow from humble camps into thriving centers.
