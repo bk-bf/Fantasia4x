@@ -53,6 +53,41 @@ export interface GameEngine {
 	calculatePawnEfficiency(pawnId: string, workType: string): number;
 	calculateBuildingEffects(buildingId: string, locationId?: string): BuildingEffectResult;
 
+	// Pawn coordination methods
+	getPawnNeeds(pawnId: string): any;
+	getPawnActivities(pawnId: string): string[];
+	getPawnNeedStatus(pawnId: string): { critical: string[]; warning: string[]; normal: string[] };
+	forcePawnActivity(pawnId: string, activity: string): void;
+
+	// Service coordination methods for UI
+	// ItemService coordination
+	getItemById(itemId: string): any;
+	getAllItems(): any[];
+	getCraftableItems(): any[];
+	craftItem(itemId: string, quantity?: number): void;
+
+	// BuildingService coordination
+	getBuildingById(buildingId: string): any;
+	getAllBuildings(): any[];
+	getBuildableBuildings(): any[];
+	constructBuilding(buildingId: string, locationId?: string): void;
+
+	// ResearchService coordination
+	getResearchById(researchId: string): any;
+	getAllResearch(): any[];
+	getAvailableResearch(): any[];
+	startResearch(researchId: string): void;
+
+	// WorkService coordination
+	assignPawnToWork(pawnId: string, workType: string, locationId?: string): void;
+	unassignPawnFromWork(pawnId: string): void;
+	getWorkAssignments(): Record<string, any>;
+
+	// LocationService coordination
+	getAvailableLocations(): any[];
+	getLocationById(locationId: string): any;
+	exploreNewLocation(): void;
+
 	// Integration
 	setGameStateManager(manager: any): void;
 }

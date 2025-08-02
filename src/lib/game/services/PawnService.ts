@@ -296,45 +296,50 @@ export class PawnServiceImpl implements PawnService {
 	processAutomaticEating(gameState: GameState): GameState {
 		console.log('[PawnService] Processing automatic eating for all pawns');
 
-		let updatedGameState = { ...gameState };
+		try {
+			let updatedGameState = { ...gameState };
 
-		// Process each pawn for automatic eating
-		gameState.pawns.forEach((pawn, index) => {
-			console.log(`[PawnService] Checking ${pawn.name}: hunger=${pawn.needs.hunger}, sleeping=${pawn.state.isSleeping}`);
+			// Process each pawn for automatic eating
+			gameState.pawns.forEach((pawn, index) => {
+				console.log(`[PawnService] Checking ${pawn.name}: hunger=${pawn.needs.hunger}, sleeping=${pawn.state.isSleeping}`);
 
-			// PRIORITY 1: Critical hunger (must eat immediately, even while sleeping)
-			if (pawn.needs.hunger >= 80) {
-				console.log(`[PawnService] ${pawn.name} critically hungry (${pawn.needs.hunger}), must eat now`);
+				// PRIORITY 1: Critical hunger (must eat immediately, even while sleeping)
+				if (pawn.needs.hunger >= 80) {
+					console.log(`[PawnService] ${pawn.name} critically hungry (${pawn.needs.hunger}), must eat now`);
 
-				const fedPawn = this.tryAutomaticEating(pawn, updatedGameState);
-				if (fedPawn !== pawn) {
-					updatedGameState.pawns[index] = fedPawn;
-					console.log(`[PawnService] ${pawn.name} ate due to critical hunger, hunger now: ${fedPawn.needs.hunger}`);
+					const fedPawn = this.tryAutomaticEating(pawn, updatedGameState);
+					if (fedPawn !== pawn) {
+						updatedGameState.pawns[index] = fedPawn;
+						console.log(`[PawnService] ${pawn.name} ate due to critical hunger, hunger now: ${fedPawn.needs.hunger}`);
+					}
 				}
-			}
-			// PRIORITY 2: Moderate hunger (eat when not sleeping) - LOWERED THRESHOLD
-			else if (pawn.needs.hunger >= 50 && !pawn.state.isSleeping) {
-				console.log(`[PawnService] ${pawn.name} moderately hungry (${pawn.needs.hunger}), attempting to eat`);
+				// PRIORITY 2: Moderate hunger (eat when not sleeping) - LOWERED THRESHOLD
+				else if (pawn.needs.hunger >= 50 && !pawn.state.isSleeping) {
+					console.log(`[PawnService] ${pawn.name} moderately hungry (${pawn.needs.hunger}), attempting to eat`);
 
-				const fedPawn = this.tryAutomaticEating(pawn, updatedGameState);
-				if (fedPawn !== pawn) {
-					updatedGameState.pawns[index] = fedPawn;
-					console.log(`[PawnService] ${pawn.name} ate due to moderate hunger, hunger now: ${fedPawn.needs.hunger}`);
+					const fedPawn = this.tryAutomaticEating(pawn, updatedGameState);
+					if (fedPawn !== pawn) {
+						updatedGameState.pawns[index] = fedPawn;
+						console.log(`[PawnService] ${pawn.name} ate due to moderate hunger, hunger now: ${fedPawn.needs.hunger}`);
+					}
 				}
-			}
-			// PRIORITY 3: Light hunger (eat when idle and food is plentiful) - NEW
-			else if (pawn.needs.hunger >= 30 && !pawn.state.isSleeping && !pawn.state.isWorking) {
-				console.log(`[PawnService] ${pawn.name} lightly hungry (${pawn.needs.hunger}), attempting to eat while idle`);
+				// PRIORITY 3: Light hunger (eat when idle and food is plentiful) - NEW
+				else if (pawn.needs.hunger >= 30 && !pawn.state.isSleeping && !pawn.state.isWorking) {
+					console.log(`[PawnService] ${pawn.name} lightly hungry (${pawn.needs.hunger}), attempting to eat while idle`);
 
-				const fedPawn = this.tryAutomaticEating(pawn, updatedGameState);
-				if (fedPawn !== pawn) {
-					updatedGameState.pawns[index] = fedPawn;
-					console.log(`[PawnService] ${pawn.name} ate while idle, hunger now: ${fedPawn.needs.hunger}`);
+					const fedPawn = this.tryAutomaticEating(pawn, updatedGameState);
+					if (fedPawn !== pawn) {
+						updatedGameState.pawns[index] = fedPawn;
+						console.log(`[PawnService] ${pawn.name} ate while idle, hunger now: ${fedPawn.needs.hunger}`);
+					}
 				}
-			}
-		});
+			});
 
-		return updatedGameState;
+			return updatedGameState;
+		} catch (error) {
+			console.error('[PawnService] Error in processAutomaticEating:', error);
+			return gameState; // Return original state on error
+		}
 	}
 
 	// ===== AUTOMATIC SLEEPING LOGIC (EXTRACTED FROM GAMEENGINE) =====
@@ -342,32 +347,37 @@ export class PawnServiceImpl implements PawnService {
 	processAutomaticSleeping(gameState: GameState): GameState {
 		console.log('[PawnService] Processing automatic sleeping for all pawns');
 
-		let updatedGameState = { ...gameState };
+		try {
+			let updatedGameState = { ...gameState };
 
-		// Process each pawn for automatic sleeping
-		gameState.pawns.forEach((pawn, index) => {
-			let updatedPawn = { ...pawn };
-			let needsUpdate = false;
+			// Process each pawn for automatic sleeping
+			gameState.pawns.forEach((pawn, index) => {
+				let updatedPawn = { ...pawn };
+				let needsUpdate = false;
 
-			// Sleep decision based on hunger/fatigue balance
-			if (this.shouldPawnSleep(updatedPawn)) {
-				console.log(`[PawnService] ${pawn.name} should sleep (fatigue: ${updatedPawn.needs.fatigue}, hunger: ${updatedPawn.needs.hunger})`);
+				// Sleep decision based on hunger/fatigue balance
+				if (this.shouldPawnSleep(updatedPawn)) {
+					console.log(`[PawnService] ${pawn.name} should sleep (fatigue: ${updatedPawn.needs.fatigue}, hunger: ${updatedPawn.needs.hunger})`);
 
-				const restedPawn = this.tryAutomaticSleeping(updatedPawn, updatedGameState);
-				if (restedPawn !== updatedPawn) {
-					updatedPawn = restedPawn;
-					needsUpdate = true;
-					console.log(`[PawnService] ${pawn.name} is sleeping, fatigue now: ${updatedPawn.needs.fatigue}`);
+					const restedPawn = this.tryAutomaticSleeping(updatedPawn, updatedGameState);
+					if (restedPawn !== updatedPawn) {
+						updatedPawn = restedPawn;
+						needsUpdate = true;
+						console.log(`[PawnService] ${pawn.name} is sleeping, fatigue now: ${updatedPawn.needs.fatigue}`);
+					}
 				}
-			}
 
-			// Update pawn in gameState if changes were made
-			if (needsUpdate) {
-				updatedGameState.pawns[index] = updatedPawn;
-			}
-		});
+				// Update pawn in gameState if changes were made
+				if (needsUpdate) {
+					updatedGameState.pawns[index] = updatedPawn;
+				}
+			});
 
-		return updatedGameState;
+			return updatedGameState;
+		} catch (error) {
+			console.error('[PawnService] Error in processAutomaticSleeping:', error);
+			return gameState; // Return original state on error
+		}
 	}
 
 	// ===== EXTRACTED SLEEPING METHODS FROM GAMEENGINE =====
@@ -441,7 +451,7 @@ export class PawnServiceImpl implements PawnService {
 		const sortedFood = availableFood.sort((a, b) => (b.nutrition || 0) - (a.nutrition || 0));
 
 		console.log(`[PawnService] ${pawn.name} available foods sorted by nutrition:`,
-			sortedFood.map(f => `${f.name}(${f.nutrition})`));
+			sortedFood.map(f => `${f.name}(${f.nutrition})`).join(', '));
 
 		// CALCULATE HOW MUCH HUNGER TO SATISFY
 		const currentHunger = pawn.needs.hunger;
@@ -852,7 +862,7 @@ export class PawnServiceImpl implements PawnService {
 		});
 
 		console.log(`[PawnService] Found ${availableFood.length} available food items:`,
-			availableFood.map(f => `${f.name}(${f.amount})`));
+			availableFood.map(f => `${f.name}(${f.amount})`).join(', '));
 
 		return availableFood;
 	}
@@ -983,44 +993,49 @@ export class PawnServiceImpl implements PawnService {
 	 * Extracted from GameEngine.clearTemporaryPawnStates()
 	 */
 	clearTemporaryPawnStates(gameState: GameState): GameState {
-		const updatedPawns = gameState.pawns.map((pawn, index) => {
-			let shouldClearStates = false;
+		try {
+			const updatedPawns = gameState.pawns.map((pawn, index) => {
+				let shouldClearStates = false;
 
-			// Clear eating state after one turn (eating is always one turn)
-			if (pawn.state.isEating) {
-				shouldClearStates = true;
-				console.log(`[PawnService] Clearing eating state for ${pawn.name}`);
-			}
-
-			// Only clear sleeping state if pawn should wake up
-			if (pawn.state.isSleeping) {
-				const shouldWakeUp = !this.shouldPawnSleep(pawn);
-				if (shouldWakeUp) {
+				// Clear eating state after one turn (eating is always one turn)
+				if (pawn.state.isEating) {
 					shouldClearStates = true;
-					console.log(`[PawnService] Waking up ${pawn.name} (fatigue: ${pawn.needs.fatigue}, hunger: ${pawn.needs.hunger})`);
-				} else {
-					console.log(`[PawnService] ${pawn.name} continues sleeping (fatigue: ${pawn.needs.fatigue}, hunger: ${pawn.needs.hunger})`);
+					console.log(`[PawnService] Clearing eating state for ${pawn.name}`);
 				}
-			}
 
-			if (shouldClearStates) {
-				return {
-					...pawn,
-					state: {
-						...pawn.state,
-						isEating: false,
-						isSleeping: pawn.state.isSleeping && !shouldClearStates // Only clear sleeping if should wake up
+				// Only clear sleeping state if pawn should wake up
+				if (pawn.state.isSleeping) {
+					const shouldWakeUp = !this.shouldPawnSleep(pawn);
+					if (shouldWakeUp) {
+						shouldClearStates = true;
+						console.log(`[PawnService] Waking up ${pawn.name} (fatigue: ${pawn.needs.fatigue}, hunger: ${pawn.needs.hunger})`);
+					} else {
+						console.log(`[PawnService] ${pawn.name} continues sleeping (fatigue: ${pawn.needs.fatigue}, hunger: ${pawn.needs.hunger})`);
 					}
-				};
-			}
+				}
 
-			return pawn;
-		});
+				if (shouldClearStates) {
+					return {
+						...pawn,
+						state: {
+							...pawn.state,
+							isEating: false,
+							isSleeping: pawn.state.isSleeping && !shouldClearStates // Only clear sleeping if should wake up
+						}
+					};
+				}
 
-		return {
-			...gameState,
-			pawns: updatedPawns
-		};
+				return pawn;
+			});
+
+			return {
+				...gameState,
+				pawns: updatedPawns
+			};
+		} catch (error) {
+			console.error('[PawnService] Error in clearTemporaryPawnStates:', error);
+			return gameState; // Return original state on error
+		}
 	}
 
 	/**
@@ -1030,15 +1045,20 @@ export class PawnServiceImpl implements PawnService {
 	processAutomaticNeeds(gameState: GameState): GameState {
 		console.log('[PawnService] Processing automatic pawn needs through service coordination');
 
-		let updatedGameState = gameState;
+		try {
+			let updatedGameState = gameState;
 
-		// Process automatic eating through PawnService
-		updatedGameState = this.processAutomaticEating(updatedGameState);
+			// Process automatic eating through PawnService
+			updatedGameState = this.processAutomaticEating(updatedGameState);
 
-		// Process automatic sleeping through PawnService
-		updatedGameState = this.processAutomaticSleeping(updatedGameState);
+			// Process automatic sleeping through PawnService
+			updatedGameState = this.processAutomaticSleeping(updatedGameState);
 
-		return updatedGameState;
+			return updatedGameState;
+		} catch (error) {
+			console.error('[PawnService] Error in processAutomaticNeeds:', error);
+			return gameState; // Return original state on error
+		}
 	}
 }
 

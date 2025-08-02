@@ -42,8 +42,10 @@ export interface BasicServiceRegistry {
   researchService: ResearchService;
 }
 
-// Re-export ServiceRegistry from ServiceIntegration for convenience
-export type { ServiceRegistry } from '../systems/ServiceIntegration';
+// ServiceRegistry type definition (moved from missing ServiceIntegration)
+export interface ServiceRegistry extends BasicServiceRegistry {
+  // Additional services can be added here as needed
+}
 
 /**
  * Default service registry with singleton instances

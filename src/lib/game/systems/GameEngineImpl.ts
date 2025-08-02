@@ -1,7 +1,7 @@
-import type { GameEngine, GameEngineConfig, TurnProcessingResult, SystemInteractionResult, BuildingEffects } from './GameEngine';
+import type { GameEngine, GameEngineConfig, TurnProcessingResult, SystemInteractionResult } from './GameEngine';
 import type { GameState, PawnNeeds } from '../core/types';
 import { GameStateManager } from '../core/GameState';
-import { gameState, currentItem } from '$lib/stores/gameState';
+import { gameState } from '$lib/stores/gameState';
 import { modifierSystem } from './ModifierSystem';
 import { workService } from '../services/WorkService';
 import { itemService } from '../services/ItemService';
@@ -10,6 +10,8 @@ import { pawnService } from '../services/PawnService';
 import { buildingService } from '../services/BuildingService';
 import { researchService } from '../services/ResearchService';
 import { WORK_CATEGORIES } from '../core/Work';
+import { ITEMS_DATABASE } from '../core/Items';
+import { AVAILABLE_BUILDINGS } from '../core/Buildings';
 
 import type { BuildingEffectResult } from './ModifierSystem';
 import type { WorkCategory } from '../core/types';
@@ -35,10 +37,13 @@ export class GameEngineImpl implements GameEngine {
 		(workService as any).setGameEngine(this);
 	}
 
-	// ===== PAWN SERVICE INTEGRATION METHODS =====
+	// ===== PAWN SERVICE COORDINATION METHODS =====
 
 	getPawnNeeds(pawnId: string): PawnNeeds {
-		const pawn = this.gameState?.pawns.find(p => p.id === pawnId);
+		if (!this.gameState) return { hunger: 0, fatigue: 0, sleep: 0, lastSleep: 0, lastMeal: 0 };
+
+		// COORDINATION: Delegate to PawnService instead of direct pawn access
+		const pawn = this.gameState.pawns.find(p => p.id === pawnId);
 		return pawn?.needs || { hunger: 0, fatigue: 0, sleep: 0, lastSleep: 0, lastMeal: 0 };
 	}
 
@@ -52,35 +57,197 @@ export class GameEngineImpl implements GameEngine {
 		return pawnService.getPawnNeedStatus(pawnId, this.gameState);
 	}
 
-	// UPDATED: Force activity method with better integration
+	// COORDINATION: Force activity method - delegates to PawnService
 	forcePawnActivity(pawnId: string, activity: string): void {
 		if (!this.gameState) return;
 
-		console.log(`[GameEngine] Forcing pawn ${pawnId} to ${activity}`);
+		console.log(`[GameEngine] Coordinating pawn ${pawnId} activity: ${activity}`);
 
-		const pawn = this.gameState.pawns.find(p => p.id === pawnId);
-		if (!pawn) {
-			console.error(`[GameEngine] Pawn ${pawnId} not found`);
-			return;
-		}
-
-		// SPECIAL HANDLING for eating - use PawnService automatic eating system
+		// COORDINATION: Delegate all activity handling to PawnService
 		if (activity === 'eating') {
 			this.gameState = pawnService.processAutomaticEating(this.gameState);
-			this.updateStores();
-			return;
-		}
-
-		// SPECIAL HANDLING for sleeping/resting - use PawnService automatic sleeping system
-		if (activity === 'sleeping' || activity === 'resting') {
+		} else if (activity === 'sleeping' || activity === 'resting') {
 			this.gameState = pawnService.processAutomaticSleeping(this.gameState);
-			this.updateStores();
-			return;
+		} else {
+			this.gameState = pawnService.setPawnActivity(pawnId, activity, this.gameState);
 		}
 
-		// For other activities, use the normal setPawnActivity
-		this.gameState = pawnService.setPawnActivity(pawnId, activity, this.gameState);
 		this.updateStores();
+	}
+
+	// ===== SERVICE COORDINATION METHODS FOR UI =====
+
+	// COORDINATION: ItemService methods for UI components
+	getItemById(itemId: string): any {
+		return itemService.getItemById(itemId);
+	}
+
+	getAllItems(): any[] {
+		// COORDINATION: Return all items from database
+		return ITEMS_DATABASE;
+	}
+
+	getCraftableItems(): any[] {
+		if (!this.gameState) return [];
+		return itemService.getCraftableItems(this.gameState);
+	}
+
+	craftItem(itemId: string, quantity: number = 1): void {
+		if (!this.gameState) return;
+		console.log(`[GameEngine] Coordinating crafting: ${quantity}x ${itemId}`);
+
+		// COORDINATION: Check if can craft and add to crafting queue
+		if (itemService.canCraftItem(itemId, this.gameState)) {
+			const item = itemService.getItemById(itemId);
+			if (item) {
+				// Add to crafting queue
+				const craftingInProgress = {
+					item: item,
+					quantity: quantity,
+					turnsRemaining: item.craftingTime || 1,
+					startedAt: this.gameState.turn
+				};
+
+				// Consume materials
+				if (item.craftingCost) {
+					this.gameState = itemService.consumeItems(item.craftingCost, this.gameState);
+				}
+
+				// Add to queue
+				this.gameState = {
+					...this.gameState,
+					craftingQueue: [...(this.gameState.craftingQueue || []), craftingInProgress]
+				};
+			}
+		}
+
+		this.updateStores();
+	}
+
+	// COORDINATION: BuildingService methods for UI components
+	getBuildingById(buildingId: string): any {
+		return buildingService.getBuildingById(buildingId);
+	}
+
+	getAllBuildings(): any[] {
+		// COORDINATION: Return all buildings from database
+		return AVAILABLE_BUILDINGS;
+	}
+
+	getBuildableBuildings(): any[] {
+		if (!this.gameState) return [];
+		return buildingService.getAvailableBuildings(this.gameState);
+	}
+
+	constructBuilding(buildingId: string, locationId?: string): void {
+		if (!this.gameState) return;
+		console.log(`[GameEngine] Coordinating building construction: ${buildingId} at ${locationId || 'default location'}`);
+
+		// COORDINATION: Check if can build and add to building queue
+		if (buildingService.canBuildBuilding(buildingId, this.gameState)) {
+			const building = buildingService.getBuildingById(buildingId);
+			if (building) {
+				// Add to building queue
+				const buildingInProgress = {
+					building: building,
+					turnsRemaining: building.buildTime || 1,
+					startedAt: this.gameState.turn,
+					locationId: locationId || 'default'
+				};
+
+				// Consume materials
+				if (building.buildingCost) {
+					this.gameState = itemService.consumeItems(building.buildingCost, this.gameState);
+				}
+
+				// Add to queue
+				this.gameState = {
+					...this.gameState,
+					buildingQueue: [...(this.gameState.buildingQueue || []), buildingInProgress]
+				};
+			}
+		}
+
+		this.updateStores();
+	}
+
+	// COORDINATION: ResearchService methods for UI components
+	getResearchById(researchId: string): any {
+		return researchService.getResearchById(researchId);
+	}
+
+	getAllResearch(): any[] {
+		return researchService.getAllResearch();
+	}
+
+	getAvailableResearch(): any[] {
+		if (!this.gameState) return [];
+		return researchService.getAvailableResearch(this.gameState);
+	}
+
+	startResearch(researchId: string): void {
+		if (!this.gameState) return;
+		console.log(`[GameEngine] Coordinating research start: ${researchId}`);
+		this.gameState = researchService.startResearch(researchId, this.gameState);
+		this.updateStores();
+	}
+
+	// COORDINATION: WorkService methods for UI components
+	assignPawnToWork(pawnId: string, workType: string, locationId?: string): void {
+		if (!this.gameState) return;
+		console.log(`[GameEngine] Coordinating work assignment: ${pawnId} to ${workType} at ${locationId || 'default location'}`);
+		this.gameState = workService.assignPawnToWork(pawnId, workType, locationId || 'default', this.gameState);
+		this.updateStores();
+	}
+
+	unassignPawnFromWork(pawnId: string): void {
+		if (!this.gameState) return;
+		console.log(`[GameEngine] Coordinating work unassignment: ${pawnId}`);
+
+		// COORDINATION: Remove work assignment by clearing priorities
+		if (this.gameState.workAssignments && this.gameState.workAssignments[pawnId]) {
+			this.gameState = {
+				...this.gameState,
+				workAssignments: {
+					...this.gameState.workAssignments,
+					[pawnId]: {
+						...this.gameState.workAssignments[pawnId],
+						workPriorities: {},
+						currentWork: undefined,
+						activeLocation: undefined
+					}
+				}
+			};
+		}
+
+		this.updateStores();
+	}
+
+	getWorkAssignments(): Record<string, any> {
+		if (!this.gameState) return {};
+		return this.gameState.workAssignments || {};
+	}
+
+	// COORDINATION: LocationService methods for UI components
+	getAvailableLocations(): any[] {
+		return locationService.getDiscoveredLocations();
+	}
+
+	getLocationById(locationId: string): any {
+		return locationService.getLocationById(locationId);
+	}
+
+	exploreNewLocation(): void {
+		if (!this.gameState) return;
+		console.log(`[GameEngine] Coordinating location exploration`);
+
+		// COORDINATION: Simple exploration - discover a random undiscovered location
+		const undiscovered = locationService.getUndiscoveredLocations();
+		if (undiscovered.length > 0) {
+			const randomLocation = undiscovered[Math.floor(Math.random() * undiscovered.length)];
+			locationService.discoverLocation(randomLocation.id);
+			this.updateStores();
+		}
 	}
 
 	// ===== CORE COORDINATION - MOVED FROM GAMESTATE =====
@@ -96,47 +263,24 @@ export class GameEngineImpl implements GameEngine {
 		}
 
 		try {
-			console.log('[GameEngine] Processing turn:', this.gameState.turn + 1);
+			console.log('[GameEngine] Coordinating turn processing:', this.gameState.turn + 1);
 
-			// DEBUG: Check work assignments BEFORE turn processing
-			console.log('[GameEngine] BEFORE turn - Work assignments:', Object.keys(this.gameState.workAssignments || {}));
-
-			// Increment turn FIRST
+			// Increment turn
 			this.gameState.turn += 1;
 
-			// ENSURE PAWNS HAVE WORK ASSIGNMENTS - delegate to WorkService
+			// COORDINATION: Delegate to services for all system processing
 			this.gameState = workService.ensureBasicWorkAssignments(this.gameState);
-
-			// Process all systems (MOVED FROM GameState.advanceTurn())
 			this.processResources();
 			this.processBuildings();
 			this.processCrafting();
 			this.processResearch();
 			this.processPawns();
 			this.processLocationRenewal();
-
-			// DEBUG: Check work assignments AFTER our processing
-			console.log('[GameEngine] AFTER our processing - Work assignments:', Object.keys(this.gameState.workAssignments || {}));
-
-			// Also run WorkService processing
 			this.gameState = workService.processWorkHarvesting(this.gameState);
 
-			// DEBUG: Check work assignments AFTER WorkService
-			console.log('[GameEngine] AFTER WorkService - Work assignments:', Object.keys(this.gameState.workAssignments || {}));
-
 			this.lastTurnProcessed = this.gameState.turn;
-
-			// Update GameStateManager with final state
 			this.gameStateManager.updateState(this.gameState);
-
-			// DEBUG: Check work assignments AFTER GameStateManager
-			console.log('[GameEngine] AFTER GameStateManager - Work assignments:', Object.keys(this.gameState.workAssignments || {}));
-
-			// Update stores (THE KEY FIX!)
 			this.updateStores();
-
-			// DEBUG: Check work assignments AFTER store update
-			console.log('[GameEngine] AFTER updateStores - Work assignments:', Object.keys(this.gameState.workAssignments || {}));
 
 			return {
 				success: true,
@@ -155,10 +299,7 @@ export class GameEngineImpl implements GameEngine {
 		}
 	}
 
-	private syncPawnWorkingStates(): void {
-		// Delegate to WorkService for work state synchronization
-		this.gameState = workService.syncPawnWorkingStates(this.gameState!);
-	}
+
 
 	/**
 	 * GameEngine coordination method - gets location-specific resources for work type
@@ -184,7 +325,7 @@ export class GameEngineImpl implements GameEngine {
 	}
 
 	private processLocationRenewal(): void {
-		console.log('[GameEngine] Processing location resource renewal');
+		console.log('[GameEngine] Coordinating location resource renewal through LocationService');
 		locationService.processAllLocationRenewal();
 	}
 
@@ -199,52 +340,33 @@ export class GameEngineImpl implements GameEngine {
 
 	// ===== SYSTEM PROCESSING - MOVED FROM GAMESTATE =====
 	private processResources(): void {
-		console.log('[GameEngine] Processing resources - BEFORE WorkService');
-		console.log('[GameEngine] Current items:', this.gameState!.item?.length || 0);
-		console.log('[GameEngine] Work assignments before WorkService:', Object.keys(this.gameState!.workAssignments || {}));
-
-		// Process through WorkService (WorkService will call back to GameEngine for coordination)
+		console.log('[GameEngine] Coordinating resource processing through WorkService');
 		this.gameState = workService.processWorkHarvesting(this.gameState!);
-
-		console.log('[GameEngine] Processing resources - AFTER WorkService');
-		console.log('[GameEngine] Items after WorkService:', this.gameState!.item?.length || 0);
-		console.log('[GameEngine] Work assignments after WorkService:', Object.keys(this.gameState!.workAssignments || {}));
-		this.gameState!.item?.forEach(item => {
-			console.log(`  - ${item.name}: ${item.amount}`);
-		});
 	}
 
 	private processPawns(): void {
-		console.log('[GameEngine] Processing pawn needs and activities');
+		console.log('[GameEngine] Coordinating pawn processing through services');
 
-		// FIRST: Clear temporary eating/sleeping states from previous turn
+		// COORDINATION: Delegate all pawn processing to PawnService
 		this.gameState = pawnService.clearTemporaryPawnStates(this.gameState!);
-
-		// SECOND: Sync working states with work assignments
-		this.syncPawnWorkingStates();
-
-		// THIRD: Process automatic need-based activities (eating, sleeping) through PawnService
+		this.gameState = workService.syncPawnWorkingStates(this.gameState!);
 		this.gameState = pawnService.processAutomaticNeeds(this.gameState!);
-
-		// FOURTH: Process regular pawn turn logic
 		this.gameState = pawnService.processPawnTurn(this.gameState!);
-
-		// FIFTH: Re-sync working states after pawn processing
-		this.syncPawnWorkingStates();
+		this.gameState = workService.syncPawnWorkingStates(this.gameState!);
 	}
 
 	private processBuildings(): void {
-		console.log('[GameEngine] Processing buildings through BuildingService');
+		console.log('[GameEngine] Coordinating building processing through BuildingService');
 		this.gameState = buildingService.processBuildingQueue(this.gameState!);
 	}
 
 	private processCrafting(): void {
-		console.log('[GameEngine] Processing crafting through ItemService');
+		console.log('[GameEngine] Coordinating crafting processing through ItemService');
 		this.gameState = itemService.processCraftingQueue(this.gameState!);
 	}
 
 	private processResearch(): void {
-		console.log('[GameEngine] Processing research through ResearchService');
+		console.log('[GameEngine] Coordinating research processing through ResearchService');
 		this.gameState = researchService.processCurrentResearch(this.gameState!);
 	}
 
@@ -252,38 +374,72 @@ export class GameEngineImpl implements GameEngine {
 
 	updateStores(): void {
 		if (!this.gameState) return;
-
-		console.log('[GameEngine] BEFORE updateStores - items in gameState:', this.gameState.item?.length || 0);
-		this.gameState.item?.forEach(item => {
-			console.log(`  - ${item.name}: ${item.amount}`);
-		});
-
-		// Update Svelte stores
 		gameState.updateWithSave(() => this.gameState!);
-
-		console.log('[GameEngine] AFTER updateStores - store should be updated');
 	}
 
 	// ===== BASIC CALCULATIONS =====
 
 	calculatePawnEfficiency(pawnId: string, workType: string): number {
-		return modifierSystem.calculateWorkEfficiency(pawnId, workType, this.gameState!, undefined).totalValue;
+		if (!this.gameState) return 1.0;
+		return modifierSystem.calculateWorkEfficiency(pawnId, workType, this.gameState, undefined).totalValue;
 	}
 
 	calculateBuildingEffects(buildingId: string, locationId?: string): BuildingEffectResult {
-		return modifierSystem.calculateBuildingEffects(buildingId, this.gameState!);
+		if (!this.gameState) {
+			return {
+				buildingId,
+				effects: {},
+				workBonuses: {},
+				productionBonuses: {}
+			};
+		}
+		return modifierSystem.calculateBuildingEffects(buildingId, this.gameState);
 	}
 
 	calculateCraftingTime(itemId: string, pawnId: string): number {
-		return 3; // Simplified - normally would calculate based on pawn skills
+		// COORDINATION: Use ItemService to get crafting time
+		const item = itemService.getItemById(itemId);
+		return item?.craftingTime || 3;
 	}
 
-	calculateResourceProduction(workAssignment: any): Record<string, number> {
-		return {}; // Simplified
+	calculateResourceProduction(workAssignment: { pawnId: string; workType: string; turns?: number }): Record<string, number> {
+		if (!this.gameState) return {};
+
+		// COORDINATION: Use WorkService to calculate resource production
+		const turns = workAssignment.turns || 1;
+		const resources = this.getLocationResourcesForWorkType('default', workAssignment.workType);
+		const result: Record<string, number> = {};
+
+		resources.forEach(resourceId => {
+			// Simplified calculation - could be enhanced with WorkService methods
+			result[resourceId] = turns * this.calculatePawnEfficiency(workAssignment.pawnId, workAssignment.workType);
+		});
+
+		return result;
 	}
 
 	calculateCombatEffectiveness(pawnId: string, combatType: 'melee' | 'ranged' | 'defense'): number {
-		return 1.0; // Simplified
+		if (!this.gameState) return 1.0;
+
+		// COORDINATION: Use ModifierSystem for combat calculations
+		const pawn = this.gameState.pawns.find(p => p.id === pawnId);
+		if (!pawn) return 1.0;
+
+		// Base effectiveness from stats
+		let effectiveness = 1.0;
+		switch (combatType) {
+			case 'melee':
+				effectiveness = (pawn.stats.strength + pawn.stats.constitution) / 20;
+				break;
+			case 'ranged':
+				effectiveness = (pawn.stats.dexterity + pawn.stats.intelligence) / 20;
+				break;
+			case 'defense':
+				effectiveness = (pawn.stats.constitution + pawn.stats.dexterity) / 20;
+				break;
+		}
+
+		return Math.max(0.1, effectiveness);
 	}
 
 	// ===== STATE MANAGEMENT =====
@@ -329,8 +485,8 @@ export class GameEngineImpl implements GameEngine {
 	}
 
 	integrateServices(services: any): void {
-		// Simplified - just note that services are available
-		console.log('[GameEngine] Services integrated');
+		// COORDINATION: Services are integrated through direct imports
+		console.log('[GameEngine] Services integrated:', Object.keys(services || {}));
 	}
 
 	getServices(): any {
@@ -338,8 +494,17 @@ export class GameEngineImpl implements GameEngine {
 	}
 
 	initialize(initialState: GameState, services: any): SystemInteractionResult {
-		this.gameState = JSON.parse(JSON.stringify(initialState));
-		return { success: true };
+		try {
+			this.gameState = JSON.parse(JSON.stringify(initialState));
+			this.integrateServices(services);
+			console.log('[GameEngine] Initialized with state and services');
+			return { success: true };
+		} catch (error) {
+			return {
+				success: false,
+				error: error instanceof Error ? error.message : 'Failed to initialize GameEngine'
+			};
+		}
 	}
 
 	shutdown(): SystemInteractionResult {

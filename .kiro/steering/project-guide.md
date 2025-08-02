@@ -21,8 +21,7 @@ Fantasia4x is a **mechanics-first**, **beginner-friendly** 4X strategy game buil
 
 ### Common Commands
 ```bash
-npm run dev          # Start development server
-npm run build        # Production build
+npx tsc --noEmit     # TypeScript type checking (run after tasks)
 npm run lint         # Check code style
 npm run lint:fix     # Auto-fix linting issues
 npm run test         # Run tests

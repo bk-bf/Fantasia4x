@@ -31,7 +31,7 @@ function generateTile(x: number, y: number): WorldTile {
 
 export function generateLocations(worldMap: WorldTile[][]): Location[] {
   const locations: Location[] = [];
-  const locationTypes = ['forest', 'ruins', 'mine', 'settlement'] as const;
+  const locationTypes = ['forest', 'ruins', 'plains', 'hills'] as const;
 
   // Generate 10-15 random locations
   const numLocations = Math.floor(Math.random() * 6) + 10;
@@ -43,10 +43,22 @@ export function generateLocations(worldMap: WorldTile[][]): Location[] {
     locations.push({
       id: `loc_${i}`,
       name: generateLocationName(),
+      description: `A ${locationTypes[Math.floor(Math.random() * locationTypes.length)]} location`,
       type: locationTypes[Math.floor(Math.random() * locationTypes.length)],
-      x,
-      y,
-      discovered: false
+      tier: Math.floor(Math.random() * 3),
+      rarity: ['common', 'uncommon', 'rare'][Math.floor(Math.random() * 3)] as 'common' | 'uncommon' | 'rare',
+      discovered: false,
+      availableResources: {
+        tier0: ['wood', 'stone'],
+        tier1: ['iron_ore'],
+        tier2: ['gold_ore']
+      },
+      workModifiers: {},
+      explorationRequirements: {},
+      hazards: [],
+      specialFeatures: [],
+      emoji: '🌲',
+      color: '#228B22'
     });
   }
 

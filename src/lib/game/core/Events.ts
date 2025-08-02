@@ -58,15 +58,15 @@ export interface GameEvent {
   title: string;
   description: string;
   category:
-    | 'environmental'
-    | 'discovery'
-    | 'social'
-    | 'disaster'
-    | 'opportunity'
-    | 'wildlife'
-    | 'weather'
-    | 'supernatural'
-    | 'political';
+  | 'environmental'
+  | 'discovery'
+  | 'social'
+  | 'disaster'
+  | 'opportunity'
+  | 'wildlife'
+  | 'weather'
+  | 'supernatural'
+  | 'political';
   severity: 'trivial' | 'minor' | 'moderate' | 'major' | 'critical' | 'catastrophic';
   rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
   weight: number;
@@ -84,19 +84,30 @@ export interface GameEvent {
   };
 }
 
+export interface EventLog {
+  id: string;
+  eventId: string;
+  turn: number;
+  title: string;
+  description: string;
+  choiceMade?: string;
+  outcome: string;
+  timestamp: Date;
+}
+
 export interface ActivityLogEntry {
   id: string;
   turn: number;
   timestamp: Date;
   type:
-    | 'work'
-    | 'building'
-    | 'crafting'
-    | 'event'
-    | 'pawn_action'
-    | 'research'
-    | 'exploration'
-    | 'system';
+  | 'work'
+  | 'building'
+  | 'crafting'
+  | 'event'
+  | 'pawn_action'
+  | 'research'
+  | 'exploration'
+  | 'system';
   actor?: string; // Pawn ID or 'system'
   action: string;
   target?: string;

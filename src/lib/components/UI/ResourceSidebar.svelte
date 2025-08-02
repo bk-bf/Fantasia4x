@@ -1,8 +1,7 @@
 <script lang="ts">
   import { currentItem, currentRace, gameState } from '$lib/stores/gameState'; // Remove currentInventory
   import { onDestroy } from 'svelte';
-  import { workService } from '$lib/game/services/WorkService';
-  import { itemService } from '$lib/game/services/ItemService';
+  import { gameEngine } from '$lib/game/systems/GameEngineImpl';
   import { get } from 'svelte/store';
 
   let items: any[] = [];
@@ -30,10 +29,18 @@
           if (sorted.length > 0) {
             const [workType, priority] = sorted[0];
             // NEW: Show all available resources for this work type
-            const availableResources = workService.getAvailableResourceIdsForWork(state, workType);
+            // COORDINATION: Use GameEngine for work resource calculations
+            const availableResources = gameEngine.getLocationResourcesForWorkType(
+              'default',
+              workType
+            );
             availableResources.forEach((resourceId) => {
-              const expected = workService.calculateHarvestAmount(pawn, workType, 1, state);
-              const item = itemService.getItemById(resourceId);
+              const expected = gameEngine.calculateResourceProduction({
+                pawnId: pawn.id,
+                workType,
+                turns: 1
+              });
+              const item = gameEngine.getItemById(resourceId);
               console.log(
                 `[Sidebar DEBUG] Pawn ${pawn.name} assigned to ${workType} (priority ${priority}), should produce ${expected} ${item?.name || resourceId}/turn`
               );

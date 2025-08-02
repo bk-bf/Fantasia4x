@@ -37,21 +37,21 @@
   emains synchronized
   - _Requirements: 1.1, 2.1, 2.2_
 
-- [ ] 5. Reduce GameEngine to coordination-only role
+- [x] 5. Reduce GameEngine to coordination-only role
   - Remove all pawn behavior implementation from GameEngineImpl
   - Keep only service coordination calls in GameEngine
   - Ensure turn processing coordinates services without implementing logic
   - Target: Reduce GameEngine from 900+ lines to ~600 lines
   - _Requirements: 1.1, 1.2, 2.1_
 
-- [ ] 6. Complete PawnService implementation for extracted logic
+- [x] 6. Complete PawnService implementation for extracted logic
   - Implement all moved eating/sleeping logic in PawnService
   - Ensure PawnService handles all automatic need satisfaction
   - Add proper error handling for pawn behavior edge cases
   - Maintain exact same game behavior as before extraction
   - _Requirements: 1.2, 4.1, 4.2_
 
-- [ ] 7. Update GameEngine coordination patterns
+- [x] 7. Update GameEngine coordination patterns
   - Replace direct pawn logic calls with service coordination
   - Ensure proper state flow: GameEngine → Services → Data
   - Maintain centralized state management through GameEngine

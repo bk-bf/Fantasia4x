@@ -8,7 +8,7 @@
     canEquipItem,
     syncAllPawnInventories
   } from '$lib/game/core/PawnEquipment';
-  import { itemService } from '$lib/game/services/ItemService';
+  import { gameEngine } from '$lib/game/systems/GameEngineImpl';
 
   export let pawn: Pawn;
 
@@ -97,7 +97,7 @@
           {#if pawn.equipment && pawn.equipment[slot as EquipmentSlot]}
             {@const equippedItem = pawn.equipment[slot as EquipmentSlot]}
             {#if equippedItem}
-              {@const itemInfo = itemService.getItemById(equippedItem.itemId)}
+              {@const itemInfo = gameEngine.getItemById(equippedItem.itemId)}
               <div class="equipped-item">
                 <span class="item-icon">{itemInfo?.emoji || '📦'}</span>
                 <div class="item-details">
@@ -129,7 +129,7 @@
     <h4>Available Items:</h4>
     <div class="inventory-grid">
       {#each Object.entries(pawn.inventory.items || {}) as [itemId, quantity]}
-        {@const itemInfo = itemService.getItemById(itemId)}
+        {@const itemInfo = gameEngine.getItemById(itemId)}
         {#if itemInfo && quantity > 0 && itemInfo.type !== 'material'}
           <div class="inventory-item" data-type={itemInfo.type}>
             <div class="item-header">

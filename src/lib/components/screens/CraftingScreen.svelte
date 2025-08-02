@@ -4,7 +4,7 @@
   import { uiState } from '$lib/stores/uiState';
   import TaskContainer from '$lib/components/UI/TaskContainer.svelte';
   import { ITEMS_DATABASE } from '$lib/game/core/Items';
-  import { itemService } from '$lib/game/services/ItemService';
+  import { gameEngine } from '$lib/game/systems/GameEngineImpl';
   import { onDestroy } from 'svelte';
   import type { Item } from '$lib/game/core/types';
 
@@ -47,7 +47,7 @@
   // Enhanced filtering with both type and category
   $: availableCraftableItems = (() => {
     if (!$gameState) return [];
-    let items = itemService.getCraftableItems($gameState);
+    let items = gameEngine.getCraftableItems();
 
     // Filter by type if specified
     if (selectedItemType !== 'all') {
@@ -95,33 +95,13 @@
   });
 
   function startCrafting(item: Item) {
-    if (!$gameState || !itemService.canCraftItem(item.id, $gameState)) {
+    if (!$gameState) {
       console.log('Cannot craft:', item.name);
       return;
     }
 
-    gameState.update((state) => {
-      // Deduct items (reuse pattern from BuildingMenu)
-      const newItems = state.item.map((stateItem) => {
-        const cost = item.craftingCost?.[stateItem.id] || 0;
-        const newAmount = Math.max(0, stateItem.amount - cost);
-        return { ...stateItem, amount: newAmount };
-      });
-
-      // Add to crafting queue with new interface
-      const newCraftingInProgress = {
-        item: item,
-        quantity: 1,
-        turnsRemaining: item.craftingTime || 1,
-        startedAt: state.turn
-      };
-
-      return {
-        ...state,
-        item: newItems,
-        craftingQueue: [...(state.craftingQueue || []), newCraftingInProgress]
-      };
-    });
+    // COORDINATION: Start crafting through GameEngine
+    gameEngine.craftItem(item.id, 1);
   }
 
   function cancelCrafting(queueIndex: number) {

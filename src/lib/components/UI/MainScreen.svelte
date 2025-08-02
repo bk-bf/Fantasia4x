@@ -1,6 +1,6 @@
 <script lang="ts">
   import { gameState } from '$lib/stores/gameState';
-  import { buildingService } from '$lib/game/services/BuildingService';
+  import { gameEngine } from '$lib/game/systems/GameEngineImpl';
   import { uiState } from '$lib/stores/uiState';
   import { onMount } from 'svelte';
   // Update imports for new activity log system
@@ -21,7 +21,13 @@
   });
 
   // Simple check: if any knowledge building exists, unlock research screen
-  $: hasResearchCapability = buildingService.hasBuildings(buildingCounts, 'knowledge');
+  // COORDINATION: Use GameEngine to check building capabilities
+  $: hasResearchCapability =
+    buildingCounts &&
+    Object.keys(buildingCounts).some((buildingId) => {
+      const building = gameEngine.getBuildingById(buildingId);
+      return building?.category === 'knowledge' && buildingCounts[buildingId] > 0;
+    });
 
   // Placeholder ASCII map
   const placeholderMap = `                                        
