@@ -1,70 +1,47 @@
-# 🏰 Fantasia4x - A Procedural 4X Fantasy Game
+# Fantasia4x
 
-> _What if every civilization told a unique story?_
+A hobby 4X strategy game project with procedurally generated civilizations. Built with SvelteKit.
 
-## 🌟 The Vision
+## What is this?
 
-Welcome to a world where **no two civilizations are ever the same**. Fantasia4x is a 4X strategy game built around procedural generation, ensuring that every playthrough begins with a **unique civilization** and meaningful decisions from the very first turn.
+This is a personal project I work on occasionally when I have time and inspiration. The basic idea is to make a 4X fantasy game where your civilization is procedurally generated each playthrough, giving you different traits and bonuses that shape how you play.
 
-## ⚡ The Early Game Experience
+Right now it has:
+- Procedural race generation with different traits
+- Basic resource management
+- Pawn/character system with needs and abilities
+- Some screens for research, exploration, crafting, and building
+- Real-time elements mixed with strategy gameplay
 
-### A Fresh Approach to Starting Out
+It's still pretty early and development is sporadic.
 
-Most 4X games follow familiar patterns—build scouts, establish early infrastructure, research basic technologies. While these foundations work, they can create repetitive opening experiences across multiple playthroughs.
+## Tech Stack
 
-Fantasia4x takes a different path: **your civilization matters from Turn 1**.
+- SvelteKit
+- TypeScript
+- Vite
+- Google Generative AI (for some procedural content generation)
 
-### Immediate Strategic Depth
-
-Imagine starting a new game where your procedurally generated race—the **Ironback Clans** with their bonus to stone production but penalty to food—makes mountain settlements appealing while coastal expansion becomes challenging. Your strategic options are shaped by who your people are, not just where they start.
-
-## 🎲 Procedural Civilizations
-
-### Your People, Your Path
-
-Every civilization in Fantasia4x is procedurally generated with traits that create unique strategic opportunities:
-
-- **The Tidecallers** manipulate water magic, finding opportunities in wetlands and coastal regions
-- **Emberkin** harness volcanic forces, thriving in harsh mountain environments  
-- **Starweavers** read cosmic patterns, unlocking specialized research paths
-- **Stoneheart Nomads** migrate with supernatural speed, emphasizing mobility over static development
-
-### Discovery Through Events
-
-Exploration happens through **dynamic events** rather than manual scouting. Ancient ruins reveal themselves through mysterious encounters. Strange merchants offer artifacts of unknown power. Your people report whispers of hidden valleys where time flows differently.
-
-Each discovery opens new strategic possibilities unique to your playthrough.
-
-## 🏰 Building Your Legacy
-
-### Real-Time Development
-
-Construction unfolds over **real time** as your civilization develops naturally. Plan your **building queues** strategically, balancing immediate needs against long-term vision while watching settlements grow from humble camps into thriving centers.
-
-## 🌍 Deep Strategic Systems
-
-### Accessible Complexity
-
-Fantasia4x aims to provide substantial mechanical depth while remaining approachable. Complex systems that reward mastery are presented through clear interfaces and intuitive design principles.
-
-### Emergent Storytelling
-
-The combination of procedural races, dynamic events, and player choices creates narratives that emerge naturally from gameplay rather than predetermined scripts.
-
-## 🚀 Your Journey
-
-Ready to lead a civilization shaped by procedural generation? Where strategic decisions matter from the opening turn? Where every playthrough offers genuinely different challenges and opportunities?
-
-### 🎮 Getting Started
+## Running it locally
 
 ```bash
-# Begin your adventure
-git clone https://github.com/yourusername/fantasia4x.git
-cd fantasia4x
+git clone https://github.com/bk-bf/Fantasia4x.git
+cd Fantasia4x
 npm install
 npm run dev
 ```
 
-Step into a world where **every civilization** has its own story to tell, and **every decision** shapes a unique path through history.
+Then open http://localhost:5173
 
-*What legend will your people create?*
+## Development
+
+```bash
+npm run dev          # Start dev server
+npm run build        # Build for production
+npm run lint         # Run linter
+npm run format       # Format code
+```
+
+## License
+
+See LICENSE file.
