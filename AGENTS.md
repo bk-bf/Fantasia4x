@@ -51,18 +51,18 @@ npm run lint       # ESLint
 
 Full architecture, design decisions, philosophy, and task tracking live in `.docs/`.
 
-| Path | Scope |
-| ---- | ----- |
-| `.docs/game/ARCHITECTURE.md` | Layer map, service boundaries, turn order, data flow |
-| `.docs/game/DESIGN.md` | Core gameplay loop, race/pawn mechanics, combat system design |
-| `.docs/game/DECISIONS.md` | ADRs — add one when a non-obvious design choice is locked in |
-| `.docs/game/PHILOSOPHY.md` | Guiding development principles; edit only if a principle genuinely changes |
-| `.docs/ui/ARCHITECTURE.md` | Component breakdown, screen structure, store usage patterns |
-| `.docs/ui/DESIGN.md` | Visual direction, retro terminal style, colour and typography rules |
-| `.docs/.tasks/open/ROADMAP.md` | Planned work; keep entries actionable and brief |
-| `.docs/.tasks/open/SCREEN-REFACTORING.md` | Break down WorkScreen, ExplorationScreen, CraftingScreen |
-| `.docs/.tasks/open/RESEARCH-ENHANCEMENT.md` | Three-tier research system design and requirements |
-| `.docs/.tasks/archive/` | Completed specs, filename pattern: `FEATURE-YYYY-MM-DD.md` |
+| Path                                        | Scope                                                                      |
+| ------------------------------------------- | -------------------------------------------------------------------------- |
+| `.docs/game/ARCHITECTURE.md`                | Layer map, service boundaries, turn order, data flow                       |
+| `.docs/game/DESIGN.md`                      | Core gameplay loop, race/pawn mechanics, combat system design              |
+| `.docs/game/DECISIONS.md`                   | ADRs — add one when a non-obvious design choice is locked in               |
+| `.docs/game/PHILOSOPHY.md`                  | Guiding development principles; edit only if a principle genuinely changes |
+| `.docs/ui/ARCHITECTURE.md`                  | Component breakdown, screen structure, store usage patterns                |
+| `.docs/ui/DESIGN.md`                        | Visual direction, retro terminal style, colour and typography rules        |
+| `.docs/.tasks/open/ROADMAP.md`              | Planned work; keep entries actionable and brief                            |
+| `.docs/.tasks/open/SCREEN-REFACTORING.md`   | Break down WorkScreen, ExplorationScreen, CraftingScreen                   |
+| `.docs/.tasks/open/RESEARCH-ENHANCEMENT.md` | Three-tier research system design and requirements                         |
+| `.docs/.tasks/archive/`                     | Completed specs, filename pattern: `FEATURE-YYYY-MM-DD.md`                 |
 
 ## When to Update
 
@@ -79,12 +79,12 @@ Do **not** speculatively update docs on every prompt. Update docs only when expl
 
 **Code → doc mapping:**
 
-| Code path changed | Check these docs |
-| ---- | ---- |
-| `src/lib/game/core/types.ts` | `.docs/game/ARCHITECTURE.md` (data model section) |
-| `src/lib/game/systems/GameEngineImpl.ts` | `.docs/game/ARCHITECTURE.md` (turn order section) |
-| `src/lib/game/services/` | `.docs/game/ARCHITECTURE.md` (services section) |
-| `src/lib/game/systems/ModifierSystem.ts` | `.docs/game/ARCHITECTURE.md`, `.docs/game/DECISIONS.md` |
-| `src/lib/game/core/` (Items/Buildings/Research/Work) | `.docs/game/DESIGN.md` |
-| `src/lib/components/screens/` | `.docs/ui/ARCHITECTURE.md` |
-| `src/app.css` | `.docs/ui/DESIGN.md` |
+| Code path changed                                    | Check these docs                                        |
+| ---------------------------------------------------- | ------------------------------------------------------- |
+| `src/lib/game/core/types.ts`                         | `.docs/game/ARCHITECTURE.md` (data model section)       |
+| `src/lib/game/systems/GameEngineImpl.ts`             | `.docs/game/ARCHITECTURE.md` (turn order section)       |
+| `src/lib/game/services/`                             | `.docs/game/ARCHITECTURE.md` (services section)         |
+| `src/lib/game/systems/ModifierSystem.ts`             | `.docs/game/ARCHITECTURE.md`, `.docs/game/DECISIONS.md` |
+| `src/lib/game/core/` (Items/Buildings/Research/Work) | `.docs/game/DESIGN.md`                                  |
+| `src/lib/components/screens/`                        | `.docs/ui/ARCHITECTURE.md`                              |
+| `src/app.css`                                        | `.docs/ui/DESIGN.md`                                    |
