@@ -138,8 +138,8 @@
   function clampView(x: number, y: number): [number, number] {
     const mapW = worldMap.length > 0 ? worldMap[0].length : 80;
     const mapH = worldMap.length > 0 ? worldMap.length : 50;
-    const visW = Math.floor((container?.clientWidth ?? 800) / tileWidth);
-    const visH = Math.floor((container?.clientHeight ?? 600) / tileHeight);
+    const visW = Math.ceil((container?.clientWidth ?? 800) / tileWidth);
+    const visH = Math.ceil((container?.clientHeight ?? 600) / tileHeight);
     return [Math.max(0, Math.min(x, mapW - visW)), Math.max(0, Math.min(y, mapH - visH))];
   }
 

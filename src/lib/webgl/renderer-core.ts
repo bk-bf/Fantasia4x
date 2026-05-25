@@ -226,8 +226,8 @@ export class WebGLRendererCore {
 		gl.bindTexture(gl.TEXTURE_2D, this.fontTexture);
 		this.shaderManager.setUniform('tileRenderer', 'u_fontAtlas', 0);
 
-		const viewportTilesW = Math.floor(this.viewport.width / this.tileWidth);
-		const viewportTilesH = Math.floor(this.viewport.height / this.tileHeight);
+		const viewportTilesW = Math.ceil(this.viewport.width / this.tileWidth);
+		const viewportTilesH = Math.ceil(this.viewport.height / this.tileHeight);
 
 		const gridStats = this.gridRenderer.renderGrid(this.gameGrid, {
 			tileWidth: this.tileWidth,
