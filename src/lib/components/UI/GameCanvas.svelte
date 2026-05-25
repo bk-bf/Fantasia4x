@@ -105,10 +105,7 @@
     const mapH = worldMap.length > 0 ? worldMap.length : 50;
     const visW = Math.floor((container?.clientWidth ?? 800) / tileWidth);
     const visH = Math.floor((container?.clientHeight ?? 600) / tileHeight);
-    return [
-      Math.max(0, Math.min(x, mapW - visW)),
-      Math.max(0, Math.min(y, mapH - visH))
-    ];
+    return [Math.max(0, Math.min(x, mapW - visW)), Math.max(0, Math.min(y, mapH - visH))];
   }
 
   function setView(x: number, y: number) {
@@ -119,10 +116,22 @@
   function handleKeyDown(e: KeyboardEvent) {
     if (!ready) return;
     switch (e.key) {
-      case 'ArrowLeft':  setView(viewX - SCROLL_STEP, viewY); e.preventDefault(); break;
-      case 'ArrowRight': setView(viewX + SCROLL_STEP, viewY); e.preventDefault(); break;
-      case 'ArrowUp':    setView(viewX, viewY - SCROLL_STEP); e.preventDefault(); break;
-      case 'ArrowDown':  setView(viewX, viewY + SCROLL_STEP); e.preventDefault(); break;
+      case 'ArrowLeft':
+        setView(viewX - SCROLL_STEP, viewY);
+        e.preventDefault();
+        break;
+      case 'ArrowRight':
+        setView(viewX + SCROLL_STEP, viewY);
+        e.preventDefault();
+        break;
+      case 'ArrowUp':
+        setView(viewX, viewY - SCROLL_STEP);
+        e.preventDefault();
+        break;
+      case 'ArrowDown':
+        setView(viewX, viewY + SCROLL_STEP);
+        e.preventDefault();
+        break;
     }
   }
 
