@@ -109,13 +109,13 @@ export class WebGLRendererCore {
 		this.viewTileY = y;
 	}
 
-	/** Change tile pixel dimensions (used for zoom). Regenerates atlas if cell size changed. */
+	/** Change tile pixel dimensions (used for zoom). Regenerates atlas only when the integer cell size changes. */
 	setTileSize(w: number, h: number): void {
-		const cellChanged = w !== this.tileWidth;
+		const prevCellSize = Math.round(this.tileWidth);
 		this.tileWidth = w;
 		this.tileHeight = h;
-		if (cellChanged) {
-			this.reloadAtlasForCellSize(w);
+		if (Math.round(w) !== prevCellSize) {
+			this.reloadAtlasForCellSize(Math.round(w));
 		}
 	}
 

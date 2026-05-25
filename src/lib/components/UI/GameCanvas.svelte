@@ -8,13 +8,24 @@
   import type { WorldTile } from '$lib/game/core/types.js';
 
   // Tile size range for zoom (square cells for CoQ sprite-mode)
-  const MIN_TILE_W = 8;
+  // MAP_W / MAP_H must match the generateWorld() call in gameState.ts
+  const MAP_W = 120;
+  const MAP_H = 80;
   const MAX_TILE_W = 24;
   const ZOOM_STEP = 2;
   const SCROLL_STEP = 4; // tiles per arrow key press
 
-  let tileWidth = 16;
-  let tileHeight = 16;
+  // fitTileSize: exact float that makes the whole map fill the canvas edge-to-edge.
+  // Used as the initial tile size and the zoom-out limit.
+  let fitTileSize = 8;
+  let tileWidth = 8;
+  let tileHeight = 8;
+
+  function computeFitTileSize(canvasW: number, canvasH: number): number {
+    const mapW = worldMap.length > 0 ? worldMap[0].length : MAP_W;
+    const mapH = worldMap.length > 0 ? worldMap.length : MAP_H;
+    return Math.min(canvasW / mapW, canvasH / mapH);
+  }
 
   let canvas: HTMLCanvasElement;
   let container: HTMLDivElement;
@@ -40,6 +51,17 @@
     if (renderer?.isReady()) {
       const grid = worldMap.length > 0 ? buildGameGrid(worldMap) : generatePlaceholderGrid();
       renderer.setGrid(grid);
+      // Re-snap to fit when the real map loads (placeholder vs. actual may differ in size)
+      if (worldMap.length > 0 && canvas) {
+        const newFit = computeFitTileSize(canvas.width, canvas.height);
+        const wasAtFit = Math.abs(tileWidth - fitTileSize) < 0.01;
+        fitTileSize = newFit;
+        if (wasAtFit) {
+          tileWidth = tileHeight = fitTileSize;
+          renderer.setTileSize(tileWidth, tileHeight);
+          setView(0, 0);
+        }
+      }
     }
   });
 
@@ -59,6 +81,11 @@
     try {
       canvas.width = container.clientWidth || 800;
       canvas.height = container.clientHeight || 600;
+
+      fitTileSize = computeFitTileSize(canvas.width, canvas.height);
+      tileWidth = tileHeight = fitTileSize;
+      viewX = 0;
+      viewY = 0;
 
       renderer = new WebGLRenderer({
         canvas,
@@ -83,6 +110,14 @@
         canvas.width = w;
         canvas.height = h;
         renderer.resize(w, h);
+        // Keep the fit size in sync; if we're at fit zoom, re-snap to new fit size
+        const wasAtFit = Math.abs(tileWidth - fitTileSize) < 0.01;
+        fitTileSize = computeFitTileSize(w, h);
+        if (wasAtFit) {
+          tileWidth = tileHeight = fitTileSize;
+          renderer.setTileSize(tileWidth, tileHeight);
+          setView(0, 0);
+        }
       }).observe(container);
     } catch (e) {
       errorMsg = e instanceof Error ? e.message : String(e);
@@ -139,9 +174,24 @@
     if (!ready || !renderer) return;
     e.preventDefault();
     const dir = e.deltaY > 0 ? -1 : 1;
-    const newW = Math.max(MIN_TILE_W, Math.min(MAX_TILE_W, tileWidth + dir * ZOOM_STEP));
-    if (newW === tileWidth) return;
-    // Keep centre tile stable during zoom
+
+    let newW: number;
+    const atFit = Math.abs(tileWidth - fitTileSize) < 0.01;
+
+    if (dir > 0) {
+      // Zoom in: from fit, snap up to first clean ZOOM_STEP multiple above fitTileSize
+      const base = atFit
+        ? Math.ceil(fitTileSize / ZOOM_STEP) * ZOOM_STEP
+        : Math.round(tileWidth) + ZOOM_STEP;
+      newW = Math.min(MAX_TILE_W, base <= fitTileSize ? base + ZOOM_STEP : base);
+    } else {
+      // Zoom out: step down; when next step would go below fitTileSize, snap to fit
+      const nextDown = Math.round(tileWidth) - ZOOM_STEP;
+      newW = nextDown <= fitTileSize ? fitTileSize : nextDown;
+    }
+
+    if (Math.abs(newW - tileWidth) < 0.001) return;
+
     const visWBefore = (container?.clientWidth ?? 800) / tileWidth;
     const visHBefore = (container?.clientHeight ?? 600) / tileHeight;
     tileWidth = newW;
