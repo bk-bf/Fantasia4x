@@ -1,387 +1,220 @@
 <script lang="ts">
-  import { currentItem, currentRace, gameState } from '$lib/stores/gameState'; // Remove currentInventory
+  import { currentItem, currentRace, gameState } from '$lib/stores/gameState';
   import { onDestroy } from 'svelte';
-  import { gameEngine } from '$lib/game/systems/GameEngineImpl';
-  import { get } from 'svelte/store';
 
   let items: any[] = [];
   let race: any = null;
-
-  // Track resource changes for animation
+  let turnValue = 0;
   let itemChanges: Record<string, number> = {};
-  $: {
-    console.log('[Sidebar] items:', items);
-    console.log('[Sidebar] allResources:', allResources);
-  }
 
-  // --- DEBUG LOGGING ---
-  $: {
-    const state = get(gameState);
-    if (state && state.pawns && state.workAssignments) {
-      console.log('[Sidebar DEBUG] Pawns:', state.pawns);
-      state.pawns.forEach((pawn: any) => {
-        const assignment = state.workAssignments[pawn.id];
-        if (assignment) {
-          const priorities = assignment.workPriorities;
-          const sorted = Object.entries(priorities)
-            .filter(([_, p]) => p > 0)
-            .sort((a, b) => b[1] - a[1]);
-          if (sorted.length > 0) {
-            const [workType, priority] = sorted[0];
-            // NEW: Show all available resources for this work type
-            // COORDINATION: Use GameEngine for work resource calculations
-            const availableResources = gameEngine.getLocationResourcesForWorkType(
-              'default',
-              workType
-            );
-            availableResources.forEach((resourceId) => {
-              const expected = gameEngine.calculateResourceProduction({
-                pawnId: pawn.id,
-                workType,
-                turns: 1
-              });
-              const item = gameEngine.getItemById(resourceId);
-              console.log(
-                `[Sidebar DEBUG] Pawn ${pawn.name} assigned to ${workType} (priority ${priority}), should produce ${expected} ${item?.name || resourceId}/turn`
-              );
-            });
-          } else {
-            console.log(`[Sidebar DEBUG] Pawn ${pawn.name} has no work assigned`);
-          }
-        } else {
-          console.log(`[Sidebar DEBUG] Pawn ${pawn.name} has no work assignment`);
-        }
-      });
-    } else {
-      console.log('[Sidebar DEBUG] No pawns or work assignments in state');
-    }
-  }
-  // --- END DEBUG LOGGING ---
-
-  const unsubscribeItems = currentItem.subscribe((newItems) => {
+  const unsubItems = currentItem.subscribe((newItems) => {
     newItems = newItems || [];
-
-    // Track changes for animation (both positive and negative)
-    newItems.forEach((newItem) => {
-      const oldItem = items.find((i) => i.id === newItem.id);
-      if (oldItem && oldItem.amount !== newItem.amount) {
-        const change = newItem.amount - oldItem.amount;
-        if (change !== 0) {
-          itemChanges[newItem.id] = change;
+    newItems.forEach((ni) => {
+      const old = items.find((i) => i.id === ni.id);
+      if (old && old.amount !== ni.amount) {
+        const delta = ni.amount - old.amount;
+        if (delta !== 0) {
+          itemChanges[ni.id] = delta;
           setTimeout(() => {
-            itemChanges[newItem.id] = 0;
-          }, 2000);
+            itemChanges[ni.id] = 0;
+          }, 2500);
         }
       }
     });
-
     items = newItems;
   });
-  const unsubscribeRace = currentRace.subscribe((value) => {
-    race = value;
-  });
 
-  // Simplified - only use items array
-  $: allResources = items.filter((item) => item.amount > 0);
+  const unsubRace = currentRace.subscribe((v) => (race = v));
+  const unsubState = gameState.subscribe((s) => (turnValue = s.turn));
+
+  $: resources = items.filter((i) => i.amount > 0 || itemChanges[i.id]);
 
   onDestroy(() => {
-    unsubscribeItems();
-    unsubscribeRace();
+    unsubItems();
+    unsubRace();
+    unsubState();
   });
 </script>
 
-<div class="resource-sidebar">
+<aside class="sidebar">
   {#if race}
-    <div class="section kingdom-overview">
-      <div
-        class="sidebar-header"
-        style="text-align: left; padding: 0px; justify-content: flex-start; display: flex;"
-      >
-        <h3 style="text-align: left; margin-left: 0;">🏰 Kingdom Status</h3>
+    <!-- Kingdom section -->
+    <div class="section-hdr">| KINGDOM</div>
+    <div class="rows">
+      <div class="row">
+        <span class="lbl">SETTLEMENT</span>
+        <span class="val hi">{race.name}</span>
       </div>
-      <div class="kingdom-title" style="justify-content: left; margin-top: 10px;">
-        <span class="crown">👑</span>
-        <span class="race-name">{race.name}</span>
-        <span class="stat-item" style="margin-left: 12px;">
-          <span class="stat-icon">👥</span>
-          <span class="stat-value">{race.population}</span>
-        </span>
+      <div class="row">
+        <span class="lbl">POPULATION</span>
+        <span class="val">{race.population}</span>
       </div>
-
-      <div class="resources-section" style="text-align: left; margin-top: 8px;">
-        <h4 style="margin-left: auto; margin-right: auto; display: inline-block;">📦 Resources</h4>
-        <div class="resource-grid">
-          {#each allResources as item}
-            <div class="resource-mini" style="--resource-color: {item.color || '#4CAF50'}">
-              <div class="resource-content">
-                <span class="resource-icon">{item.emoji || '📦'}</span>
-                <div class="resource-info">
-                  <span class="resource-label">{item.name}</span>
-                  <div class="resource-amount-container">
-                    <span class="resource-amount">{Math.floor(item.amount)}</span>
-                    {#if itemChanges[item.id] && itemChanges[item.id] !== 0}
-                      <span
-                        class="resource-change"
-                        class:positive={itemChanges[item.id] > 0}
-                        class:negative={itemChanges[item.id] < 0}
-                      >
-                        {itemChanges[item.id] > 0 ? '+' : ''}{itemChanges[item.id].toFixed(1)}
-                      </span>
-                    {/if}
-                  </div>
-                </div>
-              </div>
-              <div class="resource-bar">
-                <div
-                  class="resource-fill"
-                  style="width: {Math.min(100, (item.amount / 500) * 100)}%"
-                ></div>
-              </div>
-            </div>
-          {/each}
-        </div>
+      <div class="row">
+        <span class="lbl">TURN</span>
+        <span class="val">{turnValue}</span>
       </div>
     </div>
+
+    <!-- Resources section -->
+    <div class="section-hdr top-sep">| RESOURCES</div>
+    <div class="res-list">
+      {#if resources.length === 0}
+        <div class="empty">no resources gathered</div>
+      {:else}
+        {#each resources as item}
+          <div class="res-row">
+            <span class="res-name">{item.name}</span>
+            <span class="dots"></span>
+            <span class="res-amt" style="color:{item.color || 'var(--text)'}">
+              {Math.floor(item.amount)}
+            </span>
+            {#if itemChanges[item.id]}
+              <span
+                class="delta"
+                class:pos={itemChanges[item.id] > 0}
+                class:neg={itemChanges[item.id] < 0}
+              >
+                {itemChanges[item.id] > 0 ? '+' : ''}{Math.floor(itemChanges[item.id])}
+              </span>
+            {/if}
+          </div>
+        {/each}
+      {/if}
+    </div>
+  {:else}
+    <div class="empty">loading...</div>
   {/if}
-</div>
+</aside>
 
 <style>
-  .resource-sidebar {
+  .sidebar {
     height: 100%;
     width: 100%;
-    background: #000000; /* AMOLED black */
-    padding: 0;
-    margin: 0;
+    background: var(--bg-panel);
     font-family: 'Courier New', monospace;
-    color: #e0e0e0;
+    font-size: 11px;
+    color: var(--text);
     overflow-y: auto;
-    border: 0;
-  }
-
-  .section {
-    padding: 8px 12px;
-    border-bottom: 1px solid #000000;
-    background: transparent; /* No card background for sections */
-  }
-
-  .kingdom-overview {
-    background: transparent; /* No card background for overview */
-  }
-
-  .resource-mini {
-    background: #181c1b; /* Contrasting dark card */
-    margin: 2px;
-    border-radius: 5px;
-    padding: 6px;
-    border-left: 2px solid var(--resource-color);
-    box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.18);
-    transition:
-      box-shadow 0.2s,
-      transform 0.2s;
-    min-height: 38px;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
   }
 
-  .resource-mini:hover {
-    box-shadow: 0 4px 16px 0 rgba(76, 175, 80, 0.08);
-    transform: scale(1.04);
+  .section-hdr {
+    padding: 4px 8px 3px;
+    color: var(--accent-hi);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    flex-shrink: 0;
   }
 
-  .sidebar-header,
-  .screen-header {
-    background: #000000;
-    border-bottom: 2px solid #4caf50;
-    padding: 4px 8px;
-    margin: 0;
+  .top-sep {
+    margin-top: 4px;
+    border-top: 1px solid var(--border);
   }
 
-  /* For both .sidebar-header h3 and .screen-header h3 */
-  .sidebar-header h3,
-  .screen-header h3 {
-    font-size: 1.2em;
-    margin: 0;
-    font-weight: bold;
-    color: #4caf50;
-    text-align: center;
-    text-shadow: 0 0 8px rgba(76, 175, 80, 0.3);
-    line-height: 1.2;
+  .rows {
+    padding: 2px 0;
   }
 
-  .kingdom-title {
+  .row {
     display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-bottom: 6px;
-    justify-content: center;
-  }
-
-  .crown {
-    font-size: 1.1em;
-  }
-
-  .race-name {
-    color: #4caf50;
-    font-weight: bold;
-    font-size: 0.95em;
-    text-shadow: 0 0 5px rgba(76, 175, 80, 0.2);
-  }
-
-  .stats-row {
-    display: flex;
-    justify-content: space-around;
-    gap: 10px;
-  }
-
-  .stat-item {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    background: rgba(76, 175, 80, 0.1);
-    padding: 4px 8px;
-    border-radius: 3px;
-    border: 1px solid rgba(76, 175, 80, 0.2);
-  }
-
-  .stat-icon {
-    font-size: 0.9em;
-  }
-
-  .stat-value {
-    color: #4caf50;
-    font-weight: bold;
-    font-size: 0.85em;
-  }
-
-  .resources-section h4 {
-    color: #4caf50;
-    margin: 0 0 6px 0;
-    font-size: 0.85em;
-  }
-
-  .resource-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    align-items: baseline;
+    padding: 2px 8px;
     gap: 4px;
   }
+  .row:hover {
+    background: var(--bg-hover);
+  }
 
-  .resource-content {
+  .lbl {
+    color: var(--text-dim);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .val {
+    margin-left: auto;
+    color: var(--text);
+    text-align: right;
+    white-space: nowrap;
+  }
+  .val.hi {
+    color: var(--accent-hi);
+  }
+
+  /* Resources */
+  .res-list {
+    padding: 2px 0;
+    flex: 1;
+  }
+
+  .res-row {
     display: flex;
-    align-items: flex-start; /* Align children to the top */
+    align-items: baseline;
+    padding: 1px 8px;
     gap: 3px;
   }
-
-  .resource-icon {
-    font-size: 0.8em;
-    flex-shrink: 0;
-    line-height: 1;
-    margin-top: 1px; /* Optional: tweak for perfect alignment */
+  .res-row:hover {
+    background: var(--bg-hover);
   }
 
-  .resource-info {
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-    min-width: 0;
-  }
-
-  .resource-amount {
-    color: var(--resource-color);
-    font-weight: bold;
-    font-size: 0.7em;
-    line-height: 1;
-  }
-
-  .resource-label {
-    color: #e0e0e0;
-    font-size: 0.7em;
-    line-height: 1.1;
+  .res-name {
+    color: var(--text-dim);
+    white-space: nowrap;
+    overflow: hidden;
     text-overflow: ellipsis;
-    overflow: hidden;
-    white-space: normal; /* Allow wrapping */
-    word-break: break-word; /* Break long words if needed */
-    hyphens: auto;
-    margin-bottom: 4px; /* Add margin below the label */
+    flex-shrink: 1;
+    min-width: 0;
+    font-size: 11px;
   }
 
-  .resource-bar {
-    height: 1px;
-    background: #555;
-    border-radius: 1px;
-    overflow: hidden;
-    margin-top: 2px;
+  .dots {
+    flex: 1;
+    border-bottom: 1px dotted var(--text-muted);
+    margin: 0 3px 2px;
+    min-width: 4px;
   }
 
-  .resource-fill {
-    height: 100%;
-    background: var(--resource-color);
-    transition: width 0.3s ease;
-    border-radius: 1px;
-  }
-
-  /* Custom scrollbar */
-  .resource-sidebar::-webkit-scrollbar {
-    width: 3px;
-  }
-
-  .resource-sidebar::-webkit-scrollbar-track {
-    background: #000000;
-  }
-
-  .resource-sidebar::-webkit-scrollbar-thumb {
-    background: #4caf50;
-    border-radius: 2px;
-  }
-  .resource-amount-container {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    position: relative;
-  }
-
-  .resource-change {
-    font-size: 0.6em;
+  .res-amt {
     font-weight: bold;
-    animation: fadeInOut 2s ease-in-out;
-    position: static; /* Remove absolute positioning */
-    background: none;
-    padding: 0 2px;
-    border: none;
-    margin-left: 2px; /* Add a little space from the amount */
+    white-space: nowrap;
+    flex-shrink: 0;
+    font-size: 10px;
   }
 
-  .resource-change.positive {
-    color: #4caf50;
+  .delta {
+    font-size: 9px;
+    flex-shrink: 0;
+    animation: fadeout 2.5s ease-out forwards;
+  }
+  .delta.pos {
+    color: var(--pos);
+  }
+  .delta.neg {
+    color: var(--neg);
   }
 
-  .resource-change.negative {
-    color: #f44336;
-  }
-
-  @keyframes fadeInOut {
+  @keyframes fadeout {
     0% {
-      opacity: 0;
-      transform: translateY(-5px);
-    }
-    50% {
       opacity: 1;
-      transform: translateY(0);
+    }
+    70% {
+      opacity: 1;
     }
     100% {
       opacity: 0;
-      transform: translateY(-5px);
     }
   }
-  /* Responsive adjustments */
-  @media (max-width: 280px) {
-    .resource-grid {
-      grid-template-columns: repeat(2, 1fr);
-    }
 
-    .stats-row {
-      flex-direction: column;
-      gap: 4px;
-    }
+  .empty {
+    padding: 8px;
+    color: var(--text-muted);
+    font-size: 9px;
+    font-style: italic;
   }
 </style>

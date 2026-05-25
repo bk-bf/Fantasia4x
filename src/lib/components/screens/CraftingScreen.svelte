@@ -252,699 +252,418 @@
 </script>
 
 <div class="crafting-screen">
-  <div class="crafting-header">
-    <button class="back-btn" on:click={() => uiState.setScreen('main')}>← Back to Map</button>
-    <h2>🔨 Crafting Workshop</h2>
-    <p class="crafting-subtitle">Create tools, weapons, armor, and consumables</p>
+  <div class="screen-hdr">
+    | CRAFTING
+    <button class="hdr-btn" on:click={() => uiState.setScreen('main')}>BACK</button>
   </div>
 
-  <div class="crafting-content">
-    <!-- Enhanced Filters -->
-    <div class="crafting-filters">
-      <!-- Item Type Filter -->
-      <div class="filter-section">
-        <h3>📦 Item Types</h3>
-        <div class="filter-buttons">
-          {#each itemTypes as itemType}
-            <button
-              class="filter-btn"
-              class:active={selectedItemType === itemType}
-              on:click={() => (selectedItemType = itemType)}
-              title={itemType.charAt(0).toUpperCase() + itemType.slice(1)}
-            >
-              {getTypeIcon(itemType)}
-              <span class="filter-label">{itemType === 'all' ? 'All' : itemType}</span>
-            </button>
-          {/each}
-        </div>
-      </div>
+  <!-- Type filters -->
+  <div class="filter-bar">
+    {#each itemTypes as itemType}
+      <button
+        class="filter-btn"
+        class:active={selectedItemType === itemType}
+        on:click={() => (selectedItemType = itemType)}
+        >{itemType === 'all' ? 'ALL TYPES' : itemType.toUpperCase()}</button
+      >
+    {/each}
+  </div>
 
-      <!-- Category Filter -->
-      <div class="filter-section">
-        <h3>🏷️ Categories</h3>
-        <div class="filter-buttons">
-          {#each categories as category}
-            <button
-              class="filter-btn"
-              class:active={selectedCategory === category}
-              on:click={() => (selectedCategory = category)}
-              title={category.charAt(0).toUpperCase() + category.slice(1)}
-            >
-              {getCategoryIcon(category)}
-              <span class="filter-label">{category === 'all' ? 'All' : category}</span>
-            </button>
-          {/each}
-        </div>
-      </div>
-    </div>
+  <!-- Category filters -->
+  <div class="filter-bar secondary">
+    {#each categories as category}
+      <button
+        class="filter-btn"
+        class:active={selectedCategory === category}
+        on:click={() => (selectedCategory = category)}
+        >{category === 'all' ? 'ALL CATS' : category.toUpperCase()}</button
+      >
+    {/each}
+  </div>
 
-    <!-- Current Inventory -->
-    <div class="current-inventory">
-      <h3>🎒 Current Inventory</h3>
-      {#if Object.keys(inventory).length > 0}
-        <div class="inventory-grid">
-          {#each Object.entries(inventory) as [itemId, quantity]}
-            {#if quantity > 0}
-              {@const item = ITEMS_DATABASE.find((i) => i.id === itemId)}
-              {#if item}
-                <div
-                  class="inventory-item"
-                  style="--rarity-color: {itemService.getItemRarityColor(item.rarity ?? 'common')}"
-                >
-                  <span class="item-icon">{item.emoji || itemService.getItemIcon(itemId)}</span>
-                  <div class="item-details">
-                    <span class="item-name">{item.name}</span>
-                    <span class="item-type">{item.type} • {item.category} • {item.rarity}</span>
-                    {#if item.durability && item.maxDurability}
-                      <span class="item-durability">
-                        Durability: {item.durability}/{item.maxDurability}
-                      </span>
-                    {/if}
-                  </div>
-                  <span class="item-quantity">x{quantity}</span>
-                </div>
-              {/if}
-            {/if}
-          {/each}
-        </div>
-      {:else}
-        <div class="empty-inventory">
-          <p>No items crafted yet. Start creating your first tools!</p>
-        </div>
-      {/if}
-    </div>
-
-    <!-- Crafting Queue -->
-    {#if craftingQueue.length > 0}
-      <div class="crafting-queue">
-        <h3>⚙️ Crafting in Progress</h3>
-        <TaskContainer layout="horizontal">
-          {#each craftingQueue.slice(0, 3) as queueItem, index}
-            <CurrentTask
-              title=""
-              icon={queueItem.item.emoji || getCategoryIcon(queueItem.item.category)}
-              name={queueItem.item.name}
-              description={queueItem.item.description || 'Crafting in progress...'}
-              progress={(queueItem.item.craftingTime - queueItem.turnsRemaining) /
-                queueItem.item.craftingTime}
-              timeRemaining="{queueItem.turnsRemaining} hours"
-              onCancel={() => cancelCrafting(index)}
-              cancelTitle="Cancel crafting and refund materials"
-              accentColor="#ff9800"
-              compact={true}
-              showDescription={false}
-            />
-          {/each}
-        </TaskContainer>
-
-        <!-- Show remaining items if more than 3 -->
-        {#if craftingQueue.length > 3}
-          <div class="remaining-items">
-            <p>+{craftingQueue.length - 3} more items in queue</p>
+  <!-- Inventory -->
+  <div class="section-hdr sub">| INVENTORY</div>
+  {#if Object.keys(inventory).length > 0}
+    {#each Object.entries(inventory) as [itemId, quantity]}
+      {#if quantity > 0}
+        {@const item = ITEMS_DATABASE.find((i) => i.id === itemId)}
+        {#if item}
+          <div class="inv-row">
+            <span class="inv-name">{item.name.toUpperCase()}</span>
+            <span class="inv-meta">{item.type} / {item.category}</span>
+            <span class="inv-qty">x{quantity}</span>
           </div>
         {/if}
-      </div>
-    {:else}
-      <div class="empty-queue">
-        <p>No crafting in progress</p>
-      </div>
-    {/if}
+      {/if}
+    {/each}
+  {:else}
+    <div class="row"><span class="muted">inventory empty</span></div>
+  {/if}
 
-    <!-- Available Craftable Items -->
-    <div class="available-recipes">
-      <h3>📋 Available Items to Craft ({availableCraftableItems.length})</h3>
-      <div class="recipes-grid">
-        {#each availableCraftableItems as item}
-          <div
-            class="recipe-card"
-            class:affordable={$gameState && itemService.canCraftItem(item.id, $gameState)}
+  <!-- Crafting Queue -->
+  <div class="section-hdr sub">| CRAFTING QUEUE</div>
+  {#if craftingQueue.length > 0}
+    {#each craftingQueue as queueItem, index}
+      <div class="queue-item">
+        <div class="row">
+          <span class="lbl">ITEM</span><span class="val">{queueItem.item.name.toUpperCase()}</span>
+        </div>
+        <div class="need-row">
+          <span class="lbl">PROGRESS</span>
+          <div class="bar">
+            <div
+              class="fill"
+              style="width: {Math.round(
+                ((queueItem.item.craftingTime - queueItem.turnsRemaining) /
+                  queueItem.item.craftingTime) *
+                  100
+              )}%; background: var(--accent-hi)"
+            ></div>
+          </div>
+          <span class="val"
+            >{Math.round(
+              ((queueItem.item.craftingTime - queueItem.turnsRemaining) /
+                queueItem.item.craftingTime) *
+                100
+            )}%</span
           >
-            <div class="recipe-card-header">
-              <span class="recipe-icon">{item.emoji || itemService.getItemIcon(item.id)}</span>
-              <div class="recipe-title">
-                <h4>{item.name}</h4>
-                <div class="recipe-meta">
-                  <span class="item-type">{item.type}</span>
-                  <span class="item-category">{item.category}</span>
-                </div>
-              </div>
-              <div
-                class="item-rarity"
-                style="--rarity-color: {itemService.getItemRarityColor(item.rarity || 'common')}"
-              >
-                {item.rarity}
-              </div>
-            </div>
+          <span class="desc">{queueItem.turnsRemaining} turns left</span>
+        </div>
+        <div class="btn-row">
+          <button class="act-btn" on:click={() => cancelCrafting(index)}>CANCEL</button>
+        </div>
+      </div>
+    {/each}
+  {:else}
+    <div class="row"><span class="muted">no active crafting</span></div>
+  {/if}
 
-            <p class="recipe-description">{item.description}</p>
+  <!-- Available recipes -->
+  <div class="section-hdr">| AVAILABLE ({availableCraftableItems.length})</div>
+  {#each availableCraftableItems as item}
+    <div class="recipe-item">
+      <div class="recipe-name">
+        {item.name.toUpperCase()}
+        <span class="rmeta">{item.type} / {item.category}</span>
+        <span class="rarity-tag">{item.rarity}</span>
+      </div>
+      <div class="desc-row">{item.description}</div>
+      <div class="row">
+        <span class="lbl">CRAFT TIME</span><span class="val">{item.craftingTime || 1} turns</span>
+      </div>
 
-            <!-- Requirements Section -->
-            <div class="recipe-requirements">
-              <div class="craft-time">⏰ {item.craftingTime || 1} hours</div>
-              {#each getItemRequirements(item) as requirement}
-                <div class="requirement-item">{requirement}</div>
-              {/each}
-            </div>
+      {#each getItemRequirements(item) as req}
+        <div class="row"><span class="lbl">REQUIRE</span><span class="val dim">{req}</span></div>
+      {/each}
 
-            <!-- Special Properties -->
-            {#if getItemSpecialProperties(item).length > 0}
-              <div class="special-properties">
-                <h5>Properties:</h5>
-                {#each getItemSpecialProperties(item) as property}
-                  <div class="property-item">{property}</div>
-                {/each}
-              </div>
-            {/if}
-
-            <!-- Materials Required -->
-            <div class="recipe-inputs">
-              <h5>Materials:</h5>
-              <div class="inputs-list">
-                {#if item.craftingCost && Object.keys(item.craftingCost).length > 0}
-                  {#each Object.entries(item.craftingCost) as [itemId, amount]}
-                    {@const materialItem = ITEMS_DATABASE.find((i) => i.id === itemId)}
-                    <div class="input-item" class:insufficient={getItemAmount(itemId) < amount}>
-                      <span class="input-icon"
-                        >{materialItem?.emoji || itemService.getItemIcon(itemId)}</span
-                      >
-                      <span class="input-amount">{amount}</span>
-                      <span class="input-name">{materialItem?.name || itemId}</span>
-                      <span class="input-available">({getItemAmount(itemId)} available)</span>
-                    </div>
-                  {/each}
-                {:else}
-                  <div class="no-materials">No materials required (gathered item)</div>
-                {/if}
-              </div>
-            </div>
-
-            <!-- Item Effects -->
-            {#if item.effects && Object.keys(item.effects).length > 0}
-              <div class="recipe-outputs">
-                <h5>Effects:</h5>
-                <div class="item-effects">
-                  {#each Object.entries(item.effects) as [effect, value]}
-                    <div class="effect-item">
-                      +{value}
-                      {formatEffectName(effect)}
-                    </div>
-                  {/each}
-                </div>
-              </div>
-            {/if}
-
-            <button
-              class="craft-btn"
-              class:disabled={!$gameState || !itemService.canCraftItem(item.id, $gameState)}
-              on:click={() => startCrafting(item)}
-              disabled={!$gameState || !itemService.canCraftItem(item.id, $gameState)}
-            >
-              {#if !$gameState || !itemService.canCraftItem(item.id, $gameState)}
-                Cannot Craft
-              {:else}
-                Begin Crafting
-              {/if}
-            </button>
+      {#if item.craftingCost && Object.keys(item.craftingCost).length > 0}
+        {#each Object.entries(item.craftingCost) as [materialId, amount]}
+          {@const matItem = ITEMS_DATABASE.find((i) => i.id === materialId)}
+          {@const have = getItemAmount(materialId)}
+          <div class="row" class:insufficient={have < (amount as number)}>
+            <span class="lbl">COST</span>
+            <span class="val" class:neg={have < (amount as number)}>
+              {matItem?.name || materialId}: {amount} (have {have})
+            </span>
           </div>
         {/each}
+      {:else}
+        <div class="row"><span class="lbl">COST</span><span class="val dim">none</span></div>
+      {/if}
+
+      {#if item.effects && Object.keys(item.effects).length > 0}
+        {#each Object.entries(item.effects) as [effect, value]}
+          <div class="row">
+            <span class="lbl">EFFECT</span><span class="val pos"
+              >+{value} {formatEffectName(effect)}</span
+            >
+          </div>
+        {/each}
+      {/if}
+
+      {#each getItemSpecialProperties(item) as prop}
+        <div class="row"><span class="lbl">SPECIAL</span><span class="val dim">{prop}</span></div>
+      {/each}
+
+      <div class="btn-row">
+        <button
+          class="act-btn"
+          class:active={$gameState && itemService.canCraftItem(item.id, $gameState)}
+          on:click={() => startCrafting(item)}
+          disabled={!$gameState || !itemService.canCraftItem(item.id, $gameState)}
+        >
+          {#if !$gameState || !itemService.canCraftItem(item.id, $gameState)}CANNOT CRAFT
+          {:else}BEGIN CRAFTING
+          {/if}
+        </button>
       </div>
     </div>
-  </div>
+  {/each}
+
+  {#if availableCraftableItems.length === 0}
+    <div class="row"><span class="muted">no recipes available</span></div>
+  {/if}
 </div>
 
 <style>
-  .crafting-filters {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    background: #000000;
-    border-radius: 8px;
-    padding: 20px;
-    border-left: 4px solid #9c27b0;
-  }
-
-  .filter-section h3 {
-    color: #9c27b0;
-    margin: 0 0 15px 0;
-  }
-
-  .filter-btn {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 16px;
-    background: #000000;
-    border: 1px solid #555;
-    color: #e0e0e0;
-    border-radius: 4px;
-    cursor: pointer;
-    font-family: 'Courier New', monospace;
-    font-size: 0.9em;
-    transition: all 0.2s ease;
-  }
-
-  .filter-label {
-    text-transform: capitalize;
-  }
-
-  .recipe-title {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-
-  .recipe-meta {
-    display: flex;
-    gap: 8px;
-    font-size: 0.8em;
-    color: #888;
-  }
-
-  .item-type,
-  .item-category {
-    text-transform: capitalize;
-  }
-
-  .special-properties {
-    margin-bottom: 15px;
-  }
-
-  .special-properties h5 {
-    color: #e0e0e0;
-    margin: 0 0 8px 0;
-    font-size: 1em;
-  }
-
-  .property-item {
-    color: #2196f3;
-    font-size: 0.9em;
-    margin-bottom: 2px;
-  }
-
-  .item-durability {
-    color: #ff9800;
-    font-size: 0.8em;
-  }
-
-  .crafting-queue {
-    background: #000000;
-    border-radius: 8px;
-    padding: 20px;
-    border-left: 4px solid #2196f3;
-  }
-
-  .crafting-queue h3 {
-    color: #2196f3;
-    margin: 0 0 15px 0;
-  }
-
-  .remaining-items {
-    text-align: center;
-    color: #888;
-    font-style: italic;
-    margin-top: 10px;
-  }
   .crafting-screen {
-    padding: 20px;
-    background: #000000;
-    color: #e0e0e0;
-    font-family: 'Courier New', monospace;
     height: 100%;
     overflow-y: auto;
-  }
-
-  .crafting-header {
-    text-align: center;
-    margin-bottom: 30px;
-    padding-bottom: 20px;
-    border-bottom: 2px solid #ff9800;
-    position: relative;
-  }
-
-  .back-btn {
-    position: absolute;
-    top: 0;
-    right: 0;
-    padding: 8px 16px;
-    background: #000000;
-    border: 1px solid #ff9800;
-    color: #ff9800;
-    border-radius: 4px;
-    cursor: pointer;
+    background: var(--bg);
+    color: var(--text);
     font-family: 'Courier New', monospace;
-    font-size: 0.9em;
-  }
-
-  .back-btn:hover {
-    background: #ff9800;
-    color: #000;
-  }
-
-  .crafting-header h2 {
-    color: #ff9800;
-    margin: 0 0 10px 0;
-    font-size: 2em;
-    text-shadow: 0 0 10px rgba(255, 152, 0, 0.3);
-  }
-
-  .crafting-subtitle {
-    color: #888;
-    margin: 0;
-    font-style: italic;
-  }
-
-  .crafting-content {
+    font-size: 11px;
     display: flex;
     flex-direction: column;
-    gap: 30px;
   }
 
-  .item-filters {
-    background: #000000;
-    border-radius: 8px;
-    padding: 20px;
-    border-left: 4px solid #9c27b0;
-  }
-
-  .item-filters h3 {
-    color: #9c27b0;
-    margin: 0 0 15px 0;
-  }
-
-  .filter-buttons {
+  .screen-hdr {
+    padding: 5px 10px;
+    background: var(--bg-panel);
+    color: var(--accent-hi);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    border-bottom: 1px solid var(--border-hi);
+    flex-shrink: 0;
     display: flex;
-    gap: 10px;
+    align-items: center;
+  }
+
+  .hdr-btn {
+    margin-left: auto;
+    padding: 2px 8px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    letter-spacing: 0.04em;
+  }
+  .hdr-btn:hover {
+    color: var(--text);
+    border-color: var(--border-hi);
+  }
+
+  .section-hdr {
+    padding: 4px 8px;
+    background: var(--bg-panel);
+    color: var(--accent-hi);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    border-bottom: 1px solid var(--border);
+    border-top: 1px solid var(--border);
+    margin-top: 1px;
+    flex-shrink: 0;
+  }
+  .section-hdr.sub {
+    background: var(--bg);
+    color: var(--text-dim);
+  }
+
+  .filter-bar {
+    display: flex;
     flex-wrap: wrap;
+    gap: 2px;
+    padding: 4px 8px;
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .filter-bar.secondary {
+    background: var(--bg);
   }
 
   .filter-btn {
-    padding: 8px 16px;
-    background: #000000;
-    border: 1px solid #555;
-    color: #e0e0e0;
-    border-radius: 4px;
-    cursor: pointer;
-    font-family: 'Courier New', monospace;
-    font-size: 0.9em;
-    transition: all 0.2s ease;
-  }
-
-  .filter-btn:hover {
-    background: #0c0c0c;
-    border-color: #9c27b0;
-  }
-
-  .filter-btn.active {
-    background: #9c27b0;
-    border-color: #9c27b0;
-    color: #000;
-  }
-
-  .current-inventory {
-    background: #000000;
-    border-radius: 8px;
-    padding: 20px;
-    border-left: 4px solid #ff9800;
-  }
-
-  .current-inventory h3 {
-    color: #ff9800;
-    margin: 0 0 15px 0;
-  }
-
-  .inventory-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 10px;
-  }
-
-  .inventory-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 12px;
-    background: #0c0c0c;
-    border-radius: 4px;
-    border-left: 3px solid var(--rarity-color);
-  }
-
-  .item-icon {
-    font-size: 1.5em;
-  }
-
-  .item-details {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-
-  .item-name {
-    color: #e0e0e0;
-    font-weight: bold;
-  }
-
-  .item-type {
-    color: #888;
-    font-size: 0.8em;
-    text-transform: capitalize;
-  }
-
-  .item-quantity {
-    color: #ff9800;
-    font-weight: bold;
-  }
-
-  .empty-inventory,
-  .empty-queue {
-    padding: 4px;
-    text-align: center;
-    color: #888;
-    font-style: italic;
-    background: #000000;
-    border-radius: 4px;
-    border: 2px dashed #555;
-  }
-
-  .crafting-queue {
-    background: #000000;
-    border-radius: 8px;
-    padding: 20px;
-    border-left: 4px solid #2196f3;
-  }
-
-  .crafting-queue h3 {
-    color: #2196f3;
-    margin: 0 0 15px 0;
-  }
-
-  .queue-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .queue-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px;
-    background: #0c0c0c;
-    border-radius: 4px;
-  }
-
-  .cancel-btn {
-    margin-left: auto;
-    padding: 4px 8px;
-    background: #d32f2f;
-    border: 1px solid #f44336;
-    color: white;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.8em;
-    transition: all 0.2s ease;
-  }
-
-  .cancel-btn:hover {
-    background: #f44336;
-    transform: scale(1.1);
-  }
-
-  .queue-progress {
-    color: #2196f3;
-    font-weight: bold;
-  }
-
-  .available-recipes h3 {
-    color: #ff9800;
-    margin: 0 0 20px 0;
-  }
-
-  .recipes-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(375px, 1fr));
-    gap: 20px;
-  }
-
-  .recipe-card {
-    background: #0c0c0c;
-    border-radius: 8px;
-    padding: 20px;
-    border-left: 4px solid #555;
-    transition: all 0.3s ease;
-    box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.18);
-  }
-
-  .recipe-card.affordable {
-    border-left-color: #ff9800;
-  }
-
-  .recipe-card-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 10px;
-    position: relative;
-  }
-
-  .recipe-icon {
-    font-size: 1.5em;
-  }
-
-  .recipe-card h4 {
-    color: #ff9800;
-    margin: 0;
-    font-size: 1.2em;
-    flex: 1;
-  }
-
-  .item-rarity {
-    background: var(--rarity-color);
-    color: #000;
     padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 0.8em;
-    font-weight: bold;
-    text-transform: capitalize;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    letter-spacing: 0.04em;
+  }
+  .filter-btn.active {
+    background: var(--tab-active);
+    color: #fff;
+    border-color: var(--tab-active);
+  }
+  .filter-btn:hover:not(.active) {
+    color: var(--text);
+    border-color: var(--border-hi);
   }
 
-  .recipe-description {
-    color: #888;
-    font-style: italic;
-    margin: 0 0 15px 0;
-  }
-
-  .recipe-requirements {
+  .row {
     display: flex;
-    flex-direction: column;
-    gap: 5px;
-    margin-bottom: 15px;
-    font-size: 0.9em;
-    color: #888;
+    padding: 2px 8px;
+    align-items: baseline;
+    gap: 6px;
+  }
+  .row:hover {
+    background: var(--bg-hover);
+  }
+  .row.insufficient {
+    background: rgba(200, 48, 24, 0.05);
   }
 
-  .recipe-inputs h5,
-  .recipe-outputs h5 {
-    color: #e0e0e0;
-    margin: 0 0 8px 0;
-    font-size: 1em;
-  }
-
-  .inputs-list,
-  .outputs-list {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-    margin-bottom: 15px;
-  }
-
-  .input-item,
-  .output-item {
+  .need-row {
     display: flex;
     align-items: center;
+    padding: 3px 8px;
     gap: 8px;
-    font-size: 0.9em;
   }
 
-  .input-item.insufficient {
-    color: #f44336;
+  .lbl {
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 11px;
+    width: 70px;
+    flex-shrink: 0;
   }
 
-  .input-amount,
-  .output-amount {
-    font-weight: bold;
-  }
-
-  .input-available {
-    color: #888;
-    font-size: 0.8em;
+  .val {
+    color: var(--text);
+    font-size: 11px;
     margin-left: auto;
+    text-align: right;
+  }
+  .val.pos {
+    color: var(--pos);
+  }
+  .val.neg {
+    color: var(--neg);
+  }
+  .val.dim {
+    color: var(--text-muted);
   }
 
-  .no-materials {
-    color: #888;
+  .desc {
+    color: var(--text-muted);
+    font-size: 11px;
     font-style: italic;
-    font-size: 0.9em;
+    flex: 1;
+  }
+  .bar {
+    flex: 1;
+    height: 4px;
+    background: var(--bg-active);
+  }
+  .fill {
+    height: 100%;
+  }
+  .muted {
+    color: var(--text-muted);
+    font-style: italic;
+    font-size: 11px;
+    padding: 4px 8px;
+  }
+  .pos {
+    color: var(--pos);
+  }
+  .neg {
+    color: var(--neg);
   }
 
-  .output-item {
-    color: #4caf50;
-    border-left: 2px solid var(--rarity-color);
-    padding-left: 8px;
+  /* Inventory */
+  .inv-row {
+    display: flex;
+    padding: 2px 8px;
+    gap: 8px;
+    align-items: baseline;
+    border-bottom: 1px solid var(--border);
   }
-
-  .output-rarity {
-    color: var(--rarity-color);
-    font-size: 0.8em;
+  .inv-row:hover {
+    background: var(--bg-hover);
+  }
+  .inv-name {
+    color: var(--text);
+    font-size: 11px;
+    width: 150px;
+    flex-shrink: 0;
+  }
+  .inv-meta {
+    color: var(--text-muted);
+    font-size: 10px;
+    flex: 1;
+  }
+  .inv-qty {
+    color: var(--accent-hi);
+    font-size: 11px;
     margin-left: auto;
   }
 
-  .item-effects {
-    margin-left: 20px;
-    margin-top: 5px;
+  /* Queue */
+  .queue-item {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 2px;
   }
 
-  .effect-item {
-    color: #4caf50;
-    font-size: 0.8em;
+  /* Recipe items */
+  .recipe-item {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 2px;
+    margin-bottom: 1px;
   }
 
-  .craft-btn {
-    width: 100%;
-    padding: 12px;
-    background: #ff9800;
-    border: none;
-    color: #000;
-    border-radius: 4px;
-    cursor: pointer;
+  .recipe-name {
+    padding: 4px 8px;
+    color: var(--text);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-panel);
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+  }
+
+  .rmeta {
+    color: var(--text-muted);
+    font-size: 10px;
+  }
+  .rarity-tag {
+    color: var(--text-dim);
+    font-size: 10px;
+    margin-left: auto;
+  }
+
+  .desc-row {
+    padding: 2px 8px 3px 16px;
+    color: var(--text-muted);
+    font-size: 11px;
+    font-style: italic;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .btn-row {
+    display: flex;
+    gap: 4px;
+    padding: 4px 8px;
+  }
+
+  .act-btn {
+    padding: 3px 10px;
+    background: var(--bg-hover);
+    border: 1px solid var(--border-hi);
+    color: var(--text);
     font-family: 'Courier New', monospace;
-    font-weight: bold;
-    transition: all 0.3s ease;
+    font-size: 11px;
+    cursor: pointer;
+    letter-spacing: 0.04em;
   }
-
-  .craft-btn:hover:not(.disabled) {
-    background: #ffb74d;
-    transform: translateY(-1px);
+  .act-btn.active {
+    background: var(--tab-active);
+    color: #fff;
+    border-color: var(--tab-active);
   }
-
-  .craft-btn.disabled {
-    background: #555;
-    color: #888;
+  .act-btn:hover:not(:disabled) {
+    color: var(--accent-hi);
+    background: var(--bg-active);
+  }
+  .act-btn:disabled {
+    opacity: 0.4;
     cursor: not-allowed;
-  }
-
-  /* Scrollbar styling */
-  .crafting-screen::-webkit-scrollbar {
-    width: 8px;
-  }
-
-  .crafting-screen::-webkit-scrollbar-track {
-    background: #000000;
-  }
-
-  .crafting-screen::-webkit-scrollbar-thumb {
-    background: #ff9800;
-    border-radius: 4px;
   }
 </style>

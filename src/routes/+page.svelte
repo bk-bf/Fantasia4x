@@ -1,5 +1,6 @@
 <!-- src/routes/+page.svelte -->
 <script lang="ts">
+  import '../app.css';
   import MainScreen from '$lib/components/UI/MainScreen.svelte';
   import RaceScreen from '$lib/components/screens/RaceScreen.svelte';
   import PawnScreen from '$lib/components/screens/PawnScreen.svelte';
@@ -10,16 +11,11 @@
   import WorkScreen from '$lib/components/screens/WorkScreen.svelte';
   import ResourceSidebar from '$lib/components/UI/ResourceSidebar.svelte';
   import GameControls from '$lib/components/UI/GameControls.svelte';
+  import ChroniclePanel from '$lib/components/UI/ChroniclePanel.svelte';
   import { uiState } from '$lib/stores/uiState';
   import { gameState } from '$lib/stores/gameState';
-  import { onMount } from 'svelte';
-
-  onMount(() => {
-    console.log('Fantasia4x initialized with left sidebar');
-  });
 
   let currentScreen = 'main';
-
   uiState.subscribe((state) => {
     currentScreen = state.currentScreen;
   });
@@ -35,11 +31,11 @@
   </div>
 
   <div class="game-body">
-    <div class="sidebar-container">
+    <aside class="left-panel">
       <ResourceSidebar />
-    </div>
+    </aside>
 
-    <div class="main-content">
+    <main class="main-content">
       {#if currentScreen === 'main'}
         <MainScreen />
       {:else if currentScreen === 'race'}
@@ -57,7 +53,11 @@
       {:else if currentScreen === 'work'}
         <WorkScreen />
       {/if}
-    </div>
+    </main>
+
+    <aside class="right-panel">
+      <ChroniclePanel />
+    </aside>
   </div>
 </div>
 
@@ -65,46 +65,49 @@
   .game-container {
     height: 100vh;
     width: 100vw;
-    background: #000000;
-    color: #e0e0e0;
+    background: var(--bg);
+    color: var(--text);
     font-family: 'Courier New', monospace;
+    font-size: 11px;
     display: flex;
     flex-direction: column;
-    margin: 0;
-    padding: 0;
-    border: 0;
     overflow: hidden;
   }
 
   .game-header {
     flex-shrink: 0;
-    border-bottom: 2px solid #4caf50;
   }
 
   .game-body {
     flex: 1;
     display: flex;
     overflow: hidden;
+    min-height: 0;
   }
 
-  .sidebar-container {
+  .left-panel {
     flex-shrink: 0;
-    width: 350px;
-    background: #000000;
-    border-right: 2px solid #4caf50;
-    overflow-y: auto;
+    width: 180px;
+    border-right: 1px solid var(--border);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
   }
 
   .main-content {
     flex: 1;
     overflow: hidden;
-    background: #000000;
-    display: flex; /* Add this */
-    flex-direction: column; /* Add this */
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
   }
 
-  /* Ensure no margins or borders anywhere */
-  * {
-    box-sizing: border-box;
+  .right-panel {
+    flex-shrink: 0;
+    width: 220px;
+    border-left: 1px solid var(--border);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
   }
 </style>

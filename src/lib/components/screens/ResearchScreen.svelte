@@ -116,625 +116,291 @@
   }
 </script>
 
+
 <div class="research-screen">
-  <div class="research-header">
-    <button class="back-btn" on:click={() => uiState.setScreen('main')}>← Back to Map</button>
-    <h2>📚 Research & Development</h2>
-    <p class="research-subtitle">Advance your civilization through scholarly study</p>
-  </div>
+  <div class="screen-hdr">| RESEARCH</div>
 
-  <div class="research-content">
-    <!-- Research Materials Status -->
-    <div class="materials-status">
-      <h3>📜 Research Materials</h3>
-      <div class="materials-grid">
-        {#each ['bark_scrolls', 'hide_scrolls', 'parchment', 'scholars_ink', 'research_notes'] as materialId}
-          {@const amount = getInventoryAmount(materialId)}
-          {@const item = itemService.getItemById(materialId)}
-          {#if amount > 0 || item}
-            <div class="material-item">
-              <span class="material-icon">{item?.emoji || '📦'}</span>
-              <div class="material-details">
-                <span class="material-name">{item?.name || materialId}</span>
-                <span class="material-amount">x{amount}</span>
-              </div>
-            </div>
-          {/if}
-        {/each}
+  <!-- Materials -->
+  <div class="section-hdr sub">| MATERIALS</div>
+  {#each ['bark_scrolls', 'hide_scrolls', 'parchment', 'scholars_ink', 'research_notes'] as materialId}
+    {@const amount = getInventoryAmount(materialId)}
+    {@const item = itemService.getItemById(materialId)}
+    {#if item}
+      <div class="row">
+        <span class="lbl">{(item?.name || materialId).toUpperCase()}</span>
+        <span class="val" style="color: {amount > 0 ? 'var(--pos)' : 'var(--text-muted)'}">{amount}</span>
       </div>
+    {/if}
+  {/each}
+
+  <!-- Current Research -->
+  <div class="section-hdr sub">| ACTIVE RESEARCH</div>
+  {#if currentResearch}
+    <div class="row"><span class="lbl">PROJECT</span><span class="val">{currentResearch.name.toUpperCase()}</span></div>
+    <div class="row"><span class="lbl">CATEGORY</span><span class="val">{currentResearch.category}</span></div>
+    {@const prog = Math.round(((currentResearch.currentProgress || 0) / currentResearch.researchTime) * 100)}
+    <div class="need-row">
+      <span class="lbl">PROGRESS</span>
+      <div class="bar"><div class="fill" style="width: {prog}%; background: var(--accent-hi)"></div></div>
+      <span class="val">{prog}%</span>
+      <span class="desc">{currentResearch.researchTime - (currentResearch.currentProgress || 0)} turns left</span>
     </div>
+    <div class="btn-row">
+      <button class="act-btn" on:click={cancelCurrentResearch}>CANCEL</button>
+    </div>
+  {:else}
+    <div class="row"><span class="muted">no active research</span></div>
+  {/if}
 
-    <!-- Current Research -->
-    {#if currentResearch}
-      <CurrentTask
-        title="🔬 Current Research"
-        icon={getCategoryIcon(currentResearch.category)}
-        name={currentResearch.name}
-        description={currentResearch.description}
-        progress={(currentResearch.currentProgress || 0) / currentResearch.researchTime}
-        timeRemaining="{currentResearch.researchTime -
-          (currentResearch.currentProgress || 0)} turns remaining"
-        onCancel={cancelCurrentResearch}
-        cancelTitle="Cancel research (no refund needed)"
-        accentColor="#2196f3"
-      />
-    {:else}
-      <div class="empty-queue">No research in progress. Select a project below to begin.</div>
-    {/if}
+  <!-- Discovered Lore -->
+  {#if discoveredLore.length > 0}
+    <div class="section-hdr sub">| LORE ({discoveredLore.length})</div>
+    {#each discoveredLore as lore}
+      <div class="lore-name">{lore.name.toUpperCase()}</div>
+      <div class="desc-row">{lore.description}</div>
+      {#if lore.researchUnlocks?.length > 0}
+        <div class="row"><span class="lbl">UNLOCKS</span><span class="val">{lore.researchUnlocks.join(', ')}</span></div>
+      {/if}
+    {/each}
+  {/if}
 
-    <!-- Discovered Lore -->
-    {#if discoveredLore.length > 0}
-      <div class="discovered-lore">
-        <h3>📜 Discovered Lore</h3>
-        <div class="lore-grid">
-          {#each discoveredLore as lore}
-            <div class="lore-item">
-              <span class="lore-icon">
-                {#if lore.type === 'scroll'}📜
-                {:else if lore.type === 'tome'}📖
-                {:else if lore.type === 'artifact'}🏺
-                {:else if lore.type === 'manual'}📋
-                {:else}🔍{/if}
-              </span>
-              <div class="lore-details">
-                <h4>{lore.name}</h4>
-                <p>{lore.description}</p>
-                <small>Unlocks: {lore.researchUnlocks.join(', ')}</small>
-              </div>
-            </div>
-          {/each}
-        </div>
+  <!-- Available Research -->
+  <div class="section-hdr">| AVAILABLE ({availableResearch.length})</div>
+  {#each availableResearch as research}
+    <div class="research-item">
+      <div class="research-name">
+        {research.name.toUpperCase()}
+        <span class="tier" style="color: {getTierColor(research.tier)}">T{research.tier}</span>
+        <span class="cat">{research.category}</span>
       </div>
-    {/if}
+      <div class="row"><span class="lbl">TIME</span><span class="val">{research.researchTime} turns</span></div>
+      <div class="desc-row">{research.description}</div>
 
-    <!-- Available Research -->
-    <div class="available-research">
-      <h3>🔬 Available Research Projects ({availableResearch.length})</h3>
-      <div class="research-grid">
-        {#each availableResearch as research}
-          <div class="research-card" style="--tier-color: {getTierColor(research.tier)}">
-            <div class="research-card-header">
-              <span class="research-icon">{getCategoryIcon(research.category)}</span>
-              <h4>{research.name}</h4>
-              <div class="research-tier">Tier {research.tier}</div>
-            </div>
-
-            <p class="research-description">{research.description}</p>
-
-            <div class="research-requirements">
-              <div class="research-time">⏰ {research.researchTime} turns</div>
-
-              <!-- Scroll requirements -->
-              {#if research.scrollRequirement}
-                <div class="scroll-requirements">
-                  <h5>📜 Study Materials Required:</h5>
-                  {#each Object.entries(research.scrollRequirement) as [scrollId, amount]}
-                    {@const item = itemService.getItemById(scrollId)}
-                    <div
-                      class="requirement-item"
-                      class:insufficient={getInventoryAmount(scrollId) < (amount as number)}
-                    >
-                      <span class="req-icon">{item?.emoji || '📦'}</span>
-                      <span class="req-amount">{amount}</span>
-                      <span class="req-name">{item?.name || scrollId}</span>
-                      <span class="req-available">({getInventoryAmount(scrollId)} available)</span>
-                    </div>
-                  {/each}
-                </div>
-              {/if}
-
-              <!-- Material requirements -->
-              {#if research.materialRequirement}
-                <div class="material-requirements">
-                  <h5>🔧 Materials Required:</h5>
-                  {#each Object.entries(research.materialRequirement) as [materialId, amount]}
-                    {@const item = itemService.getItemById(materialId)}
-                    <div
-                      class="requirement-item"
-                      class:insufficient={getItemAmount(materialId) < (amount as number)}
-                    >
-                      <span class="req-icon">{item?.emoji || '📦'}</span>
-                      <span class="req-amount">{amount}</span>
-                      <span class="req-name">{item?.name || materialId}</span>
-                      <span class="req-available">({getItemAmount(materialId)} available)</span>
-                    </div>
-                  {/each}
-                </div>
-              {/if}
-
-              {#if research.buildingRequired}
-                <div class="building-requirements">
-                  🏗️ Requires: {getBuildingName(research.buildingRequired)}
-                </div>
-              {/if}
-
-              {#if research.populationRequired}
-                <div class="pop-requirements">
-                  👥 Requires: {research.populationRequired} population
-                </div>
-              {/if}
-
-              {#if research.prerequisites.length > 0}
-                <div class="prerequisites">
-                  🔗 Requires: {research.prerequisites.join(', ')}
-                </div>
-              {/if}
-            </div>
-
-            <div class="research-unlocks">
-              <h5>Unlocks:</h5>
-              <div class="unlocks-list">
-                {#if research.unlocks.toolTierRequired}
-                  <div class="unlock-item">⚒️ Tool Tier {research.unlocks.toolTierRequired}</div>
-                {/if}
-                {#if research.unlocks.buildings}
-                  <div class="unlock-item">
-                    🏠 Buildings: {research.unlocks.buildings
-                      .map((id: string) => getBuildingName(id))
-                      .join(', ')}
-                  </div>
-                {/if}
-                {#if research.unlocks.items}
-                  <div class="unlock-item">
-                    📦 Items: {research.unlocks.items.join(', ')}
-                  </div>
-                {/if}
-                {#if research.unlocks.effects}
-                  {#each Object.entries(research.unlocks.effects) as [effect, value]}
-                    <div class="unlock-item">✨ {effect}: +{value}</div>
-                  {/each}
-                {/if}
-              </div>
-            </div>
-
-            <button
-              class="research-btn"
-              class:can-start={canStartResearch(research)}
-              class:lore-bypass={researchService.canUnlockWithLore(research.id, $gameState)}
-              class:disabled={!canStartResearch(research)}
-              on:click={() => startResearch(research)}
-              disabled={!canStartResearch(research)}
-            >
-              {#if currentResearch}
-                Research in Progress
-              {:else if researchService.canUnlockWithLore(research.id, $gameState)}
-                Unlock with Lore
-              {:else if canStartResearch(research)}
-                Begin Research
-              {:else}
-                Missing Requirements
-              {/if}
-            </button>
+      {#if research.scrollRequirement}
+        {#each Object.entries(research.scrollRequirement) as [scrollId, amount]}
+          {@const item = itemService.getItemById(scrollId)}
+          {@const have = getInventoryAmount(scrollId)}
+          <div class="row req" class:insufficient={have < (amount as number)}>
+            <span class="lbl">NEED</span>
+            <span class="val" class:neg={have < (amount as number)}>
+              {item?.name || scrollId}: {amount} (have {have})
+            </span>
           </div>
         {/each}
+      {/if}
+
+      {#if research.materialRequirement}
+        {#each Object.entries(research.materialRequirement) as [materialId, amount]}
+          {@const item = itemService.getItemById(materialId)}
+          {@const have = getItemAmount(materialId)}
+          <div class="row req" class:insufficient={have < (amount as number)}>
+            <span class="lbl">NEED</span>
+            <span class="val" class:neg={have < (amount as number)}>
+              {item?.name || materialId}: {amount} (have {have})
+            </span>
+          </div>
+        {/each}
+      {/if}
+
+      {#if research.buildingRequired}
+        <div class="row"><span class="lbl">BUILDING</span><span class="val">{getBuildingName(research.buildingRequired)}</span></div>
+      {/if}
+
+      {#if research.prerequisites.length > 0}
+        <div class="row"><span class="lbl">PREREQ</span><span class="val">{research.prerequisites.join(', ')}</span></div>
+      {/if}
+
+      <!-- Unlocks -->
+      {#if research.unlocks}
+        {#if research.unlocks.buildings?.length > 0}
+          <div class="row"><span class="lbl">UNLOCKS</span><span class="val pos">{research.unlocks.buildings.map((id: string) => getBuildingName(id)).join(', ')}</span></div>
+        {/if}
+        {#if research.unlocks.items?.length > 0}
+          <div class="row"><span class="lbl">ITEMS</span><span class="val pos">{research.unlocks.items.join(', ')}</span></div>
+        {/if}
+        {#if research.unlocks.effects}
+          {#each Object.entries(research.unlocks.effects) as [effect, value]}
+            <div class="row"><span class="lbl">EFFECT</span><span class="val pos">{effect}: +{value}</span></div>
+          {/each}
+        {/if}
+      {/if}
+
+      <div class="btn-row">
+        <button
+          class="act-btn"
+          class:active={canStartResearch(research)}
+          on:click={() => startResearch(research)}
+          disabled={!canStartResearch(research)}
+        >
+          {#if currentResearch}BUSY
+          {:else if researchService.canUnlockWithLore(research.id, $gameState)}UNLOCK (LORE)
+          {:else if canStartResearch(research)}BEGIN
+          {:else}UNAVAILABLE
+          {/if}
+        </button>
       </div>
     </div>
-  </div>
+  {/each}
+
+  {#if availableResearch.length === 0}
+    <div class="row"><span class="muted">no research available</span></div>
+  {/if}
 </div>
 
 <style>
   .research-screen {
-    padding: 20px;
-    background: #000000;
-    color: #e0e0e0;
-    font-family: 'Courier New', monospace;
     height: 100%;
     overflow-y: auto;
-  }
-
-  .research-header {
-    text-align: center;
-    margin-bottom: 30px;
-    padding-bottom: 20px;
-    border-bottom: 2px solid #9c27b0;
-    position: relative;
-  }
-
-  .back-btn {
-    position: absolute;
-    top: 0;
-    right: 0;
-    padding: 8px 16px;
-    background: #000000;
-    border: 1px solid #9c27b0;
-    color: #9c27b0;
-    border-radius: 4px;
-    cursor: pointer;
+    background: var(--bg);
+    color: var(--text);
     font-family: 'Courier New', monospace;
-    font-size: 0.9em;
-  }
-
-  .back-btn:hover {
-    background: #9c27b0;
-    color: #000;
-  }
-
-  .research-header h2 {
-    color: #9c27b0;
-    margin: 0 0 10px 0;
-    font-size: 2em;
-    text-shadow: 0 0 10px rgba(156, 39, 176, 0.3);
-  }
-
-  .research-subtitle {
-    color: #888;
-    margin: 0;
-    font-style: italic;
-  }
-
-  .research-content {
+    font-size: 11px;
     display: flex;
     flex-direction: column;
-    gap: 30px;
   }
 
-  .knowledge-status {
-    background: #0c0c0c;
-    border-radius: 8px;
-    padding: 20px;
-    border-left: 4px solid #9c27b0;
+  .screen-hdr {
+    padding: 5px 10px;
+    background: var(--bg-panel);
+    color: var(--accent-hi);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    border-bottom: 1px solid var(--border-hi);
+    flex-shrink: 0;
   }
 
-  .knowledge-status h3 {
-    color: #9c27b0;
-    margin: 0 0 15px 0;
+  .section-hdr {
+    padding: 4px 8px;
+    background: var(--bg-panel);
+    color: var(--accent-hi);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    border-bottom: 1px solid var(--border);
+    border-top: 1px solid var(--border);
+    margin-top: 1px;
+  }
+  .section-hdr.sub {
+    background: var(--bg);
+    color: var(--text-dim);
   }
 
-  .knowledge-info {
+  .row {
     display: flex;
-    gap: 30px;
-  }
-
-  .knowledge-item {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-  }
-
-  .knowledge-label {
-    color: #888;
-    font-size: 0.9em;
-  }
-
-  .knowledge-value {
-    color: #9c27b0;
-    font-weight: bold;
-    font-size: 1.2em;
-  }
-
-  .empty-queue {
-    padding: 20px;
-    text-align: center;
-    color: #888;
-    font-style: italic;
-    background: #000000;
-    border-radius: 4px;
-    border: 2px dashed #555;
-    margin-bottom: 20px;
-  }
-
-  .progress-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 10px;
-  }
-
-  .progress-name {
-    flex: 1;
-    font-weight: bold;
-  }
-
-  .progress-time {
-    color: #2196f3;
-    font-size: 0.9em;
-  }
-
-  .progress-bar {
-    height: 8px;
-    background: #555;
-    border-radius: 4px;
-    overflow: hidden;
-    margin-bottom: 10px;
-  }
-
-  .progress-fill {
-    height: 100%;
-    background: #2196f3;
-    transition: width 0.5s ease;
-  }
-
-  .progress-description {
-    color: #888;
-    font-style: italic;
-    margin: 0;
-  }
-
-  .discovered-lore {
-    background: #000000;
-    border-radius: 8px;
-    padding: 20px;
-    border-left: 4px solid #ff9800;
-  }
-
-  .discovered-lore h3 {
-    color: #ff9800;
-    margin: 0 0 15px 0;
-  }
-
-  .lore-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 15px;
-  }
-
-  .lore-item {
-    display: flex;
-    gap: 10px;
-    padding: 10px;
-    background: #0c0c0c;
-    border-radius: 4px;
-  }
-
-  .lore-icon {
-    font-size: 1.5em;
-  }
-
-  .lore-details h4 {
-    color: #ff9800;
-    margin: 0 0 5px 0;
-    font-size: 1em;
-  }
-
-  .lore-details p {
-    color: #888;
-    margin: 0 0 5px 0;
-    font-size: 0.9em;
-  }
-
-  .lore-details small {
-    color: #666;
-    font-size: 0.8em;
-  }
-
-  .available-research h3 {
-    color: #9c27b0;
-    margin: 0 0 20px 0;
-  }
-
-  .research-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(375.5px, 0px));
-    gap: 20px;
-    justify-items: start;
-  }
-
-  .research-card {
-    background: #0c0c0c;
-    max-width: 375.5px; /* Keep this for safety */
-    border-radius: 8px;
-    padding: 20px;
-    border-left: 4px solid var(--tier-color);
-    transition: all 0.3s ease;
-  }
-
-  .research-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  }
-
-  .research-card-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 10px;
-    position: relative;
-  }
-
-  .research-icon {
-    font-size: 1.5em;
-  }
-
-  .research-card h4 {
-    color: var(--tier-color);
-    margin: 0;
-    font-size: 1.2em;
-    flex: 1;
-  }
-
-  .research-tier {
-    background: var(--tier-color);
-    color: #000;
     padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 0.8em;
-    font-weight: bold;
+    align-items: baseline;
+    gap: 6px;
+  }
+  .row:hover { background: var(--bg-hover); }
+  .row.insufficient { background: rgba(200, 48, 24, 0.05); }
+
+  .need-row {
+    display: flex;
+    align-items: center;
+    padding: 3px 8px;
+    gap: 8px;
   }
 
-  .research-description {
-    color: #888;
+  .lbl {
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 11px;
+    width: 70px;
+    flex-shrink: 0;
+  }
+
+  .val {
+    color: var(--text);
+    font-size: 11px;
+    margin-left: auto;
+    text-align: right;
+  }
+  .val.pos { color: var(--pos); }
+  .val.neg { color: var(--neg); }
+
+  .desc {
+    color: var(--text-muted);
+    font-size: 11px;
     font-style: italic;
-    margin: 0 0 15px 0;
+    flex: 1;
   }
 
-  .research-requirements {
+  .bar { flex: 1; height: 4px; background: var(--bg-active); }
+  .fill { height: 100%; }
+
+  .muted { color: var(--text-muted); font-style: italic; font-size: 11px; padding: 4px 8px; }
+  .pos { color: var(--pos); }
+  .neg { color: var(--neg); }
+
+  /* Lore */
+  .lore-name {
+    padding: 3px 8px;
+    color: var(--accent-hi);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    border-bottom: 1px solid var(--border);
+    margin-top: 2px;
+  }
+
+  .desc-row {
+    padding: 2px 8px 3px 16px;
+    color: var(--text-muted);
+    font-size: 11px;
+    font-style: italic;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* Research items */
+  .research-item {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 2px;
+    margin-bottom: 1px;
+  }
+
+  .research-name {
+    padding: 4px 8px;
+    color: var(--text);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-panel);
     display: flex;
-    flex-direction: column;
-    gap: 5px;
-    margin-bottom: 15px;
-    font-size: 0.9em;
+    gap: 8px;
+    align-items: baseline;
   }
 
-  .research-cost {
-    color: #9c27b0;
-    font-weight: bold;
+  .tier {
+    font-size: 10px;
+    letter-spacing: 0;
   }
 
-  .research-time {
-    color: #888;
-  }
-
-  .stat-requirements,
-  .prerequisites {
-    color: #666;
-    font-size: 0.8em;
-  }
-
-  .research-unlocks h5 {
-    color: #e0e0e0;
-    margin: 0 0 8px 0;
-    font-size: 1em;
-  }
-
-  .unlocks-list {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    margin-bottom: 15px;
-  }
-
-  .unlock-item {
-    color: #4caf50;
-    font-size: 0.9em;
-  }
-
-  .research-btn {
-    width: 100%;
-    padding: 12px;
-    background: #555;
-    border: none;
-    color: #888;
-    border-radius: 4px;
-    cursor: pointer;
-    font-family: 'Courier New', monospace;
-    font-weight: bold;
-    transition: all 0.3s ease;
-  }
-
-  .research-btn.affordable {
-    background: #9c27b0;
-    color: #000;
-  }
-
-  .research-btn.lore-bypass {
-    background: #ff9800;
-    color: #000;
-  }
-
-  .research-btn:hover:not(.disabled) {
-    transform: translateY(-1px);
-  }
-
-  .research-btn.disabled {
-    cursor: not-allowed;
-  }
-
-  /* Scrollbar styling */
-  .research-screen::-webkit-scrollbar {
-    width: 8px;
-  }
-
-  .research-screen::-webkit-scrollbar-track {
-    background: #000000;
-  }
-
-  .research-screen::-webkit-scrollbar-thumb {
-    background: #9c27b0;
-    border-radius: 4px;
-  }
-
-  .materials-status {
-    background: #0c0c0c;
-    border-radius: 8px;
-    padding: 20px;
-    border-left: 4px solid #ff9800;
-  }
-
-  .materials-status h3 {
-    color: #ff9800;
-    margin: 0 0 15px 0;
-  }
-
-  .materials-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 10px;
-  }
-
-  .material-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 8px;
-    background: #000000;
-    border-radius: 4px;
-  }
-
-  .material-icon {
-    font-size: 1.2em;
-  }
-
-  .material-details {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-
-  .material-name {
-    color: #e0e0e0;
-    font-size: 0.9em;
-  }
-
-  .material-amount {
-    color: #ff9800;
-    font-weight: bold;
-    font-size: 0.8em;
-  }
-
-  .scroll-requirements,
-  .material-requirements {
-    margin-bottom: 10px;
-  }
-
-  .scroll-requirements h5,
-  .material-requirements h5 {
-    color: #e0e0e0;
-    margin: 0 0 5px 0;
-    font-size: 0.9em;
-  }
-
-  .requirement-item {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 0.8em;
-    margin-bottom: 3px;
-  }
-
-  .requirement-item.insufficient {
-    color: #f44336;
-  }
-
-  .req-icon {
-    font-size: 1em;
-  }
-
-  .req-amount {
-    font-weight: bold;
-  }
-
-  .req-available {
-    color: #888;
+  .cat {
+    color: var(--text-muted);
+    font-size: 10px;
     margin-left: auto;
   }
 
-  .research-btn.can-start {
-    background: #9c27b0;
-    color: #000;
+  .btn-row {
+    display: flex;
+    gap: 4px;
+    padding: 4px 8px;
   }
 
-  .research-btn.lore-bypass {
-    background: #ff9800;
-    color: #000;
+  .act-btn {
+    padding: 3px 10px;
+    background: var(--bg-hover);
+    border: 1px solid var(--border-hi);
+    color: var(--text);
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    letter-spacing: 0.04em;
   }
+  .act-btn.active {
+    background: var(--tab-active);
+    color: #fff;
+    border-color: var(--tab-active);
+  }
+  .act-btn:hover:not(:disabled) { color: var(--accent-hi); background: var(--bg-active); }
+  .act-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 </style>

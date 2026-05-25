@@ -288,649 +288,301 @@
 </script>
 
 <div class="building-menu">
-  <div class="building-header">
-    <button class="back-btn" on:click={() => uiState.setScreen('main')}>← Back to Map</button>
-    <h2>🏗️ Construction Planning</h2>
-    <p class="building-subtitle">Expand your civilization with specialized buildings</p>
+  <div class="screen-hdr">
+    | CONSTRUCTION
+    <button class="hdr-btn" on:click={() => uiState.setScreen('main')}>BACK</button>
   </div>
 
-  <div class="building-content">
-    <!-- Building Category Filter -->
-    <div class="building-filters">
-      <h3>🏷️ Building Categories</h3>
-      <div class="filter-buttons">
-        {#each buildingCategories as category}
-          <button
-            class="filter-btn"
-            class:active={selectedCategory === category}
-            on:click={() => (selectedCategory = category)}
-            title={category.charAt(0).toUpperCase() + category.slice(1)}
-          >
-            {getCategoryIcon(category)}
-            <span class="filter-label">{category === 'all' ? 'All' : category}</span>
-          </button>
-        {/each}
-      </div>
-    </div>
-
-    <!-- Population Status -->
-    <div class="population-status">
-      <h3>👥 Population Status</h3>
-      <div class="pop-info">
-        <span>Current: {race?.population || 0}</span>
-        <span>Maximum: {maxPopulation}</span>
-        <span>Tool Level: {currentToolLevel}</span>
-        <span class="pop-warning" class:visible={race?.population >= maxPopulation}>
-          ⚠️ At capacity! Build housing to expand.
-        </span>
-      </div>
-    </div>
-
-    <!-- Building Queue -->
-    {#if firstBuildingInProgress}
-      <CurrentTask
-        title="🏗️ Current Construction"
-        icon={firstBuildingInProgress.building.emoji ||
-          getCategoryIcon(firstBuildingInProgress.building.category)}
-        name={firstBuildingInProgress.building.name}
-        description={firstBuildingInProgress.building.description}
-        progress={(firstBuildingInProgress.building.buildTime -
-          firstBuildingInProgress.turnsRemaining) /
-          firstBuildingInProgress.building.buildTime}
-        timeRemaining="{firstBuildingInProgress.turnsRemaining} hours remaining"
-        onCancel={() => cancelBuilding(0)}
-        cancelTitle="Cancel construction and refund materials"
-        accentColor="#4caf50"
-      />
-    {:else}
-      <div class="empty-queue">No buildings are currently under construction.</div>
-    {/if}
-
-    <!-- Available Buildings -->
-    <div class="available-buildings">
-      <h3>🏗️ Available Buildings ({availableBuildings.length})</h3>
-      <div class="buildings-grid">
-        {#each availableBuildings as building}
-          <div
-            class="building-card"
-            class:affordable={canAfford(building)}
-            class:buildable={canBuild(building)}
-            style="--rarity-color: {buildingService.getBuildingRarityColor(
-              building.rarity || 'common'
-            )}"
-          >
-            <div class="building-card-header">
-              <span class="building-icon"
-                >{building.emoji || getCategoryIcon(building.category)}</span
-              >
-              <div class="building-title">
-                <h4>{building.name}</h4>
-                <div class="building-meta">
-                  <span class="building-category">{building.category}</span>
-                  <span class="building-tier">Tier {building.tier}</span>
-                </div>
-              </div>
-              <div
-                class="building-rarity"
-                style="--rarity-color: {buildingService.getBuildingRarityColor(
-                  building.rarity || 'common'
-                )}"
-              >
-                {building.rarity}
-              </div>
-              {#if getBuildingCount(building.id) > 0}
-                <div class="building-count">
-                  {getBuildingCount(building.id)}
-                </div>
-              {/if}
-            </div>
-
-            <p class="building-description">{building.description}</p>
-
-            <!-- Requirements Section -->
-            <div class="building-requirements">
-              <div class="build-time">⏰ {building.buildTime} hours</div>
-              {#each getBuildingRequirements(building) as requirement}
-                <div class="requirement-item">{requirement}</div>
-              {/each}
-            </div>
-
-            <!-- Special Properties -->
-            {#if getBuildingSpecialProperties(building).length > 0}
-              <div class="special-properties">
-                <h5>Properties:</h5>
-                {#each getBuildingSpecialProperties(building) as property}
-                  <div class="property-item">{property}</div>
-                {/each}
-              </div>
-            {/if}
-
-            <!-- Construction Costs -->
-            <div class="building-costs">
-              <h5>Construction Cost:</h5>
-              <div class="cost-list">
-                {#each Object.entries(building.buildingCost) as [itemId, cost]}
-                  {@const item = itemService.getItemById(itemId)}
-                  <div class="cost-item" class:insufficient={getItemAmount(itemId) < cost}>
-                    <span class="cost-icon">{item?.emoji || '📦'}</span>
-                    <span class="cost-amount">{cost}</span>
-                    <span class="cost-name">{item?.name || itemId}</span>
-                    <span class="cost-available">({getItemAmount(itemId)} available)</span>
-                  </div>
-                {/each}
-              </div>
-            </div>
-
-            <!-- Upkeep Costs -->
-            <div class="upkeep-info">
-              <h5>Upkeep:</h5>
-              <div class="upkeep-list">
-                {#each getUpkeepInfo(building) as upkeep}
-                  <div class="upkeep-item">{upkeep}</div>
-                {/each}
-              </div>
-            </div>
-
-            <!-- Building Effects -->
-            <div class="building-effects">
-              <h5>Effects:</h5>
-              <div class="effects-list">
-                {#each Object.entries(building.effects) as [effect, value]}
-                  <div class="effect-item">
-                    {#if effect === 'populationCapacity'}
-                      +{value} population capacity
-                    {:else if effect.includes('Production')}
-                      +{value} {formatEffectName(effect.replace('Production', ''))} per hour
-                    {:else if effect.includes('Multiplier')}
-                      +{Math.round((value - 1) * 100)}% {formatEffectName(
-                        effect.replace('Multiplier', '')
-                      )}
-                    {:else if effect.includes('Bonus')}
-                      +{Math.round((value - 1) * 100)}% {formatEffectName(
-                        effect.replace('Bonus', '')
-                      )} bonus
-                    {:else}
-                      +{value} {formatEffectName(effect)}
-                    {/if}
-                  </div>
-                {/each}
-              </div>
-            </div>
-
-            <!-- Storage Capacity -->
-            {#if building.storageCapacity && Object.keys(building.storageCapacity).length > 0}
-              <div class="storage-info">
-                <h5>Storage:</h5>
-                <div class="storage-list">
-                  {#each Object.entries(building.storageCapacity) as [category, capacity]}
-                    <div class="storage-item">
-                      {category}: {capacity} items
-                    </div>
-                  {/each}
-                </div>
-              </div>
-            {/if}
-
-            <button
-              class="build-btn"
-              class:disabled={!canBuild(building)}
-              on:click={() => startBuilding(building)}
-              disabled={!canBuild(building)}
-            >
-              {#if !canAfford(building)}
-                Insufficient Materials
-              {:else if !canBuild(building)}
-                Requirements Not Met
-              {:else}
-                Begin Construction
-              {/if}
-            </button>
-          </div>
-        {/each}
-      </div>
-    </div>
+  <!-- Category filter -->
+  <div class="filter-bar">
+    {#each buildingCategories as category}
+      <button
+        class="filter-btn"
+        class:active={selectedCategory === category}
+        on:click={() => (selectedCategory = category)}
+      >
+        {category === 'all' ? 'ALL' : category.toUpperCase()}
+      </button>
+    {/each}
   </div>
+
+  <!-- Status -->
+  <div class="section-hdr sub">| STATUS</div>
+  <div class="row"><span class="lbl">POPULATION</span><span class="val">{race?.population || 0} / {maxPopulation}</span></div>
+  <div class="row"><span class="lbl">TOOL LEVEL</span><span class="val">{currentToolLevel}</span></div>
+  {#if race?.population >= maxPopulation}
+    <div class="row"><span class="warn">AT CAPACITY — build housing to expand</span></div>
+  {/if}
+
+  <!-- Construction Queue -->
+  <div class="section-hdr sub">| ACTIVE CONSTRUCTION</div>
+  {#if firstBuildingInProgress}
+    <div class="row"><span class="lbl">PROJECT</span><span class="val">{firstBuildingInProgress.building.name.toUpperCase()}</span></div>
+    <div class="row"><span class="lbl">CATEGORY</span><span class="val">{firstBuildingInProgress.building.category}</span></div>
+    {@const prog = Math.round(((firstBuildingInProgress.building.buildTime - firstBuildingInProgress.turnsRemaining) / firstBuildingInProgress.building.buildTime) * 100)}
+    <div class="need-row">
+      <span class="lbl">PROGRESS</span>
+      <div class="bar"><div class="fill" style="width: {prog}%; background: var(--accent-hi)"></div></div>
+      <span class="val">{prog}%</span>
+      <span class="desc">{firstBuildingInProgress.turnsRemaining} turns left</span>
+    </div>
+    <div class="btn-row">
+      <button class="act-btn" on:click={() => cancelBuilding(0)}>CANCEL CONSTRUCTION</button>
+    </div>
+  {:else}
+    <div class="row"><span class="muted">no active construction</span></div>
+  {/if}
+
+  <!-- Available Buildings -->
+  <div class="section-hdr">| AVAILABLE ({availableBuildings.length})</div>
+  {#each availableBuildings as building}
+    <div class="building-item">
+      <div class="building-name">
+        {building.name.toUpperCase()}
+        <span class="bmeta">{building.category} T{building.tier}</span>
+        {#if getBuildingCount(building.id) > 0}
+          <span class="bcount">[x{getBuildingCount(building.id)}]</span>
+        {/if}
+      </div>
+      <div class="desc-row">{building.description}</div>
+      <div class="row"><span class="lbl">BUILD TIME</span><span class="val">{building.buildTime} turns</span></div>
+
+      {#each getBuildingRequirements(building) as req}
+        <div class="row"><span class="lbl">REQUIRE</span><span class="val dim">{req}</span></div>
+      {/each}
+
+      {#each Object.entries(building.buildingCost) as [itemId, cost]}
+        {@const item = itemService.getItemById(itemId)}
+        {@const have = getItemAmount(itemId)}
+        <div class="row" class:insufficient={have < (cost as number)}>
+          <span class="lbl">COST</span>
+          <span class="val" class:neg={have < (cost as number)}>
+            {item?.name || itemId}: {cost} (have {have})
+          </span>
+        </div>
+      {/each}
+
+      {#each getUpkeepInfo(building) as upkeep}
+        <div class="row"><span class="lbl">UPKEEP</span><span class="val warn">{upkeep}</span></div>
+      {/each}
+
+      {#each Object.entries(building.effects) as [effect, value]}
+        <div class="row">
+          <span class="lbl">EFFECT</span>
+          <span class="val pos">
+            {#if effect === 'populationCapacity'}+{value} pop cap
+            {:else if effect.includes('Production')}+{value} {formatEffectName(effect.replace('Production', ''))}/turn
+            {:else if effect.includes('Multiplier')}+{Math.round(((value as number) - 1) * 100)}% {formatEffectName(effect.replace('Multiplier', ''))}
+            {:else if effect.includes('Bonus')}+{Math.round(((value as number) - 1) * 100)}% {formatEffectName(effect.replace('Bonus', ''))} bonus
+            {:else}+{value} {formatEffectName(effect)}
+            {/if}
+          </span>
+        </div>
+      {/each}
+
+      {#if building.storageCapacity && Object.keys(building.storageCapacity).length > 0}
+        {#each Object.entries(building.storageCapacity) as [cat, cap]}
+          <div class="row"><span class="lbl">STORAGE</span><span class="val">{cat}: {cap}</span></div>
+        {/each}
+      {/if}
+
+      {#each getBuildingSpecialProperties(building) as prop}
+        <div class="row"><span class="lbl">SPECIAL</span><span class="val dim">{prop}</span></div>
+      {/each}
+
+      <div class="btn-row">
+        <button
+          class="act-btn"
+          class:active={canBuild(building)}
+          on:click={() => startBuilding(building)}
+          disabled={!canBuild(building)}
+        >
+          {#if !canAfford(building)}INSUFFICIENT MATERIALS
+          {:else if !canBuild(building)}REQUIREMENTS NOT MET
+          {:else}BEGIN CONSTRUCTION
+          {/if}
+        </button>
+      </div>
+    </div>
+  {/each}
+
+  {#if availableBuildings.length === 0}
+    <div class="row"><span class="muted">no buildings available</span></div>
+  {/if}
 </div>
 
 <style>
-  .building-filters {
-    background: #000000;
-    border-radius: 8px;
-    padding: 20px;
-    border-left: 4px solid #4caf50;
-    margin-bottom: 20px;
-  }
-
-  .building-filters h3 {
-    color: #4caf50;
-    margin: 0 0 15px 0;
-  }
-
-  .filter-buttons {
+  .building-menu {
+    height: 100%;
+    overflow-y: auto;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
     display: flex;
-    gap: 10px;
+    flex-direction: column;
+  }
+
+  .screen-hdr {
+    padding: 5px 10px;
+    background: var(--bg-panel);
+    color: var(--accent-hi);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    border-bottom: 1px solid var(--border-hi);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+  }
+
+  .hdr-btn {
+    margin-left: auto;
+    padding: 2px 8px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    letter-spacing: 0.04em;
+  }
+  .hdr-btn:hover { color: var(--text); border-color: var(--border-hi); }
+
+  .section-hdr {
+    padding: 4px 8px;
+    background: var(--bg-panel);
+    color: var(--accent-hi);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    border-bottom: 1px solid var(--border);
+    border-top: 1px solid var(--border);
+    margin-top: 1px;
+    flex-shrink: 0;
+  }
+  .section-hdr.sub { background: var(--bg); color: var(--text-dim); }
+
+  .filter-bar {
+    display: flex;
     flex-wrap: wrap;
+    gap: 2px;
+    padding: 4px 8px;
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
   }
 
   .filter-btn {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 16px;
-    background: #000000;
-    border: 1px solid #555;
-    color: #e0e0e0;
-    border-radius: 4px;
-    cursor: pointer;
-    font-family: 'Courier New', monospace;
-    font-size: 0.9em;
-    transition: all 0.2s ease;
-  }
-
-  .filter-btn:hover {
-    background: #0c0c0c;
-    border-color: #4caf50;
-  }
-
-  .filter-btn.active {
-    background: #4caf50;
-    border-color: #4caf50;
-    color: #000;
-  }
-
-  .filter-label {
-    text-transform: capitalize;
-  }
-
-  .building-title {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-
-  .building-meta {
-    display: flex;
-    gap: 8px;
-    font-size: 0.8em;
-    color: #888;
-  }
-
-  .building-category,
-  .building-tier {
-    text-transform: capitalize;
-  }
-
-  .building-rarity {
-    background: var(--rarity-color);
-    color: #000;
     padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 0.8em;
-    font-weight: bold;
-    text-transform: capitalize;
-  }
-
-  .special-properties,
-  .upkeep-info,
-  .storage-info {
-    margin-bottom: 15px;
-  }
-
-  .special-properties h5,
-  .upkeep-info h5,
-  .storage-info h5 {
-    color: #e0e0e0;
-    margin: 0 0 8px 0;
-    font-size: 1em;
-  }
-
-  .property-item,
-  .upkeep-item,
-  .storage-item {
-    color: #2196f3;
-    font-size: 0.9em;
-    margin-bottom: 2px;
-  }
-
-  .upkeep-item {
-    color: #ff9800;
-  }
-
-  .storage-item {
-    color: #9c27b0;
-  }
-  .building-menu {
-    padding: 20px;
-    background: #000000;
-    color: #e0e0e0;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
     font-family: 'Courier New', monospace;
-    height: 100%;
-    overflow-y: auto;
-  }
-
-  .building-header {
-    text-align: center;
-    margin-bottom: 30px;
-    padding-bottom: 20px;
-    border-bottom: 2px solid #4caf50;
-    position: relative;
-  }
-
-  .back-btn {
-    position: absolute;
-    top: 0;
-    right: 0;
-    padding: 8px 16px;
-    background: #000000;
-    border: 1px solid #4caf50;
-    color: #4caf50;
-    border-radius: 4px;
+    font-size: 11px;
     cursor: pointer;
-    font-family: 'Courier New', monospace;
-    font-size: 0.9em;
+    letter-spacing: 0.04em;
   }
+  .filter-btn.active { background: var(--tab-active); color: #fff; border-color: var(--tab-active); }
+  .filter-btn:hover:not(.active) { color: var(--text); border-color: var(--border-hi); }
 
-  .back-btn:hover {
-    background: #4caf50;
-    color: #000;
-  }
-
-  .building-header h2 {
-    color: #4caf50;
-    margin: 0 0 10px 0;
-    font-size: 2em;
-    text-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
-  }
-
-  .building-subtitle {
-    color: #888;
-    margin: 0;
-    font-style: italic;
-  }
-
-  .empty-queue {
-    padding: 20px;
-    text-align: center;
-    color: #888;
-    font-style: italic;
-    background: #000000;
-    border-radius: 4px;
-    border: 2px dashed #555;
-  }
-
-  .building-content {
+  .row {
     display: flex;
-    flex-direction: column;
-    gap: 30px;
+    padding: 2px 8px;
+    align-items: baseline;
+    gap: 6px;
   }
+  .row:hover { background: var(--bg-hover); }
+  .row.insufficient { background: rgba(200, 48, 24, 0.05); }
 
-  .population-status {
-    background: #0c0c0c;
-    border-radius: 8px;
-    padding: 20px;
-    border-left: 4px solid #4caf50;
-  }
-
-  .population-status h3 {
-    color: #4caf50;
-    margin: 0 0 15px 0;
-  }
-
-  .pop-info {
-    display: flex;
-    gap: 20px;
-    align-items: center;
-  }
-
-  .pop-warning {
-    color: #f44336;
-    font-weight: bold;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-  }
-
-  .pop-warning.visible {
-    opacity: 1;
-  }
-
-  .building-queue {
-    background: #000000;
-    border-radius: 8px;
-    padding: 20px;
-    border-left: 4px solid #ffa726;
-  }
-
-  .building-queue h3 {
-    color: #ffa726;
-    margin: 0 0 15px 0;
-  }
-
-  .queue-list {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  .queue-progress-card {
-    background: #0c0c0c;
-    border-radius: 8px;
-    padding: 20px;
-    border-left: 4px solid #ffa726;
-    margin-bottom: 0;
-  }
-
-  .progress-header {
+  .need-row {
     display: flex;
     align-items: center;
-    gap: 10px;
-    margin-bottom: 10px;
-    position: relative;
+    padding: 3px 8px;
+    gap: 8px;
   }
 
-  .progress-icon {
-    font-size: 1.5em;
+  .lbl {
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 11px;
+    width: 70px;
+    flex-shrink: 0;
   }
 
-  .progress-name {
-    flex: 1;
-    font-weight: bold;
-    color: #ffa726;
+  .val {
+    color: var(--text);
+    font-size: 11px;
+    margin-left: auto;
+    text-align: right;
+  }
+  .val.pos { color: var(--pos); }
+  .val.neg { color: var(--neg); }
+  .val.dim { color: var(--text-muted); }
+  .val.warn { color: var(--accent); }
+
+  .desc { color: var(--text-muted); font-size: 11px; font-style: italic; flex: 1; }
+  .bar { flex: 1; height: 4px; background: var(--bg-active); }
+  .fill { height: 100%; }
+  .muted { color: var(--text-muted); font-style: italic; font-size: 11px; padding: 4px 8px; }
+  .warn { color: var(--accent); }
+  .pos { color: var(--pos); }
+  .neg { color: var(--neg); }
+
+  /* Building items */
+  .building-item {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 2px;
+    margin-bottom: 1px;
   }
 
-  .progress-time {
-    color: #ffa726;
-    font-size: 0.9em;
-  }
-
-  .progress-bar {
-    height: 8px;
-    background: #555;
-    border-radius: 4px;
-    overflow: hidden;
-    margin-bottom: 10px;
-  }
-
-  .progress-fill {
-    height: 100%;
-    background: #ffa726;
-    transition: width 0.5s ease;
-  }
-
-  .progress-description {
-    color: #888;
-    font-style: italic;
-    margin: 0;
-  }
-
-  .queue-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px;
-    background: #000000;
-    border-radius: 4px;
-  }
-
-  .queue-progress {
-    color: #ffa726;
-    font-weight: bold;
-  }
-
-  .available-buildings h3 {
-    color: #4caf50;
-    margin: 0 0 20px 0;
-  }
-
-  .buildings-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(375.5px, 0px));
-    gap: 20px;
-    justify-items: start; /* Align cards to the left */
-  }
-
-  .building-card {
-    background: #0c0c0c;
-    border-radius: 8px;
-    padding: 20px;
-    border-left: 4px solid #555;
-    transition: all 0.3s ease;
-    max-width: 375.5px; /* Set a fixed max width */
-    /* Remove any margin: 0 auto; if present */
-  }
-
-  .building-card.affordable {
-    border-left-color: #ffa726;
-  }
-
-  .building-card.buildable {
-    border-left-color: #4caf50;
-  }
-
-  .building-card-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 10px;
-    position: relative;
-  }
-
-  .building-count {
-    position: absolute;
-    top: -5px;
-    right: -5px;
-    background: #4caf50;
-    color: #000;
-    border-radius: 50%;
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.8em;
-    font-weight: bold;
-    border: 2px solid #000000;
-  }
-
-  .building-icon {
-    font-size: 1.5em;
-  }
-
-  .building-card h4 {
-    color: #4caf50;
-    margin: 0;
-    font-size: 1.2em;
-  }
-
-  .building-description {
-    color: #888;
-    font-style: italic;
-    margin: 0 0 15px 0;
-  }
-
-  .building-requirements {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-    margin-bottom: 15px;
-    font-size: 0.9em;
-    color: #888;
-  }
-
-  .building-costs h5,
-  .building-effects h5 {
-    color: #e0e0e0;
-    margin: 0 0 8px 0;
-    font-size: 1em;
-  }
-
-  .cost-list,
-  .effects-list {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-    margin-bottom: 15px;
-  }
-
-  .cost-item {
+  .building-name {
+    padding: 4px 8px;
+    color: var(--text);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-panel);
     display: flex;
     gap: 8px;
-    font-size: 0.9em;
+    align-items: baseline;
   }
 
-  .cost-item.insufficient {
-    color: #f44336;
+  .bmeta {
+    color: var(--text-muted);
+    font-size: 10px;
+    margin-left: auto;
   }
 
-  .cost-amount {
-    font-weight: bold;
+  .bcount {
+    color: var(--pos);
+    font-size: 10px;
   }
 
-  .cost-available {
-    color: #888;
-    font-size: 0.8em;
+  .desc-row {
+    padding: 2px 8px 3px 16px;
+    color: var(--text-muted);
+    font-size: 11px;
+    font-style: italic;
+    border-bottom: 1px solid var(--border);
   }
 
-  .effect-item {
-    color: #4caf50;
-    font-size: 0.9em;
+  .btn-row {
+    display: flex;
+    gap: 4px;
+    padding: 4px 8px;
   }
 
-  .build-btn {
-    width: 100%;
-    padding: 12px;
-    background: #4caf50;
-    border: none;
-    color: #000;
-    border-radius: 4px;
-    cursor: pointer;
+  .act-btn {
+    padding: 3px 10px;
+    background: var(--bg-hover);
+    border: 1px solid var(--border-hi);
+    color: var(--text);
     font-family: 'Courier New', monospace;
-    font-weight: bold;
-    transition: all 0.3s ease;
+    font-size: 11px;
+    cursor: pointer;
+    letter-spacing: 0.04em;
   }
-
-  .build-btn:hover:not(.disabled) {
-    background: #66bb6a;
-    transform: translateY(-1px);
-  }
-
-  .build-btn.disabled {
-    background: #555;
-    color: #888;
-    cursor: not-allowed;
-  }
-
-  /* Scrollbar styling */
-  .building-menu::-webkit-scrollbar {
-    width: 8px;
-  }
-
-  .building-menu::-webkit-scrollbar-track {
-    background: #000000;
-  }
-
-  .building-menu::-webkit-scrollbar-thumb {
-    background: #4caf50;
-    border-radius: 4px;
-  }
+  .act-btn.active { background: var(--tab-active); color: #fff; border-color: var(--tab-active); }
+  .act-btn:hover:not(:disabled) { color: var(--accent-hi); background: var(--bg-active); }
+  .act-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 </style>

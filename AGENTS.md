@@ -40,11 +40,12 @@ Core data (src/lib/game/core/)         ← types, static databases, GameStateMan
 
 ## Build Commands
 
+**Always use `./dev.sh` to start the dev server** — never run `npm run dev` directly. The script checks whether port 5173 is already in use and prints the existing URL instead of spawning a duplicate on a random port.
+
 ```bash
-npm run dev        # dev server
+./dev.sh           # start dev server on http://localhost:5173 (or report existing)
 npm run build      # production build
-npm run check      # TypeScript + Svelte type check
-npm run lint       # ESLint
+npm run lint       # ESLint + Prettier check
 ```
 
 ## Documentation
