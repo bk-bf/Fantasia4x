@@ -28,6 +28,9 @@ let isPausedValue = false;
 let gameSpeedValue = 1;
 
 // ===== WORLD GENERATION =====
+/** Bump this when the world generation algorithm changes to force a regen. */
+const WORLD_VERSION = 10; // fix biome distribution, regenWorld UI
+const WORLD_VERSION_KEY = 'fantasia4x-world-version';
 const WORLD_SEED = Date.now();
 const _generatedWorld = generateWorld(120, 80, WORLD_SEED);
 resourceGeneratorService.generateResources(_generatedWorld, WORLD_SEED);
@@ -167,6 +170,18 @@ function advanceTurn() {
 	}
 }
 
+// ===== WORLD REGEN =====
+function regenWorld(seed?: number) {
+	const s = (seed !== undefined ? seed : Date.now()) >>> 0 || 1;
+	const newWorld = generateWorld(120, 80, s);
+	resourceGeneratorService.generateResources(newWorld, s);
+	// Patch the engine's internal state FIRST so the next auto-turn
+	// doesn't overwrite the store back to the old worldMap.
+	gameEngine.patchWorldMap(newWorld);
+	updateWithSave((state) => ({ ...state, worldMap: newWorld }));
+	if (browser) localStorage.setItem(WORLD_VERSION_KEY, String(WORLD_VERSION));
+}
+
 // ===== ITEM MANAGEMENT =====
 function consumeGlobalItem(itemId: string, quantity: number = 1) {
 	updateWithSave((state) => {
@@ -211,6 +226,14 @@ if (!baseState.worldMap || baseState.worldMap.length === 0 || !baseState.worldMa
 	const migratedWorld = generateWorld(120, 80, migrateSeed);
 	resourceGeneratorService.generateResources(migratedWorld, migrateSeed);
 	baseState = { ...baseState, worldMap: migratedWorld };
+	if (browser) localStorage.setItem(WORLD_VERSION_KEY, String(WORLD_VERSION));
+} else if (browser && localStorage.getItem(WORLD_VERSION_KEY) !== String(WORLD_VERSION)) {
+	// World generation algorithm changed — regenerate map while keeping all other game state
+	const migrateSeed = Date.now();
+	const migratedWorld = generateWorld(120, 80, migrateSeed);
+	resourceGeneratorService.generateResources(migratedWorld, migrateSeed);
+	baseState = { ...baseState, worldMap: migratedWorld };
+	localStorage.setItem(WORLD_VERSION_KEY, String(WORLD_VERSION));
 } else if (!baseState.worldMap[0]?.[1]?.discovered) {
 	// Patch saves where only tile (0,0) was discovered — set all tiles visible (DF-style)
 	baseState = {
@@ -280,7 +303,8 @@ export const gameState = {
 	// Game functions
 	advanceTurn,
 	addItem,
-	consumeGlobalItem
+	consumeGlobalItem,
+	regenWorld
 };
 
 // Export the updateWithSave function directly for GameEngine

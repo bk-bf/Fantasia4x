@@ -10,6 +10,14 @@
   let currentTurnValue = 0;
   let currentScreen = 'main';
   let buildingCounts: Record<string, number> = {};
+  let mapSeedInput = String(Date.now() >>> 0);
+
+  function regenMap() {
+    const parsed = parseInt(mapSeedInput, 10);
+    const s = (!isNaN(parsed) && parsed > 0) ? parsed : (Date.now() >>> 0);
+    mapSeedInput = String(s);
+    gameState.regenWorld(s);
+  }
 
   const unsubPaused = gameState.isPaused.subscribe((v) => (isPaused = v));
   const unsubSpeed = gameState.gameSpeed.subscribe((v) => (gameSpeed = v));
@@ -121,6 +129,17 @@
     </nav>
 
     <div class="controls">
+      {#if currentScreen === 'main'}
+        <input
+          class="seed-input"
+          type="text"
+          bind:value={mapSeedInput}
+          placeholder="SEED"
+          title="World seed"
+          maxlength="12"
+        />
+        <button class="ctrl-btn" on:click={regenMap} title="Regenerate map">↺ MAP</button>
+      {/if}
       <button class="ctrl-btn" class:is-paused={isPaused} on:click={gameState.togglePause}>
         {isPaused ? '▶ RESUME' : '⏸ PAUSE'}
       </button>
@@ -306,6 +325,22 @@
   .ctrl-btn.danger:hover {
     background: var(--neg);
     color: #fff;
+  }
+
+  .seed-input {
+    width: 82px;
+    padding: 2px 4px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-family: 'Courier New', monospace;
+    font-size: 9px;
+    text-align: center;
+  }
+  .seed-input:focus {
+    outline: none;
+    border-color: var(--border-hi);
+    color: var(--text);
   }
 
   .speed-wrap {

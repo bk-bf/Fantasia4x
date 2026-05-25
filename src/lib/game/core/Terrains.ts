@@ -7,8 +7,14 @@ export interface BiomeDef {
     densityRange: [number, number];
     walkable: boolean;
     movementCost: number;
+    /** Ground-cover subterrains selected by detail noise threshold. */
     subterrains: string[];
     subterrainThresholds: number[]; // length = subterrains.length - 1
+    /**
+     * Object scatter: subterrain name → probability per tile (0–1).
+     * Evaluated in order; first hit wins. Remaining probability = bare ground.
+     */
+    objects?: Record<string, number>;
 }
 
 export interface SubterrainDef {
@@ -17,7 +23,36 @@ export interface SubterrainDef {
     // RGB 0-1 for WebGL renderer
     fg: [number, number, number];
     bg: [number, number, number];
-    char: string;
+    /** One or more glyph chars. When multiple, pickChar() selects by tile position. */
+    chars: string[];
+}
+
+// ── Char helpers ──────────────────────────────────────────────────────────────
+/** tiles.bmp index → CP437-mapped Unicode char */
+const T = (n: number): string => {
+    if (n >= 32 && n <= 126) return String.fromCharCode(n);
+    if (n === 3) return '\u2665'; // ♥  cave mouth
+    if (n === 209) return '\u2564'; // ╤  trunk cross-section
+    return String.fromCharCode(n);  // best-effort fallback
+};
+/** Range of tiles.bmp indices → array of Unicode chars */
+const TR = (from: number, to: number): string[] =>
+    Array.from({ length: to - from + 1 }, (_, i) => T(from + i));
+/** plants.bmp index → PUA Unicode char (U+E000 + n) */
+const P = (n: number): string => String.fromCodePoint(0xe000 + n);
+/** Range of plants.bmp indices → array of PUA chars */
+const PR = (from: number, to: number): string[] =>
+    Array.from({ length: to - from + 1 }, (_, i) => P(from + i));
+
+/**
+ * Deterministically pick a char from a SubterrainDef's chars array based
+ * on tile position. Returns the same char for the same (x, y) every time.
+ */
+export function pickChar(sub: SubterrainDef, x: number, y: number): string {
+    const { chars } = sub;
+    if (chars.length === 1) return chars[0];
+    const h = ((x * 1619 + y * 31337) >>> 0) % chars.length;
+    return chars[h];
 }
 
 // ── Biomes ────────────────────────────────────────────────────────────────────
@@ -26,37 +61,56 @@ export interface SubterrainDef {
 
 export const BIOMES: Record<string, BiomeDef> = {
     forest: {
-        densityRange: [0.50, 0.60],
+        densityRange: [0.52, 0.70],
         walkable: true,
         movementCost: 1.5,
-        // Ground tiles dominate (60 %+); trees/bushes are rare features (~18 %)
-        subterrains: ['dirt', 'grass', 'deep_grass', 'bush', 'tree', 'tree_stump', 'fallen_logs', 'mushroom_patch'],
-        subterrainThresholds: [-0.3, 0.2, 0.5, 0.72, 0.85, 0.93, 0.97]
+        // Ground cover only — objects are scattered separately
+        subterrains: ['dirt', 'grass', 'deep_grass'],
+        subterrainThresholds: [-0.3, 0.3],
+        objects: {
+            tree:           0.14,
+            bush:           0.08,
+            fallen_logs:    0.020,
+            tree_stump:     0.014,
+            mushroom_patch: 0.010,
+        }
     },
     swamp: {
-        densityRange: [0.20, 0.30],
+        densityRange: [0.18, 0.28],
         walkable: true,
         movementCost: 2.0,
-        subterrains: ['shallow_water', 'mud', 'bog', 'clay', 'moss', 'quicksand', 'dead_trees'],
-        subterrainThresholds: [-0.5, -0.2, 0.2, 0.5, 0.70, 0.88]
+        subterrains: ['shallow_water', 'mud', 'bog', 'clay', 'moss', 'quicksand'],
+        subterrainThresholds: [-0.5, -0.2, 0.2, 0.5, 0.70],
+        objects: {
+            dead_trees: 0.015,
+        }
     },
     plains: {
-        densityRange: [0.30, 0.45],
+        densityRange: [0.28, 0.52],
         walkable: true,
         movementCost: 1.0,
-        // Ground dominates; bush pushed to rare end so ♣ covers < 10 % of plains
-        subterrains: ['dirt', 'grass', 'deep_grass', 'tall_grass', 'scrubland', 'wildflowers', 'savanna', 'bush'],
-        subterrainThresholds: [-0.3, 0.2, 0.5, 0.68, 0.80, 0.90, 0.97]
+        subterrains: ['dirt', 'grass', 'tall_grass', 'savanna'],
+        subterrainThresholds: [-0.15, 0.15, 0.70],
+        objects: {
+            wildflowers: 0.015,
+            scrubland:   0.008,
+            bush:        0.015,
+        }
     },
     mountain: {
-        densityRange: [0.60, 1.00],
+        densityRange: [0.70, 1.00],
         walkable: false,
         movementCost: 3.0,
-        subterrains: ['rocky', 'cave', 'cliff', 'mineral_deposit', 'crystal_formation', 'arcane_glade'],
-        subterrainThresholds: [-0.4, 0.0, 0.4, 0.7, 0.9]
+        // mineral_deposit is noise-based (last threshold slot); crystals + arcane are scattered
+        subterrains: ['rocky', 'cave', 'cliff', 'mineral_deposit'],
+        subterrainThresholds: [-0.3, 0.35, 0.85],
+        objects: {
+            crystal_formation: 0.005,
+            arcane_glade:      0.002,
+        }
     },
     river: {
-        densityRange: [0.00, 0.20],
+        densityRange: [0.00, 0.18],
         walkable: true,
         movementCost: 2.5,
         subterrains: ['shallow_water', 'water', 'rapids', 'riverbank'],
@@ -80,57 +134,54 @@ export const BIOMES: Record<string, BiomeDef> = {
 // fg   = color for dark/opaque pixels in the sprite
 // bg   = cell background (fills the whole tile behind the sprite)
 
-/** Reference a tile from the plants.bmp half of the combined atlas (U+E000 + n). */
-const P = (n: number): string => String.fromCodePoint(0xe000 + n);
-
 // ── Color guide ──────────────────────────────────────────────────────────────
-// Each terrain keeps its natural color; only a subtle warm shift is applied:
-//   greens   → slightly yellow-shifted  (e.g. [0.38, 0.56, 0.16] not [0, 0.56, 0])
-//   blues    → slightly warm            (e.g. [0.14, 0.42, 0.70] not [0, 0, 0.70])
-//   greys    → warm undertone           (e.g. [0.58, 0.52, 0.42] not [0.5, 0.5, 0.5])
-//   bg       → very dark warm brown to match the game theme
-// fg = color for opaque/white sprite pixels; bg = cell background fill.
+// fg = sprite color (opaque pixels of the tile art)
+// bg = cell background fill — set to a VISIBLE warm dark brown on all land tiles,
+//      dark blue for water. This creates a pervasive warm-amber tint analogous to
+//      the blue tint in the DF reference screenshot.
+// All fg hues shifted +0.04 red / -0.05 blue (warm amber bias) while keeping
+// greens green, blues blue, etc.
 
 export const SUBTERRAINS: Record<string, SubterrainDef> = {
     // ── Forest ───────────────────────────────────────────────────────────────
-    dirt:          { walkable: true,  movementCost: 1.2, char: '\u0060',  fg: [0.40, 0.30, 0.14], bg: [0.04, 0.03, 0.01] }, // tiles[96]  5.6%  near-invisible dot
-    grass:         { walkable: true,  movementCost: 1.0, char: ',',       fg: [0.38, 0.56, 0.16], bg: [0.03, 0.05, 0.01] }, // tiles[44] 27.3%  warm yellow-green
-    deep_grass:    { walkable: true,  movementCost: 1.5, char: '.',       fg: [0.28, 0.50, 0.12], bg: [0.02, 0.04, 0.01] }, // tiles[46] 54.6%  medium green
-    bush:          { walkable: true,  movementCost: 1.8, char: P(6),      fg: [0.22, 0.44, 0.10], bg: [0.02, 0.04, 0.01] }, // plants[6] 33.8%  darker green shrub
-    tree:          { walkable: true,  movementCost: 2.0, char: P(5),      fg: [0.48, 0.72, 0.16], bg: [0.02, 0.05, 0.01] }, // plants[5] 46.3%  bright warm-green crown
-    tree_stump:    { walkable: true,  movementCost: 2.0, char: ':',       fg: [0.52, 0.34, 0.14], bg: [0.04, 0.03, 0.01] }, // tiles[58] 25.0%  brown stump stipple
-    fallen_logs:   { walkable: true,  movementCost: 2.2, char: '"',       fg: [0.44, 0.26, 0.10], bg: [0.04, 0.02, 0.01] }, // tiles[34] 25.9%  dark brown bark
-    mushroom_patch:{ walkable: true,  movementCost: 1.6, char: P(11),     fg: [0.82, 0.52, 0.38], bg: [0.05, 0.02, 0.01] }, // plants[11] 32.4% warm coral-cream
+    dirt: { walkable: true, movementCost: 1.2, chars: TR(64, 71), fg: [0.46, 0.30, 0.09], bg: [0.10, 0.07, 0.03] },
+    grass: { walkable: true, movementCost: 1.0, chars: TR(72, 79), fg: [0.52, 0.68, 0.13], bg: [0.08, 0.10, 0.03] },
+    deep_grass: { walkable: true, movementCost: 1.5, chars: PR(83, 84), fg: [0.38, 0.56, 0.09], bg: [0.07, 0.09, 0.03] },
+    bush: { walkable: true, movementCost: 1.8, chars: [P(41)], fg: [0.26, 0.46, 0.05], bg: [0.07, 0.09, 0.03] }, // plants 41    shrub
+    tree: { walkable: true, movementCost: 2.0, chars: PR(0, 71), fg: [0.52, 0.72, 0.11], bg: [0.07, 0.10, 0.03] }, // plants 0-71  72 tree/plant varieties
+    tree_stump: { walkable: true, movementCost: 2.0, chars: [T(209)], fg: [0.56, 0.34, 0.09], bg: [0.10, 0.07, 0.03] }, // tiles 209    ╤ trunk cross-section
+    fallen_logs: { walkable: true, movementCost: 2.2, chars: [T(209)], fg: [0.48, 0.26, 0.05], bg: [0.10, 0.06, 0.03] }, // tiles 209    same sprite, darker colour
+    mushroom_patch: { walkable: true, movementCost: 1.6, chars: [P(120)], fg: [0.86, 0.52, 0.33], bg: [0.10, 0.06, 0.03] }, // plants 120   mushroom (121-123 are empty)
     // ── Swamp ────────────────────────────────────────────────────────────────
-    shallow_water: { walkable: true,  movementCost: 2.5, char: '~',       fg: [0.16, 0.52, 0.46], bg: [0.01, 0.05, 0.05] }, // tiles[126] font ~ — murky teal
-    water:         { walkable: false, movementCost: 0.0, char: '~',       fg: [0.12, 0.36, 0.60], bg: [0.01, 0.03, 0.08] }, // tiles[126] font ~ — deep murky blue
-    mud:           { walkable: true,  movementCost: 3.0, char: ':',       fg: [0.30, 0.22, 0.14], bg: [0.03, 0.02, 0.02] }, // tiles[58]  25.0%  dark mud
-    bog:           { walkable: true,  movementCost: 3.5, char: ',',       fg: [0.26, 0.28, 0.12], bg: [0.02, 0.03, 0.01] }, // tiles[44]  27.3%  dark olive
-    clay:          { walkable: true,  movementCost: 2.8, char: '"',       fg: [0.64, 0.36, 0.18], bg: [0.05, 0.03, 0.01] }, // tiles[34]  25.9%  terracotta
-    moss:          { walkable: true,  movementCost: 1.5, char: "'",       fg: [0.28, 0.46, 0.14], bg: [0.02, 0.04, 0.01] }, // tiles[39]  18.5%  moss green
-    quicksand:     { walkable: true,  movementCost: 25.0,char: '.',       fg: [0.66, 0.52, 0.30], bg: [0.06, 0.05, 0.02] }, // tiles[46]  54.6%  sandy tan (dense)
-    dead_trees:    { walkable: true,  movementCost: 2.5, char: P(94),     fg: [0.40, 0.36, 0.26], bg: [0.03, 0.02, 0.01] }, // plants[94] 17.6%  pale grey-brown silhouette
-    // ── Mountain (no peak — too noisy) ───────────────────────────────────────
-    rocky:         { walkable: true,  movementCost: 2.5, char: '"',       fg: [0.58, 0.52, 0.42], bg: [0.05, 0.04, 0.03] }, // tiles[34]  25.9%  warm grey rock
-    cave:          { walkable: true,  movementCost: 1.0, char: 'o',       fg: [0.22, 0.18, 0.14], bg: [0.02, 0.01, 0.01] }, // tiles[111] near-black opening
-    cliff:         { walkable: false, movementCost: 0.0, char: '\u2588',  fg: [0.46, 0.40, 0.32], bg: [0.05, 0.04, 0.03] }, // tiles[219] solid block = cliff face
-    mineral_deposit:   { walkable: true, movementCost: 2.8, char: '+',   fg: [0.88, 0.76, 0.18], bg: [0.06, 0.05, 0.01] }, // tiles[43]  bright gold ore
-    crystal_formation: { walkable: true, movementCost: 2.0, char: P(94), fg: [0.36, 0.84, 0.84], bg: [0.02, 0.05, 0.06] }, // plants[94] 17.6%  bright cyan crystal
-    arcane_glade:      { walkable: true, movementCost: 1.5, char: P(11), fg: [0.82, 0.50, 0.84], bg: [0.04, 0.02, 0.06] }, // plants[11] 32.4%  bright magenta arcane
+    shallow_water: { walkable: true, movementCost: 2.5, chars: ['~'], fg: [0.20, 0.52, 0.41], bg: [0.04, 0.07, 0.08] },
+    water: { walkable: false, movementCost: 0.0, chars: ['~'], fg: [0.16, 0.36, 0.55], bg: [0.03, 0.04, 0.12] },
+    mud: { walkable: true, movementCost: 3.0, chars: ['.'], fg: [0.34, 0.22, 0.09], bg: [0.10, 0.07, 0.04] },
+    bog: { walkable: true, movementCost: 3.5, chars: [','], fg: [0.30, 0.28, 0.07], bg: [0.08, 0.08, 0.03] },
+    clay: { walkable: true, movementCost: 2.8, chars: ['"'], fg: [0.68, 0.36, 0.13], bg: [0.10, 0.07, 0.03] },
+    moss: { walkable: true, movementCost: 1.5, chars: [P(16)], fg: [0.30, 0.48, 0.09], bg: [0.07, 0.09, 0.03] },
+    quicksand: { walkable: true, movementCost: 25.0, chars: ['.'], fg: [0.70, 0.52, 0.25], bg: [0.10, 0.08, 0.03] },
+    dead_trees: { walkable: true, movementCost: 2.5, chars: PR(164, 166), fg: [0.44, 0.36, 0.21], bg: [0.10, 0.07, 0.03] }, // plants 164-166 bare branches
+    // ── Mountain (no peak) ───────────────────────────────────────────────────
+    rocky: { walkable: true, movementCost: 2.5, chars: ['"'], fg: [0.62, 0.52, 0.37], bg: [0.11, 0.08, 0.04] },
+    cave: { walkable: true, movementCost: 1.0, chars: [T(3)], fg: [0.26, 0.18, 0.09], bg: [0.07, 0.05, 0.03] }, // tiles 3  ♥ cave mouth
+    cliff: { walkable: false, movementCost: 0.0, chars: ['\u2588'], fg: [0.50, 0.42, 0.27], bg: [0.11, 0.08, 0.04] },
+    mineral_deposit: { walkable: true, movementCost: 2.8, chars: TR(43, 47), fg: [0.92, 0.76, 0.13], bg: [0.11, 0.08, 0.03] }, // tiles 43-47 ore veins, bright gold
+    crystal_formation: { walkable: true, movementCost: 2.0, chars: TR(48, 55), fg: [0.40, 0.84, 0.79], bg: [0.06, 0.08, 0.10] }, // tiles 48-55 crystal shards, warm cyan
+    arcane_glade: { walkable: true, movementCost: 1.5, chars: [...TR(40, 42), ...TR(56, 57)], fg: [0.86, 0.50, 0.79], bg: [0.09, 0.05, 0.09] }, // tiles 40-42 + 56-57 arcane symbols
     // ── Plains ───────────────────────────────────────────────────────────────
-    tall_grass:    { walkable: true,  movementCost: 1.3, char: '"',       fg: [0.50, 0.56, 0.18], bg: [0.04, 0.05, 0.01] }, // tiles[34]  25.9%  warm golden-green
-    wildflowers:   { walkable: true,  movementCost: 1.1, char: P(42),    fg: [0.84, 0.42, 0.76], bg: [0.04, 0.02, 0.04] }, // plants[42] 40.3%  bright pink-purple
-    scrubland:     { walkable: true,  movementCost: 1.7, char: ':',       fg: [0.44, 0.32, 0.14], bg: [0.05, 0.03, 0.01] }, // tiles[58]  25.0%  olive-brown
-    savanna:       { walkable: true,  movementCost: 1.2, char: '\u0060',  fg: [0.78, 0.64, 0.20], bg: [0.06, 0.05, 0.01] }, // tiles[96]   5.6%  bright golden dot
+    tall_grass: { walkable: true, movementCost: 1.3, chars: PR(83, 84), fg: [0.24, 0.42, 0.06], bg: [0.05, 0.07, 0.02] },
+    wildflowers: { walkable: true, movementCost: 1.1, chars: PR(89, 111), fg: [0.88, 0.42, 0.71], bg: [0.09, 0.06, 0.06] }, // plants 89-111 flower varieties
+    scrubland: { walkable: true, movementCost: 1.7, chars: [P(21)], fg: [0.48, 0.34, 0.09], bg: [0.10, 0.07, 0.03] },
+    savanna: { walkable: true, movementCost: 1.2, chars: TR(35, 37), fg: [0.82, 0.64, 0.15], bg: [0.10, 0.08, 0.03] }, // tiles 35-37 '#','$','%' sparse = open plain
     // ── River ────────────────────────────────────────────────────────────────
-    rapids:        { walkable: false, movementCost: 0.0, char: '~',       fg: [0.34, 0.80, 0.96], bg: [0.01, 0.05, 0.12] }, // tiles[126] font ~ — bright white-blue
-    riverbank:     { walkable: true,  movementCost: 1.4, char: ',',       fg: [0.54, 0.42, 0.18], bg: [0.05, 0.04, 0.01] }  // tiles[44]  27.3%  sandy tan
+    rapids: { walkable: false, movementCost: 0.0, chars: ['~'], fg: [0.38, 0.80, 0.91], bg: [0.03, 0.06, 0.16] },
+    riverbank: { walkable: true, movementCost: 1.4, chars: ['#'], fg: [0.58, 0.44, 0.13], bg: [0.10, 0.07, 0.03] }, // tiles 35 '#' = sandy bank
 };
 
 // Fallback for any subterrain not in the table
 export const SUBTERRAIN_FALLBACK: SubterrainDef = {
     walkable: true, movementCost: 1.0,
-    char: '?', fg: [0.5, 0.5, 0.5], bg: [0.03, 0.03, 0.03]
+    chars: ['?'], fg: [0.5, 0.5, 0.5], bg: [0.03, 0.03, 0.03]
 };
 
 /**

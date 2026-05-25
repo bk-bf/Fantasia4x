@@ -377,6 +377,11 @@ export class GameEngineImpl implements GameEngine {
 		gameState.updateWithSave(() => this.gameState!);
 	}
 
+	/** Patch just the worldMap in the engine's internal state (used by regenWorld). */
+	patchWorldMap(worldMap: import('../core/types').WorldTile[][]): void {
+		if (this.gameState) this.gameState = { ...this.gameState, worldMap };
+	}
+
 	// ===== BASIC CALCULATIONS =====
 
 	calculatePawnEfficiency(pawnId: string, workType: string): number {

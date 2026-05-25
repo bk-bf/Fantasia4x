@@ -5,7 +5,7 @@
 
 import { GameGrid } from './game-grid.js';
 import type { WorldTile } from '$lib/game/core/types.js';
-import { SUBTERRAINS, SUBTERRAIN_FALLBACK } from '$lib/game/core/Terrains.js';
+import { SUBTERRAINS, SUBTERRAIN_FALLBACK, pickChar } from '$lib/game/core/Terrains.js';
 import type { RGB } from './tile-types.js';
 
 /**
@@ -22,7 +22,7 @@ export function buildGameGrid(worldMap: WorldTile[][]): GameGrid {
             const bg = sub.bg as [number, number, number];
 
             grid.setTile(tile.x, tile.y, {
-                char: tile.ascii || sub.char,
+                char: pickChar(sub, tile.x, tile.y),
                 foreground: { r: fg[0], g: fg[1], b: fg[2] },
                 background: { r: bg[0], g: bg[1], b: bg[2] },
                 position: { x: tile.x, y: tile.y }
