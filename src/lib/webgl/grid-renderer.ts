@@ -179,14 +179,14 @@ export class GridRenderer {
 			const tileH = options.tileHeight;
 			const x1 = screenX + (charInfo?.xOffset ?? 0) + offsetX;
 			const y1 = screenY + (charInfo?.yOffset ?? 0) + offsetY;
-			const x2 = screenX + (charInfo ? charInfo.xOffset + charInfo.width  : tileW) + offsetX;
+			const x2 = screenX + (charInfo ? charInfo.xOffset + charInfo.width : tileW) + offsetX;
 			const y2 = screenY + (charInfo ? charInfo.yOffset + charInfo.height : tileH) + offsetY;
 
 			// Calculate texture coordinates.
 			// Use a UV of (0,0)→(0,0) for missing chars so sprite.a ≈ 0 → bg fills tile.
-			const u1 = charInfo ? charInfo.x / this.fontAtlas.atlasWidth  : 0;
+			const u1 = charInfo ? charInfo.x / this.fontAtlas.atlasWidth : 0;
 			const v1 = charInfo ? charInfo.y / this.fontAtlas.atlasHeight : 0;
-			const u2 = charInfo ? (charInfo.x + charInfo.width)  / this.fontAtlas.atlasWidth  : 0;
+			const u2 = charInfo ? (charInfo.x + charInfo.width) / this.fontAtlas.atlasWidth : 0;
 			const v2 = charInfo ? (charInfo.y + charInfo.height) / this.fontAtlas.atlasHeight : 0;
 
 			// Get colors — detail defaults to foreground when not set

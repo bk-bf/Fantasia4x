@@ -289,12 +289,12 @@ export async function createSquareCellAtlas(cellSize = 16, debug = false): Promi
 
 	// Atlas dimensions — power-of-2 for GPU efficiency
 	const nextPow2 = (n: number) => Math.pow(2, Math.ceil(Math.log2(Math.max(n, 1))));
-	const atlasWidth  = nextPow2(COLS * cellSize);
+	const atlasWidth = nextPow2(COLS * cellSize);
 	const atlasHeight = nextPow2(rows * cellSize);
 
 	// Offscreen canvas — willReadFrequently for getImageData
 	const canvas = document.createElement('canvas');
-	canvas.width  = atlasWidth;
+	canvas.width = atlasWidth;
 	canvas.height = atlasHeight;
 	const ctx = canvas.getContext('2d', { willReadFrequently: true });
 	if (!ctx) throw new Error('Could not create 2D context for square-cell atlas');
@@ -314,18 +314,18 @@ export async function createSquareCellAtlas(cellSize = 16, debug = false): Promi
 		'monospace'
 	].join(', ');
 
-	ctx.font           = `${fontSize}px ${fontStack}`;
-	ctx.fillStyle      = 'white';
-	ctx.textAlign      = 'center';  // horizontal centre
-	ctx.textBaseline   = 'middle';  // vertical centre
+	ctx.font = `${fontSize}px ${fontStack}`;
+	ctx.fillStyle = 'white';
+	ctx.textAlign = 'center';  // horizontal centre
+	ctx.textBaseline = 'middle';  // vertical centre
 	ctx.imageSmoothingEnabled = false;
 
 	const characters = new Map<string, import('./types.js').CharacterInfo>();
 
 	for (let i = 0; i < chars.length; i++) {
 		const char = chars[i];
-		const col  = i % COLS;
-		const row  = Math.floor(i / COLS);
+		const col = i % COLS;
+		const row = Math.floor(i / COLS);
 		const cellX = col * cellSize;
 		const cellY = row * cellSize;
 
@@ -334,13 +334,13 @@ export async function createSquareCellAtlas(cellSize = 16, debug = false): Promi
 
 		characters.set(char, {
 			char,
-			x:        cellX,
-			y:        cellY,
-			width:    cellSize,
-			height:   cellSize,
+			x: cellX,
+			y: cellY,
+			width: cellSize,
+			height: cellSize,
 			xAdvance: cellSize,
-			xOffset:  0,
-			yOffset:  0
+			xOffset: 0,
+			yOffset: 0
 		});
 	}
 
@@ -351,13 +351,13 @@ export async function createSquareCellAtlas(cellSize = 16, debug = false): Promi
 	}
 
 	return {
-		texture:    imageData,
+		texture: imageData,
 		characters,
 		fontFamily: fontStack,
 		fontSize,
 		atlasWidth,
 		atlasHeight,
 		lineHeight: cellSize,
-		baseline:   Math.floor(cellSize / 2)
+		baseline: Math.floor(cellSize / 2)
 	};
 }
