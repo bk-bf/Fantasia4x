@@ -14,6 +14,8 @@ import { syncPawnInventoryWithGlobal, syncAllPawnInventories } from '$lib/game/c
 import { calculatePawnAbilities } from '$lib/game/entities/Pawns';
 import { eventSystem } from '$lib/game/core/Events';
 import { triggerEvent } from '$lib/stores/eventStore';
+import { generateWorld } from '$lib/game/world/WorldGenerator';
+import { resourceGeneratorService } from '$lib/game/services/ResourceGeneratorService';
 
 
 // ===== CONFIGURATION =====
@@ -25,6 +27,11 @@ let autoTurnInterval: number | null = null;
 let isPausedValue = false;
 let gameSpeedValue = 1;
 
+// ===== WORLD GENERATION =====
+const WORLD_SEED = Date.now();
+const _generatedWorld = generateWorld(120, 80, WORLD_SEED);
+resourceGeneratorService.generateResources(_generatedWorld, WORLD_SEED);
+
 // ===== INITIAL STATE =====
 export const initialGameState: GameState = {
 	turn: 0,
@@ -34,7 +41,7 @@ export const initialGameState: GameState = {
 	item: [
 		...itemService.getItemsByCategory('basic').map((item) => ({ ...item, amount: 0 }))
 	].filter(item => item !== undefined),
-	worldMap: [],
+	worldMap: _generatedWorld,
 	discoveredLocations: [],
 	buildingCounts: {},
 	buildingQueue: [],
@@ -197,6 +204,20 @@ locationService.initializeAllLocations();
 
 const savedState = loadFromLocalStorage();
 let baseState = savedState || initialGameState;
+
+// Migrate old saves that have no world map or are missing terrain data
+if (!baseState.worldMap || baseState.worldMap.length === 0 || !baseState.worldMap[0]?.[0]?.terrainType) {
+	const migrateSeed = Date.now();
+	const migratedWorld = generateWorld(120, 80, migrateSeed);
+	resourceGeneratorService.generateResources(migratedWorld, migrateSeed);
+	baseState = { ...baseState, worldMap: migratedWorld };
+} else if (!baseState.worldMap[0]?.[1]?.discovered) {
+	// Patch saves where only tile (0,0) was discovered — set all tiles visible (DF-style)
+	baseState = {
+		...baseState,
+		worldMap: baseState.worldMap.map(row => row.map(tile => tile.discovered ? tile : { ...tile, discovered: true }))
+	};
+}
 
 // If no pawns, generate them from the race
 if (!baseState.pawns || baseState.pawns.length === 0) {

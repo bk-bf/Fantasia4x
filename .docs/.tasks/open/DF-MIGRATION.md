@@ -249,7 +249,7 @@ Trend: drifts toward neutral (50) at 0.1/s when no active modifiers
 
 ### Phase 1 — Wire the Renderer
 
-**Status:** `❌ not started`
+**Status:** `✅ complete`
 
 **Scope:** Visual only. Zero game model changes. The existing `worldMap` drives the WebGL tile display.
 
@@ -257,10 +257,10 @@ Trend: drifts toward neutral (50) at 0.1/s when no active modifiers
 
 **Work items:**
 
-- [ ] Create `MapCanvas.svelte` — a `<canvas>` element that instantiates `WebGLRenderer` from Exiled on mount, subscribes to `$gameState.worldMap`, converts `WorldTile` → `TileData` (char + color), calls `renderer.beginFrame()` / `endFrame()` each animation frame.
-- [ ] Add keyboard/mouse scroll: arrow keys and click-drag pan the viewport; scroll-wheel zooms tile size between 8px and 24px.
-- [ ] Map existing tile types to CP437 glyphs and colors (forest = `♦` green, mountain = `▲` grey, water = `~` blue, land = `.` dim).
-- [ ] Swap `ASCIIMap.svelte` reference in `MainScreen.svelte` to `MapCanvas.svelte`.
+- [x] Create `MapCanvas.svelte` — a `<canvas>` element that instantiates `WebGLRenderer` from Exiled on mount, subscribes to `$gameState.worldMap`, converts `WorldTile` → `TileData` (char + color), calls `renderer.beginFrame()` / `endFrame()` each animation frame.
+- [x] Add keyboard/mouse scroll: arrow keys and click-drag pan the viewport; scroll-wheel zooms tile size between 8px and 24px.
+- [x] Map existing tile types to CP437 glyphs and colors (forest = `♦` green, mountain = `▲` grey, water = `~` blue, land = `.` dim).
+- [x] Swap `ASCIIMap.svelte` reference in `MainScreen.svelte` to `MapCanvas.svelte`.
 
 **Sources from Exiled used:** `WebGLRenderer`, `GameGrid`, `TileData`, `FontAtlasGenerator` — all already in `src/lib/webgl/`.
 
@@ -272,7 +272,7 @@ Trend: drifts toward neutral (50) at 0.1/s when no active modifiers
 
 ### Phase 2 — Rich World Generation
 
-**Status:** `❌ not started`
+**Status:** `✅ complete`
 
 **Scope:** Replace the random tile generator with noise-based terrain. No pawn changes.
 
@@ -280,16 +280,16 @@ Trend: drifts toward neutral (50) at 0.1/s when no active modifiers
 
 **Work items:**
 
-- [ ] Install `simplex-noise` npm package (`createNoise2D` — equivalent of Godot's `FastNoiseLite`).
-- [ ] Create `src/lib/game/core/Terrains.ts` — port `terrain_database.gd`: export `BIOMES` and `SUBTERRAINS` lookup objects with the exact density ranges, movement costs, walkability, and subterrain threshold arrays from the Asset Inventory table above.
-- [ ] Create `src/lib/game/core/Resources.ts` — port `resource_database.gd`: export `RESOURCES` object with `wood`, `stone`, `herbs` entries including `terrainSubtype[]`, `resourceAmount: [min,max]`, `harvestTime`.
-- [ ] Rewrite `WorldGenerator.ts`:
-  - [ ] Primary noise instance: frequency `0.005`, octaves `5`, lacunarity `2.0`, gain `0.6`. Detail noise instance: frequency `0.05`. Derive `detailSeed = baseSeed * 6971`.
-  - [ ] Per tile: sample primary noise → clamp to [0,1] as `density`; look up biome by density range; sample detail noise → select subType by `subterrain_thresholds` array.
-  - [ ] Set `movementCost` and `walkable` from subterrain definition (subterrain overrides biome defaults for `water`/`peak`).
-- [ ] Extend `WorldTile` in `types.ts`: add `terrainType`, `subType`, `density`, `moisture`, `movementCost`, `walkable`, `resources: Record<string, number>`, `territoryOwner`, plus A* scratch fields `gCost`, `hCost`, `fCost`, `parent: {x,y} | null`.
-- [ ] Create `ResourceGeneratorService.ts` — port `resource_gen.gd`: for each resource in `RESOURCES`, iterate every tile; if `tile.subType` is in `resource.terrainSubtype` and tile has no resource yet, assign random amount in `[min,max]` using per-resource seed `baseSeed * 7919 + hashCode(resourceId)`.
-- [ ] Update `MapCanvas.svelte` to render subterrain glyphs and biome colors from `TERRAINS` / `SUBTERRAINS`.
+- [x] Install `simplex-noise` npm package (`createNoise2D` — equivalent of Godot's `FastNoiseLite`).
+- [x] Create `src/lib/game/core/Terrains.ts` — port `terrain_database.gd`: export `BIOMES` and `SUBTERRAINS` lookup objects with the exact density ranges, movement costs, walkability, and subterrain threshold arrays from the Asset Inventory table above.
+- [x] Create `src/lib/game/core/Resources.ts` — port `resource_database.gd`: export `RESOURCES` object with `wood`, `stone`, `herbs` entries including `terrainSubtype[]`, `resourceAmount: [min,max]`, `harvestTime`.
+- [x] Rewrite `WorldGenerator.ts`:
+  - [x] Primary noise instance: frequency `0.005`, octaves `5`, lacunarity `2.0`, gain `0.6`. Detail noise instance: frequency `0.05`. Derive `detailSeed = baseSeed * 6971`.
+  - [x] Per tile: sample primary noise → clamp to [0,1] as `density`; look up biome by density range; sample detail noise → select subType by `subterrain_thresholds` array.
+  - [x] Set `movementCost` and `walkable` from subterrain definition (subterrain overrides biome defaults for `water`/`peak`).
+- [x] Extend `WorldTile` in `types.ts`: add `terrainType`, `subType`, `density`, `moisture`, `movementCost`, `walkable`, `resources: Record<string, number>`, `territoryOwner`, plus A* scratch fields `gCost`, `hCost`, `fCost`, `parent: {x,y} | null`.
+- [x] Create `ResourceGeneratorService.ts` — port `resource_gen.gd`: for each resource in `RESOURCES`, iterate every tile; if `tile.subType` is in `resource.terrainSubtype` and tile has no resource yet, assign random amount in `[min,max]` using per-resource seed `baseSeed * 7919 + hashCode(resourceId)`.
+- [x] Update `MapCanvas.svelte` to render subterrain glyphs and biome colors from `TERRAINS` / `SUBTERRAINS`.
 
 **Sources from Celestia used:** `noise_generator.gd` (constants), `terrain_database.gd` (full port to TS), `resource_gen.gd` (algorithm port), `tile.gd` (data model).
 
@@ -299,7 +299,7 @@ Trend: drifts toward neutral (50) at 0.1/s when no active modifiers
 
 ### Phase 3 — Pawns on the Map
 
-**Status:** `❌ not started`
+**Status:** `🚧 next`
 
 **Scope:** Pawns get physical positions and render on the tile grid. A* pathfinding added.
 

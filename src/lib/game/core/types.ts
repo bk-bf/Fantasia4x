@@ -614,4 +614,19 @@ export interface WorldTile {
 	type: 'land' | 'water' | 'mountain' | 'forest';
 	discovered: boolean;
 	ascii: string;
+	// Phase 2 — rich terrain
+	terrainType: string;
+	subType: string;
+	density: number;
+	moisture: number;
+	temperature: number;
+	movementCost: number;
+	walkable: boolean;
+	resources: Record<string, number>;
+	territoryOwner: string;
+	// A* scratch fields (reset before each pathfind, not persisted)
+	gCost: number;
+	hCost: number;
+	fCost: number;
+	parent: { x: number; y: number } | null;
 }
