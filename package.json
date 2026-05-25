@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.0.1",
   "type": "module",
+  "packageManager": "pnpm@11.3.0",
   "scripts": {
     "dev": "vite dev --host",
     "build": "vite build",
@@ -35,6 +36,7 @@
     "@google/generative-ai": "^0.24.1",
     "blessed-contrib": "^4.11.0",
     "figlet": "^1.8.1",
+    "simplex-noise": "^4.0.3",
     "uuid": "^11.1.0"
   }
 }

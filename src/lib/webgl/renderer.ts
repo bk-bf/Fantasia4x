@@ -45,6 +45,13 @@ export class WebGLRenderer {
 	}
 
 	/**
+	 * Set tile pixel dimensions (used for zoom). Width:Height ratio should stay ~1:1.57.
+	 */
+	setTileSize(w: number, h: number): void {
+		this.core.setTileSize(w, h);
+	}
+
+	/**
 	 * Resize the renderer and update projection matrix
 	 */
 	resize(width: number, height: number): void {

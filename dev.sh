@@ -10,4 +10,5 @@ if lsof -ti tcp:$PORT >/dev/null 2>&1; then
   exit 0
 fi
 
-exec npm run dev -- --port $PORT
+export PATH="$HOME/.npm-global/bin:$PATH"
+exec pnpm exec vite dev --host --port $PORT

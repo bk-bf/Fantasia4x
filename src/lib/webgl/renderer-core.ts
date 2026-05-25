@@ -109,6 +109,12 @@ export class WebGLRendererCore {
 		this.viewTileY = y;
 	}
 
+	/** Change tile pixel dimensions (used for zoom). */
+	setTileSize(w: number, h: number): void {
+		this.tileWidth = w;
+		this.tileHeight = h;
+	}
+
 	private async initialize(): Promise<boolean> {
 		try {
 			if (this.debug) console.log('🔄 Initializing WebGL2 renderer...');

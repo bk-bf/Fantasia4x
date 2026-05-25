@@ -266,7 +266,7 @@ Trend: drifts toward neutral (50) at 0.1/s when no active modifiers
 
 **Nothing from Celestia needed here.**
 
-**Complexity:** Low. ~3–4 days. No architecture risk.
+**Complexity:** Low. No architecture risk.
 
 ---
 
@@ -293,7 +293,7 @@ Trend: drifts toward neutral (50) at 0.1/s when no active modifiers
 
 **Sources from Celestia used:** `noise_generator.gd` (constants), `terrain_database.gd` (full port to TS), `resource_gen.gd` (algorithm port), `tile.gd` (data model).
 
-**Complexity:** Low-medium. ~1 week. The algorithm is well-defined; the main work is the terrain database transcription.
+**Complexity:** Low-medium. The algorithm is well-defined; main work is the terrain database transcription.
 
 ---
 
@@ -323,7 +323,7 @@ Trend: drifts toward neutral (50) at 0.1/s when no active modifiers
 
 **Sources from Celestia used:** `pathfinder.gd` (full A* algorithm port), `grid.gd` (`get_neighbors()`, bounds checking), `pawn.gd` (`movement_path`, `current_path_index`, `is_moving` fields).
 
-**Complexity:** Medium. ~1.5 weeks. Pathfinding is well-understood but the integration with the turn system and `GameStateManager` needs care.
+**Complexity:** Medium. Pathfinding is well-understood; main risk is integration with the turn system and `GameStateManager`.
 
 ---
 
@@ -352,19 +352,19 @@ Trend: drifts toward neutral (50) at 0.1/s when no active modifiers
   - **Sleeping** — `sleepingDuration = 5.0` (minimum); `restPerSecond = 8.0`; wakes at `rest >= 95`; resumes rest decay on exit.
 - [ ] Add `currentState: string` to `Pawn`. Remove the separate `isWorking`, `isSleeping`, `isEating` boolean flags from `PawnState` — the state machine replaces them.
 
-**4b. Designations**
+**4b. Designations** *(no Celestia equivalent — original system)*
 
 - [ ] Add `designations: Record<string, DesignationType>` to `GameState` — maps `"x,y"` keys to `"chop" | "mine" | "haul" | "build"`.
 - [ ] Create `DesignationService.ts`: `designate(x, y, type)`, `clearDesignation(x, y)`, `getOpenDesignations(type?)`.
 - [ ] Map clicks in `MapCanvas.svelte` can enter a designation mode; right-click clears.
 
-**4c. Tile-local harvesting**
+**4c. Tile-local harvesting** *(sources: `tile.gd`, `resource_database.gd`, `harvesting_state.gd`)*
 
-- [ ] `WorkService.processWork()` changes: instead of adding to global resource totals, calls `worldMap[y][x].harvestResource(id, amount)` and adds to `GameState.stockpile`. `stockpile: Record<string, number>` is a new field on `GameState`.
-- [ ] A pawn in `MovingToResource` state pathfinds to the nearest designated tile matching its job's resource type. `harvestTime` comes from `RESOURCES[id].harvestTime` (wood=5.0, stone=8.0, herbs=3.0 turns).
+- [ ] `WorkService.processWork()` changes: instead of adding to global resource totals, calls `worldMap[y][x].harvestResource(id, amount)` (→ `tile.gd::harvestResource()`) and adds to `GameState.stockpile`. `stockpile: Record<string, number>` is a new field on `GameState`.
+- [ ] A pawn in `MovingToResource` state pathfinds to the nearest designated tile matching its job's resource type. `harvestTime` comes from `RESOURCES[id].harvestTime` (→ `resource_database.gd`: wood=5.0, stone=8.0, herbs=3.0 turns).
 - [ ] `GameStateManager` gets `addToStockpile(id, amount)` and `depleteWorldResource(x, y, id, amount)` methods.
 
-**4d. Placed buildings**
+**4d. Placed buildings** *(no Celestia equivalent — original design; construction progress formula mirrors `harvesting_state.gd`)*
 
 - [ ] Replace `buildingCounts: Record<string, number>` in `GameState` with `buildings: PlacedBuilding[]`.
   ```typescript
@@ -383,7 +383,7 @@ Trend: drifts toward neutral (50) at 0.1/s when no active modifiers
 
 **Sources from Celestia used:** `pawn_state_machine.gd` + all `states/*.gd` (logic port), `workpriority_manager.gd` (priority constants + `_adjust_priorities_based_on_traits()`), `resource_gen.gd` harvest math.
 
-**Complexity:** High. ~3–4 weeks. This is the most invasive phase — it touches `GameState`, `GameStateManager`, `WorkService`, `BuildingService`, `PawnService`, and `GameEngineImpl`.
+**Complexity:** High. Most invasive phase — touches `GameState`, `GameStateManager`, `WorkService`, `BuildingService`, `PawnService`, and `GameEngineImpl`.
 
 ---
 
