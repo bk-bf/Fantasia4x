@@ -4,7 +4,8 @@
  * Efficiently renders tile grids using viewport culling and batch operations
  */
 
-import type { GameGrid, TileData, Viewport } from './game-grid.js';
+import type { GameGrid } from './game-grid.js';
+import type { TileData, Viewport } from './tile-types.js';
 import type { CharacterRenderer } from './character-renderer.js';
 import type { ShaderManager } from './shaders.js';
 import type { FontAtlas } from './types.js';
@@ -173,14 +174,14 @@ export class GridRenderer {
 			const offsetX = tile.animationOffset?.x || 0;
 			const offsetY = tile.animationOffset?.y || 0;
 
-			// Calculate character bounds with offset.
-			// When no charInfo, fill the full tile cell with background color.
+			// Vertex quad always fills the full screen tile regardless of atlas tile size.
+			// UV coords reference the atlas tile via charInfo.{x,y,width,height}.
 			const tileW = options.tileWidth;
 			const tileH = options.tileHeight;
-			const x1 = screenX + (charInfo?.xOffset ?? 0) + offsetX;
-			const y1 = screenY + (charInfo?.yOffset ?? 0) + offsetY;
-			const x2 = screenX + (charInfo ? charInfo.xOffset + charInfo.width : tileW) + offsetX;
-			const y2 = screenY + (charInfo ? charInfo.yOffset + charInfo.height : tileH) + offsetY;
+			const x1 = screenX + offsetX;
+			const y1 = screenY + offsetY;
+			const x2 = screenX + tileW + offsetX;
+			const y2 = screenY + tileH + offsetY;
 
 			// Calculate texture coordinates.
 			// Use a UV of (0,0)→(0,0) for missing chars so sprite.a ≈ 0 → bg fills tile.

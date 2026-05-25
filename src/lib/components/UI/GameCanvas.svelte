@@ -46,6 +46,17 @@
   let dragViewX = 0;
   let dragViewY = 0;
 
+  // Hover tile inspector
+  let hoverTileX = -1;
+  let hoverTileY = -1;
+  $: hoverTile =
+    hoverTileX >= 0 && hoverTileY >= 0 && worldMap.length > 0
+      ? (worldMap[hoverTileY]?.[hoverTileX] ?? null)
+      : null;
+  $: hoverResources = hoverTile
+    ? Object.entries(hoverTile.resources ?? {}).filter(([, v]) => v > 0)
+    : [];
+
   const unsubState = gameState.subscribe((s) => {
     worldMap = s.worldMap ?? [];
     if (renderer?.isReady()) {
@@ -215,6 +226,14 @@
   }
 
   function handleMouseMove(e: MouseEvent) {
+    // Always track hover tile
+    if (canvas) {
+      const rect = canvas.getBoundingClientRect();
+      const cx = e.clientX - rect.left;
+      const cy = e.clientY - rect.top;
+      hoverTileX = Math.floor(cx / tileWidth) + viewX;
+      hoverTileY = Math.floor(cy / tileHeight) + viewY;
+    }
     if (!dragging) return;
     const dx = Math.round((dragStartX - e.clientX) / tileWidth);
     const dy = Math.round((dragStartY - e.clientY) / tileHeight);
@@ -223,6 +242,12 @@
 
   function handleMouseUp() {
     dragging = false;
+  }
+
+  function handleMouseLeave() {
+    dragging = false;
+    hoverTileX = -1;
+    hoverTileY = -1;
   }
 </script>
 
@@ -237,7 +262,7 @@
   on:mousedown={handleMouseDown}
   on:mousemove={handleMouseMove}
   on:mouseup={handleMouseUp}
-  on:mouseleave={handleMouseUp}
+  on:mouseleave={handleMouseLeave}
   on:wheel={handleWheel}
 >
   <canvas bind:this={canvas}></canvas>
@@ -245,6 +270,16 @@
     <div class="error">WebGL unavailable: {errorMsg}</div>
   {:else if !ready}
     <div class="loading">Initializing renderer…</div>
+  {/if}
+  {#if hoverTile}
+    <div class="tile-hud">
+      <span class="tile-coord">({hoverTile.x},{hoverTile.y})</span><span class="tile-layers"
+        >{hoverTile.type},{hoverTile.terrainType},{hoverTile.subType}</span
+      >
+      {#if hoverResources.length > 0}
+        <div class="tile-res">{hoverResources.map(([k, v]) => `${k}:${v}`).join(' ')}</div>
+      {/if}
+    </div>
   {/if}
 </div>
 
@@ -256,11 +291,11 @@
     background: #050706;
     overflow: hidden;
     outline: none;
-    cursor: grab;
+    cursor: crosshair;
     user-select: none;
   }
   .canvas-wrap.dragging {
-    cursor: grabbing;
+    cursor: crosshair;
   }
   canvas {
     display: block;
@@ -277,6 +312,33 @@
     justify-content: center;
     font-family: 'Courier New', monospace;
     font-size: 12px;
+  }
+  .tile-hud {
+    position: absolute;
+    bottom: 6px;
+    left: 6px;
+    background: rgba(28, 16, 6, 0.92);
+    border: 1px solid #6b4a2a;
+    color: #a07840;
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
+    line-height: 1.5;
+    padding: 2px 7px;
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 10;
+  }
+  .tile-coord {
+    color: #e8b86a;
+    font-weight: bold;
+    margin-right: 5px;
+  }
+  .tile-layers {
+    color: #b08848;
+  }
+  .tile-res {
+    color: #7a9a50;
+    font-size: 9px;
   }
   .error {
     color: #c04040;

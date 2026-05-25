@@ -7,7 +7,7 @@
 
 import { createOrthographicMatrix, PerformanceTimer } from './utils.js';
 import { ShaderManager, createTileRendererShaders } from './shaders.js';
-import { createSquareCellAtlas } from './font-atlas.js';
+import { createSquareCellAtlas, loadCombinedTerrainAtlas } from './font-atlas.js';
 import { TextureManager } from './texture-manager.js';
 import { CharacterRenderer } from './character-renderer.js';
 import { GridRenderer } from './grid-renderer.js';
@@ -64,6 +64,9 @@ export class WebGLRendererCore {
 	private fontAtlas: FontAtlas | null = null;
 	private fontTexture: WebGLTexture | null = null;
 
+	// Whether a pre-baked PNG tileset is active (skip atlas regeneration on zoom)
+	private tilesetLoaded = false;
+
 	// External grid data
 	private gameGrid: GameGrid | null = null;
 
@@ -109,12 +112,12 @@ export class WebGLRendererCore {
 		this.viewTileY = y;
 	}
 
-	/** Change tile pixel dimensions (used for zoom). Regenerates atlas only when the integer cell size changes. */
+	/** Change tile pixel dimensions (used for zoom). Regenerates atlas only when the integer cell size changes (skipped for bitmap tilesets). */
 	setTileSize(w: number, h: number): void {
 		const prevCellSize = Math.round(this.tileWidth);
 		this.tileWidth = w;
 		this.tileHeight = h;
-		if (Math.round(w) !== prevCellSize) {
+		if (!this.tilesetLoaded && Math.round(w) !== prevCellSize) {
 			this.reloadAtlasForCellSize(Math.round(w));
 		}
 	}
@@ -178,7 +181,14 @@ export class WebGLRendererCore {
 			this.shaderManager = await createTileRendererShaders(gl, this.debug);
 			if (!this.shaderManager) throw new Error('Shader init failed');
 
-			this.fontAtlas = await createSquareCellAtlas(this.tileWidth, this.debug);
+			// Try loading the combined Bitlands terrain atlas (tiles + plants sheets)
+			try {
+				this.fontAtlas = await loadCombinedTerrainAtlas('/tilesets/bitlands_combined.png', 12, 18, this.debug);
+				this.tilesetLoaded = true;
+			} catch {
+				if (this.debug) console.warn('Bitlands combined atlas unavailable, using canvas atlas');
+				this.fontAtlas = await createSquareCellAtlas(this.tileWidth, this.debug);
+			}
 
 			this.textureManager = new TextureManager(gl, this.debug);
 			this.fontTexture = this.textureManager.createFontAtlasTexture(this.fontAtlas, {

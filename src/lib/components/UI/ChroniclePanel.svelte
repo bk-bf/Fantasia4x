@@ -58,7 +58,7 @@
   }
 
   .section-hdr {
-    padding: 4px 8px 3px;
+    padding: 4px 8px 3px 0;
     color: var(--accent-hi);
     font-size: 10px;
     letter-spacing: 0.06em;
