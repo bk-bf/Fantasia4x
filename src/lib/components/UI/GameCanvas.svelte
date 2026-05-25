@@ -24,7 +24,7 @@
   function computeFitTileSize(canvasW: number, canvasH: number): number {
     const mapW = worldMap.length > 0 ? worldMap[0].length : MAP_W;
     const mapH = worldMap.length > 0 ? worldMap.length : MAP_H;
-    return Math.min(canvasW / mapW, canvasH / mapH);
+    return Math.max(canvasW / mapW, canvasH / mapH);
   }
 
   let canvas: HTMLCanvasElement;
