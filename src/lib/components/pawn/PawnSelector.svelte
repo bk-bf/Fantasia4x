@@ -21,31 +21,35 @@
 <style>
   .pawn-selector {
     display: flex;
-    gap: 10px;
-    justify-content: center;
-    margin-bottom: 20px;
+    gap: 0;
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--border);
     flex-wrap: wrap;
   }
 
   .pawn-selector-btn {
-    padding: 8px 16px;
-    background: #000000;
-    border: 1px solid #4caf50;
-    color: #4caf50;
-    border-radius: 4px;
+    padding: 4px 12px;
+    background: transparent;
+    border: none;
+    border-right: 1px solid var(--border);
+    color: var(--text-dim);
     cursor: pointer;
-    font-size: 1em;
-    transition: all 0.2s ease;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    transition:
+      background 0.1s,
+      color 0.1s;
   }
 
   .pawn-selector-btn:hover {
-    background: #4caf50;
-    color: #000;
+    background: var(--bg-hover);
+    color: var(--accent-hi);
   }
 
   .pawn-selector-btn.selected {
-    background: #4caf50;
-    color: #000;
-    font-weight: bold;
+    background: var(--tab-active);
+    color: #fff;
   }
 </style>

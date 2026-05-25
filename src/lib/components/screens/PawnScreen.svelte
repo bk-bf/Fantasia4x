@@ -78,141 +78,53 @@
 </script>
 
 <div class="pawn-screen" bind:this={pawnScreenElement}>
-  <!-- Header: Navigation and Pawn Selection -->
-  <div class="pawn-header">
-    <button class="back-btn" on:click={() => uiState.setScreen('main')}>← Back to Map</button>
-    <h2>👥 Your People</h2>
-    <p class="pawn-subtitle">Individual colonists and their traits</p>
+  <div class="screen-hdr">| PAWNS</div>
+  <PawnSelector {pawns} {selectedPawn} onSelect={selectPawn} />
 
-    <!-- Pawn Selection Component -->
-    <PawnSelector {pawns} {selectedPawn} onSelect={selectPawn} />
-  </div>
-
-  <!-- Main Content: All Pawn Details -->
   {#if selectedPawn}
     <div class="pawn-content">
-      <!-- Basic Information -->
       <PawnOverview pawn={selectedPawn} />
-
-      <!-- Core Statistics -->
       <PawnStats pawn={selectedPawn} />
-
-      <!-- Current Needs and Activities -->
       <PawnNeeds pawn={selectedPawn} />
-
-      <!-- Racial Heritage -->
       <PawnTraits pawn={selectedPawn} />
-
-      <!-- Skills and Abilities -->
       <PawnAbilities pawn={selectedPawn} gameState={$gameState} />
-
-      <!-- Equipment and Inventory -->
       <PawnEquipment pawn={selectedPawn} />
     </div>
   {:else}
-    <!-- Empty State -->
-    <div class="no-pawn-selected">
-      <p>Select a pawn to view their details.</p>
-    </div>
+    <div class="empty">select a pawn to view details</div>
   {/if}
 </div>
 
 <style>
-  /* Main Layout - Keep Only Core Styles */
   .pawn-screen {
-    padding: 20px;
-    background: #000000;
-    color: #e0e0e0;
-    font-family: 'Courier New', monospace;
-    flex: 1;
+    height: 100%;
     overflow-y: auto;
-    box-sizing: border-box;
-    padding-bottom: 40px;
-  }
-
-  /* Header Section */
-  .pawn-header {
-    text-align: center;
-    margin-bottom: 30px;
-    padding-bottom: 20px;
-    border-bottom: 2px solid #4caf50;
-    position: relative;
-  }
-
-  .pawn-header h2 {
-    color: #4caf50;
-    margin: 0 0 10px 0;
-    font-size: 2em;
-    text-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
-  }
-
-  .pawn-subtitle {
-    color: #888;
-    margin: 0 0 20px 0;
-    font-style: italic;
-  }
-
-  .back-btn {
-    position: absolute;
-    top: 0;
-    right: 0;
-    padding: 8px 16px;
-    background: #000000;
-    border: 1px solid #4caf50;
-    color: #4caf50;
-    border-radius: 4px;
-    cursor: pointer;
+    background: var(--bg);
+    color: var(--text);
     font-family: 'Courier New', monospace;
-    font-size: 0.9em;
+    font-size: 11px;
+    display: flex;
+    flex-direction: column;
   }
 
-  .back-btn:hover {
-    background: #4caf50;
-    color: #000;
+  .screen-hdr {
+    padding: 5px 10px;
+    background: var(--bg-panel);
+    color: var(--accent-hi);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    border-bottom: 1px solid var(--border-hi);
+    flex-shrink: 0;
   }
 
-  /* Content Layout */
   .pawn-content {
     display: flex;
     flex-direction: column;
-    gap: 30px;
   }
 
-  /* General States */
-  .no-pawn-selected {
-    background: #0c0c0c;
-    border-radius: 8px;
-    padding: 60px;
-    text-align: center;
-    color: #888;
-    border: 2px dashed #333;
-    margin-top: 50px;
+  .empty {
+    padding: 20px;
+    color: var(--text-muted);
     font-style: italic;
-  }
-
-  /* Scrollbar */
-  .pawn-screen::-webkit-scrollbar {
-    width: 8px;
-  }
-
-  .pawn-screen::-webkit-scrollbar-track {
-    background: #000000;
-  }
-
-  .pawn-screen::-webkit-scrollbar-thumb {
-    background: #4caf50;
-    border-radius: 4px;
-  }
-
-  /* Mobile Responsive */
-  @media (max-width: 768px) {
-    .pawn-screen {
-      padding: 15px;
-    }
-
-    .back-btn {
-      position: static;
-      margin-bottom: 15px;
-    }
   }
 </style>

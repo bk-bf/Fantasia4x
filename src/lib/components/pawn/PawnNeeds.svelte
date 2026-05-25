@@ -5,12 +5,10 @@
 
   export let pawn: Pawn;
 
-  // LIVE DATA from GameEngine (updated every turn)
   $: needs = gameEngine.getPawnNeeds(pawn.id);
   $: activities = gameEngine.getPawnActivities(pawn.id);
   $: needStatus = gameEngine.getPawnNeedStatus(pawn.id);
 
-  // Helper function to check if pawn is doing a specific activity
   function isDoingActivity(activityName: string): boolean {
     return activities.some((activity) =>
       activity.toLowerCase().includes(activityName.toLowerCase())
@@ -18,347 +16,202 @@
   }
 </script>
 
-<div class="needs-section" id="needs">
-  <h3>🏥 Current Needs & State</h3>
-  <div class="needs-grid">
-    <!-- HUNGER CARD -->
-    <div class="need-card">
-      <div class="need-header">
-        <span class="need-name">🍖 Hunger</span>
-        <span class="need-value" style="color: {getNeedColor(needs.hunger)}">
-          {Math.round(needs.hunger)}%
-        </span>
-      </div>
-      <div class="need-bar">
-        <div
-          class="need-fill"
-          style="width: {needs.hunger}%; background-color: {getNeedColor(needs.hunger)}"
-        ></div>
-      </div>
-      <p class="need-description">
-        {getNeedDescription('hunger', needs.hunger)}
-      </p>
-    </div>
+<div class="needs-section">
+  <div class="section-hdr">| NEEDS</div>
 
-    <!-- REST CARD (renamed from Fatigue, using fatigue data) -->
-    <div class="need-card">
-      <div class="need-header">
-        <span class="need-name">😴 Rest</span>
-        <span class="need-value" style="color: {getNeedColor(needs.fatigue)}">
-          {Math.round(needs.fatigue)}%
-        </span>
-      </div>
-      <div class="need-bar">
-        <div
-          class="need-fill"
-          style="width: {needs.fatigue}%; background-color: {getNeedColor(needs.fatigue)}"
-        ></div>
-      </div>
-      <p class="need-description">
-        {getNeedDescription('fatigue', needs.fatigue)}
-      </p>
+  <div class="need-row">
+    <span class="lbl">HUNGER</span>
+    <div class="bar">
+      <div
+        class="fill"
+        style="width: {needs.hunger}%; background: {getNeedColor(needs.hunger)}"
+      ></div>
     </div>
-
-    <!-- REMOVED: Sleep card - no longer needed -->
+    <span class="val" style="color: {getNeedColor(needs.hunger)}">{Math.round(needs.hunger)}%</span>
+    <span class="desc">{getNeedDescription('hunger', needs.hunger)}</span>
   </div>
 
-  <!-- ACTIVITIES SECTION -->
-  <div class="activities-section">
-    <h4>Current Activities</h4>
-    <div class="activities-list">
-      <!-- UPDATED: Use live activities data -->
-      {#each activities as activity}
-        <div class="activity-item active">
-          <span class="activity-icon">
-            {#if activity.includes('Working')}🔨
-            {:else if activity.includes('Sleeping') || activity.includes('Resting')}😴
-            {:else if activity.includes('Eating')}🍽️
-            {:else if activity.includes('Critical')}🚨
-            {:else}⚡
-            {/if}
-          </span>
-          <span class="activity-name">{activity}</span>
-          <span class="activity-status">Active</span>
-        </div>
-      {/each}
-
-      <!-- Show idle state if no activities -->
-      {#if activities.length === 0}
-        <div class="activity-item">
-          <span class="activity-icon">😴</span>
-          <span class="activity-name">Idle</span>
-          <span class="activity-status">Inactive</span>
-        </div>
-      {/if}
-
-      <!-- UPDATED: Show need status warnings -->
-      {#if needStatus.critical.length > 0}
-        <div class="activity-item critical">
-          <span class="activity-icon">🚨</span>
-          <span class="activity-name">Critical Needs</span>
-          <span class="activity-status">{needStatus.critical.join(', ')}</span>
-        </div>
-      {/if}
-
-      {#if needStatus.warning.length > 0}
-        <div class="activity-item warning">
-          <span class="activity-icon">⚠️</span>
-          <span class="activity-name">Warning Needs</span>
-          <span class="activity-status">{needStatus.warning.join(', ')}</span>
-        </div>
-      {/if}
+  <div class="need-row">
+    <span class="lbl">REST</span>
+    <div class="bar">
+      <div
+        class="fill"
+        style="width: {needs.fatigue}%; background: {getNeedColor(needs.fatigue)}"
+      ></div>
     </div>
+    <span class="val" style="color: {getNeedColor(needs.fatigue)}"
+      >{Math.round(needs.fatigue)}%</span
+    >
+    <span class="desc">{getNeedDescription('fatigue', needs.fatigue)}</span>
+  </div>
 
-    <!-- ACTIVITY CONTROLS -->
-    <div class="activity-controls">
-      <h5>Force Activity</h5>
-      <div class="control-buttons">
-        <button
-          class="control-btn"
-          on:click={() => gameEngine.forcePawnActivity(pawn.id, 'sleeping')}
-          disabled={isDoingActivity('sleeping') || isDoingActivity('resting')}
-        >
-          😴 Force Rest
-        </button>
-        <button
-          class="control-btn"
-          on:click={() => gameEngine.forcePawnActivity(pawn.id, 'eating')}
-          disabled={isDoingActivity('eating')}
-        >
-          🍽️ Force Eat
-        </button>
-        <button
-          class="control-btn"
-          on:click={() => gameEngine.forcePawnActivity(pawn.id, 'working')}
-          disabled={isDoingActivity('working')}
-        >
-          🔨 Force Work
-        </button>
-        <button
-          class="control-btn"
-          on:click={() => gameEngine.forcePawnActivity(pawn.id, 'idle')}
-          disabled={activities.length === 0}
-        >
-          ⏸️ Set Idle
-        </button>
-      </div>
+  <div class="section-hdr sub">| ACTIVITIES</div>
+
+  {#each activities as activity}
+    <div class="row"><span class="lbl">ACTIVE</span><span class="val full">{activity}</span></div>
+  {/each}
+  {#if activities.length === 0}
+    <div class="row"><span class="lbl">STATE</span><span class="val muted">idle</span></div>
+  {/if}
+  {#if needStatus.critical.length > 0}
+    <div class="row">
+      <span class="lbl neg">CRITICAL</span><span class="val neg"
+        >{needStatus.critical.join(', ')}</span
+      >
     </div>
+  {/if}
+  {#if needStatus.warning.length > 0}
+    <div class="row">
+      <span class="lbl warn">WARNING</span><span class="val warn"
+        >{needStatus.warning.join(', ')}</span
+      >
+    </div>
+  {/if}
+
+  <div class="section-hdr sub">| FORCE</div>
+  <div class="btn-row">
+    <button
+      class="act-btn"
+      on:click={() => gameEngine.forcePawnActivity(pawn.id, 'sleeping')}
+      disabled={isDoingActivity('sleeping') || isDoingActivity('resting')}>REST</button
+    >
+    <button
+      class="act-btn"
+      on:click={() => gameEngine.forcePawnActivity(pawn.id, 'eating')}
+      disabled={isDoingActivity('eating')}>EAT</button
+    >
+    <button
+      class="act-btn"
+      on:click={() => gameEngine.forcePawnActivity(pawn.id, 'working')}
+      disabled={isDoingActivity('working')}>WORK</button
+    >
+    <button
+      class="act-btn"
+      on:click={() => gameEngine.forcePawnActivity(pawn.id, 'idle')}
+      disabled={activities.length === 0}>IDLE</button
+    >
   </div>
 </div>
 
 <style>
   .needs-section {
-    margin-bottom: 30px;
-    padding: 25px;
-    background: #0c0c0c;
-    border-radius: 8px;
-    border: 1px solid #333;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    border-bottom: 1px solid var(--border);
   }
 
-  .needs-section h3 {
-    font-size: 1.4em;
-    color: #ff5722;
-    margin: 0 0 25px 0;
+  .section-hdr {
+    padding: 4px 8px;
+    background: var(--bg-panel);
+    color: var(--accent-hi);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    border-bottom: 1px solid var(--border);
+    border-top: 1px solid var(--border);
+    margin-top: 1px;
+  }
+  .section-hdr.sub {
+    background: var(--bg);
+    color: var(--text-dim);
+    border-top: none;
+  }
+
+  .need-row {
     display: flex;
     align-items: center;
-    gap: 10px;
-    font-weight: 600;
-    text-shadow: 0 0 10px rgba(255, 87, 34, 0.3);
-  }
-
-  .needs-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 20px;
-    margin-bottom: 30px;
-  }
-
-  .need-card {
-    padding: 20px;
-    background: #000000;
-    border: 1px solid #333;
-    border-radius: 8px;
-    transition: all 0.3s ease;
-  }
-
-  .need-card:hover {
-    transform: translateY(-2px);
-    border-color: #ff5722;
-    box-shadow: 0 0 15px rgba(255, 87, 34, 0.2);
-  }
-
-  .need-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
-  }
-
-  .need-name {
-    font-size: 1.1em;
-    font-weight: 600;
-    color: #ffffff;
-    display: flex;
-    align-items: center;
+    padding: 3px 8px;
     gap: 8px;
   }
-
-  .need-value {
-    font-size: 1.2em;
-    font-weight: bold;
-    text-shadow: 0 0 5px currentColor;
+  .need-row:hover {
+    background: var(--bg-hover);
   }
 
-  .need-bar {
-    width: 100%;
-    height: 12px;
-    background: #1a1a1a;
-    border-radius: 6px;
-    overflow: hidden;
-    margin-bottom: 15px;
-    border: 1px solid #333;
+  .row {
+    display: flex;
+    padding: 2px 8px;
+    align-items: baseline;
+    gap: 6px;
+  }
+  .row:hover {
+    background: var(--bg-hover);
   }
 
-  .need-fill {
-    height: 100%;
-    transition: all 0.3s ease;
-    border-radius: 6px;
-    box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+  .lbl {
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 11px;
+    width: 70px;
+    flex-shrink: 0;
+  }
+  .lbl.neg {
+    color: var(--neg);
+  }
+  .lbl.warn {
+    color: var(--accent-hi);
   }
 
-  .need-description {
-    color: #cccccc;
-    font-size: 0.95em;
-    margin: 0;
+  .val {
+    color: var(--text);
+    font-size: 11px;
+    width: 36px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .val.full {
+    width: auto;
+    margin-left: auto;
+    text-align: left;
+  }
+  .val.muted {
+    color: var(--text-muted);
     font-style: italic;
   }
-
-  .activities-section h4 {
-    font-size: 1.2em;
-    color: #ff5722;
-    margin: 0 0 15px 0;
-    font-weight: 600;
+  .val.neg {
+    color: var(--neg);
+    margin-left: auto;
+  }
+  .val.warn {
+    color: var(--accent-hi);
+    margin-left: auto;
   }
 
-  .activities-list {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    margin-bottom: 20px;
-  }
-
-  .activity-item {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    padding: 15px 20px;
-    background: #1a1a1a;
-    border: 1px solid #333;
-    border-radius: 8px;
-    transition: all 0.3s ease;
-  }
-
-  .activity-item:hover {
-    background: #222222;
-    border-color: #555;
-  }
-
-  .activity-item.active {
-    background: #0d4f3c;
-    border-color: #4caf50;
-    box-shadow: 0 0 10px rgba(76, 175, 80, 0.2);
-  }
-
-  .activity-item.critical {
-    background: #4f0d0d;
-    border-color: #f44336;
-    box-shadow: 0 0 10px rgba(244, 67, 54, 0.2);
-  }
-
-  .activity-item.warning {
-    background: #4f3c0d;
-    border-color: #ff9800;
-    box-shadow: 0 0 10px rgba(255, 152, 0, 0.2);
-  }
-
-  .activity-icon {
-    font-size: 1.3em;
-    width: 30px;
-    text-align: center;
-  }
-
-  .activity-name {
+  .desc {
+    color: var(--text-muted);
+    font-size: 11px;
+    font-style: italic;
     flex: 1;
-    font-weight: 600;
-    color: #ffffff;
   }
 
-  .activity-status {
-    font-size: 0.9em;
-    padding: 4px 12px;
-    border-radius: 12px;
-    font-weight: 500;
+  .bar {
+    flex: 1;
+    height: 4px;
+    background: var(--bg-active);
+  }
+  .fill {
+    height: 100%;
   }
 
-  .activity-item:not(.active) .activity-status {
-    background: #333;
-    color: #999;
+  .btn-row {
+    display: flex;
+    gap: 4px;
+    padding: 4px 8px;
   }
 
-  .activity-item.active .activity-status {
-    background: #4caf50;
-    color: #ffffff;
-    text-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
-  }
-
-  .activity-item.critical .activity-status {
-    background: #f44336;
-    color: #ffffff;
-  }
-
-  .activity-item.warning .activity-status {
-    background: #ff9800;
-    color: #ffffff;
-  }
-
-  /* Activity Control Styles */
-  .activity-controls {
-    border-top: 1px solid #333;
-    padding-top: 20px;
-  }
-
-  .activity-controls h5 {
-    color: #ff5722;
-    margin: 0 0 15px 0;
-    font-size: 1.1em;
-    font-weight: 600;
-  }
-
-  .control-buttons {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-    gap: 10px;
-  }
-
-  .control-btn {
-    padding: 8px 12px;
-    background: #1a1a1a;
-    border: 1px solid #333;
-    border-radius: 6px;
-    color: #ffffff;
-    font-size: 0.9em;
+  .act-btn {
+    padding: 3px 10px;
+    background: var(--bg-hover);
+    border: 1px solid var(--border-hi);
+    color: var(--text);
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
     cursor: pointer;
-    transition: all 0.3s ease;
+    letter-spacing: 0.04em;
   }
-
-  .control-btn:hover:not(:disabled) {
-    background: #333;
-    border-color: #ff5722;
+  .act-btn:hover:not(:disabled) {
+    color: var(--accent-hi);
+    background: var(--bg-active);
   }
-
-  .control-btn:disabled {
-    opacity: 0.5;
+  .act-btn:disabled {
+    opacity: 0.4;
     cursor: not-allowed;
   }
 </style>

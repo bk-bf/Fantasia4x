@@ -434,13 +434,13 @@
 </script>
 
 <div class="abilities-section" id="abilities">
-  <h3>🎯 Skills & Abilities</h3>
+  <h3>| SKILLS &amp; ABILITIES</h3>
 
   <!-- Work Efficiency Section -->
   {#if Object.keys(allModifierResults.workEfficiency).length > 0}
     <div class="ability-category">
       <h4 class="category-title">
-        ⚡ Work Efficiency ({Object.keys(allModifierResults.workEfficiency).length})
+        WORK EFFICIENCY ({Object.keys(allModifierResults.workEfficiency).length})
       </h4>
 
       <div class="abilities-grid">
@@ -449,7 +449,6 @@
           <div class="ability-card" data-category="work-efficiency">
             <div class="ability-header">
               <span class="ability-name">
-                {workCategory?.emoji || '🔨'}
                 {formatWorkName(workType)}
               </span>
               <span
@@ -518,7 +517,7 @@
   {#if Object.keys(allModifierResults.combatEfficiency).length > 0}
     <div class="ability-category">
       <h4 class="category-title">
-        ⚔️ Combat Effectiveness ({Object.keys(allModifierResults.combatEfficiency).length})
+        COMBAT EFFECTIVENESS ({Object.keys(allModifierResults.combatEfficiency).length})
       </h4>
 
       <div class="abilities-grid">
@@ -526,7 +525,6 @@
           <div class="ability-card" data-category="combat">
             <div class="ability-header">
               <span class="ability-name">
-                {getCombatIcon(combatType)}
                 {formatAbilityName(combatType)}
               </span>
               <span
@@ -594,7 +592,7 @@
   {#if Object.keys(allModifierResults.survivalEfficiency).length > 0}
     <div class="ability-category">
       <h4 class="category-title">
-        🛡️ Survival Abilities ({Object.keys(allModifierResults.survivalEfficiency).length})
+        SURVIVAL ABILITIES ({Object.keys(allModifierResults.survivalEfficiency).length})
       </h4>
 
       <div class="abilities-grid">
@@ -602,7 +600,6 @@
           <div class="ability-card" data-category="survival">
             <div class="ability-header">
               <span class="ability-name">
-                {getSurvivalIcon(survivalType)}
                 {formatAbilityName(survivalType)}
               </span>
               <span
@@ -670,7 +667,7 @@
   {#if Object.keys(allModifierResults.physicalBonus).length > 0}
     <div class="ability-category">
       <h4 class="category-title">
-        💪 Physical Bonuses ({Object.keys(allModifierResults.physicalBonus).length})
+        PHYSICAL BONUSES ({Object.keys(allModifierResults.physicalBonus).length})
       </h4>
 
       <div class="abilities-grid">
@@ -678,7 +675,6 @@
           <div class="ability-card" data-category="physical">
             <div class="ability-header">
               <span class="ability-name">
-                {getPhysicalIcon(physicalType)}
                 {formatAbilityName(physicalType)}
               </span>
               <span
@@ -746,7 +742,7 @@
   {#if Object.keys(allModifierResults.mentalBonus).length > 0}
     <div class="ability-category">
       <h4 class="category-title">
-        🧠 Mental Bonuses ({Object.keys(allModifierResults.mentalBonus).length})
+        MENTAL BONUSES ({Object.keys(allModifierResults.mentalBonus).length})
       </h4>
 
       <div class="abilities-grid">
@@ -754,7 +750,6 @@
           <div class="ability-card" data-category="mental">
             <div class="ability-header">
               <span class="ability-name">
-                {getMentalIcon(mentalType)}
                 {formatAbilityName(mentalType)}
               </span>
               <span
@@ -897,245 +892,192 @@
 
 <style>
   .abilities-section {
-    background: #0c0c0c;
-    border-radius: 8px;
-    padding: 25px;
-    margin-bottom: 30px;
-    border-left: 4px solid #ff9800;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    padding: 0;
+    margin-bottom: 0;
   }
 
   .abilities-section h3 {
-    color: #ff9800;
-    margin: 0 0 25px 0;
-    font-size: 1.4em;
-    text-shadow: 0 0 10px rgba(255, 152, 0, 0.3);
+    padding: 4px 8px;
+    background: var(--bg-panel);
+    color: var(--accent-hi);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    border-bottom: 1px solid var(--border);
+    border-top: 1px solid var(--border);
+    margin: 1px 0 0 0;
+    font-weight: normal;
   }
 
   .ability-category {
-    margin-bottom: 35px;
+    margin-bottom: 0;
   }
 
   .category-title {
     display: flex;
     align-items: center;
-    gap: 8px;
-    color: #ff9800;
-    margin: 0 0 20px 0;
-    font-size: 1.2em;
-    padding-bottom: 8px;
-    border-bottom: 1px solid rgba(255, 152, 0, 0.3);
-    font-weight: bold;
+    gap: 6px;
+    color: var(--text-dim);
+    margin: 0;
+    font-size: 11px;
+    padding: 3px 8px;
+    border-bottom: 1px solid var(--border);
+    font-weight: normal;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    background: var(--bg);
   }
 
   .abilities-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
-    gap: 20px;
+    display: flex;
+    flex-direction: column;
   }
 
   .ability-card {
-    background: #000000;
-    border: 1px solid #333;
-    border-radius: 8px;
-    padding: 20px;
-    transition: all 0.3s ease;
+    background: var(--bg);
+    border: none;
+    border-bottom: 1px solid var(--border);
+    padding: 3px 8px;
+    transition: background 0.1s;
   }
 
   .ability-card:hover {
-    box-shadow: 0 0 15px rgba(255, 152, 0, 0.2);
+    background: var(--bg-hover);
   }
 
-  .ability-card:hover .ability-name {
-    color: #4caf50;
-    transition: color 0.2s ease;
-  }
-
+  .ability-card:hover .ability-name,
   .ability-card:hover .calculation-header {
-    color: #4caf50;
-    transition: color 0.2s ease;
+    color: var(--accent-hi);
   }
 
-  /* Ability Card Categories */
-  .ability-card[data-category='work-efficiency'] {
-    border-left: 3px solid #ff9800;
-  }
-
-  .ability-card[data-category='combat'] {
-    border-left: 3px solid #f44336;
-  }
-
-  .ability-card[data-category='survival'] {
-    border-left: 3px solid #4caf50;
-  }
-
-  .ability-card[data-category='physical'] {
-    border-left: 3px solid #9c27b0;
-  }
-
-  .ability-card[data-category='mental'] {
-    border-left: 3px solid #00bcd4;
-  }
-
+  .ability-card[data-category='work-efficiency'],
+  .ability-card[data-category='combat'],
+  .ability-card[data-category='survival'],
+  .ability-card[data-category='physical'],
+  .ability-card[data-category='mental'],
   .ability-card[data-category='special'] {
-    border-left: 3px solid #ffd700;
+    border-left: none;
   }
 
   .ability-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
+    align-items: baseline;
+    gap: 6px;
   }
 
   .ability-name {
-    color: #ff9800;
-    font-weight: bold;
-    font-size: 1.1em;
+    color: var(--text-dim);
+    font-weight: normal;
+    font-size: 11px;
     flex: 1;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
   }
 
   .ability-value {
-    font-family: monospace;
+    font-family: 'Courier New', monospace;
     font-weight: bold;
-    font-size: 1.2em;
-    padding: 4px 8px;
-    border-radius: 4px;
-    background: rgba(0, 0, 0, 0.3);
+    font-size: 11px;
+    padding: 0;
+    background: none;
   }
 
   .ability-value.positive {
-    background: rgba(76, 175, 80, 0.2);
+    color: var(--pos);
   }
-
   .ability-value.negative {
-    background: rgba(244, 67, 54, 0.2);
+    color: var(--neg);
   }
-
   .ability-value.neutral {
-    color: #999;
-    background: rgba(153, 153, 153, 0.1);
+    color: var(--text-muted);
   }
 
   .ability-description {
-    color: #ccc;
-    font-size: 0.9em;
-    margin: 0 0 15px 0;
-    line-height: 1.4;
+    color: var(--text-muted);
+    font-size: 11px;
+    margin: 0;
+    line-height: 1.3;
+    font-style: italic;
   }
 
   .ability-calculation {
-    border-top: 1px solid rgba(255, 152, 0, 0.3);
-    padding-top: 15px;
-    margin-top: 12px;
-    padding-top: 8px;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 4px;
+    margin-top: 2px;
+    border-top: 1px solid var(--border);
   }
 
   .calculation-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 10px;
-    color: #ff9800;
-    font-weight: bold;
-    font-size: 0.9em;
+    margin-bottom: 4px;
+    color: var(--text-dim);
+    font-weight: normal;
+    font-size: 11px;
   }
 
   .toggle-breakdown {
-    background: none;
-    border: 1px solid #ff9800;
-    color: #ff9800;
-    padding: 2px 6px;
-    border-radius: 3px;
+    background: var(--bg-hover);
+    border: 1px solid var(--border-hi);
+    color: var(--text);
+    padding: 1px 5px;
     cursor: pointer;
-    font-size: 0.8em;
-    transition: all 0.3s ease;
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
   }
-
   .toggle-breakdown:hover {
-    background: rgba(255, 152, 0, 0.1);
+    color: var(--accent-hi);
   }
 
   .breakdown-details {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    margin-top: 10px;
+    gap: 2px;
+    margin-top: 4px;
   }
 
   .calculation-step {
-    margin: 3px 0;
-    padding: 6px 10px;
-    border-radius: 4px;
-    border-left: 3px solid #555;
-    background: rgba(0, 0, 0, 0.3);
-    font-size: 0.8em;
-    font-family: monospace;
+    margin: 0;
+    padding: 2px 6px;
+    border-left: 2px solid var(--border);
+    background: var(--bg-panel);
+    font-size: 10px;
+    font-family: 'Courier New', monospace;
     line-height: 1.3;
+    color: var(--text-muted);
   }
 
   .calculation-step.base {
-    border-left-color: #999;
-    background: rgba(153, 153, 153, 0.1);
+    border-left-color: var(--text-muted);
   }
-
   .calculation-step.formula {
-    border-left-color: #ff9800;
-    background: rgba(255, 152, 0, 0.1);
+    border-left-color: var(--accent-hi);
   }
-
   .calculation-step.stat {
-    border-left-color: #2196f3;
-    background: rgba(33, 150, 243, 0.1);
+    border-left-color: var(--text);
   }
-
   .calculation-step.trait {
-    border-left-color: #9c27b0;
-    background: rgba(156, 39, 176, 0.1);
+    border-left-color: var(--border-hi);
   }
-
   .calculation-step.equipment {
-    border-left-color: #ff9800;
-    background: rgba(255, 152, 0, 0.1);
+    border-left-color: var(--accent-hi);
   }
-
   .calculation-step.building {
-    border-left-color: #4caf50;
-    background: rgba(76, 175, 80, 0.1);
+    border-left-color: var(--pos);
   }
 
   .source-label {
-    color: #fff;
+    color: var(--text);
     font-weight: bold;
-    font-size: 0.9em;
-    font-style: italic;
+    font-size: 10px;
   }
 
   .source-description {
-    color: #bbb;
-    font-size: 0.8em;
-    margin-top: 2px;
+    color: var(--text-muted);
+    font-size: 10px;
+    margin-top: 1px;
     line-height: 1.3;
-  }
-
-  @media (max-width: 768px) {
-    .abilities-grid {
-      grid-template-columns: 1fr;
-    }
-
-    .ability-header {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 8px;
-    }
-
-    .category-title {
-      font-size: 1em;
-      text-align: center;
-    }
-
-    .ability-calculation {
-      font-size: 0.75em;
-    }
   }
 </style>

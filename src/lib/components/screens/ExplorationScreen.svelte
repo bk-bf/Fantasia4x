@@ -360,615 +360,395 @@
 </script>
 
 <div class="exploration-screen">
-  <div class="exploration-header">
-    <button class="back-btn" on:click={() => uiState.setScreen('main')}>← Back to Map</button>
-    <h2>🗺️ Exploration & Discovery</h2>
-    <p class="exploration-subtitle">Discover new lands and unlock their resources</p>
+  <div class="screen-hdr">
+    | EXPLORATION
+    <button class="hdr-btn" on:click={() => uiState.setScreen('main')}>BACK</button>
   </div>
 
-  <div class="exploration-content">
-    <!-- Discovered Locations -->
-    <div class="discovered-locations">
-      <h3>🏞️ Known Locations ({discoveredLocations.length})</h3>
-      <div class="locations-grid">
-        {#each discoveredLocations as location}
-          {@const resourceRichness = getLocationResourceRichness(location)}
-          <div
-            class="location-card discovered"
-            style="--rarity-color: {getLocationRarityColor(location.rarity)}"
+  <!-- Known Locations -->
+  <div class="section-hdr sub">| KNOWN LOCATIONS ({discoveredLocations.length})</div>
+  {#each discoveredLocations as location}
+    {@const resourceRichness = getLocationResourceRichness(location)}
+    <div class="loc-item">
+      <div class="loc-name">
+        {location.name.toUpperCase()}
+        <span class="loc-meta">{location.type || 'location'} T{location.tier}</span>
+        <span class="loc-rarity">{location.rarity}</span>
+      </div>
+      <div class="desc-row">{location.description}</div>
+
+      {#each Object.entries(resourceRichness) as [resourceId, data]}
+        {@const item = itemService.getItemById(resourceId)}
+        <div class="res-row">
+          <span class="lbl">RESOURCE</span>
+          <span class="res-name">{item?.name || resourceId}</span>
+          <span class="res-avail">
+            {data.availability.available !== 'Unknown'
+              ? Math.floor(data.availability.available as number)
+              : '?'}
+            / {data.availability.maxAmount !== 'Unknown' ? data.availability.maxAmount : '?'}
+          </span>
+          <span class="res-richness" style="color: {getRichnessColor(data.richness)}"
+            >{data.richness}</span
           >
-            <div class="location-header">
-              <span class="location-icon">{location.emoji}</span>
-              <h4>{location.name}</h4>
-              <div class="location-tier">Tier {location.tier}</div>
-            </div>
+        </div>
+      {/each}
 
-            <p class="location-description">{location.description}</p>
-            <div class="location-resources">
-              <h5>Available Resources:</h5>
-              <div class="resource-grid">
-                {#each Object.entries(resourceRichness) as [resourceId, data]}
-                  {@const item = itemService.getItemById(resourceId)}
-                  <div
-                    class="resource-item-card"
-                    style="--richness-color: {getRichnessColor(data.richness)}"
-                  >
-                    <div class="resource-content">
-                      <span class="resource-icon">{item?.emoji || '📦'}</span>
-                      <span class="resource-label">
-                        {item?.name || resourceId}
-                        <span class="richness-indicator" title={data.richness}>
-                          {getRichnessEmoji(data.richness)}
-                        </span>
-                      </span>
-                    </div>
-                    <div class="resource-details">
-                      <span class="resource-amount"
-                        >{data.availability.available !== 'Unknown'
-                          ? Math.floor(data.availability.available)
-                          : '?'}</span
-                      >
-                      <span class="resource-slash">/</span>
-                      <span class="resource-max"
-                        >{data.availability.maxAmount !== 'Unknown'
-                          ? data.availability.maxAmount
-                          : '?'}</span
-                      >
-                      <span class="richness-text" style="color: {getRichnessColor(data.richness)}"
-                        >{data.richness}</span
-                      >
-                    </div>
-                  </div>
-                {/each}
-              </div>
-            </div>
+      {#each getLocationWorkModifiers(location) as modifier}
+        <div class="row"><span class="lbl">BONUS</span><span class="val pos">{modifier}</span></div>
+      {/each}
+    </div>
+  {/each}
 
-            {#if getLocationWorkModifiers(location).length > 0}
-              <div class="work-modifiers">
-                <h5>Work Bonuses:</h5>
-                <div class="modifier-list">
-                  {#each getLocationWorkModifiers(location) as modifier}
-                    <span class="modifier-item">✨ {modifier}</span>
-                  {/each}
-                </div>
-              </div>
-            {/if}
+  <!-- Active Expeditions -->
+  <div class="section-hdr sub">| ACTIVE EXPEDITIONS</div>
+  {#if activeExplorationMissions.length > 0}
+    {#each activeExplorationMissions as mission, index}
+      <div class="mission-item">
+        <div class="row">
+          <span class="lbl">MISSION</span><span class="val">{mission.name.toUpperCase()}</span>
+        </div>
+        <div class="row">
+          <span class="lbl">TARGET</span><span class="val"
+            >{mission.targetLocation.replace(/_/g, ' ').toUpperCase()}</span
+          >
+        </div>
+        <div class="need-row">
+          <span class="lbl">PROGRESS</span>
+          <div class="bar">
+            <div
+              class="fill"
+              style="width: {Math.round(
+                ((mission.duration - mission.turnsRemaining) / mission.duration) * 100
+              )}%; background: var(--accent-hi)"
+            ></div>
           </div>
-        {/each}
-      </div>
-    </div>
-
-    <!-- Active Exploration Missions -->
-    {#if activeExplorationMissions.length > 0}
-      <div class="active-missions">
-        <h3>🏃 Expeditions in Progress</h3>
-        <TaskContainer layout="horizontal">
-          {#each activeExplorationMissions as mission, index}
-            <CurrentTask
-              title="🔍 Exploration Mission"
-              icon="🗺️"
-              name={mission.name}
-              description="Exploring {mission.targetLocation}"
-              progress={(mission.duration - mission.turnsRemaining) / mission.duration}
-              timeRemaining="{mission.turnsRemaining} hours remaining"
-              onCancel={() => recallExplorers(index)}
-              cancelTitle="Recall explorers (50% supply refund)"
-              accentColor="#2196f3"
-              compact={true}
-            />
-          {/each}
-        </TaskContainer>
-      </div>
-    {:else}
-      <div class="empty-missions">
-        <p>No exploration missions in progress</p>
-      </div>
-    {/if}
-
-    <!-- Available Exploration Opportunities -->
-    <div class="available-explorations">
-      <h3>🔍 Exploration Opportunities ({availableExplorationMissions.length})</h3>
-
-      {#if availableExplorationMissions.length === 0}
-        <div class="no-opportunities">
-          <p>
-            No new exploration opportunities available. Advance your civilization to unlock new
-            areas to explore!
-          </p>
+          <span class="val"
+            >{Math.round(
+              ((mission.duration - mission.turnsRemaining) / mission.duration) * 100
+            )}%</span
+          >
+          <span class="desc">{mission.turnsRemaining} turns left</span>
         </div>
-      {:else}
-        <div class="missions-grid">
-          {#each availableExplorationMissions as mission}
-            <div class="mission-card" style="--risk-color: {getRiskColor(mission.riskLevel)}">
-              <div class="mission-header">
-                <span class="mission-icon">🗺️</span>
-                <h4>{mission.name}</h4>
-                <div class="risk-badge" style="background-color: {getRiskColor(mission.riskLevel)}">
-                  {mission.riskLevel}
-                </div>
-              </div>
+        <div class="btn-row">
+          <button class="act-btn" on:click={() => recallExplorers(index)}
+            >RECALL (50% REFUND)</button
+          >
+        </div>
+      </div>
+    {/each}
+  {:else}
+    <div class="row"><span class="muted">no active expeditions</span></div>
+  {/if}
 
-              <p class="mission-description">{mission.description}</p>
+  <!-- Available Exploration -->
+  <div class="section-hdr">| OPPORTUNITIES ({availableExplorationMissions.length})</div>
+  {#if availableExplorationMissions.length === 0}
+    <div class="row"><span class="muted">no exploration opportunities available</span></div>
+  {:else}
+    {#each availableExplorationMissions as mission}
+      <div class="mission-item">
+        <div class="mission-name">
+          {mission.name.toUpperCase()}
+          <span class="risk-tag" style="color: {getRiskColor(mission.riskLevel)}"
+            >{mission.riskLevel}</span
+          >
+        </div>
+        <div class="desc-row">{mission.description}</div>
+        <div class="row">
+          <span class="lbl">EXPLORERS</span><span class="val">{mission.explorersRequired}</span>
+        </div>
+        <div class="row">
+          <span class="lbl">DURATION</span><span class="val">{mission.duration} turns</span>
+        </div>
+        <div class="row">
+          <span class="lbl">SUCCESS</span><span class="val">{mission.successChance}%</span>
+        </div>
+        <div class="row">
+          <span class="lbl">TARGET</span><span class="val"
+            >{mission.targetLocation
+              .replace(/_/g, ' ')
+              .replace(/\b\w/g, (l: string) => l.toUpperCase())}</span
+          >
+        </div>
 
-              <div class="mission-requirements">
-                <div class="explorers-needed">👥 {mission.explorersRequired} explorers</div>
-                <div class="mission-duration">⏰ {mission.duration} hours</div>
-                <div class="success-chance">✅ {mission.successChance}% success chance</div>
-
-                {#if mission.toolsRequired && mission.toolsRequired.length > 0}
-                  <div class="tools-required">
-                    <h5>🔧 Tools Required:</h5>
-                    {#each mission.toolsRequired as tool}
-                      {@const item = itemService.getItemById(tool)}
-                      <span class="requirement-item">
-                        {item?.emoji || '📦'}
-                        {item?.name || tool}
-                      </span>
-                    {/each}
-                  </div>
-                {/if}
-
-                {#if mission.suppliesRequired}
-                  <div class="supplies-required">
-                    <h5>📦 Supplies Required:</h5>
-                    {#each Object.entries(mission.suppliesRequired) as [itemId, amount]}
-                      {@const item = itemService.getItemById(itemId)}
-                      <div
-                        class="requirement-item"
-                        class:insufficient={getItemAmount(itemId) + getInventoryAmount(itemId) <
-                          (amount as number)}
-                      >
-                        <span class="req-icon">{item?.emoji || '📦'}</span>
-                        <span class="req-amount">{amount}</span>
-                        <span class="req-name">{item?.name || itemId}</span>
-                        <span class="req-available"
-                          >({getItemAmount(itemId) + getInventoryAmount(itemId)} available)</span
-                        >
-                      </div>
-                    {/each}
-                  </div>
-                {/if}
-              </div>
-
-              <div class="mission-rewards">
-                <h5>Potential Discovery:</h5>
-                <div class="target-location">
-                  🎯 {mission.targetLocation
-                    .replace(/_/g, ' ')
-                    .replace(/\b\w/g, (l: string) => l.toUpperCase())}
-                </div>
-              </div>
-
-              <button
-                class="launch-mission-btn"
-                class:disabled={!canLaunchMission(mission)}
-                on:click={() => launchExplorationMission(mission)}
-                disabled={!canLaunchMission(mission)}
-              >
-                {#if race?.population < mission.explorersRequired}
-                  Need More Population
-                {:else if !canLaunchMission(mission)}
-                  Missing Requirements
-                {:else}
-                  Launch Expedition
-                {/if}
-              </button>
+        {#if mission.toolsRequired && mission.toolsRequired.length > 0}
+          {#each mission.toolsRequired as tool}
+            {@const item = itemService.getItemById(tool)}
+            <div class="row">
+              <span class="lbl">TOOL</span><span class="val">{item?.name || tool}</span>
             </div>
           {/each}
+        {/if}
+
+        {#if mission.suppliesRequired}
+          {#each Object.entries(mission.suppliesRequired) as [itemId, amount]}
+            {@const item = itemService.getItemById(itemId)}
+            {@const have = getItemAmount(itemId) + getInventoryAmount(itemId)}
+            <div class="row" class:insufficient={have < (amount as number)}>
+              <span class="lbl">SUPPLY</span>
+              <span class="val" class:neg={have < (amount as number)}>
+                {item?.name || itemId}: {amount} (have {have})
+              </span>
+            </div>
+          {/each}
+        {/if}
+
+        <div class="btn-row">
+          <button
+            class="act-btn"
+            class:active={canLaunchMission(mission)}
+            on:click={() => launchExplorationMission(mission)}
+            disabled={!canLaunchMission(mission)}
+          >
+            {#if race?.population < mission.explorersRequired}NEED MORE POPULATION
+            {:else if !canLaunchMission(mission)}MISSING REQUIREMENTS
+            {:else}LAUNCH EXPEDITION
+            {/if}
+          </button>
         </div>
-      {/if}
-    </div>
-  </div>
+      </div>
+    {/each}
+  {/if}
 </div>
 
 <style>
   .exploration-screen {
-    padding: 20px;
-    background: #000000;
-    color: #e0e0e0;
-    font-family: 'Courier New', monospace;
     height: 100%;
     overflow-y: auto;
-  }
-
-  .exploration-header {
-    text-align: center;
-    margin-bottom: 30px;
-    padding-bottom: 20px;
-    border-bottom: 2px solid #2196f3;
-    position: relative;
-  }
-
-  .back-btn {
-    position: absolute;
-    top: 0;
-    right: 0;
-    padding: 8px 16px;
-    background: #000000;
-    border: 1px solid #2196f3;
-    color: #2196f3;
-    border-radius: 4px;
-    cursor: pointer;
+    background: var(--bg);
+    color: var(--text);
     font-family: 'Courier New', monospace;
-    font-size: 0.9em;
-  }
-  .back-btn:hover {
-    background: #2196f3;
-    color: #000;
-  }
-
-  .resource-grid {
-    display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    gap: 10px;
-    margin-bottom: 8px;
-  }
-
-  .resource-item-card {
-    background: #0c0c0c;
-    border-radius: 5px;
-    padding: 8px 10px;
-    border-left: 2px solid var(--richness-color);
-    box-shadow: 0 1px 4px 0 rgba(0, 0, 0, 0.12);
-    min-height: 64px; /* increase this for more height */
-    height: 64px; /* or set a fixed height */
+    font-size: 11px;
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    align-items: flex-start;
-    margin: 0;
-    width: 100%;
-    transition:
-      box-shadow 0.2s,
-      transform 0.2s;
-    box-sizing: border-box;
-  }
-  .resource-item-card:hover {
-    box-shadow: 0 4px 16px 0 rgba(76, 175, 80, 0.08);
-    transform: scale(1.03);
   }
 
-  .resource-content {
+  .screen-hdr {
+    padding: 5px 10px;
+    background: var(--bg-panel);
+    color: var(--accent-hi);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    border-bottom: 1px solid var(--border-hi);
+    flex-shrink: 0;
     display: flex;
     align-items: center;
-    gap: 3px;
-    width: 100%;
   }
 
-  .resource-label {
-    color: #e0e0e0;
-    font-size: 1em; /* was 0.65em */
-    font-weight: bold;
-    flex: 1;
-    text-align: left;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+  .hdr-btn {
+    margin-left: auto;
+    padding: 2px 8px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    letter-spacing: 0.04em;
+  }
+  .hdr-btn:hover {
+    color: var(--text);
+    border-color: var(--border-hi);
   }
 
-  .resource-icon {
-    font-size: 1.2em; /* was 0.8em */
+  .section-hdr {
+    padding: 4px 8px;
+    background: var(--bg-panel);
+    color: var(--accent-hi);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    border-bottom: 1px solid var(--border);
+    border-top: 1px solid var(--border);
+    margin-top: 1px;
     flex-shrink: 0;
   }
-
-  .richness-indicator {
-    font-size: 0.3em;
-    margin-left: 4px;
-    vertical-align: left;
-    flex-shrink: 0;
+  .section-hdr.sub {
+    background: var(--bg);
+    color: var(--text-dim);
   }
 
-  .resource-details {
+  .row {
     display: flex;
-    align-items: center;
-    gap: 4px;
-    margin-top: 4px;
-    font-size: 0.9em; /* was 0.6em */
-    color: #888;
-  }
-
-  .resource-amount {
-    color: var(--richness-color);
-    font-weight: bold;
-    font-size: 1em; /* new, for emphasis */
-  }
-
-  .richness-text {
-    font-weight: bold;
-    text-transform: capitalize;
-    font-size: 1em; /* was 0.7em */
-    margin-left: 6px;
-  }
-
-  .resource-slash {
-    color: #666;
-    margin: 0 1px;
-  }
-
-  .resource-max {
-    color: #888;
-    font-weight: normal;
-  }
-
-  .richness-text {
-    font-weight: bold;
-    text-transform: capitalize;
-    font-size: 0.7em;
-    margin-left: 4px;
-  }
-
-  /* Responsive: 2 columns on small screens */
-  @media (max-width: 700px) {
-    .resource-grid {
-      grid-template-columns: repeat(2, 1fr);
-    }
-  }
-  @media (max-width: 400px) {
-    .resource-grid {
-      grid-template-columns: 1fr;
-    }
-  }
-
-  /* --- Keep the rest of your styles for other sections as they are --- */
-
-  .exploration-subtitle {
-    color: #888;
-    margin: 0;
-    font-style: italic;
-  }
-
-  .exploration-content {
-    display: flex;
-    flex-direction: column;
-    gap: 30px;
-  }
-
-  .discovered-locations {
-    background: #0c0c0c;
-    border-radius: 8px;
-    padding: 20px;
-    border-left: 4px solid #4caf50;
-  }
-
-  .discovered-locations h3 {
-    color: #4caf50;
-    margin: 0 0 15px 0;
-  }
-
-  .locations-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-    gap: 15px;
-  }
-
-  .location-card {
-    background: #000000;
-    border-radius: 8px;
-    padding: 15px;
-    border-left: 3px solid var(--rarity-color);
-  }
-
-  .location-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 10px;
-  }
-
-  .location-icon {
-    font-size: 1.5em;
-  }
-
-  .location-card h4 {
-    color: var(--rarity-color);
-    margin: 0;
-    flex: 1;
-  }
-
-  .location-tier {
-    background: var(--rarity-color);
-    color: #000;
     padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 0.8em;
-    font-weight: bold;
+    align-items: baseline;
+    gap: 6px;
+  }
+  .row:hover {
+    background: var(--bg-hover);
+  }
+  .row.insufficient {
+    background: rgba(200, 48, 24, 0.05);
   }
 
-  .location-description {
-    color: #888;
-    font-style: italic;
-    margin: 0 0 10px 0;
-    font-size: 0.9em;
-  }
-
-  .location-resources h5,
-  .work-modifiers h5 {
-    color: #e0e0e0;
-    margin: 15px 0 5px 0;
-    font-size: 0.9em;
-  }
-
-  .resource-list,
-  .modifier-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-  }
-
-  .resource-item,
-  .modifier-item {
-    background: #0c0c0c;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 0.8em;
-    border: 1px solid #333;
-  }
-
-  .modifier-item {
-    color: #4caf50;
-  }
-
-  .active-missions {
-    background: #0c0c0c;
-    border-radius: 8px;
-    padding: 20px;
-    border-left: 4px solid #ff9800;
-  }
-
-  .active-missions h3 {
-    color: #ff9800;
-    margin: 0 0 15px 0;
-  }
-
-  .empty-missions,
-  .no-opportunities {
-    padding: 20px;
-    text-align: center;
-    color: #888;
-    font-style: italic;
-    background: #000000;
-    border-radius: 4px;
-    border: 2px dashed #555;
-  }
-
-  .available-explorations h3 {
-    color: #2196f3;
-    margin: 0 0 20px 0;
-  }
-
-  .missions-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(375px, 1fr));
-    gap: 20px;
-  }
-
-  .mission-card {
-    background: #0c0c0c;
-    border-radius: 8px;
-    padding: 20px;
-    border-left: 4px solid var(--risk-color);
-    transition: all 0.3s ease;
-  }
-
-  .mission-header {
+  .need-row {
     display: flex;
     align-items: center;
-    gap: 10px;
-    margin-bottom: 10px;
+    padding: 3px 8px;
+    gap: 8px;
   }
 
-  .mission-icon {
-    font-size: 1.5em;
-  }
-
-  .mission-card h4 {
-    color: #2196f3;
-    margin: 0;
-    flex: 1;
-  }
-
-  .risk-badge {
-    color: #000;
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 0.8em;
-    font-weight: bold;
+  .lbl {
+    color: var(--text-dim);
     text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 11px;
+    width: 70px;
+    flex-shrink: 0;
   }
 
-  .mission-description {
-    color: #888;
+  .val {
+    color: var(--text);
+    font-size: 11px;
+    margin-left: auto;
+    text-align: right;
+  }
+  .val.pos {
+    color: var(--pos);
+  }
+  .val.neg {
+    color: var(--neg);
+  }
+
+  .desc {
+    color: var(--text-muted);
+    font-size: 11px;
     font-style: italic;
-    margin: 0 0 15px 0;
+    flex: 1;
+  }
+  .bar {
+    flex: 1;
+    height: 4px;
+    background: var(--bg-active);
+  }
+  .fill {
+    height: 100%;
+  }
+  .muted {
+    color: var(--text-muted);
+    font-style: italic;
+    font-size: 11px;
+    padding: 4px 8px;
+  }
+  .pos {
+    color: var(--pos);
+  }
+  .neg {
+    color: var(--neg);
   }
 
-  .mission-requirements {
-    margin-bottom: 15px;
+  /* Location items */
+  .loc-item {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 2px;
+    margin-bottom: 1px;
   }
 
-  .explorers-needed,
-  .mission-duration,
-  .success-chance {
-    color: #e0e0e0;
-    font-size: 0.9em;
-    margin-bottom: 5px;
-  }
-
-  .tools-required h5,
-  .supplies-required h5 {
-    color: #e0e0e0;
-    margin: 10px 0 5px 0;
-    font-size: 0.9em;
-  }
-
-  .requirement-item {
+  .loc-name {
+    padding: 4px 8px;
+    color: var(--text);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-panel);
     display: flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 0.8em;
-    margin-bottom: 3px;
+    gap: 8px;
+    align-items: baseline;
   }
-
-  .requirement-item.insufficient {
-    color: #f44336;
+  .loc-meta {
+    color: var(--text-muted);
+    font-size: 10px;
   }
-
-  .req-amount {
-    font-weight: bold;
-  }
-
-  .req-available {
-    color: #888;
+  .loc-rarity {
+    color: var(--text-dim);
+    font-size: 10px;
     margin-left: auto;
   }
 
-  .mission-rewards h5 {
-    color: #e0e0e0;
-    margin: 10px 0 5px 0;
-    font-size: 0.9em;
+  .desc-row {
+    padding: 2px 8px 3px 16px;
+    color: var(--text-muted);
+    font-size: 11px;
+    font-style: italic;
+    border-bottom: 1px solid var(--border);
   }
 
-  .target-location {
-    color: #4caf50;
-    font-weight: bold;
+  .res-row {
+    display: flex;
+    padding: 2px 8px;
+    align-items: baseline;
+    gap: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+  .res-row:hover {
+    background: var(--bg-hover);
+  }
+  .res-name {
+    color: var(--text);
+    font-size: 11px;
+    flex: 1;
+  }
+  .res-avail {
+    color: var(--text-dim);
+    font-size: 11px;
+  }
+  .res-richness {
+    font-size: 10px;
+    text-align: right;
+    width: 60px;
   }
 
-  .launch-mission-btn {
-    width: 100%;
-    padding: 12px;
-    background: #2196f3;
-    border: none;
-    color: #000;
-    border-radius: 4px;
-    cursor: pointer;
+  /* Mission items */
+  .mission-item {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 2px;
+    margin-bottom: 1px;
+  }
+
+  .mission-name {
+    padding: 4px 8px;
+    color: var(--text);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-panel);
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+  }
+
+  .risk-tag {
+    font-size: 10px;
+    margin-left: auto;
+  }
+
+  .btn-row {
+    display: flex;
+    gap: 4px;
+    padding: 4px 8px;
+  }
+
+  .act-btn {
+    padding: 3px 10px;
+    background: var(--bg-hover);
+    border: 1px solid var(--border-hi);
+    color: var(--text);
     font-family: 'Courier New', monospace;
-    font-weight: bold;
-    transition: all 0.3s ease;
-    margin-top: 15px;
+    font-size: 11px;
+    cursor: pointer;
+    letter-spacing: 0.04em;
   }
-
-  .launch-mission-btn:hover:not(.disabled) {
-    background: #42a5f5;
-    transform: translateY(-1px);
+  .act-btn.active {
+    background: var(--tab-active);
+    color: #fff;
+    border-color: var(--tab-active);
   }
-
-  .launch-mission-btn.disabled {
-    background: #555;
-    color: #888;
+  .act-btn:hover:not(:disabled) {
+    color: var(--accent-hi);
+    background: var(--bg-active);
+  }
+  .act-btn:disabled {
+    opacity: 0.4;
     cursor: not-allowed;
-  }
-
-  /* Scrollbar styling */
-  .exploration-screen::-webkit-scrollbar {
-    width: 8px;
-  }
-
-  .exploration-screen::-webkit-scrollbar-track {
-    background: #000000;
-  }
-
-  .exploration-screen::-webkit-scrollbar-thumb {
-    background: #2196f3;
-    border-radius: 4px;
   }
 </style>

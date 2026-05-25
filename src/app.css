@@ -1,11 +1,28 @@
-html,
-body {
+:root {
+  --bg:          #0d0b07;
+  --bg-panel:    #150f08;
+  --bg-hover:    #201808;
+  --bg-active:   #2c1e0a;
+  --border:      #4a3818;
+  --border-hi:   #7a5e28;
+  --text:        #d4a840;
+  --text-dim:    #b09030;
+  --text-muted:  #7a5c20;
+  --accent:      #c84818;
+  --accent-hi:   #f08828;
+  --pos:         #68b030;
+  --neg:         #c83018;
+  --tab-active:  #c04818;
+}
+
+html, body {
   margin: 0;
   padding: 0;
   border: 0;
-  background-color: #000000; /* AMOLED black */
-  color: #e0e0e0;
+  background-color: var(--bg);
+  color: var(--text);
   font-family: 'Courier New', monospace;
+  font-size: 11px;
   height: 100%;
   width: 100%;
   overflow: hidden;
@@ -13,10 +30,10 @@ body {
 
 * {
   box-sizing: border-box;
-}
-
-/* Remove any default margins/padding from all elements */
-* {
   margin: 0;
   padding: 0;
 }
+
+::-webkit-scrollbar       { width: 3px; height: 3px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border-hi); }

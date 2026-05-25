@@ -1,316 +1,334 @@
 <script lang="ts">
   import { browser } from '$app/environment';
   import { gameState, currentTurn } from '$lib/stores/gameState';
+  import { uiState } from '$lib/stores/uiState';
+  import { gameEngine } from '$lib/game/systems/GameEngineImpl';
   import { onMount, onDestroy } from 'svelte';
 
   let isPaused = false;
   let gameSpeed = 1;
   let currentTurnValue = 0;
+  let currentScreen = 'main';
+  let buildingCounts: Record<string, number> = {};
 
-  // Subscribe to game state
-  const unsubscribePaused = gameState.isPaused.subscribe((value) => {
-    isPaused = value;
+  const unsubPaused = gameState.isPaused.subscribe((v) => (isPaused = v));
+  const unsubSpeed = gameState.gameSpeed.subscribe((v) => (gameSpeed = v));
+  const unsubTurn = currentTurn.subscribe((v) => (currentTurnValue = v));
+  const unsubUI = uiState.subscribe((s) => (currentScreen = s.currentScreen));
+  const unsubState = gameState.subscribe((s) => (buildingCounts = s.buildingCounts || {}));
+
+  $: hasResearch = Object.keys(buildingCounts).some((id) => {
+    const b = gameEngine.getBuildingById(id);
+    return b?.category === 'knowledge' && buildingCounts[id] > 0;
   });
 
-  const unsubscribeSpeed = gameState.gameSpeed.subscribe((value) => {
-    gameSpeed = value;
-  });
+  const TABS = [
+    { key: 'main', label: 'WORLD MAP', fkey: 'F1' },
+    { key: 'pawns', label: 'PAWNS', fkey: 'F2' },
+    { key: 'work', label: 'WORK', fkey: 'F3' },
+    { key: 'building', label: 'BUILDINGS', fkey: 'F4' },
+    { key: 'crafting', label: 'CRAFTING', fkey: 'F5' },
+    { key: 'exploration', label: 'EXPLORE', fkey: 'F6' },
+    { key: 'race', label: 'RACE', fkey: 'F7' },
+    { key: 'research', label: 'RESEARCH', fkey: 'F8', needsResearch: true }
+  ] as const;
 
-  const unsubscribeTurn = currentTurn.subscribe((value) => {
-    currentTurnValue = value;
-  });
+  function nav(key: string) {
+    if (key === 'research' && !hasResearch) return;
+    uiState.setScreen(key as any);
+  }
 
-  // Keyboard controls - only run in browser
-  function handleKeydown(event: KeyboardEvent) {
-    if (event.code === 'Space') {
-      event.preventDefault();
+  function handleKeydown(e: KeyboardEvent) {
+    if (e.code === 'Space') {
+      e.preventDefault();
       gameState.togglePause();
+      return;
+    }
+    const idx = ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8'].indexOf(e.code.replace('Key', ''));
+    const fIdx = TABS.findIndex((t) => t.fkey === e.key?.toUpperCase() || e.code === `F${e.key}`);
+    // Handle F1-F8
+    if (e.key && e.key.startsWith('F')) {
+      const n = parseInt(e.key.slice(1));
+      if (n >= 1 && n <= 8) {
+        e.preventDefault();
+        const tab = TABS[n - 1];
+        if (tab) nav(tab.key);
+      }
     }
   }
 
   onMount(() => {
-    // Only run client-side code in onMount
-    if (browser) {
-      // Start the auto-turn system when component mounts
-      gameState.startAutoTurns();
-
-      // Add keyboard listener
-      window.addEventListener('keydown', handleKeydown);
-    }
+    if (!browser) return;
+    gameState.startAutoTurns();
+    window.addEventListener('keydown', handleKeydown);
   });
 
   onDestroy(() => {
-    // Clean up - check browser first
     if (browser) {
       gameState.stopAutoTurns();
       window.removeEventListener('keydown', handleKeydown);
     }
-
-    // These are safe to call on server
-    unsubscribePaused();
-    unsubscribeSpeed();
-    unsubscribeTurn();
+    unsubPaused();
+    unsubSpeed();
+    unsubTurn();
+    unsubUI();
+    unsubState();
   });
 
-  function handleSpeedChange(newSpeed: number) {
-    gameState.setGameSpeed(newSpeed);
-  }
-
-  // Add these functions to GameControls
-  function saveGame() {
-    // Trigger a manual save
-    gameState.update((state) => state);
-  }
-
-  function loadGame() {
-    if (confirm('Load saved game? Current progress will be lost.')) {
-      location.reload();
-    }
-  }
   function wipeSave() {
-    if (confirm('This will delete your save data and restart the game. Are you sure?')) {
+    if (confirm('Delete save and restart?')) {
       localStorage.removeItem('fantasia4x-save');
       location.reload();
     }
   }
 </script>
 
-<div class="game-controls">
-  <div class="turn-info">
-    <span class="turn-label">Hour:</span>
-    <span class="turn-number">{currentTurnValue}</span>
-    <div class="turn-status" style="min-width: 210px; display: flex; align-items: center;">
-      {#if !isPaused}
-        <span class="status-indicator running">●</span>
-        <span class="status-text">Resources harvesting...</span>
-      {:else}
-        <span class="status-indicator paused">●</span>
-        <span class="status-text">Production paused</span>
-      {/if}
-    </div>
-    <div class="control-buttons">
-      <button
-        class="pause-btn"
-        class:paused={isPaused}
-        on:click={gameState.togglePause}
-        title="Press SPACE to toggle"
-        style="min-width: 80px;"
-      >
-        <span style="display: inline-block; width: 2.5em; text-align: center;">
-          {isPaused ? '▶️' : '⏸️'}
-        </span>
-        <span style="display: inline-block; width: 5em; text-align: left;">
-          {isPaused ? 'Resume' : 'Pause'}
-        </span>
-      </button>
-
-      <div class="speed-controls">
-        <span class="speed-label">Speed:</span>
-        {#each [1, 2, 4] as speed}
-          <button
-            class="speed-btn"
-            class:active={gameSpeed === speed}
-            on:click={() => handleSpeedChange(speed)}
-            title="{speed} speed"
-          >
-            {speed}
-          </button>
-        {/each}
-      </div>
-    </div>
+<div class="topbar">
+  <!-- Row 1: thin status strip -->
+  <div class="status-bar">
+    <span class="bi title">FANTASIA4X</span>
+    <span class="bi turn"
+      >{String(Math.floor(currentTurnValue / 24)).padStart(3, '0')}:{String(
+        currentTurnValue % 24
+      ).padStart(2, '0')}</span
+    >
+    <span class="bi" class:running={!isPaused} class:paused={isPaused}>
+      {isPaused ? '■ PAUSED' : '● RUNNING'}
+    </span>
+    <span class="spacer" />
+    <span class="bi screen"
+      >{TABS.find((t) => t.key === currentScreen)?.label ?? currentScreen.toUpperCase()}</span
+    >
   </div>
 
-  <div class="game-info">
-    <div class="save-controls">
-      <button class="control-btn danger-btn" on:click={wipeSave}>🗑️ Wipe Save</button>
+  <!-- Row 2: nav tabs + game controls -->
+  <div class="tab-row">
+    <nav class="tabs">
+      {#each TABS as tab}
+        {@const isActive = currentScreen === tab.key}
+        {@const disabled = tab.needsResearch && !hasResearch}
+        <button
+          class="tab"
+          class:active={isActive}
+          class:disabled
+          on:click={() => nav(tab.key)}
+          {disabled}
+          title={disabled ? 'Requires a knowledge building' : ''}
+        >
+          {#if isActive}<span class="active-mark">■</span>{/if}{tab.label}
+        </button>
+      {/each}
+    </nav>
+
+    <div class="controls">
+      <button class="ctrl-btn" class:is-paused={isPaused} on:click={gameState.togglePause}>
+        {isPaused ? '▶ RESUME' : '⏸ PAUSE'}
+      </button>
+      <div class="speed-wrap">
+        {#each [1, 2, 4] as s}
+          <button
+            class="spd"
+            class:active={gameSpeed === s}
+            on:click={() => gameState.setGameSpeed(s)}>{s}x</button
+          >
+        {/each}
+      </div>
+      <button class="ctrl-btn danger" on:click={wipeSave}>WIPE</button>
     </div>
   </div>
 </div>
 
-<!-- Keep the same styles as before -->
 <style>
-  .danger-btn {
-    background: #d32f2f !important;
-    border-color: #f44336 !important;
-    color: white !important;
-  }
-
-  .danger-btn:hover {
-    background: #f44336 !important;
-  }
-
-  .game-controls {
+  .topbar {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 15px 20px;
-    background: linear-gradient(135deg, #000000, #000000);
-    border-bottom: 2px solid #4caf50;
+    flex-direction: column;
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--border-hi);
     font-family: 'Courier New', monospace;
-    color: #e0e0e0;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    flex-shrink: 0;
   }
 
-  .turn-info {
+  /* ── Row 1: status bar ── */
+  .status-bar {
+    height: 20px;
     display: flex;
     align-items: center;
-    gap: 15px;
+    padding: 0 6px;
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+    background: var(--bg);
   }
 
-  .turn-label {
-    color: #888;
-    font-size: 0.9em;
+  .bi {
+    color: var(--text);
+    padding: 0 5px;
+    white-space: nowrap;
+  }
+  .bi::before {
+    content: '[';
+    color: var(--text-muted);
+  }
+  .bi::after {
+    content: ']';
+    color: var(--text-muted);
   }
 
-  .turn-number {
+  .bi.title {
+    color: var(--accent-hi);
     font-weight: bold;
-    color: #4caf50;
-    font-size: 1.4em;
-    text-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
+    letter-spacing: 0.05em;
+  }
+  .bi.turn {
+    color: var(--text);
+  }
+  .bi.running {
+    color: var(--pos);
+    animation: blink 2s infinite;
+  }
+  .bi.paused {
+    color: var(--neg);
+  }
+  .bi.screen {
+    color: var(--text);
   }
 
-  .turn-status {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .status-indicator {
-    font-size: 0.8em;
-  }
-
-  .status-indicator.running {
-    color: #4caf50;
-    animation: pulse 2s infinite;
-  }
-
-  .status-indicator.paused {
-    color: #f44336;
-  }
-
-  .status-text {
-    font-size: 0.85em;
-    color: #888;
-  }
-
-  .control-buttons {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-  }
-
-  .pause-btn {
-    padding: 10px 20px;
-    background: #0c0c0c;
-    border: 2px solid #4caf50;
-    color: #e0e0e0;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-weight: bold;
-    font-size: 1em;
-  }
-
-  .pause-btn:hover {
-    background: #0c0c0c;
-    border-color: #4caf50;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-  }
-
-  .pause-btn.paused {
-    background: #4caf50;
-    border-color: #4caf50;
-    color: white;
-  }
-
-  .pause-btn.paused:hover {
-    background: #4caf50;
-  }
-
-  .speed-controls {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .speed-label {
-    color: #888;
-    font-size: 0.9em;
-  }
-
-  .speed-btn {
-    padding: 6px 12px;
-    background: #000000;
-    border: 1px solid #555;
-    color: #e0e0e0;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9em;
-    min-width: 35px;
-    transition: all 0.2s ease;
-  }
-
-  .speed-btn:hover {
-    background: #444;
-    border-color: #4caf50;
-  }
-
-  .speed-btn.active {
-    background: #4caf50;
-    border-color: #66bb6a;
-    color: white;
-    font-weight: bold;
-  }
-
-  .game-info {
-    display: flex;
-    align-items: center;
-  }
-
-  .next-turn-timer {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: #000000;
-    padding: 8px 12px;
-    border-radius: 4px;
-    border: 1px solid #555;
-  }
-
-  .timer-label {
-    color: #888;
-    font-size: 0.85em;
-  }
-
-  .timer-value {
-    color: #4caf50;
-    font-weight: bold;
-  }
-
-  @keyframes pulse {
-    0% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.5;
-    }
+  @keyframes blink {
+    0%,
     100% {
       opacity: 1;
     }
+    50% {
+      opacity: 0.4;
+    }
   }
 
-  /* Responsive adjustments */
-  @media (max-width: 768px) {
-    .game-controls {
-      flex-direction: column;
-      gap: 15px;
-      padding: 15px;
-    }
+  .spacer {
+    flex: 1;
+  }
 
-    .control-buttons {
-      flex-direction: column;
-      gap: 10px;
-    }
+  /* ── Row 2: tab bar ── */
+  .tab-row {
+    height: 32px;
+    display: flex;
+    align-items: stretch;
+  }
+
+  .tabs {
+    display: flex;
+    align-items: stretch;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .tab {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    padding: 0 7px;
+    background: var(--bg-panel);
+    border: none;
+    border-right: 1px solid var(--border);
+    color: var(--text);
+    cursor: pointer;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+    transition:
+      background 0.1s,
+      color 0.1s;
+  }
+
+  .tab:hover:not(.disabled) {
+    background: var(--bg-hover);
+    color: var(--accent-hi);
+  }
+
+  .tab.active {
+    background: var(--tab-active);
+    color: #fff;
+  }
+
+  .tab.disabled {
+    color: var(--text-muted);
+    cursor: not-allowed;
+  }
+
+  .active-mark {
+    font-size: 7px;
+    color: #fff;
+    opacity: 0.8;
+  }
+
+  .fkey {
+    color: inherit;
+    opacity: 0.65;
+    font-size: 10px;
+  }
+  .tab.active .fkey {
+    opacity: 0.8;
+  }
+
+  /* ── Controls ── */
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    padding: 0 6px;
+    border-left: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .ctrl-btn {
+    padding: 2px 8px;
+    background: var(--bg-hover);
+    border: 1px solid var(--border-hi);
+    color: var(--text);
+    cursor: pointer;
+    font-family: 'Courier New', monospace;
+    font-size: 9px;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .ctrl-btn:hover {
+    background: var(--bg-active);
+    color: var(--accent-hi);
+  }
+  .ctrl-btn.is-paused {
+    border-color: var(--accent-hi);
+    color: var(--accent-hi);
+  }
+  .ctrl-btn.danger {
+    border-color: var(--neg);
+    color: var(--neg);
+  }
+  .ctrl-btn.danger:hover {
+    background: var(--neg);
+    color: #fff;
+  }
+
+  .speed-wrap {
+    display: flex;
+    gap: 1px;
+  }
+
+  .spd {
+    padding: 2px 5px;
+    background: var(--bg-hover);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    cursor: pointer;
+    font-family: 'Courier New', monospace;
+    font-size: 9px;
+  }
+  .spd:hover {
+    background: var(--bg-active);
+    color: var(--text);
+  }
+  .spd.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
   }
 </style>

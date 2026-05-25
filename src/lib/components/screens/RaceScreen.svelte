@@ -139,486 +139,280 @@
 </script>
 
 <div class="race-screen" bind:this={raceScreenElement}>
-  <div class="race-header">
-    <button class="back-btn" on:click={() => uiState.setScreen('main')}>← Back to Map</button>
-    <h2>👑 The {race?.name || 'Unknown'} People</h2>
-    <p class="race-subtitle">Your chosen civilization</p>
-
-    <!-- Quick navigation -->
-    <div class="quick-nav">
-      <button class="nav-btn" on:click={() => scrollToSection('overview')}>Overview</button>
-      <button class="nav-btn" on:click={() => scrollToSection('physical')}>Physical</button>
-      <button class="nav-btn" on:click={() => scrollToSection('stats')}>Stats</button>
-      <button class="nav-btn" on:click={() => scrollToSection('traits')}>Traits</button>
-      <button class="nav-btn" on:click={() => scrollToSection('implications')}>Culture</button>
-    </div>
-  </div>
+  <div class="screen-hdr">| RACE — {race?.name?.toUpperCase() || 'UNKNOWN'}</div>
 
   {#if race}
-    <div class="race-content">
-      <!-- Race Overview -->
-      <div class="race-overview" id="overview">
-        <div class="race-info-card">
-          <h3>🏛️ Civilization Overview</h3>
-          <div class="overview-stats">
-            <div class="overview-item">
-              <span class="overview-label">Population:</span>
-              <span class="overview-value">{race.population}</span>
-            </div>
-            <div class="overview-item">
-              <span class="overview-label">Size Category:</span>
-              <span class="overview-value">{race.physicalTraits?.size || 'Unknown'}</span>
-            </div>
-            <div class="overview-item">
-              <span class="overview-label">Racial Traits:</span>
-              <span class="overview-value">{race.racialTraits?.length || 0}</span>
-            </div>
-          </div>
-        </div>
+    <!-- Quick nav -->
+    <div class="nav-row">
+      <button class="nav-btn" on:click={() => scrollToSection('overview')}>OVERVIEW</button>
+      <button class="nav-btn" on:click={() => scrollToSection('physical')}>PHYSICAL</button>
+      <button class="nav-btn" on:click={() => scrollToSection('stats')}>STATS</button>
+      <button class="nav-btn" on:click={() => scrollToSection('traits')}>TRAITS</button>
+      {#if race.implications}<button
+          class="nav-btn"
+          on:click={() => scrollToSection('implications')}>CULTURE</button
+        >{/if}
+    </div>
+
+    <!-- Overview -->
+    <div id="overview">
+      <div class="section-hdr">| OVERVIEW</div>
+      <div class="row">
+        <span class="lbl">POPULATION</span><span class="val">{race.population}</span>
       </div>
-
-      <!-- Physical Description -->
-      <div class="race-overview" id="physical">
-        <h3>🏃 Physical Characteristics</h3>
-        <div class="physical-description">
-          <p>{getPhysicalDescription(race)}</p>
-        </div>
+      <div class="row">
+        <span class="lbl">SIZE</span><span class="val"
+          >{race.physicalTraits?.size || 'unknown'}</span
+        >
       </div>
-
-      <!-- Stat Ranges -->
-      <div class="stats-section" id="stats">
-        <h3>📊 Racial Stat Ranges</h3>
-        <div class="stats-grid">
-          {#each Object.entries(race.statRanges || {}) as [statName, statRangeRaw]}
-            {#if Array.isArray(statRangeRaw) && statRangeRaw.length === 2}
-              {@const statRange = statRangeRaw as [number, number]}
-              <div class="stat-card">
-                <div class="stat-header">
-                  <span class="stat-name"
-                    >{statName.charAt(0).toUpperCase() + statName.slice(1)}</span
-                  >
-                  <span class="stat-value" style="color: {getStatRangeColor(statRange)}"
-                    >{statRange[0]}-{statRange[1]}</span
-                  >
-                </div>
-                <div class="stat-bar">
-                  <div
-                    class="stat-fill"
-                    style="width: {(statRange[1] / 20) *
-                      100}%; background-color: {getStatRangeColor(statRange)}"
-                  ></div>
-                </div>
-                <p class="stat-description">{getStatRangeDescription(statName, statRange)}</p>
-              </div>
-            {/if}
-          {/each}
-        </div>
+      <div class="row">
+        <span class="lbl">TRAITS</span><span class="val">{race.racialTraits?.length || 0}</span>
       </div>
+    </div>
 
-      <!-- Racial Traits -->
-      <div class="traits-section" id="traits">
-        <h3>✨ Racial Traits ({race.racialTraits?.length || 0})</h3>
-        {#if race.racialTraits && race.racialTraits.length > 0}
-          <div class="traits-grid">
-            {#each race.racialTraits as trait}
-              <div class="trait-card">
-                <div class="trait-card-header">
-                  <span class="trait-icon">{trait.icon || getTraitIcon(trait.name)}</span>
-                  <div class="trait-title">
-                    <h4>{trait.name}</h4>
-                    <div class="trait-meta">
-                      <span class="trait-category">Racial Trait</span>
-                    </div>
-                  </div>
-                </div>
+    <!-- Physical -->
+    <div id="physical">
+      <div class="section-hdr">| PHYSICAL</div>
+      <div class="row">
+        <span class="lbl">HEIGHT</span><span class="val"
+          >{race.physicalTraits?.heightRange?.[0]}–{race.physicalTraits?.heightRange?.[1]}cm</span
+        >
+      </div>
+      <div class="row">
+        <span class="lbl">WEIGHT</span><span class="val"
+          >{race.physicalTraits?.weightRange?.[0]}–{race.physicalTraits?.weightRange?.[1]}kg</span
+        >
+      </div>
+      <div class="row">
+        <span class="lbl">BUILD</span><span class="val"
+          >{getSizeDescription(race.physicalTraits?.size || '')}</span
+        >
+      </div>
+    </div>
 
-                <p class="trait-description">{trait.description}</p>
-
-                <!-- Trait Effects -->
-                <div class="trait-effects">
-                  <h5>Effects:</h5>
-                  <div class="effects-list">
-                    {#each Object.entries(trait.effects || {}) as [effectName, effectValue]}
-                      <div class="effect-item">
-                        {#if effectName.includes('Bonus')}
-                          +{effectValue} {effectName.replace('Bonus', '').toLowerCase()}
-                        {:else if effectName.includes('Penalty')}
-                          {effectValue} {effectName.replace('Penalty', '').toLowerCase()}
-                        {:else if effectName.includes('Rate')}
-                          {formatEffectValue(effectName, effectValue)}
-                          {effectName.replace('Rate', '').toLowerCase()} rate
-                        {:else if effectName.includes('Resistance')}
-                          {formatEffectValue(effectName, effectValue)}
-                          {effectName.replace('Resistance', '').toLowerCase()} resistance
-                        {:else if effectName.includes('Efficiency')}
-                          {formatEffectValue(effectName, effectValue)} efficiency
-                        {:else if effectName === 'workEfficiency'}
-                          {#each Object.entries(effectValue as Record<string, number>) as [workType, multiplier]}
-                            +{Math.round(((multiplier as number) - 1) * 100)}% {workType} efficiency
-                          {/each}
-                        {:else}
-                          {effectName.replace(/([A-Z])/g, ' $1').trim()}: {formatEffectValue(
-                            effectName,
-                            effectValue
-                          )}
-                        {/if}
-                      </div>
-                    {/each}
-                  </div>
-                </div>
-              </div>
-            {/each}
-          </div>
-        {:else}
-          <div class="no-traits">
-            <p>
-              This race has no special traits yet. Traits may develop over time based on their
-              experiences.
-            </p>
+    <!-- Stat Ranges -->
+    <div id="stats">
+      <div class="section-hdr">| STAT RANGES</div>
+      {#each Object.entries(race.statRanges || {}) as [statName, statRangeRaw]}
+        {#if Array.isArray(statRangeRaw) && statRangeRaw.length === 2}
+          {@const statRange = statRangeRaw as [number, number]}
+          <div class="stat-row">
+            <span class="stat-name">{statName.toUpperCase()}</span>
+            <div class="bar">
+              <div
+                class="fill"
+                style="width: {(statRange[1] / 20) * 100}%; background: {getStatRangeColor(
+                  statRange
+                )}"
+              ></div>
+            </div>
+            <span class="stat-val" style="color: {getStatRangeColor(statRange)}"
+              >{statRange[0]}–{statRange[1]}</span
+            >
           </div>
         {/if}
-      </div>
+      {/each}
+    </div>
 
-      <!-- Cultural Implications -->
-      {#if race.implications}
-        <div class="implications-section" id="implications">
-          <h3>🎭 Cultural Implications</h3>
-          <div class="implications-grid">
-            {#each Object.entries(race.implications) as [category, implication]}
-              <div class="implication-card">
-                <h4>{category.charAt(0).toUpperCase() + category.slice(1)}</h4>
-                <p>{getImplicationDescription(category, null)}</p>
-                <small>{implication}</small>
-              </div>
-            {/each}
-          </div>
-        </div>
+    <!-- Traits -->
+    <div id="traits">
+      <div class="section-hdr">| TRAITS ({race.racialTraits?.length || 0})</div>
+      {#if race.racialTraits && race.racialTraits.length > 0}
+        {#each race.racialTraits as trait}
+          <div class="trait-name">{trait.name.toUpperCase()}</div>
+          <div class="desc-row">{trait.description}</div>
+          {#each Object.entries(trait.effects || {}) as [effectName, effectValue]}
+            <div class="row">
+              <span class="lbl">EFFECT</span>
+              <span class="val">
+                {#if effectName.includes('Bonus')}
+                  <span class="pos"
+                    >+{effectValue} {effectName.replace('Bonus', '').toLowerCase()}</span
+                  >
+                {:else if effectName.includes('Penalty')}
+                  <span class="neg"
+                    >{effectValue} {effectName.replace('Penalty', '').toLowerCase()}</span
+                  >
+                {:else if effectName === 'workEfficiency'}
+                  {#each Object.entries(effectValue as Record<string, number>) as [workType, multiplier]}
+                    <span class="pos">+{Math.round((multiplier - 1) * 100)}% {workType} eff</span>
+                  {/each}
+                {:else}
+                  {effectName.replace(/([A-Z])/g, ' $1').trim()}: {formatEffectValue(
+                    effectName,
+                    effectValue
+                  )}
+                {/if}
+              </span>
+            </div>
+          {/each}
+        {/each}
+      {:else}
+        <div class="row"><span class="muted">no racial traits</span></div>
       {/if}
     </div>
+
+    <!-- Cultural Implications -->
+    {#if race.implications}
+      <div id="implications">
+        <div class="section-hdr">| CULTURE</div>
+        {#each Object.entries(race.implications) as [category, implication]}
+          <div class="row">
+            <span class="lbl">{category.toUpperCase()}</span>
+            <span class="val">{implication}</span>
+          </div>
+        {/each}
+      </div>
+    {/if}
   {:else}
-    <div class="loading">
-      <p>Loading race information...</p>
-    </div>
+    <div class="row"><span class="muted">loading race information...</span></div>
   {/if}
 </div>
 
 <style>
   .race-screen {
-    padding: 20px;
-    background: #000000;
-    color: #e0e0e0;
-    font-family: 'Courier New', monospace;
-    flex: 1;
-    overflow-y: auto;
-    box-sizing: border-box;
-    padding-bottom: 40px;
-  }
-
-  .race-header {
-    text-align: center;
-    margin-bottom: 30px;
-    padding-bottom: 20px;
-    border-bottom: 2px solid #4caf50;
-    position: relative;
-  }
-
-  .race-header h2 {
-    color: #4caf50;
-    margin: 0 0 10px 0;
-    font-size: 2em;
-    text-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
-  }
-
-  .race-subtitle {
-    color: #888;
-    margin: 0;
-    font-style: italic;
-  }
-
-  .quick-nav {
-    display: flex;
-    gap: 10px;
-    justify-content: center;
-    margin-top: 15px;
-  }
-
-  .nav-btn {
-    padding: 6px 12px;
-    background: #000000;
-    border: 1px solid #4caf50;
-    color: #4caf50;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9em;
-    transition: all 0.2s ease;
-  }
-
-  .nav-btn:hover {
-    background: #4caf50;
-    color: #000;
-  }
-
-  .back-btn {
-    position: absolute;
-    top: 0;
-    right: 0;
-    padding: 8px 16px;
-    background: #000000;
-    border: 1px solid #4caf50;
-    color: #4caf50;
-    border-radius: 4px;
-    cursor: pointer;
-    font-family: 'Courier New', monospace;
-    font-size: 0.9em;
-  }
-
-  .back-btn:hover {
-    background: #4caf50;
-    color: #000;
-  }
-
-  .race-content {
-    display: flex;
-    flex-direction: column;
-    gap: 30px;
-  }
-
-  .race-overview {
-    background: #0c0c0c;
-    border-radius: 8px;
-    padding: 20px;
-    border-left: 4px solid #4caf50;
-  }
-
-  .race-info-card h3 {
-    color: #4caf50;
-    margin: 0 0 15px 0;
-  }
-
-  .overview-stats {
-    display: flex;
-    gap: 20px;
-  }
-
-  .overview-item {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-  }
-
-  .overview-label {
-    color: #888;
-    font-size: 0.9em;
-  }
-
-  .overview-value {
-    color: #4caf50;
-    font-weight: bold;
-    font-size: 1.2em;
-  }
-
-  .physical-description {
-    color: #e0e0e0;
-    font-size: 1.1em;
-    line-height: 1.6;
-  }
-
-  .stats-section h3 {
-    color: #4caf50;
-    margin: 0 0 20px 0;
-  }
-
-  .stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 15px;
-  }
-
-  .stat-card {
-    background: #0c0c0c;
-    border-radius: 8px;
-    padding: 15px;
-    border-left: 4px solid #555;
-  }
-
-  .stat-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-  }
-
-  .stat-name {
-    font-weight: bold;
-    color: #e0e0e0;
-  }
-
-  .stat-value {
-    font-weight: bold;
-    font-size: 1.2em;
-  }
-
-  .stat-bar {
-    height: 6px;
-    background: #555;
-    border-radius: 3px;
-    overflow: hidden;
-    margin-bottom: 10px;
-  }
-
-  .stat-fill {
     height: 100%;
-    transition: width 0.5s ease;
-    border-radius: 3px;
-  }
-
-  .stat-description {
-    color: #888;
-    font-size: 0.85em;
-    margin: 0;
-    font-style: italic;
-  }
-  .traits-section h3 {
-    color: #4caf50;
-    margin: 0 0 20px 0;
-  }
-  .traits-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(375.5px, 0px));
-    gap: 20px;
-    justify-items: start; /* Align cards to the left */
-  }
-
-  .trait-card {
-    background: #0c0c0c;
-    border-radius: 8px;
-    padding: 20px;
-    border-left: 4px solid #555;
-    transition: all 0.3s ease;
-    max-width: 375.5px; /* Set a fixed max width */
-    /* Remove any margin: 0 auto; if present */
-  }
-
-  .trait-card-header {
+    overflow-y: auto;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
     display: flex;
-    align-items: flex-start;
-    gap: 12px;
+    flex-direction: column;
   }
 
-  .trait-icon {
-    font-size: 1.8em;
-    color: #9c27b0;
+  .screen-hdr {
+    padding: 5px 10px;
+    background: var(--bg-panel);
+    color: var(--accent-hi);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    border-bottom: 1px solid var(--border-hi);
     flex-shrink: 0;
   }
 
-  .trait-title {
-    flex: 1;
+  .nav-row {
     display: flex;
-    flex-direction: column;
-    gap: 4px;
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
   }
 
-  .trait-card h4 {
-    color: #9c27b0;
-    margin: 0;
-    font-size: 1.2em;
-    font-weight: bold;
+  .nav-btn {
+    padding: 4px 10px;
+    background: transparent;
+    border: none;
+    border-right: 1px solid var(--border);
+    color: var(--text-dim);
+    cursor: pointer;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+  }
+  .nav-btn:hover {
+    color: var(--accent-hi);
+    background: var(--bg-hover);
   }
 
-  .trait-meta {
+  .section-hdr {
+    padding: 4px 8px;
+    background: var(--bg-panel);
+    color: var(--accent-hi);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    border-bottom: 1px solid var(--border);
+    border-top: 1px solid var(--border);
+    margin-top: 1px;
+  }
+
+  .row {
     display: flex;
-    gap: 8px;
+    padding: 2px 8px;
+    align-items: baseline;
+    gap: 6px;
+  }
+  .row:hover {
+    background: var(--bg-hover);
+  }
+
+  .lbl {
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 11px;
+    width: 100px;
+    flex-shrink: 0;
+  }
+
+  .val {
+    color: var(--text);
+    font-size: 11px;
+    margin-left: auto;
+    text-align: right;
+  }
+
+  .stat-row {
+    display: flex;
     align-items: center;
+    padding: 3px 8px;
+    gap: 8px;
+  }
+  .stat-row:hover {
+    background: var(--bg-hover);
   }
 
-  .trait-category {
-    background: rgba(156, 39, 176, 0.2);
-    color: #9c27b0;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 0.8em;
+  .stat-name {
+    color: var(--text-dim);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    width: 100px;
+    flex-shrink: 0;
+  }
+
+  .bar {
+    flex: 1;
+    height: 4px;
+    background: var(--bg-active);
+  }
+  .fill {
+    height: 100%;
+  }
+
+  .stat-val {
+    font-size: 11px;
     font-weight: bold;
+    width: 40px;
+    text-align: right;
+    flex-shrink: 0;
   }
 
-  .trait-description {
-    color: #e0e0e0;
+  .trait-name {
+    padding: 3px 8px;
+    color: var(--accent-hi);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    border-bottom: 1px solid var(--border);
+    margin-top: 2px;
   }
 
-  .implications-section h3 {
-    color: #4caf50;
-    margin: 0 0 20px 0;
-  }
-
-  .implications-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 15px;
-  }
-
-  .implication-card {
-    background: #0c0910;
-    border-radius: 8px;
-    padding: 15px;
-    border-left: 4px solid #9c27b0;
-  }
-
-  .implication-card h4 {
-    color: #9c27b0;
-    margin: 0 0 8px 0;
-    font-size: 1em;
-  }
-
-  .implication-card p {
-    color: #e0e0e0;
-    margin: 0;
-    font-weight: bold;
-  }
-
-  .implication-card small {
-    color: #888;
+  .desc-row {
+    padding: 2px 8px 3px 16px;
+    color: var(--text-muted);
+    font-size: 11px;
     font-style: italic;
-    font-size: 0.8em;
-    display: block;
-    margin-top: 5px;
+    border-bottom: 1px solid var(--border);
   }
 
-  .loading {
-    text-align: center;
-    padding: 50px;
-    color: #888;
+  .pos {
+    color: var(--pos);
   }
-
-  /* Scrollbar styling */
-  .race-screen::-webkit-scrollbar {
-    width: 8px;
+  .neg {
+    color: var(--neg);
   }
-
-  .race-screen::-webkit-scrollbar-track {
-    background: #000000;
-  }
-
-  .race-screen::-webkit-scrollbar-thumb {
-    background: #4caf50;
-    border-radius: 4px;
-  }
-
-  /* Responsive design */
-  @media (max-width: 768px) {
-    .race-screen {
-      padding: 10px;
-    }
-
-    .stats-grid {
-      grid-template-columns: 1fr;
-    }
-
-    .traits-grid {
-      grid-template-columns: 1fr;
-    }
-
-    .quick-nav {
-      flex-wrap: wrap;
-      justify-content: center;
-    }
+  .muted {
+    color: var(--text-muted);
+    font-style: italic;
+    font-size: 11px;
+    padding: 4px 8px;
   }
 </style>

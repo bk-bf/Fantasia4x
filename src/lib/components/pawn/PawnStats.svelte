@@ -5,106 +5,70 @@
   export let pawn: Pawn;
 </script>
 
-<div class="stats-section" id="stats">
-  <h3>📊 Individual Stats</h3>
-  <div class="stats-grid">
-    {#each Object.entries(pawn.stats) as [statName, statValue]}
-      <div class="stat-card">
-        <div class="stat-header">
-          <span class="stat-name">{statName.charAt(0).toUpperCase() + statName.slice(1)}</span>
-          <span class="stat-value" style="color: {getStatColor(statValue)}">{statValue}</span>
-        </div>
-        <div class="stat-bar">
-          <div
-            class="stat-fill"
-            style="width: {(statValue / 20) * 100}%; background-color: {getStatColor(statValue)}"
-          ></div>
-        </div>
-        <p class="stat-description">{getStatDescription(statName, statValue)}</p>
+<div class="stats-section">
+  <div class="section-hdr">| STATS</div>
+  {#each Object.entries(pawn.stats) as [statName, statValue]}
+    <div class="stat-row">
+      <span class="stat-name">{statName.toUpperCase()}</span>
+      <div class="bar">
+        <div
+          class="fill"
+          style="width: {(statValue / 20) * 100}%; background: {getStatColor(statValue)}"
+        ></div>
       </div>
-    {/each}
-  </div>
+      <span class="stat-val" style="color: {getStatColor(statValue)}">{statValue}</span>
+    </div>
+  {/each}
 </div>
 
 <style>
   .stats-section {
-    background: #0c0c0c;
-    border-radius: 8px;
-    padding: 25px;
-    margin-bottom: 30px;
-    border-left: 4px solid #2196f3;
+    border-bottom: 1px solid var(--border);
   }
 
-  .stats-section h3 {
-    color: #2196f3;
-    margin: 0 0 25px 0;
-    font-size: 1.4em;
-    text-shadow: 0 0 10px rgba(33, 150, 243, 0.3);
+  .section-hdr {
+    padding: 4px 8px;
+    background: var(--bg-panel);
+    color: var(--accent-hi);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    border-bottom: 1px solid var(--border);
+    border-top: 1px solid var(--border);
+    margin-top: 1px;
   }
 
-  .stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-    gap: 15px;
-  }
-
-  .stat-card {
-    background: #000000;
-    border: 1px solid #333;
-    border-radius: 8px;
-    padding: 20px;
-    transition: all 0.3s ease;
-  }
-
-  .stat-card:hover {
-    border-color: #2196f3;
-    box-shadow: 0 0 15px rgba(33, 150, 243, 0.2);
-  }
-
-  .stat-header {
+  .stat-row {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    margin-bottom: 10px;
+    padding: 3px 8px;
+    gap: 8px;
+  }
+  .stat-row:hover {
+    background: var(--bg-hover);
   }
 
   .stat-name {
-    color: #2196f3;
-    font-weight: bold;
-    font-size: 1.1em;
+    color: var(--text-dim);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    width: 80px;
+    flex-shrink: 0;
   }
 
-  .stat-value {
-    font-family: monospace;
-    font-weight: bold;
-    font-size: 1.2em;
+  .bar {
+    flex: 1;
+    height: 4px;
+    background: var(--bg-active);
   }
-
-  .stat-bar {
-    height: 8px;
-    background: #333;
-    border-radius: 4px;
-    overflow: hidden;
-    margin-bottom: 10px;
-  }
-
-  .stat-fill {
+  .fill {
     height: 100%;
-    transition: width 0.5s ease;
-    border-radius: 4px;
   }
 
-  .stat-description {
-    color: #ccc;
-    font-size: 0.9em;
-    margin: 0;
-    line-height: 1.4;
-  }
-
-  /* Mobile responsiveness */
-  @media (max-width: 768px) {
-    .stats-grid {
-      grid-template-columns: 1fr;
-    }
+  .stat-val {
+    font-size: 11px;
+    font-weight: bold;
+    width: 24px;
+    text-align: right;
+    flex-shrink: 0;
   }
 </style>

@@ -1,169 +1,97 @@
 <script lang="ts">
   import type { Pawn } from '$lib/game/core/types';
-  import { getTraitIcon } from '$lib/game/core/Race';
   import { formatEffectValue } from '$lib/utils/pawnUtils';
 
   export let pawn: Pawn;
 </script>
 
-<div class="traits-section" id="traits">
-  <h3>✨ Racial Traits ({pawn.racialTraits?.length || 0})</h3>
+<div class="traits-section">
+  <div class="section-hdr">| TRAITS ({pawn.racialTraits?.length || 0})</div>
   {#if pawn.racialTraits && pawn.racialTraits.length > 0}
-    <div class="traits-grid">
-      {#each pawn.racialTraits as trait}
-        <div class="trait-card">
-          <div class="trait-card-header">
-            <span class="trait-icon">{trait.icon || getTraitIcon(trait.name)}</span>
-            <div class="trait-title">
-              <h4>{trait.name}</h4>
-              <div class="trait-meta">
-                <span class="trait-category">Inherited Trait</span>
-              </div>
-            </div>
-          </div>
-
-          <p class="trait-description">{trait.description}</p>
-
-          <!-- Trait Effects -->
-          <div class="trait-effects">
-            <h5>Effects on {pawn.name}:</h5>
-            <div class="effects-list">
-              {#each Object.entries(trait.effects || {}) as [effectName, effectValue]}
-                <div class="effect-item">
-                  {#if effectName.includes('Bonus')}
-                    +{effectValue} {effectName.replace('Bonus', '').toLowerCase()}
-                  {:else if effectName.includes('Penalty')}
-                    {effectValue} {effectName.replace('Penalty', '').toLowerCase()}
-                  {:else if effectName === 'workEfficiency'}
-                    {#each Object.entries(effectValue) as [workType, multiplier]}
-                      +{Math.round((multiplier - 1) * 100)}% {workType} efficiency
-                    {/each}
-                  {:else}
-                    {effectName.replace(/([A-Z])/g, ' $1').trim()}: {formatEffectValue(
-                      effectName,
-                      effectValue
-                    )}
-                  {/if}
-                </div>
+    {#each pawn.racialTraits as trait}
+      <div class="trait-name">{trait.name.toUpperCase()}</div>
+      <div class="desc-row">{trait.description}</div>
+      {#each Object.entries(trait.effects || {}) as [effectName, effectValue]}
+        <div class="row">
+          <span class="lbl">EFFECT</span>
+          <span class="val">
+            {#if effectName.includes('Bonus')}
+              <span class="pos">+{effectValue} {effectName.replace('Bonus', '').toLowerCase()}</span>
+            {:else if effectName.includes('Penalty')}
+              <span class="neg">{effectValue} {effectName.replace('Penalty', '').toLowerCase()}</span>
+            {:else if effectName === 'workEfficiency'}
+              {#each Object.entries(effectValue as Record<string, number>) as [workType, multiplier]}
+                <span class="pos">+{Math.round((multiplier - 1) * 100)}% {workType} eff</span>
               {/each}
-            </div>
-          </div>
+            {:else}
+              {effectName.replace(/([A-Z])/g, ' $1').trim()}: {formatEffectValue(effectName, effectValue)}
+            {/if}
+          </span>
         </div>
       {/each}
-    </div>
+    {/each}
   {:else}
-    <div class="no-traits">
-      <p>This pawn has no racial traits.</p>
-    </div>
+    <div class="row"><span class="muted">no racial traits</span></div>
   {/if}
 </div>
 
 <style>
   .traits-section {
-    background: #0c0c0c;
-    border-radius: 8px;
-    padding: 25px;
-    margin-bottom: 30px;
-    border-left: 4px solid #9c27b0;
+    border-bottom: 1px solid var(--border);
   }
 
-  .traits-section h3 {
-    color: #9c27b0;
-    margin: 0 0 25px 0;
-    font-size: 1.4em;
-    text-shadow: 0 0 10px rgba(156, 39, 176, 0.3);
+  .section-hdr {
+    padding: 4px 8px;
+    background: var(--bg-panel);
+    color: var(--accent-hi);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    border-bottom: 1px solid var(--border);
+    border-top: 1px solid var(--border);
+    margin-top: 1px;
   }
 
-  .traits-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
-    gap: 20px;
+  .trait-name {
+    padding: 3px 8px;
+    color: var(--accent-hi);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    border-bottom: 1px solid var(--border);
+    margin-top: 2px;
   }
 
-  .trait-card {
-    background: #000000;
-    border: 1px solid #333;
-    border-radius: 8px;
-    padding: 20px;
-    transition: all 0.3s ease;
+  .desc-row {
+    padding: 2px 8px 3px 16px;
+    color: var(--text-muted);
+    font-size: 11px;
+    font-style: italic;
+    border-bottom: 1px solid var(--border);
   }
 
-  .trait-card:hover {
-    border-color: #9c27b0;
-    box-shadow: 0 0 15px rgba(156, 39, 176, 0.2);
-  }
-
-  .trait-card-header {
+  .row {
     display: flex;
-    align-items: center;
-    gap: 15px;
-    margin-bottom: 15px;
+    padding: 2px 8px;
+    align-items: baseline;
+    gap: 6px;
   }
+  .row:hover { background: var(--bg-hover); }
 
-  .trait-icon {
-    font-size: 2em;
+  .lbl {
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 11px;
+    width: 70px;
     flex-shrink: 0;
   }
 
-  .trait-title h4 {
-    color: #9c27b0;
-    margin: 0 0 5px 0;
-    font-size: 1.2em;
+  .val {
+    color: var(--text);
+    font-size: 11px;
+    margin-left: auto;
   }
 
-  .trait-meta {
-    display: flex;
-    gap: 10px;
-  }
-
-  .trait-category {
-    background: rgba(156, 39, 176, 0.2);
-    color: #9c27b0;
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 0.75em;
-    font-weight: bold;
-  }
-
-  .trait-description {
-    color: #ccc;
-    margin: 0 0 20px 0;
-    line-height: 1.5;
-  }
-
-  .trait-effects h5 {
-    color: #9c27b0;
-    margin: 0 0 10px 0;
-    font-size: 1em;
-  }
-
-  .effects-list {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  .effect-item {
-    background: rgba(156, 39, 176, 0.1);
-    padding: 8px 12px;
-    border-radius: 4px;
-    color: #e0e0e0;
-    font-size: 0.9em;
-    border-left: 3px solid #9c27b0;
-  }
-
-  .no-traits {
-    background: #0c0c0c;
-    border-radius: 8px;
-    padding: 40px;
-    text-align: center;
-    color: #888;
-    border: 2px dashed #333;
-  }
-
-  @media (max-width: 768px) {
-    .traits-grid {
-      grid-template-columns: 1fr;
-    }
-  }
+  .pos { color: var(--pos); }
+  .neg { color: var(--neg); }
+  .muted { color: var(--text-muted); font-style: italic; font-size: 11px; }
 </style>

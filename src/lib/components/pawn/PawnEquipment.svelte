@@ -71,7 +71,7 @@
 
 <!-- Equipment and Inventory -->
 <div class="equipment-section" id="equipment">
-  <h3>⚔️ Equipment & Inventory</h3>
+  <h3>| EQUIPMENT &amp; INVENTORY</h3>
   <p class="inventory-note">All items from global storage are automatically available to equip</p>
 
   <!-- Currently Equipped -->
@@ -164,88 +164,99 @@
 </div>
 
 <style>
-  /* Equipment Section */
   .equipment-section {
-    background: #0c0c0c;
-    border-radius: 8px;
-    padding: 25px;
-    border-left: 4px solid #607d8b;
-    margin-bottom: 30px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    padding: 0;
   }
 
   .equipment-section h3 {
-    color: #607d8b;
-    margin: 0 0 15px 0;
-    font-size: 1.4em;
-    text-shadow: 0 0 10px rgba(96, 125, 139, 0.3);
+    padding: 4px 8px;
+    background: var(--bg-panel);
+    color: var(--accent-hi);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    border-bottom: 1px solid var(--border);
+    border-top: 1px solid var(--border);
+    margin: 1px 0 0 0;
+    font-weight: normal;
   }
 
   .inventory-note {
-    color: #888;
-    margin: 0 0 25px 0;
+    color: var(--text-muted);
+    padding: 2px 8px;
     font-style: italic;
-    text-align: center;
+    font-size: 11px;
+    border-bottom: 1px solid var(--border);
   }
 
-  .equipped-items h4 {
-    color: #607d8b;
-    margin: 0 0 20px 0;
-    font-size: 1.1em;
+  .equipped-items h4,
+  .inventory-items h4 {
+    padding: 3px 8px;
+    color: var(--text-dim);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border-bottom: 1px solid var(--border);
+    font-weight: normal;
+    margin: 0;
   }
 
   .equipment-slots {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: 20px;
-    margin-bottom: 30px;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 0;
   }
 
   .equipment-slot {
-    background: #000000;
-    border: 1px solid #333;
-    border-radius: 8px;
-    padding: 15px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    padding: 3px 8px;
+  }
+  .equipment-slot:hover {
+    background: var(--bg-hover);
   }
 
   .slot-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
+    align-items: baseline;
   }
 
   .slot-name {
-    color: #607d8b;
-    font-weight: bold;
+    color: var(--text-dim);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
   }
 
   .unequip-btn {
-    background: #ff5722;
-    border: 1px solid #ff5722;
-    color: white;
-    padding: 4px 8px;
-    border-radius: 3px;
+    background: var(--bg-hover);
+    border: 1px solid var(--border-hi);
+    color: var(--text);
+    padding: 1px 6px;
     cursor: pointer;
-    font-size: 0.8em;
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
   }
-
   .unequip-btn:hover {
-    background: #d84315;
+    color: var(--neg);
+    border-color: var(--neg);
   }
-
   .unequip-btn.loading {
-    opacity: 0.6;
+    opacity: 0.5;
     cursor: not-allowed;
   }
 
   .equipped-item {
     display: flex;
-    align-items: center;
-    gap: 12px;
+    align-items: baseline;
+    gap: 8px;
+    padding: 1px 0;
   }
 
   .item-icon {
-    font-size: 1.5em;
+    display: none;
   }
 
   .item-details {
@@ -253,150 +264,105 @@
   }
 
   .item-name {
-    color: #e0e0e0;
-    font-weight: bold;
+    color: var(--text);
+    font-size: 11px;
     display: block;
-    margin-bottom: 5px;
   }
 
   .durability-bar {
-    height: 6px;
-    background: #333;
-    border-radius: 3px;
-    overflow: hidden;
-    margin-bottom: 3px;
+    height: 3px;
+    background: var(--bg-active);
+    margin: 2px 0;
   }
 
   .durability-fill {
     height: 100%;
-    background: #4caf50;
-    transition: width 0.3s ease;
+    background: var(--pos);
   }
 
   .durability-text {
-    color: #888;
-    font-size: 0.8em;
+    color: var(--text-muted);
+    font-size: 10px;
   }
 
   .empty-slot {
-    color: #666;
+    color: var(--text-muted);
     font-style: italic;
-    text-align: center;
-    padding: 20px;
-  }
-
-  .inventory-items h4 {
-    color: #607d8b;
-    margin: 0 0 20px 0;
-    font-size: 1.1em;
+    font-size: 11px;
+    padding: 1px 0;
   }
 
   .inventory-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-    gap: 15px;
+    display: flex;
+    flex-direction: column;
   }
 
   .inventory-item {
-    background: #000000;
-    border: 1px solid #333;
-    border-radius: 8px;
-    padding: 15px;
-    transition: all 0.3s ease;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    padding: 3px 8px;
   }
-
   .inventory-item:hover {
-    border-color: #607d8b;
+    background: var(--bg-hover);
   }
 
-  .inventory-item[data-type='weapon'] {
-    border-left: 3px solid #f44336;
-  }
-
-  .inventory-item[data-type='armor'] {
-    border-left: 3px solid #2196f3;
-  }
-
-  .inventory-item[data-type='tool'] {
-    border-left: 3px solid #ff9800;
-  }
-
+  .inventory-item[data-type='weapon'],
+  .inventory-item[data-type='armor'],
+  .inventory-item[data-type='tool'],
   .inventory-item[data-type='consumable'] {
-    border-left: 3px solid #4caf50;
+    border-left: none;
   }
 
   .item-header {
     display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 10px;
+    align-items: baseline;
+    gap: 6px;
   }
 
   .item-quantity {
-    color: #888;
-    font-weight: bold;
+    color: var(--text-muted);
+    font-size: 11px;
     margin-left: auto;
   }
 
   .item-description {
-    color: #ccc;
-    font-size: 0.9em;
-    margin: 0 0 15px 0;
-    line-height: 1.4;
+    color: var(--text-muted);
+    font-size: 11px;
+    margin: 0;
+    font-style: italic;
   }
 
   .item-actions {
     display: flex;
-    gap: 8px;
+    gap: 4px;
+    margin-top: 2px;
   }
 
   .use-btn,
   .equip-btn {
-    padding: 6px 12px;
-    border-radius: 4px;
+    padding: 2px 8px;
     cursor: pointer;
-    font-size: 0.9em;
-    border: 1px solid;
-    transition: all 0.3s ease;
-  }
-
-  .use-btn {
-    background: #4caf50;
-    border-color: #4caf50;
-    color: white;
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
+    background: var(--bg-hover);
+    border: 1px solid var(--border-hi);
+    color: var(--text);
   }
 
   .use-btn:hover {
-    background: #388e3c;
+    color: var(--pos);
   }
-
-  .equip-btn {
-    background: #2196f3;
-    border-color: #2196f3;
-    color: white;
-  }
-
   .equip-btn:hover {
-    background: #1976d2;
+    color: var(--accent-hi);
   }
 
   .equip-btn:disabled {
-    background: #666;
-    border-color: #666;
+    opacity: 0.4;
     cursor: not-allowed;
-    opacity: 0.6;
   }
 
   .equip-btn.loading {
-    opacity: 0.6;
+    opacity: 0.5;
     cursor: not-allowed;
-  }
-
-  /* Mobile Responsive */
-  @media (max-width: 768px) {
-    .equipment-slots,
-    .inventory-grid {
-      grid-template-columns: 1fr;
-    }
   }
 </style>
