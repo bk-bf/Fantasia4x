@@ -4,8 +4,9 @@
 // Vertex attributes
 in vec2 a_position;      // Vertex position in screen coordinates
 in vec2 a_texCoord;      // Texture coordinates for character atlas
-in vec3 a_foreground;    // Foreground color for the character
-in vec3 a_background;    // Background color for the character
+in vec3 a_foreground;    // Foreground (dark glyph pixel) color
+in vec3 a_background;    // Background (transparent pixel) color
+in vec3 a_detail;        // Detail/highlight (bright glyph pixel) color
 
 // Uniforms (constant for all vertices in a draw call)
 uniform mat4 u_projection;  // Orthographic projection matrix
@@ -14,6 +15,7 @@ uniform mat4 u_projection;  // Orthographic projection matrix
 out vec2 v_texCoord;     // Pass texture coordinates to fragment
 out vec3 v_foreground;   // Pass foreground color to fragment
 out vec3 v_background;   // Pass background color to fragment
+out vec3 v_detail;       // Pass detail color to fragment
 
 void main() {
     // Transform position to clip space using projection matrix
@@ -23,4 +25,5 @@ void main() {
     v_texCoord = a_texCoord;
     v_foreground = a_foreground;
     v_background = a_background;
+    v_detail = a_detail;
 }

@@ -7,7 +7,7 @@
 
 import { createOrthographicMatrix, PerformanceTimer } from './utils.js';
 import { ShaderManager, createTileRendererShaders } from './shaders.js';
-import { createMonospaceFontAtlas } from './font-atlas.js';
+import { createSquareCellAtlas } from './font-atlas.js';
 import { TextureManager } from './texture-manager.js';
 import { CharacterRenderer } from './character-renderer.js';
 import { GridRenderer } from './grid-renderer.js';
@@ -109,10 +109,64 @@ export class WebGLRendererCore {
 		this.viewTileY = y;
 	}
 
-	/** Change tile pixel dimensions (used for zoom). */
+	/** Change tile pixel dimensions (used for zoom). Regenerates atlas if cell size changed. */
 	setTileSize(w: number, h: number): void {
+		const cellChanged = w !== this.tileWidth;
 		this.tileWidth = w;
 		this.tileHeight = h;
+		if (cellChanged) {
+			this.reloadAtlasForCellSize(w);
+		}
+	}
+
+	// Prevent overlapping async atlas reloads
+	private atlasReloadPending = false;
+	private atlasReloadQueued: number | null = null;
+
+	/** Regenerate the font atlas at the given cell size and upload to GPU directly (no TextureManager cache). */
+	private async reloadAtlasForCellSize(cellSize: number): Promise<void> {
+		// If already loading, just queue the latest size — process after current finishes
+		if (this.atlasReloadPending) {
+			this.atlasReloadQueued = cellSize;
+			return;
+		}
+		this.atlasReloadPending = true;
+
+		try {
+			const gl = this.webglState.getContext();
+			if (!gl || !this.gridRenderer) return;
+
+			const newAtlas = await createSquareCellAtlas(cellSize, this.debug);
+
+			// Allocate raw GL texture — bypass TextureManager to avoid stale cache issues
+			const newTexture = gl.createTexture();
+			if (!newTexture) return;
+
+			gl.bindTexture(gl.TEXTURE_2D, newTexture);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+			gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA,
+				newAtlas.atlasWidth, newAtlas.atlasHeight, 0,
+				gl.RGBA, gl.UNSIGNED_BYTE, newAtlas.texture.data);
+
+			// Swap in atomically
+			if (this.fontTexture) gl.deleteTexture(this.fontTexture);
+			this.fontTexture = newTexture;
+			this.fontAtlas = newAtlas;
+			this.gridRenderer.setFontAtlas(newAtlas);
+		} catch (err) {
+			console.warn('Atlas reload failed:', err);
+		} finally {
+			this.atlasReloadPending = false;
+			// Process any size change that arrived while we were loading
+			if (this.atlasReloadQueued !== null) {
+				const next = this.atlasReloadQueued;
+				this.atlasReloadQueued = null;
+				this.reloadAtlasForCellSize(next);
+			}
+		}
 	}
 
 	private async initialize(): Promise<boolean> {
@@ -124,7 +178,7 @@ export class WebGLRendererCore {
 			this.shaderManager = await createTileRendererShaders(gl, this.debug);
 			if (!this.shaderManager) throw new Error('Shader init failed');
 
-			this.fontAtlas = await createMonospaceFontAtlas(this.debug);
+			this.fontAtlas = await createSquareCellAtlas(this.tileWidth, this.debug);
 
 			this.textureManager = new TextureManager(gl, this.debug);
 			this.fontTexture = this.textureManager.createFontAtlasTexture(this.fontAtlas, {

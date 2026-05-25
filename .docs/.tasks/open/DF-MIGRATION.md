@@ -41,12 +41,12 @@ Every file below exists in the project today and is ready to use.
 
 For reference, the main browser alternatives for a Caves of Qud-style colored-glyph grid are:
 
-| Library | Rendering | Roguelike extras | Notes |
-|---|---|---|---|
-| **rot.js** (`rot-js`) | Canvas 2D | ✅ Full (FOV, noise, A*, scheduler) | Most direct Qud analogue — `ROT.Display` supports `"rect"` (tile grid) with per-cell foreground + background color and CP437 font mode. Would replace *both* the renderer *and* PathfinderService. |
-| **WGLT** | WebGL | ❌ Display only | Explicit ASCII terminal emulator; 60fps on large maps. Closest feature-match to what Exiled provides — same rendering model, minimal API. |
-| **Malwoden** (`malwoden`) | Canvas 2D | ✅ Partial (rot.js-inspired) | First-class TypeScript API, clean ergonomics. Younger project with a smaller community. |
-| **Phaser** | WebGL/Canvas | ❌ General engine | Tilemap + spritesheet pipeline; closest to Qud's actual *tile sprite* mode. Very heavy for this use case. |
+| Library                   | Rendering    | Roguelike extras                   | Notes                                                                                                                                                                                              |
+| ------------------------- | ------------ | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **rot.js** (`rot-js`)     | Canvas 2D    | ✅ Full (FOV, noise, A*, scheduler) | Most direct Qud analogue — `ROT.Display` supports `"rect"` (tile grid) with per-cell foreground + background color and CP437 font mode. Would replace *both* the renderer *and* PathfinderService. |
+| **WGLT**                  | WebGL        | ❌ Display only                     | Explicit ASCII terminal emulator; 60fps on large maps. Closest feature-match to what Exiled provides — same rendering model, minimal API.                                                          |
+| **Malwoden** (`malwoden`) | Canvas 2D    | ✅ Partial (rot.js-inspired)        | First-class TypeScript API, clean ergonomics. Younger project with a smaller community.                                                                                                            |
+| **Phaser**                | WebGL/Canvas | ❌ General engine                   | Tilemap + spritesheet pipeline; closest to Qud's actual *tile sprite* mode. Very heavy for this use case.                                                                                          |
 
 **Decision: keep Exiled.** It is already in the project, ships CP437, runs at WebGL2 performance (equivalent to WGLT), and its `shaders.ts` layer accepts custom GLSL — meaning CRT/scanline postprocessing is addable without replacing anything. The roguelike extras rot.js provides (pathfinding, FOV, noise) are being ported from Celestia where they benefit from sitting inside the service layer alongside `ModifierSystem` and `GameStateManager`.
 
@@ -297,6 +297,53 @@ Trend: drifts toward neutral (50) at 0.1/s when no active modifiers
 
 ---
 
+### Phase 2b — CoQ Visual Style (Sprite Mode)
+
+**Status:** `✅ complete`
+
+**Scope:** Swap the font-atlas glyph renderer for a CP437 sprite-sheet + 3-color tinting shader, producing a visual style equivalent to Caves of Qud's tile mode. No gameplay changes.
+
+**Goal:** Each terrain cell renders a small 16×16 pixel-art glyph from a static PNG spritesheet. The shader recolors black pixels to a per-tile foreground color and transparent pixels to the background color, enabling infinite color variation from a single grayscale source image.
+
+**Decision rationale:** The font-atlas approach generates glyphs from the browser's system font at runtime. This produces non-square, anti-aliased, resolution-dependent glyphs. Loading a handcrafted CP437 bitmap PNG (e.g., IBM CGA 8×8 scaled to 16×16, or a DF community tileset) gives pixel-perfect square tiles identical to authentic roguelike renderers, and enables the CoQ 3-color tint technique.
+
+**3-color shader technique (from Caves of Qud):**
+```
+// Per-pixel logic in fragment shader:
+// sample pixel from sprite atlas
+vec4 sprite = texture2D(u_atlas, uv);
+// transparent → background color
+// black pixel (luma ≈ 0) → u_fg_color (base glyph color)
+// white pixel (luma ≈ 1) → u_detail_color (highlight / shading layer)
+float luma = dot(sprite.rgb, vec3(0.299, 0.587, 0.114));
+vec3 tinted = mix(u_fg_color, u_detail_color, luma);
+gl_FragColor = vec4(tinted, sprite.a) * (1.0 - step(sprite.a, 0.01))
+             + vec4(u_bg_color, 1.0) * step(sprite.a, 0.01);
+```
+`u_bg_color`, `u_fg_color`, `u_detail_color` are per-cell uniforms pushed with each tile draw call, sourced from `TileData`.
+
+**Sprite sheet format (standard CP437 layout):**
+- 256 characters arranged in a 16-column × 16-row grid
+- Each cell is exactly `N×N` pixels (N = 16 recommended for balance of detail vs. tile density)
+- Grayscale PNG with alpha: glyphs are black, background is transparent
+- UV for char code `c`: `u = (c % 16) / 16`, `v = floor(c / 16) / 16`
+
+**Work items:**
+
+- [x] **Source the sprite sheet** — used `createSquareCellAtlas()` (generates square cells from browser font on transparent background) as the primary path; external PNG can be swapped in via `loadSpritesheetAtlas()` when available.
+- [x] **Extend `TileData`** in `src/lib/webgl/tile-types.ts` — added `detail?: RGB` (defaults to `foreground` when absent).
+- [x] **Rewrite the fragment shader** — `src/lib/webgl/shaders/fragment.glsl` now implements 3-color tint: `fragColor = vec4(mix(v_background, mix(v_foreground, v_detail, luma), sprite.a), 1.0)`. Backgrounds are always rendered (no more transparent tiles).
+- [x] **Add `createSquareCellAtlas(cellSize)`** to `src/lib/webgl/font-atlas.ts` — renders font on transparent background in N×N square cells, 16-col CP437 grid layout.
+- [x] **Update `WebGLRendererCore`** — calls `createSquareCellAtlas(tileWidth)` instead of `createMonospaceFontAtlas()`.
+- [x] **Make tiles square** — `GameCanvas.svelte` now uses `tileWidth = tileHeight = 16`; zoom preserves 1:1 ratio.
+- [x] **Update `Terrains.ts` characters and colors** — replaced non-CP437 Unicode glyphs (`♦ ═ ╥ ≈ ≡ ✦ ¤ ☼ ○ ∩ ¥`) with standard ASCII chars. Adopted CoQ muted earth-tone palette across all subterrains.
+
+**Sources:** Caves of Qud 3-color shader technique (public documentation); DF wiki tileset repository (Bisasam 20×20 ASCII, CC-licensed).
+
+**Complexity:** Medium. The shader change is contained; the main risk is the UV mapping if the spritesheet cell boundaries don't align cleanly. Fallback: keep the font-atlas path behind a compile flag.
+
+---
+
 ### Phase 3 — Pawns on the Map
 
 **Status:** `🚧 next`
@@ -393,15 +440,15 @@ Trend: drifts toward neutral (50) at 0.1/s when no active modifiers
 
 Items below are optional and independent. Each can be tackled separately.
 
-| Feature                      | What it needs                                                                                                                    | Complexity                                           | Done |
-| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- | ---- |
-| Fog of war / line-of-sight   | Per-pawn visibility radius; shadow-casting algorithm over the tile grid; `WorldTile.visible: boolean`                            | Medium                                               | ☐    |
-| Mood depth                   | Port `mood_manager.gd` from Celestia: 5 thresholds, temporary modifiers with expiry, environment/activity checks                 | Low (Fantasia4x has `mood` already, this extends it) | ☐    |
-| Z-levels                     | Add `z: number` dimension to `WorldTile`, `Pawn.position`, pathfinder; ramp/staircase tile types; renderer needs layer switching | Very high — optional                                 | ☐    |
-| Temperature / season effects | Use `WorldTile.temperature`; seasonal multiplier on needs decay and crop yield                                                   | Medium                                               | ☐    |
-| Territory / danger zones     | Port `territory_database.gd` from Celestia; monster factions own tiles; penalty to resource amounts in their zones               | Medium                                               | ☐    |
-| Real-time mode               | Replace per-turn step with a `requestAnimationFrame` game loop; pawn speed becomes seconds-per-tile                              | Medium — architectural; turn-based is fine for now   | ☐    |
-| CRT / retro visual effects   | Add a scanline + bloom postprocess GLSL shader in `shaders.ts` (infrastructure already exists). `rot.js` and WGLT both render to plain canvas so the same pass can wrap either renderer. Optional CSS `filter: saturate()` for cheaper approximation. | Low — purely additive visual layer | ☐    |
+| Feature                      | What it needs                                                                                                                                                                                                                                         | Complexity                                           | Done |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- | ---- |
+| Fog of war / line-of-sight   | Per-pawn visibility radius; shadow-casting algorithm over the tile grid; `WorldTile.visible: boolean`                                                                                                                                                 | Medium                                               | ☐    |
+| Mood depth                   | Port `mood_manager.gd` from Celestia: 5 thresholds, temporary modifiers with expiry, environment/activity checks                                                                                                                                      | Low (Fantasia4x has `mood` already, this extends it) | ☐    |
+| Z-levels                     | Add `z: number` dimension to `WorldTile`, `Pawn.position`, pathfinder; ramp/staircase tile types; renderer needs layer switching                                                                                                                      | Very high — optional                                 | ☐    |
+| Temperature / season effects | Use `WorldTile.temperature`; seasonal multiplier on needs decay and crop yield                                                                                                                                                                        | Medium                                               | ☐    |
+| Territory / danger zones     | Port `territory_database.gd` from Celestia; monster factions own tiles; penalty to resource amounts in their zones                                                                                                                                    | Medium                                               | ☐    |
+| Real-time mode               | Replace per-turn step with a `requestAnimationFrame` game loop; pawn speed becomes seconds-per-tile                                                                                                                                                   | Medium — architectural; turn-based is fine for now   | ☐    |
+| CRT / retro visual effects   | Add a scanline + bloom postprocess GLSL shader in `shaders.ts` (infrastructure already exists). `rot.js` and WGLT both render to plain canvas so the same pass can wrap either renderer. Optional CSS `filter: saturate()` for cheaper approximation. | Low — purely additive visual layer                   | ☐    |
 
 ---
 

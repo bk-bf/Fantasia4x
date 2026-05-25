@@ -49,15 +49,15 @@ export function generatePlaceholderGrid(width = 80, height = 50): GameGrid {
             let bg: RGB;
 
             if (y < 3 || y > height - 4 || x < 3 || x > width - 4 || n < 0.15) {
-                char = '~'; fg = { r: 0.20, g: 0.45, b: 0.80 }; bg = { r: 0.01, g: 0.04, b: 0.12 };
+                char = '~'; fg = { r: 0.18, g: 0.40, b: 0.70 }; bg = { r: 0.01, g: 0.03, b: 0.10 };
             } else if (n < 0.35) {
-                char = ','; fg = { r: 0.82, g: 0.72, b: 0.20 }; bg = { r: 0.05, g: 0.04, b: 0.01 };
+                char = ','; fg = { r: 0.74, g: 0.64, b: 0.18 }; bg = { r: 0.05, g: 0.04, b: 0.01 };
             } else if (n < 0.55) {
-                char = '.'; fg = { r: 0.38, g: 0.62, b: 0.22 }; bg = { r: 0.03, g: 0.06, b: 0.01 };
+                char = '.'; fg = { r: 0.34, g: 0.56, b: 0.20 }; bg = { r: 0.03, g: 0.05, b: 0.01 };
             } else if (n < 0.72) {
-                char = '♦'; fg = { r: 0.13, g: 0.55, b: 0.13 }; bg = { r: 0.01, g: 0.07, b: 0.01 };
+                char = '♣'; fg = { r: 0.11, g: 0.48, b: 0.11 }; bg = { r: 0.01, g: 0.06, b: 0.01 };
             } else {
-                char = '▲'; fg = { r: 0.78, g: 0.78, b: 0.76 }; bg = { r: 0.06, g: 0.06, b: 0.06 };
+                char = '^'; fg = { r: 0.72, g: 0.72, b: 0.70 }; bg = { r: 0.06, g: 0.06, b: 0.06 };
             }
 
             grid.setTile(x, y, { char, foreground: fg, background: bg, position: { x, y } });

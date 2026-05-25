@@ -65,6 +65,11 @@ export class GridRenderer {
 		this.initializeGridRendering();
 	}
 
+	/** Hot-swap the font atlas (e.g. after zoom changes the cell size). */
+	setFontAtlas(atlas: FontAtlas): void {
+		this.fontAtlas = atlas;
+	}
+
 	/**
 	 * Render a game grid with the specified options
 	 */
@@ -131,7 +136,7 @@ export class GridRenderer {
 		// Bind VAO and render
 		gl.bindVertexArray(this.gridVAO);
 
-		const vertexCount = vertexData.length / 10; // 10 components per vertex
+		const vertexCount = vertexData.length / 13; // 13 components per vertex
 		gl.drawArrays(gl.TRIANGLES, 0, vertexCount);
 
 		gl.bindVertexArray(null);
@@ -150,16 +155,14 @@ export class GridRenderer {
 		const vertexData: number[] = [];
 
 		for (const tile of tiles) {
-			// Skip empty tiles
-			if (!tile.char || tile.char === ' ') continue;
-
-			// Get character info from font atlas
-			const charInfo = this.fontAtlas.characters.get(tile.char);
-			if (!charInfo) {
+			// Get character info from font atlas. For space/missing chars, render background only.
+			const isSpace = !tile.char || tile.char === ' ';
+			const charInfo = isSpace ? null : this.fontAtlas.characters.get(tile.char);
+			if (!isSpace && !charInfo) {
 				if (this.debug) {
 					console.warn(`⚠️ Character '${tile.char}' not found in font atlas`);
 				}
-				continue;
+				// Fall through — render background quad with no glyph
 			}
 
 			// Calculate screen position
@@ -170,34 +173,41 @@ export class GridRenderer {
 			const offsetX = tile.animationOffset?.x || 0;
 			const offsetY = tile.animationOffset?.y || 0;
 
-			// Calculate character bounds with offset
-			const x1 = screenX + charInfo.xOffset + offsetX;
-			const y1 = screenY + charInfo.yOffset + offsetY;
-			const x2 = x1 + charInfo.width;
-			const y2 = y1 + charInfo.height;
+			// Calculate character bounds with offset.
+			// When no charInfo, fill the full tile cell with background color.
+			const tileW = options.tileWidth;
+			const tileH = options.tileHeight;
+			const x1 = screenX + (charInfo?.xOffset ?? 0) + offsetX;
+			const y1 = screenY + (charInfo?.yOffset ?? 0) + offsetY;
+			const x2 = screenX + (charInfo ? charInfo.xOffset + charInfo.width  : tileW) + offsetX;
+			const y2 = screenY + (charInfo ? charInfo.yOffset + charInfo.height : tileH) + offsetY;
 
-			// Calculate texture coordinates
-			const u1 = charInfo.x / this.fontAtlas.atlasWidth;
-			const v1 = charInfo.y / this.fontAtlas.atlasHeight;
-			const u2 = (charInfo.x + charInfo.width) / this.fontAtlas.atlasWidth;
-			const v2 = (charInfo.y + charInfo.height) / this.fontAtlas.atlasHeight;
+			// Calculate texture coordinates.
+			// Use a UV of (0,0)→(0,0) for missing chars so sprite.a ≈ 0 → bg fills tile.
+			const u1 = charInfo ? charInfo.x / this.fontAtlas.atlasWidth  : 0;
+			const v1 = charInfo ? charInfo.y / this.fontAtlas.atlasHeight : 0;
+			const u2 = charInfo ? (charInfo.x + charInfo.width)  / this.fontAtlas.atlasWidth  : 0;
+			const v2 = charInfo ? (charInfo.y + charInfo.height) / this.fontAtlas.atlasHeight : 0;
 
-			// Get colors
+			// Get colors — detail defaults to foreground when not set
 			const fg = [tile.foreground.r, tile.foreground.g, tile.foreground.b];
 			const bg = [tile.background.r, tile.background.g, tile.background.b];
+			const dt = tile.detail
+				? [tile.detail.r, tile.detail.g, tile.detail.b]
+				: fg;
 
 			// Add vertex data for this character (2 triangles = 6 vertices)
-			// Vertex format: x, y, u, v, fr, fg, fb, br, bg, bb
+			// Vertex format: x, y, u, v, fr, fg, fb, br, bg, bb, dr, dg, db (13 floats)
 			const charVertices = [
 				// Triangle 1
-				x1, y1, u1, v1, fg[0], fg[1], fg[2], bg[0], bg[1], bg[2],  // Top-left
-				x2, y1, u2, v1, fg[0], fg[1], fg[2], bg[0], bg[1], bg[2],  // Top-right
-				x1, y2, u1, v2, fg[0], fg[1], fg[2], bg[0], bg[1], bg[2],  // Bottom-left
+				x1, y1, u1, v1, fg[0], fg[1], fg[2], bg[0], bg[1], bg[2], dt[0], dt[1], dt[2],  // Top-left
+				x2, y1, u2, v1, fg[0], fg[1], fg[2], bg[0], bg[1], bg[2], dt[0], dt[1], dt[2],  // Top-right
+				x1, y2, u1, v2, fg[0], fg[1], fg[2], bg[0], bg[1], bg[2], dt[0], dt[1], dt[2],  // Bottom-left
 
 				// Triangle 2
-				x2, y1, u2, v1, fg[0], fg[1], fg[2], bg[0], bg[1], bg[2],  // Top-right
-				x2, y2, u2, v2, fg[0], fg[1], fg[2], bg[0], bg[1], bg[2],  // Bottom-right
-				x1, y2, u1, v2, fg[0], fg[1], fg[2], bg[0], bg[1], bg[2],  // Bottom-left
+				x2, y1, u2, v1, fg[0], fg[1], fg[2], bg[0], bg[1], bg[2], dt[0], dt[1], dt[2],  // Top-right
+				x2, y2, u2, v2, fg[0], fg[1], fg[2], bg[0], bg[1], bg[2], dt[0], dt[1], dt[2],  // Bottom-right
+				x1, y2, u1, v2, fg[0], fg[1], fg[2], bg[0], bg[1], bg[2], dt[0], dt[1], dt[2],  // Bottom-left
 			];
 
 			vertexData.push(...charVertices);
@@ -228,7 +238,7 @@ export class GridRenderer {
 		gl.bindVertexArray(this.gridVAO);
 		gl.bindBuffer(gl.ARRAY_BUFFER, this.gridVBO);
 
-		const stride = 10 * 4; // 10 floats per vertex, 4 bytes per float
+		const stride = 13 * 4; // 13 floats per vertex, 4 bytes per float
 
 		// Position attribute (a_position)
 		const positionLocation = this.shaderManager.getAttributeLocation('tileRenderer', 'a_position');
@@ -256,6 +266,13 @@ export class GridRenderer {
 		if (backgroundLocation >= 0) {
 			gl.enableVertexAttribArray(backgroundLocation);
 			gl.vertexAttribPointer(backgroundLocation, 3, gl.FLOAT, false, stride, 7 * 4);
+		}
+
+		// Detail/highlight color attribute (a_detail)
+		const detailLocation = this.shaderManager.getAttributeLocation('tileRenderer', 'a_detail');
+		if (detailLocation >= 0) {
+			gl.enableVertexAttribArray(detailLocation);
+			gl.vertexAttribPointer(detailLocation, 3, gl.FLOAT, false, stride, 10 * 4);
 		}
 
 		gl.bindVertexArray(null);

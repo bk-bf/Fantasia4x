@@ -7,14 +7,14 @@
   import { gameState } from '$lib/stores/gameState.js';
   import type { WorldTile } from '$lib/game/core/types.js';
 
-  // Tile size range for zoom (width:height ratio ≈ 1:1.57)
+  // Tile size range for zoom (square cells for CoQ sprite-mode)
   const MIN_TILE_W = 8;
   const MAX_TILE_W = 24;
   const ZOOM_STEP = 2;
   const SCROLL_STEP = 4; // tiles per arrow key press
 
-  let tileWidth = 14;
-  let tileHeight = 22;
+  let tileWidth = 16;
+  let tileHeight = 16;
 
   let canvas: HTMLCanvasElement;
   let container: HTMLDivElement;
@@ -145,7 +145,7 @@
     const visWBefore = (container?.clientWidth ?? 800) / tileWidth;
     const visHBefore = (container?.clientHeight ?? 600) / tileHeight;
     tileWidth = newW;
-    tileHeight = Math.round(newW * 1.57);
+    tileHeight = newW; // square cells
     renderer.setTileSize(tileWidth, tileHeight);
     const visWAfter = (container?.clientWidth ?? 800) / tileWidth;
     const visHAfter = (container?.clientHeight ?? 600) / tileHeight;

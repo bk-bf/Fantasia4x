@@ -30,6 +30,7 @@ export interface TileData {
 	char: string;                    // Character to display (CP437 or Unicode)
 	foreground: RGB;                 // Text color
 	background: RGB;                 // Background color
+	detail?: RGB;                    // Highlight/detail color for 3-color tint (defaults to foreground)
 	position: { x: number; y: number }; // Grid position
 	animationOffset?: Vec2;          // Optional offset for smooth animations
 	dirty?: boolean;                 // Marks tile for re-rendering

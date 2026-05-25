@@ -266,3 +266,98 @@ export async function createMonospaceFontAtlas(debug: boolean = false): Promise<
 		generator.dispose();
 	}
 }
+
+/**
+ * Generate a square-cell CP437 atlas.
+ *
+ * Each glyph is rendered as a **white character on a transparent background**
+ * so the fragment shader can use sprite.a as glyph coverage and apply the
+ * 3-colour tint (background → foreground → detail) per-tile at runtime.
+ *
+ * Characters are laid out in 16 columns (standard CP437 grid order) so that
+ * UV coordinates can be computed with the fixed formula:
+ *   u = (charIndex % 16) / 16
+ *   v = floor(charIndex / 16) / 16
+ *
+ * @param cellSize  Width and height of each glyph cell in pixels (default 16).
+ * @param debug     Emit debug log messages.
+ */
+export async function createSquareCellAtlas(cellSize = 16, debug = false): Promise<FontAtlas> {
+	const COLS = 16;
+	const chars = CP437_CHARS;
+	const rows = Math.ceil(chars.length / COLS);
+
+	// Atlas dimensions — power-of-2 for GPU efficiency
+	const nextPow2 = (n: number) => Math.pow(2, Math.ceil(Math.log2(Math.max(n, 1))));
+	const atlasWidth  = nextPow2(COLS * cellSize);
+	const atlasHeight = nextPow2(rows * cellSize);
+
+	// Offscreen canvas — willReadFrequently for getImageData
+	const canvas = document.createElement('canvas');
+	canvas.width  = atlasWidth;
+	canvas.height = atlasHeight;
+	const ctx = canvas.getContext('2d', { willReadFrequently: true });
+	if (!ctx) throw new Error('Could not create 2D context for square-cell atlas');
+
+	// Transparent background
+	ctx.clearRect(0, 0, atlasWidth, atlasHeight);
+
+	// Font size: fill as much of the cell as possible for crisp rendering.
+	// 90 % leaves a small margin so ascenders/descenders don't clip.
+	const fontSize = Math.round(cellSize * 0.90);
+
+	// Try bitmap-style monospace fonts first
+	const fontStack = [
+		'DejaVu Sans Mono',
+		'"Courier New"',
+		'Courier',
+		'monospace'
+	].join(', ');
+
+	ctx.font           = `${fontSize}px ${fontStack}`;
+	ctx.fillStyle      = 'white';
+	ctx.textAlign      = 'center';  // horizontal centre
+	ctx.textBaseline   = 'middle';  // vertical centre
+	ctx.imageSmoothingEnabled = false;
+
+	const characters = new Map<string, import('./types.js').CharacterInfo>();
+
+	for (let i = 0; i < chars.length; i++) {
+		const char = chars[i];
+		const col  = i % COLS;
+		const row  = Math.floor(i / COLS);
+		const cellX = col * cellSize;
+		const cellY = row * cellSize;
+
+		// Render glyph centred in the cell (textAlign=center, textBaseline=middle)
+		ctx.fillText(char, cellX + cellSize / 2, cellY + cellSize / 2);
+
+		characters.set(char, {
+			char,
+			x:        cellX,
+			y:        cellY,
+			width:    cellSize,
+			height:   cellSize,
+			xAdvance: cellSize,
+			xOffset:  0,
+			yOffset:  0
+		});
+	}
+
+	const imageData = ctx.getImageData(0, 0, atlasWidth, atlasHeight);
+
+	if (debug) {
+		console.log(`✅ Square-cell atlas: ${atlasWidth}×${atlasHeight}, ${cellSize}×${cellSize} cells, ${chars.length} glyphs`);
+	}
+
+	return {
+		texture:    imageData,
+		characters,
+		fontFamily: fontStack,
+		fontSize,
+		atlasWidth,
+		atlasHeight,
+		lineHeight: cellSize,
+		baseline:   Math.floor(cellSize / 2)
+	};
+}
