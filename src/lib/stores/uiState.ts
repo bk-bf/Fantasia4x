@@ -3,14 +3,14 @@ import { writable } from 'svelte/store';
 
 interface UIState {
   currentScreen:
-    | 'main'
-    | 'pawns'
-    | 'race'
-    | 'building'
-    | 'crafting'
-    | 'research'
-    | 'exploration'
-    | 'work';
+  | 'main'
+  | 'pawns'
+  | 'race'
+  | 'building'
+  | 'crafting'
+  | 'research'
+  | 'exploration'
+  | 'work';
   showNotifications: boolean;
   lastEvent: string | null;
 }
