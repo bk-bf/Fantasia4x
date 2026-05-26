@@ -5,7 +5,11 @@
   import { WebGLRenderer } from '$lib/webgl/renderer.js';
   import { buildGameGrid, generatePlaceholderGrid } from '$lib/webgl/fantasia-world.js';
   import { gameState } from '$lib/stores/gameState.js';
-  import type { WorldTile } from '$lib/game/core/types.js';
+  import type { WorldTile, Pawn } from '$lib/game/core/types.js';
+  import type { GameGrid } from '$lib/webgl/game-grid.js';
+  import { wasmPathfinderService } from '$lib/game/services/WasmPathfinderService.js';
+  import { pawnService } from '$lib/game/services/PawnService.js';
+  import { buildPathfindingGrids } from '$lib/game/services/PathfinderService.js';
 
   // Tile size range for zoom (square cells for CoQ sprite-mode)
   // MAP_W / MAP_H must match the generateWorld() call in gameState.ts
@@ -45,6 +49,11 @@
   let dragStartY = 0;
   let dragViewX = 0;
   let dragViewY = 0;
+  let dragDistance = 0;
+
+  // Pawn overlay state
+  let pawns: Pawn[] = [];
+  let selectedPawnId: string | null = null;
 
   // Hover tile inspector
   let hoverTileX = -1;
@@ -59,8 +68,10 @@
 
   const unsubState = gameState.subscribe((s) => {
     worldMap = s.worldMap ?? [];
+    pawns = s.pawns ?? [];
     if (renderer?.isReady()) {
       const grid = worldMap.length > 0 ? buildGameGrid(worldMap) : generatePlaceholderGrid();
+      overlayPawns(grid, pawns, selectedPawnId);
       renderer.setGrid(grid);
       // Re-snap to fit when the real map loads (placeholder vs. actual may differ in size)
       if (worldMap.length > 0 && canvas) {
@@ -75,6 +86,62 @@
       }
     }
   });
+
+  function overlayPawns(grid: GameGrid, pawnList: Pawn[], selectedId: string | null) {
+    for (const pawn of pawnList) {
+      if (!pawn.position) continue;
+      const { x, y } = pawn.position;
+      const isSelected = pawn.id === selectedId;
+      grid.setTile(x, y, {
+        char: '@',
+        foreground: isSelected ? { r: 1, g: 1, b: 0.5 } : { r: 1, g: 0.75, b: 0 },
+        background: { r: 0.05, g: 0.04, b: 0.01 },
+        position: { x, y }
+      });
+    }
+  }
+
+  function redrawOverlay() {
+    if (!renderer?.isReady() || worldMap.length === 0) return;
+    const grid = buildGameGrid(worldMap);
+    overlayPawns(grid, pawns, selectedPawnId);
+    renderer.setGrid(grid);
+  }
+
+  async function handleTileClick() {
+    if (hoverTileX < 0 || hoverTileY < 0) return;
+    // Click on a pawn → select it
+    const clickedPawn = pawns.find(
+      (p) => p.position?.x === hoverTileX && p.position?.y === hoverTileY
+    );
+    if (clickedPawn) {
+      selectedPawnId = clickedPawn.id;
+      redrawOverlay();
+      return;
+    }
+    // Click-to-move: selected pawn + walkable tile
+    if (selectedPawnId && worldMap.length > 0) {
+      const targetTile = worldMap[hoverTileY]?.[hoverTileX];
+      if (!targetTile?.walkable) return;
+      const mover = pawns.find((p) => p.id === selectedPawnId);
+      if (!mover?.position) return;
+      await wasmPathfinderService.init();
+      const { walkable, costs, width, height } = buildPathfindingGrids(worldMap);
+      const path = wasmPathfinderService.findPath(
+        walkable,
+        costs,
+        width,
+        height,
+        mover.position.x,
+        mover.position.y,
+        hoverTileX,
+        hoverTileY
+      );
+      if (path.length > 0) {
+        gameState.updateWithSave((state) => pawnService.assignPath(selectedPawnId!, path, state));
+      }
+    }
+  }
 
   onMount(async () => {
     if (browser) await init();
@@ -223,6 +290,7 @@
     dragStartY = e.clientY;
     dragViewX = viewX;
     dragViewY = viewY;
+    dragDistance = 0;
   }
 
   function handleMouseMove(e: MouseEvent) {
@@ -235,12 +303,14 @@
       hoverTileY = Math.floor(cy / tileHeight) + viewY;
     }
     if (!dragging) return;
+    dragDistance += Math.abs(e.movementX) + Math.abs(e.movementY);
     const dx = Math.round((dragStartX - e.clientX) / tileWidth);
     const dy = Math.round((dragStartY - e.clientY) / tileHeight);
     setView(dragViewX + dx, dragViewY + dy);
   }
 
   function handleMouseUp() {
+    if (dragDistance < 3) handleTileClick();
     dragging = false;
   }
 

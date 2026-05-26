@@ -347,6 +347,8 @@ export class GameEngineImpl implements GameEngine {
 	private processPawns(): void {
 		console.log('[GameEngine] Coordinating pawn processing through services');
 
+		// Phase 3: advance pawn movement along queued paths
+		this.gameState = pawnService.processMovement(this.gameState!);
 		// COORDINATION: Delegate all pawn processing to PawnService
 		this.gameState = pawnService.clearTemporaryPawnStates(this.gameState!);
 		this.gameState = workService.syncPawnWorkingStates(this.gameState!);

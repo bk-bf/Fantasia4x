@@ -2,7 +2,7 @@ import { browser } from '$app/environment';
 import { writable, derived } from 'svelte/store';
 import { GameStateManager } from '$lib/game/core/GameState';
 import { gameEngine } from '$lib/game/systems/GameEngineImpl';
-import type { GameState, Pawn } from '$lib/game/core/types';
+import type { GameState, Pawn, WorldTile } from '$lib/game/core/types';
 import { generatePawns } from '$lib/game/entities/Pawns';
 import { pawnService } from '$lib/game/services/PawnService';
 import { generateRace } from '$lib/game/core/Race';
@@ -91,6 +91,51 @@ function loadFromLocalStorage(): GameState | null {
 		}
 	}
 	return null;
+}
+
+// ===== PAWN SPAWN HELPERS =====
+function findNearestWalkable(
+	worldMap: WorldTile[][],
+	cx: number,
+	cy: number,
+	occupied: Set<string>
+): { x: number; y: number } | null {
+	const mapH = worldMap.length;
+	const mapW = worldMap[0]?.length ?? 0;
+	const maxR = Math.max(mapW, mapH);
+	for (let r = 0; r <= maxR; r++) {
+		for (let dy = -r; dy <= r; dy++) {
+			for (let dx = -r; dx <= r; dx++) {
+				if (Math.abs(dx) !== r && Math.abs(dy) !== r) continue; // border only
+				const x = cx + dx;
+				const y = cy + dy;
+				if (x < 0 || y < 0 || x >= mapW || y >= mapH) continue;
+				const tile = worldMap[y]?.[x];
+				if (!tile?.walkable) continue;
+				const key = `${x},${y}`;
+				if (occupied.has(key)) continue;
+				return { x, y };
+			}
+		}
+	}
+	return null;
+}
+
+function spawnPawnsOnMap(pawns: Pawn[], worldMap: WorldTile[][]): Pawn[] {
+	const mapW = worldMap[0]?.length ?? 120;
+	const mapH = worldMap.length;
+	const cx = Math.floor(mapW / 2);
+	const cy = Math.floor(mapH / 2);
+	const occupied = new Set<string>();
+	return pawns.map((p) => {
+		if (p.position) {
+			occupied.add(`${p.position.x},${p.position.y}`);
+			return p;
+		}
+		const pos = findNearestWalkable(worldMap, cx, cy, occupied) ?? { x: cx, y: cy };
+		occupied.add(`${pos.x},${pos.y}`);
+		return { ...p, position: pos, path: [], pathIndex: 0, isMoving: false, hasReachedDestination: false };
+	});
 }
 
 function updatePawnAbilities(state: GameState): GameState {
@@ -248,6 +293,11 @@ if (!baseState.pawns || baseState.pawns.length === 0) {
 		...baseState,
 		pawns: generatePawns(baseState.race)
 	};
+}
+
+// Spawn any pawns that don't yet have map positions
+if (baseState.pawns.some((p) => !p.position)) {
+	baseState = { ...baseState, pawns: spawnPawnsOnMap(baseState.pawns, baseState.worldMap) };
 }
 
 // Create the main writable store

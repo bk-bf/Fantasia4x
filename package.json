@@ -11,7 +11,8 @@
     "test": "playwright test",
     "lint": "prettier --check . && eslint .",
     "lint:fix": "prettier --write . && eslint . --fix",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "add:wasm": "cd spatial-core && ~/.cargo/bin/wasm-pack build --target web --out-dir ../src/lib/spatial-core-pkg"
   },
   "devDependencies": {
     "@eslint/js": "^9.30.0",
@@ -30,7 +31,8 @@
     "svelte": "^5.0.0",
     "svelte-check": "^4.0.0",
     "typescript": "^5.0.0",
-    "vite": "^6.2.6"
+    "vite": "^6.2.6",
+    "vite-plugin-wasm": "^3.6.0"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

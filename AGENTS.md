@@ -40,14 +40,22 @@ Core data (src/lib/game/core/)         ← types, static databases, GameStateMan
 
 **Spatial services must stay behind interfaces** (ADR-008): All pathfinding, fog-of-war, and spatial query logic must be implemented as services conforming to a defined TypeScript interface (e.g. `PathfindingService`, `SpatialIndexService`). The implementations are Rust compiled to WASM via `wasm-pack` — callsites must never import from `spatial-core/` directly, only from the TypeScript interface. "Spatial" means: A* pathfinding, nearest-entity queries, fog-of-war visibility. It does **not** mean: pawn state machine, needs system, mood, work priorities, inventory — those stay in TypeScript services. **If you are about to implement spatial logic that bypasses the service interface, or inline it into a component, store, or GameEngineImpl, stop and flag it to the user.**
 
+## Package Manager
+
+**Always use `pnpm`** — never `npm` or `yarn`. pnpm is at `/home/kirill/.local/share/pnpm/pnpm` and may not be on PATH by default; if `pnpm` is not found, add it: `export PATH="$PATH:/home/kirill/.local/share/pnpm"`.
+
+- Install a package: `pnpm add <pkg>` / `pnpm add -D <pkg>`
+- Install all deps: `pnpm install`
+
 ## Build Commands
 
-**Always use `./dev.sh` to start the dev server** — never run `npm run dev` directly. The script checks whether port 5173 is already in use and prints the existing URL instead of spawning a duplicate on a random port.
+**Always use `./dev.sh` to start the dev server** — never run `pnpm dev` or `npm run dev` directly. The script checks whether port 5173 is already in use and prints the existing URL instead of spawning a duplicate on a random port.
 
 ```bash
-./dev.sh           # start dev server on http://localhost:5173 (or report existing)
-npm run build      # production build
-npm run lint       # ESLint + Prettier check
+./dev.sh                  # start dev server on http://localhost:5173 (or report existing)
+pnpm build                # production build
+pnpm lint                 # ESLint + Prettier check
+pnpm add:wasm             # rebuild spatial-core WASM → src/lib/spatial-core-pkg/
 ```
 
 ## Documentation

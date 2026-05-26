@@ -24,3 +24,8 @@ Thumbs.db
 # Vite
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Rust / WASM build outputs
+spatial-core/target/
+spatial-core/pkg/
+src/lib/spatial-core-pkg/

@@ -41,6 +41,11 @@ export interface PawnService {
 	// Need Calculations (PawnService internal logic)
 	calculateNeedDecay(pawnId: string, gameState: GameState): { hunger: number; rest: number };
 	getPawnNeedStatus(pawnId: string, gameState: GameState): { critical: string[]; warning: string[]; normal: string[] };
+
+	// Phase 3: Map movement
+	assignPath(pawnId: string, path: { x: number; y: number }[], gameState: GameState): GameState;
+	teleportPawn(pawnId: string, pos: { x: number; y: number }, gameState: GameState): GameState;
+	processMovement(gameState: GameState): GameState;
 }
 
 /**
@@ -1059,6 +1064,67 @@ export class PawnServiceImpl implements PawnService {
 			console.error('[PawnService] Error in processAutomaticNeeds:', error);
 			return gameState; // Return original state on error
 		}
+	}
+
+	// ===== PHASE 3: MAP MOVEMENT =====
+
+	assignPath(pawnId: string, path: { x: number; y: number }[], gameState: GameState): GameState {
+		return {
+			...gameState,
+			pawns: gameState.pawns.map(p =>
+				p.id === pawnId
+					? {
+						...p,
+						path,
+						pathIndex: 0,
+						isMoving: path.length > 1,
+						hasReachedDestination: false
+					}
+					: p
+			)
+		};
+	}
+
+	teleportPawn(pawnId: string, pos: { x: number; y: number }, gameState: GameState): GameState {
+		return {
+			...gameState,
+			pawns: gameState.pawns.map(p =>
+				p.id === pawnId
+					? { ...p, position: pos, path: [], pathIndex: 0, isMoving: false, hasReachedDestination: true }
+					: p
+			)
+		};
+	}
+
+	processMovement(gameState: GameState): GameState {
+		let state = gameState;
+		for (const pawn of state.pawns) {
+			if (!pawn.isMoving || !pawn.path || pawn.path.length === 0) continue;
+			const speed = Math.max(1, Math.floor((pawn.stats.dexterity ?? 10) / 20));
+			let idx = pawn.pathIndex ?? 0;
+			let newPos = pawn.position;
+			for (let step = 0; step < speed; step++) {
+				if (idx >= pawn.path.length) break;
+				newPos = pawn.path[idx];
+				idx++;
+			}
+			const done = idx >= pawn.path.length;
+			state = {
+				...state,
+				pawns: state.pawns.map(p =>
+					p.id === pawn.id
+						? {
+							...p,
+							position: newPos,
+							pathIndex: idx,
+							isMoving: !done,
+							hasReachedDestination: done
+						}
+						: p
+				)
+			};
+		}
+		return state;
 	}
 }
 

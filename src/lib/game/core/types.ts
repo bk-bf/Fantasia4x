@@ -108,6 +108,13 @@ export interface Pawn {
 	skills: Record<string, number>; // skillId -> level
 	currentWork?: string; // Current work category
 	workLocation?: string; // Current work location
+
+	// Phase 3: Map position and pathfinding
+	position?: { x: number; y: number };       // tile coordinates; undefined until spawned
+	path?: { x: number; y: number }[];          // queued movement path
+	pathIndex?: number;                          // next step in path (index into path[])
+	isMoving?: boolean;                          // currently following a path
+	hasReachedDestination?: boolean;            // just finished a path
 }
 
 export interface PawnInventory {
