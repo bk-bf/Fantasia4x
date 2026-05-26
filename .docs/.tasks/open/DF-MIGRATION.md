@@ -509,7 +509,174 @@ gl_FragColor = vec4(tinted, sprite.a) * (1.0 - step(sprite.a, 0.01))
 
 ---
 
-### Phase 5 — DF Depth (Long-term)
+### Phase 5 — Work, Job & Economy Overhaul
+
+**Status:** `❌ not started`
+
+**Scope:** Replace the abstract "X units per turn" work model with a spatial job system where pawns claim discrete jobs, walk to sites, and accumulate progress per tick. Migrate building construction and crafting to the same model. Wire tile-level resource generation to the existing `WorldGenerator`. The result is the core DF/RimWorld economic loop: designate → job created → pawn claims → travels → works → completes.
+
+**Goal:** A pawn assigned to woodcutting scans for the nearest available harvest job, claims it, walks to the tree tile, chops for `harvest_time` turns, places wood in the stockpile. Buildings are constructed by pawns walking to sites and contributing work points. Crafting requires a crafter pawn at a workshop.
+
+---
+
+#### Why the current system is wrong
+
+| System             | Current behavior                                                                      | Required behavior                                                                      |
+| ------------------ | ------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| **Work**           | Pawn assigned to category → `1 × efficiency` units/turn globally, round-robin cycling | Pawn claims a job at a specific tile, walks there, accumulates progress                |
+| **Harvesting**     | `baseHarvestRate = 1` hardcoded; random item selected per turn                        | Tile has resource amount `[3,6]`; pawn chops for `harvest_time=5` turns; tile depletes |
+| **Building**       | `turnsRemaining` countdown; population bonus baked in at queue time                   | `workRequired` pool; multiple pawns each contribute work points per turn               |
+| **Crafting**       | Materials consumed immediately; global queue counts down; no crafter needed           | Pawn walks to workshop, accumulates progress per turn, materials reserved              |
+| **Resource store** | `GameState.items[]` mixes crafted goods, raw materials, and equipment                 | `stockpile: Record<string,number>` for raws (Phase 4 added this, not yet primary)      |
+| **Labor settings** | `workPriorities: Record<string, number>` where `1` = highest (inverted, 0–10 scale)   | 5-level system: `DISABLED=0, LOW=1, NORMAL=2, HIGH=3, URGENT=4` (matches Celestia)     |
+
+---
+
+#### 5a — Job System (`JobService`)
+
+**What changes:** New `JobService` and `Job` interface. `PawnStateMachine.handleIdle()` migrated to query jobs instead of round-robin work categories.
+
+```typescript
+interface Job {
+  id: string;
+  type: 'harvest' | 'construct' | 'haul' | 'craft' | 'eat' | 'sleep';
+  targetX: number;
+  targetY: number;
+  resourceId?: string;    // harvest/haul: which resource
+  buildingId?: string;    // construct: which PlacedBuilding
+  craftQueueId?: string;  // craft: which crafting queue entry
+  workRequired: number;   // total work points to complete (e.g. 5 for herbs, 8 for stone)
+  workDone: number;       // accumulated so far
+  claimedBy: string | null; // pawnId, null = open
+}
+```
+
+`JobService` responsibilities:
+- `generateJobs(gameState)` — scans designations → harvest jobs; `planned` buildings → construct jobs; crafting queue → craft jobs; floor items → haul jobs. Called each turn to keep job list in sync.
+- `claimJob(pawnId, jobId, gameState)` — marks `claimedBy`; called by state machine before pawn starts moving.
+- `advanceJob(jobId, workPoints, gameState)` — `workDone += workPoints`; on `workDone >= workRequired` runs completion handler (add to stockpile, set building complete, etc).
+- `releaseJob(jobId, pawnId, gameState)` — releases claim on interrupt; job returns to open pool.
+- `getAvailableJobs(pawn, gameState)` — filters by pawn labor settings, sorts by `priority DESC, distance ASC`.
+
+`PawnStateMachine.handleIdle()` becomes: `jobService.getAvailableJobs(pawn, state)[0]` → claim → `"MovingToResource"`.
+
+**Work items:**
+- [ ] Create `src/lib/game/services/JobService.ts` — `JobServiceImpl` singleton with the methods above.
+- [ ] Add `jobs: Job[]` to `GameState`; add `GameStateManager` mutation methods `addJob`, `updateJob`, `removeJob`.
+- [ ] Migrate `PawnStateMachine.handleIdle()` to use `jobService.getAvailableJobs()`.
+- [ ] Migrate `WorkScreen.svelte` labor settings UI to the 5-level grid (one row per pawn, one column per work type — cycled 0→1→2→3→4→0 on click).
+- [ ] Replace `WorkAssignment.workPriorities` number scale with `LaborLevel = 0|1|2|3|4`. Update `WorkService` and `PawnService` call sites.
+
+**Sources from Celestia:** `workpriority_manager.gd` (5-level constants + `_adjust_priorities_based_on_traits()`), `harvesting_job.gd` + `job.gd` (job object model), `idle_state.gd` (job query + claim logic).
+
+---
+
+#### 5b — Resource generation wiring
+
+**What changes:** `WorldGenerator` calls `ResourceGeneratorService` (created in Phase 2 but not wired). Resources on tiles become the source of truth for raw material production. The direct `WorkService → GameState.items` path is removed.
+
+**Work items:**
+- [ ] Wire `ResourceGeneratorService.generate(worldMap, seed)` into `WorldGenerator.generateWorld()` after terrain generation (Phase 2 created the service; Phase 4 introduced `tile.resources` — this step connects them at world-gen time).
+- [ ] Verify `GameCanvas.svelte` renders resource-bearing tiles with a visual marker (e.g. resource glyph overlaid on subterrain — tree tile shows `♣` only when `tile.resources.wood > 0`).
+- [ ] Remove `WorkService.processWorkHarvesting()` abstract production path (the `baseHarvestRate × efficiency → GameState.items` loop). Replace with: job completion via `JobService.advanceJob()` → `gameStateManager.addToStockpile()`.
+- [ ] `GameState.items[]` stays for crafted goods and equipment; raw harvestable resources live exclusively in `stockpile`.
+
+---
+
+#### 5c — Building construction overhaul
+
+**What changes:** `buildingQueue` countdown timer replaced by work-point accumulation on `PlacedBuilding`. Multiple pawns can work the same site simultaneously.
+
+**New `PlacedBuilding` fields:**
+```typescript
+workRequired: number;        // = buildDef.buildTime × 10
+workDone: number;            // accumulated by assigned pawns
+materialsDelivered: boolean; // haul job must complete before construction starts
+```
+
+**Flow:**
+1. `placeBuilding(type, x, y)` creates `PlacedBuilding { status:'planned', workDone:0, workRequired: buildDef.buildTime*10 }`.
+2. Materials flagged as reserved in stockpile (not consumed).
+3. `JobService.generateJobs()` emits a `haul` job (deliver materials to site) and a `construct` job.
+4. First construction pawn delivers materials → `materialsDelivered = true`, `status → 'under_construction'`.
+5. Each working pawn: `workDone += pawn.constructionSpeed` per turn — additive across all pawns on site.
+6. `workDone >= workRequired` → `status → 'complete'`; materials consumed from stockpile; `ModifierSystem` building bonuses activate.
+
+**Work items:**
+- [ ] Extend `PlacedBuilding` interface with `workRequired`, `workDone`, `materialsDelivered`.
+- [ ] Remove `BuildingService.calculateConstructionTime()` and `processBuildingQueue()` countdown logic.
+- [ ] Add `buildingQueue` removal from `GameState` (old save migration: convert any in-progress `buildingQueue` entries to `PlacedBuilding { status:'under_construction' }` with `workDone = (1 - turnsRemaining/buildTime) * workRequired`).
+- [ ] `JobService.generateJobs()` generates `construct` jobs from `buildings` where `status !== 'complete'`.
+- [ ] `PawnStateMachine` `"Harvesting"` state reused for construction with `job.type === 'construct'`; `workDone += efficiency` per turn rather than depleting a tile.
+
+**Turn-rate calibration:**
+
+| Building  | `buildTime` | `workRequired` | Solo (1×) | 3 pawns |
+| --------- | ----------- | -------------- | --------- | ------- |
+| Lean-to   | 2           | 20             | 20s       | ~7s     |
+| Stone Hut | 6           | 60             | 60s       | 20s     |
+| Forge     | 8           | 80             | 80s       | ~27s    |
+
+---
+
+#### 5d — Crafting overhaul
+
+**What changes:** Crafting queue entries become craft jobs. A crafter pawn must be at a compatible workshop building. Materials reserved (not consumed) at queue time; consumed on completion.
+
+**Flow:**
+1. Player queues craft item → entry added to `craftingQueue` with `workRequired = item.craftingTime * 5`, `workDone = 0`, materials reserved.
+2. `JobService` exposes a `craft` job for the entry. Target = nearest `PlacedBuilding` matching `item.workshopType`.
+3. Pawn with crafting labor ≥ LOW claims job, walks to workshop, accumulates `workDone += pawn.craftingSpeed * toolBonus` per turn.
+4. `workDone >= workRequired` → materials consumed from stockpile, item added to inventory, queue entry removed.
+
+**Work items:**
+- [ ] Add `workRequired: number`, `workDone: number`, `reservedMaterials: boolean` to `CraftingInProgress`.
+- [ ] Add `workshopType?: string` to `Item` definition (e.g. `'forge'` for metalworking items, `undefined` = no workshop needed).
+- [ ] Remove `ItemService.processCraftingQueue()` countdown logic.
+- [ ] `JobService.generateJobs()` generates `craft` jobs from `craftingQueue` entries where `workDone < workRequired`.
+- [ ] Materials reserved at queue-add time (flag `reservedMaterials = true`); not deducted from stockpile until job completion. Cancelled jobs release reservation.
+
+---
+
+#### 5e — Needs satisfaction (complete the Phase 4 loop)
+
+**What changes:** Replace `PawnService` abstract auto-satisfaction with real job-based eating and sleeping via the state machine.
+
+**Work items:**
+- [ ] `HungryState` creates an `eat` job targeting nearest tile with `stockpile.food > 0` or a `food_storage` `PlacedBuilding`. Implements real food-source scan (replaces Phase 4 placeholder).
+- [ ] `TiredState` creates a `sleep` job targeting nearest `shelter`/`bed` `PlacedBuilding`. Implements the real scan that replaces Celestia's `Vector2i(15,15)` hardcode (noted in Porting Gotchas).
+- [ ] `EatingState` consumes food from `stockpile` at `nutritionPerSecond = 10` per turn; wakes at `hunger >= 95`.
+- [ ] `SleepingState` satisfies rest at `restPerSecond = 8` per turn; wakes at `rest >= 95`.
+- [ ] Remove abstract needs auto-satisfaction from `PawnService.processNeeds()`.
+
+---
+
+#### What stays unchanged in Phase 5
+
+- `ModifierSystem` — all efficiency calculations remain; pawn skill/stat/equipment bonuses feed into `pawn.workSpeed` which multiplies `workDone` per turn.
+- `GameStateManager` immutability pattern — extended with job mutation methods.
+- `ResearchService`, `LocationService`.
+- Race/pawn generation, traits, abilities, equipment.
+- Item, Building, Research static databases — additive changes only (`workRequired` on buildings, `workshopType` on items).
+
+---
+
+#### Phase 5 dependency order
+
+```
+5a (JobService + LaborSettings)
+    ↓
+5b (resource gen wiring)  ← replaces WorkService abstract path
+    ↓
+5c (construction overhaul)  ← needs 5a for construct jobs
+5d (crafting overhaul)      ← needs 5a for craft jobs; parallel with 5c
+    ↓
+5e (needs satisfaction)  ← needs 5a + state machine jobs working
+```
+
+---
+
+### Phase 6 — DF Depth (Long-term)
 
 **Status:** `❌ not started`
 
@@ -576,7 +743,13 @@ Phase 4b (designations)   ← parallel with 4a
 Phase 4c (tile harvesting) ← needs 4a + 4b
 Phase 4d (placed buildings) ← parallel with 4c
     ↓
-Phase 5 (optional depth features, any order)
+Phase 5a (JobService + LaborSettings)
+Phase 5b (resource gen wiring)
+Phase 5c (construction overhaul)  ← parallel with 5d
+Phase 5d (crafting overhaul)      ← parallel with 5c
+Phase 5e (needs satisfaction)
+    ↓
+Phase 6 (optional depth features, any order)
 ```
 
 ---
