@@ -103,6 +103,44 @@ function findAvailableFood(gs: GameState): { source: 'item' | 'stockpile'; id: s
     return null;
 }
 
+/** Phase 6: find the nearest complete storage building (campfire etc.) to a pawn. */
+function findNearestStorageBuilding(
+    pawn: Pawn,
+    gs: GameState
+): { x: number; y: number; buildingId: string } | null {
+    if (!pawn.position) return null;
+    let best: { x: number; y: number; buildingId: string; dist: number } | null = null;
+    for (const b of gs.buildings ?? []) {
+        if (b.status !== 'complete') continue;
+        const def = ITEMS_DATABASE; // unused, check building def via flag
+        // Check isStorage flag on the building definition (set in Buildings.ts)
+        // We can check it via the PlacedBuilding's type by looking up AVAILABLE_BUILDINGS,
+        // but to avoid a circular import we check known storage building types directly.
+        const STORAGE_TYPES = ['campfire'];
+        if (!STORAGE_TYPES.includes(b.type)) continue;
+        const dist = Math.abs(b.x - pawn.position.x) + Math.abs(b.y - pawn.position.y);
+        if (!best || dist < best.dist) best = { x: b.x, y: b.y, buildingId: b.id, dist };
+    }
+    return best ? { x: best.x, y: best.y, buildingId: best.buildingId } : null;
+}
+
+/** Phase 6: find the nearest complete rest building (shelter etc.) to a pawn. */
+function findNearestRestBuilding(
+    pawn: Pawn,
+    gs: GameState
+): { x: number; y: number; buildingId: string } | null {
+    if (!pawn.position) return null;
+    const REST_TYPES = ['lean_to_shelter', 'woodland_shelter', 'stone_hut'];
+    let best: { x: number; y: number; buildingId: string; dist: number } | null = null;
+    for (const b of gs.buildings ?? []) {
+        if (b.status !== 'complete') continue;
+        if (!REST_TYPES.includes(b.type)) continue;
+        const dist = Math.abs(b.x - pawn.position.x) + Math.abs(b.y - pawn.position.y);
+        if (!best || dist < best.dist) best = { x: b.x, y: b.y, buildingId: b.id, dist };
+    }
+    return best ? { x: best.x, y: best.y, buildingId: best.buildingId } : null;
+}
+
 function consumeFood(foodRef: { source: 'item' | 'stockpile'; id: string }, gs: GameState): GameState {
     if (foodRef.source === 'item') {
         return {
@@ -293,6 +331,40 @@ function handleHungry(pawn: Pawn, gameState: GameState): GameState {
     if (!food) {
         return transitionTo(pawn, PAWN_STATE.IDLE, gameState);
     }
+
+    // Phase 6: try to pathfind to the nearest storage building to eat there
+    const storageBuilding = findNearestStorageBuilding(pawn, gameState);
+    if (
+        storageBuilding &&
+        pawn.position &&
+        !isAdjacent(pawn.position.x, pawn.position.y, storageBuilding.x, storageBuilding.y)
+    ) {
+        const afterPath = tryAssignPath(pawn, storageBuilding.x, storageBuilding.y, gameState);
+        if (afterPath) {
+            return {
+                ...afterPath,
+                pawns: afterPath.pawns.map((p) =>
+                    p.id === pawn.id
+                        ? {
+                            ...p,
+                            currentState: PAWN_STATE.MOVING_TO_NEED,
+                            activeJob: {
+                                type: 'need' as const,
+                                targetX: storageBuilding.x,
+                                targetY: storageBuilding.y,
+                                progress: 0,
+                                timeRequired: EATING_TURNS,
+                                turnsInState: 0,
+                                targetState: PAWN_STATE.EATING
+                            }
+                        }
+                        : p
+                )
+            };
+        }
+    }
+
+    // Fallback: eat in place
     const afterConsume = consumeFood(food, gameState);
     return {
         ...afterConsume,
@@ -316,6 +388,39 @@ function handleHungry(pawn: Pawn, gameState: GameState): GameState {
 }
 
 function handleTired(pawn: Pawn, gameState: GameState): GameState {
+    // Phase 6: try to pathfind to the nearest rest building to sleep there
+    const restBuilding = findNearestRestBuilding(pawn, gameState);
+    if (
+        restBuilding &&
+        pawn.position &&
+        !isAdjacent(pawn.position.x, pawn.position.y, restBuilding.x, restBuilding.y)
+    ) {
+        const afterPath = tryAssignPath(pawn, restBuilding.x, restBuilding.y, gameState);
+        if (afterPath) {
+            return {
+                ...afterPath,
+                pawns: afterPath.pawns.map((p) =>
+                    p.id === pawn.id
+                        ? {
+                            ...p,
+                            currentState: PAWN_STATE.MOVING_TO_NEED,
+                            activeJob: {
+                                type: 'need' as const,
+                                targetX: restBuilding.x,
+                                targetY: restBuilding.y,
+                                progress: 0,
+                                timeRequired: SLEEPING_TURNS,
+                                turnsInState: 0,
+                                targetState: PAWN_STATE.SLEEPING
+                            }
+                        }
+                        : p
+                )
+            };
+        }
+    }
+
+    // Fallback: sleep in place
     return {
         ...gameState,
         pawns: gameState.pawns.map((p) =>
@@ -342,9 +447,16 @@ function handleMovingToNeed(pawn: Pawn, gameState: GameState): GameState {
     if (!activeJob) return goIdle(pawn, gameState);
     if (pawn.hasReachedDestination && pawn.position) {
         const targetState = (activeJob.targetState ?? PAWN_STATE.EATING) as PawnStateName;
+        let gs = gameState;
+        // Phase 6: consume food on arrival when transitioning to Eating
+        if (targetState === PAWN_STATE.EATING) {
+            const food = findAvailableFood(gs);
+            if (food) gs = consumeFood(food, gs);
+            else return goIdle(pawn, gs); // no food found after pathfinding
+        }
         return {
-            ...gameState,
-            pawns: gameState.pawns.map((p) =>
+            ...gs,
+            pawns: gs.pawns.map((p) =>
                 p.id === pawn.id
                     ? { ...p, currentState: targetState, hasReachedDestination: false }
                     : p

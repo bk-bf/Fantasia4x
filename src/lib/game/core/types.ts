@@ -1,6 +1,6 @@
 // ===== PHASE 4 NEW TYPES =====
 
-export type DesignationType = 'harvest' | 'construct' | 'mine' | 'haul' | 'clear';
+export type DesignationType = 'harvest' | 'construct' | 'mine' | 'haul' | 'clear' | 'forage' | 'scavenge';
 
 export interface PlacedBuilding {
 	id: string;           // unique instance id
@@ -13,6 +13,9 @@ export interface PlacedBuilding {
 	workRequired?: number;       // buildDef.buildTime × 10
 	workDone?: number;           // accumulated work points
 	materialsDelivered?: boolean; // materials consumed from stockpile?
+	// Phase 6: fuel / lighting state
+	fuel?: number;               // current fuel units remaining
+	lit?: boolean;               // campfire is burning right now
 }
 
 // ===== PHASE 5 NEW TYPES =====
@@ -27,7 +30,7 @@ export const LABOR_LEVEL = { DISABLED: 0, LOW: 1, NORMAL: 2, HIGH: 3, URGENT: 4 
  */
 export interface Job {
 	id: string;
-	type: 'harvest' | 'construct' | 'haul' | 'craft' | 'eat' | 'sleep';
+	type: 'harvest' | 'construct' | 'haul' | 'craft' | 'eat' | 'sleep' | 'light' | 'refuel';
 	targetX: number;
 	targetY: number;
 	resourceId?: string;    // harvest / haul: which resource
@@ -335,6 +338,13 @@ export interface Building {
 		environmentalNeeds?: string[]; // Environmental requirements
 	};
 
+	// Phase 6: fire / storage / rest semantics
+	requiresLighting?: boolean;  // must be lit before use (e.g. campfire)
+	maxFuel?: number;            // maximum fuel units it can hold
+	fuelConsumptionRate?: number; // fuel units burned per turn when lit
+	isStorage?: boolean;         // colonists can retrieve food/items here
+	isRest?: boolean;            // colonists can sleep here
+
 	// Integration with item system
 	itemInteractions?: {
 		consumes?: Record<string, number>; // Items consumed during operation
@@ -380,6 +390,13 @@ export interface Item {
 	buildingRequired?: string | null;
 	workshopType?: string | null;  // Phase 5d: building type required to craft (e.g. 'forge')
 	populationRequired?: number;
+	// Phase 6: fuel / container / cooking properties
+	fuelValue?: number;          // fuel units added when used as campfire fuel
+	isContainer?: boolean;       // acts as a storage container
+	storageCapacity?: number;    // max items stored
+	preservationBonus?: number;  // 0–1, reduces food spoilage rate
+	isCookingVessel?: boolean;   // required in stockpile to cook stews
+	components?: string[];       // for dynamic stew crafts: ingredient item ids
 
 	// Item properties (durability, effects, etc.)
 	durability?: number;

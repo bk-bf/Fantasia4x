@@ -303,11 +303,12 @@ export class BuildingServiceImpl implements BuildingService {
 			type,
 			x,
 			y,
-			status: 'planned',
-			progress: 0,
+			// Phase 6: zero-buildTime buildings (craft_spot) are complete immediately
+			status: building.buildTime === 0 ? 'complete' : 'planned',
+			progress: building.buildTime === 0 ? 1 : 0,
 			// Phase 5c: work-point model
 			workRequired: building.buildTime * 10,
-			workDone: 0,
+			workDone: building.buildTime === 0 ? building.buildTime * 10 : 0,
 			materialsDelivered: false
 		};
 		return {

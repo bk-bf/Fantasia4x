@@ -22,7 +22,7 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     description: 'Harvest wood from trees in forests and groves',
     emoji: '🪓',
     color: '#8D6E63',
-    toolsRequired: ['axe'],
+    toolsRequired: ['stone_axe', 'iron_axe', 'steel_axe'],
     locationTypesRequired: ['forest', 'plains'],
     primaryStat: 'strength',
     secondaryStat: 'constitution',
@@ -34,7 +34,7 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     description: 'Extract stone, ore, and minerals from quarries and mines',
     emoji: '⛏️',
     color: '#607D8B',
-    toolsRequired: ['pick'],
+    toolsRequired: ['stone_pick', 'iron_pick', 'steel_pick'],
     locationTypesRequired: ['hills', 'mountains', 'caves'],
     primaryStat: 'strength',
     secondaryStat: 'constitution',
@@ -46,7 +46,7 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     description: 'Hunt animals for meat, hide, and other materials',
     emoji: '🏹',
     color: '#8D4E85',
-    toolsRequired: ['weapon'],
+    toolsRequired: ['stone_spear', 'iron_spear', 'shortbow', 'longbow'],
     locationTypesRequired: ['forest', 'plains', 'hills'],
     primaryStat: 'dexterity',
     secondaryStat: 'wisdom',
@@ -58,7 +58,7 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     description: 'Catch fish from rivers, lakes, and streams',
     emoji: '🎣',
     color: '#4FC3F7',
-    toolsRequired: ['fishing_gear'],
+    toolsRequired: ['digging_stick', 'fishing_spear', 'fishing_rod'],
     locationTypesRequired: ['river'],
     primaryStat: 'dexterity',
     secondaryStat: 'wisdom',
@@ -72,7 +72,6 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     description: 'Create tools, weapons, and basic equipment',
     emoji: '🔨',
     color: '#FF9800',
-    toolsRequired: ['hammer'],
     primaryStat: 'dexterity',
     secondaryStat: 'intelligence',
     baseEfficiency: 1.0
@@ -83,7 +82,7 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     description: 'Smelt ores and forge metal items',
     emoji: '⚒️',
     color: '#FF5722',
-    toolsRequired: ['hammer', 'tongs'],
+    toolsRequired: ['iron_tongs', 'steel_tongs'],
     primaryStat: 'strength',
     secondaryStat: 'intelligence',
     baseEfficiency: 1.0
@@ -94,7 +93,7 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     description: 'Process hides into leather and create leather goods',
     emoji: '🦬',
     color: '#8D6E63',
-    toolsRequired: ['knife'],
+    toolsRequired: ['flint_knife', 'iron_knife', 'steel_knife'],
     primaryStat: 'dexterity',
     secondaryStat: 'intelligence',
     baseEfficiency: 1.0
@@ -129,7 +128,6 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     description: 'Build structures, roads, and infrastructure',
     emoji: '🏗️',
     color: '#4CAF50',
-    toolsRequired: ['hammer'],
     primaryStat: 'strength',
     secondaryStat: 'intelligence',
     baseEfficiency: 1.0
@@ -144,6 +142,17 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     skillRequired: 'alchemy',
     primaryStat: 'intelligence',
     secondaryStat: 'wisdom',
+    baseEfficiency: 1.0
+  },
+  // Phase 6: cooking over campfire
+  {
+    id: 'cooking',
+    name: 'Cooking',
+    description: 'Prepare food at a campfire or cooking station',
+    emoji: '🍳',
+    color: '#FF9800',
+    primaryStat: 'wisdom',
+    secondaryStat: 'dexterity',
     baseEfficiency: 1.0
   }
 ];

@@ -91,6 +91,14 @@ export class ItemServiceImpl implements ItemService {
 			return false;
 		}
 
+		// Phase 6: stew items require a clay_cooking_pot in the colony
+		if (item.workshopType === 'campfire' && item.id === 'stew') {
+			const hasCookingPot = (gameState.item ?? []).some(
+				(i) => i.id === 'clay_cooking_pot' && i.amount > 0
+			) || ((gameState.stockpile ?? {})['clay_cooking_pot'] ?? 0) > 0;
+			if (!hasCookingPot) return false;
+		}
+
 		return true;
 	}
 
@@ -113,6 +121,16 @@ export class ItemServiceImpl implements ItemService {
 
 	hasRequiredBuilding(itemId: string, gameState: GameState): boolean {
 		const item = this.getItemById(itemId);
+
+		// Check Phase 5d workshopType (e.g. 'campfire', 'makers_bench', 'craft_spot')
+		if (item?.workshopType) {
+			const workshopOk = (gameState.buildings ?? []).some(
+				(b) => b.type === item.workshopType && b.status === 'complete'
+			);
+			if (!workshopOk) return false;
+		}
+
+		// Check legacy buildingRequired field
 		if (!item?.buildingRequired) return true;
 
 		// Phase 5d fix: check buildings[] instead of deprecated buildingCounts

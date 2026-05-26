@@ -24,6 +24,7 @@
     'production',
     'knowledge',
     'military',
+    'walls',
     'food',
     'commerce',
     'magical',
@@ -31,8 +32,11 @@
     'social'
   ];
 
+  const WALL_IDS = ['twig_wall', 'wicker_wall', 'daub_wall', 'mud_brick_wall', 'twig_door'];
+
   // First incomplete placed building (status 'planned' or 'under_construction')
   $: firstBuildingInProgress = buildings.find((b) => b.status !== 'complete') ?? null;
+  $: allBuildingsInProgress = buildings.filter((b) => b.status !== 'complete');
 
   // Enhanced building filtering with category and requirements
   $: availableBuildings = (
@@ -47,7 +51,9 @@
           .concat(buildingService.getBuildingsByCategory('magical'))
           .concat(buildingService.getBuildingsByCategory('exploration'))
           .concat(buildingService.getBuildingsByCategory('social'))
-      : buildingService.getBuildingsByCategory(selectedCategory)
+      : selectedCategory === 'walls'
+        ? buildingService.getBuildingsByCategory('military').filter((b) => WALL_IDS.includes(b.id))
+        : buildingService.getBuildingsByCategory(selectedCategory)
   ).filter((building) => {
     // Research requirements
     if (building.researchRequired && !completedResearch.includes(building.researchRequired))
@@ -311,40 +317,56 @@
 
   <!-- Construction Queue -->
   <div class="section-hdr sub">| ACTIVE CONSTRUCTION</div>
-  {#if firstBuildingInProgress}
-    {@const bDef = buildingService.getBuildingById(firstBuildingInProgress.type)}
-    <div class="row">
-      <span class="lbl">PROJECT</span><span class="val"
-        >{bDef?.name.toUpperCase() ?? firstBuildingInProgress.type.toUpperCase()}</span
-      >
-    </div>
-    <div class="row">
-      <span class="lbl">STATUS</span><span class="val"
-        >{firstBuildingInProgress.status.replace('_', ' ').toUpperCase()}</span
-      >
-    </div>
-    {@const prog = Math.round(
-      ((firstBuildingInProgress.workDone ?? 0) / (firstBuildingInProgress.workRequired ?? 50)) * 100
-    )}
-    <div class="need-row">
-      <span class="lbl">PROGRESS</span>
-      <div class="bar">
-        <div class="fill" style="width: {prog}%; background: var(--accent-hi)"></div>
+  {#if allBuildingsInProgress.length > 0}
+    {#each allBuildingsInProgress as bp}
+      {@const bDef = buildingService.getBuildingById(bp.type)}
+      <div class="row">
+        <span class="lbl">PROJECT</span><span class="val"
+          >{bDef?.name.toUpperCase() ?? bp.type.toUpperCase()}</span
+        >
       </div>
-      <span class="val">{prog}%</span>
-      <span class="desc"
-        >{(firstBuildingInProgress.workRequired ?? 50) - (firstBuildingInProgress.workDone ?? 0)} work
-        pts left</span
-      >
-    </div>
-    <div class="btn-row">
-      <button class="act-btn" on:click={() => cancelBuilding(firstBuildingInProgress!.id)}
-        >CANCEL CONSTRUCTION</button
-      >
-    </div>
+      <div class="row">
+        <span class="lbl">STATUS</span><span class="val"
+          >{bp.status.replace('_', ' ').toUpperCase()}</span
+        >
+      </div>
+      {@const prog = Math.round(((bp.workDone ?? 0) / (bp.workRequired ?? 50)) * 100)}
+      <div class="need-row">
+        <span class="lbl">PROGRESS</span>
+        <div class="bar">
+          <div class="fill" style="width: {prog}%; background: var(--accent-hi)"></div>
+        </div>
+        <span class="val">{prog}%</span>
+        <span class="desc">{(bp.workRequired ?? 50) - (bp.workDone ?? 0)} work pts left</span>
+      </div>
+      <div class="btn-row">
+        <button class="act-btn" on:click={() => cancelBuilding(bp.id)}>CANCEL</button>
+      </div>
+    {/each}
   {:else}
     <div class="row"><span class="muted">no active construction</span></div>
   {/if}
+
+  <!-- Placed campfires: fuel status -->
+  {#each buildings.filter((b) => b.type === 'campfire' && b.status === 'complete') as campfire}
+    {@const maxFuel = 60}
+    {@const fuelPct = Math.round(((campfire.fuel ?? 0) / maxFuel) * 100)}
+    <div class="section-hdr sub">| CAMPFIRE</div>
+    <div class="row">
+      <span class="lbl">STATE</span>
+      <span class="val" class:pos={campfire.lit}>{campfire.lit ? '🔥 BURNING' : '❌ UNLIT'}</span>
+    </div>
+    <div class="need-row">
+      <span class="lbl">FUEL</span>
+      <div class="bar">
+        <div
+          class="fill"
+          style="width: {fuelPct}%; background: {fuelPct < 20 ? 'var(--neg)' : 'var(--accent)'}"
+        ></div>
+      </div>
+      <span class="val">{campfire.fuel ?? 0}/{maxFuel}</span>
+    </div>
+  {/each}
 
   <!-- Available Buildings -->
   <div class="section-hdr">| AVAILABLE ({availableBuildings.length})</div>
@@ -419,9 +441,14 @@
           on:click={() => startBuilding(building)}
           disabled={!canBuild(building)}
         >
-          {#if !canAfford(building)}INSUFFICIENT MATERIALS
-          {:else if !canBuild(building)}REQUIREMENTS NOT MET
-          {:else}BEGIN CONSTRUCTION
+          {#if !canAfford(building)}
+            INSUFFICIENT MATERIALS
+          {:else if building.researchRequired && !completedResearch.includes(building.researchRequired)}
+            BLOCKED — RESEARCH REQUIRED
+          {:else if !canBuild(building)}
+            REQUIREMENTS NOT MET
+          {:else}
+            BEGIN CONSTRUCTION
           {/if}
         </button>
       </div>

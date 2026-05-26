@@ -10,6 +10,7 @@
  */
 
 import type { GameState, Job, Pawn } from '../core/types';
+import { ITEMS_DATABASE } from '../core/Items';
 
 // ===== WORK CONSTANTS =====
 
@@ -24,7 +25,13 @@ const HARVEST_WORK: Record<string, number> = {
     flint: 6,
     berries: 2,
     mushrooms: 2,
-    fiber: 3
+    fiber: 3,
+    // Phase 6e: primitive resource costs
+    twig: 1,
+    flint_shard: 2,
+    plant_fiber: 2,
+    surface_stone: 2,
+    clay_lump: 2
 };
 const DEFAULT_HARVEST_WORK = 5;
 
@@ -57,6 +64,10 @@ class JobServiceImpl {
 
         // --- Craft jobs from crafting queue ---
         jobs = this._syncCraftJobs(jobs, gameState);
+
+        // --- Phase 6: fuel-management jobs for campfires ---
+        jobs = this._syncLightJobs(jobs, gameState);
+        jobs = this._syncRefuelJobs(jobs, gameState);
 
         return { ...gameState, jobs };
     }
@@ -140,19 +151,24 @@ class JobServiceImpl {
             if (j.claimedBy !== null && j.claimedBy !== pawn.id) return false;
 
             // Map job type to work category key used in labor settings
-            const workKey = this._jobTypeToWorkKey(j.type);
+            const workKey = this._jobTypeToWorkKey(j, gameState);
 
-            // Check new laborSettings first, fall back to legacy workPriorities
+            // Check new laborSettings first, fall back to legacy workPriorities.
+            // Default to LABOR_LEVEL.NORMAL (2) so new pawns accept all jobs.
+            let priority: number;
             if (workKey in laborSettings) {
-                return (laborSettings[workKey] ?? 0) > 0;
+                priority = laborSettings[workKey] ?? 2;
+            } else if (workKey in legacyPriorities) {
+                priority = legacyPriorities[workKey];
+            } else {
+                priority = 2; // LABOR_LEVEL.NORMAL — default enabled
             }
-            const legacyPriority = legacyPriorities[workKey] ?? 0;
-            return legacyPriority > 0;
+            return priority > 0;
         });
 
         return available.sort((a, b) => {
-            const workKeyA = this._jobTypeToWorkKey(a.type);
-            const workKeyB = this._jobTypeToWorkKey(b.type);
+            const workKeyA = this._jobTypeToWorkKey(a, gameState);
+            const workKeyB = this._jobTypeToWorkKey(b, gameState);
             const labA = laborSettings[workKeyA] ?? 2;
             const labB = laborSettings[workKeyB] ?? 2;
             if (labB !== labA) return labB - labA;
@@ -167,18 +183,19 @@ class JobServiceImpl {
     // ------------------------------------------------------------------ //
 
     private _syncHarvestJobs(jobs: Job[], gs: GameState): Job[] {
-        // Remove harvest jobs whose designation no longer exists or tile is empty
+        // Remove harvest/forage/scavenge jobs whose designation no longer exists or tile is empty
         jobs = jobs.filter((j) => {
             if (j.type !== 'harvest') return true;
             const key = `${j.targetX},${j.targetY}`;
-            if (gs.designations?.[key] !== 'harvest') return false;
+            const dtype = gs.designations?.[key];
+            if (dtype !== 'harvest' && dtype !== 'forage' && dtype !== 'scavenge') return false;
             const tile = gs.worldMap[j.targetY]?.[j.targetX];
             return (tile?.resources?.[j.resourceId ?? ''] ?? 0) > 0;
         });
 
         // Add new harvest jobs for designations that have no job yet
         for (const [key, dtype] of Object.entries(gs.designations ?? {})) {
-            if (dtype !== 'harvest') continue;
+            if (dtype !== 'harvest' && dtype !== 'forage' && dtype !== 'scavenge') continue;
             const [x, y] = key.split(',').map(Number);
 
             const tile = gs.worldMap[y]?.[x];
@@ -221,6 +238,11 @@ class JobServiceImpl {
         for (const building of gs.buildings ?? []) {
             if (building.status === 'complete') continue;
             if (!building.x && !building.y && building.x !== 0 && building.y !== 0) continue;
+
+            // Phase 6: zero-workRequired buildings were already completed by BuildingService.placeBuilding
+            // (buildTime === 0 → status 'complete' on placement), so they won't reach here.
+            // Extra guard just in case:
+            if ((building.workRequired ?? 1) === 0) continue;
 
             const exists = jobs.some(
                 (j) => j.type === 'construct' && j.buildingId === building.id
@@ -288,6 +310,12 @@ class JobServiceImpl {
                 break;
             case 'craft':
                 state = this._completeCraft(job, state);
+                break;
+            case 'light':
+                state = this._completeLight(job, state);
+                break;
+            case 'refuel':
+                state = this._completeRefuel(job, state);
                 break;
         }
 
@@ -381,15 +409,133 @@ class JobServiceImpl {
         return { ...gs, item: newItems, craftingQueue: newQueue };
     }
 
+    /** Phase 6: generate 'light' jobs for unlit campfires that have fuel. */
+    private _syncLightJobs(jobs: Job[], gs: GameState): Job[] {
+        // Remove light jobs for campfires that are now lit or gone
+        jobs = jobs.filter((j) => {
+            if (j.type !== 'light') return true;
+            const b = (gs.buildings ?? []).find((b) => b.id === j.buildingId);
+            return b && b.status === 'complete' && !b.lit && (b.fuel ?? 0) > 0;
+        });
+
+        // Add light job for any unlit campfire with fuel that has no light job yet
+        for (const b of gs.buildings ?? []) {
+            if (b.status !== 'complete') continue;
+            if (b.type !== 'campfire') continue;
+            if (b.lit) continue;
+            if ((b.fuel ?? 0) <= 0) continue;
+            const exists = jobs.some((j) => j.type === 'light' && j.buildingId === b.id);
+            if (!exists) {
+                jobs.push({
+                    id: `light-${b.id}-${Date.now()}`,
+                    type: 'light',
+                    targetX: b.x,
+                    targetY: b.y,
+                    buildingId: b.id,
+                    workRequired: 2,
+                    workDone: 0,
+                    claimedBy: null
+                });
+            }
+        }
+        return jobs;
+    }
+
+    /** Phase 6: generate 'refuel' jobs for campfires whose fuel is low. */
+    private _syncRefuelJobs(jobs: Job[], gs: GameState): Job[] {
+        const REFUEL_THRESHOLD = 10;
+        // Remove refuel jobs for campfires at capacity or gone
+        jobs = jobs.filter((j) => {
+            if (j.type !== 'refuel') return true;
+            const b = (gs.buildings ?? []).find((b) => b.id === j.buildingId);
+            if (!b || b.status !== 'complete') return false;
+            // Check we still have fuel items in stockpile
+            const hasFuelItems = this._hasFuelInStockpile(gs);
+            return (b.fuel ?? 0) < REFUEL_THRESHOLD && hasFuelItems;
+        });
+
+        for (const b of gs.buildings ?? []) {
+            if (b.status !== 'complete') continue;
+            if (b.type !== 'campfire') continue;
+            if ((b.fuel ?? 0) >= REFUEL_THRESHOLD) continue;
+            if (!this._hasFuelInStockpile(gs)) continue;
+            const exists = jobs.some((j) => j.type === 'refuel' && j.buildingId === b.id);
+            if (!exists) {
+                jobs.push({
+                    id: `refuel-${b.id}-${Date.now()}`,
+                    type: 'refuel',
+                    targetX: b.x,
+                    targetY: b.y,
+                    buildingId: b.id,
+                    workRequired: 3,
+                    workDone: 0,
+                    claimedBy: null
+                });
+            }
+        }
+        return jobs;
+    }
+
+    private _completeLight(job: Job, gs: GameState): GameState {
+        if (!job.buildingId) return gs;
+        // Pawn needs a firestarter in stockpile
+        const newStockpile = { ...(gs.stockpile ?? {}) };
+        const firestarters = newStockpile['firestarter'] ?? 0;
+        if (firestarters > 0) newStockpile['firestarter'] = firestarters - 1;
+        const newBuildings = (gs.buildings ?? []).map((b) =>
+            b.id === job.buildingId ? { ...b, lit: true } : b
+        );
+        console.log(`[JobService] Campfire lit: ${job.buildingId}`);
+        return { ...gs, buildings: newBuildings, stockpile: newStockpile };
+    }
+
+    private _completeRefuel(job: Job, gs: GameState): GameState {
+        if (!job.buildingId) return gs;
+        const building = (gs.buildings ?? []).find((b) => b.id === job.buildingId);
+        if (!building) return gs;
+        // Find best available fuel item in stockpile
+        const stockpile = { ...(gs.stockpile ?? {}) };
+        let fuelAdded = 0;
+        for (const item of ITEMS_DATABASE) {
+            if ((item.fuelValue ?? 0) <= 0) continue;
+            const available = stockpile[item.id] ?? 0;
+            if (available <= 0) continue;
+            stockpile[item.id] = available - 1;
+            fuelAdded = item.fuelValue!;
+            break;
+        }
+        if (fuelAdded === 0) return gs; // nothing to add
+        const newBuildings = (gs.buildings ?? []).map((b) =>
+            b.id === job.buildingId
+                ? { ...b, fuel: Math.min((b.fuel ?? 0) + fuelAdded, 60) }
+                : b
+        );
+        console.log(`[JobService] Campfire refuelled +${fuelAdded}: ${job.buildingId}`);
+        return { ...gs, buildings: newBuildings, stockpile };
+    }
+
+    private _hasFuelInStockpile(gs: GameState): boolean {
+        const stockpile = gs.stockpile ?? {};
+        return ITEMS_DATABASE.some(
+            (item) => (item.fuelValue ?? 0) > 0 && (stockpile[item.id] ?? 0) > 0
+        );
+    }
+
     // ------------------------------------------------------------------ //
     // PRIVATE — HELPERS                                                   //
     // ------------------------------------------------------------------ //
 
-    /** Map Job.type to the work category key used in WorkAssignment.laborSettings */
-    private _jobTypeToWorkKey(type: Job['type']): string {
-        switch (type) {
-            case 'harvest':
-                return 'woodcutting'; // default; could be refined per resourceId
+    /** Map Job to the work category key used in WorkAssignment.laborSettings */
+    private _jobTypeToWorkKey(job: Job, gs?: GameState): string {
+        switch (job.type) {
+            case 'harvest': {
+                // Route based on the resource being harvested
+                const resourceId = job.resourceId ?? '';
+                const primitiveForage = ['twig', 'flint_shard', 'plant_fiber', 'bark', 'surface_stone', 'clay_lump', 'herbs', 'berries', 'mushrooms', 'fiber'];
+                if (primitiveForage.includes(resourceId)) return 'foraging';
+                if (['stone', 'iron_ore', 'flint'].includes(resourceId)) return 'mining';
+                return 'woodcutting'; // wood and unrecognised defaults
+            }
             case 'construct':
                 return 'construction';
             case 'craft':
@@ -400,8 +546,11 @@ class JobServiceImpl {
                 return 'eat';
             case 'sleep':
                 return 'sleep';
+            case 'light':
+            case 'refuel':
+                return 'construction'; // map to construction labor bucket
             default:
-                return type;
+                return job.type;
         }
     }
 }

@@ -364,6 +364,26 @@ export class GameEngineImpl implements GameEngine {
 	private processBuildings(): void {
 		// Phase 5c: building construction is now handled by the job system (construct jobs).
 		// processBuildingQueue countdown removed.
+
+		// Phase 6: tick campfire fuel consumption
+		this.gameState = this._processCampfireFuel(this.gameState!);
+	}
+
+	private _processCampfireFuel(gs: GameState): GameState {
+		let changed = false;
+		const newBuildings = (gs.buildings ?? []).map((b) => {
+			const buildingDef = AVAILABLE_BUILDINGS.find((def) => def.id === b.type);
+			if (!buildingDef?.maxFuel || !buildingDef.fuelConsumptionRate) return b;
+			if (b.status !== 'complete') return b;
+			if (!b.lit) return b;
+			const newFuel = Math.max(0, (b.fuel ?? 0) - buildingDef.fuelConsumptionRate);
+			const newLit = newFuel > 0;
+			if (newFuel === b.fuel && newLit === b.lit) return b;
+			changed = true;
+			return { ...b, fuel: newFuel, lit: newLit };
+		});
+		if (!changed) return gs;
+		return { ...gs, buildings: newBuildings };
 	}
 
 	private processCrafting(): void {

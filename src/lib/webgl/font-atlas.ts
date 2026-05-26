@@ -686,7 +686,7 @@ export async function loadBitlandsAtlas(tileW = 12, tileH = 18, debug = false): 
 		{ url: '/tilesets/bitlands_crops.bmp', puaBase: 0xe700 },
 	];
 
-	const imgs = await Promise.all(
+	const results = await Promise.allSettled(
 		sheets.map(({ url }) =>
 			new Promise<HTMLImageElement>((resolve, reject) => {
 				const image = new Image();
@@ -697,8 +697,17 @@ export async function loadBitlandsAtlas(tileW = 12, tileH = 18, debug = false): 
 		)
 	);
 
-	const sheetH = imgs[0].height; // 288
-	const atlasW = imgs[0].width;  // 192
+	// Use only successfully loaded sheets; skip missing ones silently
+	const imgs: (HTMLImageElement | null)[] = results.map((r, i) => {
+		if (r.status === 'fulfilled') return r.value;
+		if (debug) console.warn(`loadBitlandsAtlas: skipping missing sheet ${sheets[i].url}`);
+		return null;
+	});
+
+	const firstLoaded = imgs.find((img) => img !== null) as HTMLImageElement;
+	if (!firstLoaded) throw new Error('loadBitlandsAtlas: no tilesheets loaded');
+	const sheetH = firstLoaded.height; // 288
+	const atlasW = firstLoaded.width;  // 192
 	const atlasH = sheetH * sheets.length; // 2304
 
 	const canvas = document.createElement('canvas');
@@ -710,8 +719,11 @@ export async function loadBitlandsAtlas(tileW = 12, tileH = 18, debug = false): 
 	const characters = new Map<string, import('./types.js').CharacterInfo>();
 
 	for (let s = 0; s < sheets.length; s++) {
+		const img = imgs[s];
+		if (!img) continue; // skip missing sheets
+
 		const yOffset = s * sheetH;
-		ctx.drawImage(imgs[s], 0, yOffset);
+		ctx.drawImage(img, 0, yOffset);
 
 		// Strip magenta (255,0,255) background → alpha=0 so the shader's
 		// mix(v_background, tinted, sprite.a) treats it as empty space.

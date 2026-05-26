@@ -74,7 +74,7 @@ export function buildGameGrid(
 
     // Phase 4b: overlay designations
     if (designations) {
-        const DESIGNATION_GLYPHS: Record<DesignationType, { char: string; fg: RGB }> = {
+        const DESIGNATION_GLYPHS: Partial<Record<DesignationType, { char: string; fg: RGB }>> = {
             harvest: { char: '!', fg: { r: 0.25, g: 0.85, b: 0.25 } },
             mine: { char: 'X', fg: { r: 0.85, g: 0.55, b: 0.15 } },
             construct: { char: '+', fg: { r: 0.35, g: 0.75, b: 0.80 } },

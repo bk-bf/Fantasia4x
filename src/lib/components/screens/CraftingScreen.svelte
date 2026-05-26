@@ -36,6 +36,26 @@
     'magical'
   ];
 
+  // Workshop filter — Phase 6
+  let selectedWorkshop = 'all';
+  let workshopFilters = ['all', 'craft_spot', 'campfire', 'makers_bench', 'other'];
+
+  function workshopLabel(ws: string | null | undefined): string {
+    if (!ws) return 'NO WORKSHOP';
+    switch (ws) {
+      case 'craft_spot':
+        return '[🪔 CRAFT SPOT]';
+      case 'campfire':
+        return '[🔥 CAMPFIRE]';
+      case 'makers_bench':
+        return '[🪚 BENCH]';
+      case 'forge':
+        return '[🔧 FORGE]';
+      default:
+        return `[${ws.replace('_', ' ').toUpperCase()}]`;
+    }
+  }
+
   // Reuse item fetching pattern from BuildingMenu
   $: getItemAmount = (itemId: string): number => {
     return itemMap[itemId] || 0;
@@ -58,6 +78,17 @@
     // Filter by category if specified
     if (selectedCategory !== 'all') {
       items = items.filter((item) => item.category === selectedCategory);
+    }
+
+    // Phase 6: filter by workshop
+    if (selectedWorkshop !== 'all') {
+      if (selectedWorkshop === 'other') {
+        items = items.filter(
+          (item) => !['craft_spot', 'campfire', 'makers_bench'].includes(item.workshopType ?? '')
+        );
+      } else {
+        items = items.filter((item) => (item.workshopType ?? null) === selectedWorkshop);
+      }
     }
 
     return items;
@@ -284,6 +315,19 @@
     {/each}
   </div>
 
+  <!-- Workshop filter — Phase 6 -->
+  <div class="filter-bar secondary">
+    <span class="lbl" style="margin-top:2px">SHOP</span>
+    {#each workshopFilters as ws}
+      <button
+        class="filter-btn"
+        class:active={selectedWorkshop === ws}
+        on:click={() => (selectedWorkshop = ws)}
+        >{ws === 'all' ? 'ALL' : ws.replace('_', ' ').toUpperCase()}</button
+      >
+    {/each}
+  </div>
+
   <!-- Inventory -->
   <div class="section-hdr sub">| INVENTORY</div>
   {#if Object.keys(inventory).length > 0}
@@ -348,6 +392,9 @@
       <div class="recipe-name">
         {item.name.toUpperCase()}
         <span class="rmeta">{item.type} / {item.category}</span>
+        {#if item.workshopType}
+          <span class="workshop-badge">{workshopLabel(item.workshopType)}</span>
+        {/if}
         <span class="rarity-tag">{item.rarity}</span>
       </div>
       <div class="desc-row">{item.description}</div>
@@ -395,7 +442,11 @@
           on:click={() => startCrafting(item)}
           disabled={!$gameState || !itemService.canCraftItem(item.id, $gameState)}
         >
-          {#if !$gameState || !itemService.canCraftItem(item.id, $gameState)}CANNOT CRAFT
+          {#if !$gameState || !itemService.canCraftItem(item.id, $gameState)}
+            {#if item.workshopType && !availableBuildings.includes(item.workshopType)}
+              BLOCKED — NEEDS {item.workshopType.replace('_', ' ').toUpperCase()}
+            {:else}CANNOT CRAFT
+            {/if}
           {:else}BEGIN CRAFTING
           {/if}
         </button>
@@ -630,6 +681,14 @@
     color: var(--text-dim);
     font-size: 10px;
     margin-left: auto;
+  }
+
+  .workshop-badge {
+    color: var(--accent);
+    font-size: 10px;
+    border: 1px solid var(--border);
+    padding: 0 4px;
+    letter-spacing: 0.04em;
   }
 
   .desc-row {
