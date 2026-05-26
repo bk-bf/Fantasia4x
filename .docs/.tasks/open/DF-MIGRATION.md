@@ -73,6 +73,17 @@ Seed derivation:    detail_seed = base_seed * 6971
                     territory_seed = base_seed * 7919
 ```
 
+**Additional noise utilities from `map_gen-refactored` branch** (not in `main`) — also port to `WorldGenerator.ts`:
+```
+getRidgedNoise(x, y):               1.0 - abs(terrainNoise(x, y))
+                                    → sharp ridges; use for mountain peak subterrain selection
+getWarpedNoise(x, y, warp=30.0):    domain warping via detail noise offsets
+                                    warpX = detailNoise(x+500, y+500) * warp
+                                    warpY = detailNoise(x-500, y-500) * warp
+                                    return terrainNoise(x+warpX, y+warpY)
+                                    → organic biome edges, river course variation
+```
+
 **`world/terrain/terrain_database.gd`** → `src/lib/game/core/Terrains.ts`
 
 Full biome table to port (density = primary noise output clamped 0–1):
@@ -201,6 +212,16 @@ DISABLED=0, LOW=1, NORMAL=2, HIGH=3, URGENT=4
 ```
 Default: all types initialized to `NORMAL`. `_adjust_priorities_based_on_traits(pawnId, traits)` modifies on spawn.
 
+Trait → priority adjustments applied at pawn spawn (from `workpriority_manager.gd`, `basic-ui`/`map_gen-refactored` branch):
+
+| Trait          | Work type    | Adjusted priority |
+| -------------- | ------------ | ----------------- |
+| `nature_lover` | harvesting   | HIGH              |
+| `strong`       | mining       | HIGH              |
+| `strong`       | hauling      | HIGH              |
+| `builder`      | construction | HIGH              |
+| `chef`         | cooking      | HIGH              |
+
 ---
 
 #### Mood system
@@ -212,6 +233,31 @@ Thresholds: depressed<15, sad<30, neutral<50, happy>75, ecstatic>90
 Modifiers: activeModifiers (permanent), temporaryModifiers {id: {value, duration}}
 Trend: drifts toward neutral (50) at 0.1/s when no active modifiers
 ```
+
+---
+
+### dnd-combat-loop — Data separation pattern (`/home/kirill/Documents/Projects/dnd-combat-loop/`)
+
+`dnd-combat-loop` is a separate Godot 4 project implementing DnD 5e turn-based tactical combat (BG3-style). Its combat system — initiative, action economy, attack/damage rolls, conditions, AI — is **architecturally incompatible** with Fantasia4x's real-time DF-like sim and is not ported.
+
+**What we borrow: the JSON data separation pattern.** Every game entity type has its own `data/*.json` file, fully decoupled from the class that consumes it:
+
+| File                   | Records | Pattern relevance                                                        |
+| ---------------------- | ------- | ------------------------------------------------------------------------ |
+| `data/conditions.json` | 33      | Per-entry: `{id, name, effects{}, duration_type, is_buff}`               |
+| `data/enemies.json`    | 25      | Per-entry: `{id, stats{}, ai_aspects[], resistances[], level_scaling{}}` |
+| `data/items.json`      | 60      | Per-entry: `{id, type, properties[], damage, range}`                     |
+| `data/classes.json`    | 5       | Per-entry: `{id, hit_die, stats{}, features[]}`                          |
+
+The pattern: **data file → typed loader → game object**, with zero logic in the data file. The loader validates shape and exports a typed array — identical to Fantasia4x's current `ITEMS_DATABASE`, `AVAILABLE_BUILDINGS` etc., just externalized.
+
+**Recommended migration path for Fantasia4x** (when lists outgrow comfortable inline editing):
+- Move `Items.ts`, `Buildings.ts`, `Research.ts`, `Work.ts` content to `src/lib/game/data/*.json`
+- Types stay in `types.ts` — they are the schema contract
+- A thin `dataLoader.ts` per domain imports the JSON and casts to the typed interface
+- No change to service layer call sites
+
+**Format note:** JSON has zero setup cost (`resolveJsonModule` in `tsconfig.json`). TOML is preferred if Tauri/Rust integration lands — `serde`+`toml` crate reads the same files natively.
 
 ---
 
@@ -357,20 +403,36 @@ gl_FragColor = vec4(tinted, sprite.a) * (1.0 - step(sprite.a, 0.01))
 - [ ] Add `position: { x: number; y: number }` to the `Pawn` interface in `types.ts`. Spawn position assigned by `PawnService` using expanding-square search (port of `pawn_manager.gd::find_nearest_walkable_tile()`) from the settlement origin.
 - [ ] Add `path: {x:number, y:number}[]`, `pathIndex: number`, `isMoving: boolean`, `hasReachedDestination: boolean` to `Pawn`. (`TILE_REACH_THRESHOLD = 2.0` from `pawn.gd`.)
 - [ ] `MapCanvas.svelte` overlays pawn glyphs (`@`) in race-accent color with selection highlight.
-- [ ] Create `src/lib/game/services/PathfinderService.ts` — clean A* rewrite informed by `pathfinder.gd`:
-  - [ ] **Distance**: octile — `1.0*(dx+dy) + (1.414 - 2.0)*Math.min(dx,dy)`. Not Manhattan.
-  - [ ] **Open set**: binary min-heap keyed on `fCost` (the Celestia version uses an O(n) array scan which it notes as a known bottleneck — don't copy that).
-  - [ ] **Terrain cost**: include `tile.movementCost` in `gCost` calculation. Celestia comments it out for performance; a proper priority queue makes this free.
-  - [ ] **Neighbour logic**: 8-direction with diagonal wall-cut prevention — diagonal allowed only if at least one orthogonal neighbour is walkable (port of `grid.gd::get_neighbors()`).
-  - [ ] **Search limit**: `clamp(Math.floor(width * height / 10 * 1500 / 10000), 500, 10000)`.
-  - [ ] Returns `{x,y}[]` path via `reconstruct_path()` (walk `parent` chain, reverse), or `[]` if blocked/limit hit.
+- [ ] **Set up Rust spatial crate** (prerequisite for PathfinderService):
+  - [ ] Create `spatial-core/` at project root — `wasm-pack new spatial-core` (or `cargo init` + add `wasm-bindgen` dependency).
+  - [ ] Add `wasm-pack build --target web` to the Vite build pipeline (via a `vite-plugin-wasm-pack` or a pre-build script in `package.json`).
+  - [ ] Gitignore `spatial-core/pkg/` — it is generated output.
+  - [ ] Verify the generated `spatial-core/pkg/spatial_core.d.ts` is importable from TypeScript before proceeding.
+- [ ] **Define `PathfinderService` TypeScript interface** at `src/lib/game/services/interfaces/PathfinderService.ts`:
+  ```typescript
+  export interface PathfinderService {
+    findPath(walkable: Uint8Array, costs: Float32Array,
+             width: number, height: number,
+             sx: number, sy: number, ex: number, ey: number): {x:number, y:number}[];
+  }
+  ```
+- [ ] **Implement A* in Rust** at `spatial-core/src/pathfinder.rs`, exposed via `#[wasm_bindgen]`:
+  - [ ] **Distance heuristic**: octile — `1.0*(dx+dy) + (1.414 - 2.0)*min(dx,dy)`. Not Manhattan.
+  - [ ] **Open set**: `BinaryHeap` (Rust std) keyed on reverse `fCost` (min-heap via `Reverse<OrderedFloat>`).
+  - [ ] **Terrain cost**: include `costs[y*width+x]` in `gCost`. Correct with a real priority queue.
+  - [ ] **Neighbour logic**: 8-direction with diagonal wall-cut prevention — diagonal allowed only if at least one orthogonal neighbour is walkable.
+  - [ ] **Search limit**: `clamp((width * height / 10 * 1500 / 10000).max(500).min(10000), 500, 10000)`.
+  - [ ] Input: flat `&[u8]` walkable grid + `&[f32]` cost grid (zero-copy JS heap views). Output: `Vec<u32>` of interleaved x,y pairs, decoded to `{x,y}[]` in the TS binding wrapper. Returns empty vec if no path or limit hit.
+- [ ] **Create `WasmPathfinderService`** at `src/lib/game/services/WasmPathfinderService.ts` — implements `PathfinderService` interface, imports from `spatial-core/pkg/spatial_core`, manages the two sync'd typed arrays (`walkableGrid: Uint8Array`, `costGrid: Float32Array`) and rebuilds them when `GameState.worldMap` changes.
 - [ ] In `GameEngineImpl.processGameTurn()`, add pawn movement step before work processing: each pawn with non-empty `path` advances `Math.floor(speedStat / 20)` tiles (minimum 1) per turn, updating `position` via `GameStateManager.updatePawn()`.
 - [ ] `PawnService` gets `assignPath(pawnId, path)` and `teleportPawn(pawnId, pos)` — both through `GameStateManager.updatePawn()`.
-- [ ] Click on map tile → if pawn selected → call `PathfinderService.findPath()` → `PawnService.assignPath()`.
+- [ ] Click on map tile → if pawn selected → call `pathfinderService.findPath()` → `PawnService.assignPath()`.
 
-**Sources from Celestia used:** `pathfinder.gd` (full A* algorithm port), `grid.gd` (`get_neighbors()`, bounds checking), `pawn.gd` (`movement_path`, `current_path_index`, `is_moving` fields).
+**Sources from Celestia used:** `pathfinder.gd` (A* algorithm — ported to Rust, not TypeScript), `grid.gd` (`get_neighbors()`, diagonal wall-cut logic), `pawn.gd` (`movement_path`, `current_path_index`, `is_moving` fields).
 
-**Complexity:** Medium. Pathfinding is well-understood; main risk is integration with the turn system and `GameStateManager`.
+**Toolchain added:** Rust stable + `wasm-pack`. See ADR-008 in `.docs/game/DECISIONS.md`.
+
+**Complexity:** Medium-high. The A* logic itself is well-defined; the added cost is the `wasm-pack` build pipeline integration and the typed-array sync layer between `GameState.worldMap` and the Rust grid representation.
 
 ---
 
@@ -401,7 +463,7 @@ gl_FragColor = vec4(tinted, sprite.a) * (1.0 - step(sprite.a, 0.01))
 
 **4b. Designations** *(no Celestia equivalent — original system)*
 
-- [ ] Add `designations: Record<string, DesignationType>` to `GameState` — maps `"x,y"` keys to `"chop" | "mine" | "haul" | "build"`.
+- [ ] Add `designations: Record<string, DesignationType>` to `GameState` — maps `"x,y"` keys to `"harvest" | "construct" | "mine" | "haul" | "clear"`. *(type names from `DesignationManager.gd`, `basic-ui`/`map_gen-refactored` branch)*
 - [ ] Create `DesignationService.ts`: `designate(x, y, type)`, `clearDesignation(x, y)`, `getOpenDesignations(type?)`.
 - [ ] Map clicks in `MapCanvas.svelte` can enter a designation mode; right-click clears.
 

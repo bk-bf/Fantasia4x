@@ -11,7 +11,7 @@ ADR-004 [GAME]: AI Generation Server-Side Only (2026-05-25, Accepted)
 ADR-005 [GAME]: LocalStorage Persistence via Store (2026-05-25, Accepted)
 ADR-006 [GAME]: Data Files Contain Definitions, Not Logic (2026-05-25, Accepted)
 ADR-007 [GAME]: SvelteKit + WebGL2 over Godot for Merged Project (2026-05-26, Accepted)
-ADR-008 [GAME]: Spatial Core WASM Upgrade Path (2026-05-26, Deferred)
+ADR-008 [GAME]: Rust/WASM Spatial Core via wasm-pack (2026-05-26, Accepted)
 
 ---
 
@@ -124,7 +124,7 @@ Fantasia4x (SvelteKit + WebGL2) and Celestia (Godot 4) are being merged into a s
 
 #### Decision
 
-Stay in SvelteKit + WebGL2, targeting desktop distribution via Tauri. Celestia's spatial systems (map data, terrain gen, pawn state machine, fog of war) will be ported into TypeScript services. Godot's C++ built-ins (AStar2D, TileMap, NavigationServer) will be reimplemented in TypeScript using standard algorithms.
+Stay in SvelteKit + WebGL2, targeting desktop distribution via Tauri. Celestia's game logic (pawn state machine, needs, mood, work priorities) will be ported into TypeScript services. Pure spatial computation (pathfinding, fog of war, spatial queries) will be implemented in Rust and compiled to WASM via wasm-pack, exposed through TypeScript service interfaces (see ADR-008).
 
 #### Rationale
 
@@ -141,29 +141,50 @@ Celestia's Godot-specific features (scene tree, physics, TileMap rendering) must
 
 ---
 
-### ADR-008 [GAME]: Spatial Core WASM Upgrade Path (Deferred)
+### ADR-008 [GAME]: Rust/WASM Spatial Core via wasm-pack
 
 - **Date**: 2026-05-26
-- **Status**: Deferred — revisit if entity count exceeds ~300 simultaneous pathfinding agents
+- **Status**: Accepted — implemented starting at Phase 3 of DF-MIGRATION
 
 #### Context
 
-At planned scale (~50 player pawns + enemies + animals + allies), total mobile entities could reach 200–400. A TypeScript A* with a binary heap on a large map is sufficient for this range. However, if simulation depth grows (large maps, dense mob spawns), a native-speed spatial core becomes relevant.
+Phase 3 of the DF migration ports the full pawn state machine from Celestia, meaning all entities (50 player pawns + enemies + animals + allies) run concurrent pathfinding requests every turn. Total mobile entities easily reach 200–400. This is at or above the threshold where a TypeScript implementation becomes a measurable bottleneck, and the state machine is being built now — deferring to a later rewrite is costlier than doing it correctly once.
+
+Additionally, the project targets desktop distribution via Tauri, whose backend is Rust. The toolchain overlap makes Rust the natural fit.
 
 #### Decision
 
-All spatial logic (pathfinding, fog of war, spatial queries) is isolated behind service interfaces (`PathfindingService`, `SpatialIndexService`). The current implementation will be TypeScript. The interfaces are designed so a WASM-backed implementation can be swapped in later without touching callsites.
+Pure spatial computation is implemented in Rust, compiled to WASM via `wasm-pack`, and called from TypeScript through service interfaces. The Rust crate lives at `spatial-core/` in the project root.
 
-#### Upgrade path if needed
+**Rust handles exclusively:**
+- `PathfinderService` — A* with binary min-heap, octile heuristic, terrain costs, diagonal wall-cut prevention
+- `SpatialIndexService` — nearest-entity queries, expanding-ring scan
+- `FogOfWarService` — recursive shadowcasting
 
-Compile a C++ spatial core (custom or derived from an existing pathfinding library) to `.wasm` via Emscripten. Expose it through the same service interface. The TypeScript game logic layer and all UI code remain unchanged.
+**TypeScript handles everything else:** pawn state machine, needs system, mood, work priorities, inventory, game state mutation, UI. These systems call the TypeScript service interfaces; they never import from `spatial-core` directly.
 
-#### Triggers to revisit
+#### Why Rust over C++
 
-- Frame budget for pathfinding consistently exceeds 2ms per turn with 300+ agents.
-- Map size grows beyond ~500×500 tiles.
-- Hierarchical pathfinding (HPA*) is needed and the TS implementation becomes unwieldy.
+- **`wasm-pack` + `wasm-bindgen`** auto-generates TypeScript `.d.ts` bindings from `#[wasm_bindgen]` annotations — zero hand-written glue code.
+- **Tauri synergy** — same `cargo` toolchain, potential future code sharing with the desktop backend.
+- **Memory safety** — no undefined behaviour; a binary heap off-by-one that segfaults in C++ panics loudly in Rust debug mode and is provably safe in release.
+- **Better DX** — `cargo` vs CMake/Emscripten; hot-rebuild with `wasm-pack build --dev`.
+
+#### Data marshaling
+
+The world grid is mirrored as two flat typed arrays kept in sync whenever `GameState.worldMap` changes:
+
+```typescript
+const walkable = new Uint8Array(width * height);   // 0 = blocked, 1 = walkable
+const costs    = new Float32Array(width * height);  // movementCost per tile
+```
+
+`wasm_bindgen` accepts `&[u8]` / `&[f32]` as zero-copy views into the JS heap — no serialisation overhead. Path results are returned as `Vec<u32>` (interleaved x,y pairs) and decoded on the TS side.
+
+#### Architecture constraint
+
+All callsites depend on the TypeScript interface, never on the Rust implementation directly. This keeps the door open for a future HPA* upgrade or a pure-TS fallback for environments where WASM is unavailable (e.g. unit tests).
 
 #### Consequences
 
-Slightly more upfront interface design for spatial services. Avoids premature optimisation while keeping the option structurally open.
+`wasm-pack` and the Rust toolchain are added to the dev environment. CI must run `wasm-pack build` before the SvelteKit build. The `spatial-core/pkg/` output directory is gitignored and regenerated on build.
