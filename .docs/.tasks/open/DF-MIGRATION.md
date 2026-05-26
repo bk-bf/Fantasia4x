@@ -82,35 +82,48 @@ getWarpedNoise(x, y, warp=30.0):    domain warping via detail noise offsets
                                     warpY = detailNoise(x-500, y-500) * warp
                                     return terrainNoise(x+warpX, y+warpY)
                                     → organic biome edges, river course variation
+getCombinedNoise(x, y, weight=0.5): terrainNoise(x,y)*(1-weight) + detailNoise(x,y)*weight
+                                    → transition zone blending; mix macro shape with detail texture
+getTerraceNoise(x, y, steps=5):     n = (terrainNoise(x,y)+1)/2
+                                    return floor(n*steps)/steps * 2 - 1
+                                    → stepped elevation; use for mesa biomes or plateau terrain
 ```
 
 **`world/terrain/terrain_database.gd`** → `src/lib/game/core/Terrains.ts`
 
-Full biome table to port (density = primary noise output clamped 0–1):
+Full biome table — `terrain_database.gd` is **identical** in both `main` and `map_gen-refactored`.
 
-| Biome      | density_range | walkable | movement_cost | Subterrains (detail thresholds)                                                                                            |
-| ---------- | ------------- | -------- | ------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `forest`   | 0.50 – 0.60   | true     | 1.5           | dirt, grass, deep_grass, bush, tree, tree_stump, fallen_logs, mushroom_patch (thresholds: -0.8,-0.6,-0.4,-0.2,0.4,0.7,0.9) |
-| `swamp`    | 0.20 – 0.30   | true     | 2.0           | shallow_water, mud, bog, clay, moss, quicksand, dead_trees (thresholds: -0.8,-0.6,-0.4,-0.2,0.2,0.6,0.8)                   |
-| `plains`   | 0.30 – 0.45   | true     | 1.0           | dirt, grass, bush, deep_grass, tall_grass, wildflowers, scrubland, savanna (thresholds: -0.8,-0.6,-0.4,-0.2,0.4,0.6,0.8)   |
-| `mountain` | 0.60 – 1.00   | false    | 3.0           | rocky, peak, cave, cliff, mineral_deposit, crystal_formation, arcane_glade (thresholds: -0.6,-0.3,0.0,0.3,0.6,0.85,0.95)   |
-| `river`    | 0.00 – 0.50   | true     | 2.5           | shallow_water, water, rapids, riverbank (thresholds: -0.6,-0.3,0.0,0.3)                                                    |
+> ⚠️ **Celestia `river` density range is dead code.** GDScript iterates the dict in insertion order: `swamp` (0.20–0.30) and `plains` (0.30–0.45) are checked before `river`, so `river`'s nominal range of 0.00–0.50 is never reached for those overlapping values. The Fantasia4x port fixes this with non-overlapping ranges. **Celestia column is the source; Fantasia4x column is what was actually implemented.**
 
-Subterrain movement costs to preserve: `tree=2.0`, `bush=1.8`, `mud=3.0`, `bog=3.5`, `rocky=2.5`, `water=0.0` (unwalkable), `peak=0.0` (unwalkable).
+| Biome      | Celestia range | Fantasia4x range | walkable | movement_cost | Subterrains (detail thresholds)                                                                                            |
+| ---------- | -------------- | ---------------- | -------- | ------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `forest`   | 0.50 – 0.60    | 0.52 – 0.70      | true     | 1.5           | dirt, grass, deep_grass, bush, tree, tree_stump, fallen_logs, mushroom_patch (thresholds: -0.8,-0.6,-0.4,-0.2,0.4,0.7,0.9) |
+| `swamp`    | 0.20 – 0.30    | 0.18 – 0.28      | true     | 2.0           | shallow_water, mud, bog, clay, moss, quicksand, dead_trees (thresholds: -0.8,-0.6,-0.4,-0.2,0.2,0.6,0.8)                   |
+| `plains`   | 0.30 – 0.45    | 0.28 – 0.52      | true     | 1.0           | dirt, grass, bush, deep_grass, tall_grass, wildflowers, scrubland, savanna (thresholds: -0.8,-0.6,-0.4,-0.2,0.4,0.6,0.8)   |
+| `mountain` | 0.60 – 1.00    | 0.70 – 1.00      | false    | 3.0           | rocky, cave, cliff, mineral_deposit (thresholds: -0.3,0.35,0.85) · scatter: crystal_formation, arcane_glade                |
+| `river`    | 0.00 – 0.50 ⚠️  | 0.00 – 0.18      | true     | 2.5           | shallow_water, water, rapids, riverbank (thresholds: -0.6,-0.3,0.0,0.3)                                                    |
+
+Subterrain movement costs to preserve: `tree=2.0`, `bush=1.8`, `mud=3.0`, `bog=3.5`, `rocky=2.5`, `water=0.0` (unwalkable), `cliff=0.0` (unwalkable).
+
+> **Note on `peak`:** Celestia lists `peak` (unwalkable, cost=0) as a mountain noise-subterrain. The Fantasia4x port removes it — it is mechanically identical to `cliff` and the scatter-object system (`crystal_formation`, `arcane_glade`) handles visual variety without a redundant tier. `stone` resource spawning no longer lists `peak` as a valid subterrain.
 
 **`world/terrain/tile.gd`** → extend `WorldTile` in `types.ts`
 
 Fields: `terrainType: string`, `subType: string`, `density: number`, `moisture: number`, `temperature: number`, `movementCost: number`, `walkable: boolean`, `resources: Record<string, number>`, `territoryOwner: string`.
 Pathfinding fields (needed on tile for A*): `gCost: number`, `hCost: number`, `fCost: number`, `parent: {x,y} | null`.
-Methods to port: `harvestResource(id, amount)` (clamps to available, removes key at 0), `addResource(id, amount)`, `resetPathfinding()`.
+Methods to port: `harvestResource(id, amount)` (clamps to available, removes key at 0), `addResource(id, amount)`, `resetPathfinding()`, `calculateFCost()` (`fCost = gCost + hCost`), `hasTerritory()` (`territoryOwner !== ''`), `setTerritory(ownerId)`.
+
+> `calculateFCost()` and the territory helpers are present in `map_gen-refactored` only — not in `main`.
 
 **`world/terrain/resource_database.gd`** → `src/lib/game/core/Resources.ts` (new file)
 
 ```
-wood:  terrain_subtype: ["tree"],               resource_amount: [3,6],  harvest_time: 5.0
-stone: terrain_subtype: ["rocky","cliff","peak"], resource_amount: [5,10], harvest_time: 8.0
-herbs: terrain_subtype: ["wildflowers","moss","deep_grass"], resource_amount: [2,5], harvest_time: 3.0
+wood:  terrain_subtype: ["tree"],                         resource_amount: [3,6],  harvest_time: 5.0
+stone: terrain_subtype: ["rocky","cliff"],                resource_amount: [5,10], harvest_time: 8.0
+herbs: terrain_subtype: ["wildflowers","moss","deep_grass"], resource_amount: [2,5],  harvest_time: 3.0
 ```
+> Celestia source lists `"peak"` in stone's `terrain_subtype`. Removed in the Fantasia4x port because `peak` was eliminated from mountain subterrains (see note above). Stone spawns on `rocky` and `cliff` only.
+> Each resource also carries `yield_amount: [min,max]` (pawn-skill-based output quantity) and `harvest_tool`/`skill_used` metadata. These are present in `resource_database.gd` but not yet consumed by the TS port — deferred until the pawn skill system is implemented.
 Seed derivation per resource: `resourceSeed = baseSeed * 7919 + hashCode(resourceId)`.
 
 **`world/generation/resource_gen.gd`** → `ResourceGeneratorService.ts`
@@ -283,7 +296,7 @@ The pattern: **data file → typed loader → game object**, with zero logic in 
 | `buildingCounts: Record<string, number>`      | `buildings: PlacedBuilding[]` — each building has `{id, type, x, y}`                                                               |
 | Pawns have no map position                    | `Pawn` gains `position: {x: number, y: number}`                                                                                    |
 | `WorkAssignment` references abstract category | `WorkAssignment` references a tile coordinate target                                                                               |
-| `ASCIIMap.svelte` renders a `<pre>` string    | `MapCanvas.svelte` drives `WebGLRenderer` on a `<canvas>`                                                                          |
+| `ASCIIMap.svelte` renders a `<pre>` string    | `GameCanvas.svelte` drives `WebGLRenderer` on a `<canvas>`                                                                         |
 | World gen is fully random per tile            | World gen uses dual Simplex noise pass                                                                                             |
 | Resources are global counts on `GameState`    | Resources are per-tile amounts; harvesting depletes the tile                                                                       |
 
@@ -303,10 +316,10 @@ The pattern: **data file → typed loader → game object**, with zero logic in 
 
 **Work items:**
 
-- [x] Create `MapCanvas.svelte` — a `<canvas>` element that instantiates `WebGLRenderer` from Exiled on mount, subscribes to `$gameState.worldMap`, converts `WorldTile` → `TileData` (char + color), calls `renderer.beginFrame()` / `endFrame()` each animation frame.
+- [x] Create `GameCanvas.svelte` — a `<canvas>` element that instantiates `WebGLRenderer` from Exiled on mount, subscribes to `$gameState.worldMap`, converts `WorldTile` → `TileData` (char + color) via `fantasia-world.ts`, calls `renderer.beginFrame()` / `endFrame()` each animation frame.
 - [x] Add keyboard/mouse scroll: arrow keys and click-drag pan the viewport; scroll-wheel zooms tile size between 8px and 24px.
 - [x] Map existing tile types to CP437 glyphs and colors (forest = `♦` green, mountain = `▲` grey, water = `~` blue, land = `.` dim).
-- [x] Swap `ASCIIMap.svelte` reference in `MainScreen.svelte` to `MapCanvas.svelte`.
+- [x] Swap `ASCIIMap.svelte` reference in `MainScreen.svelte` to `GameCanvas.svelte`.
 
 **Sources from Exiled used:** `WebGLRenderer`, `GameGrid`, `TileData`, `FontAtlasGenerator` — all already in `src/lib/webgl/`.
 
@@ -335,7 +348,7 @@ The pattern: **data file → typed loader → game object**, with zero logic in 
   - [x] Set `movementCost` and `walkable` from subterrain definition (subterrain overrides biome defaults for `water`/`peak`).
 - [x] Extend `WorldTile` in `types.ts`: add `terrainType`, `subType`, `density`, `moisture`, `movementCost`, `walkable`, `resources: Record<string, number>`, `territoryOwner`, plus A* scratch fields `gCost`, `hCost`, `fCost`, `parent: {x,y} | null`.
 - [x] Create `ResourceGeneratorService.ts` — port `resource_gen.gd`: for each resource in `RESOURCES`, iterate every tile; if `tile.subType` is in `resource.terrainSubtype` and tile has no resource yet, assign random amount in `[min,max]` using per-resource seed `baseSeed * 7919 + hashCode(resourceId)`.
-- [x] Update `MapCanvas.svelte` to render subterrain glyphs and biome colors from `TERRAINS` / `SUBTERRAINS`.
+- [x] Update `GameCanvas.svelte` to render subterrain glyphs and biome colors from `TERRAINS` / `SUBTERRAINS` (via `buildGameGrid()` in `fantasia-world.ts`).
 
 **Sources from Celestia used:** `noise_generator.gd` (constants), `terrain_database.gd` (full port to TS), `resource_gen.gd` (algorithm port), `tile.gd` (data model).
 
@@ -402,7 +415,7 @@ gl_FragColor = vec4(tinted, sprite.a) * (1.0 - step(sprite.a, 0.01))
 
 - [ ] Add `position: { x: number; y: number }` to the `Pawn` interface in `types.ts`. Spawn position assigned by `PawnService` using expanding-square search (port of `pawn_manager.gd::find_nearest_walkable_tile()`) from the settlement origin.
 - [ ] Add `path: {x:number, y:number}[]`, `pathIndex: number`, `isMoving: boolean`, `hasReachedDestination: boolean` to `Pawn`. (`TILE_REACH_THRESHOLD = 2.0` from `pawn.gd`.)
-- [ ] `MapCanvas.svelte` overlays pawn glyphs (`@`) in race-accent color with selection highlight.
+- [ ] `GameCanvas.svelte` overlays pawn glyphs (`@`) in race-accent color with selection highlight.
 - [ ] **Set up Rust spatial crate** (prerequisite for PathfinderService):
   - [ ] Create `spatial-core/` at project root — `wasm-pack new spatial-core` (or `cargo init` + add `wasm-bindgen` dependency).
   - [ ] Add `wasm-pack build --target web` to the Vite build pipeline (via a `vite-plugin-wasm-pack` or a pre-build script in `package.json`).
@@ -465,7 +478,7 @@ gl_FragColor = vec4(tinted, sprite.a) * (1.0 - step(sprite.a, 0.01))
 
 - [ ] Add `designations: Record<string, DesignationType>` to `GameState` — maps `"x,y"` keys to `"harvest" | "construct" | "mine" | "haul" | "clear"`. *(type names from `DesignationManager.gd`, `basic-ui`/`map_gen-refactored` branch)*
 - [ ] Create `DesignationService.ts`: `designate(x, y, type)`, `clearDesignation(x, y)`, `getOpenDesignations(type?)`.
-- [ ] Map clicks in `MapCanvas.svelte` can enter a designation mode; right-click clears.
+- [ ] Map clicks in `GameCanvas.svelte` can enter a designation mode; right-click clears.
 
 **4c. Tile-local harvesting** *(sources: `tile.gd`, `resource_database.gd`, `harvesting_state.gd`)*
 
@@ -487,7 +500,7 @@ gl_FragColor = vec4(tinted, sprite.a) * (1.0 - step(sprite.a, 0.01))
   }
   ```
 - [ ] `BuildingService` updated: `placeBuilding(type, x, y)` designates a construction site; pawns with `"build"` designation walk there and advance `progress` per turn via `Harvesting`-equivalent state; on `status === 'complete'` the tile's `walkable` is set to `false` for solid structures and building bonuses apply via `ModifierSystem`.
-- [ ] `MapCanvas.svelte` renders building glyphs at their coordinates (use `#` for complete, `+` for under construction).
+- [ ] `GameCanvas.svelte` renders building glyphs at their coordinates (use `#` for complete, `+` for under construction).
 - [ ] `GameStateManager` gets `addBuilding()`, `updateBuilding()`, `removeBuilding()` methods.
 
 **Sources from Celestia used:** `pawn_state_machine.gd` + all `states/*.gd` (logic port), `workpriority_manager.gd` (priority constants + `_adjust_priorities_based_on_traits()`), `resource_gen.gd` harvest math.
@@ -541,8 +554,8 @@ Services (new)    → PathfinderService, DesignationService, ResourceGeneratorSe
 Services (changed)→ WorkService (tile-local), BuildingService (placed buildings), PawnService (position, spawn)
 Systems (new)     → PawnStateMachine
 Core data (new)   → Terrains.ts (port of Celestia terrain_database.gd)
-Components (new)  → MapCanvas.svelte (replaces ASCIIMap.svelte)
-src/lib/webgl/    → unchanged; consumed by MapCanvas.svelte
+Components (new)  → GameCanvas.svelte (replaces ASCIIMap.svelte) + fantasia-world.ts (WorldTile→GameGrid adapter)
+src/lib/webgl/    → unchanged; consumed by GameCanvas.svelte
 ```
 
 ---

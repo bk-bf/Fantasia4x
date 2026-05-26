@@ -56,6 +56,42 @@ function scatterObject(biome: import('../core/Terrains').BiomeDef, x: number, y:
   return null;
 }
 
+// ── Noise utility functions (ported from Celestia map_gen-refactored noise_generator.gd) ──
+
+/** Ridged noise: sharp ridge-line features. Use for mountain peak subterrain selection. */
+export function getRidgedNoise(terrainNoise2d: (x: number, y: number) => number, x: number, y: number): number {
+  return 1.0 - Math.abs(terrainNoise2d(x * TERRAIN_FREQUENCY, y * TERRAIN_FREQUENCY));
+}
+
+/** Domain-warped noise: organic biome edges and river course variation. */
+export function getWarpedNoise(
+  terrainNoise2d: (x: number, y: number) => number,
+  detailNoise2d: (x: number, y: number) => number,
+  x: number, y: number, warp = 30.0
+): number {
+  const warpX = detailNoise2d((x + 500) * DETAIL_FREQUENCY, (y + 500) * DETAIL_FREQUENCY) * warp;
+  const warpY = detailNoise2d((x - 500) * DETAIL_FREQUENCY, (y - 500) * DETAIL_FREQUENCY) * warp;
+  return terrainNoise2d((x + warpX) * TERRAIN_FREQUENCY, (y + warpY) * TERRAIN_FREQUENCY);
+}
+
+/** Blended noise: linear interpolation between terrain and detail layers. Use for transition zone mixing. */
+export function getCombinedNoise(
+  terrainNoise2d: (x: number, y: number) => number,
+  detailNoise2d: (x: number, y: number) => number,
+  x: number, y: number, weight = 0.5
+): number {
+  const t = terrainNoise2d(x * TERRAIN_FREQUENCY, y * TERRAIN_FREQUENCY);
+  const d = detailNoise2d(x * DETAIL_FREQUENCY, y * DETAIL_FREQUENCY);
+  return t * (1.0 - weight) + d * weight;
+}
+
+/** Terrace noise: stepped elevation values. Use for mesa biomes or plateau terrain. */
+export function getTerraceNoise(terrainNoise2d: (x: number, y: number) => number, x: number, y: number, steps = 5): number {
+  const raw = terrainNoise2d(x * TERRAIN_FREQUENCY, y * TERRAIN_FREQUENCY);
+  const normalized = (raw + 1.0) / 2.0;
+  return (Math.floor(normalized * steps) / steps) * 2.0 - 1.0;
+}
+
 export function generateWorld(width: number, height: number, seed = Date.now()): WorldTile[][] {
   const detailSeed = (seed * 6971) >>> 0;
 

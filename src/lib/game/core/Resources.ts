@@ -19,7 +19,7 @@ export const RESOURCES: Record<string, ResourceDef> = {
     },
     stone: {
         displayName: 'Stone',
-        terrainSubtypes: ['rocky', 'cliff', 'peak'],
+        terrainSubtypes: ['rocky', 'cliff'], // peak removed — not a subterrain in Fantasia4x port
         resourceAmount: [5, 10],
         harvestTime: 8.0
     },
