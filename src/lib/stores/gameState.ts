@@ -291,8 +291,15 @@ if (!baseState.worldMap || baseState.worldMap.length === 0 || !baseState.worldMa
 if (!baseState.pawns || baseState.pawns.length === 0) {
 	baseState = {
 		...baseState,
-		pawns: generatePawns(baseState.race)
+		pawns: generatePawns(baseState.race, 5)
 	};
+} else if (baseState.pawns.length < 5) {
+	// Top up to 5 pawns (migration from older saves with fewer pawns)
+	const extra = generatePawns(baseState.race, 5 - baseState.pawns.length).map((p, i) => ({
+		...p,
+		id: `pawn-extra-${i}-${Date.now()}`
+	}));
+	baseState = { ...baseState, pawns: [...baseState.pawns, ...extra] };
 }
 
 // Spawn any pawns that don't yet have map positions

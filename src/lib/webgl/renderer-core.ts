@@ -7,7 +7,7 @@
 
 import { createOrthographicMatrix, PerformanceTimer } from './utils.js';
 import { ShaderManager, createTileRendererShaders } from './shaders.js';
-import { createSquareCellAtlas, loadCombinedTerrainAtlas } from './font-atlas.js';
+import { createSquareCellAtlas, loadBitlandsAtlas } from './font-atlas.js';
 import { TextureManager } from './texture-manager.js';
 import { CharacterRenderer } from './character-renderer.js';
 import { GridRenderer } from './grid-renderer.js';
@@ -181,12 +181,12 @@ export class WebGLRendererCore {
 			this.shaderManager = await createTileRendererShaders(gl, this.debug);
 			if (!this.shaderManager) throw new Error('Shader init failed');
 
-			// Try loading the combined Bitlands terrain atlas (tiles + plants sheets)
+			// Load all bitlands sheets into a unified atlas
 			try {
-				this.fontAtlas = await loadCombinedTerrainAtlas('/tilesets/bitlands_combined.png', 12, 18, this.debug);
+				this.fontAtlas = await loadBitlandsAtlas(12, 18, this.debug);
 				this.tilesetLoaded = true;
 			} catch {
-				if (this.debug) console.warn('Bitlands combined atlas unavailable, using canvas atlas');
+				if (this.debug) console.warn('Bitlands atlas unavailable, using canvas atlas');
 				this.fontAtlas = await createSquareCellAtlas(this.tileWidth, this.debug);
 			}
 

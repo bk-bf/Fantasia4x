@@ -571,3 +571,196 @@ export async function loadTilesetAtlas(
 		baseline: Math.floor(tileH / 2)
 	};
 }
+
+/**
+ * Append an additional 256-sprite sheet to an existing FontAtlas.
+ *
+ * The sheet is drawn below the existing atlas pixels. Each sprite at
+ * grid position `cp` (0–255, row-major 16 columns) is registered under
+ * String.fromCodePoint(puaBase + cp), so callers can reference it via
+ * e.g. String.fromCodePoint(0xF000 + 64) for the humanoid at slot 64.
+ */
+export async function extendAtlasWithSheet(
+	atlas: FontAtlas,
+	url: string,
+	tileW: number,
+	tileH: number,
+	puaBase: number,
+	debug = false
+): Promise<FontAtlas> {
+	const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+		const image = new Image();
+		image.onload = () => resolve(image);
+		image.onerror = () => reject(new Error(`Failed to load atlas sheet: ${url}`));
+		image.src = url;
+	});
+
+	const newW = atlas.atlasWidth;
+	const newH = atlas.atlasHeight + img.height;
+
+	// Build new canvas: existing pixels on top, new sheet appended below
+	const newCanvas = document.createElement('canvas');
+	newCanvas.width = newW;
+	newCanvas.height = newH;
+	const ctx = newCanvas.getContext('2d', { willReadFrequently: true });
+	if (!ctx) throw new Error('Could not create 2D context for atlas extension');
+
+	// Re-draw existing atlas pixels via an intermediate canvas
+	const prevCanvas = document.createElement('canvas');
+	prevCanvas.width = atlas.atlasWidth;
+	prevCanvas.height = atlas.atlasHeight;
+	const prevCtx = prevCanvas.getContext('2d');
+	if (!prevCtx) throw new Error('Could not create 2D context for atlas copy');
+	prevCtx.putImageData(atlas.texture, 0, 0);
+	ctx.drawImage(prevCanvas, 0, 0);
+
+	// Draw the new sheet immediately below
+	ctx.drawImage(img, 0, atlas.atlasHeight);
+
+	const newImageData = ctx.getImageData(0, 0, newW, newH);
+
+	// Clone existing character map and register new sprites
+	const characters = new Map(atlas.characters);
+	for (let cp = 0; cp < 256; cp++) {
+		const uchar = String.fromCodePoint(puaBase + cp);
+		const col = cp % 16;
+		const row = Math.floor(cp / 16);
+		characters.set(uchar, {
+			char: uchar,
+			x: col * tileW,
+			y: atlas.atlasHeight + row * tileH,
+			width: tileW,
+			height: tileH,
+			xAdvance: tileW,
+			xOffset: 0,
+			yOffset: 0
+		});
+	}
+
+	if (debug) {
+		console.log(
+			`✅ Atlas extended with ${url}: ${newW}×${newH}, ` +
+			`256 sprites registered at U+${puaBase.toString(16).toUpperCase()}`
+		);
+	}
+
+	return {
+		texture: newImageData,
+		characters,
+		fontFamily: atlas.fontFamily,
+		fontSize: atlas.fontSize,
+		atlasWidth: newW,
+		atlasHeight: newH,
+		lineHeight: atlas.lineHeight,
+		baseline: atlas.baseline
+	};
+}
+
+/**
+ * Load all eight bitlands sprite sheets into a single unified WebGL atlas.
+ *
+ * Atlas layout (each sheet is 192×288 px — 16 columns × 16 rows of 12×18 sprites):
+ *   y=0    bitlands_tiles.bmp     chars via CP437_TO_UNICODE  (terrain compat)
+ *   y=288  bitlands_plants.bmp    U+E000 + index
+ *   y=576  bitlands_map.bmp       U+E200 + index  ← entities / humanoids
+ *   y=864  bitlands_font.bmp      U+E300 + index
+ *   y=1152 bitlands_buildings.bmp U+E400 + index
+ *   y=1440 bitlands_items.bmp     U+E500 + index
+ *   y=1728 bitlands_workshops.bmp U+E600 + index
+ *   y=2016 bitlands_crops.bmp     U+E700 + index
+ *
+ * Total texture: 192×2304 px.  All sheets use tileW=12, tileH=18.
+ *
+ * Reference sprites by index with the helpers in tilesets.ts:
+ *   glyph(SHEET.MAP, 64)  →  humanoid at map position 64
+ */
+export async function loadBitlandsAtlas(tileW = 12, tileH = 18, debug = false): Promise<FontAtlas> {
+	const sheets: Array<{ url: string; puaBase: number | null }> = [
+		{ url: '/tilesets/bitlands_tiles.bmp', puaBase: null }, // CP437 mapping
+		{ url: '/tilesets/bitlands_plants.bmp', puaBase: 0xe000 },
+		{ url: '/tilesets/bitlands_map.bmp', puaBase: 0xe200 },
+		{ url: '/tilesets/bitlands_font.bmp', puaBase: 0xe300 },
+		{ url: '/tilesets/bitlands_buildings.bmp', puaBase: 0xe400 },
+		{ url: '/tilesets/bitlands_items.bmp', puaBase: 0xe500 },
+		{ url: '/tilesets/bitlands_workshops.bmp', puaBase: 0xe600 },
+		{ url: '/tilesets/bitlands_crops.bmp', puaBase: 0xe700 },
+	];
+
+	const imgs = await Promise.all(
+		sheets.map(({ url }) =>
+			new Promise<HTMLImageElement>((resolve, reject) => {
+				const image = new Image();
+				image.onload = () => resolve(image);
+				image.onerror = () => reject(new Error(`loadBitlandsAtlas: failed to load ${url}`));
+				image.src = url;
+			})
+		)
+	);
+
+	const sheetH = imgs[0].height; // 288
+	const atlasW = imgs[0].width;  // 192
+	const atlasH = sheetH * sheets.length; // 2304
+
+	const canvas = document.createElement('canvas');
+	canvas.width = atlasW;
+	canvas.height = atlasH;
+	const ctx = canvas.getContext('2d', { willReadFrequently: true });
+	if (!ctx) throw new Error('loadBitlandsAtlas: could not get 2D context');
+
+	const characters = new Map<string, import('./types.js').CharacterInfo>();
+
+	for (let s = 0; s < sheets.length; s++) {
+		const yOffset = s * sheetH;
+		ctx.drawImage(imgs[s], 0, yOffset);
+
+		// Strip magenta (255,0,255) background → alpha=0 so the shader's
+		// mix(v_background, tinted, sprite.a) treats it as empty space.
+		const rawData = ctx.getImageData(0, yOffset, atlasW, sheetH);
+		const d = rawData.data;
+		for (let i = 0; i < d.length; i += 4) {
+			if (d[i] === 255 && d[i + 1] === 0 && d[i + 2] === 255) {
+				d[i + 3] = 0;
+			}
+		}
+		ctx.putImageData(rawData, 0, yOffset);
+
+		const { puaBase } = sheets[s];
+		for (let cp = 0; cp < 256; cp++) {
+			const col = cp % 16;
+			const row = Math.floor(cp / 16);
+			const uchar = puaBase === null
+				? CP437_TO_UNICODE[cp]
+				: String.fromCodePoint(puaBase + cp);
+			characters.set(uchar, {
+				char: uchar,
+				x: col * tileW,
+				y: yOffset + row * tileH,
+				width: tileW,
+				height: tileH,
+				xAdvance: tileW,
+				xOffset: 0,
+				yOffset: 0
+			});
+		}
+	}
+
+	const imageData = ctx.getImageData(0, 0, atlasW, atlasH);
+
+	if (debug) {
+		console.log(
+			`✅ loadBitlandsAtlas: ${atlasW}×${atlasH}, ` +
+			`${characters.size} sprites across ${sheets.length} sheets`
+		);
+	}
+
+	return {
+		texture: imageData,
+		characters,
+		fontFamily: 'bitlands',
+		fontSize: tileH,
+		atlasWidth: atlasW,
+		atlasHeight: atlasH,
+		lineHeight: tileH,
+		baseline: Math.floor(tileH / 2)
+	};
+}
