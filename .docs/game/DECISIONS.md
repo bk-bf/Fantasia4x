@@ -141,6 +141,37 @@ Celestia's Godot-specific features (scene tree, physics, TileMap rendering) must
 
 ---
 
+### ADR-009 [GAME]: Hardcore Production Chain Design
+
+- **Date**: 2026-05-26
+- **Status**: Accepted
+
+#### Context
+
+Early build had abstract work output: pawns assigned to a category produced 1 unit/turn globally, with no tool requirements enforced and no spatial movement involved. This made survival trivial — any work assignment produced any resource immediately.
+
+The goal is "peak production chain complexity" comparable to RimWorld: Hardcore SK (a heavily modded version of Rimworld focused on industrial-era production chains). Every resource step should require the previous one; the early game should feel genuinely precarious and rewarding to navigate.
+
+#### Decision
+
+**Survival bootstrapping tier** — the starting colony has nothing. Players must:
+1. Designate **foraging/scavenging zones** on-map to gather hand-collected primitives (twigs, plant fiber, flint shards, surface stone) — these require no tools.
+2. Craft **Tier 0 tools** (Flint Knife, Stone Chopper) from those primitives at a Knapping Surface (zero-build-cost ground designation).
+3. Use Tier 0 tools to **fell trees** (woodcutting is tool-gated: requires stone axe or better) and gather larger stone.
+4. Use wood + stone to construct **basic workshop buildings** (Campfire, Crude Workbench, Debris Hut).
+5. Use those workshops to craft **Tier 1 tools and processed materials**.
+
+**Enforcement rules (non-negotiable):**
+- `WorkCategory.toolsRequired` is enforced at job-claim time in `JobService.getAvailableJobs()`. A pawn without the required tool in inventory cannot claim the job — the job simply stays open.
+- `Item.workshopType` is enforced at craft-queue-addition time in `ItemService`. A crafting order for an item that requires a workshop that doesn't exist (no complete `PlacedBuilding` of that type) cannot be queued.
+- There is no "fallback" to tool-free gathering for gated resources. If no pawn has a stone axe, the forest does not get cut.
+
+#### Consequences
+
+The early game has a genuine bootstrap problem: hand-gathered primitives → tools → workshops → better tools → better workshops. This is the intended design. Tutorials and documentation must communicate the starting dependency chain clearly. Balancing requires that starting map always spawns enough surface flint and twigs to reach Tier 0 tools without needing to move more than 20 tiles.
+
+---
+
 ### ADR-008 [GAME]: Rust/WASM Spatial Core via wasm-pack
 
 - **Date**: 2026-05-26

@@ -30,7 +30,7 @@ All critical architectural debt resolved. Core survival loop is functional.
 | -------------------------------------------------- | -------------------------------- | -------------------------------------------------- |
 | Screen refactoring (Work / Exploration / Crafting) | ❌                                | [SCREEN-REFACTORING.md](SCREEN-REFACTORING.md)     |
 | Adverse need consequences (starvation, collapse)   | ❌                                | —                                                  |
-| Production chains                                  | ❌                                | —                                                  |
+| Production chains + pawn autonomy                  | ❌                                | [PRODUCTION-CHAINS.md](PRODUCTION-CHAINS.md)       |
 | Research enhancement (three-tier system)           | ❌                                | [RESEARCH-ENHANCEMENT.md](RESEARCH-ENHANCEMENT.md) |
 | Healthcare and cooking jobs                        | ⚠️ blocked on WorkScreen refactor | —                                                  |
 

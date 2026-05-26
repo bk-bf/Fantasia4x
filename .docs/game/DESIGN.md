@@ -2,21 +2,40 @@
 
 # DESIGN [GAME]
 
-> **Related:** [ARCHITECTURE](ARCHITECTURE.md) · [DECISIONS](DECISIONS.md) · [PHILOSOPHY](PHILOSOPHY.md) · [ROADMAP](../.tasks/open/ROADMAP.md)
+> **Related:** [ARCHITECTURE](ARCHITECTURE.md) · [DECISIONS](DECISIONS.md) · [PHILOSOPHY](PHILOSOPHY.md) · [ROADMAP](../.tasks/open/ROADMAP.md) · [PRODUCTION-CHAINS](../.tasks/open/PRODUCTION-CHAINS.md)
 
 ## Core Gameplay Loop
 
 ```
 Generate race (stat ranges + racial traits)
     ↓
+Forage/scavenge primitives (no tools: twigs, flint shards, plant fiber)
+    ↓
+Craft Tier 0 tools (Flint Knife, Stone Chopper) at ground knapping surface
+    ↓
+Fell trees / quarry stone (tool-gated) → build workshop buildings
+    ↓
 Assign work → harvest resources → construct buildings → craft items → research techs
     ↓
-Manage pawn needs (hunger / fatigue / sleep) — unmet needs reduce efficiency / cause death
+Manage pawn needs (hunger / fatigue / sleep) — pawns auto-path to food/rest; unmet needs cause death
     ↓
 Explore locations → discover loot, lore items, events
     ↓
 Repeat per turn (auto-turn supported)
 ```
+
+## Production Chain Philosophy
+
+Fantasia4x targets **peak production chain complexity** — the design reference is RimWorld: HardCore SK, not vanilla RimWorld or Dwarf Fortress. Every step in the economic ladder requires completing the previous one; there is no "free" resource shortcut.
+
+**Core principles:**
+- **Tool-gated gathering**: woodcutting requires at least a Stone Axe; mining requires a Stone Pick; hunting requires a Stone Spear. Without the tool, the job cannot be claimed — the forest stays whole.
+- **Bootstrapping chain**: the starting colony has *nothing*. Survival begins with hand-gathered primitives (twigs, surface flint, plant fiber, wild berries). These enable Tier 0 tools. Tier 0 tools enable woodcutting. Wood enables workshop buildings. Workshops enable Tier 1 tools and processed materials.
+- **No free lunches**: building costs use real crafted materials. A `lean_to` shelter costs `pine_wood`, which requires the axe, which requires the knapping stone, which requires finding surface flint. Every shortcut eliminated is a failure state to navigate.
+- **Workshop chaining**: every non-trivial crafted item requires a specific workshop (`workshopType` on `Item`). Advanced materials require mid-tier workshops. Advanced workshops require mid-tier materials. The chain is deliberate.
+- **Needs create urgency**: hunger and fatigue are not background timers. When a pawn is hungry they stop working and path to food. If food doesn't exist, they starve. This creates pressure to maintain food supply at every tier of the tech tree.
+
+See ADR-009 in [DECISIONS](DECISIONS.md) for the locked-in enforcement rules.
 
 ## Race Generation
 
