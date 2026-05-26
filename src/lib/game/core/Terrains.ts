@@ -31,7 +31,7 @@ export interface SubterrainDef {
 /** tiles.bmp index → CP437-mapped Unicode char */
 const T = (n: number): string => {
     if (n >= 32 && n <= 126) return String.fromCharCode(n);
-    if (n === 3)   return '\u2665'; // ♥  cave mouth
+    if (n === 3) return '\u2665'; // ♥  cave mouth
     if (n === 176) return '\u2591'; // ░  light shade
     if (n === 177) return '\u2592'; // ▒  medium shade
     if (n === 178) return '\u2593'; // ▓  dark shade
@@ -72,10 +72,10 @@ export const BIOMES: Record<string, BiomeDef> = {
         subterrains: ['dirt', 'grass', 'deep_grass'],
         subterrainThresholds: [-0.3, 0.3],
         objects: {
-            tree:           0.14,
-            bush:           0.08,
-            fallen_logs:    0.020,
-            tree_stump:     0.014,
+            tree: 0.14,
+            bush: 0.08,
+            fallen_logs: 0.020,
+            tree_stump: 0.014,
             mushroom_patch: 0.010,
         }
     },
@@ -97,8 +97,8 @@ export const BIOMES: Record<string, BiomeDef> = {
         subterrainThresholds: [-0.15, 0.15, 0.70],
         objects: {
             wildflowers: 0.015,
-            scrubland:   0.008,
-            bush:        0.015,
+            scrubland: 0.008,
+            bush: 0.015,
         }
     },
     mountain: {
@@ -110,7 +110,7 @@ export const BIOMES: Record<string, BiomeDef> = {
         subterrainThresholds: [-0.3, 0.35, 0.85],
         objects: {
             crystal_formation: 0.005,
-            arcane_glade:      0.002,
+            arcane_glade: 0.002,
         }
     },
     river: {
@@ -153,7 +153,7 @@ export const SUBTERRAINS: Record<string, SubterrainDef> = {
     deep_grass: { walkable: true, movementCost: 1.5, chars: PR(83, 84), fg: [0.38, 0.56, 0.09], bg: [0.07, 0.09, 0.03] },
     bush: { walkable: true, movementCost: 1.8, chars: [P(41)], fg: [0.26, 0.46, 0.05], bg: [0.07, 0.09, 0.03] }, // plants 41    shrub
     tree: { walkable: true, movementCost: 2.0, chars: PR(0, 71), fg: [0.52, 0.72, 0.11], bg: [0.07, 0.10, 0.03] }, // plants 0-71  72 tree/plant varieties
-    tree_stump: { walkable: true, movementCost: 2.0, chars: [T(209)], fg: [0.56, 0.34, 0.09], bg: [0.10, 0.07, 0.03] }, // tiles 209    ╤ trunk cross-section
+    tree_stump: { walkable: true, movementCost: 2.0, chars: [P(209)], fg: [0.56, 0.34, 0.09], bg: [0.10, 0.07, 0.03] }, // plants 209
     fallen_logs: { walkable: true, movementCost: 2.2, chars: [P(209)], fg: [0.48, 0.26, 0.05], bg: [0.10, 0.06, 0.03] }, // plants 209
     mushroom_patch: { walkable: true, movementCost: 1.6, chars: [P(120)], fg: [0.86, 0.52, 0.33], bg: [0.10, 0.06, 0.03] }, // plants 120   mushroom (121-123 are empty)
     // ── Swamp ────────────────────────────────────────────────────────────────
