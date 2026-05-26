@@ -122,6 +122,14 @@ export class ItemServiceImpl implements ItemService {
 	hasRequiredBuilding(itemId: string, gameState: GameState): boolean {
 		const item = this.getItemById(itemId);
 
+		// All crafting requires at minimum a craft_spot — pawns need a designated safe location
+		if (!item?.workshopType) {
+			const hasCraftSpot = (gameState.buildings ?? []).some(
+				(b) => b.type === 'craft_spot' && b.status === 'complete'
+			);
+			if (!hasCraftSpot) return false;
+		}
+
 		// Check Phase 5d workshopType (e.g. 'campfire', 'makers_bench', 'craft_spot')
 		if (item?.workshopType) {
 			const workshopOk = (gameState.buildings ?? []).some(

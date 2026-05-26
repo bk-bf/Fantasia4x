@@ -84,6 +84,10 @@ export interface GameState {
 	pawns: Pawn[];
 	currentJobIndex: Record<string, number>;
 	pawnAbilities: {}; // Record<pawnId, Record<abilityName, { value: number, sources: string[] }>>
+	/** Per-workshop pawn assignment: key = workshopType, value = pawnId or null (any) */
+	craftingStationAssignments?: Record<string, string | null>;
+	/** Per-item crafting config: key = itemId */
+	craftingOrderConfigs?: Record<string, { amount: number; mode: 'once' | 'stockpile'; targetStockpile?: number }>;
 }
 export interface WorkCategory {
 	id: string;
@@ -243,7 +247,8 @@ export interface Building {
 	| 'commerce'
 	| 'magical'
 	| 'exploration'
-	| 'social';
+	| 'social'
+	| 'furniture';
 
 	// Operational costs and maintenance
 	upkeepCost: Record<string, number>; // Daily/periodic resource consumption

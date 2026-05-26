@@ -16,51 +16,65 @@
   let completedResearch: string[] = [];
   let currentToolLevel = 0;
 
-  // Building category filter
-  let selectedCategory = 'all';
-  let buildingCategories = [
-    'all',
+  // Building category groups defined below (no per-screen filter needed)
+  const WALL_IDS = ['twig_wall', 'wicker_wall', 'daub_wall', 'mud_brick_wall', 'twig_door'];
+  const WORKSHOP_IDS = [
+    'campfire',
+    'craft_spot',
+    'makers_bench',
+    'craftsmens_workshop',
+    'tannery',
+    'advanced_kiln',
+    'smelting_furnace'
+  ];
+  const FURNITURE_IDS = ['sleeping_mat', 'storage_rack', 'carved_bench'];
+  const KNOWLEDGE_IDS = ['scroll_hut', 'study_hall', 'scholars_workshop'];
+
+  // All building defs from every category (no research filter — show all, lock none)
+  const ALL_BUILDING_DEFS: Building[] = [
     'housing',
     'production',
     'knowledge',
     'military',
-    'walls',
     'food',
     'commerce',
     'magical',
     'exploration',
-    'social'
-  ];
+    'social',
+    'furniture'
+  ].flatMap((cat) => buildingService.getBuildingsByCategory(cat));
 
-  const WALL_IDS = ['twig_wall', 'wicker_wall', 'daub_wall', 'mud_brick_wall', 'twig_door'];
-
-  // First incomplete placed building (status 'planned' or 'under_construction')
   $: firstBuildingInProgress = buildings.find((b) => b.status !== 'complete') ?? null;
   $: allBuildingsInProgress = buildings.filter((b) => b.status !== 'complete');
 
-  // Enhanced building filtering with category and requirements
-  $: availableBuildings = (
-    selectedCategory === 'all'
-      ? buildingService
-          .getBuildingsByCategory('housing')
-          .concat(buildingService.getBuildingsByCategory('production'))
-          .concat(buildingService.getBuildingsByCategory('knowledge'))
-          .concat(buildingService.getBuildingsByCategory('military'))
-          .concat(buildingService.getBuildingsByCategory('food'))
-          .concat(buildingService.getBuildingsByCategory('commerce'))
-          .concat(buildingService.getBuildingsByCategory('magical'))
-          .concat(buildingService.getBuildingsByCategory('exploration'))
-          .concat(buildingService.getBuildingsByCategory('social'))
-      : selectedCategory === 'walls'
-        ? buildingService.getBuildingsByCategory('military').filter((b) => WALL_IDS.includes(b.id))
-        : buildingService.getBuildingsByCategory(selectedCategory)
-  ).filter((building) => {
-    // Research requirements
-    if (building.researchRequired && !completedResearch.includes(building.researchRequired))
-      return false;
+  // Only show unlocked buildings — locked buildings are hidden entirely
+  $: unlockedDefs = ALL_BUILDING_DEFS.filter(
+    (b) => !b.researchRequired || completedResearch.includes(b.researchRequired as string)
+  );
 
-    return true;
-  });
+  // Grouped unlocked buildings (no SHELTER — removed; no LOCKED section)
+  $: workshopDefs = unlockedDefs.filter((b) => WORKSHOP_IDS.includes(b.id));
+  $: furnitureDefs = unlockedDefs.filter(
+    (b) => FURNITURE_IDS.includes(b.id) || b.category === 'furniture'
+  );
+  $: wallDefs = unlockedDefs.filter((b) => WALL_IDS.includes(b.id));
+  $: knowledgeDefs = unlockedDefs.filter(
+    (b) => KNOWLEDGE_IDS.includes(b.id) || b.category === 'knowledge'
+  );
+  $: foodDefs = unlockedDefs.filter((b) => b.category === 'food' && !WORKSHOP_IDS.includes(b.id));
+  $: otherDefs = unlockedDefs.filter(
+    (b) =>
+      !WORKSHOP_IDS.includes(b.id) &&
+      !FURNITURE_IDS.includes(b.id) &&
+      !WALL_IDS.includes(b.id) &&
+      !KNOWLEDGE_IDS.includes(b.id) &&
+      b.category !== 'food' &&
+      b.category !== 'housing' &&
+      b.category !== 'furniture'
+  );
+
+  // Legacy compat
+  $: availableBuildings = unlockedDefs;
 
   $: getItemAmount = (itemId: string): number => {
     return itemsMap[itemId] || 0;
@@ -288,176 +302,96 @@
     <button class="hdr-btn" on:click={() => uiState.setScreen('main')}>BACK</button>
   </div>
 
-  <!-- Category filter -->
-  <div class="filter-bar">
-    {#each buildingCategories as category}
-      <button
-        class="filter-btn"
-        class:active={selectedCategory === category}
-        on:click={() => (selectedCategory = category)}
-      >
-        {category === 'all' ? 'ALL' : category.toUpperCase()}
-      </button>
-    {/each}
-  </div>
-
-  <!-- Status -->
-  <div class="section-hdr sub">| STATUS</div>
-  <div class="row">
-    <span class="lbl">POPULATION</span><span class="val"
-      >{race?.population || 0} / {maxPopulation}</span
+  <!-- Status bar -->
+  <div class="status-row">
+    <span class="stat-lbl">POP</span><span class="stat-val"
+      >{race?.population || 0}/{maxPopulation}</span
     >
+    <span class="stat-sep">|</span>
+    <span class="stat-lbl">TOOL TIER</span><span class="stat-val">{currentToolLevel}</span>
+    {#if race?.population >= maxPopulation}
+      <span class="warn-inline">AT CAPACITY</span>
+    {/if}
   </div>
-  <div class="row">
-    <span class="lbl">TOOL LEVEL</span><span class="val">{currentToolLevel}</span>
-  </div>
-  {#if race?.population >= maxPopulation}
-    <div class="row"><span class="warn">AT CAPACITY — build housing to expand</span></div>
-  {/if}
 
-  <!-- Construction Queue -->
-  <div class="section-hdr sub">| ACTIVE CONSTRUCTION</div>
+  <!-- Active construction queue -->
+  <div class="section-hdr sub">| ACTIVE BUILD JOBS ({allBuildingsInProgress.length})</div>
   {#if allBuildingsInProgress.length > 0}
     {#each allBuildingsInProgress as bp}
       {@const bDef = buildingService.getBuildingById(bp.type)}
-      <div class="row">
-        <span class="lbl">PROJECT</span><span class="val"
-          >{bDef?.name.toUpperCase() ?? bp.type.toUpperCase()}</span
-        >
-      </div>
-      <div class="row">
-        <span class="lbl">STATUS</span><span class="val"
-          >{bp.status.replace('_', ' ').toUpperCase()}</span
-        >
-      </div>
       {@const prog = Math.round(((bp.workDone ?? 0) / (bp.workRequired ?? 50)) * 100)}
-      <div class="need-row">
-        <span class="lbl">PROGRESS</span>
-        <div class="bar">
-          <div class="fill" style="width: {prog}%; background: var(--accent-hi)"></div>
-        </div>
-        <span class="val">{prog}%</span>
-        <span class="desc">{(bp.workRequired ?? 50) - (bp.workDone ?? 0)} work pts left</span>
-      </div>
-      <div class="btn-row">
-        <button class="act-btn" on:click={() => cancelBuilding(bp.id)}>CANCEL</button>
+      <div class="bldg-row">
+        <span class="bldg-name">{bDef?.name.toUpperCase() ?? bp.type}</span>
+        <span class="progress-mini">
+          <span class="prog-bar-ascii"
+            >{'█'.repeat(Math.round(prog / 10)) + '░'.repeat(10 - Math.round(prog / 10))}</span
+          >
+          {prog}%
+        </span>
+        <button class="act-btn-sm" on:click={() => cancelBuilding(bp.id)}>CANCEL</button>
       </div>
     {/each}
   {:else}
-    <div class="row"><span class="muted">no active construction</span></div>
+    <div class="row muted-row">no active construction</div>
   {/if}
 
-  <!-- Placed campfires: fuel status -->
-  {#each buildings.filter((b) => b.type === 'campfire' && b.status === 'complete') as campfire}
-    {@const maxFuel = 60}
-    {@const fuelPct = Math.round(((campfire.fuel ?? 0) / maxFuel) * 100)}
-    <div class="section-hdr sub">| CAMPFIRE</div>
-    <div class="row">
-      <span class="lbl">STATE</span>
-      <span class="val" class:pos={campfire.lit}>{campfire.lit ? '🔥 BURNING' : '❌ UNLIT'}</span>
-    </div>
-    <div class="need-row">
-      <span class="lbl">FUEL</span>
-      <div class="bar">
-        <div
-          class="fill"
-          style="width: {fuelPct}%; background: {fuelPct < 20 ? 'var(--neg)' : 'var(--accent)'}"
-        ></div>
-      </div>
-      <span class="val">{campfire.fuel ?? 0}/{maxFuel}</span>
+  <!-- Campfire status -->
+  {#each buildings.filter((b) => b.type === 'campfire' && b.status === 'complete') as cf}
+    {@const fuelPct = Math.round(((cf.fuel ?? 0) / 60) * 100)}
+    <div class="bldg-row">
+      <span class="bldg-name" style="color:{cf.lit ? '#fa0' : '#555'}"
+        >{cf.lit ? '🔥' : '⬛'} CAMPFIRE</span
+      >
+      <span class="fuel-bar">
+        FUEL <span class="bar-ascii"
+          >{'█'.repeat(Math.round(fuelPct / 10)) + '░'.repeat(10 - Math.round(fuelPct / 10))}</span
+        >
+        {cf.fuel ?? 0}/60
+      </span>
     </div>
   {/each}
 
-  <!-- Available Buildings -->
-  <div class="section-hdr">| AVAILABLE ({availableBuildings.length})</div>
-  {#each availableBuildings as building}
-    <div class="building-item">
-      <div class="building-name">
-        {building.name.toUpperCase()}
-        <span class="bmeta">{building.category} T{building.tier}</span>
-        {#if getBuildingCount(building.id) > 0}
-          <span class="bcount">[x{getBuildingCount(building.id)}]</span>
-        {/if}
-      </div>
-      <div class="desc-row">{building.description}</div>
-      <div class="row">
-        <span class="lbl">BUILD TIME</span><span class="val">{building.buildTime} turns</span>
-      </div>
-
-      {#each getBuildingRequirements(building) as req}
-        <div class="row"><span class="lbl">REQUIRE</span><span class="val dim">{req}</span></div>
-      {/each}
-
-      {#each Object.entries(building.buildingCost) as [itemId, cost]}
-        {@const item = itemService.getItemById(itemId)}
-        {@const have = getItemAmount(itemId)}
-        <div class="row" class:insufficient={have < (cost as number)}>
-          <span class="lbl">COST</span>
-          <span class="val" class:neg={have < (cost as number)}>
-            {item?.name || itemId}: {cost} (have {have})
+  <!-- Building groups -->
+  {#each [{ label: 'WORKSHOPS', defs: workshopDefs }, { label: 'PRIMITIVE FURNITURE', defs: furnitureDefs }, { label: 'FORTIFICATIONS', defs: wallDefs }, { label: 'KNOWLEDGE', defs: knowledgeDefs }, { label: 'FOOD & FORAGING', defs: foodDefs }, { label: 'OTHER', defs: otherDefs }] as grp}
+    {#if grp.defs.length > 0}
+      <div class="section-hdr">| {grp.label}</div>
+      {#each grp.defs as building}
+        {@const placed = getBuildingCount(building.id)}
+        {@const affordable = canAfford(building)}
+        {@const buildable = canBuild(building)}
+        <div class="bldg-row">
+          <span class="bldg-name">
+            {building.name.toUpperCase()}
+            {#if placed > 0}<span class="built-badge">[x{placed}]</span>{/if}
           </span>
-        </div>
-      {/each}
-
-      {#each getUpkeepInfo(building) as upkeep}
-        <div class="row"><span class="lbl">UPKEEP</span><span class="val warn">{upkeep}</span></div>
-      {/each}
-
-      {#each Object.entries(building.effects) as [effect, value]}
-        <div class="row">
-          <span class="lbl">EFFECT</span>
-          <span class="val pos">
-            {#if effect === 'populationCapacity'}+{value} pop cap
-            {:else if effect.includes('Production')}+{value}
-              {formatEffectName(effect.replace('Production', ''))}/turn
-            {:else if effect.includes('Multiplier')}+{Math.round(((value as number) - 1) * 100)}% {formatEffectName(
-                effect.replace('Multiplier', '')
-              )}
-            {:else if effect.includes('Bonus')}+{Math.round(((value as number) - 1) * 100)}% {formatEffectName(
-                effect.replace('Bonus', '')
-              )} bonus
-            {:else}+{value} {formatEffectName(effect)}
+          <span class="bldg-cost">
+            {#if Object.keys(building.buildingCost).length === 0}
+              <span class="muted-text">free</span>
+            {:else}
+              {#each Object.entries(building.buildingCost) as [id, n], ci}
+                {@const have = getItemAmount(id)}
+                {#if ci > 0}<span class="cost-sep">·</span>{/if}
+                <span class="cost-item" class:neg-text={have < (n as number)}>
+                  {id.replace(/_/g, ' ')} <span class="cost-qty">×{n}</span>
+                  <span class="cost-have" class:neg-text={have < (n as number)}>({have})</span>
+                </span>
+              {/each}
             {/if}
           </span>
+          <button
+            class="act-btn-sm"
+            class:active={buildable}
+            on:click={() => startBuilding(building)}
+            disabled={!buildable}
+          >
+            {#if !affordable}MISSING
+            {:else if !buildable}BLOCKED
+            {:else}BUILD{/if}
+          </button>
         </div>
       {/each}
-
-      {#if building.storageCapacity && Object.keys(building.storageCapacity).length > 0}
-        {#each Object.entries(building.storageCapacity) as [cat, cap]}
-          <div class="row">
-            <span class="lbl">STORAGE</span><span class="val">{cat}: {cap}</span>
-          </div>
-        {/each}
-      {/if}
-
-      {#each getBuildingSpecialProperties(building) as prop}
-        <div class="row"><span class="lbl">SPECIAL</span><span class="val dim">{prop}</span></div>
-      {/each}
-
-      <div class="btn-row">
-        <button
-          class="act-btn"
-          class:active={canBuild(building)}
-          on:click={() => startBuilding(building)}
-          disabled={!canBuild(building)}
-        >
-          {#if !canAfford(building)}
-            INSUFFICIENT MATERIALS
-          {:else if building.researchRequired && !completedResearch.includes(building.researchRequired)}
-            BLOCKED — RESEARCH REQUIRED
-          {:else if !canBuild(building)}
-            REQUIREMENTS NOT MET
-          {:else}
-            BEGIN CONSTRUCTION
-          {/if}
-        </button>
-      </div>
-    </div>
+    {/if}
   {/each}
-
-  {#if availableBuildings.length === 0}
-    <div class="row"><span class="muted">no buildings available</span></div>
-  {/if}
 </div>
 
 <style>
@@ -477,218 +411,182 @@
     background: var(--bg-panel);
     color: var(--accent-hi);
     font-size: 11px;
-    letter-spacing: 0.08em;
-    border-bottom: 1px solid var(--border-hi);
-    flex-shrink: 0;
+    font-weight: bold;
     display: flex;
+    justify-content: space-between;
     align-items: center;
+    border-bottom: 1px solid var(--border);
   }
 
   .hdr-btn {
-    margin-left: auto;
-    padding: 2px 8px;
-    background: transparent;
+    background: none;
     border: 1px solid var(--border);
-    color: var(--text-dim);
+    color: var(--accent);
     font-family: 'Courier New', monospace;
-    font-size: 11px;
+    font-size: 10px;
+    padding: 2px 6px;
     cursor: pointer;
-    letter-spacing: 0.04em;
   }
-  .hdr-btn:hover {
-    color: var(--text);
-    border-color: var(--border-hi);
+
+  .status-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    padding: 4px 10px;
+    background: var(--bg-panel);
+    font-size: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .stat-lbl {
+    color: var(--text-dim);
+  }
+  .stat-val {
+    color: var(--accent-hi);
+    margin-right: 4px;
+  }
+  .stat-sep {
+    color: var(--border);
+  }
+  .warn-inline {
+    color: var(--neg);
+    margin-left: 8px;
   }
 
   .section-hdr {
-    padding: 4px 8px;
-    background: var(--bg-panel);
+    padding: 5px 10px 3px;
     color: var(--accent-hi);
-    font-size: 11px;
-    letter-spacing: 0.06em;
+    font-size: 10px;
+    letter-spacing: 0.08em;
     border-bottom: 1px solid var(--border);
-    border-top: 1px solid var(--border);
-    margin-top: 1px;
-    flex-shrink: 0;
+    margin-top: 4px;
   }
   .section-hdr.sub {
-    background: var(--bg);
-    color: var(--text-dim);
+    color: var(--accent);
+    margin-top: 2px;
   }
 
-  .filter-bar {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 2px;
-    padding: 4px 8px;
-    background: var(--bg-panel);
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-  }
-
-  .filter-btn {
-    padding: 2px 8px;
-    background: transparent;
-    border: 1px solid var(--border);
-    color: var(--text-dim);
-    font-family: 'Courier New', monospace;
-    font-size: 11px;
-    cursor: pointer;
-    letter-spacing: 0.04em;
-  }
-  .filter-btn.active {
-    background: var(--tab-active);
-    color: #fff;
-    border-color: var(--tab-active);
-  }
-  .filter-btn:hover:not(.active) {
-    color: var(--text);
-    border-color: var(--border-hi);
-  }
-
-  .row {
-    display: flex;
-    padding: 2px 8px;
-    align-items: baseline;
-    gap: 6px;
-  }
-  .row:hover {
-    background: var(--bg-hover);
-  }
-  .row.insufficient {
-    background: rgba(200, 48, 24, 0.05);
-  }
-
-  .need-row {
+  .bldg-row {
     display: flex;
     align-items: center;
-    padding: 3px 8px;
     gap: 8px;
+    padding: 3px 10px;
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+    flex-wrap: wrap;
+  }
+  .bldg-row:hover {
+    background: var(--bg-hover);
   }
 
-  .lbl {
-    color: var(--text-dim);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
+  .bldg-name {
+    flex: 0 0 160px;
     font-size: 11px;
-    width: 70px;
-    flex-shrink: 0;
-  }
-
-  .val {
     color: var(--text);
-    font-size: 11px;
-    margin-left: auto;
-    text-align: right;
-  }
-  .val.pos {
-    color: var(--pos);
-  }
-  .val.neg {
-    color: var(--neg);
-  }
-  .val.dim {
-    color: var(--text-muted);
-  }
-  .val.warn {
-    color: var(--accent);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
-  .desc {
-    color: var(--text-muted);
-    font-size: 11px;
-    font-style: italic;
-    flex: 1;
-  }
-  .bar {
-    flex: 1;
-    height: 4px;
-    background: var(--bg-active);
-  }
-  .fill {
-    height: 100%;
-  }
-  .muted {
-    color: var(--text-muted);
-    font-style: italic;
-    font-size: 11px;
-    padding: 4px 8px;
-  }
-  .warn {
-    color: var(--accent);
-  }
-  .pos {
-    color: var(--pos);
-  }
-  .neg {
-    color: var(--neg);
-  }
-
-  /* Building items */
-  .building-item {
-    border-bottom: 1px solid var(--border);
-    padding-bottom: 2px;
-    margin-bottom: 1px;
-  }
-
-  .building-name {
-    padding: 4px 8px;
-    color: var(--text);
-    font-size: 11px;
-    letter-spacing: 0.04em;
-    border-bottom: 1px solid var(--border);
-    background: var(--bg-panel);
-    display: flex;
-    gap: 8px;
-    align-items: baseline;
-  }
-
-  .bmeta {
-    color: var(--text-muted);
-    font-size: 10px;
-    margin-left: auto;
-  }
-
-  .bcount {
+  .built-badge {
     color: var(--pos);
     font-size: 10px;
+    margin-left: 4px;
   }
 
-  .desc-row {
-    padding: 2px 8px 3px 16px;
-    color: var(--text-muted);
-    font-size: 11px;
-    font-style: italic;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .btn-row {
+  .bldg-cost {
+    flex: 1;
     display: flex;
     gap: 4px;
-    padding: 4px 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    font-size: 10px;
+    color: var(--text-dim);
   }
 
-  .act-btn {
-    padding: 3px 10px;
-    background: var(--bg-hover);
-    border: 1px solid var(--border-hi);
-    color: var(--text);
+  .cost-sep {
+    color: var(--text-dim);
+    opacity: 0.4;
+    margin: 0 1px;
+  }
+
+  .cost-item {
+    display: inline-flex;
+    gap: 2px;
+    align-items: center;
+  }
+
+  .cost-qty {
+    color: var(--accent);
+  }
+
+  .cost-have {
+    opacity: 0.6;
+  }
+
+  .muted-text {
+    color: var(--text-dim);
+  }
+
+  .neg-text {
+    color: var(--neg);
+  }
+
+  .lock-req {
+    flex: 1;
+    font-size: 10px;
+    color: var(--warn);
+  }
+
+  .act-btn-sm {
+    flex: 0 0 auto;
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--accent);
     font-family: 'Courier New', monospace;
-    font-size: 11px;
+    font-size: 10px;
+    padding: 2px 6px;
     cursor: pointer;
-    letter-spacing: 0.04em;
+    white-space: nowrap;
   }
-  .act-btn.active {
-    background: var(--tab-active);
-    color: #fff;
-    border-color: var(--tab-active);
-  }
-  .act-btn:hover:not(:disabled) {
+  .act-btn-sm.active,
+  .act-btn-sm:hover:not(:disabled) {
+    border-color: var(--accent-hi);
     color: var(--accent-hi);
     background: var(--bg-active);
   }
-  .act-btn:disabled {
-    opacity: 0.4;
+  .act-btn-sm:disabled {
+    opacity: 0.35;
     cursor: not-allowed;
+  }
+
+  .progress-mini {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+
+  .prog-bar-ascii,
+  .bar-ascii {
+    color: var(--accent);
+    font-size: 9px;
+    letter-spacing: -1px;
+  }
+
+  .fuel-bar {
+    flex: 1;
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+
+  .muted-row {
+    padding: 4px 10px;
+    font-size: 10px;
+    color: var(--text-dim);
   }
 </style>

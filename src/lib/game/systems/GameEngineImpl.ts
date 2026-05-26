@@ -3,6 +3,7 @@ import type { BuildingEffectResult } from './ModifierSystem';
 import type { GameState, PawnNeeds } from '../core/types';
 import { GameStateManager } from '../core/GameState';
 import { gameState } from '$lib/stores/gameState';
+import { get } from 'svelte/store';
 import { modifierSystem } from './ModifierSystem';
 import { workService } from '../services/WorkService';
 import { itemService } from '../services/ItemService';
@@ -90,12 +91,17 @@ export class GameEngineImpl implements GameEngine {
 	}
 
 	getCraftableItems(): any[] {
-		if (!this.gameState) return [];
-		return itemService.getCraftableItems(this.gameState);
+		// Always read from the live Svelte store so building/inventory changes are reflected immediately
+		const currentState = get(gameState);
+		if (!currentState) return [];
+		return itemService.getCraftableItems(currentState);
 	}
 
 	craftItem(itemId: string, quantity: number = 1): void {
-		if (!this.gameState) return;
+		// Sync from store first so we check against the current buildings/materials
+		const currentState = get(gameState);
+		if (!currentState) return;
+		this.gameState = { ...currentState };
 		console.log(`[GameEngine] Coordinating crafting: ${quantity}x ${itemId}`);
 
 		// COORDINATION: Check if can craft and add to crafting queue
@@ -265,6 +271,9 @@ export class GameEngineImpl implements GameEngine {
 		}
 
 		try {
+			// Sync from Svelte store so user changes (work priorities, etc.) made between turns are preserved
+			this.gameState = { ...get(gameState) };
+
 			console.log('[GameEngine] Coordinating turn processing:', this.gameState.turn + 1);
 
 			// Increment turn

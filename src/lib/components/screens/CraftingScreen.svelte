@@ -7,7 +7,7 @@
   import { gameEngine } from '$lib/game/systems/GameEngineImpl';
   import { itemService } from '$lib/game/services/ItemService';
   import { onDestroy } from 'svelte';
-  import type { Item } from '$lib/game/core/types';
+  import type { Item, Pawn } from '$lib/game/core/types';
 
   let itemMap: Record<string, number> = {};
   let race: any = null;
@@ -17,84 +17,23 @@
   let availableBuildings: string[] = [];
   let currentToolLevel = 0;
   let currentPopulation = 0;
+  let pawns: Pawn[] = [];
 
-  // Enhanced item type filter with new categories
-  let selectedItemType = 'all';
-  let itemTypes = ['all', 'material', 'tool', 'weapon', 'armor', 'consumable', 'currency'];
+  // Station assignment: workshopType (or 'ground') → pawnId | null (null = any)
+  let stationAssignments: Record<string, string | null> = {};
 
-  // Enhanced category filter for more granular control
-  let selectedCategory = 'all';
-  let categories = [
-    'all',
-    'harvesting',
-    'crafting',
-    'woodworking',
-    'stoneworking',
-    'metalworking',
-    'leatherworking',
-    'cooking',
-    'magical'
+  // Workshop sections — all crafting requires a designated station
+  const WORKSHOP_SECTIONS: Array<{ id: string; label: string }> = [
+    { id: 'craft_spot', label: 'CRAFT SPOT' },
+    { id: 'campfire', label: 'CAMPFIRE' },
+    { id: 'makers_bench', label: "MAKER'S BENCH" }
   ];
 
-  // Workshop filter — Phase 6
-  let selectedWorkshop = 'all';
-  let workshopFilters = ['all', 'craft_spot', 'campfire', 'makers_bench', 'other'];
+  $: getItemAmount = (itemId: string): number => itemMap[itemId] || 0;
 
-  function workshopLabel(ws: string | null | undefined): string {
-    if (!ws) return 'NO WORKSHOP';
-    switch (ws) {
-      case 'craft_spot':
-        return '[🪔 CRAFT SPOT]';
-      case 'campfire':
-        return '[🔥 CAMPFIRE]';
-      case 'makers_bench':
-        return '[🪚 BENCH]';
-      case 'forge':
-        return '[🔧 FORGE]';
-      default:
-        return `[${ws.replace('_', ' ').toUpperCase()}]`;
-    }
-  }
+  // All craftable items — split by workshop in template
+  $: allCraftableItems = $gameState ? gameEngine.getCraftableItems() : [];
 
-  // Reuse item fetching pattern from BuildingMenu
-  $: getItemAmount = (itemId: string): number => {
-    return itemMap[itemId] || 0;
-  };
-
-  $: getInventoryAmount = (itemId: string): number => {
-    return inventory[itemId] || 0;
-  };
-
-  // Enhanced filtering with both type and category
-  $: availableCraftableItems = (() => {
-    if (!$gameState) return [];
-    let items = gameEngine.getCraftableItems();
-
-    // Filter by type if specified
-    if (selectedItemType !== 'all') {
-      items = items.filter((item) => item.type === selectedItemType);
-    }
-
-    // Filter by category if specified
-    if (selectedCategory !== 'all') {
-      items = items.filter((item) => item.category === selectedCategory);
-    }
-
-    // Phase 6: filter by workshop
-    if (selectedWorkshop !== 'all') {
-      if (selectedWorkshop === 'other') {
-        items = items.filter(
-          (item) => !['craft_spot', 'campfire', 'makers_bench'].includes(item.workshopType ?? '')
-        );
-      } else {
-        items = items.filter((item) => (item.workshopType ?? null) === selectedWorkshop);
-      }
-    }
-
-    return items;
-  })();
-
-  // Get first crafting item for CurrentTask component
   $: firstCraftingInProgress = craftingQueue.length > 0 ? craftingQueue[0] : null;
 
   const unsubscribeItem = currentItem.subscribe((items) => {
@@ -110,16 +49,20 @@
   });
 
   const unsubscribeGame = gameState.subscribe((state) => {
+    if (!state) return;
     craftingQueue = state.craftingQueue || [];
     completedResearch = state.completedResearch || [];
     currentToolLevel = state.currentToolLevel || 0;
+    pawns = state.pawns || [];
 
-    // Get available buildings from buildings[]
-    availableBuildings = (state.buildings ?? [])
-      .filter((b) => b.status === 'complete')
-      .map((b) => b.type);
-    // De-duplicate since multiple instances of same type can exist
-    availableBuildings = [...new Set(availableBuildings)];
+    availableBuildings = [
+      ...new Set((state.buildings ?? []).filter((b) => b.status === 'complete').map((b) => b.type))
+    ];
+
+    // Sync station assignments from persisted state
+    if (state.craftingStationAssignments) {
+      stationAssignments = { ...state.craftingStationAssignments };
+    }
   });
 
   onDestroy(() => {
@@ -128,38 +71,32 @@
     unsubscribeGame();
   });
 
-  function startCrafting(item: Item) {
-    if (!$gameState) {
-      console.log('Cannot craft:', item.name);
-      return;
-    }
+  function setStationAssignment(wsId: string, pawnId: string | null) {
+    const key = wsId;
+    stationAssignments = { ...stationAssignments, [key]: pawnId };
+    gameState.update((state) => ({
+      ...state,
+      craftingStationAssignments: { ...(state.craftingStationAssignments ?? {}), [key]: pawnId }
+    }));
+  }
 
-    // COORDINATION: Start crafting through GameEngine
+  function startCrafting(item: Item) {
+    if (!$gameState) return;
     gameEngine.craftItem(item.id, 1);
   }
 
   function cancelCrafting(queueIndex: number) {
     if (queueIndex < 0 || queueIndex >= craftingQueue.length) return;
-
     const canceledItem = craftingQueue[queueIndex];
     const item = canceledItem.item;
-
     gameState.update((state) => {
-      // Refund items (reuse pattern from BuildingMenu)
-      const refundedItems = state.item.map((stateItem) => {
-        const refund = item.craftingCost?.[stateItem.id] || 0;
-        return { ...stateItem, amount: stateItem.amount + refund };
+      const refundedItems = state.item.map((si) => {
+        const refund = item.craftingCost?.[si.id] || 0;
+        return { ...si, amount: si.amount + refund };
       });
-
-      // Remove from queue
       const newQueue = [...(state.craftingQueue || [])];
       newQueue.splice(queueIndex, 1);
-
-      return {
-        ...state,
-        item: refundedItems,
-        craftingQueue: newQueue
-      };
+      return { ...state, item: refundedItems, craftingQueue: newQueue };
     });
   }
 
@@ -181,108 +118,6 @@
         return '📋';
     }
   }
-
-  function getCategoryIcon(category: string): string {
-    switch (category) {
-      case 'harvesting':
-        return '🌲';
-      case 'crafting':
-        return '🔨';
-      case 'woodworking':
-        return '🪚';
-      case 'stoneworking':
-        return '🗿';
-      case 'metalworking':
-        return '⚒️';
-      case 'leatherworking':
-        return '🦬';
-      case 'cooking':
-        return '🍲';
-      case 'magical':
-        return '🔮';
-      case 'light':
-        return '🧥';
-      case 'medium':
-        return '🦺';
-      case 'heavy':
-        return '🛡️';
-      case 'shield':
-        return '🛡️';
-      case 'melee':
-        return '⚔️';
-      case 'ranged':
-        return '🏹';
-      case 'healing':
-        return '💊';
-      case 'meal':
-        return '🍖';
-      case 'medical':
-        return '💉';
-      case 'alchemical':
-        return '⚗️';
-      default:
-        return '🛠️';
-    }
-  }
-
-  function formatEffectName(camelCaseStr: string): string {
-    return camelCaseStr
-      .replace(/([A-Z])/g, ' $1')
-      .replace(/^./, (match) => match.toUpperCase())
-      .trim();
-  }
-
-  function getItemRequirements(item: Item): string[] {
-    const requirements = [];
-
-    if (item.toolTierRequired && item.toolTierRequired > 0) {
-      requirements.push(`🔧 Tool Level ${item.toolTierRequired}`);
-    }
-
-    if (item.buildingRequired) {
-      requirements.push(`🏗️ ${item.buildingRequired}`);
-    }
-
-    if (item.researchRequired) {
-      requirements.push(`📚 ${item.researchRequired}`);
-    }
-
-    if (item.populationRequired && item.populationRequired > 0) {
-      requirements.push(`👥 ${item.populationRequired} population`);
-    }
-
-    return requirements;
-  }
-
-  function getItemSpecialProperties(item: Item): string[] {
-    const properties = [];
-
-    // Weapon properties
-    if (item.weaponProperties) {
-      properties.push(`⚔️ ${item.weaponProperties.damage} damage`);
-      properties.push(`⚡ ${item.weaponProperties.attackSpeed} speed`);
-      properties.push(`📏 ${item.weaponProperties.range} range`);
-    }
-
-    // Armor properties
-    if (item.armorProperties) {
-      properties.push(`🛡️ ${item.armorProperties.defense} defense`);
-      properties.push(`👕 ${item.armorProperties.armorType} armor`);
-      properties.push(`📍 ${item.armorProperties.slot} slot`);
-
-      if (item.armorProperties.movementPenalty > 0) {
-        properties.push(`🐌 ${Math.round(item.armorProperties.movementPenalty * 100)}% slower`);
-      }
-    }
-
-    // Consumable properties
-    if (item.consumableProperties) {
-      properties.push(`🔄 ${item.consumableProperties.uses} uses`);
-      properties.push(`⏱️ ${item.consumableProperties.consumeTime} time`);
-    }
-
-    return properties;
-  }
 </script>
 
 <div class="crafting-screen">
@@ -291,171 +126,115 @@
     <button class="hdr-btn" on:click={() => uiState.setScreen('main')}>BACK</button>
   </div>
 
-  <!-- Type filters -->
-  <div class="filter-bar">
-    {#each itemTypes as itemType}
-      <button
-        class="filter-btn"
-        class:active={selectedItemType === itemType}
-        on:click={() => (selectedItemType = itemType)}
-        >{itemType === 'all' ? 'ALL TYPES' : itemType.toUpperCase()}</button
-      >
-    {/each}
-  </div>
-
-  <!-- Category filters -->
-  <div class="filter-bar secondary">
-    {#each categories as category}
-      <button
-        class="filter-btn"
-        class:active={selectedCategory === category}
-        on:click={() => (selectedCategory = category)}
-        >{category === 'all' ? 'ALL CATS' : category.toUpperCase()}</button
-      >
-    {/each}
-  </div>
-
-  <!-- Workshop filter — Phase 6 -->
-  <div class="filter-bar secondary">
-    <span class="lbl" style="margin-top:2px">SHOP</span>
-    {#each workshopFilters as ws}
-      <button
-        class="filter-btn"
-        class:active={selectedWorkshop === ws}
-        on:click={() => (selectedWorkshop = ws)}
-        >{ws === 'all' ? 'ALL' : ws.replace('_', ' ').toUpperCase()}</button
-      >
-    {/each}
-  </div>
-
-  <!-- Inventory -->
-  <div class="section-hdr sub">| INVENTORY</div>
-  {#if Object.keys(inventory).length > 0}
-    {#each Object.entries(inventory) as [itemId, quantity]}
-      {#if quantity > 0}
-        {@const item = ITEMS_DATABASE.find((i) => i.id === itemId)}
-        {#if item}
-          <div class="inv-row">
-            <span class="inv-name">{item.name.toUpperCase()}</span>
-            <span class="inv-meta">{item.type} / {item.category}</span>
-            <span class="inv-qty">x{quantity}</span>
-          </div>
-        {/if}
-      {/if}
-    {/each}
-  {:else}
-    <div class="row"><span class="muted">inventory empty</span></div>
-  {/if}
-
   <!-- Crafting Queue -->
-  <div class="section-hdr sub">| CRAFTING QUEUE</div>
+  <div class="section-hdr sub">| CRAFTING QUEUE ({craftingQueue.length})</div>
   {#if craftingQueue.length > 0}
-    {#each craftingQueue as queueItem, index}
-      <div class="queue-item">
-        <div class="row">
-          <span class="lbl">ITEM</span><span class="val">{queueItem.item.name.toUpperCase()}</span>
-        </div>
-        <div class="need-row">
-          <span class="lbl">PROGRESS</span>
-          <div class="bar">
-            <div
-              class="fill"
-              style="width: {Math.round(
-                ((queueItem.item.craftingTime - queueItem.turnsRemaining) /
-                  queueItem.item.craftingTime) *
-                  100
-              )}%; background: var(--accent-hi)"
-            ></div>
-          </div>
-          <span class="val"
-            >{Math.round(
-              ((queueItem.item.craftingTime - queueItem.turnsRemaining) /
-                queueItem.item.craftingTime) *
-                100
-            )}%</span
+    {#each craftingQueue as qi, idx}
+      {@const pct = Math.round(
+        ((qi.item.craftingTime - qi.turnsRemaining) / qi.item.craftingTime) * 100
+      )}
+      <div class="queue-row">
+        <span class="q-name">{qi.item.name.toUpperCase()}</span>
+        <span class="q-prog">
+          <span class="bar-ascii"
+            >{'█'.repeat(Math.round(pct / 10)) + '░'.repeat(10 - Math.round(pct / 10))}</span
           >
-          <span class="desc">{queueItem.turnsRemaining} turns left</span>
-        </div>
-        <div class="btn-row">
-          <button class="act-btn" on:click={() => cancelCrafting(index)}>CANCEL</button>
-        </div>
+          {qi.turnsRemaining}t
+        </span>
+        <button class="act-btn-sm" on:click={() => cancelCrafting(idx)}>CANCEL</button>
       </div>
     {/each}
   {:else}
-    <div class="row"><span class="muted">no active crafting</span></div>
+    <div class="muted-row">no active crafting</div>
   {/if}
 
-  <!-- Available recipes -->
-  <div class="section-hdr">| AVAILABLE ({availableCraftableItems.length})</div>
-  {#each availableCraftableItems as item}
-    <div class="recipe-item">
-      <div class="recipe-name">
-        {item.name.toUpperCase()}
-        <span class="rmeta">{item.type} / {item.category}</span>
-        {#if item.workshopType}
-          <span class="workshop-badge">{workshopLabel(item.workshopType)}</span>
-        {/if}
-        <span class="rarity-tag">{item.rarity}</span>
-      </div>
-      <div class="desc-row">{item.description}</div>
-      <div class="row">
-        <span class="lbl">CRAFT TIME</span><span class="val">{item.craftingTime || 1} turns</span>
+  <!-- Workshop sections: built stations first, unbuilt collapsed -->
+  {#each WORKSHOP_SECTIONS as ws}
+    <!-- CRAFT SPOT also shows items with no workshopType (basic crafting needs a safe spot) -->
+    {@const wsItems = allCraftableItems.filter((i) =>
+      ws.id === 'craft_spot'
+        ? (i.workshopType ?? null) === 'craft_spot' || (i.workshopType ?? null) === null
+        : (i.workshopType ?? null) === ws.id
+    )}
+    {@const wsBuilt = availableBuildings.includes(ws.id)}
+    {@const stationKey = ws.id}
+    {@const assignedPawnId = stationAssignments[stationKey] ?? null}
+
+    {#if wsBuilt}
+      <!-- Built station — show full section -->
+      <div class="section-hdr">
+        | {ws.label}
+        <span class="ws-badge ws-ready">[READY]</span>
       </div>
 
-      {#each getItemRequirements(item) as req}
-        <div class="row"><span class="lbl">REQUIRE</span><span class="val dim">{req}</span></div>
-      {/each}
+      <!-- Pawn assignment row -->
+      <div class="station-assign-row">
+        <span class="assign-label">ASSIGNED:</span>
+        <select
+          class="assign-select"
+          value={assignedPawnId ?? ''}
+          on:change={(e) =>
+            setStationAssignment(ws.id, (e.currentTarget as HTMLSelectElement).value || null)}
+        >
+          <option value="">any eligible pawn</option>
+          {#each pawns as p}
+            <option value={p.id}>{p.name}</option>
+          {/each}
+        </select>
+      </div>
 
-      {#if item.craftingCost && Object.keys(item.craftingCost).length > 0}
-        {#each Object.entries(item.craftingCost) as [materialId, amount]}
-          {@const matItem = ITEMS_DATABASE.find((i) => i.id === materialId)}
-          {@const have = getItemAmount(materialId)}
-          <div class="row" class:insufficient={have < (amount as number)}>
-            <span class="lbl">COST</span>
-            <span class="val" class:neg={have < (amount as number)}>
-              {matItem?.name || materialId}: {amount} (have {have})
+      {#if wsItems.length > 0}
+        {#each wsItems as item}
+          {@const craftable = $gameState !== null && itemService.canCraftItem(item.id, $gameState)}
+          {@const affordable = item.craftingCost
+            ? Object.entries(item.craftingCost).every(
+                ([id, n]) => getItemAmount(id) >= (n as number)
+              )
+            : true}
+          <div class="recipe-row">
+            <span class="recipe-name">{getTypeIcon(item.type ?? '')} {item.name.toUpperCase()}</span
+            >
+            <span class="recipe-cost">
+              {#if item.craftingCost && Object.keys(item.craftingCost).length > 0}
+                {#each Object.entries(item.craftingCost) as [id, n], ci}
+                  {@const have = getItemAmount(id)}
+                  {#if ci > 0}<span class="cost-sep">·</span>{/if}
+                  <span class="cost-item" class:neg-text={have < (n as number)}>
+                    {id.replace(/_/g, ' ')} <span class="cost-qty">×{n}</span>
+                    <span class="cost-have" class:neg-text={have < (n as number)}>({have})</span>
+                  </span>
+                {/each}
+              {:else}
+                <span class="muted-text">free</span>
+              {/if}
             </span>
+            <button
+              class="act-btn-sm"
+              class:active={craftable}
+              on:click={() => startCrafting(item)}
+              disabled={!craftable}
+            >
+              {#if !affordable}MISSING
+              {:else if !craftable}BLOCKED
+              {:else}CRAFT{/if}
+            </button>
           </div>
         {/each}
       {:else}
-        <div class="row"><span class="lbl">COST</span><span class="val dim">none</span></div>
+        <div class="muted-row">no recipes for this station</div>
       {/if}
-
-      {#if item.effects && Object.keys(item.effects).length > 0}
-        {#each Object.entries(item.effects) as [effect, value]}
-          <div class="row">
-            <span class="lbl">EFFECT</span><span class="val pos"
-              >+{value} {formatEffectName(effect)}</span
-            >
-          </div>
-        {/each}
-      {/if}
-
-      {#each getItemSpecialProperties(item) as prop}
-        <div class="row"><span class="lbl">SPECIAL</span><span class="val dim">{prop}</span></div>
-      {/each}
-
-      <div class="btn-row">
-        <button
-          class="act-btn"
-          class:active={$gameState && itemService.canCraftItem(item.id, $gameState)}
-          on:click={() => startCrafting(item)}
-          disabled={!$gameState || !itemService.canCraftItem(item.id, $gameState)}
-        >
-          {#if !$gameState || !itemService.canCraftItem(item.id, $gameState)}
-            {#if item.workshopType && !availableBuildings.includes(item.workshopType)}
-              BLOCKED — NEEDS {item.workshopType.replace('_', ' ').toUpperCase()}
-            {:else}CANNOT CRAFT
-            {/if}
-          {:else}BEGIN CRAFTING
-          {/if}
-        </button>
+    {:else if wsItems.length > 0}
+      <!-- Unbuilt station — show dim header only -->
+      <div class="section-hdr locked">
+        | {ws.label}
+        <span class="ws-badge ws-need">[BUILD FIRST]</span>
+        <span class="ws-count">{wsItems.length} recipes</span>
       </div>
-    </div>
+    {/if}
   {/each}
 
-  {#if availableCraftableItems.length === 0}
-    <div class="row"><span class="muted">no recipes available</span></div>
+  {#if allCraftableItems.length === 0}
+    <div class="muted-row">no recipes available</div>
   {/if}
 </div>
 
@@ -476,256 +255,201 @@
     background: var(--bg-panel);
     color: var(--accent-hi);
     font-size: 11px;
-    letter-spacing: 0.08em;
-    border-bottom: 1px solid var(--border-hi);
-    flex-shrink: 0;
+    font-weight: bold;
     display: flex;
+    justify-content: space-between;
     align-items: center;
+    border-bottom: 1px solid var(--border);
   }
 
   .hdr-btn {
-    margin-left: auto;
-    padding: 2px 8px;
-    background: transparent;
+    background: none;
     border: 1px solid var(--border);
-    color: var(--text-dim);
+    color: var(--accent);
     font-family: 'Courier New', monospace;
-    font-size: 11px;
+    font-size: 10px;
+    padding: 2px 6px;
     cursor: pointer;
-    letter-spacing: 0.04em;
-  }
-  .hdr-btn:hover {
-    color: var(--text);
-    border-color: var(--border-hi);
   }
 
   .section-hdr {
-    padding: 4px 8px;
-    background: var(--bg-panel);
+    padding: 5px 10px 3px;
     color: var(--accent-hi);
-    font-size: 11px;
-    letter-spacing: 0.06em;
+    font-size: 10px;
+    letter-spacing: 0.08em;
     border-bottom: 1px solid var(--border);
-    border-top: 1px solid var(--border);
-    margin-top: 1px;
-    flex-shrink: 0;
-  }
-  .section-hdr.sub {
-    background: var(--bg);
-    color: var(--text-dim);
-  }
-
-  .filter-bar {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 2px;
-    padding: 4px 8px;
-    background: var(--bg-panel);
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-  }
-  .filter-bar.secondary {
-    background: var(--bg);
-  }
-
-  .filter-btn {
-    padding: 2px 8px;
-    background: transparent;
-    border: 1px solid var(--border);
-    color: var(--text-dim);
-    font-family: 'Courier New', monospace;
-    font-size: 11px;
-    cursor: pointer;
-    letter-spacing: 0.04em;
-  }
-  .filter-btn.active {
-    background: var(--tab-active);
-    color: #fff;
-    border-color: var(--tab-active);
-  }
-  .filter-btn:hover:not(.active) {
-    color: var(--text);
-    border-color: var(--border-hi);
-  }
-
-  .row {
-    display: flex;
-    padding: 2px 8px;
-    align-items: baseline;
-    gap: 6px;
-  }
-  .row:hover {
-    background: var(--bg-hover);
-  }
-  .row.insufficient {
-    background: rgba(200, 48, 24, 0.05);
-  }
-
-  .need-row {
+    margin-top: 4px;
     display: flex;
     align-items: center;
-    padding: 3px 8px;
-    gap: 8px;
+    gap: 6px;
+  }
+  .section-hdr.sub {
+    color: var(--accent);
+    margin-top: 2px;
+  }
+  .section-hdr.locked {
+    opacity: 0.45;
   }
 
-  .lbl {
+  .ws-badge {
+    font-size: 9px;
+    padding: 1px 4px;
+    border: 1px solid;
+  }
+  .ws-ready {
+    color: var(--pos);
+    border-color: var(--pos);
+  }
+  .ws-need {
     color: var(--text-dim);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    font-size: 11px;
-    width: 70px;
-    flex-shrink: 0;
+    border-color: var(--border);
   }
-
-  .val {
-    color: var(--text);
-    font-size: 11px;
+  .ws-count {
+    font-size: 9px;
+    color: var(--text-dim);
     margin-left: auto;
-    text-align: right;
-  }
-  .val.pos {
-    color: var(--pos);
-  }
-  .val.neg {
-    color: var(--neg);
-  }
-  .val.dim {
-    color: var(--text-muted);
   }
 
-  .desc {
-    color: var(--text-muted);
-    font-size: 11px;
-    font-style: italic;
-    flex: 1;
-  }
-  .bar {
-    flex: 1;
-    height: 4px;
-    background: var(--bg-active);
-  }
-  .fill {
-    height: 100%;
-  }
-  .muted {
-    color: var(--text-muted);
-    font-style: italic;
-    font-size: 11px;
-    padding: 4px 8px;
-  }
-  .pos {
-    color: var(--pos);
-  }
-  .neg {
-    color: var(--neg);
-  }
-
-  /* Inventory */
-  .inv-row {
+  .station-assign-row {
     display: flex;
-    padding: 2px 8px;
+    align-items: center;
     gap: 8px;
-    align-items: baseline;
-    border-bottom: 1px solid var(--border);
+    padding: 3px 10px;
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 30%, transparent);
+    background: color-mix(in srgb, var(--bg-panel) 60%, transparent);
   }
-  .inv-row:hover {
-    background: var(--bg-hover);
-  }
-  .inv-name {
-    color: var(--text);
-    font-size: 11px;
-    width: 150px;
+
+  .assign-label {
+    font-size: 9px;
+    color: var(--text-dim);
+    letter-spacing: 0.06em;
     flex-shrink: 0;
   }
-  .inv-meta {
-    color: var(--text-muted);
+
+  .assign-select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--accent);
+    font-family: 'Courier New', monospace;
     font-size: 10px;
+    padding: 1px 4px;
     flex: 1;
+    max-width: 200px;
   }
-  .inv-qty {
-    color: var(--accent-hi);
+
+  .queue-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 10px;
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+  }
+
+  .q-name {
+    flex: 0 0 160px;
     font-size: 11px;
-    margin-left: auto;
+    color: var(--text);
   }
 
-  /* Queue */
-  .queue-item {
-    border-bottom: 1px solid var(--border);
-    padding-bottom: 2px;
+  .q-prog {
+    flex: 1;
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    font-size: 10px;
+    color: var(--text-dim);
   }
 
-  /* Recipe items */
-  .recipe-item {
-    border-bottom: 1px solid var(--border);
-    padding-bottom: 2px;
-    margin-bottom: 1px;
+  .bar-ascii {
+    color: var(--accent);
+    font-size: 9px;
+    letter-spacing: -1px;
+  }
+
+  .recipe-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 10px;
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+    flex-wrap: wrap;
+  }
+  .recipe-row:hover {
+    background: var(--bg-hover);
   }
 
   .recipe-name {
-    padding: 4px 8px;
+    flex: 0 0 160px;
+    font-size: 11px;
     color: var(--text);
-    font-size: 11px;
-    letter-spacing: 0.04em;
-    border-bottom: 1px solid var(--border);
-    background: var(--bg-panel);
-    display: flex;
-    gap: 8px;
-    align-items: baseline;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
-  .rmeta {
-    color: var(--text-muted);
-    font-size: 10px;
-  }
-  .rarity-tag {
-    color: var(--text-dim);
-    font-size: 10px;
-    margin-left: auto;
-  }
-
-  .workshop-badge {
-    color: var(--accent);
-    font-size: 10px;
-    border: 1px solid var(--border);
-    padding: 0 4px;
-    letter-spacing: 0.04em;
-  }
-
-  .desc-row {
-    padding: 2px 8px 3px 16px;
-    color: var(--text-muted);
-    font-size: 11px;
-    font-style: italic;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .btn-row {
+  .recipe-cost {
+    flex: 1;
     display: flex;
     gap: 4px;
-    padding: 4px 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    font-size: 10px;
+    color: var(--text-dim);
   }
 
-  .act-btn {
-    padding: 3px 10px;
-    background: var(--bg-hover);
-    border: 1px solid var(--border-hi);
-    color: var(--text);
+  .cost-sep {
+    color: var(--text-dim);
+    opacity: 0.4;
+    margin: 0 1px;
+  }
+
+  .cost-item {
+    display: inline-flex;
+    gap: 2px;
+    align-items: center;
+  }
+
+  .cost-qty {
+    color: var(--accent);
+  }
+
+  .cost-have {
+    opacity: 0.6;
+  }
+
+  .muted-text {
+    color: var(--text-dim);
+  }
+
+  .neg-text {
+    color: var(--neg);
+  }
+
+  .act-btn-sm {
+    flex: 0 0 auto;
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--accent);
     font-family: 'Courier New', monospace;
-    font-size: 11px;
+    font-size: 10px;
+    padding: 2px 6px;
     cursor: pointer;
-    letter-spacing: 0.04em;
+    white-space: nowrap;
   }
-  .act-btn.active {
-    background: var(--tab-active);
-    color: #fff;
-    border-color: var(--tab-active);
-  }
-  .act-btn:hover:not(:disabled) {
+  .act-btn-sm.active,
+  .act-btn-sm:hover:not(:disabled) {
+    border-color: var(--accent-hi);
     color: var(--accent-hi);
     background: var(--bg-active);
   }
-  .act-btn:disabled {
-    opacity: 0.4;
+  .act-btn-sm:disabled {
+    opacity: 0.35;
     cursor: not-allowed;
+  }
+
+  .muted-row {
+    padding: 4px 10px;
+    font-size: 10px;
+    color: var(--text-dim);
   }
 </style>

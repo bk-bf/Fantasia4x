@@ -1,12 +1,12 @@
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte';
-  import { gameState, currentItem, currentRace } from '$lib/stores/gameState';
+  import { gameState } from '$lib/stores/gameState';
   import { uiState } from '$lib/stores/uiState';
   import { WORK_CATEGORIES } from '$lib/game/core/Work';
   import { locationService } from '$lib/game/services/LocationServices';
   import { itemService } from '$lib/game/services/ItemService';
   import { workService } from '$lib/game/services/WorkService';
   import { get } from 'svelte/store';
+  import { onMount, onDestroy } from 'svelte';
 
   let race: any = null;
   let pawns: any[] = [];
@@ -312,81 +312,154 @@
         workCategory: workService.getWorkCategory(workId)
       }));
   }
+
+  // ── Matrix: 3-letter work abbreviations ────────────────────────────
+  const ABBR: Record<string, string> = {
+    foraging: 'FRG',
+    woodcutting: 'WOD',
+    mining: 'MNE',
+    hunting: 'HNT',
+    fishing: 'FSH',
+    crafting: 'CRF',
+    metalworking: 'MTL',
+    leatherworking: 'LTH',
+    digging: 'DIG',
+    research: 'RSH',
+    construction: 'BLD',
+    alchemy: 'ALH',
+    cooking: 'COK'
+  };
+
+  function cycleLevel(pawnId: string, workId: string) {
+    const cur = getPawnLaborLevel(pawnId, workId);
+    const next = ((cur + 1) % 5) as 0 | 1 | 2 | 3 | 4;
+    updatePawnLaborLevel(pawnId, workId, next);
+  }
+
+  function stateLabel(pawn: any): string {
+    const s = pawn.currentState ?? 'Idle';
+    if (s === 'Working' && pawn.activeJob) {
+      if (pawn.activeJob.type === 'harvest')
+        return pawn.activeJob.resourceId?.toUpperCase() ?? 'HARVEST';
+      if (pawn.activeJob.type === 'construct') return 'BUILDING';
+      if (pawn.activeJob.type === 'craft') return 'CRAFTING';
+    }
+    return s.toUpperCase();
+  }
+
+  function stateColor(pawn: any): string {
+    switch (pawn.currentState) {
+      case 'Working':
+        return '#4a9';
+      case 'Hungry':
+      case 'Eating':
+        return '#f44';
+      case 'Tired':
+      case 'Sleeping':
+        return '#fa0';
+      default:
+        return '#555';
+    }
+  }
+
+  function needBar(val: number): string {
+    const f = Math.round(val / 10);
+    return '█'.repeat(f) + '░'.repeat(10 - f);
+  }
+
+  const LVL_NAMES = ['Off', 'Low', 'Normal', 'High', 'Urgent'];
+
+  $: selected = pawns.find((p) => p.id === selectedPawn) ?? null;
 </script>
 
 <div class="work-screen">
   <div class="screen-hdr">
-    | WORK MANAGEMENT
+    | LABOR ASSIGNMENTS
     <button class="hdr-btn" on:click={() => uiState.setScreen('main')}>BACK</button>
   </div>
 
-  <!-- Workers list -->
-  <div class="section-hdr sub">| WORKERS ({pawns.length})</div>
-  {#each pawns as pawn}
-    {@const currentJob = getCurrentJobForPawn(pawn.id)}
-    {@const workCategory = currentJob ? workService.getWorkCategory(currentJob.workId) : null}
-    <button
-      type="button"
-      class="pawn-row"
-      class:selected={selectedPawn === pawn.id}
-      on:click={() => (selectedPawn = selectedPawn === pawn.id ? null : pawn.id)}
-      aria-pressed={selectedPawn === pawn.id}
-      aria-label="Select worker {pawn.name}"
-    >
-      <span class="pawn-name">{pawn.name.toUpperCase()}</span>
-      <span class="pawn-stats-inline">
-        STR {pawn.stats.strength} DEX {pawn.stats.dexterity} INT {pawn.stats.intelligence}
-      </span>
-      <span class="pawn-work">
-        {#if workCategory}
-          {workCategory.name.toUpperCase()}
-          {@const efficiency = getPawnWorkEfficiency(pawn.id, currentJob?.workId || '')}
-          <span class="eff" style="color: {getWorkEfficiencyColor(efficiency)}">[{efficiency}]</span
+  <!-- Matrix grid: rows=pawns, cols=work categories -->
+  <div class="matrix-wrap">
+    <table class="matrix">
+      <thead>
+        <tr>
+          <th class="name-hdr">WORKER</th>
+          <th class="state-hdr">STATUS</th>
+          {#each WORK_CATEGORIES as wc}
+            <th class="work-hdr" title={wc.name}
+              >{ABBR[wc.id] ?? wc.id.slice(0, 3).toUpperCase()}</th
+            >
+          {/each}
+        </tr>
+      </thead>
+      <tbody>
+        {#each pawns as pawn}
+          <tr
+            class:sel={selectedPawn === pawn.id}
+            on:click={() => (selectedPawn = selectedPawn === pawn.id ? null : pawn.id)}
           >
-        {:else}
-          <span class="idle">IDLE</span>
-        {/if}
-      </span>
-    </button>
-  {/each}
-
-  <!-- Individual Work Priorities -->
-  {#if selectedPawn}
-    {@const pawn = pawns.find((p) => p.id === selectedPawn)}
-    {#if pawn}
-      <div class="section-hdr">| {pawn.name.toUpperCase()} — LABOR SETTINGS</div>
-      {#each WORK_CATEGORIES as workCategory}
-        {@const level = getPawnLaborLevel(pawn.id, workCategory.id)}
-        {@const efficiency = getPawnWorkEfficiency(pawn.id, workCategory.id)}
-        <div class="priority-row" class:active={level > 0}>
-          <span class="work-name">{workCategory.name.toUpperCase()}</span>
-          <span class="eff-label" style="color: {getWorkEfficiencyColor(efficiency)}">
-            {efficiency >= 12
-              ? 'EXCEL'
-              : efficiency >= 10
-                ? 'GOOD'
-                : efficiency >= 8
-                  ? 'AVG'
-                  : 'POOR'}({efficiency})
-          </span>
-          <div class="labor-btns">
-            {#each [0, 1, 2, 3, 4] as lvl}
-              <button
-                class="labor-btn"
-                class:active-level={level === lvl}
-                style="color: {level === lvl ? LABOR_COLORS[lvl] : '#555'}"
-                on:click={() =>
-                  updatePawnLaborLevel(pawn.id, workCategory.id, lvl as 0 | 1 | 2 | 3 | 4)}
-                title={['Disabled', 'Low', 'Normal', 'High', 'Urgent'][lvl]}
-                >{LABOR_LABELS[lvl]}</button
-              >
+            <td class="name-cell">{pawn.name.toUpperCase()}</td>
+            <td class="state-cell" style="color:{stateColor(pawn)}">{stateLabel(pawn)}</td>
+            {#each WORK_CATEGORIES as wc}
+              {@const lvl = getPawnLaborLevel(pawn.id, wc.id)}
+              <td>
+                <button
+                  class="cell-btn"
+                  style="color:{LABOR_COLORS[lvl]}"
+                  on:click|stopPropagation={() => cycleLevel(pawn.id, wc.id)}
+                  title="{wc.name}: {LVL_NAMES[lvl]}">{LABOR_LABELS[lvl]}</button
+                >
+              </td>
             {/each}
-          </div>
-        </div>
+          </tr>
+        {/each}
+        {#if pawns.length === 0}
+          <tr><td colspan={WORK_CATEGORIES.length + 2} class="empty">no colonists</td></tr>
+        {/if}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Legend -->
+  <div class="legend">
+    <span class="leg-title">LEVEL:</span>
+    {#each ['—=off', '1=low', '2=nrm', '3=hi', '4=urg'] as leg}
+      <span class="leg">{leg}</span>
+    {/each}
+    <span class="leg-hint">· click cell to cycle · click row for pawn detail</span>
+  </div>
+
+  <!-- Selected pawn detail -->
+  {#if selected}
+    <div class="section-hdr">| {selected.name.toUpperCase()} — PAWN DETAIL</div>
+    <div class="detail-row">
+      <span class="lbl">ACTIVITY</span>
+      <span style="color:{stateColor(selected)}">{stateLabel(selected)}</span>
+    </div>
+    <div class="need-row">
+      <span class="lbl">HUNGER</span>
+      <span class="bar-ascii">{needBar(selected.needs.hunger)}</span>
+      <span class="val" class:neg={selected.needs.hunger > 70}
+        >{Math.round(selected.needs.hunger)}%</span
+      >
+    </div>
+    <div class="need-row">
+      <span class="lbl">FATIGUE</span>
+      <span class="bar-ascii">{needBar(selected.needs.fatigue)}</span>
+      <span class="val" class:neg={selected.needs.fatigue > 70}
+        >{Math.round(selected.needs.fatigue)}%</span
+      >
+    </div>
+    <div class="stats-row">
+      {#each Object.entries(selected.stats) as [stat, val]}
+        <span class="stat-chip">
+          <span class="slbl">{stat.slice(0, 3).toUpperCase()}</span>
+          <span class="sval">{val}</span>
+        </span>
       {/each}
-    {/if}
-  {:else}
-    <div class="section-hdr sub">| SELECT A WORKER TO MANAGE PRIORITIES</div>
+    </div>
+  {:else if pawns.length > 0}
+    <div class="section-hdr sub">| CLICK A ROW FOR PAWN DETAIL</div>
   {/if}
 </div>
 
@@ -401,7 +474,6 @@
     display: flex;
     flex-direction: column;
   }
-
   .screen-hdr {
     padding: 5px 10px;
     background: var(--bg-panel);
@@ -413,7 +485,6 @@
     display: flex;
     align-items: center;
   }
-
   .hdr-btn {
     margin-left: auto;
     padding: 2px 8px;
@@ -423,7 +494,6 @@
     font-family: 'Courier New', monospace;
     font-size: 11px;
     cursor: pointer;
-    letter-spacing: 0.04em;
   }
   .hdr-btn:hover {
     color: var(--text);
@@ -446,107 +516,150 @@
     color: var(--text-dim);
   }
 
-  /* Pawn list */
-  .pawn-row {
-    display: flex;
+  /* Matrix table */
+  .matrix-wrap {
+    overflow-x: auto;
+    flex-shrink: 0;
+  }
+  .matrix {
+    border-collapse: collapse;
+    width: max-content;
+    min-width: 100%;
+  }
+  .matrix th,
+  .matrix td {
+    border: 1px solid var(--border);
+    padding: 0;
+    text-align: center;
+  }
+  .name-hdr {
+    text-align: left;
+    padding: 2px 6px;
+    color: var(--text-dim);
+    font-size: 10px;
+    min-width: 80px;
+  }
+  .state-hdr {
+    text-align: left;
+    padding: 2px 4px;
+    color: var(--text-dim);
+    font-size: 10px;
+    min-width: 72px;
+  }
+  .work-hdr {
+    padding: 2px 3px;
+    color: var(--text-dim);
+    font-size: 10px;
+    min-width: 28px;
+  }
+  .name-cell {
+    text-align: left;
+    padding: 2px 6px;
+    font-size: 11px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .state-cell {
+    text-align: left;
+    padding: 2px 4px;
+    font-size: 10px;
+    white-space: nowrap;
+  }
+  tr.sel {
+    background: var(--bg-active, #1a2030);
+  }
+  .matrix tr:hover {
+    background: var(--bg-hover, #151c26);
+    cursor: pointer;
+  }
+  .cell-btn {
     width: 100%;
-    padding: 3px 8px;
+    padding: 2px 0;
     background: transparent;
     border: none;
-    border-bottom: 1px solid var(--border);
-    color: var(--text);
     font-family: 'Courier New', monospace;
     font-size: 11px;
     cursor: pointer;
-    text-align: left;
+    display: block;
+  }
+  .cell-btn:hover {
+    background: var(--bg-hover, #151c26);
+  }
+
+  /* Legend */
+  .legend {
+    display: flex;
+    gap: 8px;
+    padding: 3px 8px;
+    border-bottom: 1px solid var(--border);
+    font-size: 10px;
+    color: var(--text-dim);
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .leg-title {
+    color: var(--text-muted, #555);
+  }
+  .leg-hint {
+    margin-left: auto;
+    color: var(--text-muted, #555);
+    font-style: italic;
+  }
+
+  /* Pawn detail */
+  .detail-row {
+    display: flex;
+    padding: 2px 8px;
     gap: 8px;
     align-items: baseline;
   }
-  .pawn-row:hover {
-    background: var(--bg-hover);
-  }
-  .pawn-row.selected {
-    background: var(--bg-active);
-  }
-
-  .pawn-name {
-    color: var(--text);
-    letter-spacing: 0.04em;
-    width: 120px;
-    flex-shrink: 0;
-  }
-
-  .pawn-stats-inline {
-    color: var(--text-muted);
-    font-size: 10px;
-    flex: 1;
-  }
-
-  .pawn-work {
-    color: var(--text-dim);
-    margin-left: auto;
-    font-size: 11px;
-  }
-
-  .idle {
-    color: var(--text-muted);
-    font-style: italic;
-  }
-  .eff {
-    font-size: 10px;
-  }
-
-  /* Priority rows */
-  .priority-row {
+  .need-row {
     display: flex;
     align-items: center;
-    padding: 3px 8px;
-    border-bottom: 1px solid var(--border);
-    gap: 8px;
+    padding: 2px 8px;
+    gap: 6px;
   }
-  .priority-row:hover {
-    background: var(--bg-hover);
-  }
-  .priority-row.active {
-    background: var(--bg-panel);
-  }
-
-  .work-name {
+  .lbl {
     color: var(--text-dim);
-    letter-spacing: 0.04em;
-    width: 130px;
+    font-size: 11px;
+    width: 60px;
     flex-shrink: 0;
+  }
+  .bar-ascii {
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: -1px;
+  }
+  .val {
     font-size: 11px;
   }
-
-  .eff-label {
-    font-size: 10px;
-    flex: 1;
+  .val.neg {
+    color: #f44;
   }
-
-  /* Phase 5a: 5-level labor buttons */
-  .labor-btns {
+  .stats-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 4px 8px;
+  }
+  .stat-chip {
     display: flex;
     gap: 2px;
-    margin-left: auto;
-  }
-
-  .labor-btn {
-    padding: 1px 5px;
-    background: var(--bg-hover);
-    border: 1px solid var(--border);
-    font-family: 'Courier New', monospace;
     font-size: 10px;
-    cursor: pointer;
-    letter-spacing: 0.02em;
-    min-width: 28px;
+    border: 1px solid var(--border);
+    padding: 1px 4px;
   }
-  .labor-btn:hover {
-    border-color: var(--border-hi);
+  .slbl {
+    color: var(--text-muted, #555);
   }
-  .labor-btn.active-level {
-    background: var(--bg-panel);
-    border-color: var(--border-hi);
-    font-weight: bold;
+  .sval {
+    color: var(--text);
+  }
+  .empty {
+    text-align: center;
+    color: var(--text-muted, #555);
+    padding: 8px;
+    font-style: italic;
   }
 </style>

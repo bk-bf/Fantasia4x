@@ -1194,5 +1194,61 @@ export const AVAILABLE_BUILDINGS: Building[] = [
     effects: { movementCost: 1 },
     productionBonus: {},
     storageCapacity: {}
+  },
+
+  // === PRIMITIVE FURNITURE ===
+  {
+    id: 'sleeping_mat',
+    name: 'Sleeping Mat',
+    description: 'A woven mat of dried grass and fiber. Improves pawn sleep quality and fatigue recovery.',
+    emoji: '🛏',
+    buildingCost: { plant_fiber: 8, twig: 4 },
+    buildTime: 2,
+    toolTierRequired: 0,
+    populationRequired: 1,
+    researchRequired: null,
+    tier: 0,
+    rarity: 'common',
+    category: 'furniture',
+    upkeepCost: {},
+    effects: { sleepQualityBonus: 0.2, fatigueRecovery: 0.15 },
+    productionBonus: {},
+    storageCapacity: {}
+  },
+  {
+    id: 'storage_rack',
+    name: 'Storage Rack',
+    description: 'A simple rack of lashed branches for organizing supplies. Increases stockpile capacity.',
+    emoji: '🗄',
+    buildingCost: { twig: 12, plant_fiber: 6 },
+    buildTime: 3,
+    toolTierRequired: 0,
+    populationRequired: 1,
+    researchRequired: null,
+    tier: 0,
+    rarity: 'common',
+    category: 'furniture',
+    upkeepCost: {},
+    effects: { storageCapacity: 50 },
+    productionBonus: {},
+    storageCapacity: { material: 50 }
+  },
+  {
+    id: 'carved_bench',
+    name: 'Carved Bench',
+    description: 'A rough-hewn log bench. Gives pawns a place to rest and socialise, improving colony morale.',
+    emoji: '🪵',
+    buildingCost: { oak_wood: 8 },
+    buildTime: 4,
+    toolTierRequired: 0,
+    populationRequired: 1,
+    researchRequired: null,
+    tier: 0,
+    rarity: 'common',
+    category: 'furniture',
+    upkeepCost: {},
+    effects: { moodBonus: 0.1, comfortBonus: 5 },
+    productionBonus: {},
+    storageCapacity: {}
   }
 ];
