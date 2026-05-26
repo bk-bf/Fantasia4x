@@ -15,7 +15,6 @@
   let activeExplorationMissions: any[] = [];
   let completedResearch: string[] = [];
   let availableBuildings: string[] = [];
-  let buildingCounts: Record<string, number> = {};
 
   // Available exploration missions
   let availableExplorationMissions: any[] = [];
@@ -44,12 +43,11 @@
     discoveredLocations = locationService.getDiscoveredLocations();
     activeExplorationMissions = state.activeExplorationMissions || [];
     completedResearch = state.completedResearch || [];
-    buildingCounts = state.buildingCounts || {};
 
-    // Get available buildings
-    availableBuildings = Object.keys(buildingCounts).filter(
-      (buildingId) => buildingCounts[buildingId] > 0
-    );
+    // Get available buildings from buildings[]
+    availableBuildings = (state.buildings ?? [])
+      .filter((b) => b.status === 'complete')
+      .map((b) => b.type);
 
     // Generate available exploration missions
     availableExplorationMissions = generateAvailableExplorations(state);

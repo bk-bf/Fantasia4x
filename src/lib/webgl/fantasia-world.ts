@@ -4,15 +4,20 @@
  */
 
 import { GameGrid } from './game-grid.js';
-import type { WorldTile } from '$lib/game/core/types.js';
+import type { WorldTile, PlacedBuilding, DesignationType } from '$lib/game/core/types.js';
 import { SUBTERRAINS, SUBTERRAIN_FALLBACK, pickChar } from '$lib/game/core/Terrains.js';
 import type { RGB } from './tile-types.js';
 
 /**
  * Build a GameGrid from a Fantasia4x WorldTile 2D array.
  * Uses subterrain glyph + color when available, falls back to legacy type.
+ * Overlays placed buildings and designations on top of terrain tiles.
  */
-export function buildGameGrid(worldMap: WorldTile[][]): GameGrid {
+export function buildGameGrid(
+    worldMap: WorldTile[][],
+    buildings?: PlacedBuilding[],
+    designations?: Record<string, DesignationType>
+): GameGrid {
     const grid = new GameGrid();
 
     for (const row of worldMap) {
@@ -26,6 +31,57 @@ export function buildGameGrid(worldMap: WorldTile[][]): GameGrid {
                 foreground: { r: fg[0], g: fg[1], b: fg[2] },
                 background: { r: bg[0], g: bg[1], b: bg[2] },
                 position: { x: tile.x, y: tile.y }
+            });
+        }
+    }
+
+    // Phase 4d: overlay placed buildings
+    if (buildings) {
+        for (const b of buildings) {
+            if (b.status === 'complete') {
+                // Completed building: amber '#'
+                grid.setTile(b.x, b.y, {
+                    char: '#',
+                    foreground: { r: 0.87, g: 0.62, b: 0.12 },
+                    background: { r: 0.06, g: 0.04, b: 0.01 },
+                    position: { x: b.x, y: b.y }
+                });
+            } else if (b.status === 'under_construction' || b.status === 'planned') {
+                // Under construction: dim cyan '+'
+                grid.setTile(b.x, b.y, {
+                    char: '+',
+                    foreground: { r: 0.30, g: 0.70, b: 0.70 },
+                    background: { r: 0.02, g: 0.06, b: 0.06 },
+                    position: { x: b.x, y: b.y }
+                });
+            }
+        }
+    }
+
+    // Phase 4b: overlay designations
+    if (designations) {
+        const DESIGNATION_GLYPHS: Record<DesignationType, { char: string; fg: RGB }> = {
+            harvest: { char: '!', fg: { r: 0.25, g: 0.85, b: 0.25 } },
+            mine: { char: 'X', fg: { r: 0.85, g: 0.55, b: 0.15 } },
+            construct: { char: '+', fg: { r: 0.35, g: 0.75, b: 0.80 } },
+            haul: { char: 'h', fg: { r: 0.75, g: 0.75, b: 0.25 } },
+            clear: { char: 'x', fg: { r: 0.80, g: 0.25, b: 0.25 } }
+        };
+
+        for (const [key, type] of Object.entries(designations)) {
+            const [x, y] = key.split(',').map(Number);
+            const glyph = DESIGNATION_GLYPHS[type];
+            if (!glyph) continue;
+
+            // Get the existing tile to keep the background
+            const existing = grid.getTile(x, y);
+            const bg = existing?.background ?? { r: 0.02, g: 0.02, b: 0.02 };
+
+            grid.setTile(x, y, {
+                char: glyph.char,
+                foreground: glyph.fg,
+                background: bg,
+                position: { x, y }
             });
         }
     }

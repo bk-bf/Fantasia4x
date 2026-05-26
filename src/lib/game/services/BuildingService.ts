@@ -1,4 +1,4 @@
-import type { Building, GameState } from '../core/types';
+import type { Building, GameState, PlacedBuilding } from '../core/types';
 import { AVAILABLE_BUILDINGS } from '../core/Buildings';
 
 /**
@@ -37,6 +37,11 @@ export interface BuildingService {
 
 	// Building Queue Processing
 	processBuildingQueue(gameState: GameState): GameState;
+
+	// Phase 4d: Tile-placed buildings
+	placeBuilding(type: string, x: number, y: number, gameState: GameState): GameState;
+	hasCompletedBuilding(type: string, gameState: GameState): boolean;
+	countCompletedBuildings(type: string, gameState: GameState): number;
 
 	// UI Helper Methods
 	getBuildingIcon(buildingId: string): string;
@@ -134,7 +139,9 @@ export class BuildingServiceImpl implements BuildingService {
 		const building = this.getBuildingById(buildingId);
 		if (!building?.buildingState) return true;
 
-		const currentCount = gameState.buildingCounts[buildingId] || 0;
+		const currentCount = (gameState.buildings ?? []).filter(
+			(b) => b.type === buildingId && b.status === 'complete'
+		).length;
 
 		// Check if building is unique and already exists
 		if (building.buildingState.isUnique && currentCount > 0) return false;
@@ -177,7 +184,9 @@ export class BuildingServiceImpl implements BuildingService {
 		// Apply network effects from synergies
 		const building = this.getBuildingById(buildingId);
 		if (building?.synergies?.networkEffects) {
-			const count = gameState.buildingCounts[buildingId] || 0;
+			const count = (gameState.buildings ?? []).filter(
+				(b) => b.type === buildingId && b.status === 'complete'
+			).length;
 			Object.entries(building.synergies.networkEffects).forEach(([effect, bonus]) => {
 				efficiency += bonus * count;
 			});
@@ -243,31 +252,82 @@ export class BuildingServiceImpl implements BuildingService {
 	processBuildingQueue(gameState: GameState): GameState {
 		console.log('[BuildingService] Processing building queue');
 
-		// Process building queue - buildings under construction
-		if (gameState.buildingQueue.length > 0) {
-			const updatedBuildingQueue = gameState.buildingQueue
-				.map((building) => ({
-					...building,
-					turnsRemaining: building.turnsRemaining - 1
-				}))
-				.filter((building) => {
-					if (building.turnsRemaining <= 0) {
-						// Building completed - add to building counts
-						gameState.buildingCounts[building.building.id] =
-							(gameState.buildingCounts[building.building.id] || 0) + 1;
-						console.log('[BuildingService] Building completed:', building.building.id);
-						return false;
-					}
-					return true;
-				});
+		if (gameState.buildingQueue.length === 0) return gameState;
 
-			return {
-				...gameState,
-				buildingQueue: updatedBuildingQueue
-			};
+		let newBuildings = [...(gameState.buildings ?? [])];
+		const newBuildingCounts = { ...(gameState.buildingCounts ?? {}) };
+
+		const updatedBuildingQueue = gameState.buildingQueue
+			.map((entry) => ({ ...entry, turnsRemaining: entry.turnsRemaining - 1 }))
+			.filter((entry) => {
+				if (entry.turnsRemaining <= 0) {
+					// Building completed — push into buildings[] as a complete PlacedBuilding
+					const placed: PlacedBuilding = {
+						id: `${entry.building.id}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+						type: entry.building.id,
+						x: 0, // abstract queue buildings have no tile coords
+						y: 0,
+						status: 'complete',
+						progress: 1
+					};
+					newBuildings = [...newBuildings, placed];
+					// Keep buildingCounts in sync for backward compat
+					newBuildingCounts[entry.building.id] =
+						(newBuildingCounts[entry.building.id] ?? 0) + 1;
+					console.log('[BuildingService] Building completed:', entry.building.id);
+					return false;
+				}
+				return true;
+			});
+
+		return {
+			...gameState,
+			buildingQueue: updatedBuildingQueue,
+			buildings: newBuildings,
+			buildingCounts: newBuildingCounts
+		};
+	}
+
+	/**
+	 * Phase 4d: Place a building at specific tile coordinates with status 'planned'.
+	 * Pawns with a 'construct' designation on that tile will advance progress.
+	 */
+	placeBuilding(type: string, x: number, y: number, gameState: GameState): GameState {
+		const building = this.getBuildingById(type);
+		if (!building) {
+			console.warn(`[BuildingService] Unknown building type: ${type}`);
+			return gameState;
 		}
+		const placed: PlacedBuilding = {
+			id: `${type}-${x}-${y}-${Date.now()}`,
+			type,
+			x,
+			y,
+			status: 'planned',
+			progress: 0
+		};
+		return {
+			...gameState,
+			buildings: [...(gameState.buildings ?? []), placed]
+		};
+	}
 
-		return gameState;
+	/**
+	 * Helper: does any complete building of this type exist?
+	 */
+	hasCompletedBuilding(type: string, gameState: GameState): boolean {
+		return (gameState.buildings ?? []).some(
+			(b) => b.type === type && b.status === 'complete'
+		);
+	}
+
+	/**
+	 * Helper: count complete buildings of this type.
+	 */
+	countCompletedBuildings(type: string, gameState: GameState): number {
+		return (gameState.buildings ?? []).filter(
+			(b) => b.type === type && b.status === 'complete'
+		).length;
 	}
 
 	getBuildingIcon(buildingId: string): string {
@@ -310,7 +370,23 @@ export class BuildingServiceImpl implements BuildingService {
 		}
 	}
 
-	hasBuildings(buildingCounts: Record<string, number>, category: string): boolean {
+	hasBuildings(buildingCountsOrGameState: Record<string, number> | GameState, category: string): boolean {
+		// Support legacy buildingCounts map or full GameState
+		const buildingCounts: Record<string, number> =
+			'buildings' in buildingCountsOrGameState
+				? {}
+				: (buildingCountsOrGameState as Record<string, number>);
+
+		if ('buildings' in buildingCountsOrGameState) {
+			// New path: check buildings array
+			const gs = buildingCountsOrGameState as GameState;
+			return (gs.buildings ?? []).some((b) => {
+				if (b.status !== 'complete') return false;
+				const building = this.getBuildingById(b.type);
+				return building?.category === category;
+			});
+		}
+
 		return Object.entries(buildingCounts).some(([buildingId, count]) => {
 			if (count > 0) {
 				const building = this.getBuildingById(buildingId);

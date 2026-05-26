@@ -1,10 +1,32 @@
+// ===== PHASE 4 NEW TYPES =====
+
+export type DesignationType = 'harvest' | 'construct' | 'mine' | 'haul' | 'clear';
+
+export interface PlacedBuilding {
+	id: string;           // unique instance id
+	type: string;         // building definition id (matches Building.id)
+	x: number;
+	y: number;
+	status: 'planned' | 'under_construction' | 'complete';
+	progress: number;     // 0–1
+}
+
+// ===== GAME STATE =====
+
 export interface GameState {
 	turn: number;
 	race: Race;
 	item: Item[];
 	worldMap: WorldTile[][];
 	discoveredLocations: Location[];
+	/** @deprecated Use buildings[] instead */
 	buildingCounts: Record<string, number>;
+	/** Phase 4: physically placed buildings on the map */
+	buildings: PlacedBuilding[];
+	/** Phase 4: colony-level stockpile (harvested resources) */
+	stockpile: Record<string, number>;
+	/** Phase 4: designated tile actions keyed as "x,y" */
+	designations: Record<string, DesignationType>;
 	buildingQueue: BuildingInProgress[];
 	maxPopulation: number;
 	availableResearch: string[];
@@ -115,6 +137,20 @@ export interface Pawn {
 	pathIndex?: number;                          // next step in path (index into path[])
 	isMoving?: boolean;                          // currently following a path
 	hasReachedDestination?: boolean;            // just finished a path
+
+	// Phase 4: State machine primary state
+	currentState?: string;                       // 'Idle' | 'Hungry' | 'Tired' | 'MovingToNeed' | 'MovingToResource' | 'Harvesting' | 'Eating' | 'Sleeping'
+	// Job payload for active state machine job
+	activeJob?: {
+		type: 'harvest' | 'need';
+		targetX: number;
+		targetY: number;
+		resourceId?: string;
+		progress: number;
+		timeRequired: number;
+		targetState?: string; // for MovingToNeed, which state to enter on arrival
+		turnsInState?: number; // for Eating/Sleeping duration tracking
+	};
 }
 
 export interface PawnInventory {

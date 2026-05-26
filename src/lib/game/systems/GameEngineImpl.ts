@@ -1,4 +1,5 @@
 import type { GameEngine, GameEngineConfig, TurnProcessingResult, SystemInteractionResult } from './GameEngine';
+import type { BuildingEffectResult } from './ModifierSystem';
 import type { GameState, PawnNeeds } from '../core/types';
 import { GameStateManager } from '../core/GameState';
 import { gameState } from '$lib/stores/gameState';
@@ -13,7 +14,7 @@ import { WORK_CATEGORIES } from '../core/Work';
 import { ITEMS_DATABASE } from '../core/Items';
 import { AVAILABLE_BUILDINGS } from '../core/Buildings';
 
-import type { BuildingEffectResult } from './ModifierSystem';
+import { pawnStateMachineService } from './PawnStateMachine';
 import type { WorkCategory } from '../core/types';
 import type { Pawn } from '../core/types';
 
@@ -349,6 +350,8 @@ export class GameEngineImpl implements GameEngine {
 
 		// Phase 3: advance pawn movement along queued paths
 		this.gameState = pawnService.processMovement(this.gameState!);
+		// Phase 4a: run state machine (after movement so hasReachedDestination is fresh)
+		this.gameState = pawnStateMachineService.tick(this.gameState!);
 		// COORDINATION: Delegate all pawn processing to PawnService
 		this.gameState = pawnService.clearTemporaryPawnStates(this.gameState!);
 		this.gameState = workService.syncPawnWorkingStates(this.gameState!);

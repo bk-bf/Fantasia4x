@@ -1,4 +1,4 @@
-import type { GameState, ResearchProject, Building, Item } from './types';
+import type { GameState, ResearchProject, Building, Item, PlacedBuilding } from './types';
 import { itemService } from '../services/ItemService';
 
 export class GameStateManager {
@@ -93,5 +93,59 @@ export class GameStateManager {
 			startedAt: this.state.turn
 		});
 		return true;
+	}
+
+	// ===== PHASE 4: STOCKPILE =====
+
+	addToStockpile(id: string, amount: number): void {
+		const current = this.state.stockpile?.[id] ?? 0;
+		this.state.stockpile = { ...(this.state.stockpile ?? {}), [id]: current + amount };
+	}
+
+	getStockpileAmount(id: string): number {
+		return this.state.stockpile?.[id] ?? 0;
+	}
+
+	// ===== PHASE 4: WORLD RESOURCE DEPLETION =====
+
+	depleteWorldResource(x: number, y: number, id: string, amount: number): boolean {
+		const map = this.state.worldMap;
+		if (!map[y]?.[x]) return false;
+		const tile = map[y][x];
+		const current = tile.resources?.[id] ?? 0;
+		if (current <= 0) return false;
+		const newAmount = Math.max(0, current - amount);
+		const newTile = { ...tile, resources: { ...tile.resources, [id]: newAmount } };
+		const newMap = map.map((row, ry) =>
+			ry === y ? row.map((col, rx) => (rx === x ? newTile : col)) : row
+		);
+		this.state.worldMap = newMap;
+		return true;
+	}
+
+	// ===== PHASE 4: PLACED BUILDINGS =====
+
+	addBuilding(building: PlacedBuilding): void {
+		this.state.buildings = [...(this.state.buildings ?? []), building];
+	}
+
+	updateBuilding(id: string, updates: Partial<PlacedBuilding>): void {
+		this.state.buildings = (this.state.buildings ?? []).map(b =>
+			b.id === id ? { ...b, ...updates } : b
+		);
+	}
+
+	removeBuilding(id: string): void {
+		this.state.buildings = (this.state.buildings ?? []).filter(b => b.id !== id);
+	}
+
+	/** Count complete buildings of a given type (replaces legacy buildingCounts[type]) */
+	getCompleteBuildingCount(type: string): number {
+		return (this.state.buildings ?? []).filter(b => b.type === type && b.status === 'complete').length;
+	}
+
+	/** Update a pawn by id using an updater function */
+	updatePawn(pawnId: string, updater: (pawn: NonNullable<GameState['pawns'][number]>) => GameState['pawns'][number]): void {
+		this.state.pawns = this.state.pawns.map(p => p.id === pawnId ? updater(p) : p);
 	}
 }

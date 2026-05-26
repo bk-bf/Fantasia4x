@@ -5,12 +5,12 @@
   import { buildingService } from '$lib/game/services/BuildingService';
   import { onDestroy } from 'svelte';
   import CurrentTask from '../UI/CurrentTask.svelte';
-  import type { BuildingInProgress } from '$lib/game/core/types';
+  import type { BuildingInProgress, PlacedBuilding } from '$lib/game/core/types';
   import type { Building } from '$lib/game/core/types';
 
   let itemsMap: Record<string, number> = {};
   let race: any = null;
-  let buildingCounts: Record<string, number> = {};
+  let buildings: PlacedBuilding[] = [];
   let buildingQueue: BuildingInProgress[] = [];
   let maxPopulation = 0;
   let currentTurnValue = 0;
@@ -62,7 +62,7 @@
   };
 
   $: getBuildingCount = (buildingId: string): number => {
-    return buildingCounts[buildingId] || 0;
+    return buildings.filter((b) => b.type === buildingId && b.status === 'complete').length;
   };
 
   // Enhanced affordability check using new interface
@@ -90,7 +90,10 @@
           return { ...itemObj, amount };
         })
         .filter((item): item is NonNullable<typeof item> => item !== null),
-      buildingCounts,
+      buildingCounts: {},
+      buildings,
+      stockpile: {},
+      designations: {},
       turn: currentTurnValue,
       race: race,
       buildingQueue: buildingQueue,
@@ -135,7 +138,7 @@
   });
 
   const unsubscribeGame = gameState.subscribe((state) => {
-    buildingCounts = state.buildingCounts || {};
+    buildings = state.buildings || [];
     buildingQueue = state.buildingQueue || [];
     maxPopulation = state.maxPopulation;
     completedResearch = state.completedResearch || [];
@@ -308,8 +311,14 @@
 
   <!-- Status -->
   <div class="section-hdr sub">| STATUS</div>
-  <div class="row"><span class="lbl">POPULATION</span><span class="val">{race?.population || 0} / {maxPopulation}</span></div>
-  <div class="row"><span class="lbl">TOOL LEVEL</span><span class="val">{currentToolLevel}</span></div>
+  <div class="row">
+    <span class="lbl">POPULATION</span><span class="val"
+      >{race?.population || 0} / {maxPopulation}</span
+    >
+  </div>
+  <div class="row">
+    <span class="lbl">TOOL LEVEL</span><span class="val">{currentToolLevel}</span>
+  </div>
   {#if race?.population >= maxPopulation}
     <div class="row"><span class="warn">AT CAPACITY — build housing to expand</span></div>
   {/if}
@@ -317,12 +326,26 @@
   <!-- Construction Queue -->
   <div class="section-hdr sub">| ACTIVE CONSTRUCTION</div>
   {#if firstBuildingInProgress}
-    <div class="row"><span class="lbl">PROJECT</span><span class="val">{firstBuildingInProgress.building.name.toUpperCase()}</span></div>
-    <div class="row"><span class="lbl">CATEGORY</span><span class="val">{firstBuildingInProgress.building.category}</span></div>
-    {@const prog = Math.round(((firstBuildingInProgress.building.buildTime - firstBuildingInProgress.turnsRemaining) / firstBuildingInProgress.building.buildTime) * 100)}
+    <div class="row">
+      <span class="lbl">PROJECT</span><span class="val"
+        >{firstBuildingInProgress.building.name.toUpperCase()}</span
+      >
+    </div>
+    <div class="row">
+      <span class="lbl">CATEGORY</span><span class="val"
+        >{firstBuildingInProgress.building.category}</span
+      >
+    </div>
+    {@const prog = Math.round(
+      ((firstBuildingInProgress.building.buildTime - firstBuildingInProgress.turnsRemaining) /
+        firstBuildingInProgress.building.buildTime) *
+        100
+    )}
     <div class="need-row">
       <span class="lbl">PROGRESS</span>
-      <div class="bar"><div class="fill" style="width: {prog}%; background: var(--accent-hi)"></div></div>
+      <div class="bar">
+        <div class="fill" style="width: {prog}%; background: var(--accent-hi)"></div>
+      </div>
       <span class="val">{prog}%</span>
       <span class="desc">{firstBuildingInProgress.turnsRemaining} turns left</span>
     </div>
@@ -345,7 +368,9 @@
         {/if}
       </div>
       <div class="desc-row">{building.description}</div>
-      <div class="row"><span class="lbl">BUILD TIME</span><span class="val">{building.buildTime} turns</span></div>
+      <div class="row">
+        <span class="lbl">BUILD TIME</span><span class="val">{building.buildTime} turns</span>
+      </div>
 
       {#each getBuildingRequirements(building) as req}
         <div class="row"><span class="lbl">REQUIRE</span><span class="val dim">{req}</span></div>
@@ -371,9 +396,14 @@
           <span class="lbl">EFFECT</span>
           <span class="val pos">
             {#if effect === 'populationCapacity'}+{value} pop cap
-            {:else if effect.includes('Production')}+{value} {formatEffectName(effect.replace('Production', ''))}/turn
-            {:else if effect.includes('Multiplier')}+{Math.round(((value as number) - 1) * 100)}% {formatEffectName(effect.replace('Multiplier', ''))}
-            {:else if effect.includes('Bonus')}+{Math.round(((value as number) - 1) * 100)}% {formatEffectName(effect.replace('Bonus', ''))} bonus
+            {:else if effect.includes('Production')}+{value}
+              {formatEffectName(effect.replace('Production', ''))}/turn
+            {:else if effect.includes('Multiplier')}+{Math.round(((value as number) - 1) * 100)}% {formatEffectName(
+                effect.replace('Multiplier', '')
+              )}
+            {:else if effect.includes('Bonus')}+{Math.round(((value as number) - 1) * 100)}% {formatEffectName(
+                effect.replace('Bonus', '')
+              )} bonus
             {:else}+{value} {formatEffectName(effect)}
             {/if}
           </span>
@@ -382,7 +412,9 @@
 
       {#if building.storageCapacity && Object.keys(building.storageCapacity).length > 0}
         {#each Object.entries(building.storageCapacity) as [cat, cap]}
-          <div class="row"><span class="lbl">STORAGE</span><span class="val">{cat}: {cap}</span></div>
+          <div class="row">
+            <span class="lbl">STORAGE</span><span class="val">{cat}: {cap}</span>
+          </div>
         {/each}
       {/if}
 
@@ -446,7 +478,10 @@
     cursor: pointer;
     letter-spacing: 0.04em;
   }
-  .hdr-btn:hover { color: var(--text); border-color: var(--border-hi); }
+  .hdr-btn:hover {
+    color: var(--text);
+    border-color: var(--border-hi);
+  }
 
   .section-hdr {
     padding: 4px 8px;
@@ -459,7 +494,10 @@
     margin-top: 1px;
     flex-shrink: 0;
   }
-  .section-hdr.sub { background: var(--bg); color: var(--text-dim); }
+  .section-hdr.sub {
+    background: var(--bg);
+    color: var(--text-dim);
+  }
 
   .filter-bar {
     display: flex;
@@ -481,8 +519,15 @@
     cursor: pointer;
     letter-spacing: 0.04em;
   }
-  .filter-btn.active { background: var(--tab-active); color: #fff; border-color: var(--tab-active); }
-  .filter-btn:hover:not(.active) { color: var(--text); border-color: var(--border-hi); }
+  .filter-btn.active {
+    background: var(--tab-active);
+    color: #fff;
+    border-color: var(--tab-active);
+  }
+  .filter-btn:hover:not(.active) {
+    color: var(--text);
+    border-color: var(--border-hi);
+  }
 
   .row {
     display: flex;
@@ -490,8 +535,12 @@
     align-items: baseline;
     gap: 6px;
   }
-  .row:hover { background: var(--bg-hover); }
-  .row.insufficient { background: rgba(200, 48, 24, 0.05); }
+  .row:hover {
+    background: var(--bg-hover);
+  }
+  .row.insufficient {
+    background: rgba(200, 48, 24, 0.05);
+  }
 
   .need-row {
     display: flex;
@@ -515,18 +564,48 @@
     margin-left: auto;
     text-align: right;
   }
-  .val.pos { color: var(--pos); }
-  .val.neg { color: var(--neg); }
-  .val.dim { color: var(--text-muted); }
-  .val.warn { color: var(--accent); }
+  .val.pos {
+    color: var(--pos);
+  }
+  .val.neg {
+    color: var(--neg);
+  }
+  .val.dim {
+    color: var(--text-muted);
+  }
+  .val.warn {
+    color: var(--accent);
+  }
 
-  .desc { color: var(--text-muted); font-size: 11px; font-style: italic; flex: 1; }
-  .bar { flex: 1; height: 4px; background: var(--bg-active); }
-  .fill { height: 100%; }
-  .muted { color: var(--text-muted); font-style: italic; font-size: 11px; padding: 4px 8px; }
-  .warn { color: var(--accent); }
-  .pos { color: var(--pos); }
-  .neg { color: var(--neg); }
+  .desc {
+    color: var(--text-muted);
+    font-size: 11px;
+    font-style: italic;
+    flex: 1;
+  }
+  .bar {
+    flex: 1;
+    height: 4px;
+    background: var(--bg-active);
+  }
+  .fill {
+    height: 100%;
+  }
+  .muted {
+    color: var(--text-muted);
+    font-style: italic;
+    font-size: 11px;
+    padding: 4px 8px;
+  }
+  .warn {
+    color: var(--accent);
+  }
+  .pos {
+    color: var(--pos);
+  }
+  .neg {
+    color: var(--neg);
+  }
 
   /* Building items */
   .building-item {
@@ -582,7 +661,17 @@
     cursor: pointer;
     letter-spacing: 0.04em;
   }
-  .act-btn.active { background: var(--tab-active); color: #fff; border-color: var(--tab-active); }
-  .act-btn:hover:not(:disabled) { color: var(--accent-hi); background: var(--bg-active); }
-  .act-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .act-btn.active {
+    background: var(--tab-active);
+    color: #fff;
+    border-color: var(--tab-active);
+  }
+  .act-btn:hover:not(:disabled) {
+    color: var(--accent-hi);
+    background: var(--bg-active);
+  }
+  .act-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
 </style>

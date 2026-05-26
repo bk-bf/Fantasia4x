@@ -14,7 +14,6 @@
   let discoveredLore: any[] = [];
   let itemMap: Record<string, number> = {};
   let inventory: Record<string, number> = {};
-  let buildingCounts: Record<string, number> = {};
 
   // Item fetching methods
   $: getItemAmount = (itemId: string): number => {
@@ -40,7 +39,6 @@
     completedResearch = state.completedResearch || [];
     currentResearch = state.currentResearch || null;
     discoveredLore = state.discoveredLore || [];
-    buildingCounts = state.buildingCounts || {};
 
     if (race) {
       // ✅ Use service method instead
@@ -116,7 +114,6 @@
   }
 </script>
 
-
 <div class="research-screen">
   <div class="screen-hdr">| RESEARCH</div>
 
@@ -128,7 +125,9 @@
     {#if item}
       <div class="row">
         <span class="lbl">{(item?.name || materialId).toUpperCase()}</span>
-        <span class="val" style="color: {amount > 0 ? 'var(--pos)' : 'var(--text-muted)'}">{amount}</span>
+        <span class="val" style="color: {amount > 0 ? 'var(--pos)' : 'var(--text-muted)'}"
+          >{amount}</span
+        >
       </div>
     {/if}
   {/each}
@@ -136,14 +135,24 @@
   <!-- Current Research -->
   <div class="section-hdr sub">| ACTIVE RESEARCH</div>
   {#if currentResearch}
-    <div class="row"><span class="lbl">PROJECT</span><span class="val">{currentResearch.name.toUpperCase()}</span></div>
-    <div class="row"><span class="lbl">CATEGORY</span><span class="val">{currentResearch.category}</span></div>
-    {@const prog = Math.round(((currentResearch.currentProgress || 0) / currentResearch.researchTime) * 100)}
+    <div class="row">
+      <span class="lbl">PROJECT</span><span class="val">{currentResearch.name.toUpperCase()}</span>
+    </div>
+    <div class="row">
+      <span class="lbl">CATEGORY</span><span class="val">{currentResearch.category}</span>
+    </div>
+    {@const prog = Math.round(
+      ((currentResearch.currentProgress || 0) / currentResearch.researchTime) * 100
+    )}
     <div class="need-row">
       <span class="lbl">PROGRESS</span>
-      <div class="bar"><div class="fill" style="width: {prog}%; background: var(--accent-hi)"></div></div>
+      <div class="bar">
+        <div class="fill" style="width: {prog}%; background: var(--accent-hi)"></div>
+      </div>
       <span class="val">{prog}%</span>
-      <span class="desc">{currentResearch.researchTime - (currentResearch.currentProgress || 0)} turns left</span>
+      <span class="desc"
+        >{currentResearch.researchTime - (currentResearch.currentProgress || 0)} turns left</span
+      >
     </div>
     <div class="btn-row">
       <button class="act-btn" on:click={cancelCurrentResearch}>CANCEL</button>
@@ -159,7 +168,9 @@
       <div class="lore-name">{lore.name.toUpperCase()}</div>
       <div class="desc-row">{lore.description}</div>
       {#if lore.researchUnlocks?.length > 0}
-        <div class="row"><span class="lbl">UNLOCKS</span><span class="val">{lore.researchUnlocks.join(', ')}</span></div>
+        <div class="row">
+          <span class="lbl">UNLOCKS</span><span class="val">{lore.researchUnlocks.join(', ')}</span>
+        </div>
       {/if}
     {/each}
   {/if}
@@ -173,7 +184,9 @@
         <span class="tier" style="color: {getTierColor(research.tier)}">T{research.tier}</span>
         <span class="cat">{research.category}</span>
       </div>
-      <div class="row"><span class="lbl">TIME</span><span class="val">{research.researchTime} turns</span></div>
+      <div class="row">
+        <span class="lbl">TIME</span><span class="val">{research.researchTime} turns</span>
+      </div>
       <div class="desc-row">{research.description}</div>
 
       {#if research.scrollRequirement}
@@ -203,24 +216,43 @@
       {/if}
 
       {#if research.buildingRequired}
-        <div class="row"><span class="lbl">BUILDING</span><span class="val">{getBuildingName(research.buildingRequired)}</span></div>
+        <div class="row">
+          <span class="lbl">BUILDING</span><span class="val"
+            >{getBuildingName(research.buildingRequired)}</span
+          >
+        </div>
       {/if}
 
       {#if research.prerequisites.length > 0}
-        <div class="row"><span class="lbl">PREREQ</span><span class="val">{research.prerequisites.join(', ')}</span></div>
+        <div class="row">
+          <span class="lbl">PREREQ</span><span class="val">{research.prerequisites.join(', ')}</span
+          >
+        </div>
       {/if}
 
       <!-- Unlocks -->
       {#if research.unlocks}
         {#if research.unlocks.buildings?.length > 0}
-          <div class="row"><span class="lbl">UNLOCKS</span><span class="val pos">{research.unlocks.buildings.map((id: string) => getBuildingName(id)).join(', ')}</span></div>
+          <div class="row">
+            <span class="lbl">UNLOCKS</span><span class="val pos"
+              >{research.unlocks.buildings
+                .map((id: string) => getBuildingName(id))
+                .join(', ')}</span
+            >
+          </div>
         {/if}
         {#if research.unlocks.items?.length > 0}
-          <div class="row"><span class="lbl">ITEMS</span><span class="val pos">{research.unlocks.items.join(', ')}</span></div>
+          <div class="row">
+            <span class="lbl">ITEMS</span><span class="val pos"
+              >{research.unlocks.items.join(', ')}</span
+            >
+          </div>
         {/if}
         {#if research.unlocks.effects}
           {#each Object.entries(research.unlocks.effects) as [effect, value]}
-            <div class="row"><span class="lbl">EFFECT</span><span class="val pos">{effect}: +{value}</span></div>
+            <div class="row">
+              <span class="lbl">EFFECT</span><span class="val pos">{effect}: +{value}</span>
+            </div>
           {/each}
         {/if}
       {/if}
@@ -290,8 +322,12 @@
     align-items: baseline;
     gap: 6px;
   }
-  .row:hover { background: var(--bg-hover); }
-  .row.insufficient { background: rgba(200, 48, 24, 0.05); }
+  .row:hover {
+    background: var(--bg-hover);
+  }
+  .row.insufficient {
+    background: rgba(200, 48, 24, 0.05);
+  }
 
   .need-row {
     display: flex;
@@ -315,8 +351,12 @@
     margin-left: auto;
     text-align: right;
   }
-  .val.pos { color: var(--pos); }
-  .val.neg { color: var(--neg); }
+  .val.pos {
+    color: var(--pos);
+  }
+  .val.neg {
+    color: var(--neg);
+  }
 
   .desc {
     color: var(--text-muted);
@@ -325,12 +365,27 @@
     flex: 1;
   }
 
-  .bar { flex: 1; height: 4px; background: var(--bg-active); }
-  .fill { height: 100%; }
+  .bar {
+    flex: 1;
+    height: 4px;
+    background: var(--bg-active);
+  }
+  .fill {
+    height: 100%;
+  }
 
-  .muted { color: var(--text-muted); font-style: italic; font-size: 11px; padding: 4px 8px; }
-  .pos { color: var(--pos); }
-  .neg { color: var(--neg); }
+  .muted {
+    color: var(--text-muted);
+    font-style: italic;
+    font-size: 11px;
+    padding: 4px 8px;
+  }
+  .pos {
+    color: var(--pos);
+  }
+  .neg {
+    color: var(--neg);
+  }
 
   /* Lore */
   .lore-name {
@@ -401,6 +456,12 @@
     color: #fff;
     border-color: var(--tab-active);
   }
-  .act-btn:hover:not(:disabled) { color: var(--accent-hi); background: var(--bg-active); }
-  .act-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .act-btn:hover:not(:disabled) {
+    color: var(--accent-hi);
+    background: var(--bg-active);
+  }
+  .act-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
 </style>

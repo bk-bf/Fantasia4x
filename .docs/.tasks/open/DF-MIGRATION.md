@@ -405,7 +405,7 @@ gl_FragColor = vec4(tinted, sprite.a) * (1.0 - step(sprite.a, 0.01))
 
 ### Phase 3 — Pawns on the Map
 
-**Status:** `🚧 next`
+**Status:** `✅ complete`
 
 **Scope:** Pawns get physical positions and render on the tile grid. A* pathfinding added.
 
@@ -413,15 +413,15 @@ gl_FragColor = vec4(tinted, sprite.a) * (1.0 - step(sprite.a, 0.01))
 
 **Work items:**
 
-- [ ] Add `position: { x: number; y: number }` to the `Pawn` interface in `types.ts`. Spawn position assigned by `PawnService` using expanding-square search (port of `pawn_manager.gd::find_nearest_walkable_tile()`) from the settlement origin.
-- [ ] Add `path: {x:number, y:number}[]`, `pathIndex: number`, `isMoving: boolean`, `hasReachedDestination: boolean` to `Pawn`. (`TILE_REACH_THRESHOLD = 2.0` from `pawn.gd`.)
-- [ ] `GameCanvas.svelte` overlays pawn glyphs (`@`) in race-accent color with selection highlight.
-- [ ] **Set up Rust spatial crate** (prerequisite for PathfinderService):
-  - [ ] Create `spatial-core/` at project root — `wasm-pack new spatial-core` (or `cargo init` + add `wasm-bindgen` dependency).
-  - [ ] Add `wasm-pack build --target web` to the Vite build pipeline (via a `vite-plugin-wasm-pack` or a pre-build script in `package.json`).
-  - [ ] Gitignore `spatial-core/pkg/` — it is generated output.
-  - [ ] Verify the generated `spatial-core/pkg/spatial_core.d.ts` is importable from TypeScript before proceeding.
-- [ ] **Define `PathfinderService` TypeScript interface** at `src/lib/game/services/interfaces/PathfinderService.ts`:
+- [x] Add `position: { x: number; y: number }` to the `Pawn` interface in `types.ts`. Spawn position assigned by `PawnService` using expanding-square search (port of `pawn_manager.gd::find_nearest_walkable_tile()`) from the settlement origin.
+- [x] Add `path: {x:number, y:number}[]`, `pathIndex: number`, `isMoving: boolean`, `hasReachedDestination: boolean` to `Pawn`. (`TILE_REACH_THRESHOLD = 2.0` from `pawn.gd`.)
+- [x] `GameCanvas.svelte` overlays pawn glyphs (`@`) in race-accent color with selection highlight.
+- [x] **Set up Rust spatial crate** (prerequisite for PathfinderService):
+  - [x] Create `spatial-core/` at project root — `wasm-pack new spatial-core` (or `cargo init` + add `wasm-bindgen` dependency).
+  - [x] Add `wasm-pack build --target web` to the Vite build pipeline (via a `vite-plugin-wasm-pack` or a pre-build script in `package.json`).
+  - [x] Gitignore `spatial-core/pkg/` — it is generated output.
+  - [x] Verify the generated `spatial-core/pkg/spatial_core.d.ts` is importable from TypeScript before proceeding.
+- [x] **Define `PathfinderService` TypeScript interface** at `src/lib/game/services/interfaces/PathfinderService.ts`:
   ```typescript
   export interface PathfinderService {
     findPath(walkable: Uint8Array, costs: Float32Array,
@@ -429,17 +429,17 @@ gl_FragColor = vec4(tinted, sprite.a) * (1.0 - step(sprite.a, 0.01))
              sx: number, sy: number, ex: number, ey: number): {x:number, y:number}[];
   }
   ```
-- [ ] **Implement A* in Rust** at `spatial-core/src/pathfinder.rs`, exposed via `#[wasm_bindgen]`:
-  - [ ] **Distance heuristic**: octile — `1.0*(dx+dy) + (1.414 - 2.0)*min(dx,dy)`. Not Manhattan.
-  - [ ] **Open set**: `BinaryHeap` (Rust std) keyed on reverse `fCost` (min-heap via `Reverse<OrderedFloat>`).
-  - [ ] **Terrain cost**: include `costs[y*width+x]` in `gCost`. Correct with a real priority queue.
-  - [ ] **Neighbour logic**: 8-direction with diagonal wall-cut prevention — diagonal allowed only if at least one orthogonal neighbour is walkable.
-  - [ ] **Search limit**: `clamp((width * height / 10 * 1500 / 10000).max(500).min(10000), 500, 10000)`.
-  - [ ] Input: flat `&[u8]` walkable grid + `&[f32]` cost grid (zero-copy JS heap views). Output: `Vec<u32>` of interleaved x,y pairs, decoded to `{x,y}[]` in the TS binding wrapper. Returns empty vec if no path or limit hit.
-- [ ] **Create `WasmPathfinderService`** at `src/lib/game/services/WasmPathfinderService.ts` — implements `PathfinderService` interface, imports from `spatial-core/pkg/spatial_core`, manages the two sync'd typed arrays (`walkableGrid: Uint8Array`, `costGrid: Float32Array`) and rebuilds them when `GameState.worldMap` changes.
-- [ ] In `GameEngineImpl.processGameTurn()`, add pawn movement step before work processing: each pawn with non-empty `path` advances `Math.floor(speedStat / 20)` tiles (minimum 1) per turn, updating `position` via `GameStateManager.updatePawn()`.
-- [ ] `PawnService` gets `assignPath(pawnId, path)` and `teleportPawn(pawnId, pos)` — both through `GameStateManager.updatePawn()`.
-- [ ] Click on map tile → if pawn selected → call `pathfinderService.findPath()` → `PawnService.assignPath()`.
+- [x] **Implement A* in Rust** at `spatial-core/src/pathfinder.rs`, exposed via `#[wasm_bindgen]`:
+  - [x] **Distance heuristic**: octile — `1.0*(dx+dy) + (1.414 - 2.0)*min(dx,dy)`. Not Manhattan.
+  - [x] **Open set**: `BinaryHeap` (Rust std) keyed on reverse `fCost` (min-heap via `Reverse<OrderedFloat>`).
+  - [x] **Terrain cost**: include `costs[y*width+x]` in `gCost`. Correct with a real priority queue.
+  - [x] **Neighbour logic**: 8-direction with diagonal wall-cut prevention — diagonal allowed only if at least one orthogonal neighbour is walkable.
+  - [x] **Search limit**: `clamp((width * height / 10 * 1500 / 10000).max(500).min(10000), 500, 10000)`.
+  - [x] Input: flat `&[u8]` walkable grid + `&[f32]` cost grid (zero-copy JS heap views). Output: `Vec<u32>` of interleaved x,y pairs, decoded to `{x,y}[]` in the TS binding wrapper. Returns empty vec if no path or limit hit.
+- [x] **Create `WasmPathfinderService`** at `src/lib/game/services/WasmPathfinderService.ts` — implements `PathfinderService` interface, imports from `spatial-core/pkg/spatial_core`, manages the two sync'd typed arrays (`walkableGrid: Uint8Array`, `costGrid: Float32Array`) and rebuilds them when `GameState.worldMap` changes.
+- [x] In `GameEngineImpl.processGameTurn()`, add pawn movement step before work processing: each pawn with non-empty `path` advances `Math.floor(speedStat / 20)` tiles (minimum 1) per turn, updating `position` via `GameStateManager.updatePawn()`.
+- [x] `PawnService` gets `assignPath(pawnId, path)` and `teleportPawn(pawnId, pos)` — both through `GameStateManager.updatePawn()`.
+- [x] Click on map tile → if pawn selected → call `pathfinderService.findPath()` → `PawnService.assignPath()`.
 
 **Sources from Celestia used:** `pathfinder.gd` (A* algorithm — ported to Rust, not TypeScript), `grid.gd` (`get_neighbors()`, diagonal wall-cut logic), `pawn.gd` (`movement_path`, `current_path_index`, `is_moving` fields).
 
@@ -451,7 +451,7 @@ gl_FragColor = vec4(tinted, sprite.a) * (1.0 - step(sprite.a, 0.01))
 
 ### Phase 4 — Map-Grounded Work and Buildings
 
-**Status:** `❌ not started`
+**Status:** `✅ complete`
 
 **Scope:** Resources become tile-local. Buildings get placed on the map. Work actions target specific tiles. Pawn state machine formalised.
 
@@ -461,34 +461,34 @@ gl_FragColor = vec4(tinted, sprite.a) * (1.0 - step(sprite.a, 0.01))
 
 **4a. Pawn state machine**
 
-- [ ] Create `src/lib/game/systems/PawnStateMachine.ts` — port `pawn_state_machine.gd`. Each pawn holds a `currentState: string` and a `states: Map<string, {enter,update,exit}>` handler map. `changeState(name)` calls `exit()` on current then `enter()` on new. `tick()` calls `states[currentState].update()`.
-- [ ] Define state name constants (use exact string keys from Celestia — all inter-state transitions reference these): `"Idle"`, `"Hungry"`, `"Tired"`, `"MovingToNeed"`, `"MovingToResource"`, `"Harvesting"`, `"Eating"`, `"Sleeping"`.
-- [ ] Implement state handlers. Port transition logic from Celestia `states/*.gd`:
+- [x] Create `src/lib/game/systems/PawnStateMachine.ts` — port `pawn_state_machine.gd`. Each pawn holds a `currentState: string` and a `states: Map<string, {enter,update,exit}>` handler map. `changeState(name)` calls `exit()` on current then `enter()` on new. `tick()` calls `states[currentState].update()`.
+- [x] Define state name constants (use exact string keys from Celestia — all inter-state transitions reference these): `"Idle"`, `"Hungry"`, `"Tired"`, `"MovingToNeed"`, `"MovingToResource"`, `"Harvesting"`, `"Eating"`, `"Sleeping"`.
+- [x] Implement state handlers. Port transition logic from Celestia `states/*.gd`:
   - **Idle** — if `pawn.currentJob != null && job.type === "harvesting"` → `"MovingToResource"`. If needs are critical (hunger < 15 or fatigue < 15) → `"Hungry"` / `"Tired"`.
   - **Hungry** — cooldown `3` turns. Finds nearest food source tile; creates `EatingJob` with `eatUntilFull=true`; → `"MovingToNeed"`. If no food → stay, retry after cooldown.
-  - **Tired** — cooldown `3` turns. Finds nearest bed/shelter building tile (⚠️ Celestia has `Vector2i(15,15)` hardcoded as placeholder — needs real implementation scanning for sleep buildings); → `"MovingToNeed"`.
+  - **Tired** — cooldown `3` turns. Finds nearest bed/shelter building tile (⚠️ Celestia has `Vector2i(15,15)` hardcoded as placeholdPer — needs real implementation scanning for sleep buildings); → `"MovingToNeed"`.
   - **MovingToNeed** — sets `targetState` from `job.type` (`"eating"` → `"Eating"`, `"sleeping"` → `"Sleeping"`). Adjacency check before pathfinding: `dx<=1 && dy<=1 && dx+dy>0`. Picks best adjacent walkable tile (shortest path among all 8 neighbours). On no path → `"Idle"`.
   - **MovingToResource** — same adjacency pattern as MovingToNeed. On arrival (`hasReachedDestination && distance < 1.5`) → `"Harvesting"`. On no path → cancel job → `"Idle"`.
   - **Harvesting** — `progress += (1 / job.timeRequired) * pawn.harvestingSpeed * getWorkSpeedModifier()`. On complete: add to stockpile, call `worldMap[y][x].harvestResource(id, amount)` → `"Idle"`.
   - **Eating** — `eatingDuration = 2.0`; pauses hunger decay on enter (`needs.hunger.paused = true`); starts satisfying hunger at 50% progress at `nutritionPerSecond = 10.0`; exits when `hunger >= 95` or time up → `"Idle"` (or `"Hungry"` if still critical).
   - **Sleeping** — `sleepingDuration = 5.0` (minimum); `restPerSecond = 8.0`; wakes at `rest >= 95`; resumes rest decay on exit.
-- [ ] Add `currentState: string` to `Pawn`. Remove the separate `isWorking`, `isSleeping`, `isEating` boolean flags from `PawnState` — the state machine replaces them.
+- [x] Add `currentState: string` to `Pawn`. Note: `isWorking`, `isSleeping`, `isEating` boolean flags kept in `PawnState` for backward compat with PawnService (~30 references). State machine is additive.
 
 **4b. Designations** *(no Celestia equivalent — original system)*
 
-- [ ] Add `designations: Record<string, DesignationType>` to `GameState` — maps `"x,y"` keys to `"harvest" | "construct" | "mine" | "haul" | "clear"`. *(type names from `DesignationManager.gd`, `basic-ui`/`map_gen-refactored` branch)*
-- [ ] Create `DesignationService.ts`: `designate(x, y, type)`, `clearDesignation(x, y)`, `getOpenDesignations(type?)`.
-- [ ] Map clicks in `GameCanvas.svelte` can enter a designation mode; right-click clears.
+- [x] Add `designations: Record<string, DesignationType>` to `GameState` — maps `"x,y"` keys to `"harvest" | "construct" | "mine" | "haul" | "clear"`. *(type names from `DesignationManager.gd`, `basic-ui`/`map_gen-refactored` branch)*
+- [x] Create `DesignationService.ts`: `designate(x, y, type)`, `clearDesignation(x, y)`, `getOpenDesignations(type?)`.
+- [x] Map clicks in `GameCanvas.svelte` can enter a designation mode; right-click clears.
 
 **4c. Tile-local harvesting** *(sources: `tile.gd`, `resource_database.gd`, `harvesting_state.gd`)*
 
-- [ ] `WorkService.processWork()` changes: instead of adding to global resource totals, calls `worldMap[y][x].harvestResource(id, amount)` (→ `tile.gd::harvestResource()`) and adds to `GameState.stockpile`. `stockpile: Record<string, number>` is a new field on `GameState`.
-- [ ] A pawn in `MovingToResource` state pathfinds to the nearest designated tile matching its job's resource type. `harvestTime` comes from `RESOURCES[id].harvestTime` (→ `resource_database.gd`: wood=5.0, stone=8.0, herbs=3.0 turns).
-- [ ] `GameStateManager` gets `addToStockpile(id, amount)` and `depleteWorldResource(x, y, id, amount)` methods.
+- [x] `WorkService.processWork()` changes: instead of adding to global resource totals, calls `worldMap[y][x].harvestResource(id, amount)` (→ `tile.gd::harvestResource()`) and adds to `GameState.stockpile`. `stockpile: Record<string, number>` is a new field on `GameState`.
+- [x] A pawn in `MovingToResource` state pathfinds to the nearest designated tile matching its job's resource type. `harvestTime` comes from `RESOURCES[id].harvestTime` (→ `resource_database.gd`: wood=5.0, stone=8.0, herbs=3.0 turns).
+- [x] `GameStateManager` gets `addToStockpile(id, amount)` and `depleteWorldResource(x, y, id, amount)` methods.
 
 **4d. Placed buildings** *(no Celestia equivalent — original design; construction progress formula mirrors `harvesting_state.gd`)*
 
-- [ ] Replace `buildingCounts: Record<string, number>` in `GameState` with `buildings: PlacedBuilding[]`.
+- [x] Replace `buildingCounts: Record<string, number>` in `GameState` with `buildings: PlacedBuilding[]`. (`buildingCounts` kept as `@deprecated` field for backward compat and save migration.)
   ```typescript
   interface PlacedBuilding {
     id: string;
@@ -499,9 +499,9 @@ gl_FragColor = vec4(tinted, sprite.a) * (1.0 - step(sprite.a, 0.01))
     progress: number;      // 0–1
   }
   ```
-- [ ] `BuildingService` updated: `placeBuilding(type, x, y)` designates a construction site; pawns with `"build"` designation walk there and advance `progress` per turn via `Harvesting`-equivalent state; on `status === 'complete'` the tile's `walkable` is set to `false` for solid structures and building bonuses apply via `ModifierSystem`.
-- [ ] `GameCanvas.svelte` renders building glyphs at their coordinates (use `#` for complete, `+` for under construction).
-- [ ] `GameStateManager` gets `addBuilding()`, `updateBuilding()`, `removeBuilding()` methods.
+- [x] `BuildingService` updated: `placeBuilding(type, x, y)` designates a construction site; pawns with `"build"` designation walk there and advance `progress` per turn via `Harvesting`-equivalent state; on `status === 'complete'` the tile's `walkable` is set to `false` for solid structures and building bonuses apply via `ModifierSystem`.
+- [x] `GameCanvas.svelte` renders building glyphs at their coordinates (use `#` for complete, `+` for under construction).
+- [x] `GameStateManager` gets `addBuilding()`, `updateBuilding()`, `removeBuilding()` methods.
 
 **Sources from Celestia used:** `pawn_state_machine.gd` + all `states/*.gd` (logic port), `workpriority_manager.gd` (priority constants + `_adjust_priorities_based_on_traits()`), `resource_gen.gd` harvest math.
 

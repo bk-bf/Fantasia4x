@@ -16,7 +16,7 @@
   let currentJobIndex: Record<string, number> = {};
   // Track current job for each pawn (RimWorld-style cycling)
   let pawnCurrentJobs: Record<string, { workId: string; priority: number; startTime: number }> = {};
-  let jobCycleInterval: number;
+  let jobCycleInterval: ReturnType<typeof setInterval>;
 
   // UI State
   let selectedPawn: string | null = null;
@@ -292,7 +292,8 @@
         {#if workCategory}
           {workCategory.name.toUpperCase()}
           {@const efficiency = getPawnWorkEfficiency(pawn.id, currentJob?.workId || '')}
-          <span class="eff" style="color: {getWorkEfficiencyColor(efficiency)}">[{efficiency}]</span>
+          <span class="eff" style="color: {getWorkEfficiencyColor(efficiency)}">[{efficiency}]</span
+          >
         {:else}
           <span class="idle">IDLE</span>
         {/if}
@@ -315,7 +316,13 @@
             {priority > 0 ? `+${expectedHarvest.toFixed(2)}/turn` : '+0/turn'}
           </span>
           <span class="eff-label" style="color: {getWorkEfficiencyColor(efficiency)}">
-            {efficiency >= 12 ? 'EXCEL' : efficiency >= 10 ? 'GOOD' : efficiency >= 8 ? 'AVG' : 'POOR'}({efficiency})
+            {efficiency >= 12
+              ? 'EXCEL'
+              : efficiency >= 10
+                ? 'GOOD'
+                : efficiency >= 8
+                  ? 'AVG'
+                  : 'POOR'}({efficiency})
           </span>
           <div class="pri-controls">
             <button
@@ -326,8 +333,8 @@
                   updatePawnWorkPriority(pawn.id, workCategory.id, next);
                 }
               }}
-              disabled={priority <= 0}
-            >◀</button>
+              disabled={priority <= 0}>◀</button
+            >
             <span class="pri-val" class:zero={priority === 0}>{priority}</span>
             <button
               class="pri-btn"
@@ -337,8 +344,8 @@
                   updatePawnWorkPriority(pawn.id, workCategory.id, next);
                 }
               }}
-              disabled={priority >= 12}
-            >▶</button>
+              disabled={priority >= 12}>▶</button
+            >
           </div>
         </div>
       {/each}
@@ -383,7 +390,10 @@
     cursor: pointer;
     letter-spacing: 0.04em;
   }
-  .hdr-btn:hover { color: var(--text); border-color: var(--border-hi); }
+  .hdr-btn:hover {
+    color: var(--text);
+    border-color: var(--border-hi);
+  }
 
   .section-hdr {
     padding: 4px 8px;
@@ -396,7 +406,10 @@
     margin-top: 1px;
     flex-shrink: 0;
   }
-  .section-hdr.sub { background: var(--bg); color: var(--text-dim); }
+  .section-hdr.sub {
+    background: var(--bg);
+    color: var(--text-dim);
+  }
 
   /* Pawn list */
   .pawn-row {
@@ -414,8 +427,12 @@
     gap: 8px;
     align-items: baseline;
   }
-  .pawn-row:hover { background: var(--bg-hover); }
-  .pawn-row.selected { background: var(--bg-active); }
+  .pawn-row:hover {
+    background: var(--bg-hover);
+  }
+  .pawn-row.selected {
+    background: var(--bg-active);
+  }
 
   .pawn-name {
     color: var(--text);
@@ -436,8 +453,13 @@
     font-size: 11px;
   }
 
-  .idle { color: var(--text-muted); font-style: italic; }
-  .eff { font-size: 10px; }
+  .idle {
+    color: var(--text-muted);
+    font-style: italic;
+  }
+  .eff {
+    font-size: 10px;
+  }
 
   /* Priority rows */
   .priority-row {
@@ -447,8 +469,12 @@
     border-bottom: 1px solid var(--border);
     gap: 8px;
   }
-  .priority-row:hover { background: var(--bg-hover); }
-  .priority-row.active { background: var(--bg-panel); }
+  .priority-row:hover {
+    background: var(--bg-hover);
+  }
+  .priority-row.active {
+    background: var(--bg-panel);
+  }
 
   .work-name {
     color: var(--text-dim);
@@ -486,8 +512,14 @@
     font-size: 11px;
     cursor: pointer;
   }
-  .pri-btn:hover:not(:disabled) { border-color: var(--border-hi); color: var(--accent-hi); }
-  .pri-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .pri-btn:hover:not(:disabled) {
+    border-color: var(--border-hi);
+    color: var(--accent-hi);
+  }
+  .pri-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
 
   .pri-val {
     color: var(--accent-hi);
@@ -496,5 +528,7 @@
     text-align: center;
     font-weight: bold;
   }
-  .pri-val.zero { color: var(--text-muted); }
+  .pri-val.zero {
+    color: var(--text-muted);
+  }
 </style>

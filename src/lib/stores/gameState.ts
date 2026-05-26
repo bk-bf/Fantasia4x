@@ -22,8 +22,8 @@ import { resourceGeneratorService } from '$lib/game/services/ResourceGeneratorSe
 const TURN_INTERVAL = 3000;
 
 // ===== STATE VARIABLES =====
-let gameInterval: number | null = null;
-let autoTurnInterval: number | null = null;
+let gameInterval: ReturnType<typeof setInterval> | null = null;
+let autoTurnInterval: ReturnType<typeof setInterval> | null = null;
 let isPausedValue = false;
 let gameSpeedValue = 1;
 
@@ -48,6 +48,12 @@ export const initialGameState: GameState = {
 	discoveredLocations: [],
 	buildingCounts: {},
 	buildingQueue: [],
+	/** Phase 4: placed buildings on the map */
+	buildings: [],
+	/** Phase 4: colony stockpile from harvesting */
+	stockpile: {},
+	/** Phase 4: designated tile actions */
+	designations: {},
 	maxPopulation: 1,
 	availableResearch: [],
 	completedResearch: [],
@@ -84,7 +90,24 @@ function loadFromLocalStorage(): GameState | null {
 		const saved = localStorage.getItem('fantasia4x-save');
 		if (saved) {
 			try {
-				return JSON.parse(saved);
+				const state: GameState = JSON.parse(saved);
+				// Phase 4 migration: backfill new fields for old saves
+				if (!state.buildings) {
+					state.buildings = Object.entries(state.buildingCounts ?? {}).flatMap(
+						([type, count]) =>
+							Array.from({ length: count }, (_, i) => ({
+								id: `${type}-legacy-${i}`,
+								type,
+								x: 0,
+								y: 0,
+								status: 'complete' as const,
+								progress: 1
+							}))
+					);
+				}
+				if (!state.stockpile) state.stockpile = {};
+				if (!state.designations) state.designations = {};
+				return state;
 			} catch (e) {
 				console.warn('Failed to load save data:', e);
 			}

@@ -5,16 +5,18 @@
   import { gameEngine } from '$lib/game/systems/GameEngineImpl';
   import { onMount, onDestroy } from 'svelte';
 
+  import type { PlacedBuilding } from '$lib/game/core/types';
+
   let isPaused = false;
   let gameSpeed = 1;
   let currentTurnValue = 0;
   let currentScreen = 'main';
-  let buildingCounts: Record<string, number> = {};
+  let buildings: PlacedBuilding[] = [];
   let mapSeedInput = String(Date.now() >>> 0);
 
   function regenMap() {
     const parsed = parseInt(mapSeedInput, 10);
-    const s = (!isNaN(parsed) && parsed > 0) ? parsed : (Date.now() >>> 0);
+    const s = !isNaN(parsed) && parsed > 0 ? parsed : Date.now() >>> 0;
     mapSeedInput = String(s);
     gameState.regenWorld(s);
   }
@@ -23,11 +25,11 @@
   const unsubSpeed = gameState.gameSpeed.subscribe((v) => (gameSpeed = v));
   const unsubTurn = currentTurn.subscribe((v) => (currentTurnValue = v));
   const unsubUI = uiState.subscribe((s) => (currentScreen = s.currentScreen));
-  const unsubState = gameState.subscribe((s) => (buildingCounts = s.buildingCounts || {}));
+  const unsubState = gameState.subscribe((s) => (buildings = s.buildings || []));
 
-  $: hasResearch = Object.keys(buildingCounts).some((id) => {
-    const b = gameEngine.getBuildingById(id);
-    return b?.category === 'knowledge' && buildingCounts[id] > 0;
+  $: hasResearch = buildings.some((b) => {
+    const bDef = gameEngine.getBuildingById(b.type);
+    return bDef?.category === 'knowledge' && b.status === 'complete';
   });
 
   const TABS = [
@@ -114,7 +116,7 @@
     <nav class="tabs">
       {#each TABS as tab}
         {@const isActive = currentScreen === tab.key}
-        {@const disabled = tab.needsResearch && !hasResearch}
+        {@const disabled = ('needsResearch' in tab ? tab.needsResearch : false) && !hasResearch}
         <button
           class="tab"
           class:active={isActive}

@@ -5,6 +5,7 @@
   import TaskContainer from '$lib/components/UI/TaskContainer.svelte';
   import { ITEMS_DATABASE } from '$lib/game/core/Items';
   import { gameEngine } from '$lib/game/systems/GameEngineImpl';
+  import { itemService } from '$lib/game/services/ItemService';
   import { onDestroy } from 'svelte';
   import type { Item } from '$lib/game/core/types';
 
@@ -82,10 +83,12 @@
     completedResearch = state.completedResearch || [];
     currentToolLevel = state.currentToolLevel || 0;
 
-    // Get available buildings (reuse pattern from ResearchScreen)
-    availableBuildings = Object.keys(state.buildingCounts || {}).filter(
-      (buildingId) => (state.buildingCounts || {})[buildingId] > 0
-    );
+    // Get available buildings from buildings[]
+    availableBuildings = (state.buildings ?? [])
+      .filter((b) => b.status === 'complete')
+      .map((b) => b.type);
+    // De-duplicate since multiple instances of same type can exist
+    availableBuildings = [...new Set(availableBuildings)];
   });
 
   onDestroy(() => {

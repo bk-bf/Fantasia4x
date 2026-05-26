@@ -5,11 +5,12 @@
   import { WebGLRenderer } from '$lib/webgl/renderer.js';
   import { buildGameGrid, generatePlaceholderGrid } from '$lib/webgl/fantasia-world.js';
   import { gameState } from '$lib/stores/gameState.js';
-  import type { WorldTile, Pawn } from '$lib/game/core/types.js';
+  import type { WorldTile, Pawn, PlacedBuilding, DesignationType } from '$lib/game/core/types.js';
   import type { GameGrid } from '$lib/webgl/game-grid.js';
   import { wasmPathfinderService } from '$lib/game/services/WasmPathfinderService.js';
   import { pawnService } from '$lib/game/services/PawnService.js';
   import { buildPathfindingGrids } from '$lib/game/services/PathfinderService.js';
+  import { designationService } from '$lib/game/services/DesignationService.js';
   import { glyph, SHEET } from '$lib/webgl/tilesets.js';
 
   // Tile size range for zoom (square cells for CoQ sprite-mode)
@@ -56,6 +57,14 @@
   let pawns: Pawn[] = [];
   let selectedPawnId: string | null = null;
 
+  // Phase 4: buildings and designations overlay
+  let buildings: PlacedBuilding[] = [];
+  let designations: Record<string, DesignationType> = {};
+
+  // Phase 4b: designation mode — press 'd' to toggle; left-click designates, right-click clears
+  let designationMode = false;
+  let designationTypeActive: DesignationType = 'harvest';
+
   // Hover tile inspector
   let hoverTileX = -1;
   let hoverTileY = -1;
@@ -70,8 +79,13 @@
   const unsubState = gameState.subscribe((s) => {
     worldMap = s.worldMap ?? [];
     pawns = s.pawns ?? [];
+    buildings = s.buildings ?? [];
+    designations = s.designations ?? {};
     if (renderer?.isReady()) {
-      const grid = worldMap.length > 0 ? buildGameGrid(worldMap) : generatePlaceholderGrid();
+      const grid =
+        worldMap.length > 0
+          ? buildGameGrid(worldMap, buildings, designations)
+          : generatePlaceholderGrid();
       overlayPawns(grid, pawns, selectedPawnId);
       renderer.setGrid(grid);
       // Re-snap to fit when the real map loads (placeholder vs. actual may differ in size)
@@ -169,13 +183,23 @@
 
   function redrawOverlay() {
     if (!renderer?.isReady() || worldMap.length === 0) return;
-    const grid = buildGameGrid(worldMap);
+    const grid = buildGameGrid(worldMap, buildings, designations);
     overlayPawns(grid, pawns, selectedPawnId);
     renderer.setGrid(grid);
   }
 
   async function handleTileClick() {
     if (hoverTileX < 0 || hoverTileY < 0) return;
+
+    // Phase 4b: designation mode — left-click places a harvest designation
+    if (designationMode) {
+      gameState.updateWithSave((state) =>
+        designationService.designate(hoverTileX, hoverTileY, designationTypeActive, state)
+      );
+      redrawOverlay();
+      return;
+    }
+
     // Click on a pawn → select it
     const clickedPawn = pawns.find(
       (p) => p.position?.x === hoverTileX && p.position?.y === hoverTileY
@@ -311,6 +335,17 @@
         setView(viewX, viewY + SCROLL_STEP);
         e.preventDefault();
         break;
+      case 'd':
+      case 'D':
+        // Phase 4b: toggle designation mode
+        designationMode = !designationMode;
+        e.preventDefault();
+        break;
+      case 'Escape':
+        designationMode = false;
+        selectedPawnId = null;
+        redrawOverlay();
+        break;
     }
   }
 
@@ -385,6 +420,18 @@
     hoverTileX = -1;
     hoverTileY = -1;
   }
+
+  /** Phase 4b: right-click clears a designation on the hovered tile. */
+  function handleContextMenu(e: MouseEvent) {
+    e.preventDefault();
+    if (hoverTileX < 0 || hoverTileY < 0) return;
+    if (designationService.hasDesignation(hoverTileX, hoverTileY, $gameState)) {
+      gameState.updateWithSave((state) =>
+        designationService.clearDesignation(hoverTileX, hoverTileY, state)
+      );
+      redrawOverlay();
+    }
+  }
 </script>
 
 <div
@@ -400,12 +447,18 @@
   on:mouseup={handleMouseUp}
   on:mouseleave={handleMouseLeave}
   on:wheel={handleWheel}
+  on:contextmenu={handleContextMenu}
 >
   <canvas bind:this={canvas}></canvas>
   {#if errorMsg}
     <div class="error">WebGL unavailable: {errorMsg}</div>
   {:else if !ready}
     <div class="loading">Initializing renderer…</div>
+  {/if}
+  {#if designationMode}
+    <div class="designation-hud">
+      DESIGNATE [{designationTypeActive.toUpperCase()}] — D to exit · RMB to clear
+    </div>
   {/if}
   {#if hoverTile}
     <div class="tile-hud">
@@ -460,6 +513,22 @@
     font-size: 10px;
     line-height: 1.5;
     padding: 2px 7px;
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 10;
+  }
+  .designation-hud {
+    position: absolute;
+    top: 6px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 20, 10, 0.92);
+    border: 1px solid #3aaa60;
+    color: #50ee80;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    font-weight: bold;
+    padding: 3px 10px;
     pointer-events: none;
     white-space: nowrap;
     z-index: 10;

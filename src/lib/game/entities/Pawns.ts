@@ -44,6 +44,7 @@ export function generatePawns(race: Race, count?: number): Pawn[] {
 				isSleeping: false,
 				isEating: false
 			},
+			currentState: 'Idle',
 			skills: {}
 		};
 
