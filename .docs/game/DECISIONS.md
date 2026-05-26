@@ -10,6 +10,8 @@ ADR-003 [GAME]: ModifierSystem for All Stat Calculations (2026-05-25, Accepted)
 ADR-004 [GAME]: AI Generation Server-Side Only (2026-05-25, Accepted)
 ADR-005 [GAME]: LocalStorage Persistence via Store (2026-05-25, Accepted)
 ADR-006 [GAME]: Data Files Contain Definitions, Not Logic (2026-05-25, Accepted)
+ADR-007 [GAME]: SvelteKit + WebGL2 over Godot for Merged Project (2026-05-26, Accepted)
+ADR-008 [GAME]: Spatial Core WASM Upgrade Path (2026-05-26, Deferred)
 
 ---
 
@@ -108,3 +110,60 @@ The Svelte `gameState` store in `src/lib/stores/gameState.ts` handles serialisat
 #### Consequences
 
 Data files stay scannable for balancing. Logic is testable independently. Modders can replace data files without touching service code.
+
+---
+
+### ADR-007 [GAME]: SvelteKit + WebGL2 over Godot for Merged Project
+
+- **Date**: 2026-05-26
+- **Status**: Accepted
+
+#### Context
+
+Fantasia4x (SvelteKit + WebGL2) and Celestia (Godot 4) are being merged into a single DF/Caves-of-Qud-style colony sim. The question was whether to migrate into Godot or stay in the browser stack.
+
+#### Decision
+
+Stay in SvelteKit + WebGL2, targeting desktop distribution via Tauri. Celestia's spatial systems (map data, terrain gen, pawn state machine, fog of war) will be ported into TypeScript services. Godot's C++ built-ins (AStar2D, TileMap, NavigationServer) will be reimplemented in TypeScript using standard algorithms.
+
+#### Rationale
+
+- Fantasia4x has ~17k lines of well-architected TypeScript game logic (modifier system, service layer, state manager, research/crafting trees) that would be discarded in a Godot migration.
+- SvelteKit UI development is dramatically faster with AI-assisted coding than constructing Godot UI nodes manually — this was a hard blocker in Celestia's development.
+- The existing WebGL2 renderer is already tile-grid based, which is exactly the visual model for DF/CoQ style.
+- TypeScript's type system handles complex data modelling (30+ interfaces in `types.ts`) far better than GDScript.
+- Tauri bundles to ~3–5 MB (vs Godot's native export overhead) and web deployment stays zero-friction.
+- For the planned entity count (see ADR-008), TypeScript A* is sufficient.
+
+#### Consequences
+
+Celestia's Godot-specific features (scene tree, physics, TileMap rendering) must be re-implemented. Spatial service interfaces should be defined against an abstraction layer to allow future replacement without changing callsites.
+
+---
+
+### ADR-008 [GAME]: Spatial Core WASM Upgrade Path (Deferred)
+
+- **Date**: 2026-05-26
+- **Status**: Deferred — revisit if entity count exceeds ~300 simultaneous pathfinding agents
+
+#### Context
+
+At planned scale (~50 player pawns + enemies + animals + allies), total mobile entities could reach 200–400. A TypeScript A* with a binary heap on a large map is sufficient for this range. However, if simulation depth grows (large maps, dense mob spawns), a native-speed spatial core becomes relevant.
+
+#### Decision
+
+All spatial logic (pathfinding, fog of war, spatial queries) is isolated behind service interfaces (`PathfindingService`, `SpatialIndexService`). The current implementation will be TypeScript. The interfaces are designed so a WASM-backed implementation can be swapped in later without touching callsites.
+
+#### Upgrade path if needed
+
+Compile a C++ spatial core (custom or derived from an existing pathfinding library) to `.wasm` via Emscripten. Expose it through the same service interface. The TypeScript game logic layer and all UI code remain unchanged.
+
+#### Triggers to revisit
+
+- Frame budget for pathfinding consistently exceeds 2ms per turn with 300+ agents.
+- Map size grows beyond ~500×500 tiles.
+- Hierarchical pathfinding (HPA*) is needed and the TS implementation becomes unwieldy.
+
+#### Consequences
+
+Slightly more upfront interface design for spatial services. Avoids premature optimisation while keeping the option structurally open.

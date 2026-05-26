@@ -38,6 +38,8 @@ Core data (src/lib/game/core/)         ← types, static databases, GameStateMan
 
 **Svelte 5 runes**: use `$state`, `$derived`, `$effect` — not legacy `$:` syntax.
 
+**Spatial services must stay behind interfaces** (ADR-008): All pathfinding, fog-of-war, and spatial query logic must be implemented as services conforming to a defined TypeScript interface (e.g. `PathfindingService`, `SpatialIndexService`). Never inline spatial algorithms directly into components, stores, or GameEngineImpl. The reason: a WASM-backed C++ implementation may replace the TypeScript one if entity counts grow — this is only possible if callsites depend on the interface, not the implementation. **If you are about to implement spatial logic that bypasses the service interface, stop and flag it to the user.**
+
 ## Build Commands
 
 **Always use `./dev.sh` to start the dev server** — never run `npm run dev` directly. The script checks whether port 5173 is already in use and prints the existing URL instead of spawning a duplicate on a random port.

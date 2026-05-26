@@ -31,8 +31,12 @@ export interface SubterrainDef {
 /** tiles.bmp index → CP437-mapped Unicode char */
 const T = (n: number): string => {
     if (n >= 32 && n <= 126) return String.fromCharCode(n);
-    if (n === 3) return '\u2665'; // ♥  cave mouth
+    if (n === 3)   return '\u2665'; // ♥  cave mouth
+    if (n === 176) return '\u2591'; // ░  light shade
+    if (n === 177) return '\u2592'; // ▒  medium shade
+    if (n === 178) return '\u2593'; // ▓  dark shade
     if (n === 209) return '\u2564'; // ╤  trunk cross-section
+    if (n === 219) return '\u2588'; // █  full block
     return String.fromCharCode(n);  // best-effort fallback
 };
 /** Range of tiles.bmp indices → array of Unicode chars */
@@ -150,7 +154,7 @@ export const SUBTERRAINS: Record<string, SubterrainDef> = {
     bush: { walkable: true, movementCost: 1.8, chars: [P(41)], fg: [0.26, 0.46, 0.05], bg: [0.07, 0.09, 0.03] }, // plants 41    shrub
     tree: { walkable: true, movementCost: 2.0, chars: PR(0, 71), fg: [0.52, 0.72, 0.11], bg: [0.07, 0.10, 0.03] }, // plants 0-71  72 tree/plant varieties
     tree_stump: { walkable: true, movementCost: 2.0, chars: [T(209)], fg: [0.56, 0.34, 0.09], bg: [0.10, 0.07, 0.03] }, // tiles 209    ╤ trunk cross-section
-    fallen_logs: { walkable: true, movementCost: 2.2, chars: [T(209)], fg: [0.48, 0.26, 0.05], bg: [0.10, 0.06, 0.03] }, // tiles 209    same sprite, darker colour
+    fallen_logs: { walkable: true, movementCost: 2.2, chars: [P(209)], fg: [0.48, 0.26, 0.05], bg: [0.10, 0.06, 0.03] }, // plants 209
     mushroom_patch: { walkable: true, movementCost: 1.6, chars: [P(120)], fg: [0.86, 0.52, 0.33], bg: [0.10, 0.06, 0.03] }, // plants 120   mushroom (121-123 are empty)
     // ── Swamp ────────────────────────────────────────────────────────────────
     shallow_water: { walkable: true, movementCost: 2.5, chars: ['~'], fg: [0.20, 0.52, 0.41], bg: [0.04, 0.07, 0.08] },
@@ -162,9 +166,9 @@ export const SUBTERRAINS: Record<string, SubterrainDef> = {
     quicksand: { walkable: true, movementCost: 25.0, chars: ['.'], fg: [0.70, 0.52, 0.25], bg: [0.10, 0.08, 0.03] },
     dead_trees: { walkable: true, movementCost: 2.5, chars: PR(164, 166), fg: [0.44, 0.36, 0.21], bg: [0.10, 0.07, 0.03] }, // plants 164-166 bare branches
     // ── Mountain (no peak) ───────────────────────────────────────────────────
-    rocky: { walkable: true, movementCost: 2.5, chars: ['"'], fg: [0.62, 0.52, 0.37], bg: [0.11, 0.08, 0.04] },
+    rocky: { walkable: true, movementCost: 2.5, chars: TR(177, 178), fg: [0.62, 0.52, 0.37], bg: [0.11, 0.08, 0.04] },
     cave: { walkable: true, movementCost: 1.0, chars: [T(3)], fg: [0.26, 0.18, 0.09], bg: [0.07, 0.05, 0.03] }, // tiles 3  ♥ cave mouth
-    cliff: { walkable: false, movementCost: 0.0, chars: ['\u2588'], fg: [0.50, 0.42, 0.27], bg: [0.11, 0.08, 0.04] },
+    cliff: { walkable: false, movementCost: 0.0, chars: [T(219)], fg: [0.50, 0.42, 0.27], bg: [0.11, 0.08, 0.04] },
     mineral_deposit: { walkable: true, movementCost: 2.8, chars: TR(43, 47), fg: [0.92, 0.76, 0.13], bg: [0.11, 0.08, 0.03] }, // tiles 43-47 ore veins, bright gold
     crystal_formation: { walkable: true, movementCost: 2.0, chars: TR(48, 55), fg: [0.40, 0.84, 0.79], bg: [0.06, 0.08, 0.10] }, // tiles 48-55 crystal shards, warm cyan
     arcane_glade: { walkable: true, movementCost: 1.5, chars: [...TR(40, 42), ...TR(56, 57)], fg: [0.86, 0.50, 0.79], bg: [0.09, 0.05, 0.09] }, // tiles 40-42 + 56-57 arcane symbols

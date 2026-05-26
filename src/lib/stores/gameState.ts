@@ -29,7 +29,7 @@ let gameSpeedValue = 1;
 
 // ===== WORLD GENERATION =====
 /** Bump this when the world generation algorithm changes to force a regen. */
-const WORLD_VERSION = 10; // fix biome distribution, regenWorld UI
+const WORLD_VERSION = 11; // fallen_logs → P(209)
 const WORLD_VERSION_KEY = 'fantasia4x-world-version';
 const WORLD_SEED = Date.now();
 const _generatedWorld = generateWorld(120, 80, WORLD_SEED);
