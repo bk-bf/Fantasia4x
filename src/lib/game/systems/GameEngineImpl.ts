@@ -356,19 +356,19 @@ export class GameEngineImpl implements GameEngine {
 		// COORDINATION: Delegate all pawn processing to PawnService
 		this.gameState = pawnService.clearTemporaryPawnStates(this.gameState!);
 		this.gameState = workService.syncPawnWorkingStates(this.gameState!);
-		this.gameState = pawnService.processAutomaticNeeds(this.gameState!);
+		// Phase 5e: automatic needs now handled by PawnStateMachine (HUNGRY/TIRED states).
 		this.gameState = pawnService.processPawnTurn(this.gameState!);
 		this.gameState = workService.syncPawnWorkingStates(this.gameState!);
 	}
 
 	private processBuildings(): void {
-		console.log('[GameEngine] Coordinating building processing through BuildingService');
-		this.gameState = buildingService.processBuildingQueue(this.gameState!);
+		// Phase 5c: building construction is now handled by the job system (construct jobs).
+		// processBuildingQueue countdown removed.
 	}
 
 	private processCrafting(): void {
-		console.log('[GameEngine] Coordinating crafting processing through ItemService');
-		this.gameState = itemService.processCraftingQueue(this.gameState!);
+		// Phase 5d: crafting is now handled by the job system (craft jobs).
+		// processCraftingQueue countdown removed.
 	}
 
 	private processResearch(): void {

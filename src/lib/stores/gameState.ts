@@ -110,6 +110,29 @@ function loadFromLocalStorage(): GameState | null {
 				if (!state.stockpile) state.stockpile = {};
 				if (!state.designations) state.designations = {};
 				if (!state.jobs) state.jobs = [];
+				// Phase 5c: migrate old buildingQueue entries to PlacedBuilding (work-point model)
+				if (state.buildingQueue && state.buildingQueue.length > 0) {
+					const migratedBuildings = state.buildingQueue.map((entry: any, i: number) => {
+						const buildTime = entry.building?.buildTime ?? 10;
+						const workRequired = buildTime * 10;
+						const workDone = Math.round(
+							(1 - Math.max(0, entry.turnsRemaining) / buildTime) * workRequired
+						);
+						return {
+							id: `${entry.building.id}-migrated-${i}-${Date.now()}`,
+							type: entry.building.id,
+							x: 0,
+							y: 0,
+							status: 'under_construction' as const,
+							progress: workDone / workRequired,
+							workRequired,
+							workDone,
+							materialsDelivered: true
+						};
+					});
+					state.buildings = [...(state.buildings ?? []), ...migratedBuildings];
+					state.buildingQueue = [];
+				}
 				return state;
 			} catch (e) {
 				console.warn('Failed to load save data:', e);

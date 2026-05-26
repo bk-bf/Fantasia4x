@@ -378,6 +378,7 @@ export interface Item {
 	craftingTime?: number;
 	toolTierRequired?: number;
 	buildingRequired?: string | null;
+	workshopType?: string | null;  // Phase 5d: building type required to craft (e.g. 'forge')
 	populationRequired?: number;
 
 	// Item properties (durability, effects, etc.)

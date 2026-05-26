@@ -577,7 +577,7 @@ interface Job {
 
 **Work items:**
 - [x] Wire `ResourceGeneratorService.generate(worldMap, seed)` into `WorldGenerator.generateWorld()` after terrain generation (Phase 2 created the service; Phase 4 introduced `tile.resources` — this step connects them at world-gen time).
-- [ ] Verify `GameCanvas.svelte` renders resource-bearing tiles with a visual marker (e.g. resource glyph overlaid on subterrain — tree tile shows `♣` only when `tile.resources.wood > 0`).
+- [x] Verify `GameCanvas.svelte` renders resource-bearing tiles with a visual marker (e.g. resource glyph overlaid on subterrain — tree tile shows `♣` only when `tile.resources.wood > 0`).
 - [x] Remove `WorkService.processWorkHarvesting()` abstract production path (the `baseHarvestRate × efficiency → GameState.items` loop). Replace with: job completion via `JobService.advanceJob()` → `gameStateManager.addToStockpile()`.
 - [ ] `GameState.items[]` stays for crafted goods and equipment; raw harvestable resources live exclusively in `stockpile`.
 
@@ -604,8 +604,8 @@ materialsDelivered: boolean; // haul job must complete before construction start
 
 **Work items:**
 - [x] Extend `PlacedBuilding` interface with `workRequired`, `workDone`, `materialsDelivered`.
-- [ ] Remove `BuildingService.calculateConstructionTime()` and `processBuildingQueue()` countdown logic.
-- [ ] Add `buildingQueue` removal from `GameState` (old save migration: convert any in-progress `buildingQueue` entries to `PlacedBuilding { status:'under_construction' }` with `workDone = (1 - turnsRemaining/buildTime) * workRequired`).
+- [x] Remove `BuildingService.calculateConstructionTime()` and `processBuildingQueue()` countdown logic.
+- [x] Add `buildingQueue` removal from `GameState` (old save migration: convert any in-progress `buildingQueue` entries to `PlacedBuilding { status:'under_construction' }` with `workDone = (1 - turnsRemaining/buildTime) * workRequired`).
 - [x] `JobService.generateJobs()` generates `construct` jobs from `buildings` where `status !== 'complete'`.
 - [x] `PawnStateMachine` `"Harvesting"` state reused for construction with `job.type === 'construct'`; `workDone += efficiency` per turn rather than depleting a tile.
 
@@ -631,8 +631,8 @@ materialsDelivered: boolean; // haul job must complete before construction start
 
 **Work items:**
 - [x] Add `workRequired: number`, `workDone: number`, `reservedMaterials: boolean` to `CraftingInProgress`.
-- [ ] Add `workshopType?: string` to `Item` definition (e.g. `'forge'` for metalworking items, `undefined` = no workshop needed).
-- [ ] Remove `ItemService.processCraftingQueue()` countdown logic.
+- [x] Add `workshopType?: string` to `Item` definition (e.g. `'forge'` for metalworking items, `undefined` = no workshop needed).
+- [x] Remove `ItemService.processCraftingQueue()` countdown logic.
 - [x] `JobService.generateJobs()` generates `craft` jobs from `craftingQueue` entries where `workDone < workRequired`.
 - [x] Materials reserved at queue-add time (flag `reservedMaterials = true`); not deducted from stockpile until job completion. Cancelled jobs release reservation.
 
@@ -647,7 +647,7 @@ materialsDelivered: boolean; // haul job must complete before construction start
 - [x] `TiredState` creates a `sleep` job targeting nearest `shelter`/`bed` `PlacedBuilding`. Implements the real scan that replaces Celestia's `Vector2i(15,15)` hardcode (noted in Porting Gotchas).
 - [x] `EatingState` consumes food from `stockpile` at `nutritionPerSecond = 10` per turn; wakes at `hunger >= 95`.
 - [x] `SleepingState` satisfies rest at `restPerSecond = 8` per turn; wakes at `rest >= 95`.
-- [ ] Remove abstract needs auto-satisfaction from `PawnService.processNeeds()`.
+- [x] Remove abstract needs auto-satisfaction from `PawnService.processNeeds()`.
 
 ---
 

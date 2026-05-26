@@ -142,15 +142,15 @@ function goIdle(pawn: Pawn, gs: GameState): GameState {
 function tickPawn(pawn: Pawn, gameState: GameState): GameState {
     const state = pawn.currentState ?? PAWN_STATE.IDLE;
     switch (state) {
-        case PAWN_STATE.IDLE:             return handleIdle(pawn, gameState);
+        case PAWN_STATE.IDLE: return handleIdle(pawn, gameState);
         case PAWN_STATE.MOVING_TO_RESOURCE: return handleMovingToResource(pawn, gameState);
-        case PAWN_STATE.WORKING:          return handleWorking(pawn, gameState);
-        case PAWN_STATE.HUNGRY:           return handleHungry(pawn, gameState);
-        case PAWN_STATE.TIRED:            return handleTired(pawn, gameState);
-        case PAWN_STATE.MOVING_TO_NEED:   return handleMovingToNeed(pawn, gameState);
-        case PAWN_STATE.EATING:           return handleEating(pawn, gameState);
-        case PAWN_STATE.SLEEPING:         return handleSleeping(pawn, gameState);
-        default:                          return gameState;
+        case PAWN_STATE.WORKING: return handleWorking(pawn, gameState);
+        case PAWN_STATE.HUNGRY: return handleHungry(pawn, gameState);
+        case PAWN_STATE.TIRED: return handleTired(pawn, gameState);
+        case PAWN_STATE.MOVING_TO_NEED: return handleMovingToNeed(pawn, gameState);
+        case PAWN_STATE.EATING: return handleEating(pawn, gameState);
+        case PAWN_STATE.SLEEPING: return handleSleeping(pawn, gameState);
+        default: return gameState;
     }
 }
 
@@ -182,6 +182,7 @@ function handleIdle(pawn: Pawn, gameState: GameState): GameState {
 
     const atSite =
         job.type === 'craft' ||
+        (job.targetX === 0 && job.targetY === 0) || // abstract building placed off-map
         (pawn.position && isAdjacent(pawn.position.x, pawn.position.y, job.targetX, job.targetY));
 
     if (atSite) {
@@ -251,6 +252,7 @@ function handleWorking(pawn: Pawn, gameState: GameState): GameState {
 
     if (
         activeJob.type !== 'craft' &&
+        !(activeJob.targetX === 0 && activeJob.targetY === 0) && // abstract building
         pawn.position &&
         !isAdjacent(pawn.position.x, pawn.position.y, activeJob.targetX, activeJob.targetY)
     ) {

@@ -5,13 +5,12 @@
   import { buildingService } from '$lib/game/services/BuildingService';
   import { onDestroy } from 'svelte';
   import CurrentTask from '../UI/CurrentTask.svelte';
-  import type { BuildingInProgress, PlacedBuilding } from '$lib/game/core/types';
+  import type { PlacedBuilding } from '$lib/game/core/types';
   import type { Building } from '$lib/game/core/types';
 
   let itemsMap: Record<string, number> = {};
   let race: any = null;
   let buildings: PlacedBuilding[] = [];
-  let buildingQueue: BuildingInProgress[] = [];
   let maxPopulation = 0;
   let currentTurnValue = 0;
   let completedResearch: string[] = [];
@@ -32,8 +31,8 @@
     'social'
   ];
 
-  // The first building in progress, or a default object if none
-  $: firstBuildingInProgress = buildingQueue.length > 0 ? buildingQueue[0] : null;
+  // First incomplete placed building (status 'planned' or 'under_construction')
+  $: firstBuildingInProgress = buildings.find((b) => b.status !== 'complete') ?? null;
 
   // Enhanced building filtering with category and requirements
   $: availableBuildings = (
@@ -97,7 +96,7 @@
       jobs: [],
       turn: currentTurnValue,
       race: race,
-      buildingQueue: buildingQueue,
+      buildingQueue: [],
       // Required properties with default values
       worldMap: [],
       discoveredLocations: [],
@@ -140,7 +139,6 @@
 
   const unsubscribeGame = gameState.subscribe((state) => {
     buildings = state.buildings || [];
-    buildingQueue = state.buildingQueue || [];
     maxPopulation = state.maxPopulation;
     completedResearch = state.completedResearch || [];
     currentToolLevel = state.currentToolLevel || 0;
@@ -159,50 +157,37 @@
       return;
     }
 
-    gameState.update((state) => {
-      // Deduct items using new buildingCost property
+    gameState.updateWithSave((state) => {
+      // Deduct materials
       const newItems = state.item.map((item) => {
         const cost = building.buildingCost[item.id] || 0;
-        const newAmount = Math.max(0, item.amount - cost);
-        return { ...item, amount: newAmount };
+        return { ...item, amount: Math.max(0, item.amount - cost) };
       });
-
-      // Add to building queue
-      const newBuildingInProgress = {
-        building,
-        turnsRemaining: building.buildTime,
-        startedAt: state.turn
-      };
-
-      return {
-        ...state,
-        item: newItems,
-        buildingQueue: [...(state.buildingQueue || []), newBuildingInProgress]
-      };
+      // Place building at (0,0) — abstract/off-map; JobService generates a construct job
+      return buildingService.placeBuilding(building.id, 0, 0, { ...state, item: newItems });
     });
   }
 
-  function cancelBuilding(queueIndex: number) {
-    if (queueIndex < 0 || queueIndex >= buildingQueue.length) return;
+  function cancelBuilding(buildingId: string) {
+    const placed = buildings.find((b) => b.id === buildingId);
+    if (!placed) return;
+    const buildingDef = buildingService.getBuildingById(placed.type);
+    if (!buildingDef) return;
 
-    const canceledItem = buildingQueue[queueIndex];
-    const building = canceledItem.building;
-
-    gameState.update((state) => {
-      // Calculate refund using buildingCost
+    gameState.updateWithSave((state) => {
+      // Refund materials for cancelled build
       const refundedItems = state.item.map((item) => {
-        const refund = building.buildingCost[item.id] || 0;
+        const refund = buildingDef.buildingCost[item.id] || 0;
         return { ...item, amount: item.amount + refund };
       });
-
-      // Remove from queue
-      const newQueue = [...(state.buildingQueue || [])];
-      newQueue.splice(queueIndex, 1);
-
       return {
         ...state,
         item: refundedItems,
-        buildingQueue: newQueue
+        buildings: (state.buildings ?? []).filter((b) => b.id !== buildingId),
+        // Also cancel the matching construct job
+        jobs: (state.jobs ?? []).filter(
+          (j) => !(j.type === 'construct' && j.buildingId === buildingId)
+        )
       };
     });
   }
@@ -327,20 +312,19 @@
   <!-- Construction Queue -->
   <div class="section-hdr sub">| ACTIVE CONSTRUCTION</div>
   {#if firstBuildingInProgress}
+    {@const bDef = buildingService.getBuildingById(firstBuildingInProgress.type)}
     <div class="row">
       <span class="lbl">PROJECT</span><span class="val"
-        >{firstBuildingInProgress.building.name.toUpperCase()}</span
+        >{bDef?.name.toUpperCase() ?? firstBuildingInProgress.type.toUpperCase()}</span
       >
     </div>
     <div class="row">
-      <span class="lbl">CATEGORY</span><span class="val"
-        >{firstBuildingInProgress.building.category}</span
+      <span class="lbl">STATUS</span><span class="val"
+        >{firstBuildingInProgress.status.replace('_', ' ').toUpperCase()}</span
       >
     </div>
     {@const prog = Math.round(
-      ((firstBuildingInProgress.building.buildTime - firstBuildingInProgress.turnsRemaining) /
-        firstBuildingInProgress.building.buildTime) *
-        100
+      ((firstBuildingInProgress.workDone ?? 0) / (firstBuildingInProgress.workRequired ?? 50)) * 100
     )}
     <div class="need-row">
       <span class="lbl">PROGRESS</span>
@@ -348,10 +332,15 @@
         <div class="fill" style="width: {prog}%; background: var(--accent-hi)"></div>
       </div>
       <span class="val">{prog}%</span>
-      <span class="desc">{firstBuildingInProgress.turnsRemaining} turns left</span>
+      <span class="desc"
+        >{(firstBuildingInProgress.workRequired ?? 50) - (firstBuildingInProgress.workDone ?? 0)} work
+        pts left</span
+      >
     </div>
     <div class="btn-row">
-      <button class="act-btn" on:click={() => cancelBuilding(0)}>CANCEL CONSTRUCTION</button>
+      <button class="act-btn" on:click={() => cancelBuilding(firstBuildingInProgress!.id)}
+        >CANCEL CONSTRUCTION</button
+      >
     </div>
   {:else}
     <div class="row"><span class="muted">no active construction</span></div>

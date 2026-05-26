@@ -26,12 +26,26 @@ export function buildGameGrid(
             const fg = sub.fg as [number, number, number];
             const bg = sub.bg as [number, number, number];
 
-            grid.setTile(tile.x, tile.y, {
-                char: pickChar(sub, tile.x, tile.y),
-                foreground: { r: fg[0], g: fg[1], b: fg[2] },
-                background: { r: bg[0], g: bg[1], b: bg[2] },
-                position: { x: tile.x, y: tile.y }
-            });
+            // 5b: if this tile had resources and all have been depleted, render as bare ground
+            const hasResourceSlots = tile.resources && Object.keys(tile.resources).length > 0;
+            const allDepleted = hasResourceSlots && Object.values(tile.resources!).every((v) => v <= 0);
+
+            if (allDepleted) {
+                // Depleted tile: bare ground glyph '.' with a dim brownish tint
+                grid.setTile(tile.x, tile.y, {
+                    char: '.',
+                    foreground: { r: fg[0] * 0.5, g: fg[1] * 0.5, b: fg[2] * 0.5 },
+                    background: { r: bg[0], g: bg[1], b: bg[2] },
+                    position: { x: tile.x, y: tile.y }
+                });
+            } else {
+                grid.setTile(tile.x, tile.y, {
+                    char: pickChar(sub, tile.x, tile.y),
+                    foreground: { r: fg[0], g: fg[1], b: fg[2] },
+                    background: { r: bg[0], g: bg[1], b: bg[2] },
+                    position: { x: tile.x, y: tile.y }
+                });
+            }
         }
     }
 
