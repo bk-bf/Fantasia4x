@@ -115,7 +115,10 @@ export class ItemServiceImpl implements ItemService {
 		const item = this.getItemById(itemId);
 		if (!item?.buildingRequired) return true;
 
-		return (gameState.buildingCounts[item.buildingRequired] || 0) > 0;
+		// Phase 5d fix: check buildings[] instead of deprecated buildingCounts
+		return (gameState.buildings ?? []).some(
+			(b) => b.type === item.buildingRequired && b.status === 'complete'
+		);
 	}
 
 	calculateCraftingTime(itemId: string, gameState: GameState, pawnId?: string): number {

@@ -94,6 +94,7 @@
       buildings,
       stockpile: {},
       designations: {},
+      jobs: [],
       turn: currentTurnValue,
       race: race,
       buildingQueue: buildingQueue,

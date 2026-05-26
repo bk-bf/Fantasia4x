@@ -54,6 +54,8 @@ export const initialGameState: GameState = {
 	stockpile: {},
 	/** Phase 4: designated tile actions */
 	designations: {},
+	/** Phase 5a: active job pool */
+	jobs: [],
 	maxPopulation: 1,
 	availableResearch: [],
 	completedResearch: [],
@@ -107,6 +109,7 @@ function loadFromLocalStorage(): GameState | null {
 				}
 				if (!state.stockpile) state.stockpile = {};
 				if (!state.designations) state.designations = {};
+				if (!state.jobs) state.jobs = [];
 				return state;
 			} catch (e) {
 				console.warn('Failed to load save data:', e);

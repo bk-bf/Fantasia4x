@@ -15,6 +15,7 @@ import { ITEMS_DATABASE } from '../core/Items';
 import { AVAILABLE_BUILDINGS } from '../core/Buildings';
 
 import { pawnStateMachineService } from './PawnStateMachine';
+import { jobService } from '../services/JobService';
 import type { WorkCategory } from '../core/types';
 import type { Pawn } from '../core/types';
 
@@ -271,13 +272,13 @@ export class GameEngineImpl implements GameEngine {
 
 			// COORDINATION: Delegate to services for all system processing
 			this.gameState = workService.ensureBasicWorkAssignments(this.gameState);
-			this.processResources();
+			// Phase 5a: sync job pool BEFORE pawn processing
+			this.gameState = jobService.generateJobs(this.gameState);
 			this.processBuildings();
 			this.processCrafting();
 			this.processResearch();
 			this.processPawns();
 			this.processLocationRenewal();
-			this.gameState = workService.processWorkHarvesting(this.gameState);
 
 			this.lastTurnProcessed = this.gameState.turn;
 			this.gameStateManager.updateState(this.gameState);

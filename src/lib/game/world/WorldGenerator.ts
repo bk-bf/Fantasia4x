@@ -2,6 +2,7 @@
 import { createNoise2D } from 'simplex-noise';
 import type { WorldTile, Location } from '../core/types';
 import { BIOMES, SUBTERRAINS, SUBTERRAIN_FALLBACK, pickBiome, pickSubterrain, pickChar } from '../core/Terrains';
+import { resourceGeneratorService } from '../services/ResourceGeneratorService';
 
 // Noise constants ported from Celestia noise_generator.gd
 const TERRAIN_FREQUENCY = 0.005;
@@ -150,6 +151,9 @@ export function generateWorld(width: number, height: number, seed = Date.now()):
       };
     }
   }
+
+  // Phase 5b: populate tile-level resource amounts
+  resourceGeneratorService.generateResources(world, seed);
 
   return world;
 }

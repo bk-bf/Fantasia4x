@@ -219,6 +219,55 @@
     return workAssignments[pawnId]?.workPriorities[workId] || 0;
   }
 
+  // Phase 5a: 5-level labor settings (Celestia model)
+  function getPawnLaborLevel(pawnId: string, workId: string): 0 | 1 | 2 | 3 | 4 {
+    const laborSettings = workAssignments[pawnId]?.laborSettings;
+    if (laborSettings && workId in laborSettings) return laborSettings[workId] as 0 | 1 | 2 | 3 | 4;
+    // Fall back: map legacy priority to labor level
+    const pri = workAssignments[pawnId]?.workPriorities[workId] || 0;
+    if (pri === 0) return 0;
+    if (pri <= 3) return 1;
+    if (pri <= 6) return 2;
+    if (pri <= 9) return 3;
+    return 4;
+  }
+
+  function updatePawnLaborLevel(pawnId: string, workId: string, level: 0 | 1 | 2 | 3 | 4) {
+    gameState.update((state) => {
+      const newAssignments = { ...state.workAssignments };
+      if (!newAssignments[pawnId]) {
+        newAssignments[pawnId] = {
+          pawnId,
+          workPriorities: {},
+          laborSettings: {},
+          authorizedLocations: discoveredLocations.map((loc) => loc.id)
+        };
+      }
+      newAssignments[pawnId] = {
+        ...newAssignments[pawnId],
+        laborSettings: {
+          ...(newAssignments[pawnId].laborSettings ?? {}),
+          [workId]: level
+        },
+        // Keep workPriorities in sync for backward compat
+        workPriorities: {
+          ...(newAssignments[pawnId].workPriorities ?? {}),
+          [workId]: level === 0 ? 0 : level * 3
+        }
+      };
+      return { ...state, workAssignments: newAssignments };
+    });
+  }
+
+  const LABOR_LABELS: Record<number, string> = { 0: '—', 1: 'LOW', 2: 'NRM', 3: 'HI', 4: 'URG' };
+  const LABOR_COLORS: Record<number, string> = {
+    0: '#555',
+    1: '#4a9',
+    2: '#8bc',
+    3: '#fa0',
+    4: '#f44'
+  };
+
   function getWorkCategoryColor(workId: string): string {
     const work = workService.getWorkCategory(workId);
     return work?.color || '#9E9E9E';
@@ -305,16 +354,12 @@
   {#if selectedPawn}
     {@const pawn = pawns.find((p) => p.id === selectedPawn)}
     {#if pawn}
-      <div class="section-hdr">| {pawn.name.toUpperCase()} — WORK PRIORITIES</div>
+      <div class="section-hdr">| {pawn.name.toUpperCase()} — LABOR SETTINGS</div>
       {#each WORK_CATEGORIES as workCategory}
-        {@const priority = getPawnWorkPriority(pawn.id, workCategory.id)}
+        {@const level = getPawnLaborLevel(pawn.id, workCategory.id)}
         {@const efficiency = getPawnWorkEfficiency(pawn.id, workCategory.id)}
-        {@const expectedHarvest = getExpectedHarvest(pawn.id, workCategory.id)}
-        <div class="priority-row" class:active={priority > 0}>
+        <div class="priority-row" class:active={level > 0}>
           <span class="work-name">{workCategory.name.toUpperCase()}</span>
-          <span class="harvest">
-            {priority > 0 ? `+${expectedHarvest.toFixed(2)}/turn` : '+0/turn'}
-          </span>
           <span class="eff-label" style="color: {getWorkEfficiencyColor(efficiency)}">
             {efficiency >= 12
               ? 'EXCEL'
@@ -324,28 +369,18 @@
                   ? 'AVG'
                   : 'POOR'}({efficiency})
           </span>
-          <div class="pri-controls">
-            <button
-              class="pri-btn"
-              on:click={() => {
-                if (priority > 0) {
-                  const next = getNextAvailablePriority(pawn.id, workCategory.id, -1);
-                  updatePawnWorkPriority(pawn.id, workCategory.id, next);
-                }
-              }}
-              disabled={priority <= 0}>◀</button
-            >
-            <span class="pri-val" class:zero={priority === 0}>{priority}</span>
-            <button
-              class="pri-btn"
-              on:click={() => {
-                if (priority < 12) {
-                  const next = getNextAvailablePriority(pawn.id, workCategory.id, 1);
-                  updatePawnWorkPriority(pawn.id, workCategory.id, next);
-                }
-              }}
-              disabled={priority >= 12}>▶</button
-            >
+          <div class="labor-btns">
+            {#each [0, 1, 2, 3, 4] as lvl}
+              <button
+                class="labor-btn"
+                class:active-level={level === lvl}
+                style="color: {level === lvl ? LABOR_COLORS[lvl] : '#555'}"
+                on:click={() =>
+                  updatePawnLaborLevel(pawn.id, workCategory.id, lvl as 0 | 1 | 2 | 3 | 4)}
+                title={['Disabled', 'Low', 'Normal', 'High', 'Urgent'][lvl]}
+                >{LABOR_LABELS[lvl]}</button
+              >
+            {/each}
           </div>
         </div>
       {/each}
@@ -484,51 +519,34 @@
     font-size: 11px;
   }
 
-  .harvest {
-    color: var(--pos);
-    font-size: 11px;
-    width: 80px;
-    flex-shrink: 0;
-  }
-
   .eff-label {
     font-size: 10px;
     flex: 1;
   }
 
-  .pri-controls {
+  /* Phase 5a: 5-level labor buttons */
+  .labor-btns {
     display: flex;
-    align-items: center;
-    gap: 4px;
+    gap: 2px;
     margin-left: auto;
   }
 
-  .pri-btn {
-    padding: 1px 6px;
+  .labor-btn {
+    padding: 1px 5px;
     background: var(--bg-hover);
     border: 1px solid var(--border);
-    color: var(--text);
     font-family: 'Courier New', monospace;
-    font-size: 11px;
+    font-size: 10px;
     cursor: pointer;
+    letter-spacing: 0.02em;
+    min-width: 28px;
   }
-  .pri-btn:hover:not(:disabled) {
+  .labor-btn:hover {
     border-color: var(--border-hi);
-    color: var(--accent-hi);
   }
-  .pri-btn:disabled {
-    opacity: 0.3;
-    cursor: not-allowed;
-  }
-
-  .pri-val {
-    color: var(--accent-hi);
-    font-size: 12px;
-    width: 20px;
-    text-align: center;
+  .labor-btn.active-level {
+    background: var(--bg-panel);
+    border-color: var(--border-hi);
     font-weight: bold;
-  }
-  .pri-val.zero {
-    color: var(--text-muted);
   }
 </style>

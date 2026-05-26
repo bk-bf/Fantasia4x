@@ -1,4 +1,4 @@
-import type { GameState, ResearchProject, Building, Item, PlacedBuilding } from './types';
+import type { GameState, ResearchProject, Building, Item, PlacedBuilding, Job } from './types';
 import { itemService } from '../services/ItemService';
 
 export class GameStateManager {
@@ -86,11 +86,16 @@ export class GameStateManager {
 	}
 
 	startCrafting(item: Item, quantity: number = 1): boolean {
+		const id = `craft-${item.id}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 		this.state.craftingQueue.push({
+			id,
 			item,
 			quantity,
 			turnsRemaining: item.craftingTime || 1,
-			startedAt: this.state.turn
+			startedAt: this.state.turn,
+			workRequired: (item.craftingTime || 1) * 5,
+			workDone: 0,
+			materialsReserved: true
 		});
 		return true;
 	}
@@ -147,5 +152,24 @@ export class GameStateManager {
 	/** Update a pawn by id using an updater function */
 	updatePawn(pawnId: string, updater: (pawn: NonNullable<GameState['pawns'][number]>) => GameState['pawns'][number]): void {
 		this.state.pawns = this.state.pawns.map(p => p.id === pawnId ? updater(p) : p);
+	}
+
+	// ===== PHASE 5a: JOB POOL =====
+
+	addJob(job: Job): void {
+		const jobs = this.state.jobs ?? [];
+		if (!jobs.find(j => j.id === job.id)) {
+			this.state.jobs = [...jobs, job];
+		}
+	}
+
+	updateJob(jobId: string, updates: Partial<Job>): void {
+		this.state.jobs = (this.state.jobs ?? []).map(j =>
+			j.id === jobId ? { ...j, ...updates } : j
+		);
+	}
+
+	removeJob(jobId: string): void {
+		this.state.jobs = (this.state.jobs ?? []).filter(j => j.id !== jobId);
 	}
 }

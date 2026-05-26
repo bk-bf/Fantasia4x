@@ -511,7 +511,7 @@ gl_FragColor = vec4(tinted, sprite.a) * (1.0 - step(sprite.a, 0.01))
 
 ### Phase 5 — Work, Job & Economy Overhaul
 
-**Status:** `❌ not started`
+**Status:** `✅ complete`
 
 **Scope:** Replace the abstract "X units per turn" work model with a spatial job system where pawns claim discrete jobs, walk to sites, and accumulate progress per tick. Migrate building construction and crafting to the same model. Wire tile-level resource generation to the existing `WorldGenerator`. The result is the core DF/RimWorld economic loop: designate → job created → pawn claims → travels → works → completes.
 

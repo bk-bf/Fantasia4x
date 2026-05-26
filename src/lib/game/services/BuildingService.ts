@@ -289,8 +289,8 @@ export class BuildingServiceImpl implements BuildingService {
 	}
 
 	/**
-	 * Phase 4d: Place a building at specific tile coordinates with status 'planned'.
-	 * Pawns with a 'construct' designation on that tile will advance progress.
+	 * Phase 4d / Phase 5c: Place a building at specific tile coordinates with status 'planned'.
+	 * Sets workRequired = buildTime × 10 so that JobService can generate a construct job.
 	 */
 	placeBuilding(type: string, x: number, y: number, gameState: GameState): GameState {
 		const building = this.getBuildingById(type);
@@ -304,7 +304,11 @@ export class BuildingServiceImpl implements BuildingService {
 			x,
 			y,
 			status: 'planned',
-			progress: 0
+			progress: 0,
+			// Phase 5c: work-point model
+			workRequired: building.buildTime * 10,
+			workDone: 0,
+			materialsDelivered: false
 		};
 		return {
 			...gameState,

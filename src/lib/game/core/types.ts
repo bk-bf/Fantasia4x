@@ -8,7 +8,34 @@ export interface PlacedBuilding {
 	x: number;
 	y: number;
 	status: 'planned' | 'under_construction' | 'complete';
-	progress: number;     // 0–1
+	progress: number;     // 0–1 (legacy; use workDone/workRequired for placed buildings)
+	// Phase 5c: work-point construction
+	workRequired?: number;       // buildDef.buildTime × 10
+	workDone?: number;           // accumulated work points
+	materialsDelivered?: boolean; // materials consumed from stockpile?
+}
+
+// ===== PHASE 5 NEW TYPES =====
+
+/** Celestia-compatible 5-level labor priority. 0 = disabled. */
+export type LaborLevel = 0 | 1 | 2 | 3 | 4;
+export const LABOR_LEVEL = { DISABLED: 0, LOW: 1, NORMAL: 2, HIGH: 3, URGENT: 4 } as const;
+
+/**
+ * A discrete unit of work at a specific map location.
+ * Generated each turn by JobService from designations, buildings, crafting queue.
+ */
+export interface Job {
+	id: string;
+	type: 'harvest' | 'construct' | 'haul' | 'craft' | 'eat' | 'sleep';
+	targetX: number;
+	targetY: number;
+	resourceId?: string;    // harvest / haul: which resource
+	buildingId?: string;    // construct: which PlacedBuilding.id
+	craftQueueId?: string;  // craft: which CraftingInProgress.id
+	workRequired: number;   // total work points to complete
+	workDone: number;       // accumulated progress
+	claimedBy: string | null; // pawnId claiming this job; null = open
 }
 
 // ===== GAME STATE =====
@@ -27,6 +54,8 @@ export interface GameState {
 	stockpile: Record<string, number>;
 	/** Phase 4: designated tile actions keyed as "x,y" */
 	designations: Record<string, DesignationType>;
+	/** Phase 5a: active job pool — regenerated each turn by JobService */
+	jobs: Job[];
 	buildingQueue: BuildingInProgress[];
 	maxPopulation: number;
 	availableResearch: string[];
@@ -75,10 +104,13 @@ export interface WorkCategory {
 
 export interface WorkAssignment {
 	pawnId: string;
-	workPriorities: Record<string, number>; // workCategoryId -> priority (0-10)
-	authorizedLocations: string[]; // Location IDs where pawn can work
-	activeLocation?: string; // Currently working location
-	currentWork?: string; // Current work category
+	/** @deprecated Use laborSettings instead. Legacy 0-10 scale. */
+	workPriorities: Record<string, number>;
+	/** Phase 5a: 5-level labor priorities (Celestia model). 0=disabled, 1=low, 2=normal, 3=high, 4=urgent */
+	laborSettings?: Record<string, LaborLevel>;
+	authorizedLocations: string[];
+	activeLocation?: string;
+	currentWork?: string;
 }
 
 export interface ProductionTarget {
@@ -138,15 +170,20 @@ export interface Pawn {
 	isMoving?: boolean;                          // currently following a path
 	hasReachedDestination?: boolean;            // just finished a path
 
-	// Phase 4: State machine primary state
-	currentState?: string;                       // 'Idle' | 'Hungry' | 'Tired' | 'MovingToNeed' | 'MovingToResource' | 'Harvesting' | 'Eating' | 'Sleeping'
+	// Phase 4/5: State machine primary state
+	currentState?: string;                       // 'Idle' | 'Hungry' | 'Tired' | 'MovingToNeed' | 'MovingToResource' | 'Working' | 'Eating' | 'Sleeping'
 	// Job payload for active state machine job
 	activeJob?: {
-		type: 'harvest' | 'need';
+		/** Phase 5: 'harvest'|'construct'|'craft' use work-point jobs; 'need' for eat/sleep */
+		type: 'harvest' | 'construct' | 'craft' | 'need';
+		/** Phase 5a: id of the Job in gameState.jobs[] (null for need-type jobs) */
+		jobId?: string;
 		targetX: number;
 		targetY: number;
 		resourceId?: string;
-		progress: number;
+		buildingId?: string;    // for construct jobs
+		craftQueueId?: string;  // for craft jobs
+		progress: number;       // 0–1 fractional (local display)
 		timeRequired: number;
 		targetState?: string; // for MovingToNeed, which state to enter on arrival
 		turnsInState?: number; // for Eating/Sleeping duration tracking
@@ -411,8 +448,13 @@ export interface BuildingInProgress {
 export interface CraftingInProgress {
 	item: Item; // The item being crafted
 	quantity: number; // How many are being crafted
-	turnsRemaining: number;
+	turnsRemaining: number;       // legacy countdown (kept for backward compat)
 	startedAt: number;
+	// Phase 5d: work-based crafting
+	id?: string;                  // unique id for job correlation
+	workRequired?: number;        // craftingTime × 5
+	workDone?: number;            // accumulated work points
+	materialsReserved?: boolean;  // materials locked in stockpile?
 }
 export interface ResearchProject {
 	id: string;
