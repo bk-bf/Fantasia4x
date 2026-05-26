@@ -32,6 +32,12 @@ function createUIState() {
     setScreen: (screen: UIState['currentScreen']) =>
       update((state) => ({ ...state, currentScreen: screen })),
 
+    toggleScreen: (screen: UIState['currentScreen']) =>
+      update((state) => ({
+        ...state,
+        currentScreen: state.currentScreen === screen ? 'main' : screen
+      })),
+
     addEvent: (event: string) => update((state) => ({ ...state, lastEvent: event })),
 
     clearEvent: () => update((state) => ({ ...state, lastEvent: null }))
