@@ -40,8 +40,7 @@
 
   function wipeSave() {
     if (confirm('Delete save and restart?')) {
-      localStorage.removeItem('fantasia4x-save');
-      location.reload();
+      gameState.wipeAndReload();
     }
   }
 </script>

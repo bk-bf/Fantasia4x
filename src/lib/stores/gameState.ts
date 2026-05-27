@@ -329,6 +329,35 @@ function resetGame() {
 	console.info('[GameState] Game reset to initial state.');
 }
 
+/**
+ * Completely nuke all persisted state and reload the page.
+ *
+ * Stops the auto-turn timer FIRST so no in-flight turn can
+ * re-write localStorage after the wipe but before reload.
+ * Then removes every fantasia4x-* key so nothing stale survives.
+ */
+function wipeAndReload() {
+	// 1. Kill timers — no more saves can fire after this point.
+	stopAutoTurns();
+
+	if (browser) {
+		// 2. Remove every key that belongs to this game (prefix scan).
+		//    This is future-proof — any new key added later is automatically wiped.
+		const keysToRemove: string[] = [];
+		for (let i = 0; i < localStorage.length; i++) {
+			const key = localStorage.key(i);
+			if (key && key.startsWith('fantasia4x')) keysToRemove.push(key);
+		}
+		keysToRemove.forEach((k) => localStorage.removeItem(k));
+
+		// 3. Reset in-memory store so Svelte subscribers don't trigger another save.
+		set(initialGameState);
+
+		// 4. Reload.
+		location.reload();
+	}
+}
+
 // ===== MAIN STORE SETUP =====
 // Initialize locations at game start
 locationService.initializeAllLocations();
@@ -433,6 +462,7 @@ export const gameState = {
 	addItem,
 	consumeGlobalItem,
 	resetGame,
+	wipeAndReload,
 	regenWorld
 };
 
