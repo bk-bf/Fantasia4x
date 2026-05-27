@@ -9,11 +9,16 @@ export interface ResourceYieldDef {
     skillMultiplier: number;
 }
 
+export interface ToolRequirement {
+    workType: string;
+    minTier: number;
+}
+
 export interface ResourceInteractionDef {
     action: string;
     workCategory: string;
     workAmount: number;
-    requiredTool: string;
+    toolRequirement: ToolRequirement | null;
     yields: ResourceYieldDef[];
 }
 
