@@ -48,10 +48,14 @@ const B = (n: number): string => String.fromCodePoint(0xe400 + n);
 const I = (n: number): string => String.fromCodePoint(0xe500 + n);
 /** workshops.bmp index → PUA Unicode char (U+E600 + n) */
 const W = (n: number): string => String.fromCodePoint(0xe600 + n);
+/** creatures.bmp index → PUA Unicode char (U+E800 + n) */
+const CR = (n: number): string => String.fromCodePoint(0xe800 + n);
+/** races.bmp index → PUA Unicode char (U+E900 + n) */
+const RA = (n: number): string => String.fromCodePoint(0xe900 + n);
 
 // ── CharSpan resolver ─────────────────────────────────────────────────────────
 export interface CharSpan {
-    sheet?: 'tiles' | 'plants' | 'map' | 'buildings' | 'items' | 'workshops';
+    sheet?: 'tiles' | 'plants' | 'map' | 'buildings' | 'items' | 'workshops' | 'creatures' | 'races';
     from?: number;
     to?: number;
     id?: number;
@@ -60,7 +64,7 @@ export interface CharSpan {
 
 type SheetFn = (n: number) => string;
 const SHEET_FN: Record<string, SheetFn> = {
-    tiles: T, plants: P, map: M, buildings: B, items: I, workshops: W
+    tiles: T, plants: P, map: M, buildings: B, items: I, workshops: W, creatures: CR, races: RA
 };
 
 export function resolveCharSpans(spans: CharSpan[]): string[] {

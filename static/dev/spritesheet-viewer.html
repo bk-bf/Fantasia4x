@@ -121,16 +121,14 @@
         note: 'sheet: "map" — humanoids/entities' },
       { name: 'tiles',     file: '/tilesets/bitlands_tiles.bmp',     puaBase: null,
         note: 'sheet: "tiles" — terrain CP437 tiles' },
-      { name: 'workshops', file: '/tilesets/bitlands_workshops.bmp', puaBase: 0xe600,
-        note: 'sheet: "workshops"' },
       { name: 'crops',     file: '/tilesets/bitlands_crops.bmp',     puaBase: 0xe700,
         note: 'sheet: "crops"' },
       { name: 'font',      file: '/tilesets/bitlands_font.bmp',      puaBase: 0xe300,
         note: 'sheet: "font" — UI glyphs' },
-      { name: 'creatures', file: '/tilesets/creatures.bmp',          puaBase: null,
-        note: '⚠ not yet in atlas — reference only' },
-      { name: 'races',     file: '/tilesets/races.bmp',              puaBase: null,
-        note: '⚠ not yet in atlas — reference only' },
+      { name: 'creatures', file: '/tilesets/creatures.bmp',          puaBase: 0xe800,
+        note: 'sheet: "creatures" in charSpans' },
+      { name: 'races',     file: '/tilesets/races.bmp',              puaBase: 0xe900,
+        note: 'sheet: "races" in charSpans' },
     ];
 
     const MAGENTA = [255, 0, 255]; // transparent mask colour in bitlands sheets

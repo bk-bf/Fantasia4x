@@ -26,7 +26,11 @@ export const SHEET = {
     /** bitlands_workshops.bmp – workshop sprites            (U+E600–E6FF) */
     WORKSHOPS: 0xe600,
     /** bitlands_crops.bmp     – crop / farming sprites      (U+E700–E7FF) */
-    CROPS: 0xe700
+    CROPS: 0xe700,
+    /** creatures.bmp           – creature / monster sprites  (U+E800–E8FF) */
+    CREATURES: 0xe800,
+    /** races.bmp               – playable race sprites       (U+E900–E9FF) */
+    RACES: 0xe900
 } as const;
 
 /**

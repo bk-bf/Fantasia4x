@@ -666,10 +666,12 @@ export async function extendAtlasWithSheet(
  *   y=864  bitlands_font.bmp      U+E300 + index
  *   y=1152 bitlands_buildings.bmp U+E400 + index
  *   y=1440 bitlands_items.bmp     U+E500 + index
- *   y=1728 bitlands_workshops.bmp U+E600 + index
- *   y=2016 bitlands_crops.bmp     U+E700 + index
+ *   y=1728 bitlands_crops.bmp      U+E700 + index
+ *   y=2016 creatures.bmp            U+E800 + index
+ *   y=2304 races.bmp                U+E900 + index
  *
- * Total texture: 192×2304 px.  All sheets use tileW=12, tileH=18.
+ * Total texture: 192×2592 px.  All sheets use tileW=12, tileH=18.
+ * (bitlands_workshops.bmp is absent — U+E600 range is reserved but unregistered.)
  *
  * Reference sprites by index with the helpers in tilesets.ts:
  *   glyph(SHEET.MAP, 64)  →  humanoid at map position 64
@@ -682,8 +684,9 @@ export async function loadBitlandsAtlas(tileW = 12, tileH = 18, debug = false): 
 		{ url: '/tilesets/bitlands_font.bmp', puaBase: 0xe300 },
 		{ url: '/tilesets/bitlands_buildings.bmp', puaBase: 0xe400 },
 		{ url: '/tilesets/bitlands_items.bmp', puaBase: 0xe500 },
-		{ url: '/tilesets/bitlands_workshops.bmp', puaBase: 0xe600 },
 		{ url: '/tilesets/bitlands_crops.bmp', puaBase: 0xe700 },
+		{ url: '/tilesets/creatures.bmp', puaBase: 0xe800 },
+		{ url: '/tilesets/races.bmp', puaBase: 0xe900 },
 	];
 
 	const results = await Promise.allSettled(
