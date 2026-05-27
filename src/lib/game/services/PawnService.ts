@@ -1077,7 +1077,7 @@ export class PawnServiceImpl implements PawnService {
 						...p,
 						path,
 						pathIndex: 0,
-						isMoving: path.length > 1,
+						isMoving: path.length > 0,
 						hasReachedDestination: false
 					}
 					: p

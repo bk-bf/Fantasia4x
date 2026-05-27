@@ -339,6 +339,9 @@ function handleIdle(pawn: Pawn, gameState: GameState): GameState {
         return transitionTo(pawn, PAWN_STATE.TIRED, gameState);
     }
 
+    // Don't pick jobs until the pathfinder is ready — prevents endless pick/release cycles
+    if (!wasmPathfinderService.isReady()) return gameState;
+
     const availableJobs = jobService.getAvailableJobs(pawn, gameState);
     const job = availableJobs[0];
     if (!job) return gameState;

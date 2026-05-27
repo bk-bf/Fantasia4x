@@ -461,6 +461,9 @@
       viewX = 0;
       viewY = 0;
 
+      // Init pathfinder WASM early so pawns can navigate as soon as turns start
+      wasmPathfinderService.init().catch((e) => console.warn('[GameCanvas] WASM init failed:', e));
+
       renderer = new WebGLRenderer({
         canvas,
         tileWidth,

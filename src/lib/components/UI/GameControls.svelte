@@ -2,6 +2,7 @@
   import { browser } from '$app/environment';
   import { gameState, currentTurn } from '$lib/stores/gameState';
   import { uiState } from '$lib/stores/uiState';
+  import { wasmPathfinderService } from '$lib/game/services/WasmPathfinderService';
   import { onMount, onDestroy } from 'svelte';
 
   let isPaused = false;
@@ -22,8 +23,10 @@
   const unsubTurn = currentTurn.subscribe((v) => (currentTurnValue = v));
   const unsubUI = uiState.subscribe((s) => (currentScreen = s.currentScreen));
 
-  onMount(() => {
+  onMount(async () => {
     if (!browser) return;
+    // Ensure pathfinder WASM is loaded before turns start so pawns can navigate immediately
+    await wasmPathfinderService.init();
     gameState.startAutoTurns();
   });
 
