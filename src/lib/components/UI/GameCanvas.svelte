@@ -238,7 +238,11 @@
           grid.setTile(x, y, {
             char: t.char,
             foreground: { r: 1.0, g: 1.0, b: 1.0 },
-            background: { r: t.background.r * 0.4 + 0.4, g: t.background.g * 0.4 + 0.3, b: t.background.b * 0.4 + 0.0 },
+            background: {
+              r: t.background.r * 0.4 + 0.4,
+              g: t.background.g * 0.4 + 0.3,
+              b: t.background.b * 0.4 + 0.0
+            },
             position: { x, y }
           });
         }
@@ -485,8 +489,12 @@
       // Commit the painted rectangle to game state
       gameState.updateWithSave((state) =>
         designationService.designateRect(
-          zoneAnchorX, zoneAnchorY, zoneEndX, zoneEndY,
-          designationTypeActive, state
+          zoneAnchorX,
+          zoneAnchorY,
+          zoneEndX,
+          zoneEndY,
+          designationTypeActive,
+          state
         )
       );
       zoneDragActive = false;

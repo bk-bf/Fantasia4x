@@ -77,16 +77,16 @@ export function buildGameGrid(
         // Work designations: replace terrain glyph with a marker char
         const WORK_GLYPHS: Partial<Record<DesignationType, { char: string; fg: RGB }>> = {
             harvest: { char: '!', fg: { r: 0.25, g: 0.85, b: 0.25 } },
-            mine:    { char: 'X', fg: { r: 0.85, g: 0.55, b: 0.15 } },
-            construct:{ char: '+', fg: { r: 0.35, g: 0.75, b: 0.80 } },
-            haul:    { char: 'h', fg: { r: 0.75, g: 0.75, b: 0.25 } },
-            clear:   { char: 'x', fg: { r: 0.80, g: 0.25, b: 0.25 } }
+            mine: { char: 'X', fg: { r: 0.85, g: 0.55, b: 0.15 } },
+            construct: { char: '+', fg: { r: 0.35, g: 0.75, b: 0.80 } },
+            haul: { char: 'h', fg: { r: 0.75, g: 0.75, b: 0.25 } },
+            clear: { char: 'x', fg: { r: 0.80, g: 0.25, b: 0.25 } }
         };
 
         // Zone designations: tint background, keep terrain glyph
         const ZONE_TINTS: Partial<Record<DesignationType, { bg: RGB; fg: RGB }>> = {
-            forage:    { bg: { r: 0.02, g: 0.22, b: 0.04 }, fg: { r: 0.35, g: 0.90, b: 0.35 } },
-            scavenge:  { bg: { r: 0.18, g: 0.14, b: 0.06 }, fg: { r: 0.70, g: 0.65, b: 0.45 } },
+            forage: { bg: { r: 0.02, g: 0.22, b: 0.04 }, fg: { r: 0.35, g: 0.90, b: 0.35 } },
+            scavenge: { bg: { r: 0.18, g: 0.14, b: 0.06 }, fg: { r: 0.70, g: 0.65, b: 0.45 } },
             stockpile: { bg: { r: 0.30, g: 0.18, b: 0.02 }, fg: { r: 1.00, g: 0.80, b: 0.20 } }
         };
 

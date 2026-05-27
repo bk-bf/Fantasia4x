@@ -63,7 +63,9 @@
   <div class="panel-hdr">| ZONES</div>
   <div class="hint">
     {#if designationActive}
-      <span class="hint-active">PAINTING [{activeType?.toUpperCase()}] — drag to fill · RMB to erase · click again to stop</span>
+      <span class="hint-active"
+        >PAINTING [{activeType?.toUpperCase()}] — drag to fill · RMB to erase · click again to stop</span
+      >
     {:else}
       click a zone type to start painting on the map
     {/if}
@@ -85,7 +87,11 @@
       </button>
       <span class="zone-desc">{zone.desc}</span>
       {#if count > 0}
-        <button class="clear-btn" on:click={() => clearZone(zone.type)} title="Clear all {zone.label} zones">✕</button>
+        <button
+          class="clear-btn"
+          on:click={() => clearZone(zone.type)}
+          title="Clear all {zone.label} zones">✕</button
+        >
       {/if}
     </div>
   {/each}
@@ -118,7 +124,9 @@
   }
 
   @keyframes blink {
-    50% { opacity: 0.5; }
+    50% {
+      opacity: 0.5;
+    }
   }
 
   .zone-row {
@@ -140,7 +148,9 @@
     padding: 2px 7px;
     cursor: pointer;
     min-width: 110px;
-    transition: border-color 0.15s, color 0.15s;
+    transition:
+      border-color 0.15s,
+      color 0.15s;
   }
 
   .zone-btn:hover {
