@@ -84,9 +84,10 @@ pub fn find_path(
         return vec![sx, sy];
     }
 
-    // Dynamic search limit, ported from Celestia pathfinder.gd
-    let raw_limit = (w * h / 10 * 1500 / 10000).max(500).min(10000);
-    let max_iter = raw_limit as u32;
+    // Search limit: allow up to the full grid size worth of node expansions.
+    // The old formula (w*h/10*1500/10000) gave only ~144 for a 120×80 map
+    // which was far too low for long cross-map paths.
+    let max_iter = (w * h).min(100_000) as u32;
 
     // g_cost per node (f32, initialized to +∞)
     let mut g: Vec<f32> = vec![f32::INFINITY; n];
@@ -155,19 +156,28 @@ pub fn find_path(
 }
 
 fn reconstruct(parent: &[u32], start: usize, end: usize, w: usize) -> Vec<u32> {
-    let mut path = Vec::new();
+    // Reconstruct as node indices first, then reverse node order.
+    // Reversing a flat [x,y,x,y,...] list corrupts coordinate pairing.
+    let mut rev_nodes: Vec<usize> = Vec::new();
     let mut cur = end;
+    rev_nodes.push(cur);
+
     while cur != start {
-        path.push((cur % w) as u32);
-        path.push((cur / w) as u32);
         let p = parent[cur] as usize;
         if p == usize::MAX {
             return vec![];
         }
         cur = p;
+        rev_nodes.push(cur);
     }
-    path.push((start % w) as u32);
-    path.push((start / w) as u32);
-    path.reverse();
+
+    rev_nodes.reverse();
+
+    // Match engine expectation: path excludes start tile, contains next steps only.
+    let mut path: Vec<u32> = Vec::with_capacity((rev_nodes.len().saturating_sub(1)) * 2);
+    for &node in rev_nodes.iter().skip(1) {
+        path.push((node % w) as u32);
+        path.push((node / w) as u32);
+    }
     path
 }

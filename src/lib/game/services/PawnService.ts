@@ -1099,6 +1099,16 @@ export class PawnServiceImpl implements PawnService {
 	processMovement(gameState: GameState): GameState {
 		let state = gameState;
 		for (const pawn of state.pawns) {
+			// Repair inconsistent state saved from earlier bugs: path exists but isMoving=false
+			if (!pawn.isMoving && pawn.path && pawn.path.length > 0) {
+				state = {
+					...state,
+					pawns: state.pawns.map(p =>
+						p.id === pawn.id ? { ...p, path: [], pathIndex: 0 } : p
+					)
+				};
+				continue;
+			}
 			if (!pawn.isMoving || !pawn.path || pawn.path.length === 0) continue;
 			const speed = Math.max(1, Math.floor((pawn.stats.dexterity ?? 10) / 20));
 			let idx = pawn.pathIndex ?? 0;

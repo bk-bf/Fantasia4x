@@ -332,10 +332,10 @@ function tickPawn(pawn: Pawn, gameState: GameState): GameState {
 }
 
 function handleIdle(pawn: Pawn, gameState: GameState): GameState {
-    if ((pawn.needs?.hunger ?? 0) >= HUNGER_THRESHOLD) {
+    if ((pawn.needs?.hunger ?? 0) >= HUNGER_THRESHOLD && findAvailableFood(gameState)) {
         return transitionTo(pawn, PAWN_STATE.HUNGRY, gameState);
     }
-    if ((pawn.needs?.fatigue ?? 0) >= FATIGUE_THRESHOLD) {
+    if ((pawn.needs?.fatigue ?? 0) >= FATIGUE_THRESHOLD && findNearestRestBuilding(pawn, gameState)) {
         return transitionTo(pawn, PAWN_STATE.TIRED, gameState);
     }
 
