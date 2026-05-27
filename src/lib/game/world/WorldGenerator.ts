@@ -83,8 +83,13 @@ export function generateWorld(width: number, height: number, seed = Date.now()):
   for (let y = 0; y < height; y++) {
     world[y] = [];
     for (let x = 0; x < width; x++) {
-      // Primary noise → density in 0..1
-      const raw = fbm(terrainNoise, x, y);
+      // Domain-warp the biome sampling so river (and all biome boundary) contours
+      // meander organically rather than running in straight diagonal bands.
+      // Mirrors Celestia's get_warped_noise(), which was defined but never wired up.
+      const warpAmt = 20;
+      const wx = detailNoise(x * DETAIL_FREQUENCY + 17.3, y * DETAIL_FREQUENCY + 17.3) * warpAmt;
+      const wy = detailNoise(x * DETAIL_FREQUENCY - 17.3, y * DETAIL_FREQUENCY - 17.3) * warpAmt;
+      const raw = fbm(terrainNoise, x + wx, y + wy);
       const density = Math.max(0, Math.min(1, (raw + 1) / 2));
 
       // Detail noise in -1..1 for subterrain selection

@@ -1,9 +1,9 @@
 {
   "biomes": {
-    "forest"  : { "densityRange": [0.52, 0.7 ] },
+    "forest"  : { "densityRange": [0.52, 0.6 ] },
     "swamp"   : { "densityRange": [0.18, 0.28] },
     "plains"  : { "densityRange": [0.28, 0.52] },
-    "mountain": { "densityRange": [0.7 , 1   ] },
+    "mountain": { "densityRange": [0.6 , 1   ] },
     "river"   : { "densityRange": [0   , 0.18] }
   }
 }

@@ -98,6 +98,17 @@
     designationMode = s.designationActive;
     if (s.designationType) designationTypeActive = s.designationType as DesignationType;
     redrawOverlay();
+    if (s.mapFocusRequest && ready && renderer?.isReady()) {
+      const { x, y } = s.mapFocusRequest;
+      const targetZoom = 12;
+      tileWidth = targetZoom;
+      tileHeight = targetZoom;
+      renderer.setTileSize(tileWidth, tileHeight);
+      const visW = (container?.clientWidth ?? 800) / tileWidth;
+      const visH = (container?.clientHeight ?? 600) / tileHeight;
+      setView(Math.round(x - visW / 2), Math.round(y - visH / 2));
+      uiState.clearMapFocus();
+    }
   });
 
   // Zone drag-paint state (drag fills a rectangle)
@@ -476,7 +487,12 @@
       const ok = await renderer.waitForInitialization();
       if (!ok || !renderer.isReady()) throw new Error('Renderer init failed');
 
-      const grid = worldMap.length > 0 ? buildGameGrid(worldMap) : generatePlaceholderGrid();
+      const grid =
+        worldMap.length > 0
+          ? buildGameGrid(worldMap, buildings, designations)
+          : generatePlaceholderGrid();
+      overlayPawns(grid, pawns, selectedPawnId);
+      overlayDroppedItems(grid, droppedItems);
       renderer.setGrid(grid);
 
       ready = true;

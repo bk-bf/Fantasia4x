@@ -12,6 +12,8 @@ interface UIState {
   designationType: string | null;
   /** Screen to return to after zone painting ends. */
   _screenBeforeDesignation: Screen | null;
+  /** Request the map to pan (and zoom) to a specific tile. Cleared after handling. */
+  mapFocusRequest: { x: number; y: number } | null;
 }
 
 function createUIState() {
@@ -21,7 +23,8 @@ function createUIState() {
     lastEvent: null,
     designationActive: false,
     designationType: null,
-    _screenBeforeDesignation: null
+    _screenBeforeDesignation: null,
+    mapFocusRequest: null
   };
 
   const { subscribe, set, update } = writable(initialState);
@@ -60,7 +63,13 @@ function createUIState() {
         designationType: null,
         currentScreen: state._screenBeforeDesignation ?? state.currentScreen,
         _screenBeforeDesignation: null
-      }))
+      })),
+
+    focusMapOn: (x: number, y: number) =>
+      update((state) => ({ ...state, mapFocusRequest: { x, y } })),
+
+    clearMapFocus: () =>
+      update((state) => ({ ...state, mapFocusRequest: null }))
   };
 }
 

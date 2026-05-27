@@ -71,6 +71,17 @@
     unsubscribe();
   });
 
+  // Navigate map to average pawn position
+  function focusPawnsOnMap() {
+    const placed = pawns.filter((p) => p.position);
+    if (placed.length > 0) {
+      const avgX = Math.round(placed.reduce((s, p) => s + p.position!.x, 0) / placed.length);
+      const avgY = Math.round(placed.reduce((s, p) => s + p.position!.y, 0) / placed.length);
+      uiState.focusMapOn(avgX, avgY);
+    }
+    uiState.setScreen('main');
+  }
+
   // Pawn selection handler
   function selectPawn(pawn: Pawn) {
     selectedPawn = pawn;
@@ -90,7 +101,10 @@
 </script>
 
 <div class="pawn-screen" bind:this={pawnScreenElement}>
-  <div class="screen-hdr">| PAWNS</div>
+  <div class="screen-hdr">
+    <span>| PAWNS</span>
+    <button class="find-btn" on:click={focusPawnsOnMap}>[ FIND ]</button>
+  </div>
 
   <!-- Section tabs — which info panel to show -->
   <nav class="pawn-tabs">
@@ -147,6 +161,27 @@
     letter-spacing: 0.08em;
     border-bottom: 1px solid var(--border-hi);
     flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .find-btn {
+    background: transparent;
+    border: 1px solid var(--accent-hi);
+    color: var(--accent-hi);
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    padding: 2px 6px;
+    cursor: pointer;
+    opacity: 0.85;
+    transition: opacity 0.12s;
+  }
+  .find-btn:hover {
+    opacity: 1;
+    background: var(--accent-hi);
+    color: var(--bg);
   }
 
   /* ── Section tabs (STATUS / ATTRIBUTES / GEAR / ABILITIES) ── */
