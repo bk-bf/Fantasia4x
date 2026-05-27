@@ -13,17 +13,17 @@ export interface ResourceDef {
 }
 
 export const RESOURCES: Record<string, ResourceDef> = Object.fromEntries(
-    (resourceObjectsData as Array<{
+    (resourceObjectsData as unknown as Array<{
         id: string;
         displayName: string;
-        spawn: { baseTerrainSubtypes: string[] };
+        spawn: { subterrains: Record<string, number> };
         nodeAmountRange: number[];
         interaction: { workAmount: number };
     }>).map((def) => [
         def.id,
         {
             displayName: def.displayName,
-            terrainSubtypes: def.spawn.baseTerrainSubtypes,
+            terrainSubtypes: Object.keys(def.spawn.subterrains),
             resourceAmount: [def.nodeAmountRange[0], def.nodeAmountRange[1]] as [number, number],
             harvestTime: def.interaction.workAmount
         }

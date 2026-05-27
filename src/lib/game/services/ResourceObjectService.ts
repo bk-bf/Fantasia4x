@@ -22,8 +22,7 @@ export interface ResourceObjectDef {
     displayName: string;
     objectSubType: string;
     spawn: {
-        biomes: Record<string, number>;
-        baseTerrainSubtypes: string[];
+        subterrains: Record<string, number>;
     };
     nodeAmountRange: [number, number];
     designationTypes: Array<'harvest' | 'forage' | 'scavenge'>;

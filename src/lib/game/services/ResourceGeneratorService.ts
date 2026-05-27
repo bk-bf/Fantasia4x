@@ -32,12 +32,9 @@ class ResourceGeneratorServiceImpl {
         for (const row of worldMap) {
             for (const tile of row) {
                 const baseSubType = tile.subType;
-                const biomeName = tile.terrainType;
 
                 for (const def of defs) {
-                    if (!def.spawn.baseTerrainSubtypes.includes(baseSubType)) continue;
-
-                    const chance = def.spawn.biomes[biomeName] ?? 0;
+                    const chance = def.spawn.subterrains[baseSubType] ?? 0;
                     if (chance <= 0) continue;
 
                     const roll = rng(0, 100000) / 100000;
