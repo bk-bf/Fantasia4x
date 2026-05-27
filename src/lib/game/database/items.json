@@ -106,14 +106,14 @@
     "workTypes"       : ["crafting"]
   },
   {
-    "id"       : "hide",
-    "name"     : "Raw Hide",
-    "type"     : "material",
-    "category" : "organic",
+    "id"         : "hide",
+    "name"       : "Raw Hide",
+    "type"       : "material",
+    "category"   : "organic",
     "description": "Untreated animal skin. Used in leather strips and light armor.",
-    "color"    : "#8D6E63",
-    "amount"   : 0,
-    "workTypes": ["hunting"]
+    "color"      : "#8D6E63",
+    "amount"     : 0,
+    "workTypes"  : ["hunting"]
   },
   {
     "id"              : "spit_meat",
@@ -221,8 +221,8 @@
     "workTypes"  : ["foraging"]
   },
   {
-    "id"              : "rope",
-    "name"            : "Rope",
+    "id"              : "cordage",
+    "name"            : "Cordage",
     "type"            : "material",
     "category"        : "primitive",
     "description"     : "Twisted plant fiber. Binding, lashing, weaving.",
@@ -296,7 +296,7 @@
     "craftingTime"    : 1,
     "toolTierRequired": 0,
     "workshopType"    : "craft_spot",
-    "workTypes"       : ["crafting"]
+    "workTypes"       : ["crafting", "woodcutting"]
   },
   {
     "id"              : "digging_stick",
@@ -348,22 +348,22 @@
     "workTypes"       : ["crafting", "construction"]
   },
   {
-    "id"                : "stone_spear",
-    "name"              : "Stone Spear",
-    "type"              : "weapon",
-    "category"          : "hunting",
-    "description"       : "Flint-tipped wooden shaft. First proper hunting weapon.",
-    "color"             : "#999999",
-    "amount"            : 0,
-    "tier"              : 1,
-    "durability"        : 30,
-    "maxDurability"     : 30,
-    "craftingCost"      : {"flint_shard": 3, "twig": 4, "rope": 1},
-    "craftingTime"      : 3,
-    "toolTierRequired"  : 0,
-    "workshopType"      : "makers_bench",
-    "weaponProperties"  : {"damage": 8, "attackSpeed": 1, "range": 1},
-    "workTypes"         : ["crafting", "hunting"]
+    "id"              : "stone_spear",
+    "name"            : "Stone Spear",
+    "type"            : "weapon",
+    "category"        : "hunting",
+    "description"     : "Flint-tipped wooden shaft. First proper hunting weapon.",
+    "color"           : "#999999",
+    "amount"          : 0,
+    "tier"            : 1,
+    "durability"      : 30,
+    "maxDurability"   : 30,
+    "craftingCost"    : {"flint_shard": 3, "twig": 4, "rope": 1},
+    "craftingTime"    : 3,
+    "toolTierRequired": 0,
+    "workshopType"    : "makers_bench",
+    "weaponProperties": {"damage": 8, "attackSpeed": 1, "range": 1},
+    "workTypes"       : ["crafting", "hunting"]
   },
   {
     "id"              : "stone_spade",
