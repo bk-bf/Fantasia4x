@@ -35,7 +35,7 @@ const SAVE_VERSION = 2; // v2: spatial-only economy, no abstract resource ticks
 const SAVE_VERSION_KEY = 'fantasia4x-save-version';
 const WORLD_VERSION_KEY = 'fantasia4x-world-version';
 const WORLD_SEED = Date.now();
-const _generatedWorld = generateWorld(120, 80, WORLD_SEED);
+const _generatedWorld = generateWorld(240, 160, WORLD_SEED);
 resourceGeneratorService.generateResources(_generatedWorld, WORLD_SEED);
 
 // ===== INITIAL STATE =====
@@ -280,7 +280,7 @@ function advanceTurn() {
 // ===== WORLD REGEN =====
 function regenWorld(seed?: number) {
 	const s = (seed !== undefined ? seed : Date.now()) >>> 0 || 1;
-	const newWorld = generateWorld(120, 80, s);
+	const newWorld = generateWorld(240, 160, s);
 	resourceGeneratorService.generateResources(newWorld, s);
 	// Patch the engine's internal state FIRST so the next auto-turn
 	// doesn't overwrite the store back to the old worldMap.
@@ -368,14 +368,13 @@ let baseState = savedState || initialGameState;
 // Migrate old saves that have no world map or are missing terrain data
 if (!baseState.worldMap || baseState.worldMap.length === 0 || !baseState.worldMap[0]?.[0]?.terrainType) {
 	const migrateSeed = Date.now();
-	const migratedWorld = generateWorld(120, 80, migrateSeed);
-	resourceGeneratorService.generateResources(migratedWorld, migrateSeed);
+	const migratedWorld = generateWorld(240, 160, migrateSeed);
 	baseState = { ...baseState, worldMap: migratedWorld };
 	if (browser) localStorage.setItem(WORLD_VERSION_KEY, String(WORLD_VERSION));
 } else if (browser && localStorage.getItem(WORLD_VERSION_KEY) !== String(WORLD_VERSION)) {
 	// World generation algorithm changed — regenerate map while keeping all other game state
 	const migrateSeed = Date.now();
-	const migratedWorld = generateWorld(120, 80, migrateSeed);
+	const migratedWorld = generateWorld(240, 160, migrateSeed);
 	resourceGeneratorService.generateResources(migratedWorld, migrateSeed);
 	baseState = { ...baseState, worldMap: migratedWorld };
 	localStorage.setItem(WORLD_VERSION_KEY, String(WORLD_VERSION));

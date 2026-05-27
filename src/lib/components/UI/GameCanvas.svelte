@@ -22,8 +22,8 @@
 
   // Tile size range for zoom (square cells for CoQ sprite-mode)
   // MAP_W / MAP_H must match the generateWorld() call in gameState.ts
-  const MAP_W = 120;
-  const MAP_H = 80;
+  const MAP_W = 240;
+  const MAP_H = 160;
   const MAX_TILE_W = 24;
   const ZOOM_STEP = 2;
   const SCROLL_STEP = 4; // tiles per arrow key press

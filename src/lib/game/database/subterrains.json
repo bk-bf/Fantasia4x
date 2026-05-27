@@ -13,7 +13,7 @@
         "charSpans"   : [ {"sheet": "tiles", "from": 72, "to": 79} ],
         "fg"          : [0.52, 0.68, 0.13],
         "bg"          : [0.08, 0.1, 0.03],
-        "biomes"      : { "forest": [-0.3, 0.3], "plains": [-0.15, 0.15] }
+        "biomes"      : { "forest": [-0.3, 0.18], "plains": [-0.15, 0.18] }
     },
     "deep_grass"       : {
         "walkable"    : true,
@@ -21,7 +21,7 @@
         "charSpans"   : [ {"sheet": "plants", "from": 83, "to": 84} ],
         "fg"          : [0.38, 0.56, 0.09],
         "bg"          : [0.07, 0.09, 0.03],
-        "biomes"      : { "forest": [0.3, null] }
+        "biomes"      : { "forest": [0.25, null] }
     },
     "tall_grass"       : {
         "walkable"    : true,
@@ -29,7 +29,7 @@
         "charSpans"   : [ {"sheet": "plants", "from": 83, "to": 84} ],
         "fg"          : [0.24, 0.42, 0.06],
         "bg"          : [0.05, 0.07, 0.02],
-        "biomes"      : { "plains": [0.15, 0.7] }
+        "biomes"      : { "plains": [0.25, 0.7] }
     },
     "savanna"          : {
         "walkable"    : true,
@@ -44,7 +44,8 @@
         "movementCost": 1.8,
         "charSpans"   : [ {"sheet": "plants", "id": 41} ],
         "fg"          : [0.26, 0.46, 0.05],
-        "bg"          : [0.07, 0.09, 0.03]
+        "bg"          : [0.07, 0.09, 0.03],
+        "biomes"      : { "forest": [0.05, 0.15], "plains": [0.10, 0.15] }
     },
     "scrubland"        : {
         "walkable"    : true,
