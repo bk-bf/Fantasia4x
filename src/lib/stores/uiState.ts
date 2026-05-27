@@ -13,13 +13,18 @@ interface UIState {
   | 'work';
   showNotifications: boolean;
   lastEvent: string | null;
+  /** Zone/designation painting mode. null = inactive. */
+  designationActive: boolean;
+  designationType: string | null;
 }
 
 function createUIState() {
   const initialState: UIState = {
     currentScreen: 'main',
     showNotifications: true,
-    lastEvent: null
+    lastEvent: null,
+    designationActive: false,
+    designationType: null
   };
 
   const { subscribe, set, update } = writable(initialState);
@@ -40,7 +45,13 @@ function createUIState() {
 
     addEvent: (event: string) => update((state) => ({ ...state, lastEvent: event })),
 
-    clearEvent: () => update((state) => ({ ...state, lastEvent: null }))
+    clearEvent: () => update((state) => ({ ...state, lastEvent: null })),
+
+    activateDesignation: (type: string) =>
+      update((state) => ({ ...state, designationActive: true, designationType: type })),
+
+    deactivateDesignation: () =>
+      update((state) => ({ ...state, designationActive: false, designationType: null }))
   };
 }
 

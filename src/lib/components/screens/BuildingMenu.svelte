@@ -5,6 +5,7 @@
   import { buildingService } from '$lib/game/services/BuildingService';
   import { onDestroy } from 'svelte';
   import CurrentTask from '../UI/CurrentTask.svelte';
+  import ZonePanel from '../UI/ZonePanel.svelte';
   import type { PlacedBuilding } from '$lib/game/core/types';
   import type { Building } from '$lib/game/core/types';
 
@@ -301,6 +302,8 @@
     | CONSTRUCTION
     <button class="hdr-btn" on:click={() => uiState.setScreen('main')}>BACK</button>
   </div>
+
+  <ZonePanel />
 
   <!-- Status bar -->
   <div class="status-row">

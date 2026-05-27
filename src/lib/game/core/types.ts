@@ -1,6 +1,6 @@
 // ===== PHASE 4 NEW TYPES =====
 
-export type DesignationType = 'harvest' | 'construct' | 'mine' | 'haul' | 'clear' | 'forage' | 'scavenge';
+export type DesignationType = 'harvest' | 'construct' | 'mine' | 'haul' | 'clear' | 'forage' | 'scavenge' | 'stockpile';
 
 export interface PlacedBuilding {
 	id: string;           // unique instance id

@@ -18,6 +18,7 @@
   import { buildPathfindingGrids } from '$lib/game/services/PathfinderService.js';
   import { designationService } from '$lib/game/services/DesignationService.js';
   import { glyph, SHEET } from '$lib/webgl/tilesets.js';
+  import { uiState } from '$lib/stores/uiState.js';
 
   // Tile size range for zoom (square cells for CoQ sprite-mode)
   // MAP_W / MAP_H must match the generateWorld() call in gameState.ts
@@ -70,9 +71,21 @@
   // Phase 7: dropped items overlay
   let droppedItems: DroppedItem[] = [];
 
-  // Phase 4b: designation mode — press 'd' to toggle; left-click designates, right-click clears
+  // Zone/designation painting — driven by uiState
   let designationMode = false;
   let designationTypeActive: DesignationType = 'harvest';
+  const unsubUI = uiState.subscribe((s) => {
+    designationMode = s.designationActive;
+    if (s.designationType) designationTypeActive = s.designationType as DesignationType;
+    redrawOverlay();
+  });
+
+  // Zone drag-paint state (drag fills a rectangle)
+  let zoneDragActive = false;
+  let zoneAnchorX = 0;
+  let zoneAnchorY = 0;
+  let zoneEndX = 0;
+  let zoneEndY = 0;
 
   // Hover tile inspector
   let hoverTileX = -1;
@@ -212,13 +225,32 @@
     const grid = buildGameGrid(worldMap, buildings, designations);
     overlayPawns(grid, pawns, selectedPawnId);
     overlayDroppedItems(grid, droppedItems);
+    // Show zone drag preview rectangle
+    if (zoneDragActive && designationMode) {
+      const minX = Math.min(zoneAnchorX, zoneEndX);
+      const maxX = Math.max(zoneAnchorX, zoneEndX);
+      const minY = Math.min(zoneAnchorY, zoneEndY);
+      const maxY = Math.max(zoneAnchorY, zoneEndY);
+      for (let y = minY; y <= maxY; y++) {
+        for (let x = minX; x <= maxX; x++) {
+          const t = grid.getTile(x, y);
+          if (!t) continue;
+          grid.setTile(x, y, {
+            char: t.char,
+            foreground: { r: 1.0, g: 1.0, b: 1.0 },
+            background: { r: t.background.r * 0.4 + 0.4, g: t.background.g * 0.4 + 0.3, b: t.background.b * 0.4 + 0.0 },
+            position: { x, y }
+          });
+        }
+      }
+    }
     renderer.setGrid(grid);
   }
 
   async function handleTileClick() {
     if (hoverTileX < 0 || hoverTileY < 0) return;
 
-    // Phase 4b: designation mode — left-click places a harvest designation
+    // Designation mode: handled by drag — single-click still paints one tile
     if (designationMode) {
       gameState.updateWithSave((state) =>
         designationService.designate(hoverTileX, hoverTileY, designationTypeActive, state)
@@ -266,6 +298,7 @@
 
   onDestroy(() => {
     unsubState();
+    unsubUI();
     if (browser) {
       cancelAnimationFrame(animationId);
       renderer?.dispose();
@@ -362,14 +395,9 @@
         setView(viewX, viewY + SCROLL_STEP);
         e.preventDefault();
         break;
-      case 'd':
-      case 'D':
-        // Phase 4b: toggle designation mode
-        designationMode = !designationMode;
-        e.preventDefault();
-        break;
       case 'Escape':
-        designationMode = false;
+        uiState.deactivateDesignation();
+        zoneDragActive = false;
         selectedPawnId = null;
         redrawOverlay();
         break;
@@ -413,6 +441,15 @@
 
   function handleMouseDown(e: MouseEvent) {
     if (e.button !== 0) return;
+    if (designationMode) {
+      // Zone paint mode: start a drag rectangle, don't pan
+      zoneDragActive = true;
+      zoneAnchorX = hoverTileX;
+      zoneAnchorY = hoverTileY;
+      zoneEndX = hoverTileX;
+      zoneEndY = hoverTileY;
+      return;
+    }
     dragging = true;
     dragStartX = e.clientX;
     dragStartY = e.clientY;
@@ -430,6 +467,12 @@
       hoverTileX = Math.floor(cx / tileWidth) + viewX;
       hoverTileY = Math.floor(cy / tileHeight) + viewY;
     }
+    if (zoneDragActive) {
+      zoneEndX = hoverTileX;
+      zoneEndY = hoverTileY;
+      redrawOverlay();
+      return;
+    }
     if (!dragging) return;
     dragDistance += Math.abs(e.movementX) + Math.abs(e.movementY);
     const dx = Math.round((dragStartX - e.clientX) / tileWidth);
@@ -438,21 +481,40 @@
   }
 
   function handleMouseUp() {
+    if (zoneDragActive) {
+      // Commit the painted rectangle to game state
+      gameState.updateWithSave((state) =>
+        designationService.designateRect(
+          zoneAnchorX, zoneAnchorY, zoneEndX, zoneEndY,
+          designationTypeActive, state
+        )
+      );
+      zoneDragActive = false;
+      redrawOverlay();
+      return;
+    }
     if (dragDistance < 3) handleTileClick();
     dragging = false;
   }
 
   function handleMouseLeave() {
     dragging = false;
+    zoneDragActive = false;
     hoverTileX = -1;
     hoverTileY = -1;
   }
 
-  /** Phase 4b: right-click clears a designation on the hovered tile. */
+  /** Right-click: clear designation at hovered tile (or drag-erase rect in zone mode). */
   function handleContextMenu(e: MouseEvent) {
     e.preventDefault();
     if (hoverTileX < 0 || hoverTileY < 0) return;
-    if (designationService.hasDesignation(hoverTileX, hoverTileY, $gameState)) {
+    if (designationMode) {
+      // In zone mode, right-click clears a zone tile
+      gameState.updateWithSave((state) =>
+        designationService.clearDesignation(hoverTileX, hoverTileY, state)
+      );
+      redrawOverlay();
+    } else if (designationService.hasDesignation(hoverTileX, hoverTileY, $gameState)) {
       gameState.updateWithSave((state) =>
         designationService.clearDesignation(hoverTileX, hoverTileY, state)
       );
@@ -484,7 +546,10 @@
   {/if}
   {#if designationMode}
     <div class="designation-hud">
-      DESIGNATE [{designationTypeActive.toUpperCase()}] — D to exit · RMB to clear
+      [{designationTypeActive.toUpperCase()}] drag to paint · RMB erase · Esc cancel
+      {#if zoneDragActive}
+        — selecting ({Math.abs(zoneEndX - zoneAnchorX) + 1}×{Math.abs(zoneEndY - zoneAnchorY) + 1})
+      {/if}
     </div>
   {/if}
   {#if hoverTile}

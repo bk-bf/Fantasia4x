@@ -74,29 +74,54 @@ export function buildGameGrid(
 
     // Phase 4b: overlay designations
     if (designations) {
-        const DESIGNATION_GLYPHS: Partial<Record<DesignationType, { char: string; fg: RGB }>> = {
+        // Work designations: replace terrain glyph with a marker char
+        const WORK_GLYPHS: Partial<Record<DesignationType, { char: string; fg: RGB }>> = {
             harvest: { char: '!', fg: { r: 0.25, g: 0.85, b: 0.25 } },
-            mine: { char: 'X', fg: { r: 0.85, g: 0.55, b: 0.15 } },
-            construct: { char: '+', fg: { r: 0.35, g: 0.75, b: 0.80 } },
-            haul: { char: 'h', fg: { r: 0.75, g: 0.75, b: 0.25 } },
-            clear: { char: 'x', fg: { r: 0.80, g: 0.25, b: 0.25 } }
+            mine:    { char: 'X', fg: { r: 0.85, g: 0.55, b: 0.15 } },
+            construct:{ char: '+', fg: { r: 0.35, g: 0.75, b: 0.80 } },
+            haul:    { char: 'h', fg: { r: 0.75, g: 0.75, b: 0.25 } },
+            clear:   { char: 'x', fg: { r: 0.80, g: 0.25, b: 0.25 } }
         };
+
+        // Zone designations: tint background, keep terrain glyph
+        const ZONE_TINTS: Partial<Record<DesignationType, { bg: RGB; fg: RGB }>> = {
+            forage:    { bg: { r: 0.02, g: 0.22, b: 0.04 }, fg: { r: 0.35, g: 0.90, b: 0.35 } },
+            scavenge:  { bg: { r: 0.18, g: 0.14, b: 0.06 }, fg: { r: 0.70, g: 0.65, b: 0.45 } },
+            stockpile: { bg: { r: 0.30, g: 0.18, b: 0.02 }, fg: { r: 1.00, g: 0.80, b: 0.20 } }
+        };
+
+        function lerp(a: number, b: number, t: number) { return a + (b - a) * t; }
+        function blendRGB(a: RGB, b: RGB, t: number): RGB {
+            return { r: lerp(a.r, b.r, t), g: lerp(a.g, b.g, t), b: lerp(a.b, b.b, t) };
+        }
 
         for (const [key, type] of Object.entries(designations)) {
             const [x, y] = key.split(',').map(Number);
-            const glyph = DESIGNATION_GLYPHS[type];
-            if (!glyph) continue;
-
-            // Get the existing tile to keep the background
             const existing = grid.getTile(x, y);
-            const bg = existing?.background ?? { r: 0.02, g: 0.02, b: 0.02 };
+            if (!existing) continue;
 
-            grid.setTile(x, y, {
-                char: glyph.char,
-                foreground: glyph.fg,
-                background: bg,
-                position: { x, y }
-            });
+            // Zone types: tint bg + fg, keep terrain glyph
+            const zoneTint = ZONE_TINTS[type as DesignationType];
+            if (zoneTint) {
+                grid.setTile(x, y, {
+                    char: existing.char,
+                    foreground: blendRGB(existing.foreground, zoneTint.fg, 0.30),
+                    background: blendRGB(existing.background, zoneTint.bg, 0.65),
+                    position: { x, y }
+                });
+                continue;
+            }
+
+            // Work designations: replace with marker glyph
+            const workGlyph = WORK_GLYPHS[type as DesignationType];
+            if (workGlyph) {
+                grid.setTile(x, y, {
+                    char: workGlyph.char,
+                    foreground: workGlyph.fg,
+                    background: existing.background,
+                    position: { x, y }
+                });
+            }
         }
     }
 

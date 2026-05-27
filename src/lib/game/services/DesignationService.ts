@@ -67,6 +67,54 @@ class DesignationServiceImpl {
     getDesignation(x: number, y: number, gameState: GameState): DesignationType | null {
         return (gameState.designations ?? {})[this.key(x, y)] ?? null;
     }
+
+    /**
+     * Fill a rectangular area with a designation.
+     * Coordinates are inclusive on both ends. Out-of-bounds tiles are silently skipped.
+     */
+    designateRect(
+        x1: number, y1: number,
+        x2: number, y2: number,
+        type: DesignationType,
+        gameState: GameState
+    ): GameState {
+        const minX = Math.min(x1, x2);
+        const maxX = Math.max(x1, x2);
+        const minY = Math.min(y1, y2);
+        const maxY = Math.max(y1, y2);
+        const mapH = gameState.worldMap?.length ?? 0;
+        const mapW = gameState.worldMap?.[0]?.length ?? 0;
+
+        const newDesignations = { ...(gameState.designations ?? {}) };
+        for (let y = minY; y <= maxY; y++) {
+            for (let x = minX; x <= maxX; x++) {
+                if (mapH > 0 && (x < 0 || y < 0 || x >= mapW || y >= mapH)) continue;
+                newDesignations[this.key(x, y)] = type;
+            }
+        }
+        return { ...gameState, designations: newDesignations };
+    }
+
+    /**
+     * Clear all designations in a rectangular area.
+     */
+    clearRect(
+        x1: number, y1: number,
+        x2: number, y2: number,
+        gameState: GameState
+    ): GameState {
+        const minX = Math.min(x1, x2);
+        const maxX = Math.max(x1, x2);
+        const minY = Math.min(y1, y2);
+        const maxY = Math.max(y1, y2);
+        const newDesignations = { ...(gameState.designations ?? {}) };
+        for (let y = minY; y <= maxY; y++) {
+            for (let x = minX; x <= maxX; x++) {
+                delete newDesignations[this.key(x, y)];
+            }
+        }
+        return { ...gameState, designations: newDesignations };
+    }
 }
 
 export const designationService = new DesignationServiceImpl();

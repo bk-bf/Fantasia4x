@@ -198,7 +198,16 @@ function findNearestDepositPoint(
 
     let best: { x: number; y: number; dist: number } | null = null;
 
-    // Prefer designated storage types
+    // First priority: stockpile zones designated on the map
+    for (const [key, type] of Object.entries(gs.designations ?? {})) {
+        if (type !== 'stockpile') continue;
+        const [x, y] = key.split(',').map(Number);
+        const dist = Math.abs(x - px) + Math.abs(y - py);
+        if (!best || dist < best.dist) best = { x, y, dist };
+    }
+    if (best) return { x: best.x, y: best.y };
+
+    // Second priority: designated storage building types
     for (const b of gs.buildings ?? []) {
         if (b.status !== 'complete') continue;
         if (!DEPOSIT_TYPES.includes(b.type)) continue;
