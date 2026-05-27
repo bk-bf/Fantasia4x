@@ -1,5 +1,5 @@
 import type { DesignationType, Pawn } from '../core/types';
-import resourceObjectsData from '../database/resource-objects.json';
+import resourceObjectsData from '../database/resources.json';
 
 export interface ResourceYieldDef {
     itemId: string;
