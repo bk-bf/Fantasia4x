@@ -97,9 +97,7 @@
   $: hoverResources = hoverTile
     ? Object.entries(hoverTile.resources ?? {}).filter(([, v]) => v > 0)
     : [];
-  $: hoverZoneType = hoverTile
-    ? (designations[`${hoverTile.x},${hoverTile.y}`] ?? null)
-    : null;
+  $: hoverZoneType = hoverTile ? (designations[`${hoverTile.x},${hoverTile.y}`] ?? null) : null;
   $: hoverPawn =
     hoverTileX >= 0 && hoverTileY >= 0
       ? (pawns.find((p) => p.position?.x === hoverTileX && p.position?.y === hoverTileY) ?? null)
@@ -135,28 +133,45 @@
   let selRect: { x1: number; y1: number; x2: number; y2: number } | null = null;
 
   const ZONE_META: Record<string, { label: string; color: string; desc: string }> = {
-    forage:    { label: 'FORAGE ZONE',    color: '#3aaa60', desc: 'Pawns gather berries, twigs, bark and plant fiber' },
-    scavenge:  { label: 'SCAVENGE ZONE',  color: '#a07840', desc: 'Pawns collect surface stone, flint and clay' },
-    stockpile: { label: 'STOCKPILE ZONE', color: '#e8a020', desc: 'Haulers deposit carried resources here' },
-    harvest:   { label: 'HARVEST',        color: '#4ccc44', desc: 'Single-tile harvest designation' },
-    mine:      { label: 'MINE',           color: '#cc8833', desc: 'Single-tile mining designation' },
-    construct: { label: 'CONSTRUCT',      color: '#44aacc', desc: 'Construction site' },
+    forage: {
+      label: 'FORAGE ZONE',
+      color: '#3aaa60',
+      desc: 'Pawns gather berries, twigs, bark and plant fiber'
+    },
+    scavenge: {
+      label: 'SCAVENGE ZONE',
+      color: '#a07840',
+      desc: 'Pawns collect surface stone, flint and clay'
+    },
+    stockpile: {
+      label: 'STOCKPILE ZONE',
+      color: '#e8a020',
+      desc: 'Haulers deposit carried resources here'
+    },
+    harvest: { label: 'HARVEST', color: '#4ccc44', desc: 'Single-tile harvest designation' },
+    mine: { label: 'MINE', color: '#cc8833', desc: 'Single-tile mining designation' },
+    construct: { label: 'CONSTRUCT', color: '#44aacc', desc: 'Construction site' }
   };
 
   // Entities inside committed selRect
   $: selPawns = selRect
-    ? pawns.filter((p) => p.position &&
-        p.position.x >= Math.min(selRect!.x1, selRect!.x2) &&
-        p.position.x <= Math.max(selRect!.x1, selRect!.x2) &&
-        p.position.y >= Math.min(selRect!.y1, selRect!.y2) &&
-        p.position.y <= Math.max(selRect!.y1, selRect!.y2))
+    ? pawns.filter(
+        (p) =>
+          p.position &&
+          p.position.x >= Math.min(selRect!.x1, selRect!.x2) &&
+          p.position.x <= Math.max(selRect!.x1, selRect!.x2) &&
+          p.position.y >= Math.min(selRect!.y1, selRect!.y2) &&
+          p.position.y <= Math.max(selRect!.y1, selRect!.y2)
+      )
     : [];
   $: selBuildings = selRect
-    ? buildings.filter((b) =>
-        b.x >= Math.min(selRect!.x1, selRect!.x2) &&
-        b.x <= Math.max(selRect!.x1, selRect!.x2) &&
-        b.y >= Math.min(selRect!.y1, selRect!.y2) &&
-        b.y <= Math.max(selRect!.y1, selRect!.y2))
+    ? buildings.filter(
+        (b) =>
+          b.x >= Math.min(selRect!.x1, selRect!.x2) &&
+          b.x <= Math.max(selRect!.x1, selRect!.x2) &&
+          b.y >= Math.min(selRect!.y1, selRect!.y2) &&
+          b.y <= Math.max(selRect!.y1, selRect!.y2)
+      )
     : [];
   $: selZones = (() => {
     if (!selRect) return {} as Record<string, number>;
@@ -167,12 +182,13 @@
     const counts: Record<string, number> = {};
     for (const [key, type] of Object.entries(designations)) {
       const [x, y] = key.split(',').map(Number);
-      if (x >= minX && x <= maxX && y >= minY && y <= maxY)
-        counts[type] = (counts[type] ?? 0) + 1;
+      if (x >= minX && x <= maxX && y >= minY && y <= maxY) counts[type] = (counts[type] ?? 0) + 1;
     }
     return counts;
   })();
-  $: hasSelection = selRect !== null && (selPawns.length > 0 || selBuildings.length > 0 || Object.keys(selZones).length > 0);
+  $: hasSelection =
+    selRect !== null &&
+    (selPawns.length > 0 || selBuildings.length > 0 || Object.keys(selZones).length > 0);
   // ──────────────────────────────────────────────────────────────────────────
 
   const unsubState = gameState.subscribe((s) => {
@@ -305,23 +321,41 @@
 
     // Zone drag-paint preview
     if (zoneDragActive && designationMode) {
-      _overlayRect(grid, zoneAnchorX, zoneAnchorY, zoneEndX, zoneEndY,
+      _overlayRect(
+        grid,
+        zoneAnchorX,
+        zoneAnchorY,
+        zoneEndX,
+        zoneEndY,
         { r: 1.0, g: 1.0, b: 1.0 },
-        { rMul: 0.4, rAdd: 0.4, gMul: 0.4, gAdd: 0.3, bMul: 0.4, bAdd: 0.0 });
+        { rMul: 0.4, rAdd: 0.4, gMul: 0.4, gAdd: 0.3, bMul: 0.4, bAdd: 0.0 }
+      );
     }
 
     // Selection drag preview (Shift+drag in progress)
     if (selDragActive) {
-      _overlayRect(grid, selAnchorX, selAnchorY, selEndX, selEndY,
+      _overlayRect(
+        grid,
+        selAnchorX,
+        selAnchorY,
+        selEndX,
+        selEndY,
         { r: 0.9, g: 0.9, b: 1.0 },
-        { rMul: 0.5, rAdd: 0.0, gMul: 0.5, gAdd: 0.0, bMul: 0.5, bAdd: 0.3 });
+        { rMul: 0.5, rAdd: 0.0, gMul: 0.5, gAdd: 0.0, bMul: 0.5, bAdd: 0.3 }
+      );
     }
 
     // Committed selection highlight
     if (selRect) {
-      _overlayRect(grid, selRect.x1, selRect.y1, selRect.x2, selRect.y2,
+      _overlayRect(
+        grid,
+        selRect.x1,
+        selRect.y1,
+        selRect.x2,
+        selRect.y2,
         { r: 0.8, g: 0.9, b: 1.0 },
-        { rMul: 0.6, rAdd: 0.0, gMul: 0.6, gAdd: 0.05, bMul: 0.6, bAdd: 0.2 });
+        { rMul: 0.6, rAdd: 0.0, gMul: 0.6, gAdd: 0.05, bMul: 0.6, bAdd: 0.2 }
+      );
     }
 
     renderer.setGrid(grid);
@@ -330,12 +364,17 @@
   /** Tint a rectangle of tiles. fg replaces foreground; bg params lerp the background. */
   function _overlayRect(
     grid: GameGrid,
-    x1: number, y1: number, x2: number, y2: number,
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
     fg: { r: number; g: number; b: number },
     bg: { rMul: number; rAdd: number; gMul: number; gAdd: number; bMul: number; bAdd: number }
   ) {
-    const minX = Math.min(x1, x2), maxX = Math.max(x1, x2);
-    const minY = Math.min(y1, y2), maxY = Math.max(y1, y2);
+    const minX = Math.min(x1, x2),
+      maxX = Math.max(x1, x2);
+    const minY = Math.min(y1, y2),
+      maxY = Math.max(y1, y2);
     for (let y = minY; y <= maxY; y++) {
       for (let x = minX; x <= maxX; x++) {
         const t = grid.getTile(x, y);
@@ -696,7 +735,8 @@
     </div>
   {:else if selDragActive}
     <div class="designation-hud" style="border-color:#5566cc;color:#99aaee;">
-      ◈ SELECTING ({Math.abs(selEndX - selAnchorX) + 1}×{Math.abs(selEndY - selAnchorY) + 1}) — release to highlight
+      ◈ SELECTING ({Math.abs(selEndX - selAnchorX) + 1}×{Math.abs(selEndY - selAnchorY) + 1}) —
+      release to highlight
     </div>
   {/if}
   {#if hasSelection}
@@ -704,13 +744,23 @@
     <div class="tile-hud tile-hud--selection">
       <span class="sel-title">◈ SELECTION</span>
       {#if selPawns.length > 0}
-        <div class="sel-row sel-pawns">{selPawns.length} pawn{selPawns.length !== 1 ? 's' : ''}: {selPawns.map((p) => p.name ?? p.id).join(', ')}</div>
+        <div class="sel-row sel-pawns">
+          {selPawns.length} pawn{selPawns.length !== 1 ? 's' : ''}: {selPawns
+            .map((p) => p.name ?? p.id)
+            .join(', ')}
+        </div>
       {/if}
       {#if selBuildings.length > 0}
-        <div class="sel-row sel-buildings">{selBuildings.length} building{selBuildings.length !== 1 ? 's' : ''}: {selBuildings.map((b) => b.type).join(', ')}</div>
+        <div class="sel-row sel-buildings">
+          {selBuildings.length} building{selBuildings.length !== 1 ? 's' : ''}: {selBuildings
+            .map((b) => b.type)
+            .join(', ')}
+        </div>
       {/if}
       {#each Object.entries(selZones) as [type, count]}
-        <div class="sel-row" style="color:{ZONE_META[type]?.color ?? '#aaa'}">{count}× {ZONE_META[type]?.label ?? type}</div>
+        <div class="sel-row" style="color:{ZONE_META[type]?.color ?? '#aaa'}">
+          {count}× {ZONE_META[type]?.label ?? type}
+        </div>
       {/each}
       <div class="sel-hint">Esc to clear</div>
     </div>
@@ -721,13 +771,27 @@
         <span class="pawn-state">[{pawnStateLabel(hoverPawn)}]</span>
       </div>
       <div class="pawn-row">
-        <span class="pawn-stat-label">HP</span><span class="pawn-stat-val">{hoverPawn.state.health}</span>
-        <span class="pawn-stat-label">Mood</span><span class="pawn-stat-val">{hoverPawn.state.mood}</span>
-        <span class="pawn-stat-label">Hunger</span><span class="pawn-stat-val" class:pawn-warn={hoverPawn.needs.hunger > 60}>{hoverPawn.needs.hunger}</span>
-        <span class="pawn-stat-label">Fatigue</span><span class="pawn-stat-val" class:pawn-warn={hoverPawn.needs.fatigue > 60}>{hoverPawn.needs.fatigue}</span>
+        <span class="pawn-stat-label">HP</span><span class="pawn-stat-val"
+          >{Math.floor(hoverPawn.state.health)}</span
+        >
+        <span class="pawn-stat-label">Mood</span><span class="pawn-stat-val"
+          >{Math.floor(hoverPawn.state.mood)}</span
+        >
+        <span class="pawn-stat-label">Hunger</span><span
+          class="pawn-stat-val"
+          class:pawn-warn={hoverPawn.needs.hunger > 60}>{Math.floor(hoverPawn.needs.hunger)}</span
+        >
+        <span class="pawn-stat-label">Fatigue</span><span
+          class="pawn-stat-val"
+          class:pawn-warn={hoverPawn.needs.fatigue > 60}>{Math.floor(hoverPawn.needs.fatigue)}</span
+        >
       </div>
       {#if hoverPawn.activeJob}
-        <div class="pawn-job">→ {pawnStateLabel(hoverPawn)}{hoverPawn.activeJob.resourceId ? ` (${hoverPawn.activeJob.resourceId})` : ''}</div>
+        <div class="pawn-job">
+          → {pawnStateLabel(hoverPawn)}{hoverPawn.activeJob.resourceId
+            ? ` (${hoverPawn.activeJob.resourceId})`
+            : ''}
+        </div>
       {/if}
     </div>
   {:else if hoverTile}
@@ -736,7 +800,9 @@
         >{hoverTile.type},{hoverTile.terrainType},{hoverTile.subType}</span
       >
       {#if hoverZoneType && ZONE_META[hoverZoneType]}
-        <div class="tile-zone" style="color:{ZONE_META[hoverZoneType].color}">{ZONE_META[hoverZoneType].label} — {ZONE_META[hoverZoneType].desc}</div>
+        <div class="tile-zone" style="color:{ZONE_META[hoverZoneType].color}">
+          {ZONE_META[hoverZoneType].label} — {ZONE_META[hoverZoneType].desc}
+        </div>
       {/if}
       {#if hoverResources.length > 0}
         <div class="tile-res">{hoverResources.map(([k, v]) => `${k}:${v}`).join(' ')}</div>
@@ -797,6 +863,49 @@
     max-width: 340px;
     white-space: normal;
   }
+  .tile-hud--pawn {
+    border-color: #3a9a8a;
+    background: rgba(4, 20, 18, 0.94);
+    color: #7adaca;
+    min-width: 180px;
+    white-space: nowrap;
+  }
+  .pawn-header {
+    display: flex;
+    gap: 6px;
+    align-items: baseline;
+    margin-bottom: 2px;
+  }
+  .pawn-name {
+    color: #aaeedd;
+    font-weight: bold;
+    font-size: 11px;
+  }
+  .pawn-state {
+    color: #559988;
+    font-size: 9px;
+  }
+  .pawn-row {
+    display: flex;
+    gap: 6px;
+    align-items: baseline;
+    font-size: 9px;
+  }
+  .pawn-stat-label {
+    color: #4a8878;
+  }
+  .pawn-stat-val {
+    color: #99ddcc;
+    min-width: 18px;
+  }
+  .pawn-warn {
+    color: #ee8844 !important;
+  }
+  .pawn-job {
+    color: #669988;
+    font-size: 9px;
+    margin-top: 1px;
+  }
   .sel-title {
     color: #8899ff;
     font-weight: bold;
@@ -808,8 +917,12 @@
     font-size: 9px;
     line-height: 1.4;
   }
-  .sel-pawns  { color: #ddeeff; }
-  .sel-buildings { color: #aaccff; }
+  .sel-pawns {
+    color: #ddeeff;
+  }
+  .sel-buildings {
+    color: #aaccff;
+  }
   .sel-hint {
     color: #556688;
     font-size: 9px;
