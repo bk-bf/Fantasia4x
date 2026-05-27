@@ -14,7 +14,7 @@
  */
 
 import type { GameState, Pawn } from '../core/types';
-import { ITEMS_DATABASE } from '../core/Items';
+import ITEMS_DATABASE from '../database/items.json';
 import { jobService, BASE_WORK_RATE } from '../services/JobService';
 import { pawnService } from '../services/PawnService';
 import { wasmPathfinderService } from '../services/WasmPathfinderService';

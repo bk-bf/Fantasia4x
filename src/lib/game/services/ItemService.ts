@@ -1,5 +1,7 @@
 import type { Item, GameState } from '../core/types';
-import { ITEMS_DATABASE } from '../core/Items';
+import itemsData from '../database/items.json';
+
+const ITEMS_DATABASE = itemsData as unknown as Item[];
 
 /**
  * ItemService - Clean interface for item queries and operations

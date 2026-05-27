@@ -12,14 +12,17 @@ import { pawnService } from '../services/PawnService';
 import { buildingService } from '../services/BuildingService';
 import { researchService } from '../services/ResearchService';
 import { WORK_CATEGORIES } from '../core/Work';
-import { ITEMS_DATABASE } from '../core/Items';
-import { AVAILABLE_BUILDINGS } from '../core/Buildings';
+import itemsData from '../database/items.json';
+import buildingsData from '../database/buildings.json';
 
 import { pawnStateMachineService } from './PawnStateMachine';
 import { jobService } from '../services/JobService';
 import { wasmPathfinderService } from '../services/WasmPathfinderService';
 import type { WorkCategory } from '../core/types';
 import type { Pawn } from '../core/types';
+
+const ITEMS_DATABASE = itemsData as unknown as import('../core/types').Item[];
+const AVAILABLE_BUILDINGS = buildingsData as unknown as import('../core/types').Building[];
 
 export class GameEngineImpl implements GameEngine {
 

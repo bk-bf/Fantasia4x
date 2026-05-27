@@ -1,10 +1,21 @@
 [
     {
-        "id": "wood",
+        "id": "tree",
         "displayName": "Tree",
-        "terrainSubtypes": [
-            "tree"
-        ],
+        "objectSubType": "tree",
+        "spawn": {
+            "biomes": {
+                "forest": 0.14,
+                "plains": 0.01
+            },
+            "baseTerrainSubtypes": [
+                "dirt",
+                "grass",
+                "deep_grass",
+                "tall_grass",
+                "savanna"
+            ]
+        },
         "nodeAmountRange": [
             3,
             6
@@ -37,12 +48,22 @@
         }
     },
     {
-        "id": "stone",
+        "id": "stone_outcrop",
         "displayName": "Stone Outcrop",
-        "terrainSubtypes": [
-            "rocky",
-            "cliff"
-        ],
+        "objectSubType": "rocky",
+        "spawn": {
+            "biomes": {
+                "mountain": 0.07,
+                "plains": 0.02
+            },
+            "baseTerrainSubtypes": [
+                "rocky",
+                "cliff",
+                "dirt",
+                "grass",
+                "savanna"
+            ]
+        },
         "nodeAmountRange": [
             5,
             10
@@ -68,13 +89,23 @@
         }
     },
     {
-        "id": "herbs",
-        "displayName": "Herb Patch",
-        "terrainSubtypes": [
-            "wildflowers",
-            "moss",
-            "deep_grass"
-        ],
+        "id": "wildflower_patch",
+        "displayName": "Wildflower Patch",
+        "objectSubType": "wildflowers",
+        "spawn": {
+            "biomes": {
+                "plains": 0.015,
+                "forest": 0.01
+            },
+            "baseTerrainSubtypes": [
+                "dirt",
+                "grass",
+                "deep_grass",
+                "tall_grass",
+                "savanna",
+                "moss"
+            ]
+        },
         "nodeAmountRange": [
             2,
             5
@@ -100,14 +131,22 @@
         }
     },
     {
-        "id": "twig",
-        "displayName": "Fallen Branches",
-        "terrainSubtypes": [
-            "tree",
-            "bush",
-            "shrub",
-            "light_forest"
-        ],
+        "id": "fallen_logs",
+        "displayName": "Fallen Logs",
+        "objectSubType": "fallen_logs",
+        "spawn": {
+            "biomes": {
+                "forest": 0.02,
+                "swamp": 0.006
+            },
+            "baseTerrainSubtypes": [
+                "dirt",
+                "grass",
+                "deep_grass",
+                "moss",
+                "mud"
+            ]
+        },
         "nodeAmountRange": [
             3,
             8
@@ -127,18 +166,32 @@
                     "max": 5,
                     "skillId": "foraging",
                     "skillMultiplier": 0.1
+                },
+                {
+                    "itemId": "wood",
+                    "min": 1,
+                    "max": 2,
+                    "skillId": "foraging",
+                    "skillMultiplier": 0.05
                 }
             ]
         }
     },
     {
-        "id": "flint_shard",
-        "displayName": "Flint Scatter",
-        "terrainSubtypes": [
-            "rocky",
-            "cliff",
-            "gravel"
-        ],
+        "id": "crystal_formation",
+        "displayName": "Crystal Formation",
+        "objectSubType": "crystal_formation",
+        "spawn": {
+            "biomes": {
+                "mountain": 0.005
+            },
+            "baseTerrainSubtypes": [
+                "rocky",
+                "cliff",
+                "mineral_deposit",
+                "cave"
+            ]
+        },
         "nodeAmountRange": [
             2,
             5
@@ -163,14 +216,23 @@
         }
     },
     {
-        "id": "plant_fiber",
-        "displayName": "Fiber Plants",
-        "terrainSubtypes": [
-            "deep_grass",
-            "wildflowers",
-            "marsh",
-            "reed_bed"
-        ],
+        "id": "scrub_patch",
+        "displayName": "Scrub Patch",
+        "objectSubType": "scrubland",
+        "spawn": {
+            "biomes": {
+                "plains": 0.008,
+                "swamp": 0.004
+            },
+            "baseTerrainSubtypes": [
+                "dirt",
+                "grass",
+                "tall_grass",
+                "savanna",
+                "moss",
+                "mud"
+            ]
+        },
         "nodeAmountRange": [
             3,
             7
@@ -195,12 +257,22 @@
         }
     },
     {
-        "id": "bark",
-        "displayName": "Tree Bark",
-        "terrainSubtypes": [
-            "tree",
-            "light_forest"
-        ],
+        "id": "tree_stump",
+        "displayName": "Tree Stump",
+        "objectSubType": "tree_stump",
+        "spawn": {
+            "biomes": {
+                "forest": 0.014,
+                "swamp": 0.003
+            },
+            "baseTerrainSubtypes": [
+                "dirt",
+                "grass",
+                "deep_grass",
+                "moss",
+                "mud"
+            ]
+        },
         "nodeAmountRange": [
             2,
             4
@@ -220,51 +292,121 @@
                     "max": 3,
                     "skillId": "foraging",
                     "skillMultiplier": 0.1
+                },
+                {
+                    "itemId": "wood",
+                    "min": 1,
+                    "max": 2,
+                    "skillId": "foraging",
+                    "skillMultiplier": 0.05
                 }
             ]
         }
     },
     {
-        "id": "surface_stone",
-        "displayName": "Surface Stones",
-        "terrainSubtypes": [
-            "rocky",
-            "cliff",
-            "gravel",
-            "plains"
-        ],
+        "id": "mushroom_patch",
+        "displayName": "Mushroom Patch",
+        "objectSubType": "mushroom_patch",
+        "spawn": {
+            "biomes": {
+                "forest": 0.01,
+                "swamp": 0.012
+            },
+            "baseTerrainSubtypes": [
+                "dirt",
+                "deep_grass",
+                "moss",
+                "mud"
+            ]
+        },
         "nodeAmountRange": [
-            4,
-            8
+            2,
+            5
         ],
         "designationTypes": [
-            "scavenge"
+            "forage",
+            "harvest"
         ],
         "interaction": {
-            "action": "collect",
-            "workCategory": "mining",
+            "action": "harvest",
+            "workCategory": "foraging",
             "workAmount": 2,
             "requiredTool": "none",
             "yields": [
                 {
-                    "itemId": "surface_stone",
-                    "min": 2,
-                    "max": 4,
-                    "skillId": "mining",
-                    "skillMultiplier": 0.1
+                    "itemId": "herbs",
+                    "min": 1,
+                    "max": 3,
+                    "skillId": "foraging",
+                    "skillMultiplier": 0.15
                 }
             ]
         }
     },
     {
-        "id": "clay_lump",
-        "displayName": "Clay Deposit",
-        "terrainSubtypes": [
-            "riverbank",
-            "marsh",
-            "lake_shore",
-            "wetland"
+        "id": "dead_tree",
+        "displayName": "Dead Tree",
+        "objectSubType": "dead_trees",
+        "spawn": {
+            "biomes": {
+                "swamp": 0.015,
+                "forest": 0.004
+            },
+            "baseTerrainSubtypes": [
+                "mud",
+                "moss",
+                "bog",
+                "dirt",
+                "deep_grass"
+            ]
+        },
+        "nodeAmountRange": [
+            3,
+            6
         ],
+        "designationTypes": [
+            "harvest",
+            "scavenge"
+        ],
+        "interaction": {
+            "action": "woodcut",
+            "workCategory": "woodcutting",
+            "workAmount": 4,
+            "requiredTool": "axe",
+            "yields": [
+                {
+                    "itemId": "wood",
+                    "min": 2,
+                    "max": 4,
+                    "skillId": "woodcutting",
+                    "skillMultiplier": 0.1
+                },
+                {
+                    "itemId": "twig",
+                    "min": 1,
+                    "max": 3,
+                    "skillId": "woodcutting",
+                    "skillMultiplier": 0.05
+                }
+            ]
+        }
+    },
+    {
+        "id": "clay_deposit",
+        "displayName": "Clay Deposit",
+        "objectSubType": "clay",
+        "spawn": {
+            "biomes": {
+                "swamp": 0.02,
+                "river": 0.01
+            },
+            "baseTerrainSubtypes": [
+                "mud",
+                "bog",
+                "riverbank",
+                "shallow_water"
+            ]
+        },
         "nodeAmountRange": [
             3,
             6

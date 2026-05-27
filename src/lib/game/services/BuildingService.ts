@@ -1,5 +1,7 @@
 import type { Building, GameState, PlacedBuilding } from '../core/types';
-import { AVAILABLE_BUILDINGS } from '../core/Buildings';
+import buildingsData from '../database/buildings.json';
+
+const AVAILABLE_BUILDINGS = buildingsData as unknown as Building[];
 
 /**
  * BuildingService - Clean interface for building queries and validation

@@ -15,14 +15,7 @@
       "subterrainThresholds": [
         -0.3,
         0.3
-      ],
-      "objects": {
-        "tree": 0.14,
-        "bush": 0.08,
-        "fallen_logs": 0.02,
-        "tree_stump": 0.014,
-        "mushroom_patch": 0.01
-      }
+      ]
     },
     "swamp": {
       "densityRange": [
@@ -45,10 +38,7 @@
         0.2,
         0.5,
         0.7
-      ],
-      "objects": {
-        "dead_trees": 0.015
-      }
+      ]
     },
     "plains": {
       "densityRange": [
@@ -67,12 +57,7 @@
         -0.15,
         0.15,
         0.7
-      ],
-      "objects": {
-        "wildflowers": 0.015,
-        "scrubland": 0.008,
-        "bush": 0.015
-      }
+      ]
     },
     "mountain": {
       "densityRange": [
@@ -91,11 +76,7 @@
         -0.3,
         0.35,
         0.85
-      ],
-      "objects": {
-        "crystal_formation": 0.005,
-        "arcane_glade": 0.002
-      }
+      ]
     },
     "river": {
       "densityRange": [

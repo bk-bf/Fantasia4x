@@ -10,8 +10,10 @@
  */
 
 import type { GameState, Job, Pawn, DroppedItem } from '../core/types';
-import { ITEMS_DATABASE } from '../core/Items';
+import itemsData from '../database/items.json';
 import { resourceObjectService } from './ResourceObjectService';
+
+const ITEMS_DATABASE = itemsData as unknown as import('../core/types').Item[];
 
 // ===== WORK CONSTANTS =====
 
@@ -587,12 +589,8 @@ class JobServiceImpl {
     private _jobTypeToWorkKey(job: Job, gs?: GameState): string {
         switch (job.type) {
             case 'harvest': {
-                // Route based on the resource being harvested
-                const resourceId = job.resourceId ?? '';
-                const primitiveForage = ['twig', 'flint_shard', 'plant_fiber', 'bark', 'surface_stone', 'clay_lump', 'herbs', 'berries', 'mushrooms', 'fiber'];
-                if (primitiveForage.includes(resourceId)) return 'foraging';
-                if (['stone', 'iron_ore', 'flint'].includes(resourceId)) return 'mining';
-                return 'woodcutting'; // wood and unrecognised defaults
+                const def = resourceObjectService.getById(job.resourceId ?? '');
+                return def?.interaction.workCategory ?? 'foraging';
             }
             case 'construct':
                 return 'construction';

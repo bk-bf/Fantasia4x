@@ -12,11 +12,6 @@ export interface BiomeDef {
     /** Ground-cover subterrains selected by detail noise threshold. */
     subterrains: string[];
     subterrainThresholds: number[]; // length = subterrains.length - 1
-    /**
-     * Object scatter: subterrain name → probability per tile (0–1).
-     * Evaluated in order; first hit wins. Remaining probability = bare ground.
-     */
-    objects?: Record<string, number>;
 }
 
 export interface SubterrainDef {
@@ -99,10 +94,10 @@ export const SUBTERRAINS: Record<string, SubterrainDef> = Object.fromEntries(
         ([id, sub]) => [
             id,
             {
-                walkable:      sub.walkable      as boolean,
-                movementCost:  sub.movementCost  as number,
-                fg:            sub.fg            as [number, number, number],
-                bg:            sub.bg            as [number, number, number],
+                walkable: sub.walkable as boolean,
+                movementCost: sub.movementCost as number,
+                fg: sub.fg as [number, number, number],
+                bg: sub.bg as [number, number, number],
                 chars: resolveCharSpans(sub.charSpans as CharSpan[])
             } satisfies SubterrainDef
         ]

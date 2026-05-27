@@ -16,14 +16,14 @@ export const RESOURCES: Record<string, ResourceDef> = Object.fromEntries(
     (resourceObjectsData as Array<{
         id: string;
         displayName: string;
-        terrainSubtypes: string[];
+        spawn: { baseTerrainSubtypes: string[] };
         nodeAmountRange: number[];
         interaction: { workAmount: number };
     }>).map((def) => [
         def.id,
         {
             displayName: def.displayName,
-            terrainSubtypes: def.terrainSubtypes,
+            terrainSubtypes: def.spawn.baseTerrainSubtypes,
             resourceAmount: [def.nodeAmountRange[0], def.nodeAmountRange[1]] as [number, number],
             harvestTime: def.interaction.workAmount
         }

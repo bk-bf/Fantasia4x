@@ -20,7 +20,11 @@ export interface ResourceInteractionDef {
 export interface ResourceObjectDef {
     id: string;
     displayName: string;
-    terrainSubtypes: string[];
+    objectSubType: string;
+    spawn: {
+        biomes: Record<string, number>;
+        baseTerrainSubtypes: string[];
+    };
     nodeAmountRange: [number, number];
     designationTypes: Array<'harvest' | 'forage' | 'scavenge'>;
     interaction: ResourceInteractionDef;
@@ -33,7 +37,7 @@ const WORK_STAT_FALLBACK: Record<string, keyof Pawn['stats']> = {
 };
 
 class ResourceObjectServiceImpl {
-    private readonly defs: ResourceObjectDef[] = resourceObjectsData as ResourceObjectDef[];
+    private readonly defs: ResourceObjectDef[] = resourceObjectsData as unknown as ResourceObjectDef[];
     private readonly byId = new Map(this.defs.map((d) => [d.id, d]));
 
     getAll(): ResourceObjectDef[] {

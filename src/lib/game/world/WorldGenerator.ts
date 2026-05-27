@@ -35,28 +35,6 @@ function fbm(noise2d: (x: number, y: number) => number, x: number, y: number): n
   return value / max; // normalise to -1..1
 }
 
-/**
- * Deterministically scatter an object subterrain onto a tile.
- * Uses a fast integer hash of seed + position to roll against per-biome
- * cumulative probabilities. Returns the object subterrain key, or null.
- */
-function scatterObject(biome: import('../core/Terrains').BiomeDef, x: number, y: number, seed: number): string | null {
-  const objects = biome.objects;
-  if (!objects) return null;
-  // Murmur3 finalizer — verified uniform distribution
-  let h = ((seed ^ (x * 0x9e3779b9 + y * 0x85ebca6b)) >>> 0);
-  h ^= h >>> 16; h = Math.imul(h, 0x85ebca77) >>> 0;
-  h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35) >>> 0;
-  h ^= h >>> 16;
-  const roll = (h >>> 0) / 0x100000000; // uniform [0, 1)
-  let cumulative = 0;
-  for (const [name, prob] of Object.entries(objects)) {
-    cumulative += prob;
-    if (roll < cumulative) return name;
-  }
-  return null;
-}
-
 // ── Noise utility functions (ported from Celestia map_gen-refactored noise_generator.gd) ──
 
 /** Ridged noise: sharp ridge-line features. Use for mountain peak subterrain selection. */
@@ -114,10 +92,8 @@ export function generateWorld(width: number, height: number, seed = Date.now()):
 
       const biomeName = pickBiome(density) ?? 'plains';
       const biome = BIOMES[biomeName];
-      // Base ground-cover from noise, then optionally overwrite with scattered object
-      const baseSubType = pickSubterrain(biome, detail);
-      const scattered = scatterObject(biome, x, y, seed);
-      const subTypeName = scattered ?? baseSubType;
+      // Base ground-cover only; object placement is handled later in ResourceGeneratorService
+      const subTypeName = pickSubterrain(biome, detail);
       const sub = SUBTERRAINS[subTypeName] ?? SUBTERRAIN_FALLBACK;
 
       // Walkability: subterrain overrides biome for water/peak

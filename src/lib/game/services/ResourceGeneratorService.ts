@@ -6,6 +6,7 @@
 
 import type { WorldTile } from '../core/types';
 import { resourceObjectService } from './ResourceObjectService';
+import { SUBTERRAINS, SUBTERRAIN_FALLBACK, pickChar } from '../core/Terrains';
 
 /** Simple xorshift32 PRNG — deterministic, seeded. */
 function makeRng(seed: number) {
@@ -17,13 +18,6 @@ function makeRng(seed: number) {
     };
 }
 
-/** Simple djb2-style hash for a string. */
-function hashString(str: string): number {
-    let h = 5381;
-    for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) >>> 0;
-    return h;
-}
-
 class ResourceGeneratorServiceImpl {
     /**
      * Mutates the worldMap in-place to add resource amounts per tile.
@@ -32,20 +26,35 @@ class ResourceGeneratorServiceImpl {
      */
     generateResources(worldMap: WorldTile[][], baseSeed: number): void {
         const resourceSeed = (baseSeed * 7919) >>> 0;
+        const defs = resourceObjectService.getAll();
+        const rng = makeRng(resourceSeed);
 
-        for (const def of resourceObjectService.getAll()) {
-            const resourceId = def.id;
-            const seed = (resourceSeed + hashString(resourceId)) >>> 0;
-            const rng = makeRng(seed);
+        for (const row of worldMap) {
+            for (const tile of row) {
+                const baseSubType = tile.subType;
+                const biomeName = tile.terrainType;
 
-            for (const row of worldMap) {
-                for (const tile of row) {
-                    // Skip if tile already has this resource
-                    if (tile.resources[resourceId] !== undefined) continue;
-                    // Only place on matching subterrain
-                    if (!def.terrainSubtypes.includes(tile.subType)) continue;
+                for (const def of defs) {
+                    if (!def.spawn.baseTerrainSubtypes.includes(baseSubType)) continue;
 
-                    tile.resources[resourceId] = rng(def.nodeAmountRange[0], def.nodeAmountRange[1]);
+                    const chance = def.spawn.biomes[biomeName] ?? 0;
+                    if (chance <= 0) continue;
+
+                    const roll = rng(0, 100000) / 100000;
+                    if (roll >= chance) continue;
+
+                    // Spawn this object on the tile.
+                    tile.resources[def.id] = rng(def.nodeAmountRange[0], def.nodeAmountRange[1]);
+
+                    // Promote visuals/terrain behavior to the object subtype.
+                    tile.subType = def.objectSubType;
+                    const sub = SUBTERRAINS[tile.subType] ?? SUBTERRAIN_FALLBACK;
+                    tile.ascii = pickChar(sub, tile.x, tile.y);
+                    tile.walkable = sub.walkable;
+                    tile.movementCost = sub.movementCost;
+
+                    // One primary object per tile keeps biome->terrain->object flow predictable.
+                    break;
                 }
             }
         }

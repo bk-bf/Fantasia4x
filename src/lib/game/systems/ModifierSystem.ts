@@ -16,10 +16,13 @@ import type {
 	RacialTrait,
 	EquippedItem
 } from '../core/types';
-import { ITEMS_DATABASE } from '../core/Items';
-import { AVAILABLE_BUILDINGS } from '../core/Buildings';
+import itemsData from '../database/items.json';
+import buildingsData from '../database/buildings.json';
 import { WORK_CATEGORIES } from '../core/Work';
 import { building } from '$app/environment';
+
+const ITEMS_DATABASE = itemsData as unknown as Item[];
+const AVAILABLE_BUILDINGS = buildingsData as unknown as Building[];
 
 /**
  * Represents a modifier source and its contribution

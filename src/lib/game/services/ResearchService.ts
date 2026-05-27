@@ -1,5 +1,9 @@
 import type { ResearchProject, LoreItem, RaceStats, GameState } from '../core/types';
-import { RESEARCH_DATABASE, LORE_DATABASE } from '../core/Research';
+import researchData from '../database/research.json';
+import loreData from '../database/lore.json';
+
+const RESEARCH_DATABASE = researchData as unknown as ResearchProject[];
+const LORE_DATABASE = loreData as unknown as LoreItem[];
 
 /**
  * ResearchService - Clean interface for research progression and management
