@@ -1,0 +1,216 @@
+{
+    "dirt"             : {
+        "walkable"    : true,
+        "movementCost": 1.2,
+        "charSpans"   : [ {"sheet": "tiles", "from": 64, "to": 71} ],
+        "fg"          : [0.46, 0.3, 0.09],
+        "bg"          : [0.1, 0.07, 0.03],
+        "biomes"      : { "forest": [null, -0.3], "plains": [null, -0.15] }
+    },
+    "grass"            : {
+        "walkable"    : true,
+        "movementCost": 1,
+        "charSpans"   : [ {"sheet": "tiles", "from": 72, "to": 79} ],
+        "fg"          : [0.52, 0.68, 0.13],
+        "bg"          : [0.08, 0.1, 0.03],
+        "biomes"      : { "forest": [-0.3, 0.3], "plains": [-0.15, 0.15] }
+    },
+    "deep_grass"       : {
+        "walkable"    : true,
+        "movementCost": 1.5,
+        "charSpans"   : [ {"sheet": "plants", "from": 83, "to": 84} ],
+        "fg"          : [0.38, 0.56, 0.09],
+        "bg"          : [0.07, 0.09, 0.03],
+        "biomes"      : { "forest": [0.3, null] }
+    },
+    "tall_grass"       : {
+        "walkable"    : true,
+        "movementCost": 1.3,
+        "charSpans"   : [ {"sheet": "plants", "from": 83, "to": 84} ],
+        "fg"          : [0.24, 0.42, 0.06],
+        "bg"          : [0.05, 0.07, 0.02],
+        "biomes"      : { "plains": [0.15, 0.7] }
+    },
+    "savanna"          : {
+        "walkable"    : true,
+        "movementCost": 1.2,
+        "charSpans"   : [ {"sheet": "tiles", "from": 35, "to": 37} ],
+        "fg"          : [0.82, 0.64, 0.15],
+        "bg"          : [0.1, 0.08, 0.03],
+        "biomes"      : { "plains": [0.7, null] }
+    },
+    "bush"             : {
+        "walkable"    : true,
+        "movementCost": 1.8,
+        "charSpans"   : [ {"sheet": "plants", "id": 41} ],
+        "fg"          : [0.26, 0.46, 0.05],
+        "bg"          : [0.07, 0.09, 0.03]
+    },
+    "scrubland"        : {
+        "walkable"    : true,
+        "movementCost": 1.7,
+        "charSpans"   : [ {"sheet": "plants", "id": 21} ],
+        "fg"          : [0.48, 0.34, 0.09],
+        "bg"          : [0.1, 0.07, 0.03]
+    },
+    "wildflowers"      : {
+        "walkable"    : true,
+        "movementCost": 1.1,
+        "charSpans"   : [ {"sheet": "plants", "from": 89, "to": 111} ],
+        "fg"          : [0.88, 0.42, 0.71],
+        "bg"          : [0.09, 0.06, 0.06]
+    },
+    "tree"             : {
+        "walkable"    : true,
+        "movementCost": 2,
+        "charSpans"   : [ {"sheet": "plants", "from": 0, "to": 71} ],
+        "fg"          : [0.52, 0.72, 0.11],
+        "bg"          : [0.07, 0.1, 0.03]
+    },
+    "tree_stump"       : {
+        "walkable"    : true,
+        "movementCost": 2,
+        "charSpans"   : [ {"sheet": "plants", "id": 209} ],
+        "fg"          : [0.56, 0.34, 0.09],
+        "bg"          : [0.1, 0.07, 0.03]
+    },
+    "fallen_logs"      : {
+        "walkable"    : true,
+        "movementCost": 2.2,
+        "charSpans"   : [ {"sheet": "plants", "id": 209} ],
+        "fg"          : [0.48, 0.26, 0.05],
+        "bg"          : [0.1, 0.06, 0.03]
+    },
+    "dead_trees"       : {
+        "walkable"    : true,
+        "movementCost": 2.5,
+        "charSpans"   : [ {"sheet": "plants", "from": 164, "to": 166} ],
+        "fg"          : [0.44, 0.36, 0.21],
+        "bg"          : [0.1, 0.07, 0.03]
+    },
+    "mushroom_patch"   : {
+        "walkable"    : true,
+        "movementCost": 1.6,
+        "charSpans"   : [ {"sheet": "plants", "id": 120} ],
+        "fg"          : [0.86, 0.52, 0.33],
+        "bg"          : [0.1, 0.06, 0.03]
+    },
+    "moss"             : {
+        "walkable"    : true,
+        "movementCost": 1.5,
+        "charSpans"   : [ {"sheet": "plants", "id": 16} ],
+        "fg"          : [0.3, 0.48, 0.09],
+        "bg"          : [0.07, 0.09, 0.03],
+        "biomes"      : { "swamp": [0.5, 0.7] }
+    },
+    "mud"              : {
+        "walkable"    : true,
+        "movementCost": 3,
+        "charSpans"   : [ {"literal": "."} ],
+        "fg"          : [0.34, 0.22, 0.09],
+        "bg"          : [0.1, 0.07, 0.04],
+        "biomes"      : { "swamp": [-0.5, -0.2] }
+    },
+    "bog"              : {
+        "walkable"    : true,
+        "movementCost": 3.5,
+        "charSpans"   : [ {"literal": ","} ],
+        "fg"          : [0.3, 0.28, 0.07],
+        "bg"          : [0.08, 0.08, 0.03],
+        "biomes"      : { "swamp": [-0.2, 0.2] }
+    },
+    "clay"             : {
+        "walkable"    : true,
+        "movementCost": 2.8,
+        "charSpans"   : [ {"literal": "\""} ],
+        "fg"          : [0.68, 0.36, 0.13],
+        "bg"          : [0.1, 0.07, 0.03],
+        "biomes"      : { "swamp": [0.2, 0.5] }
+    },
+    "quicksand"        : {
+        "walkable"    : true,
+        "movementCost": 25,
+        "charSpans"   : [ {"literal": "."} ],
+        "fg"          : [0.7, 0.52, 0.25],
+        "bg"          : [0.1, 0.08, 0.03],
+        "biomes"      : { "swamp": [0.7, null] }
+    },
+    "shallow_water"    : {
+        "walkable"    : true,
+        "movementCost": 2.5,
+        "charSpans"   : [ {"literal": "~"} ],
+        "fg"          : [0.2, 0.52, 0.41],
+        "bg"          : [0.04, 0.07, 0.08],
+        "biomes"      : { "swamp": [null, -0.5], "river": [null, -0.6] }
+    },
+    "water"            : {
+        "walkable"    : false,
+        "movementCost": 0,
+        "charSpans"   : [ {"literal": "~"} ],
+        "fg"          : [0.16, 0.36, 0.55],
+        "bg"          : [0.03, 0.04, 0.12],
+        "biomes"      : { "river": [-0.6, -0.3] }
+    },
+    "rapids"           : {
+        "walkable"    : false,
+        "movementCost": 0,
+        "charSpans"   : [ {"literal": "~"} ],
+        "fg"          : [0.38, 0.8, 0.91],
+        "bg"          : [0.03, 0.06, 0.16],
+        "biomes"      : { "river": [-0.3, 0.0] }
+    },
+    "riverbank"        : {
+        "walkable"    : true,
+        "movementCost": 1.4,
+        "charSpans"   : [ {"literal": "#"} ],
+        "fg"          : [0.58, 0.44, 0.13],
+        "bg"          : [0.1, 0.07, 0.03],
+        "biomes"      : { "river": [0.0, null] }
+    },
+    "rocky"            : {
+        "walkable"    : true,
+        "movementCost": 2.5,
+        "charSpans"   : [ {"sheet": "tiles", "from": 177, "to": 178} ],
+        "fg"          : [0.62, 0.52, 0.37],
+        "bg"          : [0.11, 0.08, 0.04],
+        "biomes"      : { "mountain": [null, -0.3] }
+    },
+    "cave"             : {
+        "walkable"    : true,
+        "movementCost": 1,
+        "charSpans"   : [ {"sheet": "tiles", "id": 3} ],
+        "fg"          : [0.26, 0.18, 0.09],
+        "bg"          : [0.07, 0.05, 0.03],
+        "biomes"      : { "mountain": [-0.3, 0.35] }
+    },
+    "cliff"            : {
+        "walkable"    : false,
+        "movementCost": 0,
+        "charSpans"   : [ {"sheet": "tiles", "id": 219} ],
+        "fg"          : [0.5, 0.42, 0.27],
+        "bg"          : [0.11, 0.08, 0.04],
+        "biomes"      : { "mountain": [0.35, 0.85] }
+    },
+    "mineral_deposit"  : {
+        "walkable"    : true,
+        "movementCost": 2.8,
+        "charSpans"   : [ {"sheet": "tiles", "from": 43, "to": 47} ],
+        "fg"          : [0.92, 0.76, 0.13],
+        "bg"          : [0.11, 0.08, 0.03],
+        "biomes"      : { "mountain": [0.85, null] }
+    },
+    "crystal_formation": {
+        "walkable"    : true,
+        "movementCost": 2,
+        "charSpans"   : [ {"sheet": "tiles", "from": 48, "to": 55} ],
+        "fg"          : [0.4, 0.84, 0.79],
+        "bg"          : [0.06, 0.08, 0.1]
+    },
+    "arcane_glade"     : {
+        "walkable"    : true,
+        "movementCost": 1.5,
+        "charSpans"   : [ {"sheet": "tiles", "from": 40, "to": 42}, {"sheet": "tiles", "from": 56, "to": 57} ],
+        "fg"          : [0.86, 0.5, 0.79],
+        "bg"          : [0.09, 0.05, 0.09]
+    }
+}

@@ -1,4 +1,5 @@
 import terrainsData from '../database/terrains.json';
+import subterrainsData from '../database/subterrains.json';
 
 /**
  * Terrains.ts — Biome and subterrain definitions
@@ -7,21 +8,16 @@ import terrainsData from '../database/terrains.json';
 
 export interface BiomeDef {
     densityRange: [number, number];
-    walkable: boolean;
-    movementCost: number;
-    /** Ground-cover subterrains selected by detail noise threshold. */
-    subterrains: string[];
-    subterrainThresholds: number[]; // length = subterrains.length - 1
 }
 
 export interface SubterrainDef {
     walkable: boolean;
     movementCost: number;
-    // RGB 0-1 for WebGL renderer
     fg: [number, number, number];
     bg: [number, number, number];
-    /** One or more glyph chars. When multiple, pickChar() selects by tile position. */
     chars: string[];
+    /** Per-biome noise threshold ranges [min, max] where null = unbounded. */
+    biomes?: Record<string, [number | null, number | null]>;
 }
 
 // ── Char helpers ──────────────────────────────────────────────────────────────
@@ -90,7 +86,7 @@ export const BIOMES: Record<string, BiomeDef> =
 // Chars are resolved at load time from tile-index descriptors (charSpans) stored
 // in terrains.json.  Each span references tiles.bmp or plants.bmp by sheet + index.
 export const SUBTERRAINS: Record<string, SubterrainDef> = Object.fromEntries(
-    (Object.entries(terrainsData.subterrains) as [string, Record<string, unknown>][]).map(
+    (Object.entries(subterrainsData) as [string, Record<string, unknown>][]).map(
         ([id, sub]) => [
             id,
             {
@@ -98,7 +94,8 @@ export const SUBTERRAINS: Record<string, SubterrainDef> = Object.fromEntries(
                 movementCost: sub.movementCost as number,
                 fg: sub.fg as [number, number, number],
                 bg: sub.bg as [number, number, number],
-                chars: resolveCharSpans(sub.charSpans as CharSpan[])
+                chars: resolveCharSpans(sub.charSpans as CharSpan[]),
+                biomes: sub.biomes as Record<string, [number | null, number | null]> | undefined
             } satisfies SubterrainDef
         ]
     )
@@ -111,13 +108,19 @@ export const SUBTERRAIN_FALLBACK: SubterrainDef = {
 
 /**
  * Pick the subterrain for a given biome given a detail noise value (-1..1).
+ * Each subterrain declares its own biome membership as a [min, max] range
+ * (null = unbounded). Ranges are non-overlapping so the first match is unique.
  */
-export function pickSubterrain(biome: BiomeDef, detailNoise: number): string {
-    const { subterrains, subterrainThresholds } = biome;
-    for (let i = 0; i < subterrainThresholds.length; i++) {
-        if (detailNoise < subterrainThresholds[i]) return subterrains[i];
+export function pickSubterrain(biomeName: string, detailNoise: number): string {
+    for (const [id, def] of Object.entries(SUBTERRAINS)) {
+        const range = def.biomes?.[biomeName];
+        if (!range) continue;
+        const [min, max] = range;
+        if ((min === null || detailNoise >= min) && (max === null || detailNoise < max)) {
+            return id;
+        }
     }
-    return subterrains[subterrains.length - 1];
+    return 'dirt'; // fallback
 }
 
 /**

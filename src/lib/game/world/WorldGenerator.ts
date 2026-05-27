@@ -1,7 +1,7 @@
 // src/lib/game/world/WorldGenerator.ts
 import { createNoise2D } from 'simplex-noise';
 import type { WorldTile, Location } from '../core/types';
-import { BIOMES, SUBTERRAINS, SUBTERRAIN_FALLBACK, pickBiome, pickSubterrain, pickChar } from '../core/Terrains';
+import { SUBTERRAINS, SUBTERRAIN_FALLBACK, pickBiome, pickSubterrain, pickChar } from '../core/Terrains';
 import { resourceGeneratorService } from '../services/ResourceGeneratorService';
 
 // Noise constants ported from Celestia noise_generator.gd
@@ -91,14 +91,13 @@ export function generateWorld(width: number, height: number, seed = Date.now()):
       const detail = detailNoise(x * DETAIL_FREQUENCY, y * DETAIL_FREQUENCY);
 
       const biomeName = pickBiome(density) ?? 'plains';
-      const biome = BIOMES[biomeName];
       // Base ground-cover only; object placement is handled later in ResourceGeneratorService
-      const subTypeName = pickSubterrain(biome, detail);
+      const subTypeName = pickSubterrain(biomeName, detail);
       const sub = SUBTERRAINS[subTypeName] ?? SUBTERRAIN_FALLBACK;
 
-      // Walkability: subterrain overrides biome for water/peak
+      // Walkability and movement cost come entirely from the subterrain definition
       const walkable = sub.walkable;
-      const movementCost = sub.movementCost || biome.movementCost;
+      const movementCost = sub.movementCost;
 
       // Legacy type field (kept for compatibility with existing code)
       const legacyType = biomeName === 'mountain'

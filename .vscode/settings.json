@@ -1,14 +1,10 @@
 {
   "editor.formatOnSave": true,
   "editor.defaultFormatter": "dbaeumer.vscode-eslint",
-  "[svelte]": {
-    "editor.defaultFormatter": "svelte.svelte-vscode"
-  },
+  "[svelte]": {"editor.defaultFormatter": "svelte.svelte-vscode"},
   "eslint.validate": ["javascript", "typescript", "svelte"],
-  "[markdown]": {
-    "editor.defaultFormatter": "yzhang.markdown-all-in-one"
-  },
-  "[typescript]": {
-    "editor.defaultFormatter": "vscode.typescript-language-features"
-  }
+  "[markdown]": {"editor.defaultFormatter": "yzhang.markdown-all-in-one"},
+  "[typescript]": {"editor.defaultFormatter": "vscode.typescript-language-features"},
+  "[json]": {"editor.defaultFormatter": "j-brooke.fracturedjsonvsc"},
+  "[jsonc]": {"editor.defaultFormatter": "j-brooke.fracturedjsonvsc"}
 }
