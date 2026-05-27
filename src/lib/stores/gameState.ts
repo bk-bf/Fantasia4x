@@ -30,6 +30,9 @@ let gameSpeedValue = 1;
 // ===== WORLD GENERATION =====
 /** Bump this when the world generation algorithm changes to force a regen. */
 const WORLD_VERSION = 11; // fallen_logs → P(209)
+/** Bump this to invalidate all existing saves (e.g. after a game economy reset). */
+const SAVE_VERSION = 2; // v2: spatial-only economy, no abstract resource ticks
+const SAVE_VERSION_KEY = 'fantasia4x-save-version';
 const WORLD_VERSION_KEY = 'fantasia4x-world-version';
 const WORLD_SEED = Date.now();
 const _generatedWorld = generateWorld(120, 80, WORLD_SEED);
@@ -84,11 +87,20 @@ export const initialGameState: GameState = {
 function saveToLocalStorage(state: GameState) {
 	if (browser) {
 		localStorage.setItem('fantasia4x-save', JSON.stringify(state));
+		localStorage.setItem(SAVE_VERSION_KEY, String(SAVE_VERSION));
 	}
 }
 
 function loadFromLocalStorage(): GameState | null {
 	if (browser) {
+		// Discard saves from an older save version (e.g. pre-spatial economy saves)
+		const savedVersion = Number(localStorage.getItem(SAVE_VERSION_KEY) ?? '0');
+		if (savedVersion < SAVE_VERSION) {
+			console.info('[GameState] Save version mismatch — discarding old save and starting fresh.');
+			localStorage.removeItem('fantasia4x-save');
+			localStorage.setItem(SAVE_VERSION_KEY, String(SAVE_VERSION));
+			return null;
+		}
 		const saved = localStorage.getItem('fantasia4x-save');
 		if (saved) {
 			try {
@@ -307,6 +319,15 @@ function addItem(itemId: string, amount: number) {
 	}));
 }
 
+function resetGame() {
+	if (browser) {
+		localStorage.removeItem('fantasia4x-save');
+		localStorage.setItem(SAVE_VERSION_KEY, String(SAVE_VERSION));
+	}
+	set(initialGameState);
+	console.info('[GameState] Game reset to initial state.');
+}
+
 // ===== MAIN STORE SETUP =====
 // Initialize locations at game start
 locationService.initializeAllLocations();
@@ -410,6 +431,7 @@ export const gameState = {
 	advanceTurn,
 	addItem,
 	consumeGlobalItem,
+	resetGame,
 	regenWorld
 };
 

@@ -349,12 +349,6 @@ export class GameEngineImpl implements GameEngine {
 		return availableResources.length > 0;
 	}
 
-	// ===== SYSTEM PROCESSING - MOVED FROM GAMESTATE =====
-	private processResources(): void {
-		console.log('[GameEngine] Coordinating resource processing through WorkService');
-		this.gameState = workService.processWorkHarvesting(this.gameState!);
-	}
-
 	private processPawns(): void {
 		console.log('[GameEngine] Coordinating pawn processing through services');
 
