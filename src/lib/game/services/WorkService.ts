@@ -452,7 +452,7 @@ export class WorkServiceImpl implements WorkService {
 	// ============ Work State Synchronization Methods ============
 
 	syncPawnWorkingStates(gameState: GameState): GameState {
-		console.log('[WorkService] Syncing pawn working states with work assignments');
+		console.debug('[WorkService] Syncing pawn working states with work assignments');
 
 		const updatedPawns = gameState.pawns.map((pawn) => {
 			const workAssignment = gameState.workAssignments[pawn.id];
@@ -496,7 +496,7 @@ export class WorkServiceImpl implements WorkService {
 	}
 
 	ensureBasicWorkAssignments(gameState: GameState): GameState {
-		console.log('[WorkService] Ensuring basic work assignments for all pawns');
+		console.debug('[WorkService] Ensuring basic work assignments for all pawns');
 
 		// Initialize workAssignments if it doesn't exist
 		if (!gameState.workAssignments) {
@@ -512,7 +512,7 @@ export class WorkServiceImpl implements WorkService {
 			return gameState;
 		}
 
-		console.log(`[WorkService] Using default location for assignments: ${defaultLocation.id}`);
+		console.debug(`[WorkService] Using default location for assignments: ${defaultLocation.id}`);
 
 		// Give every pawn a basic work assignment if they don't have one
 		const updatedPawns = gameState.pawns.map((pawn, index) => {
@@ -544,7 +544,7 @@ export class WorkServiceImpl implements WorkService {
 							isWorking: true
 						}
 					};
-					console.log(`[WorkService] Marked ${pawn.name} as working (${workAssignment.currentWork})`);
+					console.debug(`[WorkService] Marked ${pawn.name} as working (${workAssignment.currentWork})`);
 					return updatedPawn;
 				}
 			}
@@ -553,7 +553,7 @@ export class WorkServiceImpl implements WorkService {
 		});
 
 		const assignedCount = Object.keys(gameState.workAssignments).length;
-		console.log(`[WorkService] Work assignments ensured: ${assignedCount} pawns assigned`);
+		console.debug(`[WorkService] Work assignments ensured: ${assignedCount} pawns assigned`);
 
 		return {
 			...gameState,
@@ -571,12 +571,12 @@ export class WorkServiceImpl implements WorkService {
 			.filter(([_, priority]) => (priority as number) > 0)
 			.sort((a, b) => (b[1] as number) - (a[1] as number));
 
-		console.log(`[WorkService] ${pawn.name} work priorities:`, sortedWork);
+		console.debug(`[WorkService] ${pawn.name} work priorities:`, sortedWork);
 
 		// Find the highest priority work that the pawn can actually do
 		for (const [workType, priority] of sortedWork) {
 			if (this.canPawnDoWorkByType(pawn, workType, workAssignment, gameState)) {
-				console.log(`[WorkService] ${pawn.name} should do ${workType} (priority ${priority})`);
+				console.debug(`[WorkService] ${pawn.name} should do ${workType} (priority ${priority})`);
 				return workType;
 			}
 		}
@@ -616,7 +616,7 @@ export class WorkServiceImpl implements WorkService {
 			}
 		}
 
-		console.log(`[WorkService] ${pawn.name} can do ${workType}`);
+		console.debug(`[WorkService] ${pawn.name} can do ${workType}`);
 		return true;
 	}
 }

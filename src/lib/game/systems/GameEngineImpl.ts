@@ -346,33 +346,33 @@ export class GameEngineImpl implements GameEngine {
 		if (!this.gameState) return;
 		const gs = this.gameState;
 		const T = gs.turn;
-		const wasmReady = (wasmPathfinderService as any).isReady?.() ?? '?';
+		const wasmReady = wasmPathfinderService.isReady();
 		const jobPool = (gs.jobs ?? []).length;
-		console.groupCollapsed(`[PAWN_DEBUG] Turn ${T}  (WASM:${wasmReady}  jobs:${jobPool})`);
+		const lines: string[] = [`[PAWN_DEBUG] T=${T} WASM=${wasmReady} jobs=${jobPool}`];
 		for (const p of gs.pawns) {
 			const pos = p.position ? `(${p.position.x},${p.position.y})` : 'no-pos';
-			const state = p.currentState ?? 'Idle';
+			const state = (p.currentState ?? 'Idle').padEnd(18);
 			const isMoving = p.isMoving ?? false;
 			const pathLen = p.path?.length ?? 0;
 			const pathIdx = p.pathIndex ?? 0;
-			let target = '';
+			let target = 'no-job';
 			if (p.activeJob) {
-				target = `→(${p.activeJob.targetX},${p.activeJob.targetY}) job:${p.activeJob.type}`;
+				target = `→(${p.activeJob.targetX},${p.activeJob.targetY}) ${p.activeJob.type}`;
 				if (p.activeJob.resourceId) target += `/${p.activeJob.resourceId}`;
-				if (p.activeJob.jobId) target += ` [jid:${p.activeJob.jobId.slice(-4)}]`;
+				if (p.activeJob.jobId) target += ` jid=${p.activeJob.jobId.slice(-6)}`;
 			}
 			const pathInfo = isMoving
-				? `moving step ${pathIdx}/${pathLen}`
+				? `mv ${pathIdx}/${pathLen}`
 				: pathLen > 0
-					? `path-assigned(not-moving!) len=${pathLen}`
-					: '';
+					? `STUCK(path ${pathLen})`
+					: 'still';
 			const hunger = Math.floor(p.needs?.hunger ?? 0);
 			const fatigue = Math.floor(p.needs?.fatigue ?? 0);
-			console.log(
-				`  ${p.name.padEnd(12)} ${pos.padEnd(10)} [${state.padEnd(18)}] ${target.padEnd(35)} ${pathInfo}  H:${hunger} F:${fatigue}`
+			lines.push(
+				`  ${p.name.padEnd(14)} ${pos.padEnd(10)} [${state}] ${target.padEnd(38)} ${pathInfo.padEnd(12)} H:${hunger} F:${fatigue}`
 			);
 		}
-		console.groupEnd();
+		console.log(lines.join('\n'));
 	}
 
 	/**
