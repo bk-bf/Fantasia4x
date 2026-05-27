@@ -9,7 +9,7 @@
  * indirectly through PawnStateMachine (claimJob / advanceJob / releaseJob).
  */
 
-import type { GameState, Job, Pawn } from '../core/types';
+import type { GameState, Job, Pawn, DroppedItem } from '../core/types';
 import { ITEMS_DATABASE } from '../core/Items';
 
 // ===== WORK CONSTANTS =====
@@ -58,6 +58,9 @@ class JobServiceImpl {
 
         // --- Harvest jobs from designations ---
         jobs = this._syncHarvestJobs(jobs, gameState);
+
+        // --- Haul jobs from dropped items ---
+        jobs = this._syncHaulJobs(jobs, gameState);
 
         // --- Construct jobs from incomplete placed buildings ---
         jobs = this._syncConstructJobs(jobs, gameState);
@@ -305,6 +308,9 @@ class JobServiceImpl {
             case 'harvest':
                 state = this._completeHarvest(job, state);
                 break;
+            case 'haul':
+                state = this._completeHaul(job, state);
+                break;
             case 'construct':
                 state = this._completeConstruct(job, state);
                 break;
@@ -351,18 +357,82 @@ class JobServiceImpl {
                 : row
         );
 
-        // Add to stockpile
-        const newStockpile = { ...(gs.stockpile ?? {}) };
-        newStockpile[job.resourceId] = (newStockpile[job.resourceId] ?? 0) + harvestAmount;
+        // Spawn a dropped item at the harvest tile instead of adding straight to stockpile
+        const drop: DroppedItem = {
+            id: `drop-${job.resourceId}-${job.targetX}-${job.targetY}-${Date.now()}`,
+            resourceId: job.resourceId,
+            x: job.targetX,
+            y: job.targetY,
+            quantity: harvestAmount
+        };
+        const newDropped = [...(gs.droppedItems ?? []), drop];
 
         // Remove designation
         const newDesignations = { ...(gs.designations ?? {}) };
         delete newDesignations[`${job.targetX},${job.targetY}`];
 
         console.log(
-            `[JobService] Harvest complete: ${job.resourceId} at (${job.targetX},${job.targetY}) → stockpile`
+            `[JobService] Harvest complete: ${job.resourceId} at (${job.targetX},${job.targetY}) → dropped (${drop.id})`
         );
-        return { ...gs, worldMap: newWorldMap, stockpile: newStockpile, designations: newDesignations };
+        return { ...gs, worldMap: newWorldMap, droppedItems: newDropped, designations: newDesignations };
+    }
+
+    private _syncHaulJobs(jobs: Job[], gs: GameState): Job[] {
+        // Remove haul jobs whose dropped item no longer exists
+        jobs = jobs.filter((j) => {
+            if (j.type !== 'haul') return true;
+            return (gs.droppedItems ?? []).some((d) => d.id === j.droppedItemId);
+        });
+
+        // Add haul jobs for dropped items that have no job yet
+        for (const drop of gs.droppedItems ?? []) {
+            const exists = jobs.some((j) => j.type === 'haul' && j.droppedItemId === drop.id);
+            if (!exists) {
+                jobs.push({
+                    id: `haul-${drop.id}-${Date.now()}`,
+                    type: 'haul',
+                    targetX: drop.x,
+                    targetY: drop.y,
+                    resourceId: drop.resourceId,
+                    droppedItemId: drop.id,
+                    workRequired: 1, // instant pick-up on arrival
+                    workDone: 0,
+                    claimedBy: null
+                });
+            }
+        }
+
+        return jobs;
+    }
+
+    private _completeHaul(job: Job, gs: GameState): GameState {
+        if (!job.droppedItemId) return gs;
+
+        const drop = (gs.droppedItems ?? []).find((d) => d.id === job.droppedItemId);
+        if (!drop) return gs;
+
+        // Remove the dropped item from the ground
+        const newDropped = (gs.droppedItems ?? []).filter((d) => d.id !== drop.id);
+
+        // Add to carrying pawn's inventory
+        const pawnId = job.claimedBy;
+        if (pawnId) {
+            const newPawns = gs.pawns.map((p) => {
+                if (p.id !== pawnId) return p;
+                const inv = p.inventory ?? { items: {}, maxSlots: 20, currentSlots: 0 };
+                const newItems = { ...inv.items };
+                newItems[drop.resourceId] = (newItems[drop.resourceId] ?? 0) + drop.quantity;
+                const currentSlots = Object.values(newItems).reduce((s, v) => s + v, 0);
+                return { ...p, inventory: { ...inv, items: newItems, currentSlots } };
+            });
+            console.log(`[JobService] Haul pickup: ${drop.resourceId} ×${drop.quantity} → pawn ${pawnId}`);
+            return { ...gs, droppedItems: newDropped, pawns: newPawns };
+        }
+
+        // No pawn claimed it (shouldn't happen) — fall back to stockpile
+        const newStockpile = { ...(gs.stockpile ?? {}) };
+        newStockpile[drop.resourceId] = (newStockpile[drop.resourceId] ?? 0) + drop.quantity;
+        return { ...gs, droppedItems: newDropped, stockpile: newStockpile };
     }
 
     private _completeConstruct(job: Job, gs: GameState): GameState {

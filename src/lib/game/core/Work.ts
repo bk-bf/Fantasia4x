@@ -154,5 +154,16 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     primaryStat: 'wisdom',
     secondaryStat: 'dexterity',
     baseEfficiency: 1.0
+  },
+  // Phase 7: hauling — carry dropped items to storage
+  {
+    id: 'hauling',
+    name: 'Hauling',
+    description: 'Pick up resources left on the ground and carry them to a storage building',
+    emoji: '📦',
+    color: '#FFB300',
+    primaryStat: 'strength',
+    secondaryStat: 'constitution',
+    baseEfficiency: 1.0
   }
 ];

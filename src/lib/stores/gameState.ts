@@ -80,7 +80,8 @@ export const initialGameState: GameState = {
 	workAssignments: {},
 	productionTargets: [],
 	currentJobIndex: {},
-	pawnAbilities: {}
+	pawnAbilities: {},
+	droppedItems: []
 };
 
 // ===== UTILITY FUNCTIONS =====

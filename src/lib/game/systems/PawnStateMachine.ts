@@ -29,7 +29,9 @@ export const PAWN_STATE = {
     TIRED: 'Tired',
     MOVING_TO_NEED: 'MovingToNeed',
     EATING: 'Eating',
-    SLEEPING: 'Sleeping'
+    SLEEPING: 'Sleeping',
+    HAULING: 'Hauling',
+    MOVING_TO_DEPOSIT: 'MovingToDeposit'
 } as const;
 
 export type PawnStateName = (typeof PAWN_STATE)[keyof typeof PAWN_STATE];
@@ -177,6 +179,132 @@ function goIdle(pawn: Pawn, gs: GameState): GameState {
 
 // ===== PER-PAWN STATE HANDLERS =====
 
+// ===== HAULING HELPERS =====
+
+/** Storage building types that accept deposited resources. */
+const DEPOSIT_TYPES = ['storage_rack', 'campfire', 'lean_to_shelter', 'woodland_shelter', 'stone_hut'];
+
+/**
+ * Find the nearest complete storage building to deposit hauled items.
+ * Falls back to any complete building if no storage type found.
+ * Returns null if no buildings exist (pawn will deposit in-place).
+ */
+function findNearestDepositPoint(
+    pawn: Pawn,
+    gs: GameState
+): { x: number; y: number } | null {
+    if (!pawn.position) return null;
+    const { x: px, y: py } = pawn.position;
+
+    let best: { x: number; y: number; dist: number } | null = null;
+
+    // Prefer designated storage types
+    for (const b of gs.buildings ?? []) {
+        if (b.status !== 'complete') continue;
+        if (!DEPOSIT_TYPES.includes(b.type)) continue;
+        const dist = Math.abs(b.x - px) + Math.abs(b.y - py);
+        if (!best || dist < best.dist) best = { x: b.x, y: b.y, dist };
+    }
+    if (best) return { x: best.x, y: best.y };
+
+    // Fallback: any complete building
+    for (const b of gs.buildings ?? []) {
+        if (b.status !== 'complete') continue;
+        const dist = Math.abs(b.x - px) + Math.abs(b.y - py);
+        if (!best || dist < best.dist) best = { x: b.x, y: b.y, dist };
+    }
+    return best ? { x: best.x, y: best.y } : null;
+}
+
+/** Transfer everything in pawn.inventory to gs.stockpile and clear the inventory. */
+function depositInventory(pawn: Pawn, gs: GameState): GameState {
+    const inv = pawn.inventory?.items ?? {};
+    if (Object.keys(inv).length === 0) return goIdle(pawn, gs);
+
+    const newStockpile = { ...(gs.stockpile ?? {}) };
+    for (const [resourceId, qty] of Object.entries(inv)) {
+        if (qty > 0) newStockpile[resourceId] = (newStockpile[resourceId] ?? 0) + qty;
+    }
+
+    const newPawns = gs.pawns.map((p) =>
+        p.id === pawn.id
+            ? {
+                ...p,
+                currentState: PAWN_STATE.IDLE,
+                activeJob: undefined,
+                inventory: { ...(p.inventory ?? { items: {}, maxSlots: 20, currentSlots: 0 }), items: {}, currentSlots: 0 }
+            }
+            : p
+    );
+    console.log(`[PawnSM] ${pawn.name} deposited inventory:`, inv);
+    return { ...gs, stockpile: newStockpile, pawns: newPawns };
+}
+
+function handleHauling(pawn: Pawn, gameState: GameState): GameState {
+    // Pawn just picked up an item and needs to find a deposit point
+    const deposit = findNearestDepositPoint(pawn, gameState);
+    if (!deposit) {
+        // No building to deposit at — drop straight to stockpile
+        return depositInventory(pawn, gameState);
+    }
+
+    const alreadyAdjacent = pawn.position &&
+        isAdjacent(pawn.position.x, pawn.position.y, deposit.x, deposit.y);
+
+    if (alreadyAdjacent) {
+        return depositInventory(pawn, gameState);
+    }
+
+    const afterPath = pawn.position
+        ? tryAssignPath(pawn, deposit.x, deposit.y, gameState)
+        : null;
+
+    if (!afterPath) {
+        return depositInventory(pawn, gameState);
+    }
+
+    return {
+        ...afterPath,
+        pawns: afterPath.pawns.map((p) =>
+            p.id === pawn.id
+                ? {
+                    ...p,
+                    currentState: PAWN_STATE.MOVING_TO_DEPOSIT,
+                    activeJob: {
+                        type: 'need' as const,
+                        targetX: deposit.x,
+                        targetY: deposit.y,
+                        progress: 0,
+                        timeRequired: 1,
+                        depositX: deposit.x,
+                        depositY: deposit.y
+                    }
+                }
+                : p
+        )
+    };
+}
+
+function handleMovingToDeposit(pawn: Pawn, gameState: GameState): GameState {
+    const activeJob = pawn.activeJob;
+    if (!activeJob) return depositInventory(pawn, gameState);
+
+    if (pawn.hasReachedDestination && pawn.position) {
+        const adjacent = isAdjacent(
+            pawn.position.x, pawn.position.y,
+            activeJob.targetX, activeJob.targetY
+        );
+        if (adjacent) {
+            return depositInventory(pawn, { ...gameState, pawns: gameState.pawns.map((p) => p.id === pawn.id ? { ...p, hasReachedDestination: false } : p) });
+        }
+        // Didn't quite make it — deposit in place anyway
+        return depositInventory(pawn, gameState);
+    }
+    return gameState;
+}
+
+// ===== PER-PAWN STATE HANDLERS =====
+
 function tickPawn(pawn: Pawn, gameState: GameState): GameState {
     const state = pawn.currentState ?? PAWN_STATE.IDLE;
     switch (state) {
@@ -188,6 +316,8 @@ function tickPawn(pawn: Pawn, gameState: GameState): GameState {
         case PAWN_STATE.MOVING_TO_NEED: return handleMovingToNeed(pawn, gameState);
         case PAWN_STATE.EATING: return handleEating(pawn, gameState);
         case PAWN_STATE.SLEEPING: return handleSleeping(pawn, gameState);
+        case PAWN_STATE.HAULING: return handleHauling(pawn, gameState);
+        case PAWN_STATE.MOVING_TO_DEPOSIT: return handleMovingToDeposit(pawn, gameState);
         default: return gameState;
     }
 }
@@ -207,11 +337,12 @@ function handleIdle(pawn: Pawn, gameState: GameState): GameState {
     let gs = jobService.claimJob(pawn.id, job.id, gameState);
 
     const activeJob = {
-        type: job.type as 'harvest' | 'construct' | 'craft',
+        type: job.type as 'harvest' | 'construct' | 'craft' | 'haul',
         jobId: job.id,
         targetX: job.targetX,
         targetY: job.targetY,
         resourceId: job.resourceId,
+        droppedItemId: job.droppedItemId,
         buildingId: job.buildingId,
         craftQueueId: job.craftQueueId,
         progress: 0,
@@ -301,6 +432,48 @@ function handleWorking(pawn: Pawn, gameState: GameState): GameState {
     const jobStillExists = (afterAdvance.jobs ?? []).some((j) => j.id === jobId);
 
     if (!jobStillExists) {
+        // Job complete. If pawn is now carrying items, enter HAULING state.
+        const updatedPawn = afterAdvance.pawns.find((p) => p.id === pawn.id);
+        const hasInventory = updatedPawn &&
+            Object.values(updatedPawn.inventory?.items ?? {}).some((v) => v > 0);
+
+        if (hasInventory) {
+            // Find a deposit point and start hauling
+            const deposit = findNearestDepositPoint(updatedPawn!, afterAdvance);
+            const depositPayload = deposit
+                ? { depositX: deposit.x, depositY: deposit.y }
+                : null;
+
+            if (depositPayload && deposit && updatedPawn!.position &&
+                !isAdjacent(updatedPawn!.position.x, updatedPawn!.position.y, deposit.x, deposit.y)) {
+                const afterPath = tryAssignPath(updatedPawn!, deposit.x, deposit.y, afterAdvance);
+                if (afterPath) {
+                    return {
+                        ...afterPath,
+                        pawns: afterPath.pawns.map((p) =>
+                            p.id === pawn.id
+                                ? {
+                                    ...p,
+                                    currentState: PAWN_STATE.MOVING_TO_DEPOSIT,
+                                    activeJob: {
+                                        type: 'need' as const,
+                                        targetX: deposit.x,
+                                        targetY: deposit.y,
+                                        progress: 0,
+                                        timeRequired: 1,
+                                        depositX: deposit.x,
+                                        depositY: deposit.y
+                                    }
+                                }
+                                : p
+                        )
+                    };
+                }
+            }
+            // Already adjacent or no path — deposit immediately
+            return depositInventory(updatedPawn!, afterAdvance);
+        }
+
         return {
             ...afterAdvance,
             pawns: afterAdvance.pawns.map((p) =>

@@ -28,12 +28,22 @@ export const LABOR_LEVEL = { DISABLED: 0, LOW: 1, NORMAL: 2, HIGH: 3, URGENT: 4 
  * A discrete unit of work at a specific map location.
  * Generated each turn by JobService from designations, buildings, crafting queue.
  */
+/** An item that has been harvested and dropped on the map, awaiting a hauler. */
+export interface DroppedItem {
+	id: string;
+	resourceId: string;
+	x: number;
+	y: number;
+	quantity: number;
+}
+
 export interface Job {
 	id: string;
 	type: 'harvest' | 'construct' | 'haul' | 'craft' | 'eat' | 'sleep' | 'light' | 'refuel';
 	targetX: number;
 	targetY: number;
 	resourceId?: string;    // harvest / haul: which resource
+	droppedItemId?: string; // haul: which DroppedItem to pick up
 	buildingId?: string;    // construct: which PlacedBuilding.id
 	craftQueueId?: string;  // craft: which CraftingInProgress.id
 	workRequired: number;   // total work points to complete
@@ -88,6 +98,8 @@ export interface GameState {
 	craftingStationAssignments?: Record<string, string | null>;
 	/** Per-item crafting config: key = itemId */
 	craftingOrderConfigs?: Record<string, { amount: number; mode: 'once' | 'stockpile'; targetStockpile?: number }>;
+	/** Phase 7: items dropped on the ground after harvesting, awaiting haulers */
+	droppedItems?: DroppedItem[];
 }
 export interface WorkCategory {
 	id: string;
@@ -178,22 +190,25 @@ export interface Pawn {
 	hasReachedDestination?: boolean;            // just finished a path
 
 	// Phase 4/5: State machine primary state
-	currentState?: string;                       // 'Idle' | 'Hungry' | 'Tired' | 'MovingToNeed' | 'MovingToResource' | 'Working' | 'Eating' | 'Sleeping'
+	currentState?: string;                       // 'Idle' | 'Hungry' | 'Tired' | 'MovingToNeed' | 'MovingToResource' | 'Working' | 'Hauling' | 'MovingToDeposit' | 'Eating' | 'Sleeping'
 	// Job payload for active state machine job
 	activeJob?: {
-		/** Phase 5: 'harvest'|'construct'|'craft' use work-point jobs; 'need' for eat/sleep */
-		type: 'harvest' | 'construct' | 'craft' | 'need';
+		/** Phase 5: 'harvest'|'construct'|'craft'|'haul' use work-point jobs; 'need' for eat/sleep */
+		type: 'harvest' | 'construct' | 'craft' | 'haul' | 'need';
 		/** Phase 5a: id of the Job in gameState.jobs[] (null for need-type jobs) */
 		jobId?: string;
 		targetX: number;
 		targetY: number;
 		resourceId?: string;
+		droppedItemId?: string; // haul: id of the DroppedItem being picked up
 		buildingId?: string;    // for construct jobs
 		craftQueueId?: string;  // for craft jobs
 		progress: number;       // 0–1 fractional (local display)
 		timeRequired: number;
-		targetState?: string; // for MovingToNeed, which state to enter on arrival
-		turnsInState?: number; // for Eating/Sleeping duration tracking
+		targetState?: string;   // for MovingToNeed, which state to enter on arrival
+		turnsInState?: number;  // for Eating/Sleeping duration tracking
+		depositX?: number;      // haul: destination x for deposit
+		depositY?: number;      // haul: destination y for deposit
 	};
 }
 

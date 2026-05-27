@@ -35,6 +35,7 @@
   import PawnTraits from '../pawn/PawnTraits.svelte';
   import PawnAbilities from '../pawn/PawnAbilities.svelte';
   import PawnEquipment from '../pawn/PawnEquipment.svelte';
+  import PawnInventory from '../pawn/PawnInventory.svelte';
 
   // Component state - only pawn selection and navigation logic
   let pawns: Pawn[] = [];
@@ -89,6 +90,7 @@
       <PawnTraits pawn={selectedPawn} />
       <PawnAbilities pawn={selectedPawn} gameState={$gameState} />
       <PawnEquipment pawn={selectedPawn} />
+      <PawnInventory pawn={selectedPawn} />
     </div>
   {:else}
     <div class="empty">select a pawn to view details</div>

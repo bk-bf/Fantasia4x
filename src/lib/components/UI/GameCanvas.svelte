@@ -5,7 +5,13 @@
   import { WebGLRenderer } from '$lib/webgl/renderer.js';
   import { buildGameGrid, generatePlaceholderGrid } from '$lib/webgl/fantasia-world.js';
   import { gameState } from '$lib/stores/gameState.js';
-  import type { WorldTile, Pawn, PlacedBuilding, DesignationType } from '$lib/game/core/types.js';
+  import type {
+    WorldTile,
+    Pawn,
+    PlacedBuilding,
+    DesignationType,
+    DroppedItem
+  } from '$lib/game/core/types.js';
   import type { GameGrid } from '$lib/webgl/game-grid.js';
   import { wasmPathfinderService } from '$lib/game/services/WasmPathfinderService.js';
   import { pawnService } from '$lib/game/services/PawnService.js';
@@ -61,6 +67,9 @@
   let buildings: PlacedBuilding[] = [];
   let designations: Record<string, DesignationType> = {};
 
+  // Phase 7: dropped items overlay
+  let droppedItems: DroppedItem[] = [];
+
   // Phase 4b: designation mode — press 'd' to toggle; left-click designates, right-click clears
   let designationMode = false;
   let designationTypeActive: DesignationType = 'harvest';
@@ -81,12 +90,14 @@
     pawns = s.pawns ?? [];
     buildings = s.buildings ?? [];
     designations = s.designations ?? {};
+    droppedItems = s.droppedItems ?? [];
     if (renderer?.isReady()) {
       const grid =
         worldMap.length > 0
           ? buildGameGrid(worldMap, buildings, designations)
           : generatePlaceholderGrid();
       overlayPawns(grid, pawns, selectedPawnId);
+      overlayDroppedItems(grid, droppedItems);
       renderer.setGrid(grid);
       // Re-snap to fit when the real map loads (placeholder vs. actual may differ in size)
       if (worldMap.length > 0 && canvas) {
@@ -181,10 +192,26 @@
     }
   }
 
+  /** Render dropped items as a yellow/gold '*' glyph on the map. */
+  function overlayDroppedItems(grid: GameGrid, drops: DroppedItem[]) {
+    // ASCII '*' glyph index in the sprite sheet (glyph 42 in standard CP437)
+    const STAR_GLYPH = glyph(SHEET.MAP, 42);
+    for (const drop of drops) {
+      const existing = grid.getTile(drop.x, drop.y);
+      grid.setTile(drop.x, drop.y, {
+        char: STAR_GLYPH,
+        foreground: { r: 1.0, g: 0.85, b: 0.1 }, // gold
+        background: existing?.background ?? { r: 0, g: 0, b: 0 },
+        position: { x: drop.x, y: drop.y }
+      });
+    }
+  }
+
   function redrawOverlay() {
     if (!renderer?.isReady() || worldMap.length === 0) return;
     const grid = buildGameGrid(worldMap, buildings, designations);
     overlayPawns(grid, pawns, selectedPawnId);
+    overlayDroppedItems(grid, droppedItems);
     renderer.setGrid(grid);
   }
 
