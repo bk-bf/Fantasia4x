@@ -26,7 +26,7 @@
         "id"              : "stone_outcrop",
         "displayName"     : "Stone Outcrop",
         "objectSubType"   : "rocky",
-        "charSpans"       : [ {"sheet": "tiles", "from": 177, "to": 178} ],
+        "charSpans"       : [ {"sheet": "tiles", "id": 63} ],
         "fg"              : [0.62, 0.52, 0.37],
         "bg"              : [0.11, 0.08, 0.04],
         "spawn"           : {
@@ -182,7 +182,7 @@
         "id"              : "mushroom_patch",
         "displayName"     : "Mushroom Patch",
         "objectSubType"   : "mushroom_patch",
-        "charSpans"       : [ {"sheet": "plants", "id": 120} ],
+        "charSpans"       : [ {"sheet": "tiles", "id": 123} ],
         "fg"              : [0.86, 0.52, 0.33],
         "bg"              : [0.1, 0.06, 0.03],
         "spawn"           : { "subterrains": {"moss": 0.014, "mud": 0.012, "deep_grass": 0.01, "dirt": 0.005} },

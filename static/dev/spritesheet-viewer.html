@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bitlands Spritesheet Viewer</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0d0d0d;
+      color: #c8c8c8;
+      font-family: 'Courier New', monospace;
+      padding: 16px;
+    }
+    h1 { color: #ff9900; font-size: 16px; margin-bottom: 12px; }
+    .controls {
+      display: flex; gap: 10px; align-items: center;
+      margin-bottom: 14px; flex-wrap: wrap;
+    }
+    label { font-size: 12px; color: #999; }
+    input[type=range] { width: 120px; }
+    input[type=text] {
+      background: #1a1a1a; border: 1px solid #444; color: #eee;
+      padding: 3px 6px; font-family: monospace; font-size: 12px; width: 80px;
+    }
+    select {
+      background: #1a1a1a; border: 1px solid #444; color: #eee;
+      padding: 3px 6px; font-family: monospace; font-size: 12px;
+    }
+    .scale-val { color: #ff9900; font-size: 12px; min-width: 20px; }
+
+    .sheet-section { margin-bottom: 28px; }
+    .sheet-title {
+      font-size: 13px; color: #ff9900; margin-bottom: 6px;
+      border-bottom: 1px solid #333; padding-bottom: 4px;
+    }
+    .sheet-meta { font-size: 11px; color: #666; margin-bottom: 8px; }
+
+    .grid-wrap {
+      position: relative; display: inline-block;
+      border: 1px solid #333; background: #111;
+    }
+    canvas.sheet-canvas { display: block; image-rendering: pixelated; }
+    canvas.overlay-canvas {
+      position: absolute; top: 0; left: 0;
+      pointer-events: none;
+    }
+
+    .tooltip {
+      position: fixed;
+      background: #1a1a1a;
+      border: 1px solid #ff9900;
+      color: #eee;
+      padding: 6px 10px;
+      font-size: 11px;
+      pointer-events: none;
+      display: none;
+      z-index: 100;
+      white-space: nowrap;
+    }
+    .tooltip b { color: #ff9900; }
+
+    .copied {
+      position: fixed; top: 20px; right: 20px;
+      background: #1a4a1a; border: 1px solid #4a4; color: #8f8;
+      padding: 8px 14px; font-size: 12px; z-index: 200;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>BITLANDS SPRITESHEET VIEWER</h1>
+
+  <div class="controls">
+    <label>Scale:
+      <input type="range" id="scaleSlider" min="2" max="8" value="4" step="1">
+      <span class="scale-val" id="scaleVal">4×</span>
+    </label>
+    <label>Labels:
+      <select id="labelMode">
+        <option value="hover">On hover</option>
+        <option value="all">All indices</option>
+        <option value="none">None</option>
+      </select>
+    </label>
+    <label>Jump to index:
+      <input type="text" id="jumpInput" placeholder="0–255">
+      <select id="jumpSheet">
+        <option value="items">items</option>
+        <option value="buildings">buildings</option>
+        <option value="plants">plants</option>
+        <option value="map">map</option>
+        <option value="tiles">tiles</option>
+        <option value="workshops">workshops</option>
+        <option value="crops">crops</option>
+        <option value="font">font</option>
+      </select>
+    </label>
+    <button onclick="jumpTo()" style="background:#222;border:1px solid #555;color:#eee;padding:4px 8px;font:12px monospace;cursor:pointer">GO</button>
+  </div>
+
+  <div id="sheets"></div>
+  <div class="tooltip" id="tooltip"></div>
+  <div class="copied" id="copied">Copied!</div>
+
+  <script>
+    // ── Config ──────────────────────────────────────────────────────────────
+    const TILE_W = 12;
+    const TILE_H = 18;
+    const COLS   = 16;
+
+    // Sheets in atlas order (matches loadBitlandsAtlas layout)
+    const SHEETS = [
+      { name: 'items',     file: '/tilesets/bitlands_items.bmp',     puaBase: 0xe500,
+        note: 'sheet: "items" in charSpans — use these for buildings.json' },
+      { name: 'buildings', file: '/tilesets/bitlands_buildings.bmp', puaBase: 0xe400,
+        note: 'sheet: "buildings" in charSpans' },
+      { name: 'plants',    file: '/tilesets/bitlands_plants.bmp',    puaBase: 0xe000,
+        note: 'sheet: "plants" in charSpans — already used by resources/subterrains' },
+      { name: 'map',       file: '/tilesets/bitlands_map.bmp',       puaBase: 0xe200,
+        note: 'sheet: "map" — humanoids/entities' },
+      { name: 'tiles',     file: '/tilesets/bitlands_tiles.bmp',     puaBase: null,
+        note: 'sheet: "tiles" — terrain CP437 tiles' },
+      { name: 'workshops', file: '/tilesets/bitlands_workshops.bmp', puaBase: 0xe600,
+        note: 'sheet: "workshops"' },
+      { name: 'crops',     file: '/tilesets/bitlands_crops.bmp',     puaBase: 0xe700,
+        note: 'sheet: "crops"' },
+      { name: 'font',      file: '/tilesets/bitlands_font.bmp',      puaBase: 0xe300,
+        note: 'sheet: "font" — UI glyphs' },
+      { name: 'creatures', file: '/tilesets/creatures.bmp',          puaBase: null,
+        note: '⚠ not yet in atlas — reference only' },
+      { name: 'races',     file: '/tilesets/races.bmp',              puaBase: null,
+        note: '⚠ not yet in atlas — reference only' },
+    ];
+
+    const MAGENTA = [255, 0, 255]; // transparent mask colour in bitlands sheets
+
+    let scale     = 4;
+    let labelMode = 'hover';
+    let hoveredSheet = null;
+    let hoveredIdx   = -1;
+
+    // ── State per sheet ─────────────────────────────────────────────────────
+    const sheetState = {}; // name → { canvas, overlay, img, imageData, rows }
+
+    // ── UI ──────────────────────────────────────────────────────────────────
+    document.getElementById('scaleSlider').addEventListener('input', e => {
+      scale = Number(e.target.value);
+      document.getElementById('scaleVal').textContent = scale + '×';
+      redrawAll();
+    });
+    document.getElementById('labelMode').addEventListener('change', e => {
+      labelMode = e.target.value;
+      redrawAll();
+    });
+
+    function jumpTo() {
+      const idx   = parseInt(document.getElementById('jumpInput').value, 10);
+      const sname = document.getElementById('jumpSheet').value;
+      if (isNaN(idx) || idx < 0 || idx > 255) return;
+      const section = document.querySelector(`[data-sheet="${sname}"]`);
+      if (!section) return;
+      section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // Flash the cell
+      const st = sheetState[sname];
+      if (st) flashCell(sname, idx);
+    }
+
+    // ── Load all sheets ─────────────────────────────────────────────────────
+    async function loadSheet(sheet) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          // Decode pixels
+          const tmpC = document.createElement('canvas');
+          tmpC.width  = img.width;
+          tmpC.height = img.height;
+          const tmpCtx = tmpC.getContext('2d');
+          tmpCtx.drawImage(img, 0, 0);
+          const imageData = tmpCtx.getImageData(0, 0, img.width, img.height);
+
+          const rows = Math.floor(img.height / TILE_H);
+          resolve({ img, imageData, rows });
+        };
+        img.onerror = () => reject(new Error(`Failed: ${sheet.file}`));
+        img.src = sheet.file;
+      });
+    }
+
+    // ── Draw ────────────────────────────────────────────────────────────────
+    function drawSheet(name, imageData, rows) {
+      const st  = sheetState[name];
+      const cw  = COLS * TILE_W * scale;
+      const ch  = rows * TILE_H * scale;
+      const can = st.canvas;
+      can.width  = cw;
+      can.height = ch;
+      const ctx = can.getContext('2d');
+      ctx.imageSmoothingEnabled = false;
+
+      // Draw each sprite at scale, with magenta → transparent
+      const src = imageData;
+      for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < COLS; col++) {
+          const spriteIdx = row * COLS + col;
+          if (spriteIdx >= 256) break;
+
+          // Extract sprite pixels into temp canvas
+          const sc = document.createElement('canvas');
+          sc.width  = TILE_W;
+          sc.height = TILE_H;
+          const sctx = sc.getContext('2d');
+          const sdata = sctx.createImageData(TILE_W, TILE_H);
+          for (let py = 0; py < TILE_H; py++) {
+            for (let px = 0; px < TILE_W; px++) {
+              const si = ((row * TILE_H + py) * src.width + (col * TILE_W + px)) * 4;
+              const di = (py * TILE_W + px) * 4;
+              const r  = src.data[si];
+              const g  = src.data[si + 1];
+              const b  = src.data[si + 2];
+              const isMagenta = r === 255 && g === 0 && b === 255;
+              sdata.data[di]     = r;
+              sdata.data[di + 1] = g;
+              sdata.data[di + 2] = b;
+              sdata.data[di + 3] = isMagenta ? 0 : 255;
+            }
+          }
+          sctx.putImageData(sdata, 0, 0);
+          ctx.drawImage(sc,
+            col * TILE_W * scale, row * TILE_H * scale,
+            TILE_W * scale, TILE_H * scale
+          );
+        }
+      }
+    }
+
+    function drawOverlay(name, rows, highlightIdx = -1) {
+      const st = sheetState[name];
+      const oc = st.overlay;
+      const cw = COLS * TILE_W * scale;
+      const ch = rows * TILE_H * scale;
+      oc.width  = cw;
+      oc.height = ch;
+      const ctx = oc.getContext('2d');
+      ctx.clearRect(0, 0, cw, ch);
+
+      const tw = TILE_W * scale;
+      const th = TILE_H * scale;
+
+      for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < COLS; col++) {
+          const idx = row * COLS + col;
+          if (idx >= 256) break;
+          const x  = col * tw;
+          const y  = row * th;
+
+          // Grid lines
+          ctx.strokeStyle = 'rgba(80,80,80,0.5)';
+          ctx.lineWidth   = 0.5;
+          ctx.strokeRect(x + 0.5, y + 0.5, tw - 1, th - 1);
+
+          // Highlight hovered cell
+          if (idx === highlightIdx) {
+            ctx.fillStyle = 'rgba(255,153,0,0.25)';
+            ctx.fillRect(x, y, tw, th);
+            ctx.strokeStyle = '#ff9900';
+            ctx.lineWidth   = 1.5;
+            ctx.strokeRect(x + 0.5, y + 0.5, tw - 1, th - 1);
+          }
+
+          // Label
+          if (labelMode === 'all' || (labelMode === 'hover' && idx === highlightIdx)) {
+            const fs = Math.max(7, Math.min(11, scale * 2));
+            ctx.font         = `bold ${fs}px monospace`;
+            ctx.textAlign    = 'center';
+            ctx.textBaseline = 'bottom';
+            // Shadow for legibility
+            ctx.fillStyle = 'rgba(0,0,0,0.8)';
+            ctx.fillText(String(idx), x + tw / 2 + 1, y + th + 1);
+            ctx.fillStyle = (idx === highlightIdx) ? '#ff9900' : '#ddd';
+            ctx.fillText(String(idx), x + tw / 2, y + th);
+          }
+        }
+      }
+    }
+
+    function flashCell(name, idx) {
+      const st   = sheetState[name];
+      if (!st) return;
+      const rows = st.rows;
+      let   n    = 0;
+      const iv   = setInterval(() => {
+        drawOverlay(name, rows, n % 2 === 0 ? idx : -1);
+        if (++n >= 6) { clearInterval(iv); drawOverlay(name, rows, -1); }
+      }, 150);
+    }
+
+    function redrawAll() {
+      for (const [name, st] of Object.entries(sheetState)) {
+        const isHovered = name === hoveredSheet;
+        drawSheet(name, st.imageData, st.rows);
+        drawOverlay(name, st.rows, isHovered ? hoveredIdx : -1);
+        // Resize the wrap
+        const cw = COLS * TILE_W * scale;
+        const ch = st.rows * TILE_H * scale;
+        st.canvas.width  = cw; st.canvas.height  = ch;
+        st.overlay.width = cw; st.overlay.height = ch;
+        drawSheet(name, st.imageData, st.rows);
+        drawOverlay(name, st.rows, isHovered ? hoveredIdx : -1);
+      }
+    }
+
+    // ── Tooltip + interaction ────────────────────────────────────────────────
+    const tooltip = document.getElementById('tooltip');
+    const copied  = document.getElementById('copied');
+    let copiedTimer = null;
+
+    function showCopied() {
+      copied.style.display = 'block';
+      clearTimeout(copiedTimer);
+      copiedTimer = setTimeout(() => { copied.style.display = 'none'; }, 1200);
+    }
+
+    function attachInteraction(name, sheet) {
+      const st = sheetState[name];
+      const ov = st.overlay;
+      const wrap = ov.parentElement;
+
+      wrap.addEventListener('mousemove', e => {
+        const rect = ov.getBoundingClientRect();
+        const mx   = e.clientX - rect.left;
+        const my   = e.clientY - rect.top;
+        const tw   = TILE_W * scale;
+        const th   = TILE_H * scale;
+        const col  = Math.floor(mx / tw);
+        const row  = Math.floor(my / th);
+        const idx  = row * COLS + col;
+        if (idx < 0 || idx > 255) return;
+
+        hoveredSheet = name;
+        hoveredIdx   = idx;
+        drawOverlay(name, st.rows, idx);
+
+        const puaNote = sheet.puaBase !== null
+          ? `U+${(sheet.puaBase + idx).toString(16).toUpperCase()}`
+          : `CP437 ${idx}`;
+        tooltip.innerHTML =
+          `<b>sheet: "${name}" id: ${idx}</b><br>` +
+          `<span style="color:#999">${puaNote} — click to copy charSpan</span>`;
+        tooltip.style.display = 'block';
+        tooltip.style.left    = (e.clientX + 14) + 'px';
+        tooltip.style.top     = (e.clientY + 8)  + 'px';
+      });
+
+      wrap.addEventListener('mouseleave', () => {
+        hoveredSheet = null;
+        hoveredIdx   = -1;
+        drawOverlay(name, st.rows, -1);
+        tooltip.style.display = 'none';
+      });
+
+      // Click → copy charSpan JSON snippet to clipboard
+      wrap.addEventListener('click', e => {
+        if (hoveredIdx < 0) return;
+        const snippet = JSON.stringify({ sheet: name, id: hoveredIdx });
+        navigator.clipboard.writeText(snippet).then(() => showCopied());
+      });
+
+      // Right-click → copy range start (for "from" in a range span)
+      wrap.addEventListener('contextmenu', e => {
+        e.preventDefault();
+        if (hoveredIdx < 0) return;
+        const snippet = `"sheet": "${name}", "from": ${hoveredIdx}, "to": ${hoveredIdx}`;
+        navigator.clipboard.writeText(snippet).then(() => showCopied());
+      });
+    }
+
+    // ── Build DOM ────────────────────────────────────────────────────────────
+    async function init() {
+      const container = document.getElementById('sheets');
+
+      for (const sheet of SHEETS) {
+        const section = document.createElement('div');
+        section.className   = 'sheet-section';
+        section.dataset.sheet = sheet.name;
+
+        const title = document.createElement('div');
+        title.className = 'sheet-title';
+        title.textContent = sheet.name.toUpperCase() + '  (' + sheet.file.split('/').pop() + ')';
+        section.appendChild(title);
+
+        const meta = document.createElement('div');
+        meta.className   = 'sheet-meta';
+        meta.textContent = sheet.note + ' · click sprite → copy  {"sheet":"' + sheet.name + '","id":N}  · right-click → copy range template';
+        section.appendChild(meta);
+
+        const loadMsg = document.createElement('div');
+        loadMsg.style.cssText = 'font-size:11px;color:#555;padding:4px';
+        loadMsg.textContent = 'Loading…';
+        section.appendChild(loadMsg);
+        container.appendChild(section);
+
+        try {
+          const { img, imageData, rows } = await loadSheet(sheet);
+
+          loadMsg.remove();
+
+          const wrap = document.createElement('div');
+          wrap.className = 'grid-wrap';
+          wrap.style.cursor = 'crosshair';
+
+          const can = document.createElement('canvas');
+          can.className = 'sheet-canvas';
+
+          const ov = document.createElement('canvas');
+          ov.className = 'overlay-canvas';
+
+          wrap.appendChild(can);
+          wrap.appendChild(ov);
+          section.appendChild(wrap);
+
+          sheetState[sheet.name] = { canvas: can, overlay: ov, img, imageData, rows };
+
+          drawSheet(sheet.name, imageData, rows);
+          drawOverlay(sheet.name, rows, -1);
+          attachInteraction(sheet.name, sheet);
+
+        } catch (err) {
+          loadMsg.textContent = '⚠ ' + err.message;
+          loadMsg.style.color = '#a44';
+        }
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

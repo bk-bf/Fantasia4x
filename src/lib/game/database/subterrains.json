@@ -98,7 +98,7 @@
     "moss"             : {
         "walkable"    : true,
         "movementCost": 1.5,
-        "charSpans"   : [ {"sheet": "plants", "id": 16} ],
+        "charSpans"   : [ {"sheet": "tiles", "id": 43} ],
         "fg"          : [0.3, 0.48, 0.09],
         "bg"          : [0.07, 0.09, 0.03],
         "biomes"      : { "swamp": [0.5, 0.7] }

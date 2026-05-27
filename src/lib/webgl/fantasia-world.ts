@@ -6,6 +6,7 @@
 import { GameGrid } from './game-grid.js';
 import type { WorldTile, PlacedBuilding, DesignationType } from '$lib/game/core/types.js';
 import { SUBTERRAINS, SUBTERRAIN_FALLBACK, pickChar } from '$lib/game/core/Terrains.js';
+import { resourceObjectService } from '$lib/game/services/ResourceObjectService.js';
 import type { RGB } from './tile-types.js';
 
 /**
@@ -22,30 +23,42 @@ export function buildGameGrid(
 
     for (const row of worldMap) {
         for (const tile of row) {
+            // Layer 1: base subterrain
             const sub = SUBTERRAINS[tile.subType] ?? SUBTERRAIN_FALLBACK;
-            const fg = sub.fg as [number, number, number];
-            const bg = sub.bg as [number, number, number];
 
-            // 5b: if this tile had resources and all have been depleted, render as bare ground
-            const hasResourceSlots = tile.resources && Object.keys(tile.resources).length > 0;
-            const allDepleted = hasResourceSlots && Object.values(tile.resources!).every((v) => v <= 0);
+            // Layer 2: resource — overrides subterrain visuals when an active resource is present
+            const hasResources = tile.resources && Object.keys(tile.resources).length > 0;
+            let char: string;
+            let fg: [number, number, number];
+            let bg: [number, number, number];
 
-            if (allDepleted) {
-                // Depleted tile: bare ground glyph '.' with a dim brownish tint
-                grid.setTile(tile.x, tile.y, {
-                    char: '.',
-                    foreground: { r: fg[0] * 0.5, g: fg[1] * 0.5, b: fg[2] * 0.5 },
-                    background: { r: bg[0], g: bg[1], b: bg[2] },
-                    position: { x: tile.x, y: tile.y }
-                });
+            if (hasResources) {
+                const activeEntry = Object.entries(tile.resources!).find(([, amt]) => amt > 0);
+                const resDef = activeEntry ? resourceObjectService.getById(activeEntry[0]) : undefined;
+                if (resDef && resDef.chars.length > 0) {
+                    // Resource layer: pick deterministic char from the resource's char pool
+                    const h = ((tile.x * 1619 + tile.y * 31337) >>> 0) % resDef.chars.length;
+                    char = resDef.chars[h];
+                    fg = resDef.fg;
+                    bg = resDef.bg;
+                } else {
+                    // Resource depleted or unknown — show base subterrain
+                    char = pickChar(sub, tile.x, tile.y);
+                    fg = sub.fg as [number, number, number];
+                    bg = sub.bg as [number, number, number];
+                }
             } else {
-                grid.setTile(tile.x, tile.y, {
-                    char: pickChar(sub, tile.x, tile.y),
-                    foreground: { r: fg[0], g: fg[1], b: fg[2] },
-                    background: { r: bg[0], g: bg[1], b: bg[2] },
-                    position: { x: tile.x, y: tile.y }
-                });
+                char = pickChar(sub, tile.x, tile.y);
+                fg = sub.fg as [number, number, number];
+                bg = sub.bg as [number, number, number];
             }
+
+            grid.setTile(tile.x, tile.y, {
+                char,
+                foreground: { r: fg[0], g: fg[1], b: fg[2] },
+                background: { r: bg[0], g: bg[1], b: bg[2] },
+                position: { x: tile.x, y: tile.y }
+            });
         }
     }
 

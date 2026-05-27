@@ -43,12 +43,12 @@ class ResourceGeneratorServiceImpl {
                     // Spawn this object on the tile.
                     tile.resources[def.id] = rng(def.nodeAmountRange[0], def.nodeAmountRange[1]);
 
-                    // Promote visuals/terrain behavior to the object subtype.
-                    tile.subType = def.objectSubType;
-                    const sub = SUBTERRAINS[tile.subType] ?? SUBTERRAIN_FALLBACK;
-                    tile.ascii = pickChar(sub, tile.x, tile.y);
-                    tile.walkable = sub.walkable;
-                    tile.movementCost = sub.movementCost;
+                    // Update physics from the resource's objectSubType subterrain.
+                    // tile.subType stays as the base terrain; visuals are layered in the renderer.
+                    const resourceSub = SUBTERRAINS[def.objectSubType] ?? SUBTERRAIN_FALLBACK;
+                    tile.ascii = pickChar(resourceSub, tile.x, tile.y);
+                    tile.walkable = resourceSub.walkable;
+                    tile.movementCost = resourceSub.movementCost;
 
                     // One primary object per tile keeps biome->terrain->object flow predictable.
                     break;

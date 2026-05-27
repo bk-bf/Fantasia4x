@@ -1,4 +1,5 @@
 import type { DesignationType, Pawn } from '../core/types';
+import { resolveCharSpans, type CharSpan } from '../core/Terrains';
 import resourceObjectsData from '../database/resources.json';
 
 export interface ResourceYieldDef {
@@ -26,6 +27,10 @@ export interface ResourceObjectDef {
     id: string;
     displayName: string;
     objectSubType: string;
+    /** Resolved char array (from charSpans in JSON). */
+    chars: string[];
+    fg: [number, number, number];
+    bg: [number, number, number];
     spawn: {
         subterrains: Record<string, number>;
     };
@@ -41,8 +46,16 @@ const WORK_STAT_FALLBACK: Record<string, keyof Pawn['stats']> = {
 };
 
 class ResourceObjectServiceImpl {
-    private readonly defs: ResourceObjectDef[] = resourceObjectsData as unknown as ResourceObjectDef[];
-    private readonly byId = new Map(this.defs.map((d) => [d.id, d]));
+    private readonly defs: ResourceObjectDef[];
+    private readonly byId: Map<string, ResourceObjectDef>;
+
+    constructor() {
+        this.defs = (resourceObjectsData as unknown as Array<Record<string, unknown>>).map((raw) => ({
+            ...(raw as Omit<ResourceObjectDef, 'chars'>),
+            chars: resolveCharSpans((raw.charSpans ?? []) as CharSpan[])
+        }));
+        this.byId = new Map(this.defs.map((d) => [d.id, d]));
+    }
 
     getAll(): ResourceObjectDef[] {
         return this.defs;

@@ -40,42 +40,48 @@ const P = (n: number): string => String.fromCodePoint(0xe000 + n);
 /** Range of plants.bmp indices → array of PUA chars */
 const PR = (from: number, to: number): string[] =>
     Array.from({ length: to - from + 1 }, (_, i) => P(from + i));
-
-/**
- * Deterministically pick a char from a SubterrainDef's chars array based
- * on tile position. Returns the same char for the same (x, y) every time.
- */
-export function pickChar(sub: SubterrainDef, x: number, y: number): string {
-    const { chars } = sub;
-    if (chars.length === 1) return chars[0];
-    const h = ((x * 1619 + y * 31337) >>> 0) % chars.length;
-    return chars[h];
-}
-
-// ── Biomes ────────────────────────────────────────────────────────────────────
-// density = primary noise output clamped to 0-1
-// subterrainThresholds[i] is the detail-noise boundary between subterrains[i] and [i+1]
-
+/** map.bmp index → PUA Unicode char (U+E200 + n) */
+const M = (n: number): string => String.fromCodePoint(0xe200 + n);
+/** buildings.bmp index → PUA Unicode char (U+E400 + n) */
+const B = (n: number): string => String.fromCodePoint(0xe400 + n);
+/** items.bmp index → PUA Unicode char (U+E500 + n) */
+const I = (n: number): string => String.fromCodePoint(0xe500 + n);
+/** workshops.bmp index → PUA Unicode char (U+E600 + n) */
+const W = (n: number): string => String.fromCodePoint(0xe600 + n);
 
 // ── CharSpan resolver ─────────────────────────────────────────────────────────
-interface CharSpan {
-    sheet?: 'tiles' | 'plants';
+export interface CharSpan {
+    sheet?: 'tiles' | 'plants' | 'map' | 'buildings' | 'items' | 'workshops';
     from?: number;
     to?: number;
     id?: number;
     literal?: string;
 }
 
-function resolveCharSpans(spans: CharSpan[]): string[] {
+type SheetFn = (n: number) => string;
+const SHEET_FN: Record<string, SheetFn> = {
+    tiles: T, plants: P, map: M, buildings: B, items: I, workshops: W
+};
+
+export function resolveCharSpans(spans: CharSpan[]): string[] {
     return spans.flatMap(span => {
         if (span.literal !== undefined) return [span.literal];
-        if (span.sheet === 'tiles') {
-            return span.id !== undefined ? [T(span.id)] : TR(span.from!, span.to!);
-        }
-        return span.id !== undefined ? [P(span.id)] : PR(span.from!, span.to!);
+        const fn = SHEET_FN[span.sheet ?? 'plants'];
+        if (span.id !== undefined) return [fn(span.id)];
+        return Array.from({ length: span.to! - span.from! + 1 }, (_, i) => fn(span.from! + i));
     });
 }
 
+/**
+ * Deterministically pick a char from a SubterrainDef's chars array based
+ * on tile position. Returns the same char for the same (x, y) every time.
+ */
+export function pickChar(sub: { chars: string[] }, x: number, y: number): string {
+    const { chars } = sub;
+    if (chars.length === 1) return chars[0];
+    const h = ((x * 1619 + y * 31337) >>> 0) % chars.length;
+    return chars[h];
+}
 // ── Biomes ────────────────────────────────────────────────────────────────────
 // density = primary noise output clamped to 0-1
 // subterrainThresholds[i] is the detail-noise boundary between subterrains[i] and [i+1]
