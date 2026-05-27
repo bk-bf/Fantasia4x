@@ -1,3 +1,171 @@
+import type { GameState, Job, Pawn } from '$lib/game/core/types';
+
+const FORAGING_RESOURCES = new Set([
+  'twig',
+  'flint_shard',
+  'plant_fiber',
+  'bark',
+  'surface_stone',
+  'clay_lump',
+  'herbs',
+  'berries',
+  'mushrooms',
+  'fiber'
+]);
+
+const MINING_RESOURCES = new Set(['stone', 'iron_ore', 'flint']);
+
+export interface PawnTaskSummary {
+  currentState: string;
+  currentTask: string;
+  nextTask: string;
+  workAssignment: string;
+}
+
+function getWorkKeyForJob(job: Job): string {
+  switch (job.type) {
+    case 'harvest': {
+      const resourceId = job.resourceId ?? '';
+      if (FORAGING_RESOURCES.has(resourceId)) return 'foraging';
+      if (MINING_RESOURCES.has(resourceId)) return 'mining';
+      return 'woodcutting';
+    }
+    case 'construct':
+      return 'construction';
+    case 'craft':
+      return 'crafting';
+    case 'haul':
+      return 'hauling';
+    case 'eat':
+      return 'eat';
+    case 'sleep':
+      return 'sleep';
+    case 'light':
+    case 'refuel':
+      return 'construction';
+    default:
+      return job.type;
+  }
+}
+
+function describeJob(job: Job): string {
+  switch (job.type) {
+    case 'harvest':
+      return `harvest ${job.resourceId ?? 'resource'} @ (${job.targetX},${job.targetY})`;
+    case 'construct':
+      return `build @ (${job.targetX},${job.targetY})`;
+    case 'haul':
+      return `haul ${job.resourceId ?? 'goods'} @ (${job.targetX},${job.targetY})`;
+    case 'craft':
+      return 'craft item';
+    case 'eat':
+      return 'eat';
+    case 'sleep':
+      return 'rest';
+    case 'light':
+      return `light ${job.buildingId ?? 'campfire'}`;
+    case 'refuel':
+      return `refuel ${job.buildingId ?? 'campfire'}`;
+    default:
+      return job.type;
+  }
+}
+
+function describeActiveJob(job: Pawn['activeJob']): string {
+  if (!job) return 'idle';
+
+  switch (job.type) {
+    case 'harvest':
+      return `harvest ${job.resourceId ?? 'resource'} @ (${job.targetX},${job.targetY})`;
+    case 'construct':
+      return `build @ (${job.targetX},${job.targetY})`;
+    case 'craft':
+      return 'craft item';
+    case 'haul':
+      return `haul ${job.resourceId ?? 'goods'} @ (${job.targetX},${job.targetY})`;
+    case 'need':
+      return job.targetState === 'Sleeping' ? 'rest' : 'eat';
+    default:
+      return job.type;
+  }
+}
+
+function describeCurrentTask(pawn: Pawn): string {
+  const state = (pawn.currentState ?? 'Idle').toLowerCase();
+  if (!pawn.activeJob) return state;
+
+  if (state.includes('moving')) {
+    return `moving to ${describeActiveJob(pawn.activeJob)}`;
+  }
+
+  if (state === 'working') {
+    return `working on ${describeActiveJob(pawn.activeJob)}`;
+  }
+
+  if (state === 'hauling') {
+    return `hauling ${pawn.activeJob.resourceId ?? 'goods'}`;
+  }
+
+  if (state === 'eating' || state === 'sleeping') {
+    return state;
+  }
+
+  return `${state}: ${describeActiveJob(pawn.activeJob)}`;
+}
+
+function getNextAvailableJob(pawn: Pawn, gameState: GameState): Job | null {
+  if (!pawn.position) return null;
+
+  const assignment = gameState.workAssignments?.[pawn.id];
+  const laborSettings = assignment?.laborSettings ?? {};
+  const legacyPriorities = assignment?.workPriorities ?? {};
+  const jobs = (gameState.jobs ?? [])
+    .filter((job) => job.claimedBy === null || job.claimedBy === pawn.id)
+    .filter((job) => job.id !== pawn.activeJob?.jobId)
+    .filter((job) => {
+      const workKey = getWorkKeyForJob(job);
+      const priority =
+        workKey in laborSettings
+          ? laborSettings[workKey] ?? 2
+          : workKey in legacyPriorities
+            ? legacyPriorities[workKey]
+            : 2;
+      return priority > 0;
+    });
+
+  jobs.sort((a, b) => {
+    const workKeyA = getWorkKeyForJob(a);
+    const workKeyB = getWorkKeyForJob(b);
+    const priorityA = laborSettings[workKeyA] ?? legacyPriorities[workKeyA] ?? 2;
+    const priorityB = laborSettings[workKeyB] ?? legacyPriorities[workKeyB] ?? 2;
+    if (priorityB !== priorityA) return priorityB - priorityA;
+    const dA = Math.abs(a.targetX - pawn.position!.x) + Math.abs(a.targetY - pawn.position!.y);
+    const dB = Math.abs(b.targetX - pawn.position!.x) + Math.abs(b.targetY - pawn.position!.y);
+    return dA - dB;
+  });
+
+  return jobs[0] ?? null;
+}
+
+export function getPawnTaskSummary(pawn: Pawn, gameState: GameState): PawnTaskSummary {
+  const currentState = (pawn.currentState ?? 'Idle').toUpperCase();
+  const currentTask = describeCurrentTask(pawn);
+  const workAssignment = gameState.workAssignments?.[pawn.id];
+  const assignedWork = workAssignment?.currentWork ?? pawn.currentWork ?? null;
+  const nextJob = getNextAvailableJob(pawn, gameState);
+
+  return {
+    currentState,
+    currentTask,
+    nextTask: nextJob
+      ? describeJob(nextJob)
+      : assignedWork
+        ? `${formatWorkName(assignedWork)} queue empty`
+        : 'no work assigned',
+    workAssignment: assignedWork ? formatWorkName(assignedWork) : 'unassigned'
+  };
+}
+
 export function getStatColor(statValue: number): string {
   if (statValue >= 18) return '#4CAF50';
   if (statValue >= 15) return '#8BC34A';

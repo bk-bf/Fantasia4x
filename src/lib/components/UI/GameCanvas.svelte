@@ -64,6 +64,26 @@
   let pawns: Pawn[] = [];
   let selectedPawnId: string | null = null;
 
+  $: workingProgressOverlays = pawns
+    .filter(
+      (p) =>
+        p.position &&
+        p.currentState === 'Working' &&
+        p.activeJob &&
+        (p.activeJob.progress ?? 0) >= 0
+    )
+    .map((p) => {
+      const localX = (p.position!.x - viewX + 0.5) * tileWidth;
+      const localY = (p.position!.y - viewY) * tileHeight;
+      return {
+        id: p.id,
+        left: localX,
+        top: localY - 6,
+        progress: Math.max(0, Math.min(1, p.activeJob?.progress ?? 0))
+      };
+    })
+    .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= (container?.clientWidth ?? 0));
+
   // Phase 4: buildings and designations overlay
   let buildings: PlacedBuilding[] = [];
   let designations: Record<string, DesignationType> = {};
@@ -103,6 +123,15 @@
       ? (pawns.find((p) => p.position?.x === hoverTileX && p.position?.y === hoverTileY) ?? null)
       : null;
 
+  // When a pawn is selected its card locks the HUD regardless of hover position.
+  $: selectedPawn = selectedPawnId ? (pawns.find((p) => p.id === selectedPawnId) ?? null) : null;
+
+  // Dropped item under the hovered tile.
+  $: hoverDroppedItem =
+    hoverTileX >= 0 && hoverTileY >= 0
+      ? (droppedItems.find((d) => d.x === hoverTileX && d.y === hoverTileY) ?? null)
+      : null;
+
   function pawnStateLabel(p: import('$lib/game/core/types').Pawn): string {
     const s = p.currentState ?? 'Idle';
     if (s === 'Working' && p.activeJob) {
@@ -119,6 +148,12 @@
   function needBar(value: number): string {
     // value 0–100; show as filled/empty blocks
     const filled = Math.round(value / 10);
+    return '█'.repeat(filled) + '░'.repeat(10 - filled);
+  }
+
+  function jobProgressBar(progress: number): string {
+    const clamped = Math.max(0, Math.min(1, progress));
+    const filled = Math.round(clamped * 10);
     return '█'.repeat(filled) + '░'.repeat(10 - filled);
   }
 
@@ -726,6 +761,13 @@
   on:contextmenu={handleContextMenu}
 >
   <canvas bind:this={canvas}></canvas>
+
+  {#each workingProgressOverlays as overlay (overlay.id)}
+    <div class="pawn-progress-float" style="left:{overlay.left}px;top:{overlay.top}px;">
+      <div class="pawn-progress-fill" style="width:{overlay.progress * 100}%"></div>
+    </div>
+  {/each}
+
   {#if errorMsg}
     <div class="error">WebGL unavailable: {errorMsg}</div>
   {:else if !ready}
@@ -744,8 +786,48 @@
       release to highlight
     </div>
   {/if}
-  {#if hasSelection}
-    <!-- Selection info overrides hover info -->
+  {#if selectedPawn}
+    <!-- Selected pawn card — locked to this pawn regardless of mouse hover -->
+    <div class="tile-hud tile-hud--pawn tile-hud--selected">
+      <div class="pawn-header">
+        <span class="pawn-name">{selectedPawn.name}</span>
+        <span class="pawn-state">[{pawnStateLabel(selectedPawn)}]</span>
+        <span class="pawn-dismiss" title="Press Esc to deselect">◈</span>
+      </div>
+      <div class="pawn-row">
+        <span class="pawn-stat-label">HP</span><span class="pawn-stat-val"
+          >{Math.floor(selectedPawn.state.health)}</span
+        >
+        <span class="pawn-stat-label">Mood</span><span class="pawn-stat-val"
+          >{Math.floor(selectedPawn.state.mood)}</span
+        >
+        <span class="pawn-stat-label">Hunger</span><span
+          class="pawn-stat-val"
+          class:pawn-warn={selectedPawn.needs.hunger > 60}
+          >{Math.floor(selectedPawn.needs.hunger)}</span
+        >
+        <span class="pawn-stat-label">Fatigue</span><span
+          class="pawn-stat-val"
+          class:pawn-warn={selectedPawn.needs.fatigue > 60}
+          >{Math.floor(selectedPawn.needs.fatigue)}</span
+        >
+      </div>
+      {#if selectedPawn.activeJob}
+        <div class="pawn-job">
+          → {pawnStateLabel(selectedPawn)}{selectedPawn.activeJob.resourceId
+            ? ` (${selectedPawn.activeJob.resourceId})`
+            : ''}
+        </div>
+        <div class="pawn-progress">[{jobProgressBar(selectedPawn.activeJob.progress ?? 0)}]</div>
+      {:else}
+        <div class="pawn-job pawn-idle">→ Idle</div>
+      {/if}
+      {#if selectedPawn.position}
+        <div class="pawn-pos">pos ({selectedPawn.position.x},{selectedPawn.position.y})</div>
+      {/if}
+    </div>
+  {:else if hasSelection}
+    <!-- Multi-tile drag-select summary -->
     <div class="tile-hud tile-hud--selection">
       <span class="sel-title">◈ SELECTION</span>
       {#if selPawns.length > 0}
@@ -797,7 +879,16 @@
             ? ` (${hoverPawn.activeJob.resourceId})`
             : ''}
         </div>
+        <div class="pawn-progress">[{jobProgressBar(hoverPawn.activeJob.progress ?? 0)}]</div>
       {/if}
+    </div>
+  {:else if hoverDroppedItem}
+    <!-- Dropped item on the hovered tile -->
+    <div class="tile-hud tile-hud--item">
+      <span class="item-glyph">★</span>
+      <span class="item-name">{hoverDroppedItem.resourceId}</span>
+      <span class="item-qty">×{hoverDroppedItem.quantity}</span>
+      <div class="item-hint">dropped item — awaiting hauler</div>
     </div>
   {:else if hoverTile}
     <div class="tile-hud">
@@ -861,6 +952,22 @@
     white-space: nowrap;
     z-index: 10;
   }
+
+  .pawn-progress-float {
+    position: absolute;
+    width: 22px;
+    height: 4px;
+    margin-left: -11px;
+    background: rgba(32, 24, 10, 0.85);
+    border: 1px solid #705020;
+    pointer-events: none;
+    z-index: 9;
+  }
+
+  .pawn-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4ab85a, #8ad66a);
+  }
   .tile-hud--selection {
     border-color: #5566cc;
     background: rgba(8, 12, 40, 0.94);
@@ -910,6 +1017,59 @@
     color: #669988;
     font-size: 9px;
     margin-top: 1px;
+  }
+  .tile-hud--selected {
+    border-color: #f0c060;
+    background: rgba(20, 14, 4, 0.96);
+    color: #e8c870;
+    min-width: 200px;
+  }
+  .tile-hud--selected .pawn-name {
+    color: #ffe890;
+  }
+  .tile-hud--selected .pawn-state {
+    color: #c0a040;
+  }
+  .pawn-dismiss {
+    margin-left: auto;
+    color: #886630;
+    font-size: 9px;
+  }
+  .pawn-idle {
+    color: #887040;
+  }
+  .pawn-pos {
+    color: #776040;
+    font-size: 9px;
+  }
+  .tile-hud--item {
+    border-color: #c8a020;
+    background: rgba(20, 14, 4, 0.94);
+    color: #d4a830;
+    min-width: 140px;
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+    flex-wrap: wrap;
+  }
+  .item-glyph {
+    color: #f0c030;
+    font-size: 11px;
+  }
+  .item-name {
+    color: #ffe870;
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 10px;
+  }
+  .item-qty {
+    color: #c8a040;
+    font-size: 10px;
+  }
+  .item-hint {
+    width: 100%;
+    color: #8a7030;
+    font-size: 9px;
   }
   .sel-title {
     color: #8899ff;

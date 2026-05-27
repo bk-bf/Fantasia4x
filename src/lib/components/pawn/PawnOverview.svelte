@@ -1,13 +1,18 @@
 <script lang="ts">
   import type { Pawn } from '$lib/game/core/types';
+  import type { GameState } from '$lib/game/core/types';
   import {
     getMoodColor,
     getMoodDescription,
     getHealthColor,
-    getHealthDescription
+    getHealthDescription,
+    getPawnTaskSummary
   } from '$lib/utils/pawnUtils';
 
   export let pawn: Pawn;
+  export let gameState: GameState;
+
+  $: taskSummary = getPawnTaskSummary(pawn, gameState);
 </script>
 
 <!-- Pawn Overview -->
@@ -23,7 +28,13 @@
     <span class="lbl">SIZE</span><span class="val">{pawn.physicalTraits.size}</span>
   </div>
   <div class="row">
-    <span class="lbl">WORK</span><span class="val">{pawn.currentWork || 'idle'}</span>
+    <span class="lbl">WORK</span><span class="val">{taskSummary.workAssignment}</span>
+  </div>
+  <div class="row">
+    <span class="lbl">TASK</span><span class="val">{taskSummary.currentTask}</span>
+  </div>
+  <div class="row">
+    <span class="lbl">NEXT</span><span class="val">{taskSummary.nextTask}</span>
   </div>
   <div class="row">
     <span class="lbl">MOOD</span>

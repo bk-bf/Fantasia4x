@@ -1,18 +1,31 @@
 <script lang="ts">
-  import type { Pawn } from '$lib/game/core/types';
+  import type { GameState, Pawn } from '$lib/game/core/types';
   import { getNeedColor, getNeedDescription } from '$lib/utils/pawnUtils';
-  import { gameEngine } from '$lib/game/systems/GameEngineImpl';
+  import { getPawnTaskSummary } from '$lib/utils/pawnUtils';
 
   export let pawn: Pawn;
+  export let gameState: GameState;
 
-  $: needs = gameEngine.getPawnNeeds(pawn.id);
-  $: activities = gameEngine.getPawnActivities(pawn.id);
-  $: needStatus = gameEngine.getPawnNeedStatus(pawn.id);
+  $: needs = pawn.needs;
+  $: taskSummary = getPawnTaskSummary(pawn, gameState);
 
-  function isDoingActivity(activityName: string): boolean {
-    return activities.some((activity) =>
-      activity.toLowerCase().includes(activityName.toLowerCase())
-    );
+  function stateColor(state: string | undefined): string {
+    const normalized = (state ?? 'Idle').replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase();
+    switch (normalized) {
+      case 'working':
+      case 'moving_to_resource':
+      case 'moving_to_deposit':
+      case 'moving_to_need':
+        return '#4a9';
+      case 'hungry':
+      case 'eating':
+        return '#f44';
+      case 'tired':
+      case 'sleeping':
+        return '#fa0';
+      default:
+        return 'var(--text-muted)';
+    }
   }
 </script>
 
@@ -45,52 +58,31 @@
     <span class="desc">{getNeedDescription('fatigue', needs.fatigue)}</span>
   </div>
 
-  <div class="section-hdr sub">| ACTIVITIES</div>
-
-  {#each activities as activity}
-    <div class="row"><span class="lbl">ACTIVE</span><span class="val full">{activity}</span></div>
-  {/each}
-  {#if activities.length === 0}
-    <div class="row"><span class="lbl">STATE</span><span class="val muted">idle</span></div>
-  {/if}
-  {#if needStatus.critical.length > 0}
-    <div class="row">
-      <span class="lbl neg">CRITICAL</span><span class="val neg"
-        >{needStatus.critical.join(', ')}</span
-      >
-    </div>
-  {/if}
-  {#if needStatus.warning.length > 0}
-    <div class="row">
-      <span class="lbl warn">WARNING</span><span class="val warn"
-        >{needStatus.warning.join(', ')}</span
-      >
-    </div>
-  {/if}
-
-  <div class="section-hdr sub">| FORCE</div>
-  <div class="btn-row">
-    <button
-      class="act-btn"
-      on:click={() => gameEngine.forcePawnActivity(pawn.id, 'sleeping')}
-      disabled={isDoingActivity('sleeping') || isDoingActivity('resting')}>REST</button
-    >
-    <button
-      class="act-btn"
-      on:click={() => gameEngine.forcePawnActivity(pawn.id, 'eating')}
-      disabled={isDoingActivity('eating')}>EAT</button
-    >
-    <button
-      class="act-btn"
-      on:click={() => gameEngine.forcePawnActivity(pawn.id, 'working')}
-      disabled={isDoingActivity('working')}>WORK</button
-    >
-    <button
-      class="act-btn"
-      on:click={() => gameEngine.forcePawnActivity(pawn.id, 'idle')}
-      disabled={activities.length === 0}>IDLE</button
+  <div class="section-hdr sub">| STATUS TRACKER</div>
+  <div class="row">
+    <span class="lbl">STATE</span>
+    <span class="val full state" style="color: {stateColor(pawn.currentState)}"
+      >{taskSummary.currentState}</span
     >
   </div>
+  <div class="row">
+    <span class="lbl">TASK</span><span class="val full">{taskSummary.currentTask}</span>
+  </div>
+  <div class="row">
+    <span class="lbl">NEXT</span><span class="val full">{taskSummary.nextTask}</span>
+  </div>
+  <div class="row">
+    <span class="lbl">WORK</span><span class="val full">{taskSummary.workAssignment}</span>
+  </div>
+
+  <!-- TODO: draft-control mode will re-enable direct REST/EAT/WORK/IDLE commands later.
+  <div class="btn-row">
+    <button class="act-btn">REST</button>
+    <button class="act-btn">EAT</button>
+    <button class="act-btn">WORK</button>
+    <button class="act-btn">IDLE</button>
+  </div>
+  -->
 </div>
 
 <style>
@@ -142,13 +134,6 @@
     width: 70px;
     flex-shrink: 0;
   }
-  .lbl.neg {
-    color: var(--neg);
-  }
-  .lbl.warn {
-    color: var(--accent-hi);
-  }
-
   .val {
     color: var(--text);
     font-size: 11px;
@@ -161,17 +146,10 @@
     margin-left: auto;
     text-align: left;
   }
-  .val.muted {
-    color: var(--text-muted);
-    font-style: italic;
-  }
-  .val.neg {
-    color: var(--neg);
-    margin-left: auto;
-  }
-  .val.warn {
-    color: var(--accent-hi);
-    margin-left: auto;
+
+  .state {
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
   }
 
   .desc {
@@ -188,30 +166,5 @@
   }
   .fill {
     height: 100%;
-  }
-
-  .btn-row {
-    display: flex;
-    gap: 4px;
-    padding: 4px 8px;
-  }
-
-  .act-btn {
-    padding: 3px 10px;
-    background: var(--bg-hover);
-    border: 1px solid var(--border-hi);
-    color: var(--text);
-    font-family: 'Courier New', monospace;
-    font-size: 11px;
-    cursor: pointer;
-    letter-spacing: 0.04em;
-  }
-  .act-btn:hover:not(:disabled) {
-    color: var(--accent-hi);
-    background: var(--bg-active);
-  }
-  .act-btn:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
   }
 </style>

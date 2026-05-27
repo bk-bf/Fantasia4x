@@ -1,0 +1,291 @@
+[
+    {
+        "id": "wood",
+        "displayName": "Tree",
+        "terrainSubtypes": [
+            "tree"
+        ],
+        "nodeAmountRange": [
+            3,
+            6
+        ],
+        "designationTypes": [
+            "harvest",
+            "forage"
+        ],
+        "interaction": {
+            "action": "woodcut",
+            "workCategory": "woodcutting",
+            "workAmount": 5,
+            "requiredTool": "axe",
+            "yields": [
+                {
+                    "itemId": "wood",
+                    "min": 3,
+                    "max": 5,
+                    "skillId": "woodcutting",
+                    "skillMultiplier": 0.2
+                },
+                {
+                    "itemId": "bark",
+                    "min": 1,
+                    "max": 2,
+                    "skillId": "woodcutting",
+                    "skillMultiplier": 0.1
+                }
+            ]
+        }
+    },
+    {
+        "id": "stone",
+        "displayName": "Stone Outcrop",
+        "terrainSubtypes": [
+            "rocky",
+            "cliff"
+        ],
+        "nodeAmountRange": [
+            5,
+            10
+        ],
+        "designationTypes": [
+            "harvest",
+            "scavenge"
+        ],
+        "interaction": {
+            "action": "mine",
+            "workCategory": "mining",
+            "workAmount": 8,
+            "requiredTool": "pickaxe",
+            "yields": [
+                {
+                    "itemId": "stone",
+                    "min": 2,
+                    "max": 4,
+                    "skillId": "mining",
+                    "skillMultiplier": 0.2
+                }
+            ]
+        }
+    },
+    {
+        "id": "herbs",
+        "displayName": "Herb Patch",
+        "terrainSubtypes": [
+            "wildflowers",
+            "moss",
+            "deep_grass"
+        ],
+        "nodeAmountRange": [
+            2,
+            5
+        ],
+        "designationTypes": [
+            "harvest",
+            "forage"
+        ],
+        "interaction": {
+            "action": "harvest",
+            "workCategory": "foraging",
+            "workAmount": 3,
+            "requiredTool": "none",
+            "yields": [
+                {
+                    "itemId": "herbs",
+                    "min": 1,
+                    "max": 3,
+                    "skillId": "foraging",
+                    "skillMultiplier": 0.15
+                }
+            ]
+        }
+    },
+    {
+        "id": "twig",
+        "displayName": "Fallen Branches",
+        "terrainSubtypes": [
+            "tree",
+            "bush",
+            "shrub",
+            "light_forest"
+        ],
+        "nodeAmountRange": [
+            3,
+            8
+        ],
+        "designationTypes": [
+            "forage"
+        ],
+        "interaction": {
+            "action": "gather",
+            "workCategory": "foraging",
+            "workAmount": 1,
+            "requiredTool": "none",
+            "yields": [
+                {
+                    "itemId": "twig",
+                    "min": 2,
+                    "max": 5,
+                    "skillId": "foraging",
+                    "skillMultiplier": 0.1
+                }
+            ]
+        }
+    },
+    {
+        "id": "flint_shard",
+        "displayName": "Flint Scatter",
+        "terrainSubtypes": [
+            "rocky",
+            "cliff",
+            "gravel"
+        ],
+        "nodeAmountRange": [
+            2,
+            5
+        ],
+        "designationTypes": [
+            "scavenge"
+        ],
+        "interaction": {
+            "action": "scavenge",
+            "workCategory": "mining",
+            "workAmount": 2,
+            "requiredTool": "none",
+            "yields": [
+                {
+                    "itemId": "flint_shard",
+                    "min": 1,
+                    "max": 3,
+                    "skillId": "mining",
+                    "skillMultiplier": 0.1
+                }
+            ]
+        }
+    },
+    {
+        "id": "plant_fiber",
+        "displayName": "Fiber Plants",
+        "terrainSubtypes": [
+            "deep_grass",
+            "wildflowers",
+            "marsh",
+            "reed_bed"
+        ],
+        "nodeAmountRange": [
+            3,
+            7
+        ],
+        "designationTypes": [
+            "forage"
+        ],
+        "interaction": {
+            "action": "harvest",
+            "workCategory": "foraging",
+            "workAmount": 2,
+            "requiredTool": "none",
+            "yields": [
+                {
+                    "itemId": "plant_fiber",
+                    "min": 2,
+                    "max": 4,
+                    "skillId": "foraging",
+                    "skillMultiplier": 0.15
+                }
+            ]
+        }
+    },
+    {
+        "id": "bark",
+        "displayName": "Tree Bark",
+        "terrainSubtypes": [
+            "tree",
+            "light_forest"
+        ],
+        "nodeAmountRange": [
+            2,
+            4
+        ],
+        "designationTypes": [
+            "forage"
+        ],
+        "interaction": {
+            "action": "strip",
+            "workCategory": "foraging",
+            "workAmount": 2,
+            "requiredTool": "knife",
+            "yields": [
+                {
+                    "itemId": "bark",
+                    "min": 1,
+                    "max": 3,
+                    "skillId": "foraging",
+                    "skillMultiplier": 0.1
+                }
+            ]
+        }
+    },
+    {
+        "id": "surface_stone",
+        "displayName": "Surface Stones",
+        "terrainSubtypes": [
+            "rocky",
+            "cliff",
+            "gravel",
+            "plains"
+        ],
+        "nodeAmountRange": [
+            4,
+            8
+        ],
+        "designationTypes": [
+            "scavenge"
+        ],
+        "interaction": {
+            "action": "collect",
+            "workCategory": "mining",
+            "workAmount": 2,
+            "requiredTool": "none",
+            "yields": [
+                {
+                    "itemId": "surface_stone",
+                    "min": 2,
+                    "max": 4,
+                    "skillId": "mining",
+                    "skillMultiplier": 0.1
+                }
+            ]
+        }
+    },
+    {
+        "id": "clay_lump",
+        "displayName": "Clay Deposit",
+        "terrainSubtypes": [
+            "riverbank",
+            "marsh",
+            "lake_shore",
+            "wetland"
+        ],
+        "nodeAmountRange": [
+            3,
+            6
+        ],
+        "designationTypes": [
+            "scavenge"
+        ],
+        "interaction": {
+            "action": "dig",
+            "workCategory": "mining",
+            "workAmount": 2,
+            "requiredTool": "none",
+            "yields": [
+                {
+                    "itemId": "clay_lump",
+                    "min": 2,
+                    "max": 4,
+                    "skillId": "mining",
+                    "skillMultiplier": 0.1
+                }
+            ]
+        }
+    }
+]

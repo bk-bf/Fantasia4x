@@ -11,29 +11,9 @@
 
 import type { GameState, Job, Pawn, DroppedItem } from '../core/types';
 import { ITEMS_DATABASE } from '../core/Items';
+import { resourceObjectService } from './ResourceObjectService';
 
 // ===== WORK CONSTANTS =====
-
-/** How many work-points a harvest job costs by resource type. */
-const HARVEST_WORK: Record<string, number> = {
-    wood: 5,
-    stone: 8,
-    herbs: 3,
-    iron_ore: 7,
-    clay: 4,
-    bark: 4,
-    flint: 6,
-    berries: 2,
-    mushrooms: 2,
-    fiber: 3,
-    // Phase 6e: primitive resource costs
-    twig: 1,
-    flint_shard: 2,
-    plant_fiber: 2,
-    surface_stone: 2,
-    clay_lump: 2
-};
-const DEFAULT_HARVEST_WORK = 5;
 
 /** Work-points per turn a pawn delivers (base rate; later modifiable by stats). */
 export const BASE_WORK_RATE = 1;
@@ -186,40 +166,44 @@ class JobServiceImpl {
     // ------------------------------------------------------------------ //
 
     private _syncHarvestJobs(jobs: Job[], gs: GameState): Job[] {
-        // Remove harvest/forage/scavenge jobs whose designation no longer exists or tile is empty
+        // Remove harvest jobs whose exact designated tile no longer permits harvesting,
+        // or whose resource is gone.
         jobs = jobs.filter((j) => {
             if (j.type !== 'harvest') return true;
-            const key = `${j.targetX},${j.targetY}`;
-            const dtype = gs.designations?.[key];
-            if (dtype !== 'harvest' && dtype !== 'forage' && dtype !== 'scavenge') return false;
+            const designationType = gs.designations?.[`${j.targetX},${j.targetY}`];
+            if (designationType !== 'harvest' && designationType !== 'forage' && designationType !== 'scavenge') return false;
+            if (!this._resourceMatchesDesignation(designationType, j.resourceId ?? '')) return false;
             const tile = gs.worldMap[j.targetY]?.[j.targetX];
             return (tile?.resources?.[j.resourceId ?? ''] ?? 0) > 0;
         });
 
-        // Add new harvest jobs for designations that have no job yet
+        // Add harvest jobs only for designated tiles that currently hold matching resources.
         for (const [key, dtype] of Object.entries(gs.designations ?? {})) {
             if (dtype !== 'harvest' && dtype !== 'forage' && dtype !== 'scavenge') continue;
             const [x, y] = key.split(',').map(Number);
-
             const tile = gs.worldMap[y]?.[x];
             if (!tile) continue;
 
-            const resourceId = Object.keys(tile.resources ?? {}).find(
-                (id) => (tile.resources[id] ?? 0) > 0
-            );
-            if (!resourceId) continue;
+            for (const [resourceId, amount] of Object.entries(tile.resources ?? {})) {
+                if ((amount ?? 0) <= 0) continue;
+                if (!this._resourceMatchesDesignation(dtype, resourceId)) continue;
 
-            const exists = jobs.some(
-                (j) => j.type === 'harvest' && j.targetX === x && j.targetY === y
-            );
-            if (!exists) {
+                const exists = jobs.some(
+                    (j) =>
+                        j.type === 'harvest' &&
+                        j.targetX === x &&
+                        j.targetY === y &&
+                        j.resourceId === resourceId
+                );
+                if (exists) continue;
+
                 jobs.push({
-                    id: `harvest-${x}-${y}-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
+                    id: `harvest-${x}-${y}-${resourceId}-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
                     type: 'harvest',
                     targetX: x,
                     targetY: y,
                     resourceId,
-                    workRequired: HARVEST_WORK[resourceId] ?? DEFAULT_HARVEST_WORK,
+                    workRequired: resourceObjectService.getWorkAmount(resourceId),
                     workDone: 0,
                     claimedBy: null
                 });
@@ -335,9 +319,11 @@ class JobServiceImpl {
         const available = tile?.resources?.[job.resourceId] ?? 0;
         if (available <= 0) return gs;
 
-        const harvestAmount = 1;
+        const pawn = gs.pawns.find((p) => p.id === job.claimedBy);
+        const yields = resourceObjectService.calculateYield(job.resourceId, pawn);
+        const [dropResourceId, dropAmount] = Object.entries(yields)[0] ?? [job.resourceId, 1];
 
-        // Deplete tile
+        // Consume the whole resource node so the source object disappears.
         const newWorldMap = gs.worldMap.map((row, ry) =>
             ry === job.targetY
                 ? row.map((col, rx) =>
@@ -346,10 +332,7 @@ class JobServiceImpl {
                             ...col,
                             resources: {
                                 ...col.resources,
-                                [job.resourceId!]: Math.max(
-                                    0,
-                                    (col.resources[job.resourceId!] ?? 0) - harvestAmount
-                                )
+                                [job.resourceId!]: 0
                             }
                         }
                         : col
@@ -359,22 +342,18 @@ class JobServiceImpl {
 
         // Spawn a dropped item at the harvest tile instead of adding straight to stockpile
         const drop: DroppedItem = {
-            id: `drop-${job.resourceId}-${job.targetX}-${job.targetY}-${Date.now()}`,
-            resourceId: job.resourceId,
+            id: `drop-${dropResourceId}-${job.targetX}-${job.targetY}-${Date.now()}`,
+            resourceId: dropResourceId,
             x: job.targetX,
             y: job.targetY,
-            quantity: harvestAmount
+            quantity: dropAmount
         };
         const newDropped = [...(gs.droppedItems ?? []), drop];
 
-        // Remove designation
-        const newDesignations = { ...(gs.designations ?? {}) };
-        delete newDesignations[`${job.targetX},${job.targetY}`];
-
         console.log(
-            `[JobService] Harvest complete: ${job.resourceId} at (${job.targetX},${job.targetY}) → dropped (${drop.id})`
+            `[JobService] Harvest complete: ${job.resourceId} at (${job.targetX},${job.targetY}) → ${dropResourceId} x${dropAmount} (${drop.id})`
         );
-        return { ...gs, worldMap: newWorldMap, droppedItems: newDropped, designations: newDesignations };
+        return { ...gs, worldMap: newWorldMap, droppedItems: newDropped };
     }
 
     private _syncHaulJobs(jobs: Job[], gs: GameState): Job[] {
@@ -589,6 +568,15 @@ class JobServiceImpl {
         return ITEMS_DATABASE.some(
             (item) => (item.fuelValue ?? 0) > 0 && (stockpile[item.id] ?? 0) > 0
         );
+    }
+
+    private _resourceMatchesDesignation(
+        designationType: 'harvest' | 'forage' | 'scavenge',
+        resourceId: string
+    ): boolean {
+        const def = resourceObjectService.getById(resourceId);
+        if (!def) return designationType === 'harvest';
+        return def.designationTypes.includes(designationType);
     }
 
     // ------------------------------------------------------------------ //

@@ -5,7 +5,7 @@
  */
 
 import type { WorldTile } from '../core/types';
-import { RESOURCES } from '../core/Resources';
+import { resourceObjectService } from './ResourceObjectService';
 
 /** Simple xorshift32 PRNG — deterministic, seeded. */
 function makeRng(seed: number) {
@@ -33,7 +33,8 @@ class ResourceGeneratorServiceImpl {
     generateResources(worldMap: WorldTile[][], baseSeed: number): void {
         const resourceSeed = (baseSeed * 7919) >>> 0;
 
-        for (const [resourceId, def] of Object.entries(RESOURCES)) {
+        for (const def of resourceObjectService.getAll()) {
+            const resourceId = def.id;
             const seed = (resourceSeed + hashString(resourceId)) >>> 0;
             const rng = makeRng(seed);
 
@@ -44,7 +45,7 @@ class ResourceGeneratorServiceImpl {
                     // Only place on matching subterrain
                     if (!def.terrainSubtypes.includes(tile.subType)) continue;
 
-                    tile.resources[resourceId] = rng(def.resourceAmount[0], def.resourceAmount[1]);
+                    tile.resources[resourceId] = rng(def.nodeAmountRange[0], def.nodeAmountRange[1]);
                 }
             }
         }

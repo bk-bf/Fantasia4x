@@ -7,6 +7,7 @@
   import { workService } from '$lib/game/services/WorkService';
   import { get } from 'svelte/store';
   import { onMount, onDestroy } from 'svelte';
+  import { getPawnTaskSummary } from '$lib/utils/pawnUtils';
 
   let race: any = null;
   let pawns: any[] = [];
@@ -370,6 +371,7 @@
   const LVL_NAMES = ['Off', 'Low', 'Normal', 'High', 'Urgent'];
 
   $: selected = pawns.find((p) => p.id === selectedPawn) ?? null;
+  $: selectedTaskSummary = selected ? getPawnTaskSummary(selected, $gameState) : null;
 </script>
 
 <div class="work-screen">
@@ -435,6 +437,14 @@
     <div class="detail-row">
       <span class="lbl">ACTIVITY</span>
       <span style="color:{stateColor(selected)}">{stateLabel(selected)}</span>
+    </div>
+    <div class="detail-row">
+      <span class="lbl">TASK</span>
+      <span class="sval">{selectedTaskSummary?.currentTask ?? 'idle'}</span>
+    </div>
+    <div class="detail-row">
+      <span class="lbl">NEXT</span>
+      <span class="sval">{selectedTaskSummary?.nextTask ?? 'no work'}</span>
     </div>
     <div class="need-row">
       <span class="lbl">HUNGER</span>

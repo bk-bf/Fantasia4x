@@ -13,7 +13,8 @@
       class:selected={selectedPawn?.id === pawn.id}
       on:click={() => onSelect(pawn)}
     >
-      {pawn.name}
+      <span class="name">{pawn.name}</span>
+      <span class="state">{(pawn.currentState ?? 'idle').toUpperCase()}</span>
     </button>
   {/each}
 </div>
@@ -23,7 +24,8 @@
     display: flex;
     gap: 0;
     background: var(--bg-panel);
-    border-bottom: 1px solid var(--border);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border-hi);
     flex-wrap: wrap;
   }
 
@@ -41,6 +43,10 @@
     transition:
       background 0.1s,
       color 0.1s;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1px;
   }
 
   .pawn-selector-btn:hover {
@@ -49,7 +55,24 @@
   }
 
   .pawn-selector-btn.selected {
-    background: var(--tab-active);
-    color: #fff;
+    background: var(--bg-active);
+    color: var(--accent-hi);
+    border-left: 2px solid var(--accent-hi);
+    padding-left: 10px;
+  }
+
+  .name {
+    font-size: 11px;
+  }
+
+  .state {
+    font-size: 9px;
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+  }
+
+  .pawn-selector-btn.selected .state {
+    color: var(--accent-hi);
+    opacity: 0.7;
   }
 </style>
