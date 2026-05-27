@@ -97,6 +97,83 @@
   $: hoverResources = hoverTile
     ? Object.entries(hoverTile.resources ?? {}).filter(([, v]) => v > 0)
     : [];
+  $: hoverZoneType = hoverTile
+    ? (designations[`${hoverTile.x},${hoverTile.y}`] ?? null)
+    : null;
+  $: hoverPawn =
+    hoverTileX >= 0 && hoverTileY >= 0
+      ? (pawns.find((p) => p.position?.x === hoverTileX && p.position?.y === hoverTileY) ?? null)
+      : null;
+
+  function pawnStateLabel(p: import('$lib/game/core/types').Pawn): string {
+    const s = p.currentState ?? 'Idle';
+    if (s === 'Working' && p.activeJob) {
+      const t = p.activeJob.type;
+      const res = p.activeJob.resourceId ?? '';
+      if (t === 'harvest') return `Harvesting${res ? ` ${res}` : ''}`;
+      if (t === 'haul') return 'Hauling';
+      if (t === 'construct') return 'Building';
+      if (t === 'craft') return 'Crafting';
+    }
+    return s.replace(/([A-Z])/g, ' $1').trim();
+  }
+
+  function needBar(value: number): string {
+    // value 0–100; show as filled/empty blocks
+    const filled = Math.round(value / 10);
+    return '█'.repeat(filled) + '░'.repeat(10 - filled);
+  }
+
+  // ─── Selection system ─────────────────────────────────────────────────────
+  // Shift+drag to drag-select a rectangle; highlights entities inside.
+  let selDragActive = false;
+  let selAnchorX = 0;
+  let selAnchorY = 0;
+  let selEndX = 0;
+  let selEndY = 0;
+  // Committed selection rect (null = no selection)
+  let selRect: { x1: number; y1: number; x2: number; y2: number } | null = null;
+
+  const ZONE_META: Record<string, { label: string; color: string; desc: string }> = {
+    forage:    { label: 'FORAGE ZONE',    color: '#3aaa60', desc: 'Pawns gather berries, twigs, bark and plant fiber' },
+    scavenge:  { label: 'SCAVENGE ZONE',  color: '#a07840', desc: 'Pawns collect surface stone, flint and clay' },
+    stockpile: { label: 'STOCKPILE ZONE', color: '#e8a020', desc: 'Haulers deposit carried resources here' },
+    harvest:   { label: 'HARVEST',        color: '#4ccc44', desc: 'Single-tile harvest designation' },
+    mine:      { label: 'MINE',           color: '#cc8833', desc: 'Single-tile mining designation' },
+    construct: { label: 'CONSTRUCT',      color: '#44aacc', desc: 'Construction site' },
+  };
+
+  // Entities inside committed selRect
+  $: selPawns = selRect
+    ? pawns.filter((p) => p.position &&
+        p.position.x >= Math.min(selRect!.x1, selRect!.x2) &&
+        p.position.x <= Math.max(selRect!.x1, selRect!.x2) &&
+        p.position.y >= Math.min(selRect!.y1, selRect!.y2) &&
+        p.position.y <= Math.max(selRect!.y1, selRect!.y2))
+    : [];
+  $: selBuildings = selRect
+    ? buildings.filter((b) =>
+        b.x >= Math.min(selRect!.x1, selRect!.x2) &&
+        b.x <= Math.max(selRect!.x1, selRect!.x2) &&
+        b.y >= Math.min(selRect!.y1, selRect!.y2) &&
+        b.y <= Math.max(selRect!.y1, selRect!.y2))
+    : [];
+  $: selZones = (() => {
+    if (!selRect) return {} as Record<string, number>;
+    const minX = Math.min(selRect.x1, selRect.x2);
+    const maxX = Math.max(selRect.x1, selRect.x2);
+    const minY = Math.min(selRect.y1, selRect.y2);
+    const maxY = Math.max(selRect.y1, selRect.y2);
+    const counts: Record<string, number> = {};
+    for (const [key, type] of Object.entries(designations)) {
+      const [x, y] = key.split(',').map(Number);
+      if (x >= minX && x <= maxX && y >= minY && y <= maxY)
+        counts[type] = (counts[type] ?? 0) + 1;
+    }
+    return counts;
+  })();
+  $: hasSelection = selRect !== null && (selPawns.length > 0 || selBuildings.length > 0 || Object.keys(selZones).length > 0);
+  // ──────────────────────────────────────────────────────────────────────────
 
   const unsubState = gameState.subscribe((s) => {
     worldMap = s.worldMap ?? [];
@@ -225,30 +302,56 @@
     const grid = buildGameGrid(worldMap, buildings, designations);
     overlayPawns(grid, pawns, selectedPawnId);
     overlayDroppedItems(grid, droppedItems);
-    // Show zone drag preview rectangle
+
+    // Zone drag-paint preview
     if (zoneDragActive && designationMode) {
-      const minX = Math.min(zoneAnchorX, zoneEndX);
-      const maxX = Math.max(zoneAnchorX, zoneEndX);
-      const minY = Math.min(zoneAnchorY, zoneEndY);
-      const maxY = Math.max(zoneAnchorY, zoneEndY);
-      for (let y = minY; y <= maxY; y++) {
-        for (let x = minX; x <= maxX; x++) {
-          const t = grid.getTile(x, y);
-          if (!t) continue;
-          grid.setTile(x, y, {
-            char: t.char,
-            foreground: { r: 1.0, g: 1.0, b: 1.0 },
-            background: {
-              r: t.background.r * 0.4 + 0.4,
-              g: t.background.g * 0.4 + 0.3,
-              b: t.background.b * 0.4 + 0.0
-            },
-            position: { x, y }
-          });
-        }
+      _overlayRect(grid, zoneAnchorX, zoneAnchorY, zoneEndX, zoneEndY,
+        { r: 1.0, g: 1.0, b: 1.0 },
+        { rMul: 0.4, rAdd: 0.4, gMul: 0.4, gAdd: 0.3, bMul: 0.4, bAdd: 0.0 });
+    }
+
+    // Selection drag preview (Shift+drag in progress)
+    if (selDragActive) {
+      _overlayRect(grid, selAnchorX, selAnchorY, selEndX, selEndY,
+        { r: 0.9, g: 0.9, b: 1.0 },
+        { rMul: 0.5, rAdd: 0.0, gMul: 0.5, gAdd: 0.0, bMul: 0.5, bAdd: 0.3 });
+    }
+
+    // Committed selection highlight
+    if (selRect) {
+      _overlayRect(grid, selRect.x1, selRect.y1, selRect.x2, selRect.y2,
+        { r: 0.8, g: 0.9, b: 1.0 },
+        { rMul: 0.6, rAdd: 0.0, gMul: 0.6, gAdd: 0.05, bMul: 0.6, bAdd: 0.2 });
+    }
+
+    renderer.setGrid(grid);
+  }
+
+  /** Tint a rectangle of tiles. fg replaces foreground; bg params lerp the background. */
+  function _overlayRect(
+    grid: GameGrid,
+    x1: number, y1: number, x2: number, y2: number,
+    fg: { r: number; g: number; b: number },
+    bg: { rMul: number; rAdd: number; gMul: number; gAdd: number; bMul: number; bAdd: number }
+  ) {
+    const minX = Math.min(x1, x2), maxX = Math.max(x1, x2);
+    const minY = Math.min(y1, y2), maxY = Math.max(y1, y2);
+    for (let y = minY; y <= maxY; y++) {
+      for (let x = minX; x <= maxX; x++) {
+        const t = grid.getTile(x, y);
+        if (!t) continue;
+        grid.setTile(x, y, {
+          char: t.char,
+          foreground: fg,
+          background: {
+            r: t.background.r * bg.rMul + bg.rAdd,
+            g: t.background.g * bg.gMul + bg.gAdd,
+            b: t.background.b * bg.bMul + bg.bAdd
+          },
+          position: { x, y }
+        });
       }
     }
-    renderer.setGrid(grid);
   }
 
   async function handleTileClick() {
@@ -402,6 +505,8 @@
       case 'Escape':
         uiState.deactivateDesignation();
         zoneDragActive = false;
+        selDragActive = false;
+        selRect = null;
         selectedPawnId = null;
         redrawOverlay();
         break;
@@ -454,6 +559,18 @@
       zoneEndY = hoverTileY;
       return;
     }
+    if (e.shiftKey) {
+      // Shift+drag: start selection rectangle
+      selDragActive = true;
+      selAnchorX = hoverTileX;
+      selAnchorY = hoverTileY;
+      selEndX = hoverTileX;
+      selEndY = hoverTileY;
+      // Clear previous committed rect while dragging
+      selRect = null;
+      redrawOverlay();
+      return;
+    }
     dragging = true;
     dragStartX = e.clientX;
     dragStartY = e.clientY;
@@ -474,6 +591,12 @@
     if (zoneDragActive) {
       zoneEndX = hoverTileX;
       zoneEndY = hoverTileY;
+      redrawOverlay();
+      return;
+    }
+    if (selDragActive) {
+      selEndX = hoverTileX;
+      selEndY = hoverTileY;
       redrawOverlay();
       return;
     }
@@ -501,6 +624,13 @@
       redrawOverlay();
       return;
     }
+    if (selDragActive) {
+      // Commit selection
+      selDragActive = false;
+      selRect = { x1: selAnchorX, y1: selAnchorY, x2: selEndX, y2: selEndY };
+      redrawOverlay();
+      return;
+    }
     if (dragDistance < 3) handleTileClick();
     dragging = false;
   }
@@ -508,6 +638,11 @@
   function handleMouseLeave() {
     dragging = false;
     zoneDragActive = false;
+    if (selDragActive) {
+      selDragActive = false;
+      selRect = { x1: selAnchorX, y1: selAnchorY, x2: selEndX, y2: selEndY };
+      redrawOverlay();
+    }
     hoverTileX = -1;
     hoverTileY = -1;
   }
@@ -559,12 +694,50 @@
         — selecting ({Math.abs(zoneEndX - zoneAnchorX) + 1}×{Math.abs(zoneEndY - zoneAnchorY) + 1})
       {/if}
     </div>
+  {:else if selDragActive}
+    <div class="designation-hud" style="border-color:#5566cc;color:#99aaee;">
+      ◈ SELECTING ({Math.abs(selEndX - selAnchorX) + 1}×{Math.abs(selEndY - selAnchorY) + 1}) — release to highlight
+    </div>
   {/if}
-  {#if hoverTile}
+  {#if hasSelection}
+    <!-- Selection info overrides hover info -->
+    <div class="tile-hud tile-hud--selection">
+      <span class="sel-title">◈ SELECTION</span>
+      {#if selPawns.length > 0}
+        <div class="sel-row sel-pawns">{selPawns.length} pawn{selPawns.length !== 1 ? 's' : ''}: {selPawns.map((p) => p.name ?? p.id).join(', ')}</div>
+      {/if}
+      {#if selBuildings.length > 0}
+        <div class="sel-row sel-buildings">{selBuildings.length} building{selBuildings.length !== 1 ? 's' : ''}: {selBuildings.map((b) => b.type).join(', ')}</div>
+      {/if}
+      {#each Object.entries(selZones) as [type, count]}
+        <div class="sel-row" style="color:{ZONE_META[type]?.color ?? '#aaa'}">{count}× {ZONE_META[type]?.label ?? type}</div>
+      {/each}
+      <div class="sel-hint">Esc to clear</div>
+    </div>
+  {:else if hoverPawn}
+    <div class="tile-hud tile-hud--pawn">
+      <div class="pawn-header">
+        <span class="pawn-name">{hoverPawn.name}</span>
+        <span class="pawn-state">[{pawnStateLabel(hoverPawn)}]</span>
+      </div>
+      <div class="pawn-row">
+        <span class="pawn-stat-label">HP</span><span class="pawn-stat-val">{hoverPawn.state.health}</span>
+        <span class="pawn-stat-label">Mood</span><span class="pawn-stat-val">{hoverPawn.state.mood}</span>
+        <span class="pawn-stat-label">Hunger</span><span class="pawn-stat-val" class:pawn-warn={hoverPawn.needs.hunger > 60}>{hoverPawn.needs.hunger}</span>
+        <span class="pawn-stat-label">Fatigue</span><span class="pawn-stat-val" class:pawn-warn={hoverPawn.needs.fatigue > 60}>{hoverPawn.needs.fatigue}</span>
+      </div>
+      {#if hoverPawn.activeJob}
+        <div class="pawn-job">→ {pawnStateLabel(hoverPawn)}{hoverPawn.activeJob.resourceId ? ` (${hoverPawn.activeJob.resourceId})` : ''}</div>
+      {/if}
+    </div>
+  {:else if hoverTile}
     <div class="tile-hud">
       <span class="tile-coord">({hoverTile.x},{hoverTile.y})</span><span class="tile-layers"
         >{hoverTile.type},{hoverTile.terrainType},{hoverTile.subType}</span
       >
+      {#if hoverZoneType && ZONE_META[hoverZoneType]}
+        <div class="tile-zone" style="color:{ZONE_META[hoverZoneType].color}">{ZONE_META[hoverZoneType].label} — {ZONE_META[hoverZoneType].desc}</div>
+      {/if}
       {#if hoverResources.length > 0}
         <div class="tile-res">{hoverResources.map(([k, v]) => `${k}:${v}`).join(' ')}</div>
       {/if}
@@ -616,6 +789,35 @@
     pointer-events: none;
     white-space: nowrap;
     z-index: 10;
+  }
+  .tile-hud--selection {
+    border-color: #5566cc;
+    background: rgba(8, 12, 40, 0.94);
+    color: #99aaee;
+    max-width: 340px;
+    white-space: normal;
+  }
+  .sel-title {
+    color: #8899ff;
+    font-weight: bold;
+    margin-right: 5px;
+    display: block;
+    margin-bottom: 1px;
+  }
+  .sel-row {
+    font-size: 9px;
+    line-height: 1.4;
+  }
+  .sel-pawns  { color: #ddeeff; }
+  .sel-buildings { color: #aaccff; }
+  .sel-hint {
+    color: #556688;
+    font-size: 9px;
+    margin-top: 2px;
+  }
+  .tile-zone {
+    font-size: 9px;
+    margin-top: 1px;
   }
   .designation-hud {
     position: absolute;
