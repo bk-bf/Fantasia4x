@@ -414,28 +414,30 @@
       redrawOverlay();
       return;
     }
-    // Click-to-move: selected pawn + walkable tile
-    if (selectedPawnId && worldMap.length > 0) {
-      const targetTile = worldMap[hoverTileY]?.[hoverTileX];
-      if (!targetTile?.walkable) return;
-      const mover = pawns.find((p) => p.id === selectedPawnId);
-      if (!mover?.position) return;
-      await wasmPathfinderService.init();
-      const { walkable, costs, width, height } = buildPathfindingGrids(worldMap);
-      const path = wasmPathfinderService.findPath(
-        walkable,
-        costs,
-        width,
-        height,
-        mover.position.x,
-        mover.position.y,
-        hoverTileX,
-        hoverTileY
-      );
-      if (path.length > 0) {
-        gameState.updateWithSave((state) => pawnService.assignPath(selectedPawnId!, path, state));
-      }
-    }
+    // TODO: draft-control mechanic will re-enable direct pawn movement later.
+    // For now, pawns must only move through the automated AI and turn processing.
+    //
+    // if (selectedPawnId && worldMap.length > 0) {
+    //   const targetTile = worldMap[hoverTileY]?.[hoverTileX];
+    //   if (!targetTile?.walkable) return;
+    //   const mover = pawns.find((p) => p.id === selectedPawnId);
+    //   if (!mover?.position) return;
+    //   await wasmPathfinderService.init();
+    //   const { walkable, costs, width, height } = buildPathfindingGrids(worldMap);
+    //   const path = wasmPathfinderService.findPath(
+    //     walkable,
+    //     costs,
+    //     width,
+    //     height,
+    //     mover.position.x,
+    //     mover.position.y,
+    //     hoverTileX,
+    //     hoverTileY
+    //   );
+    //   if (path.length > 0) {
+    //     gameState.updateWithSave((state) => pawnService.assignPath(selectedPawnId!, path, state));
+    //   }
+    // }
   }
 
   onMount(async () => {

@@ -1112,10 +1112,19 @@ export class PawnServiceImpl implements PawnService {
 			if (!pawn.isMoving || !pawn.path || pawn.path.length === 0) continue;
 			const speed = Math.max(1, Math.floor((pawn.stats.dexterity ?? 10) / 20));
 			let idx = pawn.pathIndex ?? 0;
-			let newPos = pawn.position;
+			const startPos = pawn.position;
+			if (!startPos) continue;
+			let newPos = startPos;
+			let invalidPath = false;
 			for (let step = 0; step < speed; step++) {
 				if (idx >= pawn.path.length) break;
-				newPos = pawn.path[idx];
+				const nextPos = pawn.path[idx];
+				if (!nextPos) break;
+				if (Math.abs(nextPos.x - newPos.x) > 1 || Math.abs(nextPos.y - newPos.y) > 1) {
+					invalidPath = true;
+					break;
+				}
+				newPos = nextPos;
 				idx++;
 			}
 			const done = idx >= pawn.path.length;
@@ -1125,10 +1134,11 @@ export class PawnServiceImpl implements PawnService {
 					p.id === pawn.id
 						? {
 							...p,
-							position: newPos,
-							pathIndex: idx,
-							isMoving: !done,
-							hasReachedDestination: done
+							position: invalidPath ? p.position : newPos,
+							path: invalidPath ? [] : p.path,
+							pathIndex: invalidPath ? 0 : idx,
+							isMoving: invalidPath ? false : !done,
+							hasReachedDestination: invalidPath ? false : done
 						}
 						: p
 				)
