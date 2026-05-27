@@ -17,6 +17,7 @@ import { AVAILABLE_BUILDINGS } from '../core/Buildings';
 
 import { pawnStateMachineService } from './PawnStateMachine';
 import { jobService } from '../services/JobService';
+import { wasmPathfinderService } from '../services/WasmPathfinderService';
 import type { WorkCategory } from '../core/types';
 import type { Pawn } from '../core/types';
 
@@ -288,6 +289,7 @@ export class GameEngineImpl implements GameEngine {
 			this.processResearch();
 			this.processPawns();
 			this.processLocationRenewal();
+			this.debugLogPawns();
 
 			this.lastTurnProcessed = this.gameState.turn;
 			this.gameStateManager.updateState(this.gameState);
@@ -338,6 +340,39 @@ export class GameEngineImpl implements GameEngine {
 	private processLocationRenewal(): void {
 		console.log('[GameEngine] Coordinating location resource renewal through LocationService');
 		locationService.processAllLocationRenewal();
+	}
+
+	private debugLogPawns(): void {
+		if (!this.gameState) return;
+		const gs = this.gameState;
+		const T = gs.turn;
+		const wasmReady = (wasmPathfinderService as any).isReady?.() ?? '?';
+		const jobPool = (gs.jobs ?? []).length;
+		console.groupCollapsed(`[PAWN_DEBUG] Turn ${T}  (WASM:${wasmReady}  jobs:${jobPool})`);
+		for (const p of gs.pawns) {
+			const pos = p.position ? `(${p.position.x},${p.position.y})` : 'no-pos';
+			const state = p.currentState ?? 'Idle';
+			const isMoving = p.isMoving ?? false;
+			const pathLen = p.path?.length ?? 0;
+			const pathIdx = p.pathIndex ?? 0;
+			let target = '';
+			if (p.activeJob) {
+				target = `→(${p.activeJob.targetX},${p.activeJob.targetY}) job:${p.activeJob.type}`;
+				if (p.activeJob.resourceId) target += `/${p.activeJob.resourceId}`;
+				if (p.activeJob.jobId) target += ` [jid:${p.activeJob.jobId.slice(-4)}]`;
+			}
+			const pathInfo = isMoving
+				? `moving step ${pathIdx}/${pathLen}`
+				: pathLen > 0
+					? `path-assigned(not-moving!) len=${pathLen}`
+					: '';
+			const hunger = Math.floor(p.needs?.hunger ?? 0);
+			const fatigue = Math.floor(p.needs?.fatigue ?? 0);
+			console.log(
+				`  ${p.name.padEnd(12)} ${pos.padEnd(10)} [${state.padEnd(18)}] ${target.padEnd(35)} ${pathInfo}  H:${hunger} F:${fatigue}`
+			);
+		}
+		console.groupEnd();
 	}
 
 	/**
