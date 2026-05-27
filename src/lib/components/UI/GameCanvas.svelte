@@ -244,8 +244,9 @@
       if (worldMap.length > 0 && canvas) {
         const newFit = computeFitTileSize(canvas.width, canvas.height);
         const wasAtFit = Math.abs(tileWidth - fitTileSize) < 0.01;
+        const fitChanged = Math.abs(newFit - fitTileSize) > 0.01;
         fitTileSize = newFit;
-        if (wasAtFit) {
+        if (wasAtFit && fitChanged) {
           tileWidth = tileHeight = fitTileSize;
           renderer.setTileSize(tileWidth, tileHeight);
           setView(0, 0);
