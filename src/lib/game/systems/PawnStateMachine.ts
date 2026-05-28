@@ -226,14 +226,51 @@ function findNearestDepositPoint(
     return best ? { x: best.x, y: best.y } : null;
 }
 
-/** Transfer everything in pawn.inventory to gs.stockpile and clear the inventory. */
+/** Transfer everything in pawn.inventory onto stockpile zone tiles (1 item type per tile). */
 function depositInventory(pawn: Pawn, gs: GameState): GameState {
     const inv = pawn.inventory?.items ?? {};
     if (Object.keys(inv).length === 0) return goIdle(pawn, gs);
 
+    // Collect all stockpile tile coordinates
+    const stockpileTiles = Object.entries(gs.designations ?? {})
+        .filter(([, t]) => t === 'stockpile')
+        .map(([key]) => {
+            const [x, y] = key.split(',').map(Number);
+            return { x, y };
+        });
+
+    const newDropped = [...(gs.droppedItems ?? [])];
     const newStockpile = { ...(gs.stockpile ?? {}) };
+
     for (const [resourceId, qty] of Object.entries(inv)) {
-        if (qty > 0) newStockpile[resourceId] = (newStockpile[resourceId] ?? 0) + qty;
+        if (qty <= 0) continue;
+
+        // Try to stack onto an existing stored tile of the same type
+        const existingIdx = newDropped.findIndex((d) => d.stored && d.resourceId === resourceId);
+        if (existingIdx >= 0) {
+            newDropped[existingIdx] = {
+                ...newDropped[existingIdx],
+                quantity: newDropped[existingIdx].quantity + qty
+            };
+        } else {
+            // Find a free stockpile tile (no stored item on it yet)
+            const usedCoords = new Set(newDropped.filter((d) => d.stored).map((d) => `${d.x},${d.y}`));
+            const freeTile = stockpileTiles.find((t) => !usedCoords.has(`${t.x},${t.y}`));
+            if (freeTile) {
+                newDropped.push({
+                    id: `stored-${resourceId}-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
+                    resourceId,
+                    x: freeTile.x,
+                    y: freeTile.y,
+                    quantity: qty,
+                    stored: true
+                });
+            }
+            // If no free tile, items are still tracked in the aggregate below
+        }
+
+        // Always keep the aggregate stockpile in sync (used by fuel/crafting systems)
+        newStockpile[resourceId] = (newStockpile[resourceId] ?? 0) + qty;
     }
 
     const newPawns = gs.pawns.map((p) =>
@@ -248,7 +285,7 @@ function depositInventory(pawn: Pawn, gs: GameState): GameState {
     );
     console.log(`[PawnSM] ${pawn.name} deposited inventory:`, inv);
     // Write to both stockpile (for fuel/fire systems) and item (for sidebar/crafting display)
-    const afterStockpile = { ...gs, stockpile: newStockpile, pawns: newPawns };
+    const afterStockpile = { ...gs, stockpile: newStockpile, pawns: newPawns, droppedItems: newDropped };
     return itemService.addItems(inv, afterStockpile);
 }
 
@@ -449,44 +486,22 @@ function handleWorking(pawn: Pawn, gameState: GameState): GameState {
     if (!jobStillExists) {
         // Job complete. If pawn is now carrying items, enter HAULING state.
         const updatedPawn = afterAdvance.pawns.find((p) => p.id === pawn.id);
-        const hasInventory = updatedPawn &&
-            Object.values(updatedPawn.inventory?.items ?? {}).some((v) => v > 0);
+        const invItems = updatedPawn?.inventory?.items ?? {};
+        const hasInventory = Object.values(invItems).some((v) => v > 0);
+        console.log(`[WORKING-DONE] ${pawn.name} job finished — hasInventory=${hasInventory} inv=`, JSON.stringify(invItems));
 
         if (hasInventory) {
-            // Find a deposit point and start hauling
-            const deposit = findNearestDepositPoint(updatedPawn!, afterAdvance);
-            const depositPayload = deposit
-                ? { depositX: deposit.x, depositY: deposit.y }
-                : null;
-
-            if (depositPayload && deposit && updatedPawn!.position &&
-                !isAdjacent(updatedPawn!.position.x, updatedPawn!.position.y, deposit.x, deposit.y)) {
-                const afterPath = tryAssignPath(updatedPawn!, deposit.x, deposit.y, afterAdvance);
-                if (afterPath) {
-                    return {
-                        ...afterPath,
-                        pawns: afterPath.pawns.map((p) =>
-                            p.id === pawn.id
-                                ? {
-                                    ...p,
-                                    currentState: PAWN_STATE.MOVING_TO_DEPOSIT,
-                                    activeJob: {
-                                        type: 'need' as const,
-                                        targetX: deposit.x,
-                                        targetY: deposit.y,
-                                        progress: 0,
-                                        timeRequired: 1,
-                                        depositX: deposit.x,
-                                        depositY: deposit.y
-                                    }
-                                }
-                                : p
-                        )
-                    };
-                }
-            }
-            // Already adjacent or no path — deposit immediately
-            return depositInventory(updatedPawn!, afterAdvance);
+            // Transition to HAULING — handleHauling will run next turn and find a deposit point.
+            // This ensures items are visible in the CARRYING section for at least one turn.
+            console.log(`[WORKING-DONE] ${pawn.name} entering HAULING state with inv=`, JSON.stringify(invItems));
+            return {
+                ...afterAdvance,
+                pawns: afterAdvance.pawns.map((p) =>
+                    p.id === pawn.id
+                        ? { ...p, currentState: PAWN_STATE.HAULING, activeJob: undefined }
+                        : p
+                )
+            };
         }
 
         return {

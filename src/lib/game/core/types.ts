@@ -35,6 +35,8 @@ export interface DroppedItem {
 	x: number;
 	y: number;
 	quantity: number;
+	/** True when this item has been hauled and placed on a stockpile zone tile. */
+	stored?: boolean;
 }
 
 export interface Job {

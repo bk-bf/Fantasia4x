@@ -318,18 +318,31 @@
     }
   }
 
-  /** Render dropped items as a yellow/gold '*' glyph on the map. */
+  /** Render dropped items as a yellow/gold '*' glyph; stored stockpile items as a green '$'. */
   function overlayDroppedItems(grid: GameGrid, drops: DroppedItem[]) {
     // ASCII '*' glyph index in the sprite sheet (glyph 42 in standard CP437)
     const STAR_GLYPH = glyph(SHEET.MAP, 42);
+    // '$' glyph (glyph 36 in CP437) for stored stockpile items
+    const DOLLAR_GLYPH = glyph(SHEET.MAP, 36);
     for (const drop of drops) {
       const existing = grid.getTile(drop.x, drop.y);
-      grid.setTile(drop.x, drop.y, {
-        char: STAR_GLYPH,
-        foreground: { r: 1.0, g: 0.85, b: 0.1 }, // gold
-        background: existing?.background ?? { r: 0, g: 0, b: 0 },
-        position: { x: drop.x, y: drop.y }
-      });
+      if (drop.stored) {
+        // Stored in stockpile — render as green '$'
+        grid.setTile(drop.x, drop.y, {
+          char: DOLLAR_GLYPH,
+          foreground: { r: 0.2, g: 0.9, b: 0.3 }, // green
+          background: existing?.background ?? { r: 0, g: 0, b: 0 },
+          position: { x: drop.x, y: drop.y }
+        });
+      } else {
+        // Freshly dropped, awaiting hauling — render as gold '*'
+        grid.setTile(drop.x, drop.y, {
+          char: STAR_GLYPH,
+          foreground: { r: 1.0, g: 0.85, b: 0.1 }, // gold
+          background: existing?.background ?? { r: 0, g: 0, b: 0 },
+          position: { x: drop.x, y: drop.y }
+        });
+      }
     }
   }
 

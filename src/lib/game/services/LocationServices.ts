@@ -1,5 +1,5 @@
 import type { GameState } from '../core/types';
-import uiConfig from '../database/ui-config.json';
+import { RICHNESS_COLORS } from '../database/colors';
 import {
 	LOCATION_TEMPLATES,
 	type LocationTemplate,
@@ -310,7 +310,7 @@ export class LocationServiceImpl implements LocationService {
 	}
 
 	getRichnessColor(richness: string): string {
-		return (uiConfig.richnessColors as Record<string, string>)[richness] ?? '#9E9E9E';
+		return RICHNESS_COLORS[richness] ?? '#9E9E9E';
 	}
 
 	getRichnessEmoji(richness: string): string {

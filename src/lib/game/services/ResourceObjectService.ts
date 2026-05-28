@@ -71,7 +71,7 @@ class ResourceObjectServiceImpl {
     }
 
     getWorkAmount(resourceId: string): number {
-        return this.getById(resourceId)?.interaction.workAmount ?? 5;
+        return (this.getById(resourceId)?.interaction.workAmount ?? 5) * 3;
     }
 
     calculateYield(resourceId: string, pawn?: Pawn): Record<string, number> {

@@ -363,16 +363,48 @@ class JobServiceImpl {
     }
 
     private _syncHaulJobs(jobs: Job[], gs: GameState): Job[] {
+        // Only consider non-stored drops (stored = already in stockpile)
+        const drops = (gs.droppedItems ?? []).filter((d) => !d.stored);
+        console.log(`[HAUL-SYNC] drops on ground: ${drops.length}`, drops.map(d => `${d.id}(${d.resourceId}×${d.quantity})`));
+
+        // Haul jobs only make sense when there is a stockpile zone to deliver to.
+        const stockpileTiles = Object.entries(gs.designations ?? {}).filter(([, t]) => t === 'stockpile');
+        if (stockpileTiles.length === 0) {
+            // Remove any leftover haul jobs and skip creation
+            const pruned = jobs.filter((j) => j.type !== 'haul');
+            if (pruned.length !== jobs.length) console.log('[HAUL-SYNC] no stockpile zone — removed all haul jobs');
+            return pruned;
+        }
+
+        // Count free stockpile tiles (not occupied by a stored item)
+        const usedCoords = new Set(
+            (gs.droppedItems ?? []).filter((d) => d.stored).map((d) => `${d.x},${d.y}`)
+        );
+        // A tile is "available" if it's free OR already holds the same resource (can stack)
+        const storedResourceIds = new Set(
+            (gs.droppedItems ?? []).filter((d) => d.stored).map((d) => d.resourceId)
+        );
+        const freeTileCount = stockpileTiles.filter(([key]) => !usedCoords.has(key)).length;
+        // Total capacity = free tiles + tiles that can accept more of an already-stored type
+        const canAccept = freeTileCount + storedResourceIds.size;
+
         // Remove haul jobs whose dropped item no longer exists
         jobs = jobs.filter((j) => {
             if (j.type !== 'haul') return true;
-            return (gs.droppedItems ?? []).some((d) => d.id === j.droppedItemId);
+            const stillExists = drops.some((d) => d.id === j.droppedItemId);
+            if (!stillExists) console.log(`[HAUL-SYNC] pruned stale haul job ${j.id}`);
+            return stillExists;
         });
 
-        // Add haul jobs for dropped items that have no job yet
-        for (const drop of gs.droppedItems ?? []) {
+        // Count active haul jobs to avoid scheduling more than we have capacity for
+        const activeHaulCount = jobs.filter((j) => j.type === 'haul').length;
+
+        // Add haul jobs for dropped items that have no job yet, up to available capacity
+        for (const drop of drops) {
+            if (activeHaulCount >= canAccept) break; // stockpile full
             const exists = jobs.some((j) => j.type === 'haul' && j.droppedItemId === drop.id);
             if (!exists) {
+                console.log(`[HAUL-SYNC] creating haul job for drop ${drop.id} (${drop.resourceId}×${drop.quantity})`);
                 jobs.push({
                     id: `haul-${drop.id}-${Date.now()}`,
                     type: 'haul',
@@ -408,11 +440,12 @@ class JobServiceImpl {
                 const newItems = { ...inv.items };
                 newItems[drop.resourceId] = (newItems[drop.resourceId] ?? 0) + drop.quantity;
                 const currentSlots = Object.values(newItems).reduce((s, v) => s + v, 0);
+                console.log(`[HAUL-COMPLETE] ${p.name} picked up ${drop.resourceId}×${drop.quantity} — inventory now:`, JSON.stringify(newItems));
                 return { ...p, inventory: { ...inv, items: newItems, currentSlots } };
             });
-            console.log(`[JobService] Haul pickup: ${drop.resourceId} ×${drop.quantity} → pawn ${pawnId}`);
             return { ...gs, droppedItems: newDropped, pawns: newPawns };
         }
+        console.warn(`[HAUL-COMPLETE] no claimedBy on haul job ${job.id} — dropping straight to stockpile`);
 
         // No pawn claimed it (shouldn't happen) — fall back to stockpile and item
         const newStockpile = { ...(gs.stockpile ?? {}) };
