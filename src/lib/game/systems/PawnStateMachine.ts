@@ -14,6 +14,7 @@
  */
 
 import type { GameState, Pawn } from '../core/types';
+import { addToStockpileZone } from '../core/GameState';
 import ITEMS_DATABASE from '../database/items.jsonc';
 import { jobService, BASE_WORK_RATE } from '../services/JobService';
 import { pawnService } from '../services/PawnService';
@@ -38,22 +39,25 @@ export const PAWN_STATE = {
 export type PawnStateName = (typeof PAWN_STATE)[keyof typeof PAWN_STATE];
 
 // ===== NEED THRESHOLDS =====
-// Calibrated to Rimworld pacing (1 turn ≈ 1 in-game hour):
-//   Hunger: 6.5/turn → 0→70 in ~10.8 turns (Rimworld: eat at 30% saturation = 70% hunger, every ~10.5h)
-//   Fatigue: 4/turn  → 0→72 in ~18 turns   (Rimworld: drowsy at 28% rest = 72% fatigue, after ~18.2h)
+// Calibrated to Rimworld 1x speed real-time pacing (1 Fantasia turn ≈ 1 real second):
+//   Hunger:  0.16/turn → 0→70 in ~437 turns ≈ 7.3 real min  (Rimworld: ~26,250 ticks ÷ 60 t/s)
+//   Fatigue: 0.10/turn → 0→72 in ~720 turns ≈ 12 real min   (Rimworld: ~45,474 ticks ÷ 60 t/s)
+//   Bed sleep: 0.23/turn → 72→0 in ~313 turns ≈ 5.2 real min (Rimworld: 18,900 ticks ÷ 60 t/s)
+//   Ground:    0.18/turn → 72→0 in ~400 turns ≈ 6.7 real min (Rimworld: 23,625 ticks ÷ 60 t/s)
+//   At 2× speed everything is 2× faster; at 4× speed 4× faster — matching Rimworld multi-speed feel.
 const HUNGER_THRESHOLD = 70;           // Seek food at 70% (= Rimworld 30% saturation trigger)
 const CRITICAL_HUNGER = 87;            // Interrupt work — ravenous (Rimworld 12.5% sat = 87.5%)
-const FATIGUE_THRESHOLD = 72;          // Seek rest after ~18 awake hours (4/turn → 0→72)
+const FATIGUE_THRESHOLD = 72;          // Seek rest after ~12 real min (Rimworld: 28% rest = 72% fatigue)
 const CRITICAL_FATIGUE = 95;           // Emergency work interrupt — near collapse
-const EATING_TURNS = 5;                // Turns to eat at a campfire
+const EATING_TURNS = 5;                // Turns to eat at a campfire (~5 seconds)
 const EATING_TURNS_GROUND = 7;         // Turns eating in-place (cold, uncomfortable)
-const SLEEPING_TURNS = 8;              // Reference duration at shelter (9.5/turn × ~7.6 turns)
-const SLEEPING_TURNS_GROUND = 10;      // Reference duration on ground (7.5/turn × ~9.6 turns)
+const SLEEPING_TURNS = 313;            // Full recovery in bed: 72 / 0.23 ≈ 313 turns (progress bar ref)
+const SLEEPING_TURNS_GROUND = 400;     // Full recovery on ground: 72 / 0.18 = 400 turns
 const HUNGER_PER_FOOD_UNIT = 30;       // Base hunger restored per 1 unit (×nutrition)
 const SAFE_HUNGER = 10;                // Target hunger level after a full meal
 const MAX_UNITS_PER_FOOD_TYPE = 3;     // Cap per food type per meal — avoids hoarding
-const FATIGUE_PER_SLEEPING_TURN = 9.5; // Building: 72 fatigue → 0 in ~7.6 turns (≈ Rimworld 7.56h bed)
-const FATIGUE_PER_SLEEPING_GROUND = 7.5; // Ground: 72 → 0 in ~9.6 turns (≈ Rimworld 9.45h ground)
+const FATIGUE_PER_SLEEPING_TURN = 0.23; // Bed: 72 fatigue → 0 in ~313 turns ≈ 5.2 real min
+const FATIGUE_PER_SLEEPING_GROUND = 0.18; // Ground: 72 → 0 in ~400 turns ≈ 6.7 real min
 // Wake thresholds — prevents yo-yo by requiring proper rest before resuming activity
 const SLEEP_WAKE_THRESHOLD_FED = 0;    // Sleep until fully restored when not hungry
 const SLEEP_WAKE_THRESHOLD_HUNGRY = 30; // Allow early waking at 30% to go eat
@@ -329,7 +333,7 @@ function findNearestDepositPoint(
     return best ? { x: best.x, y: best.y } : null;
 }
 
-/** Transfer everything in pawn.inventory onto stockpile zone tiles (1 item type per tile). */
+/** Transfer everything in pawn.inventory into the correct stockpile zone. */
 function depositInventory(pawn: Pawn, gs: GameState): GameState {
     const inv = pawn.inventory?.items ?? {};
     if (Object.keys(inv).length === 0) return goIdle(pawn, gs);
@@ -339,11 +343,10 @@ function depositInventory(pawn: Pawn, gs: GameState): GameState {
         .filter(([, t]) => t === 'stockpile')
         .map(([key]) => {
             const [x, y] = key.split(',').map(Number);
-            return { x, y };
+            return { key, x, y };
         });
 
     const newDropped = [...(gs.droppedItems ?? [])];
-    const newStockpile = { ...(gs.stockpile ?? {}) };
 
     for (const [resourceId, qty] of Object.entries(inv)) {
         if (qty <= 0) continue;
@@ -358,7 +361,7 @@ function depositInventory(pawn: Pawn, gs: GameState): GameState {
         } else {
             // Find a free stockpile tile (no stored item on it yet)
             const usedCoords = new Set(newDropped.filter((d) => d.stored).map((d) => `${d.x},${d.y}`));
-            const freeTile = stockpileTiles.find((t) => !usedCoords.has(`${t.x},${t.y}`));
+            const freeTile = stockpileTiles.find((t) => !usedCoords.has(t.key));
             if (freeTile) {
                 newDropped.push({
                     id: `stored-${resourceId}-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
@@ -369,12 +372,17 @@ function depositInventory(pawn: Pawn, gs: GameState): GameState {
                     stored: true
                 });
             }
-            // If no free tile, items are still tracked in the aggregate below
+            // If no free tile, items still go into the zone inventory below
         }
-
-        // Always keep the aggregate stockpile in sync (used by fuel/crafting systems)
-        newStockpile[resourceId] = (newStockpile[resourceId] ?? 0) + qty;
     }
+
+    // Find the zone to credit: the stockpile tile adjacent to (or at) the pawn's position
+    const depositTileKey = pawn.position
+        ? stockpileTiles.find(({ x, y }) =>
+              isAdjacent(pawn.position!.x, pawn.position!.y, x, y) ||
+              (x === pawn.position!.x && y === pawn.position!.y)
+          )?.key ?? null
+        : null;
 
     const newPawns = gs.pawns.map((p) =>
         p.id === pawn.id
@@ -386,10 +394,10 @@ function depositInventory(pawn: Pawn, gs: GameState): GameState {
             }
             : p
     );
+
     console.log(`[PawnSM] ${pawn.name} deposited inventory:`, inv);
-    // Write to both stockpile (for fuel/fire systems) and item (for sidebar/crafting display)
-    const afterStockpile = { ...gs, stockpile: newStockpile, pawns: newPawns, droppedItems: newDropped };
-    return itemService.addItems(inv, afterStockpile);
+    const afterDrop = { ...gs, pawns: newPawns, droppedItems: newDropped };
+    return addToStockpileZone(afterDrop, depositTileKey, inv);
 }
 
 function handleHauling(pawn: Pawn, gameState: GameState): GameState {

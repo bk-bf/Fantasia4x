@@ -16,6 +16,29 @@ export interface ZoneFilter {
 	blockedItems: string[];
 }
 
+/** A named, individually-filterable zone instance (e.g. "Forage 1", "Stockpile 2"). */
+export interface ZoneInstance {
+	id: string;
+	type: FilterableZoneType;
+	label: string;
+	filter: ZoneFilter;
+}
+
+/**
+ * A named stockpile zone. Items physically live here — the colony aggregate
+ * (GameState.stockpile) is always the sum of all zone inventories.
+ * A zone with an empty `tiles` array is a virtual/non-spatial zone (catch-all).
+ */
+export interface StockpileZone {
+	id: string;
+	name: string;
+	/** "x,y" map tile keys that belong to this zone. */
+	tiles: string[];
+	filter: ZoneFilter;
+	/** Items stored here. Sum across all zones == GameState.stockpile. */
+	inventory: Record<string, number>;
+}
+
 export interface PlacedBuilding {
 	id: string;           // unique instance id
 	type: string;         // building definition id (matches Building.id)
@@ -79,12 +102,18 @@ export interface GameState {
 	buildingCounts: Record<string, number>;
 	/** Phase 4: physically placed buildings on the map */
 	buildings: PlacedBuilding[];
-	/** Phase 4: colony-level stockpile (harvested resources) */
+	/** Phase 4: colony-level stockpile (harvested resources) — aggregate of all stockpileZones. */
 	stockpile: Record<string, number>;
+	/** Named stockpile zones; each tracks its own item inventory. */
+	stockpileZones: StockpileZone[];
 	/** Phase 4: designated tile actions keyed as "x,y" */
 	designations: Record<string, DesignationType>;
-	/** DF-style item-category filters per filterable zone type. */
+	/** @deprecated Use zoneInstances instead. Legacy type-level filters for backward compat. */
 	zoneFilters?: Partial<Record<FilterableZoneType, ZoneFilter>>;
+	/** Named zone instances, each with their own filter. Replaces zoneFilters. */
+	zoneInstances?: ZoneInstance[];
+	/** Maps "x,y" tile keys to ZoneInstance.id for per-instance filter lookup. */
+	designationZoneId?: Record<string, string>;
 	/** Phase 5a: active job pool — regenerated each turn by JobService */
 	jobs: Job[];
 	buildingQueue: BuildingInProgress[];

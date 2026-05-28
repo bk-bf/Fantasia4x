@@ -1,4 +1,5 @@
 import type { ResearchProject, LoreItem, RaceStats, GameState } from '../core/types';
+import { consumeFromStockpiles } from '../core/GameState';
 import researchData from '../database/research.jsonc';
 import loreData from '../database/lore.jsonc';
 
@@ -302,22 +303,20 @@ export class ResearchServiceImpl implements ResearchService {
 			return gameState;
 		}
 
-		const newState = { ...gameState };
-
-		// Consume required scrolls and materials
-		const newStockpile = { ...(newState.stockpile ?? {}) };
+		const consumables: Record<string, number> = {};
 		if (research.scrollRequirement) {
 			Object.entries(research.scrollRequirement).forEach(([scrollId, amount]) => {
-				newStockpile[scrollId] = Math.max(0, (newStockpile[scrollId] ?? 0) - amount);
+				consumables[scrollId] = (consumables[scrollId] ?? 0) + amount;
 			});
 		}
-
 		if (research.materialRequirement) {
 			Object.entries(research.materialRequirement).forEach(([materialId, amount]) => {
-				newStockpile[materialId] = Math.max(0, (newStockpile[materialId] ?? 0) - amount);
+				consumables[materialId] = (consumables[materialId] ?? 0) + amount;
 			});
 		}
-		newState.stockpile = newStockpile;
+		const newState = Object.keys(consumables).length > 0
+			? consumeFromStockpiles({ ...gameState }, consumables)
+			: { ...gameState };
 
 		// Set current research
 		newState.currentResearch = {

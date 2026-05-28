@@ -1,5 +1,4 @@
-import type { GameState, ResearchProject, Building, Item, PlacedBuilding, Job } from './types';
-import { itemService } from '../services/ItemService';
+import type { GameState, ResearchProject, Building, Item, PlacedBuilding, Job, StockpileZone } from './types';
 
 export class GameStateManager {
 	private state: GameState;
@@ -31,7 +30,7 @@ export class GameStateManager {
 
 	// KEEP: Public utility methods
 	addResource(resourceId: string, amount: number): void {
-		this.state.stockpile = { ...this.state.stockpile, [resourceId]: (this.state.stockpile[resourceId] ?? 0) + amount };
+		this.state = addToStockpileZone(this.state, null, { [resourceId]: amount });
 	}
 
 	getItemAmount(itemId: string): number {
@@ -41,7 +40,7 @@ export class GameStateManager {
 	removeItemAmount(itemId: string, amount: number): boolean {
 		const current = this.state.stockpile[itemId] ?? 0;
 		if (current < amount) return false;
-		this.state.stockpile = { ...this.state.stockpile, [itemId]: current - amount };
+		this.state = consumeFromStockpiles(this.state, { [itemId]: amount });
 		return true;
 	}
 
@@ -84,8 +83,7 @@ export class GameStateManager {
 	// ===== PHASE 4: STOCKPILE =====
 
 	addToStockpile(id: string, amount: number): void {
-		const current = this.state.stockpile?.[id] ?? 0;
-		this.state.stockpile = { ...(this.state.stockpile ?? {}), [id]: current + amount };
+		this.state = addToStockpileZone(this.state, null, { [id]: amount });
 	}
 
 	getStockpileAmount(id: string): number {
@@ -153,4 +151,76 @@ export class GameStateManager {
 	removeJob(jobId: string): void {
 		this.state.jobs = (this.state.jobs ?? []).filter(j => j.id !== jobId);
 	}
+}
+
+// ===== STOCKPILE ZONE ID =====
+
+/** ID of the virtual catch-all zone for items added without a specific map tile. */
+export const GENERAL_ZONE_ID = 'zone-general';
+
+// ===== PURE STOCKPILE HELPERS =====
+
+/**
+ * Add items to the zone that owns `tileKey`.
+ * Falls back to the general zone when tileKey is null or no zone owns the tile.
+ * Auto-creates the general zone if it doesn't exist.
+ * Keeps state.stockpile (aggregate) in sync.
+ */
+export function addToStockpileZone(
+	state: GameState,
+	tileKey: string | null,
+	items: Record<string, number>
+): GameState {
+	const zones = (state.stockpileZones ?? []).map((z) => ({ ...z, inventory: { ...z.inventory } }));
+
+	let targetIdx = tileKey !== null ? zones.findIndex((z) => z.tiles.includes(tileKey)) : -1;
+	if (targetIdx === -1) targetIdx = zones.findIndex((z) => z.id === GENERAL_ZONE_ID);
+	if (targetIdx === -1) {
+		zones.push({
+			id: GENERAL_ZONE_ID,
+			name: 'Colony Stockpile',
+			tiles: [],
+			filter: { allowedCategories: [], blockedItems: [] },
+			inventory: {}
+		} satisfies StockpileZone);
+		targetIdx = zones.length - 1;
+	}
+
+	const newAggregate = { ...state.stockpile };
+	for (const [itemId, amount] of Object.entries(items)) {
+		if (amount <= 0) continue;
+		zones[targetIdx].inventory[itemId] = (zones[targetIdx].inventory[itemId] ?? 0) + amount;
+		newAggregate[itemId] = (newAggregate[itemId] ?? 0) + amount;
+	}
+
+	return { ...state, stockpileZones: zones, stockpile: newAggregate };
+}
+
+/**
+ * Consume items from zones greedily (iterates zones in order, largest-first is not guaranteed).
+ * Updates both zone inventories and the aggregate.
+ * Does not validate sufficiency — caller must check state.stockpile first.
+ */
+export function consumeFromStockpiles(
+	state: GameState,
+	items: Record<string, number>
+): GameState {
+	const zones = (state.stockpileZones ?? []).map((z) => ({ ...z, inventory: { ...z.inventory } }));
+	const newAggregate = { ...state.stockpile };
+
+	for (const [itemId, amount] of Object.entries(items)) {
+		if (amount <= 0) continue;
+		let remaining = amount;
+		for (const zone of zones) {
+			if (remaining <= 0) break;
+			const available = zone.inventory[itemId] ?? 0;
+			if (available <= 0) continue;
+			const take = Math.min(available, remaining);
+			zone.inventory[itemId] = available - take;
+			remaining -= take;
+		}
+		newAggregate[itemId] = Math.max(0, (newAggregate[itemId] ?? 0) - amount);
+	}
+
+	return { ...state, stockpileZones: zones, stockpile: newAggregate };
 }

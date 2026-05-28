@@ -104,10 +104,12 @@
   // Zone/designation painting — driven by uiState
   let designationMode = false;
   let designationTypeActive: DesignationType = 'harvest';
+  let activeZoneInstanceId: string | null = null;
   // Press X while in designation mode to switch between paint ↔ erase drag
   let zoneEraseMode = false;
   const unsubUI = uiState.subscribe((s) => {
     designationMode = s.designationActive;
+    activeZoneInstanceId = s.activeZoneInstanceId ?? null;
     if (!s.designationActive) zoneEraseMode = false;
     if (s.designationType) designationTypeActive = s.designationType as DesignationType;
     redrawOverlay();
@@ -469,7 +471,7 @@
     // Designation mode: handled by drag — single-click still paints one tile
     if (designationMode) {
       gameState.updateWithSave((state) =>
-        designationService.designate(hoverTileX, hoverTileY, designationTypeActive, state)
+        designationService.designate(hoverTileX, hoverTileY, designationTypeActive, state, activeZoneInstanceId ?? undefined)
       );
       redrawOverlay();
       return;
@@ -749,7 +751,8 @@
             zoneEndX,
             zoneEndY,
             designationTypeActive,
-            state
+            state,
+            activeZoneInstanceId ?? undefined
           )
         );
       }

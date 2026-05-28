@@ -10,6 +10,8 @@ interface UIState {
   /** Zone/designation painting mode. null = inactive. */
   designationActive: boolean;
   designationType: string | null;
+  /** Zone instance being painted (null = no instance / legacy). */
+  activeZoneInstanceId: string | null;
   /** Screen to return to after zone painting ends. */
   _screenBeforeDesignation: Screen | null;
   /** Request the map to pan (and zoom) to a specific tile. Cleared after handling. */
@@ -23,6 +25,7 @@ function createUIState() {
     lastEvent: null,
     designationActive: false,
     designationType: null,
+    activeZoneInstanceId: null,
     _screenBeforeDesignation: null,
     mapFocusRequest: null
   };
@@ -47,11 +50,12 @@ function createUIState() {
 
     clearEvent: () => update((state) => ({ ...state, lastEvent: null })),
 
-    activateDesignation: (type: string) =>
+    activateDesignation: (type: string, instanceId: string | null = null) =>
       update((state) => ({
         ...state,
         designationActive: true,
         designationType: type,
+        activeZoneInstanceId: instanceId,
         _screenBeforeDesignation: state.currentScreen !== 'main' ? state.currentScreen : state._screenBeforeDesignation,
         currentScreen: 'main'
       })),
@@ -61,6 +65,7 @@ function createUIState() {
         ...state,
         designationActive: false,
         designationType: null,
+        activeZoneInstanceId: null,
         currentScreen: state._screenBeforeDesignation ?? state.currentScreen,
         _screenBeforeDesignation: null
       })),

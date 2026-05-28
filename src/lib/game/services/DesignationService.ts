@@ -7,7 +7,7 @@
  * Original system (no Celestia equivalent).
  */
 
-import type { GameState, DesignationType, FilterableZoneType, ZoneFilter } from '../core/types';
+import type { GameState, DesignationType, FilterableZoneType, ZoneFilter, ZoneInstance } from '../core/types';
 
 class DesignationServiceImpl {
     private key(x: number, y: number): string {
@@ -16,26 +16,32 @@ class DesignationServiceImpl {
 
     /**
      * Add or update a designation at (x, y).
+     * Optionally assigns the tile to a zone instance.
      * Returns the updated GameState.
      */
-    designate(x: number, y: number, type: DesignationType, gameState: GameState): GameState {
-        return {
+    designate(x: number, y: number, type: DesignationType, gameState: GameState, zoneInstanceId?: string): GameState {
+        const k = this.key(x, y);
+        let state: GameState = {
             ...gameState,
-            designations: {
-                ...(gameState.designations ?? {}),
-                [this.key(x, y)]: type
-            }
+            designations: { ...(gameState.designations ?? {}), [k]: type }
         };
+        if (zoneInstanceId) {
+            state = { ...state, designationZoneId: { ...(state.designationZoneId ?? {}), [k]: zoneInstanceId } };
+        }
+        return state;
     }
 
     /**
-     * Remove the designation at (x, y).
+     * Remove the designation at (x, y), also clearing any zone instance assignment.
      * Returns the updated GameState.
      */
     clearDesignation(x: number, y: number, gameState: GameState): GameState {
+        const k = this.key(x, y);
         const newDesignations = { ...(gameState.designations ?? {}) };
-        delete newDesignations[this.key(x, y)];
-        return { ...gameState, designations: newDesignations };
+        delete newDesignations[k];
+        const newZoneIds = { ...(gameState.designationZoneId ?? {}) };
+        delete newZoneIds[k];
+        return { ...gameState, designations: newDesignations, designationZoneId: newZoneIds };
     }
 
     /**
@@ -71,12 +77,14 @@ class DesignationServiceImpl {
     /**
      * Fill a rectangular area with a designation.
      * Coordinates are inclusive on both ends. Out-of-bounds tiles are silently skipped.
+     * Optionally assigns all tiles to a zone instance.
      */
     designateRect(
         x1: number, y1: number,
         x2: number, y2: number,
         type: DesignationType,
-        gameState: GameState
+        gameState: GameState,
+        zoneInstanceId?: string
     ): GameState {
         const minX = Math.min(x1, x2);
         const maxX = Math.max(x1, x2);
@@ -86,17 +94,24 @@ class DesignationServiceImpl {
         const mapW = gameState.worldMap?.[0]?.length ?? 0;
 
         const newDesignations = { ...(gameState.designations ?? {}) };
+        const newZoneIds = zoneInstanceId ? { ...(gameState.designationZoneId ?? {}) } : undefined;
         for (let y = minY; y <= maxY; y++) {
             for (let x = minX; x <= maxX; x++) {
                 if (mapH > 0 && (x < 0 || y < 0 || x >= mapW || y >= mapH)) continue;
-                newDesignations[this.key(x, y)] = type;
+                const k = this.key(x, y);
+                newDesignations[k] = type;
+                if (zoneInstanceId && newZoneIds) newZoneIds[k] = zoneInstanceId;
             }
         }
-        return { ...gameState, designations: newDesignations };
+        return {
+            ...gameState,
+            designations: newDesignations,
+            ...(newZoneIds ? { designationZoneId: newZoneIds } : {})
+        };
     }
 
     /**
-     * Clear all designations in a rectangular area.
+     * Clear all designations in a rectangular area, also clearing zone instance assignments.
      */
     clearRect(
         x1: number, y1: number,
@@ -108,16 +123,19 @@ class DesignationServiceImpl {
         const minY = Math.min(y1, y2);
         const maxY = Math.max(y1, y2);
         const newDesignations = { ...(gameState.designations ?? {}) };
+        const newZoneIds = { ...(gameState.designationZoneId ?? {}) };
         for (let y = minY; y <= maxY; y++) {
             for (let x = minX; x <= maxX; x++) {
-                delete newDesignations[this.key(x, y)];
+                const k = this.key(x, y);
+                delete newDesignations[k];
+                delete newZoneIds[k];
             }
         }
-        return { ...gameState, designations: newDesignations };
+        return { ...gameState, designations: newDesignations, designationZoneId: newZoneIds };
     }
 
     // ------------------------------------------------------------------ //
-    // ZONE FILTERS                                                         //
+    // ZONE FILTERS (legacy — kept for backward compat)                    //
     // ------------------------------------------------------------------ //
 
     /**
@@ -141,6 +159,59 @@ class DesignationServiceImpl {
     /** Get the current filter for a zone type (undefined = no filter). */
     getZoneFilter(type: FilterableZoneType, gameState: GameState): ZoneFilter | undefined {
         return gameState.zoneFilters?.[type];
+    }
+
+    // ------------------------------------------------------------------ //
+    // ZONE INSTANCES                                                       //
+    // ------------------------------------------------------------------ //
+
+    /** Create a new zone instance with an empty filter. Returns the updated state and the new ID. */
+    createZoneInstance(type: FilterableZoneType, label: string, gs: GameState): { state: GameState; id: string } {
+        const id = `${type}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+        const instance: ZoneInstance = { id, type, label, filter: { allowedCategories: [], blockedItems: [] } };
+        return { state: { ...gs, zoneInstances: [...(gs.zoneInstances ?? []), instance] }, id };
+    }
+
+    /** Remove a zone instance and all its tile designations. */
+    removeZoneInstance(instanceId: string, gs: GameState): GameState {
+        const zoneIdMap = { ...(gs.designationZoneId ?? {}) };
+        const designations = { ...(gs.designations ?? {}) };
+        for (const [k, zId] of Object.entries(zoneIdMap)) {
+            if (zId === instanceId) {
+                delete zoneIdMap[k];
+                delete designations[k];
+            }
+        }
+        return {
+            ...gs,
+            zoneInstances: (gs.zoneInstances ?? []).filter((z) => z.id !== instanceId),
+            designationZoneId: zoneIdMap,
+            designations
+        };
+    }
+
+    /** Toggle a category in a zone instance's filter. */
+    toggleInstanceCategory(instanceId: string, category: string, gs: GameState): GameState {
+        return {
+            ...gs,
+            zoneInstances: (gs.zoneInstances ?? []).map((z) => {
+                if (z.id !== instanceId) return z;
+                const allowed = z.filter.allowedCategories.includes(category)
+                    ? z.filter.allowedCategories.filter((c) => c !== category)
+                    : [...z.filter.allowedCategories, category];
+                return { ...z, filter: { ...z.filter, allowedCategories: allowed } };
+            })
+        };
+    }
+
+    /** Clear all category restrictions from a zone instance's filter. */
+    clearInstanceFilter(instanceId: string, gs: GameState): GameState {
+        return {
+            ...gs,
+            zoneInstances: (gs.zoneInstances ?? []).map((z) =>
+                z.id === instanceId ? { ...z, filter: { allowedCategories: [], blockedItems: [] } } : z
+            )
+        };
     }
 }
 

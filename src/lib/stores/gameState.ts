@@ -1,8 +1,8 @@
 import { browser } from '$app/environment';
 import { writable, derived } from 'svelte/store';
-import { GameStateManager } from '$lib/game/core/GameState';
+import { GameStateManager, consumeFromStockpiles, addToStockpileZone } from '$lib/game/core/GameState';
 import { gameEngine } from '$lib/game/systems/GameEngineImpl';
-import type { GameState, Pawn, WorldTile } from '$lib/game/core/types';
+import type { GameState, Pawn, WorldTile, FilterableZoneType } from '$lib/game/core/types';
 import { generatePawns } from '$lib/game/entities/Pawns';
 import { pawnService } from '$lib/game/services/PawnService';
 import { generateRace } from '$lib/game/core/Race';
@@ -53,6 +53,16 @@ export const initialGameState: GameState = {
 	buildings: [],
 	/** Phase 4: colony stockpile from harvesting */
 	stockpile: {},
+	/** Stockpile zones — each zone owns specific tiles and tracks its own inventory. */
+	stockpileZones: [
+		{
+			id: 'zone-general',
+			name: 'Colony Stockpile',
+			tiles: [],
+			filter: { allowedCategories: [], blockedItems: [] },
+			inventory: {}
+		}
+	],
 	/** Phase 4: designated tile actions */
 	designations: {},
 	/** Phase 5a: active job pool */
@@ -101,6 +111,21 @@ function applyMigrations(state: GameState): GameState {
 		);
 	}
 	if (!state.stockpile) state.stockpile = {};
+	// Migrate to multi-zone stockpile system
+	if (!state.stockpileZones || state.stockpileZones.length === 0) {
+		const existingTiles = Object.entries(state.designations ?? {})
+			.filter(([, t]) => t === 'stockpile')
+			.map(([key]) => key);
+		state.stockpileZones = [
+			{
+				id: 'zone-general',
+				name: 'Colony Stockpile',
+				tiles: existingTiles,
+				filter: { allowedCategories: [], blockedItems: [] },
+				inventory: { ...(state.stockpile ?? {}) }
+			}
+		];
+	}
 	if (!state.designations) state.designations = {};
 	if (!state.jobs) state.jobs = [];
 	// Phase 5c: migrate old buildingQueue entries to PlacedBuilding (work-point model)
@@ -125,6 +150,27 @@ function applyMigrations(state: GameState): GameState {
 		});
 		state.buildings = [...(state.buildings ?? []), ...migratedBuildings];
 		state.buildingQueue = [];
+	}
+	// Migrate legacy zoneFilters to zoneInstances
+	if ((!state.zoneInstances || state.zoneInstances.length === 0) && state.zoneFilters) {
+		const instances: import('$lib/game/core/types').ZoneInstance[] = [];
+		const zoneIdMap: Record<string, string> = { ...(state.designationZoneId ?? {}) };
+		for (const [typeKey, filter] of Object.entries(state.zoneFilters)) {
+			const type = typeKey as FilterableZoneType;
+			if (!filter) continue;
+			const tilesOfType = Object.entries(state.designations ?? {}).filter(([, t]) => t === type);
+			if (tilesOfType.length > 0 || filter.allowedCategories.length > 0) {
+				const id = `${type}-migrated`;
+				const label = `${type.charAt(0).toUpperCase()}${type.slice(1)} 1`;
+				instances.push({ id, type, label, filter });
+				for (const [key] of tilesOfType) {
+					zoneIdMap[key] = id;
+				}
+			}
+		}
+		if (instances.length > 0) {
+			state = { ...state, zoneInstances: instances, designationZoneId: zoneIdMap };
+		}
 	}
 	return state;
 }
@@ -268,15 +314,12 @@ function consumeGlobalItem(itemId: string, quantity: number = 1) {
 	updateWithSave((state) => {
 		const current = (state.stockpile ?? {})[itemId] ?? 0;
 		if (current < quantity) return state;
-		return { ...state, stockpile: { ...state.stockpile, [itemId]: current - quantity } };
+		return consumeFromStockpiles(state, { [itemId]: quantity });
 	});
 }
 
 function addItem(itemId: string, amount: number) {
-	updateWithSave((state) => ({
-		...state,
-		stockpile: { ...state.stockpile, [itemId]: ((state.stockpile ?? {})[itemId] ?? 0) + amount }
-	}));
+	updateWithSave((state) => addToStockpileZone(state, null, { [itemId]: amount }));
 }
 
 function resetGame() {
@@ -448,4 +491,18 @@ export const currentStockpile = derived(gameState, ($gameState) =>
 			return { id, name: def?.name ?? id, amount, color: def?.color, emoji: def?.emoji };
 		})
 		.sort((a, b) => a.name.localeCompare(b.name))
+);
+
+/** Per-zone inventory view, enriched from the items database. */
+export const currentStockpileZones = derived(gameState, ($gameState) =>
+	($gameState.stockpileZones ?? []).map((zone) => ({
+		...zone,
+		displayInventory: Object.entries(zone.inventory)
+			.filter(([, amount]) => amount > 0)
+			.map(([id, amount]) => {
+				const def = itemService.getItemById(id);
+				return { id, name: def?.name ?? id, amount, color: def?.color, emoji: def?.emoji };
+			})
+			.sort((a, b) => a.name.localeCompare(b.name))
+	}))
 );

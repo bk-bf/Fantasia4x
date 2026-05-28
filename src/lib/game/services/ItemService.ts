@@ -1,4 +1,5 @@
 import type { Item, GameState } from '../core/types';
+import { consumeFromStockpiles } from '../core/GameState';
 import itemsData from '../database/items.jsonc';
 import { RARITY_COLORS } from '../database/colors';
 
@@ -196,11 +197,7 @@ export class ItemServiceImpl implements ItemService {
 	}
 
 	consumeItems(itemIds: Record<string, number>, gameState: GameState): GameState {
-		const newStockpile = { ...(gameState.stockpile ?? {}) };
-		Object.entries(itemIds).forEach(([itemId, amount]) => {
-			newStockpile[itemId] = Math.max(0, (newStockpile[itemId] ?? 0) - amount);
-		});
-		return { ...gameState, stockpile: newStockpile };
+		return consumeFromStockpiles(gameState, itemIds);
 	}
 
 	addItems(itemIds: Record<string, number>, gameState: GameState): GameState {

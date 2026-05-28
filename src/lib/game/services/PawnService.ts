@@ -1,4 +1,5 @@
 import type { GameState, Pawn, PawnNeeds, PawnState, StatusEffectDef } from '../core/types';
+import { consumeFromStockpiles } from '../core/GameState';
 import { calculatePawnAbilities, categorizeAbilities, getAbilityDescription } from '../entities/Pawns';
 import { WORK_CATEGORIES } from '../core/Work';
 import statusEffectsData from '../database/status-effects.jsonc';
@@ -541,9 +542,9 @@ export class PawnServiceImpl implements PawnService {
 	}
 
 	private consumeFoodFromInventory(gameState: GameState, foodId: string, amount: number): void {
-		if (gameState.stockpile) {
-			gameState.stockpile[foodId] = Math.max(0, (gameState.stockpile[foodId] ?? 0) - amount);
-		}
+		const result = consumeFromStockpiles(gameState, { [foodId]: amount });
+		gameState.stockpile = result.stockpile;
+		gameState.stockpileZones = result.stockpileZones;
 		console.log(`[PawnService] Consumed ${amount}x ${foodId} from stockpile`);
 	}
 
@@ -744,9 +745,10 @@ export class PawnServiceImpl implements PawnService {
 	}
 
 	// UPDATED: Calibrated to a 16:8 wake/sleep cycle (1 turn ≈ 1 in-game hour).
-	// baseRest = 4/turn → 0→72 (FATIGUE_THRESHOLD) in 18 turns ≈ Rimworld's 18.2h awake before drowsy.
+	// baseRest = 0.10/turn → 0→72 (FATIGUE_THRESHOLD) in ~720 turns ≈ 12 real min.
+	// Matches Rimworld 1x speed: pawn stays awake 12.63 real minutes before drowsy (45,474 ticks ÷ 60 ticks/sec).
 	private getRestIncreasePerTurn(pawn: Pawn): number {
-		let baseRest = 4;
+		let baseRest = 0.10;
 
 		if (pawn.state.isWorking) {
 			baseRest *= 1.5;
@@ -773,9 +775,10 @@ export class PawnServiceImpl implements PawnService {
 	}
 
 	// Calibrated to 2500 kcal / 3 meals / 16h waking (1 turn ≈ 1 hour).
-	// baseHunger = 6.5/turn → 0→70 (HUNGER_THRESHOLD) in ~10.8 turns ≈ Rimworld's 10.5h between meals.
+	// baseHunger = 0.16/turn → 0→70 (HUNGER_THRESHOLD) in ~437 turns ≈ 7.3 real min.
+	// Matches Rimworld 1x speed: food trigger at ~10.5 in-game hours = 26,250 ticks ÷ 60 ticks/sec.
 	private getHungerIncreasePerTurn(pawn: Pawn): number {
-		let baseHunger = 6.5;
+		let baseHunger = 0.16;
 
 		if (pawn.state.isWorking) {
 			baseHunger *= 1.4;

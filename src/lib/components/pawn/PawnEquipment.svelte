@@ -8,6 +8,7 @@
     canEquipItem,
     syncAllPawnInventories
   } from '$lib/game/core/PawnEquipment';
+  import { consumeFromStockpiles } from '$lib/game/core/GameState';
   import { gameEngine } from '$lib/game/systems/GameEngineImpl';
 
   export let pawn: Pawn;
@@ -48,8 +49,8 @@
         const available = (state.stockpile ?? {})[itemId] ?? 0;
         if (available >= 1) {
           state.pawns[pawnIndex] = useConsumable(state.pawns[pawnIndex], itemId);
-          state.stockpile = { ...state.stockpile, [itemId]: available - 1 };
-          state = syncAllPawnInventories(state);
+          const afterConsume = consumeFromStockpiles(state, { [itemId]: 1 });
+          return syncAllPawnInventories(afterConsume);
         }
       }
       return state;
