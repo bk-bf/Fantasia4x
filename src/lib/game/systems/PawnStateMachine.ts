@@ -39,25 +39,25 @@ export const PAWN_STATE = {
 export type PawnStateName = (typeof PAWN_STATE)[keyof typeof PAWN_STATE];
 
 // ===== NEED THRESHOLDS =====
-// Calibrated to Rimworld 1x speed real-time pacing (1 Fantasia turn ≈ 1 real second):
-//   Hunger:  0.16/turn → 0→70 in ~437 turns ≈ 7.3 real min  (Rimworld: ~26,250 ticks ÷ 60 t/s)
-//   Fatigue: 0.10/turn → 0→72 in ~720 turns ≈ 12 real min   (Rimworld: ~45,474 ticks ÷ 60 t/s)
-//   Bed sleep: 0.23/turn → 72→0 in ~313 turns ≈ 5.2 real min (Rimworld: 18,900 ticks ÷ 60 t/s)
-//   Ground:    0.18/turn → 72→0 in ~400 turns ≈ 6.7 real min (Rimworld: 23,625 ticks ÷ 60 t/s)
+// Calibrated to 1 in-game day = 300 turns (1 turn ≈ 5 in-game min; 1 day ≈ 5 real min at 1 turn/sec):
+//   Hunger:  0.54/turn → 0→70 in ~130 turns ≈ 0.43 days  (matches Rimworld ~10.5h hunger trigger)
+//   Fatigue: 0.32/turn → 0→72 in ~225 turns ≈ 0.75 days  (matches Rimworld ~18h sleep trigger)
+//   Bed sleep: 0.72/turn → 72→0 in ~100 turns = 1/3 day ≈ 8h   (Rimworld 8h bed sleep)
+//   Ground:    0.58/turn → 72→0 in ~124 turns ≈ 9.9h             (Rimworld ~10h ground sleep)
 //   At 2× speed everything is 2× faster; at 4× speed 4× faster — matching Rimworld multi-speed feel.
 const HUNGER_THRESHOLD = 70;           // Seek food at 70% (= Rimworld 30% saturation trigger)
 const CRITICAL_HUNGER = 87;            // Interrupt work — ravenous (Rimworld 12.5% sat = 87.5%)
-const FATIGUE_THRESHOLD = 72;          // Seek rest after ~12 real min (Rimworld: 28% rest = 72% fatigue)
+const FATIGUE_THRESHOLD = 72;          // Seek rest after ~225 turns ≈ 0.75 days (28% rest = 72% fatigue)
 const CRITICAL_FATIGUE = 95;           // Emergency work interrupt — near collapse
-const EATING_TURNS = 5;                // Turns to eat at a campfire (~5 seconds)
-const EATING_TURNS_GROUND = 7;         // Turns eating in-place (cold, uncomfortable)
-const SLEEPING_TURNS = 313;            // Full recovery in bed: 72 / 0.23 ≈ 313 turns (progress bar ref)
-const SLEEPING_TURNS_GROUND = 400;     // Full recovery on ground: 72 / 0.18 = 400 turns
+const EATING_TURNS = 2;                // Turns to eat at a campfire (~2 in-game min)
+const EATING_TURNS_GROUND = 3;         // Turns eating in-place (cold, uncomfortable)
+const SLEEPING_TURNS = 100;            // Full recovery in bed: 72 / 0.72 = 100 turns = 1/3 day (progress bar ref)
+const SLEEPING_TURNS_GROUND = 124;     // Full recovery on ground: 72 / 0.58 ≈ 124 turns ≈ 9.9h
 const HUNGER_PER_FOOD_UNIT = 30;       // Base hunger restored per 1 unit (×nutrition)
 const SAFE_HUNGER = 10;                // Target hunger level after a full meal
 const MAX_UNITS_PER_FOOD_TYPE = 3;     // Cap per food type per meal — avoids hoarding
-const FATIGUE_PER_SLEEPING_TURN = 0.23; // Bed: 72 fatigue → 0 in ~313 turns ≈ 5.2 real min
-const FATIGUE_PER_SLEEPING_GROUND = 0.18; // Ground: 72 → 0 in ~400 turns ≈ 6.7 real min
+const FATIGUE_PER_SLEEPING_TURN = 0.72; // Bed: 72 fatigue → 0 in ~100 turns = 8 in-game hours
+const FATIGUE_PER_SLEEPING_GROUND = 0.58; // Ground: 72 → 0 in ~124 turns ≈ 9.9 in-game hours
 // Wake thresholds — prevents yo-yo by requiring proper rest before resuming activity
 const SLEEP_WAKE_THRESHOLD_FED = 0;    // Sleep until fully restored when not hungry
 const SLEEP_WAKE_THRESHOLD_HUNGRY = 30; // Allow early waking at 30% to go eat
@@ -379,9 +379,9 @@ function depositInventory(pawn: Pawn, gs: GameState): GameState {
     // Find the zone to credit: the stockpile tile adjacent to (or at) the pawn's position
     const depositTileKey = pawn.position
         ? stockpileTiles.find(({ x, y }) =>
-            isAdjacent(pawn.position!.x, pawn.position!.y, x, y) ||
-            (x === pawn.position!.x && y === pawn.position!.y)
-        )?.key ?? null
+              isAdjacent(pawn.position!.x, pawn.position!.y, x, y) ||
+              (x === pawn.position!.x && y === pawn.position!.y)
+          )?.key ?? null
         : null;
 
     const newPawns = gs.pawns.map((p) =>
@@ -469,10 +469,15 @@ function handleMovingToDeposit(pawn: Pawn, gameState: GameState): GameState {
  */
 function syncActiveEffects(pawn: Pawn): Pawn {
     const effects: string[] = [];
-    if (pawn.state?.isEating || pawn.currentState === PAWN_STATE.EATING) effects.push('eating');
-    if (pawn.state?.isSleeping || pawn.currentState === PAWN_STATE.SLEEPING) effects.push('sleeping');
-    if ((pawn.needs?.fatigue ?? 0) >= FATIGUE_THRESHOLD) effects.push('tired');
-    if ((pawn.needs?.hunger ?? 0) >= HUNGER_THRESHOLD) effects.push('hungry');
+    const isEating = pawn.state?.isEating || pawn.currentState === PAWN_STATE.EATING;
+    const isSleeping = pawn.state?.isSleeping || pawn.currentState === PAWN_STATE.SLEEPING;
+
+    if (isEating) effects.push('eating');
+    if (isSleeping) effects.push('sleeping');
+    // Only show need-state badges when the pawn is NOT already acting on them.
+    // Eating supersedes hungry; sleeping supersedes tired.
+    if (!isSleeping && (pawn.needs?.fatigue ?? 0) >= FATIGUE_THRESHOLD) effects.push('tired');
+    if (!isEating && (pawn.needs?.hunger ?? 0) >= HUNGER_THRESHOLD) effects.push('hungry');
 
     const current = pawn.activeEffects ?? [];
     if (effects.length === current.length && effects.every((e, i) => e === current[i])) return pawn;

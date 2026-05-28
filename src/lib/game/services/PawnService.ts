@@ -744,11 +744,9 @@ export class PawnServiceImpl implements PawnService {
 		return regen;
 	}
 
-	// UPDATED: Calibrated to a 16:8 wake/sleep cycle (1 turn ≈ 1 in-game hour).
-	// baseRest = 0.10/turn → 0→72 (FATIGUE_THRESHOLD) in ~720 turns ≈ 12 real min.
-	// Matches Rimworld 1x speed: pawn stays awake 12.63 real minutes before drowsy (45,474 ticks ÷ 60 ticks/sec).
+	// Calibrated to 1 day = 300 turns: 0→72 in ~225 turns ≈ 0.75 days (matches Rimworld ~18h wake cycle).
 	private getRestIncreasePerTurn(pawn: Pawn): number {
-		let baseRest = 0.10;
+		let baseRest = 0.32;
 
 		if (pawn.state.isWorking) {
 			baseRest *= 1.5;
@@ -774,11 +772,9 @@ export class PawnServiceImpl implements PawnService {
 		return Math.max(0.1, baseRest);
 	}
 
-	// Calibrated to 2500 kcal / 3 meals / 16h waking (1 turn ≈ 1 hour).
-	// baseHunger = 0.16/turn → 0→70 (HUNGER_THRESHOLD) in ~437 turns ≈ 7.3 real min.
-	// Matches Rimworld 1x speed: food trigger at ~10.5 in-game hours = 26,250 ticks ÷ 60 ticks/sec.
+	// Calibrated to 1 day = 300 turns: 0→70 in ~130 turns ≈ 0.43 days (matches Rimworld ~10.5h hunger trigger).
 	private getHungerIncreasePerTurn(pawn: Pawn): number {
-		let baseHunger = 0.16;
+		let baseHunger = 0.54;
 
 		if (pawn.state.isWorking) {
 			baseHunger *= 1.4;

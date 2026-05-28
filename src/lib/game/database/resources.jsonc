@@ -53,7 +53,7 @@
                     "max"            : 5,
                     "skillId"        : "woodcutting",
                     "skillMultiplier": 0.2,
-                    "regrowthTurns"  : 336 // ~2 weeks at 24 turns/day
+                    "regrowthTurns"  : 4200 // ~2 weeks at 300 turns/day
                 },
                 {
                     "itemId"         : "bark",
@@ -61,7 +61,7 @@
                     "max"            : 2,
                     "skillId"        : "woodcutting",
                     "skillMultiplier": 0.1,
-                    "regrowthTurns"  : 120 // ~5 days (bark grows back faster than wood)
+                    "regrowthTurns"  : 1500 // ~5 days at 300 turns/day
                 }
             ],
             "persistent"     : true,
@@ -141,7 +141,7 @@
                 {"itemId": "herbs", "min": 1, "max": 3, "skillId": "foraging", "skillMultiplier": 0.15}
             ],
             "persistent"     : true,
-            "regrowthTurns"  : 96 // ~4 days
+            "regrowthTurns"  : 1200 // ~4 days at 300 turns/day
         }
     },
 
@@ -235,7 +235,7 @@
                 {"itemId": "plant_fiber", "min": 2, "max": 4, "skillId": "foraging", "skillMultiplier": 0.15}
             ],
             "persistent"     : true,
-            "regrowthTurns"  : 168 // ~1 week
+            "regrowthTurns"  : 2100 // ~1 week at 300 turns/day
         }
     },
 
@@ -375,7 +375,7 @@
                 {"itemId": "wild_berries", "min": 2, "max": 4, "skillId": "foraging", "skillMultiplier": 0.2}
             ],
             "persistent"     : true,
-            "regrowthTurns"  : 192 // ~8 days
+            "regrowthTurns"  : 2400 // ~8 days at 300 turns/day
         }
     },
 
@@ -400,7 +400,7 @@
                 {"itemId": "wild_oats", "min": 2, "max": 4, "skillId": "foraging", "skillMultiplier": 0.15}
             ],
             "persistent"     : true,
-            "regrowthTurns"  : 240 // ~10 days
+            "regrowthTurns"  : 3000 // ~10 days at 300 turns/day
         }
     },
 
@@ -428,7 +428,7 @@
                 {"itemId": "plant_fiber", "min": 1, "max": 2, "skillId": "foraging", "skillMultiplier": 0.05}
             ],
             "persistent"     : true,
-            "regrowthTurns"  : 240 // ~10 days
+            "regrowthTurns"  : 3000 // ~10 days at 300 turns/day
         }
     },
 

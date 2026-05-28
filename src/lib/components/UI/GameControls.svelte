@@ -12,7 +12,7 @@
   let mapSeedInput = String(Date.now() >>> 0);
 
   // ===== IN-GAME CALENDAR =====
-  const HOURS_PER_DAY = 24;
+  const TURNS_PER_DAY = 300; // 1 in-game day = 300 turns ≈ 5 real min at 1 turn/sec
   const DAYS_PER_MONTH = 30;
   const MONTHS_PER_YEAR = 12;
 
@@ -46,8 +46,8 @@
   ];
 
   function turnToGameDate(turn: number) {
-    const totalDays = Math.floor(turn / HOURS_PER_DAY);
-    const hour = turn % HOURS_PER_DAY;
+    const totalDays = Math.floor(turn / TURNS_PER_DAY);
+    const hour = Math.floor((turn % TURNS_PER_DAY) / TURNS_PER_DAY * 24);
     const totalMonths = Math.floor(totalDays / DAYS_PER_MONTH);
     const year = Math.floor(totalMonths / MONTHS_PER_YEAR) + 1;
     const monthIdx = totalMonths % MONTHS_PER_YEAR;
