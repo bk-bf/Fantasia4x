@@ -7,7 +7,7 @@
  * Original system (no Celestia equivalent).
  */
 
-import type { GameState, DesignationType } from '../core/types';
+import type { GameState, DesignationType, FilterableZoneType, ZoneFilter } from '../core/types';
 
 class DesignationServiceImpl {
     private key(x: number, y: number): string {
@@ -114,6 +114,33 @@ class DesignationServiceImpl {
             }
         }
         return { ...gameState, designations: newDesignations };
+    }
+
+    // ------------------------------------------------------------------ //
+    // ZONE FILTERS                                                         //
+    // ------------------------------------------------------------------ //
+
+    /**
+     * Set (or replace) the category filter for a filterable zone type.
+     * An empty `allowedCategories` array disables filtering for that zone type.
+     */
+    setZoneFilter(type: FilterableZoneType, filter: ZoneFilter, gameState: GameState): GameState {
+        return {
+            ...gameState,
+            zoneFilters: { ...(gameState.zoneFilters ?? {}), [type]: filter }
+        };
+    }
+
+    /** Remove the filter for a zone type, reverting it to "collect everything". */
+    clearZoneFilter(type: FilterableZoneType, gameState: GameState): GameState {
+        const next = { ...(gameState.zoneFilters ?? {}) };
+        delete next[type];
+        return { ...gameState, zoneFilters: next };
+    }
+
+    /** Get the current filter for a zone type (undefined = no filter). */
+    getZoneFilter(type: FilterableZoneType, gameState: GameState): ZoneFilter | undefined {
+        return gameState.zoneFilters?.[type];
     }
 }
 

@@ -9,7 +9,7 @@
  * indirectly through PawnStateMachine (claimJob / advanceJob / releaseJob).
  */
 
-import type { GameState, Job, Pawn, DroppedItem } from '../core/types';
+import type { GameState, Job, Pawn, DroppedItem, ZoneFilter } from '../core/types';
 import itemsData from '../database/items.jsonc';
 import { resourceObjectService } from './ResourceObjectService';
 import { itemService } from './ItemService';
@@ -176,6 +176,7 @@ class JobServiceImpl {
             const designationType = gs.designations?.[`${j.targetX},${j.targetY}`];
             if (designationType !== 'harvest' && designationType !== 'forage' && designationType !== 'scavenge') return false;
             if (!this._resourceMatchesDesignation(designationType, j.resourceId ?? '')) return false;
+            if (!this._resourceMatchesFilter(designationType, j.resourceId ?? '', gs)) return false;
             const tile = gs.worldMap[j.targetY]?.[j.targetX];
             return (tile?.resources?.[j.resourceId ?? ''] ?? 0) > 0;
         });
@@ -190,6 +191,7 @@ class JobServiceImpl {
             for (const [resourceId, amount] of Object.entries(tile.resources ?? {})) {
                 if ((amount ?? 0) <= 0) continue;
                 if (!this._resourceMatchesDesignation(dtype, resourceId)) continue;
+                if (!this._resourceMatchesFilter(dtype, resourceId, gs)) continue;
 
                 const exists = jobs.some(
                     (j) =>
@@ -399,7 +401,13 @@ class JobServiceImpl {
 
     private _syncHaulJobs(jobs: Job[], gs: GameState): Job[] {
         // Only consider non-stored drops (stored = already in stockpile)
-        const drops = (gs.droppedItems ?? []).filter((d) => !d.stored);
+        const allDrops = (gs.droppedItems ?? []).filter((d) => !d.stored);
+        // Apply stockpile zone filter — only haul items whose category is allowed.
+        const stockpileFilter = gs.zoneFilters?.['stockpile'];
+        const drops =
+            !stockpileFilter || stockpileFilter.allowedCategories.length === 0
+                ? allDrops
+                : allDrops.filter((d) => this._itemMatchesFilter(d.resourceId, stockpileFilter));
         console.log(`[HAUL-SYNC] drops on ground: ${drops.length}`, drops.map(d => `${d.id}(${d.resourceId}×${d.quantity})`));
 
         // Haul jobs only make sense when there is a stockpile zone to deliver to.
@@ -652,6 +660,33 @@ class JobServiceImpl {
         const def = resourceObjectService.getById(resourceId);
         if (!def) return designationType === 'harvest';
         return def.designationTypes.includes(designationType);
+    }
+
+    /**
+     * Returns false if the zone's filter excludes this tile resource.
+     * A resource passes if at least one of its yielded items falls in allowedCategories
+     * and is not in blockedItems.
+     */
+    private _resourceMatchesFilter(
+        designationType: 'harvest' | 'forage' | 'scavenge',
+        resourceId: string,
+        gs: GameState
+    ): boolean {
+        const filter = gs.zoneFilters?.[designationType];
+        if (!filter || filter.allowedCategories.length === 0) return true;
+        const def = resourceObjectService.getById(resourceId);
+        if (!def) return true;
+        return def.interaction.yields.some((y) => this._itemMatchesFilter(y.itemId, filter));
+    }
+
+    /** Check whether a single item ID passes a ZoneFilter. */
+    private _itemMatchesFilter(
+        itemId: string,
+        filter: ZoneFilter
+    ): boolean {
+        if (filter.blockedItems.includes(itemId)) return false;
+        const item = ITEMS_DATABASE.find((i) => i.id === itemId);
+        return item ? filter.allowedCategories.includes(item.category) : false;
     }
 
     // ------------------------------------------------------------------ //
