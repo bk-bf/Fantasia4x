@@ -322,29 +322,64 @@ class JobServiceImpl {
         const available = tile?.resources?.[job.resourceId] ?? 0;
         if (available <= 0) return gs;
 
+        // Determine whether this resource should persist (stay on map with a regrowth cooldown).
+        const def = resourceObjectService.getById(job.resourceId);
+        const isPersistent = def?.interaction.persistent === true;
+        const designationType = (gs.designations ?? {})[`${job.targetX},${job.targetY}`];
+        const shouldPersist = isPersistent &&
+            !(def?.interaction.harvestDepletes === true && designationType === 'harvest');
+
+        // Determine which yields are currently available (their per-yield cooldowns may be active).
+        // Compound cooldown keys are formatted as "resourceId:itemId".
+        let availableItemIds: Set<string> | undefined;
+        if (shouldPersist && def) {
+            const currentCooldowns = tile.resourceCooldowns ?? {};
+            const yieldHasPerItemCooldowns = def.interaction.yields.some((y) => y.regrowthTurns !== undefined);
+            if (yieldHasPerItemCooldowns) {
+                availableItemIds = new Set<string>();
+                for (const y of def.interaction.yields) {
+                    const key = `${job.resourceId}:${y.itemId}`;
+                    if (!(key in currentCooldowns)) {
+                        availableItemIds.add(y.itemId);
+                    }
+                }
+            }
+        }
+
         const pawn = gs.pawns.find((p) => p.id === job.claimedBy);
-        const yields = resourceObjectService.calculateYield(job.resourceId, pawn);
+        const yields = resourceObjectService.calculateYield(job.resourceId, pawn, availableItemIds);
         const yieldEntries = Object.entries(yields);
         if (yieldEntries.length === 0) yieldEntries.push([job.resourceId, 1]);
 
-        // Consume the whole resource node so the source object disappears.
+        // Build updated tile — zero resources + set per-yield or interaction-level cooldowns.
         const newWorldMap = gs.worldMap.map((row, ry) =>
             ry === job.targetY
-                ? row.map((col, rx) =>
-                    rx === job.targetX
-                        ? {
-                            ...col,
-                            resources: {
-                                ...col.resources,
-                                [job.resourceId!]: 0
+                ? row.map((col, rx) => {
+                    if (rx !== job.targetX) return col;
+                    const updatedResources = { ...col.resources, [job.resourceId!]: 0 };
+                    if (!shouldPersist) return { ...col, resources: updatedResources };
+
+                    const newCooldowns = { ...(col.resourceCooldowns ?? {}) };
+                    const yieldHasPerItemCooldowns = def!.interaction.yields.some((y) => y.regrowthTurns !== undefined);
+
+                    if (yieldHasPerItemCooldowns) {
+                        // Per-yield compound keys: "resourceId:itemId" → turn
+                        for (const y of def!.interaction.yields) {
+                            if (y.regrowthTurns && (availableItemIds?.has(y.itemId) ?? true)) {
+                                newCooldowns[`${job.resourceId!}:${y.itemId}`] = gs.turn + y.regrowthTurns;
                             }
                         }
-                        : col
-                )
+                    } else if (def?.interaction.regrowthTurns) {
+                        // Simple whole-resource cooldown
+                        newCooldowns[job.resourceId!] = gs.turn + def.interaction.regrowthTurns;
+                    }
+
+                    return { ...col, resources: updatedResources, resourceCooldowns: newCooldowns };
+                })
                 : row
         );
 
-        // Spawn one DroppedItem per yield type so all materials get hauled to stockpile
+        // Spawn one DroppedItem per yield type
         const newDropped = [...(gs.droppedItems ?? [])];
         for (const [dropResourceId, dropAmount] of yieldEntries) {
             const drop: DroppedItem = {
@@ -356,7 +391,7 @@ class JobServiceImpl {
             };
             newDropped.push(drop);
             console.log(
-                `[JobService] Harvest complete: ${job.resourceId} at (${job.targetX},${job.targetY}) → ${dropResourceId} x${dropAmount} (${drop.id})`
+                `[JobService] Harvest complete: ${job.resourceId} at (${job.targetX},${job.targetY}) → ${dropResourceId} x${dropAmount}${shouldPersist ? ' (persistent)' : ''}`
             );
         }
         return { ...gs, worldMap: newWorldMap, droppedItems: newDropped };

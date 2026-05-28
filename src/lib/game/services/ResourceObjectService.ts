@@ -8,6 +8,12 @@ export interface ResourceYieldDef {
     max: number;
     skillId: string;
     skillMultiplier: number;
+    /**
+     * When set, this specific yield item has its own regrowth timer (independent of
+     * other yields from the same resource). Requires `persistent: true` on the interaction.
+     * Cooldown is tracked as a compound key `resourceId:itemId` in `WorldTile.resourceCooldowns`.
+     */
+    regrowthTurns?: number;
 }
 
 export interface ToolRequirement {
@@ -21,6 +27,19 @@ export interface ResourceInteractionDef {
     workAmount: number;
     toolRequirement: ToolRequirement | null;
     yields: ResourceYieldDef[];
+    /**
+     * When true the resource object persists after harvesting — items are depleted
+     * and a regrowth cooldown is started instead of removing the node permanently.
+     */
+    persistent?: boolean;
+    /**
+     * When persistent is true but harvestDepletes is also true, a job triggered
+     * by a 'harvest' designation still destroys the node (e.g. chopping a tree).
+     * A 'forage' designation on the same resource keeps the node alive.
+     */
+    harvestDepletes?: boolean;
+    /** Turns to wait before items regrow (requires persistent: true). */
+    regrowthTurns?: number;
 }
 
 export interface ResourceObjectDef {
@@ -74,12 +93,13 @@ class ResourceObjectServiceImpl {
         return (this.getById(resourceId)?.interaction.workAmount ?? 5) * 3;
     }
 
-    calculateYield(resourceId: string, pawn?: Pawn): Record<string, number> {
+    calculateYield(resourceId: string, pawn?: Pawn, availableItemIds?: Set<string>): Record<string, number> {
         const def = this.getById(resourceId);
         if (!def) return { [resourceId]: 1 };
 
         const result: Record<string, number> = {};
         for (const y of def.interaction.yields) {
+            if (availableItemIds && !availableItemIds.has(y.itemId)) continue;
             const roll = this.randomInt(y.min, y.max);
             const skill = this.getSkillLevel(pawn, y.skillId, def.interaction.workCategory);
             const multiplier = Math.max(1, 1 + skill * y.skillMultiplier);

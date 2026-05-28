@@ -748,6 +748,8 @@ export interface WorldTile {
 	movementCost: number;
 	walkable: boolean;
 	resources: Record<string, number>;
+	/** resourceId → turn number when that resource finishes regrowing (persistent resources). */
+	resourceCooldowns?: Record<string, number>;
 	territoryOwner: string;
 	// A* scratch fields (reset before each pathfind, not persisted)
 	gCost?: number;

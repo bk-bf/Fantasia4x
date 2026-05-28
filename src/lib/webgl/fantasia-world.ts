@@ -34,12 +34,43 @@ export function buildGameGrid(
 
             if (hasResources) {
                 const activeEntry = Object.entries(tile.resources!).find(([, amt]) => amt > 0);
-                const resDef = activeEntry ? resourceObjectService.getById(activeEntry[0]) : undefined;
+
+                // Resolve which resource is showing a cooldown glyph when fully depleted.
+                // Cooldown keys are either "resourceId" (simple) or "resourceId:itemId" (compound).
+                let cooldownResourceId: string | undefined;
+                if (!activeEntry) {
+                    const firstCoolingKey = Object.keys(tile.resourceCooldowns ?? {}).find(
+                        (k) => (tile.resourceCooldowns![k] ?? 0) > 0
+                    );
+                    if (firstCoolingKey) {
+                        cooldownResourceId = firstCoolingKey.includes(':')
+                            ? firstCoolingKey.split(':')[0]
+                            : firstCoolingKey;
+                    }
+                }
+
+                // Partial recovery: resource count > 0 but some per-yield cooldowns still active.
+                const isPartialRecovery = activeEntry
+                    ? Object.keys(tile.resourceCooldowns ?? {}).some((k) =>
+                        k.startsWith(activeEntry[0] + ':')
+                    )
+                    : false;
+
+                const resKey = activeEntry?.[0] ?? cooldownResourceId;
+                const resDef = resKey ? resourceObjectService.getById(resKey) : undefined;
                 if (resDef && resDef.chars.length > 0) {
                     // Resource layer: pick deterministic char from the resource's char pool
                     const h = ((tile.x * 1619 + tile.y * 31337) >>> 0) % resDef.chars.length;
                     char = resDef.chars[h];
-                    fg = resDef.fg;
+                    if (cooldownResourceId) {
+                        // Fully depleted + on cooldown — very dim (35% brightness)
+                        fg = [resDef.fg[0] * 0.35, resDef.fg[1] * 0.35, resDef.fg[2] * 0.35];
+                    } else if (isPartialRecovery) {
+                        // Some yields back, some still cooling — medium brightness (65%)
+                        fg = [resDef.fg[0] * 0.65, resDef.fg[1] * 0.65, resDef.fg[2] * 0.65];
+                    } else {
+                        fg = resDef.fg;
+                    }
                     bg = resDef.bg;
                 } else {
                     // Resource depleted or unknown — show base subterrain

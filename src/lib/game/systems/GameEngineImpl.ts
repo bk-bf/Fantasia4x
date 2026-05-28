@@ -18,6 +18,7 @@ import buildingsData from '../database/buildings.json';
 import { pawnStateMachineService } from './PawnStateMachine';
 import { jobService } from '../services/JobService';
 import { wasmPathfinderService } from '../services/WasmPathfinderService';
+import { resourceObjectService } from '../services/ResourceObjectService';
 import type { WorkCategory } from '../core/types';
 import type { Pawn } from '../core/types';
 
@@ -292,6 +293,7 @@ export class GameEngineImpl implements GameEngine {
 			this.processResearch();
 			this.processPawns();
 			this.processLocationRenewal();
+			this.processResourceRegrowth();
 			this.debugLogPawns();
 
 			this.lastTurnProcessed = this.gameState.turn;
@@ -343,6 +345,91 @@ export class GameEngineImpl implements GameEngine {
 	private processLocationRenewal(): void {
 		console.log('[GameEngine] Coordinating location resource renewal through LocationService');
 		locationService.processAllLocationRenewal();
+	}
+
+	/**
+	 * Restore resources on tiles whose regrowth cooldown has expired.
+	 * Handles two key formats:
+	 *  - Simple:   `"resourceId"` → whole-resource cooldown (berry_bush, wildflower, etc.)
+	 *  - Compound: `"resourceId:itemId"` → per-yield cooldown (tree bark vs wood)
+	 *
+	 * For compound keys, the resource partially restores (count = 1) when the first
+	 * yield recovers so a new job can be claimed.  Full restoration happens once all
+	 * per-yield cooldowns for that resource have cleared.
+	 */
+	private processResourceRegrowth(): void {
+		if (!this.gameState) return;
+		const gs = this.gameState;
+		let anyChanged = false;
+
+		const newWorldMap = gs.worldMap.map((row) =>
+			row.map((tile) => {
+				const cooldowns = tile.resourceCooldowns;
+				if (!cooldowns || Object.keys(cooldowns).length === 0) return tile;
+
+				// Take a snapshot of the entries we need to process this turn.
+				const expiredEntries = Object.entries(cooldowns).filter(([, turn]) => gs.turn >= turn);
+				if (expiredEntries.length === 0) return tile;
+
+				let updatedTile = tile;
+				for (const [key] of expiredEntries) {
+					const isCompound = key.includes(':');
+
+					if (isCompound) {
+						// Compound key: "resourceId:itemId"
+						const colonIdx = key.indexOf(':');
+						const resourceId = key.slice(0, colonIdx);
+
+						// Remove this yield's cooldown.
+						const newCooldowns = { ...updatedTile.resourceCooldowns };
+						delete newCooldowns[key];
+
+						// Check whether any other per-yield cooldowns for this resource remain.
+						const anyStillCooling = Object.keys(newCooldowns).some(
+							(k) => k.startsWith(resourceId + ':')
+						);
+
+						const def = resourceObjectService.getById(resourceId);
+						let newResourceCount: number;
+						if (anyStillCooling) {
+							// Partial recovery — make node available (count = 1) so a job can be
+							// created, but only the non-cooled yields will actually be harvested.
+							newResourceCount = 1;
+							console.log(`[Regrowth] ${key} at (${tile.x},${tile.y}) recovered (partial — other yields still cooling)`);
+						} else {
+							// All yields recovered — full random restore.
+							const [minAmt, maxAmt] = def?.nodeAmountRange ?? [1, 3];
+							newResourceCount = minAmt + Math.floor(Math.random() * (maxAmt - minAmt + 1));
+							console.log(`[Regrowth] ${resourceId} at (${tile.x},${tile.y}) fully restored ×${newResourceCount}`);
+						}
+
+						updatedTile = {
+							...updatedTile,
+							resources: { ...updatedTile.resources, [resourceId]: newResourceCount },
+							resourceCooldowns: newCooldowns
+						};
+					} else {
+						// Simple whole-resource cooldown.
+						const def = resourceObjectService.getById(key);
+						const [minAmt, maxAmt] = def?.nodeAmountRange ?? [1, 3];
+						const restored = minAmt + Math.floor(Math.random() * (maxAmt - minAmt + 1));
+
+						const newCooldowns = { ...updatedTile.resourceCooldowns };
+						delete newCooldowns[key];
+						updatedTile = {
+							...updatedTile,
+							resources: { ...updatedTile.resources, [key]: restored },
+							resourceCooldowns: newCooldowns
+						};
+						console.log(`[Regrowth] ${key} at (${tile.x},${tile.y}) regrew ×${restored}`);
+					}
+					anyChanged = true;
+				}
+				return updatedTile;
+			})
+		);
+
+		if (anyChanged) this.gameState = { ...gs, worldMap: newWorldMap };
 	}
 
 	private debugLogPawns(): void {
