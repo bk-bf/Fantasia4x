@@ -11,6 +11,63 @@
   let currentScreen = 'main';
   let mapSeedInput = String(Date.now() >>> 0);
 
+  // ===== IN-GAME CALENDAR =====
+  const HOURS_PER_DAY = 24;
+  const DAYS_PER_MONTH = 30;
+  const MONTHS_PER_YEAR = 12;
+
+  const MONTH_NAMES = [
+    'Deepwinter',
+    'Thawing',
+    'Seedtime',
+    'Budding',
+    'Flowering',
+    'Midsummer',
+    'Hightide',
+    'Harvest',
+    'Goldfall',
+    'Frostfall',
+    'Snowfall',
+    'Midwinter'
+  ];
+  const MONTH_ABBR = [
+    'DWN',
+    'THW',
+    'SEE',
+    'BUD',
+    'FLW',
+    'MDS',
+    'HTD',
+    'HRV',
+    'GOL',
+    'FRO',
+    'SNO',
+    'MDW'
+  ];
+
+  function turnToGameDate(turn: number) {
+    const totalDays = Math.floor(turn / HOURS_PER_DAY);
+    const hour = turn % HOURS_PER_DAY;
+    const totalMonths = Math.floor(totalDays / DAYS_PER_MONTH);
+    const year = Math.floor(totalMonths / MONTHS_PER_YEAR) + 1;
+    const monthIdx = totalMonths % MONTHS_PER_YEAR;
+    const day = (totalDays % DAYS_PER_MONTH) + 1;
+    return {
+      year,
+      day,
+      monthIdx,
+      monthAbbr: MONTH_ABBR[monthIdx],
+      monthName: MONTH_NAMES[monthIdx],
+      hour,
+      hourStr: String(hour).padStart(2, '0'),
+      dayStr: String(day).padStart(2, '0'),
+      monthStr: String(monthIdx + 1).padStart(2, '0'),
+      yearStr: String(year).padStart(4, '0')
+    };
+  }
+
+  $: gameDate = turnToGameDate(currentTurnValue);
+
   function regenMap() {
     const parsed = parseInt(mapSeedInput, 10);
     const s = !isNaN(parsed) && parsed > 0 ? parsed : Date.now() >>> 0;
@@ -52,11 +109,10 @@
 
 <div class="topbar">
   <span class="bi title">FANTASIA4X</span>
-  <span class="bi turn"
-    >{String(Math.floor(currentTurnValue / 24)).padStart(3, '0')}:{String(
-      currentTurnValue % 24
-    ).padStart(2, '0')}</span
+  <span class="bi date" title="{gameDate.monthName} {gameDate.day}, Year {gameDate.year}"
+    >{gameDate.dayStr}/{gameDate.monthStr}/{gameDate.yearStr} {gameDate.hourStr}:00</span
   >
+  <span class="bi turn" title="Turn {currentTurnValue}">T{currentTurnValue}</span>
   <span class="bi" class:running={!isPaused} class:paused={isPaused}>
     {isPaused ? '■ PAUSED' : '● RUNNING'}
   </span>
@@ -116,6 +172,14 @@
     color: var(--accent-hi);
     font-weight: bold;
     letter-spacing: 0.05em;
+  }
+  .bi.date {
+    color: var(--text-dim);
+    letter-spacing: 0.02em;
+  }
+  .bi.turn {
+    color: var(--text-muted);
+    font-size: 10px;
   }
   .bi.running {
     color: var(--pos);

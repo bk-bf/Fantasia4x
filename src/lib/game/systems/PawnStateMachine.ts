@@ -379,9 +379,9 @@ function depositInventory(pawn: Pawn, gs: GameState): GameState {
     // Find the zone to credit: the stockpile tile adjacent to (or at) the pawn's position
     const depositTileKey = pawn.position
         ? stockpileTiles.find(({ x, y }) =>
-              isAdjacent(pawn.position!.x, pawn.position!.y, x, y) ||
-              (x === pawn.position!.x && y === pawn.position!.y)
-          )?.key ?? null
+            isAdjacent(pawn.position!.x, pawn.position!.y, x, y) ||
+            (x === pawn.position!.x && y === pawn.position!.y)
+        )?.key ?? null
         : null;
 
     const newPawns = gs.pawns.map((p) =>
