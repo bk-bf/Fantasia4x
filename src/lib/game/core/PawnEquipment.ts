@@ -318,7 +318,7 @@ export function useConsumable(pawn: Pawn, itemId: string): Pawn {
     if (typeof value === 'number') {
       switch (effect) {
         case 'healthRestore':
-          updatedPawn.state.health = Math.min(100, updatedPawn.state.health + value);
+          updatedPawn.state.health = Math.min(100, (updatedPawn.state.health ?? 100) + value);
           break;
         case 'energyBoost':
           updatedPawn.needs.fatigue = Math.max(0, updatedPawn.needs.fatigue - value * 10);

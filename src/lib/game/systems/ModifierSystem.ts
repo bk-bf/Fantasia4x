@@ -14,15 +14,19 @@ import type {
 	Building,
 	WorkCategory,
 	RacialTrait,
-	EquippedItem
+	EquippedItem,
+	ConditionDef,
+	ConditionStage
 } from '../core/types';
 import itemsData from '../database/items.jsonc';
 import buildingsData from '../database/buildings.jsonc';
+import conditionsData from '../database/conditions.jsonc';
 import { WORK_CATEGORIES } from '../core/Work';
 import { building } from '$app/environment';
 
 const ITEMS_DATABASE = itemsData as unknown as Item[];
 const AVAILABLE_BUILDINGS = buildingsData as unknown as Building[];
+const CONDITIONS_DB = conditionsData as unknown as ConditionDef[];
 
 /**
  * Represents a modifier source and its contribution
@@ -786,11 +790,10 @@ export class ModifierSystemImpl implements ModifierSystem {
 		const sources: ModifierSource[] = [];
 		let multiplier = 1.0;
 
-		// Health modifier
-		if (pawn.state.health < 100) {
+		// Legacy health modifier (kept for backwards compat with old saves that still set state.health).
+		if (pawn.state.health !== undefined && pawn.state.health < 100) {
 			const healthPenalty = pawn.state.health / 100;
 			multiplier *= healthPenalty;
-
 			sources.push({
 				id: 'health',
 				name: 'Health',
@@ -798,6 +801,45 @@ export class ModifierSystemImpl implements ModifierSystem {
 				value: healthPenalty,
 				description: `Health (${pawn.state.health}%) reduces efficiency by ${((1 - healthPenalty) * 100).toFixed(0)}%`
 			});
+		}
+
+		// Condition stage modifiers (malnutrition, blood_loss, …)
+		for (const condition of (pawn.conditions ?? [])) {
+			const def = CONDITIONS_DB.find((d) => d.id === condition.id);
+			if (!def) continue;
+			// Find highest applicable stage
+			let activeStage: ConditionStage | undefined;
+			for (const stage of def.stages) {
+				if (condition.severity >= stage.minSeverity) activeStage = stage;
+			}
+			if (!activeStage) continue;
+
+			if (activeStage.modifiers.workEfficiency !== undefined && activeStage.modifiers.workEfficiency < 1) {
+				const penalty = activeStage.modifiers.workEfficiency;
+				multiplier *= penalty;
+				sources.push({
+					id: `condition_${condition.id}`,
+					name: `${def.name} (${activeStage.label})`,
+					type: 'stat',
+					value: penalty,
+					description: `${def.name} (${activeStage.label}) reduces work efficiency by ${((1 - penalty) * 100).toFixed(0)}%`
+				});
+			}
+		}
+
+		// Missing limb functional penalties
+		for (const limb of (pawn.limbs ?? [])) {
+			if (!limb.isMissing) continue;
+			if (limb.id === 'left_arm' || limb.id === 'right_arm') {
+				multiplier *= 0.6;
+				sources.push({
+					id: `missing_${limb.id}`,
+					name: `Missing ${limb.id.replace('_', ' ')}`,
+					type: 'stat',
+					value: 0.6,
+					description: `Missing ${limb.id.replace('_', ' ')} reduces work efficiency by 40%`
+				});
+			}
 		}
 
 		// Morale modifier

@@ -13,14 +13,16 @@
  * turn-based ticks and Fantasia4x GameState immutability.
  */
 
-import type { GameState, Pawn } from '../core/types';
+import type { GameState, Pawn, ConditionDef, ConditionStage } from '../core/types';
 import { addToStockpileZone } from '../core/GameState';
 import ITEMS_DATABASE from '../database/items.jsonc';
+import conditionsData from '../database/conditions.jsonc';
 import { jobService, BASE_WORK_RATE } from '../services/JobService';
 import { pawnService } from '../services/PawnService';
 import { itemService } from '../services/ItemService';
 import { wasmPathfinderService } from '../services/WasmPathfinderService';
 import { buildPathfindingGrids } from '../services/PathfinderService';
+import { logActivity } from '../../stores/Log';
 
 // ===== STATE NAME CONSTANTS =====
 export const PAWN_STATE = {
@@ -62,7 +64,175 @@ const FATIGUE_PER_SLEEPING_GROUND = 0.58; // Ground: 72 → 0 in ~124 turns ≈ 
 const SLEEP_WAKE_THRESHOLD_FED = 0;    // Sleep until fully restored when not hungry
 const SLEEP_WAKE_THRESHOLD_HUNGRY = 30; // Allow early waking at 30% to go eat
 
+// ===== CONDITION CONSTANTS (SURVIVAL-HEALTH spec) =====
+const CONDITIONS_DB = conditionsData as unknown as ConditionDef[];
+const MALNUTRITION_ONSET_HUNGER   = 87;    // same as CRITICAL_HUNGER — condition starts here
+const MALNUTRITION_SAFE_HUNGER    = 40;    // below this threshold, condition recovers
+const MALNUTRITION_RATE_CRITICAL  = 0.0008; // +/turn at hunger 87–99  → lethal in ~1250 turns ≈ 4.2 days
+const MALNUTRITION_RATE_MAX       = 0.002;  // +/turn at hunger 100    → lethal in ~500 turns ≈ 1.7 days
+const MALNUTRITION_RECOVERY_RATE  = 0.0003; // −/turn when hunger < 40 → fully clears in ~3333 turns ≈ 11 days
+const BLOOD_REGEN_PER_TURN        = 0.05;   // blood volume +/turn when not bleeding → 0→100 in 2000 turns ≈ 6.7 days
+
+/** Return the active ConditionStage for a condition at the given severity, or undefined. */
+function getConditionStage(conditionId: string, severity: number): ConditionStage | undefined {
+    const def = CONDITIONS_DB.find((d) => d.id === conditionId);
+    if (!def) return undefined;
+    let active: ConditionStage | undefined;
+    for (const stage of def.stages) {
+        if (severity >= stage.minSeverity) active = stage;
+    }
+    return active;
+}
+
 // ===== HELPERS =====
+
+/**
+ * Kill a pawn: set isAlive=false, record DeadPawnRecord, log, apply mood penalty to survivors.
+ */
+function killPawn(
+    pawn: Pawn,
+    cause: 'malnutrition' | 'blood_loss' | 'critical_limb' | 'combat' | 'exhaustion_cascade',
+    gameState: GameState
+): GameState {
+    logActivity({
+        turn: gameState.turn,
+        type: 'event',
+        actor: pawn.id,
+        action: 'died',
+        target: cause,
+        result: `${pawn.name} has died of ${cause.replace('_', ' ')}.`,
+        severity: 'critical'
+    });
+
+    const deadRecord = {
+        name: pawn.name,
+        cause,
+        turn: gameState.turn,
+        stats: {
+            strength:     pawn.stats.strength     ?? 10,
+            dexterity:    pawn.stats.dexterity     ?? 10,
+            intelligence: pawn.stats.intelligence  ?? 10
+        }
+    };
+
+    // Apply mood penalty to all living pawns
+    const pawns = gameState.pawns.map((p) => {
+        if (p.id === pawn.id) {
+            return {
+                ...p,
+                isAlive: false,
+                currentState: 'Dead',
+                activeJob: undefined,
+                path: [],
+                isMoving: false
+            };
+        }
+        if (p.isAlive === false) return p;
+        return {
+            ...p,
+            state: { ...p.state, mood: Math.max(0, (p.state?.mood ?? 50) - 5) }
+        };
+    });
+
+    return {
+        ...gameState,
+        pawns,
+        deadPawns: [...(gameState.deadPawns ?? []), deadRecord]
+    };
+}
+
+/**
+ * Tick all progressive health conditions for a single pawn:
+ * malnutrition progression, blood loss, critical limb checks.
+ * Returns updated GameState (may trigger death via killPawn).
+ */
+function tickConditions(pawn: Pawn, gameState: GameState): GameState {
+    const hunger = pawn.needs?.hunger ?? 0;
+    let conditions = [...(pawn.conditions ?? [])];
+    let bloodVolume = pawn.bloodVolume ?? 100;
+    const limbs = pawn.limbs ?? [];
+
+    // ── Malnutrition ──────────────────────────────────────────────────────────
+    const malnutritionIdx = conditions.findIndex((c) => c.id === 'malnutrition');
+
+    if (hunger >= MALNUTRITION_ONSET_HUNGER) {
+        const rate = hunger >= 100 ? MALNUTRITION_RATE_MAX : MALNUTRITION_RATE_CRITICAL;
+        if (malnutritionIdx === -1) {
+            conditions.push({ id: 'malnutrition', severity: rate });
+        } else {
+            conditions[malnutritionIdx] = {
+                ...conditions[malnutritionIdx],
+                severity: Math.min(1.0, conditions[malnutritionIdx].severity + rate)
+            };
+        }
+    } else if (hunger < MALNUTRITION_SAFE_HUNGER && malnutritionIdx !== -1) {
+        const newSeverity = conditions[malnutritionIdx].severity - MALNUTRITION_RECOVERY_RATE;
+        if (newSeverity <= 0) {
+            conditions.splice(malnutritionIdx, 1);
+        } else {
+            conditions[malnutritionIdx] = { ...conditions[malnutritionIdx], severity: newSeverity };
+        }
+    }
+
+    // Check malnutrition lethality (re-find in case just added)
+    const malnutritionCurrent = conditions.find((c) => c.id === 'malnutrition');
+    const malnutritionDef = CONDITIONS_DB.find((d) => d.id === 'malnutrition');
+    if (malnutritionCurrent && malnutritionDef && malnutritionCurrent.severity >= malnutritionDef.lethalSeverity) {
+        const updated = { ...pawn, conditions, bloodVolume };
+        return killPawn(
+            { ...gameState.pawns.find((p) => p.id === pawn.id)!, ...updated },
+            'malnutrition',
+            { ...gameState, pawns: gameState.pawns.map((p) => p.id === pawn.id ? { ...p, conditions, bloodVolume } : p) }
+        );
+    }
+
+    // ── Blood Loss ────────────────────────────────────────────────────────────
+    const totalBleedRate = limbs.reduce((sum, l) => sum + (l.bleedRate ?? 0), 0);
+
+    if (totalBleedRate > 0) {
+        bloodVolume = Math.max(0, bloodVolume - totalBleedRate);
+    }
+
+    // Sync blood_loss condition severity = 1 - (bloodVolume / 100)
+    const bloodSeverity = 1 - (bloodVolume / 100);
+    const bloodLossIdx = conditions.findIndex((c) => c.id === 'blood_loss');
+    if (bloodSeverity > 0) {
+        if (bloodLossIdx === -1) {
+            conditions.push({ id: 'blood_loss', severity: bloodSeverity });
+        } else {
+            conditions[bloodLossIdx] = { ...conditions[bloodLossIdx], severity: bloodSeverity };
+        }
+    } else if (bloodLossIdx !== -1) {
+        conditions.splice(bloodLossIdx, 1);
+    }
+
+    // Regen blood when not bleeding
+    if (totalBleedRate === 0 && bloodVolume < 100) {
+        bloodVolume = Math.min(100, bloodVolume + BLOOD_REGEN_PER_TURN);
+    }
+
+    // Check blood loss lethality
+    if (bloodVolume <= 0) {
+        const updatedGs = { ...gameState, pawns: gameState.pawns.map((p) => p.id === pawn.id ? { ...p, conditions, bloodVolume: 0, limbs } : p) };
+        return killPawn(updatedGs.pawns.find((p) => p.id === pawn.id)!, 'blood_loss', updatedGs);
+    }
+
+    // ── Critical Limb Destruction ─────────────────────────────────────────────
+    for (const limb of limbs) {
+        if (limb.health <= 0 && (limb.id === 'head' || limb.id === 'torso')) {
+            const updatedGs = { ...gameState, pawns: gameState.pawns.map((p) => p.id === pawn.id ? { ...p, conditions, bloodVolume, limbs } : p) };
+            return killPawn(updatedGs.pawns.find((p) => p.id === pawn.id)!, 'critical_limb', updatedGs);
+        }
+    }
+
+    // ── Persist updated condition/blood state ──────────────────────────────────
+    return {
+        ...gameState,
+        pawns: gameState.pawns.map((p) =>
+            p.id === pawn.id ? { ...p, conditions, bloodVolume, limbs } : p
+        )
+    };
+}
 
 function isAdjacent(ax: number, ay: number, bx: number, by: number): boolean {
     const dx = Math.abs(ax - bx);
@@ -478,6 +648,12 @@ function syncActiveEffects(pawn: Pawn): Pawn {
     // Eating supersedes hungry; sleeping supersedes tired.
     if (!isSleeping && (pawn.needs?.fatigue ?? 0) >= FATIGUE_THRESHOLD) effects.push('tired');
     if (!isEating && (pawn.needs?.hunger ?? 0) >= HUNGER_THRESHOLD) effects.push('hungry');
+
+    // Push condition stage labels as active effects (e.g. "malnutrition:moderate").
+    for (const condition of (pawn.conditions ?? [])) {
+        const stage = getConditionStage(condition.id, condition.severity);
+        if (stage) effects.push(`${condition.id}:${stage.label}`);
+    }
 
     const current = pawn.activeEffects ?? [];
     if (effects.length === current.length && effects.every((e, i) => e === current[i])) return pawn;
@@ -946,8 +1122,29 @@ class PawnStateMachineImpl {
         for (const pawn of state.pawns) {
             const current = state.pawns.find((p) => p.id === pawn.id);
             if (!current) continue;
+            // Skip dead pawns entirely.
+            if (current.isAlive === false) continue;
+
+            // Tick conditions (malnutrition, blood loss, limb checks) — may kill pawn.
+            state = tickConditions(current, state);
+            // Re-fetch pawn in case tickConditions updated it.
+            const afterConditions = state.pawns.find((p) => p.id === pawn.id);
+            if (!afterConditions || afterConditions.isAlive === false) continue;
+
+            // Exhaustion collapse: fatigue >= 100 → force sleeping on the ground.
+            let forCollapse = afterConditions;
+            if ((forCollapse.needs?.fatigue ?? 0) >= 100 && forCollapse.currentState !== PAWN_STATE.SLEEPING) {
+                forCollapse = {
+                    ...forCollapse,
+                    currentState: PAWN_STATE.SLEEPING,
+                    activeJob: undefined,
+                    state: { ...forCollapse.state, isSleeping: true, isWorking: false, isEating: false }
+                };
+                state = { ...state, pawns: state.pawns.map((p) => p.id === pawn.id ? forCollapse : p) };
+            }
+
             // Run state machine for this pawn.
-            state = tickPawn(current, state);
+            state = tickPawn(forCollapse, state);
             // Sync activeEffects from the new state so PawnService reads fresh values.
             const updated = state.pawns.find((p) => p.id === pawn.id);
             if (updated) {

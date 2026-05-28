@@ -871,7 +871,7 @@
       </div>
       <div class="pawn-row">
         <span class="pawn-stat-label">HP</span><span class="pawn-stat-val"
-          >{Math.floor(selectedPawn.state.health)}</span
+          >{Math.floor(selectedPawn.state.health ?? 100)}</span
         >
         <span class="pawn-stat-label">Mood</span><span class="pawn-stat-val"
           >{Math.floor(selectedPawn.state.mood)}</span
@@ -934,7 +934,7 @@
       </div>
       <div class="pawn-row">
         <span class="pawn-stat-label">HP</span><span class="pawn-stat-val"
-          >{Math.floor(hoverPawn.state.health)}</span
+          >{Math.floor(hoverPawn.state.health ?? 100)}</span
         >
         <span class="pawn-stat-label">Mood</span><span class="pawn-stat-val"
           >{Math.floor(hoverPawn.state.mood)}</span

@@ -47,7 +47,7 @@
 
   function turnToGameDate(turn: number) {
     const totalDays = Math.floor(turn / TURNS_PER_DAY);
-    const hour = Math.floor((turn % TURNS_PER_DAY) / TURNS_PER_DAY * 24);
+    const hour = Math.floor(((turn % TURNS_PER_DAY) / TURNS_PER_DAY) * 24);
     const totalMonths = Math.floor(totalDays / DAYS_PER_MONTH);
     const year = Math.floor(totalMonths / MONTHS_PER_YEAR) + 1;
     const monthIdx = totalMonths % MONTHS_PER_YEAR;
@@ -105,6 +105,11 @@
       gameState.wipeAndReload();
     }
   }
+
+  let devSeedQty = 500;
+  function applyDevSeed() {
+    gameState.applyDevSeed(devSeedQty);
+  }
 </script>
 
 <div class="topbar">
@@ -139,6 +144,20 @@
     {/each}
   </div>
   <button class="ctrl-btn danger" on:click={wipeSave}>WIPE</button>
+  <span class="dev-sep">|</span>
+  <input
+    class="seed-input qty-input"
+    type="number"
+    bind:value={devSeedQty}
+    min="1"
+    max="99999"
+    title="Item quantity for dev seed"
+  />
+  <button
+    class="ctrl-btn dev"
+    on:click={applyDevSeed}
+    title="Unlock all items, locations & research">DEV SEED</button
+  >
 </div>
 
 <style>
@@ -229,6 +248,21 @@
   .ctrl-btn.danger:hover {
     background: var(--neg);
     color: #fff;
+  }
+  .ctrl-btn.dev {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .ctrl-btn.dev:hover {
+    background: var(--accent);
+    color: var(--bg);
+  }
+  .dev-sep {
+    color: var(--border-hi);
+    padding: 0 2px;
+  }
+  .qty-input {
+    width: 46px;
   }
 
   .seed-input {

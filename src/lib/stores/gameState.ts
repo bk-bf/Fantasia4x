@@ -1,5 +1,5 @@
 import { browser } from '$app/environment';
-import { writable, derived } from 'svelte/store';
+import { writable, derived, get } from 'svelte/store';
 import { GameStateManager, consumeFromStockpiles, addToStockpileZone } from '$lib/game/core/GameState';
 import { gameEngine } from '$lib/game/systems/GameEngineImpl';
 import type { GameState, Pawn, WorldTile, FilterableZoneType } from '$lib/game/core/types';
@@ -17,6 +17,7 @@ import { triggerEvent } from '$lib/stores/eventStore';
 import { generateWorld } from '$lib/game/world/WorldGenerator';
 import { resourceGeneratorService } from '$lib/game/services/ResourceGeneratorService';
 import { loadSave, scheduleSave, deleteSave } from './saveManager';
+import { buildDevSeedState } from '$lib/game/dev/devSeed';
 
 
 // ===== CONFIGURATION =====
@@ -25,7 +26,6 @@ const TURN_INTERVAL = 3000;
 // ===== STATE VARIABLES =====
 let gameInterval: ReturnType<typeof setInterval> | null = null;
 let autoTurnInterval: ReturnType<typeof setInterval> | null = null;
-let isPausedValue = false;
 let gameSpeedValue = 1;
 
 // ===== WORLD GENERATION =====
@@ -261,7 +261,7 @@ function startAutoTurns() {
 	}
 
 	autoTurnInterval = setInterval(() => {
-		if (!isPausedValue) {
+		if (!get(isPaused)) {
 			console.log('[AutoTurn] Calling GameEngine.processGameTurn()');
 			const result = gameEngine.processGameTurn();
 
@@ -347,6 +347,16 @@ function resetGame() {
 	deleteSave().catch(console.error);
 	set(initialGameState);
 	console.info('[GameState] Game reset to initial state.');
+}
+
+/**
+ * Apply the dev seed: all items at `itemQty`, all locations discovered,
+ * all research completed, max tool level, population cap 50.
+ * Does NOT wipe existing pawns or the world map.
+ */
+function applyDevSeed(itemQty = 500) {
+	updateWithSave((state) => buildDevSeedState(state, itemQty));
+	console.info(`[DevSeed] Applied dev seed (${itemQty}x each item).`);
 }
 
 /**
@@ -458,11 +468,7 @@ export const savedStateReady: Promise<void> = (async () => {
 const isPaused = writable(false);
 const gameSpeed = writable(1);
 
-// Subscribe to keep track of current values
-isPaused.subscribe(value => {
-	isPausedValue = value;
-});
-
+// Subscribe to keep track of current speed value
 gameSpeed.subscribe(value => {
 	gameSpeedValue = value;
 });
@@ -491,7 +497,8 @@ export const gameState = {
 	consumeGlobalItem,
 	resetGame,
 	wipeAndReload,
-	regenWorld
+	regenWorld,
+	applyDevSeed
 };
 
 // Export the updateWithSave function directly for GameEngine

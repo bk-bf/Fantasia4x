@@ -642,9 +642,9 @@ export class PawnServiceImpl implements PawnService {
 			newState.mood = Math.min(100, newState.mood + 1);
 		}
 
-		// Health regeneration
-		if (newState.health < 100) {
-			newState.health = Math.min(100, newState.health + this.getHealthRegenPerTurn(needs));
+		// Health regeneration (legacy field — kept for backwards compat)
+		if ((newState.health ?? 100) < 100) {
+			newState.health = Math.min(100, (newState.health ?? 100) + this.getHealthRegenPerTurn(needs));
 		}
 
 		return newState;
@@ -657,9 +657,9 @@ export class PawnServiceImpl implements PawnService {
 		if (pawn.needs.hunger > 80) morale -= 10;
 		if (pawn.needs.fatigue > 80) morale -= 12; // Slightly higher penalty for tiredness
 
-		// Health-based morale
-		if (pawn.state.health < 50) morale -= 20;
-		else if (pawn.state.health < 80) morale -= 10;
+		// Health-based morale (legacy field)
+		if ((pawn.state.health ?? 100) < 50) morale -= 20;
+		else if ((pawn.state.health ?? 100) < 80) morale -= 10;
 
 		// Trait-based morale modifiers
 		pawn.racialTraits.forEach(trait => {

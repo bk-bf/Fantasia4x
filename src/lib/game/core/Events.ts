@@ -251,13 +251,13 @@ export class EventSystem {
       const targetPawns = this.selectTargetPawns(pawnEffect, newState.pawns);
 
       targetPawns.forEach((pawn: any) => {
-        // Health changes
+        // Health changes (legacy field — kept for backwards compat)
         if (pawnEffect.effects.healthChange) {
           const change = this.rollBetween(
             pawnEffect.effects.healthChange.min,
             pawnEffect.effects.healthChange.max
           );
-          pawn.state.health = Math.max(0, Math.min(100, pawn.state.health + change));
+          pawn.state.health = Math.max(0, Math.min(100, (pawn.state.health ?? 100) + change));
         }
 
         // Mood changes
@@ -282,11 +282,11 @@ export class EventSystem {
         // Injury and death chances
         if (pawnEffect.effects.injuryChance && Math.random() < pawnEffect.effects.injuryChance) {
           // TODO: Add injury system
-          pawn.state.health = Math.max(10, pawn.state.health - 15);
+          pawn.state.health = Math.max(10, (pawn.state.health ?? 100) - 15);
         }
 
         if (pawnEffect.effects.deathChance && Math.random() < pawnEffect.effects.deathChance) {
-          // TODO: Handle pawn death
+          // TODO: Handle pawn death via killPawn
           pawn.state.health = 0;
         }
       });
