@@ -168,6 +168,15 @@
     return '█'.repeat(filled) + '░'.repeat(10 - filled);
   }
 
+  function moveCostLabel(cost: number): { label: string; color: string } {
+    if (cost <= 0)   return { label: 'impassable',    color: '#cc4444' };
+    if (cost <= 1.0) return { label: 'normal',        color: '#70bb70' };
+    if (cost <= 1.5) return { label: 'light',         color: '#99cc77' };
+    if (cost <= 2.0) return { label: 'slow',          color: '#ccaa44' };
+    if (cost <= 3.0) return { label: 'very slow',     color: '#cc7733' };
+    return                  { label: 'barely passable', color: '#cc4444' };
+  }
+
   // ─── Selection system ─────────────────────────────────────────────────────
   // Shift+drag to drag-select a rectangle; highlights entities inside.
   let selDragActive = false;
@@ -876,6 +885,14 @@
       <span class="tile-coord">({hoverTile.x},{hoverTile.y})</span><span class="tile-layers"
         >{hoverTile.type},{hoverTile.terrainType},{hoverTile.subType}</span
       >
+      {#if !hoverTile.walkable}
+        <div class="tile-move" style="color:#cc4444">move: impassable</div>
+      {:else}
+        {@const mc = moveCostLabel(hoverTile.movementCost ?? 1)}
+        <div class="tile-move" style="color:{mc.color}">
+          move ×{(hoverTile.movementCost ?? 1).toFixed(1)} · {mc.label}
+        </div>
+      {/if}
       {#if hoverZoneType && ZONE_META[hoverZoneType]}
         <div class="tile-zone" style="color:{ZONE_META[hoverZoneType].color}">
           {ZONE_META[hoverZoneType].label} — {ZONE_META[hoverZoneType].desc}
@@ -1075,6 +1092,10 @@
     margin-top: 2px;
   }
   .tile-zone {
+    font-size: 9px;
+    margin-top: 1px;
+  }
+  .tile-move {
     font-size: 9px;
     margin-top: 1px;
   }
