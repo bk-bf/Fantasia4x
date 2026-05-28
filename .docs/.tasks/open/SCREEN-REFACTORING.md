@@ -1,18 +1,20 @@
-<!-- LOC cap: 200 (created: 2026-05-25) -->
+<!-- LOC cap: 200 (created: 2026-05-25, revised: 2026-05-28) -->
 
 # SCREEN-REFACTORING
 
 > **Related:** [ROADMAP](ROADMAP.md) · [ui/ARCHITECTURE](../../ui/ARCHITECTURE.md)
 
+## Scope (revised 2026-05-28)
+
+**WorkScreen only.** ExplorationScreen and CraftingScreen are deprioritised:
+`ExplorationScreen` will be substantially reworked as part of the FOG-OF-WAR system
+(the current abstract mission list will be replaced by map interaction). `CraftingScreen`
+will gain a Workshop panel when production chains land. Neither is worth refactoring now.
+
 ## Goal
 
-Break down three bloated screen components into focused sub-components following the pattern established by PawnScreen refactoring.
-
-| Screen                     | Current LOC | Target                 |
-| -------------------------- | ----------- | ---------------------- |
-| `WorkScreen.svelte`        | 1314        | <200 per sub-component |
-| `ExplorationScreen.svelte` | 974         | <200 per sub-component |
-| `CraftingScreen.svelte`    | 950         | <200 per sub-component |
+Break down `WorkScreen.svelte` (1314 LOC) into focused sub-components so that
+healthcare and cooking jobs can be added without editing unrelated sections.
 
 ## Requirements
 
@@ -21,28 +23,13 @@ Break down three bloated screen components into focused sub-components following
 - Extract shared formatting logic to `src/lib/utils/` not inline in components
 - No change to user-facing behaviour — all existing functionality preserved
 
-## Phase 1 — WorkScreen (Priority: blocks healthcare/cooking jobs)
+## WorkScreen sub-components
 
 - [ ] `PopulationOverview` — worker cards with stats and current job indicators
 - [ ] `WorkPriorities` — per-pawn priority management with efficiency display; uses `WorkService`
 - [ ] `JobQueue` — job cycling visualisation with timer and active job highlighting
 - [ ] `ProductionManagement` — location-based production targets and worker assignments; uses `LocationService`
 - [ ] Update `WorkScreen` — import sub-components, keep only navigation and top-level state
-
-## Phase 2 — ExplorationScreen
-
-- [ ] `DiscoveredLocations` — known locations with resource info; uses `LocationService`
-- [ ] `ActiveMissions` — expeditions in progress with cancel/recall; uses `CurrentTask` widget
-- [ ] `AvailableExplorations` — available opportunities with requirements and success chance
-- [ ] Update `ExplorationScreen` — import sub-components, keep only navigation and top-level state
-
-## Phase 3 — CraftingScreen
-
-- [ ] `CraftingFilters` — item type and category filtering with counts
-- [ ] `CraftingInventory` — current inventory display
-- [ ] `CraftingQueue` — active crafting jobs with progress
-- [ ] `AvailableRecipes` — craftable items with requirements; uses `ItemService`
-- [ ] Update `CraftingScreen` — import sub-components, keep only navigation and top-level state
 
 ## Acceptance Criteria
 
