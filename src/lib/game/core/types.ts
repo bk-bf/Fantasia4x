@@ -147,6 +147,8 @@ export interface GameState {
 	craftingOrderConfigs?: Record<string, { amount: number; mode: 'once' | 'stockpile'; targetStockpile?: number }>;
 	/** Phase 7: items dropped on the ground after harvesting, awaiting haulers */
 	droppedItems?: DroppedItem[];
+	/** Dead pawn records for colony history (SURVIVAL-HEALTH spec). */
+	deadPawns?: DeadPawnRecord[];
 }
 export interface WorkCategory {
 	id: string;
@@ -208,9 +210,60 @@ export interface StatusEffectDef {
 	};
 }
 
+// ===== SURVIVAL & HEALTH TYPES (SURVIVAL-HEALTH spec) =====
+
+/** An active progressive health condition on a pawn. */
+export interface PawnCondition {
+	id: string;        // matches ConditionDef.id in conditions.jsonc
+	severity: number;  // 0.0–1.0; reaches lethalSeverity → pawn dies
+}
+
+export type LimbId = 'head' | 'torso' | 'left_arm' | 'right_arm' | 'left_leg' | 'right_leg';
+
+export const CRITICAL_LIMBS: LimbId[] = ['head', 'torso'];
+
+export interface LimbState {
+	id: LimbId;
+	health: number;      // 0–100; 0 = destroyed
+	isMissing: boolean;  // true after amputation
+	bleedRate: number;   // blood points drained per turn while >0
+}
+
+/** A single severity stage within a ConditionDef. */
+export interface ConditionStage {
+	label: string;
+	minSeverity: number;
+	color: string;
+	lifeThreatening?: boolean;
+	modifiers: {
+		workEfficiency?: number;  // multiplier on work output
+		moveSpeed?: number;       // multiplier on movement
+		hungerRate?: number;      // multiplier on hunger accrual rate
+		fatigueRate?: number;     // multiplier on fatigue accrual rate
+	};
+}
+
+/** A multi-stage progressive health condition definition (from conditions.jsonc). */
+export interface ConditionDef {
+	id: string;
+	name: string;
+	description: string;
+	lethalSeverity: number;
+	stages: ConditionStage[];
+}
+
+/** Record appended to gameState.deadPawns when a pawn dies. */
+export interface DeadPawnRecord {
+	name: string;
+	cause: 'malnutrition' | 'blood_loss' | 'critical_limb' | 'combat' | 'exhaustion_cascade';
+	turn: number;
+	stats: { strength: number; dexterity: number; intelligence: number; };
+}
+
 export interface PawnState {
 	mood: number; // 0-100, affects work efficiency
-	health: number; // 0-100, affects everything
+	/** @deprecated Use pawn.conditions for health tracking. Kept for backwards compatibility. */
+	health?: number;
 	isWorking: boolean;
 	isSleeping: boolean;
 	isEating: boolean;
@@ -252,8 +305,18 @@ export interface Pawn {
 	// Active status effect ids (derived from state; drives UI cards and need rate modifiers)
 	activeEffects?: string[];
 
+	// ===== SURVIVAL & HEALTH (SURVIVAL-HEALTH spec) =====
+	/** Active progressive health conditions (malnutrition, blood_loss, …). */
+	conditions?: PawnCondition[];
+	/** 6-limb health state. Initialized at pawn creation. */
+	limbs?: LimbState[];
+	/** Blood volume 0–100. 0 = dead. Slowly regenerates when not bleeding. */
+	bloodVolume?: number;
+	/** False once a pawn dies — dead pawns stay in pawns[] but are skipped by all processing. */
+	isAlive?: boolean;
+
 	// Phase 4/5: State machine primary state
-	currentState?: string;                       // 'Idle' | 'Hungry' | 'Tired' | 'MovingToNeed' | 'MovingToResource' | 'Working' | 'Hauling' | 'MovingToDeposit' | 'Eating' | 'Sleeping'
+	currentState?: string;                       // 'Idle' | 'Hungry' | 'Tired' | 'MovingToNeed' | 'MovingToResource' | 'Working' | 'Hauling' | 'MovingToDeposit' | 'Eating' | 'Sleeping' | 'Dead'
 	// Job payload for active state machine job
 	activeJob?: {
 		/** Phase 5: 'harvest'|'construct'|'craft'|'haul' use work-point jobs; 'need' for eat/sleep */

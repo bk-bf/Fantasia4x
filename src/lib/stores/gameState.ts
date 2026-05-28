@@ -89,7 +89,8 @@ export const initialGameState: GameState = {
 	productionTargets: [],
 	currentJobIndex: {},
 	pawnAbilities: {},
-	droppedItems: []
+	droppedItems: [],
+	deadPawns: []
 };
 
 // ===== UTILITY FUNCTIONS =====
@@ -172,6 +173,26 @@ function applyMigrations(state: GameState): GameState {
 			state = { ...state, zoneInstances: instances, designationZoneId: zoneIdMap };
 		}
 	}
+	// SURVIVAL-HEALTH migration: backfill new pawn health fields for old saves
+	if (!state.deadPawns) state.deadPawns = [];
+	state.pawns = state.pawns.map((p) => {
+		const needsInit = p.isAlive === undefined || !p.limbs || p.bloodVolume === undefined;
+		if (!needsInit) return p;
+		return {
+			...p,
+			isAlive: p.isAlive ?? true,
+			bloodVolume: p.bloodVolume ?? 100,
+			conditions: p.conditions ?? [],
+			limbs: p.limbs ?? [
+				{ id: 'head',      health: 100, isMissing: false, bleedRate: 0 },
+				{ id: 'torso',     health: 100, isMissing: false, bleedRate: 0 },
+				{ id: 'left_arm',  health: 100, isMissing: false, bleedRate: 0 },
+				{ id: 'right_arm', health: 100, isMissing: false, bleedRate: 0 },
+				{ id: 'left_leg',  health: 100, isMissing: false, bleedRate: 0 },
+				{ id: 'right_leg', health: 100, isMissing: false, bleedRate: 0 }
+			]
+		};
+	});
 	return state;
 }
 

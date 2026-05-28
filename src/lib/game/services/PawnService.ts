@@ -1,16 +1,30 @@
-import type { GameState, Pawn, PawnNeeds, PawnState, StatusEffectDef } from '../core/types';
+import type { GameState, Pawn, PawnNeeds, PawnState, StatusEffectDef, PawnCondition, ConditionDef, ConditionStage } from '../core/types';
 import { consumeFromStockpiles } from '../core/GameState';
 import { calculatePawnAbilities, categorizeAbilities, getAbilityDescription } from '../entities/Pawns';
 import { WORK_CATEGORIES } from '../core/Work';
 import statusEffectsData from '../database/status-effects.jsonc';
+import conditionsData from '../database/conditions.jsonc';
 
 const STATUS_EFFECTS_DB = statusEffectsData as unknown as StatusEffectDef[];
+const CONDITIONS_DB = conditionsData as unknown as ConditionDef[];
 
 /** Resolve active effect definitions from a pawn's activeEffects id list. */
 function getActiveEffects(pawn: Pawn): StatusEffectDef[] {
 	return (pawn.activeEffects ?? [])
 		.map((id) => STATUS_EFFECTS_DB.find((e) => e.id === id))
 		.filter((e): e is StatusEffectDef => e !== undefined);
+}
+
+/** Get the current active ConditionStage for a PawnCondition. */
+function getConditionCurrentStage(condition: PawnCondition): ConditionStage | undefined {
+	const def = CONDITIONS_DB.find((d) => d.id === condition.id);
+	if (!def) return undefined;
+	// Stages are ordered ascending by minSeverity; last one that fits wins.
+	let active: ConditionStage | undefined;
+	for (const stage of def.stages) {
+		if (condition.severity >= stage.minSeverity) active = stage;
+	}
+	return active;
 }
 
 /**
@@ -302,6 +316,7 @@ export class PawnServiceImpl implements PawnService {
 		// Calling it here caused double food consumption (and direct array mutation),
 		// draining the stockpile extremely fast.
 		gameState.pawns.forEach(pawn => {
+			if (pawn.isAlive === false) return; // skip dead pawns
 			newState = this.updatePawnNeeds(pawn.id, newState);
 			newState = this.updatePawnState(pawn.id, newState);
 			newState = this.updateMorale(pawn.id, newState);
@@ -574,8 +589,17 @@ export class PawnServiceImpl implements PawnService {
 
 		// Combine hungerRate/fatigueRate multipliers from all active effects (multiply together).
 		// e.g. 'eating' sets hungerRate=0 (paused), 'sleeping' sets hungerRate=0.33 and fatigueRate=0.
-		const hungerRate = effects.reduce((r, e) => r * (e.modifiers.hungerRate ?? 1), 1);
-		const fatigueRate = effects.reduce((r, e) => r * (e.modifiers.fatigueRate ?? 1), 1);
+		let hungerRate = effects.reduce((r, e) => r * (e.modifiers.hungerRate ?? 1), 1);
+		let fatigueRate = effects.reduce((r, e) => r * (e.modifiers.fatigueRate ?? 1), 1);
+
+		// Also apply condition stage hungerRate/fatigueRate modifiers (e.g. malnutrition increases hunger rate).
+		for (const condition of (pawn.conditions ?? [])) {
+			const stage = getConditionCurrentStage(condition);
+			if (stage) {
+				hungerRate *= stage.modifiers.hungerRate ?? 1;
+				fatigueRate *= stage.modifiers.fatigueRate ?? 1;
+			}
+		}
 
 		const hungerIncrease = this.getHungerIncreasePerTurn(pawn) * hungerRate;
 		const fatigueIncrease = this.getRestIncreasePerTurn(pawn) * fatigueRate;
