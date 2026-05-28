@@ -50,6 +50,7 @@
       return;
     }
     if (e.key === 'Escape') {
+      uiState.deactivateDesignation();
       uiState.setScreen('main');
       return;
     }
