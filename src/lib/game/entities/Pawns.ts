@@ -50,11 +50,11 @@ export function generatePawns(race: Race, count?: number): Pawn[] {
 			bloodVolume: 100,
 			conditions: [],
 			limbs: [
-				{ id: 'head',      health: 100, isMissing: false, bleedRate: 0 },
-				{ id: 'torso',     health: 100, isMissing: false, bleedRate: 0 },
-				{ id: 'left_arm',  health: 100, isMissing: false, bleedRate: 0 },
+				{ id: 'head', health: 100, isMissing: false, bleedRate: 0 },
+				{ id: 'torso', health: 100, isMissing: false, bleedRate: 0 },
+				{ id: 'left_arm', health: 100, isMissing: false, bleedRate: 0 },
 				{ id: 'right_arm', health: 100, isMissing: false, bleedRate: 0 },
-				{ id: 'left_leg',  health: 100, isMissing: false, bleedRate: 0 },
+				{ id: 'left_leg', health: 100, isMissing: false, bleedRate: 0 },
 				{ id: 'right_leg', health: 100, isMissing: false, bleedRate: 0 }
 			]
 		};

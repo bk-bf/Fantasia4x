@@ -1099,6 +1099,7 @@ export class PawnServiceImpl implements PawnService {
 	processMovement(gameState: GameState): GameState {
 		let state = gameState;
 		for (const pawn of state.pawns) {
+			if (pawn.isAlive === false) continue; // skip dead pawns
 			// Repair inconsistent state saved from earlier bugs: path exists but isMoving=false
 			if (!pawn.isMoving && pawn.path && pawn.path.length > 0) {
 				state = {
