@@ -758,80 +758,53 @@ export class PawnServiceImpl implements PawnService {
 		return regen;
 	}
 
-	// UPDATED: More realistic rest increases based on activity intensity (single rest system)
+	// UPDATED: Calibrated to a 16:8 wake/sleep cycle (1 turn ≈ 1 in-game hour).
+	// baseRest = 5/turn → 0→80 (FATIGUE_THRESHOLD) in 16 turns = 16 awake hours.
 	private getRestIncreasePerTurn(pawn: Pawn): number {
-		let baseRest = 2.5; // Fatigue increase per turn — reaches 65 in ~26 turns
+		let baseRest = 5;
 
-		// Different work types cause different rest needs
 		if (pawn.state.isWorking) {
-			// Note: We'd need to access gameState to get workAssignment, for now use generic work fatigue
-			baseRest *= 1.5; // Default work tiredness
+			baseRest *= 1.5;
 		}
 
-		// Sleeping REDUCES rest need (already handled in forceSleep)
-		if (pawn.state.isSleeping) {
-			return 0; // No rest need increase while sleeping
-		}
-
-		// Combat increases rest need significantly  
+		// Combat increases rest need significantly
 		if ((pawn.state as any).inCombat) {
-			baseRest *= 2.5; // Combat is extremely tiring
+			baseRest *= 2.5;
 		}
 
-		// Racial trait modifiers
 		pawn.racialTraits.forEach((trait) => {
 			if ((trait.effects as any).fatigueRate) {
 				baseRest *= (trait.effects as any).fatigueRate;
 			}
-			// Add specific trait effects
 			switch (trait.name) {
-				case 'Tireless':
-					baseRest *= 0.7;
-					break;
-				case 'Energetic':
-					baseRest *= 0.8;
-					break;
-				case 'Lazy':
-					baseRest *= 1.3;
-					break;
-				case 'Frail':
-					baseRest *= 1.4;
-					break;
+				case 'Tireless':   baseRest *= 0.7; break;
+				case 'Energetic':  baseRest *= 0.8; break;
+				case 'Lazy':       baseRest *= 1.3; break;
+				case 'Frail':      baseRest *= 1.4; break;
 			}
 		});
 
-		return Math.max(0.03, baseRest); // Minimum rest increase
+		return Math.max(0.1, baseRest);
 	}
 
+	// Calibrated to 2500 kcal / 3 meals / 16h waking (1 turn ≈ 1 hour).
+	// baseHunger = 10/turn → from SAFE_HUNGER (10) hits threshold (60) in 5h → ~3 meals/day.
 	private getHungerIncreasePerTurn(pawn: Pawn): number {
-		let baseHunger = 3.5; // Hunger increase per turn — reaches 60 in ~17 turns
+		let baseHunger = 10;
 
-		// Working increases hunger
 		if (pawn.state.isWorking) {
 			baseHunger *= 1.4;
 		}
 
-		// Eating REDUCES hunger (handled in tryEating)
-		if (pawn.state.isEating) {
-			return 0; // No hunger increase while eating
-		}
-
-		// Racial trait modifiers
 		pawn.racialTraits.forEach((trait) => {
 			switch (trait.name) {
-				case 'Efficient Metabolism':
-					baseHunger *= 0.7; // Needs less food
-					break;
-				case 'Large Appetite':
-					baseHunger *= 1.4; // Needs more food
-					break;
-				case 'Hardy':
-					baseHunger *= 0.9;
-					break;
+				case 'Efficient Metabolism': baseHunger *= 0.7; break;
+				case 'Large Appetite':       baseHunger *= 1.4; break;
+				case 'Hardy':                baseHunger *= 0.9; break;
 			}
 		});
 
-		return Math.max(0.04, baseHunger);
+		return Math.max(0.1, baseHunger);
 	}
 
 	private forceRest(pawn: Pawn): Pawn {

@@ -40,17 +40,20 @@ export type PawnStateName = (typeof PAWN_STATE)[keyof typeof PAWN_STATE];
 // ===== NEED THRESHOLDS =====
 const HUNGER_THRESHOLD = 60;           // Seek food at 60%
 const CRITICAL_HUNGER = 85;            // Interrupt work — must eat now
-const FATIGUE_THRESHOLD = 65;          // Seek rest at 65%
-const CRITICAL_FATIGUE = 85;           // Interrupt work — collapse/sleep
+const FATIGUE_THRESHOLD = 80;          // Seek rest after ~16 awake hours (5/turn → 0→80)
+const CRITICAL_FATIGUE = 93;           // Emergency work interrupt
 const EATING_TURNS = 5;                // Turns to eat at a campfire
 const EATING_TURNS_GROUND = 7;         // Turns eating in-place (cold, uncomfortable)
-const SLEEPING_TURNS = 10;             // Turns asleep in a shelter
-const SLEEPING_TURNS_GROUND = 15;      // Turns asleep on bare ground (fitful sleep)
+const SLEEPING_TURNS = 8;              // Reference duration at shelter (12.5/turn × 8 = 100)
+const SLEEPING_TURNS_GROUND = 10;      // Reference duration on ground (10/turn × 10 = 100)
 const HUNGER_PER_FOOD_UNIT = 30;       // Base hunger restored per 1 unit (×nutrition)
 const SAFE_HUNGER = 10;                // Target hunger level after a full meal
 const MAX_UNITS_PER_FOOD_TYPE = 3;     // Cap per food type per meal — avoids hoarding
-const FATIGUE_PER_SLEEPING_TURN = 10;  // 10×10=100 fatigue restored in shelter
-const FATIGUE_PER_SLEEPING_GROUND = 5; // 15×5=75 restored on ground — never fully rests from high fatigue
+const FATIGUE_PER_SLEEPING_TURN = 12.5; // Building: 100 fatigue → 0 in 8 turns (8h)
+const FATIGUE_PER_SLEEPING_GROUND = 10; // Ground: 100 → 0 in 10 turns (10h baseline)
+// Wake thresholds — prevents yo-yo by requiring proper rest before resuming activity
+const SLEEP_WAKE_THRESHOLD_FED = 0;    // Sleep until fully restored when not hungry
+const SLEEP_WAKE_THRESHOLD_HUNGRY = 30; // Allow early waking at 30% to go eat
 
 // ===== HELPERS =====
 
@@ -862,12 +865,19 @@ function handleEating(pawn: Pawn, gameState: GameState): GameState {
 function handleSleeping(pawn: Pawn, gameState: GameState): GameState {
     const activeJob = pawn.activeJob;
     const turnsInState = (activeJob?.turnsInState ?? 0) + 1;
-    // Proper shelter dramatically improves sleep quality and duration
     const atShelter = isAtRestBuilding(pawn, gameState);
     const fatigueRecovery = atShelter ? FATIGUE_PER_SLEEPING_TURN : FATIGUE_PER_SLEEPING_GROUND;
-    const sleepDuration = atShelter ? SLEEPING_TURNS : SLEEPING_TURNS_GROUND;
+    const sleepDuration = atShelter ? SLEEPING_TURNS : SLEEPING_TURNS_GROUND; // for progress bar only
     const newFatigue = Math.max(0, (pawn.needs?.fatigue ?? 50) - fatigueRecovery);
     const newSleep = Math.max(0, (pawn.needs?.sleep ?? 50) - fatigueRecovery);
+
+    // Wake when fatigue drops to the threshold for current hunger level.
+    // Fed pawns sleep to 0 (full rest). Hungry pawns wake at 30 so they can eat,
+    // but won't immediately re-sleep since 30 < FATIGUE_THRESHOLD (80).
+    const wakeThreshold = (pawn.needs?.hunger ?? 0) >= HUNGER_THRESHOLD
+        ? SLEEP_WAKE_THRESHOLD_HUNGRY
+        : SLEEP_WAKE_THRESHOLD_FED;
+    const shouldWake = newFatigue <= wakeThreshold;
 
     const updatedNeeds = {
         ...(pawn.needs ?? { hunger: 0, fatigue: 0, sleep: 0, lastSleep: 0, lastMeal: 0 }),
@@ -877,10 +887,10 @@ function handleSleeping(pawn: Pawn, gameState: GameState): GameState {
     };
     const updatedState = {
         ...(pawn.state ?? { mood: 50, health: 100, isWorking: false, isSleeping: false, isEating: false }),
-        isSleeping: turnsInState < sleepDuration
+        isSleeping: !shouldWake
     };
 
-    if (turnsInState >= sleepDuration) {
+    if (shouldWake) {
         return {
             ...gameState,
             pawns: gameState.pawns.map((p) =>

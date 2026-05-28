@@ -1,16 +1,15 @@
 <script lang="ts">
-  import { currentItem, currentRace, gameState } from '$lib/stores/gameState';
+  import { currentStockpile, currentRace, gameState } from '$lib/stores/gameState';
   import { onDestroy } from 'svelte';
 
-  let items: any[] = [];
+  let stockpile: { id: string; name: string; amount: number; color?: string; emoji?: string }[] = [];
   let race: any = null;
   let turnValue = 0;
   let itemChanges: Record<string, number> = {};
 
-  const unsubItems = currentItem.subscribe((newItems) => {
-    newItems = newItems || [];
-    newItems.forEach((ni) => {
-      const old = items.find((i) => i.id === ni.id);
+  const unsubStockpile = currentStockpile.subscribe((newStockpile) => {
+    newStockpile.forEach((ni) => {
+      const old = stockpile.find((i) => i.id === ni.id);
       if (old && old.amount !== ni.amount) {
         const delta = ni.amount - old.amount;
         if (delta !== 0) {
@@ -21,16 +20,14 @@
         }
       }
     });
-    items = newItems;
+    stockpile = newStockpile;
   });
 
   const unsubRace = currentRace.subscribe((v) => (race = v));
   const unsubState = gameState.subscribe((s) => (turnValue = s.turn));
 
-  $: resources = items.filter((i) => i.amount > 0 || itemChanges[i.id]);
-
   onDestroy(() => {
-    unsubItems();
+    unsubStockpile();
     unsubRace();
     unsubState();
   });
@@ -58,10 +55,10 @@
     <!-- Resources section -->
     <div class="section-hdr top-sep">| RESOURCES</div>
     <div class="res-list">
-      {#if resources.length === 0}
+      {#if stockpile.length === 0}
         <div class="empty">no resources gathered</div>
       {:else}
-        {#each resources as item}
+        {#each stockpile as item}
           <div class="res-row">
             <span class="res-name">{item.name}</span>
             <span class="dots"></span>

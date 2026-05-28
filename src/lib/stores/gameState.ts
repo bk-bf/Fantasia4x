@@ -453,3 +453,21 @@ export const currentTurn = derived(gameState, ($gameState) => $gameState.turn);
 export const currentItem = derived(gameState, ($gameState) => $gameState.item);
 export const currentRace = derived(gameState, ($gameState) => $gameState.race);
 export const pawnAbilities = derived(gameState, ($gameState) => $gameState.pawnAbilities || {});
+
+/** Stockpile entries enriched with item definition metadata, sorted by name. */
+export const currentStockpile = derived(gameState, ($gameState) => {
+	const stockpile = $gameState.stockpile ?? {};
+	return Object.entries(stockpile)
+		.filter(([, amount]) => amount > 0)
+		.map(([id, amount]) => {
+			const def = itemService.getItemById(id);
+			return {
+				id,
+				name: def?.name ?? id,
+				amount,
+				color: def?.color,
+				emoji: def?.emoji
+			};
+		})
+		.sort((a, b) => a.name.localeCompare(b.name));
+});
