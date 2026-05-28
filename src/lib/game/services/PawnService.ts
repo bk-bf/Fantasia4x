@@ -742,7 +742,7 @@ export class PawnServiceImpl implements PawnService {
 
 	// UPDATED: More realistic rest increases based on activity intensity (single rest system)
 	private getRestIncreasePerTurn(pawn: Pawn): number {
-		let baseRest = 0.12; // Reduced base rest increase
+		let baseRest = 2.5; // Fatigue increase per turn — reaches 65 in ~26 turns
 
 		// Different work types cause different rest needs
 		if (pawn.state.isWorking) {
@@ -786,7 +786,7 @@ export class PawnServiceImpl implements PawnService {
 	}
 
 	private getHungerIncreasePerTurn(pawn: Pawn): number {
-		let baseHunger = 0.3; // Base hunger increase per turn
+		let baseHunger = 3.5; // Hunger increase per turn — reaches 60 in ~17 turns
 
 		// Working increases hunger
 		if (pawn.state.isWorking) {

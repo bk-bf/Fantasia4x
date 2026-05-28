@@ -38,12 +38,18 @@ export const PAWN_STATE = {
 export type PawnStateName = (typeof PAWN_STATE)[keyof typeof PAWN_STATE];
 
 // ===== NEED THRESHOLDS =====
-const HUNGER_THRESHOLD = 65;
-const FATIGUE_THRESHOLD = 65;
-const EATING_TURNS = 3;
-const SLEEPING_TURNS = 5;
-const HUNGER_PER_EATING_TURN = 20;
-const FATIGUE_PER_SLEEPING_TURN = 15;
+const HUNGER_THRESHOLD = 60;           // Seek food at 60%
+const CRITICAL_HUNGER = 85;            // Interrupt work — must eat now
+const FATIGUE_THRESHOLD = 65;          // Seek rest at 65%
+const CRITICAL_FATIGUE = 85;           // Interrupt work — collapse/sleep
+const EATING_TURNS = 5;                // Turns to eat at a campfire
+const EATING_TURNS_GROUND = 7;         // Turns eating in-place (cold, uncomfortable)
+const SLEEPING_TURNS = 10;             // Turns asleep in a shelter
+const SLEEPING_TURNS_GROUND = 15;      // Turns asleep on bare ground (fitful sleep)
+const HUNGER_PER_EATING_CAMPFIRE = 14; // 5×14=70 hunger restored — enough from 60 to 0
+const HUNGER_PER_EATING_GROUND = 7;    // 7×7=49 hunger restored — leaves pawn still hungry from 60
+const FATIGUE_PER_SLEEPING_TURN = 10;  // 10×10=100 fatigue restored in shelter
+const FATIGUE_PER_SLEEPING_GROUND = 5; // 15×5=75 restored on ground — never fully rests from high fatigue
 
 // ===== HELPERS =====
 
@@ -53,17 +59,35 @@ function isAdjacent(ax: number, ay: number, bx: number, by: number): boolean {
     return dx <= 1 && dy <= 1 && (dx + dy) > 0;
 }
 
+/** Tiles held by pawns that are currently stationary (eating, sleeping, or working). */
+function getOccupiedTiles(excludePawnId: string, gs: GameState): Set<string> {
+    const occupied = new Set<string>();
+    for (const p of gs.pawns) {
+        if (p.id === excludePawnId || !p.position) continue;
+        const state = p.currentState ?? PAWN_STATE.IDLE;
+        if (
+            state === PAWN_STATE.EATING ||
+            state === PAWN_STATE.SLEEPING ||
+            state === PAWN_STATE.WORKING
+        ) {
+            occupied.add(`${p.position.x},${p.position.y}`);
+        }
+    }
+    return occupied;
+}
+
 function findAdjacentApproach(
     tx: number,
     ty: number,
-    worldMap: GameState['worldMap']
+    worldMap: GameState['worldMap'],
+    occupied?: Set<string>
 ): { x: number; y: number } | null {
     for (let dy = -1; dy <= 1; dy++) {
         for (let dx = -1; dx <= 1; dx++) {
             if (dx === 0 && dy === 0) continue;
             const nx = tx + dx;
             const ny = ty + dy;
-            if (worldMap[ny]?.[nx]?.walkable) return { x: nx, y: ny };
+            if (worldMap[ny]?.[nx]?.walkable && !occupied?.has(`${nx},${ny}`)) return { x: nx, y: ny };
         }
     }
     return null;
@@ -78,7 +102,8 @@ function tryAssignPath(
     if (!pawn.position) return null;
     if (!wasmPathfinderService.isReady()) return null;
     if (isAdjacent(pawn.position.x, pawn.position.y, tx, ty)) return null;
-    const approach = findAdjacentApproach(tx, ty, gameState.worldMap);
+    const occupied = getOccupiedTiles(pawn.id, gameState);
+    const approach = findAdjacentApproach(tx, ty, gameState.worldMap, occupied);
     if (!approach) return null;
     const { walkable, costs, width, height } = buildPathfindingGrids(gameState.worldMap);
     const path = wasmPathfinderService.findPath(
@@ -106,6 +131,10 @@ function findAvailableFood(gs: GameState): { source: 'item' | 'stockpile'; id: s
     return null;
 }
 
+// Building type lists — module-level for use in helpers
+const CAMPFIRE_TYPES = ['campfire'];
+const REST_TYPES = ['lean_to_shelter', 'woodland_shelter', 'stone_hut'];
+
 /** Phase 6: find the nearest complete storage building (campfire etc.) to a pawn. */
 function findNearestStorageBuilding(
     pawn: Pawn,
@@ -115,12 +144,7 @@ function findNearestStorageBuilding(
     let best: { x: number; y: number; buildingId: string; dist: number } | null = null;
     for (const b of gs.buildings ?? []) {
         if (b.status !== 'complete') continue;
-        const def = ITEMS_DATABASE; // unused, check building def via flag
-        // Check isStorage flag on the building definition (set in Buildings.ts)
-        // We can check it via the PlacedBuilding's type by looking up AVAILABLE_BUILDINGS,
-        // but to avoid a circular import we check known storage building types directly.
-        const STORAGE_TYPES = ['campfire'];
-        if (!STORAGE_TYPES.includes(b.type)) continue;
+        if (!CAMPFIRE_TYPES.includes(b.type)) continue;
         const dist = Math.abs(b.x - pawn.position.x) + Math.abs(b.y - pawn.position.y);
         if (!best || dist < best.dist) best = { x: b.x, y: b.y, buildingId: b.id, dist };
     }
@@ -133,7 +157,6 @@ function findNearestRestBuilding(
     gs: GameState
 ): { x: number; y: number; buildingId: string } | null {
     if (!pawn.position) return null;
-    const REST_TYPES = ['lean_to_shelter', 'woodland_shelter', 'stone_hut'];
     let best: { x: number; y: number; buildingId: string; dist: number } | null = null;
     for (const b of gs.buildings ?? []) {
         if (b.status !== 'complete') continue;
@@ -142,6 +165,24 @@ function findNearestRestBuilding(
         if (!best || dist < best.dist) best = { x: b.x, y: b.y, buildingId: b.id, dist };
     }
     return best ? { x: best.x, y: best.y, buildingId: best.buildingId } : null;
+}
+
+/** True when the pawn is adjacent to a lit campfire (better eating). */
+function isAtFoodBuilding(pawn: Pawn, gs: GameState): boolean {
+    if (!pawn.position) return false;
+    return (gs.buildings ?? []).some(
+        (b) => b.status === 'complete' && CAMPFIRE_TYPES.includes(b.type) &&
+            isAdjacent(pawn.position!.x, pawn.position!.y, b.x, b.y)
+    );
+}
+
+/** True when the pawn is adjacent to a shelter (better sleep). */
+function isAtRestBuilding(pawn: Pawn, gs: GameState): boolean {
+    if (!pawn.position) return false;
+    return (gs.buildings ?? []).some(
+        (b) => b.status === 'complete' && REST_TYPES.includes(b.type) &&
+            isAdjacent(pawn.position!.x, pawn.position!.y, b.x, b.y)
+    );
 }
 
 function consumeFood(foodRef: { source: 'item' | 'stockpile'; id: string }, gs: GameState): GameState {
@@ -375,7 +416,8 @@ function handleIdle(pawn: Pawn, gameState: GameState): GameState {
     if ((pawn.needs?.hunger ?? 0) >= HUNGER_THRESHOLD && findAvailableFood(gameState)) {
         return transitionTo(pawn, PAWN_STATE.HUNGRY, gameState);
     }
-    if ((pawn.needs?.fatigue ?? 0) >= FATIGUE_THRESHOLD && findNearestRestBuilding(pawn, gameState)) {
+    // Sleep if fatigued — pawn will collapse in-place if no shelter exists
+    if ((pawn.needs?.fatigue ?? 0) >= FATIGUE_THRESHOLD) {
         return transitionTo(pawn, PAWN_STATE.TIRED, gameState);
     }
 
@@ -470,6 +512,16 @@ function handleWorking(pawn: Pawn, gameState: GameState): GameState {
 
     const jobInPool = (gameState.jobs ?? []).find((j) => j.id === jobId);
     if (!jobInPool) return goIdle(pawn, gameState);
+
+    // Critical needs: pawn drops the job and attends to survival immediately
+    if ((pawn.needs?.hunger ?? 0) >= CRITICAL_HUNGER && findAvailableFood(gameState)) {
+        const gs = jobService.releaseJob(pawn.id, jobId, gameState);
+        return transitionTo(pawn, PAWN_STATE.HUNGRY, gs);
+    }
+    if ((pawn.needs?.fatigue ?? 0) >= CRITICAL_FATIGUE) {
+        const gs = jobService.releaseJob(pawn.id, jobId, gameState);
+        return transitionTo(pawn, PAWN_STATE.TIRED, gs);
+    }
 
     if (
         activeJob.type !== 'craft' &&
@@ -672,7 +724,11 @@ function handleMovingToNeed(pawn: Pawn, gameState: GameState): GameState {
 function handleEating(pawn: Pawn, gameState: GameState): GameState {
     const activeJob = pawn.activeJob;
     const turnsInState = (activeJob?.turnsInState ?? 0) + 1;
-    const newHunger = Math.max(0, (pawn.needs?.hunger ?? 50) - HUNGER_PER_EATING_TURN);
+    // Better recovery near a campfire; cold field meal is less satisfying
+    const atCampfire = isAtFoodBuilding(pawn, gameState);
+    const hungerRecovery = atCampfire ? HUNGER_PER_EATING_CAMPFIRE : HUNGER_PER_EATING_GROUND;
+    const eatDuration = atCampfire ? EATING_TURNS : EATING_TURNS_GROUND;
+    const newHunger = Math.max(0, (pawn.needs?.hunger ?? 50) - hungerRecovery);
 
     const updatedNeeds = {
         ...(pawn.needs ?? { hunger: 0, fatigue: 0, sleep: 0, lastSleep: 0, lastMeal: 0 }),
@@ -681,10 +737,10 @@ function handleEating(pawn: Pawn, gameState: GameState): GameState {
     };
     const updatedState = {
         ...(pawn.state ?? { mood: 50, health: 100, isWorking: false, isSleeping: false, isEating: false }),
-        isEating: turnsInState < EATING_TURNS
+        isEating: turnsInState < eatDuration
     };
 
-    if (turnsInState >= EATING_TURNS) {
+    if (turnsInState >= eatDuration) {
         return {
             ...gameState,
             pawns: gameState.pawns.map((p) =>
@@ -704,7 +760,7 @@ function handleEating(pawn: Pawn, gameState: GameState): GameState {
                     needs: updatedNeeds,
                     state: updatedState,
                     activeJob: activeJob
-                        ? { ...activeJob, turnsInState, progress: turnsInState / EATING_TURNS }
+                        ? { ...activeJob, turnsInState, progress: turnsInState / eatDuration }
                         : undefined
                 }
                 : p
@@ -715,8 +771,12 @@ function handleEating(pawn: Pawn, gameState: GameState): GameState {
 function handleSleeping(pawn: Pawn, gameState: GameState): GameState {
     const activeJob = pawn.activeJob;
     const turnsInState = (activeJob?.turnsInState ?? 0) + 1;
-    const newFatigue = Math.max(0, (pawn.needs?.fatigue ?? 50) - FATIGUE_PER_SLEEPING_TURN);
-    const newSleep = Math.max(0, (pawn.needs?.sleep ?? 50) - FATIGUE_PER_SLEEPING_TURN);
+    // Proper shelter dramatically improves sleep quality and duration
+    const atShelter = isAtRestBuilding(pawn, gameState);
+    const fatigueRecovery = atShelter ? FATIGUE_PER_SLEEPING_TURN : FATIGUE_PER_SLEEPING_GROUND;
+    const sleepDuration = atShelter ? SLEEPING_TURNS : SLEEPING_TURNS_GROUND;
+    const newFatigue = Math.max(0, (pawn.needs?.fatigue ?? 50) - fatigueRecovery);
+    const newSleep = Math.max(0, (pawn.needs?.sleep ?? 50) - fatigueRecovery);
 
     const updatedNeeds = {
         ...(pawn.needs ?? { hunger: 0, fatigue: 0, sleep: 0, lastSleep: 0, lastMeal: 0 }),
@@ -726,10 +786,10 @@ function handleSleeping(pawn: Pawn, gameState: GameState): GameState {
     };
     const updatedState = {
         ...(pawn.state ?? { mood: 50, health: 100, isWorking: false, isSleeping: false, isEating: false }),
-        isSleeping: turnsInState < SLEEPING_TURNS
+        isSleeping: turnsInState < sleepDuration
     };
 
-    if (turnsInState >= SLEEPING_TURNS) {
+    if (turnsInState >= sleepDuration) {
         return {
             ...gameState,
             pawns: gameState.pawns.map((p) =>
@@ -749,7 +809,7 @@ function handleSleeping(pawn: Pawn, gameState: GameState): GameState {
                     needs: updatedNeeds,
                     state: updatedState,
                     activeJob: activeJob
-                        ? { ...activeJob, turnsInState, progress: turnsInState / SLEEPING_TURNS }
+                        ? { ...activeJob, turnsInState, progress: turnsInState / sleepDuration }
                         : undefined
                 }
                 : p

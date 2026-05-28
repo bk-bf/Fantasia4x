@@ -84,6 +84,16 @@
     })
     .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= (container?.clientWidth ?? 0));
 
+  // Zzz overlays for sleeping pawns — floating letter animation above the tile
+  $: sleepingOverlays = pawns
+    .filter((p) => p.position && p.currentState === 'Sleeping')
+    .map((p) => {
+      const localX = (p.position!.x - viewX + 0.5) * tileWidth;
+      const localY = (p.position!.y - viewY) * tileHeight;
+      return { id: p.id, left: localX, top: localY - 18 };
+    })
+    .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= (container?.clientWidth ?? 0));
+
   // Phase 4: buildings and designations overlay
   let buildings: PlacedBuilding[] = [];
   let designations: Record<string, DesignationType> = {};
@@ -292,14 +302,24 @@
       if (!pawn.position) continue;
       const { x, y } = pawn.position;
       const isSelected = pawn.id === selectedId;
-      const color = pawnIdColor(pawn.id);
+      const isSleeping = pawn.currentState === 'Sleeping';
+      const isCriticallyHungry = (pawn.needs?.hunger ?? 0) >= 85;
+
+      // Color: blue for sleeping, orange for critically hungry, white otherwise
+      const baseColor = isSleeping
+        ? { r: 0.35, g: 0.45, b: 1.0 }
+        : isCriticallyHungry
+          ? { r: 1.0, g: 0.45, b: 0.05 }
+          : { r: 1, g: 1, b: 1 };
+
       const fg = isSelected
         ? {
-            r: Math.min(1, color.r + 0.25),
-            g: Math.min(1, color.g + 0.25),
-            b: Math.min(1, color.b + 0.25)
+            r: Math.min(1, baseColor.r + 0.25),
+            g: Math.min(1, baseColor.g + 0.25),
+            b: Math.min(1, baseColor.b + 0.25)
           }
-        : color;
+        : baseColor;
+
       grid.setTile(x, y, {
         char: PAWN_SPRITES[i % PAWN_SPRITES.length],
         foreground: fg,
@@ -801,6 +821,12 @@
     </div>
   {/each}
 
+  {#each sleepingOverlays as overlay (overlay.id)}
+    <div class="zzz-float" style="left:{overlay.left}px;top:{overlay.top}px;">
+      <span class="zzz-z" style="animation-delay:0s">Z</span><span class="zzz-z" style="animation-delay:0.7s">z</span><span class="zzz-z" style="animation-delay:1.4s">z</span>
+    </div>
+  {/each}
+
   {#if errorMsg}
     <div class="error">WebGL unavailable: {errorMsg}</div>
   {:else if !ready}
@@ -1017,6 +1043,31 @@
   .pawn-progress-fill {
     height: 100%;
     background: linear-gradient(90deg, #4ab85a, #8ad66a);
+  }
+
+  /* Zzz floating letters above sleeping pawns */
+  .zzz-float {
+    position: absolute;
+    pointer-events: none;
+    z-index: 12;
+    display: flex;
+    gap: 1px;
+    transform: translateX(-50%);
+  }
+  .zzz-z {
+    color: #7788ff;
+    font-family: 'Courier New', monospace;
+    font-size: 8px;
+    font-weight: bold;
+    opacity: 0;
+    animation: zzz-rise 2.1s ease-out infinite;
+    text-shadow: 0 0 4px #334;
+  }
+  @keyframes zzz-rise {
+    0%   { opacity: 0;   transform: translateY(2px) scale(0.75); }
+    15%  { opacity: 1; }
+    70%  { opacity: 0.7; transform: translateY(-14px) scale(1.1); }
+    100% { opacity: 0;   transform: translateY(-20px) scale(0.85); }
   }
   .tile-hud--selection {
     border-color: #5566cc;
