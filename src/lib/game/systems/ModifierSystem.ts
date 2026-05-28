@@ -16,8 +16,8 @@ import type {
 	RacialTrait,
 	EquippedItem
 } from '../core/types';
-import itemsData from '../database/items.json';
-import buildingsData from '../database/buildings.json';
+import itemsData from '../database/items.jsonc';
+import buildingsData from '../database/buildings.jsonc';
 import { WORK_CATEGORIES } from '../core/Work';
 import { building } from '$app/environment';
 

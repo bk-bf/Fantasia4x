@@ -1,4 +1,4 @@
-import eventData from '../database/events.json';
+import eventData from '../database/events.jsonc';
 export interface EventConsequence {
   id: string;
   description: string;

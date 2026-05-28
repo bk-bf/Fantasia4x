@@ -3,7 +3,7 @@
   import CurrentTask from '$lib/components/UI/CurrentTask.svelte';
   import { uiState } from '$lib/stores/uiState';
   import TaskContainer from '$lib/components/UI/TaskContainer.svelte';
-  import ITEMS_DATABASE from '$lib/game/database/items.json';
+  import ITEMS_DATABASE from '$lib/game/database/items.jsonc';
   import { gameEngine } from '$lib/game/systems/GameEngineImpl';
   import { itemService } from '$lib/game/services/ItemService';
   import { onDestroy } from 'svelte';

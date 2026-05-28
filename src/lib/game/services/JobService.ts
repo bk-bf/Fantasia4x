@@ -10,7 +10,7 @@
  */
 
 import type { GameState, Job, Pawn, DroppedItem } from '../core/types';
-import itemsData from '../database/items.json';
+import itemsData from '../database/items.jsonc';
 import { resourceObjectService } from './ResourceObjectService';
 import { itemService } from './ItemService';
 

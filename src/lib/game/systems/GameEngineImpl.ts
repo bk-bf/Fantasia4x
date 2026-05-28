@@ -12,8 +12,8 @@ import { pawnService } from '../services/PawnService';
 import { buildingService } from '../services/BuildingService';
 import { researchService } from '../services/ResearchService';
 import { WORK_CATEGORIES } from '../core/Work';
-import itemsData from '../database/items.json';
-import buildingsData from '../database/buildings.json';
+import itemsData from '../database/items.jsonc';
+import buildingsData from '../database/buildings.jsonc';
 
 import { pawnStateMachineService } from './PawnStateMachine';
 import { jobService } from '../services/JobService';

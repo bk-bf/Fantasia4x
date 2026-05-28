@@ -1,7 +1,7 @@
 <!-- PawnInventory.svelte — shows items the pawn is currently carrying -->
 <script lang="ts">
   import type { Pawn } from '$lib/game/core/types';
-  import ITEMS_DATABASE from '$lib/game/database/items.json';
+  import ITEMS_DATABASE from '$lib/game/database/items.jsonc';
 
   export let pawn: Pawn;
 

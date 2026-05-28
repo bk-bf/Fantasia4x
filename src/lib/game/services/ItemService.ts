@@ -1,5 +1,5 @@
 import type { Item, GameState } from '../core/types';
-import itemsData from '../database/items.json';
+import itemsData from '../database/items.jsonc';
 import { RARITY_COLORS } from '../database/colors';
 
 const ITEMS_DATABASE = itemsData as unknown as Item[];

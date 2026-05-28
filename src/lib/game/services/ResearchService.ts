@@ -1,6 +1,6 @@
 import type { ResearchProject, LoreItem, RaceStats, GameState } from '../core/types';
-import researchData from '../database/research.json';
-import loreData from '../database/lore.json';
+import researchData from '../database/research.jsonc';
+import loreData from '../database/lore.jsonc';
 
 const RESEARCH_DATABASE = researchData as unknown as ResearchProject[];
 const LORE_DATABASE = loreData as unknown as LoreItem[];

@@ -1183,6 +1183,7 @@
     color: #c04040;
   }
   .loading {
+    background: var(--bg-panel);
     color: #806830;
   }
 </style>

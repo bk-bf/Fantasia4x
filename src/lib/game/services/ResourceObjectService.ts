@@ -1,6 +1,6 @@
 import type { DesignationType, Pawn } from '../core/types';
 import { resolveCharSpans, type CharSpan } from '../core/Terrains';
-import resourceObjectsData from '../database/resources.json';
+import resourceObjectsData from '../database/resources.jsonc';
 
 export interface ResourceYieldDef {
     itemId: string;

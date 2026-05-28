@@ -1,5 +1,5 @@
-import terrainsData from '../database/terrains.json';
-import subterrainsData from '../database/subterrains.json';
+import terrainsData from '../database/terrains.jsonc';
+import subterrainsData from '../database/subterrains.jsonc';
 
 /**
  * Terrains.ts — Biome and subterrain definitions

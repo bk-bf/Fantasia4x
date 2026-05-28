@@ -1,5 +1,5 @@
 import type { Building, GameState, PlacedBuilding } from '../core/types';
-import buildingsData from '../database/buildings.json';
+import buildingsData from '../database/buildings.jsonc';
 import { RARITY_COLORS } from '../database/colors';
 
 const AVAILABLE_BUILDINGS = buildingsData as unknown as Building[];

@@ -3,7 +3,7 @@
  * Backward-compatible projection sourced from external database files.
  */
 
-import resourceObjectsData from '../database/resources.json';
+import resourceObjectsData from '../database/resources.jsonc';
 
 export interface ResourceDef {
     displayName: string;
