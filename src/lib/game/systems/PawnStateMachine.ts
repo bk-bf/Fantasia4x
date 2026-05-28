@@ -1079,7 +1079,8 @@ function handleSleeping(pawn: Pawn, gameState: GameState): GameState {
     };
     const updatedState = {
         ...(pawn.state ?? { mood: 50, health: 100, isWorking: false, isSleeping: false, isEating: false }),
-        isSleeping: !shouldWake
+        isSleeping: !shouldWake,
+        isEating: false  // can't be eating while sleeping
     };
 
     if (shouldWake) {

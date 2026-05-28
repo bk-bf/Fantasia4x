@@ -19,6 +19,7 @@
   import { designationService } from '$lib/game/services/DesignationService.js';
   import { glyph, SHEET } from '$lib/webgl/tilesets.js';
   import { uiState } from '$lib/stores/uiState.js';
+  import { worldEffects } from '$lib/stores/worldEffects.js';
 
   // Tile size range for zoom (square cells for CoQ sprite-mode)
   // MAP_W / MAP_H must match the generateWorld() call in gameState.ts
@@ -84,15 +85,18 @@
     })
     .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= (container?.clientWidth ?? 0));
 
-  // Sleeping overlays: only Zzz floating letters (tile is rotated directly in WebGL)
-  $: sleepingOverlays = pawns
-    .filter((p) => p.position && p.currentState === 'Sleeping')
-    .map((p) => {
-      const left = (p.position!.x - viewX + 0.5) * tileWidth;
-      const top = (p.position!.y - viewY) * tileHeight - 18;
-      return { id: p.id, left, top };
-    })
-    .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= (container?.clientWidth ?? 0));
+  // Sleeping overlays: push to worldEffectsStore so WorldEffectsLayer renders them
+  // at the correct z-index (above tiles, below popup panels).
+  $: worldEffects.setSleepingOverlays(
+    pawns
+      .filter((p) => p.position && p.currentState === 'Sleeping')
+      .map((p) => {
+        const left = (p.position!.x - viewX + 0.5) * tileWidth;
+        const top = (p.position!.y - viewY) * tileHeight - 18;
+        return { id: p.id, left, top };
+      })
+      .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= (container?.clientWidth ?? 0))
+  );
 
   // Phase 4: buildings and designations overlay
   let buildings: PlacedBuilding[] = [];
@@ -831,15 +835,6 @@
     </div>
   {/each}
 
-  {#each sleepingOverlays as overlay (overlay.id)}
-    <div class="zzz-float" style="left:{overlay.left}px;top:{overlay.top}px;">
-      <span class="zzz-z" style="animation-delay:0s">Z</span><span
-        class="zzz-z"
-        style="animation-delay:0.7s">z</span
-      ><span class="zzz-z" style="animation-delay:1.4s">z</span>
-    </div>
-  {/each}
-
   {#if errorMsg}
     <div class="error">WebGL unavailable: {errorMsg}</div>
   {:else if !ready}
@@ -1058,41 +1053,6 @@
     background: linear-gradient(90deg, #4ab85a, #8ad66a);
   }
 
-  /* Zzz floating letters above sleeping pawns */
-  .zzz-float {
-    position: absolute;
-    pointer-events: none;
-    z-index: 12;
-    display: flex;
-    gap: 1px;
-    transform: translateX(-50%);
-  }
-  .zzz-z {
-    color: #7788ff;
-    font-family: 'Courier New', monospace;
-    font-size: 8px;
-    font-weight: bold;
-    opacity: 0;
-    animation: zzz-rise 2.1s ease-out infinite;
-    text-shadow: 0 0 4px #334;
-  }
-  @keyframes zzz-rise {
-    0% {
-      opacity: 0;
-      transform: translateY(2px) scale(0.75);
-    }
-    15% {
-      opacity: 1;
-    }
-    70% {
-      opacity: 0.7;
-      transform: translateY(-14px) scale(1.1);
-    }
-    100% {
-      opacity: 0;
-      transform: translateY(-20px) scale(0.85);
-    }
-  }
   .tile-hud--selection {
     border-color: #5566cc;
     background: rgba(8, 12, 40, 0.94);

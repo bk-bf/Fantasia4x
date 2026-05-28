@@ -12,6 +12,7 @@
   import ResourceSidebar from '$lib/components/UI/ResourceSidebar.svelte';
   import GameControls from '$lib/components/UI/GameControls.svelte';
   import ChroniclePanel from '$lib/components/UI/ChroniclePanel.svelte';
+  import WorldEffectsLayer from '$lib/components/UI/WorldEffectsLayer.svelte';
   import { uiState } from '$lib/stores/uiState';
   import { gameState } from '$lib/stores/gameState';
   import { gameEngine } from '$lib/game/systems/GameEngineImpl';
@@ -93,6 +94,9 @@
       <!-- Map is always visible -->
       <div class="map-area">
         <MainScreen />
+
+        <!-- World effects layer: above tiles (z-index 5), below popup panels (z-index 10) -->
+        <WorldEffectsLayer />
 
         <!-- Overlay panel: slides up from bottom, covers 50% of map -->
         {#if currentScreen !== 'main'}

@@ -617,19 +617,16 @@ export class PawnServiceImpl implements PawnService {
 	private calculateStateUpdate(state: PawnState, needs: PawnNeeds, currentTurn: number): PawnState {
 		const newState = { ...state };
 
-		// Critical needs override current activities
+		// Apply mood penalties for critical needs.
+		// NOTE: Do NOT override isEating/isSleeping/isWorking here — the PawnStateMachine
+		// is the authoritative source for those flags via syncActiveEffects. Overriding them
+		// here causes stale flags (e.g. isEating=true while sleeping) because handleSleeping
+		// spreads pawn.state forward without resetting all flags.
 		if (needs.hunger > 90) {
-			newState.isWorking = false;
-			newState.isSleeping = false;
-			newState.isEating = true;
 			newState.mood = Math.max(0, newState.mood - 5);
-		} else if (needs.fatigue > 95) { // Use fatigue as single rest need
-			newState.isWorking = false;
-			newState.isEating = false;
-			newState.isSleeping = true;
+		} else if (needs.fatigue > 95) {
 			newState.mood = Math.max(0, newState.mood - 3);
-		} else if (needs.fatigue > 90) { // Medium fatigue - stop working but don't force sleep
-			newState.isWorking = false;
+		} else if (needs.fatigue > 90) {
 			newState.mood = Math.max(0, newState.mood - 2);
 		}
 
