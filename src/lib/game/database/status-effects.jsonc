@@ -1,41 +1,32 @@
 // Status effect definitions.
 // modifiers are multipliers unless noted: 1.0 = full rate, 0.0 = paused, 0.33 = one-third.
 [
-  {
-    "id"         : "eating",
-    "name"       : "Eating",
-    "description": "Mid-meal. Hunger is not accumulating.",
-    "color"      : "#ef5350",
-    "modifiers"  : {
-      "hungerRate": 0.0
+    {
+        "id"         : "eating",
+        "name"       : "Eating",
+        "description": "Mid-meal. Hunger is not accumulating.",
+        "color"      : "#ef5350",
+        "modifiers"  : {"hungerRate": 0.0}
+    },
+    {
+        "id"         : "sleeping",
+        "name"       : "Sleeping",
+        "description": "Resting. Metabolism slows; hunger accrues at one-third the normal rate.",
+        "color"      : "#ffb300",
+        "modifiers"  : {"hungerRate": 0.33, "fatigueRate": 0.0}
+    },
+    {
+        "id"         : "tired",
+        "name"       : "Exhausted",
+        "description": "Severe fatigue. Work efficiency and movement speed are reduced.",
+        "color"      : "#ff7043",
+        "modifiers"  : {"workEfficiency": 0.5, "moveSpeed": 0.5}
+    },
+    {
+        "id"         : "hungry",
+        "name"       : "Hungry",
+        "description": "Hunger is high. Work efficiency and movement speed are reduced.",
+        "color"      : "#e53935",
+        "modifiers"  : {"workEfficiency": 0.75, "moveSpeed": 0.75}
     }
-  },
-  {
-    "id"         : "sleeping",
-    "name"       : "Sleeping",
-    "description": "Resting. Metabolism slows; hunger accrues at one-third the normal rate.",
-    "color"      : "#ffb300",
-    "modifiers"  : {
-      "hungerRate" : 0.33,
-      "fatigueRate": 0.0
-    }
-  },
-  {
-    "id"         : "tired",
-    "name"       : "Exhausted",
-    "description": "Severe fatigue. Work efficiency is reduced.",
-    "color"      : "#ff7043",
-    "modifiers"  : {
-      "workEfficiency": 0.5
-    }
-  },
-  {
-    "id"         : "hungry",
-    "name"       : "Hungry",
-    "description": "Hunger is high. The pawn is seeking food.",
-    "color"      : "#e53935",
-    "modifiers"  : {
-      "workEfficiency": 0.75
-    }
-  }
 ]

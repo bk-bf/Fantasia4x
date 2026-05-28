@@ -1129,7 +1129,9 @@ export class PawnServiceImpl implements PawnService {
 				continue;
 			}
 			if (!pawn.isMoving || !pawn.path || pawn.path.length === 0) continue;
-			const speed = Math.max(1, Math.floor((pawn.stats.dexterity ?? 10) / 20));
+			const baseSpeed = Math.max(1, Math.floor((pawn.stats.dexterity ?? 10) / 20));
+			const moveRate = getActiveEffects(pawn).reduce((r, e) => r * (e.modifiers.moveSpeed ?? 1), 1);
+			const speed = Math.max(1, Math.floor(baseSpeed * moveRate));
 			let idx = pawn.pathIndex ?? 0;
 			const startPos = pawn.position;
 			if (!startPos) continue;

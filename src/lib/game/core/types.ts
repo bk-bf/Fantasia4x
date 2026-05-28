@@ -2,6 +2,20 @@
 
 export type DesignationType = 'harvest' | 'construct' | 'mine' | 'haul' | 'clear' | 'forage' | 'scavenge' | 'stockpile';
 
+/** Zone types that support item-category filtering. */
+export type FilterableZoneType = 'forage' | 'scavenge' | 'harvest' | 'stockpile';
+
+/**
+ * DF-style category filter for a zone type.
+ * An empty `allowedCategories` means "allow everything".
+ */
+export interface ZoneFilter {
+	/** Item categories that are allowed. Empty = no filter (all categories pass). */
+	allowedCategories: string[];
+	/** Specific item IDs to block regardless of their category. */
+	blockedItems: string[];
+}
+
 export interface PlacedBuilding {
 	id: string;           // unique instance id
 	type: string;         // building definition id (matches Building.id)
@@ -69,6 +83,8 @@ export interface GameState {
 	stockpile: Record<string, number>;
 	/** Phase 4: designated tile actions keyed as "x,y" */
 	designations: Record<string, DesignationType>;
+	/** DF-style item-category filters per filterable zone type. */
+	zoneFilters?: Partial<Record<FilterableZoneType, ZoneFilter>>;
 	/** Phase 5a: active job pool — regenerated each turn by JobService */
 	jobs: Job[];
 	buildingQueue: BuildingInProgress[];
@@ -159,6 +175,7 @@ export interface StatusEffectDef {
 		hungerRate?: number;      // multiplier on hunger accrual (0 = paused, 0.33 = ⅓ rate)
 		fatigueRate?: number;     // multiplier on fatigue accrual
 		workEfficiency?: number;  // multiplier on work output
+		moveSpeed?: number;       // multiplier on movement steps per turn
 	};
 }
 
