@@ -50,8 +50,11 @@
       return;
     }
     if (e.key === 'Escape') {
-      uiState.deactivateDesignation();
-      uiState.setScreen('main');
+      if ($uiState.designationActive) {
+        uiState.deactivateDesignation(); // restores _screenBeforeDesignation (e.g. 'building')
+      } else {
+        uiState.setScreen('main');
+      }
       return;
     }
     if (e.key?.startsWith('F')) {

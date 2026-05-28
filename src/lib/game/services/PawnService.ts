@@ -546,20 +546,21 @@ export class PawnServiceImpl implements PawnService {
 	}
 
 	private consumeFoodFromInventory(gameState: GameState, foodId: string, amount: number): void {
-		if (!gameState.item) return;
-
-		const foodIndex = gameState.item.findIndex(item => item.id === foodId);
-		if (foodIndex !== -1) {
-			gameState.item[foodIndex] = {
-				...gameState.item[foodIndex],
-				amount: Math.max(0, gameState.item[foodIndex].amount - amount)
-			};
-			// Do NOT splice items at 0 — keep the entry so the item stays visible in the
-			// stockpile list (just with amount 0). Removing it via splice permanently
-			// deletes the item from state.item and it can never be restocked.
-
-			console.log(`[PawnService] Consumed ${amount}x ${foodId} from inventory`);
+		// Decrement item[]
+		if (gameState.item) {
+			const foodIndex = gameState.item.findIndex(item => item.id === foodId);
+			if (foodIndex !== -1) {
+				gameState.item[foodIndex] = {
+					...gameState.item[foodIndex],
+					amount: Math.max(0, gameState.item[foodIndex].amount - amount)
+				};
+			}
 		}
+		// Keep stockpile in sync (single source of truth for the sidebar)
+		if (gameState.stockpile) {
+			gameState.stockpile[foodId] = Math.max(0, (gameState.stockpile[foodId] ?? 0) - amount);
+		}
+		console.log(`[PawnService] Consumed ${amount}x ${foodId} from stockpile`);
 	}
 
 	private calculateFoodRecovery(pawn: Pawn, food: any): number {

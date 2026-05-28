@@ -211,25 +211,11 @@ export class ItemServiceImpl implements ItemService {
 	}
 
 	addItems(itemIds: Record<string, number>, gameState: GameState): GameState {
-		const newState = { ...gameState };
-		newState.item = [...gameState.item];
-
+		const newStockpile = { ...(gameState.stockpile ?? {}) };
 		Object.entries(itemIds).forEach(([itemId, amount]) => {
-			const existingIndex = newState.item.findIndex((i) => i.id === itemId);
-			if (existingIndex >= 0) {
-				newState.item[existingIndex] = {
-					...newState.item[existingIndex],
-					amount: newState.item[existingIndex].amount + amount
-				};
-			} else {
-				const itemTemplate = this.getItemById(itemId);
-				if (itemTemplate) {
-					newState.item.push({ ...itemTemplate, amount });
-				}
-			}
+			newStockpile[itemId] = (newStockpile[itemId] ?? 0) + amount;
 		});
-
-		return newState;
+		return { ...gameState, stockpile: newStockpile };
 	}
 
 	processCraftingQueue(gameState: GameState): GameState {
