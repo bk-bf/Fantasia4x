@@ -2,7 +2,8 @@
   import { currentStockpile, currentRace, gameState } from '$lib/stores/gameState';
   import { onDestroy } from 'svelte';
 
-  let stockpile: { id: string; name: string; amount: number; color?: string; emoji?: string }[] = [];
+  let stockpile: { id: string; name: string; amount: number; color?: string; emoji?: string }[] =
+    [];
   let race: any = null;
   let turnValue = 0;
   let itemChanges: Record<string, number> = {};

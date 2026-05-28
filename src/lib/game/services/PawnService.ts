@@ -777,10 +777,10 @@ export class PawnServiceImpl implements PawnService {
 				baseRest *= (trait.effects as any).fatigueRate;
 			}
 			switch (trait.name) {
-				case 'Tireless':   baseRest *= 0.7; break;
-				case 'Energetic':  baseRest *= 0.8; break;
-				case 'Lazy':       baseRest *= 1.3; break;
-				case 'Frail':      baseRest *= 1.4; break;
+				case 'Tireless': baseRest *= 0.7; break;
+				case 'Energetic': baseRest *= 0.8; break;
+				case 'Lazy': baseRest *= 1.3; break;
+				case 'Frail': baseRest *= 1.4; break;
 			}
 		});
 
@@ -799,8 +799,8 @@ export class PawnServiceImpl implements PawnService {
 		pawn.racialTraits.forEach((trait) => {
 			switch (trait.name) {
 				case 'Efficient Metabolism': baseHunger *= 0.7; break;
-				case 'Large Appetite':       baseHunger *= 1.4; break;
-				case 'Hardy':                baseHunger *= 0.9; break;
+				case 'Large Appetite': baseHunger *= 1.4; break;
+				case 'Hardy': baseHunger *= 0.9; break;
 			}
 		});
 
