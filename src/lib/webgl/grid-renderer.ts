@@ -197,18 +197,42 @@ export class GridRenderer {
 				? [tile.detail.r, tile.detail.g, tile.detail.b]
 				: fg;
 
+			// UV corners — default (no rotation)
+			let tlU = u1, tlV = v1; // top-left
+			let trU = u2, trV = v1; // top-right
+			let blU = u1, blV = v2; // bottom-left
+			let brU = u2, brV = v2; // bottom-right
+
+			// Rotate UV coords clockwise to spin the glyph within its quad
+			if (tile.rotation === 90) {
+				tlU = u1; tlV = v2;
+				trU = u1; trV = v1;
+				blU = u2; blV = v2;
+				brU = u2; brV = v1;
+			} else if (tile.rotation === 180) {
+				tlU = u2; tlV = v2;
+				trU = u1; trV = v2;
+				blU = u2; blV = v1;
+				brU = u1; brV = v1;
+			} else if (tile.rotation === 270) {
+				tlU = u2; tlV = v1;
+				trU = u2; trV = v2;
+				blU = u1; blV = v1;
+				brU = u1; brV = v2;
+			}
+
 			// Add vertex data for this character (2 triangles = 6 vertices)
 			// Vertex format: x, y, u, v, fr, fg, fb, br, bg, bb, dr, dg, db (13 floats)
 			const charVertices = [
 				// Triangle 1
-				x1, y1, u1, v1, fg[0], fg[1], fg[2], bg[0], bg[1], bg[2], dt[0], dt[1], dt[2],  // Top-left
-				x2, y1, u2, v1, fg[0], fg[1], fg[2], bg[0], bg[1], bg[2], dt[0], dt[1], dt[2],  // Top-right
-				x1, y2, u1, v2, fg[0], fg[1], fg[2], bg[0], bg[1], bg[2], dt[0], dt[1], dt[2],  // Bottom-left
+				x1, y1, tlU, tlV, fg[0], fg[1], fg[2], bg[0], bg[1], bg[2], dt[0], dt[1], dt[2],  // Top-left
+				x2, y1, trU, trV, fg[0], fg[1], fg[2], bg[0], bg[1], bg[2], dt[0], dt[1], dt[2],  // Top-right
+				x1, y2, blU, blV, fg[0], fg[1], fg[2], bg[0], bg[1], bg[2], dt[0], dt[1], dt[2],  // Bottom-left
 
 				// Triangle 2
-				x2, y1, u2, v1, fg[0], fg[1], fg[2], bg[0], bg[1], bg[2], dt[0], dt[1], dt[2],  // Top-right
-				x2, y2, u2, v2, fg[0], fg[1], fg[2], bg[0], bg[1], bg[2], dt[0], dt[1], dt[2],  // Bottom-right
-				x1, y2, u1, v2, fg[0], fg[1], fg[2], bg[0], bg[1], bg[2], dt[0], dt[1], dt[2],  // Bottom-left
+				x2, y1, trU, trV, fg[0], fg[1], fg[2], bg[0], bg[1], bg[2], dt[0], dt[1], dt[2],  // Top-right
+				x2, y2, brU, brV, fg[0], fg[1], fg[2], bg[0], bg[1], bg[2], dt[0], dt[1], dt[2],  // Bottom-right
+				x1, y2, blU, blV, fg[0], fg[1], fg[2], bg[0], bg[1], bg[2], dt[0], dt[1], dt[2],  // Bottom-left
 			];
 
 			vertexData.push(...charVertices);

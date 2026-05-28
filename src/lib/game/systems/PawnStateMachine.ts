@@ -46,8 +46,9 @@ const EATING_TURNS = 5;                // Turns to eat at a campfire
 const EATING_TURNS_GROUND = 7;         // Turns eating in-place (cold, uncomfortable)
 const SLEEPING_TURNS = 10;             // Turns asleep in a shelter
 const SLEEPING_TURNS_GROUND = 15;      // Turns asleep on bare ground (fitful sleep)
-const HUNGER_PER_EATING_CAMPFIRE = 14; // 5×14=70 hunger restored — enough from 60 to 0
-const HUNGER_PER_EATING_GROUND = 7;    // 7×7=49 hunger restored — leaves pawn still hungry from 60
+const HUNGER_PER_FOOD_UNIT = 30;       // Base hunger restored per 1 unit (×nutrition)
+const SAFE_HUNGER = 10;                // Target hunger level after a full meal
+const MAX_UNITS_PER_FOOD_TYPE = 3;     // Cap per food type per meal — avoids hoarding
 const FATIGUE_PER_SLEEPING_TURN = 10;  // 10×10=100 fatigue restored in shelter
 const FATIGUE_PER_SLEEPING_GROUND = 5; // 15×5=75 restored on ground — never fully rests from high fatigue
 
@@ -115,20 +116,87 @@ function tryAssignPath(
     return pawnService.assignPath(pawn.id, path, gameState);
 }
 
-function findAvailableFood(gs: GameState): { source: 'item' | 'stockpile'; id: string } | null {
-    const foodItem = gs.item.find((i) => {
-        const def = ITEMS_DATABASE.find((d) => d.id === i.id);
-        return (def?.category === 'food' || (def?.nutrition ?? 0) > 0) && i.amount > 0;
+/** Quick check: is there any food available at all (no allocation). */
+function hasAvailableFood(gs: GameState): boolean {
+    return gs.item.some((i) => {
+        if (i.amount <= 0) return false;
+        const def = ITEMS_DATABASE.find((d: any) => d.id === i.id);
+        return def?.category === 'food' || (def?.nutrition ?? 0) > 0;
+    }) || Object.entries(gs.stockpile ?? {}).some(([id, amount]) => {
+        if (amount <= 0) return false;
+        const def = ITEMS_DATABASE.find((d: any) => d.id === id);
+        return def?.category === 'food' || (def?.nutrition ?? 0) > 0;
     });
-    if (foodItem) return { source: 'item', id: foodItem.id };
+}
+
+type MealPortion = { source: 'item' | 'stockpile'; id: string; units: number };
+
+/**
+ * Select a balanced meal that brings the pawn to SAFE_HUNGER.
+ * Takes the most nutritious food first, capped at MAX_UNITS_PER_FOOD_TYPE per type,
+ * then supplements with less nutritious options if needed.
+ */
+function selectFoodForMeal(pawn: Pawn, gs: GameState): MealPortion[] {
+    const hungerToSatisfy = Math.max(0, (pawn.needs?.hunger ?? 0) - SAFE_HUNGER);
+    if (hungerToSatisfy <= 0) return [];
+
+    type FoodOption = { source: 'item' | 'stockpile'; id: string; available: number; nutrition: number };
+    const seenIds = new Set<string>();
+    const options: FoodOption[] = [];
+
+    for (const i of gs.item) {
+        if (i.amount <= 0) continue;
+        const def = ITEMS_DATABASE.find((d: any) => d.id === i.id);
+        const nutrition = def?.nutrition ?? 0;
+        if (def?.category !== 'food' && nutrition <= 0) continue;
+        seenIds.add(i.id);
+        options.push({ source: 'item', id: i.id, available: i.amount, nutrition });
+    }
     for (const [id, amount] of Object.entries(gs.stockpile ?? {})) {
-        if (amount <= 0) continue;
-        const def = ITEMS_DATABASE.find((d) => d.id === id);
-        if (def?.category === 'food' || (def?.nutrition ?? 0) > 0) {
-            return { source: 'stockpile', id };
+        if (amount <= 0 || seenIds.has(id)) continue;
+        const def = ITEMS_DATABASE.find((d: any) => d.id === id);
+        const nutrition = def?.nutrition ?? 0;
+        if (def?.category !== 'food' && nutrition <= 0) continue;
+        options.push({ source: 'stockpile', id, available: amount, nutrition });
+    }
+
+    options.sort((a, b) => b.nutrition - a.nutrition);
+
+    const meal: MealPortion[] = [];
+    let remaining = hungerToSatisfy;
+    for (const food of options) {
+        if (remaining <= 0) break;
+        const hungerPerUnit = food.nutrition * HUNGER_PER_FOOD_UNIT;
+        if (hungerPerUnit <= 0) continue;
+        const unitsNeeded = Math.ceil(remaining / hungerPerUnit);
+        const unitsTaken = Math.min(unitsNeeded, MAX_UNITS_PER_FOOD_TYPE, food.available);
+        if (unitsTaken <= 0) continue;
+        meal.push({ source: food.source, id: food.id, units: unitsTaken });
+        remaining -= unitsTaken * hungerPerUnit;
+    }
+    return meal;
+}
+
+/** Consume a pre-selected meal, returning updated state and total hunger to recover. */
+function consumeMeal(meal: MealPortion[], gs: GameState): { state: GameState; hungerRecovered: number } {
+    let state = gs;
+    let hungerRecovered = 0;
+    for (const { source, id, units } of meal) {
+        const def = ITEMS_DATABASE.find((d: any) => d.id === id);
+        if (source === 'item') {
+            state = {
+                ...state,
+                item: state.item.map((i) =>
+                    i.id === id ? { ...i, amount: Math.max(0, i.amount - units) } : i
+                )
+            };
+        } else {
+            const newStockpile = { ...(state.stockpile ?? {}) };
+            newStockpile[id] = Math.max(0, (newStockpile[id] ?? 0) - units);
+            state = { ...state, stockpile: newStockpile };
         }
     }
-    return null;
+    return { state, hungerRecovered };
 }
 
 // Building type lists — module-level for use in helpers
@@ -185,19 +253,7 @@ function isAtRestBuilding(pawn: Pawn, gs: GameState): boolean {
     );
 }
 
-function consumeFood(foodRef: { source: 'item' | 'stockpile'; id: string }, gs: GameState): GameState {
-    if (foodRef.source === 'item') {
-        return {
-            ...gs,
-            item: gs.item.map((i) =>
-                i.id === foodRef.id ? { ...i, amount: Math.max(0, i.amount - 1) } : i
-            )
-        };
-    }
-    const newStockpile = { ...(gs.stockpile ?? {}) };
-    newStockpile[foodRef.id] = Math.max(0, (newStockpile[foodRef.id] ?? 0) - 1);
-    return { ...gs, stockpile: newStockpile };
-}
+
 
 function transitionTo(pawn: Pawn, state: PawnStateName, gs: GameState): GameState {
     return {
@@ -413,7 +469,7 @@ function tickPawn(pawn: Pawn, gameState: GameState): GameState {
 }
 
 function handleIdle(pawn: Pawn, gameState: GameState): GameState {
-    if ((pawn.needs?.hunger ?? 0) >= HUNGER_THRESHOLD && findAvailableFood(gameState)) {
+    if ((pawn.needs?.hunger ?? 0) >= HUNGER_THRESHOLD && hasAvailableFood(gameState)) {
         return transitionTo(pawn, PAWN_STATE.HUNGRY, gameState);
     }
     // Sleep if fatigued — pawn will collapse in-place if no shelter exists
@@ -514,7 +570,7 @@ function handleWorking(pawn: Pawn, gameState: GameState): GameState {
     if (!jobInPool) return goIdle(pawn, gameState);
 
     // Critical needs: pawn drops the job and attends to survival immediately
-    if ((pawn.needs?.hunger ?? 0) >= CRITICAL_HUNGER && findAvailableFood(gameState)) {
+    if ((pawn.needs?.hunger ?? 0) >= CRITICAL_HUNGER && hasAvailableFood(gameState)) {
         const gs = jobService.releaseJob(pawn.id, jobId, gameState);
         return transitionTo(pawn, PAWN_STATE.HUNGRY, gs);
     }
@@ -582,12 +638,12 @@ function handleWorking(pawn: Pawn, gameState: GameState): GameState {
 }
 
 function handleHungry(pawn: Pawn, gameState: GameState): GameState {
-    const food = findAvailableFood(gameState);
-    if (!food) {
+    const meal = selectFoodForMeal(pawn, gameState);
+    if (meal.length === 0) {
         return transitionTo(pawn, PAWN_STATE.IDLE, gameState);
     }
 
-    // Phase 6: try to pathfind to the nearest storage building to eat there
+    // Phase 6: try to pathfind to the nearest campfire — eat there for better recovery speed
     const storageBuilding = findNearestStorageBuilding(pawn, gameState);
     if (
         storageBuilding &&
@@ -596,6 +652,7 @@ function handleHungry(pawn: Pawn, gameState: GameState): GameState {
     ) {
         const afterPath = tryAssignPath(pawn, storageBuilding.x, storageBuilding.y, gameState);
         if (afterPath) {
+            // Food is NOT consumed yet — it will be taken on arrival at the campfire.
             return {
                 ...afterPath,
                 pawns: afterPath.pawns.map((p) =>
@@ -619,11 +676,11 @@ function handleHungry(pawn: Pawn, gameState: GameState): GameState {
         }
     }
 
-    // Fallback: eat in place
-    const afterConsume = consumeFood(food, gameState);
+    // Eat in place: consume all selected food now, then sit and eat for EATING_TURNS_GROUND turns.
+    const { state: afterMeal, hungerRecovered } = consumeMeal(meal, gameState);
     return {
-        ...afterConsume,
-        pawns: afterConsume.pawns.map((p) =>
+        ...afterMeal,
+        pawns: afterMeal.pawns.map((p) =>
             p.id === pawn.id
                 ? {
                     ...p,
@@ -633,8 +690,9 @@ function handleHungry(pawn: Pawn, gameState: GameState): GameState {
                         targetX: p.position?.x ?? 0,
                         targetY: p.position?.y ?? 0,
                         progress: 0,
-                        timeRequired: EATING_TURNS,
-                        turnsInState: 0
+                        timeRequired: EATING_TURNS_GROUND,
+                        turnsInState: 0,
+                        hungerToRecover: hungerRecovered
                     }
                 }
                 : p
@@ -702,16 +760,33 @@ function handleMovingToNeed(pawn: Pawn, gameState: GameState): GameState {
     if (!activeJob) return goIdle(pawn, gameState);
     if (pawn.hasReachedDestination && pawn.position) {
         const targetState = (activeJob.targetState ?? PAWN_STATE.EATING) as PawnStateName;
-        let gs = gameState;
-        // Phase 6: consume food on arrival when transitioning to Eating
         if (targetState === PAWN_STATE.EATING) {
-            const food = findAvailableFood(gs);
-            if (food) gs = consumeFood(food, gs);
-            else return goIdle(pawn, gs); // no food found after pathfinding
+            // Arrived at campfire — now select and consume the full meal, then start eating.
+            const meal = selectFoodForMeal(pawn, gameState);
+            if (meal.length === 0) return goIdle(pawn, gameState);
+            const { state: afterMeal, hungerRecovered } = consumeMeal(meal, gameState);
+            return {
+                ...afterMeal,
+                pawns: afterMeal.pawns.map((p) =>
+                    p.id === pawn.id
+                        ? {
+                            ...p,
+                            currentState: PAWN_STATE.EATING,
+                            hasReachedDestination: false,
+                            activeJob: {
+                                ...activeJob,
+                                timeRequired: EATING_TURNS,
+                                turnsInState: 0,
+                                hungerToRecover: hungerRecovered
+                            }
+                        }
+                        : p
+                )
+            };
         }
         return {
-            ...gs,
-            pawns: gs.pawns.map((p) =>
+            ...gameState,
+            pawns: gameState.pawns.map((p) =>
                 p.id === pawn.id
                     ? { ...p, currentState: targetState, hasReachedDestination: false }
                     : p
@@ -724,11 +799,11 @@ function handleMovingToNeed(pawn: Pawn, gameState: GameState): GameState {
 function handleEating(pawn: Pawn, gameState: GameState): GameState {
     const activeJob = pawn.activeJob;
     const turnsInState = (activeJob?.turnsInState ?? 0) + 1;
-    // Better recovery near a campfire; cold field meal is less satisfying
-    const atCampfire = isAtFoodBuilding(pawn, gameState);
-    const hungerRecovery = atCampfire ? HUNGER_PER_EATING_CAMPFIRE : HUNGER_PER_EATING_GROUND;
-    const eatDuration = atCampfire ? EATING_TURNS : EATING_TURNS_GROUND;
-    const newHunger = Math.max(0, (pawn.needs?.hunger ?? 50) - hungerRecovery);
+    const eatDuration = activeJob?.timeRequired ?? EATING_TURNS_GROUND;
+    // Distribute the pre-paid hunger recovery evenly over the eating duration.
+    const totalHunger = activeJob?.hungerToRecover ?? 0;
+    const hungerRecoveryThisTurn = totalHunger / eatDuration;
+    const newHunger = Math.max(0, (pawn.needs?.hunger ?? 50) - hungerRecoveryThisTurn);
 
     const updatedNeeds = {
         ...(pawn.needs ?? { hunger: 0, fatigue: 0, sleep: 0, lastSleep: 0, lastMeal: 0 }),

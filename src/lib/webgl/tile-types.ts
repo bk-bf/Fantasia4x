@@ -33,6 +33,7 @@ export interface TileData {
 	detail?: RGB;                    // Highlight/detail color for 3-color tint (defaults to foreground)
 	position: { x: number; y: number }; // Grid position
 	animationOffset?: Vec2;          // Optional offset for smooth animations
+	rotation?: 0 | 90 | 180 | 270;  // UV rotation in degrees (clockwise)
 	dirty?: boolean;                 // Marks tile for re-rendering
 	lastUpdated?: number;            // Timestamp of last modification
 }

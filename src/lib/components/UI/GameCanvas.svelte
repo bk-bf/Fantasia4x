@@ -84,13 +84,13 @@
     })
     .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= (container?.clientWidth ?? 0));
 
-  // Zzz overlays for sleeping pawns — floating letter animation above the tile
+  // Sleeping overlays: only Zzz floating letters (tile is rotated directly in WebGL)
   $: sleepingOverlays = pawns
     .filter((p) => p.position && p.currentState === 'Sleeping')
     .map((p) => {
-      const localX = (p.position!.x - viewX + 0.5) * tileWidth;
-      const localY = (p.position!.y - viewY) * tileHeight;
-      return { id: p.id, left: localX, top: localY - 18 };
+      const left = (p.position!.x - viewX + 0.5) * tileWidth;
+      const top = (p.position!.y - viewY) * tileHeight - 18;
+      return { id: p.id, left, top };
     })
     .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= (container?.clientWidth ?? 0));
 
@@ -336,7 +336,8 @@
               }
             : base;
         })(),
-        position: { x, y }
+        position: { x, y },
+        rotation: isSleeping ? 90 : undefined
       });
     }
   }
@@ -823,7 +824,10 @@
 
   {#each sleepingOverlays as overlay (overlay.id)}
     <div class="zzz-float" style="left:{overlay.left}px;top:{overlay.top}px;">
-      <span class="zzz-z" style="animation-delay:0s">Z</span><span class="zzz-z" style="animation-delay:0.7s">z</span><span class="zzz-z" style="animation-delay:1.4s">z</span>
+      <span class="zzz-z" style="animation-delay:0s">Z</span><span
+        class="zzz-z"
+        style="animation-delay:0.7s">z</span
+      ><span class="zzz-z" style="animation-delay:1.4s">z</span>
     </div>
   {/each}
 
@@ -1064,10 +1068,21 @@
     text-shadow: 0 0 4px #334;
   }
   @keyframes zzz-rise {
-    0%   { opacity: 0;   transform: translateY(2px) scale(0.75); }
-    15%  { opacity: 1; }
-    70%  { opacity: 0.7; transform: translateY(-14px) scale(1.1); }
-    100% { opacity: 0;   transform: translateY(-20px) scale(0.85); }
+    0% {
+      opacity: 0;
+      transform: translateY(2px) scale(0.75);
+    }
+    15% {
+      opacity: 1;
+    }
+    70% {
+      opacity: 0.7;
+      transform: translateY(-14px) scale(1.1);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(-20px) scale(0.85);
+    }
   }
   .tile-hud--selection {
     border-color: #5566cc;

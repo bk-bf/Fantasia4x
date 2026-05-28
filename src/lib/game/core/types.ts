@@ -209,6 +209,7 @@ export interface Pawn {
 		timeRequired: number;
 		targetState?: string;   // for MovingToNeed, which state to enter on arrival
 		turnsInState?: number;  // for Eating/Sleeping duration tracking
+		hungerToRecover?: number; // total hunger to restore over the eating duration
 		depositX?: number;      // haul: destination x for deposit
 		depositY?: number;      // haul: destination y for deposit
 	};

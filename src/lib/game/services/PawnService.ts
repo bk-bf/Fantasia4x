@@ -285,11 +285,14 @@ export class PawnServiceImpl implements PawnService {
 	processPawnTurn(gameState: GameState): GameState {
 		let newState = { ...gameState };
 
-		// Process each pawn's needs and state
+		// Process each pawn's needs and state.
+		// NOTE: Do NOT call processNeedsAutomatically here — PawnStateMachine already
+		// handles HUNGRY→EATING and TIRED→SLEEPING via its state transitions each tick.
+		// Calling it here caused double food consumption (and direct array mutation),
+		// draining the stockpile extremely fast.
 		gameState.pawns.forEach(pawn => {
 			newState = this.updatePawnNeeds(pawn.id, newState);
 			newState = this.updatePawnState(pawn.id, newState);
-			newState = this.processNeedsAutomatically(pawn.id, newState);
 			newState = this.updateMorale(pawn.id, newState);
 		});
 
@@ -541,11 +544,9 @@ export class PawnServiceImpl implements PawnService {
 				...gameState.item[foodIndex],
 				amount: Math.max(0, gameState.item[foodIndex].amount - amount)
 			};
-
-			// Remove item if amount reaches 0
-			if (gameState.item[foodIndex].amount <= 0) {
-				gameState.item.splice(foodIndex, 1);
-			}
+			// Do NOT splice items at 0 — keep the entry so the item stays visible in the
+			// stockpile list (just with amount 0). Removing it via splice permanently
+			// deletes the item from state.item and it can never be restocked.
 
 			console.log(`[PawnService] Consumed ${amount}x ${foodId} from inventory`);
 		}
@@ -574,11 +575,18 @@ export class PawnServiceImpl implements PawnService {
 	private calculateNeedsUpdate(pawn: Pawn, currentTurn: number): Pawn {
 		const updatedPawn = { ...pawn };
 
+		// Hunger does not increase while eating; slows to 1/3 while sleeping (metabolism drops).
+		const baseHunger = this.getHungerIncreasePerTurn(pawn);
+		const isSleeping = pawn.state?.isSleeping || pawn.currentState === 'Sleeping';
+		const hungerIncrease = pawn.state?.isEating ? 0 : isSleeping ? baseHunger / 3 : baseHunger;
+		// Fatigue does not increase while a pawn is sleeping — they are resting.
+		const fatigueIncrease = (pawn.state?.isSleeping || pawn.currentState === 'Sleeping') ? 0 : this.getRestIncreasePerTurn(pawn);
+
 		// Increase needs each turn (only hunger and fatigue/rest)
 		updatedPawn.needs = {
 			...pawn.needs,
-			hunger: Math.min(100, pawn.needs.hunger + this.getHungerIncreasePerTurn(pawn)),
-			fatigue: Math.min(100, pawn.needs.fatigue + this.getRestIncreasePerTurn(pawn)),
+			hunger: Math.min(100, pawn.needs.hunger + hungerIncrease),
+			fatigue: Math.min(100, pawn.needs.fatigue + fatigueIncrease),
 			// Keep sleep at current value but don't use it for logic
 			sleep: pawn.needs.sleep || 0
 		};
@@ -906,9 +914,10 @@ export class PawnServiceImpl implements PawnService {
 			return pawn;
 		}
 
-		// CONSUME THE FOOD - This was missing!
+		// Read food amount without mutating — food consumption is a side-effect that callers
+		// must handle via consumeFoodFromInventory if they need it. Here we only calculate
+		// how much hunger would be recovered (tryEating is only used for hunger calculation).
 		const foodConsumed = Math.min(1, selectedFood.amount); // Consume 1 unit of food
-		selectedFood.amount -= foodConsumed;
 
 		// Get nutrition value from Items.ts nutrition property
 		const nutritionValue = selectedFood.nutrition || 1.0;
