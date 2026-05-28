@@ -169,12 +169,12 @@
   }
 
   function moveCostLabel(cost: number): { label: string; color: string } {
-    if (cost <= 0)   return { label: 'impassable',    color: '#cc4444' };
-    if (cost <= 1.0) return { label: 'normal',        color: '#70bb70' };
-    if (cost <= 1.5) return { label: 'light',         color: '#99cc77' };
-    if (cost <= 2.0) return { label: 'slow',          color: '#ccaa44' };
-    if (cost <= 3.0) return { label: 'very slow',     color: '#cc7733' };
-    return                  { label: 'barely passable', color: '#cc4444' };
+    if (cost <= 0) return { label: 'impassable', color: '#cc4444' };
+    if (cost <= 1.0) return { label: 'normal', color: '#70bb70' };
+    if (cost <= 1.5) return { label: 'light', color: '#99cc77' };
+    if (cost <= 2.0) return { label: 'slow', color: '#ccaa44' };
+    if (cost <= 3.0) return { label: 'very slow', color: '#cc7733' };
+    return { label: 'barely passable', color: '#cc4444' };
   }
 
   // ─── Selection system ─────────────────────────────────────────────────────
