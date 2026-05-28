@@ -67,13 +67,17 @@
   <div class="section-hdr sub">| STATUS TRACKER</div>
 
   {#if activeEffects.length > 0}
-  <div class="effects-row">
-    {#each activeEffects as effect}
-    <div class="effect-card" style="border-color: {effect.color}; color: {effect.color}" title={effect.description}>
-      <span class="effect-name">{effect.name.toUpperCase()}</span>
+    <div class="effects-row">
+      {#each activeEffects as effect}
+        <div
+          class="effect-card"
+          style="border-color: {effect.color}; color: {effect.color}"
+          title={effect.description}
+        >
+          <span class="effect-name">{effect.name.toUpperCase()}</span>
+        </div>
+      {/each}
     </div>
-    {/each}
-  </div>
   {/if}
 
   <div class="row">

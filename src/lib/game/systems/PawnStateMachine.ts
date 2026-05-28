@@ -455,10 +455,10 @@ function handleMovingToDeposit(pawn: Pawn, gameState: GameState): GameState {
  */
 function syncActiveEffects(pawn: Pawn): Pawn {
     const effects: string[] = [];
-    if (pawn.state?.isEating  || pawn.currentState === PAWN_STATE.EATING)   effects.push('eating');
+    if (pawn.state?.isEating || pawn.currentState === PAWN_STATE.EATING) effects.push('eating');
     if (pawn.state?.isSleeping || pawn.currentState === PAWN_STATE.SLEEPING) effects.push('sleeping');
     if ((pawn.needs?.fatigue ?? 0) >= FATIGUE_THRESHOLD) effects.push('tired');
-    if ((pawn.needs?.hunger  ?? 0) >= HUNGER_THRESHOLD)  effects.push('hungry');
+    if ((pawn.needs?.hunger ?? 0) >= HUNGER_THRESHOLD) effects.push('hungry');
 
     const current = pawn.activeEffects ?? [];
     if (effects.length === current.length && effects.every((e, i) => e === current[i])) return pawn;
