@@ -449,6 +449,22 @@ function handleMovingToDeposit(pawn: Pawn, gameState: GameState): GameState {
     return gameState;
 }
 
+/**
+ * Derive the pawn's activeEffects list from current state flags and needs.
+ * Called after each tick so PawnService.calculateNeedsUpdate always reads fresh values.
+ */
+function syncActiveEffects(pawn: Pawn): Pawn {
+    const effects: string[] = [];
+    if (pawn.state?.isEating  || pawn.currentState === PAWN_STATE.EATING)   effects.push('eating');
+    if (pawn.state?.isSleeping || pawn.currentState === PAWN_STATE.SLEEPING) effects.push('sleeping');
+    if ((pawn.needs?.fatigue ?? 0) >= FATIGUE_THRESHOLD) effects.push('tired');
+    if ((pawn.needs?.hunger  ?? 0) >= HUNGER_THRESHOLD)  effects.push('hungry');
+
+    const current = pawn.activeEffects ?? [];
+    if (effects.length === current.length && effects.every((e, i) => e === current[i])) return pawn;
+    return { ...pawn, activeEffects: effects };
+}
+
 // ===== PER-PAWN STATE HANDLERS =====
 
 function tickPawn(pawn: Pawn, gameState: GameState): GameState {
@@ -903,7 +919,17 @@ class PawnStateMachineImpl {
         let state = gameState;
         for (const pawn of state.pawns) {
             const current = state.pawns.find((p) => p.id === pawn.id);
-            if (current) state = tickPawn(current, state);
+            if (!current) continue;
+            // Run state machine for this pawn.
+            state = tickPawn(current, state);
+            // Sync activeEffects from the new state so PawnService reads fresh values.
+            const updated = state.pawns.find((p) => p.id === pawn.id);
+            if (updated) {
+                const synced = syncActiveEffects(updated);
+                if (synced !== updated) {
+                    state = { ...state, pawns: state.pawns.map((p) => p.id === pawn.id ? synced : p) };
+                }
+            }
         }
         return state;
     }

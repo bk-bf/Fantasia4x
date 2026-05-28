@@ -1,13 +1,19 @@
 <script lang="ts">
-  import type { GameState, Pawn } from '$lib/game/core/types';
+  import type { GameState, Pawn, StatusEffectDef } from '$lib/game/core/types';
   import { getNeedColor, getNeedDescription } from '$lib/utils/pawnUtils';
   import { getPawnTaskSummary } from '$lib/utils/pawnUtils';
+  import statusEffectsData from '$lib/game/database/status-effects.jsonc';
+
+  const STATUS_EFFECTS_DB = statusEffectsData as unknown as StatusEffectDef[];
 
   export let pawn: Pawn;
   export let gameState: GameState;
 
   $: needs = pawn.needs;
   $: taskSummary = getPawnTaskSummary(pawn, gameState);
+  $: activeEffects = (pawn.activeEffects ?? [])
+    .map((id) => STATUS_EFFECTS_DB.find((e) => e.id === id))
+    .filter((e): e is StatusEffectDef => e !== undefined);
 
   function stateColor(state: string | undefined): string {
     const normalized = (state ?? 'Idle').replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase();
@@ -59,6 +65,17 @@
   </div>
 
   <div class="section-hdr sub">| STATUS TRACKER</div>
+
+  {#if activeEffects.length > 0}
+  <div class="effects-row">
+    {#each activeEffects as effect}
+    <div class="effect-card" style="border-color: {effect.color}; color: {effect.color}" title={effect.description}>
+      <span class="effect-name">{effect.name.toUpperCase()}</span>
+    </div>
+    {/each}
+  </div>
+  {/if}
+
   <div class="row">
     <span class="lbl">STATE</span>
     <span class="val full state" style="color: {stateColor(pawn.currentState)}"
@@ -166,5 +183,25 @@
   }
   .fill {
     height: 100%;
+  }
+
+  .effects-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 4px 8px;
+  }
+
+  .effect-card {
+    border: 1px solid;
+    padding: 1px 6px;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    background: color-mix(in srgb, currentColor 8%, var(--bg));
+    cursor: default;
+  }
+
+  .effect-name {
+    font-weight: bold;
   }
 </style>

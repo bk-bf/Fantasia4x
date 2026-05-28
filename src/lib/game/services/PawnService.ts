@@ -1,6 +1,16 @@
-import type { GameState, Pawn, PawnNeeds, PawnState } from '../core/types';
+import type { GameState, Pawn, PawnNeeds, PawnState, StatusEffectDef } from '../core/types';
 import { calculatePawnAbilities, categorizeAbilities, getAbilityDescription } from '../entities/Pawns';
 import { WORK_CATEGORIES } from '../core/Work';
+import statusEffectsData from '../database/status-effects.jsonc';
+
+const STATUS_EFFECTS_DB = statusEffectsData as unknown as StatusEffectDef[];
+
+/** Resolve active effect definitions from a pawn's activeEffects id list. */
+function getActiveEffects(pawn: Pawn): StatusEffectDef[] {
+	return (pawn.activeEffects ?? [])
+		.map((id) => STATUS_EFFECTS_DB.find((e) => e.id === id))
+		.filter((e): e is StatusEffectDef => e !== undefined);
+}
 
 /**
  * PawnService - Clean interface for pawn behavior and need management
@@ -574,20 +584,20 @@ export class PawnServiceImpl implements PawnService {
 
 	private calculateNeedsUpdate(pawn: Pawn, currentTurn: number): Pawn {
 		const updatedPawn = { ...pawn };
+		const effects = getActiveEffects(pawn);
 
-		// Hunger does not increase while eating; slows to 1/3 while sleeping (metabolism drops).
-		const baseHunger = this.getHungerIncreasePerTurn(pawn);
-		const isSleeping = pawn.state?.isSleeping || pawn.currentState === 'Sleeping';
-		const hungerIncrease = pawn.state?.isEating ? 0 : isSleeping ? baseHunger / 3 : baseHunger;
-		// Fatigue does not increase while a pawn is sleeping — they are resting.
-		const fatigueIncrease = (pawn.state?.isSleeping || pawn.currentState === 'Sleeping') ? 0 : this.getRestIncreasePerTurn(pawn);
+		// Combine hungerRate/fatigueRate multipliers from all active effects (multiply together).
+		// e.g. 'eating' sets hungerRate=0 (paused), 'sleeping' sets hungerRate=0.33 and fatigueRate=0.
+		const hungerRate = effects.reduce((r, e) => r * (e.modifiers.hungerRate ?? 1), 1);
+		const fatigueRate = effects.reduce((r, e) => r * (e.modifiers.fatigueRate ?? 1), 1);
 
-		// Increase needs each turn (only hunger and fatigue/rest)
+		const hungerIncrease = this.getHungerIncreasePerTurn(pawn) * hungerRate;
+		const fatigueIncrease = this.getRestIncreasePerTurn(pawn) * fatigueRate;
+
 		updatedPawn.needs = {
 			...pawn.needs,
 			hunger: Math.min(100, pawn.needs.hunger + hungerIncrease),
 			fatigue: Math.min(100, pawn.needs.fatigue + fatigueIncrease),
-			// Keep sleep at current value but don't use it for logic
 			sleep: pawn.needs.sleep || 0
 		};
 

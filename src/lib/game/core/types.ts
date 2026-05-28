@@ -150,6 +150,18 @@ export interface PawnNeeds {
 	lastMeal: number; // turn when last ate
 }
 
+export interface StatusEffectDef {
+	id: string;
+	name: string;
+	description: string;
+	color: string;
+	modifiers: {
+		hungerRate?: number;      // multiplier on hunger accrual (0 = paused, 0.33 = ⅓ rate)
+		fatigueRate?: number;     // multiplier on fatigue accrual
+		workEfficiency?: number;  // multiplier on work output
+	};
+}
+
 export interface PawnState {
 	mood: number; // 0-100, affects work efficiency
 	health: number; // 0-100, affects everything
@@ -190,6 +202,9 @@ export interface Pawn {
 	pathIndex?: number;                          // next step in path (index into path[])
 	isMoving?: boolean;                          // currently following a path
 	hasReachedDestination?: boolean;            // just finished a path
+
+	// Active status effect ids (derived from state; drives UI cards and need rate modifiers)
+	activeEffects?: string[];
 
 	// Phase 4/5: State machine primary state
 	currentState?: string;                       // 'Idle' | 'Hungry' | 'Tired' | 'MovingToNeed' | 'MovingToResource' | 'Working' | 'Hauling' | 'MovingToDeposit' | 'Eating' | 'Sleeping'
