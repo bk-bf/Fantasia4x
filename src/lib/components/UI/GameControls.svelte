@@ -72,8 +72,11 @@
     const parsed = parseInt(mapSeedInput, 10);
     const s = !isNaN(parsed) && parsed > 0 ? parsed : Date.now() >>> 0;
     mapSeedInput = String(s);
-    gameState.regenWorld(s);
+    gameState.regenWorld(s, devMode, devItemQty);
   }
+
+  let devMode = false;
+  let devItemQty = 500;
 
   const unsubPaused = gameState.isPaused.subscribe((v) => (isPaused = v));
   const unsubSpeed = gameState.gameSpeed.subscribe((v) => (gameSpeed = v));
@@ -105,11 +108,6 @@
       gameState.wipeAndReload();
     }
   }
-
-  let devSeedQty = 500;
-  function applyDevSeed() {
-    gameState.applyDevSeed(devSeedQty);
-  }
 </script>
 
 <div class="topbar">
@@ -132,6 +130,20 @@
       maxlength="12"
     />
     <button class="ctrl-btn" on:click={regenMap} title="Regenerate map">↺ MAP</button>
+    <label class="dev-toggle" title="Dev mode: places zones on map and pre-stocks all items">
+      <input type="checkbox" bind:checked={devMode} />
+      DEV
+    </label>
+    {#if devMode}
+      <input
+        class="seed-input dev-qty"
+        type="number"
+        bind:value={devItemQty}
+        min="1"
+        max="99999"
+        title="Items per stack in dev stockpile"
+      />
+    {/if}
   {/if}
   <button class="ctrl-btn" class:is-paused={isPaused} on:click={gameState.togglePause}>
     {isPaused ? '▶ RESUME' : '⏸ PAUSE'}
@@ -144,20 +156,6 @@
     {/each}
   </div>
   <button class="ctrl-btn danger" on:click={wipeSave}>WIPE</button>
-  <span class="dev-sep">|</span>
-  <input
-    class="seed-input qty-input"
-    type="number"
-    bind:value={devSeedQty}
-    min="1"
-    max="99999"
-    title="Item quantity for dev seed"
-  />
-  <button
-    class="ctrl-btn dev"
-    on:click={applyDevSeed}
-    title="Unlock all items, locations & research">DEV SEED</button
-  >
 </div>
 
 <style>
@@ -249,21 +247,6 @@
     background: var(--neg);
     color: #fff;
   }
-  .ctrl-btn.dev {
-    border-color: var(--accent);
-    color: var(--accent);
-  }
-  .ctrl-btn.dev:hover {
-    background: var(--accent);
-    color: var(--bg);
-  }
-  .dev-sep {
-    color: var(--border-hi);
-    padding: 0 2px;
-  }
-  .qty-input {
-    width: 46px;
-  }
 
   .seed-input {
     width: 82px;
@@ -279,6 +262,28 @@
     outline: none;
     border-color: var(--border-hi);
     color: var(--text);
+  }
+  .dev-qty {
+    width: 46px;
+  }
+  .dev-toggle {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    color: var(--accent);
+    font-size: 9px;
+    cursor: pointer;
+    user-select: none;
+    padding: 0 3px;
+    border: 1px solid transparent;
+  }
+  .dev-toggle:has(input:checked) {
+    border-color: var(--accent);
+  }
+  .dev-toggle input {
+    accent-color: var(--accent);
+    cursor: pointer;
+    margin: 0;
   }
 
   .speed-wrap {

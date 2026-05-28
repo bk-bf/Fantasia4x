@@ -17,7 +17,7 @@ import { triggerEvent } from '$lib/stores/eventStore';
 import { generateWorld } from '$lib/game/world/WorldGenerator';
 import { resourceGeneratorService } from '$lib/game/services/ResourceGeneratorService';
 import { loadSave, scheduleSave, deleteSave } from './saveManager';
-import { buildDevSeedState } from '$lib/game/dev/devSeed';
+import { applyDevWorld } from '$lib/game/dev/devWorld';
 
 
 // ===== CONFIGURATION =====
@@ -319,14 +319,18 @@ function advanceTurn() {
 }
 
 // ===== WORLD REGEN =====
-function regenWorld(seed?: number) {
+function regenWorld(seed?: number, dev = false, itemQty = 500) {
 	const s = (seed !== undefined ? seed : Date.now()) >>> 0 || 1;
 	const newWorld = generateWorld(240, 160, s);
 	resourceGeneratorService.generateResources(newWorld, s);
 	// Patch the engine's internal state FIRST so the next auto-turn
 	// doesn't overwrite the store back to the old worldMap.
 	gameEngine.patchWorldMap(newWorld);
-	updateWithSave((state) => ({ ...state, worldMap: newWorld }));
+	if (dev) {
+		updateWithSave((state) => applyDevWorld({ ...state, worldMap: newWorld }, itemQty));
+	} else {
+		updateWithSave((state) => ({ ...state, worldMap: newWorld }));
+	}
 	if (browser) localStorage.setItem(WORLD_VERSION_KEY, String(WORLD_VERSION));
 }
 
@@ -347,16 +351,6 @@ function resetGame() {
 	deleteSave().catch(console.error);
 	set(initialGameState);
 	console.info('[GameState] Game reset to initial state.');
-}
-
-/**
- * Apply the dev seed: all items at `itemQty`, all locations discovered,
- * all research completed, max tool level, population cap 50.
- * Does NOT wipe existing pawns or the world map.
- */
-function applyDevSeed(itemQty = 500) {
-	updateWithSave((state) => buildDevSeedState(state, itemQty));
-	console.info(`[DevSeed] Applied dev seed (${itemQty}x each item).`);
 }
 
 /**
@@ -497,12 +491,21 @@ export const gameState = {
 	consumeGlobalItem,
 	resetGame,
 	wipeAndReload,
-	regenWorld,
-	applyDevSeed
+	regenWorld
 };
 
 // Export the updateWithSave function directly for GameEngine
 // (Removed duplicate export to fix redeclaration error)
+
+// ===== HMR CLEANUP =====
+// When Vite hot-replaces this module during development, stop any running
+// interval so the old module's timer doesn't keep firing with a stale
+// isPaused reference that can never be updated by the new module.
+if (import.meta.hot) {
+	import.meta.hot.dispose(() => {
+		stopAutoTurns();
+	});
+}
 
 // Derived stores
 export const currentTurn = derived(gameState, ($gameState) => $gameState.turn);

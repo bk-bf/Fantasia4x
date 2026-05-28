@@ -136,7 +136,8 @@
       workAssignments: {},
       productionTargets: [],
       currentJobIndex: {},
-      pawnAbilities: {}
+      pawnAbilities: {},
+      stockpileZones: []
     };
 
     return buildingService.canBuildBuilding(building.id, gameStateForCheck) && canAfford(building);

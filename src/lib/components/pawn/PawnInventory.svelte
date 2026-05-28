@@ -1,6 +1,6 @@
 <!-- PawnInventory.svelte — shows items the pawn is currently carrying -->
 <script lang="ts">
-  import type { Pawn } from '$lib/game/core/types';
+  import type { Pawn, Item } from '$lib/game/core/types';
   import ITEMS_DATABASE from '$lib/game/database/items.jsonc';
 
   export let pawn: Pawn;
@@ -11,7 +11,7 @@
   $: isEmpty = carried.length === 0;
 
   function itemName(id: string): string {
-    return ITEMS_DATABASE.find((i) => i.id === id)?.name ?? id;
+    return (ITEMS_DATABASE as Item[]).find((i) => i.id === id)?.name ?? id;
   }
 </script>
 
