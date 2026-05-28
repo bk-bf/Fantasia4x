@@ -1,5 +1,6 @@
 import type { Item, GameState } from '../core/types';
 import itemsData from '../database/items.json';
+import uiConfig from '../database/ui-config.json';
 
 const ITEMS_DATABASE = itemsData as unknown as Item[];
 
@@ -189,20 +190,7 @@ export class ItemServiceImpl implements ItemService {
 	}
 
 	getItemRarityColor(rarity: string): string {
-		switch (rarity) {
-			case 'common':
-				return '#9E9E9E';
-			case 'uncommon':
-				return '#4CAF50';
-			case 'rare':
-				return '#2196F3';
-			case 'epic':
-				return '#9C27B0';
-			case 'legendary':
-				return '#FF9800';
-			default:
-				return '#9E9E9E';
-		}
+		return (uiConfig.rarityColors as Record<string, string>)[rarity] ?? '#9E9E9E';
 	}
 
 	getAvailableQuantity(itemId: string, gameState: GameState): number {

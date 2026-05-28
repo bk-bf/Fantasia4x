@@ -1,5 +1,6 @@
 import type { Building, GameState, PlacedBuilding } from '../core/types';
 import buildingsData from '../database/buildings.json';
+import uiConfig from '../database/ui-config.json';
 
 const AVAILABLE_BUILDINGS = buildingsData as unknown as Building[];
 
@@ -361,20 +362,7 @@ export class BuildingServiceImpl implements BuildingService {
 	}
 
 	getBuildingRarityColor(rarity: string): string {
-		switch (rarity) {
-			case 'common':
-				return '#9E9E9E';
-			case 'uncommon':
-				return '#4CAF50';
-			case 'rare':
-				return '#2196F3';
-			case 'epic':
-				return '#9C27B0';
-			case 'legendary':
-				return '#FF9800';
-			default:
-				return '#9E9E9E';
-		}
+		return (uiConfig.rarityColors as Record<string, string>)[rarity] ?? '#9E9E9E';
 	}
 
 	hasBuildings(buildingCountsOrGameState: Record<string, number> | GameState, category: string): boolean {

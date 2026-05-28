@@ -19,7 +19,8 @@
         "writingSpeed": 1.2
       }
     },
-    "researchTime": 5
+    "researchTime": 5,
+    "color": "#9C27B0"
   },
   {
     "id": "copper_smelting",
@@ -46,7 +47,8 @@
       ],
       "toolTierRequired": 1
     },
-    "researchTime": 8
+    "researchTime": 8,
+    "color": "#FF9800"
   },
   {
     "id": "stone_masonry",
@@ -75,7 +77,8 @@
         "buildingDurability": 1.3
       }
     },
-    "researchTime": 6
+    "researchTime": 6,
+    "color": "#795548"
   },
   {
     "id": "charcoal_making",
@@ -102,7 +105,8 @@
         "fuelEfficiency": 1.5
       }
     },
-    "researchTime": 4
+    "researchTime": 4,
+    "color": "#FF9800"
   },
   {
     "id": "advanced_writing",
@@ -130,7 +134,8 @@
         "researchSpeed": 1.3
       }
     },
-    "researchTime": 12
+    "researchTime": 12,
+    "color": "#9C27B0"
   },
   {
     "id": "tin_smelting",
@@ -159,7 +164,8 @@
         "alloyKnowledge": 1
       }
     },
-    "researchTime": 10
+    "researchTime": 10,
+    "color": "#FF9800"
   },
   {
     "id": "bronze_working",
@@ -190,7 +196,8 @@
       ],
       "toolTierRequired": 1
     },
-    "researchTime": 15
+    "researchTime": 15,
+    "color": "#FF9800"
   },
   {
     "id": "leather_working",
@@ -218,7 +225,8 @@
         "leatherQuality": 1.5
       }
     },
-    "researchTime": 10
+    "researchTime": 10,
+    "color": "#FF9800"
   },
   {
     "id": "pottery",
@@ -246,7 +254,8 @@
         "ceramicQuality": 1.6
       }
     },
-    "researchTime": 8
+    "researchTime": 8,
+    "color": "#FF9800"
   },
   {
     "id": "fine_ceramics",
@@ -277,7 +286,8 @@
         "luxuryProduction": 1.8
       }
     },
-    "researchTime": 12
+    "researchTime": 12,
+    "color": "#FF9800"
   },
   {
     "id": "cooking",
@@ -305,7 +315,8 @@
         "nutritionBonus": 1.4
       }
     },
-    "researchTime": 6
+    "researchTime": 6,
+    "color": "#4CAF50"
   },
   {
     "id": "baking",
@@ -336,7 +347,8 @@
         "grainProcessing": 1.6
       }
     },
-    "researchTime": 8
+    "researchTime": 8,
+    "color": "#4CAF50"
   },
   {
     "id": "fermentation",
@@ -364,7 +376,8 @@
         "alcoholProduction": 1.5
       }
     },
-    "researchTime": 10
+    "researchTime": 10,
+    "color": "#4CAF50"
   },
   {
     "id": "fishing_techniques",
@@ -389,7 +402,8 @@
         "fishingYield": 1.8
       }
     },
-    "researchTime": 6
+    "researchTime": 6,
+    "color": "#2196F3"
   },
   {
     "id": "organized_hunting",
@@ -414,7 +428,8 @@
         "huntingEfficiency": 1.6
       }
     },
-    "researchTime": 8
+    "researchTime": 8,
+    "color": "#F44336"
   },
   {
     "id": "military_organization",
@@ -443,7 +458,8 @@
         "militaryEfficiency": 1.5
       }
     },
-    "researchTime": 14
+    "researchTime": 14,
+    "color": "#F44336"
   },
   {
     "id": "basic_alchemy",
@@ -476,7 +492,8 @@
         "alchemicalKnowledge": 1
       }
     },
-    "researchTime": 15
+    "researchTime": 15,
+    "color": "#FF9800"
   },
   {
     "id": "crystal_working",
@@ -507,7 +524,8 @@
         "magicalFocus": 1.4
       }
     },
-    "researchTime": 18
+    "researchTime": 18,
+    "color": "#FF9800"
   },
   {
     "id": "scholarly_methods",
@@ -535,7 +553,8 @@
         "researchEfficiency": 2
       }
     },
-    "researchTime": 20
+    "researchTime": 20,
+    "color": "#9C27B0"
   },
   {
     "id": "iron_smelting",
@@ -564,7 +583,8 @@
         "ironKnowledge": 1
       }
     },
-    "researchTime": 18
+    "researchTime": 18,
+    "color": "#FF9800"
   },
   {
     "id": "iron_working",
@@ -595,7 +615,8 @@
         "ironworking": 1.5
       }
     },
-    "researchTime": 25
+    "researchTime": 25,
+    "color": "#FF9800"
   },
   {
     "id": "steel_making",
@@ -628,7 +649,8 @@
         "steelmastery": 2
       }
     },
-    "researchTime": 30
+    "researchTime": 30,
+    "color": "#FF9800"
   },
   {
     "id": "food_preservation",
@@ -656,7 +678,8 @@
         "foodPreservation": 2
       }
     },
-    "researchTime": 15
+    "researchTime": 15,
+    "color": "#4CAF50"
   },
   {
     "id": "distillation",
@@ -689,7 +712,8 @@
         "distillationMastery": 1.8
       }
     },
-    "researchTime": 20
+    "researchTime": 20,
+    "color": "#FF9800"
   },
   {
     "id": "fortification",
@@ -720,7 +744,8 @@
         "defensiveArchitecture": 2
       }
     },
-    "researchTime": 25
+    "researchTime": 25,
+    "color": "#F44336"
   },
   {
     "id": "master_alchemy",
@@ -753,7 +778,8 @@
         "alchemicalMastery": 2.5
       }
     },
-    "researchTime": 30
+    "researchTime": 30,
+    "color": "#FF9800"
   },
   {
     "id": "commerce",
@@ -781,7 +807,8 @@
         "tradeEfficiency": 1.5
       }
     },
-    "researchTime": 12
+    "researchTime": 12,
+    "color": "#4CAF50"
   },
   {
     "id": "foreign_trade",
@@ -812,7 +839,8 @@
         "foreignTrade": 1.8
       }
     },
-    "researchTime": 20
+    "researchTime": 20,
+    "color": "#4CAF50"
   },
   {
     "id": "advanced_forestry",
@@ -838,7 +866,8 @@
         "forestryMastery": 1.6
       }
     },
-    "researchTime": 15
+    "researchTime": 15,
+    "color": "#2196F3"
   },
   {
     "id": "masonry",
@@ -867,6 +896,7 @@
         "masonryMastery": 1.8
       }
     },
-    "researchTime": 12
+    "researchTime": 12,
+    "color": "#795548"
   }
 ]

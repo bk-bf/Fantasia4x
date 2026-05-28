@@ -1,9 +1,39 @@
 {
-  "biomes": {
-    "forest"  : { "densityRange": [0.52, 0.6 ] },
-    "swamp"   : { "densityRange": [0.18, 0.28] },
-    "plains"  : { "densityRange": [0.28, 0.52] },
-    "mountain": { "densityRange": [0.6 , 1   ] },
-    "river"   : { "densityRange": [0   , 0.18] }
-  }
+    "biomes": {
+        "forest": {
+            "densityRange": [
+                0.52,
+                0.6
+            ],
+            "color": "#2E7D32"
+        },
+        "swamp": {
+            "densityRange": [
+                0.18,
+                0.28
+            ],
+            "color": "#4E342E"
+        },
+        "plains": {
+            "densityRange": [
+                0.28,
+                0.52
+            ],
+            "color": "#8BC34A"
+        },
+        "mountain": {
+            "densityRange": [
+                0.6,
+                1
+            ],
+            "color": "#757575"
+        },
+        "river": {
+            "densityRange": [
+                0,
+                0.18
+            ],
+            "color": "#1565C0"
+        }
+    }
 }
