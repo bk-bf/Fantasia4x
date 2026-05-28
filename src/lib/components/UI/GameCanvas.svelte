@@ -471,7 +471,13 @@
     // Designation mode: handled by drag — single-click still paints one tile
     if (designationMode) {
       gameState.updateWithSave((state) =>
-        designationService.designate(hoverTileX, hoverTileY, designationTypeActive, state, activeZoneInstanceId ?? undefined)
+        designationService.designate(
+          hoverTileX,
+          hoverTileY,
+          designationTypeActive,
+          state,
+          activeZoneInstanceId ?? undefined
+        )
       );
       redrawOverlay();
       return;

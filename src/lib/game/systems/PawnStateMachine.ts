@@ -66,12 +66,12 @@ const SLEEP_WAKE_THRESHOLD_HUNGRY = 30; // Allow early waking at 30% to go eat
 
 // ===== CONDITION CONSTANTS (SURVIVAL-HEALTH spec) =====
 const CONDITIONS_DB = conditionsData as unknown as ConditionDef[];
-const MALNUTRITION_ONSET_HUNGER   = 87;    // same as CRITICAL_HUNGER — condition starts here
-const MALNUTRITION_SAFE_HUNGER    = 40;    // below this threshold, condition recovers
-const MALNUTRITION_RATE_CRITICAL  = 0.0008; // +/turn at hunger 87–99  → lethal in ~1250 turns ≈ 4.2 days
-const MALNUTRITION_RATE_MAX       = 0.002;  // +/turn at hunger 100    → lethal in ~500 turns ≈ 1.7 days
-const MALNUTRITION_RECOVERY_RATE  = 0.0003; // −/turn when hunger < 40 → fully clears in ~3333 turns ≈ 11 days
-const BLOOD_REGEN_PER_TURN        = 0.05;   // blood volume +/turn when not bleeding → 0→100 in 2000 turns ≈ 6.7 days
+const MALNUTRITION_ONSET_HUNGER = 87;    // same as CRITICAL_HUNGER — condition starts here
+const MALNUTRITION_SAFE_HUNGER = 40;    // below this threshold, condition recovers
+const MALNUTRITION_RATE_CRITICAL = 0.0008; // +/turn at hunger 87–99  → lethal in ~1250 turns ≈ 4.2 days
+const MALNUTRITION_RATE_MAX = 0.002;  // +/turn at hunger 100    → lethal in ~500 turns ≈ 1.7 days
+const MALNUTRITION_RECOVERY_RATE = 0.0003; // −/turn when hunger < 40 → fully clears in ~3333 turns ≈ 11 days
+const BLOOD_REGEN_PER_TURN = 0.05;   // blood volume +/turn when not bleeding → 0→100 in 2000 turns ≈ 6.7 days
 
 /** Return the active ConditionStage for a condition at the given severity, or undefined. */
 function getConditionStage(conditionId: string, severity: number): ConditionStage | undefined {
@@ -109,9 +109,9 @@ function killPawn(
         cause,
         turn: gameState.turn,
         stats: {
-            strength:     pawn.stats.strength     ?? 10,
-            dexterity:    pawn.stats.dexterity     ?? 10,
-            intelligence: pawn.stats.intelligence  ?? 10
+            strength: pawn.stats.strength ?? 10,
+            dexterity: pawn.stats.dexterity ?? 10,
+            intelligence: pawn.stats.intelligence ?? 10
         }
     };
 
@@ -549,9 +549,9 @@ function depositInventory(pawn: Pawn, gs: GameState): GameState {
     // Find the zone to credit: the stockpile tile adjacent to (or at) the pawn's position
     const depositTileKey = pawn.position
         ? stockpileTiles.find(({ x, y }) =>
-              isAdjacent(pawn.position!.x, pawn.position!.y, x, y) ||
-              (x === pawn.position!.x && y === pawn.position!.y)
-          )?.key ?? null
+            isAdjacent(pawn.position!.x, pawn.position!.y, x, y) ||
+            (x === pawn.position!.x && y === pawn.position!.y)
+        )?.key ?? null
         : null;
 
     const newPawns = gs.pawns.map((p) =>
