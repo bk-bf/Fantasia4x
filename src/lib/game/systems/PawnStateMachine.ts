@@ -17,6 +17,7 @@ import type { GameState, Pawn } from '../core/types';
 import ITEMS_DATABASE from '../database/items.json';
 import { jobService, BASE_WORK_RATE } from '../services/JobService';
 import { pawnService } from '../services/PawnService';
+import { itemService } from '../services/ItemService';
 import { wasmPathfinderService } from '../services/WasmPathfinderService';
 import { buildPathfindingGrids } from '../services/PathfinderService';
 
@@ -246,7 +247,9 @@ function depositInventory(pawn: Pawn, gs: GameState): GameState {
             : p
     );
     console.log(`[PawnSM] ${pawn.name} deposited inventory:`, inv);
-    return { ...gs, stockpile: newStockpile, pawns: newPawns };
+    // Write to both stockpile (for fuel/fire systems) and item (for sidebar/crafting display)
+    const afterStockpile = { ...gs, stockpile: newStockpile, pawns: newPawns };
+    return itemService.addItems(inv, afterStockpile);
 }
 
 function handleHauling(pawn: Pawn, gameState: GameState): GameState {

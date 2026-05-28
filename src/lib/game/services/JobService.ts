@@ -12,6 +12,7 @@
 import type { GameState, Job, Pawn, DroppedItem } from '../core/types';
 import itemsData from '../database/items.json';
 import { resourceObjectService } from './ResourceObjectService';
+import { itemService } from './ItemService';
 
 const ITEMS_DATABASE = itemsData as unknown as import('../core/types').Item[];
 
@@ -323,7 +324,8 @@ class JobServiceImpl {
 
         const pawn = gs.pawns.find((p) => p.id === job.claimedBy);
         const yields = resourceObjectService.calculateYield(job.resourceId, pawn);
-        const [dropResourceId, dropAmount] = Object.entries(yields)[0] ?? [job.resourceId, 1];
+        const yieldEntries = Object.entries(yields);
+        if (yieldEntries.length === 0) yieldEntries.push([job.resourceId, 1]);
 
         // Consume the whole resource node so the source object disappears.
         const newWorldMap = gs.worldMap.map((row, ry) =>
@@ -342,19 +344,21 @@ class JobServiceImpl {
                 : row
         );
 
-        // Spawn a dropped item at the harvest tile instead of adding straight to stockpile
-        const drop: DroppedItem = {
-            id: `drop-${dropResourceId}-${job.targetX}-${job.targetY}-${Date.now()}`,
-            resourceId: dropResourceId,
-            x: job.targetX,
-            y: job.targetY,
-            quantity: dropAmount
-        };
-        const newDropped = [...(gs.droppedItems ?? []), drop];
-
-        console.log(
-            `[JobService] Harvest complete: ${job.resourceId} at (${job.targetX},${job.targetY}) → ${dropResourceId} x${dropAmount} (${drop.id})`
-        );
+        // Spawn one DroppedItem per yield type so all materials get hauled to stockpile
+        const newDropped = [...(gs.droppedItems ?? [])];
+        for (const [dropResourceId, dropAmount] of yieldEntries) {
+            const drop: DroppedItem = {
+                id: `drop-${dropResourceId}-${job.targetX}-${job.targetY}-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
+                resourceId: dropResourceId,
+                x: job.targetX,
+                y: job.targetY,
+                quantity: dropAmount
+            };
+            newDropped.push(drop);
+            console.log(
+                `[JobService] Harvest complete: ${job.resourceId} at (${job.targetX},${job.targetY}) → ${dropResourceId} x${dropAmount} (${drop.id})`
+            );
+        }
         return { ...gs, worldMap: newWorldMap, droppedItems: newDropped };
     }
 
@@ -410,10 +414,11 @@ class JobServiceImpl {
             return { ...gs, droppedItems: newDropped, pawns: newPawns };
         }
 
-        // No pawn claimed it (shouldn't happen) — fall back to stockpile
+        // No pawn claimed it (shouldn't happen) — fall back to stockpile and item
         const newStockpile = { ...(gs.stockpile ?? {}) };
         newStockpile[drop.resourceId] = (newStockpile[drop.resourceId] ?? 0) + drop.quantity;
-        return { ...gs, droppedItems: newDropped, stockpile: newStockpile };
+        const baseState = { ...gs, droppedItems: newDropped, stockpile: newStockpile };
+        return itemService.addItems({ [drop.resourceId]: drop.quantity }, baseState);
     }
 
     private _completeConstruct(job: Job, gs: GameState): GameState {
