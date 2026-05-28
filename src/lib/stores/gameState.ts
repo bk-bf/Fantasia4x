@@ -266,31 +266,16 @@ function regenWorld(seed?: number) {
 // ===== ITEM MANAGEMENT =====
 function consumeGlobalItem(itemId: string, quantity: number = 1) {
 	updateWithSave((state) => {
-		const itemIndex = state.item.findIndex((item) => item.id === itemId);
-		if (itemIndex !== -1 && state.item[itemIndex].amount >= quantity) {
-			const updatedItems = [...state.item];
-			updatedItems[itemIndex] = {
-				...updatedItems[itemIndex],
-				amount: updatedItems[itemIndex].amount - quantity
-			};
-
-			if (updatedItems[itemIndex].amount <= 0) {
-				updatedItems.splice(itemIndex, 1);
-			}
-
-			return {
-				...state,
-				item: updatedItems
-			};
-		}
-		return state;
+		const current = (state.stockpile ?? {})[itemId] ?? 0;
+		if (current < quantity) return state;
+		return { ...state, stockpile: { ...state.stockpile, [itemId]: current - quantity } };
 	});
 }
 
 function addItem(itemId: string, amount: number) {
 	updateWithSave((state) => ({
 		...state,
-		item: state.item.map((i) => (i.id === itemId ? { ...i, amount: i.amount + amount } : i))
+		stockpile: { ...state.stockpile, [itemId]: ((state.stockpile ?? {})[itemId] ?? 0) + amount }
 	}));
 }
 

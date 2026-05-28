@@ -120,7 +120,7 @@ export class ResearchServiceImpl implements ResearchService {
 		if (!research?.scrollRequirement) return true;
 
 		return Object.entries(research.scrollRequirement).every(([scrollId, amount]) => {
-			const available = gameState.item.find((item) => item.id === scrollId)?.amount || 0;
+			const available = (gameState.stockpile ?? {})[scrollId] ?? 0;
 			return available >= amount;
 		});
 	}
@@ -130,7 +130,7 @@ export class ResearchServiceImpl implements ResearchService {
 		if (!research?.materialRequirement) return true;
 
 		return Object.entries(research.materialRequirement).every(([materialId, amount]) => {
-			const available = gameState.item.find((item) => item.id === materialId)?.amount || 0;
+			const available = (gameState.stockpile ?? {})[materialId] ?? 0;
 			return available >= amount;
 		});
 	}
@@ -186,7 +186,7 @@ export class ResearchServiceImpl implements ResearchService {
 		// Check scroll requirements
 		if (research.scrollRequirement) {
 			Object.entries(research.scrollRequirement).forEach(([scrollId, required]) => {
-				const available = gameState.item.find((item) => item.id === scrollId)?.amount || 0;
+				const available = (gameState.stockpile ?? {})[scrollId] ?? 0;
 				if (available < required) {
 					scrollsNeeded[scrollId] = required - available;
 					canStart = false;
@@ -197,7 +197,7 @@ export class ResearchServiceImpl implements ResearchService {
 		// Check material requirements
 		if (research.materialRequirement) {
 			Object.entries(research.materialRequirement).forEach(([materialId, required]) => {
-				const available = gameState.item.find((item) => item.id === materialId)?.amount || 0;
+				const available = (gameState.stockpile ?? {})[materialId] ?? 0;
 				if (available < required) {
 					materialsNeeded[materialId] = required - available;
 					canStart = false;
@@ -305,29 +305,19 @@ export class ResearchServiceImpl implements ResearchService {
 		const newState = { ...gameState };
 
 		// Consume required scrolls and materials
+		const newStockpile = { ...(newState.stockpile ?? {}) };
 		if (research.scrollRequirement) {
 			Object.entries(research.scrollRequirement).forEach(([scrollId, amount]) => {
-				const itemIndex = newState.item.findIndex((item) => item.id === scrollId);
-				if (itemIndex >= 0) {
-					newState.item[itemIndex] = {
-						...newState.item[itemIndex],
-						amount: Math.max(0, newState.item[itemIndex].amount - amount)
-					};
-				}
+				newStockpile[scrollId] = Math.max(0, (newStockpile[scrollId] ?? 0) - amount);
 			});
 		}
 
 		if (research.materialRequirement) {
 			Object.entries(research.materialRequirement).forEach(([materialId, amount]) => {
-				const itemIndex = newState.item.findIndex((item) => item.id === materialId);
-				if (itemIndex >= 0) {
-					newState.item[itemIndex] = {
-						...newState.item[itemIndex],
-						amount: Math.max(0, newState.item[itemIndex].amount - amount)
-					};
-				}
+				newStockpile[materialId] = Math.max(0, (newStockpile[materialId] ?? 0) - amount);
 			});
 		}
+		newState.stockpile = newStockpile;
 
 		// Set current research
 		newState.currentResearch = {

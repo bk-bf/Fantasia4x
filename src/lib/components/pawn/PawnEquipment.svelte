@@ -45,18 +45,10 @@
     gameState.update((state) => {
       const pawnIndex = state.pawns.findIndex((p) => p.id === pawnId);
       if (pawnIndex !== -1) {
-        state.pawns[pawnIndex] = useConsumable(state.pawns[pawnIndex], itemId);
-        const itemIndex = state.item.findIndex((item) => item.id === itemId);
-        if (itemIndex !== -1 && state.item[itemIndex].amount >= 1) {
-          const updatedItems = [...state.item];
-          updatedItems[itemIndex] = {
-            ...updatedItems[itemIndex],
-            amount: updatedItems[itemIndex].amount - 1
-          };
-          if (updatedItems[itemIndex].amount <= 0) {
-            updatedItems.splice(itemIndex, 1);
-          }
-          state.item = updatedItems;
+        const available = (state.stockpile ?? {})[itemId] ?? 0;
+        if (available >= 1) {
+          state.pawns[pawnIndex] = useConsumable(state.pawns[pawnIndex], itemId);
+          state.stockpile = { ...state.stockpile, [itemId]: available - 1 };
           state = syncAllPawnInventories(state);
         }
       }

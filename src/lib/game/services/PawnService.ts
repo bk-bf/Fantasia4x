@@ -546,17 +546,6 @@ export class PawnServiceImpl implements PawnService {
 	}
 
 	private consumeFoodFromInventory(gameState: GameState, foodId: string, amount: number): void {
-		// Decrement item[]
-		if (gameState.item) {
-			const foodIndex = gameState.item.findIndex(item => item.id === foodId);
-			if (foodIndex !== -1) {
-				gameState.item[foodIndex] = {
-					...gameState.item[foodIndex],
-					amount: Math.max(0, gameState.item[foodIndex].amount - amount)
-				};
-			}
-		}
-		// Keep stockpile in sync (single source of truth for the sidebar)
 		if (gameState.stockpile) {
 			gameState.stockpile[foodId] = Math.max(0, (gameState.stockpile[foodId] ?? 0) - amount);
 		}

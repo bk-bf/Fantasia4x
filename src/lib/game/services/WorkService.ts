@@ -336,13 +336,13 @@ export class WorkServiceImpl implements WorkService {
 		return workCategory.toolsRequired.some((toolType: string) => {
 			// Check equipped items
 			if (pawn.equipment.tool?.itemId) {
-				const equippedTool = gameState.item.find((item) => item.id === pawn.equipment.tool?.itemId);
+				const equippedTool = itemService.getItemById(pawn.equipment.tool.itemId);
 				if (equippedTool && equippedTool.category === toolType) return true;
 			}
 
-			// Check inventory
-			return gameState.item.some(
-				(item) => item.type === 'tool' && item.category === toolType && item.amount > 0
+			// Check inventory — any tool of the required category with stock > 0
+			return itemService.getItemsByType('tool').some(
+				(item) => item.category === toolType && ((gameState.stockpile ?? {})[item.id] ?? 0) > 0
 			);
 		});
 	}

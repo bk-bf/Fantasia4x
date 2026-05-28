@@ -96,9 +96,7 @@ export class ItemServiceImpl implements ItemService {
 
 		// Phase 6: stew items require a clay_cooking_pot in the colony
 		if (item.workshopType === 'campfire' && item.id === 'stew') {
-			const hasCookingPot = (gameState.item ?? []).some(
-				(i) => i.id === 'clay_cooking_pot' && i.amount > 0
-			) || ((gameState.stockpile ?? {})['clay_cooking_pot'] ?? 0) > 0;
+			const hasCookingPot = ((gameState.stockpile ?? {})['clay_cooking_pot'] ?? 0) > 0;
 			if (!hasCookingPot) return false;
 		}
 
@@ -194,20 +192,15 @@ export class ItemServiceImpl implements ItemService {
 	}
 
 	getAvailableQuantity(itemId: string, gameState: GameState): number {
-		const item = gameState.item.find((i) => i.id === itemId);
-		return item?.amount || 0;
+		return (gameState.stockpile ?? {})[itemId] ?? 0;
 	}
 
 	consumeItems(itemIds: Record<string, number>, gameState: GameState): GameState {
-		const newState = { ...gameState };
-		newState.item = gameState.item.map((item) => {
-			const consumeAmount = itemIds[item.id];
-			if (consumeAmount) {
-				return { ...item, amount: Math.max(0, item.amount - consumeAmount) };
-			}
-			return item;
+		const newStockpile = { ...(gameState.stockpile ?? {}) };
+		Object.entries(itemIds).forEach(([itemId, amount]) => {
+			newStockpile[itemId] = Math.max(0, (newStockpile[itemId] ?? 0) - amount);
 		});
-		return newState;
+		return { ...gameState, stockpile: newStockpile };
 	}
 
 	addItems(itemIds: Record<string, number>, gameState: GameState): GameState {

@@ -103,7 +103,7 @@ export class BuildingServiceImpl implements BuildingService {
 		if (!building?.buildingCost) return true;
 
 		return Object.entries(building.buildingCost).every(([resourceId, cost]) => {
-			const available = gameState.item.find((item) => item.id === resourceId)?.amount || 0;
+			const available = (gameState.stockpile ?? {})[resourceId] ?? 0;
 			return available >= cost;
 		});
 	}

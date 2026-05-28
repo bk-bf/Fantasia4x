@@ -23,45 +23,26 @@ export class GameStateManager {
 	}
 
 	// KEEP: Utility methods for item management
-	private addToItemArray(itemId: string, amount: number): void {
-		const itemIndex = this.state.item.findIndex((item) => item.id === itemId);
-		if (itemIndex !== -1) {
-			this.state.item[itemIndex] = {
-				...this.state.item[itemIndex],
-				amount: this.state.item[itemIndex].amount + amount
-			};
-		} else {
-			const itemInfo = itemService.getItemById(itemId);
-			if (itemInfo) {
-				this.state.item.push({ ...itemInfo, amount });
-			}
-		}
-
+	private addToItemArray(_itemId: string, _amount: number): void {
+		// Deprecated — stockpile is the single source of truth. No-op.
 	}
 
 
 
 	// KEEP: Public utility methods
 	addResource(resourceId: string, amount: number): void {
-		this.addToItemArray(resourceId, amount);
+		this.state.stockpile = { ...this.state.stockpile, [resourceId]: (this.state.stockpile[resourceId] ?? 0) + amount };
 	}
 
 	getItemAmount(itemId: string): number {
-		const item = this.state.item.find((i) => i.id === itemId);
-		return item ? item.amount : 0;
+		return this.state.stockpile[itemId] ?? 0;
 	}
 
 	removeItemAmount(itemId: string, amount: number): boolean {
-		const itemIndex = this.state.item.findIndex((item) => item.id === itemId);
-		if (itemIndex !== -1 && this.state.item[itemIndex].amount >= amount) {
-			this.state.item[itemIndex] = {
-				...this.state.item[itemIndex],
-				amount: this.state.item[itemIndex].amount - amount
-			};
-
-			return true;
-		}
-		return false;
+		const current = this.state.stockpile[itemId] ?? 0;
+		if (current < amount) return false;
+		this.state.stockpile = { ...this.state.stockpile, [itemId]: current - amount };
+		return true;
 	}
 
 
