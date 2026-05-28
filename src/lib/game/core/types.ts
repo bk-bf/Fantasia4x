@@ -748,8 +748,8 @@ export interface WorldTile {
 	resources: Record<string, number>;
 	territoryOwner: string;
 	// A* scratch fields (reset before each pathfind, not persisted)
-	gCost: number;
-	hCost: number;
-	fCost: number;
-	parent: { x: number; y: number } | null;
+	gCost?: number;
+	hCost?: number;
+	fCost?: number;
+	parent?: { x: number; y: number } | null;
 }

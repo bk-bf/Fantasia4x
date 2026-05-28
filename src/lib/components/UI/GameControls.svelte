@@ -1,6 +1,6 @@
 <script lang="ts">
   import { browser } from '$app/environment';
-  import { gameState, currentTurn } from '$lib/stores/gameState';
+  import { gameState, currentTurn, savedStateReady } from '$lib/stores/gameState';
   import { uiState } from '$lib/stores/uiState';
   import { wasmPathfinderService } from '$lib/game/services/WasmPathfinderService';
   import { onMount, onDestroy } from 'svelte';
@@ -25,9 +25,14 @@
 
   onMount(async () => {
     if (!browser) return;
-    // Ensure pathfinder WASM is loaded before turns start so pawns can navigate immediately
-    await wasmPathfinderService.init();
+    // Wait for the IndexedDB save to be loaded and applied before advancing turns.
+    await savedStateReady;
+    // Start turns; WASM pathfinder loads in the background.
+    // wasmPathfinderService.findPath returns [] when not ready — handled gracefully.
     gameState.startAutoTurns();
+    wasmPathfinderService.init().catch((err) => {
+      console.warn('[WASM] Pathfinder failed to load — pawns will stay idle until resolved:', err);
+    });
   });
 
   onDestroy(() => {

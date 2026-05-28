@@ -16,6 +16,7 @@ import { eventSystem } from '$lib/game/core/Events';
 import { triggerEvent } from '$lib/stores/eventStore';
 import { generateWorld } from '$lib/game/world/WorldGenerator';
 import { resourceGeneratorService } from '$lib/game/services/ResourceGeneratorService';
+import { loadSave, scheduleSave, deleteSave } from './saveManager';
 
 
 // ===== CONFIGURATION =====
@@ -30,9 +31,6 @@ let gameSpeedValue = 1;
 // ===== WORLD GENERATION =====
 /** Bump this when the world generation algorithm changes to force a regen. */
 const WORLD_VERSION = 11; // fallen_logs → P(209)
-/** Bump this to invalidate all existing saves (e.g. after a game economy reset). */
-const SAVE_VERSION = 2; // v2: spatial-only economy, no abstract resource ticks
-const SAVE_VERSION_KEY = 'fantasia4x-save-version';
 const WORLD_VERSION_KEY = 'fantasia4x-world-version';
 const WORLD_SEED = Date.now();
 const _generatedWorld = generateWorld(240, 160, WORLD_SEED);
@@ -85,74 +83,50 @@ export const initialGameState: GameState = {
 };
 
 // ===== UTILITY FUNCTIONS =====
-function saveToLocalStorage(state: GameState) {
-	if (browser) {
-		localStorage.setItem('fantasia4x-save', JSON.stringify(state));
-		localStorage.setItem(SAVE_VERSION_KEY, String(SAVE_VERSION));
-	}
-}
 
-function loadFromLocalStorage(): GameState | null {
-	if (browser) {
-		// Discard saves from an older save version (e.g. pre-spatial economy saves)
-		const savedVersion = Number(localStorage.getItem(SAVE_VERSION_KEY) ?? '0');
-		if (savedVersion < SAVE_VERSION) {
-			console.info('[GameState] Save version mismatch — discarding old save and starting fresh.');
-			localStorage.removeItem('fantasia4x-save');
-			localStorage.setItem(SAVE_VERSION_KEY, String(SAVE_VERSION));
-			return null;
-		}
-		const saved = localStorage.getItem('fantasia4x-save');
-		if (saved) {
-			try {
-				const state: GameState = JSON.parse(saved);
-				// Phase 4 migration: backfill new fields for old saves
-				if (!state.buildings) {
-					state.buildings = Object.entries(state.buildingCounts ?? {}).flatMap(
-						([type, count]) =>
-							Array.from({ length: count }, (_, i) => ({
-								id: `${type}-legacy-${i}`,
-								type,
-								x: 0,
-								y: 0,
-								status: 'complete' as const,
-								progress: 1
-							}))
-					);
-				}
-				if (!state.stockpile) state.stockpile = {};
-				if (!state.designations) state.designations = {};
-				if (!state.jobs) state.jobs = [];
-				// Phase 5c: migrate old buildingQueue entries to PlacedBuilding (work-point model)
-				if (state.buildingQueue && state.buildingQueue.length > 0) {
-					const migratedBuildings = state.buildingQueue.map((entry: any, i: number) => {
-						const buildTime = entry.building?.buildTime ?? 10;
-						const workRequired = buildTime * 10;
-						const workDone = Math.round(
-							(1 - Math.max(0, entry.turnsRemaining) / buildTime) * workRequired
-						);
-						return {
-							id: `${entry.building.id}-migrated-${i}-${Date.now()}`,
-							type: entry.building.id,
-							x: 0,
-							y: 0,
-							status: 'under_construction' as const,
-							progress: workDone / workRequired,
-							workRequired,
-							workDone,
-							materialsDelivered: true
-						};
-					});
-					state.buildings = [...(state.buildings ?? []), ...migratedBuildings];
-					state.buildingQueue = [];
-				}
-				return state;
-			} catch (e) {
-				console.warn('Failed to load save data:', e);
-			}
-		}
+/** Apply all legacy field migrations to a loaded save. */
+function applyMigrations(state: GameState): GameState {
+	// Phase 4 migration: backfill new fields for old saves
+	if (!state.buildings) {
+		state.buildings = Object.entries(state.buildingCounts ?? {}).flatMap(
+			([type, count]) =>
+				Array.from({ length: count }, (_, i) => ({
+					id: `${type}-legacy-${i}`,
+					type,
+					x: 0,
+					y: 0,
+					status: 'complete' as const,
+					progress: 1
+				}))
+		);
 	}
-	return null;
+	if (!state.stockpile) state.stockpile = {};
+	if (!state.designations) state.designations = {};
+	if (!state.jobs) state.jobs = [];
+	// Phase 5c: migrate old buildingQueue entries to PlacedBuilding (work-point model)
+	if (state.buildingQueue && state.buildingQueue.length > 0) {
+		const migratedBuildings = state.buildingQueue.map((entry: any, i: number) => {
+			const buildTime = entry.building?.buildTime ?? 10;
+			const workRequired = buildTime * 10;
+			const workDone = Math.round(
+				(1 - Math.max(0, entry.turnsRemaining) / buildTime) * workRequired
+			);
+			return {
+				id: `${entry.building.id}-migrated-${i}-${Date.now()}`,
+				type: entry.building.id,
+				x: 0,
+				y: 0,
+				status: 'under_construction' as const,
+				progress: workDone / workRequired,
+				workRequired,
+				workDone,
+				materialsDelivered: true
+			};
+		});
+		state.buildings = [...(state.buildings ?? []), ...migratedBuildings];
+		state.buildingQueue = [];
+	}
+	return state;
 }
 
 // ===== PAWN SPAWN HELPERS =====
@@ -321,10 +295,7 @@ function addItem(itemId: string, amount: number) {
 }
 
 function resetGame() {
-	if (browser) {
-		localStorage.removeItem('fantasia4x-save');
-		localStorage.setItem(SAVE_VERSION_KEY, String(SAVE_VERSION));
-	}
+	deleteSave().catch(console.error);
 	set(initialGameState);
 	console.info('[GameState] Game reset to initial state.');
 }
@@ -341,20 +312,13 @@ function wipeAndReload() {
 	stopAutoTurns();
 
 	if (browser) {
-		// 2. Remove every key that belongs to this game (prefix scan).
-		//    This is future-proof — any new key added later is automatically wiped.
-		const keysToRemove: string[] = [];
-		for (let i = 0; i < localStorage.length; i++) {
-			const key = localStorage.key(i);
-			if (key && key.startsWith('fantasia4x')) keysToRemove.push(key);
-		}
-		keysToRemove.forEach((k) => localStorage.removeItem(k));
-
-		// 3. Reset in-memory store so Svelte subscribers don't trigger another save.
-		set(initialGameState);
-
-		// 4. Reload.
-		location.reload();
+		// 2. Delete the IndexedDB save (also clears any lingering localStorage keys).
+		deleteSave().finally(() => {
+			// 3. Reset in-memory store so Svelte subscribers don't trigger another save.
+			set(initialGameState);
+			// 4. Reload.
+			location.reload();
+		});
 	}
 }
 
@@ -362,68 +326,84 @@ function wipeAndReload() {
 // Initialize locations at game start
 locationService.initializeAllLocations();
 
-const savedState = loadFromLocalStorage();
-let baseState = savedState || initialGameState;
+// Create the main writable store starting with a fresh game.
+// The actual save is loaded asynchronously below.
+const { subscribe, set, update } = writable(initialGameState);
 
-// Migrate old saves that have no world map or are missing terrain data
-if (!baseState.worldMap || baseState.worldMap.length === 0 || !baseState.worldMap[0]?.[0]?.terrainType) {
-	const migrateSeed = Date.now();
-	const migratedWorld = generateWorld(240, 160, migrateSeed);
-	baseState = { ...baseState, worldMap: migratedWorld };
-	if (browser) localStorage.setItem(WORLD_VERSION_KEY, String(WORLD_VERSION));
-} else if (browser && localStorage.getItem(WORLD_VERSION_KEY) !== String(WORLD_VERSION)) {
-	// World generation algorithm changed — regenerate map while keeping all other game state
-	const migrateSeed = Date.now();
-	const migratedWorld = generateWorld(240, 160, migrateSeed);
-	resourceGeneratorService.generateResources(migratedWorld, migrateSeed);
-	baseState = { ...baseState, worldMap: migratedWorld };
-	localStorage.setItem(WORLD_VERSION_KEY, String(WORLD_VERSION));
-} else if (!baseState.worldMap[0]?.[1]?.discovered) {
-	// Patch saves where only tile (0,0) was discovered — set all tiles visible (DF-style)
-	baseState = {
-		...baseState,
-		worldMap: baseState.worldMap.map(row => row.map(tile => tile.discovered ? tile : { ...tile, discovered: true }))
-	};
-}
-
-// If no pawns, generate them from the race
-if (!baseState.pawns || baseState.pawns.length === 0) {
-	baseState = {
-		...baseState,
-		pawns: generatePawns(baseState.race, 5)
-	};
-} else if (baseState.pawns.length < 5) {
-	// Top up to 5 pawns (migration from older saves with fewer pawns)
-	const extra = generatePawns(baseState.race, 5 - baseState.pawns.length).map((p, i) => ({
-		...p,
-		id: `pawn-extra-${i}-${Date.now()}`
-	}));
-	baseState = { ...baseState, pawns: [...baseState.pawns, ...extra] };
-}
-
-// Spawn any pawns that don't yet have map positions
-if (baseState.pawns.some((p) => !p.position)) {
-	baseState = { ...baseState, pawns: spawnPawnsOnMap(baseState.pawns, baseState.worldMap) };
-}
-
-// Create the main writable store
-const { subscribe, set, update } = writable(baseState);
-
-// Create update function with save
+// Create update function — schedules a debounced IndexedDB save on every mutation.
 const updateWithSave = (updater: (state: GameState) => GameState) => {
 	update((state) => {
 		const newState = updater(state);
-		saveToLocalStorage(newState);
+		scheduleSave(newState);
 		return newState;
 	});
 };
 
 // ===== INITIALIZE GAMEENGINE =====
-// Create GameStateManager and initialize GameEngine
-const gameStateManager = new GameStateManager(baseState);
+const gameStateManager = new GameStateManager(initialGameState);
 gameEngine.setGameStateManager(gameStateManager);
-
 console.log('[GameState] GameEngine initialized with GameStateManager');
+
+// ===== ASYNC SAVE LOAD + MIGRATIONS =====
+/** Resolves when the persisted save (if any) has been loaded and applied. */
+export const savedStateReady: Promise<void> = (async () => {
+	if (!browser) return;
+
+	const savedState = await loadSave();
+	let baseState = savedState ? applyMigrations(savedState) : initialGameState;
+
+	// World map migrations (same logic as before, now runs after async load)
+	if (!baseState.worldMap || baseState.worldMap.length === 0 || !baseState.worldMap[0]?.[0]?.terrainType) {
+		const migrateSeed = Date.now();
+		const migratedWorld = generateWorld(240, 160, migrateSeed);
+		resourceGeneratorService.generateResources(migratedWorld, migrateSeed);
+		baseState = { ...baseState, worldMap: migratedWorld };
+		localStorage.setItem(WORLD_VERSION_KEY, String(WORLD_VERSION));
+	} else if (localStorage.getItem(WORLD_VERSION_KEY) !== String(WORLD_VERSION)) {
+		const migrateSeed = Date.now();
+		const migratedWorld = generateWorld(240, 160, migrateSeed);
+		resourceGeneratorService.generateResources(migratedWorld, migrateSeed);
+		baseState = { ...baseState, worldMap: migratedWorld };
+		localStorage.setItem(WORLD_VERSION_KEY, String(WORLD_VERSION));
+	} else if (!baseState.worldMap[0]?.[1]?.discovered) {
+		baseState = {
+			...baseState,
+			worldMap: baseState.worldMap.map(row =>
+				row.map(tile => (tile.discovered ? tile : { ...tile, discovered: true }))
+			)
+		};
+	}
+
+	// Backfill resources if all tiles are empty (migration from pre-resource-gen saves)
+	if (
+		baseState.worldMap.length > 0 &&
+		baseState.worldMap.every(row => row.every(tile => Object.keys(tile.resources ?? {}).length === 0))
+	) {
+		resourceGeneratorService.generateResources(baseState.worldMap, Date.now());
+	}
+
+	// Pawn generation / backfill
+	if (!baseState.pawns || baseState.pawns.length === 0) {
+		baseState = { ...baseState, pawns: generatePawns(baseState.race, 5) };
+	} else if (baseState.pawns.length < 5) {
+		const extra = generatePawns(baseState.race, 5 - baseState.pawns.length).map((p, i) => ({
+			...p,
+			id: `pawn-extra-${i}-${Date.now()}`
+		}));
+		baseState = { ...baseState, pawns: [...baseState.pawns, ...extra] };
+	}
+
+	// Spawn pawns that have no map position yet
+	if (baseState.pawns.some(p => !p.position)) {
+		baseState = { ...baseState, pawns: spawnPawnsOnMap(baseState.pawns, baseState.worldMap) };
+	}
+
+	// Push loaded state into the store and sync GameEngine
+	set(baseState);
+	gameEngine.setGameStateManager(new GameStateManager(baseState));
+})().catch(err => {
+	console.error('[GameState] Failed to load save, starting fresh:', err);
+});
 
 // Create control stores
 const isPaused = writable(false);
