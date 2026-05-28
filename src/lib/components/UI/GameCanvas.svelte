@@ -94,8 +94,11 @@
   // Zone/designation painting — driven by uiState
   let designationMode = false;
   let designationTypeActive: DesignationType = 'harvest';
+  // Press X while in designation mode to switch between paint ↔ erase drag
+  let zoneEraseMode = false;
   const unsubUI = uiState.subscribe((s) => {
     designationMode = s.designationActive;
+    if (!s.designationActive) zoneEraseMode = false;
     if (s.designationType) designationTypeActive = s.designationType as DesignationType;
     redrawOverlay();
     if (s.mapFocusRequest && ready && renderer?.isReady()) {
@@ -354,15 +357,28 @@
 
     // Zone drag-paint preview
     if (zoneDragActive && designationMode) {
-      _overlayRect(
-        grid,
-        zoneAnchorX,
-        zoneAnchorY,
-        zoneEndX,
-        zoneEndY,
-        { r: 1.0, g: 1.0, b: 1.0 },
-        { rMul: 0.4, rAdd: 0.4, gMul: 0.4, gAdd: 0.3, bMul: 0.4, bAdd: 0.0 }
-      );
+      if (zoneEraseMode) {
+        // Red tint for erase drag
+        _overlayRect(
+          grid,
+          zoneAnchorX,
+          zoneAnchorY,
+          zoneEndX,
+          zoneEndY,
+          { r: 1.0, g: 0.2, b: 0.1 },
+          { rMul: 0.4, rAdd: 0.35, gMul: 0.3, gAdd: 0.0, bMul: 0.3, bAdd: 0.0 }
+        );
+      } else {
+        _overlayRect(
+          grid,
+          zoneAnchorX,
+          zoneAnchorY,
+          zoneEndX,
+          zoneEndY,
+          { r: 1.0, g: 1.0, b: 1.0 },
+          { rMul: 0.4, rAdd: 0.4, gMul: 0.4, gAdd: 0.3, bMul: 0.4, bAdd: 0.0 }
+        );
+      }
     }
 
     // Selection drag preview (Shift+drag in progress)
@@ -586,11 +602,19 @@
         break;
       case 'Escape':
         uiState.deactivateDesignation();
+        zoneEraseMode = false;
         zoneDragActive = false;
         selDragActive = false;
         selRect = null;
         selectedPawnId = null;
         redrawOverlay();
+        break;
+      case 'x':
+      case 'X':
+        if (designationMode) {
+          zoneEraseMode = !zoneEraseMode;
+          e.preventDefault();
+        }
         break;
     }
   }
@@ -691,17 +715,23 @@
 
   function handleMouseUp() {
     if (zoneDragActive) {
-      // Commit the painted rectangle to game state
-      gameState.updateWithSave((state) =>
-        designationService.designateRect(
-          zoneAnchorX,
-          zoneAnchorY,
-          zoneEndX,
-          zoneEndY,
-          designationTypeActive,
-          state
-        )
-      );
+      // Commit the painted (or erased) rectangle to game state
+      if (zoneEraseMode) {
+        gameState.updateWithSave((state) =>
+          designationService.clearRect(zoneAnchorX, zoneAnchorY, zoneEndX, zoneEndY, state)
+        );
+      } else {
+        gameState.updateWithSave((state) =>
+          designationService.designateRect(
+            zoneAnchorX,
+            zoneAnchorY,
+            zoneEndX,
+            zoneEndY,
+            designationTypeActive,
+            state
+          )
+        );
+      }
       zoneDragActive = false;
       redrawOverlay();
       return;
@@ -777,10 +807,19 @@
     <div class="loading">Initializing renderer…</div>
   {/if}
   {#if designationMode}
-    <div class="designation-hud">
-      [{designationTypeActive.toUpperCase()}] drag to paint · RMB erase · Esc cancel
+    <div
+      class="designation-hud"
+      style:border-color={zoneEraseMode ? '#cc3322' : undefined}
+      style:color={zoneEraseMode ? '#ff6655' : undefined}
+    >
+      {#if zoneEraseMode}
+        [ERASE] drag to remove · X to paint · Esc cancel
+      {:else}
+        [{designationTypeActive.toUpperCase()}] drag to paint · X to erase · Esc cancel
+      {/if}
       {#if zoneDragActive}
-        — selecting ({Math.abs(zoneEndX - zoneAnchorX) + 1}×{Math.abs(zoneEndY - zoneAnchorY) + 1})
+        — {zoneEraseMode ? 'erasing' : 'selecting'} ({Math.abs(zoneEndX - zoneAnchorX) +
+          1}×{Math.abs(zoneEndY - zoneAnchorY) + 1})
       {/if}
     </div>
   {:else if selDragActive}

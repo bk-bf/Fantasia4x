@@ -64,7 +64,7 @@
   <div class="hint">
     {#if designationActive}
       <span class="hint-active"
-        >PAINTING [{activeType?.toUpperCase()}] — drag to fill · RMB to erase · click again to stop</span
+        >PAINTING [{activeType?.toUpperCase()}] — drag to fill · X erase · click again to stop</span
       >
     {:else}
       click a zone type to start painting on the map
