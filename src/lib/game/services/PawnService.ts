@@ -406,22 +406,17 @@ export class PawnServiceImpl implements PawnService {
 
 		// Don't sleep if already sleeping
 		if (pawn.state.isSleeping) {
-			// Continue sleeping if still tired, unless getting very hungry
-			const shouldContinueSleeping = fatigue > 15 && hunger < 80; // LOWERED: Wake at 15 fatigue (was 30)
+			// Mirror state-machine wake thresholds: fed → sleep to 0; hungry → wake at 30
+			const wakeThreshold = hunger >= 70 ? 30 : 0;
+			const shouldContinueSleeping = fatigue > wakeThreshold && hunger < 87;
 			console.log(`[PawnService] ${pawn.name} sleeping: fatigue=${fatigue}, hunger=${hunger}, continue=${shouldContinueSleeping}`);
 			return shouldContinueSleeping;
 		}
 
-		// Start sleeping based on hunger/fatigue balance
-		if (hunger < 30) {
-			// Well fed: sleep until almost fully rested (fatigue < 15)
-			return fatigue >= 40; // LOWERED: Start at 40 fatigue (was 50)
-		} else if (hunger < 60) {
-			// Moderately fed: sleep until moderately rested (fatigue < 20)
-			return fatigue >= 60; // LOWERED: Start at 60 fatigue (was 70)
-		} else if (hunger < 80) {
-			// Getting hungry: only sleep when very tired (fatigue < 30)
-			return fatigue >= 80; // LOWERED: Start at 80 fatigue (was 85)
+		// Start sleeping when state-machine FATIGUE_THRESHOLD (72) is reached,
+		// but only if not ravenously hungry (87+).
+		if (hunger < 87) {
+			return fatigue >= 72;
 		} else {
 			// Very hungry: don't sleep, eat instead
 			return false;
@@ -749,9 +744,9 @@ export class PawnServiceImpl implements PawnService {
 	}
 
 	// UPDATED: Calibrated to a 16:8 wake/sleep cycle (1 turn ≈ 1 in-game hour).
-	// baseRest = 5/turn → 0→80 (FATIGUE_THRESHOLD) in 16 turns = 16 awake hours.
+	// baseRest = 4/turn → 0→72 (FATIGUE_THRESHOLD) in 18 turns ≈ Rimworld's 18.2h awake before drowsy.
 	private getRestIncreasePerTurn(pawn: Pawn): number {
-		let baseRest = 5;
+		let baseRest = 4;
 
 		if (pawn.state.isWorking) {
 			baseRest *= 1.5;
@@ -778,9 +773,9 @@ export class PawnServiceImpl implements PawnService {
 	}
 
 	// Calibrated to 2500 kcal / 3 meals / 16h waking (1 turn ≈ 1 hour).
-	// baseHunger = 10/turn → from SAFE_HUNGER (10) hits threshold (60) in 5h → ~3 meals/day.
+	// baseHunger = 6.5/turn → 0→70 (HUNGER_THRESHOLD) in ~10.8 turns ≈ Rimworld's 10.5h between meals.
 	private getHungerIncreasePerTurn(pawn: Pawn): number {
-		let baseHunger = 10;
+		let baseHunger = 6.5;
 
 		if (pawn.state.isWorking) {
 			baseHunger *= 1.4;

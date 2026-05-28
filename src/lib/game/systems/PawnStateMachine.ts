@@ -38,19 +38,22 @@ export const PAWN_STATE = {
 export type PawnStateName = (typeof PAWN_STATE)[keyof typeof PAWN_STATE];
 
 // ===== NEED THRESHOLDS =====
-const HUNGER_THRESHOLD = 60;           // Seek food at 60%
-const CRITICAL_HUNGER = 85;            // Interrupt work — must eat now
-const FATIGUE_THRESHOLD = 80;          // Seek rest after ~16 awake hours (5/turn → 0→80)
-const CRITICAL_FATIGUE = 93;           // Emergency work interrupt
+// Calibrated to Rimworld pacing (1 turn ≈ 1 in-game hour):
+//   Hunger: 6.5/turn → 0→70 in ~10.8 turns (Rimworld: eat at 30% saturation = 70% hunger, every ~10.5h)
+//   Fatigue: 4/turn  → 0→72 in ~18 turns   (Rimworld: drowsy at 28% rest = 72% fatigue, after ~18.2h)
+const HUNGER_THRESHOLD = 70;           // Seek food at 70% (= Rimworld 30% saturation trigger)
+const CRITICAL_HUNGER = 87;            // Interrupt work — ravenous (Rimworld 12.5% sat = 87.5%)
+const FATIGUE_THRESHOLD = 72;          // Seek rest after ~18 awake hours (4/turn → 0→72)
+const CRITICAL_FATIGUE = 95;           // Emergency work interrupt — near collapse
 const EATING_TURNS = 5;                // Turns to eat at a campfire
 const EATING_TURNS_GROUND = 7;         // Turns eating in-place (cold, uncomfortable)
-const SLEEPING_TURNS = 8;              // Reference duration at shelter (12.5/turn × 8 = 100)
-const SLEEPING_TURNS_GROUND = 10;      // Reference duration on ground (10/turn × 10 = 100)
+const SLEEPING_TURNS = 8;              // Reference duration at shelter (9.5/turn × ~7.6 turns)
+const SLEEPING_TURNS_GROUND = 10;      // Reference duration on ground (7.5/turn × ~9.6 turns)
 const HUNGER_PER_FOOD_UNIT = 30;       // Base hunger restored per 1 unit (×nutrition)
 const SAFE_HUNGER = 10;                // Target hunger level after a full meal
 const MAX_UNITS_PER_FOOD_TYPE = 3;     // Cap per food type per meal — avoids hoarding
-const FATIGUE_PER_SLEEPING_TURN = 12.5; // Building: 100 fatigue → 0 in 8 turns (8h)
-const FATIGUE_PER_SLEEPING_GROUND = 10; // Ground: 100 → 0 in 10 turns (10h baseline)
+const FATIGUE_PER_SLEEPING_TURN = 9.5; // Building: 72 fatigue → 0 in ~7.6 turns (≈ Rimworld 7.56h bed)
+const FATIGUE_PER_SLEEPING_GROUND = 7.5; // Ground: 72 → 0 in ~9.6 turns (≈ Rimworld 9.45h ground)
 // Wake thresholds — prevents yo-yo by requiring proper rest before resuming activity
 const SLEEP_WAKE_THRESHOLD_FED = 0;    // Sleep until fully restored when not hungry
 const SLEEP_WAKE_THRESHOLD_HUNGRY = 30; // Allow early waking at 30% to go eat
