@@ -1,5 +1,11 @@
 <script lang="ts">
-  import type { GameState, Pawn, StatusEffectDef, ConditionDef, ConditionStage } from '$lib/game/core/types';
+  import type {
+    GameState,
+    Pawn,
+    StatusEffectDef,
+    ConditionDef,
+    ConditionStage
+  } from '$lib/game/core/types';
   import {
     getNeedColor,
     getNeedDescription,
@@ -15,6 +21,7 @@
 
   export let pawn: Pawn;
   export let gameState: GameState;
+  export let part: string = 'both';
 
   $: needs = pawn.needs;
 
@@ -29,9 +36,9 @@
 
   type ActiveCond = { name: string; severity: number; stage: ConditionStage };
   $: activeConditions = (pawn.conditions ?? [])
-    .filter(c => c.severity > 0)
+    .filter((c) => c.severity > 0)
     .reduce<ActiveCond[]>((acc, c) => {
-      const def = CONDITIONS_DB.find(d => d.id === c.id);
+      const def = CONDITIONS_DB.find((d) => d.id === c.id);
       if (!def) return acc;
       let stage: ConditionStage | undefined;
       for (const s of def.stages) if (c.severity >= s.minSeverity) stage = s;
@@ -64,15 +71,21 @@
 
   <div class="need-row">
     <span class="lbl">HUNGER</span>
-    <span class="block-bar" style="color: {getNeedColor(needs.hunger)}">{blockBar(needs.hunger)}</span>
+    <span class="block-bar" style="color: {getNeedColor(needs.hunger)}"
+      >{blockBar(needs.hunger)}</span
+    >
     <span class="val" style="color: {getNeedColor(needs.hunger)}">{Math.round(needs.hunger)}%</span>
     <span class="desc">{getNeedDescription('hunger', needs.hunger)}</span>
   </div>
 
   <div class="need-row">
     <span class="lbl">REST</span>
-    <span class="block-bar" style="color: {getNeedColor(needs.fatigue)}">{blockBar(needs.fatigue)}</span>
-    <span class="val" style="color: {getNeedColor(needs.fatigue)}">{Math.round(needs.fatigue)}%</span>
+    <span class="block-bar" style="color: {getNeedColor(needs.fatigue)}"
+      >{blockBar(needs.fatigue)}</span
+    >
+    <span class="val" style="color: {getNeedColor(needs.fatigue)}"
+      >{Math.round(needs.fatigue)}%</span
+    >
     <span class="desc">{getNeedDescription('fatigue', needs.fatigue)}</span>
   </div>
 
@@ -94,7 +107,9 @@
           class="effect-card cond-card"
           class:threatening={stage.lifeThreatening}
           style="border-color: {stage.color}; color: {stage.color}"
-          title="{name} — {Math.round(severity * 100)}% severity{stage.lifeThreatening ? ' ⚠ life-threatening' : ''}"
+          title="{name} — {Math.round(severity * 100)}% severity{stage.lifeThreatening
+            ? ' ⚠ life-threatening'
+            : ''}"
         >
           <span class="effect-name">{name.toUpperCase()}</span>
           <span class="cond-meta">{stage.label.toUpperCase()} · {Math.round(severity * 100)}%</span>
@@ -106,11 +121,15 @@
   <div class="info-grid">
     <div class="info-col">
       <span class="lbl">STATE</span>
-      <span class="info-val state" style="color: {stateColor(pawn.currentState)}">{taskSummary.currentState}</span>
+      <span class="info-val state" style="color: {stateColor(pawn.currentState)}"
+        >{taskSummary.currentState}</span
+      >
     </div>
     <div class="info-col">
       <span class="lbl">MOOD</span>
-      <span class="info-val" style="color: {getMoodColor(pawn.state.mood)}">{pawn.state.mood}% — {getMoodDescription(pawn.state.mood)}</span>
+      <span class="info-val" style="color: {getMoodColor(pawn.state.mood)}"
+        >{pawn.state.mood}% — {getMoodDescription(pawn.state.mood)}</span
+      >
     </div>
     <div class="info-col">
       <span class="lbl">WORK</span>
@@ -118,7 +137,10 @@
     </div>
     <div class="info-col">
       <span class="lbl">SIZE</span>
-      <span class="info-val">{pawn.physicalTraits.size} · {pawn.physicalTraits.height}cm {pawn.physicalTraits.weight}kg</span>
+      <span class="info-val"
+        >{pawn.physicalTraits.size} · {pawn.physicalTraits.height}cm {pawn.physicalTraits
+          .weight}kg</span
+      >
     </div>
     <div class="info-span">
       <span class="lbl">TASK</span>
@@ -197,29 +219,17 @@
     flex-shrink: 0;
   }
 
-  .info-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+  .info-list {
+    padding: 0;
   }
 
-  .info-col {
+  .info-row {
     display: flex;
     align-items: baseline;
     gap: 6px;
     padding: 2px 8px;
   }
-  .info-col:hover {
-    background: var(--bg-hover);
-  }
-
-  .info-span {
-    grid-column: 1 / -1;
-    display: flex;
-    align-items: baseline;
-    gap: 6px;
-    padding: 2px 8px;
-  }
-  .info-span:hover {
+  .info-row:hover {
     background: var(--bg-hover);
   }
 
@@ -288,7 +298,12 @@
   }
 
   @keyframes pulse-threat {
-    0%, 100% { opacity: 1; }
-    50%       { opacity: 0.45; }
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.45;
+    }
   }
 </style>

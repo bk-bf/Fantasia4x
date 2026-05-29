@@ -202,11 +202,11 @@ export class GridRenderer {
 			// UV bounds for the current glyph (needed by outline edge-detection in fragment shader)
 			const ub = charInfo
 				? [
-						charInfo.x / this.fontAtlas.atlasWidth,
-						charInfo.y / this.fontAtlas.atlasHeight,
-						(charInfo.x + charInfo.width) / this.fontAtlas.atlasWidth,
-						(charInfo.y + charInfo.height) / this.fontAtlas.atlasHeight
-				  ]
+					charInfo.x / this.fontAtlas.atlasWidth,
+					charInfo.y / this.fontAtlas.atlasHeight,
+					(charInfo.x + charInfo.width) / this.fontAtlas.atlasWidth,
+					(charInfo.y + charInfo.height) / this.fontAtlas.atlasHeight
+				]
 				: [0, 0, 0, 0];
 
 			// UV corners — default (no rotation)

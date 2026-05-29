@@ -5,30 +5,30 @@
   let { pawn }: { pawn: Pawn } = $props();
 
   const FALLBACK: LimbState[] = [
-    { id: 'head',      health: 100, isMissing: false, bleedRate: 0 },
-    { id: 'torso',     health: 100, isMissing: false, bleedRate: 0 },
-    { id: 'left_arm',  health: 100, isMissing: false, bleedRate: 0 },
+    { id: 'head', health: 100, isMissing: false, bleedRate: 0 },
+    { id: 'torso', health: 100, isMissing: false, bleedRate: 0 },
+    { id: 'left_arm', health: 100, isMissing: false, bleedRate: 0 },
     { id: 'right_arm', health: 100, isMissing: false, bleedRate: 0 },
-    { id: 'left_leg',  health: 100, isMissing: false, bleedRate: 0 },
-    { id: 'right_leg', health: 100, isMissing: false, bleedRate: 0 },
+    { id: 'left_leg', health: 100, isMissing: false, bleedRate: 0 },
+    { id: 'right_leg', health: 100, isMissing: false, bleedRate: 0 }
   ];
 
   const LIMBS: { name: string; id: LimbId }[] = [
-    { name: 'HEAD',  id: 'head'      },
-    { name: 'TORSO', id: 'torso'     },
-    { name: 'L.ARM', id: 'left_arm'  },
+    { name: 'HEAD', id: 'head' },
+    { name: 'TORSO', id: 'torso' },
+    { name: 'L.ARM', id: 'left_arm' },
     { name: 'R.ARM', id: 'right_arm' },
-    { name: 'L.LEG', id: 'left_leg'  },
-    { name: 'R.LEG', id: 'right_leg' },
+    { name: 'L.LEG', id: 'left_leg' },
+    { name: 'R.LEG', id: 'right_leg' }
   ];
 
-  let alive      = $derived(pawn.isAlive !== false);
-  let limbs      = $derived(pawn.limbs?.length ? pawn.limbs : FALLBACK);
-  let blood      = $derived(pawn.bloodVolume ?? 100);
-  let bleedRate  = $derived(limbs.reduce((s, l) => s + (l.bleedRate ?? 0), 0));
+  let alive = $derived(pawn.isAlive !== false);
+  let limbs = $derived(pawn.limbs?.length ? pawn.limbs : FALLBACK);
+  let blood = $derived(pawn.bloodVolume ?? 100);
+  let bleedRate = $derived(limbs.reduce((s, l) => s + (l.bleedRate ?? 0), 0));
 
   function gl(id: LimbId): LimbState {
-    return limbs.find(l => l.id === id) ?? FALLBACK.find(l => l.id === id)!;
+    return limbs.find((l) => l.id === id) ?? FALLBACK.find((l) => l.id === id)!;
   }
 
   function lc(limb: LimbState): string {
@@ -52,7 +52,6 @@
     if (v >= 40) return 'var(--accent-hi)';
     return 'var(--neg)';
   }
-
 </script>
 
 <div class="health-section">
@@ -65,7 +64,9 @@
       {@const col = lc(limb)}
       <div class="limb-row">
         <span class="cell-name" style="color:{col}">{name}</span>
-        <span class="cell-val" style="color:{col}">{status}{#if limb.bleedRate > 0}<span class="bleed-dot"> ●</span>{/if}</span>
+        <span class="cell-val" style="color:{col}"
+          >{status}{#if limb.bleedRate > 0}<span class="bleed-dot"> ●</span>{/if}</span
+        >
       </div>
     {/each}
   </div>
@@ -154,7 +155,13 @@
   }
 
   @keyframes blink {
-    0%, 50% { opacity: 1; }
-    51%, 100% { opacity: 0; }
+    0%,
+    50% {
+      opacity: 1;
+    }
+    51%,
+    100% {
+      opacity: 0;
+    }
   }
 </style>
