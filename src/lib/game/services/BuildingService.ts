@@ -178,7 +178,7 @@ export class BuildingServiceImpl implements BuildingService {
 		const building = this.getBuildingById(buildingId);
 		if (!building) return 0;
 
-		let time = building.buildTime;
+		let time = building.workAmount;
 
 		// Apply population bonus (more workers = faster construction)
 		const availableWorkers = Math.min(gameState.pawns.length, building.populationRequired * 2);
@@ -301,7 +301,7 @@ export class BuildingServiceImpl implements BuildingService {
 
 	/**
 	 * Phase 4d / Phase 5c: Place a building at specific tile coordinates with status 'planned'.
-	 * Sets workRequired = buildTime × 10 so that JobService can generate a construct job.
+	 * Sets workRequired = workAmount so that JobService can generate a construct job.
 	 */
 	placeBuilding(type: string, x: number, y: number, gameState: GameState): GameState {
 		const building = this.getBuildingById(type);
@@ -314,12 +314,12 @@ export class BuildingServiceImpl implements BuildingService {
 			type,
 			x,
 			y,
-			// Phase 6: zero-buildTime buildings (craft_spot) are complete immediately
-			status: building.buildTime === 0 ? 'complete' : 'planned',
-			progress: building.buildTime === 0 ? 1 : 0,
-			// Phase 5c: work-point model
-			workRequired: building.buildTime * 10,
-			workDone: building.buildTime === 0 ? building.buildTime * 10 : 0,
+			// zero-workAmount buildings (craft_spot) are complete immediately
+			status: building.workAmount === 0 ? 'complete' : 'planned',
+			progress: building.workAmount === 0 ? 1 : 0,
+			// work-point model: workRequired = workAmount directly
+			workRequired: building.workAmount,
+			workDone: building.workAmount === 0 ? building.workAmount : 0,
 			materialsDelivered: false
 		};
 		return {

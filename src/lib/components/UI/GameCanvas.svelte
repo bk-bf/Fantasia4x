@@ -869,6 +869,10 @@
       redrawOverlay();
       return;
     }
+    if (blueprintBuildingId) {
+      redrawOverlay();
+      return;
+    }
     if (!dragging) return;
     dragDistance += Math.abs(e.movementX) + Math.abs(e.movementY);
     const dx = Math.round((dragStartX - e.clientX) / tileWidth);
@@ -968,6 +972,7 @@
     }
     hoverTileX = -1;
     hoverTileY = -1;
+    if (blueprintBuildingId) redrawOverlay();
   }
 
   /** Right-click: clear designation at hovered tile (or drag-erase rect in zone mode). */

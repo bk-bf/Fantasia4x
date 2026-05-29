@@ -48,7 +48,7 @@ export interface PlacedBuilding {
 	progress: number;     // 0–1 (legacy; use workDone/workRequired for placed buildings)
 	paused?: boolean;     // construction paused by player
 	// Phase 5c: work-point construction
-	workRequired?: number;       // buildDef.buildTime × 10
+	workRequired?: number;       // = buildDef.workAmount
 	workDone?: number;           // accumulated work points
 	materialsDelivered?: boolean; // materials consumed from stockpile?
 	// Phase 6: fuel / lighting state
@@ -381,7 +381,7 @@ export interface Building {
 
 	// Construction requirements
 	buildingCost: Record<string, number>; // Renamed from 'cost' to match item system
-	buildTime: number;
+	workAmount: number;
 	toolTierRequired: number; // Matches item system progression
 	populationRequired: number;
 

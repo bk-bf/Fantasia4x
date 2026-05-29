@@ -163,7 +163,7 @@ export class GameEngineImpl implements GameEngine {
 				// Add to building queue
 				const buildingInProgress = {
 					building: building,
-					turnsRemaining: building.buildTime || 1,
+					turnsRemaining: building.workAmount || 1,
 					startedAt: this.gameState.turn,
 					locationId: locationId || 'default'
 				};

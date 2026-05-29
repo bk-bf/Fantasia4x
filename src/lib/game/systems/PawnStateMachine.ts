@@ -1067,7 +1067,10 @@ function handleWorking(pawn: Pawn, gameState: GameState): GameState {
         return jobService.releaseJob(pawn.id, jobId, goIdle(pawn, gameState));
     }
 
-    const afterAdvance = jobService.advanceJob(jobId, BASE_WORK_RATE, gameState);
+    const workPoints = activeJob.type === 'construct'
+        ? Math.max(1, pawn.skills['skill_construction'] ?? 0)
+        : BASE_WORK_RATE;
+    const afterAdvance = jobService.advanceJob(jobId, workPoints, gameState);
     const jobStillExists = (afterAdvance.jobs ?? []).some((j) => j.id === jobId);
 
     if (!jobStillExists) {

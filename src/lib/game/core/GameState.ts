@@ -59,7 +59,7 @@ export class GameStateManager {
 	startBuilding(building: Building): boolean {
 		this.state.buildingQueue.push({
 			building,
-			turnsRemaining: building.buildTime,
+			turnsRemaining: building.workAmount,
 			startedAt: this.state.turn
 		});
 		return true;
