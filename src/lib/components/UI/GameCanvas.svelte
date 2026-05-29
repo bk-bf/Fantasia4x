@@ -375,7 +375,13 @@
       grid.setTile(x, y, {
         char: PAWN_SPRITES[i % PAWN_SPRITES.length],
         foreground: baseColor,
-        background: grid.getTile(x, y)?.background ?? { r: 0, g: 0, b: 0 },
+        background: isSelected
+          ? {
+              r: (grid.getTile(x, y)?.background.r ?? 0) * 0.2 + 0.38,
+              g: (grid.getTile(x, y)?.background.g ?? 0) * 0.2 + 0.3,
+              b: (grid.getTile(x, y)?.background.b ?? 0) * 0.1
+            }
+          : (grid.getTile(x, y)?.background ?? { r: 0, g: 0, b: 0 }),
         position: { x, y },
         rotation: isSleeping ? 90 : undefined
       });
