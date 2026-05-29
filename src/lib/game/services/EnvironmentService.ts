@@ -114,19 +114,27 @@ export function getAmbientTint(turn: number): [number, number, number] {
  * Per-channel RGB multiplier for HTML panels.
  *
  * Applied via an SVG `feColorMatrix` (see +page.svelte) so panels are tinted by
- * EXACTLY the same hue the map uses — cool blue at night, warm amber at
- * dawn/dusk — by multiplying each colour channel directly. This avoids the pink
- * artifact that CSS `hue-rotate` produces when rotating amber toward blue.
+ * the same hue the map uses — cool blue at night, warm amber at dawn/dusk — by
+ * multiplying each colour channel directly. This avoids the pink artifact CSS
+ * `hue-rotate` produces when rotating amber toward blue.
  *
- * It mirrors the map's `colour × light × tint`, then lifts the result by a
- * readability floor so panel text never collapses to unreadable black.
+ * Brightness and hue are computed SEPARATELY so the colour stays visible even
+ * when the scene is dim. If hue were multiplied by `light`, night would crush
+ * all channels toward the floor and wash the blue out — which is exactly what
+ * looked "too subtle". Instead:
+ *   - `bright` dims with `light` but floors at PANEL_BRIGHT_FLOOR for legibility.
+ *   - `sat` mixes white→tint at a constant strength, so the hue reads clearly
+ *     at any brightness. PANEL_SAT tunes how strong the tint is.
  */
-const PANEL_FLOOR = 0.34;
+const PANEL_BRIGHT_FLOOR = 0.45;
+const PANEL_SAT = 0.55;
 export function getPanelTint(turn: number): [number, number, number] {
     const light = getAmbientLight(turn);
     const tint = getAmbientTint(turn);
-    const lift = (c: number) => PANEL_FLOOR + (1 - PANEL_FLOOR) * light * c;
-    return [lift(tint[0]), lift(tint[1]), lift(tint[2])];
+    const bright = PANEL_BRIGHT_FLOOR + (1 - PANEL_BRIGHT_FLOOR) * light;
+    // mix(1.0, c, PANEL_SAT) — pull each channel from white toward the tint hue.
+    const mul = (c: number) => bright * (1 - PANEL_SAT + PANEL_SAT * c);
+    return [mul(tint[0]), mul(tint[1]), mul(tint[2])];
 }
 
 export interface AmbientState {
