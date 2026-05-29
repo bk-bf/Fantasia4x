@@ -274,17 +274,25 @@ function findAdjacentApproach(
     tx: number,
     ty: number,
     worldMap: GameState['worldMap'],
-    occupied?: Set<string>
+    occupied?: Set<string>,
+    fromX?: number,
+    fromY?: number
 ): { x: number; y: number } | null {
+    let best: { x: number; y: number } | null = null;
+    let bestDist = Infinity;
     for (let dy = -1; dy <= 1; dy++) {
         for (let dx = -1; dx <= 1; dx++) {
             if (dx === 0 && dy === 0) continue;
             const nx = tx + dx;
             const ny = ty + dy;
-            if (worldMap[ny]?.[nx]?.walkable && !occupied?.has(`${nx},${ny}`)) return { x: nx, y: ny };
+            if (!worldMap[ny]?.[nx]?.walkable || occupied?.has(`${nx},${ny}`)) continue;
+            const dist = fromX !== undefined && fromY !== undefined
+                ? Math.abs(nx - fromX) + Math.abs(ny - fromY)
+                : 0;
+            if (dist < bestDist) { bestDist = dist; best = { x: nx, y: ny }; }
         }
     }
-    return null;
+    return best;
 }
 
 function tryAssignPath(
@@ -297,7 +305,7 @@ function tryAssignPath(
     if (!wasmPathfinderService.isReady()) return null;
     if (isAdjacent(pawn.position.x, pawn.position.y, tx, ty)) return null;
     const occupied = getOccupiedTiles(pawn.id, gameState);
-    const approach = findAdjacentApproach(tx, ty, gameState.worldMap, occupied);
+    const approach = findAdjacentApproach(tx, ty, gameState.worldMap, occupied, pawn.position.x, pawn.position.y);
     if (!approach) return null;
     const { walkable, costs, width, height } = buildPathfindingGrids(gameState.worldMap);
     const path = wasmPathfinderService.findPath(

@@ -18,6 +18,12 @@ export interface GridRenderOptions {
 	viewportY: number;    // Camera Y position in world tiles  
 	viewportWidth: number; // Visible width in tiles
 	viewportHeight: number; // Visible height in tiles
+	// Per-tile dynamic lighting (Phase A2). Sampled at each tile CORNER and
+	// uploaded as the a_light vertex attribute; the GPU interpolates it across
+	// the quad. Returns an RGB multiplier (ambient + accumulated point light).
+	// When absent, tiles render fully lit ([1,1,1]).
+	lightSampler?: (wx: number, wy: number, time: number) => [number, number, number];
+	lightTime?: number;   // seconds, snapshot once per frame for seamless flicker
 }
 
 export interface GridRenderStats {
@@ -137,7 +143,7 @@ export class GridRenderer {
 		// Bind VAO and render
 		gl.bindVertexArray(this.gridVAO);
 
-		const vertexCount = vertexData.length / 20; // 20 components per vertex
+		const vertexCount = vertexData.length / 23; // 23 components per vertex
 		gl.drawArrays(gl.TRIANGLES, 0, vertexCount);
 
 		gl.bindVertexArray(null);
@@ -154,6 +160,8 @@ export class GridRenderer {
 	 */
 	private generateBatchVertexData(tiles: TileData[], options: GridRenderOptions): Float32Array {
 		const vertexData: number[] = [];
+		const sampler = options.lightSampler;
+		const lightTime = options.lightTime ?? 0;
 
 		for (const tile of tiles) {
 			// Get character info from font atlas. For space/missing chars, render background only.

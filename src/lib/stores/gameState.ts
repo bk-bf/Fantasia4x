@@ -458,8 +458,14 @@ export const savedStateReady: Promise<void> = (async () => {
 	console.error('[GameState] Failed to load save, starting fresh:', err);
 });
 
-// Create control stores
-const isPaused = writable(false);
+// Create control stores — seed pause from sessionStorage so HMR doesn't unpause.
+const _pausedSeed = typeof sessionStorage !== 'undefined'
+	? sessionStorage.getItem('fantasia4x-paused') === 'true'
+	: false;
+const isPaused = writable(_pausedSeed);
+isPaused.subscribe((v) => {
+	if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('fantasia4x-paused', String(v));
+});
 const gameSpeed = writable(1);
 
 // Subscribe to keep track of current speed value
