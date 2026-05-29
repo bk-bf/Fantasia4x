@@ -2,15 +2,14 @@
  * devWorld.ts — Dev-mode world setup
  *
  * Called after world generation when dev mode is active.
- * Places real tile-based zones on the map (stockpile, forage, harvest,
- * scavenge) and pre-stocks the stockpile zone with every item so you
- * can test any feature without playing through early-game.
+ * Places real tile-based zones on the map (stockpile, forage, scavenge)
+ * and pre-stocks the stockpile zone with every item so you can test any
+ * feature without playing through early-game.
  *
- * Zone layout (relative to map centre cx, cy):
- *   Stockpile  : cx-4..cx+3,  cy-4..cy+3   (8×8 block)
- *   Forage     : cx-18..cx-11, cy-4..cy+3   (left)
- *   Harvest    : cx+11..cx+18, cy-4..cy+3   (right)
- *   Scavenge   : cx-4..cx+3,  cy-18..cy-11  (above)
+ * Zone layout (relative to nearest walkable anchor near map centre ax, ay):
+ *   Stockpile  : ax-4..ax+3,  ay-4..ay+3   (8×8, centred on anchor)
+ *   Forage     : ax-18..ax-11, ay-4..ay+3   (8×8, left)
+ *   Scavenge   : ax+11..ax+18, ay-4..ay+3   (8×8, right)
  */
 
 import type { GameState, StockpileZone, ZoneInstance, ZoneFilter } from '../core/types';
@@ -30,19 +29,45 @@ function tileKey(x: number, y: number): string {
     return `${x},${y}`;
 }
 
+/**
+ * Spiral outward from (cx, cy) using Chebyshev distance to find the
+ * nearest walkable tile. Guarantees the returned tile is inside the map.
+ */
+function findWalkableAnchor(
+    worldMap: GameState['worldMap'],
+    cx: number,
+    cy: number
+): { x: number; y: number } {
+    const mapH = worldMap.length;
+    const mapW = worldMap[0]?.length ?? 0;
+    const maxR = Math.max(mapW, mapH);
+    for (let r = 0; r <= maxR; r++) {
+        for (let dy = -r; dy <= r; dy++) {
+            for (let dx = -r; dx <= r; dx++) {
+                if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue; // ring only
+                const x = cx + dx;
+                const y = cy + dy;
+                if (x < 0 || y < 0 || x >= mapW || y >= mapH) continue;
+                if (worldMap[y][x].walkable) return { x, y };
+            }
+        }
+    }
+    return { x: cx, y: cy };
+}
+
 /** Collect all "x,y" keys in a rect, keeping only walkable tiles in the world map. */
 function rectTiles(
-    state: GameState,
+    worldMap: GameState['worldMap'],
     x1: number, y1: number,
     x2: number, y2: number
 ): string[] {
-    const mapH = state.worldMap.length;
-    const mapW = state.worldMap[0]?.length ?? 0;
+    const mapH = worldMap.length;
+    const mapW = worldMap[0]?.length ?? 0;
     const keys: string[] = [];
     for (let y = y1; y <= y2; y++) {
         for (let x = x1; x <= x2; x++) {
             if (x < 0 || y < 0 || x >= mapW || y >= mapH) continue;
-            if (state.worldMap[y][x].walkable) keys.push(tileKey(x, y));
+            if (worldMap[y][x].walkable) keys.push(tileKey(x, y));
         }
     }
     return keys;
@@ -56,17 +81,21 @@ export function applyDevWorld(state: GameState, itemQty = 500): GameState {
     const cx = Math.floor(mapW / 2);
     const cy = Math.floor(mapH / 2);
 
+    // Spiral-search from the geometric centre to guarantee a walkable anchor.
+    // All zones are placed relative to this anchor so at least the stockpile
+    // centre tile is always walkable.
+    const anchor = findWalkableAnchor(state.worldMap, cx, cy);
+    const ax = anchor.x;
+    const ay = anchor.y;
+
     // --- 1. Zone geometry -------------------------------------------
-    const stockpileTiles = rectTiles(state, cx - 4, cy - 4, cx + 3, cy + 3);
-    const forageTiles = rectTiles(state, cx - 18, cy - 4, cx - 11, cy + 3);
-    const harvestTiles = rectTiles(state, cx + 11, cy - 4, cx + 18, cy + 3);
-    const scavengeTiles = rectTiles(state, cx - 4, cy - 18, cx + 3, cy - 11);
+    const stockpileTiles = rectTiles(state.worldMap, ax - 4, ay - 4, ax + 3, ay + 3);
+    const forageTiles    = rectTiles(state.worldMap, ax - 18, ay - 4, ax - 11, ay + 3);
+    const scavengeTiles  = rectTiles(state.worldMap, ax + 11, ay - 4, ax + 18, ay + 3);
 
     // --- 2. Build stockpile inventory --------------------------------
     const stockpileInventory: Record<string, number> = {};
     ALL_ITEM_IDS.forEach((id) => { stockpileInventory[id] = itemQty; });
-
-    // Aggregate across ALL zones (stockpile is the only one with items)
     const aggregate: Record<string, number> = { ...stockpileInventory };
 
     // --- 3. StockpileZone (replaces zone-general) --------------------
@@ -78,10 +107,11 @@ export function applyDevWorld(state: GameState, itemQty = 500): GameState {
         inventory: stockpileInventory
     };
 
-    // --- 4. ZoneInstances (work zones) -------------------------------
-    const forageInstance: ZoneInstance = { id: 'dev-forage-1', type: 'forage', label: 'Forage 1', filter: EMPTY_FILTER };
-    const harvestInstance: ZoneInstance = { id: 'dev-harvest-1', type: 'harvest', label: 'Harvest 1', filter: EMPTY_FILTER };
-    const scavengeInstance: ZoneInstance = { id: 'dev-scavenge-1', type: 'scavenge', label: 'Scavenge 1', filter: EMPTY_FILTER };
+    // --- 4. ZoneInstances -------------------------------------------
+    // NOTE: 'harvest' is a WORK glyph (!) not a zone tint — do not use it here.
+    const stockpileInstance: ZoneInstance = { id: 'dev-stockpile-1', type: 'stockpile',  label: 'Dev Stockpile', filter: EMPTY_FILTER };
+    const forageInstance:    ZoneInstance = { id: 'dev-forage-1',    type: 'forage',    label: 'Forage 1',      filter: EMPTY_FILTER };
+    const scavengeInstance:  ZoneInstance = { id: 'dev-scavenge-1',  type: 'scavenge',  label: 'Scavenge 1',    filter: EMPTY_FILTER };
 
     // --- 5. Designations + zoneId map --------------------------------
     const designations: Record<string, string> = { ...(state.designations ?? {}) };
@@ -89,14 +119,11 @@ export function applyDevWorld(state: GameState, itemQty = 500): GameState {
 
     for (const k of stockpileTiles) {
         designations[k] = 'stockpile';
+        designationZoneId[k] = stockpileInstance.id;
     }
     for (const k of forageTiles) {
         designations[k] = 'forage';
         designationZoneId[k] = forageInstance.id;
-    }
-    for (const k of harvestTiles) {
-        designations[k] = 'harvest';
-        designationZoneId[k] = harvestInstance.id;
     }
     for (const k of scavengeTiles) {
         designations[k] = 'scavenge';
@@ -114,7 +141,7 @@ export function applyDevWorld(state: GameState, itemQty = 500): GameState {
         ...state,
         stockpile: aggregate,
         stockpileZones: [stockpileZone],
-        zoneInstances: [forageInstance, harvestInstance, scavengeInstance],
+        zoneInstances: [stockpileInstance, forageInstance, scavengeInstance],
         designations: designations as GameState['designations'],
         designationZoneId,
         completedResearch: ALL_RESEARCH_IDS,
