@@ -708,6 +708,24 @@ class JobServiceImpl {
     // ------------------------------------------------------------------ //
     // PRIVATE — HELPERS                                                   //
     // ------------------------------------------------------------------ //
+    // PUBLIC HELPERS                                                       //
+    // ------------------------------------------------------------------ //
+
+    /**
+     * Return the labor priority level (0–4) this pawn has assigned to the given job.
+     * 0 = disabled, 1 = low, 2 = normal (default), 3 = high, 4 = critical.
+     */
+    getJobLaborLevel(job: Job, pawn: Pawn, gs: GameState): number {
+        const assignment = gs.workAssignments?.[pawn.id];
+        const laborSettings = assignment?.laborSettings ?? {};
+        const legacyPriorities = assignment?.workPriorities ?? {};
+        const workKey = this._jobTypeToWorkKey(job, gs);
+        if (workKey in laborSettings) return laborSettings[workKey] ?? 2;
+        if (workKey in legacyPriorities) return Math.max(0, Math.min(4, legacyPriorities[workKey]));
+        return 2; // LABOR_LEVEL.NORMAL default
+    }
+
+    // ------------------------------------------------------------------ //
 
     /** Map Job to the work category key used in WorkAssignment.laborSettings */
     private _jobTypeToWorkKey(job: Job, gs?: GameState): string {

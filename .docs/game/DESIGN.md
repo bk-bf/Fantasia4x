@@ -62,6 +62,44 @@ Each pawn tracks:
 
 Pawn lifecycle: spawn → work assignment → needs decay → auto-eat/sleep → repeat.
 
+### Need Priority System
+
+Pawns manage hunger and fatigue via a **dynamic proximity + urgency formula**, not flat thresholds. This means a pawn's decision to interrupt work for food considers three things simultaneously:
+
+**1. Urgency** — how far past the trigger threshold the need has climbed (quadratic curve):
+```
+urgency = (need − threshold)² / (100 − threshold)²
+```
+Low urgency = only detour if food is very close. High urgency = accept a large detour. At 100% = always seek food.
+
+**2. Proximity** — distance to nearest food source vs distance to current job:
+```
+maxDetour = max(distToJob, 5) × (1 + urgency × 14)
+eat if distToFood ≤ maxDetour
+```
+A pawn 2 tiles from a campfire will eat even at 71% hunger. A pawn 40 tiles from food needs ~87% hunger before it's worth the trip.
+
+**3. Work priority + queue lookahead** — two threshold adjustments modify when the formula kicks in:
+- **Labor level 4** (critical work): effective threshold shifts to ~78 — pawn resists interruption longer.
+- **Labor level 1** (low priority): threshold shifts to ~66 — pawn is quicker to seek food.
+- **Job queue pressure**: if the pawn's next 4 soft-queued jobs are all far from food, the threshold drops by up to 5 pts — the system nudges the pawn to eat before it runs out of opportunity.
+
+The pawn's `jobQueue` field (up to 4 upcoming job IDs) is populated whenever the pawn picks work from Idle. The queue is a *soft preview* — jobs are not claimed, and the queue becomes stale if another pawn grabs a job. The need formula degrades gracefully when queue entries are missing.
+
+Both `Working` and `MovingToResource` re-evaluate the formula every turn so mid-journey need changes are caught immediately. Fatigue/sleep uses the same formula with distance to the nearest shelter.
+
+**Key thresholds (calibrated to 1 day = 300 turns):**
+
+| Constant                         | Value       | Meaning                                                  |
+| -------------------------------- | ----------- | -------------------------------------------------------- |
+| `HUNGER_THRESHOLD`               | 70          | Need formula activates from Idle / Working               |
+| `FATIGUE_THRESHOLD`              | 72          | Same for fatigue                                         |
+| `NEED_DETOUR_MAX_FACTOR`         | 15          | At 100% hunger, willing to detour up to 15× job distance |
+| `WORK_PRIORITY_THRESHOLD_SHIFT`  | 4 pts/level | Per labor level shift on effective threshold             |
+| `QUEUE_FOOD_THRESHOLD_REDUCTION` | 5 pts       | Max threshold drop when no queue job is near food        |
+
+See ADR-010 in [DECISIONS](DECISIONS.md) for the full design rationale and numeric examples.
+
 ## Work System
 
 Work categories define: primary stat, secondary stat, base efficiency, required buildings. Building bonuses stack multiplicatively through `buildingService.calculateBuildingWorkBonus()`. Multiple buildings of the same type provide cumulative bonuses.

@@ -219,3 +219,58 @@ All callsites depend on the TypeScript interface, never on the Rust implementati
 #### Consequences
 
 `wasm-pack` and the Rust toolchain are added to the dev environment. CI must run `wasm-pack build` before the SvelteKit build. The `spatial-core/pkg/` output directory is gitignored and regenerated on build.
+
+---
+
+### ADR-010 [GAME]: Dynamic Need-Priority Interruption via Proximity + Urgency Formula
+
+- **Date**: 2026-05-29
+- **Status**: Accepted
+
+#### Context
+
+The original pawn need system used two flat thresholds: `HUNGER_THRESHOLD = 70` (seek food from Idle) and `CRITICAL_HUNGER = 87` (interrupt active work). This produced pathological behaviour: a pawn working 1 tile from a campfire would stubbornly work until 87% hunger before eating, while a pawn working 60 tiles from food would interrupt at the same 87% and make a very long round-trip. Pawns routinely reached 100% hunger, collapsed from exhaustion, and then starved while asleep — the system had no spatial awareness.
+
+#### Decision
+
+**Replace flat critical thresholds with a proximity-weighted urgency formula** active from `HUNGER_THRESHOLD` (70), checked every turn in `Working` and `MovingToResource` states.
+
+**Core formula** (`shouldInterruptForNeed`):
+```
+urgency     = (need − threshold) / (100 − threshold)   // 0..1 across threshold→100
+urgencyBias = urgency²                                   // quadratic: slow start, steep near 100%
+maxDetour   = max(distToJob, 5) × (1 + urgencyBias × 14)
+interrupt   = distToFood ≤ maxDetour  OR  need ≥ 100
+```
+
+**Threshold adjustments** applied before the formula:
+
+1. **Work priority** (`laborSettings` level 1–4): each level above/below the default (2) shifts the threshold ±4 pts. A pawn on a critical-priority job (level 4) has an effective threshold of ~78; a low-priority job (level 1) has ~66. At need = 100 the pawn always interrupts regardless.
+
+2. **Job-queue lookahead** (`Pawn.jobQueue`): when the pawn picks a job from Idle, it soft-previews the next 4 unclaimed jobs and stores their IDs. The need check computes `minQueueFoodDist` — the minimum distance from any queued job's tile to the nearest campfire. If all upcoming work is far from food, the threshold is lowered by up to 5 pts so the pawn eats sooner rather than collapsing later.
+
+Combined threshold formula (`computeAdjustedNeedThreshold`):
+```
+adjustedThreshold = baseThreshold
+    + (laborLevel − 2) × 4          // priority shift
+    − (minQueueFoodDist / 20) × 5   // queue pressure (clamped 0..1)
+// result clamped to baseThreshold ± 12
+```
+
+**Concrete examples** (base hunger threshold 70, campfire 15 tiles away, job 20 tiles away):
+
+| Hunger | Labor level | Queue near food | Effective threshold | Interrupts?                     |
+| ------ | ----------- | --------------- | ------------------- | ------------------------------- |
+| 75     | 2           | Yes             | 70                  | No (food 15 > maxDetour ~7)     |
+| 83     | 2           | No              | 65                  | Yes (effective urgency crossed) |
+| 87     | 4           | Yes             | 78                  | Yes (maxDetour ~27 > 15)        |
+| 100    | any         | any             | any                 | Always yes                      |
+
+**Both `Working` and `MovingToResource` run this check every turn.** En-route checks use the current pawn-to-job distance which shrinks as the pawn walks, naturally re-evaluating continuously.
+
+#### Consequences
+
+- Pawns no longer collapse at 100% before eating — they eat when food is conveniently close to their work path, and divert further only as urgency grows.
+- Work priority from the Work tab has a direct mechanical effect on pawn survival behaviour, not just on which jobs are claimed.
+- `Pawn.jobQueue` is a read-only soft hint; it is never claimed and may become stale if another pawn claims a previewed job. The need formula degrades gracefully (missing jobs are skipped, `computeMinQueueFoodDist` returns null → full queue pressure applied).
+- The formula is pure and stateless (`shouldInterruptForNeed` has no side effects), making it straightforward to tune constants in isolation.

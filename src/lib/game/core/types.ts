@@ -317,6 +317,10 @@ export interface Pawn {
 
 	// Phase 4/5: State machine primary state
 	currentState?: string;                       // 'Idle' | 'Hungry' | 'Tired' | 'MovingToNeed' | 'MovingToResource' | 'Working' | 'Hauling' | 'MovingToDeposit' | 'Eating' | 'Sleeping' | 'Dead'
+	/** Soft-preview of the next up-to-4 unclaimed job IDs the pawn would take after activeJob.
+	 *  Not claimed — used only for need-priority lookahead in the state machine. */
+	jobQueue?: string[];
+
 	// Job payload for active state machine job
 	activeJob?: {
 		/** Phase 5: 'harvest'|'construct'|'craft'|'haul' use work-point jobs; 'need' for eat/sleep */
