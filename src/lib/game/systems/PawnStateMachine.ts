@@ -1350,9 +1350,15 @@ function handleEating(pawn: Pawn, gameState: GameState): GameState {
 function handleSleeping(pawn: Pawn, gameState: GameState): GameState {
     const activeJob = pawn.activeJob;
     const turnsInState = (activeJob?.turnsInState ?? 0) + 1;
-    const atShelter = isAtRestBuilding(pawn, gameState);
-    const fatigueRecovery = atShelter ? FATIGUE_PER_SLEEPING_TURN : FATIGUE_PER_SLEEPING_GROUND;
-    const sleepDuration = atShelter ? SLEEPING_TURNS : SLEEPING_TURNS_GROUND; // for progress bar only
+    const restBuilding = getRestBuildingAtPawn(pawn, gameState);
+    const def = restBuilding ? BUILDINGS_DB.find((d) => d.id === restBuilding.type) : null;
+    // Recovery = base ground rate + building's fatigueRecovery + sleepQuality bonus.
+    // sleeping_spot (sleepQuality:0.1) → +0.10/turn; hay_bed (fatigueRecovery:0.3) → +0.30/turn.
+    const shelterBonus = restBuilding
+        ? (def?.effects?.fatigueRecovery ?? def?.effects?.sleepQuality ?? 0)
+        : 0;
+    const fatigueRecovery = FATIGUE_PER_SLEEPING_GROUND + shelterBonus;
+    const sleepDuration = restBuilding ? SLEEPING_TURNS : SLEEPING_TURNS_GROUND; // for progress bar only
     const newFatigue = Math.max(0, (pawn.needs?.fatigue ?? 50) - fatigueRecovery);
     const newSleep = Math.max(0, (pawn.needs?.sleep ?? 50) - fatigueRecovery);
 

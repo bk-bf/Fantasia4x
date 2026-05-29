@@ -1120,7 +1120,9 @@
         {:else if selectedBuilding.deconstructQueued}
           {@const dDone = selectedBuilding.deconstructWorkDone ?? 0}
           {@const dReq = selectedBuilding.deconstructWorkRequired ?? 1}
-          <div class="bld-progress">[{jobProgressBar(dReq > 0 ? dDone / dReq : 0)}] {dDone}/{dReq} work</div>
+          <div class="bld-progress">
+            [{jobProgressBar(dReq > 0 ? dDone / dReq : 0)}] {dDone}/{dReq} work
+          </div>
           <div class="bld-note">⊢ demolishing…</div>
         {:else}
           {@const cost = bDef?.buildingCost ?? {}}
@@ -1239,7 +1241,9 @@
       {:else if hoverBuilding.deconstructQueued}
         {@const dDone = hoverBuilding.deconstructWorkDone ?? 0}
         {@const dReq = hoverBuilding.deconstructWorkRequired ?? 1}
-        <div class="bld-progress">[{jobProgressBar(dReq > 0 ? dDone / dReq : 0)}] {dDone}/{dReq} work</div>
+        <div class="bld-progress">
+          [{jobProgressBar(dReq > 0 ? dDone / dReq : 0)}] {dDone}/{dReq} work
+        </div>
         <div class="bld-note">⊢ demolishing…</div>
       {/if}
       {#if bDef?.description}
