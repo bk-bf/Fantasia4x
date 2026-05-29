@@ -17,6 +17,12 @@
     </div>
   {/each}
 
+  {#each $worldEffects.progressOverlays as overlay (overlay.id)}
+    <div class="pawn-progress-float" style="left:{overlay.left}px;top:{overlay.top}px;">
+      <div class="pawn-progress-fill" style="width:{overlay.progress * 100}%"></div>
+    </div>
+  {/each}
+
   <!-- ── Fullscreen Weather / Shader Overlays ──────────────────────────────────── -->
   <!-- To add rain: create RainCanvas.svelte and mount it here when weather='rain'  -->
   <!-- Example:                                                                      -->
@@ -31,6 +37,23 @@
     z-index: 5;
     pointer-events: none;
     overflow: hidden;
+  }
+
+  /* ── Working progress bar ───────────────────────────────────────────────────── */
+
+  .pawn-progress-float {
+    position: absolute;
+    width: 22px;
+    height: 4px;
+    margin-left: -11px;
+    background: rgba(32, 24, 10, 0.85);
+    border: 1px solid #705020;
+    pointer-events: none;
+  }
+
+  .pawn-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4ab85a, #8ad66a);
   }
 
   /* ── Zzz sleeping animation ──────────────────────────────────────────────────── */

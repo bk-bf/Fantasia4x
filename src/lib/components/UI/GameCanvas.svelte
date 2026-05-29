@@ -79,6 +79,29 @@
       .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= (container?.clientWidth ?? 0))
   );
 
+  // Working progress bars: same pathway as sleeping overlays.
+  $: worldEffects.setProgressOverlays(
+    pawns
+      .filter(
+        (p) =>
+          p.position &&
+          p.currentState === 'Working' &&
+          p.activeJob &&
+          (p.activeJob.progress ?? 0) >= 0
+      )
+      .map((p) => {
+        const left = (p.position!.x - viewX + 0.5) * tileWidth;
+        const top = (p.position!.y - viewY) * tileHeight - 6;
+        return {
+          id: p.id,
+          left,
+          top,
+          progress: Math.max(0, Math.min(1, p.activeJob?.progress ?? 0))
+        };
+      })
+      .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= (container?.clientWidth ?? 0))
+  );
+
   // Phase 4: buildings and designations overlay
   let buildings: PlacedBuilding[] = [];
   let designations: Record<string, DesignationType> = {};

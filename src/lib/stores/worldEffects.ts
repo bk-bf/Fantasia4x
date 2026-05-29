@@ -9,8 +9,16 @@ export interface SleepingOverlay {
   top: number;
 }
 
+export interface ProgressOverlay {
+  id: string;
+  left: number;
+  top: number;
+  progress: number; // 0–1
+}
+
 export interface WorldEffectsState {
   sleepingOverlays: SleepingOverlay[];
+  progressOverlays: ProgressOverlay[];
   // Future effects — add here and handle in WorldEffectsLayer:
   // weather: 'none' | 'rain' | 'snow';
   // particleEffects: ParticleEffect[];
@@ -18,13 +26,17 @@ export interface WorldEffectsState {
 
 function createWorldEffectsStore() {
   const { subscribe, update } = writable<WorldEffectsState>({
-    sleepingOverlays: []
+    sleepingOverlays: [],
+    progressOverlays: []
   });
 
   return {
     subscribe,
     setSleepingOverlays(overlays: SleepingOverlay[]) {
       update((s) => ({ ...s, sleepingOverlays: overlays }));
+    },
+    setProgressOverlays(overlays: ProgressOverlay[]) {
+      update((s) => ({ ...s, progressOverlays: overlays }));
     }
   };
 }
