@@ -553,7 +553,6 @@
     if (clickedBuilding) {
       selectedBuildingId = clickedBuilding.id;
       selectedPawnId = null;
-      showShelterAssign = false;
       uiState.selectPawn(null);
       redrawOverlay();
       return;
@@ -957,14 +956,6 @@
     redrawOverlay();
   }
 
-  let showShelterAssign = false;
-  function assignShelterPawn(pawnId: string | null) {
-    if (!selectedBuilding) return;
-    const id = selectedBuilding.id;
-    gameState.updateWithSave((state) => buildingService.assignShelterPawn(id, pawnId, state));
-    showShelterAssign = false;
-  }
-
   function togglePauseBlueprintBuilding() {
     if (!selectedBuilding) return;
     const id = selectedBuilding.id;
@@ -1129,9 +1120,7 @@
         {:else if selectedBuilding.deconstructQueued}
           {@const dDone = selectedBuilding.deconstructWorkDone ?? 0}
           {@const dReq = selectedBuilding.deconstructWorkRequired ?? 1}
-          <div class="bld-progress">
-            [{jobProgressBar(dReq > 0 ? dDone / dReq : 0)}] {dDone}/{dReq} work
-          </div>
+          <div class="bld-progress">[{jobProgressBar(dReq > 0 ? dDone / dReq : 0)}] {dDone}/{dReq} work</div>
           <div class="bld-note">⊢ demolishing…</div>
         {:else}
           {@const cost = bDef?.buildingCost ?? {}}
@@ -1250,9 +1239,7 @@
       {:else if hoverBuilding.deconstructQueued}
         {@const dDone = hoverBuilding.deconstructWorkDone ?? 0}
         {@const dReq = hoverBuilding.deconstructWorkRequired ?? 1}
-        <div class="bld-progress">
-          [{jobProgressBar(dReq > 0 ? dDone / dReq : 0)}] {dDone}/{dReq} work
-        </div>
+        <div class="bld-progress">[{jobProgressBar(dReq > 0 ? dDone / dReq : 0)}] {dDone}/{dReq} work</div>
         <div class="bld-note">⊢ demolishing…</div>
       {/if}
       {#if bDef?.description}
