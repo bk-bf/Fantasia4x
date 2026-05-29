@@ -1739,7 +1739,7 @@
   {:else if hoverTile}
     <div class="tile-hud">
       <span class="tile-coord">({hoverTile.x},{hoverTile.y})</span><span class="tile-layers"
-        >{hoverTile.type},{hoverTile.terrainType},{hoverTile.subType}</span
+        >{hoverTile.terrainType},{hoverTile.subType},{hoverResources[0]?.[0] ?? '—'}</span
       >
       {#if !hoverTile.walkable}
         <div class="tile-move" style="color:#cc4444">move: impassable</div>
@@ -1753,9 +1753,6 @@
         <div class="tile-zone" style="color:{ZONE_META[hoverZoneType].color}">
           {ZONE_META[hoverZoneType].label} — {ZONE_META[hoverZoneType].desc}
         </div>
-      {/if}
-      {#if hoverResources.length > 0}
-        <div class="tile-res">{hoverResources.map(([k, v]) => `${k}:${v}`).join(' ')}</div>
       {/if}
     </div>
   {/if}
@@ -2136,6 +2133,18 @@
   }
   .loading {
     background: var(--bg-panel);
-    color: #806830;
+    color: var(--text-muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-size: 11px;
+    animation: loading-pulse 1.6s ease-in-out infinite alternate;
+  }
+  @keyframes loading-pulse {
+    from {
+      opacity: 0.45;
+    }
+    to {
+      opacity: 0.9;
+    }
   }
 </style>

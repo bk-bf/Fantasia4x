@@ -46,7 +46,7 @@ export interface ResourceInteractionDef {
 export interface ResourceObjectDef {
     id: string;
     displayName: string;
-    objectSubType: string;
+    subterrain: string;
     /**
      * Whether this resource object allows movement through its tile.
      * When false, placing this resource sets tile.walkable = false.

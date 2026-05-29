@@ -46,7 +46,7 @@ class ResourceGeneratorServiceImpl {
                     // Update physics from the resource definition.
                     // walkable comes directly from the resource; movementCost falls back to
                     // the objectSubType subterrain so slow-but-passable resources still apply cost.
-                    const resourceSub = SUBTERRAINS[def.objectSubType] ?? SUBTERRAIN_FALLBACK;
+                    const resourceSub = SUBTERRAINS[def.subterrain] ?? SUBTERRAIN_FALLBACK;
                     tile.ascii = pickChar(resourceSub, tile.x, tile.y);
                     tile.walkable = def.walkable ?? resourceSub.walkable;
                     tile.movementCost = resourceSub.movementCost;

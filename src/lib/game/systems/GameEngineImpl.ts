@@ -406,7 +406,11 @@ export class GameEngineImpl implements GameEngine {
 						updatedTile = {
 							...updatedTile,
 							resources: { ...updatedTile.resources, [resourceId]: newResourceCount },
-							resourceCooldowns: newCooldowns
+							resourceCooldowns: newCooldowns,
+							// Restore blocking for non-walkable resources that have fully regrown.
+							...(!anyStillCooling && def?.walkable === false
+								? { walkable: false }
+								: {})
 						};
 					} else {
 						// Simple whole-resource cooldown.
@@ -419,7 +423,9 @@ export class GameEngineImpl implements GameEngine {
 						updatedTile = {
 							...updatedTile,
 							resources: { ...updatedTile.resources, [key]: restored },
-							resourceCooldowns: newCooldowns
+							resourceCooldowns: newCooldowns,
+							// Restore blocking for non-walkable resources that have regrown.
+							...(def?.walkable === false ? { walkable: false } : {})
 						};
 						console.log(`[Regrowth] ${key} at (${tile.x},${tile.y}) regrew ×${restored}`);
 					}

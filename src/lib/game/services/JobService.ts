@@ -410,7 +410,6 @@ class JobServiceImpl {
         const yieldEntries = Object.entries(yields);
 
         // Build updated tile — zero resources + set per-yield or interaction-level cooldowns.
-        const def = resourceObjectService.getById(job.resourceId);
         const newWorldMap = gs.worldMap.map((row, ry) =>
             ry === job.targetY
                 ? row.map((col, rx) => {
