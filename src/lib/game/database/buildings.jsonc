@@ -68,7 +68,7 @@
     "bg"                : [0.06, 0.04, 0.01],
     "description"       : "A flimsy wall made from lashed branches. Barely slows attackers but defines a space.",
     "category"          : "structure",
-    "buildingCost"      : {"twig": 8, "plant_fiber": 4},
+    "buildingCost"      : {"branch": 8, "plant_fiber": 4},
     "buildTime"         : 1,
     "toolTierRequired"  : 0,
     "populationRequired": 1,

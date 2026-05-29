@@ -28,6 +28,7 @@
   const MAX_TILE_W = 24;
   const ZOOM_STEP = 2;
   const SCROLL_STEP = 4; // tiles per arrow key press
+  const CAMERA_STORAGE_KEY = 'fantasia4x-camera';
 
   // fitTileSize: exact float that makes the whole map fill the canvas edge-to-edge.
   // Used as the initial tile size and the zoom-out limit.
@@ -557,6 +558,20 @@
       viewX = 0;
       viewY = 0;
 
+      // Restore camera from previous session (survives hot reloads)
+      try {
+        const saved = sessionStorage.getItem(CAMERA_STORAGE_KEY);
+        if (saved) {
+          const c = JSON.parse(saved);
+          if (typeof c.tileWidth === 'number')
+            tileWidth = tileHeight = Math.max(fitTileSize, Math.min(MAX_TILE_W, c.tileWidth));
+          if (typeof c.viewX === 'number') viewX = c.viewX;
+          if (typeof c.viewY === 'number') viewY = c.viewY;
+        }
+      } catch {
+        /* ignore corrupt data */
+      }
+
       // Init pathfinder WASM early so pawns can navigate as soon as turns start
       wasmPathfinderService.init().catch((e) => console.warn('[GameCanvas] WASM init failed:', e));
 
@@ -577,6 +592,7 @@
       overlayDroppedItems(grid, droppedItems);
       overlayPawns(grid, pawns, selectedPawnId);
       renderer.setGrid(grid);
+      renderer.setViewTileOffset(viewX, viewY);
 
       ready = true;
       startLoop();
@@ -621,9 +637,14 @@
     return [Math.max(0, Math.min(x, mapW - visW)), Math.max(0, Math.min(y, mapH - visH))];
   }
 
+  function saveCameraState() {
+    sessionStorage.setItem(CAMERA_STORAGE_KEY, JSON.stringify({ viewX, viewY, tileWidth }));
+  }
+
   function setView(x: number, y: number) {
     [viewX, viewY] = clampView(x, y);
     renderer?.setViewTileOffset(viewX, viewY);
+    saveCameraState();
   }
 
   function handleKeyDown(e: KeyboardEvent) {

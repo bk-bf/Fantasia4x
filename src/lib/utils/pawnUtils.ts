@@ -1,7 +1,7 @@
 import type { GameState, Job, Pawn } from '$lib/game/core/types';
 
 const FORAGING_RESOURCES = new Set([
-  'twig',
+  'branch',
   'flint_shard',
   'plant_fiber',
   'bark',
