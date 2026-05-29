@@ -62,18 +62,20 @@ interface AmbientKeyframe {
 }
 
 const AMBIENT_KEYFRAMES: AmbientKeyframe[] = [
-    //  t      clock        light  normalised tint (hue only)
-    { t: 0.0, light: 0.15, tint: [0.45, 0.5, 1.0] }, // 00:00 midnight — cold blue
-    { t: 0.22, light: 0.15, tint: [0.5, 0.52, 0.98] }, // 05:18 pre-dawn — blue
-    { t: 0.28, light: 0.45, tint: [1.0, 0.62, 0.34] }, // 06:43 dawn — warm orange
-    { t: 0.34, light: 0.85, tint: [1.0, 0.92, 0.8] }, // 08:10 morning — warm white
-    { t: 0.5, light: 1.0, tint: [1.0, 1.0, 1.0] }, // 12:00 noon — neutral
-    { t: 0.67, light: 1.0, tint: [1.0, 0.97, 0.9] }, // 16:00 afternoon — faint warm
-    { t: 0.79, light: 0.85, tint: [1.0, 0.82, 0.55] }, // 19:00 evening — golden
-    { t: 0.85, light: 0.5, tint: [1.0, 0.52, 0.34] }, // 20:24 dusk — deep orange
-    { t: 0.91, light: 0.28, tint: [0.78, 0.5, 0.72] }, // 21:50 late dusk — violet
-    { t: 0.96, light: 0.18, tint: [0.52, 0.52, 0.96] }, // 23:00 night — blue
-    { t: 1.0, light: 0.15, tint: [0.45, 0.5, 1.0] }, // 24:00 midnight wrap
+    //  t      clock  light  normalised tint (hue only)
+    { t: 0.00, light: 0.15, tint: [0.45, 0.50, 1.00] }, // 00:00 midnight    — cold blue
+    { t: 0.21, light: 0.15, tint: [0.50, 0.52, 0.98] }, // 05:00 pre-dawn    — blue (still dark)
+    { t: 0.26, light: 0.35, tint: [1.00, 0.60, 0.28] }, // 06:12 early dawn  — orange glow starts
+    { t: 0.31, light: 0.82, tint: [1.00, 0.68, 0.32] }, // 07:26 PEAK dawn   — full orange at rising brightness
+    { t: 0.37, light: 0.96, tint: [1.00, 0.90, 0.72] }, // 08:53 morning     — warm white, nearly full bright
+    { t: 0.50, light: 1.00, tint: [1.00, 1.00, 1.00] }, // 12:00 noon        — neutral
+    { t: 0.64, light: 1.00, tint: [1.00, 0.98, 0.88] }, // 15:22 afternoon   — barely warm, still full brightness
+    { t: 0.72, light: 1.00, tint: [1.00, 0.80, 0.45] }, // 17:17 PEAK golden — full amber at FULL brightness
+    { t: 0.78, light: 0.88, tint: [1.00, 0.60, 0.28] }, // 18:43 sunset      — deep orange as dim begins
+    { t: 0.84, light: 0.52, tint: [1.00, 0.50, 0.32] }, // 20:10 dusk        — red-orange, noticeably darker
+    { t: 0.90, light: 0.28, tint: [0.80, 0.50, 0.75] }, // 21:36 late dusk   — violet
+    { t: 0.95, light: 0.18, tint: [0.50, 0.52, 0.98] }, // 22:48 night       — blue
+    { t: 1.00, light: 0.15, tint: [0.45, 0.50, 1.00] }, // 24:00 midnight wrap
 ];
 
 function lerp(a: number, b: number, f: number): number {
@@ -127,7 +129,7 @@ export function getAmbientTint(turn: number): [number, number, number] {
  *     at any brightness. PANEL_SAT tunes how strong the tint is.
  */
 const PANEL_BRIGHT_FLOOR = 0.45;
-const PANEL_SAT = 0.55;
+const PANEL_SAT = 0.80;
 export function getPanelTint(turn: number): [number, number, number] {
     const light = getAmbientLight(turn);
     const tint = getAmbientTint(turn);

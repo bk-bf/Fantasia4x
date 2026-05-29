@@ -282,6 +282,7 @@ export class WebGLRendererCore {
 	getShaderManager(): ShaderManager | null { return this.shaderManager; }
 	getCharacterRenderer(): CharacterRenderer | null { return this.characterRenderer; }
 	getGridRenderer(): GridRenderer | null { return this.gridRenderer; }
+	getFontAtlas(): FontAtlas | null { return this.fontAtlas; }
 
 	isReady(): boolean {
 		return this.webglState.isReady() && this.shaderManager !== null;

@@ -309,6 +309,29 @@ function tryAssignPath(
     return pawnService.assignPath(pawn.id, path, gameState);
 }
 
+/**
+ * Like tryAssignPath but paths the pawn directly TO (tx, ty) — used for beds
+ * where the pawn should sleep ON the tile, not adjacent to it.
+ */
+function tryAssignSleepPath(
+    pawn: Pawn,
+    tx: number,
+    ty: number,
+    gameState: GameState
+): GameState | null {
+    if (!pawn.position) return null;
+    if (!wasmPathfinderService.isReady()) return null;
+    if (pawn.position.x === tx && pawn.position.y === ty) return null; // already on the bed
+    const { walkable, costs, width, height } = buildPathfindingGrids(gameState.worldMap);
+    const path = wasmPathfinderService.findPath(
+        walkable, costs, width, height,
+        pawn.position.x, pawn.position.y,
+        tx, ty
+    );
+    if (path.length === 0) return null;
+    return pawnService.assignPath(pawn.id, path, gameState);
+}
+
 /** Quick check: is there any food available at all (no allocation). */
 function hasAvailableFood(gs: GameState): boolean {
     return gs.item.some((i) => {
@@ -425,12 +448,19 @@ function findNearestRestBuilding(
     );
     if (assigned) return { x: assigned.x, y: assigned.y, buildingId: assigned.id };
     // 2. Among unassigned buildings pick the highest quality one (distance as tie-break).
-    //    Skip buildings owned by another pawn.
+    //    Skip buildings owned by another pawn, and skip beds already occupied by a
+    //    sleeping pawn (only one pawn per bed).
     let best: { x: number; y: number; buildingId: string; score: number } | null = null;
     for (const b of gs.buildings ?? []) {
         if (b.status !== 'complete') continue;
         if (!REST_TYPES.includes(b.type)) continue;
         if (b.assignedPawnId && b.assignedPawnId !== pawn.id) continue;
+        // Exclusive occupancy: skip if another pawn is currently sleeping on this tile.
+        if (gs.pawns.some(
+            (p) => p.id !== pawn.id &&
+                p.currentState === PAWN_STATE.SLEEPING &&
+                p.position?.x === b.x && p.position?.y === b.y
+        )) continue;
         const def = BUILDINGS_DB.find((d) => d.id === b.type);
         const quality = (def?.effects?.sleepQuality ?? 0) + (def?.effects?.fatigueRecovery ?? 0);
         const dist = Math.abs(b.x - pawn.position!.x) + Math.abs(b.y - pawn.position!.y);
@@ -1207,15 +1237,13 @@ function handleHungry(pawn: Pawn, gameState: GameState): GameState {
 }
 
 function handleTired(pawn: Pawn, gameState: GameState): GameState {
-    // Phase 6: try to pathfind to the nearest rest building to sleep there.
-    // Guard: if any shelter exists on the map, the pawn MUST seek it out and must not
-    // sleep on the ground.  The only exception is the exhaustion-collapse guard in tick()
-    // which forces SLEEPING when fatigue reaches 100 (wherever the pawn stands).
+    // Seek the assigned/nearest bed and walk ON to its tile to sleep.
+    // Only one pawn can occupy a bed at a time (findNearestRestBuilding skips occupied ones).
     const restBuilding = findNearestRestBuilding(pawn, gameState);
     if (restBuilding && pawn.position) {
-        // Not adjacent — try to pathfind there.
-        if (!isAdjacent(pawn.position.x, pawn.position.y, restBuilding.x, restBuilding.y)) {
-            const afterPath = tryAssignPath(pawn, restBuilding.x, restBuilding.y, gameState);
+        const atBed = pawn.position.x === restBuilding.x && pawn.position.y === restBuilding.y;
+        if (!atBed) {
+            const afterPath = tryAssignSleepPath(pawn, restBuilding.x, restBuilding.y, gameState);
             if (afterPath) {
                 return {
                     ...afterPath,
@@ -1238,24 +1266,20 @@ function handleTired(pawn: Pawn, gameState: GameState): GameState {
                     )
                 };
             }
-            // Pathfinding failed but shelter exists — hold in TIRED and retry next tick.
-            // The exhaustion-collapse guard in tick() will force sleep at fatigue=100.
+            // Bed unreachable this tick — hold in TIRED and retry next tick.
+            // Exhaustion-collapse guard in tick() will force sleep at fatigue=100.
             gameLogger.log(
                 gameState.turn, 'NEED-CHECK',
-                `${pawn.name} TIRED: shelter at (${restBuilding.x},${restBuilding.y}) unreachable this tick, retrying`
+                `${pawn.name} TIRED: bed at (${restBuilding.x},${restBuilding.y}) unreachable this tick, retrying`
             );
             return gameState;
         }
-        // Already adjacent to shelter — fall through to sleep in place;
-        // handleSleeping detects adjacency via getRestBuildingAtPawn and applies the bonus.
-        // Use the building's coordinates as the job target so the UI can identify
-        // which shelter the pawn is sleeping at.
+        // Already standing on the bed tile — sleep here.
     }
 
-    // No shelter on map, or already adjacent to one: sleep here.
-    // handleSleeping will apply any adjacent building bonus automatically.
-    // When sleeping near a shelter, store the building's position as the job target
-    // (instead of the pawn's own position) so UI can identify the shelter.
+    // No bed available, or already on the bed tile: sleep at current position.
+    // When sleeping on a bed, store the bed's coordinates as the job target so
+    // the UI and handleSleeping can identify which bed the pawn is using.
     const sleepTargetX = restBuilding?.x ?? (pawn.position?.x ?? 0);
     const sleepTargetY = restBuilding?.y ?? (pawn.position?.y ?? 0);
     return {

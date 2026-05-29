@@ -8,6 +8,7 @@ import { WebGLRendererCore, type RenderStats, type RendererOptions } from './ren
 import type { ShaderManager } from './shaders.js';
 import type { CharacterRenderer } from './character-renderer.js';
 import type { GameGrid } from './game-grid.js';
+import type { FontAtlas } from './types.js';
 
 // Re-export types for easier access
 export type { RenderStats, RendererOptions };
@@ -105,6 +106,14 @@ export class WebGLRenderer {
 	 */
 	getCharacterRenderer(): CharacterRenderer | null {
 		return this.core.getCharacterRenderer();
+	}
+
+	/**
+	 * Get the loaded font/sprite atlas (sprite pixels + char→rect map).
+	 * Returns null until the atlas has finished loading.
+	 */
+	getFontAtlas(): FontAtlas | null {
+		return this.core.getFontAtlas();
 	}
 
 	/**

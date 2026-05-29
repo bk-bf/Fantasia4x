@@ -51,6 +51,10 @@
   // Pre-processed tileset canvases for Canvas2D designation overlay (magenta stripped)
   let _tilesSheetCanvas: HTMLCanvasElement | null = null;
   let _itemsSheetCanvas: HTMLCanvasElement | null = null;
+  // Current day/night ambient, mirrored from the WebGL renderer so the Canvas2D
+  // designation overlay can be darkened/tinted to match the lit scene beneath it.
+  let _ambientLight = 1;
+  let _ambientTint: [number, number, number] = [1, 1, 1];
   let container: HTMLDivElement;
   let renderer: WebGLRenderer | null = null;
   let animationId = 0;
@@ -339,6 +343,8 @@
     if (renderer?.isReady()) {
       const { light, tint } = environmentService.getAmbient(s.turn);
       renderer.setAmbient(light, tint);
+      _ambientLight = light;
+      _ambientTint = tint;
     }
     // Camera follow: pan to the followed pawn whenever pawn positions update
     if (cameraFollowPawnId && ready && renderer?.isReady()) {
@@ -617,6 +623,12 @@
 
     const SPRITE_W = 12,
       SPRITE_H = 18;
+    // Icon drawn smaller than the tile, centred within the cell.
+    const ICON_SCALE = 0.7;
+    const iconW = tileWidth * ICON_SCALE;
+    const iconH = tileHeight * ICON_SCALE;
+    const padX = (tileWidth - iconW) / 2;
+    const padY = (tileHeight - iconH) / 2;
     ctx.save();
     ctx.globalAlpha = 0.75;
 
@@ -665,11 +677,29 @@
         row * SPRITE_H,
         SPRITE_W,
         SPRITE_H,
-        sx,
-        sy,
-        tileWidth,
-        tileHeight
+        sx + padX,
+        sy + padY,
+        iconW,
+        iconH
       );
+    }
+
+    // Apply the day/night ambient to the icons only (source-atop paints solely
+    // over already-drawn sprite pixels), so they sit beneath the light/dark
+    // filter instead of glowing white at night.
+    const darken = Math.max(0, 1 - _ambientLight);
+    if (darken > 0.001) {
+      ctx.globalCompositeOperation = 'source-atop';
+      const tr = Math.round(_ambientTint[0] * 255);
+      const tg = Math.round(_ambientTint[1] * 255);
+      const tb = Math.round(_ambientTint[2] * 255);
+      // Tint toward the ambient colour, then darken with black, both scaled by night depth.
+      ctx.globalAlpha = darken * 0.5;
+      ctx.fillStyle = `rgb(${tr}, ${tg}, ${tb})`;
+      ctx.fillRect(0, 0, W, H);
+      ctx.globalAlpha = darken * 0.8;
+      ctx.fillStyle = 'rgb(0, 0, 0)';
+      ctx.fillRect(0, 0, W, H);
     }
     ctx.restore();
   }
@@ -867,6 +897,8 @@
       {
         const { light, tint } = environmentService.getAmbient($gameState?.turn ?? 0);
         renderer.setAmbient(light, tint);
+        _ambientLight = light;
+        _ambientTint = tint;
       }
 
       ready = true;
