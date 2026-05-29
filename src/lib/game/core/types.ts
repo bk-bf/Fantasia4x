@@ -394,7 +394,9 @@ export interface Building {
 	| 'magical'
 	| 'exploration'
 	| 'social'
-	| 'furniture';
+	| 'furniture'
+	| 'structure'
+	| 'shelter';
 
 	// Operational costs and maintenance
 	upkeepCost: Record<string, number>; // Daily/periodic resource consumption

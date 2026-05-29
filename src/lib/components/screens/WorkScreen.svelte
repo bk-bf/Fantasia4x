@@ -5,9 +5,10 @@
   import { locationService } from '$lib/game/services/LocationServices';
   import { itemService } from '$lib/game/services/ItemService';
   import { workService } from '$lib/game/services/WorkService';
+  import { modifierSystem } from '$lib/game/systems/ModifierSystem';
   import { get } from 'svelte/store';
   import { onMount, onDestroy } from 'svelte';
-  import { getPawnTaskSummary } from '$lib/utils/pawnUtils';
+  import { getPawnTaskSummary, getEfficiencyColor } from '$lib/utils/pawnUtils';
 
   let race: any = null;
   let pawns: any[] = [];
@@ -372,6 +373,19 @@
 
   $: selected = pawns.find((p) => p.id === selectedPawn) ?? null;
   $: selectedTaskSummary = selected ? getPawnTaskSummary(selected, $gameState) : null;
+  $: selectedWorkEfficiency = selected
+    ? Object.fromEntries(
+        WORK_CATEGORIES.map((wc) => [
+          wc.id,
+          modifierSystem.calculateWorkEfficiency(selected.id, wc.id, $gameState)
+        ])
+      )
+    : {};
+  $: sortedWorkCategories = [...WORK_CATEGORIES].sort(
+    (a, b) =>
+      (selectedWorkEfficiency[b.id]?.totalValue ?? 0) -
+      (selectedWorkEfficiency[a.id]?.totalValue ?? 0)
+  );
 </script>
 
 <div class="work-screen">
@@ -466,6 +480,18 @@
           <span class="slbl">{stat.slice(0, 3).toUpperCase()}</span>
           <span class="sval">{val}</span>
         </span>
+      {/each}
+    </div>
+    <div class="section-hdr sub">| WORK EFFICIENCY</div>
+    <div class="eff-grid">
+      {#each sortedWorkCategories as wc}
+        {@const eff = selectedWorkEfficiency[wc.id]}
+        {#if eff}
+          <div class="eff-item" title="{wc.name}: {eff.totalValue.toFixed(2)}x">
+            <span class="eff-name">{wc.name.toUpperCase()}</span>
+            <span class="eff-val" style="color:{getEfficiencyColor(eff.totalValue)}">{eff.totalValue.toFixed(2)}x</span>
+          </div>
+        {/if}
       {/each}
     </div>
   {:else if pawns.length > 0}
@@ -665,6 +691,33 @@
   }
   .sval {
     color: var(--text);
+  }
+
+  .eff-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 2px;
+    padding: 4px 8px;
+  }
+  .eff-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border: 1px solid var(--border);
+    padding: 2px 4px;
+    cursor: default;
+  }
+  .eff-item:hover {
+    background: var(--bg-hover);
+  }
+  .eff-name {
+    font-size: 9px;
+    color: var(--text-muted);
+    letter-spacing: 0.04em;
+  }
+  .eff-val {
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
   }
   .empty {
     text-align: center;

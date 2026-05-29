@@ -18,7 +18,7 @@
   let currentToolLevel = 0;
 
   // Building category groups defined below (no per-screen filter needed)
-  const WALL_IDS = ['twig_wall', 'wicker_wall', 'daub_wall', 'mud_brick_wall', 'twig_door'];
+  const WALL_IDS = ['branch_wall', 'wicker_wall', 'daub_wall', 'mud_brick_wall', 'branch_door'];
   const WORKSHOP_IDS = [
     'campfire',
     'craft_spot',
@@ -42,7 +42,9 @@
     'magical',
     'exploration',
     'social',
-    'furniture'
+    'furniture',
+    'structure',
+    'shelter'
   ].flatMap((cat) => buildingService.getBuildingsByCategory(cat));
 
   $: firstBuildingInProgress = buildings.find((b) => b.status !== 'complete') ?? null;
@@ -58,7 +60,8 @@
   $: furnitureDefs = unlockedDefs.filter(
     (b) => FURNITURE_IDS.includes(b.id) || b.category === 'furniture'
   );
-  $: wallDefs = unlockedDefs.filter((b) => WALL_IDS.includes(b.id));
+  $: wallDefs = unlockedDefs.filter((b) => WALL_IDS.includes(b.id) || b.category === 'structure');
+  $: shelterDefs = unlockedDefs.filter((b) => b.category === 'shelter');
   $: knowledgeDefs = unlockedDefs.filter(
     (b) => KNOWLEDGE_IDS.includes(b.id) || b.category === 'knowledge'
   );
@@ -71,7 +74,9 @@
       !KNOWLEDGE_IDS.includes(b.id) &&
       b.category !== 'food' &&
       b.category !== 'housing' &&
-      b.category !== 'furniture'
+      b.category !== 'furniture' &&
+      b.category !== 'structure' &&
+      b.category !== 'shelter'
   );
 
   // Legacy compat
@@ -306,18 +311,6 @@
 
   <ZonePanel />
 
-  <!-- Status bar -->
-  <div class="status-row">
-    <span class="stat-lbl">POP</span><span class="stat-val"
-      >{race?.population || 0}/{maxPopulation}</span
-    >
-    <span class="stat-sep">|</span>
-    <span class="stat-lbl">TOOL TIER</span><span class="stat-val">{currentToolLevel}</span>
-    {#if race?.population >= maxPopulation}
-      <span class="warn-inline">AT CAPACITY</span>
-    {/if}
-  </div>
-
   <!-- Active construction queue -->
   <div class="section-hdr sub">| ACTIVE BUILD JOBS ({allBuildingsInProgress.length})</div>
   {#if allBuildingsInProgress.length > 0}
@@ -356,7 +349,7 @@
   {/each}
 
   <!-- Building groups -->
-  {#each [{ label: 'WORKSHOPS', defs: workshopDefs }, { label: 'PRIMITIVE FURNITURE', defs: furnitureDefs }, { label: 'FORTIFICATIONS', defs: wallDefs }, { label: 'KNOWLEDGE', defs: knowledgeDefs }, { label: 'FOOD & FORAGING', defs: foodDefs }, { label: 'OTHER', defs: otherDefs }] as grp}
+  {#each [{ label: 'WORKSHOPS', defs: workshopDefs }, { label: 'SHELTER & BEDS', defs: shelterDefs }, { label: 'PRIMITIVE FURNITURE', defs: furnitureDefs }, { label: 'FORTIFICATIONS', defs: wallDefs }, { label: 'KNOWLEDGE', defs: knowledgeDefs }, { label: 'FOOD & FORAGING', defs: foodDefs }, { label: 'OTHER', defs: otherDefs }] as grp}
     {#if grp.defs.length > 0}
       <div class="section-hdr">| {grp.label}</div>
       {#each grp.defs as building}
