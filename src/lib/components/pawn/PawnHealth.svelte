@@ -13,13 +13,18 @@
     { id: 'right_leg', health: 100, isMissing: false, bleedRate: 0 }
   ];
 
-  const LIMBS: { name: string; id: LimbId }[] = [
-    { name: 'HEAD', id: 'head' },
-    { name: 'TORSO', id: 'torso' },
-    { name: 'L.ARM', id: 'left_arm' },
-    { name: 'R.ARM', id: 'right_arm' },
-    { name: 'L.LEG', id: 'left_leg' },
-    { name: 'R.LEG', id: 'right_leg' }
+  // Anatomical 3-column grid: left appendages | core | right appendages
+  const GRID: { name: string; id: LimbId }[][] = [
+    [
+      { name: 'L.ARM', id: 'left_arm' },
+      { name: 'HEAD', id: 'head' },
+      { name: 'R.ARM', id: 'right_arm' }
+    ],
+    [
+      { name: 'L.LEG', id: 'left_leg' },
+      { name: 'TORSO', id: 'torso' },
+      { name: 'R.LEG', id: 'right_leg' }
+    ]
   ];
 
   let alive = $derived(pawn.isAlive !== false);
@@ -57,17 +62,19 @@
 <div class="health-section">
   <div class="section-hdr">| BODY</div>
 
-  <div class="limb-list">
-    {#each LIMBS as { name, id }}
-      {@const limb = gl(id)}
-      {@const status = limbStatus(limb)}
-      {@const col = lc(limb)}
-      <div class="limb-row">
-        <span class="cell-name" style="color:{col}">{name}</span>
-        <span class="cell-val" style="color:{col}"
-          >{status}{#if limb.bleedRate > 0}<span class="bleed-dot"> ●</span>{/if}</span
-        >
-      </div>
+  <div class="limb-grid">
+    {#each GRID as row}
+      {#each row as { name, id }}
+        {@const limb = gl(id)}
+        {@const status = limbStatus(limb)}
+        {@const col = lc(limb)}
+        <div class="limb-cell">
+          <span class="cell-name">{name}</span>
+          <span class="cell-val" style="color:{col}"
+            >{status}{#if limb.bleedRate > 0}<span class="bleed-dot"> ●</span>{/if}</span
+          >
+        </div>
+      {/each}
     {/each}
   </div>
 
@@ -95,23 +102,22 @@
     border-bottom: 1px solid var(--border);
   }
 
-  .limb-list {
-    padding: 2px 8px;
+  .limb-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    padding: 4px 8px 2px;
+    gap: 1px 6px;
   }
 
-  .limb-row {
+  .limb-cell {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
     padding: 2px 0;
   }
-  .limb-row:hover {
-    background: var(--bg-hover);
-    margin: 0 -8px;
-    padding: 2px 8px;
-  }
 
   .cell-name {
+    color: var(--text-muted);
     font-size: 10px;
     letter-spacing: 0.04em;
     flex-shrink: 0;

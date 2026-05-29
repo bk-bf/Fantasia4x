@@ -373,6 +373,7 @@ function consumeMeal(meal: MealPortion[], gs: GameState): { state: GameState; hu
     let hungerRecovered = 0;
     for (const { source, id, units } of meal) {
         const def = ITEMS_DATABASE.find((d: any) => d.id === id);
+        hungerRecovered += (def?.nutrition ?? 0) * HUNGER_PER_FOOD_UNIT * units;
         if (source === 'item') {
             state = {
                 ...state,

@@ -129,8 +129,13 @@
     <!-- Tab panels — only the active one is rendered -->
     <div class="pawn-content">
       {#if activeTab === 'status'}
-        <PawnHealth pawn={selectedPawn} />
-        <PawnNeeds pawn={selectedPawn} gameState={$gameState} />
+        <div class="status-cols">
+          <PawnHealth pawn={selectedPawn} />
+          <PawnNeeds pawn={selectedPawn} gameState={$gameState} part="needs" />
+          <div class="col-last">
+            <PawnNeeds pawn={selectedPawn} gameState={$gameState} part="status" />
+          </div>
+        </div>
       {:else if activeTab === 'attributes'}
         <PawnStats pawn={selectedPawn} />
         <PawnTraits pawn={selectedPawn} />
@@ -241,6 +246,22 @@
     overflow-y: auto;
     flex: 1;
     min-height: 0;
+  }
+
+  .status-cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    align-items: start;
+    border-bottom: 1px solid var(--border);
+  }
+  /* Column dividers — override the per-section border-bottom with border-right */
+  .status-cols :global(.health-section),
+  .status-cols :global(.needs-section) {
+    border-bottom: none;
+    border-right: 1px solid var(--border);
+  }
+  .col-last :global(.needs-section) {
+    border-right: none;
   }
 
   .empty {

@@ -21,7 +21,6 @@
 
   export let pawn: Pawn;
   export let gameState: GameState;
-  export let part: string = 'both';
 
   $: needs = pawn.needs;
 
@@ -89,9 +88,8 @@
     <span class="desc">{getNeedDescription('fatigue', needs.fatigue)}</span>
   </div>
 
-  <div class="section-hdr sub">| STATUS</div>
-
   {#if activeEffects.length > 0 || activeConditions.length > 0}
+    <div class="section-hdr sub">| EFFECTS</div>
     <div class="effects-row">
       {#each activeEffects as effect}
         <div
@@ -117,6 +115,8 @@
       {/each}
     </div>
   {/if}
+
+  <div class="section-hdr sub">| STATUS</div>
 
   <div class="info-grid">
     <div class="info-col">
@@ -219,17 +219,29 @@
     flex-shrink: 0;
   }
 
-  .info-list {
-    padding: 0;
+  .info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
   }
 
-  .info-row {
+  .info-col {
     display: flex;
     align-items: baseline;
     gap: 6px;
     padding: 2px 8px;
   }
-  .info-row:hover {
+  .info-col:hover {
+    background: var(--bg-hover);
+  }
+
+  .info-span {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 2px 8px;
+  }
+  .info-span:hover {
     background: var(--bg-hover);
   }
 

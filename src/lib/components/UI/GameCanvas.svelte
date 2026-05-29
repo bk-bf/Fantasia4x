@@ -109,7 +109,8 @@
       renderer.setTileSize(tileWidth, tileHeight);
       const visW = (container?.clientWidth ?? 800) / tileWidth;
       const visH = (container?.clientHeight ?? 600) / tileHeight;
-      setView(Math.round(x - visW / 2), Math.round(y - visH / 2));
+      // Place the pawn at ~25% from the top so the HUD card at the bottom doesn't overlap it.
+      setView(Math.round(x - visW / 2), Math.round(y - visH * 0.25));
       uiState.clearMapFocus();
     }
   });

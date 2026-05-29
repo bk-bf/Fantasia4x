@@ -24,10 +24,16 @@ void main() {
         vec2 ts = u_texelSize;
         vec2 lo = v_uvBounds.xy;
         vec2 hi = v_uvBounds.zw;
-        float aN = texture(u_fontAtlas, clamp(v_texCoord + vec2( 0.0, -ts.y), lo, hi)).a;
-        float aS = texture(u_fontAtlas, clamp(v_texCoord + vec2( 0.0,  ts.y), lo, hi)).a;
-        float aE = texture(u_fontAtlas, clamp(v_texCoord + vec2( ts.x,  0.0), lo, hi)).a;
-        float aW = texture(u_fontAtlas, clamp(v_texCoord + vec2(-ts.x,  0.0), lo, hi)).a;
+        // Avoid clamping: out-of-bounds neighbours are treated as transparent
+        // so the outline never bleeds past the glyph's atlas cell.
+        vec2 nN = v_texCoord + vec2( 0.0, -ts.y);
+        vec2 nS = v_texCoord + vec2( 0.0,  ts.y);
+        vec2 nE = v_texCoord + vec2( ts.x,  0.0);
+        vec2 nW = v_texCoord + vec2(-ts.x,  0.0);
+        float aN = (nN.y >= lo.y) ? texture(u_fontAtlas, nN).a : 0.0;
+        float aS = (nS.y <= hi.y) ? texture(u_fontAtlas, nS).a : 0.0;
+        float aE = (nE.x <= hi.x) ? texture(u_fontAtlas, nE).a : 0.0;
+        float aW = (nW.x >= lo.x) ? texture(u_fontAtlas, nW).a : 0.0;
         if (aN > 0.5 || aS > 0.5 || aE > 0.5 || aW > 0.5) {
             fragColor = vec4(v_outline, 1.0);
             return;
