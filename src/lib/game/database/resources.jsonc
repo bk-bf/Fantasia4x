@@ -47,7 +47,7 @@
             "toolRequirement": {"workType": "woodcutting", "minTier": 1},
             "yields"         : [
                 {
-                    "itemId"         : "wood",
+                    "itemId"         : "wood_log",
                     "min"            : 3,
                     "max"            : 5,
                     "skillId"        : "woodcutting",

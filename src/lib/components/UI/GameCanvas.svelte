@@ -342,13 +342,11 @@
       }
     }
     if (renderer?.isReady()) {
-      const grid =
-        worldMap.length > 0
-          ? buildGameGrid(worldMap, buildings, designations)
-          : generatePlaceholderGrid();
-      overlayDroppedItems(grid, droppedItems);
-      overlayPawns(grid, pawns, selectedPawnId);
-      renderer.setGrid(grid);
+      if (worldMap.length > 0) {
+        redrawOverlay();
+      } else {
+        renderer.setGrid(generatePlaceholderGrid());
+      }
       // Re-snap to fit when the real map loads (placeholder vs. actual may differ in size)
       if (worldMap.length > 0 && canvas) {
         const newFit = computeFitTileSize(canvas.width, canvas.height);

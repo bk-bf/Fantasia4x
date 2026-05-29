@@ -201,11 +201,11 @@
     "workTypes"  : ["foraging"]
   },
   {
-    "id"         : "wood",
-    "name"       : "Wood",
+    "id"         : "wood_log",
+    "name"       : "Wood Log",
     "type"       : "material",
     "category"   : "wood",
-    "description": "Rough cut timber. Construction and fuel.",
+    "description": "Rough cut logs of timber. Construction and fuel.",
     "color"      : "#8B6914",
     "amount"     : 0,
     "fuelValue"  : 12,
