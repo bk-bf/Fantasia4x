@@ -51,7 +51,9 @@
       return;
     }
     if (e.key === 'Escape') {
-      if ($uiState.designationActive) {
+      if ($uiState.blueprintBuildingId) {
+        uiState.deactivateBlueprint();
+      } else if ($uiState.designationActive) {
         uiState.deactivateDesignation(); // restores _screenBeforeDesignation (e.g. 'building')
       } else {
         uiState.setScreen('main');

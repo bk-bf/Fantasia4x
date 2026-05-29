@@ -12,7 +12,7 @@ interface UIState {
   designationType: string | null;
   /** Zone instance being painted (null = no instance / legacy). */
   activeZoneInstanceId: string | null;
-  /** Screen to return to after zone painting ends. */
+  /** Screen to return to after zone painting or blueprint placement ends. */
   _screenBeforeDesignation: Screen | null;
   /** Request the map to pan (and zoom) to a specific tile. Cleared after handling. */
   mapFocusRequest: { x: number; y: number } | null;
@@ -20,6 +20,8 @@ interface UIState {
   selectedPawnId: string | null;
   /** Pawn id the camera should continuously follow. null = free camera. */
   cameraFollowPawnId: string | null;
+  /** Blueprint placement mode: id of the building being placed, null = inactive. */
+  blueprintBuildingId: string | null;
 }
 
 function createUIState() {
@@ -33,7 +35,8 @@ function createUIState() {
     _screenBeforeDesignation: null,
     mapFocusRequest: null,
     selectedPawnId: null,
-    cameraFollowPawnId: null
+    cameraFollowPawnId: null,
+    blueprintBuildingId: null
   };
 
   const { subscribe, set, update } = writable(initialState);
@@ -86,7 +89,23 @@ function createUIState() {
       update((state) => ({ ...state, selectedPawnId: id })),
 
     setFollowPawn: (id: string | null) =>
-      update((state) => ({ ...state, cameraFollowPawnId: id }))
+      update((state) => ({ ...state, cameraFollowPawnId: id })),
+
+    activateBlueprint: (buildingId: string) =>
+      update((state) => ({
+        ...state,
+        blueprintBuildingId: buildingId,
+        _screenBeforeDesignation: state.currentScreen !== 'main' ? state.currentScreen : state._screenBeforeDesignation,
+        currentScreen: 'main'
+      })),
+
+    deactivateBlueprint: () =>
+      update((state) => ({
+        ...state,
+        blueprintBuildingId: null,
+        currentScreen: state._screenBeforeDesignation ?? state.currentScreen,
+        _screenBeforeDesignation: null
+      }))
   };
 }
 

@@ -378,7 +378,7 @@
           <button
             class="act-btn-sm"
             class:active={buildable}
-            on:click={() => startBuilding(building)}
+            on:click={() => uiState.activateBlueprint(building.id)}
             disabled={!buildable}
           >
             {#if !affordable}MISSING

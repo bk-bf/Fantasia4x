@@ -20,6 +20,8 @@
   import { glyph, SHEET } from '$lib/webgl/tilesets.js';
   import { uiState } from '$lib/stores/uiState.js';
   import { worldEffects } from '$lib/stores/worldEffects.js';
+  import { buildingService } from '$lib/game/services/BuildingService.js';
+  import { resolveCharSpans } from '$lib/game/core/Terrains.js';
 
   // Tile size range for zoom (square cells for CoQ sprite-mode)
   // MAP_W / MAP_H must match the generateWorld() call in gameState.ts
@@ -116,8 +118,11 @@
   let activeZoneInstanceId: string | null = null;
   // Press X while in designation mode to switch between paint ↔ erase drag
   let zoneEraseMode = false;
+  // Blueprint placement mode — set when BUILD is clicked in BuildingMenu
+  let blueprintBuildingId: string | null = null;
   const unsubUI = uiState.subscribe((s) => {
     designationMode = s.designationActive;
+    blueprintBuildingId = s.blueprintBuildingId ?? null;
     activeZoneInstanceId = s.activeZoneInstanceId ?? null;
     if (!s.designationActive) zoneEraseMode = false;
     if (s.designationType) designationTypeActive = s.designationType as DesignationType;
@@ -446,10 +451,34 @@
       );
     }
 
+    // Blueprint placement preview
+    if (blueprintBuildingId && hoverTileX >= 0 && hoverTileY >= 0) {
+      _blueprintPreviewTile(grid, hoverTileX, hoverTileY);
+    }
+
     renderer.setGrid(grid);
   }
 
-  /** Tint a rectangle of tiles. fg replaces foreground; bg params lerp the background. */
+  function _blueprintPreviewTile(grid: GameGrid, tx: number, ty: number) {
+    if (tx < 0 || ty < 0 || ty >= worldMap.length || tx >= (worldMap[0]?.length ?? 0)) return;
+    const building = buildingService.getBuildingById(blueprintBuildingId!);
+    if (!building) return;
+    const charSpans = building.charSpans;
+    const char = charSpans
+      ? (resolveCharSpans(charSpans as Parameters<typeof resolveCharSpans>[0])[0] ?? '#')
+      : '#';
+    const tile = grid.getTile(tx, ty);
+    grid.setTile(tx, ty, {
+      char,
+      foreground: { r: 1, g: 1, b: 1 },
+      background: {
+        r: (tile?.background?.r ?? 0) * 0.3 + 0.05,
+        g: (tile?.background?.g ?? 0) * 0.3 + 0.05,
+        b: (tile?.background?.b ?? 0) * 0.3 + 0.25
+      },
+      position: { x: tx, y: ty }
+    });
+  }
   function _overlayRect(
     grid: GameGrid,
     x1: number,
@@ -483,6 +512,29 @@
 
   async function handleTileClick() {
     if (hoverTileX < 0 || hoverTileY < 0) return;
+
+    // Blueprint mode: place building at cursor tile
+    if (blueprintBuildingId) {
+      const bid = blueprintBuildingId;
+      const buildingDef = buildingService.getBuildingById(bid);
+      if (buildingDef) {
+        gameState.updateWithSave((state) => {
+          const newItems = state.item.map((item) => {
+            const cost =
+              (buildingDef as unknown as { buildingCost?: Record<string, number> }).buildingCost?.[
+                item.id
+              ] ?? 0;
+            return { ...item, amount: Math.max(0, item.amount - cost) };
+          });
+          return buildingService.placeBuilding(bid, hoverTileX, hoverTileY, {
+            ...state,
+            item: newItems
+          });
+        });
+      }
+      uiState.deactivateBlueprint();
+      return;
+    }
 
     // Designation mode: handled by drag — single-click still paints one tile
     if (designationMode) {
@@ -667,6 +719,11 @@
         e.preventDefault();
         break;
       case 'Escape':
+        if (blueprintBuildingId) {
+          uiState.deactivateBlueprint();
+          redrawOverlay();
+          break;
+        }
         uiState.deactivateDesignation();
         zoneEraseMode = false;
         zoneDragActive = false;
@@ -896,6 +953,11 @@
     <div class="designation-hud" style="border-color:#5566cc;color:#99aaee;">
       ◈ SELECTING ({Math.abs(selEndX - selAnchorX) + 1}×{Math.abs(selEndY - selAnchorY) + 1}) —
       release to highlight
+    </div>
+  {:else if blueprintBuildingId}
+    <div class="designation-hud" style="border-color:#4477ff;color:#88aaff;">
+      [BLUEPRINT: {buildingService.getBuildingById(blueprintBuildingId)?.name ??
+        blueprintBuildingId}] — click to place · Esc cancel
     </div>
   {/if}
   {#if selectedPawn}

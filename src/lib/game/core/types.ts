@@ -371,6 +371,12 @@ export interface Building {
 	// Visual representation
 	emoji?: string;
 	color?: string;
+	/** Glyph source descriptors for map rendering (resolved via resolveCharSpans). */
+	charSpans?: Array<{ sheet?: string; id?: number; from?: number; to?: number; literal?: string }>;
+	/** Foreground color [r, g, b] 0–1 for map tile. */
+	fg?: [number, number, number];
+	/** Background color [r, g, b] 0–1 for map tile. */
+	bg?: [number, number, number];
 
 	// Construction requirements
 	buildingCost: Record<string, number>; // Renamed from 'cost' to match item system

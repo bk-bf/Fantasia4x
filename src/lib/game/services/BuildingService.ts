@@ -1,6 +1,8 @@
 import type { Building, GameState, PlacedBuilding } from '../core/types';
 import buildingsData from '../database/buildings.jsonc';
 import { RARITY_COLORS } from '../database/colors';
+import { resolveCharSpans } from '../core/Terrains';
+import type { CharSpan } from '../core/Terrains';
 
 const AVAILABLE_BUILDINGS = buildingsData as unknown as Building[];
 
@@ -51,6 +53,8 @@ export interface BuildingService {
 	getBuildingColor(buildingId: string): string;
 	getBuildingRarityColor(rarity: string): string;
 	hasBuildings(buildingCounts: Record<string, number>, category: string): boolean;
+	/** Resolve the map glyph character for a building from its charSpans. Falls back to '#'. */
+	getBuildingGlyph(buildingId: string): string;
 }
 
 /**
@@ -389,6 +393,13 @@ export class BuildingServiceImpl implements BuildingService {
 			}
 			return false;
 		});
+	}
+
+	getBuildingGlyph(buildingId: string): string {
+		const building = this.getBuildingById(buildingId);
+		if (!building?.charSpans) return '#';
+		const chars = resolveCharSpans(building.charSpans as CharSpan[]);
+		return chars[0] ?? '#';
 	}
 }
 

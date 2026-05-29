@@ -5,8 +5,9 @@
 
 import { GameGrid } from './game-grid.js';
 import type { WorldTile, PlacedBuilding, DesignationType } from '$lib/game/core/types.js';
-import { SUBTERRAINS, SUBTERRAIN_FALLBACK, pickChar } from '$lib/game/core/Terrains.js';
+import { SUBTERRAINS, SUBTERRAIN_FALLBACK, pickChar, resolveCharSpans } from '$lib/game/core/Terrains.js';
 import { resourceObjectService } from '$lib/game/services/ResourceObjectService.js';
+import { buildingService } from '$lib/game/services/BuildingService.js';
 import type { RGB } from './tile-types.js';
 
 /**
@@ -97,11 +98,14 @@ export function buildGameGrid(
     if (buildings) {
         for (const b of buildings) {
             if (b.status === 'complete') {
-                // Completed building: amber '#'
+                const def = buildingService.getBuildingById(b.type);
+                const char = def?.charSpans ? (resolveCharSpans(def.charSpans as Parameters<typeof resolveCharSpans>[0])[0] ?? '#') : '#';
+                const fg = def?.fg ?? [0.87, 0.62, 0.12];
+                const bg = def?.bg ?? [0.06, 0.04, 0.01];
                 grid.setTile(b.x, b.y, {
-                    char: '#',
-                    foreground: { r: 0.87, g: 0.62, b: 0.12 },
-                    background: { r: 0.06, g: 0.04, b: 0.01 },
+                    char,
+                    foreground: { r: fg[0], g: fg[1], b: fg[2] },
+                    background: { r: bg[0], g: bg[1], b: bg[2] },
                     position: { x: b.x, y: b.y }
                 });
             } else if (b.status === 'under_construction' || b.status === 'planned') {
