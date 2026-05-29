@@ -63,8 +63,8 @@ interface AmbientKeyframe {
 
 const AMBIENT_KEYFRAMES: AmbientKeyframe[] = [
     //  t      clock  light  normalised tint (hue only)
-    { t: 0.00, light: 0.15, tint: [0.45, 0.50, 1.00] }, // 00:00 midnight    — cold blue
-    { t: 0.21, light: 0.15, tint: [0.50, 0.52, 0.98] }, // 05:00 pre-dawn    — blue (still dark)
+    { t: 0.00, light: 0.15, tint: [0.72, 0.40, 1.00] }, // 00:00 midnight    — purple-blue
+    { t: 0.21, light: 0.15, tint: [0.70, 0.42, 1.00] }, // 05:00 pre-dawn    — purple-blue
     { t: 0.26, light: 0.35, tint: [1.00, 0.60, 0.28] }, // 06:12 early dawn  — orange glow starts
     { t: 0.31, light: 0.82, tint: [1.00, 0.68, 0.32] }, // 07:26 PEAK dawn   — full orange at rising brightness
     { t: 0.37, light: 0.96, tint: [1.00, 0.90, 0.72] }, // 08:53 morning     — warm white, nearly full bright
@@ -73,9 +73,9 @@ const AMBIENT_KEYFRAMES: AmbientKeyframe[] = [
     { t: 0.72, light: 1.00, tint: [1.00, 0.80, 0.45] }, // 17:17 PEAK golden — full amber at FULL brightness
     { t: 0.78, light: 0.88, tint: [1.00, 0.60, 0.28] }, // 18:43 sunset      — deep orange as dim begins
     { t: 0.84, light: 0.52, tint: [1.00, 0.50, 0.32] }, // 20:10 dusk        — red-orange, noticeably darker
-    { t: 0.90, light: 0.28, tint: [0.80, 0.50, 0.75] }, // 21:36 late dusk   — violet
-    { t: 0.95, light: 0.18, tint: [0.50, 0.52, 0.98] }, // 22:48 night       — blue
-    { t: 1.00, light: 0.15, tint: [0.45, 0.50, 1.00] }, // 24:00 midnight wrap
+    { t: 0.90, light: 0.28, tint: [0.82, 0.45, 0.90] }, // 21:36 late dusk   — violet into night
+    { t: 0.95, light: 0.18, tint: [0.74, 0.40, 1.00] }, // 22:48 night       — purple-blue
+    { t: 1.00, light: 0.15, tint: [0.72, 0.40, 1.00] }, // 24:00 midnight wrap
 ];
 
 function lerp(a: number, b: number, f: number): number {
