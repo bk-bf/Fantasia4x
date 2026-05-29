@@ -165,7 +165,7 @@
             "workAmount"     : 1,
             "toolRequirement": {"workType": "woodcutting", "minTier": 0}, // tier-0 = any woodcutting tool, including stone chopper
             "yields"         : [
-                {"itemId": "twig", "min": 2, "max": 5, "skillId": "foraging", "skillMultiplier": 0.1 },
+                {"itemId": "branch", "min": 2, "max": 5, "skillId": "foraging", "skillMultiplier": 0.1 },
                 {"itemId": "wood", "min": 1, "max": 2, "skillId": "foraging", "skillMultiplier": 0.05}
             ]
         }
@@ -202,6 +202,67 @@
                     "_TODO": "magic_crystal item TBD — rare arcane material; possible uses: enchanting reagent, mana amplification, spell catalyst, arcane focus component"
                 }
             ]
+        }
+    },
+
+    // Ordinary grass stand — cut for hay; bare-handed is slow, a flint sickle doubles speed.
+    {
+        "id"              : "grass_patch",
+        "displayName"     : "Grass Patch",
+        "objectSubType"   : "grass",
+        "charSpans"       : [ {"sheet": "plants", "from": 83, "to": 85} ],
+        "fg"              : [0.58, 0.72, 0.18],
+        "bg"              : [0.07, 0.09, 0.02],
+        "color"           : "#94B82E",
+        "spawn"           : {
+            "subterrains": {
+                "grass"     : 0.018,
+                "dirt"      : 0.008,
+                "savanna"   : 0.01
+            }
+        },
+        "nodeAmountRange" : [3, 7],
+        "designationTypes": ["forage", "harvest"],
+        "interaction"     : {
+            "action"         : "cut",
+            "workCategory"   : "foraging",
+            "workAmount"     : 6,
+            "toolRequirement": null,
+            "yields"         : [
+                {"itemId": "hay", "min": 2, "max": 4, "skillId": "foraging", "skillMultiplier": 0.15}
+            ],
+            "persistent"     : true,
+            "regrowthTurns"  : 600 // ~2 days at 300 turns/day
+        }
+    },
+
+    // Dense lush grass — found in deep_grass and tall_grass biomes; more hay per cut.
+    {
+        "id"              : "lush_grass_patch",
+        "displayName"     : "Lush Grass",
+        "objectSubType"   : "tall_grass",
+        "charSpans"       : [ {"sheet": "plants", "from": 85, "to": 88} ],
+        "fg"              : [0.44, 0.78, 0.12],
+        "bg"              : [0.06, 0.1, 0.02],
+        "color"           : "#70C71F",
+        "spawn"           : {
+            "subterrains": {
+                "deep_grass": 0.028,
+                "tall_grass": 0.032
+            }
+        },
+        "nodeAmountRange" : [4, 9],
+        "designationTypes": ["forage", "harvest"],
+        "interaction"     : {
+            "action"         : "cut",
+            "workCategory"   : "foraging",
+            "workAmount"     : 6,
+            "toolRequirement": null,
+            "yields"         : [
+                {"itemId": "hay", "min": 5, "max": 10, "skillId": "foraging", "skillMultiplier": 0.2}
+            ],
+            "persistent"     : true,
+            "regrowthTurns"  : 900 // ~3 days at 300 turns/day; takes longer to regrow when cut heavily
         }
     },
 
@@ -311,7 +372,7 @@
             "toolRequirement": {"workType": "woodcutting", "minTier": 1},
             "yields"         : [
                 {"itemId": "wood", "min": 2, "max": 4, "skillId": "woodcutting", "skillMultiplier": 0.1 },
-                {"itemId": "twig", "min": 1, "max": 3, "skillId": "woodcutting", "skillMultiplier": 0.05}
+                {"itemId": "branch", "min": 1, "max": 3, "skillId": "woodcutting", "skillMultiplier": 0.05}
             ]
         }
     },

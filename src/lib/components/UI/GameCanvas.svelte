@@ -166,6 +166,17 @@
   // When a pawn is selected its card locks the HUD regardless of hover position.
   $: selectedPawn = selectedPawnId ? (pawns.find((p) => p.id === selectedPawnId) ?? null) : null;
 
+  // Yellow box ring positioned over the selected pawn's tile on the map canvas.
+  $: selectionRing = (() => {
+    if (!selectedPawn?.position) return null;
+    const left = (selectedPawn.position.x - viewX) * tileWidth;
+    const top = (selectedPawn.position.y - viewY) * tileHeight;
+    const cW = container?.clientWidth ?? 0;
+    const cH = container?.clientHeight ?? 0;
+    if (left < -tileWidth || top < -tileHeight || left >= cW || top >= cH) return null;
+    return { left, top, width: tileWidth, height: tileHeight };
+  })();
+
   // Dropped item under the hovered tile.
   $: hoverDroppedItem =
     hoverTileX >= 0 && hoverTileY >= 0
@@ -342,7 +353,6 @@
         char: PAWN_SPRITES[i % PAWN_SPRITES.length],
         foreground: baseColor,
         background: grid.getTile(x, y)?.background ?? { r: 0, g: 0, b: 0 },
-        outline: isSelected ? { r: 1, g: 0.87, b: 0 } : undefined,
         position: { x, y },
         rotation: isSleeping ? 90 : undefined
       });
@@ -833,6 +843,13 @@
 >
   <canvas bind:this={canvas}></canvas>
 
+  {#if selectionRing}
+    <div
+      class="pawn-selection-ring"
+      style="left:{selectionRing.left}px;top:{selectionRing.top}px;width:{selectionRing.width}px;height:{selectionRing.height}px;"
+    ></div>
+  {/if}
+
   {#if errorMsg}
     <div class="error">WebGL unavailable: {errorMsg}</div>
   {:else if !ready}
@@ -1019,6 +1036,15 @@
     font-family: 'Courier New', monospace;
     font-size: 12px;
   }
+  .pawn-selection-ring {
+    position: absolute;
+    pointer-events: none;
+    box-shadow:
+      inset 0 0 0 2px #ffdd00,
+      0 0 6px 2px rgba(255, 221, 0, 0.35);
+    z-index: 5;
+  }
+
   .tile-hud {
     position: absolute;
     bottom: 6px;

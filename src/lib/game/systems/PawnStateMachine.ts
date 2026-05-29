@@ -392,7 +392,7 @@ function consumeMeal(meal: MealPortion[], gs: GameState): { state: GameState; hu
 
 // Building type lists — module-level for use in helpers
 const CAMPFIRE_TYPES = ['campfire'];
-const REST_TYPES = ['lean_to_shelter', 'woodland_shelter', 'stone_hut'];
+const REST_TYPES = ['lean_to_shelter', 'woodland_shelter', 'stone_hut', 'sleeping_spot', 'hay_bed'];
 
 /** Phase 6: find the nearest complete storage building (campfire etc.) to a pawn. */
 function findNearestStorageBuilding(
@@ -594,7 +594,7 @@ function goIdle(pawn: Pawn, gs: GameState): GameState {
 // ===== HAULING HELPERS =====
 
 /** Storage building types that accept deposited resources. */
-const DEPOSIT_TYPES = ['storage_rack', 'campfire', 'lean_to_shelter', 'woodland_shelter', 'stone_hut'];
+const DEPOSIT_TYPES = ['storage_rack', 'campfire', 'lean_to_shelter', 'woodland_shelter', 'stone_hut', 'sleeping_spot', 'hay_bed'];
 
 /**
  * Find the nearest complete storage building to deposit hauled items.
