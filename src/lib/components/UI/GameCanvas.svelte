@@ -23,7 +23,7 @@
   import { uiState } from '$lib/stores/uiState.js';
   import { worldEffects } from '$lib/stores/worldEffects.js';
   import { buildingService } from '$lib/game/services/BuildingService.js';
-  import { resolveCharSpans } from '$lib/game/core/Terrains.js';
+  import { resolveCharSpans, BIOMES, SUBTERRAINS } from '$lib/game/core/Terrains.js';
   import { resourceObjectService } from '$lib/game/services/ResourceObjectService.js';
 
   // Tile size range for zoom (square cells for CoQ sprite-mode)
@@ -1739,7 +1739,12 @@
   {:else if hoverTile}
     <div class="tile-hud">
       <span class="tile-coord">({hoverTile.x},{hoverTile.y})</span><span class="tile-layers"
-        >{hoverTile.terrainType},{hoverTile.subType},{hoverResources[0]?.[0] ?? '—'}</span
+        >{BIOMES[hoverTile.terrainType]?.displayName ?? hoverTile.terrainType},{SUBTERRAINS[
+          hoverTile.subType
+        ]?.displayName ?? hoverTile.subType},{hoverResources[0]?.[0]
+          ? (resourceObjectService.getById(hoverResources[0][0])?.displayName ??
+            hoverResources[0][0])
+          : '—'}</span
       >
       {#if !hoverTile.walkable}
         <div class="tile-move" style="color:#cc4444">move: impassable</div>
