@@ -374,7 +374,7 @@
 
       grid.setTile(x, y, {
         char: PAWN_SPRITES[i % PAWN_SPRITES.length],
-        foreground: baseColor,
+        foreground: isSelected ? { r: 1.0, g: 0.9, b: 0.1 } : baseColor,
         background: isSelected
           ? {
               r: (grid.getTile(x, y)?.background.r ?? 0) * 0.2 + 0.38,

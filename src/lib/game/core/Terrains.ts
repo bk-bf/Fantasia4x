@@ -25,6 +25,7 @@ export interface SubterrainDef {
 const T = (n: number): string => {
     if (n >= 32 && n <= 126) return String.fromCharCode(n);
     if (n === 3) return '\u2665'; // ♥  cave mouth
+    if (n === 14) return '\u266B'; // ♫  campfire / double eighth note
     if (n === 176) return '\u2591'; // ░  light shade
     if (n === 177) return '\u2592'; // ▒  medium shade
     if (n === 178) return '\u2593'; // ▓  dark shade
