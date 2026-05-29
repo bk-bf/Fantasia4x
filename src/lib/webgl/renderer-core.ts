@@ -74,6 +74,11 @@ export class WebGLRendererCore {
 	private ambientLight = 1.0;
 	private ambientTint: [number, number, number] = [1.0, 1.0, 1.0];
 
+	// Per-tile dynamic lighting (Phase A2). The sampler bakes ambient + point
+	// lights into the a_light vertex attribute; the fragment shader multiplies by
+	// it directly, so the global ambient uniforms are no longer needed.
+	private lightSampler: ((wx: number, wy: number, time: number) => [number, number, number]) | null = null;
+
 	// Initialization promise
 	private initPromise: Promise<boolean>;
 
@@ -120,6 +125,16 @@ export class WebGLRendererCore {
 	setAmbient(light: number, tint: [number, number, number]): void {
 		this.ambientLight = light;
 		this.ambientTint = tint;
+	}
+
+	/**
+	 * Provide the per-tile light sampler (Phase A2). The grid renderer queries it
+	 * at every tile corner to bake dynamic lighting into the a_light attribute.
+	 */
+	setLightSampler(
+		sampler: ((wx: number, wy: number, time: number) => [number, number, number]) | null
+	): void {
+		this.lightSampler = sampler;
 	}
 
 	/** Change tile pixel dimensions (used for zoom). Regenerates atlas only when the integer cell size changes (skipped for bitmap tilesets). */
@@ -241,8 +256,6 @@ export class WebGLRendererCore {
 
 		if (!this.shaderManager.useProgram('tileRenderer')) return;
 		this.shaderManager.setUniform('tileRenderer', 'u_projection', this.projectionMatrix);
-		this.shaderManager.setUniform('tileRenderer', 'u_ambient', this.ambientLight);
-		this.shaderManager.setUniform('tileRenderer', 'u_ambient_tint', this.ambientTint);
 
 		gl.activeTexture(gl.TEXTURE0);
 		gl.bindTexture(gl.TEXTURE_2D, this.fontTexture);
@@ -263,7 +276,9 @@ export class WebGLRendererCore {
 			viewportX: this.viewTileX,
 			viewportY: this.viewTileY,
 			viewportWidth: viewportTilesW,
-			viewportHeight: viewportTilesH
+			viewportHeight: viewportTilesH,
+			lightSampler: this.lightSampler ?? undefined,
+			lightTime: performance.now() / 1000
 		});
 
 		this.stats.drawCalls++;

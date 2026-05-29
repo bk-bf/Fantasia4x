@@ -47,6 +47,12 @@ export interface ResourceObjectDef {
     id: string;
     displayName: string;
     objectSubType: string;
+    /**
+     * Whether this resource object allows movement through its tile.
+     * When false, placing this resource sets tile.walkable = false.
+     * Defaults to true when absent.
+     */
+    walkable?: boolean;
     /** Resolved char array (from charSpans in JSON). */
     chars: string[];
     fg: [number, number, number];

@@ -125,6 +125,16 @@ export class WebGLRenderer {
 	}
 
 	/**
+	 * Provide the per-tile light sampler (Phase A2). The grid renderer bakes its
+	 * result into the a_light vertex attribute each frame.
+	 */
+	setLightSampler(
+		sampler: ((wx: number, wy: number, time: number) => [number, number, number]) | null
+	): void {
+		this.core.setLightSampler(sampler);
+	}
+
+	/**
 	 * Check if the renderer is ready for use
 	 */
 	isReady(): boolean {

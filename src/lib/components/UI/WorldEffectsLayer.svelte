@@ -25,7 +25,6 @@
 
   {#each $worldEffects.campfireOverlays as overlay (overlay.id)}
     <div class="fire-sparks" style="left:{overlay.left}px;top:{overlay.top}px;">
-      <div class="campfire-glow"></div>
       <span class="spark s1">·</span>
       <span class="spark s2">*</span>
       <span class="spark s3">·</span>
@@ -106,37 +105,6 @@
   }
 
   /* ── Campfire fire animation ─────────────────────────────────────────────────── */
-
-  .campfire-glow {
-    position: absolute;
-    width: 72px;
-    height: 56px;
-    left: 0;
-    top: 0;
-    transform: translate(-50%, -50%);
-    border-radius: 50%;
-    background: radial-gradient(
-      ellipse at 50% 65%,
-      rgba(255, 120, 0, 0.6) 0%,
-      rgba(255, 60, 0, 0.3) 30%,
-      rgba(255, 30, 0, 0.1) 55%,
-      transparent 75%
-    );
-    filter: blur(6px);
-    mix-blend-mode: screen;
-    animation: glow-pulse 1.8s ease-in-out infinite alternate;
-  }
-
-  @keyframes glow-pulse {
-    0% {
-      opacity: 0.65;
-      transform: translate(-50%, -50%) scale(0.88);
-    }
-    100% {
-      opacity: 1;
-      transform: translate(-50%, -50%) scale(1.12);
-    }
-  }
 
   .fire-sparks {
     position: absolute;

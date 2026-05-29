@@ -8,13 +8,10 @@ in vec3 v_background;
 in vec3 v_detail;
 in vec3 v_outline;
 in vec4 v_uvBounds;  // (uMin, vMin, uMax, vMax) of this glyph in the atlas
+in vec3 v_light;     // Interpolated per-tile light (ambient + point lights)
 
 uniform sampler2D u_fontAtlas;
 uniform vec2 u_texelSize;  // (1/atlasWidth, 1/atlasHeight)
-
-// Day/night ambient lighting (Phase A — LIVING-WORLD spec §Subsystem 1)
-uniform float u_ambient;       // 0.0–1.0 brightness scalar
-uniform vec3  u_ambient_tint;  // pre-normalised colour tint (1,1,1 = neutral)
 
 out vec4 fragColor;
 
@@ -39,7 +36,7 @@ void main() {
         float aE = (nE.x <= hi.x) ? texture(u_fontAtlas, nE).a : 0.0;
         float aW = (nW.x >= lo.x) ? texture(u_fontAtlas, nW).a : 0.0;
         if (aN > 0.5 || aS > 0.5 || aE > 0.5 || aW > 0.5) {
-            fragColor = vec4(v_outline * u_ambient * u_ambient_tint, 1.0);
+            fragColor = vec4(v_outline * v_light, 1.0);
             return;
         }
     }
@@ -53,5 +50,5 @@ void main() {
 
     // Composite: background fills the full tile, glyph blends on top.
     vec3 lit = mix(v_background, tinted, sprite.a);
-    fragColor = vec4(lit * u_ambient * u_ambient_tint, 1.0);
+    fragColor = vec4(lit * v_light, 1.0);
 }

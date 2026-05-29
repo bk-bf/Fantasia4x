@@ -18,6 +18,7 @@
   import { buildPathfindingGrids } from '$lib/game/services/PathfinderService.js';
   import { designationService } from '$lib/game/services/DesignationService.js';
   import { environmentService } from '$lib/game/services/EnvironmentService.js';
+  import { lightingService } from '$lib/game/services/LightingService.js';
   import { glyph, SHEET } from '$lib/webgl/tilesets.js';
   import { uiState } from '$lib/stores/uiState.js';
   import { worldEffects } from '$lib/stores/worldEffects.js';
@@ -119,7 +120,12 @@
   let buildings: PlacedBuilding[] = [];
   let designations: Record<string, DesignationType> = {};
 
-  // Campfire fire animation: only lit + complete campfires.
+  // Phase A2 dynamic lighting: lit campfires emit warm point light, baked into
+  // the tile renderer (replaces the old floating DOM radial glow).
+  $: lightingService.setEmitters(lightingService.collectEmitters(buildings));
+
+  // Campfire spark embellishment: only lit + complete campfires. The radial glow
+  // div is gone (real lighting now), but the rising sparks remain.
   $: worldEffects.setCampfireOverlays(
     buildings
       .filter((b) => b.type === 'campfire' && b.status === 'complete' && b.lit === true)
@@ -345,6 +351,7 @@
     if (renderer?.isReady()) {
       const { light, tint } = environmentService.getAmbient(s.turn);
       renderer.setAmbient(light, tint);
+      lightingService.setAmbient(light, tint);
       _ambientLight = light;
       _ambientTint = tint;
     }
@@ -914,10 +921,14 @@
       overlayPawns(grid, pawns, selectedPawnId);
       renderer.setGrid(grid);
       renderer.setViewTileOffset(viewX, viewY);
+      // Phase A2: bake per-tile dynamic lighting into the renderer each frame.
+      renderer.setLightSampler((wx, wy, time) => lightingService.sample(wx, wy, time));
       // Initialise ambient from current turn so the first frame is correctly lit
       {
         const { light, tint } = environmentService.getAmbient($gameState?.turn ?? 0);
         renderer.setAmbient(light, tint);
+        lightingService.setAmbient(light, tint);
+        lightingService.setEmitters(lightingService.collectEmitters(buildings));
         _ambientLight = light;
         _ambientTint = tint;
       }

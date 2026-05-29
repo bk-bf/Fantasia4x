@@ -9,6 +9,7 @@ in vec3 a_background;    // Background (transparent pixel) color
 in vec3 a_detail;        // Detail/highlight (bright glyph pixel) color
 in vec3 a_outline;       // Outline color (vec3(0) = no outline)
 in vec4 a_uvBounds;      // Glyph UV bounds: (uMin, vMin, uMax, vMax)
+in vec3 a_light;         // Per-corner light multiplier (ambient + point lights)
 
 // Uniforms (constant for all vertices in a draw call)
 uniform mat4 u_projection;  // Orthographic projection matrix
@@ -20,6 +21,7 @@ out vec3 v_background;   // Pass background color to fragment
 out vec3 v_detail;       // Pass detail color to fragment
 out vec3 v_outline;      // Pass outline color to fragment
 out vec4 v_uvBounds;     // Pass glyph UV bounds to fragment
+out vec3 v_light;        // Interpolated per-tile light across the quad
 
 void main() {
     // Transform position to clip space using projection matrix
@@ -32,4 +34,5 @@ void main() {
     v_detail = a_detail;
     v_outline = a_outline;
     v_uvBounds = a_uvBounds;
+    v_light = a_light;
 }

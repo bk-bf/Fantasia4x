@@ -43,11 +43,12 @@ class ResourceGeneratorServiceImpl {
                     // Spawn this object on the tile.
                     tile.resources[def.id] = rng(def.nodeAmountRange[0], def.nodeAmountRange[1]);
 
-                    // Update physics from the resource's objectSubType subterrain.
-                    // tile.subType stays as the base terrain; visuals are layered in the renderer.
+                    // Update physics from the resource definition.
+                    // walkable comes directly from the resource; movementCost falls back to
+                    // the objectSubType subterrain so slow-but-passable resources still apply cost.
                     const resourceSub = SUBTERRAINS[def.objectSubType] ?? SUBTERRAIN_FALLBACK;
                     tile.ascii = pickChar(resourceSub, tile.x, tile.y);
-                    tile.walkable = resourceSub.walkable;
+                    tile.walkable = def.walkable ?? resourceSub.walkable;
                     tile.movementCost = resourceSub.movementCost;
 
                     // One primary object per tile keeps biome->terrain->object flow predictable.

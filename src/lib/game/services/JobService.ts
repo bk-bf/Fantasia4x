@@ -12,6 +12,7 @@
 import type { DesignationType, GameState, Job, Pawn, DroppedItem, ZoneFilter } from '../core/types';
 import itemsData from '../database/items.jsonc';
 import { resourceObjectService } from './ResourceObjectService';
+import { SUBTERRAINS, SUBTERRAIN_FALLBACK } from '../core/Terrains';
 import { itemService } from './ItemService';
 import { buildingService } from './BuildingService';
 
@@ -409,12 +410,22 @@ class JobServiceImpl {
         const yieldEntries = Object.entries(yields);
 
         // Build updated tile — zero resources + set per-yield or interaction-level cooldowns.
+        const def = resourceObjectService.getById(job.resourceId);
         const newWorldMap = gs.worldMap.map((row, ry) =>
             ry === job.targetY
                 ? row.map((col, rx) => {
                     if (rx !== job.targetX) return col;
                     const updatedResources = { ...col.resources, [job.resourceId!]: 0 };
-                    if (!shouldPersist) return { ...col, resources: updatedResources };
+                    if (!shouldPersist) {
+                        // Resource removed permanently — restore tile walkability to base subterrain.
+                        const baseSub = SUBTERRAINS[col.subType] ?? SUBTERRAIN_FALLBACK;
+                        return {
+                            ...col,
+                            resources: updatedResources,
+                            walkable: baseSub.walkable,
+                            movementCost: baseSub.movementCost
+                        };
+                    }
 
                     const newCooldowns = { ...(col.resourceCooldowns ?? {}) };
                     const yieldHasPerItemCooldowns = interaction!.yields.some((y) => y.regrowthTurns !== undefined);

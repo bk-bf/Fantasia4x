@@ -11,6 +11,9 @@ import type { ShaderManager } from './shaders.js';
 import type { FontAtlas } from './types.js';
 import { checkWebGLError } from './utils.js';
 
+/** Default fully-lit value used when no light sampler is supplied. */
+const ONE_LIGHT: [number, number, number] = [1, 1, 1];
+
 export interface GridRenderOptions {
 	tileWidth: number;    // Width of each tile in pixels
 	tileHeight: number;   // Height of each tile in pixels
@@ -241,18 +244,28 @@ export class GridRenderer {
 				brU = u1; brV = v2;
 			}
 
+			// Per-corner dynamic light (Phase A2). Sample the light field at each
+			// tile corner in WORLD coords; the GPU interpolates between them across
+			// the quad, giving smooth gradients with no per-pixel cost.
+			const wx = tile.position.x;
+			const wy = tile.position.y;
+			const Ltl = sampler ? sampler(wx, wy, lightTime) : ONE_LIGHT;          // top-left
+			const Ltr = sampler ? sampler(wx + 1, wy, lightTime) : ONE_LIGHT;      // top-right
+			const Lbl = sampler ? sampler(wx, wy + 1, lightTime) : ONE_LIGHT;      // bottom-left
+			const Lbr = sampler ? sampler(wx + 1, wy + 1, lightTime) : ONE_LIGHT;  // bottom-right
+
 			// Add vertex data for this character (2 triangles = 6 vertices)
-			// Vertex format: x, y, u, v, fr, fg, fb, br, bg, bb, dr, dg, db, or, og, ob, u1, v1, u2, v2 (20 floats)
+			// Vertex format: x, y, u, v, fr, fg, fb, br, bg, bb, dr, dg, db, or, og, ob, u1, v1, u2, v2, lr, lg, lb (23 floats)
 			const charVertices = [
 				// Triangle 1
-				x1, y1, tlU, tlV, fg[0], fg[1], fg[2], bg[0], bg[1], bg[2], dt[0], dt[1], dt[2], ol[0], ol[1], ol[2], ub[0], ub[1], ub[2], ub[3],  // Top-left
-				x2, y1, trU, trV, fg[0], fg[1], fg[2], bg[0], bg[1], bg[2], dt[0], dt[1], dt[2], ol[0], ol[1], ol[2], ub[0], ub[1], ub[2], ub[3],  // Top-right
-				x1, y2, blU, blV, fg[0], fg[1], fg[2], bg[0], bg[1], bg[2], dt[0], dt[1], dt[2], ol[0], ol[1], ol[2], ub[0], ub[1], ub[2], ub[3],  // Bottom-left
+				x1, y1, tlU, tlV, fg[0], fg[1], fg[2], bg[0], bg[1], bg[2], dt[0], dt[1], dt[2], ol[0], ol[1], ol[2], ub[0], ub[1], ub[2], ub[3], Ltl[0], Ltl[1], Ltl[2],  // Top-left
+				x2, y1, trU, trV, fg[0], fg[1], fg[2], bg[0], bg[1], bg[2], dt[0], dt[1], dt[2], ol[0], ol[1], ol[2], ub[0], ub[1], ub[2], ub[3], Ltr[0], Ltr[1], Ltr[2],  // Top-right
+				x1, y2, blU, blV, fg[0], fg[1], fg[2], bg[0], bg[1], bg[2], dt[0], dt[1], dt[2], ol[0], ol[1], ol[2], ub[0], ub[1], ub[2], ub[3], Lbl[0], Lbl[1], Lbl[2],  // Bottom-left
 
 				// Triangle 2
-				x2, y1, trU, trV, fg[0], fg[1], fg[2], bg[0], bg[1], bg[2], dt[0], dt[1], dt[2], ol[0], ol[1], ol[2], ub[0], ub[1], ub[2], ub[3],  // Top-right
-				x2, y2, brU, brV, fg[0], fg[1], fg[2], bg[0], bg[1], bg[2], dt[0], dt[1], dt[2], ol[0], ol[1], ol[2], ub[0], ub[1], ub[2], ub[3],  // Bottom-right
-				x1, y2, blU, blV, fg[0], fg[1], fg[2], bg[0], bg[1], bg[2], dt[0], dt[1], dt[2], ol[0], ol[1], ol[2], ub[0], ub[1], ub[2], ub[3],  // Bottom-left
+				x2, y1, trU, trV, fg[0], fg[1], fg[2], bg[0], bg[1], bg[2], dt[0], dt[1], dt[2], ol[0], ol[1], ol[2], ub[0], ub[1], ub[2], ub[3], Ltr[0], Ltr[1], Ltr[2],  // Top-right
+				x2, y2, brU, brV, fg[0], fg[1], fg[2], bg[0], bg[1], bg[2], dt[0], dt[1], dt[2], ol[0], ol[1], ol[2], ub[0], ub[1], ub[2], ub[3], Lbr[0], Lbr[1], Lbr[2],  // Bottom-right
+				x1, y2, blU, blV, fg[0], fg[1], fg[2], bg[0], bg[1], bg[2], dt[0], dt[1], dt[2], ol[0], ol[1], ol[2], ub[0], ub[1], ub[2], ub[3], Lbl[0], Lbl[1], Lbl[2],  // Bottom-left
 			];
 
 			vertexData.push(...charVertices);
@@ -283,7 +296,7 @@ export class GridRenderer {
 		gl.bindVertexArray(this.gridVAO);
 		gl.bindBuffer(gl.ARRAY_BUFFER, this.gridVBO);
 
-		const stride = 20 * 4; // 20 floats per vertex, 4 bytes per float
+		const stride = 23 * 4; // 23 floats per vertex, 4 bytes per float
 
 		// Position attribute (a_position)
 		const positionLocation = this.shaderManager.getAttributeLocation('tileRenderer', 'a_position');
@@ -332,6 +345,13 @@ export class GridRenderer {
 		if (uvBoundsLocation >= 0) {
 			gl.enableVertexAttribArray(uvBoundsLocation);
 			gl.vertexAttribPointer(uvBoundsLocation, 4, gl.FLOAT, false, stride, 16 * 4);
+		}
+
+		// Per-corner dynamic light attribute (a_light) — Phase A2
+		const lightLocation = this.shaderManager.getAttributeLocation('tileRenderer', 'a_light');
+		if (lightLocation >= 0) {
+			gl.enableVertexAttribArray(lightLocation);
+			gl.vertexAttribPointer(lightLocation, 3, gl.FLOAT, false, stride, 20 * 4);
 		}
 
 		gl.bindVertexArray(null);
