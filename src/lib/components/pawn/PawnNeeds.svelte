@@ -88,34 +88,6 @@
     <span class="desc">{getNeedDescription('fatigue', needs.fatigue)}</span>
   </div>
 
-  {#if activeEffects.length > 0 || activeConditions.length > 0}
-    <div class="section-hdr sub">| EFFECTS</div>
-    <div class="effects-row">
-      {#each activeEffects as effect}
-        <div
-          class="effect-card"
-          style="border-color: {effect.color}; color: {effect.color}"
-          title={effect.description}
-        >
-          <span class="effect-name">{effect.name.toUpperCase()}</span>
-        </div>
-      {/each}
-      {#each activeConditions as { name, severity, stage }}
-        <div
-          class="effect-card cond-card"
-          class:threatening={stage.lifeThreatening}
-          style="border-color: {stage.color}; color: {stage.color}"
-          title="{name} — {Math.round(severity * 100)}% severity{stage.lifeThreatening
-            ? ' ⚠ life-threatening'
-            : ''}"
-        >
-          <span class="effect-name">{name.toUpperCase()}</span>
-          <span class="cond-meta">{stage.label.toUpperCase()} · {Math.round(severity * 100)}%</span>
-        </div>
-      {/each}
-    </div>
-  {/if}
-
   <div class="section-hdr sub">| STATUS</div>
 
   <div class="info-grid">
@@ -151,6 +123,33 @@
       <span class="info-val">{taskSummary.nextTask}</span>
     </div>
   </div>
+
+  {#if activeEffects.length > 0 || activeConditions.length > 0}
+    <div class="effects-row">
+      {#each activeEffects as effect}
+        <div
+          class="effect-card"
+          style="border-color: {effect.color}; color: {effect.color}"
+          title={effect.description}
+        >
+          <span class="effect-name">{effect.name.toUpperCase()}</span>
+        </div>
+      {/each}
+      {#each activeConditions as { name, severity, stage }}
+        <div
+          class="effect-card cond-card"
+          class:threatening={stage.lifeThreatening}
+          style="border-color: {stage.color}; color: {stage.color}"
+          title="{name} — {Math.round(severity * 100)}% severity{stage.lifeThreatening
+            ? ' ⚠ life-threatening'
+            : ''}"
+        >
+          <span class="effect-name">{name.toUpperCase()}</span>
+          <span class="cond-meta">{stage.label.toUpperCase()} · {Math.round(severity * 100)}%</span>
+        </div>
+      {/each}
+    </div>
+  {/if}
 
   <!-- TODO: draft-control mode will re-enable direct REST/EAT/WORK/IDLE commands later.
   <div class="btn-row">
@@ -278,6 +277,7 @@
     flex-wrap: wrap;
     gap: 4px;
     padding: 4px 8px;
+    border-top: 1px solid var(--border);
   }
 
   .effect-card {

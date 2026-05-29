@@ -72,17 +72,6 @@
     unsubscribe();
   });
 
-  // Navigate map to average pawn position
-  function focusPawnsOnMap() {
-    const placed = pawns.filter((p) => p.position);
-    if (placed.length > 0) {
-      const avgX = Math.round(placed.reduce((s, p) => s + p.position!.x, 0) / placed.length);
-      const avgY = Math.round(placed.reduce((s, p) => s + p.position!.y, 0) / placed.length);
-      uiState.focusMapOn(avgX, avgY);
-    }
-    uiState.setScreen('main');
-  }
-
   // Pawn selection handler
   function selectPawn(pawn: Pawn) {
     selectedPawn = pawn;
@@ -108,7 +97,16 @@
 <div class="pawn-screen" bind:this={pawnScreenElement}>
   <div class="screen-hdr">
     <span>| PAWNS</span>
-    <button class="find-btn" on:click={focusPawnsOnMap}>[ FIND ]</button>
+    {#if selectedPawn}
+      <button
+        class="follow-btn"
+        class:active={$uiState.cameraFollowPawnId === selectedPawn.id}
+        on:click={() => {
+          const isFollowing = $uiState.cameraFollowPawnId === selectedPawn?.id;
+          uiState.setFollowPawn(isFollowing ? null : (selectedPawn?.id ?? null));
+        }}>{$uiState.cameraFollowPawnId === selectedPawn.id ? 'UNFOLLOW' : 'FOLLOW'}</button
+      >
+    {/if}
   </div>
 
   <!-- Section tabs — which info panel to show -->
@@ -129,13 +127,8 @@
     <!-- Tab panels — only the active one is rendered -->
     <div class="pawn-content">
       {#if activeTab === 'status'}
-        <div class="status-cols">
-          <PawnHealth pawn={selectedPawn} />
-          <PawnNeeds pawn={selectedPawn} gameState={$gameState} part="needs" />
-          <div class="col-last">
-            <PawnNeeds pawn={selectedPawn} gameState={$gameState} part="status" />
-          </div>
-        </div>
+        <PawnHealth pawn={selectedPawn} />
+        <PawnNeeds pawn={selectedPawn} gameState={$gameState} />
       {:else if activeTab === 'attributes'}
         <PawnStats pawn={selectedPawn} />
         <PawnTraits pawn={selectedPawn} />
@@ -176,7 +169,7 @@
     justify-content: space-between;
   }
 
-  .find-btn {
+  .follow-btn {
     background: transparent;
     border: 1px solid var(--accent-hi);
     color: var(--accent-hi);
@@ -188,10 +181,15 @@
     opacity: 0.85;
     transition: opacity 0.12s;
   }
-  .find-btn:hover {
+  .follow-btn:hover {
     opacity: 1;
     background: var(--accent-hi);
     color: var(--bg);
+  }
+  .follow-btn.active {
+    background: var(--accent-hi);
+    color: var(--bg);
+    opacity: 1;
   }
 
   /* ── Section tabs (STATUS / ATTRIBUTES / GEAR / ABILITIES) ── */
@@ -246,22 +244,6 @@
     overflow-y: auto;
     flex: 1;
     min-height: 0;
-  }
-
-  .status-cols {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    align-items: start;
-    border-bottom: 1px solid var(--border);
-  }
-  /* Column dividers — override the per-section border-bottom with border-right */
-  .status-cols :global(.health-section),
-  .status-cols :global(.needs-section) {
-    border-bottom: none;
-    border-right: 1px solid var(--border);
-  }
-  .col-last :global(.needs-section) {
-    border-right: none;
   }
 
   .empty {

@@ -64,6 +64,7 @@
   // Pawn overlay state
   let pawns: Pawn[] = [];
   let selectedPawnId: string | null = null;
+  let cameraFollowPawnId: string | null = null;
 
   // Sleeping overlays: push to worldEffectsStore so WorldEffectsLayer renders them
   // at the correct z-index (above tiles, below popup panels).
@@ -100,6 +101,7 @@
     if (s.selectedPawnId !== selectedPawnId) {
       selectedPawnId = s.selectedPawnId;
     }
+    cameraFollowPawnId = s.cameraFollowPawnId ?? null;
     redrawOverlay();
     if (s.mapFocusRequest && ready && renderer?.isReady()) {
       const { x, y } = s.mapFocusRequest;
@@ -256,6 +258,16 @@
     buildings = s.buildings ?? [];
     designations = s.designations ?? {};
     droppedItems = s.droppedItems ?? [];
+    // Camera follow: pan to the followed pawn whenever pawn positions update
+    if (cameraFollowPawnId && ready && renderer?.isReady()) {
+      const followed = pawns.find((p) => p.id === cameraFollowPawnId);
+      if (followed?.position) {
+        const { x, y } = followed.position;
+        const visW = (container?.clientWidth ?? 800) / tileWidth;
+        const visH = (container?.clientHeight ?? 600) / tileHeight;
+        setView(Math.round(x - visW / 2), Math.round(y - visH * 0.25));
+      }
+    }
     if (renderer?.isReady()) {
       const grid =
         worldMap.length > 0
@@ -608,6 +620,7 @@
         selRect = null;
         selectedPawnId = null;
         uiState.selectPawn(null);
+        uiState.setFollowPawn(null);
         redrawOverlay();
         break;
       case 'x':

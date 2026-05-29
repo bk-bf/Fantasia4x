@@ -18,6 +18,8 @@ interface UIState {
   mapFocusRequest: { x: number; y: number } | null;
   /** Currently selected pawn id — shared between Pawn Tab and the map canvas. */
   selectedPawnId: string | null;
+  /** Pawn id the camera should continuously follow. null = free camera. */
+  cameraFollowPawnId: string | null;
 }
 
 function createUIState() {
@@ -30,7 +32,8 @@ function createUIState() {
     activeZoneInstanceId: null,
     _screenBeforeDesignation: null,
     mapFocusRequest: null,
-    selectedPawnId: null
+    selectedPawnId: null,
+    cameraFollowPawnId: null
   };
 
   const { subscribe, set, update } = writable(initialState);
@@ -80,7 +83,10 @@ function createUIState() {
       update((state) => ({ ...state, mapFocusRequest: null })),
 
     selectPawn: (id: string | null) =>
-      update((state) => ({ ...state, selectedPawnId: id }))
+      update((state) => ({ ...state, selectedPawnId: id })),
+
+    setFollowPawn: (id: string | null) =>
+      update((state) => ({ ...state, cameraFollowPawnId: id }))
   };
 }
 
