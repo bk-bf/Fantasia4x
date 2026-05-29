@@ -12,7 +12,7 @@
  *   Scavenge   : ax+11..ax+26, ay-8..ay+7    (16×16, right)
  */
 
-import type { GameState, StockpileZone, ZoneInstance, ZoneFilter } from '../core/types';
+import type { GameState, StockpileZone, ZoneInstance, ZoneFilter, DroppedItem } from '../core/types';
 import { locationService } from '../services/LocationServices';
 import { LOCATION_TEMPLATES } from '../core/Locations';
 import itemsData from '../database/items.jsonc';
@@ -98,6 +98,28 @@ export function applyDevWorld(state: GameState, itemQty = 500): GameState {
     ALL_ITEM_IDS.forEach((id) => { stockpileInventory[id] = itemQty; });
     const aggregate: Record<string, number> = { ...stockpileInventory };
 
+    // --- 2b. Physical stored items (droppedItems with stored=true) ---
+    // Each unique item type gets one tile in the stockpile so the renderer
+    // shows glyphs and the capacity system tracks them correctly.
+    const stockpileTileCoords = stockpileTiles.map((key) => {
+        const [x, y] = key.split(',').map(Number);
+        return { key, x, y };
+    });
+    const storedDrops: DroppedItem[] = [];
+    let tileIdx = 0;
+    for (const [itemId, qty] of Object.entries(stockpileInventory)) {
+        if (tileIdx >= stockpileTileCoords.length) break;
+        const tile = stockpileTileCoords[tileIdx++];
+        storedDrops.push({
+            id: `dev-stored-${itemId}`,
+            resourceId: itemId,
+            x: tile.x,
+            y: tile.y,
+            quantity: qty,
+            stored: true
+        });
+    }
+
     // --- 3. StockpileZone (replaces zone-general) --------------------
     const stockpileZone: StockpileZone = {
         id: 'zone-general',
@@ -148,6 +170,7 @@ export function applyDevWorld(state: GameState, itemQty = 500): GameState {
         zoneInstances: [stockpileInstance, forageInstance, scavengeInstance],
         designations: designations as GameState['designations'],
         designationZoneId,
+        droppedItems: storedDrops,
         completedResearch: ALL_RESEARCH_IDS,
         availableResearch: [],
         currentResearch: undefined,
