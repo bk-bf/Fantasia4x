@@ -219,7 +219,7 @@
         "displayName"     : "Wildflower Patch",
         "objectSubType"   : "wildflowers",
         "walkable"        : true,
-        "charSpans"       : [ {"sheet": "plants", "from": 89, "to": 111} ],
+        "charSpans"       : [ {"sheet": "plants", "from": 89, "to": 93} ],
         "fg"              : [0.88, 0.42, 0.71],
         "bg"              : [0.09, 0.06, 0.06],
         "color"           : "#E06BB5",
@@ -308,56 +308,6 @@
                     "_TODO": "magic_crystal item TBD — rare arcane material; possible uses: enchanting reagent, mana amplification, spell catalyst, arcane focus component"
                 }
             ]
-        }
-    },
-    // Ordinary grass stand — cut for hay; bare-handed is slow, a flint sickle doubles speed.
-    {
-        "id"              : "grass_patch",
-        "displayName"     : "Grass Patch",
-        "objectSubType"   : "grass",
-        "walkable"        : true,
-        "charSpans"       : [ {"sheet": "plants", "from": 83, "to": 85} ],
-        "fg"              : [0.58, 0.72, 0.18],
-        "bg"              : [0.07, 0.09, 0.02],
-        "color"           : "#94B82E",
-        "spawn"           : { "subterrains": {"grass": 0.018, "dirt": 0.008, "savanna": 0.01} },
-        "nodeAmountRange" : [3, 7],
-        "designationTypes": ["harvest"],
-        "interaction"     : {
-            "action"         : "cut",
-            "workCategory"   : "foraging",
-            "workAmount"     : 6,
-            "toolRequirement": null,
-            "yields"         : [
-                {"itemId": "hay", "min": 2, "max": 4, "skillId": "foraging", "skillMultiplier": 0.15}
-            ],
-            "persistent"     : true,
-            "regrowthTurns"  : 600 // ~2 days at 300 turns/day
-        }
-    },
-    // Dense lush grass — found in deep_grass and tall_grass biomes; more hay per cut.
-    {
-        "id"              : "lush_grass_patch",
-        "displayName"     : "Lush Grass",
-        "objectSubType"   : "tall_grass",
-        "walkable"        : true,
-        "charSpans"       : [ {"sheet": "plants", "from": 85, "to": 88} ],
-        "fg"              : [0.44, 0.78, 0.12],
-        "bg"              : [0.06, 0.1, 0.02],
-        "color"           : "#70C71F",
-        "spawn"           : { "subterrains": {"deep_grass": 0.028, "tall_grass": 0.032} },
-        "nodeAmountRange" : [4, 9],
-        "designationTypes": ["harvest"],
-        "interaction"     : {
-            "action"         : "cut",
-            "workCategory"   : "foraging",
-            "workAmount"     : 6,
-            "toolRequirement": null,
-            "yields"         : [
-                {"itemId": "hay", "min": 5, "max": 10, "skillId": "foraging", "skillMultiplier": 0.2}
-            ],
-            "persistent"     : true,
-            "regrowthTurns"  : 900 // ~3 days at 300 turns/day; takes longer to regrow when cut heavily
         }
     },
     // Low scrubby brush — good plant fiber source in arid/transitional zones.
@@ -737,6 +687,36 @@
                     "_TODO": "peat item TBD — bog organic material; potential uses: fuel, soil amendment, preservative"
                 }
             ]
+        }
+    },
+    // ─────────────────────────────────────────────────────────────────────────
+    // GROUND COVER — placed last so all rarer resources get first pick per tile.
+    // High spawn rates fill unclaimed grass tiles; if a tree/bush/etc. already
+    // claimed the tile the break exits before these entries are reached.
+    // ─────────────────────────────────────────────────────────────────────────
+    // Ordinary grass stand — cut for hay; bare-handed is slow, a flint sickle doubles speed.
+    {
+        "id"              : "grass_patch",
+        "displayName"     : "Grass Patch",
+        "objectSubType"   : "grass",
+        "walkable"        : true,
+        "charSpans"       : [ {"sheet": "tiles", "from": 72, "to": 79} ],
+        "fg"              : [0.52, 0.68, 0.13],
+        "bg"              : [0.08, 0.06, 0.03],
+        "color"           : "#94B82E",
+        "spawn"           : { "subterrains": {"grass": 0.92, "dirt": 0.008, "savanna": 0.01} },
+        "nodeAmountRange" : [3, 7],
+        "designationTypes": ["harvest"],
+        "interaction"     : {
+            "action"         : "cut",
+            "workCategory"   : "foraging",
+            "workAmount"     : 6,
+            "toolRequirement": null,
+            "yields"         : [
+                {"itemId": "hay", "min": 2, "max": 4, "skillId": "foraging", "skillMultiplier": 0.15}
+            ],
+            "persistent"     : true,
+            "regrowthTurns"  : 600 // ~2 days at 300 turns/day
         }
     }
 ]
