@@ -276,8 +276,8 @@
         worldMap.length > 0
           ? buildGameGrid(worldMap, buildings, designations)
           : generatePlaceholderGrid();
-      overlayPawns(grid, pawns, selectedPawnId);
       overlayDroppedItems(grid, droppedItems);
+      overlayPawns(grid, pawns, selectedPawnId);
       renderer.setGrid(grid);
       // Re-snap to fit when the real map loads (placeholder vs. actual may differ in size)
       if (worldMap.length > 0 && canvas) {
@@ -379,8 +379,8 @@
   function redrawOverlay() {
     if (!renderer?.isReady() || worldMap.length === 0) return;
     const grid = buildGameGrid(worldMap, buildings, designations);
-    overlayPawns(grid, pawns, selectedPawnId);
     overlayDroppedItems(grid, droppedItems);
+    overlayPawns(grid, pawns, selectedPawnId);
 
     // Zone drag-paint preview
     if (zoneDragActive && designationMode) {
@@ -562,8 +562,8 @@
         worldMap.length > 0
           ? buildGameGrid(worldMap, buildings, designations)
           : generatePlaceholderGrid();
-      overlayPawns(grid, pawns, selectedPawnId);
       overlayDroppedItems(grid, droppedItems);
+      overlayPawns(grid, pawns, selectedPawnId);
       renderer.setGrid(grid);
 
       ready = true;

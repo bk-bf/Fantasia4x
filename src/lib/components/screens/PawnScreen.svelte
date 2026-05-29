@@ -30,6 +30,7 @@
   // Extracted Pawn components
   import PawnSelector from '../pawn/PawnSelector.svelte';
   import PawnOverview from '../pawn/PawnOverview.svelte';
+  import PawnHealth from '../pawn/PawnHealth.svelte';
   import PawnStats from '../pawn/PawnStats.svelte';
   import PawnNeeds from '../pawn/PawnNeeds.svelte';
   import PawnTraits from '../pawn/PawnTraits.svelte';
@@ -125,6 +126,7 @@
     <div class="pawn-content">
       {#if activeTab === 'status'}
         <PawnOverview pawn={selectedPawn} gameState={$gameState} />
+        <PawnHealth pawn={selectedPawn} />
         <PawnNeeds pawn={selectedPawn} gameState={$gameState} />
       {:else if activeTab === 'attributes'}
         <PawnStats pawn={selectedPawn} />
