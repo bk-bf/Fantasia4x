@@ -153,16 +153,8 @@
   let blueprintDragActive = false;
   let blueprintDragTiles = new Set<string>();
 
-  // Context popup for planned/in-progress buildings
-  let buildingPopup: {
-    placedId: string;
-    type: string;
-    status: string;
-    paused: boolean;
-    deconstructQueued: boolean;
-    screenX: number;
-    screenY: number;
-  } | null = null;
+  // Selected building (click-locked, like selectedPawnId)
+  let selectedBuildingId: string | null = null;
   let zoneAnchorX = 0;
   let zoneAnchorY = 0;
   let zoneEndX = 0;
@@ -186,6 +178,16 @@
 
   // When a pawn is selected its card locks the HUD regardless of hover position.
   $: selectedPawn = selectedPawnId ? (pawns.find((p) => p.id === selectedPawnId) ?? null) : null;
+
+  // Building under hovered tile (all statuses)
+  $: hoverBuilding =
+    hoverTileX >= 0 && hoverTileY >= 0
+      ? (buildings.find((b) => b.x === hoverTileX && b.y === hoverTileY) ?? null)
+      : null;
+  // Click-selected building (stays locked until Esc / click elsewhere)
+  $: selectedBuilding = selectedBuildingId
+    ? (buildings.find((b) => b.id === selectedBuildingId) ?? null)
+    : null;
 
   // Yellow box ring positioned over the selected pawn's tile on the map canvas.
   $: selectionRing = (() => {
@@ -478,51 +480,6 @@
       }
     }
 
-    // Selected resource tile highlight (yellow tint)
-    if (selectedResourceTile) {
-      const { x, y } = selectedResourceTile;
-      const t = grid.getTile(x, y);
-      if (t) {
-        grid.setTile(x, y, {
-          char: t.char,
-          foreground: { r: 1.0, g: 0.9, b: 0.1 },
-          background: { r: t.background.r * 0.4 + 0.14, g: t.background.g * 0.4 + 0.10, b: t.background.b * 0.4 },
-          position: { x, y }
-        });
-      }
-    }
-
-    // Similar-resource drag preview: green for matching, dimmed for non-matching
-    if (similarDragActive) {
-      const minX = Math.min(similarAnchorX, similarEndX);
-      const maxX = Math.max(similarAnchorX, similarEndX);
-      const minY = Math.min(similarAnchorY, similarEndY);
-      const maxY = Math.max(similarAnchorY, similarEndY);
-      for (let ry = minY; ry <= maxY; ry++) {
-        for (let rx = minX; rx <= maxX; rx++) {
-          const wt = worldMap[ry]?.[rx];
-          if (!wt) continue;
-          const t = grid.getTile(rx, ry);
-          if (!t) continue;
-          if ((wt.resources?.[similarDragResourceId] ?? 0) > 0) {
-            grid.setTile(rx, ry, {
-              char: t.char,
-              foreground: { r: 0.25, g: 1.0, b: 0.35 },
-              background: { r: t.background.r * 0.3 + 0.03, g: t.background.g * 0.3 + 0.16, b: t.background.b * 0.3 },
-              position: { x: rx, y: ry }
-            });
-          } else {
-            grid.setTile(rx, ry, {
-              char: t.char,
-              foreground: { r: t.foreground.r * 0.35, g: t.foreground.g * 0.35, b: t.foreground.b * 0.35 },
-              background: t.background,
-              position: { x: rx, y: ry }
-            });
-          }
-        }
-      }
-    }
-
     renderer.setGrid(grid);
   }
 
@@ -576,11 +533,6 @@
   async function handleTileClick() {
     if (hoverTileX < 0 || hoverTileY < 0) return;
 
-    // Close any open popup when clicking the map
-    if (buildingPopup) {
-      buildingPopup = null;
-    }
-
     // Designation mode: handled by drag — single-click still paints one tile
     if (designationMode) {
       gameState.updateWithSave((state) =>
@@ -596,50 +548,31 @@
       return;
     }
 
-    // Click on a planned/under_construction building → show context popup
-    const clickedBuilding = buildings.find(
-      (b) => b.x === hoverTileX && b.y === hoverTileY && b.status !== 'complete'
-    );
+    // Click on any building at this tile → select it, deselect pawn
+    const clickedBuilding = buildings.find((b) => b.x === hoverTileX && b.y === hoverTileY);
     if (clickedBuilding) {
-      buildingPopup = {
-        placedId: clickedBuilding.id,
-        type: clickedBuilding.type,
-        status: clickedBuilding.status,
-        paused: clickedBuilding.paused ?? false,
-        deconstructQueued: false,
-        screenX: (hoverTileX - viewX) * tileWidth,
-        screenY: Math.max(4, (hoverTileY - viewY) * tileHeight - 68)
-      };
+      selectedBuildingId = clickedBuilding.id;
+      selectedPawnId = null;
+      showShelterAssign = false;
+      uiState.selectPawn(null);
+      redrawOverlay();
       return;
     }
 
-    // Click on a complete building → show context popup with DECONSTRUCT
-    const clickedComplete = buildings.find(
-      (b) => b.x === hoverTileX && b.y === hoverTileY && b.status === 'complete'
-    );
-    if (clickedComplete) {
-      buildingPopup = {
-        placedId: clickedComplete.id,
-        type: clickedComplete.type,
-        status: clickedComplete.status,
-        paused: false,
-        deconstructQueued: clickedComplete.deconstructQueued ?? false,
-        screenX: (hoverTileX - viewX) * tileWidth,
-        screenY: Math.max(4, (hoverTileY - viewY) * tileHeight - 68)
-      };
-      return;
-    }
-
-    // Click on a pawn → select it
+    // Click on a pawn → select it, deselect building
     const clickedPawn = pawns.find(
       (p) => p.position?.x === hoverTileX && p.position?.y === hoverTileY
     );
     if (clickedPawn) {
       selectedPawnId = clickedPawn.id;
+      selectedBuildingId = null;
       uiState.selectPawn(clickedPawn.id);
       redrawOverlay();
       return;
     }
+
+    // Click on empty tile → deselect both
+    selectedBuildingId = null;
     // TODO: draft-control mechanic will re-enable direct pawn movement later.
     // For now, pawns must only move through the automated AI and turn processing.
     //
@@ -798,8 +731,8 @@
         e.preventDefault();
         break;
       case 'Escape':
-        if (buildingPopup) {
-          buildingPopup = null;
+        if (selectedBuildingId) {
+          selectedBuildingId = null;
           break;
         }
         if (blueprintBuildingId) {
@@ -1003,38 +936,39 @@
   }
 
   function cancelBlueprintBuilding() {
-    if (!buildingPopup) return;
-    gameState.updateWithSave((state) =>
-      buildingService.cancelBuilding(buildingPopup!.placedId, state)
-    );
-    buildingPopup = null;
+    if (!selectedBuilding) return;
+    const id = selectedBuilding.id;
+    gameState.updateWithSave((state) => buildingService.cancelBuilding(id, state));
+    selectedBuildingId = null;
     redrawOverlay();
   }
 
   function deconstructBuilding() {
-    if (!buildingPopup) return;
-    gameState.updateWithSave((state) =>
-      buildingService.deconstructBuilding(buildingPopup!.placedId, state)
-    );
-    buildingPopup = null;
+    if (!selectedBuilding) return;
+    const id = selectedBuilding.id;
+    gameState.updateWithSave((state) => buildingService.deconstructBuilding(id, state));
     redrawOverlay();
   }
 
   function cancelDeconstructBuilding() {
-    if (!buildingPopup) return;
-    gameState.updateWithSave((state) =>
-      buildingService.cancelDeconstructBuilding(buildingPopup!.placedId, state)
-    );
-    buildingPopup = null;
+    if (!selectedBuilding) return;
+    const id = selectedBuilding.id;
+    gameState.updateWithSave((state) => buildingService.cancelDeconstructBuilding(id, state));
     redrawOverlay();
   }
 
+  let showShelterAssign = false;
+  function assignShelterPawn(pawnId: string | null) {
+    if (!selectedBuilding) return;
+    const id = selectedBuilding.id;
+    gameState.updateWithSave((state) => buildingService.assignShelterPawn(id, pawnId, state));
+    showShelterAssign = false;
+  }
+
   function togglePauseBlueprintBuilding() {
-    if (!buildingPopup) return;
-    gameState.updateWithSave((state) =>
-      buildingService.togglePausedBuilding(buildingPopup!.placedId, state)
-    );
-    buildingPopup = { ...buildingPopup, paused: !buildingPopup.paused };
+    if (!selectedBuilding) return;
+    const id = selectedBuilding.id;
+    gameState.updateWithSave((state) => buildingService.togglePausedBuilding(id, state));
     redrawOverlay();
   }
 
@@ -1127,44 +1061,6 @@
       [◆ {buildingService.getBuildingById(blueprintBuildingId)?.name ?? blueprintBuildingId}] — drag
       to paint · Esc cancel
     </div>
-  {:else if similarDragMode}
-    <div class="designation-hud" style="border-color:#ccaa33;color:#ffdd55;">
-      [SELECT SIMILAR: {similarDragResourceId.replace(/_/g, ' ').toUpperCase()}] drag to designate
-      all · Esc cancel{#if similarDragActive} — ({Math.abs(similarEndX - similarAnchorX) + 1}×{Math.abs(similarEndY - similarAnchorY) + 1}){/if}
-    </div>
-  {/if}
-  {#if buildingPopup}
-    {@const bDef = buildingService.getBuildingById(buildingPopup.type)}
-    <div
-      class="building-popup"
-      style="left:{buildingPopup.screenX}px; top:{buildingPopup.screenY}px;"
-    >
-      <div class="building-popup__name">{bDef?.name ?? buildingPopup.type}</div>
-      <div class="building-popup__status">
-        [{buildingPopup.status.replace('_', ' ')}{buildingPopup.paused ? ' • paused' : ''}]
-      </div>
-      <div class="building-popup__actions">
-        {#if buildingPopup.status === 'complete'}
-          {@const cost = bDef?.buildingCost ?? {}}
-          {#if buildingPopup.deconstructQueued}
-            <div class="building-popup__refund">queued — will be removed next turn</div>
-            <button on:click={cancelDeconstructBuilding}>CANCEL DEMOLITION</button>
-          {:else}
-            {#if Object.keys(cost).length > 0}
-              <div class="building-popup__refund">
-                refund: {Object.entries(cost).map(([id, n]) => `${Math.floor(Number(n) * 0.5)} ${id.replace(/_/g, ' ')}`).join(' · ')}
-              </div>
-            {/if}
-            <button class="cancel-btn" on:click={deconstructBuilding}>DECONSTRUCT</button>
-          {/if}
-        {:else}
-          <button on:click={togglePauseBlueprintBuilding}
-            >{buildingPopup.paused ? 'RESUME' : 'PAUSE'}</button
-          >
-          <button class="cancel-btn" on:click={cancelBlueprintBuilding}>CANCEL</button>
-        {/if}
-      </div>
-    </div>
   {/if}
   {#if selectedPawn}
     <!-- Selected pawn card — locked to this pawn regardless of mouse hover -->
@@ -1205,6 +1101,75 @@
       {#if selectedPawn.position}
         <div class="pawn-pos">pos ({selectedPawn.position.x},{selectedPawn.position.y})</div>
       {/if}
+    </div>
+  {:else if selectedBuilding}
+    {@const bDef = buildingService.getBuildingById(selectedBuilding.type)}
+    {@const isBlueprint = selectedBuilding.status !== 'complete'}
+    {@const workDone = selectedBuilding.workDone ?? 0}
+    {@const workReq = selectedBuilding.workRequired ?? bDef?.workAmount ?? 1}
+    <div class="bld-row" on:mousedown|stopPropagation on:mouseup|stopPropagation>
+      <div class="tile-hud tile-hud--building tile-hud--selected-building">
+        <div class="bld-header">
+          <span class="bld-name">{bDef?.name ?? selectedBuilding.type}</span>
+          <span class="bld-status">
+            [{isBlueprint
+              ? selectedBuilding.paused
+                ? 'paused'
+                : 'building'
+              : 'complete'}{selectedBuilding.deconstructQueued ? ' ⊢ demolish' : ''}]
+          </span>
+        </div>
+        {#if bDef?.description}
+          <div class="bld-desc">{bDef.description}</div>
+        {/if}
+        {#if isBlueprint}
+          <div class="bld-progress">
+            [{jobProgressBar(workReq > 0 ? workDone / workReq : 0)}] {workDone}/{workReq} work
+          </div>
+        {:else if selectedBuilding.deconstructQueued}
+          {@const dDone = selectedBuilding.deconstructWorkDone ?? 0}
+          {@const dReq = selectedBuilding.deconstructWorkRequired ?? 1}
+          <div class="bld-progress">
+            [{jobProgressBar(dReq > 0 ? dDone / dReq : 0)}] {dDone}/{dReq} work
+          </div>
+          <div class="bld-note">⊢ demolishing…</div>
+        {:else}
+          {@const cost = bDef?.buildingCost ?? {}}
+          {#if Object.keys(cost).length > 0}
+            <div class="bld-refund">
+              refund ½: {Object.entries(cost)
+                .map(([id, n]) => `${Math.floor(Number(n) * 0.5)}×${id.replace(/_/g, ' ')}`)
+                .join(' ')}
+            </div>
+          {/if}
+        {/if}
+      </div>
+      <div class="bld-side-actions">
+        {#if isBlueprint}
+          <button
+            class="bld-btn bld-btn--sq"
+            title={selectedBuilding.paused ? 'Resume' : 'Pause'}
+            on:click={togglePauseBlueprintBuilding}>{selectedBuilding.paused ? '▶' : '⏸'}</button
+          >
+          <button
+            class="bld-btn bld-btn--danger bld-btn--sq"
+            title="Abort"
+            on:click={cancelBlueprintBuilding}>✕</button
+          >
+        {:else if selectedBuilding.deconstructQueued}
+          <button
+            class="bld-btn bld-btn--sq"
+            title="Cancel demolition"
+            on:click={cancelDeconstructBuilding}>↩</button
+          >
+        {:else}
+          <button
+            class="bld-btn bld-btn--danger bld-btn--sq"
+            title="Deconstruct"
+            on:click={deconstructBuilding}>&#x2692;</button
+          >
+        {/if}
+      </div>
     </div>
   {:else if hasSelection}
     <!-- Multi-tile drag-select summary -->
@@ -1260,6 +1225,38 @@
             : ''}
         </div>
         <div class="pawn-progress">[{jobProgressBar(hoverPawn.activeJob.progress ?? 0)}]</div>
+      {/if}
+    </div>
+  {:else if hoverBuilding && !hoverPawn}
+    {@const bDef = buildingService.getBuildingById(hoverBuilding.type)}
+    {@const isBlueprint = hoverBuilding.status !== 'complete'}
+    <div class="tile-hud tile-hud--building">
+      <div class="bld-header">
+        <span class="bld-name">{bDef?.name ?? hoverBuilding.type}</span>
+        <span class="bld-status">
+          [{isBlueprint
+            ? hoverBuilding.paused
+              ? 'paused'
+              : 'building'
+            : 'complete'}{hoverBuilding.deconstructQueued ? ' ⊢ demolish' : ''}]
+        </span>
+      </div>
+      {#if isBlueprint}
+        {@const workDone = hoverBuilding.workDone ?? 0}
+        {@const workReq = hoverBuilding.workRequired ?? bDef?.workAmount ?? 1}
+        <div class="bld-progress">
+          [{jobProgressBar(workReq > 0 ? workDone / workReq : 0)}] {workDone}/{workReq} work
+        </div>
+      {:else if hoverBuilding.deconstructQueued}
+        {@const dDone = hoverBuilding.deconstructWorkDone ?? 0}
+        {@const dReq = hoverBuilding.deconstructWorkRequired ?? 1}
+        <div class="bld-progress">
+          [{jobProgressBar(dReq > 0 ? dDone / dReq : 0)}] {dDone}/{dReq} work
+        </div>
+        <div class="bld-note">⊢ demolishing…</div>
+      {/if}
+      {#if bDef?.description}
+        <div class="bld-desc">{bDef.description}</div>
       {/if}
     </div>
   {:else if hoverDroppedItem}
@@ -1500,57 +1497,117 @@
     z-index: 10;
   }
   .building-popup {
+    display: none; /* removed — building info now lives in the tile-hud */
+  }
+  /* ── Building HUD card ─────────────────────────── */
+  .tile-hud--building {
+    border-color: #4a8aaa;
+    background: rgba(4, 14, 24, 0.95);
+    color: #7ab8cc;
+    min-width: 160px;
+    max-width: 300px;
+    white-space: normal;
+    pointer-events: none;
+  }
+  .bld-row {
     position: absolute;
-    background: rgba(0, 10, 25, 0.93);
-    border: 1px solid #00aacc;
-    color: #88ccee;
-    font-family: 'Courier New', monospace;
-    font-size: 11px;
-    padding: 5px 8px;
-    z-index: 25;
+    bottom: 6px;
+    left: 6px;
+    display: flex;
+    align-items: flex-start;
+    gap: 4px;
     pointer-events: all;
-    min-width: 110px;
   }
-  .building-popup__name {
-    color: #ddeeff;
-    font-weight: bold;
-    margin-bottom: 2px;
-    font-size: 11px;
+  .tile-hud--selected-building {
+    position: static;
+    border-color: #00ccee;
+    background: rgba(2, 12, 24, 0.97);
+    color: #88ddee;
+    pointer-events: all;
   }
-  .building-popup__status {
-    color: #4499bb;
-    font-size: 10px;
-    margin-bottom: 5px;
-  }
-  .building-popup__actions {
+  .bld-side-actions {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    align-self: stretch;
+    gap: 3px;
   }
-  .building-popup__refund {
-    font-size: 9px;
-    color: #88aabb;
+  .bld-side-actions .bld-btn--sq {
+    flex: 1;
+    height: auto;
+  }
+  .bld-header {
+    display: flex;
+    gap: 5px;
+    align-items: baseline;
     margin-bottom: 2px;
   }
-  .building-popup__actions button {
-    background: #0a1a2a;
-    border: 1px solid #00aacc;
-    color: #66bbdd;
+  .bld-name {
+    color: #cceeff;
+    font-weight: bold;
+    font-size: 11px;
+  }
+  .bld-status {
+    color: #3a8aaa;
+    font-size: 9px;
+    flex: 1;
+  }
+  .bld-actions {
+    display: none; /* actions moved to bld-side-actions */
+  }
+  .bld-desc {
+    color: #5a8898;
+    font-size: 9px;
+    margin-top: 1px;
+    line-height: 1.4;
+  }
+  .bld-progress {
+    color: #66aabb;
+    font-size: 9px;
+    margin-top: 2px;
+  }
+  .bld-note {
+    color: #cc8833;
+    font-size: 9px;
+    margin-top: 2px;
+  }
+  .bld-refund {
+    color: #557788;
+    font-size: 9px;
+    margin-top: 2px;
+  }
+  .bld-actions {
+    display: flex;
+    gap: 4px;
+    margin-top: 4px;
+  }
+  .bld-btn {
+    background: #040e18;
+    border: 1px solid #2a7a99;
+    color: #55aacc;
     font-family: 'Courier New', monospace;
     font-size: 10px;
-    padding: 2px 6px;
+    padding: 2px 7px;
     cursor: pointer;
+    line-height: 1.3;
   }
-  .building-popup__actions button:hover {
-    background: #0d2233;
-    color: #aaddff;
+  .bld-btn:hover {
+    background: #061828;
+    color: #99ddee;
   }
-  .building-popup__actions .cancel-btn {
-    border-color: #cc3322;
-    color: #ee6655;
+  .bld-btn--danger {
+    border-color: #aa3322;
+    color: #dd6655;
   }
-  .building-popup__actions .cancel-btn:hover {
-    background: #2a0a08;
+  .bld-btn--danger:hover {
+    background: #200806;
+    color: #ff8877;
+  }
+  .bld-btn--sq {
+    padding: 2px 6px;
+    font-size: 13px;
+    line-height: 1;
+    min-width: 24px;
+    text-align: center;
   }
   .tile-coord {
     color: #e8b86a;
