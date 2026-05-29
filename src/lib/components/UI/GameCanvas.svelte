@@ -549,9 +549,7 @@
     }
 
     // Click on any building at this tile → select it, deselect pawn
-    const clickedBuilding = buildings.find(
-      (b) => b.x === hoverTileX && b.y === hoverTileY
-    );
+    const clickedBuilding = buildings.find((b) => b.x === hoverTileX && b.y === hoverTileY);
     if (clickedBuilding) {
       selectedBuildingId = clickedBuilding.id;
       selectedPawnId = null;
@@ -1100,36 +1098,65 @@
     {@const isBlueprint = selectedBuilding.status !== 'complete'}
     {@const workDone = selectedBuilding.workDone ?? 0}
     {@const workReq = selectedBuilding.workRequired ?? bDef?.workAmount ?? 1}
-    <div class="bld-row">
+    <div class="bld-row" on:mousedown|stopPropagation on:mouseup|stopPropagation>
       <div class="tile-hud tile-hud--building tile-hud--selected-building">
         <div class="bld-header">
           <span class="bld-name">{bDef?.name ?? selectedBuilding.type}</span>
           <span class="bld-status">
-            [{isBlueprint ? (selectedBuilding.paused ? 'paused' : 'building') : 'complete'}{selectedBuilding.deconstructQueued ? ' ⊢ demolish' : ''}]
+            [{isBlueprint
+              ? selectedBuilding.paused
+                ? 'paused'
+                : 'building'
+              : 'complete'}{selectedBuilding.deconstructQueued ? ' ⊢ demolish' : ''}]
           </span>
         </div>
         {#if bDef?.description}
           <div class="bld-desc">{bDef.description}</div>
         {/if}
         {#if isBlueprint}
-          <div class="bld-progress">[{jobProgressBar(workReq > 0 ? workDone / workReq : 0)}] {workDone}/{workReq} work</div>
+          <div class="bld-progress">
+            [{jobProgressBar(workReq > 0 ? workDone / workReq : 0)}] {workDone}/{workReq} work
+          </div>
         {:else if selectedBuilding.deconstructQueued}
-          <div class="bld-note">⊢ queued for demolition — removed next turn</div>
+          {@const dDone = selectedBuilding.deconstructWorkDone ?? 0}
+          {@const dReq = selectedBuilding.deconstructWorkRequired ?? 1}
+          <div class="bld-progress">[{jobProgressBar(dReq > 0 ? dDone / dReq : 0)}] {dDone}/{dReq} work</div>
+          <div class="bld-note">⊢ demolishing…</div>
         {:else}
           {@const cost = bDef?.buildingCost ?? {}}
           {#if Object.keys(cost).length > 0}
-            <div class="bld-refund">refund ½: {Object.entries(cost).map(([id, n]) => `${Math.floor(Number(n) * 0.5)}×${id.replace(/_/g, ' ')}`).join(' ')}</div>
+            <div class="bld-refund">
+              refund ½: {Object.entries(cost)
+                .map(([id, n]) => `${Math.floor(Number(n) * 0.5)}×${id.replace(/_/g, ' ')}`)
+                .join(' ')}
+            </div>
           {/if}
         {/if}
       </div>
       <div class="bld-side-actions">
         {#if isBlueprint}
-          <button class="bld-btn bld-btn--sq" title={selectedBuilding.paused ? 'Resume' : 'Pause'} on:click={togglePauseBlueprintBuilding}>{selectedBuilding.paused ? '▶' : '⏸'}</button>
-          <button class="bld-btn bld-btn--danger bld-btn--sq" title="Abort" on:click={cancelBlueprintBuilding}>✕</button>
+          <button
+            class="bld-btn bld-btn--sq"
+            title={selectedBuilding.paused ? 'Resume' : 'Pause'}
+            on:click={togglePauseBlueprintBuilding}>{selectedBuilding.paused ? '▶' : '⏸'}</button
+          >
+          <button
+            class="bld-btn bld-btn--danger bld-btn--sq"
+            title="Abort"
+            on:click={cancelBlueprintBuilding}>✕</button
+          >
         {:else if selectedBuilding.deconstructQueued}
-          <button class="bld-btn bld-btn--sq" title="Cancel demolition" on:click={cancelDeconstructBuilding}>↩</button>
+          <button
+            class="bld-btn bld-btn--sq"
+            title="Cancel demolition"
+            on:click={cancelDeconstructBuilding}>↩</button
+          >
         {:else}
-          <button class="bld-btn bld-btn--danger bld-btn--sq" title="Deconstruct" on:click={deconstructBuilding}>&#x2692;</button>
+          <button
+            class="bld-btn bld-btn--danger bld-btn--sq"
+            title="Deconstruct"
+            on:click={deconstructBuilding}>&#x2692;</button
+          >
         {/if}
       </div>
     </div>
@@ -1196,13 +1223,24 @@
       <div class="bld-header">
         <span class="bld-name">{bDef?.name ?? hoverBuilding.type}</span>
         <span class="bld-status">
-          [{isBlueprint ? (hoverBuilding.paused ? 'paused' : 'building') : 'complete'}{hoverBuilding.deconstructQueued ? ' ⊢ demolish' : ''}]
+          [{isBlueprint
+            ? hoverBuilding.paused
+              ? 'paused'
+              : 'building'
+            : 'complete'}{hoverBuilding.deconstructQueued ? ' ⊢ demolish' : ''}]
         </span>
       </div>
       {#if isBlueprint}
         {@const workDone = hoverBuilding.workDone ?? 0}
         {@const workReq = hoverBuilding.workRequired ?? bDef?.workAmount ?? 1}
-        <div class="bld-progress">[{jobProgressBar(workReq > 0 ? workDone / workReq : 0)}] {workDone}/{workReq} work</div>
+        <div class="bld-progress">
+          [{jobProgressBar(workReq > 0 ? workDone / workReq : 0)}] {workDone}/{workReq} work
+        </div>
+      {:else if hoverBuilding.deconstructQueued}
+        {@const dDone = hoverBuilding.deconstructWorkDone ?? 0}
+        {@const dReq = hoverBuilding.deconstructWorkRequired ?? 1}
+        <div class="bld-progress">[{jobProgressBar(dReq > 0 ? dDone / dReq : 0)}] {dDone}/{dReq} work</div>
+        <div class="bld-note">⊢ demolishing…</div>
       {/if}
       {#if bDef?.description}
         <div class="bld-desc">{bDef.description}</div>

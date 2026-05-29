@@ -13,9 +13,10 @@
  * turn-based ticks and Fantasia4x GameState immutability.
  */
 
-import type { GameState, Pawn, ConditionDef, ConditionStage } from '../core/types';
+import type { GameState, Pawn, Building, ConditionDef, ConditionStage } from '../core/types';
 import { addToStockpileZone } from '../core/GameState';
 import ITEMS_DATABASE from '../database/items.jsonc';
+import BUILDINGS_DATABASE_RAW from '../database/buildings.jsonc';
 import conditionsData from '../database/conditions.jsonc';
 import { jobService, BASE_WORK_RATE } from '../services/JobService';
 import { pawnService } from '../services/PawnService';
@@ -76,6 +77,8 @@ const SLEEP_WAKE_THRESHOLD_HUNGRY = 30; // Allow early waking at 30% to go eat
 
 // ===== CONDITION CONSTANTS (SURVIVAL-HEALTH spec) =====
 const CONDITIONS_DB = conditionsData as unknown as ConditionDef[];
+// Building definitions (for sleep quality lookup)
+const BUILDINGS_DB = BUILDINGS_DATABASE_RAW as unknown as Building[];
 const MALNUTRITION_ONSET_HUNGER = 87;    // same as CRITICAL_HUNGER — condition starts here
 const MALNUTRITION_SAFE_HUNGER = 40;    // below this threshold, condition recovers
 const MALNUTRITION_RATE_CRITICAL = 0.0008; // +/turn at hunger 87–99  → lethal in ~1250 turns ≈ 4.2 days
@@ -416,12 +419,24 @@ function findNearestRestBuilding(
     gs: GameState
 ): { x: number; y: number; buildingId: string } | null {
     if (!pawn.position) return null;
-    let best: { x: number; y: number; buildingId: string; dist: number } | null = null;
+    // 1. Prefer a building specifically assigned to this pawn.
+    const assigned = (gs.buildings ?? []).find(
+        (b) => b.status === 'complete' && REST_TYPES.includes(b.type) && b.assignedPawnId === pawn.id
+    );
+    if (assigned) return { x: assigned.x, y: assigned.y, buildingId: assigned.id };
+    // 2. Among unassigned buildings pick the highest quality one (distance as tie-break).
+    //    Skip buildings owned by another pawn.
+    let best: { x: number; y: number; buildingId: string; score: number } | null = null;
     for (const b of gs.buildings ?? []) {
         if (b.status !== 'complete') continue;
         if (!REST_TYPES.includes(b.type)) continue;
-        const dist = Math.abs(b.x - pawn.position.x) + Math.abs(b.y - pawn.position.y);
-        if (!best || dist < best.dist) best = { x: b.x, y: b.y, buildingId: b.id, dist };
+        if (b.assignedPawnId && b.assignedPawnId !== pawn.id) continue; // belongs to another pawn
+        const def = BUILDINGS_DB.find((d) => d.id === b.type);
+        const quality = (def?.effects?.sleepQuality ?? 0) + (def?.effects?.fatigueRecovery ?? 0);
+        const dist = Math.abs(b.x - pawn.position!.x) + Math.abs(b.y - pawn.position!.y);
+        // Quality dominates; distance is a small tie-break penalty (1 pt per 100 tiles).
+        const score = quality * 100 - dist * 0.01;
+        if (!best || score > best.score) best = { x: b.x, y: b.y, buildingId: b.id, score };
     }
     return best ? { x: best.x, y: best.y, buildingId: best.buildingId } : null;
 }
@@ -435,13 +450,18 @@ function isAtFoodBuilding(pawn: Pawn, gs: GameState): boolean {
     );
 }
 
-/** True when the pawn is adjacent to a shelter (better sleep). */
-function isAtRestBuilding(pawn: Pawn, gs: GameState): boolean {
-    if (!pawn.position) return false;
-    return (gs.buildings ?? []).some(
+/** Returns the complete rest building the pawn is adjacent to, or null. */
+function getRestBuildingAtPawn(pawn: Pawn, gs: GameState): import('../core/types').PlacedBuilding | null {
+    if (!pawn.position) return null;
+    return (gs.buildings ?? []).find(
         (b) => b.status === 'complete' && REST_TYPES.includes(b.type) &&
             isAdjacent(pawn.position!.x, pawn.position!.y, b.x, b.y)
-    );
+    ) ?? null;
+}
+
+/** True when the pawn is adjacent to a shelter (better sleep). */
+function isAtRestBuilding(pawn: Pawn, gs: GameState): boolean {
+    return getRestBuildingAtPawn(pawn, gs) !== null;
 }
 
 /**
@@ -1067,7 +1087,7 @@ function handleWorking(pawn: Pawn, gameState: GameState): GameState {
         return jobService.releaseJob(pawn.id, jobId, goIdle(pawn, gameState));
     }
 
-    const workPoints = activeJob.type === 'construct'
+    const workPoints = (activeJob.type === 'construct' || activeJob.type === 'deconstruct')
         ? Math.max(1, pawn.skills['skill_construction'] ?? 0)
         : BASE_WORK_RATE;
     const afterAdvance = jobService.advanceJob(jobId, workPoints, gameState);

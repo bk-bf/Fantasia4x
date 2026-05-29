@@ -55,7 +55,11 @@ export interface PlacedBuilding {
 	fuel?: number;               // current fuel units remaining
 	lit?: boolean;               // campfire is burning right now
 	// Deconstruction
-	deconstructQueued?: boolean; // player has queued this building for demolition
+	deconstructQueued?: boolean;       // player has queued this building for demolition
+	deconstructWorkRequired?: number;  // work points to demolish (½ workAmount)
+	deconstructWorkDone?: number;      // accumulated demolition work points
+	// Shelter assignment
+	assignedPawnId?: string;           // pawn who owns this shelter; only they will use it
 }
 
 // ===== PHASE 5 NEW TYPES =====
@@ -81,7 +85,7 @@ export interface DroppedItem {
 
 export interface Job {
 	id: string;
-	type: 'harvest' | 'construct' | 'haul' | 'craft' | 'eat' | 'sleep' | 'light' | 'refuel';
+	type: 'harvest' | 'construct' | 'haul' | 'craft' | 'eat' | 'sleep' | 'light' | 'refuel' | 'deconstruct';
 	targetX: number;
 	targetY: number;
 	resourceId?: string;    // harvest / haul: which resource
@@ -327,7 +331,7 @@ export interface Pawn {
 	// Job payload for active state machine job
 	activeJob?: {
 		/** Phase 5: 'harvest'|'construct'|'craft'|'haul' use work-point jobs; 'need' for eat/sleep */
-		type: 'harvest' | 'construct' | 'craft' | 'haul' | 'need';
+		type: 'harvest' | 'construct' | 'craft' | 'haul' | 'need' | 'deconstruct';
 		/** Phase 5a: id of the Job in gameState.jobs[] (null for need-type jobs) */
 		jobId?: string;
 		targetX: number;

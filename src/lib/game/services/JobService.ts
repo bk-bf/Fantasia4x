@@ -13,6 +13,7 @@ import type { GameState, Job, Pawn, DroppedItem, ZoneFilter } from '../core/type
 import itemsData from '../database/items.jsonc';
 import { resourceObjectService } from './ResourceObjectService';
 import { itemService } from './ItemService';
+import { buildingService } from './BuildingService';
 
 const ITEMS_DATABASE = itemsData as unknown as import('../core/types').Item[];
 
@@ -47,6 +48,9 @@ class JobServiceImpl {
 
         // --- Construct jobs from incomplete placed buildings ---
         jobs = this._syncConstructJobs(jobs, gameState);
+
+        // --- Deconstruct jobs from buildings queued for demolition ---
+        jobs = this._syncDeconstructJobs(jobs, gameState);
 
         // --- Craft jobs from crafting queue ---
         jobs = this._syncCraftJobs(jobs, gameState);
@@ -106,6 +110,13 @@ class JobServiceImpl {
                 b.id === job.buildingId
                     ? { ...b, status: 'under_construction' as const, workDone: newWorkDone }
                     : b
+            );
+            return { ...gameState, jobs: newJobs, buildings: newBuildings };
+        }
+
+        if (job.type === 'deconstruct' && job.buildingId) {
+            const newBuildings = (gameState.buildings ?? []).map((b) =>
+                b.id === job.buildingId ? { ...b, deconstructWorkDone: newWorkDone } : b
             );
             return { ...gameState, jobs: newJobs, buildings: newBuildings };
         }
@@ -218,6 +229,35 @@ class JobServiceImpl {
         return jobs;
     }
 
+    private _syncDeconstructJobs(jobs: Job[], gs: GameState): Job[] {
+        // Remove deconstruct jobs for buildings no longer queued or already gone
+        jobs = jobs.filter((j) => {
+            if (j.type !== 'deconstruct') return true;
+            const b = (gs.buildings ?? []).find((b) => b.id === j.buildingId);
+            return b && b.deconstructQueued === true;
+        });
+
+        // Add new deconstruct jobs for buildings freshly queued
+        for (const building of gs.buildings ?? []) {
+            if (!building.deconstructQueued) continue;
+            const exists = jobs.some((j) => j.type === 'deconstruct' && j.buildingId === building.id);
+            if (!exists) {
+                jobs.push({
+                    id: `deconstruct-${building.id}-${Date.now()}`,
+                    type: 'deconstruct',
+                    targetX: building.x,
+                    targetY: building.y,
+                    buildingId: building.id,
+                    workRequired: building.deconstructWorkRequired ?? 1,
+                    workDone: building.deconstructWorkDone ?? 0,
+                    claimedBy: null
+                });
+            }
+        }
+
+        return jobs;
+    }
+
     private _syncConstructJobs(jobs: Job[], gs: GameState): Job[] {
         // Remove construct jobs for buildings that no longer exist or are complete
         jobs = jobs.filter((j) => {
@@ -302,6 +342,9 @@ class JobServiceImpl {
                 break;
             case 'construct':
                 state = this._completeConstruct(job, state);
+                break;
+            case 'deconstruct':
+                state = this._completeDeconstruct(job, state);
                 break;
             case 'craft':
                 state = this._completeCraft(job, state);
@@ -502,6 +545,36 @@ class JobServiceImpl {
         newStockpile[drop.resourceId] = (newStockpile[drop.resourceId] ?? 0) + drop.quantity;
         const baseState = { ...gs, droppedItems: newDropped, stockpile: newStockpile };
         return itemService.addItems({ [drop.resourceId]: drop.quantity }, baseState);
+    }
+
+    private _completeDeconstruct(job: Job, gs: GameState): GameState {
+        if (!job.buildingId) return gs;
+        const building = (gs.buildings ?? []).find((b) => b.id === job.buildingId);
+        if (!building) return gs;
+
+        // Refund 50% of building cost to stockpile
+        const def = buildingService.getBuildingById(building.type);
+        const newStockpile = { ...(gs.stockpile ?? {}) };
+        if (def?.buildingCost) {
+            for (const [itemId, cost] of Object.entries(def.buildingCost)) {
+                const refund = Math.floor(Number(cost) * 0.5);
+                if (refund > 0) newStockpile[itemId] = (newStockpile[itemId] ?? 0) + refund;
+            }
+        }
+
+        // Keep buildingCounts in sync
+        const newCounts = { ...(gs.buildingCounts ?? {}) };
+        if (newCounts[building.type]) {
+            newCounts[building.type] = Math.max(0, newCounts[building.type] - 1);
+        }
+
+        console.log(`[JobService] Deconstruction complete: ${building.type} (${building.id})`);
+        return {
+            ...gs,
+            stockpile: newStockpile,
+            buildingCounts: newCounts,
+            buildings: (gs.buildings ?? []).filter((b) => b.id !== job.buildingId)
+        };
     }
 
     private _completeConstruct(job: Job, gs: GameState): GameState {
@@ -735,6 +808,8 @@ class JobServiceImpl {
                 return def?.interaction.workCategory ?? 'foraging';
             }
             case 'construct':
+                return 'construction';
+            case 'deconstruct':
                 return 'construction';
             case 'craft':
                 return 'crafting';

@@ -65,6 +65,8 @@ export interface BuildingService {
 	cancelDeconstructBuilding(instanceId: string, gameState: GameState): GameState;
 	/** Remove all buildings flagged deconstructQueued and refund 50% of their materials. Called each turn. */
 	processDeconstructionQueue(gameState: GameState): GameState;
+	/** Assign (or unassign) a pawn to a shelter building. Pass null to clear the assignment. */
+	assignShelterPawn(instanceId: string, pawnId: string | null, gameState: GameState): GameState;
 }
 
 /**
@@ -429,10 +431,16 @@ export class BuildingServiceImpl implements BuildingService {
 	}
 
 	deconstructBuilding(instanceId: string, gameState: GameState): GameState {
+		const building = (gameState.buildings ?? []).find((b) => b.id === instanceId);
+		if (!building) return gameState;
+		const def = this.getBuildingById(building.type);
+		const deconstructWorkRequired = Math.max(1, Math.ceil((def?.workAmount ?? 0) / 2));
 		return {
 			...gameState,
 			buildings: (gameState.buildings ?? []).map((b) =>
-				b.id === instanceId ? { ...b, deconstructQueued: true } : b
+				b.id === instanceId
+					? { ...b, deconstructQueued: true, deconstructWorkRequired, deconstructWorkDone: 0 }
+					: b
 			)
 		};
 	}
@@ -441,28 +449,26 @@ export class BuildingServiceImpl implements BuildingService {
 		return {
 			...gameState,
 			buildings: (gameState.buildings ?? []).map((b) =>
-				b.id === instanceId ? { ...b, deconstructQueued: false } : b
+				b.id === instanceId
+					? { ...b, deconstructQueued: false, deconstructWorkRequired: undefined, deconstructWorkDone: undefined }
+					: b
 			)
 		};
 	}
 
+	/** No-op — deconstruction is now driven by the job system (deconstruct job type). */
 	processDeconstructionQueue(gameState: GameState): GameState {
-		const toRemove = (gameState.buildings ?? []).filter((b) => b.deconstructQueued);
-		if (toRemove.length === 0) return gameState;
-		const newStockpile = { ...(gameState.stockpile ?? {}) };
-		for (const b of toRemove) {
-			const def = this.getBuildingById(b.type);
-			if (def?.buildingCost) {
-				for (const [itemId, cost] of Object.entries(def.buildingCost)) {
-					const refund = Math.floor(Number(cost) * 0.5);
-					if (refund > 0) newStockpile[itemId] = (newStockpile[itemId] ?? 0) + refund;
-				}
-			}
-		}
+		return gameState;
+	}
+
+	assignShelterPawn(instanceId: string, pawnId: string | null, gameState: GameState): GameState {
 		return {
 			...gameState,
-			stockpile: newStockpile,
-			buildings: (gameState.buildings ?? []).filter((b) => !b.deconstructQueued)
+			buildings: (gameState.buildings ?? []).map((b) =>
+				b.id === instanceId
+					? { ...b, assignedPawnId: pawnId ?? undefined }
+					: b
+			)
 		};
 	}
 }
