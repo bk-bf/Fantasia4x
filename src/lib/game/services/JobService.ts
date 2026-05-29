@@ -22,6 +22,9 @@ const ITEMS_DATABASE = itemsData as unknown as import('../core/types').Item[];
 /** Work-points per turn a pawn delivers (base rate; later modifiable by stats). */
 export const BASE_WORK_RATE = 1;
 
+/** Designation types that produce harvest-category jobs. */
+const HARVEST_DTYPES: DesignationType[] = ['harvest', 'woodcut', 'forage'];
+
 // ===== JOB SERVICE =====
 
 class JobServiceImpl {
@@ -187,7 +190,7 @@ class JobServiceImpl {
         jobs = jobs.filter((j) => {
             if (j.type !== 'harvest') return true;
             const designationType = gs.designations?.[`${j.targetX},${j.targetY}`];
-            if (designationType !== 'harvest') return false;
+            if (!designationType || !HARVEST_DTYPES.includes(designationType)) return false;
             if (!this._resourceMatchesDesignation(designationType, j.resourceId ?? '')) return false;
             if (!this._resourceMatchesFilter(designationType, j.resourceId ?? '', gs, `${j.targetX},${j.targetY}`)) return false;
             const tile = gs.worldMap[j.targetY]?.[j.targetX];
@@ -196,7 +199,7 @@ class JobServiceImpl {
 
         // Add harvest jobs only for designated tiles that currently hold matching resources.
         for (const [key, dtype] of Object.entries(gs.designations ?? {})) {
-            if (dtype !== 'harvest') continue;
+            if (!HARVEST_DTYPES.includes(dtype)) continue;
             const [x, y] = key.split(',').map(Number);
             const tile = gs.worldMap[y]?.[x];
             if (!tile) continue;
@@ -221,7 +224,7 @@ class JobServiceImpl {
                     targetX: x,
                     targetY: y,
                     resourceId,
-                    workRequired: resourceObjectService.getWorkAmount(resourceId),
+                    workRequired: resourceObjectService.getWorkAmount(resourceId, dtype as DesignationType),
                     workDone: 0,
                     claimedBy: null
                 });
@@ -369,22 +372,30 @@ class JobServiceImpl {
         const available = tile?.resources?.[job.resourceId] ?? 0;
         if (available <= 0) return gs;
 
-        // Determine whether this resource should persist (stay on map with a regrowth cooldown).
+        // Pick the interaction matching the current designation type on this tile.
         const def = resourceObjectService.getById(job.resourceId);
-        const isPersistent = def?.interaction.persistent === true;
-        const designationType = (gs.designations ?? {})[`${job.targetX},${job.targetY}`];
-        const shouldPersist = isPersistent &&
-            !(def?.interaction.harvestDepletes === true && designationType === 'harvest');
+        const designationType = (gs.designations ?? {})[`${job.targetX},${job.targetY}`] as DesignationType | undefined;
+        const interaction = def
+            ? (resourceObjectService.getInteractionByDesignationType(
+                  job.resourceId,
+                  designationType ?? 'harvest'
+              ) ?? def.interaction)
+            : undefined;
+
+        // A persistent node stays on the map after harvesting (yields regrow via cooldown).
+        // A node with harvestDepletes:true is removed permanently when cut (e.g. woodcut).
+        const shouldPersist =
+            interaction?.persistent === true && interaction?.harvestDepletes !== true;
 
         // Determine which yields are currently available (their per-yield cooldowns may be active).
         // Compound cooldown keys are formatted as "resourceId:itemId".
         let availableItemIds: Set<string> | undefined;
-        if (shouldPersist && def) {
+        if (shouldPersist && def && interaction) {
             const currentCooldowns = tile.resourceCooldowns ?? {};
-            const yieldHasPerItemCooldowns = def.interaction.yields.some((y) => y.regrowthTurns !== undefined);
+            const yieldHasPerItemCooldowns = interaction.yields.some((y) => y.regrowthTurns !== undefined);
             if (yieldHasPerItemCooldowns) {
                 availableItemIds = new Set<string>();
-                for (const y of def.interaction.yields) {
+                for (const y of interaction.yields) {
                     const key = `${job.resourceId}:${y.itemId}`;
                     if (!(key in currentCooldowns)) {
                         availableItemIds.add(y.itemId);
@@ -394,9 +405,8 @@ class JobServiceImpl {
         }
 
         const pawn = gs.pawns.find((p) => p.id === job.claimedBy);
-        const yields = resourceObjectService.calculateYield(job.resourceId, pawn, availableItemIds);
+        const yields = resourceObjectService.calculateYield(job.resourceId, pawn, availableItemIds, designationType);
         const yieldEntries = Object.entries(yields);
-        if (yieldEntries.length === 0) yieldEntries.push([job.resourceId, 1]);
 
         // Build updated tile — zero resources + set per-yield or interaction-level cooldowns.
         const newWorldMap = gs.worldMap.map((row, ry) =>
@@ -407,18 +417,18 @@ class JobServiceImpl {
                     if (!shouldPersist) return { ...col, resources: updatedResources };
 
                     const newCooldowns = { ...(col.resourceCooldowns ?? {}) };
-                    const yieldHasPerItemCooldowns = def!.interaction.yields.some((y) => y.regrowthTurns !== undefined);
+                    const yieldHasPerItemCooldowns = interaction!.yields.some((y) => y.regrowthTurns !== undefined);
 
                     if (yieldHasPerItemCooldowns) {
                         // Per-yield compound keys: "resourceId:itemId" → turn
-                        for (const y of def!.interaction.yields) {
+                        for (const y of interaction!.yields) {
                             if (y.regrowthTurns && (availableItemIds?.has(y.itemId) ?? true)) {
                                 newCooldowns[`${job.resourceId!}:${y.itemId}`] = gs.turn + y.regrowthTurns;
                             }
                         }
-                    } else if (def?.interaction.regrowthTurns) {
+                    } else if (interaction?.regrowthTurns) {
                         // Simple whole-resource cooldown
-                        newCooldowns[job.resourceId!] = gs.turn + def.interaction.regrowthTurns;
+                        newCooldowns[job.resourceId!] = gs.turn + interaction.regrowthTurns;
                     }
 
                     return { ...col, resources: updatedResources, resourceCooldowns: newCooldowns };
@@ -751,10 +761,10 @@ class JobServiceImpl {
         designationType: DesignationType,
         resourceId: string
     ): boolean {
-        if (designationType !== 'harvest') return false;
+        if (!HARVEST_DTYPES.includes(designationType)) return false;
         const def = resourceObjectService.getById(resourceId);
         if (!def) return true;
-        return def.designationTypes.includes('harvest');
+        return def.designationTypes.includes(designationType);
     }
 
     /**
@@ -780,7 +790,10 @@ class JobServiceImpl {
         if (!filter || filter.allowedCategories.length === 0) return true;
         const def = resourceObjectService.getById(resourceId);
         if (!def) return true;
-        return def.interaction.yields.some((y) => this._itemMatchesFilter(y.itemId, filter!));
+        const interaction =
+            resourceObjectService.getInteractionByDesignationType(resourceId, designationType) ??
+            def.interaction;
+        return interaction.yields.some((y) => this._itemMatchesFilter(y.itemId, filter!));
     }
 
     /** Check whether a single item ID passes a ZoneFilter. */
@@ -819,8 +832,14 @@ class JobServiceImpl {
     private _jobTypeToWorkKey(job: Job, gs?: GameState): string {
         switch (job.type) {
             case 'harvest': {
+                const designationType = gs
+                    ? ((gs.designations ?? {})[`${job.targetX},${job.targetY}`] as DesignationType | undefined)
+                    : undefined;
                 const def = resourceObjectService.getById(job.resourceId ?? '');
-                return def?.interaction.workCategory ?? 'foraging';
+                const interaction = designationType && def
+                    ? (resourceObjectService.getInteractionByDesignationType(job.resourceId ?? '', designationType) ?? def.interaction)
+                    : def?.interaction;
+                return interaction?.workCategory ?? 'foraging';
             }
             case 'construct':
                 return 'construction';

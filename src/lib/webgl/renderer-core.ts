@@ -70,6 +70,10 @@ export class WebGLRendererCore {
 	// External grid data
 	private gameGrid: GameGrid | null = null;
 
+	// Day/night ambient (Phase A — EnvironmentService drives these each turn)
+	private ambientLight = 1.0;
+	private ambientTint: [number, number, number] = [1.0, 1.0, 1.0];
+
 	// Initialization promise
 	private initPromise: Promise<boolean>;
 
@@ -110,6 +114,12 @@ export class WebGLRendererCore {
 	setViewTileOffset(x: number, y: number): void {
 		this.viewTileX = x;
 		this.viewTileY = y;
+	}
+
+	/** Update ambient light values; called each turn from the game canvas. */
+	setAmbient(light: number, tint: [number, number, number]): void {
+		this.ambientLight = light;
+		this.ambientTint = tint;
 	}
 
 	/** Change tile pixel dimensions (used for zoom). Regenerates atlas only when the integer cell size changes (skipped for bitmap tilesets). */
@@ -231,6 +241,8 @@ export class WebGLRendererCore {
 
 		if (!this.shaderManager.useProgram('tileRenderer')) return;
 		this.shaderManager.setUniform('tileRenderer', 'u_projection', this.projectionMatrix);
+		this.shaderManager.setUniform('tileRenderer', 'u_ambient', this.ambientLight);
+		this.shaderManager.setUniform('tileRenderer', 'u_ambient_tint', this.ambientTint);
 
 		gl.activeTexture(gl.TEXTURE0);
 		gl.bindTexture(gl.TEXTURE_2D, this.fontTexture);

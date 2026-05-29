@@ -22,6 +22,8 @@ export interface ToolRequirement {
 }
 
 export interface ResourceInteractionDef {
+    /** Which designation type triggers this interaction. Required when used in `interactions[]`. */
+    designationType?: DesignationType;
     action: string;
     workCategory: string;
     workAmount: number;
@@ -33,8 +35,8 @@ export interface ResourceInteractionDef {
      */
     persistent?: boolean;
     /**
-     * When persistent is true but harvestDepletes is also true, a harvest job
-     * destroys the node (e.g. chopping a tree). Otherwise the node stays and regrows.
+     * When true this interaction removes the resource node on completion (e.g. chopping).
+     * When false (or absent) the node persists and yields regrow via cooldowns.
      */
     harvestDepletes?: boolean;
     /** Turns to wait before items regrow (requires persistent: true). */
@@ -53,8 +55,16 @@ export interface ResourceObjectDef {
         subterrains: Record<string, number>;
     };
     nodeAmountRange: [number, number];
-    designationTypes: Array<'harvest'>;
+    /** Which designation types can target this resource. */
+    designationTypes: DesignationType[];
+    /** Primary interaction (backward-compat; also used when `interactions` is absent). */
     interaction: ResourceInteractionDef;
+    /**
+     * Per-designation-type interaction overrides.
+     * When present, each entry's `designationType` field identifies which designation
+     * triggers it. Resources without this field use `interaction` for all designations.
+     */
+    interactions?: ResourceInteractionDef[];
 }
 
 const WORK_STAT_FALLBACK: Record<string, keyof Pawn['stats']> = {
@@ -84,29 +94,64 @@ class ResourceObjectServiceImpl {
     }
 
     getByDesignation(type: DesignationType): ResourceObjectDef[] {
-        if (type !== 'harvest') return [];
-        return this.defs.filter((d) => d.designationTypes.includes('harvest'));
+        const HARVEST_TYPES: DesignationType[] = ['harvest', 'woodcut', 'forage'];
+        if (!HARVEST_TYPES.includes(type)) return [];
+        return this.defs.filter((d) => d.designationTypes.includes(type));
     }
 
-    getWorkAmount(resourceId: string): number {
-        return (this.getById(resourceId)?.interaction.workAmount ?? 5) * 3;
+    getWorkAmount(resourceId: string, dtype?: DesignationType): number {
+        const def = this.getById(resourceId);
+        if (!def) return 5 * 3;
+        const interaction = dtype
+            ? (this.getInteractionByDesignationType(resourceId, dtype) ?? def.interaction)
+            : def.interaction;
+        return interaction.workAmount * 3;
     }
 
-    calculateYield(resourceId: string, pawn?: Pawn, availableItemIds?: Set<string>): Record<string, number> {
+    /**
+     * Return the interaction matching the given designation type, or the primary
+     * `interaction` as a fallback when no per-type override exists.
+     */
+    getInteractionByDesignationType(
+        resourceId: string,
+        dtype: DesignationType
+    ): ResourceInteractionDef | undefined {
+        const def = this.getById(resourceId);
+        if (!def) return undefined;
+        if (def.interactions) {
+            const found = def.interactions.find((i) => i.designationType === dtype);
+            if (found) return found;
+        }
+        return def.interaction;
+    }
+
+    calculateYield(
+        resourceId: string,
+        pawn?: Pawn,
+        availableItemIds?: Set<string>,
+        dtype?: DesignationType
+    ): Record<string, number> {
         const def = this.getById(resourceId);
         if (!def) return { [resourceId]: 1 };
 
+        const interaction = dtype
+            ? (this.getInteractionByDesignationType(resourceId, dtype) ?? def.interaction)
+            : def.interaction;
+
         const result: Record<string, number> = {};
-        for (const y of def.interaction.yields) {
+        for (const y of interaction.yields) {
             if (availableItemIds && !availableItemIds.has(y.itemId)) continue;
             const roll = this.randomInt(y.min, y.max);
-            const skill = this.getSkillLevel(pawn, y.skillId, def.interaction.workCategory);
+            const skill = this.getSkillLevel(pawn, y.skillId, interaction.workCategory);
             const multiplier = Math.max(1, 1 + skill * y.skillMultiplier);
-            const amount = Math.max(1, Math.round(roll * multiplier));
-            result[y.itemId] = (result[y.itemId] ?? 0) + amount;
+            const amount = Math.max(0, Math.round(roll * multiplier));
+            if (amount > 0) {
+                result[y.itemId] = (result[y.itemId] ?? 0) + amount;
+            }
         }
 
-        if (Object.keys(result).length === 0) {
+        // Only fall back to a raw resource drop when no yields are defined at all
+        if (Object.keys(result).length === 0 && interaction.yields.length === 0) {
             result[resourceId] = 1;
         }
 

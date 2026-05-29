@@ -17,6 +17,7 @@
   import { pawnService } from '$lib/game/services/PawnService.js';
   import { buildPathfindingGrids } from '$lib/game/services/PathfinderService.js';
   import { designationService } from '$lib/game/services/DesignationService.js';
+  import { environmentService } from '$lib/game/services/EnvironmentService.js';
   import { glyph, SHEET } from '$lib/webgl/tilesets.js';
   import { uiState } from '$lib/stores/uiState.js';
   import { worldEffects } from '$lib/stores/worldEffects.js';
@@ -331,6 +332,11 @@
     buildings = s.buildings ?? [];
     designations = s.designations ?? {};
     droppedItems = s.droppedItems ?? [];
+    // Day/night: update ambient uniforms whenever the turn changes
+    if (renderer?.isReady()) {
+      const { light, tint } = environmentService.getAmbient(s.turn);
+      renderer.setAmbient(light, tint);
+    }
     // Camera follow: pan to the followed pawn whenever pawn positions update
     if (cameraFollowPawnId && ready && renderer?.isReady()) {
       const followed = pawns.find((p) => p.id === cameraFollowPawnId);
@@ -590,13 +596,17 @@
         continue;
 
       let char: string;
-      if (type === 'harvest') {
+      if (type === 'woodcut') {
+        char = '\u00F7'; // ÷ — CP437 246 Unicode equivalent (woodcutting)
+      } else if (type === 'forage') {
+        char = '\u00B1'; // ± — CP437 241 Unicode equivalent (foraging/scavenging)
+      } else if (type === 'harvest') {
         const tile = worldMap[wy]?.[wx];
         const resourceId = tile?.resources
           ? Object.keys(tile.resources).find((id) => (tile.resources![id] ?? 0) > 0)
           : undefined;
         const resDef = resourceId ? resourceObjectService.getById(resourceId) : undefined;
-        char = resDef?.interaction.workCategory === 'foraging' ? '\u2265' : '\u00F7';
+        char = resDef?.interaction.workCategory === 'foraging' ? '\u00B1' : '\u00F7';
       } else if (type === 'mine') {
         char = '\u26CF'; // ⛏
       } else if (type === 'construct') {
@@ -802,6 +812,11 @@
       overlayPawns(grid, pawns, selectedPawnId);
       renderer.setGrid(grid);
       renderer.setViewTileOffset(viewX, viewY);
+      // Initialise ambient from current turn so the first frame is correctly lit
+      {
+        const { light, tint } = environmentService.getAmbient($gameState?.turn ?? 0);
+        renderer.setAmbient(light, tint);
+      }
 
       ready = true;
       startLoop();
@@ -855,6 +870,7 @@
     [viewX, viewY] = clampView(x, y);
     renderer?.setViewTileOffset(viewX, viewY);
     saveCameraState();
+    drawDesignations();
   }
 
   function handleKeyDown(e: KeyboardEvent) {
@@ -1133,11 +1149,12 @@
     redrawOverlay();
   }
 
-  function designateResource() {
+  function designateResource(dtype?: DesignationType) {
     if (!selectedResourceTile || !selectedResourceDef) return;
     const { x, y } = selectedResourceTile;
-    const dtype = (selectedResourceDef.designationTypes?.[0] ?? 'harvest') as DesignationType;
-    gameState.updateWithSave((state) => designationService.designate(x, y, dtype, state));
+    const resolvedType =
+      dtype ?? ((selectedResourceDef.designationTypes?.[0] ?? 'harvest') as DesignationType);
+    gameState.updateWithSave((state) => designationService.designate(x, y, resolvedType, state));
     redrawOverlay();
   }
 
@@ -1406,13 +1423,20 @@
       </div>
     </div>
   {:else if selectedResourceTile && selectedResourceDef}
-    {@const dtype = selectedResourceDef.designationTypes?.[0] ?? 'harvest'}
+    {@const activeInteractions = selectedResourceDef.interactions ?? [
+      selectedResourceDef.interaction
+    ]}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div class="res-row" on:mousedown|stopPropagation on:mouseup|stopPropagation>
       <div class="tile-hud tile-hud--resource tile-hud--selected-resource">
         <div class="bld-header">
           <span class="bld-name">{selectedResourceDef.displayName}</span>
-          <span class="bld-status">[{dtype}{selectedResourceDesignation ? ' ✓' : ''}]</span>
+          <span class="bld-status"
+            >[{selectedResourceDesignation ??
+              activeInteractions[0]?.designationType ??
+              activeInteractions[0]?.action ??
+              'harvest'}{selectedResourceDesignation ? ' ✓' : ''}]</span
+          >
         </div>
         <div class="bld-desc">
           {selectedResourceTile.resourceId.replace(/_/g, ' ')} — ×{selectedResourceAmount} nodes
@@ -1420,16 +1444,16 @@
         {#if selectedResourceDesignation}
           <div class="bld-note">⊢ {selectedResourceDesignation}…</div>
         {:else}
-          {#if selectedResourceDef.interaction.yields.length > 0}
-            <div class="bld-desc">
-              yields: {selectedResourceDef.interaction.yields
-                .map((y) => `${y.min}–${y.max}×${y.itemId.replace(/_/g, ' ')}`)
-                .join(' ')}
-            </div>
-          {/if}
-          <div class="bld-desc">
-            {selectedResourceDef.interaction.action} · {selectedResourceDef.interaction.workAmount} work
-          </div>
+          {#each activeInteractions as iact}
+            {#if iact.yields.length > 0}
+              <div class="bld-desc">
+                {iact.action}: {iact.yields
+                  .filter((y) => y.max > 0)
+                  .map((y) => `${y.min}–${y.max}×${y.itemId.replace(/_/g, ' ')}`)
+                  .join(' ')}
+              </div>
+            {/if}
+          {/each}
         {/if}
       </div>
       <div class="bld-side-actions">
@@ -1440,11 +1464,20 @@
             on:click={cancelResourceDesignation}>↩</button
           >
         {:else}
-          <button
-            class="bld-btn bld-btn--danger bld-btn--sq"
-            title={selectedResourceDef.interaction.action}
-            on:click={designateResource}>⛏</button
-          >
+          {#each activeInteractions as iact}
+            <button
+              class="bld-btn bld-btn--danger bld-btn--sq"
+              title={iact.action}
+              on:click={() => designateResource(iact.designationType)}
+              >{iact.designationType === 'woodcut'
+                ? '\u00F7'
+                : iact.designationType === 'forage'
+                  ? '\u00B1'
+                  : iact.designationType === 'mine'
+                    ? '\u26CF'
+                    : '\u26CF'}</button
+            >
+          {/each}
         {/if}
         <button
           class="bld-btn bld-btn--sq"

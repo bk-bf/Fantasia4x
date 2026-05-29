@@ -1,6 +1,6 @@
 // ===== PHASE 4 NEW TYPES =====
 
-export type DesignationType = 'harvest' | 'construct' | 'mine' | 'haul' | 'clear' | 'stockpile';
+export type DesignationType = 'harvest' | 'woodcut' | 'forage' | 'construct' | 'mine' | 'haul' | 'clear' | 'stockpile';
 
 /** Zone types that support item-category filtering. */
 export type FilterableZoneType = 'harvest' | 'stockpile';

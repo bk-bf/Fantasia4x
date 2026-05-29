@@ -108,6 +108,14 @@ export class WebGLRenderer {
 	}
 
 	/**
+	 * Update day/night ambient brightness and tint for the current turn.
+	 * Call this whenever the game turn advances (or on initial mount).
+	 */
+	setAmbient(light: number, tint: [number, number, number]): void {
+		this.core.setAmbient(light, tint);
+	}
+
+	/**
 	 * Check if the renderer is ready for use
 	 */
 	isReady(): boolean {
