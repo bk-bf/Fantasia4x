@@ -1,6 +1,13 @@
 <!-- PawnHealth.svelte — ASCII body silhouette + limb integrity panel -->
 <script lang="ts">
-  import type { Pawn, LimbState, LimbId, PawnCondition, ConditionDef, ConditionStage } from '$lib/game/core/types';
+  import type {
+    Pawn,
+    LimbState,
+    LimbId,
+    PawnCondition,
+    ConditionDef,
+    ConditionStage
+  } from '$lib/game/core/types';
   import conditionsData from '$lib/game/database/conditions.jsonc';
 
   let { pawn }: { pawn: Pawn } = $props();
@@ -8,31 +15,31 @@
   const CONDITIONS_DB = conditionsData as unknown as ConditionDef[];
 
   const FALLBACK: LimbState[] = [
-    { id: 'head',      health: 100, isMissing: false, bleedRate: 0 },
-    { id: 'torso',     health: 100, isMissing: false, bleedRate: 0 },
-    { id: 'left_arm',  health: 100, isMissing: false, bleedRate: 0 },
+    { id: 'head', health: 100, isMissing: false, bleedRate: 0 },
+    { id: 'torso', health: 100, isMissing: false, bleedRate: 0 },
+    { id: 'left_arm', health: 100, isMissing: false, bleedRate: 0 },
     { id: 'right_arm', health: 100, isMissing: false, bleedRate: 0 },
-    { id: 'left_leg',  health: 100, isMissing: false, bleedRate: 0 },
-    { id: 'right_leg', health: 100, isMissing: false, bleedRate: 0 },
+    { id: 'left_leg', health: 100, isMissing: false, bleedRate: 0 },
+    { id: 'right_leg', health: 100, isMissing: false, bleedRate: 0 }
   ];
 
   const LIMB_DEFS: { name: string; id: LimbId }[] = [
-    { name: 'HEAD',  id: 'head' },
+    { name: 'HEAD', id: 'head' },
     { name: 'TORSO', id: 'torso' },
     { name: 'L.ARM', id: 'left_arm' },
     { name: 'R.ARM', id: 'right_arm' },
     { name: 'L.LEG', id: 'left_leg' },
-    { name: 'R.LEG', id: 'right_leg' },
+    { name: 'R.LEG', id: 'right_leg' }
   ];
 
-  let alive   = $derived(pawn.isAlive !== false);
-  let limbs   = $derived(pawn.limbs?.length ? pawn.limbs : FALLBACK);
-  let blood   = $derived(pawn.bloodVolume ?? 100);
-  let conditions = $derived((pawn.conditions ?? []).filter(c => c.severity > 0));
-  let bleedRate  = $derived(limbs.reduce((s, l) => s + (l.bleedRate ?? 0), 0));
+  let alive = $derived(pawn.isAlive !== false);
+  let limbs = $derived(pawn.limbs?.length ? pawn.limbs : FALLBACK);
+  let blood = $derived(pawn.bloodVolume ?? 100);
+  let conditions = $derived((pawn.conditions ?? []).filter((c) => c.severity > 0));
+  let bleedRate = $derived(limbs.reduce((s, l) => s + (l.bleedRate ?? 0), 0));
 
   function gl(id: LimbId): LimbState {
-    return limbs.find(l => l.id === id) ?? FALLBACK.find(l => l.id === id)!;
+    return limbs.find((l) => l.id === id) ?? FALLBACK.find((l) => l.id === id)!;
   }
 
   // Color based on limb health
@@ -71,7 +78,7 @@
   }
 
   function condStage(c: PawnCondition): ConditionStage | undefined {
-    const def = CONDITIONS_DB.find(d => d.id === c.id);
+    const def = CONDITIONS_DB.find((d) => d.id === c.id);
     if (!def) return undefined;
     let active: ConditionStage | undefined;
     for (const s of def.stages) if (c.severity >= s.minSeverity) active = s;
@@ -79,7 +86,7 @@
   }
 
   function condName(c: PawnCondition): string {
-    return CONDITIONS_DB.find(d => d.id === c.id)?.name ?? c.id;
+    return CONDITIONS_DB.find((d) => d.id === c.id)?.name ?? c.id;
   }
 
   // ── ASCII silhouette ──────────────────────────────────────────────────────
@@ -91,43 +98,43 @@
   //
   type Seg = { color: string; text: string };
 
-  let h  = $derived(gl('head'));
-  let t  = $derived(gl('torso'));
+  let h = $derived(gl('head'));
+  let t = $derived(gl('torso'));
   let la = $derived(gl('left_arm'));
   let ra = $derived(gl('right_arm'));
   let ll = $derived(gl('left_leg'));
   let rl = $derived(gl('right_leg'));
 
   let figRows = $derived<Seg[][]>([
-    [{ color: lc(h),  text: '    ' + ch(h).repeat(5) + '    ' }],
-    [{ color: lc(h),  text: '    ' + ch(h).repeat(5) + '    ' }],
+    [{ color: lc(h), text: '    ' + ch(h).repeat(5) + '    ' }],
+    [{ color: lc(h), text: '    ' + ch(h).repeat(5) + '    ' }],
     [
       { color: lc(la), text: ' ' + ch(la).repeat(2) },
-      { color: lc(t),  text: ' ' + ch(t).repeat(5) + ' ' },
-      { color: lc(ra), text: ch(ra).repeat(2) + ' ' },
-    ],
-    [
-      { color: lc(la), text: ' ' + ch(la).repeat(2) },
-      { color: lc(t),  text: ' ' + ch(t).repeat(5) + ' ' },
-      { color: lc(ra), text: ch(ra).repeat(2) + ' ' },
+      { color: lc(t), text: ' ' + ch(t).repeat(5) + ' ' },
+      { color: lc(ra), text: ch(ra).repeat(2) + ' ' }
     ],
     [
       { color: lc(la), text: ' ' + ch(la).repeat(2) },
-      { color: lc(t),  text: ' ' + ch(t).repeat(5) + ' ' },
-      { color: lc(ra), text: ch(ra).repeat(2) + ' ' },
+      { color: lc(t), text: ' ' + ch(t).repeat(5) + ' ' },
+      { color: lc(ra), text: ch(ra).repeat(2) + ' ' }
+    ],
+    [
+      { color: lc(la), text: ' ' + ch(la).repeat(2) },
+      { color: lc(t), text: ' ' + ch(t).repeat(5) + ' ' },
+      { color: lc(ra), text: ch(ra).repeat(2) + ' ' }
     ],
     [
       { color: lc(ll), text: '    ' + ch(ll).repeat(2) },
-      { color: lc(rl), text: ' ' + ch(rl).repeat(2) + '   ' },
+      { color: lc(rl), text: ' ' + ch(rl).repeat(2) + '   ' }
     ],
     [
       { color: lc(ll), text: '    ' + ch(ll).repeat(2) },
-      { color: lc(rl), text: ' ' + ch(rl).repeat(2) + '   ' },
+      { color: lc(rl), text: ' ' + ch(rl).repeat(2) + '   ' }
     ],
     [
       { color: lc(ll), text: '    ' + ch(ll).repeat(2) },
-      { color: lc(rl), text: ' ' + ch(rl).repeat(2) + '   ' },
-    ],
+      { color: lc(rl), text: ' ' + ch(rl).repeat(2) + '   ' }
+    ]
   ]);
 </script>
 
@@ -138,7 +145,9 @@
     <!-- ASCII body silhouette (left) -->
     <div class="silhouette" title="Body integrity">
       {#each figRows as row}
-        <div class="fig-line">{#each row as seg}<span style="color:{seg.color}">{seg.text}</span>{/each}</div>
+        <div class="fig-line">
+          {#each row as seg}<span style="color:{seg.color}">{seg.text}</span>{/each}
+        </div>
       {/each}
     </div>
 
@@ -146,7 +155,7 @@
     <div class="limb-list">
       {#each LIMB_DEFS as def}
         {@const limb = gl(def.id)}
-        {@const col  = lc(limb)}
+        {@const col = lc(limb)}
         <div class="limb-row">
           <span class="limb-name">{def.name}</span>
           <div class="limb-bar-wrap">
@@ -185,18 +194,14 @@
       {@const stage = condStage(cond)}
       {#if stage}
         <div class="cond-row" class:threatening={stage.lifeThreatening}>
-          <span class="cond-name" style="color:{stage.color}"
-            >{condName(cond).toUpperCase()}</span
-          >
+          <span class="cond-name" style="color:{stage.color}">{condName(cond).toUpperCase()}</span>
           <div class="cond-bar-wrap">
             <div
               class="cond-bar-fill"
               style="width:{Math.round(cond.severity * 100)}%; background:{stage.color}"
             ></div>
           </div>
-          <span class="cond-stage" style="color:{stage.color}"
-            >{stage.label.toUpperCase()}</span
-          >
+          <span class="cond-stage" style="color:{stage.color}">{stage.label.toUpperCase()}</span>
           {#if stage.lifeThreatening}
             <span class="threat-icon" title="Life-threatening">⚠</span>
           {/if}
@@ -282,7 +287,9 @@
 
   .limb-bar-fill {
     height: 100%;
-    transition: width 0.15s, background 0.15s;
+    transition:
+      width 0.15s,
+      background 0.15s;
   }
 
   .limb-status {
@@ -355,8 +362,13 @@
   }
 
   @keyframes pulse-bg {
-    0%, 100% { background: transparent; }
-    50% { background: rgba(200, 48, 24, 0.10); }
+    0%,
+    100% {
+      background: transparent;
+    }
+    50% {
+      background: rgba(200, 48, 24, 0.1);
+    }
   }
 
   .cond-name {
@@ -393,7 +405,13 @@
   }
 
   @keyframes blink {
-    0%, 50% { opacity: 1; }
-    51%, 100% { opacity: 0; }
+    0%,
+    50% {
+      opacity: 1;
+    }
+    51%,
+    100% {
+      opacity: 0;
+    }
   }
 </style>
