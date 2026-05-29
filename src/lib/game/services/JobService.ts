@@ -762,7 +762,7 @@ class JobServiceImpl {
                 filter = inst?.filter;
             }
         }
-        filter = filter ?? gs.zoneFilters?.[designationType as import('../core/types').FilterableZoneType];
+        filter = filter ?? gs.zoneFilters?.[designationType];
         if (!filter || filter.allowedCategories.length === 0) return true;
         const def = resourceObjectService.getById(resourceId);
         if (!def) return true;

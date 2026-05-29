@@ -1316,7 +1316,9 @@
             {@const fuelCurr = selectedBuilding.fuel ?? 0}
             <div class="bld-fuel">
               FUEL [{jobProgressBar(fuelMax > 0 ? fuelCurr / fuelMax : 0)}] {fuelCurr}/{fuelMax}
-              {#if selectedBuilding.lit}<span class="fuel-lit">● lit</span>{:else}<span class="fuel-dark">○ unlit</span>{/if}
+              {#if selectedBuilding.lit}<span class="fuel-lit">● lit</span>{:else}<span
+                  class="fuel-dark">○ unlit</span
+                >{/if}
             </div>
           {/if}
         {/if}
@@ -1488,7 +1490,9 @@
         {@const fuelCurr = hoverBuilding.fuel ?? 0}
         <div class="bld-fuel">
           FUEL [{jobProgressBar(fuelMax > 0 ? fuelCurr / fuelMax : 0)}] {fuelCurr}/{fuelMax}
-          {#if hoverBuilding.lit}<span class="fuel-lit">● lit</span>{:else}<span class="fuel-dark">○ unlit</span>{/if}
+          {#if hoverBuilding.lit}<span class="fuel-lit">● lit</span>{:else}<span class="fuel-dark"
+              >○ unlit</span
+            >{/if}
         </div>
       {/if}
     </div>
@@ -1794,8 +1798,14 @@
     font-family: 'Courier New', monospace;
     letter-spacing: 0.02em;
   }
-  .fuel-lit   { color: #ff8800; margin-left: 4px; }
-  .fuel-dark  { color: #604020; margin-left: 4px; }
+  .fuel-lit {
+    color: #ff8800;
+    margin-left: 4px;
+  }
+  .fuel-dark {
+    color: #604020;
+    margin-left: 4px;
+  }
   .bld-actions {
     display: flex;
     gap: 4px;
