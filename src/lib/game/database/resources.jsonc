@@ -698,7 +698,7 @@
         "id"              : "mountain_wall",
         "displayName"     : "Mountain Wall",
         "subterrain"      : "rocky",
-        "walkable"        : true,
+        "walkable"        : false,
         "charSpans"       : [ {"sheet": "tiles", "from": 177, "to": 178} ],
         "fg"              : [0.62, 0.52, 0.37],
         "bg"              : [0.08, 0.06, 0.03],

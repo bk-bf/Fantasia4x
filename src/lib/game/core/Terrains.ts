@@ -7,10 +7,12 @@ import subterrainsData from '../database/subterrains.jsonc';
  */
 
 export interface BiomeDef {
+    displayName: string;
     densityRange: [number, number];
 }
 
 export interface SubterrainDef {
+    displayName: string;
     walkable: boolean;
     movementCost: number;
     fg: [number, number, number];
@@ -90,17 +92,20 @@ export function pickChar(sub: { chars: string[] }, x: number, y: number): string
 // ── Biomes ────────────────────────────────────────────────────────────────────
 // density = primary noise output clamped to 0-1
 // subterrainThresholds[i] is the detail-noise boundary between subterrains[i] and [i+1]
-export const BIOMES: Record<string, BiomeDef> =
-    terrainsData.biomes as unknown as Record<string, BiomeDef>;
+export const BIOMES: Record<string, BiomeDef> = Object.fromEntries(
+    (terrainsData.biomes as unknown as Array<{ id: string } & Record<string, unknown>>)
+        .map((b) => [b.id, b])
+) as unknown as Record<string, BiomeDef>;
 
 // ── Subterrains ───────────────────────────────────────────────────────────────
 // Chars are resolved at load time from tile-index descriptors (charSpans) stored
 // in terrains.json.  Each span references tiles.bmp or plants.bmp by sheet + index.
 export const SUBTERRAINS: Record<string, SubterrainDef> = Object.fromEntries(
-    (Object.entries(subterrainsData) as [string, Record<string, unknown>][]).map(
-        ([id, sub]) => [
-            id,
+    (subterrainsData as unknown as Array<Record<string, unknown>>).map(
+        (sub) => [
+            sub.id as string,
             {
+                displayName: sub.displayName as string,
                 walkable: sub.walkable as boolean,
                 movementCost: sub.movementCost as number,
                 fg: sub.fg as [number, number, number],
@@ -113,7 +118,7 @@ export const SUBTERRAINS: Record<string, SubterrainDef> = Object.fromEntries(
 );
 
 export const SUBTERRAIN_FALLBACK: SubterrainDef = {
-    walkable: true, movementCost: 1.0,
+    displayName: 'Unknown', walkable: true, movementCost: 1.0,
     chars: ['?'], fg: [0.5, 0.5, 0.5], bg: [0.03, 0.03, 0.03]
 };
 
