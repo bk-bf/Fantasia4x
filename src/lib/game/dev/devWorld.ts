@@ -7,9 +7,9 @@
  * feature without playing through early-game.
  *
  * Zone layout (relative to nearest walkable anchor near map centre ax, ay):
- *   Stockpile  : ax-4..ax+3,  ay-4..ay+3   (8×8, centred on anchor)
- *   Forage     : ax-18..ax-11, ay-4..ay+3   (8×8, left)
- *   Scavenge   : ax+11..ax+18, ay-4..ay+3   (8×8, right)
+ *   Stockpile  : ax-4..ax+3,   ay-4..ay+3    (8×8, centred on anchor)
+ *   Forage     : ax-26..ax-11, ay-8..ay+7    (16×16, left)
+ *   Scavenge   : ax+11..ax+26, ay-8..ay+7    (16×16, right)
  */
 
 import type { GameState, StockpileZone, ZoneInstance, ZoneFilter } from '../core/types';
@@ -89,9 +89,9 @@ export function applyDevWorld(state: GameState, itemQty = 500): GameState {
     const ay = anchor.y;
 
     // --- 1. Zone geometry -------------------------------------------
-    const stockpileTiles = rectTiles(state.worldMap, ax - 4, ay - 4, ax + 3, ay + 3);
-    const forageTiles    = rectTiles(state.worldMap, ax - 18, ay - 4, ax - 11, ay + 3);
-    const scavengeTiles  = rectTiles(state.worldMap, ax + 11, ay - 4, ax + 18, ay + 3);
+    const stockpileTiles = rectTiles(state.worldMap, ax - 4, ay - 4, ax + 3, ay + 3);  // 8×8
+    const forageTiles = rectTiles(state.worldMap, ax - 26, ay - 8, ax - 11, ay + 7);  // 16×16
+    const scavengeTiles = rectTiles(state.worldMap, ax + 11, ay - 8, ax + 26, ay + 7);  // 16×16
 
     // --- 2. Build stockpile inventory --------------------------------
     const stockpileInventory: Record<string, number> = {};
@@ -109,12 +109,16 @@ export function applyDevWorld(state: GameState, itemQty = 500): GameState {
 
     // --- 4. ZoneInstances -------------------------------------------
     // NOTE: 'harvest' is a WORK glyph (!) not a zone tint — do not use it here.
-    const stockpileInstance: ZoneInstance = { id: 'dev-stockpile-1', type: 'stockpile',  label: 'Dev Stockpile', filter: EMPTY_FILTER };
-    const forageInstance:    ZoneInstance = { id: 'dev-forage-1',    type: 'forage',    label: 'Forage 1',      filter: EMPTY_FILTER };
-    const scavengeInstance:  ZoneInstance = { id: 'dev-scavenge-1',  type: 'scavenge',  label: 'Scavenge 1',    filter: EMPTY_FILTER };
+    const stockpileInstance: ZoneInstance = { id: 'dev-stockpile-1', type: 'stockpile', label: 'Dev Stockpile', filter: EMPTY_FILTER };
+    const forageInstance: ZoneInstance = { id: 'dev-forage-1', type: 'forage', label: 'Forage 1', filter: EMPTY_FILTER };
+    const scavengeInstance: ZoneInstance = { id: 'dev-scavenge-1', type: 'scavenge', label: 'Scavenge 1', filter: EMPTY_FILTER };
 
     // --- 5. Designations + zoneId map --------------------------------
-    const designations: Record<string, string> = { ...(state.designations ?? {}) };
+    // Strip any pre-existing 'harvest' work designations left over from old saves.
+    const designations: Record<string, string> = {};
+    for (const [k, v] of Object.entries(state.designations ?? {})) {
+        if (v !== 'harvest') designations[k] = v;
+    }
     const designationZoneId: Record<string, string> = { ...(state.designationZoneId ?? {}) };
 
     for (const k of stockpileTiles) {
