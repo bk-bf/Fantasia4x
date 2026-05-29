@@ -491,12 +491,8 @@
     const tile = grid.getTile(tx, ty);
     grid.setTile(tx, ty, {
       char,
-      foreground: { r: 0.1, g: 1.0, b: 0.9 },
-      background: {
-        r: (tile?.background?.r ?? 0) * 0.1,
-        g: (tile?.background?.g ?? 0) * 0.1 + 0.08,
-        b: (tile?.background?.b ?? 0) * 0.1 + 0.45
-      },
+      foreground: { r: 1.0, g: 1.0, b: 1.0 },
+      background: tile?.background ?? { r: 0, g: 0, b: 0 },
       position: { x: tx, y: ty }
     });
   }
@@ -564,6 +560,22 @@
         type: clickedBuilding.type,
         status: clickedBuilding.status,
         paused: clickedBuilding.paused ?? false,
+        screenX: (hoverTileX - viewX) * tileWidth,
+        screenY: Math.max(4, (hoverTileY - viewY) * tileHeight - 68)
+      };
+      return;
+    }
+
+    // Click on a complete building → show context popup with DECONSTRUCT
+    const clickedComplete = buildings.find(
+      (b) => b.x === hoverTileX && b.y === hoverTileY && b.status === 'complete'
+    );
+    if (clickedComplete) {
+      buildingPopup = {
+        placedId: clickedComplete.id,
+        type: clickedComplete.type,
+        status: clickedComplete.status,
+        paused: false,
         screenX: (hoverTileX - viewX) * tileWidth,
         screenY: Math.max(4, (hoverTileY - viewY) * tileHeight - 68)
       };
@@ -951,6 +963,15 @@
     redrawOverlay();
   }
 
+  function deconstructBuilding() {
+    if (!buildingPopup) return;
+    gameState.updateWithSave((state) =>
+      buildingService.deconstructBuilding(buildingPopup!.placedId, state)
+    );
+    buildingPopup = null;
+    redrawOverlay();
+  }
+
   function togglePauseBlueprintBuilding() {
     if (!buildingPopup) return;
     gameState.updateWithSave((state) =>
@@ -1061,10 +1082,20 @@
         [{buildingPopup.status.replace('_', ' ')}{buildingPopup.paused ? ' • paused' : ''}]
       </div>
       <div class="building-popup__actions">
-        <button on:click={togglePauseBlueprintBuilding}
-          >{buildingPopup.paused ? 'RESUME' : 'PAUSE'}</button
-        >
-        <button class="cancel-btn" on:click={cancelBlueprintBuilding}>CANCEL</button>
+        {#if buildingPopup.status === 'complete'}
+          {@const cost = bDef?.buildingCost ?? {}}
+          {#if Object.keys(cost).length > 0}
+            <div class="building-popup__refund">
+              refund: {Object.entries(cost).map(([id, n]) => `${Math.floor(Number(n) * 0.5)} ${id.replace(/_/g, ' ')}`).join(' · ')}
+            </div>
+          {/if}
+          <button class="cancel-btn" on:click={deconstructBuilding}>DECONSTRUCT</button>
+        {:else}
+          <button on:click={togglePauseBlueprintBuilding}
+            >{buildingPopup.paused ? 'RESUME' : 'PAUSE'}</button
+          >
+          <button class="cancel-btn" on:click={cancelBlueprintBuilding}>CANCEL</button>
+        {/if}
       </div>
     </div>
   {/if}
@@ -1426,7 +1457,13 @@
   }
   .building-popup__actions {
     display: flex;
+    flex-direction: column;
     gap: 4px;
+  }
+  .building-popup__refund {
+    font-size: 9px;
+    color: #88aabb;
+    margin-bottom: 2px;
   }
   .building-popup__actions button {
     background: #0a1a2a;

@@ -59,6 +59,8 @@ export interface BuildingService {
 	cancelBuilding(instanceId: string, gameState: GameState): GameState;
 	/** Toggle the paused flag on a planned/under_construction building. */
 	togglePausedBuilding(instanceId: string, gameState: GameState): GameState;
+	/** Remove a completed building and refund 50% of its materials to the stockpile. */
+	deconstructBuilding(instanceId: string, gameState: GameState): GameState;
 }
 
 /**
@@ -419,6 +421,25 @@ export class BuildingServiceImpl implements BuildingService {
 			buildings: (gameState.buildings ?? []).map((b) =>
 				b.id === instanceId ? { ...b, paused: !b.paused } : b
 			)
+		};
+	}
+
+	deconstructBuilding(instanceId: string, gameState: GameState): GameState {
+		const placed = (gameState.buildings ?? []).find((b) => b.id === instanceId);
+		if (!placed) return gameState;
+		const def = this.getBuildingById(placed.type);
+		// Refund 50% of build cost (floor each amount) back to the stockpile
+		const newStockpile = { ...(gameState.stockpile ?? {}) };
+		if (def?.buildingCost) {
+			for (const [itemId, cost] of Object.entries(def.buildingCost)) {
+				const refund = Math.floor(Number(cost) * 0.5);
+				if (refund > 0) newStockpile[itemId] = (newStockpile[itemId] ?? 0) + refund;
+			}
+		}
+		return {
+			...gameState,
+			stockpile: newStockpile,
+			buildings: (gameState.buildings ?? []).filter((b) => b.id !== instanceId)
 		};
 	}
 }
