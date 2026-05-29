@@ -451,7 +451,10 @@ class JobServiceImpl {
                 `[JobService] Harvest complete: ${job.resourceId} at (${job.targetX},${job.targetY}) → ${dropResourceId} x${dropAmount}${shouldPersist ? ' (persistent)' : ''}`
             );
         }
-        return { ...gs, worldMap: newWorldMap, droppedItems: newDropped };
+        // Clear the designation for this tile now that the harvest is complete.
+        const newDesignations = { ...(gs.designations ?? {}) };
+        delete newDesignations[`${job.targetX},${job.targetY}`];
+        return { ...gs, worldMap: newWorldMap, droppedItems: newDropped, designations: newDesignations };
     }
 
     private _syncHaulJobs(jobs: Job[], gs: GameState): Job[] {

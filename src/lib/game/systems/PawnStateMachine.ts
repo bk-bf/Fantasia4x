@@ -455,11 +455,17 @@ function findNearestRestBuilding(
         if (b.status !== 'complete') continue;
         if (!REST_TYPES.includes(b.type)) continue;
         if (b.assignedPawnId && b.assignedPawnId !== pawn.id) continue;
-        // Exclusive occupancy: skip if another pawn is currently sleeping on this tile.
+        // Exclusive occupancy: skip if another pawn is sleeping on this tile OR is already
+        // en route to sleep here (MOVING_TO_NEED with targetState=SLEEPING).
+        // Without the en-route check, all fatigued pawns simultaneously claim the same bed.
         if (gs.pawns.some(
-            (p) => p.id !== pawn.id &&
-                p.currentState === PAWN_STATE.SLEEPING &&
-                p.position?.x === b.x && p.position?.y === b.y
+            (p) => p.id !== pawn.id && (
+                (p.currentState === PAWN_STATE.SLEEPING &&
+                    p.position?.x === b.x && p.position?.y === b.y) ||
+                (p.currentState === PAWN_STATE.MOVING_TO_NEED &&
+                    p.activeJob?.targetState === PAWN_STATE.SLEEPING &&
+                    p.activeJob?.targetX === b.x && p.activeJob?.targetY === b.y)
+            )
         )) continue;
         const def = BUILDINGS_DB.find((d) => d.id === b.type);
         const quality = (def?.effects?.sleepQuality ?? 0) + (def?.effects?.fatigueRecovery ?? 0);
