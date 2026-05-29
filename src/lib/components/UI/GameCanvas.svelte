@@ -553,6 +553,7 @@
     if (clickedBuilding) {
       selectedBuildingId = clickedBuilding.id;
       selectedPawnId = null;
+      showShelterAssign = false;
       uiState.selectPawn(null);
       redrawOverlay();
       return;
@@ -954,6 +955,14 @@
     const id = selectedBuilding.id;
     gameState.updateWithSave((state) => buildingService.cancelDeconstructBuilding(id, state));
     redrawOverlay();
+  }
+
+  let showShelterAssign = false;
+  function assignShelterPawn(pawnId: string | null) {
+    if (!selectedBuilding) return;
+    const id = selectedBuilding.id;
+    gameState.updateWithSave((state) => buildingService.assignShelterPawn(id, pawnId, state));
+    showShelterAssign = false;
   }
 
   function togglePauseBlueprintBuilding() {
