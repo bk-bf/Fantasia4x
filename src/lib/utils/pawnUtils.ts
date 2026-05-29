@@ -149,10 +149,25 @@ function getNextAvailableJob(pawn: Pawn, gameState: GameState): Job | null {
 
 export function getPawnTaskSummary(pawn: Pawn, gameState: GameState): PawnTaskSummary {
   const currentState = (pawn.currentState ?? 'Idle').toUpperCase();
-  const currentTask = describeCurrentTask(pawn);
+  let currentTask = describeCurrentTask(pawn);
   const workAssignment = gameState.workAssignments?.[pawn.id];
   const assignedWork = workAssignment?.currentWork ?? pawn.currentWork ?? null;
   const nextJob = getNextAvailableJob(pawn, gameState);
+
+  // When sleeping near a shelter, show which building the pawn is sleeping at.
+  // activeJob.targetX/Y points to the building position (set by handleTired).
+  if (pawn.currentState?.toLowerCase() === 'sleeping' && pawn.activeJob) {
+    const shelterBuilding = gameState.buildings?.find(
+      (b) =>
+        b.x === pawn.activeJob?.targetX &&
+        b.y === pawn.activeJob?.targetY &&
+        b.status === 'complete' &&
+        /shelter|bed|hut|tent|spot/i.test(b.type)
+    );
+    if (shelterBuilding) {
+      currentTask = `sleeping (${shelterBuilding.type.replace(/_/g, ' ')})`;
+    }
+  }
 
   return {
     currentState,

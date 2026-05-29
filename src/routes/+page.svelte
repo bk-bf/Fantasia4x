@@ -23,7 +23,14 @@
   let buildings: PlacedBuilding[] = [];
 
   // Ambient panel tint — updated reactively on every turn via the gameState store.
-  $: ambientFilter = environmentService.getAmbient($gameState.turn).cssFilter;
+  // panelTint is a per-channel RGB multiplier fed into an SVG feColorMatrix so
+  // panels are tinted by exactly the same hue as the map (no pink hue-rotate bug).
+  $: panelTint = environmentService.getAmbient($gameState.turn).panelTint;
+  $: ambientMatrix =
+    `${panelTint[0].toFixed(3)} 0 0 0 0 ` +
+    `0 ${panelTint[1].toFixed(3)} 0 0 0 ` +
+    `0 0 ${panelTint[2].toFixed(3)} 0 0 ` +
+    `0 0 0 1 0`;
 
   uiState.subscribe((s) => (currentScreen = s.currentScreen));
   gameState.subscribe((s) => (buildings = s.buildings ?? []));
@@ -86,7 +93,15 @@
   <title>Fantasia4x</title>
 </svelte:head>
 
-<div class="game-container" style="--panel-filter: {ambientFilter}">
+<!-- Ambient day/night colour tint for panels — multiplies each RGB channel.
+     Updated reactively each turn; identity matrix (all 1.0) at noon = no change. -->
+<svg width="0" height="0" style="position: absolute" aria-hidden="true" focusable="false">
+  <filter id="ambient-tint" color-interpolation-filters="sRGB">
+    <feColorMatrix type="matrix" values={ambientMatrix} />
+  </filter>
+</svg>
+
+<div class="game-container">
   <div class="game-header">
     <GameControls />
   </div>
@@ -164,14 +179,15 @@
     overflow: hidden;
   }
 
-  /* Day/night ambient tint — driven by --panel-filter CSS variable set from EnvironmentService */
+  /* Day/night ambient tint — SVG feColorMatrix multiplies each panel's RGB
+     channels by the same hue the map uses (cool blue night, warm dawn/dusk).
+     The matrix values are updated reactively from EnvironmentService.panelTint. */
   .game-header,
   .left-panel,
   .right-panel,
   .bottom-nav,
   .overlay-panel {
-    filter: var(--panel-filter, none);
-    transition: filter 1.5s ease;
+    filter: url(#ambient-tint);
   }
 
   .game-header {

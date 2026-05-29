@@ -453,9 +453,11 @@ function isAtFoodBuilding(pawn: Pawn, gs: GameState): boolean {
 /** Returns the complete rest building the pawn is adjacent to, or null. */
 function getRestBuildingAtPawn(pawn: Pawn, gs: GameState): PlacedBuilding | null {
     if (!pawn.position) return null;
+    // Use dx<=1 && dy<=1 (includes same tile) so a pawn sleeping on the building
+    // tile itself (e.g. exhaustion collapse) still receives the shelter bonus.
     return (gs.buildings ?? []).find(
         (b) => b.status === 'complete' && REST_TYPES.includes(b.type) &&
-            isAdjacent(pawn.position!.x, pawn.position!.y, b.x, b.y)
+            Math.abs(b.x - pawn.position!.x) <= 1 && Math.abs(b.y - pawn.position!.y) <= 1
     ) ?? null;
 }
 
@@ -1246,10 +1248,16 @@ function handleTired(pawn: Pawn, gameState: GameState): GameState {
         }
         // Already adjacent to shelter — fall through to sleep in place;
         // handleSleeping detects adjacency via getRestBuildingAtPawn and applies the bonus.
+        // Use the building's coordinates as the job target so the UI can identify
+        // which shelter the pawn is sleeping at.
     }
 
     // No shelter on map, or already adjacent to one: sleep here.
     // handleSleeping will apply any adjacent building bonus automatically.
+    // When sleeping near a shelter, store the building's position as the job target
+    // (instead of the pawn's own position) so UI can identify the shelter.
+    const sleepTargetX = restBuilding?.x ?? (pawn.position?.x ?? 0);
+    const sleepTargetY = restBuilding?.y ?? (pawn.position?.y ?? 0);
     return {
         ...gameState,
         pawns: gameState.pawns.map((p) =>
@@ -1259,8 +1267,8 @@ function handleTired(pawn: Pawn, gameState: GameState): GameState {
                     currentState: PAWN_STATE.SLEEPING,
                     activeJob: {
                         type: 'need' as const,
-                        targetX: p.position?.x ?? 0,
-                        targetY: p.position?.y ?? 0,
+                        targetX: sleepTargetX,
+                        targetY: sleepTargetY,
                         progress: 0,
                         timeRequired: SLEEPING_TURNS,
                         turnsInState: 0

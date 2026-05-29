@@ -20,113 +20,130 @@ export function getTimeOfDay(turn: number): number {
 }
 
 /**
- * Ambient brightness in [0.15, 1.0].
- * Sinusoidal sunrise/sunset with a 0.15 floor so glyphs remain readable at night.
+ * Ambient brightness in [0.15, 1.0], interpolated from AMBIENT_KEYFRAMES.
  *
- *   ambientLight = clamp(sin(π * t), 0, 1) * 0.85 + 0.15
- *   t = timeOfDay remapped so midnight = 0 and noon = 1:
- *       t_mapped = (timeOfDay + 0.5) % 1.0  →  midnight wraps to 0.0, noon = 0.5
- *
- * We use two half-periods:
- *   dawn  = t in [0, 0.5]  → sin rising  0 → 1 → 0 maps nicely to sin(π*t_mapped)
+ * The curve deliberately keeps full daylight through the afternoon and only
+ * begins to fall off around 19:00, reaching night levels near 22:00 — so the
+ * world does not darken too early. Midnight floors at 0.15 so glyphs stay
+ * readable. Both the WebGL map and the HTML panels read from this single
+ * value, keeping their brightness in lock-step.
  */
 export function getAmbientLight(turn: number): number {
-    const t = getTimeOfDay(turn);
-    // Remap so that t=0 (midnight) produces the nadir.  A full period sin wave:
-    // sin( 2π * (t - 0.25) ) gives -1 at midnight (t=0), +1 at noon (t=0.5).
-    // We clamp the negative portion to 0 and scale.
-    const raw = Math.sin(2 * Math.PI * (t - 0.25)); // [-1, 1]
-    const clamped = Math.max(0, raw);                // [0, 1]
-    return clamped * 0.85 + 0.15;                    // [0.15, 1.0]
-}
-
-/** Colour phases from the LIVING-WORLD spec (t = timeOfDay). */
-const TINT_PHASES: Array<{ maxT: number; tint: [number, number, number] }> = [
-    { maxT: 0.10, tint: [0.05, 0.05, 0.15] }, // deep night   0.00–0.10
-    { maxT: 0.20, tint: [0.9, 0.5, 0.2] }, // dawn         0.10–0.20
-    { maxT: 0.35, tint: [1.0, 0.85, 0.7] }, // morning      0.20–0.35
-    { maxT: 0.65, tint: [1.0, 1.0, 1.0] }, // noon         0.35–0.65
-    { maxT: 0.80, tint: [1.0, 0.8, 0.5] }, // evening      0.65–0.80
-    { maxT: 0.90, tint: [0.7, 0.3, 0.2] }, // dusk         0.80–0.90
-    { maxT: 1.00, tint: [0.1, 0.1, 0.3] }, // night        0.90–1.00
-];
-
-/** Ambient colour tint as an RGB triple with each channel in [0, 1]. */
-export function getAmbientTint(turn: number): [number, number, number] {
-    const t = getTimeOfDay(turn);
-    for (const phase of TINT_PHASES) {
-        if (t < phase.maxT) return phase.tint;
-    }
-    return TINT_PHASES[TINT_PHASES.length - 1].tint;
+    const { a, b, f } = resolveKeyframes(getTimeOfDay(turn));
+    return lerp(a.light, b.light, f);
 }
 
 /**
- * Derive a CSS filter string from ambient brightness + tint.
+ * Unified ambient keyframes — t = timeOfDay (0.0 = midnight, 0.5 = noon).
+ * t=0.00 and t=1.00 carry the same values so the day wraps seamlessly.
  *
- * Strategy (works well for the dark amber terminal theme):
- *   1. brightness()  — scaled from ambient light, floored at 0.5 so panels
- *      remain readable even at midnight.
- *   2. sepia()       — converts the existing amber palette toward a neutral
- *      warm brown, controlled by the tint's colour saturation.
- *   3. hue-rotate()  — shifts from the sepia base hue (~36° warm amber) to
- *      the dominant hue of the ambient tint.  Blue night = −156°, orange
- *      dawn = −10°, neutral noon = nothing.
+ * `light` — scalar brightness [0.15, 1.0]; drives BOTH the WebGL ambient and
+ *           the panel brightness (panels remap it with a higher floor), so the
+ *           map and the sidebars dim and brighten together.
+ * `tint`  — RGB multiplier used by the WebGL fragment shader (can go cool/blue).
+ * `cssSp` — CSS sepia() for panel elements (0 = unchanged, 1 = full amber-brown).
+ * `cssHr` — CSS hue-rotate() in degrees for panel elements.
+ *
+ * CSS params intentionally stay in the WARM range (hue-rotate ≤ 0°, i.e. shifting
+ * amber toward orange/red) so transitions NEVER pass through pink on the hue wheel.
+ * Night is handled with brightness-only — panels stay brownish, just dimmer.
  */
-export function getAmbientCssFilter(light: number, tint: [number, number, number]): string {
-    const brightness = Math.max(0.5, light);
-    const [r, g, b] = tint;
-    const max = Math.max(r, g, b);
-    const min = Math.min(r, g, b);
-    const delta = max - min;
+interface AmbientKeyframe {
+    t: number;
+    /** Scalar brightness [0.15, 1.0] — drives WebGL u_ambient AND panel dimming. */
+    light: number;
+    /**
+     * NORMALISED colour (brightest channel ≈ 1.0) — carries HUE only, never
+     * brightness. The shader multiplies it by `light`, so brightness comes
+     * solely from `light`; keeping tint normalised means the brightest channel
+     * never falls below `light` (0.15 floor) and glyphs stay visible at night.
+     */
+    tint: [number, number, number];
+}
 
-    // Essentially neutral (white / grey) — brightness only
-    if (delta < 0.05) {
-        return brightness >= 0.995 ? 'none' : `brightness(${brightness.toFixed(2)})`;
+const AMBIENT_KEYFRAMES: AmbientKeyframe[] = [
+    //  t      clock        light  normalised tint (hue only)
+    { t: 0.0, light: 0.15, tint: [0.45, 0.5, 1.0] }, // 00:00 midnight — cold blue
+    { t: 0.22, light: 0.15, tint: [0.5, 0.52, 0.98] }, // 05:18 pre-dawn — blue
+    { t: 0.28, light: 0.45, tint: [1.0, 0.62, 0.34] }, // 06:43 dawn — warm orange
+    { t: 0.34, light: 0.85, tint: [1.0, 0.92, 0.8] }, // 08:10 morning — warm white
+    { t: 0.5, light: 1.0, tint: [1.0, 1.0, 1.0] }, // 12:00 noon — neutral
+    { t: 0.67, light: 1.0, tint: [1.0, 0.97, 0.9] }, // 16:00 afternoon — faint warm
+    { t: 0.79, light: 0.85, tint: [1.0, 0.82, 0.55] }, // 19:00 evening — golden
+    { t: 0.85, light: 0.5, tint: [1.0, 0.52, 0.34] }, // 20:24 dusk — deep orange
+    { t: 0.91, light: 0.28, tint: [0.78, 0.5, 0.72] }, // 21:50 late dusk — violet
+    { t: 0.96, light: 0.18, tint: [0.52, 0.52, 0.96] }, // 23:00 night — blue
+    { t: 1.0, light: 0.15, tint: [0.45, 0.5, 1.0] }, // 24:00 midnight wrap
+];
+
+function lerp(a: number, b: number, f: number): number {
+    return a + (b - a) * f;
+}
+
+function lerpTint(
+    a: [number, number, number],
+    b: [number, number, number],
+    f: number
+): [number, number, number] {
+    return [lerp(a[0], b[0], f), lerp(a[1], b[1], f), lerp(a[2], b[2], f)];
+}
+
+/** Find the two surrounding keyframes and return an interpolation factor [0,1]. */
+function resolveKeyframes(t: number): { a: AmbientKeyframe; b: AmbientKeyframe; f: number } {
+    for (let i = 0; i < AMBIENT_KEYFRAMES.length - 1; i++) {
+        const a = AMBIENT_KEYFRAMES[i];
+        const b = AMBIENT_KEYFRAMES[i + 1];
+        if (t >= a.t && t <= b.t) {
+            return { a, b, f: (t - a.t) / (b.t - a.t) };
+        }
     }
+    const last = AMBIENT_KEYFRAMES[AMBIENT_KEYFRAMES.length - 1];
+    return { a: last, b: last, f: 0 };
+}
 
-    // HSL hue of the tint colour (0–360°)
-    let hue: number;
-    if (max === r) {
-        hue = 60 * (((g - b) / delta + 6) % 6);
-    } else if (max === g) {
-        hue = 60 * ((b - r) / delta + 2);
-    } else {
-        hue = 60 * ((r - g) / delta + 4);
-    }
+/**
+ * Ambient colour tint as an RGB triple used by the WebGL fragment shader.
+ * Linearly interpolated between keyframes — no hard phase boundaries.
+ */
+export function getAmbientTint(turn: number): [number, number, number] {
+    const { a, b, f } = resolveKeyframes(getTimeOfDay(turn));
+    return lerpTint(a.tint, b.tint, f);
+}
 
-    // sepia(1) maps toward ~36° (warm amber/brown) — the same tone as the
-    // existing panel theme, so sepia alone is subtle.  hue-rotate then
-    // nudges from that base toward the ambient tint's hue.
-    const SEPIA_HUE = 36;
-    let hueShift = hue - SEPIA_HUE;
-    if (hueShift > 180) hueShift -= 360;
-    if (hueShift < -180) hueShift += 360;
-
-    const saturation = delta / max;
-    const sepia = Math.min(0.35, saturation * 0.45);
-
-    return (
-        `brightness(${brightness.toFixed(2)})` +
-        ` sepia(${sepia.toFixed(2)})` +
-        ` hue-rotate(${Math.round(hueShift)}deg)`
-    );
+/**
+ * Per-channel RGB multiplier for HTML panels.
+ *
+ * Applied via an SVG `feColorMatrix` (see +page.svelte) so panels are tinted by
+ * EXACTLY the same hue the map uses — cool blue at night, warm amber at
+ * dawn/dusk — by multiplying each colour channel directly. This avoids the pink
+ * artifact that CSS `hue-rotate` produces when rotating amber toward blue.
+ *
+ * It mirrors the map's `colour × light × tint`, then lifts the result by a
+ * readability floor so panel text never collapses to unreadable black.
+ */
+const PANEL_FLOOR = 0.34;
+export function getPanelTint(turn: number): [number, number, number] {
+    const light = getAmbientLight(turn);
+    const tint = getAmbientTint(turn);
+    const lift = (c: number) => PANEL_FLOOR + (1 - PANEL_FLOOR) * light * c;
+    return [lift(tint[0]), lift(tint[1]), lift(tint[2])];
 }
 
 export interface AmbientState {
+    /** Scalar brightness for WebGL u_ambient. */
     light: number;
+    /** Normalised RGB hue for WebGL u_ambient_tint. */
     tint: [number, number, number];
-    /** Ready-to-use CSS filter string for HTML panel elements. */
-    cssFilter: string;
+    /** Per-channel RGB multiplier for the panel feColorMatrix tint. */
+    panelTint: [number, number, number];
 }
 
 class EnvironmentServiceImpl {
     getAmbient(turn: number): AmbientState {
-        const light = getAmbientLight(turn);
-        const tint = getAmbientTint(turn);
         return {
-            light,
-            tint,
-            cssFilter: getAmbientCssFilter(light, tint)
+            light: getAmbientLight(turn),
+            tint: getAmbientTint(turn),
+            panelTint: getPanelTint(turn)
         };
     }
 }

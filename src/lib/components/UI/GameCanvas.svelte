@@ -48,6 +48,9 @@
 
   let canvas: HTMLCanvasElement;
   let designCanvas: HTMLCanvasElement;
+  // Pre-processed tileset canvases for Canvas2D designation overlay (magenta stripped)
+  let _tilesSheetCanvas: HTMLCanvasElement | null = null;
+  let _itemsSheetCanvas: HTMLCanvasElement | null = null;
   let container: HTMLDivElement;
   let renderer: WebGLRenderer | null = null;
   let animationId = 0;
@@ -566,6 +569,29 @@
     drawDesignations();
   }
 
+  /** Load a BMP tileset, strip magenta background, cache as an HTMLCanvasElement. */
+  function _loadSpriteSheet(url: string, target: '_tilesSheetCanvas' | '_itemsSheetCanvas') {
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement('canvas');
+      c.width = img.width;
+      c.height = img.height;
+      const cx = c.getContext('2d', { willReadFrequently: true });
+      if (!cx) return;
+      cx.drawImage(img, 0, 0);
+      const id = cx.getImageData(0, 0, c.width, c.height);
+      const d = id.data;
+      for (let i = 0; i < d.length; i += 4) {
+        if (d[i] === 255 && d[i + 1] === 0 && d[i + 2] === 255) d[i + 3] = 0;
+      }
+      cx.putImageData(id, 0, 0);
+      if (target === '_tilesSheetCanvas') _tilesSheetCanvas = c;
+      else _itemsSheetCanvas = c;
+      drawDesignations();
+    };
+    img.src = url;
+  }
+
   function drawDesignations() {
     if (!designCanvas || !container || !worldMap.length) return;
     const W = container.clientWidth;
@@ -579,46 +605,71 @@
     ctx.clearRect(0, 0, W, H);
     if (!designations || Object.keys(designations).length === 0) return;
 
-    const fh = Math.max(8, Math.floor(tileHeight * 0.65));
-    ctx.save();
-    ctx.globalAlpha = 0.28;
-    ctx.fillStyle = '#ffffff';
-    ctx.font = `bold ${fh}px "Courier New", Courier, monospace`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
+    // Lazy-load sprite sheets on first designation draw
+    if (!_tilesSheetCanvas) {
+      _loadSpriteSheet('/tilesets/bitlands_tiles.bmp', '_tilesSheetCanvas');
+      return;
+    }
+    if (!_itemsSheetCanvas) {
+      _loadSpriteSheet('/tilesets/bitlands_items.bmp', '_itemsSheetCanvas');
+      return;
+    }
 
-    for (const [key, type] of Object.entries(designations)) {
-      if (type === 'stockpile') continue;
+    const SPRITE_W = 12,
+      SPRITE_H = 18;
+    ctx.save();
+    ctx.globalAlpha = 0.75;
+
+    for (const [key, dtype] of Object.entries(designations)) {
+      if (dtype === 'stockpile') continue;
       const [wx, wy] = key.split(',').map(Number);
-      const sx = (wx - viewX) * tileWidth + tileWidth * 0.5;
-      const sy = (wy - viewY) * tileHeight + tileHeight * 0.5;
+      const sx = (wx - viewX) * tileWidth;
+      const sy = (wy - viewY) * tileHeight;
       if (sx < -tileWidth || sy < -tileHeight || sx > W + tileWidth || sy > H + tileHeight)
         continue;
 
-      let char: string;
-      if (type === 'woodcut') {
-        char = '\u00F7'; // ÷ — CP437 246 Unicode equivalent (woodcutting)
-      } else if (type === 'forage') {
-        char = '\u00B1'; // ± — CP437 241 Unicode equivalent (foraging/scavenging)
-      } else if (type === 'harvest') {
+      let sheet: HTMLCanvasElement;
+      let spriteId: number;
+
+      if (dtype === 'mine') {
+        sheet = _itemsSheetCanvas;
+        spriteId = 207;
+      } else if (dtype === 'woodcut') {
+        sheet = _tilesSheetCanvas;
+        spriteId = 246;
+      } else if (dtype === 'forage') {
+        sheet = _tilesSheetCanvas;
+        spriteId = 241;
+      } else if (dtype === 'harvest') {
         const tile = worldMap[wy]?.[wx];
         const resourceId = tile?.resources
           ? Object.keys(tile.resources).find((id) => (tile.resources![id] ?? 0) > 0)
           : undefined;
         const resDef = resourceId ? resourceObjectService.getById(resourceId) : undefined;
-        char = resDef?.interaction.workCategory === 'foraging' ? '\u00B1' : '\u00F7';
-      } else if (type === 'mine') {
-        char = '\u26CF'; // ⛏
-      } else if (type === 'construct') {
-        char = '+';
-      } else if (type === 'haul') {
-        char = 'h';
-      } else if (type === 'clear') {
-        char = '\u00D7'; // ×
+        if (resDef?.interaction.workCategory === 'mining') {
+          sheet = _itemsSheetCanvas;
+          spriteId = 207;
+        } else {
+          sheet = _tilesSheetCanvas;
+          spriteId = 241;
+        }
       } else {
         continue;
       }
-      ctx.fillText(char, sx, sy);
+
+      const col = spriteId % 16;
+      const row = Math.floor(spriteId / 16);
+      ctx.drawImage(
+        sheet,
+        col * SPRITE_W,
+        row * SPRITE_H,
+        SPRITE_W,
+        SPRITE_H,
+        sx,
+        sy,
+        tileWidth,
+        tileHeight
+      );
     }
     ctx.restore();
   }
