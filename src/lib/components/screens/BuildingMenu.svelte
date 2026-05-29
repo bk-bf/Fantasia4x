@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { gameState, currentItem, currentRace, currentTurn } from '$lib/stores/gameState';
+  import { gameState, currentRace, currentTurn } from '$lib/stores/gameState';
+  import { addToStockpileZone, consumeFromStockpiles } from '$lib/game/core/GameState';
   import { uiState } from '$lib/stores/uiState';
   import { itemService } from '$lib/game/services/ItemService';
   import { buildingService } from '$lib/game/services/BuildingService';
@@ -9,7 +10,6 @@
   import type { PlacedBuilding } from '$lib/game/core/types';
   import type { Building } from '$lib/game/core/types';
 
-  let itemsMap: Record<string, number> = {};
   let race: any = null;
   let buildings: PlacedBuilding[] = [];
   let maxPopulation = 0;
@@ -82,9 +82,7 @@
   // Legacy compat
   $: availableBuildings = unlockedDefs;
 
-  $: getItemAmount = (itemId: string): number => {
-    return itemsMap[itemId] || 0;
-  };
+  $: getItemAmount = (itemId: string): number => $gameState?.stockpile?.[itemId] ?? 0;
 
   $: getBuildingCount = (buildingId: string): number => {
     return buildings.filter((b) => b.type === buildingId && b.status === 'complete').length;
@@ -94,7 +92,7 @@
   $: canAfford = (building: Building): boolean => {
     if (!building.buildingCost) return false;
     return Object.entries(building.buildingCost).every(([itemId, cost]) => {
-      const available = itemsMap[itemId] || 0;
+      const available = $gameState?.stockpile?.[itemId] ?? 0;
       return available >= Number(cost);
     });
   };
@@ -108,16 +106,10 @@
       maxPopulation,
       currentToolLevel,
       completedResearch,
-      item: Object.entries(itemsMap)
-        .map(([id, amount]) => {
-          const itemObj = itemService.getItemById(id);
-          if (!itemObj) return null;
-          return { ...itemObj, amount };
-        })
-        .filter((item): item is NonNullable<typeof item> => item !== null),
+      item: [],
       buildingCounts: {},
       buildings,
-      stockpile: {},
+      stockpile: $gameState?.stockpile ?? {},
       designations: {},
       jobs: [],
       turn: currentTurnValue,
@@ -153,13 +145,6 @@
     currentTurnValue = turn;
   });
 
-  const unsubscribeItems = currentItem.subscribe((item) => {
-    itemsMap = {};
-    item.forEach((item) => {
-      itemsMap[item.id] = Math.floor(item.amount);
-    });
-  });
-
   const unsubscribeRace = currentRace.subscribe((value) => {
     race = value;
   });
@@ -172,7 +157,6 @@
   });
 
   onDestroy(() => {
-    unsubscribeItems();
     unsubscribeRace();
     unsubscribeGame();
     unsubscribeTurn();
@@ -185,13 +169,9 @@
     }
 
     gameState.updateWithSave((state) => {
-      // Deduct materials
-      const newItems = state.item.map((item) => {
-        const cost = building.buildingCost[item.id] || 0;
-        return { ...item, amount: Math.max(0, item.amount - cost) };
-      });
+      const stateAfterCost = consumeFromStockpiles(state, building.buildingCost);
       // Place building at (0,0) — abstract/off-map; JobService generates a construct job
-      return buildingService.placeBuilding(building.id, 0, 0, { ...state, item: newItems });
+      return buildingService.placeBuilding(building.id, 0, 0, stateAfterCost);
     });
   }
 
@@ -202,14 +182,9 @@
     if (!buildingDef) return;
 
     gameState.updateWithSave((state) => {
-      // Refund materials for cancelled build
-      const refundedItems = state.item.map((item) => {
-        const refund = buildingDef.buildingCost[item.id] || 0;
-        return { ...item, amount: item.amount + refund };
-      });
+      const stateWithRefund = addToStockpileZone(state, null, buildingDef.buildingCost);
       return {
-        ...state,
-        item: refundedItems,
+        ...stateWithRefund,
         buildings: (state.buildings ?? []).filter((b) => b.id !== buildingId),
         // Also cancel the matching construct job
         jobs: (state.jobs ?? []).filter(

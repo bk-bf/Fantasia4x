@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { gameState, currentItem, currentRace } from '$lib/stores/gameState';
+  import { gameState, currentRace } from '$lib/stores/gameState';
   import { uiState } from '$lib/stores/uiState';
   import { researchService } from '$lib/game/services/ResearchService';
   import { buildingService } from '$lib/game/services/BuildingService';
@@ -12,27 +12,13 @@
   let completedResearch: string[] = [];
   let currentResearch: any = null;
   let discoveredLore: any[] = [];
-  let itemMap: Record<string, number> = {};
-  let inventory: Record<string, number> = {};
-
   // Item fetching methods
-  $: getItemAmount = (itemId: string): number => {
-    return itemMap[itemId] || 0;
-  };
+  $: getItemAmount = (itemId: string): number => $gameState?.stockpile?.[itemId] ?? 0;
 
-  $: getInventoryAmount = (itemId: string): number => {
-    return inventory[itemId] || 0;
-  };
+  $: getInventoryAmount = (itemId: string): number => $gameState?.stockpile?.[itemId] ?? 0;
 
   const unsubscribeRace = currentRace.subscribe((value) => {
     race = value;
-  });
-
-  const unsubscribeItem = currentItem.subscribe((item) => {
-    itemMap = {};
-    item.forEach((item) => {
-      itemMap[item.id] = Math.floor(item.amount);
-    });
   });
 
   const unsubscribeGame = gameState.subscribe((state) => {
@@ -48,7 +34,6 @@
 
   onDestroy(() => {
     unsubscribeRace();
-    unsubscribeItem();
     unsubscribeGame();
   });
 

@@ -13,7 +13,7 @@
  * turn-based ticks and Fantasia4x GameState immutability.
  */
 
-import type { GameState, Pawn, Building, ConditionDef, ConditionStage } from '../core/types';
+import type { GameState, Pawn, Building, PlacedBuilding, ConditionDef, ConditionStage } from '../core/types';
 import { addToStockpileZone } from '../core/GameState';
 import ITEMS_DATABASE from '../database/items.jsonc';
 import BUILDINGS_DATABASE_RAW from '../database/buildings.jsonc';
@@ -413,18 +413,30 @@ function findNearestStorageBuilding(
     return best ? { x: best.x, y: best.y, buildingId: best.buildingId } : null;
 }
 
-/** Phase 6: find the nearest complete rest building (shelter etc.) to a pawn. */
+/** Phase 6: find the best rest building for a pawn (assigned > quality > distance). */
 function findNearestRestBuilding(
     pawn: Pawn,
     gs: GameState
 ): { x: number; y: number; buildingId: string } | null {
     if (!pawn.position) return null;
-    let best: { x: number; y: number; buildingId: string; dist: number } | null = null;
+    // 1. Prefer a building specifically assigned to this pawn.
+    const assigned = (gs.buildings ?? []).find(
+        (b) => b.status === 'complete' && REST_TYPES.includes(b.type) && b.assignedPawnId === pawn.id
+    );
+    if (assigned) return { x: assigned.x, y: assigned.y, buildingId: assigned.id };
+    // 2. Among unassigned buildings pick the highest quality one (distance as tie-break).
+    //    Skip buildings owned by another pawn.
+    let best: { x: number; y: number; buildingId: string; score: number } | null = null;
     for (const b of gs.buildings ?? []) {
         if (b.status !== 'complete') continue;
         if (!REST_TYPES.includes(b.type)) continue;
-        const dist = Math.abs(b.x - pawn.position.x) + Math.abs(b.y - pawn.position.y);
-        if (!best || dist < best.dist) best = { x: b.x, y: b.y, buildingId: b.id, dist };
+        if (b.assignedPawnId && b.assignedPawnId !== pawn.id) continue;
+        const def = BUILDINGS_DB.find((d) => d.id === b.type);
+        const quality = (def?.effects?.sleepQuality ?? 0) + (def?.effects?.fatigueRecovery ?? 0);
+        const dist = Math.abs(b.x - pawn.position!.x) + Math.abs(b.y - pawn.position!.y);
+        // Quality dominates; distance is a small tie-break penalty.
+        const score = quality * 100 - dist * 0.01;
+        if (!best || score > best.score) best = { x: b.x, y: b.y, buildingId: b.id, score };
     }
     return best ? { x: best.x, y: best.y, buildingId: best.buildingId } : null;
 }
@@ -438,13 +450,18 @@ function isAtFoodBuilding(pawn: Pawn, gs: GameState): boolean {
     );
 }
 
-/** True when the pawn is adjacent to a shelter (better sleep). */
-function isAtRestBuilding(pawn: Pawn, gs: GameState): boolean {
-    if (!pawn.position) return false;
-    return (gs.buildings ?? []).some(
+/** Returns the complete rest building the pawn is adjacent to, or null. */
+function getRestBuildingAtPawn(pawn: Pawn, gs: GameState): PlacedBuilding | null {
+    if (!pawn.position) return null;
+    return (gs.buildings ?? []).find(
         (b) => b.status === 'complete' && REST_TYPES.includes(b.type) &&
             isAdjacent(pawn.position!.x, pawn.position!.y, b.x, b.y)
-    );
+    ) ?? null;
+}
+
+/** True when the pawn is adjacent to a shelter (better sleep). */
+function isAtRestBuilding(pawn: Pawn, gs: GameState): boolean {
+    return getRestBuildingAtPawn(pawn, gs) !== null;
 }
 
 /**
@@ -1333,9 +1350,15 @@ function handleEating(pawn: Pawn, gameState: GameState): GameState {
 function handleSleeping(pawn: Pawn, gameState: GameState): GameState {
     const activeJob = pawn.activeJob;
     const turnsInState = (activeJob?.turnsInState ?? 0) + 1;
-    const atShelter = isAtRestBuilding(pawn, gameState);
-    const fatigueRecovery = atShelter ? FATIGUE_PER_SLEEPING_TURN : FATIGUE_PER_SLEEPING_GROUND;
-    const sleepDuration = atShelter ? SLEEPING_TURNS : SLEEPING_TURNS_GROUND; // for progress bar only
+    const restBuilding = getRestBuildingAtPawn(pawn, gameState);
+    const def = restBuilding ? BUILDINGS_DB.find((d) => d.id === restBuilding.type) : null;
+    // Recovery = base ground rate + building's quality bonus.
+    // sleeping_spot (sleepQuality:0.1) → 0.58+0.10=0.68; hay_bed (fatigueRecovery:0.3) → 0.58+0.30=0.88.
+    const shelterBonus = restBuilding
+        ? (def?.effects?.fatigueRecovery ?? def?.effects?.sleepQuality ?? 0)
+        : 0;
+    const fatigueRecovery = FATIGUE_PER_SLEEPING_GROUND + shelterBonus;
+    const sleepDuration = restBuilding ? SLEEPING_TURNS : SLEEPING_TURNS_GROUND; // for progress bar only
     const newFatigue = Math.max(0, (pawn.needs?.fatigue ?? 50) - fatigueRecovery);
     const newSleep = Math.max(0, (pawn.needs?.sleep ?? 50) - fatigueRecovery);
 
