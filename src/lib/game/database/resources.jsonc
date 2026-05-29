@@ -718,5 +718,55 @@
             "persistent"     : true,
             "regrowthTurns"  : 600 // ~2 days at 300 turns/day
         }
+    },
+    // Taller grass stand — same harvest profile as grass_patch, matches tall_grass subterrain.
+    {
+        "id"              : "tall_grass_patch",
+        "displayName"     : "Tall Grass",
+        "objectSubType"   : "tall_grass",
+        "walkable"        : true,
+        "charSpans"       : [ {"sheet": "tiles", "from": 72, "to": 79} ],
+        "fg"              : [0.44, 0.68, 0.10],
+        "bg"              : [0.08, 0.06, 0.03],
+        "color"           : "#4D7A12",
+        "spawn"           : { "subterrains": {"tall_grass": 0.93} },
+        "nodeAmountRange" : [3, 7],
+        "designationTypes": ["harvest"],
+        "interaction"     : {
+            "action"         : "cut",
+            "workCategory"   : "foraging",
+            "workAmount"     : 7,
+            "toolRequirement": null,
+            "yields"         : [
+                {"itemId": "hay", "min": 2, "max": 5, "skillId": "foraging", "skillMultiplier": 0.15}
+            ],
+            "persistent"     : true,
+            "regrowthTurns"  : 700
+        }
+    },
+    // Dense grass stand — matches deep_grass subterrain, slightly higher yield.
+    {
+        "id"              : "deep_grass_patch",
+        "displayName"     : "Deep Grass",
+        "objectSubType"   : "deep_grass",
+        "walkable"        : true,
+        "charSpans"       : [ {"sheet": "tiles", "from": 72, "to": 79} ],
+        "fg"              : [0.36, 0.58, 0.08],
+        "bg"              : [0.07, 0.05, 0.02],
+        "color"           : "#3D6B0F",
+        "spawn"           : { "subterrains": {"deep_grass": 0.92} },
+        "nodeAmountRange" : [4, 8],
+        "designationTypes": ["harvest"],
+        "interaction"     : {
+            "action"         : "cut",
+            "workCategory"   : "foraging",
+            "workAmount"     : 8,
+            "toolRequirement": null,
+            "yields"         : [
+                {"itemId": "hay", "min": 3, "max": 6, "skillId": "foraging", "skillMultiplier": 0.15}
+            ],
+            "persistent"     : true,
+            "regrowthTurns"  : 800
+        }
     }
 ]
