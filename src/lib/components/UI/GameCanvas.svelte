@@ -588,7 +588,8 @@
       const [wx, wy] = key.split(',').map(Number);
       const sx = (wx - viewX) * tileWidth + tileWidth * 0.5;
       const sy = (wy - viewY) * tileHeight + tileHeight * 0.5;
-      if (sx < -tileWidth || sy < -tileHeight || sx > W + tileWidth || sy > H + tileHeight) continue;
+      if (sx < -tileWidth || sy < -tileHeight || sx > W + tileWidth || sy > H + tileHeight)
+        continue;
 
       let char: string;
       if (type === 'harvest') {
