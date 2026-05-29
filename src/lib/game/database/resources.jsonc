@@ -61,6 +61,22 @@
                     "skillId"        : "woodcutting",
                     "skillMultiplier": 0.1,
                     "regrowthTurns"  : 1500 // ~5 days at 300 turns/day
+                },
+                {
+                    "itemId"         : "branch",
+                    "min"            : 2,
+                    "max"            : 5,
+                    "skillId"        : "woodcutting",
+                    "skillMultiplier": 0.15,
+                    "regrowthTurns"  : 4200
+                },
+                {
+                    "itemId"         : "plant_fiber",
+                    "min"            : 1,
+                    "max"            : 3,
+                    "skillId"        : "woodcutting",
+                    "skillMultiplier": 0.05,
+                    "regrowthTurns"  : 4200
                 }
             ],
             "persistent"     : true,
