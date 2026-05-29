@@ -3,7 +3,7 @@
     "id": "campfire",
     "name": "Campfire",
     "color": "#FF6600",
-    "charSpans": [ {"sheet": "buildings", "id": 22} ],
+    "charSpans": [ {"sheet": "tiles", "id": 14} ],
     "fg": [1.0, 0.4, 0.0],
     "bg": [0.05, 0.02, 0.0],
     "description": "A simple fire pit. Provides warmth, cooking, and a place for colonists to gather food. Requires fuel and lighting.",

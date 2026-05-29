@@ -55,6 +55,10 @@ export interface BuildingService {
 	hasBuildings(buildingCounts: Record<string, number>, category: string): boolean;
 	/** Resolve the map glyph character for a building from its charSpans. Falls back to '#'. */
 	getBuildingGlyph(buildingId: string): string;
+	/** Remove a placed building instance (cancel construction). */
+	cancelBuilding(instanceId: string, gameState: GameState): GameState;
+	/** Toggle the paused flag on a planned/under_construction building. */
+	togglePausedBuilding(instanceId: string, gameState: GameState): GameState;
 }
 
 /**
@@ -400,6 +404,22 @@ export class BuildingServiceImpl implements BuildingService {
 		if (!building?.charSpans) return '#';
 		const chars = resolveCharSpans(building.charSpans as CharSpan[]);
 		return chars[0] ?? '#';
+	}
+
+	cancelBuilding(instanceId: string, gameState: GameState): GameState {
+		return {
+			...gameState,
+			buildings: (gameState.buildings ?? []).filter((b) => b.id !== instanceId)
+		};
+	}
+
+	togglePausedBuilding(instanceId: string, gameState: GameState): GameState {
+		return {
+			...gameState,
+			buildings: (gameState.buildings ?? []).map((b) =>
+				b.id === instanceId ? { ...b, paused: !b.paused } : b
+			)
+		};
 	}
 }
 

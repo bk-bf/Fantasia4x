@@ -46,6 +46,7 @@ export interface PlacedBuilding {
 	y: number;
 	status: 'planned' | 'under_construction' | 'complete';
 	progress: number;     // 0–1 (legacy; use workDone/workRequired for placed buildings)
+	paused?: boolean;     // construction paused by player
 	// Phase 5c: work-point construction
 	workRequired?: number;       // buildDef.buildTime × 10
 	workDone?: number;           // accumulated work points

@@ -148,6 +148,20 @@
 
   // Zone drag-paint state (drag fills a rectangle)
   let zoneDragActive = false;
+
+  // Blueprint drag-paint state
+  let blueprintDragActive = false;
+  let blueprintDragTiles = new Set<string>();
+
+  // Context popup for planned/in-progress buildings
+  let buildingPopup: {
+    placedId: string;
+    type: string;
+    status: string;
+    paused: boolean;
+    screenX: number;
+    screenY: number;
+  } | null = null;
   let zoneAnchorX = 0;
   let zoneAnchorY = 0;
   let zoneEndX = 0;
@@ -452,8 +466,15 @@
     }
 
     // Blueprint placement preview
-    if (blueprintBuildingId && hoverTileX >= 0 && hoverTileY >= 0) {
-      _blueprintPreviewTile(grid, hoverTileX, hoverTileY);
+    if (blueprintBuildingId) {
+      if (blueprintDragActive && blueprintDragTiles.size > 0) {
+        for (const key of blueprintDragTiles) {
+          const [tx, ty] = key.split(',').map(Number);
+          _blueprintPreviewTile(grid, tx, ty);
+        }
+      } else if (hoverTileX >= 0 && hoverTileY >= 0) {
+        _blueprintPreviewTile(grid, hoverTileX, hoverTileY);
+      }
     }
 
     renderer.setGrid(grid);
@@ -470,11 +491,11 @@
     const tile = grid.getTile(tx, ty);
     grid.setTile(tx, ty, {
       char,
-      foreground: { r: 1, g: 1, b: 1 },
+      foreground: { r: 0.1, g: 1.0, b: 0.9 },
       background: {
-        r: (tile?.background?.r ?? 0) * 0.3 + 0.05,
-        g: (tile?.background?.g ?? 0) * 0.3 + 0.05,
-        b: (tile?.background?.b ?? 0) * 0.3 + 0.25
+        r: (tile?.background?.r ?? 0) * 0.1,
+        g: (tile?.background?.g ?? 0) * 0.1 + 0.08,
+        b: (tile?.background?.b ?? 0) * 0.1 + 0.45
       },
       position: { x: tx, y: ty }
     });
@@ -513,27 +534,9 @@
   async function handleTileClick() {
     if (hoverTileX < 0 || hoverTileY < 0) return;
 
-    // Blueprint mode: place building at cursor tile
-    if (blueprintBuildingId) {
-      const bid = blueprintBuildingId;
-      const buildingDef = buildingService.getBuildingById(bid);
-      if (buildingDef) {
-        gameState.updateWithSave((state) => {
-          const newItems = state.item.map((item) => {
-            const cost =
-              (buildingDef as unknown as { buildingCost?: Record<string, number> }).buildingCost?.[
-                item.id
-              ] ?? 0;
-            return { ...item, amount: Math.max(0, item.amount - cost) };
-          });
-          return buildingService.placeBuilding(bid, hoverTileX, hoverTileY, {
-            ...state,
-            item: newItems
-          });
-        });
-      }
-      uiState.deactivateBlueprint();
-      return;
+    // Close any open popup when clicking the map
+    if (buildingPopup) {
+      buildingPopup = null;
     }
 
     // Designation mode: handled by drag — single-click still paints one tile
@@ -548,6 +551,22 @@
         )
       );
       redrawOverlay();
+      return;
+    }
+
+    // Click on a planned/under_construction building → show context popup
+    const clickedBuilding = buildings.find(
+      (b) => b.x === hoverTileX && b.y === hoverTileY && b.status !== 'complete'
+    );
+    if (clickedBuilding) {
+      buildingPopup = {
+        placedId: clickedBuilding.id,
+        type: clickedBuilding.type,
+        status: clickedBuilding.status,
+        paused: clickedBuilding.paused ?? false,
+        screenX: (hoverTileX - viewX) * tileWidth,
+        screenY: Math.max(4, (hoverTileY - viewY) * tileHeight - 68)
+      };
       return;
     }
 
@@ -719,8 +738,14 @@
         e.preventDefault();
         break;
       case 'Escape':
+        if (buildingPopup) {
+          buildingPopup = null;
+          break;
+        }
         if (blueprintBuildingId) {
           uiState.deactivateBlueprint();
+          blueprintDragActive = false;
+          blueprintDragTiles.clear();
           redrawOverlay();
           break;
         }
@@ -790,6 +815,14 @@
       zoneEndY = hoverTileY;
       return;
     }
+    if (blueprintBuildingId) {
+      // Blueprint paint mode: track tiles as user drags
+      blueprintDragActive = true;
+      blueprintDragTiles.clear();
+      if (hoverTileX >= 0 && hoverTileY >= 0) blueprintDragTiles.add(`${hoverTileX},${hoverTileY}`);
+      redrawOverlay();
+      return;
+    }
     if (e.shiftKey) {
       // Shift+drag: start selection rectangle
       selDragActive = true;
@@ -825,6 +858,11 @@
       redrawOverlay();
       return;
     }
+    if (blueprintDragActive) {
+      if (hoverTileX >= 0 && hoverTileY >= 0) blueprintDragTiles.add(`${hoverTileX},${hoverTileY}`);
+      redrawOverlay();
+      return;
+    }
     if (selDragActive) {
       selEndX = hoverTileX;
       selEndY = hoverTileY;
@@ -839,6 +877,33 @@
   }
 
   function handleMouseUp() {
+    if (blueprintDragActive) {
+      // Commit blueprint placements at all dragged tiles
+      const bid = blueprintBuildingId;
+      if (bid && blueprintDragTiles.size > 0) {
+        const buildingDef = buildingService.getBuildingById(bid);
+        if (buildingDef) {
+          gameState.updateWithSave((state) => {
+            let current = state;
+            for (const key of blueprintDragTiles) {
+              const [tx, ty] = key.split(',').map(Number);
+              const newItems = current.item.map((item) => {
+                const cost =
+                  (buildingDef as unknown as { buildingCost?: Record<string, number> })
+                    .buildingCost?.[item.id] ?? 0;
+                return { ...item, amount: Math.max(0, item.amount - cost) };
+              });
+              current = buildingService.placeBuilding(bid, tx, ty, { ...current, item: newItems });
+            }
+            return current;
+          });
+        }
+      }
+      blueprintDragActive = false;
+      blueprintDragTiles.clear();
+      uiState.deactivateBlueprint();
+      return;
+    }
     if (zoneDragActive) {
       // Commit the painted (or erased) rectangle to game state
       if (zoneEraseMode) {
@@ -873,9 +938,29 @@
     dragging = false;
   }
 
+  function cancelBlueprintBuilding() {
+    if (!buildingPopup) return;
+    gameState.updateWithSave((state) =>
+      buildingService.cancelBuilding(buildingPopup!.placedId, state)
+    );
+    buildingPopup = null;
+    redrawOverlay();
+  }
+
+  function togglePauseBlueprintBuilding() {
+    if (!buildingPopup) return;
+    gameState.updateWithSave((state) =>
+      buildingService.togglePausedBuilding(buildingPopup!.placedId, state)
+    );
+    buildingPopup = { ...buildingPopup, paused: !buildingPopup.paused };
+    redrawOverlay();
+  }
+
   function handleMouseLeave() {
     dragging = false;
     zoneDragActive = false;
+    blueprintDragActive = false;
+    blueprintDragTiles.clear();
     if (selDragActive) {
       selDragActive = false;
       selRect = { x1: selAnchorX, y1: selAnchorY, x2: selEndX, y2: selEndY };
@@ -955,9 +1040,27 @@
       release to highlight
     </div>
   {:else if blueprintBuildingId}
-    <div class="designation-hud" style="border-color:#4477ff;color:#88aaff;">
-      [BLUEPRINT: {buildingService.getBuildingById(blueprintBuildingId)?.name ??
-        blueprintBuildingId}] — click to place · Esc cancel
+    <div class="designation-hud" style="border-color:#00ddcc;color:#00ffee;">
+      [◆ {buildingService.getBuildingById(blueprintBuildingId)?.name ?? blueprintBuildingId}] — drag
+      to paint · Esc cancel
+    </div>
+  {/if}
+  {#if buildingPopup}
+    {@const bDef = buildingService.getBuildingById(buildingPopup.type)}
+    <div
+      class="building-popup"
+      style="left:{buildingPopup.screenX}px; top:{buildingPopup.screenY}px;"
+    >
+      <div class="building-popup__name">{bDef?.name ?? buildingPopup.type}</div>
+      <div class="building-popup__status">
+        [{buildingPopup.status.replace('_', ' ')}{buildingPopup.paused ? ' • paused' : ''}]
+      </div>
+      <div class="building-popup__actions">
+        <button on:click={togglePauseBlueprintBuilding}
+          >{buildingPopup.paused ? 'RESUME' : 'PAUSE'}</button
+        >
+        <button class="cancel-btn" on:click={cancelBlueprintBuilding}>CANCEL</button>
+      </div>
     </div>
   {/if}
   {#if selectedPawn}
@@ -1292,6 +1395,53 @@
     pointer-events: none;
     white-space: nowrap;
     z-index: 10;
+  }
+  .building-popup {
+    position: absolute;
+    background: rgba(0, 10, 25, 0.93);
+    border: 1px solid #00aacc;
+    color: #88ccee;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    padding: 5px 8px;
+    z-index: 25;
+    pointer-events: all;
+    min-width: 110px;
+  }
+  .building-popup__name {
+    color: #ddeeff;
+    font-weight: bold;
+    margin-bottom: 2px;
+    font-size: 11px;
+  }
+  .building-popup__status {
+    color: #4499bb;
+    font-size: 10px;
+    margin-bottom: 5px;
+  }
+  .building-popup__actions {
+    display: flex;
+    gap: 4px;
+  }
+  .building-popup__actions button {
+    background: #0a1a2a;
+    border: 1px solid #00aacc;
+    color: #66bbdd;
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
+    padding: 2px 6px;
+    cursor: pointer;
+  }
+  .building-popup__actions button:hover {
+    background: #0d2233;
+    color: #aaddff;
+  }
+  .building-popup__actions .cancel-btn {
+    border-color: #cc3322;
+    color: #ee6655;
+  }
+  .building-popup__actions .cancel-btn:hover {
+    background: #2a0a08;
   }
   .tile-coord {
     color: #e8b86a;

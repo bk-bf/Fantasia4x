@@ -109,10 +109,11 @@ export function buildGameGrid(
                     position: { x: b.x, y: b.y }
                 });
             } else if (b.status === 'under_construction' || b.status === 'planned') {
-                // Under construction: dim cyan '+'
+                // Under construction/planned: cyan '+'; paused buildings are dimmed
+                const dim = b.paused ? 0.35 : 1.0;
                 grid.setTile(b.x, b.y, {
-                    char: '+',
-                    foreground: { r: 0.30, g: 0.70, b: 0.70 },
+                    char: b.paused ? '…' : '+',
+                    foreground: { r: 0.30 * dim, g: 0.70 * dim, b: 0.70 * dim },
                     background: { r: 0.02, g: 0.06, b: 0.06 },
                     position: { x: b.x, y: b.y }
                 });
