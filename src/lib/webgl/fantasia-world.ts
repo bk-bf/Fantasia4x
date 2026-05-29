@@ -8,7 +8,11 @@ import type { WorldTile, PlacedBuilding, DesignationType } from '$lib/game/core/
 import { SUBTERRAINS, SUBTERRAIN_FALLBACK, pickChar, resolveCharSpans } from '$lib/game/core/Terrains.js';
 import { resourceObjectService } from '$lib/game/services/ResourceObjectService.js';
 import { buildingService } from '$lib/game/services/BuildingService.js';
+import { glyph, SHEET } from './tilesets.js';
 import type { RGB } from './tile-types.js';
+
+/** Glyph used as a demolition-queued overlay on top of buildings. */
+const DECONSTRUCT_GLYPH = glyph(SHEET.MAP, 88);
 
 /**
  * Build a GameGrid from a Fantasia4x WorldTile 2D array.
@@ -108,6 +112,15 @@ export function buildGameGrid(
                     background: { r: bg[0], g: bg[1], b: bg[2] },
                     position: { x: b.x, y: b.y }
                 });
+                // Deconstruct-queued overlay: render the demolition glyph in orange-red
+                if (b.deconstructQueued) {
+                    grid.setTile(b.x, b.y, {
+                        char: DECONSTRUCT_GLYPH,
+                        foreground: { r: 1.0, g: 0.25, b: 0.05 },
+                        background: { r: bg[0], g: bg[1], b: bg[2] },
+                        position: { x: b.x, y: b.y }
+                    });
+                }
             } else if (b.status === 'under_construction' || b.status === 'planned') {
                 // Under construction/planned: cyan '+'; paused buildings are dimmed
                 const dim = b.paused ? 0.35 : 1.0;

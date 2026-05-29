@@ -54,6 +54,8 @@ export interface PlacedBuilding {
 	// Phase 6: fuel / lighting state
 	fuel?: number;               // current fuel units remaining
 	lit?: boolean;               // campfire is burning right now
+	// Deconstruction
+	deconstructQueued?: boolean; // player has queued this building for demolition
 }
 
 // ===== PHASE 5 NEW TYPES =====

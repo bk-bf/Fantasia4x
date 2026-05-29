@@ -493,6 +493,9 @@ export class GameEngineImpl implements GameEngine {
 		// Phase 5c: building construction is now handled by the job system (construct jobs).
 		// processBuildingQueue countdown removed.
 
+		// Process any buildings queued for deconstruction — remove and refund materials
+		this.gameState = buildingService.processDeconstructionQueue(this.gameState!);
+
 		// Phase 6: tick campfire fuel consumption
 		this.gameState = this._processCampfireFuel(this.gameState!);
 	}

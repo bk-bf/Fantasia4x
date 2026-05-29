@@ -103,19 +103,19 @@
   function getTypeIcon(type: string): string {
     switch (type) {
       case 'material':
-        return '📦';
+        return '[MAT]';
       case 'tool':
-        return '🔧';
+        return '[TOOL]';
       case 'weapon':
-        return '⚔️';
+        return '[WPN]';
       case 'armor':
-        return '🛡️';
+        return '[ARM]';
       case 'consumable':
-        return '🧪';
+        return '[CON]';
       case 'currency':
-        return '💰';
+        return '[CUR]';
       default:
-        return '📋';
+        return '[ITEM]';
     }
   }
 </script>

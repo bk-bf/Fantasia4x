@@ -59,8 +59,12 @@ export interface BuildingService {
 	cancelBuilding(instanceId: string, gameState: GameState): GameState;
 	/** Toggle the paused flag on a planned/under_construction building. */
 	togglePausedBuilding(instanceId: string, gameState: GameState): GameState;
-	/** Remove a completed building and refund 50% of its materials to the stockpile. */
+	/** Mark a completed building as queued for demolition (shows overlay; removal happens next turn). */
 	deconstructBuilding(instanceId: string, gameState: GameState): GameState;
+	/** Cancel a queued demolition — clears the deconstructQueued flag. */
+	cancelDeconstructBuilding(instanceId: string, gameState: GameState): GameState;
+	/** Remove all buildings flagged deconstructQueued and refund 50% of their materials. Called each turn. */
+	processDeconstructionQueue(gameState: GameState): GameState;
 }
 
 /**
@@ -425,21 +429,40 @@ export class BuildingServiceImpl implements BuildingService {
 	}
 
 	deconstructBuilding(instanceId: string, gameState: GameState): GameState {
-		const placed = (gameState.buildings ?? []).find((b) => b.id === instanceId);
-		if (!placed) return gameState;
-		const def = this.getBuildingById(placed.type);
-		// Refund 50% of build cost (floor each amount) back to the stockpile
+		return {
+			...gameState,
+			buildings: (gameState.buildings ?? []).map((b) =>
+				b.id === instanceId ? { ...b, deconstructQueued: true } : b
+			)
+		};
+	}
+
+	cancelDeconstructBuilding(instanceId: string, gameState: GameState): GameState {
+		return {
+			...gameState,
+			buildings: (gameState.buildings ?? []).map((b) =>
+				b.id === instanceId ? { ...b, deconstructQueued: false } : b
+			)
+		};
+	}
+
+	processDeconstructionQueue(gameState: GameState): GameState {
+		const toRemove = (gameState.buildings ?? []).filter((b) => b.deconstructQueued);
+		if (toRemove.length === 0) return gameState;
 		const newStockpile = { ...(gameState.stockpile ?? {}) };
-		if (def?.buildingCost) {
-			for (const [itemId, cost] of Object.entries(def.buildingCost)) {
-				const refund = Math.floor(Number(cost) * 0.5);
-				if (refund > 0) newStockpile[itemId] = (newStockpile[itemId] ?? 0) + refund;
+		for (const b of toRemove) {
+			const def = this.getBuildingById(b.type);
+			if (def?.buildingCost) {
+				for (const [itemId, cost] of Object.entries(def.buildingCost)) {
+					const refund = Math.floor(Number(cost) * 0.5);
+					if (refund > 0) newStockpile[itemId] = (newStockpile[itemId] ?? 0) + refund;
+				}
 			}
 		}
 		return {
 			...gameState,
 			stockpile: newStockpile,
-			buildings: (gameState.buildings ?? []).filter((b) => b.id !== instanceId)
+			buildings: (gameState.buildings ?? []).filter((b) => !b.deconstructQueued)
 		};
 	}
 }
