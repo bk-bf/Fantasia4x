@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { gameState, currentRace } from '$lib/stores/gameState';
+  import { gameState, currentItem, currentRace } from '$lib/stores/gameState';
   import CurrentTask from '$lib/components/UI/CurrentTask.svelte';
   import { uiState } from '$lib/stores/uiState';
   import TaskContainer from '$lib/components/UI/TaskContainer.svelte';
@@ -9,6 +9,7 @@
   import { onDestroy } from 'svelte';
   import type { Item, Pawn } from '$lib/game/core/types';
 
+  let itemMap: Record<string, number> = {};
   let race: any = null;
   let inventory: Record<string, number> = {};
   let craftingQueue: any[] = [];
@@ -28,12 +29,19 @@
     { id: 'makers_bench', label: "MAKER'S BENCH" }
   ];
 
-  $: getItemAmount = (itemId: string): number => $gameState?.stockpile?.[itemId] ?? 0;
+  $: getItemAmount = (itemId: string): number => itemMap[itemId] || 0;
 
   // All craftable items — split by workshop in template
   $: allCraftableItems = $gameState ? gameEngine.getCraftableItems() : [];
 
   $: firstCraftingInProgress = craftingQueue.length > 0 ? craftingQueue[0] : null;
+
+  const unsubscribeItem = currentItem.subscribe((items) => {
+    itemMap = {};
+    items.forEach((item) => {
+      itemMap[item.id] = Math.floor(item.amount);
+    });
+  });
 
   const unsubscribeRace = currentRace.subscribe((value) => {
     race = value;
@@ -58,6 +66,7 @@
   });
 
   onDestroy(() => {
+    unsubscribeItem();
     unsubscribeRace();
     unsubscribeGame();
   });

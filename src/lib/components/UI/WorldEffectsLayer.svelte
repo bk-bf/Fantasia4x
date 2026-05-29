@@ -23,6 +23,17 @@
     </div>
   {/each}
 
+  {#each $worldEffects.campfireOverlays as overlay (overlay.id)}
+    <div class="fire-sparks" style="left:{overlay.left}px;top:{overlay.top}px;">
+      <div class="campfire-glow"></div>
+      <span class="spark s1">·</span>
+      <span class="spark s2">*</span>
+      <span class="spark s3">·</span>
+      <span class="spark s4">*</span>
+      <span class="spark s5">·</span>
+    </div>
+  {/each}
+
   <!-- ── Fullscreen Weather / Shader Overlays ──────────────────────────────────── -->
   <!-- To add rain: create RainCanvas.svelte and mount it here when weather='rain'  -->
   <!-- Example:                                                                      -->
@@ -91,6 +102,105 @@
     100% {
       opacity: 0;
       transform: translateY(-20px) scale(0.85);
+    }
+  }
+
+  /* ── Campfire fire animation ─────────────────────────────────────────────────── */
+
+  .campfire-glow {
+    position: absolute;
+    width: 72px;
+    height: 56px;
+    left: 0;
+    top: 0;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: radial-gradient(
+      ellipse at 50% 65%,
+      rgba(255, 120, 0, 0.6) 0%,
+      rgba(255, 60, 0, 0.3) 30%,
+      rgba(255, 30, 0, 0.1) 55%,
+      transparent 75%
+    );
+    filter: blur(6px);
+    mix-blend-mode: screen;
+    animation: glow-pulse 1.8s ease-in-out infinite alternate;
+  }
+
+  @keyframes glow-pulse {
+    0% {
+      opacity: 0.65;
+      transform: translate(-50%, -50%) scale(0.88);
+    }
+    100% {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1.12);
+    }
+  }
+
+  .fire-sparks {
+    position: absolute;
+    pointer-events: none;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+  }
+
+  .spark {
+    position: absolute;
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
+    font-weight: bold;
+    opacity: 0;
+    animation: fire-rise 1.1s ease-out infinite;
+  }
+
+  .s1 {
+    color: #ff3300;
+    animation-delay: 0s;
+    left: -5px;
+    text-shadow: 0 0 6px #ff1100;
+  }
+  .s2 {
+    color: #ff8800;
+    animation-delay: 0.22s;
+    left: 3px;
+    text-shadow: 0 0 6px #ff5500;
+  }
+  .s3 {
+    color: #ffcc00;
+    animation-delay: 0.44s;
+    left: -1px;
+    text-shadow: 0 0 6px #ff9900;
+  }
+  .s4 {
+    color: #ff5500;
+    animation-delay: 0.66s;
+    left: 5px;
+    text-shadow: 0 0 6px #ff2200;
+  }
+  .s5 {
+    color: #ffee44;
+    animation-delay: 0.88s;
+    left: -3px;
+    text-shadow: 0 0 6px #ffbb00;
+  }
+
+  @keyframes fire-rise {
+    0% {
+      opacity: 0;
+      transform: translateY(2px) scale(1.5);
+    }
+    10% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.85;
+      transform: translateY(-18px) scale(1.1);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(-36px) scale(0.4);
     }
   }
 </style>

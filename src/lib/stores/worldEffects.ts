@@ -16,9 +16,16 @@ export interface ProgressOverlay {
   progress: number; // 0–1
 }
 
+export interface CampfireOverlay {
+  id: string;
+  left: number;
+  top: number;
+}
+
 export interface WorldEffectsState {
   sleepingOverlays: SleepingOverlay[];
   progressOverlays: ProgressOverlay[];
+  campfireOverlays: CampfireOverlay[];
   // Future effects — add here and handle in WorldEffectsLayer:
   // weather: 'none' | 'rain' | 'snow';
   // particleEffects: ParticleEffect[];
@@ -27,7 +34,8 @@ export interface WorldEffectsState {
 function createWorldEffectsStore() {
   const { subscribe, update } = writable<WorldEffectsState>({
     sleepingOverlays: [],
-    progressOverlays: []
+    progressOverlays: [],
+    campfireOverlays: []
   });
 
   return {
@@ -37,6 +45,9 @@ function createWorldEffectsStore() {
     },
     setProgressOverlays(overlays: ProgressOverlay[]) {
       update((s) => ({ ...s, progressOverlays: overlays }));
+    },
+    setCampfireOverlays(overlays: CampfireOverlay[]) {
+      update((s) => ({ ...s, campfireOverlays: overlays }));
     }
   };
 }

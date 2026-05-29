@@ -22,6 +22,7 @@
   import { worldEffects } from '$lib/stores/worldEffects.js';
   import { buildingService } from '$lib/game/services/BuildingService.js';
   import { resolveCharSpans } from '$lib/game/core/Terrains.js';
+  import { resourceObjectService } from '$lib/game/services/ResourceObjectService.js';
 
   // Tile size range for zoom (square cells for CoQ sprite-mode)
   // MAP_W / MAP_H must match the generateWorld() call in gameState.ts
@@ -109,6 +110,18 @@
   let buildings: PlacedBuilding[] = [];
   let designations: Record<string, DesignationType> = {};
 
+  // Campfire fire animation: only lit + complete campfires.
+  $: worldEffects.setCampfireOverlays(
+    buildings
+      .filter((b) => b.type === 'campfire' && b.status === 'complete' && b.lit === true)
+      .map((b) => {
+        const left = (b.x - viewX + 0.5) * tileWidth;
+        const top = (b.y - viewY + 0.5) * tileHeight;
+        return { id: b.id, left, top };
+      })
+      .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= (container?.clientWidth ?? 0))
+  );
+
   // Phase 7: dropped items overlay
   let droppedItems: DroppedItem[] = [];
 
@@ -155,6 +168,16 @@
 
   // Selected building (click-locked, like selectedPawnId)
   let selectedBuildingId: string | null = null;
+  // Resource tile interaction
+  let selectedResourceTile: { x: number; y: number; resourceId: string } | null = null;
+  let similarDragMode = false;
+  let similarDragResourceId = '';
+  let similarDragDesignationType: DesignationType = 'harvest';
+  let similarDragActive = false;
+  let similarAnchorX = 0;
+  let similarAnchorY = 0;
+  let similarEndX = 0;
+  let similarEndY = 0;
   let zoneAnchorX = 0;
   let zoneAnchorY = 0;
   let zoneEndX = 0;
@@ -189,16 +212,18 @@
     ? (buildings.find((b) => b.id === selectedBuildingId) ?? null)
     : null;
 
-  // Yellow box ring positioned over the selected pawn's tile on the map canvas.
-  $: selectionRing = (() => {
-    if (!selectedPawn?.position) return null;
-    const left = (selectedPawn.position.x - viewX) * tileWidth;
-    const top = (selectedPawn.position.y - viewY) * tileHeight;
-    const cW = container?.clientWidth ?? 0;
-    const cH = container?.clientHeight ?? 0;
-    if (left < -tileWidth || top < -tileHeight || left >= cW || top >= cH) return null;
-    return { left, top, width: tileWidth, height: tileHeight };
-  })();
+  // Resource tile derived state
+  $: selectedResourceDef = selectedResourceTile
+    ? resourceObjectService.getById(selectedResourceTile.resourceId)
+    : null;
+  $: selectedResourceAmount = selectedResourceTile
+    ? (worldMap[selectedResourceTile.y]?.[selectedResourceTile.x]?.resources?.[
+        selectedResourceTile.resourceId
+      ] ?? 0)
+    : 0;
+  $: selectedResourceDesignation = selectedResourceTile
+    ? (designations[`${selectedResourceTile.x},${selectedResourceTile.y}`] ?? null)
+    : null;
 
   // Dropped item under the hovered tile.
   $: hoverDroppedItem =
@@ -251,16 +276,6 @@
   let selRect: { x1: number; y1: number; x2: number; y2: number } | null = null;
 
   const ZONE_META: Record<string, { label: string; color: string; desc: string }> = {
-    forage: {
-      label: 'FORAGE ZONE',
-      color: '#3aaa60',
-      desc: 'Pawns gather berries, twigs, bark and plant fiber'
-    },
-    scavenge: {
-      label: 'SCAVENGE ZONE',
-      color: '#a07840',
-      desc: 'Pawns collect surface stone, flint and clay'
-    },
     stockpile: {
       label: 'STOCKPILE ZONE',
       color: '#e8a020',
@@ -486,6 +501,62 @@
       }
     }
 
+    // Selected resource tile highlight (yellow)
+    if (selectedResourceTile) {
+      const { x, y } = selectedResourceTile;
+      const t = grid.getTile(x, y);
+      if (t) {
+        grid.setTile(x, y, {
+          char: t.char,
+          foreground: { r: 1.0, g: 0.9, b: 0.1 },
+          background: {
+            r: t.background.r * 0.4 + 0.14,
+            g: t.background.g * 0.4 + 0.1,
+            b: t.background.b * 0.4
+          },
+          position: { x, y }
+        });
+      }
+    }
+
+    // Similar-resource drag preview
+    if (similarDragActive) {
+      const minX = Math.min(similarAnchorX, similarEndX);
+      const maxX = Math.max(similarAnchorX, similarEndX);
+      const minY = Math.min(similarAnchorY, similarEndY);
+      const maxY = Math.max(similarAnchorY, similarEndY);
+      for (let ry = minY; ry <= maxY; ry++) {
+        for (let rx = minX; rx <= maxX; rx++) {
+          const wt = worldMap[ry]?.[rx];
+          const t = grid.getTile(rx, ry);
+          if (!t) continue;
+          if ((wt?.resources?.[similarDragResourceId] ?? 0) > 0) {
+            grid.setTile(rx, ry, {
+              char: t.char,
+              foreground: { r: 0.25, g: 1.0, b: 0.35 },
+              background: {
+                r: t.background.r * 0.3 + 0.03,
+                g: t.background.g * 0.3 + 0.16,
+                b: t.background.b * 0.3
+              },
+              position: { x: rx, y: ry }
+            });
+          } else {
+            grid.setTile(rx, ry, {
+              char: t.char,
+              foreground: {
+                r: t.foreground.r * 0.35,
+                g: t.foreground.g * 0.35,
+                b: t.foreground.b * 0.35
+              },
+              background: t.background,
+              position: { x: rx, y: ry }
+            });
+          }
+        }
+      }
+    }
+
     renderer.setGrid(grid);
   }
 
@@ -572,13 +643,28 @@
     if (clickedPawn) {
       selectedPawnId = clickedPawn.id;
       selectedBuildingId = null;
+      selectedResourceTile = null;
       uiState.selectPawn(clickedPawn.id);
       redrawOverlay();
       return;
     }
 
-    // Click on empty tile → deselect both
+    // Click on a tile with resources → show info HUD
+    const clickedTileData = worldMap[hoverTileY]?.[hoverTileX];
+    const tileResources = Object.entries(clickedTileData?.resources ?? {}).filter(([, v]) => v > 0);
+    if (tileResources.length > 0) {
+      const [resourceId] = tileResources[0];
+      selectedResourceTile = { x: hoverTileX, y: hoverTileY, resourceId };
+      selectedPawnId = null;
+      selectedBuildingId = null;
+      uiState.selectPawn(null);
+      redrawOverlay();
+      return;
+    }
+
+    // Click on empty tile → deselect all
     selectedBuildingId = null;
+    selectedResourceTile = null;
     // TODO: draft-control mechanic will re-enable direct pawn movement later.
     // For now, pawns must only move through the automated AI and turn processing.
     //
@@ -737,6 +823,17 @@
         e.preventDefault();
         break;
       case 'Escape':
+        if (similarDragMode) {
+          similarDragMode = false;
+          similarDragActive = false;
+          redrawOverlay();
+          break;
+        }
+        if (selectedResourceTile) {
+          selectedResourceTile = null;
+          redrawOverlay();
+          break;
+        }
         if (selectedBuildingId) {
           selectedBuildingId = null;
           break;
@@ -805,6 +902,15 @@
 
   function handleMouseDown(e: MouseEvent) {
     if (e.button !== 0) return;
+    if (similarDragMode) {
+      similarDragActive = true;
+      similarAnchorX = hoverTileX;
+      similarAnchorY = hoverTileY;
+      similarEndX = hoverTileX;
+      similarEndY = hoverTileY;
+      redrawOverlay();
+      return;
+    }
     if (designationMode) {
       // Zone paint mode: start a drag rectangle, don't pan
       zoneDragActive = true;
@@ -857,6 +963,12 @@
       redrawOverlay();
       return;
     }
+    if (similarDragActive) {
+      similarEndX = hoverTileX;
+      similarEndY = hoverTileY;
+      redrawOverlay();
+      return;
+    }
     if (blueprintDragActive) {
       if (hoverTileX >= 0 && hoverTileY >= 0) blueprintDragTiles.add(`${hoverTileX},${hoverTileY}`);
       redrawOverlay();
@@ -880,6 +992,10 @@
   }
 
   function handleMouseUp() {
+    if (similarDragActive) {
+      completeSimilarDrag();
+      return;
+    }
     if (blueprintDragActive) {
       // Commit blueprint placements at all dragged tiles
       const bid = blueprintBuildingId;
@@ -963,6 +1079,53 @@
     redrawOverlay();
   }
 
+  function designateResource() {
+    if (!selectedResourceTile || !selectedResourceDef) return;
+    const { x, y } = selectedResourceTile;
+    const dtype = (selectedResourceDef.designationTypes?.[0] ?? 'harvest') as DesignationType;
+    gameState.updateWithSave((state) => designationService.designate(x, y, dtype, state));
+    redrawOverlay();
+  }
+
+  function cancelResourceDesignation() {
+    if (!selectedResourceTile) return;
+    const { x, y } = selectedResourceTile;
+    gameState.updateWithSave((state) => designationService.clearDesignation(x, y, state));
+    redrawOverlay();
+  }
+
+  function startSimilarSelect() {
+    if (!selectedResourceTile || !selectedResourceDef) return;
+    const dtype = (selectedResourceDef.designationTypes?.[0] ?? 'harvest') as DesignationType;
+    similarDragResourceId = selectedResourceTile.resourceId;
+    similarDragDesignationType = dtype;
+    similarDragMode = true;
+    similarDragActive = false;
+    selectedResourceTile = null;
+  }
+
+  function completeSimilarDrag() {
+    const minX = Math.min(similarAnchorX, similarEndX);
+    const maxX = Math.max(similarAnchorX, similarEndX);
+    const minY = Math.min(similarAnchorY, similarEndY);
+    const maxY = Math.max(similarAnchorY, similarEndY);
+    gameState.updateWithSave((state) => {
+      let current = state;
+      for (let ry = minY; ry <= maxY; ry++) {
+        for (let rx = minX; rx <= maxX; rx++) {
+          const wt = worldMap[ry]?.[rx];
+          if ((wt?.resources?.[similarDragResourceId] ?? 0) > 0) {
+            current = designationService.designate(rx, ry, similarDragDesignationType, current);
+          }
+        }
+      }
+      return current;
+    });
+    similarDragActive = false;
+    similarDragMode = false;
+    redrawOverlay();
+  }
+
   let showShelterAssign = false;
   function assignShelterPawn(pawnId: string | null) {
     if (!selectedBuilding) return;
@@ -1029,13 +1192,6 @@
 >
   <canvas bind:this={canvas}></canvas>
 
-  {#if selectionRing}
-    <div
-      class="pawn-selection-ring"
-      style="left:{selectionRing.left}px;top:{selectionRing.top}px;width:{selectionRing.width}px;height:{selectionRing.height}px;"
-    ></div>
-  {/if}
-
   {#if errorMsg}
     <div class="error">WebGL unavailable: {errorMsg}</div>
   {:else if !ready}
@@ -1058,14 +1214,21 @@
       {/if}
     </div>
   {:else if selDragActive}
-    <div class="designation-hud" style="border-color:#5566cc;color:#99aaee;">
+    <div class="designation-hud">
       ◈ SELECTING ({Math.abs(selEndX - selAnchorX) + 1}×{Math.abs(selEndY - selAnchorY) + 1}) —
       release to highlight
     </div>
   {:else if blueprintBuildingId}
-    <div class="designation-hud" style="border-color:#00ddcc;color:#00ffee;">
+    <div class="designation-hud">
       [◆ {buildingService.getBuildingById(blueprintBuildingId)?.name ?? blueprintBuildingId}] — drag
       to paint · Esc cancel
+    </div>
+  {:else if similarDragMode}
+    <div class="designation-hud">
+      [⊞ SELECT {similarDragResourceId.replace(/_/g, ' ').toUpperCase()}] — drag to designate all ·
+      Esc cancel{#if similarDragActive}
+        — ({Math.abs(similarEndX - similarAnchorX) + 1}×{Math.abs(similarEndY - similarAnchorY) +
+          1}){/if}
     </div>
   {/if}
   {#if selectedPawn}
@@ -1175,6 +1338,54 @@
             on:click={deconstructBuilding}>&#x2692;</button
           >
         {/if}
+      </div>
+    </div>
+  {:else if selectedResourceTile && selectedResourceDef}
+    {@const dtype = selectedResourceDef.designationTypes?.[0] ?? 'harvest'}
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div class="res-row" on:mousedown|stopPropagation on:mouseup|stopPropagation>
+      <div class="tile-hud tile-hud--resource tile-hud--selected-resource">
+        <div class="bld-header">
+          <span class="bld-name">{selectedResourceDef.displayName}</span>
+          <span class="bld-status">[{dtype}{selectedResourceDesignation ? ' ✓' : ''}]</span>
+        </div>
+        <div class="bld-desc">
+          {selectedResourceTile.resourceId.replace(/_/g, ' ')} — ×{selectedResourceAmount} nodes
+        </div>
+        {#if selectedResourceDesignation}
+          <div class="bld-note">⊢ {selectedResourceDesignation}…</div>
+        {:else}
+          {#if selectedResourceDef.interaction.yields.length > 0}
+            <div class="bld-desc">
+              yields: {selectedResourceDef.interaction.yields
+                .map((y) => `${y.min}–${y.max}×${y.itemId.replace(/_/g, ' ')}`)
+                .join(' ')}
+            </div>
+          {/if}
+          <div class="bld-desc">
+            {selectedResourceDef.interaction.action} · {selectedResourceDef.interaction.workAmount} work
+          </div>
+        {/if}
+      </div>
+      <div class="bld-side-actions">
+        {#if selectedResourceDesignation}
+          <button
+            class="bld-btn bld-btn--sq"
+            title="Cancel designation"
+            on:click={cancelResourceDesignation}>↩</button
+          >
+        {:else}
+          <button
+            class="bld-btn bld-btn--danger bld-btn--sq"
+            title={selectedResourceDef.interaction.action}
+            on:click={designateResource}>⛏</button
+          >
+        {/if}
+        <button
+          class="bld-btn bld-btn--sq"
+          title="Select similar — drag to designate all matching"
+          on:click={startSimilarSelect}>⊞</button
+        >
       </div>
     </div>
   {:else if hasSelection}
@@ -1328,15 +1539,6 @@
     font-family: 'Courier New', monospace;
     font-size: 12px;
   }
-  .pawn-selection-ring {
-    position: absolute;
-    pointer-events: none;
-    box-shadow:
-      inset 0 0 0 2px #ffdd00,
-      0 0 6px 2px rgba(255, 221, 0, 0.35);
-    z-index: 5;
-  }
-
   .tile-hud {
     position: absolute;
     bottom: 6px;
@@ -1354,16 +1556,10 @@
   }
 
   .tile-hud--selection {
-    border-color: #5566cc;
-    background: rgba(8, 12, 40, 0.94);
-    color: #99aaee;
     max-width: 340px;
     white-space: normal;
   }
   .tile-hud--pawn {
-    border-color: #3a9a8a;
-    background: rgba(4, 20, 18, 0.94);
-    color: #7adaca;
     min-width: 180px;
     white-space: nowrap;
   }
@@ -1374,12 +1570,12 @@
     margin-bottom: 2px;
   }
   .pawn-name {
-    color: #aaeedd;
+    color: #c8a060;
     font-weight: bold;
     font-size: 11px;
   }
   .pawn-state {
-    color: #559988;
+    color: #7a6030;
     font-size: 9px;
   }
   .pawn-row {
@@ -1389,17 +1585,17 @@
     font-size: 9px;
   }
   .pawn-stat-label {
-    color: #4a8878;
+    color: #7a6030;
   }
   .pawn-stat-val {
-    color: #99ddcc;
+    color: #c08040;
     min-width: 18px;
   }
   .pawn-warn {
     color: #ee8844 !important;
   }
   .pawn-job {
-    color: #669988;
+    color: #8a7040;
     font-size: 9px;
     margin-top: 1px;
   }
@@ -1428,9 +1624,6 @@
     font-size: 9px;
   }
   .tile-hud--item {
-    border-color: #c8a020;
-    background: rgba(20, 14, 4, 0.94);
-    color: #d4a830;
     min-width: 140px;
     display: flex;
     align-items: baseline;
@@ -1438,11 +1631,11 @@
     flex-wrap: wrap;
   }
   .item-glyph {
-    color: #f0c030;
+    color: #c08030;
     font-size: 11px;
   }
   .item-name {
-    color: #ffe870;
+    color: #c8a060;
     font-weight: bold;
     text-transform: uppercase;
     font-size: 10px;
@@ -1457,7 +1650,7 @@
     font-size: 9px;
   }
   .sel-title {
-    color: #8899ff;
+    color: #c08040;
     font-weight: bold;
     margin-right: 5px;
     display: block;
@@ -1468,13 +1661,13 @@
     line-height: 1.4;
   }
   .sel-pawns {
-    color: #ddeeff;
+    color: #c8a060;
   }
   .sel-buildings {
-    color: #aaccff;
+    color: #a08040;
   }
   .sel-hint {
-    color: #556688;
+    color: #7a6030;
     font-size: 9px;
     margin-top: 2px;
   }
@@ -1507,9 +1700,6 @@
   }
   /* ── Building HUD card ─────────────────────────── */
   .tile-hud--building {
-    border-color: #4a8aaa;
-    background: rgba(4, 14, 24, 0.95);
-    color: #7ab8cc;
     min-width: 160px;
     max-width: 300px;
     white-space: normal;
@@ -1526,9 +1716,9 @@
   }
   .tile-hud--selected-building {
     position: static;
-    border-color: #00ccee;
-    background: rgba(2, 12, 24, 0.97);
-    color: #88ddee;
+    border-color: #f0c060;
+    background: rgba(20, 14, 4, 0.96);
+    color: #e8c870;
     pointer-events: all;
   }
   .bld-side-actions {
@@ -1548,12 +1738,12 @@
     margin-bottom: 2px;
   }
   .bld-name {
-    color: #cceeff;
+    color: #c8a060;
     font-weight: bold;
     font-size: 11px;
   }
   .bld-status {
-    color: #3a8aaa;
+    color: #7a6030;
     font-size: 9px;
     flex: 1;
   }
@@ -1561,13 +1751,13 @@
     display: none; /* actions moved to bld-side-actions */
   }
   .bld-desc {
-    color: #5a8898;
+    color: #8a7040;
     font-size: 9px;
     margin-top: 1px;
     line-height: 1.4;
   }
   .bld-progress {
-    color: #66aabb;
+    color: #a08840;
     font-size: 9px;
     margin-top: 2px;
   }
@@ -1577,7 +1767,7 @@
     margin-top: 2px;
   }
   .bld-refund {
-    color: #557788;
+    color: #7a6030;
     font-size: 9px;
     margin-top: 2px;
   }
@@ -1587,9 +1777,9 @@
     margin-top: 4px;
   }
   .bld-btn {
-    background: #040e18;
-    border: 1px solid #2a7a99;
-    color: #55aacc;
+    background: #140e04;
+    border: 1px solid #7a5820;
+    color: #c08030;
     font-family: 'Courier New', monospace;
     font-size: 10px;
     padding: 2px 7px;
@@ -1597,8 +1787,8 @@
     line-height: 1.3;
   }
   .bld-btn:hover {
-    background: #061828;
-    color: #99ddee;
+    background: #1e1608;
+    color: #e8a040;
   }
   .bld-btn--danger {
     border-color: #aa3322;
@@ -1614,6 +1804,43 @@
     line-height: 1;
     min-width: 24px;
     text-align: center;
+  }
+  /* ── Resource tile HUD ────────────────────────── */
+  .res-row {
+    position: absolute;
+    bottom: 6px;
+    left: 6px;
+    display: flex;
+    align-items: flex-start;
+    gap: 4px;
+    pointer-events: all;
+  }
+  .tile-hud--resource {
+    min-width: 160px;
+  }
+  .tile-hud--selected-resource {
+    position: static;
+    border-color: #f0c060;
+    background: rgba(20, 14, 4, 0.96);
+    color: #e8c870;
+    pointer-events: all;
+  }
+  /* bright gold text inside selected building/resource cards */
+  .tile-hud--selected-building .bld-name,
+  .tile-hud--selected-resource .bld-name {
+    color: #ffe890;
+  }
+  .tile-hud--selected-building .bld-status,
+  .tile-hud--selected-resource .bld-status {
+    color: #c0a040;
+  }
+  .tile-hud--selected-building .bld-desc,
+  .tile-hud--selected-resource .bld-desc,
+  .tile-hud--selected-building .bld-progress,
+  .tile-hud--selected-resource .bld-progress,
+  .tile-hud--selected-building .bld-refund,
+  .tile-hud--selected-resource .bld-refund {
+    color: #c0a040;
   }
   .tile-coord {
     color: #e8b86a;

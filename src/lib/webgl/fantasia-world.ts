@@ -136,20 +136,23 @@ export function buildGameGrid(
 
     // Phase 4b: overlay designations
     if (designations) {
-        // Work designations: replace terrain glyph with a marker char
-        const WORK_GLYPHS: Partial<Record<DesignationType, { char: string; fg: RGB }>> = {
-            harvest: { char: '!', fg: { r: 0.25, g: 0.85, b: 0.25 } },
-            mine: { char: 'X', fg: { r: 0.85, g: 0.55, b: 0.15 } },
-            construct: { char: '+', fg: { r: 0.35, g: 0.75, b: 0.80 } },
-            haul: { char: 'h', fg: { r: 0.75, g: 0.75, b: 0.25 } },
-            clear: { char: 'x', fg: { r: 0.80, g: 0.25, b: 0.25 } }
+        // All designation icons are white + fairly transparent so they don't clutter the map.
+        // Sprite mapping:
+        //   harvest (woodcutting/other) → tiles#246  U+00F7 ÷
+        //   harvest (gathering/forage)  → tiles#242  U+2265 ≥
+        //   mine                        → items#207
+        //   construct / haul / clear    → simple ASCII chars
+        const WORK_FG: RGB = { r: 0.45, g: 0.45, b: 0.45 };
+
+        const SIMPLE_ICONS: Partial<Record<DesignationType, string>> = {
+            construct: '+',
+            haul: 'h',
+            clear: 'x'
         };
 
-        // Zone designations: tint background, keep terrain glyph
-        const ZONE_TINTS: Partial<Record<DesignationType, { bg: RGB; fg: RGB }>> = {
-            forage: { bg: { r: 0.02, g: 0.22, b: 0.04 }, fg: { r: 0.35, g: 0.90, b: 0.35 } },
-            scavenge: { bg: { r: 0.18, g: 0.14, b: 0.06 }, fg: { r: 0.70, g: 0.65, b: 0.45 } },
-            stockpile: { bg: { r: 0.30, g: 0.18, b: 0.02 }, fg: { r: 1.00, g: 0.80, b: 0.20 } }
+        const STOCKPILE_TINT = {
+            bg: { r: 0.30, g: 0.18, b: 0.02 } as RGB,
+            fg: { r: 1.00, g: 0.80, b: 0.20 } as RGB
         };
 
         function lerp(a: number, b: number, t: number) { return a + (b - a) * t; }
@@ -162,27 +165,43 @@ export function buildGameGrid(
             const existing = grid.getTile(x, y);
             if (!existing) continue;
 
-            // Zone types: tint bg + fg, keep terrain glyph
-            const zoneTint = ZONE_TINTS[type as DesignationType];
-            if (zoneTint) {
+            if (type === 'stockpile') {
                 grid.setTile(x, y, {
                     char: existing.char,
-                    foreground: blendRGB(existing.foreground, zoneTint.fg, 0.30),
-                    background: blendRGB(existing.background, zoneTint.bg, 0.65),
+                    foreground: blendRGB(existing.foreground, STOCKPILE_TINT.fg, 0.30),
+                    background: blendRGB(existing.background, STOCKPILE_TINT.bg, 0.65),
                     position: { x, y }
                 });
                 continue;
             }
 
-            // Work designations: replace with marker glyph
-            const workGlyph = WORK_GLYPHS[type as DesignationType];
-            if (workGlyph) {
+            if (type === 'harvest') {
+                // Pick sprite based on the resource's workCategory
+                const tile = worldMap[y]?.[x];
+                const resourceId = tile?.resources
+                    ? Object.keys(tile.resources).find((id) => (tile.resources![id] ?? 0) > 0)
+                    : undefined;
+                const resDef = resourceId ? resourceObjectService.getById(resourceId) : undefined;
+                const char = resDef?.interaction.workCategory === 'foraging'
+                    ? '\u2265'  // tiles#242 — gathering
+                    : '\u00F7'; // tiles#246 — woodcutting / harvest
+                grid.setTile(x, y, { char, foreground: WORK_FG, background: existing.background, position: { x, y } });
+                continue;
+            }
+
+            if (type === 'mine') {
                 grid.setTile(x, y, {
-                    char: workGlyph.char,
-                    foreground: workGlyph.fg,
+                    char: glyph(SHEET.ITEMS, 207),
+                    foreground: WORK_FG,
                     background: existing.background,
                     position: { x, y }
                 });
+                continue;
+            }
+
+            const icon = SIMPLE_ICONS[type as DesignationType];
+            if (icon) {
+                grid.setTile(x, y, { char: icon, foreground: WORK_FG, background: existing.background, position: { x, y } });
             }
         }
     }

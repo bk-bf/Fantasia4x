@@ -39,7 +39,7 @@
             "subterrains": {"deep_grass": 0.14, "grass": 0.08, "dirt": 0.03, "tall_grass": 0.02, "savanna": 0.01}
         },
         "nodeAmountRange" : [3, 6],
-        "designationTypes": ["harvest", "forage"],
+        "designationTypes": ["harvest"],
         "interaction"     : {
             "action"         : "woodcut",
             "workCategory"   : "woodcutting",
@@ -107,7 +107,7 @@
             }
         },
         "nodeAmountRange" : [5, 10],
-        "designationTypes": ["harvest", "scavenge"],
+        "designationTypes": ["harvest"],
         "interaction"     : {
             "action"         : "mine",
             "workCategory"   : "mining",
@@ -148,7 +148,7 @@
             }
         },
         "nodeAmountRange" : [2, 5],
-        "designationTypes": ["harvest", "forage"],
+        "designationTypes": ["harvest"],
         "interaction"     : {
             "action"         : "harvest",
             "workCategory"   : "foraging",
@@ -174,7 +174,7 @@
             "subterrains": {"deep_grass": 0.02, "grass": 0.015, "dirt": 0.01, "moss": 0.008, "mud": 0.005}
         },
         "nodeAmountRange" : [3, 8],
-        "designationTypes": ["forage"],
+        "designationTypes": ["harvest"],
         "interaction"     : {
             "action"         : "gather",
             "workCategory"   : "foraging",
@@ -204,7 +204,7 @@
             "subterrains": {"mineral_deposit": 0.004, "cave": 0.002, "rocky": 0.002, "cliff": 0.001}
         },
         "nodeAmountRange" : [1, 3],
-        "designationTypes": ["scavenge"],
+        "designationTypes": ["harvest"],
         "interaction"     : {
             "action"         : "scavenge",
             "workCategory"   : "mining",
@@ -233,7 +233,7 @@
         "color"           : "#94B82E",
         "spawn"           : { "subterrains": {"grass": 0.018, "dirt": 0.008, "savanna": 0.01} },
         "nodeAmountRange" : [3, 7],
-        "designationTypes": ["forage", "harvest"],
+        "designationTypes": ["harvest"],
         "interaction"     : {
             "action"         : "cut",
             "workCategory"   : "foraging",
@@ -257,7 +257,7 @@
         "color"           : "#70C71F",
         "spawn"           : { "subterrains": {"deep_grass": 0.028, "tall_grass": 0.032} },
         "nodeAmountRange" : [4, 9],
-        "designationTypes": ["forage", "harvest"],
+        "designationTypes": ["harvest"],
         "interaction"     : {
             "action"         : "cut",
             "workCategory"   : "foraging",
@@ -290,7 +290,7 @@
             }
         },
         "nodeAmountRange" : [3, 7],
-        "designationTypes": ["forage"],
+        "designationTypes": ["harvest"],
         "interaction"     : {
             "action"         : "harvest",
             "workCategory"   : "foraging",
@@ -316,7 +316,7 @@
             "subterrains": {"deep_grass": 0.014, "grass": 0.01, "moss": 0.006, "dirt": 0.005, "mud": 0.004}
         },
         "nodeAmountRange" : [2, 4],
-        "designationTypes": ["forage"],
+        "designationTypes": ["harvest"],
         "interaction"     : {
             "action"         : "strip",
             "workCategory"   : "foraging",
@@ -339,7 +339,7 @@
         "color"           : "#DB8554",
         "spawn"           : { "subterrains": {"moss": 0.014, "mud": 0.012, "deep_grass": 0.01, "dirt": 0.005} },
         "nodeAmountRange" : [2, 5],
-        "designationTypes": ["forage", "harvest"],
+        "designationTypes": ["harvest"],
         "interaction"     : {
             "action"         : "harvest",
             "workCategory"   : "foraging",
@@ -365,7 +365,7 @@
             "subterrains": {"bog": 0.015, "mud": 0.012, "moss": 0.01, "deep_grass": 0.005, "dirt": 0.004}
         },
         "nodeAmountRange" : [3, 6],
-        "designationTypes": ["harvest", "scavenge"],
+        "designationTypes": ["harvest"],
         "interaction"     : {
             "action"         : "woodcut",
             "workCategory"   : "woodcutting",
@@ -396,7 +396,7 @@
             "subterrains": {"clay": 0.08, "mud": 0.025, "bog": 0.02, "riverbank": 0.018, "shallow_water": 0.008}
         },
         "nodeAmountRange" : [3, 6],
-        "designationTypes": ["harvest", "scavenge"],
+        "designationTypes": ["harvest"],
         "interaction"     : {
             "action"         : "dig",
             "workCategory"   : "mining",
@@ -423,7 +423,7 @@
             "subterrains": {"bush": 0.22, "deep_grass": 0.09, "grass": 0.06, "moss": 0.04, "scrubland": 0.03}
         },
         "nodeAmountRange" : [3, 7],
-        "designationTypes": ["forage"],
+        "designationTypes": ["harvest"],
         "interaction"     : {
             "action"         : "forage",
             "workCategory"   : "foraging",
@@ -447,7 +447,7 @@
         "color"           : "#D1AD1F",
         "spawn"           : { "subterrains": {"savanna": 0.012, "tall_grass": 0.008, "grass": 0.004, "dirt": 0.002} },
         "nodeAmountRange" : [3, 7],
-        "designationTypes": ["forage", "harvest"],
+        "designationTypes": ["harvest"],
         "interaction"     : {
             "action"         : "gather",
             "workCategory"   : "foraging",
@@ -473,7 +473,7 @@
             "subterrains": {"tall_grass": 0.009, "grass": 0.005, "riverbank": 0.003, "moss": 0.002}
         },
         "nodeAmountRange" : [2, 5],
-        "designationTypes": ["forage", "harvest"],
+        "designationTypes": ["harvest"],
         "interaction"     : {
             "action"         : "gather",
             "workCategory"   : "foraging",
@@ -503,7 +503,7 @@
         "color"           : "#B86130",
         "spawn"           : { "subterrains": {"mineral_deposit": 0.12, "rocky": 0.02, "cliff": 0.01, "cave": 0.008} },
         "nodeAmountRange" : [3, 7],
-        "designationTypes": ["harvest", "scavenge"],
+        "designationTypes": ["harvest"],
         "interaction"     : {
             "action"         : "mine",
             "workCategory"   : "mining",
@@ -534,7 +534,7 @@
             "subterrains": {"mineral_deposit": 0.08, "rocky": 0.012, "cliff": 0.008, "cave": 0.006}
         },
         "nodeAmountRange" : [2, 5],
-        "designationTypes": ["harvest", "scavenge"],
+        "designationTypes": ["harvest"],
         "interaction"     : {
             "action"         : "mine",
             "workCategory"   : "mining",
@@ -565,7 +565,7 @@
             "subterrains": {"mineral_deposit": 0.04, "rocky": 0.006, "cliff": 0.004, "cave": 0.003}
         },
         "nodeAmountRange" : [1, 4],
-        "designationTypes": ["harvest", "scavenge"],
+        "designationTypes": ["harvest"],
         "interaction"     : {
             "action"         : "mine",
             "workCategory"   : "mining",
@@ -594,7 +594,7 @@
         "color"           : "#7F5220",
         "spawn"           : { "subterrains": {"mud": 0.06, "bog": 0.03, "riverbank": 0.02} },
         "nodeAmountRange" : [3, 7],
-        "designationTypes": ["harvest", "scavenge"],
+        "designationTypes": ["harvest"],
         "interaction"     : {
             "action"         : "dig",
             "workCategory"   : "mining",
@@ -617,7 +617,7 @@
         "color"           : "#706620",
         "spawn"           : { "subterrains": {"bog": 0.05, "mud": 0.02} },
         "nodeAmountRange" : [2, 5],
-        "designationTypes": ["harvest", "scavenge"],
+        "designationTypes": ["harvest"],
         "interaction"     : {
             "action"         : "dig",
             "workCategory"   : "mining",

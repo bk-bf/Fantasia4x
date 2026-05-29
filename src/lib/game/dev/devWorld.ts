@@ -90,8 +90,6 @@ export function applyDevWorld(state: GameState, itemQty = 500): GameState {
 
     // --- 1. Zone geometry -------------------------------------------
     const stockpileTiles = rectTiles(state.worldMap, ax - 4, ay - 4, ax + 3, ay + 3);  // 8×8
-    const forageTiles = rectTiles(state.worldMap, ax - 26, ay - 8, ax - 11, ay + 7);  // 16×16
-    const scavengeTiles = rectTiles(state.worldMap, ax + 11, ay - 8, ax + 26, ay + 7);  // 16×16
 
     // --- 2. Build stockpile inventory --------------------------------
     const stockpileInventory: Record<string, number> = {};
@@ -132,8 +130,6 @@ export function applyDevWorld(state: GameState, itemQty = 500): GameState {
     // --- 4. ZoneInstances -------------------------------------------
     // NOTE: 'harvest' is a WORK glyph (!) not a zone tint — do not use it here.
     const stockpileInstance: ZoneInstance = { id: 'dev-stockpile-1', type: 'stockpile', label: 'Dev Stockpile', filter: EMPTY_FILTER };
-    const forageInstance: ZoneInstance = { id: 'dev-forage-1', type: 'forage', label: 'Forage 1', filter: EMPTY_FILTER };
-    const scavengeInstance: ZoneInstance = { id: 'dev-scavenge-1', type: 'scavenge', label: 'Scavenge 1', filter: EMPTY_FILTER };
 
     // --- 5. Designations + zoneId map --------------------------------
     // Strip any pre-existing 'harvest' work designations left over from old saves.
@@ -147,14 +143,6 @@ export function applyDevWorld(state: GameState, itemQty = 500): GameState {
         designations[k] = 'stockpile';
         designationZoneId[k] = stockpileInstance.id;
     }
-    for (const k of forageTiles) {
-        designations[k] = 'forage';
-        designationZoneId[k] = forageInstance.id;
-    }
-    for (const k of scavengeTiles) {
-        designations[k] = 'scavenge';
-        designationZoneId[k] = scavengeInstance.id;
-    }
 
     // --- 6. Discover all locations -----------------------------------
     LOCATION_TEMPLATES.forEach((t) => locationService.discoverLocation(t.id));
@@ -167,7 +155,7 @@ export function applyDevWorld(state: GameState, itemQty = 500): GameState {
         ...state,
         stockpile: aggregate,
         stockpileZones: [stockpileZone],
-        zoneInstances: [stockpileInstance, forageInstance, scavengeInstance],
+        zoneInstances: [stockpileInstance],
         designations: designations as GameState['designations'],
         designationZoneId,
         droppedItems: storedDrops,

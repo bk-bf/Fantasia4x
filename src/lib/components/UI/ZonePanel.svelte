@@ -14,8 +14,6 @@
 
   const ZONE_DEFS: { type: FilterableZoneType; label: string; icon: string; desc: string; color: string }[] =
     [
-      { type: 'forage',    label: 'FORAGE',    icon: '[F]', desc: 'Pawns gather berries, twigs, bark and plant fiber', color: '#3aaa60' },
-      { type: 'scavenge',  label: 'SCAVENGE',  icon: '[S]', desc: 'Pawns collect surface stone, flint and clay',       color: '#a07840' },
       { type: 'stockpile', label: 'STOCKPILE', icon: '[P]', desc: 'Haulers deposit carried resources here',             color: '#e8a020' }
     ];
 

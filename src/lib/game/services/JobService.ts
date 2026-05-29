@@ -185,7 +185,7 @@ class JobServiceImpl {
         jobs = jobs.filter((j) => {
             if (j.type !== 'harvest') return true;
             const designationType = gs.designations?.[`${j.targetX},${j.targetY}`];
-            if (designationType !== 'harvest' && designationType !== 'forage' && designationType !== 'scavenge') return false;
+            if (designationType !== 'harvest') return false;
             if (!this._resourceMatchesDesignation(designationType, j.resourceId ?? '')) return false;
             if (!this._resourceMatchesFilter(designationType, j.resourceId ?? '', gs, `${j.targetX},${j.targetY}`)) return false;
             const tile = gs.worldMap[j.targetY]?.[j.targetX];
@@ -194,7 +194,7 @@ class JobServiceImpl {
 
         // Add harvest jobs only for designated tiles that currently hold matching resources.
         for (const [key, dtype] of Object.entries(gs.designations ?? {})) {
-            if (dtype !== 'harvest' && dtype !== 'forage' && dtype !== 'scavenge') continue;
+            if (dtype !== 'harvest') continue;
             const [x, y] = key.split(',').map(Number);
             const tile = gs.worldMap[y]?.[x];
             if (!tile) continue;
@@ -734,12 +734,13 @@ class JobServiceImpl {
     }
 
     private _resourceMatchesDesignation(
-        designationType: 'harvest' | 'forage' | 'scavenge',
+        designationType: DesignationType,
         resourceId: string
     ): boolean {
+        if (designationType !== 'harvest') return false;
         const def = resourceObjectService.getById(resourceId);
-        if (!def) return designationType === 'harvest';
-        return def.designationTypes.includes(designationType);
+        if (!def) return true;
+        return def.designationTypes.includes('harvest');
     }
 
     /**
@@ -748,7 +749,7 @@ class JobServiceImpl {
      * and is not in blockedItems.
      */
     private _resourceMatchesFilter(
-        designationType: 'harvest' | 'forage' | 'scavenge',
+        designationType: DesignationType,
         resourceId: string,
         gs: GameState,
         tileKey?: string

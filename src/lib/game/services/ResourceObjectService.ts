@@ -33,9 +33,8 @@ export interface ResourceInteractionDef {
      */
     persistent?: boolean;
     /**
-     * When persistent is true but harvestDepletes is also true, a job triggered
-     * by a 'harvest' designation still destroys the node (e.g. chopping a tree).
-     * A 'forage' designation on the same resource keeps the node alive.
+     * When persistent is true but harvestDepletes is also true, a harvest job
+     * destroys the node (e.g. chopping a tree). Otherwise the node stays and regrows.
      */
     harvestDepletes?: boolean;
     /** Turns to wait before items regrow (requires persistent: true). */
@@ -54,7 +53,7 @@ export interface ResourceObjectDef {
         subterrains: Record<string, number>;
     };
     nodeAmountRange: [number, number];
-    designationTypes: Array<'harvest' | 'forage' | 'scavenge'>;
+    designationTypes: Array<'harvest'>;
     interaction: ResourceInteractionDef;
 }
 
@@ -85,8 +84,8 @@ class ResourceObjectServiceImpl {
     }
 
     getByDesignation(type: DesignationType): ResourceObjectDef[] {
-        if (type !== 'harvest' && type !== 'forage' && type !== 'scavenge') return [];
-        return this.defs.filter((d) => d.designationTypes.includes(type));
+        if (type !== 'harvest') return [];
+        return this.defs.filter((d) => d.designationTypes.includes('harvest'));
     }
 
     getWorkAmount(resourceId: string): number {
