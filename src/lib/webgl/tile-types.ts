@@ -31,6 +31,7 @@ export interface TileData {
 	foreground: RGB;                 // Text color
 	background: RGB;                 // Background color
 	detail?: RGB;                    // Highlight/detail color for 3-color tint (defaults to foreground)
+	outline?: RGB;                   // Outline color drawn around the glyph edges (omit = no outline)
 	position: { x: number; y: number }; // Grid position
 	animationOffset?: Vec2;          // Optional offset for smooth animations
 	rotation?: 0 | 90 | 180 | 270;  // UV rotation in degrees (clockwise)

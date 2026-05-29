@@ -235,6 +235,12 @@ export class WebGLRendererCore {
 		gl.activeTexture(gl.TEXTURE0);
 		gl.bindTexture(gl.TEXTURE_2D, this.fontTexture);
 		this.shaderManager.setUniform('tileRenderer', 'u_fontAtlas', 0);
+		if (this.fontAtlas) {
+			this.shaderManager.setUniform('tileRenderer', 'u_texelSize', [
+				1 / this.fontAtlas.atlasWidth,
+				1 / this.fontAtlas.atlasHeight
+			]);
+		}
 
 		const viewportTilesW = Math.ceil(this.viewport.width / this.tileWidth);
 		const viewportTilesH = Math.ceil(this.viewport.height / this.tileHeight);

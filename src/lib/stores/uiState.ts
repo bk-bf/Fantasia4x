@@ -16,6 +16,8 @@ interface UIState {
   _screenBeforeDesignation: Screen | null;
   /** Request the map to pan (and zoom) to a specific tile. Cleared after handling. */
   mapFocusRequest: { x: number; y: number } | null;
+  /** Currently selected pawn id — shared between Pawn Tab and the map canvas. */
+  selectedPawnId: string | null;
 }
 
 function createUIState() {
@@ -27,7 +29,8 @@ function createUIState() {
     designationType: null,
     activeZoneInstanceId: null,
     _screenBeforeDesignation: null,
-    mapFocusRequest: null
+    mapFocusRequest: null,
+    selectedPawnId: null
   };
 
   const { subscribe, set, update } = writable(initialState);
@@ -74,7 +77,10 @@ function createUIState() {
       update((state) => ({ ...state, mapFocusRequest: { x, y } })),
 
     clearMapFocus: () =>
-      update((state) => ({ ...state, mapFocusRequest: null }))
+      update((state) => ({ ...state, mapFocusRequest: null })),
+
+    selectPawn: (id: string | null) =>
+      update((state) => ({ ...state, selectedPawnId: id }))
   };
 }
 

@@ -23,6 +23,7 @@ import { itemService } from '../services/ItemService';
 import { wasmPathfinderService } from '../services/WasmPathfinderService';
 import { buildPathfindingGrids } from '../services/PathfinderService';
 import { logActivity } from '../../stores/Log';
+import { gameLogger } from '../dev/gameLogger';
 
 // ===== STATE NAME CONSTANTS =====
 export const PAWN_STATE = {
@@ -564,6 +565,10 @@ function shouldInterruptForNeed(
 }
 
 function transitionTo(pawn: Pawn, state: PawnStateName, gs: GameState): GameState {
+    const prev = pawn.currentState ?? PAWN_STATE.IDLE;
+    if (prev !== state) {
+        gameLogger.log(gs.turn, 'STATE-CHG', `${pawn.name} ${prev} → ${state}`);
+    }
     return {
         ...gs,
         pawns: gs.pawns.map((p) =>
@@ -693,7 +698,7 @@ function depositInventory(pawn: Pawn, gs: GameState): GameState {
             : p
     );
 
-    console.log(`[PawnSM] ${pawn.name} deposited inventory:`, inv);
+    gameLogger.log(gs.turn, 'JOB-EVT', `${pawn.name} deposited inventory: ${JSON.stringify(inv)}`);
     const afterDrop = { ...gs, pawns: newPawns, droppedItems: newDropped };
     return addToStockpileZone(afterDrop, depositTileKey, inv);
 }
@@ -790,7 +795,44 @@ function syncActiveEffects(pawn: Pawn): Pawn {
 
 // ===== PER-PAWN STATE HANDLERS =====
 
+// ── Debug tick logger ─────────────────────────────────────────────────────────
+/**
+ * Writes a compact [PAWN-TICK] line to the file-backed gameLogger.
+ * Suppressed for dead pawns.
+ */
+function logPawnTick(pawn: Pawn, gs: GameState): void {
+    if (pawn.isAlive === false) return;
+
+    const pos = pawn.position ? `(${pawn.position.x},${pawn.position.y})` : '(-,-)';
+    const job = pawn.activeJob;
+    const targetStr = job
+        ? `(${job.targetX},${job.targetY}) [${job.type}${job.jobId ? `#${job.jobId.slice(-4)}` : ''}]`
+        : 'none';
+
+    const hunger = (pawn.needs?.hunger ?? 0).toFixed(1);
+    const fatigue = (pawn.needs?.fatigue ?? 0).toFixed(1);
+    const state = (pawn.currentState ?? 'Idle').padEnd(18);
+
+    const queueLabels = (pawn.jobQueue ?? []).map((id) => {
+        const j = (gs.jobs ?? []).find((j) => j.id === id);
+        return j
+            ? `${j.type}(${j.targetX},${j.targetY})${j.claimedBy && j.claimedBy !== pawn.id ? '!' : ''}`
+            : `?${id.slice(-4)}`;
+    });
+    const queueStr = queueLabels.length ? queueLabels.join(' > ') : 'empty';
+
+    gameLogger.log(
+        gs.turn,
+        'PAWN-TICK',
+        `${pawn.name.padEnd(12)} ${state}` +
+        ` H:${hunger.padStart(5)} F:${fatigue.padStart(5)}` +
+        ` pos:${pos.padEnd(9)} → target:${targetStr.padEnd(30)}` +
+        ` queue:[${queueStr}]`
+    );
+}
+
 function tickPawn(pawn: Pawn, gameState: GameState): GameState {
+    logPawnTick(pawn, gameState);
     const state = pawn.currentState ?? PAWN_STATE.IDLE;
     switch (state) {
         case PAWN_STATE.IDLE: return handleIdle(pawn, gameState);
@@ -901,7 +943,16 @@ function handleMovingToResource(pawn: Pawn, gameState: GameState): GameState {
     if (enRouteHunger >= HUNGER_THRESHOLD && hasAvailableFood(gameState)) {
         const minQueueFood = computeMinQueueFoodDist(enRouteQueue, pawn, gameState);
         const hungerThreshold = computeAdjustedNeedThreshold(HUNGER_THRESHOLD, enRouteLaborLevel, minQueueFood);
-        if (shouldInterruptForNeed(enRouteHunger, hungerThreshold, distToNearestFoodSource(pawn, gameState), enRouteDist)) {
+        const foodDist = distToNearestFoodSource(pawn, gameState);
+        const willInterrupt = shouldInterruptForNeed(enRouteHunger, hungerThreshold, foodDist, enRouteDist);
+        gameLogger.log(
+            gameState.turn, 'NEED-CHECK',
+            `[EnRoute] ${pawn.name} H:${enRouteHunger.toFixed(1)}` +
+            ` adjThr:${hungerThreshold.toFixed(1)} foodDist:${foodDist === Infinity ? '∞' : foodDist}` +
+            ` jobDist:${enRouteDist} labor:${enRouteLaborLevel} minQueueFood:${minQueueFood ?? 'null'}` +
+            ` → ${willInterrupt ? 'INTERRUPT→EAT' : 'continue'}`
+        );
+        if (willInterrupt) {
             const gs = jobService.releaseJob(pawn.id, activeJob.jobId!, gameState);
             return transitionTo(pawn, PAWN_STATE.HUNGRY, gs);
         }
@@ -910,7 +961,16 @@ function handleMovingToResource(pawn: Pawn, gameState: GameState): GameState {
     if (enRouteFatigue >= FATIGUE_THRESHOLD) {
         const minQueueRest = computeMinQueueFoodDist(enRouteQueue, pawn, gameState);
         const fatigueThreshold = computeAdjustedNeedThreshold(FATIGUE_THRESHOLD, enRouteLaborLevel, minQueueRest);
-        if (shouldInterruptForNeed(enRouteFatigue, fatigueThreshold, distToNearestRestSource(pawn, gameState), enRouteDist)) {
+        const restDist = distToNearestRestSource(pawn, gameState);
+        const willInterrupt = shouldInterruptForNeed(enRouteFatigue, fatigueThreshold, restDist, enRouteDist);
+        gameLogger.log(
+            gameState.turn, 'NEED-CHECK',
+            `[EnRoute] ${pawn.name} F:${enRouteFatigue.toFixed(1)}` +
+            ` adjThr:${fatigueThreshold.toFixed(1)} restDist:${restDist === Infinity ? '∞' : restDist}` +
+            ` jobDist:${enRouteDist} labor:${enRouteLaborLevel}` +
+            ` → ${willInterrupt ? 'INTERRUPT→SLEEP' : 'continue'}`
+        );
+        if (willInterrupt) {
             const gs = jobService.releaseJob(pawn.id, activeJob.jobId!, gameState);
             return transitionTo(pawn, PAWN_STATE.TIRED, gs);
         }
@@ -964,7 +1024,16 @@ function handleWorking(pawn: Pawn, gameState: GameState): GameState {
     if (hunger >= HUNGER_THRESHOLD && hasAvailableFood(gameState)) {
         const minQueueFood = computeMinQueueFoodDist(queue, pawn, gameState);
         const hungerThreshold = computeAdjustedNeedThreshold(HUNGER_THRESHOLD, laborLevel, minQueueFood);
-        if (shouldInterruptForNeed(hunger, hungerThreshold, distToNearestFoodSource(pawn, gameState), jobDist)) {
+        const foodDist = distToNearestFoodSource(pawn, gameState);
+        const willInterrupt = shouldInterruptForNeed(hunger, hungerThreshold, foodDist, jobDist);
+        gameLogger.log(
+            gameState.turn, 'NEED-CHECK',
+            `[Working] ${pawn.name} H:${hunger.toFixed(1)}` +
+            ` adjThr:${hungerThreshold.toFixed(1)} foodDist:${foodDist === Infinity ? '∞' : foodDist}` +
+            ` jobDist:${jobDist} labor:${laborLevel} minQueueFood:${minQueueFood ?? 'null'}` +
+            ` → ${willInterrupt ? 'INTERRUPT→EAT' : 'continue'}`
+        );
+        if (willInterrupt) {
             const gs = jobService.releaseJob(pawn.id, jobId, gameState);
             return transitionTo(pawn, PAWN_STATE.HUNGRY, gs);
         }
@@ -973,7 +1042,16 @@ function handleWorking(pawn: Pawn, gameState: GameState): GameState {
     if (fatigue >= FATIGUE_THRESHOLD) {
         const minQueueRest = computeMinQueueFoodDist(queue, pawn, gameState); // reuse queue; rest uses its own source
         const fatigueThreshold = computeAdjustedNeedThreshold(FATIGUE_THRESHOLD, laborLevel, minQueueRest);
-        if (shouldInterruptForNeed(fatigue, fatigueThreshold, distToNearestRestSource(pawn, gameState), jobDist)) {
+        const restDist = distToNearestRestSource(pawn, gameState);
+        const willInterrupt = shouldInterruptForNeed(fatigue, fatigueThreshold, restDist, jobDist);
+        gameLogger.log(
+            gameState.turn, 'NEED-CHECK',
+            `[Working] ${pawn.name} F:${fatigue.toFixed(1)}` +
+            ` adjThr:${fatigueThreshold.toFixed(1)} restDist:${restDist === Infinity ? '∞' : restDist}` +
+            ` jobDist:${jobDist} labor:${laborLevel}` +
+            ` → ${willInterrupt ? 'INTERRUPT→SLEEP' : 'continue'}`
+        );
+        if (willInterrupt) {
             const gs = jobService.releaseJob(pawn.id, jobId, gameState);
             return transitionTo(pawn, PAWN_STATE.TIRED, gs);
         }
@@ -996,12 +1074,14 @@ function handleWorking(pawn: Pawn, gameState: GameState): GameState {
         const updatedPawn = afterAdvance.pawns.find((p) => p.id === pawn.id);
         const invItems = updatedPawn?.inventory?.items ?? {};
         const hasInventory = Object.values(invItems).some((v) => v > 0);
-        console.log(`[WORKING-DONE] ${pawn.name} job finished — hasInventory=${hasInventory} inv=`, JSON.stringify(invItems));
+        gameLogger.log(afterAdvance.turn, 'JOB-EVT',
+            `${pawn.name} job-complete hasInventory:${hasInventory} inv:${JSON.stringify(invItems)}`);
 
         if (hasInventory) {
             // Transition to HAULING — handleHauling will run next turn and find a deposit point.
             // This ensures items are visible in the CARRYING section for at least one turn.
-            console.log(`[WORKING-DONE] ${pawn.name} entering HAULING state with inv=`, JSON.stringify(invItems));
+            gameLogger.log(afterAdvance.turn, 'JOB-EVT',
+                `${pawn.name} → HAULING inv:${JSON.stringify(invItems)}`);
             return {
                 ...afterAdvance,
                 pawns: afterAdvance.pawns.map((p) =>
@@ -1308,6 +1388,9 @@ class PawnStateMachineImpl {
      * Called from GameEngineImpl.processPawns() AFTER processMovement().
      */
     tick(gameState: GameState): GameState {
+        // Periodic map snapshot every 10 turns.
+        if (gameState.turn % 10 === 0) gameLogger.logMapSnap(gameState);
+
         let state = gameState;
         for (const pawn of state.pawns) {
             const current = state.pawns.find((p) => p.id === pawn.id);

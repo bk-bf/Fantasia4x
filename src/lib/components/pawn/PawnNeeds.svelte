@@ -1,7 +1,12 @@
 <script lang="ts">
   import type { GameState, Pawn, StatusEffectDef, ConditionDef, ConditionStage } from '$lib/game/core/types';
-  import { getNeedColor, getNeedDescription } from '$lib/utils/pawnUtils';
-  import { getPawnTaskSummary } from '$lib/utils/pawnUtils';
+  import {
+    getNeedColor,
+    getNeedDescription,
+    getPawnTaskSummary,
+    getMoodColor,
+    getMoodDescription
+  } from '$lib/utils/pawnUtils';
   import statusEffectsData from '$lib/game/database/status-effects.jsonc';
   import conditionsData from '$lib/game/database/conditions.jsonc';
 
@@ -71,7 +76,7 @@
     <span class="desc">{getNeedDescription('fatigue', needs.fatigue)}</span>
   </div>
 
-  <div class="section-hdr sub">| STATUS TRACKER</div>
+  <div class="section-hdr sub">| STATUS</div>
 
   {#if activeEffects.length > 0 || activeConditions.length > 0}
     <div class="effects-row">
@@ -98,20 +103,31 @@
     </div>
   {/if}
 
-  <div class="row">
-    <span class="lbl">STATE</span>
-    <span class="val full state" style="color: {stateColor(pawn.currentState)}"
-      >{taskSummary.currentState}</span
-    >
-  </div>
-  <div class="row">
-    <span class="lbl">TASK</span><span class="val full">{taskSummary.currentTask}</span>
-  </div>
-  <div class="row">
-    <span class="lbl">NEXT</span><span class="val full">{taskSummary.nextTask}</span>
-  </div>
-  <div class="row">
-    <span class="lbl">WORK</span><span class="val full">{taskSummary.workAssignment}</span>
+  <div class="info-grid">
+    <div class="info-col">
+      <span class="lbl">STATE</span>
+      <span class="info-val state" style="color: {stateColor(pawn.currentState)}">{taskSummary.currentState}</span>
+    </div>
+    <div class="info-col">
+      <span class="lbl">MOOD</span>
+      <span class="info-val" style="color: {getMoodColor(pawn.state.mood)}">{pawn.state.mood}% — {getMoodDescription(pawn.state.mood)}</span>
+    </div>
+    <div class="info-col">
+      <span class="lbl">WORK</span>
+      <span class="info-val">{taskSummary.workAssignment}</span>
+    </div>
+    <div class="info-col">
+      <span class="lbl">SIZE</span>
+      <span class="info-val">{pawn.physicalTraits.size} · {pawn.physicalTraits.height}cm {pawn.physicalTraits.weight}kg</span>
+    </div>
+    <div class="info-span">
+      <span class="lbl">TASK</span>
+      <span class="info-val">{taskSummary.currentTask}</span>
+    </div>
+    <div class="info-span">
+      <span class="lbl">NEXT</span>
+      <span class="info-val">{taskSummary.nextTask}</span>
+    </div>
   </div>
 
   <!-- TODO: draft-control mode will re-enable direct REST/EAT/WORK/IDLE commands later.
@@ -180,10 +196,40 @@
     text-align: right;
     flex-shrink: 0;
   }
-  .val.full {
-    width: auto;
-    margin-left: auto;
-    text-align: left;
+
+  .info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .info-col {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 2px 8px;
+  }
+  .info-col:hover {
+    background: var(--bg-hover);
+  }
+
+  .info-span {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 2px 8px;
+  }
+  .info-span:hover {
+    background: var(--bg-hover);
+  }
+
+  .info-val {
+    color: var(--text);
+    font-size: 11px;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .state {

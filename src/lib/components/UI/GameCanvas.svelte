@@ -65,26 +65,6 @@
   let pawns: Pawn[] = [];
   let selectedPawnId: string | null = null;
 
-  $: workingProgressOverlays = pawns
-    .filter(
-      (p) =>
-        p.position &&
-        p.currentState === 'Working' &&
-        p.activeJob &&
-        (p.activeJob.progress ?? 0) >= 0
-    )
-    .map((p) => {
-      const localX = (p.position!.x - viewX + 0.5) * tileWidth;
-      const localY = (p.position!.y - viewY) * tileHeight;
-      return {
-        id: p.id,
-        left: localX,
-        top: localY - 6,
-        progress: Math.max(0, Math.min(1, p.activeJob?.progress ?? 0))
-      };
-    })
-    .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= (container?.clientWidth ?? 0));
-
   // Sleeping overlays: push to worldEffectsStore so WorldEffectsLayer renders them
   // at the correct z-index (above tiles, below popup panels).
   $: worldEffects.setSleepingOverlays(
@@ -116,10 +96,14 @@
     activeZoneInstanceId = s.activeZoneInstanceId ?? null;
     if (!s.designationActive) zoneEraseMode = false;
     if (s.designationType) designationTypeActive = s.designationType as DesignationType;
+    // Sync selected pawn from Pawn Tab (only when it differs to avoid clobbering map clicks)
+    if (s.selectedPawnId !== selectedPawnId) {
+      selectedPawnId = s.selectedPawnId;
+    }
     redrawOverlay();
     if (s.mapFocusRequest && ready && renderer?.isReady()) {
       const { x, y } = s.mapFocusRequest;
-      const targetZoom = 12;
+      const targetZoom = MAX_TILE_W;
       tileWidth = targetZoom;
       tileHeight = targetZoom;
       renderer.setTileSize(tileWidth, tileHeight);
@@ -318,30 +302,11 @@
           ? { r: 1.0, g: 0.45, b: 0.05 }
           : { r: 1, g: 1, b: 1 };
 
-      const fg = isSelected
-        ? {
-            r: Math.min(1, baseColor.r + 0.25),
-            g: Math.min(1, baseColor.g + 0.25),
-            b: Math.min(1, baseColor.b + 0.25)
-          }
-        : baseColor;
-
       grid.setTile(x, y, {
         char: PAWN_SPRITES[i % PAWN_SPRITES.length],
-        foreground: fg,
-        // Preserve the terrain background so the pawn sprite doesn't black out the tile beneath it.
-        // For selected pawns add a faint highlight tint over the terrain color.
-        background: (() => {
-          const terrain = grid.getTile(x, y);
-          const base = terrain?.background ?? { r: 0, g: 0, b: 0 };
-          return isSelected
-            ? {
-                r: Math.min(1, base.r + 0.1),
-                g: Math.min(1, base.g + 0.08),
-                b: Math.min(1, base.b + 0.04)
-              }
-            : base;
-        })(),
+        foreground: baseColor,
+        background: grid.getTile(x, y)?.background ?? { r: 0, g: 0, b: 0 },
+        outline: isSelected ? { r: 1, g: 0.87, b: 0 } : undefined,
         position: { x, y },
         rotation: isSleeping ? 90 : undefined
       });
@@ -493,6 +458,7 @@
     );
     if (clickedPawn) {
       selectedPawnId = clickedPawn.id;
+      uiState.selectPawn(clickedPawn.id);
       redrawOverlay();
       return;
     }
@@ -640,6 +606,7 @@
         selDragActive = false;
         selRect = null;
         selectedPawnId = null;
+        uiState.selectPawn(null);
         redrawOverlay();
         break;
       case 'x':
@@ -828,12 +795,6 @@
   on:contextmenu={handleContextMenu}
 >
   <canvas bind:this={canvas}></canvas>
-
-  {#each workingProgressOverlays as overlay (overlay.id)}
-    <div class="pawn-progress-float" style="left:{overlay.left}px;top:{overlay.top}px;">
-      <div class="pawn-progress-fill" style="width:{overlay.progress * 100}%"></div>
-    </div>
-  {/each}
 
   {#if errorMsg}
     <div class="error">WebGL unavailable: {errorMsg}</div>
@@ -1035,22 +996,6 @@
     pointer-events: none;
     white-space: nowrap;
     z-index: 10;
-  }
-
-  .pawn-progress-float {
-    position: absolute;
-    width: 22px;
-    height: 4px;
-    margin-left: -11px;
-    background: rgba(32, 24, 10, 0.85);
-    border: 1px solid #705020;
-    pointer-events: none;
-    z-index: 9;
-  }
-
-  .pawn-progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #4ab85a, #8ad66a);
   }
 
   .tile-hud--selection {

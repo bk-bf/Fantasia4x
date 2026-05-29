@@ -29,7 +29,6 @@
 
   // Extracted Pawn components
   import PawnSelector from '../pawn/PawnSelector.svelte';
-  import PawnOverview from '../pawn/PawnOverview.svelte';
   import PawnHealth from '../pawn/PawnHealth.svelte';
   import PawnStats from '../pawn/PawnStats.svelte';
   import PawnNeeds from '../pawn/PawnNeeds.svelte';
@@ -58,6 +57,7 @@
       // Auto-select first pawn if none selected
       selectedPawn = pawns[0];
       selectedPawnId = pawns[0].id;
+      uiState.selectPawn(pawns[0].id);
     }
   });
 
@@ -87,6 +87,10 @@
   function selectPawn(pawn: Pawn) {
     selectedPawn = pawn;
     selectedPawnId = pawn.id;
+    uiState.selectPawn(pawn.id);
+    if (pawn.position) {
+      uiState.focusMapOn(pawn.position.x, pawn.position.y);
+    }
   }
 
   // Tab state
@@ -125,7 +129,6 @@
     <!-- Tab panels — only the active one is rendered -->
     <div class="pawn-content">
       {#if activeTab === 'status'}
-        <PawnOverview pawn={selectedPawn} gameState={$gameState} />
         <PawnHealth pawn={selectedPawn} />
         <PawnNeeds pawn={selectedPawn} gameState={$gameState} />
       {:else if activeTab === 'attributes'}

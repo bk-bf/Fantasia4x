@@ -137,7 +137,7 @@ export class GridRenderer {
 		// Bind VAO and render
 		gl.bindVertexArray(this.gridVAO);
 
-		const vertexCount = vertexData.length / 13; // 13 components per vertex
+		const vertexCount = vertexData.length / 20; // 20 components per vertex
 		gl.drawArrays(gl.TRIANGLES, 0, vertexCount);
 
 		gl.bindVertexArray(null);
@@ -196,6 +196,18 @@ export class GridRenderer {
 			const dt = tile.detail
 				? [tile.detail.r, tile.detail.g, tile.detail.b]
 				: fg;
+			const ol = tile.outline
+				? [tile.outline.r, tile.outline.g, tile.outline.b]
+				: [0, 0, 0];
+			// UV bounds for the current glyph (needed by outline edge-detection in fragment shader)
+			const ub = charInfo
+				? [
+						charInfo.x / this.fontAtlas.atlasWidth,
+						charInfo.y / this.fontAtlas.atlasHeight,
+						(charInfo.x + charInfo.width) / this.fontAtlas.atlasWidth,
+						(charInfo.y + charInfo.height) / this.fontAtlas.atlasHeight
+				  ]
+				: [0, 0, 0, 0];
 
 			// UV corners — default (no rotation)
 			let tlU = u1, tlV = v1; // top-left
@@ -222,17 +234,17 @@ export class GridRenderer {
 			}
 
 			// Add vertex data for this character (2 triangles = 6 vertices)
-			// Vertex format: x, y, u, v, fr, fg, fb, br, bg, bb, dr, dg, db (13 floats)
+			// Vertex format: x, y, u, v, fr, fg, fb, br, bg, bb, dr, dg, db, or, og, ob, u1, v1, u2, v2 (20 floats)
 			const charVertices = [
 				// Triangle 1
-				x1, y1, tlU, tlV, fg[0], fg[1], fg[2], bg[0], bg[1], bg[2], dt[0], dt[1], dt[2],  // Top-left
-				x2, y1, trU, trV, fg[0], fg[1], fg[2], bg[0], bg[1], bg[2], dt[0], dt[1], dt[2],  // Top-right
-				x1, y2, blU, blV, fg[0], fg[1], fg[2], bg[0], bg[1], bg[2], dt[0], dt[1], dt[2],  // Bottom-left
+				x1, y1, tlU, tlV, fg[0], fg[1], fg[2], bg[0], bg[1], bg[2], dt[0], dt[1], dt[2], ol[0], ol[1], ol[2], ub[0], ub[1], ub[2], ub[3],  // Top-left
+				x2, y1, trU, trV, fg[0], fg[1], fg[2], bg[0], bg[1], bg[2], dt[0], dt[1], dt[2], ol[0], ol[1], ol[2], ub[0], ub[1], ub[2], ub[3],  // Top-right
+				x1, y2, blU, blV, fg[0], fg[1], fg[2], bg[0], bg[1], bg[2], dt[0], dt[1], dt[2], ol[0], ol[1], ol[2], ub[0], ub[1], ub[2], ub[3],  // Bottom-left
 
 				// Triangle 2
-				x2, y1, trU, trV, fg[0], fg[1], fg[2], bg[0], bg[1], bg[2], dt[0], dt[1], dt[2],  // Top-right
-				x2, y2, brU, brV, fg[0], fg[1], fg[2], bg[0], bg[1], bg[2], dt[0], dt[1], dt[2],  // Bottom-right
-				x1, y2, blU, blV, fg[0], fg[1], fg[2], bg[0], bg[1], bg[2], dt[0], dt[1], dt[2],  // Bottom-left
+				x2, y1, trU, trV, fg[0], fg[1], fg[2], bg[0], bg[1], bg[2], dt[0], dt[1], dt[2], ol[0], ol[1], ol[2], ub[0], ub[1], ub[2], ub[3],  // Top-right
+				x2, y2, brU, brV, fg[0], fg[1], fg[2], bg[0], bg[1], bg[2], dt[0], dt[1], dt[2], ol[0], ol[1], ol[2], ub[0], ub[1], ub[2], ub[3],  // Bottom-right
+				x1, y2, blU, blV, fg[0], fg[1], fg[2], bg[0], bg[1], bg[2], dt[0], dt[1], dt[2], ol[0], ol[1], ol[2], ub[0], ub[1], ub[2], ub[3],  // Bottom-left
 			];
 
 			vertexData.push(...charVertices);
@@ -263,7 +275,7 @@ export class GridRenderer {
 		gl.bindVertexArray(this.gridVAO);
 		gl.bindBuffer(gl.ARRAY_BUFFER, this.gridVBO);
 
-		const stride = 13 * 4; // 13 floats per vertex, 4 bytes per float
+		const stride = 20 * 4; // 20 floats per vertex, 4 bytes per float
 
 		// Position attribute (a_position)
 		const positionLocation = this.shaderManager.getAttributeLocation('tileRenderer', 'a_position');
@@ -298,6 +310,20 @@ export class GridRenderer {
 		if (detailLocation >= 0) {
 			gl.enableVertexAttribArray(detailLocation);
 			gl.vertexAttribPointer(detailLocation, 3, gl.FLOAT, false, stride, 10 * 4);
+		}
+
+		// Outline color attribute (a_outline)
+		const outlineLocation = this.shaderManager.getAttributeLocation('tileRenderer', 'a_outline');
+		if (outlineLocation >= 0) {
+			gl.enableVertexAttribArray(outlineLocation);
+			gl.vertexAttribPointer(outlineLocation, 3, gl.FLOAT, false, stride, 13 * 4);
+		}
+
+		// Glyph UV bounds attribute (a_uvBounds)
+		const uvBoundsLocation = this.shaderManager.getAttributeLocation('tileRenderer', 'a_uvBounds');
+		if (uvBoundsLocation >= 0) {
+			gl.enableVertexAttribArray(uvBoundsLocation);
+			gl.vertexAttribPointer(uvBoundsLocation, 4, gl.FLOAT, false, stride, 16 * 4);
 		}
 
 		gl.bindVertexArray(null);
