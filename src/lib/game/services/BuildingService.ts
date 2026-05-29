@@ -136,13 +136,9 @@ export class BuildingServiceImpl implements BuildingService {
 		if (!building) return false;
 
 		const currentPop = gameState.pawns.length;
-		const maxPop = gameState.maxPopulation;
 
 		// Check minimum population requirement
 		if (currentPop < building.populationRequired) return false;
-
-		// Check if building would exceed max population (for non-housing buildings)
-		if (building.category !== 'housing' && currentPop >= maxPop) return false;
 
 		return true;
 	}

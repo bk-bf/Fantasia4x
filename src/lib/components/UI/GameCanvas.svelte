@@ -183,6 +183,8 @@
   let similarDragResourceId = '';
   let similarDragDesignationType: DesignationType = 'harvest';
   let similarDragActive = false;
+  // Tiles highlighted yellow when the user clicks the "show similar" button.
+  let highlightedResourceTiles: Set<string> = new Set();
   let similarAnchorX = 0;
   let similarAnchorY = 0;
   let similarEndX = 0;
@@ -609,6 +611,23 @@
     const ctx = designCanvas.getContext('2d');
     if (!ctx) return;
     ctx.clearRect(0, 0, W, H);
+
+    // Draw yellow tile highlights (below icons) — just transparent rect fills.
+    if (highlightedResourceTiles.size > 0) {
+      ctx.save();
+      ctx.fillStyle = '#f0d020';
+      ctx.globalAlpha = 0.28;
+      for (const key of highlightedResourceTiles) {
+        const [wx, wy] = key.split(',').map(Number);
+        const sx = (wx - viewX) * tileWidth;
+        const sy = (wy - viewY) * tileHeight;
+        if (sx < -tileWidth || sy < -tileHeight || sx > W + tileWidth || sy > H + tileHeight)
+          continue;
+        ctx.fillRect(sx, sy, tileWidth, tileHeight);
+      }
+      ctx.restore();
+    }
+
     if (!designations || Object.keys(designations).length === 0) return;
 
     // Lazy-load sprite sheets on first designation draw
@@ -788,6 +807,7 @@
       selectedPawnId = clickedPawn.id;
       selectedBuildingId = null;
       selectedResourceTile = null;
+      highlightedResourceTiles = new Set();
       uiState.selectPawn(clickedPawn.id);
       redrawOverlay();
       return;
@@ -809,6 +829,7 @@
     // Click on empty tile → deselect all
     selectedBuildingId = null;
     selectedResourceTile = null;
+    highlightedResourceTiles = new Set();
     // TODO: draft-control mechanic will re-enable direct pawn movement later.
     // For now, pawns must only move through the automated AI and turn processing.
     //
@@ -984,6 +1005,7 @@
         }
         if (selectedResourceTile) {
           selectedResourceTile = null;
+          highlightedResourceTiles = new Set();
           redrawOverlay();
           break;
         }
@@ -1234,10 +1256,23 @@
 
   function designateResource(dtype?: DesignationType) {
     if (!selectedResourceTile || !selectedResourceDef) return;
-    const { x, y } = selectedResourceTile;
     const resolvedType =
       dtype ?? ((selectedResourceDef.designationTypes?.[0] ?? 'harvest') as DesignationType);
-    gameState.updateWithSave((state) => designationService.designate(x, y, resolvedType, state));
+    if (highlightedResourceTiles.size > 0) {
+      // Designate all tiles from the drag selection.
+      gameState.updateWithSave((state) => {
+        let current = state;
+        for (const key of highlightedResourceTiles) {
+          const [tx, ty] = key.split(',').map(Number);
+          current = designationService.designate(tx, ty, resolvedType, current);
+        }
+        return current;
+      });
+      highlightedResourceTiles = new Set();
+    } else {
+      const { x, y } = selectedResourceTile;
+      gameState.updateWithSave((state) => designationService.designate(x, y, resolvedType, state));
+    }
     redrawOverlay();
   }
 
@@ -1255,7 +1290,22 @@
     similarDragDesignationType = dtype;
     similarDragMode = true;
     similarDragActive = false;
-    selectedResourceTile = null;
+    // Keep selectedResourceTile alive so the HUD stays visible after the drag.
+  }
+
+  function highlightSimilarTiles() {
+    if (!selectedResourceTile) return;
+    const resourceId = selectedResourceTile.resourceId;
+    const newHighlighted = new Set<string>();
+    for (const row of worldMap) {
+      for (const tile of row) {
+        if ((tile.resources?.[resourceId] ?? 0) > 0) {
+          newHighlighted.add(`${tile.x},${tile.y}`);
+        }
+      }
+    }
+    highlightedResourceTiles = newHighlighted;
+    drawDesignations();
   }
 
   function completeSimilarDrag() {
@@ -1263,18 +1313,18 @@
     const maxX = Math.max(similarAnchorX, similarEndX);
     const minY = Math.min(similarAnchorY, similarEndY);
     const maxY = Math.max(similarAnchorY, similarEndY);
-    gameState.updateWithSave((state) => {
-      let current = state;
-      for (let ry = minY; ry <= maxY; ry++) {
-        for (let rx = minX; rx <= maxX; rx++) {
-          const wt = worldMap[ry]?.[rx];
-          if ((wt?.resources?.[similarDragResourceId] ?? 0) > 0) {
-            current = designationService.designate(rx, ry, similarDragDesignationType, current);
-          }
+    // Collect matching tiles into the highlight set — don't designate yet.
+    // The user presses the designation button to commit.
+    const newHighlighted = new Set<string>();
+    for (let ry = minY; ry <= maxY; ry++) {
+      for (let rx = minX; rx <= maxX; rx++) {
+        const wt = worldMap[ry]?.[rx];
+        if ((wt?.resources?.[similarDragResourceId] ?? 0) > 0) {
+          newHighlighted.add(`${rx},${ry}`);
         }
       }
-      return current;
-    });
+    }
+    highlightedResourceTiles = newHighlighted;
     similarDragActive = false;
     similarDragMode = false;
     redrawOverlay();
@@ -1558,13 +1608,13 @@
                   ? '\u00B1'
                   : iact.designationType === 'mine'
                     ? '\u26CF'
-                    : '\u26CF'}</button
+                    : '\u00B1'}</button
             >
           {/each}
         {/if}
         <button
           class="bld-btn bld-btn--sq"
-          title="Select similar — drag to designate all matching"
+          title="Drag to select similar tiles, then click above to designate"
           on:click={startSimilarSelect}>⊞</button
         >
       </div>

@@ -201,6 +201,98 @@ Multipliers applied in `PawnService` need-rate functions; weather state injected
 
 ### Ambient day/night (Phase A, in fragment.glsl — see Subsystem 1)
 
+### Dynamic point lighting (Phase A2 — per-tile light field)
+
+**Problem this solves.** The Phase-A ambient (`u_ambient`, `u_ambient_tint`) is a
+single global multiply applied identically to every tile — spatially uniform, so it
+reads as a moving gel rather than light. The campfire "glow" was a CSS
+`radial-gradient` `<div>` in `WorldEffectsLayer.svelte` composited *above* the canvas:
+it floats on its own DOM layer, cannot multiply the tiles beneath it, cannot warm the
+glyph colours, and cannot be occluded. Nothing in the scene radiates light from a
+position. This subsystem makes light **spatially varying** and **emitted from sources**.
+
+**Model — per-tile coloured light (Caves of Qud faithful).** CoQ computes light
+*per cell*, not per pixel. We do the same: a `LightingService` computes a light colour
+per tile each frame and the renderer feeds it to the GPU as a vertex attribute.
+
+```
+litTile = tileColour * clamp( ambientLight·ambientTint  +  Σ pointLight, 0, MAX )
+```
+
+- `ambientLight·ambientTint` — the existing day/night base (from EnvironmentService).
+  Multiplicative darkening.
+- `Σ pointLight` — additive contribution from every emitter in range. Brightening, so a
+  fire lifts nearby tiles *out of* the blue night and warms their glyphs.
+
+**Emitters.** `LightingService` derives a `LightEmitter[]` from `GameState` each frame:
+
+```typescript
+export interface LightEmitter {
+    x: number;            // tile coords
+    y: number;
+    color: [number, number, number]; // normalised RGB (e.g. fire = [1.0, 0.55, 0.2])
+    radius: number;       // tiles to falloff edge
+    intensity: number;    // peak additive strength at the source (0–~1.5)
+}
+```
+
+Initial source: lit, complete `campfire` buildings (`building.lit === true`). Later:
+torches, lava tiles, glowing flora, pawn-carried lanterns. Emitters are *presentation*
+state derived from `GameState` — no new persisted fields.
+
+**Falloff.** Smooth quadratic-ish falloff to the radius edge, zero beyond:
+
+```
+d = distance(tile, emitter) / emitter.radius      // 0 at source, 1 at edge
+falloff = clamp(1 - d, 0, 1)^2                     // smooth, 0 past the edge
+contribution = emitter.color * emitter.intensity * falloff
+```
+
+**Anti-blocky trick (critical for the look).** Sample the light field at each tile's
+**four corners**, not its centre, and pass those as the per-vertex `a_light` attribute.
+The GPU interpolates light across the quad for free → smooth gradients across tiles with
+**zero per-pixel cost**. Without this, lights look like lit squares.
+
+**Flicker.** Fire emitters modulate `intensity` with cheap time-based value noise
+(`intensity * (0.85 + 0.15·noise(t))`) so the warmth genuinely ripples across
+surrounding tiles instead of pulsing a fixed blurred circle.
+
+### Shader changes (Phase A2)
+
+`vertex.glsl` — new attribute + varying:
+```glsl
+in  vec3 a_light;   // per-corner light colour (ambient + accumulated point light)
+out vec3 v_light;   // interpolated across the quad by the GPU
+```
+
+`fragment.glsl` — replace the global `u_ambient * u_ambient_tint` multiply with the
+interpolated per-tile light:
+```glsl
+// was: fragColor = vec4(lit * u_ambient * u_ambient_tint, 1.0);
+fragColor = vec4(lit * v_light, 1.0);
+```
+The CPU folds `ambientLight·ambientTint` into `a_light`, so the global uniforms become
+redundant for the colour multiply (kept only if needed elsewhere).
+
+### Renderer integration (Phase A2)
+
+- `GridRenderer.generateBatchVertexData()` gains a 3-float `a_light` per vertex
+  (vertex stride 20 → 23 floats). For each tile it queries
+  `lightingService.sampleCorner(worldX, worldY)` for all four corners.
+- `WebGLRendererCore` holds the active `LightEmitter[]` + ambient, set each frame from
+  `GameCanvas` via `setLighting(emitters, ambientLight, ambientTint)`.
+- The DOM `campfire-glow` element and its `worldEffects.setCampfireOverlays` pathway are
+  **removed** — the fire now illuminates real tiles.
+
+### Spatial-boundary note (ADR-008)
+
+Phase A2 radial falloff has **no occlusion** and is therefore *not* spatial logic per
+ADR-008 — it lives in a TS `LightingService`. Light **occlusion / shadow-casting** (walls
+blocking light) IS the same algorithm as fog-of-war visibility and **must** route through
+the WASM spatial service interface. It is deferred to Subsystem 6 and must not be inlined
+into the renderer or `LightingService`.
+
+
 ### Weather overlay pass (Phase C)
 
 New shader program `'weatherOverlay'` registered in `ShaderManager` alongside `'tileRenderer'`.
@@ -262,6 +354,7 @@ but character outlines still visible at 5% brightness — Caves of Qud feel).
 | ----- | ---------------------------------------------------------------------- | ---------- |
 | A     | Ambient uniforms + day/night light curve in fragment.glsl              | —          |
 | A     | `EnvironmentService` computing `ambientLight` + `ambientTint` per turn | —          |
+| A2    | `LightingService` + per-tile `a_light` attribute (point lights, corner-interpolated, flicker) | Phase A    |
 | B     | Season state + temperature in `GameState` + need rate hooks            | Phase A    |
 | B     | Season palette uniform in fragment.glsl                                | Phase A    |
 | C     | `WeatherState` + Markov transitions + need rate hooks                  | Phase B    |
@@ -276,6 +369,7 @@ but character outlines still visible at 5% brightness — Caves of Qud feel).
 | Path                                          | Purpose                                             |
 | --------------------------------------------- | --------------------------------------------------- |
 | `src/lib/game/services/EnvironmentService.ts` | Computes ambient light, season, weather transitions |
+| `src/lib/game/services/LightingService.ts`    | Derives light emitters + samples the per-tile light field (Phase A2) |
 | `static/shaders/weather-overlay-vert.glsl`    | Fullscreen quad vertex shader                       |
 | `static/shaders/weather-overlay-frag.glsl`    | Rain/snow/blizzard/heat particle fragment shader    |
 
@@ -291,3 +385,6 @@ but character outlines still visible at 5% brightness — Caves of Qud feel).
 6. Snow weather triggers slow white particle overlay with slight drift.
 7. All ambient/weather uniforms are set from game state, not hardcoded per frame.
 8. No weather or ambient logic lives inside Svelte components.
+9. A lit campfire visibly brightens and warms the tiles around it, falling off smoothly with distance, and lifts them out of the night tint.
+10. Point light is per-tile but smoothly interpolated (no visible square blocking) and flickers subtly over time.
+11. The old DOM `campfire-glow` overlay is removed; illumination comes from the tile renderer.

@@ -164,6 +164,7 @@ export function applyDevWorld(state: GameState, itemQty = 500): GameState {
         currentResearch: undefined,
         currentToolLevel: 5,
         maxPopulation: 50,
+        turn: 100, // 08:00
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         discoveredLocations: allDiscovered as any
     };

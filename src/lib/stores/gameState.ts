@@ -38,7 +38,7 @@ resourceGeneratorService.generateResources(_generatedWorld, WORLD_SEED);
 
 // ===== INITIAL STATE =====
 export const initialGameState: GameState = {
-	turn: 0,
+	turn: 100, // 08:00 — day starts at morning (TURNS_PER_DAY=300, 08:00 = turn 100)
 	race: generateRace(),
 	pawns: [],
 	// REVERTED: Back to original - no starter food added
