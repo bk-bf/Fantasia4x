@@ -25,7 +25,6 @@
     // ─────────────────────────────────────────────────────────────────────────
     // WOODCUTTING
     // ─────────────────────────────────────────────────────────────────────────
-
     // Standard living tree — primary source of wood and bark.
     // persistent + harvestDepletes: tree stays but cannot be reharvested until regrowthTurns expires.
     {
@@ -68,12 +67,10 @@
             "harvestDepletes": true
         }
     },
-
     // ─────────────────────────────────────────────────────────────────────────
     // MINING — SURFACE DEPOSITS
     // All require a mining tool. Found in rocky and mountain terrain.
     // ─────────────────────────────────────────────────────────────────────────
-
     // Common surface rock — most accessible stone source. Chance of bonus flint.
     {
         "id"              : "stone_outcrop",
@@ -102,15 +99,19 @@
             "toolRequirement": {"workType": "mining", "minTier": 1},
             "yields"         : [
                 {"itemId": "surface_stone", "min": 2, "max": 4, "skillId": "mining", "skillMultiplier": 0.2},
-                {"itemId": "flint_shard",   "min": 0, "max": 2, "skillId": "mining", "skillMultiplier": 0.1} // chance only: min 0
+                {
+                    "itemId"         : "flint_shard",
+                    "min"            : 0,
+                    "max"            : 2,
+                    "skillId"        : "mining",
+                    "skillMultiplier": 0.1
+                } // chance only: min 0
             ]
         }
     },
-
     // ─────────────────────────────────────────────────────────────────────────
     // FORAGING — PLANTS
     // ─────────────────────────────────────────────────────────────────────────
-
     // Colourful herbaceous patches — primary herb source in open biomes.
     {
         "id"              : "wildflower_patch",
@@ -144,7 +145,6 @@
             "regrowthTurns"  : 1200 // ~4 days at 300 turns/day
         }
     },
-
     // Dead fallen logs — quick low-effort wood, no axe needed. Often overlooked early resource.
     {
         "id"              : "fallen_logs",
@@ -163,14 +163,16 @@
             "action"         : "gather",
             "workCategory"   : "foraging",
             "workAmount"     : 1,
-            "toolRequirement": {"workType": "woodcutting", "minTier": 0}, // tier-0 = any woodcutting tool, including stone chopper
+            "toolRequirement": {
+                "workType": "woodcutting",
+                "minTier" : 0
+            },  // tier-0 = any woodcutting tool, including stone chopper
             "yields"         : [
                 {"itemId": "branch", "min": 2, "max": 5, "skillId": "foraging", "skillMultiplier": 0.1 },
-                {"itemId": "wood", "min": 1, "max": 2, "skillId": "foraging", "skillMultiplier": 0.05}
+                {"itemId": "wood",   "min": 1, "max": 2, "skillId": "foraging", "skillMultiplier": 0.05}
             ]
         }
     },
-
     // Rare arcane crystal formation — deep mountain/cave occurrence only.
     // TODO: magic_crystal item properties TBD. High rarity is intentional.
     {
@@ -191,7 +193,7 @@
             "action"         : "scavenge",
             "workCategory"   : "mining",
             "workAmount"     : 5,
-            "toolRequirement": {"workType": "mining", "minTier": 2}, // requires a proper mining pick
+            "toolRequirement": {"workType": "mining", "minTier": 2},  // requires a proper mining pick
             "yields"         : [
                 {
                     "itemId": "magic_crystal",
@@ -204,7 +206,6 @@
             ]
         }
     },
-
     // Ordinary grass stand — cut for hay; bare-handed is slow, a flint sickle doubles speed.
     {
         "id"              : "grass_patch",
@@ -214,13 +215,7 @@
         "fg"              : [0.58, 0.72, 0.18],
         "bg"              : [0.07, 0.09, 0.02],
         "color"           : "#94B82E",
-        "spawn"           : {
-            "subterrains": {
-                "grass"     : 0.018,
-                "dirt"      : 0.008,
-                "savanna"   : 0.01
-            }
-        },
+        "spawn"           : { "subterrains": {"grass": 0.018, "dirt": 0.008, "savanna": 0.01} },
         "nodeAmountRange" : [3, 7],
         "designationTypes": ["forage", "harvest"],
         "interaction"     : {
@@ -235,7 +230,6 @@
             "regrowthTurns"  : 600 // ~2 days at 300 turns/day
         }
     },
-
     // Dense lush grass — found in deep_grass and tall_grass biomes; more hay per cut.
     {
         "id"              : "lush_grass_patch",
@@ -245,12 +239,7 @@
         "fg"              : [0.44, 0.78, 0.12],
         "bg"              : [0.06, 0.1, 0.02],
         "color"           : "#70C71F",
-        "spawn"           : {
-            "subterrains": {
-                "deep_grass": 0.028,
-                "tall_grass": 0.032
-            }
-        },
+        "spawn"           : { "subterrains": {"deep_grass": 0.028, "tall_grass": 0.032} },
         "nodeAmountRange" : [4, 9],
         "designationTypes": ["forage", "harvest"],
         "interaction"     : {
@@ -265,7 +254,6 @@
             "regrowthTurns"  : 900 // ~3 days at 300 turns/day; takes longer to regrow when cut heavily
         }
     },
-
     // Low scrubby brush — good plant fiber source in arid/transitional zones.
     {
         "id"              : "scrub_patch",
@@ -299,7 +287,6 @@
             "regrowthTurns"  : 2100 // ~1 week at 300 turns/day
         }
     },
-
     // Leftover tree stump — strip for bark and wood scraps using a basic crafting tool.
     {
         "id"              : "tree_stump",
@@ -325,7 +312,6 @@
             ]
         }
     },
-
     // Fungal patch — yields herbs; thrives in damp/shaded subterrains.
     {
         "id"              : "mushroom_patch",
@@ -350,7 +336,6 @@
             "regrowthTurns"  : 120 // ~5 days
         }
     },
-
     // Dead standing tree — rotted, easier and faster to fell than a living tree.
     {
         "id"              : "dead_tree",
@@ -371,18 +356,16 @@
             "workAmount"     : 4,
             "toolRequirement": {"workType": "woodcutting", "minTier": 1},
             "yields"         : [
-                {"itemId": "wood", "min": 2, "max": 4, "skillId": "woodcutting", "skillMultiplier": 0.1 },
+                {"itemId": "wood",   "min": 2, "max": 4, "skillId": "woodcutting", "skillMultiplier": 0.1 },
                 {"itemId": "branch", "min": 1, "max": 3, "skillId": "woodcutting", "skillMultiplier": 0.05}
             ]
         }
     },
-
     // ─────────────────────────────────────────────────────────────────────────
     // WETLANDS — DIGGING
     // No tool required, but high workAmount makes tools strongly preferable.
     // clay_deposit > mud_deposit > bog_deposit in yield richness.
     // ─────────────────────────────────────────────────────────────────────────
-
     // Rich clay seam — primary ceramics and construction material.
     // Highest density in the clay subterrain (swamp biome, mid-elevation noise band).
     {
@@ -401,18 +384,16 @@
         "interaction"     : {
             "action"         : "dig",
             "workCategory"   : "mining",
-            "workAmount"     : 20, // slow bare-handed — a digging_stick or stone_spade is much faster
+            "workAmount"     : 20,  // slow bare-handed — a digging_stick or stone_spade is much faster
             "toolRequirement": null,
             "yields"         : [
                 {"itemId": "clay_lump", "min": 2, "max": 4, "skillId": "mining", "skillMultiplier": 0.1}
             ]
         }
     },
-
     // ─────────────────────────────────────────────────────────────────────────
     // FORAGING — BERRIES & GRAINS
     // ─────────────────────────────────────────────────────────────────────────
-
     // Berry bush — reliable persistent food source; dense in bush subterrain.
     {
         "id"              : "berry_bush",
@@ -439,7 +420,6 @@
             "regrowthTurns"  : 2400 // ~8 days at 300 turns/day
         }
     },
-
     // Wild barley — primary primitive grain in open savanna zones.
     {
         "id"              : "wild_barley",
@@ -464,7 +444,6 @@
             "regrowthTurns"  : 3000 // ~10 days at 300 turns/day
         }
     },
-
     // Wild rye — mixed grain and fibre source; grows in taller, damper grasses.
     {
         "id"              : "wild_rye",
@@ -492,13 +471,11 @@
             "regrowthTurns"  : 3000 // ~10 days at 300 turns/day
         }
     },
-
     // ─────────────────────────────────────────────────────────────────────────
     // MINING — ORE VEINS  (mountain / mineral_deposit subterrain)
     // All require minTier 2 mining. Yield items are placeholders — smelting
     // chains are not yet designed. See _TODO fields.
     // ─────────────────────────────────────────────────────────────────────────
-
     // Most common mountain ore. Will form the backbone of the iron-age tech tier.
     {
         "id"              : "iron_ore",
@@ -528,7 +505,6 @@
             ]
         }
     },
-
     // Softer than iron; easier to smelt. Key component of the bronze alloy (copper + tin).
     {
         "id"              : "copper_ore",
@@ -560,7 +536,6 @@
             ]
         }
     },
-
     // Rare soft metal — scarcity is the limiting factor for bronze technology.
     {
         "id"              : "tin_ore",
@@ -592,7 +567,6 @@
             ]
         }
     },
-
     // Muddy clay seam — lower yield than a proper clay deposit, but more widespread.
     {
         "id"              : "mud_deposit",
@@ -608,14 +582,13 @@
         "interaction"     : {
             "action"         : "dig",
             "workCategory"   : "mining",
-            "workAmount"     : 15, // slow bare-handed
+            "workAmount"     : 15,  // slow bare-handed
             "toolRequirement": null,
             "yields"         : [
                 {"itemId": "clay_lump", "min": 1, "max": 3, "skillId": "mining", "skillMultiplier": 0.08}
             ]
         }
     },
-
     // Waterlogged bog soil — clay + organic matter. Worst bare-handed digging surface.
     // TODO: second yield should become a dedicated "peat" item once fuel/soil chains are designed.
     {
@@ -632,7 +605,7 @@
         "interaction"     : {
             "action"         : "dig",
             "workCategory"   : "mining",
-            "workAmount"     : 18, // waterlogged — worst bare-handed digging condition
+            "workAmount"     : 18,  // waterlogged — worst bare-handed digging condition
             "toolRequirement": null,
             "yields"         : [
                 {"itemId": "clay_lump", "min": 1, "max": 2, "skillId": "mining", "skillMultiplier": 0.06},
