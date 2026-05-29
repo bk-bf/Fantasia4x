@@ -350,28 +350,28 @@ but character outlines still visible at 5% brightness — Caves of Qud feel).
 
 ## Implementation Order
 
-| Phase | Deliverable                                                            | Depends on |
-| ----- | ---------------------------------------------------------------------- | ---------- |
-| A     | Ambient uniforms + day/night light curve in fragment.glsl              | —          |
-| A     | `EnvironmentService` computing `ambientLight` + `ambientTint` per turn | —          |
+| Phase | Deliverable                                                                                   | Depends on |
+| ----- | --------------------------------------------------------------------------------------------- | ---------- |
+| A     | Ambient uniforms + day/night light curve in fragment.glsl                                     | —          |
+| A     | `EnvironmentService` computing `ambientLight` + `ambientTint` per turn                        | —          |
 | A2    | `LightingService` + per-tile `a_light` attribute (point lights, corner-interpolated, flicker) | Phase A    |
-| B     | Season state + temperature in `GameState` + need rate hooks            | Phase A    |
-| B     | Season palette uniform in fragment.glsl                                | Phase A    |
-| C     | `WeatherState` + Markov transitions + need rate hooks                  | Phase B    |
-| C     | `weatherOverlay` shader (rain + snow particles)                        | Phase A    |
-| D     | `tile.visible` from vision radius + night FOW                          | Phases A-C |
-| D     | Heat shimmer (render-to-texture required)                              | Phase C    |
+| B     | Season state + temperature in `GameState` + need rate hooks                                   | Phase A    |
+| B     | Season palette uniform in fragment.glsl                                                       | Phase A    |
+| C     | `WeatherState` + Markov transitions + need rate hooks                                         | Phase B    |
+| C     | `weatherOverlay` shader (rain + snow particles)                                               | Phase A    |
+| D     | `tile.visible` from vision radius + night FOW                                                 | Phases A-C |
+| D     | Heat shimmer (render-to-texture required)                                                     | Phase C    |
 
 ---
 
 ## New Files
 
-| Path                                          | Purpose                                             |
-| --------------------------------------------- | --------------------------------------------------- |
-| `src/lib/game/services/EnvironmentService.ts` | Computes ambient light, season, weather transitions |
+| Path                                          | Purpose                                                              |
+| --------------------------------------------- | -------------------------------------------------------------------- |
+| `src/lib/game/services/EnvironmentService.ts` | Computes ambient light, season, weather transitions                  |
 | `src/lib/game/services/LightingService.ts`    | Derives light emitters + samples the per-tile light field (Phase A2) |
-| `static/shaders/weather-overlay-vert.glsl`    | Fullscreen quad vertex shader                       |
-| `static/shaders/weather-overlay-frag.glsl`    | Rain/snow/blizzard/heat particle fragment shader    |
+| `static/shaders/weather-overlay-vert.glsl`    | Fullscreen quad vertex shader                                        |
+| `static/shaders/weather-overlay-frag.glsl`    | Rain/snow/blizzard/heat particle fragment shader                     |
 
 ---
 
