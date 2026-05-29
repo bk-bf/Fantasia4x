@@ -489,7 +489,9 @@
         {#if eff}
           <div class="eff-item" title="{wc.name}: {eff.totalValue.toFixed(2)}x">
             <span class="eff-name">{wc.name.toUpperCase()}</span>
-            <span class="eff-val" style="color:{getEfficiencyColor(eff.totalValue)}">{eff.totalValue.toFixed(2)}x</span>
+            <span class="eff-val" style="color:{getEfficiencyColor(eff.totalValue)}"
+              >{eff.totalValue.toFixed(2)}x</span
+            >
           </div>
         {/if}
       {/each}
