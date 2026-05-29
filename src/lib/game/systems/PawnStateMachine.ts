@@ -48,9 +48,11 @@ export type PawnStateName = (typeof PAWN_STATE)[keyof typeof PAWN_STATE];
 //   Ground:    0.58/turn → 72→0 in ~124 turns ≈ 9.9h             (Rimworld ~10h ground sleep)
 //   At 2× speed everything is 2× faster; at 4× speed 4× faster — matching Rimworld multi-speed feel.
 const HUNGER_THRESHOLD = 70;           // Seek food at 70% (= Rimworld 30% saturation trigger)
-const CRITICAL_HUNGER = 87;            // Interrupt work — ravenous (Rimworld 12.5% sat = 87.5%)
 const FATIGUE_THRESHOLD = 72;          // Seek rest after ~225 turns ≈ 0.75 days (28% rest = 72% fatigue)
-const CRITICAL_FATIGUE = 95;           // Emergency work interrupt — near collapse
+// Dynamic need interruption (replaces flat CRITICAL_HUNGER / CRITICAL_FATIGUE thresholds).
+// A pawn weighs need urgency against proximity — the hungrier/more tired, the greater the detour.
+const NEED_DETOUR_MAX_FACTOR = 15;     // At need=100%, willing to detour up to 15× the job distance
+const NEED_DETOUR_MIN_DIST = 5;        // Minimum effective job distance (prevents ÷0 when already at site)
 const EATING_TURNS = 2;                // Turns to eat at a campfire (~2 in-game min)
 const EATING_TURNS_GROUND = 3;         // Turns eating in-place (cold, uncomfortable)
 const SLEEPING_TURNS = 100;            // Full recovery in bed: 72 / 0.72 = 100 turns = 1/3 day (progress bar ref)
@@ -433,7 +435,60 @@ function isAtRestBuilding(pawn: Pawn, gs: GameState): boolean {
     );
 }
 
+/**
+ * Manhattan distance to the nearest food source (campfire).
+ * Returns 0 when no campfire exists — pawn eats in-place, so food is always "here".
+ * Returns Infinity when no food is available anywhere.
+ */
+function distToNearestFoodSource(pawn: Pawn, gs: GameState): number {
+    if (!pawn.position) return Infinity;
+    if (!hasAvailableFood(gs)) return Infinity;
+    const building = findNearestStorageBuilding(pawn, gs);
+    if (!building) return 0; // no campfire → eat in place
+    return Math.abs(building.x - pawn.position.x) + Math.abs(building.y - pawn.position.y);
+}
 
+/**
+ * Manhattan distance to the nearest rest source (shelter).
+ * Returns 0 when no shelter exists — pawn sleeps in-place.
+ */
+function distToNearestRestSource(pawn: Pawn, gs: GameState): number {
+    if (!pawn.position) return Infinity;
+    const building = findNearestRestBuilding(pawn, gs);
+    if (!building) return 0; // no shelter → sleep in place
+    return Math.abs(building.x - pawn.position.x) + Math.abs(building.y - pawn.position.y);
+}
+
+/**
+ * Decides whether a busy pawn should interrupt their current activity to attend to a need.
+ *
+ * The formula combines two factors:
+ *   1. Urgency  — how far past `threshold` the need has climbed (quadratic 0→1 curve)
+ *   2. Proximity — how much further the need source is compared to the current job target
+ *
+ * At need = 100 the pawn always interrupts regardless of distance.
+ * At need = threshold the pawn only detours if the source is within NEED_DETOUR_MIN_DIST tiles.
+ * In between, the acceptable detour grows quadratically up to NEED_DETOUR_MAX_FACTOR × job distance.
+ *
+ * @param need         Current hunger or fatigue (0–100)
+ * @param threshold    Baseline trigger (HUNGER_THRESHOLD / FATIGUE_THRESHOLD)
+ * @param distToSource Manhattan distance to the nearest food / shelter
+ * @param distToJob    Manhattan distance to the current job target (0 if already there)
+ */
+function shouldInterruptForNeed(
+    need: number,
+    threshold: number,
+    distToSource: number,
+    distToJob: number
+): boolean {
+    if (need >= 100) return true;
+    if (need < threshold) return false;
+    const urgency = (need - threshold) / (100 - threshold); // 0..1
+    const urgencyBias = urgency * urgency;                   // quadratic: slow start, steep near 100%
+    const effectiveJobDist = Math.max(distToJob, NEED_DETOUR_MIN_DIST);
+    const maxAcceptableDist = effectiveJobDist * (1 + urgencyBias * (NEED_DETOUR_MAX_FACTOR - 1));
+    return distToSource <= maxAcceptableDist;
+}
 
 function transitionTo(pawn: Pawn, state: PawnStateName, gs: GameState): GameState {
     return {
@@ -750,6 +805,26 @@ function handleMovingToResource(pawn: Pawn, gameState: GameState): GameState {
         : null;
     if (!jobInPool) return goIdle(pawn, gameState);
 
+    // Dynamic need interruption while en route to a job.
+    // Re-evaluated every turn so needs that arise mid-journey are caught early.
+    const enRouteDist = pawn.position
+        ? Math.abs(activeJob.targetX - pawn.position.x) + Math.abs(activeJob.targetY - pawn.position.y)
+        : 0;
+    const enRouteHunger = pawn.needs?.hunger ?? 0;
+    if (enRouteHunger >= HUNGER_THRESHOLD && hasAvailableFood(gameState)) {
+        if (shouldInterruptForNeed(enRouteHunger, HUNGER_THRESHOLD, distToNearestFoodSource(pawn, gameState), enRouteDist)) {
+            const gs = jobService.releaseJob(pawn.id, activeJob.jobId!, gameState);
+            return transitionTo(pawn, PAWN_STATE.HUNGRY, gs);
+        }
+    }
+    const enRouteFatigue = pawn.needs?.fatigue ?? 0;
+    if (enRouteFatigue >= FATIGUE_THRESHOLD) {
+        if (shouldInterruptForNeed(enRouteFatigue, FATIGUE_THRESHOLD, distToNearestRestSource(pawn, gameState), enRouteDist)) {
+            const gs = jobService.releaseJob(pawn.id, activeJob.jobId!, gameState);
+            return transitionTo(pawn, PAWN_STATE.TIRED, gs);
+        }
+    }
+
     if (pawn.hasReachedDestination && pawn.position) {
         const adjacent = isAdjacent(
             pawn.position.x, pawn.position.y,
@@ -780,14 +855,25 @@ function handleWorking(pawn: Pawn, gameState: GameState): GameState {
     const jobInPool = (gameState.jobs ?? []).find((j) => j.id === jobId);
     if (!jobInPool) return goIdle(pawn, gameState);
 
-    // Critical needs: pawn drops the job and attends to survival immediately
-    if ((pawn.needs?.hunger ?? 0) >= CRITICAL_HUNGER && hasAvailableFood(gameState)) {
-        const gs = jobService.releaseJob(pawn.id, jobId, gameState);
-        return transitionTo(pawn, PAWN_STATE.HUNGRY, gs);
+    // Dynamic need interruption: weighs urgency against proximity to food/shelter vs job target.
+    // The hungrier/more tired a pawn is, the greater the detour they will accept.
+    // At need = 100% the pawn always interrupts regardless of distance.
+    const jobDist = pawn.position
+        ? Math.abs(activeJob.targetX - pawn.position.x) + Math.abs(activeJob.targetY - pawn.position.y)
+        : 0;
+    const hunger = pawn.needs?.hunger ?? 0;
+    if (hunger >= HUNGER_THRESHOLD && hasAvailableFood(gameState)) {
+        if (shouldInterruptForNeed(hunger, HUNGER_THRESHOLD, distToNearestFoodSource(pawn, gameState), jobDist)) {
+            const gs = jobService.releaseJob(pawn.id, jobId, gameState);
+            return transitionTo(pawn, PAWN_STATE.HUNGRY, gs);
+        }
     }
-    if ((pawn.needs?.fatigue ?? 0) >= CRITICAL_FATIGUE) {
-        const gs = jobService.releaseJob(pawn.id, jobId, gameState);
-        return transitionTo(pawn, PAWN_STATE.TIRED, gs);
+    const fatigue = pawn.needs?.fatigue ?? 0;
+    if (fatigue >= FATIGUE_THRESHOLD) {
+        if (shouldInterruptForNeed(fatigue, FATIGUE_THRESHOLD, distToNearestRestSource(pawn, gameState), jobDist)) {
+            const gs = jobService.releaseJob(pawn.id, jobId, gameState);
+            return transitionTo(pawn, PAWN_STATE.TIRED, gs);
+        }
     }
 
     if (

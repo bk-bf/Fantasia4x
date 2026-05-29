@@ -3,6 +3,11 @@
   import { getStatColor, getStatDescription } from '$lib/utils/pawnUtils';
 
   export let pawn: Pawn;
+
+  function blockBar(value: number, max: number, width = 20): string {
+    const filled = Math.max(0, Math.min(width, Math.round((value / max) * width)));
+    return '[' + '█'.repeat(filled) + '░'.repeat(width - filled) + ']';
+  }
 </script>
 
 <div class="stats-section">
@@ -10,12 +15,9 @@
   {#each Object.entries(pawn.stats) as [statName, statValue]}
     <div class="stat-row">
       <span class="stat-name">{statName.toUpperCase()}</span>
-      <div class="bar">
-        <div
-          class="fill"
-          style="width: {(statValue / 20) * 100}%; background: {getStatColor(statValue)}"
-        ></div>
-      </div>
+      <span class="block-bar" style="color: {getStatColor(statValue)}"
+        >{blockBar(statValue, 20)}</span
+      >
       <span class="stat-val" style="color: {getStatColor(statValue)}">{statValue}</span>
     </div>
   {/each}
@@ -55,13 +57,12 @@
     flex-shrink: 0;
   }
 
-  .bar {
+  .block-bar {
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    letter-spacing: -0.02em;
+    white-space: nowrap;
     flex: 1;
-    height: 4px;
-    background: var(--bg-active);
-  }
-  .fill {
-    height: 100%;
   }
 
   .stat-val {

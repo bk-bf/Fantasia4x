@@ -1,19 +1,38 @@
 <script lang="ts">
-  import type { GameState, Pawn, StatusEffectDef } from '$lib/game/core/types';
+  import type { GameState, Pawn, StatusEffectDef, ConditionDef, ConditionStage } from '$lib/game/core/types';
   import { getNeedColor, getNeedDescription } from '$lib/utils/pawnUtils';
   import { getPawnTaskSummary } from '$lib/utils/pawnUtils';
   import statusEffectsData from '$lib/game/database/status-effects.jsonc';
+  import conditionsData from '$lib/game/database/conditions.jsonc';
 
   const STATUS_EFFECTS_DB = statusEffectsData as unknown as StatusEffectDef[];
+  const CONDITIONS_DB = conditionsData as unknown as ConditionDef[];
 
   export let pawn: Pawn;
   export let gameState: GameState;
 
   $: needs = pawn.needs;
+
+  function blockBar(value: number, width = 20): string {
+    const filled = Math.max(0, Math.min(width, Math.round((value / 100) * width)));
+    return '[' + '█'.repeat(filled) + '░'.repeat(width - filled) + ']';
+  }
   $: taskSummary = getPawnTaskSummary(pawn, gameState);
   $: activeEffects = (pawn.activeEffects ?? [])
     .map((id) => STATUS_EFFECTS_DB.find((e) => e.id === id))
     .filter((e): e is StatusEffectDef => e !== undefined);
+
+  type ActiveCond = { name: string; severity: number; stage: ConditionStage };
+  $: activeConditions = (pawn.conditions ?? [])
+    .filter(c => c.severity > 0)
+    .reduce<ActiveCond[]>((acc, c) => {
+      const def = CONDITIONS_DB.find(d => d.id === c.id);
+      if (!def) return acc;
+      let stage: ConditionStage | undefined;
+      for (const s of def.stages) if (c.severity >= s.minSeverity) stage = s;
+      if (stage) acc.push({ name: def.name, severity: c.severity, stage });
+      return acc;
+    }, []);
 
   function stateColor(state: string | undefined): string {
     const normalized = (state ?? 'Idle').replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase();
@@ -40,33 +59,21 @@
 
   <div class="need-row">
     <span class="lbl">HUNGER</span>
-    <div class="bar">
-      <div
-        class="fill"
-        style="width: {needs.hunger}%; background: {getNeedColor(needs.hunger)}"
-      ></div>
-    </div>
+    <span class="block-bar" style="color: {getNeedColor(needs.hunger)}">{blockBar(needs.hunger)}</span>
     <span class="val" style="color: {getNeedColor(needs.hunger)}">{Math.round(needs.hunger)}%</span>
     <span class="desc">{getNeedDescription('hunger', needs.hunger)}</span>
   </div>
 
   <div class="need-row">
     <span class="lbl">REST</span>
-    <div class="bar">
-      <div
-        class="fill"
-        style="width: {needs.fatigue}%; background: {getNeedColor(needs.fatigue)}"
-      ></div>
-    </div>
-    <span class="val" style="color: {getNeedColor(needs.fatigue)}"
-      >{Math.round(needs.fatigue)}%</span
-    >
+    <span class="block-bar" style="color: {getNeedColor(needs.fatigue)}">{blockBar(needs.fatigue)}</span>
+    <span class="val" style="color: {getNeedColor(needs.fatigue)}">{Math.round(needs.fatigue)}%</span>
     <span class="desc">{getNeedDescription('fatigue', needs.fatigue)}</span>
   </div>
 
   <div class="section-hdr sub">| STATUS TRACKER</div>
 
-  {#if activeEffects.length > 0}
+  {#if activeEffects.length > 0 || activeConditions.length > 0}
     <div class="effects-row">
       {#each activeEffects as effect}
         <div
@@ -75,6 +82,17 @@
           title={effect.description}
         >
           <span class="effect-name">{effect.name.toUpperCase()}</span>
+        </div>
+      {/each}
+      {#each activeConditions as { name, severity, stage }}
+        <div
+          class="effect-card cond-card"
+          class:threatening={stage.lifeThreatening}
+          style="border-color: {stage.color}; color: {stage.color}"
+          title="{name} — {Math.round(severity * 100)}% severity{stage.lifeThreatening ? ' ⚠ life-threatening' : ''}"
+        >
+          <span class="effect-name">{name.toUpperCase()}</span>
+          <span class="cond-meta">{stage.label.toUpperCase()} · {Math.round(severity * 100)}%</span>
         </div>
       {/each}
     </div>
@@ -180,13 +198,11 @@
     flex: 1;
   }
 
-  .bar {
-    flex: 1;
-    height: 4px;
-    background: var(--bg-active);
-  }
-  .fill {
-    height: 100%;
+  .block-bar {
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    letter-spacing: -0.02em;
+    white-space: nowrap;
   }
 
   .effects-row {
@@ -207,5 +223,26 @@
 
   .effect-name {
     font-weight: bold;
+  }
+
+  .cond-card {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .cond-meta {
+    font-size: 9px;
+    letter-spacing: 0.03em;
+    opacity: 0.85;
+  }
+
+  .cond-card.threatening {
+    animation: pulse-threat 1.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse-threat {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.45; }
   }
 </style>
