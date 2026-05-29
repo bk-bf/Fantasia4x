@@ -60,16 +60,73 @@ export function getAmbientTint(turn: number): [number, number, number] {
     return TINT_PHASES[TINT_PHASES.length - 1].tint;
 }
 
+/**
+ * Derive a CSS filter string from ambient brightness + tint.
+ *
+ * Strategy (works well for the dark amber terminal theme):
+ *   1. brightness()  — scaled from ambient light, floored at 0.5 so panels
+ *      remain readable even at midnight.
+ *   2. sepia()       — converts the existing amber palette toward a neutral
+ *      warm brown, controlled by the tint's colour saturation.
+ *   3. hue-rotate()  — shifts from the sepia base hue (~36° warm amber) to
+ *      the dominant hue of the ambient tint.  Blue night = −156°, orange
+ *      dawn = −10°, neutral noon = nothing.
+ */
+export function getAmbientCssFilter(light: number, tint: [number, number, number]): string {
+    const brightness = Math.max(0.5, light);
+    const [r, g, b] = tint;
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const delta = max - min;
+
+    // Essentially neutral (white / grey) — brightness only
+    if (delta < 0.05) {
+        return brightness >= 0.995 ? 'none' : `brightness(${brightness.toFixed(2)})`;
+    }
+
+    // HSL hue of the tint colour (0–360°)
+    let hue: number;
+    if (max === r) {
+        hue = 60 * (((g - b) / delta + 6) % 6);
+    } else if (max === g) {
+        hue = 60 * ((b - r) / delta + 2);
+    } else {
+        hue = 60 * ((r - g) / delta + 4);
+    }
+
+    // sepia(1) maps toward ~36° (warm amber/brown) — the same tone as the
+    // existing panel theme, so sepia alone is subtle.  hue-rotate then
+    // nudges from that base toward the ambient tint's hue.
+    const SEPIA_HUE = 36;
+    let hueShift = hue - SEPIA_HUE;
+    if (hueShift > 180) hueShift -= 360;
+    if (hueShift < -180) hueShift += 360;
+
+    const saturation = delta / max;
+    const sepia = Math.min(0.35, saturation * 0.45);
+
+    return (
+        `brightness(${brightness.toFixed(2)})` +
+        ` sepia(${sepia.toFixed(2)})` +
+        ` hue-rotate(${Math.round(hueShift)}deg)`
+    );
+}
+
 export interface AmbientState {
     light: number;
     tint: [number, number, number];
+    /** Ready-to-use CSS filter string for HTML panel elements. */
+    cssFilter: string;
 }
 
 class EnvironmentServiceImpl {
     getAmbient(turn: number): AmbientState {
+        const light = getAmbientLight(turn);
+        const tint = getAmbientTint(turn);
         return {
-            light: getAmbientLight(turn),
-            tint: getAmbientTint(turn)
+            light,
+            tint,
+            cssFilter: getAmbientCssFilter(light, tint)
         };
     }
 }

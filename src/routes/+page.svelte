@@ -16,10 +16,14 @@
   import { uiState } from '$lib/stores/uiState';
   import { gameState } from '$lib/stores/gameState';
   import { gameEngine } from '$lib/game/systems/GameEngineImpl';
+  import { environmentService } from '$lib/game/services/EnvironmentService.js';
   import type { PlacedBuilding } from '$lib/game/core/types';
 
   let currentScreen = 'main';
   let buildings: PlacedBuilding[] = [];
+
+  // Ambient panel tint — updated reactively on every turn via the gameState store.
+  $: ambientFilter = environmentService.getAmbient($gameState.turn).cssFilter;
 
   uiState.subscribe((s) => (currentScreen = s.currentScreen));
   gameState.subscribe((s) => (buildings = s.buildings ?? []));
@@ -82,7 +86,7 @@
   <title>Fantasia4x</title>
 </svelte:head>
 
-<div class="game-container">
+<div class="game-container" style="--panel-filter: {ambientFilter}">
   <div class="game-header">
     <GameControls />
   </div>
@@ -158,6 +162,16 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
+  }
+
+  /* Day/night ambient tint — driven by --panel-filter CSS variable set from EnvironmentService */
+  .game-header,
+  .left-panel,
+  .right-panel,
+  .bottom-nav,
+  .overlay-panel {
+    filter: var(--panel-filter, none);
+    transition: filter 1.5s ease;
   }
 
   .game-header {

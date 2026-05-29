@@ -377,9 +377,9 @@ class JobServiceImpl {
         const designationType = (gs.designations ?? {})[`${job.targetX},${job.targetY}`] as DesignationType | undefined;
         const interaction = def
             ? (resourceObjectService.getInteractionByDesignationType(
-                  job.resourceId,
-                  designationType ?? 'harvest'
-              ) ?? def.interaction)
+                job.resourceId,
+                designationType ?? 'harvest'
+            ) ?? def.interaction)
             : undefined;
 
         // A persistent node stays on the map after harvesting (yields regrow via cooldown).
