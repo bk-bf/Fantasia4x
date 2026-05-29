@@ -9,7 +9,7 @@
  * indirectly through PawnStateMachine (claimJob / advanceJob / releaseJob).
  */
 
-import type { GameState, Job, Pawn, DroppedItem, ZoneFilter } from '../core/types';
+import type { DesignationType, GameState, Job, Pawn, DroppedItem, ZoneFilter } from '../core/types';
 import itemsData from '../database/items.jsonc';
 import { resourceObjectService } from './ResourceObjectService';
 import { itemService } from './ItemService';
@@ -762,7 +762,7 @@ class JobServiceImpl {
                 filter = inst?.filter;
             }
         }
-        filter = filter ?? gs.zoneFilters?.[designationType];
+        filter = filter ?? gs.zoneFilters?.[designationType as import('../core/types').FilterableZoneType];
         if (!filter || filter.allowedCategories.length === 0) return true;
         const def = resourceObjectService.getById(resourceId);
         if (!def) return true;

@@ -12,13 +12,24 @@
     ...new Set(ITEMS_DATABASE.map((i) => i.category).filter(Boolean))
   ].sort();
 
-  const ZONE_DEFS: { type: FilterableZoneType; label: string; icon: string; desc: string; color: string }[] =
-    [
-      { type: 'stockpile', label: 'STOCKPILE', icon: '[P]', desc: 'Haulers deposit carried resources here',             color: '#e8a020' }
-    ];
+  const ZONE_DEFS: {
+    type: FilterableZoneType;
+    label: string;
+    icon: string;
+    desc: string;
+    color: string;
+  }[] = [
+    {
+      type: 'stockpile',
+      label: 'STOCKPILE',
+      icon: '[P]',
+      desc: 'Haulers deposit carried resources here',
+      color: '#e8a020'
+    }
+  ];
 
-  let activeType     = $derived($uiState.designationType);
-  let activeInstId   = $derived($uiState.activeZoneInstanceId);
+  let activeType = $derived($uiState.designationType);
+  let activeInstId = $derived($uiState.activeZoneInstanceId);
   let designationActive = $derived($uiState.designationActive);
 
   /** Which zone instance currently has its filter panel open (null = none). */
@@ -100,7 +111,11 @@
         <span class="type-icon">{def.icon}</span>
         <span class="type-label">{def.label}</span>
         <span class="type-desc">{def.desc}</span>
-        <button class="new-btn" onclick={() => newZone(def.type)} title="Create new {def.label} zone">
+        <button
+          class="new-btn"
+          onclick={() => newZone(def.type)}
+          title="Create new {def.label} zone"
+        >
           [+]
         </button>
       </div>
@@ -153,7 +168,9 @@
                     : 'no filter (all allowed)'}
                 </span>
                 {#if hasFilter}
-                  <button class="filter-clear-all" onclick={() => clearFilter(inst.id)}>clear</button>
+                  <button class="filter-clear-all" onclick={() => clearFilter(inst.id)}
+                    >clear</button
+                  >
                 {/if}
               </div>
               <div class="category-grid">
@@ -208,7 +225,9 @@
   }
 
   @keyframes blink {
-    50% { opacity: 0.5; }
+    50% {
+      opacity: 0.5;
+    }
   }
 
   /* ── Type section ───────────────────────────────── */
@@ -254,7 +273,9 @@
     padding: 1px 5px;
     line-height: 1;
     opacity: 0.7;
-    transition: opacity 0.15s, border-color 0.15s;
+    transition:
+      opacity 0.15s,
+      border-color 0.15s;
   }
 
   .new-btn:hover {
@@ -294,7 +315,9 @@
     padding: 1px 4px;
     line-height: 1;
     min-width: 3ch;
-    transition: border-color 0.15s, color 0.15s;
+    transition:
+      border-color 0.15s,
+      color 0.15s;
   }
 
   .paint-btn:hover,
@@ -331,7 +354,9 @@
     font-size: 0.6rem;
     padding: 1px 3px;
     line-height: 1;
-    transition: border-color 0.15s, color 0.15s;
+    transition:
+      border-color 0.15s,
+      color 0.15s;
   }
 
   .icon-btn:hover,
