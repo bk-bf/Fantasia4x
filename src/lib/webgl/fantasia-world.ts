@@ -134,75 +134,32 @@ export function buildGameGrid(
         }
     }
 
-    // Phase 4b: overlay designations
+    // Phase 4b: overlay designation zone tints
+    // Work designation icons (harvest, mine, construct, haul, clear) are rendered
+    // on a separate transparent 2D canvas overlay in GameCanvas.svelte so the
+    // terrain glyphs remain visible underneath.  Only the stockpile zone tint is
+    // applied here because it modifies background colour rather than the glyph.
     if (designations) {
-        // All designation icons are white + fairly transparent so they don't clutter the map.
-        // Sprite mapping:
-        //   harvest (woodcutting/other) → tiles#246  U+00F7 ÷
-        //   harvest (gathering/forage)  → tiles#242  U+2265 ≥
-        //   mine                        → items#207
-        //   construct / haul / clear    → simple ASCII chars
-        const WORK_FG: RGB = { r: 0.45, g: 0.45, b: 0.45 };
-
-        const SIMPLE_ICONS: Partial<Record<DesignationType, string>> = {
-            construct: '+',
-            haul: 'h',
-            clear: 'x'
-        };
-
+        function lerp(a: number, b: number, t: number) { return a + (b - a) * t; }
+        function blendRGB(a: RGB, b: RGB, t: number): RGB {
+            return { r: lerp(a.r, b.r, t), g: lerp(a.g, b.g, t), b: lerp(a.b, b.b, t) };
+        }
         const STOCKPILE_TINT = {
             bg: { r: 0.30, g: 0.18, b: 0.02 } as RGB,
             fg: { r: 1.00, g: 0.80, b: 0.20 } as RGB
         };
 
-        function lerp(a: number, b: number, t: number) { return a + (b - a) * t; }
-        function blendRGB(a: RGB, b: RGB, t: number): RGB {
-            return { r: lerp(a.r, b.r, t), g: lerp(a.g, b.g, t), b: lerp(a.b, b.b, t) };
-        }
-
         for (const [key, type] of Object.entries(designations)) {
+            if (type !== 'stockpile') continue;
             const [x, y] = key.split(',').map(Number);
             const existing = grid.getTile(x, y);
             if (!existing) continue;
-
-            if (type === 'stockpile') {
-                grid.setTile(x, y, {
-                    char: existing.char,
-                    foreground: blendRGB(existing.foreground, STOCKPILE_TINT.fg, 0.30),
-                    background: blendRGB(existing.background, STOCKPILE_TINT.bg, 0.65),
-                    position: { x, y }
-                });
-                continue;
-            }
-
-            if (type === 'harvest') {
-                // Pick sprite based on the resource's workCategory
-                const tile = worldMap[y]?.[x];
-                const resourceId = tile?.resources
-                    ? Object.keys(tile.resources).find((id) => (tile.resources![id] ?? 0) > 0)
-                    : undefined;
-                const resDef = resourceId ? resourceObjectService.getById(resourceId) : undefined;
-                const char = resDef?.interaction.workCategory === 'foraging'
-                    ? '\u2265'  // tiles#242 — gathering
-                    : '\u00F7'; // tiles#246 — woodcutting / harvest
-                grid.setTile(x, y, { char, foreground: WORK_FG, background: existing.background, position: { x, y } });
-                continue;
-            }
-
-            if (type === 'mine') {
-                grid.setTile(x, y, {
-                    char: glyph(SHEET.ITEMS, 207),
-                    foreground: WORK_FG,
-                    background: existing.background,
-                    position: { x, y }
-                });
-                continue;
-            }
-
-            const icon = SIMPLE_ICONS[type as DesignationType];
-            if (icon) {
-                grid.setTile(x, y, { char: icon, foreground: WORK_FG, background: existing.background, position: { x, y } });
-            }
+            grid.setTile(x, y, {
+                char: existing.char,
+                foreground: blendRGB(existing.foreground, STOCKPILE_TINT.fg, 0.30),
+                background: blendRGB(existing.background, STOCKPILE_TINT.bg, 0.65),
+                position: { x, y }
+            });
         }
     }
 

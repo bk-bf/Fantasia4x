@@ -46,6 +46,7 @@
   }
 
   let canvas: HTMLCanvasElement;
+  let designCanvas: HTMLCanvasElement;
   let container: HTMLDivElement;
   let renderer: WebGLRenderer | null = null;
   let animationId = 0;
@@ -558,6 +559,59 @@
     }
 
     renderer.setGrid(grid);
+    drawDesignations();
+  }
+
+  function drawDesignations() {
+    if (!designCanvas || !container || !worldMap.length) return;
+    const W = container.clientWidth;
+    const H = container.clientHeight;
+    if (designCanvas.width !== W || designCanvas.height !== H) {
+      designCanvas.width = W;
+      designCanvas.height = H;
+    }
+    const ctx = designCanvas.getContext('2d');
+    if (!ctx) return;
+    ctx.clearRect(0, 0, W, H);
+    if (!designations || Object.keys(designations).length === 0) return;
+
+    const fh = Math.max(8, Math.floor(tileHeight * 0.65));
+    ctx.save();
+    ctx.globalAlpha = 0.28;
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `bold ${fh}px "Courier New", Courier, monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    for (const [key, type] of Object.entries(designations)) {
+      if (type === 'stockpile') continue;
+      const [wx, wy] = key.split(',').map(Number);
+      const sx = (wx - viewX) * tileWidth + tileWidth * 0.5;
+      const sy = (wy - viewY) * tileHeight + tileHeight * 0.5;
+      if (sx < -tileWidth || sy < -tileHeight || sx > W + tileWidth || sy > H + tileHeight) continue;
+
+      let char: string;
+      if (type === 'harvest') {
+        const tile = worldMap[wy]?.[wx];
+        const resourceId = tile?.resources
+          ? Object.keys(tile.resources).find((id) => (tile.resources![id] ?? 0) > 0)
+          : undefined;
+        const resDef = resourceId ? resourceObjectService.getById(resourceId) : undefined;
+        char = resDef?.interaction.workCategory === 'foraging' ? '\u2265' : '\u00F7';
+      } else if (type === 'mine') {
+        char = '\u26CF'; // ⛏
+      } else if (type === 'construct') {
+        char = '+';
+      } else if (type === 'haul') {
+        char = 'h';
+      } else if (type === 'clear') {
+        char = '\u00D7'; // ×
+      } else {
+        continue;
+      }
+      ctx.fillText(char, sx, sy);
+    }
+    ctx.restore();
   }
 
   function _blueprintPreviewTile(grid: GameGrid, tx: number, ty: number) {
@@ -760,6 +814,7 @@
         canvas.width = w;
         canvas.height = h;
         renderer.resize(w, h);
+        drawDesignations();
         // Keep the fit size in sync; if we're at fit zoom, re-snap to new fit size
         const wasAtFit = Math.abs(tileWidth - fitTileSize) < 0.01;
         fitTileSize = computeFitTileSize(w, h);
@@ -1191,6 +1246,7 @@
   on:contextmenu={handleContextMenu}
 >
   <canvas bind:this={canvas}></canvas>
+  <canvas bind:this={designCanvas} class="desig-layer"></canvas>
 
   {#if errorMsg}
     <div class="error">WebGL unavailable: {errorMsg}</div>
@@ -1542,6 +1598,16 @@
   }
   .canvas-wrap.dragging {
     cursor: crosshair;
+  }
+  .desig-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+    image-rendering: pixelated;
   }
   canvas {
     display: block;

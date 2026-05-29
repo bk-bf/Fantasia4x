@@ -56,7 +56,9 @@ class JobServiceImpl {
         jobs = this._syncCraftJobs(jobs, gameState);
 
         // --- Phase 6: fuel-management jobs for campfires ---
-        jobs = this._syncLightJobs(jobs, gameState);
+        // Light jobs removed: campfires auto-light whenever they have fuel.
+        // Stale light jobs are purged here in case of old save data.
+        jobs = jobs.filter((j) => j.type !== 'light');
         jobs = this._syncRefuelJobs(jobs, gameState);
 
         return { ...gameState, jobs };
@@ -653,24 +655,29 @@ class JobServiceImpl {
         return jobs;
     }
 
-    /** Phase 6: generate 'refuel' jobs for campfires whose fuel is low. */
+    /** Phase 6: generate 'refuel' jobs for campfires that are not at max fuel. */
     private _syncRefuelJobs(jobs: Job[], gs: GameState): Job[] {
-        const REFUEL_THRESHOLD = 10;
-        // Remove refuel jobs for campfires at capacity or gone
+        const totalFuel = this._totalFuelInStockpile(gs);
+
+        // Remove refuel jobs whose building is gone, at max, or stockpile no longer
+        // has enough fuel to fill to max (prevents partial top-ups).
         jobs = jobs.filter((j) => {
             if (j.type !== 'refuel') return true;
             const b = (gs.buildings ?? []).find((b) => b.id === j.buildingId);
             if (!b || b.status !== 'complete') return false;
-            // Check we still have fuel items in stockpile
-            const hasFuelItems = this._hasFuelInStockpile(gs);
-            return (b.fuel ?? 0) < REFUEL_THRESHOLD && hasFuelItems;
+            const maxFuel = buildingService.getBuildingById(b.type)?.maxFuel ?? 60;
+            const needed = maxFuel - (b.fuel ?? 0);
+            return needed > 0 && totalFuel >= needed;
         });
 
         for (const b of gs.buildings ?? []) {
             if (b.status !== 'complete') continue;
-            if (b.type !== 'campfire') continue;
-            if ((b.fuel ?? 0) >= REFUEL_THRESHOLD) continue;
-            if (!this._hasFuelInStockpile(gs)) continue;
+            const bDef = buildingService.getBuildingById(b.type);
+            if (!bDef?.maxFuel) continue;
+            const needed = bDef.maxFuel - (b.fuel ?? 0);
+            if (needed <= 0) continue;
+            // Only queue refuel when stockpile can fully top up the tank.
+            if (totalFuel < needed) continue;
             const exists = jobs.some((j) => j.type === 'refuel' && j.buildingId === b.id);
             if (!exists) {
                 jobs.push({
@@ -679,7 +686,7 @@ class JobServiceImpl {
                     targetX: b.x,
                     targetY: b.y,
                     buildingId: b.id,
-                    workRequired: 3,
+                    workRequired: 5,
                     workDone: 0,
                     claimedBy: null
                 });
@@ -690,39 +697,38 @@ class JobServiceImpl {
 
     private _completeLight(job: Job, gs: GameState): GameState {
         if (!job.buildingId) return gs;
-        // Pawn needs a firestarter in stockpile
-        const newStockpile = { ...(gs.stockpile ?? {}) };
-        const firestarters = newStockpile['firestarter'] ?? 0;
-        if (firestarters > 0) newStockpile['firestarter'] = firestarters - 1;
+        // Campfires auto-light from fuel — no firestarter required.
         const newBuildings = (gs.buildings ?? []).map((b) =>
             b.id === job.buildingId ? { ...b, lit: true } : b
         );
         console.log(`[JobService] Campfire lit: ${job.buildingId}`);
-        return { ...gs, buildings: newBuildings, stockpile: newStockpile };
+        return { ...gs, buildings: newBuildings };
     }
 
     private _completeRefuel(job: Job, gs: GameState): GameState {
         if (!job.buildingId) return gs;
         const building = (gs.buildings ?? []).find((b) => b.id === job.buildingId);
         if (!building) return gs;
-        // Find best available fuel item in stockpile
+        const maxFuel = buildingService.getBuildingById(building.type)?.maxFuel ?? 60;
         const stockpile = { ...(gs.stockpile ?? {}) };
-        let fuelAdded = 0;
+        let currentFuel = building.fuel ?? 0;
+        // Consume fuel items until tank is full or stockpile exhausted
         for (const item of ITEMS_DATABASE) {
             if ((item.fuelValue ?? 0) <= 0) continue;
-            const available = stockpile[item.id] ?? 0;
-            if (available <= 0) continue;
-            stockpile[item.id] = available - 1;
-            fuelAdded = item.fuelValue!;
-            break;
+            while (currentFuel < maxFuel) {
+                const available = stockpile[item.id] ?? 0;
+                if (available <= 0) break;
+                stockpile[item.id] = available - 1;
+                currentFuel = Math.min(currentFuel + item.fuelValue!, maxFuel);
+            }
         }
-        if (fuelAdded === 0) return gs; // nothing to add
+        if (currentFuel === (building.fuel ?? 0)) return gs; // nothing added
         const newBuildings = (gs.buildings ?? []).map((b) =>
             b.id === job.buildingId
-                ? { ...b, fuel: Math.min((b.fuel ?? 0) + fuelAdded, 60) }
+                ? { ...b, fuel: currentFuel, lit: currentFuel > 0 }
                 : b
         );
-        console.log(`[JobService] Campfire refuelled +${fuelAdded}: ${job.buildingId}`);
+        console.log(`[JobService] Campfire refuelled to ${currentFuel}/${maxFuel}: ${job.buildingId}`);
         return { ...gs, buildings: newBuildings, stockpile };
     }
 
@@ -731,6 +737,14 @@ class JobServiceImpl {
         return ITEMS_DATABASE.some(
             (item) => (item.fuelValue ?? 0) > 0 && (stockpile[item.id] ?? 0) > 0
         );
+    }
+
+    private _totalFuelInStockpile(gs: GameState): number {
+        const stockpile = gs.stockpile ?? {};
+        return ITEMS_DATABASE.reduce((sum, item) => {
+            if ((item.fuelValue ?? 0) <= 0) return sum;
+            return sum + (stockpile[item.id] ?? 0) * item.fuelValue!;
+        }, 0);
     }
 
     private _resourceMatchesDesignation(
@@ -762,7 +776,7 @@ class JobServiceImpl {
                 filter = inst?.filter;
             }
         }
-        filter = filter ?? gs.zoneFilters?.[designationType];
+        filter = filter ?? gs.zoneFilters?.[designationType as import('$lib/game/core/types.js').FilterableZoneType];
         if (!filter || filter.allowedCategories.length === 0) return true;
         const def = resourceObjectService.getById(resourceId);
         if (!def) return true;

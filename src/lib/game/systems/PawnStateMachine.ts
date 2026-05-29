@@ -1205,39 +1205,51 @@ function handleHungry(pawn: Pawn, gameState: GameState): GameState {
 }
 
 function handleTired(pawn: Pawn, gameState: GameState): GameState {
-    // Phase 6: try to pathfind to the nearest rest building to sleep there
+    // Phase 6: try to pathfind to the nearest rest building to sleep there.
+    // Guard: if any shelter exists on the map, the pawn MUST seek it out and must not
+    // sleep on the ground.  The only exception is the exhaustion-collapse guard in tick()
+    // which forces SLEEPING when fatigue reaches 100 (wherever the pawn stands).
     const restBuilding = findNearestRestBuilding(pawn, gameState);
-    if (
-        restBuilding &&
-        pawn.position &&
-        !isAdjacent(pawn.position.x, pawn.position.y, restBuilding.x, restBuilding.y)
-    ) {
-        const afterPath = tryAssignPath(pawn, restBuilding.x, restBuilding.y, gameState);
-        if (afterPath) {
-            return {
-                ...afterPath,
-                pawns: afterPath.pawns.map((p) =>
-                    p.id === pawn.id
-                        ? {
-                            ...p,
-                            currentState: PAWN_STATE.MOVING_TO_NEED,
-                            activeJob: {
-                                type: 'need' as const,
-                                targetX: restBuilding.x,
-                                targetY: restBuilding.y,
-                                progress: 0,
-                                timeRequired: SLEEPING_TURNS,
-                                turnsInState: 0,
-                                targetState: PAWN_STATE.SLEEPING
+    if (restBuilding && pawn.position) {
+        // Not adjacent — try to pathfind there.
+        if (!isAdjacent(pawn.position.x, pawn.position.y, restBuilding.x, restBuilding.y)) {
+            const afterPath = tryAssignPath(pawn, restBuilding.x, restBuilding.y, gameState);
+            if (afterPath) {
+                return {
+                    ...afterPath,
+                    pawns: afterPath.pawns.map((p) =>
+                        p.id === pawn.id
+                            ? {
+                                ...p,
+                                currentState: PAWN_STATE.MOVING_TO_NEED,
+                                activeJob: {
+                                    type: 'need' as const,
+                                    targetX: restBuilding.x,
+                                    targetY: restBuilding.y,
+                                    progress: 0,
+                                    timeRequired: SLEEPING_TURNS,
+                                    turnsInState: 0,
+                                    targetState: PAWN_STATE.SLEEPING
+                                }
                             }
-                        }
-                        : p
-                )
-            };
+                            : p
+                    )
+                };
+            }
+            // Pathfinding failed but shelter exists — hold in TIRED and retry next tick.
+            // The exhaustion-collapse guard in tick() will force sleep at fatigue=100.
+            gameLogger.log(
+                gameState.turn, 'NEED-CHECK',
+                `${pawn.name} TIRED: shelter at (${restBuilding.x},${restBuilding.y}) unreachable this tick, retrying`
+            );
+            return gameState;
         }
+        // Already adjacent to shelter — fall through to sleep in place;
+        // handleSleeping detects adjacency via getRestBuildingAtPawn and applies the bonus.
     }
 
-    // Fallback: sleep in place
+    // No shelter on map, or already adjacent to one: sleep here.
+    // handleSleeping will apply any adjacent building bonus automatically.
     return {
         ...gameState,
         pawns: gameState.pawns.map((p) =>

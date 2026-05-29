@@ -506,6 +506,11 @@ export class GameEngineImpl implements GameEngine {
 			const buildingDef = AVAILABLE_BUILDINGS.find((def) => def.id === b.type);
 			if (!buildingDef?.maxFuel || !buildingDef.fuelConsumptionRate) return b;
 			if (b.status !== 'complete') return b;
+			// Auto-light: campfire ignites itself whenever it has fuel.
+			if (!b.lit && (b.fuel ?? 0) > 0) {
+				changed = true;
+				return { ...b, lit: true };
+			}
 			if (!b.lit) return b;
 			const newFuel = Math.max(0, (b.fuel ?? 0) - buildingDef.fuelConsumptionRate);
 			const newLit = newFuel > 0;
