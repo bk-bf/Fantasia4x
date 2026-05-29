@@ -199,7 +199,7 @@
     "rocky"            : {
         "walkable"    : true,
         "movementCost": 2.5,
-        "charSpans"   : [ {"sheet": "tiles", "from": 177, "to": 178} ],
+        "charSpans"   : [ {"literal": " "} ],  // transparent — visual comes from mountain_wall resource
         "fg"          : [0.62, 0.52, 0.37],
         "bg"          : [0.08, 0.06, 0.03],
         "color"       : "#9E855E",
@@ -217,7 +217,7 @@
     "cliff"            : {
         "walkable"    : false,
         "movementCost": 0,
-        "charSpans"   : [ {"sheet": "tiles", "id": 219} ],
+        "charSpans"   : [ {"literal": " "} ],  // transparent — visual comes from cliff_wall resource
         "fg"          : [0.5, 0.42, 0.27],
         "bg"          : [0.08, 0.06, 0.03],
         "color"       : "#806B45",

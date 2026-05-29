@@ -690,6 +690,56 @@
         }
     },
     // ─────────────────────────────────────────────────────────────────────────
+    // TERRAIN WALLS — stone_outcrop still gets first pick (placed earlier);
+    // these fill the remaining ~92% of rocky/cliff tiles as the default identity.
+    // ─────────────────────────────────────────────────────────────────────────
+    // Walkable rocky mountain floor — minable for stone.
+    {
+        "id"              : "mountain_wall",
+        "displayName"     : "Mountain Wall",
+        "objectSubType"   : "rocky",
+        "walkable"        : true,
+        "charSpans"       : [ {"sheet": "tiles", "from": 177, "to": 178} ],
+        "fg"              : [0.62, 0.52, 0.37],
+        "bg"              : [0.08, 0.06, 0.03],
+        "color"           : "#9E855E",
+        "spawn"           : { "subterrains": {"rocky": 0.99} },
+        "nodeAmountRange" : [4, 8],
+        "designationTypes": ["harvest"],
+        "interaction"     : {
+            "action"         : "mine",
+            "workCategory"   : "mining",
+            "workAmount"     : 10,
+            "toolRequirement": null,
+            "yields"         : [
+                {"itemId": "surface_stone", "min": 2, "max": 5, "skillId": "mining", "skillMultiplier": 0.2}
+            ]
+        }
+    },
+    // Impassable cliff face — mine to open passage; yields dressed stone.
+    {
+        "id"              : "cliff_wall",
+        "displayName"     : "Cliff Wall",
+        "objectSubType"   : "cliff",
+        "walkable"        : false,
+        "charSpans"       : [ {"sheet": "tiles", "id": 219} ],
+        "fg"              : [0.5, 0.42, 0.27],
+        "bg"              : [0.08, 0.06, 0.03],
+        "color"           : "#806B45",
+        "spawn"           : { "subterrains": {"cliff": 0.99} },
+        "nodeAmountRange" : [5, 10],
+        "designationTypes": ["harvest"],
+        "interaction"     : {
+            "action"         : "mine",
+            "workCategory"   : "mining",
+            "workAmount"     : 12,
+            "toolRequirement": {"workType": "mining", "minTier": 1},
+            "yields"         : [
+                {"itemId": "surface_stone", "min": 3, "max": 6, "skillId": "mining", "skillMultiplier": 0.2}
+            ]
+        }
+    },
+    // ─────────────────────────────────────────────────────────────────────────
     // GROUND COVER — placed last so all rarer resources get first pick per tile.
     // High spawn rates fill unclaimed grass tiles; if a tree/bush/etc. already
     // claimed the tile the break exits before these entries are reached.
@@ -713,7 +763,7 @@
             "workAmount"     : 6,
             "toolRequirement": null,
             "yields"         : [
-                {"itemId": "hay", "min": 2, "max": 4, "skillId": "foraging", "skillMultiplier": 0.15}
+                {"itemId": "hay", "min": 2, "max": 5, "skillId": "foraging", "skillMultiplier": 0.15}
             ],
             "persistent"     : true,
             "regrowthTurns"  : 600 // ~2 days at 300 turns/day
@@ -738,7 +788,7 @@
             "workAmount"     : 7,
             "toolRequirement": null,
             "yields"         : [
-                {"itemId": "hay", "min": 2, "max": 5, "skillId": "foraging", "skillMultiplier": 0.15}
+                {"itemId": "hay", "min": 10, "max": 15, "skillId": "foraging", "skillMultiplier": 0.15}
             ],
             "persistent"     : true,
             "regrowthTurns"  : 700
@@ -763,7 +813,7 @@
             "workAmount"     : 8,
             "toolRequirement": null,
             "yields"         : [
-                {"itemId": "hay", "min": 3, "max": 6, "skillId": "foraging", "skillMultiplier": 0.15}
+                {"itemId": "hay", "min": 5, "max": 10, "skillId": "foraging", "skillMultiplier": 0.15}
             ],
             "persistent"     : true,
             "regrowthTurns"  : 800
