@@ -34,6 +34,9 @@ export const BASE_WORK_RATE = 1;
 /** Designation types that produce harvest-category jobs. */
 const HARVEST_DTYPES: DesignationType[] = ['harvest', 'woodcut', 'forage'];
 
+/** Campfires only request refueling once fuel falls below 30% capacity. */
+const CAMPFIRE_REFUEL_THRESHOLD_RATIO = 0.3;
+
 // ===== JOB SERVICE =====
 
 class JobServiceImpl {
@@ -704,7 +707,7 @@ class JobServiceImpl {
         return jobs;
     }
 
-    /** Phase 6: generate 'refuel' jobs for campfires that are not at max fuel. */
+    /** Phase 6: generate 'refuel' jobs, with campfires gated to <30% fuel. */
     private _syncRefuelJobs(jobs: Job[], gs: GameState): Job[] {
         const totalFuel = this._totalFuelInStockpile(gs);
 
@@ -715,6 +718,9 @@ class JobServiceImpl {
             const b = (gs.buildings ?? []).find((b) => b.id === j.buildingId);
             if (!b || b.status !== 'complete') return false;
             const maxFuel = buildingService.getBuildingById(b.type)?.maxFuel ?? 60;
+            if (b.type === 'campfire' && (b.fuel ?? 0) / Math.max(maxFuel, 1) >= CAMPFIRE_REFUEL_THRESHOLD_RATIO) {
+                return false;
+            }
             const needed = maxFuel - (b.fuel ?? 0);
             return needed > 0 && totalFuel >= needed;
         });
@@ -723,6 +729,10 @@ class JobServiceImpl {
             if (b.status !== 'complete') continue;
             const bDef = buildingService.getBuildingById(b.type);
             if (!bDef?.maxFuel) continue;
+            if (b.type === 'campfire') {
+                const fuelRatio = (b.fuel ?? 0) / Math.max(bDef.maxFuel, 1);
+                if (fuelRatio >= CAMPFIRE_REFUEL_THRESHOLD_RATIO) continue;
+            }
             const needed = bDef.maxFuel - (b.fuel ?? 0);
             if (needed <= 0) continue;
             // Only queue refuel when stockpile can fully top up the tank.

@@ -1726,7 +1726,9 @@
             {@const fuelMax = bDef.maxFuel}
             {@const fuelCurr = selectedBuilding.fuel ?? 0}
             <div class="bld-fuel">
-              FUEL [{jobProgressBar(fuelMax > 0 ? fuelCurr / fuelMax : 0)}] {fuelCurr}/{fuelMax}
+              FUEL [{jobProgressBar(fuelMax > 0 ? fuelCurr / fuelMax : 0)}] {Math.floor(
+                fuelCurr
+              )}/{Math.floor(fuelMax)}
               {#if selectedBuilding.lit}<span class="fuel-lit">● lit</span>{:else}<span
                   class="fuel-dark">○ unlit</span
                 >{/if}
@@ -1916,7 +1918,9 @@
         {@const fuelMax = bDef.maxFuel}
         {@const fuelCurr = hoverBuilding.fuel ?? 0}
         <div class="bld-fuel">
-          FUEL [{jobProgressBar(fuelMax > 0 ? fuelCurr / fuelMax : 0)}] {fuelCurr}/{fuelMax}
+          FUEL [{jobProgressBar(fuelMax > 0 ? fuelCurr / fuelMax : 0)}] {Math.floor(
+            fuelCurr
+          )}/{Math.floor(fuelMax)}
           {#if hoverBuilding.lit}<span class="fuel-lit">● lit</span>{:else}<span class="fuel-dark"
               >○ unlit</span
             >{/if}
