@@ -570,7 +570,9 @@
       .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= W);
     // Round progress to 5% steps so small increments don't trigger re-renders.
     const progressKey = newProgress
-      .map((o) => `${o.id}:${Math.round(o.left)},${Math.round(o.top)},${Math.round(o.progress * 20)}`)
+      .map(
+        (o) => `${o.id}:${Math.round(o.left)},${Math.round(o.top)},${Math.round(o.progress * 20)}`
+      )
       .join('|');
     if (progressKey !== _progressOverlayKey) {
       _progressOverlayKey = progressKey;

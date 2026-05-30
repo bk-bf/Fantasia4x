@@ -9,7 +9,10 @@
   <!-- ── World-Space Animations (positions derived from tile coordinates) ──────── -->
 
   {#each $worldEffects.sleepingOverlays as overlay (overlay.id)}
-    <div class="zzz-float" style="transform: translate({overlay.left}px, {overlay.top}px) translateX(-50%);">
+    <div
+      class="zzz-float"
+      style="transform: translate({overlay.left}px, {overlay.top}px) translateX(-50%);"
+    >
       <span class="zzz-z" style="animation-delay:0s">Z</span><span
         class="zzz-z"
         style="animation-delay:0.7s">z</span
@@ -18,13 +21,19 @@
   {/each}
 
   {#each $worldEffects.progressOverlays as overlay (overlay.id)}
-    <div class="pawn-progress-float" style="transform: translate({overlay.left}px, {overlay.top}px) translateX(-50%);">
+    <div
+      class="pawn-progress-float"
+      style="transform: translate({overlay.left}px, {overlay.top}px) translateX(-50%);"
+    >
       <div class="pawn-progress-fill" style="width:{overlay.progress * 100}%"></div>
     </div>
   {/each}
 
   {#each $worldEffects.campfireOverlays as overlay (overlay.id)}
-    <div class="fire-sparks" style="transform: translate({overlay.left}px, {overlay.top}px) translateX(-50%);">
+    <div
+      class="fire-sparks"
+      style="transform: translate({overlay.left}px, {overlay.top}px) translateX(-50%);"
+    >
       <span class="spark s1">·</span>
       <span class="spark s2">*</span>
       <span class="spark s3">·</span>
