@@ -471,14 +471,17 @@ class JobServiceImpl {
                 `[JobService] Harvest complete: ${job.resourceId} at (${job.targetX},${job.targetY}) → ${dropResourceId} x${dropAmount}${shouldPersist ? ' (persistent)' : ''}`
             );
         }
-        // Clear the designation for this tile now that the harvest is complete.
+        // Clear only work-type designations for this tile.
+        // Do NOT clear stockpile: designations are single-valued per tile and wiping
+        // unconditionally would remove stockpile tint/behavior if the tile was repainted.
+        const tileKey = `${job.targetX},${job.targetY}`;
+        const currentDesignation = (gs.designations ?? {})[tileKey];
         const newDesignations = { ...(gs.designations ?? {}) };
-        delete newDesignations[`${job.targetX},${job.targetY}`];
+        if (currentDesignation && currentDesignation !== 'stockpile') {
+            delete newDesignations[tileKey];
+        }
 
         // Trigger-based absorption: if any drop landed on a stockpile tile, absorb immediately.
-        // Note: designations is already updated above so a harvested stockpile tile has its
-        // harvest designation removed; stockpile designation is a separate designation type
-        // so this correctly absorbs items harvested on a tile that is ALSO a stockpile.
         let state: GameState = { ...gs, worldMap: newWorldMap, droppedItems: newDropped, designations: newDesignations };
         for (const id of newDropIds) {
             state = absorbDropIfOnStockpileTile(state, id);
