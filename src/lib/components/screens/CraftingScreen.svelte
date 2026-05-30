@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { gameState, currentItem, currentRace } from '$lib/stores/gameState';
+  import { gameState, currentRace } from '$lib/stores/gameState';
   import CurrentTask from '$lib/components/UI/CurrentTask.svelte';
   import { uiState } from '$lib/stores/uiState';
   import TaskContainer from '$lib/components/UI/TaskContainer.svelte';
@@ -9,15 +9,17 @@
   import { onDestroy } from 'svelte';
   import type { Item, Pawn } from '$lib/game/core/types';
 
-  let itemMap: Record<string, number> = {};
   let race: any = null;
-  let inventory: Record<string, number> = {};
   let craftingQueue: any[] = [];
   let completedResearch: string[] = [];
   let availableBuildings: string[] = [];
   let currentToolLevel = 0;
   let currentPopulation = 0;
   let pawns: Pawn[] = [];
+
+  // Read item amounts directly from the stockpile aggregate — the single source of truth.
+  // gameState.item is a legacy no-op array (addToItemArray is a stub) and must not be used.
+  $: itemMap = $gameState?.stockpile ?? {};
 
   // Station assignment: workshopType (or 'ground') → pawnId | null (null = any)
   let stationAssignments: Record<string, string | null> = {};
@@ -31,17 +33,20 @@
 
   $: getItemAmount = (itemId: string): number => itemMap[itemId] || 0;
 
-  // All craftable items — split by workshop in template
-  $: allCraftableItems = $gameState ? gameEngine.getCraftableItems() : [];
+  // All unlocked recipes — split by workshop in template.
+  // Filtered by research + population only (not materials/tools/building) so recipes are always
+  // visible for built stations; the per-item craftable flag controls the CRAFT button.
+  $: allCraftableItems = $gameState
+    ? (ITEMS_DATABASE as Item[]).filter((item) => {
+        if (!item.craftingCost) return false;
+        if (item.researchRequired && !completedResearch.includes(item.researchRequired))
+          return false;
+        if (item.populationRequired && currentPopulation < item.populationRequired) return false;
+        return true;
+      })
+    : [];
 
   $: firstCraftingInProgress = craftingQueue.length > 0 ? craftingQueue[0] : null;
-
-  const unsubscribeItem = currentItem.subscribe((items) => {
-    itemMap = {};
-    items.forEach((item) => {
-      itemMap[item.id] = Math.floor(item.amount);
-    });
-  });
 
   const unsubscribeRace = currentRace.subscribe((value) => {
     race = value;
@@ -66,7 +71,6 @@
   });
 
   onDestroy(() => {
-    unsubscribeItem();
     unsubscribeRace();
     unsubscribeGame();
   });

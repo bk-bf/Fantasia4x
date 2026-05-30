@@ -15,6 +15,10 @@ uniform vec2 u_texelSize;  // (1/atlasWidth, 1/atlasHeight)
 // Global day/night ambient (light * tint). Combined per-fragment with the baked
 // additive point light so ambient changes never rebuild the vertex buffer.
 uniform vec3 u_ambient;
+// Global fire-flicker multiplier (~0.85..1.0). The baked v_light is static, so
+// the flicker is applied here per-fragment — this keeps the terrain vertex buffer
+// stable while a campfire is lit instead of rebaking every tile each frame.
+uniform float u_lightFlicker;
 // Overlay mode: 0 = opaque tile (background fills the cell), 1 = glyph-only
 // (transparent background) so entities composite over the terrain layer below.
 uniform float u_glyphOnly;
@@ -22,9 +26,10 @@ uniform float u_glyphOnly;
 out vec4 fragColor;
 
 void main() {
-    // Final light multiplier = day/night ambient + baked additive point lights,
-    // clamped to the same ceiling the CPU lighting model used (MAX_LIGHT = 1.6).
-    vec3 light = min(u_ambient + v_light, vec3(1.6));
+    // Final light multiplier = day/night ambient + baked additive point lights
+    // (animated by the global flicker uniform), clamped to the same ceiling the
+    // CPU lighting model used (MAX_LIGHT = 1.6).
+    vec3 light = min(u_ambient + v_light * u_lightFlicker, vec3(1.6));
 
     vec4 sprite = texture(u_fontAtlas, v_texCoord);
 

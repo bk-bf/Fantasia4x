@@ -46,10 +46,33 @@ class LightingServiceImpl {
     private emitters: LightEmitter[] = [];
     private ambientLight = 1.0;
     private ambientTint: [number, number, number] = [1.0, 1.0, 1.0];
+    // Monotonic version that bumps whenever the emitter SET changes (a campfire is
+    // lit/extinguished/moved). The renderer bakes flicker-free light into the vertex
+    // buffer and only rebuilds when this changes; flicker is a per-frame shader uniform.
+    private emittersVersion = 0;
+    private emittersSignature = '';
 
     /** Replace the active emitter set (called each frame/turn from the canvas). */
     setEmitters(emitters: LightEmitter[]): void {
         this.emitters = emitters;
+        // Cheap signature of position + radius + intensity so the version only bumps
+        // on a real change, not on every frame's freshly-allocated array.
+        let sig = '';
+        for (const e of emitters) sig += `${e.x},${e.y},${e.radius},${e.intensity}|`;
+        if (sig !== this.emittersSignature) {
+            this.emittersSignature = sig;
+            this.emittersVersion++;
+        }
+    }
+
+    /** Version of the current emitter set; changes only when emitters are added/removed/moved. */
+    getEmittersVersion(): number {
+        return this.emittersVersion;
+    }
+
+    /** Global fire-flicker scalar (~0.85..1.0) applied as a shader uniform. */
+    flicker(time: number): number {
+        return fireFlicker(time, 0);
     }
 
     /** Mirror the current day/night ambient used as the multiplicative base. */
@@ -130,6 +153,9 @@ class LightingServiceImpl {
             const e = this.emitters[i];
             const dx = wx - e.x - 0.5;
             const dy = wy - e.y - 0.5;
+            // Cheap AABB reject: if either axis offset already exceeds the radius the
+            // tile cannot be lit, so skip the sqrt for the (vast) majority of tiles.
+            if (dx <= -e.radius || dx >= e.radius || dy <= -e.radius || dy >= e.radius) continue;
             const dist = Math.sqrt(dx * dx + dy * dy);
             if (dist >= e.radius) continue;
 
@@ -148,6 +174,61 @@ class LightingServiceImpl {
     /** Whether any point-light emitters are currently active. */
     hasEmitters(): boolean {
         return this.emitters.length > 0;
+    }
+
+    /**
+     * Axis-aligned bounding box (world tile coords) enclosing every emitter's
+     * reach, or null when nothing is lit. The renderer uses it to skip light
+     * sampling for tiles that no emitter can reach, so lighting cost scales with
+     * the lit area rather than the whole map.
+     */
+    getLitBounds(): { minX: number; minY: number; maxX: number; maxY: number } | null {
+        if (this.emitters.length === 0) return null;
+        let minX = Infinity;
+        let minY = Infinity;
+        let maxX = -Infinity;
+        let maxY = -Infinity;
+        for (let i = 0; i < this.emitters.length; i++) {
+            const e = this.emitters[i];
+            const cx = e.x + 0.5; // emitter sits at tile centre (matches samplePoint*)
+            const cy = e.y + 0.5;
+            if (cx - e.radius < minX) minX = cx - e.radius;
+            if (cy - e.radius < minY) minY = cy - e.radius;
+            if (cx + e.radius > maxX) maxX = cx + e.radius;
+            if (cy + e.radius > maxY) maxY = cy + e.radius;
+        }
+        return { minX, minY, maxX, maxY };
+    }
+
+    /**
+     * Sample ONLY the additive point-light contribution WITHOUT flicker. Used by
+     * the renderer to bake a static a_light vertex attribute; the time-varying
+     * flicker is applied globally via a shader uniform so the terrain buffer stays
+     * stable while a fire is lit. Returns [0,0,0] when no emitter is in range.
+     */
+    samplePointStatic(wx: number, wy: number): [number, number, number] {
+        let r = 0;
+        let g = 0;
+        let b = 0;
+        for (let i = 0; i < this.emitters.length; i++) {
+            const e = this.emitters[i];
+            const dx = wx - e.x - 0.5;
+            const dy = wy - e.y - 0.5;
+            // Cheap AABB reject: if either axis offset already exceeds the radius the
+            // tile cannot be lit, so skip the sqrt for the (vast) majority of tiles.
+            if (dx <= -e.radius || dx >= e.radius || dy <= -e.radius || dy >= e.radius) continue;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist >= e.radius) continue;
+
+            const d = dist / e.radius;
+            const falloff = (1 - d) * (1 - d);
+            const add = e.intensity * falloff;
+
+            r += e.color[0] * add;
+            g += e.color[1] * add;
+            b += e.color[2] * add;
+        }
+        return [r, g, b];
     }
 }
 

@@ -12,12 +12,13 @@
 import type { DesignationType, GameState, Job, Pawn, DroppedItem, ZoneFilter } from '../core/types';
 // Gated console shim — see core/log.ts. Silences per-tick log/debug/warn unless
 // gameDebug(true); console.error still surfaces.
-import { gatedConsole as console } from '../core/log';
+import { gatedConsole as console, isGameDebug } from '../core/log';
 import itemsData from '../database/items.jsonc';
 import { resourceObjectService } from './ResourceObjectService';
 import { SUBTERRAINS, SUBTERRAIN_FALLBACK } from '../core/Terrains';
 import { itemService } from './ItemService';
 import { buildingService } from './BuildingService';
+import { addToStockpileZone } from '../core/GameState';
 import { ticksFromSeconds } from '../core/time';
 
 const ITEMS_DATABASE = itemsData as unknown as import('../core/types').Item[];
@@ -490,7 +491,11 @@ class JobServiceImpl {
             if (!legacyFilter || legacyFilter.allowedCategories.length === 0) return true;
             return this._itemMatchesFilter(d.resourceId, legacyFilter);
         });
-        console.log(`[HAUL-SYNC] drops on ground: ${drops.length}`, drops.map(d => `${d.id}(${d.resourceId}×${d.quantity})`));
+        // Heavy per-tick string building guarded behind the debug flag (see core/log.ts):
+        // gatedConsole suppresses output, but the drops.map() would still run every tick.
+        if (isGameDebug()) {
+            console.log(`[HAUL-SYNC] drops on ground: ${drops.length}`, drops.map(d => `${d.id}(${d.resourceId}×${d.quantity})`));
+        }
 
         // Haul jobs only make sense when there is a stockpile zone to deliver to.
         const stockpileTiles = Object.entries(gs.designations ?? {}).filter(([, t]) => t === 'stockpile');
@@ -586,11 +591,11 @@ class JobServiceImpl {
 
         // Refund 50% of building cost to stockpile
         const def = buildingService.getBuildingById(building.type);
-        const newStockpile = { ...(gs.stockpile ?? {}) };
+        const refunds: Record<string, number> = {};
         if (def?.buildingCost) {
             for (const [itemId, cost] of Object.entries(def.buildingCost)) {
                 const refund = Math.floor(Number(cost) * 0.5);
-                if (refund > 0) newStockpile[itemId] = (newStockpile[itemId] ?? 0) + refund;
+                if (refund > 0) refunds[itemId] = (refunds[itemId] ?? 0) + refund;
             }
         }
 
@@ -601,12 +606,12 @@ class JobServiceImpl {
         }
 
         console.log(`[JobService] Deconstruction complete: ${building.type} (${building.id})`);
-        return {
-            ...gs,
-            stockpile: newStockpile,
-            buildingCounts: newCounts,
-            buildings: (gs.buildings ?? []).filter((b) => b.id !== job.buildingId)
-        };
+        const afterRefund = addToStockpileZone(
+            { ...gs, buildingCounts: newCounts, buildings: (gs.buildings ?? []).filter((b) => b.id !== job.buildingId) },
+            null,
+            refunds
+        );
+        return afterRefund;
     }
 
     private _completeConstruct(job: Job, gs: GameState): GameState {

@@ -141,6 +141,22 @@ export class WebGLRenderer {
 	}
 
 	/**
+	 * Set the emitter-set version so the terrain buffer rebakes its static point
+	 * light exactly once per change (campfire lit/extinguished/moved).
+	 */
+	setLightVersion(version: number): void {
+		this.core.setLightVersion(version);
+	}
+
+	/**
+	 * Set the bounding box enclosing all lit emitters so the bake only samples
+	 * point light for tiles within reach (cost scales with the lit area).
+	 */
+	setLightBounds(bounds: { minX: number; minY: number; maxX: number; maxY: number } | null): void {
+		this.core.setLightBounds(bounds);
+	}
+
+	/**
 	 * Provide the per-tile light sampler (Phase A2). The grid renderer bakes its
 	 * result into the a_light vertex attribute each frame.
 	 */

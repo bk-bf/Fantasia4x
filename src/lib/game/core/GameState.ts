@@ -161,10 +161,24 @@ export const GENERAL_ZONE_ID = 'zone-general';
 // ===== PURE STOCKPILE HELPERS =====
 
 /**
+ * Compute the aggregate stockpile by summing all zone inventories.
+ * This is the single source of truth — never mutate state.stockpile directly.
+ */
+export function computeAggregate(zones: StockpileZone[]): Record<string, number> {
+	const agg: Record<string, number> = {};
+	for (const zone of (zones ?? [])) {
+		for (const [id, amt] of Object.entries(zone.inventory)) {
+			if (amt > 0) agg[id] = (agg[id] ?? 0) + amt;
+		}
+	}
+	return agg;
+}
+
+/**
  * Add items to the zone that owns `tileKey`.
  * Falls back to the general zone when tileKey is null or no zone owns the tile.
  * Auto-creates the general zone if it doesn't exist.
- * Keeps state.stockpile (aggregate) in sync.
+ * state.stockpile is always recomputed from zones — never tracked separately.
  */
 export function addToStockpileZone(
 	state: GameState,
@@ -186,19 +200,17 @@ export function addToStockpileZone(
 		targetIdx = zones.length - 1;
 	}
 
-	const newAggregate = { ...state.stockpile };
 	for (const [itemId, amount] of Object.entries(items)) {
 		if (amount <= 0) continue;
 		zones[targetIdx].inventory[itemId] = (zones[targetIdx].inventory[itemId] ?? 0) + amount;
-		newAggregate[itemId] = (newAggregate[itemId] ?? 0) + amount;
 	}
 
-	return { ...state, stockpileZones: zones, stockpile: newAggregate };
+	return { ...state, stockpileZones: zones, stockpile: computeAggregate(zones) };
 }
 
 /**
- * Consume items from zones greedily (iterates zones in order, largest-first is not guaranteed).
- * Updates both zone inventories and the aggregate.
+ * Consume items from zones greedily (iterates zones in order).
+ * state.stockpile is always recomputed from zones after the deduction.
  * Does not validate sufficiency — caller must check state.stockpile first.
  */
 export function consumeFromStockpiles(
@@ -206,7 +218,6 @@ export function consumeFromStockpiles(
 	items: Record<string, number>
 ): GameState {
 	const zones = (state.stockpileZones ?? []).map((z) => ({ ...z, inventory: { ...z.inventory } }));
-	const newAggregate = { ...state.stockpile };
 
 	for (const [itemId, amount] of Object.entries(items)) {
 		if (amount <= 0) continue;
@@ -219,8 +230,7 @@ export function consumeFromStockpiles(
 			zone.inventory[itemId] = available - take;
 			remaining -= take;
 		}
-		newAggregate[itemId] = Math.max(0, (newAggregate[itemId] ?? 0) - amount);
 	}
 
-	return { ...state, stockpileZones: zones, stockpile: newAggregate };
+	return { ...state, stockpileZones: zones, stockpile: computeAggregate(zones) };
 }

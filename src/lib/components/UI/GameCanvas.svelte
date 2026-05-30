@@ -70,9 +70,8 @@
 
   // Previous references for terrain-rebuild change detection (see gameState.subscribe).
   let _prevWorldMap: unknown;
-  let _prevBuildings: unknown;
+  let _prevBuildingsSig = '';
   let _prevDesignations: unknown;
-  let _prevDroppedItems: unknown;
 
   // Viewport offset in tile coordinates
   let viewX = 0;
@@ -153,6 +152,8 @@
   $: {
     lightingService.setEmitters(lightingService.collectEmitters(buildings));
     renderer?.setDynamicLight(lightingService.hasEmitters());
+    renderer?.setLightVersion(lightingService.getEmittersVersion());
+    renderer?.setLightBounds(lightingService.getLitBounds());
   }
 
   // Campfire spark embellishment: only lit + complete campfires. The radial glow
@@ -372,6 +373,19 @@
     (selPawns.length > 0 || selBuildings.length > 0 || Object.keys(selZones).length > 0);
   // ──────────────────────────────────────────────────────────────────────────
 
+  // Visual signature of the building set for terrain-rebuild change detection.
+  // Includes ONLY fields buildGameGrid draws (position, type, status, deconstruct,
+  // paused). Deliberately excludes fuel/lit so a burning campfire's per-tick fuel
+  // countdown does not force a full terrain rebuild every frame.
+  function buildingsVisualSig(bs: PlacedBuilding[]): string {
+    let sig = '';
+    for (let i = 0; i < bs.length; i++) {
+      const b = bs[i];
+      sig += `${b.id}:${b.x},${b.y}:${b.type}:${b.status}:${b.deconstructQueued ? 1 : 0}:${b.paused ? 1 : 0}|`;
+    }
+    return sig;
+  }
+
   const unsubState = gameState.subscribe((s) => {
     worldMap = s.worldMap ?? [];
     pawns = s.pawns ?? [];
@@ -380,17 +394,23 @@
     droppedItems = s.droppedItems ?? [];
     // Only the terrain layer is expensive to rebuild (buildGameGrid scans the
     // whole 240×160 map). It only changes when one of these references changes —
-    // pawns are rendered as a separate per-frame overlay, so pawn-only ticks need
-    // no terrain rebuild. Skipping unchanged rebuilds is the main perf win.
+    // pawns AND dropped items are rendered as a separate per-frame overlay, so
+    // ticks that only move items/pawns need no terrain rebuild. Skipping unchanged
+    // rebuilds is the main perf win.
+    //
+    // Buildings are compared by a VISUAL signature (only the fields buildGameGrid
+    // actually draws) rather than array identity: a lit campfire decrements its
+    // fuel every tick — producing a fresh buildings array each tick — but fuel/lit
+    // are invisible on the map, so an identity check would force a full terrain
+    // rebuild every frame while a fire burns. The signature ignores fuel/lit.
+    const buildingsSig = buildingsVisualSig(buildings);
     const terrainChanged =
       worldMap !== _prevWorldMap ||
-      buildings !== _prevBuildings ||
-      designations !== _prevDesignations ||
-      droppedItems !== _prevDroppedItems;
+      buildingsSig !== _prevBuildingsSig ||
+      designations !== _prevDesignations;
     _prevWorldMap = worldMap;
-    _prevBuildings = buildings;
+    _prevBuildingsSig = buildingsSig;
     _prevDesignations = designations;
-    _prevDroppedItems = droppedItems;
     // Day/night: update ambient uniforms whenever the turn changes
     if (renderer?.isReady()) {
       const { light, tint } = environmentService.getAmbient(s.turn);
@@ -465,6 +485,9 @@
    */
   function updatePawnOverlay(dt: number) {
     pawnOverlayGrid.clear();
+    // Dropped/stored items are a layer BENEATH pawns: draw them first so a pawn
+    // standing on an item's tile overwrites (renders on top of) it.
+    overlayDroppedItems(pawnOverlayGrid, droppedItems);
     const seen = new Set<string>();
     // Exponential smoothing factor for this frame's elapsed time.
     const alpha = dt > 0 ? 1 - Math.exp(-dt / MOVE_SMOOTH_TAU) : 1;
@@ -561,7 +584,6 @@
   function redrawOverlayNow() {
     if (!renderer?.isReady() || worldMap.length === 0) return;
     const grid = buildGameGrid(worldMap, buildings, designations);
-    overlayDroppedItems(grid, droppedItems);
 
     // (Live zone drag-paint preview is drawn on the 2D overlay in
     // drawDesignations(), not here, to avoid rebuilding the terrain buffer.)
@@ -1007,12 +1029,12 @@
         worldMap.length > 0
           ? buildGameGrid(worldMap, buildings, designations)
           : generatePlaceholderGrid();
-      overlayDroppedItems(grid, droppedItems);
       renderer.setGrid(grid);
       renderer.setViewTileOffset(viewX, viewY);
-      // Phase A2: bake ONLY additive point light into the renderer; the global
-      // day/night ambient is applied as a shader uniform (renderer.setAmbient).
-      renderer.setLightSampler((wx, wy, time) => lightingService.samplePointOnly(wx, wy, time));
+      // Phase A2: bake ONLY the static (flicker-free) additive point light into the
+      // renderer; the global day/night ambient and the fire flicker are both applied
+      // as shader uniforms, so the terrain buffer never rebakes per frame.
+      renderer.setLightSampler((wx, wy) => lightingService.samplePointStatic(wx, wy));
       // Initialise ambient from current turn so the first frame is correctly lit
       {
         const { light, tint } = environmentService.getAmbient($gameState?.turn ?? 0);
@@ -1020,6 +1042,7 @@
         lightingService.setAmbient(light, tint);
         lightingService.setEmitters(lightingService.collectEmitters(buildings));
         renderer.setDynamicLight(lightingService.hasEmitters());
+        renderer.setLightVersion(lightingService.getEmittersVersion());
         _ambientLight = light;
         _ambientTint = tint;
       }
@@ -1081,6 +1104,10 @@
       const now = performance.now();
       const dt = lastFrameTime ? (now - lastFrameTime) / 1000 : 0;
       lastFrameTime = now;
+      // Advance the simulation on this same thread/schedule. Driving the sim from
+      // the render loop (rather than a competing setInterval) prevents the timer
+      // starvation that throttled a <1 ms/tick sim to ~20 TPS while rendering.
+      gameState.stepSimulation(dt * 1000);
       updatePawnOverlay(dt);
       updateCameraFollow(dt);
       renderer.setOverlayGrid(pawnOverlayGrid);

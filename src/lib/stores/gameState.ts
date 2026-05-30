@@ -1,6 +1,6 @@
 import { browser } from '$app/environment';
 import { writable, derived, get } from 'svelte/store';
-import { GameStateManager, consumeFromStockpiles, addToStockpileZone } from '$lib/game/core/GameState';
+import { GameStateManager, consumeFromStockpiles, addToStockpileZone, GENERAL_ZONE_ID, computeAggregate } from '$lib/game/core/GameState';
 import { gameEngine } from '$lib/game/systems/GameEngineImpl';
 import type { GameState, Pawn, WorldTile, FilterableZoneType } from '$lib/game/core/types';
 import { generatePawns } from '$lib/game/entities/Pawns';
@@ -22,12 +22,21 @@ import { TICKS_PER_SECOND, ticksFromSeconds } from '$lib/game/core/time';
 
 
 // ===== CONFIGURATION =====
-const TURN_INTERVAL = 3000;
+/** Real-time duration of one simulation tick at 1× speed (ms). */
+const TICK_DURATION_MS = 1000 / TICKS_PER_SECOND;
+/**
+ * Upper bound on how many sim steps a single animation frame may run. Caps the
+ * cost per frame (each step ≈ 1 ms) so fast-forward / catch-up after a hitch
+ * can never spiral and lock up the render thread. Backlog beyond this is dropped.
+ */
+const MAX_STEPS_PER_FRAME = 16;
 
 // ===== STATE VARIABLES =====
-let gameInterval: ReturnType<typeof setInterval> | null = null;
-let autoTurnInterval: ReturnType<typeof setInterval> | null = null;
 let gameSpeedValue = 1;
+/** Whether the simulation should advance (set by start/stopAutoTurns). */
+let simRunning = false;
+/** Accumulated real time (× speed) not yet consumed by whole sim steps. */
+let simAccumulatorMs = 0;
 
 // ===== WORLD GENERATION =====
 /** Bump this when the world generation algorithm changes to force a regen. */
@@ -194,6 +203,31 @@ function applyMigrations(state: GameState): GameState {
 			]
 		};
 	});
+	// Stockpile zone repair: old code had paths that updated the aggregate without touching zones,
+	// and vice versa.  The aggregate is the more reliable value (it was always decremented on
+	// consumption).  Reset zone inventories so they sum to the aggregate: put everything into the
+	// general zone, which computeAggregate will then reflect correctly.
+	{
+		const aggregate = state.stockpile ?? {};
+		if (Object.keys(aggregate).length > 0) {
+			const zones = (state.stockpileZones ?? []).map((z) =>
+				z.id === GENERAL_ZONE_ID
+					? { ...z, inventory: { ...aggregate } }
+					: { ...z, inventory: {} }
+			);
+			const generalExists = zones.some((z) => z.id === GENERAL_ZONE_ID);
+			if (!generalExists) {
+				zones.push({
+					id: GENERAL_ZONE_ID,
+					name: 'Colony Stockpile',
+					tiles: [],
+					filter: { allowedCategories: [], blockedItems: [] },
+					inventory: { ...aggregate }
+				});
+			}
+			state = { ...state, stockpileZones: zones, stockpile: computeAggregate(zones) };
+		}
+	}
 	return state;
 }
 
@@ -256,30 +290,56 @@ function updatePawnAbilities(state: GameState): GameState {
 }
 
 // ===== AUTO-TURN FUNCTIONS =====
+// The simulation is no longer driven by its own setInterval. A standalone timer
+// competes with the rAF render loop for the single main thread and gets starved
+// (browsers deprioritise timers under a busy frame), so a ~1 ms/tick sim could
+// stall to ~20 TPS while rendering. Instead the render loop calls
+// stepSimulation() once per frame with the elapsed time, and a fixed-timestep
+// accumulator runs as many whole sim steps as that time (× speed) warrants.
 function startAutoTurns() {
-	if (autoTurnInterval) {
-		clearInterval(autoTurnInterval);
-	}
-
-	// Uniform fixed-timestep loop: every interval fire IS one tick, and one tick
-	// is one full sim step. processGameTurn() runs the entire pipeline (movement,
-	// needs, work, research, buildings, events) and advances gameState.turn by 1.
-	// At 1× speed this fires TICKS_PER_SECOND times per real second.
-	autoTurnInterval = setInterval(() => {
-		if (get(isPaused)) return;
-
-		const result = gameEngine.processGameTurn();
-		if (!result.success) {
-			console.error('[AutoTurn] GameEngine tick processing failed:', result.errors);
-		}
-	}, 1000 / (TICKS_PER_SECOND * gameSpeedValue));
+	simRunning = true;
+	simAccumulatorMs = 0;
 }
 
 function stopAutoTurns() {
-	if (autoTurnInterval) {
-		clearInterval(autoTurnInterval);
-		autoTurnInterval = null;
+	simRunning = false;
+	simAccumulatorMs = 0;
+}
+
+/**
+ * Advance the simulation by the wall-clock time elapsed since the previous
+ * frame. Called from the render loop (GameCanvas) so the sim and renderer share
+ * one deterministic schedule instead of fighting over the main thread.
+ *
+ * @param frameDtMs Real milliseconds since the last frame.
+ */
+function stepSimulation(frameDtMs: number) {
+	if (!browser || !simRunning) return;
+	if (get(isPaused)) {
+		simAccumulatorMs = 0;
+		return;
 	}
+
+	// Clamp the frame delta so returning from a long stall (or a backgrounded
+	// tab where rAF was paused) doesn't try to replay minutes of backlog at once.
+	const dt = Math.min(frameDtMs, 250);
+	simAccumulatorMs += dt * gameSpeedValue;
+
+	let steps = 0;
+	while (simAccumulatorMs >= TICK_DURATION_MS && steps < MAX_STEPS_PER_FRAME) {
+		const result = gameEngine.processGameTurn();
+		if (!result.success) {
+			console.error('[AutoTurn] GameEngine tick processing failed:', result.errors);
+			simAccumulatorMs = 0;
+			return;
+		}
+		simAccumulatorMs -= TICK_DURATION_MS;
+		steps++;
+	}
+
+	// Couldn't keep up with the requested speed this frame — drop the backlog so
+	// it doesn't accumulate into an ever-growing catch-up debt.
+	if (steps >= MAX_STEPS_PER_FRAME) simAccumulatorMs = 0;
 }
 
 function pauseGame() {
@@ -294,34 +354,11 @@ function togglePause() {
 	isPaused.update((paused) => !paused);
 }
 
+// Speed is applied live by stepSimulation via gameSpeedValue (kept in sync by the
+// gameSpeed store subscription below), so changing speed needs no loop restart.
 function setGameSpeed(speed: number) {
 	gameSpeed.set(speed);
-	if (browser && gameInterval) {
-		stopAutoTurns();
-		const newInterval = TURN_INTERVAL / speed;
-		gameInterval = setInterval(() => {
-			let currentlyPaused = false;
-			isPaused.subscribe((paused) => {
-				currentlyPaused = paused;
-			})();
-
-			if (!currentlyPaused) {
-				advanceTurn();
-			}
-		}, newInterval);
-	}
-}
-
-// ===== DEPRECATED FUNCTION =====
-function advanceTurn() {
-	console.warn('[GameState] DEPRECATED: advanceTurn() called. Using GameEngine instead.');
-	const result = gameEngine.processGameTurn();
-	if (!result.success) {
-		console.error('[GameState] GameEngine turn processing failed:', result.errors);
-	}
-}
-
-// ===== WORLD REGEN =====
+}// ===== WORLD REGEN =====
 function regenWorld(seed?: number, dev = false, itemQty = 500) {
 	const s = (seed !== undefined ? seed : Date.now()) >>> 0 || 1;
 	const newWorld = generateWorld(240, 160, s);
@@ -535,13 +572,13 @@ export const gameState = {
 	// Auto-turn functions
 	startAutoTurns,
 	stopAutoTurns,
+	stepSimulation,
 	pauseGame,
 	unpauseGame,
 	togglePause,
 	setGameSpeed,
 
 	// Game functions
-	advanceTurn,
 	addItem,
 	consumeGlobalItem,
 	resetGame,

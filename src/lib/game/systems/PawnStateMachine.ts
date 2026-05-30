@@ -14,7 +14,7 @@
  */
 
 import type { GameState, Pawn, Building, PlacedBuilding, ConditionDef, ConditionStage } from '../core/types';
-import { addToStockpileZone } from '../core/GameState';
+import { addToStockpileZone, consumeFromStockpiles } from '../core/GameState';
 import ITEMS_DATABASE from '../database/items.jsonc';
 import BUILDINGS_DATABASE_RAW from '../database/buildings.jsonc';
 import conditionsData from '../database/conditions.jsonc';
@@ -305,6 +305,29 @@ function findAdjacentApproach(
     return best;
 }
 
+// Per-pawn "unreachable job" cooldown. A failed A* search to an unreachable target
+// explores the whole connected map component — very expensive. Without this, an idle
+// pawn that cannot reach its highest-priority job would claim → fail → release it every
+// single tick, re-running that full-map search 60×/second (and ×N idle pawns). We instead
+// remember the failure for UNREACHABLE_COOLDOWN_TICKS and skip the job until then.
+const UNREACHABLE_COOLDOWN_TICKS = 60; // ~1 in-game second before retrying an unreachable job
+const _unreachableJobs = new Map<string, Map<string, number>>(); // pawnId → (jobId → expiryTurn)
+
+function isJobUnreachableForPawn(pawnId: string, jobId: string, turn: number): boolean {
+    const expiry = _unreachableJobs.get(pawnId)?.get(jobId);
+    return expiry !== undefined && expiry > turn;
+}
+
+function markJobUnreachable(pawnId: string, jobId: string, turn: number): void {
+    let m = _unreachableJobs.get(pawnId);
+    if (!m) { m = new Map(); _unreachableJobs.set(pawnId, m); }
+    // Prune expired entries so the map can't grow unbounded as job ids churn.
+    if (m.size > 16) {
+        for (const [id, exp] of m) if (exp <= turn) m.delete(id);
+    }
+    m.set(jobId, turn + UNREACHABLE_COOLDOWN_TICKS);
+}
+
 function tryAssignPath(
     pawn: Pawn,
     tx: number,
@@ -426,9 +449,8 @@ function consumeMeal(meal: MealPortion[], gs: GameState): { state: GameState; hu
                 )
             };
         } else {
-            const newStockpile = { ...(state.stockpile ?? {}) };
-            newStockpile[id] = Math.max(0, (newStockpile[id] ?? 0) - units);
-            state = { ...state, stockpile: newStockpile };
+            // Use consumeFromStockpiles so both the aggregate and zone inventories stay in sync.
+            state = consumeFromStockpiles(state, { [id]: units });
         }
     }
     return { state, hungerRecovered };
@@ -939,7 +961,11 @@ function handleIdle(pawn: Pawn, gameState: GameState): GameState {
     if (!wasmPathfinderService.isReady()) return gameState;
 
     const availableJobs = jobService.getAvailableJobs(pawn, gameState);
-    const job = availableJobs[0];
+    // Skip jobs this pawn recently failed to reach (see _unreachableJobs). Prevents an
+    // unreachable target from triggering a full-map A* search every tick.
+    const job = availableJobs.find(
+        (j) => !isJobUnreachableForPawn(pawn.id, j.id, gameState.turn)
+    );
     if (!job) return gameState;
 
     let gs = jobService.claimJob(pawn.id, job.id, gameState);
@@ -982,6 +1008,9 @@ function handleIdle(pawn: Pawn, gameState: GameState): GameState {
 
     const afterPath = tryAssignPath(pawn, job.targetX, job.targetY, gs);
     if (!afterPath) {
+        // Unreachable right now — cool the job down for this pawn so we don't re-run the
+        // expensive failed pathfind every tick, then drop the claim.
+        markJobUnreachable(pawn.id, job.id, gameState.turn);
         return jobService.releaseJob(pawn.id, job.id, gs);
     }
 

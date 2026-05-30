@@ -13,6 +13,8 @@ import { checkWebGLError } from './utils.js';
 
 /** Default fully-lit value used when no light sampler is supplied. */
 const ONE_LIGHT: [number, number, number] = [1, 1, 1];
+/** Shared "no point light" value for tiles outside every emitter's reach. */
+const ZERO_LIGHT: [number, number, number] = [0, 0, 0];
 
 export interface GridRenderOptions {
 	tileWidth: number;    // Width of each tile in pixels
@@ -27,8 +29,16 @@ export interface GridRenderOptions {
 	// When absent, tiles render fully lit ([1,1,1]).
 	lightSampler?: (wx: number, wy: number, time: number) => [number, number, number];
 	lightTime?: number;   // seconds, snapshot once per frame for seamless flicker
-	// When true, render every tile stored in the grid (skip viewport culling).
-	// Used for the sparse entity-overlay grid which holds only a handful of tiles.
+	// Monotonic version of the EMITTER SET (campfires lit/extinguished/moved). The
+	// baked a_light is flicker-free, so the terrain buffer only needs rebuilding
+	// when this changes — flicker itself is a cheap per-fragment shader uniform.
+	lightVersion?: number;
+	// Axis-aligned bounding box (in world tile coords) that encloses every active
+	// light emitter's reach. Tiles fully outside it can't receive point light, so
+	// the bake skips sampling them — making lighting cost scale with the lit area,
+	// not the whole map. `null` means a sampler is present but no emitters are lit
+	// (so every tile is dark); `undefined` falls back to sampling all tiles.
+	litBounds?: { minX: number; minY: number; maxX: number; maxY: number } | null;
 	renderAllTiles?: boolean;
 	// Monotonic version of the grid's CONTENT. When provided, the generated
 	// vertex buffer is cached and reused across frames as long as the version,
@@ -71,7 +81,7 @@ export class GridRenderer {
 		viewY: number;
 		tileW: number;
 		tileH: number;
-		lightBucket: number;
+		lightVersion: number;
 		count: number;
 		data: Float32Array;
 	} | null = null;
@@ -165,14 +175,14 @@ export class GridRenderer {
 		}
 
 		// Geometry is now camera-independent (pan/zoom applied via shader uniforms,
-		// ambient via uniform), so the terrain buffer only needs rebuilding when:
+		// ambient + flicker via uniforms), so the terrain buffer only needs rebuilding
+		// when:
 		//   - the grid content changes (cacheVersion bump),
 		//   - the zoom (tile pixel size) changes, or
-		//   - active flickering point lights animate. When no emitters are lit the
-		//     baked additive light is a constant 0, so we never rebuild for light.
-		const lightBucket = options.pointLightActive
-			? Math.floor((options.lightTime ?? 0) / 0.1) // ~10 Hz flicker refresh
-			: 0;
+		//   - the EMITTER SET changes (a campfire is lit/extinguished/moved). The baked
+		//     a_light is flicker-free and static per emitter set, so flicker animation
+		//     no longer forces a rebuild — it's a per-fragment shader uniform now.
+		const lightVersion = options.lightVersion ?? 0;
 
 		const c = this.terrainCache;
 		if (
@@ -180,7 +190,7 @@ export class GridRenderer {
 			c.version === options.cacheVersion &&
 			c.tileW === options.tileWidth &&
 			c.tileH === options.tileHeight &&
-			c.lightBucket === lightBucket &&
+			c.lightVersion === lightVersion &&
 			c.count === tiles.length
 		) {
 			return c.data;
@@ -193,7 +203,7 @@ export class GridRenderer {
 			viewY: 0,
 			tileW: options.tileWidth,
 			tileH: options.tileHeight,
-			lightBucket,
+			lightVersion,
 			count: tiles.length,
 			data
 		};
@@ -244,6 +254,11 @@ export class GridRenderer {
 		const vertexData: number[] = [];
 		const sampler = options.lightSampler;
 		const lightTime = options.lightTime ?? 0;
+		// Emitter reach. When a sampler is present but no emitters are lit (bounds ===
+		// null) every tile is dark; when bounds is a rect we only sample tiles whose
+		// quad overlaps it. `undefined` keeps the legacy sample-everything behaviour.
+		const litBounds = options.litBounds;
+		const noEmitters = sampler !== undefined && litBounds === null;
 
 		for (const tile of tiles) {
 			// Get character info from font atlas. For space/missing chars, render background only.
@@ -330,10 +345,31 @@ export class GridRenderer {
 			// the quad, giving smooth gradients with no per-pixel cost.
 			const wx = tile.position.x;
 			const wy = tile.position.y;
-			const Ltl = sampler ? sampler(wx, wy, lightTime) : ONE_LIGHT;          // top-left
-			const Ltr = sampler ? sampler(wx + 1, wy, lightTime) : ONE_LIGHT;      // top-right
-			const Lbl = sampler ? sampler(wx, wy + 1, lightTime) : ONE_LIGHT;      // bottom-left
-			const Lbr = sampler ? sampler(wx + 1, wy + 1, lightTime) : ONE_LIGHT;  // bottom-right
+			// Skip the four corner samples for tiles that can't be lit: no sampler
+			// (lighting off → fully lit), no emitters (dark), or the tile quad lies
+			// fully outside the emitter bounding box. This keeps lighting work
+			// proportional to the lit area instead of the whole map.
+			let Ltl: [number, number, number];
+			let Ltr: [number, number, number];
+			let Lbl: [number, number, number];
+			let Lbr: [number, number, number];
+			if (!sampler) {
+				Ltl = Ltr = Lbl = Lbr = ONE_LIGHT;
+			} else if (
+				noEmitters ||
+				(litBounds != null &&
+					(wx + 1 < litBounds.minX ||
+						wx > litBounds.maxX ||
+						wy + 1 < litBounds.minY ||
+						wy > litBounds.maxY))
+			) {
+				Ltl = Ltr = Lbl = Lbr = ZERO_LIGHT;
+			} else {
+				Ltl = sampler(wx, wy, lightTime); // top-left
+				Ltr = sampler(wx + 1, wy, lightTime); // top-right
+				Lbl = sampler(wx, wy + 1, lightTime); // bottom-left
+				Lbr = sampler(wx + 1, wy + 1, lightTime); // bottom-right
+			}
 
 			// Add vertex data for this character (2 triangles = 6 vertices)
 			// Vertex format: x, y, u, v, fr, fg, fb, br, bg, bb, dr, dg, db, or, og, ob, u1, v1, u2, v2, lr, lg, lb (23 floats)

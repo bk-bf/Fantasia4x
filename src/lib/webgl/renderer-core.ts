@@ -88,10 +88,18 @@ export class WebGLRendererCore {
 	// terrain cache's light-refresh gating so a fire-free map never rebuilds.
 	private dynamicLight = false;
 
+	// Version of the emitter SET. The baked a_light is flicker-free, so the terrain
+	// buffer is only regenerated when this changes (a campfire toggled/moved).
+	private lightVersion = 0;
+
 	// Per-tile dynamic POINT lighting (Phase A2). The sampler bakes ONLY the
 	// additive point-light contribution into the a_light vertex attribute; the
 	// global ambient is added per-fragment via the u_ambient uniform.
 	private lightSampler: ((wx: number, wy: number, time: number) => [number, number, number]) | null = null;
+	// Bounding box (world tiles) enclosing all lit emitters' reach. `undefined`
+	// until first set; `null` once set with no emitters lit. Lets the bake skip
+	// sampling tiles that no campfire can reach.
+	private lightBounds: { minX: number; minY: number; maxX: number; maxY: number } | null | undefined = undefined;
 
 	// Initialization promise
 	private initPromise: Promise<boolean>;
@@ -154,6 +162,24 @@ export class WebGLRendererCore {
 	 */
 	setDynamicLight(active: boolean): void {
 		this.dynamicLight = active;
+	}
+
+	/**
+	 * Set the emitter-set version. Bumped by the canvas whenever a campfire is
+	 * lit/extinguished/moved so the terrain vertex buffer rebakes its (static)
+	 * point light exactly once per change — flicker is a per-fragment uniform.
+	 */
+	setLightVersion(version: number): void {
+		this.lightVersion = version;
+	}
+
+	/**
+	 * Set the bounding box (world tiles) that encloses every lit emitter's reach,
+	 * or null when nothing is lit. The terrain bake samples point light only for
+	 * tiles overlapping this box, so a small campfire costs a small box of work.
+	 */
+	setLightBounds(bounds: { minX: number; minY: number; maxX: number; maxY: number } | null): void {
+		this.lightBounds = bounds;
 	}
 
 	/**
@@ -304,6 +330,14 @@ export class WebGLRendererCore {
 			this.ambientLight * this.ambientTint[1],
 			this.ambientLight * this.ambientTint[2]
 		]);
+		// Global fire-flicker multiplier for the baked (static) point light. Cheap
+		// per-frame uniform so a lit campfire animates without rebaking any vertices.
+		const flickerTime = performance.now() / 1000;
+		this.shaderManager.setUniform(
+			'tileRenderer',
+			'u_lightFlicker',
+			this.dynamicLight ? fireFlickerGlobal(flickerTime) : 1.0
+		);
 
 		gl.activeTexture(gl.TEXTURE0);
 		gl.bindTexture(gl.TEXTURE_2D, this.fontTexture);
@@ -335,6 +369,8 @@ export class WebGLRendererCore {
 			lightTime,
 			renderAllTiles: true,
 			pointLightActive: this.dynamicLight,
+			lightVersion: this.lightVersion,
+			litBounds: this.lightBounds,
 			cacheVersion: this.gridVersion
 		});
 
@@ -358,6 +394,7 @@ export class WebGLRendererCore {
 				viewportHeight: viewportTilesH,
 				lightSampler: this.lightSampler ?? undefined,
 				lightTime,
+				litBounds: this.lightBounds,
 				renderAllTiles: true
 			});
 			this.shaderManager.setUniform('tileRenderer', 'u_glyphOnly', 0);
@@ -400,3 +437,15 @@ export class WebGLRendererCore {
 		this.gameGrid = null;
 	}
 }
+
+/**
+ * Global fire-flicker scalar in [0.85, 1.0] applied as the u_lightFlicker uniform.
+ * Mirrors LightingService.fireFlicker(time, 0) so the baked-vs-uniform split stays
+ * visually consistent. A single shared phase animates all lit campfires together,
+ * which is a negligible visual trade for eliminating per-frame vertex rebakes.
+ */
+function fireFlickerGlobal(time: number): number {
+	const n = Math.sin(time * 6.0) * 0.5 + Math.sin(time * 11.3) * 0.5;
+	return 0.85 + 0.15 * (0.5 + 0.5 * n);
+}
+
