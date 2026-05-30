@@ -35,6 +35,7 @@
 
   const ITEMS_DATABASE = itemsData as unknown as Item[];
   const FUEL_ITEMS = ITEMS_DATABASE.filter((item) => (item.fuelValue ?? 0) > 0);
+  const FUEL_SETTINGS_ICON = resolveCharSpans([{ sheet: 'tiles', id: 11 }])[0] ?? '☲';
 
   // Tile size range for zoom (square cells for CoQ sprite-mode)
   // MAP_W / MAP_H must match the generateWorld() call in gameState.ts
@@ -1853,7 +1854,7 @@
               class="bld-btn bld-btn--sq"
               class:bld-btn--active={showFuelSettings}
               title="Fuel settings"
-              on:click={toggleFuelSettingsPanel}>☲</button
+              on:click={toggleFuelSettingsPanel}>{FUEL_SETTINGS_ICON}</button
             >
           {/if}
         {/if}
@@ -1866,7 +1867,7 @@
           on:mousedown|stopPropagation
           on:mouseup|stopPropagation
         >
-          <div class="fuel-settings-hdr">☲ fuel settings</div>
+          <div class="fuel-settings-hdr">{FUEL_SETTINGS_ICON} fuel settings</div>
           <label class="fuel-settings-row">
             <input
               type="checkbox"
@@ -2347,7 +2348,7 @@
     bottom: 6px;
     left: 6px;
     display: flex;
-    align-items: flex-start;
+    align-items: stretch;
     gap: 4px;
     pointer-events: all;
   }

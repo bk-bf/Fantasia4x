@@ -26,6 +26,7 @@ export interface SubterrainDef {
 /** tiles.bmp index → CP437-mapped Unicode char */
 const T = (n: number): string => {
     if (n >= 32 && n <= 126) return String.fromCharCode(n);
+    if (n === 11) return '\u2642'; // ♂  CP437 11 (used by tiles picker id:11)
     if (n === 3) return '\u2665'; // ♥  cave mouth
     if (n === 14) return '\u266B'; // ♫  campfire / double eighth note
     if (n === 176) return '\u2591'; // ░  light shade
