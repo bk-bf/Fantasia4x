@@ -15,13 +15,16 @@ import { resourceObjectService } from './ResourceObjectService';
 import { SUBTERRAINS, SUBTERRAIN_FALLBACK } from '../core/Terrains';
 import { itemService } from './ItemService';
 import { buildingService } from './BuildingService';
+import { ticksFromSeconds } from '../core/time';
 
 const ITEMS_DATABASE = itemsData as unknown as import('../core/types').Item[];
 
 // ===== WORK CONSTANTS =====
 
 /** Work-points per turn a pawn delivers (base rate; later modifiable by stats). */
-// PER-TURN RATE — for uniform 60 Hz: divide by TICKS_PER_TURN and apply each tick.
+// Deliberately PER-TURN: work delivery is gated through the turn-based job/state-machine
+// flow (claimJob/advanceJob), so smoothing it would mean running job advancement every
+// tick — high risk for purely cosmetic progress, and completion timing is unchanged either way.
 export const BASE_WORK_RATE = 1;
 
 /** Designation types that produce harvest-category jobs. */
@@ -434,12 +437,12 @@ class JobServiceImpl {
                         // Per-yield compound keys: "resourceId:itemId" → turn
                         for (const y of interaction!.yields) {
                             if (y.regrowthTurns && (availableItemIds?.has(y.itemId) ?? true)) {
-                                newCooldowns[`${job.resourceId!}:${y.itemId}`] = gs.turn + y.regrowthTurns;
+                                newCooldowns[`${job.resourceId!}:${y.itemId}`] = gs.turn + ticksFromSeconds(y.regrowthTurns);
                             }
                         }
                     } else if (interaction?.regrowthTurns) {
                         // Simple whole-resource cooldown
-                        newCooldowns[job.resourceId!] = gs.turn + interaction.regrowthTurns;
+                        newCooldowns[job.resourceId!] = gs.turn + ticksFromSeconds(interaction.regrowthTurns);
                     }
 
                     return { ...col, resources: updatedResources, resourceCooldowns: newCooldowns };

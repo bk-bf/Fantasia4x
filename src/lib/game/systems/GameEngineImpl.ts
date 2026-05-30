@@ -19,6 +19,7 @@ import { pawnStateMachineService } from './PawnStateMachine';
 import { jobService } from '../services/JobService';
 import { wasmPathfinderService } from '../services/WasmPathfinderService';
 import { resourceObjectService } from '../services/ResourceObjectService';
+import { TICKS_PER_SECOND, ticksFromSeconds, perTick } from '../core/time';
 import type { WorkCategory } from '../core/types';
 import type { Pawn } from '../core/types';
 
@@ -276,13 +277,15 @@ export class GameEngineImpl implements GameEngine {
 		}
 
 		try {
-			// Sync from Svelte store so user changes (work priorities, etc.) made between turns are preserved
+			// Sync from Svelte store so user changes (work priorities, etc.) made between ticks are preserved
 			this.gameState = { ...get(gameState) };
 
-			console.log('[GameEngine] Coordinating turn processing:', this.gameState.turn + 1);
-
-			// Increment turn
+			// Increment the tick counter (gameState.turn counts ticks).
 			this.gameState.turn += 1;
+
+			// Continuous accrual every tick (smooth bars; per-second totals preserved).
+			this.gameState = pawnService.processNeedsTick(this.gameState);
+			this.gameState = researchService.processResearchTick(this.gameState);
 
 			// COORDINATION: Delegate to services for all system processing
 			this.gameState = workService.ensureBasicWorkAssignments(this.gameState);
@@ -290,7 +293,6 @@ export class GameEngineImpl implements GameEngine {
 			this.gameState = jobService.generateJobs(this.gameState);
 			this.processBuildings();
 			this.processCrafting();
-			this.processResearch();
 			this.processPawns();
 			this.processLocationRenewal();
 			this.processResourceRegrowth();
@@ -343,7 +345,6 @@ export class GameEngineImpl implements GameEngine {
 	}
 
 	private processLocationRenewal(): void {
-		console.log('[GameEngine] Coordinating location resource renewal through LocationService');
 		locationService.processAllLocationRenewal();
 	}
 
@@ -441,6 +442,9 @@ export class GameEngineImpl implements GameEngine {
 	private debugLogPawns(): void {
 		if (!this.gameState) return;
 		const gs = this.gameState;
+		// The pipeline runs TICKS_PER_SECOND times per second — log at most once per
+		// in-game second to avoid flooding the console.
+		if (gs.turn % TICKS_PER_SECOND !== 0) return;
 		const T = gs.turn;
 		const wasmReady = wasmPathfinderService.isReady();
 		const jobPool = (gs.jobs ?? []).length;
@@ -481,11 +485,11 @@ export class GameEngineImpl implements GameEngine {
 	}
 
 	private processPawns(): void {
-		console.log('[GameEngine] Coordinating pawn processing through services');
-
-		// Phase 3: pawn movement now advances every tick via processTick()/processMovement(),
-		// not here. By the time a turn boundary runs, the final movement tick has already
-		// set hasReachedDestination, so the state machine below still reads it fresh.
+		// Movement advances every tick (smooth, terrain-cost aware). Run it before
+		// the state machine so hasReachedDestination is fresh.
+		if (this.gameState!.pawns?.some((p) => p.isMoving)) {
+			this.gameState = pawnService.processMovement({ ...this.gameState! });
+		}
 		// Phase 4a: run state machine (after movement so hasReachedDestination is fresh)
 		this.gameState = pawnStateMachineService.tick(this.gameState!);
 		// COORDINATION: Delegate all pawn processing to PawnService
@@ -519,7 +523,7 @@ export class GameEngineImpl implements GameEngine {
 				return { ...b, lit: true };
 			}
 			if (!b.lit) return b;
-			const newFuel = Math.max(0, (b.fuel ?? 0) - buildingDef.fuelConsumptionRate);
+			const newFuel = Math.max(0, (b.fuel ?? 0) - perTick(buildingDef.fuelConsumptionRate));
 			const newLit = newFuel > 0;
 			if (newFuel === b.fuel && newLit === b.lit) return b;
 			changed = true;
@@ -534,11 +538,6 @@ export class GameEngineImpl implements GameEngine {
 		// processCraftingQueue countdown removed.
 	}
 
-	private processResearch(): void {
-		console.log('[GameEngine] Coordinating research processing through ResearchService');
-		this.gameState = researchService.processCurrentResearch(this.gameState!);
-	}
-
 	// ===== HELPER METHODS =====
 
 	updateStores(): void {
@@ -547,18 +546,11 @@ export class GameEngineImpl implements GameEngine {
 	}
 
 	/**
-	 * Advance the simulation by ONE tick (60 Hz). Only movement runs every tick;
-	 * all other systems run once per turn (every TICKS_PER_TURN ticks) via
-	 * processGameTurn(). Skips work entirely when no pawn is moving, and updates
-	 * the store WITHOUT scheduling a save (the per-turn boundary save covers it),
-	 * so continuous movement doesn't starve the debounced save timer.
+	 * Legacy alias. The whole pipeline now runs on a single uniform tick, so a
+	 * "tick" and a "turn" are the same step — both are processGameTurn().
 	 */
 	processTick(): void {
-		const current = get(gameState);
-		if (!current.pawns?.some(p => p.isMoving)) return;
-		this.gameState = pawnService.processMovement({ ...current });
-		if (!this.gameState) return;
-		gameState.update(() => this.gameState!);
+		this.processGameTurn();
 	}
 
 	/** Patch just the worldMap in the engine's internal state (used by regenWorld). */

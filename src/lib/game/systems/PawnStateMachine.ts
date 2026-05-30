@@ -25,6 +25,7 @@ import { wasmPathfinderService } from '../services/WasmPathfinderService';
 import { buildPathfindingGrids } from '../services/PathfinderService';
 import { logActivity } from '../../stores/Log';
 import { gameLogger } from '../dev/gameLogger';
+import { ticksFromSeconds, perTick } from '../core/time';
 
 // ===== STATE NAME CONSTANTS =====
 export const PAWN_STATE = {
@@ -62,18 +63,24 @@ const WORK_PRIORITY_THRESHOLD_SHIFT = 4;  // pts per labor level above/below def
 const QUEUE_FOOD_THRESHOLD_REDUCTION = 5; // max threshold pts reduction when all queue jobs far from food
 // How many ahead-of-time jobs to soft-preview in the pawn's jobQueue.
 const JOB_QUEUE_SIZE = 4;
-// NOTE: The constants below are turn-denominated. *_TURNS are durations (multiply by
-// TICKS_PER_TURN for uniform 60 Hz); FATIGUE_PER_SLEEPING_* and the MALNUTRITION/BLOOD
-// rates below are per-turn magnitudes (divide by TICKS_PER_TURN for per-tick application).
-const EATING_TURNS = 2;                // Turns to eat at a campfire (~2 in-game min)
-const EATING_TURNS_GROUND = 3;         // Turns eating in-place (cold, uncomfortable)
-const SLEEPING_TURNS = 100;            // Full recovery in bed: 72 / 0.72 = 100 turns = 1/3 day (progress bar ref)
-const SLEEPING_TURNS_GROUND = 124;     // Full recovery on ground: 72 / 0.58 ≈ 124 turns ≈ 9.9h
+// NOTE: The constants below are turn-denominated. *_TURNS are durations (a turn = 60 ticks,
+// so they keep their values). FATIGUE_PER_SLEEPING_* and the MALNUTRITION/BLOOD rates below
+// deliberately stay PER-TURN: they are recovery/condition rates evaluated alongside the
+// turn-based state machine and death checks, and at <0.001/turn they are sub-perceptual —
+// smoothing them to per-tick would add risk for no visible benefit.
+// NOTE: Values below are authored in SECONDS (the legacy "turn"). The sim runs the
+// whole pipeline every tick, so DURATIONS are converted to ticks via ticksFromSeconds()
+// and per-second RATES are converted to per-tick amounts via perTick(). One knob
+// (TICKS_PER_SECOND in core/time) retunes all of them at once.
+const EATING_TURNS = ticksFromSeconds(2);          // ~2 in-game min to eat at a campfire
+const EATING_TURNS_GROUND = ticksFromSeconds(3);   // eating in-place (cold, uncomfortable)
+const SLEEPING_TURNS = ticksFromSeconds(100);      // Full recovery in bed: 72 / 0.72 = 100s = 1/3 day (progress bar ref)
+const SLEEPING_TURNS_GROUND = ticksFromSeconds(124); // Full recovery on ground: 72 / 0.58 ≈ 124s ≈ 9.9h
 const HUNGER_PER_FOOD_UNIT = 30;       // Base hunger restored per 1 unit (×nutrition)
 const SAFE_HUNGER = 10;                // Target hunger level after a full meal
 const MAX_UNITS_PER_FOOD_TYPE = 3;     // Cap per food type per meal — avoids hoarding
-const FATIGUE_PER_SLEEPING_TURN = 0.72; // Bed: 72 fatigue → 0 in ~100 turns = 8 in-game hours
-const FATIGUE_PER_SLEEPING_GROUND = 0.58; // Ground: 72 → 0 in ~124 turns ≈ 9.9 in-game hours
+const FATIGUE_PER_SLEEPING_TURN = 0.72; // Bed: 72 fatigue → 0 in ~100s = 8 in-game hours (per second; perTick at use)
+const FATIGUE_PER_SLEEPING_GROUND = 0.58; // Ground: 72 → 0 in ~124s ≈ 9.9 in-game hours (per second; perTick at use)
 // Wake thresholds — prevents yo-yo by requiring proper rest before resuming activity
 const SLEEP_WAKE_THRESHOLD_FED = 0;    // Sleep until fully restored when not hungry
 const SLEEP_WAKE_THRESHOLD_HUNGRY = 30; // Allow early waking at 30% to go eat
@@ -84,10 +91,10 @@ const CONDITIONS_DB = conditionsData as unknown as ConditionDef[];
 const BUILDINGS_DB = BUILDINGS_DATABASE_RAW as unknown as Building[];
 const MALNUTRITION_ONSET_HUNGER = 87;    // same as CRITICAL_HUNGER — condition starts here
 const MALNUTRITION_SAFE_HUNGER = 40;    // below this threshold, condition recovers
-const MALNUTRITION_RATE_CRITICAL = 0.0008; // +/turn at hunger 87–99  → lethal in ~1250 turns ≈ 4.2 days
-const MALNUTRITION_RATE_MAX = 0.002;  // +/turn at hunger 100    → lethal in ~500 turns ≈ 1.7 days
-const MALNUTRITION_RECOVERY_RATE = 0.0003; // −/turn when hunger < 40 → fully clears in ~3333 turns ≈ 11 days
-const BLOOD_REGEN_PER_TURN = 0.05;   // blood volume +/turn when not bleeding → 0→100 in 2000 turns ≈ 6.7 days
+const MALNUTRITION_RATE_CRITICAL = perTick(0.0008); // +/s at hunger 87–99  → lethal in ~1250s ≈ 4.2 days
+const MALNUTRITION_RATE_MAX = perTick(0.002);  // +/s at hunger 100    → lethal in ~500s ≈ 1.7 days
+const MALNUTRITION_RECOVERY_RATE = perTick(0.0003); // −/s when hunger < 40 → fully clears in ~3333s ≈ 11 days
+const BLOOD_REGEN_PER_TURN = perTick(0.05);   // blood volume +/s when not bleeding → 0→100 in 2000s ≈ 6.7 days
 
 /** Return the active ConditionStage for a condition at the given severity, or undefined. */
 function getConditionStage(conditionId: string, severity: number): ConditionStage | undefined {
@@ -206,7 +213,7 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
     const totalBleedRate = limbs.reduce((sum, l) => sum + (l.bleedRate ?? 0), 0);
 
     if (totalBleedRate > 0) {
-        bloodVolume = Math.max(0, bloodVolume - totalBleedRate);
+        bloodVolume = Math.max(0, bloodVolume - perTick(totalBleedRate));
     }
 
     // Sync blood_loss condition severity = 1 - (bloodVolume / 100)
@@ -1139,7 +1146,9 @@ function handleWorking(pawn: Pawn, gameState: GameState): GameState {
     const workPoints = (activeJob.type === 'construct' || activeJob.type === 'deconstruct')
         ? Math.max(1, pawn.skills['skill_construction'] ?? 0)
         : BASE_WORK_RATE;
-    const afterAdvance = jobService.advanceJob(jobId, workPoints, gameState);
+    // workPoints is authored as work-points PER SECOND; deliver one tick's worth so
+    // a job authored as N seconds of work still takes N seconds of real time.
+    const afterAdvance = jobService.advanceJob(jobId, perTick(workPoints), gameState);
     const jobStillExists = (afterAdvance.jobs ?? []).some((j) => j.id === jobId);
 
     if (!jobStillExists) {
@@ -1420,8 +1429,9 @@ function handleSleeping(pawn: Pawn, gameState: GameState): GameState {
         : 0;
     const fatigueRecovery = FATIGUE_PER_SLEEPING_GROUND + shelterBonus;
     const sleepDuration = restBuilding ? SLEEPING_TURNS : SLEEPING_TURNS_GROUND; // for progress bar only
-    const newFatigue = Math.max(0, (pawn.needs?.fatigue ?? 50) - fatigueRecovery);
-    const newSleep = Math.max(0, (pawn.needs?.sleep ?? 50) - fatigueRecovery);
+    // fatigueRecovery is a per-second rate; apply one tick's worth each step.
+    const newFatigue = Math.max(0, (pawn.needs?.fatigue ?? 50) - perTick(fatigueRecovery));
+    const newSleep = Math.max(0, (pawn.needs?.sleep ?? 50) - perTick(fatigueRecovery));
 
     // Wake when fatigue drops to the threshold for current hunger level.
     // Fed pawns sleep to 0 (full rest). Hungry pawns wake at 30 so they can eat,

@@ -1,14 +1,35 @@
-// time.ts — Central tick/turn timing constants.
+// time.ts — Central simulation timing.
 //
-// The simulation loop runs at TICKS_PER_TURN ticks per second (60 Hz). One
-// "turn" still equals one in-game second and remains the balance + save unit:
-// heavy systems (needs, work, research, buildings, events) run once every
-// TICKS_PER_TURN ticks, so all existing per-turn magnitudes and stored
-// turn-stamps keep their meaning. Only movement runs every tick, draining a
-// per-tile cost budget (see PawnService.processMovement).
+// The sim is a uniform fixed-timestep loop: there is ONE timestep, the tick.
+// `processGameTurn()` IS the tick step and runs TICKS_PER_SECOND times per real
+// second (at 1× speed). `gameState.turn` counts ticks, so it advances
+// TICKS_PER_SECOND per second.
 //
-// If continuous per-turn rates are ever migrated to smooth per-tick application,
-// divide the per-turn magnitude by TICKS_PER_TURN at the point of application.
+// All balance values are authored in human-readable SECONDS (the old "turn").
+// TICKS_PER_SECOND is the single tunable knob that converts them to tick space —
+// change it to 50 or 100 to experiment with the tick rate without touching any
+// balance value:
+//   • DURATIONS / thresholds (seconds you wait): multiply  → ticksFromSeconds(s)
+//   • RATES (amount accrued per second):         divide    → perTick(perSecond)
+//
+// Continuous bars (movement, needs, research) and discrete completions (work,
+// buildings, events, mood, day/night, regrowth) all run on the same tick, so a
+// task authored as N seconds always takes N seconds of real time regardless of
+// the tick rate.
 
-/** Simulation ticks per in-game turn (= ticks per real second at 1× speed). */
-export const TICKS_PER_TURN = 60;
+/** Simulation ticks per in-game second (= ticks per real second at 1× speed).
+ *  The master time knob — retune the whole sim's granularity from here. */
+export const TICKS_PER_SECOND = 60;
+
+/** Seconds advanced per tick (the fixed timestep dt). Multiply per-second RATES
+ *  by this to get the per-tick amount. */
+export const SECONDS_PER_TICK = 1 / TICKS_PER_SECOND;
+
+/** Convert an authored duration in seconds (legacy "turns") to ticks. Use for
+ *  task durations, cooldowns, day length, and any threshold compared against
+ *  the tick-counting `gameState.turn`. */
+export const ticksFromSeconds = (seconds: number): number => seconds * TICKS_PER_SECOND;
+
+/** Convert a per-second RATE to the amount applied on a single tick. Use for
+ *  any accumulator stepped every tick (needs, research, fuel, regen…). */
+export const perTick = (perSecond: number): number => perSecond * SECONDS_PER_TICK;

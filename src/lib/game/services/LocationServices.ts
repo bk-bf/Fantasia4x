@@ -1,4 +1,5 @@
 import type { GameState } from '../core/types';
+import { perTick } from '../core/time';
 import { RICHNESS_COLORS } from '../database/colors';
 import {
 	LOCATION_TEMPLATES,
@@ -274,7 +275,7 @@ export class LocationServiceImpl implements LocationService {
 
 		Object.values(location.resourceNodes).forEach(node => {
 			if (node.renewalRate > 0 && node.currentAmount < node.maxAmount) {
-				const renewal = Math.min(node.renewalRate, node.maxAmount - node.currentAmount);
+				const renewal = Math.min(perTick(node.renewalRate), node.maxAmount - node.currentAmount);
 				node.currentAmount += renewal;
 			}
 		});

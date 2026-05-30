@@ -1,4 +1,5 @@
 import eventData from '../database/events.jsonc';
+import { ticksFromSeconds } from './time';
 export interface EventConsequence {
   id: string;
   description: string;
@@ -125,8 +126,8 @@ export class EventSystem {
   private lastEventTurn = 0;
 
   generateEvent(gameState: any): { event: GameEvent; consequences: EventConsequence[] } | null {
-    // Reduce frequency for more meaningful events
-    if (gameState.turn - this.lastEventTurn < Math.floor(Math.random() * 3) + 2) return null;
+    // Reduce frequency for more meaningful events (gap authored in in-game seconds)
+    if (gameState.turn - this.lastEventTurn < ticksFromSeconds(Math.floor(Math.random() * 3) + 2)) return null;
 
     const availableEvents = this.getAvailableEvents(gameState);
     if (availableEvents.length === 0) return null;
@@ -145,7 +146,7 @@ export class EventSystem {
       if (random <= 0) {
         this.lastEventTurn = gameState.turn;
         if (event.triggers.cooldown) {
-          this.eventCooldowns.set(event.id, gameState.turn + event.triggers.cooldown);
+          this.eventCooldowns.set(event.id, gameState.turn + ticksFromSeconds(event.triggers.cooldown));
         }
         this.eventHistory.push(event.id);
 

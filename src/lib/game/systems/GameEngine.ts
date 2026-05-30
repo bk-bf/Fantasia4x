@@ -43,7 +43,7 @@ export interface GameEngineConfig {
 export interface GameEngine {
 	// Core methods
 	processGameTurn(): TurnProcessingResult;
-	/** Advance the sim by one 60 Hz tick (movement only; turn systems run every TICKS_PER_TURN ticks). */
+	/** Advance the sim by one tick (turn = 1 tick; the whole pipeline runs every tick). */
 	processTick(): void;
 	updateStores(): void;
 

@@ -9,16 +9,19 @@
  * Season / weather phases (B–D) will be added here when implemented.
  */
 
-// Turn-denominated duration. For uniform 60 Hz, multiply by TICKS_PER_TURN (and rescale
-// the initialGameState.turn anchor) so the calendar keeps the same wall-clock pace.
+import { TICKS_PER_SECOND } from '../core/time';
+
+// In-game seconds per day. The simulation `turn` counts ticks, so a full day is
+// TURNS_PER_DAY × TICKS_PER_SECOND ticks long.
 export const TURNS_PER_DAY = 300;
+const TICKS_PER_DAY = TURNS_PER_DAY * TICKS_PER_SECOND;
 
 /**
- * Map turn → fractional time-of-day in [0, 1).
+ * Map turn (ticks) → fractional time-of-day in [0, 1).
  * 0.0 = midnight, 0.25 = 06:00, 0.5 = noon, 0.75 = 18:00.
  */
 export function getTimeOfDay(turn: number): number {
-    return (turn % TURNS_PER_DAY) / TURNS_PER_DAY;
+    return (turn % TICKS_PER_DAY) / TICKS_PER_DAY;
 }
 
 /**

@@ -2,6 +2,7 @@ import type { ResearchProject, LoreItem, RaceStats, GameState } from '../core/ty
 import { consumeFromStockpiles } from '../core/GameState';
 import researchData from '../database/research.jsonc';
 import loreData from '../database/lore.jsonc';
+import { perTick } from '../core/time';
 
 const RESEARCH_DATABASE = researchData as unknown as ResearchProject[];
 const LORE_DATABASE = loreData as unknown as LoreItem[];
@@ -63,6 +64,8 @@ export interface ResearchService {
 	startResearch(researchId: string, gameState: GameState): GameState;
 	completeResearch(researchId: string, gameState: GameState): GameState;
 	processCurrentResearch(gameState: GameState): GameState;
+	/** Continuous research accrual for one tick (+perTick(1) of researchTime). */
+	processResearchTick(gameState: GameState): GameState;
 }
 
 /**
@@ -364,7 +367,9 @@ export class ResearchServiceImpl implements ResearchService {
 		console.log('[ResearchService] Processing current research');
 
 		// Process current research - scroll-based progression
-		// PER-TURN RATE (+1/turn) — for uniform 60 Hz: add 1/TICKS_PER_TURN each tick instead.
+		// PER-TURN RATE (+1/turn). Accrual now happens smoothly each tick via
+		// processResearchTick(); this whole-step variant is kept for any caller that
+		// still wants to advance a full turn at once.
 		if (gameState.currentResearch) {
 			const updatedCurrentResearch = {
 				...gameState.currentResearch,
@@ -385,6 +390,29 @@ export class ResearchServiceImpl implements ResearchService {
 		}
 
 		return gameState;
+	}
+
+	/**
+	 * Continuous research accrual for ONE simulation tick (60 Hz): adds
+	 * perTick(1) of scroll progress and completes mid-stream once the
+	 * threshold is reached. Over a full turn this nets +1 progress — identical
+	 * pacing to the legacy per-turn step, just smooth (and save-safe: currentProgress
+	 * is already a plain number).
+	 */
+	processResearchTick(gameState: GameState): GameState {
+		if (!gameState.currentResearch) return gameState;
+
+		const updated = {
+			...gameState.currentResearch,
+			currentProgress: (gameState.currentResearch.currentProgress || 0) + perTick(1)
+		};
+
+		if (updated.currentProgress >= updated.researchTime) {
+			console.log('[ResearchService] Research completed:', updated.id);
+			return this.completeResearch(updated.id, gameState);
+		}
+
+		return { ...gameState, currentResearch: updated };
 	}
 }
 

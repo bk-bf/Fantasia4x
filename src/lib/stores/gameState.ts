@@ -18,7 +18,7 @@ import { generateWorld } from '$lib/game/world/WorldGenerator';
 import { resourceGeneratorService } from '$lib/game/services/ResourceGeneratorService';
 import { loadSave, scheduleSave, deleteSave } from './saveManager';
 import { applyDevWorld } from '$lib/game/dev/devWorld';
-import { TICKS_PER_TURN } from '$lib/game/core/time';
+import { TICKS_PER_SECOND, ticksFromSeconds } from '$lib/game/core/time';
 
 
 // ===== CONFIGURATION =====
@@ -28,8 +28,6 @@ const TURN_INTERVAL = 3000;
 let gameInterval: ReturnType<typeof setInterval> | null = null;
 let autoTurnInterval: ReturnType<typeof setInterval> | null = null;
 let gameSpeedValue = 1;
-/** Ticks elapsed in the current turn; a turn completes every TICKS_PER_TURN ticks. */
-let tickInTurn = 0;
 
 // ===== WORLD GENERATION =====
 /** Bump this when the world generation algorithm changes to force a regen. */
@@ -41,7 +39,7 @@ resourceGeneratorService.generateResources(_generatedWorld, WORLD_SEED);
 
 // ===== INITIAL STATE =====
 export const initialGameState: GameState = {
-	turn: 100, // 08:00 — day starts at morning (TURNS_PER_DAY=300, 08:00 = turn 100)
+	turn: ticksFromSeconds(100), // 08:00 — turn counts ticks; 100 in-game s × TICKS_PER_SECOND (TURNS_PER_DAY=300 s)
 	race: generateRace(),
 	pawns: [],
 	// REVERTED: Back to original - no starter food added
@@ -263,25 +261,18 @@ function startAutoTurns() {
 		clearInterval(autoTurnInterval);
 	}
 
-	tickInTurn = 0;
-	// Run at TICKS_PER_TURN Hz. Movement advances every tick (smooth, terrain-cost
-	// aware); the full turn (needs, work, research, buildings, events) fires once
-	// every TICKS_PER_TURN ticks — preserving the original 1 turn/second cadence
-	// and all per-turn balance.
+	// Uniform fixed-timestep loop: every interval fire IS one tick, and one tick
+	// is one full sim step. processGameTurn() runs the entire pipeline (movement,
+	// needs, work, research, buildings, events) and advances gameState.turn by 1.
+	// At 1× speed this fires TICKS_PER_SECOND times per real second.
 	autoTurnInterval = setInterval(() => {
 		if (get(isPaused)) return;
 
-		gameEngine.processTick();
-
-		if (++tickInTurn >= TICKS_PER_TURN) {
-			tickInTurn = 0;
-			console.log('[AutoTurn] Calling GameEngine.processGameTurn()');
-			const result = gameEngine.processGameTurn();
-			if (!result.success) {
-				console.error('[AutoTurn] GameEngine turn processing failed:', result.errors);
-			}
+		const result = gameEngine.processGameTurn();
+		if (!result.success) {
+			console.error('[AutoTurn] GameEngine tick processing failed:', result.errors);
 		}
-	}, 1000 / (TICKS_PER_TURN * gameSpeedValue));
+	}, 1000 / (TICKS_PER_SECOND * gameSpeedValue));
 }
 
 function stopAutoTurns() {

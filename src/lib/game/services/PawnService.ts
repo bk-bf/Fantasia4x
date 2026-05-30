@@ -2,7 +2,7 @@ import type { GameState, Pawn, PawnNeeds, PawnState, StatusEffectDef, PawnCondit
 import { consumeFromStockpiles } from '../core/GameState';
 import { calculatePawnAbilities, categorizeAbilities, getAbilityDescription } from '../entities/Pawns';
 import { WORK_CATEGORIES } from '../core/Work';
-import { TICKS_PER_TURN } from '../core/time';
+import { TICKS_PER_SECOND, SECONDS_PER_TICK, perTick } from '../core/time';
 import statusEffectsData from '../database/status-effects.jsonc';
 import conditionsData from '../database/conditions.jsonc';
 
@@ -52,6 +52,9 @@ export interface PawnService {
 
 	// Turn Processing (PawnService coordination)
 	processPawnTurn(gameState: GameState): GameState;
+
+	/** Continuous needs accrual for one 60 Hz tick (hunger/fatigue rise + health regen). */
+	processNeedsTick(gameState: GameState): GameState;
 
 	// Automatic Eating Logic (extracted from GameEngine)
 	processAutomaticEating(gameState: GameState): GameState;
@@ -316,9 +319,11 @@ export class PawnServiceImpl implements PawnService {
 		// handles HUNGRY→EATING and TIRED→SLEEPING via its state transitions each tick.
 		// Calling it here caused double food consumption (and direct array mutation),
 		// draining the stockpile extremely fast.
+		// NOTE: hunger/fatigue rise and health regen are NOT accrued here anymore — they
+		// advance smoothly every tick via processNeedsTick(). This turn pass only runs the
+		// threshold reactions (mood) and morale off the already-accrued need values.
 		gameState.pawns.forEach(pawn => {
 			if (pawn.isAlive === false) return; // skip dead pawns
-			newState = this.updatePawnNeeds(pawn.id, newState);
 			newState = this.updatePawnState(pawn.id, newState);
 			newState = this.updateMorale(pawn.id, newState);
 		});
@@ -584,8 +589,12 @@ export class PawnServiceImpl implements PawnService {
 
 	// ===== PRIVATE HELPER METHODS =====
 
-	private calculateNeedsUpdate(pawn: Pawn, currentTurn: number): Pawn {
-		const updatedPawn = { ...pawn };
+	/**
+	 * Per-turn hunger/fatigue increase including every active-effect and condition-stage
+	 * multiplier. This is the single source of truth for the need-drain rate; both the
+	 * legacy per-turn path and the per-tick accrual (processNeedsTick) scale this value.
+	 */
+	private getNeedIncreasePerTurn(pawn: Pawn): { hunger: number; fatigue: number } {
 		const effects = getActiveEffects(pawn);
 
 		// Combine hungerRate/fatigueRate multipliers from all active effects (multiply together).
@@ -602,8 +611,15 @@ export class PawnServiceImpl implements PawnService {
 			}
 		}
 
-		const hungerIncrease = this.getHungerIncreasePerTurn(pawn) * hungerRate;
-		const fatigueIncrease = this.getRestIncreasePerTurn(pawn) * fatigueRate;
+		return {
+			hunger: this.getHungerIncreasePerTurn(pawn) * hungerRate,
+			fatigue: this.getRestIncreasePerTurn(pawn) * fatigueRate
+		};
+	}
+
+	private calculateNeedsUpdate(pawn: Pawn, currentTurn: number): Pawn {
+		const updatedPawn = { ...pawn };
+		const { hunger: hungerIncrease, fatigue: fatigueIncrease } = this.getNeedIncreasePerTurn(pawn);
 
 		updatedPawn.needs = {
 			...pawn.needs,
@@ -613,6 +629,46 @@ export class PawnServiceImpl implements PawnService {
 		};
 
 		return updatedPawn;
+	}
+
+	/**
+	 * Continuous needs accrual for ONE simulation tick (turn = 1 tick). Applies hunger rise,
+	 * fatigue rise and health regen at perTick() of their per-second magnitude, so a
+	 * full second (TICKS_PER_SECOND ticks) accrues exactly the authored per-second amount.
+	 * Threshold reactions, eating/sleeping recovery, mood and morale stay per-turn
+	 * (processPawnTurn / PawnStateMachine). During eating/sleeping the relevant rate
+	 * multiplier is already 0, so recovery handled per-turn never double-counts here.
+	 */
+	processNeedsTick(gameState: GameState): GameState {
+		const dt = SECONDS_PER_TICK;
+		let changed = false;
+
+		const pawns = gameState.pawns.map((pawn) => {
+			if (pawn.isAlive === false) return pawn;
+
+			const rate = this.getNeedIncreasePerTurn(pawn);
+			const hunger = Math.min(100, pawn.needs.hunger + rate.hunger * dt);
+			const fatigue = Math.min(100, pawn.needs.fatigue + rate.fatigue * dt);
+
+			const prevHealth = pawn.state.health ?? 100;
+			const health = prevHealth < 100
+				? Math.min(100, prevHealth + this.getHealthRegenPerTurn(pawn.needs) * dt)
+				: prevHealth;
+
+			if (hunger === pawn.needs.hunger && fatigue === pawn.needs.fatigue && health === prevHealth) {
+				return pawn;
+			}
+
+			changed = true;
+			return {
+				...pawn,
+				needs: { ...pawn.needs, hunger, fatigue },
+				state: { ...pawn.state, health }
+			};
+		});
+
+		if (!changed) return gameState;
+		return { ...gameState, pawns };
 	}
 
 	private calculateStateUpdate(state: PawnState, needs: PawnNeeds, currentTurn: number): PawnState {
@@ -626,30 +682,28 @@ export class PawnServiceImpl implements PawnService {
 			newState.isWorking = false;
 			newState.isSleeping = false;
 			newState.isEating = true;
-			newState.mood = Math.max(0, newState.mood - 5);
+			newState.mood = Math.max(0, newState.mood - perTick(5));
 		} else if (needs.fatigue > 95) { // Use fatigue as single rest need
 			newState.isWorking = false;
 			newState.isEating = false;
 			newState.isSleeping = true;
-			newState.mood = Math.max(0, newState.mood - 3);
+			newState.mood = Math.max(0, newState.mood - perTick(3));
 		} else if (needs.fatigue > 90) { // Medium fatigue - stop working but don't force sleep
 			newState.isWorking = false;
-			newState.mood = Math.max(0, newState.mood - 2);
+			newState.mood = Math.max(0, newState.mood - perTick(2));
 		}
 
 		// Positive mood from activities
 		if (newState.isEating && needs.hunger > 50) {
-			newState.mood = Math.min(100, newState.mood + 3);
+			newState.mood = Math.min(100, newState.mood + perTick(3));
 		} else if (newState.isSleeping && needs.fatigue > 50) { // Use fatigue for sleep benefit
-			newState.mood = Math.min(100, newState.mood + 2);
+			newState.mood = Math.min(100, newState.mood + perTick(2));
 		} else if (newState.isWorking && needs.fatigue < 80) {
-			newState.mood = Math.min(100, newState.mood + 1);
+			newState.mood = Math.min(100, newState.mood + perTick(1));
 		}
 
-		// Health regeneration (legacy field — kept for backwards compat)
-		if ((newState.health ?? 100) < 100) {
-			newState.health = Math.min(100, (newState.health ?? 100) + this.getHealthRegenPerTurn(needs));
-		}
+		// Health regeneration is accrued per tick (processNeedsTick), not here, so the
+		// HP bar climbs smoothly. This per-turn pass only handles mood reactions.
 
 		return newState;
 	}
@@ -756,8 +810,7 @@ export class PawnServiceImpl implements PawnService {
 		return bonus;
 	}
 
-	// PER-TURN RATE (applied once per turn). For uniform 60 Hz movement-style ticks,
-	// divide by TICKS_PER_TURN and apply each tick instead of once per turn.
+	// Per-second magnitude. Applied smoothly each tick (via perTick) by processNeedsTick().
 	private getHealthRegenPerTurn(needs: PawnNeeds): number {
 		let regen = 0.5; // Base health regen per turn
 
@@ -774,8 +827,8 @@ export class PawnServiceImpl implements PawnService {
 		return regen;
 	}
 
-	// Calibrated to 1 day = 300 turns: 0→72 in ~225 turns ≈ 0.75 days (matches Rimworld ~18h wake cycle).
-	// PER-TURN RATE — for uniform 60 Hz: divide by TICKS_PER_TURN and apply each tick.
+	// Calibrated to 1 day = 300 in-game seconds: 0→72 in ~225 s ≈ 0.75 days (matches Rimworld ~18h wake cycle).
+	// Per-second magnitude. Applied smoothly each tick (via perTick) by processNeedsTick().
 	private getRestIncreasePerTurn(pawn: Pawn): number {
 		let baseRest = 0.32;
 
@@ -803,8 +856,8 @@ export class PawnServiceImpl implements PawnService {
 		return Math.max(0.1, baseRest);
 	}
 
-	// Calibrated to 1 day = 300 turns: 0→70 in ~130 turns ≈ 0.43 days (matches Rimworld ~10.5h hunger trigger).
-	// PER-TURN RATE — for uniform 60 Hz: divide by TICKS_PER_TURN and apply each tick.
+	// Calibrated to 1 day = 300 in-game seconds: 0→70 in ~130 s ≈ 0.43 days (matches Rimworld ~10.5h hunger trigger).
+	// Per-second magnitude. Applied smoothly each tick (via perTick) by processNeedsTick().
 	private getHungerIncreasePerTurn(pawn: Pawn): number {
 		let baseHunger = 0.54;
 
@@ -1107,7 +1160,7 @@ export class PawnServiceImpl implements PawnService {
 	/**
 	 * Advance pawn movement by ONE simulation tick (called every tick at 60 Hz,
 	 * not once per turn). RimWorld-style budget drain: each tick a pawn spends
-	 * `speed` cost-units, and entering a cell costs `movementCost × TICKS_PER_TURN`
+	 * `speed` cost-units, and entering a cell costs `movementCost × TICKS_PER_SECOND`
 	 * units (diagonals ×√2). `nextCellCostLeft` carries the remaining cost to the
 	 * next cell across ticks, so a tile with movementCost 2.5 genuinely takes
 	 * 2.5× as long to cross as a normal (1.0) tile.
@@ -1124,7 +1177,7 @@ export class PawnServiceImpl implements PawnService {
 			const tile = state.worldMap[to.y]?.[to.x];
 			const base = tile && tile.movementCost > 0 ? tile.movementCost : 1;
 			const diagonal = from.x !== to.x && from.y !== to.y ? Math.SQRT2 : 1;
-			return base * diagonal * TICKS_PER_TURN;
+			return base * diagonal * TICKS_PER_SECOND;
 		};
 
 		for (const pawn of state.pawns) {
