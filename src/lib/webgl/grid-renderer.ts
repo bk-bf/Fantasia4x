@@ -30,6 +30,12 @@ export interface GridRenderOptions {
 	// When true, render every tile stored in the grid (skip viewport culling).
 	// Used for the sparse entity-overlay grid which holds only a handful of tiles.
 	renderAllTiles?: boolean;
+	// Monotonic version of the grid's CONTENT. When provided, the generated
+	// vertex buffer is cached and reused across frames as long as the version,
+	// camera position, zoom and (coarse) light bucket are unchanged. This avoids
+	// regenerating tens of thousands of static terrain tiles every single frame.
+	// Omit for layers whose content changes every frame (e.g. the pawn overlay).
+	cacheVersion?: number;
 }
 
 export interface GridRenderStats {
@@ -53,6 +59,18 @@ export class GridRenderer {
 	private gridVAO: WebGLVertexArrayObject | null = null;
 	private gridVBO: WebGLBuffer | null = null;
 	private currentVertexCount: number = 0;
+
+	// Cached vertex buffer for the static terrain layer (see GridRenderOptions.cacheVersion).
+	private terrainCache: {
+		version: number;
+		viewX: number;
+		viewY: number;
+		tileW: number;
+		tileH: number;
+		lightBucket: number;
+		count: number;
+		data: Float32Array;
+	} | null = null;
 
 	// Render statistics
 	private stats: GridRenderStats = {
@@ -110,7 +128,10 @@ export class GridRenderer {
 
 		// Render tiles in batches
 		if (visibleTiles.length > 0) {
-			this.renderTileBatch(visibleTiles, options);
+			const vertexData = this.getVertexData(grid, visibleTiles, options);
+			this.uploadAndDraw(vertexData);
+		} else {
+			this.currentVertexCount = 0;
 		}
 
 		// Update statistics
@@ -126,16 +147,60 @@ export class GridRenderer {
 	}
 
 	/**
-	 * Render a batch of tiles efficiently using instanced rendering
+	 * Resolve the vertex buffer for this draw, reusing the terrain cache when
+	 * possible. Only callers that pass `cacheVersion` (the static terrain layer)
+	 * are cached; per-frame layers like the pawn overlay always regenerate.
 	 */
-	private renderTileBatch(tiles: TileData[], options: GridRenderOptions): void {
+	private getVertexData(
+		grid: GameGrid,
+		tiles: TileData[],
+		options: GridRenderOptions
+	): Float32Array {
+		if (options.cacheVersion === undefined) {
+			return this.generateBatchVertexData(tiles, options);
+		}
+
+		// Day/night light changes very slowly, so snap it to a coarse bucket
+		// (~4×/sec) rather than invalidating the cache every frame.
+		const LIGHT_REFRESH_SEC = 0.25;
+		const lightBucket = Math.floor((options.lightTime ?? 0) / LIGHT_REFRESH_SEC);
+
+		const c = this.terrainCache;
+		if (
+			c &&
+			c.version === options.cacheVersion &&
+			c.viewX === options.viewportX &&
+			c.viewY === options.viewportY &&
+			c.tileW === options.tileWidth &&
+			c.tileH === options.tileHeight &&
+			c.lightBucket === lightBucket &&
+			c.count === tiles.length
+		) {
+			return c.data;
+		}
+
+		const data = this.generateBatchVertexData(tiles, options);
+		this.terrainCache = {
+			version: options.cacheVersion,
+			viewX: options.viewportX,
+			viewY: options.viewportY,
+			tileW: options.tileWidth,
+			tileH: options.tileHeight,
+			lightBucket,
+			count: tiles.length,
+			data
+		};
+		return data;
+	}
+
+	/**
+	 * Upload a prebuilt vertex buffer and issue the draw call.
+	 */
+	private uploadAndDraw(vertexData: Float32Array): void {
 		if (!this.gridVAO || !this.gridVBO) {
 			console.error('❌ Grid rendering resources not initialized');
 			return;
 		}
-
-		// Generate vertex data for all tiles
-		const vertexData = this.generateBatchVertexData(tiles, options);
 		if (vertexData.length === 0) return;
 
 		const gl = this.gl;

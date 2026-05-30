@@ -37,6 +37,7 @@
   const ZOOM_STEP = 2;
   const SCROLL_STEP = 4; // tiles per arrow key press
   const CAMERA_STORAGE_KEY = 'fantasia4x-camera';
+  let saveCameraTimer: ReturnType<typeof setTimeout> | null = null;
 
   // fitTileSize: exact float that makes the whole map fill the canvas edge-to-edge.
   // Used as the initial tile size and the zoom-out limit.
@@ -669,8 +670,6 @@
     renderer.setGrid(grid);
     drawDesignations();
   }
-
-  /** Load a BMP tileset, strip magenta background, cache as an HTMLCanvasElement. */
   function _loadSpriteSheet(url: string, target: '_tilesSheetCanvas' | '_itemsSheetCanvas') {
     const img = new Image();
     img.onload = () => {
@@ -1076,7 +1075,13 @@
   }
 
   function saveCameraState() {
-    sessionStorage.setItem(CAMERA_STORAGE_KEY, JSON.stringify({ viewX, viewY, tileWidth }));
+    // Debounced: the actual sessionStorage write is a synchronous, blocking call
+    // that must not run on every mousemove during a camera drag (caused stutter).
+    if (saveCameraTimer !== null) clearTimeout(saveCameraTimer);
+    saveCameraTimer = setTimeout(() => {
+      saveCameraTimer = null;
+      sessionStorage.setItem(CAMERA_STORAGE_KEY, JSON.stringify({ viewX, viewY, tileWidth }));
+    }, 200);
   }
 
   function setView(x: number, y: number) {

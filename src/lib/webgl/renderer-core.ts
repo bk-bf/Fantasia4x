@@ -69,6 +69,9 @@ export class WebGLRendererCore {
 
 	// External grid data
 	private gameGrid: GameGrid | null = null;
+	// Bumped every time the terrain grid is replaced; lets the grid renderer
+	// cache the static terrain vertex buffer and skip per-frame regeneration.
+	private gridVersion = 0;
 	// Sparse entity-overlay grid (pawns, dropped items…) rendered as a second,
 	// alpha-blended pass on top of the terrain grid so entities never destroy the
 	// terrain glyph in their cell and can slide smoothly between tiles.
@@ -117,6 +120,7 @@ export class WebGLRendererCore {
 	/** Inject the game grid to render. Call whenever the world changes. */
 	setGrid(grid: GameGrid): void {
 		this.gameGrid = grid;
+		this.gridVersion++;
 	}
 
 	/** Inject the entity-overlay grid (pawns/items) rendered on top of the terrain. */
@@ -291,7 +295,8 @@ export class WebGLRendererCore {
 			viewportWidth: viewportTilesW,
 			viewportHeight: viewportTilesH,
 			lightSampler: this.lightSampler ?? undefined,
-			lightTime
+			lightTime,
+			cacheVersion: this.gridVersion
 		});
 
 		this.stats.drawCalls++;

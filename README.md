@@ -27,8 +27,8 @@ It's still pretty early and development is sporadic.
 ```bash
 git clone https://github.com/bk-bf/Fantasia4x.git
 cd Fantasia4x
-npm install
-npm run dev
+pnpm install
+./dev.sh
 ```
 
 Then open http://localhost:5173
@@ -36,10 +36,10 @@ Then open http://localhost:5173
 ## Development
 
 ```bash
-npm run dev          # Start dev server
-npm run build        # Build for production
-npm run lint         # Run linter
-npm run format       # Format code
+./dev.sh             # Start dev server (use this instead of pnpm dev)
+pnpm build           # Build for production
+pnpm lint            # Run linter
+pnpm format          # Format code
 ```
 
 ## License

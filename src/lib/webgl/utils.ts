@@ -115,9 +115,8 @@ export function formatBytes(bytes: number): string {
  */
 export class PerformanceTimer {
 	private startTime: number = 0;
-	private frameCount: number = 0;
-	private lastFpsUpdate: number = 0;
-	private currentFps: number = 0;
+	private lastFrameTime: number = 0;
+	private smoothedFps: number = 0;
 
 	start(): void {
 		this.startTime = performance.now();
@@ -127,16 +126,40 @@ export class PerformanceTimer {
 		return performance.now() - this.startTime;
 	}
 
+	/**
+	 * Returns a smoothed frames-per-second estimate.
+	 *
+	 * Uses an exponential moving average of per-frame deltas instead of a
+	 * 1-second frame-count bucket. The bucket approach only updates once per
+	 * second and swings wildly whenever a single heavy frame (GC, a simulation
+	 * burst, a terrain rebuild) lands on the boundary, making the readout look
+	 * far less stable than the game actually is. The EMA reacts smoothly and
+	 * tracks perceived smoothness. Frame deltas longer than 250ms (tab
+	 * throttling, debugger pauses) are ignored so a stall doesn't crater the
+	 * value.
+	 */
 	updateFPS(): number {
-		this.frameCount++;
 		const now = performance.now();
 
-		if (now - this.lastFpsUpdate >= 1000) {
-			this.currentFps = this.frameCount;
-			this.frameCount = 0;
-			this.lastFpsUpdate = now;
+		if (this.lastFrameTime === 0) {
+			this.lastFrameTime = now;
+			return this.smoothedFps;
 		}
 
-		return this.currentFps;
+		const dt = now - this.lastFrameTime;
+		this.lastFrameTime = now;
+
+		if (dt <= 0 || dt > 250) {
+			return this.smoothedFps;
+		}
+
+		const instantaneous = 1000 / dt;
+		const alpha = 0.1; // responsive but stable
+		this.smoothedFps =
+			this.smoothedFps === 0
+				? instantaneous
+				: this.smoothedFps * (1 - alpha) + instantaneous * alpha;
+
+		return this.smoothedFps;
 	}
 }
