@@ -10,7 +10,9 @@
     Pawn,
     PlacedBuilding,
     DesignationType,
-    DroppedItem
+    DroppedItem,
+    FuelSettings,
+    Item
   } from '$lib/game/core/types.js';
   import type { GameGrid } from '$lib/webgl/game-grid.js';
   import { GameGrid as GameGridClass } from '$lib/webgl/game-grid.js';
@@ -29,6 +31,10 @@
   import { resolveCharSpans, BIOMES, SUBTERRAINS } from '$lib/game/core/Terrains.js';
   import { resourceObjectService } from '$lib/game/services/ResourceObjectService.js';
   import { TICKS_PER_SECOND } from '$lib/game/core/time.js';
+  import itemsData from '$lib/game/database/items.jsonc';
+
+  const ITEMS_DATABASE = itemsData as unknown as Item[];
+  const FUEL_ITEMS = ITEMS_DATABASE.filter((item) => (item.fuelValue ?? 0) > 0);
 
   // Tile size range for zoom (square cells for CoQ sprite-mode)
   // MAP_W / MAP_H must match the generateWorld() call in gameState.ts
@@ -570,9 +576,7 @@
       .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= W);
     // Round progress to 5% steps so small increments don't trigger re-renders.
     const progressKey = newProgress
-      .map(
-        (o) => `${o.id}:${Math.round(o.left)},${Math.round(o.top)},${Math.round(o.progress * 20)}`
-      )
+      .map((o) => `${o.id}:${Math.round(o.left)},${Math.round(o.top)},${Math.round(o.progress * 20)}`)
       .join('|');
     if (progressKey !== _progressOverlayKey) {
       _progressOverlayKey = progressKey;
@@ -1199,6 +1203,10 @@
         e.preventDefault();
         break;
       case 'Escape':
+        if (showFuelSettings) {
+          showFuelSettings = false;
+          break;
+        }
         if (similarDragMode) {
           similarDragMode = false;
           similarDragActive = false;
@@ -1537,6 +1545,79 @@
   }
 
   let showShelterAssign = false;
+  let showFuelSettings = false;
+  let fuelSettingsForBuildingId: string | null = null;
+
+  $: {
+    const nextId = selectedBuilding?.id ?? null;
+    if (nextId !== fuelSettingsForBuildingId) {
+      showFuelSettings = false;
+      fuelSettingsForBuildingId = nextId;
+    }
+  }
+
+  $: selectedFuelSettings = (selectedBuilding?.fuelSettings ?? {}) as FuelSettings;
+  $: selectedFuelThresholdPct = Math.max(0, Math.min(100, selectedFuelSettings.refuelThresholdPct ?? 30));
+  $: selectedFuelItemFilters = selectedFuelSettings.allowedFuelItemIds ?? [];
+  $: selectedRefuelPawnFilters = selectedFuelSettings.allowedRefuelPawnIds ?? [];
+
+  function toggleFuelSettingsPanel() {
+    showFuelSettings = !showFuelSettings;
+  }
+
+  function updateSelectedBuildingFuelSettings(updates: Partial<FuelSettings>) {
+    if (!selectedBuilding) return;
+    const id = selectedBuilding.id;
+    gameState.updateWithSave((state) => ({
+      ...state,
+      buildings: (state.buildings ?? []).map((b) => {
+        if (b.id !== id) return b;
+        return { ...b, fuelSettings: { ...(b.fuelSettings ?? {}), ...updates } };
+      })
+    }));
+  }
+
+  function setRefuelThresholdPct(nextPct: number) {
+    updateSelectedBuildingFuelSettings({ refuelThresholdPct: Math.max(0, Math.min(100, nextPct)) });
+  }
+
+  function toggleFuelItemFilter(itemId: string) {
+    const set = new Set(selectedFuelItemFilters);
+    if (set.has(itemId)) set.delete(itemId);
+    else set.add(itemId);
+    updateSelectedBuildingFuelSettings({ allowedFuelItemIds: Array.from(set) });
+  }
+
+  function clearFuelItemFilters() {
+    updateSelectedBuildingFuelSettings({ allowedFuelItemIds: [] });
+  }
+
+  function toggleRefuelPawnFilter(pawnId: string) {
+    const set = new Set(selectedRefuelPawnFilters);
+    if (set.has(pawnId)) set.delete(pawnId);
+    else set.add(pawnId);
+    updateSelectedBuildingFuelSettings({ allowedRefuelPawnIds: Array.from(set) });
+  }
+
+  function clearRefuelPawnFilters() {
+    updateSelectedBuildingFuelSettings({ allowedRefuelPawnIds: [] });
+  }
+
+  function setRefuelPaused(paused: boolean) {
+    updateSelectedBuildingFuelSettings({ paused });
+  }
+
+  function onRefuelPausedChange(event: Event) {
+    const input = event.currentTarget as HTMLInputElement | null;
+    setRefuelPaused(Boolean(input?.checked));
+  }
+
+  function onRefuelThresholdInput(event: Event) {
+    const input = event.currentTarget as HTMLInputElement | null;
+    if (!input) return;
+    setRefuelThresholdPct(Number(input.value));
+  }
+
   function assignShelterPawn(pawnId: string | null) {
     if (!selectedBuilding) return;
     const id = selectedBuilding.id;
@@ -1685,6 +1766,7 @@
   {:else if selectedBuilding}
     {@const bDef = buildingService.getBuildingById(selectedBuilding.type)}
     {@const isBlueprint = selectedBuilding.status !== 'complete'}
+    {@const canConfigureFuel = !isBlueprint && !selectedBuilding.deconstructQueued && bDef?.maxFuel !== undefined}
     {@const workDone = selectedBuilding.workDone ?? 0}
     {@const workReq = selectedBuilding.workRequired ?? bDef?.workAmount ?? 1}
     <div class="bld-row" on:mousedown|stopPropagation on:mouseup|stopPropagation>
@@ -1760,8 +1842,89 @@
             title="Deconstruct"
             on:click={deconstructBuilding}>&#x2692;</button
           >
+          {#if canConfigureFuel}
+            <button
+              class="bld-btn bld-btn--sq"
+              class:bld-btn--active={showFuelSettings}
+              title="Fuel settings"
+              on:click={toggleFuelSettingsPanel}>☲</button
+            >
+          {/if}
         {/if}
       </div>
+      {#if canConfigureFuel}
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <div class="fuel-settings-panel" class:open={showFuelSettings} on:mousedown|stopPropagation on:mouseup|stopPropagation>
+          <div class="fuel-settings-hdr">☲ fuel settings</div>
+          <label class="fuel-settings-row">
+            <input
+              type="checkbox"
+              checked={selectedFuelSettings.paused ?? false}
+              on:change={onRefuelPausedChange}
+            />
+            <span>pause refueling</span>
+          </label>
+
+          <div class="fuel-settings-block">
+            <div class="fuel-settings-label">refuel threshold</div>
+            <div class="fuel-settings-threshold">
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="5"
+                value={selectedFuelThresholdPct}
+                on:input={onRefuelThresholdInput}
+              />
+              <input
+                class="fuel-threshold-num"
+                type="number"
+                min="0"
+                max="100"
+                value={selectedFuelThresholdPct}
+                on:change={onRefuelThresholdInput}
+              />
+              <span>%</span>
+            </div>
+          </div>
+
+          <div class="fuel-settings-block">
+            <div class="fuel-settings-label">fuel filters</div>
+            <div class="fuel-checklist">
+              {#each FUEL_ITEMS as item}
+                <label class="fuel-settings-row fuel-settings-row--compact">
+                  <input
+                    type="checkbox"
+                    checked={selectedFuelItemFilters.includes(item.id)}
+                    on:change={() => toggleFuelItemFilter(item.id)}
+                  />
+                  <span>{item.name}</span>
+                </label>
+              {/each}
+            </div>
+            <button class="fuel-mini-btn" on:click={clearFuelItemFilters}>allow all fuels</button>
+          </div>
+
+          <div class="fuel-settings-block">
+            <div class="fuel-settings-label">allowed colonists</div>
+            <div class="fuel-checklist">
+              {#each pawns as pawn}
+                <label class="fuel-settings-row fuel-settings-row--compact">
+                  <input
+                    type="checkbox"
+                    checked={selectedRefuelPawnFilters.includes(pawn.id)}
+                    on:change={() => toggleRefuelPawnFilter(pawn.id)}
+                  />
+                  <span>{pawn.name}</span>
+                </label>
+              {/each}
+            </div>
+            <button class="fuel-mini-btn" on:click={clearRefuelPawnFilters}
+              >allow all colonists</button
+            >
+          </div>
+        </div>
+      {/if}
     </div>
   {:else if selectedResourceTile && selectedResourceDef}
     {@const activeInteractions = selectedResourceDef.interactions ?? [
@@ -1918,9 +2081,7 @@
         {@const fuelMax = bDef.maxFuel}
         {@const fuelCurr = hoverBuilding.fuel ?? 0}
         <div class="bld-fuel">
-          FUEL [{jobProgressBar(fuelMax > 0 ? fuelCurr / fuelMax : 0)}] {Math.floor(
-            fuelCurr
-          )}/{Math.floor(fuelMax)}
+          FUEL [{jobProgressBar(fuelMax > 0 ? fuelCurr / fuelMax : 0)}] {Math.floor(fuelCurr)}/{Math.floor(fuelMax)}
           {#if hoverBuilding.lit}<span class="fuel-lit">● lit</span>{:else}<span class="fuel-dark"
               >○ unlit</span
             >{/if}
@@ -2268,6 +2429,11 @@
     background: #1e1608;
     color: #e8a040;
   }
+  .bld-btn--active {
+    background: #2a1c08;
+    border-color: #f0b040;
+    color: #ffd080;
+  }
   .bld-btn--danger {
     border-color: #aa3322;
     color: #dd6655;
@@ -2282,6 +2448,96 @@
     line-height: 1;
     min-width: 24px;
     text-align: center;
+  }
+  .fuel-settings-panel {
+    position: absolute;
+    bottom: calc(100% + 4px);
+    left: 0;
+    /* width matches the info card — capped at 300px (same as tile-hud--building max-width) */
+    width: 100%;
+    max-width: 300px;
+    opacity: 0;
+    transform: translateY(6px);
+    overflow: hidden;
+    max-height: 0;
+    pointer-events: none;
+    background: rgba(13, 9, 3, 0.98);
+    border: 1px solid #7a5e28;
+    color: #d4a860;
+    font-size: 9px;
+    z-index: 20;
+    transition: opacity 140ms ease, transform 140ms ease, max-height 200ms ease;
+  }
+  .fuel-settings-panel.open {
+    opacity: 1;
+    transform: translateY(0);
+    max-height: 500px;
+    pointer-events: all;
+    padding: 5px 7px;
+  }
+  .fuel-settings-hdr {
+    color: #f0c060;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    margin-bottom: 4px;
+  }
+  .fuel-settings-block {
+    margin-top: 5px;
+    border-top: 1px solid rgba(122, 94, 40, 0.6);
+    padding-top: 4px;
+  }
+  .fuel-settings-label {
+    color: #c8a048;
+    margin-bottom: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .fuel-settings-row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 2px;
+  }
+  .fuel-settings-row--compact {
+    margin-top: 1px;
+  }
+  .fuel-settings-threshold {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .fuel-settings-threshold input[type='range'] {
+    width: 112px;
+    accent-color: #c87020;
+  }
+  .fuel-threshold-num {
+    width: 40px;
+    background: #140e04;
+    border: 1px solid #6a4e20;
+    color: #e0b868;
+    font-family: 'Courier New', monospace;
+    font-size: 9px;
+    padding: 1px 2px;
+  }
+  .fuel-checklist {
+    max-height: 70px;
+    overflow-y: auto;
+    padding-right: 2px;
+  }
+  .fuel-mini-btn {
+    margin-top: 3px;
+    background: #160f06;
+    border: 1px solid #6b4f22;
+    color: #d0a858;
+    font-family: 'Courier New', monospace;
+    font-size: 9px;
+    padding: 1px 5px;
+    cursor: pointer;
+  }
+  .fuel-mini-btn:hover {
+    background: #24180a;
+    border-color: #b07a28;
+    color: #f0c878;
   }
   /* ── Resource tile HUD ────────────────────────── */
   .res-row {

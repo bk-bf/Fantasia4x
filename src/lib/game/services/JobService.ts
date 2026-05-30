@@ -34,8 +34,8 @@ export const BASE_WORK_RATE = 1;
 /** Designation types that produce harvest-category jobs. */
 const HARVEST_DTYPES: DesignationType[] = ['harvest', 'woodcut', 'forage'];
 
-/** Campfires only request refueling once fuel falls below 30% capacity. */
-const CAMPFIRE_REFUEL_THRESHOLD_RATIO = 0.3;
+/** Default refuel threshold when no per-building override is set. */
+const DEFAULT_REFUEL_THRESHOLD_RATIO = 0.3;
 
 // ===== JOB SERVICE =====
 
@@ -163,6 +163,13 @@ class JobServiceImpl {
         const available = (gameState.jobs ?? []).filter((j) => {
             // Must be unclaimed or claimed by this pawn
             if (j.claimedBy !== null && j.claimedBy !== pawn.id) return false;
+
+            // If a building restricts who may refuel it, enforce here.
+            if (j.type === 'refuel' && j.buildingId) {
+                const building = (gameState.buildings ?? []).find((b) => b.id === j.buildingId);
+                const allowedPawns = building?.fuelSettings?.allowedRefuelPawnIds ?? [];
+                if (allowedPawns.length > 0 && !allowedPawns.includes(pawn.id)) return false;
+            }
 
             // Map job type to work category key used in labor settings
             const workKey = this._jobTypeToWorkKey(j, gameState);
@@ -474,17 +481,14 @@ class JobServiceImpl {
                 `[JobService] Harvest complete: ${job.resourceId} at (${job.targetX},${job.targetY}) → ${dropResourceId} x${dropAmount}${shouldPersist ? ' (persistent)' : ''}`
             );
         }
-        // Clear only work-type designations for this tile.
-        // Do NOT clear stockpile: designations are single-valued per tile and wiping
-        // unconditionally would remove stockpile tint/behavior if the tile was repainted.
-        const tileKey = `${job.targetX},${job.targetY}`;
-        const currentDesignation = (gs.designations ?? {})[tileKey];
+        // Clear the designation for this tile now that the harvest is complete.
         const newDesignations = { ...(gs.designations ?? {}) };
-        if (currentDesignation && currentDesignation !== 'stockpile') {
-            delete newDesignations[tileKey];
-        }
+        delete newDesignations[`${job.targetX},${job.targetY}`];
 
         // Trigger-based absorption: if any drop landed on a stockpile tile, absorb immediately.
+        // Note: designations is already updated above so a harvested stockpile tile has its
+        // harvest designation removed; stockpile designation is a separate designation type
+        // so this correctly absorbs items harvested on a tile that is ALSO a stockpile.
         let state: GameState = { ...gs, worldMap: newWorldMap, droppedItems: newDropped, designations: newDesignations };
         for (const id of newDropIds) {
             state = absorbDropIfOnStockpileTile(state, id);
@@ -707,36 +711,33 @@ class JobServiceImpl {
         return jobs;
     }
 
-    /** Phase 6: generate 'refuel' jobs, with campfires gated to <30% fuel. */
+    /** Phase 6: generate 'refuel' jobs using per-building fuel settings where present. */
     private _syncRefuelJobs(jobs: Job[], gs: GameState): Job[] {
-        const totalFuel = this._totalFuelInStockpile(gs);
-
         // Remove refuel jobs whose building is gone, at max, or stockpile no longer
         // has enough fuel to fill to max (prevents partial top-ups).
         jobs = jobs.filter((j) => {
             if (j.type !== 'refuel') return true;
             const b = (gs.buildings ?? []).find((b) => b.id === j.buildingId);
             if (!b || b.status !== 'complete') return false;
+            if (b.fuelSettings?.paused) return false;
             const maxFuel = buildingService.getBuildingById(b.type)?.maxFuel ?? 60;
-            if (b.type === 'campfire' && (b.fuel ?? 0) / Math.max(maxFuel, 1) >= CAMPFIRE_REFUEL_THRESHOLD_RATIO) {
-                return false;
-            }
+            const fuelRatio = (b.fuel ?? 0) / Math.max(maxFuel, 1);
+            if (fuelRatio >= this._getRefuelThresholdRatio(b)) return false;
             const needed = maxFuel - (b.fuel ?? 0);
-            return needed > 0 && totalFuel >= needed;
+            return needed > 0 && this._totalFuelInStockpile(gs, b) >= needed;
         });
 
         for (const b of gs.buildings ?? []) {
             if (b.status !== 'complete') continue;
             const bDef = buildingService.getBuildingById(b.type);
             if (!bDef?.maxFuel) continue;
-            if (b.type === 'campfire') {
-                const fuelRatio = (b.fuel ?? 0) / Math.max(bDef.maxFuel, 1);
-                if (fuelRatio >= CAMPFIRE_REFUEL_THRESHOLD_RATIO) continue;
-            }
+            if (b.fuelSettings?.paused) continue;
+            const fuelRatio = (b.fuel ?? 0) / Math.max(bDef.maxFuel, 1);
+            if (fuelRatio >= this._getRefuelThresholdRatio(b)) continue;
             const needed = bDef.maxFuel - (b.fuel ?? 0);
             if (needed <= 0) continue;
             // Only queue refuel when stockpile can fully top up the tank.
-            if (totalFuel < needed) continue;
+            if (this._totalFuelInStockpile(gs, b) < needed) continue;
             const exists = jobs.some((j) => j.type === 'refuel' && j.buildingId === b.id);
             if (!exists) {
                 jobs.push({
@@ -771,10 +772,13 @@ class JobServiceImpl {
         const maxFuel = buildingService.getBuildingById(building.type)?.maxFuel ?? 60;
         const stockpile = gs.stockpile ?? {};
         const consumed: Record<string, number> = {};
+        const allowedFuelIds = new Set(building.fuelSettings?.allowedFuelItemIds ?? []);
+        const hasFuelFilter = allowedFuelIds.size > 0;
         let currentFuel = building.fuel ?? 0;
         // Track which items to consume (read-only from aggregate; apply via consumeFromStockpiles)
         for (const item of ITEMS_DATABASE) {
             if ((item.fuelValue ?? 0) <= 0) continue;
+            if (hasFuelFilter && !allowedFuelIds.has(item.id)) continue;
             while (currentFuel < maxFuel) {
                 const available = (stockpile[item.id] ?? 0) - (consumed[item.id] ?? 0);
                 if (available <= 0) break;
@@ -800,12 +804,22 @@ class JobServiceImpl {
         );
     }
 
-    private _totalFuelInStockpile(gs: GameState): number {
+    private _totalFuelInStockpile(gs: GameState, building?: import('../core/types').PlacedBuilding): number {
         const stockpile = gs.stockpile ?? {};
+        const allowedFuelIds = new Set(building?.fuelSettings?.allowedFuelItemIds ?? []);
+        const hasFuelFilter = allowedFuelIds.size > 0;
         return ITEMS_DATABASE.reduce((sum, item) => {
             if ((item.fuelValue ?? 0) <= 0) return sum;
+            if (hasFuelFilter && !allowedFuelIds.has(item.id)) return sum;
             return sum + (stockpile[item.id] ?? 0) * item.fuelValue!;
         }, 0);
+    }
+
+    private _getRefuelThresholdRatio(building: import('../core/types').PlacedBuilding): number {
+        const rawPct = building.fuelSettings?.refuelThresholdPct;
+        if (rawPct === undefined || Number.isNaN(rawPct)) return DEFAULT_REFUEL_THRESHOLD_RATIO;
+        const clampedPct = Math.max(0, Math.min(100, rawPct));
+        return clampedPct / 100;
     }
 
     private _resourceMatchesDesignation(

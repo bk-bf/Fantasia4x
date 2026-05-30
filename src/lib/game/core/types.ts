@@ -39,6 +39,17 @@ export interface StockpileZone {
 	inventory: Record<string, number>;
 }
 
+export interface FuelSettings {
+	/** Refuel only when current fuel is below this percentage (0-100). */
+	refuelThresholdPct?: number;
+	/** Restrict fuel inputs to these item IDs. Empty/undefined means any fuel item. */
+	allowedFuelItemIds?: string[];
+	/** Restrict refuel jobs to these pawn IDs. Empty/undefined means any pawn. */
+	allowedRefuelPawnIds?: string[];
+	/** When true, no new refuel jobs are generated for this building. */
+	paused?: boolean;
+}
+
 export interface PlacedBuilding {
 	id: string;           // unique instance id
 	type: string;         // building definition id (matches Building.id)
@@ -54,6 +65,7 @@ export interface PlacedBuilding {
 	// Phase 6: fuel / lighting state
 	fuel?: number;               // current fuel units remaining
 	lit?: boolean;               // campfire is burning right now
+	fuelSettings?: FuelSettings; // optional per-building refuel controls
 	// Deconstruction
 	deconstructQueued?: boolean;       // player has queued this building for demolition
 	deconstructWorkRequired?: number;  // work points to demolish (½ workAmount)

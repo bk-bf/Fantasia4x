@@ -308,7 +308,7 @@
   {/if}
 
   <!-- Campfire status -->
-  {#each buildings.filter((b) => b.type === 'campfire' && b.status === 'complete') as cf}
+  {#each buildings.filter((b) => b.type === 'campfire' && b.status === 'complete') as cf (cf.id)}
     {@const fuelPct = Math.round(((cf.fuel ?? 0) / 60) * 100)}
     <div class="bldg-row">
       <span class="bldg-name" style="color:{cf.lit ? '#fa0' : '#555'}"
@@ -318,7 +318,7 @@
         FUEL <span class="bar-ascii"
           >{'█'.repeat(Math.round(fuelPct / 10)) + '░'.repeat(10 - Math.round(fuelPct / 10))}</span
         >
-        {cf.fuel ?? 0}/60
+        {Math.floor(cf.fuel ?? 0)}/60
       </span>
     </div>
   {/each}
