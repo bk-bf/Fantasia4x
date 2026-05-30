@@ -19,6 +19,11 @@
     "requiresLighting": true,
     "maxFuel": 60,
     "fuelConsumptionRate": 1,
+    "fuelRequirements": {
+      "requiredFuelTypes": 2,
+      "tinderItemId": "plant_fiber",
+      "tinderAmount": 2
+    },
     "buildingState": {"isUnique": false, "maxCount": 5}
   },
   {

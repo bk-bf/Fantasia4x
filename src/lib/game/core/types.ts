@@ -521,6 +521,11 @@ export interface Building {
 	requiresLighting?: boolean;  // must be lit before use (e.g. campfire)
 	maxFuel?: number;            // maximum fuel units it can hold
 	fuelConsumptionRate?: number; // fuel units burned per turn when lit
+	fuelRequirements?: {
+		requiredFuelTypes?: number;
+		tinderItemId?: string;
+		tinderAmount?: number;
+	};
 	isStorage?: boolean;         // colonists can retrieve food/items here
 	isRest?: boolean;            // colonists can sleep here
 

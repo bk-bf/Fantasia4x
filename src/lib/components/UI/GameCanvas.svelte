@@ -35,7 +35,16 @@
 
   const ITEMS_DATABASE = itemsData as unknown as Item[];
   const FUEL_ITEMS = ITEMS_DATABASE.filter((item) => (item.fuelValue ?? 0) > 0);
-  const FUEL_SETTINGS_ICON = resolveCharSpans([{ sheet: 'tiles', id: 11 }])[0] ?? '☲';
+  const DEFAULT_FUEL_FILTER_IDS = ['branch', 'wood_log', 'plant_fiber'];
+  const HUD_SPRITE_W = 12;
+  const HUD_SPRITE_H = 18;
+  const HUD_ICON_TINT = { r: 232, g: 136, b: 40, a: 0.98 };
+  const HUD_SPRITE_SHEET_URLS = {
+    tiles: '/tilesets/bitlands_tiles.bmp',
+    items: '/tilesets/bitlands_items.bmp'
+  } as const;
+  type HudSpriteIconRef = { sheet: keyof typeof HUD_SPRITE_SHEET_URLS; id: number };
+  const FUEL_SETTINGS_ICON_REF = { sheet: 'tiles', id: 11 } as const;
 
   // Tile size range for zoom (square cells for CoQ sprite-mode)
   // MAP_W / MAP_H must match the generateWorld() call in gameState.ts
@@ -64,6 +73,76 @@
   // Pre-processed tileset canvases for Canvas2D designation overlay (magenta stripped)
   let _tilesSheetCanvas: HTMLCanvasElement | null = null;
   let _itemsSheetCanvas: HTMLCanvasElement | null = null;
+  const _hudSpriteIconNodes = new Set<{ node: HTMLCanvasElement; icon: HudSpriteIconRef }>();
+
+  function _sheetCanvasByIcon(icon: HudSpriteIconRef): HTMLCanvasElement | null {
+    return icon.sheet === 'items' ? _itemsSheetCanvas : _tilesSheetCanvas;
+  }
+
+  function _ensureHudIconSheetLoaded(icon: HudSpriteIconRef): void {
+    if (icon.sheet === 'items') {
+      if (!_itemsSheetCanvas) _loadSpriteSheet(HUD_SPRITE_SHEET_URLS.items, '_itemsSheetCanvas');
+      return;
+    }
+    if (!_tilesSheetCanvas) _loadSpriteSheet(HUD_SPRITE_SHEET_URLS.tiles, '_tilesSheetCanvas');
+  }
+
+  function _paintHudSpriteIcon(node: HTMLCanvasElement, icon: HudSpriteIconRef): void {
+    node.width = HUD_SPRITE_W;
+    node.height = HUD_SPRITE_H;
+    const ctx = node.getContext('2d');
+    if (!ctx) return;
+    ctx.clearRect(0, 0, HUD_SPRITE_W, HUD_SPRITE_H);
+
+    const sheet = _sheetCanvasByIcon(icon);
+    if (!sheet) {
+      _ensureHudIconSheetLoaded(icon);
+      return;
+    }
+
+    const col = icon.id % 16;
+    const row = Math.floor(icon.id / 16);
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(
+      sheet,
+      col * HUD_SPRITE_W,
+      row * HUD_SPRITE_H,
+      HUD_SPRITE_W,
+      HUD_SPRITE_H,
+      0,
+      0,
+      HUD_SPRITE_W,
+      HUD_SPRITE_H
+    );
+
+    // Tint HUD icons to the panel accent color while preserving sprite alpha.
+    ctx.globalCompositeOperation = 'source-atop';
+    ctx.fillStyle = `rgba(${HUD_ICON_TINT.r}, ${HUD_ICON_TINT.g}, ${HUD_ICON_TINT.b}, ${HUD_ICON_TINT.a})`;
+    ctx.fillRect(0, 0, HUD_SPRITE_W, HUD_SPRITE_H);
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  function _redrawHudSpriteIcons(): void {
+    for (const entry of _hudSpriteIconNodes) {
+      _paintHudSpriteIcon(entry.node, entry.icon);
+    }
+  }
+
+  function hudSpriteIconAction(node: HTMLCanvasElement, icon: HudSpriteIconRef) {
+    const entry = { node, icon };
+    _hudSpriteIconNodes.add(entry);
+    _paintHudSpriteIcon(node, icon);
+
+    return {
+      update(nextIcon: HudSpriteIconRef) {
+        entry.icon = nextIcon;
+        _paintHudSpriteIcon(node, nextIcon);
+      },
+      destroy() {
+        _hudSpriteIconNodes.delete(entry);
+      }
+    };
+  }
   // Current day/night ambient, mirrored from the WebGL renderer so the Canvas2D
   // designation overlay can be darkened/tinted to match the lit scene beneath it.
   let _ambientLight = 1;
@@ -704,6 +783,7 @@
       cx.putImageData(id, 0, 0);
       if (target === '_tilesSheetCanvas') _tilesSheetCanvas = c;
       else _itemsSheetCanvas = c;
+      _redrawHudSpriteIcons();
       drawDesignations();
     };
     img.src = url;
@@ -1564,7 +1644,7 @@
     0,
     Math.min(100, selectedFuelSettings.refuelThresholdPct ?? 30)
   );
-  $: selectedFuelItemFilters = selectedFuelSettings.allowedFuelItemIds ?? [];
+  $: selectedFuelItemFilters = selectedFuelSettings.allowedFuelItemIds ?? DEFAULT_FUEL_FILTER_IDS;
   $: selectedRefuelPawnFilters = selectedFuelSettings.allowedRefuelPawnIds ?? [];
 
   function toggleFuelSettingsPanel() {
@@ -1587,10 +1667,30 @@
     updateSelectedBuildingFuelSettings({ refuelThresholdPct: Math.max(0, Math.min(100, nextPct)) });
   }
 
+  function isFuelItemAllowed(itemId: string): boolean {
+    return selectedFuelItemFilters.length === 0 || selectedFuelItemFilters.includes(itemId);
+  }
+
+  function isRefuelPawnAllowed(pawnId: string): boolean {
+    return selectedRefuelPawnFilters.length === 0 || selectedRefuelPawnFilters.includes(pawnId);
+  }
+
   function toggleFuelItemFilter(itemId: string) {
+    if (selectedFuelItemFilters.length === 0) {
+      const allExceptClicked = FUEL_ITEMS.map((item) => item.id).filter((id) => id !== itemId);
+      updateSelectedBuildingFuelSettings({ allowedFuelItemIds: allExceptClicked });
+      return;
+    }
+
     const set = new Set(selectedFuelItemFilters);
     if (set.has(itemId)) set.delete(itemId);
     else set.add(itemId);
+
+    if (set.size >= FUEL_ITEMS.length) {
+      updateSelectedBuildingFuelSettings({ allowedFuelItemIds: [] });
+      return;
+    }
+
     updateSelectedBuildingFuelSettings({ allowedFuelItemIds: Array.from(set) });
   }
 
@@ -1599,9 +1699,21 @@
   }
 
   function toggleRefuelPawnFilter(pawnId: string) {
+    if (selectedRefuelPawnFilters.length === 0) {
+      const allExceptClicked = pawns.map((pawn) => pawn.id).filter((id) => id !== pawnId);
+      updateSelectedBuildingFuelSettings({ allowedRefuelPawnIds: allExceptClicked });
+      return;
+    }
+
     const set = new Set(selectedRefuelPawnFilters);
     if (set.has(pawnId)) set.delete(pawnId);
     else set.add(pawnId);
+
+    if (set.size >= pawns.length) {
+      updateSelectedBuildingFuelSettings({ allowedRefuelPawnIds: [] });
+      return;
+    }
+
     updateSelectedBuildingFuelSettings({ allowedRefuelPawnIds: Array.from(set) });
   }
 
@@ -1854,7 +1966,14 @@
               class="bld-btn bld-btn--sq"
               class:bld-btn--active={showFuelSettings}
               title="Fuel settings"
-              on:click={toggleFuelSettingsPanel}>{FUEL_SETTINGS_ICON}</button
+              on:click={toggleFuelSettingsPanel}
+            >
+              <canvas
+                class="hud-sprite-icon"
+                use:hudSpriteIconAction={FUEL_SETTINGS_ICON_REF}
+                aria-hidden="true"
+              ></canvas>
+            </button
             >
           {/if}
         {/if}
@@ -1867,7 +1986,14 @@
           on:mousedown|stopPropagation
           on:mouseup|stopPropagation
         >
-          <div class="fuel-settings-hdr">{FUEL_SETTINGS_ICON} fuel settings</div>
+          <div class="fuel-settings-hdr">
+            <canvas
+              class="hud-sprite-icon hud-sprite-icon--inline"
+              use:hudSpriteIconAction={FUEL_SETTINGS_ICON_REF}
+              aria-hidden="true"
+            ></canvas>
+            fuel settings
+          </div>
           <label class="fuel-settings-row">
             <input
               type="checkbox"
@@ -1907,7 +2033,7 @@
                 <label class="fuel-settings-row fuel-settings-row--compact">
                   <input
                     type="checkbox"
-                    checked={selectedFuelItemFilters.includes(item.id)}
+                    checked={isFuelItemAllowed(item.id)}
                     on:change={() => toggleFuelItemFilter(item.id)}
                   />
                   <span>{item.name}</span>
@@ -1924,7 +2050,7 @@
                 <label class="fuel-settings-row fuel-settings-row--compact">
                   <input
                     type="checkbox"
-                    checked={selectedRefuelPawnFilters.includes(pawn.id)}
+                    checked={isRefuelPawnAllowed(pawn.id)}
                     on:change={() => toggleRefuelPawnFilter(pawn.id)}
                   />
                   <span>{pawn.name}</span>
@@ -2461,7 +2587,20 @@
     font-size: 13px;
     line-height: 1;
     min-width: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     text-align: center;
+  }
+  .hud-sprite-icon {
+    width: 12px;
+    height: 18px;
+    image-rendering: pixelated;
+    display: block;
+    flex: 0 0 auto;
+  }
+  .hud-sprite-icon--inline {
+    margin-right: 4px;
   }
   .fuel-settings-panel {
     position: absolute;
@@ -2493,6 +2632,8 @@
     padding: 5px 7px;
   }
   .fuel-settings-hdr {
+    display: flex;
+    align-items: center;
     color: #f0c060;
     text-transform: uppercase;
     letter-spacing: 0.07em;
@@ -2515,6 +2656,36 @@
     gap: 5px;
     margin-top: 2px;
   }
+  .fuel-settings-row input[type='checkbox'] {
+    appearance: none;
+    width: 11px;
+    height: 11px;
+    border: 1px solid #8e6a2a;
+    background: #140e04;
+    box-shadow: inset 0 0 0 1px rgba(12, 8, 2, 0.7);
+    cursor: pointer;
+    position: relative;
+    margin: 0;
+  }
+  .fuel-settings-row input[type='checkbox']:hover {
+    border-color: #c88a30;
+    background: #1a1206;
+  }
+  .fuel-settings-row input[type='checkbox']:checked {
+    background: #2a1a08;
+    border-color: #e0a848;
+  }
+  .fuel-settings-row input[type='checkbox']:checked::after {
+    content: '';
+    position: absolute;
+    left: 2px;
+    top: 0px;
+    width: 4px;
+    height: 7px;
+    border: solid #f0c060;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+  }
   .fuel-settings-row--compact {
     margin-top: 1px;
   }
@@ -2526,6 +2697,33 @@
   .fuel-settings-threshold input[type='range'] {
     width: 112px;
     accent-color: #c87020;
+    height: 12px;
+    background: transparent;
+  }
+  .fuel-settings-threshold input[type='range']::-webkit-slider-runnable-track {
+    height: 8px;
+    border: 1px solid #7a5a22;
+    background: #140e04;
+  }
+  .fuel-settings-threshold input[type='range']::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 10px;
+    height: 12px;
+    margin-top: -3px;
+    border: 1px solid #e0a048;
+    background: #c87020;
+  }
+  .fuel-settings-threshold input[type='range']::-moz-range-track {
+    height: 8px;
+    border: 1px solid #7a5a22;
+    background: #140e04;
+  }
+  .fuel-settings-threshold input[type='range']::-moz-range-thumb {
+    width: 10px;
+    height: 12px;
+    border: 1px solid #e0a048;
+    border-radius: 0;
+    background: #c87020;
   }
   .fuel-threshold-num {
     width: 40px;
@@ -2535,6 +2733,13 @@
     font-family: 'Courier New', monospace;
     font-size: 9px;
     padding: 1px 2px;
+    appearance: textfield;
+  }
+  .fuel-threshold-num:focus {
+    outline: none;
+    border-color: #c88a30;
+    background: #1c1407;
+    color: #f0c878;
   }
   .fuel-checklist {
     max-height: 70px;
