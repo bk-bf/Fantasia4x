@@ -107,41 +107,14 @@
   // so the camera trails gently rather than rigidly locking to the pawn.
   const FOLLOW_SMOOTH_TAU = 0.12;
 
-  // Sleeping overlays: push to worldEffectsStore so WorldEffectsLayer renders them
-  // at the correct z-index (above tiles, below popup panels).
-  $: worldEffects.setSleepingOverlays(
-    pawns
-      .filter((p) => p.position && p.currentState === 'Sleeping')
-      .map((p) => {
-        const left = (p.position!.x - viewX + 0.5) * tileWidth;
-        const top = (p.position!.y - viewY) * tileHeight - 18;
-        return { id: p.id, left, top };
-      })
-      .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= (container?.clientWidth ?? 0))
-  );
-
-  // Working progress bars: same pathway as sleeping overlays.
-  $: worldEffects.setProgressOverlays(
-    pawns
-      .filter(
-        (p) =>
-          p.position &&
-          p.currentState === 'Working' &&
-          p.activeJob &&
-          (p.activeJob.progress ?? 0) >= 0
-      )
-      .map((p) => {
-        const left = (p.position!.x - viewX + 0.5) * tileWidth;
-        const top = (p.position!.y - viewY) * tileHeight - 6;
-        return {
-          id: p.id,
-          left,
-          top,
-          progress: Math.max(0, Math.min(1, p.activeJob?.progress ?? 0))
-        };
-      })
-      .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= (container?.clientWidth ?? 0))
-  );
+  // World-effect overlay positions (Zzz, progress bars, campfire sparks) are computed
+  // in the rAF frame() loop via updateWorldEffectOverlays(). Using $: reactive blocks
+  // here caused 60fps Svelte store updates and DOM re-renders whenever viewX/viewY
+  // changed (every frame during camera follow), scaling with sleeping-pawn count and
+  // tanking FPS at night when everyone was asleep.
+  let _sleepOverlayKey = '';
+  let _progressOverlayKey = '';
+  let _campfireOverlayKey = '';
 
   // Phase 4: buildings and designations overlay
   let buildings: PlacedBuilding[] = [];
@@ -155,19 +128,6 @@
     renderer?.setLightVersion(lightingService.getEmittersVersion());
     renderer?.setLightBounds(lightingService.getLitBounds());
   }
-
-  // Campfire spark embellishment: only lit + complete campfires. The radial glow
-  // div is gone (real lighting now), but the rising sparks remain.
-  $: worldEffects.setCampfireOverlays(
-    buildings
-      .filter((b) => b.type === 'campfire' && b.status === 'complete' && b.lit === true)
-      .map((b) => {
-        const left = (b.x - viewX + 0.5) * tileWidth;
-        const top = (b.y - viewY + 0.5) * tileHeight;
-        return { id: b.id, left, top };
-      })
-      .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= (container?.clientWidth ?? 0))
-  );
 
   // Phase 7: dropped items overlay
   let droppedItems: DroppedItem[] = [];
@@ -563,6 +523,74 @@
           position: { x: drop.x, y: drop.y }
         });
       }
+    }
+  }
+
+  /**
+   * Compute world-effect overlay positions (Zzz, progress bars, campfire sparks)
+   * once per rAF frame, after the camera follow has updated viewX/viewY. Positions
+   * are deduped at 1-px granularity: the Svelte store (and therefore the DOM) only
+   * updates when something actually moved, not on every floating-point nudge.
+   */
+  function updateWorldEffectOverlays() {
+    const W = container?.clientWidth ?? 0;
+    const tW = tileWidth;
+    const tH = tileHeight;
+
+    const newSleep = pawns
+      .filter((p) => p.position && p.currentState === 'Sleeping')
+      .map((p) => ({
+        id: p.id,
+        left: (p.position!.x - viewX + 0.5) * tW,
+        top: (p.position!.y - viewY) * tH - 18
+      }))
+      .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= W);
+    const sleepKey = newSleep
+      .map((o) => `${o.id}:${Math.round(o.left)},${Math.round(o.top)}`)
+      .join('|');
+    if (sleepKey !== _sleepOverlayKey) {
+      _sleepOverlayKey = sleepKey;
+      worldEffects.setSleepingOverlays(newSleep);
+    }
+
+    const newProgress = pawns
+      .filter(
+        (p) =>
+          p.position &&
+          p.currentState === 'Working' &&
+          p.activeJob &&
+          (p.activeJob.progress ?? 0) >= 0
+      )
+      .map((p) => ({
+        id: p.id,
+        left: (p.position!.x - viewX + 0.5) * tW,
+        top: (p.position!.y - viewY) * tH - 6,
+        progress: Math.max(0, Math.min(1, p.activeJob?.progress ?? 0))
+      }))
+      .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= W);
+    // Round progress to 5% steps so small increments don't trigger re-renders.
+    const progressKey = newProgress
+      .map((o) => `${o.id}:${Math.round(o.left)},${Math.round(o.top)},${Math.round(o.progress * 20)}`)
+      .join('|');
+    if (progressKey !== _progressOverlayKey) {
+      _progressOverlayKey = progressKey;
+      worldEffects.setProgressOverlays(newProgress);
+    }
+
+    const newCampfire = buildings
+      .filter((b) => b.type === 'campfire' && b.status === 'complete' && b.lit === true)
+      .map((b) => ({
+        id: b.id,
+        left: (b.x - viewX + 0.5) * tW,
+        top: (b.y - viewY + 0.5) * tH
+      }))
+      .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= W);
+    const campfireKey = newCampfire
+      .map((o) => `${o.id}:${Math.round(o.left)},${Math.round(o.top)}`)
+      .join('|');
+    if (campfireKey !== _campfireOverlayKey) {
+      _campfireOverlayKey = campfireKey;
+      worldEffects.setCampfireOverlays(newCampfire);
     }
   }
 
@@ -1110,6 +1138,7 @@
       gameState.stepSimulation(dt * 1000);
       updatePawnOverlay(dt);
       updateCameraFollow(dt);
+      updateWorldEffectOverlays();
       renderer.setOverlayGrid(pawnOverlayGrid);
       renderer.beginFrame();
       renderer.endFrame();

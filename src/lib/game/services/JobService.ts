@@ -18,7 +18,7 @@ import { resourceObjectService } from './ResourceObjectService';
 import { SUBTERRAINS, SUBTERRAIN_FALLBACK } from '../core/Terrains';
 import { itemService } from './ItemService';
 import { buildingService } from './BuildingService';
-import { addToStockpileZone, consumeFromStockpiles } from '../core/GameState';
+import { addToStockpileZone, consumeFromStockpiles, absorbDropIfOnStockpileTile } from '../core/GameState';
 import { ticksFromSeconds } from '../core/time';
 
 const ITEMS_DATABASE = itemsData as unknown as import('../core/types').Item[];
@@ -454,17 +454,19 @@ class JobServiceImpl {
                 : row
         );
 
-        // Spawn one DroppedItem per yield type
+        // Spawn one DroppedItem per yield type.
         const newDropped = [...(gs.droppedItems ?? [])];
+        const newDropIds: string[] = [];
         for (const [dropResourceId, dropAmount] of yieldEntries) {
-            const drop: DroppedItem = {
-                id: `drop-${dropResourceId}-${job.targetX}-${job.targetY}-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
+            const id = `drop-${dropResourceId}-${job.targetX}-${job.targetY}-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`;
+            newDropped.push({
+                id,
                 resourceId: dropResourceId,
                 x: job.targetX,
                 y: job.targetY,
                 quantity: dropAmount
-            };
-            newDropped.push(drop);
+            });
+            newDropIds.push(id);
             console.log(
                 `[JobService] Harvest complete: ${job.resourceId} at (${job.targetX},${job.targetY}) → ${dropResourceId} x${dropAmount}${shouldPersist ? ' (persistent)' : ''}`
             );
@@ -472,7 +474,16 @@ class JobServiceImpl {
         // Clear the designation for this tile now that the harvest is complete.
         const newDesignations = { ...(gs.designations ?? {}) };
         delete newDesignations[`${job.targetX},${job.targetY}`];
-        return { ...gs, worldMap: newWorldMap, droppedItems: newDropped, designations: newDesignations };
+
+        // Trigger-based absorption: if any drop landed on a stockpile tile, absorb immediately.
+        // Note: designations is already updated above so a harvested stockpile tile has its
+        // harvest designation removed; stockpile designation is a separate designation type
+        // so this correctly absorbs items harvested on a tile that is ALSO a stockpile.
+        let state: GameState = { ...gs, worldMap: newWorldMap, droppedItems: newDropped, designations: newDesignations };
+        for (const id of newDropIds) {
+            state = absorbDropIfOnStockpileTile(state, id);
+        }
+        return state;
     }
 
     private _syncHaulJobs(jobs: Job[], gs: GameState): Job[] {

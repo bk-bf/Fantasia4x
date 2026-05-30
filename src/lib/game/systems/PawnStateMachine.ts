@@ -14,7 +14,7 @@
  */
 
 import type { GameState, Pawn, Building, PlacedBuilding, ConditionDef, ConditionStage } from '../core/types';
-import { addToStockpileZone, consumeFromStockpiles } from '../core/GameState';
+import { addToStockpileZone, consumeFromStockpiles, absorbDropIfOnStockpileTile } from '../core/GameState';
 import ITEMS_DATABASE from '../database/items.jsonc';
 import BUILDINGS_DATABASE_RAW from '../database/buildings.jsonc';
 import conditionsData from '../database/conditions.jsonc';
@@ -740,51 +740,50 @@ function depositInventory(pawn: Pawn, gs: GameState): GameState {
     const inv = pawn.inventory?.items ?? {};
     if (Object.keys(inv).length === 0) return goIdle(pawn, gs);
 
-    // Collect all stockpile tile coordinates
+    // Collect all stockpile tile coordinates.
     const stockpileTiles = Object.entries(gs.designations ?? {})
         .filter(([, t]) => t === 'stockpile')
         .map(([key]) => {
             const [x, y] = key.split(',').map(Number);
             return { key, x, y };
         });
+    const stockpileTileKeys = new Set(stockpileTiles.map((t) => t.key));
 
     const newDropped = [...(gs.droppedItems ?? [])];
+    // Track IDs of newly created unstored drops so we can trigger absorption below.
+    const newDropIds: string[] = [];
+    // Track which items landed on a physical tile (for fallback accounting).
+    const placed = new Set<string>();
 
     for (const [resourceId, qty] of Object.entries(inv)) {
         if (qty <= 0) continue;
 
-        // Try to stack onto an existing stored tile of the same type
-        const existingIdx = newDropped.findIndex((d) => d.stored && d.resourceId === resourceId);
-        if (existingIdx >= 0) {
-            newDropped[existingIdx] = {
-                ...newDropped[existingIdx],
-                quantity: newDropped[existingIdx].quantity + qty
-            };
+        // Prefer a tile that already holds this resource (stacking); otherwise a free tile.
+        const existingStoredDrop = newDropped.find(
+            (d) => d.stored && d.resourceId === resourceId && stockpileTileKeys.has(`${d.x},${d.y}`)
+        );
+        let tile: { x: number; y: number } | null = null;
+        if (existingStoredDrop) {
+            tile = { x: existingStoredDrop.x, y: existingStoredDrop.y };
         } else {
-            // Find a free stockpile tile (no stored item on it yet)
-            const usedCoords = new Set(newDropped.filter((d) => d.stored).map((d) => `${d.x},${d.y}`));
+            const usedCoords = new Set(
+                newDropped
+                    .filter((d) => d.stored && stockpileTileKeys.has(`${d.x},${d.y}`))
+                    .map((d) => `${d.x},${d.y}`)
+            );
             const freeTile = stockpileTiles.find((t) => !usedCoords.has(t.key));
-            if (freeTile) {
-                newDropped.push({
-                    id: `stored-${resourceId}-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
-                    resourceId,
-                    x: freeTile.x,
-                    y: freeTile.y,
-                    quantity: qty,
-                    stored: true
-                });
-            }
-            // If no free tile, items still go into the zone inventory below
+            if (freeTile) tile = { x: freeTile.x, y: freeTile.y };
+        }
+
+        if (tile) {
+            // Create an UNSTORED drop at the tile — the absorption trigger below
+            // will detect it, mark it stored, and credit the zone.
+            const id = `deposit-${resourceId}-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`;
+            newDropIds.push(id);
+            newDropped.push({ id, resourceId, x: tile.x, y: tile.y, quantity: qty, stored: false });
+            placed.add(resourceId);
         }
     }
-
-    // Find the zone to credit: the stockpile tile adjacent to (or at) the pawn's position
-    const depositTileKey = pawn.position
-        ? stockpileTiles.find(({ x, y }) =>
-            isAdjacent(pawn.position!.x, pawn.position!.y, x, y) ||
-            (x === pawn.position!.x && y === pawn.position!.y)
-        )?.key ?? null
-        : null;
 
     const newPawns = gs.pawns.map((p) =>
         p.id === pawn.id
@@ -798,8 +797,24 @@ function depositInventory(pawn: Pawn, gs: GameState): GameState {
     );
 
     gameLogger.log(gs.turn, 'JOB-EVT', `${pawn.name} deposited inventory: ${JSON.stringify(inv)}`);
-    const afterDrop = { ...gs, pawns: newPawns, droppedItems: newDropped };
-    return addToStockpileZone(afterDrop, depositTileKey, inv);
+
+    // Trigger-based absorption: each new drop sitting on a stockpile tile is absorbed
+    // immediately — marked stored and credited to the zone — without a separate scan.
+    let state: GameState = { ...gs, pawns: newPawns, droppedItems: newDropped };
+    for (const id of newDropIds) {
+        state = absorbDropIfOnStockpileTile(state, id);
+    }
+
+    // Fallback for items that had no available tile (rare): credit directly to the general zone.
+    const unplaced: Record<string, number> = {};
+    for (const [resourceId, qty] of Object.entries(inv)) {
+        if (qty > 0 && !placed.has(resourceId)) unplaced[resourceId] = qty;
+    }
+    if (Object.keys(unplaced).length > 0) {
+        state = addToStockpileZone(state, null, unplaced);
+    }
+
+    return state;
 }
 
 function handleHauling(pawn: Pawn, gameState: GameState): GameState {

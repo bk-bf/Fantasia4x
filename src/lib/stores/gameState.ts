@@ -1,6 +1,6 @@
 import { browser } from '$app/environment';
 import { writable, derived, get } from 'svelte/store';
-import { GameStateManager, consumeFromStockpiles, addToStockpileZone, GENERAL_ZONE_ID, computeAggregate } from '$lib/game/core/GameState';
+import { GameStateManager, consumeFromStockpiles, addToStockpileZone, GENERAL_ZONE_ID, computeAggregate, absorbDropIfOnStockpileTile } from '$lib/game/core/GameState';
 import { gameEngine } from '$lib/game/systems/GameEngineImpl';
 import type { GameState, Pawn, WorldTile, FilterableZoneType } from '$lib/game/core/types';
 import { generatePawns } from '$lib/game/entities/Pawns';
@@ -236,6 +236,19 @@ function applyMigrations(state: GameState): GameState {
 			state = { ...state, stockpile: computeAggregate(existingZones) };
 		}
 	}
+
+	// One-time migration: absorb any unstored dropped items that are physically sitting on
+	// stockpile tiles but were never credited (saves predating the trigger-based absorption).
+	{
+		const unabsorbed = (state.droppedItems ?? []).filter((d) => {
+			if (d.stored) return false;
+			return (state.designations ?? {})[`${d.x},${d.y}`] === 'stockpile';
+		});
+		for (const drop of unabsorbed) {
+			state = absorbDropIfOnStockpileTile(state, drop.id);
+		}
+	}
+
 	return state;
 }
 

@@ -246,20 +246,23 @@ export class GameGrid {
 	 * Clear all tiles from the grid
 	 */
 	clear(): void {
-		const clearedTiles = Array.from(this.tiles.values());
+		// The per-frame pawn overlay grid calls this every animation frame and has
+		// no listeners, so skip the tile-array copy + notify unless someone is
+		// actually listening. (No console log here — it ran 60+×/sec as spam.)
+		const hasListeners = this.listeners.length > 0;
+		const clearedTiles = hasListeners ? Array.from(this.tiles.values()) : [];
 
 		this.tiles.clear();
 		this.dirtyTiles.clear();
 		this.bounds = null;
 		this.recordOperation();
 
-		// Notify listeners
-		this.notifyListeners({
-			type: 'clear',
-			tiles: clearedTiles
-		});
-
-		console.log('🧹 Grid cleared');
+		if (hasListeners) {
+			this.notifyListeners({
+				type: 'clear',
+				tiles: clearedTiles
+			});
+		}
 	}
 
 	/**

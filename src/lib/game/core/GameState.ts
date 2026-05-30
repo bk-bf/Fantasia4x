@@ -1,4 +1,4 @@
-import type { GameState, ResearchProject, Building, Item, PlacedBuilding, Job, StockpileZone } from './types';
+import type { GameState, ResearchProject, Building, Item, PlacedBuilding, Job, StockpileZone, DroppedItem } from './types';
 
 export class GameStateManager {
 	private state: GameState;
@@ -219,8 +219,16 @@ export function consumeFromStockpiles(
 ): GameState {
 	const zones = (state.stockpileZones ?? []).map((z) => ({ ...z, inventory: { ...z.inventory } }));
 
+	// Also reduce stored DroppedItems so the physical map stays in sync.
+	// Only touches items that have a physical stored representation; items that
+	// exist only in zone.inventory (e.g. crafted output added without a tile drop)
+	// are unaffected here and are correctly handled by the zone loop above.
+	const newDropped = (state.droppedItems ?? []).map((d) => ({ ...d }));
+
 	for (const [itemId, amount] of Object.entries(items)) {
 		if (amount <= 0) continue;
+
+		// Deduct from zone inventories.
 		let remaining = amount;
 		for (const zone of zones) {
 			if (remaining <= 0) break;
@@ -230,7 +238,61 @@ export function consumeFromStockpiles(
 			zone.inventory[itemId] = available - take;
 			remaining -= take;
 		}
+
+		// Deduct from stored drops (physical truth).
+		remaining = amount;
+		for (let i = 0; i < newDropped.length && remaining > 0; i++) {
+			const d = newDropped[i];
+			if (!d.stored || d.resourceId !== itemId || (d.quantity ?? 0) <= 0) continue;
+			const take = Math.min(d.quantity, remaining);
+			newDropped[i] = { ...d, quantity: d.quantity - take };
+			remaining -= take;
+		}
 	}
 
-	return { ...state, stockpileZones: zones, stockpile: computeAggregate(zones) };
+	return {
+		...state,
+		droppedItems: newDropped.filter((d) => !d.stored || d.quantity > 0),
+		stockpileZones: zones,
+		stockpile: computeAggregate(zones)
+	};
+}
+
+/**
+ * Single absorption trigger: if `dropId` is an unstored DroppedItem sitting on a
+ * stockpile-designated tile, mark it stored and credit the zone.
+ *
+ * If a stored drop of the same resource already exists at that tile the quantities are
+ * merged so there is always at most one stored pile per resource per tile.
+ *
+ * Returns state unchanged when the drop is already stored, the tile is not a stockpile,
+ * or the drop doesn't exist.
+ */
+export function absorbDropIfOnStockpileTile(state: GameState, dropId: string): GameState {
+	const drop = (state.droppedItems ?? []).find((d) => d.id === dropId);
+	if (!drop || drop.stored) return state;
+
+	const tileKey = `${drop.x},${drop.y}`;
+	if ((state.designations ?? {})[tileKey] !== 'stockpile') return state;
+
+	// Try to merge into an existing stored pile of the same resource at the same tile.
+	const existingIdx = (state.droppedItems ?? []).findIndex(
+		(d) => d.stored && d.resourceId === drop.resourceId && d.x === drop.x && d.y === drop.y
+	);
+
+	let newDropped: DroppedItem[];
+	if (existingIdx >= 0) {
+		// Merge: increase existing stored pile, remove the new unstored drop.
+		newDropped = (state.droppedItems ?? [])
+			.map((d, i) => (i === existingIdx ? { ...d, quantity: d.quantity + drop.quantity } : d))
+			.filter((d) => d.id !== dropId);
+	} else {
+		// Mark the drop as stored in-place.
+		newDropped = (state.droppedItems ?? []).map((d) =>
+			d.id === dropId ? { ...d, stored: true } : d
+		);
+	}
+
+	const withDrop = { ...state, droppedItems: newDropped };
+	return addToStockpileZone(withDrop, tileKey, { [drop.resourceId]: drop.quantity });
 }

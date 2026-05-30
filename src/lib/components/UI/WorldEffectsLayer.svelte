@@ -9,7 +9,7 @@
   <!-- ── World-Space Animations (positions derived from tile coordinates) ──────── -->
 
   {#each $worldEffects.sleepingOverlays as overlay (overlay.id)}
-    <div class="zzz-float" style="left:{overlay.left}px;top:{overlay.top}px;">
+    <div class="zzz-float" style="transform: translate({overlay.left}px, {overlay.top}px) translateX(-50%);">
       <span class="zzz-z" style="animation-delay:0s">Z</span><span
         class="zzz-z"
         style="animation-delay:0.7s">z</span
@@ -18,13 +18,13 @@
   {/each}
 
   {#each $worldEffects.progressOverlays as overlay (overlay.id)}
-    <div class="pawn-progress-float" style="left:{overlay.left}px;top:{overlay.top}px;">
+    <div class="pawn-progress-float" style="transform: translate({overlay.left}px, {overlay.top}px) translateX(-50%);">
       <div class="pawn-progress-fill" style="width:{overlay.progress * 100}%"></div>
     </div>
   {/each}
 
   {#each $worldEffects.campfireOverlays as overlay (overlay.id)}
-    <div class="fire-sparks" style="left:{overlay.left}px;top:{overlay.top}px;">
+    <div class="fire-sparks" style="transform: translate({overlay.left}px, {overlay.top}px) translateX(-50%);">
       <span class="spark s1">·</span>
       <span class="spark s2">*</span>
       <span class="spark s3">·</span>
@@ -53,12 +53,14 @@
 
   .pawn-progress-float {
     position: absolute;
+    left: 0;
+    top: 0;
     width: 22px;
     height: 4px;
-    margin-left: -11px;
     background: rgba(32, 24, 10, 0.85);
     border: 1px solid #705020;
     pointer-events: none;
+    /* centering + positioning via inline style transform: translate(X,Y) translateX(-50%) */
   }
 
   .pawn-progress-fill {
@@ -70,10 +72,12 @@
 
   .zzz-float {
     position: absolute;
+    left: 0;
+    top: 0;
     pointer-events: none;
     display: flex;
     gap: 1px;
-    transform: translateX(-50%);
+    /* centering + positioning via inline style transform: translate(X,Y) translateX(-50%) */
   }
 
   .zzz-z {
@@ -84,6 +88,11 @@
     opacity: 0;
     animation: zzz-rise 2.1s ease-out infinite;
     text-shadow: 0 0 4px #334;
+    /* Promote to its own compositor layer so the looping opacity/transform
+       animation composites on the GPU instead of re-rasterising the blurred
+       text-shadow every frame — this is what tanked FPS at night when many
+       pawns slept at once. */
+    will-change: transform, opacity;
   }
 
   @keyframes zzz-rise {
@@ -108,10 +117,12 @@
 
   .fire-sparks {
     position: absolute;
+    left: 0;
+    top: 0;
     pointer-events: none;
-    transform: translateX(-50%);
     width: 0;
     height: 0;
+    /* centering + positioning via inline style transform: translate(X,Y) translateX(-50%) */
   }
 
   .spark {
@@ -121,6 +132,9 @@
     font-weight: bold;
     opacity: 0;
     animation: fire-rise 1.1s ease-out infinite;
+    /* Same reasoning as .zzz-z: keep the blurred spark text-shadow off the
+       per-frame raster path by compositing on the GPU. */
+    will-change: transform, opacity;
   }
 
   .s1 {
