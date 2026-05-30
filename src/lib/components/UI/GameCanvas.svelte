@@ -576,7 +576,9 @@
       .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= W);
     // Round progress to 5% steps so small increments don't trigger re-renders.
     const progressKey = newProgress
-      .map((o) => `${o.id}:${Math.round(o.left)},${Math.round(o.top)},${Math.round(o.progress * 20)}`)
+      .map(
+        (o) => `${o.id}:${Math.round(o.left)},${Math.round(o.top)},${Math.round(o.progress * 20)}`
+      )
       .join('|');
     if (progressKey !== _progressOverlayKey) {
       _progressOverlayKey = progressKey;
@@ -1557,7 +1559,10 @@
   }
 
   $: selectedFuelSettings = (selectedBuilding?.fuelSettings ?? {}) as FuelSettings;
-  $: selectedFuelThresholdPct = Math.max(0, Math.min(100, selectedFuelSettings.refuelThresholdPct ?? 30));
+  $: selectedFuelThresholdPct = Math.max(
+    0,
+    Math.min(100, selectedFuelSettings.refuelThresholdPct ?? 30)
+  );
   $: selectedFuelItemFilters = selectedFuelSettings.allowedFuelItemIds ?? [];
   $: selectedRefuelPawnFilters = selectedFuelSettings.allowedRefuelPawnIds ?? [];
 
@@ -1766,7 +1771,8 @@
   {:else if selectedBuilding}
     {@const bDef = buildingService.getBuildingById(selectedBuilding.type)}
     {@const isBlueprint = selectedBuilding.status !== 'complete'}
-    {@const canConfigureFuel = !isBlueprint && !selectedBuilding.deconstructQueued && bDef?.maxFuel !== undefined}
+    {@const canConfigureFuel =
+      !isBlueprint && !selectedBuilding.deconstructQueued && bDef?.maxFuel !== undefined}
     {@const workDone = selectedBuilding.workDone ?? 0}
     {@const workReq = selectedBuilding.workRequired ?? bDef?.workAmount ?? 1}
     <div class="bld-row" on:mousedown|stopPropagation on:mouseup|stopPropagation>
@@ -1854,7 +1860,12 @@
       </div>
       {#if canConfigureFuel}
         <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <div class="fuel-settings-panel" class:open={showFuelSettings} on:mousedown|stopPropagation on:mouseup|stopPropagation>
+        <div
+          class="fuel-settings-panel"
+          class:open={showFuelSettings}
+          on:mousedown|stopPropagation
+          on:mouseup|stopPropagation
+        >
           <div class="fuel-settings-hdr">☲ fuel settings</div>
           <label class="fuel-settings-row">
             <input
@@ -2081,7 +2092,9 @@
         {@const fuelMax = bDef.maxFuel}
         {@const fuelCurr = hoverBuilding.fuel ?? 0}
         <div class="bld-fuel">
-          FUEL [{jobProgressBar(fuelMax > 0 ? fuelCurr / fuelMax : 0)}] {Math.floor(fuelCurr)}/{Math.floor(fuelMax)}
+          FUEL [{jobProgressBar(fuelMax > 0 ? fuelCurr / fuelMax : 0)}] {Math.floor(
+            fuelCurr
+          )}/{Math.floor(fuelMax)}
           {#if hoverBuilding.lit}<span class="fuel-lit">● lit</span>{:else}<span class="fuel-dark"
               >○ unlit</span
             >{/if}
@@ -2466,7 +2479,10 @@
     color: #d4a860;
     font-size: 9px;
     z-index: 20;
-    transition: opacity 140ms ease, transform 140ms ease, max-height 200ms ease;
+    transition:
+      opacity 140ms ease,
+      transform 140ms ease,
+      max-height 200ms ease;
   }
   .fuel-settings-panel.open {
     opacity: 1;
