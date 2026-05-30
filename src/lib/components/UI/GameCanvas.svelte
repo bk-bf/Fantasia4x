@@ -563,31 +563,8 @@
     const grid = buildGameGrid(worldMap, buildings, designations);
     overlayDroppedItems(grid, droppedItems);
 
-    // Zone drag-paint preview
-    if (zoneDragActive && designationMode) {
-      if (zoneEraseMode) {
-        // Red tint for erase drag
-        _overlayRect(
-          grid,
-          zoneAnchorX,
-          zoneAnchorY,
-          zoneEndX,
-          zoneEndY,
-          { r: 1.0, g: 0.2, b: 0.1 },
-          { rMul: 0.4, rAdd: 0.35, gMul: 0.3, gAdd: 0.0, bMul: 0.3, bAdd: 0.0 }
-        );
-      } else {
-        _overlayRect(
-          grid,
-          zoneAnchorX,
-          zoneAnchorY,
-          zoneEndX,
-          zoneEndY,
-          { r: 1.0, g: 1.0, b: 1.0 },
-          { rMul: 0.4, rAdd: 0.4, gMul: 0.4, gAdd: 0.3, bMul: 0.4, bAdd: 0.0 }
-        );
-      }
-    }
+    // (Live zone drag-paint preview is drawn on the 2D overlay in
+    // drawDesignations(), not here, to avoid rebuilding the terrain buffer.)
 
     // Selection drag preview (Shift+drag in progress)
     if (selDragActive) {
@@ -645,43 +622,8 @@
       }
     }
 
-    // Similar-resource drag preview
-    if (similarDragActive) {
-      const minX = Math.min(similarAnchorX, similarEndX);
-      const maxX = Math.max(similarAnchorX, similarEndX);
-      const minY = Math.min(similarAnchorY, similarEndY);
-      const maxY = Math.max(similarAnchorY, similarEndY);
-      for (let ry = minY; ry <= maxY; ry++) {
-        for (let rx = minX; rx <= maxX; rx++) {
-          const wt = worldMap[ry]?.[rx];
-          const t = grid.getTile(rx, ry);
-          if (!t) continue;
-          if ((wt?.resources?.[similarDragResourceId] ?? 0) > 0) {
-            grid.setTile(rx, ry, {
-              char: t.char,
-              foreground: { r: 0.25, g: 1.0, b: 0.35 },
-              background: {
-                r: t.background.r * 0.3 + 0.03,
-                g: t.background.g * 0.3 + 0.16,
-                b: t.background.b * 0.3
-              },
-              position: { x: rx, y: ry }
-            });
-          } else {
-            grid.setTile(rx, ry, {
-              char: t.char,
-              foreground: {
-                r: t.foreground.r * 0.35,
-                g: t.foreground.g * 0.35,
-                b: t.foreground.b * 0.35
-              },
-              background: t.background,
-              position: { x: rx, y: ry }
-            });
-          }
-        }
-      }
-    }
+    // (Live "select similar" drag preview is drawn on the 2D overlay in
+    // drawDesignations(), not here, to avoid rebuilding the terrain buffer.)
 
     renderer.setGrid(grid);
     drawDesignations();
@@ -719,6 +661,53 @@
     const ctx = designCanvas.getContext('2d');
     if (!ctx) return;
     ctx.clearRect(0, 0, W, H);
+
+    // Live zone drag-paint preview. Drawn here on the lightweight 2D overlay
+    // (rather than tinting the WebGL grid) so the heavy terrain vertex buffer
+    // isn't rebuilt on every mouse move while painting a harvest/work zone.
+    if (zoneDragActive && designationMode) {
+      const minX = Math.min(zoneAnchorX, zoneEndX);
+      const maxX = Math.max(zoneAnchorX, zoneEndX);
+      const minY = Math.min(zoneAnchorY, zoneEndY);
+      const maxY = Math.max(zoneAnchorY, zoneEndY);
+      const sx = (minX - viewX) * tileWidth;
+      const sy = (minY - viewY) * tileHeight;
+      const rw = (maxX - minX + 1) * tileWidth;
+      const rh = (maxY - minY + 1) * tileHeight;
+      ctx.save();
+      ctx.fillStyle = zoneEraseMode ? 'rgba(255, 60, 30, 0.30)' : 'rgba(120, 255, 120, 0.26)';
+      ctx.fillRect(sx, sy, rw, rh);
+      ctx.strokeStyle = zoneEraseMode ? 'rgba(255, 90, 60, 0.95)' : 'rgba(160, 255, 160, 0.95)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(sx + 0.5, sy + 0.5, rw - 1, rh - 1);
+      ctx.restore();
+    }
+
+    // Live "select similar resource" drag preview. Matching tiles glow green, the
+    // rest are dimmed. Drawn on the 2D overlay so dragging across many tiles never
+    // rebuilds the WebGL terrain buffer.
+    if (similarDragActive) {
+      const minX = Math.min(similarAnchorX, similarEndX);
+      const maxX = Math.max(similarAnchorX, similarEndX);
+      const minY = Math.min(similarAnchorY, similarEndY);
+      const maxY = Math.max(similarAnchorY, similarEndY);
+      // Only iterate tiles that are actually on screen.
+      const vx0 = Math.max(minX, viewX);
+      const vy0 = Math.max(minY, viewY);
+      const vx1 = Math.min(maxX, viewX + Math.ceil(W / tileWidth));
+      const vy1 = Math.min(maxY, viewY + Math.ceil(H / tileHeight));
+      ctx.save();
+      for (let ry = vy0; ry <= vy1; ry++) {
+        for (let rx = vx0; rx <= vx1; rx++) {
+          const sx2 = (rx - viewX) * tileWidth;
+          const sy2 = (ry - viewY) * tileHeight;
+          const match = (worldMap[ry]?.[rx]?.resources?.[similarDragResourceId] ?? 0) > 0;
+          ctx.fillStyle = match ? 'rgba(60, 230, 90, 0.40)' : 'rgba(0, 0, 0, 0.45)';
+          ctx.fillRect(sx2, sy2, tileWidth, tileHeight);
+        }
+      }
+      ctx.restore();
+    }
 
     // Draw yellow tile highlights (below icons) — just transparent rect fills.
     if (highlightedResourceTiles.size > 0) {
@@ -1189,6 +1178,7 @@
       case 'X':
         if (designationMode) {
           zoneEraseMode = !zoneEraseMode;
+          if (zoneDragActive) drawDesignations();
           e.preventDefault();
         }
         break;
@@ -1238,7 +1228,7 @@
       similarAnchorY = hoverTileY;
       similarEndX = hoverTileX;
       similarEndY = hoverTileY;
-      redrawOverlay();
+      drawDesignations();
       return;
     }
     if (designationMode) {
@@ -1248,6 +1238,7 @@
       zoneAnchorY = hoverTileY;
       zoneEndX = hoverTileX;
       zoneEndY = hoverTileY;
+      drawDesignations();
       return;
     }
     if (blueprintBuildingId) {
@@ -1290,13 +1281,15 @@
     if (zoneDragActive) {
       zoneEndX = hoverTileX;
       zoneEndY = hoverTileY;
-      redrawOverlay();
+      // Cheap 2D-overlay redraw only — the terrain buffer stays untouched.
+      drawDesignations();
       return;
     }
     if (similarDragActive) {
       similarEndX = hoverTileX;
       similarEndY = hoverTileY;
-      redrawOverlay();
+      // Cheap 2D-overlay redraw only — the terrain buffer stays untouched.
+      drawDesignations();
       return;
     }
     if (blueprintDragActive) {
