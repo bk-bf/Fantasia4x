@@ -2,6 +2,7 @@ import type { GameState, Pawn, PawnNeeds, PawnState, StatusEffectDef, PawnCondit
 import { consumeFromStockpiles } from '../core/GameState';
 import { calculatePawnAbilities, categorizeAbilities, getAbilityDescription } from '../entities/Pawns';
 import { WORK_CATEGORIES } from '../core/Work';
+import { TICKS_PER_TURN } from '../core/time';
 import statusEffectsData from '../database/status-effects.jsonc';
 import conditionsData from '../database/conditions.jsonc';
 
@@ -755,6 +756,8 @@ export class PawnServiceImpl implements PawnService {
 		return bonus;
 	}
 
+	// PER-TURN RATE (applied once per turn). For uniform 60 Hz movement-style ticks,
+	// divide by TICKS_PER_TURN and apply each tick instead of once per turn.
 	private getHealthRegenPerTurn(needs: PawnNeeds): number {
 		let regen = 0.5; // Base health regen per turn
 
@@ -772,6 +775,7 @@ export class PawnServiceImpl implements PawnService {
 	}
 
 	// Calibrated to 1 day = 300 turns: 0→72 in ~225 turns ≈ 0.75 days (matches Rimworld ~18h wake cycle).
+	// PER-TURN RATE — for uniform 60 Hz: divide by TICKS_PER_TURN and apply each tick.
 	private getRestIncreasePerTurn(pawn: Pawn): number {
 		let baseRest = 0.32;
 
@@ -800,6 +804,7 @@ export class PawnServiceImpl implements PawnService {
 	}
 
 	// Calibrated to 1 day = 300 turns: 0→70 in ~130 turns ≈ 0.43 days (matches Rimworld ~10.5h hunger trigger).
+	// PER-TURN RATE — for uniform 60 Hz: divide by TICKS_PER_TURN and apply each tick.
 	private getHungerIncreasePerTurn(pawn: Pawn): number {
 		let baseHunger = 0.54;
 
@@ -1099,8 +1104,29 @@ export class PawnServiceImpl implements PawnService {
 		};
 	}
 
+	/**
+	 * Advance pawn movement by ONE simulation tick (called every tick at 60 Hz,
+	 * not once per turn). RimWorld-style budget drain: each tick a pawn spends
+	 * `speed` cost-units, and entering a cell costs `movementCost × TICKS_PER_TURN`
+	 * units (diagonals ×√2). `nextCellCostLeft` carries the remaining cost to the
+	 * next cell across ticks, so a tile with movementCost 2.5 genuinely takes
+	 * 2.5× as long to cross as a normal (1.0) tile.
+	 */
 	processMovement(gameState: GameState): GameState {
 		let state = gameState;
+
+		// Cost (in ticks) to step from `from` into `to`, based on the destination
+		// tile's movementCost. Mirrors PathfinderService's `movementCost > 0 ? : 1`.
+		const costToEnter = (
+			from: { x: number; y: number },
+			to: { x: number; y: number }
+		): number => {
+			const tile = state.worldMap[to.y]?.[to.x];
+			const base = tile && tile.movementCost > 0 ? tile.movementCost : 1;
+			const diagonal = from.x !== to.x && from.y !== to.y ? Math.SQRT2 : 1;
+			return base * diagonal * TICKS_PER_TURN;
+		};
+
 		for (const pawn of state.pawns) {
 			if (pawn.isAlive === false) continue; // skip dead pawns
 			// Repair inconsistent state saved from earlier bugs: path exists but isMoving=false
@@ -1108,43 +1134,58 @@ export class PawnServiceImpl implements PawnService {
 				state = {
 					...state,
 					pawns: state.pawns.map(p =>
-						p.id === pawn.id ? { ...p, path: [], pathIndex: 0 } : p
+						p.id === pawn.id ? { ...p, path: [], pathIndex: 0, nextCellCostLeft: undefined } : p
 					)
 				};
 				continue;
 			}
 			if (!pawn.isMoving || !pawn.path || pawn.path.length === 0) continue;
-			const baseSpeed = Math.max(1, Math.floor((pawn.stats.dexterity ?? 10) / 20));
-			const moveRate = getActiveEffects(pawn).reduce((r, e) => r * (e.modifiers.moveSpeed ?? 1), 1);
-			const speed = Math.max(1, Math.floor(baseSpeed * moveRate));
-			let idx = pawn.pathIndex ?? 0;
 			const startPos = pawn.position;
 			if (!startPos) continue;
-			let newPos = startPos;
+
+			// Cost-units spendable this tick. Continuous (no flooring) so fractional
+			// moveSpeed effects and dexterity scale smoothly at tick resolution.
+			const baseSpeed = Math.max(1, (pawn.stats.dexterity ?? 10) / 20);
+			const moveRate = getActiveEffects(pawn).reduce((r, e) => r * (e.modifiers.moveSpeed ?? 1), 1);
+			let budget = Math.max(0.01, baseSpeed * moveRate);
+
+			let idx = pawn.pathIndex ?? 0;
+			let pos = startPos;
+			let costLeft = pawn.nextCellCostLeft ?? null;
 			let invalidPath = false;
-			for (let step = 0; step < speed; step++) {
-				if (idx >= pawn.path.length) break;
-				const nextPos = pawn.path[idx];
-				if (!nextPos) break;
-				if (Math.abs(nextPos.x - newPos.x) > 1 || Math.abs(nextPos.y - newPos.y) > 1) {
+
+			while (budget > 0 && idx < pawn.path.length) {
+				const next = pawn.path[idx];
+				if (!next) break;
+				if (Math.abs(next.x - pos.x) > 1 || Math.abs(next.y - pos.y) > 1) {
 					invalidPath = true;
 					break;
 				}
-				newPos = nextPos;
-				idx++;
+				if (costLeft == null) costLeft = costToEnter(pos, next);
+				if (budget >= costLeft) {
+					budget -= costLeft;
+					pos = next;
+					idx++;
+					costLeft = null; // recompute for the following cell
+				} else {
+					costLeft -= budget;
+					budget = 0;
+				}
 			}
-			const done = idx >= pawn.path.length;
+
+			const done = !invalidPath && idx >= pawn.path.length;
 			state = {
 				...state,
 				pawns: state.pawns.map(p =>
 					p.id === pawn.id
 						? {
 							...p,
-							position: invalidPath ? p.position : newPos,
+							position: invalidPath ? p.position : pos,
 							path: invalidPath ? [] : p.path,
 							pathIndex: invalidPath ? 0 : idx,
 							isMoving: invalidPath ? false : !done,
-							hasReachedDestination: invalidPath ? false : done
+							hasReachedDestination: invalidPath ? false : done,
+							nextCellCostLeft: invalidPath || done ? undefined : (costLeft ?? undefined)
 						}
 						: p
 				)

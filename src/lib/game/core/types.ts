@@ -308,6 +308,7 @@ export interface Pawn {
 	pathIndex?: number;                          // next step in path (index into path[])
 	isMoving?: boolean;                          // currently following a path
 	hasReachedDestination?: boolean;            // just finished a path
+	nextCellCostLeft?: number;                   // remaining tick-cost to enter the next path cell (RimWorld-style budget drain)
 
 	// Active status effect ids (derived from state; drives UI cards and need rate modifiers)
 	activeEffects?: string[];

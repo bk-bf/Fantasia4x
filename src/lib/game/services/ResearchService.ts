@@ -364,6 +364,7 @@ export class ResearchServiceImpl implements ResearchService {
 		console.log('[ResearchService] Processing current research');
 
 		// Process current research - scroll-based progression
+		// PER-TURN RATE (+1/turn) — for uniform 60 Hz: add 1/TICKS_PER_TURN each tick instead.
 		if (gameState.currentResearch) {
 			const updatedCurrentResearch = {
 				...gameState.currentResearch,

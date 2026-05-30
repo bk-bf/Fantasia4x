@@ -21,6 +21,7 @@ const ITEMS_DATABASE = itemsData as unknown as import('../core/types').Item[];
 // ===== WORK CONSTANTS =====
 
 /** Work-points per turn a pawn delivers (base rate; later modifiable by stats). */
+// PER-TURN RATE — for uniform 60 Hz: divide by TICKS_PER_TURN and apply each tick.
 export const BASE_WORK_RATE = 1;
 
 /** Designation types that produce harvest-category jobs. */

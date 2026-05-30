@@ -483,8 +483,9 @@ export class GameEngineImpl implements GameEngine {
 	private processPawns(): void {
 		console.log('[GameEngine] Coordinating pawn processing through services');
 
-		// Phase 3: advance pawn movement along queued paths
-		this.gameState = pawnService.processMovement(this.gameState!);
+		// Phase 3: pawn movement now advances every tick via processTick()/processMovement(),
+		// not here. By the time a turn boundary runs, the final movement tick has already
+		// set hasReachedDestination, so the state machine below still reads it fresh.
 		// Phase 4a: run state machine (after movement so hasReachedDestination is fresh)
 		this.gameState = pawnStateMachineService.tick(this.gameState!);
 		// COORDINATION: Delegate all pawn processing to PawnService
@@ -543,6 +544,21 @@ export class GameEngineImpl implements GameEngine {
 	updateStores(): void {
 		if (!this.gameState) return;
 		gameState.updateWithSave(() => this.gameState!);
+	}
+
+	/**
+	 * Advance the simulation by ONE tick (60 Hz). Only movement runs every tick;
+	 * all other systems run once per turn (every TICKS_PER_TURN ticks) via
+	 * processGameTurn(). Skips work entirely when no pawn is moving, and updates
+	 * the store WITHOUT scheduling a save (the per-turn boundary save covers it),
+	 * so continuous movement doesn't starve the debounced save timer.
+	 */
+	processTick(): void {
+		const current = get(gameState);
+		if (!current.pawns?.some(p => p.isMoving)) return;
+		this.gameState = pawnService.processMovement({ ...current });
+		if (!this.gameState) return;
+		gameState.update(() => this.gameState!);
 	}
 
 	/** Patch just the worldMap in the engine's internal state (used by regenWorld). */

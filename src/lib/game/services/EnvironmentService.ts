@@ -9,6 +9,8 @@
  * Season / weather phases (B–D) will be added here when implemented.
  */
 
+// Turn-denominated duration. For uniform 60 Hz, multiply by TICKS_PER_TURN (and rescale
+// the initialGameState.turn anchor) so the calendar keeps the same wall-clock pace.
 export const TURNS_PER_DAY = 300;
 
 /**

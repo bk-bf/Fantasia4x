@@ -62,6 +62,9 @@ const WORK_PRIORITY_THRESHOLD_SHIFT = 4;  // pts per labor level above/below def
 const QUEUE_FOOD_THRESHOLD_REDUCTION = 5; // max threshold pts reduction when all queue jobs far from food
 // How many ahead-of-time jobs to soft-preview in the pawn's jobQueue.
 const JOB_QUEUE_SIZE = 4;
+// NOTE: The constants below are turn-denominated. *_TURNS are durations (multiply by
+// TICKS_PER_TURN for uniform 60 Hz); FATIGUE_PER_SLEEPING_* and the MALNUTRITION/BLOOD
+// rates below are per-turn magnitudes (divide by TICKS_PER_TURN for per-tick application).
 const EATING_TURNS = 2;                // Turns to eat at a campfire (~2 in-game min)
 const EATING_TURNS_GROUND = 3;         // Turns eating in-place (cold, uncomfortable)
 const SLEEPING_TURNS = 100;            // Full recovery in bed: 72 / 0.72 = 100 turns = 1/3 day (progress bar ref)
