@@ -4,6 +4,13 @@
  * Defines the structure and behavior of individual tiles
  */
 
+/**
+ * Fixed pixel size each tile's geometry is baked at. Zoom is applied as a shader
+ * uniform (u_zoom = actualTileSize / BASE_TILE_PX) rather than baked into vertex
+ * positions, so changing zoom never rebuilds the terrain vertex buffer.
+ */
+export const BASE_TILE_PX = 16;
+
 // Core color type
 export interface RGB {
 	r: number;

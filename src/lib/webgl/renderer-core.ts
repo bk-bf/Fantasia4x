@@ -14,6 +14,7 @@ import { GridRenderer } from './grid-renderer.js';
 import { WebGLStateManager } from './webgl-state.js';
 import type { GameGrid } from './game-grid.js';
 import type { FontAtlas } from './types.js';
+import { BASE_TILE_PX } from './tile-types.js';
 
 interface Viewport {
 	x: number;
@@ -285,11 +286,16 @@ export class WebGLRendererCore {
 		if (!this.shaderManager.useProgram('tileRenderer')) return;
 		this.shaderManager.setUniform('tileRenderer', 'u_projection', this.projectionMatrix);
 
-		// Camera pan is a shader uniform now: terrain geometry is baked in absolute
-		// world pixels and shifted here, so scrolling never rebuilds the buffer.
+		// Pan AND zoom are shader uniforms now: terrain geometry is baked once at a
+		// fixed BASE_TILE_PX size, then shifted (u_viewOffset) and scaled (u_zoom)
+		// here — so neither scrolling nor zooming ever rebuilds the vertex buffer.
 		this.shaderManager.setUniform('tileRenderer', 'u_viewOffset', [
-			this.viewTileX * this.tileWidth,
-			this.viewTileY * this.tileHeight
+			this.viewTileX * BASE_TILE_PX,
+			this.viewTileY * BASE_TILE_PX
+		]);
+		this.shaderManager.setUniform('tileRenderer', 'u_zoom', [
+			this.tileWidth / BASE_TILE_PX,
+			this.tileHeight / BASE_TILE_PX
 		]);
 		// Global day/night ambient is a uniform too, combined per-fragment with the
 		// baked additive point light, so ambient changes never rebuild the buffer.
@@ -318,8 +324,9 @@ export class WebGLRendererCore {
 		// static map so panning never changes the tile set (cache stays valid).
 		this.shaderManager.setUniform('tileRenderer', 'u_glyphOnly', 0);
 		const gridStats = this.gridRenderer.renderGrid(this.gameGrid, {
-			tileWidth: this.tileWidth,
-			tileHeight: this.tileHeight,
+			// Geometry baked at the fixed base size; zoom comes from u_zoom.
+			tileWidth: BASE_TILE_PX,
+			tileHeight: BASE_TILE_PX,
 			viewportX: this.viewTileX,
 			viewportY: this.viewTileY,
 			viewportWidth: viewportTilesW,
@@ -341,8 +348,10 @@ export class WebGLRendererCore {
 			gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 			this.shaderManager.setUniform('tileRenderer', 'u_glyphOnly', 1);
 			const overlayStats = this.gridRenderer.renderGrid(this.overlayGrid, {
-				tileWidth: this.tileWidth,
-				tileHeight: this.tileHeight,
+				// Geometry baked at the fixed base size; zoom comes from u_zoom. The
+				// overlay's sub-tile animationOffset is likewise in base-tile pixels.
+				tileWidth: BASE_TILE_PX,
+				tileHeight: BASE_TILE_PX,
 				viewportX: this.viewTileX,
 				viewportY: this.viewTileY,
 				viewportWidth: viewportTilesW,

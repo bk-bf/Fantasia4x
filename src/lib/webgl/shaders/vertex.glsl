@@ -13,8 +13,10 @@ in vec3 a_light;         // Per-corner ADDITIVE point-light contribution (0 = no
 
 // Uniforms (constant for all vertices in a draw call)
 uniform mat4 u_projection;  // Orthographic projection matrix
-uniform vec2 u_viewOffset;  // Camera top-left in pixels; applied here so panning
-                            // never requires rebuilding the vertex buffer.
+uniform vec2 u_viewOffset;  // Camera top-left in BASE-tile pixels; applied here so
+                            // panning never rebuilds the vertex buffer.
+uniform vec2 u_zoom;        // actualTileSize / BASE_TILE_PX; applied here so zoom
+                            // never rebuilds the vertex buffer either.
 
 // Varying outputs (passed to fragment shader)
 out vec2 v_texCoord;     // Pass texture coordinates to fragment
@@ -26,9 +28,11 @@ out vec4 v_uvBounds;     // Pass glyph UV bounds to fragment
 out vec3 v_light;        // Interpolated per-tile light across the quad
 
 void main() {
-    // a_position holds absolute world pixel coordinates. Subtract the camera
-    // offset here so a pan only changes a uniform, keeping the buffer static.
-    gl_Position = u_projection * vec4(a_position - u_viewOffset, 0.0, 1.0);
+    // a_position holds world coordinates baked at a FIXED base tile size. Pan
+    // (u_viewOffset) and zoom (u_zoom) are applied here as uniforms, so neither
+    // scrolling nor zooming ever requires rebuilding the vertex buffer.
+    vec2 pos = (a_position - u_viewOffset) * u_zoom;
+    gl_Position = u_projection * vec4(pos, 0.0, 1.0);
     
     // Pass through texture coordinates and colors to fragment shader
     v_texCoord = a_texCoord;

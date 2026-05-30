@@ -14,6 +14,7 @@
   } from '$lib/game/core/types.js';
   import type { GameGrid } from '$lib/webgl/game-grid.js';
   import { GameGrid as GameGridClass } from '$lib/webgl/game-grid.js';
+  import { BASE_TILE_PX } from '$lib/webgl/tile-types.js';
   import { wasmPathfinderService } from '$lib/game/services/WasmPathfinderService.js';
   import { pawnService } from '$lib/game/services/PawnService.js';
   import { buildPathfindingGrids } from '$lib/game/services/PathfinderService.js';
@@ -501,7 +502,7 @@
         foreground: isSelected ? { r: 1.0, g: 0.9, b: 0.1 } : baseColor,
         background: { r: 0, g: 0, b: 0 },
         position: { x: cellX, y: cellY },
-        animationOffset: { x: (rp.x - cellX) * tileWidth, y: (rp.y - cellY) * tileHeight },
+        animationOffset: { x: (rp.x - cellX) * BASE_TILE_PX, y: (rp.y - cellY) * BASE_TILE_PX },
         rotation: isSleeping ? 90 : undefined
       });
     }
