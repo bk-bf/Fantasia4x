@@ -20,6 +20,7 @@ import { jobService } from '../services/JobService';
 import { wasmPathfinderService } from '../services/WasmPathfinderService';
 import { resourceObjectService } from '../services/ResourceObjectService';
 import { TICKS_PER_SECOND, ticksFromSeconds, perTick } from '../core/time';
+import { isGameDebug } from '../core/log';
 import type { WorkCategory } from '../core/types';
 import type { Pawn } from '../core/types';
 
@@ -406,6 +407,23 @@ export class GameEngineImpl implements GameEngine {
 		const gs = this.gameState;
 		let anyChanged = false;
 
+		// Cheap pre-scan: most ticks have no cooldown expiring. Rebuilding the whole
+		// worldMap (38,400 tiles → new row arrays + per-tile closure) every tick is a
+		// fixed O(map) tax independent of pawn count — catastrophic on large maps. Skip
+		// the allocation entirely unless at least one tile actually has an expired
+		// cooldown this tick.
+		let needsRegrowth = false;
+		outer: for (const row of gs.worldMap) {
+			for (const tile of row) {
+				const cd = tile.resourceCooldowns;
+				if (!cd) continue;
+				for (const k in cd) {
+					if (gs.turn >= cd[k]) { needsRegrowth = true; break outer; }
+				}
+			}
+		}
+		if (!needsRegrowth) return;
+
 		const newWorldMap = gs.worldMap.map((row) =>
 			row.map((tile) => {
 				const cooldowns = tile.resourceCooldowns;
@@ -484,6 +502,9 @@ export class GameEngineImpl implements GameEngine {
 
 	private debugLogPawns(): void {
 		if (!this.gameState) return;
+		// Per-pawn debug dump — only when hot-path debugging is explicitly enabled
+		// (gameDebug(true)). Off by default so it costs nothing in normal play.
+		if (!isGameDebug()) return;
 		const gs = this.gameState;
 		// The pipeline runs TICKS_PER_SECOND times per second — log at most once per
 		// in-game second to avoid flooding the console.
@@ -528,19 +549,34 @@ export class GameEngineImpl implements GameEngine {
 	}
 
 	private processPawns(): void {
+		const prof = (globalThis as any).__profileTurns ? ((globalThis as any).__profP ??= {}) : null;
+		const tp = prof
+			? (label: string, fn: () => void) => {
+				const s = performance.now();
+				fn();
+				const e = (prof[label] ??= { sum: 0, n: 0 });
+				e.sum += performance.now() - s; e.n++;
+			}
+			: (_label: string, fn: () => void) => fn();
 		// Movement advances every tick (smooth, terrain-cost aware). Run it before
 		// the state machine so hasReachedDestination is fresh.
 		if (this.gameState!.pawns?.some((p) => p.isMoving)) {
-			this.gameState = pawnService.processMovement({ ...this.gameState! });
+			tp('p.movement', () => { this.gameState = pawnService.processMovement({ ...this.gameState! }); });
 		}
 		// Phase 4a: run state machine (after movement so hasReachedDestination is fresh)
-		this.gameState = pawnStateMachineService.tick(this.gameState!);
+		tp('p.stateMachine', () => { this.gameState = pawnStateMachineService.tick(this.gameState!); });
 		// COORDINATION: Delegate all pawn processing to PawnService
-		this.gameState = pawnService.clearTemporaryPawnStates(this.gameState!);
-		this.gameState = workService.syncPawnWorkingStates(this.gameState!);
+		tp('p.clearTemp', () => { this.gameState = pawnService.clearTemporaryPawnStates(this.gameState!); });
+		tp('p.syncWork1', () => { this.gameState = workService.syncPawnWorkingStates(this.gameState!); });
 		// Phase 5e: automatic needs now handled by PawnStateMachine (HUNGRY/TIRED states).
-		this.gameState = pawnService.processPawnTurn(this.gameState!);
-		this.gameState = workService.syncPawnWorkingStates(this.gameState!);
+		tp('p.pawnTurn', () => { this.gameState = pawnService.processPawnTurn(this.gameState!); });
+		tp('p.syncWork2', () => { this.gameState = workService.syncPawnWorkingStates(this.gameState!); });
+		if (prof && this.gameState!.turn % TICKS_PER_SECOND === 0) {
+			const out: Record<string, string> = {};
+			for (const k of Object.keys(prof)) out[k] = (prof[k].sum / prof[k].n).toFixed(3) + 'ms';
+			console.log('[PROF-PAWN] ' + JSON.stringify(out));
+			for (const k of Object.keys(prof)) { prof[k].sum = 0; prof[k].n = 0; }
+		}
 	}
 
 	private processBuildings(): void {

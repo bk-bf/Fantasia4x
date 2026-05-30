@@ -10,6 +10,10 @@ import { WORK_CATEGORIES } from '../core/Work';
 import { itemService } from './ItemService';
 import { locationService } from './LocationServices';
 import { buildingService } from './BuildingService';
+// Shadow the global console with a gated shim: log/debug/info/warn are silent in
+// normal play (toggle via gameDebug(true)); console.error still surfaces. This
+// removes the per-tick logging that profiling showed was ~75% of turn cost.
+import { gatedConsole as console } from '../core/log';
 
 // Lazy import to avoid circular dependency
 let gameEngineInstance: any = null;

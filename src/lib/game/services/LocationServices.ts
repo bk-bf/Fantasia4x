@@ -1,6 +1,9 @@
 import type { GameState } from '../core/types';
 import { perTick } from '../core/time';
 import { RICHNESS_COLORS } from '../database/colors';
+// Gated console shim — see core/log.ts. Silences per-tick log/debug/warn unless
+// gameDebug(true); console.error still surfaces.
+import { gatedConsole as console } from '../core/log';
 import {
 	LOCATION_TEMPLATES,
 	type LocationTemplate,

@@ -5,6 +5,9 @@ import { WORK_CATEGORIES } from '../core/Work';
 import { TICKS_PER_SECOND, SECONDS_PER_TICK, perTick } from '../core/time';
 import statusEffectsData from '../database/status-effects.jsonc';
 import conditionsData from '../database/conditions.jsonc';
+// Gated console shim — see core/log.ts. Silences per-tick log/debug/warn unless
+// gameDebug(true); console.error still surfaces.
+import { gatedConsole as console } from '../core/log';
 
 const STATUS_EFFECTS_DB = statusEffectsData as unknown as StatusEffectDef[];
 const CONDITIONS_DB = conditionsData as unknown as ConditionDef[];

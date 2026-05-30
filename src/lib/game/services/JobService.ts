@@ -10,6 +10,9 @@
  */
 
 import type { DesignationType, GameState, Job, Pawn, DroppedItem, ZoneFilter } from '../core/types';
+// Gated console shim — see core/log.ts. Silences per-tick log/debug/warn unless
+// gameDebug(true); console.error still surfaces.
+import { gatedConsole as console } from '../core/log';
 import itemsData from '../database/items.jsonc';
 import { resourceObjectService } from './ResourceObjectService';
 import { SUBTERRAINS, SUBTERRAIN_FALLBACK } from '../core/Terrains';

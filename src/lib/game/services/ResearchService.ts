@@ -3,6 +3,9 @@ import { consumeFromStockpiles } from '../core/GameState';
 import researchData from '../database/research.jsonc';
 import loreData from '../database/lore.jsonc';
 import { perTick } from '../core/time';
+// Gated console shim — see core/log.ts. Silences per-tick log/debug/warn unless
+// gameDebug(true); console.error still surfaces.
+import { gatedConsole as console } from '../core/log';
 
 const RESEARCH_DATABASE = researchData as unknown as ResearchProject[];
 const LORE_DATABASE = loreData as unknown as LoreItem[];
