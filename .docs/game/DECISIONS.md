@@ -12,6 +12,7 @@ ADR-005 [GAME]: LocalStorage Persistence via Store (2026-05-25, Accepted)
 ADR-006 [GAME]: Data Files Contain Definitions, Not Logic (2026-05-25, Accepted)
 ADR-007 [GAME]: SvelteKit + WebGL2 over Godot for Merged Project (2026-05-26, Accepted)
 ADR-008 [GAME]: Rust/WASM Spatial Core via wasm-pack (2026-05-26, Accepted)
+ADR-011 [GAME]: Gated Hot-Path Logging + On-Demand Tick Profiler (2026-05-30, Accepted)
 
 ---
 
@@ -273,4 +274,36 @@ adjustedThreshold = baseThreshold
 - Pawns no longer collapse at 100% before eating — they eat when food is conveniently close to their work path, and divert further only as urgency grows.
 - Work priority from the Work tab has a direct mechanical effect on pawn survival behaviour, not just on which jobs are claimed.
 - `Pawn.jobQueue` is a read-only soft hint; it is never claimed and may become stale if another pawn claims a previewed job. The need formula degrades gracefully (missing jobs are skipped, `computeMinQueueFoodDist` returns null → full queue pressure applied).
+
+---
+
+### ADR-011 [GAME]: Gated Hot-Path Logging + On-Demand Tick Profiler
+
+- **Date**: 2026-05-30
+- **Status**: Accepted
+- **Spec**: [.tasks/open/SIMULATION-PERF.md](../.tasks/open/SIMULATION-PERF.md)
+
+#### Context
+
+`GameEngineImpl.processGameTurn()` runs `TICKS_PER_SECOND` (60) times per second; one tick = one `processGameTurn()` call. The sim could not hold 60 TPS even with a single pawn and almost nothing happening. Per-phase wall-clock profiling proved that hot-path `console.*` calls (many fired every tick, several per pawn) were **~75% of total per-tick cost** — at 1 pawn, TOTAL dropped from **6.7 ms → 1.5 ms** when console output was suppressed; the `pawns` phase alone went 5.0 ms → 0.40 ms. The cost is string interpolation + I/O (extra-expensive under a debugger/CDP) and it scales per-pawn, making it the single biggest blocker both to a steady 60 TPS and to large pawn counts. A reliable, low-overhead way to measure tick cost was also needed: live TPS read from the turn-counter delta is unreliable under CDP/Playwright (timer scheduling + HMR can stack duplicate `setInterval` loops and report >60 TPS).
+
+#### Decision
+
+**1. Gated logger (`core/log.ts`).** A module-level `enabled` flag (default `false`) backs `glog`/`gdebug`/`gwarn` (no-ops unless enabled) and a `gatedConsole` object `{ log, debug, info, warn }` plus an always-live `error`. Hot-path modules silence all per-tick logging with **one line** that shadows the global `console` for the whole file:
+
+```typescript
+import { gatedConsole as console } from '../core/log';
+```
+
+No call sites change. Applied to the per-tick services: `WorkService`, `PawnService`, `JobService`, `ResearchService`, `LocationServices`. Toggle at runtime from the dev console with `gameDebug(true)` (exposed via `globalThis.gameDebug = setGameDebug`); `isGameDebug()` gates any remaining heavy log-building (e.g. `GameEngineImpl.debugLogPawns()`).
+
+**2. On-demand tick profiler (in `GameEngineImpl`).** `processGameTurn()` wraps each phase in a `t(label, fn)` timer that is a pass-through no-op unless `globalThis.__profileTurns` is set. Enable with `profileTurns()` / disable with `profileTurns(false)` in the dev console. Average phase timings print as `[PROF] {...}` once per in-game second and persist at `globalThis.__profOut`. A nested `[PROF-PAWN]` breakdown inside `processPawns()` is gated by the same flag. **Trust `__profOut` (wall-clock), not the TPS counter, for sim cost.**
+
+**3. `GameEngineImpl` itself does NOT shadow `console`** — its `[PROF]`/`[PROF-PAWN]` output must always print when the profiler is toggled on, independent of `gameDebug`.
+
+#### Consequences
+
+- Steady **60/60 TPS** at current scale (1.2 ms/tick); diagnostics remain one keystroke away (`gameDebug(true)`).
+- New hot-path code must add the `gatedConsole as console` import rather than calling the global `console` directly; profiler phases must be wrapped in `t(...)` to stay measurable.
+- **Scaling caveat (flagged, out of scope here):** even console-free the tick is ~1.2 ms with a single pawn and per-pawn work scales linearly. Reaching 500+ entities on 1000×1000 maps needs deeper algorithmic work — spread/incremental work scheduling, spatial indices, and a cooldown index so resource regrowth isn't O(map). See the spec. 60 TPS is solid at the current scale.
 - The formula is pure and stateless (`shouldInterruptForNeed` has no side effects), making it straightforward to tune constants in isolation.

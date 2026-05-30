@@ -2,7 +2,7 @@
 
 # ROADMAP
 
-> **Related:** [game/DESIGN](../game/DESIGN.md) · [game/ARCHITECTURE](../game/ARCHITECTURE.md) · [SCREEN-REFACTORING](SCREEN-REFACTORING.md) · [RESEARCH-ENHANCEMENT](RESEARCH-ENHANCEMENT.md) · [SURVIVAL-HEALTH](SURVIVAL-HEALTH.md) · [LIVING-WORLD](LIVING-WORLD.md)
+> **Related:** [game/DESIGN](../game/DESIGN.md) · [game/ARCHITECTURE](../game/ARCHITECTURE.md) · [SCREEN-REFACTORING](SCREEN-REFACTORING.md) · [RESEARCH-ENHANCEMENT](RESEARCH-ENHANCEMENT.md) · [SURVIVAL-HEALTH](SURVIVAL-HEALTH.md) · [LIVING-WORLD](LIVING-WORLD.md) · [SIMULATION-PERF](SIMULATION-PERF.md)
 
 ## Status Key
 
@@ -26,26 +26,27 @@ All critical architectural debt resolved. Core survival loop is functional.
 
 ## Phase 2 — Core Loop Completion (CURRENT)
 
-| Item                                               | Status                           | Spec                                               |
-| -------------------------------------------------- | -------------------------------- | -------------------------------------------------- |
-| Screen refactoring (WorkScreen only)               | ❌                                | [SCREEN-REFACTORING.md](SCREEN-REFACTORING.md)     |
-| **Survival consequences** (starvation death, collapse, injuries, health) | ❌ **NEXT** | [SURVIVAL-HEALTH.md](SURVIVAL-HEALTH.md) |
-| Production chains + pawn autonomy                  | ❌                                | archived: `PRODUCTION-CHAINS-2026-05-28.md`        |
-| Research enhancement (three-tier system)           | ❌                                | [RESEARCH-ENHANCEMENT.md](RESEARCH-ENHANCEMENT.md) |
-| Healthcare and cooking jobs                        | ⚠️ blocked on WorkScreen refactor | —                                                  |
+| Item                                                                     | Status                           | Spec                                               |
+| ------------------------------------------------------------------------ | -------------------------------- | -------------------------------------------------- |
+| Screen refactoring (WorkScreen only)                                     | ❌                                | [SCREEN-REFACTORING.md](SCREEN-REFACTORING.md)     |
+| **Survival consequences** (starvation death, collapse, injuries, health) | ❌ **NEXT**                       | [SURVIVAL-HEALTH.md](SURVIVAL-HEALTH.md)           |
+| Production chains + pawn autonomy                                        | ❌                                | archived: `PRODUCTION-CHAINS-2026-05-28.md`        |
+| Research enhancement (three-tier system)                                 | ❌                                | [RESEARCH-ENHANCEMENT.md](RESEARCH-ENHANCEMENT.md) |
+| Healthcare and cooking jobs                                              | ⚠️ blocked on WorkScreen refactor | —                                                  |
 
 ---
 
 ## Phase 3 — Depth Features
 
-| Item                                       | Status                     | Notes                                                                            |
-| ------------------------------------------ | -------------------------- | -------------------------------------------------------------------------------- |
-| **Living World** (day/night, seasons, temperature, weather, WebGL shaders) | ❌ | [LIVING-WORLD.md](LIVING-WORLD.md) |
-| **Combat system** (mobs, enemies, animals, tactical combat, skills, abilities) | ❌ | spec pending — see `game/DESIGN.md` combat section |
-| Fog of War & Visibility (night-based vision, eventual WASM shadowcast) | ❌ | Phase D of LIVING-WORLD; archived: `FOG-OF-WAR-DEFERRED-2026-05-28.md` |
-| Building-work integration (bonus stacking) | ❌                          | Analysis in `game/ARCHITECTURE.md`                                               |
-| Equipment-driven combat abilities          | ⚠️ blocked on combat system | —                                                                                |
-| AI event generation expansion              | ❌                          | —                                                                                |
+| Item                                                                           | Status                     | Notes                                                                    |
+| ------------------------------------------------------------------------------ | -------------------------- | ------------------------------------------------------------------------ |
+| **Living World** (day/night, seasons, temperature, weather, WebGL shaders)     | ❌                          | [LIVING-WORLD.md](LIVING-WORLD.md)                                       |
+| **Combat system** (mobs, enemies, animals, tactical combat, skills, abilities) | ❌                          | spec pending — see `game/DESIGN.md` combat section                       |
+| Fog of War & Visibility (night-based vision, eventual WASM shadowcast)         | ❌                          | Phase D of LIVING-WORLD; archived: `FOG-OF-WAR-DEFERRED-2026-05-28.md`   |
+| Building-work integration (bonus stacking)                                     | ❌                          | Analysis in `game/ARCHITECTURE.md`                                       |
+| Equipment-driven combat abilities                                              | ⚠️ blocked on combat system | —                                                                        |
+| AI event generation expansion                                                  | ❌                          | —                                                                        |
+| **Sim perf scaling** (500+ entities, 1000×1000 maps)                           | ❌ Phase 2 of spec          | [SIMULATION-PERF.md](SIMULATION-PERF.md) — Phase 1 (60 TPS + profiler) ✅ |
 
 ---
 
@@ -53,10 +54,10 @@ All critical architectural debt resolved. Core survival loop is functional.
 
 See `.tasks/archive/` for full specs.
 
-| Item                           | Completed  | Archive file                              |
-| ------------------------------ | ---------- | ----------------------------------------- |
-| GameEngine refactoring Phase 1 | 2026-05-25 | `GAMEENGINE-REFACTORING-2026-05-25.md`    |
-| PawnScreen refactoring         | 2026-05-25 | `PAWN-SCREEN-REFACTORING-2026-05-25.md`   |
-| DF-like migration design       | 2026-05-28 | `DF-MIGRATION-2026-05-28.md`              |
-| Production chains design       | 2026-05-28 | `PRODUCTION-CHAINS-2026-05-28.md`         |
-| Fog of War (deferred to Living World) | 2026-05-28 | `FOG-OF-WAR-DEFERRED-2026-05-28.md` |
+| Item                                  | Completed  | Archive file                            |
+| ------------------------------------- | ---------- | --------------------------------------- |
+| GameEngine refactoring Phase 1        | 2026-05-25 | `GAMEENGINE-REFACTORING-2026-05-25.md`  |
+| PawnScreen refactoring                | 2026-05-25 | `PAWN-SCREEN-REFACTORING-2026-05-25.md` |
+| DF-like migration design              | 2026-05-28 | `DF-MIGRATION-2026-05-28.md`            |
+| Production chains design              | 2026-05-28 | `PRODUCTION-CHAINS-2026-05-28.md`       |
+| Fog of War (deferred to Living World) | 2026-05-28 | `FOG-OF-WAR-DEFERRED-2026-05-28.md`     |

@@ -2,7 +2,7 @@
 
 # ARCHITECTURE [GAME]
 
-> **Related:** [DESIGN](DESIGN.md) · [DECISIONS](DECISIONS.md) · [PHILOSOPHY](PHILOSOPHY.md) · [ui/ARCHITECTURE](../ui/ARCHITECTURE.md) · [ROADMAP](../.tasks/open/ROADMAP.md)
+> **Related:** [DESIGN](DESIGN.md) · [DECISIONS](DECISIONS.md) · [PHILOSOPHY](PHILOSOPHY.md) · [ui/ARCHITECTURE](../ui/ARCHITECTURE.md) · [ROADMAP](../.tasks/open/ROADMAP.md) · [SIMULATION-PERF](../.tasks/open/SIMULATION-PERF.md)
 
 ## Layer Map
 
@@ -85,6 +85,13 @@ Never compute flat bonus sums manually when a modifier system method exists.
 ## AI Generation (Server-Only)
 
 Gemini API calls live exclusively in `src/routes/api/`. Client code calls the route; it never imports `@google/generative-ai` directly.
+
+## Performance & Observability
+
+`processGameTurn()` is one tick; the sim runs at `TICKS_PER_SECOND = 60` (`core/time.ts`) on a `setInterval` in `stores/gameState.ts`. See ADR-011 and [SIMULATION-PERF](../.tasks/open/SIMULATION-PERF.md) for full detail.
+
+- **Tick profiler** — `profileTurns()` / `profileTurns(false)` in the dev console toggles a per-phase wall-clock timer (zero cost when off). Averages print as `[PROF]` once per second and persist at `globalThis.__profOut`. Trust `__profOut`, not the TPS counter (unreliable under CDP/HMR).
+- **Gated logging** (`core/log.ts`) — hot-path modules do `import { gatedConsole as console } from '../core/log'` to silence per-tick `log`/`debug`/`info`/`warn` (errors stay live). Off by default; enable at runtime with `gameDebug(true)`. Hot-path logging was ~75% of per-tick cost before this. New per-tick code must use the shim, not the global `console`.
 
 ## Known Architectural Debt
 
