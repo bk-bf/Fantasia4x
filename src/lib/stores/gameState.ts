@@ -382,9 +382,44 @@ function wipeAndReload() {
 // Initialize locations at game start
 locationService.initializeAllLocations();
 
-// Create the main writable store starting with a fresh game.
-// The actual save is loaded asynchronously below.
-const { subscribe, set, update } = writable(initialGameState);
+// Create the main store starting with a fresh game. The actual save is loaded
+// asynchronously below.
+//
+// This is a custom store (not a plain `writable`) so the GameEngine can update
+// the held value on EVERY tick — keeping `get(gameState)` fresh so manual edits
+// are never lost — while only NOTIFYING subscribers at a throttled rate. Manual
+// edits made through `set`/`update`/`updateWithSave` notify subscribers
+// immediately, so user actions stay snappy.
+function createGameStore(initial: GameState) {
+	let value = initial;
+	const subscribers = new Set<(v: GameState) => void>();
+	return {
+		subscribe(run: (v: GameState) => void) {
+			subscribers.add(run);
+			run(value);
+			return () => subscribers.delete(run);
+		},
+		set(v: GameState) {
+			value = v;
+			subscribers.forEach((run) => run(value));
+		},
+		update(updater: (v: GameState) => GameState) {
+			value = updater(value);
+			subscribers.forEach((run) => run(value));
+		},
+		/** Update the held value WITHOUT notifying subscribers (engine hot path). */
+		setSilent(v: GameState) {
+			value = v;
+		},
+		/** Flush the current value to all subscribers. */
+		notify() {
+			subscribers.forEach((run) => run(value));
+		}
+	};
+}
+
+const gameStore = createGameStore(initialGameState);
+const { subscribe, set, update } = gameStore;
 
 // Create update function — schedules a debounced IndexedDB save on every mutation.
 const updateWithSave = (updater: (state: GameState) => GameState) => {
@@ -393,6 +428,16 @@ const updateWithSave = (updater: (state: GameState) => GameState) => {
 		scheduleSave(newState);
 		return newState;
 	});
+};
+
+// Engine tick push: refresh the held value every tick (so `get()` stays current
+// and manual edits survive the read-modify-write loop) but only notify
+// subscribers when `flush` is true. Saves are still scheduled (debounced) each
+// tick exactly as before.
+const pushFromEngine = (state: GameState, flush: boolean) => {
+	gameStore.setSilent(state);
+	scheduleSave(state);
+	if (flush) gameStore.notify();
 };
 
 // ===== INITIALIZE GAMEENGINE =====
@@ -483,6 +528,7 @@ export const gameState = {
 	set,
 	update,
 	updateWithSave,
+	pushFromEngine,
 	isPaused: { subscribe: isPaused.subscribe },
 	gameSpeed: { subscribe: gameSpeed.subscribe },
 

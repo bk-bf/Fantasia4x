@@ -26,12 +26,24 @@ import type { Pawn } from '../core/types';
 const ITEMS_DATABASE = itemsData as unknown as import('../core/types').Item[];
 const AVAILABLE_BUILDINGS = buildingsData as unknown as import('../core/types').Building[];
 
+/**
+ * How many sim ticks pass between UI store notifications. The sim runs at
+ * TICKS_PER_SECOND (60); notifying every 4th tick pushes UI updates at ~15 Hz.
+ * The WebGL renderer interpolates pawn motion every animation frame, so movement
+ * stays smooth regardless. Between notifications the engine still refreshes the
+ * store's held value each tick (via pushFromEngine), so `get(gameState)` is
+ * always current and manual edits are never lost.
+ */
+const UI_PUSH_INTERVAL = Math.max(1, Math.round(TICKS_PER_SECOND / 15));
+
 export class GameEngineImpl implements GameEngine {
 
 	private gameState: GameState | null = null;
 	private gameStateManager: GameStateManager | null = null;
 	private config: GameEngineConfig;
 	private lastTurnProcessed = 0;
+	/** Counts ticks toward the next throttled UI notification (see UI_PUSH_INTERVAL). */
+	private uiPushCounter = 0;
 
 	constructor(config: GameEngineConfig = {}) {
 		this.config = {
@@ -283,20 +295,55 @@ export class GameEngineImpl implements GameEngine {
 			// Increment the tick counter (gameState.turn counts ticks).
 			this.gameState.turn += 1;
 
-			this.gameState = pawnService.processNeedsTick(this.gameState);
-			this.gameState = researchService.processResearchTick(this.gameState);
-			this.gameState = workService.ensureBasicWorkAssignments(this.gameState);
-			this.gameState = jobService.generateJobs(this.gameState);
-			this.processBuildings();
-			this.processCrafting();
-			this.processPawns();
-			this.processLocationRenewal();
-			this.processResourceRegrowth();
+			// On-demand per-phase profiler. Zero cost unless toggled on at runtime
+			// via `profileTurns()` in the dev console (sets globalThis.__profileTurns).
+			// When active, average phase timings log as `[PROF]` once per second.
+			const prof = (globalThis as any).__profileTurns
+				? ((globalThis as any).__prof ??= {})
+				: null;
+			const t = prof
+				? (label: string, fn: () => void) => {
+						const s = performance.now();
+						fn();
+						const e = (prof[label] ??= { sum: 0, n: 0 });
+						e.sum += performance.now() - s;
+						e.n++;
+					}
+				: (_label: string, fn: () => void) => fn();
+
+			t('needsTick', () => { this.gameState = pawnService.processNeedsTick(this.gameState!); });
+			t('researchTick', () => { this.gameState = researchService.processResearchTick(this.gameState!); });
+			t('workAssign', () => { this.gameState = workService.ensureBasicWorkAssignments(this.gameState!); });
+			t('generateJobs', () => { this.gameState = jobService.generateJobs(this.gameState!); });
+			t('buildings', () => this.processBuildings());
+			t('crafting', () => this.processCrafting());
+			t('pawns', () => this.processPawns());
+			t('locationRenewal', () => this.processLocationRenewal());
+			t('resourceRegrowth', () => this.processResourceRegrowth());
 			this.debugLogPawns();
 
 			this.lastTurnProcessed = this.gameState.turn;
-			this.gameStateManager.updateState(this.gameState);
-			this.updateStores();
+			t('mgrUpdate', () => this.gameStateManager!.updateState(this.gameState!));
+			// Throttled UI push: refresh the store value every tick, notify
+			// subscribers at ~15 Hz (see UI_PUSH_INTERVAL).
+			t('uiPush', () => {
+				this.uiPushCounter = (this.uiPushCounter + 1) % UI_PUSH_INTERVAL;
+				gameState.pushFromEngine(this.gameState!, this.uiPushCounter === 0);
+			});
+
+			if (prof && this.gameState.turn % TICKS_PER_SECOND === 0) {
+				const out: Record<string, string> = {};
+				let total = 0;
+				for (const k of Object.keys(prof)) {
+					const e = prof[k];
+					out[k] = (e.sum / e.n).toFixed(3) + 'ms';
+					total += e.sum / e.n;
+				}
+				out.TOTAL = total.toFixed(3) + 'ms';
+				(globalThis as any).__profOut = out;
+				console.log('[PROF] ' + JSON.stringify(out));
+				for (const k of Object.keys(prof)) { prof[k].sum = 0; prof[k].n = 0; }
+			}
 
 			return {
 				success: true,
@@ -803,6 +850,21 @@ export class GameEngineImpl implements GameEngine {
 
 // Export singleton
 export const gameEngine = new GameEngineImpl();
+
+// Dev console helper: toggle the on-demand per-phase turn profiler.
+//   profileTurns()       → start profiling (logs avg phase ms as [PROF] each second)
+//   profileTurns(false)  → stop profiling
+// Results are also available at globalThis.__profOut. Off by default — adds zero
+// cost to the tick loop until enabled.
+if (typeof globalThis !== 'undefined' && import.meta.env?.DEV) {
+	(globalThis as any).profileTurns = (enable = true) => {
+		(globalThis as any).__profileTurns = !!enable;
+		(globalThis as any).__prof = {};
+		return enable
+			? 'Turn profiler ON — avg phase timings log as [PROF] every second.'
+			: 'Turn profiler OFF.';
+	};
+}
 
 export function initializeGameEngine(gameStateManager: GameStateManager): GameEngineImpl {
 	gameEngine.setGameStateManager(gameStateManager);

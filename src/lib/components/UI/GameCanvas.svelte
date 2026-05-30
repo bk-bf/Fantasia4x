@@ -66,6 +66,12 @@
   let errorMsg = '';
   let worldMap: WorldTile[][] = [];
 
+  // Previous references for terrain-rebuild change detection (see gameState.subscribe).
+  let _prevWorldMap: unknown;
+  let _prevBuildings: unknown;
+  let _prevDesignations: unknown;
+  let _prevDroppedItems: unknown;
+
   // Viewport offset in tile coordinates
   let viewX = 0;
   let viewY = 0;
@@ -362,6 +368,19 @@
     buildings = s.buildings ?? [];
     designations = s.designations ?? {};
     droppedItems = s.droppedItems ?? [];
+    // Only the terrain layer is expensive to rebuild (buildGameGrid scans the
+    // whole 240×160 map). It only changes when one of these references changes —
+    // pawns are rendered as a separate per-frame overlay, so pawn-only ticks need
+    // no terrain rebuild. Skipping unchanged rebuilds is the main perf win.
+    const terrainChanged =
+      worldMap !== _prevWorldMap ||
+      buildings !== _prevBuildings ||
+      designations !== _prevDesignations ||
+      droppedItems !== _prevDroppedItems;
+    _prevWorldMap = worldMap;
+    _prevBuildings = buildings;
+    _prevDesignations = designations;
+    _prevDroppedItems = droppedItems;
     // Day/night: update ambient uniforms whenever the turn changes
     if (renderer?.isReady()) {
       const { light, tint } = environmentService.getAmbient(s.turn);
@@ -382,7 +401,7 @@
     }
     if (renderer?.isReady()) {
       if (worldMap.length > 0) {
-        redrawOverlay();
+        if (terrainChanged) redrawOverlay();
       } else {
         renderer.setGrid(generatePlaceholderGrid());
       }

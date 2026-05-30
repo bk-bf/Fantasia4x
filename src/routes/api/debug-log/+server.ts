@@ -12,9 +12,12 @@
  *  - No user-controlled data influences the file path.
  */
 
-import { appendFileSync, mkdirSync, existsSync } from 'node:fs';
+import { appendFileSync, writeFileSync, mkdirSync, existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import type { RequestHandler } from './$types';
+
+/** Clear the log file once it grows past this size (bytes). */
+const MAX_LOG_BYTES = 500 * 1024 * 1024; // 500 MB
 
 export const POST: RequestHandler = async ({ request }) => {
     // No-op outside development so the route can safely be left in the build.
@@ -51,7 +54,25 @@ export const POST: RequestHandler = async ({ request }) => {
     const logDir = join(process.cwd(), '.debug');
     if (!existsSync(logDir)) mkdirSync(logDir, { recursive: true });
 
-    appendFileSync(join(logDir, 'game.log'), safeLines.join('\n') + '\n', 'utf8');
+    const logFile = join(logDir, 'game.log');
+    const payload = safeLines.join('\n') + '\n';
+
+    // Size-capped rotation: if the file has grown past MAX_LOG_BYTES, clear it
+    // (overwrite) instead of appending. Keeps full per-turn granularity while
+    // bounding disk use — even at 60 ticks/s the file simply resets when full.
+    let size = 0;
+    try {
+        size = statSync(logFile).size;
+    } catch {
+        size = 0;
+    }
+
+    if (size >= MAX_LOG_BYTES) {
+        const banner = `=== log reset at ${new Date().toISOString()} (exceeded ${MAX_LOG_BYTES} bytes) ===\n`;
+        writeFileSync(logFile, banner + payload, 'utf8');
+    } else {
+        appendFileSync(logFile, payload, 'utf8');
+    }
 
     return new Response(null, { status: 204 });
 };
