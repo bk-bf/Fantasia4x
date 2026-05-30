@@ -39,6 +39,14 @@ export class WebGLRenderer {
 	}
 
 	/**
+	 * Inject (or clear) the entity-overlay grid (pawns/items). Rendered as a
+	 * glyph-only, alpha-blended pass on top of the terrain grid.
+	 */
+	setOverlayGrid(grid: GameGrid | null): void {
+		this.core.setOverlayGrid(grid);
+	}
+
+	/**
 	 * Set the viewport tile offset (top-left corner).
 	 */
 	setViewTileOffset(x: number, y: number): void {

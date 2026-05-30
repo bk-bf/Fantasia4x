@@ -12,6 +12,9 @@ in vec3 v_light;     // Interpolated per-tile light (ambient + point lights)
 
 uniform sampler2D u_fontAtlas;
 uniform vec2 u_texelSize;  // (1/atlasWidth, 1/atlasHeight)
+// Overlay mode: 0 = opaque tile (background fills the cell), 1 = glyph-only
+// (transparent background) so entities composite over the terrain layer below.
+uniform float u_glyphOnly;
 
 out vec4 fragColor;
 
@@ -47,6 +50,13 @@ void main() {
     //   bright pixels → v_detail    (highlight / shading layer)
     float luma = dot(sprite.rgb, vec3(0.299, 0.587, 0.114));
     vec3 tinted = mix(v_foreground, v_detail, luma);
+
+    // Glyph-only overlay pass: draw only the glyph, transparent elsewhere, so the
+    // terrain rendered underneath shows through (no opaque background quad).
+    if (u_glyphOnly > 0.5) {
+        fragColor = vec4(tinted * v_light, sprite.a);
+        return;
+    }
 
     // Composite: background fills the full tile, glyph blends on top.
     vec3 lit = mix(v_background, tinted, sprite.a);

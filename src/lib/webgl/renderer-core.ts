@@ -69,6 +69,10 @@ export class WebGLRendererCore {
 
 	// External grid data
 	private gameGrid: GameGrid | null = null;
+	// Sparse entity-overlay grid (pawns, dropped items…) rendered as a second,
+	// alpha-blended pass on top of the terrain grid so entities never destroy the
+	// terrain glyph in their cell and can slide smoothly between tiles.
+	private overlayGrid: GameGrid | null = null;
 
 	// Day/night ambient (Phase A — EnvironmentService drives these each turn)
 	private ambientLight = 1.0;
@@ -113,6 +117,11 @@ export class WebGLRendererCore {
 	/** Inject the game grid to render. Call whenever the world changes. */
 	setGrid(grid: GameGrid): void {
 		this.gameGrid = grid;
+	}
+
+	/** Inject the entity-overlay grid (pawns/items) rendered on top of the terrain. */
+	setOverlayGrid(grid: GameGrid | null): void {
+		this.overlayGrid = grid;
 	}
 
 	/** Set the top-left viewport tile position. */
@@ -270,6 +279,10 @@ export class WebGLRendererCore {
 		const viewportTilesW = Math.ceil(this.viewport.width / this.tileWidth);
 		const viewportTilesH = Math.ceil(this.viewport.height / this.tileHeight);
 
+		const lightTime = performance.now() / 1000;
+
+		// Terrain pass — opaque, fills every cell background.
+		this.shaderManager.setUniform('tileRenderer', 'u_glyphOnly', 0);
 		const gridStats = this.gridRenderer.renderGrid(this.gameGrid, {
 			tileWidth: this.tileWidth,
 			tileHeight: this.tileHeight,
@@ -278,11 +291,34 @@ export class WebGLRendererCore {
 			viewportWidth: viewportTilesW,
 			viewportHeight: viewportTilesH,
 			lightSampler: this.lightSampler ?? undefined,
-			lightTime: performance.now() / 1000
+			lightTime
 		});
 
 		this.stats.drawCalls++;
 		this.stats.vertexCount += gridStats.tilesRendered * 6;
+
+		// Entity overlay pass — glyph-only, alpha-blended on top of the terrain so
+		// the tile underneath a pawn keeps rendering and motion can be sub-tile.
+		if (this.overlayGrid) {
+			gl.enable(gl.BLEND);
+			gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+			this.shaderManager.setUniform('tileRenderer', 'u_glyphOnly', 1);
+			const overlayStats = this.gridRenderer.renderGrid(this.overlayGrid, {
+				tileWidth: this.tileWidth,
+				tileHeight: this.tileHeight,
+				viewportX: this.viewTileX,
+				viewportY: this.viewTileY,
+				viewportWidth: viewportTilesW,
+				viewportHeight: viewportTilesH,
+				lightSampler: this.lightSampler ?? undefined,
+				lightTime,
+				renderAllTiles: true
+			});
+			this.shaderManager.setUniform('tileRenderer', 'u_glyphOnly', 0);
+			gl.disable(gl.BLEND);
+			this.stats.drawCalls++;
+			this.stats.vertexCount += overlayStats.tilesRendered * 6;
+		}
 	}
 
 	endFrame(): void {

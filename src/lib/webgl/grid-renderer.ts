@@ -27,6 +27,9 @@ export interface GridRenderOptions {
 	// When absent, tiles render fully lit ([1,1,1]).
 	lightSampler?: (wx: number, wy: number, time: number) => [number, number, number];
 	lightTime?: number;   // seconds, snapshot once per frame for seamless flicker
+	// When true, render every tile stored in the grid (skip viewport culling).
+	// Used for the sparse entity-overlay grid which holds only a handful of tiles.
+	renderAllTiles?: boolean;
 }
 
 export interface GridRenderStats {
@@ -94,8 +97,12 @@ export class GridRenderer {
 			height: options.viewportHeight
 		};
 
-		// Get visible tiles using efficient culling
-		const visibleTiles = grid.getVisibleTiles(viewport);
+		// Get visible tiles using efficient culling. The sparse overlay grid asks
+		// for all tiles instead (it holds only entities, so culling would waste a
+		// full viewport scan to find a handful of cells).
+		const visibleTiles = options.renderAllTiles
+			? grid.getAllTiles()
+			: grid.getVisibleTiles(viewport);
 
 		if (this.debug) {
 			console.log(`🎯 Rendering ${visibleTiles.length} visible tiles in viewport ${viewport.width}x${viewport.height}`);

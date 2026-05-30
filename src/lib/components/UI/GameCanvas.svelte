@@ -13,6 +13,7 @@
     DroppedItem
   } from '$lib/game/core/types.js';
   import type { GameGrid } from '$lib/webgl/game-grid.js';
+  import { GameGrid as GameGridClass } from '$lib/webgl/game-grid.js';
   import { wasmPathfinderService } from '$lib/game/services/WasmPathfinderService.js';
   import { pawnService } from '$lib/game/services/PawnService.js';
   import { buildPathfindingGrids } from '$lib/game/services/PathfinderService.js';
@@ -22,9 +23,11 @@
   import { glyph, SHEET } from '$lib/webgl/tilesets.js';
   import { uiState } from '$lib/stores/uiState.js';
   import { worldEffects } from '$lib/stores/worldEffects.js';
+  import { renderFps } from '$lib/stores/perfStats.js';
   import { buildingService } from '$lib/game/services/BuildingService.js';
   import { resolveCharSpans, BIOMES, SUBTERRAINS } from '$lib/game/core/Terrains.js';
   import { resourceObjectService } from '$lib/game/services/ResourceObjectService.js';
+  import { TICKS_PER_SECOND } from '$lib/game/core/time.js';
 
   // Tile size range for zoom (square cells for CoQ sprite-mode)
   // MAP_W / MAP_H must match the generateWorld() call in gameState.ts
@@ -79,6 +82,18 @@
   let pawns: Pawn[] = [];
   let selectedPawnId: string | null = null;
   let cameraFollowPawnId: string | null = null;
+
+  // Entity-overlay layer: pawns are drawn into their own sparse grid rendered as
+  // a glyph-only pass ON TOP of the terrain (see renderer setOverlayGrid). This
+  // keeps the terrain tile beneath a pawn intact and lets us interpolate motion
+  // every animation frame, independent of the simulation tick rate.
+  const pawnOverlayGrid: GameGrid = new GameGridClass();
+  // Per-pawn rendered position in float world-tile coords, eased toward the
+  // simulation's authoritative sub-tile position each frame for smooth 60fps motion.
+  const pawnRenderPos = new Map<string, { x: number; y: number }>();
+  let lastFrameTime = 0;
+  // Smoothing time-constant (seconds). Lower = snappier, higher = smoother/laggier.
+  const MOVE_SMOOTH_TAU = 0.06;
 
   // Sleeping overlays: push to worldEffectsStore so WorldEffectsLayer renders them
   // at the correct z-index (above tiles, below popup panels).
@@ -394,35 +409,88 @@
     return { r: 1, g: 1, b: 1 };
   }
 
-  function overlayPawns(grid: GameGrid, pawnList: Pawn[], selectedId: string | null) {
-    for (let i = 0; i < pawnList.length; i++) {
-      const pawn = pawnList[i];
+  /**
+   * Authoritative sub-tile target for a pawn in float world-tile coords. The sim
+   * Authoritative sub-tile target for a pawn in float world-tile coords. The sim
+   * only updates pawn.position when a pawn fully crosses into the next tile, so we
+   * read how much of the entering cell's cost has been paid to recover the fraction.
+   */
+  function pawnSimTarget(pawn: Pawn): { x: number; y: number } {
+    const { x, y } = pawn.position!;
+    if (pawn.isMoving && pawn.path && pawn.path.length > 0) {
+      const next = pawn.path[pawn.pathIndex ?? 0];
+      if (next && (next.x !== x || next.y !== y)) {
+        const dx = next.x - x;
+        const dy = next.y - y;
+        // Mirror PawnService.costToEnter so progress matches the sim exactly.
+        const wt = worldMap[next.y]?.[next.x];
+        const baseCost = wt && wt.movementCost > 0 ? wt.movementCost : 1;
+        const diagonal = dx !== 0 && dy !== 0 ? Math.SQRT2 : 1;
+        const totalCost = baseCost * diagonal * TICKS_PER_SECOND;
+        const costLeft = pawn.nextCellCostLeft ?? totalCost;
+        const progress = Math.min(1, Math.max(0, 1 - costLeft / totalCost));
+        return { x: x + dx * progress, y: y + dy * progress };
+      }
+    }
+    return { x, y };
+  }
+
+  /**
+   * Rebuild the pawn overlay grid every animation frame, easing each pawn's
+   * rendered position toward the simulation target using real elapsed time. This
+   * decouples visual smoothness from the simulation tick rate (buttery 60fps even
+   * when the sim runs at ~22 TPS) and renders pawns as a transparent layer above
+   * the terrain so the tile beneath them is never blanked out.
+   */
+  function updatePawnOverlay(dt: number) {
+    pawnOverlayGrid.clear();
+    const seen = new Set<string>();
+    // Exponential smoothing factor for this frame's elapsed time.
+    const alpha = dt > 0 ? 1 - Math.exp(-dt / MOVE_SMOOTH_TAU) : 1;
+
+    for (let i = 0; i < pawns.length; i++) {
+      const pawn = pawns[i];
       if (!pawn.position) continue;
-      const { x, y } = pawn.position;
-      const isSelected = pawn.id === selectedId;
+      seen.add(pawn.id);
+
+      const target = pawnSimTarget(pawn);
+      let rp = pawnRenderPos.get(pawn.id);
+      if (!rp || Math.abs(rp.x - target.x) > 2 || Math.abs(rp.y - target.y) > 2) {
+        // First sighting or a teleport/path-jump — snap, don't slide across the map.
+        rp = { x: target.x, y: target.y };
+      } else {
+        rp.x += (target.x - rp.x) * alpha;
+        rp.y += (target.y - rp.y) * alpha;
+      }
+      pawnRenderPos.set(pawn.id, rp);
+
+      // Owning cell = nearest integer tile; offset keeps the glyph within ±0.5 tile.
+      const cellX = Math.round(rp.x);
+      const cellY = Math.round(rp.y);
+      const isSelected = pawn.id === selectedPawnId;
       const isSleeping = pawn.currentState === 'Sleeping';
       const isCriticallyHungry = (pawn.needs?.hunger ?? 0) >= 85;
-
-      // Color: blue for sleeping, orange for critically hungry, white otherwise
       const baseColor = isSleeping
         ? { r: 0.35, g: 0.45, b: 1.0 }
         : isCriticallyHungry
           ? { r: 1.0, g: 0.45, b: 0.05 }
           : { r: 1, g: 1, b: 1 };
 
-      grid.setTile(x, y, {
+      pawnOverlayGrid.setTile(cellX, cellY, {
         char: PAWN_SPRITES[i % PAWN_SPRITES.length],
         foreground: isSelected ? { r: 1.0, g: 0.9, b: 0.1 } : baseColor,
-        background: isSelected
-          ? {
-              r: (grid.getTile(x, y)?.background.r ?? 0) * 0.2 + 0.38,
-              g: (grid.getTile(x, y)?.background.g ?? 0) * 0.2 + 0.3,
-              b: (grid.getTile(x, y)?.background.b ?? 0) * 0.1
-            }
-          : (grid.getTile(x, y)?.background ?? { r: 0, g: 0, b: 0 }),
-        position: { x, y },
+        background: { r: 0, g: 0, b: 0 },
+        position: { x: cellX, y: cellY },
+        animationOffset: { x: (rp.x - cellX) * tileWidth, y: (rp.y - cellY) * tileHeight },
         rotation: isSleeping ? 90 : undefined
       });
+    }
+
+    // Drop render state for pawns that no longer exist.
+    if (seen.size !== pawnRenderPos.size) {
+      for (const id of pawnRenderPos.keys()) {
+        if (!seen.has(id)) pawnRenderPos.delete(id);
+      }
     }
   }
 
@@ -458,7 +526,6 @@
     if (!renderer?.isReady() || worldMap.length === 0) return;
     const grid = buildGameGrid(worldMap, buildings, designations);
     overlayDroppedItems(grid, droppedItems);
-    overlayPawns(grid, pawns, selectedPawnId);
 
     // Zone drag-paint preview
     if (zoneDragActive && designationMode) {
@@ -918,7 +985,6 @@
           ? buildGameGrid(worldMap, buildings, designations)
           : generatePlaceholderGrid();
       overlayDroppedItems(grid, droppedItems);
-      overlayPawns(grid, pawns, selectedPawnId);
       renderer.setGrid(grid);
       renderer.setViewTileOffset(viewX, viewY);
       // Phase A2: bake per-tile dynamic lighting into the renderer each frame.
@@ -960,10 +1026,23 @@
   }
 
   function startLoop() {
+    let lastFpsPush = 0;
     function frame() {
       if (!renderer || !ready) return;
+      // Real elapsed time drives interpolation so motion is smooth at the display
+      // refresh rate regardless of how fast/slow the simulation ticks.
+      const now = performance.now();
+      const dt = lastFrameTime ? (now - lastFrameTime) / 1000 : 0;
+      lastFrameTime = now;
+      updatePawnOverlay(dt);
+      renderer.setOverlayGrid(pawnOverlayGrid);
       renderer.beginFrame();
       renderer.endFrame();
+      // Surface render FPS to the topbar ~4×/sec to avoid store churn.
+      if (now - lastFpsPush > 250) {
+        lastFpsPush = now;
+        renderFps.set(Math.round(renderer.getStats().fps));
+      }
       animationId = requestAnimationFrame(frame);
     }
     frame();

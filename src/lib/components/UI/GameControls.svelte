@@ -2,6 +2,7 @@
   import { browser } from '$app/environment';
   import { gameState, currentTurn, savedStateReady } from '$lib/stores/gameState';
   import { uiState } from '$lib/stores/uiState';
+  import { renderFps } from '$lib/stores/perfStats';
   import { wasmPathfinderService } from '$lib/game/services/WasmPathfinderService';
   import { TICKS_PER_SECOND } from '$lib/game/core/time';
   import { onMount, onDestroy } from 'svelte';
@@ -11,6 +12,10 @@
   let currentTurnValue = 0;
   let currentScreen = 'main';
   let mapSeedInput = String(Date.now() >>> 0);
+
+  // ===== PERFORMANCE TRACKERS =====
+  let fps = 0; // render frames/sec (from the WebGL canvas)
+  let tps = 0; // simulation ticks/sec (measured from the turn counter)
 
   // ===== IN-GAME CALENDAR =====
   const TURNS_PER_DAY = 300; // 1 in-game day = 300 in-game seconds; turn counts ticks
@@ -85,6 +90,12 @@
   const unsubSpeed = gameState.gameSpeed.subscribe((v) => (gameSpeed = v));
   const unsubTurn = currentTurn.subscribe((v) => (currentTurnValue = v));
   const unsubUI = uiState.subscribe((s) => (currentScreen = s.currentScreen));
+  const unsubFps = renderFps.subscribe((v) => (fps = v));
+
+  // Measure real simulation throughput by sampling the tick counter once a second.
+  let tpsTimer: ReturnType<typeof setInterval> | undefined;
+  let lastSampleTurn = 0;
+  let lastSampleTime = 0;
 
   onMount(async () => {
     if (!browser) return;
@@ -96,14 +107,28 @@
     wasmPathfinderService.init().catch((err) => {
       console.warn('[WASM] Pathfinder failed to load — pawns will stay idle until resolved:', err);
     });
+
+    lastSampleTurn = currentTurnValue;
+    lastSampleTime = performance.now();
+    tpsTimer = setInterval(() => {
+      const now = performance.now();
+      const elapsed = (now - lastSampleTime) / 1000;
+      if (elapsed > 0) {
+        tps = Math.round((currentTurnValue - lastSampleTurn) / elapsed);
+      }
+      lastSampleTurn = currentTurnValue;
+      lastSampleTime = now;
+    }, 1000);
   });
 
   onDestroy(() => {
     if (browser) gameState.stopAutoTurns();
+    if (tpsTimer) clearInterval(tpsTimer);
     unsubPaused();
     unsubSpeed();
     unsubTurn();
     unsubUI();
+    unsubFps();
   });
 
   function wipeSave() {
@@ -119,6 +144,9 @@
     >{gameDate.dayStr}/{gameDate.monthStr}/{gameDate.yearStr} {gameDate.hourStr}:00</span
   >
   <span class="bi turn" title="Turn {currentTurnValue}">T{currentTurnValue}</span>
+  <span class="bi perf" title="Render {fps} FPS · Simulation {tps}/{TICKS_PER_SECOND} TPS"
+    >{fps}FPS · {tps}TPS</span
+  >
   <span class="bi" class:running={!isPaused} class:paused={isPaused}>
     {isPaused ? '■ PAUSED' : '● RUNNING'}
   </span>
@@ -200,6 +228,11 @@
   .bi.turn {
     color: var(--text-muted);
     font-size: 10px;
+  }
+  .bi.perf {
+    color: var(--text-dim);
+    font-size: 10px;
+    letter-spacing: 0.02em;
   }
   .bi.running {
     color: var(--pos);

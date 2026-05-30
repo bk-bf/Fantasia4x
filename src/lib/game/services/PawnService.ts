@@ -75,6 +75,14 @@ export interface PawnService {
 	assignPath(pawnId: string, path: { x: number; y: number }[], gameState: GameState): GameState;
 	teleportPawn(pawnId: string, pos: { x: number; y: number }, gameState: GameState): GameState;
 	processMovement(gameState: GameState): GameState;
+
+	/**
+	 * Stat-derived movement speed in tiles/second on open (movementCost 1) terrain.
+	 * Calibrated so an all-average pawn (DEX 10, balanced weight, healthy legs,
+	 * rested & fed) walks at ≈4 tiles/s — the RimWorld baseline. `sources` lists
+	 * each contributing factor for UI display.
+	 */
+	getMoveSpeed(pawn: Pawn): { tilesPerSecond: number; sources: string[] };
 }
 
 /**
@@ -1158,6 +1166,70 @@ export class PawnServiceImpl implements PawnService {
 	}
 
 	/**
+	 * Stat-derived walking speed in tiles/second on open (movementCost 1) terrain.
+	 * Multiplicative model where every factor is ×1.0 for an all-average pawn, so
+	 * the baseline lands on the RimWorld-ish 4 tiles/s. Factors:
+	 *   • Dexterity — nimbleness (DEX 10 = ×1.0)
+	 *   • Body load — own weight carried by strength (weight ≈ STR×6kg = ×1.0)
+	 *   • Legs — each leg ≈ half of locomotion; missing/injured legs cripple speed
+	 *   • Needs — hunger/fatigue above 50% progressively slow the pawn
+	 *   • Effects — status-effect & condition moveSpeed multipliers
+	 */
+	getMoveSpeed(pawn: Pawn): { tilesPerSecond: number; sources: string[] } {
+		const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
+		const sources: string[] = [];
+
+		const base = 4.0; // tiles/s on open terrain at all-average stats
+
+		// Dexterity: average (10) → ×1.0; capped so extremes stay sane.
+		const dex = pawn.stats?.dexterity ?? 10;
+		const dexFactor = clamp(0.5 + dex / 20, 0.4, 1.8);
+		sources.push(`DEX ${dex} ×${dexFactor.toFixed(2)}`);
+
+		// Body load: own bodyweight carried by strength-derived capacity.
+		const str = pawn.stats?.strength ?? 10;
+		const weight = pawn.physicalTraits?.weight ?? 60;
+		const capacity = Math.max(1, str * 6); // STR 10 ≈ 60 kg comfortable
+		const weightFactor = clamp(1.15 - 0.15 * (weight / capacity), 0.65, 1.1);
+		sources.push(`${weight}kg/STR${str} ×${weightFactor.toFixed(2)}`);
+
+		// Legs: average leg health fraction; missing legs count as 0.
+		let legFactor = 1;
+		const legs = (pawn.limbs ?? []).filter((l) => l.id === 'left_leg' || l.id === 'right_leg');
+		if (legs.length > 0) {
+			const locomotion =
+				legs.reduce((sum, l) => sum + (l.isMissing ? 0 : l.health / 100), 0) / legs.length;
+			legFactor = clamp(locomotion, 0.1, 1);
+			if (legFactor < 0.999) sources.push(`legs ×${legFactor.toFixed(2)}`);
+		}
+
+		// Needs: hunger & fatigue above the halfway mark drag speed down.
+		const hunger = pawn.needs?.hunger ?? 0;
+		const fatigue = pawn.needs?.fatigue ?? 0;
+		const hungerPenalty = Math.max(0, (hunger - 50) / 50) * 0.25;
+		const fatiguePenalty = Math.max(0, (fatigue - 50) / 50) * 0.25;
+		const needsFactor = clamp(1 - hungerPenalty - fatiguePenalty, 0.5, 1);
+		if (needsFactor < 0.999) sources.push(`needs ×${needsFactor.toFixed(2)}`);
+
+		// Status effects + condition stages that modify movement.
+		let effectFactor = getActiveEffects(pawn).reduce(
+			(r, e) => r * (e.modifiers.moveSpeed ?? 1),
+			1
+		);
+		for (const c of pawn.conditions ?? []) {
+			const stage = getConditionCurrentStage(c);
+			if (stage?.modifiers.moveSpeed != null) effectFactor *= stage.modifiers.moveSpeed;
+		}
+		if (Math.abs(effectFactor - 1) > 0.001) sources.push(`effects ×${effectFactor.toFixed(2)}`);
+
+		const tilesPerSecond = Math.max(
+			0.05,
+			base * dexFactor * weightFactor * legFactor * needsFactor * effectFactor
+		);
+		return { tilesPerSecond, sources };
+	}
+
+	/**
 	 * Advance pawn movement by ONE simulation tick (called every tick at 60 Hz,
 	 * not once per turn). RimWorld-style budget drain: each tick a pawn spends
 	 * `speed` cost-units, and entering a cell costs `movementCost × TICKS_PER_SECOND`
@@ -1167,7 +1239,6 @@ export class PawnServiceImpl implements PawnService {
 	 */
 	processMovement(gameState: GameState): GameState {
 		let state = gameState;
-
 		// Cost (in ticks) to step from `from` into `to`, based on the destination
 		// tile's movementCost. Mirrors PathfinderService's `movementCost > 0 ? : 1`.
 		const costToEnter = (
@@ -1196,11 +1267,10 @@ export class PawnServiceImpl implements PawnService {
 			const startPos = pawn.position;
 			if (!startPos) continue;
 
-			// Cost-units spendable this tick. Continuous (no flooring) so fractional
-			// moveSpeed effects and dexterity scale smoothly at tick resolution.
-			const baseSpeed = Math.max(1, (pawn.stats.dexterity ?? 10) / 20);
-			const moveRate = getActiveEffects(pawn).reduce((r, e) => r * (e.modifiers.moveSpeed ?? 1), 1);
-			let budget = Math.max(0.01, baseSpeed * moveRate);
+			// Cost-units spendable this tick. On open terrain a tile costs
+			// TICKS_PER_SECOND units, so spending `tilesPerSecond` units/tick yields
+			// exactly that many tiles per second (see getMoveSpeed for the formula).
+			let budget = Math.max(0.01, this.getMoveSpeed(pawn).tilesPerSecond);
 
 			let idx = pawn.pathIndex ?? 0;
 			let pos = startPos;

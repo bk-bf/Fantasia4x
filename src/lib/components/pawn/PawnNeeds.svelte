@@ -15,6 +15,7 @@
   } from '$lib/utils/pawnUtils';
   import statusEffectsData from '$lib/game/database/status-effects.jsonc';
   import conditionsData from '$lib/game/database/conditions.jsonc';
+  import { pawnService } from '$lib/game/services/PawnService';
 
   const STATUS_EFFECTS_DB = statusEffectsData as unknown as StatusEffectDef[];
   const CONDITIONS_DB = conditionsData as unknown as ConditionDef[];
@@ -22,13 +23,12 @@
   export let pawn: Pawn;
   export let gameState: GameState;
 
-  $: needs = pawn.needs;
-
-  function blockBar(value: number, width = 20): string {
+  $: needs = pawn.needs;  function blockBar(value: number, width = 20): string {
     const filled = Math.max(0, Math.min(width, Math.round((value / 100) * width)));
     return '[' + '█'.repeat(filled) + '░'.repeat(width - filled) + ']';
   }
   $: taskSummary = getPawnTaskSummary(pawn, gameState);
+  $: moveSpeed = pawnService.getMoveSpeed(pawn);
   $: activeEffects = (pawn.activeEffects ?? [])
     .map((id) => STATUS_EFFECTS_DB.find((e) => e.id === id))
     .filter((e): e is StatusEffectDef => e !== undefined);
@@ -112,6 +112,12 @@
       <span class="info-val"
         >{pawn.physicalTraits.size} · {pawn.physicalTraits.height}cm {pawn.physicalTraits
           .weight}kg</span
+      >
+    </div>
+    <div class="info-col">
+      <span class="lbl">SPEED</span>
+      <span class="info-val" title={moveSpeed.sources.join('  ')}
+        >{moveSpeed.tilesPerSecond.toFixed(1)} t/s</span
       >
     </div>
     <div class="info-span">
