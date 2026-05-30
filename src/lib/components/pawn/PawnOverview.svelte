@@ -39,7 +39,7 @@
   <div class="row">
     <span class="lbl">MOOD</span>
     <span class="val" style="color: {getMoodColor(pawn.state.mood)}"
-      >{pawn.state.mood}% — {getMoodDescription(pawn.state.mood)}</span
+      >{Math.round(pawn.state.mood)}% — {getMoodDescription(pawn.state.mood)}</span
     >
   </div>
   <div class="row">

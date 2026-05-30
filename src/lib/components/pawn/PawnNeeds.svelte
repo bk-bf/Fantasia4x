@@ -23,7 +23,8 @@
   export let pawn: Pawn;
   export let gameState: GameState;
 
-  $: needs = pawn.needs;  function blockBar(value: number, width = 20): string {
+  $: needs = pawn.needs;
+  function blockBar(value: number, width = 20): string {
     const filled = Math.max(0, Math.min(width, Math.round((value / 100) * width)));
     return '[' + '█'.repeat(filled) + '░'.repeat(width - filled) + ']';
   }
@@ -100,7 +101,7 @@
     <div class="info-col">
       <span class="lbl">MOOD</span>
       <span class="info-val" style="color: {getMoodColor(pawn.state.mood)}"
-        >{pawn.state.mood}% — {getMoodDescription(pawn.state.mood)}</span
+        >{Math.round(pawn.state.mood)}% — {getMoodDescription(pawn.state.mood)}</span
       >
     </div>
     <div class="info-col">

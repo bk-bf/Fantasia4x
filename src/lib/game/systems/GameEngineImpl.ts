@@ -283,13 +283,9 @@ export class GameEngineImpl implements GameEngine {
 			// Increment the tick counter (gameState.turn counts ticks).
 			this.gameState.turn += 1;
 
-			// Continuous accrual every tick (smooth bars; per-second totals preserved).
 			this.gameState = pawnService.processNeedsTick(this.gameState);
 			this.gameState = researchService.processResearchTick(this.gameState);
-
-			// COORDINATION: Delegate to services for all system processing
 			this.gameState = workService.ensureBasicWorkAssignments(this.gameState);
-			// Phase 5a: sync job pool BEFORE pawn processing
 			this.gameState = jobService.generateJobs(this.gameState);
 			this.processBuildings();
 			this.processCrafting();
