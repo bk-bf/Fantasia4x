@@ -115,6 +115,40 @@ class LightingServiceImpl {
 
         return [Math.min(r, MAX_LIGHT), Math.min(g, MAX_LIGHT), Math.min(b, MAX_LIGHT)];
     }
+
+    /**
+     * Sample ONLY the additive point-light contribution at a world tile corner
+     * (no ambient). The renderer bakes this into the vertex buffer and adds the
+     * global day/night ambient as a shader uniform, so ambient changes never
+     * force a vertex-buffer rebuild. Returns [0,0,0] when no emitter is in range.
+     */
+    samplePointOnly(wx: number, wy: number, time: number): [number, number, number] {
+        let r = 0;
+        let g = 0;
+        let b = 0;
+        for (let i = 0; i < this.emitters.length; i++) {
+            const e = this.emitters[i];
+            const dx = wx - e.x - 0.5;
+            const dy = wy - e.y - 0.5;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist >= e.radius) continue;
+
+            const d = dist / e.radius;
+            const falloff = (1 - d) * (1 - d);
+            const flick = e.flicker ? fireFlicker(time, i) : 1.0;
+            const add = e.intensity * falloff * flick;
+
+            r += e.color[0] * add;
+            g += e.color[1] * add;
+            b += e.color[2] * add;
+        }
+        return [r, g, b];
+    }
+
+    /** Whether any point-light emitters are currently active. */
+    hasEmitters(): boolean {
+        return this.emitters.length > 0;
+    }
 }
 
 /**

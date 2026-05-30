@@ -36,6 +36,10 @@ export interface GridRenderOptions {
 	// regenerating tens of thousands of static terrain tiles every single frame.
 	// Omit for layers whose content changes every frame (e.g. the pawn overlay).
 	cacheVersion?: number;
+	// Whether any flickering point-light emitters are currently lit. When false,
+	// the baked additive light is constant 0 and the terrain cache never rebuilds
+	// for lighting; when true it refreshes at ~10 Hz to animate the flicker.
+	pointLightActive?: boolean;
 }
 
 export interface GridRenderStats {
@@ -160,17 +164,20 @@ export class GridRenderer {
 			return this.generateBatchVertexData(tiles, options);
 		}
 
-		// Day/night light changes very slowly, so snap it to a coarse bucket
-		// (~4×/sec) rather than invalidating the cache every frame.
-		const LIGHT_REFRESH_SEC = 0.25;
-		const lightBucket = Math.floor((options.lightTime ?? 0) / LIGHT_REFRESH_SEC);
+		// Geometry is now camera-independent (pan/zoom applied via shader uniforms,
+		// ambient via uniform), so the terrain buffer only needs rebuilding when:
+		//   - the grid content changes (cacheVersion bump),
+		//   - the zoom (tile pixel size) changes, or
+		//   - active flickering point lights animate. When no emitters are lit the
+		//     baked additive light is a constant 0, so we never rebuild for light.
+		const lightBucket = options.pointLightActive
+			? Math.floor((options.lightTime ?? 0) / 0.1) // ~10 Hz flicker refresh
+			: 0;
 
 		const c = this.terrainCache;
 		if (
 			c &&
 			c.version === options.cacheVersion &&
-			c.viewX === options.viewportX &&
-			c.viewY === options.viewportY &&
 			c.tileW === options.tileWidth &&
 			c.tileH === options.tileHeight &&
 			c.lightBucket === lightBucket &&
@@ -182,8 +189,8 @@ export class GridRenderer {
 		const data = this.generateBatchVertexData(tiles, options);
 		this.terrainCache = {
 			version: options.cacheVersion,
-			viewX: options.viewportX,
-			viewY: options.viewportY,
+			viewX: 0,
+			viewY: 0,
 			tileW: options.tileWidth,
 			tileH: options.tileHeight,
 			lightBucket,
@@ -249,9 +256,11 @@ export class GridRenderer {
 				// Fall through — render background quad with no glyph
 			}
 
-			// Calculate screen position
-			const screenX = (tile.position.x - options.viewportX) * options.tileWidth;
-			const screenY = (tile.position.y - options.viewportY) * options.tileHeight;
+			// Calculate absolute world pixel position. The camera/pan offset is
+			// applied in the vertex shader (u_viewOffset), so the buffer stays
+			// valid across pans and never needs regenerating just to scroll.
+			const screenX = tile.position.x * options.tileWidth;
+			const screenY = tile.position.y * options.tileHeight;
 
 			// Apply animation offset if present
 			const offsetX = tile.animationOffset?.x || 0;

@@ -8,10 +8,13 @@ in vec3 v_background;
 in vec3 v_detail;
 in vec3 v_outline;
 in vec4 v_uvBounds;  // (uMin, vMin, uMax, vMax) of this glyph in the atlas
-in vec3 v_light;     // Interpolated per-tile light (ambient + point lights)
+in vec3 v_light;     // Interpolated ADDITIVE point-light contribution (0 = none)
 
 uniform sampler2D u_fontAtlas;
 uniform vec2 u_texelSize;  // (1/atlasWidth, 1/atlasHeight)
+// Global day/night ambient (light * tint). Combined per-fragment with the baked
+// additive point light so ambient changes never rebuild the vertex buffer.
+uniform vec3 u_ambient;
 // Overlay mode: 0 = opaque tile (background fills the cell), 1 = glyph-only
 // (transparent background) so entities composite over the terrain layer below.
 uniform float u_glyphOnly;
@@ -19,6 +22,10 @@ uniform float u_glyphOnly;
 out vec4 fragColor;
 
 void main() {
+    // Final light multiplier = day/night ambient + baked additive point lights,
+    // clamped to the same ceiling the CPU lighting model used (MAX_LIGHT = 1.6).
+    vec3 light = min(u_ambient + v_light, vec3(1.6));
+
     vec4 sprite = texture(u_fontAtlas, v_texCoord);
 
     // Outline: if this tile has an outline color and the current fragment is
@@ -39,7 +46,7 @@ void main() {
         float aE = (nE.x <= hi.x) ? texture(u_fontAtlas, nE).a : 0.0;
         float aW = (nW.x >= lo.x) ? texture(u_fontAtlas, nW).a : 0.0;
         if (aN > 0.5 || aS > 0.5 || aE > 0.5 || aW > 0.5) {
-            fragColor = vec4(v_outline * v_light, 1.0);
+            fragColor = vec4(v_outline * light, 1.0);
             return;
         }
     }
@@ -54,11 +61,11 @@ void main() {
     // Glyph-only overlay pass: draw only the glyph, transparent elsewhere, so the
     // terrain rendered underneath shows through (no opaque background quad).
     if (u_glyphOnly > 0.5) {
-        fragColor = vec4(tinted * v_light, sprite.a);
+        fragColor = vec4(tinted * light, sprite.a);
         return;
     }
 
     // Composite: background fills the full tile, glyph blends on top.
     vec3 lit = mix(v_background, tinted, sprite.a);
-    fragColor = vec4(lit * v_light, 1.0);
+    fragColor = vec4(lit * light, 1.0);
 }

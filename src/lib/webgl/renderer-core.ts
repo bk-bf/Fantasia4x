@@ -77,13 +77,19 @@ export class WebGLRendererCore {
 	// terrain glyph in their cell and can slide smoothly between tiles.
 	private overlayGrid: GameGrid | null = null;
 
-	// Day/night ambient (Phase A — EnvironmentService drives these each turn)
+	// Day/night ambient (Phase A — EnvironmentService drives these each turn).
+	// Applied as the u_ambient fragment uniform, combined with the baked additive
+	// point light, so ambient changes never rebuild the terrain vertex buffer.
 	private ambientLight = 1.0;
 	private ambientTint: [number, number, number] = [1.0, 1.0, 1.0];
 
-	// Per-tile dynamic lighting (Phase A2). The sampler bakes ambient + point
-	// lights into the a_light vertex attribute; the fragment shader multiplies by
-	// it directly, so the global ambient uniforms are no longer needed.
+	// Whether flickering point lights (campfires) are currently lit. Drives the
+	// terrain cache's light-refresh gating so a fire-free map never rebuilds.
+	private dynamicLight = false;
+
+	// Per-tile dynamic POINT lighting (Phase A2). The sampler bakes ONLY the
+	// additive point-light contribution into the a_light vertex attribute; the
+	// global ambient is added per-fragment via the u_ambient uniform.
 	private lightSampler: ((wx: number, wy: number, time: number) => [number, number, number]) | null = null;
 
 	// Initialization promise
@@ -138,6 +144,15 @@ export class WebGLRendererCore {
 	setAmbient(light: number, tint: [number, number, number]): void {
 		this.ambientLight = light;
 		this.ambientTint = tint;
+	}
+
+	/**
+	 * Declare whether any flickering point-light emitters are currently lit. When
+	 * false the terrain cache treats baked point light as a constant 0 and never
+	 * rebuilds for lighting; when true it refreshes the lit subset at ~10 Hz.
+	 */
+	setDynamicLight(active: boolean): void {
+		this.dynamicLight = active;
 	}
 
 	/**
@@ -270,6 +285,20 @@ export class WebGLRendererCore {
 		if (!this.shaderManager.useProgram('tileRenderer')) return;
 		this.shaderManager.setUniform('tileRenderer', 'u_projection', this.projectionMatrix);
 
+		// Camera pan is a shader uniform now: terrain geometry is baked in absolute
+		// world pixels and shifted here, so scrolling never rebuilds the buffer.
+		this.shaderManager.setUniform('tileRenderer', 'u_viewOffset', [
+			this.viewTileX * this.tileWidth,
+			this.viewTileY * this.tileHeight
+		]);
+		// Global day/night ambient is a uniform too, combined per-fragment with the
+		// baked additive point light, so ambient changes never rebuild the buffer.
+		this.shaderManager.setUniform('tileRenderer', 'u_ambient', [
+			this.ambientLight * this.ambientTint[0],
+			this.ambientLight * this.ambientTint[1],
+			this.ambientLight * this.ambientTint[2]
+		]);
+
 		gl.activeTexture(gl.TEXTURE0);
 		gl.bindTexture(gl.TEXTURE_2D, this.fontTexture);
 		this.shaderManager.setUniform('tileRenderer', 'u_fontAtlas', 0);
@@ -285,7 +314,8 @@ export class WebGLRendererCore {
 
 		const lightTime = performance.now() / 1000;
 
-		// Terrain pass — opaque, fills every cell background.
+		// Terrain pass — opaque, fills every cell background. Rendered as the full
+		// static map so panning never changes the tile set (cache stays valid).
 		this.shaderManager.setUniform('tileRenderer', 'u_glyphOnly', 0);
 		const gridStats = this.gridRenderer.renderGrid(this.gameGrid, {
 			tileWidth: this.tileWidth,
@@ -296,6 +326,8 @@ export class WebGLRendererCore {
 			viewportHeight: viewportTilesH,
 			lightSampler: this.lightSampler ?? undefined,
 			lightTime,
+			renderAllTiles: true,
+			pointLightActive: this.dynamicLight,
 			cacheVersion: this.gridVersion
 		});
 

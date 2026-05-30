@@ -133,6 +133,14 @@ export class WebGLRenderer {
 	}
 
 	/**
+	 * Declare whether flickering point lights (campfires) are currently lit so the
+	 * terrain cache knows whether baked point light needs animating.
+	 */
+	setDynamicLight(active: boolean): void {
+		this.core.setDynamicLight(active);
+	}
+
+	/**
 	 * Provide the per-tile light sampler (Phase A2). The grid renderer bakes its
 	 * result into the a_light vertex attribute each frame.
 	 */

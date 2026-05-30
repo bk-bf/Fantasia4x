@@ -9,10 +9,12 @@ in vec3 a_background;    // Background (transparent pixel) color
 in vec3 a_detail;        // Detail/highlight (bright glyph pixel) color
 in vec3 a_outline;       // Outline color (vec3(0) = no outline)
 in vec4 a_uvBounds;      // Glyph UV bounds: (uMin, vMin, uMax, vMax)
-in vec3 a_light;         // Per-corner light multiplier (ambient + point lights)
+in vec3 a_light;         // Per-corner ADDITIVE point-light contribution (0 = none)
 
 // Uniforms (constant for all vertices in a draw call)
 uniform mat4 u_projection;  // Orthographic projection matrix
+uniform vec2 u_viewOffset;  // Camera top-left in pixels; applied here so panning
+                            // never requires rebuilding the vertex buffer.
 
 // Varying outputs (passed to fragment shader)
 out vec2 v_texCoord;     // Pass texture coordinates to fragment
@@ -24,8 +26,9 @@ out vec4 v_uvBounds;     // Pass glyph UV bounds to fragment
 out vec3 v_light;        // Interpolated per-tile light across the quad
 
 void main() {
-    // Transform position to clip space using projection matrix
-    gl_Position = u_projection * vec4(a_position, 0.0, 1.0);
+    // a_position holds absolute world pixel coordinates. Subtract the camera
+    // offset here so a pan only changes a uniform, keeping the buffer static.
+    gl_Position = u_projection * vec4(a_position - u_viewOffset, 0.0, 1.0);
     
     // Pass through texture coordinates and colors to fragment shader
     v_texCoord = a_texCoord;

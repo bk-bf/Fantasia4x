@@ -99,8 +99,13 @@
   // simulation's authoritative sub-tile position each frame for smooth 60fps motion.
   const pawnRenderPos = new Map<string, { x: number; y: number }>();
   let lastFrameTime = 0;
+  // Coalesces many per-mousemove preview redraws into one rebuild per frame.
+  let overlayRedrawScheduled = false;
   // Smoothing time-constant (seconds). Lower = snappier, higher = smoother/laggier.
   const MOVE_SMOOTH_TAU = 0.06;
+  // Follow-camera smoothing constant (seconds). Slightly looser than pawn motion
+  // so the camera trails gently rather than rigidly locking to the pawn.
+  const FOLLOW_SMOOTH_TAU = 0.12;
 
   // Sleeping overlays: push to worldEffectsStore so WorldEffectsLayer renders them
   // at the correct z-index (above tiles, below popup panels).
@@ -144,7 +149,10 @@
 
   // Phase A2 dynamic lighting: lit campfires emit warm point light, baked into
   // the tile renderer (replaces the old floating DOM radial glow).
-  $: lightingService.setEmitters(lightingService.collectEmitters(buildings));
+  $: {
+    lightingService.setEmitters(lightingService.collectEmitters(buildings));
+    renderer?.setDynamicLight(lightingService.hasEmitters());
+  }
 
   // Campfire spark embellishment: only lit + complete campfires. The radial glow
   // div is gone (real lighting now), but the rising sparks remain.
@@ -390,16 +398,8 @@
       _ambientLight = light;
       _ambientTint = tint;
     }
-    // Camera follow: pan to the followed pawn whenever pawn positions update
-    if (cameraFollowPawnId && ready && renderer?.isReady()) {
-      const followed = pawns.find((p) => p.id === cameraFollowPawnId);
-      if (followed?.position) {
-        const { x, y } = followed.position;
-        const visW = (container?.clientWidth ?? 800) / tileWidth;
-        const visH = (container?.clientHeight ?? 600) / tileHeight;
-        setView(Math.round(x - visW / 2), Math.round(y - visH * 0.25));
-      }
-    }
+    // Camera follow is driven per-frame in the render loop (updateCameraFollow)
+    // so it tracks the pawn's interpolated sub-tile position smoothly.
     if (renderer?.isReady()) {
       if (worldMap.length > 0) {
         if (terrainChanged) redrawOverlay();
@@ -542,7 +542,22 @@
     }
   }
 
+  // Rebuilding the full base grid + bumping the terrain version is expensive at
+  // zoom-out (tens of thousands of tiles). Mousemove-driven previews (zone paint,
+  // selection drag, blueprint drag) can fire many times per frame, so coalesce
+  // all redraw requests into a single rebuild per animation frame.
   function redrawOverlay() {
+    if (typeof requestAnimationFrame === 'undefined') return; // SSR / no canvas
+    if (!renderer?.isReady() || worldMap.length === 0) return;
+    if (overlayRedrawScheduled) return;
+    overlayRedrawScheduled = true;
+    requestAnimationFrame(() => {
+      overlayRedrawScheduled = false;
+      redrawOverlayNow();
+    });
+  }
+
+  function redrawOverlayNow() {
     if (!renderer?.isReady() || worldMap.length === 0) return;
     const grid = buildGameGrid(worldMap, buildings, designations);
     overlayDroppedItems(grid, droppedItems);
@@ -1005,14 +1020,16 @@
       overlayDroppedItems(grid, droppedItems);
       renderer.setGrid(grid);
       renderer.setViewTileOffset(viewX, viewY);
-      // Phase A2: bake per-tile dynamic lighting into the renderer each frame.
-      renderer.setLightSampler((wx, wy, time) => lightingService.sample(wx, wy, time));
+      // Phase A2: bake ONLY additive point light into the renderer; the global
+      // day/night ambient is applied as a shader uniform (renderer.setAmbient).
+      renderer.setLightSampler((wx, wy, time) => lightingService.samplePointOnly(wx, wy, time));
       // Initialise ambient from current turn so the first frame is correctly lit
       {
         const { light, tint } = environmentService.getAmbient($gameState?.turn ?? 0);
         renderer.setAmbient(light, tint);
         lightingService.setAmbient(light, tint);
         lightingService.setEmitters(lightingService.collectEmitters(buildings));
+        renderer.setDynamicLight(lightingService.hasEmitters());
         _ambientLight = light;
         _ambientTint = tint;
       }
@@ -1043,6 +1060,28 @@
     }
   }
 
+  // Smoothly slide the camera toward the followed pawn each frame, tracking its
+  // INTERPOLATED sub-tile render position (not the snapped integer tile) so the
+  // follow never janks tile-to-tile like the old per-store-update snap did.
+  function updateCameraFollow(dt: number) {
+    if (!cameraFollowPawnId || !ready || !renderer?.isReady()) return;
+    const rp = pawnRenderPos.get(cameraFollowPawnId);
+    if (!rp) return;
+    const visW = (container?.clientWidth ?? 800) / tileWidth;
+    const visH = (container?.clientHeight ?? 600) / tileHeight;
+    const [targetX, targetY] = clampView(rp.x - visW / 2, rp.y - visH * 0.25);
+    // Exponential smoothing keeps the slide framerate-independent; snap when very
+    // close to avoid an endless asymptote (and to settle exactly on a teleport).
+    const alpha = dt > 0 ? 1 - Math.exp(-dt / FOLLOW_SMOOTH_TAU) : 1;
+    const dx = targetX - viewX;
+    const dy = targetY - viewY;
+    if (Math.abs(dx) < 0.01 && Math.abs(dy) < 0.01) {
+      if (dx !== 0 || dy !== 0) setView(targetX, targetY);
+      return;
+    }
+    setView(viewX + dx * alpha, viewY + dy * alpha);
+  }
+
   function startLoop() {
     let lastFpsPush = 0;
     function frame() {
@@ -1053,6 +1092,7 @@
       const dt = lastFrameTime ? (now - lastFrameTime) / 1000 : 0;
       lastFrameTime = now;
       updatePawnOverlay(dt);
+      updateCameraFollow(dt);
       renderer.setOverlayGrid(pawnOverlayGrid);
       renderer.beginFrame();
       renderer.endFrame();
