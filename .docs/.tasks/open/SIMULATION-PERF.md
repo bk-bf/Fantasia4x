@@ -189,6 +189,17 @@ need ~600 ms/tick. Required work:
 - [ ] **Cooldown index for regrowth** — maintain a set of tiles-with-active-cooldowns so
       `processResourceRegrowth()` is O(active cooldowns), not O(map). The current early-out
       still does an O(map) scan (~0.22 ms at 38k tiles → ~6 ms at 1M tiles).
+- [ ] **Chunked dirty-region terrain buffer** — today the terrain VBO is all-or-nothing:
+      reuse the whole cache, or rebuild + re-upload the entire `Float32Array`. At 38k tiles
+      (~5 MB) that's fine because the visual-signature gate makes rebuilds rare; at 1M tiles
+      (~138 MB) a full rebuild on any single-tile change is infeasible. Split the map into
+      fixed chunks (RimWorld uses ~17×17 sections), each owning a sub-range of a persistent
+      VBO; on a tile change mark only its chunk dirty and re-upload that range via
+      `gl.bufferSubData`. A lighting change marks every chunk overlapping the emitter AABB.
+      `GameGrid` already tracks `dirtyTiles` + `clearDirtyFlags()` (currently unused by the
+      renderer) and just needs a stable tile→chunk→byte-offset mapping. Prefer chunks over
+      literal per-tile uploads: 1M tiny `bufferSubData` calls have prohibitive driver
+      overhead, so batch dirty tiles per chunk per frame.
 - [ ] **Re-profile at scale** — generate 100 / 250 / 500 pawns on a 1000×1000 map, capture
       `__profOut`, and confirm each phase stays sub-linear before raising the entity cap.
 
