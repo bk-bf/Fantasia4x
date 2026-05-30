@@ -303,12 +303,12 @@ export class GameEngineImpl implements GameEngine {
 				: null;
 			const t = prof
 				? (label: string, fn: () => void) => {
-						const s = performance.now();
-						fn();
-						const e = (prof[label] ??= { sum: 0, n: 0 });
-						e.sum += performance.now() - s;
-						e.n++;
-					}
+					const s = performance.now();
+					fn();
+					const e = (prof[label] ??= { sum: 0, n: 0 });
+					e.sum += performance.now() - s;
+					e.n++;
+				}
 				: (_label: string, fn: () => void) => fn();
 
 			t('needsTick', () => { this.gameState = pawnService.processNeedsTick(this.gameState!); });
