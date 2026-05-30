@@ -18,7 +18,7 @@ import { resourceObjectService } from './ResourceObjectService';
 import { SUBTERRAINS, SUBTERRAIN_FALLBACK } from '../core/Terrains';
 import { itemService } from './ItemService';
 import { buildingService } from './BuildingService';
-import { addToStockpileZone } from '../core/GameState';
+import { addToStockpileZone, consumeFromStockpiles } from '../core/GameState';
 import { ticksFromSeconds } from '../core/time';
 
 const ITEMS_DATABASE = itemsData as unknown as import('../core/types').Item[];
@@ -745,15 +745,16 @@ class JobServiceImpl {
         const building = (gs.buildings ?? []).find((b) => b.id === job.buildingId);
         if (!building) return gs;
         const maxFuel = buildingService.getBuildingById(building.type)?.maxFuel ?? 60;
-        const stockpile = { ...(gs.stockpile ?? {}) };
+        const stockpile = gs.stockpile ?? {};
+        const consumed: Record<string, number> = {};
         let currentFuel = building.fuel ?? 0;
-        // Consume fuel items until tank is full or stockpile exhausted
+        // Track which items to consume (read-only from aggregate; apply via consumeFromStockpiles)
         for (const item of ITEMS_DATABASE) {
             if ((item.fuelValue ?? 0) <= 0) continue;
             while (currentFuel < maxFuel) {
-                const available = stockpile[item.id] ?? 0;
+                const available = (stockpile[item.id] ?? 0) - (consumed[item.id] ?? 0);
                 if (available <= 0) break;
-                stockpile[item.id] = available - 1;
+                consumed[item.id] = (consumed[item.id] ?? 0) + 1;
                 currentFuel = Math.min(currentFuel + item.fuelValue!, maxFuel);
             }
         }
@@ -764,7 +765,8 @@ class JobServiceImpl {
                 : b
         );
         console.log(`[JobService] Campfire refuelled to ${currentFuel}/${maxFuel}: ${job.buildingId}`);
-        return { ...gs, buildings: newBuildings, stockpile };
+        const afterConsume = consumeFromStockpiles(gs, consumed);
+        return { ...afterConsume, buildings: newBuildings };
     }
 
     private _hasFuelInStockpile(gs: GameState): boolean {

@@ -203,20 +203,25 @@ function applyMigrations(state: GameState): GameState {
 			]
 		};
 	});
-	// Stockpile zone repair: old code had paths that updated the aggregate without touching zones,
-	// and vice versa.  The aggregate is the more reliable value (it was always decremented on
-	// consumption).  Reset zone inventories so they sum to the aggregate: put everything into the
-	// general zone, which computeAggregate will then reflect correctly.
+	// Stockpile zone sync: enforce the invariant stockpile === computeAggregate(zones).
+	// Two migration cases:
+	//   1. Pre-zone save (zones are empty, aggregate has items): seed the general zone from aggregate.
+	//   2. Post-zone save (zones have items, aggregate may be stale/wrong): recompute from zones.
 	{
 		const aggregate = state.stockpile ?? {};
-		if (Object.keys(aggregate).length > 0) {
-			const zones = (state.stockpileZones ?? []).map((z) =>
+		const existingZones = state.stockpileZones ?? [];
+		const zoneTotal = computeAggregate(existingZones);
+		const zonesAreEmpty = Object.keys(zoneTotal).length === 0;
+		const aggregateHasItems = Object.keys(aggregate).length > 0;
+
+		if (zonesAreEmpty && aggregateHasItems) {
+			// Case 1: old save — migrate aggregate into the general zone.
+			const zones = existingZones.map((z) =>
 				z.id === GENERAL_ZONE_ID
 					? { ...z, inventory: { ...aggregate } }
 					: { ...z, inventory: {} }
 			);
-			const generalExists = zones.some((z) => z.id === GENERAL_ZONE_ID);
-			if (!generalExists) {
+			if (!zones.some((z) => z.id === GENERAL_ZONE_ID)) {
 				zones.push({
 					id: GENERAL_ZONE_ID,
 					name: 'Colony Stockpile',
@@ -226,6 +231,9 @@ function applyMigrations(state: GameState): GameState {
 				});
 			}
 			state = { ...state, stockpileZones: zones, stockpile: computeAggregate(zones) };
+		} else {
+			// Case 2: zones are the truth — recompute aggregate from them.
+			state = { ...state, stockpile: computeAggregate(existingZones) };
 		}
 	}
 	return state;
