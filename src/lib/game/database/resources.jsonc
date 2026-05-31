@@ -763,7 +763,8 @@
             "workAmount"     : 6,
             "toolRequirement": null,
             "yields"         : [
-                {"itemId": "hay", "min": 2, "max": 5, "skillId": "foraging", "skillMultiplier": 0.15}
+                {"itemId": "hay",         "min": 2, "max": 5, "skillId": "foraging", "skillMultiplier": 0.15},
+                {"itemId": "plant_fiber", "min": 0, "max": 1, "skillId": "foraging", "skillMultiplier": 0.15}
             ],
             "persistent"     : true,
             "regrowthTurns"  : 600 // ~2 days at 300 turns/day
@@ -788,7 +789,8 @@
             "workAmount"     : 7,
             "toolRequirement": null,
             "yields"         : [
-                {"itemId": "hay", "min": 10, "max": 15, "skillId": "foraging", "skillMultiplier": 0.15}
+                {"itemId": "hay",         "min": 10, "max": 15, "skillId": "foraging", "skillMultiplier": 0.15},
+                {"itemId": "plant_fiber", "min":  0, "max":  2, "skillId": "foraging", "skillMultiplier": 0.15}
             ],
             "persistent"     : true,
             "regrowthTurns"  : 700
@@ -813,7 +815,8 @@
             "workAmount"     : 8,
             "toolRequirement": null,
             "yields"         : [
-                {"itemId": "hay", "min": 5, "max": 10, "skillId": "foraging", "skillMultiplier": 0.15}
+                {"itemId": "hay",         "min": 5, "max": 10, "skillId": "foraging", "skillMultiplier": 0.15},
+                {"itemId": "plant_fiber", "min": 0, "max":  2, "skillId": "foraging", "skillMultiplier": 0.15}
             ],
             "persistent"     : true,
             "regrowthTurns"  : 800
