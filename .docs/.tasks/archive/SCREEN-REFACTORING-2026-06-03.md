@@ -25,11 +25,11 @@ healthcare and cooking jobs can be added without editing unrelated sections.
 
 ## WorkScreen sub-components
 
-- [ ] `PopulationOverview` — worker cards with stats and current job indicators
-- [ ] `WorkPriorities` — per-pawn priority management with efficiency display; uses `WorkService`
-- [ ] `JobQueue` — job cycling visualisation with timer and active job highlighting
-- [ ] `ProductionManagement` — location-based production targets and worker assignments; uses `LocationService`
-- [ ] Update `WorkScreen` — import sub-components, keep only navigation and top-level state
+- [x] `PopulationOverview` — worker cards with stats and current job indicators
+- [x] `WorkPriorities` — per-pawn priority management with efficiency display; uses `WorkService`
+- [x] ~~`JobQueue`~~ — removed; legacy cycling artefact, did not respect pause state
+- [x] `ProductionManagement` — location-based production targets and worker assignments; uses `LocationService`
+- [x] Update `WorkScreen` — import sub-components, keep only navigation and top-level state
 
 ## Acceptance Criteria
 
