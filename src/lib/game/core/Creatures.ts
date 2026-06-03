@@ -13,6 +13,13 @@ import { resolveCharSpans, type CharSpan } from './Terrains';
 export type EntityClass = 'mob' | 'animal';
 export type EntityBehaviour = 'passive' | 'neutral' | 'aggressive';
 export type EntityDiet = 'herbivore' | 'carnivore' | 'omnivore';
+/**
+ * Governs how deeply an entity uses game systems.
+ * - `primitive`: food-only needs, eats directly from tile/corpse (no item spawns), no mood.
+ * - `sapient`:   full pawn-equivalent systems — abilities, mood, cooked food, beverages.
+ *   Sapient creatures spawn as `Pawn` instances (isPlayerControlled: false), not as `Mob`.
+ */
+export type EntityIntelligence = 'primitive' | 'sapient';
 
 export interface CreatureStats {
     health: number;
@@ -45,6 +52,11 @@ export interface CreatureDefinition {
     behaviour: EntityBehaviour;
     /** What this creature eats — drives feeding FSM (Phase B hunger system). */
     diet: EntityDiet;
+    /**
+     * Depth of systems this creature uses.
+     * `primitive` = animals; `sapient` = humanoid NPCs (spawn as Pawn, not Mob).
+     */
+    intelligence: EntityIntelligence;
     nocturnalAggro: boolean;
     /** Only spawns at night (e.g. shadow_wraith). */
     nightOnly: boolean;
@@ -77,6 +89,7 @@ function toDefinition(raw: RawCreature): CreatureDefinition {
         stats: raw.stats as CreatureStats,
         behaviour: raw.behaviour as EntityBehaviour,
         diet: (raw.diet as EntityDiet) ?? 'omnivore',
+        intelligence: (raw.intelligence as EntityIntelligence) ?? 'primitive',
         nocturnalAggro: (raw.nocturnalAggro as boolean) ?? false,
         nightOnly: (raw.nightOnly as boolean) ?? false,
         pack: (raw.pack as [number, number]) ?? [1, 1],

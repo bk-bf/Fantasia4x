@@ -44,6 +44,24 @@ const BASE_HUNGER_PER_SECOND = 0.54;
 const BASE_FATIGUE_PER_SECOND = 0.32;
 /** HP drained per second once hunger reaches 100 (starving). */
 const STARVATION_DAMAGE_PER_SECOND = 1;
+/** Hunger threshold at which an entity transitions to a feeding state. */
+const HUNGER_EAT_THRESHOLD = 60;
+/** Hunger threshold at which a feeding entity considers itself sated. */
+const HUNGER_SATED_THRESHOLD = 10;
+/** Tile radius searched for edible grass resources. */
+const FORAGE_RADIUS = 15;
+/** Tile radius searched for prey (corpse or live animal). */
+const HUNT_RADIUS = 20;
+/** Tile resource keys counted as edible grass for herbivores/omnivores. */
+const GRASS_RESOURCES = ['grass_patch', 'tall_grass_patch', 'deep_grass_patch'] as const;
+/** Action steps to eat a grass tile (advances eatProgress each step). */
+const EAT_GRASS_STEPS = 5;
+/** Action steps to consume a corpse. */
+const EAT_CORPSE_STEPS = 8;
+/** Hunger restored when finishing a grass meal. */
+const EAT_GRASS_HUNGER_RESTORE = 40;
+/** Hunger restored when finishing a corpse meal. */
+const EAT_CORPSE_HUNGER_RESTORE = 50;
 
 class EntityServiceImpl {
     private idCounter = 0;
@@ -204,6 +222,8 @@ class EntityServiceImpl {
         if (!mobs || mobs.length === 0) return state;
 
         const livePawns = state.pawns.filter((p) => p.position && p.isAlive !== false);
+        // Accumulates entity-vs-entity damage dealt this tick (hunting mini-combat).
+        const pendingDamage = new Map<string, number>();
         let changed = false;
         const next: Mob[] = new Array(mobs.length);
 
@@ -218,9 +238,20 @@ class EntityServiceImpl {
                 next[i] = mob;
                 continue;
             }
-            const stepped = this.stepOne(mob, def, livePawns, state);
+            const stepped = this.stepOne(mob, def, livePawns, mobs, state, pendingDamage);
             next[i] = stepped;
             if (stepped !== mob) changed = true;
+        }
+
+        // Apply accumulated hunting damage after all mob steps.
+        if (pendingDamage.size > 0) {
+            changed = true;
+            for (let i = 0; i < next.length; i++) {
+                const dmg = pendingDamage.get(next[i].id);
+                if (dmg && dmg > 0) {
+                    next[i] = { ...next[i], health: Math.max(0, next[i].health - dmg) };
+                }
+            }
         }
 
         return changed ? { ...state, mobs: next } : state;
@@ -230,7 +261,9 @@ class EntityServiceImpl {
         mob: Mob,
         def: CreatureDefinition,
         pawns: Pawn[],
-        state: GameState
+        allMobs: Mob[],
+        state: GameState,
+        pendingDamage: Map<string, number>
     ): Mob {
         // Movement throttle: only act when the per-entity cooldown elapses.
         const cooldown = mob.moveCooldown - 1;
@@ -247,9 +280,9 @@ class EntityServiceImpl {
         let work: Mob = { ...mob, moveCooldown: this.moveInterval(def) };
 
         if (def.entityClass === 'animal') {
-            work = this.stepAnimal(work, def, inVision, nearest, turn, state);
+            work = this.stepAnimal(work, def, inVision, nearest, turn, state, allMobs, pendingDamage);
         } else {
-            work = this.stepHostile(work, def, inVision, nearest, isNight, turn, state);
+            work = this.stepHostile(work, def, inVision, nearest, isNight, turn, state, allMobs, pendingDamage);
         }
         return work;
     }
@@ -261,13 +294,34 @@ class EntityServiceImpl {
         nearest: { pos: { x: number; y: number } } | null,
         isNight: boolean,
         turn: number,
-        state: GameState
+        state: GameState,
+        allMobs: Mob[],
+        pendingDamage: Map<string, number>
     ): Mob {
         const aggressive = def.behaviour === 'aggressive' || (def.nocturnalAggro && isNight);
 
         // Wounded entities flee regardless of state.
         if (mob.health <= mob.maxHealth * FLEE_HEALTH_FRACTION && mob.state !== 'Fleeing') {
-            return { ...mob, state: 'Fleeing', stateSince: turn };
+            return { ...mob, state: 'Fleeing', stateSince: turn, eatProgress: undefined, huntTargetId: undefined };
+        }
+
+        // ── Hunger-driven FSM ───────────────────────────────────────────
+        // Aggressive mobs prioritise attacking pawns over feeding.
+        // Non-aggressive (passive/neutral) hostile mobs will hunt when hungry.
+        const canHunt = def.diet !== 'herbivore';
+        if (mob.state === 'Hunting') {
+            // Snap back to aggro if a pawn enters vision while aggressive.
+            if (inVision && aggressive) {
+                return { ...mob, state: 'Alerted', stateSince: turn, eatProgress: undefined, huntTargetId: undefined };
+            }
+            if (mob.needs.hunger <= HUNGER_SATED_THRESHOLD) {
+                return { ...mob, state: 'Wander', stateSince: turn, eatProgress: undefined, huntTargetId: undefined };
+            }
+            return this.stepHunting(mob, def, turn, state, allMobs, pendingDamage);
+        }
+        if (!inVision && canHunt && mob.needs.hunger >= HUNGER_EAT_THRESHOLD &&
+            mob.state !== 'Fleeing') {
+            return { ...mob, state: 'Hunting', stateSince: turn };
         }
 
         switch (mob.state) {
@@ -317,8 +371,33 @@ class EntityServiceImpl {
         inVision: { pos: { x: number; y: number } } | null,
         nearest: { pos: { x: number; y: number } } | null,
         turn: number,
-        state: GameState
+        state: GameState,
+        allMobs: Mob[],
+        pendingDamage: Map<string, number>
     ): Mob {
+        // ── Hunger-driven FSM transitions (only when safe) ───────────────────────
+        if (!inVision) {
+            const hungry = mob.needs.hunger >= HUNGER_EAT_THRESHOLD;
+            const sated  = mob.needs.hunger <= HUNGER_SATED_THRESHOLD;
+
+            // Exit feeding states when sated.
+            if (sated && (mob.state === 'Foraging' || mob.state === 'Hunting')) {
+                return { ...mob, state: 'Grazing', stateSince: turn, eatProgress: undefined, huntTargetId: undefined };
+            }
+
+            // Enter a feeding state from any non-feeding, non-flight state.
+            if (hungry && mob.state !== 'Foraging' && mob.state !== 'Hunting' &&
+                mob.state !== 'Fleeing' && mob.state !== 'Startled') {
+                const canForage = def.diet !== 'carnivore';
+                const canHunt   = def.diet !== 'herbivore';
+                if (canForage) return { ...mob, state: 'Foraging', stateSince: turn };
+                if (canHunt)   return { ...mob, state: 'Hunting',  stateSince: turn };
+            }
+        } else if (mob.state === 'Foraging' || mob.state === 'Hunting') {
+            // Threatened while eating — drop food and flee.
+            return { ...mob, state: 'Startled', stateSince: turn, eatProgress: undefined, huntTargetId: undefined };
+        }
+
         switch (mob.state) {
             case 'Grazing': {
                 if (inVision) return { ...mob, state: 'Startled', stateSince: turn };
@@ -348,12 +427,170 @@ class EntityServiceImpl {
             }
             case 'Tamed':
                 return mob; // Phase C — taming not yet implemented
+            case 'Foraging':
+                return this.stepForaging(mob, def, turn, state);
+            case 'Hunting':
+                return this.stepHunting(mob, def, turn, state, allMobs, pendingDamage);
             default:
                 return { ...mob, state: 'Grazing', stateSince: turn };
         }
     }
 
-    // ===== HUNGER / FATIGUE =======================================================
+    // ===== FEEDING MECHANICS ======================================================
+
+    /**
+     * Advance a Foraging entity toward the nearest grass tile, then eat from it.
+     * No item spawns — primitive entities consume the resource directly.
+     */
+    private stepForaging(mob: Mob, def: CreatureDefinition, turn: number, state: GameState): Mob {
+        // Continue eating if mid-progress.
+        const progress = mob.eatProgress ?? 0;
+        if (progress > 0) {
+            const next = progress + (1 / EAT_GRASS_STEPS);
+            if (next >= 1) {
+                // Eating complete: restore hunger, return to grazing.
+                return {
+                    ...mob,
+                    eatProgress: undefined,
+                    needs: {
+                        ...mob.needs,
+                        hunger: Math.max(0, mob.needs.hunger - EAT_GRASS_HUNGER_RESTORE),
+                        lastMeal: turn
+                    },
+                    state: 'Grazing',
+                    stateSince: turn
+                };
+            }
+            return { ...mob, eatProgress: next };
+        }
+
+        // Find the nearest grassy tile.
+        const target = this.findNearestEdibleTile(state, mob.x, mob.y, FORAGE_RADIUS);
+        if (!target) {
+            // No grass nearby — drift home.
+            return this.wanderStep(mob, def, state);
+        }
+
+        if (target.x === mob.x && target.y === mob.y) {
+            // Arrived: start eating.
+            return { ...mob, eatProgress: 1 / EAT_GRASS_STEPS };
+        }
+
+        // Move toward the grass tile.
+        return this.moveToward(mob, target, state);
+    }
+
+    /**
+     * Advance a Hunting entity toward the nearest corpse or live animal, then eat.
+     * Mini-combat roll on contact with a live animal; no item spawns on kill.
+     */
+    private stepHunting(
+        mob: Mob,
+        def: CreatureDefinition,
+        turn: number,
+        state: GameState,
+        allMobs: Mob[],
+        pendingDamage: Map<string, number>
+    ): Mob {
+        // Continue eating if mid-progress.
+        const progress = mob.eatProgress ?? 0;
+        if (progress > 0) {
+            const target = mob.huntTargetId ? allMobs.find((m) => m.id === mob.huntTargetId) : null;
+            if (!target || target.state !== 'Corpse') {
+                // Prey no longer a corpse (respawned? despawned?) — reset.
+                return { ...mob, eatProgress: undefined, huntTargetId: undefined };
+            }
+            const next = progress + (1 / EAT_CORPSE_STEPS);
+            if (next >= 1) {
+                const restState: MobState = def.entityClass === 'animal' ? 'Grazing' : 'Wander';
+                return {
+                    ...mob,
+                    eatProgress: undefined,
+                    huntTargetId: undefined,
+                    needs: {
+                        ...mob.needs,
+                        hunger: Math.max(0, mob.needs.hunger - EAT_CORPSE_HUNGER_RESTORE),
+                        lastMeal: turn
+                    },
+                    state: restState,
+                    stateSince: turn
+                };
+            }
+            return { ...mob, eatProgress: next };
+        }
+
+        const prey = this.findNearestPrey(mob, allMobs);
+        if (!prey) {
+            // Nothing to hunt — wander.
+            return { ...mob, huntTargetId: undefined, ...this.wanderStep(mob, def, state) };
+        }
+
+        const preyPos = { x: prey.x, y: prey.y };
+
+        if (this.adjacent(mob, preyPos)) {
+            if (prey.state === 'Corpse') {
+                // Begin eating.
+                return { ...mob, huntTargetId: prey.id, eatProgress: 1 / EAT_CORPSE_STEPS };
+            }
+            // Live prey: STR vs STR mini-combat roll.
+            const hitChance = Math.min(0.9, Math.max(0.1, 0.5 + (mob.stats.strength - prey.stats.strength) * 0.05));
+            if (Math.random() < hitChance) {
+                pendingDamage.set(prey.id, (pendingDamage.get(prey.id) ?? 0) + mob.stats.strength);
+            }
+            return { ...mob, huntTargetId: prey.id };
+        }
+
+        // Move toward prey.
+        return this.moveToward({ ...mob, huntTargetId: prey.id }, preyPos, state);
+    }
+
+    // ===== FORAGING QUERIES =======================================================
+
+    /** Nearest walkable tile within radius that has a grass resource node. */
+    private findNearestEdibleTile(
+        state: GameState,
+        x: number,
+        y: number,
+        radius: number
+    ): { x: number; y: number } | null {
+        let bestDist = Infinity;
+        let best: { x: number; y: number } | null = null;
+        for (let dy = -radius; dy <= radius; dy++) {
+            for (let dx = -radius; dx <= radius; dx++) {
+                const nx = x + dx;
+                const ny = y + dy;
+                const tile = state.worldMap[ny]?.[nx];
+                if (!tile?.walkable) continue;
+                const hasGrass = GRASS_RESOURCES.some((k) => (tile.resources?.[k] ?? 0) > 0);
+                if (!hasGrass) continue;
+                const dist = Math.abs(dx) + Math.abs(dy);
+                if (dist < bestDist) { bestDist = dist; best = { x: nx, y: ny }; }
+            }
+        }
+        return best;
+    }
+
+    /** Nearest corpse (preferred) or live non-tamed animal within HUNT_RADIUS. */
+    private findNearestPrey(mob: Mob, allMobs: Mob[]): Mob | null {
+        let best: Mob | null = null;
+        let bestDist = Infinity;
+        for (const candidate of allMobs) {
+            if (candidate.id === mob.id) continue;
+            const raw = Math.abs(candidate.x - mob.x) + Math.abs(candidate.y - mob.y);
+            if (candidate.state === 'Corpse') {
+                // Corpses weighted as 50% closer — free food with no danger.
+                const d = raw * 0.5;
+                if (d < bestDist) { bestDist = d; best = candidate; }
+            } else if (
+                candidate.entityClass === 'animal' &&
+                candidate.state !== 'Tamed' &&
+                raw <= HUNT_RADIUS
+            ) {
+                if (raw < bestDist) { bestDist = raw; best = candidate; }
+            }
+        }
+        return best;
+    }
 
     stepHunger(state: GameState): GameState {
         const mobs = state.mobs;

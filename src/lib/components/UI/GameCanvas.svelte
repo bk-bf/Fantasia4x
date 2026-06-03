@@ -770,21 +770,33 @@
       worldEffects.setSleepingOverlays(newSleep);
     }
 
-    const newProgress = pawns
-      .filter(
-        (p) =>
-          p.position &&
-          p.currentState === 'Working' &&
-          p.activeJob &&
-          (p.activeJob.progress ?? 0) >= 0
-      )
-      .map((p) => ({
-        id: p.id,
-        left: (p.position!.x - viewX + 0.5) * tW,
-        top: (p.position!.y - viewY) * tH - 6,
-        progress: Math.max(0, Math.min(1, p.activeJob?.progress ?? 0))
-      }))
-      .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= W);
+    const newProgress = [
+      ...pawns
+        .filter(
+          (p) =>
+            p.position &&
+            p.currentState === 'Working' &&
+            p.activeJob &&
+            (p.activeJob.progress ?? 0) >= 0
+        )
+        .map((p) => ({
+          id: p.id,
+          left: (p.position!.x - viewX + 0.5) * tW,
+          top: (p.position!.y - viewY) * tH - 6,
+          progress: Math.max(0, Math.min(1, p.activeJob?.progress ?? 0))
+        }))
+        .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= W),
+      // Eating progress for mobs (foraging / hunting).
+      ...mobs
+        .filter((m) => (m.eatProgress ?? 0) > 0)
+        .map((m) => ({
+          id: m.id,
+          left: (m.x - viewX + 0.5) * tW,
+          top: (m.y - viewY) * tH - 6,
+          progress: Math.max(0, Math.min(1, m.eatProgress ?? 0))
+        }))
+        .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= W)
+    ];
     // Round progress to 5% steps so small increments don't trigger re-renders.
     const progressKey = newProgress
       .map(
