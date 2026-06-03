@@ -6,7 +6,7 @@ import type {
   Item,
   PawnEquipment,
   PawnInventory,
-  RaceStats
+  EntityStats
 } from './types';
 import { itemService } from '../services/ItemService';
 
@@ -349,7 +349,7 @@ export function getEquipmentBonuses(pawn: Pawn): Record<string, number> {
 }
 
 // Get effective stats including equipment bonuses
-export function getEffectiveStats(pawn: Pawn): RaceStats {
+export function getEffectiveStats(pawn: Pawn): EntityStats {
   const baseStats = { ...pawn.stats };
   const equipmentBonuses = getEquipmentBonuses(pawn);
 

@@ -1,7 +1,8 @@
-import type { GameState, Mob, MobState, Pawn } from '../core/types';
+import type { GameState, Mob, MobState, Pawn, EntityStats, EntityNeeds, EntityCondition } from '../core/types';
 import { CREATURES, getCreatureById, type CreatureDefinition } from '../core/Creatures';
 import { getAmbientLight } from './EnvironmentService';
-import { ticksFromSeconds } from '../core/time';
+import { ticksFromSeconds, SECONDS_PER_TICK } from '../core/time';
+import { conditionNeedMultipliers } from '../core/needs';
 
 /**
  * EntityService — ENTITIES_SPAWNING spec, Phase A.
@@ -35,6 +36,14 @@ const FLEE_TO_EXHAUST_TICKS = ticksFromSeconds(20);
 const EXHAUST_RECOVER_TICKS = ticksFromSeconds(15);
 const SAFE_RESET_TICKS = ticksFromSeconds(15);
 const FLEE_HEALTH_FRACTION = 0.2;
+
+// ── Hunger / fatigue tunables ──────────────────────────────────────────────────
+/** Hunger accrual per second for an omnivore at neutral condition. */
+const BASE_HUNGER_PER_SECOND = 0.54;
+/** Fatigue accrual per second at neutral condition. */
+const BASE_FATIGUE_PER_SECOND = 0.32;
+/** HP drained per second once hunger reaches 100 (starving). */
+const STARVATION_DAMAGE_PER_SECOND = 1;
 
 class EntityServiceImpl {
     private idCounter = 0;
@@ -154,6 +163,21 @@ class EntityServiceImpl {
 
     private makeMob(def: CreatureDefinition, x: number, y: number, turn: number): Mob {
         const initialState: MobState = def.entityClass === 'mob' ? 'Wander' : 'Grazing';
+        const stats: EntityStats = {
+            strength: def.stats.strength,
+            dexterity: Math.round(def.stats.speed * 1.5),
+            wisdom: def.stats.visionRange,
+            constitution: Math.round(10 + (def.stats.health - 30) / 5),
+            intelligence: def.entityClass === 'animal' ? 4 : 8,
+            charisma: 5
+        };
+        const needs: EntityNeeds = {
+            hunger: 0,
+            fatigue: 0,
+            sleep: 0,
+            lastSleep: turn,
+            lastMeal: turn
+        };
         return {
             id: `mob-${def.id}-${turn}-${this.idCounter++}`,
             creatureId: def.id,
@@ -166,7 +190,10 @@ class EntityServiceImpl {
             homeX: x,
             homeY: y,
             stateSince: turn,
-            moveCooldown: this.moveInterval(def)
+            moveCooldown: this.moveInterval(def),
+            needs,
+            conditions: [],
+            stats
         };
     }
 
@@ -324,6 +351,45 @@ class EntityServiceImpl {
             default:
                 return { ...mob, state: 'Grazing', stateSince: turn };
         }
+    }
+
+    // ===== HUNGER / FATIGUE =======================================================
+
+    stepHunger(state: GameState): GameState {
+        const mobs = state.mobs;
+        if (!mobs || mobs.length === 0) return state;
+
+        const next = mobs.map((mob): Mob => {
+            if (mob.state === 'Corpse') return mob;
+            const def = getCreatureById(mob.creatureId);
+            if (!def) return mob;
+
+            // Diet affects how fast hunger accrues.
+            const dietMult =
+                def.diet === 'carnivore' ? 1.0 :
+                    def.diet === 'herbivore' ? 0.5 :
+                        0.7; // omnivore
+
+            const condMults = conditionNeedMultipliers(mob.conditions ?? []);
+            const hungerDelta = BASE_HUNGER_PER_SECOND * SECONDS_PER_TICK * dietMult * condMults.hungerRate;
+            const fatigueDelta = BASE_FATIGUE_PER_SECOND * SECONDS_PER_TICK * condMults.fatigueRate;
+
+            const newHunger = Math.min(100, mob.needs.hunger + hungerDelta);
+            // Starvation: drain HP once hunger is capped at 100.
+            const healthDelta = newHunger >= 100 ? -(STARVATION_DAMAGE_PER_SECOND * SECONDS_PER_TICK) : 0;
+
+            return {
+                ...mob,
+                needs: {
+                    ...mob.needs,
+                    hunger: newHunger,
+                    fatigue: Math.min(100, mob.needs.fatigue + fatigueDelta)
+                },
+                health: Math.max(0, mob.health + healthDelta)
+            };
+        });
+
+        return { ...state, mobs: next };
     }
 
     // ===== DECAY ===================================================================

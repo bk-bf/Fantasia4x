@@ -6,7 +6,8 @@
 
 ## Status
 
-Not started. Supersedes MOB-SPAWNING.md. Two entity classes share a spawn
+**Phase A complete.** `Mob` type, `EntityService`, `Creatures.ts`, rendering, click/hover HUD cards, ENTITIES tab — all done.
+Phases B–E not started. Two entity classes share a spawn
 model: hostile mobs (threat) and neutral animals (food/taming/mounts).
 
 ---
@@ -39,6 +40,7 @@ interface CreatureDefinition {
   glyph: string;
   color: string;
   entityClass: 'mob' | 'animal';
+  diet: 'herbivore' | 'carnivore' | 'omnivore'; // drives feeding FSM
   stats: {
     health: number;
     strength: number;
@@ -95,6 +97,8 @@ interface CreatureDefinition {
 3. **Fleeing** — sprint away from threat at +1 tile/turn bonus
 4. **Exhausted** — after 20 turns of Fleeing; slows to normal speed (huntable)
 5. **Tamed** (persistent) — follows assigned pawn; no longer flees; see Phase C
+6. **Foraging** (Phase A.5) — herbivore/omnivore moving toward a grass tile to eat
+7. **Hunting** (Phase A.5) — carnivore/omnivore pursuing nearest non-tamed animal or Corpse
 
 FSM transitions for neutral animals:
 - Grazing → Startled: pawn within `visionRange`
@@ -102,6 +106,101 @@ FSM transitions for neutral animals:
 - Fleeing → Grazing: no pawn in `visionRange × 1.5` for 15 turns
 - Fleeing → Exhausted: 20 turns in Fleeing state
 - Any → Tamed: taming action succeeds (Phase C)
+- Any → Foraging: `hunger >= 60` AND not threatened AND `diet` is herbivore/omnivore
+- Any → Hunting: `hunger >= 60` AND not threatened AND `diet` is carnivore/omnivore
+- Foraging/Hunting → previous state: `hunger <= 10` (sated)
+
+---
+
+## Phase A.5 — Entity Hunger & Diet
+
+> Prerequisite for Phases B (hunting) and D (husbandry). Can be implemented
+> independently of combat. Adds a simulation heartbeat to the entity layer.
+
+### Data model
+
+Entities reuse the same `EntityNeeds`, `EntityCondition[]`, and `EntityStats` types as
+pawns — no dumbed-down duplicates. Abilities are **never** computed for entities.
+
+```typescript
+// Fields added to Mob (implemented in types.ts)
+interface Mob {
+  needs: EntityNeeds;           // same type as Pawn.needs; sleep fields set to defaults
+  conditions?: EntityCondition[]; // progressive conditions (malnutrition, wounds, etc.)
+  stats: EntityStats;           // mapped from CreatureDefinition.stats at spawn
+  eatProgress?: number;       // 0–1 progress through current eat action
+  huntTargetId?: string;      // id of target Mob when in Hunting state
+}
+
+// EntityStats mapping from CreatureDefinition.stats:
+// strength     → strength   (direct)
+// speed        → dexterity  (×1.5 rounded)
+// visionRange  → wisdom     (perception)
+// health       → constitution (10 + (health - 30) / 5)
+// entityClass  → intelligence (animal=4, mob=8)
+// charisma     = 5 (default)
+```
+
+The shared condition helper `conditionNeedMultipliers()` lives in
+`core/needs.ts` — used by both `PawnService` and `EntityService`.
+
+### Hunger accrual
+
+| Diet      | Base rate (×SECONDS_PER_TICK) | Notes                   |
+| --------- | ----------------------------- | ----------------------- |
+| herbivore | 0.5 / s                       | slow — always near food |
+| carnivore | 1.0 / s                       | faster — must hunt      |
+| omnivore  | 0.7 / s                       | middle ground           |
+
+Condition stage multipliers from `EntityCondition[]` are applied on top via
+`conditionNeedMultipliers()` (shared with `PawnService`).
+
+Starvation (`hunger >= 100`): entity loses 1 HP / second until it eats or dies.
+
+### Feeding mechanics
+
+**Herbivore / omnivore — Foraging state:**
+
+1. Entity transitions to `Foraging` when `hunger >= 60` and not threatened.
+2. Pathfinds toward nearest tile with `resources.grass > 0` within 15-tile radius.
+3. On arrival: plays `eatProgress` 0 → 1 over 5 ticks. Consumes 1 `grass` from tile.
+4. On completion: `hunger -= 40`; back to `Grazing`/`Wander`.
+5. If no grass found within radius: wanders toward map-center home range.
+
+**Carnivore / omnivore — Hunting state:**
+
+1. Entity transitions to `Hunting` when `hunger >= 60` and not threatened.
+2. Targets: nearest `Corpse` first (free food); else nearest non-Tamed `animal`.
+3. Pursues target via same `moveToward` as Alerted state; sets `huntTargetId`.
+4. Adjacent to Corpse: begins `eatProgress` 0 → 1 over 8 ticks; then `hunger -= 50`.
+5. Adjacent to live animal: triggers a mini-combat roll (STR vs STR); on kill —
+   entity enters step 4 on the resulting Corpse.
+6. If target dies/decays before arrival: clear `huntTargetId`, re-evaluate.
+
+### Progress bar rendering
+
+When `eatProgress > 0`, `GameCanvas` should render a progress bar overlay on the
+entity tile (same `worldEffects` pipeline used for pawn tasks). The existing
+`SelectedEntityCard.progressBar` field surfaces it in the HUD info card too.
+
+### Relationship to pawn hunger
+
+Entities deliberately do **not** call `calculatePawnAbilities()` — that system
+is pawn-only. They share the **type** layer (`EntityNeeds`, `EntityCondition[]`,
+`EntityStats`) and the condition-multiplier helper, but skip abilities entirely.
+
+### Entity vs Pawn systems — intentional boundaries
+
+| System     | Pawns                          | Entities                                    |
+| ---------- | ------------------------------ | ------------------------------------------- |
+| Health     | `pawn.state.health` + ModSys   | `mob.health` / `mob.maxHealth` (simple HP)  |
+| Stats      | Race traits + ModifierSystem   | `mob.stats: EntityStats` (no modifier calc) |
+| Needs      | `EntityNeeds` (hunger/fatigue) | **Shared** `EntityNeeds` type — same fields |
+| Conditions | `EntityCondition[]`            | **Shared** `EntityCondition[]` type         |
+| Abilities  | calculatePawnAbilities()       | **Not called** for entities                 |
+| FSM        | `PawnState` + job queue        | `MobState` autonomous                       |
+| Movement   | PathfindingService (WASM)      | EntityService simple `moveToward`           |
+| Rendering  | `pawnRenderPos` smooth interp  | `mobRenderPos` smooth interp (fixed)        |
 
 ---
 
@@ -214,13 +313,24 @@ slows to base pawn speed until healed (vet work category, Phase E2 — deferred)
 
 ## Implementation Plan
 
-### Phase A — Shared entity layer
+### Phase A — Shared entity layer ✅ DONE
 
-- Add `Mob` interface to `core/types.ts` (id, creatureId, x, y, health, state, entityClass)
-- Add `mobs: Mob[]`, `tamedAnimals: TamedAnimal[]` to `GameState`
-- Add `core/Creatures.ts` with all hostile + neutral definitions
-- `EntityService` singleton (renamed from `MobService`): `spawnEntities()`, `stepEntities()`, `removeDead()`
-- Rendering: draw all `mobs[]` via existing glyph pipeline in `GameCanvas.svelte`
+- ~~Add `Mob` interface to `core/types.ts` (id, creatureId, x, y, health, state, entityClass)~~
+- ~~Add `mobs: Mob[]`, `tamedAnimals: TamedAnimal[]` to `GameState`~~
+- ~~Add `core/Creatures.ts` with all hostile + neutral definitions~~
+- ~~`EntityService` singleton (renamed from `MobService`): `spawnEntities()`, `stepEntities()`, `removeDead()`~~
+- ~~Rendering: draw all `mobs[]` via existing glyph pipeline in `GameCanvas.svelte`~~
+- ~~Click-to-select mob with locked HUD info card~~
+- ~~Hover mob shows dim HUD info card (parity with pawns)~~
+- ~~ENTITIES tab (F9) listing live mobs with focus-on-map~~
+
+### Phase A.5 — Entity Hunger & Diet
+
+- Add `EntityService.stepHunger(state)` — accrues `mob.hunger` each tick; triggers `Foraging`/`Hunting` FSM transitions
+- Herbivore foraging: pathfind to nearest grass tile, consume via `eatProgress` timer
+- Carnivore hunting: pursue nearest `Corpse` or live animal via existing `moveToward`; mini-combat roll on contact
+- Starvation damage: `hunger >= 100` → −1 HP / tick
+- Render `eatProgress` as world-effect progress bar overlay (reuse pawn task bar pipeline)
 
 ### Phase B — Hunting & Butchering
 

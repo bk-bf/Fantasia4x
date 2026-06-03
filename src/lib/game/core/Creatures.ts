@@ -12,6 +12,7 @@ import { resolveCharSpans, type CharSpan } from './Terrains';
 
 export type EntityClass = 'mob' | 'animal';
 export type EntityBehaviour = 'passive' | 'neutral' | 'aggressive';
+export type EntityDiet = 'herbivore' | 'carnivore' | 'omnivore';
 
 export interface CreatureStats {
     health: number;
@@ -42,7 +43,8 @@ export interface CreatureDefinition {
     bg: [number, number, number];
     stats: CreatureStats;
     behaviour: EntityBehaviour;
-    /** A `neutral` mob turns aggressive while ambient light is low. */
+    /** What this creature eats — drives feeding FSM (Phase B hunger system). */
+    diet: EntityDiet;
     nocturnalAggro: boolean;
     /** Only spawns at night (e.g. shadow_wraith). */
     nightOnly: boolean;
@@ -74,6 +76,7 @@ function toDefinition(raw: RawCreature): CreatureDefinition {
         bg: (raw.bg as [number, number, number]) ?? [0, 0, 0],
         stats: raw.stats as CreatureStats,
         behaviour: raw.behaviour as EntityBehaviour,
+        diet: (raw.diet as EntityDiet) ?? 'omnivore',
         nocturnalAggro: (raw.nocturnalAggro as boolean) ?? false,
         nightOnly: (raw.nightOnly as boolean) ?? false,
         pack: (raw.pack as [number, number]) ?? [1, 1],

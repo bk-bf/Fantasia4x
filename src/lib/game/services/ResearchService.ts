@@ -1,4 +1,4 @@
-import type { ResearchProject, LoreItem, RaceStats, GameState } from '../core/types';
+import type { ResearchProject, LoreItem, EntityStats, GameState } from '../core/types';
 import { consumeFromStockpiles } from '../core/GameState';
 import researchData from '../database/research.jsonc';
 import loreData from '../database/lore.jsonc';

@@ -17,11 +17,8 @@
         "bg"            : [0.0, 0.0, 0.0],
         "stats"         : {"health": 40, "strength": 12, "speed": 4, "visionRange": 7},
         "behaviour"     : "neutral",
+        "diet"          : "carnivore",
         "nocturnalAggro": true,
-        "pack"          : [1, 3],
-        "tameable"      : true,
-        "mountable"     : false,
-        "biomeWeights"  : {"forest": 1.0, "plains": 0.4},
         "lootTable"     : [
             { "itemId": "raw_meat", "chance": 1.0, "qty": [1, 2] },
             { "itemId": "hide",     "chance": 0.7, "qty": [1, 1] }
@@ -37,6 +34,7 @@
         "bg"            : [0.0, 0.0, 0.0],
         "stats"         : {"health": 90, "strength": 22, "speed": 3, "visionRange": 6},
         "behaviour"     : "neutral",
+        "diet"          : "omnivore",
         "nocturnalAggro": false,
         "pack"          : [1, 1],
         "tameable"      : true,
@@ -57,11 +55,10 @@
         "bg"            : [0.0, 0.0, 0.0],
         "stats"         : {"health": 35, "strength": 10, "speed": 4, "visionRange": 8},
         "behaviour"     : "aggressive",
+        "diet"          : "omnivore",
         "nocturnalAggro": false,
         "pack"          : [1, 3],
         "tameable"      : false,
-        "mountable"     : false,
-        "canSteal"      : true,
         "biomeWeights"  : {"swamp": 1.0, "forest": 0.5},
         "lootTable"     : [
             { "itemId": "bone", "chance": 0.5, "qty": [1, 2] }
@@ -77,11 +74,9 @@
         "bg"            : [0.0, 0.0, 0.0],
         "stats"         : {"health": 18, "strength": 5, "speed": 5, "visionRange": 5},
         "behaviour"     : "passive",
+        "diet"          : "omnivore",
         "nocturnalAggro": false,
         "pack"          : [1, 2],
-        "tameable"      : true,
-        "mountable"     : false,
-        "biomeWeights"  : {"plains": 1.0, "swamp": 0.6},
         "lootTable"     : [
             { "itemId": "raw_meat", "chance": 0.6, "qty": [1, 1] }
         ],
@@ -96,6 +91,7 @@
         "bg"            : [0.0, 0.0, 0.0],
         "stats"         : {"health": 50, "strength": 16, "speed": 5, "visionRange": 9},
         "behaviour"     : "aggressive",
+        "diet"          : "carnivore",
         "nocturnalAggro": false,
         "nightOnly"     : true,
         "pack"          : [1, 1],
@@ -107,42 +103,37 @@
     },
     // ── Neutral animals ─────────────────────────────────────────────────────────
     {
-        "id"            : "deer",
-        "name"          : "Deer",
-        "entityClass"   : "animal",
-        "charSpans"     : [ {"sheet": "creatures", "id": 66} ],
-        "fg"            : [0.72, 0.55, 0.38],
-        "bg"            : [0.0, 0.0, 0.0],
-        "stats"         : {"health": 30, "strength": 4, "speed": 6, "visionRange": 8},
-        "behaviour"     : "passive",
-        "pack"          : [3, 8],
-        "tameable"      : true,
-        "tameResistance": 0.4,
-        "mountable"     : false,
-        "biomeWeights"  : {"forest": 1.0, "plains": 0.8},
-        "lootTable"     : [
+        "id"         : "deer",
+        "name"       : "Deer",
+        "entityClass": "animal",
+        "charSpans"  : [ {"sheet": "creatures", "id": 66} ],
+        "fg"         : [0.72, 0.55, 0.38],
+        "bg"         : [0.0, 0.0, 0.0],
+        "stats"      : {"health": 30, "strength": 4, "speed": 6, "visionRange": 8},
+        "behaviour"  : "passive",
+        "diet"       : "herbivore",
+        "pack"       : [3, 8],
+        "lootTable"  : [
             { "itemId": "raw_meat", "chance": 1.0, "qty": [2, 3] },
             { "itemId": "hide",     "chance": 1.0, "qty": [1, 2] }
         ],
-        "xpValue"       : 8
+        "xpValue"    : 8
     },
     {
-        "id"          : "rabbit",
-        "name"        : "Rabbit",
-        "entityClass" : "animal",
-        "charSpans"   : [ {"sheet": "creatures", "id": 76} ],
-        "fg"          : [0.80, 0.78, 0.72],
-        "bg"          : [0.0, 0.0, 0.0],
-        "stats"       : {"health": 8, "strength": 1, "speed": 7, "visionRange": 6},
-        "behaviour"   : "passive",
-        "pack"        : [1, 5],
-        "tameable"    : true,
-        "mountable"   : false,
-        "biomeWeights": {"plains": 1.0, "forest": 0.6},
-        "lootTable"   : [
+        "id"         : "rabbit",
+        "name"       : "Rabbit",
+        "entityClass": "animal",
+        "charSpans"  : [ {"sheet": "creatures", "id": 76} ],
+        "fg"         : [0.80, 0.78, 0.72],
+        "bg"         : [0.0, 0.0, 0.0],
+        "stats"      : {"health": 8, "strength": 1, "speed": 7, "visionRange": 6},
+        "behaviour"  : "passive",
+        "diet"       : "herbivore",
+        "pack"       : [1, 5],
+        "lootTable"  : [
             { "itemId": "raw_meat", "chance": 1.0, "qty": [1, 1] }
         ],
-        "xpValue"     : 3
+        "xpValue"    : 3
     },
     {
         "id"                : "boar",
@@ -153,6 +144,7 @@
         "bg"                : [0.0, 0.0, 0.0],
         "stats"             : {"health": 45, "strength": 14, "speed": 5, "visionRange": 6},
         "behaviour"         : "neutral",
+        "diet"              : "omnivore",
         "chargesWhenWounded": true,
         "pack"              : [3, 8],
         "tameable"          : true,
@@ -175,6 +167,7 @@
         "bg"            : [0.0, 0.0, 0.0],
         "stats"         : {"health": 55, "strength": 8, "speed": 6, "visionRange": 8},
         "behaviour"     : "passive",
+        "diet"          : "herbivore",
         "pack"          : [3, 8],
         "tameable"      : true,
         "tameResistance": 0.4,
@@ -196,6 +189,7 @@
         "bg"            : [0.0, 0.0, 0.0],
         "stats"         : {"health": 22, "strength": 5, "speed": 5, "visionRange": 7},
         "behaviour"     : "passive",
+        "diet"          : "herbivore",
         "pack"          : [3, 8],
         "tameable"      : true,
         "tameResistance": 0.8,
@@ -217,6 +211,7 @@
         "bg"            : [0.0, 0.0, 0.0],
         "stats"         : {"health": 6, "strength": 1, "speed": 4, "visionRange": 5},
         "behaviour"     : "passive",
+        "diet"          : "omnivore",
         "pack"          : [3, 8],
         "tameable"      : true,
         "tameResistance": 0.8,

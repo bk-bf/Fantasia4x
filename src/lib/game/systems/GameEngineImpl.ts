@@ -1,6 +1,6 @@
 import type { GameEngine, GameEngineConfig, TurnProcessingResult, SystemInteractionResult } from './GameEngine';
 import type { BuildingEffectResult } from './ModifierSystem';
-import type { GameState, PawnNeeds } from '../core/types';
+import type { GameState, EntityNeeds } from '../core/types';
 import { GameStateManager } from '../core/GameState';
 import { gameState } from '$lib/stores/gameState';
 import { get } from 'svelte/store';
@@ -62,7 +62,7 @@ export class GameEngineImpl implements GameEngine {
 
 	// ===== PAWN SERVICE COORDINATION METHODS =====
 
-	getPawnNeeds(pawnId: string): PawnNeeds {
+	getPawnNeeds(pawnId: string): EntityNeeds {
 		if (!this.gameState) return { hunger: 0, fatigue: 0, sleep: 0, lastSleep: 0, lastMeal: 0 };
 
 		// COORDINATION: Delegate to PawnService instead of direct pawn access
@@ -325,6 +325,7 @@ export class GameEngineImpl implements GameEngine {
 			t('entityStep', () => {
 				this.gameState = entityService.spawnEntities(this.gameState!);
 				this.gameState = entityService.stepEntities(this.gameState!);
+				this.gameState = entityService.stepHunger(this.gameState!);
 				this.gameState = entityService.removeDead(this.gameState!);
 			});
 			this.debugLogPawns();

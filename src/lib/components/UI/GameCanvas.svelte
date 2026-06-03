@@ -188,6 +188,7 @@
   // Per-pawn rendered position in float world-tile coords, eased toward the
   // simulation's authoritative sub-tile position each frame for smooth 60fps motion.
   const pawnRenderPos = new Map<string, { x: number; y: number }>();
+  const mobRenderPos = new Map<string, { x: number; y: number }>();
   let lastFrameTime = 0;
   // Coalesces many per-mousemove preview redraws into one rebuild per frame.
   let overlayRedrawScheduled = false;
@@ -342,7 +343,11 @@
       ? (mobs.find((m) => m.x === hoverTileX && m.y === hoverTileY && m.state !== 'Corpse') ?? null)
       : null;
 
-  function buildMobCard(mob: Mob, def: NonNullable<ReturnType<typeof getCreatureById>>, selected: boolean): SelectedEntityModel {
+  function buildMobCard(
+    mob: Mob,
+    def: NonNullable<ReturnType<typeof getCreatureById>>,
+    selected: boolean
+  ): SelectedEntityModel {
     return {
       name: def.name,
       status: mob.state,
@@ -354,9 +359,14 @@
           value: `${Math.floor(mob.health)}/${mob.maxHealth}`,
           warn: mob.health < mob.maxHealth * 0.35
         },
-        { label: 'STR', value: def.stats.strength },
-        { label: 'SPD', value: def.stats.speed },
-        { label: 'Vision', value: def.stats.visionRange }
+        {
+          label: 'Hunger',
+          value: `${Math.floor(mob.needs.hunger)}%`,
+          warn: mob.needs.hunger > 60
+        },
+        { label: 'STR', value: mob.stats.strength },
+        { label: 'DEX', value: mob.stats.dexterity },
+        { label: 'WIS', value: mob.stats.wisdom }
       ],
       note: `${def.entityClass === 'mob' ? '⚔ hostile' : '◆ neutral'} · ${def.behaviour}${
         def.tameable ? ' · tameable' : ''
@@ -614,10 +624,50 @@
     // Dropped/stored items are a layer BENEATH pawns: draw them first so a pawn
     // standing on an item's tile overwrites (renders on top of) it.
     overlayDroppedItems(pawnOverlayGrid, droppedItems);
-    overlayMobs(pawnOverlayGrid, mobs);
-    const seen = new Set<string>();
-    // Exponential smoothing factor for this frame's elapsed time.
+    // Exponential smoothing factor — shared for pawns and mobs this frame.
     const alpha = dt > 0 ? 1 - Math.exp(-dt / MOVE_SMOOTH_TAU) : 1;
+
+    // ── Mobs / animals — same interpolation approach as pawns ─────────────────
+    const seenMobs = new Set<string>();
+    for (const mob of mobs) {
+      const def = getCreatureById(mob.creatureId);
+      if (!def || !def.chars.length) continue;
+      seenMobs.add(mob.id);
+
+      const target = { x: mob.x, y: mob.y };
+      let rm = mobRenderPos.get(mob.id);
+      if (!rm || Math.abs(rm.x - target.x) > 2 || Math.abs(rm.y - target.y) > 2) {
+        rm = { x: target.x, y: target.y };
+      } else {
+        rm.x += (target.x - rm.x) * alpha;
+        rm.y += (target.y - rm.y) * alpha;
+      }
+      mobRenderPos.set(mob.id, rm);
+
+      const cellX = Math.round(rm.x);
+      const cellY = Math.round(rm.y);
+      const isCorpse = mob.state === 'Corpse';
+      const isSelected = mob.id === selectedMobId;
+      const existing = pawnOverlayGrid.getTile(cellX, cellY);
+      pawnOverlayGrid.setTile(cellX, cellY, {
+        char: def.chars[0],
+        foreground: isSelected
+          ? { r: 1.0, g: 0.9, b: 0.1 }
+          : isCorpse
+            ? { r: 0.5, g: 0.25, b: 0.2 }
+            : { r: def.fg[0], g: def.fg[1], b: def.fg[2] },
+        background: existing?.background ?? { r: 0, g: 0, b: 0 },
+        position: { x: cellX, y: cellY },
+        animationOffset: { x: (rm.x - cellX) * BASE_TILE_PX, y: (rm.y - cellY) * BASE_TILE_PX }
+      });
+    }
+    if (seenMobs.size !== mobRenderPos.size) {
+      for (const id of mobRenderPos.keys()) {
+        if (!seenMobs.has(id)) mobRenderPos.delete(id);
+      }
+    }
+
+    const seen = new Set<string>();
 
     for (let i = 0; i < pawns.length; i++) {
       const pawn = pawns[i];
@@ -690,27 +740,6 @@
           position: { x: drop.x, y: drop.y }
         });
       }
-    }
-  }
-
-  /** Render each live mob/animal via its DB-defined glyph + foreground colour. */
-  function overlayMobs(grid: GameGrid, list: Mob[]) {
-    for (const mob of list) {
-      const def = getCreatureById(mob.creatureId);
-      if (!def || !def.chars.length) continue;
-      const isCorpse = mob.state === 'Corpse';
-      const isSelected = mob.id === selectedMobId;
-      const existing = grid.getTile(mob.x, mob.y);
-      grid.setTile(mob.x, mob.y, {
-        char: def.chars[0],
-        foreground: isSelected
-          ? { r: 1.0, g: 0.9, b: 0.1 }
-          : isCorpse
-            ? { r: 0.5, g: 0.25, b: 0.2 }
-            : { r: def.fg[0], g: def.fg[1], b: def.fg[2] },
-        background: existing?.background ?? { r: 0, g: 0, b: 0 },
-        position: { x: mob.x, y: mob.y }
-      });
     }
   }
 

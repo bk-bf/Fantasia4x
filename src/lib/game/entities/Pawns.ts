@@ -1,10 +1,10 @@
 import type {
 	GameState,
 	Pawn,
-	PawnNeeds,
+	EntityNeeds,
 	PawnState,
 	Race,
-	RaceStats,
+	EntityStats,
 	RacialTrait
 } from '../core/types';
 import {
@@ -385,28 +385,28 @@ export function getAbilityDescription(
 
 // --- Existing utility functions (unchanged) ---
 
-function rollStatsFromRanges(statRanges: Record<string, [number, number]>): RaceStats {
+function rollStatsFromRanges(statRanges: Record<string, [number, number]>): EntityStats {
 	const stats: any = {};
 
 	Object.entries(statRanges).forEach(([statName, [min, max]]) => {
 		stats[statName] = min + Math.floor(Math.random() * (max - min + 1));
 	});
 
-	return stats as RaceStats;
+	return stats as EntityStats;
 }
 
-function applyRacialTraitBonuses(baseStats: RaceStats, traits: RacialTrait[]): RaceStats {
+function applyRacialTraitBonuses(baseStats: EntityStats, traits: RacialTrait[]): EntityStats {
 	const modifiedStats = { ...baseStats };
 
 	traits.forEach((trait) => {
 		Object.entries(trait.effects).forEach(([effectName, effectValue]) => {
 			if (effectName.endsWith('Bonus') && typeof effectValue === 'number') {
-				const statName = effectName.replace('Bonus', '').toLowerCase() as keyof RaceStats;
+				const statName = effectName.replace('Bonus', '').toLowerCase() as keyof EntityStats;
 				if (modifiedStats[statName] !== undefined) {
 					modifiedStats[statName] += effectValue;
 				}
 			} else if (effectName.endsWith('Penalty') && typeof effectValue === 'number') {
-				const statName = effectName.replace('Penalty', '').toLowerCase() as keyof RaceStats;
+				const statName = effectName.replace('Penalty', '').toLowerCase() as keyof EntityStats;
 				if (modifiedStats[statName] !== undefined) {
 					modifiedStats[statName] = Math.max(1, modifiedStats[statName] + effectValue);
 				}

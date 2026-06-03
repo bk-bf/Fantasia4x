@@ -1,34 +1,21 @@
-import type { GameState, Pawn, PawnNeeds, PawnState, StatusEffectDef, PawnCondition, ConditionDef, ConditionStage } from '../core/types';
+import type { GameState, Pawn, EntityNeeds, PawnState, StatusEffectDef, EntityCondition, ConditionDef, ConditionStage } from '../core/types';
 import { consumeFromStockpiles } from '../core/GameState';
 import { calculatePawnAbilities, categorizeAbilities, getAbilityDescription } from '../entities/Pawns';
 import { WORK_CATEGORIES } from '../core/Work';
 import { TICKS_PER_SECOND, SECONDS_PER_TICK, perTick } from '../core/time';
 import statusEffectsData from '../database/status-effects.jsonc';
-import conditionsData from '../database/conditions.jsonc';
+import { getConditionCurrentStage, conditionNeedMultipliers } from '../core/needs';
 // Gated console shim — see core/log.ts. Silences per-tick log/debug/warn unless
 // gameDebug(true); console.error still surfaces.
 import { gatedConsole as console } from '../core/log';
 
 const STATUS_EFFECTS_DB = statusEffectsData as unknown as StatusEffectDef[];
-const CONDITIONS_DB = conditionsData as unknown as ConditionDef[];
 
 /** Resolve active effect definitions from a pawn's activeEffects id list. */
 function getActiveEffects(pawn: Pawn): StatusEffectDef[] {
 	return (pawn.activeEffects ?? [])
 		.map((id) => STATUS_EFFECTS_DB.find((e) => e.id === id))
 		.filter((e): e is StatusEffectDef => e !== undefined);
-}
-
-/** Get the current active ConditionStage for a PawnCondition. */
-function getConditionCurrentStage(condition: PawnCondition): ConditionStage | undefined {
-	const def = CONDITIONS_DB.find((d) => d.id === condition.id);
-	if (!def) return undefined;
-	// Stages are ordered ascending by minSeverity; last one that fits wins.
-	let active: ConditionStage | undefined;
-	for (const stage of def.stages) {
-		if (condition.severity >= stage.minSeverity) active = stage;
-	}
-	return active;
 }
 
 /**
@@ -614,13 +601,9 @@ export class PawnServiceImpl implements PawnService {
 		let fatigueRate = effects.reduce((r, e) => r * (e.modifiers.fatigueRate ?? 1), 1);
 
 		// Also apply condition stage hungerRate/fatigueRate modifiers (e.g. malnutrition increases hunger rate).
-		for (const condition of (pawn.conditions ?? [])) {
-			const stage = getConditionCurrentStage(condition);
-			if (stage) {
-				hungerRate *= stage.modifiers.hungerRate ?? 1;
-				fatigueRate *= stage.modifiers.fatigueRate ?? 1;
-			}
-		}
+		const condMults = conditionNeedMultipliers(pawn.conditions ?? []);
+		hungerRate *= condMults.hungerRate;
+		fatigueRate *= condMults.fatigueRate;
 
 		return {
 			hunger: this.getHungerIncreasePerTurn(pawn) * hungerRate,
@@ -682,7 +665,7 @@ export class PawnServiceImpl implements PawnService {
 		return { ...gameState, pawns };
 	}
 
-	private calculateStateUpdate(state: PawnState, needs: PawnNeeds, currentTurn: number): PawnState {
+	private calculateStateUpdate(state: PawnState, needs: EntityNeeds, currentTurn: number): PawnState {
 		const newState = { ...state };
 
 		// Critical needs override current activities.
@@ -822,7 +805,7 @@ export class PawnServiceImpl implements PawnService {
 	}
 
 	// Per-second magnitude. Applied smoothly each tick (via perTick) by processNeedsTick().
-	private getHealthRegenPerTurn(needs: PawnNeeds): number {
+	private getHealthRegenPerTurn(needs: EntityNeeds): number {
 		let regen = 0.5; // Base health regen per turn
 
 		// Well-fed and rested pawns regenerate faster

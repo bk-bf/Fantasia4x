@@ -188,6 +188,9 @@ export type MobState =
 	| 'Startled'
 	| 'Exhausted'
 	| 'Tamed'
+	// hunger states (Phase B)
+	| 'Foraging'  // herbivore/omnivore moving to a grass tile to eat
+	| 'Hunting'   // carnivore/omnivore pursuing nearest animal or corpse
 	// shared terminal state
 	| 'Corpse';
 
@@ -215,6 +218,17 @@ export interface Mob {
 	targetPawnId?: string;
 	/** Tick when the entity died (Corpse state) — used for decay timing. */
 	diedAt?: number;
+	// ── Shared pawn systems ───────────────────────────────────────────
+	/** Hunger + fatigue accrual (same type as Pawn.needs). sleep fields are unused for mobs. */
+	needs: EntityNeeds;
+	/** Progressive conditions (wounds, malnutrition, etc.) — same system as Pawn. */
+	conditions?: EntityCondition[];
+	/** D&D-style stats mapped from CreatureDefinition at spawn. */
+	stats: EntityStats;
+	/** Progress 0–1 through current eat action (shown as progress bar). */
+	eatProgress?: number;
+	/** Target entity id when in Hunting state. */
+	huntTargetId?: string;
 }
 
 /** An animal tamed and bound to an owning pawn (Phase C+). */
@@ -240,8 +254,8 @@ export interface WorkCategory {
 	locationTypesRequired?: string[]; // Location types where this work can be done
 
 	// Efficiency modifiers
-	primaryStat: keyof RaceStats;
-	secondaryStat?: keyof RaceStats;
+	primaryStat: keyof EntityStats;
+	secondaryStat?: keyof EntityStats;
 
 	// Base efficiency
 	baseEfficiency: number;
@@ -266,7 +280,7 @@ export interface ProductionTarget {
 	assignedPawns: string[]; // Pawn IDs assigned to this production
 }
 // NEW: Individual pawn interfaces
-export interface PawnNeeds {
+export interface EntityNeeds {
 	hunger: number; // 0-100, 100 = starving
 	fatigue: number; // 0-100, 100 = exhausted
 	sleep: number; // 0-100, 100 = must sleep
@@ -290,7 +304,7 @@ export interface StatusEffectDef {
 // ===== SURVIVAL & HEALTH TYPES (SURVIVAL-HEALTH spec) =====
 
 /** An active progressive health condition on a pawn. */
-export interface PawnCondition {
+export interface EntityCondition {
 	id: string;        // matches ConditionDef.id in conditions.jsonc
 	severity: number;  // 0.0–1.0; reaches lethalSeverity → pawn dies
 }
@@ -352,7 +366,7 @@ export interface Pawn {
 	inventory: PawnInventory;
 	equipment: PawnEquipment;
 	// Individual stats (rolled from race ranges)
-	stats: RaceStats;
+	stats: EntityStats;
 
 	// NEW: Individual physical traits
 	physicalTraits: {
@@ -362,7 +376,7 @@ export interface Pawn {
 	};
 
 	// NEW: Needs and state tracking
-	needs: PawnNeeds;
+	needs: EntityNeeds;
 	state: PawnState;
 
 	// Reference to racial traits for bonuses
@@ -385,7 +399,7 @@ export interface Pawn {
 
 	// ===== SURVIVAL & HEALTH (SURVIVAL-HEALTH spec) =====
 	/** Active progressive health conditions (malnutrition, blood_loss, …). */
-	conditions?: PawnCondition[];
+	conditions?: EntityCondition[];
 	/** 6-limb health state. Initialized at pawn creation. */
 	limbs?: LimbState[];
 	/** Blood volume 0–100. 0 = dead. Slowly regenerates when not bleeding. */
@@ -743,8 +757,8 @@ export interface ResearchProject {
 
 	// Stat Requirements
 	statRequirements?: {
-		minStats?: Partial<RaceStats>;
-		maxStats?: Partial<RaceStats>;
+		minStats?: Partial<EntityStats>;
+		maxStats?: Partial<EntityStats>;
 	};
 
 	// Lore bypass system
@@ -775,7 +789,7 @@ export interface LoreItem {
 	researchUnlocks: string[];
 	discoveryWeight: number;
 }
-export interface RaceStats {
+export interface EntityStats {
 	strength: number;
 	dexterity: number;
 	intelligence: number;
@@ -883,7 +897,7 @@ export interface Equipment {
 	id: string;
 	name: string;
 	type: 'weapon' | 'armor' | 'accessory';
-	stats: Partial<RaceStats>;
+	stats: Partial<EntityStats>;
 	magical?: boolean;
 }
 export interface Location {

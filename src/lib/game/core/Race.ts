@@ -1,4 +1,4 @@
-import type { Race, RaceStats } from './types';
+import type { Race, EntityStats } from './types';
 
 // Comprehensive Racial Trait Database
 const RACIAL_TRAIT_DATABASE = [
