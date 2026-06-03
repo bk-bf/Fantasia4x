@@ -1891,7 +1891,12 @@
     {@const workDone = selectedBuilding.workDone ?? 0}
     {@const workReq = selectedBuilding.workRequired ?? bDef?.workAmount ?? 1}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="bld-row" role="presentation" on:mousedown|stopPropagation on:mouseup|stopPropagation>
+    <div
+      class="bld-row"
+      role="presentation"
+      on:mousedown|stopPropagation
+      on:mouseup|stopPropagation
+    >
       <div class="tile-hud tile-hud--building tile-hud--selected-building">
         <div class="bld-header">
           <span class="bld-name">{bDef?.name ?? selectedBuilding.type}</span>
