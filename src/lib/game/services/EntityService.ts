@@ -39,48 +39,48 @@ const FLEE_HEALTH_FRACTION = 0.2;
 class EntityServiceImpl {
     private idCounter = 0;
 
-	// ===== INITIAL SEEDING =========================================================
+    // ===== INITIAL SEEDING =========================================================
 
-	/**
-	 * Populate a freshly generated / loaded world with a starting population so
-	 * entities are visible on the map immediately, without waiting for the slow
-	 * periodic spawner. Skips `nightOnly` creatures (they appear after dusk via
-	 * the regular spawner). Ignored if the world already has live entities.
-	 */
-	seedInitialEntities(state: GameState, packs = 10): GameState {
-		if ((state.mobs?.length ?? 0) > 0) return state;
-		const dayCreatures = CREATURES.filter((c) => !c.nightOnly);
-		if (dayCreatures.length === 0) return state;
+    /**
+     * Populate a freshly generated / loaded world with a starting population so
+     * entities are visible on the map immediately, without waiting for the slow
+     * periodic spawner. Skips `nightOnly` creatures (they appear after dusk via
+     * the regular spawner). Ignored if the world already has live entities.
+     */
+    seedInitialEntities(state: GameState, packs = 10): GameState {
+        if ((state.mobs?.length ?? 0) > 0) return state;
+        const dayCreatures = CREATURES.filter((c) => !c.nightOnly);
+        if (dayCreatures.length === 0) return state;
 
-		const seeded: Mob[] = [];
-		let hostile = 0;
-		let neutral = 0;
+        const seeded: Mob[] = [];
+        let hostile = 0;
+        let neutral = 0;
 
-		for (let p = 0; p < packs; p++) {
-			const def = dayCreatures[Math.floor(Math.random() * dayCreatures.length)];
-			if (def.entityClass === 'mob' && hostile >= MAX_HOSTILE) continue;
-			if (def.entityClass === 'animal' && neutral >= MAX_NEUTRAL) continue;
+        for (let p = 0; p < packs; p++) {
+            const def = dayCreatures[Math.floor(Math.random() * dayCreatures.length)];
+            if (def.entityClass === 'mob' && hostile >= MAX_HOSTILE) continue;
+            if (def.entityClass === 'animal' && neutral >= MAX_NEUTRAL) continue;
 
-			const origin = this.findSpawnTile(state, def);
-			if (!origin) continue;
+            const origin = this.findSpawnTile(state, def);
+            if (!origin) continue;
 
-			const [packMin, packMax] = def.pack;
-			const packSize = packMin + Math.floor(Math.random() * (packMax - packMin + 1));
-			for (let i = 0; i < packSize; i++) {
-				const tile =
-					i === 0 ? origin : this.findNearbyWalkable(state, origin.x, origin.y) ?? origin;
-				seeded.push(this.makeMob(def, tile.x, tile.y, state.turn));
-				if (def.entityClass === 'mob') hostile++;
-				else neutral++;
-			}
-		}
+            const [packMin, packMax] = def.pack;
+            const packSize = packMin + Math.floor(Math.random() * (packMax - packMin + 1));
+            for (let i = 0; i < packSize; i++) {
+                const tile =
+                    i === 0 ? origin : this.findNearbyWalkable(state, origin.x, origin.y) ?? origin;
+                seeded.push(this.makeMob(def, tile.x, tile.y, state.turn));
+                if (def.entityClass === 'mob') hostile++;
+                else neutral++;
+            }
+        }
 
-		return { ...state, mobs: [...(state.mobs ?? []), ...seeded] };
-	}
+        return { ...state, mobs: [...(state.mobs ?? []), ...seeded] };
+    }
 
-	// ===== SPAWNING =================================================================
+    // ===== SPAWNING =================================================================
 
-	spawnEntities(state: GameState): GameState {
+    spawnEntities(state: GameState): GameState {
         // Only roll on the spawn-check cadence to keep per-tick cost ~zero.
         if (state.turn % SPAWN_CHECK_INTERVAL !== 0) return state;
 

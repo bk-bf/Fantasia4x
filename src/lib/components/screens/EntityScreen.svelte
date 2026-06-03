@@ -68,9 +68,13 @@
       {#each groups as g (g.creatureId)}
         <div class="group">
           <div class="group-hdr">
-            <span class="glyph" style="color: {rgb(g.fg)}">{g.entityClass === 'mob' ? '✦' : '◆'}</span>
+            <span class="glyph" style="color: {rgb(g.fg)}"
+              >{g.entityClass === 'mob' ? '✦' : '◆'}</span
+            >
             <span class="name">{g.name}</span>
-            <span class="tag {g.entityClass}">{g.entityClass === 'mob' ? 'HOSTILE' : 'NEUTRAL'}</span>
+            <span class="tag {g.entityClass}"
+              >{g.entityClass === 'mob' ? 'HOSTILE' : 'NEUTRAL'}</span
+            >
             <span class="count">×{g.count}</span>
           </div>
           <div class="members">
