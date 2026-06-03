@@ -378,7 +378,7 @@ class EntityServiceImpl {
         // ── Hunger-driven FSM transitions (only when safe) ───────────────────────
         if (!inVision) {
             const hungry = mob.needs.hunger >= HUNGER_EAT_THRESHOLD;
-            const sated  = mob.needs.hunger <= HUNGER_SATED_THRESHOLD;
+            const sated = mob.needs.hunger <= HUNGER_SATED_THRESHOLD;
 
             // Exit feeding states when sated.
             if (sated && (mob.state === 'Foraging' || mob.state === 'Hunting')) {
@@ -389,9 +389,9 @@ class EntityServiceImpl {
             if (hungry && mob.state !== 'Foraging' && mob.state !== 'Hunting' &&
                 mob.state !== 'Fleeing' && mob.state !== 'Startled') {
                 const canForage = def.diet !== 'carnivore';
-                const canHunt   = def.diet !== 'herbivore';
+                const canHunt = def.diet !== 'herbivore';
                 if (canForage) return { ...mob, state: 'Foraging', stateSince: turn };
-                if (canHunt)   return { ...mob, state: 'Hunting',  stateSince: turn };
+                if (canHunt) return { ...mob, state: 'Hunting', stateSince: turn };
             }
         } else if (mob.state === 'Foraging' || mob.state === 'Hunting') {
             // Threatened while eating — drop food and flee.
