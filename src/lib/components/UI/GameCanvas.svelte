@@ -33,6 +33,8 @@
   import { resourceObjectService } from '$lib/game/services/ResourceObjectService.js';
   import { getCreatureById } from '$lib/game/core/Creatures.js';
   import { TICKS_PER_SECOND } from '$lib/game/core/time.js';
+  import SelectedEntityCard from '$lib/components/UI/SelectedEntityCard.svelte';
+  import type { SelectedEntityModel } from '$lib/components/UI/SelectedEntityCard.svelte';
   import itemsData from '$lib/game/database/items.jsonc';
 
   const ITEMS_DATABASE = itemsData as unknown as Item[];
@@ -265,6 +267,8 @@
 
   // Selected building (click-locked, like selectedPawnId)
   let selectedBuildingId: string | null = null;
+  // Selected mob/animal (click-locked, like selectedPawnId)
+  let selectedMobId: string | null = null;
   // Resource tile interaction
   let selectedResourceTile: { x: number; y: number; resourceId: string } | null = null;
   let similarDragMode = false;
@@ -300,6 +304,77 @@
 
   // When a pawn is selected its card locks the HUD regardless of hover position.
   $: selectedPawn = selectedPawnId ? (pawns.find((p) => p.id === selectedPawnId) ?? null) : null;
+
+  // Click-selected mob/animal (stays locked until Esc / click elsewhere).
+  $: selectedMob = selectedMobId ? (mobs.find((m) => m.id === selectedMobId) ?? null) : null;
+  $: selectedMobDef = selectedMob ? (getCreatureById(selectedMob.creatureId) ?? null) : null;
+
+  // Reusable info-card models — both feed the same SelectedEntityCard component.
+  function buildPawnCard(pawn: Pawn, selected: boolean): SelectedEntityModel {
+    return {
+      name: pawn.name,
+      status: pawnStateLabel(pawn),
+      selected,
+      dismissable: selected,
+      stats: [
+        { label: 'HP', value: Math.floor(pawn.state.health ?? 100) },
+        { label: 'Mood', value: Math.floor(pawn.state.mood) },
+        { label: 'Hunger', value: Math.floor(pawn.needs.hunger), warn: pawn.needs.hunger > 60 },
+        { label: 'Fatigue', value: Math.floor(pawn.needs.fatigue), warn: pawn.needs.fatigue > 60 }
+      ],
+      job: pawn.activeJob
+        ? {
+            text: `→ ${pawnStateLabel(pawn)}${
+              pawn.activeJob.resourceId ? ` (${pawn.activeJob.resourceId})` : ''
+            }`
+          }
+        : { text: '→ Idle', idle: true },
+      progressBar: pawn.activeJob ? jobProgressBar(pawn.activeJob.progress ?? 0) : undefined,
+      pos: selected ? (pawn.position ?? undefined) : undefined
+    };
+  }
+
+  $: selectedPawnCard = selectedPawn ? buildPawnCard(selectedPawn, true) : null;
+  $: hoverPawnCard = hoverPawn ? buildPawnCard(hoverPawn, false) : null;
+
+  $: hoverMob =
+    hoverTileX >= 0 && hoverTileY >= 0
+      ? (mobs.find((m) => m.x === hoverTileX && m.y === hoverTileY && m.state !== 'Corpse') ?? null)
+      : null;
+
+  function buildMobCard(mob: Mob, def: NonNullable<ReturnType<typeof getCreatureById>>, selected: boolean): SelectedEntityModel {
+    return {
+      name: def.name,
+      status: mob.state,
+      selected,
+      dismissable: selected,
+      stats: [
+        {
+          label: 'HP',
+          value: `${Math.floor(mob.health)}/${mob.maxHealth}`,
+          warn: mob.health < mob.maxHealth * 0.35
+        },
+        { label: 'STR', value: def.stats.strength },
+        { label: 'SPD', value: def.stats.speed },
+        { label: 'Vision', value: def.stats.visionRange }
+      ],
+      note: `${def.entityClass === 'mob' ? '⚔ hostile' : '◆ neutral'} · ${def.behaviour}${
+        def.tameable ? ' · tameable' : ''
+      }`,
+      pos: selected ? { x: mob.x, y: mob.y } : undefined
+    };
+  }
+
+  $: hoverMobCard = (() => {
+    if (!hoverMob) return null;
+    const def = getCreatureById(hoverMob.creatureId);
+    return def ? buildMobCard(hoverMob, def, false) : null;
+  })();
+
+  $: selectedMobCard = (() => {
+    if (!selectedMob || !selectedMobDef) return null;
+    return buildMobCard(selectedMob, selectedMobDef, true);
+  })();
 
   // Building under hovered tile (all statuses)
   $: hoverBuilding =
@@ -624,12 +699,15 @@
       const def = getCreatureById(mob.creatureId);
       if (!def || !def.chars.length) continue;
       const isCorpse = mob.state === 'Corpse';
+      const isSelected = mob.id === selectedMobId;
       const existing = grid.getTile(mob.x, mob.y);
       grid.setTile(mob.x, mob.y, {
         char: def.chars[0],
-        foreground: isCorpse
-          ? { r: 0.5, g: 0.25, b: 0.2 }
-          : { r: def.fg[0], g: def.fg[1], b: def.fg[2] },
+        foreground: isSelected
+          ? { r: 1.0, g: 0.9, b: 0.1 }
+          : isCorpse
+            ? { r: 0.5, g: 0.25, b: 0.2 }
+            : { r: def.fg[0], g: def.fg[1], b: def.fg[2] },
         background: existing?.background ?? { r: 0, g: 0, b: 0 },
         position: { x: mob.x, y: mob.y }
       });
@@ -1053,6 +1131,7 @@
     if (clickedBuilding) {
       selectedBuildingId = clickedBuilding.id;
       selectedPawnId = null;
+      selectedMobId = null;
       showShelterAssign = false;
       uiState.selectPawn(null);
       redrawOverlay();
@@ -1066,9 +1145,25 @@
     if (clickedPawn) {
       selectedPawnId = clickedPawn.id;
       selectedBuildingId = null;
+      selectedMobId = null;
       selectedResourceTile = null;
       highlightedResourceTiles = new Set();
       uiState.selectPawn(clickedPawn.id);
+      redrawOverlay();
+      return;
+    }
+
+    // Click on a live mob/animal → select it, deselect everything else
+    const clickedMob = mobs.find(
+      (m) => m.x === hoverTileX && m.y === hoverTileY && m.state !== 'Corpse'
+    );
+    if (clickedMob) {
+      selectedMobId = clickedMob.id;
+      selectedPawnId = null;
+      selectedBuildingId = null;
+      selectedResourceTile = null;
+      highlightedResourceTiles = new Set();
+      uiState.selectPawn(null);
       redrawOverlay();
       return;
     }
@@ -1081,6 +1176,7 @@
       selectedResourceTile = { x: hoverTileX, y: hoverTileY, resourceId };
       selectedPawnId = null;
       selectedBuildingId = null;
+      selectedMobId = null;
       uiState.selectPawn(null);
       redrawOverlay();
       return;
@@ -1089,6 +1185,7 @@
     // Click on empty tile → deselect all
     selectedBuildingId = null;
     selectedResourceTile = null;
+    selectedMobId = null;
     highlightedResourceTiles = new Set();
     // TODO: draft-control mechanic will re-enable direct pawn movement later.
     // For now, pawns must only move through the automated AI and turn processing.
@@ -1323,6 +1420,11 @@
         if (selectedResourceTile) {
           selectedResourceTile = null;
           highlightedResourceTiles = new Set();
+          redrawOverlay();
+          break;
+        }
+        if (selectedMobId) {
+          selectedMobId = null;
           redrawOverlay();
           break;
         }
@@ -1867,46 +1969,12 @@
           1}){/if}
     </div>
   {/if}
-  {#if selectedPawn}
+  {#if selectedPawnCard}
     <!-- Selected pawn card — locked to this pawn regardless of mouse hover -->
-    <div class="tile-hud tile-hud--pawn tile-hud--selected">
-      <div class="pawn-header">
-        <span class="pawn-name">{selectedPawn.name}</span>
-        <span class="pawn-state">[{pawnStateLabel(selectedPawn)}]</span>
-        <span class="pawn-dismiss" title="Press Esc to deselect">◈</span>
-      </div>
-      <div class="pawn-row">
-        <span class="pawn-stat-label">HP</span><span class="pawn-stat-val"
-          >{Math.floor(selectedPawn.state.health ?? 100)}</span
-        >
-        <span class="pawn-stat-label">Mood</span><span class="pawn-stat-val"
-          >{Math.floor(selectedPawn.state.mood)}</span
-        >
-        <span class="pawn-stat-label">Hunger</span><span
-          class="pawn-stat-val"
-          class:pawn-warn={selectedPawn.needs.hunger > 60}
-          >{Math.floor(selectedPawn.needs.hunger)}</span
-        >
-        <span class="pawn-stat-label">Fatigue</span><span
-          class="pawn-stat-val"
-          class:pawn-warn={selectedPawn.needs.fatigue > 60}
-          >{Math.floor(selectedPawn.needs.fatigue)}</span
-        >
-      </div>
-      {#if selectedPawn.activeJob}
-        <div class="pawn-job">
-          → {pawnStateLabel(selectedPawn)}{selectedPawn.activeJob.resourceId
-            ? ` (${selectedPawn.activeJob.resourceId})`
-            : ''}
-        </div>
-        <div class="pawn-progress">[{jobProgressBar(selectedPawn.activeJob.progress ?? 0)}]</div>
-      {:else}
-        <div class="pawn-job pawn-idle">→ Idle</div>
-      {/if}
-      {#if selectedPawn.position}
-        <div class="pawn-pos">pos ({selectedPawn.position.x},{selectedPawn.position.y})</div>
-      {/if}
-    </div>
+    <SelectedEntityCard model={selectedPawnCard} />
+  {:else if selectedMobCard}
+    <!-- Selected mob/animal card — locked to this creature regardless of hover -->
+    <SelectedEntityCard model={selectedMobCard} />
   {:else if selectedBuilding}
     {@const bDef = buildingService.getBuildingById(selectedBuilding.type)}
     {@const isBlueprint = selectedBuilding.status !== 'complete'}
@@ -2184,37 +2252,10 @@
       {/each}
       <div class="sel-hint">Esc to clear</div>
     </div>
-  {:else if hoverPawn}
-    <div class="tile-hud tile-hud--pawn">
-      <div class="pawn-header">
-        <span class="pawn-name">{hoverPawn.name}</span>
-        <span class="pawn-state">[{pawnStateLabel(hoverPawn)}]</span>
-      </div>
-      <div class="pawn-row">
-        <span class="pawn-stat-label">HP</span><span class="pawn-stat-val"
-          >{Math.floor(hoverPawn.state.health ?? 100)}</span
-        >
-        <span class="pawn-stat-label">Mood</span><span class="pawn-stat-val"
-          >{Math.floor(hoverPawn.state.mood)}</span
-        >
-        <span class="pawn-stat-label">Hunger</span><span
-          class="pawn-stat-val"
-          class:pawn-warn={hoverPawn.needs.hunger > 60}>{Math.floor(hoverPawn.needs.hunger)}</span
-        >
-        <span class="pawn-stat-label">Fatigue</span><span
-          class="pawn-stat-val"
-          class:pawn-warn={hoverPawn.needs.fatigue > 60}>{Math.floor(hoverPawn.needs.fatigue)}</span
-        >
-      </div>
-      {#if hoverPawn.activeJob}
-        <div class="pawn-job">
-          → {pawnStateLabel(hoverPawn)}{hoverPawn.activeJob.resourceId
-            ? ` (${hoverPawn.activeJob.resourceId})`
-            : ''}
-        </div>
-        <div class="pawn-progress">[{jobProgressBar(hoverPawn.activeJob.progress ?? 0)}]</div>
-      {/if}
-    </div>
+  {:else if hoverPawnCard}
+    <SelectedEntityCard model={hoverPawnCard} />
+  {:else if hoverMobCard}
+    <SelectedEntityCard model={hoverMobCard} />
   {:else if hoverBuilding && !hoverPawn}
     {@const bDef = buildingService.getBuildingById(hoverBuilding.type)}
     {@const isBlueprint = hoverBuilding.status !== 'complete'}
@@ -2353,70 +2394,6 @@
   .tile-hud--selection {
     max-width: 340px;
     white-space: normal;
-  }
-  .tile-hud--pawn {
-    min-width: 180px;
-    white-space: nowrap;
-  }
-  .pawn-header {
-    display: flex;
-    gap: 6px;
-    align-items: baseline;
-    margin-bottom: 2px;
-  }
-  .pawn-name {
-    color: #c8a060;
-    font-weight: bold;
-    font-size: 11px;
-  }
-  .pawn-state {
-    color: #7a6030;
-    font-size: 9px;
-  }
-  .pawn-row {
-    display: flex;
-    gap: 6px;
-    align-items: baseline;
-    font-size: 9px;
-  }
-  .pawn-stat-label {
-    color: #7a6030;
-  }
-  .pawn-stat-val {
-    color: #c08040;
-    min-width: 18px;
-  }
-  .pawn-warn {
-    color: #ee8844 !important;
-  }
-  .pawn-job {
-    color: #8a7040;
-    font-size: 9px;
-    margin-top: 1px;
-  }
-  .tile-hud--selected {
-    border-color: #f0c060;
-    background: rgba(20, 14, 4, 0.96);
-    color: #e8c870;
-    min-width: 200px;
-  }
-  .tile-hud--selected .pawn-name {
-    color: #ffe890;
-  }
-  .tile-hud--selected .pawn-state {
-    color: #c0a040;
-  }
-  .pawn-dismiss {
-    margin-left: auto;
-    color: #886630;
-    font-size: 9px;
-  }
-  .pawn-idle {
-    color: #887040;
-  }
-  .pawn-pos {
-    color: #776040;
-    font-size: 9px;
   }
   .tile-hud--item {
     min-width: 140px;
