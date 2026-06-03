@@ -19,6 +19,7 @@ import { pawnStateMachineService } from './PawnStateMachine';
 import { jobService } from '../services/JobService';
 import { wasmPathfinderService } from '../services/WasmPathfinderService';
 import { resourceObjectService } from '../services/ResourceObjectService';
+import { entityService } from '../services/EntityService';
 import { TICKS_PER_SECOND, ticksFromSeconds, perTick } from '../core/time';
 import { isGameDebug } from '../core/log';
 import type { WorkCategory } from '../core/types';
@@ -321,6 +322,11 @@ export class GameEngineImpl implements GameEngine {
 			t('pawns', () => this.processPawns());
 			t('locationRenewal', () => this.processLocationRenewal());
 			t('resourceRegrowth', () => this.processResourceRegrowth());
+			t('entityStep', () => {
+				this.gameState = entityService.spawnEntities(this.gameState!);
+				this.gameState = entityService.stepEntities(this.gameState!);
+				this.gameState = entityService.removeDead(this.gameState!);
+			});
 			this.debugLogPawns();
 
 			this.lastTurnProcessed = this.gameState.turn;

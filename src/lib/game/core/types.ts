@@ -168,6 +168,64 @@ export interface GameState {
 	droppedItems?: DroppedItem[];
 	/** Dead pawn records for colony history (SURVIVAL-HEALTH spec). */
 	deadPawns?: DeadPawnRecord[];
+	/** ENTITIES_SPAWNING Phase A: live hostile mobs + neutral animals on the map. */
+	mobs?: Mob[];
+	/** ENTITIES_SPAWNING Phase C: animals tamed and bound to a pawn. */
+	tamedAnimals?: TamedAnimal[];
+}
+
+// ===== ENTITIES (ENTITIES_SPAWNING spec) =====
+
+/** FSM state for a live entity. Hostile + neutral share one machine. */
+export type MobState =
+	// hostile mob states
+	| 'Wander'
+	| 'Alerted'
+	| 'Attacking'
+	| 'Fleeing'
+	// neutral animal states
+	| 'Grazing'
+	| 'Startled'
+	| 'Exhausted'
+	| 'Tamed'
+	// shared terminal state
+	| 'Corpse';
+
+/**
+ * A live entity instance on the map — either a hostile mob or a neutral animal.
+ * `creatureId` references a CreatureDefinition in core/Creatures.ts (DB-driven).
+ */
+export interface Mob {
+	id: string;
+	creatureId: string;
+	entityClass: 'mob' | 'animal';
+	x: number;
+	y: number;
+	health: number;
+	maxHealth: number;
+	state: MobState;
+	/** Anchor tile for grazing/wander home-range drift. */
+	homeX: number;
+	homeY: number;
+	/** Tick when the FSM last changed state — drives timed transitions. */
+	stateSince: number;
+	/** Remaining tick budget before this entity may move one tile again. */
+	moveCooldown: number;
+	/** Transient: pawn this entity is hunting or fleeing from. */
+	targetPawnId?: string;
+	/** Tick when the entity died (Corpse state) — used for decay timing. */
+	diedAt?: number;
+}
+
+/** An animal tamed and bound to an owning pawn (Phase C+). */
+export interface TamedAnimal {
+	id: string;
+	creatureId: string;
+	ownerPawnId: string;
+	x: number;
+	y: number;
+	health: number;
+	maxHealth: number;
 }
 export interface WorkCategory {
 	id: string;

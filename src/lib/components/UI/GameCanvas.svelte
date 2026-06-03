@@ -12,7 +12,8 @@
     DesignationType,
     DroppedItem,
     FuelSettings,
-    Item
+    Item,
+    Mob
   } from '$lib/game/core/types.js';
   import type { GameGrid } from '$lib/webgl/game-grid.js';
   import { GameGrid as GameGridClass } from '$lib/webgl/game-grid.js';
@@ -30,6 +31,7 @@
   import { buildingService } from '$lib/game/services/BuildingService.js';
   import { resolveCharSpans, BIOMES, SUBTERRAINS } from '$lib/game/core/Terrains.js';
   import { resourceObjectService } from '$lib/game/services/ResourceObjectService.js';
+  import { getCreatureById } from '$lib/game/core/Creatures.js';
   import { TICKS_PER_SECOND } from '$lib/game/core/time.js';
   import itemsData from '$lib/game/database/items.jsonc';
 
@@ -218,6 +220,8 @@
   // Phase 7: dropped items overlay
   let droppedItems: DroppedItem[] = [];
 
+  // ENTITIES_SPAWNING Phase A: live mobs/animals overlay
+  let mobs: Mob[] = [];
   // Zone/designation painting — driven by uiState
   let designationMode = false;
   let designationTypeActive: DesignationType = 'harvest';
@@ -438,6 +442,7 @@
     buildings = s.buildings ?? [];
     designations = s.designations ?? {};
     droppedItems = s.droppedItems ?? [];
+    mobs = s.mobs ?? [];
     // Only the terrain layer is expensive to rebuild (buildGameGrid scans the
     // whole 240×160 map). It only changes when one of these references changes —
     // pawns AND dropped items are rendered as a separate per-frame overlay, so
@@ -534,6 +539,7 @@
     // Dropped/stored items are a layer BENEATH pawns: draw them first so a pawn
     // standing on an item's tile overwrites (renders on top of) it.
     overlayDroppedItems(pawnOverlayGrid, droppedItems);
+    overlayMobs(pawnOverlayGrid, mobs);
     const seen = new Set<string>();
     // Exponential smoothing factor for this frame's elapsed time.
     const alpha = dt > 0 ? 1 - Math.exp(-dt / MOVE_SMOOTH_TAU) : 1;
@@ -609,6 +615,24 @@
           position: { x: drop.x, y: drop.y }
         });
       }
+    }
+  }
+
+  /** Render each live mob/animal via its DB-defined glyph + foreground colour. */
+  function overlayMobs(grid: GameGrid, list: Mob[]) {
+    for (const mob of list) {
+      const def = getCreatureById(mob.creatureId);
+      if (!def || !def.chars.length) continue;
+      const isCorpse = mob.state === 'Corpse';
+      const existing = grid.getTile(mob.x, mob.y);
+      grid.setTile(mob.x, mob.y, {
+        char: def.chars[0],
+        foreground: isCorpse
+          ? { r: 0.5, g: 0.25, b: 0.2 }
+          : { r: def.fg[0], g: def.fg[1], b: def.fg[2] },
+        background: existing?.background ?? { r: 0, g: 0, b: 0 },
+        position: { x: mob.x, y: mob.y }
+      });
     }
   }
 

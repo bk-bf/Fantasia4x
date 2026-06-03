@@ -9,6 +9,7 @@
   import CraftingScreen from '$lib/components/screens/CraftingScreen.svelte';
   import ExplorationScreen from '$lib/components/screens/ExplorationScreen.svelte';
   import WorkScreen from '$lib/components/screens/WorkScreen.svelte';
+  import EntityScreen from '$lib/components/screens/EntityScreen.svelte';
   import ResourceSidebar from '$lib/components/UI/ResourceSidebar.svelte';
   import GameControls from '$lib/components/UI/GameControls.svelte';
   import ChroniclePanel from '$lib/components/UI/ChroniclePanel.svelte';
@@ -47,7 +48,8 @@
     { key: 'crafting', label: 'CRAFTING', fkey: 'F5' },
     { key: 'exploration', label: 'EXPLORE', fkey: 'F6' },
     { key: 'race', label: 'RACE', fkey: 'F7' },
-    { key: 'research', label: 'RESEARCH', fkey: 'F8', needsResearch: true }
+    { key: 'research', label: 'RESEARCH', fkey: 'F8', needsResearch: true },
+    { key: 'entities', label: 'ENTITIES', fkey: 'F9' }
   ] as const;
 
   function toggle(key: string) {
@@ -78,7 +80,7 @@
         uiState.setScreen('main');
         return;
       }
-      if (n >= 2 && n <= 8) {
+      if (n >= 2 && n <= 9) {
         e.preventDefault();
         const tab = NAV_TABS[n - 2];
         if (tab) toggle(tab.key);
@@ -136,6 +138,8 @@
               <RaceScreen />
             {:else if currentScreen === 'research'}
               <ResearchScreen />
+            {:else if currentScreen === 'entities'}
+              <EntityScreen />
             {/if}
           </div>
         {/if}

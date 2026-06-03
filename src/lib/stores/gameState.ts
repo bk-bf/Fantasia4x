@@ -16,6 +16,7 @@ import { eventSystem } from '$lib/game/core/Events';
 import { triggerEvent } from '$lib/stores/eventStore';
 import { generateWorld } from '$lib/game/world/WorldGenerator';
 import { resourceGeneratorService } from '$lib/game/services/ResourceGeneratorService';
+import { entityService } from '$lib/game/services/EntityService';
 import { loadSave, scheduleSave, deleteSave } from './saveManager';
 import { applyDevWorld } from '$lib/game/dev/devWorld';
 import { TICKS_PER_SECOND, ticksFromSeconds } from '$lib/game/core/time';
@@ -100,7 +101,9 @@ export const initialGameState: GameState = {
 	currentJobIndex: {},
 	pawnAbilities: {},
 	droppedItems: [],
-	deadPawns: []
+	deadPawns: [],
+	mobs: [],
+	tamedAnimals: []
 };
 
 // ===== UTILITY FUNCTIONS =====
@@ -139,6 +142,8 @@ function applyMigrations(state: GameState): GameState {
 	}
 	if (!state.designations) state.designations = {};
 	if (!state.jobs) state.jobs = [];
+	if (!state.mobs) state.mobs = [];
+	if (!state.tamedAnimals) state.tamedAnimals = [];
 	// Phase 5c: migrate old buildingQueue entries to PlacedBuilding (work-point model)
 	if (state.buildingQueue && state.buildingQueue.length > 0) {
 		const migratedBuildings = state.buildingQueue.map((entry: any, i: number) => {
@@ -388,9 +393,15 @@ function regenWorld(seed?: number, dev = false, itemQty = 500) {
 	// doesn't overwrite the store back to the old worldMap.
 	gameEngine.patchWorldMap(newWorld);
 	if (dev) {
-		updateWithSave((state) => applyDevWorld({ ...state, worldMap: newWorld }, itemQty));
+		updateWithSave((state) =>
+			entityService.seedInitialEntities(
+				applyDevWorld({ ...state, worldMap: newWorld, mobs: [] }, itemQty)
+			)
+		);
 	} else {
-		updateWithSave((state) => ({ ...state, worldMap: newWorld }));
+		updateWithSave((state) =>
+			entityService.seedInitialEntities({ ...state, worldMap: newWorld, mobs: [] })
+		);
 	}
 	if (browser) localStorage.setItem(WORLD_VERSION_KEY, String(WORLD_VERSION));
 }
@@ -556,6 +567,10 @@ export const savedStateReady: Promise<void> = (async () => {
 	if (baseState.pawns.some(p => !p.position)) {
 		baseState = { ...baseState, pawns: spawnPawnsOnMap(baseState.pawns, baseState.worldMap) };
 	}
+
+	// Seed an initial mob/animal population so entities are visible on the map
+	// immediately on load (no-op if the save already has live entities).
+	baseState = entityService.seedInitialEntities(baseState);
 
 	// Push loaded state into the store and sync GameEngine
 	set(baseState);

@@ -1,7 +1,7 @@
 // src/lib/stores/uiState.ts
 import { writable } from 'svelte/store';
 
-type Screen = 'main' | 'pawns' | 'race' | 'building' | 'crafting' | 'research' | 'exploration' | 'work';
+type Screen = 'main' | 'pawns' | 'race' | 'building' | 'crafting' | 'research' | 'exploration' | 'work' | 'entities';
 
 interface UIState {
   currentScreen: Screen;
