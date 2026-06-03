@@ -1784,6 +1784,8 @@
   }
 </script>
 
+<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <div
   class="canvas-wrap"
   class:dragging
@@ -1888,7 +1890,8 @@
       !isBlueprint && !selectedBuilding.deconstructQueued && bDef?.maxFuel !== undefined}
     {@const workDone = selectedBuilding.workDone ?? 0}
     {@const workReq = selectedBuilding.workRequired ?? bDef?.workAmount ?? 1}
-    <div class="bld-row" on:mousedown|stopPropagation on:mouseup|stopPropagation>
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div class="bld-row" role="presentation" on:mousedown|stopPropagation on:mouseup|stopPropagation>
       <div class="tile-hud tile-hud--building tile-hud--selected-building">
         <div class="bld-header">
           <span class="bld-name">{bDef?.name ?? selectedBuilding.type}</span>
@@ -1973,8 +1976,7 @@
                 use:hudSpriteIconAction={FUEL_SETTINGS_ICON_REF}
                 aria-hidden="true"
               ></canvas>
-            </button
-            >
+            </button>
           {/if}
         {/if}
       </div>
@@ -2459,9 +2461,6 @@
     white-space: nowrap;
     z-index: 10;
   }
-  .building-popup {
-    display: none; /* removed — building info now lives in the tile-hud */
-  }
   /* ── Building HUD card ─────────────────────────── */
   .tile-hud--building {
     min-width: 160px;
@@ -2511,9 +2510,6 @@
     font-size: 9px;
     flex: 1;
   }
-  .bld-actions {
-    display: none; /* actions moved to bld-side-actions */
-  }
   .bld-desc {
     color: #8a7040;
     font-size: 9px;
@@ -2549,11 +2545,6 @@
   .fuel-dark {
     color: #604020;
     margin-left: 4px;
-  }
-  .bld-actions {
-    display: flex;
-    gap: 4px;
-    margin-top: 4px;
   }
   .bld-btn {
     background: #140e04;
@@ -2793,9 +2784,7 @@
   .tile-hud--selected-building .bld-desc,
   .tile-hud--selected-resource .bld-desc,
   .tile-hud--selected-building .bld-progress,
-  .tile-hud--selected-resource .bld-progress,
-  .tile-hud--selected-building .bld-refund,
-  .tile-hud--selected-resource .bld-refund {
+  .tile-hud--selected-building .bld-refund {
     color: #c0a040;
   }
   .tile-coord {
@@ -2805,10 +2794,6 @@
   }
   .tile-layers {
     color: #b08848;
-  }
-  .tile-res {
-    color: #7a9a50;
-    font-size: 9px;
   }
   .error {
     color: #c04040;
