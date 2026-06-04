@@ -648,18 +648,18 @@
       }
       mobRenderPos.set(mob.id, rm);
 
+      // Don't render corpse mobs — the dropped carcass item already represents them on the map.
+      if (mob.state === 'Corpse') continue;
+
       const cellX = Math.round(rm.x);
       const cellY = Math.round(rm.y);
-      const isCorpse = mob.state === 'Corpse';
       const isSelected = mob.id === selectedMobId;
       const existing = pawnOverlayGrid.getTile(cellX, cellY);
       pawnOverlayGrid.setTile(cellX, cellY, {
         char: def.chars[0],
         foreground: isSelected
           ? { r: 1.0, g: 0.9, b: 0.1 }
-          : isCorpse
-            ? { r: 0.5, g: 0.25, b: 0.2 }
-            : { r: def.fg[0], g: def.fg[1], b: def.fg[2] },
+          : { r: def.fg[0], g: def.fg[1], b: def.fg[2] },
         background: existing?.background ?? { r: 0, g: 0, b: 0 },
         position: { x: cellX, y: cellY },
         animationOffset: { x: (rm.x - cellX) * BASE_TILE_PX, y: (rm.y - cellY) * BASE_TILE_PX }

@@ -409,17 +409,10 @@ class EntityServiceImpl {
             }
         }
 
-        // ── Fatigue-driven sleep (safe, no pawn in vision) ──────────────────────
-        if (!inVision && mob.needs.fatigue >= SLEEP_FATIGUE_THRESHOLD &&
-            mob.needs.hunger < SLEEP_MAX_HUNGER &&
-            mob.state !== 'Sleeping' && mob.state !== 'Fleeing' &&
-            mob.state !== 'Hunting' && mob.state !== 'Alerted' && mob.state !== 'Attacking') {
-            return { ...mob, state: 'Sleeping', stateSince: turn, path: [] };
-        }
-
         // ── Hunger-driven FSM ───────────────────────────────────────────
         // Aggressive mobs prioritise attacking pawns over feeding.
         // Non-aggressive (passive/neutral) hostile mobs will hunt when hungry.
+        // Hunger check runs BEFORE sleep so mobs eat before resting.
         const canHunt = def.diet !== 'herbivore';
         if (mob.state === 'Hunting') {
             // Snap back to aggro if a pawn enters vision while aggressive.
@@ -434,6 +427,14 @@ class EntityServiceImpl {
         if (!inVision && canHunt && mob.needs.hunger >= HUNGER_EAT_THRESHOLD &&
             mob.state !== 'Fleeing' && mob.state !== 'Sleeping') {
             return { ...mob, state: 'Hunting', stateSince: turn };
+        }
+
+        // ── Fatigue-driven sleep (safe, no pawn in vision, not hungry) ──────────
+        if (!inVision && mob.needs.fatigue >= SLEEP_FATIGUE_THRESHOLD &&
+            mob.needs.hunger < SLEEP_MAX_HUNGER &&
+            mob.state !== 'Sleeping' && mob.state !== 'Fleeing' &&
+            mob.state !== 'Alerted' && mob.state !== 'Attacking') {
+            return { ...mob, state: 'Sleeping', stateSince: turn, path: [] };
         }
 
         switch (mob.state) {
@@ -474,13 +475,13 @@ class EntityServiceImpl {
                 const pawnDist = nearest ? this.dist(mob, nearest.pos) : Infinity;
                 const predDist = predThreat ? this.dist(mob, predThreat.pos) : Infinity;
                 const closestDist = Math.min(pawnDist, predDist);
-                const fleeTarget = pawnDist <= predDist ? nearest : predThreat;
-                if (fleeTarget && closestDist <= def.stats.visionRange * 1.5) {
-                    return this.moveAway(mob, fleeTarget.pos, state);
-                }
+                // Stop fleeing if threat is gone or after a safety timeout.
                 if (closestDist > def.stats.fleeRange || turn - mob.stateSince > SAFE_RESET_TICKS) {
                     return { ...mob, state: 'Wander', stateSince: turn };
                 }
+                // Always move away whenever the threat is still within flee range.
+                const fleeTarget = pawnDist <= predDist ? nearest : predThreat;
+                if (fleeTarget) return this.moveAway(mob, fleeTarget.pos, state);
                 return this.wanderStep(mob, def, state);
             }
             case 'Sleeping': {
@@ -522,26 +523,26 @@ class EntityServiceImpl {
             const hungry = mob.needs.hunger >= HUNGER_EAT_THRESHOLD;
             const sated = mob.needs.hunger <= HUNGER_SATED_THRESHOLD;
 
-            // Enter sleep when fatigued and not ravenously hungry (mirrors pawn shouldPawnSleep).
-            if (mob.needs.fatigue >= SLEEP_FATIGUE_THRESHOLD &&
-                mob.needs.hunger < SLEEP_MAX_HUNGER &&
-                mob.state !== 'Sleeping' && mob.state !== 'Fleeing' &&
-                mob.state !== 'Startled' && mob.state !== 'Foraging' && mob.state !== 'Hunting') {
-                return { ...mob, state: 'Sleeping', stateSince: turn, path: [] };
-            }
-
             // Exit feeding states when sated.
             if (sated && (mob.state === 'Foraging' || mob.state === 'Hunting')) {
                 return { ...mob, state: 'Grazing', stateSince: turn, eatProgress: undefined, huntTargetId: undefined };
             }
 
-            // Enter a feeding state from any non-feeding, non-flight, non-sleep state.
+            // Enter a feeding state — hunger takes priority over sleep so animals eat before resting.
             if (hungry && mob.state !== 'Foraging' && mob.state !== 'Hunting' &&
                 mob.state !== 'Fleeing' && mob.state !== 'Startled' && mob.state !== 'Sleeping') {
                 const canForage = def.diet !== 'carnivore';
                 const canHunt = def.diet !== 'herbivore';
                 if (canForage) return { ...mob, state: 'Foraging', stateSince: turn };
                 if (canHunt) return { ...mob, state: 'Hunting', stateSince: turn };
+            }
+
+            // Enter sleep only when not hungry (mirrors pawn shouldPawnSleep).
+            if (mob.needs.fatigue >= SLEEP_FATIGUE_THRESHOLD &&
+                mob.needs.hunger < SLEEP_MAX_HUNGER &&
+                mob.state !== 'Sleeping' && mob.state !== 'Fleeing' &&
+                mob.state !== 'Startled' && mob.state !== 'Foraging' && mob.state !== 'Hunting') {
+                return { ...mob, state: 'Sleeping', stateSince: turn, path: [] };
             }
         } else if (mob.state === 'Foraging' || mob.state === 'Hunting') {
             // Threatened while eating — drop food and flee.
