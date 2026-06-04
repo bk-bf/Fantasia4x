@@ -194,13 +194,13 @@ class EntityServiceImpl {
     }
 
     private makeMob(def: CreatureDefinition, x: number, y: number, turn: number): Mob {
-        const initialState: MobState = def.entityClass === 'mob' ? 'Wander' : 'Grazing';
+        const initialState: MobState = def.behaviour === 'passive' ? 'Grazing' : 'Wander';
         const stats: EntityStats = {
             strength: def.stats.strength,
             dexterity: Math.round(def.stats.speed * 1.5),
             wisdom: def.stats.visionRange,
             constitution: Math.round(10 + (def.stats.health - 30) / 5),
-            intelligence: def.entityClass === 'animal' ? 4 : 8,
+            intelligence: def.behaviour === 'passive' ? 4 : 8,
             charisma: 5
         };
         const needs: EntityNeeds = {
@@ -344,7 +344,9 @@ class EntityServiceImpl {
             nearest && this.dist(mob, nearest.pos) <= def.stats.visionRange ? nearest : null;
         const isNight = getAmbientLight(turn) < NIGHT_THRESHOLD;
 
-        if (def.entityClass === 'animal') {
+        // Passive creatures (herbivores, timid omnivores) use the prey FSM.
+        // Neutral/aggressive creatures with fight potential use the hostile FSM.
+        if (def.behaviour === 'passive') {
             return this.stepAnimal(mob, def, inVision, nearest, turn, state, allMobs, pendingDamage, pendingTileDepletion);
         }
         return this.stepHostile(mob, def, inVision, nearest, isNight, turn, state, allMobs, pendingDamage);
@@ -397,7 +399,12 @@ class EntityServiceImpl {
 
         switch (mob.state) {
             case 'Wander': {
-                if (inVision && aggressive) {
+                // Aggressive creatures attack on full sight range.
+                // Neutral creatures are territorial: defend personal space when a pawn
+                // steps within half their vision range (e.g. bears charge if approached).
+                const tooClose = !aggressive && inVision &&
+                    this.dist(mob, inVision.pos) <= Math.ceil(def.stats.visionRange * 0.5);
+                if (inVision && (aggressive || tooClose)) {
                     return this.moveToward(
                         { ...mob, state: 'Alerted', stateSince: turn },
                         inVision.pos,
@@ -627,7 +634,7 @@ class EntityServiceImpl {
             }
             const next = progress + SECONDS_PER_TICK / EAT_CORPSE_SECONDS;
             if (next >= 1) {
-                const restState: MobState = def.entityClass === 'animal' ? 'Grazing' : 'Wander';
+                const restState: MobState = def.behaviour === 'passive' ? 'Grazing' : 'Wander';
                 return {
                     ...mob,
                     eatProgress: undefined,
@@ -704,6 +711,7 @@ class EntityServiceImpl {
             if (candidate.id === mob.id) continue;
             const raw = Math.abs(candidate.x - mob.x) + Math.abs(candidate.y - mob.y);
             if (candidate.state === 'Corpse') {
+                if (raw > HUNT_RADIUS * 2) continue; // don't cross the map for carrion
                 // Corpses weighted as 50% closer — free food with no danger.
                 const d = raw * 0.5;
                 if (d < bestDist) { bestDist = d; best = candidate; }
@@ -719,9 +727,9 @@ class EntityServiceImpl {
     }
 
     /**
-     * Returns the nearest hostile mob (entityClass `mob`, non-herbivore diet) within
-     * the prey's vision range, or null. Used to trigger fleeing from predators.
-     * Only applies to creatures with `huntable: true`.
+     * Returns the nearest non-herbivore creature within the prey's vision range.
+     * Predator identity is driven by `diet`, not `entityClass` — a wolf stays
+     * entityClass 'animal' but is still a threat to herbivore prey.
      */
     private nearestPredatorThreat(
         prey: Mob,
@@ -733,9 +741,8 @@ class EntityServiceImpl {
         let bestDist = Infinity;
         for (const m of allMobs) {
             if (m.id === prey.id || m.state === 'Corpse') continue;
-            if (m.entityClass !== 'mob') continue; // only hostile mob-class entities
             const mDef = getCreatureById(m.creatureId);
-            if (!mDef || mDef.diet === 'herbivore') continue;
+            if (!mDef || mDef.diet === 'herbivore') continue; // only carnivores/omnivores
             const d = this.dist(prey, { x: m.x, y: m.y });
             if (d <= def.stats.visionRange && d < bestDist) {
                 bestDist = d;
