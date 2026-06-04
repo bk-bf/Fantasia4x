@@ -25,7 +25,8 @@ export interface CreatureStats {
     health: number;
     strength: number;
     speed: number; // tiles per in-game second
-    visionRange: number; // tiles
+    visionRange: number; // tiles — detection radius
+    fleeRange: number;   // tiles — stop fleeing once all threats are beyond this distance
 }
 
 export interface CreatureLootEntry {

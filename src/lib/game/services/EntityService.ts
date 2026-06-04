@@ -456,15 +456,13 @@ class EntityServiceImpl {
         pendingDamage: Map<string, number>,
         pendingTileDepletion: Array<{ x: number; y: number; id: string }>
     ): Mob {
-        // Herbivores are skittish: they detect threats at twice their base vision range
-        // and keep fleeing until the danger is much further away.
+        // Vision range is set per-creature in creatures.jsonc; herbivores have wide
+        // ranges (12-15 tiles) so detection and flee distances are fully data-driven.
         const isHerbivore = def.diet === 'herbivore';
-        const alertMult = isHerbivore ? 2.0 : 1.0;
 
-        // Combined threat: a pawn in wide alert radius OR a predatory mob nearby.
-        const predatorThreat = this.nearestPredatorThreat(mob, def, allMobs, alertMult);
-        const widenedPawnThreat = nearest && this.dist(mob, nearest.pos) <= def.stats.visionRange * alertMult ? nearest : null;
-        const threat = widenedPawnThreat ?? predatorThreat;
+        // Combined threat: pawn in vision OR a predatory mob nearby.
+        const predatorThreat = this.nearestPredatorThreat(mob, def, allMobs);
+        const threat = inVision ?? predatorThreat;
 
         // ── Hunger / fatigue FSM transitions (only when safe) ──────────────────────
         if (!threat) {
@@ -518,9 +516,8 @@ class EntityServiceImpl {
                 const pawnDist = nearest ? this.dist(mob, nearest.pos) : Infinity;
                 const predDist = predatorThreat ? this.dist(mob, predatorThreat.pos) : Infinity;
                 const closestDist = Math.min(pawnDist, predDist);
-                // Herbivores don't relax until threats are well out of alert range.
-                const safeZone = def.stats.visionRange * (isHerbivore ? 2.5 : 1.5);
-                if (closestDist > safeZone) {
+                // Flee until the threat is beyond this creature's defined flee range.
+                if (closestDist > def.stats.fleeRange) {
                     return { ...mob, state: 'Grazing', stateSince: turn };
                 }
                 const fleeFrom = pawnDist <= predDist ? nearest!.pos : predatorThreat!.pos;
@@ -729,20 +726,18 @@ class EntityServiceImpl {
     private nearestPredatorThreat(
         prey: Mob,
         def: CreatureDefinition,
-        allMobs: Mob[],
-        radiusMult = 1.0
+        allMobs: Mob[]
     ): { pos: { x: number; y: number } } | null {
         if (!def.huntable) return null;
         let best: Mob | null = null;
         let bestDist = Infinity;
-        const radius = def.stats.visionRange * radiusMult;
         for (const m of allMobs) {
             if (m.id === prey.id || m.state === 'Corpse') continue;
             if (m.entityClass !== 'mob') continue; // only hostile mob-class entities
             const mDef = getCreatureById(m.creatureId);
             if (!mDef || mDef.diet === 'herbivore') continue;
             const d = this.dist(prey, { x: m.x, y: m.y });
-            if (d <= radius && d < bestDist) {
+            if (d <= def.stats.visionRange && d < bestDist) {
                 bestDist = d;
                 best = m;
             }
