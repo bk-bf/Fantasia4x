@@ -33,6 +33,7 @@
   import { resourceObjectService } from '$lib/game/services/ResourceObjectService.js';
   import { getCreatureById } from '$lib/game/core/Creatures.js';
   import { TICKS_PER_SECOND } from '$lib/game/core/time.js';
+  import { simTarget } from '$lib/game/systems/MovementSystem.js';
   import SelectedEntityCard from '$lib/components/UI/SelectedEntityCard.svelte';
   import type { SelectedEntityModel } from '$lib/components/UI/SelectedEntityCard.svelte';
   import itemsData from '$lib/game/database/items.jsonc';
@@ -587,29 +588,16 @@
   }
 
   /**
-   * Authoritative sub-tile target for a pawn in float world-tile coords. The sim
-   * Authoritative sub-tile target for a pawn in float world-tile coords. The sim
-   * only updates pawn.position when a pawn fully crosses into the next tile, so we
-   * read how much of the entering cell's cost has been paid to recover the fraction.
+  /**
+   * Authoritative sub-tile target for a pawn in float world-tile coords.
+   * Delegates to the shared MovementSystem.simTarget, flattening pawn.position.
    */
   function pawnSimTarget(pawn: Pawn): { x: number; y: number } {
     const { x, y } = pawn.position!;
-    if (pawn.isMoving && pawn.path && pawn.path.length > 0) {
-      const next = pawn.path[pawn.pathIndex ?? 0];
-      if (next && (next.x !== x || next.y !== y)) {
-        const dx = next.x - x;
-        const dy = next.y - y;
-        // Mirror PawnService.costToEnter so progress matches the sim exactly.
-        const wt = worldMap[next.y]?.[next.x];
-        const baseCost = wt && wt.movementCost > 0 ? wt.movementCost : 1;
-        const diagonal = dx !== 0 && dy !== 0 ? Math.SQRT2 : 1;
-        const totalCost = baseCost * diagonal * TICKS_PER_SECOND;
-        const costLeft = pawn.nextCellCostLeft ?? totalCost;
-        const progress = Math.min(1, Math.max(0, 1 - costLeft / totalCost));
-        return { x: x + dx * progress, y: y + dy * progress };
-      }
-    }
-    return { x, y };
+    return simTarget(
+      { x, y, path: pawn.path, pathIndex: pawn.pathIndex, nextCellCostLeft: pawn.nextCellCostLeft },
+      worldMap
+    );
   }
 
   /**
@@ -634,7 +622,7 @@
       if (!def || !def.chars.length) continue;
       seenMobs.add(mob.id);
 
-      const target = { x: mob.x, y: mob.y };
+      const target = simTarget(mob, worldMap);
       let rm = mobRenderPos.get(mob.id);
       if (!rm || Math.abs(rm.x - target.x) > 2 || Math.abs(rm.y - target.y) > 2) {
         rm = { x: target.x, y: target.y };

@@ -3,6 +3,7 @@ import { consumeFromStockpiles } from '../core/GameState';
 import { calculatePawnAbilities, categorizeAbilities, getAbilityDescription } from '../entities/Pawns';
 import { WORK_CATEGORIES } from '../core/Work';
 import { TICKS_PER_SECOND, SECONDS_PER_TICK, perTick } from '../core/time';
+import { advanceAlongPath } from '../systems/MovementSystem';
 import statusEffectsData from '../database/status-effects.jsonc';
 import { getConditionCurrentStage, conditionNeedMultipliers } from '../core/needs';
 // Gated console shim — see core/log.ts. Silences per-tick log/debug/warn unless
@@ -1225,20 +1226,9 @@ export class PawnServiceImpl implements PawnService {
 	 */
 	processMovement(gameState: GameState): GameState {
 		let state = gameState;
-		// Cost (in ticks) to step from `from` into `to`, based on the destination
-		// tile's movementCost. Mirrors PathfinderService's `movementCost > 0 ? : 1`.
-		const costToEnter = (
-			from: { x: number; y: number },
-			to: { x: number; y: number }
-		): number => {
-			const tile = state.worldMap[to.y]?.[to.x];
-			const base = tile && tile.movementCost > 0 ? tile.movementCost : 1;
-			const diagonal = from.x !== to.x && from.y !== to.y ? Math.SQRT2 : 1;
-			return base * diagonal * TICKS_PER_SECOND;
-		};
 
 		for (const pawn of state.pawns) {
-			if (pawn.isAlive === false) continue; // skip dead pawns
+			if (pawn.isAlive === false) continue;
 			// Repair inconsistent state saved from earlier bugs: path exists but isMoving=false
 			if (!pawn.isMoving && pawn.path && pawn.path.length > 0) {
 				state = {
@@ -1249,52 +1239,37 @@ export class PawnServiceImpl implements PawnService {
 				};
 				continue;
 			}
-			if (!pawn.isMoving || !pawn.path || pawn.path.length === 0) continue;
-			const startPos = pawn.position;
-			if (!startPos) continue;
+			if (!pawn.isMoving || !pawn.path || pawn.path.length === 0 || !pawn.position) continue;
 
 			// Cost-units spendable this tick. On open terrain a tile costs
 			// TICKS_PER_SECOND units, so spending `tilesPerSecond` units/tick yields
 			// exactly that many tiles per second (see getMoveSpeed for the formula).
-			let budget = Math.max(0.01, this.getMoveSpeed(pawn).tilesPerSecond);
+			const budget = Math.max(0.01, this.getMoveSpeed(pawn).tilesPerSecond);
 
-			let idx = pawn.pathIndex ?? 0;
-			let pos = startPos;
-			let costLeft = pawn.nextCellCostLeft ?? null;
-			let invalidPath = false;
+			// Flatten pawn position into the Movable shape, run shared movement engine.
+			const moved = advanceAlongPath(
+				{
+					x: pawn.position.x, y: pawn.position.y,
+					path: pawn.path, pathIndex: pawn.pathIndex,
+					nextCellCostLeft: pawn.nextCellCostLeft
+				},
+				budget,
+				state.worldMap
+			);
+			const done = !moved.path || moved.path.length === 0;
 
-			while (budget > 0 && idx < pawn.path.length) {
-				const next = pawn.path[idx];
-				if (!next) break;
-				if (Math.abs(next.x - pos.x) > 1 || Math.abs(next.y - pos.y) > 1) {
-					invalidPath = true;
-					break;
-				}
-				if (costLeft == null) costLeft = costToEnter(pos, next);
-				if (budget >= costLeft) {
-					budget -= costLeft;
-					pos = next;
-					idx++;
-					costLeft = null; // recompute for the following cell
-				} else {
-					costLeft -= budget;
-					budget = 0;
-				}
-			}
-
-			const done = !invalidPath && idx >= pawn.path.length;
 			state = {
 				...state,
 				pawns: state.pawns.map(p =>
 					p.id === pawn.id
 						? {
 							...p,
-							position: invalidPath ? p.position : pos,
-							path: invalidPath ? [] : p.path,
-							pathIndex: invalidPath ? 0 : idx,
-							isMoving: invalidPath ? false : !done,
-							hasReachedDestination: invalidPath ? false : done,
-							nextCellCostLeft: invalidPath || done ? undefined : (costLeft ?? undefined)
+							position: { x: moved.x, y: moved.y },
+							path: moved.path ?? [],
+							pathIndex: moved.pathIndex ?? 0,
+							isMoving: !done,
+							hasReachedDestination: done,
+							nextCellCostLeft: moved.nextCellCostLeft
 						}
 						: p
 				)

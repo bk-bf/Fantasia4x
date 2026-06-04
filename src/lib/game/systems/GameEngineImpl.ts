@@ -325,6 +325,7 @@ export class GameEngineImpl implements GameEngine {
 			t('entityStep', () => {
 				this.gameState = entityService.spawnEntities(this.gameState!);
 				this.gameState = entityService.stepEntities(this.gameState!);
+				this.gameState = entityService.advanceMobMovement(this.gameState!);
 				this.gameState = entityService.stepHunger(this.gameState!);
 				this.gameState = entityService.removeDead(this.gameState!);
 			});

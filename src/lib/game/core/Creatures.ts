@@ -73,7 +73,6 @@ export interface CreatureDefinition {
     /** biome id → relative spawn weight (terrains.jsonc biome ids). */
     biomeWeights: Record<string, number>;
     lootTable: CreatureLootEntry[];
-    xpValue: number;
 }
 
 type RawCreature = Record<string, unknown>;
@@ -100,8 +99,7 @@ function toDefinition(raw: RawCreature): CreatureDefinition {
         chargesWhenWounded: (raw.chargesWhenWounded as boolean) ?? false,
         produces: raw.produces as CreatureProduces | undefined,
         biomeWeights: (raw.biomeWeights as Record<string, number>) ?? {},
-        lootTable: (raw.lootTable as CreatureLootEntry[]) ?? [],
-        xpValue: (raw.xpValue as number) ?? 0
+        lootTable: (raw.lootTable as CreatureLootEntry[]) ?? []
     };
 }
 

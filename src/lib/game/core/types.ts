@@ -212,10 +212,15 @@ export interface Mob {
 	homeY: number;
 	/** Tick when the FSM last changed state — drives timed transitions. */
 	stateSince: number;
-	/** Remaining tick budget before this entity may move one tile again. */
-	moveCooldown: number;
 	/** Transient: pawn this entity is hunting or fleeing from. */
 	targetPawnId?: string;
+	// ── Shared path-based movement (same system as Pawn) ─────────────────────
+	/** Queued 1-tile movement steps output by the FSM each tick. */
+	path?: { x: number; y: number }[];
+	/** Next step index into path[]. */
+	pathIndex?: number;
+	/** Remaining tick-budget cost to fully enter the next cell (sub-tile interp). */
+	nextCellCostLeft?: number;
 	/** Tick when the entity died (Corpse state) — used for decay timing. */
 	diedAt?: number;
 	// ── Shared pawn systems ───────────────────────────────────────────

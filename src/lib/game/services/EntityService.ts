@@ -3,6 +3,7 @@ import { CREATURES, getCreatureById, type CreatureDefinition } from '../core/Cre
 import { getAmbientLight } from './EnvironmentService';
 import { ticksFromSeconds, SECONDS_PER_TICK } from '../core/time';
 import { conditionNeedMultipliers } from '../core/needs';
+import { advanceAlongPath } from '../systems/MovementSystem';
 
 /**
  * EntityService — ENTITIES_SPAWNING spec, Phase A.
@@ -54,14 +55,16 @@ const FORAGE_RADIUS = 15;
 const HUNT_RADIUS = 20;
 /** Tile resource keys counted as edible grass for herbivores/omnivores. */
 const GRASS_RESOURCES = ['grass_patch', 'tall_grass_patch', 'deep_grass_patch'] as const;
-/** Action steps to eat a grass tile (advances eatProgress each step). */
-const EAT_GRASS_STEPS = 5;
-/** Action steps to consume a corpse. */
-const EAT_CORPSE_STEPS = 8;
+/** Real-time duration to eat a grass tile (seconds). */
+const EAT_GRASS_SECONDS = 1.25;
+/** Real-time duration to consume a corpse (seconds). */
+const EAT_CORPSE_SECONDS = 2.0;
 /** Hunger restored when finishing a grass meal. */
 const EAT_GRASS_HUNGER_RESTORE = 40;
 /** Hunger restored when finishing a corpse meal. */
 const EAT_CORPSE_HUNGER_RESTORE = 50;
+/** Average wander-step decisions per second while grazing (idle fraction excluded). */
+const WANDER_MOVES_PER_SECOND = 1.0;
 
 class EntityServiceImpl {
     private idCounter = 0;
@@ -208,7 +211,8 @@ class EntityServiceImpl {
             homeX: x,
             homeY: y,
             stateSince: turn,
-            moveCooldown: this.moveInterval(def),
+            path: [],
+            pathIndex: 0,
             needs,
             conditions: [],
             stats
@@ -265,26 +269,18 @@ class EntityServiceImpl {
         state: GameState,
         pendingDamage: Map<string, number>
     ): Mob {
-        // Movement throttle: only act when the per-entity cooldown elapses.
-        const cooldown = mob.moveCooldown - 1;
-        if (cooldown > 0) {
-            return { ...mob, moveCooldown: cooldown };
-        }
-
+        // FSM runs every tick. Movement advancement is handled separately by
+        // advanceMobMovement(), which uses the shared MovementSystem path engine.
         const turn = state.turn;
         const nearest = this.nearestPawn(mob, pawns);
         const inVision =
             nearest && this.dist(mob, nearest.pos) <= def.stats.visionRange ? nearest : null;
         const isNight = getAmbientLight(turn) < NIGHT_THRESHOLD;
 
-        let work: Mob = { ...mob, moveCooldown: this.moveInterval(def) };
-
         if (def.entityClass === 'animal') {
-            work = this.stepAnimal(work, def, inVision, nearest, turn, state, allMobs, pendingDamage);
-        } else {
-            work = this.stepHostile(work, def, inVision, nearest, isNight, turn, state, allMobs, pendingDamage);
+            return this.stepAnimal(mob, def, inVision, nearest, turn, state, allMobs, pendingDamage);
         }
-        return work;
+        return this.stepHostile(mob, def, inVision, nearest, isNight, turn, state, allMobs, pendingDamage);
     }
 
     private stepHostile(
@@ -441,17 +437,18 @@ class EntityServiceImpl {
     /**
      * Advance a Foraging entity toward the nearest grass tile, then eat from it.
      * No item spawns — primitive entities consume the resource directly.
+     * Eating duration is time-based; the entity stays still (path: []) while eating.
      */
     private stepForaging(mob: Mob, def: CreatureDefinition, turn: number, state: GameState): Mob {
-        // Continue eating if mid-progress.
+        // Eating in progress — stay still and advance progress by elapsed seconds.
         const progress = mob.eatProgress ?? 0;
         if (progress > 0) {
-            const next = progress + (1 / EAT_GRASS_STEPS);
+            const next = progress + SECONDS_PER_TICK / EAT_GRASS_SECONDS;
             if (next >= 1) {
-                // Eating complete: restore hunger, return to grazing.
                 return {
                     ...mob,
                     eatProgress: undefined,
+                    path: [],
                     needs: {
                         ...mob.needs,
                         hunger: Math.max(0, mob.needs.hunger - EAT_GRASS_HUNGER_RESTORE),
@@ -461,22 +458,21 @@ class EntityServiceImpl {
                     stateSince: turn
                 };
             }
-            return { ...mob, eatProgress: next };
+            return { ...mob, eatProgress: next, path: [] };
         }
 
-        // Find the nearest grassy tile.
-        const target = this.findNearestEdibleTile(state, mob.x, mob.y, FORAGE_RADIUS);
-        if (!target) {
-            // No grass nearby — drift home.
-            return this.wanderStep(mob, def, state);
+        // Already mid-path toward the food tile — let movement engine finish it.
+        if (mob.path && mob.path.length > 0 && (mob.pathIndex ?? 0) < mob.path.length) {
+            return mob;
         }
+
+        // Path done — decide next step.
+        const target = this.findNearestEdibleTile(state, mob.x, mob.y, FORAGE_RADIUS);
+        if (!target) return this.wanderStep(mob, def, state);
 
         if (target.x === mob.x && target.y === mob.y) {
-            // Arrived: start eating.
-            return { ...mob, eatProgress: 1 / EAT_GRASS_STEPS };
+            return { ...mob, eatProgress: SECONDS_PER_TICK / EAT_GRASS_SECONDS, path: [] };
         }
-
-        // Move toward the grass tile.
         return this.moveToward(mob, target, state);
     }
 
@@ -492,21 +488,21 @@ class EntityServiceImpl {
         allMobs: Mob[],
         pendingDamage: Map<string, number>
     ): Mob {
-        // Continue eating if mid-progress.
+        // Eating a corpse — stay still.
         const progress = mob.eatProgress ?? 0;
         if (progress > 0) {
             const target = mob.huntTargetId ? allMobs.find((m) => m.id === mob.huntTargetId) : null;
             if (!target || target.state !== 'Corpse') {
-                // Prey no longer a corpse (respawned? despawned?) — reset.
-                return { ...mob, eatProgress: undefined, huntTargetId: undefined };
+                return { ...mob, eatProgress: undefined, huntTargetId: undefined, path: [] };
             }
-            const next = progress + (1 / EAT_CORPSE_STEPS);
+            const next = progress + SECONDS_PER_TICK / EAT_CORPSE_SECONDS;
             if (next >= 1) {
                 const restState: MobState = def.entityClass === 'animal' ? 'Grazing' : 'Wander';
                 return {
                     ...mob,
                     eatProgress: undefined,
                     huntTargetId: undefined,
+                    path: [],
                     needs: {
                         ...mob.needs,
                         hunger: Math.max(0, mob.needs.hunger - EAT_CORPSE_HUNGER_RESTORE),
@@ -516,31 +512,27 @@ class EntityServiceImpl {
                     stateSince: turn
                 };
             }
-            return { ...mob, eatProgress: next };
+            return { ...mob, eatProgress: next, path: [] };
         }
 
         const prey = this.findNearestPrey(mob, allMobs);
-        if (!prey) {
-            // Nothing to hunt — wander.
-            return { ...mob, huntTargetId: undefined, ...this.wanderStep(mob, def, state) };
-        }
+        if (!prey) return { ...mob, huntTargetId: undefined, ...this.wanderStep(mob, def, state) };
 
         const preyPos = { x: prey.x, y: prey.y };
 
         if (this.adjacent(mob, preyPos)) {
             if (prey.state === 'Corpse') {
-                // Begin eating.
-                return { ...mob, huntTargetId: prey.id, eatProgress: 1 / EAT_CORPSE_STEPS };
+                return { ...mob, huntTargetId: prey.id, eatProgress: SECONDS_PER_TICK / EAT_CORPSE_SECONDS, path: [] };
             }
-            // Live prey: STR vs STR mini-combat roll.
+            // Live prey — STR vs STR mini-combat roll.
             const hitChance = Math.min(0.9, Math.max(0.1, 0.5 + (mob.stats.strength - prey.stats.strength) * 0.05));
             if (Math.random() < hitChance) {
                 pendingDamage.set(prey.id, (pendingDamage.get(prey.id) ?? 0) + mob.stats.strength);
             }
-            return { ...mob, huntTargetId: prey.id };
+            return { ...mob, huntTargetId: prey.id, path: [] };
         }
 
-        // Move toward prey.
+        // Pursue prey — always refresh path for responsive tracking.
         return this.moveToward({ ...mob, huntTargetId: prey.id }, preyPos, state);
     }
 
@@ -658,18 +650,19 @@ class EntityServiceImpl {
 
     // ===== MOVEMENT HELPERS ========================================================
 
-    /** Ticks between single-tile moves, derived from the creature's speed. */
-    private moveInterval(def: CreatureDefinition): number {
-        const speed = Math.max(1, def.stats.speed);
-        return Math.max(1, Math.round(ticksFromSeconds(1) / speed));
-    }
-
+    /**
+     * Set a 1-tile path step toward or away from a reference position.
+     * The movement engine (advanceMobMovement) will advance the entity
+     * along this path on the same tick.
+     */
     private wanderStep(mob: Mob, def: CreatureDefinition, state: GameState): Mob {
-        // 60% chance to idle, else drift one tile, biased to stay near home.
-        if (Math.random() < 0.6) return mob;
+        // Still following a path — let it finish before picking the next step.
+        if (mob.path && mob.path.length > 0 && (mob.pathIndex ?? 0) < mob.path.length) return mob;
+        // Probabilistic idle: ~WANDER_MOVES_PER_SECOND steps/sec on average.
+        if (Math.random() >= WANDER_MOVES_PER_SECOND * SECONDS_PER_TICK) return mob;
         const tile = this.findNearbyWalkable(state, mob.x, mob.y, mob.homeX, mob.homeY);
         if (!tile) return mob;
-        return { ...mob, x: tile.x, y: tile.y };
+        return { ...mob, path: [tile], pathIndex: 0, nextCellCostLeft: undefined };
     }
 
     private moveToward(mob: Mob, target: { x: number; y: number }, state: GameState): Mob {
@@ -695,9 +688,39 @@ class EntityServiceImpl {
             { x: mob.x, y: mob.y + dy }
         ];
         for (const c of candidates) {
-            if (this.isWalkable(state, c.x, c.y)) return { ...mob, x: c.x, y: c.y };
+            if (this.isWalkable(state, c.x, c.y)) {
+                // Override path with new 1-tile step (urgent directional moves always redirect).
+                return { ...mob, path: [c], pathIndex: 0, nextCellCostLeft: undefined };
+            }
         }
         return mob;
+    }
+
+    /**
+     * Advance all moving mobs along their paths using the shared MovementSystem.
+     * Called once per tick in GameEngineImpl, after stepEntities().
+     */
+    advanceMobMovement(state: GameState): GameState {
+        const mobs = state.mobs;
+        if (!mobs || mobs.length === 0) return state;
+
+        let changed = false;
+        const next: Mob[] = new Array(mobs.length);
+
+        for (let i = 0; i < mobs.length; i++) {
+            const mob = mobs[i];
+            if (!mob.path || mob.path.length === 0) {
+                next[i] = mob;
+                continue;
+            }
+            const def = getCreatureById(mob.creatureId);
+            const speed = def ? Math.max(0.5, def.stats.speed) : 1;
+            const moved = advanceAlongPath(mob, speed, state.worldMap);
+            next[i] = moved;
+            if (moved !== mob) changed = true;
+        }
+
+        return changed ? { ...state, mobs: next } : state;
     }
 
     private findNearbyWalkable(

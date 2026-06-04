@@ -23,8 +23,7 @@
         "lootTable"     : [
             { "itemId": "raw_meat", "chance": 1.0, "qty": [1, 2] },
             { "itemId": "hide",     "chance": 0.7, "qty": [1, 1] }
-        ],
-        "xpValue"       : 12
+        ]
     },
     {
         "id"            : "bear",
@@ -45,8 +44,7 @@
         "lootTable"     : [
             { "itemId": "raw_meat", "chance": 1.0, "qty": [3, 5] },
             { "itemId": "hide",     "chance": 1.0, "qty": [1, 2] }
-        ],
-        "xpValue"       : 30
+        ]
     },
     {
         "id"            : "goblin",
@@ -65,8 +63,7 @@
         "biomeWeights"  : {"swamp": 1.0, "forest": 0.5},
         "lootTable"     : [
             { "itemId": "bone", "chance": 0.5, "qty": [1, 2] }
-        ],
-        "xpValue"       : 15
+        ]
     },
     {
         "id"            : "giant_rat",
@@ -83,8 +80,7 @@
         "pack"          : [1, 2],
         "lootTable"     : [
             { "itemId": "raw_meat", "chance": 0.6, "qty": [1, 1] }
-        ],
-        "xpValue"       : 5
+        ]
     },
     {
         "id"            : "shadow_wraith",
@@ -103,8 +99,7 @@
         "tameable"      : false,
         "mountable"     : false,
         "biomeWeights"  : {"forest": 1.0, "swamp": 1.0, "plains": 1.0, "mountain": 1.0},
-        "lootTable"     : [],
-        "xpValue"       : 25
+        "lootTable"     : []
     },
     // ── Neutral animals ─────────────────────────────────────────────────────────
     {
@@ -112,7 +107,7 @@
         "name"       : "Deer",
         "entityClass": "animal",
         "charSpans"  : [ {"sheet": "creatures", "id": 66} ],
-        "fg"         : [0.72, 0.55, 0.38],
+        "fg"         : [1.0, 1.0, 1.0],
         "bg"         : [0.0, 0.0, 0.0],
         "stats"      : {"health": 30, "strength": 4, "speed": 6, "visionRange": 8},
         "behaviour"  : "passive",
@@ -122,15 +117,14 @@
         "lootTable"  : [
             { "itemId": "raw_meat", "chance": 1.0, "qty": [2, 3] },
             { "itemId": "hide",     "chance": 1.0, "qty": [1, 2] }
-        ],
-        "xpValue"    : 8
+        ]
     },
     {
         "id"         : "rabbit",
         "name"       : "Rabbit",
         "entityClass": "animal",
         "charSpans"  : [ {"sheet": "creatures", "id": 76} ],
-        "fg"         : [0.80, 0.78, 0.72],
+        "fg"         : [1.0, 1.0, 1.0],
         "bg"         : [0.0, 0.0, 0.0],
         "stats"      : {"health": 8, "strength": 1, "speed": 7, "visionRange": 6},
         "behaviour"  : "passive",
@@ -139,15 +133,14 @@
         "pack"       : [1, 5],
         "lootTable"  : [
             { "itemId": "raw_meat", "chance": 1.0, "qty": [1, 1] }
-        ],
-        "xpValue"    : 3
+        ]
     },
     {
         "id"                : "boar",
         "name"              : "Wild Boar",
         "entityClass"       : "animal",
         "charSpans"         : [ {"sheet": "creatures", "id": 248} ],
-        "fg"                : [0.45, 0.35, 0.28],
+        "fg"                : [1.0, 1.0, 1.0],
         "bg"                : [0.0, 0.0, 0.0],
         "stats"             : {"health": 45, "strength": 14, "speed": 5, "visionRange": 6},
         "behaviour"         : "neutral",
@@ -163,15 +156,14 @@
             { "itemId": "raw_meat", "chance": 1.0, "qty": [3, 4] },
             { "itemId": "bone",     "chance": 0.8, "qty": [1, 2] },
             { "itemId": "tusk",     "chance": 0.5, "qty": [1, 1] }
-        ],
-        "xpValue"           : 14
+        ]
     },
     {
         "id"            : "elk",
         "name"          : "Elk",
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 78} ],
-        "fg"            : [0.65, 0.48, 0.32],
+        "fg"            : [1.0, 1.0, 1.0],
         "bg"            : [0.0, 0.0, 0.0],
         "stats"         : {"health": 55, "strength": 8, "speed": 6, "visionRange": 8},
         "behaviour"     : "passive",
@@ -186,15 +178,14 @@
             { "itemId": "raw_meat", "chance": 1.0, "qty": [4, 6] },
             { "itemId": "hide",     "chance": 1.0, "qty": [2, 3] },
             { "itemId": "antler",   "chance": 0.7, "qty": [1, 2] }
-        ],
-        "xpValue"       : 16
+        ]
     },
     {
         "id"            : "mountain_goat",
         "name"          : "Mountain Goat",
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 74} ],
-        "fg"            : [0.82, 0.80, 0.76],
+        "fg"            : [1.0, 1.0, 1.0],
         "bg"            : [0.0, 0.0, 0.0],
         "stats"         : {"health": 22, "strength": 5, "speed": 5, "visionRange": 7},
         "behaviour"     : "passive",
@@ -209,15 +200,14 @@
         "lootTable"     : [
             { "itemId": "raw_meat", "chance": 1.0, "qty": [1, 2] },
             { "itemId": "hide",     "chance": 1.0, "qty": [1, 1] }
-        ],
-        "xpValue"       : 6
+        ]
     },
     {
         "id"            : "wild_chicken",
         "name"          : "Wild Chicken",
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 75} ],
-        "fg"            : [0.85, 0.82, 0.70],
+        "fg"            : [1.0, 1.0, 1.0],
         "bg"            : [0.0, 0.0, 0.0],
         "stats"         : {"health": 6, "strength": 1, "speed": 4, "visionRange": 5},
         "behaviour"     : "passive",
@@ -231,7 +221,6 @@
         "biomeWeights"  : {"plains": 1.0},
         "lootTable"     : [
             { "itemId": "raw_meat", "chance": 1.0, "qty": [1, 1] }
-        ],
-        "xpValue"       : 2
+        ]
     }
 ]
