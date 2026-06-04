@@ -118,6 +118,7 @@
         "huntable"    : true,
         "intelligence": "primitive",
         "pack"        : [3, 8],
+        "biomeWeights": {"forest": 1.0, "plains": 1.0},
         "lootTable"   : [
             { "itemId": "raw_meat", "chance": 1.0, "qty": [2, 3] },
             { "itemId": "hide",     "chance": 1.0, "qty": [1, 2] }
@@ -136,6 +137,7 @@
         "huntable"    : true,
         "intelligence": "primitive",
         "pack"        : [1, 5],
+        "biomeWeights": {"plains": 1.0, "forest": 0.8, "mountain": 0.4},
         "lootTable"   : [
             { "itemId": "raw_meat", "chance": 1.0, "qty": [1, 1] }
         ]

@@ -28,8 +28,8 @@ const NIGHT_SPAWN_MULT = 3; // ×multiplier when ambient light is low
 const NIGHT_THRESHOLD = 0.3; // ambient light below this counts as night
 const EDGE_BUFFER = 8; // tiles; no spawns within this band of the map edge
 const MIN_PAWN_DISTANCE = 12; // tiles; do not spawn packs on top of the colony
-const MAX_HOSTILE = 20;
-const MAX_NEUTRAL = 20;
+const MAX_HOSTILE = 40;
+const MAX_NEUTRAL = 40;
 const CORPSE_DECAY_TICKS = ticksFromSeconds(200); // corpse persists ~200s then vanishes
 
 // Movement / FSM timings
@@ -363,7 +363,9 @@ class EntityServiceImpl {
         allMobs: Mob[],
         pendingDamage: Map<string, number>
     ): Mob {
-        const aggressive = def.behaviour === 'aggressive' || (def.nocturnalAggro && isNight);
+        // nocturnalAggro promotes neutral → aggressive at night; otherwise use the data value.
+        const effectiveBehaviour = def.nocturnalAggro && isNight ? 'aggressive' : def.behaviour;
+        const aggressive = effectiveBehaviour === 'aggressive';
 
         // Wounded entities flee regardless of state.
         if (mob.health <= mob.maxHealth * FLEE_HEALTH_FRACTION && mob.state !== 'Fleeing') {
@@ -881,7 +883,7 @@ class EntityServiceImpl {
         // Probabilistic idle: ~WANDER_MOVES_PER_SECOND steps/sec on average.
         if (Math.random() >= WANDER_MOVES_PER_SECOND * SECONDS_PER_TICK) return mob;
         const tile = this.findNearbyWalkable(state, mob.x, mob.y, mob.homeX, mob.homeY);
-        if (!tile) return mob;
+        if (!tile || this.isOccupied(state, tile.x, tile.y, mob.id)) return mob;
         return { ...mob, path: [tile], pathIndex: 0, nextCellCostLeft: undefined };
     }
 
@@ -908,8 +910,14 @@ class EntityServiceImpl {
             { x: mob.x, y: mob.y + dy }
         ];
         for (const c of candidates) {
-            if (this.isWalkable(state, c.x, c.y)) {
-                // Override path with new 1-tile step (urgent directional moves always redirect).
+            if (this.isWalkable(state, c.x, c.y) && !this.isOccupied(state, c.x, c.y, mob.id)) {
+                // If already stepping toward this exact tile, preserve the accumulated
+                // movement cost so advanceMobMovement can finish crossing it.
+                const currentNext = mob.path?.[mob.pathIndex ?? 0];
+                if (currentNext && currentNext.x === c.x && currentNext.y === c.y) {
+                    return mob;
+                }
+                // Direction changed — redirect immediately.
                 return { ...mob, path: [c], pathIndex: 0, nextCellCostLeft: undefined };
             }
         }
@@ -924,6 +932,16 @@ class EntityServiceImpl {
         const mobs = state.mobs;
         if (!mobs || mobs.length === 0) return state;
 
+        // Snapshot of occupied tiles at the start of this tick.
+        // Used to block mobs from stepping onto tiles already claimed by another entity.
+        const startOccupied = new Set<string>();
+        for (const p of state.pawns) {
+            if (p.position) startOccupied.add(`${p.position.x},${p.position.y}`);
+        }
+        for (const m of mobs) {
+            if (m.state !== 'Corpse') startOccupied.add(`${m.x},${m.y}`);
+        }
+
         let changed = false;
         const next: Mob[] = new Array(mobs.length);
 
@@ -936,8 +954,17 @@ class EntityServiceImpl {
             const def = getCreatureById(mob.creatureId);
             const speed = def ? Math.max(0.5, def.stats.speed) : 1;
             const moved = advanceAlongPath(mob, speed, state.worldMap);
-            next[i] = moved;
-            if (moved !== mob) changed = true;
+            // If the mob actually crossed into a new tile this tick, verify it's not
+            // occupied by another entity (using start-of-tick snapshot to avoid races).
+            if ((moved.x !== mob.x || moved.y !== mob.y) &&
+                startOccupied.has(`${moved.x},${moved.y}`)) {
+                // Blocked — clear path so the FSM reroutes next tick.
+                next[i] = { ...mob, path: [], pathIndex: 0, nextCellCostLeft: undefined };
+                changed = true;
+            } else {
+                next[i] = moved;
+                if (moved !== mob) changed = true;
+            }
         }
 
         return changed ? { ...state, mobs: next } : state;
@@ -971,6 +998,18 @@ class EntityServiceImpl {
     private isWalkable(state: GameState, x: number, y: number): boolean {
         const tile = state.worldMap[y]?.[x];
         return !!tile && tile.walkable;
+    }
+
+    /** True if a non-corpse entity (pawn or mob other than `selfId`) already occupies (x, y). */
+    private isOccupied(state: GameState, x: number, y: number, selfId: string): boolean {
+        for (const p of state.pawns) {
+            if (p.position?.x === x && p.position?.y === y) return true;
+        }
+        for (const m of state.mobs ?? []) {
+            if (m.id === selfId || m.state === 'Corpse') continue;
+            if (m.x === x && m.y === y) return true;
+        }
+        return false;
     }
 
     // ===== QUERY HELPERS ===========================================================
