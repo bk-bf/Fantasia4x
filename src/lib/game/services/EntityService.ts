@@ -1,7 +1,7 @@
-import type { GameState, Mob, MobState, Pawn, EntityStats, EntityNeeds, EntityCondition } from '../core/types';
+import type { GameState, Mob, MobState, Pawn, EntityStats, EntityNeeds, EntityCondition, LimbState } from '../core/types';
 import { CREATURES, getCreatureById, type CreatureDefinition } from '../core/Creatures';
 import { getAmbientLight } from './EnvironmentService';
-import { ticksFromSeconds, SECONDS_PER_TICK } from '../core/time';
+import { ticksFromSeconds, SECONDS_PER_TICK, perTick } from '../core/time';
 import { conditionNeedMultipliers } from '../core/needs';
 import { advanceAlongPath } from '../systems/MovementSystem';
 
@@ -215,7 +215,20 @@ class EntityServiceImpl {
             pathIndex: 0,
             needs,
             conditions: [],
-            stats
+            stats,
+            // ── Full health/survival parity with Pawn ────────────────────────────────────────
+            bloodVolume: 100,
+            isAlive: true,
+            activeEffects: [],
+            skills: {},
+            limbs: [
+                { id: 'head', health: 100, isMissing: false, bleedRate: 0 },
+                { id: 'torso', health: 100, isMissing: false, bleedRate: 0 },
+                { id: 'left_arm', health: 100, isMissing: false, bleedRate: 0 },
+                { id: 'right_arm', health: 100, isMissing: false, bleedRate: 0 },
+                { id: 'left_leg', health: 100, isMissing: false, bleedRate: 0 },
+                { id: 'right_leg', health: 100, isMissing: false, bleedRate: 0 }
+            ]
         };
     }
 
@@ -252,9 +265,30 @@ class EntityServiceImpl {
             changed = true;
             for (let i = 0; i < next.length; i++) {
                 const dmg = pendingDamage.get(next[i].id);
-                if (dmg && dmg > 0) {
-                    next[i] = { ...next[i], health: Math.max(0, next[i].health - dmg) };
+                if (!dmg || dmg <= 0) continue;
+                let m = next[i];
+                const newHealth = Math.max(0, m.health - dmg);
+
+                // Distribute damage to a random non-missing body-part limb,
+                // causing proportional bleeding. Head/torso dealt half damage
+                // to avoid trivial instakills from light attacks.
+                let limbs = m.limbs ? [...m.limbs] : undefined;
+                if (limbs) {
+                    const candidates = limbs.filter(
+                        (l) => !l.isMissing && l.id !== 'head' && l.id !== 'torso'
+                    );
+                    if (candidates.length > 0) {
+                        const hit = candidates[Math.floor(Math.random() * candidates.length)];
+                        const hitIdx = limbs.findIndex((l) => l.id === hit.id);
+                        const limbDmg = dmg * 0.5;
+                        const newLimbHealth = Math.max(0, hit.health - limbDmg);
+                        // Bleed rate scales with damage severity on that limb.
+                        const bleedRate = newLimbHealth < 60 ? (60 - newLimbHealth) * 0.4 : 0;
+                        limbs[hitIdx] = { ...hit, health: newLimbHealth, bleedRate };
+                    }
                 }
+
+                next[i] = { ...m, health: newHealth, limbs };
             }
         }
 
@@ -587,9 +621,10 @@ class EntityServiceImpl {
     stepHunger(state: GameState): GameState {
         const mobs = state.mobs;
         if (!mobs || mobs.length === 0) return state;
+        const { turn } = state;
 
         const next = mobs.map((mob): Mob => {
-            if (mob.state === 'Corpse') return mob;
+            if (mob.state === 'Corpse' || mob.isAlive === false) return mob;
             const def = getCreatureById(mob.creatureId);
             if (!def) return mob;
 
@@ -607,6 +642,49 @@ class EntityServiceImpl {
             // Starvation: drain HP once hunger is capped at 100.
             const healthDelta = newHunger >= 100 ? -(STARVATION_DAMAGE_PER_SECOND * SECONDS_PER_TICK) : 0;
 
+            // ── Blood loss ──────────────────────────────────────────────────────────────────
+            const limbs = mob.limbs ? [...mob.limbs] : undefined;
+            const totalBleedRate = (limbs ?? []).reduce((sum, l) => sum + (l.bleedRate ?? 0), 0);
+            let bloodVolume = mob.bloodVolume ?? 100;
+
+            if (totalBleedRate > 0) {
+                bloodVolume = Math.max(0, bloodVolume - perTick(totalBleedRate));
+            } else if (bloodVolume < 100) {
+                // Slow regeneration when not bleeding (~2000s to full recovery).
+                bloodVolume = Math.min(100, bloodVolume + perTick(0.05));
+            }
+
+            // Sync blood_loss condition severity (mirrors pawn tickConditions).
+            let conditions = [...(mob.conditions ?? [])];
+            const bloodSeverity = Math.round((1 - bloodVolume / 100) * 1000) / 1000;
+            const bloodLossIdx = conditions.findIndex((c) => c.id === 'blood_loss');
+            if (bloodSeverity > 0) {
+                if (bloodLossIdx === -1) conditions.push({ id: 'blood_loss', severity: bloodSeverity });
+                else conditions[bloodLossIdx] = { ...conditions[bloodLossIdx], severity: bloodSeverity };
+            } else if (bloodLossIdx !== -1) {
+                conditions.splice(bloodLossIdx, 1);
+            }
+
+            // Death by blood loss.
+            if (bloodVolume <= 0) {
+                return {
+                    ...mob, state: 'Corpse', isAlive: false, diedAt: turn,
+                    bloodVolume: 0, conditions, limbs: limbs ?? mob.limbs
+                };
+            }
+
+            // Critical limb destruction (head or torso at 0 HP).
+            if (limbs) {
+                for (const limb of limbs) {
+                    if (limb.health <= 0 && (limb.id === 'head' || limb.id === 'torso')) {
+                        return {
+                            ...mob, state: 'Corpse', isAlive: false, diedAt: turn,
+                            bloodVolume, conditions, limbs
+                        };
+                    }
+                }
+            }
+
             return {
                 ...mob,
                 needs: {
@@ -614,7 +692,10 @@ class EntityServiceImpl {
                     hunger: newHunger,
                     fatigue: Math.min(100, mob.needs.fatigue + fatigueDelta)
                 },
-                health: Math.max(0, mob.health + healthDelta)
+                health: Math.max(0, mob.health + healthDelta),
+                bloodVolume,
+                conditions,
+                limbs: limbs ?? mob.limbs
             };
         });
 
@@ -640,7 +721,7 @@ class EntityServiceImpl {
         const finalized = kept.map((m) => {
             if (m.health <= 0 && m.state !== 'Corpse') {
                 changed = true;
-                return { ...m, state: 'Corpse' as MobState, diedAt: state.turn };
+                return { ...m, state: 'Corpse' as MobState, isAlive: false, diedAt: state.turn };
             }
             return m;
         });

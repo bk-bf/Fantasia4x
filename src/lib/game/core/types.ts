@@ -234,6 +234,17 @@ export interface Mob {
 	eatProgress?: number;
 	/** Target entity id when in Hunting state. */
 	huntTargetId?: string;
+	// ── Survival & health (same system as Pawn) ──────────────────────────────
+	/** Per-limb health state (same 6-limb model as Pawn). */
+	limbs?: LimbState[];
+	/** Blood volume 0–100; 0 = death by blood loss. Drains from limb bleed rates. */
+	bloodVolume?: number;
+	/** Active status effect ids (drives modifier lookups, same as Pawn). */
+	activeEffects?: string[];
+	/** False once the mob dies. Stays in mobs[] as a Corpse for loot/butchering. */
+	isAlive?: boolean;
+	/** Skill levels — empty for primitive mobs; populated for sapient entities. */
+	skills: Record<string, number>;
 }
 
 /** An animal tamed and bound to an owning pawn (Phase C+). */
