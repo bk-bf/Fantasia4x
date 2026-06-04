@@ -35,7 +35,7 @@
   import { TICKS_PER_SECOND } from '$lib/game/core/time.js';
   import { simTarget } from '$lib/game/systems/MovementSystem.js';
   import SelectedEntityCard from '$lib/components/UI/SelectedEntityCard.svelte';
-  import type { SelectedEntityModel } from '$lib/components/UI/SelectedEntityCard.svelte';
+  import type { SelectedEntityModel, EntityBar } from '$lib/components/UI/SelectedEntityCard.svelte';
   import itemsData from '$lib/game/database/items.jsonc';
 
   const ITEMS_DATABASE = itemsData as unknown as Item[];
@@ -320,10 +320,12 @@
       dismissable: selected,
       stats: [
         { label: 'HP', value: Math.floor(pawn.state.health ?? 100) },
-        { label: 'Mood', value: Math.floor(pawn.state.mood) },
-        { label: 'Hunger', value: Math.floor(pawn.needs.hunger), warn: pawn.needs.hunger > 60 },
-        { label: 'Fatigue', value: Math.floor(pawn.needs.fatigue), warn: pawn.needs.fatigue > 60 }
+        { label: 'Mood', value: Math.floor(pawn.state.mood) }
       ],
+      bars: [
+        { label: 'HUNGER', value: pawn.needs.hunger, warn: pawn.needs.hunger > 60 },
+        { label: 'REST', value: pawn.needs.fatigue, warn: pawn.needs.fatigue > 60 }
+      ] satisfies EntityBar[],
       job: pawn.activeJob
         ? {
             text: `→ ${pawnStateLabel(pawn)}${
@@ -360,19 +362,26 @@
           value: `${Math.floor(mob.health)}/${mob.maxHealth}`,
           warn: mob.health < mob.maxHealth * 0.35
         },
-        {
-          label: 'Food',
-          value: `${Math.max(0, 100 - Math.floor(mob.needs.hunger))}%`,
-          warn: mob.needs.hunger > 60
-        },
-        {
-          label: 'Blood',
-          value: `${Math.floor(mob.bloodVolume ?? 100)}%`,
-          warn: (mob.bloodVolume ?? 100) < 60
-        },
         { label: 'STR', value: mob.stats.strength },
         { label: 'DEX', value: mob.stats.dexterity }
       ],
+      bars: [
+        {
+          label: 'HUNGER',
+          value: mob.needs.hunger,
+          warn: mob.needs.hunger > 60
+        },
+        {
+          label: 'REST',
+          value: mob.needs.fatigue,
+          warn: mob.needs.fatigue > 60
+        },
+        {
+          label: 'BLOOD',
+          value: mob.bloodVolume ?? 100,
+          warn: (mob.bloodVolume ?? 100) < 60
+        }
+      ] satisfies EntityBar[],
       note: `${def.entityClass === 'mob' ? '⚔ hostile' : '◆ neutral'} · ${def.behaviour}${
         def.tameable ? ' · tameable' : ''
       }`,
@@ -746,14 +755,24 @@
     const tW = tileWidth;
     const tH = tileHeight;
 
-    const newSleep = pawns
-      .filter((p) => p.position && p.currentState === 'Sleeping')
-      .map((p) => ({
-        id: p.id,
-        left: (p.position!.x - viewX + 0.5) * tW,
-        top: (p.position!.y - viewY) * tH - 18
-      }))
-      .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= W);
+    const newSleep = [
+      ...pawns
+        .filter((p) => p.position && p.currentState === 'Sleeping')
+        .map((p) => ({
+          id: p.id,
+          left: (p.position!.x - viewX + 0.5) * tW,
+          top: (p.position!.y - viewY) * tH - 18
+        }))
+        .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= W),
+      ...mobs
+        .filter((m) => m.state === 'Sleeping')
+        .map((m) => ({
+          id: m.id,
+          left: (m.x - viewX + 0.5) * tW,
+          top: (m.y - viewY) * tH - 18
+        }))
+        .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= W)
+    ];
     const sleepKey = newSleep
       .map((o) => `${o.id}:${Math.round(o.left)},${Math.round(o.top)}`)
       .join('|');

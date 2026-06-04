@@ -66,6 +66,11 @@ export interface CreatureDefinition {
     /** 1.0 = easy to tame, 0.3 = hard. Used in Phase C. */
     tameResistance: number;
     mountable: boolean;
+    /**
+     * When true, predatory mobs will hunt this creature and it will flee from them.
+     * Typically set on passive/neutral animals; absent on hostile mobs.
+     */
+    huntable: boolean;
     canSteal: boolean;
     chargesWhenWounded: boolean;
     /** Husbandry product (Phase D), when present. */
@@ -95,6 +100,7 @@ function toDefinition(raw: RawCreature): CreatureDefinition {
         tameable: (raw.tameable as boolean) ?? false,
         tameResistance: (raw.tameResistance as number) ?? 0.5,
         mountable: (raw.mountable as boolean) ?? false,
+        huntable: (raw.huntable as boolean) ?? false,
         canSteal: (raw.canSteal as boolean) ?? false,
         chargesWhenWounded: (raw.chargesWhenWounded as boolean) ?? false,
         produces: raw.produces as CreatureProduces | undefined,

@@ -188,6 +188,8 @@ export type MobState =
 	| 'Startled'
 	| 'Exhausted'
 	| 'Tamed'
+	// shared rest state
+	| 'Sleeping'
 	// hunger states (Phase B)
 	| 'Foraging'  // herbivore/omnivore moving to a grass tile to eat
 	| 'Hunting'   // carnivore/omnivore pursuing nearest animal or corpse

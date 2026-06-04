@@ -47,7 +47,7 @@ const BASE_FATIGUE_PER_SECOND = 0.32;
 /** HP drained per second once hunger reaches 100 (starving). */
 const STARVATION_DAMAGE_PER_SECOND = 1;
 /** Hunger threshold at which an entity transitions to a feeding state. */
-const HUNGER_EAT_THRESHOLD = 60;
+const HUNGER_EAT_THRESHOLD = 50;
 /** Hunger threshold at which a feeding entity considers itself sated. */
 const HUNGER_SATED_THRESHOLD = 10;
 /** Tile radius searched for edible grass resources. */
@@ -64,6 +64,18 @@ const EAT_GRASS_HUNGER_RESTORE = 40;
 const EAT_CORPSE_HUNGER_RESTORE = 50;
 /** Average wander-step decisions per second while grazing (idle fraction excluded). */
 const WANDER_MOVES_PER_SECOND = 1.0;
+/** Fatigue level at which mobs enter sleep — set lower than pawn (60 vs 72) so animals
+ * sleep more naturally and spend a realistic fraction of time resting. */
+const SLEEP_FATIGUE_THRESHOLD = 60;
+/** Natural wake-up fatigue level — mirrors shouldPawnSleep: wake at 0 when fed, 30 when hunger ≥ 70. */
+function sleepWakeThreshold(hunger: number): number { return hunger >= 70 ? 30 : 0; }
+/** Fatigue recovered per second while sleeping. Kept low (2.0) so animals sleep for a
+ * substantial portion of their time rather than snapping back to full immediately. */
+const SLEEP_RECOVERY_PER_SECOND = 2.0;
+/** Hunger accrual rate multiplier while sleeping (mirrors pawn hungerRate=0.33 sleeping effect). */
+const SLEEP_HUNGER_RATE = 0.33;
+/** Hunger ceiling above which a mob won't enter sleep (mirrors pawn shouldPawnSleep: hunger < 87). */
+const SLEEP_MAX_HUNGER = 87;
 
 class EntityServiceImpl {
     private idCounter = 0;
@@ -356,6 +368,14 @@ class EntityServiceImpl {
             return { ...mob, state: 'Fleeing', stateSince: turn, eatProgress: undefined, huntTargetId: undefined };
         }
 
+        // ── Fatigue-driven sleep (safe, no pawn in vision) ──────────────────────
+        if (!inVision && mob.needs.fatigue >= SLEEP_FATIGUE_THRESHOLD &&
+            mob.needs.hunger < SLEEP_MAX_HUNGER &&
+            mob.state !== 'Sleeping' && mob.state !== 'Fleeing' &&
+            mob.state !== 'Hunting' && mob.state !== 'Alerted' && mob.state !== 'Attacking') {
+            return { ...mob, state: 'Sleeping', stateSince: turn, path: [] };
+        }
+
         // ── Hunger-driven FSM ───────────────────────────────────────────
         // Aggressive mobs prioritise attacking pawns over feeding.
         // Non-aggressive (passive/neutral) hostile mobs will hunt when hungry.
@@ -371,7 +391,7 @@ class EntityServiceImpl {
             return this.stepHunting(mob, def, turn, state, allMobs, pendingDamage);
         }
         if (!inVision && canHunt && mob.needs.hunger >= HUNGER_EAT_THRESHOLD &&
-            mob.state !== 'Fleeing') {
+            mob.state !== 'Fleeing' && mob.state !== 'Sleeping') {
             return { ...mob, state: 'Hunting', stateSince: turn };
         }
 
@@ -411,6 +431,15 @@ class EntityServiceImpl {
                 }
                 return this.wanderStep(mob, def, state);
             }
+            case 'Sleeping': {
+                // Woken by a pawn entering vision.
+                if (inVision) return { ...mob, state: 'Alerted', stateSince: turn };
+                // Natural wake when rested or force-wake when ravenously hungry.
+                if (mob.needs.fatigue <= sleepWakeThreshold(mob.needs.hunger) || mob.needs.hunger >= SLEEP_MAX_HUNGER) {
+                    return { ...mob, state: 'Wander', stateSince: turn };
+                }
+                return { ...mob, path: [] }; // stay still
+            }
             default:
                 return { ...mob, state: 'Wander', stateSince: turn };
         }
@@ -427,19 +456,37 @@ class EntityServiceImpl {
         pendingDamage: Map<string, number>,
         pendingTileDepletion: Array<{ x: number; y: number; id: string }>
     ): Mob {
-        // ── Hunger-driven FSM transitions (only when safe) ───────────────────────
-        if (!inVision) {
+        // Herbivores are skittish: they detect threats at twice their base vision range
+        // and keep fleeing until the danger is much further away.
+        const isHerbivore = def.diet === 'herbivore';
+        const alertMult = isHerbivore ? 2.0 : 1.0;
+
+        // Combined threat: a pawn in wide alert radius OR a predatory mob nearby.
+        const predatorThreat = this.nearestPredatorThreat(mob, def, allMobs, alertMult);
+        const widenedPawnThreat = nearest && this.dist(mob, nearest.pos) <= def.stats.visionRange * alertMult ? nearest : null;
+        const threat = widenedPawnThreat ?? predatorThreat;
+
+        // ── Hunger / fatigue FSM transitions (only when safe) ──────────────────────
+        if (!threat) {
             const hungry = mob.needs.hunger >= HUNGER_EAT_THRESHOLD;
             const sated = mob.needs.hunger <= HUNGER_SATED_THRESHOLD;
+
+            // Enter sleep when fatigued and not ravenously hungry (mirrors pawn shouldPawnSleep).
+            if (mob.needs.fatigue >= SLEEP_FATIGUE_THRESHOLD &&
+                mob.needs.hunger < SLEEP_MAX_HUNGER &&
+                mob.state !== 'Sleeping' && mob.state !== 'Fleeing' &&
+                mob.state !== 'Startled' && mob.state !== 'Foraging' && mob.state !== 'Hunting') {
+                return { ...mob, state: 'Sleeping', stateSince: turn, path: [] };
+            }
 
             // Exit feeding states when sated.
             if (sated && (mob.state === 'Foraging' || mob.state === 'Hunting')) {
                 return { ...mob, state: 'Grazing', stateSince: turn, eatProgress: undefined, huntTargetId: undefined };
             }
 
-            // Enter a feeding state from any non-feeding, non-flight state.
+            // Enter a feeding state from any non-feeding, non-flight, non-sleep state.
             if (hungry && mob.state !== 'Foraging' && mob.state !== 'Hunting' &&
-                mob.state !== 'Fleeing' && mob.state !== 'Startled') {
+                mob.state !== 'Fleeing' && mob.state !== 'Startled' && mob.state !== 'Sleeping') {
                 const canForage = def.diet !== 'carnivore';
                 const canHunt = def.diet !== 'herbivore';
                 if (canForage) return { ...mob, state: 'Foraging', stateSince: turn };
@@ -452,11 +499,13 @@ class EntityServiceImpl {
 
         switch (mob.state) {
             case 'Grazing': {
-                if (inVision) return { ...mob, state: 'Startled', stateSince: turn };
+                if (threat) return { ...mob, state: 'Startled', stateSince: turn };
                 return this.wanderStep(mob, def, state);
             }
             case 'Startled': {
-                if (turn - mob.stateSince >= STARTLED_TICKS) {
+                // Herbivores bolt almost instantly; other animals freeze briefly.
+                const startledDuration = isHerbivore ? Math.ceil(STARTLED_TICKS * 0.3) : STARTLED_TICKS;
+                if (turn - mob.stateSince >= startledDuration) {
                     return { ...mob, state: 'Fleeing', stateSince: turn };
                 }
                 return mob; // frozen
@@ -465,17 +514,32 @@ class EntityServiceImpl {
                 if (turn - mob.stateSince > FLEE_TO_EXHAUST_TICKS) {
                     return { ...mob, state: 'Exhausted', stateSince: turn };
                 }
-                if (!nearest || this.dist(mob, nearest.pos) > def.stats.visionRange * 1.5) {
+                // Flee from the closest current threat (pawn or predator).
+                const pawnDist = nearest ? this.dist(mob, nearest.pos) : Infinity;
+                const predDist = predatorThreat ? this.dist(mob, predatorThreat.pos) : Infinity;
+                const closestDist = Math.min(pawnDist, predDist);
+                // Herbivores don't relax until threats are well out of alert range.
+                const safeZone = def.stats.visionRange * (isHerbivore ? 2.5 : 1.5);
+                if (closestDist > safeZone) {
                     return { ...mob, state: 'Grazing', stateSince: turn };
                 }
-                if (nearest) return this.moveAway(mob, nearest.pos, state);
-                return this.wanderStep(mob, def, state);
+                const fleeFrom = pawnDist <= predDist ? nearest!.pos : predatorThreat!.pos;
+                return this.moveAway(mob, fleeFrom, state);
             }
             case 'Exhausted': {
                 if (turn - mob.stateSince > EXHAUST_RECOVER_TICKS) {
                     return { ...mob, state: 'Grazing', stateSince: turn };
                 }
-                return this.wanderStep(mob, def, state); // slow drift, huntable
+                return this.wanderStep(mob, def, state); // slow drift, vulnerable
+            }
+            case 'Sleeping': {
+                // Woken by any threat — bolt immediately.
+                if (threat) return { ...mob, state: 'Startled', stateSince: turn };
+                // Natural wake-up when rested, or force-wake when ravenously hungry.
+                if (mob.needs.fatigue <= sleepWakeThreshold(mob.needs.hunger) || mob.needs.hunger >= SLEEP_MAX_HUNGER) {
+                    return { ...mob, state: 'Grazing', stateSince: turn };
+                }
+                return { ...mob, path: [] }; // stay still while sleeping
             }
             case 'Tamed':
                 return mob; // Phase C — taming not yet implemented
@@ -635,7 +699,7 @@ class EntityServiceImpl {
         return best;
     }
 
-    /** Nearest corpse (preferred) or live non-tamed animal within HUNT_RADIUS. */
+    /** Nearest corpse (preferred) or live huntable creature within HUNT_RADIUS. */
     private findNearestPrey(mob: Mob, allMobs: Mob[]): Mob | null {
         let best: Mob | null = null;
         let bestDist = Infinity;
@@ -647,7 +711,7 @@ class EntityServiceImpl {
                 const d = raw * 0.5;
                 if (d < bestDist) { bestDist = d; best = candidate; }
             } else if (
-                candidate.entityClass === 'animal' &&
+                getCreatureById(candidate.creatureId)?.huntable &&
                 candidate.state !== 'Tamed' &&
                 raw <= HUNT_RADIUS
             ) {
@@ -655,6 +719,35 @@ class EntityServiceImpl {
             }
         }
         return best;
+    }
+
+    /**
+     * Returns the nearest hostile mob (entityClass `mob`, non-herbivore diet) within
+     * the prey's vision range, or null. Used to trigger fleeing from predators.
+     * Only applies to creatures with `huntable: true`.
+     */
+    private nearestPredatorThreat(
+        prey: Mob,
+        def: CreatureDefinition,
+        allMobs: Mob[],
+        radiusMult = 1.0
+    ): { pos: { x: number; y: number } } | null {
+        if (!def.huntable) return null;
+        let best: Mob | null = null;
+        let bestDist = Infinity;
+        const radius = def.stats.visionRange * radiusMult;
+        for (const m of allMobs) {
+            if (m.id === prey.id || m.state === 'Corpse') continue;
+            if (m.entityClass !== 'mob') continue; // only hostile mob-class entities
+            const mDef = getCreatureById(m.creatureId);
+            if (!mDef || mDef.diet === 'herbivore') continue;
+            const d = this.dist(prey, { x: m.x, y: m.y });
+            if (d <= radius && d < bestDist) {
+                bestDist = d;
+                best = m;
+            }
+        }
+        return best ? { pos: { x: best.x, y: best.y } } : null;
     }
 
     stepHunger(state: GameState): GameState {
@@ -677,7 +770,12 @@ class EntityServiceImpl {
             const hungerDelta = BASE_HUNGER_PER_SECOND * SECONDS_PER_TICK * dietMult * condMults.hungerRate;
             const fatigueDelta = BASE_FATIGUE_PER_SECOND * SECONDS_PER_TICK * condMults.fatigueRate;
 
-            const newHunger = Math.min(100, mob.needs.hunger + hungerDelta);
+            // Sleeping: hunger accrues at 33% rate; fatigue recovers instead of rising.
+            const sleepingNow = mob.state === 'Sleeping';
+            const newHunger = Math.min(100, mob.needs.hunger + hungerDelta * (sleepingNow ? SLEEP_HUNGER_RATE : 1));
+            const newFatigue = sleepingNow
+                ? Math.max(0, mob.needs.fatigue - SLEEP_RECOVERY_PER_SECOND * SECONDS_PER_TICK)
+                : Math.min(100, mob.needs.fatigue + fatigueDelta);
             // Starvation: drain HP once hunger is capped at 100.
             const healthDelta = newHunger >= 100 ? -(STARVATION_DAMAGE_PER_SECOND * SECONDS_PER_TICK) : 0;
 
@@ -729,7 +827,7 @@ class EntityServiceImpl {
                 needs: {
                     ...mob.needs,
                     hunger: newHunger,
-                    fatigue: Math.min(100, mob.needs.fatigue + fatigueDelta)
+                    fatigue: newFatigue
                 },
                 health: Math.max(0, mob.health + healthDelta),
                 bloodVolume,
