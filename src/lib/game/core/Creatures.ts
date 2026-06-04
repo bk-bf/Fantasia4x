@@ -76,6 +76,12 @@ export interface CreatureDefinition {
     chargesWhenWounded: boolean;
     /** Husbandry product (Phase D), when present. */
     produces?: CreatureProduces;
+    /**
+     * Item ID of the carcass dropped when this creature dies.
+     * Maps to an item in items.jsonc (e.g. "wolf_carcass").
+     * Absent on creatures that leave no physical remains (shadow_wraith, etc.).
+     */
+    carcassItemId?: string;
     /** biome id → relative spawn weight (terrains.jsonc biome ids). */
     biomeWeights: Record<string, number>;
     lootTable: CreatureLootEntry[];
@@ -105,6 +111,7 @@ function toDefinition(raw: RawCreature): CreatureDefinition {
         canSteal: (raw.canSteal as boolean) ?? false,
         chargesWhenWounded: (raw.chargesWhenWounded as boolean) ?? false,
         produces: raw.produces as CreatureProduces | undefined,
+        carcassItemId: (raw.carcassItemId as string) ?? undefined,
         biomeWeights: (raw.biomeWeights as Record<string, number>) ?? {},
         lootTable: (raw.lootTable as CreatureLootEntry[]) ?? []
     };

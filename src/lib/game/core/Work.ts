@@ -53,6 +53,17 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     baseEfficiency: 1.0
   },
   {
+    id: 'butchery',
+    name: 'Butchery',
+    description: 'Process animal carcasses into meat, hide, and bone at a butcher spot',
+    emoji: '\uD83D\uDD2A',
+    color: '#C62828',
+    toolsRequired: ['flint_knife'],
+    primaryStat: 'strength',
+    secondaryStat: 'dexterity',
+    baseEfficiency: 1.0
+  },
+  {
     id: 'fishing',
     name: 'Fishing',
     description: 'Catch fish from rivers, lakes, and streams',

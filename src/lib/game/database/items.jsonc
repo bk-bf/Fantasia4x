@@ -79,31 +79,31 @@
     "id"              : "rabbit_meat",
     "name"            : "Rabbit Meat",
     "type"            : "food",
-    "category"        : "food",
+    "category"        : "meat",
     "description"     : "Lean rabbit meat, ready to cook.",
     "color"           : "#C8864E",
     "amount"          : 0,
     "nutrition"       : 1.8,
     "craftingCost"    : {"rabbit_carcass": 1},
-    "craftingTime"    : 1,
+    "craftingTime"    : 200,
     "toolTierRequired": 0,
-    "workshopType"    : null,
-    "workTypes"       : ["crafting"]
+    "workshopType"    : "butcher_spot",
+    "workTypes"       : ["butchery"]
   },
   {
     "id"              : "venison",
     "name"            : "Venison",
     "type"            : "food",
-    "category"        : "food",
+    "category"        : "meat",
     "description"     : "Rich deer meat. Filling and nutritious.",
     "color"           : "#C8864E",
     "amount"          : 0,
     "nutrition"       : 2.5,
     "craftingCost"    : {"deer_carcass": 1},
-    "craftingTime"    : 2,
+    "craftingTime"    : 900,
     "toolTierRequired": 0,
-    "workshopType"    : null,
-    "workTypes"       : ["crafting"]
+    "workshopType"    : "butcher_spot",
+    "workTypes"       : ["butchery"]
   },
   {
     "id"         : "hide",
@@ -124,7 +124,53 @@
     "color"           : "#C8864E",
     "amount"          : 0,
     "nutrition"       : 3.0,
-    "craftingCost"    : {"rabbit_meat": 1, "branch": 2},
+    "craftingCost"    : {"branch": 2},
+    "dynamicRecipe"   : {
+      "meat": {
+        "acceptsCategory": "meat",
+        "quantity"  : 1,
+        "variants"  : {
+          "rabbit_meat" : {"name": "Rabbit on a Spit", "description": "Lean rabbit skewered over open flame."},
+          "venison"     : {
+            "name"          : "Venison on a Spit",
+            "description"   : "Rich deer meat, charred and fragrant.",
+            "nutritionBonus": 0.3
+          },
+          "wolf_meat"   : {
+            "name"          : "Wolf Meat on a Spit",
+            "description"   : "Gamey and tough, but hot food is hot food.",
+            "nutritionBonus": -0.3
+          },
+          "bear_meat"   : {
+            "name"          : "Bear Steak",
+            "description"   : "Dense, fatty bear meat over open coals.",
+            "nutritionBonus": 0.8
+          },
+          "boar_meat"   : {
+            "name"          : "Boar on a Spit",
+            "description"   : "Wild pork crackling over the fire.",
+            "nutritionBonus": 0.2
+          },
+          "elk_meat"    : {
+            "name"          : "Elk Roast",
+            "description"   : "Prime elk, slow-cooked over embers.",
+            "nutritionBonus": 0.8
+          },
+          "goat_meat"   : {"name": "Goat on a Spit", "description": "Mountain goat with a smoky char."},
+          "chicken_meat": {
+            "name"          : "Roasted Chicken",
+            "description"   : "Crispy wild chicken on a branch skewer.",
+            "nutritionBonus": -0.4
+          },
+          "rat_meat"    : {
+            "name"          : "Roasted Rat",
+            "description"   : "Scrappy and unpleasant. But cooked.",
+            "nutritionBonus": -0.8
+          }
+        },
+        "default"   : {"name": "Spit-Roasted Meat", "description": "Meat skewered on a branch and cooked over fire."}
+      }
+    },
     "craftingTime"    : 2,
     "toolTierRequired": 0,
     "workshopType"    : "campfire",
@@ -140,6 +186,56 @@
     "amount"          : 0,
     "nutrition"       : 5.0,
     "craftingCost"    : {},
+    "dynamicRecipe"   : {
+      "meat": {
+        "acceptsCategory": "meat",
+        "quantity"  : 1,
+        "variants"  : {
+          "rabbit_meat" : {"name": "Rabbit Stew", "description": "A warm rabbit stew with wild herbs."},
+          "venison"     : {
+            "name"          : "Venison Stew",
+            "description"   : "Hearty deer stew, thick and rich.",
+            "nutritionBonus": 0.5
+          },
+          "wolf_meat"   : {
+            "name"          : "Wolf Stew",
+            "description"   : "Gamey wolf stew. Fills the belly if not the soul.",
+            "nutritionBonus": -0.3
+          },
+          "bear_meat"   : {
+            "name"          : "Bear Stew",
+            "description"   : "Rich, fatty bear stew. Warming and dense.",
+            "nutritionBonus": 1.0
+          },
+          "boar_meat"   : {
+            "name"          : "Boar Stew",
+            "description"   : "Wild pork boiled with roots and herbs.",
+            "nutritionBonus": 0.5
+          },
+          "elk_meat"    : {
+            "name"          : "Elk Stew",
+            "description"   : "Prime elk braised in the pot. Excellent.",
+            "nutritionBonus": 1.0
+          },
+          "goat_meat"   : {
+            "name"          : "Goat Stew",
+            "description"   : "Mountain goat stewed until tender.",
+            "nutritionBonus": 0.2
+          },
+          "chicken_meat": {
+            "name"          : "Chicken Broth",
+            "description"   : "Light wild-chicken broth. Comforting.",
+            "nutritionBonus": -0.5
+          },
+          "rat_meat"    : {
+            "name"          : "Rat Stew",
+            "description"   : "Unpleasant but surprisingly caloric.",
+            "nutritionBonus": -1.5
+          }
+        },
+        "default"   : {"name": "Stew", "description": "A hearty stew. Nutrition depends on ingredients."}
+      }
+    },
     "craftingTime"    : 3,
     "toolTierRequired": 0,
     "workshopType"    : "campfire",
@@ -458,20 +554,363 @@
     "workTypes"       : ["crafting"]
   },
   {
-    "id"               : "clay_storage_jar",
-    "name"             : "Clay Storage Jar",
-    "type"             : "container",
-    "category"         : "storage",
-    "description"      : "Large sealed clay jar. 30 slots, 70% food preservation.",
-    "color"            : "#B5651D",
-    "amount"           : 0,
-    "isContainer"      : true,
-    "storageCapacity"  : 30,
-    "preservationBonus": 0.7,
-    "craftingCost"     : {"clay_lump": 5, "cordage": 2},
-    "craftingTime"     : 5,
-    "toolTierRequired" : 0,
-    "workshopType"     : "makers_bench",
-    "workTypes"        : ["crafting"]
+    "id"         : "wolf_carcass",
+    "name"       : "Wolf Carcass",
+    "type"       : "material",
+    "category"   : "organic",
+    "description": "A slain wolf. Skin and process it for hide and meat.",
+    "color"      : "#B3B8C8",
+    "amount"     : 0,
+    "workTypes"  : ["hunting"]
+  },
+  {
+    "id"         : "bear_carcass",
+    "name"       : "Bear Carcass",
+    "type"       : "material",
+    "category"   : "organic",
+    "description": "A massive cave bear. Butcher it for prime cuts, hide, and fat.",
+    "color"      : "#8D6040",
+    "amount"     : 0,
+    "workTypes"  : ["hunting"]
+  },
+  {
+    "id"         : "goblin_carcass",
+    "name"       : "Goblin Remains",
+    "type"       : "material",
+    "category"   : "organic",
+    "description": "A fallen goblin. Mostly bone and leather scraps.",
+    "color"      : "#66A64D",
+    "amount"     : 0,
+    "workTypes"  : ["hunting"]
+  },
+  {
+    "id"         : "giant_rat_carcass",
+    "name"       : "Giant Rat Carcass",
+    "type"       : "material",
+    "category"   : "organic",
+    "description": "A large dead rat. Lean, gamey meat if you're not picky.",
+    "color"      : "#8D7266",
+    "amount"     : 0,
+    "workTypes"  : ["hunting"]
+  },
+  {
+    "id"         : "boar_carcass",
+    "name"       : "Boar Carcass",
+    "type"       : "material",
+    "category"   : "organic",
+    "description": "A slain wild boar. Process for meat, bone, and tusks.",
+    "color"      : "#C8A080",
+    "amount"     : 0,
+    "workTypes"  : ["hunting"]
+  },
+  {
+    "id"         : "elk_carcass",
+    "name"       : "Elk Carcass",
+    "type"       : "material",
+    "category"   : "organic",
+    "description": "A large elk. Yields generous cuts of venison, hide, and antler.",
+    "color"      : "#B09878",
+    "amount"     : 0,
+    "workTypes"  : ["hunting"]
+  },
+  {
+    "id"         : "mountain_goat_carcass",
+    "name"       : "Mountain Goat Carcass",
+    "type"       : "material",
+    "category"   : "organic",
+    "description": "A mountain goat. Modest meat yield; hide is tough and durable.",
+    "color"      : "#D0D0D0",
+    "amount"     : 0,
+    "workTypes"  : ["hunting"]
+  },
+  {
+    "id"         : "wild_chicken_carcass",
+    "name"       : "Wild Chicken Carcass",
+    "type"       : "material",
+    "category"   : "organic",
+    "description": "A plucked wild chicken. Small but worth the effort.",
+    "color"      : "#E8C880",
+    "amount"     : 0,
+    "workTypes"  : ["hunting"]
+  },
+  // ── Butchery products ───────────────────────────────────────────────────────
+  // Creature-specific meats
+  {
+    "id"              : "wolf_meat",
+    "name"            : "Wolf Meat",
+    "type"            : "food",
+    "category"        : "meat",
+    "description"     : "Tough, gamey predator meat. Edible if well-seasoned.",
+    "color"           : "#B06040",
+    "amount"          : 0,
+    "nutrition"       : 1.5,
+    "craftingCost"    : {"wolf_carcass": 1},
+    "craftingTime"    : 900,
+    "toolTierRequired": 0,
+    "workshopType"    : "butcher_spot",
+    "workTypes"       : ["butchery"]
+  },
+  {
+    "id"              : "bear_meat",
+    "name"            : "Bear Meat",
+    "type"            : "food",
+    "category"        : "meat",
+    "description"     : "Rich, fatty bear meat. Dense and warming.",
+    "color"           : "#A05030",
+    "amount"          : 0,
+    "nutrition"       : 2.8,
+    "craftingCost"    : {"bear_carcass": 1},
+    "craftingTime"    : 3600,
+    "toolTierRequired": 0,
+    "workshopType"    : "butcher_spot",
+    "workTypes"       : ["butchery"]
+  },
+  {
+    "id"              : "boar_meat",
+    "name"            : "Boar Meat",
+    "type"            : "food",
+    "category"        : "meat",
+    "description"     : "Robust, well-marbled wild pork. Excellent in stew.",
+    "color"           : "#C87050",
+    "amount"          : 0,
+    "nutrition"       : 2.2,
+    "craftingCost"    : {"boar_carcass": 1},
+    "craftingTime"    : 900,
+    "toolTierRequired": 0,
+    "workshopType"    : "butcher_spot",
+    "workTypes"       : ["butchery"]
+  },
+  {
+    "id"              : "elk_meat",
+    "name"            : "Elk Meat",
+    "type"            : "food",
+    "category"        : "meat",
+    "description"     : "Lean, premium venison from a large elk.",
+    "color"           : "#C86040",
+    "amount"          : 0,
+    "nutrition"       : 2.8,
+    "craftingCost"    : {"elk_carcass": 1},
+    "craftingTime"    : 3600,
+    "toolTierRequired": 0,
+    "workshopType"    : "butcher_spot",
+    "workTypes"       : ["butchery"]
+  },
+  {
+    "id"              : "goat_meat",
+    "name"            : "Goat Meat",
+    "type"            : "food",
+    "category"        : "meat",
+    "description"     : "Lean mountain goat. Mild flavour, modest portion.",
+    "color"           : "#C07858",
+    "amount"          : 0,
+    "nutrition"       : 1.6,
+    "craftingCost"    : {"mountain_goat_carcass": 1},
+    "craftingTime"    : 900,
+    "toolTierRequired": 0,
+    "workshopType"    : "butcher_spot",
+    "workTypes"       : ["butchery"]
+  },
+  {
+    "id"              : "chicken_meat",
+    "name"            : "Chicken Meat",
+    "type"            : "food",
+    "category"        : "meat",
+    "description"     : "Delicate wild chicken. Small but flavourful.",
+    "color"           : "#E8B870",
+    "amount"          : 0,
+    "nutrition"       : 0.9,
+    "craftingCost"    : {"wild_chicken_carcass": 1},
+    "craftingTime"    : 200,
+    "toolTierRequired": 0,
+    "workshopType"    : "butcher_spot",
+    "workTypes"       : ["butchery"]
+  },
+  {
+    "id"              : "rat_meat",
+    "name"            : "Rat Meat",
+    "type"            : "food",
+    "category"        : "meat",
+    "description"     : "Gamey and unpleasant. Better than starving.",
+    "color"           : "#907060",
+    "amount"          : 0,
+    "nutrition"       : 0.8,
+    "craftingCost"    : {"giant_rat_carcass": 1},
+    "craftingTime"    : 200,
+    "toolTierRequired": 0,
+    "workshopType"    : "butcher_spot",
+    "workTypes"       : ["butchery"]
+  },
+  // Creature-specific hides / pelts
+  {
+    "id"              : "rabbit_pelt",
+    "name"            : "Rabbit Pelt",
+    "type"            : "material",
+    "category"        : "organic",
+    "description"     : "Small, soft rabbit pelt. Light insulation and trim.",
+    "color"           : "#E0D8C8",
+    "amount"          : 0,
+    "craftingCost"    : {"rabbit_carcass": 1},
+    "craftingTime"    : 150,
+    "toolTierRequired": 0,
+    "workshopType"    : "butcher_spot",
+    "workTypes"       : ["butchery"]
+  },
+  {
+    "id"              : "deer_hide",
+    "name"            : "Deer Hide",
+    "type"            : "material",
+    "category"        : "organic",
+    "description"     : "Supple deer skin. A foundational leatherworking material.",
+    "color"           : "#A07848",
+    "amount"          : 0,
+    "craftingCost"    : {"deer_carcass": 1},
+    "craftingTime"    : 600,
+    "toolTierRequired": 0,
+    "workshopType"    : "butcher_spot",
+    "workTypes"       : ["butchery"]
+  },
+  {
+    "id"              : "wolf_hide",
+    "name"            : "Wolf Hide",
+    "type"            : "material",
+    "category"        : "organic",
+    "description"     : "Coarse wolf skin with a dense undercoat. Excellent for cold-weather gear.",
+    "color"           : "#A0A8B0",
+    "amount"          : 0,
+    "craftingCost"    : {"wolf_carcass": 1},
+    "craftingTime"    : 600,
+    "toolTierRequired": 0,
+    "workshopType"    : "butcher_spot",
+    "workTypes"       : ["butchery"]
+  },
+  {
+    "id"              : "bear_pelt",
+    "name"            : "Bear Pelt",
+    "type"            : "material",
+    "category"        : "organic",
+    "description"     : "Thick, shaggy bear pelt. Premium winter cloak material.",
+    "color"           : "#705030",
+    "amount"          : 0,
+    "craftingCost"    : {"bear_carcass": 1},
+    "craftingTime"    : 2400,
+    "toolTierRequired": 0,
+    "workshopType"    : "butcher_spot",
+    "workTypes"       : ["butchery"]
+  },
+  {
+    "id"              : "boar_hide",
+    "name"            : "Boar Hide",
+    "type"            : "material",
+    "category"        : "organic",
+    "description"     : "Thick, bristle-covered boar skin. Stiff but durable.",
+    "color"           : "#908070",
+    "amount"          : 0,
+    "craftingCost"    : {"boar_carcass": 1},
+    "craftingTime"    : 600,
+    "toolTierRequired": 0,
+    "workshopType"    : "butcher_spot",
+    "workTypes"       : ["butchery"]
+  },
+  {
+    "id"              : "elk_hide",
+    "name"            : "Elk Hide",
+    "type"            : "material",
+    "category"        : "organic",
+    "description"     : "Large, tough elk hide. Ideal for armour lining and tents.",
+    "color"           : "#887060",
+    "amount"          : 0,
+    "craftingCost"    : {"elk_carcass": 1},
+    "craftingTime"    : 2400,
+    "toolTierRequired": 0,
+    "workshopType"    : "butcher_spot",
+    "workTypes"       : ["butchery"]
+  },
+  {
+    "id"              : "goat_hide",
+    "name"            : "Goat Hide",
+    "type"            : "material",
+    "category"        : "organic",
+    "description"     : "Tough mountain goat hide. Weather-resistant and hard-wearing.",
+    "color"           : "#C0C0B0",
+    "amount"          : 0,
+    "craftingCost"    : {"mountain_goat_carcass": 1},
+    "craftingTime"    : 600,
+    "toolTierRequired": 0,
+    "workshopType"    : "butcher_spot",
+    "workTypes"       : ["butchery"]
+  },
+  {
+    "id"              : "chicken_feathers",
+    "name"            : "Chicken Feathers",
+    "type"            : "material",
+    "category"        : "organic",
+    "description"     : "Soft wild-chicken feathers. Stuffing, fletching, and decoration.",
+    "color"           : "#F0E0A0",
+    "amount"          : 0,
+    "craftingCost"    : {"wild_chicken_carcass": 1},
+    "craftingTime"    : 150,
+    "toolTierRequired": 0,
+    "workshopType"    : "butcher_spot",
+    "workTypes"       : ["butchery"]
+  },
+  {
+    "id"              : "rat_pelt",
+    "name"            : "Rat Pelt",
+    "type"            : "material",
+    "category"        : "organic",
+    "description"     : "Small, coarse rat skin. Barely worth the scraping.",
+    "color"           : "#807060",
+    "amount"          : 0,
+    "craftingCost"    : {"giant_rat_carcass": 1},
+    "craftingTime"    : 150,
+    "toolTierRequired": 0,
+    "workshopType"    : "butcher_spot",
+    "workTypes"       : ["butchery"]
+  },
+  // Size-based bones (alternative sources via craftingCostAlternatives)
+  {
+    "id": "small_bones",
+    "name": "Small Bones",
+    "type": "material",
+    "category": "organic",
+    "description": "Hollow, delicate bones from small animals. Useful for needles and fishhooks.",
+    "color": "#E8E0D0",
+    "amount": 0,
+    "craftingCost": {"rabbit_carcass": 1},
+    "craftingCostAlternatives": [ {"giant_rat_carcass": 1}, {"wild_chicken_carcass": 1} ],
+    "craftingTime": 100,
+    "toolTierRequired": 0,
+    "workshopType": "butcher_spot",
+    "workTypes": ["butchery"]
+  },
+  {
+    "id": "medium_bones",
+    "name": "Medium Bones",
+    "type": "material",
+    "category": "organic",
+    "description": "Sturdy mid-sized bones. Blanched into tools, handles, and toggles.",
+    "color": "#D8D0C0",
+    "amount": 0,
+    "craftingCost": {"wolf_carcass": 1},
+    "craftingCostAlternatives": [ {"deer_carcass": 1}, {"boar_carcass": 1}, {"mountain_goat_carcass": 1} ],
+    "craftingTime": 300,
+    "toolTierRequired": 0,
+    "workshopType": "butcher_spot",
+    "workTypes": ["butchery"]
+  },
+  {
+    "id": "large_bones",
+    "name": "Large Bones",
+    "type": "material",
+    "category": "organic",
+    "description": "Massive load-bearing bones. Ground for fertiliser or carved into heavy tools.",
+    "color": "#C8C0B0",
+    "amount": 0,
+    "craftingCost": {"bear_carcass": 1},
+    "craftingCostAlternatives": [ {"elk_carcass": 1} ],
+    "craftingTime": 1200,
+    "toolTierRequired": 0,
+    "workshopType": "butcher_spot",
+    "workTypes": ["butchery"]
   }
 ]

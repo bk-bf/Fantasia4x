@@ -1,4 +1,4 @@
-import type { Item, GameState } from '../core/types';
+import type { Item, GameState, DynamicIngredientSlot } from '../core/types';
 import { consumeFromStockpiles, addToStockpileZone } from '../core/GameState';
 import itemsData from '../database/items.jsonc';
 import { RARITY_COLORS } from '../database/colors';
@@ -22,6 +22,14 @@ export interface ItemService {
 	hasRequiredMaterials(itemId: string, gameState: GameState): boolean;
 	hasRequiredTools(itemId: string, gameState: GameState): boolean;
 	hasRequiredBuilding(itemId: string, gameState: GameState): boolean;
+	/** Returns the cost set to consume (primary or first matching alternative), or null if nothing is satisfied. */
+	resolveActiveCost(itemId: string, gameState: GameState, selectedIngredients?: Record<string, string>): Record<string, number> | null;
+	/**
+	 * For items with a dynamicRecipe: auto-picks the first available item per slot
+	 * whose `category` matches `acceptsCategory`.
+	 * Returns {} for items with no dynamicRecipe, or null if a slot cannot be satisfied.
+	 */
+	autoSelectIngredients(itemId: string, gameState: GameState): Record<string, string> | null;
 
 	// Calculation Methods
 	calculateCraftingTime(itemId: string, gameState: GameState, pawnId?: string): number;
@@ -64,17 +72,16 @@ export class ItemServiceImpl implements ItemService {
 
 	getCraftableItems(gameState: GameState, pawnId?: string): Item[] {
 		return ITEMS_DATABASE.filter((item) => {
-			// Must have crafting requirements
-			if (!item.craftingCost) return false;
-
-			// Check if can craft
+			// Must have crafting cost (primary, alternative, or dynamic recipe)
+			if (!item.craftingCost && !(item.craftingCostAlternatives?.length) && !item.dynamicRecipe) return false;
 			return this.canCraftItem(item.id, gameState, pawnId);
 		});
 	}
 
 	canCraftItem(itemId: string, gameState: GameState, pawnId?: string): boolean {
 		const item = this.getItemById(itemId);
-		if (!item || !item.craftingCost) return false;
+		if (!item) return false;
+		if (!item.craftingCost && !(item.craftingCostAlternatives?.length) && !item.dynamicRecipe) return false;
 
 		// Check materials
 		if (!this.hasRequiredMaterials(itemId, gameState)) return false;
@@ -106,12 +113,57 @@ export class ItemServiceImpl implements ItemService {
 
 	hasRequiredMaterials(itemId: string, gameState: GameState): boolean {
 		const item = this.getItemById(itemId);
-		if (!item?.craftingCost) return true;
+		if (!item?.craftingCost && !(item?.craftingCostAlternatives?.length) && !item?.dynamicRecipe) return true;
+		return this.resolveActiveCost(itemId, gameState) !== null;
+	}
 
-		return Object.entries(item.craftingCost).every(([materialId, required]) => {
-			const available = this.getAvailableQuantity(materialId, gameState);
-			return available >= required;
-		});
+	autoSelectIngredients(itemId: string, gameState: GameState): Record<string, string> | null {
+		const item = this.getItemById(itemId);
+		if (!item?.dynamicRecipe) return {};
+		const selected: Record<string, string> = {};
+		for (const [slotKey, slot] of Object.entries(item.dynamicRecipe)) {
+			const candidates = ITEMS_DATABASE.filter(
+				(i) => i.category === slot.acceptsCategory && this.getAvailableQuantity(i.id, gameState) >= slot.quantity
+			);
+			if (!candidates.length) return null;
+			// Pick the first available (lowest index = most common)
+			selected[slotKey] = candidates[0].id;
+		}
+		return selected;
+	}
+
+	resolveActiveCost(itemId: string, gameState: GameState, selectedIngredients?: Record<string, string>): Record<string, number> | null {
+		const item = this.getItemById(itemId);
+		if (!item) return null;
+		const satisfies = (cost: Record<string, number>) =>
+			Object.entries(cost).every(([id, qty]) => this.getAvailableQuantity(id, gameState) >= qty);
+
+		// Resolve base crafting cost
+		let baseCost: Record<string, number> | null = null;
+		if (item.craftingCost !== undefined) {
+			// Empty craftingCost ({}) is valid — no base materials needed
+			baseCost = satisfies(item.craftingCost) ? item.craftingCost : null;
+		}
+		if (baseCost === null && item.craftingCostAlternatives?.length) {
+			baseCost = item.craftingCostAlternatives.find(satisfies) ?? null;
+		}
+		if (baseCost === null) return null;
+
+		// No dynamic recipe — return base cost (original behaviour)
+		if (!item.dynamicRecipe) return baseCost;
+
+		// Resolve dynamic ingredient slots
+		const selected = selectedIngredients ?? this.autoSelectIngredients(itemId, gameState);
+		if (!selected) return null;
+
+		const dynamicCosts: Record<string, number> = {};
+		for (const [slotKey, slot] of Object.entries(item.dynamicRecipe)) {
+			const chosenId = selected[slotKey];
+			if (!chosenId || this.getAvailableQuantity(chosenId, gameState) < slot.quantity) return null;
+			dynamicCosts[chosenId] = slot.quantity;
+		}
+
+		return { ...baseCost, ...dynamicCosts };
 	}
 
 	hasRequiredTools(itemId: string, gameState: GameState): boolean {
@@ -170,7 +222,7 @@ export class ItemServiceImpl implements ItemService {
 
 	calculateCraftingCost(itemId: string): Record<string, number> {
 		const item = this.getItemById(itemId);
-		return item?.craftingCost || {};
+		return item?.craftingCost ?? item?.craftingCostAlternatives?.[0] ?? {};
 	}
 
 	calculateItemEffects(itemId: string): Record<string, number> {
@@ -221,10 +273,22 @@ export class ItemServiceImpl implements ItemService {
 						const itemId = crafting.item.id;
 						const quantity = crafting.quantity || 1;
 
+						// Resolve variant display name for dynamic recipes
+						let displayName = crafting.item.name;
+						if (crafting.item.dynamicRecipe && crafting.selectedIngredients) {
+							for (const [slotKey, slot] of Object.entries(crafting.item.dynamicRecipe)) {
+								const chosenId = crafting.selectedIngredients[slotKey];
+								if (chosenId) {
+									const variant = slot.variants?.[chosenId] ?? slot.default;
+									if (variant?.name) { displayName = variant.name; break; }
+								}
+							}
+						}
+
 						// Use the addItems method to handle adding the crafted item
 						gameState = this.addItems({ [itemId]: quantity }, gameState);
 
-						console.log('[ItemService] Crafting completed:', itemId, 'x', quantity);
+						console.log('[ItemService] Crafting completed:', displayName, `(${itemId})`, 'x', quantity);
 						return false;
 					}
 					return true;

@@ -22,10 +22,7 @@
         "nocturnalAggro": true,
         "pack"          : [1, 3],
         "biomeWeights"  : {"forest": 1.0, "plains": 0.7, "mountain": 0.5},
-        "lootTable"     : [
-            { "itemId": "raw_meat", "chance": 1.0, "qty": [1, 2] },
-            { "itemId": "hide",     "chance": 0.7, "qty": [1, 1] }
-        ]
+        "carcassItemId" : "wolf_carcass"
     },
     {
         "id": "bear",  // add anchor to beehives for bears, so they hang around and protect beehives from pawns
@@ -43,10 +40,7 @@
         "tameable": true,
         "mountable": false,
         "biomeWeights": {"mountain": 1.0, "forest": 0.6},
-        "lootTable": [
-            { "itemId": "raw_meat", "chance": 1.0, "qty": [3, 5] },
-            { "itemId": "hide",     "chance": 1.0, "qty": [1, 2] }
-        ]
+        "carcassItemId": "bear_carcass"
     },
     {
         "id"            : "goblin",
@@ -63,9 +57,7 @@
         "pack"          : [1, 3],
         "tameable"      : false,
         "biomeWeights"  : {"swamp": 1.0, "forest": 0.5},
-        "lootTable"     : [
-            { "itemId": "bone", "chance": 0.5, "qty": [1, 2] }
-        ]
+        "carcassItemId" : "goblin_carcass"
     },
     {
         "id"            : "giant_rat",
@@ -81,9 +73,7 @@
         "nocturnalAggro": false,
         "pack"          : [1, 4],
         "biomeWeights"  : {"plains": 1.0, "swamp": 0.8, "forest": 0.6},
-        "lootTable"     : [
-            { "itemId": "raw_meat", "chance": 0.6, "qty": [1, 1] }
-        ]
+        "carcassItemId" : "giant_rat_carcass"
     },
     {
         "id"            : "shadow_wraith",
@@ -101,46 +91,40 @@
         "pack"          : [1, 1],
         "tameable"      : false,
         "mountable"     : false,
-        "biomeWeights"  : {"mountain": 1.0},
-        "lootTable"     : []
+        "biomeWeights"  : {"mountain": 1.0}
     },
     // ── Neutral ─────────────────────────────────────────────────────────
     {
-        "id"          : "deer",
-        "name"        : "Deer",
-        "entityClass" : "animal",
-        "charSpans"   : [ {"sheet": "creatures", "id": 66} ],
-        "fg"          : [1.0, 1.0, 1.0],
-        "bg"          : [0.0, 0.0, 0.0],
-        "stats"       : {"health": 30, "strength": 4, "speed": 6, "visionRange": 15, "fleeRange": 22},
-        "behaviour"   : "passive",
-        "diet"        : "herbivore",
-        "huntable"    : true,
-        "intelligence": "primitive",
-        "pack"        : [3, 8],
-        "biomeWeights": {"forest": 1.0, "plains": 1.0},
-        "lootTable"   : [
-            { "itemId": "raw_meat", "chance": 1.0, "qty": [2, 3] },
-            { "itemId": "hide",     "chance": 1.0, "qty": [1, 2] }
-        ]
+        "id"           : "deer",
+        "name"         : "Deer",
+        "entityClass"  : "animal",
+        "charSpans"    : [ {"sheet": "creatures", "id": 66} ],
+        "fg"           : [1.0, 1.0, 1.0],
+        "bg"           : [0.0, 0.0, 0.0],
+        "stats"        : {"health": 30, "strength": 4, "speed": 6, "visionRange": 15, "fleeRange": 22},
+        "behaviour"    : "passive",
+        "diet"         : "herbivore",
+        "huntable"     : true,
+        "intelligence" : "primitive",
+        "pack"         : [3, 8],
+        "biomeWeights" : {"forest": 1.0, "plains": 1.0},
+        "carcassItemId": "deer_carcass"
     },
     {
-        "id"          : "rabbit",
-        "name"        : "Rabbit",
-        "entityClass" : "animal",
-        "charSpans"   : [ {"sheet": "creatures", "id": 76} ],
-        "fg"          : [1.0, 1.0, 1.0],
-        "bg"          : [0.0, 0.0, 0.0],
-        "stats"       : {"health": 8, "strength": 1, "speed": 7, "visionRange": 12, "fleeRange": 18},
-        "behaviour"   : "passive",
-        "diet"        : "herbivore",
-        "huntable"    : true,
-        "intelligence": "primitive",
-        "pack"        : [1, 5],
-        "biomeWeights": {"plains": 1.0, "forest": 0.8, "mountain": 0.4},
-        "lootTable"   : [
-            { "itemId": "raw_meat", "chance": 1.0, "qty": [1, 1] }
-        ]
+        "id"           : "rabbit",
+        "name"         : "Rabbit",
+        "entityClass"  : "animal",
+        "charSpans"    : [ {"sheet": "creatures", "id": 76} ],
+        "fg"           : [1.0, 1.0, 1.0],
+        "bg"           : [0.0, 0.0, 0.0],
+        "stats"        : {"health": 8, "strength": 1, "speed": 7, "visionRange": 12, "fleeRange": 18},
+        "behaviour"    : "passive",
+        "diet"         : "herbivore",
+        "huntable"     : true,
+        "intelligence" : "primitive",
+        "pack"         : [1, 5],
+        "biomeWeights" : {"plains": 1.0, "forest": 0.8, "mountain": 0.4},
+        "carcassItemId": "rabbit_carcass"
     },
     {
         "id"                : "boar",
@@ -160,11 +144,7 @@
         "tameResistance"    : 0.6,
         "mountable"         : false,
         "biomeWeights"      : {"forest": 1.0, "swamp": 0.6},
-        "lootTable"         : [
-            { "itemId": "raw_meat", "chance": 1.0, "qty": [3, 4] },
-            { "itemId": "bone",     "chance": 0.8, "qty": [1, 2] },
-            { "itemId": "tusk",     "chance": 0.5, "qty": [1, 1] }
-        ]
+        "carcassItemId"     : "boar_carcass"
     },
     {
         "id"            : "elk",
@@ -183,11 +163,7 @@
         "tameResistance": 0.4,
         "mountable"     : true,
         "biomeWeights"  : {"forest": 0.8, "mountain": 0.6},
-        "lootTable"     : [
-            { "itemId": "raw_meat", "chance": 1.0, "qty": [4, 6] },
-            { "itemId": "hide",     "chance": 1.0, "qty": [2, 3] },
-            { "itemId": "antler",   "chance": 0.7, "qty": [1, 2] }
-        ]
+        "carcassItemId" : "elk_carcass"
     },
     {
         "id"            : "mountain_goat",
@@ -207,10 +183,7 @@
         "mountable"     : false,
         "produces"      : {"itemId": "milk", "qty": 2, "intervalSeconds": 300},
         "biomeWeights"  : {"mountain": 1.0},
-        "lootTable"     : [
-            { "itemId": "raw_meat", "chance": 1.0, "qty": [1, 2] },
-            { "itemId": "hide",     "chance": 1.0, "qty": [1, 1] }
-        ]
+        "carcassItemId" : "mountain_goat_carcass"
     },
     {
         "id"            : "wild_chicken",
@@ -230,8 +203,6 @@
         "mountable"     : false,
         "produces"      : {"itemId": "egg", "qty": 1, "intervalSeconds": 200},
         "biomeWeights"  : {"plains": 1.0},
-        "lootTable"     : [
-            { "itemId": "raw_meat", "chance": 1.0, "qty": [1, 1] }
-        ]
+        "carcassItemId" : "wild_chicken_carcass"
     }
 ]

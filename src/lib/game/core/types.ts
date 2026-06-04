@@ -641,6 +641,30 @@ export interface Building {
 	};
 }
 
+/**
+ * Defines a single dynamic ingredient slot in a recipe.
+ * Any item whose `category` matches `acceptsCategory` is a valid substitute;
+ * the chosen ingredient drives the output item's display name, description,
+ * and optional stat tweaks.
+ */
+export interface DynamicIngredientSlot {
+	/** Items with this `category` are accepted in this slot (e.g. "meat") */
+	acceptsCategory: string;
+	/** Units consumed from the chosen ingredient */
+	quantity: number;
+	/**
+	 * Per-ingredient overrides applied to the crafted item's display/stats.
+	 * Key = source itemId, value = overrides.
+	 */
+	variants?: Record<string, {
+		name?: string;
+		description?: string;
+		nutritionBonus?: number;
+	}>;
+	/** Fallback when the chosen ingredient has no specific variant entry */
+	default?: { name?: string; description?: string };
+}
+
 // Fixed: Remove duplicate Tool interface - Item interface covers this
 export interface Item {
 	id: string;
@@ -649,6 +673,12 @@ export interface Item {
 	description?: string; // Optional description for lore or flavor text
 	properties?: Record<string, any>;
 	workTypes?: string[]; // Work categories this item can be used in
+	/**
+	 * Dynamic recipe slots — each key is a slot name (e.g. "meat").
+	 * Any item whose `category` matches `acceptsCategory` can fill that slot;
+	 * the chosen item determines the output's name, description, and optional stat bonus.
+	 */
+	dynamicRecipe?: Record<string, DynamicIngredientSlot>;
 
 	// Unified categorization
 	type: 'material' | 'tool' | 'weapon' | 'armor' | 'consumable' | 'currency';
@@ -664,6 +694,11 @@ export interface Item {
 
 	// Embedded crafting requirements (like building system)
 	craftingCost?: Record<string, number>;
+	/**
+	 * Alternative ingredient sets — crafting can use ANY ONE of these instead of craftingCost.
+	 * Useful when a product (e.g. medium_bones) can be obtained from multiple source items.
+	 */
+	craftingCostAlternatives?: Record<string, number>[];
 	craftingTime?: number;
 	toolTierRequired?: number;
 	buildingRequired?: string | null;
@@ -747,6 +782,8 @@ export interface CraftingInProgress {
 	quantity: number; // How many are being crafted
 	turnsRemaining: number;       // legacy countdown (kept for backward compat)
 	startedAt: number;
+	/** For dynamic recipes: maps slot key (e.g. "meat") → chosen itemId */
+	selectedIngredients?: Record<string, string>;
 	// Phase 5d: work-based crafting
 	id?: string;                  // unique id for job correlation
 	workRequired?: number;        // craftingTime × 5

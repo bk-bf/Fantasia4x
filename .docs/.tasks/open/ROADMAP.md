@@ -2,7 +2,7 @@
 
 # ROADMAP
 
-> **Related:** [game/DESIGN](../game/DESIGN.md) · [game/ARCHITECTURE](../game/ARCHITECTURE.md) · [RESEARCH-ENHANCEMENT](RESEARCH-ENHANCEMENT.md) · [LIVING-WORLD](LIVING-WORLD.md) · [ENTITIES_SPAWNING](ENTITIES_SPAWNING.md) · [COMBAT-SYSTEM](COMBAT-SYSTEM.md) · [MAGIC-SKILLS](MAGIC-SKILLS.md) · [EQUIPMENT-EXPANSION](EQUIPMENT-EXPANSION.md) · [PRODUCTION-CHAIN-EXPANSION](PRODUCTION-CHAIN-EXPANSION.md) · [SOCIAL-LAYER](SOCIAL-LAYER.md) · [TAURI-DISTRIBUTION](TAURI-DISTRIBUTION.md) · archived: [SCREEN-REFACTORING](../archive/SCREEN-REFACTORING-2026-06-03.md) · [SURVIVAL-HEALTH](../archive/SURVIVAL-HEALTH-2026-05-30.md) · [SIMULATION-PERF](../archive/SIMULATION-PERF-2026-05-30.md)
+> **Related:** [game/DESIGN](../game/DESIGN.md) · [game/ARCHITECTURE](../game/ARCHITECTURE.md) · [RESEARCH-ENHANCEMENT](RESEARCH-ENHANCEMENT.md) · [SEASONS_WEATHER](SEASONS_WEATHER.md) · [ENTITIES_SPAWNING](ENTITIES_SPAWNING.md) · [COMBAT-SYSTEM](COMBAT-SYSTEM.md) · [MAGIC-SKILLS](MAGIC-SKILLS.md) · [EQUIPMENT-EXPANSION](EQUIPMENT-EXPANSION.md) · [PRODUCTION-CHAIN-EXPANSION](PRODUCTION-CHAIN-EXPANSION.md) · [SOCIAL-LAYER](SOCIAL-LAYER.md) · [TAURI-DISTRIBUTION](TAURI-DISTRIBUTION.md) · archived: [SCREEN-REFACTORING](../archive/SCREEN-REFACTORING-2026-06-03.md) · [SURVIVAL-HEALTH](../archive/SURVIVAL-HEALTH-2026-05-30.md) · [SIMULATION-PERF](../archive/SIMULATION-PERF-2026-05-30.md)
 
 ## Status Key
 
@@ -47,7 +47,7 @@ is the governing skill framework — Combat is built on top of it.
 | 3   | **Combat System** (RimWorld real-time × Stoneshard skills; governed by magic) | ❌      | [COMBAT-SYSTEM.md](COMBAT-SYSTEM.md)                           |
 | 4   | **Production Chain Expansion** (smelting, forges, mining, cooking, healing)   | ❌      | [PRODUCTION-CHAIN-EXPANSION.md](PRODUCTION-CHAIN-EXPANSION.md) |
 | 5   | **Equipment Expansion** (Tiers 0–2, durability, skill grants)                 | ❌      | [EQUIPMENT-EXPANSION.md](EQUIPMENT-EXPANSION.md)               |
-| 6   | **Living World B–D** (seasons, temperature, weather, fog of war)              | ❌ B–D  | [LIVING-WORLD.md](LIVING-WORLD.md)                             |
+| 6   | **Living World B–D** (seasons, temperature, weather, fog of war)              | ❌ B–D  | [SEASONS_WEATHER.md](SEASONS_WEATHER.md)                       |
 | 7   | **Social Layer** (relationships, mood depth, pawn traits)                     | ❌      | [SOCIAL-LAYER.md](SOCIAL-LAYER.md)                             |
 | 8   | **Research Enhancement** (three-tier, lore-item driven; after item DB)        | ❌      | [RESEARCH-ENHANCEMENT.md](RESEARCH-ENHANCEMENT.md)             |
 
@@ -58,9 +58,9 @@ is the governing skill framework — Combat is built on top of it.
 | SCREEN-REFACTORING ✅        | —                                        | —                                                  | healthcare / cooking jobs                                        |
 | SURVIVAL-HEALTH ✅           | —                                        | —                                                  | ENTITIES_SPAWNING Phase B (food stakes); COMBAT (injury context) |
 | RESEARCH-ENHANCEMENT        | EQUIPMENT-EXPANSION (lore items)         | —                                                  | MAGIC-SKILLS (nodes 3 + 5)                                       |
-| LIVING-WORLD B–D            | —                                        | —                                                  | ENTITIES_SPAWNING (night multiplier; seasonal biome weights)     |
+| SEASONS_WEATHER B–D         | —                                        | —                                                  | ENTITIES_SPAWNING (night multiplier; seasonal biome weights)     |
 | PRODUCTION-CHAIN-EXPANSION  | —                                        | —                                                  | EQUIPMENT-EXPANSION Tier 1 + 2                                   |
-| ENTITIES_SPAWNING Phase A–B | —                                        | LIVING-WORLD; SURVIVAL-HEALTH                      | COMBAT-SYSTEM                                                    |
+| ENTITIES_SPAWNING Phase A–B | —                                        | SEASONS_WEATHER; SURVIVAL-HEALTH                   | COMBAT-SYSTEM                                                    |
 | COMBAT-SYSTEM               | ENTITIES_SPAWNING Phase A + MAGIC-SKILLS | SURVIVAL-HEALTH                                    | EQUIPMENT; SOCIAL; ENTITIES Phase E                              |
 | EQUIPMENT-EXPANSION         | COMBAT + PRODUCTION-CHAIN                | —                                                  | MAGIC-SKILLS (staff items)                                       |
 | MAGIC-SKILLS                | —                                        | RESEARCH (nodes 3+5 only); EQUIPMENT (staff items) | COMBAT-SYSTEM (skill framework)                                  |
@@ -75,7 +75,7 @@ is the governing skill framework — Combat is built on top of it.
 | **1** — Phase 2 ✅     | SCREEN-REFACTORING ✅ · SURVIVAL-HEALTH ✅                | complete                                                  |
 | **2** — Phase 3 early | ENTITIES_SPAWNING Phase A–B · MAGIC-SKILLS Phase 1      | none (parallel — both independent foundational work)      |
 | **3**                 | COMBAT-SYSTEM                                           | Wave 2 (needs ENTITIES Phase A + MAGIC-SKILLS)            |
-| **4**                 | PRODUCTION-CHAIN-EXPANSION · LIVING-WORLD B–D           | none (parallel, both independent)                         |
+| **4**                 | PRODUCTION-CHAIN-EXPANSION · SEASONS_WEATHER B–D        | none (parallel, both independent)                         |
 | **5**                 | EQUIPMENT-EXPANSION · SOCIAL-LAYER · ENTITIES Phase C–E | Wave 3 (COMBAT); EQUIPMENT also needs PROD-CHAIN (Wave 4) |
 | **6**                 | RESEARCH-ENHANCEMENT · MAGIC nodes 3+5                  | Wave 5 EQUIPMENT (lore item types defined)                |
 | **7** — Phase 4       | TAURI-DISTRIBUTION                                      | Wave 6 complete                                           |

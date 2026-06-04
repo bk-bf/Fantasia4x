@@ -117,7 +117,7 @@ export class GameEngineImpl implements GameEngine {
 		return itemService.getCraftableItems(currentState);
 	}
 
-	craftItem(itemId: string, quantity: number = 1): void {
+	craftItem(itemId: string, quantity: number = 1, selectedIngredients?: Record<string, string>): void {
 		// Sync from store first so we check against the current buildings/materials
 		const currentState = get(gameState);
 		if (!currentState) return;
@@ -128,17 +128,22 @@ export class GameEngineImpl implements GameEngine {
 		if (itemService.canCraftItem(itemId, this.gameState)) {
 			const item = itemService.getItemById(itemId);
 			if (item) {
+				// Resolve dynamic ingredient selection (auto-pick if not specified)
+				const resolved = selectedIngredients ?? itemService.autoSelectIngredients(itemId, this.gameState) ?? {};
+
 				// Add to crafting queue
 				const craftingInProgress = {
 					item: item,
 					quantity: quantity,
 					turnsRemaining: item.craftingTime || 1,
-					startedAt: this.gameState.turn
+					startedAt: this.gameState.turn,
+					selectedIngredients: Object.keys(resolved).length > 0 ? resolved : undefined
 				};
 
-				// Consume materials
-				if (item.craftingCost) {
-					this.gameState = itemService.consumeItems(item.craftingCost, this.gameState);
+				// Consume materials — use resolved cost to support craftingCostAlternatives and dynamicRecipe
+				const activeCost = itemService.resolveActiveCost(item.id, this.gameState, resolved);
+				if (activeCost) {
+					this.gameState = itemService.consumeItems(activeCost, this.gameState);
 				}
 
 				// Add to queue

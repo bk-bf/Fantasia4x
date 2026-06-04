@@ -1,10 +1,11 @@
-import type { GameState, Mob, MobState, Pawn, EntityStats, EntityNeeds, EntityCondition, LimbState } from '../core/types';
+import type { GameState, Mob, MobState, Pawn, EntityStats, EntityNeeds, EntityCondition, LimbState, DroppedItem } from '../core/types';
 import { CREATURES, getCreatureById, type CreatureDefinition } from '../core/Creatures';
 import { getAmbientLight } from './EnvironmentService';
 import { ticksFromSeconds, SECONDS_PER_TICK, perTick } from '../core/time';
 import { conditionNeedMultipliers } from '../core/needs';
 import { advanceAlongPath } from '../systems/MovementSystem';
 import { resourceObjectService } from './ResourceObjectService';
+import { absorbDropIfOnStockpileTile } from '../core/GameState';
 
 /**
  * EntityService — ENTITIES_SPAWNING spec, Phase A.
@@ -400,8 +401,8 @@ class EntityServiceImpl {
             // Corpse alarm: visible pack-mate corpse triggers panic flight.
             const packCorpse = allMobs.find(
                 (m) => m.state === 'Corpse' &&
-                       m.creatureId === mob.creatureId &&
-                       this.dist(mob, { x: m.x, y: m.y }) <= def.stats.visionRange
+                    m.creatureId === mob.creatureId &&
+                    this.dist(mob, { x: m.x, y: m.y }) <= def.stats.visionRange
             );
             if (packCorpse) {
                 return { ...mob, state: 'Fleeing', stateSince: turn, eatProgress: undefined, huntTargetId: undefined };
@@ -892,10 +893,29 @@ class EntityServiceImpl {
             };
         });
 
-        return { ...state, mobs: next };
+        // Drop a carcass item for every mob that just died this tick.
+        let result: GameState = { ...state, mobs: next };
+        for (let i = 0; i < mobs.length; i++) {
+            if (mobs[i].state !== 'Corpse' && next[i].state === 'Corpse') {
+                result = this.dropCarcass(result, next[i]);
+            }
+        }
+        return result;
     }
 
     // ===== DECAY ===================================================================
+
+    /** Drop a carcass DroppedItem at the mob's position when it dies. */
+    private dropCarcass(state: GameState, mob: Mob): GameState {
+        const def = getCreatureById(mob.creatureId);
+        const carcassId = def?.carcassItemId;
+        if (!carcassId) return state; // no carcass for this creature (e.g. shadow_wraith)
+        const id = `carcass-${mob.id}-${state.turn}`;
+        const drop: DroppedItem = { id, resourceId: carcassId, x: mob.x, y: mob.y, quantity: 1 };
+        let next: GameState = { ...state, droppedItems: [...(state.droppedItems ?? []), drop] };
+        next = absorbDropIfOnStockpileTile(next, id);
+        return next;
+    }
 
     removeDead(state: GameState): GameState {
         const mobs = state.mobs;
@@ -919,7 +939,15 @@ class EntityServiceImpl {
             return m;
         });
 
-        return changed ? { ...state, mobs: finalized } : state;
+        if (!changed) return state;
+        let result: GameState = { ...state, mobs: finalized };
+        // Drop a carcass item for each mob freshly converted to Corpse this pass.
+        for (let i = 0; i < kept.length; i++) {
+            if (kept[i].state !== 'Corpse' && finalized[i].state === 'Corpse') {
+                result = this.dropCarcass(result, finalized[i]);
+            }
+        }
+        return result;
     }
 
     // ===== MOVEMENT HELPERS ========================================================

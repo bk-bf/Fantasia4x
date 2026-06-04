@@ -19,11 +19,7 @@
     "requiresLighting": true,
     "maxFuel": 60,
     "fuelConsumptionRate": 1,
-    "fuelRequirements": {
-      "requiredFuelTypes": 2,
-      "tinderItemId": "plant_fiber",
-      "tinderAmount": 2
-    },
+    "fuelRequirements": {"requiredFuelTypes": 2, "tinderItemId": "plant_fiber", "tinderAmount": 2},
     "buildingState": {"isUnique": false, "maxCount": 5}
   },
   {
@@ -68,6 +64,25 @@
     "researchRequired": null,
     "upkeepCost": {},
     "effects": {"craftingEnabled": true, "tier": 1, "craftingBonus": 0.2},
+    "storageCapacity": {},
+    "buildingState": {"isUnique": false, "maxCount": 3}
+  },
+  {
+    "id": "butcher_spot",
+    "name": "Butcher Spot",
+    "color": "#C62828",
+    "charSpans": [ {"sheet": "buildings", "id": 39} ],
+    "fg": [0.78, 0.16, 0.16],
+    "bg": [0.06, 0.01, 0.01],
+    "description": "A sturdy branch lashed between two posts with a hook for hanging carcasses. Process kills into meat, hide, and bone.",
+    "category": "production",
+    "buildingCost": {"branch": 6, "cordage": 3},
+    "workAmount": 8,
+    "toolTierRequired": 0,
+    "populationRequired": 1,
+    "researchRequired": null,
+    "upkeepCost": {},
+    "effects": {"butcheringEnabled": true},
     "storageCapacity": {},
     "buildingState": {"isUnique": false, "maxCount": 3}
   },
