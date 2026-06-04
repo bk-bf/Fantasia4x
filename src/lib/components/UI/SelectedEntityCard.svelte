@@ -68,7 +68,9 @@
       {#each model.bars as bar (bar.label)}
         <div class="bar-row">
           <span class="bar-label">{bar.label}</span>
-          <span class="bar-track" class:bar-warn={bar.warn}>[{blockBar(bar.value, bar.max ?? 100)}]</span>
+          <span class="bar-track" class:bar-warn={bar.warn}
+            >[{blockBar(bar.value, bar.max ?? 100)}]</span
+          >
           <span class="bar-val" class:bar-warn={bar.warn}>{Math.floor(bar.value)}%</span>
         </div>
       {/each}

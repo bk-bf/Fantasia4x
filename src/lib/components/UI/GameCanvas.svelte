@@ -35,7 +35,10 @@
   import { TICKS_PER_SECOND } from '$lib/game/core/time.js';
   import { simTarget } from '$lib/game/systems/MovementSystem.js';
   import SelectedEntityCard from '$lib/components/UI/SelectedEntityCard.svelte';
-  import type { SelectedEntityModel, EntityBar } from '$lib/components/UI/SelectedEntityCard.svelte';
+  import type {
+    SelectedEntityModel,
+    EntityBar
+  } from '$lib/components/UI/SelectedEntityCard.svelte';
   import itemsData from '$lib/game/database/items.jsonc';
 
   const ITEMS_DATABASE = itemsData as unknown as Item[];
