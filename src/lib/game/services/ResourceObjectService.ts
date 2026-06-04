@@ -63,6 +63,11 @@ export interface ResourceObjectDef {
     nodeAmountRange: [number, number];
     /** Which designation types can target this resource. */
     designationTypes: DesignationType[];
+    /**
+     * When true, grazing animals can eat this resource directly (depletes 1 unit per meal).
+     * Used by EntityService to discover edible tiles without a hardcoded ID list.
+     */
+    grazing?: boolean;
     /** Primary interaction (backward-compat; also used when `interactions` is absent). */
     interaction: ResourceInteractionDef;
     /**

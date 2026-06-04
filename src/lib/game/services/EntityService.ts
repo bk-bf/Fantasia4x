@@ -4,6 +4,7 @@ import { getAmbientLight } from './EnvironmentService';
 import { ticksFromSeconds, SECONDS_PER_TICK, perTick } from '../core/time';
 import { conditionNeedMultipliers } from '../core/needs';
 import { advanceAlongPath } from '../systems/MovementSystem';
+import { resourceObjectService } from './ResourceObjectService';
 
 /**
  * EntityService — ENTITIES_SPAWNING spec, Phase A.
@@ -53,8 +54,6 @@ const HUNGER_SATED_THRESHOLD = 10;
 const FORAGE_RADIUS = 15;
 /** Tile radius searched for prey (corpse or live animal). */
 const HUNT_RADIUS = 20;
-/** Tile resource keys counted as edible grass for herbivores/omnivores. */
-const GRASS_RESOURCES = ['grass_patch', 'tall_grass_patch', 'deep_grass_patch'] as const;
 /** Real-time duration to eat a grass tile (seconds). */
 const EAT_GRASS_SECONDS = 1.25;
 /** Real-time duration to consume a corpse (seconds). */
@@ -241,6 +240,8 @@ class EntityServiceImpl {
         const livePawns = state.pawns.filter((p) => p.position && p.isAlive !== false);
         // Accumulates entity-vs-entity damage dealt this tick (hunting mini-combat).
         const pendingDamage = new Map<string, number>();
+        // Accumulates grass-tile depletions from foraging animals this tick.
+        const pendingTileDepletion: Array<{ x: number; y: number; id: string }> = [];
         let changed = false;
         const next: Mob[] = new Array(mobs.length);
 
@@ -255,7 +256,7 @@ class EntityServiceImpl {
                 next[i] = mob;
                 continue;
             }
-            const stepped = this.stepOne(mob, def, livePawns, mobs, state, pendingDamage);
+            const stepped = this.stepOne(mob, def, livePawns, mobs, state, pendingDamage, pendingTileDepletion);
             next[i] = stepped;
             if (stepped !== mob) changed = true;
         }
@@ -292,7 +293,26 @@ class EntityServiceImpl {
             }
         }
 
-        return changed ? { ...state, mobs: next } : state;
+        let finalState = changed ? { ...state, mobs: next } : state;
+
+        // Apply foraging tile depletions immutably after the mob loop.
+        if (pendingTileDepletion.length > 0) {
+            let worldMap = finalState.worldMap;
+            for (const { x, y, id } of pendingTileDepletion) {
+                const tile = worldMap[y]?.[x];
+                if (!tile) continue;
+                const current = tile.resources?.[id] ?? 0;
+                if (current <= 0) continue;
+                const newAmount = Math.max(0, current - 1);
+                const newTile = { ...tile, resources: { ...tile.resources, [id]: newAmount } };
+                worldMap = worldMap.map((row, ry) =>
+                    ry === y ? row.map((col, rx) => (rx === x ? newTile : col)) : row
+                );
+            }
+            finalState = { ...finalState, worldMap };
+        }
+
+        return finalState;
     }
 
     private stepOne(
@@ -301,7 +321,8 @@ class EntityServiceImpl {
         pawns: Pawn[],
         allMobs: Mob[],
         state: GameState,
-        pendingDamage: Map<string, number>
+        pendingDamage: Map<string, number>,
+        pendingTileDepletion: Array<{ x: number; y: number; id: string }>
     ): Mob {
         // FSM runs every tick. Movement advancement is handled separately by
         // advanceMobMovement(), which uses the shared MovementSystem path engine.
@@ -312,7 +333,7 @@ class EntityServiceImpl {
         const isNight = getAmbientLight(turn) < NIGHT_THRESHOLD;
 
         if (def.entityClass === 'animal') {
-            return this.stepAnimal(mob, def, inVision, nearest, turn, state, allMobs, pendingDamage);
+            return this.stepAnimal(mob, def, inVision, nearest, turn, state, allMobs, pendingDamage, pendingTileDepletion);
         }
         return this.stepHostile(mob, def, inVision, nearest, isNight, turn, state, allMobs, pendingDamage);
     }
@@ -403,7 +424,8 @@ class EntityServiceImpl {
         turn: number,
         state: GameState,
         allMobs: Mob[],
-        pendingDamage: Map<string, number>
+        pendingDamage: Map<string, number>,
+        pendingTileDepletion: Array<{ x: number; y: number; id: string }>
     ): Mob {
         // ── Hunger-driven FSM transitions (only when safe) ───────────────────────
         if (!inVision) {
@@ -458,7 +480,7 @@ class EntityServiceImpl {
             case 'Tamed':
                 return mob; // Phase C — taming not yet implemented
             case 'Foraging':
-                return this.stepForaging(mob, def, turn, state);
+                return this.stepForaging(mob, def, turn, state, pendingTileDepletion);
             case 'Hunting':
                 return this.stepHunting(mob, def, turn, state, allMobs, pendingDamage);
             default:
@@ -473,22 +495,35 @@ class EntityServiceImpl {
      * No item spawns — primitive entities consume the resource directly.
      * Eating duration is time-based; the entity stays still (path: []) while eating.
      */
-    private stepForaging(mob: Mob, def: CreatureDefinition, turn: number, state: GameState): Mob {
+    private stepForaging(
+        mob: Mob,
+        def: CreatureDefinition,
+        turn: number,
+        state: GameState,
+        pendingTileDepletion: Array<{ x: number; y: number; id: string }>
+    ): Mob {
         // Eating in progress — stay still and advance progress by elapsed seconds.
         const progress = mob.eatProgress ?? 0;
         if (progress > 0) {
             const next = progress + SECONDS_PER_TICK / EAT_GRASS_SECONDS;
             if (next >= 1) {
+                // Deplete the grass tile the animal is standing on.
+                const tileRes = state.worldMap[mob.y]?.[mob.x]?.resources;
+                const grassKey = tileRes
+                    ? Object.keys(tileRes).find(
+                        (k) => (tileRes[k] ?? 0) > 0 && resourceObjectService.getById(k)?.grazing
+                    )
+                    : undefined;
+                if (grassKey) pendingTileDepletion.push({ x: mob.x, y: mob.y, id: grassKey });
+
+                const newHunger = Math.max(0, mob.needs.hunger - EAT_GRASS_HUNGER_RESTORE);
+                // Stay Foraging until sated so the animal repeats eating on the next cycle.
                 return {
                     ...mob,
                     eatProgress: undefined,
                     path: [],
-                    needs: {
-                        ...mob.needs,
-                        hunger: Math.max(0, mob.needs.hunger - EAT_GRASS_HUNGER_RESTORE),
-                        lastMeal: turn
-                    },
-                    state: 'Grazing',
+                    needs: { ...mob.needs, hunger: newHunger, lastMeal: turn },
+                    state: newHunger > HUNGER_SATED_THRESHOLD ? 'Foraging' : 'Grazing',
                     stateSince: turn
                 };
             }
@@ -572,7 +607,7 @@ class EntityServiceImpl {
 
     // ===== FORAGING QUERIES =======================================================
 
-    /** Nearest walkable tile within radius that has a grass resource node. */
+    /** Nearest walkable tile within radius that has a resource with `grazing: true`. */
     private findNearestEdibleTile(
         state: GameState,
         x: number,
@@ -587,8 +622,12 @@ class EntityServiceImpl {
                 const ny = y + dy;
                 const tile = state.worldMap[ny]?.[nx];
                 if (!tile?.walkable) continue;
-                const hasGrass = GRASS_RESOURCES.some((k) => (tile.resources?.[k] ?? 0) > 0);
-                if (!hasGrass) continue;
+                const hasGraze = tile.resources
+                    ? Object.entries(tile.resources).some(
+                        ([k, v]) => v > 0 && resourceObjectService.getById(k)?.grazing
+                    )
+                    : false;
+                if (!hasGraze) continue;
                 const dist = Math.abs(dx) + Math.abs(dy);
                 if (dist < bestDist) { bestDist = dist; best = { x: nx, y: ny }; }
             }

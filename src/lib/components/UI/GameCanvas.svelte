@@ -361,13 +361,17 @@
           warn: mob.health < mob.maxHealth * 0.35
         },
         {
-          label: 'Hunger',
-          value: `${Math.floor(mob.needs.hunger)}%`,
+          label: 'Food',
+          value: `${Math.max(0, 100 - Math.floor(mob.needs.hunger))}%`,
           warn: mob.needs.hunger > 60
         },
+        {
+          label: 'Blood',
+          value: `${Math.floor(mob.bloodVolume ?? 100)}%`,
+          warn: (mob.bloodVolume ?? 100) < 60
+        },
         { label: 'STR', value: mob.stats.strength },
-        { label: 'DEX', value: mob.stats.dexterity },
-        { label: 'WIS', value: mob.stats.wisdom }
+        { label: 'DEX', value: mob.stats.dexterity }
       ],
       note: `${def.entityClass === 'mob' ? '⚔ hostile' : '◆ neutral'} · ${def.behaviour}${
         def.tameable ? ' · tameable' : ''
