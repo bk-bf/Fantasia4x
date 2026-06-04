@@ -245,6 +245,11 @@ export interface Mob {
 	activeEffects?: string[];
 	/** False once the mob dies. Stays in mobs[] as a Corpse for loot/butchering. */
 	isAlive?: boolean;
+	/**
+	 * Fraction of the corpse not yet consumed (0–1). Set to 1.0 on death.
+	 * Reduced by animals eating from it; scales loot yield when pawns butcher.
+	 */
+	intactness?: number;
 	/** Skill levels — empty for primitive mobs; populated for sapient entities. */
 	skills: Record<string, number>;
 }

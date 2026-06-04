@@ -62,6 +62,8 @@ const EAT_CORPSE_SECONDS = 2.0;
 const EAT_GRASS_HUNGER_RESTORE = 40;
 /** Hunger restored when finishing a corpse meal. */
 const EAT_CORPSE_HUNGER_RESTORE = 50;
+/** Fraction of the corpse consumed per eating session (1/CORPSE_PORTION meals to strip). */
+const CORPSE_PORTION = 0.25;
 /** Average wander-step decisions per second while grazing (idle fraction excluded). */
 const WANDER_MOVES_PER_SECOND = 1.0;
 /** Fatigue level at which mobs enter sleep — set lower than pawn (60 vs 72) so animals
@@ -252,6 +254,8 @@ class EntityServiceImpl {
         const livePawns = state.pawns.filter((p) => p.position && p.isAlive !== false);
         // Accumulates entity-vs-entity damage dealt this tick (hunting mini-combat).
         const pendingDamage = new Map<string, number>();
+        // Accumulates meat consumed from corpses this tick (corpseId → fraction eaten).
+        const pendingMeatConsumption = new Map<string, number>();
         // Accumulates grass-tile depletions from foraging animals this tick.
         const pendingTileDepletion: Array<{ x: number; y: number; id: string }> = [];
         let changed = false;
@@ -268,9 +272,20 @@ class EntityServiceImpl {
                 next[i] = mob;
                 continue;
             }
-            const stepped = this.stepOne(mob, def, livePawns, mobs, state, pendingDamage, pendingTileDepletion);
+            const stepped = this.stepOne(mob, def, livePawns, mobs, state, pendingDamage, pendingMeatConsumption, pendingTileDepletion);
             next[i] = stepped;
             if (stepped !== mob) changed = true;
+        }
+
+        // Apply corpse meat consumption accumulated this tick.
+        if (pendingMeatConsumption.size > 0) {
+            changed = true;
+            for (let i = 0; i < next.length; i++) {
+                const consumed = pendingMeatConsumption.get(next[i].id);
+                if (!consumed || next[i].state !== 'Corpse') continue;
+                const newMeatLeft = Math.max(0, (next[i].intactness ?? 1.0) - consumed);
+                next[i] = { ...next[i], intactness: newMeatLeft };
+            }
         }
 
         // Apply accumulated hunting damage after all mob steps.
@@ -334,6 +349,7 @@ class EntityServiceImpl {
         allMobs: Mob[],
         state: GameState,
         pendingDamage: Map<string, number>,
+        pendingMeatConsumption: Map<string, number>,
         pendingTileDepletion: Array<{ x: number; y: number; id: string }>
     ): Mob {
         // FSM runs every tick. Movement advancement is handled separately by
@@ -347,9 +363,9 @@ class EntityServiceImpl {
         // Passive creatures (herbivores, timid omnivores) use the prey FSM.
         // Neutral/aggressive creatures with fight potential use the hostile FSM.
         if (def.behaviour === 'passive') {
-            return this.stepAnimal(mob, def, inVision, nearest, turn, state, allMobs, pendingDamage, pendingTileDepletion);
+            return this.stepAnimal(mob, def, inVision, nearest, turn, state, allMobs, pendingDamage, pendingMeatConsumption, pendingTileDepletion);
         }
-        return this.stepHostile(mob, def, inVision, nearest, isNight, turn, state, allMobs, pendingDamage);
+        return this.stepHostile(mob, def, inVision, nearest, isNight, turn, state, allMobs, pendingDamage, pendingMeatConsumption);
     }
 
     private stepHostile(
@@ -361,7 +377,8 @@ class EntityServiceImpl {
         turn: number,
         state: GameState,
         allMobs: Mob[],
-        pendingDamage: Map<string, number>
+        pendingDamage: Map<string, number>,
+        pendingMeatConsumption: Map<string, number>
     ): Mob {
         // nocturnalAggro promotes neutral → aggressive at night; otherwise use the data value.
         const effectiveBehaviour = def.nocturnalAggro && isNight ? 'aggressive' : def.behaviour;
@@ -370,6 +387,25 @@ class EntityServiceImpl {
         // Wounded entities flee regardless of state.
         if (mob.health <= mob.maxHealth * FLEE_HEALTH_FRACTION && mob.state !== 'Fleeing') {
             return { ...mob, state: 'Fleeing', stateSince: turn, eatProgress: undefined, huntTargetId: undefined };
+        }
+
+        // Huntable neutral animals (boar, elk, etc.) also react to predators and pack deaths.
+        // They flee from carnivore/omnivore threats just like passive animals do, and panic when
+        // they see a corpse of the same species within vision range.
+        if (def.huntable && mob.state !== 'Fleeing' && mob.state !== 'Attacking') {
+            const predThreat = this.nearestPredatorThreat(mob, def, allMobs);
+            if (predThreat) {
+                return { ...mob, state: 'Fleeing', stateSince: turn, eatProgress: undefined, huntTargetId: undefined };
+            }
+            // Corpse alarm: visible pack-mate corpse triggers panic flight.
+            const packCorpse = allMobs.find(
+                (m) => m.state === 'Corpse' &&
+                       m.creatureId === mob.creatureId &&
+                       this.dist(mob, { x: m.x, y: m.y }) <= def.stats.visionRange
+            );
+            if (packCorpse) {
+                return { ...mob, state: 'Fleeing', stateSince: turn, eatProgress: undefined, huntTargetId: undefined };
+            }
         }
 
         // ── Fatigue-driven sleep (safe, no pawn in vision) ──────────────────────
@@ -392,7 +428,7 @@ class EntityServiceImpl {
             if (mob.needs.hunger <= HUNGER_SATED_THRESHOLD) {
                 return { ...mob, state: 'Wander', stateSince: turn, eatProgress: undefined, huntTargetId: undefined };
             }
-            return this.stepHunting(mob, def, turn, state, allMobs, pendingDamage);
+            return this.stepHunting(mob, def, turn, state, allMobs, pendingDamage, pendingMeatConsumption);
         }
         if (!inVision && canHunt && mob.needs.hunger >= HUNGER_EAT_THRESHOLD &&
             mob.state !== 'Fleeing' && mob.state !== 'Sleeping') {
@@ -432,10 +468,16 @@ class EntityServiceImpl {
                 return mob;
             }
             case 'Fleeing': {
-                if (nearest && this.dist(mob, nearest.pos) <= def.stats.visionRange) {
-                    return this.moveAway(mob, nearest.pos, state);
+                // For huntable neutral animals, also flee from nearby predators.
+                const predThreat = def.huntable ? this.nearestPredatorThreat(mob, def, allMobs) : null;
+                const pawnDist = nearest ? this.dist(mob, nearest.pos) : Infinity;
+                const predDist = predThreat ? this.dist(mob, predThreat.pos) : Infinity;
+                const closestDist = Math.min(pawnDist, predDist);
+                const fleeTarget = pawnDist <= predDist ? nearest : predThreat;
+                if (fleeTarget && closestDist <= def.stats.visionRange * 1.5) {
+                    return this.moveAway(mob, fleeTarget.pos, state);
                 }
-                if (turn - mob.stateSince > SAFE_RESET_TICKS) {
+                if (closestDist > def.stats.fleeRange || turn - mob.stateSince > SAFE_RESET_TICKS) {
                     return { ...mob, state: 'Wander', stateSince: turn };
                 }
                 return this.wanderStep(mob, def, state);
@@ -463,6 +505,7 @@ class EntityServiceImpl {
         state: GameState,
         allMobs: Mob[],
         pendingDamage: Map<string, number>,
+        pendingMeatConsumption: Map<string, number>,
         pendingTileDepletion: Array<{ x: number; y: number; id: string }>
     ): Mob {
         // Vision range is set per-creature in creatures.jsonc; herbivores have wide
@@ -552,7 +595,7 @@ class EntityServiceImpl {
             case 'Foraging':
                 return this.stepForaging(mob, def, turn, state, pendingTileDepletion);
             case 'Hunting':
-                return this.stepHunting(mob, def, turn, state, allMobs, pendingDamage);
+                return this.stepHunting(mob, def, turn, state, allMobs, pendingDamage, pendingMeatConsumption);
             default:
                 return { ...mob, state: 'Grazing', stateSince: turn };
         }
@@ -625,17 +668,21 @@ class EntityServiceImpl {
         turn: number,
         state: GameState,
         allMobs: Mob[],
-        pendingDamage: Map<string, number>
+        pendingDamage: Map<string, number>,
+        pendingMeatConsumption: Map<string, number>
     ): Mob {
         // Eating a corpse — stay still.
         const progress = mob.eatProgress ?? 0;
         if (progress > 0) {
             const target = mob.huntTargetId ? allMobs.find((m) => m.id === mob.huntTargetId) : null;
-            if (!target || target.state !== 'Corpse') {
+            // Abort if target gone, stripped, or no longer a corpse.
+            if (!target || target.state !== 'Corpse' || (target.intactness ?? 1.0) <= 0) {
                 return { ...mob, eatProgress: undefined, huntTargetId: undefined, path: [] };
             }
             const next = progress + SECONDS_PER_TICK / EAT_CORPSE_SECONDS;
             if (next >= 1) {
+                // Record the portion consumed so the corpse's meatLeft is updated after the loop.
+                pendingMeatConsumption.set(target.id, (pendingMeatConsumption.get(target.id) ?? 0) + CORPSE_PORTION);
                 const restState: MobState = def.behaviour === 'passive' ? 'Grazing' : 'Wander';
                 return {
                     ...mob,
@@ -661,6 +708,10 @@ class EntityServiceImpl {
 
         if (this.adjacent(mob, preyPos)) {
             if (prey.state === 'Corpse') {
+                // Only start eating if meat remains (guards against race with pendingMeatConsumption).
+                if ((prey.intactness ?? 1.0) <= 0) {
+                    return { ...mob, huntTargetId: undefined, ...this.wanderStep(mob, def, state) };
+                }
                 return { ...mob, huntTargetId: prey.id, eatProgress: SECONDS_PER_TICK / EAT_CORPSE_SECONDS, path: [] };
             }
             // Live prey — STR vs STR mini-combat roll.
@@ -714,6 +765,7 @@ class EntityServiceImpl {
             const raw = Math.abs(candidate.x - mob.x) + Math.abs(candidate.y - mob.y);
             if (candidate.state === 'Corpse') {
                 if (raw > HUNT_RADIUS * 2) continue; // don't cross the map for carrion
+                if ((candidate.intactness ?? 1.0) <= 0) continue; // stripped — skip
                 // Corpses weighted as 50% closer — free food with no danger.
                 const d = raw * 0.5;
                 if (d < bestDist) { bestDist = d; best = candidate; }
@@ -809,7 +861,7 @@ class EntityServiceImpl {
             // Death by blood loss.
             if (bloodVolume <= 0) {
                 return {
-                    ...mob, state: 'Corpse', isAlive: false, diedAt: turn,
+                    ...mob, state: 'Corpse', isAlive: false, diedAt: turn, intactness: 1.0,
                     bloodVolume: 0, conditions, limbs: limbs ?? mob.limbs
                 };
             }
@@ -819,7 +871,7 @@ class EntityServiceImpl {
                 for (const limb of limbs) {
                     if (limb.health <= 0 && (limb.id === 'head' || limb.id === 'torso')) {
                         return {
-                            ...mob, state: 'Corpse', isAlive: false, diedAt: turn,
+                            ...mob, state: 'Corpse', isAlive: false, diedAt: turn, intactness: 1.0,
                             bloodVolume, conditions, limbs
                         };
                     }
@@ -862,7 +914,7 @@ class EntityServiceImpl {
         const finalized = kept.map((m) => {
             if (m.health <= 0 && m.state !== 'Corpse') {
                 changed = true;
-                return { ...m, state: 'Corpse' as MobState, isAlive: false, diedAt: state.turn };
+                return { ...m, state: 'Corpse' as MobState, isAlive: false, diedAt: state.turn, intactness: 1.0 };
             }
             return m;
         });
