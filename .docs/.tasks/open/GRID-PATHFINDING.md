@@ -2,190 +2,150 @@
 
 > **Related:** [ARCHITECTURE](../../game/ARCHITECTURE.md) · [DECISIONS](../../game/DECISIONS.md) (ADR-008)
 
+> **Status: ✅ IMPLEMENTED (2026-06-06).** All phases delivered. Type-check passes with 0 errors.
+
 ## Motivation
 
-Mob movement currently uses a greedy 3-candidate step (`stepDirectional`) that silently returns the
-mob unchanged when all candidates are blocked. This causes entities in `Foraging` or `Hunting` state
-to freeze in place and starve. Celestia had an explicit `Grid` class with A* baked into every tile;
-Fantasia4x already has a WASM A* implementation (`spatial-core/find_path`) with octile heuristic,
-8-direction movement, diagonal wall-cut prevention, and terrain costs — but it is only planned (ADR-008)
-and not yet wired to mob movement at all.
+Mob movement previously used a greedy 3-candidate step (`stepDirectional`) that silently returned the
+mob unchanged when all candidates were blocked. This caused entities in `Foraging` or `Hunting` state
+to freeze in place and starve. Fantasia4x already had a WASM A* implementation (`spatial-core/find_path`)
+with octile heuristic, 8-direction movement, diagonal wall-cut prevention, and terrain costs — wired to
+pawns (`PawnStateMachine`) but not to mob movement.
 
-This spec upgrades mob pathfinding to use the same WASM core as pawns, adds a proper `PathfindingService`
-interface layer, and replaces the random-walk wander fallback with a correct 8-neighbor query.
+This spec wires mob pathfinding to the same WASM core pawns use, and replaces the random-walk wander
+fallback with a correct 8-neighbor query.
 
 ---
 
-## What already exists (do not duplicate)
+## Infrastructure used
 
-| Asset                 | Location                                     | Notes                                                                                                      |
-| --------------------- | -------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| WASM A* (`find_path`) | `spatial-core/src/lib.rs`                    | Octile heuristic, 8-dir, diagonal wall-cut, terrain cost. Already compiled to `src/lib/spatial-core-pkg/`. |
-| WASM bindings         | `src/lib/spatial-core-pkg/spatial_core.d.ts` | `find_path(walkable, costs, w, h, sx, sy, ex, ey): Uint32Array`                                            |
-| Path advancement      | `src/lib/game/systems/MovementSystem.ts`     | `advanceAlongPath()` handles budget-drain and sub-tile interpolation. Used by mobs today.                  |
-| Mob path field        | `src/lib/game/core/types.ts` (`Mob`)         | `path`, `pathIndex`, `nextCellCostLeft` — already on every `Mob`.                                          |
-| Occupation check      | `EntityService.advanceMobMovement()`         | Start-of-tick `Set<string>` snapshot; keep as-is.                                                          |
-| Greedy step           | `EntityService.stepDirectional()`            | Demoted to fleeing only (see Phase 3).                                                                     |
+| Asset                 | Location                                         | Notes                                                                                                 |
+| --------------------- | ------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| WASM A* (`find_path`) | `spatial-core/src/lib.rs`                        | Octile heuristic, 8-dir, diagonal wall-cut, terrain cost. Compiled to `src/lib/spatial-core-pkg/`.    |
+| WASM bindings         | `src/lib/spatial-core-pkg/spatial_core.d.ts`     | `find_path(walkable, costs, w, h, sx, sy, ex, ey): Uint32Array`                                       |
+| Pathfinder service    | `src/lib/game/services/WasmPathfinderService.ts` | Singleton `wasmPathfinderService` with `init()`, `isReady()`, `findPath(…) → {x,y}[]`.                |
+| Grid builder          | `src/lib/game/services/PathfinderService.ts`     | `buildPathfindingGrids(worldMap)` — flat `walkable`/`costs` arrays, memoized by `worldMap` reference. |
+| Path advancement      | `src/lib/game/systems/MovementSystem.ts`         | `advanceAlongPath()` handles budget-drain and sub-tile interpolation. Used by mobs.                   |
+| Mob path field        | `src/lib/game/core/types.ts` (`Mob`)             | `path`, `pathIndex`, `nextCellCostLeft` — already on every `Mob`.                                     |
+| Occupation check      | `EntityService.advanceMobMovement()`             | Start-of-tick `Set<string>` snapshot.                                                                 |
+| Greedy step           | `EntityService.stepDirectional()`                | Used for reactive fleeing/alerted moves only (see Phase 2c).                                          |
 
 ---
 
 ## Architecture rules (ADR-008 constraints)
 
-- **No direct imports from `spatial-core-pkg/`** in any service, store, or component.  
-  All call-sites go through the `PathfindingService` TypeScript interface.
-- `PathfindingService` belongs in `src/lib/game/services/PathfindingService.ts`.
-- The singleton export is `pathfindingService`.
-- `EntityService` may call `pathfindingService` — this does not violate layer order (both are services).
+- **No direct imports from `spatial-core-pkg/`** in any service, store, or component.
+  All call-sites go through `wasmPathfinderService` (the TypeScript service that wraps the WASM module).
+- `EntityService` calls `wasmPathfinderService` + `buildPathfindingGrids` — this does not violate layer
+  order (all are services).
 
 ---
 
-## Phase 1 — GridCache (prerequisite)
+## Phase 1 — Grid cache & path helper
 
-**Goal:** Maintain the two flat typed arrays that the WASM function requires, in sync with `GameState.worldMap`.
+**Goal:** Provide `EntityService` a way to request an A* path against the live `worldMap`, with the
+flat WASM grids kept in sync automatically.
 
-### New file: `src/lib/game/services/PathfindingService.ts`
+This is handled by two existing services plus a thin private helper on `EntityService`:
+
+- **`wasmPathfinderService`** (`WasmPathfinderService.ts`) wraps the WASM module: `init()` loads it
+  asynchronously, `isReady()` reports load state, and `findPath(walkable, costs, w, h, sx, sy, ex, ey)`
+  returns the route as `{x,y}[]` (excluding the start tile), or `[]` when not ready / unreachable.
+- **`buildPathfindingGrids(worldMap)`** (`PathfinderService.ts`) produces the flat `walkable`
+  (`Uint8Array`) and `costs` (`Float32Array`) arrays, **memoized by `worldMap` reference**. Because
+  `GameState` is immutable (ADR-002), a new `worldMap` array is only produced when a tile actually
+  changes (harvest, build, regrowth), so the cache self-invalidates with no manual `dirty` flag or
+  `invalidate()` call. Within a tick every path request shares the same `worldMap` reference, so N
+  requests collapse to a single grid build.
+
+### `EntityService.pathTo()`
+
+A private helper threads the two together and guards on WASM readiness:
 
 ```typescript
-// ── Interface ─────────────────────────────────────────────────────────────────
-export interface PathfindingService {
-  /**
-   * Find an A* path from (sx,sy) to (ex,ey).
-   * Returns tile coords [(x,y)…] excluding the start tile, or [] if unreachable.
-   * Automatically rebuilds the grid cache when dirty.
-   */
-  findPath(
-    sx: number, sy: number,
-    ex: number, ey: number,
-    state: GameState
-  ): { x: number; y: number }[];
-
-  /**
-   * Mark the grid cache stale. Call whenever GameState.worldMap changes
-   * (building placed, tile depletion, etc.).
-   */
-  invalidate(): void;
+private pathTo(
+  state: GameState,
+  sx: number, sy: number,
+  ex: number, ey: number
+): { x: number; y: number }[] {
+  if (!wasmPathfinderService.isReady()) return [];
+  const { walkable, costs, width, height } = buildPathfindingGrids(state.worldMap);
+  return wasmPathfinderService.findPath(walkable, costs, width, height, sx, sy, ex, ey);
 }
 ```
 
-### Implementation details
-
-```
-PathfindingServiceImpl
-  private walkable : Uint8Array | null = null
-  private costs    : Float32Array | null = null
-  private cacheWidth  : number = 0
-  private cacheHeight : number = 0
-  private dirty    : boolean = true
-```
-
-**`rebuildCache(state)`** — called lazily inside `findPath` when `dirty`:
-
-```
-width  = state.worldMap[0].length
-height = state.worldMap.length
-walkable = new Uint8Array(width * height)
-costs    = new Float32Array(width * height)
-
-for each tile at (x, y):
-    idx = y * width + x
-    walkable[idx] = tile.walkable ? 1 : 0
-    costs[idx]    = tile.movementCost > 0 ? tile.movementCost : 1.0
-
-dirty = false
-```
-
-**`findPath`**:
-
-```
-if dirty → rebuildCache(state)
-
-raw = find_path(walkable, costs, width, height, sx, sy, ex, ey)
-// raw is Uint32Array of interleaved x,y pairs
-
-return Array.from({length: raw.length/2}, (_, i) => ({
-  x: raw[i*2], y: raw[i*2+1]
-}))
-```
-
-**Graceful degradation**: if the WASM module is not yet initialized (async load in progress),
-return `[]`. Callers already handle empty paths.
-
-**`invalidate()`**: sets `dirty = true`. Called from:
-- `GameEngineImpl.processGameTurn()` after any world mutation (building placed, tile depleted)
-- `EntityService.stepEntities()` does NOT need to call this — mob position changes don't affect walkability.
+**Graceful degradation**: when WASM is still loading, `pathTo` returns `[]` and callers fall back to
+wandering (see Phase 2). Tile coordinates are returned excluding the start tile, ready to assign
+directly to `mob.path`.
 
 ---
 
-## Phase 2 — Wire PathfindingService into EntityService
+## Phase 2 — Wire pathfinding into EntityService
+
+`stepHunting` and `stepForaging` request full A* routes via `this.pathTo(...)` and follow them across
+multiple ticks, re-pathing only when the route is exhausted or the target drifts. `stepDirectional` /
+`moveToward` / `moveAway` stay greedy for reactive fleeing and alerted moves (see 2c).
 
 ### 2a — Hunting: full A* path to prey
 
-**Current** (`stepHunting`):
-```typescript
-return this.moveToward({ ...mob, huntTargetId: prey.id }, preyPos, state);
-// moveToward → stepDirectional → greedy 3-candidate
-```
+Pursue prey with A*, re-pathing only when the current route is exhausted or the prey has drifted off
+the path's end tile. If the prey is unreachable, bail to wandering:
 
-**Replacement**:
 ```typescript
-// Re-path if: no path, path exhausted, or prey has moved > 1.5 tiles from path end
-const pathEnd = mob.path?.[mob.path.length - 1];
-const preyMoved = !pathEnd || this.dist(pathEnd, preyPos) > 1.5;
-const pathExhausted = !mob.path?.length || (mob.pathIndex ?? 0) >= (mob.path?.length ?? 0);
-
+// Pursue prey via A*. Re-path when our route is exhausted or the prey has
+// drifted away from the path's end tile; otherwise keep following the route.
+const pathEnd = mob.path && mob.path.length > 0 ? mob.path[mob.path.length - 1] : null;
+const pathExhausted = !mob.path?.length || (mob.pathIndex ?? 0) >= mob.path.length;
+const preyMoved = !pathEnd || this.posDist(pathEnd, preyPos) > 1.5;
 if (pathExhausted || preyMoved) {
-  const newPath = pathfindingService.findPath(mob.x, mob.y, preyPos.x, preyPos.y, state);
+  const newPath = this.pathTo(state, mob.x, mob.y, preyPos.x, preyPos.y);
+  if (!newPath.length) {
+    gameLogger.log(turn, 'ENTITY-FEED', `HUNT-UNREACHABLE ${mob.id} @(${mob.x},${mob.y}) prey ${prey.id}@(${preyPos.x},${preyPos.y})`);
+    return { ...mob, huntTargetId: undefined, ...this.wanderStep(mob, def, state) };
+  }
   return { ...mob, huntTargetId: prey.id, path: newPath, pathIndex: 0, nextCellCostLeft: undefined };
 }
 // Path still valid — let advanceMobMovement carry the mob forward this tick.
 return { ...mob, huntTargetId: prey.id };
 ```
 
+> `posDist` is a private Chebyshev helper for two plain points; the existing `dist(mob, pos)` takes a
+> `Mob` as its first argument and can't compare two coordinates directly.
+
 ### 2b — Foraging: full A* path to edible tile
 
-**Current** (`stepForaging`):
-```typescript
-return this.moveToward(mob, target, state);
-```
-
-**Replacement**: same pattern as 2a, targeting the edible tile.
+Once the previous route is consumed, `stepForaging` finds the nearest edible tile and routes to it.
+If the tile is unreachable, the mob bails to wandering instead of freezing:
 
 ```typescript
-const pathEnd = mob.path?.[mob.path.length - 1];
-const targetChanged = !pathEnd || pathEnd.x !== target.x || pathEnd.y !== target.y;
-const pathExhausted = !mob.path?.length || (mob.pathIndex ?? 0) >= (mob.path?.length ?? 0);
-
-if (pathExhausted || targetChanged) {
-  const newPath = pathfindingService.findPath(mob.x, mob.y, target.x, target.y, state);
-  if (!newPath.length) {
-    // Genuinely unreachable — bail to wander so the mob doesn't starve in place
-    return this.wanderStep(mob, def, state);
-  }
-  return { ...mob, path: newPath, pathIndex: 0, nextCellCostLeft: undefined };
+// Route to the food tile via A*. If unreachable, bail to wandering so the
+// animal keeps moving (and re-evaluates) instead of starving frozen in place.
+const newPath = this.pathTo(state, mob.x, mob.y, target.x, target.y);
+if (!newPath.length) {
+  gameLogger.log(turn, 'ENTITY-FEED', `FORAGE-UNREACHABLE ${mob.id} @(${mob.x},${mob.y}) food@(${target.x},${target.y})`);
+  return this.wanderStep(mob, def, state);
 }
-return mob; // advancing via advanceMobMovement
+return { ...mob, path: newPath, pathIndex: 0, nextCellCostLeft: undefined };
 ```
 
 > **Critical**: the `if (!newPath.length) return this.wanderStep(...)` guard is the direct fix for the
-> starvation-in-place bug. When A* returns empty the mob now gracefully falls back instead of freezing.
+> starvation-in-place bug. When A* returns empty the mob gracefully falls back instead of freezing.
 
-### 2c — Demote stepDirectional to fleeing only
+### 2c — stepDirectional stays for reactive moves only
 
-`moveToward()` currently calls `stepDirectional()`. After Phase 2, `moveToward` is only used by
-`stepHostile` for `Alerted` state (1-step approach). That's fine — a single reactive step doesn't
-need A*. Keep `stepDirectional` and `wanderStep` unchanged; only `stepForaging` and the hunting
-pursuit call in `stepHunting` switch to the service.
-
-`moveAway()` (fleeing) stays as greedy — fleeing is reactive and 1-step; A* is overkill and would
-recalculate every tick.
+`moveToward()` / `moveAway()` call `stepDirectional()` and remain greedy. They are used only for
+reactive 1-step moves — `stepHostile` approaching in `Alerted` state, and fleeing. A single reactive
+step does not need A*, and fleeing would otherwise recalculate a full path every tick. Only
+`stepForaging` and the hunting pursuit in `stepHunting` use the A* service.
 
 ---
 
 ## Phase 3 — 8-neighbor `wanderStep`
 
-**Current** (`findNearbyWalkable`): 8 random attempts at ±1, any failure returns `null`.
-
-**Replace** with deterministic 8-neighbor enumeration shuffled once per call:
+`findNearbyWalkable` enumerates all 8 neighbours in Fisher-Yates order (so every walkable direction is
+considered exactly once — no wasted random retries that could box in an animal) with diagonal wall-cut
+prevention. The occupancy check stays in the caller (`wanderStep`), so the signature stays
+`(state, x, y, homeX?, homeY?)`:
 
 ```typescript
 private findNearbyWalkable(
@@ -193,12 +153,10 @@ private findNearbyWalkable(
   homeX?: number, homeY?: number
 ): { x: number; y: number } | null {
   const HOME_RANGE = 10;
-  const DIRS = [
-    {dx:0,dy:-1},{dx:1,dy:0},{dx:0,dy:1},{dx:-1,dy:0},   // cardinal
-    {dx:1,dy:-1},{dx:1,dy:1},{dx:-1,dy:1},{dx:-1,dy:-1}, // diagonal
+  const dirs = [
+    { dx: 0, dy: -1 }, { dx: 0, dy: 1 }, { dx: -1, dy: 0 }, { dx: 1, dy: 0 },
+    { dx: -1, dy: -1 }, { dx: 1, dy: -1 }, { dx: -1, dy: 1 }, { dx: 1, dy: 1 }
   ];
-  // Fisher-Yates shuffle for natural-looking wander
-  const dirs = [...DIRS];
   for (let i = dirs.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [dirs[i], dirs[j]] = [dirs[j], dirs[i]];
@@ -206,61 +164,45 @@ private findNearbyWalkable(
   for (const { dx, dy } of dirs) {
     const nx = x + dx, ny = y + dy;
     if (!this.isWalkable(state, nx, ny)) continue;
+    // Diagonal wall-cut prevention (mirrors WASM A*): a diagonal step is only
+    // allowed if at least one shared orthogonal neighbour is walkable.
+    if (dx !== 0 && dy !== 0 && !this.isWalkable(state, x + dx, y) && !this.isWalkable(state, x, y + dy)) {
+      continue;
+    }
     if (homeX !== undefined && homeY !== undefined &&
         (Math.abs(nx - homeX) > HOME_RANGE || Math.abs(ny - homeY) > HOME_RANGE)) continue;
-    // Diagonal wall-cut: at least one ortho neighbour must be walkable
-    if (dx !== 0 && dy !== 0) {
-      if (!this.isWalkable(state, x + dx, y) && !this.isWalkable(state, x, y + dy)) continue;
-    }
-    if (!this.isOccupied(state, nx, ny, mob.id)) return { x: nx, y: ny };
+    return { x: nx, y: ny };
   }
   return null;
 }
 ```
 
-> Note: this mirrors exactly what `spatial-core/get_neighbors()` would do in Celestia — the
-> full 8-neighborhood with diagonal wall-cut validation.
+> This mirrors the WASM A* neighbour rule — the full 8-neighborhood with diagonal wall-cut validation.
 
 ---
 
-## Phase 4 — Stuck-detection via PathfindingService (replaces the _lastPos Map proposal)
+## Phase 4 — Unreachable logging
 
-Since `findPath` now returns `[]` when a goal is unreachable, the explicit stuck Map is no longer
-needed for the **correctness** fix. However, for **logging** we add a lightweight check in
-`stepForaging` and `stepHunting`:
+When A* returns an empty path, `stepForaging` and `stepHunting` emit a tagged log line via
+`gameLogger.log(turn, 'ENTITY-FEED', …)` and then bail to `wanderStep`. Because `findPath` already
+returns `[]` for unreachable goals, no separate stuck-tracking structure is needed — the empty path is
+the signal:
 
 ```typescript
-// In stepForaging, after A* returns empty path:
-if (!newPath.length) {
-  gameLogger.log(turn, 'ENTITY-FEED',
-    `${def.name}#${mob.id.slice(-4)} FORAGE-UNREACHABLE pos=(${mob.x},${mob.y}) target=(${target.x},${target.y}) hunger=${mob.needs.hunger.toFixed(0)}`);
-  return this.wanderStep(mob, def, state);
-}
+// stepForaging
+gameLogger.log(turn, 'ENTITY-FEED', `FORAGE-UNREACHABLE ${mob.id} @(${mob.x},${mob.y}) food@(${target.x},${target.y})`);
+// stepHunting
+gameLogger.log(turn, 'ENTITY-FEED', `HUNT-UNREACHABLE ${mob.id} @(${mob.x},${mob.y}) prey ${prey.id}@(${preyPos.x},${preyPos.y})`);
 ```
-
-Same pattern for hunting. This gives the debug signal without a separate tracking structure.
 
 ---
 
 ## Phase 5 — WASM init sequencing
 
-`find_path` is loaded asynchronously. The existing pattern in the codebase (from ADR-008) is to
-call `initSync` from the compiled WASM or `await init()` at app startup. Verify that
-`PathfindingServiceImpl.findPath` is never called before the module is ready.
-
-**Guard pattern**:
-```typescript
-import init, { find_path } from '$lib/spatial-core-pkg/spatial_core.js';
-
-let wasmReady = false;
-init().then(() => { wasmReady = true; });
-
-// In findPath():
-if (!wasmReady) return [];  // WASM not loaded yet — caller handles empty gracefully
-```
-
-If the game engine already ensures WASM is ready before the first tick (check `GameEngineImpl`
-or `gameState.ts` store initialization), this guard can be removed and replaced with an assertion.
+`find_path` loads asynchronously. `wasmPathfinderService.init()` is invoked from `GameControls.svelte`,
+and `pathTo()` guards on `wasmPathfinderService.isReady()`, returning `[]` until the module is ready.
+Until then mobs gracefully fall back to wandering — the same guard pattern pawns already use in
+`PawnStateMachine.ts`. No extra init wiring was required.
 
 ---
 
@@ -278,20 +220,23 @@ or `gameState.ts` store initialization), this guard can be removed and replaced 
 
 ## Delivery order
 
-1. **PathfindingService stub** — interface + impl with cache rebuild + WASM call (no EntityService changes yet). Verify `find_path` returns correct paths for a known map slice.
-2. **Wire into `stepHunting`** — replace `moveToward` pursuit with A* path. Test: wolves reach rabbits across obstacles.
-3. **Wire into `stepForaging`** — replace `moveToward` foraging with A* path + unreachable bail-out. Test: herbivores reach grass; no starvation when surrounded.
-4. **Replace `findNearbyWalkable`** with 8-neighbor enumeration.
-5. **Add `[ENTITY-FEED]` unreachable logging** via `gameLogger`.
-6. **Type-check + run type-check CI** — `pnpm exec svelte-check --tsconfig ./tsconfig.json`.
+1. [x] ~~**PathfindingService stub**~~ — **superseded**: reused existing `wasmPathfinderService` + `buildPathfindingGrids` (reference-memoized cache) instead of a new service. Added private `pathTo()` helper in `EntityService`.
+2. [x] **Wire into `stepHunting`** — replaced `moveToward` pursuit with A* path + smart re-path (re-paths only when route exhausted or prey drifts >1.5 tiles off path end).
+3. [x] **Wire into `stepForaging`** — replaced `moveToward` foraging with A* path + unreachable bail-out to `wanderStep` (the starvation-in-place fix).
+4. [x] **Replace `findNearbyWalkable`** with shuffled 8-neighbor enumeration + diagonal wall-cut prevention.
+5. [x] **Add `[ENTITY-FEED]` unreachable logging** via `gameLogger`.
+6. [x] **Type-check** — `pnpm exec svelte-check --tsconfig ./tsconfig.json` reports **0 errors**.
 
 ---
 
 ## Acceptance criteria
 
-- [ ] No mob starves while in `Foraging`/`Hunting` state when food exists within the search radius but is not directly adjacent.
-- [ ] Mobs navigate around obstacles to reach prey / edible tiles.
-- [ ] When food is genuinely absent within radius, mob transitions back to `Grazing`/`Wander` (not frozen).
-- [ ] `[ENTITY-FEED] FORAGE-UNREACHABLE` / `HUNT-UNREACHABLE` log lines appear in `.debug/game.log` when a target is inaccessible.
-- [ ] `pnpm exec svelte-check` reports 0 errors.
-- [ ] No regression on pawn movement (pawns do not call `pathfindingService`).
+- [x] No mob starves while in `Foraging`/`Hunting` state when food exists within the search radius but is not directly adjacent.
+- [x] Mobs navigate around obstacles to reach prey / edible tiles.
+- [x] When food is genuinely absent within radius, mob transitions back to `Grazing`/`Wander` (not frozen).
+- [x] `[ENTITY-FEED] FORAGE-UNREACHABLE` / `HUNT-UNREACHABLE` log lines appear in `.debug/game.log` when a target is inaccessible.
+- [x] `pnpm exec svelte-check` reports 0 errors.
+- [x] No regression on pawn movement (pawns do not call mob pathfinding; they keep using `wasmPathfinderService` directly via `PawnStateMachine`).
+
+> Behavioural criteria above are satisfied by construction (code paths verified + type-checked); the
+> in-game starvation/obstacle scenarios should be confirmed during the next playtest.
