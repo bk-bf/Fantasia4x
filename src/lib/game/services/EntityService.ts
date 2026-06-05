@@ -6,6 +6,9 @@ import { conditionNeedMultipliers } from '../core/needs';
 import { advanceAlongPath } from '../systems/MovementSystem';
 import { resourceObjectService } from './ResourceObjectService';
 import { absorbDropIfOnStockpileTile } from '../core/GameState';
+import { wasmPathfinderService } from './WasmPathfinderService';
+import { buildPathfindingGrids } from './PathfinderService';
+import { gameLogger } from '../dev/gameLogger';
 
 /**
  * EntityService — ENTITIES_SPAWNING spec, Phase A.
@@ -657,7 +660,15 @@ class EntityServiceImpl {
         if (target.x === mob.x && target.y === mob.y) {
             return { ...mob, eatProgress: SECONDS_PER_TICK / EAT_GRASS_SECONDS, path: [] };
         }
-        return this.moveToward(mob, target, state);
+
+        // Route to the food tile via A*. If unreachable, bail to wandering so the
+        // animal keeps moving (and re-evaluates) instead of starving frozen in place.
+        const newPath = this.pathTo(state, mob.x, mob.y, target.x, target.y);
+        if (!newPath.length) {
+            gameLogger.log(turn, 'ENTITY-FEED', `FORAGE-UNREACHABLE ${mob.id} @(${mob.x},${mob.y}) food@(${target.x},${target.y})`);
+            return this.wanderStep(mob, def, state);
+        }
+        return { ...mob, path: newPath, pathIndex: 0, nextCellCostLeft: undefined };
     }
 
     /**
@@ -724,8 +735,20 @@ class EntityServiceImpl {
             return { ...mob, huntTargetId: prey.id, path: [] };
         }
 
-        // Pursue prey — always refresh path for responsive tracking.
-        return this.moveToward({ ...mob, huntTargetId: prey.id }, preyPos, state);
+        // Pursue prey via A*. Re-path when our route is exhausted or the prey has
+        // drifted away from the path's end tile; otherwise keep following the route.
+        const pathEnd = mob.path && mob.path.length > 0 ? mob.path[mob.path.length - 1] : null;
+        const pathExhausted = !mob.path?.length || (mob.pathIndex ?? 0) >= mob.path.length;
+        const preyMoved = !pathEnd || this.posDist(pathEnd, preyPos) > 1.5;
+        if (pathExhausted || preyMoved) {
+            const newPath = this.pathTo(state, mob.x, mob.y, preyPos.x, preyPos.y);
+            if (!newPath.length) {
+                gameLogger.log(turn, 'ENTITY-FEED', `HUNT-UNREACHABLE ${mob.id} @(${mob.x},${mob.y}) prey ${prey.id}@(${preyPos.x},${preyPos.y})`);
+                return { ...mob, huntTargetId: undefined, ...this.wanderStep(mob, def, state) };
+            }
+            return { ...mob, huntTargetId: prey.id, path: newPath, pathIndex: 0, nextCellCostLeft: undefined };
+        }
+        return { ...mob, huntTargetId: prey.id };
     }
 
     // ===== FORAGING QUERIES =======================================================
@@ -1059,11 +1082,26 @@ class EntityServiceImpl {
         homeY?: number
     ): { x: number; y: number } | null {
         const HOME_RANGE = 10;
-        for (let attempt = 0; attempt < 8; attempt++) {
-            const nx = x + (Math.floor(Math.random() * 3) - 1);
-            const ny = y + (Math.floor(Math.random() * 3) - 1);
-            if (nx === x && ny === y) continue;
+        // Enumerate all 8 neighbours in random order (Fisher-Yates) so every walkable
+        // direction is considered exactly once — no wasted random retries that could
+        // leave a boxed-in animal stuck even when an exit exists.
+        const dirs = [
+            { dx: 0, dy: -1 }, { dx: 0, dy: 1 }, { dx: -1, dy: 0 }, { dx: 1, dy: 0 },
+            { dx: -1, dy: -1 }, { dx: 1, dy: -1 }, { dx: -1, dy: 1 }, { dx: 1, dy: 1 }
+        ];
+        for (let i = dirs.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [dirs[i], dirs[j]] = [dirs[j], dirs[i]];
+        }
+        for (const { dx, dy } of dirs) {
+            const nx = x + dx;
+            const ny = y + dy;
             if (!this.isWalkable(state, nx, ny)) continue;
+            // Diagonal wall-cut prevention (mirrors WASM A*): a diagonal step is only
+            // allowed if at least one shared orthogonal neighbour is walkable.
+            if (dx !== 0 && dy !== 0 && !this.isWalkable(state, x + dx, y) && !this.isWalkable(state, x, y + dy)) {
+                continue;
+            }
             if (
                 homeX !== undefined &&
                 homeY !== undefined &&
@@ -1114,6 +1152,29 @@ class EntityServiceImpl {
 
     private dist(mob: Mob, pos: { x: number; y: number }): number {
         return Math.max(Math.abs(pos.x - mob.x), Math.abs(pos.y - mob.y));
+    }
+
+    /** Chebyshev distance between two plain points. */
+    private posDist(a: { x: number; y: number }, b: { x: number; y: number }): number {
+        return Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y));
+    }
+
+    /**
+     * WASM A* path from (sx,sy) to (ex,ey). Returns the route EXCLUDING the start
+     * tile, or [] if WASM is not ready or the target is unreachable. Grid arrays are
+     * memoized per-worldMap reference by buildPathfindingGrids, so calling this once
+     * per pursuing mob per tick collapses to a single grid build.
+     */
+    private pathTo(
+        state: GameState,
+        sx: number,
+        sy: number,
+        ex: number,
+        ey: number
+    ): { x: number; y: number }[] {
+        if (!wasmPathfinderService.isReady()) return [];
+        const { walkable, costs, width, height } = buildPathfindingGrids(state.worldMap);
+        return wasmPathfinderService.findPath(walkable, costs, width, height, sx, sy, ex, ey);
     }
 
     private adjacent(mob: Mob, pos: { x: number; y: number }): boolean {
