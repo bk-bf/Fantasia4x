@@ -592,8 +592,10 @@ class EntityServiceImpl {
                 const pawnDist = nearest ? this.dist(mob, nearest.pos) : Infinity;
                 const predDist = predatorThreat ? this.dist(mob, predatorThreat.pos) : Infinity;
                 const closestDist = Math.min(pawnDist, predDist);
-                // Flee until the threat is beyond this creature's defined flee range.
-                if (closestDist > def.stats.fleeRange) {
+                // Flee until both pawn and predator threats are fully out of vision.
+                // Using visionRange (not fleeRange) guarantees that on return to
+                // Grazing the threat is truly gone and Startled cannot re-fire.
+                if (closestDist > def.stats.visionRange) {
                     return { ...mob, state: 'Grazing', stateSince: turn, path: [] };
                 }
                 const fleeFrom = pawnDist <= predDist ? nearest!.pos : predatorThreat!.pos;
