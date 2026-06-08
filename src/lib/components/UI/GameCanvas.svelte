@@ -1431,25 +1431,54 @@
 
   function startLoop() {
     let lastFpsPush = 0;
+    // Per-phase timing for slow-frame logging (enabled via globalThis.__perfFollow=true).
+    const ph = { sim: 0, overlay: 0, cam: 0, desgn: 0, webgl: 0 };
     function frame() {
       if (!renderer || !ready) return;
-      // Real elapsed time drives interpolation so motion is smooth at the display
-      // refresh rate regardless of how fast/slow the simulation ticks.
       const now = performance.now();
       const dt = lastFrameTime ? (now - lastFrameTime) / 1000 : 0;
       lastFrameTime = now;
-      // Advance the simulation on this same thread/schedule. Driving the sim from
-      // the render loop (rather than a competing setInterval) prevents the timer
-      // starvation that throttled a <1 ms/tick sim to ~20 TPS while rendering.
+      // dt used by stepSimulation is the real wall time (it has its own 250ms clamp).
+      // smoothDt is capped at 50ms so interpolation/camera never snap on CPU-stall frames.
+      const smoothDt = Math.min(dt, 0.05);
+
+      const prof = (globalThis as any).__perfFollow as boolean | undefined;
+
+      let t0 = prof ? performance.now() : 0;
       gameState.stepSimulation(dt * 1000);
-      updatePawnOverlay(dt);
-      updateCameraFollow(dt);
-      updateCameraFollowMob(dt);
+      if (prof) ph.sim = performance.now() - t0;
+
+      t0 = prof ? performance.now() : 0;
+      updatePawnOverlay(smoothDt);
+      if (prof) ph.overlay = performance.now() - t0;
+
+      t0 = prof ? performance.now() : 0;
+      updateCameraFollow(smoothDt);
+      updateCameraFollowMob(smoothDt);
+      if (prof) ph.cam = performance.now() - t0;
+
+      t0 = prof ? performance.now() : 0;
       updateWorldEffectOverlays();
+      // Single drawDesignations() per frame — removed from setView so follow mode
+      // no longer triggers a full Canvas2D clear + sprite redraw 60×/sec.
+      drawDesignations();
+      if (prof) ph.desgn = performance.now() - t0;
+
+      t0 = prof ? performance.now() : 0;
       renderer.setOverlayGrid(pawnOverlayGrid);
       renderer.beginFrame();
       renderer.endFrame();
-      // Surface render FPS to the topbar ~4×/sec to avoid store churn.
+      if (prof) ph.webgl = performance.now() - t0;
+
+      if (prof) {
+        const total = ph.sim + ph.overlay + ph.cam + ph.desgn + ph.webgl;
+        if (total > 16) {
+          console.log(
+            `[FRAME ${total.toFixed(1)}ms] sim=${ph.sim.toFixed(1)} overlay=${ph.overlay.toFixed(1)} cam=${ph.cam.toFixed(1)} desgn=${ph.desgn.toFixed(1)} webgl=${ph.webgl.toFixed(1)}`
+          );
+        }
+      }
+
       if (now - lastFpsPush > 250) {
         lastFpsPush = now;
         renderFps.set(Math.round(renderer.getStats().fps));
@@ -1481,7 +1510,10 @@
     [viewX, viewY] = clampView(x, y);
     renderer?.setViewTileOffset(viewX, viewY);
     saveCameraState();
-    drawDesignations();
+    // drawDesignations() is NOT called here — it runs once per rAF frame in
+    // startLoop() so camera-follow mode doesn't call it 60×/sec.
+    // Event handlers that need an immediate 2D-overlay update (zoom, resize,
+    // keyboard pan when the rAF loop is paused) call it directly after setView.
   }
 
   function handleKeyDown(e: KeyboardEvent) {
