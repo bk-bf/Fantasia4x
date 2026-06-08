@@ -2,6 +2,7 @@ import type { Item, GameState, DynamicIngredientSlot } from '../core/types';
 import { consumeFromStockpiles, addToStockpileZone } from '../core/GameState';
 import itemsData from '../database/items.jsonc';
 import { RARITY_COLORS } from '../database/colors';
+import { SECONDS_PER_TICK } from '../core/time';
 
 const ITEMS_DATABASE = itemsData as unknown as Item[];
 
@@ -48,6 +49,9 @@ export interface ItemService {
 
 	// Crafting Queue Processing
 	processCraftingQueue(gameState: GameState): GameState;
+
+	// Decay
+	stepItemDecay(gameState: GameState): GameState;
 }
 
 /**
@@ -317,6 +321,40 @@ export class ItemServiceImpl implements ItemService {
 
 		return gameState;
 	}
+}
+
+stepItemDecay(gameState: GameState): GameState {
+	const stockpile = gameState.stockpile ?? {};
+	const decayAcc: Record<string, number> = { ...(gameState.stockpileDecaySeconds ?? {}) };
+	let state: GameState = gameState;
+	let changed = false;
+
+	for (const [itemId, qty] of Object.entries(stockpile)) {
+		if (qty <= 0) continue;
+		const def = this.getItemById(itemId);
+		if (!def?.decaySeconds) continue;
+
+		decayAcc[itemId] = (decayAcc[itemId] ?? 0) + SECONDS_PER_TICK;
+		if (decayAcc[itemId] >= def.decaySeconds) {
+			decayAcc[itemId] -= def.decaySeconds;
+			// Only consume if there's still stock (could have been spent this tick)
+			if ((state.stockpile[itemId] ?? 0) > 0) {
+				state = this.consumeItems({ [itemId]: 1 }, state);
+				if (def.decaysTo) {
+					state = this.addItems({ [def.decaysTo]: 1 }, state);
+				}
+				changed = true;
+			} else {
+				delete decayAcc[itemId];
+			}
+		}
+	}
+
+	if (!changed && Object.keys(decayAcc).length === Object.keys(gameState.stockpileDecaySeconds ?? {}).length) {
+		return { ...state, stockpileDecaySeconds: decayAcc };
+	}
+	return { ...state, stockpileDecaySeconds: decayAcc };
+}
 }
 
 // Export singleton instance

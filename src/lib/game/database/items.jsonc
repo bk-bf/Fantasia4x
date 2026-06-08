@@ -1,81 +1,95 @@
 [
   {
-    "id"         : "wild_berries",
-    "name"       : "Wild Berries",
-    "type"       : "food",
-    "category"   : "food",
-    "description": "Foraged berries. Small, tart, filling enough.",
-    "color"      : "#673AB7",
-    "amount"     : 0,
-    "nutrition"  : 1.0,
-    "gatheringTypes"  : ["foraging"]
+    "id"            : "wild_berries",
+    "name"          : "Wild Berries",
+    "type"          : "food",
+    "category"      : "food",
+    "description"   : "Foraged berries. Small, tart, filling enough.",
+    "color"         : "#673AB7",
+    "amount"        : 0,
+    "nutrition"     : 1.0,
+    "gatheringTypes": ["foraging"],
+    "decaySeconds"  : 600,
+    "decaysTo"      : "rotten_food"
   },
   {
-    "id"         : "common_carp",
-    "name"       : "Carp",
-    "type"       : "food",
-    "category"   : "food",
-    "description": "Freshwater fish. Bony but nutritious.",
-    "color"      : "#4FC3F7",
-    "amount"     : 0,
-    "nutrition"  : 1.6,
-    "gatheringTypes"  : ["fishing"]
+    "id"            : "common_carp",
+    "name"          : "Carp",
+    "type"          : "food",
+    "category"      : "food",
+    "description"   : "Freshwater fish. Bony but nutritious.",
+    "color"         : "#4FC3F7",
+    "amount"        : 0,
+    "nutrition"     : 1.6,
+    "gatheringTypes": ["fishing"],
+    "decaySeconds"  : 300,
+    "decaysTo"      : "rotten_food"
   },
   {
-    "id"         : "wild_oats",
-    "name"       : "Wild Oats",
-    "type"       : "food",
-    "category"   : "food",
-    "description": "Gathered grain. Edible raw, better cooked.",
-    "color"      : "#FFA726",
-    "amount"     : 0,
-    "nutrition"  : 1.3,
-    "gatheringTypes"  : ["foraging"]
+    "id"            : "wild_oats",
+    "name"          : "Wild Oats",
+    "type"          : "food",
+    "category"      : "food",
+    "description"   : "Gathered grain. Edible raw, better cooked.",
+    "color"         : "#FFA726",
+    "amount"        : 0,
+    "nutrition"     : 1.3,
+    "gatheringTypes": ["foraging"],
+    "decaySeconds"  : 9000,
+    "decaysTo"      : "rotten_food"
   },
   {
-    "id"         : "herbs",
-    "name"       : "Herbs",
-    "type"       : "food",
-    "category"   : "food",
-    "description": "Wild aromatic plants. Flavors stews, minor health benefits.",
-    "color"      : "#4CAF50",
-    "amount"     : 0,
-    "nutrition"  : 0.5,
-    "effects"    : {"healthBonus": 0.1},
-    "gatheringTypes"  : ["foraging"]
+    "id"            : "herbs",
+    "name"          : "Herbs",
+    "type"          : "food",
+    "category"      : "food",
+    "description"   : "Wild aromatic plants. Flavors stews, minor health benefits.",
+    "color"         : "#4CAF50",
+    "amount"        : 0,
+    "nutrition"     : 0.5,
+    "effects"       : {"healthBonus": 0.1},
+    "gatheringTypes": ["foraging"],
+    "decaySeconds"  : 1200,
+    "decaysTo"      : "rotten_food"
   },
   {
-    "id"         : "river_trout",
-    "name"       : "River Trout",
-    "type"       : "food",
-    "category"   : "food",
-    "description": "A prized freshwater fish. Rich and delicate.",
-    "color"      : "#FF8A65",
-    "amount"     : 0,
-    "nutrition"  : 1.8,
-    "gatheringTypes"  : ["fishing"]
+    "id"            : "river_trout",
+    "name"          : "River Trout",
+    "type"          : "food",
+    "category"      : "food",
+    "description"   : "A prized freshwater fish. Rich and delicate.",
+    "color"         : "#FF8A65",
+    "amount"        : 0,
+    "nutrition"     : 1.8,
+    "gatheringTypes": ["fishing"],
+    "decaySeconds"  : 300,
+    "decaysTo"      : "rotten_food"
   },
   {
-    "id"         : "rabbit_carcass",
-    "name"       : "Rabbit Carcass",
-    "type"       : "food",
-    "category"   : "food",
-    "description": "Freshly hunted rabbit. Process it to get meat.",
-    "color"      : "#8D4E85",
-    "amount"     : 0,
-    "gatheringTypes"  : ["hunting"],
-    "processingType": ["butchery"]
+    "id"            : "rabbit_carcass",
+    "name"          : "Rabbit Carcass",
+    "type"          : "food",
+    "category"      : "food",
+    "description"   : "Freshly hunted rabbit. Process it to get meat.",
+    "color"         : "#8D4E85",
+    "amount"        : 0,
+    "gatheringTypes": ["hunting"],
+    "processingType": ["butchery"],
+    "decaySeconds"  : 300,
+    "decaysTo"      : "rotten_carcass"
   },
   {
-    "id"         : "deer_carcass",
-    "name"       : "Deer Carcass",
-    "type"       : "food",
-    "category"   : "food",
-    "description": "A large game animal. Process for venison and hide.",
-    "color"      : "#8D6E63",
-    "amount"     : 0,
-    "gatheringTypes"  : ["hunting"],
-    "processingType": ["butchery"]
+    "id"            : "deer_carcass",
+    "name"          : "Deer Carcass",
+    "type"          : "food",
+    "category"      : "food",
+    "description"   : "A large game animal. Process for venison and hide.",
+    "color"         : "#8D6E63",
+    "amount"        : 0,
+    "gatheringTypes": ["hunting"],
+    "processingType": ["butchery"],
+    "decaySeconds"  : 300,
+    "decaysTo"      : "rotten_carcass"
   },
   {
     "id"              : "rabbit_meat",
@@ -90,7 +104,9 @@
     "craftingTime"    : 200,
     "toolTierRequired": 0,
     "workshopType"    : "butcher_spot",
-    "processingType": ["cooking"]
+    "processingType"  : ["cooking"],
+    "decaySeconds"    : 600,
+    "decaysTo"        : "rotten_meat"
   },
   {
     "id"              : "venison",
@@ -105,16 +121,18 @@
     "craftingTime"    : 900,
     "toolTierRequired": 0,
     "workshopType"    : "butcher_spot",
-    "processingType": ["cooking"]
+    "processingType"  : ["cooking"],
+    "decaySeconds"    : 600,
+    "decaysTo"        : "rotten_meat"
   },
   {
-    "id"         : "hide",
-    "name"       : "Raw Hide",
-    "type"       : "material",
-    "category"   : "organic",
-    "description": "Untreated animal skin.",
-    "color"      : "#8D6E63",
-    "amount"     : 0,
+    "id"            : "hide",
+    "name"          : "Raw Hide",
+    "type"          : "material",
+    "category"      : "organic",
+    "description"   : "Untreated animal skin.",
+    "color"         : "#8D6E63",
+    "amount"        : 0,
     "processingType": ["leatherworking"]
   },
   {
@@ -130,8 +148,8 @@
     "dynamicRecipe"   : {
       "meat": {
         "acceptsCategory": "meat",
-        "quantity"  : 1,
-        "variants"  : {
+        "quantity"       : 1,
+        "variants"       : {
           "rabbit_meat" : {"name": "Rabbit on a Spit", "description": "Lean rabbit skewered over open flame."},
           "venison"     : {
             "name"          : "Venison on a Spit",
@@ -170,12 +188,17 @@
             "nutritionBonus": -0.8
           }
         },
-        "default"   : {"name": "Spit-Roasted Meat", "description": "Meat skewered on a branch and cooked over fire."}
+        "default"        : {
+          "name"       : "Spit-Roasted Meat",
+          "description": "Meat skewered on a branch and cooked over fire."
+        }
       }
     },
     "craftingTime"    : 2,
     "toolTierRequired": 0,
-    "workshopType"    : "campfire"
+    "workshopType"    : "campfire",
+    "decaySeconds"    : 600,
+    "decaysTo"        : "rotten_food"
   },
   {
     "id"              : "stew",
@@ -190,8 +213,8 @@
     "dynamicRecipe"   : {
       "meat": {
         "acceptsCategory": "meat",
-        "quantity"  : 1,
-        "variants"  : {
+        "quantity"       : 1,
+        "variants"       : {
           "rabbit_meat" : {"name": "Rabbit Stew", "description": "A warm rabbit stew with wild herbs."},
           "venison"     : {
             "name"          : "Venison Stew",
@@ -234,108 +257,110 @@
             "nutritionBonus": -1.5
           }
         },
-        "default"   : {"name": "Stew", "description": "A hearty stew. Nutrition depends on ingredients."}
+        "default"        : {"name": "Stew", "description": "A hearty stew. Nutrition depends on ingredients."}
       }
     },
     "craftingTime"    : 3,
     "toolTierRequired": 0,
     "workshopType"    : "campfire",
-    "components"      : []
+    "components"      : [],
+    "decaySeconds"    : 300,
+    "decaysTo"        : "rotten_food"
   },
   {
-    "id"         : "branch",
-    "name"       : "Branch",
-    "type"       : "material",
-    "category"   : "primitive",
+    "id": "branch",
+    "name": "Branch",
+    "type": "material",
+    "category": "primitive",
     "description": "A dry woody branch. Burns quickly and lashes together easily. Used in nearly everything early on.",
-    "color"      : "#8B6914",
-    "amount"     : 0,
-    "fuelValue"  : 3,
-    "gatheringTypes"  : ["foraging"]
+    "color": "#8B6914",
+    "amount": 0,
+    "fuelValue": 3,
+    "gatheringTypes": ["foraging"]
   },
   {
-    "id"         : "small_stone",
-    "name"       : "Small Stone",
-    "type"       : "material",
-    "category"   : "primitive",
-    "description": "A small, loose stone. Useful for crafting.",
-    "color"      : "#888888",
-    "amount"     : 0,
-    "gatheringTypes"  : ["foraging", "mining"]
+    "id"            : "small_stone",
+    "name"          : "Small Stone",
+    "type"          : "material",
+    "category"      : "primitive",
+    "description"   : "A small, loose stone. Useful for crafting.",
+    "color"         : "#888888",
+    "amount"        : 0,
+    "gatheringTypes": ["foraging", "mining"]
   },
   {
-    "id"         : "flint_shard",
-    "name"       : "Flint Shard",
-    "type"       : "material",
-    "category"   : "primitive",
-    "description": "A knapped flint chip. Sharp edge, primitive cutting tool blank.",
-    "color"      : "#888888",
-    "amount"     : 0,
-    "gatheringTypes"  : ["foraging", "mining"]
+    "id"            : "flint_shard",
+    "name"          : "Flint Shard",
+    "type"          : "material",
+    "category"      : "primitive",
+    "description"   : "A knapped flint chip. Sharp edge, primitive cutting tool blank.",
+    "color"         : "#888888",
+    "amount"        : 0,
+    "gatheringTypes": ["foraging", "mining"]
   },
   {
-    "id"         : "plant_fiber",
-    "name"       : "Plant Fiber",
-    "type"       : "material",
-    "category"   : "primitive",
-    "description": "Stripped plant stalks. Twisted into rope, woven into walls.",
-    "color"      : "#7EC850",
-    "amount"     : 0,
-    "fuelValue"  : 2,
-    "gatheringTypes"  : ["foraging"]
+    "id"            : "plant_fiber",
+    "name"          : "Plant Fiber",
+    "type"          : "material",
+    "category"      : "primitive",
+    "description"   : "Stripped plant stalks. Twisted into rope, woven into walls.",
+    "color"         : "#7EC850",
+    "amount"        : 0,
+    "fuelValue"     : 2,
+    "gatheringTypes": ["foraging"]
   },
   {
-    "id"         : "bark",
-    "name"       : "Bark",
-    "type"       : "material",
-    "category"   : "primitive",
-    "description": "Peeled tree bark. Burns slowly and steadily.",
-    "color"      : "#8B5E3C",
-    "amount"     : 0,
-    "fuelValue"  : 8,
-    "gatheringTypes"  : ["foraging"]
+    "id"            : "bark",
+    "name"          : "Bark",
+    "type"          : "material",
+    "category"      : "primitive",
+    "description"   : "Peeled tree bark. Burns slowly and steadily.",
+    "color"         : "#8B5E3C",
+    "amount"        : 0,
+    "fuelValue"     : 8,
+    "gatheringTypes": ["foraging"]
   },
   {
-    "id"         : "hay",
-    "name"       : "Hay",
-    "type"       : "material",
-    "category"   : "primitive",
-    "description": "Dried grass stalks. Soft bedding material, thatching, or animal fodder.",
-    "color"      : "#D4B44A",
-    "amount"     : 0,
-    "fuelValue"  : 4,
-    "gatheringTypes"  : ["foraging"]
+    "id"            : "hay",
+    "name"          : "Hay",
+    "type"          : "material",
+    "category"      : "primitive",
+    "description"   : "Dried grass stalks. Soft bedding material, thatching, or animal fodder.",
+    "color"         : "#D4B44A",
+    "amount"        : 0,
+    "fuelValue"     : 4,
+    "gatheringTypes": ["foraging"]
   },
   {
-    "id"         : "wood_log",
-    "name"       : "Wood Log",
-    "type"       : "material",
-    "category"   : "wood",
-    "description": "Rough cut logs of timber. Construction and fuel.",
-    "color"      : "#8B6914",
-    "amount"     : 0,
-    "fuelValue"  : 12,
-    "gatheringTypes"  : ["woodcutting"]
+    "id"            : "wood_log",
+    "name"          : "Wood Log",
+    "type"          : "material",
+    "category"      : "wood",
+    "description"   : "Rough cut logs of timber. Construction and fuel.",
+    "color"         : "#8B6914",
+    "amount"        : 0,
+    "fuelValue"     : 12,
+    "gatheringTypes": ["woodcutting"]
   },
   {
-    "id"         : "surface_stone",
-    "name"       : "Surface Stone",
-    "type"       : "material",
-    "category"   : "primitive",
-    "description": "A loose stone from the ground. Useful for hammering and building.",
-    "color"      : "#9E9E9E",
-    "amount"     : 0,
-    "gatheringTypes"  : ["foraging", "mining"]
+    "id"            : "surface_stone",
+    "name"          : "Surface Stone",
+    "type"          : "material",
+    "category"      : "primitive",
+    "description"   : "A loose stone from the ground. Useful for hammering and building.",
+    "color"         : "#9E9E9E",
+    "amount"        : 0,
+    "gatheringTypes": ["foraging", "mining"]
   },
   {
-    "id"         : "clay_lump",
-    "name"       : "Clay Lump",
-    "type"       : "material",
-    "category"   : "primitive",
-    "description": "Raw clay scooped from riverbank or bog.",
-    "color"      : "#B5651D",
-    "amount"     : 0,
-    "gatheringTypes"  : ["foraging"]
+    "id"            : "clay_lump",
+    "name"          : "Clay Lump",
+    "type"          : "material",
+    "category"      : "primitive",
+    "description"   : "Raw clay scooped from riverbank or bog.",
+    "color"         : "#B5651D",
+    "amount"        : 0,
+    "gatheringTypes": ["foraging"]
   },
   {
     "id"              : "cordage",
@@ -379,7 +404,7 @@
     "craftingTime"    : 1,
     "toolTierRequired": 0,
     "workshopType"    : "craft_spot",
-    "processingType": ["light"]
+    "processingType"  : ["light"]
   },
   {
     "id"              : "flint_knife",
@@ -396,7 +421,7 @@
     "craftingTime"    : 1,
     "toolTierRequired": 0,
     "workshopType"    : "craft_spot",
-    "processingType": ["crafting", "butchery"]
+    "processingType"  : ["crafting", "butchery"]
   },
   {
     "id"              : "flint_sickle",
@@ -413,7 +438,7 @@
     "craftingTime"    : 2,
     "toolTierRequired": 0,
     "workshopType"    : "craft_spot",
-    "processingType": ["foraging", "harvesting"],
+    "processingType"  : ["foraging", "harvesting"],
     "effects"         : {"foragingBonus": 0.5}
   },
   {
@@ -431,7 +456,7 @@
     "craftingTime"    : 1,
     "toolTierRequired": 0,
     "workshopType"    : "craft_spot",
-    "processingType": ["crafting", "woodcutting"]
+    "processingType"  : ["crafting", "woodcutting"]
   },
   {
     "id"              : "digging_stick",
@@ -446,7 +471,7 @@
     "craftingTime"    : 1,
     "toolTierRequired": 0,
     "workshopType"    : "craft_spot",
-    "processingType": ["crafting", "fishing", "mining"]
+    "processingType"  : ["crafting", "fishing", "mining"]
   },
   {
     "id"              : "stone_axe",
@@ -463,7 +488,7 @@
     "craftingTime"    : 3,
     "toolTierRequired": 0,
     "workshopType"    : "makers_bench",
-    "processingType": ["woodcutting"]
+    "processingType"  : ["woodcutting"]
   },
   {
     "id"              : "stone_hammer",
@@ -480,7 +505,7 @@
     "craftingTime"    : 3,
     "toolTierRequired": 0,
     "workshopType"    : "makers_bench",
-    "processingType": ["construction"]
+    "processingType"  : ["construction"]
   },
   {
     "id"              : "stone_spear",
@@ -498,7 +523,7 @@
     "toolTierRequired": 0,
     "workshopType"    : "makers_bench",
     "weaponProperties": {"damage": 8, "attackSpeed": 1, "range": 1},
-    "processingType": ["hunting"]
+    "processingType"  : ["hunting"]
   },
   {
     "id"              : "stone_spade",
@@ -515,7 +540,7 @@
     "craftingTime"    : 3,
     "toolTierRequired": 0,
     "workshopType"    : "makers_bench",
-    "processingType": ["construction", "mining"]
+    "processingType"  : ["construction", "mining"]
   },
   {
     "id"              : "clay_cooking_pot",
@@ -533,7 +558,7 @@
     "craftingTime"    : 2,
     "toolTierRequired": 0,
     "workshopType"    : "campfire",
-    "processingType": ["cooking"]
+    "processingType"  : ["cooking"]
   },
   {
     "id"              : "woven_basket",
@@ -551,92 +576,108 @@
     "workshopType"    : "makers_bench"
   },
   {
-    "id"         : "wolf_carcass",
-    "name"       : "Wolf Carcass",
-    "type"       : "material",
-    "category"   : "organic",
-    "description": "A slain wolf. Skin and process it for hide and meat.",
-    "color"      : "#B3B8C8",
-    "amount"     : 0,
-    "gatheringTypes"  : ["hunting"],
-    "processingType": ["butchery"]
+    "id"            : "wolf_carcass",
+    "name"          : "Wolf Carcass",
+    "type"          : "material",
+    "category"      : "organic",
+    "description"   : "A slain wolf. Skin and process it for hide and meat.",
+    "color"         : "#B3B8C8",
+    "amount"        : 0,
+    "gatheringTypes": ["hunting"],
+    "processingType": ["butchery"],
+    "decaySeconds"  : 300,
+    "decaysTo"      : "rotten_carcass"
   },
   {
-    "id"         : "bear_carcass",
-    "name"       : "Bear Carcass",
-    "type"       : "material",
-    "category"   : "organic",
-    "description": "A massive cave bear. Butcher it for prime cuts, hide, and fat.",
-    "color"      : "#8D6040",
-    "amount"     : 0,
-    "gatheringTypes"  : ["hunting"],
-    "processingType": ["butchery"]
+    "id"            : "bear_carcass",
+    "name"          : "Bear Carcass",
+    "type"          : "material",
+    "category"      : "organic",
+    "description"   : "A massive cave bear. Butcher it for prime cuts, hide, and fat.",
+    "color"         : "#8D6040",
+    "amount"        : 0,
+    "gatheringTypes": ["hunting"],
+    "processingType": ["butchery"],
+    "decaySeconds"  : 300,
+    "decaysTo"      : "rotten_carcass"
   },
   {
-    "id"         : "goblin_carcass",
-    "name"       : "Goblin Remains",
-    "type"       : "material",
-    "category"   : "organic",
-    "description": "A fallen goblin. Mostly bone and leather scraps.",
-    "color"      : "#66A64D",
-    "amount"     : 0,
-    "gatheringTypes"  : ["hunting"],
-    "processingType": ["butchery"]
+    "id"            : "goblin_carcass",
+    "name"          : "Goblin Remains",
+    "type"          : "material",
+    "category"      : "organic",
+    "description"   : "A fallen goblin. Mostly bone and leather scraps.",
+    "color"         : "#66A64D",
+    "amount"        : 0,
+    "gatheringTypes": ["hunting"],
+    "processingType": ["butchery"],
+    "decaySeconds"  : 300,
+    "decaysTo"      : "rotten_carcass"
   },
   {
-    "id"         : "giant_rat_carcass",
-    "name"       : "Giant Rat Carcass",
-    "type"       : "material",
-    "category"   : "organic",
-    "description": "A large dead rat. Lean, gamey meat if you're not picky.",
-    "color"      : "#8D7266",
-    "amount"     : 0,
-    "gatheringTypes"  : ["hunting"],
-    "processingType": ["butchery"]
+    "id"            : "giant_rat_carcass",
+    "name"          : "Giant Rat Carcass",
+    "type"          : "material",
+    "category"      : "organic",
+    "description"   : "A large dead rat. Lean, gamey meat if you're not picky.",
+    "color"         : "#8D7266",
+    "amount"        : 0,
+    "gatheringTypes": ["hunting"],
+    "processingType": ["butchery"],
+    "decaySeconds"  : 300,
+    "decaysTo"      : "rotten_carcass"
   },
   {
-    "id"         : "boar_carcass",
-    "name"       : "Boar Carcass",
-    "type"       : "material",
-    "category"   : "organic",
-    "description": "A slain wild boar. Process for meat, bone, and tusks.",
-    "color"      : "#C8A080",
-    "amount"     : 0,
-    "gatheringTypes"  : ["hunting"],
-    "processingType": ["butchery"]
+    "id"            : "boar_carcass",
+    "name"          : "Boar Carcass",
+    "type"          : "material",
+    "category"      : "organic",
+    "description"   : "A slain wild boar. Process for meat, bone, and tusks.",
+    "color"         : "#C8A080",
+    "amount"        : 0,
+    "gatheringTypes": ["hunting"],
+    "processingType": ["butchery"],
+    "decaySeconds"  : 300,
+    "decaysTo"      : "rotten_carcass"
   },
   {
-    "id"         : "elk_carcass",
-    "name"       : "Elk Carcass",
-    "type"       : "material",
-    "category"   : "organic",
-    "description": "A large elk. Yields generous cuts of venison, hide, and antler.",
-    "color"      : "#B09878",
-    "amount"     : 0,
-    "gatheringTypes"  : ["hunting"],
-    "processingType": ["butchery"]
+    "id"            : "elk_carcass",
+    "name"          : "Elk Carcass",
+    "type"          : "material",
+    "category"      : "organic",
+    "description"   : "A large elk. Yields generous cuts of venison, hide, and antler.",
+    "color"         : "#B09878",
+    "amount"        : 0,
+    "gatheringTypes": ["hunting"],
+    "processingType": ["butchery"],
+    "decaySeconds"  : 300,
+    "decaysTo"      : "rotten_carcass"
   },
   {
-    "id"         : "mountain_goat_carcass",
-    "name"       : "Mountain Goat Carcass",
-    "type"       : "material",
-    "category"   : "organic",
-    "description": "A mountain goat. Modest meat yield; hide is tough and durable.",
-    "color"      : "#D0D0D0",
-    "amount"     : 0,
-    "gatheringTypes"  : ["hunting"],
-    "processingType": ["butchery"]
+    "id"            : "mountain_goat_carcass",
+    "name"          : "Mountain Goat Carcass",
+    "type"          : "material",
+    "category"      : "organic",
+    "description"   : "A mountain goat. Modest meat yield; hide is tough and durable.",
+    "color"         : "#D0D0D0",
+    "amount"        : 0,
+    "gatheringTypes": ["hunting"],
+    "processingType": ["butchery"],
+    "decaySeconds"  : 300,
+    "decaysTo"      : "rotten_carcass"
   },
   {
-    "id"         : "wild_chicken_carcass",
-    "name"       : "Wild Chicken Carcass",
-    "type"       : "material",
-    "category"   : "organic",
-    "description": "A plucked wild chicken. Small but worth the effort.",
-    "color"      : "#E8C880",
-    "amount"     : 0,
-    "gatheringTypes"  : ["hunting"],
-    "processingType": ["butchery"]
+    "id"            : "wild_chicken_carcass",
+    "name"          : "Wild Chicken Carcass",
+    "type"          : "material",
+    "category"      : "organic",
+    "description"   : "A plucked wild chicken. Small but worth the effort.",
+    "color"         : "#E8C880",
+    "amount"        : 0,
+    "gatheringTypes": ["hunting"],
+    "processingType": ["butchery"],
+    "decaySeconds"  : 225,
+    "decaysTo"      : "rotten_carcass"
   },
   // ── Butchery products ───────────────────────────────────────────────────────
   // Creature-specific meats
@@ -653,7 +694,9 @@
     "craftingTime"    : 900,
     "toolTierRequired": 0,
     "workshopType"    : "butcher_spot",
-    "processingType": ["cooking"]
+    "processingType"  : ["cooking"],
+    "decaySeconds"    : 600,
+    "decaysTo"        : "rotten_meat"
   },
   {
     "id"              : "bear_meat",
@@ -668,7 +711,9 @@
     "craftingTime"    : 3600,
     "toolTierRequired": 0,
     "workshopType"    : "butcher_spot",
-    "processingType": ["cooking"]
+    "processingType"  : ["cooking"],
+    "decaySeconds"    : 900,
+    "decaysTo"        : "rotten_meat"
   },
   {
     "id"              : "boar_meat",
@@ -683,7 +728,9 @@
     "craftingTime"    : 900,
     "toolTierRequired": 0,
     "workshopType"    : "butcher_spot",
-    "processingType": ["cooking"]
+    "processingType"  : ["cooking"],
+    "decaySeconds"    : 600,
+    "decaysTo"        : "rotten_meat"
   },
   {
     "id"              : "elk_meat",
@@ -698,7 +745,9 @@
     "craftingTime"    : 3600,
     "toolTierRequired": 0,
     "workshopType"    : "butcher_spot",
-    "processingType": ["cooking"]
+    "processingType"  : ["cooking"],
+    "decaySeconds"    : 900,
+    "decaysTo"        : "rotten_meat"
   },
   {
     "id"              : "goat_meat",
@@ -713,7 +762,9 @@
     "craftingTime"    : 900,
     "toolTierRequired": 0,
     "workshopType"    : "butcher_spot",
-    "processingType": ["cooking"]
+    "processingType"  : ["cooking"],
+    "decaySeconds"    : 600,
+    "decaysTo"        : "rotten_meat"
   },
   {
     "id"              : "chicken_meat",
@@ -728,7 +779,9 @@
     "craftingTime"    : 200,
     "toolTierRequired": 0,
     "workshopType"    : "butcher_spot",
-    "processingType": ["cooking"]
+    "processingType"  : ["cooking"],
+    "decaySeconds"    : 450,
+    "decaysTo"        : "rotten_meat"
   },
   {
     "id"              : "rat_meat",
@@ -743,7 +796,9 @@
     "craftingTime"    : 200,
     "toolTierRequired": 0,
     "workshopType"    : "butcher_spot",
-    "processingType": ["cooking"]
+    "processingType"  : ["cooking"],
+    "decaySeconds"    : 450,
+    "decaysTo"        : "rotten_meat"
   },
   // Creature-specific hides / pelts
   {
@@ -758,7 +813,7 @@
     "craftingTime"    : 150,
     "toolTierRequired": 0,
     "workshopType"    : "butcher_spot",
-    "processingType": ["leatherworking"]
+    "processingType"  : ["leatherworking"]
   },
   {
     "id"              : "deer_hide",
@@ -772,7 +827,7 @@
     "craftingTime"    : 600,
     "toolTierRequired": 0,
     "workshopType"    : "butcher_spot",
-    "processingType": ["leatherworking"]
+    "processingType"  : ["leatherworking"]
   },
   {
     "id"              : "wolf_hide",
@@ -786,7 +841,7 @@
     "craftingTime"    : 600,
     "toolTierRequired": 0,
     "workshopType"    : "butcher_spot",
-    "processingType": ["leatherworking"]
+    "processingType"  : ["leatherworking"]
   },
   {
     "id"              : "bear_pelt",
@@ -800,7 +855,7 @@
     "craftingTime"    : 2400,
     "toolTierRequired": 0,
     "workshopType"    : "butcher_spot",
-    "processingType": ["leatherworking"]
+    "processingType"  : ["leatherworking"]
   },
   {
     "id"              : "boar_hide",
@@ -814,7 +869,7 @@
     "craftingTime"    : 600,
     "toolTierRequired": 0,
     "workshopType"    : "butcher_spot",
-    "processingType": ["leatherworking"]
+    "processingType"  : ["leatherworking"]
   },
   {
     "id"              : "elk_hide",
@@ -828,7 +883,7 @@
     "craftingTime"    : 2400,
     "toolTierRequired": 0,
     "workshopType"    : "butcher_spot",
-    "processingType": ["leatherworking"]
+    "processingType"  : ["leatherworking"]
   },
   {
     "id"              : "goat_hide",
@@ -842,7 +897,7 @@
     "craftingTime"    : 600,
     "toolTierRequired": 0,
     "workshopType"    : "butcher_spot",
-    "processingType": ["leatherworking"]
+    "processingType"  : ["leatherworking"]
   },
   {
     "id"              : "chicken_feathers",
@@ -856,7 +911,7 @@
     "craftingTime"    : 150,
     "toolTierRequired": 0,
     "workshopType"    : "butcher_spot",
-    "processingType": ["crafting"]
+    "processingType"  : ["crafting"]
   },
   {
     "id"              : "rat_pelt",
@@ -870,7 +925,7 @@
     "craftingTime"    : 150,
     "toolTierRequired": 0,
     "workshopType"    : "butcher_spot",
-    "processingType": ["leatherworking"]
+    "processingType"  : ["leatherworking"]
   },
   // Size-based bones (alternative sources via craftingCostAlternatives)
   {
@@ -917,5 +972,37 @@
     "toolTierRequired": 0,
     "workshopType": "butcher_spot",
     "processingType": ["crafting"]
+  },
+  // ── Spoiled / rotten items ──────────────────────────────────────────────────
+  {
+    "id"         : "rotten_food",
+    "name"       : "Rotten Food",
+    "type"       : "food",
+    "category"   : "food",
+    "description": "Spoiled plant matter, fish, or cooked food. Causes illness if eaten.",
+    "color"      : "#4E342E",
+    "amount"     : 0,
+    "nutrition"  : -2.0,
+    "effects"    : {"nausea": 1, "healthBonus": -0.5}
+  },
+  {
+    "id"         : "rotten_meat",
+    "name"       : "Rotten Meat",
+    "type"       : "food",
+    "category"   : "food",
+    "description": "Putrefied raw meat. Dangerous to consume. Still useful as animal bait.",
+    "color"      : "#3E2723",
+    "amount"     : 0,
+    "nutrition"  : -1.5,
+    "effects"    : {"nausea": 1, "healthBonus": -0.3}
+  },
+  {
+    "id"         : "rotten_carcass",
+    "name"       : "Rotten Carcass",
+    "type"       : "material",
+    "category"   : "organic",
+    "description": "A fully decomposed animal body. Inedible. Can be worked into fertiliser.",
+    "color"      : "#212121",
+    "amount"     : 0
   }
 ]

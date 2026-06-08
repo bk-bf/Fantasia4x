@@ -6,7 +6,7 @@
 
 ## Status
 
-**Phase A complete.** `Mob` type, `EntityService`, `Creatures.ts`, rendering, click/hover HUD cards, ENTITIES tab — all done.
+**Phases A and A.5 complete.** `Mob` type, `EntityService`, `Creatures.ts`, rendering, click/hover HUD cards, ENTITIES tab, hunger/diet/starvation/eatProgress — all done.
 Phases B–E not started. Two entity classes share a spawn
 model: hostile mobs (threat) and neutral animals (food/taming/mounts).
 
@@ -324,13 +324,13 @@ slows to base pawn speed until healed (vet work category, Phase E2 — deferred)
 - ~~Hover mob shows dim HUD info card (parity with pawns)~~
 - ~~ENTITIES tab (F9) listing live mobs with focus-on-map~~
 
-### Phase A.5 — Entity Hunger & Diet
+### Phase A.5 — Entity Hunger & Diet ✅ DONE
 
-- Add `EntityService.stepHunger(state)` — accrues `mob.hunger` each tick; triggers `Foraging`/`Hunting` FSM transitions
-- Herbivore foraging: pathfind to nearest grass tile, consume via `eatProgress` timer
-- Carnivore hunting: pursue nearest `Corpse` or live animal via existing `moveToward`; mini-combat roll on contact
-- Starvation damage: `hunger >= 100` → −1 HP / tick
-- Render `eatProgress` as world-effect progress bar overlay (reuse pawn task bar pipeline)
+- ~~Add `EntityService.stepHunger(state)` — accrues `mob.hunger` each tick; triggers `Foraging`/`Hunting` FSM transitions~~
+- ~~Herbivore foraging: pathfind to nearest grass tile, consume via `eatProgress` timer~~
+- ~~Carnivore hunting: pursue nearest `Corpse` or live animal via existing `moveToward`; mini-combat roll on contact~~
+- ~~Starvation damage: `hunger >= 100` → −1 HP / tick~~
+- ~~Render `eatProgress` as world-effect progress bar overlay (reuse pawn task bar pipeline)~~
 
 ### Phase B — Hunting & Butchering
 

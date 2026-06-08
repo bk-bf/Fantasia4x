@@ -381,6 +381,7 @@ export class GameEngineImpl implements GameEngine {
 				: (_label: string, fn: () => void) => fn();
 
 			t('needsTick', () => { this.gameState = pawnService.processNeedsTick(this.gameState!); });
+			t('itemDecay', () => { this.gameState = itemService.stepItemDecay(this.gameState!); });
 			t('researchTick', () => { this.gameState = researchService.processResearchTick(this.gameState!); });
 			t('workAssign', () => { this.gameState = workService.ensureBasicWorkAssignments(this.gameState!); });
 			t('generateJobs', () => { this.gameState = jobService.generateJobs(this.gameState!); });

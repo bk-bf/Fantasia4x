@@ -233,6 +233,9 @@
     color: var(--text-dim);
     font-size: 10px;
     letter-spacing: 0.02em;
+    min-width: 17ch;
+    display: inline-block;
+    text-align: center;
   }
   .bi.running {
     color: var(--pos);
