@@ -1,8 +1,12 @@
 /**
  * POST /api/debug-log
  *
- * Receives batched log lines from the client-side gameLogger and appends
- * them to .debug/game.log at the project root.
+ * Receives batched log lines from the client-side gameLogger and routes
+ * each line to a tag-specific file under .debug/:
+ *
+ *   .debug/entities.log  — ENTITY-*, MOB-SNAP, HUNT-UNREACHABLE
+ *   .debug/pawns.log     — PAWN-TICK, NEED-CHECK, STATE-CHG, JOB-EVT, MAP-SNAP
+ *   .debug/game.log      — everything else (catch-all)
  *
  * Dev-only: returns 204 with no side effects in production builds.
  *
@@ -16,8 +20,47 @@ import { appendFileSync, writeFileSync, mkdirSync, existsSync, statSync } from '
 import { join } from 'node:path';
 import type { RequestHandler } from './$types';
 
-/** Clear the log file once it grows past this size (bytes). */
-const MAX_LOG_BYTES = 500 * 1024 * 1024; // 500 MB
+/** Clear a log file once it grows past this size (bytes). */
+const MAX_LOG_BYTES = 100 * 1024 * 1024; // 100 MB per file
+
+/** Extract the bracketed tag from a log line, e.g. "[ENTITY-STATE]" → "ENTITY-STATE". */
+function extractTag(line: string): string {
+    const m = line.match(/\[([A-Z][A-Z0-9_-]*)\]/);
+    return m ? m[1] : '';
+}
+
+/** Decide which log file a line belongs to based on its tag. */
+function fileForTag(tag: string): string {
+    if (
+        tag.startsWith('ENTITY-') ||
+        tag === 'MOB-SNAP' ||
+        tag === 'HUNT-UNREACHABLE'
+    ) return 'entities.log';
+
+    if (
+        tag === 'PAWN-TICK' ||
+        tag === 'NEED-CHECK' ||
+        tag === 'STATE-CHG' ||
+        tag === 'JOB-EVT' ||
+        tag === 'MAP-SNAP'
+    ) return 'pawns.log';
+
+    return 'game.log';
+}
+
+/** Append lines to a size-capped log file, rotating (clearing) if it exceeds MAX_LOG_BYTES. */
+function appendToLog(logFile: string, lines: string[]): void {
+    if (lines.length === 0) return;
+    const payload = lines.join('\n') + '\n';
+    let size = 0;
+    try { size = statSync(logFile).size; } catch { size = 0; }
+    if (size >= MAX_LOG_BYTES) {
+        const banner = `=== log reset at ${new Date().toISOString()} (exceeded ${MAX_LOG_BYTES} bytes) ===\n`;
+        writeFileSync(logFile, banner + payload, 'utf8');
+    } else {
+        appendFileSync(logFile, payload, 'utf8');
+    }
+}
 
 export const POST: RequestHandler = async ({ request }) => {
     // No-op outside development so the route can safely be left in the build.
@@ -54,24 +97,17 @@ export const POST: RequestHandler = async ({ request }) => {
     const logDir = join(process.cwd(), '.debug');
     if (!existsSync(logDir)) mkdirSync(logDir, { recursive: true });
 
-    const logFile = join(logDir, 'game.log');
-    const payload = safeLines.join('\n') + '\n';
-
-    // Size-capped rotation: if the file has grown past MAX_LOG_BYTES, clear it
-    // (overwrite) instead of appending. Keeps full per-turn granularity while
-    // bounding disk use — even at 60 ticks/s the file simply resets when full.
-    let size = 0;
-    try {
-        size = statSync(logFile).size;
-    } catch {
-        size = 0;
+    // Group lines by destination file
+    const buckets = new Map<string, string[]>();
+    for (const line of safeLines) {
+        const dest = fileForTag(extractTag(line));
+        let bucket = buckets.get(dest);
+        if (!bucket) { bucket = []; buckets.set(dest, bucket); }
+        bucket.push(line);
     }
 
-    if (size >= MAX_LOG_BYTES) {
-        const banner = `=== log reset at ${new Date().toISOString()} (exceeded ${MAX_LOG_BYTES} bytes) ===\n`;
-        writeFileSync(logFile, banner + payload, 'utf8');
-    } else {
-        appendFileSync(logFile, payload, 'utf8');
+    for (const [filename, lines] of buckets) {
+        appendToLog(join(logDir, filename), lines);
     }
 
     return new Response(null, { status: 204 });

@@ -1431,8 +1431,34 @@
 
   function startLoop() {
     let lastFpsPush = 0;
-    // Per-phase timing for slow-frame logging (enabled via globalThis.__perfFollow=true).
+
+    // ── Frame profiler ────────────────────────────────────────────────────────
+    // Enable with: globalThis.__perfFollow = true
+    // Disable with: globalThis.__perfFollow = false
+    //
+    // Prints a rolling 1-second summary (avg ± max per phase) to the console,
+    // plus a ★ spike line for any individual frame that exceeds 20 ms.
+    // Phase labels: sim | overlay | cam | desgn | webgl | TOTAL
     const ph = { sim: 0, overlay: 0, cam: 0, desgn: 0, webgl: 0 };
+
+    // Accumulator for the current 1-second window
+    type Acc = { sum: number; max: number; n: number };
+    const mkAcc = (): Acc => ({ sum: 0, max: 0, n: 0 });
+    let acc = {
+      sim: mkAcc(), overlay: mkAcc(), cam: mkAcc(),
+      desgn: mkAcc(), webgl: mkAcc(), total: mkAcc()
+    };
+    let accStart = 0;
+
+    function recordAcc(key: keyof typeof acc, v: number) {
+      acc[key].sum += v; acc[key].n++;
+      if (v > acc[key].max) acc[key].max = v;
+    }
+    function fmtAcc(a: Acc): string {
+      return a.n ? `${(a.sum / a.n).toFixed(1)}/${a.max.toFixed(1)}` : '-';
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
     function frame() {
       if (!renderer || !ready) return;
       const now = performance.now();
@@ -1443,28 +1469,29 @@
       const smoothDt = Math.min(dt, 0.05);
 
       const prof = (globalThis as any).__perfFollow as boolean | undefined;
+      let t0 = 0;
 
-      let t0 = prof ? performance.now() : 0;
+      if (prof) { t0 = performance.now(); if (!accStart) accStart = now; }
       gameState.stepSimulation(dt * 1000);
       if (prof) ph.sim = performance.now() - t0;
 
-      t0 = prof ? performance.now() : 0;
+      if (prof) t0 = performance.now();
       updatePawnOverlay(smoothDt);
       if (prof) ph.overlay = performance.now() - t0;
 
-      t0 = prof ? performance.now() : 0;
+      if (prof) t0 = performance.now();
       updateCameraFollow(smoothDt);
       updateCameraFollowMob(smoothDt);
       if (prof) ph.cam = performance.now() - t0;
 
-      t0 = prof ? performance.now() : 0;
+      if (prof) t0 = performance.now();
       updateWorldEffectOverlays();
       // Single drawDesignations() per frame — removed from setView so follow mode
       // no longer triggers a full Canvas2D clear + sprite redraw 60×/sec.
       drawDesignations();
       if (prof) ph.desgn = performance.now() - t0;
 
-      t0 = prof ? performance.now() : 0;
+      if (prof) t0 = performance.now();
       renderer.setOverlayGrid(pawnOverlayGrid);
       renderer.beginFrame();
       renderer.endFrame();
@@ -1472,10 +1499,34 @@
 
       if (prof) {
         const total = ph.sim + ph.overlay + ph.cam + ph.desgn + ph.webgl;
-        if (total > 16) {
+        recordAcc('sim',     ph.sim);
+        recordAcc('overlay', ph.overlay);
+        recordAcc('cam',     ph.cam);
+        recordAcc('desgn',   ph.desgn);
+        recordAcc('webgl',   ph.webgl);
+        recordAcc('total',   total);
+
+        // Spike: any frame over 20 ms gets an immediate line
+        if (total > 20) {
           console.log(
-            `[FRAME ${total.toFixed(1)}ms] sim=${ph.sim.toFixed(1)} overlay=${ph.overlay.toFixed(1)} cam=${ph.cam.toFixed(1)} desgn=${ph.desgn.toFixed(1)} webgl=${ph.webgl.toFixed(1)}`
+            `★ SPIKE ${total.toFixed(1)}ms  sim=${ph.sim.toFixed(1)} overlay=${ph.overlay.toFixed(1)} cam=${ph.cam.toFixed(1)} desgn=${ph.desgn.toFixed(1)} webgl=${ph.webgl.toFixed(1)}`
           );
+        }
+
+        // Rolling 1-second summary (avg/max per phase)
+        if (now - accStart >= 1000) {
+          const fps = acc.total.n;
+          console.log(
+            `[PERF 1s | ${fps}fps]  ` +
+            `sim=${fmtAcc(acc.sim)}  overlay=${fmtAcc(acc.overlay)}  ` +
+            `cam=${fmtAcc(acc.cam)}  desgn=${fmtAcc(acc.desgn)}  ` +
+            `webgl=${fmtAcc(acc.webgl)}  TOTAL=${fmtAcc(acc.total)} ms (avg/max)`
+          );
+          acc = {
+            sim: mkAcc(), overlay: mkAcc(), cam: mkAcc(),
+            desgn: mkAcc(), webgl: mkAcc(), total: mkAcc()
+          };
+          accStart = now;
         }
       }
 
