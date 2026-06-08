@@ -23,10 +23,13 @@ import type { RequestHandler } from './$types';
 /** Clear a log file once it grows past this size (bytes). */
 const MAX_LOG_BYTES = 100 * 1024 * 1024; // 100 MB per file
 
-/** Extract the bracketed tag from a log line, e.g. "[ENTITY-STATE]" → "ENTITY-STATE". */
+/** Extract the bracketed tag from a log line, e.g. "[ENTITY-STATE]" → "ENTITY-STATE".
+ *  Skips the turn-number token [T0000] which appears before the real tag. */
 function extractTag(line: string): string {
-    const m = line.match(/\[([A-Z][A-Z0-9_-]*)\]/);
-    return m ? m[1] : '';
+    for (const m of line.matchAll(/\[([A-Z][A-Z0-9_-]*)\]/g)) {
+        if (!/^T\d+$/.test(m[1])) return m[1];
+    }
+    return '';
 }
 
 /** Decide which log file a line belongs to based on its tag. */
