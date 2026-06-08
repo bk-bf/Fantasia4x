@@ -13,6 +13,9 @@ import {
 } from '../core/PawnEquipment';
 import { modifierSystem } from '../systems/ModifierSystem';
 
+// Module-level counter for sequential debug IDs across all generated pawns.
+let _pawnDebugIdCounter = 1;
+
 // Update generatePawns function
 export function generatePawns(race: Race, count?: number): Pawn[] {
 	const pawns: Pawn[] = [];
@@ -24,6 +27,7 @@ export function generatePawns(race: Race, count?: number): Pawn[] {
 
 		const pawn: Pawn = {
 			id: `pawn-${i}`,
+			debugId: _pawnDebugIdCounter++,
 			name: generatePawnName(),
 			stats: finalStats,
 			physicalTraits: rollPhysicalTraits(race.physicalTraits),

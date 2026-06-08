@@ -28,7 +28,8 @@
   const WORKSHOP_SECTIONS: Array<{ id: string; label: string }> = [
     { id: 'craft_spot', label: 'CRAFT SPOT' },
     { id: 'campfire', label: 'CAMPFIRE' },
-    { id: 'makers_bench', label: "MAKER'S BENCH" }
+    { id: 'makers_bench', label: "MAKER'S BENCH" },
+    { id: 'butcher_spot', label: 'BUTCHER SPOT' }
   ];
 
   $: getItemAmount = (itemId: string): number => itemMap[itemId] || 0;
@@ -38,6 +39,9 @@
   // visible for built stations; the per-item craftable flag controls the CRAFT button.
   $: allCraftableItems = $gameState
     ? (ITEMS_DATABASE as Item[]).filter((item) => {
+        // Include carcass items for butchery
+        if (item.isCarcass && item.yields) return true;
+        // Include regular craftable items
         if (!item.craftingCost) return false;
         if (item.researchRequired && !completedResearch.includes(item.researchRequired))
           return false;
@@ -124,6 +128,7 @@
   }
 </script>
 
+4713:1898827
 <div class="crafting-screen">
   <div class="screen-hdr">
     | CRAFTING
@@ -155,11 +160,14 @@
   <!-- Workshop sections: built stations first, unbuilt collapsed -->
   {#each WORKSHOP_SECTIONS as ws}
     <!-- CRAFT SPOT also shows items with no workshopType (basic crafting needs a safe spot) -->
-    {@const wsItems = allCraftableItems.filter((i) =>
-      ws.id === 'craft_spot'
+    {@const wsItems = allCraftableItems.filter((i) => {
+      // Carcass items go to butcher_spot
+      if (i.isCarcass && i.yields) return ws.id === 'butcher_spot';
+      // Regular items go to their workshopType
+      return ws.id === 'craft_spot'
         ? (i.workshopType ?? null) === 'craft_spot' || (i.workshopType ?? null) === null
-        : (i.workshopType ?? null) === ws.id
-    )}
+        : (i.workshopType ?? null) === ws.id;
+    })}
     {@const wsBuilt = availableBuildings.includes(ws.id)}
     {@const stationKey = ws.id}
     {@const assignedPawnId = stationAssignments[stationKey] ?? null}
@@ -190,28 +198,55 @@
       {#if wsItems.length > 0}
         {#each wsItems as item}
           {@const craftable = $gameState !== null && itemService.canCraftItem(item.id, $gameState)}
-          {@const affordable = item.craftingCost
-            ? Object.entries(item.craftingCost).every(
-                ([id, n]) => getItemAmount(id) >= (n as number)
-              )
-            : true}
+          {@const isCarcass = item.isCarcass && item.yields}
+          {@const affordable = isCarcass
+            ? getItemAmount(item.id) > 0
+            : item.craftingCost
+              ? Object.entries(item.craftingCost).every(
+                  ([id, n]) => getItemAmount(id) >= (n as number)
+                )
+              : true}
           <div class="recipe-row">
             <span class="recipe-name">{getTypeIcon(item.type ?? '')} {item.name.toUpperCase()}</span
             >
-            <span class="recipe-cost">
-              {#if item.craftingCost && Object.keys(item.craftingCost).length > 0}
-                {#each Object.entries(item.craftingCost) as [id, n], ci}
-                  {@const have = getItemAmount(id)}
+            {#if isCarcass}
+              {@const intactness = $gameState?.carcassIntactness?.[item.id] ?? 100}
+              {@const pct = Math.round(intactness)}
+              <span
+                class="intactness-badge"
+                style="color:{pct >= 70 ? 'var(--pos)' : pct >= 35 ? '#e8b830' : 'var(--neg)'}"
+              >
+                {pct}%
+              </span>
+              <span class="recipe-cost">
+                {#each item.yields as output, ci}
+                  {@const outputDef = itemService.getItemById(output.item)}
+                  {@const intactnessFraction = intactness / 100}
+                  {@const minScaled = Math.max(1, Math.round(output.min * intactnessFraction))}
+                  {@const maxScaled = Math.max(1, Math.round(output.max * intactnessFraction))}
                   {#if ci > 0}<span class="cost-sep">·</span>{/if}
-                  <span class="cost-item" class:neg-text={have < (n as number)}>
-                    {id.replace(/_/g, ' ')} <span class="cost-qty">×{n}</span>
-                    <span class="cost-have" class:neg-text={have < (n as number)}>({have})</span>
+                  <span class="cost-item">
+                    {outputDef?.name ?? output.item}
+                    <span class="cost-qty">×{minScaled}-{maxScaled}</span>
                   </span>
                 {/each}
-              {:else}
-                <span class="muted-text">free</span>
-              {/if}
-            </span>
+              </span>
+            {:else}
+              <span class="recipe-cost">
+                {#if item.craftingCost && Object.keys(item.craftingCost).length > 0}
+                  {#each Object.entries(item.craftingCost) as [id, n], ci}
+                    {@const have = getItemAmount(id)}
+                    {#if ci > 0}<span class="cost-sep">·</span>{/if}
+                    <span class="cost-item" class:neg-text={have < (n as number)}>
+                      {id.replace(/_/g, ' ')} <span class="cost-qty">×{n}</span>
+                      <span class="cost-have" class:neg-text={have < (n as number)}>({have})</span>
+                    </span>
+                  {/each}
+                {:else}
+                  <span class="muted-text">free</span>
+                {/if}
+              </span>
+            {/if}
             <button
               class="act-btn-sm"
               class:active={craftable}
@@ -220,7 +255,7 @@
             >
               {#if !affordable}MISSING
               {:else if !craftable}BLOCKED
-              {:else}CRAFT{/if}
+              {:else}{isCarcass ? 'BUTCHER' : 'CRAFT'}{/if}
             </button>
           </div>
         {/each}
@@ -389,6 +424,14 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  .intactness-badge {
+    font-size: 9px;
+    padding: 1px 4px;
+    border: 1px solid currentColor;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
 
   .recipe-cost {

@@ -172,6 +172,8 @@ export interface GameState {
 	mobs?: Mob[];
 	/** ENTITIES_SPAWNING Phase C: animals tamed and bound to a pawn. */
 	tamedAnimals?: TamedAnimal[];
+	/** Intactness (0–100) for each carcass item type currently in the stockpile. */
+	carcassIntactness?: Record<string, number>;
 }
 
 // ===== ENTITIES (ENTITIES_SPAWNING spec) =====
@@ -202,6 +204,8 @@ export type MobState =
  */
 export interface Mob {
 	id: string;
+	/** Sequential integer shown in debug mode next to the entity name. */
+	debugId?: number;
 	creatureId: string;
 	entityClass: 'mob' | 'animal';
 	x: number;
@@ -236,6 +240,8 @@ export interface Mob {
 	eatProgress?: number;
 	/** Target entity id when in Hunting state. */
 	huntTargetId?: string;
+	/** Tick when the hunter can re-enter Hunting state after a failed hunt. */
+	huntCooldownUntil?: number;
 	// ── Survival & health (same system as Pawn) ──────────────────────────────
 	/** Per-limb health state (same 6-limb model as Pawn). */
 	limbs?: LimbState[];
@@ -385,6 +391,8 @@ export interface PawnState {
 
 export interface Pawn {
 	id: string;
+	/** Sequential integer shown in debug mode next to the entity name. */
+	debugId?: number;
 	name: string;
 	inventory: PawnInventory;
 	equipment: PawnEquipment;
@@ -672,7 +680,18 @@ export interface Item {
 	amount: number;
 	description?: string; // Optional description for lore or flavor text
 	properties?: Record<string, any>;
-	workTypes?: string[]; // Work categories this item can be used in
+	/** Gathering work types that produce this item from the world (e.g. foraging, hunting, mining). */
+	gatheringTypes?: string[];
+	/** Work categories that can use/process this item (e.g. butchery, cooking, leatherworking). */
+	processingType?: string[];
+	/** True if this item is an animal carcass subject to intactness decay. */
+	isCarcass?: boolean;
+	/** Butchery yields: what items this carcass produces and in what quantities. */
+	yields?: Array<{
+		item: string;
+		min: number;
+		max: number;
+	}>;
 	/**
 	 * Dynamic recipe slots — each key is a slot name (e.g. "meat").
 	 * Any item whose `category` matches `acceptsCategory` can fill that slot;

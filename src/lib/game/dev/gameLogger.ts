@@ -85,7 +85,8 @@ class GameLoggerImpl {
             const pos = p.position ? `(${p.position.x},${p.position.y})` : '(-,-)';
             const h = (p.needs?.hunger ?? 0).toFixed(0);
             const f = (p.needs?.fatigue ?? 0).toFixed(0);
-            return `${p.name}:${p.currentState ?? 'Idle'}@${pos} H${h}/F${f}`;
+            const idTag = p.debugId != null ? `#${p.debugId} ` : '';
+            return `${idTag}${p.name}:${p.currentState ?? 'Idle'}@${pos} H${h}/F${f}`;
         });
 
         const msg =
@@ -95,6 +96,32 @@ class GameLoggerImpl {
             ` | ${pawnLines.join(' | ')}`;
 
         this.log(gs.turn, 'MAP-SNAP', msg);
+
+        // Mob summary — emit if any entities are present.
+        const mobs = gs.mobs ?? [];
+        if (mobs.length > 0) {
+            const byState: Record<string, number> = {};
+            let hungry = 0;
+            let dead = 0;
+            for (const m of mobs) {
+                byState[m.state] = (byState[m.state] ?? 0) + 1;
+                if (m.state === 'Corpse') dead++;
+                else if (m.needs.hunger >= 80) hungry++;
+            }
+            const stateSummary = Object.entries(byState)
+                .map(([s, n]) => `${s}:${n}`)
+                .join(' ');
+            const mobLines = mobs
+                .filter((m) => m.state !== 'Corpse')
+                .slice(0, 10)
+                .map((m) => {
+                    const idTag = m.debugId != null ? `#${m.debugId} ` : '';
+                    return `${idTag}${m.creatureId}:${m.state}@(${m.x},${m.y})`;
+                })
+                .join(' | ');
+            const mobSuffix = mobs.filter((m) => m.state !== 'Corpse').length > 10 ? ' …' : '';
+            this.log(gs.turn, 'MOB-SNAP', `total:${mobs.length} ${stateSummary} hungry(≥80):${hungry} corpses:${dead} | ${mobLines}${mobSuffix}`);
+        }
     }
 
     /**

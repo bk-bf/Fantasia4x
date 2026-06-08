@@ -476,8 +476,8 @@ export class ModifierSystemImpl implements ModifierSystem {
 		const workBonuses: Record<string, Record<string, number>> = {};
 
 		ITEMS_DATABASE.forEach((item) => {
-			if (item.workTypes && item.effects) {
-				item.workTypes.forEach((workType) => {
+			if (item.processingType && item.effects) {
+				item.processingType.forEach((workType) => {
 					if (!workBonuses[workType]) {
 						workBonuses[workType] = {};
 					}
@@ -688,7 +688,7 @@ export class ModifierSystemImpl implements ModifierSystem {
 				const item = ITEMS_DATABASE.find((i) => i.id === equipped.itemId);
 				if (item) {
 					// Check if item is suitable for this work type
-					if (item.workTypes && item.workTypes.includes(workType)) {
+					if (item.processingType && item.processingType.includes(workType)) {
 						// Auto-discover work bonus from item effects
 						const workBonus = this.calculateItemWorkBonus(item, workType);
 						if (workBonus > 1.0) {

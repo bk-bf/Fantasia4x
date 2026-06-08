@@ -55,9 +55,9 @@ const HUNGER_EAT_THRESHOLD = 50;
 /** Hunger threshold at which a feeding entity considers itself sated. */
 const HUNGER_SATED_THRESHOLD = 10;
 /** Tile radius searched for edible grass resources. */
-const FORAGE_RADIUS = 15;
+const FORAGE_RADIUS = 120;
 /** Tile radius searched for prey (corpse or live animal). */
-const HUNT_RADIUS = 20;
+const HUNT_RADIUS = 150;
 /** Real-time duration to eat a grass tile (seconds). */
 const EAT_GRASS_SECONDS = 1.25;
 /** Real-time duration to consume a corpse (seconds). */
@@ -70,6 +70,8 @@ const EAT_CORPSE_HUNGER_RESTORE = 50;
 const CORPSE_PORTION = 0.25;
 /** Average wander-step decisions per second while grazing (idle fraction excluded). */
 const WANDER_MOVES_PER_SECOND = 1.0;
+/** Cooldown after a failed hunt before the entity can re-enter Hunting state (seconds). */
+const HUNT_COOLDOWN_SECONDS = 60;
 /** Fatigue level at which mobs enter sleep — set lower than pawn (60 vs 72) so animals
  * sleep more naturally and spend a realistic fraction of time resting. */
 const SLEEP_FATIGUE_THRESHOLD = 60;
@@ -217,7 +219,8 @@ class EntityServiceImpl {
             lastMeal: turn
         };
         return {
-            id: `mob-${def.id}-${turn}-${this.idCounter++}`,
+            id: `mob-${def.id}-${turn}-${this.idCounter}`,
+            debugId: this.idCounter++,
             creatureId: def.id,
             entityClass: def.entityClass,
             x,
@@ -359,6 +362,20 @@ class EntityServiceImpl {
         // FSM runs every tick. Movement advancement is handled separately by
         // advanceMobMovement(), which uses the shared MovementSystem path engine.
         const turn = state.turn;
+
+        // Periodic entity-state snapshot — every 300 turns (~5 s at 60 tps).
+        if (turn % 300 === 0) {
+            const pathLen = mob.path?.length ?? 0;
+            const pathIdx = mob.pathIndex ?? 0;
+            gameLogger.log(
+                turn, 'ENTITY-STATE',
+                `${def.id}#${mob.id.slice(-6)} state=${mob.state} pos=(${mob.x},${mob.y})` +
+                ` hunger=${mob.needs.hunger.toFixed(1)} fatigue=${mob.needs.fatigue.toFixed(1)}` +
+                ` path=${pathLen > 0 ? `${pathIdx}/${pathLen} end=(${mob.path![pathLen - 1].x},${mob.path![pathLen - 1].y})` : 'none'}` +
+                (mob.huntTargetId ? ` prey=${mob.huntTargetId.slice(-6)}` : '')
+            );
+        }
+
         const nearest = this.nearestPawn(mob, pawns);
         const inVision =
             nearest && this.dist(mob, nearest.pos) <= def.stats.visionRange ? nearest : null;
@@ -390,7 +407,7 @@ class EntityServiceImpl {
 
         // Wounded entities flee regardless of state.
         if (mob.health <= mob.maxHealth * FLEE_HEALTH_FRACTION && mob.state !== 'Fleeing') {
-            return { ...mob, state: 'Fleeing', stateSince: turn, eatProgress: undefined, huntTargetId: undefined };
+            return { ...mob, state: 'Fleeing', stateSince: turn, eatProgress: undefined, huntTargetId: undefined, path: [] };
         }
 
         // Huntable neutral animals (boar, elk, etc.) also react to predators and pack deaths.
@@ -399,7 +416,7 @@ class EntityServiceImpl {
         if (def.huntable && mob.state !== 'Fleeing' && mob.state !== 'Attacking') {
             const predThreat = this.nearestPredatorThreat(mob, def, allMobs);
             if (predThreat) {
-                return { ...mob, state: 'Fleeing', stateSince: turn, eatProgress: undefined, huntTargetId: undefined };
+                return { ...mob, state: 'Fleeing', stateSince: turn, eatProgress: undefined, huntTargetId: undefined, path: [] };
             }
             // Corpse alarm: visible pack-mate corpse triggers panic flight.
             const packCorpse = allMobs.find(
@@ -408,7 +425,7 @@ class EntityServiceImpl {
                     this.dist(mob, { x: m.x, y: m.y }) <= def.stats.visionRange
             );
             if (packCorpse) {
-                return { ...mob, state: 'Fleeing', stateSince: turn, eatProgress: undefined, huntTargetId: undefined };
+                return { ...mob, state: 'Fleeing', stateSince: turn, eatProgress: undefined, huntTargetId: undefined, path: [] };
             }
         }
 
@@ -429,7 +446,7 @@ class EntityServiceImpl {
         }
         if (!inVision && canHunt && mob.needs.hunger >= HUNGER_EAT_THRESHOLD &&
             mob.state !== 'Fleeing' && mob.state !== 'Sleeping') {
-            return { ...mob, state: 'Hunting', stateSince: turn };
+            return { ...mob, state: 'Hunting', stateSince: turn, path: [] };
         }
 
         // ── Fatigue-driven sleep (safe, no pawn in vision, not hungry) ──────────
@@ -528,7 +545,7 @@ class EntityServiceImpl {
 
             // Exit feeding states when sated.
             if (sated && (mob.state === 'Foraging' || mob.state === 'Hunting')) {
-                return { ...mob, state: 'Grazing', stateSince: turn, eatProgress: undefined, huntTargetId: undefined };
+                return { ...mob, state: 'Grazing', stateSince: turn, eatProgress: undefined, huntTargetId: undefined, path: [] };
             }
 
             // Enter a feeding state — hunger takes priority over sleep so animals eat before resting.
@@ -536,8 +553,10 @@ class EntityServiceImpl {
                 mob.state !== 'Fleeing' && mob.state !== 'Startled' && mob.state !== 'Sleeping') {
                 const canForage = def.diet !== 'carnivore';
                 const canHunt = def.diet !== 'herbivore';
-                if (canForage) return { ...mob, state: 'Foraging', stateSince: turn };
-                if (canHunt) return { ...mob, state: 'Hunting', stateSince: turn };
+                // Check hunt cooldown before entering Hunting state.
+                const huntCooldownExpired = !mob.huntCooldownUntil || turn >= mob.huntCooldownUntil;
+                if (canForage) return { ...mob, state: 'Foraging', stateSince: turn, path: [] };
+                if (canHunt && huntCooldownExpired) return { ...mob, state: 'Hunting', stateSince: turn, path: [] };
             }
 
             // Enter sleep only when not hungry (mirrors pawn shouldPawnSleep).
@@ -549,19 +568,19 @@ class EntityServiceImpl {
             }
         } else if (mob.state === 'Foraging' || mob.state === 'Hunting') {
             // Threatened while eating — drop food and flee.
-            return { ...mob, state: 'Startled', stateSince: turn, eatProgress: undefined, huntTargetId: undefined };
+            return { ...mob, state: 'Startled', stateSince: turn, eatProgress: undefined, huntTargetId: undefined, path: [] };
         }
 
         switch (mob.state) {
             case 'Grazing': {
-                if (threat) return { ...mob, state: 'Startled', stateSince: turn };
+                if (threat) return { ...mob, state: 'Startled', stateSince: turn, path: [] };
                 return this.wanderStep(mob, def, state);
             }
             case 'Startled': {
                 // Herbivores bolt almost instantly; other animals freeze briefly.
                 const startledDuration = isHerbivore ? Math.ceil(STARTLED_TICKS * 0.3) : STARTLED_TICKS;
                 if (turn - mob.stateSince >= startledDuration) {
-                    return { ...mob, state: 'Fleeing', stateSince: turn };
+                    return { ...mob, state: 'Fleeing', stateSince: turn, path: [] };
                 }
                 return mob; // frozen
             }
@@ -575,23 +594,23 @@ class EntityServiceImpl {
                 const closestDist = Math.min(pawnDist, predDist);
                 // Flee until the threat is beyond this creature's defined flee range.
                 if (closestDist > def.stats.fleeRange) {
-                    return { ...mob, state: 'Grazing', stateSince: turn };
+                    return { ...mob, state: 'Grazing', stateSince: turn, path: [] };
                 }
                 const fleeFrom = pawnDist <= predDist ? nearest!.pos : predatorThreat!.pos;
                 return this.moveAway(mob, fleeFrom, state);
             }
             case 'Exhausted': {
                 if (turn - mob.stateSince > EXHAUST_RECOVER_TICKS) {
-                    return { ...mob, state: 'Grazing', stateSince: turn };
+                    return { ...mob, state: 'Grazing', stateSince: turn, path: [] };
                 }
                 return this.wanderStep(mob, def, state); // slow drift, vulnerable
             }
             case 'Sleeping': {
                 // Woken by any threat — bolt immediately.
-                if (threat) return { ...mob, state: 'Startled', stateSince: turn };
+                if (threat) return { ...mob, state: 'Startled', stateSince: turn, path: [] };
                 // Natural wake-up when rested, or force-wake when ravenously hungry.
                 if (mob.needs.fatigue <= sleepWakeThreshold(mob.needs.hunger) || mob.needs.hunger >= SLEEP_MAX_HUNGER) {
-                    return { ...mob, state: 'Grazing', stateSince: turn };
+                    return { ...mob, state: 'Grazing', stateSince: turn, path: [] };
                 }
                 return { ...mob, path: [] }; // stay still while sleeping
             }
@@ -602,7 +621,7 @@ class EntityServiceImpl {
             case 'Hunting':
                 return this.stepHunting(mob, def, turn, state, allMobs, pendingDamage, pendingMeatConsumption);
             default:
-                return { ...mob, state: 'Grazing', stateSince: turn };
+                return { ...mob, state: 'Grazing', stateSince: turn, path: [] };
         }
     }
 
@@ -655,7 +674,13 @@ class EntityServiceImpl {
 
         // Path done — decide next step.
         const target = this.findNearestEdibleTile(state, mob.x, mob.y, FORAGE_RADIUS);
-        if (!target) return this.wanderStep(mob, def, state);
+        if (!target) {
+            // No edible tile in range — exit Foraging state and wander.
+            if (turn % 300 === 0) {
+                gameLogger.log(turn, 'ENTITY-FEED', `FORAGE-NO-TARGET ${mob.id} @(${mob.x},${mob.y}) hunger=${mob.needs.hunger.toFixed(1)}`);
+            }
+            return { ...this.wanderStep(mob, def, state), state: 'Grazing', stateSince: turn };
+        }
 
         if (target.x === mob.x && target.y === mob.y) {
             return { ...mob, eatProgress: SECONDS_PER_TICK / EAT_GRASS_SECONDS, path: [] };
@@ -666,14 +691,16 @@ class EntityServiceImpl {
         const newPath = this.pathTo(state, mob.x, mob.y, target.x, target.y);
         if (!newPath.length) {
             gameLogger.log(turn, 'ENTITY-FEED', `FORAGE-UNREACHABLE ${mob.id} @(${mob.x},${mob.y}) food@(${target.x},${target.y})`);
-            return this.wanderStep(mob, def, state);
+            return { ...this.wanderStep(mob, def, state), state: 'Grazing', stateSince: turn };
         }
         return { ...mob, path: newPath, pathIndex: 0, nextCellCostLeft: undefined };
     }
 
     /**
-     * Advance a Hunting entity toward the nearest corpse or live animal, then eat.
-     * Mini-combat roll on contact with a live animal; no item spawns on kill.
+     * Advance a Hunting entity toward its locked target or find new prey.
+     * Once a target is locked (huntTargetId set), the hunter pursues it exclusively
+     * unless the target becomes invalid (gone, stripped) or a corpse appears (free food).
+     * If pathfinding fails, the hunter enters Wander with a cooldown before re-hunting.
      */
     private stepHunting(
         mob: Mob,
@@ -690,7 +717,8 @@ class EntityServiceImpl {
             const target = mob.huntTargetId ? allMobs.find((m) => m.id === mob.huntTargetId) : null;
             // Abort if target gone, stripped, or no longer a corpse.
             if (!target || target.state !== 'Corpse' || (target.intactness ?? 1.0) <= 0) {
-                return { ...mob, eatProgress: undefined, huntTargetId: undefined, path: [] };
+                const restState: MobState = def.behaviour === 'passive' ? 'Grazing' : 'Wander';
+                return { ...mob, eatProgress: undefined, huntTargetId: undefined, path: [], state: restState, stateSince: turn };
             }
             const next = progress + SECONDS_PER_TICK / EAT_CORPSE_SECONDS;
             if (next >= 1) {
@@ -714,8 +742,33 @@ class EntityServiceImpl {
             return { ...mob, eatProgress: next, path: [] };
         }
 
-        const prey = this.findNearestPrey(mob, allMobs);
-        if (!prey) return { ...mob, huntTargetId: undefined, ...this.wanderStep(mob, def, state) };
+        // Determine prey: lock onto existing target or find new prey.
+        let prey: Mob | null = null;
+        if (mob.huntTargetId) {
+            // Locked onto a target — stick with it unless it's invalid.
+            const lockedTarget = allMobs.find((m) => m.id === mob.huntTargetId);
+            if (lockedTarget && lockedTarget.state !== 'Tamed') {
+                // Target is valid. Allow switching to a corpse if one appears (free food).
+                if (lockedTarget.state === 'Corpse' && (lockedTarget.intactness ?? 1.0) <= 0) {
+                    // Locked target is stripped — clear and find new prey.
+                    prey = this.findNearestPrey(mob, allMobs);
+                } else {
+                    prey = lockedTarget;
+                }
+            } else {
+                // Locked target is gone — find new prey.
+                prey = this.findNearestPrey(mob, allMobs);
+            }
+        } else {
+            // No locked target — find nearest prey.
+            prey = this.findNearestPrey(mob, allMobs);
+        }
+
+        if (!prey) {
+            // No prey in range — exit Hunting state and wander.
+            const restState: MobState = def.behaviour === 'passive' ? 'Grazing' : 'Wander';
+            return { ...this.wanderStep(mob, def, state), huntTargetId: undefined, state: restState, stateSince: turn };
+        }
 
         const preyPos = { x: prey.x, y: prey.y };
 
@@ -723,7 +776,8 @@ class EntityServiceImpl {
             if (prey.state === 'Corpse') {
                 // Only start eating if meat remains (guards against race with pendingMeatConsumption).
                 if ((prey.intactness ?? 1.0) <= 0) {
-                    return { ...mob, huntTargetId: undefined, ...this.wanderStep(mob, def, state) };
+                    const restState: MobState = def.behaviour === 'passive' ? 'Grazing' : 'Wander';
+                    return { ...this.wanderStep(mob, def, state), huntTargetId: undefined, state: restState, stateSince: turn };
                 }
                 return { ...mob, huntTargetId: prey.id, eatProgress: SECONDS_PER_TICK / EAT_CORPSE_SECONDS, path: [] };
             }
@@ -739,12 +793,19 @@ class EntityServiceImpl {
         // drifted away from the path's end tile; otherwise keep following the route.
         const pathEnd = mob.path && mob.path.length > 0 ? mob.path[mob.path.length - 1] : null;
         const pathExhausted = !mob.path?.length || (mob.pathIndex ?? 0) >= mob.path.length;
-        const preyMoved = !pathEnd || this.posDist(pathEnd, preyPos) > 1.5;
+        const preyMoved = !pathEnd ||
+            Math.max(Math.abs(pathEnd.x - preyPos.x), Math.abs(pathEnd.y - preyPos.y)) > 1.5;
         if (pathExhausted || preyMoved) {
-            const newPath = this.pathTo(state, mob.x, mob.y, preyPos.x, preyPos.y);
+            // Path to an unoccupied tile adjacent to the prey so the wolf arrives in
+            // attack range without needing to land on the prey's own tile.
+            const approachTile = this.bestApproachTile(state, mob, preyPos, mob.id) ?? preyPos;
+            const newPath = this.pathTo(state, mob.x, mob.y, approachTile.x, approachTile.y);
             if (!newPath.length) {
                 gameLogger.log(turn, 'ENTITY-FEED', `HUNT-UNREACHABLE ${mob.id} @(${mob.x},${mob.y}) prey ${prey.id}@(${preyPos.x},${preyPos.y})`);
-                return { ...mob, huntTargetId: undefined, ...this.wanderStep(mob, def, state) };
+                // Set cooldown and transition to Wander.
+                const cooldownUntil = turn + ticksFromSeconds(HUNT_COOLDOWN_SECONDS);
+                const restState: MobState = def.behaviour === 'passive' ? 'Grazing' : 'Wander';
+                return { ...this.wanderStep(mob, def, state), huntTargetId: undefined, huntCooldownUntil: cooldownUntil, state: restState, stateSince: turn };
             }
             return { ...mob, huntTargetId: prey.id, path: newPath, pathIndex: 0, nextCellCostLeft: undefined };
         }
@@ -789,7 +850,6 @@ class EntityServiceImpl {
             if (candidate.id === mob.id) continue;
             const raw = Math.abs(candidate.x - mob.x) + Math.abs(candidate.y - mob.y);
             if (candidate.state === 'Corpse') {
-                if (raw > HUNT_RADIUS * 2) continue; // don't cross the map for carrion
                 if ((candidate.intactness ?? 1.0) <= 0) continue; // stripped — skip
                 // Corpses weighted as 50% closer — free food with no danger.
                 const d = raw * 0.5;
@@ -986,8 +1046,8 @@ class EntityServiceImpl {
         if (mob.path && mob.path.length > 0 && (mob.pathIndex ?? 0) < mob.path.length) return mob;
         // Probabilistic idle: ~WANDER_MOVES_PER_SECOND steps/sec on average.
         if (Math.random() >= WANDER_MOVES_PER_SECOND * SECONDS_PER_TICK) return mob;
-        const tile = this.findNearbyWalkable(state, mob.x, mob.y, mob.homeX, mob.homeY);
-        if (!tile || this.isOccupied(state, tile.x, tile.y, mob.id)) return mob;
+        const tile = this.findNearbyWalkable(state, mob.x, mob.y, mob.homeX, mob.homeY, mob.id);
+        if (!tile) return mob;
         return { ...mob, path: [tile], pathIndex: 0, nextCellCostLeft: undefined };
     }
 
@@ -999,6 +1059,33 @@ class EntityServiceImpl {
         return this.stepDirectional(mob, threat, state, -1);
     }
 
+    /**
+     * Nearest walkable tile adjacent to `target` (excluding target itself), ranked
+     * by Manhattan distance from `from`. Used so hunters path to a tile beside their
+     * prey rather than onto the prey's occupied tile.
+     */
+    private bestApproachTile(
+        state: GameState,
+        from: { x: number; y: number },
+        target: { x: number; y: number },
+        selfId: string
+    ): { x: number; y: number } | null {
+        let best: { x: number; y: number } | null = null;
+        let bestDist = Infinity;
+        for (let dy = -1; dy <= 1; dy++) {
+            for (let dx = -1; dx <= 1; dx++) {
+                if (dx === 0 && dy === 0) continue;
+                const nx = target.x + dx;
+                const ny = target.y + dy;
+                if (!this.isWalkable(state, nx, ny)) continue;
+                if (this.isOccupied(state, nx, ny, selfId)) continue;
+                const d = Math.abs(nx - from.x) + Math.abs(ny - from.y);
+                if (d < bestDist) { bestDist = d; best = { x: nx, y: ny }; }
+            }
+        }
+        return best;
+    }
+
     private stepDirectional(
         mob: Mob,
         ref: { x: number; y: number },
@@ -1007,25 +1094,45 @@ class EntityServiceImpl {
     ): Mob {
         const dx = Math.sign(ref.x - mob.x) * sign;
         const dy = Math.sign(ref.y - mob.y) * sign;
-        // Try diagonal first, then the two cardinal fallbacks.
-        const candidates = [
+        // Primary candidates: diagonal away + 2 cardinal fallbacks.
+        // Filter self-tile: when dx or dy is 0, one candidate can equal (mob.x, mob.y),
+        // which would produce a stuck self-referential path.
+        const primary = [
             { x: mob.x + dx, y: mob.y + dy },
             { x: mob.x + dx, y: mob.y },
             { x: mob.x, y: mob.y + dy }
-        ];
-        for (const c of candidates) {
+        ].filter(c => c.x !== mob.x || c.y !== mob.y);
+
+        for (const c of primary) {
             if (this.isWalkable(state, c.x, c.y) && !this.isOccupied(state, c.x, c.y, mob.id)) {
-                // If already stepping toward this exact tile, preserve the accumulated
-                // movement cost so advanceMobMovement can finish crossing it.
                 const currentNext = mob.path?.[mob.pathIndex ?? 0];
-                if (currentNext && currentNext.x === c.x && currentNext.y === c.y) {
-                    return mob;
-                }
-                // Direction changed — redirect immediately.
+                if (currentNext && currentNext.x === c.x && currentNext.y === c.y) return mob;
                 return { ...mob, path: [c], pathIndex: 0, nextCellCostLeft: undefined };
             }
         }
-        return mob;
+
+        // All primary directions blocked (cornered against terrain) — try the full 8
+        // neighbours sorted by how well they move away from / toward the reference point.
+        const allNeighbours = [
+            { x: mob.x - 1, y: mob.y - 1 }, { x: mob.x, y: mob.y - 1 }, { x: mob.x + 1, y: mob.y - 1 },
+            { x: mob.x - 1, y: mob.y }, { x: mob.x + 1, y: mob.y },
+            { x: mob.x - 1, y: mob.y + 1 }, { x: mob.x, y: mob.y + 1 }, { x: mob.x + 1, y: mob.y + 1 }
+        ].sort((a, b) => {
+            const dA = Math.abs(a.x - ref.x) + Math.abs(a.y - ref.y);
+            const dB = Math.abs(b.x - ref.x) + Math.abs(b.y - ref.y);
+            // sign = -1 (flee): maximise distance → sort descending
+            // sign = +1 (approach): minimise distance → sort ascending
+            return (dA - dB) * sign;
+        });
+
+        for (const c of allNeighbours) {
+            if (this.isWalkable(state, c.x, c.y) && !this.isOccupied(state, c.x, c.y, mob.id)) {
+                const currentNext = mob.path?.[mob.pathIndex ?? 0];
+                if (currentNext && currentNext.x === c.x && currentNext.y === c.y) return mob;
+                return { ...mob, path: [c], pathIndex: 0, nextCellCostLeft: undefined };
+            }
+        }
+        return mob; // truly boxed in on all sides
     }
 
     /**
@@ -1037,7 +1144,7 @@ class EntityServiceImpl {
         if (!mobs || mobs.length === 0) return state;
 
         // Snapshot of occupied tiles at the start of this tick.
-        // Used to block mobs from stepping onto tiles already claimed by another entity.
+        // Used to prevent two entities from coming to rest on the same tile simultaneously.
         const startOccupied = new Set<string>();
         for (const p of state.pawns) {
             if (p.position) startOccupied.add(`${p.position.x},${p.position.y}`);
@@ -1058,11 +1165,13 @@ class EntityServiceImpl {
             const def = getCreatureById(mob.creatureId);
             const speed = def ? Math.max(0.5, def.stats.speed) : 1;
             const moved = advanceAlongPath(mob, speed, state.worldMap);
-            // If the mob actually crossed into a new tile this tick, verify it's not
-            // occupied by another entity (using start-of-tick snapshot to avoid races).
-            if ((moved.x !== mob.x || moved.y !== mob.y) &&
-                startOccupied.has(`${moved.x},${moved.y}`)) {
-                // Blocked — clear path so the FSM reroutes next tick.
+            // Entities may pass THROUGH each other mid-path (RimWorld/DF model).
+            // Only enforce no-stacking when the mob has just finished its path
+            // (arrived at destination) and the destination tile is already occupied.
+            const justArrived = (!moved.path || moved.path.length === 0) &&
+                (mob.path && mob.path.length > 0);
+            if (justArrived && startOccupied.has(`${moved.x},${moved.y}`)) {
+                // Destination now occupied — clear path so FSM picks a new target.
                 next[i] = { ...mob, path: [], pathIndex: 0, nextCellCostLeft: undefined };
                 changed = true;
             } else {
@@ -1079,7 +1188,8 @@ class EntityServiceImpl {
         x: number,
         y: number,
         homeX?: number,
-        homeY?: number
+        homeY?: number,
+        selfId?: string
     ): { x: number; y: number } | null {
         const HOME_RANGE = 10;
         // Enumerate all 8 neighbours in random order (Fisher-Yates) so every walkable
@@ -1109,6 +1219,7 @@ class EntityServiceImpl {
             ) {
                 continue;
             }
+            if (selfId && this.isOccupied(state, nx, ny, selfId)) continue;
             return { x: nx, y: ny };
         }
         return null;
@@ -1154,11 +1265,6 @@ class EntityServiceImpl {
         return Math.max(Math.abs(pos.x - mob.x), Math.abs(pos.y - mob.y));
     }
 
-    /** Chebyshev distance between two plain points. */
-    private posDist(a: { x: number; y: number }, b: { x: number; y: number }): number {
-        return Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y));
-    }
-
     /**
      * WASM A* path from (sx,sy) to (ex,ey). Returns the route EXCLUDING the start
      * tile, or [] if WASM is not ready or the target is unreachable. Grid arrays are
@@ -1174,6 +1280,9 @@ class EntityServiceImpl {
     ): { x: number; y: number }[] {
         if (!wasmPathfinderService.isReady()) return [];
         const { walkable, costs, width, height } = buildPathfindingGrids(state.worldMap);
+        // Terrain-only grid: entities are not treated as walls so paths can route
+        // through occupied tiles (RimWorld / DF model). The movement engine enforces
+        // the no-stacking rule only at the final destination, not mid-path.
         return wasmPathfinderService.findPath(walkable, costs, width, height, sx, sy, ex, ey);
     }
 

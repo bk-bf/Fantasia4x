@@ -8,7 +8,7 @@
     "color"      : "#673AB7",
     "amount"     : 0,
     "nutrition"  : 1.0,
-    "workTypes"  : ["foraging"]
+    "gatheringTypes"  : ["foraging"]
   },
   {
     "id"         : "common_carp",
@@ -19,7 +19,7 @@
     "color"      : "#4FC3F7",
     "amount"     : 0,
     "nutrition"  : 1.6,
-    "workTypes"  : ["fishing"]
+    "gatheringTypes"  : ["fishing"]
   },
   {
     "id"         : "wild_oats",
@@ -30,7 +30,7 @@
     "color"      : "#FFA726",
     "amount"     : 0,
     "nutrition"  : 1.3,
-    "workTypes"  : ["foraging"]
+    "gatheringTypes"  : ["foraging"]
   },
   {
     "id"         : "herbs",
@@ -42,7 +42,7 @@
     "amount"     : 0,
     "nutrition"  : 0.5,
     "effects"    : {"healthBonus": 0.1},
-    "workTypes"  : ["foraging"]
+    "gatheringTypes"  : ["foraging"]
   },
   {
     "id"         : "river_trout",
@@ -53,7 +53,7 @@
     "color"      : "#FF8A65",
     "amount"     : 0,
     "nutrition"  : 1.8,
-    "workTypes"  : ["fishing"]
+    "gatheringTypes"  : ["fishing"]
   },
   {
     "id"         : "rabbit_carcass",
@@ -63,7 +63,8 @@
     "description": "Freshly hunted rabbit. Process it to get meat.",
     "color"      : "#8D4E85",
     "amount"     : 0,
-    "workTypes"  : ["hunting"]
+    "gatheringTypes"  : ["hunting"],
+    "processingType": ["butchery"]
   },
   {
     "id"         : "deer_carcass",
@@ -73,7 +74,8 @@
     "description": "A large game animal. Process for venison and hide.",
     "color"      : "#8D6E63",
     "amount"     : 0,
-    "workTypes"  : ["hunting"]
+    "gatheringTypes"  : ["hunting"],
+    "processingType": ["butchery"]
   },
   {
     "id"              : "rabbit_meat",
@@ -88,7 +90,7 @@
     "craftingTime"    : 200,
     "toolTierRequired": 0,
     "workshopType"    : "butcher_spot",
-    "workTypes"       : ["butchery"]
+    "processingType": ["cooking"]
   },
   {
     "id"              : "venison",
@@ -103,7 +105,7 @@
     "craftingTime"    : 900,
     "toolTierRequired": 0,
     "workshopType"    : "butcher_spot",
-    "workTypes"       : ["butchery"]
+    "processingType": ["cooking"]
   },
   {
     "id"         : "hide",
@@ -113,7 +115,7 @@
     "description": "Untreated animal skin.",
     "color"      : "#8D6E63",
     "amount"     : 0,
-    "workTypes"  : ["hunting"]
+    "processingType": ["leatherworking"]
   },
   {
     "id"              : "spit_meat",
@@ -173,8 +175,7 @@
     },
     "craftingTime"    : 2,
     "toolTierRequired": 0,
-    "workshopType"    : "campfire",
-    "workTypes"       : ["cooking"]
+    "workshopType"    : "campfire"
   },
   {
     "id"              : "stew",
@@ -239,8 +240,7 @@
     "craftingTime"    : 3,
     "toolTierRequired": 0,
     "workshopType"    : "campfire",
-    "components"      : [],
-    "workTypes"       : ["cooking"]
+    "components"      : []
   },
   {
     "id"         : "branch",
@@ -251,7 +251,7 @@
     "color"      : "#8B6914",
     "amount"     : 0,
     "fuelValue"  : 3,
-    "workTypes"  : ["foraging"]
+    "gatheringTypes"  : ["foraging"]
   },
   {
     "id"         : "small_stone",
@@ -261,7 +261,7 @@
     "description": "A small, loose stone. Useful for crafting.",
     "color"      : "#888888",
     "amount"     : 0,
-    "workTypes"  : ["foraging", "mining"]
+    "gatheringTypes"  : ["foraging", "mining"]
   },
   {
     "id"         : "flint_shard",
@@ -271,7 +271,7 @@
     "description": "A knapped flint chip. Sharp edge, primitive cutting tool blank.",
     "color"      : "#888888",
     "amount"     : 0,
-    "workTypes"  : ["foraging", "mining"]
+    "gatheringTypes"  : ["foraging", "mining"]
   },
   {
     "id"         : "plant_fiber",
@@ -282,7 +282,7 @@
     "color"      : "#7EC850",
     "amount"     : 0,
     "fuelValue"  : 2,
-    "workTypes"  : ["foraging"]
+    "gatheringTypes"  : ["foraging"]
   },
   {
     "id"         : "bark",
@@ -293,7 +293,7 @@
     "color"      : "#8B5E3C",
     "amount"     : 0,
     "fuelValue"  : 8,
-    "workTypes"  : ["foraging"]
+    "gatheringTypes"  : ["foraging"]
   },
   {
     "id"         : "hay",
@@ -304,7 +304,7 @@
     "color"      : "#D4B44A",
     "amount"     : 0,
     "fuelValue"  : 4,
-    "workTypes"  : ["foraging"]
+    "gatheringTypes"  : ["foraging"]
   },
   {
     "id"         : "wood_log",
@@ -315,7 +315,7 @@
     "color"      : "#8B6914",
     "amount"     : 0,
     "fuelValue"  : 12,
-    "workTypes"  : ["woodcutting"]
+    "gatheringTypes"  : ["woodcutting"]
   },
   {
     "id"         : "surface_stone",
@@ -325,7 +325,7 @@
     "description": "A loose stone from the ground. Useful for hammering and building.",
     "color"      : "#9E9E9E",
     "amount"     : 0,
-    "workTypes"  : ["foraging", "mining"]
+    "gatheringTypes"  : ["foraging", "mining"]
   },
   {
     "id"         : "clay_lump",
@@ -335,7 +335,7 @@
     "description": "Raw clay scooped from riverbank or bog.",
     "color"      : "#B5651D",
     "amount"     : 0,
-    "workTypes"  : ["foraging"]
+    "gatheringTypes"  : ["foraging"]
   },
   {
     "id"              : "cordage",
@@ -349,8 +349,7 @@
     "craftingCost"    : {"plant_fiber": 5},
     "craftingTime"    : 1,
     "toolTierRequired": 0,
-    "workshopType"    : "craft_spot",
-    "workTypes"       : ["crafting"]
+    "workshopType"    : "craft_spot"
   },
   {
     "id"              : "mud_brick",
@@ -363,8 +362,7 @@
     "craftingCost"    : {"clay_lump": 2},
     "craftingTime"    : 2,
     "toolTierRequired": 0,
-    "workshopType"    : "craft_spot",
-    "workTypes"       : ["crafting"]
+    "workshopType"    : "craft_spot"
   },
   {
     "id"              : "firestarter",
@@ -381,7 +379,7 @@
     "craftingTime"    : 1,
     "toolTierRequired": 0,
     "workshopType"    : "craft_spot",
-    "workTypes"       : ["crafting"]
+    "processingType": ["light"]
   },
   {
     "id"              : "flint_knife",
@@ -398,7 +396,7 @@
     "craftingTime"    : 1,
     "toolTierRequired": 0,
     "workshopType"    : "craft_spot",
-    "workTypes"       : ["crafting"]
+    "processingType": ["crafting", "butchery"]
   },
   {
     "id"              : "flint_sickle",
@@ -415,7 +413,7 @@
     "craftingTime"    : 2,
     "toolTierRequired": 0,
     "workshopType"    : "craft_spot",
-    "workTypes"       : ["foraging", "harvesting"],
+    "processingType": ["foraging", "harvesting"],
     "effects"         : {"foragingBonus": 0.5}
   },
   {
@@ -433,7 +431,7 @@
     "craftingTime"    : 1,
     "toolTierRequired": 0,
     "workshopType"    : "craft_spot",
-    "workTypes"       : ["crafting", "woodcutting"]
+    "processingType": ["crafting", "woodcutting"]
   },
   {
     "id"              : "digging_stick",
@@ -448,7 +446,7 @@
     "craftingTime"    : 1,
     "toolTierRequired": 0,
     "workshopType"    : "craft_spot",
-    "workTypes"       : ["crafting", "fishing"]
+    "processingType": ["crafting", "fishing", "mining"]
   },
   {
     "id"              : "stone_axe",
@@ -465,7 +463,7 @@
     "craftingTime"    : 3,
     "toolTierRequired": 0,
     "workshopType"    : "makers_bench",
-    "workTypes"       : ["crafting", "woodcutting"]
+    "processingType": ["woodcutting"]
   },
   {
     "id"              : "stone_hammer",
@@ -482,7 +480,7 @@
     "craftingTime"    : 3,
     "toolTierRequired": 0,
     "workshopType"    : "makers_bench",
-    "workTypes"       : ["crafting", "construction"]
+    "processingType": ["construction"]
   },
   {
     "id"              : "stone_spear",
@@ -500,7 +498,7 @@
     "toolTierRequired": 0,
     "workshopType"    : "makers_bench",
     "weaponProperties": {"damage": 8, "attackSpeed": 1, "range": 1},
-    "workTypes"       : ["crafting", "hunting"]
+    "processingType": ["hunting"]
   },
   {
     "id"              : "stone_spade",
@@ -517,7 +515,7 @@
     "craftingTime"    : 3,
     "toolTierRequired": 0,
     "workshopType"    : "makers_bench",
-    "workTypes"       : ["crafting", "construction", "mining"]
+    "processingType": ["construction", "mining"]
   },
   {
     "id"              : "clay_cooking_pot",
@@ -535,7 +533,7 @@
     "craftingTime"    : 2,
     "toolTierRequired": 0,
     "workshopType"    : "campfire",
-    "workTypes"       : ["crafting"]
+    "processingType": ["cooking"]
   },
   {
     "id"              : "woven_basket",
@@ -550,8 +548,7 @@
     "craftingCost"    : {"branch": 4, "cordage": 15},
     "craftingTime"    : 2,
     "toolTierRequired": 0,
-    "workshopType"    : "makers_bench",
-    "workTypes"       : ["crafting"]
+    "workshopType"    : "makers_bench"
   },
   {
     "id"         : "wolf_carcass",
@@ -561,7 +558,8 @@
     "description": "A slain wolf. Skin and process it for hide and meat.",
     "color"      : "#B3B8C8",
     "amount"     : 0,
-    "workTypes"  : ["hunting"]
+    "gatheringTypes"  : ["hunting"],
+    "processingType": ["butchery"]
   },
   {
     "id"         : "bear_carcass",
@@ -571,7 +569,8 @@
     "description": "A massive cave bear. Butcher it for prime cuts, hide, and fat.",
     "color"      : "#8D6040",
     "amount"     : 0,
-    "workTypes"  : ["hunting"]
+    "gatheringTypes"  : ["hunting"],
+    "processingType": ["butchery"]
   },
   {
     "id"         : "goblin_carcass",
@@ -581,7 +580,8 @@
     "description": "A fallen goblin. Mostly bone and leather scraps.",
     "color"      : "#66A64D",
     "amount"     : 0,
-    "workTypes"  : ["hunting"]
+    "gatheringTypes"  : ["hunting"],
+    "processingType": ["butchery"]
   },
   {
     "id"         : "giant_rat_carcass",
@@ -591,7 +591,8 @@
     "description": "A large dead rat. Lean, gamey meat if you're not picky.",
     "color"      : "#8D7266",
     "amount"     : 0,
-    "workTypes"  : ["hunting"]
+    "gatheringTypes"  : ["hunting"],
+    "processingType": ["butchery"]
   },
   {
     "id"         : "boar_carcass",
@@ -601,7 +602,8 @@
     "description": "A slain wild boar. Process for meat, bone, and tusks.",
     "color"      : "#C8A080",
     "amount"     : 0,
-    "workTypes"  : ["hunting"]
+    "gatheringTypes"  : ["hunting"],
+    "processingType": ["butchery"]
   },
   {
     "id"         : "elk_carcass",
@@ -611,7 +613,8 @@
     "description": "A large elk. Yields generous cuts of venison, hide, and antler.",
     "color"      : "#B09878",
     "amount"     : 0,
-    "workTypes"  : ["hunting"]
+    "gatheringTypes"  : ["hunting"],
+    "processingType": ["butchery"]
   },
   {
     "id"         : "mountain_goat_carcass",
@@ -621,7 +624,8 @@
     "description": "A mountain goat. Modest meat yield; hide is tough and durable.",
     "color"      : "#D0D0D0",
     "amount"     : 0,
-    "workTypes"  : ["hunting"]
+    "gatheringTypes"  : ["hunting"],
+    "processingType": ["butchery"]
   },
   {
     "id"         : "wild_chicken_carcass",
@@ -631,7 +635,8 @@
     "description": "A plucked wild chicken. Small but worth the effort.",
     "color"      : "#E8C880",
     "amount"     : 0,
-    "workTypes"  : ["hunting"]
+    "gatheringTypes"  : ["hunting"],
+    "processingType": ["butchery"]
   },
   // ── Butchery products ───────────────────────────────────────────────────────
   // Creature-specific meats
@@ -648,7 +653,7 @@
     "craftingTime"    : 900,
     "toolTierRequired": 0,
     "workshopType"    : "butcher_spot",
-    "workTypes"       : ["butchery"]
+    "processingType": ["cooking"]
   },
   {
     "id"              : "bear_meat",
@@ -663,7 +668,7 @@
     "craftingTime"    : 3600,
     "toolTierRequired": 0,
     "workshopType"    : "butcher_spot",
-    "workTypes"       : ["butchery"]
+    "processingType": ["cooking"]
   },
   {
     "id"              : "boar_meat",
@@ -678,7 +683,7 @@
     "craftingTime"    : 900,
     "toolTierRequired": 0,
     "workshopType"    : "butcher_spot",
-    "workTypes"       : ["butchery"]
+    "processingType": ["cooking"]
   },
   {
     "id"              : "elk_meat",
@@ -693,7 +698,7 @@
     "craftingTime"    : 3600,
     "toolTierRequired": 0,
     "workshopType"    : "butcher_spot",
-    "workTypes"       : ["butchery"]
+    "processingType": ["cooking"]
   },
   {
     "id"              : "goat_meat",
@@ -708,7 +713,7 @@
     "craftingTime"    : 900,
     "toolTierRequired": 0,
     "workshopType"    : "butcher_spot",
-    "workTypes"       : ["butchery"]
+    "processingType": ["cooking"]
   },
   {
     "id"              : "chicken_meat",
@@ -723,7 +728,7 @@
     "craftingTime"    : 200,
     "toolTierRequired": 0,
     "workshopType"    : "butcher_spot",
-    "workTypes"       : ["butchery"]
+    "processingType": ["cooking"]
   },
   {
     "id"              : "rat_meat",
@@ -738,7 +743,7 @@
     "craftingTime"    : 200,
     "toolTierRequired": 0,
     "workshopType"    : "butcher_spot",
-    "workTypes"       : ["butchery"]
+    "processingType": ["cooking"]
   },
   // Creature-specific hides / pelts
   {
@@ -753,7 +758,7 @@
     "craftingTime"    : 150,
     "toolTierRequired": 0,
     "workshopType"    : "butcher_spot",
-    "workTypes"       : ["butchery"]
+    "processingType": ["leatherworking"]
   },
   {
     "id"              : "deer_hide",
@@ -767,7 +772,7 @@
     "craftingTime"    : 600,
     "toolTierRequired": 0,
     "workshopType"    : "butcher_spot",
-    "workTypes"       : ["butchery"]
+    "processingType": ["leatherworking"]
   },
   {
     "id"              : "wolf_hide",
@@ -781,7 +786,7 @@
     "craftingTime"    : 600,
     "toolTierRequired": 0,
     "workshopType"    : "butcher_spot",
-    "workTypes"       : ["butchery"]
+    "processingType": ["leatherworking"]
   },
   {
     "id"              : "bear_pelt",
@@ -795,7 +800,7 @@
     "craftingTime"    : 2400,
     "toolTierRequired": 0,
     "workshopType"    : "butcher_spot",
-    "workTypes"       : ["butchery"]
+    "processingType": ["leatherworking"]
   },
   {
     "id"              : "boar_hide",
@@ -809,7 +814,7 @@
     "craftingTime"    : 600,
     "toolTierRequired": 0,
     "workshopType"    : "butcher_spot",
-    "workTypes"       : ["butchery"]
+    "processingType": ["leatherworking"]
   },
   {
     "id"              : "elk_hide",
@@ -823,7 +828,7 @@
     "craftingTime"    : 2400,
     "toolTierRequired": 0,
     "workshopType"    : "butcher_spot",
-    "workTypes"       : ["butchery"]
+    "processingType": ["leatherworking"]
   },
   {
     "id"              : "goat_hide",
@@ -837,7 +842,7 @@
     "craftingTime"    : 600,
     "toolTierRequired": 0,
     "workshopType"    : "butcher_spot",
-    "workTypes"       : ["butchery"]
+    "processingType": ["leatherworking"]
   },
   {
     "id"              : "chicken_feathers",
@@ -851,7 +856,7 @@
     "craftingTime"    : 150,
     "toolTierRequired": 0,
     "workshopType"    : "butcher_spot",
-    "workTypes"       : ["butchery"]
+    "processingType": ["crafting"]
   },
   {
     "id"              : "rat_pelt",
@@ -865,7 +870,7 @@
     "craftingTime"    : 150,
     "toolTierRequired": 0,
     "workshopType"    : "butcher_spot",
-    "workTypes"       : ["butchery"]
+    "processingType": ["leatherworking"]
   },
   // Size-based bones (alternative sources via craftingCostAlternatives)
   {
@@ -881,7 +886,7 @@
     "craftingTime": 100,
     "toolTierRequired": 0,
     "workshopType": "butcher_spot",
-    "workTypes": ["butchery"]
+    "processingType": ["crafting"]
   },
   {
     "id": "medium_bones",
@@ -896,7 +901,7 @@
     "craftingTime": 300,
     "toolTierRequired": 0,
     "workshopType": "butcher_spot",
-    "workTypes": ["butchery"]
+    "processingType": ["crafting"]
   },
   {
     "id": "large_bones",
@@ -911,6 +916,6 @@
     "craftingTime": 1200,
     "toolTierRequired": 0,
     "workshopType": "butcher_spot",
-    "workTypes": ["butchery"]
+    "processingType": ["crafting"]
   }
 ]

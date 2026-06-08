@@ -946,7 +946,9 @@ function logPawnTick(pawn: Pawn, gs: GameState): void {
 }
 
 function tickPawn(pawn: Pawn, gameState: GameState): GameState {
-    logPawnTick(pawn, gameState);
+    // Throttle file logging to every 30 turns (~0.5 s at 60 TPS) so PAWN-TICK
+    // doesn't flood the buffer and bury ENTITY-STATE / MOB-SNAP lines.
+    if (gameState.turn % 30 === 0) logPawnTick(pawn, gameState);
     const state = pawn.currentState ?? PAWN_STATE.IDLE;
     switch (state) {
         case PAWN_STATE.IDLE: return handleIdle(pawn, gameState);
@@ -1533,8 +1535,8 @@ class PawnStateMachineImpl {
      * Called from GameEngineImpl.processPawns() AFTER processMovement().
      */
     tick(gameState: GameState): GameState {
-        // Periodic map snapshot every 10 turns.
-        if (gameState.turn % 10 === 0) gameLogger.logMapSnap(gameState);
+        // Periodic map snapshot every 60 turns (~1 s at 60 TPS).
+        if (gameState.turn % 60 === 0) gameLogger.logMapSnap(gameState);
 
         let state = gameState;
         for (const pawn of state.pawns) {

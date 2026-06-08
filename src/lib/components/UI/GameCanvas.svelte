@@ -1,6 +1,7 @@
 <!-- WebGL tile renderer canvas for Fantasia4x world map -->
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
+  import { get } from 'svelte/store';
   import { browser } from '$app/environment';
   import { WebGLRenderer } from '$lib/webgl/renderer.js';
   import { buildGameGrid, generatePlaceholderGrid } from '$lib/webgl/fantasia-world.js';
@@ -183,6 +184,7 @@
   let pawns: Pawn[] = [];
   let selectedPawnId: string | null = null;
   let cameraFollowPawnId: string | null = null;
+  let cameraFollowMobId: string | null = null;
 
   // Entity-overlay layer: pawns are drawn into their own sparse grid rendered as
   // a glyph-only pass ON TOP of the terrain (see renderer setOverlayGrid). This
@@ -248,6 +250,7 @@
       selectedPawnId = s.selectedPawnId;
     }
     cameraFollowPawnId = s.cameraFollowPawnId ?? null;
+    cameraFollowMobId = s.cameraFollowMobId ?? null;
     redrawOverlay();
     if (s.mapFocusRequest && ready && renderer?.isReady()) {
       const { x, y } = s.mapFocusRequest;
@@ -315,9 +318,18 @@
   $: selectedMobDef = selectedMob ? (getCreatureById(selectedMob.creatureId) ?? null) : null;
 
   // Reusable info-card models — both feed the same SelectedEntityCard component.
+
+  /** Returns " #N" in debug mode, derived from debugId or the trailing number in the id string. */
+  function entityDebugLabel(entity: { id: string; debugId?: number }): string {
+    if (import.meta.env.VITE_DEBUG_MODE !== 'true') return '';
+    if (entity.debugId != null) return ` #${entity.debugId}`;
+    const m = entity.id.match(/(\d+)(?!.*\d)/);
+    return m ? ` #${m[1]}` : ` #${entity.id.slice(-4)}`;
+  }
+
   function buildPawnCard(pawn: Pawn, selected: boolean): SelectedEntityModel {
     return {
-      name: pawn.name,
+      name: pawn.name + entityDebugLabel(pawn),
       status: pawnStateLabel(pawn),
       selected,
       dismissable: selected,
@@ -355,7 +367,7 @@
     selected: boolean
   ): SelectedEntityModel {
     return {
-      name: def.name,
+      name: def.name + entityDebugLabel(mob),
       status: mob.state,
       selected,
       dismissable: selected,
@@ -628,12 +640,24 @@
     // Dropped/stored items are a layer BENEATH pawns: draw them first so a pawn
     // standing on an item's tile overwrites (renders on top of) it.
     overlayDroppedItems(pawnOverlayGrid, droppedItems);
+    // Clamp dt so a CPU-stall frame (e.g. pathfinding for many entities) doesn't
+    // produce alpha≈1 and snap all entities to their new positions at once.
+    const clampedDt = Math.min(dt, 0.05);
     // Exponential smoothing factor — shared for pawns and mobs this frame.
-    const alpha = dt > 0 ? 1 - Math.exp(-dt / MOVE_SMOOTH_TAU) : 1;
+    const alpha = clampedDt > 0 ? 1 - Math.exp(-clampedDt / MOVE_SMOOTH_TAU) : 1;
+
+    // Read the freshest game state directly from the store's held value.
+    // The engine calls gameStore.setSilent() every tick, so get(gameState) is
+    // always current-tick data — not the subscriber-throttled snapshot (4 ticks
+    // old) stored in the `mobs` / `pawns` component variables. Using stale data
+    // caused all entities to simultaneously lurch when the 4-tick flush fired.
+    const freshState = get(gameState);
+    const liveMobs = freshState.mobs ?? mobs;
+    const livePawns = freshState.pawns ?? pawns;
 
     // ── Mobs / animals — same interpolation approach as pawns ─────────────────
     const seenMobs = new Set<string>();
-    for (const mob of mobs) {
+    for (const mob of liveMobs) {
       const def = getCreatureById(mob.creatureId);
       if (!def || !def.chars.length) continue;
       seenMobs.add(mob.id);
@@ -673,8 +697,8 @@
 
     const seen = new Set<string>();
 
-    for (let i = 0; i < pawns.length; i++) {
-      const pawn = pawns[i];
+    for (let i = 0; i < livePawns.length; i++) {
+      const pawn = livePawns[i];
       if (!pawn.position) continue;
       seen.add(pawn.id);
 
@@ -1388,6 +1412,23 @@
     setView(viewX + dx * alpha, viewY + dy * alpha);
   }
 
+  function updateCameraFollowMob(dt: number) {
+    if (!cameraFollowMobId || !ready || !renderer?.isReady()) return;
+    const rp = mobRenderPos.get(cameraFollowMobId);
+    if (!rp) return;
+    const visW = (container?.clientWidth ?? 800) / tileWidth;
+    const visH = (container?.clientHeight ?? 600) / tileHeight;
+    const [targetX, targetY] = clampView(rp.x - visW / 2, rp.y - visH * 0.25);
+    const alpha = dt > 0 ? 1 - Math.exp(-dt / FOLLOW_SMOOTH_TAU) : 1;
+    const dx = targetX - viewX;
+    const dy = targetY - viewY;
+    if (Math.abs(dx) < 0.01 && Math.abs(dy) < 0.01) {
+      if (dx !== 0 || dy !== 0) setView(targetX, targetY);
+      return;
+    }
+    setView(viewX + dx * alpha, viewY + dy * alpha);
+  }
+
   function startLoop() {
     let lastFpsPush = 0;
     function frame() {
@@ -1403,6 +1444,7 @@
       gameState.stepSimulation(dt * 1000);
       updatePawnOverlay(dt);
       updateCameraFollow(dt);
+      updateCameraFollowMob(dt);
       updateWorldEffectOverlays();
       renderer.setOverlayGrid(pawnOverlayGrid);
       renderer.beginFrame();
@@ -1502,6 +1544,7 @@
         selectedPawnId = null;
         uiState.selectPawn(null);
         uiState.setFollowPawn(null);
+        uiState.setFollowMob(null);
         redrawOverlay();
         break;
       case 'x':

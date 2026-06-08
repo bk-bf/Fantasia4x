@@ -124,37 +124,99 @@ export class GameEngineImpl implements GameEngine {
 		this.gameState = { ...currentState };
 		console.log(`[GameEngine] Coordinating crafting: ${quantity}x ${itemId}`);
 
+		const item = itemService.getItemById(itemId);
+		if (!item) return;
+
+		// Special handling for butchery: process carcass to produce all outputs
+		if (item.isCarcass && item.yields) {
+			this.craftButchery(item);
+			this.updateStores();
+			return;
+		}
+
 		// COORDINATION: Check if can craft and add to crafting queue
 		if (itemService.canCraftItem(itemId, this.gameState)) {
-			const item = itemService.getItemById(itemId);
-			if (item) {
-				// Resolve dynamic ingredient selection (auto-pick if not specified)
-				const resolved = selectedIngredients ?? itemService.autoSelectIngredients(itemId, this.gameState) ?? {};
+			// Resolve dynamic ingredient selection (auto-pick if not specified)
+			const resolved = selectedIngredients ?? itemService.autoSelectIngredients(itemId, this.gameState) ?? {};
 
-				// Add to crafting queue
-				const craftingInProgress = {
-					item: item,
-					quantity: quantity,
-					turnsRemaining: item.craftingTime || 1,
-					startedAt: this.gameState.turn,
-					selectedIngredients: Object.keys(resolved).length > 0 ? resolved : undefined
-				};
+			// Add to crafting queue
+			const craftingInProgress = {
+				item: item,
+				quantity: quantity,
+				turnsRemaining: item.craftingTime || 1,
+				startedAt: this.gameState.turn,
+				selectedIngredients: Object.keys(resolved).length > 0 ? resolved : undefined
+			};
 
-				// Consume materials — use resolved cost to support craftingCostAlternatives and dynamicRecipe
-				const activeCost = itemService.resolveActiveCost(item.id, this.gameState, resolved);
-				if (activeCost) {
-					this.gameState = itemService.consumeItems(activeCost, this.gameState);
-				}
-
-				// Add to queue
-				this.gameState = {
-					...this.gameState,
-					craftingQueue: [...(this.gameState.craftingQueue || []), craftingInProgress]
-				};
+			// Consume materials — use resolved cost to support craftingCostAlternatives and dynamicRecipe
+			const activeCost = itemService.resolveActiveCost(item.id, this.gameState, resolved);
+			if (activeCost) {
+				this.gameState = itemService.consumeItems(activeCost, this.gameState);
 			}
+
+			// Add to queue
+			this.gameState = {
+				...this.gameState,
+				craftingQueue: [...(this.gameState.craftingQueue || []), craftingInProgress]
+			};
 		}
 
 		this.updateStores();
+	}
+
+	/**
+	 * Butchery crafting: processes a carcass to produce all outputs at once.
+	 * Output quantities are scaled by current intactness. At 0% intactness, the carcass vanishes.
+	 */
+	private craftButchery(carcassItem: import('../core/types').Item): void {
+		if (!this.gameState) return;
+		if (!carcassItem.isCarcass || !carcassItem.yields) return;
+
+		// Check intactness
+		const intactness = this.gameState.carcassIntactness ?? {};
+		const currentIntactness = intactness[carcassItem.id] ?? 100;
+
+		if (currentIntactness <= 0) {
+			console.log(`[GameEngine] Carcass ${carcassItem.id} is fully consumed (0% intactness)`);
+			return;
+		}
+
+		// Check if can craft (building, tools, etc.)
+		if (!itemService.canCraftItem(carcassItem.id, this.gameState)) return;
+
+		// Calculate intactness multiplier
+		const intactnessFraction = currentIntactness / 100;
+
+		// Roll all outputs and scale by intactness
+		const outputs: Record<string, number> = {};
+		for (const output of carcassItem.yields) {
+			const baseQty = Math.floor(Math.random() * (output.max - output.min + 1)) + output.min;
+			const scaledQty = Math.max(1, Math.round(baseQty * intactnessFraction));
+			outputs[output.item] = (outputs[output.item] ?? 0) + scaledQty;
+		}
+
+		// Consume intactness (set to 0)
+		const newIntactnessMap = { ...intactness };
+		delete newIntactnessMap[carcassItem.id];
+
+		// Remove the carcass from stockpile
+		let newState = this.gameState;
+		const carcassQty = newState.stockpile[carcassItem.id] ?? 0;
+		if (carcassQty > 0) {
+			newState = itemService.consumeItems({ [carcassItem.id]: carcassQty }, newState);
+		}
+
+		// Add all outputs to stockpile
+		newState = itemService.addItems(outputs, newState);
+
+		// Update state
+		newState = {
+			...newState,
+			carcassIntactness: newIntactnessMap
+		};
+
+		this.gameState = newState;
+		console.log(`[GameEngine] Butchery: ${carcassItem.name} → ${Object.entries(outputs).map(([k, v]) => `${v}×${k}`).join(', ')} (scaled by ${currentIntactness.toFixed(0)}% intactness)`);
 	}
 
 	// COORDINATION: BuildingService methods for UI components
@@ -392,7 +454,7 @@ export class GameEngineImpl implements GameEngine {
 		// GameEngine filters using ItemService
 		const filteredResources = availableResources.filter(resourceId => {
 			const item = itemService.getItemById(resourceId);
-			const hasWorkType = item?.workTypes?.includes(workType);
+			const hasWorkType = item?.gatheringTypes?.includes(workType);
 			console.log(`[GameEngine] Resource ${resourceId} has workType ${workType}:`, hasWorkType);
 			return hasWorkType;
 		});

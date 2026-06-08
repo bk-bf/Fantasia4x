@@ -1,5 +1,6 @@
 <script lang="ts">
   import { currentStockpile, currentRace, gameState } from '$lib/stores/gameState';
+  import { itemService } from '$lib/game/services/ItemService';
   import { onDestroy } from 'svelte';
 
   let stockpile: { id: string; name: string; amount: number; color?: string; emoji?: string }[] =
@@ -7,6 +8,7 @@
   let race: any = null;
   let turnValue = 0;
   let itemChanges: Record<string, number> = {};
+  let carcassIntactness: Record<string, number> = {};
 
   const unsubStockpile = currentStockpile.subscribe((newStockpile) => {
     newStockpile.forEach((ni) => {
@@ -25,7 +27,16 @@
   });
 
   const unsubRace = currentRace.subscribe((v) => (race = v));
-  const unsubState = gameState.subscribe((s) => (turnValue = s.turn));
+  const unsubState = gameState.subscribe((s) => {
+    turnValue = s.turn;
+    carcassIntactness = s.carcassIntactness ?? {};
+  });
+
+  function intactnessColor(pct: number): string {
+    if (pct >= 70) return 'var(--pos)';
+    if (pct >= 35) return '#e8b830';
+    return 'var(--neg)';
+  }
 
   onDestroy(() => {
     unsubStockpile();
@@ -76,6 +87,20 @@
               </span>
             {/if}
           </div>
+          {#if itemService.getItemById(item.id)?.isCarcass}
+            {@const pct = Math.round(carcassIntactness[item.id] ?? 100)}
+            <div class="carcass-row">
+              <span class="intactness-lbl" style="color:{intactnessColor(pct)}">INTACT</span>
+              <span class="intactness-bar">
+                {#each Array(10) as _, i}
+                  <span style="color:{intactnessColor(pct)}"
+                    >{i < Math.round(pct / 10) ? '█' : '░'}</span
+                  >
+                {/each}
+              </span>
+              <span class="intactness-pct" style="color:{intactnessColor(pct)}">{pct}%</span>
+            </div>
+          {/if}
         {/each}
       {/if}
     </div>
@@ -214,5 +239,31 @@
     color: var(--text-muted);
     font-size: 9px;
     font-style: italic;
+  }
+
+  .carcass-row {
+    display: flex;
+    align-items: center;
+    padding: 0 8px 2px 16px;
+    gap: 4px;
+    font-size: 9px;
+    font-family: 'Courier New', monospace;
+  }
+
+  .intactness-lbl {
+    white-space: nowrap;
+    flex-shrink: 0;
+    letter-spacing: 0.03em;
+  }
+
+  .intactness-bar {
+    letter-spacing: -1px;
+    flex-shrink: 0;
+  }
+
+  .intactness-pct {
+    white-space: nowrap;
+    flex-shrink: 0;
+    font-size: 9px;
   }
 </style>

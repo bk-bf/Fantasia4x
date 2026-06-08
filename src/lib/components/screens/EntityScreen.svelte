@@ -79,11 +79,21 @@
           </div>
           <div class="members">
             {#each g.members as m (m.id)}
-              <button class="member" onclick={() => focus(m)} title="Focus on map">
-                <span class="state">{m.state}</span>
-                <span class="hp">{Math.round(m.health)}/{m.maxHealth}</span>
-                <span class="pos">({m.x},{m.y})</span>
-              </button>
+              <div class="member-row">
+                <button class="member" onclick={() => focus(m)} title="Focus on map">
+                  <span class="state">{m.state}</span>
+                  <span class="hp">{Math.round(m.health)}/{m.maxHealth}</span>
+                  <span class="pos">({m.x},{m.y})</span>
+                </button>
+                <button
+                  class="follow-btn"
+                  class:active={$uiState.cameraFollowMobId === m.id}
+                  onclick={() => {
+                    const isFollowing = $uiState.cameraFollowMobId === m.id;
+                    uiState.setFollowMob(isFollowing ? null : m.id);
+                  }}>{$uiState.cameraFollowMobId === m.id ? 'UNFOLLOW' : 'FOLLOW'}</button
+                >
+              </div>
             {/each}
           </div>
         </div>
@@ -181,6 +191,11 @@
     gap: 2px;
     padding: 4px;
   }
+  .member-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+  }
   .member {
     display: inline-flex;
     gap: 6px;
@@ -202,5 +217,27 @@
   }
   .member .pos {
     color: var(--text-muted);
+  }
+  .follow-btn {
+    background: transparent;
+    border: 1px solid var(--accent-hi);
+    color: var(--accent-hi);
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    padding: 2px 6px;
+    cursor: pointer;
+    opacity: 0.85;
+    transition: opacity 0.12s;
+  }
+  .follow-btn:hover {
+    opacity: 1;
+    background: var(--accent-hi);
+    color: var(--bg);
+  }
+  .follow-btn.active {
+    background: var(--accent-hi);
+    color: var(--bg);
+    opacity: 1;
   }
 </style>

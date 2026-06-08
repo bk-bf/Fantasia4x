@@ -20,6 +20,8 @@ interface UIState {
   selectedPawnId: string | null;
   /** Pawn id the camera should continuously follow. null = free camera. */
   cameraFollowPawnId: string | null;
+  /** Mob id the camera should continuously follow. null = free camera. */
+  cameraFollowMobId: string | null;
   /** Blueprint placement mode: id of the building being placed, null = inactive. */
   blueprintBuildingId: string | null;
 }
@@ -36,6 +38,7 @@ function createUIState() {
     mapFocusRequest: null,
     selectedPawnId: null,
     cameraFollowPawnId: null,
+    cameraFollowMobId: null,
     blueprintBuildingId: null
   };
 
@@ -89,7 +92,10 @@ function createUIState() {
       update((state) => ({ ...state, selectedPawnId: id })),
 
     setFollowPawn: (id: string | null) =>
-      update((state) => ({ ...state, cameraFollowPawnId: id })),
+      update((state) => ({ ...state, cameraFollowPawnId: id, cameraFollowMobId: null })),
+
+    setFollowMob: (id: string | null) =>
+      update((state) => ({ ...state, cameraFollowMobId: id, cameraFollowPawnId: null })),
 
     activateBlueprint: (buildingId: string) =>
       update((state) => ({

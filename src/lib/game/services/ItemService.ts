@@ -67,7 +67,7 @@ export class ItemServiceImpl implements ItemService {
 	}
 
 	getItemsByWorkType(workType: string): Item[] {
-		return ITEMS_DATABASE.filter((item) => item.workTypes && item.workTypes.includes(workType));
+		return ITEMS_DATABASE.filter((item) => item.gatheringTypes && item.gatheringTypes.includes(workType));
 	}
 
 	getCraftableItems(gameState: GameState, pawnId?: string): Item[] {
@@ -81,6 +81,21 @@ export class ItemServiceImpl implements ItemService {
 	canCraftItem(itemId: string, gameState: GameState, pawnId?: string): boolean {
 		const item = this.getItemById(itemId);
 		if (!item) return false;
+
+		// Special check for butchery: carcass must have intactness > 0
+		if (item.isCarcass && item.yields) {
+			const intactness = gameState.carcassIntactness ?? {};
+			const currentIntactness = intactness[itemId] ?? 100;
+			if (currentIntactness <= 0) return false;
+			// Check if we have the carcass in stockpile
+			if ((gameState.stockpile?.[itemId] ?? 0) <= 0) return false;
+			// Check if we have a butcher spot
+			const hasButcherSpot = (gameState.buildings ?? []).some(
+				(b) => b.type === 'butcher_spot' && b.status === 'complete'
+			);
+			return hasButcherSpot;
+		}
+
 		if (!item.craftingCost && !(item.craftingCostAlternatives?.length) && !item.dynamicRecipe) return false;
 
 		// Check materials
