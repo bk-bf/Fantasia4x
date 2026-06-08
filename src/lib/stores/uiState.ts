@@ -18,6 +18,8 @@ interface UIState {
   mapFocusRequest: { x: number; y: number } | null;
   /** Currently selected pawn id — shared between Pawn Tab and the map canvas. */
   selectedPawnId: string | null;
+  /** Currently selected mob id — shared between Entity Tab and the map canvas. */
+  selectedMobId: string | null;
   /** Pawn id the camera should continuously follow. null = free camera. */
   cameraFollowPawnId: string | null;
   /** Mob id the camera should continuously follow. null = free camera. */
@@ -38,6 +40,7 @@ function createUIState() {
     mapFocusRequest: null,
     selectedPawnId: null,
     cameraFollowPawnId: null,
+    selectedMobId: null,
     cameraFollowMobId: null,
     blueprintBuildingId: null
   };
@@ -90,6 +93,9 @@ function createUIState() {
 
     selectPawn: (id: string | null) =>
       update((state) => ({ ...state, selectedPawnId: id })),
+
+    selectMob: (id: string | null) =>
+      update((state) => ({ ...state, selectedMobId: id })),
 
     setFollowPawn: (id: string | null) =>
       update((state) => ({ ...state, cameraFollowPawnId: id, cameraFollowMobId: null })),

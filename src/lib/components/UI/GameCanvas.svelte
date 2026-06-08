@@ -239,6 +239,10 @@
   let zoneEraseMode = false;
   // Blueprint placement mode — set when BUILD is clicked in BuildingMenu
   let blueprintBuildingId: string | null = null;
+  // Selected building (click-locked, like selectedPawnId)
+  let selectedBuildingId: string | null = null;
+  // Selected mob/animal (click-locked, like selectedPawnId)
+  let selectedMobId: string | null = null;
   const unsubUI = uiState.subscribe((s) => {
     designationMode = s.designationActive;
     blueprintBuildingId = s.blueprintBuildingId ?? null;
@@ -248,6 +252,10 @@
     // Sync selected pawn from Pawn Tab (only when it differs to avoid clobbering map clicks)
     if (s.selectedPawnId !== selectedPawnId) {
       selectedPawnId = s.selectedPawnId;
+    }
+    // Sync selected mob from Entity Tab (only when it differs)
+    if (s.selectedMobId !== selectedMobId) {
+      selectedMobId = s.selectedMobId;
     }
     cameraFollowPawnId = s.cameraFollowPawnId ?? null;
     cameraFollowMobId = s.cameraFollowMobId ?? null;
@@ -272,11 +280,6 @@
   // Blueprint drag-paint state
   let blueprintDragActive = false;
   let blueprintDragTiles = new Set<string>();
-
-  // Selected building (click-locked, like selectedPawnId)
-  let selectedBuildingId: string | null = null;
-  // Selected mob/animal (click-locked, like selectedPawnId)
-  let selectedMobId: string | null = null;
   // Resource tile interaction
   let selectedResourceTile: { x: number; y: number; resourceId: string } | null = null;
   let similarDragMode = false;
@@ -1217,6 +1220,7 @@
       selectedMobId = null;
       showShelterAssign = false;
       uiState.selectPawn(null);
+      uiState.selectMob(null);
       redrawOverlay();
       return;
     }
@@ -1232,6 +1236,7 @@
       selectedResourceTile = null;
       highlightedResourceTiles = new Set();
       uiState.selectPawn(clickedPawn.id);
+      uiState.selectMob(null);
       redrawOverlay();
       return;
     }
@@ -1247,6 +1252,7 @@
       selectedResourceTile = null;
       highlightedResourceTiles = new Set();
       uiState.selectPawn(null);
+      uiState.selectMob(clickedMob.id);
       redrawOverlay();
       return;
     }
@@ -1261,6 +1267,7 @@
       selectedBuildingId = null;
       selectedMobId = null;
       uiState.selectPawn(null);
+      uiState.selectMob(null);
       redrawOverlay();
       return;
     }
@@ -1270,6 +1277,9 @@
     selectedResourceTile = null;
     selectedMobId = null;
     highlightedResourceTiles = new Set();
+    uiState.selectPawn(null);
+    uiState.selectMob(null);
+    uiState.selectMob(null);
     // TODO: draft-control mechanic will re-enable direct pawn movement later.
     // For now, pawns must only move through the automated AI and turn processing.
     //
@@ -1526,6 +1536,7 @@
         }
         if (selectedMobId) {
           selectedMobId = null;
+          uiState.selectMob(null);
           redrawOverlay();
           break;
         }

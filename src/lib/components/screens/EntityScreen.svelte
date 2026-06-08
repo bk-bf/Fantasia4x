@@ -3,6 +3,7 @@
   import { uiState } from '$lib/stores/uiState';
   import { getCreatureById } from '$lib/game/core/Creatures';
   import type { Mob } from '$lib/game/core/types';
+  import FollowButton from '../UI/FollowButton.svelte';
 
   let mobs = $derived(($gameState.mobs ?? []).filter((m) => m.state !== 'Corpse'));
   let corpses = $derived(($gameState.mobs ?? []).filter((m) => m.state === 'Corpse'));
@@ -50,6 +51,7 @@
 
   function focus(m: Mob) {
     uiState.focusMapOn(m.x, m.y);
+    uiState.selectMob(m.id);
   }
 </script>
 
@@ -85,14 +87,13 @@
                   <span class="hp">{Math.round(m.health)}/{m.maxHealth}</span>
                   <span class="pos">({m.x},{m.y})</span>
                 </button>
-                <button
-                  class="follow-btn"
-                  class:active={$uiState.cameraFollowMobId === m.id}
-                  onclick={() => {
+                <FollowButton
+                  isActive={$uiState.cameraFollowMobId === m.id}
+                  onToggle={() => {
                     const isFollowing = $uiState.cameraFollowMobId === m.id;
                     uiState.setFollowMob(isFollowing ? null : m.id);
-                  }}>{$uiState.cameraFollowMobId === m.id ? 'UNFOLLOW' : 'FOLLOW'}</button
-                >
+                  }}
+                />
               </div>
             {/each}
           </div>
@@ -217,27 +218,5 @@
   }
   .member .pos {
     color: var(--text-muted);
-  }
-  .follow-btn {
-    background: transparent;
-    border: 1px solid var(--accent-hi);
-    color: var(--accent-hi);
-    font-family: 'Courier New', monospace;
-    font-size: 10px;
-    letter-spacing: 0.06em;
-    padding: 2px 6px;
-    cursor: pointer;
-    opacity: 0.85;
-    transition: opacity 0.12s;
-  }
-  .follow-btn:hover {
-    opacity: 1;
-    background: var(--accent-hi);
-    color: var(--bg);
-  }
-  .follow-btn.active {
-    background: var(--accent-hi);
-    color: var(--bg);
-    opacity: 1;
   }
 </style>
