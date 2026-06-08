@@ -45,6 +45,8 @@ function fileForTag(tag: string): string {
         tag === 'MAP-SNAP'
     ) return 'pawns.log';
 
+    if (tag === 'PERF') return 'perf.log';
+
     return 'game.log';
 }
 

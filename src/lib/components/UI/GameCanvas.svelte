@@ -35,6 +35,7 @@
   import { getCreatureById } from '$lib/game/core/Creatures.js';
   import { TICKS_PER_SECOND } from '$lib/game/core/time.js';
   import { simTarget } from '$lib/game/systems/MovementSystem.js';
+  import { gameLogger } from '$lib/game/dev/gameLogger.js';
   import SelectedEntityCard from '$lib/components/UI/SelectedEntityCard.svelte';
   import type {
     SelectedEntityModel,
@@ -1445,13 +1446,18 @@
     type Acc = { sum: number; max: number; n: number };
     const mkAcc = (): Acc => ({ sum: 0, max: 0, n: 0 });
     let acc = {
-      sim: mkAcc(), overlay: mkAcc(), cam: mkAcc(),
-      desgn: mkAcc(), webgl: mkAcc(), total: mkAcc()
+      sim: mkAcc(),
+      overlay: mkAcc(),
+      cam: mkAcc(),
+      desgn: mkAcc(),
+      webgl: mkAcc(),
+      total: mkAcc()
     };
     let accStart = 0;
 
     function recordAcc(key: keyof typeof acc, v: number) {
-      acc[key].sum += v; acc[key].n++;
+      acc[key].sum += v;
+      acc[key].n++;
       if (v > acc[key].max) acc[key].max = v;
     }
     function fmtAcc(a: Acc): string {
@@ -1471,7 +1477,10 @@
       const prof = (globalThis as any).__perfFollow as boolean | undefined;
       let t0 = 0;
 
-      if (prof) { t0 = performance.now(); if (!accStart) accStart = now; }
+      if (prof) {
+        t0 = performance.now();
+        if (!accStart) accStart = now;
+      }
       gameState.stepSimulation(dt * 1000);
       if (prof) ph.sim = performance.now() - t0;
 
@@ -1499,32 +1508,37 @@
 
       if (prof) {
         const total = ph.sim + ph.overlay + ph.cam + ph.desgn + ph.webgl;
-        recordAcc('sim',     ph.sim);
+        recordAcc('sim', ph.sim);
         recordAcc('overlay', ph.overlay);
-        recordAcc('cam',     ph.cam);
-        recordAcc('desgn',   ph.desgn);
-        recordAcc('webgl',   ph.webgl);
-        recordAcc('total',   total);
+        recordAcc('cam', ph.cam);
+        recordAcc('desgn', ph.desgn);
+        recordAcc('webgl', ph.webgl);
+        recordAcc('total', total);
 
-        // Spike: any frame over 20 ms gets an immediate line
+        // Spike: any frame over 20 ms — log to file and console
         if (total > 20) {
-          console.log(
-            `★ SPIKE ${total.toFixed(1)}ms  sim=${ph.sim.toFixed(1)} overlay=${ph.overlay.toFixed(1)} cam=${ph.cam.toFixed(1)} desgn=${ph.desgn.toFixed(1)} webgl=${ph.webgl.toFixed(1)}`
-          );
+          const spikeLine = `SPIKE ${total.toFixed(1)}ms  sim=${ph.sim.toFixed(1)} overlay=${ph.overlay.toFixed(1)} cam=${ph.cam.toFixed(1)} desgn=${ph.desgn.toFixed(1)} webgl=${ph.webgl.toFixed(1)}`;
+          gameLogger.log(0, 'PERF', spikeLine);
+          console.log('★ ' + spikeLine);
         }
 
         // Rolling 1-second summary (avg/max per phase)
         if (now - accStart >= 1000) {
           const fps = acc.total.n;
-          console.log(
-            `[PERF 1s | ${fps}fps]  ` +
+          const summaryLine =
+            `1s | ${fps}fps  ` +
             `sim=${fmtAcc(acc.sim)}  overlay=${fmtAcc(acc.overlay)}  ` +
             `cam=${fmtAcc(acc.cam)}  desgn=${fmtAcc(acc.desgn)}  ` +
-            `webgl=${fmtAcc(acc.webgl)}  TOTAL=${fmtAcc(acc.total)} ms (avg/max)`
-          );
+            `webgl=${fmtAcc(acc.webgl)}  TOTAL=${fmtAcc(acc.total)} ms (avg/max)`;
+          gameLogger.log(0, 'PERF', summaryLine);
+          console.log('[PERF] ' + summaryLine);
           acc = {
-            sim: mkAcc(), overlay: mkAcc(), cam: mkAcc(),
-            desgn: mkAcc(), webgl: mkAcc(), total: mkAcc()
+            sim: mkAcc(),
+            overlay: mkAcc(),
+            cam: mkAcc(),
+            desgn: mkAcc(),
+            webgl: mkAcc(),
+            total: mkAcc()
           };
           accStart = now;
         }
