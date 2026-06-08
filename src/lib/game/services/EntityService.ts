@@ -1187,11 +1187,10 @@ class EntityServiceImpl {
         state: GameState,
         x: number,
         y: number,
-        homeX?: number,
-        homeY?: number,
+        _homeX?: number,
+        _homeY?: number,
         selfId?: string
     ): { x: number; y: number } | null {
-        const HOME_RANGE = 10;
         // Enumerate all 8 neighbours in random order (Fisher-Yates) so every walkable
         // direction is considered exactly once — no wasted random retries that could
         // leave a boxed-in animal stuck even when an exit exists.
@@ -1210,13 +1209,6 @@ class EntityServiceImpl {
             // Diagonal wall-cut prevention (mirrors WASM A*): a diagonal step is only
             // allowed if at least one shared orthogonal neighbour is walkable.
             if (dx !== 0 && dy !== 0 && !this.isWalkable(state, x + dx, y) && !this.isWalkable(state, x, y + dy)) {
-                continue;
-            }
-            if (
-                homeX !== undefined &&
-                homeY !== undefined &&
-                (Math.abs(nx - homeX) > HOME_RANGE || Math.abs(ny - homeY) > HOME_RANGE)
-            ) {
                 continue;
             }
             if (selfId && this.isOccupied(state, nx, ny, selfId)) continue;
