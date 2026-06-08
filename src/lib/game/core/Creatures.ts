@@ -51,8 +51,14 @@ export interface CreatureDefinition {
     bg: [number, number, number];
     stats: CreatureStats;
     behaviour: EntityBehaviour;
-    /** What this creature eats — drives feeding FSM (Phase B hunger system). */
+    /** What this creature eats — gates only which foods it may consume, not aggression. */
     diet: EntityDiet;
+    /**
+     * True if this creature hunts and frightens prey. This — not `diet` — is the
+     * sole flag that marks something as a threat: a passive omnivore (chicken)
+     * is not a predator, while a neutral omnivore (bear) is.
+     */
+    predator: boolean;
     /**
      * Depth of systems this creature uses.
      * `primitive` = animals; `sapient` = humanoid NPCs (spawn as Pawn, not Mob).
@@ -100,6 +106,7 @@ function toDefinition(raw: RawCreature): CreatureDefinition {
         stats: raw.stats as CreatureStats,
         behaviour: raw.behaviour as EntityBehaviour,
         diet: (raw.diet as EntityDiet) ?? 'omnivore',
+        predator: (raw.predator as boolean) ?? false,
         intelligence: (raw.intelligence as EntityIntelligence) ?? 'primitive',
         nocturnalAggro: (raw.nocturnalAggro as boolean) ?? false,
         nightOnly: (raw.nightOnly as boolean) ?? false,

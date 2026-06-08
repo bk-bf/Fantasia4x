@@ -297,6 +297,10 @@
   // Hover tile inspector
   let hoverTileX = -1;
   let hoverTileY = -1;
+  // Last raw cursor position in canvas pixels — used to recompute hover tile on
+  // click when the follow camera has moved viewX/viewY since the last mousemove.
+  let lastCursorCx = 0;
+  let lastCursorCy = 0;
   $: hoverTile =
     hoverTileX >= 0 && hoverTileY >= 0 && worldMap.length > 0
       ? (worldMap[hoverTileY]?.[hoverTileX] ?? null)
@@ -1639,7 +1643,11 @@
     dragStartY = e.clientY;
     dragViewX = viewX;
     dragViewY = viewY;
-    dragDistance = 0;
+    // When follow-mode is active the follow camera immediately corrects any
+    // pan, so drag-to-pan is a no-op. Skip drag accumulation entirely so that
+    // clicks always register regardless of hand tremor.
+    if (cameraFollowPawnId || cameraFollowMobId) dragDistance = -Infinity;
+    else dragDistance = 0;
   }
 
   function handleMouseMove(e: MouseEvent) {
@@ -1648,6 +1656,8 @@
       const rect = canvas.getBoundingClientRect();
       const cx = e.clientX - rect.left;
       const cy = e.clientY - rect.top;
+      lastCursorCx = cx;
+      lastCursorCy = cy;
       hoverTileX = Math.floor(cx / tileWidth) + viewX;
       hoverTileY = Math.floor(cy / tileHeight) + viewY;
     }
@@ -1749,7 +1759,13 @@
       redrawOverlay();
       return;
     }
-    if (dragDistance < 3) handleTileClick();
+    if (dragDistance < 3) {
+      // Recompute hover tile from current viewX/viewY — the follow camera may
+      // have shifted the view since the last mousemove, making the stored tile stale.
+      hoverTileX = Math.floor(lastCursorCx / tileWidth) + viewX;
+      hoverTileY = Math.floor(lastCursorCy / tileHeight) + viewY;
+      handleTileClick();
+    }
     dragging = false;
   }
 

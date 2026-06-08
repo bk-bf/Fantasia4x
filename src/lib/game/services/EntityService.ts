@@ -37,6 +37,7 @@ const MAX_NEUTRAL = 40;
 const CORPSE_DECAY_TICKS = ticksFromSeconds(200); // corpse persists ~200s then vanishes
 
 // Movement / FSM timings
+/** How long a startled animal freezes in place before it bolts into Fleeing. */
 const STARTLED_TICKS = ticksFromSeconds(1);
 const FLEE_TO_EXHAUST_TICKS = ticksFromSeconds(20);
 const EXHAUST_RECOVER_TICKS = ticksFromSeconds(15);
@@ -411,7 +412,7 @@ class EntityServiceImpl {
         }
 
         // Huntable neutral animals (boar, elk, etc.) also react to predators and pack deaths.
-        // They flee from carnivore/omnivore threats just like passive animals do, and panic when
+        // They flee from flagged predators just like passive animals do, and panic when
         // they see a corpse of the same species within vision range.
         if (def.huntable && mob.state !== 'Fleeing' && mob.state !== 'Attacking') {
             const predThreat = this.nearestPredatorThreat(mob, def, allMobs);
@@ -532,7 +533,6 @@ class EntityServiceImpl {
     ): Mob {
         // Vision range is set per-creature in creatures.jsonc; herbivores have wide
         // ranges (12-15 tiles) so detection and flee distances are fully data-driven.
-        const isHerbivore = def.diet === 'herbivore';
 
         // Combined threat: pawn in vision OR a predatory mob nearby.
         const predatorThreat = this.nearestPredatorThreat(mob, def, allMobs);
@@ -577,12 +577,13 @@ class EntityServiceImpl {
                 return this.wanderStep(mob, def, state);
             }
             case 'Startled': {
-                // Herbivores bolt almost instantly; other animals freeze briefly.
-                const startledDuration = isHerbivore ? Math.ceil(STARTLED_TICKS * 0.3) : STARTLED_TICKS;
-                if (turn - mob.stateSince >= startledDuration) {
+                // Committed freeze: hold still for the full startle duration, then
+                // ALWAYS bolt. Never returns to Grazing — that path would allow a
+                // Grazing↔Startled flicker. Fleeing is the only exit.
+                if (turn - mob.stateSince >= STARTLED_TICKS) {
                     return { ...mob, state: 'Fleeing', stateSince: turn, path: [] };
                 }
-                return mob; // frozen
+                return { ...mob, path: [] }; // frozen in place
             }
             case 'Fleeing': {
                 if (turn - mob.stateSince > FLEE_TO_EXHAUST_TICKS) {
@@ -866,9 +867,10 @@ class EntityServiceImpl {
     }
 
     /**
-     * Returns the nearest non-herbivore creature within the prey's vision range.
-     * Predator identity is driven by `diet`, not `entityClass` — a wolf stays
-     * entityClass 'animal' but is still a threat to herbivore prey.
+     * Returns the nearest predator within the prey's vision range.
+     * Threat identity is driven solely by the `predator` flag in creatures.jsonc
+     * (wolf, bear, goblin, wraith). Diet is irrelevant here \u2014 a passive omnivore
+     * chicken is not a predator, so flockmates never frighten each other.
      */
     private nearestPredatorThreat(
         prey: Mob,
@@ -881,7 +883,7 @@ class EntityServiceImpl {
         for (const m of allMobs) {
             if (m.id === prey.id || m.state === 'Corpse') continue;
             const mDef = getCreatureById(m.creatureId);
-            if (!mDef || mDef.diet === 'herbivore') continue; // only carnivores/omnivores
+            if (!mDef || !mDef.predator) continue; // only flagged predators frighten prey
             const d = this.dist(prey, { x: m.x, y: m.y });
             if (d <= def.stats.visionRange && d < bestDist) {
                 bestDist = d;
