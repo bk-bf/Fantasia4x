@@ -2,7 +2,7 @@
  * gameLogger — dev-only file-backed structured logger.
  *
  * Buffers tagged log lines and flushes them to the server-side
- * /api/debug-log endpoint, which routes each line to a tag-specific file.
+ * /api/debug-log endpoint, which appends to .debug/game.log.
  * Only active in development; the server endpoint is a no-op in production.
  *
  * ─── Usage ────────────────────────────────────────────────────────────────
@@ -11,29 +11,24 @@
  *   gameLogger.log(gs.turn, 'MY-TAG', 'some message');
  *   gameLogger.logMapSnap(gs);   // full settlement snapshot
  *
- * ─── Tags and destination files ──────────────────────────────────────────
+ * ─── Tags (grep targets) ─────────────────────────────────────────────────
  *
- *   .debug/entities.log
- *     [ENTITY-STATE]  Periodic entity FSM snapshot (every 300 turns)
- *     [ENTITY-FEED]   Foraging/hunting feeding events and failures
- *     [MOB-SNAP]      Aggregate mob state summary
- *     [HUNT-UNREACHABLE] Pathfinding failure for hunting
- *
- *   .debug/pawns.log
- *     [PAWN-TICK]   Per-pawn per-turn status snapshot
- *     [NEED-CHECK]  Need-interruption decision trace (eat/sleep thresholds)
- *     [STATE-CHG]   Pawn state transition events
- *     [JOB-EVT]     Job claim / release events
- *     [MAP-SNAP]    Periodic full-settlement snapshot (every N turns)
- *
- *   .debug/game.log   (catch-all for any other tags)
+ *   [PAWN-TICK]   Per-pawn per-turn status snapshot
+ *   [NEED-CHECK]  Need-interruption decision trace (eat/sleep thresholds)
+ *   [STATE-CHG]   Pawn state transition events
+ *   [JOB-EVT]     Job claim / release events
+ *   [MAP-SNAP]    Periodic full-settlement snapshot (every N turns)
  *
  * ─── Filtering examples ───────────────────────────────────────────────────
  *
- *   grep 'wolf.*36' .debug/entities.log
- *   grep 'FORAGE-UNREACHABLE' .debug/entities.log
- *   grep 'Zara Ironforge' .debug/pawns.log
- *   grep 'INTERRUPT' .debug/pawns.log
+ *   grep '\[NEED-CHECK\]' .debug/game.log
+ *   grep '\[MAP-SNAP\]'   .debug/game.log
+ *   grep 'Zara Ironforge' .debug/game.log
+ *   grep 'INTERRUPT'      .debug/game.log
+ *
+ * ─── File location ────────────────────────────────────────────────────────
+ *
+ *   .debug/game.log  (project root, gitignored)
  */
 
 import type { GameState } from '../core/types';

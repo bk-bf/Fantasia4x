@@ -592,10 +592,8 @@ class EntityServiceImpl {
                 const pawnDist = nearest ? this.dist(mob, nearest.pos) : Infinity;
                 const predDist = predatorThreat ? this.dist(mob, predatorThreat.pos) : Infinity;
                 const closestDist = Math.min(pawnDist, predDist);
-                // Flee until both pawn and predator threats are fully out of vision.
-                // Using visionRange (not fleeRange) guarantees that on return to
-                // Grazing the threat is truly gone and Startled cannot re-fire.
-                if (closestDist > def.stats.visionRange) {
+                // Flee until the threat is beyond this creature's defined flee range.
+                if (closestDist > def.stats.fleeRange) {
                     return { ...mob, state: 'Grazing', stateSince: turn, path: [] };
                 }
                 const fleeFrom = pawnDist <= predDist ? nearest!.pos : predatorThreat!.pos;
@@ -1189,10 +1187,11 @@ class EntityServiceImpl {
         state: GameState,
         x: number,
         y: number,
-        _homeX?: number,
-        _homeY?: number,
+        homeX?: number,
+        homeY?: number,
         selfId?: string
     ): { x: number; y: number } | null {
+        const HOME_RANGE = 10;
         // Enumerate all 8 neighbours in random order (Fisher-Yates) so every walkable
         // direction is considered exactly once — no wasted random retries that could
         // leave a boxed-in animal stuck even when an exit exists.
@@ -1211,6 +1210,13 @@ class EntityServiceImpl {
             // Diagonal wall-cut prevention (mirrors WASM A*): a diagonal step is only
             // allowed if at least one shared orthogonal neighbour is walkable.
             if (dx !== 0 && dy !== 0 && !this.isWalkable(state, x + dx, y) && !this.isWalkable(state, x, y + dy)) {
+                continue;
+            }
+            if (
+                homeX !== undefined &&
+                homeY !== undefined &&
+                (Math.abs(nx - homeX) > HOME_RANGE || Math.abs(ny - homeY) > HOME_RANGE)
+            ) {
                 continue;
             }
             if (selfId && this.isOccupied(state, nx, ny, selfId)) continue;

@@ -35,7 +35,6 @@
   import { getCreatureById } from '$lib/game/core/Creatures.js';
   import { TICKS_PER_SECOND } from '$lib/game/core/time.js';
   import { simTarget } from '$lib/game/systems/MovementSystem.js';
-  import { gameLogger } from '$lib/game/dev/gameLogger.js';
   import SelectedEntityCard from '$lib/components/UI/SelectedEntityCard.svelte';
   import type {
     SelectedEntityModel,
@@ -1432,118 +1431,25 @@
 
   function startLoop() {
     let lastFpsPush = 0;
-
-    // ── Frame profiler ────────────────────────────────────────────────────────
-    // Enable with: globalThis.__perfFollow = true
-    // Disable with: globalThis.__perfFollow = false
-    //
-    // Prints a rolling 1-second summary (avg ± max per phase) to the console,
-    // plus a ★ spike line for any individual frame that exceeds 20 ms.
-    // Phase labels: sim | overlay | cam | desgn | webgl | TOTAL
-    const ph = { sim: 0, overlay: 0, cam: 0, desgn: 0, webgl: 0 };
-
-    // Accumulator for the current 1-second window
-    type Acc = { sum: number; max: number; n: number };
-    const mkAcc = (): Acc => ({ sum: 0, max: 0, n: 0 });
-    let acc = {
-      sim: mkAcc(),
-      overlay: mkAcc(),
-      cam: mkAcc(),
-      desgn: mkAcc(),
-      webgl: mkAcc(),
-      total: mkAcc()
-    };
-    let accStart = 0;
-
-    function recordAcc(key: keyof typeof acc, v: number) {
-      acc[key].sum += v;
-      acc[key].n++;
-      if (v > acc[key].max) acc[key].max = v;
-    }
-    function fmtAcc(a: Acc): string {
-      return a.n ? `${(a.sum / a.n).toFixed(1)}/${a.max.toFixed(1)}` : '-';
-    }
-    // ─────────────────────────────────────────────────────────────────────────
-
     function frame() {
       if (!renderer || !ready) return;
+      // Real elapsed time drives interpolation so motion is smooth at the display
+      // refresh rate regardless of how fast/slow the simulation ticks.
       const now = performance.now();
       const dt = lastFrameTime ? (now - lastFrameTime) / 1000 : 0;
       lastFrameTime = now;
-      // dt used by stepSimulation is the real wall time (it has its own 250ms clamp).
-      // smoothDt is capped at 50ms so interpolation/camera never snap on CPU-stall frames.
-      const smoothDt = Math.min(dt, 0.05);
-
-      const prof = (globalThis as any).__perfFollow as boolean | undefined;
-      let t0 = 0;
-
-      if (prof) {
-        t0 = performance.now();
-        if (!accStart) accStart = now;
-      }
+      // Advance the simulation on this same thread/schedule. Driving the sim from
+      // the render loop (rather than a competing setInterval) prevents the timer
+      // starvation that throttled a <1 ms/tick sim to ~20 TPS while rendering.
       gameState.stepSimulation(dt * 1000);
-      if (prof) ph.sim = performance.now() - t0;
-
-      if (prof) t0 = performance.now();
-      updatePawnOverlay(smoothDt);
-      if (prof) ph.overlay = performance.now() - t0;
-
-      if (prof) t0 = performance.now();
-      updateCameraFollow(smoothDt);
-      updateCameraFollowMob(smoothDt);
-      if (prof) ph.cam = performance.now() - t0;
-
-      if (prof) t0 = performance.now();
+      updatePawnOverlay(dt);
+      updateCameraFollow(dt);
+      updateCameraFollowMob(dt);
       updateWorldEffectOverlays();
-      // Single drawDesignations() per frame — removed from setView so follow mode
-      // no longer triggers a full Canvas2D clear + sprite redraw 60×/sec.
-      drawDesignations();
-      if (prof) ph.desgn = performance.now() - t0;
-
-      if (prof) t0 = performance.now();
       renderer.setOverlayGrid(pawnOverlayGrid);
       renderer.beginFrame();
       renderer.endFrame();
-      if (prof) ph.webgl = performance.now() - t0;
-
-      if (prof) {
-        const total = ph.sim + ph.overlay + ph.cam + ph.desgn + ph.webgl;
-        recordAcc('sim', ph.sim);
-        recordAcc('overlay', ph.overlay);
-        recordAcc('cam', ph.cam);
-        recordAcc('desgn', ph.desgn);
-        recordAcc('webgl', ph.webgl);
-        recordAcc('total', total);
-
-        // Spike: any frame over 20 ms — log to file and console
-        if (total > 20) {
-          const spikeLine = `SPIKE ${total.toFixed(1)}ms  sim=${ph.sim.toFixed(1)} overlay=${ph.overlay.toFixed(1)} cam=${ph.cam.toFixed(1)} desgn=${ph.desgn.toFixed(1)} webgl=${ph.webgl.toFixed(1)}`;
-          gameLogger.log(0, 'PERF', spikeLine);
-          console.log('★ ' + spikeLine);
-        }
-
-        // Rolling 1-second summary (avg/max per phase)
-        if (now - accStart >= 1000) {
-          const fps = acc.total.n;
-          const summaryLine =
-            `1s | ${fps}fps  ` +
-            `sim=${fmtAcc(acc.sim)}  overlay=${fmtAcc(acc.overlay)}  ` +
-            `cam=${fmtAcc(acc.cam)}  desgn=${fmtAcc(acc.desgn)}  ` +
-            `webgl=${fmtAcc(acc.webgl)}  TOTAL=${fmtAcc(acc.total)} ms (avg/max)`;
-          gameLogger.log(0, 'PERF', summaryLine);
-          console.log('[PERF] ' + summaryLine);
-          acc = {
-            sim: mkAcc(),
-            overlay: mkAcc(),
-            cam: mkAcc(),
-            desgn: mkAcc(),
-            webgl: mkAcc(),
-            total: mkAcc()
-          };
-          accStart = now;
-        }
-      }
-
+      // Surface render FPS to the topbar ~4×/sec to avoid store churn.
       if (now - lastFpsPush > 250) {
         lastFpsPush = now;
         renderFps.set(Math.round(renderer.getStats().fps));
@@ -1575,10 +1481,7 @@
     [viewX, viewY] = clampView(x, y);
     renderer?.setViewTileOffset(viewX, viewY);
     saveCameraState();
-    // drawDesignations() is NOT called here — it runs once per rAF frame in
-    // startLoop() so camera-follow mode doesn't call it 60×/sec.
-    // Event handlers that need an immediate 2D-overlay update (zoom, resize,
-    // keyboard pan when the rAF loop is paused) call it directly after setView.
+    drawDesignations();
   }
 
   function handleKeyDown(e: KeyboardEvent) {
