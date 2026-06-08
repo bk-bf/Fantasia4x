@@ -58,7 +58,7 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     description: 'Process animal carcasses into meat, hide, and bone at a butcher spot',
     emoji: '\uD83D\uDD2A',
     color: '#C62828',
-    toolsRequired: ['flint_knife'],
+    toolsRequired: ['flint_knife', 'bone_cleaver'],
     primaryStat: 'strength',
     secondaryStat: 'dexterity',
     baseEfficiency: 1.0

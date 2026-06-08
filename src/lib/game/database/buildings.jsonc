@@ -87,6 +87,25 @@
     "buildingState": {"isUnique": false, "maxCount": 3}
   },
   {
+    "id": "dressing_stone",
+    "name": "Dressing Stone",
+    "color": "#8D6E63",
+    "charSpans": [ {"sheet": "buildings", "id": 39} ],
+    "fg": [0.55, 0.43, 0.39],
+    "bg": [0.06, 0.03, 0.02],
+    "description": "A flat slab of dressed stone set on hewn log stakes, with a hanging rail and bone-chip drainage groove. Yields 25% more from each carcass than the raw butcher spot.",
+    "category": "production",
+    "buildingCost": {"wood_log": 3, "surface_stone": 6, "cordage": 2},
+    "workAmount": 25,
+    "toolTierRequired": 1,
+    "populationRequired": 1,
+    "researchRequired": null,
+    "upkeepCost": {},
+    "effects": {"butcheringEnabled": true, "butcheryYieldBonus": 0.25},
+    "storageCapacity": {},
+    "buildingState": {"isUnique": false, "maxCount": 2}
+  },
+  {
     "id"                : "branch_wall",
     "name"              : "Branch Wall",
     "color"             : "#8B6914",

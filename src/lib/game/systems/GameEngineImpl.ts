@@ -187,11 +187,21 @@ export class GameEngineImpl implements GameEngine {
 		// Calculate intactness multiplier
 		const intactnessFraction = currentIntactness / 100;
 
-		// Roll all outputs and scale by intactness
+		// Tier 1 tool bonus: bone_cleaver in stockpile → +25% yield
+		const hasBoneCleaver = (this.gameState.stockpile?.['bone_cleaver'] ?? 0) > 0;
+		// Tier 1 building bonus: dressing_stone → +25% yield
+		const hasDressingStone = (this.gameState.buildings ?? []).some(
+			(b) => b.type === 'dressing_stone' && b.status === 'complete'
+		);
+		const toolMult = hasBoneCleaver ? 1.25 : 1.0;
+		const buildMult = hasDressingStone ? 1.25 : 1.0;
+		const yieldMult = intactnessFraction * toolMult * buildMult;
+
+		// Roll all outputs and scale by combined multiplier
 		const outputs: Record<string, number> = {};
 		for (const output of carcassItem.yields) {
 			const baseQty = Math.floor(Math.random() * (output.max - output.min + 1)) + output.min;
-			const scaledQty = Math.max(1, Math.round(baseQty * intactnessFraction));
+			const scaledQty = Math.max(1, Math.round(baseQty * yieldMult));
 			outputs[output.item] = (outputs[output.item] ?? 0) + scaledQty;
 		}
 

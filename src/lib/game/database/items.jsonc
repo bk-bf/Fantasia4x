@@ -1004,5 +1004,24 @@
     "description": "A fully decomposed animal body. Inedible. Can be worked into fertiliser.",
     "color"      : "#212121",
     "amount"     : 0
+  },
+  // ── Tier 1 butchery tool ─────────────────────────────────────────────────────
+  {
+    "id": "bone_cleaver",
+    "name": "Bone Cleaver",
+    "type": "tool",
+    "category": "butchery",
+    "description": "A heavy blade split from large animal bone and knapped to a sharp edge, lashed to a hardwood grip with cordage. Renders 25% more yield from any carcass than a flint knife.",
+    "color": "#C8A87A",
+    "amount": 0,
+    "tier": 1,
+    "durability": 45,
+    "maxDurability": 45,
+    "craftingCost": {"large_bones": 1, "flint_shard": 2, "branch": 3, "cordage": 2},
+    "craftingTime": 4,
+    "toolTierRequired": 0,
+    "workshopType": "makers_bench",
+    "processingType": ["butchery"],
+    "effects": {"butcheryYieldBonus": 0.25}
   }
 ]

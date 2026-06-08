@@ -94,10 +94,10 @@ export class ItemServiceImpl implements ItemService {
 			// Check if we have the carcass in stockpile
 			if ((gameState.stockpile?.[itemId] ?? 0) <= 0) return false;
 			// Check if we have a butcher spot
-			const hasButcherSpot = (gameState.buildings ?? []).some(
-				(b) => b.type === 'butcher_spot' && b.status === 'complete'
+			const hasButcherStation = (gameState.buildings ?? []).some(
+				(b) => (b.type === 'butcher_spot' || b.type === 'dressing_stone') && b.status === 'complete'
 			);
-			return hasButcherSpot;
+			return hasButcherStation;
 		}
 
 		if (!item.craftingCost && !(item.craftingCostAlternatives?.length) && !item.dynamicRecipe) return false;
@@ -321,40 +321,33 @@ export class ItemServiceImpl implements ItemService {
 
 		return gameState;
 	}
-}
 
-stepItemDecay(gameState: GameState): GameState {
-	const stockpile = gameState.stockpile ?? {};
-	const decayAcc: Record<string, number> = { ...(gameState.stockpileDecaySeconds ?? {}) };
-	let state: GameState = gameState;
-	let changed = false;
+	stepItemDecay(gameState: GameState): GameState {
+		const stockpile = gameState.stockpile ?? {};
+		const decayAcc: Record<string, number> = { ...(gameState.stockpileDecaySeconds ?? {}) };
+		let state: GameState = gameState;
 
-	for (const [itemId, qty] of Object.entries(stockpile)) {
-		if (qty <= 0) continue;
-		const def = this.getItemById(itemId);
-		if (!def?.decaySeconds) continue;
+		for (const [itemId, qty] of Object.entries(stockpile)) {
+			if ((qty as number) <= 0) continue;
+			const def = this.getItemById(itemId);
+			if (!def?.decaySeconds) continue;
 
-		decayAcc[itemId] = (decayAcc[itemId] ?? 0) + SECONDS_PER_TICK;
-		if (decayAcc[itemId] >= def.decaySeconds) {
-			decayAcc[itemId] -= def.decaySeconds;
-			// Only consume if there's still stock (could have been spent this tick)
-			if ((state.stockpile[itemId] ?? 0) > 0) {
-				state = this.consumeItems({ [itemId]: 1 }, state);
-				if (def.decaysTo) {
-					state = this.addItems({ [def.decaysTo]: 1 }, state);
+			decayAcc[itemId] = (decayAcc[itemId] ?? 0) + SECONDS_PER_TICK;
+			if (decayAcc[itemId] >= def.decaySeconds) {
+				decayAcc[itemId] -= def.decaySeconds;
+				if ((state.stockpile[itemId] ?? 0) > 0) {
+					state = this.consumeItems({ [itemId]: 1 }, state);
+					if (def.decaysTo) {
+						state = this.addItems({ [def.decaysTo]: 1 }, state);
+					}
+				} else {
+					delete decayAcc[itemId];
 				}
-				changed = true;
-			} else {
-				delete decayAcc[itemId];
 			}
 		}
-	}
 
-	if (!changed && Object.keys(decayAcc).length === Object.keys(gameState.stockpileDecaySeconds ?? {}).length) {
 		return { ...state, stockpileDecaySeconds: decayAcc };
 	}
-	return { ...state, stockpileDecaySeconds: decayAcc };
-}
 }
 
 // Export singleton instance

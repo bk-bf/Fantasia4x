@@ -334,10 +334,11 @@ slows to base pawn speed until healed (vet work category, Phase E2 — deferred)
 
 ### Phase B — Hunting & Butchering
 
-- Add `hunting`, `butchering` work categories to `core/Work.ts`
-- `EntityService.stepHunting(state)` — pathfind pawn toward target animal
-- Corpse tile-entity: add `corpses: Corpse[]` to `GameState`; decay timer
-- Add `Butcher's Cleaver` to `core/Items.ts`; `Butcher's Block` to `core/Buildings.ts`
+- ~~Add `hunting`, `butchery` work categories to `core/Work.ts`~~ ✅ done (note: id is `butchery`, not `butchering`)
+- Pawn hunting: `JobService` / `WorkService` — pathfind pawn to nearest non-tamed animal, attack roll on arrival
+- ~~Corpse tile-entity: dead mobs remain in `mobs[]` with `state: 'Corpse'`; `diedAt` + `CORPSE_DECAY_TICKS` already in `EntityService`~~ ✅ done (no separate `Corpse[]` array needed)
+- ~~Add `bone_cleaver` (Tier 1 butchery tool, `makers_bench`) — crafted from `large_bones` + flint + cordage; +25% carcass yield~~ ✅ done
+- ~~Add `dressing_stone` (Tier 1 butchery building) — flat stone slab + log stakes; unlocks at tool tier 1; +25% carcass yield stacks with `bone_cleaver`~~ ✅ done
 
 ### Phase C — Taming
 
