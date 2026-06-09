@@ -48,6 +48,7 @@
       mentalBonus: Record<string, any>;
       specialEffects: Record<string, any>;
       resistanceBonus: Record<string, any>;
+      workBonus: Record<string, any>;
       capacityBonus: Record<string, any>;
     } = {
       workEfficiency: {},
@@ -57,6 +58,7 @@
       mentalBonus: {},
       specialEffects: {},
       resistanceBonus: {},
+      workBonus: {},
       capacityBonus: {}
     };
 
@@ -106,7 +108,8 @@
       physical: results.physicalBonus,
       mental: results.mentalBonus,
       special: results.specialEffects,
-      resistance: results.resistanceBonus
+      resistance: results.resistanceBonus,
+      work: results.workBonus
     };
     STATS.forEach((st) => {
       const bucket = resultBuckets[st.category];
@@ -216,18 +219,24 @@
 
     switch (capacityId) {
       case 'consciousness': {
-        // Brain is primary (60%); heart (20%) and lungs (15%) supply oxygenated blood.
-        // 5% baseline = deep coma / brainstem reflexes only.
+        // Brain (50%), heart (15%), lungs (10%) supply oxygenated blood.
+        // Sight (10%) and hearing (5%) feed into mental clarity.
+        // 10% baseline = minimal awareness.
         // Pain reduces consciousness: 100% pain → ×0.5, 200% pain → 0 (shock).
         const brain = organMissing('head', 'brain') ? 0.0 : organH('head', 'brain') / 30;
         const heart = organMissing('torso', 'heart') ? 0.0 : organH('torso', 'heart') / 20;
         const leftLung = organMissing('torso', 'leftLung') ? 0.0 : organH('torso', 'leftLung') / 30;
         const rightLung = organMissing('torso', 'rightLung') ? 0.0 : organH('torso', 'rightLung') / 30;
         const avgLung = (leftLung + rightLung) / 2;
-        const baseCon = brain * 0.60 + heart * 0.20 + avgLung * 0.15 + 0.05;
-        const painMult = Math.max(0, 1 - painValue * 0.5);
-        value = baseCon * painMult;
-        description = `Brain ${(brain * 100).toFixed(0)}% × 0.6 + Heart ${(heart * 100).toFixed(0)}% × 0.2 + Lungs ${(avgLung * 100).toFixed(0)}% × 0.15 + 0.05 × Pain ${(painMult * 100).toFixed(0)}%`;
+        const baseCon = brain * 0.50 + heart * 0.15 + avgLung * 0.10 + 0.10;
+        const sightCap = capacities.sight ?? 1;
+        const hearingCap = capacities.hearing ?? 1;
+        // Pain threshold: minor pain (<10%) doesn't affect consciousness.
+        // Above 10%, each 10% pain reduces consciousness by ~5%.
+        const effectivePain = Math.max(0, painValue - 0.10);
+        const painMult = Math.max(0.10, 1 - effectivePain * 0.5);
+        value = (baseCon + sightCap * 0.10 + hearingCap * 0.05) * painMult;
+        description = `Brain ${(brain * 100).toFixed(0)}% × 0.5 + Heart ${(heart * 100).toFixed(0)}% × 0.15 + Lungs ${(avgLung * 100).toFixed(0)}% × 0.1 + Sight ${(sightCap * 100).toFixed(0)}% × 0.1 + Hearing ${(hearingCap * 100).toFixed(0)}% × 0.05 + 0.1 × Pain ${(painMult * 100).toFixed(0)}%`;
         break;
       }
       case 'pain': {
@@ -888,6 +897,81 @@
                       class:trait={source.type === 'trait'}
                     >
                       <span class="source-label">{source.name}: {(source.value * 100).toFixed(1)}%</span>
+                      <div class="source-description">{source.description}</div>
+                    </div>
+                  {/each}
+                </div>
+              {/if}
+            </div>
+          </div>
+        {/each}
+      </div>
+    </div>
+  {/if}
+
+  <!-- Work Bonuses Section -->
+  {#if Object.keys(allModifierResults.workBonus).length > 0}
+    <div class="ability-category">
+      <h4 class="category-title">
+        WORK ({Object.keys(allModifierResults.workBonus).length})
+      </h4>
+
+      <div class="abilities-grid">
+        {#each Object.entries(allModifierResults.workBonus) as [workType, result]}
+          <div class="ability-card" data-category="work">
+            <div class="ability-header">
+              <span class="ability-name">
+                {formatAbilityName(workType)}
+              </span>
+              <span
+                class="ability-value"
+                class:positive={result.totalValue > 1.0}
+                class:negative={result.totalValue < 1.0}
+                class:neutral={result.totalValue === 1.0}
+                style="color: {getEfficiencyColor(result.totalValue)}"
+              >
+                {result.totalValue.toFixed(2)}x
+              </span>
+            </div>
+
+            <p class="ability-description">
+              {getAbilityDescription(workType, result.totalValue)}
+            </p>
+
+            <div class="ability-calculation">
+              <div class="calculation-header">
+                <span>Modifiers ({result.sources.length})</span>
+                <button
+                  class="toggle-breakdown"
+                  on:click={() => toggleBreakdown(`work_${workType}`)}
+                >
+                  {showBreakdown[`work_${workType}`] ? '▼' : '▶'}
+                </button>
+              </div>
+
+              {#if showBreakdown[`work_${workType}`]}
+                <div class="breakdown-details">
+                  <div class="calculation-step base">
+                    Base: {result.baseValue.toFixed(2)}x
+                  </div>
+                  <div class="calculation-step formula">
+                    Total Multiplier: {result.multiplier.toFixed(2)}x
+                  </div>
+                  <div class="calculation-step formula">
+                    Final: {result.baseValue.toFixed(2)} × {result.multiplier.toFixed(2)} = {result.totalValue.toFixed(
+                      2
+                    )}x
+                  </div>
+
+                  {#each result.sources as source}
+                    <div
+                      class="calculation-step"
+                      class:stat={source.type === 'stat'}
+                      class:trait={source.type === 'trait'}
+                      class:equipment={source.type === 'item'}
+                      class:building={source.type === 'building'}
+                    >
+                      <span class="source-label">{source.name}: {source.value.toFixed(2)}x</span>
                       <div class="source-description">{source.description}</div>
                     </div>
                   {/each}

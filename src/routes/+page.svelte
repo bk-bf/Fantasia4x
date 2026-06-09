@@ -108,72 +108,72 @@
     <span class="loading-text">LOADING…</span>
   </div>
 {:else}
-<div class="game-container">
-  <div class="game-header">
-    <GameControls />
+  <div class="game-container">
+    <div class="game-header">
+      <GameControls />
+    </div>
+
+    <div class="game-body">
+      <aside class="left-panel">
+        <ResourceSidebar />
+      </aside>
+
+      <main class="main-content">
+        <!-- Map is always visible -->
+        <div class="map-area">
+          <MainScreen />
+
+          <!-- World effects layer: above tiles (z-index 5), below popup panels (z-index 10) -->
+          <WorldEffectsLayer />
+
+          <!-- Overlay panel: slides up from bottom, covers 50% of map -->
+          {#if currentScreen !== 'main'}
+            <div class="overlay-panel">
+              {#if currentScreen === 'pawns'}
+                <PawnScreen />
+              {:else if currentScreen === 'work'}
+                <WorkScreen />
+              {:else if currentScreen === 'building'}
+                <BuildingMenu />
+              {:else if currentScreen === 'crafting'}
+                <CraftingScreen />
+              {:else if currentScreen === 'exploration'}
+                <ExplorationScreen />
+              {:else if currentScreen === 'race'}
+                <RaceScreen />
+              {:else if currentScreen === 'research'}
+                <ResearchScreen />
+              {:else if currentScreen === 'entities'}
+                <EntityScreen />
+              {/if}
+            </div>
+          {/if}
+        </div>
+
+        <!-- Bottom nav bar -->
+        <nav class="bottom-nav">
+          {#each NAV_TABS as tab}
+            {@const isActive = currentScreen === tab.key}
+            {@const disabled = ('needsResearch' in tab ? tab.needsResearch : false) && !hasResearch}
+            <button
+              class="nav-tab"
+              class:active={isActive}
+              class:disabled
+              on:click={() => toggle(tab.key)}
+              {disabled}
+              title={disabled ? 'Requires a knowledge building' : tab.fkey}
+            >
+              {#if isActive}<span class="active-mark">■</span>{/if}{tab.label}
+            </button>
+          {/each}
+        </nav>
+      </main>
+
+      <aside class="right-panel">
+        <ChroniclePanel />
+      </aside>
+    </div>
   </div>
-
-  <div class="game-body">
-    <aside class="left-panel">
-      <ResourceSidebar />
-    </aside>
-
-    <main class="main-content">
-      <!-- Map is always visible -->
-      <div class="map-area">
-        <MainScreen />
-
-        <!-- World effects layer: above tiles (z-index 5), below popup panels (z-index 10) -->
-        <WorldEffectsLayer />
-
-        <!-- Overlay panel: slides up from bottom, covers 50% of map -->
-        {#if currentScreen !== 'main'}
-          <div class="overlay-panel">
-            {#if currentScreen === 'pawns'}
-              <PawnScreen />
-            {:else if currentScreen === 'work'}
-              <WorkScreen />
-            {:else if currentScreen === 'building'}
-              <BuildingMenu />
-            {:else if currentScreen === 'crafting'}
-              <CraftingScreen />
-            {:else if currentScreen === 'exploration'}
-              <ExplorationScreen />
-            {:else if currentScreen === 'race'}
-              <RaceScreen />
-            {:else if currentScreen === 'research'}
-              <ResearchScreen />
-            {:else if currentScreen === 'entities'}
-              <EntityScreen />
-            {/if}
-          </div>
-        {/if}
-      </div>
-
-      <!-- Bottom nav bar -->
-      <nav class="bottom-nav">
-        {#each NAV_TABS as tab}
-          {@const isActive = currentScreen === tab.key}
-          {@const disabled = ('needsResearch' in tab ? tab.needsResearch : false) && !hasResearch}
-          <button
-            class="nav-tab"
-            class:active={isActive}
-            class:disabled
-            on:click={() => toggle(tab.key)}
-            {disabled}
-            title={disabled ? 'Requires a knowledge building' : tab.fkey}
-          >
-            {#if isActive}<span class="active-mark">■</span>{/if}{tab.label}
-          </button>
-        {/each}
-      </nav>
-    </main>
-
-    <aside class="right-panel">
-      <ChroniclePanel />
-    </aside>
-  </div>
-</div>
 {/if}
 
 <style>

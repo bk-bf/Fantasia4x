@@ -69,6 +69,17 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     secondaryStat: 'perception',
     baseEfficiency: 1.0
   },
+  {
+    id: 'planting',
+    name: 'Planting',
+    description: 'Sow seeds, tend crops, and manage farmland',
+    color: '#66BB6A',
+    toolsRequired: ['digging_stick', 'stone_hoe', 'iron_hoe'],
+    locationTypesRequired: ['plains', 'forest'],
+    primaryStat: 'dexterity',
+    secondaryStat: 'intelligence',
+    baseEfficiency: 1.0
+  },
 
   // CRAFTING WORK
   {
@@ -140,6 +151,17 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     skillRequired: 'alchemy',
     primaryStat: 'intelligence',
     secondaryStat: 'perception',
+    baseEfficiency: 1.0
+  },
+  {
+    id: 'caretaking',
+    name: 'Caretaking',
+    description: 'Treat injuries, administer medicine, and care for the sick',
+    color: '#E53935',
+    toolsRequired: ['herbal_kit', 'bandages', 'medicine'],
+    skillRequired: 'medicine',
+    primaryStat: 'intelligence',
+    secondaryStat: 'dexterity',
     baseEfficiency: 1.0
   },
   // Phase 6: cooking over campfire
