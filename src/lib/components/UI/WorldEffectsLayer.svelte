@@ -58,21 +58,22 @@
 
   <!-- ── Draft target lines ────────────────────────────────────────────────────── -->
   {#each $worldEffects.draftTargetOverlays as overlay (overlay.id)}
+    {@const last = overlay.points[overlay.points.length - 1]}
     <svg
       class="draft-target-line"
       style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none;"
     >
-      <line
-        x1={overlay.fromX}
-        y1={overlay.fromY}
-        x2={overlay.toX}
-        y2={overlay.toY}
+      <polyline
+        points={overlay.points.map((p) => `${p.x},${p.y}`).join(' ')}
+        fill="none"
         stroke="#ff4444"
         stroke-width="2"
         stroke-dasharray="4,4"
         opacity="0.7"
       />
-      <circle cx={overlay.toX} cy={overlay.toY} r="4" fill="#ff4444" opacity="0.5" />
+      {#if last}
+        <circle cx={last.x} cy={last.y} r="4" fill="#ff4444" opacity="0.5" />
+      {/if}
     </svg>
   {/each}
 

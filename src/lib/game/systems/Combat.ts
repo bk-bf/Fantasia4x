@@ -13,6 +13,8 @@ import type {
 } from '../core/types';
 import { itemService } from '../services/ItemService';
 import { getCreatureById } from '../core/Creatures';
+import { pawnStatService } from '../services/PawnStatService';
+import { logCombatStart, logCombatTurn, logCombatEnd } from '../../stores/Log';
 
 // ── Tuning constants ─────────────────────────────────────────────────────────
 /** Scales per-part bleed so a fully-severed 5%-mass hand ≈ 2 blood/turn. */
@@ -23,8 +25,8 @@ const CLOT_FLOOR = 0.5;
 const STAT_SCALE = 10;
 /** Mob base damage when it has no weapon. */
 const MOB_BASE_DAMAGE = 5;
-/** Mobs in Attacking state fire once per this many ticks. */
-const ATTACK_INTERVAL_TICKS = 10;
+/** Base attack interval in ticks — scaled by attack_speed stat. */
+const BASE_ATTACK_INTERVAL_TICKS = 12;
 /** Stamina drained per auto-attack. Shared by mobs; pawn attacks will use same constant. */
 const ATTACK_STAMINA_COST = 2;
 /** Stamina regenerated per tick when winded (no attack this tick). */
@@ -942,7 +944,9 @@ class CombatServiceImpl implements CombatService {
         const mobs = state.mobs ?? [];
         for (const mob of mobs) {
             if (mob.state !== 'Attacking' || mob.isAlive === false) continue;
-            if ((state.turn - mob.stateSince) % ATTACK_INTERVAL_TICKS !== 0) continue;
+            const attackSpeed = Math.max(0.5, pawnStatService.evaluateStat('attack_speed', mob));
+            const interval = Math.max(3, Math.round(BASE_ATTACK_INTERVAL_TICKS / attackSpeed));
+            if ((state.turn - mob.stateSince) % interval !== 0) continue;
 
             const curStamina = mob.stamina ?? mob.maxStamina ?? 50;
             if (curStamina <= 0) {
@@ -988,6 +992,22 @@ class CombatServiceImpl implements CombatService {
             }
 
             mobStaminaUpdates.set(mob.id, Math.max(0, curStamina - ATTACK_STAMINA_COST));
+
+            // Log combat turn
+            const mobDef = getCreatureById(mob.creatureId);
+            const attackerName = mobDef ? `${mobDef.name} #${mob.debugId ?? mob.id.slice(-4)}` : mob.id;
+            const targetName = 'entityClass' in target
+                ? (getCreatureById((target as Mob).creatureId)?.name ?? (target as Mob).id)
+                : (target as Pawn).name;
+            logCombatTurn(mob.id, attackerName, target.id, targetName, state.turn, true, result.injury.damage, result.injury.bodyPart, result.knockdown);
+
+            // Check if target died this hit
+            const targetAfter = 'entityClass' in target
+                ? next.mobs?.find((m) => m.id === target.id)
+                : next.pawns.find((p) => p.id === target.id);
+            if (targetAfter && (targetAfter.isAlive === false || ('state' in targetAfter && targetAfter.state === 'Corpse'))) {
+                logCombatEnd(mob.id, target.id, `${targetName} was killed`, state.turn);
+            }
 
             if (result.knockdown) {
                 const turns = Math.floor(Math.random() * 3) + 1;
@@ -1040,8 +1060,10 @@ class CombatServiceImpl implements CombatService {
             const ty = 'entityClass' in target ? target.y : (target.position?.y ?? -1);
             if (Math.abs(pawn.position.x - tx) > 1 || Math.abs(pawn.position.y - ty) > 1) continue;
 
-            // Attack cadence for drafted pawns (same interval as mobs)
-            if (state.turn % ATTACK_INTERVAL_TICKS !== 0) continue;
+            // Attack cadence for drafted pawns — scaled by attack_speed stat.
+            const pawnAttackSpeed = Math.max(0.5, pawnStatService.evaluateStat('attack_speed', pawn));
+            const pawnInterval = Math.max(3, Math.round(BASE_ATTACK_INTERVAL_TICKS / pawnAttackSpeed));
+            if (state.turn % pawnInterval !== 0) continue;
 
             const curStamina = pawn.stamina ?? pawn.maxStamina ?? 50;
             if (curStamina <= 0) {

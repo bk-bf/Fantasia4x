@@ -449,8 +449,10 @@
         },
         {
           label: 'BLOOD',
-          value: mob.bloodVolume ?? 100,
-          warn: (mob.bloodVolume ?? 100) < 60
+          value: Math.round(
+            ((mob.bloodVolume ?? mob.maxBloodVolume ?? 100) / (mob.maxBloodVolume ?? 100)) * 100
+          ),
+          warn: (mob.bloodVolume ?? mob.maxBloodVolume ?? 100) / (mob.maxBloodVolume ?? 100) < 0.6
         }
       ] satisfies EntityBar[],
       note: `${def.entityClass === 'mob' ? '⚔ hostile' : '◆ neutral'} · ${def.behaviour}${
@@ -957,42 +959,32 @@
       .filter((p) => p.position && p.drafted && p.draftTarget)
       .map((p) => {
         const target = p.draftTarget!;
-        let toX: number, toY: number;
-        if (target.type === 'move') {
-          toX = target.x;
-          toY = target.y;
-        } else {
-          // attack target — resolve entity position
+        // Build polyline from current position through remaining path tiles to target.
+        const points: Array<{ x: number; y: number }> = [
+          { x: (p.position!.x - viewX + 0.5) * tW, y: (p.position!.y - viewY + 0.5) * tH }
+        ];
+        const path = p.path ?? [];
+        const pathIdx = p.pathIndex ?? 0;
+        for (let i = pathIdx; i < path.length; i++) {
+          const tile = path[i];
+          points.push({ x: (tile.x - viewX + 0.5) * tW, y: (tile.y - viewY + 0.5) * tH });
+        }
+        // For attack orders, append the live target position (path ends at adjacent tile).
+        if (target.type === 'attack') {
           const targetEntity =
             target.targetType === 'mob'
               ? mobs.find((m) => m.id === target.targetId)
               : pawns.find((pp) => pp.id === target.targetId);
-          toX = targetEntity?.x ?? targetEntity?.position?.x ?? p.position!.x;
-          toY = targetEntity?.y ?? targetEntity?.position?.y ?? p.position!.y;
+          const tx = targetEntity?.x ?? targetEntity?.position?.x ?? p.position!.x;
+          const ty = targetEntity?.y ?? targetEntity?.position?.y ?? p.position!.y;
+          points.push({ x: (tx - viewX + 0.5) * tW, y: (ty - viewY + 0.5) * tH });
         }
-        return {
-          id: `draft-${p.id}`,
-          fromX: (p.position!.x - viewX + 0.5) * tW,
-          fromY: (p.position!.y - viewY + 0.5) * tH,
-          toX: (toX - viewX + 0.5) * tW,
-          toY: (toY - viewY + 0.5) * tH
-        };
+        return { id: `draft-${p.id}`, points };
       })
-      .filter(
-        (o) =>
-          o.fromX >= -tW &&
-          o.fromY >= -tH &&
-          o.fromX <= W + tW &&
-          o.toX >= -tW &&
-          o.toY >= -tH &&
-          o.toX <= W + tW
-      );
+      .filter((o) => o.points.some((p) => p.x >= -tW && p.y >= -tH && p.x <= W + tW && p.y <= H + tH));
     const draftKey = newDraftTargets
-      .map(
-        (o) =>
-          `${o.id}:${Math.round(o.fromX)},${Math.round(o.fromY)},${Math.round(o.toX)},${Math.round(o.toY)}`
-      )
-      .join('|');
+      .map((o) => `${o.id}:${o.points.map((p) => `${Math.round(p.x)},${Math.round(p.y)}`).join('|')}`)
+      .join(';');
     if (draftKey !== _draftOverlayKey) {
       _draftOverlayKey = draftKey;
       worldEffects.setDraftTargetOverlays(newDraftTargets);

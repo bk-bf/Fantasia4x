@@ -50,6 +50,13 @@
         "formula"    : "(1.0 + (PER − 10) × 0.05) × sight",
         "description": "threat detection range (× sight)"
     },
+    {
+        "id"         : "attack_speed",
+        "category"   : "combat",
+        "primaryStat": "dexterity",
+        "formula"    : "(1.0 + (DEX − 10) × 0.03) × manipulation",
+        "description": "attack cadence multiplier — higher = faster strikes (× manipulation)"
+    },
     // ── Physical ──────────────────────────────────────────────────────────────────
     // Physical stats are multiplied by the body capacities that enable them:
     //   manipulation = can physically interact (carry, wield)

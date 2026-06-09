@@ -32,10 +32,7 @@ export interface HealthOverlay {
 
 export interface DraftTargetOverlay {
   id: string;
-  fromX: number;
-  fromY: number;
-  toX: number;
-  toY: number;
+  points: Array<{ x: number; y: number }>;
 }
 
 export interface WorldEffectsState {

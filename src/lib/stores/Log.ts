@@ -126,3 +126,155 @@ export function logSystem(
     severity
   });
 }
+
+// ── Combat & Entity Logging ─────────────────────────────────────────────────
+
+/** Active combat sessions being tracked for breakdown (key = "attackerId|defenderId"). */
+const activeCombatSessions = new Map<string, ActivityLogEntry>();
+
+function combatKey(a: string, b: string) {
+  return a < b ? `${a}|${b}` : `${b}|${a}`;
+}
+
+export function logCombatStart(
+  attackerId: string,
+  attackerName: string,
+  defenderId: string,
+  defenderName: string,
+  turn: number,
+  focusX: number,
+  focusY: number
+) {
+  const key = combatKey(attackerId, defenderId);
+  const entry: ActivityLogEntry = {
+    turn,
+    type: 'combat',
+    actor: attackerId,
+    action: `${attackerName} engaged in combat with ${defenderName}`,
+    target: defenderId,
+    result: '',
+    severity: 'warning',
+    entityIds: [attackerId, defenderId],
+    focusX,
+    focusY,
+    combatBreakdown: []
+  };
+  activeCombatSessions.set(key, entry);
+  logActivity(entry);
+}
+
+export function logCombatTurn(
+  attackerId: string,
+  attackerName: string,
+  defenderId: string,
+  defenderName: string,
+  turn: number,
+  hit: boolean,
+  damage?: number,
+  injury?: string,
+  knockdown?: boolean
+) {
+  const key = combatKey(attackerId, defenderId);
+  const session = activeCombatSessions.get(key);
+  const turnEntry: CombatTurnEntry = {
+    turn,
+    attackerName,
+    defenderName,
+    hit,
+    damage,
+    injury,
+    knockdown
+  };
+  if (session && session.combatBreakdown) {
+    session.combatBreakdown.push(turnEntry);
+  }
+}
+
+export function logCombatEnd(
+  attackerId: string,
+  defenderId: string,
+  result: string,
+  turn: number
+) {
+  const key = combatKey(attackerId, defenderId);
+  const session = activeCombatSessions.get(key);
+  if (session) {
+    session.result = result;
+    session.severity = result.includes('died') || result.includes('killed') ? 'critical' : 'warning';
+    activeCombatSessions.delete(key);
+  }
+}
+
+export function logHuntStart(
+  hunterId: string,
+  hunterName: string,
+  preyId: string,
+  preyName: string,
+  turn: number,
+  focusX: number,
+  focusY: number
+) {
+  logActivity({
+    turn,
+    type: 'entity',
+    actor: hunterId,
+    action: `${hunterName} has started hunting ${preyName}`,
+    target: preyId,
+    result: '',
+    severity: 'info',
+    entityIds: [hunterId, preyId],
+    focusX,
+    focusY
+  });
+}
+
+export function logFlee(
+  entityId: string,
+  entityName: string,
+  threatId: string | undefined,
+  threatName: string | undefined,
+  turn: number,
+  focusX: number,
+  focusY: number
+) {
+  const action = threatName
+    ? `${entityName} is fleeing from ${threatName}`
+    : `${entityName} is fleeing`;
+  logActivity({
+    turn,
+    type: 'entity',
+    actor: entityId,
+    action,
+    target: threatId,
+    result: '',
+    severity: 'warning',
+    entityIds: threatId ? [entityId, threatId] : [entityId],
+    focusX,
+    focusY
+  });
+}
+
+export function logEntityStateChange(
+  entityId: string,
+  entityName: string,
+  fromState: string,
+  toState: string,
+  turn: number,
+  focusX: number,
+  focusY: number
+) {
+  // Only log interesting state transitions
+  const interesting = ['Attacking', 'Fleeing', 'Hunting', 'Eating', 'Sleeping', 'Startled', 'Exhausted'];
+  if (!interesting.includes(toState)) return;
+  logActivity({
+    turn,
+    type: 'entity',
+    actor: entityId,
+    action: `${entityName} is now ${toState.toLowerCase()}`,
+    result: fromState !== toState ? `(was ${fromState.toLowerCase()})` : '',
+    severity: toState === 'Attacking' || toState === 'Fleeing' ? 'warning' : 'info',
+    entityIds: [entityId],
+    focusX,
+    focusY
+  });
+}

@@ -97,6 +97,16 @@ export interface EventLog {
   timestamp: Date;
 }
 
+export interface CombatTurnEntry {
+  turn: number;
+  attackerName: string;
+  defenderName: string;
+  hit: boolean;
+  damage?: number;
+  injury?: string;
+  knockdown?: boolean;
+}
+
 export interface ActivityLogEntry {
   id: string;
   turn: number;
@@ -109,7 +119,9 @@ export interface ActivityLogEntry {
     | 'pawn_action'
     | 'research'
     | 'exploration'
-    | 'system';
+    | 'system'
+    | 'combat'
+    | 'entity';
   actor?: string; // Pawn ID or 'system'
   action: string;
   target?: string;
@@ -117,6 +129,13 @@ export interface ActivityLogEntry {
   result: string;
   details?: Record<string, any>;
   severity: 'info' | 'success' | 'warning' | 'error' | 'critical';
+  /** Entity IDs involved — used for click-to-jump on the map. */
+  entityIds?: string[];
+  /** Map coordinates for camera focus. */
+  focusX?: number;
+  focusY?: number;
+  /** Per-turn combat breakdown — shown when expanding a combat log entry. */
+  combatBreakdown?: CombatTurnEntry[];
 }
 
 // Enhanced Event System
