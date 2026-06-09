@@ -22,7 +22,6 @@ import { resourceObjectService } from '../services/ResourceObjectService';
 import { entityService } from '../services/EntityService';
 import { TICKS_PER_SECOND, ticksFromSeconds, perTick } from '../core/time';
 import { isGameDebug } from '../core/log';
-import { computeTileLightLevel } from '../services/EnvironmentService';
 import type { WorkCategory } from '../core/types';
 import type { Pawn } from '../core/types';
 
@@ -408,7 +407,8 @@ export class GameEngineImpl implements GameEngine {
 				this.gameState = entityService.stepHunger(this.gameState!);
 				this.gameState = entityService.removeDead(this.gameState!);
 			});
-			this.debugLogPawns(); t('cacheLight', () => this.cacheWorldLight());
+		this.debugLogPawns();
+
 			this.lastTurnProcessed = this.gameState.turn;
 			t('mgrUpdate', () => this.gameStateManager!.updateState(this.gameState!));
 			// Throttled UI push: refresh the store value every tick, notify
@@ -701,23 +701,6 @@ export class GameEngineImpl implements GameEngine {
 	private processCrafting(): void {
 		// Phase 5d: crafting is now handled by the job system (craft jobs).
 		// processCraftingQueue countdown removed.
-	}
-
-	/** Cache per-tile light level (ambient + point sources) on every WorldTile. */
-	private cacheWorldLight(): void {
-		if (!this.gameState) return;
-		const gs = this.gameState;
-		const map = gs.worldMap;
-		if (!map || map.length === 0) return;
-
-		const buildings = gs.buildings;
-		const newMap = map.map((row, ry) =>
-			row.map((tile, rx) => {
-				const light = computeTileLightLevel(gs.turn, buildings, rx, ry);
-				return light !== tile.lightLevel ? { ...tile, lightLevel: light } : tile;
-			})
-		);
-		gs.worldMap = newMap;
 	}
 
 	// ===== HELPER METHODS =====

@@ -14,6 +14,7 @@
     formatEffectValue
   } from '$lib/utils/pawnUtils';
   import { pawnStatService } from '$lib/game/services/PawnStatService';
+  import { computeTileLightLevel } from '$lib/game/services/EnvironmentService';
   import statsData from '$lib/game/database/stats.jsonc';
   import { WORK_CATEGORIES } from '$lib/game/core/Work';
 
@@ -63,11 +64,15 @@
       capacityBonus: {}
     };
 
-    // ── Phase 0: Read cached environmental light at pawn's position ─────
-    const lightMult =
-      pawn.position && gameState.worldMap[pawn.position.y]?.[pawn.position.x]?.lightLevel != null
-        ? gameState.worldMap[pawn.position.y][pawn.position.x].lightLevel!
-        : 1.0;
+    // ── Phase 0: Compute environmental light at pawn's position (on-demand) ──
+    const lightMult = pawn.position
+      ? computeTileLightLevel(
+          gameState.turn,
+          gameState.buildings,
+          pawn.position.x,
+          pawn.position.y
+        )
+      : 1.0;
 
     // ── Phase 1: Pre-compute body capacities (0–1 multipliers from limb health) ──
     const capacities: Record<string, number> = {};
