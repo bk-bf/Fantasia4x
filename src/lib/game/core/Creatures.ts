@@ -22,11 +22,37 @@ export type EntityDiet = 'herbivore' | 'carnivore' | 'omnivore';
 export type EntityIntelligence = 'primitive' | 'sapient';
 
 export interface CreatureStats {
+    // ── Primary attributes (set in creatures.jsonc) ───────────────────────
+    /** Physical power → melee damage, carry weight. */
+    str: number;
+    /** Agility → move speed, dodge, hit chance. */
+    dex: number;
+    /** Durability → maxHealth (= con × 5). */
+    con: number;
+    /** Awareness → vision range (= round(2 + per × 0.65)). */
+    per: number;
+    // ── Derived (computed in toDefinition(); do not set in JSON) ─────────
+    /** = con × 5 */
     health: number;
+    /** = floor(1.5 + dex × 0.35) — tiles per second */
+    speed: number;
+    /** = round(2 + per × 0.65) — tile detection radius */
+    visionRange: number;
+    /** = round(visionRange × 1.45) */
+    fleeRange: number;
+    /** Alias for str; used by legacy spawn code. */
     strength: number;
-    speed: number; // tiles per in-game second
-    visionRange: number; // tiles — detection radius
-    fleeRange: number;   // tiles — stop fleeing once all threats are beyond this distance
+}
+
+/** A natural attack this creature can make in melee (claws, bite, hoof, fists…). */
+export interface NaturalWeapon {
+    /** Descriptive id shown in logs, e.g. 'bite', 'claw', 'hoof', 'fists'. */
+    id: string;
+    damageType: 'cutting' | 'piercing' | 'blunt';
+    /** Base damage before strength scaling. Scaled by str / STAT_SCALE in Combat. */
+    baseDamage: number;
+    /** Knockdown multiplier; only relevant for blunt weapons (default 1.0 for blunt, 0 otherwise). */
+    bluntMod?: number;
 }
 
 export interface CreatureLootEntry {
@@ -91,11 +117,26 @@ export interface CreatureDefinition {
     /** biome id → relative spawn weight (terrains.jsonc biome ids). */
     biomeWeights: Record<string, number>;
     lootTable: CreatureLootEntry[];
+    /** Natural melee attacks available to this creature. */
+    naturalWeapons: NaturalWeapon[];
 }
 
 type RawCreature = Record<string, unknown>;
 
 function toDefinition(raw: RawCreature): CreatureDefinition {
+    const rs = raw.stats as { str: number; dex: number; con: number; per: number };
+    const visionRange = Math.round(2 + rs.per * 0.65);
+    const stats: CreatureStats = {
+        str: rs.str,
+        dex: rs.dex,
+        con: rs.con,
+        per: rs.per,
+        strength: rs.str,
+        health: rs.con * 5,
+        speed: Math.floor(1.5 + rs.dex * 0.35),
+        visionRange,
+        fleeRange: Math.round(visionRange * 1.45),
+    };
     return {
         id: raw.id as string,
         name: raw.name as string,
@@ -103,7 +144,7 @@ function toDefinition(raw: RawCreature): CreatureDefinition {
         chars: resolveCharSpans((raw.charSpans ?? []) as CharSpan[]),
         fg: raw.fg as [number, number, number],
         bg: (raw.bg as [number, number, number]) ?? [0, 0, 0],
-        stats: raw.stats as CreatureStats,
+        stats,
         behaviour: raw.behaviour as EntityBehaviour,
         diet: (raw.diet as EntityDiet) ?? 'omnivore',
         predator: (raw.predator as boolean) ?? false,
@@ -120,7 +161,8 @@ function toDefinition(raw: RawCreature): CreatureDefinition {
         produces: raw.produces as CreatureProduces | undefined,
         carcassItemId: (raw.carcassItemId as string) ?? undefined,
         biomeWeights: (raw.biomeWeights as Record<string, number>) ?? {},
-        lootTable: (raw.lootTable as CreatureLootEntry[]) ?? []
+        lootTable: (raw.lootTable as CreatureLootEntry[]) ?? [],
+        naturalWeapons: (raw.naturalWeapons as NaturalWeapon[]) ?? [],
     };
 }
 

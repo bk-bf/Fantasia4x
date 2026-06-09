@@ -205,10 +205,10 @@ class EntityServiceImpl {
     private makeMob(def: CreatureDefinition, x: number, y: number, turn: number): Mob {
         const initialState: MobState = def.behaviour === 'passive' ? 'Grazing' : 'Wander';
         const stats: EntityStats = {
-            strength: def.stats.strength,
-            dexterity: Math.round(def.stats.speed * 1.5),
-            wisdom: def.stats.visionRange,
-            constitution: Math.round(10 + (def.stats.health - 30) / 5),
+            strength: def.stats.str,
+            dexterity: def.stats.dex,
+            wisdom: def.stats.per,
+            constitution: def.stats.con,
             intelligence: def.behaviour === 'passive' ? 4 : 8,
             charisma: 5
         };

@@ -344,11 +344,64 @@ export type LimbId = 'head' | 'torso' | 'left_arm' | 'right_arm' | 'left_leg' | 
 
 export const CRITICAL_LIMBS: LimbId[] = ['head', 'torso'];
 
+// ===== COMBAT BODY MODEL (COMBAT-SYSTEM spec) =====
+
+export type DamageType = 'cutting' | 'piercing' | 'blunt';
+
+export type BodyPartId =
+	// ── Head region ──────────────────────────────────────────────────────────
+	| 'skull' | 'jaw' | 'nose'
+	| 'leftEye' | 'rightEye'
+	| 'leftEar' | 'rightEar'
+	| 'brain'
+	// ── Torso ────────────────────────────────────────────────────────────────
+	| 'chest' | 'abdomen'
+	| 'heart' | 'leftLung' | 'rightLung'
+	| 'liver' | 'stomach' | 'leftKidney' | 'rightKidney'
+	| 'spine'
+	// ── Left arm ─────────────────────────────────────────────────────────────
+	| 'leftShoulder' | 'leftUpperArm' | 'leftForearm' | 'leftHand'
+	| 'leftThumb' | 'leftIndexFinger' | 'leftMiddleFinger' | 'leftRingFinger' | 'leftLittleFinger'
+	// ── Right arm ────────────────────────────────────────────────────────────
+	| 'rightShoulder' | 'rightUpperArm' | 'rightForearm' | 'rightHand'
+	| 'rightThumb' | 'rightIndexFinger' | 'rightMiddleFinger' | 'rightRingFinger' | 'rightLittleFinger'
+	// ── Left leg ─────────────────────────────────────────────────────────────
+	| 'leftHip' | 'leftUpperLeg' | 'leftLowerLeg' | 'leftFoot'
+	| 'leftBigToe' | 'leftSecondToe' | 'leftMiddleToe' | 'leftFourthToe' | 'leftLittleToe'
+	// ── Right leg ────────────────────────────────────────────────────────────
+	| 'rightHip' | 'rightUpperLeg' | 'rightLowerLeg' | 'rightFoot'
+	| 'rightBigToe' | 'rightSecondToe' | 'rightMiddleToe' | 'rightFourthToe' | 'rightLittleToe';
+
+export interface Injury {
+	bodyPart: BodyPartId;
+	type: 'cut' | 'fracture' | 'puncture' | 'crush';
+	severity: 'minor' | 'serious' | 'critical' | 'destroyed';
+	/** HP dealt to this body part in this hit (used by applyInjury to update BodyPartState.health). */
+	damage: number;
+	/** Blood volume drained per turn; clots below CLOT_FLOOR or via herbal_kit. */
+	bleeding: number;
+	painContribution: number;
+	infected: boolean;     // doubles pain + bleeding after 20 untreated turns
+	treatedAt?: number;    // turn when a Healer applied care
+}
+
+/** State of a single fine body part (organ, bone, sub-limb). */
+export interface BodyPartState {
+	id: BodyPartId;
+	/** Current hit points; seeded from BodyPartDef.maxHp. */
+	health: number;
+	maxHp: number;
+	isMissing: boolean;
+	injuries: Injury[];
+}
+
 export interface LimbState {
 	id: LimbId;
 	health: number;      // 0–100; 0 = destroyed
 	isMissing: boolean;  // true after amputation
 	bleedRate: number;   // blood points drained per turn while >0
+	/** Fine parts nested inside this root limb (organs, bones, fingers…). Hidden in UI until injured. */
+	parts?: BodyPartState[];
 }
 
 /** A single severity stage within a ConditionDef. */
@@ -439,6 +492,18 @@ export interface Pawn {
 	bloodVolume?: number;
 	/** False once a pawn dies — dead pawns stay in pawns[] but are skipped by all processing. */
 	isAlive?: boolean;
+
+	// ===== COMBAT (COMBAT-SYSTEM spec) =====
+	/** All current open wounds; bleed/pain rolls up to root limb each turn. */
+	injuries?: Injury[];
+	/** Aggregate pain score 0–100; exceeding 80 causes collapse. */
+	pain?: number;
+	/** Milliseconds remaining until next auto-attack fires. */
+	attackCooldown?: number;
+	/** Radius in tiles within which this pawn auto-engages hostiles. */
+	aggroRange?: number;
+	/** Turns remaining prone; 0 = standing. */
+	knockdown?: number;
 
 	// Phase 4/5: State machine primary state
 	currentState?: string;                       // 'Idle' | 'Hungry' | 'Tired' | 'MovingToNeed' | 'MovingToResource' | 'Working' | 'Hauling' | 'MovingToDeposit' | 'Eating' | 'Sleeping' | 'Dead'
@@ -752,9 +817,15 @@ export interface Item {
 
 	// Item-specific properties
 	weaponProperties?: {
-		damage: number;
+		damage: number;           // legacy flat damage; kept for backward compat
 		attackSpeed: number;
 		range: number;
+		// ── COMBAT-SYSTEM additions ──────────────────────────────────────────
+		damageType?: DamageType;       // cutting | piercing | blunt
+		baseDamage?: number;           // base damage before str scaling
+		accuracy?: number;             // added to hitChance formula
+		armorPenetration?: number;     // 0–1; fraction of armor reduction bypassed
+		bluntMod?: number;             // multiplier on knockdown chance (blunt weapons)
 	};
 
 	armorProperties?: {

@@ -6,18 +6,23 @@
 
 ## Status
 
-Not started. No blockers — magic is the governing skill framework. Combat is
-built on top of it, not the other way round. Design this before COMBAT-SYSTEM.
+Not started. **Blocked on COMBAT-SYSTEM** — magic and skills are a depth layer
+added on top of the physical combat foundation, not the other way round. Ship
+COMBAT-SYSTEM first; this spec then slots skills and spells into its existing
+combat loop (the optional skill bar, `triggerSkill`, and the `Injury`/damage
+pipeline).
 
 ---
 
 ## Goal
 
-A unified skill and magic framework that governs combat. Physical abilities and
-spells share one `Skill` interface — there is no separate combat tree. Magic is
-not a parallel system bolted onto combat; combat resolves through the skill
-framework. Race design (high Int = affinity unlocks) and lore-item research
-(Celestia Phase 5 inspiration) gate access to advanced skill nodes.
+A unified skill and magic framework layered **on top of** the COMBAT-SYSTEM
+foundation. Combat already resolves through physical auto-attacks and the
+limb/organ injury model; this framework adds active skills and spells that slot
+into that combat loop's optional skill bar. Physical abilities and spells share
+one `Skill` interface — there is no separate combat tree. Race design (high Int =
+affinity unlocks) and lore-item research (Celestia Phase 5 inspiration) gate
+access to advanced skill nodes.
 
 ---
 
@@ -130,9 +135,10 @@ Node 5 (3000 XP) — requires research: advanced [tree] technique
 
 ### Phase A — Data
 
+- `core/Skills.ts` — unified `Skill` interface consumed by the combat skill bar
 - `core/Spells.ts` — spell definitions
 - `core/SkillTrees.ts` — tree + node definitions
-- `Pawn` type: add `mana`, `maxMana`, `skillXP: Record<string, number>`, `unlockedNodes: string[]`
+- `Pawn` type: add `mana`, `maxMana`, `skillXP: Record<string, number>`, `unlockedNodes: string[]`, `skillBar: string[]`
 
 ### Phase B — MagicService
 

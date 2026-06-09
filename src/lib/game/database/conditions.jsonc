@@ -83,5 +83,107 @@
             },
             {"label": "fatal", "minSeverity": 0.90, "color": "#ff1744", "lifeThreatening": true, "modifiers": {}}
         ]
+    },
+    {
+        "id"            : "fracture",
+        "name"          : "Fracture",
+        "description"   : "A broken bone impairing movement and combat ability. Worsens without rest.",
+        "lethalSeverity": 1.0,
+        "stages"        : [
+            {
+                "label"      : "hairline",
+                "minSeverity": 0.00,
+                "color"      : "#8d6e63",
+                "modifiers"  : {"moveSpeed": 0.90, "workEfficiency": 0.85}
+            },
+            {
+                "label"      : "cracked",
+                "minSeverity": 0.25,
+                "color"      : "#795548",
+                "modifiers"  : {"moveSpeed": 0.75, "workEfficiency": 0.70}
+            },
+            {
+                "label"      : "displaced",
+                "minSeverity": 0.50,
+                "color"      : "#6d4c41",
+                "modifiers"  : {"moveSpeed": 0.50, "workEfficiency": 0.40}
+            },
+            {
+                "label"          : "shattered",
+                "minSeverity"    : 0.75,
+                "color"          : "#4e342e",
+                "lifeThreatening": false,
+                "modifiers"      : {"moveSpeed": 0.0, "workEfficiency": 0.10}
+            }
+        ]
+    },
+    {
+        "id"            : "infection",
+        "name"          : "Infection",
+        "description"   : "A wound has become infected. Untreated infections spread, doubling pain and bleeding.",
+        "lethalSeverity": 1.0,
+        "stages"        : [
+            { "label": "mild", "minSeverity": 0.00, "color": "#f9a825", "modifiers": {"workEfficiency": 0.90} },
+            {
+                "label"      : "moderate",
+                "minSeverity": 0.25,
+                "color"      : "#f57f17",
+                "modifiers"  : {"workEfficiency": 0.70, "hungerRate": 1.1}
+            },
+            {
+                "label"      : "serious",
+                "minSeverity": 0.50,
+                "color"      : "#e65100",
+                "modifiers"  : {"workEfficiency": 0.50, "moveSpeed": 0.80, "hungerRate": 1.25}
+            },
+            {
+                "label"          : "severe",
+                "minSeverity"    : 0.75,
+                "color"          : "#bf360c",
+                "lifeThreatening": true,
+                "modifiers"      : {"workEfficiency": 0.20, "moveSpeed": 0.50, "hungerRate": 1.5}
+            },
+            {
+                "label"          : "fatal",
+                "minSeverity"    : 0.90,
+                "color"          : "#ff1744",
+                "lifeThreatening": true,
+                "modifiers"      : {"workEfficiency": 0.0, "moveSpeed": 0.0}
+            }
+        ]
+    },
+    {
+        "id"            : "shock",
+        "name"          : "Shock",
+        "description"   : "Severe pain or blood loss has sent the body into shock. The pawn is barely functional.",
+        "lethalSeverity": 1.0,
+        "stages"        : [
+            {
+                "label"      : "mild",
+                "minSeverity": 0.00,
+                "color"      : "#b0bec5",
+                "modifiers"  : {"workEfficiency": 0.80, "moveSpeed": 0.90}
+            },
+            {
+                "label"      : "moderate",
+                "minSeverity": 0.30,
+                "color"      : "#90a4ae",
+                "modifiers"  : {"workEfficiency": 0.55, "moveSpeed": 0.70}
+            },
+            {
+                "label"          : "severe",
+                "minSeverity"    : 0.60,
+                "color"          : "#607d8b",
+                "lifeThreatening": true,
+                "modifiers"      : {"workEfficiency": 0.20, "moveSpeed": 0.30}
+            },
+            {
+                "label"          : "critical",
+                "minSeverity"    : 0.85,
+                "color"          : "#455a64",
+                "lifeThreatening": true,
+                "modifiers"      : {"workEfficiency": 0.0, "moveSpeed": 0.0}
+            }
+        ]
     }
 ]
