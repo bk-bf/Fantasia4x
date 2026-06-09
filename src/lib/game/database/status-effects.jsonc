@@ -2,6 +2,13 @@
 // modifiers are multipliers unless noted: 1.0 = full rate, 0.0 = paused, 0.33 = one-third.
 [
     {
+        "id"         : "knockdown",
+        "name"       : "Knocked Down",
+        "description": "Prone and unable to move or attack. Recovers after a few turns.",
+        "color"      : "#ff5722",
+        "modifiers"  : {"moveSpeed": 0.0, "workEfficiency": 0.0}
+    },
+    {
         "id"         : "eating",
         "name"       : "Eating",
         "description": "Mid-meal. Hunger is not accumulating.",

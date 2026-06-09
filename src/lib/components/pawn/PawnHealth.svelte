@@ -42,7 +42,7 @@
   let blood = $derived(pawn.bloodVolume ?? 100);
   let bleedRate = $derived(limbs.reduce((s, l) => s + (l.bleedRate ?? 0), 0));
   let pain = $derived(pawn.pain ?? 0);
-  let prone = $derived((pawn.knockdown ?? 0) > 0);
+  let prone = $derived((pawn.activeEffects ?? []).includes('knockdown'));
 
   /** Which limbs are expanded to show their sub-parts. */
   let expandedLimbs = $state<Set<LimbId>>(new Set());

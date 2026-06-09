@@ -599,6 +599,9 @@ export interface HitResult {
     damage: number;
     injury: Injury | null;
     knockdown: boolean;
+    damageType: DamageType;
+    partRemainingHp?: number;
+    partMaxHp?: number;
 }
 
 export interface CombatService {
@@ -786,7 +789,7 @@ class CombatServiceImpl implements CombatService {
 
         const hitChance = clamp(dex * 3 + accuracy - defDex * 2, 5, 95);
         if (Math.random() * 100 > hitChance) {
-            return { hit: false, bodyPart: null, damage: 0, injury: null, knockdown: false };
+            return { hit: false, bodyPart: null, damage: 0, injury: null, knockdown: false, damageType: 'blunt' };
         }
 
         const partId = rollBodyPart();
@@ -824,7 +827,16 @@ class CombatServiceImpl implements CombatService {
         const knockChance = damageType === 'blunt' ? clamp((final - defCon / 4) * bluntMod, 0, 100) : 0;
         const knockdown = knockChance > 0 && Math.random() * 100 < knockChance;
 
-        return { hit: true, bodyPart: partId, damage: final, injury, knockdown };
+        return {
+            hit: true,
+            bodyPart: partId,
+            damage: final,
+            injury,
+            knockdown,
+            damageType,
+            partRemainingHp: newHealth,
+            partMaxHp: partDef.maxHp
+        };
     }
 
     private _applyInjuryToEntity<T extends Pawn | Mob>(
@@ -888,15 +900,22 @@ class CombatServiceImpl implements CombatService {
         const newConditions = upsertCondition(entity.conditions ?? [], 'blood_loss', bloodLossSev);
 
         // Pain collapse → knockdown 3 turns
-        const newKnockdown =
-            newPain >= 80 ? Math.max(entity.knockdown ?? 0, 3) : (entity.knockdown ?? 0);
+        const durations = { ...(entity.statusEffectDurations ?? {}) };
+        if (newPain >= 80) {
+            durations.knockdown = Math.max(durations.knockdown ?? 0, 3);
+        }
+        const activeEffects = [...(entity.activeEffects ?? [])];
+        if (durations.knockdown && !activeEffects.includes('knockdown')) {
+            activeEffects.push('knockdown');
+        }
 
         const updated = {
             ...entity,
             limbs,
             injuries: newInjuries,
             pain: newPain,
-            knockdown: newKnockdown,
+            statusEffectDurations: durations,
+            activeEffects,
             conditions: newConditions
         };
 
@@ -1002,7 +1021,12 @@ class CombatServiceImpl implements CombatService {
             const targetName = 'entityClass' in target
                 ? (getCreatureById((target as Mob).creatureId)?.name ?? (target as Mob).id)
                 : (target as Pawn).name;
-            logCombatTurn(mob.id, attackerName, target.id, targetName, state.turn, true, result.injury.damage, result.injury.bodyPart, result.knockdown);
+            logCombatTurn(
+                mob.id, attackerName, target.id, targetName, state.turn, true,
+                result.injury.damage, result.injury.bodyPart, result.knockdown,
+                result.injury.bodyPart, result.damageType, result.partMaxHp, result.partRemainingHp,
+                result.injury.bleeding > 0
+            );
 
             // Check if target died this hit
             const targetAfter = 'entityClass' in target
@@ -1012,24 +1036,6 @@ class CombatServiceImpl implements CombatService {
                 logCombatEnd(mob.id, target.id, `${targetName} was killed`, state.turn);
             }
 
-            if (result.knockdown) {
-                const turns = Math.floor(Math.random() * 3) + 1;
-                if ('entityClass' in target) {
-                    next = {
-                        ...next,
-                        mobs: next.mobs!.map((m) =>
-                            m.id === target.id ? { ...m, knockdown: Math.max(m.knockdown ?? 0, turns) } : m
-                        )
-                    };
-                } else {
-                    next = {
-                        ...next,
-                        pawns: next.pawns.map((p) =>
-                            p.id === target.id ? { ...p, knockdown: Math.max(p.knockdown ?? 0, turns) } : p
-                        )
-                    };
-                }
-            }
         }
 
         // ── Drafted pawn attacks ─────────────────────────────────────────────
@@ -1092,7 +1098,12 @@ class CombatServiceImpl implements CombatService {
             const targetName = 'entityClass' in target
                 ? (getCreatureById((target as Mob).creatureId)?.name ?? (target as Mob).id)
                 : (target as Pawn).name;
-            logCombatTurn(pawn.id, pawn.name, target.id, targetName, state.turn, true, result.injury.damage, result.injury.bodyPart, result.knockdown);
+            logCombatTurn(
+                pawn.id, pawn.name, target.id, targetName, state.turn, true,
+                result.injury.damage, result.injury.bodyPart, result.knockdown,
+                result.injury.bodyPart, result.damageType, result.partMaxHp, result.partRemainingHp,
+                result.injury.bleeding > 0
+            );
 
             // Check if target died this hit
             const targetAfter = 'entityClass' in target
@@ -1102,24 +1113,6 @@ class CombatServiceImpl implements CombatService {
                 logCombatEnd(pawn.id, target.id, `${targetName} was killed`, state.turn);
             }
 
-            if (result.knockdown) {
-                const turns = Math.floor(Math.random() * 3) + 1;
-                if ('entityClass' in target) {
-                    next = {
-                        ...next,
-                        mobs: next.mobs!.map((m) =>
-                            m.id === target.id ? { ...m, knockdown: Math.max(m.knockdown ?? 0, turns) } : m
-                        )
-                    };
-                } else {
-                    next = {
-                        ...next,
-                        pawns: next.pawns.map((p) =>
-                            p.id === target.id ? { ...p, knockdown: Math.max(p.knockdown ?? 0, turns) } : p
-                        )
-                    };
-                }
-            }
         }
 
         // Apply stamina mutations in one pass

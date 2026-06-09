@@ -321,7 +321,7 @@ class EntityServiceImpl {
             pain: 0,
             aggroRange: def.behaviour === 'hostile' ? 8 : 3,
             attackCooldown: 0,
-            knockdown: 0
+            statusEffectDurations: {}
         };
     }
 
@@ -365,8 +365,9 @@ class EntityServiceImpl {
                 pendingTileDepletion,
                 pendingMobState
             );
-            next[i] = stepped;
-            if (stepped !== mob) changed = true;
+            const ticked = this.tickMobStatusEffectDurations(stepped);
+            next[i] = ticked;
+            if (ticked !== mob) changed = true;
         }
 
         // Apply pending mob state changes (e.g. prey forced into Attacking by hunter).
@@ -515,6 +516,22 @@ class EntityServiceImpl {
         return def ? `${def.name} #${mob.debugId ?? mob.id.slice(-4)}` : mob.id.slice(-6);
     }
 
+    /** Decrement temporary status effect durations and remove expired ones from activeEffects. */
+    private tickMobStatusEffectDurations(mob: Mob): Mob {
+        const durations = mob.statusEffectDurations;
+        if (!durations || Object.keys(durations).length === 0) return mob;
+        const next: Record<string, number> = {};
+        for (const [key, val] of Object.entries(durations)) {
+            const remaining = val - 1;
+            if (remaining > 0) next[key] = remaining;
+        }
+        const changed = Object.keys(next).length !== Object.keys(durations).length ||
+            Object.entries(next).some(([k, v]) => v !== durations[k]);
+        if (!changed) return mob;
+        const activeEffects = (mob.activeEffects ?? []).filter((e) => next[e] !== undefined);
+        return { ...mob, statusEffectDurations: next, activeEffects };
+    }
+
     private stepHostile(
         mob: Mob,
         def: CreatureDefinition,
@@ -623,7 +640,8 @@ class EntityServiceImpl {
             mob.needs.hunger >= HUNGER_EAT_THRESHOLD &&
             mob.state !== 'Fleeing' &&
             mob.state !== 'Sleeping' &&
-            mob.state !== 'Eating'
+            mob.state !== 'Eating' &&
+            mob.state !== 'Hunting'
         ) {
             const prey = this.findNearestPrey(mob, allMobs);
             if (prey) {

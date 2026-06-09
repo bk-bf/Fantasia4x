@@ -307,8 +307,8 @@ export interface Mob {
 	aggroRange?: number;
 	/** Milliseconds remaining until next auto-attack fires. */
 	attackCooldown?: number;
-	/** Turns remaining prone; 0 = standing. */
-	knockdown?: number;
+	/** Remaining turns for temporary status effects (e.g. knockdown). */
+	statusEffectDurations?: Record<string, number>;
 }
 
 /** An animal tamed and bound to an owning pawn (Phase C+). */
@@ -594,8 +594,8 @@ export interface Pawn {
 	attackCooldown?: number;
 	/** Radius in tiles within which this pawn auto-engages hostiles. */
 	aggroRange?: number;
-	/** Turns remaining prone; 0 = standing. */
-	knockdown?: number;
+	/** Remaining turns for temporary status effects (e.g. knockdown). */
+	statusEffectDurations?: Record<string, number>;
 	/**
 	 * Current stamina 0–maxStamina. Drains while fleeing/sprinting or attacking;
 	 * regenerates at rest. Reaching 0 forces a rest turn (attack skipped / Exhausted).

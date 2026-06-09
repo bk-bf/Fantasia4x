@@ -52,10 +52,19 @@
   }
 
   function formatCombatTurn(t: CombatTurnEntry): string {
-    if (!t.hit) return `T${t.turn}: ${t.attackerName} missed ${t.defenderName}`;
-    let s = `T${t.turn}: ${t.attackerName} hit ${t.defenderName} for ${t.damage} dmg`;
-    if (t.injury) s += ` (${t.injury})`;
-    if (t.knockdown) s += ' [KNOCKDOWN]';
+    if (!t.hit) {
+      return `${t.attackerName} hits ${t.defenderName}${t.bodyPart ? ` in the ${t.bodyPart}` : ''}, but misses`;
+    }
+    let s = `${t.attackerName} hit ${t.defenderName}`;
+    if (t.bodyPart) {
+      s += ` in the ${t.bodyPart}`;
+      if (t.partRemainingHp !== undefined && t.partMaxHp !== undefined) {
+        s += ` (${t.partRemainingHp}/${t.partMaxHp})`;
+      }
+    }
+    s += ` and dealt ${t.damage}${t.damageType ? ` ${t.damageType}` : ''} damage`;
+    if (t.bleeding) s += `, ${t.defenderName} is bleeding`;
+    if (t.knockdown) s += `, ${t.defenderName} is knocked down`;
     return s;
   }
 </script>

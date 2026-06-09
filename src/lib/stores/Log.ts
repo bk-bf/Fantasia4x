@@ -1,5 +1,5 @@
 import { writable, derived } from 'svelte/store';
-import type { ActivityLogEntry } from '$lib/game/core/Events';
+import type { ActivityLogEntry, CombatTurnEntry } from '$lib/game/core/Events';
 import { activityLogger } from '$lib/game/dev/activityLogger';
 
 export const activityLog = writable<ActivityLogEntry[]>([]);
@@ -167,7 +167,7 @@ export function logCombatStart(
   if (shouldSkipLog(pairKey, 'combat-start', turn, 60)) return;
 
   const key = combatKey(attackerId, defenderId);
-  const entry: ActivityLogEntry = {
+  const entry: Omit<ActivityLogEntry, 'id' | 'timestamp'> = {
     turn,
     type: 'combat',
     actor: attackerId,
@@ -180,7 +180,7 @@ export function logCombatStart(
     focusY,
     combatBreakdown: []
   };
-  activeCombatSessions.set(key, entry);
+  activeCombatSessions.set(key, entry as ActivityLogEntry);
   logActivity(entry);
 }
 
@@ -193,7 +193,12 @@ export function logCombatTurn(
   hit: boolean,
   damage?: number,
   injury?: string,
-  knockdown?: boolean
+  knockdown?: boolean,
+  bodyPart?: string,
+  damageType?: string,
+  partMaxHp?: number,
+  partRemainingHp?: number,
+  bleeding?: boolean
 ) {
   const key = combatKey(attackerId, defenderId);
   const session = activeCombatSessions.get(key);
@@ -204,7 +209,12 @@ export function logCombatTurn(
     hit,
     damage,
     injury,
-    knockdown
+    knockdown,
+    bodyPart,
+    damageType,
+    partMaxHp,
+    partRemainingHp,
+    bleeding
   };
   if (session && session.combatBreakdown) {
     session.combatBreakdown.push(turnEntry);

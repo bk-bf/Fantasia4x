@@ -967,7 +967,24 @@ function handleMovingToDeposit(pawn: Pawn, gameState: GameState): GameState {
 }
 
 /**
- * Derive the pawn's activeEffects list from current state flags and needs.
+ * Decrement temporary status effect durations and remove expired ones.
+ */
+function tickStatusEffectDurations(pawn: Pawn): Pawn {
+    const durations = pawn.statusEffectDurations;
+    if (!durations || Object.keys(durations).length === 0) return pawn;
+    const next: Record<string, number> = {};
+    for (const [key, val] of Object.entries(durations)) {
+        const remaining = val - 1;
+        if (remaining > 0) next[key] = remaining;
+    }
+    const changed = Object.keys(next).length !== Object.keys(durations).length ||
+        Object.entries(next).some(([k, v]) => v !== durations[k]);
+    if (!changed) return pawn;
+    return { ...pawn, statusEffectDurations: next };
+}
+
+/**
+ * Derive the pawn's activeEffects list from current state flags, needs, and durations.
  * Called after each tick so PawnService.calculateNeedsUpdate always reads fresh values.
  */
 function syncActiveEffects(pawn: Pawn): Pawn {
@@ -981,6 +998,11 @@ function syncActiveEffects(pawn: Pawn): Pawn {
     // Eating supersedes hungry; sleeping supersedes tired.
     if (!isSleeping && (pawn.needs?.fatigue ?? 0) >= FATIGUE_THRESHOLD) effects.push('tired');
     if (!isEating && (pawn.needs?.hunger ?? 0) >= HUNGER_THRESHOLD) effects.push('hungry');
+
+    // Duration-based status effects (knockdown, etc.)
+    for (const [effectId, remaining] of Object.entries(pawn.statusEffectDurations ?? {})) {
+        if (remaining > 0) effects.push(effectId);
+    }
 
     // Mood-based status effects (discrete ranges replace continuous morale calculation)
     const mood = pawn.state?.mood ?? 50;
@@ -1736,12 +1758,15 @@ class PawnStateMachineImpl {
 
             // Run state machine for this pawn.
             state = tickPawn(forCollapse, state);
-            // Sync activeEffects from the new state so PawnService reads fresh values.
+            // Tick status effect durations, then sync activeEffects so PawnService reads fresh values.
             const updated = state.pawns.find((p) => p.id === pawn.id);
             if (updated) {
-                const synced = syncActiveEffects(updated);
-                if (synced !== updated) {
+                let stepped = tickStatusEffectDurations(updated);
+                const synced = syncActiveEffects(stepped);
+                if (synced !== stepped) {
                     state = { ...state, pawns: state.pawns.map((p) => (p.id === pawn.id ? synced : p)) };
+                } else if (stepped !== updated) {
+                    state = { ...state, pawns: state.pawns.map((p) => (p.id === pawn.id ? stepped : p)) };
                 }
             }
         }

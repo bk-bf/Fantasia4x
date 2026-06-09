@@ -450,9 +450,13 @@ function wipeAndReload() {
     // 2. Hide the game immediately so the old map doesn't flash while we
     //    delete the save.  The loading screen will show until reload completes.
     storeReady.set(false);
-    // 3. Delete the IndexedDB save (also clears any lingering localStorage keys).
+    // 3. Clear dev log files (fire-and-forget; don't block reload on failure).
+    fetch('/api/logs', { method: 'DELETE', keepalive: true }).catch(() => {
+      /* silently ignore */
+    });
+    // 4. Delete the IndexedDB save (also clears any lingering localStorage keys).
     deleteSave().finally(() => {
-      // 4. Reload — no need to mutate the store here since we're reloading.
+      // 5. Reload — no need to mutate the store here since we're reloading.
       location.reload();
     });
   }

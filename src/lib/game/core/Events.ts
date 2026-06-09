@@ -105,6 +105,11 @@ export interface CombatTurnEntry {
   damage?: number;
   injury?: string;
   knockdown?: boolean;
+  bodyPart?: string;
+  damageType?: string;
+  partMaxHp?: number;
+  partRemainingHp?: number;
+  bleeding?: boolean;
 }
 
 export interface ActivityLogEntry {
