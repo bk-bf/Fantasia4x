@@ -276,7 +276,6 @@ export interface WorkCategory {
 	id: string;
 	name: string;
 	description: string;
-	emoji: string;
 	color: string;
 
 	// Requirements
@@ -957,7 +956,6 @@ export interface EntityStats {
 export interface RacialTrait {
 	name: string;
 	description: string;
-	icon: string; // NEW: Add icon property
 	effects: {
 		// Stat bonuses/penalties
 		strengthBonus?: number;

@@ -6,7 +6,6 @@
     {
         "name"       : "Iron Skin",
         "description": "Metallic skin that provides natural armor.",
-        "icon"       : "🛡️",
         "effects"    : {
             "constitutionBonus": 3,
             "damageReduction"  : 0.2,
@@ -16,13 +15,11 @@
     {
         "name"       : "Dragon Heritage",
         "description": "Ancient draconic bloodline grants resilience and power.",
-        "icon"       : "🐉",
         "effects"    : {"strengthBonus": 2, "constitutionBonus": 2, "fireResistance": 0.5, "intimidation": 1.3}
     },
     {
         "name"       : "Feathered",
         "description": "Light feathers provide insulation and grace.",
-        "icon"       : "🪶",
         "effects"    : {
             "dexterityBonus"     :  2  ,
             "constitutionPenalty": -1  ,
@@ -33,13 +30,11 @@
     {
         "name"       : "Stone Bones",
         "description": "Dense, stone-like bone structure.",
-        "icon"       : "🗿",
         "effects"    : {"constitutionBonus": 4, "strengthBonus": 1, "dexterityPenalty": -2, "crushResistance": 0.6}
     },
     {
         "name"       : "Crystalline Eyes",
         "description": "Crystal-like eyes that see magical auras.",
-        "icon"       : "💎",
         "effects"    : {
             "perceptionBonus"  : 2,
             "intelligenceBonus": 1,
@@ -51,13 +46,11 @@
     {
         "name"       : "Flame Touched",
         "description": "Body radiates warmth, immune to cold.",
-        "icon"       : "🔥",
         "effects"    : { "fireResistance": 0.8, "coldImmunity": 1.0, "workEfficiency": {"metalworking": 1.3} }
     },
     {
         "name"       : "Frost Born",
         "description": "Born in eternal winter, thrives in cold.",
-        "icon"       : "❄️",
         "effects"    : {
             "coldResistance" : 0.9,
             "heatSensitivity": 1.5,
@@ -68,13 +61,11 @@
     {
         "name"       : "Earth Bound",
         "description": "Connected to the earth and stone.",
-        "icon"       : "🌍",
         "effects"    : { "strengthBonus": 2, "workEfficiency": {"mining": 1.4, "digging": 1.3}, "tremorsense": 1.0 }
     },
     {
         "name"       : "Wind Walker",
         "description": "Moves with the grace of the wind.",
-        "icon"       : "💨",
         "effects"    : {
             "dexterityBonus": 3,
             "movementSpeed" : 1.2,
@@ -86,7 +77,6 @@
     {
         "name"       : "Stargazer",
         "description": "Eyes that reflect the cosmos, naturally perceptive.",
-        "icon"       : "⭐",
         "effects"    : {
             "perceptionBonus"  : 3,
             "intelligenceBonus": 1,
@@ -97,13 +87,11 @@
     {
         "name"       : "Dream Walker",
         "description": "Can enter and manipulate dreams.",
-        "icon"       : "🌙",
         "effects"    : {"intelligenceBonus": 2, "charismaBonus": 1, "sleepEfficiency": 1.5, "mentalResistance": 0.7}
     },
     {
         "name"       : "Void Touched",
         "description": "Touched by the emptiness between worlds.",
-        "icon"       : "🌌",
         "effects"    : {
             "intelligenceBonus"  : 2,
             "constitutionPenalty": -1,
@@ -115,7 +103,6 @@
     {
         "name"       : "Keen Senses",
         "description": "Extraordinarily sharp senses.",
-        "icon"       : "👁️",
         "effects"    : {
             "perceptionBonus": 2,
             "dexterityBonus" : 1,
@@ -126,13 +113,11 @@
     {
         "name"       : "Regenerative",
         "description": "Naturally heals wounds over time.",
-        "icon"       : "💚",
         "effects"    : {"constitutionBonus": 2, "healingRate": 2.0, "hungerRate": 1.2, "diseaseResistance": 0.4}
     },
     {
         "name"       : "Venomous",
         "description": "Natural toxins in saliva and claws.",
-        "icon"       : "🐍",
         "effects"    : {
             "constitutionBonus": 1,
             "dexterityBonus"   : 1,
@@ -143,7 +128,6 @@
     {
         "name"       : "Amphibious",
         "description": "Equally at home on land and in water.",
-        "icon"       : "🐸",
         "effects"    : {
             "constitutionBonus": 1,
             "workEfficiency"   : {"fishing": 1.5},
@@ -155,7 +139,6 @@
     {
         "name"       : "Hive Mind",
         "description": "Shared consciousness with others of the same race.",
-        "icon"       : "🧠",
         "effects"    : {
             "intelligenceBonus": 2,
             "charismaBonus"    : 1,
@@ -166,7 +149,6 @@
     {
         "name"       : "Pack Hunter",
         "description": "Works better in groups, struggles alone.",
-        "icon"       : "🐺",
         "effects"    : {
             "strengthBonus"   : 1,
             "dexterityBonus"  : 1,
@@ -178,7 +160,6 @@
     {
         "name"       : "Loner",
         "description": "Prefers solitude, works best alone.",
-        "icon"       : "🦅",
         "effects"    : {
             "intelligenceBonus": 2,
             "charismaBonus"    : -1,
@@ -190,13 +171,11 @@
     {
         "name"       : "Shapeshifter",
         "description": "Can alter physical form slightly.",
-        "icon"       : "🦋",
         "effects"    : { "dexterityBonus": 2, "charismaBonus": 1, "adaptability": 1.3, "workEfficiency": {"all": 1.05} }
     },
     {
         "name"       : "Photosynthetic",
         "description": "Gains energy from sunlight.",
-        "icon"       : "🌱",
         "effects"    : {
             "constitutionBonus" : 1,
             "hungerRate"        : 0.6,
@@ -207,7 +186,6 @@
     {
         "name"       : "Nocturnal",
         "description": "Active during night, sluggish during day.",
-        "icon"       : "🦉",
         "effects"    : {
             "dexterityBonus" : 1,
             "perceptionBonus": 1,
@@ -219,7 +197,6 @@
     {
         "name"       : "Ancient",
         "description": "Extremely long-lived, wise but frail.",
-        "icon"       : "📜",
         "effects"    : {
             "intelligenceBonus"  : 6,
             "constitutionPenalty": -2,
@@ -230,7 +207,6 @@
     {
         "name"       : "Berserker Blood",
         "description": "Enters rage states when threatened.",
-        "icon"       : "⚔️",
         "effects"    : {
             "strengthBonus"      : 3,
             "constitutionBonus"  : 1,
@@ -243,7 +219,6 @@
     {
         "name"       : "Industrious",
         "description": "Naturally hardworking and efficient.",
-        "icon"       : "🔧",
         "effects"    : {
             "constitutionBonus": 1,
             "workEfficiency"   : {"all": 1.15},
@@ -254,7 +229,6 @@
     {
         "name"       : "Meticulous",
         "description": "Extremely careful and precise in all tasks.",
-        "icon"       : "🔍",
         "effects"    : {
             "dexterityBonus"   : 2,
             "intelligenceBonus": 1,
@@ -265,13 +239,11 @@
     {
         "name"       : "Robust",
         "description": "Naturally healthy and disease-resistant.",
-        "icon"       : "💪",
         "effects"    : {"constitutionBonus": 3, "diseaseResistance": 0.6, "hungerRate": 0.9, "fatigueRate": 0.9}
     },
     {
         "name"       : "Curious",
         "description": "Insatiably curious about the world.",
-        "icon"       : "🤔",
         "effects"    : { "intelligenceBonus": 3, "workEfficiency": {"research": 1.25}, "experienceGain": 1.2 }
     }
 ]

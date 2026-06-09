@@ -3,11 +3,6 @@ import raceDbData from '../database/racial-traits.jsonc';
 
 export const RACIAL_TRAIT_DATABASE: RacialTrait[] = raceDbData as unknown as RacialTrait[];
 
-export function getTraitIcon(traitName: string): string {
-  const trait = RACIAL_TRAIT_DATABASE.find((t) => t.name === traitName);
-  return trait?.icon || '✨';
-}
-
 export function generateRace(): Race {
   const statRanges = generateStatRanges();
   const physicalTraits = generatePhysicalTraits();

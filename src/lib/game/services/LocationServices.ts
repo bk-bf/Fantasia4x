@@ -13,10 +13,10 @@ import {
 
 /** Richness level display data — single source of truth for richness visuals. */
 const RICHNESS_LEVELS: Record<string, { color: string; emoji: string }> = {
-	sparse:   { color: '#F44336', emoji: '🔴' },
-	scarce:   { color: '#FF9800', emoji: '🟠' },
+	sparse: { color: '#F44336', emoji: '🔴' },
+	scarce: { color: '#FF9800', emoji: '🟠' },
 	moderate: { color: '#FFC107', emoji: '🟡' },
-	rich:     { color: '#8BC34A', emoji: '🟢' },
+	rich: { color: '#8BC34A', emoji: '🟢' },
 	abundant: { color: '#4CAF50', emoji: '💚' }
 };
 

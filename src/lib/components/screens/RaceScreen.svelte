@@ -1,7 +1,6 @@
 <script lang="ts">
   import { currentRace } from '$lib/stores/gameState';
   import { uiState } from '$lib/stores/uiState';
-  import { getTraitIcon } from '$lib/game/core/Race';
   import { onMount } from 'svelte';
   import { onDestroy } from 'svelte';
 
