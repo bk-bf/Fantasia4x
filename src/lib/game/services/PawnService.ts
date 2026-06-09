@@ -348,6 +348,7 @@ export class PawnServiceImpl implements PawnService {
 		// threshold reactions (mood) and morale off the already-accrued need values.
 		gameState.pawns.forEach((pawn) => {
 			if (pawn.isAlive === false) return; // skip dead pawns
+			if (pawn.drafted) return; // skip drafted pawns — player-controlled
 			newState = this.updatePawnState(pawn.id, newState);
 			newState = this.updateMorale(pawn.id, newState);
 		});
@@ -365,6 +366,7 @@ export class PawnServiceImpl implements PawnService {
 
 			// Process each pawn for automatic eating
 			gameState.pawns.forEach((pawn, index) => {
+				if (pawn.drafted) return; // skip drafted pawns — player-controlled
 				console.log(
 					`[PawnService] Checking ${pawn.name}: hunger=${pawn.needs.hunger}, sleeping=${pawn.state.isSleeping}`
 				);
@@ -430,6 +432,7 @@ export class PawnServiceImpl implements PawnService {
 
 			// Process each pawn for automatic sleeping
 			gameState.pawns.forEach((pawn, index) => {
+				if (pawn.drafted) return; // skip drafted pawns — player-controlled
 				let updatedPawn = { ...pawn };
 				let needsUpdate = false;
 

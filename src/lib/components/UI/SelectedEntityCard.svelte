@@ -51,7 +51,13 @@
   }
 </script>
 
-<div class="tile-hud tile-hud--pawn" class:tile-hud--selected={model.selected}>
+<div
+  class="tile-hud tile-hud--pawn"
+  class:tile-hud--selected={model.selected}
+  onmousedown={(e) => model.selected && e.stopPropagation()}
+  onmouseup={(e) => model.selected && e.stopPropagation()}
+  onclick={(e) => model.selected && e.stopPropagation()}
+>
   <div class="pawn-header">
     <span class="pawn-name">{model.name}</span>
     {#if model.status}<span class="pawn-state">[{model.status}]</span>{/if}
@@ -60,7 +66,12 @@
       <button
         class="draft-btn"
         class:draft-active={model.drafted}
-        onclick={model.onDraftToggle}
+        onmousedown={(e) => e.stopPropagation()}
+        onmouseup={(e) => e.stopPropagation()}
+        onclick={(e) => {
+          e.stopPropagation();
+          model.onDraftToggle?.();
+        }}
         title={model.drafted ? 'Click to undraft pawn' : 'Click to draft pawn'}
       >
         {model.drafted ? 'DRAFTED' : 'DRAFT'}
@@ -117,9 +128,9 @@
     font-size: 10px;
     line-height: 1.5;
     padding: 2px 7px;
-    pointer-events: none;
+    pointer-events: auto;
     white-space: nowrap;
-    z-index: 10;
+    z-index: 5;
   }
   .tile-hud--pawn {
     min-width: 180px;
@@ -224,6 +235,8 @@
     cursor: pointer;
     pointer-events: auto;
     line-height: 1.3;
+    position: relative;
+    z-index: 20;
   }
   .draft-btn:hover {
     border-color: #c8a060;

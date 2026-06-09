@@ -216,6 +216,7 @@
   let _progressOverlayKey = '';
   let _campfireOverlayKey = '';
   let _healthOverlayKey = '';
+  let _draftOverlayKey = '';
 
   // Phase 4: buildings and designations overlay
   let buildings: PlacedBuilding[] = [];
@@ -773,17 +774,20 @@
       const cellY = Math.round(rp.y);
       const isSelected = pawn.id === selectedPawnId;
       const isSleeping = pawn.currentState === 'Sleeping';
+      const isDrafted = pawn.drafted;
       const isCriticallyHungry = (pawn.needs?.hunger ?? 0) >= 85;
-      const baseColor = isSleeping
-        ? { r: 0.35, g: 0.45, b: 1.0 }
-        : isCriticallyHungry
-          ? { r: 1.0, g: 0.45, b: 0.05 }
-          : { r: 1, g: 1, b: 1 };
+      const baseColor = isDrafted
+        ? { r: 1.0, g: 0.15, b: 0.15 }
+        : isSleeping
+          ? { r: 0.35, g: 0.45, b: 1.0 }
+          : isCriticallyHungry
+            ? { r: 1.0, g: 0.45, b: 0.05 }
+            : { r: 1, g: 1, b: 1 };
 
       pawnOverlayGrid.setTile(cellX, cellY, {
         char: PAWN_SPRITES[i % PAWN_SPRITES.length],
         foreground: isSelected ? { r: 1.0, g: 0.9, b: 0.1 } : baseColor,
-        background: { r: 0, g: 0, b: 0 },
+        background: isDrafted ? { r: 0.3, g: 0, b: 0 } : { r: 0, g: 0, b: 0 },
         position: { x: cellX, y: cellY },
         animationOffset: { x: (rp.x - cellX) * BASE_TILE_PX, y: (rp.y - cellY) * BASE_TILE_PX },
         rotation: isSleeping ? 90 : undefined
@@ -946,6 +950,52 @@
     if (healthKey !== _healthOverlayKey) {
       _healthOverlayKey = healthKey;
       worldEffects.setHealthOverlays(newHealth);
+    }
+
+    // Draft target lines for drafted pawns with move/attack orders.
+    const newDraftTargets = pawns
+      .filter((p) => p.position && p.drafted && p.draftTarget)
+      .map((p) => {
+        const target = p.draftTarget!;
+        let toX: number, toY: number;
+        if (target.type === 'move') {
+          toX = target.x;
+          toY = target.y;
+        } else {
+          // attack target — resolve entity position
+          const targetEntity =
+            target.targetType === 'mob'
+              ? mobs.find((m) => m.id === target.targetId)
+              : pawns.find((pp) => pp.id === target.targetId);
+          toX = targetEntity?.x ?? targetEntity?.position?.x ?? p.position!.x;
+          toY = targetEntity?.y ?? targetEntity?.position?.y ?? p.position!.y;
+        }
+        return {
+          id: `draft-${p.id}`,
+          fromX: (p.position!.x - viewX + 0.5) * tW,
+          fromY: (p.position!.y - viewY + 0.5) * tH,
+          toX: (toX - viewX + 0.5) * tW,
+          toY: (toY - viewY + 0.5) * tH
+        };
+      })
+      .filter(
+        (o) =>
+          o.fromX >= -tW &&
+          o.fromY >= -tH &&
+          o.fromX <= W + tW &&
+          o.toX >= -tW &&
+          o.toY >= -tH &&
+          o.toX <= W + tW
+      );
+    const draftKey = newDraftTargets
+      .map(
+        (o) =>
+          `${o.id}:${Math.round(o.fromX)},${Math.round(o.fromY)},${Math.round(o.toX)},${Math.round(o.toY)}`
+      )
+      .join('|');
+    if (draftKey !== _draftOverlayKey) {
+      _draftOverlayKey = draftKey;
+      worldEffects.setDraftTargetOverlays(newDraftTargets);
     }
   }
 
@@ -1351,38 +1401,32 @@
       return;
     }
 
-    // Click on empty tile → deselect all
+    // Click on empty tile → if drafted pawn selected, move there; else deselect all
     selectedBuildingId = null;
     selectedResourceTile = null;
     selectedMobId = null;
     highlightedResourceTiles = new Set();
+    uiState.selectMob(null);
+
+    if (selectedPawn?.drafted && worldMap.length > 0) {
+      const targetTile = worldMap[hoverTileY]?.[hoverTileX];
+      if (targetTile?.walkable) {
+        gameState.updateWithSave((state) => ({
+          ...state,
+          pawns: state.pawns.map((p) =>
+            p.id === selectedPawn.id
+              ? { ...p, draftTarget: { type: 'move', x: hoverTileX, y: hoverTileY } }
+              : p
+          )
+        }));
+        redrawOverlay();
+        return;
+      }
+    }
+
+    selectedPawnId = null;
     uiState.selectPawn(null);
-    uiState.selectMob(null);
-    uiState.selectMob(null);
-    // TODO: draft-control mechanic will re-enable direct pawn movement later.
-    // For now, pawns must only move through the automated AI and turn processing.
-    //
-    // if (selectedPawnId && worldMap.length > 0) {
-    //   const targetTile = worldMap[hoverTileY]?.[hoverTileX];
-    //   if (!targetTile?.walkable) return;
-    //   const mover = pawns.find((p) => p.id === selectedPawnId);
-    //   if (!mover?.position) return;
-    //   await wasmPathfinderService.init();
-    //   const { walkable, costs, width, height } = buildPathfindingGrids(worldMap);
-    //   const path = wasmPathfinderService.findPath(
-    //     walkable,
-    //     costs,
-    //     width,
-    //     height,
-    //     mover.position.x,
-    //     mover.position.y,
-    //     hoverTileX,
-    //     hoverTileY
-    //   );
-    //   if (path.length > 0) {
-    //     gameState.updateWithSave((state) => pawnService.assignPath(selectedPawnId!, path, state));
-    //   }
-    // }
+    redrawOverlay();
   }
 
   onMount(async () => {

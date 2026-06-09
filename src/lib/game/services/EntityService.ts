@@ -490,7 +490,8 @@ class EntityServiceImpl {
                 allMobs,
                 pendingDamage,
                 pendingMeatConsumption,
-                pendingTileDepletion
+                pendingTileDepletion,
+                pendingMobState
             );
         }
         return this.stepHostile(
@@ -503,7 +504,8 @@ class EntityServiceImpl {
             state,
             allMobs,
             pendingDamage,
-            pendingMeatConsumption
+            pendingMeatConsumption,
+            pendingMobState
         );
     }
 
@@ -517,7 +519,8 @@ class EntityServiceImpl {
         state: GameState,
         allMobs: Mob[],
         pendingDamage: Map<string, number>,
-        pendingMeatConsumption: Map<string, number>
+        pendingMeatConsumption: Map<string, number>,
+        pendingMobState: Map<string, Partial<Mob>>
     ): Mob {
         // nocturnalAggro promotes neutral → aggressive at night; otherwise use the data value.
         const effectiveBehaviour = def.nocturnalAggro && isNight ? 'aggressive' : def.behaviour;
@@ -706,7 +709,8 @@ class EntityServiceImpl {
         allMobs: Mob[],
         pendingDamage: Map<string, number>,
         pendingMeatConsumption: Map<string, number>,
-        pendingTileDepletion: Array<{ x: number; y: number; id: string }>
+        pendingTileDepletion: Array<{ x: number; y: number; id: string }>,
+        pendingMobState: Map<string, Partial<Mob>>
     ): Mob {
         // Vision range is set per-creature in creatures.jsonc; herbivores have wide
         // ranges (12-15 tiles) so detection and flee distances are fully data-driven.

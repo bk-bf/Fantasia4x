@@ -30,11 +30,20 @@ export interface HealthOverlay {
   type: 'pawn' | 'mob';
 }
 
+export interface DraftTargetOverlay {
+  id: string;
+  fromX: number;
+  fromY: number;
+  toX: number;
+  toY: number;
+}
+
 export interface WorldEffectsState {
   sleepingOverlays: SleepingOverlay[];
   progressOverlays: ProgressOverlay[];
   campfireOverlays: CampfireOverlay[];
   healthOverlays: HealthOverlay[];
+  draftTargetOverlays: DraftTargetOverlay[];
   // Future effects — add here and handle in WorldEffectsLayer:
   // weather: 'none' | 'rain' | 'snow';
   // particleEffects: ParticleEffect[];
@@ -45,7 +54,8 @@ function createWorldEffectsStore() {
     sleepingOverlays: [],
     progressOverlays: [],
     campfireOverlays: [],
-    healthOverlays: []
+    healthOverlays: [],
+    draftTargetOverlays: []
   });
 
   return {
@@ -61,6 +71,9 @@ function createWorldEffectsStore() {
     },
     setHealthOverlays(overlays: HealthOverlay[]) {
       update((s) => ({ ...s, healthOverlays: overlays }));
+    },
+    setDraftTargetOverlays(overlays: DraftTargetOverlay[]) {
+      update((s) => ({ ...s, draftTargetOverlays: overlays }));
     }
   };
 }

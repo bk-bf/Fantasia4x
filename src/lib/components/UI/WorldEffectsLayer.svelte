@@ -56,6 +56,26 @@
     </div>
   {/each}
 
+  <!-- ── Draft target lines ────────────────────────────────────────────────────── -->
+  {#each $worldEffects.draftTargetOverlays as overlay (overlay.id)}
+    <svg
+      class="draft-target-line"
+      style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none;"
+    >
+      <line
+        x1={overlay.fromX}
+        y1={overlay.fromY}
+        x2={overlay.toX}
+        y2={overlay.toY}
+        stroke="#ff4444"
+        stroke-width="2"
+        stroke-dasharray="4,4"
+        opacity="0.7"
+      />
+      <circle cx={overlay.toX} cy={overlay.toY} r="4" fill="#ff4444" opacity="0.5" />
+    </svg>
+  {/each}
+
   <!-- ── Fullscreen Weather / Shader Overlays ──────────────────────────────────── -->
   <!-- To add rain: create RainCanvas.svelte and mount it here when weather='rain'  -->
   <!-- Example:                                                                      -->
