@@ -79,7 +79,10 @@
   }
 
   function partName(id: BodyPartId): string {
-    return id.replace(/([A-Z])/g, ' $1').toLowerCase().trim();
+    return id
+      .replace(/([A-Z])/g, ' $1')
+      .toLowerCase()
+      .trim();
   }
 
   function partHealthColor(part: BodyPartState): string {
@@ -87,18 +90,23 @@
     if (part.isMissing || part.health <= 0) return '#661010';
     const pct = part.health / part.maxHp;
     if (pct < 0.25) return 'var(--neg)';
-    if (pct < 0.50) return 'var(--accent-hi)';
+    if (pct < 0.5) return 'var(--accent-hi)';
     if (pct < 0.75) return 'var(--text-dim)';
     return 'var(--pos)';
   }
 
   function injuryBadgeClass(type: string): string {
     switch (type) {
-      case 'cut': return 'cut';
-      case 'fracture': return 'fracture';
-      case 'puncture': return 'puncture';
-      case 'crush': return 'crush';
-      default: return '';
+      case 'cut':
+        return 'cut';
+      case 'fracture':
+        return 'fracture';
+      case 'puncture':
+        return 'puncture';
+      case 'crush':
+        return 'crush';
+      default:
+        return '';
     }
   }
 </script>
@@ -143,7 +151,9 @@
           {#if part.injuries.length > 0}
             <span class="part-badges">
               {#each part.injuries as injury}
-                <span class="injury-badge {injuryBadgeClass(injury.type)}">{injury.type.toUpperCase()}</span>
+                <span class="injury-badge {injuryBadgeClass(injury.type)}"
+                  >{injury.type.toUpperCase()}</span
+                >
               {/each}
             </span>
           {/if}

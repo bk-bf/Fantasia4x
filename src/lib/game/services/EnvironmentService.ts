@@ -153,6 +153,35 @@ export interface AmbientState {
     panelTint: [number, number, number];
 }
 
+/**
+ * Compute total light (ambient + point sources) at a tile centre.
+ * Mirrors the renderer's LightingService.sample() logic so UI numbers match
+ * what the player sees on the map.
+ */
+export function computeTileLightLevel(
+    turn: number,
+    buildings: { type: string; status: string; lit?: boolean; x: number; y: number }[],
+    x: number,
+    y: number
+): number {
+    const ambient = getAmbientLight(turn);
+    const FIRE_RADIUS = 6;
+    const FIRE_INTENSITY = 1.1;
+    let point = 0;
+    for (const b of buildings) {
+        if (b.type === 'campfire' && b.status === 'complete' && b.lit === true) {
+            const dx = x - b.x;
+            const dy = y - b.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < FIRE_RADIUS) {
+                const falloff = (1 - dist / FIRE_RADIUS) * (1 - dist / FIRE_RADIUS);
+                point += FIRE_INTENSITY * falloff;
+            }
+        }
+    }
+    return Math.max(0.1, ambient + point);
+}
+
 class EnvironmentServiceImpl {
     getAmbient(turn: number): AmbientState {
         return {

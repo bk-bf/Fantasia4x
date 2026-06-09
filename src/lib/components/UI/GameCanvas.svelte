@@ -23,7 +23,7 @@
   import { pawnService } from '$lib/game/services/PawnService.js';
   import { buildPathfindingGrids } from '$lib/game/services/PathfinderService.js';
   import { designationService } from '$lib/game/services/DesignationService.js';
-  import { environmentService } from '$lib/game/services/EnvironmentService.js';
+  import { environmentService, computeTileLightLevel } from '$lib/game/services/EnvironmentService.js';
   import { lightingService } from '$lib/game/services/LightingService.js';
   import { glyph, SHEET } from '$lib/webgl/tilesets.js';
   import { uiState } from '$lib/stores/uiState.js';
@@ -312,6 +312,9 @@
     ? Object.entries(hoverTile.resources ?? {}).filter(([, v]) => v > 0)
     : [];
   $: hoverZoneType = hoverTile ? (designations[`${hoverTile.x},${hoverTile.y}`] ?? null) : null;
+  $: hoverTileLight = hoverTile
+    ? computeTileLightLevel($gameState?.turn ?? 0, $gameState?.buildings ?? [], hoverTile.x, hoverTile.y)
+    : 1.0;
   $: hoverPawn =
     hoverTileX >= 0 && hoverTileY >= 0
       ? (pawns.find((p) => p.position?.x === hoverTileX && p.position?.y === hoverTileY) ?? null)
@@ -2465,7 +2468,7 @@
       {:else}
         {@const mc = moveCostLabel(hoverTile.movementCost ?? 1)}
         <div class="tile-move" style="color:{mc.color}">
-          move ×{(hoverTile.movementCost ?? 1).toFixed(1)} · {mc.label}
+          move ×{(hoverTile.movementCost ?? 1).toFixed(1)}
         </div>
       {/if}
       {#if hoverZoneType && ZONE_META[hoverZoneType]}
@@ -2473,6 +2476,9 @@
           {ZONE_META[hoverZoneType].label} — {ZONE_META[hoverZoneType].desc}
         </div>
       {/if}
+      <div class="tile-light" style="color:{hoverTileLight >= 0.8 ? '#68b030' : hoverTileLight >= 0.4 ? '#b09030' : '#c83018'}">
+        light {Math.round(hoverTileLight * 100)}%
+      </div>
     </div>
   {/if}
 </div>
@@ -2590,6 +2596,10 @@
     margin-top: 1px;
   }
   .tile-move {
+    font-size: 9px;
+    margin-top: 1px;
+  }
+  .tile-light {
     font-size: 9px;
     margin-top: 1px;
   }

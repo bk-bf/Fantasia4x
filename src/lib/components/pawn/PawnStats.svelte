@@ -14,33 +14,11 @@
     formatEffectValue
   } from '$lib/utils/pawnUtils';
   import { pawnStatService } from '$lib/game/services/PawnStatService';
-  import { getAmbientLight } from '$lib/game/services/EnvironmentService';
-  import type { PlacedBuilding } from '$lib/game/core/types';
   import statsData from '$lib/game/database/stats.jsonc';
   import { WORK_CATEGORIES } from '$lib/game/core/Work';
 
   export let pawn: Pawn;
   export let gameState: GameState;
-
-  // ── Light level at pawn's tile (ambient + point sources) ──────────────
-  function computeTileLightLevel(turn: number, buildings: PlacedBuilding[], x: number, y: number): number {
-    const ambient = getAmbientLight(turn);
-    const FIRE_RADIUS = 6;
-    const FIRE_INTENSITY = 1.1;
-    let point = 0;
-    for (const b of buildings) {
-      if (b.type === 'campfire' && b.status === 'complete' && b.lit === true) {
-        const dx = x - b.x;
-        const dy = y - b.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < FIRE_RADIUS) {
-          const falloff = (1 - dist / FIRE_RADIUS) * (1 - dist / FIRE_RADIUS);
-          point += FIRE_INTENSITY * falloff;
-        }
-      }
-    }
-    return Math.max(0.1, ambient + point);
-  }
 
   // ── Stat definitions loaded from DB ────────────────────────────────────
   type StatDef = {
@@ -85,10 +63,10 @@
       capacityBonus: {}
     };
 
-    // ── Phase 0: Compute environmental light at pawn's position ──────────
+    // ── Phase 0: Read cached environmental light at pawn's position ─────
     const lightMult =
-      pawn.position
-        ? computeTileLightLevel(gameState.turn, gameState.buildings, pawn.position.x, pawn.position.y)
+      pawn.position && gameState.worldMap[pawn.position.y]?.[pawn.position.x]?.lightLevel != null
+        ? gameState.worldMap[pawn.position.y][pawn.position.x].lightLevel!
         : 1.0;
 
     // ── Phase 1: Pre-compute body capacities (0–1 multipliers from limb health) ──
@@ -213,7 +191,11 @@
   }
 
   // ── Capacity calculator: delegates to PawnStatService ──
-  function calculateCapacity(pawn: Pawn, capacityId: string, lightMultiplier?: number): ModifierResult {
+  function calculateCapacity(
+    pawn: Pawn,
+    capacityId: string,
+    lightMultiplier?: number
+  ): ModifierResult {
     const value = pawnStatService.computeCapacities(pawn, lightMultiplier)[capacityId] ?? 1.0;
     const descriptions: Record<string, string> = {
       consciousness: 'Brain + Heart + Lungs + Sight + Hearing + Pain',

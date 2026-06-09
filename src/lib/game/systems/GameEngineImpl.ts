@@ -22,6 +22,7 @@ import { resourceObjectService } from '../services/ResourceObjectService';
 import { entityService } from '../services/EntityService';
 import { TICKS_PER_SECOND, ticksFromSeconds, perTick } from '../core/time';
 import { isGameDebug } from '../core/log';
+import { computeTileLightLevel } from '../services/EnvironmentService';
 import type { WorkCategory } from '../core/types';
 import type { Pawn } from '../core/types';
 
@@ -407,8 +408,7 @@ export class GameEngineImpl implements GameEngine {
 				this.gameState = entityService.stepHunger(this.gameState!);
 				this.gameState = entityService.removeDead(this.gameState!);
 			});
-			this.debugLogPawns();
-
+			this.debugLogPawns(); t('cacheLight', () => this.cacheWorldLight());
 			this.lastTurnProcessed = this.gameState.turn;
 			t('mgrUpdate', () => this.gameStateManager!.updateState(this.gameState!));
 			// Throttled UI push: refresh the store value every tick, notify
@@ -703,6 +703,23 @@ export class GameEngineImpl implements GameEngine {
 		// processCraftingQueue countdown removed.
 	}
 
+	/** Cache per-tile light level (ambient + point sources) on every WorldTile. */
+	private cacheWorldLight(): void {
+		if (!this.gameState) return;
+		const gs = this.gameState;
+		const map = gs.worldMap;
+		if (!map || map.length === 0) return;
+
+		const buildings = gs.buildings;
+		const newMap = map.map((row, ry) =>
+			row.map((tile, rx) => {
+				const light = computeTileLightLevel(gs.turn, buildings, rx, ry);
+				return light !== tile.lightLevel ? { ...tile, lightLevel: light } : tile;
+			})
+		);
+		gs.worldMap = newMap;
+	}
+
 	// ===== HELPER METHODS =====
 
 	updateStores(): void {
@@ -776,11 +793,11 @@ export class GameEngineImpl implements GameEngine {
 		// Formulas mirror COMBAT-SYSTEM.md spec exactly.
 		const { strength: str, dexterity: dex, constitution: con, perception: per } = pawn.stats;
 		switch (combatType) {
-			case 'melee_damage':         return str / 100;
-			case 'hit_chance':           return dex * 3;
-			case 'dodge':                return dex * 2;
+			case 'melee_damage': return str / 100;
+			case 'hit_chance': return dex * 3;
+			case 'dodge': return dex * 2;
 			case 'knockdown_resistance': return con / 4;
-			case 'aggro_range':          return 8 + Math.floor(per / 20);
+			case 'aggro_range': return 8 + Math.floor(per / 20);
 		}
 	}
 
