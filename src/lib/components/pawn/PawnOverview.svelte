@@ -8,11 +8,32 @@
     getHealthDescription,
     getPawnTaskSummary
   } from '$lib/utils/pawnUtils';
+  import { pawnService } from '$lib/game/services/PawnService';
 
   export let pawn: Pawn;
   export let gameState: GameState;
 
   $: taskSummary = getPawnTaskSummary(pawn, gameState);
+  $: moveSpeed = pawnService.getMoveSpeed(pawn);
+
+  function stateColor(state: string | undefined): string {
+    const normalized = (state ?? 'Idle').replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase();
+    switch (normalized) {
+      case 'working':
+      case 'moving_to_resource':
+      case 'moving_to_deposit':
+      case 'moving_to_need':
+        return '#4a9';
+      case 'hungry':
+      case 'eating':
+        return '#f44';
+      case 'tired':
+      case 'sleeping':
+        return '#fa0';
+      default:
+        return 'var(--text-muted)';
+    }
+  }
 </script>
 
 <!-- Pawn Overview -->
@@ -48,13 +69,8 @@
   </div>
 
   <div class="row">
-    <span class="lbl">HEIGHT</span><span class="val">{pawn.physicalTraits.height}cm</span>
-  </div>
-  <div class="row">
-    <span class="lbl">WEIGHT</span><span class="val">{pawn.physicalTraits.weight}kg</span>
-  </div>
-  <div class="row">
-    <span class="lbl">SIZE</span><span class="val">{pawn.physicalTraits.size}</span>
+    <span class="lbl">STATE</span>
+    <span class="val" style="color: {stateColor(pawn.currentState)}">{taskSummary.currentState}</span>
   </div>
   <div class="row">
     <span class="lbl">WORK</span><span class="val">{taskSummary.workAssignment}</span>
@@ -64,6 +80,19 @@
   </div>
   <div class="row">
     <span class="lbl">NEXT</span><span class="val">{taskSummary.nextTask}</span>
+  </div>
+  <div class="row">
+    <span class="lbl">SPEED</span>
+    <span class="val" title={moveSpeed.sources.join('  ')}>{moveSpeed.tilesPerSecond.toFixed(1)} t/s</span>
+  </div>
+  <div class="row">
+    <span class="lbl">HEIGHT</span><span class="val">{pawn.physicalTraits.height}cm</span>
+  </div>
+  <div class="row">
+    <span class="lbl">WEIGHT</span><span class="val">{pawn.physicalTraits.weight}kg</span>
+  </div>
+  <div class="row">
+    <span class="lbl">SIZE</span><span class="val">{pawn.physicalTraits.size}</span>
   </div>
   <div class="row">
     <span class="lbl">MOOD</span>

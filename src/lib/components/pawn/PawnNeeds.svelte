@@ -8,10 +8,7 @@
   } from '$lib/game/core/types';
   import {
     getNeedColor,
-    getNeedDescription,
-    getPawnTaskSummary,
-    getMoodColor,
-    getMoodDescription
+    getNeedDescription
   } from '$lib/utils/pawnUtils';
   import statusEffectsData from '$lib/game/database/status-effects.jsonc';
   import conditionsData from '$lib/game/database/conditions.jsonc';
@@ -32,9 +29,6 @@
     const filled = Math.max(0, Math.min(width, Math.round((value / 100) * width)));
     return '[' + '█'.repeat(filled) + '░'.repeat(width - filled) + ']';
   }
-  $: taskSummary = getPawnTaskSummary(pawn, gameState);
-  $: moveSpeed = pawnService.getMoveSpeed(pawn);
-
   function getBloodColor(pct: number): string {
     if (pct >= 70) return 'var(--pos)';
     if (pct >= 40) return '#c8a030';
@@ -62,24 +56,6 @@
       return acc;
     }, []);
 
-  function stateColor(state: string | undefined): string {
-    const normalized = (state ?? 'Idle').replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase();
-    switch (normalized) {
-      case 'working':
-      case 'moving_to_resource':
-      case 'moving_to_deposit':
-      case 'moving_to_need':
-        return '#4a9';
-      case 'hungry':
-      case 'eating':
-        return '#f44';
-      case 'tired':
-      case 'sleeping':
-        return '#fa0';
-      default:
-        return 'var(--text-muted)';
-    }
-  }
 </script>
 
 <div class="needs-section">
@@ -142,48 +118,6 @@
       >
     </div>
   {/if}
-
-  <div class="section-hdr sub">| STATUS</div>
-
-  <div class="info-grid">
-    <div class="info-col">
-      <span class="lbl">STATE</span>
-      <span class="info-val state" style="color: {stateColor(pawn.currentState)}"
-        >{taskSummary.currentState}</span
-      >
-    </div>
-    <div class="info-col">
-      <span class="lbl">MOOD</span>
-      <span class="info-val" style="color: {getMoodColor(pawn.state.mood)}"
-        >{Math.round(pawn.state.mood)}% — {getMoodDescription(pawn.state.mood)}</span
-      >
-    </div>
-    <div class="info-col">
-      <span class="lbl">WORK</span>
-      <span class="info-val">{taskSummary.workAssignment}</span>
-    </div>
-    <div class="info-col">
-      <span class="lbl">SIZE</span>
-      <span class="info-val"
-        >{pawn.physicalTraits.size} · {pawn.physicalTraits.height}cm {pawn.physicalTraits
-          .weight}kg</span
-      >
-    </div>
-    <div class="info-col">
-      <span class="lbl">SPEED</span>
-      <span class="info-val" title={moveSpeed.sources.join('  ')}
-        >{moveSpeed.tilesPerSecond.toFixed(1)} t/s</span
-      >
-    </div>
-    <div class="info-span">
-      <span class="lbl">TASK</span>
-      <span class="info-val">{taskSummary.currentTask}</span>
-    </div>
-    <div class="info-span">
-      <span class="lbl">NEXT</span>
-      <span class="info-val">{taskSummary.nextTask}</span>
-    </div>
-  </div>
 
   {#if activeEffects.length > 0 || activeConditions.length > 0}
     <div class="effects-row">
@@ -278,46 +212,6 @@
     text-align: right;
     flex-shrink: 0;
     white-space: nowrap;
-  }
-
-  .info-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .info-col {
-    display: flex;
-    align-items: baseline;
-    gap: 6px;
-    padding: 2px 8px;
-  }
-  .info-col:hover {
-    background: var(--bg-hover);
-  }
-
-  .info-span {
-    grid-column: 1 / -1;
-    display: flex;
-    align-items: baseline;
-    gap: 6px;
-    padding: 2px 8px;
-  }
-  .info-span:hover {
-    background: var(--bg-hover);
-  }
-
-  .info-val {
-    color: var(--text);
-    font-size: 11px;
-    flex: 1;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .state {
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
   }
 
   .desc {
