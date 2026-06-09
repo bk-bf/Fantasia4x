@@ -222,7 +222,7 @@ export function calculateItemBonuses(item: Item): Record<string, number> {
         case 'strengthBonus':
         case 'dexterityBonus':
         case 'intelligenceBonus':
-        case 'wisdomBonus':
+        case 'perceptionBonus':
         case 'charismaBonus':
         case 'constitutionBonus':
           bonuses[effect] = value;
@@ -238,7 +238,7 @@ export function calculateItemBonuses(item: Item): Record<string, number> {
         // Special effects
         case 'magicalPower':
           bonuses.intelligenceBonus = Math.floor(value / 2);
-          bonuses.wisdomBonus = Math.floor(value / 3);
+          bonuses.perceptionBonus = Math.floor(value / 3);
           break;
 
         default:
@@ -357,7 +357,7 @@ export function getEffectiveStats(pawn: Pawn): EntityStats {
     strength: baseStats.strength + (equipmentBonuses.strengthBonus || 0),
     dexterity: baseStats.dexterity + (equipmentBonuses.dexterityBonus || 0),
     intelligence: baseStats.intelligence + (equipmentBonuses.intelligenceBonus || 0),
-    wisdom: baseStats.wisdom + (equipmentBonuses.wisdomBonus || 0),
+    perception: baseStats.perception + (equipmentBonuses.perceptionBonus || 0),
     charisma: baseStats.charisma + (equipmentBonuses.charismaBonus || 0),
     constitution: baseStats.constitution + (equipmentBonuses.constitutionBonus || 0)
   };

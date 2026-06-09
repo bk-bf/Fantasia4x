@@ -12,7 +12,7 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     emoji: '🫐',
     color: '#4CAF50',
     locationTypesRequired: ['plains', 'forest'],
-    primaryStat: 'wisdom',
+    primaryStat: 'perception',
     secondaryStat: 'constitution',
     baseEfficiency: 1.0
   },
@@ -49,7 +49,7 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     toolsRequired: ['stone_spear', 'iron_spear', 'shortbow', 'longbow'],
     locationTypesRequired: ['forest', 'plains', 'hills'],
     primaryStat: 'dexterity',
-    secondaryStat: 'wisdom',
+    secondaryStat: 'perception',
     baseEfficiency: 1.0
   },
   {
@@ -72,7 +72,7 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     toolsRequired: ['digging_stick', 'fishing_spear', 'fishing_rod'],
     locationTypesRequired: ['river'],
     primaryStat: 'dexterity',
-    secondaryStat: 'wisdom',
+    secondaryStat: 'perception',
     baseEfficiency: 1.0
   },
 
@@ -130,7 +130,7 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     color: '#9C27B0',
     skillRequired: 'scholarship',
     primaryStat: 'intelligence',
-    secondaryStat: 'wisdom',
+    secondaryStat: 'perception',
     baseEfficiency: 1.0
   },
   {
@@ -152,7 +152,7 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     toolsRequired: ['alchemical_apparatus'],
     skillRequired: 'alchemy',
     primaryStat: 'intelligence',
-    secondaryStat: 'wisdom',
+    secondaryStat: 'perception',
     baseEfficiency: 1.0
   },
   // Phase 6: cooking over campfire
@@ -162,7 +162,7 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     description: 'Prepare food at a campfire or cooking station',
     emoji: '🍳',
     color: '#FF9800',
-    primaryStat: 'wisdom',
+    primaryStat: 'intelligence',
     secondaryStat: 'dexterity',
     baseEfficiency: 1.0
   },

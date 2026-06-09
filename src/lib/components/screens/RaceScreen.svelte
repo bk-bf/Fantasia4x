@@ -59,10 +59,10 @@
         medium: 'Quick learners with sharp analytical skills',
         low: 'Practical wisdom over book learning'
       },
-      wisdom: {
-        high: 'Ancient wisdom flows through their consciousness',
-        medium: 'Perceptive and intuitive with good judgment',
-        low: 'Learning through experience rather than foresight'
+      perception: {
+        high: 'Keen senses attuned to every detail of their environment',
+        medium: 'Perceptive and alert, rarely caught off guard',
+        low: 'Relies on logic over raw sensory awareness'
       },
       charisma: {
         high: 'Natural leaders who inspire devotion in others',

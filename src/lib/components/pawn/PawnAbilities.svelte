@@ -247,7 +247,7 @@
 
   function getSurvivalPrimaryStat(survivalType: string): string {
     const statMap: Record<string, string> = {
-      foraging: 'wisdom',
+      foraging: 'perception',
       navigation: 'intelligence',
       weather_resistance: 'constitution',
       disease_resistance: 'constitution'
@@ -269,7 +269,7 @@
     const statMap: Record<string, string> = {
       learning_speed: 'intelligence',
       memory: 'intelligence',
-      focus: 'wisdom',
+      focus: 'perception',
       social_influence: 'charisma'
     };
     return statMap[mentalType] || 'intelligence';

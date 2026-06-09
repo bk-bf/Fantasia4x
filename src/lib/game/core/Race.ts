@@ -51,9 +51,8 @@ const RACIAL_TRAIT_DATABASE = [
     description: 'Crystal-like eyes that see magical auras.',
     icon: '💎',
     effects: {
-      wisdomBonus: 2,
+      perceptionBonus: 2,
       intelligenceBonus: 1,
-      magicDetection: 1.5,
       workEfficiency: { research: 1.2 }
     }
   },
@@ -108,7 +107,7 @@ const RACIAL_TRAIT_DATABASE = [
     description: 'Eyes that reflect the cosmos, naturally wise.',
     icon: '⭐',
     effects: {
-      wisdomBonus: 3,
+      perceptionBonus: 3,
       intelligenceBonus: 1,
       nightVision: 1.0,
       workEfficiency: { research: 1.25 }
@@ -119,7 +118,7 @@ const RACIAL_TRAIT_DATABASE = [
     description: 'Can enter and manipulate dreams.',
     icon: '🌙',
     effects: {
-      wisdomBonus: 2,
+      intelligenceBonus: 2,
       charismaBonus: 1,
       sleepEfficiency: 1.5,
       mentalResistance: 0.7
@@ -143,7 +142,7 @@ const RACIAL_TRAIT_DATABASE = [
     description: 'Extraordinarily sharp senses.',
     icon: '👁️',
     effects: {
-      wisdomBonus: 2,
+      perceptionBonus: 2,
       dexterityBonus: 1,
       workEfficiency: { hunting: 1.3, foraging: 1.2 },
       dangerSense: 1.4
@@ -212,7 +211,7 @@ const RACIAL_TRAIT_DATABASE = [
     description: 'Prefers solitude, works best alone.',
     icon: '🦅',
     effects: {
-      wisdomBonus: 2,
+      intelligenceBonus: 2,
       charismaBonus: -1,
       workEfficiency: { research: 1.3, crafting: 1.2 },
       groupPenalty: 0.9
@@ -248,7 +247,7 @@ const RACIAL_TRAIT_DATABASE = [
     icon: '🦉',
     effects: {
       dexterityBonus: 1,
-      wisdomBonus: 1,
+      perceptionBonus: 1,
       nightVision: 1.0,
       daytimePenalty: 0.8,
       workEfficiency: { hunting: 1.2 }
@@ -259,8 +258,7 @@ const RACIAL_TRAIT_DATABASE = [
     description: 'Extremely long-lived, wise but frail.',
     icon: '📜',
     effects: {
-      wisdomBonus: 4,
-      intelligenceBonus: 2,
+      intelligenceBonus: 6,
       constitutionPenalty: -2,
       workEfficiency: { research: 1.4 },
       memoryBonus: 1.5
@@ -273,7 +271,7 @@ const RACIAL_TRAIT_DATABASE = [
     effects: {
       strengthBonus: 3,
       constitutionBonus: 1,
-      wisdomPenalty: -1,
+      intelligencePenalty: -1,
       combatRage: 1.5,
       workEfficiency: { hunting: 1.3 }
     }
@@ -318,8 +316,7 @@ const RACIAL_TRAIT_DATABASE = [
     description: 'Insatiably curious about the world.',
     icon: '🤔',
     effects: {
-      intelligenceBonus: 2,
-      wisdomBonus: 1,
+      intelligenceBonus: 3,
       workEfficiency: { research: 1.25 },
       experienceGain: 1.2
     }
@@ -383,7 +380,7 @@ function generateStatRanges(): Record<string, [number, number]> {
   // Generate more varied stat ranges based on racial archetype
   const statRanges: Record<string, [number, number]> = {};
 
-  const stats = ['strength', 'dexterity', 'intelligence', 'wisdom', 'charisma', 'constitution'];
+  const stats = ['strength', 'dexterity', 'intelligence', 'perception', 'charisma', 'constitution'];
 
   stats.forEach((stat) => {
     // Base range: 8-12, then modify based on racial focus

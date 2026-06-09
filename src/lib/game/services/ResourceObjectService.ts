@@ -79,7 +79,7 @@ export interface ResourceObjectDef {
 }
 
 const WORK_STAT_FALLBACK: Record<string, keyof Pawn['stats']> = {
-    foraging: 'wisdom',
+    foraging: 'perception',
     woodcutting: 'strength',
     mining: 'strength'
 };

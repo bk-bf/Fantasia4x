@@ -207,7 +207,7 @@ class EntityServiceImpl {
         const stats: EntityStats = {
             strength: def.stats.str,
             dexterity: def.stats.dex,
-            wisdom: def.stats.per,
+            perception: def.stats.per,
             constitution: def.stats.con,
             intelligence: def.behaviour === 'passive' ? 4 : 8,
             charisma: 5

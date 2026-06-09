@@ -949,7 +949,7 @@ export interface EntityStats {
 	strength: number;
 	dexterity: number;
 	intelligence: number;
-	wisdom: number;
+	perception: number;
 	charisma: number;
 	constitution: number;
 }
@@ -963,13 +963,13 @@ export interface RacialTrait {
 		strengthBonus?: number;
 		dexterityBonus?: number;
 		intelligenceBonus?: number;
-		wisdomBonus?: number;
+		perceptionBonus?: number;
 		charismaBonus?: number;
 		constitutionBonus?: number;
 		strengthPenalty?: number;
 		dexterityPenalty?: number;
 		intelligencePenalty?: number;
-		wisdomPenalty?: number;
+		perceptionPenalty?: number;
 		charismaPenalty?: number;
 		constitutionPenalty?: number;
 

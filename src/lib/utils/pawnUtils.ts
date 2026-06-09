@@ -212,12 +212,12 @@ export function getStatDescription(statName: string, statValue: number): string 
       average: 'Average reasoning ability',
       low: 'Slower to grasp concepts'
     },
-    wisdom: {
-      exceptional: 'Profound wisdom and insight',
-      high: 'Excellent judgment and perception',
-      good: 'Good instincts and awareness',
-      average: 'Decent common sense',
-      low: 'Sometimes poor judgment'
+    perception: {
+      exceptional: 'Razor-sharp senses and extraordinary awareness',
+      high: 'Excellent perception and detection',
+      good: 'Good instincts and alertness',
+      average: 'Decent situational awareness',
+      low: 'Sometimes misses important details'
     },
     charisma: {
       exceptional: 'Magnetic personality and leadership',

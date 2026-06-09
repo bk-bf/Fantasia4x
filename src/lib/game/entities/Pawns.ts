@@ -128,7 +128,7 @@ function getBaseStats(pawn: Pawn) {
 		strength: pawn.stats.strength || 0,
 		dexterity: pawn.stats.dexterity || 0,
 		intelligence: pawn.stats.intelligence || 0,
-		wisdom: pawn.stats.wisdom || 0,
+		perception: pawn.stats.perception || 0,
 		charisma: pawn.stats.charisma || 0,
 		constitution: pawn.stats.constitution || 0
 	};
@@ -152,7 +152,7 @@ function getTotalStats(
 		strength: base.strength + (trait.strength || 0) + (equip.strength || 0),
 		dexterity: base.dexterity + (trait.dexterity || 0) + (equip.dexterity || 0),
 		intelligence: base.intelligence + (trait.intelligence || 0),
-		wisdom: base.wisdom + (trait.wisdom || 0),
+		perception: base.perception + (trait.perception || 0),
 		charisma: base.charisma + (trait.charisma || 0),
 		constitution: base.constitution + (trait.constitution || 0)
 	};
@@ -187,9 +187,6 @@ function addBasicPhysicalAbilities(
 		baseSwimmingSpeed,
 		`50% of movement speed (${movementSpeed.toFixed(2)} × 0.5)`
 	);
-
-	// Basic vision range
-	addAbility(abilities, 'visionRange', 10, 'Base vision range (10 meters)');
 }
 
 function addBasicMentalAbilities(
@@ -213,12 +210,12 @@ function addBasicMentalAbilities(
 		`Base (1.0) + Charisma modifier (${totalStats.charisma - 10} × 0.05)`
 	);
 
-	const intuition = 1.0 + (totalStats.wisdom - 10) * 0.05;
+	const intuition = 1.0 + (totalStats.perception - 10) * 0.05;
 	addAbility(
 		abilities,
 		'intuition',
 		intuition,
-		`Base (1.0) + Wisdom modifier (${totalStats.wisdom - 10} × 0.05)`
+		`Base (1.0) + Perception modifier (${totalStats.perception - 10} × 0.05)`
 	);
 
 	const knowledgeStorage = totalStats.intelligence * 10;
@@ -229,12 +226,20 @@ function addBasicMentalAbilities(
 		`Intelligence × 10 (${totalStats.intelligence} × 10)`
 	);
 
-	const experienceGain = 1.0 + (totalStats.wisdom - 10) * 0.02;
+	const experienceGain = 1.0 + (totalStats.intelligence - 10) * 0.02;
 	addAbility(
 		abilities,
 		'experienceGain',
 		experienceGain,
-		`Base (1.0) + Wisdom modifier (${totalStats.wisdom - 10} × 0.02)`
+		`Base (1.0) + Intelligence modifier (${totalStats.intelligence - 10} × 0.02)`
+	);
+
+	const visionRange = 10 + (totalStats.perception - 10) * 0.5;
+	addAbility(
+		abilities,
+		'visionRange',
+		visionRange,
+		`Base (10) + Perception modifier (${totalStats.perception - 10} × 0.5)`
 	);
 }
 
