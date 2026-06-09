@@ -70,7 +70,9 @@
 
   <div class="row">
     <span class="lbl">STATE</span>
-    <span class="val" style="color: {stateColor(pawn.currentState)}">{taskSummary.currentState}</span>
+    <span class="val" style="color: {stateColor(pawn.currentState)}"
+      >{taskSummary.currentState}</span
+    >
   </div>
   <div class="row">
     <span class="lbl">WORK</span><span class="val">{taskSummary.workAssignment}</span>
@@ -83,7 +85,9 @@
   </div>
   <div class="row">
     <span class="lbl">SPEED</span>
-    <span class="val" title={moveSpeed.sources.join('  ')}>{moveSpeed.tilesPerSecond.toFixed(1)} t/s</span>
+    <span class="val" title={moveSpeed.sources.join('  ')}
+      >{moveSpeed.tilesPerSecond.toFixed(1)} t/s</span
+    >
   </div>
   <div class="row">
     <span class="lbl">HEIGHT</span><span class="val">{pawn.physicalTraits.height}cm</span>

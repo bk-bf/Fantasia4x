@@ -9,562 +9,562 @@
 //               limb damage cascades into stat reduction (RimWorld-style).
 //               Example: dodge = (1.0 + (DEX−10)×0.02) × moving
 [
-    // ── Combat ────────────────────────────────────────────────────────────────────
-    // All combat stats are multiplied by relevant body capacities:
-    //   manipulation = ability to swing weapon / aim
-    //   sight        = ability to see target
-    //   moving       = ability to evade
-    //   consciousness = mental clarity for threat detection / balance
-    {
-        "id"         : "melee_damage",
-        "category"   : "combat",
-        "primaryStat": "strength",
-        "formula"    : "(1.0 + (STR − 10) × 0.01) × manipulation",
-        "description": "physical attack damage multiplier (× manipulation)"
-    },
-    {
-        "id"         : "hit_chance",
-        "category"   : "combat",
-        "primaryStat": "dexterity",
-        "formula"    : "(1.0 + (DEX − 10) × 0.03) × sight × manipulation",
-        "description": "attack accuracy (× sight × manipulation)"
-    },
-    {
-        "id"         : "dodge",
-        "category"   : "combat",
-        "primaryStat": "dexterity",
-        "formula"    : "(1.0 + (DEX − 10) × 0.02 − (weight − 70) × 0.002) × moving",
-        "description": "evasion (× moving; heavier = harder to dodge)"
-    },
-    {
-        "id"         : "knockdown_resistance",
-        "category"   : "combat",
-        "primaryStat": "constitution",
-        "formula"    : "(1.0 + (CON − 10) × 0.025) × consciousness",
-        "description": "resistance to stagger (× consciousness; dazed = easier to knock down)"
-    },
-    {
-        "id"         : "aggro_range",
-        "category"   : "combat",
-        "primaryStat": "perception",
-        "formula"    : "(1.0 + (PER − 10) × 0.05) × sight",
-        "description": "threat detection range (× sight)"
-    },
-    // ── Physical ──────────────────────────────────────────────────────────────────
-    // Physical stats are multiplied by the body capacities that enable them:
-    //   manipulation = can physically interact (carry, wield)
-    //   moving       = can locomote (speed, stamina)
-    //   blood_pumping = heart drives stamina
-    //   blood_filtration = kidneys drive recovery
-    //   digestion    = stomach/liver drive food tolerance
-    //   consciousness = mental drive for endurance
-    {
-        "id"         : "movement_speed",
-        "category"   : "physical",
-        "primaryStat": "dexterity",
-        "formula"    : "(1.0 + (DEX − 10) × 0.05 − (weight − 70) × 0.003 + (height − 170) × 0.001) × moving",
-        "description": "movement speed (× moving; broken legs = crawl)"
-    },
-    {
-        "id"         : "stamina",
-        "category"   : "physical",
-        "primaryStat": "constitution",
-        "formula"    : "(50 + (CON − 10) × 4 + (DEX − 10) × 2) × moving × blood_pumping",
-        "description": "stamina pool (× moving × blood_pumping)"
-    },
-    {
-        "id"         : "blood_volume",
-        "category"   : "physical",
-        "primaryStat": "constitution",
-        "formula"    : "weight × 1.4 + (CON − 10) × 2",
-        "description": "total blood pool — physical property, not capacity-dependent"
-    },
-    {
-        "id"         : "blood_regeneration",
-        "category"   : "physical",
-        "primaryStat": "constitution",
-        "formula"    : "(1.0 + (CON − 10) × 0.08) × blood_filtration",
-        "description": "blood recovery (× blood_filtration)"
-    },
-    {
-        "id"         : "hunger_capacity",
-        "category"   : "physical",
-        "primaryStat": "constitution",
-        "formula"    : "(weight + (CON − 10) × 3 + 30) × digestion",
-        "description": "hunger tolerance (× digestion)"
-    },
-    {
-        "id"         : "fatigue_capacity",
-        "category"   : "physical",
-        "primaryStat": "constitution",
-        "formula"    : "(weight × 0.8 + (CON − 10) × 3 + (STR − 10) + 44) × consciousness",
-        "description": "fatigue tolerance (× consciousness)"
-    },
-    // ── Resistance ────────────────────────────────────────────────────────────────
-    // Resistances are multiplied by consciousness (dazed = weaker) and
-    // blood_filtration (for biological resistances: poison, disease).
-    {
-        "id"         : "cutting_resistance",
-        "category"   : "resistance",
-        "primaryStat": "dexterity",
-        "formula"    : "(0.0 + (DEX − 10) × 0.01) × consciousness",
-        "description": "cutting damage reduction (× consciousness)"
-    },
-    {
-        "id"         : "piercing_resistance",
-        "category"   : "resistance",
-        "primaryStat": "constitution",
-        "formula"    : "(0.0 + (CON − 10) × 0.008) × consciousness",
-        "description": "piercing damage reduction (× consciousness)"
-    },
-    {
-        "id"         : "blunt_resistance",
-        "category"   : "resistance",
-        "primaryStat": "constitution",
-        "formula"    : "(0.0 + (CON − 10) × 0.008 + (STR − 10) × 0.004) × consciousness",
-        "description": "blunt damage reduction (× consciousness)"
-    },
-    {
-        "id"         : "fire_resistance",
-        "category"   : "resistance",
-        "primaryStat": "constitution",
-        "formula"    : "(0.0 + (CON − 10) × 0.01) × consciousness",
-        "description": "fire damage reduction (× consciousness)"
-    },
-    {
-        "id"         : "cold_resistance",
-        "category"   : "resistance",
-        "primaryStat": "constitution",
-        "formula"    : "(0.0 + (CON − 10) × 0.01) × consciousness",
-        "description": "cold damage reduction (× consciousness)"
-    },
-    {
-        "id"         : "lightning_resistance",
-        "category"   : "resistance",
-        "primaryStat": "dexterity",
-        "formula"    : "(0.0 + (DEX − 10) × 0.01) × consciousness",
-        "description": "lightning damage reduction (× consciousness)"
-    },
-    {
-        "id"         : "shadow_resistance",
-        "category"   : "resistance",
-        "primaryStat": "intelligence",
-        "formula"    : "(0.0 + (INT − 10) × 0.01) × consciousness",
-        "description": "shadow damage reduction (× consciousness)"
-    },
-    {
-        "id"         : "poison_resistance",
-        "category"   : "resistance",
-        "primaryStat": "constitution",
-        "formula"    : "(0.0 + (CON − 10) × 0.015) × consciousness × blood_filtration",
-        "description": "toxin mitigation (× consciousness × blood_filtration)"
-    },
-    {
-        "id"         : "disease_resistance",
-        "category"   : "resistance",
-        "primaryStat": "constitution",
-        "formula"    : "(0.0 + (CON − 10) × 0.01) × consciousness × blood_filtration",
-        "description": "disease resistance (× consciousness × blood_filtration)"
-    },
-    {
-        "id"         : "mental_resistance",
-        "category"   : "resistance",
-        "primaryStat": "intelligence",
-        "formula"    : "(0.0 + (INT − 10) × 0.015) × consciousness",
-        "description": "mental resistance (× consciousness)"
-    },
-    // ── Work ──────────────────────────────────────────────────────────────────────
-    // Each work type has speed, yield (production amount), and quality modifiers.
-    // Speed    = how fast the pawn completes work (× relevant capacities).
-    // Yield    = how much resource is produced per completion.
-    // Quality  = output quality / durability / potency (× precision capacities).
-    {
-        "id"         : "foraging_speed",
-        "category"   : "work",
-        "primaryStat": "perception",
-        "formula"    : "(1.0 + (PER − 10) × 0.05 + (CON − 10) × 0.02) × sight × moving",
-        "description": "foraging work speed (× sight × moving)"
-    },
-    {
-        "id"         : "foraging_yield",
-        "category"   : "work",
-        "primaryStat": "perception",
-        "formula"    : "(1.0 + (PER − 10) × 0.04 + (CON − 10) × 0.02) × sight",
-        "description": "foraging resource amount (× sight)"
-    },
-    {
-        "id"         : "foraging_quality",
-        "category"   : "work",
-        "primaryStat": "perception",
-        "formula"    : "(1.0 + (PER − 10) × 0.03) × sight × consciousness",
-        "description": "foraged food quality (× sight × consciousness)"
-    },
-    {
-        "id"         : "woodcutting_speed",
-        "category"   : "work",
-        "primaryStat": "strength",
-        "formula"    : "(1.0 + (STR − 10) × 0.04 + (CON − 10) × 0.02) × manipulation × moving",
-        "description": "woodcutting speed (× manipulation × moving)"
-    },
-    {
-        "id"         : "woodcutting_yield",
-        "category"   : "work",
-        "primaryStat": "strength",
-        "formula"    : "(1.0 + (STR − 10) × 0.05) × manipulation",
-        "description": "wood per tree (× manipulation)"
-    },
-    {
-        "id"         : "woodcutting_quality",
-        "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "(1.0 + (DEX − 10) × 0.03) × manipulation × sight",
-        "description": "wood quality (× manipulation × sight)"
-    },
-    {
-        "id"         : "mining_speed",
-        "category"   : "work",
-        "primaryStat": "strength",
-        "formula"    : "(1.0 + (STR − 10) × 0.04 + (CON − 10) × 0.02) × manipulation × moving",
-        "description": "mining speed (× manipulation × moving)"
-    },
-    {
-        "id"         : "mining_yield",
-        "category"   : "work",
-        "primaryStat": "strength",
-        "formula"    : "(1.0 + (STR − 10) × 0.05 + (INT − 10) × 0.01) × manipulation",
-        "description": "ore per vein (× manipulation)"
-    },
-    {
-        "id"         : "mining_quality",
-        "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "(1.0 + (DEX − 10) × 0.03 + (INT − 10) × 0.02) × manipulation × sight",
-        "description": "ore purity (× manipulation × sight)"
-    },
-    {
-        "id"         : "hunting_speed",
-        "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "(1.0 + (DEX − 10) × 0.05 + (PER − 10) × 0.03) × sight × moving",
-        "description": "hunting speed (× sight × moving)"
-    },
-    {
-        "id"         : "hunting_yield",
-        "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "(1.0 + (DEX − 10) × 0.03 + (STR − 10) × 0.02) × sight",
-        "description": "meat per kill (× sight)"
-    },
-    {
-        "id"         : "hunting_quality",
-        "category"   : "work",
-        "primaryStat": "perception",
-        "formula"    : "(1.0 + (PER − 10) × 0.04 + (DEX − 10) × 0.02) × sight × consciousness",
-        "description": "pelt quality (× sight × consciousness)"
-    },
-    {
-        "id"         : "butchery_speed",
-        "category"   : "work",
-        "primaryStat": "strength",
-        "formula"    : "(1.0 + (STR − 10) × 0.03 + (DEX − 10) × 0.03) × manipulation",
-        "description": "butchery speed (× manipulation)"
-    },
-    {
-        "id"         : "butchery_yield",
-        "category"   : "work",
-        "primaryStat": "strength",
-        "formula"    : "(1.0 + (STR − 10) × 0.04) × manipulation",
-        "description": "meat per carcass (× manipulation)"
-    },
-    {
-        "id"         : "butchery_quality",
-        "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "(1.0 + (DEX − 10) × 0.05) × manipulation × sight",
-        "description": "cut quality (× manipulation × sight)"
-    },
-    {
-        "id"         : "fishing_speed",
-        "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "(1.0 + (DEX − 10) × 0.05 + (PER − 10) × 0.03) × sight × manipulation",
-        "description": "fishing speed (× sight × manipulation)"
-    },
-    {
-        "id"         : "fishing_yield",
-        "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "(1.0 + (DEX − 10) × 0.03 + (PER − 10) × 0.02) × sight",
-        "description": "catch size (× sight)"
-    },
-    {
-        "id"         : "fishing_quality",
-        "category"   : "work",
-        "primaryStat": "perception",
-        "formula"    : "(1.0 + (PER − 10) × 0.04) × sight × consciousness",
-        "description": "fish quality (× sight × consciousness)"
-    },
-    {
-        "id"         : "crafting_speed",
-        "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "(1.0 + (DEX − 10) × 0.05 + (INT − 10) × 0.02) × manipulation × sight",
-        "description": "crafting speed (× manipulation × sight)"
-    },
-    {
-        "id"         : "crafting_yield",
-        "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "(1.0 + (DEX − 10) × 0.03 + (INT − 10) × 0.02) × manipulation",
-        "description": "items per batch (× manipulation)"
-    },
-    {
-        "id"         : "crafting_quality",
-        "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "(1.0 + (DEX − 10) × 0.04 + (INT − 10) × 0.03) × manipulation × sight × consciousness",
-        "description": "item quality (× manipulation × sight × consciousness)"
-    },
-    {
-        "id"         : "metalworking_speed",
-        "category"   : "work",
-        "primaryStat": "strength",
-        "formula"    : "(1.0 + (STR − 10) × 0.04 + (INT − 10) × 0.02) × manipulation × sight",
-        "description": "smithing speed (× manipulation × sight)"
-    },
-    {
-        "id"         : "metalworking_quality",
-        "category"   : "work",
-        "primaryStat": "intelligence",
-        "formula"    : "(1.0 + (DEX − 10) × 0.03 + (INT − 10) × 0.04) × manipulation × sight × consciousness",
-        "description": "metal purity / edge retention (× manipulation × sight × consciousness)"
-    },
-    {
-        "id"         : "leatherworking_speed",
-        "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "(1.0 + (DEX − 10) × 0.05 + (INT − 10) × 0.02) × manipulation × sight",
-        "description": "leatherwork speed (× manipulation × sight)"
-    },
-    {
-        "id"         : "leatherworking_quality",
-        "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "(1.0 + (DEX − 10) × 0.05 + (INT − 10) × 0.02) × manipulation × sight",
-        "description": "leather quality (× manipulation × sight)"
-    },
-    {
-        "id"         : "digging_speed",
-        "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "(1.0 + (DEX − 10) × 0.04 + (INT − 10) × 0.02) × manipulation × moving",
-        "description": "digging speed (× manipulation × moving)"
-    },
-    {
-        "id"         : "digging_yield",
-        "category"   : "work",
-        "primaryStat": "strength",
-        "formula"    : "(1.0 + (STR − 10) × 0.03 + (DEX − 10) × 0.02) × manipulation",
-        "description": "soil / clay per dig (× manipulation)"
-    },
-    {
-        "id"         : "digging_quality",
-        "category"   : "work",
-        "primaryStat": "intelligence",
-        "formula"    : "(1.0 + (INT − 10) × 0.03) × manipulation × sight",
-        "description": "material purity (× manipulation × sight)"
-    },
-    {
-        "id"         : "research_speed",
-        "category"   : "work",
-        "primaryStat": "intelligence",
-        "formula"    : "(1.0 + (INT − 10) × 0.05 + (PER − 10) × 0.02) × sight × consciousness",
-        "description": "research speed (× sight × consciousness)"
-    },
-    {
-        "id"         : "research_quality",
-        "category"   : "work",
-        "primaryStat": "intelligence",
-        "formula"    : "(1.0 + (INT − 10) × 0.05 + (PER − 10) × 0.02) × sight × consciousness",
-        "description": "breakthrough chance (× sight × consciousness)"
-    },
-    {
-        "id"         : "construction_speed",
-        "category"   : "work",
-        "primaryStat": "strength",
-        "formula"    : "(1.0 + (STR − 10) × 0.04 + (INT − 10) × 0.02) × manipulation × moving",
-        "description": "construction speed (× manipulation × moving)"
-    },
-    {
-        "id"         : "construction_quality",
-        "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "(1.0 + (DEX − 10) × 0.03 + (INT − 10) × 0.02) × manipulation × sight",
-        "description": "building durability (× manipulation × sight)"
-    },
-    {
-        "id"         : "alchemy_speed",
-        "category"   : "work",
-        "primaryStat": "intelligence",
-        "formula"    : "(1.0 + (INT − 10) × 0.05 + (PER − 10) × 0.02) × sight × manipulation",
-        "description": "brewing speed (× sight × manipulation)"
-    },
-    {
-        "id"         : "alchemy_quality",
-        "category"   : "work",
-        "primaryStat": "intelligence",
-        "formula"    : "(1.0 + (INT − 10) × 0.06 + (PER − 10) × 0.02) × sight × manipulation × consciousness",
-        "description": "potion potency (× sight × manipulation × consciousness)"
-    },
-    {
-        "id"         : "cooking_speed",
-        "category"   : "work",
-        "primaryStat": "intelligence",
-        "formula"    : "(1.0 + (INT − 10) × 0.04 + (DEX − 10) × 0.03) × manipulation × sight",
-        "description": "cooking speed (× manipulation × sight)"
-    },
-    {
-        "id"         : "cooking_quality",
-        "category"   : "work",
-        "primaryStat": "intelligence",
-        "formula"    : "(1.0 + (INT − 10) × 0.05 + (DEX − 10) × 0.03) × manipulation × sight × consciousness",
-        "description": "meal nutrition / taste (× manipulation × sight × consciousness)"
-    },
-    {
-        "id"         : "hauling_speed",
-        "category"   : "work",
-        "primaryStat": "strength",
-        "formula"    : "(1.0 + (STR − 10) × 0.04 + (CON − 10) × 0.02) × moving × manipulation",
-        "description": "hauling speed (× moving × manipulation)"
-    },
-    {
-        "id"         : "hauling_quality",
-        "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "(1.0 + (DEX − 10) × 0.02) × manipulation",
-        "description": "careful handling (× manipulation)"
-    },
-    {
-        "id"         : "planting_speed",
-        "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "(1.0 + (DEX − 10) × 0.05 + (INT − 10) × 0.02) × manipulation × sight",
-        "description": "planting speed (× manipulation × sight)"
-    },
-    {
-        "id"         : "planting_yield",
-        "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "(1.0 + (DEX − 10) × 0.03 + (INT − 10) × 0.02) × manipulation",
-        "description": "crop yield (× manipulation)"
-    },
-    {
-        "id"         : "planting_quality",
-        "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "(1.0 + (DEX − 10) × 0.04 + (INT − 10) × 0.03) × manipulation × sight × consciousness",
-        "description": "crop quality / growth rate (× manipulation × sight × consciousness)"
-    },
-    {
-        "id"         : "caretaking_speed",
-        "category"   : "work",
-        "primaryStat": "intelligence",
-        "formula"    : "(1.0 + (INT − 10) × 0.05 + (DEX − 10) × 0.02) × manipulation × sight",
-        "description": "treatment speed (× manipulation × sight)"
-    },
-    {
-        "id"         : "caretaking_yield",
-        "category"   : "work",
-        "primaryStat": "intelligence",
-        "formula"    : "(1.0 + (INT − 10) × 0.04) × manipulation",
-        "description": "healing amount per treatment (× manipulation)"
-    },
-    {
-        "id"         : "caretaking_quality",
-        "category"   : "work",
-        "primaryStat": "intelligence",
-        "formula"    : "(1.0 + (INT − 10) × 0.05 + (DEX − 10) × 0.03) × manipulation × sight × consciousness",
-        "description": "treatment effectiveness / infection prevention (× manipulation × sight × consciousness)"
-    },
-    // ── Body Capacities ───────────────────────────────────────────────────────────
-    // Derived from specific organ health (not parent limb health).
-    // Paired organs use partial-function logic: one destroyed ≠ 0, but severe penalty.
-    // Order matters: pain, sight, hearing must be computed before consciousness.
-    {
-        "id"         : "pain",
-        "category"   : "capacity",
-        "primaryStat": "constitution",
-        "formula"    : "1.0",
-        "description": "injuries + limb damage + bleeding → 0–200%+, reduces consciousness"
-    },
-    {
-        "id"         : "sight",
-        "category"   : "capacity",
-        "primaryStat": "perception",
-        "formula"    : "1.0",
-        "description": "weaker eye × 0.4 + avg eyes × 0.6 + 0.05 baseline"
-    },
-    {
-        "id"         : "hearing",
-        "category"   : "capacity",
-        "primaryStat": "perception",
-        "formula"    : "1.0",
-        "description": "weaker ear × 0.3 + avg ears × 0.7 + 0.15 baseline (bone conduction)"
-    },
-    {
-        "id"         : "consciousness",
-        "category"   : "capacity",
-        "primaryStat": "constitution",
-        "formula"    : "1.0",
-        "description": "brain × 0.5 + heart × 0.15 + lungs × 0.1 + sight × 0.1 + hearing × 0.05 + 0.1 baseline, reduced by pain"
-    },
-    {
-        "id"         : "manipulation",
-        "category"   : "capacity",
-        "primaryStat": "dexterity",
-        "formula"    : "1.0",
-        "description": "weaker arm × 0.3 + avg arms × 0.7"
-    },
-    {
-        "id"         : "moving",
-        "category"   : "capacity",
-        "primaryStat": "dexterity",
-        "formula"    : "1.0",
-        "description": "weaker leg × 0.5 + avg legs × 0.5"
-    },
-    {
-        "id"         : "blood_pumping",
-        "category"   : "capacity",
-        "primaryStat": "constitution",
-        "formula"    : "1.0",
-        "description": "heart × 0.9 + 0.10 baseline (agonal/CPR)"
-    },
-    {
-        "id"         : "blood_filtration",
-        "category"   : "capacity",
-        "primaryStat": "constitution",
-        "formula"    : "1.0",
-        "description": "weaker kidney × 0.4 + avg kidneys × 0.6 (one kidney sustains ~60%)"
-    },
-    {
-        "id"         : "breathing",
-        "category"   : "capacity",
-        "primaryStat": "constitution",
-        "formula"    : "1.0",
-        "description": "weaker lung × 0.5 + avg lungs × 0.5 + 0.05 baseline (diaphragm)"
-    },
-    {
-        "id"         : "digestion",
-        "category"   : "capacity",
-        "primaryStat": "constitution",
-        "formula"    : "1.0",
-        "description": "stomach × 0.6 + liver × 0.4"
-    },
-    {
-        "id"         : "talking",
-        "category"   : "capacity",
-        "primaryStat": "charisma",
-        "formula"    : "1.0",
-        "description": "jaw × 0.9 + 0.10 baseline (groan/whisper)"
-    }
+  // ── Combat ────────────────────────────────────────────────────────────────────
+  // All combat stats are multiplied by relevant body capacities:
+  //   manipulation = ability to swing weapon / aim
+  //   sight        = ability to see target
+  //   moving       = ability to evade
+  //   consciousness = mental clarity for threat detection / balance
+  {
+    "id": "melee_damage",
+    "category": "combat",
+    "primaryStat": "strength",
+    "formula": "(1.0 + (STR − 10) × 0.01) × manipulation",
+    "description": "physical attack damage multiplier (× manipulation)"
+  },
+  {
+    "id": "hit_chance",
+    "category": "combat",
+    "primaryStat": "dexterity",
+    "formula": "(1.0 + (DEX − 10) × 0.03) × sight × manipulation",
+    "description": "attack accuracy (× sight × manipulation)"
+  },
+  {
+    "id": "dodge",
+    "category": "combat",
+    "primaryStat": "dexterity",
+    "formula": "(1.0 + (DEX − 10) × 0.02 − (weight − 70) × 0.002) × moving",
+    "description": "evasion (× moving; heavier = harder to dodge)"
+  },
+  {
+    "id": "knockdown_resistance",
+    "category": "combat",
+    "primaryStat": "constitution",
+    "formula": "(1.0 + (CON − 10) × 0.025) × consciousness",
+    "description": "resistance to stagger (× consciousness; dazed = easier to knock down)"
+  },
+  {
+    "id": "aggro_range",
+    "category": "combat",
+    "primaryStat": "perception",
+    "formula": "(1.0 + (PER − 10) × 0.05) × sight",
+    "description": "threat detection range (× sight)"
+  },
+  // ── Physical ──────────────────────────────────────────────────────────────────
+  // Physical stats are multiplied by the body capacities that enable them:
+  //   manipulation = can physically interact (carry, wield)
+  //   moving       = can locomote (speed, stamina)
+  //   blood_pumping = heart drives stamina
+  //   blood_filtration = kidneys drive recovery
+  //   digestion    = stomach/liver drive food tolerance
+  //   consciousness = mental drive for endurance
+  {
+    "id": "movement_speed",
+    "category": "physical",
+    "primaryStat": "dexterity",
+    "formula": "(1.0 + (DEX − 10) × 0.05 − (weight − 70) × 0.003 + (height − 170) × 0.001) × moving",
+    "description": "movement speed (× moving; broken legs = crawl)"
+  },
+  {
+    "id": "stamina",
+    "category": "physical",
+    "primaryStat": "constitution",
+    "formula": "(50 + (CON − 10) × 4 + (DEX − 10) × 2) × moving × blood_pumping",
+    "description": "stamina pool (× moving × blood_pumping)"
+  },
+  {
+    "id": "blood_volume",
+    "category": "physical",
+    "primaryStat": "constitution",
+    "formula": "weight × 1.4 + (CON − 10) × 2",
+    "description": "total blood pool — physical property, not capacity-dependent"
+  },
+  {
+    "id": "blood_regeneration",
+    "category": "physical",
+    "primaryStat": "constitution",
+    "formula": "(1.0 + (CON − 10) × 0.08) × blood_filtration",
+    "description": "blood recovery (× blood_filtration)"
+  },
+  {
+    "id": "hunger_capacity",
+    "category": "physical",
+    "primaryStat": "constitution",
+    "formula": "(weight + (CON − 10) × 3 + 30) × digestion",
+    "description": "hunger tolerance (× digestion)"
+  },
+  {
+    "id": "fatigue_capacity",
+    "category": "physical",
+    "primaryStat": "constitution",
+    "formula": "(weight × 0.8 + (CON − 10) × 3 + (STR − 10) + 44) × consciousness",
+    "description": "fatigue tolerance (× consciousness)"
+  },
+  // ── Resistance ────────────────────────────────────────────────────────────────
+  // Resistances are multiplied by consciousness (dazed = weaker) and
+  // blood_filtration (for biological resistances: poison, disease).
+  {
+    "id": "cutting_resistance",
+    "category": "resistance",
+    "primaryStat": "dexterity",
+    "formula": "(0.0 + (DEX − 10) × 0.01) × consciousness",
+    "description": "cutting damage reduction (× consciousness)"
+  },
+  {
+    "id": "piercing_resistance",
+    "category": "resistance",
+    "primaryStat": "constitution",
+    "formula": "(0.0 + (CON − 10) × 0.008) × consciousness",
+    "description": "piercing damage reduction (× consciousness)"
+  },
+  {
+    "id": "blunt_resistance",
+    "category": "resistance",
+    "primaryStat": "constitution",
+    "formula": "(0.0 + (CON − 10) × 0.008 + (STR − 10) × 0.004) × consciousness",
+    "description": "blunt damage reduction (× consciousness)"
+  },
+  {
+    "id": "fire_resistance",
+    "category": "resistance",
+    "primaryStat": "constitution",
+    "formula": "(0.0 + (CON − 10) × 0.01) × consciousness",
+    "description": "fire damage reduction (× consciousness)"
+  },
+  {
+    "id": "cold_resistance",
+    "category": "resistance",
+    "primaryStat": "constitution",
+    "formula": "(0.0 + (CON − 10) × 0.01) × consciousness",
+    "description": "cold damage reduction (× consciousness)"
+  },
+  {
+    "id": "lightning_resistance",
+    "category": "resistance",
+    "primaryStat": "dexterity",
+    "formula": "(0.0 + (DEX − 10) × 0.01) × consciousness",
+    "description": "lightning damage reduction (× consciousness)"
+  },
+  {
+    "id": "shadow_resistance",
+    "category": "resistance",
+    "primaryStat": "intelligence",
+    "formula": "(0.0 + (INT − 10) × 0.01) × consciousness",
+    "description": "shadow damage reduction (× consciousness)"
+  },
+  {
+    "id": "poison_resistance",
+    "category": "resistance",
+    "primaryStat": "constitution",
+    "formula": "(0.0 + (CON − 10) × 0.015) × consciousness × blood_filtration",
+    "description": "toxin mitigation (× consciousness × blood_filtration)"
+  },
+  {
+    "id": "disease_resistance",
+    "category": "resistance",
+    "primaryStat": "constitution",
+    "formula": "(0.0 + (CON − 10) × 0.01) × consciousness × blood_filtration",
+    "description": "disease resistance (× consciousness × blood_filtration)"
+  },
+  {
+    "id": "mental_resistance",
+    "category": "resistance",
+    "primaryStat": "intelligence",
+    "formula": "(0.0 + (INT − 10) × 0.015) × consciousness",
+    "description": "mental resistance (× consciousness)"
+  },
+  // ── Work ──────────────────────────────────────────────────────────────────────
+  // Each work type has speed, yield (production amount), and quality modifiers.
+  // Speed    = how fast the pawn completes work (× relevant capacities).
+  // Yield    = how much resource is produced per completion.
+  // Quality  = output quality / durability / potency (× precision capacities).
+  {
+    "id": "foraging_speed",
+    "category": "work",
+    "primaryStat": "perception",
+    "formula": "(1.0 + (PER − 10) × 0.05 + (CON − 10) × 0.02) × sight × moving",
+    "description": "foraging work speed (× sight × moving)"
+  },
+  {
+    "id": "foraging_yield",
+    "category": "work",
+    "primaryStat": "perception",
+    "formula": "(1.0 + (PER − 10) × 0.04 + (CON − 10) × 0.02) × sight",
+    "description": "foraging resource amount (× sight)"
+  },
+  {
+    "id": "foraging_quality",
+    "category": "work",
+    "primaryStat": "perception",
+    "formula": "(1.0 + (PER − 10) × 0.03) × sight × consciousness",
+    "description": "foraged food quality (× sight × consciousness)"
+  },
+  {
+    "id": "woodcutting_speed",
+    "category": "work",
+    "primaryStat": "strength",
+    "formula": "(1.0 + (STR − 10) × 0.04 + (CON − 10) × 0.02) × manipulation × moving",
+    "description": "woodcutting speed (× manipulation × moving)"
+  },
+  {
+    "id": "woodcutting_yield",
+    "category": "work",
+    "primaryStat": "strength",
+    "formula": "(1.0 + (STR − 10) × 0.05) × manipulation",
+    "description": "wood per tree (× manipulation)"
+  },
+  {
+    "id": "woodcutting_quality",
+    "category": "work",
+    "primaryStat": "dexterity",
+    "formula": "(1.0 + (DEX − 10) × 0.03) × manipulation × sight",
+    "description": "wood quality (× manipulation × sight)"
+  },
+  {
+    "id": "mining_speed",
+    "category": "work",
+    "primaryStat": "strength",
+    "formula": "(1.0 + (STR − 10) × 0.04 + (CON − 10) × 0.02) × manipulation × moving",
+    "description": "mining speed (× manipulation × moving)"
+  },
+  {
+    "id": "mining_yield",
+    "category": "work",
+    "primaryStat": "strength",
+    "formula": "(1.0 + (STR − 10) × 0.05 + (INT − 10) × 0.01) × manipulation",
+    "description": "ore per vein (× manipulation)"
+  },
+  {
+    "id": "mining_quality",
+    "category": "work",
+    "primaryStat": "dexterity",
+    "formula": "(1.0 + (DEX − 10) × 0.03 + (INT − 10) × 0.02) × manipulation × sight",
+    "description": "ore purity (× manipulation × sight)"
+  },
+  {
+    "id": "hunting_speed",
+    "category": "work",
+    "primaryStat": "dexterity",
+    "formula": "(1.0 + (DEX − 10) × 0.05 + (PER − 10) × 0.03) × sight × moving",
+    "description": "hunting speed (× sight × moving)"
+  },
+  {
+    "id": "hunting_yield",
+    "category": "work",
+    "primaryStat": "dexterity",
+    "formula": "(1.0 + (DEX − 10) × 0.03 + (STR − 10) × 0.02) × sight",
+    "description": "meat per kill (× sight)"
+  },
+  {
+    "id": "hunting_quality",
+    "category": "work",
+    "primaryStat": "perception",
+    "formula": "(1.0 + (PER − 10) × 0.04 + (DEX − 10) × 0.02) × sight × consciousness",
+    "description": "pelt quality (× sight × consciousness)"
+  },
+  {
+    "id": "butchery_speed",
+    "category": "work",
+    "primaryStat": "strength",
+    "formula": "(1.0 + (STR − 10) × 0.03 + (DEX − 10) × 0.03) × manipulation",
+    "description": "butchery speed (× manipulation)"
+  },
+  {
+    "id": "butchery_yield",
+    "category": "work",
+    "primaryStat": "strength",
+    "formula": "(1.0 + (STR − 10) × 0.04) × manipulation",
+    "description": "meat per carcass (× manipulation)"
+  },
+  {
+    "id": "butchery_quality",
+    "category": "work",
+    "primaryStat": "dexterity",
+    "formula": "(1.0 + (DEX − 10) × 0.05) × manipulation × sight",
+    "description": "cut quality (× manipulation × sight)"
+  },
+  {
+    "id": "fishing_speed",
+    "category": "work",
+    "primaryStat": "dexterity",
+    "formula": "(1.0 + (DEX − 10) × 0.05 + (PER − 10) × 0.03) × sight × manipulation",
+    "description": "fishing speed (× sight × manipulation)"
+  },
+  {
+    "id": "fishing_yield",
+    "category": "work",
+    "primaryStat": "dexterity",
+    "formula": "(1.0 + (DEX − 10) × 0.03 + (PER − 10) × 0.02) × sight",
+    "description": "catch size (× sight)"
+  },
+  {
+    "id": "fishing_quality",
+    "category": "work",
+    "primaryStat": "perception",
+    "formula": "(1.0 + (PER − 10) × 0.04) × sight × consciousness",
+    "description": "fish quality (× sight × consciousness)"
+  },
+  {
+    "id": "crafting_speed",
+    "category": "work",
+    "primaryStat": "dexterity",
+    "formula": "(1.0 + (DEX − 10) × 0.05 + (INT − 10) × 0.02) × manipulation × sight",
+    "description": "crafting speed (× manipulation × sight)"
+  },
+  {
+    "id": "crafting_yield",
+    "category": "work",
+    "primaryStat": "dexterity",
+    "formula": "(1.0 + (DEX − 10) × 0.03 + (INT − 10) × 0.02) × manipulation",
+    "description": "items per batch (× manipulation)"
+  },
+  {
+    "id": "crafting_quality",
+    "category": "work",
+    "primaryStat": "dexterity",
+    "formula": "(1.0 + (DEX − 10) × 0.04 + (INT − 10) × 0.03) × manipulation × sight × consciousness",
+    "description": "item quality (× manipulation × sight × consciousness)"
+  },
+  {
+    "id": "metalworking_speed",
+    "category": "work",
+    "primaryStat": "strength",
+    "formula": "(1.0 + (STR − 10) × 0.04 + (INT − 10) × 0.02) × manipulation × sight",
+    "description": "smithing speed (× manipulation × sight)"
+  },
+  {
+    "id": "metalworking_quality",
+    "category": "work",
+    "primaryStat": "intelligence",
+    "formula": "(1.0 + (DEX − 10) × 0.03 + (INT − 10) × 0.04) × manipulation × sight × consciousness",
+    "description": "metal purity / edge retention (× manipulation × sight × consciousness)"
+  },
+  {
+    "id": "leatherworking_speed",
+    "category": "work",
+    "primaryStat": "dexterity",
+    "formula": "(1.0 + (DEX − 10) × 0.05 + (INT − 10) × 0.02) × manipulation × sight",
+    "description": "leatherwork speed (× manipulation × sight)"
+  },
+  {
+    "id": "leatherworking_quality",
+    "category": "work",
+    "primaryStat": "dexterity",
+    "formula": "(1.0 + (DEX − 10) × 0.05 + (INT − 10) × 0.02) × manipulation × sight",
+    "description": "leather quality (× manipulation × sight)"
+  },
+  {
+    "id": "digging_speed",
+    "category": "work",
+    "primaryStat": "dexterity",
+    "formula": "(1.0 + (DEX − 10) × 0.04 + (INT − 10) × 0.02) × manipulation × moving",
+    "description": "digging speed (× manipulation × moving)"
+  },
+  {
+    "id": "digging_yield",
+    "category": "work",
+    "primaryStat": "strength",
+    "formula": "(1.0 + (STR − 10) × 0.03 + (DEX − 10) × 0.02) × manipulation",
+    "description": "soil / clay per dig (× manipulation)"
+  },
+  {
+    "id": "digging_quality",
+    "category": "work",
+    "primaryStat": "intelligence",
+    "formula": "(1.0 + (INT − 10) × 0.03) × manipulation × sight",
+    "description": "material purity (× manipulation × sight)"
+  },
+  {
+    "id": "research_speed",
+    "category": "work",
+    "primaryStat": "intelligence",
+    "formula": "(1.0 + (INT − 10) × 0.05 + (PER − 10) × 0.02) × sight × consciousness",
+    "description": "research speed (× sight × consciousness)"
+  },
+  {
+    "id": "research_quality",
+    "category": "work",
+    "primaryStat": "intelligence",
+    "formula": "(1.0 + (INT − 10) × 0.05 + (PER − 10) × 0.02) × sight × consciousness",
+    "description": "breakthrough chance (× sight × consciousness)"
+  },
+  {
+    "id": "construction_speed",
+    "category": "work",
+    "primaryStat": "strength",
+    "formula": "(1.0 + (STR − 10) × 0.04 + (INT − 10) × 0.02) × manipulation × moving",
+    "description": "construction speed (× manipulation × moving)"
+  },
+  {
+    "id": "construction_quality",
+    "category": "work",
+    "primaryStat": "dexterity",
+    "formula": "(1.0 + (DEX − 10) × 0.03 + (INT − 10) × 0.02) × manipulation × sight",
+    "description": "building durability (× manipulation × sight)"
+  },
+  {
+    "id": "alchemy_speed",
+    "category": "work",
+    "primaryStat": "intelligence",
+    "formula": "(1.0 + (INT − 10) × 0.05 + (PER − 10) × 0.02) × sight × manipulation",
+    "description": "brewing speed (× sight × manipulation)"
+  },
+  {
+    "id": "alchemy_quality",
+    "category": "work",
+    "primaryStat": "intelligence",
+    "formula": "(1.0 + (INT − 10) × 0.06 + (PER − 10) × 0.02) × sight × manipulation × consciousness",
+    "description": "potion potency (× sight × manipulation × consciousness)"
+  },
+  {
+    "id": "cooking_speed",
+    "category": "work",
+    "primaryStat": "intelligence",
+    "formula": "(1.0 + (INT − 10) × 0.04 + (DEX − 10) × 0.03) × manipulation × sight",
+    "description": "cooking speed (× manipulation × sight)"
+  },
+  {
+    "id": "cooking_quality",
+    "category": "work",
+    "primaryStat": "intelligence",
+    "formula": "(1.0 + (INT − 10) × 0.05 + (DEX − 10) × 0.03) × manipulation × sight × consciousness",
+    "description": "meal nutrition / taste (× manipulation × sight × consciousness)"
+  },
+  {
+    "id": "hauling_speed",
+    "category": "work",
+    "primaryStat": "strength",
+    "formula": "(1.0 + (STR − 10) × 0.04 + (CON − 10) × 0.02) × moving × manipulation",
+    "description": "hauling speed (× moving × manipulation)"
+  },
+  {
+    "id": "hauling_quality",
+    "category": "work",
+    "primaryStat": "dexterity",
+    "formula": "(1.0 + (DEX − 10) × 0.02) × manipulation",
+    "description": "careful handling (× manipulation)"
+  },
+  {
+    "id": "planting_speed",
+    "category": "work",
+    "primaryStat": "dexterity",
+    "formula": "(1.0 + (DEX − 10) × 0.05 + (INT − 10) × 0.02) × manipulation × sight",
+    "description": "planting speed (× manipulation × sight)"
+  },
+  {
+    "id": "planting_yield",
+    "category": "work",
+    "primaryStat": "dexterity",
+    "formula": "(1.0 + (DEX − 10) × 0.03 + (INT − 10) × 0.02) × manipulation",
+    "description": "crop yield (× manipulation)"
+  },
+  {
+    "id": "planting_quality",
+    "category": "work",
+    "primaryStat": "dexterity",
+    "formula": "(1.0 + (DEX − 10) × 0.04 + (INT − 10) × 0.03) × manipulation × sight × consciousness",
+    "description": "crop quality / growth rate (× manipulation × sight × consciousness)"
+  },
+  {
+    "id": "caretaking_speed",
+    "category": "work",
+    "primaryStat": "intelligence",
+    "formula": "(1.0 + (INT − 10) × 0.05 + (DEX − 10) × 0.02) × manipulation × sight",
+    "description": "treatment speed (× manipulation × sight)"
+  },
+  {
+    "id": "caretaking_yield",
+    "category": "work",
+    "primaryStat": "intelligence",
+    "formula": "(1.0 + (INT − 10) × 0.04) × manipulation",
+    "description": "healing amount per treatment (× manipulation)"
+  },
+  {
+    "id": "caretaking_quality",
+    "category": "work",
+    "primaryStat": "intelligence",
+    "formula": "(1.0 + (INT − 10) × 0.05 + (DEX − 10) × 0.03) × manipulation × sight × consciousness",
+    "description": "treatment effectiveness / infection prevention (× manipulation × sight × consciousness)"
+  },
+  // ── Body Capacities ───────────────────────────────────────────────────────────
+  // Derived from specific organ health (not parent limb health).
+  // Paired organs use partial-function logic: one destroyed ≠ 0, but severe penalty.
+  // Order matters: pain, sight, hearing must be computed before consciousness.
+  {
+    "id": "pain",
+    "category": "capacity",
+    "primaryStat": "constitution",
+    "formula": "1.0",
+    "description": "injuries + limb damage + bleeding → 0–200%+, reduces consciousness"
+  },
+  {
+    "id": "sight",
+    "category": "capacity",
+    "primaryStat": "perception",
+    "formula": "1.0",
+    "description": "weaker eye × 0.4 + avg eyes × 0.6 + 0.05 baseline"
+  },
+  {
+    "id": "hearing",
+    "category": "capacity",
+    "primaryStat": "perception",
+    "formula": "1.0",
+    "description": "weaker ear × 0.3 + avg ears × 0.7 + 0.15 baseline (bone conduction)"
+  },
+  {
+    "id": "consciousness",
+    "category": "capacity",
+    "primaryStat": "constitution",
+    "formula": "1.0",
+    "description": "brain × 0.5 + heart × 0.15 + lungs × 0.1 + sight × 0.1 + hearing × 0.05 + 0.1 baseline, reduced by pain"
+  },
+  {
+    "id": "manipulation",
+    "category": "capacity",
+    "primaryStat": "dexterity",
+    "formula": "1.0",
+    "description": "weaker arm × 0.3 + avg arms × 0.7"
+  },
+  {
+    "id": "moving",
+    "category": "capacity",
+    "primaryStat": "dexterity",
+    "formula": "1.0",
+    "description": "weaker leg × 0.5 + avg legs × 0.5"
+  },
+  {
+    "id": "blood_pumping",
+    "category": "capacity",
+    "primaryStat": "constitution",
+    "formula": "1.0",
+    "description": "heart × 0.9 + 0.10 baseline (agonal/CPR)"
+  },
+  {
+    "id": "blood_filtration",
+    "category": "capacity",
+    "primaryStat": "constitution",
+    "formula": "1.0",
+    "description": "weaker kidney × 0.4 + avg kidneys × 0.6 (one kidney sustains ~60%)"
+  },
+  {
+    "id": "breathing",
+    "category": "capacity",
+    "primaryStat": "constitution",
+    "formula": "1.0",
+    "description": "weaker lung × 0.5 + avg lungs × 0.5 + 0.05 baseline (diaphragm)"
+  },
+  {
+    "id": "digestion",
+    "category": "capacity",
+    "primaryStat": "constitution",
+    "formula": "1.0",
+    "description": "stomach × 0.6 + liver × 0.4"
+  },
+  {
+    "id": "talking",
+    "category": "capacity",
+    "primaryStat": "charisma",
+    "formula": "1.0",
+    "description": "jaw × 0.9 + 0.10 baseline (groan/whisper)"
+  }
 ]

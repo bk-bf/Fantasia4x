@@ -7,6 +7,7 @@ A hobby 4X strategy game project with procedurally generated civilizations. Buil
 This is a personal project I work on occasionally when I have time and inspiration. The basic idea is to make a 4X fantasy game where your civilization is procedurally generated each playthrough, giving you different traits and bonuses that shape how you play.
 
 Right now it has:
+
 - Procedural race generation with different traits
 - Basic resource management
 - Pawn/character system with needs and abilities

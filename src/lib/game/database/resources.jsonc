@@ -22,807 +22,919 @@
 //     persistent       — true: node survives harvest (regrows); absent: node is consumed
 //     harvestDepletes  — true: removes only this yield; the node itself stays
 [
-    // ─────────────────────────────────────────────────────────────────────────
-    // WOODCUTTING
-    // ─────────────────────────────────────────────────────────────────────────
-    // Standard living tree — primary source of wood and bark.
-    // Two interaction modes:
-    //   woodcut  — axe required (tier 1); fells the tree; harvestDepletes:true
-    //   forage   — bare hands; gathers surface materials; node stays and regrows quickly
-    {
-        "id"              : "tree",
-        "displayName"     : "Tree",
-        "subterrain"      : "tree",
-        "walkable"        : false,
-        "charSpans"       : [ {"sheet": "plants", "from": 0, "to": 71} ],
-        "fg"              : [0.52, 0.72, 0.11],
-        "bg"              : [0.07, 0.1, 0.03],
-        "color"           : "#85B81C",
-        "spawn"           : {
-            "subterrains": {"deep_grass": 0.14, "grass": 0.08, "dirt": 0.03, "tall_grass": 0.02, "savanna": 0.01}
+  // ─────────────────────────────────────────────────────────────────────────
+  // WOODCUTTING
+  // ─────────────────────────────────────────────────────────────────────────
+  // Standard living tree — primary source of wood and bark.
+  // Two interaction modes:
+  //   woodcut  — axe required (tier 1); fells the tree; harvestDepletes:true
+  //   forage   — bare hands; gathers surface materials; node stays and regrows quickly
+  {
+    "id": "tree",
+    "displayName": "Tree",
+    "subterrain": "tree",
+    "walkable": false,
+    "charSpans": [{ "sheet": "plants", "from": 0, "to": 71 }],
+    "fg": [0.52, 0.72, 0.11],
+    "bg": [0.07, 0.1, 0.03],
+    "color": "#85B81C",
+    "spawn": {
+      "subterrains": {
+        "deep_grass": 0.14,
+        "grass": 0.08,
+        "dirt": 0.03,
+        "tall_grass": 0.02,
+        "savanna": 0.01
+      }
+    },
+    "nodeAmountRange": [3, 6],
+    "designationTypes": ["woodcut", "forage"],
+    "interaction": {
+      "designationType": "woodcut",
+      "action": "woodcut",
+      "workCategory": "woodcutting",
+      "workAmount": 5,
+      "toolRequirement": { "workType": "woodcutting", "minTier": 1 },
+      "yields": [
+        {
+          "itemId": "wood_log",
+          "min": 3,
+          "max": 5,
+          "skillId": "woodcutting",
+          "skillMultiplier": 0.2,
+          "regrowthTurns": 4200
         },
-        "nodeAmountRange" : [3, 6],
-        "designationTypes": ["woodcut", "forage"],
-        "interaction"     : {
-            "designationType": "woodcut",
-            "action"         : "woodcut",
-            "workCategory"   : "woodcutting",
-            "workAmount"     : 5,
-            "toolRequirement": {"workType": "woodcutting", "minTier": 1},
-            "yields"         : [
-                {
-                    "itemId"         : "wood_log",
-                    "min"            : 3,
-                    "max"            : 5,
-                    "skillId"        : "woodcutting",
-                    "skillMultiplier": 0.2,
-                    "regrowthTurns"  : 4200
-                },
-                {
-                    "itemId"         : "bark",
-                    "min"            : 1,
-                    "max"            : 2,
-                    "skillId"        : "woodcutting",
-                    "skillMultiplier": 0.1,
-                    "regrowthTurns"  : 1500
-                },
-                {
-                    "itemId"         : "branch",
-                    "min"            : 2,
-                    "max"            : 5,
-                    "skillId"        : "woodcutting",
-                    "skillMultiplier": 0.15,
-                    "regrowthTurns"  : 4200
-                },
-                {
-                    "itemId"         : "plant_fiber",
-                    "min"            : 1,
-                    "max"            : 3,
-                    "skillId"        : "woodcutting",
-                    "skillMultiplier": 0.05,
-                    "regrowthTurns"  : 4200
-                }
-            ],
-            "persistent"     : true,
-            "harvestDepletes": true
+        {
+          "itemId": "bark",
+          "min": 1,
+          "max": 2,
+          "skillId": "woodcutting",
+          "skillMultiplier": 0.1,
+          "regrowthTurns": 1500
         },
-        "interactions"    : [
-            {
-                "designationType": "woodcut",
-                "action"         : "woodcut",
-                "workCategory"   : "woodcutting",
-                "workAmount"     : 5,
-                "toolRequirement": {"workType": "woodcutting", "minTier": 1},
-                "yields"         : [
-                    {
-                        "itemId"         : "wood_log",
-                        "min"            : 3,
-                        "max"            : 5,
-                        "skillId"        : "woodcutting",
-                        "skillMultiplier": 0.2,
-                        "regrowthTurns"  : 4200
-                    },
-                    {
-                        "itemId"         : "bark",
-                        "min"            : 1,
-                        "max"            : 2,
-                        "skillId"        : "woodcutting",
-                        "skillMultiplier": 0.1,
-                        "regrowthTurns"  : 1500
-                    },
-                    {
-                        "itemId"         : "branch",
-                        "min"            : 2,
-                        "max"            : 5,
-                        "skillId"        : "woodcutting",
-                        "skillMultiplier": 0.15,
-                        "regrowthTurns"  : 4200
-                    },
-                    {
-                        "itemId"         : "plant_fiber",
-                        "min"            : 1,
-                        "max"            : 3,
-                        "skillId"        : "woodcutting",
-                        "skillMultiplier": 0.05,
-                        "regrowthTurns"  : 4200
-                    }
-                ],
-                "persistent"     : true,
-                "harvestDepletes": true
-            },
-            {
-                "designationType": "forage",
-                "action"         : "forage",
-                "workCategory"   : "foraging",
-                "workAmount"     : 3,
-                "toolRequirement": null,
-                "yields"         : [
-                    {
-                        "itemId"         : "bark",
-                        "min"            : 0,
-                        "max"            : 2,
-                        "skillId"        : "foraging",
-                        "skillMultiplier": 0.1,
-                        "regrowthTurns"  : 600
-                    },
-                    {
-                        "itemId"         : "branch",
-                        "min"            : 0,
-                        "max"            : 2,
-                        "skillId"        : "foraging",
-                        "skillMultiplier": 0.1,
-                        "regrowthTurns"  : 450
-                    },
-                    {
-                        "itemId"         : "plant_fiber",
-                        "min"            : 0,
-                        "max"            : 2,
-                        "skillId"        : "foraging",
-                        "skillMultiplier": 0.1,
-                        "regrowthTurns"  : 300
-                    }
-                ],
-                "persistent"     : true,
-                "harvestDepletes": false
-            }
-        ]
-    },
-    // ─────────────────────────────────────────────────────────────────────────
-    // MINING — SURFACE DEPOSITS
-    // All require a mining tool. Found in rocky and mountain terrain.
-    // ─────────────────────────────────────────────────────────────────────────
-    // Common surface rock — most accessible stone source. Chance of bonus flint.
-    {
-        "id"              : "stone_outcrop",
-        "displayName"     : "Stone Outcrop",
-        "subterrain"      : "rocky",
-        "walkable"        : false,
-        "charSpans"       : [ {"sheet": "tiles", "id": 63} ],
-        "fg"              : [0.62, 0.52, 0.37],
-        "bg"              : [0.11, 0.08, 0.04],
-        "color"           : "#9E855E",
-        "spawn"           : {
-            "subterrains": {
-                "rocky"          : 0.07 ,
-                "cliff"          : 0.05 ,
-                "mineral_deposit": 0.03 ,
-                "dirt"           : 0.015,
-                "savanna"        : 0.02 ,
-                "grass"          : 0.01
-            }
+        {
+          "itemId": "branch",
+          "min": 2,
+          "max": 5,
+          "skillId": "woodcutting",
+          "skillMultiplier": 0.15,
+          "regrowthTurns": 4200
         },
-        "nodeAmountRange" : [5, 10],
-        "designationTypes": ["harvest"],
-        "interaction"     : {
-            "action"         : "mine",
-            "workCategory"   : "mining",
-            "workAmount"     : 8,
-            "toolRequirement": {"workType": "mining", "minTier": 1},
-            "yields"         : [
-                {"itemId": "surface_stone", "min": 2, "max": 4, "skillId": "mining", "skillMultiplier": 0.2},
-                {
-                    "itemId"         : "flint_shard",
-                    "min"            : 0,
-                    "max"            : 2,
-                    "skillId"        : "mining",
-                    "skillMultiplier": 0.1
-                } // chance only: min 0
-            ]
+        {
+          "itemId": "plant_fiber",
+          "min": 1,
+          "max": 3,
+          "skillId": "woodcutting",
+          "skillMultiplier": 0.05,
+          "regrowthTurns": 4200
         }
+      ],
+      "persistent": true,
+      "harvestDepletes": true
     },
-    // ─────────────────────────────────────────────────────────────────────────
-    // FORAGING — PLANTS
-    // ─────────────────────────────────────────────────────────────────────────
-    // Colourful herbaceous patches — primary herb source in open biomes.
-    {
-        "id"              : "wildflower_patch",
-        "displayName"     : "Wildflower Patch",
-        "subterrain"      : "wildflowers",
-        "walkable"        : true,
-        "charSpans"       : [ {"sheet": "plants", "from": 89, "to": 93} ],
-        "fg"              : [0.88, 0.42, 0.71],
-        "bg"              : [0.09, 0.06, 0.06],
-        "color"           : "#E06BB5",
-        "spawn"           : {
-            "subterrains": {
-                "tall_grass": 0.007,
-                "grass"     : 0.006,
-                "savanna"   : 0.005,
-                "deep_grass": 0.004,
-                "moss"      : 0.003,
-                "dirt"      : 0.002
-            }
+    "interactions": [
+      {
+        "designationType": "woodcut",
+        "action": "woodcut",
+        "workCategory": "woodcutting",
+        "workAmount": 5,
+        "toolRequirement": { "workType": "woodcutting", "minTier": 1 },
+        "yields": [
+          {
+            "itemId": "wood_log",
+            "min": 3,
+            "max": 5,
+            "skillId": "woodcutting",
+            "skillMultiplier": 0.2,
+            "regrowthTurns": 4200
+          },
+          {
+            "itemId": "bark",
+            "min": 1,
+            "max": 2,
+            "skillId": "woodcutting",
+            "skillMultiplier": 0.1,
+            "regrowthTurns": 1500
+          },
+          {
+            "itemId": "branch",
+            "min": 2,
+            "max": 5,
+            "skillId": "woodcutting",
+            "skillMultiplier": 0.15,
+            "regrowthTurns": 4200
+          },
+          {
+            "itemId": "plant_fiber",
+            "min": 1,
+            "max": 3,
+            "skillId": "woodcutting",
+            "skillMultiplier": 0.05,
+            "regrowthTurns": 4200
+          }
+        ],
+        "persistent": true,
+        "harvestDepletes": true
+      },
+      {
+        "designationType": "forage",
+        "action": "forage",
+        "workCategory": "foraging",
+        "workAmount": 3,
+        "toolRequirement": null,
+        "yields": [
+          {
+            "itemId": "bark",
+            "min": 0,
+            "max": 2,
+            "skillId": "foraging",
+            "skillMultiplier": 0.1,
+            "regrowthTurns": 600
+          },
+          {
+            "itemId": "branch",
+            "min": 0,
+            "max": 2,
+            "skillId": "foraging",
+            "skillMultiplier": 0.1,
+            "regrowthTurns": 450
+          },
+          {
+            "itemId": "plant_fiber",
+            "min": 0,
+            "max": 2,
+            "skillId": "foraging",
+            "skillMultiplier": 0.1,
+            "regrowthTurns": 300
+          }
+        ],
+        "persistent": true,
+        "harvestDepletes": false
+      }
+    ]
+  },
+  // ─────────────────────────────────────────────────────────────────────────
+  // MINING — SURFACE DEPOSITS
+  // All require a mining tool. Found in rocky and mountain terrain.
+  // ─────────────────────────────────────────────────────────────────────────
+  // Common surface rock — most accessible stone source. Chance of bonus flint.
+  {
+    "id": "stone_outcrop",
+    "displayName": "Stone Outcrop",
+    "subterrain": "rocky",
+    "walkable": false,
+    "charSpans": [{ "sheet": "tiles", "id": 63 }],
+    "fg": [0.62, 0.52, 0.37],
+    "bg": [0.11, 0.08, 0.04],
+    "color": "#9E855E",
+    "spawn": {
+      "subterrains": {
+        "rocky": 0.07,
+        "cliff": 0.05,
+        "mineral_deposit": 0.03,
+        "dirt": 0.015,
+        "savanna": 0.02,
+        "grass": 0.01
+      }
+    },
+    "nodeAmountRange": [5, 10],
+    "designationTypes": ["harvest"],
+    "interaction": {
+      "action": "mine",
+      "workCategory": "mining",
+      "workAmount": 8,
+      "toolRequirement": { "workType": "mining", "minTier": 1 },
+      "yields": [
+        {
+          "itemId": "surface_stone",
+          "min": 2,
+          "max": 4,
+          "skillId": "mining",
+          "skillMultiplier": 0.2
         },
-        "nodeAmountRange" : [2, 5],
-        "designationTypes": ["harvest"],
-        "interaction"     : {
-            "action"         : "harvest",
-            "workCategory"   : "foraging",
-            "workAmount"     : 3,
-            "toolRequirement": null,
-            "yields"         : [
-                {"itemId": "herbs", "min": 1, "max": 3, "skillId": "foraging", "skillMultiplier": 0.15}
-            ],
-            "persistent"     : true,
-            "regrowthTurns"  : 1200 // ~4 days at 300 turns/day
-        }
-    },
-    // Dead fallen logs — quick low-effort wood, no axe needed. Often overlooked early resource.
-    {
-        "id"              : "fallen_logs",
-        "displayName"     : "Fallen Logs",
-        "subterrain"      : "fallen_logs",
-        "walkable"        : true,
-        "charSpans"       : [ {"sheet": "plants", "id": 209} ],
-        "fg"              : [0.48, 0.26, 0.05],
-        "bg"              : [0.1, 0.06, 0.03],
-        "color"           : "#7A420D",
-        "spawn"           : {
-            "subterrains": {"deep_grass": 0.02, "grass": 0.015, "dirt": 0.01, "moss": 0.008, "mud": 0.005}
-        },
-        "nodeAmountRange" : [3, 8],
-        "designationTypes": ["harvest"],
-        "interaction"     : {
-            "action"         : "gather",
-            "workCategory"   : "foraging",
-            "workAmount"     : 1,
-            "toolRequirement": {
-                "workType": "woodcutting",
-                "minTier" : 0
-            },  // tier-0 = any woodcutting tool, including stone chopper
-            "yields"         : [
-                {"itemId": "branch", "min": 2, "max": 5, "skillId": "foraging", "skillMultiplier": 0.1 },
-                {"itemId": "wood",   "min": 1, "max": 2, "skillId": "foraging", "skillMultiplier": 0.05}
-            ]
-        }
-    },
-    // Rare arcane crystal formation — deep mountain/cave occurrence only.
-    // TODO: magic_crystal item properties TBD. High rarity is intentional.
-    {
-        "id"              : "crystal_formation",
-        "displayName"     : "Crystal Formation",
-        "subterrain"      : "crystal_formation",
-        "walkable"        : false,
-        "charSpans"       : [ {"sheet": "tiles", "from": 48, "to": 55} ],
-        "fg"              : [0.4, 0.84, 0.79],
-        "bg"              : [0.06, 0.08, 0.1],
-        "color"           : "#66D6C9",
-        "spawn"           : {
-            // Intentionally sparse — these are high-value arcane nodes.
-            "subterrains": {"mineral_deposit": 0.004, "cave": 0.002, "rocky": 0.002, "cliff": 0.001}
-        },
-        "nodeAmountRange" : [1, 3],
-        "designationTypes": ["harvest"],
-        "interaction"     : {
-            "action"         : "scavenge",
-            "workCategory"   : "mining",
-            "workAmount"     : 5,
-            "toolRequirement": {"workType": "mining", "minTier": 2},  // requires a proper mining pick
-            "yields"         : [
-                {
-                    "itemId": "magic_crystal",
-                    "min": 1,
-                    "max": 2,
-                    "skillId": "mining",
-                    "skillMultiplier": 0.1,
-                    "_TODO": "magic_crystal item TBD — rare arcane material; possible uses: enchanting reagent, mana amplification, spell catalyst, arcane focus component"
-                }
-            ]
-        }
-    },
-    // Low scrubby brush — good plant fiber source in arid/transitional zones.
-    {
-        "id"              : "scrub_patch",
-        "displayName"     : "Scrub Patch",
-        "subterrain"      : "scrubland",
-        "walkable"        : true,
-        "charSpans"       : [ {"sheet": "plants", "id": 21} ],
-        "fg"              : [0.48, 0.34, 0.09],
-        "bg"              : [0.1, 0.07, 0.03],
-        "color"           : "#7A5717",
-        "spawn"           : {
-            "subterrains": {
-                "savanna"   : 0.01 ,
-                "tall_grass": 0.008,
-                "moss"      : 0.006,
-                "grass"     : 0.006,
-                "mud"       : 0.004,
-                "dirt"      : 0.004
-            }
-        },
-        "nodeAmountRange" : [3, 7],
-        "designationTypes": ["harvest"],
-        "interaction"     : {
-            "action"         : "harvest",
-            "workCategory"   : "foraging",
-            "workAmount"     : 2,
-            "toolRequirement": null,
-            "yields"         : [
-                {"itemId": "plant_fiber", "min": 2, "max": 4, "skillId": "foraging", "skillMultiplier": 0.15}
-            ],
-            "persistent"     : true,
-            "regrowthTurns"  : 2100 // ~1 week at 300 turns/day
-        }
-    },
-    // Leftover tree stump — strip for bark and wood scraps using a basic crafting tool.
-    {
-        "id"              : "tree_stump",
-        "displayName"     : "Tree Stump",
-        "subterrain"      : "tree_stump",
-        "walkable"        : true,
-        "charSpans"       : [ {"sheet": "plants", "id": 209} ],
-        "fg"              : [0.56, 0.34, 0.09],
-        "bg"              : [0.1, 0.07, 0.03],
-        "color"           : "#8F5717",
-        "spawn"           : {
-            "subterrains": {"deep_grass": 0.014, "grass": 0.01, "moss": 0.006, "dirt": 0.005, "mud": 0.004}
-        },
-        "nodeAmountRange" : [2, 4],
-        "designationTypes": ["harvest"],
-        "interaction"     : {
-            "action"         : "strip",
-            "workCategory"   : "foraging",
-            "workAmount"     : 2,
-            "toolRequirement": {"workType": "crafting", "minTier": 0},
-            "yields"         : [
-                {"itemId": "bark", "min": 1, "max": 3, "skillId": "foraging", "skillMultiplier": 0.1 },
-                {"itemId": "wood", "min": 1, "max": 2, "skillId": "foraging", "skillMultiplier": 0.05}
-            ]
-        }
-    },
-    // Fungal patch — yields herbs; thrives in damp/shaded subterrains.
-    {
-        "id"              : "mushroom_patch",
-        "displayName"     : "Mushroom Patch",
-        "subterrain"      : "mushroom_patch",
-        "walkable"        : true,
-        "charSpans"       : [ {"sheet": "tiles", "id": 123} ],
-        "fg"              : [0.86, 0.52, 0.33],
-        "bg"              : [0.1, 0.06, 0.03],
-        "color"           : "#DB8554",
-        "spawn"           : { "subterrains": {"moss": 0.014, "mud": 0.012, "deep_grass": 0.01, "dirt": 0.005} },
-        "nodeAmountRange" : [2, 5],
-        "designationTypes": ["harvest"],
-        "interaction"     : {
-            "action"         : "harvest",
-            "workCategory"   : "foraging",
-            "workAmount"     : 2,
-            "toolRequirement": null,
-            "yields"         : [
-                {"itemId": "herbs", "min": 1, "max": 3, "skillId": "foraging", "skillMultiplier": 0.15}
-            ],
-            "persistent"     : true,
-            "regrowthTurns"  : 120 // ~5 days
-        }
-    },
-    // Dead standing tree — rotted, easier and faster to fell than a living tree.
-    {
-        "id"              : "dead_tree",
-        "displayName"     : "Dead Tree",
-        "subterrain"      : "dead_trees",
-        "walkable"        : false,
-        "charSpans"       : [ {"sheet": "plants", "from": 164, "to": 166} ],
-        "fg"              : [0.44, 0.36, 0.21],
-        "bg"              : [0.1, 0.07, 0.03],
-        "color"           : "#705C36",
-        "spawn"           : {
-            "subterrains": {"bog": 0.015, "mud": 0.012, "moss": 0.01, "deep_grass": 0.005, "dirt": 0.004}
-        },
-        "nodeAmountRange" : [3, 6],
-        "designationTypes": ["harvest"],
-        "interaction"     : {
-            "action"         : "woodcut",
-            "workCategory"   : "woodcutting",
-            "workAmount"     : 4,
-            "toolRequirement": {"workType": "woodcutting", "minTier": 1},
-            "yields"         : [
-                {"itemId": "wood",   "min": 2, "max": 4, "skillId": "woodcutting", "skillMultiplier": 0.1 },
-                {"itemId": "branch", "min": 1, "max": 3, "skillId": "woodcutting", "skillMultiplier": 0.05}
-            ]
-        }
-    },
-    // ─────────────────────────────────────────────────────────────────────────
-    // WETLANDS — DIGGING
-    // No tool required, but high workAmount makes tools strongly preferable.
-    // clay_deposit > mud_deposit > bog_deposit in yield richness.
-    // ─────────────────────────────────────────────────────────────────────────
-    // Rich clay seam — primary ceramics and construction material.
-    // Highest density in the clay subterrain (swamp biome, mid-elevation noise band).
-    {
-        "id"              : "clay_deposit",
-        "displayName"     : "Clay Deposit",
-        "subterrain"      : "clay",
-        "walkable"        : true,
-        "charSpans"       : [ {"literal": "\""} ],
-        "fg"              : [0.68, 0.36, 0.13],
-        "bg"              : [0.1, 0.07, 0.03],
-        "color"           : "#AD5C21",
-        "spawn"           : {
-            "subterrains": {"clay": 0.08, "mud": 0.025, "bog": 0.02, "riverbank": 0.018, "shallow_water": 0.008}
-        },
-        "nodeAmountRange" : [3, 6],
-        "designationTypes": ["harvest"],
-        "interaction"     : {
-            "action"         : "dig",
-            "workCategory"   : "mining",
-            "workAmount"     : 20,  // slow bare-handed — a digging_stick or stone_spade is much faster
-            "toolRequirement": null,
-            "yields"         : [
-                {"itemId": "clay_lump", "min": 2, "max": 4, "skillId": "mining", "skillMultiplier": 0.1}
-            ]
-        }
-    },
-    // ─────────────────────────────────────────────────────────────────────────
-    // FORAGING — BERRIES & GRAINS
-    // ─────────────────────────────────────────────────────────────────────────
-    // Berry bush — reliable persistent food source; dense in bush subterrain.
-    {
-        "id"              : "berry_bush",
-        "displayName"     : "Berry Bush",
-        "subterrain"      : "bush",
-        "walkable"        : true,
-        "charSpans"       : [ {"sheet": "plants", "id": 41} ],
-        "fg"              : [0.75, 0.18, 0.22],
-        "bg"              : [0.07, 0.05, 0.06],
-        "color"           : "#BF2E38",
-        "spawn"           : {
-            "subterrains": {"bush": 0.22, "deep_grass": 0.09, "grass": 0.06, "moss": 0.04, "scrubland": 0.03}
-        },
-        "nodeAmountRange" : [3, 7],
-        "designationTypes": ["harvest"],
-        "interaction"     : {
-            "action"         : "forage",
-            "workCategory"   : "foraging",
-            "workAmount"     : 2,
-            "toolRequirement": null,
-            "yields"         : [
-                {"itemId": "wild_berries", "min": 2, "max": 4, "skillId": "foraging", "skillMultiplier": 0.2}
-            ],
-            "persistent"     : true,
-            "regrowthTurns"  : 2400 // ~8 days at 300 turns/day
-        }
-    },
-    // Wild barley — primary primitive grain in open savanna zones.
-    {
-        "id"              : "wild_barley",
-        "displayName"     : "Wild Barley",
-        "subterrain"      : "savanna",
-        "walkable"        : true,
-        "charSpans"       : [ {"sheet": "plants", "from": 85, "to": 88} ],
-        "fg"              : [0.82, 0.68, 0.12],
-        "bg"              : [0.1, 0.08, 0.02],
-        "color"           : "#D1AD1F",
-        "spawn"           : { "subterrains": {"savanna": 0.012, "tall_grass": 0.008, "grass": 0.004, "dirt": 0.002} },
-        "nodeAmountRange" : [3, 7],
-        "designationTypes": ["harvest"],
-        "interaction"     : {
-            "action"         : "gather",
-            "workCategory"   : "foraging",
-            "workAmount"     : 2,
-            "toolRequirement": null,
-            "yields"         : [
-                {"itemId": "wild_oats", "min": 2, "max": 4, "skillId": "foraging", "skillMultiplier": 0.15}
-            ],
-            "persistent"     : true,
-            "regrowthTurns"  : 3000 // ~10 days at 300 turns/day
-        }
-    },
-    // Wild rye — mixed grain and fibre source; grows in taller, damper grasses.
-    {
-        "id"              : "wild_rye",
-        "displayName"     : "Wild Rye",
-        "subterrain"      : "tall_grass",
-        "walkable"        : true,
-        "charSpans"       : [ {"sheet": "plants", "from": 83, "to": 85} ],
-        "fg"              : [0.75, 0.6, 0.14],
-        "bg"              : [0.09, 0.07, 0.02],
-        "color"           : "#BF9924",
-        "spawn"           : {
-            "subterrains": {"tall_grass": 0.009, "grass": 0.005, "riverbank": 0.003, "moss": 0.002}
-        },
-        "nodeAmountRange" : [2, 5],
-        "designationTypes": ["harvest"],
-        "interaction"     : {
-            "action"         : "gather",
-            "workCategory"   : "foraging",
-            "workAmount"     : 2,
-            "toolRequirement": null,
-            "yields"         : [
-                {"itemId": "wild_oats",   "min": 1, "max": 3, "skillId": "foraging", "skillMultiplier": 0.15},
-                {"itemId": "plant_fiber", "min": 1, "max": 2, "skillId": "foraging", "skillMultiplier": 0.05}
-            ],
-            "persistent"     : true,
-            "regrowthTurns"  : 3000 // ~10 days at 300 turns/day
-        }
-    },
-    // ─────────────────────────────────────────────────────────────────────────
-    // MINING — ORE VEINS  (mountain / mineral_deposit subterrain)
-    // All require minTier 2 mining. Yield items are placeholders — smelting
-    // chains are not yet designed. See _TODO fields.
-    // ─────────────────────────────────────────────────────────────────────────
-    // Most common mountain ore. Will form the backbone of the iron-age tech tier.
-    {
-        "id"              : "iron_ore",
-        "displayName"     : "Iron Ore",
-        "subterrain"      : "ore_vein",
-        "walkable"        : true,
-        "charSpans"       : [ {"literal": "*"} ],
-        "fg"              : [0.72, 0.38, 0.18],
-        "bg"              : [0.08, 0.06, 0.03],
-        "color"           : "#B86130",
-        "spawn"           : { "subterrains": {"mineral_deposit": 0.12, "rocky": 0.02, "cliff": 0.01, "cave": 0.008} },
-        "nodeAmountRange" : [3, 7],
-        "designationTypes": ["harvest"],
-        "interaction"     : {
-            "action"         : "mine",
-            "workCategory"   : "mining",
-            "workAmount"     : 10,
-            "toolRequirement": {"workType": "mining", "minTier": 2},
-            "yields"         : [
-                {
-                    "itemId"         : "iron_ore",
-                    "min"            : 2,
-                    "max"            : 5,
-                    "skillId"        : "mining",
-                    "skillMultiplier": 0.2,
-                    "_TODO"          : "iron_ore item TBD — smelting chain into iron_bar not yet designed"
-                }
-            ]
-        }
-    },
-    // Softer than iron; easier to smelt. Key component of the bronze alloy (copper + tin).
-    {
-        "id"              : "copper_ore",
-        "displayName"     : "Copper Ore",
-        "subterrain"      : "ore_vein",
-        "walkable"        : true,
-        "charSpans"       : [ {"literal": "*"} ],
-        "fg"              : [0.22, 0.72, 0.48],
-        "bg"              : [0.04, 0.08, 0.06],
-        "color"           : "#38B87A",
-        "spawn"           : {
-            "subterrains": {"mineral_deposit": 0.08, "rocky": 0.012, "cliff": 0.008, "cave": 0.006}
-        },
-        "nodeAmountRange" : [2, 5],
-        "designationTypes": ["harvest"],
-        "interaction"     : {
-            "action"         : "mine",
-            "workCategory"   : "mining",
-            "workAmount"     : 12,
-            "toolRequirement": {"workType": "mining", "minTier": 2},
-            "yields"         : [
-                {
-                    "itemId": "copper_ore",
-                    "min": 1,
-                    "max": 3,
-                    "skillId": "mining",
-                    "skillMultiplier": 0.15,
-                    "_TODO": "copper_ore item TBD — smelting into copper_bar; bronze alloy (copper + tin) not yet designed"
-                }
-            ]
-        }
-    },
-    // Rare soft metal — scarcity is the limiting factor for bronze technology.
-    {
-        "id"              : "tin_ore",
-        "displayName"     : "Tin Ore",
-        "subterrain"      : "ore_vein",
-        "walkable"        : true,
-        "charSpans"       : [ {"literal": "*"} ],
-        "fg"              : [0.62, 0.72, 0.78],
-        "bg"              : [0.06, 0.07, 0.09],
-        "color"           : "#9EB8C7",
-        "spawn"           : {
-            "subterrains": {"mineral_deposit": 0.04, "rocky": 0.006, "cliff": 0.004, "cave": 0.003}
-        },
-        "nodeAmountRange" : [1, 4],
-        "designationTypes": ["harvest"],
-        "interaction"     : {
-            "action"         : "mine",
-            "workCategory"   : "mining",
-            "workAmount"     : 14,
-            "toolRequirement": {"workType": "mining", "minTier": 2},
-            "yields"         : [
-                {
-                    "itemId"         : "tin_ore",
-                    "min"            : 1,
-                    "max"            : 2,
-                    "skillId"        : "mining",
-                    "skillMultiplier": 0.12,
-                    "_TODO"          : "tin_ore item TBD — rare; key ingredient for bronze alloy (tin + copper)"
-                }
-            ]
-        }
-    },
-    // Muddy clay seam — lower yield than a proper clay deposit, but more widespread.
-    {
-        "id"              : "mud_deposit",
-        "displayName"     : "Mud Deposit",
-        "subterrain"      : "mud",
-        "walkable"        : true,
-        "charSpans"       : [ {"literal": "."} ],
-        "fg"              : [0.5, 0.32, 0.12],
-        "bg"              : [0.08, 0.06, 0.03],
-        "color"           : "#7F5220",
-        "spawn"           : { "subterrains": {"mud": 0.06, "bog": 0.03, "riverbank": 0.02} },
-        "nodeAmountRange" : [3, 7],
-        "designationTypes": ["harvest"],
-        "interaction"     : {
-            "action"         : "dig",
-            "workCategory"   : "mining",
-            "workAmount"     : 15,  // slow bare-handed
-            "toolRequirement": null,
-            "yields"         : [
-                {"itemId": "clay_lump", "min": 1, "max": 3, "skillId": "mining", "skillMultiplier": 0.08}
-            ]
-        }
-    },
-    // Waterlogged bog soil — clay + organic matter. Worst bare-handed digging surface.
-    // TODO: second yield should become a dedicated "peat" item once fuel/soil chains are designed.
-    {
-        "id"              : "bog_deposit",
-        "displayName"     : "Bog Deposit",
-        "subterrain"      : "bog",
-        "walkable"        : true,
-        "charSpans"       : [ {"literal": ","} ],
-        "fg"              : [0.44, 0.4, 0.12],
-        "bg"              : [0.08, 0.06, 0.03],
-        "color"           : "#706620",
-        "spawn"           : { "subterrains": {"bog": 0.05, "mud": 0.02} },
-        "nodeAmountRange" : [2, 5],
-        "designationTypes": ["harvest"],
-        "interaction"     : {
-            "action"         : "dig",
-            "workCategory"   : "mining",
-            "workAmount"     : 18,  // waterlogged — worst bare-handed digging condition
-            "toolRequirement": null,
-            "yields"         : [
-                {"itemId": "clay_lump", "min": 1, "max": 2, "skillId": "mining", "skillMultiplier": 0.06},
-                {
-                    "itemId": "plant_fiber",
-                    "min": 1,
-                    "max": 2,
-                    "skillId": "foraging",
-                    "skillMultiplier": 0.08,
-                    "_TODO": "peat item TBD — bog organic material; potential uses: fuel, soil amendment, preservative"
-                }
-            ]
-        }
-    },
-    // ─────────────────────────────────────────────────────────────────────────
-    // TERRAIN WALLS — stone_outcrop still gets first pick (placed earlier);
-    // these fill the remaining ~92% of rocky/cliff tiles as the default identity.
-    // ─────────────────────────────────────────────────────────────────────────
-    // Walkable rocky mountain floor — minable for stone.
-    {
-        "id"              : "mountain_wall",
-        "displayName"     : "Mountain Wall",
-        "subterrain"      : "rocky",
-        "walkable"        : false,
-        "charSpans"       : [ {"sheet": "tiles", "from": 177, "to": 178} ],
-        "fg"              : [0.62, 0.52, 0.37],
-        "bg"              : [0.08, 0.06, 0.03],
-        "color"           : "#9E855E",
-        "spawn"           : { "subterrains": {"rocky": 0.99} },
-        "nodeAmountRange" : [4, 8],
-        "designationTypes": ["harvest"],
-        "interaction"     : {
-            "action"         : "mine",
-            "workCategory"   : "mining",
-            "workAmount"     : 10,
-            "toolRequirement": null,
-            "yields"         : [
-                {"itemId": "surface_stone", "min": 2, "max": 5, "skillId": "mining", "skillMultiplier": 0.2}
-            ]
-        }
-    },
-    // Impassable cliff face — mine to open passage; yields dressed stone.
-    {
-        "id"              : "cliff_wall",
-        "displayName"     : "Cliff Wall",
-        "subterrain"      : "cliff",
-        "walkable"        : false,
-        "charSpans"       : [ {"sheet": "tiles", "id": 219} ],
-        "fg"              : [0.5, 0.42, 0.27],
-        "bg"              : [0.08, 0.06, 0.03],
-        "color"           : "#806B45",
-        "spawn"           : { "subterrains": {"cliff": 0.99} },
-        "nodeAmountRange" : [5, 10],
-        "designationTypes": ["harvest"],
-        "interaction"     : {
-            "action"         : "mine",
-            "workCategory"   : "mining",
-            "workAmount"     : 12,
-            "toolRequirement": {"workType": "mining", "minTier": 1},
-            "yields"         : [
-                {"itemId": "surface_stone", "min": 3, "max": 6, "skillId": "mining", "skillMultiplier": 0.2}
-            ]
-        }
-    },
-    // ─────────────────────────────────────────────────────────────────────────
-    // GROUND COVER — placed last so all rarer resources get first pick per tile.
-    // High spawn rates fill unclaimed grass tiles; if a tree/bush/etc. already
-    // claimed the tile the break exits before these entries are reached.
-    // ─────────────────────────────────────────────────────────────────────────
-    // Ordinary grass stand — cut for hay; bare-handed is slow, a flint sickle doubles speed.
-    {
-        "id"              : "grass_patch",
-        "displayName"     : "Grass Patch",
-        "subterrain"      : "grass",
-        "walkable"        : true,
-        "grazing"         : true,
-        "charSpans"       : [ {"sheet": "tiles", "from": 72, "to": 79} ],
-        "fg"              : [0.52, 0.68, 0.13],
-        "bg"              : [0.08, 0.06, 0.03],
-        "color"           : "#94B82E",
-        "spawn"           : { "subterrains": {"grass": 0.92, "dirt": 0.008, "savanna": 0.01} },
-        "nodeAmountRange" : [3, 7],
-        "designationTypes": ["harvest"],
-        "interaction"     : {
-            "action"         : "cut",
-            "workCategory"   : "foraging",
-            "workAmount"     : 6,
-            "toolRequirement": null,
-            "yields"         : [
-                {"itemId": "hay",         "min": 2, "max": 5, "skillId": "foraging", "skillMultiplier": 0.15},
-                {"itemId": "plant_fiber", "min": 0, "max": 1, "skillId": "foraging", "skillMultiplier": 0.15}
-            ],
-            "persistent"     : true,
-            "regrowthTurns"  : 600 // ~2 days at 300 turns/day
-        }
-    },
-    // Taller grass stand — same harvest profile as grass_patch, matches tall_grass subterrain.
-    {
-        "id"              : "tall_grass_patch",
-        "displayName"     : "Tall Grass",
-        "subterrain"      : "tall_grass",
-        "walkable"        : true,
-        "grazing"         : true,
-        "charSpans"       : [ {"sheet": "tiles", "from": 72, "to": 79} ],
-        "fg"              : [0.44, 0.68, 0.10],
-        "bg"              : [0.08, 0.06, 0.03],
-        "color"           : "#4D7A12",
-        "spawn"           : { "subterrains": {"tall_grass": 0.93} },
-        "nodeAmountRange" : [3, 7],
-        "designationTypes": ["harvest"],
-        "interaction"     : {
-            "action"         : "cut",
-            "workCategory"   : "foraging",
-            "workAmount"     : 7,
-            "toolRequirement": null,
-            "yields"         : [
-                {"itemId": "hay",         "min": 10, "max": 15, "skillId": "foraging", "skillMultiplier": 0.15},
-                {"itemId": "plant_fiber", "min":  0, "max":  2, "skillId": "foraging", "skillMultiplier": 0.15}
-            ],
-            "persistent"     : true,
-            "regrowthTurns"  : 700
-        }
-    },
-    // Dense grass stand — matches deep_grass subterrain, slightly higher yield.
-    {
-        "id"              : "deep_grass_patch",
-        "displayName"     : "Deep Grass",
-        "subterrain"      : "deep_grass",
-        "walkable"        : true,
-        "grazing"         : true,
-        "charSpans"       : [ {"sheet": "tiles", "from": 72, "to": 79} ],
-        "fg"              : [0.36, 0.58, 0.08],
-        "bg"              : [0.07, 0.05, 0.02],
-        "color"           : "#3D6B0F",
-        "spawn"           : { "subterrains": {"deep_grass": 0.92} },
-        "nodeAmountRange" : [4, 8],
-        "designationTypes": ["harvest"],
-        "interaction"     : {
-            "action"         : "cut",
-            "workCategory"   : "foraging",
-            "workAmount"     : 8,
-            "toolRequirement": null,
-            "yields"         : [
-                {"itemId": "hay",         "min": 5, "max": 10, "skillId": "foraging", "skillMultiplier": 0.15},
-                {"itemId": "plant_fiber", "min": 0, "max":  2, "skillId": "foraging", "skillMultiplier": 0.15}
-            ],
-            "persistent"     : true,
-            "regrowthTurns"  : 800
-        }
+        {
+          "itemId": "flint_shard",
+          "min": 0,
+          "max": 2,
+          "skillId": "mining",
+          "skillMultiplier": 0.1
+        } // chance only: min 0
+      ]
     }
+  },
+  // ─────────────────────────────────────────────────────────────────────────
+  // FORAGING — PLANTS
+  // ─────────────────────────────────────────────────────────────────────────
+  // Colourful herbaceous patches — primary herb source in open biomes.
+  {
+    "id": "wildflower_patch",
+    "displayName": "Wildflower Patch",
+    "subterrain": "wildflowers",
+    "walkable": true,
+    "charSpans": [{ "sheet": "plants", "from": 89, "to": 93 }],
+    "fg": [0.88, 0.42, 0.71],
+    "bg": [0.09, 0.06, 0.06],
+    "color": "#E06BB5",
+    "spawn": {
+      "subterrains": {
+        "tall_grass": 0.007,
+        "grass": 0.006,
+        "savanna": 0.005,
+        "deep_grass": 0.004,
+        "moss": 0.003,
+        "dirt": 0.002
+      }
+    },
+    "nodeAmountRange": [2, 5],
+    "designationTypes": ["harvest"],
+    "interaction": {
+      "action": "harvest",
+      "workCategory": "foraging",
+      "workAmount": 3,
+      "toolRequirement": null,
+      "yields": [
+        { "itemId": "herbs", "min": 1, "max": 3, "skillId": "foraging", "skillMultiplier": 0.15 }
+      ],
+      "persistent": true,
+      "regrowthTurns": 1200 // ~4 days at 300 turns/day
+    }
+  },
+  // Dead fallen logs — quick low-effort wood, no axe needed. Often overlooked early resource.
+  {
+    "id": "fallen_logs",
+    "displayName": "Fallen Logs",
+    "subterrain": "fallen_logs",
+    "walkable": true,
+    "charSpans": [{ "sheet": "plants", "id": 209 }],
+    "fg": [0.48, 0.26, 0.05],
+    "bg": [0.1, 0.06, 0.03],
+    "color": "#7A420D",
+    "spawn": {
+      "subterrains": {
+        "deep_grass": 0.02,
+        "grass": 0.015,
+        "dirt": 0.01,
+        "moss": 0.008,
+        "mud": 0.005
+      }
+    },
+    "nodeAmountRange": [3, 8],
+    "designationTypes": ["harvest"],
+    "interaction": {
+      "action": "gather",
+      "workCategory": "foraging",
+      "workAmount": 1,
+      "toolRequirement": {
+        "workType": "woodcutting",
+        "minTier": 0
+      }, // tier-0 = any woodcutting tool, including stone chopper
+      "yields": [
+        { "itemId": "branch", "min": 2, "max": 5, "skillId": "foraging", "skillMultiplier": 0.1 },
+        { "itemId": "wood", "min": 1, "max": 2, "skillId": "foraging", "skillMultiplier": 0.05 }
+      ]
+    }
+  },
+  // Rare arcane crystal formation — deep mountain/cave occurrence only.
+  // TODO: magic_crystal item properties TBD. High rarity is intentional.
+  {
+    "id": "crystal_formation",
+    "displayName": "Crystal Formation",
+    "subterrain": "crystal_formation",
+    "walkable": false,
+    "charSpans": [{ "sheet": "tiles", "from": 48, "to": 55 }],
+    "fg": [0.4, 0.84, 0.79],
+    "bg": [0.06, 0.08, 0.1],
+    "color": "#66D6C9",
+    "spawn": {
+      // Intentionally sparse — these are high-value arcane nodes.
+      "subterrains": { "mineral_deposit": 0.004, "cave": 0.002, "rocky": 0.002, "cliff": 0.001 }
+    },
+    "nodeAmountRange": [1, 3],
+    "designationTypes": ["harvest"],
+    "interaction": {
+      "action": "scavenge",
+      "workCategory": "mining",
+      "workAmount": 5,
+      "toolRequirement": { "workType": "mining", "minTier": 2 }, // requires a proper mining pick
+      "yields": [
+        {
+          "itemId": "magic_crystal",
+          "min": 1,
+          "max": 2,
+          "skillId": "mining",
+          "skillMultiplier": 0.1,
+          "_TODO": "magic_crystal item TBD — rare arcane material; possible uses: enchanting reagent, mana amplification, spell catalyst, arcane focus component"
+        }
+      ]
+    }
+  },
+  // Low scrubby brush — good plant fiber source in arid/transitional zones.
+  {
+    "id": "scrub_patch",
+    "displayName": "Scrub Patch",
+    "subterrain": "scrubland",
+    "walkable": true,
+    "charSpans": [{ "sheet": "plants", "id": 21 }],
+    "fg": [0.48, 0.34, 0.09],
+    "bg": [0.1, 0.07, 0.03],
+    "color": "#7A5717",
+    "spawn": {
+      "subterrains": {
+        "savanna": 0.01,
+        "tall_grass": 0.008,
+        "moss": 0.006,
+        "grass": 0.006,
+        "mud": 0.004,
+        "dirt": 0.004
+      }
+    },
+    "nodeAmountRange": [3, 7],
+    "designationTypes": ["harvest"],
+    "interaction": {
+      "action": "harvest",
+      "workCategory": "foraging",
+      "workAmount": 2,
+      "toolRequirement": null,
+      "yields": [
+        {
+          "itemId": "plant_fiber",
+          "min": 2,
+          "max": 4,
+          "skillId": "foraging",
+          "skillMultiplier": 0.15
+        }
+      ],
+      "persistent": true,
+      "regrowthTurns": 2100 // ~1 week at 300 turns/day
+    }
+  },
+  // Leftover tree stump — strip for bark and wood scraps using a basic crafting tool.
+  {
+    "id": "tree_stump",
+    "displayName": "Tree Stump",
+    "subterrain": "tree_stump",
+    "walkable": true,
+    "charSpans": [{ "sheet": "plants", "id": 209 }],
+    "fg": [0.56, 0.34, 0.09],
+    "bg": [0.1, 0.07, 0.03],
+    "color": "#8F5717",
+    "spawn": {
+      "subterrains": {
+        "deep_grass": 0.014,
+        "grass": 0.01,
+        "moss": 0.006,
+        "dirt": 0.005,
+        "mud": 0.004
+      }
+    },
+    "nodeAmountRange": [2, 4],
+    "designationTypes": ["harvest"],
+    "interaction": {
+      "action": "strip",
+      "workCategory": "foraging",
+      "workAmount": 2,
+      "toolRequirement": { "workType": "crafting", "minTier": 0 },
+      "yields": [
+        { "itemId": "bark", "min": 1, "max": 3, "skillId": "foraging", "skillMultiplier": 0.1 },
+        { "itemId": "wood", "min": 1, "max": 2, "skillId": "foraging", "skillMultiplier": 0.05 }
+      ]
+    }
+  },
+  // Fungal patch — yields herbs; thrives in damp/shaded subterrains.
+  {
+    "id": "mushroom_patch",
+    "displayName": "Mushroom Patch",
+    "subterrain": "mushroom_patch",
+    "walkable": true,
+    "charSpans": [{ "sheet": "tiles", "id": 123 }],
+    "fg": [0.86, 0.52, 0.33],
+    "bg": [0.1, 0.06, 0.03],
+    "color": "#DB8554",
+    "spawn": { "subterrains": { "moss": 0.014, "mud": 0.012, "deep_grass": 0.01, "dirt": 0.005 } },
+    "nodeAmountRange": [2, 5],
+    "designationTypes": ["harvest"],
+    "interaction": {
+      "action": "harvest",
+      "workCategory": "foraging",
+      "workAmount": 2,
+      "toolRequirement": null,
+      "yields": [
+        { "itemId": "herbs", "min": 1, "max": 3, "skillId": "foraging", "skillMultiplier": 0.15 }
+      ],
+      "persistent": true,
+      "regrowthTurns": 120 // ~5 days
+    }
+  },
+  // Dead standing tree — rotted, easier and faster to fell than a living tree.
+  {
+    "id": "dead_tree",
+    "displayName": "Dead Tree",
+    "subterrain": "dead_trees",
+    "walkable": false,
+    "charSpans": [{ "sheet": "plants", "from": 164, "to": 166 }],
+    "fg": [0.44, 0.36, 0.21],
+    "bg": [0.1, 0.07, 0.03],
+    "color": "#705C36",
+    "spawn": {
+      "subterrains": {
+        "bog": 0.015,
+        "mud": 0.012,
+        "moss": 0.01,
+        "deep_grass": 0.005,
+        "dirt": 0.004
+      }
+    },
+    "nodeAmountRange": [3, 6],
+    "designationTypes": ["harvest"],
+    "interaction": {
+      "action": "woodcut",
+      "workCategory": "woodcutting",
+      "workAmount": 4,
+      "toolRequirement": { "workType": "woodcutting", "minTier": 1 },
+      "yields": [
+        { "itemId": "wood", "min": 2, "max": 4, "skillId": "woodcutting", "skillMultiplier": 0.1 },
+        {
+          "itemId": "branch",
+          "min": 1,
+          "max": 3,
+          "skillId": "woodcutting",
+          "skillMultiplier": 0.05
+        }
+      ]
+    }
+  },
+  // ─────────────────────────────────────────────────────────────────────────
+  // WETLANDS — DIGGING
+  // No tool required, but high workAmount makes tools strongly preferable.
+  // clay_deposit > mud_deposit > bog_deposit in yield richness.
+  // ─────────────────────────────────────────────────────────────────────────
+  // Rich clay seam — primary ceramics and construction material.
+  // Highest density in the clay subterrain (swamp biome, mid-elevation noise band).
+  {
+    "id": "clay_deposit",
+    "displayName": "Clay Deposit",
+    "subterrain": "clay",
+    "walkable": true,
+    "charSpans": [{ "literal": "\"" }],
+    "fg": [0.68, 0.36, 0.13],
+    "bg": [0.1, 0.07, 0.03],
+    "color": "#AD5C21",
+    "spawn": {
+      "subterrains": {
+        "clay": 0.08,
+        "mud": 0.025,
+        "bog": 0.02,
+        "riverbank": 0.018,
+        "shallow_water": 0.008
+      }
+    },
+    "nodeAmountRange": [3, 6],
+    "designationTypes": ["harvest"],
+    "interaction": {
+      "action": "dig",
+      "workCategory": "mining",
+      "workAmount": 20, // slow bare-handed — a digging_stick or stone_spade is much faster
+      "toolRequirement": null,
+      "yields": [
+        { "itemId": "clay_lump", "min": 2, "max": 4, "skillId": "mining", "skillMultiplier": 0.1 }
+      ]
+    }
+  },
+  // ─────────────────────────────────────────────────────────────────────────
+  // FORAGING — BERRIES & GRAINS
+  // ─────────────────────────────────────────────────────────────────────────
+  // Berry bush — reliable persistent food source; dense in bush subterrain.
+  {
+    "id": "berry_bush",
+    "displayName": "Berry Bush",
+    "subterrain": "bush",
+    "walkable": true,
+    "charSpans": [{ "sheet": "plants", "id": 41 }],
+    "fg": [0.75, 0.18, 0.22],
+    "bg": [0.07, 0.05, 0.06],
+    "color": "#BF2E38",
+    "spawn": {
+      "subterrains": {
+        "bush": 0.22,
+        "deep_grass": 0.09,
+        "grass": 0.06,
+        "moss": 0.04,
+        "scrubland": 0.03
+      }
+    },
+    "nodeAmountRange": [3, 7],
+    "designationTypes": ["harvest"],
+    "interaction": {
+      "action": "forage",
+      "workCategory": "foraging",
+      "workAmount": 2,
+      "toolRequirement": null,
+      "yields": [
+        {
+          "itemId": "wild_berries",
+          "min": 2,
+          "max": 4,
+          "skillId": "foraging",
+          "skillMultiplier": 0.2
+        }
+      ],
+      "persistent": true,
+      "regrowthTurns": 2400 // ~8 days at 300 turns/day
+    }
+  },
+  // Wild barley — primary primitive grain in open savanna zones.
+  {
+    "id": "wild_barley",
+    "displayName": "Wild Barley",
+    "subterrain": "savanna",
+    "walkable": true,
+    "charSpans": [{ "sheet": "plants", "from": 85, "to": 88 }],
+    "fg": [0.82, 0.68, 0.12],
+    "bg": [0.1, 0.08, 0.02],
+    "color": "#D1AD1F",
+    "spawn": {
+      "subterrains": { "savanna": 0.012, "tall_grass": 0.008, "grass": 0.004, "dirt": 0.002 }
+    },
+    "nodeAmountRange": [3, 7],
+    "designationTypes": ["harvest"],
+    "interaction": {
+      "action": "gather",
+      "workCategory": "foraging",
+      "workAmount": 2,
+      "toolRequirement": null,
+      "yields": [
+        {
+          "itemId": "wild_oats",
+          "min": 2,
+          "max": 4,
+          "skillId": "foraging",
+          "skillMultiplier": 0.15
+        }
+      ],
+      "persistent": true,
+      "regrowthTurns": 3000 // ~10 days at 300 turns/day
+    }
+  },
+  // Wild rye — mixed grain and fibre source; grows in taller, damper grasses.
+  {
+    "id": "wild_rye",
+    "displayName": "Wild Rye",
+    "subterrain": "tall_grass",
+    "walkable": true,
+    "charSpans": [{ "sheet": "plants", "from": 83, "to": 85 }],
+    "fg": [0.75, 0.6, 0.14],
+    "bg": [0.09, 0.07, 0.02],
+    "color": "#BF9924",
+    "spawn": {
+      "subterrains": { "tall_grass": 0.009, "grass": 0.005, "riverbank": 0.003, "moss": 0.002 }
+    },
+    "nodeAmountRange": [2, 5],
+    "designationTypes": ["harvest"],
+    "interaction": {
+      "action": "gather",
+      "workCategory": "foraging",
+      "workAmount": 2,
+      "toolRequirement": null,
+      "yields": [
+        {
+          "itemId": "wild_oats",
+          "min": 1,
+          "max": 3,
+          "skillId": "foraging",
+          "skillMultiplier": 0.15
+        },
+        {
+          "itemId": "plant_fiber",
+          "min": 1,
+          "max": 2,
+          "skillId": "foraging",
+          "skillMultiplier": 0.05
+        }
+      ],
+      "persistent": true,
+      "regrowthTurns": 3000 // ~10 days at 300 turns/day
+    }
+  },
+  // ─────────────────────────────────────────────────────────────────────────
+  // MINING — ORE VEINS  (mountain / mineral_deposit subterrain)
+  // All require minTier 2 mining. Yield items are placeholders — smelting
+  // chains are not yet designed. See _TODO fields.
+  // ─────────────────────────────────────────────────────────────────────────
+  // Most common mountain ore. Will form the backbone of the iron-age tech tier.
+  {
+    "id": "iron_ore",
+    "displayName": "Iron Ore",
+    "subterrain": "ore_vein",
+    "walkable": true,
+    "charSpans": [{ "literal": "*" }],
+    "fg": [0.72, 0.38, 0.18],
+    "bg": [0.08, 0.06, 0.03],
+    "color": "#B86130",
+    "spawn": {
+      "subterrains": { "mineral_deposit": 0.12, "rocky": 0.02, "cliff": 0.01, "cave": 0.008 }
+    },
+    "nodeAmountRange": [3, 7],
+    "designationTypes": ["harvest"],
+    "interaction": {
+      "action": "mine",
+      "workCategory": "mining",
+      "workAmount": 10,
+      "toolRequirement": { "workType": "mining", "minTier": 2 },
+      "yields": [
+        {
+          "itemId": "iron_ore",
+          "min": 2,
+          "max": 5,
+          "skillId": "mining",
+          "skillMultiplier": 0.2,
+          "_TODO": "iron_ore item TBD — smelting chain into iron_bar not yet designed"
+        }
+      ]
+    }
+  },
+  // Softer than iron; easier to smelt. Key component of the bronze alloy (copper + tin).
+  {
+    "id": "copper_ore",
+    "displayName": "Copper Ore",
+    "subterrain": "ore_vein",
+    "walkable": true,
+    "charSpans": [{ "literal": "*" }],
+    "fg": [0.22, 0.72, 0.48],
+    "bg": [0.04, 0.08, 0.06],
+    "color": "#38B87A",
+    "spawn": {
+      "subterrains": { "mineral_deposit": 0.08, "rocky": 0.012, "cliff": 0.008, "cave": 0.006 }
+    },
+    "nodeAmountRange": [2, 5],
+    "designationTypes": ["harvest"],
+    "interaction": {
+      "action": "mine",
+      "workCategory": "mining",
+      "workAmount": 12,
+      "toolRequirement": { "workType": "mining", "minTier": 2 },
+      "yields": [
+        {
+          "itemId": "copper_ore",
+          "min": 1,
+          "max": 3,
+          "skillId": "mining",
+          "skillMultiplier": 0.15,
+          "_TODO": "copper_ore item TBD — smelting into copper_bar; bronze alloy (copper + tin) not yet designed"
+        }
+      ]
+    }
+  },
+  // Rare soft metal — scarcity is the limiting factor for bronze technology.
+  {
+    "id": "tin_ore",
+    "displayName": "Tin Ore",
+    "subterrain": "ore_vein",
+    "walkable": true,
+    "charSpans": [{ "literal": "*" }],
+    "fg": [0.62, 0.72, 0.78],
+    "bg": [0.06, 0.07, 0.09],
+    "color": "#9EB8C7",
+    "spawn": {
+      "subterrains": { "mineral_deposit": 0.04, "rocky": 0.006, "cliff": 0.004, "cave": 0.003 }
+    },
+    "nodeAmountRange": [1, 4],
+    "designationTypes": ["harvest"],
+    "interaction": {
+      "action": "mine",
+      "workCategory": "mining",
+      "workAmount": 14,
+      "toolRequirement": { "workType": "mining", "minTier": 2 },
+      "yields": [
+        {
+          "itemId": "tin_ore",
+          "min": 1,
+          "max": 2,
+          "skillId": "mining",
+          "skillMultiplier": 0.12,
+          "_TODO": "tin_ore item TBD — rare; key ingredient for bronze alloy (tin + copper)"
+        }
+      ]
+    }
+  },
+  // Muddy clay seam — lower yield than a proper clay deposit, but more widespread.
+  {
+    "id": "mud_deposit",
+    "displayName": "Mud Deposit",
+    "subterrain": "mud",
+    "walkable": true,
+    "charSpans": [{ "literal": "." }],
+    "fg": [0.5, 0.32, 0.12],
+    "bg": [0.08, 0.06, 0.03],
+    "color": "#7F5220",
+    "spawn": { "subterrains": { "mud": 0.06, "bog": 0.03, "riverbank": 0.02 } },
+    "nodeAmountRange": [3, 7],
+    "designationTypes": ["harvest"],
+    "interaction": {
+      "action": "dig",
+      "workCategory": "mining",
+      "workAmount": 15, // slow bare-handed
+      "toolRequirement": null,
+      "yields": [
+        { "itemId": "clay_lump", "min": 1, "max": 3, "skillId": "mining", "skillMultiplier": 0.08 }
+      ]
+    }
+  },
+  // Waterlogged bog soil — clay + organic matter. Worst bare-handed digging surface.
+  // TODO: second yield should become a dedicated "peat" item once fuel/soil chains are designed.
+  {
+    "id": "bog_deposit",
+    "displayName": "Bog Deposit",
+    "subterrain": "bog",
+    "walkable": true,
+    "charSpans": [{ "literal": "," }],
+    "fg": [0.44, 0.4, 0.12],
+    "bg": [0.08, 0.06, 0.03],
+    "color": "#706620",
+    "spawn": { "subterrains": { "bog": 0.05, "mud": 0.02 } },
+    "nodeAmountRange": [2, 5],
+    "designationTypes": ["harvest"],
+    "interaction": {
+      "action": "dig",
+      "workCategory": "mining",
+      "workAmount": 18, // waterlogged — worst bare-handed digging condition
+      "toolRequirement": null,
+      "yields": [
+        { "itemId": "clay_lump", "min": 1, "max": 2, "skillId": "mining", "skillMultiplier": 0.06 },
+        {
+          "itemId": "plant_fiber",
+          "min": 1,
+          "max": 2,
+          "skillId": "foraging",
+          "skillMultiplier": 0.08,
+          "_TODO": "peat item TBD — bog organic material; potential uses: fuel, soil amendment, preservative"
+        }
+      ]
+    }
+  },
+  // ─────────────────────────────────────────────────────────────────────────
+  // TERRAIN WALLS — stone_outcrop still gets first pick (placed earlier);
+  // these fill the remaining ~92% of rocky/cliff tiles as the default identity.
+  // ─────────────────────────────────────────────────────────────────────────
+  // Walkable rocky mountain floor — minable for stone.
+  {
+    "id": "mountain_wall",
+    "displayName": "Mountain Wall",
+    "subterrain": "rocky",
+    "walkable": false,
+    "charSpans": [{ "sheet": "tiles", "from": 177, "to": 178 }],
+    "fg": [0.62, 0.52, 0.37],
+    "bg": [0.08, 0.06, 0.03],
+    "color": "#9E855E",
+    "spawn": { "subterrains": { "rocky": 0.99 } },
+    "nodeAmountRange": [4, 8],
+    "designationTypes": ["harvest"],
+    "interaction": {
+      "action": "mine",
+      "workCategory": "mining",
+      "workAmount": 10,
+      "toolRequirement": null,
+      "yields": [
+        {
+          "itemId": "surface_stone",
+          "min": 2,
+          "max": 5,
+          "skillId": "mining",
+          "skillMultiplier": 0.2
+        }
+      ]
+    }
+  },
+  // Impassable cliff face — mine to open passage; yields dressed stone.
+  {
+    "id": "cliff_wall",
+    "displayName": "Cliff Wall",
+    "subterrain": "cliff",
+    "walkable": false,
+    "charSpans": [{ "sheet": "tiles", "id": 219 }],
+    "fg": [0.5, 0.42, 0.27],
+    "bg": [0.08, 0.06, 0.03],
+    "color": "#806B45",
+    "spawn": { "subterrains": { "cliff": 0.99 } },
+    "nodeAmountRange": [5, 10],
+    "designationTypes": ["harvest"],
+    "interaction": {
+      "action": "mine",
+      "workCategory": "mining",
+      "workAmount": 12,
+      "toolRequirement": { "workType": "mining", "minTier": 1 },
+      "yields": [
+        {
+          "itemId": "surface_stone",
+          "min": 3,
+          "max": 6,
+          "skillId": "mining",
+          "skillMultiplier": 0.2
+        }
+      ]
+    }
+  },
+  // ─────────────────────────────────────────────────────────────────────────
+  // GROUND COVER — placed last so all rarer resources get first pick per tile.
+  // High spawn rates fill unclaimed grass tiles; if a tree/bush/etc. already
+  // claimed the tile the break exits before these entries are reached.
+  // ─────────────────────────────────────────────────────────────────────────
+  // Ordinary grass stand — cut for hay; bare-handed is slow, a flint sickle doubles speed.
+  {
+    "id": "grass_patch",
+    "displayName": "Grass Patch",
+    "subterrain": "grass",
+    "walkable": true,
+    "grazing": true,
+    "charSpans": [{ "sheet": "tiles", "from": 72, "to": 79 }],
+    "fg": [0.52, 0.68, 0.13],
+    "bg": [0.08, 0.06, 0.03],
+    "color": "#94B82E",
+    "spawn": { "subterrains": { "grass": 0.92, "dirt": 0.008, "savanna": 0.01 } },
+    "nodeAmountRange": [3, 7],
+    "designationTypes": ["harvest"],
+    "interaction": {
+      "action": "cut",
+      "workCategory": "foraging",
+      "workAmount": 6,
+      "toolRequirement": null,
+      "yields": [
+        { "itemId": "hay", "min": 2, "max": 5, "skillId": "foraging", "skillMultiplier": 0.15 },
+        {
+          "itemId": "plant_fiber",
+          "min": 0,
+          "max": 1,
+          "skillId": "foraging",
+          "skillMultiplier": 0.15
+        }
+      ],
+      "persistent": true,
+      "regrowthTurns": 600 // ~2 days at 300 turns/day
+    }
+  },
+  // Taller grass stand — same harvest profile as grass_patch, matches tall_grass subterrain.
+  {
+    "id": "tall_grass_patch",
+    "displayName": "Tall Grass",
+    "subterrain": "tall_grass",
+    "walkable": true,
+    "grazing": true,
+    "charSpans": [{ "sheet": "tiles", "from": 72, "to": 79 }],
+    "fg": [0.44, 0.68, 0.1],
+    "bg": [0.08, 0.06, 0.03],
+    "color": "#4D7A12",
+    "spawn": { "subterrains": { "tall_grass": 0.93 } },
+    "nodeAmountRange": [3, 7],
+    "designationTypes": ["harvest"],
+    "interaction": {
+      "action": "cut",
+      "workCategory": "foraging",
+      "workAmount": 7,
+      "toolRequirement": null,
+      "yields": [
+        { "itemId": "hay", "min": 10, "max": 15, "skillId": "foraging", "skillMultiplier": 0.15 },
+        {
+          "itemId": "plant_fiber",
+          "min": 0,
+          "max": 2,
+          "skillId": "foraging",
+          "skillMultiplier": 0.15
+        }
+      ],
+      "persistent": true,
+      "regrowthTurns": 700
+    }
+  },
+  // Dense grass stand — matches deep_grass subterrain, slightly higher yield.
+  {
+    "id": "deep_grass_patch",
+    "displayName": "Deep Grass",
+    "subterrain": "deep_grass",
+    "walkable": true,
+    "grazing": true,
+    "charSpans": [{ "sheet": "tiles", "from": 72, "to": 79 }],
+    "fg": [0.36, 0.58, 0.08],
+    "bg": [0.07, 0.05, 0.02],
+    "color": "#3D6B0F",
+    "spawn": { "subterrains": { "deep_grass": 0.92 } },
+    "nodeAmountRange": [4, 8],
+    "designationTypes": ["harvest"],
+    "interaction": {
+      "action": "cut",
+      "workCategory": "foraging",
+      "workAmount": 8,
+      "toolRequirement": null,
+      "yields": [
+        { "itemId": "hay", "min": 5, "max": 10, "skillId": "foraging", "skillMultiplier": 0.15 },
+        {
+          "itemId": "plant_fiber",
+          "min": 0,
+          "max": 2,
+          "skillId": "foraging",
+          "skillMultiplier": 0.15
+        }
+      ],
+      "persistent": true,
+      "regrowthTurns": 800
+    }
+  }
 ]

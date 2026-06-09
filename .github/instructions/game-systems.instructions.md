@@ -1,6 +1,6 @@
 ---
-description: "Use when writing or modifying game systems, services, entities, or core data in src/lib/game/. Covers service singleton pattern, state mutation, modifier system usage, and turn processing."
-applyTo: "src/lib/game/**/*.ts"
+description: 'Use when writing or modifying game systems, services, entities, or core data in src/lib/game/. Covers service singleton pattern, state mutation, modifier system usage, and turn processing.'
+applyTo: 'src/lib/game/**/*.ts'
 ---
 
 # Game Systems Conventions

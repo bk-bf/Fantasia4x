@@ -30,8 +30,8 @@ interactions.
 interface PawnRelationship {
   pawnA: string;
   pawnB: string;
-  score: number;          // –100 → +100
-  tags: RelationTag[];    // 'friend' | 'rival' | 'mentor' | 'grief_bond' | 'romantic'
+  score: number; // –100 → +100
+  tags: RelationTag[]; // 'friend' | 'rival' | 'mentor' | 'grief_bond' | 'romantic'
 }
 ```
 
@@ -61,9 +61,9 @@ unhappy.
 ```typescript
 interface MoodModifier {
   id: string;
-  label: string;          // shown in UI: "Lost a friend in battle"
-  value: number;          // mood delta (positive or negative)
-  expiresAt: number;      // turn number; 0 = permanent until resolved
+  label: string; // shown in UI: "Lost a friend in battle"
+  value: number; // mood delta (positive or negative)
+  expiresAt: number; // turn number; 0 = permanent until resolved
 }
 ```
 
@@ -136,6 +136,7 @@ Traits are assigned at pawn generation (2–3 per pawn from the social pool).
 ### Phase B — SocialService
 
 New `socialService` singleton:
+
 - `processSocialTurn(state)` — daily relationship + mood processing
 - `addMoodModifier(pawnId, modifier, state)`
 - `getEffectiveMood(pawn)` — sum of modifiers + base

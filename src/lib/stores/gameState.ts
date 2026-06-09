@@ -1,6 +1,13 @@
 import { browser } from '$app/environment';
 import { writable, derived, get } from 'svelte/store';
-import { GameStateManager, consumeFromStockpiles, addToStockpileZone, GENERAL_ZONE_ID, computeAggregate, absorbDropIfOnStockpileTile } from '$lib/game/core/GameState';
+import {
+  GameStateManager,
+  consumeFromStockpiles,
+  addToStockpileZone,
+  GENERAL_ZONE_ID,
+  computeAggregate,
+  absorbDropIfOnStockpileTile
+} from '$lib/game/core/GameState';
 import { gameEngine } from '$lib/game/systems/GameEngineImpl';
 import type { GameState, Pawn, WorldTile, FilterableZoneType } from '$lib/game/core/types';
 import { generatePawns } from '$lib/game/entities/Pawns';
@@ -20,7 +27,6 @@ import { entityService } from '$lib/game/services/EntityService';
 import { loadSave, scheduleSave, deleteSave } from './saveManager';
 import { applyDevWorld } from '$lib/game/dev/devWorld';
 import { TICKS_PER_SECOND, ticksFromSeconds } from '$lib/game/core/time';
-
 
 // ===== CONFIGURATION =====
 /** Real-time duration of one simulation tick at 1× speed (ms). */
@@ -49,270 +55,274 @@ resourceGeneratorService.generateResources(_generatedWorld, WORLD_SEED);
 
 // ===== INITIAL STATE =====
 export const initialGameState: GameState = {
-	turn: ticksFromSeconds(100), // 08:00 — turn counts ticks; 100 in-game s × TICKS_PER_SECOND (TURNS_PER_DAY=300 s)
-	race: generateRace(),
-	pawns: [],
-	// REVERTED: Back to original - no starter food added
-	item: [
-		...itemService.getItemsByCategory('basic').map((item) => ({ ...item, amount: 0 }))
-	].filter(item => item !== undefined),
-	worldMap: _generatedWorld,
-	discoveredLocations: [],
-	buildingCounts: {},
-	buildingQueue: [],
-	/** Phase 4: placed buildings on the map */
-	buildings: [],
-	/** Phase 4: colony stockpile from harvesting */
-	stockpile: {},
-	/** Stockpile zones — each zone owns specific tiles and tracks its own inventory. */
-	stockpileZones: [
-		{
-			id: 'zone-general',
-			name: 'Colony Stockpile',
-			tiles: [],
-			filter: { allowedCategories: [], blockedItems: [] },
-			inventory: {}
-		}
-	],
-	/** Phase 4: designated tile actions */
-	designations: {},
-	/** Phase 5a: active job pool */
-	jobs: [],
-	maxPopulation: 1,
-	availableResearch: [],
-	completedResearch: [],
-	currentResearch: undefined,
-	discoveredLore: [],
-	_woodBonus: 0,
-	_stoneBonus: 0,
-	equippedItems: {
-		weapon: null,
-		head: null,
-		chest: null,
-		legs: null,
-		feet: null,
-		hands: null
-	},
-	craftingQueue: [],
-	currentToolLevel: 0,
-	activeExplorationMissions: [],
-	workAssignments: {},
-	productionTargets: [],
-	currentJobIndex: {},
-	pawnStats: {},
-	droppedItems: [],
-	deadPawns: [],
-	mobs: [],
-	tamedAnimals: []
+  turn: ticksFromSeconds(100), // 08:00 — turn counts ticks; 100 in-game s × TICKS_PER_SECOND (TURNS_PER_DAY=300 s)
+  race: generateRace(),
+  pawns: [],
+  // REVERTED: Back to original - no starter food added
+  item: [...itemService.getItemsByCategory('basic').map((item) => ({ ...item, amount: 0 }))].filter(
+    (item) => item !== undefined
+  ),
+  worldMap: _generatedWorld,
+  discoveredLocations: [],
+  buildingCounts: {},
+  buildingQueue: [],
+  /** Phase 4: placed buildings on the map */
+  buildings: [],
+  /** Phase 4: colony stockpile from harvesting */
+  stockpile: {},
+  /** Stockpile zones — each zone owns specific tiles and tracks its own inventory. */
+  stockpileZones: [
+    {
+      id: 'zone-general',
+      name: 'Colony Stockpile',
+      tiles: [],
+      filter: { allowedCategories: [], blockedItems: [] },
+      inventory: {}
+    }
+  ],
+  /** Phase 4: designated tile actions */
+  designations: {},
+  /** Phase 5a: active job pool */
+  jobs: [],
+  maxPopulation: 1,
+  availableResearch: [],
+  completedResearch: [],
+  currentResearch: undefined,
+  discoveredLore: [],
+  _woodBonus: 0,
+  _stoneBonus: 0,
+  equippedItems: {
+    weapon: null,
+    head: null,
+    chest: null,
+    legs: null,
+    feet: null,
+    hands: null
+  },
+  craftingQueue: [],
+  currentToolLevel: 0,
+  activeExplorationMissions: [],
+  workAssignments: {},
+  productionTargets: [],
+  currentJobIndex: {},
+  pawnStats: {},
+  droppedItems: [],
+  deadPawns: [],
+  mobs: [],
+  tamedAnimals: []
 };
 
 // ===== UTILITY FUNCTIONS =====
 
 /** Apply all legacy field migrations to a loaded save. */
 function applyMigrations(state: GameState): GameState {
-	// Phase 4 migration: backfill new fields for old saves
-	if (!state.buildings) {
-		state.buildings = Object.entries(state.buildingCounts ?? {}).flatMap(
-			([type, count]) =>
-				Array.from({ length: count }, (_, i) => ({
-					id: `${type}-legacy-${i}`,
-					type,
-					x: 0,
-					y: 0,
-					status: 'complete' as const,
-					progress: 1
-				}))
-		);
-	}
-	if (!state.stockpile) state.stockpile = {};
-	// Migrate to multi-zone stockpile system
-	if (!state.stockpileZones || state.stockpileZones.length === 0) {
-		const existingTiles = Object.entries(state.designations ?? {})
-			.filter(([, t]) => t === 'stockpile')
-			.map(([key]) => key);
-		state.stockpileZones = [
-			{
-				id: 'zone-general',
-				name: 'Colony Stockpile',
-				tiles: existingTiles,
-				filter: { allowedCategories: [], blockedItems: [] },
-				inventory: { ...(state.stockpile ?? {}) }
-			}
-		];
-	}
-	if (!state.designations) state.designations = {};
-	if (!state.jobs) state.jobs = [];
-	if (!state.mobs) state.mobs = [];
-	if (!state.tamedAnimals) state.tamedAnimals = [];
-	// Phase 5c: migrate old buildingQueue entries to PlacedBuilding (work-point model)
-	if (state.buildingQueue && state.buildingQueue.length > 0) {
-		const migratedBuildings = state.buildingQueue.map((entry: any, i: number) => {
-			const buildTime = entry.building?.buildTime ?? 10;
-			const workRequired = buildTime * 10;
-			const workDone = Math.round(
-				(1 - Math.max(0, entry.turnsRemaining) / buildTime) * workRequired
-			);
-			return {
-				id: `${entry.building.id}-migrated-${i}-${Date.now()}`,
-				type: entry.building.id,
-				x: 0,
-				y: 0,
-				status: 'under_construction' as const,
-				progress: workDone / workRequired,
-				workRequired,
-				workDone,
-				materialsDelivered: true
-			};
-		});
-		state.buildings = [...(state.buildings ?? []), ...migratedBuildings];
-		state.buildingQueue = [];
-	}
-	// Migrate legacy zoneFilters to zoneInstances
-	if ((!state.zoneInstances || state.zoneInstances.length === 0) && state.zoneFilters) {
-		const instances: import('$lib/game/core/types').ZoneInstance[] = [];
-		const zoneIdMap: Record<string, string> = { ...(state.designationZoneId ?? {}) };
-		for (const [typeKey, filter] of Object.entries(state.zoneFilters)) {
-			const type = typeKey as FilterableZoneType;
-			if (!filter) continue;
-			const tilesOfType = Object.entries(state.designations ?? {}).filter(([, t]) => t === type);
-			if (tilesOfType.length > 0 || filter.allowedCategories.length > 0) {
-				const id = `${type}-migrated`;
-				const label = `${type.charAt(0).toUpperCase()}${type.slice(1)} 1`;
-				instances.push({ id, type, label, filter });
-				for (const [key] of tilesOfType) {
-					zoneIdMap[key] = id;
-				}
-			}
-		}
-		if (instances.length > 0) {
-			state = { ...state, zoneInstances: instances, designationZoneId: zoneIdMap };
-		}
-	}
-	// SURVIVAL-HEALTH migration: backfill new pawn health fields for old saves
-	if (!state.deadPawns) state.deadPawns = [];
-	state.pawns = state.pawns.map((p) => {
-		const needsInit = p.isAlive === undefined || !p.limbs || p.bloodVolume === undefined;
-		if (!needsInit) return p;
-		return {
-			...p,
-			isAlive: p.isAlive ?? true,
-			bloodVolume: p.bloodVolume ?? 100,
-			conditions: p.conditions ?? [],
-			limbs: p.limbs ?? [
-				{ id: 'head', health: 100, isMissing: false, bleedRate: 0 },
-				{ id: 'torso', health: 100, isMissing: false, bleedRate: 0 },
-				{ id: 'left_arm', health: 100, isMissing: false, bleedRate: 0 },
-				{ id: 'right_arm', health: 100, isMissing: false, bleedRate: 0 },
-				{ id: 'left_leg', health: 100, isMissing: false, bleedRate: 0 },
-				{ id: 'right_leg', health: 100, isMissing: false, bleedRate: 0 }
-			]
-		};
-	});
-	// Stockpile zone sync: enforce the invariant stockpile === computeAggregate(zones).
-	// Two migration cases:
-	//   1. Pre-zone save (zones are empty, aggregate has items): seed the general zone from aggregate.
-	//   2. Post-zone save (zones have items, aggregate may be stale/wrong): recompute from zones.
-	{
-		const aggregate = state.stockpile ?? {};
-		const existingZones = state.stockpileZones ?? [];
-		const zoneTotal = computeAggregate(existingZones);
-		const zonesAreEmpty = Object.keys(zoneTotal).length === 0;
-		const aggregateHasItems = Object.keys(aggregate).length > 0;
+  // Phase 4 migration: backfill new fields for old saves
+  if (!state.buildings) {
+    state.buildings = Object.entries(state.buildingCounts ?? {}).flatMap(([type, count]) =>
+      Array.from({ length: count }, (_, i) => ({
+        id: `${type}-legacy-${i}`,
+        type,
+        x: 0,
+        y: 0,
+        status: 'complete' as const,
+        progress: 1
+      }))
+    );
+  }
+  if (!state.stockpile) state.stockpile = {};
+  // Migrate to multi-zone stockpile system
+  if (!state.stockpileZones || state.stockpileZones.length === 0) {
+    const existingTiles = Object.entries(state.designations ?? {})
+      .filter(([, t]) => t === 'stockpile')
+      .map(([key]) => key);
+    state.stockpileZones = [
+      {
+        id: 'zone-general',
+        name: 'Colony Stockpile',
+        tiles: existingTiles,
+        filter: { allowedCategories: [], blockedItems: [] },
+        inventory: { ...(state.stockpile ?? {}) }
+      }
+    ];
+  }
+  if (!state.designations) state.designations = {};
+  if (!state.jobs) state.jobs = [];
+  if (!state.mobs) state.mobs = [];
+  if (!state.tamedAnimals) state.tamedAnimals = [];
+  // Phase 5c: migrate old buildingQueue entries to PlacedBuilding (work-point model)
+  if (state.buildingQueue && state.buildingQueue.length > 0) {
+    const migratedBuildings = state.buildingQueue.map((entry: any, i: number) => {
+      const buildTime = entry.building?.buildTime ?? 10;
+      const workRequired = buildTime * 10;
+      const workDone = Math.round(
+        (1 - Math.max(0, entry.turnsRemaining) / buildTime) * workRequired
+      );
+      return {
+        id: `${entry.building.id}-migrated-${i}-${Date.now()}`,
+        type: entry.building.id,
+        x: 0,
+        y: 0,
+        status: 'under_construction' as const,
+        progress: workDone / workRequired,
+        workRequired,
+        workDone,
+        materialsDelivered: true
+      };
+    });
+    state.buildings = [...(state.buildings ?? []), ...migratedBuildings];
+    state.buildingQueue = [];
+  }
+  // Migrate legacy zoneFilters to zoneInstances
+  if ((!state.zoneInstances || state.zoneInstances.length === 0) && state.zoneFilters) {
+    const instances: import('$lib/game/core/types').ZoneInstance[] = [];
+    const zoneIdMap: Record<string, string> = { ...(state.designationZoneId ?? {}) };
+    for (const [typeKey, filter] of Object.entries(state.zoneFilters)) {
+      const type = typeKey as FilterableZoneType;
+      if (!filter) continue;
+      const tilesOfType = Object.entries(state.designations ?? {}).filter(([, t]) => t === type);
+      if (tilesOfType.length > 0 || filter.allowedCategories.length > 0) {
+        const id = `${type}-migrated`;
+        const label = `${type.charAt(0).toUpperCase()}${type.slice(1)} 1`;
+        instances.push({ id, type, label, filter });
+        for (const [key] of tilesOfType) {
+          zoneIdMap[key] = id;
+        }
+      }
+    }
+    if (instances.length > 0) {
+      state = { ...state, zoneInstances: instances, designationZoneId: zoneIdMap };
+    }
+  }
+  // SURVIVAL-HEALTH migration: backfill new pawn health fields for old saves
+  if (!state.deadPawns) state.deadPawns = [];
+  state.pawns = state.pawns.map((p) => {
+    const needsInit = p.isAlive === undefined || !p.limbs || p.bloodVolume === undefined;
+    if (!needsInit) return p;
+    return {
+      ...p,
+      isAlive: p.isAlive ?? true,
+      bloodVolume: p.bloodVolume ?? 100,
+      conditions: p.conditions ?? [],
+      limbs: p.limbs ?? [
+        { id: 'head', health: 100, isMissing: false, bleedRate: 0 },
+        { id: 'torso', health: 100, isMissing: false, bleedRate: 0 },
+        { id: 'left_arm', health: 100, isMissing: false, bleedRate: 0 },
+        { id: 'right_arm', health: 100, isMissing: false, bleedRate: 0 },
+        { id: 'left_leg', health: 100, isMissing: false, bleedRate: 0 },
+        { id: 'right_leg', health: 100, isMissing: false, bleedRate: 0 }
+      ]
+    };
+  });
+  // Stockpile zone sync: enforce the invariant stockpile === computeAggregate(zones).
+  // Two migration cases:
+  //   1. Pre-zone save (zones are empty, aggregate has items): seed the general zone from aggregate.
+  //   2. Post-zone save (zones have items, aggregate may be stale/wrong): recompute from zones.
+  {
+    const aggregate = state.stockpile ?? {};
+    const existingZones = state.stockpileZones ?? [];
+    const zoneTotal = computeAggregate(existingZones);
+    const zonesAreEmpty = Object.keys(zoneTotal).length === 0;
+    const aggregateHasItems = Object.keys(aggregate).length > 0;
 
-		if (zonesAreEmpty && aggregateHasItems) {
-			// Case 1: old save — migrate aggregate into the general zone.
-			const zones = existingZones.map((z) =>
-				z.id === GENERAL_ZONE_ID
-					? { ...z, inventory: { ...aggregate } }
-					: { ...z, inventory: {} }
-			);
-			if (!zones.some((z) => z.id === GENERAL_ZONE_ID)) {
-				zones.push({
-					id: GENERAL_ZONE_ID,
-					name: 'Colony Stockpile',
-					tiles: [],
-					filter: { allowedCategories: [], blockedItems: [] },
-					inventory: { ...aggregate }
-				});
-			}
-			state = { ...state, stockpileZones: zones, stockpile: computeAggregate(zones) };
-		} else {
-			// Case 2: zones are the truth — recompute aggregate from them.
-			state = { ...state, stockpile: computeAggregate(existingZones) };
-		}
-	}
+    if (zonesAreEmpty && aggregateHasItems) {
+      // Case 1: old save — migrate aggregate into the general zone.
+      const zones = existingZones.map((z) =>
+        z.id === GENERAL_ZONE_ID ? { ...z, inventory: { ...aggregate } } : { ...z, inventory: {} }
+      );
+      if (!zones.some((z) => z.id === GENERAL_ZONE_ID)) {
+        zones.push({
+          id: GENERAL_ZONE_ID,
+          name: 'Colony Stockpile',
+          tiles: [],
+          filter: { allowedCategories: [], blockedItems: [] },
+          inventory: { ...aggregate }
+        });
+      }
+      state = { ...state, stockpileZones: zones, stockpile: computeAggregate(zones) };
+    } else {
+      // Case 2: zones are the truth — recompute aggregate from them.
+      state = { ...state, stockpile: computeAggregate(existingZones) };
+    }
+  }
 
-	// One-time migration: absorb any unstored dropped items that are physically sitting on
-	// stockpile tiles but were never credited (saves predating the trigger-based absorption).
-	{
-		const unabsorbed = (state.droppedItems ?? []).filter((d) => {
-			if (d.stored) return false;
-			return (state.designations ?? {})[`${d.x},${d.y}`] === 'stockpile';
-		});
-		for (const drop of unabsorbed) {
-			state = absorbDropIfOnStockpileTile(state, drop.id);
-		}
-	}
+  // One-time migration: absorb any unstored dropped items that are physically sitting on
+  // stockpile tiles but were never credited (saves predating the trigger-based absorption).
+  {
+    const unabsorbed = (state.droppedItems ?? []).filter((d) => {
+      if (d.stored) return false;
+      return (state.designations ?? {})[`${d.x},${d.y}`] === 'stockpile';
+    });
+    for (const drop of unabsorbed) {
+      state = absorbDropIfOnStockpileTile(state, drop.id);
+    }
+  }
 
-	return state;
+  return state;
 }
 
 // ===== PAWN SPAWN HELPERS =====
 function findNearestWalkable(
-	worldMap: WorldTile[][],
-	cx: number,
-	cy: number,
-	occupied: Set<string>
+  worldMap: WorldTile[][],
+  cx: number,
+  cy: number,
+  occupied: Set<string>
 ): { x: number; y: number } | null {
-	const mapH = worldMap.length;
-	const mapW = worldMap[0]?.length ?? 0;
-	const maxR = Math.max(mapW, mapH);
-	for (let r = 0; r <= maxR; r++) {
-		for (let dy = -r; dy <= r; dy++) {
-			for (let dx = -r; dx <= r; dx++) {
-				if (Math.abs(dx) !== r && Math.abs(dy) !== r) continue; // border only
-				const x = cx + dx;
-				const y = cy + dy;
-				if (x < 0 || y < 0 || x >= mapW || y >= mapH) continue;
-				const tile = worldMap[y]?.[x];
-				if (!tile?.walkable) continue;
-				const key = `${x},${y}`;
-				if (occupied.has(key)) continue;
-				return { x, y };
-			}
-		}
-	}
-	return null;
+  const mapH = worldMap.length;
+  const mapW = worldMap[0]?.length ?? 0;
+  const maxR = Math.max(mapW, mapH);
+  for (let r = 0; r <= maxR; r++) {
+    for (let dy = -r; dy <= r; dy++) {
+      for (let dx = -r; dx <= r; dx++) {
+        if (Math.abs(dx) !== r && Math.abs(dy) !== r) continue; // border only
+        const x = cx + dx;
+        const y = cy + dy;
+        if (x < 0 || y < 0 || x >= mapW || y >= mapH) continue;
+        const tile = worldMap[y]?.[x];
+        if (!tile?.walkable) continue;
+        const key = `${x},${y}`;
+        if (occupied.has(key)) continue;
+        return { x, y };
+      }
+    }
+  }
+  return null;
 }
 
 function spawnPawnsOnMap(pawns: Pawn[], worldMap: WorldTile[][]): Pawn[] {
-	const mapW = worldMap[0]?.length ?? 120;
-	const mapH = worldMap.length;
-	const cx = Math.floor(mapW / 2);
-	const cy = Math.floor(mapH / 2);
-	const occupied = new Set<string>();
-	return pawns.map((p) => {
-		if (p.position) {
-			occupied.add(`${p.position.x},${p.position.y}`);
-			return p;
-		}
-		const pos = findNearestWalkable(worldMap, cx, cy, occupied) ?? { x: cx, y: cy };
-		occupied.add(`${pos.x},${pos.y}`);
-		return { ...p, position: pos, path: [], pathIndex: 0, isMoving: false, hasReachedDestination: false };
-	});
+  const mapW = worldMap[0]?.length ?? 120;
+  const mapH = worldMap.length;
+  const cx = Math.floor(mapW / 2);
+  const cy = Math.floor(mapH / 2);
+  const occupied = new Set<string>();
+  return pawns.map((p) => {
+    if (p.position) {
+      occupied.add(`${p.position.x},${p.position.y}`);
+      return p;
+    }
+    const pos = findNearestWalkable(worldMap, cx, cy, occupied) ?? { x: cx, y: cy };
+    occupied.add(`${pos.x},${pos.y}`);
+    return {
+      ...p,
+      position: pos,
+      path: [],
+      pathIndex: 0,
+      isMoving: false,
+      hasReachedDestination: false
+    };
+  });
 }
 
 function updatePawnStats(state: GameState): GameState {
-	const newPawnStats: Record<string, Record<string, { value: number; sources: string[] }>> = {};
+  const newPawnStats: Record<string, Record<string, { value: number; sources: string[] }>> = {};
 
-	state.pawns.forEach((pawn) => {
-		newPawnStats[pawn.id] = calculatePawnStats(pawn);
-	});
+  state.pawns.forEach((pawn) => {
+    newPawnStats[pawn.id] = calculatePawnStats(pawn);
+  });
 
-	return {
-		...state,
-		pawnStats: newPawnStats
-	};
+  return {
+    ...state,
+    pawnStats: newPawnStats
+  };
 }
 
 // ===== AUTO-TURN FUNCTIONS =====
@@ -323,13 +333,13 @@ function updatePawnStats(state: GameState): GameState {
 // stepSimulation() once per frame with the elapsed time, and a fixed-timestep
 // accumulator runs as many whole sim steps as that time (× speed) warrants.
 function startAutoTurns() {
-	simRunning = true;
-	simAccumulatorMs = 0;
+  simRunning = true;
+  simAccumulatorMs = 0;
 }
 
 function stopAutoTurns() {
-	simRunning = false;
-	simAccumulatorMs = 0;
+  simRunning = false;
+  simAccumulatorMs = 0;
 }
 
 /**
@@ -340,89 +350,89 @@ function stopAutoTurns() {
  * @param frameDtMs Real milliseconds since the last frame.
  */
 function stepSimulation(frameDtMs: number) {
-	if (!browser || !simRunning) return;
-	if (get(isPaused)) {
-		simAccumulatorMs = 0;
-		return;
-	}
+  if (!browser || !simRunning) return;
+  if (get(isPaused)) {
+    simAccumulatorMs = 0;
+    return;
+  }
 
-	// Clamp the frame delta so returning from a long stall (or a backgrounded
-	// tab where rAF was paused) doesn't try to replay minutes of backlog at once.
-	const dt = Math.min(frameDtMs, 250);
-	simAccumulatorMs += dt * gameSpeedValue;
+  // Clamp the frame delta so returning from a long stall (or a backgrounded
+  // tab where rAF was paused) doesn't try to replay minutes of backlog at once.
+  const dt = Math.min(frameDtMs, 250);
+  simAccumulatorMs += dt * gameSpeedValue;
 
-	let steps = 0;
-	while (simAccumulatorMs >= TICK_DURATION_MS && steps < MAX_STEPS_PER_FRAME) {
-		const result = gameEngine.processGameTurn();
-		if (!result.success) {
-			console.error('[AutoTurn] GameEngine tick processing failed:', result.errors);
-			simAccumulatorMs = 0;
-			return;
-		}
-		simAccumulatorMs -= TICK_DURATION_MS;
-		steps++;
-	}
+  let steps = 0;
+  while (simAccumulatorMs >= TICK_DURATION_MS && steps < MAX_STEPS_PER_FRAME) {
+    const result = gameEngine.processGameTurn();
+    if (!result.success) {
+      console.error('[AutoTurn] GameEngine tick processing failed:', result.errors);
+      simAccumulatorMs = 0;
+      return;
+    }
+    simAccumulatorMs -= TICK_DURATION_MS;
+    steps++;
+  }
 
-	// Couldn't keep up with the requested speed this frame — drop the backlog so
-	// it doesn't accumulate into an ever-growing catch-up debt.
-	if (steps >= MAX_STEPS_PER_FRAME) simAccumulatorMs = 0;
+  // Couldn't keep up with the requested speed this frame — drop the backlog so
+  // it doesn't accumulate into an ever-growing catch-up debt.
+  if (steps >= MAX_STEPS_PER_FRAME) simAccumulatorMs = 0;
 }
 
 function pauseGame() {
-	isPaused.set(true);
+  isPaused.set(true);
 }
 
 function unpauseGame() {
-	isPaused.set(false);
+  isPaused.set(false);
 }
 
 function togglePause() {
-	isPaused.update((paused) => !paused);
+  isPaused.update((paused) => !paused);
 }
 
 // Speed is applied live by stepSimulation via gameSpeedValue (kept in sync by the
 // gameSpeed store subscription below), so changing speed needs no loop restart.
 function setGameSpeed(speed: number) {
-	gameSpeed.set(speed);
-}// ===== WORLD REGEN =====
+  gameSpeed.set(speed);
+} // ===== WORLD REGEN =====
 function regenWorld(seed?: number, dev = false, itemQty = 500) {
-	const s = (seed !== undefined ? seed : Date.now()) >>> 0 || 1;
-	const newWorld = generateWorld(240, 160, s);
-	resourceGeneratorService.generateResources(newWorld, s);
-	// Patch the engine's internal state FIRST so the next auto-turn
-	// doesn't overwrite the store back to the old worldMap.
-	gameEngine.patchWorldMap(newWorld);
-	if (dev) {
-		updateWithSave((state) =>
-			entityService.seedInitialEntities(
-				applyDevWorld({ ...state, worldMap: newWorld, mobs: [] }, itemQty)
-			)
-		);
-	} else {
-		updateWithSave((state) =>
-			entityService.seedInitialEntities({ ...state, worldMap: newWorld, mobs: [] })
-		);
-	}
-	if (browser) localStorage.setItem(WORLD_VERSION_KEY, String(WORLD_VERSION));
+  const s = (seed !== undefined ? seed : Date.now()) >>> 0 || 1;
+  const newWorld = generateWorld(240, 160, s);
+  resourceGeneratorService.generateResources(newWorld, s);
+  // Patch the engine's internal state FIRST so the next auto-turn
+  // doesn't overwrite the store back to the old worldMap.
+  gameEngine.patchWorldMap(newWorld);
+  if (dev) {
+    updateWithSave((state) =>
+      entityService.seedInitialEntities(
+        applyDevWorld({ ...state, worldMap: newWorld, mobs: [] }, itemQty)
+      )
+    );
+  } else {
+    updateWithSave((state) =>
+      entityService.seedInitialEntities({ ...state, worldMap: newWorld, mobs: [] })
+    );
+  }
+  if (browser) localStorage.setItem(WORLD_VERSION_KEY, String(WORLD_VERSION));
 }
 
 // ===== ITEM MANAGEMENT =====
 function consumeGlobalItem(itemId: string, quantity: number = 1) {
-	updateWithSave((state) => {
-		const current = (state.stockpile ?? {})[itemId] ?? 0;
-		if (current < quantity) return state;
-		return consumeFromStockpiles(state, { [itemId]: quantity });
-	});
+  updateWithSave((state) => {
+    const current = (state.stockpile ?? {})[itemId] ?? 0;
+    if (current < quantity) return state;
+    return consumeFromStockpiles(state, { [itemId]: quantity });
+  });
 }
 
 function addItem(itemId: string, amount: number) {
-	updateWithSave((state) => addToStockpileZone(state, null, { [itemId]: amount }));
+  updateWithSave((state) => addToStockpileZone(state, null, { [itemId]: amount }));
 }
 
 function resetGame() {
-	deleteSave().catch(console.error);
-	set(initialGameState);
-	console.info('[GameState] Game reset to initial state.');
+  deleteSave().catch(console.error);
+  set(initialGameState);
+  console.info('[GameState] Game reset to initial state.');
 }
 
 /**
@@ -433,19 +443,19 @@ function resetGame() {
  * Then removes every fantasia4x-* key so nothing stale survives.
  */
 function wipeAndReload() {
-	// 1. Kill timers — no more saves can fire after this point.
-	stopAutoTurns();
+  // 1. Kill timers — no more saves can fire after this point.
+  stopAutoTurns();
 
-	if (browser) {
-		// 2. Hide the game immediately so the old map doesn't flash while we
-		//    delete the save.  The loading screen will show until reload completes.
-		storeReady.set(false);
-		// 3. Delete the IndexedDB save (also clears any lingering localStorage keys).
-		deleteSave().finally(() => {
-			// 4. Reload — no need to mutate the store here since we're reloading.
-			location.reload();
-		});
-	}
+  if (browser) {
+    // 2. Hide the game immediately so the old map doesn't flash while we
+    //    delete the save.  The loading screen will show until reload completes.
+    storeReady.set(false);
+    // 3. Delete the IndexedDB save (also clears any lingering localStorage keys).
+    deleteSave().finally(() => {
+      // 4. Reload — no need to mutate the store here since we're reloading.
+      location.reload();
+    });
+  }
 }
 
 // ===== STORE READY FLAG =====
@@ -469,31 +479,31 @@ locationService.initializeAllLocations();
 // edits made through `set`/`update`/`updateWithSave` notify subscribers
 // immediately, so user actions stay snappy.
 function createGameStore(initial: GameState) {
-	let value = initial;
-	const subscribers = new Set<(v: GameState) => void>();
-	return {
-		subscribe(run: (v: GameState) => void) {
-			subscribers.add(run);
-			run(value);
-			return () => subscribers.delete(run);
-		},
-		set(v: GameState) {
-			value = v;
-			subscribers.forEach((run) => run(value));
-		},
-		update(updater: (v: GameState) => GameState) {
-			value = updater(value);
-			subscribers.forEach((run) => run(value));
-		},
-		/** Update the held value WITHOUT notifying subscribers (engine hot path). */
-		setSilent(v: GameState) {
-			value = v;
-		},
-		/** Flush the current value to all subscribers. */
-		notify() {
-			subscribers.forEach((run) => run(value));
-		}
-	};
+  let value = initial;
+  const subscribers = new Set<(v: GameState) => void>();
+  return {
+    subscribe(run: (v: GameState) => void) {
+      subscribers.add(run);
+      run(value);
+      return () => subscribers.delete(run);
+    },
+    set(v: GameState) {
+      value = v;
+      subscribers.forEach((run) => run(value));
+    },
+    update(updater: (v: GameState) => GameState) {
+      value = updater(value);
+      subscribers.forEach((run) => run(value));
+    },
+    /** Update the held value WITHOUT notifying subscribers (engine hot path). */
+    setSilent(v: GameState) {
+      value = v;
+    },
+    /** Flush the current value to all subscribers. */
+    notify() {
+      subscribers.forEach((run) => run(value));
+    }
+  };
 }
 
 const gameStore = createGameStore(initialGameState);
@@ -501,11 +511,11 @@ const { subscribe, set, update } = gameStore;
 
 // Create update function — schedules a debounced IndexedDB save on every mutation.
 const updateWithSave = (updater: (state: GameState) => GameState) => {
-	update((state) => {
-		const newState = updater(state);
-		scheduleSave(newState);
-		return newState;
-	});
+  update((state) => {
+    const newState = updater(state);
+    scheduleSave(newState);
+    return newState;
+  });
 };
 
 // Engine tick push: refresh the held value every tick (so `get()` stays current
@@ -513,9 +523,9 @@ const updateWithSave = (updater: (state: GameState) => GameState) => {
 // subscribers when `flush` is true. Saves are still scheduled (debounced) each
 // tick exactly as before.
 const pushFromEngine = (state: GameState, flush: boolean) => {
-	gameStore.setSilent(state);
-	scheduleSave(state);
-	if (flush) gameStore.notify();
+  gameStore.setSilent(state);
+  scheduleSave(state);
+  if (flush) gameStore.notify();
 };
 
 // ===== INITIALIZE GAMEENGINE =====
@@ -526,113 +536,119 @@ console.log('[GameState] GameEngine initialized with GameStateManager');
 // ===== ASYNC SAVE LOAD + MIGRATIONS =====
 /** Resolves when the persisted save (if any) has been loaded and applied. */
 export const savedStateReady: Promise<void> = (async () => {
-	if (!browser) return;
+  if (!browser) return;
 
-	const savedState = await loadSave();
-	let baseState = savedState ? applyMigrations(savedState) : initialGameState;
+  const savedState = await loadSave();
+  let baseState = savedState ? applyMigrations(savedState) : initialGameState;
 
-	// World map migrations (same logic as before, now runs after async load)
-	if (!baseState.worldMap || baseState.worldMap.length === 0 || !baseState.worldMap[0]?.[0]?.terrainType) {
-		const migrateSeed = Date.now();
-		const migratedWorld = generateWorld(240, 160, migrateSeed);
-		resourceGeneratorService.generateResources(migratedWorld, migrateSeed);
-		baseState = { ...baseState, worldMap: migratedWorld };
-		localStorage.setItem(WORLD_VERSION_KEY, String(WORLD_VERSION));
-	} else if (localStorage.getItem(WORLD_VERSION_KEY) !== String(WORLD_VERSION)) {
-		const migrateSeed = Date.now();
-		const migratedWorld = generateWorld(240, 160, migrateSeed);
-		resourceGeneratorService.generateResources(migratedWorld, migrateSeed);
-		baseState = { ...baseState, worldMap: migratedWorld };
-		localStorage.setItem(WORLD_VERSION_KEY, String(WORLD_VERSION));
-	} else if (!baseState.worldMap[0]?.[1]?.discovered) {
-		baseState = {
-			...baseState,
-			worldMap: baseState.worldMap.map(row =>
-				row.map(tile => (tile.discovered ? tile : { ...tile, discovered: true }))
-			)
-		};
-	}
+  // World map migrations (same logic as before, now runs after async load)
+  if (
+    !baseState.worldMap ||
+    baseState.worldMap.length === 0 ||
+    !baseState.worldMap[0]?.[0]?.terrainType
+  ) {
+    const migrateSeed = Date.now();
+    const migratedWorld = generateWorld(240, 160, migrateSeed);
+    resourceGeneratorService.generateResources(migratedWorld, migrateSeed);
+    baseState = { ...baseState, worldMap: migratedWorld };
+    localStorage.setItem(WORLD_VERSION_KEY, String(WORLD_VERSION));
+  } else if (localStorage.getItem(WORLD_VERSION_KEY) !== String(WORLD_VERSION)) {
+    const migrateSeed = Date.now();
+    const migratedWorld = generateWorld(240, 160, migrateSeed);
+    resourceGeneratorService.generateResources(migratedWorld, migrateSeed);
+    baseState = { ...baseState, worldMap: migratedWorld };
+    localStorage.setItem(WORLD_VERSION_KEY, String(WORLD_VERSION));
+  } else if (!baseState.worldMap[0]?.[1]?.discovered) {
+    baseState = {
+      ...baseState,
+      worldMap: baseState.worldMap.map((row) =>
+        row.map((tile) => (tile.discovered ? tile : { ...tile, discovered: true }))
+      )
+    };
+  }
 
-	// Backfill resources if all tiles are empty (migration from pre-resource-gen saves)
-	if (
-		baseState.worldMap.length > 0 &&
-		baseState.worldMap.every(row => row.every(tile => Object.keys(tile.resources ?? {}).length === 0))
-	) {
-		resourceGeneratorService.generateResources(baseState.worldMap, Date.now());
-	}
+  // Backfill resources if all tiles are empty (migration from pre-resource-gen saves)
+  if (
+    baseState.worldMap.length > 0 &&
+    baseState.worldMap.every((row) =>
+      row.every((tile) => Object.keys(tile.resources ?? {}).length === 0)
+    )
+  ) {
+    resourceGeneratorService.generateResources(baseState.worldMap, Date.now());
+  }
 
-	// Pawn generation / backfill
-	if (!baseState.pawns || baseState.pawns.length === 0) {
-		baseState = { ...baseState, pawns: generatePawns(baseState.race, 5) };
-	} else if (baseState.pawns.length < 5) {
-		const extra = generatePawns(baseState.race, 5 - baseState.pawns.length).map((p, i) => ({
-			...p,
-			id: `pawn-extra-${i}-${Date.now()}`
-		}));
-		baseState = { ...baseState, pawns: [...baseState.pawns, ...extra] };
-	}
+  // Pawn generation / backfill
+  if (!baseState.pawns || baseState.pawns.length === 0) {
+    baseState = { ...baseState, pawns: generatePawns(baseState.race, 5) };
+  } else if (baseState.pawns.length < 5) {
+    const extra = generatePawns(baseState.race, 5 - baseState.pawns.length).map((p, i) => ({
+      ...p,
+      id: `pawn-extra-${i}-${Date.now()}`
+    }));
+    baseState = { ...baseState, pawns: [...baseState.pawns, ...extra] };
+  }
 
-	// Spawn pawns that have no map position yet
-	if (baseState.pawns.some(p => !p.position)) {
-		baseState = { ...baseState, pawns: spawnPawnsOnMap(baseState.pawns, baseState.worldMap) };
-	}
+  // Spawn pawns that have no map position yet
+  if (baseState.pawns.some((p) => !p.position)) {
+    baseState = { ...baseState, pawns: spawnPawnsOnMap(baseState.pawns, baseState.worldMap) };
+  }
 
-	// Seed an initial mob/animal population so entities are visible on the map
-	// immediately on load (no-op if the save already has live entities).
-	baseState = entityService.seedInitialEntities(baseState);
+  // Seed an initial mob/animal population so entities are visible on the map
+  // immediately on load (no-op if the save already has live entities).
+  baseState = entityService.seedInitialEntities(baseState);
 
-	// Push loaded state into the store and sync GameEngine
-	set(baseState);
-	gameEngine.setGameStateManager(new GameStateManager(baseState));
-	// Signal that the real state is now in the store — unblock rendering.
-	storeReady.set(true);
-})().catch(err => {
-	console.error('[GameState] Failed to load save, starting fresh:', err);
-	// Still unblock rendering so the app doesn't stay stuck on the loading screen.
-	storeReady.set(true);
+  // Push loaded state into the store and sync GameEngine
+  set(baseState);
+  gameEngine.setGameStateManager(new GameStateManager(baseState));
+  // Signal that the real state is now in the store — unblock rendering.
+  storeReady.set(true);
+})().catch((err) => {
+  console.error('[GameState] Failed to load save, starting fresh:', err);
+  // Still unblock rendering so the app doesn't stay stuck on the loading screen.
+  storeReady.set(true);
 });
 
 // Create control stores — seed pause from sessionStorage so HMR doesn't unpause.
-const _pausedSeed = typeof sessionStorage !== 'undefined'
-	? sessionStorage.getItem('fantasia4x-paused') === 'true'
-	: false;
+const _pausedSeed =
+  typeof sessionStorage !== 'undefined'
+    ? sessionStorage.getItem('fantasia4x-paused') === 'true'
+    : false;
 const isPaused = writable(_pausedSeed);
 isPaused.subscribe((v) => {
-	if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('fantasia4x-paused', String(v));
+  if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('fantasia4x-paused', String(v));
 });
 const gameSpeed = writable(1);
 
 // Subscribe to keep track of current speed value
-gameSpeed.subscribe(value => {
-	gameSpeedValue = value;
+gameSpeed.subscribe((value) => {
+  gameSpeedValue = value;
 });
-
 
 // ===== EXPORTS =====
 export const gameState = {
-	subscribe,
-	set,
-	update,
-	updateWithSave,
-	pushFromEngine,
-	isPaused: { subscribe: isPaused.subscribe },
-	gameSpeed: { subscribe: gameSpeed.subscribe },
+  subscribe,
+  set,
+  update,
+  updateWithSave,
+  pushFromEngine,
+  isPaused: { subscribe: isPaused.subscribe },
+  gameSpeed: { subscribe: gameSpeed.subscribe },
 
-	// Auto-turn functions
-	startAutoTurns,
-	stopAutoTurns,
-	stepSimulation,
-	pauseGame,
-	unpauseGame,
-	togglePause,
-	setGameSpeed,
+  // Auto-turn functions
+  startAutoTurns,
+  stopAutoTurns,
+  stepSimulation,
+  pauseGame,
+  unpauseGame,
+  togglePause,
+  setGameSpeed,
 
-	// Game functions
-	addItem,
-	consumeGlobalItem,
-	resetGame,
-	wipeAndReload,
-	regenWorld
+  // Game functions
+  addItem,
+  consumeGlobalItem,
+  resetGame,
+  wipeAndReload,
+  regenWorld
 };
 
 // Export the updateWithSave function directly for GameEngine
@@ -643,9 +659,9 @@ export const gameState = {
 // interval so the old module's timer doesn't keep firing with a stale
 // isPaused reference that can never be updated by the new module.
 if (import.meta.hot) {
-	import.meta.hot.dispose(() => {
-		stopAutoTurns();
-	});
+  import.meta.hot.dispose(() => {
+    stopAutoTurns();
+  });
 }
 
 // Derived stores
@@ -656,25 +672,25 @@ export const pawnStats = derived(gameState, ($gameState) => $gameState.pawnStats
 
 /** Items currently in the colony stockpile, enriched from the items database, sorted by name. */
 export const currentStockpile = derived(gameState, ($gameState) =>
-	Object.entries($gameState.stockpile ?? {})
-		.filter(([, amount]) => amount > 0)
-		.map(([id, amount]) => {
-			const def = itemService.getItemById(id);
-			return { id, name: def?.name ?? id, amount, color: def?.color, emoji: def?.emoji };
-		})
-		.sort((a, b) => a.name.localeCompare(b.name))
+  Object.entries($gameState.stockpile ?? {})
+    .filter(([, amount]) => amount > 0)
+    .map(([id, amount]) => {
+      const def = itemService.getItemById(id);
+      return { id, name: def?.name ?? id, amount, color: def?.color, emoji: def?.emoji };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name))
 );
 
 /** Per-zone inventory view, enriched from the items database. */
 export const currentStockpileZones = derived(gameState, ($gameState) =>
-	($gameState.stockpileZones ?? []).map((zone) => ({
-		...zone,
-		displayInventory: Object.entries(zone.inventory)
-			.filter(([, amount]) => amount > 0)
-			.map(([id, amount]) => {
-				const def = itemService.getItemById(id);
-				return { id, name: def?.name ?? id, amount, color: def?.color, emoji: def?.emoji };
-			})
-			.sort((a, b) => a.name.localeCompare(b.name))
-	}))
+  ($gameState.stockpileZones ?? []).map((zone) => ({
+    ...zone,
+    displayInventory: Object.entries(zone.inventory)
+      .filter(([, amount]) => amount > 0)
+      .map(([id, amount]) => {
+        const def = itemService.getItemById(id);
+        return { id, name: def?.name ?? id, amount, color: def?.color, emoji: def?.emoji };
+      })
+      .sort((a, b) => a.name.localeCompare(b.name))
+  }))
 );

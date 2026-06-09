@@ -134,7 +134,7 @@ Stay in SvelteKit + WebGL2, targeting desktop distribution via Tauri. Celestia's
 - The existing WebGL2 renderer is already tile-grid based, which is exactly the visual model for DF/CoQ style.
 - TypeScript's type system handles complex data modelling (30+ interfaces in `types.ts`) far better than GDScript.
 - Tauri bundles to ~3–5 MB (vs Godot's native export overhead) and web deployment stays zero-friction.
-- For the planned entity count (see ADR-008), TypeScript A* is sufficient.
+- For the planned entity count (see ADR-008), TypeScript A\* is sufficient.
 
 #### Consequences
 
@@ -156,6 +156,7 @@ The goal is "peak production chain complexity" comparable to RimWorld: Hardcore 
 #### Decision
 
 **Survival bootstrapping tier** — the starting colony has nothing. Players must:
+
 1. Designate **foraging/scavenging zones** on-map to gather hand-collected primitives (twigs, plant fiber, flint shards, surface stone) — these require no tools.
 2. Craft **Tier 0 tools** (Flint Knife, Stone Chopper) from those primitives at a Knapping Surface (zero-build-cost ground designation).
 3. Use Tier 0 tools to **fell trees** (woodcutting is tool-gated: requires stone axe or better) and gather larger stone.
@@ -163,6 +164,7 @@ The goal is "peak production chain complexity" comparable to RimWorld: Hardcore 
 5. Use those workshops to craft **Tier 1 tools and processed materials**.
 
 **Enforcement rules (non-negotiable):**
+
 - `WorkCategory.toolsRequired` is enforced at job-claim time in `JobService.getAvailableJobs()`. A pawn without the required tool in inventory cannot claim the job — the job simply stays open.
 - `Item.workshopType` is enforced at craft-queue-addition time in `ItemService`. A crafting order for an item that requires a workshop that doesn't exist (no complete `PlacedBuilding` of that type) cannot be queued.
 - There is no "fallback" to tool-free gathering for gated resources. If no pawn has a stone axe, the forest does not get cut.
@@ -189,7 +191,8 @@ Additionally, the project targets desktop distribution via Tauri, whose backend 
 Pure spatial computation is implemented in Rust, compiled to WASM via `wasm-pack`, and called from TypeScript through service interfaces. The Rust crate lives at `spatial-core/` in the project root.
 
 **Rust handles exclusively:**
-- `PathfinderService` — A* with binary min-heap, octile heuristic, terrain costs, diagonal wall-cut prevention
+
+- `PathfinderService` — A\* with binary min-heap, octile heuristic, terrain costs, diagonal wall-cut prevention
 - `SpatialIndexService` — nearest-entity queries, expanding-ring scan
 - `FogOfWarService` — recursive shadowcasting
 
@@ -207,15 +210,15 @@ Pure spatial computation is implemented in Rust, compiled to WASM via `wasm-pack
 The world grid is mirrored as two flat typed arrays kept in sync whenever `GameState.worldMap` changes:
 
 ```typescript
-const walkable = new Uint8Array(width * height);   // 0 = blocked, 1 = walkable
-const costs    = new Float32Array(width * height);  // movementCost per tile
+const walkable = new Uint8Array(width * height); // 0 = blocked, 1 = walkable
+const costs = new Float32Array(width * height); // movementCost per tile
 ```
 
 `wasm_bindgen` accepts `&[u8]` / `&[f32]` as zero-copy views into the JS heap — no serialisation overhead. Path results are returned as `Vec<u32>` (interleaved x,y pairs) and decoded on the TS side.
 
 #### Architecture constraint
 
-All callsites depend on the TypeScript interface, never on the Rust implementation directly. This keeps the door open for a future HPA* upgrade or a pure-TS fallback for environments where WASM is unavailable (e.g. unit tests).
+All callsites depend on the TypeScript interface, never on the Rust implementation directly. This keeps the door open for a future HPA\* upgrade or a pure-TS fallback for environments where WASM is unavailable (e.g. unit tests).
 
 #### Consequences
 
@@ -237,6 +240,7 @@ The original pawn need system used two flat thresholds: `HUNGER_THRESHOLD = 70` 
 **Replace flat critical thresholds with a proximity-weighted urgency formula** active from `HUNGER_THRESHOLD` (70), checked every turn in `Working` and `MovingToResource` states.
 
 **Core formula** (`shouldInterruptForNeed`):
+
 ```
 urgency     = (need − threshold) / (100 − threshold)   // 0..1 across threshold→100
 urgencyBias = urgency²                                   // quadratic: slow start, steep near 100%
@@ -251,6 +255,7 @@ interrupt   = distToFood ≤ maxDetour  OR  need ≥ 100
 2. **Job-queue lookahead** (`Pawn.jobQueue`): when the pawn picks a job from Idle, it soft-previews the next 4 unclaimed jobs and stores their IDs. The need check computes `minQueueFoodDist` — the minimum distance from any queued job's tile to the nearest campfire. If all upcoming work is far from food, the threshold is lowered by up to 5 pts so the pawn eats sooner rather than collapsing later.
 
 Combined threshold formula (`computeAdjustedNeedThreshold`):
+
 ```
 adjustedThreshold = baseThreshold
     + (laborLevel − 2) × 4          // priority shift

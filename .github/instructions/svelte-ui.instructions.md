@@ -1,6 +1,6 @@
 ---
-description: "Use when writing or modifying Svelte components, screens, or routes. Covers Svelte 5 runes, store subscriptions, UI navigation, and the retro terminal visual style."
-applyTo: ["src/lib/components/**/*.svelte", "src/routes/**/*.svelte"]
+description: 'Use when writing or modifying Svelte components, screens, or routes. Covers Svelte 5 runes, store subscriptions, UI navigation, and the retro terminal visual style.'
+applyTo: ['src/lib/components/**/*.svelte', 'src/routes/**/*.svelte']
 ---
 
 # Svelte UI Conventions
@@ -14,7 +14,9 @@ This project uses Svelte 5 with runes syntax. Do not use the legacy `$:` reactiv
   // ✅ Svelte 5 runes
   let count = $state(0);
   let doubled = $derived(count * 2);
-  $effect(() => { console.log(count); });
+  $effect(() => {
+    console.log(count);
+  });
 
   // ❌ legacy — do not use
   // $: doubled = count * 2;
@@ -42,7 +44,7 @@ Change the active screen via the `uiState` store, not with SvelteKit router navi
 
 ```typescript
 import { uiState } from '$lib/stores/uiState';
-uiState.setScreen('pawn');   // or 'building', 'research', 'work', etc.
+uiState.setScreen('pawn'); // or 'building', 'research', 'work', etc.
 ```
 
 ## Calling Game Logic

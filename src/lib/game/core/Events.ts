@@ -60,15 +60,15 @@ export interface GameEvent {
   title: string;
   description: string;
   category:
-  | 'environmental'
-  | 'discovery'
-  | 'social'
-  | 'disaster'
-  | 'opportunity'
-  | 'wildlife'
-  | 'weather'
-  | 'supernatural'
-  | 'political';
+    | 'environmental'
+    | 'discovery'
+    | 'social'
+    | 'disaster'
+    | 'opportunity'
+    | 'wildlife'
+    | 'weather'
+    | 'supernatural'
+    | 'political';
   severity: 'trivial' | 'minor' | 'moderate' | 'major' | 'critical' | 'catastrophic';
   rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
   weight: number;
@@ -102,14 +102,14 @@ export interface ActivityLogEntry {
   turn: number;
   timestamp: Date;
   type:
-  | 'work'
-  | 'building'
-  | 'crafting'
-  | 'event'
-  | 'pawn_action'
-  | 'research'
-  | 'exploration'
-  | 'system';
+    | 'work'
+    | 'building'
+    | 'crafting'
+    | 'event'
+    | 'pawn_action'
+    | 'research'
+    | 'exploration'
+    | 'system';
   actor?: string; // Pawn ID or 'system'
   action: string;
   target?: string;
@@ -127,7 +127,8 @@ export class EventSystem {
 
   generateEvent(gameState: any): { event: GameEvent; consequences: EventConsequence[] } | null {
     // Reduce frequency for more meaningful events (gap authored in in-game seconds)
-    if (gameState.turn - this.lastEventTurn < ticksFromSeconds(Math.floor(Math.random() * 3) + 2)) return null;
+    if (gameState.turn - this.lastEventTurn < ticksFromSeconds(Math.floor(Math.random() * 3) + 2))
+      return null;
 
     const availableEvents = this.getAvailableEvents(gameState);
     if (availableEvents.length === 0) return null;
@@ -146,7 +147,10 @@ export class EventSystem {
       if (random <= 0) {
         this.lastEventTurn = gameState.turn;
         if (event.triggers.cooldown) {
-          this.eventCooldowns.set(event.id, gameState.turn + ticksFromSeconds(event.triggers.cooldown));
+          this.eventCooldowns.set(
+            event.id,
+            gameState.turn + ticksFromSeconds(event.triggers.cooldown)
+          );
         }
         this.eventHistory.push(event.id);
 
@@ -375,7 +379,6 @@ export class EventSystem {
 }
 
 export const eventSystem = new EventSystem();
-
 
 // Event data loaded from database
 export const EVENT_DATABASE = eventData as unknown as GameEvent[];

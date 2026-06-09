@@ -16,27 +16,27 @@ let enabled = false;
 
 /** Enable/disable hot-path debug logging at runtime. */
 export function setGameDebug(on: boolean): void {
-    enabled = on;
+  enabled = on;
 }
 
 /** Whether hot-path debug logging is currently enabled. */
 export function isGameDebug(): boolean {
-    return enabled;
+  return enabled;
 }
 
 /** Gated `console.log` — silent unless `gameDebug(true)`. */
 export const glog = (...args: unknown[]): void => {
-    if (enabled) console.log(...args);
+  if (enabled) console.log(...args);
 };
 
 /** Gated `console.debug` — silent unless `gameDebug(true)`. */
 export const gdebug = (...args: unknown[]): void => {
-    if (enabled) console.debug(...args);
+  if (enabled) console.debug(...args);
 };
 
 /** Gated `console.warn` — silent unless `gameDebug(true)`. */
 export const gwarn = (...args: unknown[]): void => {
-    if (enabled) console.warn(...args);
+  if (enabled) console.warn(...args);
 };
 
 /**
@@ -50,15 +50,15 @@ export const gwarn = (...args: unknown[]): void => {
  * existing `console.log(...)` call sites need no changes.
  */
 export const gatedConsole = {
-    log: glog,
-    debug: gdebug,
-    info: glog,
-    warn: gwarn,
-    // Real errors are always surfaced.
-    error: (...args: unknown[]): void => console.error(...args)
+  log: glog,
+  debug: gdebug,
+  info: glog,
+  warn: gwarn,
+  // Real errors are always surfaced.
+  error: (...args: unknown[]): void => console.error(...args)
 };
 
 // Expose the toggle on the global object so it can be flipped from the dev console.
 if (typeof globalThis !== 'undefined') {
-    (globalThis as Record<string, unknown>).gameDebug = setGameDebug;
+  (globalThis as Record<string, unknown>).gameDebug = setGameDebug;
 }

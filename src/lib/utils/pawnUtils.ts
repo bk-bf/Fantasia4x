@@ -126,7 +126,7 @@ function getNextAvailableJob(pawn: Pawn, gameState: GameState): Job | null {
       const workKey = getWorkKeyForJob(job);
       const priority =
         workKey in laborSettings
-          ? laborSettings[workKey] ?? 2
+          ? (laborSettings[workKey] ?? 2)
           : workKey in legacyPriorities
             ? legacyPriorities[workKey]
             : 2;

@@ -1,316 +1,322 @@
 [
-    {
-        "id": "harsh_winter_storm",
-        "title": "Harsh Winter Storm",
-        "description": "A severe blizzard batters your settlement for days. The cold seeps through every crack, and food stores dwindle as hunting becomes impossible.",
-        "category": "weather",
-        "severity": "major",
-        "rarity": "uncommon",
-        "weight": 12,
-        "triggers": {
-            "minTurn"        : 8,
-            "populationRange": {"min": 2, "max": 100},
-            "seasonSpecific" : "winter",
-            "cooldown"       : 15
+  {
+    "id": "harsh_winter_storm",
+    "title": "Harsh Winter Storm",
+    "description": "A severe blizzard batters your settlement for days. The cold seeps through every crack, and food stores dwindle as hunting becomes impossible.",
+    "category": "weather",
+    "severity": "major",
+    "rarity": "uncommon",
+    "weight": 12,
+    "triggers": {
+      "minTurn": 8,
+      "populationRange": { "min": 2, "max": 100 },
+      "seasonSpecific": "winter",
+      "cooldown": 15
+    },
+    "consequences": [
+      {
+        "id": "food_shortage",
+        "description": "Food consumption increases significantly due to the cold",
+        "probability": 0.9,
+        "effects": {
+          "resources": { "food": { "min": -25, "max": -40 } }
         },
-        "consequences": [
-            {
-                "id"         : "food_shortage",
-                "description": "Food consumption increases significantly due to the cold",
-                "probability": 0.9,
-                "effects"    : {
-                    "resources": { "food": {"min": -25, "max": -40} }
-                },
-                "modifiers"  : {"populationScaling": true}
-            },
-            {
-                "id"         : "health_decline",
-                "description": "Some people fall ill from the extreme cold",
-                "probability": 0.6,
-                "effects"    : {
-                    "pawnEffects": {
-                        "targetType": "percentage",
-                        "percentage": 0.3,
-                        "effects"   : {
-                            "healthChange": {"min": -15, "max": -25},
-                            "moodChange"  : {"min":  -5, "max": -10}
-                        }
-                    }
-                }
-            },
-            {
-                "id"         : "building_damage",
-                "description": "The storm damages some structures",
-                "probability": 0.4,
-                "effects"    : {
-                    "buildingEffects": {"damageChance": 0.3, "targetBuilding": "random", "targetCount": 2}
-                }
+        "modifiers": { "populationScaling": true }
+      },
+      {
+        "id": "health_decline",
+        "description": "Some people fall ill from the extreme cold",
+        "probability": 0.6,
+        "effects": {
+          "pawnEffects": {
+            "targetType": "percentage",
+            "percentage": 0.3,
+            "effects": {
+              "healthChange": { "min": -15, "max": -25 },
+              "moodChange": { "min": -5, "max": -10 }
             }
-        ],
-        "color": "#2196F3"
-    },
-    {
-        "id": "ancient_library_ruins",
-        "title": "Ancient Library Discovered",
-        "description": "Your explorers stumble upon the ruins of an ancient library. Weathered stone tablets and mysterious artifacts lie scattered among the rubble, whispering secrets of forgotten civilizations.",
-        "category": "discovery",
-        "severity": "moderate",
-        "rarity": "rare",
-        "weight": 6,
-        "triggers": { "minTurn": 20, "populationRange": {"min": 4, "max": 100}, "cooldown": 50 },
-        "consequences": [
-            {
-                "id"         : "knowledge_cache",
-                "description": "Scholars decipher valuable knowledge from the ruins",
-                "probability": 0.8,
-                "effects"    : {
-                    "resources"       : { "knowledge": {"min": 40, "max": 80}                                   },
-                    "discoveryEffects": {                                      "advanceResearch": "random_tech" }
-                }
-            },
-            {
-                "id"         : "ancient_wisdom",
-                "description": "A scholar gains insight into ancient ways",
-                "probability": 0.3,
-                "effects"    : {
-                    "pawnEffects": {
-                        "targetType": "random",
-                        "count"     : 1,
-                        "effects"   : {
-                            "statChanges": { "intelligence": {"min": 1, "max": 2}, "perception": {"min": 1, "max": 2} }
-                        }
-                    }
-                }
-            },
-            {
-                "id"         : "cursed_knowledge",
-                "description": "Some knowledge comes with a terrible price",
-                "probability": 0.1,
-                "effects"    : {
-                    "pawnEffects": {
-                        "targetType": "random",
-                        "count"     : 1,
-                        "effects"   : { "moodChange": {"min": -20, "max": -30}, "addTrait": ["cursed_knowledge"] }
-                    }
-                }
+          }
+        }
+      },
+      {
+        "id": "building_damage",
+        "description": "The storm damages some structures",
+        "probability": 0.4,
+        "effects": {
+          "buildingEffects": { "damageChance": 0.3, "targetBuilding": "random", "targetCount": 2 }
+        }
+      }
+    ],
+    "color": "#2196F3"
+  },
+  {
+    "id": "ancient_library_ruins",
+    "title": "Ancient Library Discovered",
+    "description": "Your explorers stumble upon the ruins of an ancient library. Weathered stone tablets and mysterious artifacts lie scattered among the rubble, whispering secrets of forgotten civilizations.",
+    "category": "discovery",
+    "severity": "moderate",
+    "rarity": "rare",
+    "weight": 6,
+    "triggers": { "minTurn": 20, "populationRange": { "min": 4, "max": 100 }, "cooldown": 50 },
+    "consequences": [
+      {
+        "id": "knowledge_cache",
+        "description": "Scholars decipher valuable knowledge from the ruins",
+        "probability": 0.8,
+        "effects": {
+          "resources": { "knowledge": { "min": 40, "max": 80 } },
+          "discoveryEffects": { "advanceResearch": "random_tech" }
+        }
+      },
+      {
+        "id": "ancient_wisdom",
+        "description": "A scholar gains insight into ancient ways",
+        "probability": 0.3,
+        "effects": {
+          "pawnEffects": {
+            "targetType": "random",
+            "count": 1,
+            "effects": {
+              "statChanges": {
+                "intelligence": { "min": 1, "max": 2 },
+                "perception": { "min": 1, "max": 2 }
+              }
             }
-        ],
-        "color": "#9C27B0"
-    },
-    {
-        "id": "megafauna_migration",
-        "title": "Great Beast Migration",
-        "description": "A herd of massive creatures thunders past your settlement. These ancient beasts could provide enormous amounts of food and materials, but hunting them is extremely dangerous.",
-        "category": "wildlife",
-        "severity": "major",
-        "rarity": "epic",
-        "weight": 3,
-        "triggers": { "minTurn": 30, "populationRange": {"min": 6, "max": 50}, "cooldown": 40 },
-        "consequences": [
-            {
-                "id"         : "successful_hunt",
-                "description": "Skilled hunters manage to bring down one of the great beasts",
-                "probability": 0.4,
-                "effects"    : {
-                    "resources"  : {
-                        "food"   : {"min": 100, "max": 200},
-                        "leather": {"min":  50, "max":  80},
-                        "bone"   : {"min":  30, "max":  50}
-                    },
-                    "pawnEffects": {
-                        "targetType": "random",
-                        "count"     : 2,
-                        "effects"   : {
-                            "skillChanges": { "hunting": {"min": 2, "max": 4}                       },
-                            "moodChange"  : {                                  "min": 10, "max": 20 }
-                        }
-                    }
-                }
-            },
-            {
-                "id"         : "hunting_disaster",
-                "description": "The hunt goes terribly wrong",
-                "probability": 0.3,
-                "effects"    : {
-                    "pawnEffects": {
-                        "targetType": "random",
-                        "count"     : 3,
-                        "effects"   : {
-                            "healthChange": {"min": -30, "max": -50},
-                            "injuryChance": 0.6,
-                            "deathChance" : 0.1
-                        }
-                    }
-                }
-            },
-            {
-                "id"         : "peaceful_observation",
-                "description": "Your people simply observe the majestic creatures",
-                "probability": 0.3,
-                "effects"    : {
-                    "pawnEffects": {
-                        "targetType": "all",
-                        "effects"   : { "moodChange": {"min": 5, "max": 10} }
-                    },
-                    "resources"  : { "knowledge": {"min": 10, "max": 20} }
-                }
+          }
+        }
+      },
+      {
+        "id": "cursed_knowledge",
+        "description": "Some knowledge comes with a terrible price",
+        "probability": 0.1,
+        "effects": {
+          "pawnEffects": {
+            "targetType": "random",
+            "count": 1,
+            "effects": {
+              "moodChange": { "min": -20, "max": -30 },
+              "addTrait": ["cursed_knowledge"]
             }
-        ],
-        "color": "#8BC34A"
-    },
-    {
-        "id": "refugee_caravan",
-        "title": "Refugee Caravan Arrives",
-        "description": "A group of desperate refugees arrives at your gates, fleeing from some distant catastrophe. They carry little but stories of horror and loss, seeking sanctuary in your growing settlement.",
-        "category": "social",
-        "severity": "moderate",
-        "rarity": "common",
-        "weight": 15,
-        "triggers": { "minTurn": 12, "populationRange": {"min": 4, "max": 30}, "cooldown": 8 },
-        "consequences": [
-            {
-                "id"         : "population_boost",
-                "description": "Some refugees decide to join your settlement",
-                "probability": 0.7,
-                "effects"    : {
-                    "resources": { "food": {"min": -20, "max": -35} }
-                }
-            },
-            {
-                "id"         : "disease_outbreak",
-                "description": "The refugees bring disease with them",
-                "probability": 0.2,
-                "effects"    : {
-                    "pawnEffects": {
-                        "targetType": "percentage",
-                        "percentage": 0.4,
-                        "effects"   : {
-                            "healthChange": {"min": -20, "max": -35},
-                            "moodChange"  : {"min": -10, "max": -15}
-                        }
-                    }
-                }
-            },
-            {
-                "id"         : "valuable_information",
-                "description": "Refugees share knowledge of distant lands",
-                "probability": 0.5,
-                "effects"    : {
-                    "resources"       : { "knowledge": {"min": 15, "max": 30}                                    },
-                    "discoveryEffects": {                                      "newLocation": "refugee_homeland" }
-                }
+          }
+        }
+      }
+    ],
+    "color": "#9C27B0"
+  },
+  {
+    "id": "megafauna_migration",
+    "title": "Great Beast Migration",
+    "description": "A herd of massive creatures thunders past your settlement. These ancient beasts could provide enormous amounts of food and materials, but hunting them is extremely dangerous.",
+    "category": "wildlife",
+    "severity": "major",
+    "rarity": "epic",
+    "weight": 3,
+    "triggers": { "minTurn": 30, "populationRange": { "min": 6, "max": 50 }, "cooldown": 40 },
+    "consequences": [
+      {
+        "id": "successful_hunt",
+        "description": "Skilled hunters manage to bring down one of the great beasts",
+        "probability": 0.4,
+        "effects": {
+          "resources": {
+            "food": { "min": 100, "max": 200 },
+            "leather": { "min": 50, "max": 80 },
+            "bone": { "min": 30, "max": 50 }
+          },
+          "pawnEffects": {
+            "targetType": "random",
+            "count": 2,
+            "effects": {
+              "skillChanges": { "hunting": { "min": 2, "max": 4 } },
+              "moodChange": { "min": 10, "max": 20 }
             }
-        ],
-        "color": "#4CAF50"
-    },
-    {
-        "id": "earthquake",
-        "title": "Devastating Earthquake",
-        "description": "The ground shakes violently as a powerful earthquake rocks your settlement. Buildings creak and groan, people scream in terror, and the very earth seems to rebel against your presence.",
-        "category": "disaster",
-        "severity": "critical",
-        "rarity": "rare",
-        "weight": 4,
-        "triggers": { "minTurn": 25, "populationRange": {"min": 8, "max": 100}, "cooldown": 60 },
-        "consequences": [
-            {
-                "id"         : "structural_collapse",
-                "description": "Multiple buildings suffer severe damage or collapse entirely",
-                "probability": 0.9,
-                "effects"    : {
-                    "buildingEffects": {"destroyChance": 0.4, "targetBuilding": "random", "targetCount": 4}
-                }
-            },
-            {
-                "id"         : "casualties",
-                "description": "People are injured or killed in the collapse",
-                "probability": 0.7,
-                "effects"    : {
-                    "pawnEffects": {
-                        "targetType": "percentage",
-                        "percentage": 0.6,
-                        "effects"   : {
-                            "healthChange": {"min": -40, "max": -70},
-                            "injuryChance": 0.8,
-                            "deathChance" : 0.15
-                        }
-                    }
-                }
-            },
-            {
-                "id"         : "resource_loss",
-                "description": "Stored resources are buried or destroyed",
-                "probability": 0.8,
-                "effects"    : {
-                    "resources": {
-                        "food" : {"min": -50, "max": -80},
-                        "wood" : {"min": -30, "max": -60},
-                        "stone": {"min": -20, "max": -40}
-                    }
-                }
-            },
-            {
-                "id"         : "underground_discovery",
-                "description": "The earthquake reveals hidden underground chambers",
-                "probability": 0.15,
-                "effects"    : {
-                    "resources"       : { "metal": {"min": 20, "max": 50}, "knowledge": {"min": 30, "max": 60} },
-                    "discoveryEffects": {"newLocation": "underground_caves"}
-                }
+          }
+        }
+      },
+      {
+        "id": "hunting_disaster",
+        "description": "The hunt goes terribly wrong",
+        "probability": 0.3,
+        "effects": {
+          "pawnEffects": {
+            "targetType": "random",
+            "count": 3,
+            "effects": {
+              "healthChange": { "min": -30, "max": -50 },
+              "injuryChance": 0.6,
+              "deathChance": 0.1
             }
-        ],
-        "color": "#F44336"
-    },
-    {
-        "id": "merchant_guild_arrival",
-        "title": "Merchant Guild Caravan",
-        "description": "A well-organized merchant caravan from the Guild arrives with exotic goods and hungry purses. Their leader, a shrewd trader, eyes your settlement's potential.",
-        "category": "opportunity",
-        "severity": "minor",
-        "rarity": "common",
-        "weight": 10,
-        "triggers": { "minTurn": 15, "populationRange": {"min": 5, "max": 100}, "cooldown": 12 },
-        "consequences": [
-            {
-                "id"         : "trading_opportunity",
-                "description": "A valuable trading opportunity presents itself",
-                "probability": 1,
-                "effects"    : {
-                    "tradingPlaceholder": {
-                        "traderType"   : "merchant",
-                        "goodsOffered" : ["exotic_spices", "fine_cloth", "quality_tools", "rare_metals"],
-                        "goodsWanted"  : ["food", "leather", "wood", "crafted_goods"],
-                        "priceModifier": 1.2
-                    }
-                }
+          }
+        }
+      },
+      {
+        "id": "peaceful_observation",
+        "description": "Your people simply observe the majestic creatures",
+        "probability": 0.3,
+        "effects": {
+          "pawnEffects": {
+            "targetType": "all",
+            "effects": { "moodChange": { "min": 5, "max": 10 } }
+          },
+          "resources": { "knowledge": { "min": 10, "max": 20 } }
+        }
+      }
+    ],
+    "color": "#8BC34A"
+  },
+  {
+    "id": "refugee_caravan",
+    "title": "Refugee Caravan Arrives",
+    "description": "A group of desperate refugees arrives at your gates, fleeing from some distant catastrophe. They carry little but stories of horror and loss, seeking sanctuary in your growing settlement.",
+    "category": "social",
+    "severity": "moderate",
+    "rarity": "common",
+    "weight": 15,
+    "triggers": { "minTurn": 12, "populationRange": { "min": 4, "max": 30 }, "cooldown": 8 },
+    "consequences": [
+      {
+        "id": "population_boost",
+        "description": "Some refugees decide to join your settlement",
+        "probability": 0.7,
+        "effects": {
+          "resources": { "food": { "min": -20, "max": -35 } }
+        }
+      },
+      {
+        "id": "disease_outbreak",
+        "description": "The refugees bring disease with them",
+        "probability": 0.2,
+        "effects": {
+          "pawnEffects": {
+            "targetType": "percentage",
+            "percentage": 0.4,
+            "effects": {
+              "healthChange": { "min": -20, "max": -35 },
+              "moodChange": { "min": -10, "max": -15 }
             }
-        ],
-        "color": "#FFC107"
-    },
-    {
-        "id": "bandit_raid",
-        "title": "Bandit Raid",
-        "description": "A group of desperate bandits has spotted your settlement and decided it looks like easy pickings. They approach under cover of darkness, weapons ready.",
-        "category": "disaster",
-        "severity": "major",
-        "rarity": "uncommon",
-        "weight": 8,
-        "triggers": { "minTurn": 18, "populationRange": {"min": 6, "max": 100}, "cooldown": 20 },
-        "consequences": [
-            {
-                "id"         : "bandit_combat",
-                "description": "Your settlement is attacked by bandits",
-                "probability": 1,
-                "effects"    : {
-                    "combatPlaceholder": {
-                        "enemyType"    : "bandits",
-                        "threatLevel"  : "moderate",
-                        "enemyCount"   : {"min": 4, "max": 8},
-                        "lootPotential": ["weapons", "food", "metal", "stolen_goods"]
-                    }
-                }
+          }
+        }
+      },
+      {
+        "id": "valuable_information",
+        "description": "Refugees share knowledge of distant lands",
+        "probability": 0.5,
+        "effects": {
+          "resources": { "knowledge": { "min": 15, "max": 30 } },
+          "discoveryEffects": { "newLocation": "refugee_homeland" }
+        }
+      }
+    ],
+    "color": "#4CAF50"
+  },
+  {
+    "id": "earthquake",
+    "title": "Devastating Earthquake",
+    "description": "The ground shakes violently as a powerful earthquake rocks your settlement. Buildings creak and groan, people scream in terror, and the very earth seems to rebel against your presence.",
+    "category": "disaster",
+    "severity": "critical",
+    "rarity": "rare",
+    "weight": 4,
+    "triggers": { "minTurn": 25, "populationRange": { "min": 8, "max": 100 }, "cooldown": 60 },
+    "consequences": [
+      {
+        "id": "structural_collapse",
+        "description": "Multiple buildings suffer severe damage or collapse entirely",
+        "probability": 0.9,
+        "effects": {
+          "buildingEffects": { "destroyChance": 0.4, "targetBuilding": "random", "targetCount": 4 }
+        }
+      },
+      {
+        "id": "casualties",
+        "description": "People are injured or killed in the collapse",
+        "probability": 0.7,
+        "effects": {
+          "pawnEffects": {
+            "targetType": "percentage",
+            "percentage": 0.6,
+            "effects": {
+              "healthChange": { "min": -40, "max": -70 },
+              "injuryChance": 0.8,
+              "deathChance": 0.15
             }
-        ],
-        "color": "#F44336"
-    }
+          }
+        }
+      },
+      {
+        "id": "resource_loss",
+        "description": "Stored resources are buried or destroyed",
+        "probability": 0.8,
+        "effects": {
+          "resources": {
+            "food": { "min": -50, "max": -80 },
+            "wood": { "min": -30, "max": -60 },
+            "stone": { "min": -20, "max": -40 }
+          }
+        }
+      },
+      {
+        "id": "underground_discovery",
+        "description": "The earthquake reveals hidden underground chambers",
+        "probability": 0.15,
+        "effects": {
+          "resources": { "metal": { "min": 20, "max": 50 }, "knowledge": { "min": 30, "max": 60 } },
+          "discoveryEffects": { "newLocation": "underground_caves" }
+        }
+      }
+    ],
+    "color": "#F44336"
+  },
+  {
+    "id": "merchant_guild_arrival",
+    "title": "Merchant Guild Caravan",
+    "description": "A well-organized merchant caravan from the Guild arrives with exotic goods and hungry purses. Their leader, a shrewd trader, eyes your settlement's potential.",
+    "category": "opportunity",
+    "severity": "minor",
+    "rarity": "common",
+    "weight": 10,
+    "triggers": { "minTurn": 15, "populationRange": { "min": 5, "max": 100 }, "cooldown": 12 },
+    "consequences": [
+      {
+        "id": "trading_opportunity",
+        "description": "A valuable trading opportunity presents itself",
+        "probability": 1,
+        "effects": {
+          "tradingPlaceholder": {
+            "traderType": "merchant",
+            "goodsOffered": ["exotic_spices", "fine_cloth", "quality_tools", "rare_metals"],
+            "goodsWanted": ["food", "leather", "wood", "crafted_goods"],
+            "priceModifier": 1.2
+          }
+        }
+      }
+    ],
+    "color": "#FFC107"
+  },
+  {
+    "id": "bandit_raid",
+    "title": "Bandit Raid",
+    "description": "A group of desperate bandits has spotted your settlement and decided it looks like easy pickings. They approach under cover of darkness, weapons ready.",
+    "category": "disaster",
+    "severity": "major",
+    "rarity": "uncommon",
+    "weight": 8,
+    "triggers": { "minTurn": 18, "populationRange": { "min": 6, "max": 100 }, "cooldown": 20 },
+    "consequences": [
+      {
+        "id": "bandit_combat",
+        "description": "Your settlement is attacked by bandits",
+        "probability": 1,
+        "effects": {
+          "combatPlaceholder": {
+            "enemyType": "bandits",
+            "threatLevel": "moderate",
+            "enemyCount": { "min": 4, "max": 8 },
+            "lootPotential": ["weapons", "food", "metal", "stolen_goods"]
+          }
+        }
+      }
+    ],
+    "color": "#F44336"
+  }
 ]

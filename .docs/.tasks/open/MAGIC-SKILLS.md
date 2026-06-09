@@ -29,6 +29,7 @@ access to advanced skill nodes.
 ## Magic Model: Attunement, Not Classes
 
 There are no mage classes. A pawn gains magical ability through:
+
 1. **Attunement items** — staff, focus, grimoire (see EQUIPMENT-EXPANSION)
 2. **Research unlocks** — arcane research tree (Tier 2 lore items gate advanced spells)
 3. **Racial affinity** — stat-gated (high Int or Wis stat ranges; see RESEARCH-ENHANCEMENT Tier 3)
@@ -74,11 +75,11 @@ interface SpellDefinition {
   element: MagicElement;
   apCost: number;
   manaCost: number;
-  requiredItemTag: string;        // 'staff', 'focus', 'grimoire'
-  requiredResearch?: string;      // research id that must be unlocked
+  requiredItemTag: string; // 'staff', 'focus', 'grimoire'
+  requiredResearch?: string; // research id that must be unlocked
   statScaling: Partial<Record<StatName, number>>;
   effect: AbilityEffect;
-  range: number;                  // tiles; 0 = self/adjacent
+  range: number; // tiles; 0 = self/adjacent
 }
 ```
 

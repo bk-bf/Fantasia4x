@@ -46,13 +46,13 @@ npm run format     # Prettier
 
 ## Project Layout Quick Reference
 
-| Path | Contains |
-|------|----------|
-| `src/lib/game/core/types.ts` | All core interfaces (GameState, Pawn, Building, Item…) |
-| `src/lib/game/core/GameState.ts` | GameStateManager — the only way to mutate state |
-| `src/lib/game/services/` | One service per domain (Item, Building, Work, Research, Pawn, Location) |
-| `src/lib/game/systems/GameEngineImpl.ts` | processGameTurn() — main game loop |
-| `src/lib/game/systems/ModifierSystem.ts` | All bonus/penalty calculations |
-| `src/lib/stores/gameState.ts` | Svelte writable store + auto-turn logic |
-| `src/lib/stores/uiState.ts` | Screen navigation state |
-| `src/routes/api/` | Server-side Gemini AI endpoints |
+| Path                                     | Contains                                                                |
+| ---------------------------------------- | ----------------------------------------------------------------------- |
+| `src/lib/game/core/types.ts`             | All core interfaces (GameState, Pawn, Building, Item…)                  |
+| `src/lib/game/core/GameState.ts`         | GameStateManager — the only way to mutate state                         |
+| `src/lib/game/services/`                 | One service per domain (Item, Building, Work, Research, Pawn, Location) |
+| `src/lib/game/systems/GameEngineImpl.ts` | processGameTurn() — main game loop                                      |
+| `src/lib/game/systems/ModifierSystem.ts` | All bonus/penalty calculations                                          |
+| `src/lib/stores/gameState.ts`            | Svelte writable store + auto-turn logic                                 |
+| `src/lib/stores/uiState.ts`              | Screen navigation state                                                 |
+| `src/routes/api/`                        | Server-side Gemini AI endpoints                                         |

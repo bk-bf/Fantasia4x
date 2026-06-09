@@ -23,10 +23,10 @@ production chain — no equipment exists without a crafting prerequisite.
 
 ```typescript
 interface EquipmentSlots {
-  weapon:    string | null;   // grants combat abilities + weapon stats
-  armor:     string | null;   // grants damage reduction + armor abilities
-  tool:      string | null;   // work efficiency bonus (unchanged)
-  accessory: string | null;   // utility: rings, amulets, focus items
+  weapon: string | null; // grants combat abilities + weapon stats
+  armor: string | null; // grants damage reduction + armor abilities
+  tool: string | null; // work efficiency bonus (unchanged)
+  accessory: string | null; // utility: rings, amulets, focus items
 }
 ```
 
@@ -38,17 +38,17 @@ interface Item {
   weaponStats?: {
     damMin: number;
     damMax: number;
-    accuracy: number;         // flat % modifier to hit chance
-    range: number;            // 0 = melee, >0 = ranged (tiles)
-    tags: string[];           // 'sword' | 'axe' | 'bow' | 'dagger' | 'staff' | 'shield'
+    accuracy: number; // flat % modifier to hit chance
+    range: number; // 0 = melee, >0 = ranged (tiles)
+    tags: string[]; // 'sword' | 'axe' | 'bow' | 'dagger' | 'staff' | 'shield'
   };
   armorStats?: {
-    reduction: number;        // 0.0–0.5 flat damage reduction fraction
-    tags: string[];           // 'light' | 'medium' | 'heavy'
+    reduction: number; // 0.0–0.5 flat damage reduction fraction
+    tags: string[]; // 'light' | 'medium' | 'heavy'
   };
-  combatAbilities: string[];  // CombatAbility ids granted while equipped
+  combatAbilities: string[]; // CombatAbility ids granted while equipped
   magicAttunement?: MagicElement; // grants spells from Spells.ts if set
-  durability: number;         // 0–100; efficiency scales with durability
+  durability: number; // 0–100; efficiency scales with durability
 }
 ```
 

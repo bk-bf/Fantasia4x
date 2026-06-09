@@ -10,8 +10,8 @@ This proposal describes a phased migration of Fantasia4x from its current abstra
 
 The migration is incremental: each phase delivers something playable and does not break what came before. Two existing sibling projects dramatically reduce the total work:
 
-- **Exiled** (`src/lib/webgl/`) — A full WebGL2 tile renderer already ported into the project. Provides the *entire* rendering stack (shaders, font atlas with CP437 glyphs, game grid, character renderer). This is the hardest part of going DF-like and is already done.
-- **Celestia** (`/home/kirill/Documents/Projects/Celestia/`) — A Godot 4 Rimworld-like that contains proven design decisions: noise-based terrain generation with tuned parameters, a rich tile data model, A* pathfinding, a pawn state machine, and a work priority system. Nothing ports as-is (GDScript ≠ TypeScript) but the *logic and constants* translate directly.
+- **Exiled** (`src/lib/webgl/`) — A full WebGL2 tile renderer already ported into the project. Provides the _entire_ rendering stack (shaders, font atlas with CP437 glyphs, game grid, character renderer). This is the hardest part of going DF-like and is already done.
+- **Celestia** (`/home/kirill/Documents/Projects/Celestia/`) — A Godot 4 Rimworld-like that contains proven design decisions: noise-based terrain generation with tuned parameters, a rich tile data model, A* pathfinding, a pawn state machine, and a work priority system. Nothing ports as-is (GDScript ≠ TypeScript) but the *logic and constants\* translate directly.
 
 **What stays the same:** pawn stats/traits/equipment/abilities, race generation, the ModifierSystem, research, crafting, ItemService, GameStateManager pattern, the five-layer architecture. The DF migration is additive to the core pawn identity system, not a replacement.
 
@@ -41,12 +41,12 @@ Every file below exists in the project today and is ready to use.
 
 For reference, the main browser alternatives for a Caves of Qud-style colored-glyph grid are:
 
-| Library                   | Rendering    | Roguelike extras                   | Notes                                                                                                                                                                                              |
-| ------------------------- | ------------ | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **rot.js** (`rot-js`)     | Canvas 2D    | ✅ Full (FOV, noise, A*, scheduler) | Most direct Qud analogue — `ROT.Display` supports `"rect"` (tile grid) with per-cell foreground + background color and CP437 font mode. Would replace *both* the renderer *and* PathfinderService. |
-| **WGLT**                  | WebGL        | ❌ Display only                     | Explicit ASCII terminal emulator; 60fps on large maps. Closest feature-match to what Exiled provides — same rendering model, minimal API.                                                          |
-| **Malwoden** (`malwoden`) | Canvas 2D    | ✅ Partial (rot.js-inspired)        | First-class TypeScript API, clean ergonomics. Younger project with a smaller community.                                                                                                            |
-| **Phaser**                | WebGL/Canvas | ❌ General engine                   | Tilemap + spritesheet pipeline; closest to Qud's actual *tile sprite* mode. Very heavy for this use case.                                                                                          |
+| Library                   | Rendering    | Roguelike extras                     | Notes                                                                                                                                                                                              |
+| ------------------------- | ------------ | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **rot.js** (`rot-js`)     | Canvas 2D    | ✅ Full (FOV, noise, A\*, scheduler) | Most direct Qud analogue — `ROT.Display` supports `"rect"` (tile grid) with per-cell foreground + background color and CP437 font mode. Would replace _both_ the renderer _and_ PathfinderService. |
+| **WGLT**                  | WebGL        | ❌ Display only                      | Explicit ASCII terminal emulator; 60fps on large maps. Closest feature-match to what Exiled provides — same rendering model, minimal API.                                                          |
+| **Malwoden** (`malwoden`) | Canvas 2D    | ✅ Partial (rot.js-inspired)         | First-class TypeScript API, clean ergonomics. Younger project with a smaller community.                                                                                                            |
+| **Phaser**                | WebGL/Canvas | ❌ General engine                    | Tilemap + spritesheet pipeline; closest to Qud's actual _tile sprite_ mode. Very heavy for this use case.                                                                                          |
 
 **Decision: keep Exiled.** It is already in the project, ships CP437, runs at WebGL2 performance (equivalent to WGLT), and its `shaders.ts` layer accepts custom GLSL — meaning CRT/scanline postprocessing is addable without replacing anything. The roguelike extras rot.js provides (pathfinding, FOV, noise) are being ported from Celestia where they benefit from sitting inside the service layer alongside `ModifierSystem` and `GameStateManager`.
 
@@ -56,11 +56,12 @@ For reference, the main browser alternatives for a Caves of Qud-style colored-gl
 
 ### Celestia — Port targets (`/home/kirill/Documents/Projects/Celestia/src/`)
 
-GDScript cannot be imported. What we take is the *design logic*: algorithms, constants, state flows, data shapes. All paths are relative to `src/`.
+GDScript cannot be imported. What we take is the _design logic_: algorithms, constants, state flows, data shapes. All paths are relative to `src/`.
 
 #### World generation
 
 **`world/terrain/noise_generator.gd`** → `WorldGenerator.ts`
+
 ```
 TERRAIN_NOISE_FREQUENCY  = 0.005   (macro biome shape)
 DETAIL_NOISE_FREQUENCY   = 0.05    (subterrain variation)
@@ -74,6 +75,7 @@ Seed derivation:    detail_seed = base_seed * 6971
 ```
 
 **Additional noise utilities from `map_gen-refactored` branch** (not in `main`) — also port to `WorldGenerator.ts`:
+
 ```
 getRidgedNoise(x, y):               1.0 - abs(terrainNoise(x, y))
                                     → sharp ridges; use for mountain peak subterrain selection
@@ -101,7 +103,7 @@ Full biome table — `terrain_database.gd` is **identical** in both `main` and `
 | `swamp`    | 0.20 – 0.30    | 0.18 – 0.28      | true     | 2.0           | shallow_water, mud, bog, clay, moss, quicksand, dead_trees (thresholds: -0.8,-0.6,-0.4,-0.2,0.2,0.6,0.8)                   |
 | `plains`   | 0.30 – 0.45    | 0.28 – 0.52      | true     | 1.0           | dirt, grass, bush, deep_grass, tall_grass, wildflowers, scrubland, savanna (thresholds: -0.8,-0.6,-0.4,-0.2,0.4,0.6,0.8)   |
 | `mountain` | 0.60 – 1.00    | 0.70 – 1.00      | false    | 3.0           | rocky, cave, cliff, mineral_deposit (thresholds: -0.3,0.35,0.85) · scatter: crystal_formation, arcane_glade                |
-| `river`    | 0.00 – 0.50 ⚠️  | 0.00 – 0.18      | true     | 2.5           | shallow_water, water, rapids, riverbank (thresholds: -0.6,-0.3,0.0,0.3)                                                    |
+| `river`    | 0.00 – 0.50 ⚠️ | 0.00 – 0.18      | true     | 2.5           | shallow_water, water, rapids, riverbank (thresholds: -0.6,-0.3,0.0,0.3)                                                    |
 
 Subterrain movement costs to preserve: `tree=2.0`, `bush=1.8`, `mud=3.0`, `bog=3.5`, `rocky=2.5`, `water=0.0` (unwalkable), `cliff=0.0` (unwalkable).
 
@@ -110,7 +112,7 @@ Subterrain movement costs to preserve: `tree=2.0`, `bush=1.8`, `mud=3.0`, `bog=3
 **`world/terrain/tile.gd`** → extend `WorldTile` in `types.ts`
 
 Fields: `terrainType: string`, `subType: string`, `density: number`, `moisture: number`, `temperature: number`, `movementCost: number`, `walkable: boolean`, `resources: Record<string, number>`, `territoryOwner: string`.
-Pathfinding fields (needed on tile for A*): `gCost: number`, `hCost: number`, `fCost: number`, `parent: {x,y} | null`.
+Pathfinding fields (needed on tile for A\*): `gCost: number`, `hCost: number`, `fCost: number`, `parent: {x,y} | null`.
 Methods to port: `harvestResource(id, amount)` (clamps to available, removes key at 0), `addResource(id, amount)`, `resetPathfinding()`, `calculateFCost()` (`fCost = gCost + hCost`), `hasTerritory()` (`territoryOwner !== ''`), `setTerritory(ownerId)`.
 
 > `calculateFCost()` and the territory helpers are present in `map_gen-refactored` only — not in `main`.
@@ -122,9 +124,10 @@ wood:  terrain_subtype: ["tree"],                         resource_amount: [3,6]
 stone: terrain_subtype: ["rocky","cliff"],                resource_amount: [5,10], harvest_time: 8.0
 herbs: terrain_subtype: ["wildflowers","moss","deep_grass"], resource_amount: [2,5],  harvest_time: 3.0
 ```
+
 > Celestia source lists `"peak"` in stone's `terrain_subtype`. Removed in the Fantasia4x port because `peak` was eliminated from mountain subterrains (see note above). Stone spawns on `rocky` and `cliff` only.
 > Each resource also carries `yield_amount: [min,max]` (pawn-skill-based output quantity) and `harvest_tool`/`skill_used` metadata. These are present in `resource_database.gd` but not yet consumed by the TS port — deferred until the pawn skill system is implemented.
-Seed derivation per resource: `resourceSeed = baseSeed * 7919 + hashCode(resourceId)`.
+> Seed derivation per resource: `resourceSeed = baseSeed * 7919 + hashCode(resourceId)`.
 
 **`world/generation/resource_gen.gd`** → `ResourceGeneratorService.ts`
 
@@ -137,6 +140,7 @@ Logic: for each resource id, iterate every tile; if `tile.subType` is in `resour
 **`world/generation/pathfinder.gd`** → `PathfinderService.ts`
 
 Key details to port correctly:
+
 - **Distance heuristic**: octile distance — `1.0*(dx+dy) + (1.414 - 2.0)*min(dx,dy)`. Not Manhattan, not Euclidean.
 - **Open set scan**: currently O(n) array scan for lowest f-cost. **Rewrite as a binary min-heap** — the Celestia version is the known performance bottleneck.
 - **Terrain cost is commented out** in Celestia (`# * terrain_cost literally a death sentence for performance`) — the TS port should include it but only as the heuristic weight, not repeated per-neighbor. With a proper priority queue it is not a bottleneck.
@@ -146,6 +150,7 @@ Key details to port correctly:
 **`world/terrain/grid.gd`** → inform `PathfinderService.ts` neighbour logic
 
 8-direction neighbours with diagonal wall-cutting prevention: diagonal is only allowed if at least one of the two orthogonal neighbours is walkable.
+
 ```
 directions: N, E, S, W, NE, SE, SW, NW
 diagonal check: ortho1 = (x+dx, y) ; ortho2 = (x, y+dy)
@@ -164,6 +169,7 @@ currentState: string
 changeState(name): calls exit() on current, enter() on new
 tick(turn): calls states[currentState].update()
 ```
+
 Exact state name strings (these are the keys used across all state files): `"Idle"`, `"Hungry"`, `"Tired"`, `"MovingToNeed"`, `"MovingToResource"`, `"Harvesting"`, `"Eating"`, `"Sleeping"`.
 
 **`pawn/states/idle_state.gd`** — transition trigger: `pawn.currentJob != null && job is HarvestingJob` → `"MovingToResource"`.
@@ -177,9 +183,11 @@ Exact state name strings (these are the keys used across all state files): `"Idl
 **`pawn/states/moving_to_resouce_state.gd`** — adjacency check before pathfinding: `dx <= 1 && dy <= 1 && (dx+dy > 0)`. Picks best adjacent walkable tile by running `pathfinder.find_path()` for each of the 8 adjacent positions and selecting the shortest. If no path → cancel job → `"Idle"`.
 
 **`pawn/states/harvesting_state.gd`** — progress formula:
+
 ```
 progress += (1 / job.timeRequired) * pawn.harvestingSpeed * pawn.getWorkSpeed()
 ```
+
 On completion: `pawn.inventory.addItem(job.type, harvestAmount)` and `mapData.reduceResourceAt(job.targetPosition, amount)`.
 
 **`pawn/states/eating_state.gd`** — `eatingDuration = 2.0`, starts satisfying hunger after 50% progress, `nutritionPerSecond = 10.0` (from `needs_database.gd`), wakes at hunger >= 95. Pauses hunger decay via `needs["hunger"].pause()` on enter, does NOT resume on exit (hunger stays paused until next decay tick — intentional).
@@ -199,6 +207,7 @@ pause() / resume() — stop/start decay during eating/sleeping
 ```
 
 **`pawn/needs/needs_database.gd`** — config values:
+
 ```
 hunger: decay_rate=0.08, nutrition_per_second=10.0, base_nutrition_value=20.0
 rest:   decay_rate=0.05, rest_per_second=8.0,       base_rest_value=30.0
@@ -211,6 +220,7 @@ rest:   decay_rate=0.05, rest_per_second=8.0,       base_rest_value=30.0
 **`pawn/work/worktype_database.gd`** → extend `Work.ts` in `core/`
 
 5 job types and their associated skills:
+
 ```
 harvesting → skills: harvesting_speed, plant_knowledge
 mining     → skills: mining_speed, stone_knowledge
@@ -220,9 +230,11 @@ cooking    → skills: cooking_quality, cooking_speed
 ```
 
 **`pawn/work/workpriority_manager.gd`** → `WorkAssignment.workPriorities` values:
+
 ```
 DISABLED=0, LOW=1, NORMAL=2, HIGH=3, URGENT=4
 ```
+
 Default: all types initialized to `NORMAL`. `_adjust_priorities_based_on_traits(pawnId, traits)` modifies on spawn.
 
 Trait → priority adjustments applied at pawn spawn (from `workpriority_manager.gd`, `basic-ui`/`map_gen-refactored` branch):
@@ -265,6 +277,7 @@ Trend: drifts toward neutral (50) at 0.1/s when no active modifiers
 The pattern: **data file → typed loader → game object**, with zero logic in the data file. The loader validates shape and exports a typed array — identical to Fantasia4x's current `ITEMS_DATABASE`, `AVAILABLE_BUILDINGS` etc., just externalized.
 
 **Recommended migration path for Fantasia4x** (when lists outgrow comfortable inline editing):
+
 - Move `Items.ts`, `Buildings.ts`, `Research.ts`, `Work.ts` content to `src/lib/game/data/*.json`
 - Types stay in `types.ts` — they are the schema contract
 - A thin `dataLoader.ts` per domain imports the JSON and casts to the typed interface
@@ -346,7 +359,7 @@ The pattern: **data file → typed loader → game object**, with zero logic in 
   - [x] Primary noise instance: frequency `0.005`, octaves `5`, lacunarity `2.0`, gain `0.6`. Detail noise instance: frequency `0.05`. Derive `detailSeed = baseSeed * 6971`.
   - [x] Per tile: sample primary noise → clamp to [0,1] as `density`; look up biome by density range; sample detail noise → select subType by `subterrain_thresholds` array.
   - [x] Set `movementCost` and `walkable` from subterrain definition (subterrain overrides biome defaults for `water`/`peak`).
-- [x] Extend `WorldTile` in `types.ts`: add `terrainType`, `subType`, `density`, `moisture`, `movementCost`, `walkable`, `resources: Record<string, number>`, `territoryOwner`, plus A* scratch fields `gCost`, `hCost`, `fCost`, `parent: {x,y} | null`.
+- [x] Extend `WorldTile` in `types.ts`: add `terrainType`, `subType`, `density`, `moisture`, `movementCost`, `walkable`, `resources: Record<string, number>`, `territoryOwner`, plus A\* scratch fields `gCost`, `hCost`, `fCost`, `parent: {x,y} | null`.
 - [x] Create `ResourceGeneratorService.ts` — port `resource_gen.gd`: for each resource in `RESOURCES`, iterate every tile; if `tile.subType` is in `resource.terrainSubtype` and tile has no resource yet, assign random amount in `[min,max]` using per-resource seed `baseSeed * 7919 + hashCode(resourceId)`.
 - [x] Update `GameCanvas.svelte` to render subterrain glyphs and biome colors from `TERRAINS` / `SUBTERRAINS` (via `buildGameGrid()` in `fantasia-world.ts`).
 
@@ -367,6 +380,7 @@ The pattern: **data file → typed loader → game object**, with zero logic in 
 **Decision rationale:** The font-atlas approach generates glyphs from the browser's system font at runtime. This produces non-square, anti-aliased, resolution-dependent glyphs. Loading a handcrafted CP437 bitmap PNG (e.g., IBM CGA 8×8 scaled to 16×16, or a DF community tileset) gives pixel-perfect square tiles identical to authentic roguelike renderers, and enables the CoQ 3-color tint technique.
 
 **3-color shader technique (from Caves of Qud):**
+
 ```
 // Per-pixel logic in fragment shader:
 // sample pixel from sprite atlas
@@ -379,9 +393,11 @@ vec3 tinted = mix(u_fg_color, u_detail_color, luma);
 gl_FragColor = vec4(tinted, sprite.a) * (1.0 - step(sprite.a, 0.01))
              + vec4(u_bg_color, 1.0) * step(sprite.a, 0.01);
 ```
+
 `u_bg_color`, `u_fg_color`, `u_detail_color` are per-cell uniforms pushed with each tile draw call, sourced from `TileData`.
 
 **Sprite sheet format (standard CP437 layout):**
+
 - 256 characters arranged in a 16-column × 16-row grid
 - Each cell is exactly `N×N` pixels (N = 16 recommended for balance of detail vs. tile density)
 - Grayscale PNG with alpha: glyphs are black, background is transparent
@@ -407,7 +423,7 @@ gl_FragColor = vec4(tinted, sprite.a) * (1.0 - step(sprite.a, 0.01))
 
 **Status:** `✅ complete`
 
-**Scope:** Pawns get physical positions and render on the tile grid. A* pathfinding added.
+**Scope:** Pawns get physical positions and render on the tile grid. A\* pathfinding added.
 
 **Goal:** You can see your pawns as `@` glyphs on the map. They can navigate to destinations.
 
@@ -424,12 +440,19 @@ gl_FragColor = vec4(tinted, sprite.a) * (1.0 - step(sprite.a, 0.01))
 - [x] **Define `PathfinderService` TypeScript interface** at `src/lib/game/services/interfaces/PathfinderService.ts`:
   ```typescript
   export interface PathfinderService {
-    findPath(walkable: Uint8Array, costs: Float32Array,
-             width: number, height: number,
-             sx: number, sy: number, ex: number, ey: number): {x:number, y:number}[];
+    findPath(
+      walkable: Uint8Array,
+      costs: Float32Array,
+      width: number,
+      height: number,
+      sx: number,
+      sy: number,
+      ex: number,
+      ey: number
+    ): { x: number; y: number }[];
   }
   ```
-- [x] **Implement A* in Rust** at `spatial-core/src/pathfinder.rs`, exposed via `#[wasm_bindgen]`:
+- [x] **Implement A\* in Rust** at `spatial-core/src/pathfinder.rs`, exposed via `#[wasm_bindgen]`:
   - [x] **Distance heuristic**: octile — `1.0*(dx+dy) + (1.414 - 2.0)*min(dx,dy)`. Not Manhattan.
   - [x] **Open set**: `BinaryHeap` (Rust std) keyed on reverse `fCost` (min-heap via `Reverse<OrderedFloat>`).
   - [x] **Terrain cost**: include `costs[y*width+x]` in `gCost`. Correct with a real priority queue.
@@ -441,11 +464,11 @@ gl_FragColor = vec4(tinted, sprite.a) * (1.0 - step(sprite.a, 0.01))
 - [x] `PawnService` gets `assignPath(pawnId, path)` and `teleportPawn(pawnId, pos)` — both through `GameStateManager.updatePawn()`.
 - [x] Click on map tile → if pawn selected → call `pathfinderService.findPath()` → `PawnService.assignPath()`.
 
-**Sources from Celestia used:** `pathfinder.gd` (A* algorithm — ported to Rust, not TypeScript), `grid.gd` (`get_neighbors()`, diagonal wall-cut logic), `pawn.gd` (`movement_path`, `current_path_index`, `is_moving` fields).
+**Sources from Celestia used:** `pathfinder.gd` (A\* algorithm — ported to Rust, not TypeScript), `grid.gd` (`get_neighbors()`, diagonal wall-cut logic), `pawn.gd` (`movement_path`, `current_path_index`, `is_moving` fields).
 
 **Toolchain added:** Rust stable + `wasm-pack`. See ADR-008 in `.docs/game/DECISIONS.md`.
 
-**Complexity:** Medium-high. The A* logic itself is well-defined; the added cost is the `wasm-pack` build pipeline integration and the typed-array sync layer between `GameState.worldMap` and the Rust grid representation.
+**Complexity:** Medium-high. The A\* logic itself is well-defined; the added cost is the `wasm-pack` build pipeline integration and the typed-array sync layer between `GameState.worldMap` and the Rust grid representation.
 
 ---
 
@@ -474,29 +497,29 @@ gl_FragColor = vec4(tinted, sprite.a) * (1.0 - step(sprite.a, 0.01))
   - **Sleeping** — `sleepingDuration = 5.0` (minimum); `restPerSecond = 8.0`; wakes at `rest >= 95`; resumes rest decay on exit.
 - [x] Add `currentState: string` to `Pawn`. Note: `isWorking`, `isSleeping`, `isEating` boolean flags kept in `PawnState` for backward compat with PawnService (~30 references). State machine is additive.
 
-**4b. Designations** *(no Celestia equivalent — original system)*
+**4b. Designations** _(no Celestia equivalent — original system)_
 
-- [x] Add `designations: Record<string, DesignationType>` to `GameState` — maps `"x,y"` keys to `"harvest" | "construct" | "mine" | "haul" | "clear"`. *(type names from `DesignationManager.gd`, `basic-ui`/`map_gen-refactored` branch)*
+- [x] Add `designations: Record<string, DesignationType>` to `GameState` — maps `"x,y"` keys to `"harvest" | "construct" | "mine" | "haul" | "clear"`. _(type names from `DesignationManager.gd`, `basic-ui`/`map_gen-refactored` branch)_
 - [x] Create `DesignationService.ts`: `designate(x, y, type)`, `clearDesignation(x, y)`, `getOpenDesignations(type?)`.
 - [x] Map clicks in `GameCanvas.svelte` can enter a designation mode; right-click clears.
 
-**4c. Tile-local harvesting** *(sources: `tile.gd`, `resource_database.gd`, `harvesting_state.gd`)*
+**4c. Tile-local harvesting** _(sources: `tile.gd`, `resource_database.gd`, `harvesting_state.gd`)_
 
 - [x] `WorkService.processWork()` changes: instead of adding to global resource totals, calls `worldMap[y][x].harvestResource(id, amount)` (→ `tile.gd::harvestResource()`) and adds to `GameState.stockpile`. `stockpile: Record<string, number>` is a new field on `GameState`.
 - [x] A pawn in `MovingToResource` state pathfinds to the nearest designated tile matching its job's resource type. `harvestTime` comes from `RESOURCES[id].harvestTime` (→ `resource_database.gd`: wood=5.0, stone=8.0, herbs=3.0 turns).
 - [x] `GameStateManager` gets `addToStockpile(id, amount)` and `depleteWorldResource(x, y, id, amount)` methods.
 
-**4d. Placed buildings** *(no Celestia equivalent — original design; construction progress formula mirrors `harvesting_state.gd`)*
+**4d. Placed buildings** _(no Celestia equivalent — original design; construction progress formula mirrors `harvesting_state.gd`)_
 
 - [x] Replace `buildingCounts: Record<string, number>` in `GameState` with `buildings: PlacedBuilding[]`. (`buildingCounts` kept as `@deprecated` field for backward compat and save migration.)
   ```typescript
   interface PlacedBuilding {
     id: string;
-    type: string;          // building definition id
+    type: string; // building definition id
     x: number;
     y: number;
     status: 'planned' | 'under_construction' | 'complete';
-    progress: number;      // 0–1
+    progress: number; // 0–1
   }
   ```
 - [x] `BuildingService` updated: `placeBuilding(type, x, y)` designates a construction site; pawns with `"build"` designation walk there and advance `progress` per turn via `Harvesting`-equivalent state; on `status === 'complete'` the tile's `walkable` is set to `false` for solid structures and building bonuses apply via `ModifierSystem`.
@@ -542,16 +565,17 @@ interface Job {
   type: 'harvest' | 'construct' | 'haul' | 'craft' | 'eat' | 'sleep';
   targetX: number;
   targetY: number;
-  resourceId?: string;    // harvest/haul: which resource
-  buildingId?: string;    // construct: which PlacedBuilding
-  craftQueueId?: string;  // craft: which crafting queue entry
-  workRequired: number;   // total work points to complete (e.g. 5 for herbs, 8 for stone)
-  workDone: number;       // accumulated so far
+  resourceId?: string; // harvest/haul: which resource
+  buildingId?: string; // construct: which PlacedBuilding
+  craftQueueId?: string; // craft: which crafting queue entry
+  workRequired: number; // total work points to complete (e.g. 5 for herbs, 8 for stone)
+  workDone: number; // accumulated so far
   claimedBy: string | null; // pawnId, null = open
 }
 ```
 
 `JobService` responsibilities:
+
 - `generateJobs(gameState)` — scans designations → harvest jobs; `planned` buildings → construct jobs; crafting queue → craft jobs; floor items → haul jobs. Called each turn to keep job list in sync.
 - `claimJob(pawnId, jobId, gameState)` — marks `claimedBy`; called by state machine before pawn starts moving.
 - `advanceJob(jobId, workPoints, gameState)` — `workDone += workPoints`; on `workDone >= workRequired` runs completion handler (add to stockpile, set building complete, etc).
@@ -561,6 +585,7 @@ interface Job {
 `PawnStateMachine.handleIdle()` becomes: `jobService.getAvailableJobs(pawn, state)[0]` → claim → `"MovingToResource"`.
 
 **Work items:**
+
 - [x] Create `src/lib/game/services/JobService.ts` — `JobServiceImpl` singleton with the methods above.
 - [x] Add `jobs: Job[]` to `GameState`; add `GameStateManager` mutation methods `addJob`, `updateJob`, `removeJob`.
 - [x] Migrate `PawnStateMachine.handleIdle()` to use `jobService.getAvailableJobs()`.
@@ -576,6 +601,7 @@ interface Job {
 **What changes:** `WorldGenerator` calls `ResourceGeneratorService` (created in Phase 2 but not wired). Resources on tiles become the source of truth for raw material production. The direct `WorkService → GameState.items` path is removed.
 
 **Work items:**
+
 - [x] Wire `ResourceGeneratorService.generate(worldMap, seed)` into `WorldGenerator.generateWorld()` after terrain generation (Phase 2 created the service; Phase 4 introduced `tile.resources` — this step connects them at world-gen time).
 - [x] Verify `GameCanvas.svelte` renders resource-bearing tiles with a visual marker (e.g. resource glyph overlaid on subterrain — tree tile shows `♣` only when `tile.resources.wood > 0`).
 - [x] Remove `WorkService.processWorkHarvesting()` abstract production path (the `baseHarvestRate × efficiency → GameState.items` loop). Replace with: job completion via `JobService.advanceJob()` → `gameStateManager.addToStockpile()`.
@@ -588,13 +614,15 @@ interface Job {
 **What changes:** `buildingQueue` countdown timer replaced by work-point accumulation on `PlacedBuilding`. Multiple pawns can work the same site simultaneously.
 
 **New `PlacedBuilding` fields:**
+
 ```typescript
-workRequired: number;        // = buildDef.buildTime × 10
-workDone: number;            // accumulated by assigned pawns
+workRequired: number; // = buildDef.buildTime × 10
+workDone: number; // accumulated by assigned pawns
 materialsDelivered: boolean; // haul job must complete before construction starts
 ```
 
 **Flow:**
+
 1. `placeBuilding(type, x, y)` creates `PlacedBuilding { status:'planned', workDone:0, workRequired: buildDef.buildTime*10 }`.
 2. Materials flagged as reserved in stockpile (not consumed).
 3. `JobService.generateJobs()` emits a `haul` job (deliver materials to site) and a `construct` job.
@@ -603,6 +631,7 @@ materialsDelivered: boolean; // haul job must complete before construction start
 6. `workDone >= workRequired` → `status → 'complete'`; materials consumed from stockpile; `ModifierSystem` building bonuses activate.
 
 **Work items:**
+
 - [x] Extend `PlacedBuilding` interface with `workRequired`, `workDone`, `materialsDelivered`.
 - [x] Remove `BuildingService.calculateConstructionTime()` and `processBuildingQueue()` countdown logic.
 - [x] Add `buildingQueue` removal from `GameState` (old save migration: convert any in-progress `buildingQueue` entries to `PlacedBuilding { status:'under_construction' }` with `workDone = (1 - turnsRemaining/buildTime) * workRequired`).
@@ -624,12 +653,14 @@ materialsDelivered: boolean; // haul job must complete before construction start
 **What changes:** Crafting queue entries become craft jobs. A crafter pawn must be at a compatible workshop building. Materials reserved (not consumed) at queue time; consumed on completion.
 
 **Flow:**
+
 1. Player queues craft item → entry added to `craftingQueue` with `workRequired = item.craftingTime * 5`, `workDone = 0`, materials reserved.
 2. `JobService` exposes a `craft` job for the entry. Target = nearest `PlacedBuilding` matching `item.workshopType`.
 3. Pawn with crafting labor ≥ LOW claims job, walks to workshop, accumulates `workDone += pawn.craftingSpeed * toolBonus` per turn.
 4. `workDone >= workRequired` → materials consumed from stockpile, item added to inventory, queue entry removed.
 
 **Work items:**
+
 - [x] Add `workRequired: number`, `workDone: number`, `reservedMaterials: boolean` to `CraftingInProgress`.
 - [x] Add `workshopType?: string` to `Item` definition (e.g. `'forge'` for metalworking items, `undefined` = no workshop needed).
 - [x] Remove `ItemService.processCraftingQueue()` countdown logic.
@@ -643,6 +674,7 @@ materialsDelivered: boolean; // haul job must complete before construction start
 **What changes:** Replace `PawnService` abstract auto-satisfaction with real job-based eating and sleeping via the state machine.
 
 **Work items:**
+
 - [x] `HungryState` creates an `eat` job targeting nearest tile with `stockpile.food > 0` or a `food_storage` `PlacedBuilding`. Implements real food-source scan (replaces Phase 4 placeholder).
 - [x] `TiredState` creates a `sleep` job targeting nearest `shelter`/`bed` `PlacedBuilding`. Implements the real scan that replaces Celestia's `Vector2i(15,15)` hardcode (noted in Porting Gotchas).
 - [x] `EatingState` consumes food from `stockpile` at `nutritionPerSecond = 10` per turn; wakes at `hunger >= 95`.
@@ -759,7 +791,7 @@ Phase 6 (optional depth features, any order)
 | Risk                                                 | Likelihood | Mitigation                                                                                                                                                                     |
 | ---------------------------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | WebGL renderer has bugs/gaps not visible until wired | Medium     | Phase 1 is low-stakes; bugs surface before any game model changes                                                                                                              |
-| A* is too slow for large maps                        | Low        | `GameGrid` already uses sparse storage + viewport culling; Celestia's dynamic search limit prevents worst-case hangs                                                           |
+| A\* is too slow for large maps                       | Low        | `GameGrid` already uses sparse storage + viewport culling; Celestia's dynamic search limit prevents worst-case hangs                                                           |
 | Replacing `buildingCounts` breaks save compatibility | High       | Old saves will not load after Phase 4d; accept this or write a one-time migration in `gameState.ts`                                                                            |
 | Phase 4 scope creep                                  | High       | 4a–4d are explicitly separated; stop after each and verify the loop is playable before continuing                                                                              |
 | GDScript port bugs                                   | Medium     | Port algorithms independently with small test cases before integrating; Celestia's pathfinder was self-described as "horrific" — rewrite cleanly rather than copying literally |

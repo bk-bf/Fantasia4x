@@ -38,8 +38,8 @@ New shared types:
 
 ```typescript
 export interface PawnCondition {
-    id: string;        // matches ConditionDef.id in conditions.jsonc
-    severity: number;  // 0.0–1.0; reaches lethalSeverity → pawn dies
+  id: string; // matches ConditionDef.id in conditions.jsonc
+  severity: number; // 0.0–1.0; reaches lethalSeverity → pawn dies
 }
 
 export type LimbId = 'head' | 'torso' | 'left_arm' | 'right_arm' | 'left_leg' | 'right_leg';
@@ -47,14 +47,15 @@ export type LimbId = 'head' | 'torso' | 'left_arm' | 'right_arm' | 'left_leg' | 
 export const CRITICAL_LIMBS: LimbId[] = ['head', 'torso'];
 
 export interface LimbState {
-    id: LimbId;
-    health: number;      // 0–100; 0 = destroyed (critical limb → death; other → lost limb)
-    isMissing: boolean;  // true after amputation (combat/surgery — future)
-    bleedRate: number;   // blood points drained per turn while >0; set by wounds
+  id: LimbId;
+  health: number; // 0–100; 0 = destroyed (critical limb → death; other → lost limb)
+  isMissing: boolean; // true after amputation (combat/surgery — future)
+  bleedRate: number; // blood points drained per turn while >0; set by wounds
 }
 ```
 
 `GameState` addition:
+
 ```typescript
 deadPawns: DeadPawnRecord[];
 
@@ -69,6 +70,7 @@ export interface DeadPawnRecord {
 ### Default limb initialization
 
 Every new pawn (via `PawnService.createPawn()`) starts with:
+
 ```typescript
 limbs: [
     { id: 'head',      health: 100, isMissing: false, bleedRate: 0 },
@@ -93,24 +95,24 @@ status effect modifiers.
 ```typescript
 // src/lib/game/core/types.ts — new types
 export interface ConditionStage {
-    label: string;
-    minSeverity: number;
-    color: string;
-    lifeThreatening?: boolean;
-    modifiers: {
-        workEfficiency?: number;   // multiplier on work output
-        moveSpeed?: number;        // multiplier on movement
-        hungerRate?: number;       // multiplier on hunger accrual rate
-        fatigueRate?: number;      // multiplier on fatigue accrual rate
-    };
+  label: string;
+  minSeverity: number;
+  color: string;
+  lifeThreatening?: boolean;
+  modifiers: {
+    workEfficiency?: number; // multiplier on work output
+    moveSpeed?: number; // multiplier on movement
+    hungerRate?: number; // multiplier on hunger accrual rate
+    fatigueRate?: number; // multiplier on fatigue accrual rate
+  };
 }
 
 export interface ConditionDef {
-    id: string;
-    name: string;
-    description: string;
-    lethalSeverity: number;
-    stages: ConditionStage[];
+  id: string;
+  name: string;
+  description: string;
+  lethalSeverity: number;
+  stages: ConditionStage[];
 }
 ```
 
@@ -118,33 +120,61 @@ export interface ConditionDef {
 
 ```jsonc
 {
-    "id": "malnutrition",
-    "name": "Malnutrition",
-    "description": "A diet deficiency causing progressive physical deterioration. Reduces work capacity and ultimately leads to death if unchecked.",
-    "lethalSeverity": 1.0,
-    "stages": [
-        { "label": "trivial",  "minSeverity": 0.00, "color": "#f57c00",
-          "modifiers": { "workEfficiency": 0.95 } },
-        { "label": "minor",    "minSeverity": 0.20, "color": "#ef6c00",
-          "modifiers": { "workEfficiency": 0.85, "hungerRate": 1.1 } },
-        { "label": "moderate", "minSeverity": 0.35, "color": "#e65100",
-          "modifiers": { "workEfficiency": 0.70, "hungerRate": 1.2 } },
-        { "label": "serious",  "minSeverity": 0.50, "color": "#bf360c",
-          "modifiers": { "workEfficiency": 0.55, "hungerRate": 1.3 } },
-        { "label": "severe",   "minSeverity": 0.65, "color": "#b71c1c",
-          "lifeThreatening": true,
-          "modifiers": { "workEfficiency": 0.40, "hungerRate": 1.4 } },
-        { "label": "extreme",  "minSeverity": 0.80, "color": "#c62828",
-          "lifeThreatening": true,
-          "modifiers": { "workEfficiency": 0.20, "hungerRate": 1.5 } },
-        { "label": "fatal",    "minSeverity": 0.95, "color": "#ff1744",
-          "lifeThreatening": true,
-          "modifiers": { "workEfficiency": 0.0 } }
-    ]
+  "id": "malnutrition",
+  "name": "Malnutrition",
+  "description": "A diet deficiency causing progressive physical deterioration. Reduces work capacity and ultimately leads to death if unchecked.",
+  "lethalSeverity": 1.0,
+  "stages": [
+    {
+      "label": "trivial",
+      "minSeverity": 0.0,
+      "color": "#f57c00",
+      "modifiers": { "workEfficiency": 0.95 }
+    },
+    {
+      "label": "minor",
+      "minSeverity": 0.2,
+      "color": "#ef6c00",
+      "modifiers": { "workEfficiency": 0.85, "hungerRate": 1.1 }
+    },
+    {
+      "label": "moderate",
+      "minSeverity": 0.35,
+      "color": "#e65100",
+      "modifiers": { "workEfficiency": 0.7, "hungerRate": 1.2 }
+    },
+    {
+      "label": "serious",
+      "minSeverity": 0.5,
+      "color": "#bf360c",
+      "modifiers": { "workEfficiency": 0.55, "hungerRate": 1.3 }
+    },
+    {
+      "label": "severe",
+      "minSeverity": 0.65,
+      "color": "#b71c1c",
+      "lifeThreatening": true,
+      "modifiers": { "workEfficiency": 0.4, "hungerRate": 1.4 }
+    },
+    {
+      "label": "extreme",
+      "minSeverity": 0.8,
+      "color": "#c62828",
+      "lifeThreatening": true,
+      "modifiers": { "workEfficiency": 0.2, "hungerRate": 1.5 }
+    },
+    {
+      "label": "fatal",
+      "minSeverity": 0.95,
+      "color": "#ff1744",
+      "lifeThreatening": true,
+      "modifiers": { "workEfficiency": 0.0 }
+    }
+  ]
 }
 ```
 
-Note: malnutrition *increases* the hunger rate as it progresses — a body
+Note: malnutrition _increases_ the hunger rate as it progresses — a body
 shutting down metabolises inefficiently, creating a vicious cycle. This mirrors
 the RimWorld Diseases Overhauled definition.
 
@@ -152,28 +182,52 @@ the RimWorld Diseases Overhauled definition.
 
 ```jsonc
 {
-    "id": "blood_loss",
-    "name": "Blood Loss",
-    "description": "Insufficient blood volume impairs consciousness and movement. Extreme blood loss leads to death.",
-    "lethalSeverity": 1.0,
-    "stages": [
-        { "label": "initial",  "minSeverity": 0.00, "color": "#c62828", "modifiers": {} },
-        { "label": "minor",    "minSeverity": 0.15, "color": "#b71c1c",
-          "modifiers": { "moveSpeed": 0.95 } },
-        { "label": "moderate", "minSeverity": 0.30, "color": "#d50000",
-          "modifiers": { "moveSpeed": 0.80, "workEfficiency": 0.90 } },
-        { "label": "major",    "minSeverity": 0.45, "color": "#d50000",
-          "modifiers": { "moveSpeed": 0.60, "workEfficiency": 0.75 } },
-        { "label": "serious",  "minSeverity": 0.60, "color": "#ff1744",
-          "lifeThreatening": true,
-          "modifiers": { "moveSpeed": 0.40, "workEfficiency": 0.50 } },
-        { "label": "extreme",  "minSeverity": 0.75, "color": "#ff1744",
-          "lifeThreatening": true,
-          "modifiers": { "moveSpeed": 0.0, "workEfficiency": 0.0 } },
-        { "label": "fatal",    "minSeverity": 0.90, "color": "#ff1744",
-          "lifeThreatening": true,
-          "modifiers": {} }
-    ]
+  "id": "blood_loss",
+  "name": "Blood Loss",
+  "description": "Insufficient blood volume impairs consciousness and movement. Extreme blood loss leads to death.",
+  "lethalSeverity": 1.0,
+  "stages": [
+    { "label": "initial", "minSeverity": 0.0, "color": "#c62828", "modifiers": {} },
+    {
+      "label": "minor",
+      "minSeverity": 0.15,
+      "color": "#b71c1c",
+      "modifiers": { "moveSpeed": 0.95 }
+    },
+    {
+      "label": "moderate",
+      "minSeverity": 0.3,
+      "color": "#d50000",
+      "modifiers": { "moveSpeed": 0.8, "workEfficiency": 0.9 }
+    },
+    {
+      "label": "major",
+      "minSeverity": 0.45,
+      "color": "#d50000",
+      "modifiers": { "moveSpeed": 0.6, "workEfficiency": 0.75 }
+    },
+    {
+      "label": "serious",
+      "minSeverity": 0.6,
+      "color": "#ff1744",
+      "lifeThreatening": true,
+      "modifiers": { "moveSpeed": 0.4, "workEfficiency": 0.5 }
+    },
+    {
+      "label": "extreme",
+      "minSeverity": 0.75,
+      "color": "#ff1744",
+      "lifeThreatening": true,
+      "modifiers": { "moveSpeed": 0.0, "workEfficiency": 0.0 }
+    },
+    {
+      "label": "fatal",
+      "minSeverity": 0.9,
+      "color": "#ff1744",
+      "lifeThreatening": true,
+      "modifiers": {}
+    }
+  ]
 }
 ```
 
@@ -185,14 +239,15 @@ Conditions are ticked every turn. Malnutrition severity changes based on hunger:
 
 ```typescript
 // Constants
-const MALNUTRITION_ONSET_HUNGER   = 87;   // CRITICAL_HUNGER — condition starts here
-const MALNUTRITION_SAFE_HUNGER    = 40;   // below this, condition recovers
-const MALNUTRITION_RATE_CRITICAL  = 0.0008; // +/turn at hunger 87–99  → lethal in ~1250t ≈ 4.2 days
-const MALNUTRITION_RATE_MAX       = 0.002;  // +/turn at hunger 100    → lethal in ~500t ≈ 1.7 days
-const MALNUTRITION_RECOVERY_RATE  = 0.0003; // −/turn when hunger < 40 → fully clears in ~11 days
+const MALNUTRITION_ONSET_HUNGER = 87; // CRITICAL_HUNGER — condition starts here
+const MALNUTRITION_SAFE_HUNGER = 40; // below this, condition recovers
+const MALNUTRITION_RATE_CRITICAL = 0.0008; // +/turn at hunger 87–99  → lethal in ~1250t ≈ 4.2 days
+const MALNUTRITION_RATE_MAX = 0.002; // +/turn at hunger 100    → lethal in ~500t ≈ 1.7 days
+const MALNUTRITION_RECOVERY_RATE = 0.0003; // −/turn when hunger < 40 → fully clears in ~11 days
 ```
 
 Tick logic:
+
 ```
 if hunger >= 100:
     increase malnutrition severity by MALNUTRITION_RATE_MAX
@@ -216,6 +271,7 @@ exists yet: add `{ id: 'malnutrition', severity: 0 }` to `pawn.conditions`.
 for now no limbs bleed unless set programmatically for testing).
 
 Per-turn tick:
+
 ```typescript
 const totalBleedRate = pawn.limbs.reduce((sum, l) => sum + l.bleedRate, 0);
 if (totalBleedRate > 0) {
@@ -234,10 +290,11 @@ if (pawn.bloodVolume <= 0): → killPawn('blood_loss')
 ```
 
 ```typescript
-const BLOOD_REGEN_PER_TURN = 0.05;  // 0→100 in 2000 turns ≈ 6.7 days without bleeding
+const BLOOD_REGEN_PER_TURN = 0.05; // 0→100 in 2000 turns ≈ 6.7 days without bleeding
 ```
 
 **Limb destruction** (future combat, but modelled now):
+
 - If `limb.health <= 0` and `limb.id ∈ CRITICAL_LIMBS`: → `killPawn('critical_limb')`
 - If `limb.health <= 0` and not critical: set `limb.isMissing = true`, apply functional penalty
   (missing arm: `workEfficiency *= 0.6`; missing leg: `moveSpeed *= 0.4`)
@@ -249,6 +306,7 @@ const BLOOD_REGEN_PER_TURN = 0.05;  // 0→100 in 2000 turns ≈ 6.7 days withou
 **Trigger:** `fatigue >= 100`.
 
 **Collapse behaviour:**
+
 - Force `currentState = PAWN_STATE.SLEEPING`; pawn sleeps on the ground
 - No job claimable until `fatigue < FATIGUE_THRESHOLD`
 - If already at malnutrition `severe` or higher when collapsing: add `exhaustion_cascade` death
@@ -272,6 +330,7 @@ Limb health does not regenerate without medicine (future healthcare job).
 (c) `bloodVolume <= 0`.
 
 In `PawnStateMachine.ts` `killPawn(cause)` helper (called by all three paths):
+
 1. Set `pawn.isAlive = false`
 2. Append `DeadPawnRecord` to `gameState.deadPawns`
 3. Clear `pawn.activeJob`, set `pawn.currentState = 'Dead'`
@@ -286,13 +345,15 @@ skip them. Colony history UI can display the `deadPawns` list.
 ## Phase H — ModifierSystem Integration
 
 `ModifierSystem.getPawnModifiers(pawn)` must aggregate from:
+
 1. Existing `status-effects.jsonc` active effects (eating, sleeping, tired, hungry)
 2. **New**: active `ConditionDef` stage modifiers from each `pawn.conditions` entry
 3. **New**: missing limb functional penalties
 
 Each modifier source must include a `sources[]` entry (existing contract):
+
 ```typescript
-sources: [{ label: 'Malnutrition (moderate)', value: -0.30, type: 'multiplier' }]
+sources: [{ label: 'Malnutrition (moderate)', value: -0.3, type: 'multiplier' }];
 ```
 
 ---
@@ -300,16 +361,19 @@ sources: [{ label: 'Malnutrition (moderate)', value: -0.30, type: 'multiplier' }
 ## Phase I — UI
 
 ### PawnNeeds.svelte
+
 - Each active condition appears as a card in the effects row, labelled with the current
   stage name (e.g. "Malnutrition — Moderate")
 - Card color matches the stage `color` field from conditions.jsonc
 - `lifeThreatening: true` stages get a pulsing red border (CSS animation)
 
 ### Limb panel (`PawnOverview.svelte` or new `PawnHealth.svelte`)
+
 - 6-limb silhouette: each limb colored by health (green→yellow→red→grey for missing)
 - Blood volume shown as a small bar; only visible when `bloodVolume < 90`
 
 ### Colony overview (`GameControls.svelte`)
+
 - Pawn list: red `[!]` indicator when any condition is `lifeThreatening`
 - Dead pawn count: `†N` suffix in the top bar
 

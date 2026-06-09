@@ -55,8 +55,8 @@ load. Detect environment with `window.__TAURI_INTERNALS__` to branch code paths.
 ```typescript
 // src/lib/stores/persistence.ts
 export interface SaveAdapter {
-    load(): Promise<string | null>;
-    save(data: string): Promise<void>;
+  load(): Promise<string | null>;
+  save(data: string): Promise<void>;
 }
 ```
 
@@ -85,15 +85,28 @@ export interface SaveAdapter {
   "version": "0.1.0",
   "identifier": "dev.fantasia4x.app",
   "app": {
-    "windows": [{ "title": "Fantasia4x", "width": 1280, "height": 800,
-                   "minWidth": 1024, "minHeight": 640, "resizable": true }],
+    "windows": [
+      {
+        "title": "Fantasia4x",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 1024,
+        "minHeight": 640,
+        "resizable": true
+      }
+    ],
     "security": { "csp": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'" }
   },
   "bundle": {
     "active": true,
     "targets": "all",
-    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png",
-             "icons/icon.icns", "icons/icon.ico"]
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
   }
 }
 ```

@@ -44,12 +44,12 @@ interface CreatureDefinition {
   stats: {
     health: number;
     strength: number;
-    speed: number;       // tiles/turn
+    speed: number; // tiles/turn
     visionRange: number;
   };
   behaviour: 'passive' | 'neutral' | 'aggressive';
   tameable: boolean;
-  mountable: boolean;    // eligible as riding mount (Phase E)
+  mountable: boolean; // eligible as riding mount (Phase E)
   biomeWeights: Partial<Record<TerrainType, number>>;
   lootTable: Array<{ itemId: string; chance: number; qty: [number, number] }>;
   xpValue: number;
@@ -86,12 +86,14 @@ interface CreatureDefinition {
 ## Entity FSM (shared)
 
 ### Hostile mob states
+
 1. **Wander** — random tile drift 0–2 tiles/turn, new target every 5–10 turns
 2. **Alerted** — pawn in `visionRange`; move toward nearest pawn
 3. **Attacking** — adjacent to pawn; trigger combat (COMBAT-SYSTEM)
 4. **Fleeing** — HP < 20%; move away from all pawns
 
 ### Neutral animal states
+
 1. **Grazing** — slow drift within home range (10-tile radius); like Wander
 2. **Startled** — pawn within `visionRange`; freeze 1 turn then transition to Fleeing
 3. **Fleeing** — sprint away from threat at +1 tile/turn bonus
@@ -101,6 +103,7 @@ interface CreatureDefinition {
 7. **Hunting** (Phase A.5) — carnivore/omnivore pursuing nearest non-tamed animal or Corpse
 
 FSM transitions for neutral animals:
+
 - Grazing → Startled: pawn within `visionRange`
 - Startled → Fleeing: any move or attack
 - Fleeing → Grazing: no pawn in `visionRange × 1.5` for 15 turns
@@ -125,11 +128,11 @@ pawns — no dumbed-down duplicates. Abilities are **never** computed for entiti
 ```typescript
 // Fields added to Mob (implemented in types.ts)
 interface Mob {
-  needs: EntityNeeds;           // same type as Pawn.needs; sleep fields set to defaults
+  needs: EntityNeeds; // same type as Pawn.needs; sleep fields set to defaults
   conditions?: EntityCondition[]; // progressive conditions (malnutrition, wounds, etc.)
-  stats: EntityStats;           // mapped from CreatureDefinition.stats at spawn
-  eatProgress?: number;       // 0–1 progress through current eat action
-  huntTargetId?: string;      // id of target Mob when in Hunting state
+  stats: EntityStats; // mapped from CreatureDefinition.stats at spawn
+  eatProgress?: number; // 0–1 progress through current eat action
+  huntTargetId?: string; // id of target Mob when in Hunting state
 }
 
 // EntityStats mapping from CreatureDefinition.stats:
@@ -294,6 +297,7 @@ interface Pawn {
 ```
 
 While mounted:
+
 - Movement speed: pawn speed + mount.speed (not added — takes higher value + 1)
 - Can cross `shallow_water` without penalty
 - Melee attack range extends to 2 (charge reach)

@@ -21,6 +21,7 @@ resources. Fog of war is a subfeature of the day/night visibility model, not a
 separate system.
 
 Visual delivery is via existing WebGL2 renderer extended with:
+
 1. Ambient uniforms in the tile fragment shader (day/night tint)
 2. A secondary fullscreen overlay render pass (weather particles)
 
@@ -36,13 +37,14 @@ Map this to a 24h clock as the calendar already does.
 ```typescript
 // GameEngineImpl (or a new EnvironmentService)
 function getTimeOfDay(turn: number): number {
-    return (turn % TURNS_PER_DAY) / TURNS_PER_DAY; // 0.0 = midnight, 0.5 = noon
+  return (turn % TURNS_PER_DAY) / TURNS_PER_DAY; // 0.0 = midnight, 0.5 = noon
 }
 ```
 
 ### Ambient light curve
 
 Sinusoidal sunrise/sunset with a floor to prevent full black:
+
 ```
 ambientLight = clamp(sin(π * t), 0.0, 1.0) * 0.85 + 0.15
 // t = timeOfDay mapped 0→1 over the full day
@@ -69,12 +71,14 @@ but unmistakably different at midnight vs noon.
 ### Shader changes (`src/lib/webgl/shaders/fragment.glsl`)
 
 Add two uniforms:
+
 ```glsl
 uniform float u_ambient;       // 0.0–1.0 brightness
 uniform vec3  u_ambient_tint;  // pre-normalised colour tint
 ```
 
 Apply as a final multiply before output:
+
 ```glsl
 vec3 lit = mix(v_background, tinted, sprite.a);
 fragColor = vec4(lit * u_ambient * u_ambient_tint, 1.0);
@@ -99,13 +103,14 @@ export type Season = 'spring' | 'summer' | 'autumn' | 'winter';
 
 // GameState additions:
 season: Season;
-seasonDay: number;   // 0-indexed day within the current season
+seasonDay: number; // 0-indexed day within the current season
 ```
 
 ### Season length
 
 `DAYS_PER_SEASON = 30` (configurable constant). One full year = 120 in-game days.
 At 300 turns/day and 1 turn/sec that's:
+
 - 1 season = 9 000 real seconds ≈ 2.5 real hours of play (at unpaused 1× speed)
 - Seasons will pass naturally over a long session; speed controls accelerate them
 
@@ -125,6 +130,7 @@ Regrowth multipliers applied to `resource.regrowthTurns` when restocking persist
 ### Seasonal visual palette
 
 Pass `u_season_tint: vec3` uniform alongside ambient:
+
 - Spring: `(0.95, 1.0, 0.9)` slight green
 - Summer: `(1.0, 1.0, 0.95)` neutral-warm
 - Autumn: `(1.0, 0.85, 0.6)` amber
@@ -139,6 +145,7 @@ The season tint multiplies the ambient tint (both are applied in fragment shader
 ### Tile temperature
 
 Each `WorldTile` gains a derived `temperature: number` (°C, conceptual units):
+
 ```
 tile.temperature = biomeBaseTemp + seasonOffset + weatherMod + shelterMod
 ```
@@ -153,6 +160,7 @@ Each pawn (or race template) defines `[comfortMin, comfortMax]` in conceptual °
 Default: `[5, 30]`. Traits modify: `"Cold Blooded"` → `[15, 40]`, `"Insulated"` → `[-5, 25]`.
 
 **Need rate effects** when outside comfort:
+
 ```
 cold = max(0, comfortMin - tile.temperature)
 heat = max(0, tile.temperature - comfortMax)
@@ -174,16 +182,17 @@ This feeds directly into existing `PawnService.getRestIncreasePerTurn()` and
 weather: WeatherState;
 
 export interface WeatherState {
-    type: 'clear' | 'rain' | 'heavy_rain' | 'snow' | 'blizzard' | 'heat_wave';
-    intensity: number;      // 0.0–1.0
-    turnsRemaining: number;
-    temperatureOverride?: number; // heat_wave / blizzard delta
+  type: 'clear' | 'rain' | 'heavy_rain' | 'snow' | 'blizzard' | 'heat_wave';
+  intensity: number; // 0.0–1.0
+  turnsRemaining: number;
+  temperatureOverride?: number; // heat_wave / blizzard delta
 }
 ```
 
 ### Weather transitions
 
 Stochastic Markov chain evaluated once per in-game day (every 300 turns):
+
 - Clear → rain: `precipitationChance` from season table above
 - Rain → heavy_rain: 20%
 - Snow (winter only) → blizzard: 15%
@@ -214,13 +223,13 @@ Multipliers applied in `PawnService` need-rate functions; weather state injected
 **Problem this solves.** The Phase-A ambient (`u_ambient`, `u_ambient_tint`) is a
 single global multiply applied identically to every tile — spatially uniform, so it
 reads as a moving gel rather than light. The campfire "glow" was a CSS
-`radial-gradient` `<div>` in `WorldEffectsLayer.svelte` composited *above* the canvas:
+`radial-gradient` `<div>` in `WorldEffectsLayer.svelte` composited _above_ the canvas:
 it floats on its own DOM layer, cannot multiply the tiles beneath it, cannot warm the
 glyph colours, and cannot be occluded. Nothing in the scene radiates light from a
 position. This subsystem makes light **spatially varying** and **emitted from sources**.
 
 **Model — per-tile coloured light (Caves of Qud faithful).** CoQ computes light
-*per cell*, not per pixel. We do the same: a `LightingService` computes a light colour
+_per cell_, not per pixel. We do the same: a `LightingService` computes a light colour
 per tile each frame and the renderer feeds it to the GPU as a vertex attribute.
 
 ```
@@ -230,22 +239,22 @@ litTile = tileColour * clamp( ambientLight·ambientTint  +  Σ pointLight, 0, MA
 - `ambientLight·ambientTint` — the existing day/night base (from EnvironmentService).
   Multiplicative darkening.
 - `Σ pointLight` — additive contribution from every emitter in range. Brightening, so a
-  fire lifts nearby tiles *out of* the blue night and warms their glyphs.
+  fire lifts nearby tiles _out of_ the blue night and warms their glyphs.
 
 **Emitters.** `LightingService` derives a `LightEmitter[]` from `GameState` each frame:
 
 ```typescript
 export interface LightEmitter {
-    x: number;            // tile coords
-    y: number;
-    color: [number, number, number]; // normalised RGB (e.g. fire = [1.0, 0.55, 0.2])
-    radius: number;       // tiles to falloff edge
-    intensity: number;    // peak additive strength at the source (0–~1.5)
+  x: number; // tile coords
+  y: number;
+  color: [number, number, number]; // normalised RGB (e.g. fire = [1.0, 0.55, 0.2])
+  radius: number; // tiles to falloff edge
+  intensity: number; // peak additive strength at the source (0–~1.5)
 }
 ```
 
 Initial source: lit, complete `campfire` buildings (`building.lit === true`). Later:
-torches, lava tiles, glowing flora, pawn-carried lanterns. Emitters are *presentation*
+torches, lava tiles, glowing flora, pawn-carried lanterns. Emitters are _presentation_
 state derived from `GameState` — no new persisted fields.
 
 **Falloff.** Smooth quadratic-ish falloff to the radius edge, zero beyond:
@@ -268,6 +277,7 @@ surrounding tiles instead of pulsing a fixed blurred circle.
 ### Shader changes (Phase A2)
 
 `vertex.glsl` — new attribute + varying:
+
 ```glsl
 in  vec3 a_light;   // per-corner light colour (ambient + accumulated point light)
 out vec3 v_light;   // interpolated across the quad by the GPU
@@ -275,10 +285,12 @@ out vec3 v_light;   // interpolated across the quad by the GPU
 
 `fragment.glsl` — replace the global `u_ambient * u_ambient_tint` multiply with the
 interpolated per-tile light:
+
 ```glsl
 // was: fragColor = vec4(lit * u_ambient * u_ambient_tint, 1.0);
 fragColor = vec4(lit * v_light, 1.0);
 ```
+
 The CPU folds `ambientLight·ambientTint` into `a_light`, so the global uniforms become
 redundant for the colour multiply (kept only if needed elsewhere).
 
@@ -294,12 +306,11 @@ redundant for the colour multiply (kept only if needed elsewhere).
 
 ### Spatial-boundary note (ADR-008)
 
-Phase A2 radial falloff has **no occlusion** and is therefore *not* spatial logic per
+Phase A2 radial falloff has **no occlusion** and is therefore _not_ spatial logic per
 ADR-008 — it lives in a TS `LightingService`. Light **occlusion / shadow-casting** (walls
 blocking light) IS the same algorithm as fog-of-war visibility and **must** route through
 the WASM spatial service interface. It is deferred to Subsystem 6 and must not be inlined
 into the renderer or `LightingService`.
-
 
 ### Weather overlay pass (Phase C)
 
@@ -311,6 +322,7 @@ Shader files: `static/shaders/weather-overlay-vert.glsl` / `static/shaders/weath
 **Vertex shader:** fullscreen quad via two triangles (`gl_Position` from `[-1,1]` NDC).
 
 **Fragment shader uniforms:**
+
 ```glsl
 uniform float u_time;           // cumulative seconds
 uniform float u_intensity;      // 0.0–1.0 from WeatherState.intensity
@@ -319,6 +331,7 @@ uniform vec2  u_resolution;     // canvas width/height in px
 ```
 
 **Effect implementations:**
+
 - **Rain**: near-vertical streaks using `fract(uv.y * 40.0 + u_time * 2.5 * uv.x * 3.0)` — short bright lines with slight angle randomisation per column
 - **Snow**: slow white dots using `fract(sin(floor(uv * 80.0) * 127.1 + u_time * 0.08))` — large flakes, no horizontal drift
 - **Blizzard**: snow at high intensity + horizontal UV distortion `uv.x += sin(uv.y * 12.0 + u_time) * 0.01`
@@ -329,6 +342,7 @@ For MVP: rain and snow as additive alpha overlays are sufficient. Heat shimmer d
 ### Renderer integration
 
 In `WebGLRendererCore.render()`:
+
 1. Tile pass (existing)
 2. Weather pass: bind `weatherOverlay` program, draw fullscreen quad, `gl.blendFunc(gl.SRC_ALPHA, gl.ONE)` (additive for rain/snow brightness)
 
@@ -342,6 +356,7 @@ Night reduces pawn vision radius. No full shadow-casting until the WASM spatial 
 is extended (see archived FOG-OF-WAR-DEFERRED spec).
 
 Short-term model:
+
 ```
 visionRadius = pawn.baseVision ?? 8
 if (ambientLight < 0.4) visionRadius = Math.floor(visionRadius * (ambientLight / 0.4))

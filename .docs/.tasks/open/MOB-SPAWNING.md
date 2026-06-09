@@ -47,12 +47,12 @@ Higher weight = more likely in that biome. Zero = never spawns there.
 interface CreatureDefinition {
   id: string;
   name: string;
-  glyph: string;         // single char, rendered via existing sprite system
-  color: string;         // CSS hex
+  glyph: string; // single char, rendered via existing sprite system
+  color: string; // CSS hex
   stats: {
     health: number;
     strength: number;
-    speed: number;       // tiles/turn
+    speed: number; // tiles/turn
     visionRange: number; // tiles
   };
   behaviour: 'passive' | 'neutral' | 'aggressive';
@@ -70,6 +70,7 @@ interface CreatureDefinition {
 4. **Fleeing** — health < 20%; move away from all pawns
 
 Transition rules:
+
 - Wander → Alerted: any pawn in `visionRange`
 - Alerted → Attacking: adjacent tile occupied by a pawn
 - Any → Fleeing: health drops below 20%

@@ -11,10 +11,7 @@
     },
     "canBypassWithLore": false,
     "unlocks": {
-      "items": [
-        "hide_scrolls",
-        "parchment"
-      ],
+      "items": ["hide_scrolls", "parchment"],
       "effects": {
         "writingSpeed": 1.2
       }
@@ -39,12 +36,8 @@
     "canBypassWithLore": true,
     "loreItemRequired": "ancient_forge_manual",
     "unlocks": {
-      "buildings": [
-        "smelting_furnace"
-      ],
-      "items": [
-        "copper_ingot"
-      ],
+      "buildings": ["smelting_furnace"],
+      "items": ["copper_ingot"],
       "toolTierRequired": 1
     },
     "researchTime": 8,
@@ -67,12 +60,8 @@
     "canBypassWithLore": true,
     "loreItemRequired": "builders_codex",
     "unlocks": {
-      "buildings": [
-        "stone_hut"
-      ],
-      "items": [
-        "cut_stone"
-      ],
+      "buildings": ["stone_hut"],
+      "items": ["cut_stone"],
       "effects": {
         "buildingDurability": 1.3
       }
@@ -95,12 +84,8 @@
     },
     "canBypassWithLore": false,
     "unlocks": {
-      "buildings": [
-        "charcoal_kiln"
-      ],
-      "items": [
-        "charcoal"
-      ],
+      "buildings": ["charcoal_kiln"],
+      "items": ["charcoal"],
       "effects": {
         "fuelEfficiency": 1.5
       }
@@ -114,9 +99,7 @@
     "description": "Create parchment and develop scholarly methods",
     "category": "knowledge",
     "tier": 1,
-    "prerequisites": [
-      "basic_writing"
-    ],
+    "prerequisites": ["basic_writing"],
     "buildingRequired": "scroll_hut",
     "scrollRequirement": {
       "bark_scrolls": 10,
@@ -124,12 +107,8 @@
     },
     "canBypassWithLore": false,
     "unlocks": {
-      "buildings": [
-        "learning_hall"
-      ],
-      "items": [
-        "scholars_ink"
-      ],
+      "buildings": ["learning_hall"],
+      "items": ["scholars_ink"],
       "effects": {
         "researchSpeed": 1.3
       }
@@ -143,9 +122,7 @@
     "description": "Extract tin from cassiterite ore for bronze alloys",
     "category": "crafting",
     "tier": 1,
-    "prerequisites": [
-      "copper_smelting"
-    ],
+    "prerequisites": ["copper_smelting"],
     "buildingRequired": "smelting_furnace",
     "scrollRequirement": {
       "hide_scrolls": 4
@@ -157,9 +134,7 @@
     "canBypassWithLore": true,
     "loreItemRequired": "ancient_forge_manual",
     "unlocks": {
-      "items": [
-        "tin_ingot"
-      ],
+      "items": ["tin_ingot"],
       "effects": {
         "alloyKnowledge": 1
       }
@@ -173,10 +148,7 @@
     "description": "Alloy copper and tin to create superior bronze",
     "category": "crafting",
     "tier": 1,
-    "prerequisites": [
-      "copper_smelting",
-      "tin_smelting"
-    ],
+    "prerequisites": ["copper_smelting", "tin_smelting"],
     "buildingRequired": "smelting_furnace",
     "scrollRequirement": {
       "hide_scrolls": 8
@@ -188,12 +160,8 @@
     "canBypassWithLore": true,
     "loreItemRequired": "ancient_forge_manual",
     "unlocks": {
-      "buildings": [
-        "bronze_foundry"
-      ],
-      "items": [
-        "bronze_ingot"
-      ],
+      "buildings": ["bronze_foundry"],
+      "items": ["bronze_ingot"],
       "toolTierRequired": 1
     },
     "researchTime": 15,
@@ -215,12 +183,8 @@
     },
     "canBypassWithLore": false,
     "unlocks": {
-      "buildings": [
-        "tannery"
-      ],
-      "items": [
-        "leather"
-      ],
+      "buildings": ["tannery"],
+      "items": ["leather"],
       "effects": {
         "leatherQuality": 1.5
       }
@@ -244,12 +208,8 @@
     },
     "canBypassWithLore": false,
     "unlocks": {
-      "buildings": [
-        "advanced_kiln"
-      ],
-      "items": [
-        "fire_bricks"
-      ],
+      "buildings": ["advanced_kiln"],
+      "items": ["fire_bricks"],
       "effects": {
         "ceramicQuality": 1.6
       }
@@ -263,9 +223,7 @@
     "description": "Master the art of delicate porcelain creation",
     "category": "crafting",
     "tier": 1,
-    "prerequisites": [
-      "pottery"
-    ],
+    "prerequisites": ["pottery"],
     "buildingRequired": "advanced_kiln",
     "scrollRequirement": {
       "parchment": 8,
@@ -276,12 +234,8 @@
     },
     "canBypassWithLore": false,
     "unlocks": {
-      "buildings": [
-        "porcelain_workshop"
-      ],
-      "items": [
-        "porcelain_vessels"
-      ],
+      "buildings": ["porcelain_workshop"],
+      "items": ["porcelain_vessels"],
       "effects": {
         "luxuryProduction": 1.8
       }
@@ -305,12 +259,8 @@
     },
     "canBypassWithLore": false,
     "unlocks": {
-      "buildings": [
-        "kitchen"
-      ],
-      "items": [
-        "hearty_stew"
-      ],
+      "buildings": ["kitchen"],
+      "items": ["hearty_stew"],
       "effects": {
         "nutritionBonus": 1.4
       }
@@ -324,9 +274,7 @@
     "description": "Stone oven techniques for bread and grain processing",
     "category": "social",
     "tier": 1,
-    "prerequisites": [
-      "cooking"
-    ],
+    "prerequisites": ["cooking"],
     "buildingRequired": "kitchen",
     "scrollRequirement": {
       "parchment": 6
@@ -337,12 +285,8 @@
     },
     "canBypassWithLore": false,
     "unlocks": {
-      "buildings": [
-        "bakery"
-      ],
-      "items": [
-        "fresh_bread"
-      ],
+      "buildings": ["bakery"],
+      "items": ["fresh_bread"],
       "effects": {
         "grainProcessing": 1.6
       }
@@ -366,12 +310,8 @@
     },
     "canBypassWithLore": false,
     "unlocks": {
-      "buildings": [
-        "brewery"
-      ],
-      "items": [
-        "berry_wine"
-      ],
+      "buildings": ["brewery"],
+      "items": ["berry_wine"],
       "effects": {
         "alcoholProduction": 1.5
       }
@@ -395,9 +335,7 @@
     },
     "canBypassWithLore": false,
     "unlocks": {
-      "buildings": [
-        "fishing_dock"
-      ],
+      "buildings": ["fishing_dock"],
       "effects": {
         "fishingYield": 1.8
       }
@@ -421,9 +359,7 @@
     },
     "canBypassWithLore": false,
     "unlocks": {
-      "buildings": [
-        "hunting_lodge"
-      ],
+      "buildings": ["hunting_lodge"],
       "effects": {
         "huntingEfficiency": 1.6
       }
@@ -437,9 +373,7 @@
     "description": "Establish professional armies and tactics",
     "category": "military",
     "tier": 1,
-    "prerequisites": [
-      "bronze_working"
-    ],
+    "prerequisites": ["bronze_working"],
     "populationRequired": 4,
     "scrollRequirement": {
       "parchment": 8
@@ -450,10 +384,7 @@
     },
     "canBypassWithLore": false,
     "unlocks": {
-      "buildings": [
-        "armory",
-        "war_camp"
-      ],
+      "buildings": ["armory", "war_camp"],
       "effects": {
         "militaryEfficiency": 1.5
       }
@@ -467,9 +398,7 @@
     "description": "Fundamental principles of material transformation",
     "category": "crafting",
     "tier": 1,
-    "prerequisites": [
-      "bronze_working"
-    ],
+    "prerequisites": ["bronze_working"],
     "buildingRequired": "learning_hall",
     "scrollRequirement": {
       "parchment": 10,
@@ -481,13 +410,8 @@
     },
     "canBypassWithLore": false,
     "unlocks": {
-      "buildings": [
-        "alchemist_lab"
-      ],
-      "items": [
-        "miners_elixir",
-        "crafters_focus"
-      ],
+      "buildings": ["alchemist_lab"],
+      "items": ["miners_elixir", "crafters_focus"],
       "effects": {
         "alchemicalKnowledge": 1
       }
@@ -501,9 +425,7 @@
     "description": "Cutting and shaping crystals for magical focuses",
     "category": "crafting",
     "tier": 1,
-    "prerequisites": [
-      "basic_alchemy"
-    ],
+    "prerequisites": ["basic_alchemy"],
     "buildingRequired": "alchemist_lab",
     "scrollRequirement": {
       "parchment": 12
@@ -514,12 +436,8 @@
     },
     "canBypassWithLore": false,
     "unlocks": {
-      "buildings": [
-        "crystal_workshop"
-      ],
-      "items": [
-        "crystal_focus"
-      ],
+      "buildings": ["crystal_workshop"],
+      "items": ["crystal_focus"],
       "effects": {
         "magicalFocus": 1.4
       }
@@ -533,9 +451,7 @@
     "description": "Systematic research and experimentation techniques",
     "category": "knowledge",
     "tier": 2,
-    "prerequisites": [
-      "advanced_writing"
-    ],
+    "prerequisites": ["advanced_writing"],
     "buildingRequired": "learning_hall",
     "scrollRequirement": {
       "parchment": 20,
@@ -543,12 +459,8 @@
     },
     "canBypassWithLore": false,
     "unlocks": {
-      "buildings": [
-        "scholars_workshop"
-      ],
-      "items": [
-        "research_notes"
-      ],
+      "buildings": ["scholars_workshop"],
+      "items": ["research_notes"],
       "effects": {
         "researchEfficiency": 2
       }
@@ -562,9 +474,7 @@
     "description": "Extract iron from ore using advanced furnace techniques",
     "category": "crafting",
     "tier": 2,
-    "prerequisites": [
-      "bronze_working"
-    ],
+    "prerequisites": ["bronze_working"],
     "buildingRequired": "bronze_foundry",
     "scrollRequirement": {
       "parchment": 15
@@ -576,9 +486,7 @@
     "canBypassWithLore": true,
     "loreItemRequired": "ancient_forge_manual",
     "unlocks": {
-      "items": [
-        "wrought_iron"
-      ],
+      "items": ["wrought_iron"],
       "effects": {
         "ironKnowledge": 1
       }
@@ -592,9 +500,7 @@
     "description": "Forge wrought iron into tools and weapons",
     "category": "crafting",
     "tier": 2,
-    "prerequisites": [
-      "iron_smelting"
-    ],
+    "prerequisites": ["iron_smelting"],
     "buildingRequired": "bronze_foundry",
     "scrollRequirement": {
       "parchment": 18,
@@ -607,9 +513,7 @@
     "canBypassWithLore": true,
     "loreItemRequired": "ancient_forge_manual",
     "unlocks": {
-      "buildings": [
-        "iron_forge"
-      ],
+      "buildings": ["iron_forge"],
       "toolTierRequired": 2,
       "effects": {
         "ironworking": 1.5
@@ -624,9 +528,7 @@
     "description": "Master the art of creating superior steel alloys",
     "category": "crafting",
     "tier": 2,
-    "prerequisites": [
-      "iron_working"
-    ],
+    "prerequisites": ["iron_working"],
     "buildingRequired": "iron_forge",
     "scrollRequirement": {
       "parchment": 25,
@@ -639,12 +541,8 @@
     },
     "canBypassWithLore": false,
     "unlocks": {
-      "buildings": [
-        "blast_furnace"
-      ],
-      "items": [
-        "steel_ingot"
-      ],
+      "buildings": ["blast_furnace"],
+      "items": ["steel_ingot"],
       "effects": {
         "steelmastery": 2
       }
@@ -658,9 +556,7 @@
     "description": "Advanced techniques for storing food long-term",
     "category": "social",
     "tier": 2,
-    "prerequisites": [
-      "baking"
-    ],
+    "prerequisites": ["baking"],
     "buildingRequired": "bakery",
     "scrollRequirement": {
       "parchment": 12
@@ -671,9 +567,7 @@
     },
     "canBypassWithLore": false,
     "unlocks": {
-      "buildings": [
-        "granary"
-      ],
+      "buildings": ["granary"],
       "effects": {
         "foodPreservation": 2
       }
@@ -687,10 +581,7 @@
     "description": "Advanced alcohol production through distillation",
     "category": "crafting",
     "tier": 2,
-    "prerequisites": [
-      "fermentation",
-      "bronze_working"
-    ],
+    "prerequisites": ["fermentation", "bronze_working"],
     "buildingRequired": "brewery",
     "scrollRequirement": {
       "parchment": 15,
@@ -702,12 +593,8 @@
     },
     "canBypassWithLore": false,
     "unlocks": {
-      "buildings": [
-        "distillery"
-      ],
-      "items": [
-        "distilled_spirits"
-      ],
+      "buildings": ["distillery"],
+      "items": ["distilled_spirits"],
       "effects": {
         "distillationMastery": 1.8
       }
@@ -721,10 +608,7 @@
     "description": "Design and build defensive structures",
     "category": "military",
     "tier": 2,
-    "prerequisites": [
-      "military_organization",
-      "iron_working"
-    ],
+    "prerequisites": ["military_organization", "iron_working"],
     "buildingRequired": "war_camp",
     "populationRequired": 5,
     "scrollRequirement": {
@@ -737,9 +621,7 @@
     },
     "canBypassWithLore": false,
     "unlocks": {
-      "buildings": [
-        "fortress_wall"
-      ],
+      "buildings": ["fortress_wall"],
       "effects": {
         "defensiveArchitecture": 2
       }
@@ -753,10 +635,7 @@
     "description": "Advanced alchemical techniques and powerful elixirs",
     "category": "crafting",
     "tier": 2,
-    "prerequisites": [
-      "basic_alchemy",
-      "iron_working"
-    ],
+    "prerequisites": ["basic_alchemy", "iron_working"],
     "buildingRequired": "alchemist_lab",
     "scrollRequirement": {
       "parchment": 25,
@@ -768,12 +647,8 @@
     },
     "canBypassWithLore": false,
     "unlocks": {
-      "buildings": [
-        "grand_laboratory"
-      ],
-      "items": [
-        "master_crafters_elixir"
-      ],
+      "buildings": ["grand_laboratory"],
+      "items": ["master_crafters_elixir"],
       "effects": {
         "alchemicalMastery": 2.5
       }
@@ -787,9 +662,7 @@
     "description": "Establish trade networks and market systems",
     "category": "social",
     "tier": 1,
-    "prerequisites": [
-      "bronze_working"
-    ],
+    "prerequisites": ["bronze_working"],
     "populationRequired": 3,
     "scrollRequirement": {
       "parchment": 10
@@ -800,9 +673,7 @@
     },
     "canBypassWithLore": false,
     "unlocks": {
-      "buildings": [
-        "marketplace"
-      ],
+      "buildings": ["marketplace"],
       "effects": {
         "tradeEfficiency": 1.5
       }
@@ -816,10 +687,7 @@
     "description": "Establish trade routes with distant civilizations",
     "category": "social",
     "tier": 2,
-    "prerequisites": [
-      "commerce",
-      "iron_working"
-    ],
+    "prerequisites": ["commerce", "iron_working"],
     "buildingRequired": "marketplace",
     "populationRequired": 4,
     "scrollRequirement": {
@@ -832,9 +700,7 @@
     },
     "canBypassWithLore": false,
     "unlocks": {
-      "buildings": [
-        "trading_post"
-      ],
+      "buildings": ["trading_post"],
       "effects": {
         "foreignTrade": 1.8
       }
@@ -858,10 +724,7 @@
     },
     "canBypassWithLore": false,
     "unlocks": {
-      "items": [
-        "yew_wood",
-        "hickory_wood"
-      ],
+      "items": ["yew_wood", "hickory_wood"],
       "effects": {
         "forestryMastery": 1.6
       }
@@ -875,9 +738,7 @@
     "description": "Sophisticated stone construction techniques",
     "category": "building",
     "tier": 1,
-    "prerequisites": [
-      "stone_masonry"
-    ],
+    "prerequisites": ["stone_masonry"],
     "scrollRequirement": {
       "parchment": 8
     },
@@ -888,10 +749,7 @@
     "canBypassWithLore": true,
     "loreItemRequired": "builders_codex",
     "unlocks": {
-      "items": [
-        "marble",
-        "cut_granite"
-      ],
+      "items": ["marble", "cut_granite"],
       "effects": {
         "masonryMastery": 1.8
       }

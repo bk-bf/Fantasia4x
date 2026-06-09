@@ -153,18 +153,19 @@ See **§ Dynamic Stew System** below. No hardcoded stew IDs — a single `stew` 
 
 | Condition                     | Name pattern           | Example                             |
 | ----------------------------- | ---------------------- | ----------------------------------- |
-| protein + grain (`wild_oats`) | `"[Protein] Porridge"` | *Fish Porridge*, *Venison Porridge* |
-| protein only (single source)  | `"[Protein] Stew"`     | *Carp Stew*, *Rabbit Stew*          |
-| 3+ distinct protein sources   | `"Mixed Stew"`         | *Mixed Stew*                        |
-| grain only                    | `"Oat Gruel"`          | *Oat Gruel*                         |
-| berries + grain               | `"Berry Porridge"`     | *Berry Porridge*                    |
-| berries only                  | `"Berry Mash"`         | *Berry Mash*                        |
-| `herbs` present in any slot   | prepend `"Herb "`      | *Herb Fish Stew*                    |
+| protein + grain (`wild_oats`) | `"[Protein] Porridge"` | _Fish Porridge_, _Venison Porridge_ |
+| protein only (single source)  | `"[Protein] Stew"`     | _Carp Stew_, _Rabbit Stew_          |
+| 3+ distinct protein sources   | `"Mixed Stew"`         | _Mixed Stew_                        |
+| grain only                    | `"Oat Gruel"`          | _Oat Gruel_                         |
+| berries + grain               | `"Berry Porridge"`     | _Berry Porridge_                    |
+| berries only                  | `"Berry Mash"`         | _Berry Mash_                        |
+| `herbs` present in any slot   | prepend `"Herb "`      | _Herb Fish Stew_                    |
 
 **Protein label mapping** (first protein wins unless 3+ sources):
+
 - `common_carp`, any fish → "Fish"
 - `rabbit_meat` → "Rabbit"; `venison` → "Venison"; `boar_meat` → "Boar"
-- Two different meat species → "Mixed Meat" (e.g. *Mixed Meat Porridge*)
+- Two different meat species → "Mixed Meat" (e.g. _Mixed Meat Porridge_)
 
 **Nutrition:** `Σ(ingredient.nutrition) × 1.5`. Four-ingredient stews yield meaningfully more than eating the same items raw — the cooking multiplier is the payoff for acquiring a clay_cooking_pot.
 
@@ -332,10 +333,9 @@ Initial buildings with `isRest: true`: any wall-enclosed structure is NOT auto-d
 ### Fix labor default
 
 `JobService.getAvailableJobs()` must default unconfigured work types to `NORMAL (2)` instead of blocking all jobs:
+
 ```typescript
-const laborLevel = workKey in laborSettings
-    ? laborSettings[workKey]
-    : LABOR_LEVEL.NORMAL;  // was: 0 (blocked everything for new pawns)
+const laborLevel = workKey in laborSettings ? laborSettings[workKey] : LABOR_LEVEL.NORMAL; // was: 0 (blocked everything for new pawns)
 ```
 
 ---
@@ -343,12 +343,15 @@ const laborLevel = workKey in laborSettings
 ## Phase 6h — Tool-Gate Enforcement
 
 ### In `JobService.getAvailableJobs()`:
+
 Check `WorkCategory.toolsRequired` — if the category needs any tool, at least one must exist in `gameState.stockpile` or `gameState.item[]`. A pawn cannot claim a gated job without the tool anywhere in the colony (individual pawn inventory checks come in Phase 7).
 
 ### In `ItemService.startCrafting()`:
+
 Check `item.workshopType` — a complete `PlacedBuilding` of that type must exist. Return error + reason string if not.
 
 ### `Work.ts` tool requirement updates:
+
 | category       | toolsRequired                                          |
 | -------------- | ------------------------------------------------------ |
 | `woodcutting`  | `['stone_axe', 'iron_axe', 'steel_axe']`               |
@@ -364,6 +367,7 @@ Check `item.workshopType` — a complete `PlacedBuilding` of that type must exis
 ## Phase 6i — Building & Crafting Menu Rework
 
 ### Building menu additions:
+
 - **Walls & Doors** sub-category showing all wall segment types.
 - **"REQUIRES LIGHTING"** badge on campfire if no `firestarter` in stockpile.
 - **"BLOCKED"** badge if materials missing.
@@ -371,6 +375,7 @@ Check `item.workshopType` — a complete `PlacedBuilding` of that type must exis
 - Multi-building progress panel (show all `under_construction` buildings, not just first).
 
 ### Crafting menu additions:
+
 - **"REQUIRES: <workshopType>"** badge — item visible but unclickable, tooltip explains.
 - **Workshop grouping filter** — "show by workshop": Craft Spot | Campfire | Maker's Bench | All.
 - Progress bar per queued item (work-points, not turns).
@@ -423,4 +428,3 @@ Add `'forage' | 'scavenge'` to `DesignationType`. Rectangle zone painting in `Ga
 - [ ] Tired pawn with any housing wall-enclosure walks toward it (Phase 7 refinement; Phase 6: any `isRest` building).
 - [ ] Twig walls, wicker walls, daub walls placeable as individual 1-tile segments.
 - [ ] CraftingScreen shows "REQUIRES: makers_bench" on `stone_axe` when none is built.
-

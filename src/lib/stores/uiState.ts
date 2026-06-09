@@ -1,7 +1,16 @@
 // src/lib/stores/uiState.ts
 import { writable } from 'svelte/store';
 
-type Screen = 'main' | 'pawns' | 'race' | 'building' | 'crafting' | 'research' | 'exploration' | 'work' | 'entities';
+type Screen =
+  | 'main'
+  | 'pawns'
+  | 'race'
+  | 'building'
+  | 'crafting'
+  | 'research'
+  | 'exploration'
+  | 'work'
+  | 'entities';
 
 interface UIState {
   currentScreen: Screen;
@@ -52,8 +61,7 @@ function createUIState() {
     set,
     update,
 
-    setScreen: (screen: Screen) =>
-      update((state) => ({ ...state, currentScreen: screen })),
+    setScreen: (screen: Screen) => update((state) => ({ ...state, currentScreen: screen })),
 
     toggleScreen: (screen: Screen) =>
       update((state) => ({
@@ -71,7 +79,8 @@ function createUIState() {
         designationActive: true,
         designationType: type,
         activeZoneInstanceId: instanceId,
-        _screenBeforeDesignation: state.currentScreen !== 'main' ? state.currentScreen : state._screenBeforeDesignation,
+        _screenBeforeDesignation:
+          state.currentScreen !== 'main' ? state.currentScreen : state._screenBeforeDesignation,
         currentScreen: 'main'
       })),
 
@@ -88,14 +97,11 @@ function createUIState() {
     focusMapOn: (x: number, y: number) =>
       update((state) => ({ ...state, mapFocusRequest: { x, y } })),
 
-    clearMapFocus: () =>
-      update((state) => ({ ...state, mapFocusRequest: null })),
+    clearMapFocus: () => update((state) => ({ ...state, mapFocusRequest: null })),
 
-    selectPawn: (id: string | null) =>
-      update((state) => ({ ...state, selectedPawnId: id })),
+    selectPawn: (id: string | null) => update((state) => ({ ...state, selectedPawnId: id })),
 
-    selectMob: (id: string | null) =>
-      update((state) => ({ ...state, selectedMobId: id })),
+    selectMob: (id: string | null) => update((state) => ({ ...state, selectedMobId: id })),
 
     setFollowPawn: (id: string | null) =>
       update((state) => ({ ...state, cameraFollowPawnId: id, cameraFollowMobId: null })),
@@ -107,7 +113,8 @@ function createUIState() {
       update((state) => ({
         ...state,
         blueprintBuildingId: buildingId,
-        _screenBeforeDesignation: state.currentScreen !== 'main' ? state.currentScreen : state._screenBeforeDesignation,
+        _screenBeforeDesignation:
+          state.currentScreen !== 'main' ? state.currentScreen : state._screenBeforeDesignation,
         currentScreen: 'main'
       })),
 

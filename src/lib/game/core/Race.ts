@@ -188,4 +188,3 @@ function generateRaceName(): string {
     suffixes[Math.floor(Math.random() * suffixes.length)]
   );
 }
-

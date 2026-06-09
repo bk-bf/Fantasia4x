@@ -6,10 +6,7 @@
     ConditionDef,
     ConditionStage
   } from '$lib/game/core/types';
-  import {
-    getNeedColor,
-    getNeedDescription
-  } from '$lib/utils/pawnUtils';
+  import { getNeedColor, getNeedDescription } from '$lib/utils/pawnUtils';
   import statusEffectsData from '$lib/game/database/status-effects.jsonc';
   import conditionsData from '$lib/game/database/conditions.jsonc';
   import { pawnService } from '$lib/game/services/PawnService';
@@ -55,7 +52,6 @@
       if (stage) acc.push({ name: def.name, severity: c.severity, stage });
       return acc;
     }, []);
-
 </script>
 
 <div class="needs-section">

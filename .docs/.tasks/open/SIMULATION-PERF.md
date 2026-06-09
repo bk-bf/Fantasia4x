@@ -65,6 +65,7 @@ See ADR-011 for the decision. Mechanics:
 
   Applied to: `WorkService`, `PawnService`, `JobService`, `ResearchService`,
   `LocationServices`.
+
 - `GameEngineImpl` deliberately does **not** shadow `console` (its `[PROF]` output must
   print regardless of `gameDebug`); instead `debugLogPawns()` early-returns on
   `!isGameDebug()`.
@@ -150,7 +151,7 @@ uniform.**
   deconstructQueued, paused). It deliberately excludes `fuel`/`lit`. **This was the lit-fire
   FPS cliff:** `_processCampfireFuel()` returns a fresh `buildings` array every tick to
   decrement fuel, so the old array-identity check rebuilt all 38k tiles + re-uploaded ~5 MB
-  *every frame* while any fire burned (100+ FPS → sub-10). Fuel/lit are invisible on the map,
+  _every frame_ while any fire burned (100+ FPS → sub-10). Fuel/lit are invisible on the map,
   so the signature now matches across ticks and the terrain buffer stays cached.
 - **Entities are a per-frame overlay, not baked terrain** — pawns AND dropped/stored items
   render into a transparent `pawnOverlayGrid` rebuilt each rAF frame (items drawn first so

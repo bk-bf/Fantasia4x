@@ -13,24 +13,24 @@
  * CP437 helpers in Terrains.ts (T(n), TR(…)) which the atlas registers directly.
  */
 export const SHEET = {
-    /** bitlands_plants.bmp    – plant / tree sprites        (U+E000–E0FF) */
-    PLANTS: 0xe000,
-    /** bitlands_map.bmp       – entity / humanoid sprites   (U+E200–E2FF) */
-    MAP: 0xe200,
-    /** bitlands_font.bmp      – UI / character font sprites (U+E300–E3FF) */
-    FONT: 0xe300,
-    /** bitlands_buildings.bmp – building sprites            (U+E400–E4FF) */
-    BUILDINGS: 0xe400,
-    /** bitlands_items.bmp     – item sprites                (U+E500–E5FF) */
-    ITEMS: 0xe500,
-    /** bitlands_workshops.bmp – workshop sprites            (U+E600–E6FF) */
-    WORKSHOPS: 0xe600,
-    /** bitlands_crops.bmp     – crop / farming sprites      (U+E700–E7FF) */
-    CROPS: 0xe700,
-    /** creatures.bmp           – creature / monster sprites  (U+E800–E8FF) */
-    CREATURES: 0xe800,
-    /** races.bmp               – playable race sprites       (U+E900–E9FF) */
-    RACES: 0xe900
+  /** bitlands_plants.bmp    – plant / tree sprites        (U+E000–E0FF) */
+  PLANTS: 0xe000,
+  /** bitlands_map.bmp       – entity / humanoid sprites   (U+E200–E2FF) */
+  MAP: 0xe200,
+  /** bitlands_font.bmp      – UI / character font sprites (U+E300–E3FF) */
+  FONT: 0xe300,
+  /** bitlands_buildings.bmp – building sprites            (U+E400–E4FF) */
+  BUILDINGS: 0xe400,
+  /** bitlands_items.bmp     – item sprites                (U+E500–E5FF) */
+  ITEMS: 0xe500,
+  /** bitlands_workshops.bmp – workshop sprites            (U+E600–E6FF) */
+  WORKSHOPS: 0xe600,
+  /** bitlands_crops.bmp     – crop / farming sprites      (U+E700–E7FF) */
+  CROPS: 0xe700,
+  /** creatures.bmp           – creature / monster sprites  (U+E800–E8FF) */
+  CREATURES: 0xe800,
+  /** races.bmp               – playable race sprites       (U+E900–E9FF) */
+  RACES: 0xe900
 } as const;
 
 /**
@@ -38,4 +38,4 @@ export const SHEET = {
  * Pass one of the SHEET.* constants as `sheetBase`.
  */
 export const glyph = (sheetBase: number, index: number): string =>
-    String.fromCodePoint(sheetBase + index);
+  String.fromCodePoint(sheetBase + index);

@@ -19,11 +19,11 @@ import { TICKS_PER_SECOND } from '../core/time';
 
 /** Minimum interface for movement advancement and sim-target rendering. */
 export interface Movable {
-    x: number;
-    y: number;
-    path?: { x: number; y: number }[];
-    pathIndex?: number;
-    nextCellCostLeft?: number;
+  x: number;
+  y: number;
+  path?: { x: number; y: number }[];
+  pathIndex?: number;
+  nextCellCostLeft?: number;
 }
 
 // ── Core helpers ──────────────────────────────────────────────────────────────
@@ -33,14 +33,14 @@ export interface Movable {
  * Matches the identical formula used by the pathfinder.
  */
 export function moveCostToEnter(
-    from: { x: number; y: number },
-    to: { x: number; y: number },
-    worldMap: WorldTile[][]
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+  worldMap: WorldTile[][]
 ): number {
-    const tile = worldMap[to.y]?.[to.x];
-    const base = tile && tile.movementCost > 0 ? tile.movementCost : 1;
-    const diagonal = from.x !== to.x && from.y !== to.y ? Math.SQRT2 : 1;
-    return base * diagonal * TICKS_PER_SECOND;
+  const tile = worldMap[to.y]?.[to.x];
+  const base = tile && tile.movementCost > 0 ? tile.movementCost : 1;
+  const diagonal = from.x !== to.x && from.y !== to.y ? Math.SQRT2 : 1;
+  return base * diagonal * TICKS_PER_SECOND;
 }
 
 /**
@@ -52,52 +52,52 @@ export function moveCostToEnter(
  * returned unchanged (reference equality preserved).
  */
 export function advanceAlongPath<T extends Movable>(
-    entity: T,
-    budget: number,
-    worldMap: WorldTile[][]
+  entity: T,
+  budget: number,
+  worldMap: WorldTile[][]
 ): T {
-    const path = entity.path;
-    if (!path || path.length === 0) return entity;
+  const path = entity.path;
+  if (!path || path.length === 0) return entity;
 
-    let b = budget;
-    let idx = entity.pathIndex ?? 0;
-    let pos = { x: entity.x, y: entity.y };
-    let costLeft: number | null = entity.nextCellCostLeft ?? null;
-    let invalidPath = false;
+  let b = budget;
+  let idx = entity.pathIndex ?? 0;
+  let pos = { x: entity.x, y: entity.y };
+  let costLeft: number | null = entity.nextCellCostLeft ?? null;
+  let invalidPath = false;
 
-    while (b > 0 && idx < path.length) {
-        const next = path[idx];
-        if (!next) break;
-        // Guard: path steps must be strictly adjacent (1 tile max distance).
-        if (Math.abs(next.x - pos.x) > 1 || Math.abs(next.y - pos.y) > 1) {
-            invalidPath = true;
-            break;
-        }
-        if (costLeft === null) costLeft = moveCostToEnter(pos, next, worldMap);
-        if (b >= costLeft) {
-            b -= costLeft;
-            pos = next;
-            idx++;
-            costLeft = null;
-        } else {
-            costLeft -= b;
-            b = 0;
-        }
+  while (b > 0 && idx < path.length) {
+    const next = path[idx];
+    if (!next) break;
+    // Guard: path steps must be strictly adjacent (1 tile max distance).
+    if (Math.abs(next.x - pos.x) > 1 || Math.abs(next.y - pos.y) > 1) {
+      invalidPath = true;
+      break;
     }
-
-    if (invalidPath) {
-        return { ...entity, path: [], pathIndex: 0, nextCellCostLeft: undefined };
+    if (costLeft === null) costLeft = moveCostToEnter(pos, next, worldMap);
+    if (b >= costLeft) {
+      b -= costLeft;
+      pos = next;
+      idx++;
+      costLeft = null;
+    } else {
+      costLeft -= b;
+      b = 0;
     }
+  }
 
-    const done = idx >= path.length;
-    return {
-        ...entity,
-        x: pos.x,
-        y: pos.y,
-        path: done ? [] : path,
-        pathIndex: done ? 0 : idx,
-        nextCellCostLeft: costLeft ?? undefined
-    };
+  if (invalidPath) {
+    return { ...entity, path: [], pathIndex: 0, nextCellCostLeft: undefined };
+  }
+
+  const done = idx >= path.length;
+  return {
+    ...entity,
+    x: pos.x,
+    y: pos.y,
+    path: done ? [] : path,
+    pathIndex: done ? 0 : idx,
+    nextCellCostLeft: costLeft ?? undefined
+  };
 }
 
 /**
@@ -110,21 +110,21 @@ export function advanceAlongPath<T extends Movable>(
  * Feed this as the lerp target in the renderer each animation frame.
  */
 export function simTarget<T extends Movable>(
-    entity: T,
-    worldMap: WorldTile[][]
+  entity: T,
+  worldMap: WorldTile[][]
 ): { x: number; y: number } {
-    const path = entity.path;
-    if (!path || path.length === 0) return { x: entity.x, y: entity.y };
+  const path = entity.path;
+  if (!path || path.length === 0) return { x: entity.x, y: entity.y };
 
-    const next = path[entity.pathIndex ?? 0];
-    if (!next || (next.x === entity.x && next.y === entity.y)) {
-        return { x: entity.x, y: entity.y };
-    }
+  const next = path[entity.pathIndex ?? 0];
+  if (!next || (next.x === entity.x && next.y === entity.y)) {
+    return { x: entity.x, y: entity.y };
+  }
 
-    const dx = next.x - entity.x;
-    const dy = next.y - entity.y;
-    const totalCost = moveCostToEnter({ x: entity.x, y: entity.y }, next, worldMap);
-    const costLeft = entity.nextCellCostLeft ?? totalCost;
-    const progress = Math.min(1, Math.max(0, 1 - costLeft / totalCost));
-    return { x: entity.x + dx * progress, y: entity.y + dy * progress };
+  const dx = next.x - entity.x;
+  const dy = next.y - entity.y;
+  const totalCost = moveCostToEnter({ x: entity.x, y: entity.y }, next, worldMap);
+  const costLeft = entity.nextCellCostLeft ?? totalCost;
+  const progress = Math.min(1, Math.max(0, 1 - costLeft / totalCost));
+  return { x: entity.x + dx * progress, y: entity.y + dy * progress };
 }

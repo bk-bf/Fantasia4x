@@ -1,7 +1,13 @@
 // src/lib/game/world/WorldGenerator.ts
 import { createNoise2D } from 'simplex-noise';
 import type { WorldTile, Location } from '../core/types';
-import { SUBTERRAINS, SUBTERRAIN_FALLBACK, pickBiome, pickSubterrain, pickChar } from '../core/Terrains';
+import {
+  SUBTERRAINS,
+  SUBTERRAIN_FALLBACK,
+  pickBiome,
+  pickSubterrain,
+  pickChar
+} from '../core/Terrains';
 import { resourceGeneratorService } from '../services/ResourceGeneratorService';
 
 // Noise constants ported from Celestia noise_generator.gd
@@ -15,8 +21,10 @@ const TERRAIN_GAIN = 0.6;
 function makeRng(seed: number) {
   let s = seed >>> 0 || 1;
   return () => {
-    s ^= s << 13; s ^= s >>> 17; s ^= s << 5;
-    return ((s >>> 0) / 0x100000000);
+    s ^= s << 13;
+    s ^= s >>> 17;
+    s ^= s << 5;
+    return (s >>> 0) / 0x100000000;
   };
 }
 
@@ -25,9 +33,13 @@ function makeRng(seed: number) {
  * Matches Celestia's FastNoiseLite fractal settings.
  */
 function fbm(noise2d: (x: number, y: number) => number, x: number, y: number): number {
-  let value = 0, amplitude = 1, frequency = 1, max = 0;
+  let value = 0,
+    amplitude = 1,
+    frequency = 1,
+    max = 0;
   for (let i = 0; i < TERRAIN_OCTAVES; i++) {
-    value += noise2d(x * frequency * TERRAIN_FREQUENCY, y * frequency * TERRAIN_FREQUENCY) * amplitude;
+    value +=
+      noise2d(x * frequency * TERRAIN_FREQUENCY, y * frequency * TERRAIN_FREQUENCY) * amplitude;
     max += amplitude;
     amplitude *= TERRAIN_GAIN;
     frequency *= TERRAIN_LACUNARITY;
@@ -38,7 +50,11 @@ function fbm(noise2d: (x: number, y: number) => number, x: number, y: number): n
 // ── Noise utility functions (ported from Celestia map_gen-refactored noise_generator.gd) ──
 
 /** Ridged noise: sharp ridge-line features. Use for mountain peak subterrain selection. */
-export function getRidgedNoise(terrainNoise2d: (x: number, y: number) => number, x: number, y: number): number {
+export function getRidgedNoise(
+  terrainNoise2d: (x: number, y: number) => number,
+  x: number,
+  y: number
+): number {
   return 1.0 - Math.abs(terrainNoise2d(x * TERRAIN_FREQUENCY, y * TERRAIN_FREQUENCY));
 }
 
@@ -46,7 +62,9 @@ export function getRidgedNoise(terrainNoise2d: (x: number, y: number) => number,
 export function getWarpedNoise(
   terrainNoise2d: (x: number, y: number) => number,
   detailNoise2d: (x: number, y: number) => number,
-  x: number, y: number, warp = 30.0
+  x: number,
+  y: number,
+  warp = 30.0
 ): number {
   const warpX = detailNoise2d((x + 500) * DETAIL_FREQUENCY, (y + 500) * DETAIL_FREQUENCY) * warp;
   const warpY = detailNoise2d((x - 500) * DETAIL_FREQUENCY, (y - 500) * DETAIL_FREQUENCY) * warp;
@@ -57,7 +75,9 @@ export function getWarpedNoise(
 export function getCombinedNoise(
   terrainNoise2d: (x: number, y: number) => number,
   detailNoise2d: (x: number, y: number) => number,
-  x: number, y: number, weight = 0.5
+  x: number,
+  y: number,
+  weight = 0.5
 ): number {
   const t = terrainNoise2d(x * TERRAIN_FREQUENCY, y * TERRAIN_FREQUENCY);
   const d = detailNoise2d(x * DETAIL_FREQUENCY, y * DETAIL_FREQUENCY);
@@ -65,7 +85,12 @@ export function getCombinedNoise(
 }
 
 /** Terrace noise: stepped elevation values. Use for mesa biomes or plateau terrain. */
-export function getTerraceNoise(terrainNoise2d: (x: number, y: number) => number, x: number, y: number, steps = 5): number {
+export function getTerraceNoise(
+  terrainNoise2d: (x: number, y: number) => number,
+  x: number,
+  y: number,
+  steps = 5
+): number {
   const raw = terrainNoise2d(x * TERRAIN_FREQUENCY, y * TERRAIN_FREQUENCY);
   const normalized = (raw + 1.0) / 2.0;
   return (Math.floor(normalized * steps) / steps) * 2.0 - 1.0;
@@ -105,16 +130,18 @@ export function generateWorld(width: number, height: number, seed = Date.now()):
       const movementCost = sub.movementCost;
 
       // Legacy type field (kept for compatibility with existing code)
-      const legacyType = biomeName === 'mountain'
-        ? 'mountain'
-        : subTypeName === 'water' || subTypeName === 'shallow_water' || subTypeName === 'rapids'
-          ? 'water'
-          : biomeName === 'forest'
-            ? 'forest'
-            : 'land';
+      const legacyType =
+        biomeName === 'mountain'
+          ? 'mountain'
+          : subTypeName === 'water' || subTypeName === 'shallow_water' || subTypeName === 'rapids'
+            ? 'water'
+            : biomeName === 'forest'
+              ? 'forest'
+              : 'land';
 
       world[y][x] = {
-        x, y,
+        x,
+        y,
         type: legacyType as WorldTile['type'],
         discovered: true,
         ascii: pickChar(sub, x, y),
@@ -127,7 +154,10 @@ export function generateWorld(width: number, height: number, seed = Date.now()):
         walkable,
         resources: {},
         territoryOwner: '',
-        gCost: 0, hCost: 0, fCost: 0, parent: null
+        gCost: 0,
+        hCost: 0,
+        fCost: 0,
+        parent: null
       };
     }
   }
@@ -161,7 +191,10 @@ export function generateLocations(worldMap: WorldTile[][]): Location[] {
       description: `A ${locationTypes[Math.floor(Math.random() * locationTypes.length)]} location`,
       type: locationTypes[Math.floor(Math.random() * locationTypes.length)],
       tier: Math.floor(Math.random() * 3),
-      rarity: ['common', 'uncommon', 'rare'][Math.floor(Math.random() * 3)] as 'common' | 'uncommon' | 'rare',
+      rarity: ['common', 'uncommon', 'rare'][Math.floor(Math.random() * 3)] as
+        | 'common'
+        | 'uncommon'
+        | 'rare',
       discovered: false,
       availableResources: {
         tier0: ['wood', 'stone'],

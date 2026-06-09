@@ -1,189 +1,210 @@
 [
-    {
-        "id": "malnutrition",
-        "name": "Malnutrition",
-        "description": "A diet deficiency causing progressive physical deterioration. Reduces work capacity and ultimately leads to death if unchecked.",
-        "lethalSeverity": 1.0,
-        "stages": [
-            { "label": "trivial", "minSeverity": 0.00, "color": "#f57c00", "modifiers": {"workEfficiency": 0.95} },
-            {
-                "label"      : "minor",
-                "minSeverity": 0.20,
-                "color"      : "#ef6c00",
-                "modifiers"  : {"workEfficiency": 0.85, "hungerRate": 1.1}
-            },
-            {
-                "label"      : "moderate",
-                "minSeverity": 0.35,
-                "color"      : "#e65100",
-                "modifiers"  : {"workEfficiency": 0.70, "hungerRate": 1.2}
-            },
-            {
-                "label"      : "serious",
-                "minSeverity": 0.50,
-                "color"      : "#bf360c",
-                "modifiers"  : {"workEfficiency": 0.55, "hungerRate": 1.3}
-            },
-            {
-                "label"          : "severe",
-                "minSeverity"    : 0.65,
-                "color"          : "#b71c1c",
-                "lifeThreatening": true,
-                "modifiers"      : {"workEfficiency": 0.40, "hungerRate": 1.4}
-            },
-            {
-                "label"          : "extreme",
-                "minSeverity"    : 0.80,
-                "color"          : "#c62828",
-                "lifeThreatening": true,
-                "modifiers"      : {"workEfficiency": 0.20, "hungerRate": 1.5}
-            },
-            {
-                "label"          : "fatal",
-                "minSeverity"    : 0.95,
-                "color"          : "#ff1744",
-                "lifeThreatening": true,
-                "modifiers"      : {"workEfficiency": 0.0}
-            }
-        ]
-    },
-    {
-        "id": "blood_loss",
-        "name": "Blood Loss",
-        "description": "Insufficient blood volume impairs consciousness and movement. Extreme blood loss leads to death.",
-        "lethalSeverity": 1.0,
-        "stages": [
-            {"label": "initial", "minSeverity": 0.00, "color": "#c62828", "modifiers": {}},
-            { "label": "minor", "minSeverity": 0.15, "color": "#b71c1c", "modifiers": {"moveSpeed": 0.95} },
-            {
-                "label"      : "moderate",
-                "minSeverity": 0.30,
-                "color"      : "#d50000",
-                "modifiers"  : {"moveSpeed": 0.80, "workEfficiency": 0.90}
-            },
-            {
-                "label"      : "major",
-                "minSeverity": 0.45,
-                "color"      : "#d50000",
-                "modifiers"  : {"moveSpeed": 0.60, "workEfficiency": 0.75}
-            },
-            {
-                "label"          : "serious",
-                "minSeverity"    : 0.60,
-                "color"          : "#ff1744",
-                "lifeThreatening": true,
-                "modifiers"      : {"moveSpeed": 0.40, "workEfficiency": 0.50}
-            },
-            {
-                "label"          : "extreme",
-                "minSeverity"    : 0.75,
-                "color"          : "#ff1744",
-                "lifeThreatening": true,
-                "modifiers"      : {"moveSpeed": 0.0, "workEfficiency": 0.0}
-            },
-            {"label": "fatal", "minSeverity": 0.90, "color": "#ff1744", "lifeThreatening": true, "modifiers": {}}
-        ]
-    },
-    {
-        "id"            : "fracture",
-        "name"          : "Fracture",
-        "description"   : "A broken bone impairing movement and combat ability. Worsens without rest.",
-        "lethalSeverity": 1.0,
-        "stages"        : [
-            {
-                "label"      : "hairline",
-                "minSeverity": 0.00,
-                "color"      : "#8d6e63",
-                "modifiers"  : {"moveSpeed": 0.90, "workEfficiency": 0.85}
-            },
-            {
-                "label"      : "cracked",
-                "minSeverity": 0.25,
-                "color"      : "#795548",
-                "modifiers"  : {"moveSpeed": 0.75, "workEfficiency": 0.70}
-            },
-            {
-                "label"      : "displaced",
-                "minSeverity": 0.50,
-                "color"      : "#6d4c41",
-                "modifiers"  : {"moveSpeed": 0.50, "workEfficiency": 0.40}
-            },
-            {
-                "label"          : "shattered",
-                "minSeverity"    : 0.75,
-                "color"          : "#4e342e",
-                "lifeThreatening": false,
-                "modifiers"      : {"moveSpeed": 0.0, "workEfficiency": 0.10}
-            }
-        ]
-    },
-    {
-        "id"            : "infection",
-        "name"          : "Infection",
-        "description"   : "A wound has become infected. Untreated infections spread, doubling pain and bleeding.",
-        "lethalSeverity": 1.0,
-        "stages"        : [
-            { "label": "mild", "minSeverity": 0.00, "color": "#f9a825", "modifiers": {"workEfficiency": 0.90} },
-            {
-                "label"      : "moderate",
-                "minSeverity": 0.25,
-                "color"      : "#f57f17",
-                "modifiers"  : {"workEfficiency": 0.70, "hungerRate": 1.1}
-            },
-            {
-                "label"      : "serious",
-                "minSeverity": 0.50,
-                "color"      : "#e65100",
-                "modifiers"  : {"workEfficiency": 0.50, "moveSpeed": 0.80, "hungerRate": 1.25}
-            },
-            {
-                "label"          : "severe",
-                "minSeverity"    : 0.75,
-                "color"          : "#bf360c",
-                "lifeThreatening": true,
-                "modifiers"      : {"workEfficiency": 0.20, "moveSpeed": 0.50, "hungerRate": 1.5}
-            },
-            {
-                "label"          : "fatal",
-                "minSeverity"    : 0.90,
-                "color"          : "#ff1744",
-                "lifeThreatening": true,
-                "modifiers"      : {"workEfficiency": 0.0, "moveSpeed": 0.0}
-            }
-        ]
-    },
-    {
-        "id"            : "shock",
-        "name"          : "Shock",
-        "description"   : "Severe pain or blood loss has sent the body into shock. The pawn is barely functional.",
-        "lethalSeverity": 1.0,
-        "stages"        : [
-            {
-                "label"      : "mild",
-                "minSeverity": 0.00,
-                "color"      : "#b0bec5",
-                "modifiers"  : {"workEfficiency": 0.80, "moveSpeed": 0.90}
-            },
-            {
-                "label"      : "moderate",
-                "minSeverity": 0.30,
-                "color"      : "#90a4ae",
-                "modifiers"  : {"workEfficiency": 0.55, "moveSpeed": 0.70}
-            },
-            {
-                "label"          : "severe",
-                "minSeverity"    : 0.60,
-                "color"          : "#607d8b",
-                "lifeThreatening": true,
-                "modifiers"      : {"workEfficiency": 0.20, "moveSpeed": 0.30}
-            },
-            {
-                "label"          : "critical",
-                "minSeverity"    : 0.85,
-                "color"          : "#455a64",
-                "lifeThreatening": true,
-                "modifiers"      : {"workEfficiency": 0.0, "moveSpeed": 0.0}
-            }
-        ]
-    }
+  {
+    "id": "malnutrition",
+    "name": "Malnutrition",
+    "description": "A diet deficiency causing progressive physical deterioration. Reduces work capacity and ultimately leads to death if unchecked.",
+    "lethalSeverity": 1.0,
+    "stages": [
+      {
+        "label": "trivial",
+        "minSeverity": 0.0,
+        "color": "#f57c00",
+        "modifiers": { "workEfficiency": 0.95 }
+      },
+      {
+        "label": "minor",
+        "minSeverity": 0.2,
+        "color": "#ef6c00",
+        "modifiers": { "workEfficiency": 0.85, "hungerRate": 1.1 }
+      },
+      {
+        "label": "moderate",
+        "minSeverity": 0.35,
+        "color": "#e65100",
+        "modifiers": { "workEfficiency": 0.7, "hungerRate": 1.2 }
+      },
+      {
+        "label": "serious",
+        "minSeverity": 0.5,
+        "color": "#bf360c",
+        "modifiers": { "workEfficiency": 0.55, "hungerRate": 1.3 }
+      },
+      {
+        "label": "severe",
+        "minSeverity": 0.65,
+        "color": "#b71c1c",
+        "lifeThreatening": true,
+        "modifiers": { "workEfficiency": 0.4, "hungerRate": 1.4 }
+      },
+      {
+        "label": "extreme",
+        "minSeverity": 0.8,
+        "color": "#c62828",
+        "lifeThreatening": true,
+        "modifiers": { "workEfficiency": 0.2, "hungerRate": 1.5 }
+      },
+      {
+        "label": "fatal",
+        "minSeverity": 0.95,
+        "color": "#ff1744",
+        "lifeThreatening": true,
+        "modifiers": { "workEfficiency": 0.0 }
+      }
+    ]
+  },
+  {
+    "id": "blood_loss",
+    "name": "Blood Loss",
+    "description": "Insufficient blood volume impairs consciousness and movement. Extreme blood loss leads to death.",
+    "lethalSeverity": 1.0,
+    "stages": [
+      { "label": "initial", "minSeverity": 0.0, "color": "#c62828", "modifiers": {} },
+      {
+        "label": "minor",
+        "minSeverity": 0.15,
+        "color": "#b71c1c",
+        "modifiers": { "moveSpeed": 0.95 }
+      },
+      {
+        "label": "moderate",
+        "minSeverity": 0.3,
+        "color": "#d50000",
+        "modifiers": { "moveSpeed": 0.8, "workEfficiency": 0.9 }
+      },
+      {
+        "label": "major",
+        "minSeverity": 0.45,
+        "color": "#d50000",
+        "modifiers": { "moveSpeed": 0.6, "workEfficiency": 0.75 }
+      },
+      {
+        "label": "serious",
+        "minSeverity": 0.6,
+        "color": "#ff1744",
+        "lifeThreatening": true,
+        "modifiers": { "moveSpeed": 0.4, "workEfficiency": 0.5 }
+      },
+      {
+        "label": "extreme",
+        "minSeverity": 0.75,
+        "color": "#ff1744",
+        "lifeThreatening": true,
+        "modifiers": { "moveSpeed": 0.0, "workEfficiency": 0.0 }
+      },
+      {
+        "label": "fatal",
+        "minSeverity": 0.9,
+        "color": "#ff1744",
+        "lifeThreatening": true,
+        "modifiers": {}
+      }
+    ]
+  },
+  {
+    "id": "fracture",
+    "name": "Fracture",
+    "description": "A broken bone impairing movement and combat ability. Worsens without rest.",
+    "lethalSeverity": 1.0,
+    "stages": [
+      {
+        "label": "hairline",
+        "minSeverity": 0.0,
+        "color": "#8d6e63",
+        "modifiers": { "moveSpeed": 0.9, "workEfficiency": 0.85 }
+      },
+      {
+        "label": "cracked",
+        "minSeverity": 0.25,
+        "color": "#795548",
+        "modifiers": { "moveSpeed": 0.75, "workEfficiency": 0.7 }
+      },
+      {
+        "label": "displaced",
+        "minSeverity": 0.5,
+        "color": "#6d4c41",
+        "modifiers": { "moveSpeed": 0.5, "workEfficiency": 0.4 }
+      },
+      {
+        "label": "shattered",
+        "minSeverity": 0.75,
+        "color": "#4e342e",
+        "lifeThreatening": false,
+        "modifiers": { "moveSpeed": 0.0, "workEfficiency": 0.1 }
+      }
+    ]
+  },
+  {
+    "id": "infection",
+    "name": "Infection",
+    "description": "A wound has become infected. Untreated infections spread, doubling pain and bleeding.",
+    "lethalSeverity": 1.0,
+    "stages": [
+      {
+        "label": "mild",
+        "minSeverity": 0.0,
+        "color": "#f9a825",
+        "modifiers": { "workEfficiency": 0.9 }
+      },
+      {
+        "label": "moderate",
+        "minSeverity": 0.25,
+        "color": "#f57f17",
+        "modifiers": { "workEfficiency": 0.7, "hungerRate": 1.1 }
+      },
+      {
+        "label": "serious",
+        "minSeverity": 0.5,
+        "color": "#e65100",
+        "modifiers": { "workEfficiency": 0.5, "moveSpeed": 0.8, "hungerRate": 1.25 }
+      },
+      {
+        "label": "severe",
+        "minSeverity": 0.75,
+        "color": "#bf360c",
+        "lifeThreatening": true,
+        "modifiers": { "workEfficiency": 0.2, "moveSpeed": 0.5, "hungerRate": 1.5 }
+      },
+      {
+        "label": "fatal",
+        "minSeverity": 0.9,
+        "color": "#ff1744",
+        "lifeThreatening": true,
+        "modifiers": { "workEfficiency": 0.0, "moveSpeed": 0.0 }
+      }
+    ]
+  },
+  {
+    "id": "shock",
+    "name": "Shock",
+    "description": "Severe pain or blood loss has sent the body into shock. The pawn is barely functional.",
+    "lethalSeverity": 1.0,
+    "stages": [
+      {
+        "label": "mild",
+        "minSeverity": 0.0,
+        "color": "#b0bec5",
+        "modifiers": { "workEfficiency": 0.8, "moveSpeed": 0.9 }
+      },
+      {
+        "label": "moderate",
+        "minSeverity": 0.3,
+        "color": "#90a4ae",
+        "modifiers": { "workEfficiency": 0.55, "moveSpeed": 0.7 }
+      },
+      {
+        "label": "severe",
+        "minSeverity": 0.6,
+        "color": "#607d8b",
+        "lifeThreatening": true,
+        "modifiers": { "workEfficiency": 0.2, "moveSpeed": 0.3 }
+      },
+      {
+        "label": "critical",
+        "minSeverity": 0.85,
+        "color": "#455a64",
+        "lifeThreatening": true,
+        "modifiers": { "workEfficiency": 0.0, "moveSpeed": 0.0 }
+      }
+    ]
+  }
 ]

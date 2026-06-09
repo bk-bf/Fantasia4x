@@ -1,4 +1,3 @@
-
 # COMBAT SYSTEM
 
 > **Related:** [ROADMAP](ROADMAP.md) · [ENTITIES_SPAWNING](ENTITIES_SPAWNING.md) · [MAGIC-SKILLS](MAGIC-SKILLS.md) · [EQUIPMENT-EXPANSION](EQUIPMENT-EXPANSION.md) · [game/DESIGN](../../game/DESIGN.md)
@@ -47,9 +46,9 @@ auto-attacks at `attackSpeed` interval. Player can override target or issue a
 Flee order at any time.
 
 ```typescript
-attackCooldown = 1000 / attackSpeed    // ms; decrements each sim tick
-attackSpeed    = 1.0 + pawn.stats.dexterity / 100 + weaponMod
-aggroRange     = 8 + floor(pawn.stats.perception / 20)  // tiles
+attackCooldown = 1000 / attackSpeed; // ms; decrements each sim tick
+attackSpeed = 1.0 + pawn.stats.dexterity / 100 + weaponMod;
+aggroRange = 8 + floor(pawn.stats.perception / 20); // tiles
 ```
 
 **Drafted mode**: player picks the target and issues move/attack/flee orders; the
@@ -148,49 +147,87 @@ differently this one.
 ```typescript
 type BodyPartId =
   // ── Head region ──────────────────────────────────────────────────────────
-  | 'skull' | 'jaw' | 'nose'
-  | 'leftEye'  | 'rightEye'
-  | 'leftEar'  | 'rightEar'
+  | 'skull'
+  | 'jaw'
+  | 'nose'
+  | 'leftEye'
+  | 'rightEye'
+  | 'leftEar'
+  | 'rightEar'
   // internal (only reachable via skull hit)
   | 'brain'
   // ── Torso ─────────────────────────────────────────────────────────────────
-  | 'chest' | 'abdomen'
+  | 'chest'
+  | 'abdomen'
   // internal (only reachable via torso hit)
-  | 'heart' | 'leftLung' | 'rightLung'
-  | 'liver' | 'stomach' | 'leftKidney' | 'rightKidney'
+  | 'heart'
+  | 'leftLung'
+  | 'rightLung'
+  | 'liver'
+  | 'stomach'
+  | 'leftKidney'
+  | 'rightKidney'
   | 'spine'
   // ── Left arm ──────────────────────────────────────────────────────────────
-  | 'leftShoulder' | 'leftUpperArm' | 'leftForearm' | 'leftHand'
-  | 'leftThumb' | 'leftIndexFinger' | 'leftMiddleFinger' | 'leftRingFinger' | 'leftLittleFinger'
+  | 'leftShoulder'
+  | 'leftUpperArm'
+  | 'leftForearm'
+  | 'leftHand'
+  | 'leftThumb'
+  | 'leftIndexFinger'
+  | 'leftMiddleFinger'
+  | 'leftRingFinger'
+  | 'leftLittleFinger'
   // ── Right arm ─────────────────────────────────────────────────────────────
-  | 'rightShoulder' | 'rightUpperArm' | 'rightForearm' | 'rightHand'
-  | 'rightThumb' | 'rightIndexFinger' | 'rightMiddleFinger' | 'rightRingFinger' | 'rightLittleFinger'
+  | 'rightShoulder'
+  | 'rightUpperArm'
+  | 'rightForearm'
+  | 'rightHand'
+  | 'rightThumb'
+  | 'rightIndexFinger'
+  | 'rightMiddleFinger'
+  | 'rightRingFinger'
+  | 'rightLittleFinger'
   // ── Left leg ──────────────────────────────────────────────────────────────
-  | 'leftHip' | 'leftUpperLeg' | 'leftLowerLeg' | 'leftFoot'
-  | 'leftBigToe' | 'leftSecondToe' | 'leftMiddleToe' | 'leftFourthToe' | 'leftLittleToe'
+  | 'leftHip'
+  | 'leftUpperLeg'
+  | 'leftLowerLeg'
+  | 'leftFoot'
+  | 'leftBigToe'
+  | 'leftSecondToe'
+  | 'leftMiddleToe'
+  | 'leftFourthToe'
+  | 'leftLittleToe'
   // ── Right leg ─────────────────────────────────────────────────────────────
-  | 'rightHip' | 'rightUpperLeg' | 'rightLowerLeg' | 'rightFoot'
-  | 'rightBigToe' | 'rightSecondToe' | 'rightMiddleToe' | 'rightFourthToe' | 'rightLittleToe';
+  | 'rightHip'
+  | 'rightUpperLeg'
+  | 'rightLowerLeg'
+  | 'rightFoot'
+  | 'rightBigToe'
+  | 'rightSecondToe'
+  | 'rightMiddleToe'
+  | 'rightFourthToe'
+  | 'rightLittleToe';
 
 interface BodyPartDef {
   id: BodyPartId;
-  parentLimb: LimbId;         // one of the existing 6 roots; every fine part rolls up to it
-  maxHp: number;              // hit points before the part is destroyed (hand ≈ 30)
-  bleedRatio: number;         // share of total body mass (0–1); scales open-wound bleed
-  hitWeight: number;          // relative probability of being struck; 0 = internal only
-  containedIn?: BodyPartId;   // nested organs/bones hit via parent with penetration roll
-  isPaired: boolean;          // losing both = full loss of that function
-  isVital: boolean;           // destruction causes immediate collapse → bleedout
+  parentLimb: LimbId; // one of the existing 6 roots; every fine part rolls up to it
+  maxHp: number; // hit points before the part is destroyed (hand ≈ 30)
+  bleedRatio: number; // share of total body mass (0–1); scales open-wound bleed
+  hitWeight: number; // relative probability of being struck; 0 = internal only
+  containedIn?: BodyPartId; // nested organs/bones hit via parent with penetration roll
+  isPaired: boolean; // losing both = full loss of that function
+  isVital: boolean; // destruction causes immediate collapse → bleedout
 }
 
 interface Injury {
   bodyPart: BodyPartId;
   type: 'cut' | 'blunt' | 'fracture' | 'puncture' | 'burn' | 'crush';
   severity: 'minor' | 'serious' | 'critical' | 'destroyed';
-  bleeding: number;           // blood/turn lost; clots below CLOT_FLOOR, or via herbal_kit
-  painContribution: number;   // adds to pawn.pain total
-  infected: boolean;          // set after 20+ turns untreated; doubles pain + bleeding
-  treatedAt?: number;         // turn number when a Healer applied care
+  bleeding: number; // blood/turn lost; clots below CLOT_FLOOR, or via herbal_kit
+  painContribution: number; // adds to pawn.pain total
+  infected: boolean; // set after 20+ turns untreated; doubles pain + bleeding
+  treatedAt?: number; // turn number when a Healer applied care
 }
 ```
 
@@ -249,6 +286,7 @@ decay entirely.
 ### Body-part consequences
 
 #### Head & sensory
+
 | Part        | Condition | Effect                                                |
 | ----------- | --------- | ----------------------------------------------------- |
 | brain       | serious+  | 30% chance to attack wrong target; random job cancels |
@@ -262,6 +300,7 @@ decay entirely.
 | nose        | destroyed | Cosmetic; +5 mood debuff (self-image)                 |
 
 #### Torso & organs
+
 | Part           | Condition | Effect                                                  |
 | -------------- | --------- | ------------------------------------------------------- |
 | chest          | critical  | Immediate collapse regardless of pain total             |
@@ -277,6 +316,7 @@ decay entirely.
 | spine          | serious+  | Paralysis below waist; cannot move or fight             |
 
 #### Arms & hands
+
 | Part             | Condition | Effect                                           |
 | ---------------- | --------- | ------------------------------------------------ |
 | shoulder         | fracture  | Arm unusable; cannot equip in that slot          |
@@ -288,6 +328,7 @@ decay entirely.
 | arm (whole)      | destroyed | Arm slot permanently lost; major mood event      |
 
 #### Legs & feet
+
 | Part              | Condition | Effect                                                |
 | ----------------- | --------- | ----------------------------------------------------- |
 | hip               | fracture  | Leg unusable; −3 movement speed                       |
@@ -298,6 +339,7 @@ decay entirely.
 | leg (whole)       | destroyed | Leg slot permanently lost; major mood event; −3 speed |
 
 #### Universal
+
 | Condition  | Effect                                                               |
 | ---------- | -------------------------------------------------------------------- |
 | HP = 0     | Permadeath — triggers colony-wide mood event (SOCIAL-LAYER)          |
@@ -349,6 +391,7 @@ the roots.
 ### Phase B — CombatService
 
 ✅ New `combatService` singleton (`systems/Combat.ts`):
+
 - `tickCombat(state, dtMs)` — finds mobs in `Attacking` state, fires every `ATTACK_INTERVAL_TICKS`, resolves hit against nearest adjacent pawn
 - `resolveHit(attacker, defender, state)` → `HitResult` (bodyPart, damage, injury, knockdown)
 - `applyInjury(pawnId, injury, state)` — updates `LimbState.parts[]`, aggregates `bleedRate` to root limb, upserts `blood_loss` condition, handles pain collapse + vital-part permadeath
