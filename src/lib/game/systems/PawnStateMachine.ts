@@ -21,6 +21,7 @@ import conditionsData from '../database/conditions.jsonc';
 import { jobService, BASE_WORK_RATE } from '../services/JobService';
 import { pawnService } from '../services/PawnService';
 import { itemService } from '../services/ItemService';
+import { pawnStatService } from '../services/PawnStatService';
 import { wasmPathfinderService } from '../services/WasmPathfinderService';
 import { buildPathfindingGrids } from '../services/PathfinderService';
 import { logActivity } from '../../stores/Log';
@@ -1192,9 +1193,12 @@ function handleWorking(pawn: Pawn, gameState: GameState): GameState {
         return jobService.releaseJob(pawn.id, jobId, goIdle(pawn, gameState));
     }
 
+    // Wire stats.jsonc work speed into job advancement
+    const workCategory = jobService.getJobWorkCategory(activeJob, gameState);
+    const workSpeedMult = pawnStatService.getWorkModifiers(pawn, workCategory).speed;
     const workPoints = (activeJob.type === 'construct' || activeJob.type === 'deconstruct')
-        ? Math.max(1, pawn.skills['skill_construction'] ?? 0)
-        : BASE_WORK_RATE;
+        ? Math.max(1, pawn.skills['skill_construction'] ?? 0) * workSpeedMult
+        : BASE_WORK_RATE * workSpeedMult;
     // workPoints is authored as work-points PER SECOND; deliver one tick's worth so
     // a job authored as N seconds of work still takes N seconds of real time.
     const afterAdvance = jobService.advanceJob(jobId, perTick(workPoints), gameState);

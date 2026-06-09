@@ -18,6 +18,7 @@ import { resourceObjectService } from './ResourceObjectService';
 import { SUBTERRAINS, SUBTERRAIN_FALLBACK } from '../core/Terrains';
 import { itemService } from './ItemService';
 import { buildingService } from './BuildingService';
+import { pawnStatService } from './PawnStatService';
 import { addToStockpileZone, consumeFromStockpiles, absorbDropIfOnStockpileTile } from '../core/GameState';
 import { ticksFromSeconds } from '../core/time';
 
@@ -644,9 +645,13 @@ class JobServiceImpl {
         const building = (gs.buildings ?? []).find((b) => b.id === job.buildingId);
         if (!building) return gs;
 
+        // Wire stats.jsonc construction quality into building durability
+        const pawn = gs.pawns.find((p) => p.id === job.claimedBy);
+        const qualityMult = pawn ? pawnStatService.getWorkModifiers(pawn, 'construction').quality : 1;
+
         const newBuildings = (gs.buildings ?? []).map((b) =>
             b.id === job.buildingId
-                ? { ...b, status: 'complete' as const, progress: 1, workDone: b.workRequired ?? 50 }
+                ? { ...b, status: 'complete' as const, progress: 1, workDone: b.workRequired ?? 50, quality: qualityMult }
                 : b
         );
 
@@ -654,7 +659,7 @@ class JobServiceImpl {
         const newCounts = { ...(gs.buildingCounts ?? {}) };
         newCounts[building.type] = (newCounts[building.type] ?? 0) + 1;
 
-        console.log(`[JobService] Construction complete: ${building.type} (${building.id})`);
+        console.log(`[JobService] Construction complete: ${building.type} (${building.id}) quality=${qualityMult.toFixed(2)}`);
         return { ...gs, buildings: newBuildings, buildingCounts: newCounts };
     }
 
@@ -664,21 +669,37 @@ class JobServiceImpl {
         const entry = (gs.craftingQueue ?? []).find((e) => e.id === job.craftQueueId);
         if (!entry) return gs;
 
-        // Add crafted item(s) to item pool
+        // Wire stats.jsonc crafting quality into item properties
+        const pawn = gs.pawns.find((p) => p.id === job.claimedBy);
+        // Map craft item to work category (crafting, metalworking, leatherworking, alchemy, cooking)
+        const workCategory = entry.item.workshopType
+            ? (entry.item.workshopType === 'forge' ? 'metalworking'
+                : entry.item.workshopType === 'alchemy_lab' ? 'alchemy'
+                : entry.item.workshopType === 'kitchen' ? 'cooking'
+                : 'crafting')
+            : 'crafting';
+        const qualityMult = pawn ? pawnStatService.getWorkModifiers(pawn, workCategory).quality : 1;
+
+        // Add crafted item(s) to item pool with quality stored in properties
         const itemId = entry.item.id;
         const quantity = entry.quantity ?? 1;
         const newItems = [...gs.item];
         const idx = newItems.findIndex((i) => i.id === itemId);
         if (idx >= 0) {
+            // Existing item: just add quantity (quality is per-batch, not tracked for stacks)
             newItems[idx] = { ...newItems[idx], amount: newItems[idx].amount + quantity };
         } else {
-            newItems.push({ ...entry.item, amount: quantity });
+            newItems.push({
+                ...entry.item,
+                amount: quantity,
+                properties: { ...(entry.item.properties ?? {}), quality: qualityMult }
+            });
         }
 
         // Remove from crafting queue
         const newQueue = (gs.craftingQueue ?? []).filter((e) => e.id !== job.craftQueueId);
 
-        console.log(`[JobService] Crafting complete: ${itemId} ×${quantity}`);
+        console.log(`[JobService] Crafting complete: ${itemId} ×${quantity} quality=${qualityMult.toFixed(2)}`);
         return { ...gs, item: newItems, craftingQueue: newQueue };
     }
 
@@ -965,6 +986,11 @@ class JobServiceImpl {
         if (workKey in laborSettings) return laborSettings[workKey] ?? 2;
         if (workKey in legacyPriorities) return Math.max(0, Math.min(4, legacyPriorities[workKey]));
         return 2; // LABOR_LEVEL.NORMAL default
+    }
+
+    /** Public accessor for work-category mapping (used by PawnStateMachine for stat wiring). */
+    getJobWorkCategory(job: Job, gs?: GameState): string {
+        return this._jobTypeToWorkKey(job, gs);
     }
 
     // ------------------------------------------------------------------ //

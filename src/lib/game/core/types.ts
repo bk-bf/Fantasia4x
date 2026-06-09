@@ -72,6 +72,8 @@ export interface PlacedBuilding {
 	deconstructWorkDone?: number;      // accumulated demolition work points
 	// Shelter assignment
 	assignedPawnId?: string;           // pawn who owns this shelter; only they will use it
+	// Quality from construction work stat
+	quality?: number;                  // 0.1–2.0+ multiplier from construction_quality stat
 }
 
 // ===== PHASE 5 NEW TYPES =====

@@ -1,6 +1,7 @@
 import type { DesignationType, Pawn } from '../core/types';
 import { resolveCharSpans, type CharSpan } from '../core/Terrains';
 import resourceObjectsData from '../database/resources.jsonc';
+import { pawnStatService } from './PawnStatService';
 
 export interface ResourceYieldDef {
     itemId: string;
@@ -150,14 +151,16 @@ class ResourceObjectServiceImpl {
             : def.interaction;
 
         const result: Record<string, number> = {};
+        // Wire stats.jsonc work yield into harvest output
+        const statYieldMult = pawn ? pawnStatService.getWorkModifiers(pawn, interaction.workCategory).yield : 1;
         for (const y of interaction.yields) {
             if (availableItemIds && !availableItemIds.has(y.itemId)) continue;
             const roll = this.randomInt(y.min, y.max);
             const skill = this.getSkillLevel(pawn, y.skillId, interaction.workCategory);
             const multiplier = Math.max(1, 1 + skill * y.skillMultiplier);
             // Apply workYield bonus from racial traits (e.g. Keen Senses for foraging)
-            const yieldMult = this.getWorkYieldMultiplier(pawn, interaction.workCategory);
-            const amount = Math.max(0, Math.round(roll * multiplier * yieldMult));
+            const traitYieldMult = this.getWorkYieldMultiplier(pawn, interaction.workCategory);
+            const amount = Math.max(0, Math.round(roll * multiplier * traitYieldMult * statYieldMult));
             if (amount > 0) {
                 result[y.itemId] = (result[y.itemId] ?? 0) + amount;
             }
