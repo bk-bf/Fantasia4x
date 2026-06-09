@@ -9,6 +9,7 @@ import { absorbDropIfOnStockpileTile } from '../core/GameState';
 import { wasmPathfinderService } from './WasmPathfinderService';
 import { buildPathfindingGrids } from './PathfinderService';
 import { calcMaxStamina, calcMaxBloodVolume } from '../entities/Pawns';
+import { createDefaultBodyParts } from '../systems/Combat';
 import { gameLogger } from '../dev/gameLogger';
 
 /**
@@ -253,12 +254,12 @@ class EntityServiceImpl {
             stamina: calcMaxStamina(stats),
             maxStamina: calcMaxStamina(stats),
             limbs: [
-                { id: 'head', health: 100, isMissing: false, bleedRate: 0 },
-                { id: 'torso', health: 100, isMissing: false, bleedRate: 0 },
-                { id: 'left_arm', health: 100, isMissing: false, bleedRate: 0 },
-                { id: 'right_arm', health: 100, isMissing: false, bleedRate: 0 },
-                { id: 'left_leg', health: 100, isMissing: false, bleedRate: 0 },
-                { id: 'right_leg', health: 100, isMissing: false, bleedRate: 0 }
+                { id: 'head', health: 100, isMissing: false, bleedRate: 0, parts: createDefaultBodyParts('head') },
+                { id: 'torso', health: 100, isMissing: false, bleedRate: 0, parts: createDefaultBodyParts('torso') },
+                { id: 'left_arm', health: 100, isMissing: false, bleedRate: 0, parts: createDefaultBodyParts('left_arm') },
+                { id: 'right_arm', health: 100, isMissing: false, bleedRate: 0, parts: createDefaultBodyParts('right_arm') },
+                { id: 'left_leg', health: 100, isMissing: false, bleedRate: 0, parts: createDefaultBodyParts('left_leg') },
+                { id: 'right_leg', health: 100, isMissing: false, bleedRate: 0, parts: createDefaultBodyParts('right_leg') }
             ]
         };
     }

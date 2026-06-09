@@ -12,6 +12,7 @@ import {
 	createPawnEquipment
 } from '../core/PawnEquipment';
 import { modifierSystem } from '../systems/ModifierSystem';
+import { createDefaultBodyParts } from '../systems/Combat';
 
 // Module-level counter for sequential debug IDs across all generated pawns.
 let _pawnDebugIdCounter = 1;
@@ -108,12 +109,12 @@ export function generatePawns(race: Race, count?: number): Pawn[] {
 			maxHunger,
 			maxFatigue,
 			limbs: [
-				{ id: 'head', health: 100, isMissing: false, bleedRate: 0 },
-				{ id: 'torso', health: 100, isMissing: false, bleedRate: 0 },
-				{ id: 'left_arm', health: 100, isMissing: false, bleedRate: 0 },
-				{ id: 'right_arm', health: 100, isMissing: false, bleedRate: 0 },
-				{ id: 'left_leg', health: 100, isMissing: false, bleedRate: 0 },
-				{ id: 'right_leg', health: 100, isMissing: false, bleedRate: 0 }
+				{ id: 'head', health: 100, isMissing: false, bleedRate: 0, parts: createDefaultBodyParts('head') },
+				{ id: 'torso', health: 100, isMissing: false, bleedRate: 0, parts: createDefaultBodyParts('torso') },
+				{ id: 'left_arm', health: 100, isMissing: false, bleedRate: 0, parts: createDefaultBodyParts('left_arm') },
+				{ id: 'right_arm', health: 100, isMissing: false, bleedRate: 0, parts: createDefaultBodyParts('right_arm') },
+				{ id: 'left_leg', health: 100, isMissing: false, bleedRate: 0, parts: createDefaultBodyParts('left_leg') },
+				{ id: 'right_leg', health: 100, isMissing: false, bleedRate: 0, parts: createDefaultBodyParts('right_leg') }
 			]
 		};
 

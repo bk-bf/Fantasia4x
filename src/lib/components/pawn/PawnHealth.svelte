@@ -1,7 +1,7 @@
 <!-- PawnHealth.svelte — ASCII body silhouette + limb integrity panel -->
 <script lang="ts">
   import type { Pawn, LimbState, LimbId, BodyPartState, BodyPartId } from '$lib/game/core/types';
-  import { PART_DEF_MAP } from '$lib/game/systems/Combat';
+  import { PART_DEF_MAP, createDefaultBodyParts } from '$lib/game/systems/Combat';
 
   let { pawn }: { pawn: Pawn } = $props();
 
@@ -157,8 +157,10 @@
         {@const limb = gl(id)}
         {@const status = limbStatus(limb)}
         {@const col = lc(limb)}
-        {@const hasParts = (limb.parts ?? []).length > 0}
+        {@const definedParts = createDefaultBodyParts(id)}
+        {@const hasParts = definedParts.length > 0}
         {@const expanded = isExpanded(id, limb)}
+        {@const displayParts = (limb.parts ?? []).length > 0 ? limb.parts! : definedParts}
         <div
           class="limb-cell"
           class:expandable={hasParts}
@@ -177,14 +179,16 @@
         </div>
         {#if expanded && hasParts}
           <div class="limb-parts">
-            {#each limb.parts ?? [] as part}
+            {#each displayParts as part}
               <div
                 class="part-row"
                 class:damaged={part.isMissing ||
                   part.health < part.maxHp ||
                   part.injuries.length > 0}
               >
-                <span class="part-name">{partName(part.id)}</span>
+                <span class="part-name">
+                  {partName(part.id)}{#if PART_DEF_MAP[part.id]?.isVital}<span class="vital-star">★</span>{/if}
+                </span>
                 <span class="part-hp" style="color:{partHealthColor(part)}">
                   {part.isMissing ? 'MISSING' : `${Math.round((part.health / part.maxHp) * 100)}%`}
                 </span>
@@ -196,9 +200,6 @@
                       >
                     {/each}
                   </span>
-                {/if}
-                {#if PART_DEF_MAP[part.id]?.isVital}
-                  <span class="vital-badge">V</span>
                 {/if}
               </div>
             {/each}
@@ -386,14 +387,11 @@
     border-color: #a08060;
   }
 
-  .vital-badge {
-    font-size: 9px;
-    padding: 0 3px;
-    border-radius: 2px;
-    background: var(--bg-panel);
+  .vital-star {
+    font-size: 8px;
     color: var(--accent);
-    border: 1px solid var(--accent);
-    letter-spacing: 0.02em;
+    margin-right: 3px;
+    line-height: 1;
   }
 
   @keyframes blink {

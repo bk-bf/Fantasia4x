@@ -104,6 +104,20 @@ const PART_DEF_MAP: Partial<Record<BodyPartId, BodyPartDef>> =
 const OUTER_PARTS = BODY_PART_DEFS.filter(d => d.hitWeight > 0);
 const TOTAL_HIT_WEIGHT = OUTER_PARTS.reduce((s, d) => s + d.hitWeight, 0);
 
+/** Build the default full body-part tree for a given root limb.
+ *  Used when spawning pawns / mobs so every entity carries the complete anatomy. */
+export function createDefaultBodyParts(limbId: LimbId): import('../core/types').BodyPartState[] {
+    return BODY_PART_DEFS
+        .filter(d => d.parentLimb === limbId)
+        .map(d => ({
+            id: d.id,
+            health: d.maxHp,
+            maxHp: d.maxHp,
+            isMissing: false,
+            injuries: []
+        }));
+}
+
 // ── Public types ─────────────────────────────────────────────────────────────
 export interface HitResult {
     hit: boolean;
