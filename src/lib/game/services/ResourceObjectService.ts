@@ -155,7 +155,9 @@ class ResourceObjectServiceImpl {
             const roll = this.randomInt(y.min, y.max);
             const skill = this.getSkillLevel(pawn, y.skillId, interaction.workCategory);
             const multiplier = Math.max(1, 1 + skill * y.skillMultiplier);
-            const amount = Math.max(0, Math.round(roll * multiplier));
+            // Apply workYield bonus from racial traits (e.g. Keen Senses for foraging)
+            const yieldMult = this.getWorkYieldMultiplier(pawn, interaction.workCategory);
+            const amount = Math.max(0, Math.round(roll * multiplier * yieldMult));
             if (amount > 0) {
                 result[y.itemId] = (result[y.itemId] ?? 0) + amount;
             }
@@ -167,6 +169,19 @@ class ResourceObjectServiceImpl {
         }
 
         return result;
+    }
+
+    /** Aggregate workYield multiplier from all racial traits for a given work category. */
+    private getWorkYieldMultiplier(pawn: Pawn | undefined, workCategory: string): number {
+        if (!pawn) return 1;
+        let mult = 1;
+        for (const trait of pawn.racialTraits ?? []) {
+            const yieldMap = trait.effects.workYield as Record<string, number> | undefined;
+            if (!yieldMap) continue;
+            if (yieldMap[workCategory]) mult *= yieldMap[workCategory];
+            if (yieldMap['all']) mult *= yieldMap['all'];
+        }
+        return mult;
     }
 
     private getSkillLevel(pawn: Pawn | undefined, skillId: string, workCategory: string): number {

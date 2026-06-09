@@ -159,7 +159,7 @@ export interface GameState {
 	productionTargets: ProductionTarget[];
 	pawns: Pawn[];
 	currentJobIndex: Record<string, number>;
-	pawnAbilities: {}; // Record<pawnId, Record<abilityName, { value: number, sources: string[] }>>
+	pawnStats: {}; // Record<pawnId, Record<statName, { value: number, sources: string[] }>>
 	/** Per-workshop pawn assignment: key = workshopType, value = pawnId or null (any) */
 	craftingStationAssignments?: Record<string, string | null>;
 	/** Per-item crafting config: key = itemId */
@@ -249,6 +249,8 @@ export interface Mob {
 	limbs?: LimbState[];
 	/** Blood volume 0–100; 0 = death by blood loss. Drains from limb bleed rates. */
 	bloodVolume?: number;
+	/** Maximum blood pool; derived from maxHealth (= con×5) at spawn. */
+	maxBloodVolume?: number;
 	/** Active status effect ids (drives modifier lookups, same as Pawn). */
 	activeEffects?: string[];
 	/** False once the mob dies. Stays in mobs[] as a Corpse for loot/butchering. */
@@ -494,8 +496,14 @@ export interface Pawn {
 	conditions?: EntityCondition[];
 	/** 6-limb health state. Initialized at pawn creation. */
 	limbs?: LimbState[];
-	/** Blood volume 0–100. 0 = dead. Slowly regenerates when not bleeding. */
+	/** Blood volume; 0 = dead. Starts at maxBloodVolume. */
 	bloodVolume?: number;
+	/**
+	 * Maximum blood pool — derived from weight and constitution.
+	 * Formula: round(weight × 1.4 + (CON − 10) × 2).
+	 * A 70kg pawn with CON 10 ≈ 98; heavier/tougher pawns go up to ~140.
+	 */
+	maxBloodVolume?: number;
 	/** False once a pawn dies — dead pawns stay in pawns[] but are skipped by all processing. */
 	isAlive?: boolean;
 
@@ -518,6 +526,16 @@ export interface Pawn {
 	stamina?: number;
 	/** Maximum stamina pool for this pawn. */
 	maxStamina?: number;
+	/**
+	 * Hunger tolerance before critical state — derived from CON.
+	 * Formula: round(100 + (CON − 10) × 3). Default 100.
+	 */
+	maxHunger?: number;
+	/**
+	 * Fatigue tolerance before collapse — derived from CON.
+	 * Formula: round(100 + (CON − 10) × 3). Default 100.
+	 */
+	maxFatigue?: number;
 
 	// Phase 4/5: State machine primary state
 	currentState?: string;                       // 'Idle' | 'Hungry' | 'Tired' | 'MovingToNeed' | 'MovingToResource' | 'Working' | 'Hauling' | 'MovingToDeposit' | 'Eating' | 'Sleeping' | 'Dead'
@@ -987,7 +1005,8 @@ export interface RacialTrait {
 		constitutionPenalty?: number;
 
 		// Work efficiency modifiers
-		workEfficiency?: Record<string, number>; // workType -> multiplier
+		workEfficiency?: Record<string, number>; // workType -> speed multiplier
+		workYield?: Record<string, number>;       // workType -> harvest yield multiplier
 
 		// Needs modifiers
 		hungerRate?: number;
@@ -1000,12 +1019,17 @@ export interface RacialTrait {
 		poisonResistance?: number;
 		diseaseResistance?: number;
 		magicResistance?: number;
+		mentalResistance?: number;
+		/** General damage reduction applied before type-specific resistances. */
 		damageReduction?: number;
+		/** Physical damage resistances (0–1; stacks with damageReduction). */
+		blunt_resistance?: number;
+		cutting_resistance?: number;
+		piercing_resistance?: number;
 
 		// Movement and physical
 		movementSpeed?: number;
 		swimmingSpeed?: number;
-		fallDamageReduction?: number;
 
 		// Special abilities
 		nightVision?: number;
@@ -1035,9 +1059,8 @@ export interface RacialTrait {
 		// Combat effects
 		combatRage?: number;
 
-		// Environmental dependencies
+		// Environmental dependencies and sensitivities
 		heatSensitivity?: number;
-		coldImmunity?: number;
 	};
 }
 

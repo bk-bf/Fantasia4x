@@ -1,0 +1,256 @@
+// Pawn stat definitions — non-work stats only.
+// Work stats are defined in Work.ts (WORK_CATEGORIES) and computed by ModifierSystem.
+// "category"  — UI grouping: "combat" | "physical" | "resistance" | "capacity"
+// "formula"   — expression evaluated at runtime; tokens:
+//                 STR DEX CON PER INT CHA weight height  (base stats / physique)
+//                 consciousness manipulation sight moving blood_pumping blood_filtration
+//                 breathing digestion talking hearing pain (body capacities, 0–1)
+//               All non-capacity formulas multiply by relevant capacities so that
+//               limb damage cascades into stat reduction (RimWorld-style).
+//               Example: dodge = (1.0 + (DEX−10)×0.02) × moving
+[
+    // ── Combat ────────────────────────────────────────────────────────────────────
+    // All combat stats are multiplied by relevant body capacities:
+    //   manipulation = ability to swing weapon / aim
+    //   sight        = ability to see target
+    //   moving       = ability to evade
+    //   consciousness = mental clarity for threat detection / balance
+    {
+        "id"         : "melee_damage",
+        "category"   : "combat",
+        "primaryStat": "strength",
+        "formula"    : "(1.0 + (STR − 10) × 0.01) × manipulation",
+        "description": "physical attack damage multiplier (× manipulation)"
+    },
+    {
+        "id"         : "hit_chance",
+        "category"   : "combat",
+        "primaryStat": "dexterity",
+        "formula"    : "(1.0 + (DEX − 10) × 0.03) × sight × manipulation",
+        "description": "attack accuracy (× sight × manipulation)"
+    },
+    {
+        "id"         : "dodge",
+        "category"   : "combat",
+        "primaryStat": "dexterity",
+        "formula"    : "(1.0 + (DEX − 10) × 0.02 − (weight − 70) × 0.002) × moving",
+        "description": "evasion (× moving; heavier = harder to dodge)"
+    },
+    {
+        "id"         : "knockdown_resistance",
+        "category"   : "combat",
+        "primaryStat": "constitution",
+        "formula"    : "(1.0 + (CON − 10) × 0.025) × consciousness",
+        "description": "resistance to stagger (× consciousness; dazed = easier to knock down)"
+    },
+    {
+        "id"         : "aggro_range",
+        "category"   : "combat",
+        "primaryStat": "perception",
+        "formula"    : "(1.0 + (PER − 10) × 0.05) × sight",
+        "description": "threat detection range (× sight)"
+    },
+    // ── Physical ──────────────────────────────────────────────────────────────────
+    // Physical stats are multiplied by the body capacities that enable them:
+    //   manipulation = can physically interact (carry, wield)
+    //   moving       = can locomote (speed, stamina)
+    //   blood_pumping = heart drives stamina
+    //   blood_filtration = kidneys drive recovery
+    //   digestion    = stomach/liver drive food tolerance
+    //   consciousness = mental drive for endurance
+    {
+        "id"         : "movement_speed",
+        "category"   : "physical",
+        "primaryStat": "dexterity",
+        "formula"    : "(1.0 + (DEX − 10) × 0.05 − (weight − 70) × 0.003 + (height − 170) × 0.001) × moving",
+        "description": "movement speed (× moving; broken legs = crawl)"
+    },
+    {
+        "id"         : "stamina",
+        "category"   : "physical",
+        "primaryStat": "constitution",
+        "formula"    : "(50 + (CON − 10) × 4 + (DEX − 10) × 2) × moving × blood_pumping",
+        "description": "stamina pool (× moving × blood_pumping)"
+    },
+    {
+        "id"         : "blood_volume",
+        "category"   : "physical",
+        "primaryStat": "constitution",
+        "formula"    : "weight × 1.4 + (CON − 10) × 2",
+        "description": "total blood pool — physical property, not capacity-dependent"
+    },
+    {
+        "id"         : "blood_regeneration",
+        "category"   : "physical",
+        "primaryStat": "constitution",
+        "formula"    : "(1.0 + (CON − 10) × 0.08) × blood_filtration",
+        "description": "blood recovery (× blood_filtration)"
+    },
+    {
+        "id"         : "hunger_capacity",
+        "category"   : "physical",
+        "primaryStat": "constitution",
+        "formula"    : "(weight + (CON − 10) × 3 + 30) × digestion",
+        "description": "hunger tolerance (× digestion)"
+    },
+    {
+        "id"         : "fatigue_capacity",
+        "category"   : "physical",
+        "primaryStat": "constitution",
+        "formula"    : "(weight × 0.8 + (CON − 10) × 3 + (STR − 10) + 44) × consciousness",
+        "description": "fatigue tolerance (× consciousness)"
+    },
+    // ── Resistance ────────────────────────────────────────────────────────────────
+    // Resistances are multiplied by consciousness (dazed = weaker) and
+    // blood_filtration (for biological resistances: poison, disease).
+    {
+        "id"         : "cutting_resistance",
+        "category"   : "resistance",
+        "primaryStat": "dexterity",
+        "formula"    : "(0.0 + (DEX − 10) × 0.01) × consciousness",
+        "description": "cutting damage reduction (× consciousness)"
+    },
+    {
+        "id"         : "piercing_resistance",
+        "category"   : "resistance",
+        "primaryStat": "constitution",
+        "formula"    : "(0.0 + (CON − 10) × 0.008) × consciousness",
+        "description": "piercing damage reduction (× consciousness)"
+    },
+    {
+        "id"         : "blunt_resistance",
+        "category"   : "resistance",
+        "primaryStat": "constitution",
+        "formula"    : "(0.0 + (CON − 10) × 0.008 + (STR − 10) × 0.004) × consciousness",
+        "description": "blunt damage reduction (× consciousness)"
+    },
+    {
+        "id"         : "fire_resistance",
+        "category"   : "resistance",
+        "primaryStat": "constitution",
+        "formula"    : "(0.0 + (CON − 10) × 0.01) × consciousness",
+        "description": "fire damage reduction (× consciousness)"
+    },
+    {
+        "id"         : "cold_resistance",
+        "category"   : "resistance",
+        "primaryStat": "constitution",
+        "formula"    : "(0.0 + (CON − 10) × 0.01) × consciousness",
+        "description": "cold damage reduction (× consciousness)"
+    },
+    {
+        "id"         : "lightning_resistance",
+        "category"   : "resistance",
+        "primaryStat": "dexterity",
+        "formula"    : "(0.0 + (DEX − 10) × 0.01) × consciousness",
+        "description": "lightning damage reduction (× consciousness)"
+    },
+    {
+        "id"         : "shadow_resistance",
+        "category"   : "resistance",
+        "primaryStat": "intelligence",
+        "formula"    : "(0.0 + (INT − 10) × 0.01) × consciousness",
+        "description": "shadow damage reduction (× consciousness)"
+    },
+    {
+        "id"         : "poison_resistance",
+        "category"   : "resistance",
+        "primaryStat": "constitution",
+        "formula"    : "(0.0 + (CON − 10) × 0.015) × consciousness × blood_filtration",
+        "description": "toxin mitigation (× consciousness × blood_filtration)"
+    },
+    {
+        "id"         : "disease_resistance",
+        "category"   : "resistance",
+        "primaryStat": "constitution",
+        "formula"    : "(0.0 + (CON − 10) × 0.01) × consciousness × blood_filtration",
+        "description": "disease resistance (× consciousness × blood_filtration)"
+    },
+    {
+        "id"         : "mental_resistance",
+        "category"   : "resistance",
+        "primaryStat": "intelligence",
+        "formula"    : "(0.0 + (INT − 10) × 0.015) × consciousness",
+        "description": "mental resistance (× consciousness)"
+    },
+    // ── Body Capacities ───────────────────────────────────────────────────────────
+    // Derived from specific organ health (not parent limb health).
+    // Paired organs use partial-function logic: one destroyed ≠ 0, but severe penalty.
+    {
+        "id"         : "consciousness",
+        "category"   : "capacity",
+        "primaryStat": "constitution",
+        "formula"    : "1.0",
+        "description": "brain × 0.6 + heart × 0.2 + lungs × 0.15 + 0.05 baseline, reduced by pain"
+    },
+    {
+        "id"         : "manipulation",
+        "category"   : "capacity",
+        "primaryStat": "dexterity",
+        "formula"    : "1.0",
+        "description": "weaker arm × 0.3 + avg arms × 0.7"
+    },
+    {
+        "id"         : "sight",
+        "category"   : "capacity",
+        "primaryStat": "perception",
+        "formula"    : "1.0",
+        "description": "weaker eye × 0.4 + avg eyes × 0.6 + 0.05 baseline"
+    },
+    {
+        "id"         : "moving",
+        "category"   : "capacity",
+        "primaryStat": "dexterity",
+        "formula"    : "1.0",
+        "description": "weaker leg × 0.5 + avg legs × 0.5"
+    },
+    {
+        "id"         : "blood_pumping",
+        "category"   : "capacity",
+        "primaryStat": "constitution",
+        "formula"    : "1.0",
+        "description": "heart × 0.9 + 0.10 baseline (agonal/CPR)"
+    },
+    {
+        "id"         : "blood_filtration",
+        "category"   : "capacity",
+        "primaryStat": "constitution",
+        "formula"    : "1.0",
+        "description": "weaker kidney × 0.4 + avg kidneys × 0.6 (one kidney sustains ~60%)"
+    },
+    {
+        "id"         : "breathing",
+        "category"   : "capacity",
+        "primaryStat": "constitution",
+        "formula"    : "1.0",
+        "description": "weaker lung × 0.5 + avg lungs × 0.5 + 0.05 baseline (diaphragm)"
+    },
+    {
+        "id"         : "digestion",
+        "category"   : "capacity",
+        "primaryStat": "constitution",
+        "formula"    : "1.0",
+        "description": "stomach × 0.6 + liver × 0.4"
+    },
+    {
+        "id"         : "talking",
+        "category"   : "capacity",
+        "primaryStat": "charisma",
+        "formula"    : "1.0",
+        "description": "jaw × 0.9 + 0.10 baseline (groan/whisper)"
+    },
+    {
+        "id"         : "hearing",
+        "category"   : "capacity",
+        "primaryStat": "perception",
+        "formula"    : "1.0",
+        "description": "weaker ear × 0.3 + avg ears × 0.7 + 0.15 baseline (bone conduction)"
+    },
+    {
+        "id"         : "pain",
+        "category"   : "capacity",
+        "primaryStat": "constitution",
+        "formula"    : "1.0",
+        "description": "injuries + limb damage + bleeding → 0–200%+, reduces consciousness"
+    }
+]

@@ -133,7 +133,7 @@
       workAssignments: {},
       productionTargets: [],
       currentJobIndex: {},
-      pawnAbilities: {},
+      pawnStats: {},
       stockpileZones: []
     };
 

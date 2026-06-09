@@ -21,6 +21,43 @@ export function calcMaxStamina(stats: EntityStats): number {
 	return 50 + (stats.constitution - 10) * 4 + (stats.dexterity - 10) * 2;
 }
 
+/**
+ * Blood pool recovery rate per second when not bleeding.
+ * Formula matches blood_regeneration ability: 1.0 + (CON − 10) × 0.08.
+ * Base rate 0.05 /s gives ~0→100 in 2000 s at CON 10; scales with CON.
+ */
+export function calcBloodRegenRate(stats: EntityStats): number {
+	return (1.0 + (stats.constitution - 10) * 0.08) * 0.05;
+}
+
+/**
+ * Hunger pool derived from body weight and constitution.
+ * Formula matches hunger_capacity ability: weight + (CON − 10) × 3 + 30.
+ * A 70 kg pawn with CON 10 ≈ 100; heavier/tougher pawns go higher.
+ * NOTE: Gameplay thresholds in PawnStateMachine are still absolute (0–100 scale);
+ *       make them proportional (maxHunger × fraction) when that system is updated.
+ */
+export function calcMaxHunger(physicalTraits: { weight: number }, stats: EntityStats): number {
+	return Math.round(physicalTraits.weight + (stats.constitution - 10) * 3 + 30);
+}
+
+/**
+ * Fatigue pool derived from body weight, constitution, and strength.
+ * Formula matches fatigue_capacity ability: weight × 0.8 + (CON − 10) × 3 + (STR − 10) + 44.
+ * A 70 kg pawn with CON 10, STR 10 ≈ 100.
+ */
+export function calcMaxFatigue(physicalTraits: { weight: number }, stats: EntityStats): number {
+	return Math.round(physicalTraits.weight * 0.8 + (stats.constitution - 10) * 3 + (stats.strength - 10) + 44);
+}
+
+/** Blood pool derived from body weight and constitution. */
+export function calcMaxBloodVolume(
+	physicalTraits: { weight: number },
+	stats: EntityStats
+): number {
+	return Math.round(physicalTraits.weight * 1.4 + (stats.constitution - 10) * 2);
+}
+
 // Update generatePawns function
 export function generatePawns(race: Race, count?: number): Pawn[] {
 	const pawns: Pawn[] = [];
@@ -29,13 +66,18 @@ export function generatePawns(race: Race, count?: number): Pawn[] {
 	for (let i = 0; i < pawnCount; i++) {
 		const baseStats = rollStatsFromRanges(race.statRanges);
 		const finalStats = applyRacialTraitBonuses(baseStats, race.racialTraits);
+		const physicalTraits = rollPhysicalTraits(race.physicalTraits);
+		const maxBloodVolume = calcMaxBloodVolume(physicalTraits, finalStats);
+		const maxStamina = calcMaxStamina(finalStats);
+		const maxHunger = calcMaxHunger(physicalTraits, finalStats);
+		const maxFatigue = calcMaxFatigue(physicalTraits, finalStats);
 
 		const pawn: Pawn = {
 			id: `pawn-${i}`,
 			debugId: _pawnDebugIdCounter++,
 			name: generatePawnName(),
 			stats: finalStats,
-			physicalTraits: rollPhysicalTraits(race.physicalTraits),
+			physicalTraits,
 			racialTraits: race.racialTraits,
 			inventory: createPawnInventory(10), // 10 base inventory slots
 			equipment: createPawnEquipment(),
@@ -56,11 +98,15 @@ export function generatePawns(race: Race, count?: number): Pawn[] {
 			skills: {},
 			// Survival & Health
 			isAlive: true,
-			bloodVolume: 100,
+			maxBloodVolume,
+			bloodVolume: maxBloodVolume,
 			conditions: [],
 			// Combat — stamina
-			stamina: calcMaxStamina(finalStats),
-			maxStamina: calcMaxStamina(finalStats),
+			stamina: maxStamina,
+			maxStamina,
+			// Needs capacity
+			maxHunger,
+			maxFatigue,
 			limbs: [
 				{ id: 'head', health: 100, isMissing: false, bleedRate: 0 },
 				{ id: 'torso', health: 100, isMissing: false, bleedRate: 0 },
@@ -78,18 +124,18 @@ export function generatePawns(race: Race, count?: number): Pawn[] {
 }
 
 // UPDATED: Use ModifierSystem for complex calculations
-export function calculatePawnAbilities(
+export function calculatePawnStats(
 	pawn: Pawn,
 	gameState?: GameState
 ): Record<string, { value: number; sources: string[] }> {
-	const abilities: Record<string, { value: number; sources: string[] }> = {};
+	const stats: Record<string, { value: number; sources: string[] }> = {};
 
 	// If we have gameState, use ModifierSystem for work efficiencies and equipment
 	if (gameState) {
 		// Use ModifierSystem for work efficiencies
 		const workResults = modifierSystem.calculateAllWorkEfficiencies(pawn.id, gameState);
 		Object.entries(workResults).forEach(([workType, result]) => {
-			abilities[`${workType}Efficiency`] = {
+			stats[`${workType}Efficiency`] = {
 				value: result.totalValue,
 				sources: result.sources.map(s => s.description)
 			};
@@ -98,7 +144,7 @@ export function calculatePawnAbilities(
 		// Use ModifierSystem for equipment bonuses
 		const equipmentResults = modifierSystem.calculateEquipmentBonuses(pawn);
 		Object.entries(equipmentResults).forEach(([effectName, result]) => {
-			abilities[effectName] = {
+			stats[effectName] = {
 				value: result.totalValue,
 				sources: result.sources.map(s => s.description)
 			};
@@ -107,7 +153,7 @@ export function calculatePawnAbilities(
 		// Use ModifierSystem for trait effects
 		const traitResults = modifierSystem.calculateAllTraitEffects(pawn);
 		Object.entries(traitResults).forEach(([effectName, result]) => {
-			abilities[effectName] = {
+			stats[effectName] = {
 				value: result.totalValue,
 				sources: result.sources.map(s => s.description)
 			};
@@ -119,14 +165,14 @@ export function calculatePawnAbilities(
 	const totalStats = getTotalStats(baseStats, {}, {}); // Simplified since ModifierSystem handles bonuses
 
 	// Add skills (not handled by ModifierSystem)
-	addSkillAbilities(abilities, pawn);
+	addSkillAbilities(stats, pawn);
 
 	// Keep only basic derived abilities that don't conflict with ModifierSystem
-	addBasicPhysicalAbilities(abilities, totalStats);
-	addBasicMentalAbilities(abilities, totalStats);
-	addBasicSurvivalAbilities(abilities, totalStats);
+	addBasicPhysicalAbilities(stats, totalStats);
+	addBasicMentalAbilities(stats, totalStats);
+	addBasicSurvivalAbilities(stats, totalStats);
 
-	return abilities;
+	return stats;
 }
 
 // --- Helper functions ---
@@ -295,8 +341,8 @@ function addAbility(
 }
 
 // UPDATED: Simplified categorization focused on basic abilities
-export function categorizeAbilities(
-	abilities: Record<string, { value: number; sources: string[] }>
+export function categorizeStats(
+	stats: Record<string, { value: number; sources: string[] }>
 ): Record<string, string[]> {
 	const categories: Record<string, string[]> = {
 		'Basic Physical': [],
@@ -306,12 +352,12 @@ export function categorizeAbilities(
 		'Special': []
 	};
 
-	Object.keys(abilities).forEach((abilityName) => {
-		const lowerName = abilityName.toLowerCase();
+	Object.keys(stats).forEach((statName) => {
+		const lowerName = statName.toLowerCase();
 
 		// Skills
 		if (lowerName.startsWith('skill_')) {
-			categories['Skills'].push(abilityName);
+			categories['Skills'].push(statName);
 		}
 		// Basic Physical abilities
 		else if (
@@ -320,7 +366,7 @@ export function categorizeAbilities(
 			lowerName.includes('swimming') ||
 			lowerName.includes('vision')
 		) {
-			categories['Basic Physical'].push(abilityName);
+			categories['Basic Physical'].push(statName);
 		}
 		// Basic Mental abilities
 		else if (
@@ -330,7 +376,7 @@ export function categorizeAbilities(
 			lowerName.includes('knowledge') ||
 			lowerName.includes('experience')
 		) {
-			categories['Basic Mental'].push(abilityName);
+			categories['Basic Mental'].push(statName);
 		}
 		// Basic Survival abilities
 		else if (
@@ -338,11 +384,11 @@ export function categorizeAbilities(
 			lowerName.includes('disease') ||
 			lowerName.includes('vitality')
 		) {
-			categories['Basic Survival'].push(abilityName);
+			categories['Basic Survival'].push(statName);
 		}
 		// Everything else goes to Special (ModifierSystem handled abilities)
 		else {
-			categories['Special'].push(abilityName);
+			categories['Special'].push(statName);
 		}
 	});
 
@@ -356,10 +402,10 @@ export function categorizeAbilities(
 	return categories;
 }
 
-// SIMPLIFIED: Basic ability descriptions only
-export function getAbilityDescription(
-	abilityName: string,
-	abilityData: { value: number; sources: string[] }
+// SIMPLIFIED: Basic stat descriptions only
+export function getStatDescription(
+	statName: string,
+	statData: { value: number; sources: string[] }
 ): string {
 	const descriptions: Record<string, string> = {
 		// Basic Physical
@@ -392,12 +438,12 @@ export function getAbilityDescription(
 	};
 
 	// Handle generic skill descriptions
-	if (abilityName.startsWith('skill_')) {
-		const skillName = abilityName.replace('skill_', '');
-		return descriptions[abilityName] || `Experience in ${skillName}`;
+	if (statName.startsWith('skill_')) {
+		const skillName = statName.replace('skill_', '');
+		return descriptions[statName] || `Experience in ${skillName}`;
 	}
 
-	return descriptions[abilityName] || 'Special ability with unique effects';
+	return descriptions[statName] || 'Special stat with unique effects';
 }
 
 // --- Existing utility functions (unchanged) ---

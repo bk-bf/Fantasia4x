@@ -26,6 +26,7 @@ import { buildPathfindingGrids } from '../services/PathfinderService';
 import { logActivity } from '../../stores/Log';
 import { gameLogger } from '../dev/gameLogger';
 import { ticksFromSeconds, perTick } from '../core/time';
+import { calcBloodRegenRate } from '../entities/Pawns';
 
 // ===== STATE NAME CONSTANTS =====
 export const PAWN_STATE = {
@@ -94,7 +95,8 @@ const MALNUTRITION_SAFE_HUNGER = 40;    // below this threshold, condition recov
 const MALNUTRITION_RATE_CRITICAL = perTick(0.0008); // +/s at hunger 87–99  → lethal in ~1250s ≈ 4.2 days
 const MALNUTRITION_RATE_MAX = perTick(0.002);  // +/s at hunger 100    → lethal in ~500s ≈ 1.7 days
 const MALNUTRITION_RECOVERY_RATE = perTick(0.0003); // −/s when hunger < 40 → fully clears in ~3333s ≈ 11 days
-const BLOOD_REGEN_PER_TURN = perTick(0.05);   // blood volume +/s when not bleeding → 0→100 in 2000s ≈ 6.7 days
+// Blood regen is computed per-pawn via calcBloodRegenRate(pawn.stats) × SECONDS_PER_TICK.
+// See blood_regeneration entry in stats.jsonc for the formula.
 
 /** Return the active ConditionStage for a condition at the given severity, or undefined. */
 function getConditionStage(conditionId: string, severity: number): ConditionStage | undefined {
@@ -172,7 +174,8 @@ function killPawn(
 function tickConditions(pawn: Pawn, gameState: GameState): GameState {
     const hunger = pawn.needs?.hunger ?? 0;
     let conditions = [...(pawn.conditions ?? [])];
-    let bloodVolume = pawn.bloodVolume ?? 100;
+    const maxBloodVolume = pawn.maxBloodVolume ?? 100;
+    let bloodVolume = pawn.bloodVolume ?? maxBloodVolume;
     const limbs = pawn.limbs ?? [];
 
     // ── Malnutrition ──────────────────────────────────────────────────────────
@@ -216,8 +219,8 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
         bloodVolume = Math.max(0, bloodVolume - perTick(totalBleedRate));
     }
 
-    // Sync blood_loss condition severity = 1 - (bloodVolume / 100)
-    const bloodSeverity = 1 - (bloodVolume / 100);
+    // Sync blood_loss condition severity = 1 - (bloodVolume / maxBloodVolume)
+    const bloodSeverity = 1 - (bloodVolume / maxBloodVolume);
     const bloodLossIdx = conditions.findIndex((c) => c.id === 'blood_loss');
     if (bloodSeverity > 0) {
         if (bloodLossIdx === -1) {
@@ -229,9 +232,9 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
         conditions.splice(bloodLossIdx, 1);
     }
 
-    // Regen blood when not bleeding
-    if (totalBleedRate === 0 && bloodVolume < 100) {
-        bloodVolume = Math.min(100, bloodVolume + BLOOD_REGEN_PER_TURN);
+    // Regen blood when not bleeding — rate driven by blood_regeneration ability (CON-scaled)
+    if (totalBleedRate === 0 && bloodVolume < maxBloodVolume) {
+        bloodVolume = Math.min(maxBloodVolume, bloodVolume + perTick(calcBloodRegenRate(pawn.stats)));
     }
 
     // Check blood loss lethality

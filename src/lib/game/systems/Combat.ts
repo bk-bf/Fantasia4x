@@ -216,6 +216,34 @@ function attackerProfile(attacker: Pawn | Mob): {
     };
 }
 
+/**
+ * Compute the defender's physical damage resistance for a given damage type.
+ * Sources: racial trait general damageReduction + type-specific resistance + base stat contribution.
+ * Clamped 0–0.90 (can never fully negate damage from this layer alone).
+ */
+function physicalResistance(defender: Pawn | Mob, damageType: DamageType): number {
+    const con = defender.stats.constitution;
+    const dex = defender.stats.dexterity;
+    const str = defender.stats.strength;
+
+    // Base from stats (matches cutting/piercing/blunt_resistance ability formulas)
+    let res = 0;
+    if (damageType === 'cutting')  res += (dex - 10) * 0.01;
+    if (damageType === 'piercing') res += (con - 10) * 0.008;
+    if (damageType === 'blunt')    res += (con - 10) * 0.008 + (str - 10) * 0.004;
+
+    // Racial trait bonuses
+    const traits = ('racialTraits' in defender) ? (defender.racialTraits ?? []) : [];
+    for (const trait of traits) {
+        res += trait.effects.damageReduction ?? 0;
+        if (damageType === 'cutting')  res += trait.effects.cutting_resistance ?? 0;
+        if (damageType === 'piercing') res += trait.effects.piercing_resistance ?? 0;
+        if (damageType === 'blunt')    res += trait.effects.blunt_resistance ?? 0;
+    }
+
+    return clamp(res, 0, 0.90);
+}
+
 function partArmorReduction(defender: Pawn | Mob, partId: BodyPartId, armorPen: number): number {
     if (!('equipment' in defender) || !defender.equipment?.armor) return 0;
     const ap = itemService.getItemById(defender.equipment.armor.itemId)?.armorProperties;
@@ -269,7 +297,8 @@ class CombatServiceImpl implements CombatService {
         // illustrative 0–100 scale.
         const raw = baseDamage * str / STAT_SCALE;
         const armorRed = partArmorReduction(defender, partId, armorPen);
-        const final = Math.round(raw * (1 - armorRed));
+        const physRes  = physicalResistance(defender, damageType);
+        const final = Math.round(raw * (1 - armorRed) * (1 - physRes));
 
         const prevHealth = currentPartHealth(defender, partId, partDef.maxHp);
         const newHealth = Math.max(0, prevHealth - final);
@@ -354,7 +383,8 @@ class CombatServiceImpl implements CombatService {
         const newInjuries: Injury[] = [...(pawn.injuries ?? []), injury];
 
         // blood_loss severity derived from current bloodVolume
-        const bloodLossSev = clamp(1 - (pawn.bloodVolume ?? 100) / 100, 0, 1);
+        const maxBV = pawn.maxBloodVolume ?? 100;
+        const bloodLossSev = clamp(1 - (pawn.bloodVolume ?? maxBV) / maxBV, 0, 1);
         const newConditions = upsertCondition(pawn.conditions ?? [], 'blood_loss', bloodLossSev);
 
         // Pain collapse → knockdown 3 turns

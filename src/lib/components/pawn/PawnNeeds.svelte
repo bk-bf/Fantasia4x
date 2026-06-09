@@ -24,12 +24,28 @@
   export let gameState: GameState;
 
   $: needs = pawn.needs;
+  $: maxH = pawn.maxHunger ?? 100;
+  $: hungerPct = Math.round((needs.hunger / maxH) * 100);
+  $: maxF = pawn.maxFatigue ?? 100;
+  $: fatiguePct = Math.round((needs.fatigue / maxF) * 100);
   function blockBar(value: number, width = 20): string {
     const filled = Math.max(0, Math.min(width, Math.round((value / 100) * width)));
     return '[' + '█'.repeat(filled) + '░'.repeat(width - filled) + ']';
   }
   $: taskSummary = getPawnTaskSummary(pawn, gameState);
   $: moveSpeed = pawnService.getMoveSpeed(pawn);
+
+  function getBloodColor(pct: number): string {
+    if (pct >= 70) return 'var(--pos)';
+    if (pct >= 40) return '#c8a030';
+    if (pct >= 20) return '#c86030';
+    return 'var(--neg)';
+  }
+  function getStaminaColor(pct: number): string {
+    if (pct >= 60) return '#38b8c8';
+    if (pct >= 30) return '#c8a030';
+    return '#c86030';
+  }
   $: activeEffects = (pawn.activeEffects ?? [])
     .map((id) => STATUS_EFFECTS_DB.find((e) => e.id === id))
     .filter((e): e is StatusEffectDef => e !== undefined);
@@ -71,23 +87,47 @@
 
   <div class="need-row">
     <span class="lbl">HUNGER</span>
-    <span class="block-bar" style="color: {getNeedColor(needs.hunger)}"
-      >{blockBar(needs.hunger)}</span
+    <span class="block-bar" style="color: {getNeedColor(hungerPct)}"
+      >{blockBar(hungerPct)}</span
     >
-    <span class="val" style="color: {getNeedColor(needs.hunger)}">{Math.round(needs.hunger)}%</span>
+    <span class="val" style="color: {getNeedColor(hungerPct)}">{Math.round(needs.hunger)}/{maxH}</span>
     <span class="desc">{getNeedDescription('hunger', needs.hunger)}</span>
   </div>
 
   <div class="need-row">
     <span class="lbl">REST</span>
-    <span class="block-bar" style="color: {getNeedColor(needs.fatigue)}"
-      >{blockBar(needs.fatigue)}</span
+    <span class="block-bar" style="color: {getNeedColor(fatiguePct)}"
+      >{blockBar(fatiguePct)}</span
     >
-    <span class="val" style="color: {getNeedColor(needs.fatigue)}"
-      >{Math.round(needs.fatigue)}%</span
+    <span class="val" style="color: {getNeedColor(fatiguePct)}"
+      >{Math.round(needs.fatigue)}/{maxF}</span
     >
     <span class="desc">{getNeedDescription('fatigue', needs.fatigue)}</span>
   </div>
+
+  {#if pawn.maxBloodVolume}
+    {@const maxBV = pawn.maxBloodVolume}
+    {@const curBV = pawn.bloodVolume ?? maxBV}
+    {@const bloodPct = Math.round((curBV / maxBV) * 100)}
+    <div class="need-row">
+      <span class="lbl">BLOOD</span>
+      <span class="block-bar" style="color: {getBloodColor(bloodPct)}">{blockBar(bloodPct)}</span>
+      <span class="val" style="color: {getBloodColor(bloodPct)}">{Math.round(curBV)}/{maxBV}</span>
+      <span class="desc">{bloodPct >= 90 ? 'healthy' : bloodPct >= 60 ? 'low' : bloodPct >= 30 ? 'critical' : 'near death'}</span>
+    </div>
+  {/if}
+
+  {#if pawn.maxStamina !== undefined}
+    {@const maxST = pawn.maxStamina}
+    {@const curST = pawn.stamina ?? maxST}
+    {@const stPct = Math.round((curST / maxST) * 100)}
+    <div class="need-row">
+      <span class="lbl">STAMINA</span>
+      <span class="block-bar" style="color: {getStaminaColor(stPct)}">{blockBar(stPct)}</span>
+      <span class="val" style="color: {getStaminaColor(stPct)}">{Math.round(curST)}/{maxST}</span>
+      <span class="desc">{stPct >= 80 ? 'fresh' : stPct >= 50 ? 'tired' : stPct >= 20 ? 'winded' : 'exhausted'}</span>
+    </div>
+  {/if}
 
   <div class="section-hdr sub">| STATUS</div>
 

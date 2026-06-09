@@ -8,7 +8,7 @@ import { resourceObjectService } from './ResourceObjectService';
 import { absorbDropIfOnStockpileTile } from '../core/GameState';
 import { wasmPathfinderService } from './WasmPathfinderService';
 import { buildPathfindingGrids } from './PathfinderService';
-import { calcMaxStamina } from '../entities/Pawns';
+import { calcMaxStamina, calcMaxBloodVolume } from '../entities/Pawns';
 import { gameLogger } from '../dev/gameLogger';
 
 /**
@@ -245,7 +245,8 @@ class EntityServiceImpl {
             conditions: [],
             stats,
             // ── Full health/survival parity with Pawn ────────────────────────────────────────
-            bloodVolume: 100,
+            bloodVolume: def.stats.health,
+            maxBloodVolume: def.stats.health,
             isAlive: true,
             activeEffects: [],
             skills: {},

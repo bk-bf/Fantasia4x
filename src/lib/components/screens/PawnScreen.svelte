@@ -33,7 +33,6 @@
   import PawnStats from '../pawn/PawnStats.svelte';
   import PawnNeeds from '../pawn/PawnNeeds.svelte';
   import PawnTraits from '../pawn/PawnTraits.svelte';
-  import PawnAbilities from '../pawn/PawnAbilities.svelte';
   import PawnEquipment from '../pawn/PawnEquipment.svelte';
   import PawnInventory from '../pawn/PawnInventory.svelte';
   import FollowButton from '../UI/FollowButton.svelte';
@@ -130,13 +129,13 @@
         <PawnHealth pawn={selectedPawn} />
         <PawnNeeds pawn={selectedPawn} gameState={$gameState} />
       {:else if activeTab === 'attributes'}
-        <PawnStats pawn={selectedPawn} />
+        <PawnStats pawn={selectedPawn} gameState={$gameState} />
         <PawnTraits pawn={selectedPawn} />
       {:else if activeTab === 'gear'}
         <PawnEquipment pawn={selectedPawn} />
         <PawnInventory pawn={selectedPawn} />
       {:else if activeTab === 'abilities'}
-        <PawnAbilities pawn={selectedPawn} gameState={$gameState} />
+        <PawnStats pawn={selectedPawn} gameState={$gameState} />
       {/if}
     </div>
   {:else}

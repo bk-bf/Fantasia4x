@@ -23,14 +23,13 @@
         "effects"    : {
             "dexterityBonus"     :  2  ,
             "constitutionPenalty": -1  ,
-            "coldResistance"     :  0.3,
-            "fallDamageReduction":  0.8
+            "coldResistance"     :  0.3
         }
     },
     {
         "name"       : "Stone Bones",
         "description": "Dense, stone-like bone structure.",
-        "effects"    : {"constitutionBonus": 4, "strengthBonus": 1, "dexterityPenalty": -2, "crushResistance": 0.6}
+        "effects"    : {"constitutionBonus": 4, "strengthBonus": 1, "dexterityPenalty": -2, "blunt_resistance": 0.6}
     },
     {
         "name"       : "Crystalline Eyes",
@@ -45,8 +44,8 @@
     // ── Elemental Traits ─────────────────────────────────────────────────────
     {
         "name"       : "Flame Touched",
-        "description": "Body radiates warmth, immune to cold.",
-        "effects"    : { "fireResistance": 0.8, "coldImmunity": 1.0, "workEfficiency": {"metalworking": 1.3} }
+        "description": "Body radiates warmth, naturally immune to cold.",
+        "effects"    : { "fireResistance": 0.8, "coldResistance": 1.0, "workEfficiency": {"metalworking": 1.3} }
     },
     {
         "name"       : "Frost Born",
@@ -106,7 +105,8 @@
         "effects"    : {
             "perceptionBonus": 2,
             "dexterityBonus" : 1,
-            "workEfficiency" : {"hunting": 1.3, "foraging": 1.2},
+            "workEfficiency" : {"hunting": 1.3},
+            "workYield"      : {"foraging": 1.2},
             "dangerSense"    : 1.4
         }
     },
@@ -122,7 +122,7 @@
             "constitutionBonus": 1,
             "dexterityBonus"   : 1,
             "poisonResistance" : 0.8,
-            "workEfficiency"   : {"alchemy": 1.2}
+            "workYield"        : {"alchemy": 1.2}
         }
     },
     {

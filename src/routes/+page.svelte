@@ -15,7 +15,7 @@
   import ChroniclePanel from '$lib/components/UI/ChroniclePanel.svelte';
   import WorldEffectsLayer from '$lib/components/UI/WorldEffectsLayer.svelte';
   import { uiState } from '$lib/stores/uiState';
-  import { gameState } from '$lib/stores/gameState';
+  import { gameState, storeReady } from '$lib/stores/gameState';
   import { gameEngine } from '$lib/game/systems/GameEngineImpl';
   import { environmentService } from '$lib/game/services/EnvironmentService.js';
   import type { PlacedBuilding } from '$lib/game/core/types';
@@ -103,6 +103,11 @@
   </filter>
 </svg>
 
+{#if !$storeReady}
+  <div class="loading-screen">
+    <span class="loading-text">LOADING…</span>
+  </div>
+{:else}
 <div class="game-container">
   <div class="game-header">
     <GameControls />
@@ -169,8 +174,25 @@
     </aside>
   </div>
 </div>
+{/if}
 
 <style>
+  .loading-screen {
+    height: 100vh;
+    width: 100vw;
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .loading-text {
+    color: var(--text-muted, #555);
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    letter-spacing: 0.15em;
+  }
+
   .game-container {
     height: 100vh;
     width: 100vw;

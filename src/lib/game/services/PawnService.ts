@@ -1,6 +1,6 @@
 import type { GameState, Pawn, EntityNeeds, PawnState, StatusEffectDef, EntityCondition, ConditionDef, ConditionStage } from '../core/types';
 import { consumeFromStockpiles } from '../core/GameState';
-import { calculatePawnAbilities, categorizeAbilities, getAbilityDescription } from '../entities/Pawns';
+import { calculatePawnStats, categorizeStats, getStatDescription } from '../entities/Pawns';
 import { WORK_CATEGORIES } from '../core/Work';
 import { TICKS_PER_SECOND, SECONDS_PER_TICK, perTick } from '../core/time';
 import { advanceAlongPath } from '../systems/MovementSystem';
@@ -36,10 +36,10 @@ export interface PawnService {
 	getPawnActivities(pawnId: string, gameState: GameState): string[];
 	setPawnActivity(pawnId: string, activity: string, gameState: GameState): GameState;
 
-	// Ability Calculations (DELEGATED to existing Pawns.ts functions)
-	calculatePawnAbilities(pawnId: string, gameState: GameState): Record<string, { value: number; sources: string[] }>;
-	categorizeAbilities(abilities: Record<string, { value: number; sources: string[] }>): Record<string, string[]>;
-	getAbilityDescription(abilityName: string, abilityData: { value: number; sources: string[] }): string;
+	// Stat Calculations (DELEGATED to existing Pawns.ts functions)
+	calculatePawnStats(pawnId: string, gameState: GameState): Record<string, { value: number; sources: string[] }>;
+	categorizeStats(stats: Record<string, { value: number; sources: string[] }>): Record<string, string[]>;
+	getStatDescription(statName: string, statData: { value: number; sources: string[] }): string;
 
 	// Turn Processing (PawnService coordination)
 	processPawnTurn(gameState: GameState): GameState;
@@ -288,24 +288,24 @@ export class PawnServiceImpl implements PawnService {
 		};
 	}
 
-	// ===== ABILITY CALCULATIONS (DELEGATED) =====
+	// ===== STAT CALCULATIONS (DELEGATED) =====
 
-	calculatePawnAbilities(pawnId: string, gameState: GameState): Record<string, { value: number; sources: string[] }> {
+	calculatePawnStats(pawnId: string, gameState: GameState): Record<string, { value: number; sources: string[] }> {
 		const pawn = gameState.pawns.find(p => p.id === pawnId);
 		if (!pawn) return {};
 
 		// DELEGATE to existing Pawns.ts function (which uses ModifierSystem)
-		return calculatePawnAbilities(pawn, gameState);
+		return calculatePawnStats(pawn, gameState);
 	}
 
-	categorizeAbilities(abilities: Record<string, { value: number; sources: string[] }>): Record<string, string[]> {
+	categorizeStats(stats: Record<string, { value: number; sources: string[] }>): Record<string, string[]> {
 		// DELEGATE to existing Pawns.ts function
-		return categorizeAbilities(abilities);
+		return categorizeStats(stats);
 	}
 
-	getAbilityDescription(abilityName: string, abilityData: { value: number; sources: string[] }): string {
+	getStatDescription(statName: string, statData: { value: number; sources: string[] }): string {
 		// DELEGATE to existing Pawns.ts function
-		return getAbilityDescription(abilityName, abilityData);
+		return getStatDescription(statName, statData);
 	}
 
 	// ===== TURN PROCESSING =====

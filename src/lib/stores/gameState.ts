@@ -11,7 +11,7 @@ import { locationService } from '$lib/game/services/LocationServices';
 import { buildingService } from '$lib/game/services/BuildingService';
 import { workService } from '$lib/game/services/WorkService';
 import { syncPawnInventoryWithGlobal, syncAllPawnInventories } from '$lib/game/core/PawnEquipment';
-import { calculatePawnAbilities } from '$lib/game/entities/Pawns';
+import { calculatePawnStats } from '$lib/game/entities/Pawns';
 import { eventSystem } from '$lib/game/core/Events';
 import { triggerEvent } from '$lib/stores/eventStore';
 import { generateWorld } from '$lib/game/world/WorldGenerator';
@@ -99,7 +99,7 @@ export const initialGameState: GameState = {
 	workAssignments: {},
 	productionTargets: [],
 	currentJobIndex: {},
-	pawnAbilities: {},
+	pawnStats: {},
 	droppedItems: [],
 	deadPawns: [],
 	mobs: [],
@@ -302,16 +302,16 @@ function spawnPawnsOnMap(pawns: Pawn[], worldMap: WorldTile[][]): Pawn[] {
 	});
 }
 
-function updatePawnAbilities(state: GameState): GameState {
-	const newPawnAbilities: Record<string, Record<string, { value: number; sources: string[] }>> = {};
+function updatePawnStats(state: GameState): GameState {
+	const newPawnStats: Record<string, Record<string, { value: number; sources: string[] }>> = {};
 
 	state.pawns.forEach((pawn) => {
-		newPawnAbilities[pawn.id] = calculatePawnAbilities(pawn);
+		newPawnStats[pawn.id] = calculatePawnStats(pawn);
 	});
 
 	return {
 		...state,
-		pawnAbilities: newPawnAbilities
+		pawnStats: newPawnStats
 	};
 }
 
@@ -437,15 +437,24 @@ function wipeAndReload() {
 	stopAutoTurns();
 
 	if (browser) {
-		// 2. Delete the IndexedDB save (also clears any lingering localStorage keys).
+		// 2. Hide the game immediately so the old map doesn't flash while we
+		//    delete the save.  The loading screen will show until reload completes.
+		storeReady.set(false);
+		// 3. Delete the IndexedDB save (also clears any lingering localStorage keys).
 		deleteSave().finally(() => {
-			// 3. Reset in-memory store so Svelte subscribers don't trigger another save.
-			set(initialGameState);
-			// 4. Reload.
+			// 4. Reload — no need to mutate the store here since we're reloading.
 			location.reload();
 		});
 	}
 }
+
+// ===== STORE READY FLAG =====
+/**
+ * Becomes `true` once the persisted save has been loaded and applied to the
+ * store. Use this to gate rendering so components never see the ephemeral
+ * freshly-generated world that lives in `initialGameState`.
+ */
+export const storeReady = writable(false);
 
 // ===== MAIN STORE SETUP =====
 // Initialize locations at game start
@@ -575,8 +584,12 @@ export const savedStateReady: Promise<void> = (async () => {
 	// Push loaded state into the store and sync GameEngine
 	set(baseState);
 	gameEngine.setGameStateManager(new GameStateManager(baseState));
+	// Signal that the real state is now in the store — unblock rendering.
+	storeReady.set(true);
 })().catch(err => {
 	console.error('[GameState] Failed to load save, starting fresh:', err);
+	// Still unblock rendering so the app doesn't stay stuck on the loading screen.
+	storeReady.set(true);
 });
 
 // Create control stores — seed pause from sessionStorage so HMR doesn't unpause.
@@ -639,7 +652,7 @@ if (import.meta.hot) {
 export const currentTurn = derived(gameState, ($gameState) => $gameState.turn);
 export const currentItem = derived(gameState, ($gameState) => $gameState.item);
 export const currentRace = derived(gameState, ($gameState) => $gameState.race);
-export const pawnAbilities = derived(gameState, ($gameState) => $gameState.pawnAbilities || {});
+export const pawnStats = derived(gameState, ($gameState) => $gameState.pawnStats || {});
 
 /** Items currently in the colony stockpile, enriched from the items database, sorted by name. */
 export const currentStockpile = derived(gameState, ($gameState) =>
