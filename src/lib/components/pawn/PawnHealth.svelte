@@ -187,7 +187,9 @@
                   part.injuries.length > 0}
               >
                 <span class="part-name">
-                  {partName(part.id)}{#if PART_DEF_MAP[part.id]?.isVital}<span class="vital-star">★</span>{/if}
+                  {partName(part.id)}{#if PART_DEF_MAP[part.id]?.isVital}<span class="vital-star"
+                      >★</span
+                    >{/if}
                 </span>
                 <span class="part-hp" style="color:{partHealthColor(part)}">
                   {part.isMissing ? 'MISSING' : `${Math.round((part.health / part.maxHp) * 100)}%`}

@@ -242,17 +242,17 @@ function physicalResistance(defender: Pawn | Mob, damageType: DamageType): numbe
 
     // Base from stats (matches cutting/piercing/blunt_resistance ability formulas)
     let res = 0;
-    if (damageType === 'cutting')  res += (dex - 10) * 0.01;
+    if (damageType === 'cutting') res += (dex - 10) * 0.01;
     if (damageType === 'piercing') res += (con - 10) * 0.008;
-    if (damageType === 'blunt')    res += (con - 10) * 0.008 + (str - 10) * 0.004;
+    if (damageType === 'blunt') res += (con - 10) * 0.008 + (str - 10) * 0.004;
 
     // Racial trait bonuses
     const traits = ('racialTraits' in defender) ? (defender.racialTraits ?? []) : [];
     for (const trait of traits) {
         res += trait.effects.damageReduction ?? 0;
-        if (damageType === 'cutting')  res += trait.effects.cutting_resistance ?? 0;
+        if (damageType === 'cutting') res += trait.effects.cutting_resistance ?? 0;
         if (damageType === 'piercing') res += trait.effects.piercing_resistance ?? 0;
-        if (damageType === 'blunt')    res += trait.effects.blunt_resistance ?? 0;
+        if (damageType === 'blunt') res += trait.effects.blunt_resistance ?? 0;
     }
 
     return clamp(res, 0, 0.90);
@@ -311,7 +311,7 @@ class CombatServiceImpl implements CombatService {
         // illustrative 0–100 scale.
         const raw = baseDamage * str / STAT_SCALE;
         const armorRed = partArmorReduction(defender, partId, armorPen);
-        const physRes  = physicalResistance(defender, damageType);
+        const physRes = physicalResistance(defender, damageType);
         const final = Math.round(raw * (1 - armorRed) * (1 - physRes));
 
         const prevHealth = currentPartHealth(defender, partId, partDef.maxHp);
