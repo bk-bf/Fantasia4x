@@ -1085,6 +1085,20 @@ class CombatServiceImpl implements CombatService {
 
             pawnStaminaUpdates.set(pawn.id, Math.max(0, curStamina - ATTACK_STAMINA_COST));
 
+            // Log combat turn
+            const targetName = 'entityClass' in target
+                ? (getCreatureById((target as Mob).creatureId)?.name ?? (target as Mob).id)
+                : (target as Pawn).name;
+            logCombatTurn(pawn.id, pawn.name, target.id, targetName, state.turn, true, result.injury.damage, result.injury.bodyPart, result.knockdown);
+
+            // Check if target died this hit
+            const targetAfter = 'entityClass' in target
+                ? next.mobs?.find((m) => m.id === target.id)
+                : next.pawns.find((p) => p.id === target.id);
+            if (targetAfter && (targetAfter.isAlive === false || ('state' in targetAfter && targetAfter.state === 'Corpse'))) {
+                logCombatEnd(pawn.id, target.id, `${targetName} was killed`, state.turn);
+            }
+
             if (result.knockdown) {
                 const turns = Math.floor(Math.random() * 3) + 1;
                 if ('entityClass' in target) {

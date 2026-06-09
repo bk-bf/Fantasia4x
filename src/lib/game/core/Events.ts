@@ -60,15 +60,15 @@ export interface GameEvent {
   title: string;
   description: string;
   category:
-    | 'environmental'
-    | 'discovery'
-    | 'social'
-    | 'disaster'
-    | 'opportunity'
-    | 'wildlife'
-    | 'weather'
-    | 'supernatural'
-    | 'political';
+  | 'environmental'
+  | 'discovery'
+  | 'social'
+  | 'disaster'
+  | 'opportunity'
+  | 'wildlife'
+  | 'weather'
+  | 'supernatural'
+  | 'political';
   severity: 'trivial' | 'minor' | 'moderate' | 'major' | 'critical' | 'catastrophic';
   rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
   weight: number;
@@ -112,16 +112,16 @@ export interface ActivityLogEntry {
   turn: number;
   timestamp: Date;
   type:
-    | 'work'
-    | 'building'
-    | 'crafting'
-    | 'event'
-    | 'pawn_action'
-    | 'research'
-    | 'exploration'
-    | 'system'
-    | 'combat'
-    | 'entity';
+  | 'work'
+  | 'building'
+  | 'crafting'
+  | 'event'
+  | 'pawn_action'
+  | 'research'
+  | 'exploration'
+  | 'system'
+  | 'combat'
+  | 'entity';
   actor?: string; // Pawn ID or 'system'
   action: string;
   target?: string;

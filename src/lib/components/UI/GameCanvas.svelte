@@ -981,9 +981,13 @@
         }
         return { id: `draft-${p.id}`, points };
       })
-      .filter((o) => o.points.some((p) => p.x >= -tW && p.y >= -tH && p.x <= W + tW && p.y <= H + tH));
+      .filter((o) =>
+        o.points.some((p) => p.x >= -tW && p.y >= -tH && p.x <= W + tW && p.y <= H + tH)
+      );
     const draftKey = newDraftTargets
-      .map((o) => `${o.id}:${o.points.map((p) => `${Math.round(p.x)},${Math.round(p.y)}`).join('|')}`)
+      .map(
+        (o) => `${o.id}:${o.points.map((p) => `${Math.round(p.x)},${Math.round(p.y)}`).join('|')}`
+      )
       .join(';');
     if (draftKey !== _draftOverlayKey) {
       _draftOverlayKey = draftKey;
