@@ -1,4 +1,4 @@
-import type { Pawn, BodyPartState } from '../core/types';
+import type { Pawn, Mob, BodyPartState } from '../core/types';
 import statsData from '../database/stats.jsonc';
 
 // ── Stat definitions loaded from JSONC ────────────────────────────────────
@@ -22,7 +22,7 @@ const WORK_STAT_IDS = new Set(STATS.filter((s) => s.category === 'work').map((s)
 // Safe: expression is from project JSONC (not user input); sanitised to arithmetic chars only.
 function evaluateFormula(
     formula: string | undefined,
-    p: Pawn,
+    p: Pawn | Mob,
     capacities: Record<string, number> = {}
 ): number {
     if (!formula) return 1.0;
@@ -61,7 +61,12 @@ function evaluateFormula(
 // ── Capacity calculator: derives body capacities from specific organs ──
 // Uses partial-function logic with real organs (heart, lungs, kidneys, eyes…).
 // Paired organs use weighted blend of weaker (bottleneck) and average (compensation).
-function calculateCapacityValue(pawn: Pawn, capacityId: string, capacities: Record<string, number>, lightMultiplier?: number): number {
+function calculateCapacityValue(
+    pawn: Pawn | Mob,
+    capacityId: string,
+    capacities: Record<string, number>,
+    lightMultiplier?: number
+): number {
     const limbs = pawn.limbs ?? [];
     const limb = (id: string) => limbs.find((l) => l.id === id);
     const limbH = (id: string) => limb(id)?.health ?? 100;
@@ -97,14 +102,16 @@ function calculateCapacityValue(pawn: Pawn, capacityId: string, capacities: Reco
             const brain = organMissing('head', 'brain') ? 0.0 : organH('head', 'brain') / 100;
             const heart = organMissing('torso', 'heart') ? 0.0 : organH('torso', 'heart') / 100;
             const leftLung = organMissing('torso', 'leftLung') ? 0.0 : organH('torso', 'leftLung') / 100;
-            const rightLung = organMissing('torso', 'rightLung') ? 0.0 : organH('torso', 'rightLung') / 100;
+            const rightLung = organMissing('torso', 'rightLung')
+                ? 0.0
+                : organH('torso', 'rightLung') / 100;
             const avgLung = (leftLung + rightLung) / 2;
-            const baseCon = brain * 0.50 + heart * 0.15 + avgLung * 0.10 + 0.10;
+            const baseCon = brain * 0.5 + heart * 0.15 + avgLung * 0.1 + 0.1;
             const sightCap = capacities.sight ?? 1;
             const hearingCap = capacities.hearing ?? 1;
-            const effectivePain = Math.max(0, painValue - 0.10);
-            const painMult = Math.max(0.10, 1 - effectivePain * 0.5);
-            value = (baseCon + sightCap * 0.10 + hearingCap * 0.05) * painMult;
+            const effectivePain = Math.max(0, painValue - 0.1);
+            const painMult = Math.max(0.1, 1 - effectivePain * 0.5);
+            value = (baseCon + sightCap * 0.1 + hearingCap * 0.05) * painMult;
             break;
         }
         case 'pain': {
@@ -116,7 +123,7 @@ function calculateCapacityValue(pawn: Pawn, capacityId: string, capacities: Reco
             const right = limbMissing('right_arm') ? 0.0 : limbH('right_arm') / 100;
             const minArm = Math.min(left, right);
             const avgArm = (left + right) / 2;
-            value = minArm * 0.30 + avgArm * 0.70;
+            value = minArm * 0.3 + avgArm * 0.7;
             break;
         }
         case 'sight': {
@@ -124,7 +131,7 @@ function calculateCapacityValue(pawn: Pawn, capacityId: string, capacities: Reco
             const rightEye = organMissing('head', 'rightEye') ? 0.0 : organH('head', 'rightEye') / 100;
             const minEye = Math.min(leftEye, rightEye);
             const avgEye = (leftEye + rightEye) / 2;
-            const baseSight = minEye * 0.40 + avgEye * 0.60 + 0.05;
+            const baseSight = minEye * 0.4 + avgEye * 0.6 + 0.05;
             value = baseSight * (lightMultiplier ?? 1.0);
             break;
         }
@@ -133,20 +140,22 @@ function calculateCapacityValue(pawn: Pawn, capacityId: string, capacities: Reco
             const right = limbMissing('right_leg') ? 0.0 : limbH('right_leg') / 100;
             const minLeg = Math.min(left, right);
             const avgLeg = (left + right) / 2;
-            value = minLeg * 0.50 + avgLeg * 0.50;
+            value = minLeg * 0.5 + avgLeg * 0.5;
             break;
         }
         case 'blood_pumping': {
             const heart = organMissing('torso', 'heart') ? 0.0 : organH('torso', 'heart') / 100;
-            value = heart * 0.90 + 0.10;
+            value = heart * 0.9 + 0.1;
             break;
         }
         case 'blood_filtration': {
             const leftK = organMissing('torso', 'leftKidney') ? 0.0 : organH('torso', 'leftKidney') / 100;
-            const rightK = organMissing('torso', 'rightKidney') ? 0.0 : organH('torso', 'rightKidney') / 100;
+            const rightK = organMissing('torso', 'rightKidney')
+                ? 0.0
+                : organH('torso', 'rightKidney') / 100;
             const minK = Math.min(leftK, rightK);
             const avgK = (leftK + rightK) / 2;
-            value = minK * 0.40 + avgK * 0.60;
+            value = minK * 0.4 + avgK * 0.6;
             break;
         }
         case 'breathing': {
@@ -154,18 +163,18 @@ function calculateCapacityValue(pawn: Pawn, capacityId: string, capacities: Reco
             const rightL = organMissing('torso', 'rightLung') ? 0.0 : organH('torso', 'rightLung') / 100;
             const minL = Math.min(leftL, rightL);
             const avgL = (leftL + rightL) / 2;
-            value = minL * 0.50 + avgL * 0.50 + 0.05;
+            value = minL * 0.5 + avgL * 0.5 + 0.05;
             break;
         }
         case 'digestion': {
             const stomach = organMissing('torso', 'stomach') ? 0.0 : organH('torso', 'stomach') / 100;
             const liver = organMissing('torso', 'liver') ? 0.0 : organH('torso', 'liver') / 100;
-            value = stomach * 0.60 + liver * 0.40;
+            value = stomach * 0.6 + liver * 0.4;
             break;
         }
         case 'talking': {
             const jaw = organMissing('head', 'jaw') ? 0.0 : organH('head', 'jaw') / 100;
-            value = jaw * 0.90 + 0.10;
+            value = jaw * 0.9 + 0.1;
             break;
         }
         case 'hearing': {
@@ -173,7 +182,7 @@ function calculateCapacityValue(pawn: Pawn, capacityId: string, capacities: Reco
             const rightE = organMissing('head', 'rightEar') ? 0.0 : organH('head', 'rightEar') / 100;
             const minE = Math.min(leftE, rightE);
             const avgE = (leftE + rightE) / 2;
-            value = minE * 0.30 + avgE * 0.70 + 0.15;
+            value = minE * 0.3 + avgE * 0.7 + 0.15;
             break;
         }
         default:
@@ -185,18 +194,21 @@ function calculateCapacityValue(pawn: Pawn, capacityId: string, capacities: Reco
 
 // ── Service interface ──────────────────────────────────────────────────────
 export interface PawnStatService {
-    /** Evaluate any stat formula from stats.jsonc for a given pawn. */
-    evaluateStat(statId: string, pawn: Pawn): number;
-    /** Compute all body capacities (0–1) for a pawn. */
-    computeCapacities(pawn: Pawn, lightMultiplier?: number): Record<string, number>;
+    /** Evaluate any stat formula from stats.jsonc for a given pawn or mob. */
+    evaluateStat(statId: string, pawn: Pawn | Mob): number;
+    /** Compute all body capacities (0–1) for a pawn or mob. */
+    computeCapacities(pawn: Pawn | Mob, lightMultiplier?: number): Record<string, number>;
     /** Get speed / yield / quality multipliers for a work type. */
-    getWorkModifiers(pawn: Pawn, workType: string): { speed: number; yield: number; quality: number };
+    getWorkModifiers(
+        pawn: Pawn | Mob,
+        workType: string
+    ): { speed: number; yield: number; quality: number };
     /** Check if a stat ID exists in stats.jsonc. */
     hasStat(statId: string): boolean;
 }
 
 export class PawnStatServiceImpl implements PawnStatService {
-    computeCapacities(pawn: Pawn, lightMultiplier?: number): Record<string, number> {
+    computeCapacities(pawn: Pawn | Mob, lightMultiplier?: number): Record<string, number> {
         const capacities: Record<string, number> = {};
         // Order matters: pain → sight → hearing → consciousness → everything else
         const capacityIds = [
@@ -213,19 +225,28 @@ export class PawnStatServiceImpl implements PawnStatService {
             'talking'
         ];
         for (const id of capacityIds) {
-            capacities[id] = calculateCapacityValue(pawn, id, capacities, id === 'sight' ? lightMultiplier : undefined);
+            capacities[id] = calculateCapacityValue(
+                pawn,
+                id,
+                capacities,
+                id === 'sight' ? lightMultiplier : undefined
+            );
         }
         return capacities;
     }
 
-    evaluateStat(statId: string, pawn: Pawn): number {
+    evaluateStat(statId: string, pawn: Pawn | Mob): number {
         const def = STAT_MAP[statId];
         if (!def) return 1.0;
-        const capacities = def.category === 'capacity' ? this.computeCapacities(pawn) : this.computeCapacities(pawn);
+        const capacities =
+            def.category === 'capacity' ? this.computeCapacities(pawn) : this.computeCapacities(pawn);
         return evaluateFormula(def.formula, pawn, capacities);
     }
 
-    getWorkModifiers(pawn: Pawn, workType: string): { speed: number; yield: number; quality: number } {
+    getWorkModifiers(
+        pawn: Pawn | Mob,
+        workType: string
+    ): { speed: number; yield: number; quality: number } {
         const capacities = this.computeCapacities(pawn);
         const speed = evaluateFormula(STAT_MAP[`${workType}_speed`]?.formula, pawn, capacities);
         const yieldVal = evaluateFormula(STAT_MAP[`${workType}_yield`]?.formula, pawn, capacities);

@@ -1,6 +1,14 @@
 // ===== PHASE 4 NEW TYPES =====
 
-export type DesignationType = 'harvest' | 'woodcut' | 'forage' | 'construct' | 'mine' | 'haul' | 'clear' | 'stockpile';
+export type DesignationType =
+	| 'harvest'
+	| 'woodcut'
+	| 'forage'
+	| 'construct'
+	| 'mine'
+	| 'haul'
+	| 'clear'
+	| 'stockpile';
 
 /** Zone types that support item-category filtering. */
 export type FilterableZoneType = 'harvest' | 'stockpile';
@@ -51,29 +59,29 @@ export interface FuelSettings {
 }
 
 export interface PlacedBuilding {
-	id: string;           // unique instance id
-	type: string;         // building definition id (matches Building.id)
+	id: string; // unique instance id
+	type: string; // building definition id (matches Building.id)
 	x: number;
 	y: number;
 	status: 'planned' | 'under_construction' | 'complete';
-	progress: number;     // 0–1 (legacy; use workDone/workRequired for placed buildings)
-	paused?: boolean;     // construction paused by player
+	progress: number; // 0–1 (legacy; use workDone/workRequired for placed buildings)
+	paused?: boolean; // construction paused by player
 	// Phase 5c: work-point construction
-	workRequired?: number;       // = buildDef.workAmount
-	workDone?: number;           // accumulated work points
+	workRequired?: number; // = buildDef.workAmount
+	workDone?: number; // accumulated work points
 	materialsDelivered?: boolean; // materials consumed from stockpile?
 	// Phase 6: fuel / lighting state
-	fuel?: number;               // current fuel units remaining
-	lit?: boolean;               // campfire is burning right now
+	fuel?: number; // current fuel units remaining
+	lit?: boolean; // campfire is burning right now
 	fuelSettings?: FuelSettings; // optional per-building refuel controls
 	// Deconstruction
-	deconstructQueued?: boolean;       // player has queued this building for demolition
-	deconstructWorkRequired?: number;  // work points to demolish (½ workAmount)
-	deconstructWorkDone?: number;      // accumulated demolition work points
+	deconstructQueued?: boolean; // player has queued this building for demolition
+	deconstructWorkRequired?: number; // work points to demolish (½ workAmount)
+	deconstructWorkDone?: number; // accumulated demolition work points
 	// Shelter assignment
-	assignedPawnId?: string;           // pawn who owns this shelter; only they will use it
+	assignedPawnId?: string; // pawn who owns this shelter; only they will use it
 	// Quality from construction work stat
-	quality?: number;                  // 0.1–2.0+ multiplier from construction_quality stat
+	quality?: number; // 0.1–2.0+ multiplier from construction_quality stat
 }
 
 // ===== PHASE 5 NEW TYPES =====
@@ -99,15 +107,24 @@ export interface DroppedItem {
 
 export interface Job {
 	id: string;
-	type: 'harvest' | 'construct' | 'haul' | 'craft' | 'eat' | 'sleep' | 'light' | 'refuel' | 'deconstruct';
+	type:
+	| 'harvest'
+	| 'construct'
+	| 'haul'
+	| 'craft'
+	| 'eat'
+	| 'sleep'
+	| 'light'
+	| 'refuel'
+	| 'deconstruct';
 	targetX: number;
 	targetY: number;
-	resourceId?: string;    // harvest / haul: which resource
+	resourceId?: string; // harvest / haul: which resource
 	droppedItemId?: string; // haul: which DroppedItem to pick up
-	buildingId?: string;    // construct: which PlacedBuilding.id
-	craftQueueId?: string;  // craft: which CraftingInProgress.id
-	workRequired: number;   // total work points to complete
-	workDone: number;       // accumulated progress
+	buildingId?: string; // construct: which PlacedBuilding.id
+	craftQueueId?: string; // craft: which CraftingInProgress.id
+	workRequired: number; // total work points to complete
+	workDone: number; // accumulated progress
 	claimedBy: string | null; // pawnId claiming this job; null = open
 }
 
@@ -165,7 +182,10 @@ export interface GameState {
 	/** Per-workshop pawn assignment: key = workshopType, value = pawnId or null (any) */
 	craftingStationAssignments?: Record<string, string | null>;
 	/** Per-item crafting config: key = itemId */
-	craftingOrderConfigs?: Record<string, { amount: number; mode: 'once' | 'stockpile'; targetStockpile?: number }>;
+	craftingOrderConfigs?: Record<
+		string,
+		{ amount: number; mode: 'once' | 'stockpile'; targetStockpile?: number }
+	>;
 	/** Phase 7: items dropped on the ground after harvesting, awaiting haulers */
 	droppedItems?: DroppedItem[];
 	/** Dead pawn records for colony history (SURVIVAL-HEALTH spec). */
@@ -197,8 +217,8 @@ export type MobState =
 	// shared rest state
 	| 'Sleeping'
 	// hunger states (Phase B)
-	| 'Foraging'  // herbivore/omnivore moving to a grass tile to eat
-	| 'Hunting'   // carnivore/omnivore pursuing nearest animal or corpse
+	| 'Foraging' // herbivore/omnivore moving to a grass tile to eat
+	| 'Hunting' // carnivore/omnivore pursuing nearest animal or corpse
 	// shared terminal state
 	| 'Corpse';
 
@@ -271,6 +291,23 @@ export interface Mob {
 	stamina?: number;
 	/** Maximum stamina pool for this mob. */
 	maxStamina?: number;
+	// ── Physical traits (same system as Pawn) ───────────────────────────────
+	/** Height in cm, weight in kg, size category. */
+	physicalTraits?: {
+		height: number;
+		weight: number;
+		size: string;
+	};
+	/** All current open wounds; bleed/pain rolls up to root limb each turn. */
+	injuries?: Injury[];
+	/** Aggregate pain score 0–100; exceeding 80 causes collapse. */
+	pain?: number;
+	/** Radius in tiles within which this mob auto-engages hostiles. */
+	aggroRange?: number;
+	/** Milliseconds remaining until next auto-attack fires. */
+	attackCooldown?: number;
+	/** Turns remaining prone; 0 = standing. */
+	knockdown?: number;
 }
 
 /** An animal tamed and bound to an owning pawn (Phase C+). */
@@ -335,10 +372,10 @@ export interface StatusEffectDef {
 	description: string;
 	color: string;
 	modifiers: {
-		hungerRate?: number;      // multiplier on hunger accrual (0 = paused, 0.33 = ⅓ rate)
-		fatigueRate?: number;     // multiplier on fatigue accrual
-		workEfficiency?: number;  // multiplier on work output
-		moveSpeed?: number;       // multiplier on movement steps per turn
+		hungerRate?: number; // multiplier on hunger accrual (0 = paused, 0.33 = ⅓ rate)
+		fatigueRate?: number; // multiplier on fatigue accrual
+		workEfficiency?: number; // multiplier on work output
+		moveSpeed?: number; // multiplier on movement steps per turn
 	};
 }
 
@@ -346,8 +383,8 @@ export interface StatusEffectDef {
 
 /** An active progressive health condition on a pawn. */
 export interface EntityCondition {
-	id: string;        // matches ConditionDef.id in conditions.jsonc
-	severity: number;  // 0.0–1.0; reaches lethalSeverity → pawn dies
+	id: string; // matches ConditionDef.id in conditions.jsonc
+	severity: number; // 0.0–1.0; reaches lethalSeverity → pawn dies
 }
 
 export type LimbId = 'head' | 'torso' | 'left_arm' | 'right_arm' | 'left_leg' | 'right_leg';
@@ -360,27 +397,65 @@ export type DamageType = 'cutting' | 'piercing' | 'blunt';
 
 export type BodyPartId =
 	// ── Head region ──────────────────────────────────────────────────────────
-	| 'skull' | 'jaw' | 'nose'
-	| 'leftEye' | 'rightEye'
-	| 'leftEar' | 'rightEar'
+	| 'skull'
+	| 'jaw'
+	| 'nose'
+	| 'leftEye'
+	| 'rightEye'
+	| 'leftEar'
+	| 'rightEar'
 	| 'brain'
 	// ── Torso ────────────────────────────────────────────────────────────────
-	| 'chest' | 'abdomen'
-	| 'heart' | 'leftLung' | 'rightLung'
-	| 'liver' | 'stomach' | 'leftKidney' | 'rightKidney'
+	| 'chest'
+	| 'abdomen'
+	| 'heart'
+	| 'leftLung'
+	| 'rightLung'
+	| 'liver'
+	| 'stomach'
+	| 'leftKidney'
+	| 'rightKidney'
 	| 'spine'
 	// ── Left arm ─────────────────────────────────────────────────────────────
-	| 'leftShoulder' | 'leftUpperArm' | 'leftForearm' | 'leftHand'
-	| 'leftThumb' | 'leftIndexFinger' | 'leftMiddleFinger' | 'leftRingFinger' | 'leftLittleFinger'
+	| 'leftShoulder'
+	| 'leftUpperArm'
+	| 'leftForearm'
+	| 'leftHand'
+	| 'leftThumb'
+	| 'leftIndexFinger'
+	| 'leftMiddleFinger'
+	| 'leftRingFinger'
+	| 'leftLittleFinger'
 	// ── Right arm ────────────────────────────────────────────────────────────
-	| 'rightShoulder' | 'rightUpperArm' | 'rightForearm' | 'rightHand'
-	| 'rightThumb' | 'rightIndexFinger' | 'rightMiddleFinger' | 'rightRingFinger' | 'rightLittleFinger'
+	| 'rightShoulder'
+	| 'rightUpperArm'
+	| 'rightForearm'
+	| 'rightHand'
+	| 'rightThumb'
+	| 'rightIndexFinger'
+	| 'rightMiddleFinger'
+	| 'rightRingFinger'
+	| 'rightLittleFinger'
 	// ── Left leg ─────────────────────────────────────────────────────────────
-	| 'leftHip' | 'leftUpperLeg' | 'leftLowerLeg' | 'leftFoot'
-	| 'leftBigToe' | 'leftSecondToe' | 'leftMiddleToe' | 'leftFourthToe' | 'leftLittleToe'
+	| 'leftHip'
+	| 'leftUpperLeg'
+	| 'leftLowerLeg'
+	| 'leftFoot'
+	| 'leftBigToe'
+	| 'leftSecondToe'
+	| 'leftMiddleToe'
+	| 'leftFourthToe'
+	| 'leftLittleToe'
 	// ── Right leg ────────────────────────────────────────────────────────────
-	| 'rightHip' | 'rightUpperLeg' | 'rightLowerLeg' | 'rightFoot'
-	| 'rightBigToe' | 'rightSecondToe' | 'rightMiddleToe' | 'rightFourthToe' | 'rightLittleToe';
+	| 'rightHip'
+	| 'rightUpperLeg'
+	| 'rightLowerLeg'
+	| 'rightFoot'
+	| 'rightBigToe'
+	| 'rightSecondToe'
+	| 'rightMiddleToe'
+	| 'rightFourthToe'
+	| 'rightLittleToe';
 
 export interface Injury {
 	bodyPart: BodyPartId;
@@ -391,8 +466,8 @@ export interface Injury {
 	/** Blood volume drained per turn; clots below CLOT_FLOOR or via herbal_kit. */
 	bleeding: number;
 	painContribution: number;
-	infected: boolean;     // doubles pain + bleeding after 20 untreated turns
-	treatedAt?: number;    // turn when a Healer applied care
+	infected: boolean; // doubles pain + bleeding after 20 untreated turns
+	treatedAt?: number; // turn when a Healer applied care
 }
 
 /** State of a single fine body part (organ, bone, sub-limb). */
@@ -407,9 +482,9 @@ export interface BodyPartState {
 
 export interface LimbState {
 	id: LimbId;
-	health: number;      // 0–100; 0 = destroyed
-	isMissing: boolean;  // true after amputation
-	bleedRate: number;   // blood points drained per turn while >0
+	health: number; // 0–100; 0 = destroyed
+	isMissing: boolean; // true after amputation
+	bleedRate: number; // blood points drained per turn while >0
 	/** Fine parts nested inside this root limb (organs, bones, fingers…). Hidden in UI until injured. */
 	parts?: BodyPartState[];
 }
@@ -421,10 +496,10 @@ export interface ConditionStage {
 	color: string;
 	lifeThreatening?: boolean;
 	modifiers: {
-		workEfficiency?: number;  // multiplier on work output
-		moveSpeed?: number;       // multiplier on movement
-		hungerRate?: number;      // multiplier on hunger accrual rate
-		fatigueRate?: number;     // multiplier on fatigue accrual rate
+		workEfficiency?: number; // multiplier on work output
+		moveSpeed?: number; // multiplier on movement
+		hungerRate?: number; // multiplier on hunger accrual rate
+		fatigueRate?: number; // multiplier on fatigue accrual rate
 	};
 }
 
@@ -442,7 +517,7 @@ export interface DeadPawnRecord {
 	name: string;
 	cause: 'malnutrition' | 'blood_loss' | 'critical_limb' | 'combat' | 'exhaustion_cascade';
 	turn: number;
-	stats: { strength: number; dexterity: number; intelligence: number; };
+	stats: { strength: number; dexterity: number; intelligence: number };
 }
 
 export interface PawnState {
@@ -483,12 +558,12 @@ export interface Pawn {
 	workLocation?: string; // Current work location
 
 	// Phase 3: Map position and pathfinding
-	position?: { x: number; y: number };       // tile coordinates; undefined until spawned
-	path?: { x: number; y: number }[];          // queued movement path
-	pathIndex?: number;                          // next step in path (index into path[])
-	isMoving?: boolean;                          // currently following a path
-	hasReachedDestination?: boolean;            // just finished a path
-	nextCellCostLeft?: number;                   // remaining tick-cost to enter the next path cell (RimWorld-style budget drain)
+	position?: { x: number; y: number }; // tile coordinates; undefined until spawned
+	path?: { x: number; y: number }[]; // queued movement path
+	pathIndex?: number; // next step in path (index into path[])
+	isMoving?: boolean; // currently following a path
+	hasReachedDestination?: boolean; // just finished a path
+	nextCellCostLeft?: number; // remaining tick-cost to enter the next path cell (RimWorld-style budget drain)
 
 	// Active status effect ids (derived from state; drives UI cards and need rate modifiers)
 	activeEffects?: string[];
@@ -539,8 +614,16 @@ export interface Pawn {
 	 */
 	maxFatigue?: number;
 
+	// ===== DRAFT MODE =====
+	/** When true, pawn ignores jobs/needs and follows player orders. */
+	drafted?: boolean;
+	/** Current draft order: move to tile or attack target. */
+	draftTarget?:
+	| { type: 'move'; x: number; y: number }
+	| { type: 'attack'; targetId: string; targetType: 'pawn' | 'mob' };
+
 	// Phase 4/5: State machine primary state
-	currentState?: string;                       // 'Idle' | 'Hungry' | 'Tired' | 'MovingToNeed' | 'MovingToResource' | 'Working' | 'Hauling' | 'MovingToDeposit' | 'Eating' | 'Sleeping' | 'Dead'
+	currentState?: string; // 'Idle' | 'Hungry' | 'Tired' | 'MovingToNeed' | 'MovingToResource' | 'Working' | 'Hauling' | 'MovingToDeposit' | 'Eating' | 'Sleeping' | 'Dead'
 	/** Soft-preview of the next up-to-4 unclaimed job IDs the pawn would take after activeJob.
 	 *  Not claimed — used only for need-priority lookahead in the state machine. */
 	jobQueue?: string[];
@@ -555,15 +638,15 @@ export interface Pawn {
 		targetY: number;
 		resourceId?: string;
 		droppedItemId?: string; // haul: id of the DroppedItem being picked up
-		buildingId?: string;    // for construct jobs
-		craftQueueId?: string;  // for craft jobs
-		progress: number;       // 0–1 fractional (local display)
+		buildingId?: string; // for construct jobs
+		craftQueueId?: string; // for craft jobs
+		progress: number; // 0–1 fractional (local display)
 		timeRequired: number;
-		targetState?: string;   // for MovingToNeed, which state to enter on arrival
-		turnsInState?: number;  // for Eating/Sleeping duration tracking
+		targetState?: string; // for MovingToNeed, which state to enter on arrival
+		turnsInState?: number; // for Eating/Sleeping duration tracking
 		hungerToRecover?: number; // total hunger to restore over the eating duration
-		depositX?: number;      // haul: destination x for deposit
-		depositY?: number;      // haul: destination y for deposit
+		depositX?: number; // haul: destination x for deposit
+		depositY?: number; // haul: destination y for deposit
 	};
 }
 
@@ -722,16 +805,16 @@ export interface Building {
 	};
 
 	// Phase 6: fire / storage / rest semantics
-	requiresLighting?: boolean;  // must be lit before use (e.g. campfire)
-	maxFuel?: number;            // maximum fuel units it can hold
+	requiresLighting?: boolean; // must be lit before use (e.g. campfire)
+	maxFuel?: number; // maximum fuel units it can hold
 	fuelConsumptionRate?: number; // fuel units burned per turn when lit
 	fuelRequirements?: {
 		requiredFuelTypes?: number;
 		tinderItemId?: string;
 		tinderAmount?: number;
 	};
-	isStorage?: boolean;         // colonists can retrieve food/items here
-	isRest?: boolean;            // colonists can sleep here
+	isStorage?: boolean; // colonists can retrieve food/items here
+	isRest?: boolean; // colonists can sleep here
 
 	// Integration with item system
 	itemInteractions?: {
@@ -765,11 +848,14 @@ export interface DynamicIngredientSlot {
 	 * Per-ingredient overrides applied to the crafted item's display/stats.
 	 * Key = source itemId, value = overrides.
 	 */
-	variants?: Record<string, {
-		name?: string;
-		description?: string;
-		nutritionBonus?: number;
-	}>;
+	variants?: Record<
+		string,
+		{
+			name?: string;
+			description?: string;
+			nutritionBonus?: number;
+		}
+	>;
 	/** Fallback when the chosen ingredient has no specific variant entry */
 	default?: { name?: string; description?: string };
 }
@@ -822,15 +908,15 @@ export interface Item {
 	craftingTime?: number;
 	toolTierRequired?: number;
 	buildingRequired?: string | null;
-	workshopType?: string | null;  // Phase 5d: building type required to craft (e.g. 'forge')
+	workshopType?: string | null; // Phase 5d: building type required to craft (e.g. 'forge')
 	populationRequired?: number;
 	// Phase 6: fuel / container / cooking properties
-	fuelValue?: number;          // fuel units added when used as campfire fuel
-	isContainer?: boolean;       // acts as a storage container
-	storageCapacity?: number;    // max items stored
-	preservationBonus?: number;  // 0–1, reduces food spoilage rate
-	isCookingVessel?: boolean;   // required in stockpile to cook stews
-	components?: string[];       // for dynamic stew crafts: ingredient item ids
+	fuelValue?: number; // fuel units added when used as campfire fuel
+	isContainer?: boolean; // acts as a storage container
+	storageCapacity?: number; // max items stored
+	preservationBonus?: number; // 0–1, reduces food spoilage rate
+	isCookingVessel?: boolean; // required in stockpile to cook stews
+	components?: string[]; // for dynamic stew crafts: ingredient item ids
 
 	// Item properties (durability, effects, etc.)
 	durability?: number;
@@ -841,8 +927,8 @@ export interface Item {
 	nutrition?: number; // Dedicated nutrition value for food items
 
 	// Decay properties
-	decaySeconds?: number;  // in-game seconds until one unit of this item spoils
-	decaysTo?: string;      // itemId it becomes on decay; omit to simply vanish
+	decaySeconds?: number; // in-game seconds until one unit of this item spoils
+	decaysTo?: string; // itemId it becomes on decay; omit to simply vanish
 
 	// Requirements
 	researchRequired?: string | null;
@@ -851,15 +937,15 @@ export interface Item {
 
 	// Item-specific properties
 	weaponProperties?: {
-		damage: number;           // legacy flat damage; kept for backward compat
+		damage: number; // legacy flat damage; kept for backward compat
 		attackSpeed: number;
 		range: number;
 		// ── COMBAT-SYSTEM additions ──────────────────────────────────────────
-		damageType?: DamageType;       // cutting | piercing | blunt
-		baseDamage?: number;           // base damage before str scaling
-		accuracy?: number;             // added to hitChance formula
-		armorPenetration?: number;     // 0–1; fraction of armor reduction bypassed
-		bluntMod?: number;             // multiplier on knockdown chance (blunt weapons)
+		damageType?: DamageType; // cutting | piercing | blunt
+		baseDamage?: number; // base damage before str scaling
+		accuracy?: number; // added to hitChance formula
+		armorPenetration?: number; // 0–1; fraction of armor reduction bypassed
+		bluntMod?: number; // multiplier on knockdown chance (blunt weapons)
 	};
 
 	armorProperties?: {
@@ -910,15 +996,15 @@ export interface BuildingInProgress {
 export interface CraftingInProgress {
 	item: Item; // The item being crafted
 	quantity: number; // How many are being crafted
-	turnsRemaining: number;       // legacy countdown (kept for backward compat)
+	turnsRemaining: number; // legacy countdown (kept for backward compat)
 	startedAt: number;
 	/** For dynamic recipes: maps slot key (e.g. "meat") → chosen itemId */
 	selectedIngredients?: Record<string, string>;
 	// Phase 5d: work-based crafting
-	id?: string;                  // unique id for job correlation
-	workRequired?: number;        // craftingTime × 5
-	workDone?: number;            // accumulated work points
-	materialsReserved?: boolean;  // materials locked in stockpile?
+	id?: string; // unique id for job correlation
+	workRequired?: number; // craftingTime × 5
+	workDone?: number; // accumulated work points
+	materialsReserved?: boolean; // materials locked in stockpile?
 }
 export interface ResearchProject {
 	id: string;
@@ -1008,7 +1094,7 @@ export interface RacialTrait {
 
 		// Work efficiency modifiers
 		workEfficiency?: Record<string, number>; // workType -> speed multiplier
-		workYield?: Record<string, number>;       // workType -> harvest yield multiplier
+		workYield?: Record<string, number>; // workType -> harvest yield multiplier
 
 		// Needs modifiers
 		hungerRate?: number;

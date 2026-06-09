@@ -346,6 +346,23 @@
     return m ? ` #${m[1]}` : ` #${entity.id.slice(-4)}`;
   }
 
+  function toggleDraft(pawnId: string) {
+    gameState.updateWithSave((state) => ({
+      ...state,
+      pawns: state.pawns.map((p) =>
+        p.id === pawnId
+          ? {
+              ...p,
+              drafted: !p.drafted,
+              draftTarget: undefined,
+              activeJob: undefined,
+              currentState: 'Idle'
+            }
+          : p
+      )
+    }));
+  }
+
   function buildPawnCard(pawn: Pawn, selected: boolean): SelectedEntityModel {
     const bars: EntityBar[] = [
       { label: 'HUNGER', value: pawn.needs.hunger, warn: pawn.needs.hunger > 60 },
@@ -385,7 +402,9 @@
           }
         : { text: '→ Idle', idle: true },
       progressBar: pawn.activeJob ? jobProgressBar(pawn.activeJob.progress ?? 0) : undefined,
-      pos: selected ? (pawn.position ?? undefined) : undefined
+      pos: selected ? (pawn.position ?? undefined) : undefined,
+      drafted: pawn.drafted ?? false,
+      onDraftToggle: selected ? () => toggleDraft(pawn.id) : undefined
     };
   }
 
@@ -2080,6 +2099,58 @@
   function handleContextMenu(e: MouseEvent) {
     e.preventDefault();
     if (hoverTileX < 0 || hoverTileY < 0) return;
+
+    // ── Draft mode: right-click issues orders ────────────────────────────────
+    if (selectedPawn?.drafted) {
+      const targetMob = mobs.find(
+        (m) => m.x === hoverTileX && m.y === hoverTileY && m.isAlive !== false
+      );
+      if (targetMob) {
+        // Attack mob
+        gameState.updateWithSave((state) => ({
+          ...state,
+          pawns: state.pawns.map((p) =>
+            p.id === selectedPawn.id
+              ? { ...p, draftTarget: { type: 'attack', targetId: targetMob.id, targetType: 'mob' } }
+              : p
+          )
+        }));
+        return;
+      }
+      const targetPawn = pawns.find(
+        (p) =>
+          p.id !== selectedPawn.id &&
+          p.position?.x === hoverTileX &&
+          p.position?.y === hoverTileY &&
+          p.isAlive !== false
+      );
+      if (targetPawn) {
+        // Attack pawn
+        gameState.updateWithSave((state) => ({
+          ...state,
+          pawns: state.pawns.map((p) =>
+            p.id === selectedPawn.id
+              ? {
+                  ...p,
+                  draftTarget: { type: 'attack', targetId: targetPawn.id, targetType: 'pawn' }
+                }
+              : p
+          )
+        }));
+        return;
+      }
+      // Move to tile
+      gameState.updateWithSave((state) => ({
+        ...state,
+        pawns: state.pawns.map((p) =>
+          p.id === selectedPawn.id
+            ? { ...p, draftTarget: { type: 'move', x: hoverTileX, y: hoverTileY } }
+            : p
+        )
+      }));
+      return;
+    }
+
     if (designationMode) {
       // In zone mode, right-click clears a zone tile
       gameState.updateWithSave((state) =>

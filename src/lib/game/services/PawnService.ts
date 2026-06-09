@@ -1,4 +1,14 @@
-import type { GameState, Pawn, EntityNeeds, PawnState, StatusEffectDef, EntityCondition, ConditionDef, ConditionStage } from '../core/types';
+import type {
+	GameState,
+	Pawn,
+	Mob,
+	EntityNeeds,
+	PawnState,
+	StatusEffectDef,
+	EntityCondition,
+	ConditionDef,
+	ConditionStage
+} from '../core/types';
 import { consumeFromStockpiles } from '../core/GameState';
 import { calculatePawnStats, categorizeStats, getStatDescription } from '../entities/Pawns';
 import { WORK_CATEGORIES } from '../core/Work';
@@ -13,8 +23,8 @@ import { gatedConsole as console } from '../core/log';
 const STATUS_EFFECTS_DB = statusEffectsData as unknown as StatusEffectDef[];
 
 /** Resolve active effect definitions from a pawn's activeEffects id list. */
-function getActiveEffects(pawn: Pawn): StatusEffectDef[] {
-	return (pawn.activeEffects ?? [])
+function getActiveEffects(entity: Pawn | Mob): StatusEffectDef[] {
+	return (entity.activeEffects ?? [])
 		.map((id) => STATUS_EFFECTS_DB.find((e) => e.id === id))
 		.filter((e): e is StatusEffectDef => e !== undefined);
 }
@@ -37,8 +47,13 @@ export interface PawnService {
 	setPawnActivity(pawnId: string, activity: string, gameState: GameState): GameState;
 
 	// Stat Calculations (DELEGATED to existing Pawns.ts functions)
-	calculatePawnStats(pawnId: string, gameState: GameState): Record<string, { value: number; sources: string[] }>;
-	categorizeStats(stats: Record<string, { value: number; sources: string[] }>): Record<string, string[]>;
+	calculatePawnStats(
+		pawnId: string,
+		gameState: GameState
+	): Record<string, { value: number; sources: string[] }>;
+	categorizeStats(
+		stats: Record<string, { value: number; sources: string[] }>
+	): Record<string, string[]>;
 	getStatDescription(statName: string, statData: { value: number; sources: string[] }): string;
 
 	// Turn Processing (PawnService coordination)
@@ -50,7 +65,7 @@ export interface PawnService {
 	// Automatic Eating Logic (extracted from GameEngine)
 	processAutomaticEating(gameState: GameState): GameState;
 
-	// Automatic Sleeping Logic (extracted from GameEngine)  
+	// Automatic Sleeping Logic (extracted from GameEngine)
 	processAutomaticSleeping(gameState: GameState): GameState;
 	shouldPawnSleep(pawn: Pawn): boolean;
 
@@ -60,7 +75,10 @@ export interface PawnService {
 
 	// Need Calculations (PawnService internal logic)
 	calculateNeedDecay(pawnId: string, gameState: GameState): { hunger: number; rest: number };
-	getPawnNeedStatus(pawnId: string, gameState: GameState): { critical: string[]; warning: string[]; normal: string[] };
+	getPawnNeedStatus(
+		pawnId: string,
+		gameState: GameState
+	): { critical: string[]; warning: string[]; normal: string[] };
 
 	// Phase 3: Map movement
 	assignPath(pawnId: string, path: { x: number; y: number }[], gameState: GameState): GameState;
@@ -73,31 +91,30 @@ export interface PawnService {
 	 * rested & fed) walks at ≈4 tiles/s — the RimWorld baseline. `sources` lists
 	 * each contributing factor for UI display.
 	 */
-	getMoveSpeed(pawn: Pawn): { tilesPerSecond: number; sources: string[] };
+	getMoveSpeed(entity: Pawn | Mob): { tilesPerSecond: number; sources: string[] };
 }
 
 /**
  * PawnService Implementation - Focused on pawn behavior and needs only
  */
 export class PawnServiceImpl implements PawnService {
-
 	// ===== RECOVERY CONFIGURATION =====
 	private RECOVERY_CONFIG = {
 		EATING: {
-			BASE_HUNGER_REDUCTION: 8,         // Low base recovery per eating turn
+			BASE_HUNGER_REDUCTION: 8, // Low base recovery per eating turn
 			BASE_MOOD_BOOST: 2,
 			DURATION_TURNS: 2,
-			MAX_RECOVERY_PER_TURN: 15         // Prevents massive overflow
+			MAX_RECOVERY_PER_TURN: 15 // Prevents massive overflow
 		},
 		SLEEPING: {
-			BASE_REST_REDUCTION: 12,          // Single rest recovery (replaces fatigue + sleep)
+			BASE_REST_REDUCTION: 12, // Single rest recovery (replaces fatigue + sleep)
 			BASE_MOOD_BOOST: 1,
 			DURATION_TURNS: 3,
-			MAX_RECOVERY_PER_TURN: 20,        // Prevents massive overflow
-			MIN_RECOVERY_THRESHOLD: 30        // Must be 30+ to benefit from sleep
+			MAX_RECOVERY_PER_TURN: 20, // Prevents massive overflow
+			MIN_RECOVERY_THRESHOLD: 30 // Must be 30+ to benefit from sleep
 		},
 		RESTING: {
-			BASE_REST_REDUCTION: 3,           // Light rest for just resting (not sleeping)
+			BASE_REST_REDUCTION: 3, // Light rest for just resting (not sleeping)
 			DURATION_TURNS: 1,
 			MAX_RECOVERY_PER_TURN: 8
 		}
@@ -106,19 +123,19 @@ export class PawnServiceImpl implements PawnService {
 	// ===== NEED MANAGEMENT =====
 
 	updatePawnNeeds(pawnId: string, gameState: GameState): GameState {
-		const pawn = gameState.pawns.find(p => p.id === pawnId);
+		const pawn = gameState.pawns.find((p) => p.id === pawnId);
 		if (!pawn) return gameState;
 
 		const updatedPawn = this.calculateNeedsUpdate(pawn, gameState.turn);
 
 		return {
 			...gameState,
-			pawns: gameState.pawns.map(p => p.id === pawnId ? updatedPawn : p)
+			pawns: gameState.pawns.map((p) => (p.id === pawnId ? updatedPawn : p))
 		};
 	}
 
 	processNeedsAutomatically(pawnId: string, gameState: GameState): GameState {
-		const pawn = gameState.pawns.find(p => p.id === pawnId);
+		const pawn = gameState.pawns.find((p) => p.id === pawnId);
 		if (!pawn) return gameState;
 
 		let updatedPawn = { ...pawn };
@@ -140,12 +157,12 @@ export class PawnServiceImpl implements PawnService {
 
 		return {
 			...gameState,
-			pawns: gameState.pawns.map(p => p.id === pawnId ? updatedPawn : p)
+			pawns: gameState.pawns.map((p) => (p.id === pawnId ? updatedPawn : p))
 		};
 	}
 
 	calculateNeedDecay(pawnId: string, gameState: GameState): { hunger: number; rest: number } {
-		const pawn = gameState.pawns.find(p => p.id === pawnId);
+		const pawn = gameState.pawns.find((p) => p.id === pawnId);
 		if (!pawn) return { hunger: 0, rest: 0 };
 
 		return {
@@ -154,8 +171,11 @@ export class PawnServiceImpl implements PawnService {
 		};
 	}
 
-	getPawnNeedStatus(pawnId: string, gameState: GameState): { critical: string[]; warning: string[]; normal: string[] } {
-		const pawn = gameState.pawns.find(p => p.id === pawnId);
+	getPawnNeedStatus(
+		pawnId: string,
+		gameState: GameState
+	): { critical: string[]; warning: string[]; normal: string[] } {
+		const pawn = gameState.pawns.find((p) => p.id === pawnId);
 		if (!pawn) return { critical: [], warning: [], normal: [] };
 
 		const critical = [];
@@ -178,7 +198,7 @@ export class PawnServiceImpl implements PawnService {
 	// ===== STATE MANAGEMENT =====
 
 	updatePawnState(pawnId: string, gameState: GameState): GameState {
-		const pawn = gameState.pawns.find(p => p.id === pawnId);
+		const pawn = gameState.pawns.find((p) => p.id === pawnId);
 		if (!pawn) return gameState;
 
 		const updatedState = this.calculateStateUpdate(pawn.state, pawn.needs, gameState.turn);
@@ -186,12 +206,12 @@ export class PawnServiceImpl implements PawnService {
 
 		return {
 			...gameState,
-			pawns: gameState.pawns.map(p => p.id === pawnId ? updatedPawn : p)
+			pawns: gameState.pawns.map((p) => (p.id === pawnId ? updatedPawn : p))
 		};
 	}
 
 	updateMorale(pawnId: string, gameState: GameState): GameState {
-		const pawn = gameState.pawns.find(p => p.id === pawnId);
+		const pawn = gameState.pawns.find((p) => p.id === pawnId);
 		if (!pawn) return gameState;
 
 		const newMorale = this.calculateMorale(pawn, gameState);
@@ -202,14 +222,14 @@ export class PawnServiceImpl implements PawnService {
 
 		return {
 			...gameState,
-			pawns: gameState.pawns.map(p => p.id === pawnId ? updatedPawn : p)
+			pawns: gameState.pawns.map((p) => (p.id === pawnId ? updatedPawn : p))
 		};
 	}
 
 	// ===== ACTIVITY MANAGEMENT =====
 
 	getPawnActivities(pawnId: string, gameState: GameState): string[] {
-		const pawn = gameState.pawns.find(p => p.id === pawnId);
+		const pawn = gameState.pawns.find((p) => p.id === pawnId);
 		if (!pawn) return [];
 
 		const activities = [];
@@ -219,7 +239,7 @@ export class PawnServiceImpl implements PawnService {
 			const workAssignment = gameState.workAssignments?.[pawnId];
 			if (workAssignment?.currentWork) {
 				// FIXED: Get proper work category name instead of just the ID
-				const workCategory = WORK_CATEGORIES.find(w => w.id === workAssignment.currentWork);
+				const workCategory = WORK_CATEGORIES.find((w) => w.id === workAssignment.currentWork);
 				const workName = workCategory?.name || workAssignment.currentWork;
 				const location = workAssignment.activeLocation || 'unknown location';
 				activities.push(`Working: ${workName} at ${location}`);
@@ -236,7 +256,7 @@ export class PawnServiceImpl implements PawnService {
 			// Check if they have work assignment but aren't marked as working
 			const workAssignment = gameState.workAssignments?.[pawnId];
 			if (workAssignment?.currentWork) {
-				const workCategory = WORK_CATEGORIES.find(w => w.id === workAssignment.currentWork);
+				const workCategory = WORK_CATEGORIES.find((w) => w.id === workAssignment.currentWork);
 				const workName = workCategory?.name || workAssignment.currentWork;
 				activities.push(`Idle (assigned to ${workName})`);
 			} else {
@@ -254,7 +274,7 @@ export class PawnServiceImpl implements PawnService {
 	}
 
 	setPawnActivity(pawnId: string, activity: string, gameState: GameState): GameState {
-		const pawn = gameState.pawns.find(p => p.id === pawnId);
+		const pawn = gameState.pawns.find((p) => p.id === pawnId);
 		if (!pawn) return gameState;
 
 		const updatedState = { ...pawn.state };
@@ -284,21 +304,26 @@ export class PawnServiceImpl implements PawnService {
 
 		return {
 			...gameState,
-			pawns: gameState.pawns.map(p => p.id === pawnId ? updatedPawn : p)
+			pawns: gameState.pawns.map((p) => (p.id === pawnId ? updatedPawn : p))
 		};
 	}
 
 	// ===== STAT CALCULATIONS (DELEGATED) =====
 
-	calculatePawnStats(pawnId: string, gameState: GameState): Record<string, { value: number; sources: string[] }> {
-		const pawn = gameState.pawns.find(p => p.id === pawnId);
+	calculatePawnStats(
+		pawnId: string,
+		gameState: GameState
+	): Record<string, { value: number; sources: string[] }> {
+		const pawn = gameState.pawns.find((p) => p.id === pawnId);
 		if (!pawn) return {};
 
 		// DELEGATE to existing Pawns.ts function (which uses ModifierSystem)
 		return calculatePawnStats(pawn, gameState);
 	}
 
-	categorizeStats(stats: Record<string, { value: number; sources: string[] }>): Record<string, string[]> {
+	categorizeStats(
+		stats: Record<string, { value: number; sources: string[] }>
+	): Record<string, string[]> {
 		// DELEGATE to existing Pawns.ts function
 		return categorizeStats(stats);
 	}
@@ -321,7 +346,7 @@ export class PawnServiceImpl implements PawnService {
 		// NOTE: hunger/fatigue rise and health regen are NOT accrued here anymore — they
 		// advance smoothly every tick via processNeedsTick(). This turn pass only runs the
 		// threshold reactions (mood) and morale off the already-accrued need values.
-		gameState.pawns.forEach(pawn => {
+		gameState.pawns.forEach((pawn) => {
 			if (pawn.isAlive === false) return; // skip dead pawns
 			newState = this.updatePawnState(pawn.id, newState);
 			newState = this.updateMorale(pawn.id, newState);
@@ -340,36 +365,50 @@ export class PawnServiceImpl implements PawnService {
 
 			// Process each pawn for automatic eating
 			gameState.pawns.forEach((pawn, index) => {
-				console.log(`[PawnService] Checking ${pawn.name}: hunger=${pawn.needs.hunger}, sleeping=${pawn.state.isSleeping}`);
+				console.log(
+					`[PawnService] Checking ${pawn.name}: hunger=${pawn.needs.hunger}, sleeping=${pawn.state.isSleeping}`
+				);
 
 				// PRIORITY 1: Critical hunger (must eat immediately, even while sleeping)
 				if (pawn.needs.hunger >= 80) {
-					console.log(`[PawnService] ${pawn.name} critically hungry (${pawn.needs.hunger}), must eat now`);
+					console.log(
+						`[PawnService] ${pawn.name} critically hungry (${pawn.needs.hunger}), must eat now`
+					);
 
 					const fedPawn = this.tryAutomaticEating(pawn, updatedGameState);
 					if (fedPawn !== pawn) {
 						updatedGameState.pawns[index] = fedPawn;
-						console.log(`[PawnService] ${pawn.name} ate due to critical hunger, hunger now: ${fedPawn.needs.hunger}`);
+						console.log(
+							`[PawnService] ${pawn.name} ate due to critical hunger, hunger now: ${fedPawn.needs.hunger}`
+						);
 					}
 				}
 				// PRIORITY 2: Moderate hunger (eat when not sleeping) - LOWERED THRESHOLD
 				else if (pawn.needs.hunger >= 50 && !pawn.state.isSleeping) {
-					console.log(`[PawnService] ${pawn.name} moderately hungry (${pawn.needs.hunger}), attempting to eat`);
+					console.log(
+						`[PawnService] ${pawn.name} moderately hungry (${pawn.needs.hunger}), attempting to eat`
+					);
 
 					const fedPawn = this.tryAutomaticEating(pawn, updatedGameState);
 					if (fedPawn !== pawn) {
 						updatedGameState.pawns[index] = fedPawn;
-						console.log(`[PawnService] ${pawn.name} ate due to moderate hunger, hunger now: ${fedPawn.needs.hunger}`);
+						console.log(
+							`[PawnService] ${pawn.name} ate due to moderate hunger, hunger now: ${fedPawn.needs.hunger}`
+						);
 					}
 				}
 				// PRIORITY 3: Light hunger (eat when idle and food is plentiful) - NEW
 				else if (pawn.needs.hunger >= 30 && !pawn.state.isSleeping && !pawn.state.isWorking) {
-					console.log(`[PawnService] ${pawn.name} lightly hungry (${pawn.needs.hunger}), attempting to eat while idle`);
+					console.log(
+						`[PawnService] ${pawn.name} lightly hungry (${pawn.needs.hunger}), attempting to eat while idle`
+					);
 
 					const fedPawn = this.tryAutomaticEating(pawn, updatedGameState);
 					if (fedPawn !== pawn) {
 						updatedGameState.pawns[index] = fedPawn;
-						console.log(`[PawnService] ${pawn.name} ate while idle, hunger now: ${fedPawn.needs.hunger}`);
+						console.log(
+							`[PawnService] ${pawn.name} ate while idle, hunger now: ${fedPawn.needs.hunger}`
+						);
 					}
 				}
 			});
@@ -396,13 +435,17 @@ export class PawnServiceImpl implements PawnService {
 
 				// Sleep decision based on hunger/fatigue balance
 				if (this.shouldPawnSleep(updatedPawn)) {
-					console.log(`[PawnService] ${pawn.name} should sleep (fatigue: ${updatedPawn.needs.fatigue}, hunger: ${updatedPawn.needs.hunger})`);
+					console.log(
+						`[PawnService] ${pawn.name} should sleep (fatigue: ${updatedPawn.needs.fatigue}, hunger: ${updatedPawn.needs.hunger})`
+					);
 
 					const restedPawn = this.tryAutomaticSleeping(updatedPawn, updatedGameState);
 					if (restedPawn !== updatedPawn) {
 						updatedPawn = restedPawn;
 						needsUpdate = true;
-						console.log(`[PawnService] ${pawn.name} is sleeping, fatigue now: ${updatedPawn.needs.fatigue}`);
+						console.log(
+							`[PawnService] ${pawn.name} is sleeping, fatigue now: ${updatedPawn.needs.fatigue}`
+						);
 					}
 				}
 
@@ -430,7 +473,9 @@ export class PawnServiceImpl implements PawnService {
 			// Mirror state-machine wake thresholds: fed → sleep to 0; hungry → wake at 30
 			const wakeThreshold = hunger >= 70 ? 30 : 0;
 			const shouldContinueSleeping = fatigue > wakeThreshold && hunger < 87;
-			console.log(`[PawnService] ${pawn.name} sleeping: fatigue=${fatigue}, hunger=${hunger}, continue=${shouldContinueSleeping}`);
+			console.log(
+				`[PawnService] ${pawn.name} sleeping: fatigue=${fatigue}, hunger=${hunger}, continue=${shouldContinueSleeping}`
+			);
 			return shouldContinueSleeping;
 		}
 
@@ -462,7 +507,9 @@ export class PawnServiceImpl implements PawnService {
 			isEating: false
 		};
 
-		console.log(`[PawnService] ${pawn.name} sleeping: fatigue ${pawn.needs.fatigue} → ${updatedPawn.needs.fatigue} (recovery: ${recovery})`);
+		console.log(
+			`[PawnService] ${pawn.name} sleeping: fatigue ${pawn.needs.fatigue} → ${updatedPawn.needs.fatigue} (recovery: ${recovery})`
+		);
 		return updatedPawn;
 	}
 
@@ -484,15 +531,19 @@ export class PawnServiceImpl implements PawnService {
 		// Sort foods by nutrition value (highest first) for priority eating
 		const sortedFood = availableFood.sort((a, b) => (b.nutrition || 0) - (a.nutrition || 0));
 
-		console.log(`[PawnService] ${pawn.name} available foods sorted by nutrition:`,
-			sortedFood.map(f => `${f.name}(${f.nutrition})`).join(', '));
+		console.log(
+			`[PawnService] ${pawn.name} available foods sorted by nutrition:`,
+			sortedFood.map((f) => `${f.name}(${f.nutrition})`).join(', ')
+		);
 
 		// CALCULATE HOW MUCH HUNGER TO SATISFY
 		const currentHunger = pawn.needs.hunger;
 		const targetHunger = Math.max(10, currentHunger * 0.3); // Reduce hunger to 30% of current, minimum 10
 		let hungerToReduce = currentHunger - targetHunger;
 
-		console.log(`[PawnService] ${pawn.name} eating session: hunger ${currentHunger} → target ${targetHunger} (need to reduce ${hungerToReduce.toFixed(1)})`);
+		console.log(
+			`[PawnService] ${pawn.name} eating session: hunger ${currentHunger} → target ${targetHunger} (need to reduce ${hungerToReduce.toFixed(1)})`
+		);
 
 		let totalHungerReduction = 0;
 		const foodsEaten = [];
@@ -522,10 +573,16 @@ export class PawnServiceImpl implements PawnService {
 			hungerToReduce -= hungerReductionFromThisFood;
 
 			// Track what was eaten
-			foodsEaten.push({ name: food.name, amount: unitsToEat, nutrition: hungerReductionFromThisFood });
+			foodsEaten.push({
+				name: food.name,
+				amount: unitsToEat,
+				nutrition: hungerReductionFromThisFood
+			});
 			maxFoodTypes--;
 
-			console.log(`[PawnService] ${pawn.name} ate ${unitsToEat}x ${food.name} (nutrition: ${nutritionPerUnit.toFixed(1)} each, total: ${hungerReductionFromThisFood.toFixed(1)})`);
+			console.log(
+				`[PawnService] ${pawn.name} ate ${unitsToEat}x ${food.name} (nutrition: ${nutritionPerUnit.toFixed(1)} each, total: ${hungerReductionFromThisFood.toFixed(1)})`
+			);
 		}
 
 		if (totalHungerReduction <= 0) {
@@ -554,9 +611,11 @@ export class PawnServiceImpl implements PawnService {
 		};
 
 		// Log the complete eating session
-		const foodSummary = foodsEaten.map(f => `${f.amount}x ${f.name}`).join(', ');
+		const foodSummary = foodsEaten.map((f) => `${f.amount}x ${f.name}`).join(', ');
 		console.log(`[PawnService] ${pawn.name} eating session complete: ate ${foodSummary}`);
-		console.log(`[PawnService] ${pawn.name} hunger reduced: ${currentHunger} → ${newHunger} (total reduction: ${actualReduction.toFixed(1)})`);
+		console.log(
+			`[PawnService] ${pawn.name} hunger reduced: ${currentHunger} → ${newHunger} (total reduction: ${actualReduction.toFixed(1)})`
+		);
 
 		return updatedPawn;
 	}
@@ -578,7 +637,8 @@ export class PawnServiceImpl implements PawnService {
 		const racialMultiplier = this.getRacialEatingMultiplier(pawn);
 
 		// Calculate total recovery per unit
-		let recoveryPerUnit = nutritionValue * buildingBonus * (1 + constitutionBonus) * racialMultiplier;
+		let recoveryPerUnit =
+			nutritionValue * buildingBonus * (1 + constitutionBonus) * racialMultiplier;
 
 		// Cap at reasonable max to prevent oversatisfaction from super foods
 		recoveryPerUnit = Math.min(recoveryPerUnit, 15); // Max 15 hunger reduction per food unit
@@ -646,9 +706,10 @@ export class PawnServiceImpl implements PawnService {
 			const fatigue = Math.min(100, pawn.needs.fatigue + rate.fatigue * dt);
 
 			const prevHealth = pawn.state.health ?? 100;
-			const health = prevHealth < 100
-				? Math.min(100, prevHealth + this.getHealthRegenPerTurn(pawn.needs) * dt)
-				: prevHealth;
+			const health =
+				prevHealth < 100
+					? Math.min(100, prevHealth + this.getHealthRegenPerTurn(pawn.needs) * dt)
+					: prevHealth;
 
 			if (hunger === pawn.needs.hunger && fatigue === pawn.needs.fatigue && health === prevHealth) {
 				return pawn;
@@ -666,7 +727,11 @@ export class PawnServiceImpl implements PawnService {
 		return { ...gameState, pawns };
 	}
 
-	private calculateStateUpdate(state: PawnState, needs: EntityNeeds, currentTurn: number): PawnState {
+	private calculateStateUpdate(
+		state: PawnState,
+		needs: EntityNeeds,
+		currentTurn: number
+	): PawnState {
 		const newState = { ...state };
 
 		// Critical needs override current activities.
@@ -678,12 +743,14 @@ export class PawnServiceImpl implements PawnService {
 			newState.isSleeping = false;
 			newState.isEating = true;
 			newState.mood = Math.max(0, newState.mood - perTick(5));
-		} else if (needs.fatigue > 95) { // Use fatigue as single rest need
+		} else if (needs.fatigue > 95) {
+			// Use fatigue as single rest need
 			newState.isWorking = false;
 			newState.isEating = false;
 			newState.isSleeping = true;
 			newState.mood = Math.max(0, newState.mood - perTick(3));
-		} else if (needs.fatigue > 90) { // Medium fatigue - stop working but don't force sleep
+		} else if (needs.fatigue > 90) {
+			// Medium fatigue - stop working but don't force sleep
 			newState.isWorking = false;
 			newState.mood = Math.max(0, newState.mood - perTick(2));
 		}
@@ -691,7 +758,8 @@ export class PawnServiceImpl implements PawnService {
 		// Positive mood from activities
 		if (newState.isEating && needs.hunger > 50) {
 			newState.mood = Math.min(100, newState.mood + perTick(3));
-		} else if (newState.isSleeping && needs.fatigue > 50) { // Use fatigue for sleep benefit
+		} else if (newState.isSleeping && needs.fatigue > 50) {
+			// Use fatigue for sleep benefit
 			newState.mood = Math.min(100, newState.mood + perTick(2));
 		} else if (newState.isWorking && needs.fatigue < 80) {
 			newState.mood = Math.min(100, newState.mood + perTick(1));
@@ -715,7 +783,7 @@ export class PawnServiceImpl implements PawnService {
 		else if ((pawn.state.health ?? 100) < 80) morale -= 10;
 
 		// Trait-based morale modifiers
-		pawn.racialTraits.forEach(trait => {
+		pawn.racialTraits.forEach((trait) => {
 			// Add other trait-based morale effects here if needed
 			// Currently no moraleBonus/moralePenalty properties exist in trait effects
 		});
@@ -745,15 +813,23 @@ export class PawnServiceImpl implements PawnService {
 		const racialMultiplier = this.getRacialSleepMultiplier(pawn);
 
 		// Calculate recovery with realistic limits (single rest recovery)
-		let restReduction = this.RECOVERY_CONFIG.SLEEPING.BASE_REST_REDUCTION *
-			buildingBonus * (1 + constitutionBonus) * racialMultiplier;
+		let restReduction =
+			this.RECOVERY_CONFIG.SLEEPING.BASE_REST_REDUCTION *
+			buildingBonus *
+			(1 + constitutionBonus) *
+			racialMultiplier;
 
 		// PREVENT OVERFLOW: Cap recovery per turn and scale by actual need
 		const restEfficiency = Math.min(1.0, restLevel / 80); // Less effective if not very tired
 
-		restReduction = Math.min(restReduction * restEfficiency, this.RECOVERY_CONFIG.SLEEPING.MAX_RECOVERY_PER_TURN);
+		restReduction = Math.min(
+			restReduction * restEfficiency,
+			this.RECOVERY_CONFIG.SLEEPING.MAX_RECOVERY_PER_TURN
+		);
 
-		console.log(`[PawnService] ${pawn.name} sleeping - rest recovery: ${restReduction.toFixed(1)}, building bonus: ${buildingBonus}`);
+		console.log(
+			`[PawnService] ${pawn.name} sleeping - rest recovery: ${restReduction.toFixed(1)}, building bonus: ${buildingBonus}`
+		);
 
 		const updatedPawn = { ...pawn };
 		updatedPawn.state = {
@@ -841,10 +917,18 @@ export class PawnServiceImpl implements PawnService {
 				baseRest *= (trait.effects as any).fatigueRate;
 			}
 			switch (trait.name) {
-				case 'Tireless': baseRest *= 0.7; break;
-				case 'Energetic': baseRest *= 0.8; break;
-				case 'Lazy': baseRest *= 1.3; break;
-				case 'Frail': baseRest *= 1.4; break;
+				case 'Tireless':
+					baseRest *= 0.7;
+					break;
+				case 'Energetic':
+					baseRest *= 0.8;
+					break;
+				case 'Lazy':
+					baseRest *= 1.3;
+					break;
+				case 'Frail':
+					baseRest *= 1.4;
+					break;
 			}
 		});
 
@@ -862,9 +946,15 @@ export class PawnServiceImpl implements PawnService {
 
 		pawn.racialTraits.forEach((trait) => {
 			switch (trait.name) {
-				case 'Efficient Metabolism': baseHunger *= 0.7; break;
-				case 'Large Appetite': baseHunger *= 1.4; break;
-				case 'Hardy': baseHunger *= 0.9; break;
+				case 'Efficient Metabolism':
+					baseHunger *= 0.7;
+					break;
+				case 'Large Appetite':
+					baseHunger *= 1.4;
+					break;
+				case 'Hardy':
+					baseHunger *= 0.9;
+					break;
 			}
 		});
 
@@ -881,12 +971,15 @@ export class PawnServiceImpl implements PawnService {
 		const constitutionBonus = Math.max(0, (pawn.stats.constitution - 10) * 0.02);
 		const racialMultiplier = this.getRacialSleepMultiplier(pawn);
 
-		let restReduction = this.RECOVERY_CONFIG.RESTING.BASE_REST_REDUCTION *
-			(1 + constitutionBonus) * racialMultiplier;
+		let restReduction =
+			this.RECOVERY_CONFIG.RESTING.BASE_REST_REDUCTION * (1 + constitutionBonus) * racialMultiplier;
 
 		// Cap recovery and scale by need
 		const restEfficiency = Math.min(1.0, restLevel / 60);
-		restReduction = Math.min(restReduction * restEfficiency, this.RECOVERY_CONFIG.RESTING.MAX_RECOVERY_PER_TURN);
+		restReduction = Math.min(
+			restReduction * restEfficiency,
+			this.RECOVERY_CONFIG.RESTING.MAX_RECOVERY_PER_TURN
+		);
 
 		console.log(`[PawnService] ${pawn.name} resting - rest recovery: ${restReduction.toFixed(1)}`);
 
@@ -911,18 +1004,22 @@ export class PawnServiceImpl implements PawnService {
 			return [];
 		}
 
-		const availableFood = gameState.item.filter(item => {
+		const availableFood = gameState.item.filter((item) => {
 			// FIXED: Check if item has nutritional value AND sufficient amount
 			const hasNutrition = item.nutrition && item.nutrition > 0;
 			const hasAmount = item.amount && item.amount > 0;
 
-			console.log(`[PawnService] Checking item ${item.name}: nutrition=${item.nutrition}, amount=${item.amount}, hasNutrition=${hasNutrition}, hasAmount=${hasAmount}`);
+			console.log(
+				`[PawnService] Checking item ${item.name}: nutrition=${item.nutrition}, amount=${item.amount}, hasNutrition=${hasNutrition}, hasAmount=${hasAmount}`
+			);
 
 			return hasNutrition && hasAmount;
 		});
 
-		console.log(`[PawnService] Found ${availableFood.length} available food items:`,
-			availableFood.map(f => `${f.name}(${f.amount})`).join(', '));
+		console.log(
+			`[PawnService] Found ${availableFood.length} available food items:`,
+			availableFood.map((f) => `${f.name}(${f.amount})`).join(', ')
+		);
 
 		return availableFood;
 	}
@@ -940,7 +1037,9 @@ export class PawnServiceImpl implements PawnService {
 			return currentNutrition > bestNutrition ? current : best;
 		});
 
-		console.log(`[PawnService] Selected best food: ${bestFood.name} (nutrition: ${bestFood.nutrition})`);
+		console.log(
+			`[PawnService] Selected best food: ${bestFood.name} (nutrition: ${bestFood.nutrition})`
+		);
 		return bestFood;
 	}
 
@@ -978,12 +1077,15 @@ export class PawnServiceImpl implements PawnService {
 		const constitutionBonus = Math.max(0, (pawn.stats.constitution - 10) * 0.02); // 2% per point above 10
 		const racialMultiplier = this.getRacialEatingMultiplier(pawn);
 
-		let hungerReduction = baseRecovery * foodMultiplier * buildingBonus * (1 + constitutionBonus) * racialMultiplier;
+		let hungerReduction =
+			baseRecovery * foodMultiplier * buildingBonus * (1 + constitutionBonus) * racialMultiplier;
 
 		// PREVENT OVERFLOW: Cap recovery per turn
 		hungerReduction = Math.min(hungerReduction, this.RECOVERY_CONFIG.EATING.MAX_RECOVERY_PER_TURN);
 
-		console.log(`[PawnService] ${pawn.name} eating ${selectedFood.name} - recovery: ${hungerReduction.toFixed(1)} (nutrition: ${nutritionValue}, building: ${buildingBonus})`);
+		console.log(
+			`[PawnService] ${pawn.name} eating ${selectedFood.name} - recovery: ${hungerReduction.toFixed(1)} (nutrition: ${nutritionValue}, building: ${buildingBonus})`
+		);
 
 		const updatedPawn = { ...pawn };
 		updatedPawn.needs = {
@@ -1004,7 +1106,7 @@ export class PawnServiceImpl implements PawnService {
 	private getRacialEatingMultiplier(pawn: Pawn): number {
 		let multiplier = 1.0;
 
-		pawn.racialTraits.forEach(trait => {
+		pawn.racialTraits.forEach((trait) => {
 			switch (trait.name) {
 				case 'Efficient Metabolism':
 					multiplier *= 1.3; // Better food processing
@@ -1027,7 +1129,7 @@ export class PawnServiceImpl implements PawnService {
 	private getRacialSleepMultiplier(pawn: Pawn): number {
 		let multiplier = 1.0;
 
-		pawn.racialTraits.forEach(trait => {
+		pawn.racialTraits.forEach((trait) => {
 			switch (trait.name) {
 				case 'Light Sleeper':
 					multiplier *= 1.2; // Recovers faster but needs more sleep
@@ -1069,9 +1171,13 @@ export class PawnServiceImpl implements PawnService {
 					const shouldWakeUp = !this.shouldPawnSleep(pawn);
 					if (shouldWakeUp) {
 						shouldClearStates = true;
-						console.log(`[PawnService] Waking up ${pawn.name} (fatigue: ${pawn.needs.fatigue}, hunger: ${pawn.needs.hunger})`);
+						console.log(
+							`[PawnService] Waking up ${pawn.name} (fatigue: ${pawn.needs.fatigue}, hunger: ${pawn.needs.hunger})`
+						);
 					} else {
-						console.log(`[PawnService] ${pawn.name} continues sleeping (fatigue: ${pawn.needs.fatigue}, hunger: ${pawn.needs.hunger})`);
+						console.log(
+							`[PawnService] ${pawn.name} continues sleeping (fatigue: ${pawn.needs.fatigue}, hunger: ${pawn.needs.hunger})`
+						);
 					}
 				}
 
@@ -1127,7 +1233,7 @@ export class PawnServiceImpl implements PawnService {
 	assignPath(pawnId: string, path: { x: number; y: number }[], gameState: GameState): GameState {
 		return {
 			...gameState,
-			pawns: gameState.pawns.map(p =>
+			pawns: gameState.pawns.map((p) =>
 				p.id === pawnId
 					? {
 						...p,
@@ -1144,9 +1250,16 @@ export class PawnServiceImpl implements PawnService {
 	teleportPawn(pawnId: string, pos: { x: number; y: number }, gameState: GameState): GameState {
 		return {
 			...gameState,
-			pawns: gameState.pawns.map(p =>
+			pawns: gameState.pawns.map((p) =>
 				p.id === pawnId
-					? { ...p, position: pos, path: [], pathIndex: 0, isMoving: false, hasReachedDestination: true }
+					? {
+						...p,
+						position: pos,
+						path: [],
+						pathIndex: 0,
+						isMoving: false,
+						hasReachedDestination: true
+					}
 					: p
 			)
 		};
@@ -1162,27 +1275,27 @@ export class PawnServiceImpl implements PawnService {
 	 *   • Needs — hunger/fatigue above 50% progressively slow the pawn
 	 *   • Effects — status-effect & condition moveSpeed multipliers
 	 */
-	getMoveSpeed(pawn: Pawn): { tilesPerSecond: number; sources: string[] } {
+	getMoveSpeed(entity: Pawn | Mob): { tilesPerSecond: number; sources: string[] } {
 		const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 		const sources: string[] = [];
 
 		const base = 4.0; // tiles/s on open terrain at all-average stats
 
 		// Dexterity: average (10) → ×1.0; capped so extremes stay sane.
-		const dex = pawn.stats?.dexterity ?? 10;
+		const dex = entity.stats?.dexterity ?? 10;
 		const dexFactor = clamp(0.5 + dex / 20, 0.4, 1.8);
 		sources.push(`DEX ${dex} ×${dexFactor.toFixed(2)}`);
 
 		// Body load: own bodyweight carried by strength-derived capacity.
-		const str = pawn.stats?.strength ?? 10;
-		const weight = pawn.physicalTraits?.weight ?? 60;
+		const str = entity.stats?.strength ?? 10;
+		const weight = entity.physicalTraits?.weight ?? 60;
 		const capacity = Math.max(1, str * 6); // STR 10 ≈ 60 kg comfortable
 		const weightFactor = clamp(1.15 - 0.15 * (weight / capacity), 0.65, 1.1);
 		sources.push(`${weight}kg/STR${str} ×${weightFactor.toFixed(2)}`);
 
 		// Legs: average leg health fraction; missing legs count as 0.
 		let legFactor = 1;
-		const legs = (pawn.limbs ?? []).filter((l) => l.id === 'left_leg' || l.id === 'right_leg');
+		const legs = (entity.limbs ?? []).filter((l) => l.id === 'left_leg' || l.id === 'right_leg');
 		if (legs.length > 0) {
 			const locomotion =
 				legs.reduce((sum, l) => sum + (l.isMissing ? 0 : l.health / 100), 0) / legs.length;
@@ -1191,19 +1304,19 @@ export class PawnServiceImpl implements PawnService {
 		}
 
 		// Needs: hunger & fatigue above the halfway mark drag speed down.
-		const hunger = pawn.needs?.hunger ?? 0;
-		const fatigue = pawn.needs?.fatigue ?? 0;
+		const hunger = entity.needs?.hunger ?? 0;
+		const fatigue = entity.needs?.fatigue ?? 0;
 		const hungerPenalty = Math.max(0, (hunger - 50) / 50) * 0.25;
 		const fatiguePenalty = Math.max(0, (fatigue - 50) / 50) * 0.25;
 		const needsFactor = clamp(1 - hungerPenalty - fatiguePenalty, 0.5, 1);
 		if (needsFactor < 0.999) sources.push(`needs ×${needsFactor.toFixed(2)}`);
 
 		// Status effects + condition stages that modify movement.
-		let effectFactor = getActiveEffects(pawn).reduce(
+		let effectFactor = getActiveEffects(entity).reduce(
 			(r, e) => r * (e.modifiers.moveSpeed ?? 1),
 			1
 		);
-		for (const c of pawn.conditions ?? []) {
+		for (const c of entity.conditions ?? []) {
 			const stage = getConditionCurrentStage(c);
 			if (stage?.modifiers.moveSpeed != null) effectFactor *= stage.modifiers.moveSpeed;
 		}
@@ -1233,7 +1346,7 @@ export class PawnServiceImpl implements PawnService {
 			if (!pawn.isMoving && pawn.path && pawn.path.length > 0) {
 				state = {
 					...state,
-					pawns: state.pawns.map(p =>
+					pawns: state.pawns.map((p) =>
 						p.id === pawn.id ? { ...p, path: [], pathIndex: 0, nextCellCostLeft: undefined } : p
 					)
 				};
@@ -1249,8 +1362,10 @@ export class PawnServiceImpl implements PawnService {
 			// Flatten pawn position into the Movable shape, run shared movement engine.
 			const moved = advanceAlongPath(
 				{
-					x: pawn.position.x, y: pawn.position.y,
-					path: pawn.path, pathIndex: pawn.pathIndex,
+					x: pawn.position.x,
+					y: pawn.position.y,
+					path: pawn.path,
+					pathIndex: pawn.pathIndex,
 					nextCellCostLeft: pawn.nextCellCostLeft
 				},
 				budget,
@@ -1260,7 +1375,7 @@ export class PawnServiceImpl implements PawnService {
 
 			state = {
 				...state,
-				pawns: state.pawns.map(p =>
+				pawns: state.pawns.map((p) =>
 					p.id === pawn.id
 						? {
 							...p,

@@ -35,6 +35,10 @@
     note?: string;
     /** Map position footer. */
     pos?: { x: number; y: number };
+    /** Draft mode toggle — undefined = not a pawn / no draft support. */
+    drafted?: boolean;
+    /** Called when the draft button is clicked. */
+    onDraftToggle?: () => void;
   }
 </script>
 
@@ -52,6 +56,16 @@
     <span class="pawn-name">{model.name}</span>
     {#if model.status}<span class="pawn-state">[{model.status}]</span>{/if}
     {#if model.dismissable}<span class="pawn-dismiss" title="Press Esc to deselect">◈</span>{/if}
+    {#if model.drafted !== undefined && model.onDraftToggle}
+      <button
+        class="draft-btn"
+        class:draft-active={model.drafted}
+        onclick={model.onDraftToggle}
+        title={model.drafted ? 'Click to undraft pawn' : 'Click to draft pawn'}
+      >
+        {model.drafted ? 'DRAFTED' : 'DRAFT'}
+      </button>
+    {/if}
   </div>
 
   {#if model.stats && model.stats.length > 0}
@@ -198,6 +212,32 @@
     margin-left: auto;
     color: #886630;
     font-size: 9px;
+  }
+  .draft-btn {
+    margin-left: 6px;
+    background: #2a1a0a;
+    border: 1px solid #6b4a2a;
+    color: #a07840;
+    font-family: 'Courier New', monospace;
+    font-size: 9px;
+    padding: 1px 5px;
+    cursor: pointer;
+    pointer-events: auto;
+    line-height: 1.3;
+  }
+  .draft-btn:hover {
+    border-color: #c8a060;
+    color: #c8a060;
+  }
+  .draft-active {
+    background: #4a2010;
+    border-color: #ee8844;
+    color: #ee8844;
+  }
+  .draft-active:hover {
+    background: #5a2814;
+    border-color: #ffaa66;
+    color: #ffaa66;
   }
   .pawn-idle {
     color: #887040;
