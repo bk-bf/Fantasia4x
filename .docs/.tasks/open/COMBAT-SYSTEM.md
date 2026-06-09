@@ -357,22 +357,23 @@ the roots.
 
 ### Phase C — GameEngine wiring
 
-- ⬜ `combatService.tickCombat()` called from `GameEngineImpl` after Entity Step
-- 🟡 Mob FSM `Attacking` (in `EntityService.stepHostile`) currently only holds position — make it delegate to `combatService`, reusing the existing `pendingDamage` aggregation so pawn and mob damage share one path
+- ✅ `combatService.tickCombat()` called from `GameEngineImpl` after Entity Step
+- ✅ Mob FSM `Attacking` (in `EntityService.stepHostile`) holds position; `combatService.tickCombat()` resolves all hits for mobs in `Attacking` state. The existing `pendingDamage` aggregation in `EntityService` handles mob-vs-mob hunting damage; `combatService` handles mob-vs-pawn combat damage.
 
 ### Phase D — HUD feedback (deepen the shipped limb/blood UI)
 
 Limbs and blood are already rendered; this phase expands that depiction rather than
 building it from scratch.
 
-- 🟡 PawnScreen health panel: keep the 6 root limbs always visible; make each limb
-  expandable to reveal its injured organs/bones/fingers on demand (collapsed when
-  healthy). Surface pain total + prone state.
-- ⬜ Rework EntityScreen into a RimWorld-style health table — one entity per row,
-  columns for blood %, worst-limb status, pain, and FSM state — replacing the
-  current grouped card list. Row click expands that entity's full body tree.
-- ⬜ Health bars on mob/pawn map tiles in `GameCanvas.svelte` (reuse the mob
-  `eatProgress` overlay pipeline).
+- ✅ PawnScreen health panel: 6 root limbs always visible, each expandable to reveal
+  sub-parts (organs, bones, fingers). Auto-expanded when injured, collapsed when healthy.
+  Healthy sub-parts dimmed (opacity 0.6). Pain total + prone state surfaced in status row.
+  Vital organs marked with ★ after the name.
+- ✅ EntityScreen reworked into RimWorld-style health table — one entity per row,
+  columns for blood %, worst-limb status, pain, and FSM state. Row click expands full
+  body tree with limb/sub-part detail.
+- ✅ Health bars on mob/pawn map tiles in `GameCanvas.svelte` — reuses the existing
+  `progressOverlays` / `worldEffects` overlay pipeline. Green bars for pawns, red for mobs.
 - ⬜ Drafted-mode skill bar deferred to MAGIC-SKILLS.
 
 ---
