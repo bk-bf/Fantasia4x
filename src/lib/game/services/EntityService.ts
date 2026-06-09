@@ -697,10 +697,28 @@ class EntityServiceImpl {
                 if (closestDist > def.stats.fleeRange || turn - mob.stateSince > SAFE_RESET_TICKS) {
                     return { ...mob, state: 'Wander', stateSince: turn };
                 }
+                // Drain stamina while fleeing; transition to Exhausted when empty.
+                const curStamina = mob.stamina ?? mob.maxStamina ?? calcMaxStamina(mob.stats);
+                const drainedStamina = curStamina - FLEE_STAMINA_DRAIN_PER_SECOND * SECONDS_PER_TICK;
+                if (drainedStamina <= 0) {
+                    return { ...mob, state: 'Exhausted', stateSince: turn, stamina: 0, path: [] };
+                }
                 // Always move away whenever the threat is still within flee range.
                 const fleeTarget = pawnDist <= predDist ? nearest : predThreat;
-                if (fleeTarget) return this.moveAway(mob, fleeTarget.pos, state);
-                return this.wanderStep(mob, def, state);
+                if (fleeTarget) return { ...this.moveAway(mob, fleeTarget.pos, state), stamina: drainedStamina };
+                return { ...this.wanderStep(mob, def, state), stamina: drainedStamina };
+            }
+            case 'Exhausted': {
+                // Regenerate stamina while resting; resume normal behaviour when recovered.
+                const exhaustStamina = mob.stamina ?? 0;
+                const regenStamina = Math.min(
+                    exhaustStamina + EXHAUST_STAMINA_REGEN_PER_SECOND * SECONDS_PER_TICK,
+                    mob.maxStamina ?? calcMaxStamina(mob.stats)
+                );
+                if (regenStamina >= EXHAUST_EXIT_STAMINA) {
+                    return { ...mob, state: 'Wander', stateSince: turn, path: [], stamina: regenStamina };
+                }
+                return { ...this.wanderStep(mob, def, state), stamina: regenStamina }; // slow drift, vulnerable
             }
             case 'Sleeping': {
                 // Woken by a pawn entering vision.
@@ -861,6 +879,16 @@ class EntityServiceImpl {
             }
             case 'Tamed':
                 return mob; // Phase C — taming not yet implemented
+            case 'Attacking': {
+                // Prey forced into combat by a hunter. Stay in Attacking while adjacent
+                // to the attacker; if the attacker moves away, flee.
+                const attacker = mob.huntTargetId ? allMobs.find((m) => m.id === mob.huntTargetId) : null;
+                if (attacker && attacker.state === 'Attacking' && this.adjacent(mob, { x: attacker.x, y: attacker.y })) {
+                    return mob; // hold position, combatService resolves damage
+                }
+                // Attacker gone or moved away — flee.
+                return { ...mob, state: 'Fleeing', stateSince: turn, huntTargetId: undefined, path: [] };
+            }
             case 'Foraging':
                 return this.stepForaging(mob, def, turn, state, pendingTileDepletion);
             case 'Hunting':
@@ -1101,11 +1129,14 @@ class EntityServiceImpl {
 
         // Pursue prey via A*. Re-path when our route is exhausted or the prey has
         // drifted away from the path's end tile; otherwise keep following the route.
+        // Throttle re-pathing to every 10 ticks to prevent main-thread stalls when
+        // many hunters chase fleeing prey simultaneously.
         const pathEnd = mob.path && mob.path.length > 0 ? mob.path[mob.path.length - 1] : null;
         const pathExhausted = !mob.path?.length || (mob.pathIndex ?? 0) >= mob.path.length;
         const preyMoved =
             !pathEnd || Math.max(Math.abs(pathEnd.x - preyPos.x), Math.abs(pathEnd.y - preyPos.y)) > 1.5;
-        if (pathExhausted || preyMoved) {
+        const repathDue = pathExhausted || (preyMoved && (turn - mob.stateSince) % 10 === 0);
+        if (repathDue) {
             // Path to an unoccupied tile adjacent to the prey so the wolf arrives in
             // attack range without needing to land on the prey's own tile.
             const approachTile = this.bestApproachTile(state, mob, preyPos, mob.id) ?? preyPos;
