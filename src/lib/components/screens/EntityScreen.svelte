@@ -100,7 +100,13 @@
         {@const pp = painPct(m)}
         {@const expanded = expandedId === m.id}
         <div class="table-row" class:expanded>
-          <button class="row-main" onclick={() => toggleExpand(m.id)}>
+          <button
+            class="row-main"
+            onclick={() => {
+              toggleExpand(m.id);
+              focus(m);
+            }}
+          >
             <span class="col-name">
               <span class="glyph" style="color: {def ? rgb(def.fg) : 'var(--text-dim)'}"
                 >{m.entityClass === 'mob' ? '✦' : '◆'}</span
@@ -120,7 +126,6 @@
           {#if expanded}
             <div class="row-expand">
               <div class="expand-actions">
-                <button class="act-btn" onclick={() => focus(m)}>Focus on map</button>
                 <FollowButton
                   isActive={$uiState.cameraFollowMobId === m.id}
                   onToggle={() => {

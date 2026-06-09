@@ -1,6 +1,7 @@
 <script lang="ts">
   import { recentActivity } from '$lib/stores/Log';
-  import type { ActivityLogEntry } from '$lib/game/core/Events';
+  import { uiState } from '$lib/stores/uiState';
+  import type { ActivityLogEntry, CombatTurnEntry } from '$lib/game/core/Events';
 
   const TYPE_ABBR: Record<string, string> = {
     work: 'WRK',
@@ -10,7 +11,9 @@
     pawn_action: 'PWN',
     research: 'RSH',
     exploration: 'EXP',
-    system: 'SYS'
+    system: 'SYS',
+    combat: 'CBT',
+    entity: 'ENT'
   };
 
   const SEV_CLASS: Record<string, string> = {
@@ -24,6 +27,37 @@
   function abbr(e: ActivityLogEntry) {
     return TYPE_ABBR[e.type] ?? '???';
   }
+
+  let expandedId: string | null = null;
+
+  function handleClick(entry: ActivityLogEntry) {
+    // Toggle combat breakdown expansion
+    if (entry.type === 'combat' && entry.combatBreakdown && entry.combatBreakdown.length > 0) {
+      expandedId = expandedId === entry.id ? null : entry.id;
+    }
+    // Focus map on the event location
+    if (entry.focusX !== undefined && entry.focusY !== undefined) {
+      uiState.focusMapOn(entry.focusX, entry.focusY);
+    }
+    // Select first entity involved
+    if (entry.entityIds && entry.entityIds.length > 0) {
+      const firstId = entry.entityIds[0];
+      // Heuristic: pawn IDs usually don't start with 'mob-'
+      if (firstId.startsWith('mob-')) {
+        uiState.selectMob(firstId);
+      } else {
+        uiState.selectPawn(firstId);
+      }
+    }
+  }
+
+  function formatCombatTurn(t: CombatTurnEntry): string {
+    if (!t.hit) return `T${t.turn}: ${t.attackerName} missed ${t.defenderName}`;
+    let s = `T${t.turn}: ${t.attackerName} hit ${t.defenderName} for ${t.damage} dmg`;
+    if (t.injury) s += ` (${t.injury})`;
+    if (t.knockdown) s += ' [KNOCKDOWN]';
+    return s;
+  }
 </script>
 
 <aside class="panel">
@@ -34,11 +68,27 @@
       <div class="empty">awaiting events...</div>
     {:else}
       {#each $recentActivity as entry (entry.id)}
-        <div class="entry {SEV_CLASS[entry.severity] || ''}">
+        <div
+          class="entry {SEV_CLASS[entry.severity] || ''} {entry.focusX !== undefined
+            ? 'clickable'
+            : ''}"
+          class:expanded={expandedId === entry.id}
+          on:click={() => handleClick(entry)}
+          role="button"
+          tabindex="0"
+          on:keydown={(e) => e.key === 'Enter' && handleClick(entry)}
+        >
           <span class="turn">T{entry.turn}</span>
           <span class="type">{abbr(entry)}</span>
           <span class="msg">{entry.action}{entry.result ? ' · ' + entry.result : ''}</span>
         </div>
+        {#if expandedId === entry.id && entry.combatBreakdown}
+          <div class="combat-breakdown">
+            {#each entry.combatBreakdown as turn}
+              <div class="turn-line">{formatCombatTurn(turn)}</div>
+            {/each}
+          </div>
+        {/if}
       {/each}
     {/if}
   </div>
@@ -126,5 +176,31 @@
     color: var(--text-muted);
     font-size: 9px;
     font-style: italic;
+  }
+
+  .clickable {
+    cursor: pointer;
+  }
+
+  .clickable:hover {
+    background: var(--bg-hover);
+  }
+
+  .expanded {
+    background: rgba(212, 168, 64, 0.08);
+  }
+
+  .combat-breakdown {
+    padding: 2px 6px 4px 34px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(0, 0, 0, 0.2);
+  }
+
+  .turn-line {
+    font-size: 9px;
+    color: var(--text-dim);
+    line-height: 1.5;
+    padding-left: 4px;
+    border-left: 2px solid var(--border-hi);
   }
 </style>

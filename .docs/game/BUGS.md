@@ -11,13 +11,12 @@ Tracks confirmed bugs, root causes, and fix status. Add new entries at the top.
 **Root causes (two interacting):**
 
 1. **Synchronous `initialGameState` with generated world.**
-   The store is created at module load with a brand-new `generateWorld()` result. Svelte subscribers (GameCanvas, etc.) render this immediately. The _real_ persisted save is loaded asynchronously from IndexedDB and applied later, causing a visible flash as the ephemeral generated map is replaced by the stored one.
+   The store is created at module load with a brand-new `generateWorld()` result. Svelte subscribers (GameCanvas, etc.) render this immediately. The *real* persisted save is loaded asynchronously from IndexedDB and applied later, causing a visible flash as the ephemeral generated map is replaced by the stored one.
 
 2. **`wipeAndReload()` called `set(initialGameState)` before reload.**
    After deleting the save, the function pushed a new generated world into the store for a split-second before `location.reload()` fired, causing the old stored map to flash back and forth.
 
 **Fix** (`src/lib/stores/gameState.ts`, `src/routes/+page.svelte`):
-
 - Added `storeReady` writable flag (default `false`). It becomes `true` only after `savedStateReady` resolves and the correct state is in the store.
 - `+page.svelte` gates the entire game UI behind `{#if $storeReady}`; while loading, a minimal `LOADING…` screen is shown. The ephemeral generated map never reaches the DOM.
 - `wipeAndReload()` now sets `storeReady.set(false)` immediately (hiding the game) and removes the pointless `set(initialGameState)` call before reload.
@@ -37,7 +36,6 @@ Tracks confirmed bugs, root causes, and fix status. Add new entries at the top.
    When pathfinding for 45 entities stalls the JS thread, the next `requestAnimationFrame` callback receives a large `dt` (e.g. 200 ms). With `MOVE_SMOOTH_TAU = 0.06 s` that produces `alpha ≈ 0.97`, snapping all entities near-instantly rather than easing them.
 
 **Fix** (`src/lib/components/UI/GameCanvas.svelte`):
-
 - `updatePawnOverlay` now reads `get(gameState).mobs` / `.pawns` instead of the subscriber-throttled component variables, so the renderer always uses current-tick positions.
 - `dt` is clamped to 50 ms before computing `alpha`, preventing whole-world snap on CPU-stall frames.
 
@@ -47,10 +45,9 @@ Tracks confirmed bugs, root causes, and fix status. Add new entries at the top.
 
 **Symptom:** Carnivore entities (wolves etc.) would continuously swap prey targets, causing them to run back and forth rather than pursuing a single animal.
 
-**Root cause:** `findNearestPrey()` was called unconditionally every tick. Any closer animal that wandered into range caused an immediate target switch, resetting the A\* path and producing zigzag movement.
+**Root cause:** `findNearestPrey()` was called unconditionally every tick. Any closer animal that wandered into range caused an immediate target switch, resetting the A* path and producing zigzag movement.
 
 **Fix** (`src/lib/game/services/EntityService.ts`):
-
 - Added `huntTargetId` target-locking on `Mob`: once a target is set, the hunter pursues it exclusively.
 - Re-evaluation only happens when the target becomes invalid (dead, stripped, tamed) or a corpse appears (free food opportunity).
 - Added `huntCooldownUntil` field: if pathfinding to prey fails, the entity enters Wander state with a 60-second cooldown before re-entering Hunting.
@@ -64,7 +61,6 @@ Tracks confirmed bugs, root causes, and fix status. Add new entries at the top.
 **Root cause:** The `eatProgress` completion branch in `stepForaging` and `stepHunting` returned without explicitly setting a new state, leaving the FSM in Hunting/Foraging with no target to act on.
 
 **Fix** (`src/lib/game/services/EntityService.ts`):
-
 - All `eatProgress` completion paths now explicitly transition to a rest state (`'Grazing'` for passive animals, `'Wander'` for hostile entities) and set `path: []`.
 
 ---
@@ -76,7 +72,6 @@ Tracks confirmed bugs, root causes, and fix status. Add new entries at the top.
 **Root cause:** State-transition returns in `stepAnimal`/`stepHostile` spread `...mob` without resetting `path`. The previous wander path was preserved in the new state; the movement engine followed it for one tick before the FSM assigned the correct flee/hunt path, causing a one-frame lurch in the wrong direction.
 
 **Fix** (`src/lib/game/services/EntityService.ts`):
-
 - All 15+ FSM state-transition return sites now include `path: []` to discard the old path immediately.
 
 ---

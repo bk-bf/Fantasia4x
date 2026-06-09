@@ -25,8 +25,11 @@ const CLOT_FLOOR = 0.5;
 const STAT_SCALE = 10;
 /** Mob base damage when it has no weapon. */
 const MOB_BASE_DAMAGE = 5;
-/** Base attack interval in ticks — scaled by attack_speed stat. */
-const BASE_ATTACK_INTERVAL_TICKS = 12;
+/** Base attack interval in ticks — scaled by attack_speed stat.
+ *  60 TPS: 30 ticks = 0.5s = 2 attacks/sec (base).
+ *  Fast attackers (DEX 20) get down to ~20 ticks = 0.33s = 3 attacks/sec.
+ */
+const BASE_ATTACK_INTERVAL_TICKS = 30;
 /** Stamina drained per auto-attack. Shared by mobs; pawn attacks will use same constant. */
 const ATTACK_STAMINA_COST = 2;
 /** Stamina regenerated per tick when winded (no attack this tick). */
@@ -945,7 +948,7 @@ class CombatServiceImpl implements CombatService {
         for (const mob of mobs) {
             if (mob.state !== 'Attacking' || mob.isAlive === false) continue;
             const attackSpeed = Math.max(0.5, pawnStatService.evaluateStat('attack_speed', mob));
-            const interval = Math.max(3, Math.round(BASE_ATTACK_INTERVAL_TICKS / attackSpeed));
+            const interval = Math.max(18, Math.round(BASE_ATTACK_INTERVAL_TICKS / attackSpeed));
             if ((state.turn - mob.stateSince) % interval !== 0) continue;
 
             const curStamina = mob.stamina ?? mob.maxStamina ?? 50;
@@ -1062,7 +1065,7 @@ class CombatServiceImpl implements CombatService {
 
             // Attack cadence for drafted pawns — scaled by attack_speed stat.
             const pawnAttackSpeed = Math.max(0.5, pawnStatService.evaluateStat('attack_speed', pawn));
-            const pawnInterval = Math.max(3, Math.round(BASE_ATTACK_INTERVAL_TICKS / pawnAttackSpeed));
+            const pawnInterval = Math.max(18, Math.round(BASE_ATTACK_INTERVAL_TICKS / pawnAttackSpeed));
             if (state.turn % pawnInterval !== 0) continue;
 
             const curStamina = pawn.stamina ?? pawn.maxStamina ?? 50;
