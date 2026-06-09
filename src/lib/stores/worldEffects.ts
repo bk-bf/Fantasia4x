@@ -22,10 +22,19 @@ export interface CampfireOverlay {
   top: number;
 }
 
+export interface HealthOverlay {
+  id: string;
+  left: number;
+  top: number;
+  health: number; // 0–1 fraction
+  type: 'pawn' | 'mob';
+}
+
 export interface WorldEffectsState {
   sleepingOverlays: SleepingOverlay[];
   progressOverlays: ProgressOverlay[];
   campfireOverlays: CampfireOverlay[];
+  healthOverlays: HealthOverlay[];
   // Future effects — add here and handle in WorldEffectsLayer:
   // weather: 'none' | 'rain' | 'snow';
   // particleEffects: ParticleEffect[];
@@ -35,7 +44,8 @@ function createWorldEffectsStore() {
   const { subscribe, update } = writable<WorldEffectsState>({
     sleepingOverlays: [],
     progressOverlays: [],
-    campfireOverlays: []
+    campfireOverlays: [],
+    healthOverlays: []
   });
 
   return {
@@ -48,6 +58,9 @@ function createWorldEffectsStore() {
     },
     setCampfireOverlays(overlays: CampfireOverlay[]) {
       update((s) => ({ ...s, campfireOverlays: overlays }));
+    },
+    setHealthOverlays(overlays: HealthOverlay[]) {
+      update((s) => ({ ...s, healthOverlays: overlays }));
     }
   };
 }

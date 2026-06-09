@@ -494,7 +494,9 @@ class EntityServiceImpl {
                 return this.moveToward(mob, nearest.pos, state);
             }
             case 'Attacking': {
-                // COMBAT-SYSTEM owns damage resolution; Phase A just holds the line.
+                // COMBAT-SYSTEM owns damage resolution.
+                // combatService.tickCombat() (called from GameEngineImpl after entityStep)
+                // resolves hits for all mobs in Attacking state. The FSM only holds position.
                 if (!nearest || !this.adjacent(mob, nearest.pos)) {
                     return { ...mob, state: 'Alerted', stateSince: turn };
                 }

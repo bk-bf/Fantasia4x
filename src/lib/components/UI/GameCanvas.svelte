@@ -23,7 +23,10 @@
   import { pawnService } from '$lib/game/services/PawnService.js';
   import { buildPathfindingGrids } from '$lib/game/services/PathfinderService.js';
   import { designationService } from '$lib/game/services/DesignationService.js';
-  import { environmentService, computeTileLightLevel } from '$lib/game/services/EnvironmentService.js';
+  import {
+    environmentService,
+    computeTileLightLevel
+  } from '$lib/game/services/EnvironmentService.js';
   import { lightingService } from '$lib/game/services/LightingService.js';
   import { glyph, SHEET } from '$lib/webgl/tilesets.js';
   import { uiState } from '$lib/stores/uiState.js';
@@ -212,6 +215,7 @@
   let _sleepOverlayKey = '';
   let _progressOverlayKey = '';
   let _campfireOverlayKey = '';
+  let _healthOverlayKey = '';
 
   // Phase 4: buildings and designations overlay
   let buildings: PlacedBuilding[] = [];
@@ -313,7 +317,12 @@
     : [];
   $: hoverZoneType = hoverTile ? (designations[`${hoverTile.x},${hoverTile.y}`] ?? null) : null;
   $: hoverTileLight = hoverTile
-    ? computeTileLightLevel($gameState?.turn ?? 0, $gameState?.buildings ?? [], hoverTile.x, hoverTile.y)
+    ? computeTileLightLevel(
+        $gameState?.turn ?? 0,
+        $gameState?.buildings ?? [],
+        hoverTile.x,
+        hoverTile.y
+      )
     : 1.0;
   $: hoverPawn =
     hoverTileX >= 0 && hoverTileY >= 0
@@ -887,6 +896,37 @@
     if (campfireKey !== _campfireOverlayKey) {
       _campfireOverlayKey = campfireKey;
       worldEffects.setCampfireOverlays(newCampfire);
+    }
+
+    // Health bars for damaged pawns and mobs.
+    const newHealth = [
+      ...pawns
+        .filter((p) => p.position && p.isAlive !== false && (p.state.health ?? 100) < 100)
+        .map((p) => ({
+          id: `hp-${p.id}`,
+          left: (p.position!.x - viewX + 0.5) * tW,
+          top: (p.position!.y - viewY) * tH - 10,
+          health: Math.max(0, Math.min(1, (p.state.health ?? 100) / 100)),
+          type: 'pawn' as const
+        }))
+        .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= W),
+      ...mobs
+        .filter((m) => m.state !== 'Corpse' && m.health < m.maxHealth)
+        .map((m) => ({
+          id: `hp-${m.id}`,
+          left: (m.x - viewX + 0.5) * tW,
+          top: (m.y - viewY) * tH - 10,
+          health: Math.max(0, Math.min(1, m.maxHealth > 0 ? m.health / m.maxHealth : 1)),
+          type: 'mob' as const
+        }))
+        .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= W)
+    ];
+    const healthKey = newHealth
+      .map((o) => `${o.id}:${Math.round(o.left)},${Math.round(o.top)},${Math.round(o.health * 20)}`)
+      .join('|');
+    if (healthKey !== _healthOverlayKey) {
+      _healthOverlayKey = healthKey;
+      worldEffects.setHealthOverlays(newHealth);
     }
   }
 
@@ -2476,7 +2516,14 @@
           {ZONE_META[hoverZoneType].label} — {ZONE_META[hoverZoneType].desc}
         </div>
       {/if}
-      <div class="tile-light" style="color:{hoverTileLight >= 0.8 ? '#68b030' : hoverTileLight >= 0.4 ? '#b09030' : '#c83018'}">
+      <div
+        class="tile-light"
+        style="color:{hoverTileLight >= 0.8
+          ? '#68b030'
+          : hoverTileLight >= 0.4
+            ? '#b09030'
+            : '#c83018'}"
+      >
         light {Math.round(hoverTileLight * 100)}%
       </div>
     </div>

@@ -41,16 +41,27 @@
   let limbs = $derived(pawn.limbs?.length ? pawn.limbs : FALLBACK);
   let blood = $derived(pawn.bloodVolume ?? 100);
   let bleedRate = $derived(limbs.reduce((s, l) => s + (l.bleedRate ?? 0), 0));
+  let pain = $derived(pawn.pain ?? 0);
+  let prone = $derived((pawn.knockdown ?? 0) > 0);
 
-  /** Collect every damaged / missing / injured sub-part so the UI can render them. */
-  let damagedParts = $derived(
-    limbs.flatMap((limb) => {
-      const limbName = LIMB_NAME_MAP[limb.id];
-      return (limb.parts ?? [])
-        .filter((p) => p.isMissing || p.health < p.maxHp || p.injuries.length > 0)
-        .map((part) => ({ limbName, part }));
-    })
-  );
+  /** Which limbs are expanded to show their sub-parts. */
+  let expandedLimbs = $state<Set<LimbId>>(new Set());
+
+  function toggleLimb(id: LimbId) {
+    const next = new Set(expandedLimbs);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    expandedLimbs = next;
+  }
+
+  function isExpanded(id: LimbId, limb: LimbState): boolean {
+    if (expandedLimbs.has(id)) return true;
+    // Auto-expand if any sub-part is injured / missing.
+    const hasDamage = (limb.parts ?? []).some(
+      (p) => p.isMissing || p.health < p.maxHp || p.injuries.length > 0
+    );
+    return hasDamage;
+  }
 
   function gl(id: LimbId): LimbState {
     return limbs.find((l) => l.id === id) ?? FALLBACK.find((l) => l.id === id)!;
@@ -76,6 +87,13 @@
     if (v >= 60) return 'var(--text-dim)';
     if (v >= 40) return 'var(--accent-hi)';
     return 'var(--neg)';
+  }
+
+  function painColor(v: number): string {
+    if (v >= 80) return 'var(--neg)';
+    if (v >= 55) return 'var(--accent-hi)';
+    if (v >= 30) return 'var(--text-dim)';
+    return 'var(--pos)';
   }
 
   function partName(id: BodyPartId): string {
@@ -114,56 +132,81 @@
 <div class="health-section">
   <div class="section-hdr">| BODY</div>
 
+  <!-- Pain + prone summary -->
+  {#if pain > 0 || prone || blood < 100 || bleedRate > 0}
+    <div class="status-row">
+      {#if pain > 0}
+        <span class="status-lbl">PAIN</span>
+        <span class="status-val" style="color:{painColor(pain)}">{Math.round(pain)}%</span>
+      {/if}
+      {#if prone}
+        <span class="prone-badge">PRONE</span>
+      {/if}
+      {#if blood < 100 || bleedRate > 0}
+        <span class="status-lbl">BLOOD</span>
+        <span class="status-val" style="color:{bloodColor(blood)}">{Math.round(blood)}%</span>
+        {#if bleedRate > 0}<span class="bleed-rate">▼{bleedRate.toFixed(1)}/t</span>{/if}
+      {/if}
+    </div>
+  {/if}
+
+  <!-- Root limb grid -->
   <div class="limb-grid">
     {#each GRID as row}
       {#each row as { name, id }}
         {@const limb = gl(id)}
         {@const status = limbStatus(limb)}
         {@const col = lc(limb)}
-        <div class="limb-cell">
+        {@const hasParts = (limb.parts ?? []).length > 0}
+        {@const expanded = isExpanded(id, limb)}
+        <div
+          class="limb-cell"
+          class:expandable={hasParts}
+          onclick={() => hasParts && toggleLimb(id)}
+          role="button"
+          tabindex="0"
+          onkeydown={(e) => e.key === 'Enter' && hasParts && toggleLimb(id)}
+        >
           <span class="cell-name">{name}</span>
-          <span class="cell-val" style="color:{col}"
-            >{status}{#if limb.bleedRate > 0}<span class="bleed-dot"> ●</span>{/if}</span
-          >
+          <span class="cell-val" style="color:{col}">
+            {status}{#if limb.bleedRate > 0}<span class="bleed-dot">●</span>{/if}{#if hasParts}<span
+                class="expand-cue"
+                class:expanded>▸</span
+              >{/if}
+          </span>
         </div>
+        {#if expanded && hasParts}
+          <div class="limb-parts">
+            {#each limb.parts ?? [] as part}
+              <div
+                class="part-row"
+                class:damaged={part.isMissing ||
+                  part.health < part.maxHp ||
+                  part.injuries.length > 0}
+              >
+                <span class="part-name">{partName(part.id)}</span>
+                <span class="part-hp" style="color:{partHealthColor(part)}">
+                  {part.isMissing ? 'MISSING' : `${Math.round((part.health / part.maxHp) * 100)}%`}
+                </span>
+                {#if part.injuries.length > 0}
+                  <span class="part-badges">
+                    {#each part.injuries as injury}
+                      <span class="injury-badge {injuryBadgeClass(injury.type)}"
+                        >{injury.type.toUpperCase()}</span
+                      >
+                    {/each}
+                  </span>
+                {/if}
+                {#if PART_DEF_MAP[part.id]?.isVital}
+                  <span class="vital-badge">V</span>
+                {/if}
+              </div>
+            {/each}
+          </div>
+        {/if}
       {/each}
     {/each}
   </div>
-
-  {#if blood < 100 || bleedRate > 0}
-    <div class="blood-row">
-      <span class="blood-lbl">BLOOD</span>
-      <span class="blood-val" style="color:{bloodColor(blood)}">{Math.round(blood)}%</span>
-      {#if bleedRate > 0}<span class="bleed-rate"> ▼{bleedRate.toFixed(1)}/t</span>{/if}
-    </div>
-  {/if}
-
-  {#if damagedParts.length > 0}
-    <div class="section-hdr sub-hdr">| INJURIES</div>
-    <div class="parts-list">
-      {#each damagedParts as { limbName, part }}
-        <div class="part-row">
-          <span class="part-limb">{limbName}</span>
-          <span class="part-name">{partName(part.id)}</span>
-          <span class="part-hp" style="color:{partHealthColor(part)}">
-            {part.isMissing ? 'MISSING' : `${Math.round((part.health / part.maxHp) * 100)}%`}
-          </span>
-          {#if part.injuries.length > 0}
-            <span class="part-badges">
-              {#each part.injuries as injury}
-                <span class="injury-badge {injuryBadgeClass(injury.type)}"
-                  >{injury.type.toUpperCase()}</span
-                >
-              {/each}
-            </span>
-          {/if}
-          {#if PART_DEF_MAP[part.id]?.isVital}
-            <span class="vital-badge">V</span>
-          {/if}
-        </div>
-      {/each}
-    </div>
-  {/if}
 </div>
 
 <style>
@@ -181,8 +224,38 @@
     border-bottom: 1px solid var(--border);
   }
 
-  .sub-hdr {
-    border-top: 1px solid var(--border);
+  .status-row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 3px 8px;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+
+  .status-lbl {
+    color: var(--text-muted);
+    font-size: 10px;
+    letter-spacing: 0.04em;
+  }
+
+  .status-val {
+    font-size: 10px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .prone-badge {
+    font-size: 9px;
+    padding: 0 4px;
+    border-radius: 2px;
+    background: var(--bg-panel);
+    color: var(--accent-hi);
+    border: 1px solid var(--accent-hi);
+    letter-spacing: 0.04em;
+  }
+
+  .bleed-rate {
+    color: var(--neg);
     font-size: 10px;
   }
 
@@ -198,6 +271,15 @@
     align-items: baseline;
     justify-content: space-between;
     padding: 2px 0;
+    cursor: default;
+  }
+
+  .limb-cell.expandable {
+    cursor: pointer;
+  }
+
+  .limb-cell.expandable:hover .cell-name {
+    color: var(--text);
   }
 
   .cell-name {
@@ -211,6 +293,9 @@
     font-size: 10px;
     font-variant-numeric: tabular-nums;
     text-align: right;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
   }
 
   .bleed-dot {
@@ -218,37 +303,25 @@
     animation: blink 1s step-end infinite;
   }
 
-  .blood-row {
-    display: flex;
-    align-items: baseline;
-    gap: 6px;
-    padding: 2px 8px 4px;
-    border-top: 1px solid var(--border);
-  }
-
-  .blood-lbl {
+  .expand-cue {
     color: var(--text-muted);
-    font-size: 10px;
-    letter-spacing: 0.04em;
-    min-width: 40px;
-    flex-shrink: 0;
+    font-size: 8px;
+    transition: transform 0.12s;
+    display: inline-block;
   }
 
-  .blood-val {
-    font-size: 10px;
-    font-variant-numeric: tabular-nums;
+  .expand-cue.expanded {
+    transform: rotate(90deg);
   }
 
-  .bleed-rate {
-    color: var(--neg);
-    font-size: 10px;
-  }
-
-  .parts-list {
+  .limb-parts {
+    grid-column: 1 / -1;
     display: flex;
     flex-direction: column;
-    padding: 2px 8px 4px;
+    padding: 1px 0 3px 8px;
     gap: 1px;
+    border-left: 1px solid var(--border);
+    margin-left: 4px;
   }
 
   .part-row {
@@ -257,14 +330,11 @@
     gap: 6px;
     padding: 1px 0;
     flex-wrap: wrap;
+    opacity: 0.6;
   }
 
-  .part-limb {
-    color: var(--text-muted);
-    font-size: 10px;
-    letter-spacing: 0.04em;
-    min-width: 36px;
-    flex-shrink: 0;
+  .part-row.damaged {
+    opacity: 1;
   }
 
   .part-name {

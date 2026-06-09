@@ -20,6 +20,7 @@ import { jobService } from '../services/JobService';
 import { wasmPathfinderService } from '../services/WasmPathfinderService';
 import { resourceObjectService } from '../services/ResourceObjectService';
 import { entityService } from '../services/EntityService';
+import { combatService } from './Combat';
 import { TICKS_PER_SECOND, ticksFromSeconds, perTick } from '../core/time';
 import { isGameDebug } from '../core/log';
 import type { WorkCategory } from '../core/types';
@@ -406,6 +407,9 @@ export class GameEngineImpl implements GameEngine {
 				this.gameState = entityService.advanceMobMovement(this.gameState!);
 				this.gameState = entityService.stepHunger(this.gameState!);
 				this.gameState = entityService.removeDead(this.gameState!);
+			});
+			t('combat', () => {
+				this.gameState = combatService.tickCombat(this.gameState!, 1000 / TICKS_PER_SECOND);
 			});
 			this.debugLogPawns();
 

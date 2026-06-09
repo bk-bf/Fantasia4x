@@ -42,6 +42,20 @@
     </div>
   {/each}
 
+  {#each $worldEffects.healthOverlays as overlay (overlay.id)}
+    <div
+      class="health-bar-float"
+      style="transform: translate({overlay.left}px, {overlay.top}px) translateX(-50%);"
+    >
+      <div
+        class="health-bar-fill"
+        class:pawn={overlay.type === 'pawn'}
+        class:mob={overlay.type === 'mob'}
+        style="width:{overlay.health * 100}%"
+      ></div>
+    </div>
+  {/each}
+
   <!-- ── Fullscreen Weather / Shader Overlays ──────────────────────────────────── -->
   <!-- To add rain: create RainCanvas.svelte and mount it here when weather='rain'  -->
   <!-- Example:                                                                      -->
@@ -193,5 +207,31 @@
       opacity: 0;
       transform: translateY(-36px) scale(0.4);
     }
+  }
+
+  /* ── Health bar overlays ───────────────────────────────────────────────────── */
+
+  .health-bar-float {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 20px;
+    height: 3px;
+    background: rgba(32, 24, 10, 0.9);
+    border: 1px solid #503020;
+    pointer-events: none;
+  }
+
+  .health-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #cc3322, #ee5544);
+  }
+
+  .health-bar-fill.pawn {
+    background: linear-gradient(90deg, #44aa66, #66cc88);
+  }
+
+  .health-bar-fill.mob {
+    background: linear-gradient(90deg, #cc3322, #ee5544);
   }
 </style>
