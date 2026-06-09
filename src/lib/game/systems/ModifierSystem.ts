@@ -16,17 +16,20 @@ import type {
 	RacialTrait,
 	EquippedItem,
 	ConditionDef,
-	ConditionStage
+	ConditionStage,
+	StatusEffectDef
 } from '../core/types';
 import itemsData from '../database/items.jsonc';
 import buildingsData from '../database/buildings.jsonc';
 import conditionsData from '../database/conditions.jsonc';
+import statusEffectsData from '../database/status-effects.jsonc';
 import { WORK_CATEGORIES } from '../core/Work';
 import { building } from '$app/environment';
 
 const ITEMS_DATABASE = itemsData as unknown as Item[];
 const AVAILABLE_BUILDINGS = buildingsData as unknown as Building[];
 const CONDITIONS_DB = conditionsData as unknown as ConditionDef[];
+const STATUS_EFFECTS_DB = statusEffectsData as unknown as StatusEffectDef[];
 
 /**
  * Represents a modifier source and its contribution
@@ -842,17 +845,22 @@ export class ModifierSystemImpl implements ModifierSystem {
 			}
 		}
 
-		// Morale modifier
-		if (pawn.state.mood !== 50) {
-			const moraleBonus = 1 + (pawn.state.mood - 50) / 100;
-			multiplier *= moraleBonus;
+		// Active status-effect modifiers (mood, tired, hungry, …)
+		for (const effectId of (pawn.activeEffects ?? [])) {
+			const def = STATUS_EFFECTS_DB.find((e) => e.id === effectId);
+			if (!def || def.modifiers.workEfficiency === undefined) continue;
 
+			const factor = def.modifiers.workEfficiency;
+			multiplier *= factor;
 			sources.push({
-				id: 'morale',
-				name: 'Morale',
+				id: def.id,
+				name: def.name,
 				type: 'stat',
-				value: moraleBonus,
-				description: `Morale (${pawn.state.mood}) provides ${((moraleBonus - 1) * 100).toFixed(0)}% modifier`
+				value: factor,
+				description:
+					factor >= 1
+						? `${def.name} boosts work efficiency by ${((factor - 1) * 100).toFixed(0)}%`
+						: `${def.name} reduces work efficiency by ${((1 - factor) * 100).toFixed(0)}%`
 			});
 		}
 

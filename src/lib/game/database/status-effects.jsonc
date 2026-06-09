@@ -28,5 +28,33 @@
         "description": "Hunger is high. Work efficiency and movement speed are reduced.",
         "color"      : "#e53935",
         "modifiers"  : {"workEfficiency": 0.75, "moveSpeed": 0.75}
+    },
+    {
+        "id"         : "mood_ecstatic",
+        "name"       : "Ecstatic",
+        "description": "In high spirits. Work efficiency is greatly boosted.",
+        "color"      : "#4CAF50",
+        "modifiers"  : {"workEfficiency": 1.20}
+    },
+    {
+        "id"         : "mood_content",
+        "name"       : "Content",
+        "description": "Feeling good. Work efficiency is slightly boosted.",
+        "color"      : "#8BC34A",
+        "modifiers"  : {"workEfficiency": 1.10}
+    },
+    {
+        "id"         : "mood_sad",
+        "name"       : "Somewhat Sad",
+        "description": "Feeling down. Work efficiency is reduced.",
+        "color"      : "#FF5722",
+        "modifiers"  : {"workEfficiency": 0.80}
+    },
+    {
+        "id"         : "mood_depressed",
+        "name"       : "Deeply Depressed",
+        "description": "Severely depressed. Work efficiency is greatly reduced.",
+        "color"      : "#D32F2F",
+        "modifiers"  : {"workEfficiency": 0.60}
     }
 ]

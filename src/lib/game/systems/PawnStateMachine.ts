@@ -900,6 +900,14 @@ function syncActiveEffects(pawn: Pawn): Pawn {
     if (!isSleeping && (pawn.needs?.fatigue ?? 0) >= FATIGUE_THRESHOLD) effects.push('tired');
     if (!isEating && (pawn.needs?.hunger ?? 0) >= HUNGER_THRESHOLD) effects.push('hungry');
 
+    // Mood-based status effects (discrete ranges replace continuous morale calculation)
+    const mood = pawn.state?.mood ?? 50;
+    if (mood >= 80) effects.push('mood_ecstatic');
+    else if (mood >= 60) effects.push('mood_content');
+    else if (mood >= 40) { /* neutral — no effect */ }
+    else if (mood >= 20) effects.push('mood_sad');
+    else effects.push('mood_depressed');
+
     // Push condition stage labels as active effects (e.g. "malnutrition:moderate").
     for (const condition of (pawn.conditions ?? [])) {
         const stage = getConditionStage(condition.id, condition.severity);
