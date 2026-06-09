@@ -87,18 +87,16 @@
 
   <div class="need-row">
     <span class="lbl">HUNGER</span>
-    <span class="block-bar" style="color: {getNeedColor(hungerPct)}"
-      >{blockBar(hungerPct)}</span
+    <span class="block-bar" style="color: {getNeedColor(hungerPct)}">{blockBar(hungerPct)}</span>
+    <span class="val" style="color: {getNeedColor(hungerPct)}"
+      >{Math.round(needs.hunger)}/{maxH}</span
     >
-    <span class="val" style="color: {getNeedColor(hungerPct)}">{Math.round(needs.hunger)}/{maxH}</span>
     <span class="desc">{getNeedDescription('hunger', needs.hunger)}</span>
   </div>
 
   <div class="need-row">
     <span class="lbl">REST</span>
-    <span class="block-bar" style="color: {getNeedColor(fatiguePct)}"
-      >{blockBar(fatiguePct)}</span
-    >
+    <span class="block-bar" style="color: {getNeedColor(fatiguePct)}">{blockBar(fatiguePct)}</span>
     <span class="val" style="color: {getNeedColor(fatiguePct)}"
       >{Math.round(needs.fatigue)}/{maxF}</span
     >
@@ -113,7 +111,15 @@
       <span class="lbl">BLOOD</span>
       <span class="block-bar" style="color: {getBloodColor(bloodPct)}">{blockBar(bloodPct)}</span>
       <span class="val" style="color: {getBloodColor(bloodPct)}">{Math.round(curBV)}/{maxBV}</span>
-      <span class="desc">{bloodPct >= 90 ? 'healthy' : bloodPct >= 60 ? 'low' : bloodPct >= 30 ? 'critical' : 'near death'}</span>
+      <span class="desc"
+        >{bloodPct >= 90
+          ? 'healthy'
+          : bloodPct >= 60
+            ? 'low'
+            : bloodPct >= 30
+              ? 'critical'
+              : 'near death'}</span
+      >
     </div>
   {/if}
 
@@ -125,7 +131,15 @@
       <span class="lbl">STAMINA</span>
       <span class="block-bar" style="color: {getStaminaColor(stPct)}">{blockBar(stPct)}</span>
       <span class="val" style="color: {getStaminaColor(stPct)}">{Math.round(curST)}/{maxST}</span>
-      <span class="desc">{stPct >= 80 ? 'fresh' : stPct >= 50 ? 'tired' : stPct >= 20 ? 'winded' : 'exhausted'}</span>
+      <span class="desc"
+        >{stPct >= 80
+          ? 'fresh'
+          : stPct >= 50
+            ? 'tired'
+            : stPct >= 20
+              ? 'winded'
+              : 'exhausted'}</span
+      >
     </div>
   {/if}
 
@@ -260,9 +274,10 @@
   .val {
     color: var(--text);
     font-size: 11px;
-    width: 36px;
+    min-width: 36px;
     text-align: right;
     flex-shrink: 0;
+    white-space: nowrap;
   }
 
   .info-grid {
