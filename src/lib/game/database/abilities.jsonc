@@ -1,0 +1,152 @@
+// Pawn ability definitions — non-work abilities only.
+// Work abilities are defined in Work.ts (WORK_CATEGORIES) and computed by ModifierSystem.
+// "category"  — UI grouping: "combat" | "survival" | "physical" | "mental" | "special"
+// "formula"   — stat-based calculation: value = base + (stat − 10) × perPoint
+[
+    // ── Combat ────────────────────────────────────────────────────────────────────
+    // base 1.0 at stat 10; +0.1 per point above / −0.1 per point below
+    {
+        "id"         : "melee",
+        "category"   : "combat",
+        "primaryStat": "strength",
+        "formula"    : {"base": 1.0, "perPoint": 0.1},
+        "description": "close combat effectiveness"
+    },
+    {
+        "id"         : "ranged",
+        "category"   : "combat",
+        "primaryStat": "dexterity",
+        "formula"    : {"base": 1.0, "perPoint": 0.1},
+        "description": "ranged combat accuracy"
+    },
+    {
+        "id"         : "defense",
+        "category"   : "combat",
+        "primaryStat": "constitution",
+        "formula"    : {"base": 1.0, "perPoint": 0.1},
+        "description": "defensive capabilities"
+    },
+    {
+        "id"         : "accuracy",
+        "category"   : "combat",
+        "primaryStat": "dexterity",
+        "formula"    : {"base": 1.0, "perPoint": 0.1},
+        "description": "targeting precision"
+    },
+    // ── Survival ──────────────────────────────────────────────────────────────────
+    {
+        "id"         : "foraging_skill",
+        "category"   : "survival",
+        "primaryStat": "perception",
+        "formula"    : {"base": 1.0, "perPoint": 0.08},
+        "description": "at finding food and resources"
+    },
+    {
+        "id"         : "navigation",
+        "category"   : "survival",
+        "primaryStat": "intelligence",
+        "formula"    : {"base": 1.0, "perPoint": 0.08},
+        "description": "pathfinding and orientation"
+    },
+    {
+        "id"         : "weather_resistance",
+        "category"   : "survival",
+        "primaryStat": "constitution",
+        "formula"    : {"base": 1.0, "perPoint": 0.1},
+        "description": "resistance to harsh weather"
+    },
+    {
+        "id"         : "disease_resistance",
+        "category"   : "survival",
+        "primaryStat": "constitution",
+        "formula"    : {"base": 1.0, "perPoint": 0.1},
+        "description": "immunity to diseases"
+    },
+    // ── Physical ──────────────────────────────────────────────────────────────────
+    {
+        "id"         : "carry_capacity",
+        "category"   : "physical",
+        "primaryStat": "strength",
+        "formula"    : {"base": 1.0, "perPoint": 0.12},
+        "description": "carrying capacity"
+    },
+    {
+        "id"         : "movement_speed",
+        "category"   : "physical",
+        "primaryStat": "dexterity",
+        "formula"    : {"base": 1.0, "perPoint": 0.05},
+        "description": "movement speed"
+    },
+    {
+        "id"         : "stamina",
+        "category"   : "physical",
+        "primaryStat": "constitution",
+        "formula"    : {"base": 1.0, "perPoint": 0.1},
+        "description": "physical endurance"
+    },
+    {
+        "id"         : "health_regeneration",
+        "category"   : "physical",
+        "primaryStat": "constitution",
+        "formula"    : {"base": 1.0, "perPoint": 0.08},
+        "description": "natural healing"
+    },
+    // ── Mental ────────────────────────────────────────────────────────────────────
+    {
+        "id"         : "learning_speed",
+        "category"   : "mental",
+        "primaryStat": "intelligence",
+        "formula"    : {"base": 1.0, "perPoint": 0.05},
+        "description": "learning ability"
+    },
+    {
+        "id"         : "memory",
+        "category"   : "mental",
+        "primaryStat": "intelligence",
+        "formula"    : {"base": 1.0, "perPoint": 0.05},
+        "description": "information retention"
+    },
+    {
+        "id"         : "focus",
+        "category"   : "mental",
+        "primaryStat": "perception",
+        "formula"    : {"base": 1.0, "perPoint": 0.08},
+        "description": "concentration ability"
+    },
+    {
+        "id"         : "social_influence",
+        "category"   : "mental",
+        "primaryStat": "charisma",
+        "formula"    : {"base": 1.0, "perPoint": 0.1},
+        "description": "social skills"
+    },
+    // ── Special ───────────────────────────────────────────────────────────────────
+    {
+        "id"         : "leadership",
+        "category"   : "special",
+        "primaryStat": "charisma",
+        "formula"    : {"base": 1.0, "perPoint": 0.1},
+        "description": "leadership qualities"
+    },
+    {
+        "id"         : "diplomacy",
+        "category"   : "special",
+        "primaryStat": "charisma",
+        "formula"    : {"base": 1.0, "perPoint": 0.1},
+        "description": "diplomatic skills"
+    },
+    {
+        "id"         : "trade_bonus",
+        "category"   : "special",
+        "primaryStat": "charisma",
+        "formula"    : {"base": 1.0, "perPoint": 0.1},
+        "description": "trading acumen"
+    },
+    {
+        "id"         : "research_speed",
+        "category"   : "special",
+        "primaryStat": "intelligence",
+        "formula"    : {"base": 1.0, "perPoint": 0.05},
+        "description": "research capabilities"
+    }
+]

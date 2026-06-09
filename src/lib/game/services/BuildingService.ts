@@ -1,6 +1,5 @@
 import type { Building, GameState, PlacedBuilding } from '../core/types';
 import buildingsData from '../database/buildings.jsonc';
-import { RARITY_COLORS } from '../database/colors';
 import { resolveCharSpans } from '../core/Terrains';
 import type { CharSpan } from '../core/Terrains';
 
@@ -51,7 +50,6 @@ export interface BuildingService {
 	// UI Helper Methods
 	getBuildingIcon(buildingId: string): string;
 	getBuildingColor(buildingId: string): string;
-	getBuildingRarityColor(rarity: string): string;
 	hasBuildings(buildingCounts: Record<string, number>, category: string): boolean;
 	/** Resolve the map glyph character for a building from its charSpans. Falls back to '#'. */
 	getBuildingGlyph(buildingId: string): string;
@@ -371,10 +369,6 @@ export class BuildingServiceImpl implements BuildingService {
 	getBuildingColor(buildingId: string): string {
 		const building = this.getBuildingById(buildingId);
 		return building?.color || '#4CAF50';
-	}
-
-	getBuildingRarityColor(rarity: string): string {
-		return RARITY_COLORS[rarity] ?? '#9E9E9E';
 	}
 
 	hasBuildings(buildingCountsOrGameState: Record<string, number> | GameState, category: string): boolean {

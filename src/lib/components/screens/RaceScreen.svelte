@@ -148,10 +148,6 @@
       <button class="nav-btn" on:click={() => scrollToSection('physical')}>PHYSICAL</button>
       <button class="nav-btn" on:click={() => scrollToSection('stats')}>STATS</button>
       <button class="nav-btn" on:click={() => scrollToSection('traits')}>TRAITS</button>
-      {#if race.implications}<button
-          class="nav-btn"
-          on:click={() => scrollToSection('implications')}>CULTURE</button
-        >{/if}
     </div>
 
     <!-- Overview -->
@@ -251,19 +247,6 @@
         <div class="row"><span class="muted">no racial traits</span></div>
       {/if}
     </div>
-
-    <!-- Cultural Implications -->
-    {#if race.implications}
-      <div id="implications">
-        <div class="section-hdr">| CULTURE</div>
-        {#each Object.entries(race.implications) as [category, implication]}
-          <div class="row">
-            <span class="lbl">{category.toUpperCase()}</span>
-            <span class="val">{implication}</span>
-          </div>
-        {/each}
-      </div>
-    {/if}
   {:else}
     <div class="row"><span class="muted">loading race information...</span></div>
   {/if}

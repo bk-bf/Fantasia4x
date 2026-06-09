@@ -1046,7 +1046,6 @@ export interface Race {
 	racialTraits: RacialTrait[];
 
 	population: number;
-	implications: Record<string, string>;
 }
 
 export interface Equipment {

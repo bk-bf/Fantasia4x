@@ -1,0 +1,29 @@
+// Rarity tier definitions with associated colors
+// Used for displaying items, buildings, and other entities by rarity
+[
+  {
+    "id": "common",
+    "name": "Common",
+    "color": "#9E9E9E"
+  },
+  {
+    "id": "uncommon",
+    "name": "Uncommon",
+    "color": "#4CAF50"
+  },
+  {
+    "id": "rare",
+    "name": "Rare",
+    "color": "#2196F3"
+  },
+  {
+    "id": "epic",
+    "name": "Epic",
+    "color": "#9C27B0"
+  },
+  {
+    "id": "legendary",
+    "name": "Legendary",
+    "color": "#FF9800"
+  }
+]

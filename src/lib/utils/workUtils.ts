@@ -2,11 +2,11 @@ import type { Pawn } from '$lib/game/core/types';
 
 export const LABOR_LABELS: Record<number, string> = { 0: '—', 1: 'LOW', 2: 'NRM', 3: 'HI', 4: 'URG' };
 export const LABOR_COLORS: Record<number, string> = {
-    0: '#555',
-    1: '#4a9',
-    2: '#8bc',
-    3: '#fa0',
-    4: '#f44'
+	0: '#555',
+	1: '#4a9',
+	2: '#8bc',
+	3: '#fa0',
+	4: '#f44'
 };
 export const LVL_NAMES = ['Off', 'Low', 'Normal', 'High', 'Urgent'] as const;
 export const ABBR: Record<string, string> = {

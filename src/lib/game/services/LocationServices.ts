@@ -1,6 +1,5 @@
 import type { GameState } from '../core/types';
 import { perTick } from '../core/time';
-import { RICHNESS_COLORS } from '../database/colors';
 // Gated console shim — see core/log.ts. Silences per-tick log/debug/warn unless
 // gameDebug(true); console.error still surfaces.
 import { gatedConsole as console } from '../core/log';
@@ -11,6 +10,15 @@ import {
 	type ResourceNode,
 	type ResourceNodeTemplate
 } from '../core/Locations';
+
+/** Richness level display data — single source of truth for richness visuals. */
+const RICHNESS_LEVELS: Record<string, { color: string; emoji: string }> = {
+	sparse:   { color: '#F44336', emoji: '🔴' },
+	scarce:   { color: '#FF9800', emoji: '🟠' },
+	moderate: { color: '#FFC107', emoji: '🟡' },
+	rich:     { color: '#8BC34A', emoji: '🟢' },
+	abundant: { color: '#4CAF50', emoji: '💚' }
+};
 
 // Forward declaration to avoid circular import
 interface ItemService {
@@ -56,7 +64,6 @@ export interface LocationService {
 
 	// Utility Methods
 	evaluateResourceRichness(currentRange: [number, number], maxRange: [number, number]): string;
-	getRichnessColor(richness: string): string;
 	getRichnessEmoji(richness: string): string;
 }
 
@@ -313,19 +320,8 @@ export class LocationServiceImpl implements LocationService {
 		else return 'abundant';
 	}
 
-	getRichnessColor(richness: string): string {
-		return RICHNESS_COLORS[richness] ?? '#9E9E9E';
-	}
-
 	getRichnessEmoji(richness: string): string {
-		switch (richness) {
-			case 'sparse': return '🔴';
-			case 'scarce': return '🟠';
-			case 'moderate': return '🟡';
-			case 'rich': return '🟢';
-			case 'abundant': return '💚';
-			default: return '⚪';
-		}
+		return RICHNESS_LEVELS[richness]?.emoji ?? '⚪';
 	}
 }
 

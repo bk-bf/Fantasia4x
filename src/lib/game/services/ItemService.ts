@@ -1,7 +1,6 @@
 import type { Item, GameState, DynamicIngredientSlot } from '../core/types';
 import { consumeFromStockpiles, addToStockpileZone } from '../core/GameState';
 import itemsData from '../database/items.jsonc';
-import { RARITY_COLORS } from '../database/colors';
 import { SECONDS_PER_TICK } from '../core/time';
 
 const ITEMS_DATABASE = itemsData as unknown as Item[];
@@ -40,7 +39,6 @@ export interface ItemService {
 	// Display Methods
 	getItemIcon(itemId: string): string;
 	getItemColor(itemId: string): string;
-	getItemRarityColor(rarity: string): string;
 
 	// Inventory Methods
 	getAvailableQuantity(itemId: string, gameState: GameState): number;
@@ -257,10 +255,6 @@ export class ItemServiceImpl implements ItemService {
 	getItemColor(itemId: string): string {
 		const item = this.getItemById(itemId);
 		return item?.color || '#4CAF50';
-	}
-
-	getItemRarityColor(rarity: string): string {
-		return RARITY_COLORS[rarity] ?? '#9E9E9E';
 	}
 
 	getAvailableQuantity(itemId: string, gameState: GameState): number {

@@ -1,7 +1,6 @@
 <script lang="ts">
   import type { Pawn, GameState } from '$lib/game/core/types';
   import { modifierSystem } from '$lib/game/systems/ModifierSystem';
-  import { WORK_CATEGORIES } from '$lib/game/core/Work';
   import type {
     WorkEfficiencyResult,
     ModifierResult,
@@ -14,9 +13,25 @@
     formatWorkName,
     formatEffectValue
   } from '$lib/utils/pawnUtils';
+  import abilitiesData from '$lib/game/database/abilities.jsonc';
+  import { WORK_CATEGORIES } from '$lib/game/core/Work';
 
   export let pawn: Pawn;
   export let gameState: GameState;
+
+  // ── Ability definitions loaded from DB ────────────────────────────────────
+  type AbilityDef = {
+    id: string;
+    category: string;
+    primaryStat: string;
+    description: string;
+    formula?: { base: number; perPoint: number };
+  };
+  const ABILITIES: AbilityDef[] = abilitiesData as unknown as AbilityDef[];
+  const ABILITY_MAP: Record<string, AbilityDef> = {};
+  ABILITIES.forEach((ab) => {
+    ABILITY_MAP[ab.id] = ab;
+  });
 
   // State for breakdown toggles
   let showBreakdown: Record<string, boolean> = {};
@@ -41,180 +56,65 @@
       specialEffects: {}
     };
 
-    // Work Efficiency (using existing ModifierSystem)
-    WORK_CATEGORIES.forEach((workCategory) => {
-      results.workEfficiency[workCategory.id] = modifierSystem.calculateWorkEfficiency(
+    // Work efficiency — iterate WORK_CATEGORIES (source of truth), compute via ModifierSystem
+    WORK_CATEGORIES.forEach((wc) => {
+      results.workEfficiency[wc.id] = modifierSystem.calculateWorkEfficiency(
         pawn.id,
-        workCategory.id,
+        wc.id,
         gameState
       );
     });
 
-    // Combat Effectiveness
-    const combatTypes = ['melee', 'ranged', 'defense', 'accuracy'];
-    combatTypes.forEach((combatType) => {
-      results.combatEfficiency[combatType] = calculateCombatEfficiency(pawn, combatType, gameState);
-    });
-
-    // Survival Abilities
-    const survivalTypes = ['foraging', 'navigation', 'weather_resistance', 'disease_resistance'];
-    survivalTypes.forEach((survivalType) => {
-      results.survivalEfficiency[survivalType] = calculateSurvivalBonus(
-        pawn,
-        survivalType,
-        gameState
-      );
-    });
-
-    // Physical Bonuses
-    const physicalTypes = ['carry_capacity', 'movement_speed', 'stamina', 'health_regeneration'];
-    physicalTypes.forEach((physicalType) => {
-      results.physicalBonus[physicalType] = calculatePhysicalBonus(pawn, physicalType, gameState);
-    });
-
-    // Mental Bonuses
-    const mentalTypes = ['learning_speed', 'memory', 'focus', 'social_influence'];
-    mentalTypes.forEach((mentalType) => {
-      results.mentalBonus[mentalType] = calculateMentalBonus(pawn, mentalType, gameState);
-    });
-
-    // Special Effects
-    const specialTypes = ['leadership', 'diplomacy', 'trade_bonus', 'research_speed'];
-    specialTypes.forEach((specialType) => {
-      results.specialEffects[specialType] = calculateSpecialEffect(pawn, specialType, gameState);
+    // All other ability categories — driven by abilities.jsonc
+    const resultBuckets: Record<string, Record<string, any>> = {
+      combat: results.combatEfficiency,
+      survival: results.survivalEfficiency,
+      physical: results.physicalBonus,
+      mental: results.mentalBonus,
+      special: results.specialEffects
+    };
+    ABILITIES.forEach((ab) => {
+      const bucket = resultBuckets[ab.category];
+      if (bucket) bucket[ab.id] = calculateEfficiency(pawn, ab.id);
     });
 
     return results;
   }
 
-  // Calculation functions
-  function calculateCombatEfficiency(
-    pawn: Pawn,
-    combatType: string,
-    gameState: GameState
-  ): ModifierResult {
-    const sources = [];
-    let baseValue = 1.0;
-    let multiplier = 1.0;
-
-    // Stat contributions
-    const primaryStat = getCombatPrimaryStat(combatType);
-    const statValue = (pawn.stats as any)[primaryStat] || 10;
-    const statBonus = statValue / 10;
-    multiplier *= statBonus;
-
-    sources.push({
-      id: primaryStat,
-      name: primaryStat.charAt(0).toUpperCase() + primaryStat.slice(1),
-      type: 'stat' as const,
-      value: statBonus,
-      description: `${primaryStat} (${statValue}) provides ${(statBonus * 100).toFixed(0)}% ${combatType} effectiveness`
-    });
-
-    return createModifierResult(baseValue, baseValue * multiplier, multiplier, sources);
+  // ── Generic ability efficiency calculator ─────────────────────────────────
+  function calculateEfficiency(pawn: Pawn, abilityId: string): ModifierResult {
+    const def = ABILITY_MAP[abilityId];
+    const statName = def?.primaryStat || 'strength';
+    const base = def?.formula?.base ?? 1.0;
+    const perPoint = def?.formula?.perPoint ?? 0.1;
+    const statValue = (pawn.stats as any)[statName] || 10;
+    const value = base + (statValue - 10) * perPoint;
+    const sources: ModifierSource[] = [
+      {
+        id: statName,
+        name: statName.charAt(0).toUpperCase() + statName.slice(1),
+        type: 'stat',
+        value: value,
+        description: `${statName} (${statValue}): ${base} + (${statValue}−10) × ${perPoint} = ${value.toFixed(2)}`
+      }
+    ];
+    return createModifierResult(base, value, value, sources);
   }
 
-  function calculateSurvivalBonus(
-    pawn: Pawn,
-    survivalType: string,
-    gameState: GameState
-  ): ModifierResult {
-    const sources = [];
-    let baseValue = 1.0;
-    let multiplier = 1.0;
-
-    const primaryStat = getSurvivalPrimaryStat(survivalType);
-    const statValue = (pawn.stats as any)[primaryStat] || 10;
-    const statBonus = statValue / 10;
-    multiplier *= statBonus;
-
-    sources.push({
-      id: primaryStat,
-      name: primaryStat.charAt(0).toUpperCase() + primaryStat.slice(1),
-      type: 'stat' as const,
-      value: statBonus,
-      description: `${primaryStat} (${statValue}) provides ${(statBonus * 100).toFixed(0)}% ${survivalType} effectiveness`
-    });
-
-    return createModifierResult(baseValue, baseValue * multiplier, multiplier, sources);
+  // ── Unified description helpers ──────────────────────────────────────────────
+  function getAbilityDescription(id: string, efficiency: number): string {
+    const base =
+      efficiency >= 2.0
+        ? 'Excellent'
+        : efficiency >= 1.5
+          ? 'Good'
+          : efficiency >= 1.0
+            ? 'Average'
+            : 'Poor';
+    return `${base} ${ABILITY_MAP[id]?.description || 'ability'}`;
   }
 
-  function calculatePhysicalBonus(
-    pawn: Pawn,
-    physicalType: string,
-    gameState: GameState
-  ): ModifierResult {
-    const sources = [];
-    let baseValue = 1.0;
-    let multiplier = 1.0;
-
-    const primaryStat = getPhysicalPrimaryStat(physicalType);
-    const statValue = (pawn.stats as any)[primaryStat] || 10;
-    const statBonus = statValue / 10;
-    multiplier *= statBonus;
-
-    sources.push({
-      id: primaryStat,
-      name: primaryStat.charAt(0).toUpperCase() + primaryStat.slice(1),
-      type: 'stat' as const,
-      value: statBonus,
-      description: `${primaryStat} (${statValue}) affects ${physicalType}`
-    });
-
-    return createModifierResult(baseValue, baseValue * multiplier, multiplier, sources);
-  }
-
-  function calculateMentalBonus(
-    pawn: Pawn,
-    mentalType: string,
-    gameState: GameState
-  ): ModifierResult {
-    const sources = [];
-    let baseValue = 1.0;
-    let multiplier = 1.0;
-
-    const primaryStat = getMentalPrimaryStat(mentalType);
-    const statValue = (pawn.stats as any)[primaryStat] || 10;
-    const statBonus = statValue / 10;
-    multiplier *= statBonus;
-
-    sources.push({
-      id: primaryStat,
-      name: primaryStat.charAt(0).toUpperCase() + primaryStat.slice(1),
-      type: 'stat' as const,
-      value: statBonus,
-      description: `${primaryStat} (${statValue}) affects ${mentalType}`
-    });
-
-    return createModifierResult(baseValue, baseValue * multiplier, multiplier, sources);
-  }
-
-  function calculateSpecialEffect(
-    pawn: Pawn,
-    specialType: string,
-    gameState: GameState
-  ): ModifierResult {
-    const sources = [];
-    let baseValue = 1.0;
-    let multiplier = 1.0;
-
-    const primaryStat = getSpecialPrimaryStat(specialType);
-    const statValue = (pawn.stats as any)[primaryStat] || 10;
-    const statBonus = statValue / 10;
-    multiplier *= statBonus;
-
-    sources.push({
-      id: primaryStat,
-      name: primaryStat.charAt(0).toUpperCase() + primaryStat.slice(1),
-      type: 'stat' as const,
-      value: statBonus,
-      description: `${primaryStat} (${statValue}) affects ${specialType}`
-    });
-
-    return createModifierResult(baseValue, baseValue * multiplier, multiplier, sources);
-  }
-
-  // Helper functions
+  // Helper
   function createModifierResult(
     baseValue: number,
     totalValue: number,
@@ -235,201 +135,9 @@
     };
   }
 
-  function getCombatPrimaryStat(combatType: string): string {
-    const statMap: Record<string, string> = {
-      melee: 'strength',
-      ranged: 'dexterity',
-      defense: 'constitution',
-      accuracy: 'dexterity'
-    };
-    return statMap[combatType] || 'strength';
-  }
-
-  function getSurvivalPrimaryStat(survivalType: string): string {
-    const statMap: Record<string, string> = {
-      foraging: 'perception',
-      navigation: 'intelligence',
-      weather_resistance: 'constitution',
-      disease_resistance: 'constitution'
-    };
-    return statMap[survivalType] || 'constitution';
-  }
-
-  function getPhysicalPrimaryStat(physicalType: string): string {
-    const statMap: Record<string, string> = {
-      carry_capacity: 'strength',
-      movement_speed: 'dexterity',
-      stamina: 'constitution',
-      health_regeneration: 'constitution'
-    };
-    return statMap[physicalType] || 'constitution';
-  }
-
-  function getMentalPrimaryStat(mentalType: string): string {
-    const statMap: Record<string, string> = {
-      learning_speed: 'intelligence',
-      memory: 'intelligence',
-      focus: 'perception',
-      social_influence: 'charisma'
-    };
-    return statMap[mentalType] || 'intelligence';
-  }
-
-  function getSpecialPrimaryStat(specialType: string): string {
-    const statMap: Record<string, string> = {
-      leadership: 'charisma',
-      diplomacy: 'charisma',
-      trade_bonus: 'charisma',
-      research_speed: 'intelligence'
-    };
-    return statMap[specialType] || 'charisma';
-  }
-
   function toggleBreakdown(type: string) {
     showBreakdown[type] = !showBreakdown[type];
     showBreakdown = { ...showBreakdown };
-  }
-
-  // Icon functions
-  function getCombatIcon(combatType: string): string {
-    const iconMap: Record<string, string> = {
-      melee: '⚔️',
-      ranged: '🏹',
-      defense: '🛡️',
-      accuracy: '🎯'
-    };
-    return iconMap[combatType] || '⚔️';
-  }
-
-  function getSurvivalIcon(survivalType: string): string {
-    const iconMap: Record<string, string> = {
-      foraging: '🍃',
-      navigation: '🧭',
-      weather_resistance: '🌦️',
-      disease_resistance: '🏥'
-    };
-    return iconMap[survivalType] || '🛡️';
-  }
-
-  function getPhysicalIcon(physicalType: string): string {
-    const iconMap: Record<string, string> = {
-      carry_capacity: '📦',
-      movement_speed: '💨',
-      stamina: '💪',
-      health_regeneration: '💚'
-    };
-    return iconMap[physicalType] || '💪';
-  }
-
-  function getMentalIcon(mentalType: string): string {
-    const iconMap: Record<string, string> = {
-      learning_speed: '📚',
-      memory: '🧠',
-      focus: '🎯',
-      social_influence: '👥'
-    };
-    return iconMap[mentalType] || '🧠';
-  }
-
-  function getSpecialIcon(specialType: string): string {
-    const iconMap: Record<string, string> = {
-      leadership: '👑',
-      diplomacy: '🤝',
-      trade_bonus: '💰',
-      research_speed: '🔬'
-    };
-    return iconMap[specialType] || '✨';
-  }
-
-  // Description functions
-  function getCombatDescription(combatType: string, efficiency: number): string {
-    const base =
-      efficiency >= 2.0
-        ? 'Excellent'
-        : efficiency >= 1.5
-          ? 'Good'
-          : efficiency >= 1.0
-            ? 'Average'
-            : 'Poor';
-    const descriptions: Record<string, string> = {
-      melee: `${base} close combat effectiveness`,
-      ranged: `${base} ranged combat accuracy`,
-      defense: `${base} defensive capabilities`,
-      accuracy: `${base} targeting precision`
-    };
-    return descriptions[combatType] || `${base} combat ability`;
-  }
-
-  function getSurvivalDescription(survivalType: string, efficiency: number): string {
-    const base =
-      efficiency >= 2.0
-        ? 'Excellent'
-        : efficiency >= 1.5
-          ? 'Good'
-          : efficiency >= 1.0
-            ? 'Average'
-            : 'Poor';
-    const descriptions: Record<string, string> = {
-      foraging: `${base} at finding food and resources`,
-      navigation: `${base} pathfinding and orientation`,
-      weather_resistance: `${base} resistance to harsh weather`,
-      disease_resistance: `${base} immunity to diseases`
-    };
-    return descriptions[survivalType] || `${base} survival ability`;
-  }
-
-  function getPhysicalDescription(physicalType: string, efficiency: number): string {
-    const base =
-      efficiency >= 2.0
-        ? 'Excellent'
-        : efficiency >= 1.5
-          ? 'Good'
-          : efficiency >= 1.0
-            ? 'Average'
-            : 'Poor';
-    const descriptions: Record<string, string> = {
-      carry_capacity: `${base} carrying capacity`,
-      movement_speed: `${base} movement speed`,
-      stamina: `${base} physical endurance`,
-      health_regeneration: `${base} natural healing`
-    };
-    return descriptions[physicalType] || `${base} physical ability`;
-  }
-
-  function getMentalDescription(mentalType: string, efficiency: number): string {
-    const base =
-      efficiency >= 2.0
-        ? 'Excellent'
-        : efficiency >= 1.5
-          ? 'Good'
-          : efficiency >= 1.0
-            ? 'Average'
-            : 'Poor';
-    const descriptions: Record<string, string> = {
-      learning_speed: `${base} learning ability`,
-      memory: `${base} information retention`,
-      focus: `${base} concentration ability`,
-      social_influence: `${base} social skills`
-    };
-    return descriptions[mentalType] || `${base} mental ability`;
-  }
-
-  function getSpecialDescription(specialType: string, efficiency: number): string {
-    const base =
-      efficiency >= 2.0
-        ? 'Excellent'
-        : efficiency >= 1.5
-          ? 'Good'
-          : efficiency >= 1.0
-            ? 'Average'
-            : 'Poor';
-    const descriptions: Record<string, string> = {
-      leadership: `${base} leadership qualities`,
-      diplomacy: `${base} diplomatic skills`,
-      trade_bonus: `${base} trading acumen`,
-      research_speed: `${base} research capabilities`
-    };
-    return descriptions[specialType] || `${base} special ability`;
   }
 </script>
 
@@ -445,7 +153,7 @@
 
       <div class="abilities-grid">
         {#each Object.entries(allModifierResults.workEfficiency) as [workType, result]}
-          {@const workCategory = WORK_CATEGORIES.find((w) => w.id === workType)}
+          {@const workDesc = WORK_CATEGORIES.find((w) => w.id === workType)?.description}
           <div class="ability-card" data-category="work-efficiency">
             <div class="ability-header">
               <span class="ability-name">
@@ -463,8 +171,7 @@
             </div>
 
             <p class="ability-description">
-              {getEfficiencyDescription(result.totalValue)} - {workCategory?.description ||
-                'Work activity'}
+              {getEfficiencyDescription(result.totalValue)} - {workDesc || 'Work activity'}
             </p>
 
             <div class="ability-calculation">
@@ -539,7 +246,7 @@
             </div>
 
             <p class="ability-description">
-              {getCombatDescription(combatType, result.totalValue)}
+              {getAbilityDescription(combatType, result.totalValue)}
             </p>
 
             <div class="ability-calculation">
@@ -614,7 +321,7 @@
             </div>
 
             <p class="ability-description">
-              {getSurvivalDescription(survivalType, result.totalValue)}
+              {getAbilityDescription(survivalType, result.totalValue)}
             </p>
 
             <div class="ability-calculation">
@@ -689,7 +396,7 @@
             </div>
 
             <p class="ability-description">
-              {getPhysicalDescription(physicalType, result.totalValue)}
+              {getAbilityDescription(physicalType, result.totalValue)}
             </p>
 
             <div class="ability-calculation">
@@ -764,7 +471,7 @@
             </div>
 
             <p class="ability-description">
-              {getMentalDescription(mentalType, result.totalValue)}
+              {getAbilityDescription(mentalType, result.totalValue)}
             </p>
 
             <div class="ability-calculation">
@@ -825,7 +532,6 @@
           <div class="ability-card" data-category="special">
             <div class="ability-header">
               <span class="ability-name">
-                {getSpecialIcon(specialType)}
                 {formatAbilityName(specialType)}
               </span>
               <span
@@ -840,7 +546,7 @@
             </div>
 
             <p class="ability-description">
-              {getSpecialDescription(specialType, result.totalValue)}
+              {getAbilityDescription(specialType, result.totalValue)}
             </p>
 
             <div class="ability-calculation">
