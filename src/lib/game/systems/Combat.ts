@@ -17,6 +17,10 @@ const STAT_SCALE = 10;
 const MOB_BASE_DAMAGE = 5;
 /** Mobs in Attacking state fire once per this many ticks. */
 const ATTACK_INTERVAL_TICKS = 10;
+/** Stamina drained per auto-attack. Shared by mobs; pawn attacks will use same constant. */
+const ATTACK_STAMINA_COST = 2;
+/** Stamina regenerated per tick when winded (no attack this tick). */
+const WINDED_STAMINA_REGEN_PER_TICK = 0.05;
 
 // ── Body-part definitions ────────────────────────────────────────────────────
 interface BodyPartDef {
@@ -380,11 +384,24 @@ class CombatServiceImpl implements CombatService {
         if (!mobs || mobs.length === 0) return state;
 
         let next = state;
+        // Track stamina mutations for attacking mobs (id → new stamina value).
+        const mobStaminaUpdates = new Map<string, number>();
 
         for (const mob of mobs) {
             // Only process mobs actively attacking and within their attack cadence
             if (mob.state !== 'Attacking' || mob.isAlive === false) continue;
             if ((state.turn - mob.stateSince) % ATTACK_INTERVAL_TICKS !== 0) continue;
+
+            const curStamina = mob.stamina ?? (mob.maxStamina ?? 50);
+
+            // Winded: skip attack this tick and regen instead
+            if (curStamina <= 0) {
+                mobStaminaUpdates.set(mob.id, Math.min(
+                    curStamina + WINDED_STAMINA_REGEN_PER_TICK,
+                    mob.maxStamina ?? 50
+                ));
+                continue;
+            }
 
             // Find the closest alive pawn within 1 tile (Chebyshev)
             const target = state.pawns.find(p =>
@@ -400,6 +417,9 @@ class CombatServiceImpl implements CombatService {
 
             next = this.applyInjury(target.id, result.injury, next);
 
+            // Deduct stamina for the attack
+            mobStaminaUpdates.set(mob.id, Math.max(0, curStamina - ATTACK_STAMINA_COST));
+
             if (result.knockdown) {
                 const turns = Math.floor(Math.random() * 3) + 1;
                 next = {
@@ -411,6 +431,16 @@ class CombatServiceImpl implements CombatService {
                     ),
                 };
             }
+        }
+
+        // Apply stamina mutations to the mobs array in one pass
+        if (mobStaminaUpdates.size > 0) {
+            next = {
+                ...next,
+                mobs: next.mobs!.map(m =>
+                    mobStaminaUpdates.has(m.id) ? { ...m, stamina: mobStaminaUpdates.get(m.id)! } : m
+                ),
+            };
         }
 
         return next;

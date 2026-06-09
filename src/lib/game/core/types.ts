@@ -260,6 +260,13 @@ export interface Mob {
 	intactness?: number;
 	/** Skill levels — empty for primitive mobs; populated for sapient entities. */
 	skills: Record<string, number>;
+	/**
+	 * Current stamina 0–maxStamina. Drains while fleeing; 0 = Exhausted.
+	 * Derived from CON and DEX: 50 + (CON−10)×4 + (DEX−10)×2.
+	 */
+	stamina?: number;
+	/** Maximum stamina pool for this mob. */
+	maxStamina?: number;
 }
 
 /** An animal tamed and bound to an owning pawn (Phase C+). */
@@ -503,6 +510,14 @@ export interface Pawn {
 	aggroRange?: number;
 	/** Turns remaining prone; 0 = standing. */
 	knockdown?: number;
+	/**
+	 * Current stamina 0–maxStamina. Drains while fleeing/sprinting or attacking;
+	 * regenerates at rest. Reaching 0 forces a rest turn (attack skipped / Exhausted).
+	 * Derived from CON and DEX: 50 + (CON−10)×4 + (DEX−10)×2.
+	 */
+	stamina?: number;
+	/** Maximum stamina pool for this pawn. */
+	maxStamina?: number;
 
 	// Phase 4/5: State machine primary state
 	currentState?: string;                       // 'Idle' | 'Hungry' | 'Tired' | 'MovingToNeed' | 'MovingToResource' | 'Working' | 'Hauling' | 'MovingToDeposit' | 'Eating' | 'Sleeping' | 'Dead'

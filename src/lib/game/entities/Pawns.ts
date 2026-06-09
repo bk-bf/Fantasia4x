@@ -16,6 +16,11 @@ import { modifierSystem } from '../systems/ModifierSystem';
 // Module-level counter for sequential debug IDs across all generated pawns.
 let _pawnDebugIdCounter = 1;
 
+/** Stamina pool derived from constitution and dexterity — shared by Pawn and Mob. */
+export function calcMaxStamina(stats: EntityStats): number {
+	return 50 + (stats.constitution - 10) * 4 + (stats.dexterity - 10) * 2;
+}
+
 // Update generatePawns function
 export function generatePawns(race: Race, count?: number): Pawn[] {
 	const pawns: Pawn[] = [];
@@ -53,6 +58,9 @@ export function generatePawns(race: Race, count?: number): Pawn[] {
 			isAlive: true,
 			bloodVolume: 100,
 			conditions: [],
+			// Combat — stamina
+			stamina: calcMaxStamina(finalStats),
+			maxStamina: calcMaxStamina(finalStats),
 			limbs: [
 				{ id: 'head', health: 100, isMissing: false, bleedRate: 0 },
 				{ id: 'torso', health: 100, isMissing: false, bleedRate: 0 },

@@ -8,6 +8,7 @@ import { resourceObjectService } from './ResourceObjectService';
 import { absorbDropIfOnStockpileTile } from '../core/GameState';
 import { wasmPathfinderService } from './WasmPathfinderService';
 import { buildPathfindingGrids } from './PathfinderService';
+import { calcMaxStamina } from '../entities/Pawns';
 import { gameLogger } from '../dev/gameLogger';
 
 /**
@@ -39,10 +40,16 @@ const CORPSE_DECAY_TICKS = ticksFromSeconds(200); // corpse persists ~200s then 
 // Movement / FSM timings
 /** How long a startled animal freezes in place before it bolts into Fleeing. */
 const STARTLED_TICKS = ticksFromSeconds(1);
-const FLEE_TO_EXHAUST_TICKS = ticksFromSeconds(20);
-const EXHAUST_RECOVER_TICKS = ticksFromSeconds(15);
 const SAFE_RESET_TICKS = ticksFromSeconds(15);
 const FLEE_HEALTH_FRACTION = 0.2;
+
+// ── Stamina (flee/exhaust pool) ────────────────────────────────────────────────
+/** Stamina drained per second while an entity is actively fleeing. */
+const FLEE_STAMINA_DRAIN_PER_SECOND = 2.5;
+/** Stamina regenerated per second while exhausted (standing still). */
+const EXHAUST_STAMINA_REGEN_PER_SECOND = 3.0;
+/** Stamina threshold to exit Exhausted and resume normal behaviour. */
+const EXHAUST_EXIT_STAMINA = 30;
 
 // ── Hunger / fatigue tunables ──────────────────────────────────────────────────
 /** Hunger accrual per second for an omnivore at neutral condition. */
@@ -242,6 +249,8 @@ class EntityServiceImpl {
             isAlive: true,
             activeEffects: [],
             skills: {},
+            stamina: calcMaxStamina(stats),
+            maxStamina: calcMaxStamina(stats),
             limbs: [
                 { id: 'head', health: 100, isMissing: false, bleedRate: 0 },
                 { id: 'torso', health: 100, isMissing: false, bleedRate: 0 },
@@ -586,8 +595,11 @@ class EntityServiceImpl {
                 return { ...mob, path: [] }; // frozen in place
             }
             case 'Fleeing': {
-                if (turn - mob.stateSince > FLEE_TO_EXHAUST_TICKS) {
-                    return { ...mob, state: 'Exhausted', stateSince: turn };
+                // Drain stamina while fleeing; transition to Exhausted when empty.
+                const curStamina = mob.stamina ?? (mob.maxStamina ?? calcMaxStamina(mob.stats));
+                const drainedStamina = curStamina - FLEE_STAMINA_DRAIN_PER_SECOND * SECONDS_PER_TICK;
+                if (drainedStamina <= 0) {
+                    return { ...mob, state: 'Exhausted', stateSince: turn, stamina: 0 };
                 }
                 // Flee from the closest current threat (pawn or predator).
                 const pawnDist = nearest ? this.dist(mob, nearest.pos) : Infinity;
@@ -595,16 +607,22 @@ class EntityServiceImpl {
                 const closestDist = Math.min(pawnDist, predDist);
                 // Flee until the threat is beyond this creature's defined flee range.
                 if (closestDist > def.stats.fleeRange) {
-                    return { ...mob, state: 'Grazing', stateSince: turn, path: [] };
+                    return { ...mob, state: 'Grazing', stateSince: turn, path: [], stamina: drainedStamina };
                 }
                 const fleeFrom = pawnDist <= predDist ? nearest!.pos : predatorThreat!.pos;
-                return this.moveAway(mob, fleeFrom, state);
+                return { ...this.moveAway(mob, fleeFrom, state), stamina: drainedStamina };
             }
             case 'Exhausted': {
-                if (turn - mob.stateSince > EXHAUST_RECOVER_TICKS) {
-                    return { ...mob, state: 'Grazing', stateSince: turn, path: [] };
+                // Regenerate stamina while resting; resume normal behaviour when recovered.
+                const exhaustStamina = mob.stamina ?? 0;
+                const regenStamina = Math.min(
+                    exhaustStamina + EXHAUST_STAMINA_REGEN_PER_SECOND * SECONDS_PER_TICK,
+                    mob.maxStamina ?? calcMaxStamina(mob.stats)
+                );
+                if (regenStamina >= EXHAUST_EXIT_STAMINA) {
+                    return { ...mob, state: 'Grazing', stateSince: turn, path: [], stamina: regenStamina };
                 }
-                return this.wanderStep(mob, def, state); // slow drift, vulnerable
+                return { ...this.wanderStep(mob, def, state), stamina: regenStamina }; // slow drift, vulnerable
             }
             case 'Sleeping': {
                 // Woken by any threat — bolt immediately.
