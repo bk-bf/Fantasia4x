@@ -1,65 +1,71 @@
 // Pawn ability definitions — non-work abilities only.
 // Work abilities are defined in Work.ts (WORK_CATEGORIES) and computed by ModifierSystem.
 // "category"  — UI grouping: "combat" | "survival" | "physical" | "mental" | "special"
-// "formula"   — stat-based calculation: value = base + (stat − 10) × perPoint
+// "formula"   — expression evaluated at runtime: 1.0 + (STAT − 10) × scale
 [
     // ── Combat ────────────────────────────────────────────────────────────────────
-    // base 1.0 at stat 10; +0.1 per point above / −0.1 per point below
     {
-        "id"         : "melee",
+        "id"         : "melee_damage",
         "category"   : "combat",
         "primaryStat": "strength",
-        "formula"    : {"base": 1.0, "perPoint": 0.1},
-        "description": "close combat effectiveness"
+        "formula"    : "1.0 + (STR − 10) × 0.01",
+        "description": "physical attack damage multiplier"
     },
     {
-        "id"         : "ranged",
+        "id"         : "hit_chance",
         "category"   : "combat",
         "primaryStat": "dexterity",
-        "formula"    : {"base": 1.0, "perPoint": 0.1},
-        "description": "ranged combat accuracy"
+        "formula"    : "1.0 + (DEX − 10) × 0.03",
+        "description": "attack accuracy and to-hit roll"
     },
     {
-        "id"         : "defense",
+        "id"         : "dodge",
+        "category"   : "combat",
+        "primaryStat": "dexterity",
+        "formula"    : "1.0 + (DEX − 10) × 0.02",
+        "description": "evasion and avoidance chance"
+    },
+    {
+        "id"         : "knockdown_resistance",
         "category"   : "combat",
         "primaryStat": "constitution",
-        "formula"    : {"base": 1.0, "perPoint": 0.1},
-        "description": "defensive capabilities"
+        "formula"    : "1.0 + (CON − 10) × 0.025",
+        "description": "resistance to stagger and knockdown"
     },
     {
-        "id"         : "accuracy",
+        "id"         : "aggro_range",
         "category"   : "combat",
-        "primaryStat": "dexterity",
-        "formula"    : {"base": 1.0, "perPoint": 0.1},
-        "description": "targeting precision"
+        "primaryStat": "perception",
+        "formula"    : "1.0 + (PER − 10) × 0.05",
+        "description": "threat detection and combat engagement range"
     },
     // ── Survival ──────────────────────────────────────────────────────────────────
     {
         "id"         : "foraging_skill",
         "category"   : "survival",
         "primaryStat": "perception",
-        "formula"    : {"base": 1.0, "perPoint": 0.08},
+        "formula"    : "1.0 + (PER − 10) × 0.08",
         "description": "at finding food and resources"
     },
     {
         "id"         : "navigation",
         "category"   : "survival",
         "primaryStat": "intelligence",
-        "formula"    : {"base": 1.0, "perPoint": 0.08},
+        "formula"    : "1.0 + (INT − 10) × 0.08",
         "description": "pathfinding and orientation"
     },
     {
         "id"         : "weather_resistance",
         "category"   : "survival",
         "primaryStat": "constitution",
-        "formula"    : {"base": 1.0, "perPoint": 0.1},
+        "formula"    : "1.0 + (CON − 10) × 0.10",
         "description": "resistance to harsh weather"
     },
     {
         "id"         : "disease_resistance",
         "category"   : "survival",
         "primaryStat": "constitution",
-        "formula"    : {"base": 1.0, "perPoint": 0.1},
+        "formula"    : "1.0 + (CON − 10) × 0.10",
         "description": "immunity to diseases"
     },
     // ── Physical ──────────────────────────────────────────────────────────────────
@@ -67,28 +73,28 @@
         "id"         : "carry_capacity",
         "category"   : "physical",
         "primaryStat": "strength",
-        "formula"    : {"base": 1.0, "perPoint": 0.12},
+        "formula"    : "1.0 + (STR − 10) × 0.12",
         "description": "carrying capacity"
     },
     {
         "id"         : "movement_speed",
         "category"   : "physical",
         "primaryStat": "dexterity",
-        "formula"    : {"base": 1.0, "perPoint": 0.05},
+        "formula"    : "1.0 + (DEX − 10) × 0.05",
         "description": "movement speed"
     },
     {
         "id"         : "stamina",
         "category"   : "physical",
         "primaryStat": "constitution",
-        "formula"    : {"base": 1.0, "perPoint": 0.1},
+        "formula"    : "1.0 + (CON − 10) × 0.10",
         "description": "physical endurance"
     },
     {
         "id"         : "health_regeneration",
         "category"   : "physical",
         "primaryStat": "constitution",
-        "formula"    : {"base": 1.0, "perPoint": 0.08},
+        "formula"    : "1.0 + (CON − 10) × 0.08",
         "description": "natural healing"
     },
     // ── Mental ────────────────────────────────────────────────────────────────────
@@ -96,28 +102,28 @@
         "id"         : "learning_speed",
         "category"   : "mental",
         "primaryStat": "intelligence",
-        "formula"    : {"base": 1.0, "perPoint": 0.05},
+        "formula"    : "1.0 + (INT − 10) × 0.05",
         "description": "learning ability"
     },
     {
         "id"         : "memory",
         "category"   : "mental",
         "primaryStat": "intelligence",
-        "formula"    : {"base": 1.0, "perPoint": 0.05},
+        "formula"    : "1.0 + (INT − 10) × 0.05",
         "description": "information retention"
     },
     {
         "id"         : "focus",
         "category"   : "mental",
         "primaryStat": "perception",
-        "formula"    : {"base": 1.0, "perPoint": 0.08},
+        "formula"    : "1.0 + (PER − 10) × 0.08",
         "description": "concentration ability"
     },
     {
         "id"         : "social_influence",
         "category"   : "mental",
         "primaryStat": "charisma",
-        "formula"    : {"base": 1.0, "perPoint": 0.1},
+        "formula"    : "1.0 + (CHA − 10) × 0.10",
         "description": "social skills"
     },
     // ── Special ───────────────────────────────────────────────────────────────────
@@ -125,28 +131,28 @@
         "id"         : "leadership",
         "category"   : "special",
         "primaryStat": "charisma",
-        "formula"    : {"base": 1.0, "perPoint": 0.1},
+        "formula"    : "1.0 + (CHA − 10) × 0.10",
         "description": "leadership qualities"
     },
     {
         "id"         : "diplomacy",
         "category"   : "special",
         "primaryStat": "charisma",
-        "formula"    : {"base": 1.0, "perPoint": 0.1},
+        "formula"    : "1.0 + (CHA − 10) × 0.10",
         "description": "diplomatic skills"
     },
     {
         "id"         : "trade_bonus",
         "category"   : "special",
         "primaryStat": "charisma",
-        "formula"    : {"base": 1.0, "perPoint": 0.1},
+        "formula"    : "1.0 + (CHA − 10) × 0.10",
         "description": "trading acumen"
     },
     {
         "id"         : "research_speed",
         "category"   : "special",
         "primaryStat": "intelligence",
-        "formula"    : {"base": 1.0, "perPoint": 0.05},
+        "formula"    : "1.0 + (INT − 10) × 0.05",
         "description": "research capabilities"
     }
 ]

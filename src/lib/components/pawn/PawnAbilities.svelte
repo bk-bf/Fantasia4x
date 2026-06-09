@@ -25,7 +25,7 @@
     category: string;
     primaryStat: string;
     description: string;
-    formula?: { base: number; perPoint: number };
+    formula?: string; // e.g. "1.0 + (STR − 10) × 0.01"
   };
   const ABILITIES: AbilityDef[] = abilitiesData as unknown as AbilityDef[];
   const ABILITY_MAP: Record<string, AbilityDef> = {};
@@ -82,20 +82,27 @@
   }
 
   // ── Generic ability efficiency calculator ─────────────────────────────────
+  function parseFormula(formula: string | undefined): { base: number; scale: number } {
+    if (!formula) return { base: 1.0, scale: 0.1 };
+    const m = formula.match(/([\d.]+)\s*\+\s*\([A-Z]+\s*[\u2212\-]\s*10\)\s*[\u00d7*]\s*([\d.]+)/);
+    if (m) return { base: parseFloat(m[1]), scale: parseFloat(m[2]) };
+    return { base: 1.0, scale: 0.1 };
+  }
+
   function calculateEfficiency(pawn: Pawn, abilityId: string): ModifierResult {
     const def = ABILITY_MAP[abilityId];
     const statName = def?.primaryStat || 'strength';
-    const base = def?.formula?.base ?? 1.0;
-    const perPoint = def?.formula?.perPoint ?? 0.1;
+    const { base, scale } = parseFormula(def?.formula);
     const statValue = (pawn.stats as any)[statName] || 10;
-    const value = base + (statValue - 10) * perPoint;
+    const value = base + (statValue - 10) * scale;
+    const formulaStr = def?.formula ?? `${base} + (${statName.toUpperCase().slice(0,3)} − 10) × ${scale}`;
     const sources: ModifierSource[] = [
       {
         id: statName,
         name: statName.charAt(0).toUpperCase() + statName.slice(1),
         type: 'stat',
         value: value,
-        description: `${statName} (${statValue}): ${base} + (${statValue}−10) × ${perPoint} = ${value.toFixed(2)}`
+        description: `${formulaStr}  [${statName} = ${statValue}] = ${value.toFixed(2)}`
       }
     ];
     return createModifierResult(base, value, value, sources);

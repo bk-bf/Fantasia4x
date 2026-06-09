@@ -764,28 +764,24 @@ export class GameEngineImpl implements GameEngine {
 		return result;
 	}
 
-	calculateCombatEffectiveness(pawnId: string, combatType: 'melee' | 'ranged' | 'defense'): number {
-		if (!this.gameState) return 1.0;
+	calculateCombatEffectiveness(
+		pawnId: string,
+		combatType: 'melee_damage' | 'hit_chance' | 'dodge' | 'knockdown_resistance' | 'aggro_range'
+	): number {
+		if (!this.gameState) return 0;
 
-		// COORDINATION: Use ModifierSystem for combat calculations
 		const pawn = this.gameState.pawns.find(p => p.id === pawnId);
-		if (!pawn) return 1.0;
+		if (!pawn) return 0;
 
-		// Base effectiveness from stats
-		let effectiveness = 1.0;
+		// Formulas mirror COMBAT-SYSTEM.md spec exactly.
+		const { strength: str, dexterity: dex, constitution: con, perception: per } = pawn.stats;
 		switch (combatType) {
-			case 'melee':
-				effectiveness = (pawn.stats.strength + pawn.stats.constitution) / 20;
-				break;
-			case 'ranged':
-				effectiveness = (pawn.stats.dexterity + pawn.stats.intelligence) / 20;
-				break;
-			case 'defense':
-				effectiveness = (pawn.stats.constitution + pawn.stats.dexterity) / 20;
-				break;
+			case 'melee_damage':         return str / 100;
+			case 'hit_chance':           return dex * 3;
+			case 'dodge':                return dex * 2;
+			case 'knockdown_resistance': return con / 4;
+			case 'aggro_range':          return 8 + Math.floor(per / 20);
 		}
-
-		return Math.max(0.1, effectiveness);
 	}
 
 	// ===== STATE MANAGEMENT =====
