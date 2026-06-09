@@ -335,6 +335,26 @@
   }
 
   function buildPawnCard(pawn: Pawn, selected: boolean): SelectedEntityModel {
+    const bars: EntityBar[] = [
+      { label: 'HUNGER', value: pawn.needs.hunger, warn: pawn.needs.hunger > 60 },
+      { label: 'REST', value: pawn.needs.fatigue, warn: pawn.needs.fatigue > 60 }
+    ];
+    if (pawn.maxBloodVolume) {
+      const curBV = pawn.bloodVolume ?? pawn.maxBloodVolume;
+      bars.push({
+        label: 'BLOOD',
+        value: Math.round((curBV / pawn.maxBloodVolume) * 100),
+        warn: curBV < pawn.maxBloodVolume * 0.6
+      });
+    }
+    if (pawn.maxStamina !== undefined) {
+      const curST = pawn.stamina ?? pawn.maxStamina;
+      bars.push({
+        label: 'STAMINA',
+        value: Math.round((curST / pawn.maxStamina) * 100),
+        warn: curST < pawn.maxStamina * 0.25
+      });
+    }
     return {
       name: pawn.name + entityDebugLabel(pawn),
       status: pawnStateLabel(pawn),
@@ -344,10 +364,7 @@
         { label: 'HP', value: Math.floor(pawn.state.health ?? 100) },
         { label: 'Mood', value: Math.floor(pawn.state.mood) }
       ],
-      bars: [
-        { label: 'HUNGER', value: pawn.needs.hunger, warn: pawn.needs.hunger > 60 },
-        { label: 'REST', value: pawn.needs.fatigue, warn: pawn.needs.fatigue > 60 }
-      ] satisfies EntityBar[],
+      bars,
       job: pawn.activeJob
         ? {
             text: `→ ${pawnStateLabel(pawn)}${

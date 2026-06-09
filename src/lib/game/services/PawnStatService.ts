@@ -61,7 +61,7 @@ function evaluateFormula(
 // ── Capacity calculator: derives body capacities from specific organs ──
 // Uses partial-function logic with real organs (heart, lungs, kidneys, eyes…).
 // Paired organs use weighted blend of weaker (bottleneck) and average (compensation).
-function calculateCapacityValue(pawn: Pawn, capacityId: string, capacities: Record<string, number>): number {
+function calculateCapacityValue(pawn: Pawn, capacityId: string, capacities: Record<string, number>, lightMultiplier?: number): number {
     const limbs = pawn.limbs ?? [];
     const limb = (id: string) => limbs.find((l) => l.id === id);
     const limbH = (id: string) => limb(id)?.health ?? 100;
@@ -124,7 +124,8 @@ function calculateCapacityValue(pawn: Pawn, capacityId: string, capacities: Reco
             const rightEye = organMissing('head', 'rightEye') ? 0.0 : organH('head', 'rightEye') / 100;
             const minEye = Math.min(leftEye, rightEye);
             const avgEye = (leftEye + rightEye) / 2;
-            value = minEye * 0.40 + avgEye * 0.60 + 0.05;
+            const baseSight = minEye * 0.40 + avgEye * 0.60 + 0.05;
+            value = baseSight * (lightMultiplier ?? 1.0);
             break;
         }
         case 'moving': {
@@ -187,7 +188,7 @@ export interface PawnStatService {
     /** Evaluate any stat formula from stats.jsonc for a given pawn. */
     evaluateStat(statId: string, pawn: Pawn): number;
     /** Compute all body capacities (0–1) for a pawn. */
-    computeCapacities(pawn: Pawn): Record<string, number>;
+    computeCapacities(pawn: Pawn, lightMultiplier?: number): Record<string, number>;
     /** Get speed / yield / quality multipliers for a work type. */
     getWorkModifiers(pawn: Pawn, workType: string): { speed: number; yield: number; quality: number };
     /** Check if a stat ID exists in stats.jsonc. */
@@ -195,7 +196,7 @@ export interface PawnStatService {
 }
 
 export class PawnStatServiceImpl implements PawnStatService {
-    computeCapacities(pawn: Pawn): Record<string, number> {
+    computeCapacities(pawn: Pawn, lightMultiplier?: number): Record<string, number> {
         const capacities: Record<string, number> = {};
         // Order matters: pain → sight → hearing → consciousness → everything else
         const capacityIds = [
@@ -212,7 +213,7 @@ export class PawnStatServiceImpl implements PawnStatService {
             'talking'
         ];
         for (const id of capacityIds) {
-            capacities[id] = calculateCapacityValue(pawn, id, capacities);
+            capacities[id] = calculateCapacityValue(pawn, id, capacities, id === 'sight' ? lightMultiplier : undefined);
         }
         return capacities;
     }
