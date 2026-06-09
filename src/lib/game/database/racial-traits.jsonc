@@ -3,250 +3,181 @@
 // Valid effects keys: stat *Bonus/*Penalty, workEfficiency, workYield,
 // damageReduction, cutting_resistance, piercing_resistance, blunt_resistance.
 [
-  // ── Physical Traits ──────────────────────────────────────────────────────
-  {
-    "name": "Iron Skin",
-    "description": "Metallic skin that provides natural armor.",
-    "effects": {
-      "constitutionBonus": 3,
-      "damageReduction": 0.2,
-      "workEfficiency": { "mining": 1.15, "construction": 1.1 }
+    // ── Physical Traits ──────────────────────────────────────────────────────
+    {
+        "name"       : "Iron Skin",
+        "description": "Metallic skin that provides natural armor.",
+        "effects"    : {
+            "constitutionBonus": 3,
+            "damageReduction"  : 0.2,
+            "workEfficiency"   : {"mining": 1.15, "construction": 1.1}
+        }
+    },
+    {
+        "name"       : "Dragon Heritage",
+        "description": "Ancient draconic bloodline grants resilience and power.",
+        "effects"    : {
+            "strengthBonus"    : 2,
+            "constitutionBonus": 2,
+            "workEfficiency"   : {"hunting": 1.2, "butchery": 1.15}
+        }
+    },
+    {
+        "name"       : "Feathered",
+        "description": "Light feathers provide insulation and grace.",
+        "effects"    : { "dexterityBonus": 2, "constitutionPenalty": 1, "workEfficiency": {"foraging": 1.1} }
+    },
+    {
+        "name"       : "Stone Bones",
+        "description": "Dense, stone-like bone structure.",
+        "effects"    : {"constitutionBonus": 4, "strengthBonus": 1, "dexterityPenalty": 2, "blunt_resistance": 0.6}
+    },
+    {
+        "name"       : "Crystalline Eyes",
+        "description": "Crystal-like eyes that see magical auras.",
+        "effects"    : { "perceptionBonus": 2, "intelligenceBonus": 1, "workEfficiency": {"research": 1.2} }
+    },
+    // ── Elemental Traits ─────────────────────────────────────────────────────
+    {
+        "name"       : "Flame Touched",
+        "description": "Body radiates warmth, naturally immune to cold.",
+        "effects"    : { "workEfficiency": {"metalworking": 1.3, "mining": 1.15} }
+    },
+    {
+        "name"       : "Frost Born",
+        "description": "Born in eternal winter, thrives in cold.",
+        "effects"    : { "workEfficiency": {"fishing": 1.2, "hunting": 1.1} }
+    },
+    {
+        "name"       : "Earth Bound",
+        "description": "Connected to the earth and stone.",
+        "effects"    : { "strengthBonus": 2, "workEfficiency": {"mining": 1.4, "digging": 1.3} }
+    },
+    {
+        "name"       : "Wind Walker",
+        "description": "Moves with the grace of the wind.",
+        "effects"    : { "dexterityBonus": 3, "workEfficiency": {"hunting": 1.2, "foraging": 1.15} }
+    },
+    // ── Mystical Traits ──────────────────────────────────────────────────────
+    {
+        "name"       : "Stargazer",
+        "description": "Eyes that reflect the cosmos, naturally perceptive.",
+        "effects"    : { "perceptionBonus": 3, "intelligenceBonus": 1, "workEfficiency": {"research": 1.25} }
+    },
+    {
+        "name"       : "Dream Walker",
+        "description": "Can enter and manipulate dreams.",
+        "effects"    : { "intelligenceBonus": 2, "charismaBonus": 1, "workEfficiency": {"research": 1.15} }
+    },
+    {
+        "name"       : "Void Touched",
+        "description": "Touched by the emptiness between worlds.",
+        "effects"    : { "intelligenceBonus": 2, "constitutionPenalty": 1, "workEfficiency": {"research": 1.3} }
+    },
+    // ── Biological Traits ────────────────────────────────────────────────────
+    {
+        "name"       : "Keen Senses",
+        "description": "Extraordinarily sharp senses.",
+        "effects"    : {
+            "perceptionBonus": 2,
+            "dexterityBonus" : 1,
+            "workEfficiency" : {"hunting": 1.3},
+            "workYield"      : {"foraging": 1.2}
+        }
+    },
+    {
+        "name"       : "Regenerative",
+        "description": "Naturally heals wounds over time.",
+        "effects"    : { "constitutionBonus": 2, "workEfficiency": {"caretaking": 1.2} }
+    },
+    {
+        "name"       : "Venomous",
+        "description": "Natural toxins in saliva and claws.",
+        "effects"    : { "constitutionBonus": 1, "dexterityBonus": 1, "workYield": {"alchemy": 1.2} }
+    },
+    {
+        "name"       : "Amphibious",
+        "description": "Equally at home on land and in water.",
+        "effects"    : { "constitutionBonus": 1, "workEfficiency": {"fishing": 1.5, "foraging": 1.1} }
+    },
+    // ── Social / Mental Traits ───────────────────────────────────────────────
+    {
+        "name"       : "Hive Mind",
+        "description": "Shared consciousness with others of the same race.",
+        "effects"    : { "intelligenceBonus": 2, "charismaBonus": 1, "workEfficiency": {"all": 1.1} }
+    },
+    {
+        "name"       : "Pack Hunter",
+        "description": "Works better in groups, struggles alone.",
+        "effects"    : { "strengthBonus": 1, "dexterityBonus": 1, "workEfficiency": {"hunting": 1.4, "butchery": 1.2} }
+    },
+    {
+        "name"       : "Loner",
+        "description": "Prefers solitude, works best alone.",
+        "effects"    : {
+            "intelligenceBonus": 2,
+            "charismaPenalty"  : 1,
+            "workEfficiency"   : {"research": 1.3, "crafting": 1.2}
+        }
+    },
+    // ── Exotic Traits ────────────────────────────────────────────────────────
+    {
+        "name"       : "Shapeshifter",
+        "description": "Can alter physical form slightly.",
+        "effects"    : { "dexterityBonus": 2, "charismaBonus": 1, "workEfficiency": {"all": 1.05} }
+    },
+    {
+        "name"       : "Photosynthetic",
+        "description": "Gains energy from sunlight.",
+        "effects"    : { "constitutionBonus": 1, "workEfficiency": {"foraging": 1.2, "planting": 1.15} }
+    },
+    {
+        "name"       : "Nocturnal",
+        "description": "Active during night, sluggish during day.",
+        "effects"    : {
+            "dexterityBonus" : 1,
+            "perceptionBonus": 1,
+            "workEfficiency" : {"hunting": 1.2, "foraging": 1.1}
+        }
+    },
+    {
+        "name"       : "Ancient",
+        "description": "Extremely long-lived, wise but frail.",
+        "effects"    : { "intelligenceBonus": 6, "constitutionPenalty": 2, "workEfficiency": {"research": 1.4} }
+    },
+    {
+        "name"       : "Berserker Blood",
+        "description": "Enters rage states when threatened.",
+        "effects"    : {
+            "strengthBonus"      : 3,
+            "constitutionBonus"  : 1,
+            "intelligencePenalty": 1,
+            "workEfficiency"     : {"hunting": 1.3, "butchery": 1.2}
+        }
+    },
+    // ── Mundane but Useful Traits ────────────────────────────────────────────
+    {
+        "name"       : "Industrious",
+        "description": "Naturally hardworking and efficient.",
+        "effects"    : { "constitutionBonus": 1, "workEfficiency": {"all": 1.15} }
+    },
+    {
+        "name"       : "Meticulous",
+        "description": "Extremely careful and precise in all tasks.",
+        "effects"    : {
+            "dexterityBonus"   : 2,
+            "intelligenceBonus": 1,
+            "workEfficiency"   : {"crafting": 1.3, "research": 1.15}
+        }
+    },
+    {
+        "name"       : "Robust",
+        "description": "Naturally healthy and disease-resistant.",
+        "effects"    : { "constitutionBonus": 3, "workEfficiency": {"all": 1.05} }
+    },
+    {
+        "name"       : "Curious",
+        "description": "Insatiably curious about the world.",
+        "effects"    : { "intelligenceBonus": 3, "workEfficiency": {"research": 1.25} }
     }
-  },
-  {
-    "name": "Dragon Heritage",
-    "description": "Ancient draconic bloodline grants resilience and power.",
-    "effects": {
-      "strengthBonus": 2,
-      "constitutionBonus": 2,
-      "workEfficiency": { "hunting": 1.2, "butchery": 1.15 }
-    }
-  },
-  {
-    "name": "Feathered",
-    "description": "Light feathers provide insulation and grace.",
-    "effects": {
-      "dexterityBonus": 2,
-      "constitutionPenalty": 1,
-      "workEfficiency": { "foraging": 1.1 }
-    }
-  },
-  {
-    "name": "Stone Bones",
-    "description": "Dense, stone-like bone structure.",
-    "effects": {
-      "constitutionBonus": 4,
-      "strengthBonus": 1,
-      "dexterityPenalty": 2,
-      "blunt_resistance": 0.6
-    }
-  },
-  {
-    "name": "Crystalline Eyes",
-    "description": "Crystal-like eyes that see magical auras.",
-    "effects": {
-      "perceptionBonus": 2,
-      "intelligenceBonus": 1,
-      "workEfficiency": { "research": 1.2 }
-    }
-  },
-  // ── Elemental Traits ─────────────────────────────────────────────────────
-  {
-    "name": "Flame Touched",
-    "description": "Body radiates warmth, naturally immune to cold.",
-    "effects": { "workEfficiency": { "metalworking": 1.3, "mining": 1.15 } }
-  },
-  {
-    "name": "Frost Born",
-    "description": "Born in eternal winter, thrives in cold.",
-    "effects": { "workEfficiency": { "fishing": 1.2, "hunting": 1.1 } }
-  },
-  {
-    "name": "Earth Bound",
-    "description": "Connected to the earth and stone.",
-    "effects": {
-      "strengthBonus": 2,
-      "workEfficiency": { "mining": 1.4, "digging": 1.3 }
-    }
-  },
-  {
-    "name": "Wind Walker",
-    "description": "Moves with the grace of the wind.",
-    "effects": {
-      "dexterityBonus": 3,
-      "workEfficiency": { "hunting": 1.2, "foraging": 1.15 }
-    }
-  },
-  // ── Mystical Traits ──────────────────────────────────────────────────────
-  {
-    "name": "Stargazer",
-    "description": "Eyes that reflect the cosmos, naturally perceptive.",
-    "effects": {
-      "perceptionBonus": 3,
-      "intelligenceBonus": 1,
-      "workEfficiency": { "research": 1.25 }
-    }
-  },
-  {
-    "name": "Dream Walker",
-    "description": "Can enter and manipulate dreams.",
-    "effects": {
-      "intelligenceBonus": 2,
-      "charismaBonus": 1,
-      "workEfficiency": { "research": 1.15 }
-    }
-  },
-  {
-    "name": "Void Touched",
-    "description": "Touched by the emptiness between worlds.",
-    "effects": {
-      "intelligenceBonus": 2,
-      "constitutionPenalty": 1,
-      "workEfficiency": { "research": 1.3 }
-    }
-  },
-  // ── Biological Traits ────────────────────────────────────────────────────
-  {
-    "name": "Keen Senses",
-    "description": "Extraordinarily sharp senses.",
-    "effects": {
-      "perceptionBonus": 2,
-      "dexterityBonus": 1,
-      "workEfficiency": { "hunting": 1.3 },
-      "workYield": { "foraging": 1.2 }
-    }
-  },
-  {
-    "name": "Regenerative",
-    "description": "Naturally heals wounds over time.",
-    "effects": {
-      "constitutionBonus": 2,
-      "workEfficiency": { "caretaking": 1.2 }
-    }
-  },
-  {
-    "name": "Venomous",
-    "description": "Natural toxins in saliva and claws.",
-    "effects": {
-      "constitutionBonus": 1,
-      "dexterityBonus": 1,
-      "workYield": { "alchemy": 1.2 }
-    }
-  },
-  {
-    "name": "Amphibious",
-    "description": "Equally at home on land and in water.",
-    "effects": {
-      "constitutionBonus": 1,
-      "workEfficiency": { "fishing": 1.5, "foraging": 1.1 }
-    }
-  },
-  // ── Social / Mental Traits ───────────────────────────────────────────────
-  {
-    "name": "Hive Mind",
-    "description": "Shared consciousness with others of the same race.",
-    "effects": {
-      "intelligenceBonus": 2,
-      "charismaBonus": 1,
-      "workEfficiency": { "all": 1.1 }
-    }
-  },
-  {
-    "name": "Pack Hunter",
-    "description": "Works better in groups, struggles alone.",
-    "effects": {
-      "strengthBonus": 1,
-      "dexterityBonus": 1,
-      "workEfficiency": { "hunting": 1.4, "butchery": 1.2 }
-    }
-  },
-  {
-    "name": "Loner",
-    "description": "Prefers solitude, works best alone.",
-    "effects": {
-      "intelligenceBonus": 2,
-      "charismaPenalty": 1,
-      "workEfficiency": { "research": 1.3, "crafting": 1.2 }
-    }
-  },
-  // ── Exotic Traits ────────────────────────────────────────────────────────
-  {
-    "name": "Shapeshifter",
-    "description": "Can alter physical form slightly.",
-    "effects": {
-      "dexterityBonus": 2,
-      "charismaBonus": 1,
-      "workEfficiency": { "all": 1.05 }
-    }
-  },
-  {
-    "name": "Photosynthetic",
-    "description": "Gains energy from sunlight.",
-    "effects": {
-      "constitutionBonus": 1,
-      "workEfficiency": { "foraging": 1.2, "planting": 1.15 }
-    }
-  },
-  {
-    "name": "Nocturnal",
-    "description": "Active during night, sluggish during day.",
-    "effects": {
-      "dexterityBonus": 1,
-      "perceptionBonus": 1,
-      "workEfficiency": { "hunting": 1.2, "foraging": 1.1 }
-    }
-  },
-  {
-    "name": "Ancient",
-    "description": "Extremely long-lived, wise but frail.",
-    "effects": {
-      "intelligenceBonus": 6,
-      "constitutionPenalty": 2,
-      "workEfficiency": { "research": 1.4 }
-    }
-  },
-  {
-    "name": "Berserker Blood",
-    "description": "Enters rage states when threatened.",
-    "effects": {
-      "strengthBonus": 3,
-      "constitutionBonus": 1,
-      "intelligencePenalty": 1,
-      "workEfficiency": { "hunting": 1.3, "butchery": 1.2 }
-    }
-  },
-  // ── Mundane but Useful Traits ────────────────────────────────────────────
-  {
-    "name": "Industrious",
-    "description": "Naturally hardworking and efficient.",
-    "effects": {
-      "constitutionBonus": 1,
-      "workEfficiency": { "all": 1.15 }
-    }
-  },
-  {
-    "name": "Meticulous",
-    "description": "Extremely careful and precise in all tasks.",
-    "effects": {
-      "dexterityBonus": 2,
-      "intelligenceBonus": 1,
-      "workEfficiency": { "crafting": 1.3, "research": 1.15 }
-    }
-  },
-  {
-    "name": "Robust",
-    "description": "Naturally healthy and disease-resistant.",
-    "effects": {
-      "constitutionBonus": 3,
-      "workEfficiency": { "all": 1.05 }
-    }
-  },
-  {
-    "name": "Curious",
-    "description": "Insatiably curious about the world.",
-    "effects": {
-      "intelligenceBonus": 3,
-      "workEfficiency": { "research": 1.25 }
-    }
-  }
 ]
