@@ -1,5 +1,6 @@
 import { writable, derived } from 'svelte/store';
 import type { ActivityLogEntry } from '$lib/game/core/Events';
+import { activityLogger } from '$lib/game/dev/activityLogger';
 
 export const activityLog = writable<ActivityLogEntry[]>([]);
 
@@ -43,6 +44,8 @@ export function logActivity(entry: Omit<ActivityLogEntry, 'id' | 'timestamp'>) {
     // Keep only last 1000 entries to prevent memory issues
     return newLog.slice(-1000);
   });
+
+  activityLogger.log(fullEntry);
 }
 
 // Convenience functions for different activity types
@@ -132,8 +135,22 @@ export function logSystem(
 /** Active combat sessions being tracked for breakdown (key = "attackerId|defenderId"). */
 const activeCombatSessions = new Map<string, ActivityLogEntry>();
 
+/** Deduplication: last turn an entity logged a specific action type. */
+const lastEntityLogTurn = new Map<string, number>();
+
 function combatKey(a: string, b: string) {
   return a < b ? `${a}|${b}` : `${b}|${a}`;
+}
+
+/** Check if we should skip logging because the same entity logged the same action recently. */
+function shouldSkipLog(entityId: string, actionType: string, turn: number, cooldownTicks: number): boolean {
+  const key = `${entityId}:${actionType}`;
+  const last = lastEntityLogTurn.get(key);
+  if (last !== undefined && turn - last < cooldownTicks) {
+    return true;
+  }
+  lastEntityLogTurn.set(key, turn);
+  return false;
 }
 
 export function logCombatStart(
@@ -145,6 +162,10 @@ export function logCombatStart(
   focusX: number,
   focusY: number
 ) {
+  // Deduplicate: same combat pair within 60 ticks (1s) → skip
+  const pairKey = combatKey(attackerId, defenderId);
+  if (shouldSkipLog(pairKey, 'combat-start', turn, 60)) return;
+
   const key = combatKey(attackerId, defenderId);
   const entry: ActivityLogEntry = {
     turn,
@@ -214,6 +235,7 @@ export function logHuntStart(
   focusX: number,
   focusY: number
 ) {
+  if (shouldSkipLog(hunterId, 'hunt-start', turn, 60)) return;
   logActivity({
     turn,
     type: 'entity',
@@ -237,6 +259,7 @@ export function logFlee(
   focusX: number,
   focusY: number
 ) {
+  if (shouldSkipLog(entityId, 'flee', turn, 60)) return;
   const action = threatName
     ? `${entityName} is fleeing from ${threatName}`
     : `${entityName} is fleeing`;
@@ -266,6 +289,7 @@ export function logEntityStateChange(
   // Only log interesting state transitions
   const interesting = ['Attacking', 'Fleeing', 'Hunting', 'Eating', 'Sleeping', 'Startled', 'Exhausted'];
   if (!interesting.includes(toState)) return;
+  if (shouldSkipLog(entityId, `state-${toState}`, turn, 30)) return;
   logActivity({
     turn,
     type: 'entity',

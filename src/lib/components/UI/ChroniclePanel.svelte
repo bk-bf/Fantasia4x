@@ -125,7 +125,7 @@
 
   .entry {
     display: grid;
-    grid-template-columns: 28px 28px 1fr;
+    grid-template-columns: 36px 28px 1fr;
     gap: 3px;
     padding: 2px 6px;
     border-bottom: 1px solid var(--border);
@@ -140,12 +140,17 @@
     color: var(--text-dim);
     font-size: 9px;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .type {
     color: var(--accent-hi);
     font-size: 9px;
     text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .msg {
