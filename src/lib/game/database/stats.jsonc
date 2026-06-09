@@ -333,13 +333,6 @@
         "description": "smithing speed (× manipulation × sight)"
     },
     {
-        "id"         : "metalworking_yield",
-        "category"   : "work",
-        "primaryStat": "strength",
-        "formula"    : "(1.0 + (STR − 10) × 0.04 + (INT − 10) × 0.02) × manipulation",
-        "description": "ingots per smelt (× manipulation)"
-    },
-    {
         "id"         : "metalworking_quality",
         "category"   : "work",
         "primaryStat": "intelligence",
@@ -352,13 +345,6 @@
         "primaryStat": "dexterity",
         "formula"    : "(1.0 + (DEX − 10) × 0.05 + (INT − 10) × 0.02) × manipulation × sight",
         "description": "leatherwork speed (× manipulation × sight)"
-    },
-    {
-        "id"         : "leatherworking_yield",
-        "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "(1.0 + (DEX − 10) × 0.03) × manipulation",
-        "description": "leather per hide (× manipulation)"
     },
     {
         "id"         : "leatherworking_quality",
@@ -396,13 +382,6 @@
         "description": "research speed (× sight × consciousness)"
     },
     {
-        "id"         : "research_yield",
-        "category"   : "work",
-        "primaryStat": "intelligence",
-        "formula"    : "(1.0 + (INT − 10) × 0.04) × consciousness",
-        "description": "knowledge points per study (× consciousness)"
-    },
-    {
         "id"         : "research_quality",
         "category"   : "work",
         "primaryStat": "intelligence",
@@ -415,13 +394,6 @@
         "primaryStat": "strength",
         "formula"    : "(1.0 + (STR − 10) × 0.04 + (INT − 10) × 0.02) × manipulation × moving",
         "description": "construction speed (× manipulation × moving)"
-    },
-    {
-        "id"         : "construction_yield",
-        "category"   : "work",
-        "primaryStat": "strength",
-        "formula"    : "(1.0 + (STR − 10) × 0.05) × manipulation",
-        "description": "build progress per action (× manipulation)"
     },
     {
         "id"         : "construction_quality",
@@ -438,13 +410,6 @@
         "description": "brewing speed (× sight × manipulation)"
     },
     {
-        "id"         : "alchemy_yield",
-        "category"   : "work",
-        "primaryStat": "intelligence",
-        "formula"    : "(1.0 + (INT − 10) × 0.04) × manipulation",
-        "description": "potions per batch (× manipulation)"
-    },
-    {
         "id"         : "alchemy_quality",
         "category"   : "work",
         "primaryStat": "intelligence",
@@ -459,13 +424,6 @@
         "description": "cooking speed (× manipulation × sight)"
     },
     {
-        "id"         : "cooking_yield",
-        "category"   : "work",
-        "primaryStat": "intelligence",
-        "formula"    : "(1.0 + (INT − 10) × 0.03 + (DEX − 10) × 0.02) × manipulation",
-        "description": "meals per cook (× manipulation)"
-    },
-    {
         "id"         : "cooking_quality",
         "category"   : "work",
         "primaryStat": "intelligence",
@@ -478,13 +436,6 @@
         "primaryStat": "strength",
         "formula"    : "(1.0 + (STR − 10) × 0.04 + (CON − 10) × 0.02) × moving × manipulation",
         "description": "hauling speed (× moving × manipulation)"
-    },
-    {
-        "id"         : "hauling_yield",
-        "category"   : "work",
-        "primaryStat": "strength",
-        "formula"    : "(1.0 + (STR − 10) × 0.05) × manipulation",
-        "description": "carry weight (× manipulation)"
     },
     {
         "id"         : "hauling_quality",

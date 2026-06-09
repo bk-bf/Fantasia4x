@@ -407,7 +407,7 @@ export class GameEngineImpl implements GameEngine {
 				this.gameState = entityService.stepHunger(this.gameState!);
 				this.gameState = entityService.removeDead(this.gameState!);
 			});
-		this.debugLogPawns();
+			this.debugLogPawns();
 
 			this.lastTurnProcessed = this.gameState.turn;
 			t('mgrUpdate', () => this.gameStateManager!.updateState(this.gameState!));

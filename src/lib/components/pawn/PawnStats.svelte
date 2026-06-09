@@ -66,12 +66,7 @@
 
     // ── Phase 0: Compute environmental light at pawn's position (on-demand) ──
     const lightMult = pawn.position
-      ? computeTileLightLevel(
-          gameState.turn,
-          gameState.buildings,
-          pawn.position.x,
-          pawn.position.y
-        )
+      ? computeTileLightLevel(gameState.turn, gameState.buildings, pawn.position.x, pawn.position.y)
       : 1.0;
 
     // ── Phase 1: Pre-compute body capacities (0–1 multipliers from limb health) ──
