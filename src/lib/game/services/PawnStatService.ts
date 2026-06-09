@@ -94,10 +94,10 @@ function calculateCapacityValue(pawn: Pawn, capacityId: string, capacities: Reco
 
     switch (capacityId) {
         case 'consciousness': {
-            const brain = organMissing('head', 'brain') ? 0.0 : organH('head', 'brain') / 30;
-            const heart = organMissing('torso', 'heart') ? 0.0 : organH('torso', 'heart') / 20;
-            const leftLung = organMissing('torso', 'leftLung') ? 0.0 : organH('torso', 'leftLung') / 30;
-            const rightLung = organMissing('torso', 'rightLung') ? 0.0 : organH('torso', 'rightLung') / 30;
+            const brain = organMissing('head', 'brain') ? 0.0 : organH('head', 'brain') / 100;
+            const heart = organMissing('torso', 'heart') ? 0.0 : organH('torso', 'heart') / 100;
+            const leftLung = organMissing('torso', 'leftLung') ? 0.0 : organH('torso', 'leftLung') / 100;
+            const rightLung = organMissing('torso', 'rightLung') ? 0.0 : organH('torso', 'rightLung') / 100;
             const avgLung = (leftLung + rightLung) / 2;
             const baseCon = brain * 0.50 + heart * 0.15 + avgLung * 0.10 + 0.10;
             const sightCap = capacities.sight ?? 1;
@@ -120,8 +120,8 @@ function calculateCapacityValue(pawn: Pawn, capacityId: string, capacities: Reco
             break;
         }
         case 'sight': {
-            const leftEye = organMissing('head', 'leftEye') ? 0.0 : organH('head', 'leftEye') / 10;
-            const rightEye = organMissing('head', 'rightEye') ? 0.0 : organH('head', 'rightEye') / 10;
+            const leftEye = organMissing('head', 'leftEye') ? 0.0 : organH('head', 'leftEye') / 100;
+            const rightEye = organMissing('head', 'rightEye') ? 0.0 : organH('head', 'rightEye') / 100;
             const minEye = Math.min(leftEye, rightEye);
             const avgEye = (leftEye + rightEye) / 2;
             value = minEye * 0.40 + avgEye * 0.60 + 0.05;
@@ -136,40 +136,40 @@ function calculateCapacityValue(pawn: Pawn, capacityId: string, capacities: Reco
             break;
         }
         case 'blood_pumping': {
-            const heart = organMissing('torso', 'heart') ? 0.0 : organH('torso', 'heart') / 20;
+            const heart = organMissing('torso', 'heart') ? 0.0 : organH('torso', 'heart') / 100;
             value = heart * 0.90 + 0.10;
             break;
         }
         case 'blood_filtration': {
-            const leftK = organMissing('torso', 'leftKidney') ? 0.0 : organH('torso', 'leftKidney') / 15;
-            const rightK = organMissing('torso', 'rightKidney') ? 0.0 : organH('torso', 'rightKidney') / 15;
+            const leftK = organMissing('torso', 'leftKidney') ? 0.0 : organH('torso', 'leftKidney') / 100;
+            const rightK = organMissing('torso', 'rightKidney') ? 0.0 : organH('torso', 'rightKidney') / 100;
             const minK = Math.min(leftK, rightK);
             const avgK = (leftK + rightK) / 2;
             value = minK * 0.40 + avgK * 0.60;
             break;
         }
         case 'breathing': {
-            const leftL = organMissing('torso', 'leftLung') ? 0.0 : organH('torso', 'leftLung') / 30;
-            const rightL = organMissing('torso', 'rightLung') ? 0.0 : organH('torso', 'rightLung') / 30;
+            const leftL = organMissing('torso', 'leftLung') ? 0.0 : organH('torso', 'leftLung') / 100;
+            const rightL = organMissing('torso', 'rightLung') ? 0.0 : organH('torso', 'rightLung') / 100;
             const minL = Math.min(leftL, rightL);
             const avgL = (leftL + rightL) / 2;
             value = minL * 0.50 + avgL * 0.50 + 0.05;
             break;
         }
         case 'digestion': {
-            const stomach = organMissing('torso', 'stomach') ? 0.0 : organH('torso', 'stomach') / 20;
-            const liver = organMissing('torso', 'liver') ? 0.0 : organH('torso', 'liver') / 25;
+            const stomach = organMissing('torso', 'stomach') ? 0.0 : organH('torso', 'stomach') / 100;
+            const liver = organMissing('torso', 'liver') ? 0.0 : organH('torso', 'liver') / 100;
             value = stomach * 0.60 + liver * 0.40;
             break;
         }
         case 'talking': {
-            const jaw = organMissing('head', 'jaw') ? 0.0 : organH('head', 'jaw') / 25;
+            const jaw = organMissing('head', 'jaw') ? 0.0 : organH('head', 'jaw') / 100;
             value = jaw * 0.90 + 0.10;
             break;
         }
         case 'hearing': {
-            const leftE = organMissing('head', 'leftEar') ? 0.0 : organH('head', 'leftEar') / 10;
-            const rightE = organMissing('head', 'rightEar') ? 0.0 : organH('head', 'rightEar') / 10;
+            const leftE = organMissing('head', 'leftEar') ? 0.0 : organH('head', 'leftEar') / 100;
+            const rightE = organMissing('head', 'rightEar') ? 0.0 : organH('head', 'rightEar') / 100;
             const minE = Math.min(leftE, rightE);
             const avgE = (leftE + rightE) / 2;
             value = minE * 0.30 + avgE * 0.70 + 0.15;

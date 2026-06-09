@@ -83,14 +83,13 @@
   }
 
   // Tab state
-  type PawnTab = 'status' | 'attributes' | 'gear' | 'abilities';
+  type PawnTab = 'status' | 'attributes' | 'gear';
   let activeTab: PawnTab = 'status';
 
   const TABS: { id: PawnTab; label: string }[] = [
     { id: 'status', label: 'STATUS' },
     { id: 'attributes', label: 'ATTRIBUTES' },
-    { id: 'gear', label: 'GEAR' },
-    { id: 'abilities', label: 'ABILITIES' }
+    { id: 'gear', label: 'GEAR' }
   ];
 </script>
 
@@ -134,8 +133,6 @@
       {:else if activeTab === 'gear'}
         <PawnEquipment pawn={selectedPawn} />
         <PawnInventory pawn={selectedPawn} />
-      {:else if activeTab === 'abilities'}
-        <PawnStats pawn={selectedPawn} gameState={$gameState} />
       {/if}
     </div>
   {:else}
@@ -168,7 +165,7 @@
     justify-content: space-between;
   }
 
-  /* ── Section tabs (STATUS / ATTRIBUTES / GEAR / ABILITIES) ── */
+  /* ── Section tabs (STATUS / ATTRIBUTES / GEAR) ── */
   /* Underline-indicator style — reads as chapter navigation, not
      item selection. Visually separated from the pawn selector below. */
   .pawn-tabs {
