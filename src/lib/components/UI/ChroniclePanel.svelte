@@ -67,6 +67,22 @@
     if (t.knockdown) s += `, ${t.defenderName} is knocked down`;
     return s;
   }
+
+  function fullLogLine(entry: ActivityLogEntry): string {
+    const parts: string[] = [];
+    parts.push(`[${abbr(entry)}]`);
+    parts.push(`T${entry.turn}`);
+    if (entry.severity) parts.push(`(${entry.severity})`);
+    if (entry.actor) parts.push(`actor: ${entry.actor}`);
+    parts.push(`action: ${entry.action}`);
+    if (entry.target) parts.push(`target: ${entry.target}`);
+    if (entry.result) parts.push(`result: ${entry.result}`);
+    if (entry.location) parts.push(`loc: ${entry.location}`);
+    if (entry.focusX !== undefined && entry.focusY !== undefined) {
+      parts.push(`pos: (${entry.focusX}, ${entry.focusY})`);
+    }
+    return parts.join(' | ');
+  }
 </script>
 
 <aside class="panel">
@@ -82,6 +98,7 @@
             ? 'clickable'
             : ''}"
           class:expanded={expandedId === entry.id}
+          title={fullLogLine(entry)}
           on:click={() => handleClick(entry)}
           role="button"
           tabindex="0"
@@ -91,7 +108,7 @@
           <span class="type">{abbr(entry)}</span>
           <span class="msg">{entry.action}{entry.result ? ' · ' + entry.result : ''}</span>
         </div>
-        {#if expandedId === entry.id && entry.combatBreakdown}
+        {#if expandedId === entry.id && entry.combatBreakdown && entry.combatBreakdown.length > 0}
           <div class="combat-breakdown">
             {#each entry.combatBreakdown as turn}
               <div class="turn-line">{formatCombatTurn(turn)}</div>

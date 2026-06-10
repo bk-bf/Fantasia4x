@@ -602,7 +602,7 @@ class EntityServiceImpl {
         // Aggressive mobs prioritise attacking pawns over feeding.
         // Non-aggressive (passive/neutral) hostile mobs will hunt when hungry.
         // Hunger check runs BEFORE sleep so mobs eat before resting.
-        const canHunt = def.diet !== 'herbivore';
+        const canHunt = def.diet === 'carnivore';
         if (mob.state === 'Hunting' || mob.state === 'Eating') {
             // Snap back to aggro if a pawn enters vision while aggressive.
             if (inVision && aggressive) {
@@ -736,7 +736,7 @@ class EntityServiceImpl {
                 if (regenStamina >= EXHAUST_EXIT_STAMINA) {
                     return { ...mob, state: 'Wander', stateSince: turn, path: [], stamina: regenStamina };
                 }
-                return { ...this.wanderStep(mob, def, state), stamina: regenStamina }; // slow drift, vulnerable
+                return { ...mob, path: [], stamina: regenStamina }; // stay still while recovering
             }
             case 'Sleeping': {
                 // Woken by a pawn entering vision.
@@ -803,7 +803,7 @@ class EntityServiceImpl {
                 mob.state !== 'Sleeping'
             ) {
                 const canForage = def.diet !== 'carnivore';
-                const canHunt = def.diet !== 'herbivore';
+                const canHunt = def.diet === 'carnivore';
                 // Check hunt cooldown before entering Hunting state.
                 const huntCooldownExpired = !mob.huntCooldownUntil || turn >= mob.huntCooldownUntil;
                 if (canForage) return { ...mob, state: 'Foraging', stateSince: turn, path: [] };
@@ -881,7 +881,7 @@ class EntityServiceImpl {
                 if (regenStamina >= EXHAUST_EXIT_STAMINA) {
                     return { ...mob, state: 'Grazing', stateSince: turn, path: [], stamina: regenStamina };
                 }
-                return { ...this.wanderStep(mob, def, state), stamina: regenStamina }; // slow drift, vulnerable
+                return { ...mob, path: [], stamina: regenStamina }; // stay still while recovering
             }
             case 'Sleeping': {
                 // Woken by any threat — bolt immediately.

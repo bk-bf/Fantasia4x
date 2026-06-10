@@ -34,7 +34,8 @@ function formatEntry(entry: unknown): string {
     const target = typeof e.target === 'string' ? ` → ${e.target}` : '';
     const result = typeof e.result === 'string' && e.result.length > 0 ? ` | ${e.result}` : '';
     const severity = typeof e.severity === 'string' ? `(${e.severity})` : '';
-    const ts = new Date().toISOString();
+    // Use the entry's own timestamp (set client-side) so logs align with gameLogger.
+    const ts = typeof e.timestamp === 'string' ? e.timestamp : new Date().toISOString();
     return `${ts} ${turn} ${type} ${severity} ${actor}: ${action}${target}${result}`;
 }
 
