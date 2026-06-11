@@ -14,6 +14,13 @@
     warn?: boolean;
   }
 
+  export interface EntityButton {
+    label: string;
+    onClick: () => void;
+    /** Highlighted/active state (e.g. UNFOLLOW, DRAFTED). */
+    active?: boolean;
+  }
+
   export interface SelectedEntityModel {
     /** Display name shown in the header. */
     name: string;
@@ -35,16 +42,10 @@
     note?: string;
     /** Map position footer. */
     pos?: { x: number; y: number };
-    /** Draft mode toggle — undefined = not a pawn / no draft support. */
-    drafted?: boolean;
-    /** Called when the draft button is clicked. */
-    onDraftToggle?: () => void;
-    /** Whether the camera is currently following this entity. undefined = not supported. */
-    following?: boolean;
-    /** Called when the follow button is clicked. */
-    onFollowToggle?: () => void;
-    /** Called when the view-tab button is clicked (jumps to pawns/entities screen). */
-    onViewTab?: () => void;
+    /** Action buttons shown in a 3-column grid. Only rendered on selected cards. */
+    buttons?: EntityButton[];
+    /** Called when a non-selected hover card is clicked (to select the entity). */
+    onSelect?: () => void;
   }
 </script>
 
@@ -57,62 +58,40 @@
   }
 </script>
 
+<!--
+  Always stop mousedown/mouseup from reaching the canvas so canvas drag/click
+  handlers never fire when the user interacts with any HUD card (fixes the
+  FOLLOW/UNFOLLOW glitch that deselected the pawn via handleTileClick).
+  Hover cards use onSelect to forward the "select entity" action instead.
+-->
 <div
   class="tile-hud tile-hud--pawn"
   class:tile-hud--selected={model.selected}
-  onmousedown={(e) => model.selected && e.stopPropagation()}
-  onmouseup={(e) => model.selected && e.stopPropagation()}
-  onclick={(e) => model.selected && e.stopPropagation()}
+  onmousedown={(e) => { e.stopPropagation(); if (!model.selected) model.onSelect?.(); }}
+  onmouseup={(e) => e.stopPropagation()}
+  onclick={(e) => e.stopPropagation()}
 >
   <div class="pawn-header">
     <span class="pawn-name">{model.name}</span>
     {#if model.status}<span class="pawn-state">[{model.status}]</span>{/if}
     {#if model.dismissable}<span class="pawn-dismiss" title="Press Esc to deselect">◈</span>{/if}
-    {#if model.onViewTab}
-      <button
-        class="hud-btn"
-        onmousedown={(e) => e.stopPropagation()}
-        onmouseup={(e) => e.stopPropagation()}
-        onclick={(e) => {
-          e.stopPropagation();
-          model.onViewTab?.();
-        }}
-        title="Open in character screen"
-      >
-        VIEW
-      </button>
-    {/if}
-    {#if model.following !== undefined && model.onFollowToggle}
-      <button
-        class="hud-btn"
-        class:hud-btn--active={model.following}
-        onmousedown={(e) => e.stopPropagation()}
-        onmouseup={(e) => e.stopPropagation()}
-        onclick={(e) => {
-          e.stopPropagation();
-          model.onFollowToggle?.();
-        }}
-        title={model.following ? 'Stop following' : 'Follow with camera'}
-      >
-        {model.following ? 'UNFOLLOW' : 'FOLLOW'}
-      </button>
-    {/if}
-    {#if model.drafted !== undefined && model.onDraftToggle}
-      <button
-        class="hud-btn"
-        class:hud-btn--active={model.drafted}
-        onmousedown={(e) => e.stopPropagation()}
-        onmouseup={(e) => e.stopPropagation()}
-        onclick={(e) => {
-          e.stopPropagation();
-          model.onDraftToggle?.();
-        }}
-        title={model.drafted ? 'Click to undraft pawn' : 'Click to draft pawn'}
-      >
-        {model.drafted ? 'DRAFTED' : 'DRAFT'}
-      </button>
-    {/if}
   </div>
+
+  {#if model.buttons && model.buttons.length > 0}
+    <div class="btn-grid">
+      {#each model.buttons as btn (btn.label)}
+        <button
+          class="hud-btn"
+          class:hud-btn--active={btn.active}
+          onmousedown={(e) => e.stopPropagation()}
+          onmouseup={(e) => e.stopPropagation()}
+          onclick={(e) => { e.stopPropagation(); btn.onClick(); }}
+        >
+          {btn.label}
+        </button>
+      {/each}
+    </div>
+  {/if}
 
   {#if model.stats && model.stats.length > 0}
     <div class="pawn-row">
@@ -186,6 +165,47 @@
     color: #7a6030;
     font-size: 9px;
   }
+  .pawn-dismiss {
+    margin-left: auto;
+    color: #886630;
+    font-size: 9px;
+  }
+  /* ── 3-column button grid ─────────────────────────────────────── */
+  .btn-grid {
+    display: grid;
+    grid-template-columns: repeat(3, max-content);
+    gap: 3px;
+    margin-bottom: 3px;
+  }
+  .hud-btn {
+    background: #2a1a0a;
+    border: 1px solid #6b4a2a;
+    color: #a07840;
+    font-family: 'Courier New', monospace;
+    font-size: 9px;
+    padding: 1px 5px;
+    cursor: pointer;
+    pointer-events: auto;
+    line-height: 1.3;
+    position: relative;
+    z-index: 20;
+    white-space: nowrap;
+  }
+  .hud-btn:hover {
+    border-color: #c8a060;
+    color: #c8a060;
+  }
+  .hud-btn--active {
+    background: #4a2010;
+    border-color: #ee8844;
+    color: #ee8844;
+  }
+  .hud-btn--active:hover {
+    background: #5a2814;
+    border-color: #ffaa66;
+    color: #ffaa66;
+  }
+  /* ── Stats / bars ─────────────────────────────────────────────── */
   .pawn-row {
     display: flex;
     gap: 6px;
@@ -226,10 +246,6 @@
     color: #c08040;
     min-width: 24px;
   }
-  .bar-warn .bar-track,
-  .bar-warn .bar-val {
-    color: #ee8844;
-  }
   .bar-warn {
     color: #ee8844;
   }
@@ -253,38 +269,6 @@
   }
   .tile-hud--selected .pawn-state {
     color: #c0a040;
-  }
-  .pawn-dismiss {
-    margin-left: auto;
-    color: #886630;
-    font-size: 9px;
-  }
-  .hud-btn {
-    background: #2a1a0a;
-    border: 1px solid #6b4a2a;
-    color: #a07840;
-    font-family: 'Courier New', monospace;
-    font-size: 9px;
-    padding: 1px 5px;
-    cursor: pointer;
-    pointer-events: auto;
-    line-height: 1.3;
-    position: relative;
-    z-index: 20;
-  }
-  .hud-btn:hover {
-    border-color: #c8a060;
-    color: #c8a060;
-  }
-  .hud-btn--active {
-    background: #4a2010;
-    border-color: #ee8844;
-    color: #ee8844;
-  }
-  .hud-btn--active:hover {
-    background: #5a2814;
-    border-color: #ffaa66;
-    color: #ffaa66;
   }
   .pawn-idle {
     color: #887040;

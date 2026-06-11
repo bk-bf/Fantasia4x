@@ -10,6 +10,11 @@
   let productionTargets = $derived($gameState.productionTargets ?? []);
   let selectedPawn = $state<string | null>(null);
   let selected = $derived(pawns.find((p) => p.id === selectedPawn) ?? null);
+
+  $effect(() => {
+    const id = $uiState.selectedPawnId;
+    if (id) selectedPawn = id;
+  });
 </script>
 
 <div class="work-screen">

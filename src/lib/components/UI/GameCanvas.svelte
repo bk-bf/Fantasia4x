@@ -42,7 +42,8 @@
   import SelectedEntityCard from '$lib/components/UI/SelectedEntityCard.svelte';
   import type {
     SelectedEntityModel,
-    EntityBar
+    EntityBar,
+    EntityButton
   } from '$lib/components/UI/SelectedEntityCard.svelte';
   import itemsData from '$lib/game/database/items.jsonc';
 
@@ -407,6 +408,24 @@
     }));
   }
 
+  function toggleHuntMark(mobId: string) {
+    gameState.updateWithSave((state) => ({
+      ...state,
+      mobs: (state.mobs ?? []).map((m) =>
+        m.id === mobId ? { ...m, markedForHunt: !m.markedForHunt } : m
+      )
+    }));
+  }
+
+  function toggleMobMark(mobId: string) {
+    gameState.updateWithSave((state) => ({
+      ...state,
+      mobs: (state.mobs ?? []).map((m) =>
+        m.id === mobId ? { ...m, marked: !m.marked } : m
+      )
+    }));
+  }
+
   function buildPawnCard(pawn: Pawn, selected: boolean): SelectedEntityModel {
     const bars: EntityBar[] = [
       { label: 'HUNGER', value: pawn.needs.hunger, warn: pawn.needs.hunger > 60 },
@@ -447,16 +466,47 @@
         : { text: '→ Idle', idle: true },
       progressBar: pawn.activeJob ? jobProgressBar(pawn.activeJob.progress ?? 0) : undefined,
       pos: selected ? (pawn.position ?? undefined) : undefined,
-      drafted: pawn.drafted ?? false,
-      onDraftToggle: selected ? () => toggleDraft(pawn.id) : undefined,
-      following: selected ? cameraFollowPawnId === pawn.id : undefined,
-      onFollowToggle: selected
-        ? () => uiState.setFollowPawn(cameraFollowPawnId === pawn.id ? null : pawn.id)
+      buttons: selected
+        ? ([
+            {
+              label: 'VIEW',
+              onClick: () => {
+                uiState.selectPawn(pawn.id);
+                uiState.setScreen('pawns');
+              }
+            },
+            {
+              label: cameraFollowPawnId === pawn.id ? 'UNFOLLOW' : 'FOLLOW',
+              active: cameraFollowPawnId === pawn.id,
+              onClick: () =>
+                uiState.setFollowPawn(cameraFollowPawnId === pawn.id ? null : pawn.id)
+            },
+            {
+              label: pawn.drafted ? 'DRAFTED' : 'DRAFT',
+              active: pawn.drafted ?? false,
+              onClick: () => toggleDraft(pawn.id)
+            },
+            {
+              label: 'WORK',
+              onClick: () => {
+                uiState.selectPawn(pawn.id);
+                uiState.setScreen('work');
+              }
+            },
+            {
+              label: 'GEAR',
+              onClick: () => {
+                uiState.selectPawn(pawn.id);
+                uiState.setPawnTab('gear');
+                uiState.setScreen('pawns');
+              }
+            }
+          ] satisfies EntityButton[])
         : undefined,
-      onViewTab: selected
+      onSelect: !selected
         ? () => {
             uiState.selectPawn(pawn.id);
-            uiState.setScreen('pawns');
+            uiState.selectMob(null);
           }
         : undefined
     };
@@ -509,14 +559,37 @@
         def.tameable ? ' · tameable' : ''
       }`,
       pos: selected ? { x: mob.x, y: mob.y } : undefined,
-      following: selected ? cameraFollowMobId === mob.id : undefined,
-      onFollowToggle: selected
-        ? () => uiState.setFollowMob(cameraFollowMobId === mob.id ? null : mob.id)
+      buttons: selected
+        ? ([
+            {
+              label: 'VIEW',
+              onClick: () => {
+                uiState.selectMob(mob.id);
+                uiState.setScreen('entities');
+              }
+            },
+            {
+              label: cameraFollowMobId === mob.id ? 'UNFOLLOW' : 'FOLLOW',
+              active: cameraFollowMobId === mob.id,
+              onClick: () =>
+                uiState.setFollowMob(cameraFollowMobId === mob.id ? null : mob.id)
+            },
+            {
+              label: mob.markedForHunt ? 'UNQUEUE' : 'HUNT',
+              active: mob.markedForHunt ?? false,
+              onClick: () => toggleHuntMark(mob.id)
+            },
+            {
+              label: mob.marked ? 'MARKED' : 'MARK',
+              active: mob.marked ?? false,
+              onClick: () => toggleMobMark(mob.id)
+            }
+          ] satisfies EntityButton[])
         : undefined,
-      onViewTab: selected
+      onSelect: !selected
         ? () => {
             uiState.selectMob(mob.id);
-            uiState.setScreen('entities');
+            uiState.selectPawn(null);
           }
         : undefined
     };
@@ -3173,10 +3246,10 @@
     pointer-events: all;
   }
   .panel-actions {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(3, max-content);
     gap: 3px;
     margin-top: 4px;
-    flex-wrap: wrap;
   }
   /* bright gold text inside selected building/resource cards */
   .tile-hud--selected-building .bld-name,

@@ -312,6 +312,10 @@ export interface Mob {
 	attackCooldown?: number;
 	/** Remaining turns for temporary status effects (e.g. knockdown). */
 	statusEffectDurations?: Record<string, number>;
+	/** Player has queued this mob for hunting — drafted pawns with hunting work will prioritise it. */
+	markedForHunt?: boolean;
+	/** Player has tagged this mob for attention (generic marker, not task-specific). */
+	marked?: boolean;
 }
 
 /** An animal tamed and bound to an owning pawn (Phase C+). */

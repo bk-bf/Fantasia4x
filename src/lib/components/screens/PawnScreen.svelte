@@ -62,12 +62,16 @@
     }
   });
 
-  // Sync selection when navigating here from the map canvas (VIEW button)
+  // Sync selection and active tab when navigating here from the map canvas (VIEW/GEAR buttons)
   const unsubscribeUI = uiState.subscribe((ui) => {
     if (ui.selectedPawnId && ui.selectedPawnId !== selectedPawnId) {
       selectedPawnId = ui.selectedPawnId;
       const pawn = pawns.find((p) => p.id === ui.selectedPawnId);
       if (pawn) selectedPawn = pawn;
+    }
+    if (ui.pawnScreenTab) {
+      activeTab = ui.pawnScreenTab;
+      uiState.setPawnTab(null);
     }
   });
 

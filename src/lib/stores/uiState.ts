@@ -35,6 +35,8 @@ interface UIState {
   cameraFollowMobId: string | null;
   /** Blueprint placement mode: id of the building being placed, null = inactive. */
   blueprintBuildingId: string | null;
+  /** Requests the pawn screen to open a specific tab. Cleared after reading. */
+  pawnScreenTab: 'status' | 'attributes' | 'gear' | null;
 }
 
 function createUIState() {
@@ -51,7 +53,8 @@ function createUIState() {
     cameraFollowPawnId: null,
     selectedMobId: null,
     cameraFollowMobId: null,
-    blueprintBuildingId: null
+    blueprintBuildingId: null,
+    pawnScreenTab: null
   };
 
   const { subscribe, set, update } = writable(initialState);
@@ -108,6 +111,9 @@ function createUIState() {
 
     setFollowMob: (id: string | null) =>
       update((state) => ({ ...state, cameraFollowMobId: id, cameraFollowPawnId: null })),
+
+    setPawnTab: (tab: 'status' | 'attributes' | 'gear' | null) =>
+      update((state) => ({ ...state, pawnScreenTab: tab })),
 
     activateBlueprint: (buildingId: string) =>
       update((state) => ({
