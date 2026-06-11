@@ -34,6 +34,8 @@ Core data (src/lib/game/core/)         ← types, static databases, GameStateMan
 
 **Data files are definitions only**: `src/lib/game/core/` contains static arrays/objects. Logic belongs in services.
 
+**New core data needs a stable id**: entries added to `Items.ts`, `Buildings.ts`, `Research.ts`, or `Work.ts` need a stable `kebab-case` string `id`. Unlock conditions reference `researchId` strings from `Research.ts`; costs reference resource `id` strings from `types.ts`.
+
 **Component size**: 200 line limit per component. Extract sub-components when exceeded.
 
 **Svelte 5 runes**: use `$state`, `$derived`, `$effect` — not legacy `$:` syntax.
@@ -54,7 +56,10 @@ Core data (src/lib/game/core/)         ← types, static databases, GameStateMan
 ```bash
 ./dev.sh                  # start dev server on http://localhost:5173 (or report existing)
 pnpm build                # production build
+pnpm check                # TypeScript + Svelte type check (svelte-check)
 pnpm lint                 # ESLint + Prettier check
+pnpm format               # Prettier write
+pnpm test                 # Vitest unit/regression suite (test:watch for watch mode)
 pnpm add:wasm             # rebuild spatial-core WASM → src/lib/spatial-core-pkg/
 ```
 
