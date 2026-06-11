@@ -7,7 +7,7 @@ const FORAGING_RESOURCES = new Set([
   'bark',
   'surface_stone',
   'clay_lump',
-  'herbs',
+  'wild_sage',
   'berries',
   'mushrooms',
   'fiber'

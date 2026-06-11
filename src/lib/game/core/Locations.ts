@@ -228,7 +228,7 @@ export const LOCATION_TEMPLATES: LocationTemplate[] = [
     discovered: false,
 
     availableResources: {
-      tier0: ['sandstone', 'limestone', 'flint', 'pine_wood', 'fir_wood', 'herbs', 'plant_fiber'],
+      tier0: ['sandstone', 'limestone', 'flint', 'pine_wood', 'fir_wood', 'wild_sage', 'plant_fiber'],
       tier1: [],
       tier2: []
     },
@@ -274,8 +274,8 @@ export const LOCATION_TEMPLATES: LocationTemplate[] = [
         renewalType: 'slow',
         depletion: 1
       },
-      herbs: {
-        id: 'herbs',
+      wild_sage: {
+        id: 'wild_sage',
         currentAmountRange: [25, 60],
         maxAmountRange: [40, 80],
         renewalRate: 3,

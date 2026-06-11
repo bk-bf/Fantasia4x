@@ -255,7 +255,7 @@
     },
     "materialRequirement": {
       "clay_pot": 2,
-      "herbs": 5
+      "wild_sage": 5
     },
     "canBypassWithLore": false,
     "unlocks": {
@@ -405,7 +405,7 @@
       "scholars_ink": 5
     },
     "materialRequirement": {
-      "herbs": 15,
+      "wild_sage": 15,
       "bronze_vessel": 3
     },
     "canBypassWithLore": false,

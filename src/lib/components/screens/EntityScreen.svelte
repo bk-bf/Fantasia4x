@@ -91,6 +91,7 @@
       <!-- Header -->
       <div class="table-hdr">
         <span class="col-name">ENTITY</span>
+        <span class="col-type">TYPE</span>
         <span class="col-blood">BLOOD</span>
         <span class="col-limb">WORST LIMB</span>
         <span class="col-pain">PAIN</span>
@@ -117,8 +118,10 @@
                 >{m.entityClass === 'mob' ? '✦' : '◆'}</span
               >
               <span class="ename">{def?.name ?? m.creatureId}</span>
-              <span class="etag {m.entityClass}">{m.entityClass === 'mob' ? 'H' : 'N'}</span>
             </span>
+            <span class="col-type col-type--{m.entityClass}"
+              >{m.entityClass === 'mob' ? 'hostile' : 'neutral'}</span
+            >
             <span class="col-blood" style="color:{bloodColor(bp)}">{bp}%</span>
             <span class="col-limb" style="color:{wl ? limbColor(wl.health) : 'var(--text-muted)'}">
               {wl ? `${wl.name} ${wl.health}%` : '—'}
@@ -247,11 +250,10 @@
     padding: 4px 8px 12px;
     display: flex;
     flex-direction: column;
-    gap: 1px;
   }
   .table-hdr {
     display: grid;
-    grid-template-columns: 2fr 1fr 2fr 1fr 1.2fr 1fr;
+    grid-template-columns: 2fr 1fr 1fr 2fr 1fr 1.2fr 1fr;
     gap: 6px;
     padding: 3px 6px;
     color: var(--text-muted);
@@ -262,15 +264,15 @@
   .table-row {
     display: flex;
     flex-direction: column;
-    border: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
     background: var(--bg-panel);
   }
   .table-row.expanded {
-    border-color: var(--border-hi);
+    border-bottom-color: var(--border-hi);
   }
   .row-main {
     display: grid;
-    grid-template-columns: 2fr 1fr 2fr 1fr 1.2fr 1fr;
+    grid-template-columns: 2fr 1fr 1fr 2fr 1fr 1.2fr 1fr;
     gap: 6px;
     padding: 3px 6px;
     align-items: baseline;
@@ -297,18 +299,16 @@
   .ename {
     color: var(--text);
   }
-  .etag {
-    font-size: 9px;
-    padding: 0 3px;
-    border: 1px solid var(--border);
+  .col-type {
+    font-size: 10px;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-muted);
   }
-  .etag.mob {
+  .col-type--mob {
     color: var(--neg);
-    border-color: var(--neg);
   }
-  .etag.animal {
+  .col-type--animal {
     color: var(--pos);
-    border-color: var(--pos);
   }
   .col-blood,
   .col-limb,
