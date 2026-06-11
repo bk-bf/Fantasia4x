@@ -1,0 +1,44 @@
+# Copilot context exclusions — reduce prompt token usage by excluding
+# large generated files, build artifacts, and binary assets.
+
+# Dependencies
+node_modules/
+
+# Build outputs
+.svelte-kit/
+dist/
+build/
+
+# Package manager lock files (very large, rarely useful for coding context)
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# Rust build artifacts (can be massive)
+spatial-core/target/
+
+# Compiled WASM output
+src/lib/spatial-core-pkg/
+*.wasm
+
+# Static assets (images, audio, fonts)
+static/tilesets/
+static/dev/
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.svg
+*.mp3
+*.wav
+*.ogg
+*.ttf
+*.woff
+*.woff2
+
+# Cache / generated markers
+CACHEDIR.TAG
+
+# Logs
+*.log
