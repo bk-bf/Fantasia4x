@@ -102,6 +102,7 @@
     if (!race) return false;
 
     const gameStateForCheck = {
+      seed: 0,
       pawns: Array(race.population).fill({}),
       maxPopulation,
       currentToolLevel,
@@ -132,7 +133,6 @@
       activeExplorationMissions: [],
       workAssignments: {},
       productionTargets: [],
-      currentJobIndex: {},
       pawnStats: {},
       stockpileZones: []
     };

@@ -21,7 +21,8 @@ import { buildPathfindingGrids } from './PathfinderService';
 import { calcMaxStamina, calcMaxBloodVolume } from '../entities/Pawns';
 import { createDefaultBodyParts } from '../systems/Combat';
 import { gameLogger } from '../dev/gameLogger';
-import { logHuntStart, logFlee, logEntityStateChange, logCombatStart, logCombatEnd } from '../../stores/Log';
+import { logHuntStart, logFlee, logEntityStateChange, logEntityDeath, logCombatStart, logCombatEnd } from '../../stores/Log';
+import { rng } from '../core/rng';
 
 /**
  * EntityService — ENTITIES_SPAWNING spec, Phase A.
@@ -64,12 +65,18 @@ const EXHAUST_STAMINA_REGEN_PER_SECOND = 3.0;
 const EXHAUST_EXIT_STAMINA = 30;
 
 // ── Hunger / fatigue tunables ──────────────────────────────────────────────────
-/** Hunger accrual per second for an omnivore at neutral condition. */
-const BASE_HUNGER_PER_SECOND = 0.54;
+/** Hunger accrual per second for an omnivore at neutral condition. Halved so the whole
+ *  starvation arc (hunger rise → collapse → death) spans ~a week of in-game time, not ~1 day. */
+const BASE_HUNGER_PER_SECOND = 0.27;
 /** Fatigue accrual per second at neutral condition. */
 const BASE_FATIGUE_PER_SECOND = 0.32;
-/** HP drained per second once hunger reaches 100 (starving). */
-const STARVATION_DAMAGE_PER_SECOND = 1;
+/** HP drained per second once hunger reaches 100 (starving). Greatly reduced so a starving
+ *  entity lingers (collapsed) for days rather than dying in under a minute. With ~50 HP this
+ *  is ~28 in-game minutes-of-real-time → several in-game days from full hunger to death. */
+const STARVATION_DAMAGE_PER_SECOND = 0.03;
+/** Hunger at which an entity collapses into an immobile, incapacitated state — it stops
+ *  fleeing/hunting/wandering and simply lies starving until it dies or (rarely) is relieved. */
+const STARVATION_COLLAPSE_HUNGER = 80;
 /** Hunger threshold at which an entity transitions to a feeding state. */
 const HUNGER_EAT_THRESHOLD = 50;
 /** Hunger threshold at which a feeding entity considers itself sated. */
@@ -127,8 +134,16 @@ class EntityServiceImpl {
         let hostile = 0;
         let neutral = 0;
 
-        for (let p = 0; p < packs; p++) {
-            const def = dayCreatures[Math.floor(Math.random() * dayCreatures.length)];
+        // Guarantee variety: attempt one pack of EACH distinct day creature first (shuffled),
+        // then fill any remaining slots at random. Without this, the seeded RNG could pick the
+        // same few creatures every time, so a species like wolf would "never spawn anymore".
+        const shuffled = [...dayCreatures].sort(() => rng.random() - 0.5);
+        const picks: CreatureDefinition[] = shuffled.slice(0, packs);
+        while (picks.length < packs) {
+            picks.push(dayCreatures[Math.floor(rng.random() * dayCreatures.length)]);
+        }
+
+        for (const def of picks) {
             if (def.entityClass === 'mob' && hostile >= MAX_HOSTILE) continue;
             if (def.entityClass === 'animal' && neutral >= MAX_NEUTRAL) continue;
 
@@ -136,7 +151,7 @@ class EntityServiceImpl {
             if (!origin) continue;
 
             const [packMin, packMax] = def.pack;
-            const packSize = packMin + Math.floor(Math.random() * (packMax - packMin + 1));
+            const packSize = packMin + Math.floor(rng.random() * (packMax - packMin + 1));
             for (let i = 0; i < packSize; i++) {
                 const tile =
                     i === 0 ? origin : (this.findNearbyWalkable(state, origin.x, origin.y) ?? origin);
@@ -158,7 +173,7 @@ class EntityServiceImpl {
         const mobs = state.mobs ?? [];
         const isNight = getAmbientLight(state.turn) < NIGHT_THRESHOLD;
         const chance = BASE_SPAWN_CHANCE * (isNight ? NIGHT_SPAWN_MULT : 1);
-        if (Math.random() > chance) return state;
+        if (rng.random() > chance) return state;
 
         const hostileCount = mobs.filter((m) => m.entityClass === 'mob' && m.state !== 'Corpse').length;
         const neutralCount = mobs.filter(
@@ -174,7 +189,7 @@ class EntityServiceImpl {
         if (!origin) return state;
 
         const [packMin, packMax] = def.pack;
-        const packSize = packMin + Math.floor(Math.random() * (packMax - packMin + 1));
+        const packSize = packMin + Math.floor(rng.random() * (packMax - packMin + 1));
         const newMobs: Mob[] = [];
         for (let i = 0; i < packSize; i++) {
             const tile =
@@ -188,7 +203,7 @@ class EntityServiceImpl {
     private pickSpawnCreature(isNight: boolean): CreatureDefinition | undefined {
         const pool = CREATURES.filter((c) => !c.nightOnly || isNight);
         if (pool.length === 0) return undefined;
-        return pool[Math.floor(Math.random() * pool.length)];
+        return pool[Math.floor(rng.random() * pool.length)];
     }
 
     private findSpawnTile(
@@ -203,15 +218,15 @@ class EntityServiceImpl {
         const pawnPositions = state.pawns.filter((p) => p.position).map((p) => p.position!);
 
         for (let attempt = 0; attempt < 40; attempt++) {
-            const x = EDGE_BUFFER + Math.floor(Math.random() * (w - 2 * EDGE_BUFFER));
-            const y = EDGE_BUFFER + Math.floor(Math.random() * (h - 2 * EDGE_BUFFER));
+            const x = EDGE_BUFFER + Math.floor(rng.random() * (w - 2 * EDGE_BUFFER));
+            const y = EDGE_BUFFER + Math.floor(rng.random() * (h - 2 * EDGE_BUFFER));
             const tile = map[y]?.[x];
             if (!tile || !tile.walkable) continue;
 
             const weight = def.biomeWeights[tile.terrainType] ?? 0;
             if (weight <= 0) continue;
             // Probabilistic accept by biome weight (max weight 1.2 → clamp).
-            if (Math.random() > Math.min(1, weight)) continue;
+            if (rng.random() > Math.min(1, weight)) continue;
 
             // Keep spawns away from the colony.
             const tooClose = pawnPositions.some(
@@ -226,6 +241,8 @@ class EntityServiceImpl {
 
     private makeMob(def: CreatureDefinition, x: number, y: number, turn: number): Mob {
         const initialState: MobState = def.behaviour === 'passive' ? 'Grazing' : 'Wander';
+        const sizeClass: 'large' | 'medium' | 'small' =
+            def.stats.str >= 14 ? 'large' : def.stats.str >= 6 ? 'medium' : 'small';
         const stats: EntityStats = {
             strength: def.stats.str,
             dexterity: def.stats.dex,
@@ -312,14 +329,16 @@ class EntityServiceImpl {
                 }
             ],
             // ── Combat & stat parity with Pawn ───────────────────────────────────────────
+            // CreatureDefinition has no explicit size; derive a size class from strength
+            // (bear str 22 → large, wolf 12 → medium, rabbit 1 → small).
             physicalTraits: {
-                height: def.size === 'large' ? 180 : def.size === 'medium' ? 140 : 80,
-                weight: def.size === 'large' ? 90 : def.size === 'medium' ? 50 : 20,
-                size: def.size ?? 'medium'
+                height: sizeClass === 'large' ? 180 : sizeClass === 'medium' ? 140 : 80,
+                weight: sizeClass === 'large' ? 90 : sizeClass === 'medium' ? 50 : 20,
+                size: sizeClass
             },
             injuries: [],
             pain: 0,
-            aggroRange: def.behaviour === 'hostile' ? 8 : 3,
+            aggroRange: def.behaviour === 'aggressive' ? 8 : 3,
             attackCooldown: 0,
             statusEffectDurations: {}
         };
@@ -409,7 +428,7 @@ class EntityServiceImpl {
                         (l) => !l.isMissing && l.id !== 'head' && l.id !== 'torso'
                     );
                     if (candidates.length > 0) {
-                        const hit = candidates[Math.floor(Math.random() * candidates.length)];
+                        const hit = candidates[Math.floor(rng.random() * candidates.length)];
                         const hitIdx = limbs.findIndex((l) => l.id === hit.id);
                         const limbDmg = dmg * 0.5;
                         const newLimbHealth = Math.max(0, hit.health - limbDmg);
@@ -472,6 +491,20 @@ class EntityServiceImpl {
                 ` path=${pathLen > 0 ? `${pathIdx}/${pathLen} end=(${mob.path![pathLen - 1].x},${mob.path![pathLen - 1].y})` : 'none'}` +
                 (mob.huntTargetId ? ` prey=${mob.huntTargetId.slice(-6)}` : '')
             );
+        }
+
+        // Starvation collapse: once hunger passes the collapse threshold the entity is
+        // incapacitated — it does NOT flee, hunt, or wander. It lies in place (path cleared)
+        // and slowly dies. This replaces the old behaviour where starvation HP-drain dropped
+        // health below the flee threshold and the entity confusingly "started fleeing".
+        if (mob.needs.hunger >= STARVATION_COLLAPSE_HUNGER) {
+            if (mob.state === 'Collapsed') return mob;
+            logEntityStateChange(mob.id, this.entityName(mob), mob.state, 'Collapsed', turn, mob.x, mob.y);
+            return { ...mob, state: 'Collapsed', stateSince: turn, path: [], huntTargetId: undefined, eatProgress: undefined };
+        }
+        // Recovered (e.g. fed): leave the collapsed state and resume normal behaviour.
+        if (mob.state === 'Collapsed') {
+            return { ...mob, state: 'Wander', stateSince: turn };
         }
 
         const nearest = this.nearestPawn(mob, pawns);
@@ -602,7 +635,9 @@ class EntityServiceImpl {
         // Aggressive mobs prioritise attacking pawns over feeding.
         // Non-aggressive (passive/neutral) hostile mobs will hunt when hungry.
         // Hunger check runs BEFORE sleep so mobs eat before resting.
-        const canHunt = def.diet === 'carnivore';
+        // Predators (incl. omnivore predators like goblins/bears) hunt prey & corpses —
+        // previously only strict carnivores could, so omnivore predators just starved.
+        const canHunt = def.predator || def.diet === 'carnivore';
         if (mob.state === 'Hunting' || mob.state === 'Eating') {
             // Snap back to aggro if a pawn enters vision while aggressive.
             if (inVision && aggressive) {
@@ -639,9 +674,8 @@ class EntityServiceImpl {
             canHunt &&
             mob.needs.hunger >= HUNGER_EAT_THRESHOLD &&
             mob.state !== 'Fleeing' &&
-            mob.state !== 'Sleeping' &&
-            mob.state !== 'Eating' &&
-            mob.state !== 'Hunting'
+            mob.state !== 'Sleeping'
+            // (Hunting/Eating already excluded by the early-return guard above)
         ) {
             const prey = this.findNearestPrey(mob, allMobs);
             if (prey) {
@@ -1332,6 +1366,7 @@ class EntityServiceImpl {
 
             // Death by blood loss.
             if (bloodVolume <= 0) {
+                logEntityDeath(mob.id, this.entityName(mob), 'blood_loss', turn, mob.x, mob.y);
                 return {
                     ...mob,
                     state: 'Corpse',
@@ -1348,6 +1383,7 @@ class EntityServiceImpl {
             if (limbs) {
                 for (const limb of limbs) {
                     if (limb.health <= 0 && (limb.id === 'head' || limb.id === 'torso')) {
+                        logEntityDeath(mob.id, this.entityName(mob), 'critical_limb', turn, mob.x, mob.y);
                         return {
                             ...mob,
                             state: 'Corpse',
@@ -1417,6 +1453,15 @@ class EntityServiceImpl {
         const finalized = kept.map((m) => {
             if (m.health <= 0 && m.state !== 'Corpse') {
                 changed = true;
+                // Attribute the death so the log says "died of …" rather than the old
+                // misfire where a starving entity "started fleeing" just before dying.
+                const cause =
+                    m.needs.hunger >= 95
+                        ? 'starvation'
+                        : (m.bloodVolume ?? 1) <= 0
+                          ? 'blood_loss'
+                          : 'injuries';
+                logEntityDeath(m.id, this.entityName(m), cause, state.turn, m.x, m.y);
                 return {
                     ...m,
                     state: 'Corpse' as MobState,
@@ -1450,7 +1495,7 @@ class EntityServiceImpl {
         // Still following a path — let it finish before picking the next step.
         if (mob.path && mob.path.length > 0 && (mob.pathIndex ?? 0) < mob.path.length) return mob;
         // Probabilistic idle: ~WANDER_MOVES_PER_SECOND steps/sec on average.
-        if (Math.random() >= WANDER_MOVES_PER_SECOND * SECONDS_PER_TICK) return mob;
+        if (rng.random() >= WANDER_MOVES_PER_SECOND * SECONDS_PER_TICK) return mob;
         const tile = this.findNearbyWalkable(state, mob.x, mob.y, mob.homeX, mob.homeY, mob.id);
         if (!tile) return mob;
         return { ...mob, path: [tile], pathIndex: 0, nextCellCostLeft: undefined };
@@ -1619,7 +1664,7 @@ class EntityServiceImpl {
             { dx: 1, dy: 1 }
         ];
         for (let i = dirs.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
+            const j = Math.floor(rng.random() * (i + 1));
             [dirs[i], dirs[j]] = [dirs[j], dirs[i]];
         }
         for (const { dx, dy } of dirs) {

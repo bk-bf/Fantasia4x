@@ -840,6 +840,7 @@
    */
   function updateWorldEffectOverlays() {
     const W = container?.clientWidth ?? 0;
+    const H = container?.clientHeight ?? 0;
     const tW = tileWidth;
     const tH = tileHeight;
 
@@ -971,12 +972,23 @@
         }
         // For attack orders, append the live target position (path ends at adjacent tile).
         if (target.type === 'attack') {
-          const targetEntity =
-            target.targetType === 'mob'
-              ? mobs.find((m) => m.id === target.targetId)
-              : pawns.find((pp) => pp.id === target.targetId);
-          const tx = targetEntity?.x ?? targetEntity?.position?.x ?? p.position!.x;
-          const ty = targetEntity?.y ?? targetEntity?.position?.y ?? p.position!.y;
+          // Mobs carry x/y directly; pawns carry a position object. Resolve per target kind
+          // so the union (Pawn | Mob) is narrowed before reading the coordinate.
+          let tx = p.position!.x;
+          let ty = p.position!.y;
+          if (target.targetType === 'mob') {
+            const m = mobs.find((mm) => mm.id === target.targetId);
+            if (m) {
+              tx = m.x;
+              ty = m.y;
+            }
+          } else {
+            const pp = pawns.find((q) => q.id === target.targetId);
+            if (pp?.position) {
+              tx = pp.position.x;
+              ty = pp.position.y;
+            }
+          }
           points.push({ x: (tx - viewX + 0.5) * tW, y: (ty - viewY + 0.5) * tH });
         }
         return { id: `draft-${p.id}`, points };

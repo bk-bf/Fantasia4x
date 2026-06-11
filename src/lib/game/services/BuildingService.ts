@@ -2,6 +2,7 @@ import type { Building, GameState, PlacedBuilding } from '../core/types';
 import buildingsData from '../database/buildings.jsonc';
 import { resolveCharSpans } from '../core/Terrains';
 import type { CharSpan } from '../core/Terrains';
+import { rng } from '../core/rng';
 
 const AVAILABLE_BUILDINGS = buildingsData as unknown as Building[];
 
@@ -276,7 +277,7 @@ export class BuildingServiceImpl implements BuildingService {
         if (entry.turnsRemaining <= 0) {
           // Building completed — push into buildings[] as a complete PlacedBuilding
           const placed: PlacedBuilding = {
-            id: `${entry.building.id}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            id: `${entry.building.id}-${Date.now()}-${rng.random().toString(36).slice(2, 7)}`,
             type: entry.building.id,
             x: 0, // abstract queue buildings have no tile coords
             y: 0,

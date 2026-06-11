@@ -1,5 +1,6 @@
 import eventData from '../database/events.jsonc';
 import { ticksFromSeconds } from './time';
+import { rng } from './rng';
 export interface EventConsequence {
   id: string;
   description: string;
@@ -151,7 +152,7 @@ export class EventSystem {
 
   generateEvent(gameState: any): { event: GameEvent; consequences: EventConsequence[] } | null {
     // Reduce frequency for more meaningful events (gap authored in in-game seconds)
-    if (gameState.turn - this.lastEventTurn < ticksFromSeconds(Math.floor(Math.random() * 3) + 2))
+    if (gameState.turn - this.lastEventTurn < ticksFromSeconds(Math.floor(rng.random() * 3) + 2))
       return null;
 
     const availableEvents = this.getAvailableEvents(gameState);
@@ -164,7 +165,7 @@ export class EventSystem {
     }));
 
     const totalWeight = weightedEvents.reduce((sum, item) => sum + item.adjustedWeight, 0);
-    let random = Math.random() * totalWeight;
+    let random = rng.random() * totalWeight;
 
     for (const { event, adjustedWeight } of weightedEvents) {
       random -= adjustedWeight;
@@ -191,7 +192,7 @@ export class EventSystem {
     const rolledConsequences: EventConsequence[] = [];
 
     for (const consequence of event.consequences) {
-      const roll = Math.random();
+      const roll = rng.random();
       if (roll <= consequence.probability) {
         rolledConsequences.push(consequence);
       }
@@ -309,12 +310,12 @@ export class EventSystem {
         }
 
         // Injury and death chances
-        if (pawnEffect.effects.injuryChance && Math.random() < pawnEffect.effects.injuryChance) {
+        if (pawnEffect.effects.injuryChance && rng.random() < pawnEffect.effects.injuryChance) {
           // TODO: Add injury system
           pawn.state.health = Math.max(10, (pawn.state.health ?? 100) - 15);
         }
 
-        if (pawnEffect.effects.deathChance && Math.random() < pawnEffect.effects.deathChance) {
+        if (pawnEffect.effects.deathChance && rng.random() < pawnEffect.effects.deathChance) {
           // TODO: Handle pawn death via killPawn
           pawn.state.health = 0;
         }
@@ -325,7 +326,7 @@ export class EventSystem {
     if (consequence.effects.buildingEffects) {
       const buildingEffect = consequence.effects.buildingEffects;
 
-      if (buildingEffect.destroyChance && Math.random() < buildingEffect.destroyChance) {
+      if (buildingEffect.destroyChance && rng.random() < buildingEffect.destroyChance) {
         const targetBuilding = buildingEffect.targetBuilding || 'house';
         if (newState.buildingCounts[targetBuilding] > 0) {
           newState.buildingCounts[targetBuilding]--;
@@ -353,11 +354,11 @@ export class EventSystem {
   }
 
   private rollBetween(min: number, max: number): number {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
+    return Math.floor(rng.random() * (max - min + 1)) + min;
   }
 
   private getRandomPawns(pawns: any[], count: number): any[] {
-    const shuffled = [...pawns].sort(() => Math.random() - 0.5);
+    const shuffled = [...pawns].sort(() => rng.random() - 0.5);
     return shuffled.slice(0, Math.min(count, pawns.length));
   }
 

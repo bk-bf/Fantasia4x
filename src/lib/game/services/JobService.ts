@@ -25,8 +25,21 @@ import {
   absorbDropIfOnStockpileTile
 } from '../core/GameState';
 import { ticksFromSeconds } from '../core/time';
+import { rng } from '../core/rng';
 
 const ITEMS_DATABASE = itemsData as unknown as import('../core/types').Item[];
+
+/**
+ * Minimal shape needed to map a job to its labor work-category key. Both a full {@link Job}
+ * and a Pawn's looser `activeJob` (which can be a 'need' type) satisfy this, so the mapping
+ * accepts either without a cast.
+ */
+type WorkKeyJob = {
+  type: string;
+  targetX: number;
+  targetY: number;
+  resourceId?: string;
+};
 
 // ===== WORK CONSTANTS =====
 
@@ -254,7 +267,7 @@ class JobServiceImpl {
         if (exists) continue;
 
         jobs.push({
-          id: `harvest-${x}-${y}-${resourceId}-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
+          id: `harvest-${x}-${y}-${resourceId}-${Date.now()}-${rng.random().toString(36).slice(2, 5)}`,
           type: 'harvest',
           targetX: x,
           targetY: y,
@@ -493,7 +506,7 @@ class JobServiceImpl {
     const newDropped = [...(gs.droppedItems ?? [])];
     const newDropIds: string[] = [];
     for (const [dropResourceId, dropAmount] of yieldEntries) {
-      const id = `drop-${dropResourceId}-${job.targetX}-${job.targetY}-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`;
+      const id = `drop-${dropResourceId}-${job.targetX}-${job.targetY}-${Date.now()}-${rng.random().toString(36).slice(2, 5)}`;
       newDropped.push({
         id,
         resourceId: dropResourceId,
@@ -1049,14 +1062,14 @@ class JobServiceImpl {
   }
 
   /** Public accessor for work-category mapping (used by PawnStateMachine for stat wiring). */
-  getJobWorkCategory(job: Job, gs?: GameState): string {
+  getJobWorkCategory(job: WorkKeyJob, gs?: GameState): string {
     return this._jobTypeToWorkKey(job, gs);
   }
 
   // ------------------------------------------------------------------ //
 
   /** Map Job to the work category key used in WorkAssignment.laborSettings */
-  private _jobTypeToWorkKey(job: Job, gs?: GameState): string {
+  private _jobTypeToWorkKey(job: WorkKeyJob, gs?: GameState): string {
     switch (job.type) {
       case 'harvest': {
         const designationType = gs

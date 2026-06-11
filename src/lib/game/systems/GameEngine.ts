@@ -59,7 +59,6 @@ export interface GameEngine {
   getPawnNeeds(pawnId: string): any;
   getPawnActivities(pawnId: string): string[];
   getPawnNeedStatus(pawnId: string): { critical: string[]; warning: string[]; normal: string[] };
-  forcePawnActivity(pawnId: string, activity: string): void;
 
   // Service coordination methods for UI
   // ItemService coordination

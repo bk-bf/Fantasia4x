@@ -37,11 +37,12 @@ Core data (src/lib/game/core/)         ← types, static databases, state manage
 ## Build & Check
 
 ```bash
-npm run dev        # dev server
-npm run build      # production build
-npm run check      # TypeScript + Svelte type check
-npm run lint       # ESLint
-npm run format     # Prettier
+pnpm dev          # dev server
+pnpm build        # production build
+pnpm check        # TypeScript + Svelte type check (svelte-check)
+pnpm lint         # Prettier check + ESLint
+pnpm test         # Vitest unit/regression suite
+pnpm format       # Prettier write
 ```
 
 ## Project Layout Quick Reference

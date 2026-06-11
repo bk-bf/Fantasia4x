@@ -2,6 +2,7 @@ import type { DesignationType, Pawn } from '../core/types';
 import { resolveCharSpans, type CharSpan } from '../core/Terrains';
 import resourceObjectsData from '../database/resources.jsonc';
 import { pawnStatService } from './PawnStatService';
+import { rng } from '../core/rng';
 
 export interface ResourceYieldDef {
   itemId: string;
@@ -203,7 +204,7 @@ class ResourceObjectServiceImpl {
   }
 
   private randomInt(min: number, max: number): number {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
+    return Math.floor(rng.random() * (max - min + 1)) + min;
   }
 }
 

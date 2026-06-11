@@ -1,5 +1,6 @@
 import type { Race, EntityStats, RacialTrait } from './types';
 import raceDbData from '../database/racial-traits.jsonc';
+import { rng } from './rng';
 
 export const RACIAL_TRAIT_DATABASE: RacialTrait[] = raceDbData as unknown as RacialTrait[];
 
@@ -26,13 +27,13 @@ function generateStatRanges(): Record<string, [number, number]> {
 
   stats.forEach((stat) => {
     // Base range: 8-12, then modify based on racial focus
-    const baseMin = 8 + Math.floor(Math.random() * 3); // 8-10
-    const baseMax = 12 + Math.floor(Math.random() * 4); // 12-15
+    const baseMin = 8 + Math.floor(rng.random() * 3); // 8-10
+    const baseMax = 12 + Math.floor(rng.random() * 4); // 12-15
 
     // Occasionally create specialized races with extreme ranges
-    if (Math.random() < 0.3) {
+    if (rng.random() < 0.3) {
       // 30% chance of specialization
-      if (Math.random() < 0.5) {
+      if (rng.random() < 0.5) {
         // High specialization
         statRanges[stat] = [baseMin + 2, baseMax + 3];
       } else {
@@ -53,7 +54,7 @@ function generatePhysicalTraits(): {
   size: 'tiny' | 'small' | 'medium' | 'large' | 'huge';
 } {
   const sizes = ['tiny', 'small', 'medium', 'large', 'huge'] as const;
-  const size = sizes[Math.floor(Math.random() * sizes.length)];
+  const size = sizes[Math.floor(rng.random() * sizes.length)];
 
   const sizeModifiers = {
     tiny: {
@@ -84,17 +85,17 @@ function generatePhysicalTraits(): {
   };
 
   const modifier = sizeModifiers[size];
-  const heightVariation = 15 + Math.floor(Math.random() * 20); // 15-35 cm variation
-  const weightVariation = 10 + Math.floor(Math.random() * 20); // 10-30 kg variation
+  const heightVariation = 15 + Math.floor(rng.random() * 20); // 15-35 cm variation
+  const weightVariation = 10 + Math.floor(rng.random() * 20); // 10-30 kg variation
 
   return {
     heightRange: [
-      modifier.height[0] + Math.floor(Math.random() * heightVariation),
-      modifier.height[1] + Math.floor(Math.random() * heightVariation)
+      modifier.height[0] + Math.floor(rng.random() * heightVariation),
+      modifier.height[1] + Math.floor(rng.random() * heightVariation)
     ],
     weightRange: [
-      modifier.weight[0] + Math.floor(Math.random() * weightVariation),
-      modifier.weight[1] + Math.floor(Math.random() * weightVariation)
+      modifier.weight[0] + Math.floor(rng.random() * weightVariation),
+      modifier.weight[1] + Math.floor(rng.random() * weightVariation)
     ],
     size
   };
@@ -102,7 +103,7 @@ function generatePhysicalTraits(): {
 
 function generateRacialTraits(): any[] {
   const traits: any[] = [];
-  const numTraits = Math.floor(Math.random() * 3) + 2; // 2-4 traits
+  const numTraits = Math.floor(rng.random() * 3) + 2; // 2-4 traits
 
   const availableTraits = [...RACIAL_TRAIT_DATABASE];
 
@@ -117,7 +118,7 @@ function generateRacialTraits(): any[] {
   for (let i = 0; i < numTraits; i++) {
     if (availableTraits.length === 0) break;
 
-    const randomIndex = Math.floor(Math.random() * availableTraits.length);
+    const randomIndex = Math.floor(rng.random() * availableTraits.length);
     const selectedTrait = availableTraits.splice(randomIndex, 1)[0];
     traits.push(selectedTrait);
 
@@ -184,7 +185,7 @@ function generateRaceName(): string {
   ];
 
   return (
-    prefixes[Math.floor(Math.random() * prefixes.length)] +
-    suffixes[Math.floor(Math.random() * suffixes.length)]
+    prefixes[Math.floor(rng.random() * prefixes.length)] +
+    suffixes[Math.floor(rng.random() * suffixes.length)]
   );
 }

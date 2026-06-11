@@ -15,6 +15,7 @@ import { itemService } from '../services/ItemService';
 import { getCreatureById } from '../core/Creatures';
 import { pawnStatService } from '../services/PawnStatService';
 import { logCombatStart, logCombatTurn, logCombatEnd } from '../../stores/Log';
+import { rng } from '../core/rng';
 
 // ── Tuning constants ─────────────────────────────────────────────────────────
 /** Scales per-part bleed so a fully-severed 5%-mass hand ≈ 2 blood/turn. */
@@ -626,7 +627,7 @@ function clamp(v: number, lo: number, hi: number): number {
 }
 
 function rollBodyPart(): BodyPartId {
-    let r = Math.random() * TOTAL_HIT_WEIGHT;
+    let r = rng.random() * TOTAL_HIT_WEIGHT;
     for (const part of OUTER_PARTS) {
         r -= part.hitWeight;
         if (r <= 0) return part.id;
@@ -689,7 +690,7 @@ function attackerProfile(attacker: Pawn | Mob): {
     if ('creatureId' in attacker) {
         const def = getCreatureById(attacker.creatureId);
         if (def?.naturalWeapons && def.naturalWeapons.length > 0) {
-            const w = def.naturalWeapons[Math.floor(Math.random() * def.naturalWeapons.length)];
+            const w = def.naturalWeapons[Math.floor(rng.random() * def.naturalWeapons.length)];
             return {
                 str,
                 dex,
@@ -788,7 +789,7 @@ class CombatServiceImpl implements CombatService {
         const defDex = defender.stats.dexterity;
 
         const hitChance = clamp(dex * 3 + accuracy - defDex * 2, 5, 95);
-        if (Math.random() * 100 > hitChance) {
+        if (rng.random() * 100 > hitChance) {
             return { hit: false, bodyPart: null, damage: 0, injury: null, knockdown: false, damageType: 'blunt' };
         }
 
@@ -825,7 +826,7 @@ class CombatServiceImpl implements CombatService {
         // Knockdown: blunt/crush hits roll chance based on damage vs constitution
         const defCon = defender.stats.constitution ?? 10;
         const knockChance = damageType === 'blunt' ? clamp((final - defCon / 4) * bluntMod, 0, 100) : 0;
-        const knockdown = knockChance > 0 && Math.random() * 100 < knockChance;
+        const knockdown = knockChance > 0 && rng.random() * 100 < knockChance;
 
         return {
             hit: true,

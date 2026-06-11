@@ -33,12 +33,14 @@ import { jobService, BASE_WORK_RATE } from '../services/JobService';
 import { pawnService } from '../services/PawnService';
 import { itemService } from '../services/ItemService';
 import { pawnStatService } from '../services/PawnStatService';
+import { modifierSystem } from './ModifierSystem';
 import { wasmPathfinderService } from '../services/WasmPathfinderService';
 import { buildPathfindingGrids } from '../services/PathfinderService';
 import { logActivity } from '../../stores/Log';
 import { gameLogger } from '../dev/gameLogger';
 import { ticksFromSeconds, perTick } from '../core/time';
 import { calcBloodRegenRate } from '../entities/Pawns';
+import { rng } from '../core/rng';
 
 // ===== STATE NAME CONSTANTS =====
 export const PAWN_STATE = {
@@ -55,6 +57,12 @@ export const PAWN_STATE = {
 } as const;
 
 export type PawnStateName = (typeof PAWN_STATE)[keyof typeof PAWN_STATE];
+
+// D9.4: index the item database by id ONCE. The hot need-interrupt path used to scan
+// ITEMS_DATABASE.find(...) per stockpile entry per call for every needy pawn each tick.
+const ITEM_DEF_BY_ID: Map<string, any> = new Map(
+    (ITEMS_DATABASE as any[]).map((d) => [d.id, d])
+);
 
 // ===== NEED THRESHOLDS =====
 // Calibrated to 1 in-game day = 300 turns (1 turn ≈ 5 in-game min; 1 day ≈ 5 real min at 1 turn/sec):
@@ -104,8 +112,9 @@ const CONDITIONS_DB = conditionsData as unknown as ConditionDef[];
 const BUILDINGS_DB = BUILDINGS_DATABASE_RAW as unknown as Building[];
 const MALNUTRITION_ONSET_HUNGER = 87; // same as CRITICAL_HUNGER — condition starts here
 const MALNUTRITION_SAFE_HUNGER = 40; // below this threshold, condition recovers
-const MALNUTRITION_RATE_CRITICAL = perTick(0.0008); // +/s at hunger 87–99  → lethal in ~1250s ≈ 4.2 days
-const MALNUTRITION_RATE_MAX = perTick(0.002); // +/s at hunger 100    → lethal in ~500s ≈ 1.7 days
+// Lethal timers slowed ~4× so starvation is a multi-day ordeal (~a week), not ~2 days.
+const MALNUTRITION_RATE_CRITICAL = perTick(0.0002); // +/s at hunger 87–99  → lethal in ~5000s ≈ 16.7 days
+const MALNUTRITION_RATE_MAX = perTick(0.0005); // +/s at hunger 100    → lethal in ~2000s ≈ 6.7 days
 const MALNUTRITION_RECOVERY_RATE = perTick(0.0003); // −/s when hunger < 40 → fully clears in ~3333s ≈ 11 days
 // Blood regen is computed per-pawn via calcBloodRegenRate(pawn.stats) × SECONDS_PER_TICK.
 // See blood_regeneration entry in stats.jsonc for the formula.
@@ -171,9 +180,16 @@ function killPawn(
         };
     });
 
+    // Release any pool jobs claimed by the dead pawn so a living pawn can take them.
+    // Without this, a job stays claimedBy === deadPawnId forever and is unworkable.
+    const jobs = (gameState.jobs ?? []).map((j) =>
+        j.claimedBy === pawn.id ? { ...j, claimedBy: null } : j
+    );
+
     return {
         ...gameState,
         pawns,
+        jobs,
         deadPawns: [...(gameState.deadPawns ?? []), deadRecord]
     };
 }
@@ -351,6 +367,16 @@ function findAdjacentApproach(
 const UNREACHABLE_COOLDOWN_TICKS = 60; // ~1 in-game second before retrying an unreachable job
 const _unreachableJobs = new Map<string, Map<string, number>>(); // pawnId → (jobId → expiryTurn)
 
+/**
+ * Clear the module-level unreachable-job memory (D7). This Map is NOT part of GameState,
+ * so without an explicit reset it survives save/load and new-game resets — stale entries
+ * compared against a `turn` that resets can become permanent or expire instantly. Called
+ * from the store init/load path whenever a fresh GameState is installed.
+ */
+export function resetUnreachableJobs(): void {
+    _unreachableJobs.clear();
+}
+
 function isJobUnreachableForPawn(pawnId: string, jobId: string, turn: number): boolean {
     const expiry = _unreachableJobs.get(pawnId)?.get(jobId);
     return expiry !== undefined && expiry > turn;
@@ -431,12 +457,12 @@ function hasAvailableFood(gs: GameState): boolean {
     return (
         gs.item.some((i) => {
             if (i.amount <= 0) return false;
-            const def = ITEMS_DATABASE.find((d: any) => d.id === i.id);
+            const def = ITEM_DEF_BY_ID.get(i.id);
             return def?.category === 'food' || (def?.nutrition ?? 0) > 0;
         }) ||
         Object.entries(gs.stockpile ?? {}).some(([id, amount]) => {
             if (amount <= 0) return false;
-            const def = ITEMS_DATABASE.find((d: any) => d.id === id);
+            const def = ITEM_DEF_BY_ID.get(id);
             return def?.category === 'food' || (def?.nutrition ?? 0) > 0;
         })
     );
@@ -464,7 +490,7 @@ function selectFoodForMeal(pawn: Pawn, gs: GameState): MealPortion[] {
 
     for (const i of gs.item) {
         if (i.amount <= 0) continue;
-        const def = ITEMS_DATABASE.find((d: any) => d.id === i.id);
+        const def = ITEM_DEF_BY_ID.get(i.id);
         const nutrition = def?.nutrition ?? 0;
         if (def?.category !== 'food' && nutrition <= 0) continue;
         seenIds.add(i.id);
@@ -472,7 +498,7 @@ function selectFoodForMeal(pawn: Pawn, gs: GameState): MealPortion[] {
     }
     for (const [id, amount] of Object.entries(gs.stockpile ?? {})) {
         if (amount <= 0 || seenIds.has(id)) continue;
-        const def = ITEMS_DATABASE.find((d: any) => d.id === id);
+        const def = ITEM_DEF_BY_ID.get(id);
         const nutrition = def?.nutrition ?? 0;
         if (def?.category !== 'food' && nutrition <= 0) continue;
         options.push({ source: 'stockpile', id, available: amount, nutrition });
@@ -503,7 +529,7 @@ function consumeMeal(
     let state = gs;
     let hungerRecovered = 0;
     for (const { source, id, units } of meal) {
-        const def = ITEMS_DATABASE.find((d: any) => d.id === id);
+        const def = ITEM_DEF_BY_ID.get(id);
         hungerRecovered += (def?.nutrition ?? 0) * HUNGER_PER_FOOD_UNIT * units;
         if (source === 'item') {
             state = {
@@ -646,7 +672,7 @@ function distToNearestRestSource(pawn: Pawn, gs: GameState): number {
  * Manhattan distance from an arbitrary map point to the nearest food source (campfire).
  * Returns 0 when no campfire exists (eat in-place). Returns Infinity when no food available.
  */
-function distFromPointToNearestFoodSource(x: number, y: number, gs: GameState): number {
+export function distFromPointToNearestFoodSource(x: number, y: number, gs: GameState): number {
     if (!hasAvailableFood(gs)) return Infinity;
     let best = Infinity;
     for (const b of gs.buildings ?? []) {
@@ -663,7 +689,7 @@ function distFromPointToNearestFoodSource(x: number, y: number, gs: GameState): 
  * Returns null when the queue is empty or no food is available.
  * Jobs that are no longer in the pool or claimed by another pawn are skipped.
  */
-function computeMinQueueFoodDist(queueIds: string[], pawn: Pawn, gs: GameState): number | null {
+export function computeMinQueueFoodDist(queueIds: string[], pawn: Pawn, gs: GameState): number | null {
     if (queueIds.length === 0 || !hasAvailableFood(gs)) return null;
     let min = Infinity;
     for (const id of queueIds) {
@@ -672,6 +698,40 @@ function computeMinQueueFoodDist(queueIds: string[], pawn: Pawn, gs: GameState):
         );
         if (!job) continue;
         const d = distFromPointToNearestFoodSource(job.targetX, job.targetY, gs);
+        if (d < min) min = d;
+    }
+    return min === Infinity ? null : min;
+}
+
+/**
+ * Manhattan distance from an arbitrary map point to the nearest rest source (shelter).
+ * Returns 0 when no shelter exists (sleep in-place), so rest is always reachable.
+ */
+export function distFromPointToNearestRestSource(x: number, y: number, gs: GameState): number {
+    let best = Infinity;
+    for (const b of gs.buildings ?? []) {
+        if (b.status !== 'complete') continue;
+        if (!REST_TYPES.includes(b.type)) continue;
+        const d = Math.abs(b.x - x) + Math.abs(b.y - y);
+        if (d < best) best = d;
+    }
+    return best === Infinity ? 0 : best; // 0 = sleep in place when no shelter exists
+}
+
+/**
+ * Minimum Manhattan distance from any job in the pawn's soft queue to the nearest rest source.
+ * Returns null when the queue is empty. Mirrors {@link computeMinQueueFoodDist} but for the
+ * fatigue interrupt — D8 fixed the copy-paste that fed food distance into the rest threshold.
+ */
+export function computeMinQueueRestDist(queueIds: string[], pawn: Pawn, gs: GameState): number | null {
+    if (queueIds.length === 0) return null;
+    let min = Infinity;
+    for (const id of queueIds) {
+        const job = (gs.jobs ?? []).find(
+            (j) => j.id === id && (j.claimedBy === null || j.claimedBy === pawn.id)
+        );
+        if (!job) continue;
+        const d = distFromPointToNearestRestSource(job.targetX, job.targetY, gs);
         if (d < min) min = d;
     }
     return min === Infinity ? null : min;
@@ -691,7 +751,7 @@ function computeMinQueueFoodDist(queueIds: string[], pawn: Pawn, gs: GameState):
  *
  * Result is clamped within ±12 pts of the base to prevent extreme values.
  */
-function computeAdjustedNeedThreshold(
+export function computeAdjustedNeedThreshold(
     baseThreshold: number,
     laborLevel: number,
     minQueueFoodDist: number | null
@@ -855,7 +915,7 @@ function depositInventory(pawn: Pawn, gs: GameState): GameState {
         if (tile) {
             // Create an UNSTORED drop at the tile — the absorption trigger below
             // will detect it, mark it stored, and credit the zone.
-            const id = `deposit-${resourceId}-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`;
+            const id = `deposit-${resourceId}-${Date.now()}-${rng.random().toString(36).slice(2, 5)}`;
             newDropIds.push(id);
             newDropped.push({ id, resourceId, x: tile.x, y: tile.y, quantity: qty, stored: false });
             placed.add(resourceId);
@@ -1033,6 +1093,8 @@ function syncActiveEffects(pawn: Pawn): Pawn {
  */
 function logPawnTick(pawn: Pawn, gs: GameState): void {
     if (pawn.isAlive === false) return;
+    // D9.5: skip all the per-pawn string assembly below when file logging is off.
+    if (!gameLogger.isEnabled) return;
 
     const pos = pawn.position ? `(${pawn.position.x},${pawn.position.y})` : '(-,-)';
     const job = pawn.activeJob;
@@ -1167,6 +1229,72 @@ function handleIdle(pawn: Pawn, gameState: GameState): GameState {
     };
 }
 
+/**
+ * Shared hunger/fatigue interrupt check for a working OR en-route pawn (D9.2).
+ *
+ * Previously this ~35-line hunger block + ~35-line fatigue block were pasted into both
+ * handleWorking and handleMovingToResource — four near-identical copies. That duplication
+ * is exactly how D8 (the wrong distance fed to the fatigue threshold) slipped in: a fix to
+ * one copy didn't reach the others. Extracting it means there is one place to get right.
+ *
+ * Returns the post-interrupt GameState (pawn transitioned to HUNGRY/TIRED, claimed job
+ * released) when an interrupt fires, or null to continue. `label` only tags the debug log.
+ */
+function checkNeedInterrupts(
+    pawn: Pawn,
+    gameState: GameState,
+    label: 'EnRoute' | 'Working',
+    jobDist: number,
+    queue: string[],
+    laborLevel: number
+): GameState | null {
+    const jobId = pawn.activeJob?.jobId;
+
+    const hunger = pawn.needs?.hunger ?? 0;
+    if (hunger >= HUNGER_THRESHOLD && hasAvailableFood(gameState)) {
+        const minQueueFood = computeMinQueueFoodDist(queue, pawn, gameState);
+        const hungerThreshold = computeAdjustedNeedThreshold(HUNGER_THRESHOLD, laborLevel, minQueueFood);
+        const foodDist = distToNearestFoodSource(pawn, gameState);
+        const willInterrupt = shouldInterruptForNeed(hunger, hungerThreshold, foodDist, jobDist);
+        gameLogger.log(
+            gameState.turn,
+            'NEED-CHECK',
+            () =>
+                `[${label}] ${pawn.name} H:${hunger.toFixed(1)}` +
+                ` adjThr:${hungerThreshold.toFixed(1)} foodDist:${foodDist === Infinity ? '∞' : foodDist}` +
+                ` jobDist:${jobDist} labor:${laborLevel} minQueueFood:${minQueueFood ?? 'null'}` +
+                ` → ${willInterrupt ? 'INTERRUPT→EAT' : 'continue'}`
+        );
+        if (willInterrupt) {
+            const gs = jobId ? jobService.releaseJob(pawn.id, jobId, gameState) : gameState;
+            return transitionTo(pawn, PAWN_STATE.HUNGRY, gs);
+        }
+    }
+
+    const fatigue = pawn.needs?.fatigue ?? 0;
+    if (fatigue >= FATIGUE_THRESHOLD) {
+        const minQueueRest = computeMinQueueRestDist(queue, pawn, gameState);
+        const fatigueThreshold = computeAdjustedNeedThreshold(FATIGUE_THRESHOLD, laborLevel, minQueueRest);
+        const restDist = distToNearestRestSource(pawn, gameState);
+        const willInterrupt = shouldInterruptForNeed(fatigue, fatigueThreshold, restDist, jobDist);
+        gameLogger.log(
+            gameState.turn,
+            'NEED-CHECK',
+            () =>
+                `[${label}] ${pawn.name} F:${fatigue.toFixed(1)}` +
+                ` adjThr:${fatigueThreshold.toFixed(1)} restDist:${restDist === Infinity ? '∞' : restDist}` +
+                ` jobDist:${jobDist} labor:${laborLevel}` +
+                ` → ${willInterrupt ? 'INTERRUPT→SLEEP' : 'continue'}`
+        );
+        if (willInterrupt) {
+            const gs = jobId ? jobService.releaseJob(pawn.id, jobId, gameState) : gameState;
+            return transitionTo(pawn, PAWN_STATE.TIRED, gs);
+        }
+    }
+
+    return null;
+}
+
 function handleMovingToResource(pawn: Pawn, gameState: GameState): GameState {
     const activeJob = pawn.activeJob;
     if (!activeJob || activeJob.type === 'need') return goIdle(pawn, gameState);
@@ -1183,67 +1311,17 @@ function handleMovingToResource(pawn: Pawn, gameState: GameState): GameState {
         ? Math.abs(activeJob.targetX - pawn.position.x) + Math.abs(activeJob.targetY - pawn.position.y)
         : 0;
     const enRouteQueue = pawn.jobQueue ?? [];
-    const enRouteLaborLevel = (() => {
-        const poolJob = (gameState.jobs ?? []).find((j) => j.id === activeJob.jobId);
-        return poolJob ? jobService.getJobLaborLevel(poolJob, pawn, gameState) : 2;
-    })();
+    const enRouteLaborLevel = jobService.getJobLaborLevel(jobInPool, pawn, gameState);
 
-    const enRouteHunger = pawn.needs?.hunger ?? 0;
-    if (enRouteHunger >= HUNGER_THRESHOLD && hasAvailableFood(gameState)) {
-        const minQueueFood = computeMinQueueFoodDist(enRouteQueue, pawn, gameState);
-        const hungerThreshold = computeAdjustedNeedThreshold(
-            HUNGER_THRESHOLD,
-            enRouteLaborLevel,
-            minQueueFood
-        );
-        const foodDist = distToNearestFoodSource(pawn, gameState);
-        const willInterrupt = shouldInterruptForNeed(
-            enRouteHunger,
-            hungerThreshold,
-            foodDist,
-            enRouteDist
-        );
-        gameLogger.log(
-            gameState.turn,
-            'NEED-CHECK',
-            `[EnRoute] ${pawn.name} H:${enRouteHunger.toFixed(1)}` +
-            ` adjThr:${hungerThreshold.toFixed(1)} foodDist:${foodDist === Infinity ? '∞' : foodDist}` +
-            ` jobDist:${enRouteDist} labor:${enRouteLaborLevel} minQueueFood:${minQueueFood ?? 'null'}` +
-            ` → ${willInterrupt ? 'INTERRUPT→EAT' : 'continue'}`
-        );
-        if (willInterrupt) {
-            const gs = jobService.releaseJob(pawn.id, activeJob.jobId!, gameState);
-            return transitionTo(pawn, PAWN_STATE.HUNGRY, gs);
-        }
-    }
-    const enRouteFatigue = pawn.needs?.fatigue ?? 0;
-    if (enRouteFatigue >= FATIGUE_THRESHOLD) {
-        const minQueueRest = computeMinQueueFoodDist(enRouteQueue, pawn, gameState);
-        const fatigueThreshold = computeAdjustedNeedThreshold(
-            FATIGUE_THRESHOLD,
-            enRouteLaborLevel,
-            minQueueRest
-        );
-        const restDist = distToNearestRestSource(pawn, gameState);
-        const willInterrupt = shouldInterruptForNeed(
-            enRouteFatigue,
-            fatigueThreshold,
-            restDist,
-            enRouteDist
-        );
-        gameLogger.log(
-            gameState.turn,
-            'NEED-CHECK',
-            `[EnRoute] ${pawn.name} F:${enRouteFatigue.toFixed(1)}` +
-            ` adjThr:${fatigueThreshold.toFixed(1)} restDist:${restDist === Infinity ? '∞' : restDist}` +
-            ` jobDist:${enRouteDist} labor:${enRouteLaborLevel}` +
-            ` → ${willInterrupt ? 'INTERRUPT→SLEEP' : 'continue'}`
-        );
-        if (willInterrupt) {
-            const gs = jobService.releaseJob(pawn.id, activeJob.jobId!, gameState);
-            return transitionTo(pawn, PAWN_STATE.TIRED, gs);
-        }
-    }
+    const interrupted = checkNeedInterrupts(
+        pawn,
+        gameState,
+        'EnRoute',
+        enRouteDist,
+        enRouteQueue,
+        enRouteLaborLevel
+    );
+    if (interrupted) return interrupted;
 
     if (pawn.hasReachedDestination && pawn.position) {
         const adjacent = isAdjacent(
@@ -1284,59 +1362,11 @@ function handleWorking(pawn: Pawn, gameState: GameState): GameState {
         ? Math.abs(activeJob.targetX - pawn.position.x) + Math.abs(activeJob.targetY - pawn.position.y)
         : 0;
     const queue = pawn.jobQueue ?? [];
-    const laborLevel = jobId
-        ? (() => {
-            const poolJob = (gameState.jobs ?? []).find((j) => j.id === jobId);
-            return poolJob ? jobService.getJobLaborLevel(poolJob, pawn, gameState) : 2;
-        })()
-        : 2;
+    // Reuse jobInPool (found above) instead of scanning gameState.jobs a second time (D9.3).
+    const laborLevel = jobService.getJobLaborLevel(jobInPool, pawn, gameState);
 
-    const hunger = pawn.needs?.hunger ?? 0;
-    if (hunger >= HUNGER_THRESHOLD && hasAvailableFood(gameState)) {
-        const minQueueFood = computeMinQueueFoodDist(queue, pawn, gameState);
-        const hungerThreshold = computeAdjustedNeedThreshold(
-            HUNGER_THRESHOLD,
-            laborLevel,
-            minQueueFood
-        );
-        const foodDist = distToNearestFoodSource(pawn, gameState);
-        const willInterrupt = shouldInterruptForNeed(hunger, hungerThreshold, foodDist, jobDist);
-        gameLogger.log(
-            gameState.turn,
-            'NEED-CHECK',
-            `[Working] ${pawn.name} H:${hunger.toFixed(1)}` +
-            ` adjThr:${hungerThreshold.toFixed(1)} foodDist:${foodDist === Infinity ? '∞' : foodDist}` +
-            ` jobDist:${jobDist} labor:${laborLevel} minQueueFood:${minQueueFood ?? 'null'}` +
-            ` → ${willInterrupt ? 'INTERRUPT→EAT' : 'continue'}`
-        );
-        if (willInterrupt) {
-            const gs = jobService.releaseJob(pawn.id, jobId, gameState);
-            return transitionTo(pawn, PAWN_STATE.HUNGRY, gs);
-        }
-    }
-    const fatigue = pawn.needs?.fatigue ?? 0;
-    if (fatigue >= FATIGUE_THRESHOLD) {
-        const minQueueRest = computeMinQueueFoodDist(queue, pawn, gameState); // reuse queue; rest uses its own source
-        const fatigueThreshold = computeAdjustedNeedThreshold(
-            FATIGUE_THRESHOLD,
-            laborLevel,
-            minQueueRest
-        );
-        const restDist = distToNearestRestSource(pawn, gameState);
-        const willInterrupt = shouldInterruptForNeed(fatigue, fatigueThreshold, restDist, jobDist);
-        gameLogger.log(
-            gameState.turn,
-            'NEED-CHECK',
-            `[Working] ${pawn.name} F:${fatigue.toFixed(1)}` +
-            ` adjThr:${fatigueThreshold.toFixed(1)} restDist:${restDist === Infinity ? '∞' : restDist}` +
-            ` jobDist:${jobDist} labor:${laborLevel}` +
-            ` → ${willInterrupt ? 'INTERRUPT→SLEEP' : 'continue'}`
-        );
-        if (willInterrupt) {
-            const gs = jobService.releaseJob(pawn.id, jobId, gameState);
-            return transitionTo(pawn, PAWN_STATE.TIRED, gs);
-        }
-    }
+    const interrupted = checkNeedInterrupts(pawn, gameState, 'Working', jobDist, queue, laborLevel);
+    if (interrupted) return interrupted;
 
     if (
         activeJob.type !== 'craft' &&
@@ -1347,13 +1377,19 @@ function handleWorking(pawn: Pawn, gameState: GameState): GameState {
         return jobService.releaseJob(pawn.id, jobId, goIdle(pawn, gameState));
     }
 
-    // Wire stats.jsonc work speed into job advancement
+    // Wire work speed into job advancement.
     const workCategory = jobService.getJobWorkCategory(activeJob, gameState);
     const workSpeedMult = pawnStatService.getWorkModifiers(pawn, workCategory).speed;
+    // For harvest/craft/haul/etc. use the SAME unified work-efficiency the UI shows
+    // (skill + stats + traits + equipment + buildings + needs/mood/health). Previously these
+    // used only the stat-based foraging_speed formula, so a skilled forager was no faster than
+    // an unskilled one and mood-reduced stats didn't slow work. Construction keeps its own
+    // skill-scaled rate so building times are unchanged.
     const workPoints =
         activeJob.type === 'construct' || activeJob.type === 'deconstruct'
             ? Math.max(1, pawn.skills['skill_construction'] ?? 0) * workSpeedMult
-            : BASE_WORK_RATE * workSpeedMult;
+            : BASE_WORK_RATE *
+              Math.max(0.1, modifierSystem.calculateWorkEfficiency(pawn.id, workCategory, gameState).totalValue);
     // workPoints is authored as work-points PER SECOND; deliver one tick's worth so
     // a job authored as N seconds of work still takes N seconds of real time.
     const afterAdvance = jobService.advanceJob(jobId, perTick(workPoints), gameState);
@@ -1524,6 +1560,8 @@ function handleTired(pawn: Pawn, gameState: GameState): GameState {
                 ? {
                     ...p,
                     currentState: PAWN_STATE.SLEEPING,
+                    path: [],
+                    isMoving: false,
                     activeJob: {
                         type: 'need' as const,
                         targetX: sleepTargetX,
@@ -1570,7 +1608,16 @@ function handleMovingToNeed(pawn: Pawn, gameState: GameState): GameState {
         return {
             ...gameState,
             pawns: gameState.pawns.map((p) =>
-                p.id === pawn.id ? { ...p, currentState: targetState, hasReachedDestination: false } : p
+                p.id === pawn.id
+                    ? {
+                        ...p,
+                        currentState: targetState,
+                        hasReachedDestination: false,
+                        // Arrived — stop any residual movement so we don't sleepwalk past the tile.
+                        path: [],
+                        isMoving: false
+                    }
+                    : p
             )
         };
     }
@@ -1654,7 +1701,7 @@ function handleSleeping(pawn: Pawn, gameState: GameState): GameState {
 
     // Wake when fatigue drops to the threshold for current hunger level.
     // Fed pawns sleep to 0 (full rest). Hungry pawns wake at 30 so they can eat,
-    // but won't immediately re-sleep since 30 < FATIGUE_THRESHOLD (80).
+    // but won't immediately re-sleep since 30 < FATIGUE_THRESHOLD (72).
     const wakeThreshold =
         (pawn.needs?.hunger ?? 0) >= HUNGER_THRESHOLD
             ? SLEEP_WAKE_THRESHOLD_HUNGRY
@@ -1733,7 +1780,23 @@ class PawnStateMachineImpl {
 
             // Drafted pawns are player-controlled: skip AI state machine entirely.
             // They still tick conditions (bleeding, etc.) but won't auto-eat/sleep/work.
-            if (current.drafted) continue;
+            // Release any job they still claim so a living, undrafted pawn can take it —
+            // otherwise the claim leaks for as long as the pawn stays drafted.
+            if (current.drafted) {
+                if (current.activeJob || (state.jobs ?? []).some((j) => j.claimedBy === current.id)) {
+                    const jobs = (state.jobs ?? []).map((j) =>
+                        j.claimedBy === current.id ? { ...j, claimedBy: null } : j
+                    );
+                    state = {
+                        ...state,
+                        jobs,
+                        pawns: state.pawns.map((p) =>
+                            p.id === current.id ? { ...p, activeJob: undefined } : p
+                        )
+                    };
+                }
+                continue;
+            }
 
             // Tick conditions (malnutrition, blood loss, limb checks) — may kill pawn.
             state = tickConditions(current, state);
@@ -1751,6 +1814,11 @@ class PawnStateMachineImpl {
                     ...forCollapse,
                     currentState: PAWN_STATE.SLEEPING,
                     activeJob: undefined,
+                    // Stop movement on collapse — otherwise processMovement keeps walking the
+                    // pawn along its old path while it's shown sleeping ("sleepwalking").
+                    path: [],
+                    isMoving: false,
+                    hasReachedDestination: false,
                     state: { ...forCollapse.state, isSleeping: true, isWorking: false, isEating: false }
                 };
                 state = { ...state, pawns: state.pawns.map((p) => (p.id === pawn.id ? forCollapse : p)) };

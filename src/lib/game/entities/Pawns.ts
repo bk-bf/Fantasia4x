@@ -10,6 +10,7 @@ import type {
 import { createPawnInventory, createPawnEquipment } from '../core/PawnEquipment';
 import { modifierSystem } from '../systems/ModifierSystem';
 import { createDefaultBodyParts } from '../systems/Combat';
+import { rng } from '../core/rng';
 
 // Module-level counter for sequential debug IDs across all generated pawns.
 let _pawnDebugIdCounter = 1;
@@ -480,7 +481,7 @@ function rollStatsFromRanges(statRanges: Record<string, [number, number]>): Enti
   const stats: any = {};
 
   Object.entries(statRanges).forEach(([statName, [min, max]]) => {
-    stats[statName] = min + Math.floor(Math.random() * (max - min + 1));
+    stats[statName] = min + Math.floor(rng.random() * (max - min + 1));
   });
 
   return stats as EntityStats;
@@ -512,8 +513,8 @@ function rollPhysicalTraits(racePhysicalTraits: any): any {
   const { heightRange, weightRange, size } = racePhysicalTraits;
 
   return {
-    height: heightRange[0] + Math.floor(Math.random() * (heightRange[1] - heightRange[0] + 1)),
-    weight: weightRange[0] + Math.floor(Math.random() * (weightRange[1] - weightRange[0] + 1)),
+    height: heightRange[0] + Math.floor(rng.random() * (heightRange[1] - heightRange[0] + 1)),
+    weight: weightRange[0] + Math.floor(rng.random() * (weightRange[1] - weightRange[0] + 1)),
     size: size
   };
 }
@@ -610,8 +611,8 @@ function generatePawnName(): string {
     'Miralake'
   ];
 
-  const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
-  const surname = surnames[Math.floor(Math.random() * surnames.length)];
+  const firstName = firstNames[Math.floor(rng.random() * firstNames.length)];
+  const surname = surnames[Math.floor(rng.random() * surnames.length)];
 
   return `${firstName} ${surname}`;
 }

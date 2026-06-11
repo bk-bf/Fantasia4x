@@ -139,16 +139,16 @@
   <div class="section-hdr sub">| CRAFTING QUEUE ({craftingQueue.length})</div>
   {#if craftingQueue.length > 0}
     {#each craftingQueue as qi, idx}
-      {@const pct = Math.round(
-        ((qi.item.craftingTime - qi.turnsRemaining) / qi.item.craftingTime) * 100
-      )}
+      {@const wReq = qi.workRequired ?? (qi.item.craftingTime ?? 1) * 5}
+      {@const wDone = qi.workDone ?? 0}
+      {@const pct = Math.round(Math.min(100, (wDone / wReq) * 100))}
       <div class="queue-row">
         <span class="q-name">{qi.item.name.toUpperCase()}</span>
         <span class="q-prog">
           <span class="bar-ascii"
             >{'█'.repeat(Math.round(pct / 10)) + '░'.repeat(10 - Math.round(pct / 10))}</span
           >
-          {qi.turnsRemaining}t
+          {pct}%
         </span>
         <button class="act-btn-sm" on:click={() => cancelCrafting(idx)}>CANCEL</button>
       </div>

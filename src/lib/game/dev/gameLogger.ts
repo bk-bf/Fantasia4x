@@ -41,6 +41,12 @@ const FLUSH_INTERVAL_MS = 3000;
 class GameLoggerImpl {
   private buffer: string[] = [];
   private timer: ReturnType<typeof setInterval> | null = null;
+  /**
+   * D9.5: master gate. When false, log() returns BEFORE invoking a message thunk, so the
+   * hot per-pawn-per-tick NEED-CHECK strings are never even built. Defaults to dev builds
+   * (where the .debug logs are wanted); zero cost in production.
+   */
+  private enabled = import.meta.env.DEV;
 
   constructor() {
     // Start auto-flush timer in browser only.
@@ -51,17 +57,29 @@ class GameLoggerImpl {
     }
   }
 
+  /** Returns whether file logging is currently active (callers can skip extra work). */
+  get isEnabled(): boolean {
+    return this.enabled;
+  }
+
+  setEnabled(on: boolean): void {
+    this.enabled = on;
+  }
+
   /**
    * Append a tagged line to the write buffer.
    *
    * @param turn   Current game turn (used in prefix).
    * @param tag    Uppercase tag string — e.g. 'PAWN-TICK', 'NEED-CHECK'.
-   * @param msg    Message body.
+   * @param msg    Message body, or a thunk producing it. Pass a thunk for hot-path callers
+   *               so the (often multi-segment) string is only built when logging is enabled.
    */
-  log(turn: number, tag: string, msg: string): void {
+  log(turn: number, tag: string, msg: string | (() => string)): void {
+    if (!this.enabled) return;
+    const body = typeof msg === 'function' ? msg() : msg;
     const ts = new Date().toISOString();
     const t = String(turn).padStart(4, '0');
-    this.buffer.push(`${ts} [T${t}] [${tag}] ${msg}`);
+    this.buffer.push(`${ts} [T${t}] [${tag}] ${body}`);
     if (this.buffer.length >= FLUSH_SIZE) this.flush();
   }
 

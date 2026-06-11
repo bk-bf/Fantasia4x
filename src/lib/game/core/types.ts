@@ -131,6 +131,8 @@ export interface Job {
 // ===== GAME STATE =====
 
 export interface GameState {
+	/** Deterministic RNG seed (P0-2). Persisted so a loaded save replays identically. */
+	seed: number;
 	turn: number;
 	race: Race;
 	item: Item[];
@@ -177,7 +179,6 @@ export interface GameState {
 	workAssignments: Record<string, WorkAssignment>;
 	productionTargets: ProductionTarget[];
 	pawns: Pawn[];
-	currentJobIndex: Record<string, number>;
 	pawnStats: {}; // Record<pawnId, Record<statName, { value: number, sources: string[] }>>
 	/** Per-workshop pawn assignment: key = workshopType, value = pawnId or null (any) */
 	craftingStationAssignments?: Record<string, string | null>;
@@ -220,6 +221,8 @@ export type MobState =
 	| 'Foraging' // herbivore/omnivore moving to a grass tile to eat
 	| 'Hunting' // carnivore/omnivore pursuing nearest animal or corpse
 	| 'Eating' // actively consuming food (corpse or grass) — stays still
+	// starvation: collapsed/incapacitated once hunger passes the collapse threshold
+	| 'Collapsed'
 	// shared terminal state
 	| 'Corpse';
 
@@ -997,15 +1000,14 @@ export interface BuildingInProgress {
 export interface CraftingInProgress {
 	item: Item; // The item being crafted
 	quantity: number; // How many are being crafted
-	turnsRemaining: number; // legacy countdown (kept for backward compat)
 	startedAt: number;
 	/** For dynamic recipes: maps slot key (e.g. "meat") → chosen itemId */
 	selectedIngredients?: Record<string, string>;
-	// Phase 5d: work-based crafting
-	id?: string; // unique id for job correlation
-	workRequired?: number; // craftingTime × 5
-	workDone?: number; // accumulated work points
-	materialsReserved?: boolean; // materials locked in stockpile?
+	// Phase 5d: work-based crafting (produced by craftItem, consumed by JobService)
+	id: string; // unique id for job correlation
+	workRequired: number; // craftingTime × 5
+	workDone: number; // accumulated work points
+	materialsReserved: boolean; // materials locked in stockpile?
 }
 export interface ResearchProject {
 	id: string;

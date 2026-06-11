@@ -287,6 +287,29 @@ export function logFlee(
   });
 }
 
+/** Logs an entity death with its cause (starvation, blood loss, combat, …). */
+export function logEntityDeath(
+  entityId: string,
+  entityName: string,
+  cause: string,
+  turn: number,
+  focusX: number,
+  focusY: number
+) {
+  logActivity({
+    turn,
+    type: 'entity',
+    actor: entityId,
+    action: `${entityName} died`,
+    target: cause,
+    result: `of ${cause.replace(/_/g, ' ')}`,
+    severity: 'critical',
+    entityIds: [entityId],
+    focusX,
+    focusY
+  });
+}
+
 export function logEntityStateChange(
   entityId: string,
   entityName: string,
@@ -297,7 +320,7 @@ export function logEntityStateChange(
   focusY: number
 ) {
   // Only log interesting state transitions
-  const interesting = ['Attacking', 'Fleeing', 'Hunting', 'Eating', 'Sleeping', 'Startled', 'Exhausted'];
+  const interesting = ['Attacking', 'Fleeing', 'Hunting', 'Eating', 'Sleeping', 'Startled', 'Exhausted', 'Collapsed'];
   if (!interesting.includes(toState)) return;
   if (shouldSkipLog(entityId, `state-${toState}`, turn, 30)) return;
   logActivity({

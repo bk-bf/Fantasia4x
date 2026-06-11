@@ -10,6 +10,7 @@ import {
   type ResourceNode,
   type ResourceNodeTemplate
 } from '../core/Locations';
+import { rng } from '../core/rng';
 
 /** Richness level display data — single source of truth for richness visuals. */
 const RICHNESS_LEVELS: Record<string, { color: string; emoji: string }> = {
@@ -107,9 +108,9 @@ export class LocationServiceImpl implements LocationService {
     const [minCurrent, maxCurrent] = template.currentAmountRange;
     const [minMax, maxMax] = template.maxAmountRange;
 
-    const maxAmount = Math.floor(Math.random() * (maxMax - minMax + 1)) + minMax;
+    const maxAmount = Math.floor(rng.random() * (maxMax - minMax + 1)) + minMax;
     const currentAmount = Math.min(
-      Math.floor(Math.random() * (maxCurrent - minCurrent + 1)) + minCurrent,
+      Math.floor(rng.random() * (maxCurrent - minCurrent + 1)) + minCurrent,
       maxAmount
     );
 

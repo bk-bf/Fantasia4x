@@ -9,7 +9,6 @@ import type {
 	ConditionDef,
 	ConditionStage
 } from '../core/types';
-import { consumeFromStockpiles } from '../core/GameState';
 import { calculatePawnStats, categorizeStats, getStatDescription } from '../entities/Pawns';
 import { WORK_CATEGORIES } from '../core/Work';
 import { TICKS_PER_SECOND, SECONDS_PER_TICK, perTick } from '../core/time';
@@ -44,7 +43,6 @@ export interface PawnService {
 
 	// Activity Management (PawnService responsibility)
 	getPawnActivities(pawnId: string, gameState: GameState): string[];
-	setPawnActivity(pawnId: string, activity: string, gameState: GameState): GameState;
 
 	// Stat Calculations (DELEGATED to existing Pawns.ts functions)
 	calculatePawnStats(
@@ -62,15 +60,10 @@ export interface PawnService {
 	/** Continuous needs accrual for one 60 Hz tick (hunger/fatigue rise + health regen). */
 	processNeedsTick(gameState: GameState): GameState;
 
-	// Automatic Eating Logic (extracted from GameEngine)
-	processAutomaticEating(gameState: GameState): GameState;
-
-	// Automatic Sleeping Logic (extracted from GameEngine)
-	processAutomaticSleeping(gameState: GameState): GameState;
+	// Sleep decision (still used by clearTemporaryPawnStates wake logic)
 	shouldPawnSleep(pawn: Pawn): boolean;
 
 	// Pawn Needs Coordination (extracted from GameEngine)
-	processAutomaticNeeds(gameState: GameState): GameState;
 	clearTemporaryPawnStates(gameState: GameState): GameState;
 
 	// Need Calculations (PawnService internal logic)
@@ -273,41 +266,6 @@ export class PawnServiceImpl implements PawnService {
 		return activities;
 	}
 
-	setPawnActivity(pawnId: string, activity: string, gameState: GameState): GameState {
-		const pawn = gameState.pawns.find((p) => p.id === pawnId);
-		if (!pawn) return gameState;
-
-		const updatedState = { ...pawn.state };
-
-		// Reset all activities
-		updatedState.isWorking = false;
-		updatedState.isSleeping = false;
-		updatedState.isEating = false;
-
-		// Set new activity
-		switch (activity.toLowerCase()) {
-			case 'working':
-				updatedState.isWorking = true;
-				break;
-			case 'sleeping':
-				updatedState.isSleeping = true;
-				break;
-			case 'eating':
-				updatedState.isEating = true;
-				break;
-			case 'idle':
-				// All activities already set to false
-				break;
-		}
-
-		const updatedPawn = { ...pawn, state: updatedState };
-
-		return {
-			...gameState,
-			pawns: gameState.pawns.map((p) => (p.id === pawnId ? updatedPawn : p))
-		};
-	}
-
 	// ===== STAT CALCULATIONS (DELEGATED) =====
 
 	calculatePawnStats(
@@ -356,117 +314,6 @@ export class PawnServiceImpl implements PawnService {
 		return newState;
 	}
 
-	// ===== AUTOMATIC EATING LOGIC (EXTRACTED FROM GAMEENGINE) =====
-
-	processAutomaticEating(gameState: GameState): GameState {
-		console.log('[PawnService] Processing automatic eating for all pawns');
-
-		try {
-			let updatedGameState = { ...gameState };
-
-			// Process each pawn for automatic eating
-			gameState.pawns.forEach((pawn, index) => {
-				if (pawn.drafted) return; // skip drafted pawns — player-controlled
-				console.log(
-					`[PawnService] Checking ${pawn.name}: hunger=${pawn.needs.hunger}, sleeping=${pawn.state.isSleeping}`
-				);
-
-				// PRIORITY 1: Critical hunger (must eat immediately, even while sleeping)
-				if (pawn.needs.hunger >= 80) {
-					console.log(
-						`[PawnService] ${pawn.name} critically hungry (${pawn.needs.hunger}), must eat now`
-					);
-
-					const fedPawn = this.tryAutomaticEating(pawn, updatedGameState);
-					if (fedPawn !== pawn) {
-						updatedGameState.pawns[index] = fedPawn;
-						console.log(
-							`[PawnService] ${pawn.name} ate due to critical hunger, hunger now: ${fedPawn.needs.hunger}`
-						);
-					}
-				}
-				// PRIORITY 2: Moderate hunger (eat when not sleeping) - LOWERED THRESHOLD
-				else if (pawn.needs.hunger >= 50 && !pawn.state.isSleeping) {
-					console.log(
-						`[PawnService] ${pawn.name} moderately hungry (${pawn.needs.hunger}), attempting to eat`
-					);
-
-					const fedPawn = this.tryAutomaticEating(pawn, updatedGameState);
-					if (fedPawn !== pawn) {
-						updatedGameState.pawns[index] = fedPawn;
-						console.log(
-							`[PawnService] ${pawn.name} ate due to moderate hunger, hunger now: ${fedPawn.needs.hunger}`
-						);
-					}
-				}
-				// PRIORITY 3: Light hunger (eat when idle and food is plentiful) - NEW
-				else if (pawn.needs.hunger >= 30 && !pawn.state.isSleeping && !pawn.state.isWorking) {
-					console.log(
-						`[PawnService] ${pawn.name} lightly hungry (${pawn.needs.hunger}), attempting to eat while idle`
-					);
-
-					const fedPawn = this.tryAutomaticEating(pawn, updatedGameState);
-					if (fedPawn !== pawn) {
-						updatedGameState.pawns[index] = fedPawn;
-						console.log(
-							`[PawnService] ${pawn.name} ate while idle, hunger now: ${fedPawn.needs.hunger}`
-						);
-					}
-				}
-			});
-
-			return updatedGameState;
-		} catch (error) {
-			console.error('[PawnService] Error in processAutomaticEating:', error);
-			return gameState; // Return original state on error
-		}
-	}
-
-	// ===== AUTOMATIC SLEEPING LOGIC (EXTRACTED FROM GAMEENGINE) =====
-
-	processAutomaticSleeping(gameState: GameState): GameState {
-		console.log('[PawnService] Processing automatic sleeping for all pawns');
-
-		try {
-			let updatedGameState = { ...gameState };
-
-			// Process each pawn for automatic sleeping
-			gameState.pawns.forEach((pawn, index) => {
-				if (pawn.drafted) return; // skip drafted pawns — player-controlled
-				let updatedPawn = { ...pawn };
-				let needsUpdate = false;
-
-				// Sleep decision based on hunger/fatigue balance
-				if (this.shouldPawnSleep(updatedPawn)) {
-					console.log(
-						`[PawnService] ${pawn.name} should sleep (fatigue: ${updatedPawn.needs.fatigue}, hunger: ${updatedPawn.needs.hunger})`
-					);
-
-					const restedPawn = this.tryAutomaticSleeping(updatedPawn, updatedGameState);
-					if (restedPawn !== updatedPawn) {
-						updatedPawn = restedPawn;
-						needsUpdate = true;
-						console.log(
-							`[PawnService] ${pawn.name} is sleeping, fatigue now: ${updatedPawn.needs.fatigue}`
-						);
-					}
-				}
-
-				// Update pawn in gameState if changes were made
-				if (needsUpdate) {
-					updatedGameState.pawns[index] = updatedPawn;
-				}
-			});
-
-			return updatedGameState;
-		} catch (error) {
-			console.error('[PawnService] Error in processAutomaticSleeping:', error);
-			return gameState; // Return original state on error
-		}
-	}
-
-	// ===== EXTRACTED SLEEPING METHODS FROM GAMEENGINE =====
-
 	shouldPawnSleep(pawn: Pawn): boolean {
 		const fatigue = pawn.needs.fatigue;
 		const hunger = pawn.needs.hunger;
@@ -490,163 +337,6 @@ export class PawnServiceImpl implements PawnService {
 			// Very hungry: don't sleep, eat instead
 			return false;
 		}
-	}
-
-	private tryAutomaticSleeping(pawn: Pawn, gameState: GameState): Pawn {
-		// Calculate rest recovery
-		const recovery = this.calculateRestRecovery(pawn);
-
-		// Update pawn
-		const updatedPawn = { ...pawn };
-		updatedPawn.needs = {
-			...pawn.needs,
-			fatigue: Math.max(0, pawn.needs.fatigue - recovery),
-			lastSleep: gameState.turn
-		};
-		updatedPawn.state = {
-			...pawn.state,
-			isSleeping: true,
-			isWorking: false, // Stop working to sleep
-			isEating: false
-		};
-
-		console.log(
-			`[PawnService] ${pawn.name} sleeping: fatigue ${pawn.needs.fatigue} → ${updatedPawn.needs.fatigue} (recovery: ${recovery})`
-		);
-		return updatedPawn;
-	}
-
-	private calculateRestRecovery(pawn: Pawn): number {
-		return 5; // Simple fixed rest recovery
-	}
-
-	// ===== EXTRACTED EATING METHODS FROM GAMEENGINE =====
-
-	private tryAutomaticEating(pawn: Pawn, gameState: GameState): Pawn {
-		// Find available food in gameState
-		const availableFood = this.findAvailableFood(gameState);
-
-		if (availableFood.length === 0) {
-			console.log(`[PawnService] No food available for ${pawn.name}`);
-			return pawn; // No food available
-		}
-
-		// Sort foods by nutrition value (highest first) for priority eating
-		const sortedFood = availableFood.sort((a, b) => (b.nutrition || 0) - (a.nutrition || 0));
-
-		console.log(
-			`[PawnService] ${pawn.name} available foods sorted by nutrition:`,
-			sortedFood.map((f) => `${f.name}(${f.nutrition})`).join(', ')
-		);
-
-		// CALCULATE HOW MUCH HUNGER TO SATISFY
-		const currentHunger = pawn.needs.hunger;
-		const targetHunger = Math.max(10, currentHunger * 0.3); // Reduce hunger to 30% of current, minimum 10
-		let hungerToReduce = currentHunger - targetHunger;
-
-		console.log(
-			`[PawnService] ${pawn.name} eating session: hunger ${currentHunger} → target ${targetHunger} (need to reduce ${hungerToReduce.toFixed(1)})`
-		);
-
-		let totalHungerReduction = 0;
-		const foodsEaten = [];
-		let maxFoodTypes = 3; // Limit to eating 3 different food types per session
-
-		// EAT MULTIPLE FOOD TYPES, STARTING WITH HIGHEST NUTRITION
-		for (const food of sortedFood) {
-			if (hungerToReduce <= 0 || maxFoodTypes <= 0) {
-				break; // Satisfied or reached variety limit
-			}
-
-			// Calculate nutrition per unit of this food
-			const nutritionPerUnit = this.calculateFoodRecovery(pawn, food);
-
-			// Calculate how many units of this food we should eat
-			const unitsNeeded = Math.ceil(hungerToReduce / nutritionPerUnit);
-			const unitsToEat = Math.min(food.amount, unitsNeeded, 25); // Max 25 units of any single food type
-
-			if (unitsToEat <= 0) continue;
-
-			// Consume the food from inventory
-			this.consumeFoodFromInventory(gameState, food.id, unitsToEat);
-
-			// Calculate actual hunger reduction from this food
-			const hungerReductionFromThisFood = nutritionPerUnit * unitsToEat;
-			totalHungerReduction += hungerReductionFromThisFood;
-			hungerToReduce -= hungerReductionFromThisFood;
-
-			// Track what was eaten
-			foodsEaten.push({
-				name: food.name,
-				amount: unitsToEat,
-				nutrition: hungerReductionFromThisFood
-			});
-			maxFoodTypes--;
-
-			console.log(
-				`[PawnService] ${pawn.name} ate ${unitsToEat}x ${food.name} (nutrition: ${nutritionPerUnit.toFixed(1)} each, total: ${hungerReductionFromThisFood.toFixed(1)})`
-			);
-		}
-
-		if (totalHungerReduction <= 0) {
-			console.log(`[PawnService] ${pawn.name} couldn't eat any food effectively`);
-			return pawn;
-		}
-
-		// Update pawn's hunger - don't go below 0
-		const newHunger = Math.max(0, currentHunger - totalHungerReduction);
-		const actualReduction = currentHunger - newHunger;
-
-		const updatedPawn = {
-			...pawn,
-			needs: {
-				...pawn.needs,
-				hunger: newHunger,
-				lastMeal: gameState.turn
-			},
-			state: {
-				...pawn.state,
-				isEating: true, // Mark as eating this turn
-				isWorking: false, // Stop working to eat
-				isSleeping: false,
-				mood: Math.min(100, pawn.state.mood + Math.floor(actualReduction * 0.15)) // Mood boost scales with satisfaction
-			}
-		};
-
-		// Log the complete eating session
-		const foodSummary = foodsEaten.map((f) => `${f.amount}x ${f.name}`).join(', ');
-		console.log(`[PawnService] ${pawn.name} eating session complete: ate ${foodSummary}`);
-		console.log(
-			`[PawnService] ${pawn.name} hunger reduced: ${currentHunger} → ${newHunger} (total reduction: ${actualReduction.toFixed(1)})`
-		);
-
-		return updatedPawn;
-	}
-
-	private consumeFoodFromInventory(gameState: GameState, foodId: string, amount: number): void {
-		const result = consumeFromStockpiles(gameState, { [foodId]: amount });
-		gameState.stockpile = result.stockpile;
-		gameState.stockpileZones = result.stockpileZones;
-		console.log(`[PawnService] Consumed ${amount}x ${foodId} from stockpile`);
-	}
-
-	private calculateFoodRecovery(pawn: Pawn, food: any): number {
-		// Get base nutrition value from Items.ts
-		const nutritionValue = food.nutrition || 1.0;
-
-		// Apply simplified bonuses (building bonus would require full gameState)
-		const buildingBonus = 1.0; // For now, use base value - could be improved later
-		const constitutionBonus = Math.max(0, (pawn.stats.constitution - 10) * 0.02); // 2% per point above 10
-		const racialMultiplier = this.getRacialEatingMultiplier(pawn);
-
-		// Calculate total recovery per unit
-		let recoveryPerUnit =
-			nutritionValue * buildingBonus * (1 + constitutionBonus) * racialMultiplier;
-
-		// Cap at reasonable max to prevent oversatisfaction from super foods
-		recoveryPerUnit = Math.min(recoveryPerUnit, 15); // Max 15 hunger reduction per food unit
-
-		return recoveryPerUnit;
 	}
 
 	// ===== PRIVATE HELPER METHODS =====
@@ -1204,29 +894,6 @@ export class PawnServiceImpl implements PawnService {
 			};
 		} catch (error) {
 			console.error('[PawnService] Error in clearTemporaryPawnStates:', error);
-			return gameState; // Return original state on error
-		}
-	}
-
-	/**
-	 * Process automatic pawn needs (eating and sleeping)
-	 * Extracted from GameEngine.processAutomaticPawnNeeds()
-	 */
-	processAutomaticNeeds(gameState: GameState): GameState {
-		console.log('[PawnService] Processing automatic pawn needs through service coordination');
-
-		try {
-			let updatedGameState = gameState;
-
-			// Process automatic eating through PawnService
-			updatedGameState = this.processAutomaticEating(updatedGameState);
-
-			// Process automatic sleeping through PawnService
-			updatedGameState = this.processAutomaticSleeping(updatedGameState);
-
-			return updatedGameState;
-		} catch (error) {
-			console.error('[PawnService] Error in processAutomaticNeeds:', error);
 			return gameState; // Return original state on error
 		}
 	}

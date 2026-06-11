@@ -19,7 +19,6 @@ import { buildingService } from '$lib/game/services/BuildingService';
 import { workService } from '$lib/game/services/WorkService';
 import { syncPawnInventoryWithGlobal, syncAllPawnInventories } from '$lib/game/core/PawnEquipment';
 import { calculatePawnStats } from '$lib/game/entities/Pawns';
-import { eventSystem } from '$lib/game/core/Events';
 import { triggerEvent } from '$lib/stores/eventStore';
 import { generateWorld } from '$lib/game/world/WorldGenerator';
 import { resourceGeneratorService } from '$lib/game/services/ResourceGeneratorService';
@@ -27,6 +26,8 @@ import { entityService } from '$lib/game/services/EntityService';
 import { loadSave, scheduleSave, deleteSave } from './saveManager';
 import { applyDevWorld } from '$lib/game/dev/devWorld';
 import { TICKS_PER_SECOND, ticksFromSeconds } from '$lib/game/core/time';
+import { rng, freshSeed } from '$lib/game/core/rng';
+import { resetUnreachableJobs } from '$lib/game/systems/PawnStateMachine';
 
 // ===== CONFIGURATION =====
 /** Real-time duration of one simulation tick at 1× speed (ms). */
@@ -49,20 +50,21 @@ let simAccumulatorMs = 0;
 /** Bump this when the world generation algorithm changes to force a regen. */
 const WORLD_VERSION = 11; // fallen_logs → P(209)
 const WORLD_VERSION_KEY = 'fantasia4x-world-version';
-const WORLD_SEED = Date.now();
-const _generatedWorld = generateWorld(240, 160, WORLD_SEED);
-resourceGeneratorService.generateResources(_generatedWorld, WORLD_SEED);
+// D7: world generation is DEFERRED to the async init below rather than run at module
+// import. Generating a 240×160 world here only to overwrite it when a save loads is pure
+// waste; the fresh-start path regenerates from the empty worldMap in the migration block.
 
 // ===== INITIAL STATE =====
 export const initialGameState: GameState = {
+  seed: freshSeed(), // P0-2: deterministic sim seed; reseeded from the save on load
   turn: ticksFromSeconds(100), // 08:00 — turn counts ticks; 100 in-game s × TICKS_PER_SECOND (TURNS_PER_DAY=300 s)
   race: generateRace(),
   pawns: [],
+  worldMap: [], // generated lazily in the async init (D7)
   // REVERTED: Back to original - no starter food added
   item: [...itemService.getItemsByCategory('basic').map((item) => ({ ...item, amount: 0 }))].filter(
     (item) => item !== undefined
   ),
-  worldMap: _generatedWorld,
   discoveredLocations: [],
   buildingCounts: {},
   buildingQueue: [],
@@ -104,7 +106,6 @@ export const initialGameState: GameState = {
   activeExplorationMissions: [],
   workAssignments: {},
   productionTargets: [],
-  currentJobIndex: {},
   pawnStats: {},
   droppedItems: [],
   deadPawns: [],
@@ -116,6 +117,8 @@ export const initialGameState: GameState = {
 
 /** Apply all legacy field migrations to a loaded save. */
 function applyMigrations(state: GameState): GameState {
+  // P0-2: old saves predate the deterministic seed — assign one so future ticks replay.
+  if (typeof state.seed !== 'number') state.seed = freshSeed();
   // Phase 4 migration: backfill new fields for old saves
   if (!state.buildings) {
     state.buildings = Object.entries(state.buildingCounts ?? {}).flatMap(([type, count]) =>
@@ -396,7 +399,11 @@ function setGameSpeed(speed: number) {
   gameSpeed.set(speed);
 } // ===== WORLD REGEN =====
 function regenWorld(seed?: number, dev = false, itemQty = 500) {
-  const s = (seed !== undefined ? seed : Date.now()) >>> 0 || 1;
+  const s = (seed !== undefined ? seed : freshSeed()) >>> 0 || 1;
+  // P0-2/D7: regenerating the world starts a fresh deterministic run — persist the seed,
+  // reseed the sim RNG, and clear stale module-level unreachable-job memory.
+  rng.reseed(s);
+  resetUnreachableJobs();
   const newWorld = generateWorld(240, 160, s);
   resourceGeneratorService.generateResources(newWorld, s);
   // Patch the engine's internal state FIRST so the next auto-turn
@@ -405,12 +412,12 @@ function regenWorld(seed?: number, dev = false, itemQty = 500) {
   if (dev) {
     updateWithSave((state) =>
       entityService.seedInitialEntities(
-        applyDevWorld({ ...state, worldMap: newWorld, mobs: [] }, itemQty)
+        applyDevWorld({ ...state, seed: s, worldMap: newWorld, mobs: [] }, itemQty)
       )
     );
   } else {
     updateWithSave((state) =>
-      entityService.seedInitialEntities({ ...state, worldMap: newWorld, mobs: [] })
+      entityService.seedInitialEntities({ ...state, seed: s, worldMap: newWorld, mobs: [] })
     );
   }
   if (browser) localStorage.setItem(WORLD_VERSION_KEY, String(WORLD_VERSION));
@@ -431,7 +438,14 @@ function addItem(itemId: string, amount: number) {
 
 function resetGame() {
   deleteSave().catch(console.error);
-  set(initialGameState);
+  // Fresh deterministic run: new seed, reseeded RNG, cleared module state, fresh world
+  // (initialGameState.worldMap is now empty — world gen is no longer done at module load).
+  const seed = freshSeed();
+  rng.reseed(seed);
+  resetUnreachableJobs();
+  const world = generateWorld(240, 160, seed);
+  resourceGeneratorService.generateResources(world, seed);
+  set({ ...initialGameState, seed, worldMap: world });
   console.info('[GameState] Game reset to initial state.');
 }
 
@@ -545,21 +559,25 @@ export const savedStateReady: Promise<void> = (async () => {
   const savedState = await loadSave();
   let baseState = savedState ? applyMigrations(savedState) : initialGameState;
 
-  // World map migrations (same logic as before, now runs after async load)
+  // P0-2/D7: reseed the sim RNG from the persisted seed so the run replays deterministically,
+  // and clear module-level state (unreachable-job memory) carried over from a prior session.
+  rng.reseed(baseState.seed);
+  resetUnreachableJobs();
+
+  // World map migrations (same logic as before, now runs after async load). World gen is
+  // seeded from baseState.seed (D7) so the same save always yields the same world.
   if (
     !baseState.worldMap ||
     baseState.worldMap.length === 0 ||
     !baseState.worldMap[0]?.[0]?.terrainType
   ) {
-    const migrateSeed = Date.now();
-    const migratedWorld = generateWorld(240, 160, migrateSeed);
-    resourceGeneratorService.generateResources(migratedWorld, migrateSeed);
+    const migratedWorld = generateWorld(240, 160, baseState.seed);
+    resourceGeneratorService.generateResources(migratedWorld, baseState.seed);
     baseState = { ...baseState, worldMap: migratedWorld };
     localStorage.setItem(WORLD_VERSION_KEY, String(WORLD_VERSION));
   } else if (localStorage.getItem(WORLD_VERSION_KEY) !== String(WORLD_VERSION)) {
-    const migrateSeed = Date.now();
-    const migratedWorld = generateWorld(240, 160, migrateSeed);
-    resourceGeneratorService.generateResources(migratedWorld, migrateSeed);
+    const migratedWorld = generateWorld(240, 160, baseState.seed);
+    resourceGeneratorService.generateResources(migratedWorld, baseState.seed);
     baseState = { ...baseState, worldMap: migratedWorld };
     localStorage.setItem(WORLD_VERSION_KEY, String(WORLD_VERSION));
   } else if (!baseState.worldMap[0]?.[1]?.discovered) {
@@ -596,6 +614,10 @@ export const savedStateReady: Promise<void> = (async () => {
   if (baseState.pawns.some((p) => !p.position)) {
     baseState = { ...baseState, pawns: spawnPawnsOnMap(baseState.pawns, baseState.worldMap) };
   }
+
+  // Give any pawn without a work assignment explicit default labor settings — ONCE.
+  // (Replaces the old per-tick workService.ensureBasicWorkAssignments — see D4.)
+  baseState = workService.ensureDefaultWorkAssignments(baseState);
 
   // Seed an initial mob/animal population so entities are visible on the map
   // immediately on load (no-op if the save already has live entities).

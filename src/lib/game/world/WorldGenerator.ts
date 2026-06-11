@@ -1,6 +1,6 @@
 // src/lib/game/world/WorldGenerator.ts
 import { createNoise2D } from 'simplex-noise';
-import type { WorldTile, Location } from '../core/types';
+import type { WorldTile } from '../core/types';
 import {
   SUBTERRAINS,
   SUBTERRAIN_FALLBACK,
@@ -168,47 +168,3 @@ export function generateWorld(width: number, height: number, seed = Date.now()):
   return world;
 }
 
-function generateLocationName(): string {
-  const prefixes = ['Ancient', 'Forgotten', 'Dark', 'Green', 'Misty', 'Stone', 'Iron', 'Lost'];
-  const suffixes = ['Vale', 'Peak', 'Grove', 'Hollow', 'Ridge', 'Haven', 'Ford', 'Reach'];
-  return `${prefixes[Math.floor(Math.random() * prefixes.length)]} ${suffixes[Math.floor(Math.random() * suffixes.length)]}`;
-}
-
-export function generateLocations(worldMap: WorldTile[][]): Location[] {
-  const locations: Location[] = [];
-  const locationTypes = ['forest', 'ruins', 'plains', 'hills'] as const;
-
-  // Generate 10-15 random locations
-  const numLocations = Math.floor(Math.random() * 6) + 10;
-
-  for (let i = 0; i < numLocations; i++) {
-    const x = Math.floor(Math.random() * worldMap[0].length);
-    const y = Math.floor(Math.random() * worldMap.length);
-
-    locations.push({
-      id: `loc_${i}`,
-      name: generateLocationName(),
-      description: `A ${locationTypes[Math.floor(Math.random() * locationTypes.length)]} location`,
-      type: locationTypes[Math.floor(Math.random() * locationTypes.length)],
-      tier: Math.floor(Math.random() * 3),
-      rarity: ['common', 'uncommon', 'rare'][Math.floor(Math.random() * 3)] as
-        | 'common'
-        | 'uncommon'
-        | 'rare',
-      discovered: false,
-      availableResources: {
-        tier0: ['wood', 'stone'],
-        tier1: ['iron_ore'],
-        tier2: ['gold_ore']
-      },
-      workModifiers: {},
-      explorationRequirements: {},
-      hazards: [],
-      specialFeatures: [],
-      emoji: '🌲',
-      color: '#228B22'
-    });
-  }
-
-  return locations;
-}

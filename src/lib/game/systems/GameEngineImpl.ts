@@ -28,9 +28,10 @@ import { entityService } from '../services/EntityService';
 import { combatService } from './Combat';
 import { TICKS_PER_SECOND, ticksFromSeconds, perTick } from '../core/time';
 import { buildPathfindingGrids } from '../services/PathfinderService';
-import { isGameDebug } from '../core/log';
+import { isGameDebug, gatedConsole } from '../core/log';
 import type { WorkCategory } from '../core/types';
 import type { Pawn } from '../core/types';
+import { rng } from '../core/rng';
 
 const ITEMS_DATABASE = itemsData as unknown as import('../core/types').Item[];
 const AVAILABLE_BUILDINGS = buildingsData as unknown as import('../core/types').Building[];
@@ -62,8 +63,8 @@ export class GameEngineImpl implements GameEngine {
 			errorRecoveryMode: 'lenient',
 			...config
 		};
-		// Inject GameEngine reference into WorkService
-		(workService as any).setGameEngine(this);
+		// Inject GameEngine reference into WorkService (typed via WorkEfficiencyProvider — P0-3)
+		workService.setGameEngine(this);
 	}
 
 	// ===== PAWN SERVICE COORDINATION METHODS =====
@@ -84,24 +85,6 @@ export class GameEngineImpl implements GameEngine {
 	getPawnNeedStatus(pawnId: string): { critical: string[]; warning: string[]; normal: string[] } {
 		if (!this.gameState) return { critical: [], warning: [], normal: [] };
 		return pawnService.getPawnNeedStatus(pawnId, this.gameState);
-	}
-
-	// COORDINATION: Force activity method - delegates to PawnService
-	forcePawnActivity(pawnId: string, activity: string): void {
-		if (!this.gameState) return;
-
-		console.log(`[GameEngine] Coordinating pawn ${pawnId} activity: ${activity}`);
-
-		// COORDINATION: Delegate all activity handling to PawnService
-		if (activity === 'eating') {
-			this.gameState = pawnService.processAutomaticEating(this.gameState);
-		} else if (activity === 'sleeping' || activity === 'resting') {
-			this.gameState = pawnService.processAutomaticSleeping(this.gameState);
-		} else {
-			this.gameState = pawnService.setPawnActivity(pawnId, activity, this.gameState);
-		}
-
-		this.updateStores();
 	}
 
 	// ===== SERVICE COORDINATION METHODS FOR UI =====
@@ -132,7 +115,7 @@ export class GameEngineImpl implements GameEngine {
 		const currentState = get(gameState);
 		if (!currentState) return;
 		this.gameState = { ...currentState };
-		console.log(`[GameEngine] Coordinating crafting: ${quantity}x ${itemId}`);
+		gatedConsole.log(`[GameEngine] Coordinating crafting: ${quantity}x ${itemId}`);
 
 		const item = itemService.getItemById(itemId);
 		if (!item) return;
@@ -150,11 +133,14 @@ export class GameEngineImpl implements GameEngine {
 			const resolved =
 				selectedIngredients ?? itemService.autoSelectIngredients(itemId, this.gameState) ?? {};
 
-			// Add to crafting queue
+			// Add to crafting queue (Phase 5d work-based shape — JobService picks this up)
 			const craftingInProgress = {
+				id: crypto.randomUUID(),
 				item: item,
 				quantity: quantity,
-				turnsRemaining: item.craftingTime || 1,
+				workRequired: (item.craftingTime || 1) * 5,
+				workDone: 0,
+				materialsReserved: true,
 				startedAt: this.gameState.turn,
 				selectedIngredients: Object.keys(resolved).length > 0 ? resolved : undefined
 			};
@@ -176,72 +162,12 @@ export class GameEngineImpl implements GameEngine {
 	}
 
 	/**
-	 * Butchery crafting: processes a carcass to produce all outputs at once.
-	 * Output quantities are scaled by current intactness. At 0% intactness, the carcass vanishes.
+	 * Butchery crafting — delegated to ItemService (D10: the engine coordinates, the service
+	 * owns the item math). Processes a carcass to produce all outputs, scaled by intactness.
 	 */
 	private craftButchery(carcassItem: import('../core/types').Item): void {
 		if (!this.gameState) return;
-		if (!carcassItem.isCarcass || !carcassItem.yields) return;
-
-		// Check intactness
-		const intactness = this.gameState.carcassIntactness ?? {};
-		const currentIntactness = intactness[carcassItem.id] ?? 100;
-
-		if (currentIntactness <= 0) {
-			console.log(`[GameEngine] Carcass ${carcassItem.id} is fully consumed (0% intactness)`);
-			return;
-		}
-
-		// Check if can craft (building, tools, etc.)
-		if (!itemService.canCraftItem(carcassItem.id, this.gameState)) return;
-
-		// Calculate intactness multiplier
-		const intactnessFraction = currentIntactness / 100;
-
-		// Tier 1 tool bonus: bone_cleaver in stockpile → +25% yield
-		const hasBoneCleaver = (this.gameState.stockpile?.['bone_cleaver'] ?? 0) > 0;
-		// Tier 1 building bonus: dressing_stone → +25% yield
-		const hasDressingStone = (this.gameState.buildings ?? []).some(
-			(b) => b.type === 'dressing_stone' && b.status === 'complete'
-		);
-		const toolMult = hasBoneCleaver ? 1.25 : 1.0;
-		const buildMult = hasDressingStone ? 1.25 : 1.0;
-		const yieldMult = intactnessFraction * toolMult * buildMult;
-
-		// Roll all outputs and scale by combined multiplier
-		const outputs: Record<string, number> = {};
-		for (const output of carcassItem.yields) {
-			const baseQty = Math.floor(Math.random() * (output.max - output.min + 1)) + output.min;
-			const scaledQty = Math.max(1, Math.round(baseQty * yieldMult));
-			outputs[output.item] = (outputs[output.item] ?? 0) + scaledQty;
-		}
-
-		// Consume intactness (set to 0)
-		const newIntactnessMap = { ...intactness };
-		delete newIntactnessMap[carcassItem.id];
-
-		// Remove the carcass from stockpile
-		let newState = this.gameState;
-		const carcassQty = newState.stockpile[carcassItem.id] ?? 0;
-		if (carcassQty > 0) {
-			newState = itemService.consumeItems({ [carcassItem.id]: carcassQty }, newState);
-		}
-
-		// Add all outputs to stockpile
-		newState = itemService.addItems(outputs, newState);
-
-		// Update state
-		newState = {
-			...newState,
-			carcassIntactness: newIntactnessMap
-		};
-
-		this.gameState = newState;
-		console.log(
-			`[GameEngine] Butchery: ${carcassItem.name} → ${Object.entries(outputs)
-				.map(([k, v]) => `${v}×${k}`)
-				.join(', ')} (scaled by ${currentIntactness.toFixed(0)}% intactness)`
-		);
+		this.gameState = itemService.processButchery(carcassItem, this.gameState);
 	}
 
 	// COORDINATION: BuildingService methods for UI components
@@ -261,7 +187,7 @@ export class GameEngineImpl implements GameEngine {
 
 	constructBuilding(buildingId: string, locationId?: string): void {
 		if (!this.gameState) return;
-		console.log(
+		gatedConsole.log(
 			`[GameEngine] Coordinating building construction: ${buildingId} at ${locationId || 'default location'}`
 		);
 
@@ -309,7 +235,7 @@ export class GameEngineImpl implements GameEngine {
 
 	startResearch(researchId: string): void {
 		if (!this.gameState) return;
-		console.log(`[GameEngine] Coordinating research start: ${researchId}`);
+		gatedConsole.log(`[GameEngine] Coordinating research start: ${researchId}`);
 		this.gameState = researchService.startResearch(researchId, this.gameState);
 		this.updateStores();
 	}
@@ -317,7 +243,7 @@ export class GameEngineImpl implements GameEngine {
 	// COORDINATION: WorkService methods for UI components
 	assignPawnToWork(pawnId: string, workType: string, locationId?: string): void {
 		if (!this.gameState) return;
-		console.log(
+		gatedConsole.log(
 			`[GameEngine] Coordinating work assignment: ${pawnId} to ${workType} at ${locationId || 'default location'}`
 		);
 		this.gameState = workService.assignPawnToWork(
@@ -331,7 +257,7 @@ export class GameEngineImpl implements GameEngine {
 
 	unassignPawnFromWork(pawnId: string): void {
 		if (!this.gameState) return;
-		console.log(`[GameEngine] Coordinating work unassignment: ${pawnId}`);
+		gatedConsole.log(`[GameEngine] Coordinating work unassignment: ${pawnId}`);
 
 		// COORDINATION: Remove work assignment by clearing priorities
 		if (this.gameState.workAssignments && this.gameState.workAssignments[pawnId]) {
@@ -368,12 +294,12 @@ export class GameEngineImpl implements GameEngine {
 
 	exploreNewLocation(): void {
 		if (!this.gameState) return;
-		console.log(`[GameEngine] Coordinating location exploration`);
+		gatedConsole.log(`[GameEngine] Coordinating location exploration`);
 
 		// COORDINATION: Simple exploration - discover a random undiscovered location
 		const undiscovered = locationService.getUndiscoveredLocations();
 		if (undiscovered.length > 0) {
-			const randomLocation = undiscovered[Math.floor(Math.random() * undiscovered.length)];
+			const randomLocation = undiscovered[Math.floor(rng.random() * undiscovered.length)];
 			locationService.discoverLocation(randomLocation.id);
 			this.updateStores();
 		}
@@ -421,14 +347,10 @@ export class GameEngineImpl implements GameEngine {
 			t('researchTick', () => {
 				this.gameState = researchService.processResearchTick(this.gameState!);
 			});
-			t('workAssign', () => {
-				this.gameState = workService.ensureBasicWorkAssignments(this.gameState!);
-			});
 			t('generateJobs', () => {
 				this.gameState = jobService.generateJobs(this.gameState!);
 			});
 			t('buildings', () => this.processBuildings());
-			t('crafting', () => this.processCrafting());
 			t('pawns', () => this.processPawns());
 			t('locationRenewal', () => this.processLocationRenewal());
 			t('resourceRegrowth', () => this.processResourceRegrowth());
@@ -491,21 +413,21 @@ export class GameEngineImpl implements GameEngine {
 	 * Replaces the removed LocationService.getResourcesForWorkType method
 	 */
 	getLocationResourcesForWorkType(locationId: string, workType: string): string[] {
-		console.log(`[GameEngine] Getting resources for ${workType} at ${locationId}`);
+		gatedConsole.log(`[GameEngine] Getting resources for ${workType} at ${locationId}`);
 
 		// GameEngine coordinates between LocationService and ItemService
 		const availableResources = locationService.getAvailableResources(locationId);
-		console.log(`[GameEngine] Available resources at ${locationId}:`, availableResources);
+		gatedConsole.log(`[GameEngine] Available resources at ${locationId}:`, availableResources);
 
 		// GameEngine filters using ItemService
 		const filteredResources = availableResources.filter((resourceId) => {
 			const item = itemService.getItemById(resourceId);
 			const hasWorkType = item?.gatheringTypes?.includes(workType);
-			console.log(`[GameEngine] Resource ${resourceId} has workType ${workType}:`, hasWorkType);
+			gatedConsole.log(`[GameEngine] Resource ${resourceId} has workType ${workType}:`, hasWorkType);
 			return hasWorkType;
 		});
 
-		console.log(`[GameEngine] Filtered resources for ${workType}:`, filteredResources);
+		gatedConsole.log(`[GameEngine] Filtered resources for ${workType}:`, filteredResources);
 		return filteredResources;
 	}
 
@@ -581,14 +503,14 @@ export class GameEngineImpl implements GameEngine {
 							// Partial recovery — make node available (count = 1) so a job can be
 							// created, but only the non-cooled yields will actually be harvested.
 							newResourceCount = 1;
-							console.log(
+							gatedConsole.log(
 								`[Regrowth] ${key} at (${tile.x},${tile.y}) recovered (partial — other yields still cooling)`
 							);
 						} else {
 							// All yields recovered — full random restore.
 							const [minAmt, maxAmt] = def?.nodeAmountRange ?? [1, 3];
-							newResourceCount = minAmt + Math.floor(Math.random() * (maxAmt - minAmt + 1));
-							console.log(
+							newResourceCount = minAmt + Math.floor(rng.random() * (maxAmt - minAmt + 1));
+							gatedConsole.log(
 								`[Regrowth] ${resourceId} at (${tile.x},${tile.y}) fully restored ×${newResourceCount}`
 							);
 						}
@@ -604,7 +526,7 @@ export class GameEngineImpl implements GameEngine {
 						// Simple whole-resource cooldown.
 						const def = resourceObjectService.getById(key);
 						const [minAmt, maxAmt] = def?.nodeAmountRange ?? [1, 3];
-						const restored = minAmt + Math.floor(Math.random() * (maxAmt - minAmt + 1));
+						const restored = minAmt + Math.floor(rng.random() * (maxAmt - minAmt + 1));
 
 						const newCooldowns = { ...updatedTile.resourceCooldowns };
 						delete newCooldowns[key];
@@ -615,7 +537,7 @@ export class GameEngineImpl implements GameEngine {
 							// Restore blocking for non-walkable resources that have regrown.
 							...(def?.walkable === false ? { walkable: false } : {})
 						};
-						console.log(`[Regrowth] ${key} at (${tile.x},${tile.y}) regrew ×${restored}`);
+						gatedConsole.log(`[Regrowth] ${key} at (${tile.x},${tile.y}) regrew ×${restored}`);
 					}
 					anyChanged = true;
 				}
@@ -662,7 +584,7 @@ export class GameEngineImpl implements GameEngine {
 				`  ${p.name.padEnd(14)} ${pos.padEnd(10)} [${state}] ${target.padEnd(38)} ${pathInfo.padEnd(12)} H:${hunger} F:${fatigue}`
 			);
 		}
-		console.log(lines.join('\n'));
+		gatedConsole.log(lines.join('\n'));
 	}
 
 	/**
@@ -708,7 +630,7 @@ export class GameEngineImpl implements GameEngine {
 				let tx = -1,
 					ty = -1;
 				if (target.targetType === 'mob') {
-					const mob = gs.mobs.find((m) => m.id === target.targetId);
+					const mob = (gs.mobs ?? []).find((m) => m.id === target.targetId);
 					if (!mob || mob.isAlive === false) {
 						gs = {
 							...gs,
@@ -844,11 +766,6 @@ export class GameEngineImpl implements GameEngine {
 		return { ...gs, buildings: newBuildings };
 	}
 
-	private processCrafting(): void {
-		// Phase 5d: crafting is now handled by the job system (craft jobs).
-		// processCraftingQueue countdown removed.
-	}
-
 	// ===== HELPER METHODS =====
 
 	updateStores(): void {
@@ -887,33 +804,6 @@ export class GameEngineImpl implements GameEngine {
 			};
 		}
 		return modifierSystem.calculateBuildingEffects(buildingId, this.gameState);
-	}
-
-	calculateCraftingTime(itemId: string, pawnId: string): number {
-		// COORDINATION: Use ItemService to get crafting time
-		const item = itemService.getItemById(itemId);
-		return item?.craftingTime || 3;
-	}
-
-	calculateResourceProduction(workAssignment: {
-		pawnId: string;
-		workType: string;
-		turns?: number;
-	}): Record<string, number> {
-		if (!this.gameState) return {};
-
-		// COORDINATION: Use WorkService to calculate resource production
-		const turns = workAssignment.turns || 1;
-		const resources = this.getLocationResourcesForWorkType('default', workAssignment.workType);
-		const result: Record<string, number> = {};
-
-		resources.forEach((resourceId) => {
-			// Simplified calculation - could be enhanced with WorkService methods
-			result[resourceId] =
-				turns * this.calculatePawnEfficiency(workAssignment.pawnId, workAssignment.workType);
-		});
-
-		return result;
 	}
 
 	calculateCombatEffectiveness(
@@ -964,10 +854,6 @@ export class GameEngineImpl implements GameEngine {
 		return { success: true };
 	}
 
-	validateSystemConsistency(): any {
-		return { isValid: true, errors: [], warnings: [], affectedSystems: [] };
-	}
-
 	resetGameState(newState?: GameState): SystemInteractionResult {
 		if (newState) {
 			this.gameState = JSON.parse(JSON.stringify(newState));
@@ -985,7 +871,7 @@ export class GameEngineImpl implements GameEngine {
 
 	integrateServices(services: any): void {
 		// COORDINATION: Services are integrated through direct imports
-		console.log('[GameEngine] Services integrated:', Object.keys(services || {}));
+		gatedConsole.log('[GameEngine] Services integrated:', Object.keys(services || {}));
 	}
 
 	getServices(): any {
@@ -996,7 +882,7 @@ export class GameEngineImpl implements GameEngine {
 		try {
 			this.gameState = JSON.parse(JSON.stringify(initialState));
 			this.integrateServices(services);
-			console.log('[GameEngine] Initialized with state and services');
+			gatedConsole.log('[GameEngine] Initialized with state and services');
 			return { success: true };
 		} catch (error) {
 			return {
@@ -1018,118 +904,6 @@ export class GameEngineImpl implements GameEngine {
 			pendingOperations: 0,
 			errors: []
 		};
-	}
-
-	/**
-	 * Debug command to test work efficiency balance
-	 */
-	debugWorkBalance(pawnId?: string, workType?: string): void {
-		if (!this.gameState) {
-			console.log('No game state available');
-			return;
-		}
-
-		const testPawnId = pawnId || this.gameState.pawns[0]?.id;
-		const testWorkType = workType || 'crafting';
-
-		if (!testPawnId) {
-			console.log('No pawns available for testing');
-			return;
-		}
-
-		console.log('\n🔍 WORK EFFICIENCY BALANCE TEST');
-		console.log('================================');
-
-		// Test current state
-		modifierSystem.debugWorkEfficiency(testPawnId, testWorkType, this.gameState);
-
-		// Test balance scenarios
-		modifierSystem.testBalanceScenarios(this.gameState);
-
-		// Test all work types for this pawn
-		console.log(`\n--- All Work Types for Pawn ${testPawnId} ---`);
-		WORK_CATEGORIES.forEach((work: WorkCategory) => {
-			const efficiency = modifierSystem.calculateWorkEfficiency(
-				testPawnId,
-				work.id,
-				this.gameState!
-			);
-			console.log(
-				`${work.id}: ${efficiency.totalValue.toFixed(2)}x (${efficiency.sources.length} sources)`
-			);
-		});
-	}
-
-	validateGameBalance(): void {
-		if (!this.gameState) return;
-
-		const validation = modifierSystem.validateEfficiencyBalance(this.gameState);
-
-		console.log('\n🎯 GAME BALANCE VALIDATION');
-		console.log('==========================');
-		console.log(
-			`Overall Balance: ${validation.isBalanced ? '✅ BALANCED' : '❌ NEEDS ADJUSTMENT'}`
-		);
-
-		if (validation.issues.length > 0) {
-			console.log('\n🚨 Issues Found:');
-			validation.issues.forEach((issue, index) => {
-				console.log(`  ${index + 1}. ${issue}`);
-			});
-		}
-
-		if (validation.recommendations.length > 0) {
-			console.log('\n💡 Recommendations:');
-			validation.recommendations.forEach((rec, index) => {
-				console.log(`  ${index + 1}. ${rec}`);
-			});
-		}
-	}
-
-	/**
-	 * Quick balance check for all pawns
-	 */
-	checkAllPawnEfficiencies(): void {
-		if (!this.gameState) return;
-
-		console.log('\n📊 ALL PAWN EFFICIENCY SUMMARY');
-		console.log('==============================');
-
-		this.gameState.pawns.forEach((pawn: Pawn) => {
-			console.log(`\nPawn: ${pawn.name} (${pawn.id})`);
-
-			const efficiencies = WORK_CATEGORIES.map((work: WorkCategory) => {
-				const result = modifierSystem.calculateWorkEfficiency(pawn.id, work.id, this.gameState!);
-				return {
-					workType: work.id,
-					efficiency: result.totalValue,
-					sources: result.sources.length
-				};
-			});
-
-			// Show top 3 and bottom 3 efficiencies
-			efficiencies.sort((a, b) => b.efficiency - a.efficiency);
-
-			console.log('  Top 3:');
-			efficiencies.slice(0, 3).forEach((e) => {
-				console.log(`    ${e.workType}: ${e.efficiency.toFixed(2)}x (${e.sources} sources)`);
-			});
-
-			if (efficiencies.length > 6) {
-				console.log('  Bottom 3:');
-				efficiencies.slice(-3).forEach((e) => {
-					console.log(`    ${e.workType}: ${e.efficiency.toFixed(2)}x (${e.sources} sources)`);
-				});
-			}
-
-			// Flag concerning efficiencies
-			const overpowered = efficiencies.filter((e) => e.efficiency > 5.0);
-			if (overpowered.length > 0) {
-				console.warn(
-					`    ⚠️  Overpowered: ${overpowered.map((e) => `${e.workType}(${e.efficiency.toFixed(1)}x)`).join(', ')}`
-				);
-			}
-		});
 	}
 }
 

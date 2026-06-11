@@ -8,6 +8,7 @@ import type {
   StockpileZone,
   DroppedItem
 } from './types';
+import { rng } from './rng';
 
 export class GameStateManager {
   private state: GameState;
@@ -74,12 +75,11 @@ export class GameStateManager {
   }
 
   startCrafting(item: Item, quantity: number = 1): boolean {
-    const id = `craft-${item.id}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const id = `craft-${item.id}-${Date.now()}-${rng.random().toString(36).slice(2, 7)}`;
     this.state.craftingQueue.push({
       id,
       item,
       quantity,
-      turnsRemaining: item.craftingTime || 1,
       startedAt: this.state.turn,
       workRequired: (item.craftingTime || 1) * 5,
       workDone: 0,

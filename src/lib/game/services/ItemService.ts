@@ -2,6 +2,7 @@ import type { Item, GameState, DynamicIngredientSlot } from '../core/types';
 import { consumeFromStockpiles, addToStockpileZone } from '../core/GameState';
 import itemsData from '../database/items.jsonc';
 import { SECONDS_PER_TICK } from '../core/time';
+import { rng } from '../core/rng';
 
 const ITEMS_DATABASE = itemsData as unknown as Item[];
 
@@ -48,9 +49,7 @@ export interface ItemService {
   getAvailableQuantity(itemId: string, gameState: GameState): number;
   consumeItems(itemIds: Record<string, number>, gameState: GameState): GameState;
   addItems(itemIds: Record<string, number>, gameState: GameState): GameState;
-
-  // Crafting Queue Processing
-  processCraftingQueue(gameState: GameState): GameState;
+  processButchery(carcassItem: Item, gameState: GameState): GameState;
 
   // Decay
   stepItemDecay(gameState: GameState): GameState;
@@ -285,59 +284,43 @@ export class ItemServiceImpl implements ItemService {
     return addToStockpileZone(gameState, null, itemIds);
   }
 
-  processCraftingQueue(gameState: GameState): GameState {
-    console.log('[ItemService] Processing crafting queue');
+  /**
+   * Butchery: process a carcass into all its outputs at once (D10 — moved here from the
+   * engine so the engine stays a coordinator). Output quantities scale by current carcass
+   * intactness × tool (bone_cleaver) × building (dressing_stone) bonuses. Returns the new
+   * state (immutable); a no-op state when the carcass can't be processed.
+   */
+  processButchery(carcassItem: Item, gameState: GameState): GameState {
+    if (!carcassItem.isCarcass || !carcassItem.yields) return gameState;
 
-    // Process crafting queue - items being crafted
-    if (gameState.craftingQueue.length > 0) {
-      const updatedCraftingQueue = gameState.craftingQueue
-        .map((crafting) => ({
-          ...crafting,
-          turnsRemaining: crafting.turnsRemaining - 1
-        }))
-        .filter((crafting) => {
-          if (crafting.turnsRemaining <= 0) {
-            // Crafting completed - add to items array
-            const itemId = crafting.item.id;
-            const quantity = crafting.quantity || 1;
+    const intactness = gameState.carcassIntactness ?? {};
+    const currentIntactness = intactness[carcassItem.id] ?? 100;
+    if (currentIntactness <= 0) return gameState;
 
-            // Resolve variant display name for dynamic recipes
-            let displayName = crafting.item.name;
-            if (crafting.item.dynamicRecipe && crafting.selectedIngredients) {
-              for (const [slotKey, slot] of Object.entries(crafting.item.dynamicRecipe)) {
-                const chosenId = crafting.selectedIngredients[slotKey];
-                if (chosenId) {
-                  const variant = slot.variants?.[chosenId] ?? slot.default;
-                  if (variant?.name) {
-                    displayName = variant.name;
-                    break;
-                  }
-                }
-              }
-            }
+    if (!this.canCraftItem(carcassItem.id, gameState)) return gameState;
 
-            // Use the addItems method to handle adding the crafted item
-            gameState = this.addItems({ [itemId]: quantity }, gameState);
+    const intactnessFraction = currentIntactness / 100;
+    const hasBoneCleaver = (gameState.stockpile?.['bone_cleaver'] ?? 0) > 0;
+    const hasDressingStone = (gameState.buildings ?? []).some(
+      (b) => b.type === 'dressing_stone' && b.status === 'complete'
+    );
+    const yieldMult = intactnessFraction * (hasBoneCleaver ? 1.25 : 1.0) * (hasDressingStone ? 1.25 : 1.0);
 
-            console.log(
-              '[ItemService] Crafting completed:',
-              displayName,
-              `(${itemId})`,
-              'x',
-              quantity
-            );
-            return false;
-          }
-          return true;
-        });
-
-      return {
-        ...gameState,
-        craftingQueue: updatedCraftingQueue
-      };
+    const outputs: Record<string, number> = {};
+    for (const output of carcassItem.yields) {
+      const baseQty = Math.floor(rng.random() * (output.max - output.min + 1)) + output.min;
+      const scaledQty = Math.max(1, Math.round(baseQty * yieldMult));
+      outputs[output.item] = (outputs[output.item] ?? 0) + scaledQty;
     }
 
-    return gameState;
+    const newIntactnessMap = { ...intactness };
+    delete newIntactnessMap[carcassItem.id];
+
+    let state = gameState;
+    const carcassQty = state.stockpile[carcassItem.id] ?? 0;
+    if (carcassQty > 0) state = this.consumeItems({ [carcassItem.id]: carcassQty }, state);
+    state = this.addItems(outputs, state);
+    return { ...state, carcassIntactness: newIntactnessMap };
   }
 
   stepItemDecay(gameState: GameState): GameState {

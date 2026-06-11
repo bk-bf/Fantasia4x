@@ -14,6 +14,7 @@ import type {
   ZoneFilter,
   ZoneInstance
 } from '../core/types';
+import { rng } from '../core/rng';
 
 class DesignationServiceImpl {
   private key(x: number, y: number): string {
@@ -184,7 +185,7 @@ class DesignationServiceImpl {
     label: string,
     gs: GameState
   ): { state: GameState; id: string } {
-    const id = `${type}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+    const id = `${type}-${Date.now().toString(36)}-${rng.random().toString(36).slice(2, 6)}`;
     const instance: ZoneInstance = {
       id,
       type,
