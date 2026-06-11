@@ -30,8 +30,6 @@ Core data (src/lib/game/core/)         ← types, static databases, GameStateMan
 
 **Turn order** (do not reorder): needs → work → completions → exploration → events.
 
-**AI is server-only**: `@google/generative-ai` lives exclusively in `src/routes/api/`. Client code calls the route via `fetch`.
-
 **Data files are definitions only**: `src/lib/game/core/` contains static arrays/objects. Logic belongs in services.
 
 **New core data needs a stable id**: entries added to `Items.ts`, `Buildings.ts`, `Research.ts`, or `Work.ts` need a stable `kebab-case` string `id`. Unlock conditions reference `researchId` strings from `Research.ts`; costs reference resource `id` strings from `types.ts`.
@@ -44,7 +42,7 @@ Core data (src/lib/game/core/)         ← types, static databases, GameStateMan
 
 ## Package Manager
 
-**Always use `pnpm`** — never `npm` or `yarn`. pnpm is at `/home/kirill/.local/share/pnpm/pnpm` and may not be on PATH by default; if `pnpm` is not found, add it: `export PATH="$PATH:/home/kirill/.local/share/pnpm"`.
+**Always use `pnpm`** — never `npm` or `yarn`.
 
 - Install a package: `pnpm add <pkg>` / `pnpm add -D <pkg>`
 - Install all deps: `pnpm install`
