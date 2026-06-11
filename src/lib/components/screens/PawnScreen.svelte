@@ -41,7 +41,11 @@
   // Component state - only pawn selection and navigation logic
   let pawns: Pawn[] = [];
   let selectedPawn: Pawn | null = null;
-  let selectedPawnId: string | null = null;
+  // Seed from the current uiState selection so opening this screen via VIEW/GEAR shows
+  // the pawn that was clicked. Without this seed the gameState subscription (which fires
+  // first on mount) would see a null id, auto-select pawns[0], and clobber the real
+  // selection — which is why it always opened the first pawn.
+  let selectedPawnId: string | null = get(uiState).selectedPawnId;
   let pawnScreenElement: HTMLElement;
 
   // Tab state. Declared BEFORE the store subscriptions below: a Svelte store emits
