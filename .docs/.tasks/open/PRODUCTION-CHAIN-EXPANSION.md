@@ -6,7 +6,26 @@
 
 ## Status
 
-Not started. Phase 1 (primitives through Maker's Bench) is archived.
+**In progress** (implementing chapter-by-chapter; each gated on `pnpm check` + test suite green).
+
+| Chapter | State | Notes |
+| ------- | ----- | ----- |
+| Foundation (types) | ✅ | needs `thirst`/`hygiene`, `drink`/`wash` designations, item `deterioration`/`durabilityLossPerAction`/`fuelHeat`, building `minFuelHeat`/`fluxPerBatch`/`moldRequired`/`storageDecayMultiplier`/`requiresEnclosure` |
+| §A Forageables & loose stone | ✅ | 5 named rocks (granite/limestone/sandstone/marble/slate) replace `surface_stone`; terrain-distributed yields; stone `hearth` added. "Any-rock" station cost approximated by granite (Building cost takes fixed ids) |
+| §B Durability & Deterioration | ✅* | durable-goods deterioration on loose items live + tested (`stepItemDeterioration`); *tool work-wear loop deferred to EQUIPMENT-EXPANSION (needs per-instance durability); data hook seeded |
+| §1 Wood | ⬜ | |
+| §2 Fuel & Heat | ⬜ | |
+| §3 Stone | ⬜ | |
+| §4 Clay & Ceramics | ⬜ | |
+| §5 Ore → Metal | ⬜ | |
+| §6 Hide → Leather | ⬜ | |
+| §C Food preservation | ⬜ | |
+| §D Water needs | ⬜ | |
+| §E Trapping | ⬜ | |
+| §F Storage & roofs | ⬜ | |
+| §G Shelter & Light | ⬜ | |
+
+Phase 1 (primitives through Maker's Bench) is archived.
 
 The **full detailed early-game progression** — forage → fire → primitive tools →
 food preservation → shelter & light → water → storage → clay → leather → copper
@@ -120,6 +139,14 @@ station appearance/decor but does not gate function (any rock works).
 ---
 
 ## §B. Durability & Deterioration (all items)
+
+> **Impl status:** durable-goods deterioration (case 3) is implemented +
+> unit-tested (`itemService.stepItemDeterioration`, stepped in the turn loop;
+> `itemDeterioration.test.ts`). Tool work-usage decay (case 2) needs a
+> per-instance/per-stack tool-durability model the engine doesn't have yet — that
+> model is owned by [EQUIPMENT-EXPANSION](EQUIPMENT-EXPANSION.md), so the wear
+> *loop* lands there; the data hooks (`durabilityLossPerAction` on `stone_axe`)
+> are seeded here.
 
 Everything degrades. Add a deterioration model spanning three coordinated cases;
 all of them are scaled by storage/enclosure (§F).

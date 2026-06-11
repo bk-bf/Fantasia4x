@@ -192,7 +192,8 @@
       "workAmount"     : 8,
       "toolRequirement": {"workType": "mining", "minTier": 1},
       "yields"         : [
-        {"itemId": "surface_stone", "min": 2, "max": 4, "skillId": "mining", "skillMultiplier": 0.2},
+        {"itemId": "granite", "min": 2, "max": 4, "skillId": "mining", "skillMultiplier": 0.2},
+        {"itemId": "limestone", "min": 0, "max": 2, "skillId": "mining", "skillMultiplier": 0.15}, // chance only: min 0
         {"itemId": "flint_shard", "min": 0, "max": 2, "skillId": "mining", "skillMultiplier": 0.1} // chance only: min 0
       ]
     }
@@ -678,7 +679,8 @@
       "workAmount"     : 10,
       "toolRequirement": null,
       "yields"         : [
-        {"itemId": "surface_stone", "min": 2, "max": 5, "skillId": "mining", "skillMultiplier": 0.2}
+        {"itemId": "granite", "min": 2, "max": 5, "skillId": "mining", "skillMultiplier": 0.2},
+        {"itemId": "marble", "min": 0, "max": 1, "skillId": "mining", "skillMultiplier": 0.1} // rare: prestige stone
       ]
     }
   },
@@ -701,7 +703,8 @@
       "workAmount"     : 12,
       "toolRequirement": {"workType": "mining", "minTier": 1},
       "yields"         : [
-        {"itemId": "surface_stone", "min": 3, "max": 6, "skillId": "mining", "skillMultiplier": 0.2}
+        {"itemId": "sandstone", "min": 3, "max": 6, "skillId": "mining", "skillMultiplier": 0.2},
+        {"itemId": "slate", "min": 0, "max": 2, "skillId": "mining", "skillMultiplier": 0.15} // sedimentary cliff: roofing slate
       ]
     }
   },

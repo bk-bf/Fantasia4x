@@ -344,6 +344,9 @@ export class GameEngineImpl implements GameEngine {
 			t('itemDecay', () => {
 				this.gameState = itemService.stepItemDecay(this.gameState!);
 			});
+			t('itemDeterioration', () => {
+				this.gameState = itemService.stepItemDeterioration(this.gameState!);
+			});
 			t('researchTick', () => {
 				this.gameState = researchService.processResearchTick(this.gameState!);
 			});

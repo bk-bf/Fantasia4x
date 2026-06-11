@@ -1,4 +1,4 @@
-import type { Item, GameState, DynamicIngredientSlot } from '../core/types';
+import type { Item, GameState, DynamicIngredientSlot, DroppedItem } from '../core/types';
 import { consumeFromStockpiles, addToStockpileZone } from '../core/GameState';
 import itemsData from '../database/items.jsonc';
 import { SECONDS_PER_TICK } from '../core/time';
@@ -53,6 +53,7 @@ export interface ItemService {
 
   // Decay
   stepItemDecay(gameState: GameState): GameState;
+  stepItemDeterioration(gameState: GameState): GameState;
 }
 
 /**
@@ -348,6 +349,41 @@ export class ItemServiceImpl implements ItemService {
     }
 
     return { ...state, stockpileDecaySeconds: decayAcc };
+  }
+
+  /**
+   * §B Durable-goods deterioration. Items left loose on the ground (DroppedItem with
+   * `stored !== true`) accrue elemental wear at their def's `deteriorationRate`. At 100
+   * the stack is ruined and removed. Items in the stockpile or on a stockpile tile
+   * (`stored`) take no exposure damage — storage/enclosure halts it entirely (per spec §F).
+   * Organic spoilage is handled separately by stepItemDecay; this is durables only.
+   */
+  stepItemDeterioration(gameState: GameState): GameState {
+    const dropped = gameState.droppedItems;
+    if (!dropped || dropped.length === 0) return gameState;
+
+    let changed = false;
+    const next: DroppedItem[] = [];
+    for (const di of dropped) {
+      if (di.stored) {
+        next.push(di);
+        continue;
+      }
+      const rate = this.getItemById(di.resourceId)?.deteriorationRate;
+      if (!rate) {
+        next.push(di);
+        continue;
+      }
+      const wear = (di.deterioration ?? 0) + rate;
+      changed = true;
+      if (wear >= 100) {
+        // ruined — the stack crumbles away (drop the DroppedItem)
+        continue;
+      }
+      next.push({ ...di, deterioration: wear });
+    }
+
+    return changed ? { ...gameState, droppedItems: next } : gameState;
   }
 }
 

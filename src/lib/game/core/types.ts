@@ -8,7 +8,10 @@ export type DesignationType =
 	| 'mine'
 	| 'haul'
 	| 'clear'
-	| 'stockpile';
+	| 'stockpile'
+	// ── PRODUCTION-CHAIN-EXPANSION §D: water/hygiene zones ──
+	| 'drink'
+	| 'wash';
 
 /** Zone types that support item-category filtering. */
 export type FilterableZoneType = 'harvest' | 'stockpile';
@@ -103,6 +106,8 @@ export interface DroppedItem {
 	quantity: number;
 	/** True when this item has been hauled and placed on a stockpile zone tile. */
 	stored?: boolean;
+	/** §B elemental wear 0–100 while loose/exposed; at 100 the stack is ruined. Halted once `stored`. */
+	deterioration?: number;
 }
 
 export interface Job {
@@ -372,6 +377,11 @@ export interface EntityNeeds {
 	sleep: number; // 0-100, 100 = must sleep
 	lastSleep: number; // turn when last slept
 	lastMeal: number; // turn when last ate
+	// ── PRODUCTION-CHAIN-EXPANSION §D: water needs (optional; pawns only) ──
+	thirst?: number; // 0-100, 100 = dehydrated
+	hygiene?: number; // 0-100, 100 = filthy
+	lastDrink?: number; // turn when last drank
+	lastWash?: number; // turn when last washed
 }
 
 export interface StatusEffectDef {
@@ -829,6 +839,12 @@ export interface Building {
 	requiresLighting?: boolean; // must be lit before use (e.g. campfire)
 	maxFuel?: number; // maximum fuel units it can hold
 	fuelConsumptionRate?: number; // fuel units burned per turn when lit
+	// ── PRODUCTION-CHAIN-EXPANSION §2/§5/§F: heat, flux, molds, storage ──
+	minFuelHeat?: number; // station won't operate below this fuel heat rating (§2)
+	fluxPerBatch?: number; // limestone flux consumed per smelt batch (bloomery, §5)
+	moldRequired?: string; // clay/metal mold consumed/worn per cast (§5/§G)
+	storageDecayMultiplier?: number; // <1 slows organic spoilage of stored items (§F)
+	requiresEnclosure?: boolean; // full storage benefit only when walls+roof+door (§F)
 	fuelRequirements?: {
 		requiredFuelTypes?: number;
 		tinderItemId?: string;
@@ -943,6 +959,15 @@ export interface Item {
 	durability?: number;
 	maxDurability?: number;
 	effects?: Record<string, number>;
+	// ── PRODUCTION-CHAIN-EXPANSION §B: wear & deterioration ──
+	/** Durability spent per work action when used as a tool (scaled by tier). */
+	durabilityLossPerAction?: number;
+	/** Per-tick elemental deterioration (0–100 scale) accrued only while loose/exposed. */
+	deteriorationRate?: number;
+	/** Current elemental wear 0–100; at 100 the item is ruined. Container/enclosure halts growth. */
+	deterioration?: number;
+	// ── §2: heat rating when burned as fuel (gates high-heat stations) ──
+	fuelHeat?: number;
 
 	// Food properties
 	nutrition?: number; // Dedicated nutrition value for food items
