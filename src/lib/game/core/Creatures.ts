@@ -14,6 +14,16 @@ export type EntityClass = 'mob' | 'animal';
 export type EntityBehaviour = 'passive' | 'neutral' | 'aggressive';
 export type EntityDiet = 'herbivore' | 'carnivore' | 'omnivore';
 /**
+ * What an entity can eat, in PRIORITY order (it tries the first kind it can find before
+ * falling back to the next):
+ * - `forage` — wild edible forage nodes (berry bushes, mushrooms — any forage resource that
+ *   yields a food item). The "actual food" omnivores prefer.
+ * - `grass`  — graze-able grass tiles. Herbivore staple.
+ * - `carcass`— corpses on the ground.
+ * - `prey`   — live huntable animals.
+ */
+export type FoodKind = 'forage' | 'grass' | 'carcass' | 'prey';
+/**
  * Governs how deeply an entity uses game systems.
  * - `primitive`: food-only needs, eats directly from tile/corpse (no item spawns), no mood.
  * - `sapient`:   full pawn-equivalent systems — abilities, mood, cooked food, beverages.
@@ -80,6 +90,13 @@ export interface CreatureDefinition {
   /** What this creature eats — gates only which foods it may consume, not aggression. */
   diet: EntityDiet;
   /**
+   * Concrete, priority-ordered food sources this creature will seek when hungry. Authored
+   * in creatures.jsonc as `eats`; when absent it is derived from `diet` (+`predator`):
+   *   herbivore → [grass, forage]; carnivore → [prey, carcass];
+   *   omnivore  → [forage, carcass, (prey if predator), grass]  (real food first, grass last).
+   */
+  eats: FoodKind[];
+  /**
    * True if this creature hunts and frightens prey. This — not `diet` — is the
    * sole flag that marks something as a threat: a passive omnivore (chicken)
    * is not a predator, while a neutral omnivore (bear) is.
@@ -123,6 +140,21 @@ export interface CreatureDefinition {
 
 type RawCreature = Record<string, unknown>;
 
+/** Default food priority when a creature doesn't author an explicit `eats` list. */
+function defaultEats(diet: EntityDiet, predator: boolean): FoodKind[] {
+  switch (diet) {
+    case 'herbivore':
+      return ['grass', 'forage'];
+    case 'carnivore':
+      return ['prey', 'carcass'];
+    case 'omnivore':
+    default:
+      // Real food (berries/mushrooms) and carcasses first; predatory omnivores also hunt;
+      // grass is the last-resort fallback so they don't starve when nothing else is near.
+      return predator ? ['forage', 'carcass', 'prey', 'grass'] : ['forage', 'carcass', 'grass'];
+  }
+}
+
 function toDefinition(raw: RawCreature): CreatureDefinition {
   const rs = raw.stats as { str: number; dex: number; con: number; per: number };
   const visionRange = Math.round(2 + rs.per * 0.65);
@@ -137,6 +169,8 @@ function toDefinition(raw: RawCreature): CreatureDefinition {
     visionRange,
     fleeRange: Math.round(visionRange * 1.45)
   };
+  const diet = (raw.diet as EntityDiet) ?? 'omnivore';
+  const predator = (raw.predator as boolean) ?? false;
   return {
     id: raw.id as string,
     name: raw.name as string,
@@ -146,8 +180,9 @@ function toDefinition(raw: RawCreature): CreatureDefinition {
     bg: (raw.bg as [number, number, number]) ?? [0, 0, 0],
     stats,
     behaviour: raw.behaviour as EntityBehaviour,
-    diet: (raw.diet as EntityDiet) ?? 'omnivore',
-    predator: (raw.predator as boolean) ?? false,
+    diet,
+    predator,
+    eats: (raw.eats as FoodKind[] | undefined) ?? defaultEats(diet, predator),
     intelligence: (raw.intelligence as EntityIntelligence) ?? 'primitive',
     nocturnalAggro: (raw.nocturnalAggro as boolean) ?? false,
     nightOnly: (raw.nightOnly as boolean) ?? false,

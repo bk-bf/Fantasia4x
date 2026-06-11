@@ -9,12 +9,13 @@ import type {
     LimbState,
     DroppedItem
 } from '../core/types';
-import { CREATURES, getCreatureById, type CreatureDefinition } from '../core/Creatures';
+import { CREATURES, getCreatureById, type CreatureDefinition, type FoodKind } from '../core/Creatures';
 import { getAmbientLight } from './EnvironmentService';
 import { ticksFromSeconds, SECONDS_PER_TICK, perTick } from '../core/time';
 import { conditionNeedMultipliers } from '../core/needs';
 import { advanceAlongPath } from '../systems/MovementSystem';
 import { resourceObjectService } from './ResourceObjectService';
+import itemsData from '../database/items.jsonc';
 import { absorbDropIfOnStockpileTile } from '../core/GameState';
 import { wasmPathfinderService } from './WasmPathfinderService';
 import { buildPathfindingGrids } from './PathfinderService';
@@ -113,6 +114,29 @@ const SLEEP_RECOVERY_PER_SECOND = 2.0;
 const SLEEP_HUNGER_RATE = 0.33;
 /** Hunger ceiling above which a mob won't enter sleep (mirrors pawn shouldPawnSleep: hunger < 87). */
 const SLEEP_MAX_HUNGER = 87;
+/** Hunger restored when a foraging entity finishes eating from a wild forage node (berries…). */
+const EAT_FORAGE_HUNGER_RESTORE = 45;
+
+// ── Wild food discovery (data-driven) ─────────────────────────────────────────
+/** Item ids that count as food (category food, or any positive nutrition). */
+const FOOD_ITEM_IDS = new Set(
+    (itemsData as Array<{ id: string; category?: string; nutrition?: number }>)
+        .filter((i) => i.category === 'food' || (i.nutrition ?? 0) > 0)
+        .map((i) => i.id)
+);
+/** Resource ids whose forage interaction yields a food item (berry bushes, mushrooms…).
+ *  Detected once from the resource + item databases so new edible forage auto-qualifies. */
+const WILD_FORAGE_RESOURCE_IDS = new Set(
+    resourceObjectService
+        .getAll()
+        .filter(
+            (r) =>
+                !r.grazing &&
+                r.interaction?.action === 'forage' &&
+                (r.interaction.yields ?? []).some((y) => FOOD_ITEM_IDS.has(y.itemId))
+        )
+        .map((r) => r.id)
+);
 
 class EntityServiceImpl {
     private idCounter = 0;
@@ -540,6 +564,7 @@ class EntityServiceImpl {
             allMobs,
             pendingDamage,
             pendingMeatConsumption,
+            pendingTileDepletion,
             pendingMobState
         );
     }
@@ -576,6 +601,7 @@ class EntityServiceImpl {
         allMobs: Mob[],
         pendingDamage: Map<string, number>,
         pendingMeatConsumption: Map<string, number>,
+        pendingTileDepletion: Array<{ x: number; y: number; id: string }>,
         pendingMobState: Map<string, Partial<Mob>>
     ): Mob {
         // nocturnalAggro promotes neutral → aggressive at night; otherwise use the data value.
@@ -638,7 +664,7 @@ class EntityServiceImpl {
         // Predators (incl. omnivore predators like goblins/bears) hunt prey & corpses —
         // previously only strict carnivores could, so omnivore predators just starved.
         const canHunt = def.predator || def.diet === 'carnivore';
-        if (mob.state === 'Hunting' || mob.state === 'Eating') {
+        if (mob.state === 'Hunting' || mob.state === 'Eating' || mob.state === 'Foraging') {
             // Snap back to aggro if a pawn enters vision while aggressive.
             if (inVision && aggressive) {
                 return {
@@ -658,6 +684,11 @@ class EntityServiceImpl {
                     huntTargetId: undefined
                 };
             }
+            // Foraging (and grazing-style Eating with no hunt target) routes to the forage
+            // stepper; corpse-eating (huntTargetId set) and Hunting route to the hunt stepper.
+            if (mob.state === 'Foraging' || (mob.state === 'Eating' && !mob.huntTargetId)) {
+                return this.stepForaging(mob, def, turn, state, pendingTileDepletion);
+            }
             return this.stepHunting(
                 mob,
                 def,
@@ -671,19 +702,48 @@ class EntityServiceImpl {
         }
         if (
             !inVision &&
-            canHunt &&
             mob.needs.hunger >= HUNGER_EAT_THRESHOLD &&
             mob.state !== 'Fleeing' &&
             mob.state !== 'Sleeping'
-            // (Hunting/Eating already excluded by the early-return guard above)
+            // (Hunting/Eating/Foraging already excluded by the early-return guard above)
         ) {
-            const prey = this.findNearestPrey(mob, allMobs);
-            if (prey) {
+            // Decide between foraging real food (berries/grass) and hunting, by the creature's
+            // authored priority — with a fallback to whichever is actually available so an
+            // omnivore goblin eats berries instead of starving when there's no prey nearby.
+            const eatIdx = (pred: (k: FoodKind) => boolean) => {
+                const i = def.eats.findIndex(pred);
+                return i === -1 ? Infinity : i;
+            };
+            const forageIdx = eatIdx((k) => k === 'grass' || k === 'forage');
+            const huntIdx = eatIdx((k) => k === 'prey' || k === 'carcass');
+            const forageKinds = new Set<FoodKind>(
+                def.eats.filter((k) => k === 'grass' || k === 'forage')
+            );
+            const forageReachable = () =>
+                forageKinds.size > 0 &&
+                this.findNearestFoodTile(state, mob.x, mob.y, FORAGE_RADIUS, forageKinds) !== null;
+            const tryHunt = (): Mob | null => {
+                if (!canHunt || huntIdx === Infinity) return null;
+                const prey = this.findNearestPrey(mob, allMobs);
+                if (!prey) return null;
                 const preyDef = getCreatureById(prey.creatureId);
-                const preyName = preyDef ? `${preyDef.name} #${prey.debugId ?? prey.id.slice(-4)}` : prey.id.slice(-6);
+                const preyName = preyDef
+                    ? `${preyDef.name} #${prey.debugId ?? prey.id.slice(-4)}`
+                    : prey.id.slice(-6);
                 logHuntStart(mob.id, this.entityName(mob), prey.id, preyName, turn, mob.x, mob.y);
+                return { ...mob, state: 'Hunting', stateSince: turn, path: [] };
+            };
+
+            // Highest-priority available food first, then the other as fallback.
+            if (forageIdx <= huntIdx) {
+                if (forageReachable()) return { ...mob, state: 'Foraging', stateSince: turn, path: [] };
+                const hunted = tryHunt();
+                if (hunted) return hunted;
+            } else {
+                const hunted = tryHunt();
+                if (hunted) return hunted;
+                if (forageReachable()) return { ...mob, state: 'Foraging', stateSince: turn, path: [] };
             }
-            return { ...mob, state: 'Hunting', stateSince: turn, path: [] };
         }
 
         // ── Fatigue-driven sleep (safe, no pawn in vision, not hungry) ──────────
@@ -836,13 +896,22 @@ class EntityServiceImpl {
                 mob.state !== 'Startled' &&
                 mob.state !== 'Sleeping'
             ) {
-                const canForage = def.diet !== 'carnivore';
-                const canHunt = def.diet === 'carnivore';
+                // Priority index of the creature's best forage vs hunt food (missing = lowest).
+                const eatIdx = (pred: (k: FoodKind) => boolean) => {
+                    const i = def.eats.findIndex(pred);
+                    return i === -1 ? Infinity : i;
+                };
+                const forageIdx = eatIdx((k) => k === 'grass' || k === 'forage');
+                const huntIdx = eatIdx((k) => k === 'prey' || k === 'carcass');
+                const canForage = forageIdx !== Infinity;
+                const canHunt = huntIdx !== Infinity;
                 // Check hunt cooldown before entering Hunting state.
                 const huntCooldownExpired = !mob.huntCooldownUntil || turn >= mob.huntCooldownUntil;
-                if (canForage) return { ...mob, state: 'Foraging', stateSince: turn, path: [] };
+                if (canForage && forageIdx <= huntIdx)
+                    return { ...mob, state: 'Foraging', stateSince: turn, path: [] };
                 if (canHunt && huntCooldownExpired)
                     return { ...mob, state: 'Hunting', stateSince: turn, path: [] };
+                if (canForage) return { ...mob, state: 'Foraging', stateSince: turn, path: [] };
             }
 
             // Enter sleep only when not hungry (mirrors pawn shouldPawnSleep).
@@ -988,28 +1057,35 @@ class EntityServiceImpl {
         state: GameState,
         pendingTileDepletion: Array<{ x: number; y: number; id: string }>
     ): Mob {
+        // What this creature will graze/forage from tiles (grass and/or wild forage nodes),
+        // in its authored priority order.
+        const kinds = new Set<FoodKind>(def.eats.filter((k) => k === 'grass' || k === 'forage'));
+        // Idle/rest state differs by FSM: passive animals graze, hostile mobs wander.
+        const idleState: MobState = def.behaviour === 'passive' ? 'Grazing' : 'Wander';
+
         // Eating in progress — stay still and advance progress by elapsed seconds.
         const progress = mob.eatProgress ?? 0;
         if (progress > 0) {
             const next = progress + SECONDS_PER_TICK / EAT_GRASS_SECONDS;
             if (next >= 1) {
-                // Deplete the grass tile the animal is standing on.
-                const tileRes = state.worldMap[mob.y]?.[mob.x]?.resources;
-                const grassKey = tileRes
-                    ? Object.keys(tileRes).find(
-                        (k) => (tileRes[k] ?? 0) > 0 && resourceObjectService.getById(k)?.grazing
-                    )
-                    : undefined;
-                if (grassKey) pendingTileDepletion.push({ x: mob.x, y: mob.y, id: grassKey });
+                // Deplete the edible resource (grass OR wild forage node) on the current tile,
+                // restoring more hunger from real forage food than from plain grass.
+                const tile = state.worldMap[mob.y]?.[mob.x];
+                const edibleId = this.edibleResourceOnTile(tile, kinds);
+                if (edibleId) pendingTileDepletion.push({ x: mob.x, y: mob.y, id: edibleId });
+                const restore =
+                    edibleId && WILD_FORAGE_RESOURCE_IDS.has(edibleId)
+                        ? EAT_FORAGE_HUNGER_RESTORE
+                        : EAT_GRASS_HUNGER_RESTORE;
 
-                const newHunger = Math.max(0, mob.needs.hunger - EAT_GRASS_HUNGER_RESTORE);
+                const newHunger = Math.max(0, mob.needs.hunger - restore);
                 // Stay Foraging until sated so the animal repeats eating on the next cycle.
                 return {
                     ...mob,
                     eatProgress: undefined,
                     path: [],
                     needs: { ...mob.needs, hunger: newHunger, lastMeal: turn },
-                    state: newHunger > HUNGER_SATED_THRESHOLD ? 'Foraging' : 'Grazing',
+                    state: newHunger > HUNGER_SATED_THRESHOLD ? 'Foraging' : idleState,
                     stateSince: turn
                 };
             }
@@ -1021,8 +1097,14 @@ class EntityServiceImpl {
             return mob;
         }
 
-        // Path done — decide next step.
-        const target = this.findNearestEdibleTile(state, mob.x, mob.y, FORAGE_RADIUS);
+        // Path done — decide next step. Search in the creature's authored priority order so
+        // omnivores head for real forage food (berries/mushrooms) before falling back to grass.
+        let target: { x: number; y: number } | null = null;
+        for (const kind of def.eats) {
+            if (kind !== 'grass' && kind !== 'forage') continue;
+            target = this.findNearestFoodTile(state, mob.x, mob.y, FORAGE_RADIUS, new Set([kind]));
+            if (target) break;
+        }
         if (!target) {
             // No edible tile in range — exit Foraging state and wander.
             if (turn % 300 === 0) {
@@ -1032,7 +1114,7 @@ class EntityServiceImpl {
                     `FORAGE-NO-TARGET ${mob.id} @(${mob.x},${mob.y}) hunger=${mob.needs.hunger.toFixed(1)}`
                 );
             }
-            return { ...this.wanderStep(mob, def, state), state: 'Grazing', stateSince: turn };
+            return { ...this.wanderStep(mob, def, state), state: idleState, stateSince: turn };
         }
 
         if (target.x === mob.x && target.y === mob.y) {
@@ -1048,7 +1130,7 @@ class EntityServiceImpl {
                 'ENTITY-FEED',
                 `FORAGE-UNREACHABLE ${mob.id} @(${mob.x},${mob.y}) food@(${target.x},${target.y})`
             );
-            return { ...this.wanderStep(mob, def, state), state: 'Grazing', stateSince: turn };
+            return { ...this.wanderStep(mob, def, state), state: idleState, stateSince: turn };
         }
         return { ...mob, path: newPath, pathIndex: 0, nextCellCostLeft: undefined };
     }
@@ -1224,12 +1306,34 @@ class EntityServiceImpl {
     // ===== FORAGING QUERIES =======================================================
 
     /** Nearest walkable tile within radius that has a resource with `grazing: true`. */
-    private findNearestEdibleTile(
+    /**
+     * The id of an edible resource on a tile that matches the given food kinds, or null.
+     * `grass` matches grazing resources; `forage` matches wild edible forage nodes (berries…).
+     */
+    private edibleResourceOnTile(
+        tile: { resources?: Record<string, number> } | undefined,
+        kinds: Set<FoodKind>
+    ): string | null {
+        if (!tile?.resources) return null;
+        const wantGrass = kinds.has('grass');
+        const wantForage = kinds.has('forage');
+        for (const [k, v] of Object.entries(tile.resources)) {
+            if ((v ?? 0) <= 0) continue;
+            if (wantGrass && resourceObjectService.getById(k)?.grazing) return k;
+            if (wantForage && WILD_FORAGE_RESOURCE_IDS.has(k)) return k;
+        }
+        return null;
+    }
+
+    /** Nearest tile (Manhattan) within `radius` that carries food matching `kinds`. */
+    private findNearestFoodTile(
         state: GameState,
         x: number,
         y: number,
-        radius: number
+        radius: number,
+        kinds: Set<FoodKind>
     ): { x: number; y: number } | null {
+        if (kinds.size === 0) return null;
         let bestDist = Infinity;
         let best: { x: number; y: number } | null = null;
         for (let dy = -radius; dy <= radius; dy++) {
@@ -1238,12 +1342,7 @@ class EntityServiceImpl {
                 const ny = y + dy;
                 const tile = state.worldMap[ny]?.[nx];
                 if (!tile?.walkable) continue;
-                const hasGraze = tile.resources
-                    ? Object.entries(tile.resources).some(
-                        ([k, v]) => v > 0 && resourceObjectService.getById(k)?.grazing
-                    )
-                    : false;
-                if (!hasGraze) continue;
+                if (!this.edibleResourceOnTile(tile, kinds)) continue;
                 const dist = Math.abs(dx) + Math.abs(dy);
                 if (dist < bestDist) {
                     bestDist = dist;
