@@ -176,6 +176,15 @@ Each runner: install Rust stable → install WASM target → `pnpm add:wasm` →
 The `pnpm add:wasm` script already does this; just ensure `wasm-pack` is
 available in the CI environment (`cargo install wasm-pack` step).
 
+### C4 — CI caching
+
+Cargo/wasm-pack builds are the slow part of the matrix. Use
+[`Swatinem/rust-cache`](https://github.com/Swatinem/rust-cache) (free GitHub
+Action) to cache `~/.cargo` and `target/` per-OS — covers Linux, Windows, and
+macOS runners alike. A paid runner service (e.g. Blacksmith) was considered but
+doesn't support macOS runners, so it wouldn't help the full matrix; revisit
+only if release-build CI time becomes a real pain point.
+
 ---
 
 ## Open Questions
