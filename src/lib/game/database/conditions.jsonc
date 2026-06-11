@@ -185,5 +185,35 @@
                 "modifiers"      : {"workEfficiency": 0.0, "moveSpeed": 0.0}
             }
         ]
+    },
+    {
+        "id"            : "infection",
+        "name"          : "Infection",
+        "description"   : "An untended wound has festered. Worsens without treatment and can turn fatal; good care drives it back.",
+        "lethalSeverity": 1.0,
+        "stages": [
+            {"label": "trace", "minSeverity": 0.0, "color": "#9ccc65", "modifiers": {}},
+            { "label": "minor", "minSeverity": 0.2, "color": "#cddc39", "modifiers": {"workEfficiency": 0.85} },
+            {
+                "label"      : "moderate",
+                "minSeverity": 0.4,
+                "color"      : "#ffb300",
+                "modifiers"  : {"workEfficiency": 0.6, "moveSpeed": 0.85}
+            },
+            {
+                "label"          : "serious",
+                "minSeverity"    : 0.6,
+                "color"          : "#f4511e",
+                "lifeThreatening": true,
+                "modifiers"      : {"workEfficiency": 0.4, "moveSpeed": 0.6}
+            },
+            {
+                "label"          : "critical",
+                "minSeverity"    : 0.85,
+                "color"          : "#c62828",
+                "lifeThreatening": true,
+                "modifiers"      : {"workEfficiency": 0.15, "moveSpeed": 0.35}
+            }
+        ]
     }
 ]

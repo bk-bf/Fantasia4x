@@ -14,6 +14,7 @@ import type {
 } from '../core/types';
 import { itemService } from '../services/ItemService';
 import { getCreatureById } from '../core/Creatures';
+import { woundForDamageType, woundById, severityFromFrac } from '../core/Wounds';
 import { pawnStatService } from '../services/PawnStatService';
 import { logCombatSwing, logCombatKill } from '../../stores/Log';
 import { combatFeedback, type CombatTextKind } from '../../stores/combatFeedback';
@@ -32,6 +33,13 @@ const MOB_BASE_DAMAGE = 5;
 const CRIT_MULTIPLIER = 1.5;
 /** Upper bound on total crit chance (base stat + weapon critMod). */
 const CRIT_CHANCE_CAP = 0.6;
+/** Consciousness (capacity 0–1) below which an entity collapses — out of the fight,
+ *  distinct from a brief blunt knockdown. Consciousness already folds in pain, blood
+ *  loss and organ damage, so downing is unified rather than a separate pain threshold.
+ *  Mobs are defeated on collapse; pawns go down until consciousness recovers. */
+const COLLAPSE_CONSCIOUSNESS = 0.3;
+/** Turns a blunt knockdown keeps an entity prone (short tactical stagger). */
+const KNOCKDOWN_TURNS = 2;
 /**
  * A pawn's innate attacks — ids of `natural_weapon` items in items.jsonc. Bare hands
  * are deliberately weak vs crafted gear so equipping a real weapon is a clear upgrade;
@@ -631,10 +639,11 @@ export interface CombatService {
     tickCombat(state: GameState, dtMs: number): GameState;
     /** Pure hit resolution: roll to-hit, pick body part, compute damage & injury. */
     resolveHit(attacker: Pawn | Mob, defender: Pawn | Mob, state: GameState): HitResult;
-    /** Apply an already-resolved Injury to a pawn, updating limb tree + conditions. */
-    applyInjury(pawnId: string, injury: Injury, state: GameState): GameState;
+    /** Apply an already-resolved Injury to a pawn, updating limb tree + conditions.
+     *  `knockdown` applies a short blunt-stagger status when the swing rolled one. */
+    applyInjury(pawnId: string, injury: Injury, state: GameState, knockdown?: boolean): GameState;
     /** Apply an already-resolved Injury to a mob, updating limb tree + conditions. */
-    applyInjuryToMob(mobId: string, injury: Injury, state: GameState): GameState;
+    applyInjuryToMob(mobId: string, injury: Injury, state: GameState, knockdown?: boolean): GameState;
     /** Deferred — stub; wired by MAGIC-SKILLS spec. */
     triggerSkill(skillId: string, casterId: string, targetId: string, state: GameState): GameState;
 }
@@ -653,25 +662,35 @@ function rollBodyPart(): BodyPartId {
     return OUTER_PARTS[OUTER_PARTS.length - 1].id;
 }
 
-function bleedModForType(t: DamageType): number {
-    return t === 'cutting' ? 1.0 : t === 'piercing' ? 0.5 : 0.0;
-}
-
-function injuryTypeFor(t: DamageType): Injury['type'] {
-    return t === 'cutting' ? 'cut' : t === 'piercing' ? 'puncture' : 'crush';
-}
-
-function injurySeverity(hpMissingFrac: number): Injury['severity'] {
-    if (hpMissingFrac >= 1.0) return 'destroyed';
-    if (hpMissingFrac >= 0.7) return 'critical';
-    if (hpMissingFrac >= 0.4) return 'serious';
-    return 'minor';
-}
-
-function painFromSeverity(severity: Injury['severity'], isVital: boolean): number {
-    const base =
-        severity === 'destroyed' ? 30 : severity === 'critical' ? 20 : severity === 'serious' ? 10 : 4;
-    return isVital ? base * 2 : base;
+/**
+ * Derive a wound's severity, bleed rate and pain from its accumulated damage on a
+ * part. Shared by damage application (Combat) and healing (PawnStateMachine) so both
+ * the build-up and the recovery use one formula. Bleed/pain scale with the wound's
+ * total damage as a fraction of the part's max HP; vital parts hurt twice as much.
+ */
+export function recomputeWound(
+    bodyPart: BodyPartId,
+    type: Injury['type'],
+    accumDamage: number,
+    prev?: Pick<Injury, 'infected' | 'treatedAt'>
+): Injury {
+    const partDef = PART_DEF_MAP[bodyPart];
+    const wd = woundById(type);
+    const maxHp = partDef?.maxHp ?? 1;
+    const frac = maxHp > 0 ? Math.min(accumDamage / maxHp, 1) : 0;
+    return {
+        bodyPart,
+        type,
+        severity: severityFromFrac(frac),
+        damage: accumDamage,
+        bleeding: partDef
+            ? Math.round(partDef.bleedRatio * BLEED_CONSTANT * (wd?.bleedMod ?? 0) * frac * 100) / 100
+            : 0,
+        painContribution:
+            Math.round(accumDamage * (wd?.painPerDamage ?? 0.5) * (partDef?.isVital ? 2 : 1) * 10) / 10,
+        infected: prev?.infected ?? false,
+        treatedAt: prev?.treatedAt
+    };
 }
 
 interface AttackProfile {
@@ -892,18 +911,17 @@ class CombatServiceImpl implements CombatService {
         const newHealth = Math.max(0, prevHealth - final);
         const hpMissing = (partDef.maxHp - newHealth) / partDef.maxHp;
 
-        const bMod = bleedModForType(damageType);
-        const bleeding = Math.round(partDef.bleedRatio * BLEED_CONSTANT * bMod * hpMissing * 100) / 100;
-        const severity = injurySeverity(hpMissing);
-        const pain = painFromSeverity(severity, partDef.isVital);
-
+        // This-hit wound increment. The damage type picks the wound (cut/puncture/crush/
+        // burn); accumulation, final severity, bleed rate and pain are computed when the
+        // wound is merged into the part (applyInjury) — same-type hits stack into one.
+        const woundDef = woundForDamageType(damageType);
         const injury: Injury = {
             bodyPart: partId,
-            type: injuryTypeFor(damageType),
-            severity,
+            type: woundDef.id as Injury['type'],
+            severity: severityFromFrac(hpMissing),
             damage: final,
-            bleeding,
-            painContribution: pain,
+            bleeding: woundDef.bleedMod > 0 && hpMissing > 0 ? 1 : 0,
+            painContribution: 0,
             infected: false
         };
 
@@ -931,70 +949,90 @@ class CombatServiceImpl implements CombatService {
         entity: T,
         injury: Injury,
         state: GameState,
-        entityType: 'pawn' | 'mob'
+        entityType: 'pawn' | 'mob',
+        knockdown: boolean
     ): GameState {
         const partDef = PART_DEF_MAP[injury.bodyPart];
         if (!partDef) return state;
 
-        // ── Update limb tree ─────────────────────────────────────────────────
+        // ── Update limb tree: merge this hit into the part's same-type wound ──────
         const limbs: LimbState[] = (entity.limbs ?? []).map((limb) => {
             if (limb.id !== partDef.parentLimb) return limb;
 
             const existing: BodyPartState[] = limb.parts ?? [];
             const idx = existing.findIndex((p) => p.id === injury.bodyPart);
+            const prev: BodyPartState =
+                idx >= 0
+                    ? existing[idx]
+                    : { id: injury.bodyPart, health: partDef.maxHp, maxHp: partDef.maxHp, isMissing: false, injuries: [] };
 
-            let newParts: BodyPartState[];
-            if (idx >= 0) {
-                const prev = existing[idx];
-                const newHp = Math.max(0, prev.health - injury.damage);
-                newParts = [...existing];
-                newParts[idx] = {
-                    ...prev,
-                    health: newHp,
-                    isMissing: prev.isMissing || injury.severity === 'destroyed',
-                    injuries: [...prev.injuries, injury]
-                };
-            } else {
-                // First hit on this fine part — seed health from partDef.maxHp
-                const newHp: number = Math.max(0, partDef.maxHp - injury.damage);
-                newParts = [
-                    ...existing,
-                    {
-                        id: injury.bodyPart,
-                        health: newHp,
-                        maxHp: partDef.maxHp,
-                        isMissing: injury.severity === 'destroyed',
-                        injuries: [injury]
-                    }
-                ];
-            }
+            const newHp = Math.max(0, prev.health - injury.damage);
 
-            // Aggregate bleed from all fine-part injuries to the root limb's bleedRate
+            // Stack: one wound per type per part. Same-type hits accumulate damage and
+            // escalate severity (5 crushes → one severe crush) instead of piling up.
+            const wIdx = prev.injuries.findIndex((w) => w.type === injury.type);
+            const prevW = wIdx >= 0 ? prev.injuries[wIdx] : undefined;
+            const accum = Math.min((prevW?.damage ?? 0) + injury.damage, partDef.maxHp);
+            const merged = recomputeWound(injury.bodyPart, injury.type, accum, prevW);
+            const woundList =
+                wIdx >= 0 ? prev.injuries.map((w, i) => (i === wIdx ? merged : w)) : [...prev.injuries, merged];
+
+            const updatedPart: BodyPartState = {
+                ...prev,
+                health: newHp,
+                isMissing: prev.isMissing || merged.severity === 'destroyed',
+                injuries: woundList
+            };
+            const newParts = idx >= 0 ? existing.map((p, i) => (i === idx ? updatedPart : p)) : [...existing, updatedPart];
+
+            // Bleed rate = sum of all current part-wound bleed (falls as wounds heal),
+            // and the root-limb health is the mass-weighted health of its parts.
             const totalBleed = newParts.reduce(
-                (sum, p) => sum + p.injuries.reduce((s, inj) => s + inj.bleeding, 0),
+                (sum, p) => sum + p.injuries.reduce((s, w) => s + w.bleeding, 0),
                 0
             );
+            const partMaxTotal = newParts.reduce((s, p) => s + p.maxHp, 0);
+            const partHealthTotal = newParts.reduce((s, p) => s + p.health, 0);
+            const rolledHealth =
+                partMaxTotal > 0 ? Math.round((partHealthTotal / partMaxTotal) * 100) : limb.health;
 
-            return { ...limb, bleedRate: Math.max(limb.bleedRate, totalBleed) };
+            return { ...limb, parts: newParts, health: rolledHealth, bleedRate: totalBleed };
         });
 
-        // ── Update entity-level fields ─────────────────────────────────────────
-        const newPain = clamp((entity.pain ?? 0) + injury.painContribution, 0, 100);
-        const newInjuries: Injury[] = [...(entity.injuries ?? []), injury];
+        // ── Entity-level fields. Pain is the SUM of all active wounds (so it falls as
+        //    wounds heal), and the flat injuries list mirrors the merged part wounds. ──
+        let painTotal = 0;
+        const newInjuries: Injury[] = [];
+        for (const l of limbs) {
+            for (const p of l.parts ?? []) {
+                for (const w of p.injuries) {
+                    painTotal += w.painContribution;
+                    newInjuries.push(w);
+                }
+            }
+        }
+        const newPain = clamp(Math.round(painTotal), 0, 100);
 
         // blood_loss severity derived from current bloodVolume
         const maxBV = entity.maxBloodVolume ?? 100;
         const bloodLossSev = clamp(1 - (entity.bloodVolume ?? maxBV) / maxBV, 0, 1);
         const newConditions = upsertCondition(entity.conditions ?? [], 'blood_loss', bloodLossSev);
 
-        // Pain collapse → knockdown 3 turns
+        // Status effects. Knockdown = a short blunt stagger (this swing rolled one).
+        // Collapse = loss of consciousness (pain + blood loss + organ damage, via the
+        // capacity), kept active while it stays low; the pawn state machine clears it as
+        // the pawn recovers. Deliberately distinct: a stagger is momentary, a collapse
+        // ends the fight.
+        const consciousness =
+            pawnStatService.computeCapacities({ ...entity, limbs, injuries: newInjuries } as T)
+                .consciousness ?? 1;
+        const collapsed = consciousness < COLLAPSE_CONSCIOUSNESS;
         const durations = { ...(entity.statusEffectDurations ?? {}) };
-        if (newPain >= 80) {
-            durations.knockdown = Math.max(durations.knockdown ?? 0, 3);
-        }
+        if (knockdown) durations.knockdown = Math.max(durations.knockdown ?? 0, KNOCKDOWN_TURNS);
+        if (collapsed) durations.collapse = Math.max(durations.collapse ?? 0, KNOCKDOWN_TURNS);
         const activeEffects = [...(entity.activeEffects ?? [])];
-        if (durations.knockdown && !activeEffects.includes('knockdown')) {
-            activeEffects.push('knockdown');
+        for (const id of ['knockdown', 'collapse']) {
+            if ((durations[id] ?? 0) > 0 && !activeEffects.includes(id)) activeEffects.push(id);
         }
 
         const updated = {
@@ -1007,7 +1045,9 @@ class CombatServiceImpl implements CombatService {
             conditions: newConditions
         };
 
-        // Vital part destroyed → permadeath
+        // Resolution: a destroyed vital part is instant death. Otherwise a collapse
+        // takes the entity out of the fight — a mob is defeated (no capture system yet),
+        // a pawn goes down (the state machine drives the Collapsed state + recovery).
         if (partDef.isVital && injury.severity === 'destroyed') {
             if (entityType === 'pawn') {
                 (updated as Pawn).isAlive = false;
@@ -1017,6 +1057,10 @@ class CombatServiceImpl implements CombatService {
                 (updated as Mob).state = 'Corpse';
                 (updated as Mob).diedAt = state.turn;
             }
+        } else if (collapsed && entityType === 'mob') {
+            (updated as Mob).isAlive = false;
+            (updated as Mob).state = 'Corpse';
+            (updated as Mob).diedAt = state.turn;
         }
 
         if (entityType === 'pawn') {
@@ -1032,16 +1076,16 @@ class CombatServiceImpl implements CombatService {
         }
     }
 
-    applyInjury(pawnId: string, injury: Injury, state: GameState): GameState {
+    applyInjury(pawnId: string, injury: Injury, state: GameState, knockdown = false): GameState {
         const pawn = state.pawns.find((p) => p.id === pawnId);
         if (!pawn) return state;
-        return this._applyInjuryToEntity(pawn, injury, state, 'pawn');
+        return this._applyInjuryToEntity(pawn, injury, state, 'pawn', knockdown);
     }
 
-    applyInjuryToMob(mobId: string, injury: Injury, state: GameState): GameState {
+    applyInjuryToMob(mobId: string, injury: Injury, state: GameState, knockdown = false): GameState {
         const mob = state.mobs?.find((m) => m.id === mobId);
         if (!mob) return state;
-        return this._applyInjuryToEntity(mob, injury, state, 'mob');
+        return this._applyInjuryToEntity(mob, injury, state, 'mob', knockdown);
     }
 
     // ── Combat feedback helpers ────────────────────────────────────────────────
@@ -1098,8 +1142,8 @@ class CombatServiceImpl implements CombatService {
         if (!result.injury) return { state, staminaCost: result.staminaCost };
 
         const next = isTargetMob
-            ? this.applyInjuryToMob(target.id, result.injury, state)
-            : this.applyInjury(target.id, result.injury, state);
+            ? this.applyInjuryToMob(target.id, result.injury, state, result.knockdown)
+            : this.applyInjury(target.id, result.injury, state, result.knockdown);
 
         // Floating text: damage number — a rolled crit OR a part-wrecking hit reads as
         // 'crit'; plus a secondary knockdown / bleed cue.
@@ -1162,9 +1206,10 @@ class CombatServiceImpl implements CombatService {
         return best;
     }
 
-    /** True while an entity is knocked down and cannot swing this tick. */
+    /** True while an entity is knocked down OR collapsed and cannot swing this tick. */
     private isKnockedDown(e: Pawn | Mob): boolean {
-        return (e.statusEffectDurations?.knockdown ?? 0) > 0;
+        const d = e.statusEffectDurations;
+        return (d?.knockdown ?? 0) > 0 || (d?.collapse ?? 0) > 0;
     }
 
     tickCombat(state: GameState, _dtMs: number): GameState {
@@ -1197,9 +1242,13 @@ class CombatServiceImpl implements CombatService {
                 target = mobs.find((m) => m.id === mob.huntTargetId && m.isAlive !== false);
             }
             if (!target) {
+                // Skip collapsed pawns — a downed pawn is no longer a target, so the
+                // mob disengages rather than beating an unconscious body (spec: a
+                // collapsed pawn is carried off or bleeds out, not auto-finished).
                 target = state.pawns.find(
                     (p) =>
                         p.isAlive !== false &&
+                        p.currentState !== 'Collapsed' &&
                         p.position &&
                         Math.abs(mob.x - p.position.x) <= 1 &&
                         Math.abs(mob.y - p.position.y) <= 1

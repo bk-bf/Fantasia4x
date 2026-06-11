@@ -20,8 +20,12 @@ import type {
     Building,
     PlacedBuilding,
     ConditionDef,
-    ConditionStage
+    ConditionStage,
+    Injury,
+    LimbState
 } from '../core/types';
+import { recomputeWound } from './Combat';
+import { HEALING_CONFIG, CARE_CONFIG, woundById } from '../core/Wounds';
 import {
     addToStockpileZone,
     consumeFromStockpiles,
@@ -57,7 +61,9 @@ export const PAWN_STATE = {
     MOVING_TO_DEPOSIT: 'MovingToDeposit',
     // Combat states (COMBAT-SYSTEM): auto-engagement when a hostile enters aggro range.
     FIGHTING: 'Fighting',
-    FLEEING: 'Fleeing'
+    FLEEING: 'Fleeing',
+    // Downed by cumulative pain — out of the fight until pain subsides.
+    COLLAPSED: 'Collapsed'
 } as const;
 
 export type PawnStateName = (typeof PAWN_STATE)[keyof typeof PAWN_STATE];
@@ -85,6 +91,11 @@ const FATIGUE_THRESHOLD = 72; // Seek rest after ~225 turns ≈ 0.75 days (28% r
 const PAWN_BASE_VISION = 6;
 /** How far (tiles) a fleeing pawn tries to put between itself and the threat. */
 const FLEE_DISTANCE = 6;
+/** Consciousness (0–1) below which a pawn collapses (matches Combat.COLLAPSE_CONSCIOUSNESS).
+ *  Folds in pain + blood loss + organ damage, so downing has one unified cause. */
+const COLLAPSE_CONSCIOUSNESS = 0.3;
+/** A collapsed pawn stands back up once consciousness recovers above this. */
+const RECOVER_CONSCIOUSNESS = 0.45;
 
 /** Vision/aggro radius in tiles for this pawn (perception- and sight-scaled). */
 function pawnVisionTiles(pawn: Pawn): number {
@@ -155,7 +166,7 @@ function getConditionStage(conditionId: string, severity: number): ConditionStag
  */
 function killPawn(
     pawn: Pawn,
-    cause: 'malnutrition' | 'blood_loss' | 'critical_limb' | 'combat' | 'exhaustion_cascade',
+    cause: 'malnutrition' | 'blood_loss' | 'critical_limb' | 'combat' | 'exhaustion_cascade' | 'infection',
     gameState: GameState
 ): GameState {
     logActivity({
@@ -303,6 +314,52 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
         return killPawn(updatedGs.pawns.find((p) => p.id === pawn.id)!, 'blood_loss', updatedGs);
     }
 
+    // ── Infection ─────────────────────────────────────────────────────────────
+    // Untended open wounds fester; the immune system (CON) and good care push back.
+    // Drives the multi-stage `infection` condition, lethal at full severity.
+    let infectionPressure = 0;
+    for (const limb of limbs) {
+        for (const part of limb.parts ?? []) {
+            for (const w of part.injuries) {
+                const open =
+                    w.bleeding > 0 ||
+                    w.severity === 'serious' ||
+                    w.severity === 'critical' ||
+                    w.severity === 'destroyed';
+                if (open && !isTended(w, gameState.turn)) {
+                    infectionPressure += CARE_CONFIG.infectionRiskPerWound;
+                }
+            }
+        }
+    }
+    const immune = Math.max(
+        0,
+        Math.min(0.95, CARE_CONFIG.immuneResistBase + (pawn.stats.constitution - 10) * 0.02)
+    );
+    const infIdx = conditions.findIndex((c) => c.id === 'infection');
+    const curInf = infIdx >= 0 ? conditions[infIdx].severity : 0;
+    const nextInf =
+        infectionPressure > 0
+            ? Math.min(1, curInf + infectionPressure * (1 - immune))
+            : Math.max(0, curInf - CARE_CONFIG.infectionRecoveryPerTick);
+    if (nextInf <= 0) {
+        if (infIdx >= 0) conditions.splice(infIdx, 1);
+    } else if (infIdx >= 0) {
+        conditions[infIdx] = { ...conditions[infIdx], severity: nextInf };
+    } else {
+        conditions.push({ id: 'infection', severity: nextInf });
+    }
+    const infectionDef = CONDITIONS_DB.find((d) => d.id === 'infection');
+    if (infectionDef && nextInf >= infectionDef.lethalSeverity) {
+        const updatedGs = {
+            ...gameState,
+            pawns: gameState.pawns.map((p) =>
+                p.id === pawn.id ? { ...p, conditions, bloodVolume, limbs } : p
+            )
+        };
+        return killPawn(updatedGs.pawns.find((p) => p.id === pawn.id)!, 'infection', updatedGs);
+    }
+
     // ── Critical Limb Destruction ─────────────────────────────────────────────
     for (const limb of limbs) {
         if (limb.health <= 0 && (limb.id === 'head' || limb.id === 'torso')) {
@@ -322,6 +379,139 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
         pawns: gameState.pawns.map((p) =>
             p.id === pawn.id ? { ...p, conditions, bloodVolume, limbs } : p
         )
+    };
+}
+
+/**
+ * Mend wounds over time (COMBAT-SYSTEM). Each wound's accumulated damage shrinks by a
+ * heal-rate- and difficulty-scaled amount, restoring part HP, lowering bleed, and
+ * (since pain = Σ wounds) lowering pain — which is how a collapsed pawn recovers.
+ * Recovery is boosted by sleep, being well-fed, and a good mood. Wounds do NOT mend
+ * mid-fight (the caller skips FIGHTING/FLEEING), so a brawl still marches to collapse.
+ */
+/** Is this wound currently under active treatment? Higher-quality tends last longer. */
+function isTended(w: Injury, turn: number): boolean {
+    if (w.treatedAt == null) return false;
+    return turn - w.treatedAt < CARE_CONFIG.treatmentDurationTicks * (w.treatmentQuality ?? 0);
+}
+
+/** The colony's best available medic (skill + mood) — anyone alive and not downed or
+ *  mid-fight, including the patient (self-care). Returns null if no one can help. */
+function bestCaretaker(gameState: GameState): { skill: number; mood: number } | null {
+    let best: { skill: number; mood: number } | null = null;
+    for (const p of gameState.pawns) {
+        if (p.isAlive === false) continue;
+        const st = p.currentState;
+        if (st === PAWN_STATE.COLLAPSED || st === PAWN_STATE.FIGHTING || st === PAWN_STATE.FLEEING) continue;
+        const skill = pawnStatService.evaluateStat('medical_skill', p);
+        if (!best || skill > best.skill) best = { skill, mood: p.state?.mood ?? 50 };
+    }
+    return best;
+}
+
+/**
+ * Tend a patient's untended wounds (COMBAT-SYSTEM caretaking). The colony's best
+ * available medic rolls a treatment quality from their medical_skill × mood × variance;
+ * the quality is stamped on each wound and drives faster healing, a longer-lasting tend,
+ * and infection suppression. A botched roll (below minTendQuality) does nothing.
+ */
+function tendWounds(patient: Pawn, gameState: GameState): Pawn {
+    const turn = gameState.turn;
+    const limbs = patient.limbs;
+    if (!limbs) return patient;
+    const hasUntended = limbs.some((l) =>
+        (l.parts ?? []).some((p) => p.injuries.some((w) => !isTended(w, turn)))
+    );
+    if (!hasUntended) return patient;
+
+    const medic = bestCaretaker(gameState);
+    if (!medic) return patient;
+    const moodFactor = Math.max(0.3, Math.min(1.2, 0.6 + (medic.mood / 100) * 0.6));
+    const quality = Math.max(0, Math.min(1, medic.skill * moodFactor * (0.6 + rng.random() * 0.4)));
+    if (quality < CARE_CONFIG.minTendQuality) return patient; // botched tend
+
+    const newLimbs = limbs.map((limb) => {
+        const parts = limb.parts;
+        if (!parts || !parts.some((p) => p.injuries.length > 0)) return limb;
+        return {
+            ...limb,
+            parts: parts.map((part) =>
+                part.injuries.length === 0
+                    ? part
+                    : {
+                          ...part,
+                          injuries: part.injuries.map((w) =>
+                              isTended(w, turn) ? w : { ...w, treatedAt: turn, treatmentQuality: quality }
+                          )
+                      }
+            )
+        };
+    });
+    return { ...patient, limbs: newLimbs };
+}
+
+export function healWounds(pawn: Pawn, turn = 0): Pawn {
+    const limbs = pawn.limbs;
+    const hasWounds = limbs?.some((l) => (l.parts ?? []).some((p) => p.injuries.length > 0));
+    if (!limbs || !hasWounds) return pawn;
+
+    const healRate = Math.max(0, pawnStatService.evaluateStat('heal_rate', pawn));
+    let mult = 1;
+    if (pawn.currentState === PAWN_STATE.SLEEPING) mult *= HEALING_CONFIG.sleepingMultiplier;
+    if ((pawn.needs?.hunger ?? 0) <= HEALING_CONFIG.wellFedHunger) mult *= HEALING_CONFIG.wellFedMultiplier;
+    if ((pawn.state?.mood ?? 50) >= HEALING_CONFIG.goodMood) mult *= HEALING_CONFIG.goodMoodMultiplier;
+    const baseHeal = HEALING_CONFIG.baseHealPerTick * healRate * mult; // part HP / tick, per wound
+    if (baseHeal <= 0) return pawn;
+
+    const newLimbs: LimbState[] = limbs.map((limb) => {
+        const parts = limb.parts;
+        if (!parts || !parts.some((p) => p.injuries.length > 0)) return limb;
+        const newParts = parts.map((part) => {
+            if (part.injuries.length === 0 || part.isMissing) return part;
+            let healed = 0;
+            const newWounds: Injury[] = [];
+            for (const w of part.injuries) {
+                // A tended wound knits faster, scaled by the tend's quality.
+                const tendBoost = isTended(w, turn)
+                    ? 1 + CARE_CONFIG.treatedHealMultiplier * (w.treatmentQuality ?? 0)
+                    : 1;
+                const heal = (baseHeal / (woundById(w.type)?.healDifficulty ?? 1)) * tendBoost;
+                const newDamage = w.damage - heal;
+                if (newDamage <= 0.05) {
+                    healed += w.damage; // fully mended — drop the wound
+                    continue;
+                }
+                healed += heal;
+                newWounds.push(recomputeWound(part.id, w.type, newDamage, w));
+            }
+            return { ...part, health: Math.min(part.maxHp, part.health + healed), injuries: newWounds };
+        });
+        const totalBleed = newParts.reduce(
+            (s, p) => s + p.injuries.reduce((ps, w) => ps + w.bleeding, 0),
+            0
+        );
+        const partMaxTotal = newParts.reduce((s, p) => s + p.maxHp, 0);
+        const partHealthTotal = newParts.reduce((s, p) => s + p.health, 0);
+        const rolledHealth =
+            partMaxTotal > 0 ? Math.round((partHealthTotal / partMaxTotal) * 100) : limb.health;
+        return { ...limb, parts: newParts, health: rolledHealth, bleedRate: totalBleed };
+    });
+
+    let painTotal = 0;
+    const newInjuries: Injury[] = [];
+    for (const l of newLimbs) {
+        for (const p of l.parts ?? []) {
+            for (const w of p.injuries) {
+                painTotal += w.painContribution;
+                newInjuries.push(w);
+            }
+        }
+    }
+    return {
+        ...pawn,
+        limbs: newLimbs,
+        pain: Math.max(0, Math.min(100, Math.round(painTotal))),
+        injuries: newInjuries
     };
 }
 
@@ -1918,11 +2108,93 @@ class PawnStateMachineImpl {
                 continue;
             }
 
-            // Tick conditions (malnutrition, blood loss, limb checks) — may kill pawn.
-            state = tickConditions(current, state);
+            // Periodic caretaking: the colony's best available medic tends this pawn's
+            // untended wounds (skipped mid-fight). Runs before conditions so infection
+            // sees fresh treatment, and before healing so the tend boost applies.
+            const inMeleeNow =
+                current.currentState === PAWN_STATE.FIGHTING ||
+                current.currentState === PAWN_STATE.FLEEING;
+            let toTick = current;
+            if (!inMeleeNow && state.turn % CARE_CONFIG.tendIntervalTicks === 0) {
+                const tended = tendWounds(current, state);
+                if (tended !== current) {
+                    toTick = tended;
+                    state = { ...state, pawns: state.pawns.map((p) => (p.id === pawn.id ? tended : p)) };
+                }
+            }
+
+            // Tick conditions (malnutrition, blood loss, infection, limb checks) — may kill pawn.
+            state = tickConditions(toTick, state);
             // Re-fetch pawn in case tickConditions updated it.
-            const afterConditions = state.pawns.find((p) => p.id === pawn.id);
+            let afterConditions = state.pawns.find((p) => p.id === pawn.id);
             if (!afterConditions || afterConditions.isAlive === false) continue;
+
+            // ── Wound healing + collapse lifecycle (COMBAT-SYSTEM) ────────────────
+            // Pain is the sum of active wounds, so a pawn recovers by mending them — but
+            // not mid-fight (wounds don't knit while trading blows), so a sustained brawl
+            // still marches to collapse. A collapsed pawn is down until pain subsides.
+            const inMelee =
+                afterConditions.currentState === PAWN_STATE.FIGHTING ||
+                afterConditions.currentState === PAWN_STATE.FLEEING;
+            if (!inMelee) {
+                const healed = healWounds(afterConditions, state.turn);
+                if (healed !== afterConditions) {
+                    afterConditions = healed;
+                    state = {
+                        ...state,
+                        pawns: state.pawns.map((p) => (p.id === pawn.id ? healed : p))
+                    };
+                }
+            }
+            const consciousness =
+                pawnStatService.computeCapacities(afterConditions).consciousness ?? 1;
+
+            if (afterConditions.currentState === PAWN_STATE.COLLAPSED) {
+                const durations = { ...(afterConditions.statusEffectDurations ?? {}) };
+                let downed: Pawn;
+                if (consciousness >= RECOVER_CONSCIOUSNESS) {
+                    delete durations.collapse; // recovered — stand back up
+                    downed = {
+                        ...afterConditions,
+                        currentState: PAWN_STATE.IDLE,
+                        statusEffectDurations: durations
+                    };
+                } else {
+                    durations.collapse = Math.max(durations.collapse ?? 0, 2); // keep it active
+                    downed = { ...afterConditions, statusEffectDurations: durations };
+                }
+                state = {
+                    ...state,
+                    pawns: state.pawns.map((p) => (p.id === pawn.id ? syncActiveEffects(downed) : p))
+                };
+                continue;
+            }
+
+            if (consciousness < COLLAPSE_CONSCIOUSNESS) {
+                // Enter collapse: drop the job, halt, and go down.
+                const jobs = (state.jobs ?? []).some((j) => j.claimedBy === afterConditions.id)
+                    ? (state.jobs ?? []).map((j) =>
+                          j.claimedBy === afterConditions.id ? { ...j, claimedBy: null } : j
+                      )
+                    : state.jobs;
+                const durations = { ...(afterConditions.statusEffectDurations ?? {}) };
+                durations.collapse = Math.max(durations.collapse ?? 0, 2);
+                const downed = syncActiveEffects({
+                    ...afterConditions,
+                    currentState: PAWN_STATE.COLLAPSED,
+                    activeJob: undefined,
+                    path: [],
+                    isMoving: false,
+                    hasReachedDestination: false,
+                    statusEffectDurations: durations
+                });
+                state = {
+                    ...state,
+                    jobs,
+                    pawns: state.pawns.map((p) => (p.id === pawn.id ? downed : p))
+                };
+                continue;
+            }
 
             let forCollapse = afterConditions;
 

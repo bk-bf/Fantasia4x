@@ -39,6 +39,12 @@
     drafted?: boolean;
     /** Called when the draft button is clicked. */
     onDraftToggle?: () => void;
+    /** Whether the camera is currently following this entity. undefined = not supported. */
+    following?: boolean;
+    /** Called when the follow button is clicked. */
+    onFollowToggle?: () => void;
+    /** Called when the view-tab button is clicked (jumps to pawns/entities screen). */
+    onViewTab?: () => void;
   }
 </script>
 
@@ -62,10 +68,39 @@
     <span class="pawn-name">{model.name}</span>
     {#if model.status}<span class="pawn-state">[{model.status}]</span>{/if}
     {#if model.dismissable}<span class="pawn-dismiss" title="Press Esc to deselect">◈</span>{/if}
+    {#if model.onViewTab}
+      <button
+        class="hud-btn"
+        onmousedown={(e) => e.stopPropagation()}
+        onmouseup={(e) => e.stopPropagation()}
+        onclick={(e) => {
+          e.stopPropagation();
+          model.onViewTab?.();
+        }}
+        title="Open in character screen"
+      >
+        VIEW
+      </button>
+    {/if}
+    {#if model.following !== undefined && model.onFollowToggle}
+      <button
+        class="hud-btn"
+        class:hud-btn--active={model.following}
+        onmousedown={(e) => e.stopPropagation()}
+        onmouseup={(e) => e.stopPropagation()}
+        onclick={(e) => {
+          e.stopPropagation();
+          model.onFollowToggle?.();
+        }}
+        title={model.following ? 'Stop following' : 'Follow with camera'}
+      >
+        {model.following ? 'UNFOLLOW' : 'FOLLOW'}
+      </button>
+    {/if}
     {#if model.drafted !== undefined && model.onDraftToggle}
       <button
-        class="draft-btn"
-        class:draft-active={model.drafted}
+        class="hud-btn"
+        class:hud-btn--active={model.drafted}
         onmousedown={(e) => e.stopPropagation()}
         onmouseup={(e) => e.stopPropagation()}
         onclick={(e) => {
@@ -224,8 +259,7 @@
     color: #886630;
     font-size: 9px;
   }
-  .draft-btn {
-    margin-left: 6px;
+  .hud-btn {
     background: #2a1a0a;
     border: 1px solid #6b4a2a;
     color: #a07840;
@@ -238,16 +272,16 @@
     position: relative;
     z-index: 20;
   }
-  .draft-btn:hover {
+  .hud-btn:hover {
     border-color: #c8a060;
     color: #c8a060;
   }
-  .draft-active {
+  .hud-btn--active {
     background: #4a2010;
     border-color: #ee8844;
     color: #ee8844;
   }
-  .draft-active:hover {
+  .hud-btn--active:hover {
     background: #5a2814;
     border-color: #ffaa66;
     color: #ffaa66;

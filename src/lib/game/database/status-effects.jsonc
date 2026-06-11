@@ -4,8 +4,15 @@
     {
         "id"         : "knockdown",
         "name"       : "Knocked Down",
-        "description": "Prone and unable to move or attack. Recovers after a few turns.",
+        "description": "Prone from a heavy blunt blow. Loses the next attack; recovers after a couple of turns.",
         "color"      : "#ff5722",
+        "modifiers"  : {"moveSpeed": 0.0, "workEfficiency": 0.0}
+    },
+    {
+        "id"         : "collapse",
+        "name"       : "Collapsed",
+        "description": "Overwhelmed by pain — incapacitated and out of the fight. Recovers only as the pain subsides.",
+        "color"      : "#b71c1c",
         "modifiers"  : {"moveSpeed": 0.0, "workEfficiency": 0.0}
     },
     {

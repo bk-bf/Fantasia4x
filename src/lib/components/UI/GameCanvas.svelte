@@ -334,10 +334,44 @@
         hoverTile.y
       )
     : 1.0;
-  $: hoverPawn =
-    hoverTileX >= 0 && hoverTileY >= 0
-      ? (pawns.find((p) => p.position?.x === hoverTileX && p.position?.y === hoverTileY) ?? null)
-      : null;
+  // Hover entity IDs — updated imperatively using render positions so that
+  // interpolated movement doesn't create a mismatch between visual location and click target.
+  let hoverPawnId: string | null = null;
+  let hoverMobId: string | null = null;
+
+  function findPawnAtTile(tx: number, ty: number): Pawn | null {
+    for (const pawn of pawns) {
+      const rp = pawnRenderPos.get(pawn.id);
+      const cx = rp ? Math.round(rp.x) : (pawn.position?.x ?? -1);
+      const cy = rp ? Math.round(rp.y) : (pawn.position?.y ?? -1);
+      if (cx === tx && cy === ty) return pawn;
+    }
+    return null;
+  }
+
+  function findMobAtTile(tx: number, ty: number): Mob | null {
+    for (const mob of mobs) {
+      if (mob.state === 'Corpse') continue;
+      const rp = mobRenderPos.get(mob.id);
+      const cx = rp ? Math.round(rp.x) : mob.x;
+      const cy = rp ? Math.round(rp.y) : mob.y;
+      if (cx === tx && cy === ty) return mob;
+    }
+    return null;
+  }
+
+  function updateHoverEntity() {
+    if (hoverTileX < 0 || hoverTileY < 0) {
+      hoverPawnId = null;
+      hoverMobId = null;
+      return;
+    }
+    const pawn = findPawnAtTile(hoverTileX, hoverTileY);
+    hoverPawnId = pawn?.id ?? null;
+    hoverMobId = pawn ? null : (findMobAtTile(hoverTileX, hoverTileY)?.id ?? null);
+  }
+
+  $: hoverPawn = hoverPawnId ? (pawns.find((p) => p.id === hoverPawnId) ?? null) : null;
 
   // When a pawn is selected its card locks the HUD regardless of hover position.
   $: selectedPawn = selectedPawnId ? (pawns.find((p) => p.id === selectedPawnId) ?? null) : null;
@@ -414,17 +448,24 @@
       progressBar: pawn.activeJob ? jobProgressBar(pawn.activeJob.progress ?? 0) : undefined,
       pos: selected ? (pawn.position ?? undefined) : undefined,
       drafted: pawn.drafted ?? false,
-      onDraftToggle: selected ? () => toggleDraft(pawn.id) : undefined
+      onDraftToggle: selected ? () => toggleDraft(pawn.id) : undefined,
+      following: selected ? cameraFollowPawnId === pawn.id : undefined,
+      onFollowToggle: selected
+        ? () => uiState.setFollowPawn(cameraFollowPawnId === pawn.id ? null : pawn.id)
+        : undefined,
+      onViewTab: selected
+        ? () => {
+            uiState.selectPawn(pawn.id);
+            uiState.setScreen('pawns');
+          }
+        : undefined
     };
   }
 
   $: selectedPawnCard = selectedPawn ? buildPawnCard(selectedPawn, true) : null;
   $: hoverPawnCard = hoverPawn ? buildPawnCard(hoverPawn, false) : null;
 
-  $: hoverMob =
-    hoverTileX >= 0 && hoverTileY >= 0
-      ? (mobs.find((m) => m.x === hoverTileX && m.y === hoverTileY && m.state !== 'Corpse') ?? null)
-      : null;
+  $: hoverMob = hoverMobId ? (mobs.find((m) => m.id === hoverMobId) ?? null) : null;
 
   function buildMobCard(
     mob: Mob,
@@ -467,7 +508,17 @@
       note: `${def.entityClass === 'mob' ? '⚔ hostile' : '◆ neutral'} · ${def.behaviour}${
         def.tameable ? ' · tameable' : ''
       }`,
-      pos: selected ? { x: mob.x, y: mob.y } : undefined
+      pos: selected ? { x: mob.x, y: mob.y } : undefined,
+      following: selected ? cameraFollowMobId === mob.id : undefined,
+      onFollowToggle: selected
+        ? () => uiState.setFollowMob(cameraFollowMobId === mob.id ? null : mob.id)
+        : undefined,
+      onViewTab: selected
+        ? () => {
+            uiState.selectMob(mob.id);
+            uiState.setScreen('entities');
+          }
+        : undefined
     };
   }
 
@@ -1395,9 +1446,7 @@
     }
 
     // Click on a pawn → select it, deselect building
-    const clickedPawn = pawns.find(
-      (p) => p.position?.x === hoverTileX && p.position?.y === hoverTileY
-    );
+    const clickedPawn = findPawnAtTile(hoverTileX, hoverTileY);
     if (clickedPawn) {
       selectedPawnId = clickedPawn.id;
       selectedBuildingId = null;
@@ -1411,9 +1460,7 @@
     }
 
     // Click on a live mob/animal → select it, deselect everything else
-    const clickedMob = mobs.find(
-      (m) => m.x === hoverTileX && m.y === hoverTileY && m.state !== 'Corpse'
-    );
+    const clickedMob = findMobAtTile(hoverTileX, hoverTileY);
     if (clickedMob) {
       selectedMobId = clickedMob.id;
       selectedPawnId = null;
@@ -1621,6 +1668,7 @@
       // starvation that throttled a <1 ms/tick sim to ~20 TPS while rendering.
       gameState.stepSimulation(dt * 1000);
       updatePawnOverlay(dt);
+      updateHoverEntity();
       updateCameraFollow(dt);
       updateCameraFollowMob(dt);
       updateWorldEffectOverlays();
@@ -1835,6 +1883,7 @@
       lastCursorCy = cy;
       hoverTileX = Math.floor(cx / tileWidth) + viewX;
       hoverTileY = Math.floor(cy / tileHeight) + viewY;
+      updateHoverEntity();
     }
     if (zoneDragActive) {
       zoneEndX = hoverTileX;
@@ -2509,62 +2558,62 @@
       selectedResourceDef.interaction
     ]}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="res-row" on:mousedown|stopPropagation on:mouseup|stopPropagation>
-      <div class="tile-hud tile-hud--resource tile-hud--selected-resource">
-        <div class="bld-header">
-          <span class="bld-name">{selectedResourceDef.displayName}</span>
-          <span class="bld-status"
-            >[{selectedResourceDesignation ??
-              activeInteractions[0]?.designationType ??
-              activeInteractions[0]?.action ??
-              'harvest'}{selectedResourceDesignation ? ' ✓' : ''}]</span
-          >
-        </div>
-        <div class="bld-desc">
-          {selectedResourceTile.resourceId.replace(/_/g, ' ')} — ×{selectedResourceAmount} nodes
-        </div>
-        {#if selectedResourceDesignation}
-          <div class="bld-note">⊢ {selectedResourceDesignation}…</div>
-        {:else}
-          {#each activeInteractions as iact}
-            {#if iact.yields.length > 0}
-              <div class="bld-desc">
-                {iact.action}: {iact.yields
-                  .filter((y) => y.max > 0)
-                  .map((y) => `${y.min}–${y.max}×${y.itemId.replace(/_/g, ' ')}`)
-                  .join(' ')}
-              </div>
-            {/if}
-          {/each}
-        {/if}
+    <div
+      class="tile-hud tile-hud--resource tile-hud--selected-resource"
+      on:mousedown|stopPropagation
+      on:mouseup|stopPropagation
+    >
+      <div class="bld-header">
+        <span class="bld-name">{selectedResourceDef.displayName}</span>
+        <span class="bld-status"
+          >[{selectedResourceDesignation ??
+            activeInteractions[0]?.designationType ??
+            activeInteractions[0]?.action ??
+            'harvest'}{selectedResourceDesignation ? ' ✓' : ''}]</span
+        >
       </div>
-      <div class="bld-side-actions">
+      <div class="bld-desc">
+        {selectedResourceTile.resourceId.replace(/_/g, ' ')} — ×{selectedResourceAmount} nodes
+      </div>
+      {#if selectedResourceDesignation}
+        <div class="bld-note">⊢ {selectedResourceDesignation}…</div>
+      {:else}
+        {#each activeInteractions as iact}
+          {#if iact.yields.length > 0}
+            <div class="bld-desc">
+              {iact.action}: {iact.yields
+                .filter((y) => y.max > 0)
+                .map((y) => `${y.min}–${y.max}×${y.itemId.replace(/_/g, ' ')}`)
+                .join(' ')}
+            </div>
+          {/if}
+        {/each}
+      {/if}
+      <div class="panel-actions">
         {#if selectedResourceDesignation}
-          <button
-            class="bld-btn bld-btn--sq"
-            title="Cancel designation"
-            on:click={cancelResourceDesignation}>↩</button
+          <button class="bld-btn" title="Cancel designation" on:click={cancelResourceDesignation}
+            >CANCEL</button
           >
         {:else}
           {#each activeInteractions as iact}
             <button
-              class="bld-btn bld-btn--danger bld-btn--sq"
+              class="bld-btn bld-btn--danger"
               title={iact.action}
               on:click={() => designateResource(iact.designationType)}
               >{iact.designationType === 'woodcut'
-                ? '\u00F7'
+                ? 'CUT'
                 : iact.designationType === 'forage'
-                  ? '\u00B1'
+                  ? 'FORAGE'
                   : iact.designationType === 'mine'
-                    ? '\u26CF'
-                    : '\u00B1'}</button
+                    ? 'MINE'
+                    : 'HARVEST'}</button
             >
           {/each}
         {/if}
         <button
-          class="bld-btn bld-btn--sq"
-          title="Drag to select similar tiles, then click above to designate"
-          on:click={startSimilarSelect}>⊞</button
+          class="bld-btn"
+          title="Drag to select similar tiles, then designate"
+          on:click={startSimilarSelect}>MARK</button
         >
       </div>
     </div>
@@ -3114,24 +3163,20 @@
     color: #f0c878;
   }
   /* ── Resource tile HUD ────────────────────────── */
-  .res-row {
-    position: absolute;
-    bottom: 6px;
-    left: 6px;
-    display: flex;
-    align-items: flex-start;
-    gap: 4px;
-    pointer-events: all;
-  }
   .tile-hud--resource {
     min-width: 160px;
   }
   .tile-hud--selected-resource {
-    position: static;
     border-color: #f0c060;
     background: rgba(20, 14, 4, 0.96);
     color: #e8c870;
     pointer-events: all;
+  }
+  .panel-actions {
+    display: flex;
+    gap: 3px;
+    margin-top: 4px;
+    flex-wrap: wrap;
   }
   /* bright gold text inside selected building/resource cards */
   .tile-hud--selected-building .bld-name,

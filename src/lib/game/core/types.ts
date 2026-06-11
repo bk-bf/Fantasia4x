@@ -463,15 +463,18 @@ export type BodyPartId =
 
 export interface Injury {
 	bodyPart: BodyPartId;
-	type: 'cut' | 'fracture' | 'puncture' | 'crush';
+	/** Wound type id from wounds.jsonc (cut | puncture | crush | burn). One wound per type per part. */
+	type: 'cut' | 'fracture' | 'puncture' | 'crush' | 'burn';
 	severity: 'minor' | 'serious' | 'critical' | 'destroyed';
-	/** HP dealt to this body part in this hit (used by applyInjury to update BodyPartState.health). */
+	/** Accumulated HP of damage this wound has dealt to the part (same-type hits stack here). */
 	damage: number;
 	/** Blood volume drained per turn; clots below CLOT_FLOOR or via herbal_kit. */
 	bleeding: number;
 	painContribution: number;
 	infected: boolean; // doubles pain + bleeding after 20 untreated turns
-	treatedAt?: number; // turn when a Healer applied care
+	treatedAt?: number; // turn when a caretaker last tended this wound
+	/** Quality 0–1 of the most recent tend; scales heal speed, treatment duration, infection resistance. */
+	treatmentQuality?: number;
 }
 
 /** State of a single fine body part (organ, bone, sub-limb). */
@@ -519,7 +522,7 @@ export interface ConditionDef {
 /** Record appended to gameState.deadPawns when a pawn dies. */
 export interface DeadPawnRecord {
 	name: string;
-	cause: 'malnutrition' | 'blood_loss' | 'critical_limb' | 'combat' | 'exhaustion_cascade';
+	cause: 'malnutrition' | 'blood_loss' | 'critical_limb' | 'combat' | 'exhaustion_cascade' | 'infection';
 	turn: number;
 	stats: { strength: number; dexterity: number; intelligence: number };
 }

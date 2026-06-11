@@ -1,0 +1,72 @@
+// Wound definitions (COMBAT-SYSTEM). A wound is produced by a damage type and
+// accumulates on the struck body part: repeated same-type hits stack into ONE wound
+// whose severity escalates with total damage (5 crushes → one severe crush), rather
+// than piling up as separate entries.
+//
+// Per wound (all data-driven — no hardcoded combat tables):
+//   fromDamageType — the DamageType that inflicts this wound (Combat maps hit → wound)
+//   bleedMod       — 0–1 scale on open-wound bleed (cutting bleeds hardest, blunt none)
+//   painPerDamage  — pain per accumulated HP of this wound (× 2 on a vital part)
+//   healDifficulty — multiplier on heal time (burns/punctures mend slower than cuts)
+//
+// healing — how wounds mend over time:
+//   baseHealPerTick    — part HP recovered per tick at heal_rate 1.0 (per wound)
+//   sleeping/wellFed/goodMood multipliers stack onto the heal_rate stat so a rested,
+//   fed, content pawn recovers far faster than a starving, miserable one.
+{
+  "healing": {
+    "baseHealPerTick": 0.02,
+    "sleepingMultiplier": 2.5,
+    "wellFedHunger": 40,
+    "wellFedMultiplier": 1.4,
+    "goodMood": 65,
+    "goodMoodMultiplier": 1.3
+  },
+  // Caretaking & infection. A tend rolls quality 0–1 (medical_skill × mood × variance);
+  // quality scales how much faster treated wounds heal, how long the tend lasts, and how
+  // strongly it suppresses infection. Untended open wounds build infection pressure each
+  // tick; the immune system (CON) pushes back. Infection is the `infection` condition.
+  "care": {
+    "tendIntervalTicks": 240,
+    "treatmentDurationTicks": 1800,
+    "treatedHealMultiplier": 2.5,
+    "minTendQuality": 0.05,
+    "infectionRiskPerWound": 0.0012,
+    "infectionRecoveryPerTick": 0.0015,
+    "immuneResistBase": 0.35
+  },
+  "wounds": [
+    {
+      "id": "cut",
+      "name": "Cut",
+      "fromDamageType": "cutting",
+      "bleedMod": 1.0,
+      "painPerDamage": 0.6,
+      "healDifficulty": 1.0
+    },
+    {
+      "id": "puncture",
+      "name": "Puncture",
+      "fromDamageType": "piercing",
+      "bleedMod": 0.5,
+      "painPerDamage": 0.7,
+      "healDifficulty": 1.2
+    },
+    {
+      "id": "crush",
+      "name": "Crush",
+      "fromDamageType": "blunt",
+      "bleedMod": 0.0,
+      "painPerDamage": 0.9,
+      "healDifficulty": 1.4
+    },
+    {
+      "id": "burn",
+      "name": "Burn",
+      "fromDamageType": "fire",
+      "bleedMod": 0.0,
+      "painPerDamage": 1.1,
+      "healDifficulty": 2.0
+    }
+  ]
+}

@@ -109,8 +109,11 @@ function calculateCapacityValue(
             const baseCon = brain * 0.5 + heart * 0.15 + avgLung * 0.1 + 0.1;
             const sightCap = capacities.sight ?? 1;
             const hearingCap = capacities.hearing ?? 1;
+            // Pain drives consciousness down (RimWorld pain-shock): ~80 pain → ~0.3
+            // consciousness, which is the colony's downing threshold. Organ/blood damage
+            // lowers baseCon on top, so a wounded pawn faints at lower pain.
             const effectivePain = Math.max(0, painValue - 0.1);
-            const painMult = Math.max(0.1, 1 - effectivePain * 0.5);
+            const painMult = Math.max(0.05, 1 - effectivePain);
             value = (baseCon + sightCap * 0.1 + hearingCap * 0.05) * painMult;
             break;
         }

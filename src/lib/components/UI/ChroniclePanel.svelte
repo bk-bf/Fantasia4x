@@ -1,7 +1,8 @@
 <script lang="ts">
   import { recentActivity } from '$lib/stores/Log';
   import { uiState } from '$lib/stores/uiState';
-  import type { ActivityLogEntry, CombatTurnEntry } from '$lib/game/core/Events';
+  import type { ActivityLogEntry } from '$lib/game/core/Events';
+  import CombatBreakdown from './CombatBreakdown.svelte';
 
   const TYPE_ABBR: Record<string, string> = {
     work: 'WRK',
@@ -51,24 +52,6 @@
     }
   }
 
-  function formatCombatTurn(t: CombatTurnEntry): string {
-    const withWeapon = t.weapon ? ` with ${t.weapon}` : '';
-    if (!t.hit) {
-      return `${t.attackerName} attacks${withWeapon} but ${t.defenderName} dodges`;
-    }
-    let s = `${t.attackerName}${t.crit ? ' CRITS' : ' hit'} ${t.defenderName}${withWeapon}`;
-    if (t.bodyPart) {
-      s += ` in the ${t.bodyPart}`;
-      if (t.partRemainingHp !== undefined && t.partMaxHp !== undefined) {
-        s += ` (${t.partRemainingHp}/${t.partMaxHp})`;
-      }
-    }
-    s += ` for ${t.damage}${t.damageType ? ` ${t.damageType}` : ''} damage`;
-    if (t.bleeding) s += `, ${t.defenderName} is bleeding`;
-    if (t.knockdown) s += `, ${t.defenderName} is knocked down`;
-    return s;
-  }
-
   function fullLogLine(entry: ActivityLogEntry): string {
     const parts: string[] = [];
     parts.push(`[${abbr(entry)}]`);
@@ -110,11 +93,7 @@
           <span class="msg">{entry.action}{entry.result ? ' · ' + entry.result : ''}</span>
         </div>
         {#if expandedId === entry.id && entry.combatBreakdown && entry.combatBreakdown.length > 0}
-          <div class="combat-breakdown">
-            {#each entry.combatBreakdown as turn}
-              <div class="turn-line">{formatCombatTurn(turn)}</div>
-            {/each}
-          </div>
+          <CombatBreakdown turns={entry.combatBreakdown} />
         {/if}
       {/each}
     {/if}
@@ -222,17 +201,7 @@
     background: rgba(212, 168, 64, 0.08);
   }
 
-  .combat-breakdown {
-    padding: 2px 6px 4px 34px;
-    border-bottom: 1px solid var(--border);
-    background: rgba(0, 0, 0, 0.2);
-  }
-
-  .turn-line {
-    font-size: 9px;
-    color: var(--text-dim);
-    line-height: 1.5;
-    padding-left: 4px;
-    border-left: 2px solid var(--border-hi);
+  .entry.expanded {
+    border-bottom: none;
   }
 </style>

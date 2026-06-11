@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { combatService } from './Combat';
+import { healWounds } from './PawnStateMachine';
 import { CREATURES } from '../core/Creatures';
 import { itemService } from '../services/ItemService';
-import type { GameState, Mob, Pawn } from '../core/types';
+import type { GameState, Injury, Mob, Pawn } from '../core/types';
 
 /**
  * Headless combat-sim: drives the REAL combatService.tickCombat over a hand-built
@@ -90,6 +91,33 @@ describe('combat sim (headless tickCombat)', () => {
 		expect(mobInjured).toBe(true);
 	});
 
+	it('part damage accumulates and a sustained beating drops a mob via pain collapse', () => {
+		// Pawn-only attacker (goblin Wandering, so it never swings back). The goblin can
+		// only die from cumulative pain collapse here — vital organs (hitWeight 0) are
+		// never directly struck — so this also proves collapse, not a lucky vital hit.
+		let state = makeState([makePawn()], [makeGoblin({ state: 'Wander' })]);
+		let accumulated = false;
+		let maxPain = 0;
+		let died = false;
+		for (let t = 0; t < 3000 && !died; t++) {
+			state = { ...state, turn: t };
+			state = combatService.tickCombat(state, 16);
+			const g = state.mobs![0];
+			maxPain = Math.max(maxPain, g.pain ?? 0);
+			// Total HP lost across all body parts — stays 0 under the old bug (parts never
+			// persisted); grows once damage actually accumulates.
+			const lost = (g.limbs ?? []).reduce(
+				(s, l) => s + (l.parts ?? []).reduce((ps, p) => ps + (p.maxHp - p.health), 0),
+				0
+			);
+			if (lost > 15) accumulated = true;
+			if (g.isAlive === false || g.state === 'Corpse') died = true;
+		}
+		expect(accumulated).toBe(true); // bug fix: part damage persists and accumulates
+		expect(died).toBe(true); // the fight resolves via collapse (vitals are never struck)
+		expect(maxPain).toBeGreaterThan(30); // …with pain a real driver of the downing
+	});
+
 	it('an Attacking mob damages the adjacent pawn', () => {
 		// Accurate mob vs low-dodge pawn so hits land reliably regardless of rng sequence.
 		const target = makePawn({ currentState: 'Idle', stats: { ...stats, dexterity: 3 } });
@@ -135,6 +163,84 @@ describe('combat sim (headless tickCombat)', () => {
 		}
 		expect(hits).toBeGreaterThan(0);
 		expect(crits).toBeGreaterThan(0);
+	});
+});
+
+describe('wound system (stacking + healing)', () => {
+	const crush = (dmg: number): Injury => ({
+		bodyPart: 'leftLittleFinger',
+		type: 'crush',
+		severity: 'minor',
+		damage: dmg,
+		bleeding: 0,
+		painContribution: 0,
+		infected: false
+	});
+
+	it('stacks same-type hits into one escalating wound (not five entries)', () => {
+		let state = makeState([], [makeGoblin()]);
+		for (let i = 0; i < 5; i++) {
+			state = combatService.applyInjuryToMob('g1', crush(2), state);
+		}
+		const finger = state
+			.mobs![0].limbs!.find((l) => l.id === 'left_arm')!
+			.parts!.find((p) => p.id === 'leftLittleFinger')!;
+		expect(finger.injuries).toHaveLength(1); // merged, not 5
+		expect(finger.injuries[0].type).toBe('crush');
+		// little finger maxHp 8; 5×2 = 10 capped at 8 → fully destroyed (severity escalated)
+		expect(finger.injuries[0].severity).toBe('destroyed');
+		expect(state.mobs![0].pain ?? 0).toBeGreaterThan(0);
+	});
+
+	it('keeps different damage types as separate wounds on the same part', () => {
+		let state = makeState([], [makeGoblin()]);
+		state = combatService.applyInjuryToMob('g1', crush(2), state);
+		state = combatService.applyInjuryToMob('g1', { ...crush(2), type: 'cut' }, state);
+		const finger = state
+			.mobs![0].limbs!.find((l) => l.id === 'left_arm')!
+			.parts!.find((p) => p.id === 'leftLittleFinger')!;
+		expect(finger.injuries.map((w) => w.type).sort()).toEqual(['crush', 'cut']);
+	});
+
+	it('tended wounds heal faster than untended ones (treatment quality)', () => {
+		let state = makeState([makePawn({ currentState: 'Idle' })], []);
+		state = combatService.applyInjury('p1', { ...crush(20), bodyPart: 'chest' }, state);
+		state = combatService.applyInjury('p1', { ...crush(20), bodyPart: 'leftUpperLeg' }, state);
+		// Tend the chest wound only (treatedAt now, high quality).
+		const pawn: Pawn = {
+			...state.pawns[0],
+			limbs: state.pawns[0].limbs!.map((l) => ({
+				...l,
+				parts: (l.parts ?? []).map((p) =>
+					p.id === 'chest'
+						? { ...p, injuries: p.injuries.map((w) => ({ ...w, treatedAt: 0, treatmentQuality: 0.8 })) }
+						: p
+				)
+			}))
+		};
+		const woundDmg = (pw: Pawn, partId: string) =>
+			pw.limbs!.flatMap((l) => l.parts ?? []).find((p) => p.id === partId)!.injuries[0].damage;
+		const chestBefore = woundDmg(pawn, 'chest');
+		const legBefore = woundDmg(pawn, 'leftUpperLeg');
+		const healed = healWounds(pawn, 1);
+		expect(chestBefore - woundDmg(healed, 'chest')).toBeGreaterThan(
+			legBefore - woundDmg(healed, 'leftUpperLeg')
+		);
+	});
+
+	it('wounds heal over time, restoring HP and lowering pain to zero', () => {
+		let state = makeState([makePawn({ currentState: 'Idle' })], []);
+		state = combatService.applyInjury(
+			'p1',
+			{ ...crush(20), bodyPart: 'chest' },
+			state
+		);
+		let pawn = state.pawns[0];
+		expect(pawn.pain ?? 0).toBeGreaterThan(0);
+		expect((pawn.injuries ?? []).length).toBe(1);
+		for (let i = 0; i < 8000 && (pawn.injuries?.length ?? 0) > 0; i++) pawn = healWounds(pawn);
+		expect(pawn.injuries ?? []).toHaveLength(0);
+		expect(pawn.pain).toBe(0);
 	});
 });
 

@@ -62,6 +62,15 @@
     }
   });
 
+  // Sync selection when navigating here from the map canvas (VIEW button)
+  const unsubscribeUI = uiState.subscribe((ui) => {
+    if (ui.selectedPawnId && ui.selectedPawnId !== selectedPawnId) {
+      selectedPawnId = ui.selectedPawnId;
+      const pawn = pawns.find((p) => p.id === ui.selectedPawnId);
+      if (pawn) selectedPawn = pawn;
+    }
+  });
+
   // Lifecycle management
   onMount(() => {
     if (pawnScreenElement) {
@@ -71,6 +80,7 @@
 
   onDestroy(() => {
     unsubscribe();
+    unsubscribeUI();
   });
 
   // Pawn selection handler

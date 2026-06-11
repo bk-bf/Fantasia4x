@@ -123,6 +123,8 @@
         return 'puncture';
       case 'crush':
         return 'crush';
+      case 'burn':
+        return 'burn';
       default:
         return '';
     }
@@ -197,8 +199,10 @@
                 {#if part.injuries.length > 0}
                   <span class="part-badges">
                     {#each part.injuries as injury}
-                      <span class="injury-badge {injuryBadgeClass(injury.type)}"
-                        >{injury.type.toUpperCase()}</span
+                      <span
+                        class="injury-badge {injuryBadgeClass(injury.type)}"
+                        title="{injury.severity} {injury.type}"
+                        >{injury.type.toUpperCase()} · {injury.severity}</span
                       >
                     {/each}
                   </span>
@@ -387,6 +391,11 @@
   .injury-badge.crush {
     color: #a08060;
     border-color: #a08060;
+  }
+
+  .injury-badge.burn {
+    color: #ff7043;
+    border-color: #ff7043;
   }
 
   .vital-star {

@@ -13,6 +13,11 @@
 
   let expandedId = $state<string | null>(null);
 
+  $effect(() => {
+    const id = $uiState.selectedMobId;
+    if (id) expandedId = id;
+  });
+
   function rgb(c: [number, number, number]): string {
     return `rgb(${Math.round(c[0] * 255)}, ${Math.round(c[1] * 255)}, ${Math.round(c[2] * 255)})`;
   }
@@ -173,7 +178,9 @@
                             {#if part.injuries.length > 0}
                               <span class="expand-part-badges">
                                 {#each part.injuries as injury}
-                                  <span class="part-badge">{injury.type.toUpperCase()}</span>
+                                  <span class="part-badge" title="{injury.severity} {injury.type}"
+                                    >{injury.type.toUpperCase()} · {injury.severity}</span
+                                  >
                                 {/each}
                               </span>
                             {/if}

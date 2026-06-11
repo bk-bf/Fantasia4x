@@ -64,6 +64,20 @@
         "formula"    : "(0.05 + (DEX − 10) × 0.005 + (PER − 10) × 0.0025) × consciousness × sight",
         "description": "base critical-hit probability 0–1 (× consciousness × sight); weapons add their own critMod on top"
     },
+    {
+        "id"         : "heal_rate",
+        "category"   : "physical",
+        "primaryStat": "constitution",
+        "formula"    : "(1.0 + (CON − 10) × 0.05) × blood_filtration × consciousness",
+        "description": "wound recovery speed multiplier (× blood_filtration × consciousness); boosted further by rest, food, and mood"
+    },
+    {
+        "id"         : "medical_skill",
+        "category"   : "physical",
+        "primaryStat": "intelligence",
+        "formula"    : "(0.3 + (INT − 10) × 0.025 + (PER − 10) × 0.015) × manipulation × sight × consciousness",
+        "description": "caretaking ability 0–1 — a tend rolls treatment quality against this (× manipulation × sight × consciousness; mood applies on the roll)"
+    },
     // ── Physical ──────────────────────────────────────────────────────────────────
     // Physical stats are multiplied by the body capacities that enable them:
     //   manipulation = can physically interact (carry, wield)

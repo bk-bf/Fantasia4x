@@ -13,6 +13,8 @@ ADR-006 [GAME]: Data Files Contain Definitions, Not Logic (2026-05-25, Accepted)
 ADR-007 [GAME]: SvelteKit + WebGL2 over Godot for Merged Project (2026-05-26, Accepted)
 ADR-008 [GAME]: Rust/WASM Spatial Core via wasm-pack (2026-05-26, Accepted)
 ADR-011 [GAME]: Gated Hot-Path Logging + On-Demand Tick Profiler (2026-05-30, Accepted)
+ADR-012 [GAME]: Combat Wound Model — Merge-and-Escalate + Capacity-Driven Downing (2026-06-11, Accepted)
+ADR-013 [GAME]: Deferred Combat Depth — Tissue Layers, Nerves & Arteries (2026-06-11, Deferred)
 
 ---
 
@@ -312,3 +314,47 @@ No call sites change. Applied to the per-tick services: `WorkService`, `PawnServ
 - New hot-path code must add the `gatedConsole as console` import rather than calling the global `console` directly; profiler phases must be wrapped in `t(...)` to stay measurable.
 - **Scaling caveat (flagged, out of scope here):** even console-free the tick is ~1.2 ms with a single pawn and per-pawn work scales linearly. Reaching 500+ entities on 1000×1000 maps needs deeper algorithmic work — spread/incremental work scheduling, spatial indices, and a cooldown index so resource regrowth isn't O(map). See the spec. 60 TPS is solid at the current scale.
 - The formula is pure and stateless (`shouldInterruptForNeed` has no side effects), making it straightforward to tune constants in isolation.
+
+---
+
+### ADR-012 [GAME]: Combat Wound Model — Merge-and-Escalate + Capacity-Driven Downing
+
+- **Date**: 2026-06-11
+- **Status**: Accepted
+- **Spec**: [.tasks/open/COMBAT-SYSTEM.md](../.tasks/open/COMBAT-SYSTEM.md)
+
+#### Context
+
+Combat is RimWorld-inspired (legible body-part HP + a capacity system already drives stats). Two model choices needed locking in. (1) RimWorld keeps every hit as a **discrete** injury and merely groups them in the UI; our first pass did that and produced unreadable stacks ("5× crush on the little finger"). (2) Downing originally used a bolted-on hard `pain ≥ 80` threshold that ran **parallel** to the existing `consciousness` capacity, which already folds in pain, blood loss and organ damage — two pain brains that never reconciled.
+
+#### Decision
+
+**1. Wounds merge by type per part (`wounds.jsonc` + `core/Wounds.ts`).** One wound per damage type per body part; same-type hits accumulate damage and **escalate severity** (5 crushes → one severe/destroyed crush), rather than piling up. This diverges from RimWorld's discrete model deliberately — it is more readable and arguably more realistic (repeated trauma to one spot *should* compound). Pain = Σ active wound contributions, so it falls as wounds heal. Balance lever: severity is a fraction of part max-HP, tunable per part; if limbs are lost too fast, raise thresholds.
+
+**2. Downing = the `consciousness` capacity, not a separate pain number.** A pawn/mob collapses when `consciousness < 0.3` (recovers > 0.45). The capacity's pain term was strengthened (`painMult = 1 − effectivePain`) so ~80 pain ≈ 0.3 consciousness — matching the old behaviour — but blood loss and organ damage now lower it on top, so a wounded pawn faints sooner. Collapse is distinct from a short blunt **knockdown** (separate status). Mobs are defeated on collapse (no capture system yet); pawns go down and recover as wounds heal.
+
+#### Consequences
+
+- Combat outcomes are decided by accumulated trauma → unconsciousness, not a lucky vital-organ roll.
+- One source of truth for downing; the magic `80` is gone. Tuning lives in the consciousness formula + `COLLAPSE_CONSCIOUSNESS`.
+- Wound merge means a part shows at most one badge per damage type (cut/puncture/crush/burn) with a severity label — readable health panels.
+
+---
+
+### ADR-013 [GAME]: Deferred Combat Depth — Tissue Layers, Nerves & Arteries
+
+- **Date**: 2026-06-11
+- **Status**: Deferred (tracked)
+
+#### Context
+
+Dwarf Fortress derives wound *type* from tissue physics — a blow cracks the bone under skin that only bruises; a cut shears skin/fat/muscle and may nick an artery; severed nerves cause specific functional loss. It was raised as a possible richer alternative to our damage-type → wound lookup.
+
+#### Decision
+
+**Defer it.** Bone/organ damage is already represented as **nested parts** (skull, brain, spine, ribs-as-torso-HP): an attacker must roll a hit that reaches the inner part, so "damage pierced to the bone" is already modelled at the granularity this game needs. A full tissue-layer / nerve / artery simulation (DF-style) is intentionally **not** built now: it adds large tuning surface and opacity, and an upcoming magic + skill system will already raise combat complexity — nobody will track both. The damage-type → wound mapping in `wounds.jsonc` stays the source of wound flavour.
+
+#### Consequences
+
+- Wound type is data-driven (`fromDamageType`), not physics-derived; good enough for a legible colony sim.
+- Revisit only if a future design needs material-specific outcomes (e.g. armour that shears vs dents, or surgery targeting specific tissues). The `fracture` wound type is reserved in `Injury` for a possible light flesh/bone split if ever wanted.
