@@ -12,7 +12,8 @@
 | ------- | ----- | ----- |
 | Foundation (types) | ✅ | needs `thirst`/`hygiene`, `drink`/`wash` designations, item `deterioration`/`durabilityLossPerAction`/`fuelHeat`, building `minFuelHeat`/`fluxPerBatch`/`moldRequired`/`storageDecayMultiplier`/`requiresEnclosure` |
 | §A Forageables & loose stone | ✅ | 5 named rocks (granite/limestone/sandstone/marble/slate) replace `surface_stone`; terrain-distributed yields; stone `hearth` added. "Any-rock" station cost approximated by granite (Building cost takes fixed ids) |
-| §B Durability & Deterioration | ✅* | durable-goods deterioration on loose items live + tested (`stepItemDeterioration`); *tool work-wear loop deferred to EQUIPMENT-EXPANSION (needs per-instance durability); data hook seeded |
+| §B Durability & Deterioration | 🔄 | (1) loose-item deterioration live + tested (`stepItemDeterioration`). (2) **building** condition decay + repair live + tested (`stepBuildingCondition`/`repairBuilding`; `branch_wall` decays). (3) tool work-wear blocked on per-tile item-stacks (storage refactor below) — once stacks are authoritative, per-stack tool durability lands |
+| **Storage refactor** (per-tile stacks) | 🔄 | Approved staged rewrite (plan: `~/.claude/plans/streamed-napping-wave.md`). **Stage 1 ✅** PlacedBuilding.condition + `tileCapacityBonus`. **Stage 2 Step 1 ✅** additive helpers `BASE_TILE_CAPACITY`/`aggregateFromDrops`/`tileStoredQuantity`/`tileCapacity`/`tileFreeCapacity` + tests. **Pending:** Stage 2 Steps 2–4 = the *authority flip* (make `stored` drops the source of truth in `addToStockpileZone`/`consumeFromStockpiles`/`absorbDropIfOnStockpileTile`; aggregate from drops). Delicate: must preserve "crafted output immediately countable" + positionless-output fallback. Then Stage 3 (drop `zone.inventory`) / Stage 4 (decay/deterioration/drying/durability read the tile) |
 | §1 Wood | ⬜ | |
 | §2 Fuel & Heat | ⬜ | |
 | §3 Stone | ⬜ | |

@@ -85,6 +85,9 @@ export interface PlacedBuilding {
 	assignedPawnId?: string; // pawn who owns this shelter; only they will use it
 	// Quality from construction work stat
 	quality?: number; // 0.1–2.0+ multiplier from construction_quality stat
+	// §B/refactor Stage 1: per-instance structural condition.
+	/** 0–100; 100 = pristine. Decays for buildings with a def `conditionDecayPerTurn`; restored by repair. Undefined = treat as full. */
+	condition?: number;
 }
 
 // ===== PHASE 5 NEW TYPES =====
@@ -840,6 +843,8 @@ export interface Building {
 	maxFuel?: number; // maximum fuel units it can hold
 	fuelConsumptionRate?: number; // fuel units burned per turn when lit
 	// ── PRODUCTION-CHAIN-EXPANSION §2/§5/§F: heat, flux, molds, storage ──
+	conditionDecayPerTurn?: number; // §B: structural wear/turn for complete instances (0/undefined = never decays)
+	tileCapacityBonus?: number; // refactor Stage 2: extra item capacity this building grants to its tile (§F storage)
 	minFuelHeat?: number; // station won't operate below this fuel heat rating (§2)
 	fluxPerBatch?: number; // limestone flux consumed per smelt batch (bloomery, §5)
 	moldRequired?: string; // clay/metal mold consumed/worn per cast (§5/§G)

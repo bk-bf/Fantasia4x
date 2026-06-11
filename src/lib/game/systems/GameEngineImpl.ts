@@ -745,6 +745,9 @@ export class GameEngineImpl implements GameEngine {
 
 		// Phase 6: tick campfire fuel consumption
 		this.gameState = this._processCampfireFuel(this.gameState!);
+
+		// Refactor Stage 1: structural condition decay (opt-in per building def)
+		this.gameState = buildingService.stepBuildingCondition(this.gameState!);
 	}
 
 	private _processCampfireFuel(gs: GameState): GameState {

@@ -3,6 +3,8 @@ import buildingsData from '../database/buildings.jsonc';
 import { resolveCharSpans } from '../core/Terrains';
 import type { CharSpan } from '../core/Terrains';
 import { rng } from '../core/rng';
+import { perTick } from '../core/time';
+import { consumeFromStockpiles } from '../core/GameState';
 
 const AVAILABLE_BUILDINGS = buildingsData as unknown as Building[];
 
@@ -66,6 +68,12 @@ export interface BuildingService {
   processDeconstructionQueue(gameState: GameState): GameState;
   /** Assign (or unassign) a pawn to a shelter building. Pass null to clear the assignment. */
   assignShelterPawn(instanceId: string, pawnId: string | null, gameState: GameState): GameState;
+
+  // ── Refactor Stage 1: structural condition (§B building wear) ──
+  /** Decay complete buildings' `condition` by their def `conditionDecayPerTurn` (per-tick). */
+  stepBuildingCondition(gameState: GameState): GameState;
+  /** Restore a building to full condition, consuming a fraction of its build cost. No-op if unaffordable. */
+  repairBuilding(instanceId: string, gameState: GameState): GameState;
 }
 
 /**
@@ -463,6 +471,51 @@ export class BuildingServiceImpl implements BuildingService {
         b.id === instanceId ? { ...b, assignedPawnId: pawnId ?? undefined } : b
       )
     };
+  }
+
+  stepBuildingCondition(gameState: GameState): GameState {
+    let changed = false;
+    const buildings = (gameState.buildings ?? []).map((b) => {
+      if (b.status !== 'complete') return b;
+      const def = AVAILABLE_BUILDINGS.find((d) => d.id === b.type);
+      const rate = def?.conditionDecayPerTurn;
+      if (!rate) return b;
+      const cur = b.condition ?? 100;
+      if (cur <= 0) return b;
+      const next = Math.max(0, cur - perTick(rate));
+      if (next === cur) return b;
+      changed = true;
+      return { ...b, condition: next };
+    });
+    return changed ? { ...gameState, buildings } : gameState;
+  }
+
+  repairBuilding(instanceId: string, gameState: GameState): GameState {
+    const b = (gameState.buildings ?? []).find((x) => x.id === instanceId);
+    if (!b || b.status !== 'complete') return gameState;
+    const def = AVAILABLE_BUILDINGS.find((d) => d.id === b.type);
+    if (!def) return gameState;
+    const cur = b.condition ?? 100;
+    if (cur >= 100) return gameState;
+
+    // Repair costs ~25% of the build cost (rounded up, min 1 per material).
+    const cost: Record<string, number> = {};
+    for (const [item, qty] of Object.entries(def.buildingCost ?? {})) {
+      cost[item] = Math.max(1, Math.ceil((qty as number) * 0.25));
+    }
+    const stock = gameState.stockpile ?? {};
+    for (const [item, qty] of Object.entries(cost)) {
+      if ((stock[item] ?? 0) < qty) return gameState; // can't afford → no-op
+    }
+
+    let state = consumeFromStockpiles(gameState, cost);
+    state = {
+      ...state,
+      buildings: (state.buildings ?? []).map((x) =>
+        x.id === instanceId ? { ...x, condition: 100 } : x
+      )
+    };
+    return state;
   }
 }
 

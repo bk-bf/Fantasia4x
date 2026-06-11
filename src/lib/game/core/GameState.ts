@@ -9,6 +9,9 @@ import type {
   DroppedItem
 } from './types';
 import { rng } from './rng';
+import buildingsData from '../database/buildings.jsonc';
+
+const BUILDING_DEFS = buildingsData as unknown as Building[];
 
 export class GameStateManager {
   private state: GameState;
@@ -184,6 +187,48 @@ export function computeAggregate(zones: StockpileZone[]): Record<string, number>
     }
   }
   return agg;
+}
+
+// ===== PER-TILE STORAGE (refactor Stage 2) =====
+// Items physically live as `stored` DroppedItems on tiles. A tile has a capacity
+// (base + storage-building bonus); zones are drop-off designations, not holders.
+
+/** Base item capacity of a bare map tile, before any storage building. */
+export const BASE_TILE_CAPACITY = 200;
+
+/** Sum `stored` DroppedItems (the per-tile authority) into an aggregate by resourceId. */
+export function aggregateFromDrops(drops: DroppedItem[] | undefined): Record<string, number> {
+  const agg: Record<string, number> = {};
+  for (const d of drops ?? []) {
+    if (!d.stored || (d.quantity ?? 0) <= 0) continue;
+    agg[d.resourceId] = (agg[d.resourceId] ?? 0) + d.quantity;
+  }
+  return agg;
+}
+
+/** Total stored item quantity physically held on tile (x,y). */
+export function tileStoredQuantity(state: GameState, x: number, y: number): number {
+  let total = 0;
+  for (const d of state.droppedItems ?? []) {
+    if (d.stored && d.x === x && d.y === y) total += d.quantity ?? 0;
+  }
+  return total;
+}
+
+/** Item capacity of tile (x,y) = base + Σ tileCapacityBonus of complete buildings on it. */
+export function tileCapacity(state: GameState, x: number, y: number): number {
+  let cap = BASE_TILE_CAPACITY;
+  for (const b of state.buildings ?? []) {
+    if (b.status !== 'complete' || b.x !== x || b.y !== y) continue;
+    const def = BUILDING_DEFS.find((d) => d.id === b.type);
+    if (def?.tileCapacityBonus) cap += def.tileCapacityBonus;
+  }
+  return cap;
+}
+
+/** Free capacity remaining on tile (x,y) for additional stored items. */
+export function tileFreeCapacity(state: GameState, x: number, y: number): number {
+  return Math.max(0, tileCapacity(state, x, y) - tileStoredQuantity(state, x, y));
 }
 
 /**
