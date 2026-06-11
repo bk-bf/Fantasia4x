@@ -87,11 +87,14 @@ export interface CreatureDefinition {
   bg: [number, number, number];
   stats: CreatureStats;
   behaviour: EntityBehaviour;
-  /** What this creature eats — gates only which foods it may consume, not aggression. */
+  /**
+   * The single source of truth for what a creature eats. Drives both the hunger-accrual rate
+   * (carnivore 1.0 / omnivore 0.7 / herbivore 0.5) and the food-seeking priority (see `eats`).
+   */
   diet: EntityDiet;
   /**
-   * Concrete, priority-ordered food sources this creature will seek when hungry. Authored
-   * in creatures.jsonc as `eats`; when absent it is derived from `diet` (+`predator`):
+   * Concrete, priority-ordered food sources this creature seeks when hungry. NOT authored —
+   * it is derived from `diet` (+`predator`) at load, so `diet` stays the only data field:
    *   herbivore → [grass, forage]; carnivore → [prey, carcass];
    *   omnivore  → [forage, carcass, (prey if predator), grass]  (real food first, grass last).
    */
@@ -140,18 +143,19 @@ export interface CreatureDefinition {
 
 type RawCreature = Record<string, unknown>;
 
-/** Default food priority when a creature doesn't author an explicit `eats` list. */
-function defaultEats(diet: EntityDiet, predator: boolean): FoodKind[] {
+/** The priority-ordered food list a creature seeks, derived solely from its `diet`. */
+function eatsForDiet(diet: EntityDiet, predator: boolean): FoodKind[] {
   switch (diet) {
     case 'herbivore':
+      // Grazers live on grass, with berries/mushrooms as a secondary nibble.
       return ['grass', 'forage'];
     case 'carnivore':
       return ['prey', 'carcass'];
     case 'omnivore':
     default:
-      // Real food (berries/mushrooms) and carcasses first; predatory omnivores also hunt;
-      // grass is the last-resort fallback so they don't starve when nothing else is near.
-      return predator ? ['forage', 'carcass', 'prey', 'grass'] : ['forage', 'carcass', 'grass'];
+      // Omnivores eat REAL food — wild forage (berries/mushrooms) and carcasses — and hunt
+      // live prey if they're predators. They do NOT graze plain grass.
+      return predator ? ['forage', 'carcass', 'prey'] : ['forage', 'carcass'];
   }
 }
 
@@ -182,7 +186,8 @@ function toDefinition(raw: RawCreature): CreatureDefinition {
     behaviour: raw.behaviour as EntityBehaviour,
     diet,
     predator,
-    eats: (raw.eats as FoodKind[] | undefined) ?? defaultEats(diet, predator),
+    // Always derived from diet (+predator) — never authored, so `diet` is the lone food field.
+    eats: eatsForDiet(diet, predator),
     intelligence: (raw.intelligence as EntityIntelligence) ?? 'primitive',
     nocturnalAggro: (raw.nocturnalAggro as boolean) ?? false,
     nightOnly: (raw.nightOnly as boolean) ?? false,

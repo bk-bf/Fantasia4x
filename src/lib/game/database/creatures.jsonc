@@ -62,7 +62,6 @@
         "stats"         : {"str": 10, "dex": 8, "con": 7, "per": 9},
         "behaviour"     : "aggressive",
         "diet"          : "omnivore",
-        "eats"          : ["forage", "carcass", "prey", "grass"],
         "predator"      : true,
         "intelligence"  : "primitive",
         "nocturnalAggro": false,
