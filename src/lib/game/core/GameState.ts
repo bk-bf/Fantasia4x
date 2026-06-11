@@ -232,6 +232,38 @@ export function tileFreeCapacity(state: GameState, x: number, y: number): number
 }
 
 /**
+ * Choose a tile to physically store items on. Prefers the explicit `tileKey`, then a
+ * stockpile-designated tile with free capacity, then any stockpile tile, then an existing
+ * stored pile, then (0,0). Capacity is advisory here — storing never fails (items are never
+ * lost); capacity governs hauling/overflow elsewhere.
+ */
+function pickStorageTile(state: GameState, tileKey: string | null): { x: number; y: number } {
+  if (tileKey) {
+    const [x, y] = tileKey.split(',').map(Number);
+    if (Number.isFinite(x) && Number.isFinite(y)) return { x, y };
+  }
+  const desig = state.designations ?? {};
+  let fallback: { x: number; y: number } | null = null;
+  for (const key of Object.keys(desig)) {
+    if (desig[key] !== 'stockpile') continue;
+    const [x, y] = key.split(',').map(Number);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+    if (!fallback) fallback = { x, y };
+    if (tileFreeCapacity(state, x, y) > 0) return { x, y };
+  }
+  if (fallback) return fallback;
+  const sd = (state.droppedItems ?? []).find((d) => d.stored);
+  if (sd) return { x: sd.x, y: sd.y };
+  for (const z of state.stockpileZones ?? []) {
+    if (z.tiles[0]) {
+      const [x, y] = z.tiles[0].split(',').map(Number);
+      if (Number.isFinite(x) && Number.isFinite(y)) return { x, y };
+    }
+  }
+  return { x: 0, y: 0 };
+}
+
+/**
  * Add items to the zone that owns `tileKey`.
  * Falls back to the general zone when tileKey is null or no zone owns the tile.
  * Auto-creates the general zone if it doesn't exist.
@@ -242,27 +274,32 @@ export function addToStockpileZone(
   tileKey: string | null,
   items: Record<string, number>
 ): GameState {
-  const zones = (state.stockpileZones ?? []).map((z) => ({ ...z, inventory: { ...z.inventory } }));
-
-  let targetIdx = tileKey !== null ? zones.findIndex((z) => z.tiles.includes(tileKey)) : -1;
-  if (targetIdx === -1) targetIdx = zones.findIndex((z) => z.id === GENERAL_ZONE_ID);
-  if (targetIdx === -1) {
-    zones.push({
-      id: GENERAL_ZONE_ID,
-      name: 'Colony Stockpile',
-      tiles: [],
-      filter: { allowedCategories: [], blockedItems: [] },
-      inventory: {}
-    } satisfies StockpileZone);
-    targetIdx = zones.length - 1;
-  }
+  // Stage 2: items are stored as physical `stored` DroppedItems on a tile (the source of
+  // truth). Zones no longer hold inventory; they only designate where haulers drop. There is
+  // at most one stored pile per (resourceId, tile), so ids are deterministic and merges are O(1).
+  const { x, y } = pickStorageTile(state, tileKey);
+  const drops = (state.droppedItems ?? []).map((d) => ({ ...d }));
 
   for (const [itemId, amount] of Object.entries(items)) {
     if (amount <= 0) continue;
-    zones[targetIdx].inventory[itemId] = (zones[targetIdx].inventory[itemId] ?? 0) + amount;
+    const idx = drops.findIndex(
+      (d) => d.stored && d.resourceId === itemId && d.x === x && d.y === y
+    );
+    if (idx >= 0) {
+      drops[idx].quantity += amount;
+    } else {
+      drops.push({
+        id: `stored-${itemId}-${x}-${y}`,
+        resourceId: itemId,
+        x,
+        y,
+        quantity: amount,
+        stored: true
+      });
+    }
   }
 
-  return { ...state, stockpileZones: zones, stockpile: computeAggregate(zones) };
+  return { ...state, droppedItems: drops, stockpile: aggregateFromDrops(drops) };
 }
 
 /**
@@ -271,30 +308,13 @@ export function addToStockpileZone(
  * Does not validate sufficiency — caller must check state.stockpile first.
  */
 export function consumeFromStockpiles(state: GameState, items: Record<string, number>): GameState {
-  const zones = (state.stockpileZones ?? []).map((z) => ({ ...z, inventory: { ...z.inventory } }));
-
-  // Also reduce stored DroppedItems so the physical map stays in sync.
-  // Only touches items that have a physical stored representation; items that
-  // exist only in zone.inventory (e.g. crafted output added without a tile drop)
-  // are unaffected here and are correctly handled by the zone loop above.
+  // Stage 2: deduct from `stored` DroppedItems (the source of truth). Loose/in-transit drops
+  // are not "in stockpile" and are not consumable here. Caller must check `state.stockpile`.
   const newDropped = (state.droppedItems ?? []).map((d) => ({ ...d }));
 
   for (const [itemId, amount] of Object.entries(items)) {
     if (amount <= 0) continue;
-
-    // Deduct from zone inventories.
     let remaining = amount;
-    for (const zone of zones) {
-      if (remaining <= 0) break;
-      const available = zone.inventory[itemId] ?? 0;
-      if (available <= 0) continue;
-      const take = Math.min(available, remaining);
-      zone.inventory[itemId] = available - take;
-      remaining -= take;
-    }
-
-    // Deduct from stored drops (physical truth).
-    remaining = amount;
     for (let i = 0; i < newDropped.length && remaining > 0; i++) {
       const d = newDropped[i];
       if (!d.stored || d.resourceId !== itemId || (d.quantity ?? 0) <= 0) continue;
@@ -304,12 +324,8 @@ export function consumeFromStockpiles(state: GameState, items: Record<string, nu
     }
   }
 
-  return {
-    ...state,
-    droppedItems: newDropped.filter((d) => !d.stored || d.quantity > 0),
-    stockpileZones: zones,
-    stockpile: computeAggregate(zones)
-  };
+  const kept = newDropped.filter((d) => !d.stored || d.quantity > 0);
+  return { ...state, droppedItems: kept, stockpile: aggregateFromDrops(kept) };
 }
 
 /**
@@ -347,6 +363,7 @@ export function absorbDropIfOnStockpileTile(state: GameState, dropId: string): G
     );
   }
 
-  const withDrop = { ...state, droppedItems: newDropped };
-  return addToStockpileZone(withDrop, tileKey, { [drop.resourceId]: drop.quantity });
+  // Stage 2: marking the drop `stored` IS the credit (drops are the source of truth).
+  // No separate zone-inventory bookkeeping; just recompute the aggregate from drops.
+  return { ...state, droppedItems: newDropped, stockpile: aggregateFromDrops(newDropped) };
 }

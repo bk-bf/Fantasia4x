@@ -6,6 +6,7 @@ import {
   addToStockpileZone,
   GENERAL_ZONE_ID,
   computeAggregate,
+  aggregateFromDrops,
   absorbDropIfOnStockpileTile
 } from '$lib/game/core/GameState';
 import { gameEngine } from '$lib/game/systems/GameEngineImpl';
@@ -216,36 +217,29 @@ function applyMigrations(state: GameState): GameState {
       ]
     };
   });
-  // Stockpile zone sync: enforce the invariant stockpile === computeAggregate(zones).
-  // Two migration cases:
-  //   1. Pre-zone save (zones are empty, aggregate has items): seed the general zone from aggregate.
-  //   2. Post-zone save (zones have items, aggregate may be stale/wrong): recompute from zones.
+  // Stage 2: per-tile `stored` DroppedItems are the source of truth; the aggregate is summed
+  // from them. Migrate any items that exist only in a legacy aggregate / zone.inventory into
+  // stored drops, then clear vestigial zone inventories (zones are now pure drop-off zones).
   {
-    const aggregate = state.stockpile ?? {};
-    const existingZones = state.stockpileZones ?? [];
-    const zoneTotal = computeAggregate(existingZones);
-    const zonesAreEmpty = Object.keys(zoneTotal).length === 0;
-    const aggregateHasItems = Object.keys(aggregate).length > 0;
+    const dropAgg = aggregateFromDrops(state.droppedItems);
+    const zoneAgg = computeAggregate(state.stockpileZones ?? []);
+    const oldAgg = state.stockpile ?? {};
+    const target: Record<string, number> = { ...zoneAgg };
+    for (const [id, q] of Object.entries(oldAgg)) target[id] = Math.max(target[id] ?? 0, q);
 
-    if (zonesAreEmpty && aggregateHasItems) {
-      // Case 1: old save — migrate aggregate into the general zone.
-      const zones = existingZones.map((z) =>
-        z.id === GENERAL_ZONE_ID ? { ...z, inventory: { ...aggregate } } : { ...z, inventory: {} }
-      );
-      if (!zones.some((z) => z.id === GENERAL_ZONE_ID)) {
-        zones.push({
-          id: GENERAL_ZONE_ID,
-          name: 'Colony Stockpile',
-          tiles: [],
-          filter: { allowedCategories: [], blockedItems: [] },
-          inventory: { ...aggregate }
-        });
-      }
-      state = { ...state, stockpileZones: zones, stockpile: computeAggregate(zones) };
-    } else {
-      // Case 2: zones are the truth — recompute aggregate from them.
-      state = { ...state, stockpile: computeAggregate(existingZones) };
+    const missing: Record<string, number> = {};
+    for (const [id, q] of Object.entries(target)) {
+      const have = dropAgg[id] ?? 0;
+      if (q > have) missing[id] = q - have;
     }
+    if (Object.keys(missing).length > 0) {
+      state = addToStockpileZone(state, null, missing);
+    }
+    state = {
+      ...state,
+      stockpileZones: (state.stockpileZones ?? []).map((z) => ({ ...z, inventory: {} })),
+      stockpile: aggregateFromDrops(state.droppedItems)
+    };
   }
 
   // One-time migration: absorb any unstored dropped items that are physically sitting on
@@ -707,16 +701,26 @@ export const currentStockpile = derived(gameState, ($gameState) =>
     .sort((a, b) => a.name.localeCompare(b.name))
 );
 
-/** Per-zone inventory view, enriched from the items database. */
-export const currentStockpileZones = derived(gameState, ($gameState) =>
-  ($gameState.stockpileZones ?? []).map((zone) => ({
-    ...zone,
-    displayInventory: Object.entries(zone.inventory)
-      .filter(([, amount]) => amount > 0)
-      .map(([id, amount]) => {
-        const def = itemService.getItemById(id);
-        return { id, name: def?.name ?? id, amount, color: def?.color, emoji: def?.emoji };
-      })
-      .sort((a, b) => a.name.localeCompare(b.name))
-  }))
-);
+/** Per-zone inventory view, derived from the `stored` DroppedItems on each zone's tiles. */
+export const currentStockpileZones = derived(gameState, ($gameState) => {
+  const drops = $gameState.droppedItems ?? [];
+  return ($gameState.stockpileZones ?? []).map((zone) => {
+    const tileSet = new Set(zone.tiles);
+    const inv: Record<string, number> = {};
+    for (const d of drops) {
+      if (!d.stored || (d.quantity ?? 0) <= 0) continue;
+      if (!tileSet.has(`${d.x},${d.y}`)) continue;
+      inv[d.resourceId] = (inv[d.resourceId] ?? 0) + d.quantity;
+    }
+    return {
+      ...zone,
+      displayInventory: Object.entries(inv)
+        .filter(([, amount]) => amount > 0)
+        .map(([id, amount]) => {
+          const def = itemService.getItemById(id);
+          return { id, name: def?.name ?? id, amount, color: def?.color, emoji: def?.emoji };
+        })
+        .sort((a, b) => a.name.localeCompare(b.name))
+    };
+  });
+});

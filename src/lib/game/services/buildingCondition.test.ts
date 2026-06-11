@@ -9,19 +9,21 @@ import type { GameState, PlacedBuilding } from '../core/types';
  * `branch_wall` carries conditionDecayPerTurn 0.5 and buildingCost {branch:8, plant_fiber:4}.
  */
 function makeState(buildings: PlacedBuilding[], stockpile: Record<string, number> = {}): GameState {
-  // stockpile is derived from zones — mirror it into a general zone so consume works.
-  const zone = {
-    id: 'zone-general',
-    name: 'General',
-    tiles: [] as string[],
-    filter: { allowedCategories: [], blockedItems: [] },
-    inventory: { ...stockpile }
-  };
+  // Stage 2: items live as `stored` DroppedItems on tiles; the aggregate is summed from them.
+  const droppedItems = Object.entries(stockpile).map(([id, qty], i) => ({
+    id: `stored-${id}`,
+    resourceId: id,
+    x: i,
+    y: 0,
+    quantity: qty,
+    stored: true
+  }));
   return {
     seed: 1,
     turn: 0,
     stockpile: { ...stockpile },
-    stockpileZones: [zone],
+    stockpileZones: [],
+    droppedItems,
     buildings
   } as unknown as GameState;
 }
