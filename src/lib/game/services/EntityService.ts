@@ -9,7 +9,7 @@ import type {
     LimbState,
     DroppedItem
 } from '../core/types';
-import { CREATURES, getCreatureById, type CreatureDefinition, type FoodKind } from '../core/Creatures';
+import { CREATURES, getCreatureById, type CreatureDefinition } from '../core/Creatures';
 import { getAmbientLight } from './EnvironmentService';
 import { ticksFromSeconds, SECONDS_PER_TICK, perTick } from '../core/time';
 import { conditionNeedMultipliers } from '../core/needs';
@@ -22,7 +22,7 @@ import { buildPathfindingGrids } from './PathfinderService';
 import { calcMaxStamina, calcMaxBloodVolume } from '../entities/Pawns';
 import { createDefaultBodyParts } from '../systems/Combat';
 import { gameLogger } from '../dev/gameLogger';
-import { logHuntStart, logFlee, logEntityStateChange, logEntityDeath, logCombatStart, logCombatEnd } from '../../stores/Log';
+import { logHuntStart, logFlee, logEntityStateChange, logEntityDeath } from '../../stores/Log';
 import { rng } from '../core/rng';
 
 /**
@@ -118,6 +118,13 @@ const SLEEP_MAX_HUNGER = 87;
 const EAT_FORAGE_HUNGER_RESTORE = 45;
 
 // ── Wild food discovery (data-driven) ─────────────────────────────────────────
+/**
+ * Map-tile food sources (not items, so not part of `CreatureDefinition.eats`):
+ * - `grass`   — grazeable tiles (resourceObjectService `grazing: true`). Herbivore staple.
+ * - `forage`  — wild forage nodes whose yield is in `eats` (e.g. category `food` → berries).
+ */
+type TileFoodKind = 'grass' | 'forage';
+
 /** Item ids that count as food (category food, or any positive nutrition). */
 const FOOD_ITEM_IDS = new Set(
     (itemsData as Array<{ id: string; category?: string; nutrition?: number }>)
@@ -707,24 +714,22 @@ class EntityServiceImpl {
             mob.state !== 'Sleeping'
             // (Hunting/Eating/Foraging already excluded by the early-return guard above)
         ) {
-            // Decide between foraging real food (berries/grass) and hunting, by the creature's
-            // authored priority — with a fallback to whichever is actually available so an
-            // omnivore goblin eats berries instead of starving when there's no prey nearby.
-            const eatIdx = (pred: (k: FoodKind) => boolean) => {
-                const i = def.eats.findIndex(pred);
-                return i === -1 ? Infinity : i;
-            };
-            const forageIdx = eatIdx((k) => k === 'grass' || k === 'forage');
-            const huntIdx = eatIdx((k) => k === 'prey' || k === 'carcass');
-            const forageKinds = new Set<FoodKind>(
-                def.eats.filter((k) => k === 'grass' || k === 'forage')
-            );
+            // Forage real food (and graze, for herbivores) first; fall back to hunting live
+            // prey or scavenging a corpse only if nothing forageable is in range. A creature
+            // can scavenge (`eats` includes meat/organic) without being a hunter — only
+            // `predator`/`carnivore` mobs will go after LIVE prey.
+            const tileKinds = new Set<TileFoodKind>();
+            if (def.grazes) tileKinds.add('grass');
+            if (def.eats.includes('food')) tileKinds.add('forage');
+            const canForage = tileKinds.size > 0;
+            const canScavengeOrHunt =
+                canHunt || def.eats.includes('meat') || def.eats.includes('organic');
             const forageReachable = () =>
-                forageKinds.size > 0 &&
-                this.findNearestFoodTile(state, mob.x, mob.y, FORAGE_RADIUS, forageKinds) !== null;
+                canForage &&
+                this.findNearestFoodTile(state, mob.x, mob.y, FORAGE_RADIUS, tileKinds) !== null;
             const tryHunt = (): Mob | null => {
-                if (!canHunt || huntIdx === Infinity) return null;
-                const prey = this.findNearestPrey(mob, allMobs);
+                if (!canScavengeOrHunt) return null;
+                const prey = this.findNearestPrey(mob, allMobs, canHunt);
                 if (!prey) return null;
                 const preyDef = getCreatureById(prey.creatureId);
                 const preyName = preyDef
@@ -734,16 +739,9 @@ class EntityServiceImpl {
                 return { ...mob, state: 'Hunting', stateSince: turn, path: [] };
             };
 
-            // Highest-priority available food first, then the other as fallback.
-            if (forageIdx <= huntIdx) {
-                if (forageReachable()) return { ...mob, state: 'Foraging', stateSince: turn, path: [] };
-                const hunted = tryHunt();
-                if (hunted) return hunted;
-            } else {
-                const hunted = tryHunt();
-                if (hunted) return hunted;
-                if (forageReachable()) return { ...mob, state: 'Foraging', stateSince: turn, path: [] };
-            }
+            if (forageReachable()) return { ...mob, state: 'Foraging', stateSince: turn, path: [] };
+            const hunted = tryHunt();
+            if (hunted) return hunted;
         }
 
         // ── Fatigue-driven sleep (safe, no pawn in vision, not hungry) ──────────
@@ -782,10 +780,8 @@ class EntityServiceImpl {
                     return { ...mob, state: 'Wander', stateSince: turn };
                 }
                 if (this.adjacent(mob, nearest.pos)) {
-                    const targetPawn = state.pawns.find((p) => p.isAlive !== false && p.position && Math.abs(mob.x - p.position.x) <= 1 && Math.abs(mob.y - p.position.y) <= 1);
-                    if (targetPawn) {
-                        logCombatStart(mob.id, this.entityName(mob), targetPawn.id, targetPawn.name, turn, mob.x, mob.y);
-                    }
+                    // Engagement logging is owned by combatService (one Chronicle entry per
+                    // engagement, opened on the first resolved swing) — the FSM only holds state.
                     return { ...mob, state: 'Attacking', stateSince: turn };
                 }
                 return this.moveToward(mob, nearest.pos, state);
@@ -896,22 +892,18 @@ class EntityServiceImpl {
                 mob.state !== 'Startled' &&
                 mob.state !== 'Sleeping'
             ) {
-                // Priority index of the creature's best forage vs hunt food (missing = lowest).
-                const eatIdx = (pred: (k: FoodKind) => boolean) => {
-                    const i = def.eats.findIndex(pred);
-                    return i === -1 ? Infinity : i;
-                };
-                const forageIdx = eatIdx((k) => k === 'grass' || k === 'forage');
-                const huntIdx = eatIdx((k) => k === 'prey' || k === 'carcass');
-                const canForage = forageIdx !== Infinity;
-                const canHunt = huntIdx !== Infinity;
+                // Forage (graze grass / eat wild food) first; hunt or scavenge a corpse only
+                // as a fallback. Live-prey hunting requires `predator`/`carnivore`; scavenging
+                // a corpse only requires `meat`/`organic` in `eats`.
+                const canForage = def.grazes || def.eats.includes('food');
+                const canHuntLive = def.predator || def.diet === 'carnivore';
+                const canScavengeOrHunt =
+                    canHuntLive || def.eats.includes('meat') || def.eats.includes('organic');
                 // Check hunt cooldown before entering Hunting state.
                 const huntCooldownExpired = !mob.huntCooldownUntil || turn >= mob.huntCooldownUntil;
-                if (canForage && forageIdx <= huntIdx)
-                    return { ...mob, state: 'Foraging', stateSince: turn, path: [] };
-                if (canHunt && huntCooldownExpired)
-                    return { ...mob, state: 'Hunting', stateSince: turn, path: [] };
                 if (canForage) return { ...mob, state: 'Foraging', stateSince: turn, path: [] };
+                if (canScavengeOrHunt && huntCooldownExpired)
+                    return { ...mob, state: 'Hunting', stateSince: turn, path: [] };
             }
 
             // Enter sleep only when not hungry (mirrors pawn shouldPawnSleep).
@@ -1057,9 +1049,12 @@ class EntityServiceImpl {
         state: GameState,
         pendingTileDepletion: Array<{ x: number; y: number; id: string }>
     ): Mob {
-        // What this creature will graze/forage from tiles (grass and/or wild forage nodes),
-        // in its authored priority order.
-        const kinds = new Set<FoodKind>(def.eats.filter((k) => k === 'grass' || k === 'forage'));
+        // What this creature will graze/forage from tiles, in priority order: grass first
+        // (herbivore staple), then wild forage nodes (berries/mushrooms — `eats` has 'food').
+        const tileKindOrder: TileFoodKind[] = [];
+        if (def.grazes) tileKindOrder.push('grass');
+        if (def.eats.includes('food')) tileKindOrder.push('forage');
+        const kinds = new Set<TileFoodKind>(tileKindOrder);
         // Idle/rest state differs by FSM: passive animals graze, hostile mobs wander.
         const idleState: MobState = def.behaviour === 'passive' ? 'Grazing' : 'Wander';
 
@@ -1097,11 +1092,10 @@ class EntityServiceImpl {
             return mob;
         }
 
-        // Path done — decide next step. Search in the creature's authored priority order so
-        // omnivores head for real forage food (berries/mushrooms) before falling back to grass.
+        // Path done — decide next step. Search in priority order so herbivores head for
+        // grass before wild forage, and omnivores head for real forage food (berries/mushrooms).
         let target: { x: number; y: number } | null = null;
-        for (const kind of def.eats) {
-            if (kind !== 'grass' && kind !== 'forage') continue;
+        for (const kind of tileKindOrder) {
             target = this.findNearestFoodTile(state, mob.x, mob.y, FORAGE_RADIUS, new Set([kind]));
             if (target) break;
         }
@@ -1201,7 +1195,10 @@ class EntityServiceImpl {
             return { ...mob, eatProgress: next, path: [], state: 'Eating' as MobState };
         }
 
-        // Determine prey: lock onto existing target or find new prey.
+        // Determine prey: lock onto existing target or find new prey. Live-prey hunting
+        // requires `predator`/`carnivore`; scavenging a corpse only requires `eats`
+        // to include `meat`/`organic`.
+        const allowLivePrey = def.predator || def.diet === 'carnivore';
         let prey: Mob | null = null;
         if (mob.huntTargetId) {
             // Locked onto a target — stick with it unless it's invalid.
@@ -1210,17 +1207,17 @@ class EntityServiceImpl {
                 // Target is valid. Allow switching to a corpse if one appears (free food).
                 if (lockedTarget.state === 'Corpse' && (lockedTarget.intactness ?? 1.0) <= 0) {
                     // Locked target is stripped — clear and find new prey.
-                    prey = this.findNearestPrey(mob, allMobs);
+                    prey = this.findNearestPrey(mob, allMobs, allowLivePrey);
                 } else {
                     prey = lockedTarget;
                 }
             } else {
                 // Locked target is gone — find new prey.
-                prey = this.findNearestPrey(mob, allMobs);
+                prey = this.findNearestPrey(mob, allMobs, allowLivePrey);
             }
         } else {
             // No locked target — find nearest prey.
-            prey = this.findNearestPrey(mob, allMobs);
+            prey = this.findNearestPrey(mob, allMobs, allowLivePrey);
         }
 
         if (!prey) {
@@ -1312,7 +1309,7 @@ class EntityServiceImpl {
      */
     private edibleResourceOnTile(
         tile: { resources?: Record<string, number> } | undefined,
-        kinds: Set<FoodKind>
+        kinds: Set<TileFoodKind>
     ): string | null {
         if (!tile?.resources) return null;
         const wantGrass = kinds.has('grass');
@@ -1331,7 +1328,7 @@ class EntityServiceImpl {
         x: number,
         y: number,
         radius: number,
-        kinds: Set<FoodKind>
+        kinds: Set<TileFoodKind>
     ): { x: number; y: number } | null {
         if (kinds.size === 0) return null;
         let bestDist = Infinity;
@@ -1353,8 +1350,12 @@ class EntityServiceImpl {
         return best;
     }
 
-    /** Nearest corpse (preferred) or live huntable creature within HUNT_RADIUS. */
-    private findNearestPrey(mob: Mob, allMobs: Mob[]): Mob | null {
+    /**
+     * Nearest corpse (preferred) within HUNT_RADIUS, or — if `allowLivePrey` — the nearest
+     * live huntable creature. `allowLivePrey` should be `predator || diet === 'carnivore'`:
+     * scavenging a corpse doesn't require being a hunter, but stalking live prey does.
+     */
+    private findNearestPrey(mob: Mob, allMobs: Mob[], allowLivePrey: boolean): Mob | null {
         let best: Mob | null = null;
         let bestDist = Infinity;
         for (const candidate of allMobs) {
@@ -1369,6 +1370,7 @@ class EntityServiceImpl {
                     best = candidate;
                 }
             } else if (
+                allowLivePrey &&
                 getCreatureById(candidate.creatureId)?.huntable &&
                 candidate.state !== 'Tamed' &&
                 raw <= HUNT_RADIUS

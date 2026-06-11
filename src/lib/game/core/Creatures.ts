@@ -14,15 +14,13 @@ export type EntityClass = 'mob' | 'animal';
 export type EntityBehaviour = 'passive' | 'neutral' | 'aggressive';
 export type EntityDiet = 'herbivore' | 'carnivore' | 'omnivore';
 /**
- * What an entity can eat, in PRIORITY order (it tries the first kind it can find before
- * falling back to the next):
- * - `forage` — wild edible forage nodes (berry bushes, mushrooms — any forage resource that
- *   yields a food item). The "actual food" omnivores prefer.
- * - `grass`  — graze-able grass tiles. Herbivore staple.
- * - `carcass`— corpses on the ground.
- * - `prey`   — live huntable animals.
+ * Item categories (matching the `category` field in items.jsonc) an entity will eat when
+ * foraging wild food or scavenging a corpse:
+ * - `food`    — wild forage (berries, herbs, mushrooms) and prepared meals.
+ * - `meat`    — butchered cuts (rabbit meat, venison…).
+ * - `organic` — raw carcasses/remains.
  */
-export type FoodKind = 'forage' | 'grass' | 'carcass' | 'prey';
+export type FoodCategory = 'food' | 'meat' | 'organic';
 /**
  * Governs how deeply an entity uses game systems.
  * - `primitive`: food-only needs, eats directly from tile/corpse (no item spawns), no mood.
@@ -87,18 +85,23 @@ export interface CreatureDefinition {
   bg: [number, number, number];
   stats: CreatureStats;
   behaviour: EntityBehaviour;
-  /**
-   * The single source of truth for what a creature eats. Drives both the hunger-accrual rate
-   * (carnivore 1.0 / omnivore 0.7 / herbivore 0.5) and the food-seeking priority (see `eats`).
-   */
+  /** Governs hunger-accrual rate only (carnivore 1.0 / omnivore 0.7 / herbivore 0.5).
+   *  Does NOT determine what this creature eats — see `eats`/`grazes`. */
   diet: EntityDiet;
   /**
-   * Concrete, priority-ordered food sources this creature seeks when hungry. NOT authored —
-   * it is derived from `diet` (+`predator`) at load, so `diet` stays the only data field:
-   *   herbivore → [grass, forage]; carnivore → [prey, carcass];
-   *   omnivore  → [forage, carcass, (prey if predator), grass]  (real food first, grass last).
+   * Item categories (from items.jsonc `category`) this creature will forage or scavenge when
+   * hungry — `food` (wild forage/meals), `meat` and `organic` (carcasses). Authored per
+   * creature in creatures.jsonc so individual species can be tuned independently (e.g. a
+   * future bear could prioritise honey) even when they share the same `diet`. If omitted,
+   * defaults from `diet`: herbivore → [food]; carnivore → [meat, organic];
+   * omnivore → [food, meat, organic].
    */
-  eats: FoodKind[];
+  eats: FoodCategory[];
+  /**
+   * True if this creature also grazes plain grass tiles (no item involved) — the herbivore
+   * staple. Authored per creature; if omitted, defaults to `diet === 'herbivore'`.
+   */
+  grazes: boolean;
   /**
    * True if this creature hunts and frightens prey. This — not `diet` — is the
    * sole flag that marks something as a threat: a passive omnivore (chicken)
@@ -143,19 +146,16 @@ export interface CreatureDefinition {
 
 type RawCreature = Record<string, unknown>;
 
-/** The priority-ordered food list a creature seeks, derived solely from its `diet`. */
-function eatsForDiet(diet: EntityDiet, predator: boolean): FoodKind[] {
+/** Default `eats` for a creature that doesn't author its own list, by `diet`. */
+function defaultEatsForDiet(diet: EntityDiet): FoodCategory[] {
   switch (diet) {
     case 'herbivore':
-      // Grazers live on grass, with berries/mushrooms as a secondary nibble.
-      return ['grass', 'forage'];
+      return ['food'];
     case 'carnivore':
-      return ['prey', 'carcass'];
+      return ['meat', 'organic'];
     case 'omnivore':
     default:
-      // Omnivores eat REAL food — wild forage (berries/mushrooms) and carcasses — and hunt
-      // live prey if they're predators. They do NOT graze plain grass.
-      return predator ? ['forage', 'carcass', 'prey'] : ['forage', 'carcass'];
+      return ['food', 'meat', 'organic'];
   }
 }
 
@@ -186,8 +186,8 @@ function toDefinition(raw: RawCreature): CreatureDefinition {
     behaviour: raw.behaviour as EntityBehaviour,
     diet,
     predator,
-    // Always derived from diet (+predator) — never authored, so `diet` is the lone food field.
-    eats: eatsForDiet(diet, predator),
+    eats: (raw.eats as FoodCategory[] | undefined) ?? defaultEatsForDiet(diet),
+    grazes: (raw.grazes as boolean | undefined) ?? diet === 'herbivore',
     intelligence: (raw.intelligence as EntityIntelligence) ?? 'primitive',
     nocturnalAggro: (raw.nocturnalAggro as boolean) ?? false,
     nightOnly: (raw.nightOnly as boolean) ?? false,

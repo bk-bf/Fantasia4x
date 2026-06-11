@@ -31,6 +31,7 @@
   import { glyph, SHEET } from '$lib/webgl/tilesets.js';
   import { uiState } from '$lib/stores/uiState.js';
   import { worldEffects } from '$lib/stores/worldEffects.js';
+  import { combatFeedback, FLOAT_TTL_MS, type CombatTextEvent } from '$lib/stores/combatFeedback.js';
   import { renderFps } from '$lib/stores/perfStats.js';
   import { buildingService } from '$lib/game/services/BuildingService.js';
   import { resolveCharSpans, BIOMES, SUBTERRAINS } from '$lib/game/core/Terrains.js';
@@ -217,6 +218,14 @@
   let _campfireOverlayKey = '';
   let _healthOverlayKey = '';
   let _draftOverlayKey = '';
+  let _floatTextKey = '';
+
+  // Live world-space combat-text events (damage/miss/dodge…). Converted to screen
+  // coordinates each frame in updateWorldEffectOverlays so they track the camera.
+  let combatTexts: CombatTextEvent[] = [];
+  const unsubCombatFeedback = combatFeedback.subscribe((list) => {
+    combatTexts = list;
+  });
 
   // Phase 4: buildings and designations overlay
   let buildings: PlacedBuilding[] = [];
@@ -1005,6 +1014,29 @@
       _draftOverlayKey = draftKey;
       worldEffects.setDraftTargetOverlays(newDraftTargets);
     }
+
+    // Floating combat text: age out expired events, convert the live tile coord of
+    // each to a screen position (so labels track the camera as it pans/follows).
+    const now = Date.now();
+    const newFloats = combatTexts
+      .filter((e) => now - e.spawnTime < FLOAT_TTL_MS)
+      .map((e) => ({
+        id: e.id,
+        left: (e.worldX - viewX + 0.5) * tW,
+        top: (e.worldY - viewY) * tH - 14,
+        text: e.text,
+        kind: e.kind
+      }))
+      .filter((o) => o.left >= -tW && o.top >= -tH && o.left <= W + tW && o.top <= H + tH);
+    // Key on id + rounded position: the set changes whenever an event spawns,
+    // expires, or the camera moves a label by ≥1px.
+    const floatKey = newFloats
+      .map((o) => `${o.id}:${Math.round(o.left)},${Math.round(o.top)}`)
+      .join('|');
+    if (floatKey !== _floatTextKey) {
+      _floatTextKey = floatKey;
+      worldEffects.setFloatingTextOverlays(newFloats);
+    }
   }
 
   // Rebuilding the full base grid + bumping the terrain version is expensive at
@@ -1444,6 +1476,7 @@
   onDestroy(() => {
     unsubState();
     unsubUI();
+    unsubCombatFeedback();
     if (browser) {
       cancelAnimationFrame(animationId);
       renderer?.dispose();

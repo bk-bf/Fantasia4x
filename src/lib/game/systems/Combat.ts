@@ -14,7 +14,8 @@ import type {
 import { itemService } from '../services/ItemService';
 import { getCreatureById } from '../core/Creatures';
 import { pawnStatService } from '../services/PawnStatService';
-import { logCombatStart, logCombatTurn, logCombatEnd } from '../../stores/Log';
+import { logCombatSwing, logCombatKill } from '../../stores/Log';
+import { combatFeedback, type CombatTextKind } from '../../stores/combatFeedback';
 import { rng } from '../core/rng';
 
 // ── Tuning constants ─────────────────────────────────────────────────────────
@@ -957,6 +958,118 @@ class CombatServiceImpl implements CombatService {
         return this._applyInjuryToEntity(mob, injury, state, 'mob');
     }
 
+    // ── Combat feedback helpers ────────────────────────────────────────────────
+    /** Display name for the Chronicle / floating text. */
+    private entityName(e: Pawn | Mob): string {
+        if ('entityClass' in e) {
+            const def = getCreatureById(e.creatureId);
+            return def ? `${def.name} #${e.debugId ?? e.id.slice(-4)}` : e.id;
+        }
+        return e.name;
+    }
+
+    /** Live tile coordinate of an entity (mobs carry x/y, pawns a position object). */
+    private entityPos(e: Pawn | Mob): { x: number; y: number } {
+        if ('entityClass' in e) return { x: e.x, y: e.y };
+        return { x: e.position?.x ?? -1, y: e.position?.y ?? -1 };
+    }
+
+    private emitFloat(x: number, y: number, kind: CombatTextKind, text: string): void {
+        if (x < 0 || y < 0) return;
+        combatFeedback.push({ worldX: x, worldY: y, text, kind });
+    }
+
+    /**
+     * Resolve one swing from attacker → target: roll, apply injury, surface floating
+     * text + engagement log, and report a kill. Returns the updated state. Misses are
+     * surfaced too (as a "dodge") so the defender's evasion is visible.
+     */
+    private performAttack(
+        attacker: Pawn | Mob,
+        target: Pawn | Mob,
+        state: GameState,
+        turn: number
+    ): GameState {
+        const result = this.resolveHit(attacker, target, state);
+        const pos = this.entityPos(target);
+        const attackerName = this.entityName(attacker);
+        const targetName = this.entityName(target);
+        const isTargetMob = 'entityClass' in target;
+
+        // Miss → no injury, but log + show the dodge.
+        if (!result.hit) {
+            this.emitFloat(pos.x, pos.y, 'dodge', 'dodge');
+            logCombatSwing(attacker.id, attackerName, target.id, targetName, turn, pos.x, pos.y, {
+                turn,
+                attackerName,
+                defenderName: targetName,
+                hit: false
+            });
+            return state;
+        }
+        if (!result.injury) return state;
+
+        const next = isTargetMob
+            ? this.applyInjuryToMob(target.id, result.injury, state)
+            : this.applyInjury(target.id, result.injury, state);
+
+        // Floating text: damage number (crit when the part is critically/destroyed),
+        // plus secondary knockdown / bleed cues.
+        const crit =
+            result.injury.severity === 'critical' || result.injury.severity === 'destroyed';
+        this.emitFloat(pos.x, pos.y, crit ? 'crit' : 'damage', `-${result.injury.damage}`);
+        if (result.knockdown) this.emitFloat(pos.x, pos.y, 'knockdown', 'DOWN!');
+        else if (result.injury.bleeding > 0) this.emitFloat(pos.x, pos.y, 'bleed', 'bleed');
+
+        logCombatSwing(attacker.id, attackerName, target.id, targetName, turn, pos.x, pos.y, {
+            turn,
+            attackerName,
+            defenderName: targetName,
+            hit: true,
+            damage: result.injury.damage,
+            injury: result.injury.bodyPart,
+            knockdown: result.knockdown,
+            bodyPart: result.injury.bodyPart,
+            damageType: result.damageType,
+            partMaxHp: result.partMaxHp,
+            partRemainingHp: result.partRemainingHp,
+            bleeding: result.injury.bleeding > 0
+        });
+
+        const after = isTargetMob
+            ? next.mobs?.find((m) => m.id === target.id)
+            : next.pawns.find((p) => p.id === target.id);
+        if (after && (after.isAlive === false || ('state' in after && after.state === 'Corpse'))) {
+            logCombatKill(attacker.id, target.id, turn);
+        }
+        return next;
+    }
+
+    /** Nearest living hostile mob adjacent to a pawn (for auto-engagement). */
+    private nearestAdjacentHostile(pawn: Pawn, mobs: Mob[]): Mob | undefined {
+        if (!pawn.position) return undefined;
+        const px = pawn.position.x;
+        const py = pawn.position.y;
+        let best: Mob | undefined;
+        let bestDist = Infinity;
+        for (const m of mobs) {
+            if (m.isAlive === false || m.state === 'Corpse') continue;
+            const hostile = m.entityClass === 'mob' || m.state === 'Attacking' || m.state === 'Alerted';
+            if (!hostile) continue;
+            const d = Math.max(Math.abs(px - m.x), Math.abs(py - m.y));
+            if (d <= 1 && d < bestDist) {
+                best = m;
+                bestDist = d;
+            }
+        }
+        return best;
+    }
+
+    /** True while an entity is knocked down and cannot swing this tick. */
+    private isKnockedDown(e: Pawn | Mob): boolean {
+        return (e.statusEffectDurations?.knockdown ?? 0) > 0;
+    }
+
     tickCombat(state: GameState, _dtMs: number): GameState {
         let next = state;
         // Track stamina mutations for attacking entities (id → new stamina value).
@@ -967,6 +1080,7 @@ class CombatServiceImpl implements CombatService {
         const mobs = state.mobs ?? [];
         for (const mob of mobs) {
             if (mob.state !== 'Attacking' || mob.isAlive === false) continue;
+            if (this.isKnockedDown(mob)) continue;
             const attackSpeed = Math.max(0.5, pawnStatService.evaluateStat('attack_speed', mob));
             const interval = Math.max(18, Math.round(BASE_ATTACK_INTERVAL_TICKS / attackSpeed));
             if ((state.turn - mob.stateSince) % interval !== 0) continue;
@@ -1005,72 +1119,46 @@ class CombatServiceImpl implements CombatService {
             }
             if (!target) continue;
 
-            const result = this.resolveHit(mob, target, next);
-            if (!result.hit || !result.injury) continue;
-
-            if ('entityClass' in target) {
-                next = this.applyInjuryToMob(target.id, result.injury, next);
-            } else {
-                next = this.applyInjury(target.id, result.injury, next);
-            }
-
+            next = this.performAttack(mob, target, next, state.turn);
             mobStaminaUpdates.set(mob.id, Math.max(0, curStamina - ATTACK_STAMINA_COST));
-
-            // Log combat turn
-            const mobDef = getCreatureById(mob.creatureId);
-            const attackerName = mobDef ? `${mobDef.name} #${mob.debugId ?? mob.id.slice(-4)}` : mob.id;
-            const targetName = 'entityClass' in target
-                ? (getCreatureById((target as Mob).creatureId)?.name ?? (target as Mob).id)
-                : (target as Pawn).name;
-            logCombatTurn(
-                mob.id, attackerName, target.id, targetName, state.turn, true,
-                result.injury.damage, result.injury.bodyPart, result.knockdown,
-                result.injury.bodyPart, result.damageType, result.partMaxHp, result.partRemainingHp,
-                result.injury.bleeding > 0
-            );
-
-            // Check if target died this hit
-            const targetAfter = 'entityClass' in target
-                ? next.mobs?.find((m) => m.id === target.id)
-                : next.pawns.find((p) => p.id === target.id);
-            if (targetAfter && (targetAfter.isAlive === false || ('state' in targetAfter && targetAfter.state === 'Corpse'))) {
-                logCombatEnd(mob.id, target.id, `${targetName} was killed`, state.turn);
-            }
-
         }
 
-        // ── Drafted pawn attacks ─────────────────────────────────────────────
+        // ── Pawn attacks (drafted order OR auto-engaged Fighting state) ───────
         for (const pawn of state.pawns) {
-            if (
-                pawn.isAlive === false ||
-                !pawn.drafted ||
-                !pawn.draftTarget ||
-                pawn.draftTarget.type !== 'attack'
-            )
-                continue;
-            if (!pawn.position) continue;
+            if (pawn.isAlive === false || !pawn.position) continue;
+            if (this.isKnockedDown(pawn)) continue;
 
-            const dt = pawn.draftTarget;
+            // Resolve the pawn's target: an explicit draft order, or — for an
+            // undrafted pawn the FSM has put into Fighting — the nearest adjacent hostile.
             let target: Pawn | Mob | undefined;
-            if (dt.targetType === 'mob') {
-                target = mobs.find((m) => m.id === dt.targetId && m.isAlive !== false);
+            if (pawn.drafted && pawn.draftTarget?.type === 'attack') {
+                const dt = pawn.draftTarget;
+                target =
+                    dt.targetType === 'mob'
+                        ? mobs.find((m) => m.id === dt.targetId && m.isAlive !== false)
+                        : state.pawns.find((p) => p.id === dt.targetId && p.isAlive !== false);
+                if (!target) {
+                    // Target dead — clear the stale draft order.
+                    next = {
+                        ...next,
+                        pawns: next.pawns.map((p) =>
+                            p.id === pawn.id ? { ...p, draftTarget: undefined } : p
+                        )
+                    };
+                    continue;
+                }
+            } else if (pawn.currentState === 'Fighting') {
+                target = this.nearestAdjacentHostile(pawn, mobs);
             } else {
-                target = state.pawns.find((p) => p.id === dt.targetId && p.isAlive !== false);
-            }
-            if (!target) {
-                // Target dead — clear draft order
-                next = {
-                    ...next,
-                    pawns: next.pawns.map((p) => (p.id === pawn.id ? { ...p, draftTarget: undefined } : p))
-                };
                 continue;
             }
+            if (!target) continue;
 
-            const tx = 'entityClass' in target ? target.x : (target.position?.x ?? -1);
-            const ty = 'entityClass' in target ? target.y : (target.position?.y ?? -1);
-            if (Math.abs(pawn.position.x - tx) > 1 || Math.abs(pawn.position.y - ty) > 1) continue;
+            const tpos = this.entityPos(target);
+            if (Math.abs(pawn.position.x - tpos.x) > 1 || Math.abs(pawn.position.y - tpos.y) > 1)
+                continue;
 
-            // Attack cadence for drafted pawns — scaled by attack_speed stat.
+            // Attack cadence — scaled by attack_speed stat.
             const pawnAttackSpeed = Math.max(0.5, pawnStatService.evaluateStat('attack_speed', pawn));
             const pawnInterval = Math.max(18, Math.round(BASE_ATTACK_INTERVAL_TICKS / pawnAttackSpeed));
             if (state.turn % pawnInterval !== 0) continue;
@@ -1084,36 +1172,8 @@ class CombatServiceImpl implements CombatService {
                 continue;
             }
 
-            const result = this.resolveHit(pawn, target, next);
-            if (!result.hit || !result.injury) continue;
-
-            if ('entityClass' in target) {
-                next = this.applyInjuryToMob(target.id, result.injury, next);
-            } else {
-                next = this.applyInjury(target.id, result.injury, next);
-            }
-
+            next = this.performAttack(pawn, target, next, state.turn);
             pawnStaminaUpdates.set(pawn.id, Math.max(0, curStamina - ATTACK_STAMINA_COST));
-
-            // Log combat turn
-            const targetName = 'entityClass' in target
-                ? (getCreatureById((target as Mob).creatureId)?.name ?? (target as Mob).id)
-                : (target as Pawn).name;
-            logCombatTurn(
-                pawn.id, pawn.name, target.id, targetName, state.turn, true,
-                result.injury.damage, result.injury.bodyPart, result.knockdown,
-                result.injury.bodyPart, result.damageType, result.partMaxHp, result.partRemainingHp,
-                result.injury.bleeding > 0
-            );
-
-            // Check if target died this hit
-            const targetAfter = 'entityClass' in target
-                ? next.mobs?.find((m) => m.id === target.id)
-                : next.pawns.find((p) => p.id === target.id);
-            if (targetAfter && (targetAfter.isAlive === false || ('state' in targetAfter && targetAfter.state === 'Corpse'))) {
-                logCombatEnd(pawn.id, target.id, `${targetName} was killed`, state.turn);
-            }
-
         }
 
         // Apply stamina mutations in one pass

@@ -35,12 +35,21 @@ export interface DraftTargetOverlay {
   points: Array<{ x: number; y: number }>;
 }
 
+export interface FloatingTextOverlay {
+  id: string;
+  left: number;
+  top: number;
+  text: string;
+  kind: 'damage' | 'crit' | 'miss' | 'dodge' | 'bleed' | 'knockdown';
+}
+
 export interface WorldEffectsState {
   sleepingOverlays: SleepingOverlay[];
   progressOverlays: ProgressOverlay[];
   campfireOverlays: CampfireOverlay[];
   healthOverlays: HealthOverlay[];
   draftTargetOverlays: DraftTargetOverlay[];
+  floatingTextOverlays: FloatingTextOverlay[];
   // Future effects — add here and handle in WorldEffectsLayer:
   // weather: 'none' | 'rain' | 'snow';
   // particleEffects: ParticleEffect[];
@@ -52,7 +61,8 @@ function createWorldEffectsStore() {
     progressOverlays: [],
     campfireOverlays: [],
     healthOverlays: [],
-    draftTargetOverlays: []
+    draftTargetOverlays: [],
+    floatingTextOverlays: []
   });
 
   return {
@@ -71,6 +81,9 @@ function createWorldEffectsStore() {
     },
     setDraftTargetOverlays(overlays: DraftTargetOverlay[]) {
       update((s) => ({ ...s, draftTargetOverlays: overlays }));
+    },
+    setFloatingTextOverlays(overlays: FloatingTextOverlay[]) {
+      update((s) => ({ ...s, floatingTextOverlays: overlays }));
     }
   };
 }

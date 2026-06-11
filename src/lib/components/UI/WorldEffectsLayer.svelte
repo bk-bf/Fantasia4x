@@ -77,6 +77,16 @@
     </svg>
   {/each}
 
+  <!-- ── Floating combat text (damage / miss / dodge / crit / bleed) ───────────── -->
+  {#each $worldEffects.floatingTextOverlays as overlay (overlay.id)}
+    <div
+      class="combat-float {overlay.kind}"
+      style="transform: translate({overlay.left}px, {overlay.top}px) translateX(-50%);"
+    >
+      {overlay.text}
+    </div>
+  {/each}
+
   <!-- ── Fullscreen Weather / Shader Overlays ──────────────────────────────────── -->
   <!-- To add rain: create RainCanvas.svelte and mount it here when weather='rain'  -->
   <!-- Example:                                                                      -->
@@ -254,5 +264,69 @@
 
   .health-bar-fill.mob {
     background: linear-gradient(90deg, #cc3322, #ee5544);
+  }
+
+  /* ── Floating combat text ──────────────────────────────────────────────────── */
+
+  .combat-float {
+    position: absolute;
+    left: 0;
+    top: 0;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    font-weight: bold;
+    white-space: nowrap;
+    pointer-events: none;
+    text-shadow:
+      0 0 3px #000,
+      0 1px 2px #000;
+    /* GPU-composite the rise/fade so the blurred text-shadow isn't re-rasterised
+       every frame (same reasoning as .zzz-z / .spark). */
+    will-change: transform, opacity;
+    animation: combat-float-rise 0.9s ease-out forwards;
+  }
+
+  /* The keyframe rise stacks ON TOP of the inline translate() that positions the
+     label over its tile, so the base position still tracks the camera each frame. */
+  @keyframes combat-float-rise {
+    0% {
+      opacity: 0;
+      margin-top: 2px;
+    }
+    15% {
+      opacity: 1;
+    }
+    70% {
+      opacity: 1;
+      margin-top: -16px;
+    }
+    100% {
+      opacity: 0;
+      margin-top: -24px;
+    }
+  }
+
+  .combat-float.damage {
+    color: #ff6644;
+  }
+  .combat-float.crit {
+    color: #ff3322;
+    font-size: 14px;
+  }
+  .combat-float.miss {
+    color: #bbbbbb;
+    font-size: 10px;
+  }
+  .combat-float.dodge {
+    color: #66ccee;
+    font-size: 10px;
+  }
+  .combat-float.bleed {
+    color: #cc2222;
+    font-size: 10px;
+  }
+  .combat-float.knockdown {
+    color: #ffcc44;
+    font-size: 10px;
   }
 </style>

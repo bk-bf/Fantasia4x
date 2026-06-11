@@ -31,8 +31,9 @@ export const criticalActivity = derived(activityLog, ($log) =>
     .reverse()
 );
 
-// Function to add activity log entries
-export function logActivity(entry: Omit<ActivityLogEntry, 'id' | 'timestamp'>) {
+// Function to add activity log entries. Returns the generated entry id so callers
+// (e.g. the combat-engagement tracker) can later update the same entry in place.
+export function logActivity(entry: Omit<ActivityLogEntry, 'id' | 'timestamp'>): string {
   const fullEntry: ActivityLogEntry = {
     ...entry,
     id: crypto.randomUUID(),
@@ -46,6 +47,7 @@ export function logActivity(entry: Omit<ActivityLogEntry, 'id' | 'timestamp'>) {
   });
 
   activityLogger.log(fullEntry);
+  return fullEntry.id;
 }
 
 // Convenience functions for different activity types
@@ -132,9 +134,6 @@ export function logSystem(
 
 // ── Combat & Entity Logging ─────────────────────────────────────────────────
 
-/** Active combat sessions being tracked for breakdown (key = "attackerId|defenderId"). */
-const activeCombatSessions = new Map<string, ActivityLogEntry>();
-
 /** Deduplication: last turn an entity logged a specific action type. */
 const lastEntityLogTurn = new Map<string, number>();
 
@@ -153,87 +152,152 @@ function shouldSkipLog(entityId: string, actionType: string, turn: number, coold
   return false;
 }
 
-export function logCombatStart(
+// ── Engagement-scoped combat sessions ────────────────────────────────────────
+//
+// One Chronicle entry per *engagement* (an unordered attacker/defender pair),
+// not per swing. Every hit/miss appends a CombatTurnEntry to that entry's
+// breakdown and refreshes its summary in place — so a 40-swing brawl reads as a
+// single expandable line instead of 40 "engaged in combat" lines.
+//
+// A session stays open across brief disengage/re-engage flickers; it only closes
+// on death or after ENGAGEMENT_EXPIRE_TICKS of no activity (lazily, on the next
+// event for that pair). This is what kills the re-engagement log spam.
+
+interface CombatSession {
+  entryId: string;
+  attackerId: string;
+  attackerName: string;
+  defenderName: string;
+  startTurn: number;
+  lastActivityTurn: number;
+  lastStoreTurn: number;
+  hits: number;
+  misses: number;
+  totalDamage: number;
+  killed: boolean;
+  closed: boolean;
+  breakdown: CombatTurnEntry[];
+  focusX: number;
+  focusY: number;
+}
+
+const combatSessions = new Map<string, CombatSession>();
+
+/** Ticks of silence before an engagement is considered over (≈5s at 60 TPS). */
+const ENGAGEMENT_EXPIRE_TICKS = 300;
+/** Don't rewrite the store entry more than once per this many ticks (perf). */
+const STORE_THROTTLE_TICKS = 12;
+
+function sessionSummary(s: CombatSession): { result: string; severity: ActivityLogEntry['severity'] } {
+  const swings = s.hits + s.misses;
+  let result = `${s.hits}/${swings} hits · ${s.totalDamage} dmg`;
+  if (s.killed) result += ' · killed';
+  else if (s.closed) result += ' · disengaged';
+  const severity: ActivityLogEntry['severity'] = s.killed ? 'critical' : 'warning';
+  return { result, severity };
+}
+
+/** Rewrite the session's Chronicle entry in place (immutably → reactivity fires). */
+function flushSession(s: CombatSession, force: boolean, turn: number) {
+  if (!force && turn - s.lastStoreTurn < STORE_THROTTLE_TICKS) return;
+  s.lastStoreTurn = turn;
+  const { result, severity } = sessionSummary(s);
+  const breakdownCopy = [...s.breakdown];
+  activityLog.update((log) =>
+    log.map((e) =>
+      e.id === s.entryId
+        ? { ...e, result, severity, combatBreakdown: breakdownCopy }
+        : e
+    )
+  );
+}
+
+/**
+ * Record one resolved combat swing (hit OR miss) between an attacker and defender.
+ * Opens the engagement entry lazily on the first swing; appends to it thereafter.
+ */
+export function logCombatSwing(
   attackerId: string,
   attackerName: string,
   defenderId: string,
   defenderName: string,
   turn: number,
   focusX: number,
-  focusY: number
-) {
-  // Deduplicate: same combat pair within 60 ticks (1s) → skip
-  const pairKey = combatKey(attackerId, defenderId);
-  if (shouldSkipLog(pairKey, 'combat-start', turn, 60)) return;
-
-  const key = combatKey(attackerId, defenderId);
-  const entry: Omit<ActivityLogEntry, 'id' | 'timestamp'> = {
-    turn,
-    type: 'combat',
-    actor: attackerId,
-    action: `${attackerName} engaged in combat with ${defenderName}`,
-    target: defenderId,
-    result: '',
-    severity: 'warning',
-    entityIds: [attackerId, defenderId],
-    focusX,
-    focusY,
-    combatBreakdown: []
-  };
-  activeCombatSessions.set(key, entry as ActivityLogEntry);
-  logActivity(entry);
-}
-
-export function logCombatTurn(
-  attackerId: string,
-  attackerName: string,
-  defenderId: string,
-  defenderName: string,
-  turn: number,
-  hit: boolean,
-  damage?: number,
-  injury?: string,
-  knockdown?: boolean,
-  bodyPart?: string,
-  damageType?: string,
-  partMaxHp?: number,
-  partRemainingHp?: number,
-  bleeding?: boolean
+  focusY: number,
+  swing: CombatTurnEntry
 ) {
   const key = combatKey(attackerId, defenderId);
-  const session = activeCombatSessions.get(key);
-  const turnEntry: CombatTurnEntry = {
-    turn,
-    attackerName,
-    defenderName,
-    hit,
-    damage,
-    injury,
-    knockdown,
-    bodyPart,
-    damageType,
-    partMaxHp,
-    partRemainingHp,
-    bleeding
-  };
-  if (session && session.combatBreakdown) {
-    session.combatBreakdown.push(turnEntry);
+  let session = combatSessions.get(key);
+
+  // Stale session (engagement lapsed) → close it out and start a fresh one.
+  if (session && (session.closed || turn - session.lastActivityTurn > ENGAGEMENT_EXPIRE_TICKS)) {
+    if (!session.closed) {
+      session.closed = true;
+      flushSession(session, true, turn);
+    }
+    combatSessions.delete(key);
+    session = undefined;
   }
+
+  if (!session) {
+    const entry: Omit<ActivityLogEntry, 'id' | 'timestamp'> = {
+      turn,
+      type: 'combat',
+      actor: attackerId,
+      action: `${attackerName} engaged ${defenderName}`,
+      target: defenderId,
+      result: '',
+      severity: 'warning',
+      entityIds: [attackerId, defenderId],
+      focusX,
+      focusY,
+      combatBreakdown: []
+    };
+    const entryId = logActivity(entry);
+    session = {
+      entryId,
+      attackerId,
+      attackerName,
+      defenderName,
+      startTurn: turn,
+      lastActivityTurn: turn,
+      lastStoreTurn: -Infinity,
+      hits: 0,
+      misses: 0,
+      totalDamage: 0,
+      killed: false,
+      closed: false,
+      breakdown: [],
+      focusX,
+      focusY
+    };
+    combatSessions.set(key, session);
+  }
+
+  session.breakdown.push(swing);
+  if (swing.hit) {
+    session.hits += 1;
+    session.totalDamage += swing.damage ?? 0;
+  } else {
+    session.misses += 1;
+  }
+  session.lastActivityTurn = turn;
+  flushSession(session, false, turn);
 }
 
-export function logCombatEnd(
+/** Finalize an engagement after a kill (forces an immediate summary refresh). */
+export function logCombatKill(
   attackerId: string,
   defenderId: string,
-  result: string,
   turn: number
 ) {
   const key = combatKey(attackerId, defenderId);
-  const session = activeCombatSessions.get(key);
-  if (session) {
-    session.result = result;
-    session.severity = result.includes('died') || result.includes('killed') ? 'critical' : 'warning';
-    activeCombatSessions.delete(key);
-  }
+  const session = combatSessions.get(key);
+  if (!session) return;
+  session.killed = true;
+  session.closed = true;
+  flushSession(session, true, turn);
+  combatSessions.delete(key);
 }
 
 export function logHuntStart(
