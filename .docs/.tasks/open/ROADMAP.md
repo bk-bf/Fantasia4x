@@ -35,22 +35,28 @@ All critical architectural debt resolved. Core survival loop is functional.
 
 ---
 
-## Phase 3 — Depth Features (highest impact first)
+## Phase 3 — Depth Features (re-prioritised 2026-06-11)
 
-Ordered by player-visible impact at the time of implementation. Combat is the
-physical foundation (probability hit chance, limbs/organs, bleeding, knockdown);
-Magic & Skills is a depth layer added on top of it.
+**Dev model: skateboard → bike → motorcycle → car → truck.** Each step must be a
+**complete, playable experience**, not a perfected feature. So we sequence the items
+that round out the playable loop first and **defer content-expansion features** —
+things that mostly add *more stuff* on top of an already-working loop (e.g. taming /
+mounts / breeding) — even when they're spec'd, because they don't make the current
+slice more complete. Combat (the physical foundation) and the Entity Spawning world
+layer it needed are done; focus now shifts to the **production → equipment** loop, then
+the Living World layer. **Magic & Skills is pushed back** after Living World.
 
-| #   | Item                                                                                               | Status | Spec                                                           |
-| --- | -------------------------------------------------------------------------------------------------- | ------ | -------------------------------------------------------------- |
-| 1   | **Entity Spawning** (mobs, animals, hunting, butchering, taming)                                   | ❌     | [ENTITIES_SPAWNING.md](ENTITIES_SPAWNING.md)                   |
-| 2   | **Combat System** (RimWorld/DF physical foundation: hit chance, limbs/organs, bleeding, knockdown) | ❌     | [COMBAT-SYSTEM.md](COMBAT-SYSTEM.md)                           |
-| 3   | **Magic & Skills** (depth layer on top of combat: skills + spells)                                 | ❌     | [MAGIC-SKILLS.md](MAGIC-SKILLS.md)                             |
-| 4   | **Production Chain Expansion** (smelting, forges, mining, cooking, healing)                        | ❌     | [PRODUCTION-CHAIN-EXPANSION.md](PRODUCTION-CHAIN-EXPANSION.md) |
-| 5   | **Equipment Expansion** (Tiers 0–2, durability, skill grants)                                      | ❌     | [EQUIPMENT-EXPANSION.md](EQUIPMENT-EXPANSION.md)               |
-| 6   | **Living World B–D** (seasons, temperature, weather, fog of war)                                   | ❌ B–D | [SEASONS_WEATHER.md](SEASONS_WEATHER.md)                       |
-| 7   | **Social Layer** (relationships, mood depth, pawn traits)                                          | ❌     | [SOCIAL-LAYER.md](SOCIAL-LAYER.md)                             |
-| 8   | **Research Enhancement** (three-tier, lore-item driven; after item DB)                             | ❌     | [RESEARCH-ENHANCEMENT.md](RESEARCH-ENHANCEMENT.md)             |
+| #   | Item                                                                                  | Status        | Spec                                                           |
+| --- | ------------------------------------------------------------------------------------- | ------------- | -------------------------------------------------------------- |
+| —   | **Combat System** (stances, weapons/crit, wounds, pain→collapse, healing, caretaking) | ✅ 2026-06-11 | [COMBAT-SYSTEM.md](COMBAT-SYSTEM.md) · ADR-012/013             |
+| —   | **Entity Spawning** Phase A–B (mobs, animals, hunting, foraging, butchering)           | ✅            | [ENTITIES_SPAWNING.md](ENTITIES_SPAWNING.md)                   |
+| 1   | **Production Chain Expansion** (smelting, forges, mining, cooking, healing) — **next** | ❌            | [PRODUCTION-CHAIN-EXPANSION.md](PRODUCTION-CHAIN-EXPANSION.md) |
+| 2   | **Equipment Expansion** (Tiers 0–2, durability, skill grants)                          | ❌            | [EQUIPMENT-EXPANSION.md](EQUIPMENT-EXPANSION.md)               |
+| 3   | **Living World B–D** (seasons, temperature, weather, fog of war)                       | ❌ B–D        | [SEASONS_WEATHER.md](SEASONS_WEATHER.md)                       |
+| 4   | **Magic & Skills** (depth layer; **reorganised after Living World**)                   | ❌ deferred   | [MAGIC-SKILLS.md](MAGIC-SKILLS.md)                             |
+| 5   | **Social Layer** (relationships, mood depth, death mood events, pawn traits)           | ❌            | [SOCIAL-LAYER.md](SOCIAL-LAYER.md)                             |
+| 6   | **Research Enhancement** (three-tier, lore-item driven; after item DB)                 | ❌            | [RESEARCH-ENHANCEMENT.md](RESEARCH-ENHANCEMENT.md)             |
+| 7   | **Entity Spawning** Phase C–E (taming, mounts, breeding) — **deferred** content expansion | ❌ (A–B ✅) | [ENTITIES_SPAWNING.md](ENTITIES_SPAWNING.md)                   |
 
 ### Spec Dependency Matrix
 
@@ -71,15 +77,16 @@ Magic & Skills is a depth layer added on top of it.
 
 ### Implementation Waves
 
-| Wave                  | Parallel tracks                                                         | Prerequisite                                              |
-| --------------------- | ----------------------------------------------------------------------- | --------------------------------------------------------- |
-| **1** — Phase 2 ✅    | SCREEN-REFACTORING ✅ · SURVIVAL-HEALTH ✅                              | complete                                                  |
-| **2** — Phase 3 early | ENTITIES_SPAWNING Phase A–B                                             | none (foundational world layer)                           |
-| **3**                 | COMBAT-SYSTEM                                                           | Wave 2 (needs ENTITIES Phase A)                           |
-| **4**                 | MAGIC-SKILLS Phase 1 · PRODUCTION-CHAIN-EXPANSION · SEASONS_WEATHER B–D | MAGIC needs Wave 3 (COMBAT); others independent           |
-| **5**                 | EQUIPMENT-EXPANSION · SOCIAL-LAYER · ENTITIES Phase C–E                 | Wave 3 (COMBAT); EQUIPMENT also needs PROD-CHAIN (Wave 4) |
-| **6**                 | RESEARCH-ENHANCEMENT · MAGIC nodes 3+5                                  | Wave 4 MAGIC Phase 1 + Wave 5 EQUIPMENT (lore item types) |
-| **7** — Phase 4       | TAURI-DISTRIBUTION                                                      | Wave 6 complete                                           |
+| Wave                | Parallel tracks                                            | Prerequisite                                              |
+| ------------------- | ---------------------------------------------------------- | -------------------------------------------------------- |
+| **1** — Phase 2 ✅  | SCREEN-REFACTORING ✅ · SURVIVAL-HEALTH ✅                 | complete                                                  |
+| **2** ✅            | ENTITIES_SPAWNING Phase A–B                                | complete                                                 |
+| **3** ✅            | COMBAT-SYSTEM (incl. wounds, stances, caretaking)          | complete (2026-06-11)                                    |
+| **4** — next        | PRODUCTION-CHAIN-EXPANSION                                 | independent                                              |
+| **5**               | EQUIPMENT-EXPANSION                                        | EQUIPMENT needs PROD-CHAIN (Wave 4) + COMBAT ✅          |
+| **6**               | SEASONS_WEATHER B–D (Living World) · SOCIAL-LAYER          | independent / COMBAT ✅                                  |
+| **7**               | MAGIC-SKILLS · RESEARCH-ENHANCEMENT · ENTITIES C–E (deferred content) | after Living World; MAGIC needs COMBAT ✅ + EQUIPMENT |
+| **8** — Phase 4     | TAURI-DISTRIBUTION                                         | Wave 7 complete                                          |
 
 ### Other Phase 3 work (no dedicated spec)
 

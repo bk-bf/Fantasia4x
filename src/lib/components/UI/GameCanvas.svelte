@@ -308,6 +308,17 @@
   let similarAnchorY = 0;
   let similarEndX = 0;
   let similarEndY = 0;
+
+  // Hunt-drag mode: drag a zone to mark all same-type mobs in the area for hunting
+  let huntDragMode = false;
+  let huntDragCreatureId = '';
+  let huntDragCreatureName = '';
+  let huntDragActive = false;
+  let huntAnchorX = 0;
+  let huntAnchorY = 0;
+  let huntEndX = 0;
+  let huntEndY = 0;
+
   let zoneAnchorX = 0;
   let zoneAnchorY = 0;
   let zoneEndX = 0;
@@ -418,20 +429,6 @@
     }));
   }
 
-  // Mark ALL living mobs of the same creature type for hunting.
-  // If every one is already queued, this clears them all; otherwise queues them all.
-  function markAllSameTypeForHunt(creatureId: string) {
-    const sameType = mobs.filter((m) => m.creatureId === creatureId && m.state !== 'Corpse');
-    const allMarked = sameType.length > 0 && sameType.every((m) => m.markedForHunt);
-    gameState.updateWithSave((state) => ({
-      ...state,
-      mobs: (state.mobs ?? []).map((m) =>
-        m.creatureId === creatureId && m.state !== 'Corpse'
-          ? { ...m, markedForHunt: !allMarked }
-          : m
-      )
-    }));
-  }
 
   function buildPawnCard(pawn: Pawn, selected: boolean): SelectedEntityModel {
     const bars: EntityBar[] = [
@@ -580,43 +577,30 @@
       }`,
       pos: selected ? { x: mob.x, y: mob.y } : undefined,
       buttons: selected
-        ? ((): EntityButton[] => {
-            const sameType = mobs.filter(
-              (m) => m.creatureId === mob.creatureId && m.state !== 'Corpse'
-            );
-            const allSameTypeMarked =
-              sameType.length > 0 && sameType.every((m) => m.markedForHunt);
-            const markedCount = sameType.filter((m) => m.markedForHunt).length;
-            return [
-              {
-                label: 'VIEW',
-                onClick: () => {
-                  uiState.selectMob(mob.id);
-                  uiState.setScreen('entities');
-                }
-              },
-              {
-                label: cameraFollowMobId === mob.id ? 'UNFOLLOW' : 'FOLLOW',
-                active: cameraFollowMobId === mob.id,
-                onClick: () =>
-                  uiState.setFollowMob(cameraFollowMobId === mob.id ? null : mob.id)
-              },
-              {
-                label: mob.markedForHunt ? 'UNQUEUE' : 'HUNT',
-                active: mob.markedForHunt ?? false,
-                onClick: () => toggleHuntMark(mob.id)
-              },
-              {
-                label: allSameTypeMarked
-                  ? 'UNMARK ALL'
-                  : markedCount > 0
-                    ? `MARK ALL (${markedCount}/${sameType.length})`
-                    : `MARK ALL (${sameType.length})`,
-                active: allSameTypeMarked,
-                onClick: () => markAllSameTypeForHunt(mob.creatureId)
+        ? ([
+            {
+              label: 'VIEW',
+              onClick: () => {
+                uiState.selectMob(mob.id);
+                uiState.setScreen('entities');
               }
-            ];
-          })()
+            },
+            {
+              label: cameraFollowMobId === mob.id ? 'UNFOLLOW' : 'FOLLOW',
+              active: cameraFollowMobId === mob.id,
+              onClick: () =>
+                uiState.setFollowMob(cameraFollowMobId === mob.id ? null : mob.id)
+            },
+            {
+              label: mob.markedForHunt ? 'UNQUEUE' : 'HUNT',
+              active: mob.markedForHunt ?? false,
+              onClick: () => toggleHuntMark(mob.id)
+            },
+            {
+              label: 'MARK',
+              onClick: () => startHuntDrag(mob)
+            }
+          ] satisfies EntityButton[])
         : undefined,
       onSelect: !selected
         ? () => {
@@ -1967,6 +1951,12 @@
           showFuelSettings = false;
           break;
         }
+        if (huntDragMode) {
+          huntDragMode = false;
+          huntDragActive = false;
+          redrawOverlay();
+          break;
+        }
         if (similarDragMode) {
           similarDragMode = false;
           similarDragActive = false;
@@ -2055,6 +2045,15 @@
 
   function handleMouseDown(e: MouseEvent) {
     if (e.button !== 0) return;
+    if (huntDragMode) {
+      huntDragActive = true;
+      huntAnchorX = hoverTileX;
+      huntAnchorY = hoverTileY;
+      huntEndX = hoverTileX;
+      huntEndY = hoverTileY;
+      redrawOverlay();
+      return;
+    }
     if (similarDragMode) {
       similarDragActive = true;
       similarAnchorX = hoverTileX;
@@ -2125,6 +2124,12 @@
       drawDesignations();
       return;
     }
+    if (huntDragActive) {
+      huntEndX = hoverTileX;
+      huntEndY = hoverTileY;
+      redrawOverlay();
+      return;
+    }
     if (similarDragActive) {
       similarEndX = hoverTileX;
       similarEndY = hoverTileY;
@@ -2155,6 +2160,10 @@
   }
 
   function handleMouseUp() {
+    if (huntDragActive) {
+      completeHuntDrag();
+      return;
+    }
     if (similarDragActive) {
       completeSimilarDrag();
       return;
@@ -2274,6 +2283,43 @@
     if (!selectedResourceTile) return;
     const { x, y } = selectedResourceTile;
     gameState.updateWithSave((state) => designationService.clearDesignation(x, y, state));
+    redrawOverlay();
+  }
+
+  function startHuntDrag(mob: Mob) {
+    const def = getCreatureById(mob.creatureId);
+    huntDragCreatureId = mob.creatureId;
+    huntDragCreatureName = def?.name ?? mob.creatureId.replace(/_/g, ' ');
+    huntDragMode = true;
+    huntDragActive = false;
+  }
+
+  function completeHuntDrag() {
+    const minX = Math.min(huntAnchorX, huntEndX);
+    const maxX = Math.max(huntAnchorX, huntEndX);
+    const minY = Math.min(huntAnchorY, huntEndY);
+    const maxY = Math.max(huntAnchorY, huntEndY);
+    const ids = new Set(
+      mobs
+        .filter(
+          (m) =>
+            m.creatureId === huntDragCreatureId &&
+            m.state !== 'Corpse' &&
+            m.x >= minX && m.x <= maxX &&
+            m.y >= minY && m.y <= maxY
+        )
+        .map((m) => m.id)
+    );
+    if (ids.size > 0) {
+      gameState.updateWithSave((state) => ({
+        ...state,
+        mobs: (state.mobs ?? []).map((m) =>
+          ids.has(m.id) ? { ...m, markedForHunt: true } : m
+        )
+      }));
+    }
+    huntDragMode = false;
+    huntDragActive = false;
     redrawOverlay();
   }
 
@@ -2590,6 +2636,12 @@
       Esc cancel{#if similarDragActive}
         — ({Math.abs(similarEndX - similarAnchorX) + 1}×{Math.abs(similarEndY - similarAnchorY) +
           1}){/if}
+    </div>
+  {:else if huntDragMode}
+    <div class="designation-hud" style:color="#ee8844" style:border-color="#ee8844">
+      [⊞ HUNT {huntDragCreatureName.toUpperCase()}] — drag zone to queue all for hunting · Esc
+      cancel{#if huntDragActive}
+        — ({Math.abs(huntEndX - huntAnchorX) + 1}×{Math.abs(huntEndY - huntAnchorY) + 1}){/if}
     </div>
   {/if}
   {#if selectedPawnCard}

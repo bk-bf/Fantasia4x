@@ -1,22 +1,24 @@
 # COMBAT SYSTEM
 
-> **Related:** [ROADMAP](ROADMAP.md) · [ENTITIES_SPAWNING](ENTITIES_SPAWNING.md) · [MAGIC-SKILLS](MAGIC-SKILLS.md) · [EQUIPMENT-EXPANSION](EQUIPMENT-EXPANSION.md) · [game/DESIGN](../../game/DESIGN.md)
+> **Related:** [ROADMAP](ROADMAP.md) · [ENTITIES_SPAWNING](ENTITIES_SPAWNING.md) · [MAGIC-SKILLS](MAGIC-SKILLS.md) · [EQUIPMENT-EXPANSION](EQUIPMENT-EXPANSION.md) · [game/DESIGN](../../game/DESIGN.md) · [game/DECISIONS](../../game/DECISIONS.md) (ADR-012/013)
 
 ## Status
 
-Not started — no `combatService` (`systems/Combat.ts` is an empty stub) and pawns
-take no combat damage yet. Blocked only on ENTITIES_SPAWNING Phase A (live
-targets). Combat is a **self-contained physical foundation** — probability-based
-hit chance against a detailed limb/organ body map, with bleeding, fractures, pain,
-and knockdown. MAGIC-SKILLS is **not** a prerequisite; it layers on top later.
+**Implemented (2026-06-11).** The physical foundation — Phases A–D plus a large
+Phase E of feedback, AI, wounds, and caretaking — is live and test-covered
+(`systems/Combat.ts`, `core/Wounds.ts`, `systems/PawnStateMachine.ts`). Pawns
+auto-engage, take and deal limb/organ damage, accumulate wounds + pain, collapse,
+heal over time, and can be tended. See ADR-012 (wound model + capacity-driven
+downing) and ADR-013 (deferred tissue/nerve depth) in `game/DECISIONS.md`.
 
-**Foundations already in place** (SURVIVAL-HEALTH + ENTITIES_SPAWNING):
+**Deferred (tracked):** drafted-mode skill bar + spells → MAGIC-SKILLS; ranged
+attacks; the doctor **job loop** (assignment/pathing/medicine items — the tend
+mechanic exists but is currently abstract); DF-style tissue layers → ADR-013;
+colony-wide death mood events → SOCIAL-LAYER.
 
-- Pawn & Mob carry `limbs` (6-limb), `conditions`, `bloodVolume`, `isAlive`.
-- `Item.weaponProperties` + `armorProperties` (resist, parry, bash, kick) exist.
-- Hostile-mob FSM has a live `Attacking` state that holds position; a
-  `pendingDamage` map already routes mob hunting damage to a random limb with
-  bleed — reusable for pawn damage.
+**Foundations relied on** (SURVIVAL-HEALTH + ENTITIES_SPAWNING): Pawn & Mob carry
+`limbs`, `conditions`, `bloodVolume`, `isAlive`; the hostile-mob FSM has a live
+`Attacking` state; `Item.weaponProperties`/`armorProperties` exist.
 
 ---
 
@@ -394,7 +396,7 @@ the roots.
 
 - `tickCombat(state, dtMs)` — finds mobs in `Attacking` state, fires every `ATTACK_INTERVAL_TICKS`, resolves hit against nearest adjacent pawn
 - `resolveHit(attacker, defender, state)` → `HitResult` (bodyPart, damage, injury, knockdown)
-- `applyInjury(pawnId, injury, state)` — updates `LimbState.parts[]`, aggregates `bleedRate` to root limb, upserts `blood_loss` condition, handles pain collapse + vital-part permadeath
+- `applyInjury(pawnId, injury, state, knockdown)` — merges the hit into the part's same-type wound (`recomputeWound`), rolls part damage up to the limb, aggregates `bleedRate`, recomputes `pain = Σ wounds`, upserts `blood_loss`, applies knockdown/collapse status + vital-part permadeath (collapse via the consciousness capacity — Phase E)
 - `triggerSkill(...)` — **deferred stub**; returns state unmodified until MAGIC-SKILLS wires it
 - Body-part definitions exported as `PART_DEF_MAP` + `BodyPartDef` for Phase D UI and tests
 
@@ -408,21 +410,55 @@ the roots.
 Limbs and blood are already rendered; this phase expands that depiction rather than
 building it from scratch.
 
-- ✅ PawnScreen health panel: 6 root limbs always visible, each expandable to reveal
-  sub-parts (organs, bones, fingers). Auto-expanded when injured, collapsed when healthy.
-  Healthy sub-parts dimmed (opacity 0.6). Pain total + prone state surfaced in status row.
-  Vital organs marked with ★ after the name.
-- ✅ EntityScreen reworked into RimWorld-style health table — one entity per row,
-  columns for blood %, worst-limb status, pain, and FSM state. Row click expands full
-  body tree with limb/sub-part detail.
-- ✅ Health bars on mob/pawn map tiles in `GameCanvas.svelte` — reuses the existing
-  `progressOverlays` / `worldEffects` overlay pipeline. Green bars for pawns, red for mobs.
+- ✅ PawnScreen health panel (`PawnHealth.svelte`): vertical limb **tree** — sub-parts
+  nest directly beneath their root limb. Per-limb 3-state click cycle (hidden →
+  injured-only → all); injured limbs auto-show their injured parts. Wound badges show
+  type + severity; vital organs marked ★. Blood shown as % of capacity (matches the
+  info card). Pain + DOWN state in the status row.
+- ✅ EntityScreen RimWorld-style health table; wound badges show severity.
+- ✅ Health bars on mob/pawn map tiles in `GameCanvas.svelte`.
+- ✅ Info card (`SelectedEntityCard`): HP / Mood / **PAIN** + BLOOD (capacity-normalised).
 - ⬜ Drafted-mode skill bar deferred to MAGIC-SKILLS.
+
+### Phase E — Engagement AI, feedback, wounds & caretaking (2026-06-11)
+
+- ✅ **Auto-combat stances** (`combatStance: aggressive | defensive(default) | flee`,
+  settable via `PawnStance.svelte`). Detection range from the `aggro_range` stat
+  (perception + sight). Pawn FSM gains `Fighting`/`Fleeing`/`Collapsed` + a top-priority
+  combat interrupt so an attacked pawn defends instead of walking off. Aggressive pawns
+  chase; defensive only react when adjacent.
+- ✅ **Weighted natural weapons as a gear category.** `natural_weapon` items in
+  `items.jsonc` (fists/kick/bite/claw/slam/…); creatures + pawns reference them by id.
+  Per-swing weighted roll, per-weapon `staminaCost`/`weight`/`critMod`; STR scaling
+  differentiates per creature. Crafted weapons resolve through the same path.
+- ✅ **Crit system** — `crit_chance` stat (DEX/PER × capacities) + weapon `critMod`,
+  ×1.5 damage, capped.
+- ✅ **Wound model** (`wounds.jsonc` + `core/Wounds.ts`): one wound per damage-type per
+  part, merge-and-escalate (cut/puncture/crush/burn); severity from accumulated damage
+  fraction; pain = Σ active wounds. **ADR-012.**
+- ✅ **Capacity-driven downing** — collapse when the `consciousness` capacity (folds in
+  pain + blood loss + organ damage) drops below threshold; **knockdown** (short blunt
+  stagger) and **collapse** are separate status effects. Mobs defeated on collapse;
+  pawns go down and recover. **ADR-012.**
+- ✅ **Wound healing** — `heal_rate` stat; recovery boosted by sleep / well-fed / good
+  mood (all in `wounds.jsonc`). Pain falls as wounds mend.
+- ✅ **Caretaking** — `medical_skill` stat; a tend rolls treatment quality
+  (skill × mood × variance) → faster healing + infection suppression; **infection** is a
+  multi-stage condition (`conditions.jsonc`), lethal at full severity. Trigger is a
+  lightweight "best available medic" auto-tend; full doctor **job loop deferred**.
+- ✅ **Engagement-scoped Chronicle logging** — one entry per engagement that accretes
+  every swing (hit + miss) with a live summary; expandable breakdown (`CombatBreakdown.svelte`,
+  newest-first). Replaces the per-re-engagement spam.
+- ✅ **Floating combat text** — damage / crit / miss / dodge / knockdown over the tile
+  (`combatFeedback` store → `WorldEffectsLayer`).
+- ⬜ **Deferred (ADR-013):** DF-style tissue layers, nerves, arteries.
 
 ---
 
 ## Open Questions
 
-- [ ] Auto-retreat when pain exceeds 80? (yes, draft-overridable)
-- [ ] Ranged attack range cap? (8 tiles base; Perception scales it)
+- [x] Auto-retreat when pain exceeds 80? → **Resolved:** replaced by the explicit `flee`
+  stance + capacity-driven collapse; default pawns fight until downed (ADR-012).
+- [ ] Ranged attack range cap? (8 tiles base; Perception scales it) — not yet built.
 - [ ] Squad assignment UI for drafted mode? (Phase 2)
+- [ ] Doctor job loop: assignment, pathing to patient, medicine items (tend is abstract today).
