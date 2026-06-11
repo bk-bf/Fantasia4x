@@ -2,32 +2,45 @@
   import type { CombatTurnEntry } from '$lib/game/core/Events';
 
   export let turns: CombatTurnEntry[];
+
+  // Newest swing first, so a live engagement trails from the top — no scrolling to follow.
+  $: ordered = [...turns].reverse();
+
+  /** camelCase body-part id → readable name, e.g. rightUpperLeg → "right upper leg". */
+  function partName(id?: string): string {
+    if (!id) return '';
+    return id
+      .replace(/([A-Z])/g, ' $1')
+      .toLowerCase()
+      .trim();
+  }
 </script>
 
 <div class="breakdown">
-  {#each turns as t}
+  {#each ordered as t}
     <div class="line" class:crit={t.crit} class:miss={!t.hit}>
-      <span class="turn">T{t.turn}</span>
-      <span class="who atk">{t.attackerName}</span>
-      {#if t.weapon}<span class="weapon">{t.weapon}</span>{/if}
+      <div class="head">
+        <span class="turn">T{t.turn}</span>
+        <span class="who atk">{t.attackerName}</span>
+        <span class="arrow">{t.hit ? '→' : '⨯'}</span>
+        <span class="who">{t.defenderName}</span>
+        {#if !t.hit}<span class="dodge">dodged</span>{/if}
+      </div>
       {#if t.hit}
-        <span class="arrow">→</span>
-        <span class="who">{t.defenderName}</span>
-        {#if t.bodyPart}<span class="part">{t.bodyPart}</span>{/if}
-        {#if t.partRemainingHp !== undefined && t.partMaxHp !== undefined}
-          <span class="hp">{t.partRemainingHp}/{t.partMaxHp}</span>
-        {/if}
-        {#if t.crit}
-          <span class="dmg crit-dmg">CRIT −{t.damage}</span>
-        {:else}
-          <span class="dmg">−{t.damage}</span>
-        {/if}
-        {#if t.knockdown}<span class="tag knock">KNOCKED DOWN</span>{/if}
-        {#if t.bleeding}<span class="tag bleed">BLEEDING</span>{/if}
-      {:else}
-        <span class="arrow miss-x">⨯</span>
-        <span class="who">{t.defenderName}</span>
-        <span class="dodge">dodged</span>
+        <div class="detail">
+          {#if t.weapon}<span class="weapon">{t.weapon}</span>{/if}
+          {#if t.bodyPart}<span class="part">{partName(t.bodyPart)}</span>{/if}
+          {#if t.partRemainingHp !== undefined && t.partMaxHp !== undefined}
+            <span class="hp">{t.partRemainingHp}/{t.partMaxHp}</span>
+          {/if}
+          {#if t.crit}
+            <span class="dmg crit-dmg">CRIT −{t.damage}</span>
+          {:else}
+            <span class="dmg">−{t.damage}</span>
+          {/if}
+          {#if t.knockdown}<span class="tag knock">DOWN</span>{/if}
+          {#if t.bleeding}<span class="tag bleed">BLEED</span>{/if}
+        </div>
       {/if}
     </div>
   {/each}
@@ -37,32 +50,44 @@
   .breakdown {
     display: flex;
     flex-direction: column;
-    gap: 3px;
-    padding: 4px 6px 6px 30px;
+    gap: 2px;
+    padding: 3px 6px 5px 8px;
   }
 
   .line {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 5px;
-    font-size: 9px;
-    line-height: 1.5;
-    padding: 2px 0 2px 6px;
+    padding: 2px 0 2px 5px;
     border-left: 2px solid var(--border-hi);
+    line-height: 1.4;
   }
   .line.crit {
     border-left-color: #ff3322;
     background: rgba(255, 51, 34, 0.06);
   }
   .line.miss {
-    opacity: 0.6;
+    opacity: 0.55;
+  }
+
+  .head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px;
+    font-size: 9px;
+  }
+  /* Detail row sits under the header, indented — uses vertical space instead of
+     crowding the narrow log column. */
+  .detail {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 5px;
+    font-size: 9px;
+    padding-left: 10px;
   }
 
   .turn {
     color: var(--text-muted);
     font-variant-numeric: tabular-nums;
-    min-width: 34px;
   }
   .who {
     color: var(--text);
@@ -70,15 +95,12 @@
   .who.atk {
     color: var(--accent-hi);
   }
-  .weapon {
-    color: var(--text-dim);
-    font-style: italic;
-  }
   .arrow {
     color: var(--text-muted);
   }
-  .arrow.miss-x {
-    color: #888;
+  .weapon {
+    color: var(--text-dim);
+    font-style: italic;
   }
   .part {
     color: #66ccee;

@@ -17,8 +17,7 @@
 
 <script lang="ts">
   // Core Svelte imports
-  import { onMount } from 'svelte';
-  import { onDestroy } from 'svelte';
+  import { onMount, onDestroy, tick } from 'svelte';
 
   // Game state and UI imports
   import { gameState } from '$lib/stores/gameState';
@@ -70,8 +69,11 @@
       if (pawn) selectedPawn = pawn;
     }
     if (ui.pawnScreenTab) {
-      activeTab = ui.pawnScreenTab;
-      uiState.setPawnTab(null);
+      const tab = ui.pawnScreenTab;
+      activeTab = tab;
+      // Defer the clear to avoid calling store.update() inside a subscriber callback,
+      // which would synchronously re-invoke all subscribers and cause cascading updates.
+      tick().then(() => uiState.setPawnTab(null));
     }
   });
 

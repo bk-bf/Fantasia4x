@@ -1,4 +1,4 @@
-<!-- PawnHealth.svelte — ASCII body silhouette + limb integrity panel -->
+<!-- PawnHealth.svelte — limb tree with nested sub-parts + 3-state reveal cycle -->
 <script lang="ts">
   import type { Pawn, LimbState, LimbId, BodyPartState, BodyPartId } from '$lib/game/core/types';
   import { PART_DEF_MAP, createDefaultBodyParts } from '$lib/game/systems/Combat';
@@ -14,53 +14,55 @@
     { id: 'right_leg', health: 100, isMissing: false, bleedRate: 0 }
   ];
 
-  // Anatomical 3-column grid: left appendages | core | right appendages
-  const GRID: { name: string; id: LimbId }[][] = [
-    [
-      { name: 'L.ARM', id: 'left_arm' },
-      { name: 'HEAD', id: 'head' },
-      { name: 'R.ARM', id: 'right_arm' }
-    ],
-    [
-      { name: 'L.LEG', id: 'left_leg' },
-      { name: 'TORSO', id: 'torso' },
-      { name: 'R.LEG', id: 'right_leg' }
-    ]
+  // Anatomical top-down order; sub-parts nest directly beneath each limb.
+  const LIMB_ORDER: { name: string; id: LimbId }[] = [
+    { name: 'HEAD', id: 'head' },
+    { name: 'TORSO', id: 'torso' },
+    { name: 'L.ARM', id: 'left_arm' },
+    { name: 'R.ARM', id: 'right_arm' },
+    { name: 'L.LEG', id: 'left_leg' },
+    { name: 'R.LEG', id: 'right_leg' }
   ];
-
-  const LIMB_NAME_MAP: Record<LimbId, string> = {
-    head: 'HEAD',
-    torso: 'TORSO',
-    left_arm: 'L.ARM',
-    right_arm: 'R.ARM',
-    left_leg: 'L.LEG',
-    right_leg: 'R.LEG'
-  };
 
   let alive = $derived(pawn.isAlive !== false);
   let limbs = $derived(pawn.limbs?.length ? pawn.limbs : FALLBACK);
-  let blood = $derived(pawn.bloodVolume ?? 100);
+  // Blood as a % of capacity — matches the info-card readout. (Showing raw bloodVolume
+  // mislabelled a light pawn's full blood as e.g. "59%" while the info card said 100%.)
+  let maxBlood = $derived(pawn.maxBloodVolume ?? 100);
+  let blood = $derived(Math.round(((pawn.bloodVolume ?? maxBlood) / maxBlood) * 100));
   let bleedRate = $derived(limbs.reduce((s, l) => s + (l.bleedRate ?? 0), 0));
   let pain = $derived(pawn.pain ?? 0);
-  let prone = $derived((pawn.activeEffects ?? []).includes('knockdown'));
+  let prone = $derived(
+    (pawn.activeEffects ?? []).includes('knockdown') ||
+      (pawn.activeEffects ?? []).includes('collapse')
+  );
 
-  /** Which limbs are expanded to show their sub-parts. */
-  let expandedLimbs = $state<Set<LimbId>>(new Set());
+  // Per-limb reveal cycle: hidden → injured-only → all → hidden. No override yet means
+  // the default: injured limbs auto-show their injured parts; healthy limbs stay hidden.
+  type Reveal = 'hidden' | 'injured' | 'all';
+  let override = $state<Map<LimbId, Reveal>>(new Map());
 
-  function toggleLimb(id: LimbId) {
-    const next = new Set(expandedLimbs);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    expandedLimbs = next;
+  function isInjured(p: BodyPartState): boolean {
+    return p.isMissing || p.health < p.maxHp || p.injuries.length > 0;
   }
-
-  function isExpanded(id: LimbId, limb: LimbState): boolean {
-    if (expandedLimbs.has(id)) return true;
-    // Auto-expand if any sub-part is injured / missing.
-    const hasDamage = (limb.parts ?? []).some(
-      (p) => p.isMissing || p.health < p.maxHp || p.injuries.length > 0
-    );
-    return hasDamage;
+  function limbHasInjury(limb: LimbState): boolean {
+    return (limb.parts ?? []).some(isInjured);
+  }
+  function reveal(id: LimbId, limb: LimbState): Reveal {
+    return override.get(id) ?? (limbHasInjury(limb) ? 'injured' : 'hidden');
+  }
+  function cycle(id: LimbId, limb: LimbState) {
+    const cur = reveal(id, limb);
+    const next: Reveal = cur === 'hidden' ? 'injured' : cur === 'injured' ? 'all' : 'hidden';
+    const m = new Map(override);
+    m.set(id, next);
+    override = m;
+  }
+  function shownParts(id: LimbId, limb: LimbState): BodyPartState[] {
+    const st = reveal(id, limb);
+    if (st === 'hidden') return [];
+    const all = (limb.parts ?? []).length > 0 ? limb.parts! : createDefaultBodyParts(id);
+    return st === 'all' ? all : all.filter(isInjured);
   }
 
   function gl(id: LimbId): LimbState {
@@ -142,7 +144,7 @@
         <span class="status-val" style="color:{painColor(pain)}">{Math.round(pain)}%</span>
       {/if}
       {#if prone}
-        <span class="prone-badge">PRONE</span>
+        <span class="prone-badge">DOWN</span>
       {/if}
       {#if blood < 100 || bleedRate > 0}
         <span class="status-lbl">BLOOD</span>
@@ -152,66 +154,56 @@
     </div>
   {/if}
 
-  <!-- Root limb grid -->
-  <div class="limb-grid">
-    {#each GRID as row}
-      {#each row as { name, id }}
-        {@const limb = gl(id)}
-        {@const status = limbStatus(limb)}
-        {@const col = lc(limb)}
-        {@const definedParts = createDefaultBodyParts(id)}
-        {@const hasParts = definedParts.length > 0}
-        {@const expanded = isExpanded(id, limb)}
-        {@const displayParts = (limb.parts ?? []).length > 0 ? limb.parts! : definedParts}
-        <div
-          class="limb-cell"
-          class:expandable={hasParts}
-          onclick={() => hasParts && toggleLimb(id)}
-          role="button"
-          tabindex="0"
-          onkeydown={(e) => e.key === 'Enter' && hasParts && toggleLimb(id)}
+  <!-- Limb tree: each root limb, sub-parts nested beneath. Click a limb to cycle
+       hidden → injured-only → all. -->
+  <div class="limb-list">
+    {#each LIMB_ORDER as { name, id }}
+      {@const limb = gl(id)}
+      {@const st = reveal(id, limb)}
+      {@const parts = shownParts(id, limb)}
+      <div
+        class="limb-row"
+        role="button"
+        tabindex="0"
+        title="click: cycle hidden → injured → all"
+        onclick={() => cycle(id, limb)}
+        onkeydown={(e) => e.key === 'Enter' && cycle(id, limb)}
+      >
+        <span class="limb-name">{name}</span>
+        <span class="limb-cue" class:open={st !== 'hidden'} class:all={st === 'all'}
+          >{st === 'hidden' ? '▸' : '▾'}</span
         >
-          <span class="cell-name">{name}</span>
-          <span class="cell-val" style="color:{col}">
-            {status}{#if limb.bleedRate > 0}<span class="bleed-dot">●</span>{/if}{#if hasParts}<span
-                class="expand-cue"
-                class:expanded>▸</span
-              >{/if}
-          </span>
-        </div>
-        {#if expanded && hasParts}
-          <div class="limb-parts">
-            {#each displayParts as part}
-              <div
-                class="part-row"
-                class:damaged={part.isMissing ||
-                  part.health < part.maxHp ||
-                  part.injuries.length > 0}
+        <span class="limb-val" style="color:{lc(limb)}"
+          >{limbStatus(limb)}{#if limb.bleedRate > 0}<span class="bleed-dot">●</span>{/if}</span
+        >
+      </div>
+      {#if parts.length > 0}
+        <div class="limb-children">
+          {#each parts as part}
+            <div class="part-row" class:damaged={isInjured(part)}>
+              <span class="part-name"
+                >{partName(part.id)}{#if PART_DEF_MAP[part.id]?.isVital}<span class="vital-star"
+                    >★</span
+                  >{/if}</span
               >
-                <span class="part-name">
-                  {partName(part.id)}{#if PART_DEF_MAP[part.id]?.isVital}<span class="vital-star"
-                      >★</span
-                    >{/if}
+              <span class="part-hp" style="color:{partHealthColor(part)}"
+                >{part.isMissing ? 'MISSING' : `${Math.round((part.health / part.maxHp) * 100)}%`}</span
+              >
+              {#if part.injuries.length > 0}
+                <span class="part-badges">
+                  {#each part.injuries as injury}
+                    <span
+                      class="injury-badge {injuryBadgeClass(injury.type)}"
+                      title="{injury.severity} {injury.type}"
+                      >{injury.type.toUpperCase()} · {injury.severity}</span
+                    >
+                  {/each}
                 </span>
-                <span class="part-hp" style="color:{partHealthColor(part)}">
-                  {part.isMissing ? 'MISSING' : `${Math.round((part.health / part.maxHp) * 100)}%`}
-                </span>
-                {#if part.injuries.length > 0}
-                  <span class="part-badges">
-                    {#each part.injuries as injury}
-                      <span
-                        class="injury-badge {injuryBadgeClass(injury.type)}"
-                        title="{injury.severity} {injury.type}"
-                        >{injury.type.toUpperCase()} · {injury.severity}</span
-                      >
-                    {/each}
-                  </span>
-                {/if}
-              </div>
-            {/each}
-          </div>
-        {/if}
-      {/each}
+              {/if}
+            </div>
+          {/each}
+        </div>
+      {/if}
     {/each}
   </div>
 </div>
@@ -256,8 +248,8 @@
     padding: 0 4px;
     border-radius: 2px;
     background: var(--bg-panel);
-    color: var(--accent-hi);
-    border: 1px solid var(--accent-hi);
+    color: var(--neg);
+    border: 1px solid var(--neg);
     letter-spacing: 0.04em;
   }
 
@@ -266,37 +258,44 @@
     font-size: 10px;
   }
 
-  .limb-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    padding: 4px 8px 2px;
-    gap: 1px 6px;
+  .limb-list {
+    display: flex;
+    flex-direction: column;
+    padding: 3px 8px 5px;
   }
 
-  .limb-cell {
+  .limb-row {
     display: flex;
     align-items: baseline;
-    justify-content: space-between;
+    gap: 5px;
     padding: 2px 0;
-    cursor: default;
-  }
-
-  .limb-cell.expandable {
     cursor: pointer;
   }
-
-  .limb-cell.expandable:hover .cell-name {
+  .limb-row:hover .limb-name {
     color: var(--text);
   }
 
-  .cell-name {
-    color: var(--text-muted);
+  .limb-name {
+    color: var(--text-dim);
     font-size: 10px;
     letter-spacing: 0.04em;
     flex-shrink: 0;
   }
 
-  .cell-val {
+  .limb-cue {
+    color: var(--text-muted);
+    font-size: 8px;
+    flex-shrink: 0;
+  }
+  .limb-cue.open {
+    color: var(--accent-hi);
+  }
+  .limb-cue.all {
+    color: var(--text-muted);
+  }
+
+  .limb-val {
+    margin-left: auto;
     font-size: 10px;
     font-variant-numeric: tabular-nums;
     text-align: right;
@@ -310,25 +309,14 @@
     animation: blink 1s step-end infinite;
   }
 
-  .expand-cue {
-    color: var(--text-muted);
-    font-size: 8px;
-    transition: transform 0.12s;
-    display: inline-block;
-  }
-
-  .expand-cue.expanded {
-    transform: rotate(90deg);
-  }
-
-  .limb-parts {
-    grid-column: 1 / -1;
+  /* Sub-parts indented directly under their parent limb. */
+  .limb-children {
     display: flex;
     flex-direction: column;
-    padding: 1px 0 3px 8px;
     gap: 1px;
+    padding: 1px 0 3px 14px;
+    margin-left: 3px;
     border-left: 1px solid var(--border);
-    margin-left: 4px;
   }
 
   .part-row {
@@ -336,25 +324,22 @@
     align-items: baseline;
     gap: 6px;
     padding: 1px 0;
-    flex-wrap: wrap;
-    opacity: 0.6;
+    opacity: 0.55;
   }
-
   .part-row.damaged {
     opacity: 1;
   }
 
   .part-name {
     font-size: 10px;
-    flex: 1 1 auto;
-    min-width: 60px;
+    color: var(--text-dim);
+    flex: 0 1 auto;
   }
 
   .part-hp {
+    margin-left: auto;
     font-size: 10px;
     font-variant-numeric: tabular-nums;
-    min-width: 36px;
-    text-align: right;
     flex-shrink: 0;
   }
 
@@ -371,28 +356,25 @@
     background: var(--bg-panel);
     border: 1px solid var(--border);
     letter-spacing: 0.02em;
+    white-space: nowrap;
   }
 
   .injury-badge.cut {
     color: var(--neg);
     border-color: var(--neg);
   }
-
   .injury-badge.fracture {
     color: var(--accent-hi);
     border-color: var(--accent-hi);
   }
-
   .injury-badge.puncture {
     color: var(--text-dim);
     border-color: var(--text-dim);
   }
-
   .injury-badge.crush {
     color: #a08060;
     border-color: #a08060;
   }
-
   .injury-badge.burn {
     color: #ff7043;
     border-color: #ff7043;
@@ -401,7 +383,7 @@
   .vital-star {
     font-size: 8px;
     color: var(--accent);
-    margin-right: 3px;
+    margin-left: 2px;
     line-height: 1;
   }
 

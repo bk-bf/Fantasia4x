@@ -43,7 +43,8 @@
   import type {
     SelectedEntityModel,
     EntityBar,
-    EntityButton
+    EntityButton,
+    EntityStat
   } from '$lib/components/UI/SelectedEntityCard.svelte';
   import itemsData from '$lib/game/database/items.jsonc';
 
@@ -447,15 +448,18 @@
         warn: curST < pawn.maxStamina * 0.25
       });
     }
+    const stats: EntityStat[] = [
+      { label: 'HP', value: Math.floor(pawn.state.health ?? 100) },
+      { label: 'Mood', value: Math.floor(pawn.state.mood) }
+    ];
+    const painPct = Math.round(pawn.pain ?? 0);
+    if (painPct > 0) stats.push({ label: 'PAIN', value: painPct, warn: painPct >= 55 });
     return {
       name: pawn.name + entityDebugLabel(pawn),
       status: pawnStateLabel(pawn),
       selected,
       dismissable: selected,
-      stats: [
-        { label: 'HP', value: Math.floor(pawn.state.health ?? 100) },
-        { label: 'Mood', value: Math.floor(pawn.state.mood) }
-      ],
+      stats,
       bars,
       job: pawn.activeJob
         ? {
@@ -470,10 +474,13 @@
         ? ([
             {
               label: 'VIEW',
-              onClick: () => {
-                uiState.selectPawn(pawn.id);
-                uiState.setScreen('pawns');
-              }
+              onClick: () =>
+                uiState.update((s) => ({
+                  ...s,
+                  selectedPawnId: pawn.id,
+                  pawnScreenTab: null,
+                  currentScreen: 'pawns'
+                }))
             },
             {
               label: cameraFollowPawnId === pawn.id ? 'UNFOLLOW' : 'FOLLOW',
@@ -488,18 +495,23 @@
             },
             {
               label: 'WORK',
-              onClick: () => {
-                uiState.selectPawn(pawn.id);
-                uiState.setScreen('work');
-              }
+              onClick: () =>
+                uiState.update((s) => ({
+                  ...s,
+                  selectedPawnId: pawn.id,
+                  pawnScreenTab: null,
+                  currentScreen: 'work'
+                }))
             },
             {
               label: 'GEAR',
-              onClick: () => {
-                uiState.selectPawn(pawn.id);
-                uiState.setPawnTab('gear');
-                uiState.setScreen('pawns');
-              }
+              onClick: () =>
+                uiState.update((s) => ({
+                  ...s,
+                  selectedPawnId: pawn.id,
+                  pawnScreenTab: 'gear',
+                  currentScreen: 'pawns'
+                }))
             }
           ] satisfies EntityButton[])
         : undefined,
@@ -628,6 +640,129 @@
   $: selectedResourceDesignation = selectedResourceTile
     ? (designations[`${selectedResourceTile.x},${selectedResourceTile.y}`] ?? null)
     : null;
+
+  $: buildingCard = (() => {
+    if (!selectedBuilding) return null;
+    const bDef = buildingService.getBuildingById(selectedBuilding.type);
+    const isBlueprint = selectedBuilding.status !== 'complete';
+    const workDone = selectedBuilding.workDone ?? 0;
+    const workReq = selectedBuilding.workRequired ?? bDef?.workAmount ?? 1;
+    const canConfigFuel =
+      !isBlueprint && !selectedBuilding.deconstructQueued && bDef?.maxFuel !== undefined;
+    const statusStr = isBlueprint
+      ? selectedBuilding.paused
+        ? 'paused'
+        : 'building'
+      : `complete${selectedBuilding.deconstructQueued ? ' ⊢ demolish' : ''}`;
+    const lines: string[] = [];
+    if (bDef?.description) lines.push(bDef.description);
+    if (isBlueprint) {
+      lines.push(
+        `[${jobProgressBar(workReq > 0 ? workDone / workReq : 0)}] ${workDone}/${workReq} work`
+      );
+    } else if (selectedBuilding.deconstructQueued) {
+      const dDone = selectedBuilding.deconstructWorkDone ?? 0;
+      const dReq = selectedBuilding.deconstructWorkRequired ?? 1;
+      lines.push(
+        `[${jobProgressBar(dReq > 0 ? dDone / dReq : 0)}] ${dDone}/${dReq} work`
+      );
+      lines.push('⊢ demolishing…');
+    } else {
+      const cost = bDef?.buildingCost ?? {};
+      if (Object.keys(cost).length > 0) {
+        lines.push(
+          `refund ½: ${Object.entries(cost)
+            .map(([id, n]) => `${Math.floor(Number(n) * 0.5)}×${id.replace(/_/g, ' ')}`)
+            .join(' ')}`
+        );
+      }
+      if (bDef?.maxFuel !== undefined) {
+        const fuelMax = bDef.maxFuel;
+        const fuelCurr = selectedBuilding.fuel ?? 0;
+        const litStr = selectedBuilding.lit ? '● lit' : '○ unlit';
+        lines.push(
+          `FUEL [${jobProgressBar(fuelMax > 0 ? fuelCurr / fuelMax : 0)}] ${Math.floor(fuelCurr)}/${Math.floor(fuelMax)} ${litStr}`
+        );
+      }
+    }
+    const btns: EntityButton[] = [];
+    if (isBlueprint) {
+      btns.push({
+        label: selectedBuilding.paused ? 'RESUME' : 'PAUSE',
+        onClick: togglePauseBlueprintBuilding
+      });
+      btns.push({ label: 'ABORT', onClick: cancelBlueprintBuilding });
+    } else if (selectedBuilding.deconstructQueued) {
+      btns.push({ label: 'CANCEL', onClick: cancelDeconstructBuilding });
+    } else {
+      btns.push({ label: 'DEMOLISH', onClick: deconstructBuilding });
+      if (canConfigFuel) {
+        btns.push({ label: 'FUEL', active: showFuelSettings, onClick: toggleFuelSettingsPanel });
+      }
+    }
+    return {
+      name: bDef?.name ?? selectedBuilding.type,
+      status: statusStr,
+      selected: true,
+      dismissable: true,
+      lines,
+      buttons: btns
+    } satisfies SelectedEntityModel;
+  })();
+
+  $: resourceCard = (() => {
+    if (!selectedResourceTile || !selectedResourceDef) return null;
+    const activeInteractions = selectedResourceDef.interactions ?? [
+      selectedResourceDef.interaction
+    ];
+    const lines: string[] = [];
+    lines.push(
+      `${selectedResourceTile.resourceId.replace(/_/g, ' ')} — ×${selectedResourceAmount} nodes`
+    );
+    if (selectedResourceDesignation) {
+      lines.push(`⊢ ${selectedResourceDesignation}…`);
+    } else {
+      for (const iact of activeInteractions) {
+        if (iact.yields.length > 0) {
+          lines.push(
+            `${iact.action}: ${iact.yields
+              .filter((y) => y.max > 0)
+              .map((y) => `${y.min}–${y.max}×${y.itemId.replace(/_/g, ' ')}`)
+              .join(' ')}`
+          );
+        }
+      }
+    }
+    const btns: EntityButton[] = [];
+    if (selectedResourceDesignation) {
+      btns.push({ label: 'CANCEL', onClick: cancelResourceDesignation });
+    } else {
+      for (const iact of activeInteractions) {
+        const label =
+          iact.designationType === 'woodcut'
+            ? 'CUT'
+            : iact.designationType === 'forage'
+              ? 'FORAGE'
+              : iact.designationType === 'mine'
+                ? 'MINE'
+                : 'HARVEST';
+        btns.push({ label, onClick: () => designateResource(iact.designationType) });
+      }
+    }
+    btns.push({ label: 'MARK', onClick: startSimilarSelect });
+    return {
+      name: selectedResourceDef.displayName,
+      status:
+        selectedResourceDesignation ??
+        activeInteractions[0]?.designationType ??
+        activeInteractions[0]?.action ??
+        'harvest',
+      selected: true,
+      dismissable: true,
+      lines,
+      buttons: btns
+    } satisfies SelectedEntityModel;
+  })();
 
   // Dropped item under the hovered tile.
   $: hoverDroppedItem =
@@ -2439,12 +2574,10 @@
     <!-- Selected mob/animal card — locked to this creature regardless of hover -->
     <SelectedEntityCard model={selectedMobCard} />
   {:else if selectedBuilding}
-    {@const bDef = buildingService.getBuildingById(selectedBuilding.type)}
-    {@const isBlueprint = selectedBuilding.status !== 'complete'}
     {@const canConfigureFuel =
-      !isBlueprint && !selectedBuilding.deconstructQueued && bDef?.maxFuel !== undefined}
-    {@const workDone = selectedBuilding.workDone ?? 0}
-    {@const workReq = selectedBuilding.workRequired ?? bDef?.workAmount ?? 1}
+      selectedBuilding.status === 'complete' &&
+      !selectedBuilding.deconstructQueued &&
+      buildingService.getBuildingById(selectedBuilding.type)?.maxFuel !== undefined}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
       class="bld-row"
@@ -2452,94 +2585,9 @@
       on:mousedown|stopPropagation
       on:mouseup|stopPropagation
     >
-      <div class="tile-hud tile-hud--building tile-hud--selected-building">
-        <div class="bld-header">
-          <span class="bld-name">{bDef?.name ?? selectedBuilding.type}</span>
-          <span class="bld-status">
-            [{isBlueprint
-              ? selectedBuilding.paused
-                ? 'paused'
-                : 'building'
-              : 'complete'}{selectedBuilding.deconstructQueued ? ' ⊢ demolish' : ''}]
-          </span>
-        </div>
-        {#if bDef?.description}
-          <div class="bld-desc">{bDef.description}</div>
-        {/if}
-        {#if isBlueprint}
-          <div class="bld-progress">
-            [{jobProgressBar(workReq > 0 ? workDone / workReq : 0)}] {workDone}/{workReq} work
-          </div>
-        {:else if selectedBuilding.deconstructQueued}
-          {@const dDone = selectedBuilding.deconstructWorkDone ?? 0}
-          {@const dReq = selectedBuilding.deconstructWorkRequired ?? 1}
-          <div class="bld-progress">
-            [{jobProgressBar(dReq > 0 ? dDone / dReq : 0)}] {dDone}/{dReq} work
-          </div>
-          <div class="bld-note">⊢ demolishing…</div>
-        {:else}
-          {@const cost = bDef?.buildingCost ?? {}}
-          {#if Object.keys(cost).length > 0}
-            <div class="bld-refund">
-              refund ½: {Object.entries(cost)
-                .map(([id, n]) => `${Math.floor(Number(n) * 0.5)}×${id.replace(/_/g, ' ')}`)
-                .join(' ')}
-            </div>
-          {/if}
-          {#if bDef?.maxFuel !== undefined}
-            {@const fuelMax = bDef.maxFuel}
-            {@const fuelCurr = selectedBuilding.fuel ?? 0}
-            <div class="bld-fuel">
-              FUEL [{jobProgressBar(fuelMax > 0 ? fuelCurr / fuelMax : 0)}] {Math.floor(
-                fuelCurr
-              )}/{Math.floor(fuelMax)}
-              {#if selectedBuilding.lit}<span class="fuel-lit">● lit</span>{:else}<span
-                  class="fuel-dark">○ unlit</span
-                >{/if}
-            </div>
-          {/if}
-        {/if}
-      </div>
-      <div class="bld-side-actions">
-        {#if isBlueprint}
-          <button
-            class="bld-btn bld-btn--sq"
-            title={selectedBuilding.paused ? 'Resume' : 'Pause'}
-            on:click={togglePauseBlueprintBuilding}>{selectedBuilding.paused ? '▶' : '⏸'}</button
-          >
-          <button
-            class="bld-btn bld-btn--danger bld-btn--sq"
-            title="Abort"
-            on:click={cancelBlueprintBuilding}>✕</button
-          >
-        {:else if selectedBuilding.deconstructQueued}
-          <button
-            class="bld-btn bld-btn--sq"
-            title="Cancel demolition"
-            on:click={cancelDeconstructBuilding}>↩</button
-          >
-        {:else}
-          <button
-            class="bld-btn bld-btn--danger bld-btn--sq"
-            title="Deconstruct"
-            on:click={deconstructBuilding}>&#x2692;</button
-          >
-          {#if canConfigureFuel}
-            <button
-              class="bld-btn bld-btn--sq"
-              class:bld-btn--active={showFuelSettings}
-              title="Fuel settings"
-              on:click={toggleFuelSettingsPanel}
-            >
-              <canvas
-                class="hud-sprite-icon"
-                use:hudSpriteIconAction={FUEL_SETTINGS_ICON_REF}
-                aria-hidden="true"
-              ></canvas>
-            </button>
-          {/if}
-        {/if}
-      </div>
+      {#if buildingCard}
+        <SelectedEntityCard model={buildingCard} />
+      {/if}
       {#if canConfigureFuel}
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div
@@ -2626,70 +2674,8 @@
         </div>
       {/if}
     </div>
-  {:else if selectedResourceTile && selectedResourceDef}
-    {@const activeInteractions = selectedResourceDef.interactions ?? [
-      selectedResourceDef.interaction
-    ]}
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div
-      class="tile-hud tile-hud--resource tile-hud--selected-resource"
-      on:mousedown|stopPropagation
-      on:mouseup|stopPropagation
-    >
-      <div class="bld-header">
-        <span class="bld-name">{selectedResourceDef.displayName}</span>
-        <span class="bld-status"
-          >[{selectedResourceDesignation ??
-            activeInteractions[0]?.designationType ??
-            activeInteractions[0]?.action ??
-            'harvest'}{selectedResourceDesignation ? ' ✓' : ''}]</span
-        >
-      </div>
-      <div class="bld-desc">
-        {selectedResourceTile.resourceId.replace(/_/g, ' ')} — ×{selectedResourceAmount} nodes
-      </div>
-      {#if selectedResourceDesignation}
-        <div class="bld-note">⊢ {selectedResourceDesignation}…</div>
-      {:else}
-        {#each activeInteractions as iact}
-          {#if iact.yields.length > 0}
-            <div class="bld-desc">
-              {iact.action}: {iact.yields
-                .filter((y) => y.max > 0)
-                .map((y) => `${y.min}–${y.max}×${y.itemId.replace(/_/g, ' ')}`)
-                .join(' ')}
-            </div>
-          {/if}
-        {/each}
-      {/if}
-      <div class="panel-actions">
-        {#if selectedResourceDesignation}
-          <button class="bld-btn" title="Cancel designation" on:click={cancelResourceDesignation}
-            >CANCEL</button
-          >
-        {:else}
-          {#each activeInteractions as iact}
-            <button
-              class="bld-btn bld-btn--danger"
-              title={iact.action}
-              on:click={() => designateResource(iact.designationType)}
-              >{iact.designationType === 'woodcut'
-                ? 'CUT'
-                : iact.designationType === 'forage'
-                  ? 'FORAGE'
-                  : iact.designationType === 'mine'
-                    ? 'MINE'
-                    : 'HARVEST'}</button
-            >
-          {/each}
-        {/if}
-        <button
-          class="bld-btn"
-          title="Drag to select similar tiles, then designate"
-          on:click={startSimilarSelect}>MARK</button
-        >
-      </div>
-    </div>
+  {:else if resourceCard}
+    <SelectedEntityCard model={resourceCard} />
   {:else if hasSelection}
     <!-- Multi-tile drag-select summary -->
     <div class="tile-hud tile-hud--selection">

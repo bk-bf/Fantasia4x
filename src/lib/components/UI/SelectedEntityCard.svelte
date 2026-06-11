@@ -42,6 +42,8 @@
     note?: string;
     /** Map position footer. */
     pos?: { x: number; y: number };
+    /** Free-form text lines rendered below the header (description, progress, refund, etc.). */
+    lines?: string[];
     /** Action buttons shown in a 3-column grid. Only rendered on selected cards. */
     buttons?: EntityButton[];
     /** Called when a non-selected hover card is clicked (to select the entity). */
@@ -72,23 +74,32 @@
   onclick={(e) => e.stopPropagation()}
 >
   <div class="pawn-header">
-    <span class="pawn-name">{model.name}</span>
-    {#if model.status}<span class="pawn-state">[{model.status}]</span>{/if}
-    {#if model.dismissable}<span class="pawn-dismiss" title="Press Esc to deselect">◈</span>{/if}
+    <div class="pawn-meta">
+      <span class="pawn-name">{model.name}</span>
+      {#if model.status}<span class="pawn-state">[{model.status}]</span>{/if}
+      {#if model.dismissable}<span class="pawn-dismiss" title="Press Esc to deselect">◈</span>{/if}
+    </div>
+    {#if model.buttons && model.buttons.length > 0}
+      <div class="btn-grid">
+        {#each model.buttons as btn (btn.label)}
+          <button
+            class="hud-btn"
+            class:hud-btn--active={btn.active}
+            onmousedown={(e) => e.stopPropagation()}
+            onmouseup={(e) => e.stopPropagation()}
+            onclick={(e) => { e.stopPropagation(); btn.onClick(); }}
+          >
+            {btn.label}
+          </button>
+        {/each}
+      </div>
+    {/if}
   </div>
 
-  {#if model.buttons && model.buttons.length > 0}
-    <div class="btn-grid">
-      {#each model.buttons as btn (btn.label)}
-        <button
-          class="hud-btn"
-          class:hud-btn--active={btn.active}
-          onmousedown={(e) => e.stopPropagation()}
-          onmouseup={(e) => e.stopPropagation()}
-          onclick={(e) => { e.stopPropagation(); btn.onClick(); }}
-        >
-          {btn.label}
-        </button>
+  {#if model.lines && model.lines.length > 0}
+    <div class="text-lines">
+      {#each model.lines as line}
+        <div class="text-line">{line}</div>
       {/each}
     </div>
   {/if}
@@ -152,9 +163,16 @@
   }
   .pawn-header {
     display: flex;
-    gap: 6px;
-    align-items: baseline;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
     margin-bottom: 2px;
+  }
+  .pawn-meta {
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+    flex-wrap: wrap;
   }
   .pawn-name {
     color: #c8a060;
@@ -166,16 +184,15 @@
     font-size: 9px;
   }
   .pawn-dismiss {
-    margin-left: auto;
     color: #886630;
     font-size: 9px;
   }
-  /* ── 3-column button grid ─────────────────────────────────────── */
+  /* ── 3-column button grid (right side of header) ─────────────── */
   .btn-grid {
     display: grid;
     grid-template-columns: repeat(3, max-content);
     gap: 3px;
-    margin-bottom: 3px;
+    flex-shrink: 0;
   }
   .hud-btn {
     background: #2a1a0a;
@@ -204,6 +221,17 @@
     background: #5a2814;
     border-color: #ffaa66;
     color: #ffaa66;
+  }
+  /* ── Text lines (description, progress, refund, etc.) ───────── */
+  .text-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    margin-bottom: 2px;
+  }
+  .text-line {
+    color: #c0a040;
+    font-size: 9px;
   }
   /* ── Stats / bars ─────────────────────────────────────────────── */
   .pawn-row {
