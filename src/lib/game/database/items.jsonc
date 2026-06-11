@@ -1023,5 +1023,68 @@
     "workshopType": "makers_bench",
     "processingType": ["butchery"],
     "effects": {"butcheryYieldBonus": 0.25}
+  },
+  // ── Natural weapons ─────────────────────────────────────────────────────────
+  // Innate attacks for pawns and creatures — a gear category, resolved through the
+  // same item lookup as crafted weapons (ItemService.getItemById). Never crafted
+  // (no craftingCost → excluded from crafting) and never in inventory (so they
+  // don't appear in the equip picker). Shared and reused across creatures: STR
+  // scaling (baseDamage × STR / 10 in Combat) makes a wolf's bite hit harder than a
+  // rabbit's. weaponProperties: weight = relative roll frequency per swing,
+  // staminaCost = stamina drained, critMod = added to the attacker's crit_chance.
+  {
+    "id": "fists", "name": "Fists", "type": "weapon", "category": "natural_weapon",
+    "description": "Bare knuckles. Frequent, cheap, weak.", "color": "#C8A064", "amount": 0,
+    "weaponProperties": {"damage": 2, "attackSpeed": 1, "range": 1, "damageType": "blunt", "baseDamage": 2, "bluntMod": 0.4, "weight": 4, "staminaCost": 1}
+  },
+  {
+    "id": "kick", "name": "Kick", "type": "weapon", "category": "natural_weapon",
+    "description": "A booted heel. Rarer than a jab, hits harder, staggers, tires faster.", "color": "#C8A064", "amount": 0,
+    "weaponProperties": {"damage": 3, "attackSpeed": 1, "range": 1, "damageType": "blunt", "baseDamage": 3, "bluntMod": 0.9, "weight": 1, "staminaCost": 3, "critMod": 0.02}
+  },
+  {
+    "id": "bite", "name": "Bite", "type": "weapon", "category": "natural_weapon",
+    "description": "Teeth. Crit-prone piercing attack.", "color": "#D8D0C0", "amount": 0,
+    "weaponProperties": {"damage": 3, "attackSpeed": 1, "range": 1, "damageType": "piercing", "baseDamage": 3, "weight": 3, "staminaCost": 3, "critMod": 0.06}
+  },
+  {
+    "id": "claw", "name": "Claw", "type": "weapon", "category": "natural_weapon",
+    "description": "Raking claws. Fast cutting swipes that open wounds.", "color": "#D8D0C0", "amount": 0,
+    "weaponProperties": {"damage": 3, "attackSpeed": 1, "range": 1, "damageType": "cutting", "baseDamage": 3, "weight": 2, "staminaCost": 2, "critMod": 0.02}
+  },
+  {
+    "id": "slam", "name": "Slam", "type": "weapon", "category": "natural_weapon",
+    "description": "A heavy body blow. Big blunt hit, strong knockdown.", "color": "#A05030", "amount": 0,
+    "weaponProperties": {"damage": 5, "attackSpeed": 1, "range": 1, "damageType": "blunt", "baseDamage": 5, "bluntMod": 1.2, "weight": 1, "staminaCost": 4}
+  },
+  {
+    "id": "tusk", "name": "Tusk", "type": "weapon", "category": "natural_weapon",
+    "description": "Goring tusks. Deep piercing wounds.", "color": "#C8A080", "amount": 0,
+    "weaponProperties": {"damage": 5, "attackSpeed": 1, "range": 1, "damageType": "piercing", "baseDamage": 5, "weight": 2, "staminaCost": 3, "critMod": 0.04}
+  },
+  {
+    "id": "charge", "name": "Charge", "type": "weapon", "category": "natural_weapon",
+    "description": "A full-body charge. Heavy blunt impact, brutal knockdown.", "color": "#C8A080", "amount": 0,
+    "weaponProperties": {"damage": 4, "attackSpeed": 1, "range": 1, "damageType": "blunt", "baseDamage": 4, "bluntMod": 1.5, "weight": 1, "staminaCost": 4}
+  },
+  {
+    "id": "antler", "name": "Antler", "type": "weapon", "category": "natural_weapon",
+    "description": "Sharp antler points. Piercing gore.", "color": "#B09878", "amount": 0,
+    "weaponProperties": {"damage": 4, "attackSpeed": 1, "range": 1, "damageType": "piercing", "baseDamage": 4, "weight": 2, "staminaCost": 3}
+  },
+  {
+    "id": "headbutt", "name": "Headbutt", "type": "weapon", "category": "natural_weapon",
+    "description": "A skull-first ram. Blunt and staggering.", "color": "#D0D0C0", "amount": 0,
+    "weaponProperties": {"damage": 3, "attackSpeed": 1, "range": 1, "damageType": "blunt", "baseDamage": 3, "bluntMod": 1.0, "weight": 1, "staminaCost": 3}
+  },
+  {
+    "id": "peck", "name": "Peck", "type": "weapon", "category": "natural_weapon",
+    "description": "A sharp beak jab. Tiny but quick.", "color": "#E8C880", "amount": 0,
+    "weaponProperties": {"damage": 1, "attackSpeed": 1, "range": 1, "damageType": "piercing", "baseDamage": 1, "weight": 1, "staminaCost": 1}
+  },
+  {
+    "id": "spectral_strike", "name": "Spectral Strike", "type": "weapon", "category": "natural_weapon",
+    "description": "A chilling incorporeal blow that ignores flesh and rattles the bone.", "color": "#A0C0E0", "amount": 0,
+    "weaponProperties": {"damage": 5, "attackSpeed": 1, "range": 1, "damageType": "blunt", "baseDamage": 5, "bluntMod": 1.1, "weight": 1, "staminaCost": 2, "critMod": 0.05}
   }
 ]

@@ -170,7 +170,6 @@ interface CombatSession {
   defenderName: string;
   startTurn: number;
   lastActivityTurn: number;
-  lastStoreTurn: number;
   hits: number;
   misses: number;
   totalDamage: number;
@@ -185,8 +184,6 @@ const combatSessions = new Map<string, CombatSession>();
 
 /** Ticks of silence before an engagement is considered over (≈5s at 60 TPS). */
 const ENGAGEMENT_EXPIRE_TICKS = 300;
-/** Don't rewrite the store entry more than once per this many ticks (perf). */
-const STORE_THROTTLE_TICKS = 12;
 
 function sessionSummary(s: CombatSession): { result: string; severity: ActivityLogEntry['severity'] } {
   const swings = s.hits + s.misses;
@@ -197,19 +194,24 @@ function sessionSummary(s: CombatSession): { result: string; severity: ActivityL
   return { result, severity };
 }
 
-/** Rewrite the session's Chronicle entry in place (immutably → reactivity fires). */
-function flushSession(s: CombatSession, force: boolean, turn: number) {
-  if (!force && turn - s.lastStoreTurn < STORE_THROTTLE_TICKS) return;
-  s.lastStoreTurn = turn;
+/**
+ * Rewrite the session's Chronicle entry in place (immutably → reactivity fires).
+ * Called once per resolved swing — cheap because swings are gated by attack cadence
+ * (~every 30 ticks per attacker), not emitted every sim tick.
+ */
+function flushSession(s: CombatSession) {
   const { result, severity } = sessionSummary(s);
   const breakdownCopy = [...s.breakdown];
   activityLog.update((log) =>
     log.map((e) =>
-      e.id === s.entryId
-        ? { ...e, result, severity, combatBreakdown: breakdownCopy }
-        : e
+      e.id === s.entryId ? { ...e, result, severity, combatBreakdown: breakdownCopy } : e
     )
   );
+}
+
+/** Test-only: clear in-flight engagement sessions so module state doesn't leak. */
+export function __resetCombatSessions() {
+  combatSessions.clear();
 }
 
 /**
@@ -233,7 +235,7 @@ export function logCombatSwing(
   if (session && (session.closed || turn - session.lastActivityTurn > ENGAGEMENT_EXPIRE_TICKS)) {
     if (!session.closed) {
       session.closed = true;
-      flushSession(session, true, turn);
+      flushSession(session);
     }
     combatSessions.delete(key);
     session = undefined;
@@ -261,7 +263,6 @@ export function logCombatSwing(
       defenderName,
       startTurn: turn,
       lastActivityTurn: turn,
-      lastStoreTurn: -Infinity,
       hits: 0,
       misses: 0,
       totalDamage: 0,
@@ -282,21 +283,17 @@ export function logCombatSwing(
     session.misses += 1;
   }
   session.lastActivityTurn = turn;
-  flushSession(session, false, turn);
+  flushSession(session);
 }
 
 /** Finalize an engagement after a kill (forces an immediate summary refresh). */
-export function logCombatKill(
-  attackerId: string,
-  defenderId: string,
-  turn: number
-) {
+export function logCombatKill(attackerId: string, defenderId: string) {
   const key = combatKey(attackerId, defenderId);
   const session = combatSessions.get(key);
   if (!session) return;
   session.killed = true;
   session.closed = true;
-  flushSession(session, true, turn);
+  flushSession(session);
   combatSessions.delete(key);
 }
 

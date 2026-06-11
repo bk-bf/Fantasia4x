@@ -52,17 +52,18 @@
   }
 
   function formatCombatTurn(t: CombatTurnEntry): string {
+    const withWeapon = t.weapon ? ` with ${t.weapon}` : '';
     if (!t.hit) {
-      return `${t.attackerName} hits ${t.defenderName}${t.bodyPart ? ` in the ${t.bodyPart}` : ''}, but misses`;
+      return `${t.attackerName} attacks${withWeapon} but ${t.defenderName} dodges`;
     }
-    let s = `${t.attackerName} hit ${t.defenderName}`;
+    let s = `${t.attackerName}${t.crit ? ' CRITS' : ' hit'} ${t.defenderName}${withWeapon}`;
     if (t.bodyPart) {
       s += ` in the ${t.bodyPart}`;
       if (t.partRemainingHp !== undefined && t.partMaxHp !== undefined) {
         s += ` (${t.partRemainingHp}/${t.partMaxHp})`;
       }
     }
-    s += ` and dealt ${t.damage}${t.damageType ? ` ${t.damageType}` : ''} damage`;
+    s += ` for ${t.damage}${t.damageType ? ` ${t.damageType}` : ''} damage`;
     if (t.bleeding) s += `, ${t.defenderName} is bleeding`;
     if (t.knockdown) s += `, ${t.defenderName} is knocked down`;
     return s;

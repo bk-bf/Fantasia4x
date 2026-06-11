@@ -106,6 +106,9 @@ export interface CombatTurnEntry {
   damage?: number;
   injury?: string;
   knockdown?: boolean;
+  crit?: boolean;
+  /** Attack used this swing (weapon name / natural-weapon id, e.g. 'bite', 'kick'). */
+  weapon?: string;
   bodyPart?: string;
   damageType?: string;
   partMaxHp?: number;

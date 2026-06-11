@@ -1421,8 +1421,15 @@ class EntityServiceImpl {
             const def = getCreatureById(mob.creatureId);
             if (!def) return mob;
 
-            // Diet affects how fast hunger accrues.
-            const dietMult = def.diet === 'carnivore' ? 1.0 : def.diet === 'herbivore' ? 0.5 : 0.7; // omnivore
+            // Diet affects how fast hunger accrues. `none` (e.g. shadow_wraith) never gets hungry.
+            const dietMult =
+                def.diet === 'none'
+                    ? 0
+                    : def.diet === 'carnivore'
+                      ? 1.0
+                      : def.diet === 'herbivore'
+                        ? 0.5
+                        : 0.7; // omnivore
 
             const condMults = conditionNeedMultipliers(mob.conditions ?? []);
             const hungerDelta =

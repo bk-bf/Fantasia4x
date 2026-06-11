@@ -618,6 +618,16 @@ export interface Pawn {
 	 */
 	maxFatigue?: number;
 
+	// ===== COMBAT =====
+	/**
+	 * Auto-combat behaviour when a hostile is detected (COMBAT-SYSTEM):
+	 *  - 'aggressive' — engage any hostile within vision range (approach + fight)
+	 *  - 'defensive'  — (default) only fight once a hostile is adjacent / attacking
+	 *  - 'flee'       — retreat as soon as a hostile enters vision range
+	 * Undefined is treated as 'defensive'. Drafted pawns ignore this (player-driven).
+	 */
+	combatStance?: 'aggressive' | 'defensive' | 'flee';
+
 	// ===== DRAFT MODE =====
 	/** When true, pawn ignores jobs/needs and follows player orders. */
 	drafted?: boolean;
@@ -627,7 +637,7 @@ export interface Pawn {
 	| { type: 'attack'; targetId: string; targetType: 'pawn' | 'mob' };
 
 	// Phase 4/5: State machine primary state
-	currentState?: string; // 'Idle' | 'Hungry' | 'Tired' | 'MovingToNeed' | 'MovingToResource' | 'Working' | 'Hauling' | 'MovingToDeposit' | 'Eating' | 'Sleeping' | 'Dead'
+	currentState?: string; // 'Idle' | 'Hungry' | 'Tired' | 'MovingToNeed' | 'MovingToResource' | 'Working' | 'Hauling' | 'MovingToDeposit' | 'Eating' | 'Sleeping' | 'Fighting' | 'Fleeing' | 'Dead'
 	/** Soft-preview of the next up-to-4 unclaimed job IDs the pawn would take after activeJob.
 	 *  Not claimed — used only for need-priority lookahead in the state machine. */
 	jobQueue?: string[];
@@ -950,6 +960,10 @@ export interface Item {
 		accuracy?: number; // added to hitChance formula
 		armorPenetration?: number; // 0–1; fraction of armor reduction bypassed
 		bluntMod?: number; // multiplier on knockdown chance (blunt weapons)
+		critMod?: number; // added to the wielder's base crit_chance (0–1)
+		// ── Natural-weapon additions (innate attacks rolled per swing) ───────
+		weight?: number; // relative roll frequency among an entity's natural weapons (default 1)
+		staminaCost?: number; // stamina drained by this attack (default ATTACK_STAMINA_COST)
 	};
 
 	armorProperties?: {

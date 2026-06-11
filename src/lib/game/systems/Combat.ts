@@ -9,7 +9,8 @@ import type {
     EntityCondition,
     BodyPartId,
     DamageType,
-    LimbId
+    LimbId,
+    Item
 } from '../core/types';
 import { itemService } from '../services/ItemService';
 import { getCreatureById } from '../core/Creatures';
@@ -27,6 +28,16 @@ const CLOT_FLOOR = 0.5;
 const STAT_SCALE = 10;
 /** Mob base damage when it has no weapon. */
 const MOB_BASE_DAMAGE = 5;
+/** Damage multiplier applied on a critical hit. */
+const CRIT_MULTIPLIER = 1.5;
+/** Upper bound on total crit chance (base stat + weapon critMod). */
+const CRIT_CHANCE_CAP = 0.6;
+/**
+ * A pawn's innate attacks — ids of `natural_weapon` items in items.jsonc. Bare hands
+ * are deliberately weak vs crafted gear so equipping a real weapon is a clear upgrade;
+ * the per-weapon weight/stamina/crit (kicks rarer, costlier, harder) live on the items.
+ */
+const PAWN_NATURAL_WEAPON_IDS = ['fists', 'kick'];
 /** Base attack interval in ticks — scaled by attack_speed stat.
  *  60 TPS: 30 ticks = 0.5s = 2 attacks/sec (base).
  *  Fast attackers (DEX 20) get down to ~20 ticks = 0.33s = 3 attacks/sec.
@@ -597,11 +608,17 @@ export function createDefaultBodyParts(limbId: LimbId): import('../core/types').
 export interface HitResult {
     hit: boolean;
     bodyPart: BodyPartId | null;
-    /** Final damage after armour reduction. */
+    /** Final damage after armour reduction (and crit multiplier, if any). */
     damage: number;
     injury: Injury | null;
     knockdown: boolean;
+    /** True when this swing rolled a critical hit. */
+    crit: boolean;
     damageType: DamageType;
+    /** Attack used this swing (weapon name / natural-weapon id). */
+    weaponId: string;
+    /** Stamina this swing drained — deducted by the caller regardless of hit/miss. */
+    staminaCost: number;
     partRemainingHp?: number;
     partMaxHp?: number;
 }
@@ -657,9 +674,7 @@ function painFromSeverity(severity: Injury['severity'], isVital: boolean): numbe
     return isVital ? base * 2 : base;
 }
 
-/** Return attacker's effective combat stats. Mobs check naturalWeapons from their creature def;
- *  pawns check their equipped weapon. Both fall back to unarmed/blunt. */
-function attackerProfile(attacker: Pawn | Mob): {
+interface AttackProfile {
     str: number;
     dex: number;
     baseDamage: number;
@@ -667,44 +682,89 @@ function attackerProfile(attacker: Pawn | Mob): {
     damageType: DamageType;
     bluntMod: number;
     armorPen: number;
-} {
+    /** Which attack was rolled this swing (weapon name / natural-weapon id) — for logs & floaters. */
+    weaponId: string;
+    /** Stamina this particular attack drains. */
+    staminaCost: number;
+    /** Crit chance this attack adds on top of the attacker's base crit_chance stat. */
+    critMod: number;
+}
+
+type WeaponProps = NonNullable<Item['weaponProperties']>;
+
+/** One natural-weapon candidate this swing could roll: its item id + properties. */
+interface WeaponCandidate {
+    id: string;
+    wp: WeaponProps;
+}
+
+/** Weighted pick over a candidate pool (weaponProperties.weight, default 1). */
+function pickWeightedWeapon(candidates: WeaponCandidate[]): WeaponCandidate {
+    const total = candidates.reduce((s, c) => s + Math.max(0, c.wp.weight ?? 1), 0);
+    if (total <= 0) return candidates[candidates.length - 1];
+    let r = rng.random() * total;
+    for (const c of candidates) {
+        r -= Math.max(0, c.wp.weight ?? 1);
+        if (r <= 0) return c;
+    }
+    return candidates[candidates.length - 1];
+}
+
+/** Build an attack profile from a resolved weaponProperties block. */
+function profileFromWeapon(
+    str: number,
+    dex: number,
+    wp: WeaponProps,
+    weaponId: string
+): AttackProfile {
+    const dtype = wp.damageType ?? 'blunt';
+    return {
+        str,
+        dex,
+        baseDamage: wp.baseDamage ?? wp.damage,
+        accuracy: wp.accuracy ?? 0,
+        damageType: dtype,
+        bluntMod: wp.bluntMod ?? (dtype === 'blunt' ? 1.0 : 0),
+        armorPen: wp.armorPenetration ?? 0,
+        weaponId,
+        staminaCost: wp.staminaCost ?? ATTACK_STAMINA_COST,
+        critMod: wp.critMod ?? 0
+    };
+}
+
+/** Resolve the attack used for one swing. An equipped weapon wins; otherwise a
+ *  weighted roll over the attacker's `natural_weapon` items (creature def, or a
+ *  pawn's bare hands/feet); finally an unarmed fallback. Both gear paths resolve
+ *  through the same ItemService lookup. */
+function attackerProfile(attacker: Pawn | Mob): AttackProfile {
     const str = attacker.stats.strength;
     const dex = attacker.stats.dexterity;
 
-    // Pawn with equipped weapon
+    // Equipped weapon (pawns; future-proofed for armed mobs).
     if ('equipment' in attacker && attacker.equipment?.weapon) {
-        const wp = itemService.getItemById(attacker.equipment.weapon.itemId)?.weaponProperties;
-        if (wp) {
-            return {
-                str,
-                dex,
-                baseDamage: wp.baseDamage ?? wp.damage,
-                accuracy: wp.accuracy ?? 0,
-                damageType: wp.damageType ?? 'blunt',
-                bluntMod: wp.bluntMod ?? (wp.damageType === 'blunt' ? 1.0 : 0),
-                armorPen: wp.armorPenetration ?? 0
-            };
+        const item = itemService.getItemById(attacker.equipment.weapon.itemId);
+        if (item?.weaponProperties) {
+            return profileFromWeapon(str, dex, item.weaponProperties, item.name ?? 'weapon');
         }
     }
 
-    // Mob — pick a natural weapon at random (variety per-swing)
-    if ('creatureId' in attacker) {
-        const def = getCreatureById(attacker.creatureId);
-        if (def?.naturalWeapons && def.naturalWeapons.length > 0) {
-            const w = def.naturalWeapons[Math.floor(rng.random() * def.naturalWeapons.length)];
-            return {
-                str,
-                dex,
-                baseDamage: w.baseDamage,
-                accuracy: 0,
-                damageType: w.damageType,
-                bluntMod: w.bluntMod ?? (w.damageType === 'blunt' ? 1.0 : 0),
-                armorPen: 0
-            };
-        }
+    // Natural weapons: ids from the creature def, or the pawn default set. Resolve
+    // each to its item and weighted-pick one for this swing.
+    const ids =
+        'creatureId' in attacker
+            ? (getCreatureById(attacker.creatureId)?.naturalWeapons ?? [])
+            : PAWN_NATURAL_WEAPON_IDS;
+    const candidates: WeaponCandidate[] = [];
+    for (const id of ids) {
+        const wp = itemService.getItemById(id)?.weaponProperties;
+        if (wp) candidates.push({ id, wp });
+    }
+    if (candidates.length > 0) {
+        const chosen = pickWeightedWeapon(candidates);
+        return profileFromWeapon(str, dex, chosen.wp, chosen.id);
     }
 
-    // Unarmed fallback (fists / body-slam)
+    // Unarmed fallback (body-slam) — entity with no weapon and no natural-weapon items.
     return {
         str,
         dex,
@@ -712,7 +772,10 @@ function attackerProfile(attacker: Pawn | Mob): {
         accuracy: 0,
         damageType: 'blunt',
         bluntMod: 1.0,
-        armorPen: 0
+        armorPen: 0,
+        weaponId: 'strike',
+        staminaCost: ATTACK_STAMINA_COST,
+        critMod: 0
     };
 }
 
@@ -785,25 +848,45 @@ function upsertCondition(
 // ── Implementation ────────────────────────────────────────────────────────────
 class CombatServiceImpl implements CombatService {
     resolveHit(attacker: Pawn | Mob, defender: Pawn | Mob, _state: GameState): HitResult {
-        const { str, dex, baseDamage, accuracy, damageType, bluntMod, armorPen } =
+        const { str, dex, baseDamage, accuracy, damageType, bluntMod, armorPen, weaponId, staminaCost, critMod } =
             attackerProfile(attacker);
         const defDex = defender.stats.dexterity;
 
         const hitChance = clamp(dex * 3 + accuracy - defDex * 2, 5, 95);
         if (rng.random() * 100 > hitChance) {
-            return { hit: false, bodyPart: null, damage: 0, injury: null, knockdown: false, damageType: 'blunt' };
+            return {
+                hit: false,
+                bodyPart: null,
+                damage: 0,
+                injury: null,
+                knockdown: false,
+                crit: false,
+                damageType,
+                weaponId,
+                staminaCost
+            };
         }
 
         const partId = rollBodyPart();
         const partDef = PART_DEF_MAP[partId]!;
 
-        // Damage: baseDamage × str / STAT_SCALE, then armour reduces it.
-        // STAT_SCALE=10 matches the real stat range (5–22) rather than the spec's
-        // illustrative 0–100 scale.
+        // Crit: base crit_chance stat (DEX/PER + capacities) plus this weapon's critMod.
+        // A crit multiplies the post-mitigation damage — so a high-crit build with a
+        // high-crit weapon spikes hard.
+        const critChance = clamp(
+            pawnStatService.evaluateStat('crit_chance', attacker) + critMod,
+            0,
+            CRIT_CHANCE_CAP
+        );
+        const crit = rng.random() < critChance;
+
+        // Damage: baseDamage × str / STAT_SCALE, then armour + resistance reduce it,
+        // then the crit multiplier. STAT_SCALE=10 matches the real stat range (5–22).
         const raw = (baseDamage * str) / STAT_SCALE;
         const armorRed = partArmorReduction(defender, partId, armorPen);
         const physRes = physicalResistance(defender, damageType);
-        const final = Math.round(raw * (1 - armorRed) * (1 - physRes));
+        const mitigated = raw * (1 - armorRed) * (1 - physRes);
+        const final = Math.max(1, Math.round(mitigated * (crit ? CRIT_MULTIPLIER : 1)));
 
         const prevHealth = currentPartHealth(defender, partId, partDef.maxHp);
         const newHealth = Math.max(0, prevHealth - final);
@@ -824,7 +907,7 @@ class CombatServiceImpl implements CombatService {
             infected: false
         };
 
-        // Knockdown: blunt/crush hits roll chance based on damage vs constitution
+        // Knockdown: blunt/crush hits roll chance based on damage vs constitution.
         const defCon = defender.stats.constitution ?? 10;
         const knockChance = damageType === 'blunt' ? clamp((final - defCon / 4) * bluntMod, 0, 100) : 0;
         const knockdown = knockChance > 0 && rng.random() * 100 < knockChance;
@@ -835,7 +918,10 @@ class CombatServiceImpl implements CombatService {
             damage: final,
             injury,
             knockdown,
+            crit,
             damageType,
+            weaponId,
+            staminaCost,
             partRemainingHp: newHealth,
             partMaxHp: partDef.maxHp
         };
@@ -981,43 +1067,52 @@ class CombatServiceImpl implements CombatService {
 
     /**
      * Resolve one swing from attacker → target: roll, apply injury, surface floating
-     * text + engagement log, and report a kill. Returns the updated state. Misses are
-     * surfaced too (as a "dodge") so the defender's evasion is visible.
+     * text + engagement log, and report a kill. Returns the updated state plus the
+     * stamina this swing drained (deducted by the caller regardless of hit/miss).
+     * Misses are surfaced too (as a "dodge") so the defender's evasion is visible.
      */
     private performAttack(
         attacker: Pawn | Mob,
         target: Pawn | Mob,
         state: GameState,
         turn: number
-    ): GameState {
+    ): { state: GameState; staminaCost: number } {
         const result = this.resolveHit(attacker, target, state);
         const pos = this.entityPos(target);
         const attackerName = this.entityName(attacker);
         const targetName = this.entityName(target);
         const isTargetMob = 'entityClass' in target;
 
-        // Miss → no injury, but log + show the dodge.
+        // Miss → no injury, but log + show the dodge. The swing still cost stamina.
         if (!result.hit) {
             this.emitFloat(pos.x, pos.y, 'dodge', 'dodge');
             logCombatSwing(attacker.id, attackerName, target.id, targetName, turn, pos.x, pos.y, {
                 turn,
                 attackerName,
                 defenderName: targetName,
-                hit: false
+                hit: false,
+                weapon: result.weaponId
             });
-            return state;
+            return { state, staminaCost: result.staminaCost };
         }
-        if (!result.injury) return state;
+        if (!result.injury) return { state, staminaCost: result.staminaCost };
 
         const next = isTargetMob
             ? this.applyInjuryToMob(target.id, result.injury, state)
             : this.applyInjury(target.id, result.injury, state);
 
-        // Floating text: damage number (crit when the part is critically/destroyed),
-        // plus secondary knockdown / bleed cues.
-        const crit =
-            result.injury.severity === 'critical' || result.injury.severity === 'destroyed';
-        this.emitFloat(pos.x, pos.y, crit ? 'crit' : 'damage', `-${result.injury.damage}`);
+        // Floating text: damage number — a rolled crit OR a part-wrecking hit reads as
+        // 'crit'; plus a secondary knockdown / bleed cue.
+        const critFloater =
+            result.crit ||
+            result.injury.severity === 'critical' ||
+            result.injury.severity === 'destroyed';
+        this.emitFloat(
+            pos.x,
+            pos.y,
+            critFloater ? 'crit' : 'damage',
+            result.crit ? `-${result.injury.damage}!` : `-${result.injury.damage}`
+        );
         if (result.knockdown) this.emitFloat(pos.x, pos.y, 'knockdown', 'DOWN!');
         else if (result.injury.bleeding > 0) this.emitFloat(pos.x, pos.y, 'bleed', 'bleed');
 
@@ -1029,6 +1124,8 @@ class CombatServiceImpl implements CombatService {
             damage: result.injury.damage,
             injury: result.injury.bodyPart,
             knockdown: result.knockdown,
+            crit: result.crit,
+            weapon: result.weaponId,
             bodyPart: result.injury.bodyPart,
             damageType: result.damageType,
             partMaxHp: result.partMaxHp,
@@ -1040,9 +1137,9 @@ class CombatServiceImpl implements CombatService {
             ? next.mobs?.find((m) => m.id === target.id)
             : next.pawns.find((p) => p.id === target.id);
         if (after && (after.isAlive === false || ('state' in after && after.state === 'Corpse'))) {
-            logCombatKill(attacker.id, target.id, turn);
+            logCombatKill(attacker.id, target.id);
         }
-        return next;
+        return { state: next, staminaCost: result.staminaCost };
     }
 
     /** Nearest living hostile mob adjacent to a pawn (for auto-engagement). */
@@ -1119,8 +1216,9 @@ class CombatServiceImpl implements CombatService {
             }
             if (!target) continue;
 
-            next = this.performAttack(mob, target, next, state.turn);
-            mobStaminaUpdates.set(mob.id, Math.max(0, curStamina - ATTACK_STAMINA_COST));
+            const atk = this.performAttack(mob, target, next, state.turn);
+            next = atk.state;
+            mobStaminaUpdates.set(mob.id, Math.max(0, curStamina - atk.staminaCost));
         }
 
         // ── Pawn attacks (drafted order OR auto-engaged Fighting state) ───────
@@ -1172,8 +1270,9 @@ class CombatServiceImpl implements CombatService {
                 continue;
             }
 
-            next = this.performAttack(pawn, target, next, state.turn);
-            pawnStaminaUpdates.set(pawn.id, Math.max(0, curStamina - ATTACK_STAMINA_COST));
+            const atk = this.performAttack(pawn, target, next, state.turn);
+            next = atk.state;
+            pawnStaminaUpdates.set(pawn.id, Math.max(0, curStamina - atk.staminaCost));
         }
 
         // Apply stamina mutations in one pass
@@ -1198,7 +1297,6 @@ class CombatServiceImpl implements CombatService {
     }
 
     /** Deferred — stub; wired by MAGIC-SKILLS spec. */
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     triggerSkill(
         _skillId: string,
         _casterId: string,

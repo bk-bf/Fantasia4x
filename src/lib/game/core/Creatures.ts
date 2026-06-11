@@ -12,7 +12,7 @@ import { resolveCharSpans, type CharSpan } from './Terrains';
 
 export type EntityClass = 'mob' | 'animal';
 export type EntityBehaviour = 'passive' | 'neutral' | 'aggressive';
-export type EntityDiet = 'herbivore' | 'carnivore' | 'omnivore';
+export type EntityDiet = 'herbivore' | 'carnivore' | 'omnivore' | 'none';
 /**
  * Item categories (matching the `category` field in items.jsonc) an entity will eat when
  * foraging wild food or scavenging a corpse:
@@ -52,16 +52,11 @@ export interface CreatureStats {
   strength: number;
 }
 
-/** A natural attack this creature can make in melee (claws, bite, hoof, fists…). */
-export interface NaturalWeapon {
-  /** Descriptive id shown in logs, e.g. 'bite', 'claw', 'hoof', 'fists'. */
-  id: string;
-  damageType: 'cutting' | 'piercing' | 'blunt';
-  /** Base damage before strength scaling. Scaled by str / STAT_SCALE in Combat. */
-  baseDamage: number;
-  /** Knockdown multiplier; only relevant for blunt weapons (default 1.0 for blunt, 0 otherwise). */
-  bluntMod?: number;
-}
+// Natural attacks are now first-class items (category 'natural_weapon' in
+// items.jsonc). A creature's `naturalWeapons` is a list of those item ids, resolved
+// — like crafted weapons — through ItemService in Combat. Per-swing weight, stamina,
+// crit and damage live on each item's weaponProperties. STR scaling differentiates a
+// shared attack (a wolf's `bite` hits harder than a rabbit's).
 
 export interface CreatureLootEntry {
   itemId: string;
@@ -85,8 +80,9 @@ export interface CreatureDefinition {
   bg: [number, number, number];
   stats: CreatureStats;
   behaviour: EntityBehaviour;
-  /** Governs hunger-accrual rate only (carnivore 1.0 / omnivore 0.7 / herbivore 0.5).
-   *  Does NOT determine what this creature eats — see `eats`/`grazes`. */
+  /** Governs hunger-accrual rate only (carnivore 1.0 / omnivore 0.7 / herbivore 0.5 /
+   *  none 0 — never gets hungry). Does NOT determine what this creature eats —
+   *  see `eats`/`grazes`. */
   diet: EntityDiet;
   /**
    * Item categories (from items.jsonc `category`) this creature will forage or scavenge when
@@ -140,8 +136,8 @@ export interface CreatureDefinition {
   /** biome id → relative spawn weight (terrains.jsonc biome ids). */
   biomeWeights: Record<string, number>;
   lootTable: CreatureLootEntry[];
-  /** Natural melee attacks available to this creature. */
-  naturalWeapons: NaturalWeapon[];
+  /** Natural melee attacks — ids of `natural_weapon` items in items.jsonc. */
+  naturalWeapons: string[];
 }
 
 type RawCreature = Record<string, unknown>;
@@ -153,6 +149,8 @@ function defaultEatsForDiet(diet: EntityDiet): FoodCategory[] {
       return ['food'];
     case 'carnivore':
       return ['meat', 'organic'];
+    case 'none':
+      return [];
     case 'omnivore':
     default:
       return ['food', 'meat', 'organic'];
@@ -202,7 +200,7 @@ function toDefinition(raw: RawCreature): CreatureDefinition {
     carcassItemId: (raw.carcassItemId as string) ?? undefined,
     biomeWeights: (raw.biomeWeights as Record<string, number>) ?? {},
     lootTable: (raw.lootTable as CreatureLootEntry[]) ?? [],
-    naturalWeapons: (raw.naturalWeapons as NaturalWeapon[]) ?? []
+    naturalWeapons: (raw.naturalWeapons as string[]) ?? []
   };
 }
 

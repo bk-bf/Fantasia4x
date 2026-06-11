@@ -16,6 +16,7 @@
 import type {
     GameState,
     Pawn,
+    Mob,
     Building,
     PlacedBuilding,
     ConditionDef,
@@ -53,7 +54,10 @@ export const PAWN_STATE = {
     EATING: 'Eating',
     SLEEPING: 'Sleeping',
     HAULING: 'Hauling',
-    MOVING_TO_DEPOSIT: 'MovingToDeposit'
+    MOVING_TO_DEPOSIT: 'MovingToDeposit',
+    // Combat states (COMBAT-SYSTEM): auto-engagement when a hostile enters aggro range.
+    FIGHTING: 'Fighting',
+    FLEEING: 'Fleeing'
 } as const;
 
 export type PawnStateName = (typeof PAWN_STATE)[keyof typeof PAWN_STATE];
@@ -73,6 +77,20 @@ const ITEM_DEF_BY_ID: Map<string, any> = new Map(
 //   At 2× speed everything is 2× faster; at 4× speed 4× faster — matching Rimworld multi-speed feel.
 const HUNGER_THRESHOLD = 70; // Seek food at 70% (= Rimworld 30% saturation trigger)
 const FATIGUE_THRESHOLD = 72; // Seek rest after ~225 turns ≈ 0.75 days (28% rest = 72% fatigue)
+
+// ===== COMBAT (COMBAT-SYSTEM) =====
+/** Base vision radius in tiles for aggressive/flee stances, scaled by the pawn's
+ *  aggro_range stat (perception + sight capacity). Defensive pawns ignore this and
+ *  only react to adjacent hostiles. */
+const PAWN_BASE_VISION = 6;
+/** How far (tiles) a fleeing pawn tries to put between itself and the threat. */
+const FLEE_DISTANCE = 6;
+
+/** Vision/aggro radius in tiles for this pawn (perception- and sight-scaled). */
+function pawnVisionTiles(pawn: Pawn): number {
+    const mult = pawnStatService.evaluateStat('aggro_range', pawn);
+    return Math.max(1, Math.round(PAWN_BASE_VISION * (mult > 0 ? mult : 1)));
+}
 // Dynamic need interruption (replaces flat CRITICAL_HUNGER / CRITICAL_FATIGUE thresholds).
 // A pawn weighs need urgency against proximity — the hungrier/more tired, the greater the detour.
 const NEED_DETOUR_MAX_FACTOR = 15; // At need=100%, willing to detour up to 15× the job distance
@@ -819,6 +837,104 @@ function goIdle(pawn: Pawn, gs: GameState): GameState {
     };
 }
 
+// ===== COMBAT STATE (COMBAT-SYSTEM) =====
+
+/**
+ * Nearest hostile mob this pawn should react to, or null. A `mob`-class creature
+ * (goblins etc.) is always hostile; a neutral `animal` only counts once it has
+ * actually turned aggressive (Alerted/Attacking) toward the colony.
+ *
+ * Detection range depends on stance: a "defensive" pawn reacts only once a hostile
+ * is adjacent (it fights when drawn into melee), while "aggressive" and "flee" pawns
+ * react anywhere inside their vision range.
+ */
+function findCombatThreat(pawn: Pawn, gs: GameState): Mob | null {
+    if (!pawn.position || pawn.isAlive === false) return null;
+    const stance = pawn.combatStance ?? 'defensive';
+    const range = stance === 'defensive' ? 1 : pawnVisionTiles(pawn);
+    const px = pawn.position.x;
+    const py = pawn.position.y;
+    let best: Mob | null = null;
+    let bestDist = Infinity;
+    for (const m of gs.mobs ?? []) {
+        if (m.isAlive === false || m.state === 'Corpse') continue;
+        const hostile = m.entityClass === 'mob' || m.state === 'Attacking' || m.state === 'Alerted';
+        if (!hostile) continue;
+        const d = Math.max(Math.abs(px - m.x), Math.abs(py - m.y));
+        if (d <= range && d < bestDist) {
+            best = m;
+            bestDist = d;
+        }
+    }
+    return best;
+}
+
+/** Stop a pawn's current movement in place (used when planting to fight). */
+function haltMovement(pawn: Pawn, gs: GameState): GameState {
+    if ((pawn.path?.length ?? 0) === 0 && !pawn.isMoving) return gs;
+    return {
+        ...gs,
+        pawns: gs.pawns.map((p) =>
+            p.id === pawn.id
+                ? { ...p, path: [], isMoving: false, hasReachedDestination: false }
+                : p
+        )
+    };
+}
+
+/**
+ * FIGHTING: engage the hostile. Defensive pawns stand their ground (the threat is
+ * adjacent by definition); aggressive pawns close the distance first. Pawns fight
+ * until knocked down — there is no automatic pain-based retreat (that caused pawns
+ * to break off fights they could win / disrupt crowd control). Exits to IDLE once
+ * no hostile remains in range.
+ */
+function handleFighting(pawn: Pawn, gameState: GameState): GameState {
+    const threat = findCombatThreat(pawn, gameState);
+    if (!threat || !pawn.position) {
+        return threat ? haltMovement(pawn, gameState) : transitionTo(pawn, PAWN_STATE.IDLE, gameState);
+    }
+    const adjacent = Math.max(Math.abs(pawn.position.x - threat.x), Math.abs(pawn.position.y - threat.y)) <= 1;
+    if (adjacent) {
+        // Stand and trade blows — combatService.tickCombat() resolves Fighting-pawn swings.
+        return haltMovement(pawn, gameState);
+    }
+    // Not adjacent: only aggressive pawns chase a hostile down (defensive pawns only
+    // ever see adjacent threats, so this is the aggressive-approach path).
+    if ((pawn.combatStance ?? 'defensive') === 'aggressive') {
+        if ((pawn.path?.length ?? 0) > 0) return gameState; // already approaching
+        const afterPath = tryAssignPath(pawn, threat.x, threat.y, gameState);
+        if (afterPath) return afterPath;
+    }
+    return haltMovement(pawn, gameState);
+}
+
+/**
+ * FLEEING (flee stance only): break contact, pathing away from the nearest threat.
+ * Stands down to IDLE once no hostile remains in vision range.
+ */
+function handleFleeing(pawn: Pawn, gameState: GameState): GameState {
+    const threat = findCombatThreat(pawn, gameState);
+    if (!threat) {
+        return transitionTo(pawn, PAWN_STATE.IDLE, gameState);
+    }
+    if (!pawn.position) return gameState;
+    // Already retreating — let processMovement carry it along the path.
+    if ((pawn.path?.length ?? 0) > 0) return gameState;
+
+    // Path to a tile away from the threat. Clamp to map bounds; if unreachable,
+    // hold and fight rather than freeze uselessly.
+    const mapH = gameState.worldMap.length;
+    const mapW = mapH > 0 ? gameState.worldMap[0].length : 0;
+    const dx = Math.sign(pawn.position.x - threat.x) || 1;
+    const dy = Math.sign(pawn.position.y - threat.y) || 1;
+    const fleeX = Math.max(0, Math.min(mapW - 1, pawn.position.x + dx * FLEE_DISTANCE));
+    const fleeY = Math.max(0, Math.min(mapH - 1, pawn.position.y + dy * FLEE_DISTANCE));
+    const afterPath = tryAssignSleepPath(pawn, fleeX, fleeY, gameState);
+    if (afterPath) return afterPath;
+    return haltMovement(pawn, gameState);
+}
+
 // ===== PER-PAWN STATE HANDLERS =====
 
 // ===== HAULING HELPERS =====
@@ -1150,6 +1266,10 @@ function tickPawn(pawn: Pawn, gameState: GameState): GameState {
             return handleHauling(pawn, gameState);
         case PAWN_STATE.MOVING_TO_DEPOSIT:
             return handleMovingToDeposit(pawn, gameState);
+        case PAWN_STATE.FIGHTING:
+            return handleFighting(pawn, gameState);
+        case PAWN_STATE.FLEEING:
+            return handleFleeing(pawn, gameState);
         default:
             return gameState;
     }
@@ -1804,8 +1924,69 @@ class PawnStateMachineImpl {
             const afterConditions = state.pawns.find((p) => p.id === pawn.id);
             if (!afterConditions || afterConditions.isAlive === false) continue;
 
-            // Exhaustion collapse: fatigue >= 100 → force sleeping on the ground.
             let forCollapse = afterConditions;
+
+            // ── Combat interrupt (top priority): a hostile is within aggro range. ──
+            // Drop the current job and switch to a combat state so the pawn defends
+            // itself instead of walking off to work. While already in a combat state we
+            // leave path/movement to the handler (so a fleeing pawn can keep retreating).
+            const threat = findCombatThreat(forCollapse, state);
+            if (threat) {
+                const inCombat =
+                    forCollapse.currentState === PAWN_STATE.FIGHTING ||
+                    forCollapse.currentState === PAWN_STATE.FLEEING;
+                const desired =
+                    (forCollapse.combatStance ?? 'defensive') === 'flee'
+                        ? PAWN_STATE.FLEEING
+                        : PAWN_STATE.FIGHTING;
+                if (!inCombat) {
+                    // Entering combat: release any claimed job and plant in place.
+                    const jobs =
+                        forCollapse.activeJob ||
+                        (state.jobs ?? []).some((j) => j.claimedBy === forCollapse.id)
+                            ? (state.jobs ?? []).map((j) =>
+                                  j.claimedBy === forCollapse.id ? { ...j, claimedBy: null } : j
+                              )
+                            : state.jobs;
+                    forCollapse = {
+                        ...forCollapse,
+                        currentState: desired,
+                        activeJob: undefined,
+                        path: [],
+                        isMoving: false,
+                        hasReachedDestination: false
+                    };
+                    state = {
+                        ...state,
+                        jobs,
+                        pawns: state.pawns.map((p) => (p.id === pawn.id ? forCollapse : p))
+                    };
+                } else if (forCollapse.currentState !== desired) {
+                    // Switch between fighting/fleeing without clobbering an active flee path.
+                    forCollapse = { ...forCollapse, currentState: desired };
+                    state = {
+                        ...state,
+                        pawns: state.pawns.map((p) => (p.id === pawn.id ? forCollapse : p))
+                    };
+                }
+                // Run the combat handler and tick status effects, then move to next pawn —
+                // skip the need/work state machine entirely while a threat is present.
+                state = tickPawn(forCollapse, state);
+                const afterCombat = state.pawns.find((p) => p.id === pawn.id);
+                if (afterCombat) {
+                    const stepped = tickStatusEffectDurations(afterCombat);
+                    const synced = syncActiveEffects(stepped);
+                    if (synced !== afterCombat) {
+                        state = {
+                            ...state,
+                            pawns: state.pawns.map((p) => (p.id === pawn.id ? synced : p))
+                        };
+                    }
+                }
+                continue;
+            }
+
+            // Exhaustion collapse: fatigue >= 100 → force sleeping on the ground.
             if (
                 (forCollapse.needs?.fatigue ?? 0) >= 100 &&
                 forCollapse.currentState !== PAWN_STATE.SLEEPING

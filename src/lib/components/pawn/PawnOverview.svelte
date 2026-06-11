@@ -9,6 +9,7 @@
     getPawnTaskSummary
   } from '$lib/utils/pawnUtils';
   import { pawnService } from '$lib/game/services/PawnService';
+  import PawnStance from './PawnStance.svelte';
 
   export let pawn: Pawn;
   export let gameState: GameState;
@@ -74,6 +75,7 @@
       >{taskSummary.currentState}</span
     >
   </div>
+  <PawnStance {pawn} />
   <div class="row">
     <span class="lbl">WORK</span><span class="val">{taskSummary.workAssignment}</span>
   </div>
