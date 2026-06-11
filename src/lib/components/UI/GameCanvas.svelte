@@ -418,11 +418,17 @@
     }));
   }
 
-  function toggleMobMark(mobId: string) {
+  // Mark ALL living mobs of the same creature type for hunting.
+  // If every one is already queued, this clears them all; otherwise queues them all.
+  function markAllSameTypeForHunt(creatureId: string) {
+    const sameType = mobs.filter((m) => m.creatureId === creatureId && m.state !== 'Corpse');
+    const allMarked = sameType.length > 0 && sameType.every((m) => m.markedForHunt);
     gameState.updateWithSave((state) => ({
       ...state,
       mobs: (state.mobs ?? []).map((m) =>
-        m.id === mobId ? { ...m, marked: !m.marked } : m
+        m.creatureId === creatureId && m.state !== 'Corpse'
+          ? { ...m, markedForHunt: !allMarked }
+          : m
       )
     }));
   }
@@ -464,7 +470,9 @@
       job: pawn.activeJob
         ? {
             text: `→ ${pawnStateLabel(pawn)}${
-              pawn.activeJob.resourceId ? ` (${pawn.activeJob.resourceId})` : ''
+              pawn.activeJob.resourceId
+                ? ` ${jobResourceName(pawn.activeJob.resourceId)}`
+                : ''
             }`
           }
         : { text: '→ Idle', idle: true },
@@ -478,7 +486,7 @@
                 uiState.update((s) => ({
                   ...s,
                   selectedPawnId: pawn.id,
-                  pawnScreenTab: null,
+                  pawnScreenTab: 'status',
                   currentScreen: 'pawns'
                 }))
             },
@@ -572,31 +580,43 @@
       }`,
       pos: selected ? { x: mob.x, y: mob.y } : undefined,
       buttons: selected
-        ? ([
-            {
-              label: 'VIEW',
-              onClick: () => {
-                uiState.selectMob(mob.id);
-                uiState.setScreen('entities');
+        ? ((): EntityButton[] => {
+            const sameType = mobs.filter(
+              (m) => m.creatureId === mob.creatureId && m.state !== 'Corpse'
+            );
+            const allSameTypeMarked =
+              sameType.length > 0 && sameType.every((m) => m.markedForHunt);
+            const markedCount = sameType.filter((m) => m.markedForHunt).length;
+            return [
+              {
+                label: 'VIEW',
+                onClick: () => {
+                  uiState.selectMob(mob.id);
+                  uiState.setScreen('entities');
+                }
+              },
+              {
+                label: cameraFollowMobId === mob.id ? 'UNFOLLOW' : 'FOLLOW',
+                active: cameraFollowMobId === mob.id,
+                onClick: () =>
+                  uiState.setFollowMob(cameraFollowMobId === mob.id ? null : mob.id)
+              },
+              {
+                label: mob.markedForHunt ? 'UNQUEUE' : 'HUNT',
+                active: mob.markedForHunt ?? false,
+                onClick: () => toggleHuntMark(mob.id)
+              },
+              {
+                label: allSameTypeMarked
+                  ? 'UNMARK ALL'
+                  : markedCount > 0
+                    ? `MARK ALL (${markedCount}/${sameType.length})`
+                    : `MARK ALL (${sameType.length})`,
+                active: allSameTypeMarked,
+                onClick: () => markAllSameTypeForHunt(mob.creatureId)
               }
-            },
-            {
-              label: cameraFollowMobId === mob.id ? 'UNFOLLOW' : 'FOLLOW',
-              active: cameraFollowMobId === mob.id,
-              onClick: () =>
-                uiState.setFollowMob(cameraFollowMobId === mob.id ? null : mob.id)
-            },
-            {
-              label: mob.markedForHunt ? 'UNQUEUE' : 'HUNT',
-              active: mob.markedForHunt ?? false,
-              onClick: () => toggleHuntMark(mob.id)
-            },
-            {
-              label: mob.marked ? 'MARKED' : 'MARK',
-              active: mob.marked ?? false,
-              onClick: () => toggleMobMark(mob.id)
-            }
-          ] satisfies EntityButton[])
+            ];
+          })()
         : undefined,
       onSelect: !selected
         ? () => {
@@ -774,13 +794,18 @@
     const s = p.currentState ?? 'Idle';
     if (s === 'Working' && p.activeJob) {
       const t = p.activeJob.type;
-      const res = p.activeJob.resourceId ?? '';
-      if (t === 'harvest') return `Harvesting${res ? ` ${res}` : ''}`;
+      if (t === 'harvest') return 'Harvesting';
       if (t === 'haul') return 'Hauling';
       if (t === 'construct') return 'Building';
       if (t === 'craft') return 'Crafting';
     }
     return s.replace(/([A-Z])/g, ' $1').trim();
+  }
+
+  function jobResourceName(resourceId: string): string {
+    const def = resourceObjectService.getById(resourceId);
+    if (def?.displayName) return def.displayName;
+    return resourceId.replace(/_/g, ' ');
   }
 
   function needBar(value: number): string {
@@ -2753,7 +2778,7 @@
     <!-- Dropped item on the hovered tile -->
     <div class="tile-hud tile-hud--item">
       <span class="item-glyph">★</span>
-      <span class="item-name">{hoverDroppedItem.resourceId}</span>
+      <span class="item-name">{ITEMS_DATABASE.find((i) => i.id === hoverDroppedItem.resourceId)?.name ?? hoverDroppedItem.resourceId.replace(/_/g, ' ')}</span>
       <span class="item-qty">×{hoverDroppedItem.quantity}</span>
       <div class="item-hint">dropped item — awaiting hauler</div>
     </div>

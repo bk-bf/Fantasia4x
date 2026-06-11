@@ -18,6 +18,7 @@
 <script lang="ts">
   // Core Svelte imports
   import { onMount, onDestroy, tick } from 'svelte';
+  import { get } from 'svelte/store';
 
   // Game state and UI imports
   import { gameState } from '$lib/stores/gameState';
@@ -42,6 +43,19 @@
   let selectedPawn: Pawn | null = null;
   let selectedPawnId: string | null = null;
   let pawnScreenElement: HTMLElement;
+
+  // Tab state. Declared BEFORE the store subscriptions below: a Svelte store emits
+  // its current value synchronously on subscribe, and the uiState callback assigns
+  // `activeTab` — if it were declared later it would be in its temporal dead zone
+  // and navigating in with a tab set (e.g. the GEAR button) would throw.
+  type PawnTab = 'status' | 'attributes' | 'gear';
+  let activeTab: PawnTab = 'status';
+
+  const TABS: { id: PawnTab; label: string }[] = [
+    { id: 'status', label: 'STATUS' },
+    { id: 'attributes', label: 'ATTRIBUTES' },
+    { id: 'gear', label: 'GEAR' }
+  ];
 
   // Game state subscription and automatic pawn management
   const unsubscribe = gameState.subscribe((state) => {
@@ -99,15 +113,6 @@
     }
   }
 
-  // Tab state
-  type PawnTab = 'status' | 'attributes' | 'gear';
-  let activeTab: PawnTab = 'status';
-
-  const TABS: { id: PawnTab; label: string }[] = [
-    { id: 'status', label: 'STATUS' },
-    { id: 'attributes', label: 'ATTRIBUTES' },
-    { id: 'gear', label: 'GEAR' }
-  ];
 </script>
 
 <div class="pawn-screen" bind:this={pawnScreenElement}>
