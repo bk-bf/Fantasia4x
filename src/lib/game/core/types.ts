@@ -947,6 +947,9 @@ export interface Item {
 	// Food properties
 	nutrition?: number; // Dedicated nutrition value for food items
 
+	/** Medicine quality 0–1 — added to a tend's treatment quality when consumed (COMBAT-SYSTEM caretaking). */
+	medicineQuality?: number;
+
 	// Decay properties
 	decaySeconds?: number; // in-game seconds until one unit of this item spoils
 	decaysTo?: string; // itemId it becomes on decay; omit to simply vanish

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { combatService } from './Combat';
-import { healWounds } from './PawnStateMachine';
+import { healWounds, tendWounds } from './PawnStateMachine';
 import { CREATURES } from '../core/Creatures';
 import { itemService } from '../services/ItemService';
 import type { GameState, Injury, Mob, Pawn } from '../core/types';
@@ -226,6 +226,43 @@ describe('wound system (stacking + healing)', () => {
 		expect(chestBefore - woundDmg(healed, 'chest')).toBeGreaterThan(
 			legBefore - woundDmg(healed, 'leftUpperLeg')
 		);
+	});
+
+	it('tending consumes the best medicine and boosts treatment quality', () => {
+		// Wound a pawn, then tend with a Chewed Poultice in the stockpile.
+		let state = makeState([makePawn({ currentState: 'Idle' })], []) as GameState;
+		state = combatService.applyInjury('p1', { ...crush(20), bodyPart: 'chest' }, state);
+		state = {
+			...state,
+			stockpile: { chewed_poultice: 1 },
+			stockpileZones: [
+				{
+					id: 'z1',
+					name: 'med',
+					tiles: [],
+					filter: { allowedCategories: [], blockedItems: [] },
+					inventory: { chewed_poultice: 1 }
+				}
+			]
+		} as GameState;
+
+		const after = tendWounds(state.pawns[0], state);
+		const wound = after.pawns[0]
+			.limbs!.flatMap((l) => l.parts ?? [])
+			.find((p) => p.id === 'chest')!.injuries[0];
+		// Poultice medicineQuality 0.5 → treated, and quality is at least that.
+		expect(wound.treatmentQuality ?? 0).toBeGreaterThanOrEqual(0.5);
+		expect(wound.treatedAt).toBeDefined();
+		// …and the dose was consumed.
+		expect(after.stockpile.chewed_poultice ?? 0).toBe(0);
+	});
+
+	it('the poultice recipe and medicine items are well-formed', () => {
+		const herb = itemService.getItemById('woundwort');
+		const poultice = itemService.getItemById('chewed_poultice');
+		expect(herb?.medicineQuality).toBeGreaterThan(0);
+		expect(poultice?.medicineQuality).toBeGreaterThan(herb!.medicineQuality!);
+		expect(poultice?.craftingCost?.woundwort).toBeGreaterThan(0); // recipe references the herb
 	});
 
 	it('wounds heal over time, restoring HP and lowering pain to zero', () => {

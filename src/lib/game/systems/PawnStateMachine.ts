@@ -409,26 +409,41 @@ function bestCaretaker(gameState: GameState): { skill: number; mood: number } | 
     return best;
 }
 
+/** Best medicine in the stockpile (highest `medicineQuality` with stock), or null. */
+function bestMedicine(gameState: GameState): { id: string; quality: number } | null {
+    let best: { id: string; quality: number } | null = null;
+    for (const [id, amount] of Object.entries(gameState.stockpile ?? {})) {
+        if (amount <= 0) continue;
+        const q = itemService.getItemById(id)?.medicineQuality;
+        if (q && q > 0 && (!best || q > best.quality)) best = { id, quality: q };
+    }
+    return best;
+}
+
 /**
  * Tend a patient's untended wounds (COMBAT-SYSTEM caretaking). The colony's best
- * available medic rolls a treatment quality from their medical_skill × mood × variance;
- * the quality is stamped on each wound and drives faster healing, a longer-lasting tend,
- * and infection suppression. A botched roll (below minTendQuality) does nothing.
+ * available medic rolls a treatment quality from their `medical_skill` (which folds in
+ * sight × manipulation × consciousness) × mood × variance, **plus the quality of the best
+ * medicine in the stockpile**, which is consumed. The quality is stamped on each wound and
+ * drives faster healing, a longer-lasting tend, and infection suppression. A botched roll
+ * (below minTendQuality) does nothing. Returns the updated GameState (patient + stockpile).
  */
-function tendWounds(patient: Pawn, gameState: GameState): Pawn {
+export function tendWounds(patient: Pawn, gameState: GameState): GameState {
     const turn = gameState.turn;
     const limbs = patient.limbs;
-    if (!limbs) return patient;
+    if (!limbs) return gameState;
     const hasUntended = limbs.some((l) =>
         (l.parts ?? []).some((p) => p.injuries.some((w) => !isTended(w, turn)))
     );
-    if (!hasUntended) return patient;
+    if (!hasUntended) return gameState;
 
     const medic = bestCaretaker(gameState);
-    if (!medic) return patient;
+    if (!medic) return gameState;
+    const med = bestMedicine(gameState);
     const moodFactor = Math.max(0.3, Math.min(1.2, 0.6 + (medic.mood / 100) * 0.6));
-    const quality = Math.max(0, Math.min(1, medic.skill * moodFactor * (0.6 + rng.random() * 0.4)));
-    if (quality < CARE_CONFIG.minTendQuality) return patient; // botched tend
+    const skillRoll = medic.skill * moodFactor * (0.6 + rng.random() * 0.4);
+    const quality = Math.max(0, Math.min(1, skillRoll + (med?.quality ?? 0)));
+    if (quality < CARE_CONFIG.minTendQuality) return gameState; // botched tend
 
     const newLimbs = limbs.map((limb) => {
         const parts = limb.parts;
@@ -447,7 +462,12 @@ function tendWounds(patient: Pawn, gameState: GameState): Pawn {
             )
         };
     });
-    return { ...patient, limbs: newLimbs };
+    let next: GameState = {
+        ...gameState,
+        pawns: gameState.pawns.map((p) => (p.id === patient.id ? { ...patient, limbs: newLimbs } : p))
+    };
+    if (med) next = consumeFromStockpiles(next, { [med.id]: 1 }); // consume one dose
+    return next;
 }
 
 export function healWounds(pawn: Pawn, turn = 0): Pawn {
@@ -2116,10 +2136,10 @@ class PawnStateMachineImpl {
                 current.currentState === PAWN_STATE.FLEEING;
             let toTick = current;
             if (!inMeleeNow && state.turn % CARE_CONFIG.tendIntervalTicks === 0) {
-                const tended = tendWounds(current, state);
-                if (tended !== current) {
-                    toTick = tended;
-                    state = { ...state, pawns: state.pawns.map((p) => (p.id === pawn.id ? tended : p)) };
+                const afterTend = tendWounds(current, state);
+                if (afterTend !== state) {
+                    state = afterTend;
+                    toTick = state.pawns.find((p) => p.id === pawn.id) ?? current;
                 }
             }
 

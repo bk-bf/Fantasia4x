@@ -53,6 +53,33 @@
     "decaysTo"      : "rotten_food"
   },
   {
+    "id"            : "woundwort",
+    "name"          : "Woundwort",
+    "type"          : "material",
+    "category"      : "medicine",
+    "description"   : "Bitter staunchweed pulled from the ditches. The old folk pack it onto a gash to slow the bleeding — chew it raw in a pinch.",
+    "color"         : "#7CB342",
+    "amount"        : 0,
+    "medicineQuality": 0.2,
+    "gatheringTypes": ["foraging"],
+    "decaySeconds"  : 1800,
+    "decaysTo"      : "rotten_food"
+  },
+  {
+    "id"              : "chewed_poultice",
+    "name"            : "Chewed Poultice",
+    "type"            : "consumable",
+    "category"        : "medicine",
+    "description"     : "Woundwort mashed between the teeth to a green spit-paste and lashed over the wound with cord. Crude, foul, and it works.",
+    "color"           : "#9CCC65",
+    "amount"          : 0,
+    "medicineQuality" : 0.5,
+    "craftingCost"    : {"woundwort": 2, "cordage": 1},
+    "craftingTime"    : 2,
+    "toolTierRequired": 0,
+    "workshopType"    : "craft_spot"
+  },
+  {
     "id"            : "river_trout",
     "name"          : "River Trout",
     "type"          : "food",
