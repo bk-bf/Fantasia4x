@@ -181,10 +181,121 @@
     "category"      : "organic",
     "maxDurability"  : 80,
     "deteriorationRate": 0.07,
-    "description"   : "Untreated animal skin.",
+    "description"   : "Untreated animal skin. Rots if not cured.",
     "color"         : "#8D6E63",
     "amount"        : 0,
-    "processingType": ["leatherworking"]
+    "processingType": ["leatherworking"],
+    "decaySeconds"  : 2400,
+    "decaysTo"      : "rotten_hide"
+  },
+  {
+    "id"            : "rotten_hide",
+    "name"          : "Rotten Hide",
+    "type"          : "material",
+    "category"      : "organic",
+    "maxDurability"  : 40,
+    "deteriorationRate": 0.1,
+    "description"   : "A hide left too long — slimy and useless. Scrap.",
+    "color"         : "#5A4A3A",
+    "amount"        : 0
+  },
+  {
+    "id"            : "tanning_bucket",
+    "name"          : "Tanning Bucket",
+    "type"          : "material",
+    "category"      : "storage",
+    "maxDurability"  : 150,
+    "deteriorationRate": 0.03,
+    "description"   : "Plank-staved bucket for soaking hides in tannin. Needed to build a tanning rack.",
+    "color"         : "#9A7B4F",
+    "amount"        : 0,
+    "craftingCost"  : {"pine_plank": 2, "cordage": 1},
+    "craftingTime"  : 5, "toolTierRequired": 0, "workshopType": "sawtable"
+  },
+  {
+    "id": "cured_thin_hide", "name": "Cured Thin Hide", "type": "material", "category": "organic",
+    "maxDurability": 120, "deteriorationRate": 0.03,
+    "description": "Ash/salt-cured small pelt. Stable — won't rot. Tans into thin leather.",
+    "color": "#B89878", "amount": 0,
+    "craftingCost": {"rabbit_pelt": 1, "ash": 2},
+    "craftingCostAlternatives": [{"rat_pelt": 1, "ash": 2}, {"rabbit_pelt": 1, "salt": 1}, {"rat_pelt": 1, "salt": 1}],
+    "craftingTime": 40, "toolTierRequired": 0, "workshopType": "hide_rack"
+  },
+  {
+    "id": "cured_light_hide", "name": "Cured Light Hide", "type": "material", "category": "organic",
+    "maxDurability": 120, "deteriorationRate": 0.03,
+    "description": "Cured deer/goat hide. Stable. Tans into light leather.",
+    "color": "#B08F6A", "amount": 0,
+    "craftingCost": {"deer_hide": 1, "ash": 2},
+    "craftingCostAlternatives": [{"goat_hide": 1, "ash": 2}, {"deer_hide": 1, "salt": 1}, {"goat_hide": 1, "salt": 1}],
+    "craftingTime": 50, "toolTierRequired": 0, "workshopType": "hide_rack"
+  },
+  {
+    "id": "cured_sturdy_hide", "name": "Cured Sturdy Hide", "type": "material", "category": "organic",
+    "maxDurability": 120, "deteriorationRate": 0.03,
+    "description": "Cured wolf/boar hide. Stable. Tans into sturdy leather.",
+    "color": "#8A6E4E", "amount": 0,
+    "craftingCost": {"wolf_hide": 1, "ash": 2},
+    "craftingCostAlternatives": [{"boar_hide": 1, "ash": 2}, {"wolf_hide": 1, "salt": 1}, {"boar_hide": 1, "salt": 1}],
+    "craftingTime": 60, "toolTierRequired": 0, "workshopType": "hide_rack"
+  },
+  {
+    "id": "cured_heavy_hide", "name": "Cured Heavy Hide", "type": "material", "category": "organic",
+    "maxDurability": 120, "deteriorationRate": 0.03,
+    "description": "Cured elk hide. Stable. Tans into heavy leather.",
+    "color": "#75593C", "amount": 0,
+    "craftingCost": {"elk_hide": 1, "ash": 2},
+    "craftingCostAlternatives": [{"elk_hide": 1, "salt": 1}],
+    "craftingTime": 70, "toolTierRequired": 0, "workshopType": "hide_rack"
+  },
+  {
+    "id": "cured_thick_hide", "name": "Cured Thick Hide", "type": "material", "category": "organic",
+    "maxDurability": 120, "deteriorationRate": 0.03,
+    "description": "Cured bear pelt. Stable. Tans into thick leather.",
+    "color": "#5E4632", "amount": 0,
+    "craftingCost": {"bear_pelt": 1, "ash": 2},
+    "craftingCostAlternatives": [{"bear_pelt": 1, "salt": 1}],
+    "craftingTime": 80, "toolTierRequired": 0, "workshopType": "hide_rack"
+  },
+  {
+    "id": "thin_leather", "name": "Thin Leather", "type": "material", "category": "leather",
+    "maxDurability": 140, "deteriorationRate": 0.04,
+    "description": "Soft thin leather. Clothing lining and light bags.",
+    "color": "#C8A878", "amount": 0,
+    "craftingCost": {"cured_thin_hide": 1, "bark": 1},
+    "craftingTime": 30, "toolTierRequired": 0, "workshopType": "tanning_rack"
+  },
+  {
+    "id": "light_leather", "name": "Light Leather", "type": "material", "category": "leather",
+    "maxDurability": 150, "deteriorationRate": 0.035,
+    "description": "Supple light leather. Soft armour and packs.",
+    "color": "#B8935E", "amount": 0,
+    "craftingCost": {"cured_light_hide": 1, "bark": 1},
+    "craftingTime": 35, "toolTierRequired": 0, "workshopType": "tanning_rack"
+  },
+  {
+    "id": "sturdy_leather", "name": "Sturdy Leather", "type": "material", "category": "leather",
+    "maxDurability": 160, "deteriorationRate": 0.03,
+    "description": "Tough leather. Light armour and straps.",
+    "color": "#9A7848", "amount": 0,
+    "craftingCost": {"cured_sturdy_hide": 1, "bark": 2},
+    "craftingTime": 40, "toolTierRequired": 0, "workshopType": "tanning_rack"
+  },
+  {
+    "id": "heavy_leather", "name": "Heavy Leather", "type": "material", "category": "leather",
+    "maxDurability": 170, "deteriorationRate": 0.03,
+    "description": "Thick, stiff leather. Armour and harness.",
+    "color": "#7E5E36", "amount": 0,
+    "craftingCost": {"cured_heavy_hide": 1, "bark": 2},
+    "craftingTime": 45, "toolTierRequired": 0, "workshopType": "tanning_rack"
+  },
+  {
+    "id": "thick_leather", "name": "Thick Leather", "type": "material", "category": "leather",
+    "maxDurability": 180, "deteriorationRate": 0.025,
+    "description": "Heaviest leather. Best armour and prestige trim.",
+    "color": "#604529", "amount": 0,
+    "craftingCost": {"cured_thick_hide": 1, "bark": 3},
+    "craftingTime": 55, "toolTierRequired": 0, "workshopType": "tanning_rack"
   },
   {
     "id"              : "spit_meat",
@@ -550,6 +661,133 @@
     "gatheringTypes": ["mining"]
   },
   {
+    "id"            : "malachite", "name": "Malachite", "type": "material", "category": "ore",
+    "maxDurability" : 300, "deteriorationRate": 0.004,
+    "description"   : "Green copper carbonate ore. The common, easily-smelted copper ore.",
+    "color"         : "#1B7A4C", "amount": 0, "gatheringTypes": ["mining"]
+  },
+  {
+    "id"            : "chalcopyrite", "name": "Chalcopyrite", "type": "material", "category": "ore",
+    "maxDurability" : 300, "deteriorationRate": 0.004,
+    "description"   : "Brassy copper-iron sulphide. Rich copper ore — more bar per smelt.",
+    "color"         : "#C9A227", "amount": 0, "gatheringTypes": ["mining"]
+  },
+  {
+    "id"            : "azurite", "name": "Azurite", "type": "material", "category": "ore",
+    "maxDurability" : 300, "deteriorationRate": 0.004,
+    "description"   : "Deep-blue copper ore. Lean but pretty; also a pigment.",
+    "color"         : "#2E5BB8", "amount": 0, "gatheringTypes": ["mining"]
+  },
+  {
+    "id"            : "cassiterite", "name": "Cassiterite", "type": "material", "category": "ore",
+    "maxDurability" : 300, "deteriorationRate": 0.004,
+    "description"   : "Tin oxide ore. The only common source of tin — needed for bronze.",
+    "color"         : "#6B4423", "amount": 0, "gatheringTypes": ["mining"]
+  },
+  {
+    "id"            : "hematite", "name": "Hematite", "type": "material", "category": "ore",
+    "maxDurability" : 300, "deteriorationRate": 0.004,
+    "description"   : "Red iron oxide. The workhorse iron ore.",
+    "color"         : "#8B3A2F", "amount": 0, "gatheringTypes": ["mining"]
+  },
+  {
+    "id"            : "magnetite", "name": "Magnetite", "type": "material", "category": "ore",
+    "maxDurability" : 300, "deteriorationRate": 0.004,
+    "description"   : "Magnetic black iron ore. Rich, but stubborn to smelt.",
+    "color"         : "#33373B", "amount": 0, "gatheringTypes": ["mining"]
+  },
+  {
+    "id"            : "limonite", "name": "Limonite", "type": "material", "category": "ore",
+    "maxDurability" : 300, "deteriorationRate": 0.004,
+    "description"   : "Bog iron — yellow-brown hydrated iron ore. Lean but shallow.",
+    "color"         : "#B5651D", "amount": 0, "gatheringTypes": ["mining"]
+  },
+  {
+    "id"            : "galena", "name": "Galena", "type": "material", "category": "ore",
+    "maxDurability" : 300, "deteriorationRate": 0.004,
+    "description"   : "Lead sulphide ore — smelts to lead, and to silver when worked finely.",
+    "color"         : "#6E7378", "amount": 0, "gatheringTypes": ["mining"]
+  },
+  {
+    "id"            : "native_gold", "name": "Native Gold", "type": "material", "category": "ore",
+    "maxDurability" : 300, "deteriorationRate": 0.003,
+    "description"   : "Raw gold nuggets and flakes. Rare; smelts straight to gold.",
+    "color"         : "#D4AF37", "amount": 0, "gatheringTypes": ["mining"]
+  },
+  {
+    "id"            : "electrum", "name": "Electrum Ore", "type": "material", "category": "ore",
+    "maxDurability" : 300, "deteriorationRate": 0.003,
+    "description"   : "Natural gold-silver alloy ore. Rare prestige metal source.",
+    "color"         : "#E6D49A", "amount": 0, "gatheringTypes": ["mining"]
+  },
+  {
+    "id"            : "copper_bar", "name": "Copper Bar", "type": "material", "category": "metal",
+    "maxDurability" : 250, "deteriorationRate": 0.008,
+    "description"   : "Smelted copper ingot. First metal — soft tools, wire, and half of bronze.",
+    "color"         : "#B87333", "amount": 0,
+    "craftingCost"  : {"malachite": 3},
+    "craftingCostAlternatives": [{"chalcopyrite": 2}, {"azurite": 4}],
+    "craftingTime"  : 8, "toolTierRequired": 0, "workshopType": "stone_forge"
+  },
+  {
+    "id"            : "tin_bar", "name": "Tin Bar", "type": "material", "category": "metal",
+    "maxDurability" : 250, "deteriorationRate": 0.008,
+    "description"   : "Smelted tin ingot. Soft on its own; alloyed with copper makes bronze.",
+    "color"         : "#9DA1A6", "amount": 0,
+    "craftingCost"  : {"cassiterite": 3},
+    "craftingTime"  : 8, "toolTierRequired": 0, "workshopType": "stone_forge"
+  },
+  {
+    "id"            : "bronze_bar", "name": "Bronze Bar", "type": "material", "category": "metal",
+    "maxDurability" : 250, "deteriorationRate": 0.006,
+    "description"   : "Cast bronze ingot — copper and tin. Tier-1 tools, weapons, and the first saw.",
+    "color"         : "#CD7F32", "amount": 0,
+    "craftingCost"  : {"copper_bar": 3, "tin_bar": 1},
+    "craftingTime"  : 10, "toolTierRequired": 1, "workshopType": "stone_forge"
+  },
+  {
+    "id"            : "iron_bar", "name": "Iron Bar", "type": "material", "category": "metal",
+    "maxDurability" : 250, "deteriorationRate": 0.008,
+    "description"   : "Bloomery iron ingot. Tier-2 tools, weapons and armour. Needs limestone flux.",
+    "color"         : "#6E7378", "amount": 0,
+    "craftingCost"  : {"hematite": 4, "limestone": 1},
+    "craftingCostAlternatives": [{"magnetite": 3, "limestone": 1}, {"limonite": 5, "limestone": 1}],
+    "craftingTime"  : 14, "toolTierRequired": 1, "workshopType": "bloomery"
+  },
+  {
+    "id"            : "lead_bar", "name": "Lead Bar", "type": "material", "category": "metal",
+    "maxDurability" : 250, "deteriorationRate": 0.008,
+    "description"   : "Smelted lead. Heavy, soft — pipes, weights, and shot.",
+    "color"           : "#5A5E63", "amount": 0,
+    "craftingCost"  : {"galena": 3},
+    "craftingTime"  : 8, "toolTierRequired": 0, "workshopType": "stone_forge"
+  },
+  {
+    "id"            : "silver_bar", "name": "Silver Bar", "type": "material", "category": "metal",
+    "maxDurability" : 250, "deteriorationRate": 0.006,
+    "description"   : "Cupelled silver from galena. Coin, fine decor, and trade.",
+    "color"         : "#C0C0C0", "amount": 0,
+    "craftingCost"  : {"galena": 5},
+    "craftingTime"  : 16, "toolTierRequired": 1, "workshopType": "stone_forge"
+  },
+  {
+    "id"            : "gold_bar", "name": "Gold Bar", "type": "material", "category": "metal",
+    "maxDurability" : 250, "deteriorationRate": 0.005,
+    "description"   : "Cast gold ingot. Currency, prestige decor, and magical work.",
+    "color"         : "#D4AF37", "amount": 0,
+    "craftingCost"  : {"native_gold": 3},
+    "craftingCostAlternatives": [{"electrum": 3}],
+    "craftingTime"  : 10, "toolTierRequired": 1, "workshopType": "stone_forge"
+  },
+  {
+    "id"            : "steel_bar", "name": "Steel Bar", "type": "material", "category": "metal",
+    "maxDurability" : 250, "deteriorationRate": 0.006,
+    "description"   : "Cast steel — iron with coal and flux. The deterministic ceiling: best mundane gear.",
+    "color"           : "#43484D", "amount": 0,
+    "craftingCost"  : {"iron_bar": 2, "coal": 1, "limestone": 1},
+    "craftingTime"  : 20, "toolTierRequired": 2, "workshopType": "bloomery"
+  },
+  {
     "id"            : "ash",
     "name"          : "Ash",
     "type"          : "material",
@@ -845,6 +1083,83 @@
     "craftingTime"    : 2,
     "toolTierRequired": 0,
     "workshopType"    : "craft_spot"
+  },
+  {
+    "id"              : "fired_brick",
+    "name"            : "Fired Brick",
+    "type"            : "material",
+    "category"        : "construction",
+    "maxDurability"  : 400,
+    "deteriorationRate": 0.006,
+    "description"     : "Kiln-fired clay brick. Hard and weatherproof — forges, kilns, cellars, sturdy walls.",
+    "color"           : "#A0522D",
+    "amount"          : 0,
+    "craftingCost"    : {"clay_lump": 2},
+    "craftingTime"    : 5,
+    "toolTierRequired": 0,
+    "workshopType"    : "pottery_kiln"
+  },
+  {
+    "id"              : "water_urn",
+    "name"            : "Clay Urn",
+    "type"            : "material",
+    "category"        : "storage",
+    "maxDurability"  : 150,
+    "deteriorationRate": 0.015,
+    "description"     : "Fired clay vessel. Stores boiled water (and dry goods) safely.",
+    "color"           : "#B07A4A",
+    "amount"          : 0,
+    "isContainer"     : true,
+    "storageCapacity" : 20,
+    "craftingCost"    : {"clay_lump": 1},
+    "craftingTime"    : 4,
+    "toolTierRequired": 0,
+    "workshopType"    : "pottery_kiln"
+  },
+  {
+    "id"              : "clay_mold",
+    "name"            : "Clay Mold",
+    "type"            : "tool",
+    "category"        : "metalworking",
+    "maxDurability"  : 40,
+    "deteriorationRate": 0.02,
+    "description"     : "Fired clay ingot mold. Required to cast metal bars — cracks and wears with each pour.",
+    "color"           : "#9A6B43",
+    "amount"          : 0,
+    "craftingCost"    : {"clay_lump": 2},
+    "craftingTime"    : 4,
+    "toolTierRequired": 0,
+    "workshopType"    : "pottery_kiln"
+  },
+  {
+    "id"              : "tile_mold",
+    "name"            : "Tile Mold",
+    "type"            : "tool",
+    "category"        : "metalworking",
+    "maxDurability"  : 120,
+    "deteriorationRate": 0.008,
+    "description"     : "Cast-metal form for pressing clay roof tiles. Made at the forge — needs bronze.",
+    "color"           : "#B87333",
+    "amount"          : 0,
+    "craftingCost"    : {"bronze_bar": 1},
+    "craftingTime"    : 6,
+    "toolTierRequired": 1,
+    "workshopType"    : "stone_forge"
+  },
+  {
+    "id"              : "clay_roof_tile",
+    "name"            : "Clay Roof Tile",
+    "type"            : "material",
+    "category"        : "construction",
+    "maxDurability"  : 500,
+    "deteriorationRate": 0.003,
+    "description"     : "Pressed-and-fired clay tile. The durable, low-maintenance roof — slow to weather, robust against storms. (Pressing needs a reusable tile_mold — enforced once mold-required logic lands.)",
+    "color"           : "#9C3B2E",
+    "amount"          : 0,
+    "craftingCost"    : {"clay_lump": 2},
+    "craftingTime"    : 5,
+    "toolTierRequired": 0,
+    "workshopType"    : "pottery_kiln"
   },
   {
     "id"              : "firestarter",
@@ -1309,6 +1624,8 @@
     "category"        : "organic",
     "maxDurability"  : 80,
     "deteriorationRate": 0.07,
+    "decaySeconds"  : 3000,
+    "decaysTo"      : "rotten_hide",
     "description"     : "Small, soft rabbit pelt. Light insulation and trim.",
     "color"           : "#E0D8C8",
     "amount"          : 0,
@@ -1325,6 +1642,8 @@
     "category"        : "organic",
     "maxDurability"  : 80,
     "deteriorationRate": 0.07,
+    "decaySeconds"  : 3000,
+    "decaysTo"      : "rotten_hide",
     "description"     : "Supple deer skin. A foundational leatherworking material.",
     "color"           : "#A07848",
     "amount"          : 0,
@@ -1341,6 +1660,8 @@
     "category"        : "organic",
     "maxDurability"  : 80,
     "deteriorationRate": 0.07,
+    "decaySeconds"  : 3000,
+    "decaysTo"      : "rotten_hide",
     "description"     : "Coarse wolf skin with a dense undercoat. Excellent for cold-weather gear.",
     "color"           : "#A0A8B0",
     "amount"          : 0,
@@ -1357,6 +1678,8 @@
     "category"        : "organic",
     "maxDurability"  : 80,
     "deteriorationRate": 0.07,
+    "decaySeconds"  : 3000,
+    "decaysTo"      : "rotten_hide",
     "description"     : "Thick, shaggy bear pelt. Premium winter cloak material.",
     "color"           : "#705030",
     "amount"          : 0,
@@ -1373,6 +1696,8 @@
     "category"        : "organic",
     "maxDurability"  : 80,
     "deteriorationRate": 0.07,
+    "decaySeconds"  : 3000,
+    "decaysTo"      : "rotten_hide",
     "description"     : "Thick, bristle-covered boar skin. Stiff but durable.",
     "color"           : "#908070",
     "amount"          : 0,
@@ -1389,6 +1714,8 @@
     "category"        : "organic",
     "maxDurability"  : 80,
     "deteriorationRate": 0.07,
+    "decaySeconds"  : 3000,
+    "decaysTo"      : "rotten_hide",
     "description"     : "Large, tough elk hide. Ideal for armour lining and tents.",
     "color"           : "#887060",
     "amount"          : 0,
@@ -1405,6 +1732,8 @@
     "category"        : "organic",
     "maxDurability"  : 80,
     "deteriorationRate": 0.07,
+    "decaySeconds"  : 3000,
+    "decaysTo"      : "rotten_hide",
     "description"     : "Tough mountain goat hide. Weather-resistant and hard-wearing.",
     "color"           : "#C0C0B0",
     "amount"          : 0,
@@ -1437,6 +1766,8 @@
     "category"        : "organic",
     "maxDurability"  : 80,
     "deteriorationRate": 0.07,
+    "decaySeconds"  : 3000,
+    "decaysTo"      : "rotten_hide",
     "description"     : "Small, coarse rat skin. Barely worth the scraping.",
     "color"           : "#807060",
     "amount"          : 0,

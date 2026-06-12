@@ -548,14 +548,10 @@
       "workAmount"     : 10,
       "toolRequirement": {"workType": "mining", "minTier": 2},
       "yields"         : [
-        {
-          "itemId"         : "iron_ore",
-          "min"            : 2,
-          "max"            : 5,
-          "skillId"        : "mining",
-          "skillMultiplier": 0.2,
-          "_TODO"          : "iron_ore item TBD — smelting chain into iron_bar not yet designed"
-        }
+        {"itemId": "hematite", "min": 2, "max": 4, "skillId": "mining", "skillMultiplier": 0.2},
+        {"itemId": "magnetite", "min": 0, "max": 2, "skillId": "mining", "skillMultiplier": 0.15},
+        {"itemId": "limonite", "min": 0, "max": 2, "skillId": "mining", "skillMultiplier": 0.15},
+        {"itemId": "galena", "min": 0, "max": 1, "skillId": "mining", "skillMultiplier": 0.1}
       ]
     }
   },
@@ -576,16 +572,12 @@
       "action"         : "mine",
       "workCategory"   : "mining",
       "workAmount"     : 12,
-      "toolRequirement": {"workType": "mining", "minTier": 2},
+      "toolRequirement": {"workType": "mining", "minTier": 1},
       "yields"         : [
-        {
-          "itemId": "copper_ore",
-          "min": 1,
-          "max": 3,
-          "skillId": "mining",
-          "skillMultiplier": 0.15,
-          "_TODO": "copper_ore item TBD — smelting into copper_bar; bronze alloy (copper + tin) not yet designed"
-        }
+        {"itemId": "malachite", "min": 1, "max": 3, "skillId": "mining", "skillMultiplier": 0.15},
+        {"itemId": "chalcopyrite", "min": 0, "max": 2, "skillId": "mining", "skillMultiplier": 0.12},
+        {"itemId": "azurite", "min": 0, "max": 2, "skillId": "mining", "skillMultiplier": 0.12},
+        {"itemId": "native_gold", "min": 0, "max": 1, "skillId": "mining", "skillMultiplier": 0.05}
       ]
     }
   },
@@ -606,16 +598,9 @@
       "action"         : "mine",
       "workCategory"   : "mining",
       "workAmount"     : 14,
-      "toolRequirement": {"workType": "mining", "minTier": 2},
+      "toolRequirement": {"workType": "mining", "minTier": 1},
       "yields"         : [
-        {
-          "itemId"         : "tin_ore",
-          "min"            : 1,
-          "max"            : 2,
-          "skillId"        : "mining",
-          "skillMultiplier": 0.12,
-          "_TODO"          : "tin_ore item TBD — rare; key ingredient for bronze alloy (tin + copper)"
-        }
+        {"itemId": "cassiterite", "min": 1, "max": 2, "skillId": "mining", "skillMultiplier": 0.12}
       ]
     }
   },
