@@ -1508,9 +1508,9 @@
     "subterrain"      : "clay",
     "walkable"        : true,
     "charSpans"       : [ {"literal": "\""} ],
-    "fg"              : [0.86, 0.74, 0.5],
+    "fg"              : [0.82, 0.56, 0.3],
     "bg"              : [0.08, 0.06, 0.03],
-    "color"           : "#DBBC80",
+    "color"           : "#D18F4D",
     "spawn"           : { "subterrains": {"clay": 0.15} },
     "nodeAmountRange" : [2, 4],
     "designationTypes": ["harvest"],
@@ -1530,9 +1530,9 @@
     "subterrain"      : "clay",
     "walkable"        : true,
     "charSpans"       : [ {"literal": "\""} ],
-    "fg"              : [0.42, 0.5, 0.62],
+    "fg"              : [0.68, 0.36, 0.13],
     "bg"              : [0.08, 0.06, 0.03],
-    "color"           : "#6B7F9E",
+    "color"           : "#AD5C21",
     "spawn"           : {
       "subterrains": {"clay": 0.85, "mud": 0.04, "bog": 0.03, "riverbank": 0.05, "shallow_water": 0.02}
     },

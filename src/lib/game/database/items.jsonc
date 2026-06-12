@@ -1105,8 +1105,8 @@
     "category"         : "primitive",
     "maxDurability"    : 120,
     "deteriorationRate": 0.01,
-    "description"      : "Raw blue-grey earthenware clay dug from a clay, mud or bog bank. The bulk ceramics and construction material.",
-    "color"            : "#6B7F9E",
+    "description"      : "Raw earthenware clay dug from a clay, mud or bog bank. The bulk ceramics and construction material.",
+    "color"            : "#B5651D",
     "amount"           : 0,
     "gatheringTypes"   : ["foraging", "mining"]
   },
