@@ -241,14 +241,29 @@ pine spear gets the job done; ash spear is simply better. No single-use ingredie
 
 ### Durability model
 
-`durabilityLossPerCombatHit` tracks on the **`EquippedItem` record** during combat
-(fast path, no stockpile churn). When the item is unequipped it writes its current
-durability back to the `DroppedItem` / stockpile stack. When it is re-equipped it
-reads from there. Both representations carry durability; they stay in sync on
-equip/unequip. At **0 durability the item is destroyed** — consumed, removed.
+There is no sync pipeline. An equipped item is the **same `ItemInstance` record**
+that was previously in inventory or on the ground — it moves locations, it does not
+get copied. `PawnEquipment` slots hold an `ItemInstance` directly:
 
-`effectiveWeaponDam = damMax × (dur / maxDur)` — fully damaged weapon hits at full
-value; severely worn hits at a fraction. No 30% floor; repair restores full value.
+```typescript
+export interface ItemInstance {
+  instanceId: string;   // unique; stable across location changes
+  itemId    : string;   // references the Item definition
+  durability: number;   // current (shared field — same record everywhere)
+}
+```
+
+Equipping = remove the `ItemInstance` from `PawnInventory.instances` (or from a
+`DroppedItem` on the tile) and place it in the `PawnEquipment` slot. Unequipping =
+move it back. One record, one durability value, no copying.
+
+`DroppedItem` gains an optional `instance?: ItemInstance` for trackable items
+(weapons, armour, tools with `maxDurability`). Bulk materials (logs, bars, hides)
+stay as aggregate `quantity` counts — they never need individual identity.
+
+At **0 durability the item is destroyed** — the `ItemInstance` is removed. No floor.
+
+`effectiveWeaponDam = damMax × (dur / maxDur)` — worn weapons hit at a fraction.
 
 | Tier              | durabilityLossPerCombatHit | Approx. fights before destroyed |
 | ----------------- | -------------------------- | -------------------------------- |
@@ -362,22 +377,18 @@ assumes `sturdy_leather` or equivalent; `materialBonuses` adjusts up/down from t
 
 ## Part VII — Combat Durability & Repair
 
-Durability is tracked in **two places that stay in sync**:
+Durability lives on the `ItemInstance` record — the same object whether the item is
+on the ground, in a pawn's inventory, or equipped. Elemental deterioration
+(`deteriorationRate` × exposure) applies when loose/unsheltered, exactly as it does
+for all other items. Combat wear applies `durabilityLossPerCombatHit` per hit to the
+attacker's weapon and the struck armour layer.
 
-- **In the stockpile / DroppedItem stack**: existing `durability` field on the stack.
-  An item in storage degrades via normal `deteriorationRate` (elemental exposure)
-  unless sheltered — the same system as all other items.
-- **On the `EquippedItem` record**: same value, transferred on equip; written back on
-  unequip. Combat hit resolution reads and writes `EquippedItem.durability` only
-  (fast path, no stockpile churn mid-fight).
-
-**At 0 durability the item is destroyed** — removed from the game (consistent with
-how tools break in the production chain). There is no floor; repair prevents
-destruction, not avoids it.
+**At 0 durability the item is destroyed** — `ItemInstance` removed. No floor; repair
+prevents this.
 
 **Repair** at Smithy (iron/bronze) or Maker's Bench (primitive/bone):
 - Cost = `ceil((maxDurability – currentDurability) / 20)` × original material fraction
-- Work category: `metalworking` for metal items; `crafting` for bone/hide/wood
+- Work category: `metalworking` for metal; `crafting` for bone/hide/wood
 
 ---
 
@@ -429,8 +440,8 @@ bandaging, recipe wrapping — not a single-use ingredient.
 
 ### Phase C — Service wiring (requires COMBAT-SYSTEM)
 
-1. `ItemService.syncEquippedDurability(pawn, slot)` — equip reads stockpile durability;
-   unequip writes it back.
+1. `ItemService.equipItem(pawn, instanceId, slot)` — moves `ItemInstance` from
+   inventory/ground into `PawnEquipment` slot; no copy, no sync.
 2. `ItemService.getArmorLayers(pawn)` — ordered layer list for damage cascade.
 3. `ItemService.applyArmorHit(pawn, damage)` — cascades through layers, drains
    durability, destroys layer at 0.
