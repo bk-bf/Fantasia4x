@@ -89,9 +89,13 @@
     defs: unlockedDefs.filter((b) => classify(b) === label)
   })).filter((s) => s.defs.length > 0);
 
-  // Which category tab is active (default to the first; keep valid as sections change).
+  // Which tab is active ('ZONES' or a category; default to the first category).
   let selectedSection = '';
-  $: if (sections.length && !sections.some((s) => s.label === selectedSection)) {
+  $: if (
+    selectedSection !== 'ZONES' &&
+    sections.length &&
+    !sections.some((s) => s.label === selectedSection)
+  ) {
     selectedSection = sections[0].label;
   }
   $: activeSection = sections.find((s) => s.label === selectedSection) ?? sections[0];
@@ -279,11 +283,9 @@
     <button class="hdr-btn" on:click={() => uiState.setScreen('main')}>BACK</button>
   </div>
 
-  <ZonePanel />
-
-  <!-- Active construction queue -->
-  <div class="section-hdr sub">| ACTIVE BUILD JOBS ({allBuildingsInProgress.length})</div>
+  <!-- Active construction queue — only shown while something is building -->
   {#if allBuildingsInProgress.length > 0}
+    <div class="section-hdr sub">| ACTIVE BUILD JOBS ({allBuildingsInProgress.length})</div>
     {#each allBuildingsInProgress as bp}
       {@const bDef = buildingService.getBuildingById(bp.type)}
       {@const prog = Math.round(((bp.workDone ?? 0) / (bp.workRequired ?? 50)) * 100)}
@@ -298,8 +300,6 @@
         <button class="act-btn-sm" on:click={() => cancelBuilding(bp.id)}>CANCEL</button>
       </div>
     {/each}
-  {:else}
-    <div class="row muted-row">no active construction</div>
   {/if}
 
   <!-- Campfire status -->
@@ -318,14 +318,16 @@
     </div>
   {/each}
 
-  <!-- Building groups -->
+  <!-- Building groups + ZONES as a tab -->
   {#if sections.length > 0}
     <FilterTabs
-      tabs={sections.map((s) => ({ id: s.label, label: s.label, count: s.defs.length }))}
+      tabs={[{ id: 'ZONES', label: 'ZONES' }, ...sections.map((s) => ({ id: s.label, label: s.label }))]}
       selected={selectedSection}
       onSelect={(id) => (selectedSection = id)}
     />
-    {#if activeSection}
+    {#if selectedSection === 'ZONES'}
+      <ZonePanel />
+    {:else if activeSection}
       <div class="card-grid">
         {#each activeSection.defs as building}
           {@const placed = getBuildingCount(building.id)}

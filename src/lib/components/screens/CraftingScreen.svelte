@@ -168,9 +168,9 @@
     <button class="hdr-btn" on:click={() => uiState.setScreen('main')}>BACK</button>
   </div>
 
-  <!-- Crafting Queue -->
-  <div class="section-hdr sub">| CRAFTING QUEUE ({craftingQueue.length})</div>
+  <!-- Crafting queue — only shown while something is crafting -->
   {#if craftingQueue.length > 0}
+    <div class="section-hdr sub">| CRAFTING QUEUE ({craftingQueue.length})</div>
     {#each craftingQueue as qi, idx}
       {@const wReq = qi.workRequired ?? (recipeOf(qi.item.id)?.workAmount ?? 1) * 5}
       {@const wDone = qi.workDone ?? 0}
@@ -186,18 +186,12 @@
         <button class="act-btn-sm" on:click={() => cancelCrafting(idx)}>CANCEL</button>
       </div>
     {/each}
-  {:else}
-    <div class="muted-row">no active crafting</div>
   {/if}
 
   <!-- Workshop tabs: pick a station, see its recipes -->
   {#if workshopTabs.length > 0}
     <FilterTabs
-      tabs={workshopTabs.map((w) => ({
-        id: w.id,
-        label: w.built ? w.label : `${w.label} 🔒`,
-        count: w.items.length
-      }))}
+      tabs={workshopTabs.map((w) => ({ id: w.id, label: w.label }))}
       selected={selectedStation}
       onSelect={(id) => (selectedStation = id)}
     />
@@ -288,12 +282,6 @@
             </BuildCard>
           {/each}
         </div>
-      {:else}
-        <div class="muted-row">
-          Build a {ws.label.toLowerCase()} to unlock its {ws.items.length}
-          recipe{ws.items.length === 1 ? '' : 's'}.
-        </div>
-      {/if}
     {/if}
   {/if}
 
