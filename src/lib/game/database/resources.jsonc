@@ -978,7 +978,7 @@
       "workAmount"     : 2,
       "toolRequirement": null,
       "yields"         : [
-        {"itemId": "wild_berries", "min": 10, "max": 25, "skillId": "foraging", "skillMultiplier": 0.2}
+        {"itemId": "wild_berries", "min": 25, "max": 40, "skillId": "foraging", "skillMultiplier": 0.2}
       ],
       "persistent"     : true,
       "regrowthTurns"  : 2400 // ~8 days at 300 turns/day
