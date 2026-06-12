@@ -18,9 +18,11 @@
   export let gameState: GameState;
 
   $: needs = pawn.needs;
-  // Hunger and fatigue are flat 0–100 needs.
+  // All needs are flat 0–100.
   $: hungerPct = Math.round(needs.hunger);
   $: fatiguePct = Math.round(needs.fatigue);
+  $: thirstPct = Math.round(needs.thirst ?? 0);
+  $: hygienePct = Math.round(needs.hygiene ?? 0);
   function blockBar(value: number, width = 20): string {
     const filled = Math.max(0, Math.min(width, Math.round((value / 100) * width)));
     return '[' + '█'.repeat(filled) + '░'.repeat(width - filled) + ']';
@@ -72,6 +74,20 @@
       >{Math.round(needs.fatigue)}/100</span
     >
     <span class="desc">{getNeedDescription('fatigue', needs.fatigue)}</span>
+  </div>
+
+  <div class="need-row">
+    <span class="lbl">THIRST</span>
+    <span class="block-bar" style="color: {getNeedColor(thirstPct)}">{blockBar(thirstPct)}</span>
+    <span class="val" style="color: {getNeedColor(thirstPct)}">{thirstPct}/100</span>
+    <span class="desc">{getNeedDescription('thirst', thirstPct)}</span>
+  </div>
+
+  <div class="need-row">
+    <span class="lbl">HYGIENE</span>
+    <span class="block-bar" style="color: {getNeedColor(hygienePct)}">{blockBar(hygienePct)}</span>
+    <span class="val" style="color: {getNeedColor(hygienePct)}">{hygienePct}/100</span>
+    <span class="desc">{getNeedDescription('hygiene', hygienePct)}</span>
   </div>
 
   {#if pawn.maxBloodVolume}

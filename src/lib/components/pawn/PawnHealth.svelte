@@ -37,23 +37,20 @@
       (pawn.activeEffects ?? []).includes('collapse')
   );
 
-  // Per-limb reveal cycle: hidden → injured-only → all → hidden. No override yet means
-  // the default: injured limbs auto-show their injured parts; healthy limbs stay hidden.
+  // Per-limb reveal cycle: damaged sub-limbs (default) → show all → hide everything → back.
   type Reveal = 'hidden' | 'injured' | 'all';
   let override = $state<Map<LimbId, Reveal>>(new Map());
 
   function isInjured(p: BodyPartState): boolean {
     return p.isMissing || p.health < p.maxHp || p.injuries.length > 0;
   }
-  function limbHasInjury(limb: LimbState): boolean {
-    return (limb.parts ?? []).some(isInjured);
-  }
-  function reveal(id: LimbId, limb: LimbState): Reveal {
-    return override.get(id) ?? (limbHasInjury(limb) ? 'injured' : 'hidden');
+  function reveal(id: LimbId, _limb: LimbState): Reveal {
+    // Default everywhere = 'injured' (show only damaged sub-limbs; healthy limbs show none).
+    return override.get(id) ?? 'injured';
   }
   function cycle(id: LimbId, limb: LimbState) {
     const cur = reveal(id, limb);
-    const next: Reveal = cur === 'hidden' ? 'injured' : cur === 'injured' ? 'all' : 'hidden';
+    const next: Reveal = cur === 'injured' ? 'all' : cur === 'all' ? 'hidden' : 'injured';
     const m = new Map(override);
     m.set(id, next);
     override = m;
@@ -165,7 +162,7 @@
         class="limb-row"
         role="button"
         tabindex="0"
-        title="click: cycle hidden → injured → all"
+        title="click: cycle damaged → all → hidden"
         onclick={() => cycle(id, limb)}
         onkeydown={(e) => e.key === 'Enter' && cycle(id, limb)}
       >

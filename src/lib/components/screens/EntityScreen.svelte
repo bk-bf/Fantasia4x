@@ -106,12 +106,14 @@
         {@const pp = painPct(m)}
         {@const expanded = expandedId === m.id}
         <div class="table-row" class:expanded>
+          <div class="row-line">
+          <button class="row-toggle" onclick={() => toggleExpand(m.id)} title="health details">
+            {expanded ? '▾' : '▸'}
+          </button>
           <button
             class="row-main"
-            onclick={() => {
-              toggleExpand(m.id);
-              focus(m);
-            }}
+            onclick={() => focus(m)}
+            title="jump camera to entity"
           >
             <span class="col-name">
               <span class="glyph" style="color: {def ? rgb(def.fg) : 'var(--text-dim)'}"
@@ -130,6 +132,7 @@
             <span class="col-state">{m.state}</span>
             <span class="col-pos">({m.x},{m.y})</span>
           </button>
+          </div>
 
           {#if expanded}
             <div class="row-expand">
@@ -270,7 +273,25 @@
   .table-row.expanded {
     border-bottom-color: var(--border-hi);
   }
+  .row-line {
+    display: flex;
+    align-items: stretch;
+  }
+  .row-toggle {
+    flex-shrink: 0;
+    width: 20px;
+    background: transparent;
+    border: none;
+    color: var(--text-muted, #777);
+    cursor: pointer;
+    font-size: 10px;
+    font-family: 'Courier New', monospace;
+  }
+  .row-toggle:hover {
+    color: var(--text);
+  }
   .row-main {
+    flex: 1;
     display: grid;
     grid-template-columns: 2fr 1fr 1fr 2fr 1fr 1.2fr 1fr;
     gap: 6px;

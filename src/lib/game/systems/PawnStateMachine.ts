@@ -1368,13 +1368,19 @@ function depositInventory(pawn: Pawn, gs: GameState): GameState {
     const inv = pawn.inventory?.items ?? {};
     if (Object.keys(inv).length === 0) return goIdle(pawn, gs);
 
-    // Collect all stockpile tile coordinates.
+    // Collect all stockpile tile coordinates, ordered NEAREST-FIRST to the pawn so items land
+    // where the pawn actually dropped them (its current tile / the one it walked to), not on
+    // whatever tile happens to come first in designation-iteration order (the old "top row" bug).
+    const px = pawn.position?.x ?? 0;
+    const py = pawn.position?.y ?? 0;
+    const distToPawn = (x: number, y: number) => Math.abs(x - px) + Math.abs(y - py);
     const stockpileTiles = Object.entries(gs.designations ?? {})
         .filter(([, t]) => t === 'stockpile')
         .map(([key]) => {
             const [x, y] = key.split(',').map(Number);
             return { key, x, y };
-        });
+        })
+        .sort((a, b) => distToPawn(a.x, a.y) - distToPawn(b.x, b.y));
     const stockpileTileKeys = new Set(stockpileTiles.map((t) => t.key));
 
     const newDropped = [...(gs.droppedItems ?? [])];
@@ -1386,10 +1392,14 @@ function depositInventory(pawn: Pawn, gs: GameState): GameState {
     for (const [resourceId, qty] of Object.entries(inv)) {
         if (qty <= 0) continue;
 
-        // Prefer a tile that already holds this resource (stacking); otherwise a free tile.
-        const existingStoredDrop = newDropped.find(
-            (d) => d.stored && d.resourceId === resourceId && stockpileTileKeys.has(`${d.x},${d.y}`)
-        );
+        // Prefer the NEAREST tile already holding this resource (stack near the pawn); else the
+        // nearest free tile (stockpileTiles is already sorted nearest-first).
+        const existingStoredDrop = newDropped
+            .filter(
+                (d) =>
+                    d.stored && d.resourceId === resourceId && stockpileTileKeys.has(`${d.x},${d.y}`)
+            )
+            .sort((a, b) => distToPawn(a.x, a.y) - distToPawn(b.x, b.y))[0];
         let tile: { x: number; y: number } | null = null;
         if (existingStoredDrop) {
             tile = { x: existingStoredDrop.x, y: existingStoredDrop.y };

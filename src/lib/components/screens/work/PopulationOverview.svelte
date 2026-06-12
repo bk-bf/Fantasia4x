@@ -50,6 +50,20 @@
   <span class="bar-ascii">{needBar(pawn.needs.fatigue)}</span>
   <span class="val" class:neg={pawn.needs.fatigue > 70}>{Math.round(pawn.needs.fatigue)}%</span>
 </div>
+<div class="need-row">
+  <span class="lbl">THIRST</span>
+  <span class="bar-ascii">{needBar(pawn.needs.thirst ?? 0)}</span>
+  <span class="val" class:neg={(pawn.needs.thirst ?? 0) > 70}
+    >{Math.round(pawn.needs.thirst ?? 0)}%</span
+  >
+</div>
+<div class="need-row">
+  <span class="lbl">HYGIENE</span>
+  <span class="bar-ascii">{needBar(pawn.needs.hygiene ?? 0)}</span>
+  <span class="val" class:neg={(pawn.needs.hygiene ?? 0) > 70}
+    >{Math.round(pawn.needs.hygiene ?? 0)}%</span
+  >
+</div>
 <div class="stats-row">
   {#each Object.entries(pawn.stats) as [stat, val]}
     <span class="stat-chip">

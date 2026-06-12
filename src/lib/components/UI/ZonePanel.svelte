@@ -18,13 +18,29 @@
     icon: string;
     desc: string;
     color: string;
+    filterable?: boolean;
   }[] = [
     {
       type: 'stockpile',
       label: 'STOCKPILE',
       icon: '[P]',
       desc: 'Haulers deposit carried resources here',
-      color: '#e8a020'
+      color: '#e8a020',
+      filterable: true
+    },
+    {
+      type: 'drink',
+      label: 'DRINK',
+      icon: '[~]',
+      desc: 'Thirsty pawns come here to drink (clean upstream water / urns)',
+      color: '#4fc3f7'
+    },
+    {
+      type: 'wash',
+      label: 'WASH',
+      icon: '[≈]',
+      desc: 'Dirty pawns come here to wash',
+      color: '#80d8c0'
     }
   ];
 
@@ -142,15 +158,17 @@
             {#if tileCount > 0}
               <span class="tile-count">{tileCount}t</span>
             {/if}
-            {#if hasFilter}
+            {#if def.filterable && hasFilter}
               <span class="filter-badge">{inst.filter.allowedCategories.length}f</span>
             {/if}
-            <button
-              class="icon-btn"
-              class:active={isFilterOpen}
-              onclick={() => toggleFilterPanel(inst.id)}
-              title="Configure filter">[F]</button
-            >
+            {#if def.filterable}
+              <button
+                class="icon-btn"
+                class:active={isFilterOpen}
+                onclick={() => toggleFilterPanel(inst.id)}
+                title="Configure filter">[F]</button
+              >
+            {/if}
             <button
               class="icon-btn del"
               onclick={() => removeZone(inst.id)}

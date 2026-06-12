@@ -14,7 +14,9 @@ export type DesignationType =
 	| 'wash';
 
 /** Zone types that support item-category filtering. */
-export type FilterableZoneType = 'harvest' | 'stockpile';
+// Paintable zone-instance types. 'harvest'/'stockpile' carry an item filter; 'drink'/'wash' are
+// pure location designations (no filter) that pawns route to for thirst/hygiene.
+export type FilterableZoneType = 'harvest' | 'stockpile' | 'drink' | 'wash';
 
 /**
  * DF-style category filter for a zone type.

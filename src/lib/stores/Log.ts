@@ -359,7 +359,9 @@ export function logHuntStart(
   focusX: number,
   focusY: number
 ) {
-  if (shouldSkipLog(hunterId, 'hunt-start', turn, 60)) return;
+  // Key on the prey so a NEW target logs immediately, but a stalled/repeated hunt of the SAME
+  // prey (the mob keeps re-deciding to chase it) collapses to one entry per long window.
+  if (shouldSkipLog(hunterId, `hunt-start:${preyId}`, turn, 1200)) return;
   logActivity({
     turn,
     type: 'entity',

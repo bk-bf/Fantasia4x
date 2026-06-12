@@ -956,7 +956,8 @@ class EntityServiceImpl {
                 const curStamina = mob.stamina ?? mob.maxStamina ?? calcMaxStamina(mob.stats);
                 const drainedStamina = curStamina - FLEE_STAMINA_DRAIN_PER_SECOND * SECONDS_PER_TICK;
                 if (drainedStamina <= 0) {
-                    logEntityStateChange(mob.id, this.entityName(mob), 'Fleeing', 'Exhausted', turn, mob.x, mob.y);
+                    // Exhaustion is a transient, repeating state (flee → exhaust → recover → flee);
+                    // not chronicle-worthy — logging it floods the log.
                     return { ...mob, state: 'Exhausted', stateSince: turn, stamina: 0 };
                 }
                 // Flee from the closest current threat (pawn or predator).

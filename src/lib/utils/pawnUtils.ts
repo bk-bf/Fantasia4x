@@ -296,6 +296,20 @@ export function getNeedDescription(needType: string, needValue: number): string 
       moderate: 'Sleepy',
       high: 'Very sleepy',
       critical: 'Must sleep soon'
+    },
+    thirst: {
+      satisfied: 'Hydrated',
+      content: 'Slightly thirsty',
+      moderate: 'Thirsty',
+      high: 'Very thirsty',
+      critical: 'Parched'
+    },
+    hygiene: {
+      satisfied: 'Clean',
+      content: 'A little grubby',
+      moderate: 'Dirty',
+      high: 'Filthy',
+      critical: 'Caked in filth'
     }
   };
 

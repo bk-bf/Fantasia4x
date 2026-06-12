@@ -798,6 +798,13 @@
     return '█'.repeat(filled) + '░'.repeat(10 - filled);
   }
 
+  /** Colour for an item bar where higher = better (freshness / condition). */
+  function itemBarColor(goodPct: number): string {
+    if (goodPct >= 66) return '#4CAF50';
+    if (goodPct >= 33) return '#FFA726';
+    return '#D32F2F';
+  }
+
   function jobProgressBar(progress: number): string {
     const clamped = Math.max(0, Math.min(1, progress));
     const filled = Math.round(clamped * 10);
@@ -2828,11 +2835,30 @@
     </div>
   {:else if hoverDroppedItem}
     <!-- Dropped item on the hovered tile -->
+    {@const itemDef = ITEMS_DATABASE.find((i) => i.id === hoverDroppedItem.resourceId)}
+    {@const maxDur = itemDef?.maxDurability ?? 100}
+    {@const freshPct =
+      itemDef?.decaySeconds && itemDef.decaySeconds > 0
+        ? Math.round(
+            Math.max(0, 1 - (hoverDroppedItem.decayAcc ?? 0) / itemDef.decaySeconds) * 100
+          )
+        : null}
+    {@const durPct = Math.round(
+      (Math.min(maxDur, hoverDroppedItem.durability ?? maxDur) / maxDur) * 100
+    )}
     <div class="tile-hud tile-hud--item">
       <span class="item-glyph">★</span>
-      <span class="item-name">{ITEMS_DATABASE.find((i) => i.id === hoverDroppedItem.resourceId)?.name ?? hoverDroppedItem.resourceId.replace(/_/g, ' ')}</span>
+      <span class="item-name">{itemDef?.name ?? hoverDroppedItem.resourceId.replace(/_/g, ' ')}</span>
       <span class="item-qty">×{hoverDroppedItem.quantity}</span>
-      <div class="item-hint">dropped item — awaiting hauler</div>
+      {#if freshPct !== null}
+        <div class="item-bar" style="color:{itemBarColor(freshPct)}">
+          FRESH <span class="item-bar-glyph">{needBar(freshPct)}</span> {freshPct}%
+        </div>
+      {/if}
+      <div class="item-bar" style="color:{itemBarColor(durPct)}">
+        COND&nbsp; <span class="item-bar-glyph">{needBar(durPct)}</span> {durPct}%
+      </div>
+      <div class="item-hint">{hoverDroppedItem.stored ? 'stored' : 'dropped item — awaiting hauler'}</div>
     </div>
   {:else if hoverTile}
     <div class="tile-hud">
@@ -2947,6 +2973,14 @@
     font-weight: bold;
     text-transform: uppercase;
     font-size: 10px;
+  }
+  .item-bar {
+    font-size: 9px;
+    letter-spacing: -0.5px;
+    white-space: nowrap;
+  }
+  .item-bar-glyph {
+    font-family: monospace;
   }
   .item-qty {
     color: #c8a040;
