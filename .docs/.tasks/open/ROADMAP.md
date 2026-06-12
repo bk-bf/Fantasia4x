@@ -2,7 +2,7 @@
 
 # ROADMAP
 
-> **Related:** [game/DESIGN](../game/DESIGN.md) · [game/ARCHITECTURE](../game/ARCHITECTURE.md) · [RESEARCH-ENHANCEMENT](RESEARCH-ENHANCEMENT.md) · [SEASONS_WEATHER](SEASONS_WEATHER.md) · [ENTITIES_SPAWNING](ENTITIES_SPAWNING.md) · [COMBAT-SYSTEM](COMBAT-SYSTEM.md) · [MAGIC-SKILLS](MAGIC-SKILLS.md) · [EQUIPMENT-EXPANSION](EQUIPMENT-EXPANSION.md) · [SOCIAL-LAYER](SOCIAL-LAYER.md) · [TAURI-DISTRIBUTION](TAURI-DISTRIBUTION.md) · archived: [PRODUCTION-CHAIN-EXPANSION](../archive/PRODUCTION-CHAIN-EXPANSION-2026-06-12.md) · [SCREEN-REFACTORING](../archive/SCREEN-REFACTORING-2026-06-03.md) · [SURVIVAL-HEALTH](../archive/SURVIVAL-HEALTH-2026-05-30.md) · [SIMULATION-PERF](../archive/SIMULATION-PERF-2026-05-30.md)
+> **Related:** [game/DESIGN](../game/DESIGN.md) · [game/ARCHITECTURE](../game/ARCHITECTURE.md) · [RESEARCH-ENHANCEMENT](RESEARCH-ENHANCEMENT.md) · [SEASONS_WEATHER](SEASONS_WEATHER.md) · [ENTITIES_SPAWNING](ENTITIES_SPAWNING.md) · [COMBAT-SYSTEM](COMBAT-SYSTEM.md) · [MAGIC-SKILLS](MAGIC-SKILLS.md) · [EQUIPMENT-EXPANSION](EQUIPMENT-EXPANSION.md) · [RANGED-WEAPONS](RANGED-WEAPONS.md) · [SOCIAL-LAYER](SOCIAL-LAYER.md) · [TAURI-DISTRIBUTION](TAURI-DISTRIBUTION.md) · archived: [PRODUCTION-CHAIN-EXPANSION](../archive/PRODUCTION-CHAIN-EXPANSION-2026-06-12.md) · [SCREEN-REFACTORING](../archive/SCREEN-REFACTORING-2026-06-03.md) · [SURVIVAL-HEALTH](../archive/SURVIVAL-HEALTH-2026-05-30.md) · [SIMULATION-PERF](../archive/SIMULATION-PERF-2026-05-30.md)
 
 ## Status Key
 
@@ -53,6 +53,7 @@ the Living World layer. **Magic & Skills is pushed back** after Living World.
 | —   | **Entity Spawning** Phase A–B (mobs, animals, hunting, foraging, butchering)           | ✅            | [ENTITIES_SPAWNING.md](ENTITIES_SPAWNING.md)                   |
 | 1   | **Production Chain Expansion** (smelting, forges, mining, fuel/heat, leather, survival) | ✅ 2026-06-12 | archived: [PRODUCTION-CHAIN-EXPANSION-2026-06-12.md](../archive/PRODUCTION-CHAIN-EXPANSION-2026-06-12.md) |
 | 2   | **Equipment Expansion** (Tiers 0–2, durability, skill grants) — **next**               | ❌            | [EQUIPMENT-EXPANSION.md](EQUIPMENT-EXPANSION.md)               |
+| 2a  | **Ranged Weapons** (ammunition, line-of-sight, bows/sling/crossbow) — after Equipment  | ❌            | [RANGED-WEAPONS.md](RANGED-WEAPONS.md)                         |
 | 3   | **Living World B–D** (seasons, temperature, weather, fog of war)                       | ❌ B–D        | [SEASONS_WEATHER.md](SEASONS_WEATHER.md)                       |
 | 4   | **Magic & Skills** (depth layer; **reorganised after Living World**)                   | ❌ deferred   | [MAGIC-SKILLS.md](MAGIC-SKILLS.md)                             |
 | 5   | **Social Layer** (relationships, mood depth, death mood events, pawn traits)           | ❌            | [SOCIAL-LAYER.md](SOCIAL-LAYER.md)                             |
@@ -70,7 +71,8 @@ the Living World layer. **Magic & Skills is pushed back** after Living World.
 | PRODUCTION-CHAIN-EXPANSION ✅ | —                              | —                                                  | EQUIPMENT-EXPANSION Tier 1 + 2                                   |
 | ENTITIES_SPAWNING Phase A–B | —                                | SEASONS_WEATHER; SURVIVAL-HEALTH                   | COMBAT-SYSTEM                                                    |
 | COMBAT-SYSTEM               | ENTITIES_SPAWNING Phase A        | SURVIVAL-HEALTH                                    | MAGIC-SKILLS; EQUIPMENT; SOCIAL; ENTITIES Phase E                |
-| EQUIPMENT-EXPANSION         | COMBAT ✅ + PRODUCTION-CHAIN ✅   | —                                                  | MAGIC-SKILLS (staff items)                                       |
+| EQUIPMENT-EXPANSION         | COMBAT ✅ + PRODUCTION-CHAIN ✅   | —                                                  | MAGIC-SKILLS (staff items); RANGED-WEAPONS (bow items + fields)  |
+| RANGED-WEAPONS              | COMBAT ✅ + EQUIPMENT-EXPANSION   | fog-of-war service (LoS query)                     | mob archers; MAGIC-SKILLS (enchanted ammo)                       |
 | MAGIC-SKILLS                | COMBAT-SYSTEM                    | RESEARCH (nodes 3+5 only); EQUIPMENT (staff items) | COMBAT depth (skills + spells)                                   |
 | SOCIAL-LAYER                | COMBAT                           | —                                                  | —                                                                |
 | ENTITIES_SPAWNING Phase C–E | COMBAT (Phase E); Phase A        | —                                                  | —                                                                |
@@ -84,7 +86,7 @@ the Living World layer. **Magic & Skills is pushed back** after Living World.
 | **2** ✅            | ENTITIES_SPAWNING Phase A–B                                | complete                                                 |
 | **3** ✅            | COMBAT-SYSTEM (incl. wounds, stances, caretaking)          | complete (2026-06-11)                                    |
 | **4** ✅            | PRODUCTION-CHAIN-EXPANSION                                 | complete (2026-06-12)                                    |
-| **5** — next        | EQUIPMENT-EXPANSION                                        | EQUIPMENT needs PROD-CHAIN ✅ (Wave 4) + COMBAT ✅       |
+| **5** — next        | EQUIPMENT-EXPANSION → RANGED-WEAPONS                       | EQUIPMENT needs PROD-CHAIN ✅ (Wave 4) + COMBAT ✅; RANGED needs EQUIPMENT |
 | **6**               | SEASONS_WEATHER B–D (Living World) · SOCIAL-LAYER          | independent / COMBAT ✅                                  |
 | **7**               | MAGIC-SKILLS · RESEARCH-ENHANCEMENT · ENTITIES C–E (deferred content) | after Living World; MAGIC needs COMBAT ✅ + EQUIPMENT |
 | **8** — Phase 4     | TAURI-DISTRIBUTION                                         | Wave 7 complete                                          |
