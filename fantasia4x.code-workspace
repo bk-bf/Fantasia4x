@@ -1,0 +1,35 @@
+{
+  "folders": [
+    {
+      "path": ".",
+      "name": "Fantasia4x [main]",
+    },
+    {
+      "path": "../Fantasia4x-equipment-expansion",
+      "name": "Fantasia4x [feat/equipment-expansion]",
+    },
+  ],
+  "settings": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "dbaeumer.vscode-eslint",
+    "[svelte]": { "editor.defaultFormatter": "svelte.svelte-vscode" },
+    "eslint.validate": ["javascript", "typescript", "svelte"],
+    "[markdown]": { "editor.defaultFormatter": "yzhang.markdown-all-in-one" },
+    "[typescript]": { "editor.defaultFormatter": "vscode.typescript-language-features" },
+    "[json]": { "editor.defaultFormatter": "j-brooke.fracturedjsonvsc" },
+    "[jsonc]": { "editor.defaultFormatter": "j-brooke.fracturedjsonvsc" },
+    "git.openRepositoryInParentFolders": "always",
+    "git.scanRepositories": [
+      ".",
+      "../Fantasia4x-equipment-expansion",
+    ],
+  },
+  "extensions": {
+    "recommendations": [
+      "svelte.svelte-vscode",
+      "dbaeumer.vscode-eslint",
+      "esbenp.prettier-vscode",
+      "j-brooke.fracturedjsonvsc",
+    ],
+  },
+}
