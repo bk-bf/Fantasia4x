@@ -1,21 +1,17 @@
 <script lang="ts">
   import { gameState, currentRace } from '$lib/stores/gameState';
-  import CurrentTask from '$lib/components/UI/CurrentTask.svelte';
   import BuildCard from '$lib/components/UI/BuildCard.svelte';
   import FilterTabs from '$lib/components/UI/FilterTabs.svelte';
   import { uiState } from '$lib/stores/uiState';
-  import TaskContainer from '$lib/components/UI/TaskContainer.svelte';
   import ITEMS_DATABASE from '$lib/game/database/items.jsonc';
   import { gameEngine } from '$lib/game/systems/GameEngineImpl';
   import { itemService } from '$lib/game/services/ItemService';
   import { recipeService } from '$lib/game/services/RecipeService';
-  import { buildingService } from '$lib/game/services/BuildingService';
   import { onDestroy } from 'svelte';
-  import type { Item, Pawn } from '$lib/game/core/types';
+  import type { Item } from '$lib/game/core/types';
 
   // Recipe registry: per-item recipe lookups (static DBs — plain functions, not reactive).
   const recipeOf = (itemId: string) => recipeService.getRecipeForItem(itemId);
-  const stationOf = (itemId: string) => recipeOf(itemId)?.station ?? null;
   const costOf = (itemId: string): Record<string, number> => {
     const r = recipeOf(itemId);
     if (!r) return {};
@@ -32,32 +28,12 @@
   let race: any = null;
   let craftingQueue: any[] = [];
   let completedResearch: string[] = [];
-  let availableBuildings: string[] = [];
   let currentToolLevel = 0;
   let currentPopulation = 0;
-  let pawns: Pawn[] = [];
 
   // Read item amounts directly from the stockpile aggregate — the single source of truth.
   // gameState.item is a legacy no-op array (addToItemArray is a stub) and must not be used.
   $: itemMap = $gameState?.stockpile ?? {};
-
-  // Station assignment: workshopType (or 'ground') → pawnId | null (null = any)
-  let stationAssignments: Record<string, string | null> = {};
-
-  // Workshop sections — derived from the recipe registry so every station with recipes
-  // gets a section (curated early-game order first, the rest appended alphabetically).
-  const SECTION_ORDER = ['craft_spot', 'campfire', 'hearth', 'makers_bench', 'butcher_spot'];
-  const WORKSHOP_SECTIONS: Array<{ id: string; label: string }> = (() => {
-    const stations = new Set<string>(SECTION_ORDER);
-    for (const r of recipeService.getAllRecipes()) {
-      if (r.station) stations.add(r.station);
-    }
-    const label = (id: string) =>
-      (buildingService.getBuildingById(id)?.name ?? id.replace(/_/g, ' ')).toUpperCase();
-    const ordered = SECTION_ORDER.filter((id) => stations.has(id));
-    const rest = [...stations].filter((id) => !SECTION_ORDER.includes(id)).sort();
-    return [...ordered, ...rest].map((id) => ({ id, label: label(id) }));
-  })();
 
   $: getItemAmount = (itemId: string): number => itemMap[itemId] || 0;
 
@@ -81,27 +57,56 @@
 
   $: firstCraftingInProgress = craftingQueue.length > 0 ? craftingQueue[0] : null;
 
-  // Items craftable at a given station (craft_spot also absorbs station-less recipes).
-  const itemsForStation = (id: string) =>
-    allCraftableItems.filter((i) => {
-      if (i.isCarcass && i.yields) return id === 'butcher_spot';
-      const st = stationOf(i.id);
-      return id === 'craft_spot' ? st === 'craft_spot' || st === null : st === id;
-    });
-
-  // Workshop tabs: only stations that have any recipe; carry built-state + item list.
-  $: workshopTabs = WORKSHOP_SECTIONS.map((ws) => ({
-    id: ws.id,
-    label: ws.label,
-    items: itemsForStation(ws.id),
-    built: availableBuildings.includes(ws.id)
-  })).filter((ws) => ws.items.length > 0);
-
-  let selectedStation = '';
-  $: if (workshopTabs.length && !workshopTabs.some((w) => w.id === selectedStation)) {
-    selectedStation = workshopTabs[0].id;
+  // Craft categories (filter tabs). Maps an item's data category onto a player-facing group.
+  const CRAFT_CAT_ORDER = [
+    'BUTCHERING',
+    'COOKING',
+    'WOOD & FUEL',
+    'STONE',
+    'METAL',
+    'LEATHER',
+    'TOOLS',
+    'WEAPONS',
+    'GOODS',
+    'MEDICINE'
+  ];
+  const CAT_GROUP: Record<string, string> = {
+    wood: 'WOOD & FUEL',
+    fuel: 'WOOD & FUEL',
+    woodcutting: 'WOOD & FUEL',
+    stone: 'STONE',
+    construction: 'STONE',
+    metal: 'METAL',
+    ore: 'METAL',
+    metalworking: 'METAL',
+    leather: 'LEATHER',
+    medicine: 'MEDICINE'
+  };
+  function craftCategory(item: Item): string {
+    const t = String(item.type ?? '');
+    const c = item.category ?? '';
+    // Butchering = raw carcasses and the raw meat the butcher block produces.
+    if (item.isCarcass || recipeOf(item.id)?.station === 'butcher_spot' || c === 'meat') {
+      return 'BUTCHERING';
+    }
+    if (t === 'tool') return 'TOOLS';
+    if (t === 'weapon') return 'WEAPONS';
+    // Cooking = everything edible/drinkable that isn't raw butchered meat.
+    if (t === 'food' || ['food', 'cooking', 'drink'].includes(c)) return 'COOKING';
+    return CAT_GROUP[c] ?? 'GOODS';
   }
-  $: activeWorkshop = workshopTabs.find((w) => w.id === selectedStation) ?? workshopTabs[0];
+
+  $: craftCategories = CRAFT_CAT_ORDER.map((cat) => ({
+    id: cat,
+    label: cat,
+    items: allCraftableItems.filter((i) => craftCategory(i) === cat)
+  })).filter((c) => c.items.length > 0);
+
+  let selectedCat = '';
+  $: if (craftCategories.length && !craftCategories.some((c) => c.id === selectedCat)) {
+    selectedCat = craftCategories[0].id;
+  }
+  $: activeCat = craftCategories.find((c) => c.id === selectedCat) ?? craftCategories[0];
 
   const unsubscribeRace = currentRace.subscribe((value) => {
     race = value;
@@ -113,31 +118,12 @@
     craftingQueue = state.craftingQueue || [];
     completedResearch = state.completedResearch || [];
     currentToolLevel = state.currentToolLevel || 0;
-    pawns = state.pawns || [];
-
-    availableBuildings = [
-      ...new Set((state.buildings ?? []).filter((b) => b.status === 'complete').map((b) => b.type))
-    ];
-
-    // Sync station assignments from persisted state
-    if (state.craftingStationAssignments) {
-      stationAssignments = { ...state.craftingStationAssignments };
-    }
   });
 
   onDestroy(() => {
     unsubscribeRace();
     unsubscribeGame();
   });
-
-  function setStationAssignment(wsId: string, pawnId: string | null) {
-    const key = wsId;
-    stationAssignments = { ...stationAssignments, [key]: pawnId };
-    gameState.update((state) => ({
-      ...state,
-      craftingStationAssignments: { ...(state.craftingStationAssignments ?? {}), [key]: pawnId }
-    }));
-  }
 
   function startCrafting(item: Item) {
     if (!$gameState) return;
@@ -188,37 +174,16 @@
     {/each}
   {/if}
 
-  <!-- Workshop tabs: pick a station, see its recipes -->
-  {#if workshopTabs.length > 0}
+  <!-- Category tabs: pick a category, see its recipes -->
+  {#if craftCategories.length > 0}
     <FilterTabs
-      tabs={workshopTabs.map((w) => ({ id: w.id, label: w.label }))}
-      selected={selectedStation}
-      onSelect={(id) => (selectedStation = id)}
+      tabs={craftCategories.map((c) => ({ id: c.id, label: c.label }))}
+      selected={selectedCat}
+      onSelect={(id) => (selectedCat = id)}
     />
-    {#if activeWorkshop}
-      {@const ws = activeWorkshop}
-      {@const assignedPawnId = stationAssignments[ws.id] ?? null}
-      {#if ws.built}
-        <!-- Pawn assignment row -->
-        <div class="station-assign-row">
-          <span class="assign-label">ASSIGNED:</span>
-          <select
-            class="assign-select"
-            value={assignedPawnId ?? ''}
-            on:change={(e) =>
-              setStationAssignment(ws.id, (e.currentTarget as HTMLSelectElement).value || null)}
-          >
-            <option value="">any eligible pawn</option>
-            {#each pawns as p}
-              <option value={p.id}>{p.name}</option>
-            {/each}
-          </select>
-        </div>
-      {/if}
-
-      <!-- Recipe cards always show; an unbuilt station's recipes read BLOCKED. -->
+    {#if activeCat}
       <div class="card-grid">
-        {#each ws.items as item}
+        {#each activeCat.items as item}
             {@const craftable = $gameState !== null && itemService.canCraftItem(item.id, $gameState)}
             {@const isCarcass = item.isCarcass && item.yields}
             {@const displayCost = isCarcass ? {} : costOf(item.id)}
@@ -344,33 +309,6 @@
   .section-hdr.sub {
     color: var(--accent);
     margin-top: 2px;
-  }
-
-  .station-assign-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 3px 10px;
-    border-bottom: 1px solid color-mix(in srgb, var(--border) 30%, transparent);
-    background: color-mix(in srgb, var(--bg-panel) 60%, transparent);
-  }
-
-  .assign-label {
-    font-size: 9px;
-    color: var(--text-dim);
-    letter-spacing: 0.06em;
-    flex-shrink: 0;
-  }
-
-  .assign-select {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    color: var(--accent);
-    font-family: 'Courier New', monospace;
-    font-size: 10px;
-    padding: 1px 4px;
-    flex: 1;
-    max-width: 200px;
   }
 
   .queue-row {
