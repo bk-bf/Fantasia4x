@@ -48,9 +48,6 @@ let simRunning = false;
 let simAccumulatorMs = 0;
 
 // ===== WORLD GENERATION =====
-/** Bump this when the world generation algorithm changes to force a regen. */
-const WORLD_VERSION = 16; // doubled mineral_deposit area again (0.79->0.68 detail), cost from rocky
-const WORLD_VERSION_KEY = 'fantasia4x-world-version';
 // D7: world generation is DEFERRED to the async init below rather than run at module
 // import. Generating a 240×160 world here only to overwrite it when a save loads is pure
 // waste; the fresh-start path regenerates from the empty worldMap in the migration block.
@@ -411,7 +408,6 @@ function regenWorld(seed?: number, dev = false, itemQty = 500) {
       entityService.seedInitialEntities({ ...state, seed: s, worldMap: newWorld, mobs: [] })
     );
   }
-  if (browser) localStorage.setItem(WORLD_VERSION_KEY, String(WORLD_VERSION));
 }
 
 // ===== ITEM MANAGEMENT =====
