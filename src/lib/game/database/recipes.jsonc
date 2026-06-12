@@ -9,1330 +9,803 @@
 //         toolTierRequired? · researchRequired? · buildingRequired? · populationRequired? · dynamicRecipe?
 [
   {
-    "id": "split_firewood",
-    "station": "chopping_block",
-    "inputs": {
-      "pine_log": 1
-    },
-    "inputAlternatives": [
-      {
-        "birch_log": 1
-      },
-      {
-        "oak_log": 1
-      },
-      {
-        "ash_log": 1
-      },
-      {
-        "yew_log": 1
-      }
-    ],
-    "outputs": {
-      "green_firewood": 3,
-      "branch": 2
-    },
-    "workAmount": 2,
+    "id"               : "split_firewood",
+    "station"          : "chopping_block",
+    "inputs"           : {"pine_log": 1},
+    "inputAlternatives": [ {"birch_log": 1}, {"oak_log": 1}, {"ash_log": 1}, {"yew_log": 1} ],
+    "outputs"          : {"green_firewood": 3, "branch": 2},
+    "workAmount"       : 2,
+    "toolTierRequired" : 0
+  },
+  {
+    "id"              : "saw_pine_planks",
+    "station"         : "sawtable",
+    "inputs"          : {"pine_log": 1},
+    "outputs"         : {"pine_plank": 3, "sawdust": 1},
+    "workAmount"      : 4,
     "toolTierRequired": 0
   },
   {
-    "id": "saw_pine_planks",
-    "station": "sawtable",
-    "inputs": {
-      "pine_log": 1
-    },
-    "outputs": {
-      "pine_plank": 3,
-      "sawdust": 1
-    },
-    "workAmount": 4,
+    "id"               : "burn_charcoal",
+    "station"          : "charcoal_pit",
+    "inputs"           : {"pine_log": 2},
+    "inputAlternatives": [ {"oak_log": 2}, {"birch_log": 2}, {"ash_log": 2}, {"dry_firewood": 3} ],
+    "outputs"          : {"charcoal": 2, "ash": 1},
+    "workAmount"       : 12,
+    "toolTierRequired" : 0
+  },
+  {
+    "id"              : "make_chewed_poultice",
+    "station"         : "craft_spot",
+    "inputs"          : {"woundwort": 2, "cordage": 1},
+    "outputs"         : {"chewed_poultice": 1},
+    "workAmount"      : 2,
     "toolTierRequired": 0
   },
   {
-    "id": "burn_charcoal",
-    "station": "charcoal_pit",
-    "inputs": {
-      "pine_log": 2
-    },
-    "inputAlternatives": [
-      {
-        "oak_log": 2
-      },
-      {
-        "birch_log": 2
-      },
-      {
-        "ash_log": 2
-      },
-      {
-        "dry_firewood": 3
-      }
-    ],
-    "outputs": {
-      "charcoal": 2,
-      "ash": 1
-    },
-    "workAmount": 12,
+    "id"              : "make_rabbit_meat",
+    "station"         : "butcher_spot",
+    "inputs"          : {"rabbit_carcass": 1},
+    "outputs"         : {"rabbit_meat": 1},
+    "workAmount"      : 200,
     "toolTierRequired": 0
   },
   {
-    "id": "make_chewed_poultice",
-    "station": "craft_spot",
-    "inputs": {
-      "woundwort": 2,
-      "cordage": 1
-    },
-    "outputs": {
-      "chewed_poultice": 1
-    },
-    "workAmount": 2,
+    "id"              : "make_venison",
+    "station"         : "butcher_spot",
+    "inputs"          : {"deer_carcass": 1},
+    "outputs"         : {"venison": 1},
+    "workAmount"      : 900,
     "toolTierRequired": 0
   },
   {
-    "id": "make_rabbit_meat",
-    "station": "butcher_spot",
-    "inputs": {
-      "rabbit_carcass": 1
-    },
-    "outputs": {
-      "rabbit_meat": 1
-    },
-    "workAmount": 200,
+    "id"              : "make_tanning_bucket",
+    "station"         : "sawtable",
+    "inputs"          : {"pine_plank": 2, "cordage": 1},
+    "outputs"         : {"tanning_bucket": 1},
+    "workAmount"      : 5,
     "toolTierRequired": 0
   },
   {
-    "id": "make_venison",
-    "station": "butcher_spot",
-    "inputs": {
-      "deer_carcass": 1
-    },
-    "outputs": {
-      "venison": 1
-    },
-    "workAmount": 900,
+    "id"               : "make_cured_thin_hide",
+    "station"          : "hide_rack",
+    "inputs"           : {"rabbit_pelt": 1, "ash": 2},
+    "inputAlternatives": [ {"rat_pelt": 1, "ash": 2}, {"rabbit_pelt": 1, "salt": 1}, {"rat_pelt": 1, "salt": 1} ],
+    "outputs"          : {"cured_thin_hide": 1},
+    "workAmount"       : 40,
+    "toolTierRequired" : 0
+  },
+  {
+    "id"               : "make_cured_light_hide",
+    "station"          : "hide_rack",
+    "inputs"           : {"deer_hide": 1, "ash": 2},
+    "inputAlternatives": [ {"goat_hide": 1, "ash": 2}, {"deer_hide": 1, "salt": 1}, {"goat_hide": 1, "salt": 1} ],
+    "outputs"          : {"cured_light_hide": 1},
+    "workAmount"       : 50,
+    "toolTierRequired" : 0
+  },
+  {
+    "id"               : "make_cured_sturdy_hide",
+    "station"          : "hide_rack",
+    "inputs"           : {"wolf_hide": 1, "ash": 2},
+    "inputAlternatives": [ {"boar_hide": 1, "ash": 2}, {"wolf_hide": 1, "salt": 1}, {"boar_hide": 1, "salt": 1} ],
+    "outputs"          : {"cured_sturdy_hide": 1},
+    "workAmount"       : 60,
+    "toolTierRequired" : 0
+  },
+  {
+    "id"               : "make_cured_heavy_hide",
+    "station"          : "hide_rack",
+    "inputs"           : {"elk_hide": 1, "ash": 2},
+    "inputAlternatives": [ {"elk_hide": 1, "salt": 1} ],
+    "outputs"          : {"cured_heavy_hide": 1},
+    "workAmount"       : 70,
+    "toolTierRequired" : 0
+  },
+  {
+    "id"               : "make_cured_thick_hide",
+    "station"          : "hide_rack",
+    "inputs"           : {"bear_pelt": 1, "ash": 2},
+    "inputAlternatives": [ {"bear_pelt": 1, "salt": 1} ],
+    "outputs"          : {"cured_thick_hide": 1},
+    "workAmount"       : 80,
+    "toolTierRequired" : 0
+  },
+  {
+    "id"              : "make_thin_leather",
+    "station"         : "tanning_rack",
+    "inputs"          : {"cured_thin_hide": 1, "bark": 1},
+    "outputs"         : {"thin_leather": 1},
+    "workAmount"      : 30,
     "toolTierRequired": 0
   },
   {
-    "id": "make_tanning_bucket",
-    "station": "sawtable",
-    "inputs": {
-      "pine_plank": 2,
-      "cordage": 1
-    },
-    "outputs": {
-      "tanning_bucket": 1
-    },
-    "workAmount": 5,
+    "id"              : "make_light_leather",
+    "station"         : "tanning_rack",
+    "inputs"          : {"cured_light_hide": 1, "bark": 1},
+    "outputs"         : {"light_leather": 1},
+    "workAmount"      : 35,
     "toolTierRequired": 0
   },
   {
-    "id": "make_cured_thin_hide",
-    "station": "hide_rack",
-    "inputs": {
-      "rabbit_pelt": 1,
-      "ash": 2
-    },
-    "inputAlternatives": [
-      {
-        "rat_pelt": 1,
-        "ash": 2
-      },
-      {
-        "rabbit_pelt": 1,
-        "salt": 1
-      },
-      {
-        "rat_pelt": 1,
-        "salt": 1
-      }
-    ],
-    "outputs": {
-      "cured_thin_hide": 1
-    },
-    "workAmount": 40,
+    "id"              : "make_sturdy_leather",
+    "station"         : "tanning_rack",
+    "inputs"          : {"cured_sturdy_hide": 1, "bark": 2},
+    "outputs"         : {"sturdy_leather": 1},
+    "workAmount"      : 40,
     "toolTierRequired": 0
   },
   {
-    "id": "make_cured_light_hide",
-    "station": "hide_rack",
-    "inputs": {
-      "deer_hide": 1,
-      "ash": 2
-    },
-    "inputAlternatives": [
-      {
-        "goat_hide": 1,
-        "ash": 2
-      },
-      {
-        "deer_hide": 1,
-        "salt": 1
-      },
-      {
-        "goat_hide": 1,
-        "salt": 1
-      }
-    ],
-    "outputs": {
-      "cured_light_hide": 1
-    },
-    "workAmount": 50,
+    "id"              : "make_heavy_leather",
+    "station"         : "tanning_rack",
+    "inputs"          : {"cured_heavy_hide": 1, "bark": 2},
+    "outputs"         : {"heavy_leather": 1},
+    "workAmount"      : 45,
     "toolTierRequired": 0
   },
   {
-    "id": "make_cured_sturdy_hide",
-    "station": "hide_rack",
-    "inputs": {
-      "wolf_hide": 1,
-      "ash": 2
-    },
-    "inputAlternatives": [
-      {
-        "boar_hide": 1,
-        "ash": 2
-      },
-      {
-        "wolf_hide": 1,
-        "salt": 1
-      },
-      {
-        "boar_hide": 1,
-        "salt": 1
-      }
-    ],
-    "outputs": {
-      "cured_sturdy_hide": 1
-    },
-    "workAmount": 60,
+    "id"              : "make_thick_leather",
+    "station"         : "tanning_rack",
+    "inputs"          : {"cured_thick_hide": 1, "bark": 3},
+    "outputs"         : {"thick_leather": 1},
+    "workAmount"      : 55,
     "toolTierRequired": 0
   },
   {
-    "id": "make_cured_heavy_hide",
-    "station": "hide_rack",
-    "inputs": {
-      "elk_hide": 1,
-      "ash": 2
-    },
-    "inputAlternatives": [
-      {
-        "elk_hide": 1,
-        "salt": 1
-      }
-    ],
-    "outputs": {
-      "cured_heavy_hide": 1
-    },
-    "workAmount": 70,
-    "toolTierRequired": 0
-  },
-  {
-    "id": "make_cured_thick_hide",
-    "station": "hide_rack",
-    "inputs": {
-      "bear_pelt": 1,
-      "ash": 2
-    },
-    "inputAlternatives": [
-      {
-        "bear_pelt": 1,
-        "salt": 1
-      }
-    ],
-    "outputs": {
-      "cured_thick_hide": 1
-    },
-    "workAmount": 80,
-    "toolTierRequired": 0
-  },
-  {
-    "id": "make_thin_leather",
-    "station": "tanning_rack",
-    "inputs": {
-      "cured_thin_hide": 1,
-      "bark": 1
-    },
-    "outputs": {
-      "thin_leather": 1
-    },
-    "workAmount": 30,
-    "toolTierRequired": 0
-  },
-  {
-    "id": "make_light_leather",
-    "station": "tanning_rack",
-    "inputs": {
-      "cured_light_hide": 1,
-      "bark": 1
-    },
-    "outputs": {
-      "light_leather": 1
-    },
-    "workAmount": 35,
-    "toolTierRequired": 0
-  },
-  {
-    "id": "make_sturdy_leather",
-    "station": "tanning_rack",
-    "inputs": {
-      "cured_sturdy_hide": 1,
-      "bark": 2
-    },
-    "outputs": {
-      "sturdy_leather": 1
-    },
-    "workAmount": 40,
-    "toolTierRequired": 0
-  },
-  {
-    "id": "make_heavy_leather",
-    "station": "tanning_rack",
-    "inputs": {
-      "cured_heavy_hide": 1,
-      "bark": 2
-    },
-    "outputs": {
-      "heavy_leather": 1
-    },
-    "workAmount": 45,
-    "toolTierRequired": 0
-  },
-  {
-    "id": "make_thick_leather",
-    "station": "tanning_rack",
-    "inputs": {
-      "cured_thick_hide": 1,
-      "bark": 3
-    },
-    "outputs": {
-      "thick_leather": 1
-    },
-    "workAmount": 55,
-    "toolTierRequired": 0
-  },
-  {
-    "id": "make_spit_meat",
-    "station": "campfire",
-    "inputs": {
-      "branch": 2
-    },
-    "outputs": {
-      "spit_meat": 1
-    },
-    "workAmount": 2,
+    "id"              : "make_spit_meat",
+    "station"         : "campfire",
+    "inputs"          : {"branch": 2},
+    "outputs"         : {"spit_meat": 1},
+    "workAmount"      : 2,
     "toolTierRequired": 0,
-    "dynamicRecipe": {
+    "dynamicRecipe"   : {
       "meat": {
         "acceptsCategory": "meat",
-        "quantity": 1,
-        "variants": {
-          "rabbit_meat": {
-            "name": "Rabbit on a Spit",
-            "description": "Lean rabbit skewered over open flame."
-          },
-          "venison": {
-            "name": "Venison on a Spit",
-            "description": "Rich deer meat, charred and fragrant.",
+        "quantity"       : 1,
+        "variants"       : {
+          "rabbit_meat" : {"name": "Rabbit on a Spit", "description": "Lean rabbit skewered over open flame."},
+          "venison"     : {
+            "name"          : "Venison on a Spit",
+            "description"   : "Rich deer meat, charred and fragrant.",
             "nutritionBonus": 0.3
           },
-          "wolf_meat": {
-            "name": "Wolf Meat on a Spit",
-            "description": "Gamey and tough, but hot food is hot food.",
+          "wolf_meat"   : {
+            "name"          : "Wolf Meat on a Spit",
+            "description"   : "Gamey and tough, but hot food is hot food.",
             "nutritionBonus": -0.3
           },
-          "bear_meat": {
-            "name": "Bear Steak",
-            "description": "Dense, fatty bear meat over open coals.",
+          "bear_meat"   : {
+            "name"          : "Bear Steak",
+            "description"   : "Dense, fatty bear meat over open coals.",
             "nutritionBonus": 0.8
           },
-          "boar_meat": {
-            "name": "Boar on a Spit",
-            "description": "Wild pork crackling over the fire.",
+          "boar_meat"   : {
+            "name"          : "Boar on a Spit",
+            "description"   : "Wild pork crackling over the fire.",
             "nutritionBonus": 0.2
           },
-          "elk_meat": {
-            "name": "Elk Roast",
-            "description": "Prime elk, slow-cooked over embers.",
+          "elk_meat"    : {
+            "name"          : "Elk Roast",
+            "description"   : "Prime elk, slow-cooked over embers.",
             "nutritionBonus": 0.8
           },
-          "goat_meat": {
-            "name": "Goat on a Spit",
-            "description": "Mountain goat with a smoky char."
-          },
+          "goat_meat"   : {"name": "Goat on a Spit", "description": "Mountain goat with a smoky char."},
           "chicken_meat": {
-            "name": "Roasted Chicken",
-            "description": "Crispy wild chicken on a branch skewer.",
+            "name"          : "Roasted Chicken",
+            "description"   : "Crispy wild chicken on a branch skewer.",
             "nutritionBonus": -0.4
           },
-          "rat_meat": {
-            "name": "Roasted Rat",
-            "description": "Scrappy and unpleasant. But cooked.",
+          "rat_meat"    : {
+            "name"          : "Roasted Rat",
+            "description"   : "Scrappy and unpleasant. But cooked.",
             "nutritionBonus": -0.8
           }
         },
-        "default": {
-          "name": "Spit-Roasted Meat",
+        "default"        : {
+          "name"       : "Spit-Roasted Meat",
           "description": "Meat skewered on a branch and cooked over fire."
         }
       }
     }
   },
   {
-    "id": "make_stew",
-    "station": "campfire",
-    "inputs": {},
-    "outputs": {
-      "stew": 1
-    },
-    "workAmount": 3,
+    "id"              : "make_stew",
+    "station"         : "campfire",
+    "inputs"          : {},
+    "outputs"         : {"stew": 1},
+    "workAmount"      : 3,
     "toolTierRequired": 0,
-    "dynamicRecipe": {
+    "dynamicRecipe"   : {
       "meat": {
         "acceptsCategory": "meat",
-        "quantity": 1,
-        "variants": {
-          "rabbit_meat": {
-            "name": "Rabbit Stew",
-            "description": "A warm rabbit stew with wild herbs."
-          },
-          "venison": {
-            "name": "Venison Stew",
-            "description": "Hearty deer stew, thick and rich.",
+        "quantity"       : 1,
+        "variants"       : {
+          "rabbit_meat" : {"name": "Rabbit Stew", "description": "A warm rabbit stew with wild herbs."},
+          "venison"     : {
+            "name"          : "Venison Stew",
+            "description"   : "Hearty deer stew, thick and rich.",
             "nutritionBonus": 0.5
           },
-          "wolf_meat": {
-            "name": "Wolf Stew",
-            "description": "Gamey wolf stew. Fills the belly if not the soul.",
+          "wolf_meat"   : {
+            "name"          : "Wolf Stew",
+            "description"   : "Gamey wolf stew. Fills the belly if not the soul.",
             "nutritionBonus": -0.3
           },
-          "bear_meat": {
-            "name": "Bear Stew",
-            "description": "Rich, fatty bear stew. Warming and dense.",
+          "bear_meat"   : {
+            "name"          : "Bear Stew",
+            "description"   : "Rich, fatty bear stew. Warming and dense.",
             "nutritionBonus": 1
           },
-          "boar_meat": {
-            "name": "Boar Stew",
-            "description": "Wild pork boiled with roots and herbs.",
+          "boar_meat"   : {
+            "name"          : "Boar Stew",
+            "description"   : "Wild pork boiled with roots and herbs.",
             "nutritionBonus": 0.5
           },
-          "elk_meat": {
-            "name": "Elk Stew",
-            "description": "Prime elk braised in the pot. Excellent.",
+          "elk_meat"    : {
+            "name"          : "Elk Stew",
+            "description"   : "Prime elk braised in the pot. Excellent.",
             "nutritionBonus": 1
           },
-          "goat_meat": {
-            "name": "Goat Stew",
-            "description": "Mountain goat stewed until tender.",
+          "goat_meat"   : {
+            "name"          : "Goat Stew",
+            "description"   : "Mountain goat stewed until tender.",
             "nutritionBonus": 0.2
           },
           "chicken_meat": {
-            "name": "Chicken Broth",
-            "description": "Light wild-chicken broth. Comforting.",
+            "name"          : "Chicken Broth",
+            "description"   : "Light wild-chicken broth. Comforting.",
             "nutritionBonus": -0.5
           },
-          "rat_meat": {
-            "name": "Rat Stew",
-            "description": "Unpleasant but surprisingly caloric.",
+          "rat_meat"    : {
+            "name"          : "Rat Stew",
+            "description"   : "Unpleasant but surprisingly caloric.",
             "nutritionBonus": -1.5
           }
         },
-        "default": {
-          "name": "Stew",
-          "description": "A hearty stew. Nutrition depends on ingredients."
-        }
+        "default"        : {"name": "Stew", "description": "A hearty stew. Nutrition depends on ingredients."}
       }
     }
   },
   {
-    "id": "make_copper_bar",
-    "station": "stone_forge",
-    "inputs": {
-      "malachite": 3
-    },
-    "inputAlternatives": [
-      {
-        "chalcopyrite": 2
-      },
-      {
-        "azurite": 4
-      }
-    ],
-    "outputs": {
-      "copper_bar": 1
-    },
-    "workAmount": 8,
+    "id"               : "make_copper_bar",
+    "station"          : "stone_forge",
+    "inputs"           : {"malachite": 3},
+    "inputAlternatives": [ {"chalcopyrite": 2}, {"azurite": 4} ],
+    "outputs"          : {"copper_bar": 1},
+    "workAmount"       : 8,
+    "toolTierRequired" : 0
+  },
+  {
+    "id"              : "make_tin_bar",
+    "station"         : "stone_forge",
+    "inputs"          : {"cassiterite": 3},
+    "outputs"         : {"tin_bar": 1},
+    "workAmount"      : 8,
     "toolTierRequired": 0
   },
   {
-    "id": "make_tin_bar",
-    "station": "stone_forge",
-    "inputs": {
-      "cassiterite": 3
-    },
-    "outputs": {
-      "tin_bar": 1
-    },
-    "workAmount": 8,
+    "id"              : "make_bronze_bar",
+    "station"         : "stone_forge",
+    "inputs"          : {"copper_bar": 3, "tin_bar": 1},
+    "outputs"         : {"bronze_bar": 1},
+    "workAmount"      : 10,
+    "toolTierRequired": 1
+  },
+  {
+    "id"               : "make_iron_bar",
+    "station"          : "bloomery",
+    "inputs"           : {"hematite": 4, "limestone": 1},
+    "inputAlternatives": [ {"magnetite": 3, "limestone": 1}, {"limonite": 5, "limestone": 1} ],
+    "outputs"          : {"iron_bar": 1},
+    "workAmount"       : 14,
+    "toolTierRequired" : 1
+  },
+  {
+    "id"              : "make_lead_bar",
+    "station"         : "stone_forge",
+    "inputs"          : {"galena": 3},
+    "outputs"         : {"lead_bar": 1},
+    "workAmount"      : 8,
     "toolTierRequired": 0
   },
   {
-    "id": "make_bronze_bar",
-    "station": "stone_forge",
-    "inputs": {
-      "copper_bar": 3,
-      "tin_bar": 1
-    },
-    "outputs": {
-      "bronze_bar": 1
-    },
-    "workAmount": 10,
+    "id"              : "make_silver_bar",
+    "station"         : "stone_forge",
+    "inputs"          : {"galena": 5},
+    "outputs"         : {"silver_bar": 1},
+    "workAmount"      : 16,
     "toolTierRequired": 1
   },
   {
-    "id": "make_iron_bar",
-    "station": "bloomery",
-    "inputs": {
-      "hematite": 4,
-      "limestone": 1
-    },
-    "inputAlternatives": [
-      {
-        "magnetite": 3,
-        "limestone": 1
-      },
-      {
-        "limonite": 5,
-        "limestone": 1
-      }
-    ],
-    "outputs": {
-      "iron_bar": 1
-    },
-    "workAmount": 14,
-    "toolTierRequired": 1
+    "id"               : "make_gold_bar",
+    "station"          : "stone_forge",
+    "inputs"           : {"native_gold": 3},
+    "inputAlternatives": [ {"electrum": 3} ],
+    "outputs"          : {"gold_bar": 1},
+    "workAmount"       : 10,
+    "toolTierRequired" : 1
   },
   {
-    "id": "make_lead_bar",
-    "station": "stone_forge",
-    "inputs": {
-      "galena": 3
-    },
-    "outputs": {
-      "lead_bar": 1
-    },
-    "workAmount": 8,
-    "toolTierRequired": 0
-  },
-  {
-    "id": "make_silver_bar",
-    "station": "stone_forge",
-    "inputs": {
-      "galena": 5
-    },
-    "outputs": {
-      "silver_bar": 1
-    },
-    "workAmount": 16,
-    "toolTierRequired": 1
-  },
-  {
-    "id": "make_gold_bar",
-    "station": "stone_forge",
-    "inputs": {
-      "native_gold": 3
-    },
-    "inputAlternatives": [
-      {
-        "electrum": 3
-      }
-    ],
-    "outputs": {
-      "gold_bar": 1
-    },
-    "workAmount": 10,
-    "toolTierRequired": 1
-  },
-  {
-    "id": "make_steel_bar",
-    "station": "bloomery",
-    "inputs": {
-      "iron_bar": 2,
-      "coal": 1,
-      "limestone": 1
-    },
-    "outputs": {
-      "steel_bar": 1
-    },
-    "workAmount": 20,
+    "id"              : "make_steel_bar",
+    "station"         : "bloomery",
+    "inputs"          : {"iron_bar": 2, "coal": 1, "limestone": 1},
+    "outputs"         : {"steel_bar": 1},
+    "workAmount"      : 20,
     "toolTierRequired": 2
   },
   {
-    "id": "make_ash",
-    "station": "hearth",
-    "inputs": {
-      "green_firewood": 1
-    },
-    "inputAlternatives": [
-      {
-        "dry_firewood": 1
-      },
-      {
-        "branch": 3
-      }
-    ],
-    "outputs": {
-      "ash": 1
-    },
-    "workAmount": 3,
+    "id"               : "make_ash",
+    "station"          : "hearth",
+    "inputs"           : {"green_firewood": 1},
+    "inputAlternatives": [ {"dry_firewood": 1}, {"branch": 3} ],
+    "outputs"          : {"ash": 1},
+    "workAmount"       : 3,
+    "toolTierRequired" : 0
+  },
+  {
+    "id"               : "make_animal_fat",
+    "station"          : "hearth",
+    "inputs"           : {"bear_meat": 1},
+    "inputAlternatives": [ {"boar_meat": 1}, {"elk_meat": 1}, {"goat_meat": 1} ],
+    "outputs"          : {"animal_fat": 1},
+    "workAmount"       : 6,
+    "toolTierRequired" : 0
+  },
+  {
+    "id"              : "make_torch",
+    "station"         : "craft_spot",
+    "inputs"          : {"branch": 1, "animal_fat": 1, "plant_fiber": 1},
+    "outputs"         : {"torch": 1},
+    "workAmount"      : 3,
     "toolTierRequired": 0
   },
   {
-    "id": "make_animal_fat",
-    "station": "hearth",
-    "inputs": {
-      "bear_meat": 1
-    },
-    "inputAlternatives": [
-      {
-        "boar_meat": 1
-      },
-      {
-        "elk_meat": 1
-      },
-      {
-        "goat_meat": 1
-      }
-    ],
-    "outputs": {
-      "animal_fat": 1
-    },
-    "workAmount": 6,
+    "id"              : "make_candle",
+    "station"         : "makers_bench",
+    "inputs"          : {"animal_fat": 2, "plant_fiber": 1},
+    "outputs"         : {"candle": 1},
+    "workAmount"      : 4,
     "toolTierRequired": 0
   },
   {
-    "id": "make_torch",
-    "station": "craft_spot",
-    "inputs": {
-      "branch": 1,
-      "animal_fat": 1,
-      "plant_fiber": 1
-    },
-    "outputs": {
-      "torch": 1
-    },
-    "workAmount": 3,
-    "toolTierRequired": 0
-  },
-  {
-    "id": "make_candle",
-    "station": "makers_bench",
-    "inputs": {
-      "animal_fat": 2,
-      "plant_fiber": 1
-    },
-    "outputs": {
-      "candle": 1
-    },
-    "workAmount": 4,
-    "toolTierRequired": 0
-  },
-  {
-    "id": "make_salted_meat",
-    "station": "butcher_spot",
-    "inputs": {
-      "salt": 1
-    },
-    "outputs": {
-      "salted_meat": 1
-    },
-    "workAmount": 60,
+    "id"              : "make_salted_meat",
+    "station"         : "butcher_spot",
+    "inputs"          : {"salt": 1},
+    "outputs"         : {"salted_meat": 1},
+    "workAmount"      : 60,
     "toolTierRequired": 0,
-    "dynamicRecipe": {
+    "dynamicRecipe"   : {
       "meat": {
         "acceptsCategory": "meat",
-        "quantity": 1,
-        "default": {
-          "name": "Salted Meat",
-          "description": "Meat packed in salt. Keeps for a very long time."
-        }
+        "quantity"       : 1,
+        "default"        : {"name": "Salted Meat", "description": "Meat packed in salt. Keeps for a very long time."}
       }
     }
   },
   {
-    "id": "make_dried_meat",
-    "station": "drying_rack",
-    "inputs": {},
-    "outputs": {
-      "dried_meat": 1
-    },
-    "workAmount": 120,
+    "id"              : "make_dried_meat",
+    "station"         : "drying_rack",
+    "inputs"          : {},
+    "outputs"         : {"dried_meat": 1},
+    "workAmount"      : 120,
     "toolTierRequired": 0,
-    "dynamicRecipe": {
+    "dynamicRecipe"   : {
       "meat": {
         "acceptsCategory": "meat",
-        "quantity": 1,
-        "default": {
-          "name": "Dried Meat",
-          "description": "Wind- and smoke-dried meat. Keeps well without salt."
-        }
+        "quantity"       : 1,
+        "default"        : {"name": "Dried Meat", "description": "Wind- and smoke-dried meat. Keeps well without salt."}
       }
     }
   },
   {
-    "id": "make_oak_plank",
-    "station": "sawtable",
-    "inputs": {
-      "oak_log": 1
-    },
-    "outputs": {
-      "oak_plank": 1
-    },
-    "workAmount": 5,
+    "id"              : "make_oak_plank",
+    "station"         : "sawtable",
+    "inputs"          : {"oak_log": 1},
+    "outputs"         : {"oak_plank": 1},
+    "workAmount"      : 5,
     "toolTierRequired": 0
   },
   {
-    "id": "make_birch_plank",
-    "station": "sawtable",
-    "inputs": {
-      "birch_log": 1
-    },
-    "outputs": {
-      "birch_plank": 1
-    },
-    "workAmount": 4,
+    "id"              : "make_birch_plank",
+    "station"         : "sawtable",
+    "inputs"          : {"birch_log": 1},
+    "outputs"         : {"birch_plank": 1},
+    "workAmount"      : 4,
     "toolTierRequired": 0
   },
   {
-    "id": "make_ash_plank",
-    "station": "sawtable",
-    "inputs": {
-      "ash_log": 1
-    },
-    "outputs": {
-      "ash_plank": 1
-    },
-    "workAmount": 4,
+    "id"              : "make_ash_plank",
+    "station"         : "sawtable",
+    "inputs"          : {"ash_log": 1},
+    "outputs"         : {"ash_plank": 1},
+    "workAmount"      : 4,
     "toolTierRequired": 0
   },
   {
-    "id": "make_yew_plank",
-    "station": "sawtable",
-    "inputs": {
-      "yew_log": 1
-    },
-    "outputs": {
-      "yew_plank": 1
-    },
-    "workAmount": 6,
+    "id"              : "make_yew_plank",
+    "station"         : "sawtable",
+    "inputs"          : {"yew_log": 1},
+    "outputs"         : {"yew_plank": 1},
+    "workAmount"      : 6,
     "toolTierRequired": 0
   },
   {
-    "id": "make_saw",
-    "station": "makers_bench",
-    "inputs": {
-      "bronze_bar": 1,
-      "ash_log": 1
-    },
-    "outputs": {
-      "saw": 1
-    },
-    "workAmount": 6,
+    "id"              : "make_saw",
+    "station"         : "makers_bench",
+    "inputs"          : {"bronze_bar": 1, "ash_log": 1},
+    "outputs"         : {"saw": 1},
+    "workAmount"      : 6,
     "toolTierRequired": 1
   },
   {
-    "id": "make_granite_block",
-    "station": "masons_bench",
-    "inputs": {
-      "granite": 2
-    },
-    "outputs": {
-      "granite_block": 1
-    },
-    "workAmount": 6,
+    "id"              : "make_granite_block",
+    "station"         : "masons_bench",
+    "inputs"          : {"granite": 2},
+    "outputs"         : {"granite_block": 1},
+    "workAmount"      : 6,
     "toolTierRequired": 1
   },
   {
-    "id": "make_limestone_block",
-    "station": "masons_bench",
-    "inputs": {
-      "limestone": 2
-    },
-    "outputs": {
-      "limestone_block": 1
-    },
-    "workAmount": 5,
+    "id"              : "make_limestone_block",
+    "station"         : "masons_bench",
+    "inputs"          : {"limestone": 2},
+    "outputs"         : {"limestone_block": 1},
+    "workAmount"      : 5,
     "toolTierRequired": 1
   },
   {
-    "id": "make_sandstone_block",
-    "station": "masons_bench",
-    "inputs": {
-      "sandstone": 2
-    },
-    "outputs": {
-      "sandstone_block": 1
-    },
-    "workAmount": 5,
+    "id"              : "make_sandstone_block",
+    "station"         : "masons_bench",
+    "inputs"          : {"sandstone": 2},
+    "outputs"         : {"sandstone_block": 1},
+    "workAmount"      : 5,
     "toolTierRequired": 1
   },
   {
-    "id": "make_marble_block",
-    "station": "masons_bench",
-    "inputs": {
-      "marble": 2
-    },
-    "outputs": {
-      "marble_block": 1
-    },
-    "workAmount": 9,
+    "id"              : "make_marble_block",
+    "station"         : "masons_bench",
+    "inputs"          : {"marble": 2},
+    "outputs"         : {"marble_block": 1},
+    "workAmount"      : 9,
     "toolTierRequired": 1
   },
   {
-    "id": "make_slate_tile",
-    "station": "masons_bench",
-    "inputs": {
-      "slate": 1
-    },
-    "outputs": {
-      "slate_tile": 1
-    },
-    "workAmount": 3,
+    "id"              : "make_slate_tile",
+    "station"         : "masons_bench",
+    "inputs"          : {"slate": 1},
+    "outputs"         : {"slate_tile": 1},
+    "workAmount"      : 3,
     "toolTierRequired": 1
   },
   {
-    "id": "make_cordage",
-    "station": "craft_spot",
-    "inputs": {
-      "plant_fiber": 5
-    },
-    "outputs": {
-      "cordage": 1
-    },
-    "workAmount": 1,
+    "id"              : "make_cordage",
+    "station"         : "craft_spot",
+    "inputs"          : {"plant_fiber": 5},
+    "outputs"         : {"cordage": 1},
+    "workAmount"      : 1,
     "toolTierRequired": 0
   },
   {
-    "id": "make_mud_brick",
-    "station": "craft_spot",
-    "inputs": {
-      "clay_lump": 2
-    },
-    "outputs": {
-      "mud_brick": 1
-    },
-    "workAmount": 2,
+    "id"              : "make_mud_brick",
+    "station"         : "craft_spot",
+    "inputs"          : {"clay_lump": 2},
+    "outputs"         : {"mud_brick": 1},
+    "workAmount"      : 2,
     "toolTierRequired": 0
   },
   {
-    "id": "make_fired_brick",
-    "station": "pottery_kiln",
-    "inputs": {
-      "clay_lump": 2
-    },
-    "outputs": {
-      "fired_brick": 1
-    },
-    "workAmount": 5,
+    "id"              : "make_fired_brick",
+    "station"         : "pottery_kiln",
+    "inputs"          : {"clay_lump": 2},
+    "outputs"         : {"fired_brick": 1},
+    "workAmount"      : 5,
     "toolTierRequired": 0
   },
   {
-    "id": "make_water_urn",
-    "station": "pottery_kiln",
-    "inputs": {
-      "clay_lump": 1
-    },
-    "outputs": {
-      "water_urn": 1
-    },
-    "workAmount": 4,
+    "id"              : "make_water_urn",
+    "station"         : "pottery_kiln",
+    "inputs"          : {"clay_lump": 1},
+    "outputs"         : {"water_urn": 1},
+    "workAmount"      : 4,
     "toolTierRequired": 0
   },
   {
-    "id": "make_clay_mold",
-    "station": "pottery_kiln",
-    "inputs": {
-      "clay_lump": 2
-    },
-    "outputs": {
-      "clay_mold": 1
-    },
-    "workAmount": 4,
+    "id"              : "make_clay_mold",
+    "station"         : "pottery_kiln",
+    "inputs"          : {"clay_lump": 2},
+    "outputs"         : {"clay_mold": 1},
+    "workAmount"      : 4,
     "toolTierRequired": 0
   },
   {
-    "id": "make_tile_mold",
-    "station": "stone_forge",
-    "inputs": {
-      "bronze_bar": 1
-    },
-    "outputs": {
-      "tile_mold": 1
-    },
-    "workAmount": 6,
+    "id"              : "make_tile_mold",
+    "station"         : "stone_forge",
+    "inputs"          : {"bronze_bar": 1},
+    "outputs"         : {"tile_mold": 1},
+    "workAmount"      : 6,
     "toolTierRequired": 1
   },
   {
-    "id": "make_clay_roof_tile",
-    "station": "pottery_kiln",
-    "inputs": {
-      "clay_lump": 2
-    },
-    "outputs": {
-      "clay_roof_tile": 1
-    },
-    "workAmount": 5,
+    "id"              : "make_clay_roof_tile",
+    "station"         : "pottery_kiln",
+    "inputs"          : {"clay_lump": 2},
+    "outputs"         : {"clay_roof_tile": 1},
+    "workAmount"      : 5,
     "toolTierRequired": 0
   },
   {
-    "id": "make_firestarter",
-    "station": "craft_spot",
-    "inputs": {
-      "small_stone": 1,
-      "flint_shard": 1
-    },
-    "outputs": {
-      "firestarter": 1
-    },
-    "workAmount": 1,
+    "id"              : "make_firestarter",
+    "station"         : "craft_spot",
+    "inputs"          : {"small_stone": 1, "flint_shard": 1},
+    "outputs"         : {"firestarter": 1},
+    "workAmount"      : 1,
     "toolTierRequired": 0
   },
   {
-    "id": "make_flint_knife",
-    "station": "craft_spot",
-    "inputs": {
-      "flint_shard": 2,
-      "branch": 2,
-      "cordage": 1
-    },
-    "outputs": {
-      "flint_knife": 1
-    },
-    "workAmount": 1,
+    "id"              : "make_flint_knife",
+    "station"         : "craft_spot",
+    "inputs"          : {"flint_shard": 2, "branch": 2, "cordage": 1},
+    "outputs"         : {"flint_knife": 1},
+    "workAmount"      : 1,
     "toolTierRequired": 0
   },
   {
-    "id": "make_flint_sickle",
-    "station": "craft_spot",
-    "inputs": {
-      "flint_shard": 3,
-      "branch": 2,
-      "cordage": 1
-    },
-    "outputs": {
-      "flint_sickle": 1
-    },
-    "workAmount": 2,
+    "id"              : "make_flint_sickle",
+    "station"         : "craft_spot",
+    "inputs"          : {"flint_shard": 3, "branch": 2, "cordage": 1},
+    "outputs"         : {"flint_sickle": 1},
+    "workAmount"      : 2,
     "toolTierRequired": 0
   },
   {
-    "id": "make_stone_chopper",
-    "station": "craft_spot",
-    "inputs": {
-      "small_stone": 1,
-      "branch": 3,
-      "cordage": 1
-    },
-    "outputs": {
-      "stone_chopper": 1
-    },
-    "workAmount": 1,
+    "id"              : "make_stone_chopper",
+    "station"         : "craft_spot",
+    "inputs"          : {"small_stone": 1, "branch": 3, "cordage": 1},
+    "outputs"         : {"stone_chopper": 1},
+    "workAmount"      : 1,
     "toolTierRequired": 0
   },
   {
-    "id": "make_digging_stick",
-    "station": "craft_spot",
-    "inputs": {
-      "branch": 2,
-      "plant_fiber": 2
-    },
-    "outputs": {
-      "digging_stick": 1
-    },
-    "workAmount": 1,
+    "id"              : "make_digging_stick",
+    "station"         : "craft_spot",
+    "inputs"          : {"branch": 2, "plant_fiber": 2},
+    "outputs"         : {"digging_stick": 1},
+    "workAmount"      : 1,
     "toolTierRequired": 0
   },
   {
-    "id": "make_stone_axe",
-    "station": "makers_bench",
-    "inputs": {
-      "flint_shard": 2,
-      "branch": 3,
-      "cordage": 2
-    },
-    "outputs": {
-      "stone_axe": 1
-    },
-    "workAmount": 3,
+    "id"              : "make_stone_axe",
+    "station"         : "makers_bench",
+    "inputs"          : {"flint_shard": 2, "branch": 3, "cordage": 2},
+    "outputs"         : {"stone_axe": 1},
+    "workAmount"      : 3,
     "toolTierRequired": 0
   },
   {
-    "id": "make_stone_hammer",
-    "station": "makers_bench",
-    "inputs": {
-      "granite": 2,
-      "branch": 3,
-      "cordage": 1
-    },
-    "outputs": {
-      "stone_hammer": 1
-    },
-    "workAmount": 3,
+    "id"              : "make_stone_hammer",
+    "station"         : "makers_bench",
+    "inputs"          : {"granite": 2, "branch": 3, "cordage": 1},
+    "outputs"         : {"stone_hammer": 1},
+    "workAmount"      : 3,
     "toolTierRequired": 0
   },
   {
-    "id": "make_stone_spear",
-    "station": "makers_bench",
-    "inputs": {
-      "flint_shard": 3,
-      "branch": 4,
-      "cordage": 1
-    },
-    "outputs": {
-      "stone_spear": 1
-    },
-    "workAmount": 3,
+    "id"              : "make_stone_spear",
+    "station"         : "makers_bench",
+    "inputs"          : {"flint_shard": 3, "branch": 4, "cordage": 1},
+    "outputs"         : {"stone_spear": 1},
+    "workAmount"      : 3,
     "toolTierRequired": 0
   },
   {
-    "id": "make_stone_spade",
-    "station": "makers_bench",
-    "inputs": {
-      "granite": 2,
-      "branch": 2,
-      "cordage": 2
-    },
-    "outputs": {
-      "stone_spade": 1
-    },
-    "workAmount": 3,
+    "id"              : "make_stone_spade",
+    "station"         : "makers_bench",
+    "inputs"          : {"granite": 2, "branch": 2, "cordage": 2},
+    "outputs"         : {"stone_spade": 1},
+    "workAmount"      : 3,
     "toolTierRequired": 0
   },
   {
-    "id": "make_clay_cooking_pot",
-    "station": "campfire",
-    "inputs": {
-      "clay_lump": 2
-    },
-    "outputs": {
-      "clay_cooking_pot": 1
-    },
-    "workAmount": 2,
+    "id"              : "make_clay_cooking_pot",
+    "station"         : "campfire",
+    "inputs"          : {"clay_lump": 2},
+    "outputs"         : {"clay_cooking_pot": 1},
+    "workAmount"      : 2,
     "toolTierRequired": 0
   },
   {
-    "id": "make_woven_basket",
-    "station": "makers_bench",
-    "inputs": {
-      "branch": 4,
-      "cordage": 15
-    },
-    "outputs": {
-      "woven_basket": 1
-    },
-    "workAmount": 2,
+    "id"              : "make_woven_basket",
+    "station"         : "makers_bench",
+    "inputs"          : {"branch": 4, "cordage": 15},
+    "outputs"         : {"woven_basket": 1},
+    "workAmount"      : 2,
     "toolTierRequired": 0
   },
   {
-    "id": "make_wolf_meat",
-    "station": "butcher_spot",
-    "inputs": {
-      "wolf_carcass": 1
-    },
-    "outputs": {
-      "wolf_meat": 1
-    },
-    "workAmount": 900,
+    "id"              : "make_wolf_meat",
+    "station"         : "butcher_spot",
+    "inputs"          : {"wolf_carcass": 1},
+    "outputs"         : {"wolf_meat": 1},
+    "workAmount"      : 900,
     "toolTierRequired": 0
   },
   {
-    "id": "make_bear_meat",
-    "station": "butcher_spot",
-    "inputs": {
-      "bear_carcass": 1
-    },
-    "outputs": {
-      "bear_meat": 1
-    },
-    "workAmount": 3600,
+    "id"              : "make_bear_meat",
+    "station"         : "butcher_spot",
+    "inputs"          : {"bear_carcass": 1},
+    "outputs"         : {"bear_meat": 1},
+    "workAmount"      : 3600,
     "toolTierRequired": 0
   },
   {
-    "id": "make_boar_meat",
-    "station": "butcher_spot",
-    "inputs": {
-      "boar_carcass": 1
-    },
-    "outputs": {
-      "boar_meat": 1
-    },
-    "workAmount": 900,
+    "id"              : "make_boar_meat",
+    "station"         : "butcher_spot",
+    "inputs"          : {"boar_carcass": 1},
+    "outputs"         : {"boar_meat": 1},
+    "workAmount"      : 900,
     "toolTierRequired": 0
   },
   {
-    "id": "make_elk_meat",
-    "station": "butcher_spot",
-    "inputs": {
-      "elk_carcass": 1
-    },
-    "outputs": {
-      "elk_meat": 1
-    },
-    "workAmount": 3600,
+    "id"              : "make_elk_meat",
+    "station"         : "butcher_spot",
+    "inputs"          : {"elk_carcass": 1},
+    "outputs"         : {"elk_meat": 1},
+    "workAmount"      : 3600,
     "toolTierRequired": 0
   },
   {
-    "id": "make_goat_meat",
-    "station": "butcher_spot",
-    "inputs": {
-      "mountain_goat_carcass": 1
-    },
-    "outputs": {
-      "goat_meat": 1
-    },
-    "workAmount": 900,
+    "id"              : "make_goat_meat",
+    "station"         : "butcher_spot",
+    "inputs"          : {"mountain_goat_carcass": 1},
+    "outputs"         : {"goat_meat": 1},
+    "workAmount"      : 900,
     "toolTierRequired": 0
   },
   {
-    "id": "make_chicken_meat",
-    "station": "butcher_spot",
-    "inputs": {
-      "wild_chicken_carcass": 1
-    },
-    "outputs": {
-      "chicken_meat": 1
-    },
-    "workAmount": 200,
+    "id"              : "make_chicken_meat",
+    "station"         : "butcher_spot",
+    "inputs"          : {"wild_chicken_carcass": 1},
+    "outputs"         : {"chicken_meat": 1},
+    "workAmount"      : 200,
     "toolTierRequired": 0
   },
   {
-    "id": "make_rat_meat",
-    "station": "butcher_spot",
-    "inputs": {
-      "giant_rat_carcass": 1
-    },
-    "outputs": {
-      "rat_meat": 1
-    },
-    "workAmount": 200,
+    "id"              : "make_rat_meat",
+    "station"         : "butcher_spot",
+    "inputs"          : {"giant_rat_carcass": 1},
+    "outputs"         : {"rat_meat": 1},
+    "workAmount"      : 200,
     "toolTierRequired": 0
   },
   {
-    "id": "make_rabbit_pelt",
-    "station": "butcher_spot",
-    "inputs": {
-      "rabbit_carcass": 1
-    },
-    "outputs": {
-      "rabbit_pelt": 1
-    },
-    "workAmount": 150,
+    "id"              : "make_rabbit_pelt",
+    "station"         : "butcher_spot",
+    "inputs"          : {"rabbit_carcass": 1},
+    "outputs"         : {"rabbit_pelt": 1},
+    "workAmount"      : 150,
     "toolTierRequired": 0
   },
   {
-    "id": "make_deer_hide",
-    "station": "butcher_spot",
-    "inputs": {
-      "deer_carcass": 1
-    },
-    "outputs": {
-      "deer_hide": 1
-    },
-    "workAmount": 600,
+    "id"              : "make_deer_hide",
+    "station"         : "butcher_spot",
+    "inputs"          : {"deer_carcass": 1},
+    "outputs"         : {"deer_hide": 1},
+    "workAmount"      : 600,
     "toolTierRequired": 0
   },
   {
-    "id": "make_wolf_hide",
-    "station": "butcher_spot",
-    "inputs": {
-      "wolf_carcass": 1
-    },
-    "outputs": {
-      "wolf_hide": 1
-    },
-    "workAmount": 600,
+    "id"              : "make_wolf_hide",
+    "station"         : "butcher_spot",
+    "inputs"          : {"wolf_carcass": 1},
+    "outputs"         : {"wolf_hide": 1},
+    "workAmount"      : 600,
     "toolTierRequired": 0
   },
   {
-    "id": "make_bear_pelt",
-    "station": "butcher_spot",
-    "inputs": {
-      "bear_carcass": 1
-    },
-    "outputs": {
-      "bear_pelt": 1
-    },
-    "workAmount": 2400,
+    "id"              : "make_bear_pelt",
+    "station"         : "butcher_spot",
+    "inputs"          : {"bear_carcass": 1},
+    "outputs"         : {"bear_pelt": 1},
+    "workAmount"      : 2400,
     "toolTierRequired": 0
   },
   {
-    "id": "make_boar_hide",
-    "station": "butcher_spot",
-    "inputs": {
-      "boar_carcass": 1
-    },
-    "outputs": {
-      "boar_hide": 1
-    },
-    "workAmount": 600,
+    "id"              : "make_boar_hide",
+    "station"         : "butcher_spot",
+    "inputs"          : {"boar_carcass": 1},
+    "outputs"         : {"boar_hide": 1},
+    "workAmount"      : 600,
     "toolTierRequired": 0
   },
   {
-    "id": "make_elk_hide",
-    "station": "butcher_spot",
-    "inputs": {
-      "elk_carcass": 1
-    },
-    "outputs": {
-      "elk_hide": 1
-    },
-    "workAmount": 2400,
+    "id"              : "make_elk_hide",
+    "station"         : "butcher_spot",
+    "inputs"          : {"elk_carcass": 1},
+    "outputs"         : {"elk_hide": 1},
+    "workAmount"      : 2400,
     "toolTierRequired": 0
   },
   {
-    "id": "make_goat_hide",
-    "station": "butcher_spot",
-    "inputs": {
-      "mountain_goat_carcass": 1
-    },
-    "outputs": {
-      "goat_hide": 1
-    },
-    "workAmount": 600,
+    "id"              : "make_goat_hide",
+    "station"         : "butcher_spot",
+    "inputs"          : {"mountain_goat_carcass": 1},
+    "outputs"         : {"goat_hide": 1},
+    "workAmount"      : 600,
     "toolTierRequired": 0
   },
   {
-    "id": "make_chicken_feathers",
-    "station": "butcher_spot",
-    "inputs": {
-      "wild_chicken_carcass": 1
-    },
-    "outputs": {
-      "chicken_feathers": 1
-    },
-    "workAmount": 150,
+    "id"              : "make_chicken_feathers",
+    "station"         : "butcher_spot",
+    "inputs"          : {"wild_chicken_carcass": 1},
+    "outputs"         : {"chicken_feathers": 1},
+    "workAmount"      : 150,
     "toolTierRequired": 0
   },
   {
-    "id": "make_rat_pelt",
-    "station": "butcher_spot",
-    "inputs": {
-      "giant_rat_carcass": 1
-    },
-    "outputs": {
-      "rat_pelt": 1
-    },
-    "workAmount": 150,
+    "id"              : "make_rat_pelt",
+    "station"         : "butcher_spot",
+    "inputs"          : {"giant_rat_carcass": 1},
+    "outputs"         : {"rat_pelt": 1},
+    "workAmount"      : 150,
     "toolTierRequired": 0
   },
   {
-    "id": "make_small_bones",
-    "station": "butcher_spot",
-    "inputs": {
-      "rabbit_carcass": 1
-    },
-    "inputAlternatives": [
-      {
-        "giant_rat_carcass": 1
-      },
-      {
-        "wild_chicken_carcass": 1
-      }
-    ],
-    "outputs": {
-      "small_bones": 1
-    },
-    "workAmount": 100,
+    "id"               : "make_small_bones",
+    "station"          : "butcher_spot",
+    "inputs"           : {"rabbit_carcass": 1},
+    "inputAlternatives": [ {"giant_rat_carcass": 1}, {"wild_chicken_carcass": 1} ],
+    "outputs"          : {"small_bones": 1},
+    "workAmount"       : 100,
+    "toolTierRequired" : 0
+  },
+  {
+    "id"               : "make_medium_bones",
+    "station"          : "butcher_spot",
+    "inputs"           : {"wolf_carcass": 1},
+    "inputAlternatives": [ {"deer_carcass": 1}, {"boar_carcass": 1}, {"mountain_goat_carcass": 1} ],
+    "outputs"          : {"medium_bones": 1},
+    "workAmount"       : 300,
+    "toolTierRequired" : 0
+  },
+  {
+    "id"               : "make_large_bones",
+    "station"          : "butcher_spot",
+    "inputs"           : {"bear_carcass": 1},
+    "inputAlternatives": [ {"elk_carcass": 1} ],
+    "outputs"          : {"large_bones": 1},
+    "workAmount"       : 1200,
+    "toolTierRequired" : 0
+  },
+  {
+    "id"              : "make_bone_cleaver",
+    "station"         : "makers_bench",
+    "inputs"          : {"large_bones": 1, "flint_shard": 2, "branch": 3, "cordage": 2},
+    "outputs"         : {"bone_cleaver": 1},
+    "workAmount"      : 4,
     "toolTierRequired": 0
   },
   {
-    "id": "make_medium_bones",
-    "station": "butcher_spot",
-    "inputs": {
-      "wolf_carcass": 1
-    },
-    "inputAlternatives": [
-      {
-        "deer_carcass": 1
-      },
-      {
-        "boar_carcass": 1
-      },
-      {
-        "mountain_goat_carcass": 1
-      }
-    ],
-    "outputs": {
-      "medium_bones": 1
-    },
-    "workAmount": 300,
+    "id"              : "make_rope",
+    "station"         : "ropewalk",
+    "inputs"          : {"cordage": 6},
+    "outputs"         : {"rope": 1},
+    "workAmount"      : 4,
     "toolTierRequired": 0
   },
   {
-    "id": "make_large_bones",
-    "station": "butcher_spot",
-    "inputs": {
-      "bear_carcass": 1
-    },
-    "inputAlternatives": [
-      {
-        "elk_carcass": 1
-      }
-    ],
-    "outputs": {
-      "large_bones": 1
-    },
-    "workAmount": 1200,
-    "toolTierRequired": 0
-  },
-  {
-    "id": "make_bone_cleaver",
-    "station": "makers_bench",
-    "inputs": {
-      "large_bones": 1,
-      "flint_shard": 2,
-      "branch": 3,
-      "cordage": 2
-    },
-    "outputs": {
-      "bone_cleaver": 1
-    },
-    "workAmount": 4,
-    "toolTierRequired": 0
-  },
-  {
-    "id": "make_rope",
-    "station": "ropewalk",
-    "inputs": {
-      "cordage": 6
-    },
-    "outputs": {
-      "rope": 1
-    },
-    "workAmount": 4,
-    "toolTierRequired": 0
-  },
-  {
-    "id": "make_iron_nail",
-    "station": "anvil",
-    "inputs": {
-      "iron_bar": 1
-    },
-    "outputs": {
-      "iron_nail": 12
-    },
-    "workAmount": 6,
+    "id"              : "make_iron_nail",
+    "station"         : "anvil",
+    "inputs"          : {"iron_bar": 1},
+    "outputs"         : {"iron_nail": 12},
+    "workAmount"      : 6,
     "toolTierRequired": 1
   },
   {
-    "id": "make_wooden_chest",
-    "station": "sawtable",
-    "inputs": {
-      "pine_plank": 4,
-      "iron_nail": 6
-    },
-    "outputs": {
-      "wooden_chest": 1
-    },
-    "workAmount": 16,
+    "id"              : "make_wooden_chest",
+    "station"         : "sawtable",
+    "inputs"          : {"pine_plank": 4, "iron_nail": 6},
+    "outputs"         : {"wooden_chest": 1},
+    "workAmount"      : 16,
     "toolTierRequired": 1
   }
 ]
