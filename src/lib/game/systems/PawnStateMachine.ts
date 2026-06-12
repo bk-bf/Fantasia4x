@@ -130,9 +130,7 @@ const EATING_TURNS = ticksFromSeconds(2); // ~2 in-game min to eat at a campfire
 const EATING_TURNS_GROUND = ticksFromSeconds(3); // eating in-place (cold, uncomfortable)
 const SLEEPING_TURNS = ticksFromSeconds(100); // Full recovery in bed: 72 / 0.72 = 100s = 1/3 day (progress bar ref)
 const SLEEPING_TURNS_GROUND = ticksFromSeconds(124); // Full recovery on ground: 72 / 0.58 ≈ 124s ≈ 9.9h
-const HUNGER_PER_FOOD_UNIT = 30; // Base hunger restored per 1 unit (×nutrition)
 const SAFE_HUNGER = 10; // Target hunger level after a full meal
-const MAX_UNITS_PER_FOOD_TYPE = 3; // Cap per food type per meal — avoids hoarding
 const FATIGUE_PER_SLEEPING_TURN = 0.72; // Bed: 72 fatigue → 0 in ~100s = 8 in-game hours (per second; perTick at use)
 const FATIGUE_PER_SLEEPING_GROUND = 0.58; // Ground: 72 → 0 in ~124s ≈ 9.9 in-game hours (per second; perTick at use)
 // Wake thresholds — prevents yo-yo by requiring proper rest before resuming activity
@@ -764,9 +762,9 @@ function hasAvailableFood(gs: GameState): boolean {
 type MealPortion = { source: 'item' | 'stockpile'; id: string; units: number };
 
 /**
- * Select a balanced meal that brings the pawn to SAFE_HUNGER.
- * Takes the most nutritious food first, capped at MAX_UNITS_PER_FOOD_TYPE per type,
- * then supplements with less nutritious options if needed.
+ * Select a meal that brings the pawn to SAFE_HUNGER. Takes the most nutritious food first and
+ * eats as many units as needed (an item's `nutrition` IS the hunger it removes per unit — no
+ * scaling, no per-type cap), then supplements with less nutritious options.
  */
 function selectFoodForMeal(pawn: Pawn, gs: GameState): MealPortion[] {
     const hungerToSatisfy = Math.max(0, (pawn.needs?.hunger ?? 0) - SAFE_HUNGER);
@@ -803,10 +801,10 @@ function selectFoodForMeal(pawn: Pawn, gs: GameState): MealPortion[] {
     let remaining = hungerToSatisfy;
     for (const food of options) {
         if (remaining <= 0) break;
-        const hungerPerUnit = food.nutrition * HUNGER_PER_FOOD_UNIT;
+        const hungerPerUnit = food.nutrition;
         if (hungerPerUnit <= 0) continue;
         const unitsNeeded = Math.ceil(remaining / hungerPerUnit);
-        const unitsTaken = Math.min(unitsNeeded, MAX_UNITS_PER_FOOD_TYPE, food.available);
+        const unitsTaken = Math.min(unitsNeeded, food.available);
         if (unitsTaken <= 0) continue;
         meal.push({ source: food.source, id: food.id, units: unitsTaken });
         remaining -= unitsTaken * hungerPerUnit;
@@ -823,7 +821,7 @@ function consumeMeal(
     let hungerRecovered = 0;
     for (const { source, id, units } of meal) {
         const def = ITEM_DEF_BY_ID.get(id);
-        hungerRecovered += (def?.nutrition ?? 0) * HUNGER_PER_FOOD_UNIT * units;
+        hungerRecovered += (def?.nutrition ?? 0) * units;
         if (source === 'item') {
             state = {
                 ...state,
