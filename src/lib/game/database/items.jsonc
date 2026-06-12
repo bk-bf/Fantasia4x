@@ -86,7 +86,7 @@
     "color": "#9CCC65",
     "amount": 0,
     "medicineQuality": 0.5,
-    "toolTierRequired": 0,
+    "toolTierRequired": 0
   },
   {
     "id"            : "river_trout",
@@ -199,67 +199,67 @@
     "deteriorationRate": 0.03,
     "description"   : "Plank-staved bucket for soaking hides in tannin. Needed to build a tanning rack.",
     "color"         : "#9A7B4F",
-    "amount"        : 0,
+    "amount"        : 0
   },
   {
     "id": "cured_thin_hide", "name": "Cured Thin Hide", "type": "material", "category": "organic",
     "maxDurability": 120, "deteriorationRate": 0.03,
     "description": "Ash/salt-cured small pelt. Stable — won't rot. Tans into thin leather.",
-    "color": "#B89878", "amount": 0,
+    "color": "#B89878", "amount": 0
   },
   {
     "id": "cured_light_hide", "name": "Cured Light Hide", "type": "material", "category": "organic",
     "maxDurability": 120, "deteriorationRate": 0.03,
     "description": "Cured deer/goat hide. Stable. Tans into light leather.",
-    "color": "#B08F6A", "amount": 0,
+    "color": "#B08F6A", "amount": 0
   },
   {
     "id": "cured_sturdy_hide", "name": "Cured Sturdy Hide", "type": "material", "category": "organic",
     "maxDurability": 120, "deteriorationRate": 0.03,
     "description": "Cured wolf/boar hide. Stable. Tans into sturdy leather.",
-    "color": "#8A6E4E", "amount": 0,
+    "color": "#8A6E4E", "amount": 0
   },
   {
     "id": "cured_heavy_hide", "name": "Cured Heavy Hide", "type": "material", "category": "organic",
     "maxDurability": 120, "deteriorationRate": 0.03,
     "description": "Cured elk hide. Stable. Tans into heavy leather.",
-    "color": "#75593C", "amount": 0,
+    "color": "#75593C", "amount": 0
   },
   {
     "id": "cured_thick_hide", "name": "Cured Thick Hide", "type": "material", "category": "organic",
     "maxDurability": 120, "deteriorationRate": 0.03,
     "description": "Cured bear pelt. Stable. Tans into thick leather.",
-    "color": "#5E4632", "amount": 0,
+    "color": "#5E4632", "amount": 0
   },
   {
     "id": "thin_leather", "name": "Thin Leather", "type": "material", "category": "leather",
     "maxDurability": 140, "deteriorationRate": 0.04,
     "description": "Soft thin leather. Clothing lining and light bags.",
-    "color": "#C8A878", "amount": 0,
+    "color": "#C8A878", "amount": 0
   },
   {
     "id": "light_leather", "name": "Light Leather", "type": "material", "category": "leather",
     "maxDurability": 150, "deteriorationRate": 0.035,
     "description": "Supple light leather. Soft armour and packs.",
-    "color": "#B8935E", "amount": 0,
+    "color": "#B8935E", "amount": 0
   },
   {
     "id": "sturdy_leather", "name": "Sturdy Leather", "type": "material", "category": "leather",
     "maxDurability": 160, "deteriorationRate": 0.03,
     "description": "Tough leather. Light armour and straps.",
-    "color": "#9A7848", "amount": 0,
+    "color": "#9A7848", "amount": 0
   },
   {
     "id": "heavy_leather", "name": "Heavy Leather", "type": "material", "category": "leather",
     "maxDurability": 170, "deteriorationRate": 0.03,
     "description": "Thick, stiff leather. Armour and harness.",
-    "color": "#7E5E36", "amount": 0,
+    "color": "#7E5E36", "amount": 0
   },
   {
     "id": "thick_leather", "name": "Thick Leather", "type": "material", "category": "leather",
     "maxDurability": 180, "deteriorationRate": 0.025,
     "description": "Heaviest leather. Best armour and prestige trim.",
-    "color": "#604529", "amount": 0,
+    "color": "#604529", "amount": 0
   },
   {
     "id"              : "spit_meat",
@@ -450,7 +450,7 @@
     "fuelHeat"      : 1,
     "deteriorationRate": 0.04,
     "maxDurability" : 120,
-    "toolTierRequired": 0,
+    "toolTierRequired": 0
   },
   {
     "id"            : "dry_firewood",
@@ -504,7 +504,7 @@
     "amount"        : 0,
     "fuelValue"     : 24,
     "fuelHeat"      : 3,
-    "toolTierRequired": 0,
+    "toolTierRequired": 0
   },
   {
     "id"            : "coal",
@@ -584,49 +584,49 @@
     "id"            : "copper_bar", "name": "Copper Bar", "type": "material", "category": "metal",
     "maxDurability" : 250, "deteriorationRate": 0.008,
     "description"   : "Smelted copper ingot. First metal — soft tools, wire, and half of bronze.",
-    "color"         : "#B87333", "amount": 0,
+    "color"         : "#B87333", "amount": 0
   },
   {
     "id"            : "tin_bar", "name": "Tin Bar", "type": "material", "category": "metal",
     "maxDurability" : 250, "deteriorationRate": 0.008,
     "description"   : "Smelted tin ingot. Soft on its own; alloyed with copper makes bronze.",
-    "color"         : "#9DA1A6", "amount": 0,
+    "color"         : "#9DA1A6", "amount": 0
   },
   {
     "id"            : "bronze_bar", "name": "Bronze Bar", "type": "material", "category": "metal",
     "maxDurability" : 250, "deteriorationRate": 0.006,
     "description"   : "Cast bronze ingot — copper and tin. Tier-1 tools, weapons, and the first saw.",
-    "color"         : "#CD7F32", "amount": 0,
+    "color"         : "#CD7F32", "amount": 0
   },
   {
     "id"            : "iron_bar", "name": "Iron Bar", "type": "material", "category": "metal",
     "maxDurability" : 250, "deteriorationRate": 0.008,
     "description"   : "Bloomery iron ingot. Tier-2 tools, weapons and armour. Needs limestone flux.",
-    "color"         : "#6E7378", "amount": 0,
+    "color"         : "#6E7378", "amount": 0
   },
   {
     "id"            : "lead_bar", "name": "Lead Bar", "type": "material", "category": "metal",
     "maxDurability" : 250, "deteriorationRate": 0.008,
     "description"   : "Smelted lead. Heavy, soft — pipes, weights, and shot.",
-    "color"           : "#5A5E63", "amount": 0,
+    "color"           : "#5A5E63", "amount": 0
   },
   {
     "id"            : "silver_bar", "name": "Silver Bar", "type": "material", "category": "metal",
     "maxDurability" : 250, "deteriorationRate": 0.006,
     "description"   : "Cupelled silver from galena. Coin, fine decor, and trade.",
-    "color"         : "#C0C0C0", "amount": 0,
+    "color"         : "#C0C0C0", "amount": 0
   },
   {
     "id"            : "gold_bar", "name": "Gold Bar", "type": "material", "category": "metal",
     "maxDurability" : 250, "deteriorationRate": 0.005,
     "description"   : "Cast gold ingot. Currency, prestige decor, and magical work.",
-    "color"         : "#D4AF37", "amount": 0,
+    "color"         : "#D4AF37", "amount": 0
   },
   {
     "id"            : "steel_bar", "name": "Steel Bar", "type": "material", "category": "metal",
     "maxDurability" : 250, "deteriorationRate": 0.006,
     "description"   : "Cast steel — iron with coal and flux. The deterministic ceiling: best mundane gear.",
-    "color"           : "#43484D", "amount": 0,
+    "color"           : "#43484D", "amount": 0
   },
   {
     "id"            : "ash",
@@ -638,7 +638,7 @@
     "description"   : "Wood ash from a fire. Used to cure hides and, later, to make lye and soap.",
     "color"         : "#9E9E9E",
     "amount"        : 0,
-    "toolTierRequired": 0,
+    "toolTierRequired": 0
   },
   {
     "id"            : "salt",
@@ -673,7 +673,7 @@
     "description"   : "Rendered fat from a fatty carcass. Fuel for torches and lamps; later, soap and tallow.",
     "color"         : "#E8D9A8",
     "amount"        : 0,
-    "toolTierRequired": 0,
+    "toolTierRequired": 0
   },
   {
     "id"            : "torch",
@@ -686,7 +686,7 @@
     "color"         : "#FF9E40",
     "amount"        : 0,
     "fuelValue"     : 6,
-    "toolTierRequired": 0,
+    "toolTierRequired": 0
   },
   {
     "id"            : "candle",
@@ -699,7 +699,7 @@
     "color"         : "#F2E2B0",
     "amount"        : 0,
     "fuelValue"     : 4,
-    "toolTierRequired": 0,
+    "toolTierRequired": 0
   },
   {
     "id"              : "salted_meat",
@@ -743,7 +743,7 @@
     "fuelHeat"      : 1,
     "deteriorationRate": 0.03,
     "maxDurability" : 120,
-    "toolTierRequired": 0,
+    "toolTierRequired": 0
   },
   {
     "id"            : "oak_plank",
@@ -757,7 +757,7 @@
     "fuelHeat"      : 1,
     "deteriorationRate": 0.025,
     "maxDurability" : 120,
-    "toolTierRequired": 0,
+    "toolTierRequired": 0
   },
   {
     "id"            : "birch_plank",
@@ -771,7 +771,7 @@
     "fuelHeat"      : 1,
     "deteriorationRate": 0.03,
     "maxDurability" : 120,
-    "toolTierRequired": 0,
+    "toolTierRequired": 0
   },
   {
     "id"            : "ash_plank",
@@ -785,7 +785,7 @@
     "fuelHeat"      : 1,
     "deteriorationRate": 0.025,
     "maxDurability" : 120,
-    "toolTierRequired": 0,
+    "toolTierRequired": 0
   },
   {
     "id"            : "yew_plank",
@@ -799,7 +799,7 @@
     "fuelHeat"      : 1,
     "deteriorationRate": 0.02,
     "maxDurability" : 120,
-    "toolTierRequired": 0,
+    "toolTierRequired": 0
   },
   {
     "id"              : "saw",
@@ -814,7 +814,7 @@
     "durability"      : 80,
     "maxDurability"   : 80,
     "durabilityLossPerAction": 2,
-    "toolTierRequired": 1,
+    "toolTierRequired": 1
   },
   {
     "id"            : "granite",
@@ -886,7 +886,7 @@
     "description"   : "Dressed granite block. Strong walls and prestige stonework.",
     "color"         : "#9E8E8A",
     "amount"        : 0,
-    "toolTierRequired": 1,
+    "toolTierRequired": 1
   },
   {
     "id"            : "limestone_block",
@@ -898,7 +898,7 @@
     "description"   : "Dressed limestone block. Soft, easy walls and mortar work.",
     "color"         : "#C8C0A8",
     "amount"        : 0,
-    "toolTierRequired": 1,
+    "toolTierRequired": 1
   },
   {
     "id"            : "sandstone_block",
@@ -910,7 +910,7 @@
     "description"   : "Dressed sandstone block. Cheap bulk building.",
     "color"         : "#D9B88C",
     "amount"        : 0,
-    "toolTierRequired": 1,
+    "toolTierRequired": 1
   },
   {
     "id"            : "marble_block",
@@ -922,7 +922,7 @@
     "description"   : "Dressed marble block. Statues, fine floors, prestige decor.",
     "color"         : "#E8E6E0",
     "amount"        : 0,
-    "toolTierRequired": 1,
+    "toolTierRequired": 1
   },
   {
     "id"            : "slate_tile",
@@ -934,7 +934,7 @@
     "description"   : "Split slate roofing tile — the durable, low-maintenance roof.",
     "color"         : "#5A6066",
     "amount"        : 0,
-    "toolTierRequired": 1,
+    "toolTierRequired": 1
   },
   {
     "id"            : "clay_lump",
@@ -959,7 +959,7 @@
     "color"           : "#C8A064",
     "amount"          : 0,
     "fuelValue"       : 4,
-    "toolTierRequired": 0,
+    "toolTierRequired": 0
   },
   {
     "id"              : "mud_brick",
@@ -971,7 +971,7 @@
     "description"     : "Sun-dried mud brick. Requires no kiln.",
     "color"           : "#C4A265",
     "amount"          : 0,
-    "toolTierRequired": 0,
+    "toolTierRequired": 0
   },
   {
     "id"              : "fired_brick",
@@ -983,7 +983,7 @@
     "description"     : "Kiln-fired clay brick. Hard and weatherproof — forges, kilns, cellars, sturdy walls.",
     "color"           : "#A0522D",
     "amount"          : 0,
-    "toolTierRequired": 0,
+    "toolTierRequired": 0
   },
   {
     "id"              : "water_urn",
@@ -997,7 +997,7 @@
     "amount"          : 0,
     "isContainer"     : true,
     "storageCapacity" : 20,
-    "toolTierRequired": 0,
+    "toolTierRequired": 0
   },
   {
     "id"              : "clay_mold",
@@ -1010,7 +1010,7 @@
     "description"     : "Fired clay ingot mold. Required to cast metal bars — cracks and wears with each pour.",
     "color"           : "#9A6B43",
     "amount"          : 0,
-    "toolTierRequired": 0,
+    "toolTierRequired": 0
   },
   {
     "id"              : "tile_mold",
@@ -1022,7 +1022,7 @@
     "description"     : "Cast-metal form for pressing clay roof tiles. Made at the forge — needs bronze.",
     "color"           : "#B87333",
     "amount"          : 0,
-    "toolTierRequired": 1,
+    "toolTierRequired": 1
   },
   {
     "id"              : "clay_roof_tile",
@@ -1034,7 +1034,7 @@
     "description"     : "Pressed-and-fired clay tile. The durable, low-maintenance roof — slow to weather, robust against storms. (Pressing needs a reusable tile_mold — enforced once mold-required logic lands.)",
     "color"           : "#9C3B2E",
     "amount"          : 0,
-    "toolTierRequired": 0,
+    "toolTierRequired": 0
   },
   {
     "id"              : "firestarter",
@@ -1201,7 +1201,7 @@
     "amount"          : 0,
     "isContainer"     : true,
     "storageCapacity" : 15,
-    "toolTierRequired": 0,
+    "toolTierRequired": 0
   },
   {
     "id"            : "wolf_carcass",

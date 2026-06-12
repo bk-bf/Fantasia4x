@@ -2,13 +2,13 @@
 
 # PROCEDURAL METALS — Signature Alloys (Endgame)
 
-> **Related:** [ROADMAP](ROADMAP.md) · [PRODUCTION-CHAIN-EXPANSION](PRODUCTION-CHAIN-EXPANSION.md) (prerequisite) · [MAGIC-SKILLS](MAGIC-SKILLS.md) · [EQUIPMENT-EXPANSION](EQUIPMENT-EXPANSION.md) · [RESEARCH-ENHANCEMENT](RESEARCH-ENHANCEMENT.md) · [game/DESIGN](../../game/DESIGN.md)
+> **Related:** [ROADMAP](ROADMAP.md) · [PRODUCTION-CHAIN-EXPANSION](../archive/PRODUCTION-CHAIN-EXPANSION-2026-06-12.md) (prerequisite, ✅ archived) · [MAGIC-SKILLS](MAGIC-SKILLS.md) · [EQUIPMENT-EXPANSION](EQUIPMENT-EXPANSION.md) · [RESEARCH-ENHANCEMENT](RESEARCH-ENHANCEMENT.md) · [game/DESIGN](../../game/DESIGN.md)
 
 ## Status
 
 Not started. **Deferred endgame layer** — depends on the deterministic material
 ladder reaching its **steel / steampunk ceiling** in
-[PRODUCTION-CHAIN-EXPANSION](PRODUCTION-CHAIN-EXPANSION.md), and pairs with the
+[PRODUCTION-CHAIN-EXPANSION](../archive/PRODUCTION-CHAIN-EXPANSION-2026-06-12.md), and pairs with the
 high-magic/enchantment content in [MAGIC-SKILLS](MAGIC-SKILLS.md). Do not start
 before those land. This spec captures the design so it isn't lost.
 

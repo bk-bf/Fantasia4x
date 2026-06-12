@@ -2,7 +2,7 @@
 
 # ROADMAP
 
-> **Related:** [game/DESIGN](../game/DESIGN.md) · [game/ARCHITECTURE](../game/ARCHITECTURE.md) · [RESEARCH-ENHANCEMENT](RESEARCH-ENHANCEMENT.md) · [SEASONS_WEATHER](SEASONS_WEATHER.md) · [ENTITIES_SPAWNING](ENTITIES_SPAWNING.md) · [COMBAT-SYSTEM](COMBAT-SYSTEM.md) · [MAGIC-SKILLS](MAGIC-SKILLS.md) · [EQUIPMENT-EXPANSION](EQUIPMENT-EXPANSION.md) · [PRODUCTION-CHAIN-EXPANSION](PRODUCTION-CHAIN-EXPANSION.md) · [SOCIAL-LAYER](SOCIAL-LAYER.md) · [TAURI-DISTRIBUTION](TAURI-DISTRIBUTION.md) · archived: [SCREEN-REFACTORING](../archive/SCREEN-REFACTORING-2026-06-03.md) · [SURVIVAL-HEALTH](../archive/SURVIVAL-HEALTH-2026-05-30.md) · [SIMULATION-PERF](../archive/SIMULATION-PERF-2026-05-30.md)
+> **Related:** [game/DESIGN](../game/DESIGN.md) · [game/ARCHITECTURE](../game/ARCHITECTURE.md) · [RESEARCH-ENHANCEMENT](RESEARCH-ENHANCEMENT.md) · [SEASONS_WEATHER](SEASONS_WEATHER.md) · [ENTITIES_SPAWNING](ENTITIES_SPAWNING.md) · [COMBAT-SYSTEM](COMBAT-SYSTEM.md) · [MAGIC-SKILLS](MAGIC-SKILLS.md) · [EQUIPMENT-EXPANSION](EQUIPMENT-EXPANSION.md) · [SOCIAL-LAYER](SOCIAL-LAYER.md) · [TAURI-DISTRIBUTION](TAURI-DISTRIBUTION.md) · archived: [PRODUCTION-CHAIN-EXPANSION](../archive/PRODUCTION-CHAIN-EXPANSION-2026-06-12.md) · [SCREEN-REFACTORING](../archive/SCREEN-REFACTORING-2026-06-03.md) · [SURVIVAL-HEALTH](../archive/SURVIVAL-HEALTH-2026-05-30.md) · [SIMULATION-PERF](../archive/SIMULATION-PERF-2026-05-30.md)
 
 ## Status Key
 
@@ -30,8 +30,9 @@ All critical architectural debt resolved. Core survival loop is functional.
 | ------------------------------------------------------------------------ | ------ | ------------------------------------------------------------------------- |
 | Screen refactoring (WorkScreen only)                                     | ✅     | archived: `SCREEN-REFACTORING-2026-06-03.md`                              |
 | **Survival consequences** (starvation death, collapse, injuries, health) | ✅     | archived: `SURVIVAL-HEALTH-2026-05-30.md`                                 |
-| Production chains (primitives through Maker's Bench)                     | ✅     | archived: `PRODUCTION-CHAINS-2026-05-28.md`; expansion → Phase 3          |
-| Healthcare and cooking jobs                                              | ❌     | tracked in [PRODUCTION-CHAIN-EXPANSION.md](PRODUCTION-CHAIN-EXPANSION.md) |
+| Production chains (primitives → Maker's Bench, then full expansion)      | ✅     | archived: `PRODUCTION-CHAINS-2026-05-28.md` + `PRODUCTION-CHAIN-EXPANSION-2026-06-12.md` |
+| Healthcare jobs                                                          | ✅     | delivered as caretaking/healing in `COMBAT-SYSTEM.md`                     |
+| Cooking as a dedicated job                                               | ❌     | Hearth/Kitchen/Drying-Rack buildings exist; standalone cooking job unclaimed |
 
 ---
 
@@ -50,8 +51,8 @@ the Living World layer. **Magic & Skills is pushed back** after Living World.
 | --- | ------------------------------------------------------------------------------------- | ------------- | -------------------------------------------------------------- |
 | —   | **Combat System** (stances, weapons/crit, wounds, pain→collapse, healing, caretaking) | ✅ 2026-06-11 | [COMBAT-SYSTEM.md](COMBAT-SYSTEM.md) · ADR-012/013             |
 | —   | **Entity Spawning** Phase A–B (mobs, animals, hunting, foraging, butchering)           | ✅            | [ENTITIES_SPAWNING.md](ENTITIES_SPAWNING.md)                   |
-| 1   | **Production Chain Expansion** (smelting, forges, mining, cooking, healing) — **next** | ❌            | [PRODUCTION-CHAIN-EXPANSION.md](PRODUCTION-CHAIN-EXPANSION.md) |
-| 2   | **Equipment Expansion** (Tiers 0–2, durability, skill grants)                          | ❌            | [EQUIPMENT-EXPANSION.md](EQUIPMENT-EXPANSION.md)               |
+| 1   | **Production Chain Expansion** (smelting, forges, mining, fuel/heat, leather, survival) | ✅ 2026-06-12 | archived: [PRODUCTION-CHAIN-EXPANSION-2026-06-12.md](../archive/PRODUCTION-CHAIN-EXPANSION-2026-06-12.md) |
+| 2   | **Equipment Expansion** (Tiers 0–2, durability, skill grants) — **next**               | ❌            | [EQUIPMENT-EXPANSION.md](EQUIPMENT-EXPANSION.md)               |
 | 3   | **Living World B–D** (seasons, temperature, weather, fog of war)                       | ❌ B–D        | [SEASONS_WEATHER.md](SEASONS_WEATHER.md)                       |
 | 4   | **Magic & Skills** (depth layer; **reorganised after Living World**)                   | ❌ deferred   | [MAGIC-SKILLS.md](MAGIC-SKILLS.md)                             |
 | 5   | **Social Layer** (relationships, mood depth, death mood events, pawn traits)           | ❌            | [SOCIAL-LAYER.md](SOCIAL-LAYER.md)                             |
@@ -66,10 +67,10 @@ the Living World layer. **Magic & Skills is pushed back** after Living World.
 | SURVIVAL-HEALTH ✅          | —                                | —                                                  | ENTITIES_SPAWNING Phase B (food stakes); COMBAT (injury context) |
 | RESEARCH-ENHANCEMENT        | EQUIPMENT-EXPANSION (lore items) | —                                                  | MAGIC-SKILLS (nodes 3 + 5)                                       |
 | SEASONS_WEATHER B–D         | —                                | —                                                  | ENTITIES_SPAWNING (night multiplier; seasonal biome weights)     |
-| PRODUCTION-CHAIN-EXPANSION  | —                                | —                                                  | EQUIPMENT-EXPANSION Tier 1 + 2                                   |
+| PRODUCTION-CHAIN-EXPANSION ✅ | —                              | —                                                  | EQUIPMENT-EXPANSION Tier 1 + 2                                   |
 | ENTITIES_SPAWNING Phase A–B | —                                | SEASONS_WEATHER; SURVIVAL-HEALTH                   | COMBAT-SYSTEM                                                    |
 | COMBAT-SYSTEM               | ENTITIES_SPAWNING Phase A        | SURVIVAL-HEALTH                                    | MAGIC-SKILLS; EQUIPMENT; SOCIAL; ENTITIES Phase E                |
-| EQUIPMENT-EXPANSION         | COMBAT + PRODUCTION-CHAIN        | —                                                  | MAGIC-SKILLS (staff items)                                       |
+| EQUIPMENT-EXPANSION         | COMBAT ✅ + PRODUCTION-CHAIN ✅   | —                                                  | MAGIC-SKILLS (staff items)                                       |
 | MAGIC-SKILLS                | COMBAT-SYSTEM                    | RESEARCH (nodes 3+5 only); EQUIPMENT (staff items) | COMBAT depth (skills + spells)                                   |
 | SOCIAL-LAYER                | COMBAT                           | —                                                  | —                                                                |
 | ENTITIES_SPAWNING Phase C–E | COMBAT (Phase E); Phase A        | —                                                  | —                                                                |
@@ -82,8 +83,8 @@ the Living World layer. **Magic & Skills is pushed back** after Living World.
 | **1** — Phase 2 ✅  | SCREEN-REFACTORING ✅ · SURVIVAL-HEALTH ✅                 | complete                                                  |
 | **2** ✅            | ENTITIES_SPAWNING Phase A–B                                | complete                                                 |
 | **3** ✅            | COMBAT-SYSTEM (incl. wounds, stances, caretaking)          | complete (2026-06-11)                                    |
-| **4** — next        | PRODUCTION-CHAIN-EXPANSION                                 | independent                                              |
-| **5**               | EQUIPMENT-EXPANSION                                        | EQUIPMENT needs PROD-CHAIN (Wave 4) + COMBAT ✅          |
+| **4** ✅            | PRODUCTION-CHAIN-EXPANSION                                 | complete (2026-06-12)                                    |
+| **5** — next        | EQUIPMENT-EXPANSION                                        | EQUIPMENT needs PROD-CHAIN ✅ (Wave 4) + COMBAT ✅       |
 | **6**               | SEASONS_WEATHER B–D (Living World) · SOCIAL-LAYER          | independent / COMBAT ✅                                  |
 | **7**               | MAGIC-SKILLS · RESEARCH-ENHANCEMENT · ENTITIES C–E (deferred content) | after Living World; MAGIC needs COMBAT ✅ + EQUIPMENT |
 | **8** — Phase 4     | TAURI-DISTRIBUTION                                         | Wave 7 complete                                          |
@@ -122,3 +123,4 @@ See `.tasks/archive/` for full specs.
 | Sim perf Phase 1+1.5 (60 TPS stable, 100+ FPS, rAF-accumulator, campfire fix) | 2026-05-30 | `SIMULATION-PERF-2026-05-30.md`         |
 | Screen refactoring (WorkScreen split into sub-components)                     | 2026-06-03 | `SCREEN-REFACTORING-2026-06-03.md`      |
 | Survival consequences (starvation, collapse, injuries, health)                | 2026-05-30 | `SURVIVAL-HEALTH-2026-05-30.md`         |
+| Production & early-survival expansion (§A–§G, §1–§6; durability, recipes)      | 2026-06-12 | `PRODUCTION-CHAIN-EXPANSION-2026-06-12.md` |
