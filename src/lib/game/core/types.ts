@@ -957,6 +957,12 @@ export interface Recipe {
 	buildingRequired?: string | null;
 	/** Variant-output slot — folds in the legacy `dynamicRecipe` system (e.g. spit_meat, stew). */
 	dynamicRecipe?: Record<string, DynamicIngredientSlot>;
+	/**
+	 * Per-slot, per-material stat deltas applied to the crafted output.
+	 * Key = slot name → itemId → weaponProperties/armorProperties delta fields.
+	 * e.g. { "shaft": { "ash_log": { "accuracy": 3 }, "oak_log": { "maxDurability": 15 } } }
+	 */
+	materialBonuses?: Record<string, Record<string, Record<string, number>>>;
 	/** True when synthesised from an item's inline fields rather than authored in recipes.jsonc. */
 	synthesized?: boolean;
 }
@@ -1069,11 +1075,15 @@ export interface Item {
 		// ── COMBAT-SYSTEM additions ──────────────────────────────────────────
 		damageType?: DamageType; // cutting | piercing | blunt
 		baseDamage?: number; // base damage before str scaling
+		damMin?: number; // minimum damage roll (EQUIPMENT-EXPANSION)
+		damMax?: number; // maximum damage roll (EQUIPMENT-EXPANSION)
+		reach?: number; // melee reach in tiles (1 = adjacent, 2 = pole-arm)
 		accuracy?: number; // added to hitChance formula
 		armorPenetration?: number; // 0–1; fraction of armor reduction bypassed
 		bluntMod?: number; // multiplier on knockdown chance (blunt weapons)
 		critMod?: number; // added to the wielder's base crit_chance (0–1)
 		twoHanded?: boolean; // requires both mainHand and offHand slots
+		tags?: string[]; // ability grants from COMBAT-SYSTEM
 		// ── Natural-weapon additions (innate attacks rolled per swing) ───────
 		weight?: number; // relative roll frequency among an entity's natural weapons (default 1)
 		staminaCost?: number; // stamina drained by this attack (default ATTACK_STAMINA_COST)
@@ -1081,11 +1091,15 @@ export interface Item {
 
 	armorProperties?: {
 		defense: number;
-		armorType: 'light' | 'medium' | 'heavy' | 'shield';
-		slot: 'head' | 'chest' | 'legs' | 'feet' | 'hands' | 'offhand';
+		armorType?: 'light' | 'medium' | 'heavy' | 'shield';
+		slot?: 'head' | 'chest' | 'legs' | 'feet' | 'hands' | 'offhand'
+			| 'headBase' | 'headOuter' | 'bodyBase' | 'bodyMid' | 'bodyOuter'
+			| 'gloves' | 'boots' | 'gorget' | 'ring' | 'belt' | 'back' | 'offHand';
 		armorLayer?: 'gambeson' | 'mail' | 'plate';
+		armorValue?: number; // damage absorbed per hit from this layer
+		fatiguePerTurn?: number; // fatigue drain per turn while worn
 		equipmentSlot?: EquipmentSlot;
-		movementPenalty: number; // 0.0 to 1.0, where 0.3 = 30% movement penalty
+		movementPenalty?: number; // 0.0 to 1.0, where 0.3 = 30% movement penalty
 
 		// Resistance properties
 		slashResistance?: number;

@@ -711,5 +711,24 @@
     "effects": {"sleepQuality": 0.8, "fatigueRecovery": 0.6},
     "storageCapacity": {},
     "buildingState": {"isUnique": false, "maxCount": 10}
+  },
+  {
+    "id": "weaving_frame",
+    "name": "Weaving Frame",
+    "color": "#C8A050",
+    "charSpans": [ {"sheet": "buildings", "id": 39} ],
+    "fg": [0.78, 0.63, 0.31],
+    "bg": [0.06, 0.04, 0.01],
+    "description": "A simple loom frame lashed from branches. Processes plant fibers into cloth.",
+    "category": "production",
+    "buildingCost": {"branch": 6, "cordage": 3},
+    "workAmount": 20,
+    "toolTierRequired": 0,
+    "populationRequired": 1,
+    "researchRequired": null,
+    "upkeepCost": {},
+    "effects": {"craftingEnabled": true},
+    "storageCapacity": {},
+    "buildingState": {"isUnique": false}
   }
 ]

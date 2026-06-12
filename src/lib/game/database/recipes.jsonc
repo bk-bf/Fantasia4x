@@ -1334,5 +1334,905 @@
     },
     "workAmount": 16,
     "toolTierRequired": 1
+  },
+
+  // ── Phase B: carry containers ─────────────────────────────────────────────
+  {
+    "id": "make_leather_satchel",
+    "station": "makers_bench",
+    "inputs": {
+      "light_leather": 2,
+      "cordage": 1
+    },
+    "outputs": {
+      "leather_satchel": 1
+    },
+    "workAmount": 5,
+    "toolTierRequired": 0
+  },
+  {
+    "id": "make_tool_holster",
+    "station": "makers_bench",
+    "inputs": {
+      "sturdy_leather": 1,
+      "cordage": 1
+    },
+    "outputs": {
+      "tool_holster": 1
+    },
+    "workAmount": 4,
+    "toolTierRequired": 0
+  },
+  {
+    "id": "make_canvas_pack",
+    "station": "makers_bench",
+    "inputs": {
+      "linen_cloth": 2,
+      "sturdy_leather": 1,
+      "cordage": 2
+    },
+    "outputs": {
+      "canvas_pack": 1
+    },
+    "workAmount": 8,
+    "toolTierRequired": 0
+  },
+  {
+    "id": "make_wicker_frame_pack",
+    "station": "makers_bench",
+    "inputs": {
+      "branch": 4,
+      "plant_fiber": 3,
+      "cordage": 2
+    },
+    "outputs": {
+      "wicker_frame": 1
+    },
+    "workAmount": 6,
+    "toolTierRequired": 0
+  },
+
+  // ── Phase B: linen production ─────────────────────────────────────────────
+  {
+    "id": "weave_linen",
+    "station": "weaving_frame",
+    "inputs": {
+      "flax_fiber": 3
+    },
+    "outputs": {
+      "linen_cloth": 1
+    },
+    "workAmount": 4,
+    "toolTierRequired": 0
+  },
+
+  // ── Phase B: sinew from medium/large butchery ─────────────────────────────
+  {
+    "id": "render_sinew_medium",
+    "station": "butcher_spot",
+    "inputs": {
+      "wolf_carcass": 1
+    },
+    "inputAlternatives": [
+      { "boar_carcass": 1 },
+      { "mountain_goat_carcass": 1 },
+      { "elk_carcass": 1 }
+    ],
+    "outputs": {
+      "sinew": 1
+    },
+    "workAmount": 60,
+    "toolTierRequired": 0
+  },
+  {
+    "id": "render_sinew_large",
+    "station": "butcher_spot",
+    "inputs": {
+      "bear_carcass": 1
+    },
+    "inputAlternatives": [
+      { "elk_carcass": 1 }
+    ],
+    "outputs": {
+      "sinew": 2
+    },
+    "workAmount": 120,
+    "toolTierRequired": 0
+  },
+
+  // ── Phase B: Tier 0 weapon recipes ───────────────────────────────────────
+  {
+    "id": "make_flint_handaxe",
+    "station": "makers_bench",
+    "inputs": {
+      "flint_shard": 2,
+      "branch": 1,
+      "cordage": 1
+    },
+    "outputs": {
+      "flint_handaxe": 1
+    },
+    "workAmount": 3,
+    "toolTierRequired": 0
+  },
+  {
+    "id": "make_wattle_buckler",
+    "station": "makers_bench",
+    "inputs": {
+      "branch": 4,
+      "cordage": 2
+    },
+    "outputs": {
+      "wattle_buckler": 1
+    },
+    "workAmount": 4,
+    "toolTierRequired": 0
+  },
+
+  // ── Phase B: Tier 0.5 weapon recipes ─────────────────────────────────────
+  {
+    "id": "make_bone_knife",
+    "station": "makers_bench",
+    "inputs": {
+      "medium_bones": 1,
+      "cordage": 1
+    },
+    "outputs": {
+      "bone_knife": 1
+    },
+    "workAmount": 3,
+    "toolTierRequired": 0
+  },
+  {
+    "id": "make_antler_club",
+    "station": "makers_bench",
+    "inputs": {
+      "large_bones": 1,
+      "cordage": 1
+    },
+    "outputs": {
+      "antler_club": 1
+    },
+    "workAmount": 4,
+    "toolTierRequired": 0
+  },
+  {
+    "id": "make_bone_tipped_spear",
+    "station": "makers_bench",
+    "inputs": {
+      "medium_bones": 1,
+      "cordage": 1
+    },
+    "outputs": {
+      "bone_tipped_spear": 1
+    },
+    "workAmount": 5,
+    "toolTierRequired": 0,
+    "dynamicRecipe": {
+      "shaft": {
+        "acceptsCategory": "wood",
+        "quantity": 1,
+        "variants": {
+          "pine_log": { "name": "Pine-Shafted Bone Spear" },
+          "oak_log":  { "name": "Oak-Shafted Bone Spear" },
+          "ash_log":  { "name": "Ash-Shafted Bone Spear" }
+        }
+      }
+    },
+    "materialBonuses": {
+      "shaft": {
+        "ash_log" : { "accuracy": 3, "damMax": 1 },
+        "oak_log" : { "maxDurability": 10 },
+        "yew_log" : { "damMax": 2, "critMod": 0.02 }
+      }
+    }
+  },
+
+  // ── Phase B: Tier 1 weapon recipes ───────────────────────────────────────
+  {
+    "id": "make_bronze_punch_dagger",
+    "station": "stone_forge",
+    "inputs": {
+      "copper_bar": 1,
+      "clay_mold": 1,
+      "medium_bones": 1,
+      "cordage": 1
+    },
+    "outputs": {
+      "bronze_punch_dagger": 1
+    },
+    "workAmount": 6,
+    "toolTierRequired": 1,
+    "researchRequired": "bronze_working"
+  },
+  {
+    "id": "make_leaf_blade_spear",
+    "station": "stone_forge",
+    "inputs": {
+      "bronze_bar": 1,
+      "clay_mold": 1,
+      "cordage": 1
+    },
+    "outputs": {
+      "leaf_blade_spear": 1
+    },
+    "workAmount": 8,
+    "toolTierRequired": 1,
+    "researchRequired": "bronze_working",
+    "dynamicRecipe": {
+      "shaft": {
+        "acceptsCategory": "wood",
+        "quantity": 1,
+        "variants": {
+          "pine_log": { "name": "Pine-Shafted Leaf-Blade Spear" },
+          "oak_log":  { "name": "Oak-Shafted Leaf-Blade Spear" },
+          "ash_log":  { "name": "Ash-Shafted Leaf-Blade Spear" }
+        }
+      }
+    },
+    "materialBonuses": {
+      "shaft": {
+        "ash_log" : { "accuracy": 3, "damMax": 1 },
+        "oak_log" : { "maxDurability": 15 },
+        "yew_log" : { "damMax": 2, "critMod": 0.02 }
+      }
+    }
+  },
+  {
+    "id": "make_cast_bronze_hatchet",
+    "station": "stone_forge",
+    "inputs": {
+      "bronze_bar": 1,
+      "clay_mold": 1,
+      "cordage": 1
+    },
+    "outputs": {
+      "cast_bronze_hatchet": 1
+    },
+    "workAmount": 8,
+    "toolTierRequired": 1,
+    "researchRequired": "bronze_working",
+    "dynamicRecipe": {
+      "haft": {
+        "acceptsCategory": "wood",
+        "quantity": 1,
+        "variants": {
+          "pine_log": { "name": "Pine-Hafted Bronze Hatchet" },
+          "oak_log":  { "name": "Oak-Hafted Bronze Hatchet" },
+          "ash_log":  { "name": "Ash-Hafted Bronze Hatchet" }
+        }
+      }
+    },
+    "materialBonuses": {
+      "haft": {
+        "ash_log": { "accuracy": 2 },
+        "oak_log": { "maxDurability": 10 }
+      }
+    }
+  },
+  {
+    "id": "make_self_bow",
+    "station": "makers_bench",
+    "inputs": {
+      "sinew": 1,
+      "cordage": 1
+    },
+    "outputs": {
+      "self_bow": 1
+    },
+    "workAmount": 6,
+    "toolTierRequired": 0,
+    "dynamicRecipe": {
+      "stave": {
+        "acceptsCategory": "wood",
+        "quantity": 1,
+        "variants": {
+          "yew_log":  { "name": "Yew Self Bow" },
+          "ash_log":  { "name": "Ash Self Bow" },
+          "oak_log":  { "name": "Oak Self Bow" },
+          "pine_log": { "name": "Pine Self Bow" }
+        }
+      }
+    },
+    "materialBonuses": {
+      "stave": {
+        "yew_log":  { "damMax": 2, "critMod": 0.03 },
+        "ash_log":  { "accuracy": 3, "damMax": 1 },
+        "oak_log":  { "maxDurability": 20 },
+        "pine_log": {}
+      }
+    }
+  },
+  {
+    "id": "make_rawhide_round_shield",
+    "station": "makers_bench",
+    "inputs": {
+      "cordage": 1
+    },
+    "outputs": {
+      "rawhide_round_shield": 1
+    },
+    "workAmount": 6,
+    "toolTierRequired": 0,
+    "dynamicRecipe": {
+      "planks": {
+        "acceptsCategory": "wood",
+        "quantity": 2,
+        "variants": {
+          "oak_plank":  { "name": "Oak Round Shield" },
+          "ash_plank":  { "name": "Ash Round Shield" },
+          "pine_plank": { "name": "Pine Round Shield" }
+        }
+      },
+      "facing": {
+        "acceptsCategory": "organic",
+        "quantity": 1,
+        "variants": {
+          "deer_hide": { "name": "Deer-Faced Round Shield" },
+          "wolf_hide": { "name": "Wolf-Faced Round Shield" },
+          "bear_pelt": { "name": "Bear-Faced Round Shield" }
+        }
+      }
+    },
+    "materialBonuses": {
+      "facing": {
+        "bear_pelt": { "armorValue": 2 },
+        "deer_hide": {}
+      }
+    }
+  },
+
+  // ── Phase B: Tier 2 weapon recipes ───────────────────────────────────────
+  {
+    "id": "make_short_seax",
+    "station": "anvil",
+    "inputs": {
+      "iron_bar": 1,
+      "clay_mold": 1,
+      "cordage": 1
+    },
+    "outputs": {
+      "short_seax": 1
+    },
+    "workAmount": 8,
+    "toolTierRequired": 2,
+    "researchRequired": "iron_working",
+    "dynamicRecipe": {
+      "grip": {
+        "acceptsCategory": "wood",
+        "quantity": 1,
+        "variants": {
+          "oak_log":  { "name": "Oak-Grip Seax" },
+          "ash_log":  { "name": "Ash-Grip Seax" },
+          "pine_log": { "name": "Pine-Grip Seax" }
+        }
+      }
+    }
+  },
+  {
+    "id": "make_spatha",
+    "station": "anvil",
+    "inputs": {
+      "iron_bar": 2,
+      "clay_mold": 1,
+      "cordage": 1
+    },
+    "outputs": {
+      "spatha": 1
+    },
+    "workAmount": 12,
+    "toolTierRequired": 2,
+    "researchRequired": "iron_working",
+    "dynamicRecipe": {
+      "grip": {
+        "acceptsCategory": "wood",
+        "quantity": 1,
+        "variants": {
+          "oak_log":  { "name": "Oak-Grip Spatha" },
+          "ash_log":  { "name": "Ash-Grip Spatha" },
+          "pine_log": { "name": "Pine-Grip Spatha" }
+        }
+      },
+      "wrap": {
+        "acceptsCategory": "leather",
+        "quantity": 1,
+        "variants": {
+          "light_leather": { "name": "Light-Wrapped Spatha" },
+          "sturdy_leather": { "name": "Sturdy-Wrapped Spatha" },
+          "heavy_leather": { "name": "Heavy-Wrapped Spatha" }
+        }
+      }
+    },
+    "materialBonuses": {
+      "wrap": {
+        "sturdy_leather": { "accuracy": 1 },
+        "heavy_leather":  { "accuracy": 2 }
+      }
+    }
+  },
+  {
+    "id": "make_bearded_axe",
+    "station": "anvil",
+    "inputs": {
+      "iron_bar": 2,
+      "clay_mold": 1,
+      "cordage": 1
+    },
+    "outputs": {
+      "bearded_axe": 1
+    },
+    "workAmount": 12,
+    "toolTierRequired": 2,
+    "researchRequired": "iron_working",
+    "dynamicRecipe": {
+      "haft": {
+        "acceptsCategory": "wood",
+        "quantity": 1,
+        "variants": {
+          "oak_log":  { "name": "Oak-Hafted Bearded Axe" },
+          "ash_log":  { "name": "Ash-Hafted Bearded Axe" },
+          "pine_log": { "name": "Pine-Hafted Bearded Axe" }
+        }
+      }
+    },
+    "materialBonuses": {
+      "haft": {
+        "ash_log": { "accuracy": 2 },
+        "oak_log": { "maxDurability": 15 }
+      }
+    }
+  },
+  {
+    "id": "make_framea",
+    "station": "anvil",
+    "inputs": {
+      "iron_bar": 1,
+      "clay_mold": 1,
+      "cordage": 1
+    },
+    "outputs": {
+      "framea": 1
+    },
+    "workAmount": 10,
+    "toolTierRequired": 2,
+    "researchRequired": "iron_working",
+    "dynamicRecipe": {
+      "shaft": {
+        "acceptsCategory": "wood",
+        "quantity": 1,
+        "variants": {
+          "ash_log":  { "name": "Ash-Shafted Framea" },
+          "oak_log":  { "name": "Oak-Shafted Framea" },
+          "pine_log": { "name": "Pine-Shafted Framea" }
+        }
+      }
+    },
+    "materialBonuses": {
+      "shaft": {
+        "ash_log": { "accuracy": 3, "damMax": 1 },
+        "oak_log": { "maxDurability": 15 }
+      }
+    }
+  },
+  {
+    "id": "make_war_bow",
+    "station": "makers_bench",
+    "inputs": {
+      "sinew": 2,
+      "cordage": 1
+    },
+    "outputs": {
+      "war_bow": 1
+    },
+    "workAmount": 10,
+    "toolTierRequired": 1,
+    "researchRequired": "iron_working",
+    "dynamicRecipe": {
+      "stave": {
+        "acceptsCategory": "wood",
+        "quantity": 1,
+        "variants": {
+          "yew_log": { "name": "Yew War Bow" },
+          "ash_log": { "name": "Ash War Bow" }
+        }
+      }
+    },
+    "materialBonuses": {
+      "stave": {
+        "yew_log": { "damMax": 3, "critMod": 0.03 },
+        "ash_log": { "accuracy": 3, "damMax": 1 }
+      }
+    }
+  },
+  {
+    "id": "make_iron_boss_shield",
+    "station": "anvil",
+    "inputs": {
+      "iron_bar": 1,
+      "clay_mold": 1,
+      "cordage": 1
+    },
+    "outputs": {
+      "iron_boss_shield": 1
+    },
+    "workAmount": 10,
+    "toolTierRequired": 2,
+    "researchRequired": "iron_working",
+    "dynamicRecipe": {
+      "planks": {
+        "acceptsCategory": "wood",
+        "quantity": 2,
+        "variants": {
+          "oak_plank": { "name": "Oak Iron-Bossed Shield" },
+          "ash_plank": { "name": "Ash Iron-Bossed Shield" }
+        }
+      },
+      "facing": {
+        "acceptsCategory": "leather",
+        "quantity": 1,
+        "variants": {
+          "light_leather":  { "name": "Light-Faced Iron Shield" },
+          "sturdy_leather": { "name": "Iron-Bossed Kite Shield" },
+          "heavy_leather":  { "name": "Heavy Iron-Bossed Shield" }
+        }
+      }
+    },
+    "materialBonuses": {
+      "facing": {
+        "heavy_leather":  { "armorValue": 2 },
+        "sturdy_leather": { "armorValue": 1 },
+        "thin_leather":   { "armorValue": -1 }
+      }
+    }
+  },
+
+  // ── Phase B: Tier 0 armour recipes ────────────────────────────────────────
+  {
+    "id": "make_raw_hide_vest",
+    "station": "makers_bench",
+    "inputs": {
+      "cordage": 2
+    },
+    "outputs": {
+      "raw_hide_vest": 1
+    },
+    "workAmount": 4,
+    "toolTierRequired": 0,
+    "dynamicRecipe": {
+      "hide": {
+        "acceptsCategory": "organic",
+        "quantity": 2,
+        "variants": {
+          "deer_hide":  { "name": "Deer-Hide Vest" },
+          "wolf_hide":  { "name": "Wolf-Hide Vest" },
+          "bear_pelt":  { "name": "Bear-Pelt Vest" },
+          "boar_hide":  { "name": "Boar-Hide Vest" },
+          "elk_hide":   { "name": "Elk-Hide Vest" }
+        }
+      }
+    },
+    "materialBonuses": {
+      "hide": {
+        "bear_pelt": { "armorValue": 2, "fatiguePerTurn": 0.05 },
+        "elk_hide":  { "armorValue": 1 },
+        "deer_hide": {}
+      }
+    }
+  },
+  {
+    "id": "make_padded_cap",
+    "station": "makers_bench",
+    "inputs": {
+      "cordage": 1
+    },
+    "outputs": {
+      "padded_cap": 1
+    },
+    "workAmount": 3,
+    "toolTierRequired": 0,
+    "dynamicRecipe": {
+      "hide": {
+        "acceptsCategory": "organic",
+        "quantity": 2,
+        "variants": {
+          "deer_hide":    { "name": "Deer-Hide Cap" },
+          "rabbit_pelt":  { "name": "Rabbit-Pelt Cap" },
+          "wolf_hide":    { "name": "Wolf-Hide Cap" }
+        }
+      }
+    }
+  },
+
+  // ── Phase B: Tier 1 armour recipes ────────────────────────────────────────
+  {
+    "id": "make_linen_gambeson",
+    "station": "weaving_frame",
+    "inputs": {
+      "linen_cloth": 6,
+      "cordage": 2
+    },
+    "outputs": {
+      "linen_gambeson": 1
+    },
+    "workAmount": 12,
+    "toolTierRequired": 0
+  },
+  {
+    "id": "make_boiled_leather_jerkin",
+    "station": "makers_bench",
+    "inputs": {
+      "cordage": 1
+    },
+    "outputs": {
+      "boiled_leather_jerkin": 1
+    },
+    "workAmount": 8,
+    "toolTierRequired": 0,
+    "dynamicRecipe": {
+      "leather": {
+        "acceptsCategory": "leather",
+        "quantity": 3,
+        "variants": {
+          "thin_leather":   { "name": "Thin-Leather Jerkin" },
+          "light_leather":  { "name": "Light-Leather Jerkin" },
+          "sturdy_leather": { "name": "Sturdy-Leather Jerkin" },
+          "heavy_leather":  { "name": "Heavy-Leather Jerkin" },
+          "thick_leather":  { "name": "Thick-Leather Jerkin" }
+        }
+      }
+    },
+    "materialBonuses": {
+      "leather": {
+        "thick_leather":  { "armorValue": 4, "fatiguePerTurn": 0.1 },
+        "heavy_leather":  { "armorValue": 2 },
+        "sturdy_leather": { "armorValue": 1 },
+        "light_leather":  {},
+        "thin_leather":   { "armorValue": -1 }
+      }
+    }
+  },
+  {
+    "id": "make_leather_coif",
+    "station": "makers_bench",
+    "inputs": {
+      "cordage": 1
+    },
+    "outputs": {
+      "leather_coif": 1
+    },
+    "workAmount": 5,
+    "toolTierRequired": 0,
+    "dynamicRecipe": {
+      "leather": {
+        "acceptsCategory": "leather",
+        "quantity": 2,
+        "variants": {
+          "light_leather":  { "name": "Light-Leather Coif" },
+          "sturdy_leather": { "name": "Leather Coif" },
+          "heavy_leather":  { "name": "Heavy-Leather Coif" }
+        }
+      }
+    },
+    "materialBonuses": {
+      "leather": {
+        "heavy_leather":  { "armorValue": 2 },
+        "sturdy_leather": { "armorValue": 1 },
+        "light_leather":  {}
+      }
+    }
+  },
+  {
+    "id": "make_cast_bronze_skullcap",
+    "station": "stone_forge",
+    "inputs": {
+      "bronze_bar": 1,
+      "clay_mold": 1
+    },
+    "outputs": {
+      "cast_bronze_skullcap": 1
+    },
+    "workAmount": 8,
+    "toolTierRequired": 1,
+    "researchRequired": "bronze_working"
+  },
+  {
+    "id": "make_stitched_gauntlets",
+    "station": "makers_bench",
+    "inputs": {
+      "cordage": 1
+    },
+    "outputs": {
+      "stitched_gauntlets": 1
+    },
+    "workAmount": 4,
+    "toolTierRequired": 0,
+    "dynamicRecipe": {
+      "leather": {
+        "acceptsCategory": "leather",
+        "quantity": 1,
+        "variants": {
+          "light_leather":  { "name": "Light-Leather Gauntlets" },
+          "sturdy_leather": { "name": "Stitched Leather Gauntlets" },
+          "heavy_leather":  { "name": "Heavy-Leather Gauntlets" }
+        }
+      }
+    }
+  },
+  {
+    "id": "make_tallow_boots",
+    "station": "makers_bench",
+    "inputs": {
+      "cordage": 1
+    },
+    "outputs": {
+      "tallow_boots": 1
+    },
+    "workAmount": 5,
+    "toolTierRequired": 0,
+    "dynamicRecipe": {
+      "leather": {
+        "acceptsCategory": "leather",
+        "quantity": 2,
+        "variants": {
+          "light_leather":  { "name": "Light-Leather Boots" },
+          "sturdy_leather": { "name": "Tallow-Dressed Hide Boots" },
+          "heavy_leather":  { "name": "Heavy Hide Boots" }
+        }
+      }
+    }
+  },
+
+  // ── Phase B: Tier 2 armour recipes ────────────────────────────────────────
+  {
+    "id": "make_mail_coif",
+    "station": "anvil",
+    "inputs": {
+      "iron_bar": 6,
+      "linen_gambeson": 1
+    },
+    "outputs": {
+      "mail_coif": 1
+    },
+    "workAmount": 16,
+    "toolTierRequired": 2,
+    "researchRequired": "iron_working"
+  },
+  {
+    "id": "make_iron_nasal_helm",
+    "station": "anvil",
+    "inputs": {
+      "iron_bar": 2,
+      "clay_mold": 1
+    },
+    "outputs": {
+      "iron_nasal_helm": 1
+    },
+    "workAmount": 12,
+    "toolTierRequired": 2,
+    "researchRequired": "iron_working",
+    "dynamicRecipe": {
+      "padding": {
+        "acceptsCategory": "leather",
+        "quantity": 1,
+        "variants": {
+          "light_leather":  { "name": "Iron Nasal Helm (Light Pad)" },
+          "sturdy_leather": { "name": "Iron Nasal Helm" }
+        }
+      }
+    }
+  },
+  {
+    "id": "make_mail_hauberk",
+    "station": "anvil",
+    "inputs": {
+      "iron_bar": 12,
+      "linen_gambeson": 1
+    },
+    "outputs": {
+      "mail_hauberk": 1
+    },
+    "workAmount": 30,
+    "toolTierRequired": 2,
+    "researchRequired": "iron_working"
+  },
+  {
+    "id": "make_brigandine_coat",
+    "station": "anvil",
+    "inputs": {
+      "iron_bar": 6,
+      "linen_cloth": 2
+    },
+    "outputs": {
+      "brigandine_coat": 1
+    },
+    "workAmount": 20,
+    "toolTierRequired": 2,
+    "researchRequired": "iron_working",
+    "dynamicRecipe": {
+      "leather": {
+        "acceptsCategory": "leather",
+        "quantity": 4,
+        "variants": {
+          "sturdy_leather": { "name": "Brigandine Coat" },
+          "heavy_leather":  { "name": "Heavy Brigandine Coat" }
+        }
+      }
+    },
+    "materialBonuses": {
+      "leather": {
+        "heavy_leather": { "armorValue": 2 }
+      }
+    }
+  },
+  {
+    "id": "make_iron_gauntlets",
+    "station": "anvil",
+    "inputs": {
+      "iron_bar": 2,
+      "clay_mold": 1
+    },
+    "outputs": {
+      "iron_gauntlets": 1
+    },
+    "workAmount": 10,
+    "toolTierRequired": 2,
+    "researchRequired": "iron_working",
+    "dynamicRecipe": {
+      "lining": {
+        "acceptsCategory": "leather",
+        "quantity": 1,
+        "variants": {
+          "light_leather":  { "name": "Iron Gauntlets (Light Lined)" },
+          "sturdy_leather": { "name": "Riveted Iron Gauntlets" }
+        }
+      }
+    }
+  },
+  {
+    "id": "make_iron_shod_boots",
+    "station": "anvil",
+    "inputs": {
+      "iron_bar": 2
+    },
+    "outputs": {
+      "iron_shod_boots": 1
+    },
+    "workAmount": 10,
+    "toolTierRequired": 2,
+    "researchRequired": "iron_working",
+    "dynamicRecipe": {
+      "leather": {
+        "acceptsCategory": "leather",
+        "quantity": 2,
+        "variants": {
+          "sturdy_leather": { "name": "Iron-Shod Boots" },
+          "heavy_leather":  { "name": "Heavy Iron-Shod Boots" }
+        }
+      }
+    }
+  },
+  {
+    "id": "make_iron_gorget",
+    "station": "anvil",
+    "inputs": {
+      "iron_bar": 1,
+      "clay_mold": 1
+    },
+    "outputs": {
+      "iron_gorget": 1
+    },
+    "workAmount": 8,
+    "toolTierRequired": 2,
+    "researchRequired": "iron_working",
+    "dynamicRecipe": {
+      "lining": {
+        "acceptsCategory": "leather",
+        "quantity": 1,
+        "variants": {
+          "light_leather":  { "name": "Iron Gorget (Light Lined)" },
+          "sturdy_leather": { "name": "Riveted Iron Gorget" }
+        }
+      }
+    }
   }
 ]
