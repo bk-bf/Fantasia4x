@@ -699,13 +699,7 @@
     "bg"              : [0.11, 0.08, 0.04],
     "color"           : "#9E855E",
     "spawn"           : {
-      "subterrains": {
-        "rocky"          : 0.07 ,
-        "cliff"          : 0.05 ,
-        "dirt"           : 0.015,
-        "savanna"        : 0.02 ,
-        "grass"          : 0.01
-      }
+      "subterrains": {"rocky": 0.07, "cliff": 0.05, "dirt": 0.015, "savanna": 0.02, "grass": 0.01}
     },
     "nodeAmountRange" : [5, 10],
     "designationTypes": ["harvest"],
@@ -1249,7 +1243,7 @@
   },
   {
     "id"              : "coal",
-    "displayName"     : "Coal Seam",
+    "displayName"     : "Coal",
     "subterrain"      : "ore_vein",
     "walkable"        : true,
     "charSpans"       : [ {"literal": "*"} ],
@@ -1360,7 +1354,7 @@
       "toolRequirement": null,
       "yields"         : [
         {"itemId": "granite", "min": 2, "max": 5, "skillId": "mining", "skillMultiplier": 0.2},
-        {"itemId": "marble", "min": 0, "max": 1, "skillId": "mining", "skillMultiplier": 0.1} // rare: prestige stone
+        {"itemId": "marble",  "min": 0, "max": 1, "skillId": "mining", "skillMultiplier": 0.1}   // rare: prestige stone
         // coal + salt now come from mineral_deposit nodes (coal / rock_salt), not mountain walls
       ]
     }

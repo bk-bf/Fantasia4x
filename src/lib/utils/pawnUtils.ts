@@ -1,39 +1,5 @@
 import type { GameState, Job, Pawn } from '$lib/game/core/types';
-
-const FORAGING_RESOURCES = new Set([
-  'branch',
-  'flint_shard',
-  'plant_fiber',
-  'bark',
-  'granite',
-  'limestone',
-  'sandstone',
-  'marble',
-  'slate',
-  'clay_lump',
-  'wild_sage',
-  'berries',
-  'mushrooms',
-  'fiber'
-]);
-
-const MINING_RESOURCES = new Set([
-  'stone',
-  'flint',
-  // §5 named ore minerals + coal/salt (mineral_deposit nodes)
-  'malachite',
-  'chalcopyrite',
-  'azurite',
-  'cassiterite',
-  'hematite',
-  'magnetite',
-  'limonite',
-  'galena',
-  'native_gold',
-  'electrum',
-  'coal',
-  'rock_salt'
-]);
+import { resourceObjectService } from '$lib/game/services/ResourceObjectService';
 
 export interface PawnTaskSummary {
   currentState: string;
@@ -45,10 +11,10 @@ export interface PawnTaskSummary {
 function getWorkKeyForJob(job: Job): string {
   switch (job.type) {
     case 'harvest': {
-      const resourceId = job.resourceId ?? '';
-      if (FORAGING_RESOURCES.has(resourceId)) return 'foraging';
-      if (MINING_RESOURCES.has(resourceId)) return 'mining';
-      return 'woodcutting';
+      // DB-driven: read the work category straight off the resource node definition
+      // (resources.jsonc) — no hardcoded id list to drift from the database.
+      const def = resourceObjectService.getById(job.resourceId ?? '');
+      return def?.interaction?.workCategory ?? 'foraging';
     }
     case 'construct':
       return 'construction';
