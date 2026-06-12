@@ -6,12 +6,12 @@
 
 ## Status
 
-**Round 1 (A–D) + Round 2 (F) all done; E1 remains** (build green, 113 tests). Worked in a loop:
-implement → `pnpm check` + `pnpm test` → check off. **Remaining: E1** (card-based crafting/building
-lists) — the one larger UI redesign, next pass. Minor cleanup: a few now-orphaned CSS selectors
-(`.need-row`/`.block-bar` in PawnNeeds, `.stats-grid` in PawnOverview, `.stats-row` in
-PopulationOverview) — dead after the StatBar/banner extraction; sweep next. Orphaned
-`PawnStats.svelte` (40k) also deletable.
+**ALL items done (A–F + E1)** — build green, 113 tests. Worked in a loop: implement →
+`pnpm check` + `pnpm test` → check off. **Only cleanup left:** orphaned CSS selectors from the
+component extractions (`.need-row`/`.block-bar` in PawnNeeds, `.stats-grid` in PawnOverview,
+`.stats-row`/`.eff-grid` in PopulationOverview, `.bldg-row` in BuildingMenu, `.recipe-row`/
+`.act-btn-sm` in CraftingScreen) — ~26 dead-CSS warnings; and the orphaned 40k `PawnStats.svelte`
+is deletable. (Use `CI=true` with pnpm here to avoid the no-TTY modules-purge abort.)
 
 Grouped, roughly by quick-win / dependency order. Each box is one loop iteration.
 
@@ -99,8 +99,10 @@ Grouped, roughly by quick-win / dependency order. Each box is one loop iteration
 
 ## E. Crafting / building tabs
 
-- [ ] **E1 — Card-based crafting + building lists.** Replace the flat lists with compact but
-      immersive cards (icon, name, cost, requirements).
+- [x] **E1 — Card-based crafting + building lists.** ✅ Shared `BuildCard.svelte` (icon · name ·
+      badge · cost slot · action). BuildingMenu + CraftingScreen now render their items as cards in
+      a responsive `auto-fill` grid; cost/yield/byproduct markup is slotted so each screen keeps its
+      rich formatting. Old `.bldg-row`/`.recipe-row` CSS now orphaned (sweep).
 
 ---
 
