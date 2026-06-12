@@ -15,6 +15,7 @@ ADR-008 [GAME]: Rust/WASM Spatial Core via wasm-pack (2026-05-26, Accepted)
 ADR-011 [GAME]: Gated Hot-Path Logging + On-Demand Tick Profiler (2026-05-30, Accepted)
 ADR-012 [GAME]: Combat Wound Model — Merge-and-Escalate + Capacity-Driven Downing (2026-06-11, Accepted)
 ADR-013 [GAME]: Deferred Combat Depth — Tissue Layers, Nerves & Arteries (2026-06-11, Deferred)
+ADR-014 [GAME]: Hard Tile Occupancy via Central OccupancyService (2026-06-12, Accepted)
 
 ---
 
@@ -358,3 +359,29 @@ Dwarf Fortress derives wound *type* from tissue physics — a blow cracks the bo
 
 - Wound type is data-driven (`fromDamageType`), not physics-derived; good enough for a legible colony sim.
 - Revisit only if a future design needs material-specific outcomes (e.g. armour that shears vs dents, or surgery targeting specific tissues). The `fracture` wound type is reserved in `Injury` for a possible light flesh/bone split if ever wanted.
+
+---
+
+### ADR-014 [GAME]: Hard Tile Occupancy via Central OccupancyService
+
+- **Date**: 2026-06-12
+- **Status**: Accepted
+
+#### Context
+
+Movement originally used a "soft" model: pathfinding ran on a terrain-only grid (entities not treated as obstacles), entities could pass **through** each other mid-path, and the only no-stacking gate fired at a path's *final* tile, comparing against a snapshot of positions taken at the **start of the tick**. Two failures fell out of this. (1) **In-sync stagger / yoyo:** when a follower and leader moved at the same speed, the follower arrived on the tile the leader occupied at tick-start but had already vacated — the stale snapshot flagged it occupied, wiped the follower's path, and the FSM re-pathed every tick (a visible back-and-forth during hunts/chases). (2) **Phasing:** enemies walked through pawns and through each other, so they could surround a defender or stack on one tile and deal stacked melee damage — defeating doorway-baiting / chokepoint tactics. Compounding both, **five callsites each hand-rolled their own "is this tile occupied?"** (mob A*, mob movement, pawn movement, pawn job A*, draft orders) with three different definitions, so mob and pawn behaviour silently disagreed.
+
+#### Decision
+
+**One solid body per tile, enforced from a single source of truth.** A new `occupancyService` (`services/OccupancyService.ts`) answers "which tiles hold a living pawn or non-corpse mob" — `blockedTiles(state, excludeId?)` / `isBlocked(...)`. It is a plain per-tick TypeScript scan; it is **not** spatial-WASM (only A\* and nearest-entity stay behind the WASM interface per ADR-008). Both consumers defer to it:
+
+- **Pathfinding** feeds `blockedTiles()` into `buildPathfindingGridsWithBlocked` so A\* routes **around** other bodies — a pawn standing in a doorway is a real wall. The mover's own start tile and its goal are kept walkable.
+- **Movement** (both the mob and pawn advance passes) tests the same set before entering a tile, and reserves resting/target tiles so two movers can't converge on one free tile in a tick. A blocked mover **holds** (keeps its path — no re-path, which is what removes the yoyo) and drops the path only after ~1.5 s (`MAX_BLOCKED_TICKS`) so genuine deadlocks (e.g. a corridor swap) re-route.
+
+#### Consequences
+
+- No stacked melee damage (attackers limited to distinct adjacent tiles), no phasing; doorway baiting and chokepoints work as intended.
+- Collision policy lives in one service — movement and pathfinding can no longer drift apart.
+- Pawn job-pathing now routes around bodies too; a transiently blocked job falls back to the existing unreachable-cooldown (ADR-010 plumbing), so pawns **queue** for single-access workstations instead of stacking — no path-churn.
+- Costs: a `blockedTicks` field on `Mob`; the entity-aware A\* clones only the walkable mask per route (the terrain layer stays memoized by `worldMap` reference).
+- Trade-off: a follower now trails a leader with a one-tile gap (queue cadence) rather than moving in lockstep. This is intentional and replaces the stagger.

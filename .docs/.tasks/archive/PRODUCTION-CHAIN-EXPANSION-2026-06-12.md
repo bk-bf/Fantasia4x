@@ -39,7 +39,7 @@ chapters and remain a separate ROADMAP thread.
 | Foundation (types)                     | ✅     | needs `thirst`/`hygiene`, `drink`/`wash` designations, item `deterioration`/`durabilityLossPerAction`/`fuelHeat`, building `minFuelHeat`/`fluxPerBatch`/`moldRequired`/`storageDecayMultiplier`/`requiresEnclosure`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | §A Forageables & loose stone           | ✅     | 5 named rocks (granite/limestone/sandstone/marble/slate) replace `surface_stone`; terrain-distributed yields; stone `hearth`. **Any-rock stations live**: `buildingCost` now supports **`category:<cat>` slots** (`resolveBuildingCost` — the building-cost analogue of a recipe's `acceptsCategory`); `hearth` costs `category:stone` 8, built from any mix of rock types (`buildingCost.test`) |
 | §B Durability & Deterioration          | ✅     | **Durability = the elements wearing an item apart** (≠ food spoilage, which is a separate rot timer). **EVERY item** has a durability pool: `maxDurability` (default 100) drained by `deteriorationRate`/tick **only while loose/exposed** (category defaults so all items weather — stone slow, organics fast; per-item override; rate 0 = immune), **destroyed at 0**, halted when stored/sheltered. Live + tested (`stepItemDeterioration` count-down + `deteriorationRateFor`). **building** condition decay + repair also live + tested. **Tool work-wear done**: per-stack tool durability spent at work-action completion (`applyToolWear`; stone axe ~8 fells; `toolWear.test`)                                                                                                                                                                  |
-| **Storage refactor** (per-tile stacks) | ✅     | Plan: `~/.claude/plans/streamed-napping-wave.md`. **Stages 1–3 ✅** done + green (73 tests): per-tile `stored` DroppedItems are now the **source of truth**; `addToStockpileZone`/`consumeFromStockpiles`/`absorbDropIfOnStockpileTile` rewritten drops-authoritative; aggregate summed from drops; per-tile capacity (`BASE_TILE_CAPACITY` + building `tileCapacityBonus`, advisory); zones = pure drop-off designations (`inventory` vestigial, cleared on init); UI per-zone view derives from drops; building `condition`+repair. Hauling/crafting/butchery tests intact. **Stage 4 done:** per-stack **tool durability** spent at work-action completion (`applyToolWear`, closes §B case 3) + **tile-aware decay/deterioration/drying** (`stepItemDecay`/`stepWoodDrying`, roof/enclosure, 2-tile fire proximity) all live + tested |
+| **Storage refactor** (per-tile stacks) | ✅     | **Stages 1–4 ✅** done + green (73→113 tests): per-tile `stored` DroppedItems are now the **source of truth**; `addToStockpileZone`/`consumeFromStockpiles`/`absorbDropIfOnStockpileTile` rewritten drops-authoritative; aggregate summed from drops; per-tile capacity (`BASE_TILE_CAPACITY` + building `tileCapacityBonus`, advisory); zones = pure drop-off designations (`inventory` vestigial, cleared on init); UI per-zone view derives from drops; building `condition`+repair. Hauling/crafting/butchery tests intact. **Stage 4 done:** per-stack **tool durability** spent at work-action completion (`applyToolWear`, closes §B case 3) + **tile-aware decay/deterioration/drying** (`stepItemDecay`/`stepWoodDrying`, roof/enclosure, 2-tile fire proximity) all live + tested. See [implementation notes](#storage-refactor-implementation-notes) below. |
 | §1 Wood                                | ✅     | 5 species logs (pine/birch/oak/ash/yew); the `tree` resource is **split into 5 species tree nodes** (`pine_tree`…`yew_tree`), each yielding its own log, with spawn weights summing to the original tree rate per subterrain. `green_firewood`→`dry_firewood` (drying live, Stage 4), 5 planks, `saw` (bronze-gated), `chopping_block`+`sawtable`; chopping byproduct **branches** live (recipe registry). `wood_log`→`pine_log` migrated |
 | §2 Fuel & Heat                         | ✅     | **Data ✅**: `peat` (dug from bogs), `charcoal` (Charcoal Pit, from logs/firewood), `coal` (mined in mountains), `ash` (burnt at hearth → feeds §6 curing); fuel `fuelHeat` ladder set (firewood 1–2 / peat 2 / charcoal 3 / coal 4); `charcoal_pit` building. **`minFuelHeat` gating live + enforced** at pottery kiln (§4) and bloomery (§5)                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | §3 Stone                               | ✅     | 5 cut blocks/tiles (`granite_block`/`limestone_block`/`sandstone_block`/`marble_block`/`slate_tile`) at new `masons_bench`, from raw rock (already quarried via §A from walls/outcrops with a pick)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
@@ -661,3 +661,67 @@ Forage (loose rock ×5 / flint / branch / hay / fiber)
 - [ ] Direct fire-adjacency fire-spread risk → [SEASONS_WEATHER](SEASONS_WEATHER.md) Living World.
 - [ ] Forge overheat / explosion hazards → Phase 3 hazard system.
 ```
+
+---
+
+## Storage Refactor — Implementation Notes {#storage-refactor-implementation-notes}
+
+> Formerly `~/.claude/plans/streamed-napping-wave.md`. Merged here on 2026-06-12; plan file deleted.
+
+### Context
+
+Items are tracked **on tiles** as stacks: a tile has a capacity, a storage building **raises that
+tile's capacity**, and stockpile zones are pure **drop-off designations** (they must not "magically
+hold" inventory or affect decay). This is also the prerequisite for tracking per-item
+durability/deterioration (§B) and faithful storage/enclosure (§F) — you can't track "this axe is
+at 12/40" in an aggregate count.
+
+Previously the model double-booked: `StockpileZone.inventory` was the authoritative aggregate
+(`gameState.stockpile = computeAggregate(zones)`), while `stored` `DroppedItem`s were a synced
+*physical mirror* on tiles. The refactor flips authority to the physical per-tile drops and makes
+zones pure designations.
+
+**Key leverage:** storage is a 4-function seam in `core/GameState.ts`
+(`computeAggregate`, `addToStockpileZone`, `consumeFromStockpiles`,
+`absorbDropIfOnStockpileTile`). ~15 callers (ItemService, JobService, PawnStateMachine,
+EntityService, ResearchService, BuildingService, the gameState store, a few `.svelte`) go
+through these. Keeping their signatures stable and rewriting the internals collapsed the blast
+radius to `GameState.ts` + the handful of places that read `zone.inventory` directly.
+
+### Data shape
+
+- **Authority = `stored` `DroppedItem`s** on tiles (`{resourceId, x, y, quantity, stored,
+  deterioration}` — already exists). Optional per-stack `durability?: number` for tools
+  (tools become quantity-1 stored stacks so they wear individually).
+- **Aggregate** `gameState.stockpile` = sum of `stored` drops by `resourceId` (recomputed,
+  same shape `Record<id,number>` — callers reading the aggregate are unaffected).
+- **Per-tile capacity:** `BASE_TILE_CAPACITY` constant + Σ `tileCapacityBonus` of complete
+  buildings on that tile. Tile is full when stored qty ≥ cap.
+- **`StockpileZone`:** keep `id/name/tiles/filter`; `inventory` vestigial — stopped writing it,
+  stopped reading it for the aggregate (field kept optional through Stage 3, cleared on init).
+
+### Function rewrites — `src/lib/game/core/GameState.ts`
+
+1. **`computeAggregate`** — sums `stored` drops instead of `zone.inventory`. Thin
+   `aggregateFromDrops(drops)` helper; `computeAggregate(zones)` shim kept during transition,
+   then store switched to drops-based version.
+2. **`addToStockpileZone(state, tileKey, items)`** — places items as `DroppedItem`s:
+   - tileKey given + capacity free → create/merge a `stored:true` drop on that tile.
+   - else (null tile = crafted output, or tile full) → create an **unstored loose** drop at a
+     sensible origin (producing building/pawn tile, falling back to a zone tile or general drop)
+     for haulers to pick up. Recomputes aggregate from drops.
+3. **`consumeFromStockpiles(state, items)`** — deducts greedily from `stored` drops only; dropped
+   the zone-inventory branch; recomputes aggregate.
+4. **`absorbDropIfOnStockpileTile`** — flips a loose drop to `stored` only when on a zone tile
+   **and** the tile is under capacity; no longer credits `zone.inventory`.
+
+### Rollout (each step: `pnpm check` + `pnpm test` green)
+
+1. **Additive:** `BASE_TILE_CAPACITY`, `aggregateFromDrops`, `tileStoredItems`, `tileCapacity`
+   helpers. New unit tests. Nothing wired yet.
+2. Switch gameState-store invariant + `computeAggregate` usage to drops; keep zones as passive
+   mirror.
+3. Rewrite `addToStockpileZone` / `consumeFromStockpiles` / `absorbDropIfOnStockpileTile` to be
+   drops-authoritative; stop writing `zone.inventory`.
+4. Repoint direct `zone.inventory` readers; add capacity guard to hauling; update devWorld.
+5. **(Stage 4)** per-stack tool `durability` decay at work-action completion → closes §B case 3.

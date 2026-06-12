@@ -4,6 +4,14 @@ Tracks confirmed bugs, root causes, and fix status. Add new entries at the top.
 
 ---
 
+## [FIXED] In-sync movement stagger + entities phasing through each other
+
+**Symptom:** Two flavours of the same root problem. (1) During hunts/chases, a pursuer moving at the same speed as its quarry would stagger — stepping forward, snapping back, re-pathing every tick. (2) Enemies walked straight **through** pawns and through each other, letting them surround a defender or stack on one tile and deal stacked melee damage (no doorway/chokepoint defence possible).
+
+**Root cause:** The movement model was "soft." Pathfinding used a terrain-only grid (entities not treated as walls), entities passed through each other mid-path, and the only no-stacking gate fired at a path's **final** tile against a snapshot taken at the **start of the tick**. A follower arriving on the tile the leader occupied at tick-start — but had already vacated that same tick — was falsely flagged blocked; its path was wiped and the FSM re-pathed next tick, producing the back-and-forth. Separately, nothing stopped mid-path phasing or two movers converging on one tile. Five callsites each defined "occupied" differently, so mobs and pawns disagreed.
+
+**Fix** (ADR-014): Introduced `services/OccupancyService.ts` as the single source of truth for solid-body occupancy. Both pathfinding (`buildPathfindingGridsWithBlocked` masks occupied tiles → A\* routes around bodies) and the per-tick movement passes (`EntityService.advanceMobMovement`, `PawnService.processMovement`) consult it. One body per tile; blocked movers **hold and keep their path** (no re-path → no yoyo) and drop it after ~1.5 s to break deadlocks. Mobs gained a `blockedTicks` field. Regression coverage in `entitySim.test.ts` (`hard tile occupancy`).
+
 ## [FIXED] Hunt-chase stutter and global entity freeze
 
 **Symptom:** During a wolf/deer (or any predator/prey) chase, the prey would stutter — freezing for ~1 second, then fleeing, then freezing again. Simultaneously, ALL entities on the map would briefly freeze during the chase.

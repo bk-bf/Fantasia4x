@@ -32,6 +32,9 @@ Each service implements an interface and exports a singleton. Import the singlet
 | `itemService`     | `services/ItemService.ts`      | Crafting availability, item operations            |
 | `researchService` | `services/ResearchService.ts`  | Research progression, unlock checks               |
 | `locationService` | `services/LocationServices.ts` | Exploration missions, location data               |
+| `occupancyService`| `services/OccupancyService.ts` | Single source of "which tiles hold a body" — pathfinding + movement collision (ADR-014) |
+
+**Movement & collision flow.** Pawns and mobs share one pathfinder (WASM A\*, behind the `PathfinderService` interface per ADR-008) and one movement integrator (`MovementSystem.advanceAlongPath`). Both consult `occupancyService` for solid-body collision: A\* grids are built with occupied tiles masked out (`buildPathfindingGridsWithBlocked`) so routes plan around bodies, and the per-tick advance passes hold rather than enter an occupied tile. One body per tile — see ADR-014.
 
 ## State Management
 

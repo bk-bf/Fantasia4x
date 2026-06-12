@@ -130,7 +130,7 @@ Battle Brothers–inspired tactical combat with ASCII/text graphics.
 
 - Turn order by initiative: `Base + Equipment mod + Status mod + 1d20`
 - Action Point system: `AP = 6 + (Speed/20) + Equipment mods`; standard actions cost 1–5 AP
-- Positioning and formation matter (flanking, cover bonuses)
+- Positioning and formation matter (flanking, cover bonuses). On the live real-time map this is already enforced by hard tile occupancy — one body per tile, no phasing — so a defender in a doorway is reachable only from the limited adjacent tiles (anti-surround chokepoint) and melee can't stack on one tile (ADR-014).
 - Equipment-driven abilities — abilities tied to equipped items, not flat stat tables
 - Permadeath consequences: injuries and PTSD affect the colony workforce
 - Scale: 20–50 combat-capable pawns; squad-based hierarchy for large battles
