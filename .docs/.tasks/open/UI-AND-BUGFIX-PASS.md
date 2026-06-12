@@ -6,10 +6,12 @@
 
 ## Status
 
-**12 / 13 done** (build green, 113 tests). Worked through in a loop: implement → `pnpm check` +
-`pnpm test` → check off. **Remaining: E1** (card-based crafting/building lists) — a larger UI
-redesign left for the next pass. Minor follow-ups noted inline (WorkScreen reuse of
-`PawnAttributes`; delete orphaned `PawnStats.svelte`).
+**Round 1 (A–D) + Round 2 (F) all done; E1 remains** (build green, 113 tests). Worked in a loop:
+implement → `pnpm check` + `pnpm test` → check off. **Remaining: E1** (card-based crafting/building
+lists) — the one larger UI redesign, next pass. Minor cleanup: a few now-orphaned CSS selectors
+(`.need-row`/`.block-bar` in PawnNeeds, `.stats-grid` in PawnOverview, `.stats-row` in
+PopulationOverview) — dead after the StatBar/banner extraction; sweep next. Orphaned
+`PawnStats.svelte` (40k) also deletable.
 
 Grouped, roughly by quick-win / dependency order. Each box is one loop iteration.
 
