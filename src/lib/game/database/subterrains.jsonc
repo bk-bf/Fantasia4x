@@ -66,8 +66,8 @@
     "displayName" : "Savanna",
     "walkable"    : true,
     "movementCost": 1.2,
-    "charSpans"   : [ {"sheet": "tiles", "from": 35, "to": 37} ],
-    "fg"          : [0.82, 0.64, 0.15],
+    "charSpans"   : [ {"sheet": "tiles", "from": 64, "to": 71} ],  // dirt tile — savanna resource paints the visual
+    "fg"          : [0.46, 0.3, 0.09],
     "bg"          : [0.08, 0.06, 0.03],
     "color"       : "#D1A326",
     "biomes"      : { "plains": [0.7, null] }
@@ -158,8 +158,8 @@
     "displayName" : "Moss",
     "walkable"    : true,
     "movementCost": 1.5,
-    "charSpans"   : [ {"sheet": "tiles", "id": 43} ],
-    "fg"          : [0.3, 0.48, 0.09],
+    "charSpans"   : [ {"sheet": "tiles", "from": 64, "to": 71} ],  // dirt tile — moss resource paints the visual
+    "fg"          : [0.46, 0.3, 0.09],
     "bg"          : [0.08, 0.06, 0.03],
     "color"       : "#4C7A17",
     "biomes"      : { "swamp": [0.5, 0.7] }
@@ -169,8 +169,8 @@
     "displayName" : "Mud",
     "walkable"    : true,
     "movementCost": 3,
-    "charSpans"   : [ {"literal": "."} ],
-    "fg"          : [0.34, 0.22, 0.09],
+    "charSpans"   : [ {"sheet": "tiles", "from": 64, "to": 71} ],  // dirt tile — mud resource paints the visual
+    "fg"          : [0.46, 0.3, 0.09],
     "bg"          : [0.08, 0.06, 0.03],
     "color"       : "#573817",
     "biomes"      : { "swamp": [-0.5, -0.2] }
@@ -180,8 +180,8 @@
     "displayName" : "Bog",
     "walkable"    : true,
     "movementCost": 3.5,
-    "charSpans"   : [ {"literal": ","} ],
-    "fg"          : [0.3, 0.28, 0.07],
+    "charSpans"   : [ {"sheet": "tiles", "from": 64, "to": 71} ],  // dirt tile — bog resource paints the visual
+    "fg"          : [0.46, 0.3, 0.09],
     "bg"          : [0.08, 0.06, 0.03],
     "color"       : "#4C4712",
     "biomes"      : { "swamp": [-0.2, 0.2] }
@@ -191,8 +191,8 @@
     "displayName" : "Clay",
     "walkable"    : true,
     "movementCost": 2.8,
-    "charSpans"   : [ {"literal": "\""} ],
-    "fg"          : [0.68, 0.36, 0.13],
+    "charSpans"   : [ {"sheet": "tiles", "from": 64, "to": 71} ],  // dirt tile — clay resource paints the visual
+    "fg"          : [0.46, 0.3, 0.09],
     "bg"          : [0.08, 0.06, 0.03],
     "color"       : "#AD5C21",
     "biomes"      : { "swamp": [0.2, 0.5] }

@@ -2,6 +2,7 @@
   import { gameState, currentRace } from '$lib/stores/gameState';
   import CurrentTask from '$lib/components/UI/CurrentTask.svelte';
   import BuildCard from '$lib/components/UI/BuildCard.svelte';
+  import FilterTabs from '$lib/components/UI/FilterTabs.svelte';
   import { uiState } from '$lib/stores/uiState';
   import TaskContainer from '$lib/components/UI/TaskContainer.svelte';
   import ITEMS_DATABASE from '$lib/game/database/items.jsonc';
@@ -80,6 +81,28 @@
 
   $: firstCraftingInProgress = craftingQueue.length > 0 ? craftingQueue[0] : null;
 
+  // Items craftable at a given station (craft_spot also absorbs station-less recipes).
+  const itemsForStation = (id: string) =>
+    allCraftableItems.filter((i) => {
+      if (i.isCarcass && i.yields) return id === 'butcher_spot';
+      const st = stationOf(i.id);
+      return id === 'craft_spot' ? st === 'craft_spot' || st === null : st === id;
+    });
+
+  // Workshop tabs: only stations that have any recipe; carry built-state + item list.
+  $: workshopTabs = WORKSHOP_SECTIONS.map((ws) => ({
+    id: ws.id,
+    label: ws.label,
+    items: itemsForStation(ws.id),
+    built: availableBuildings.includes(ws.id)
+  })).filter((ws) => ws.items.length > 0);
+
+  let selectedStation = '';
+  $: if (workshopTabs.length && !workshopTabs.some((w) => w.id === selectedStation)) {
+    selectedStation = workshopTabs[0].id;
+  }
+  $: activeWorkshop = workshopTabs.find((w) => w.id === selectedStation) ?? workshopTabs[0];
+
   const unsubscribeRace = currentRace.subscribe((value) => {
     race = value;
     currentPopulation = value?.population || 0;
@@ -139,7 +162,6 @@
 
 </script>
 
-4713:1898827
 <div class="crafting-screen">
   <div class="screen-hdr">
     | CRAFTING
@@ -168,46 +190,41 @@
     <div class="muted-row">no active crafting</div>
   {/if}
 
-  <!-- Workshop sections: built stations first, unbuilt collapsed -->
-  {#each WORKSHOP_SECTIONS as ws}
-    <!-- CRAFT SPOT also shows items with no workshopType (basic crafting needs a safe spot) -->
-    {@const wsItems = allCraftableItems.filter((i) => {
-      // Carcass items go to butcher_spot
-      if (i.isCarcass && i.yields) return ws.id === 'butcher_spot';
-      // Regular items go to their recipe's station
-      const st = stationOf(i.id);
-      return ws.id === 'craft_spot' ? st === 'craft_spot' || st === null : st === ws.id;
-    })}
-    {@const wsBuilt = availableBuildings.includes(ws.id)}
-    {@const stationKey = ws.id}
-    {@const assignedPawnId = stationAssignments[stationKey] ?? null}
+  <!-- Workshop tabs: pick a station, see its recipes -->
+  {#if workshopTabs.length > 0}
+    <FilterTabs
+      tabs={workshopTabs.map((w) => ({
+        id: w.id,
+        label: w.built ? w.label : `${w.label} 🔒`,
+        count: w.items.length
+      }))}
+      selected={selectedStation}
+      onSelect={(id) => (selectedStation = id)}
+    />
+    {#if activeWorkshop}
+      {@const ws = activeWorkshop}
+      {@const assignedPawnId = stationAssignments[ws.id] ?? null}
+      {#if ws.built}
+        <!-- Pawn assignment row -->
+        <div class="station-assign-row">
+          <span class="assign-label">ASSIGNED:</span>
+          <select
+            class="assign-select"
+            value={assignedPawnId ?? ''}
+            on:change={(e) =>
+              setStationAssignment(ws.id, (e.currentTarget as HTMLSelectElement).value || null)}
+          >
+            <option value="">any eligible pawn</option>
+            {#each pawns as p}
+              <option value={p.id}>{p.name}</option>
+            {/each}
+          </select>
+        </div>
+      {/if}
 
-    {#if wsBuilt}
-      <!-- Built station — show full section -->
-      <div class="section-hdr">
-        | {ws.label}
-        <span class="ws-badge ws-ready">[READY]</span>
-      </div>
-
-      <!-- Pawn assignment row -->
-      <div class="station-assign-row">
-        <span class="assign-label">ASSIGNED:</span>
-        <select
-          class="assign-select"
-          value={assignedPawnId ?? ''}
-          on:change={(e) =>
-            setStationAssignment(ws.id, (e.currentTarget as HTMLSelectElement).value || null)}
-        >
-          <option value="">any eligible pawn</option>
-          {#each pawns as p}
-            <option value={p.id}>{p.name}</option>
-          {/each}
-        </select>
-      </div>
-
-      {#if wsItems.length > 0}
-        <div class="card-grid">
-          {#each wsItems as item}
+      <!-- Recipe cards always show; an unbuilt station's recipes read BLOCKED. -->
+      <div class="card-grid">
+        {#each ws.items as item}
             {@const craftable = $gameState !== null && itemService.canCraftItem(item.id, $gameState)}
             {@const isCarcass = item.isCarcass && item.yields}
             {@const displayCost = isCarcass ? {} : costOf(item.id)}
@@ -219,6 +236,7 @@
             <BuildCard
               name={item.name.toUpperCase()}
               charSpans={item.charSpans}
+              description={item.description ?? null}
               tint={item.color ?? 'var(--accent)'}
               badge={isCarcass ? `${pct}%` : null}
               actionLabel={!affordable
@@ -271,17 +289,13 @@
           {/each}
         </div>
       {:else}
-        <div class="muted-row">no recipes for this station</div>
+        <div class="muted-row">
+          Build a {ws.label.toLowerCase()} to unlock its {ws.items.length}
+          recipe{ws.items.length === 1 ? '' : 's'}.
+        </div>
       {/if}
-    {:else if wsItems.length > 0}
-      <!-- Unbuilt station — show dim header only -->
-      <div class="section-hdr locked">
-        | {ws.label}
-        <span class="ws-badge ws-need">[BUILD FIRST]</span>
-        <span class="ws-count">{wsItems.length} recipes</span>
-      </div>
     {/if}
-  {/each}
+  {/if}
 
   {#if allCraftableItems.length === 0}
     <div class="muted-row">no recipes available</div>
@@ -342,28 +356,6 @@
   .section-hdr.sub {
     color: var(--accent);
     margin-top: 2px;
-  }
-  .section-hdr.locked {
-    opacity: 0.45;
-  }
-
-  .ws-badge {
-    font-size: 9px;
-    padding: 1px 4px;
-    border: 1px solid;
-  }
-  .ws-ready {
-    color: var(--pos);
-    border-color: var(--pos);
-  }
-  .ws-need {
-    color: var(--text-dim);
-    border-color: var(--border);
-  }
-  .ws-count {
-    font-size: 9px;
-    color: var(--text-dim);
-    margin-left: auto;
   }
 
   .station-assign-row {

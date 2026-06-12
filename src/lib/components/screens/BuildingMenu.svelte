@@ -8,6 +8,7 @@
   import CurrentTask from '../UI/CurrentTask.svelte';
   import ZonePanel from '../UI/ZonePanel.svelte';
   import BuildCard from '../UI/BuildCard.svelte';
+  import FilterTabs from '../UI/FilterTabs.svelte';
   import type { PlacedBuilding } from '$lib/game/core/types';
   import type { Building } from '$lib/game/core/types';
 
@@ -87,6 +88,13 @@
     label,
     defs: unlockedDefs.filter((b) => classify(b) === label)
   })).filter((s) => s.defs.length > 0);
+
+  // Which category tab is active (default to the first; keep valid as sections change).
+  let selectedSection = '';
+  $: if (sections.length && !sections.some((s) => s.label === selectedSection)) {
+    selectedSection = sections[0].label;
+  }
+  $: activeSection = sections.find((s) => s.label === selectedSection) ?? sections[0];
 
   // Legacy compat
   $: availableBuildings = unlockedDefs;
@@ -311,17 +319,22 @@
   {/each}
 
   <!-- Building groups -->
-  {#each sections as grp}
-    {#if grp.defs.length > 0}
-      <div class="section-hdr">| {grp.label}</div>
+  {#if sections.length > 0}
+    <FilterTabs
+      tabs={sections.map((s) => ({ id: s.label, label: s.label, count: s.defs.length }))}
+      selected={selectedSection}
+      onSelect={(id) => (selectedSection = id)}
+    />
+    {#if activeSection}
       <div class="card-grid">
-        {#each grp.defs as building}
+        {#each activeSection.defs as building}
           {@const placed = getBuildingCount(building.id)}
           {@const affordable = canAfford(building)}
           {@const buildable = canBuild(building)}
           <BuildCard
             name={building.name.toUpperCase()}
             charSpans={building.charSpans}
+            description={building.description ?? null}
             tint={building.color ?? 'var(--accent)'}
             badge={placed > 0 ? `×${placed}` : null}
             actionLabel={!affordable ? 'MISSING' : !buildable ? 'BLOCKED' : 'BUILD'}
@@ -345,7 +358,7 @@
         {/each}
       </div>
     {/if}
-  {/each}
+  {/if}
 </div>
 
 <style>

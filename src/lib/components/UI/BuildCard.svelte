@@ -7,6 +7,7 @@
 
   export let name: string;
   export let charSpans: CharSpan[] | undefined = undefined;
+  export let description: string | null = null;
   /** Accent + icon tint (rgb/hex), usually the def's fg colour. */
   export let tint = 'var(--accent)';
   export let badge: string | null = null;
@@ -25,6 +26,7 @@
       <span class="card-name">{name}</span>
       {#if badge}<span class="card-badge">{badge}</span>{/if}
     </div>
+    {#if description}<div class="card-desc">{description}</div>{/if}
     <div class="card-cost"><slot /></div>
     <button
       class="card-action card-action--{variant}"
@@ -82,6 +84,16 @@
     color: var(--accent-hi);
     font-size: 10px;
     flex-shrink: 0;
+  }
+  .card-desc {
+    color: var(--text-muted);
+    font-size: 10px;
+    line-height: 1.35;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
   .card-cost {
     color: var(--text-dim);
