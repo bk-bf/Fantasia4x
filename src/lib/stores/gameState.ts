@@ -50,7 +50,7 @@ let simAccumulatorMs = 0;
 
 // ===== WORLD GENERATION =====
 /** Bump this when the world generation algorithm changes to force a regen. */
-const WORLD_VERSION = 15; // ore spawns only on mineral_deposit; deposits grow to 3-8 tile clusters
+const WORLD_VERSION = 16; // doubled mineral_deposit area again (0.79->0.68 detail), cost from rocky
 const WORLD_VERSION_KEY = 'fantasia4x-world-version';
 // D7: world generation is DEFERRED to the async init below rather than run at module
 // import. Generating a 240×160 world here only to overwrite it when a save loads is pure
