@@ -180,14 +180,7 @@ export class ModifierSystemImpl implements ModifierSystem {
     sources.push(...researchResult.sources);
     multiplicativeBonus *= researchResult.multiplier;
 
-    // 6. Location modifiers
-    if (locationId) {
-      const locationResult = this.calculateLocationWorkBonus(gameState, workType, locationId);
-      sources.push(...locationResult.sources);
-      multiplicativeBonus *= locationResult.multiplier;
-    }
-
-    // 7. Pawn state modifiers (needs, morale, health)
+    // 6. Pawn state modifiers (needs, morale, health)
     const stateResult = this.calculatePawnStateModifiers(pawn);
     sources.push(...stateResult.sources);
     multiplicativeBonus *= stateResult.multiplier;
@@ -757,31 +750,6 @@ export class ModifierSystemImpl implements ModifierSystem {
 
     // This would be expanded to check research database for work bonuses
     // For now, return base values
-
-    return { sources, multiplier };
-  }
-
-  private calculateLocationWorkBonus(
-    gameState: GameState,
-    workType: string,
-    locationId: string
-  ): { sources: ModifierSource[]; multiplier: number } {
-    const sources: ModifierSource[] = [];
-    let multiplier = 1.0;
-
-    const location = gameState.discoveredLocations.find((l) => l.id === locationId);
-    if (location && location.workModifiers && location.workModifiers[workType]) {
-      const bonus = location.workModifiers[workType];
-      multiplier *= bonus;
-
-      sources.push({
-        id: locationId,
-        name: location.name,
-        type: 'location',
-        value: bonus,
-        description: `${location.name} provides ${((bonus - 1) * 100).toFixed(0)}% modifier to ${workType}`
-      });
-    }
 
     return { sources, multiplier };
   }

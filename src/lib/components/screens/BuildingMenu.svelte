@@ -118,7 +118,6 @@
       buildingQueue: [],
       // Required properties with default values
       worldMap: [],
-      discoveredLocations: [],
       availableResearch: [],
       discoveredLore: [],
       equippedItems: {
@@ -130,9 +129,7 @@
         hands: null
       },
       craftingQueue: [],
-      activeExplorationMissions: [],
       workAssignments: {},
-      productionTargets: [],
       pawnStats: {},
       stockpileZones: []
     };

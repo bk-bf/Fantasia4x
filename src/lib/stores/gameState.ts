@@ -15,7 +15,6 @@ import { generatePawns } from '$lib/game/entities/Pawns';
 import { pawnService } from '$lib/game/services/PawnService';
 import { generateRace } from '$lib/game/core/Race';
 import { itemService } from '$lib/game/services/ItemService';
-import { locationService } from '$lib/game/services/LocationServices';
 import { buildingService } from '$lib/game/services/BuildingService';
 import { workService } from '$lib/game/services/WorkService';
 import { syncPawnInventoryWithGlobal, syncAllPawnInventories } from '$lib/game/core/PawnEquipment';
@@ -67,7 +66,6 @@ export const initialGameState: GameState = {
   item: [...itemService.getItemsByCategory('basic').map((item) => ({ ...item, amount: 0 }))].filter(
     (item) => item !== undefined
   ),
-  discoveredLocations: [],
   buildingCounts: {},
   buildingQueue: [],
   /** Phase 4: placed buildings on the map */
@@ -105,9 +103,7 @@ export const initialGameState: GameState = {
   },
   craftingQueue: [],
   currentToolLevel: 0,
-  activeExplorationMissions: [],
   workAssignments: {},
-  productionTargets: [],
   pawnStats: {},
   droppedItems: [],
   deadPawns: [],
@@ -481,8 +477,6 @@ function wipeAndReload() {
 export const storeReady = writable(false);
 
 // ===== MAIN STORE SETUP =====
-// Initialize locations at game start
-locationService.initializeAllLocations();
 
 // Create the main store starting with a fresh game. The actual save is loaded
 // asynchronously below.

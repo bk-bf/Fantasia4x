@@ -252,8 +252,7 @@ export class PawnServiceImpl implements PawnService {
 				// FIXED: Get proper work category name instead of just the ID
 				const workCategory = WORK_CATEGORIES.find((w) => w.id === workAssignment.currentWork);
 				const workName = workCategory?.name || workAssignment.currentWork;
-				const location = workAssignment.activeLocation || 'unknown location';
-				activities.push(`Working: ${workName} at ${location}`);
+				activities.push(`Working: ${workName}`);
 			} else {
 				activities.push('Working (unassigned)');
 			}
@@ -618,12 +617,6 @@ export class PawnServiceImpl implements PawnService {
 			// Add other trait-based morale effects here if needed
 			// Currently no moraleBonus/moralePenalty properties exist in trait effects
 		});
-
-		// Environment-based morale (could be expanded)
-		const workAssignment = gameState.workAssignments?.[pawn.id];
-		if (workAssignment?.activeLocation) {
-			// Different locations could provide morale bonuses/penalties
-		}
 
 		return Math.max(0, Math.min(100, morale));
 	}

@@ -1,14 +1,11 @@
 import type {
   Pawn,
-  Location,
   GameState,
   WorkAssignment,
-  ProductionTarget,
   WorkCategory,
   LaborLevel
 } from '../core/types';
 import { WORK_CATEGORIES } from '../core/Work';
-import { locationService } from './LocationServices';
 // Shadow the global console with a gated shim: log/debug/info/warn are silent in
 // normal play (toggle via gameDebug(true)); console.error still surfaces. This
 // removes the per-tick logging that profiling showed was ~75% of turn cost.
@@ -34,20 +31,13 @@ export interface WorkService {
   // Query Methods
   getWorkCategory(workId: string): WorkCategory | undefined;
   getAllWorkCategories(): WorkCategory[];
-  getWorkCategoriesByLocation(locationId: string): WorkCategory[];
 
   // Assignment Methods
   assignPawnToWork(
     pawnId: string,
     workType: string,
-    locationId: string,
     gameState: GameState
   ): GameState;
-  getOptimalWorkAssignment(
-    pawns: Pawn[],
-    productionTargets: ProductionTarget[],
-    gameState: GameState
-  ): Record<string, WorkAssignment>;
   updateWorkPriorities(
     pawnId: string,
     priorities: Record<string, number>,
@@ -58,7 +48,6 @@ export interface WorkService {
   calculateWorkEfficiency(
     pawn: Pawn,
     workCategory: WorkCategory,
-    location?: Location,
     gameState?: GameState
   ): number;
 
@@ -103,16 +92,9 @@ export class WorkServiceImpl implements WorkService {
     return [...WORK_CATEGORIES];
   }
 
-  getWorkCategoriesByLocation(locationId: string): WorkCategory[] {
-    // TODO: Implement when location system is available
-    // For now, return all work categories
-    return WORK_CATEGORIES;
-  }
-
   assignPawnToWork(
     pawnId: string,
     workType: string,
-    locationId: string,
     gameState: GameState
   ): GameState {
     const newState = { ...gameState };
@@ -125,14 +107,12 @@ export class WorkServiceImpl implements WorkService {
     // Create or update work assignment
     const currentAssignment = newState.workAssignments[pawnId] || {
       pawnId,
-      workPriorities: {},
-      authorizedLocations: [locationId]
+      workPriorities: {}
     };
 
     newState.workAssignments[pawnId] = {
       ...currentAssignment,
       currentWork: workType,
-      activeLocation: locationId,
       workPriorities: {
         ...currentAssignment.workPriorities,
         [workType]: 10 // High priority for assigned work
@@ -140,47 +120,6 @@ export class WorkServiceImpl implements WorkService {
     };
 
     return newState;
-  }
-
-  getOptimalWorkAssignment(
-    pawns: Pawn[],
-    productionTargets: ProductionTarget[],
-    gameState: GameState
-  ): Record<string, WorkAssignment> {
-    const assignments: Record<string, WorkAssignment> = {};
-
-    // Initialize assignments for all pawns
-    pawns.forEach((pawn) => {
-      assignments[pawn.id] = {
-        pawnId: pawn.id,
-        workPriorities: {},
-        authorizedLocations: [] // TODO: Get from discovered locations
-      };
-    });
-
-    // Assign pawns to production targets based on efficiency
-    productionTargets.forEach((target) => {
-      const workCategory = this.getWorkCategory(target.workCategoryId);
-      if (!workCategory) return;
-
-      // Calculate efficiency for each pawn
-      const pawnEfficiencies = pawns.map((pawn) => ({
-        pawn,
-        efficiency: this.calculateWorkEfficiency(pawn, workCategory, undefined, gameState)
-      }));
-
-      // Sort by efficiency and assign best pawns
-      pawnEfficiencies
-        .sort((a, b) => b.efficiency - a.efficiency)
-        .slice(0, target.assignedPawns.length)
-        .forEach(({ pawn }) => {
-          assignments[pawn.id].currentWork = workCategory.id;
-          assignments[pawn.id].activeLocation = target.locationId;
-          assignments[pawn.id].workPriorities[workCategory.id] = 10;
-        });
-    });
-
-    return assignments;
   }
 
   updateWorkPriorities(
@@ -196,8 +135,7 @@ export class WorkServiceImpl implements WorkService {
 
     const currentAssignment = newState.workAssignments[pawnId] || {
       pawnId,
-      workPriorities: {},
-      authorizedLocations: []
+      workPriorities: {}
     };
 
     newState.workAssignments[pawnId] = {
@@ -211,7 +149,6 @@ export class WorkServiceImpl implements WorkService {
   calculateWorkEfficiency(
     pawn: Pawn,
     workCategory: WorkCategory,
-    location?: Location,
     gameState?: GameState
   ): number {
     // Delegate to GameEngine's unified calculation system
@@ -227,7 +164,7 @@ export class WorkServiceImpl implements WorkService {
     const workCategory = this.getWorkCategory(workType);
     if (!workCategory) return 'Unknown work type';
 
-    const efficiency = this.calculateWorkEfficiency(pawn, workCategory, undefined, gameState);
+    const efficiency = this.calculateWorkEfficiency(pawn, workCategory, gameState);
     const efficiencyPercent = Math.round(efficiency * 100);
 
     // Build description based on available data
@@ -316,8 +253,7 @@ export class WorkServiceImpl implements WorkService {
         workAssignments[pawn.id] = {
           pawnId: pawn.id,
           workPriorities: {},
-          laborSettings: this.createDefaultLaborSettings(),
-          authorizedLocations: []
+          laborSettings: this.createDefaultLaborSettings()
         };
         changed = true;
       }
@@ -370,22 +306,6 @@ export class WorkServiceImpl implements WorkService {
     // and always passed, which misled readers into thinking tools were gated. Per ADR-009,
     // tool requirements belong at job-claim time against the pawn's claimed inventory
     // (JobService) — not against the global stockpile here. Until that lands, do not pretend.
-
-    // Check if location supports this work type
-    if (workCategory.locationTypesRequired && workCategory.locationTypesRequired.length > 0) {
-      const currentLocation = workAssignment.activeLocation;
-      if (!currentLocation) {
-        console.log(`[WorkService] No active location for ${pawn.name}, cannot do ${workType}`);
-        return false;
-      }
-
-      const location = locationService.getLocationById(currentLocation);
-
-      if (location && !workCategory.locationTypesRequired.includes(location.type)) {
-        console.log(`[WorkService] ${workType} not available at ${location.type} location`);
-        return false;
-      }
-    }
 
     console.debug(`[WorkService] ${pawn.name} can do ${workType}`);
     return true;

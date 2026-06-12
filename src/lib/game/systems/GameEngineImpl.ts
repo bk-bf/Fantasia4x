@@ -13,7 +13,6 @@ import { modifierSystem } from './ModifierSystem';
 import { workService } from '../services/WorkService';
 import { itemService } from '../services/ItemService';
 import { recipeService } from '../services/RecipeService';
-import { locationService } from '../services/LocationServices';
 import { pawnService } from '../services/PawnService';
 import { buildingService } from '../services/BuildingService';
 import { researchService } from '../services/ResearchService';
@@ -243,17 +242,10 @@ export class GameEngineImpl implements GameEngine {
 	}
 
 	// COORDINATION: WorkService methods for UI components
-	assignPawnToWork(pawnId: string, workType: string, locationId?: string): void {
+	assignPawnToWork(pawnId: string, workType: string): void {
 		if (!this.gameState) return;
-		gatedConsole.log(
-			`[GameEngine] Coordinating work assignment: ${pawnId} to ${workType} at ${locationId || 'default location'}`
-		);
-		this.gameState = workService.assignPawnToWork(
-			pawnId,
-			workType,
-			locationId || 'default',
-			this.gameState
-		);
+		gatedConsole.log(`[GameEngine] Coordinating work assignment: ${pawnId} to ${workType}`);
+		this.gameState = workService.assignPawnToWork(pawnId, workType, this.gameState);
 		this.updateStores();
 	}
 
@@ -270,8 +262,7 @@ export class GameEngineImpl implements GameEngine {
 					[pawnId]: {
 						...this.gameState.workAssignments[pawnId],
 						workPriorities: {},
-						currentWork: undefined,
-						activeLocation: undefined
+						currentWork: undefined
 					}
 				}
 			};
@@ -283,28 +274,6 @@ export class GameEngineImpl implements GameEngine {
 	getWorkAssignments(): Record<string, any> {
 		if (!this.gameState) return {};
 		return this.gameState.workAssignments || {};
-	}
-
-	// COORDINATION: LocationService methods for UI components
-	getAvailableLocations(): any[] {
-		return locationService.getDiscoveredLocations();
-	}
-
-	getLocationById(locationId: string): any {
-		return locationService.getLocationById(locationId);
-	}
-
-	exploreNewLocation(): void {
-		if (!this.gameState) return;
-		gatedConsole.log(`[GameEngine] Coordinating location exploration`);
-
-		// COORDINATION: Simple exploration - discover a random undiscovered location
-		const undiscovered = locationService.getUndiscoveredLocations();
-		if (undiscovered.length > 0) {
-			const randomLocation = undiscovered[Math.floor(rng.random() * undiscovered.length)];
-			locationService.discoverLocation(randomLocation.id);
-			this.updateStores();
-		}
 	}
 
 	// ===== CORE COORDINATION - MOVED FROM GAMESTATE =====
@@ -362,7 +331,6 @@ export class GameEngineImpl implements GameEngine {
 			});
 			t('buildings', () => this.processBuildings());
 			t('pawns', () => this.processPawns());
-			t('locationRenewal', () => this.processLocationRenewal());
 			t('resourceRegrowth', () => this.processResourceRegrowth());
 			t('entityStep', () => {
 				this.gameState = entityService.spawnEntities(this.gameState!);
@@ -416,33 +384,6 @@ export class GameEngineImpl implements GameEngine {
 				errors: [error instanceof Error ? error.message : 'Unknown error']
 			};
 		}
-	}
-
-	/**
-	 * GameEngine coordination method - gets location-specific resources for work type
-	 * Replaces the removed LocationService.getResourcesForWorkType method
-	 */
-	getLocationResourcesForWorkType(locationId: string, workType: string): string[] {
-		gatedConsole.log(`[GameEngine] Getting resources for ${workType} at ${locationId}`);
-
-		// GameEngine coordinates between LocationService and ItemService
-		const availableResources = locationService.getAvailableResources(locationId);
-		gatedConsole.log(`[GameEngine] Available resources at ${locationId}:`, availableResources);
-
-		// GameEngine filters using ItemService
-		const filteredResources = availableResources.filter((resourceId) => {
-			const item = itemService.getItemById(resourceId);
-			const hasWorkType = item?.gatheringTypes?.includes(workType);
-			gatedConsole.log(`[GameEngine] Resource ${resourceId} has workType ${workType}:`, hasWorkType);
-			return hasWorkType;
-		});
-
-		gatedConsole.log(`[GameEngine] Filtered resources for ${workType}:`, filteredResources);
-		return filteredResources;
-	}
-
-	private processLocationRenewal(): void {
-		locationService.processAllLocationRenewal();
 	}
 
 	/**
@@ -595,15 +536,6 @@ export class GameEngineImpl implements GameEngine {
 			);
 		}
 		gatedConsole.log(lines.join('\n'));
-	}
-
-	/**
-	 * GameEngine coordination method - checks if work can be performed at location
-	 * Replaces the removed LocationService.canPerformWorkAtLocation method
-	 */
-	canPerformWorkAtLocation(locationId: string, workType: string): boolean {
-		const availableResources = this.getLocationResourcesForWorkType(locationId, workType);
-		return availableResources.length > 0;
 	}
 
 	private _processDraftOrders(state: GameState): GameState {

@@ -3,11 +3,9 @@
   import { uiState } from '$lib/stores/uiState';
   import WorkPriorities from '$lib/components/screens/work/WorkPriorities.svelte';
   import PopulationOverview from '$lib/components/screens/work/PopulationOverview.svelte';
-  import ProductionManagement from '$lib/components/screens/work/ProductionManagement.svelte';
 
   let pawns = $derived($gameState.pawns ?? []);
   let workAssignments = $derived($gameState.workAssignments ?? {});
-  let productionTargets = $derived($gameState.productionTargets ?? []);
   let selectedPawn = $state<string | null>(null);
   let selected = $derived(pawns.find((p) => p.id === selectedPawn) ?? null);
 
@@ -30,8 +28,6 @@
   {:else if pawns.length > 0}
     <div class="section-hdr sub">| CLICK A ROW FOR PAWN DETAIL</div>
   {/if}
-
-  <ProductionManagement {productionTargets} {pawns} />
 </div>
 
 <style>

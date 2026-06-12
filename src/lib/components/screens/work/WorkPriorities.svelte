@@ -1,7 +1,6 @@
 <script lang="ts">
   import { gameState } from '$lib/stores/gameState';
   import { WORK_CATEGORIES } from '$lib/game/core/Work';
-  import { locationService } from '$lib/game/services/LocationServices';
   import type { Pawn, WorkAssignment } from '$lib/game/core/types';
   import {
     LABOR_LABELS,
@@ -31,15 +30,13 @@
   }
 
   function updatePawnLaborLevel(pawnId: string, workId: string, level: 0 | 1 | 2 | 3 | 4) {
-    const discovered = locationService.getDiscoveredLocations();
     gameState.update((state) => {
       const newAssignments = { ...state.workAssignments };
       if (!newAssignments[pawnId]) {
         newAssignments[pawnId] = {
           pawnId,
           workPriorities: {},
-          laborSettings: {},
-          authorizedLocations: discovered.map((l) => l.id)
+          laborSettings: {}
         };
       }
       newAssignments[pawnId] = {

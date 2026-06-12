@@ -153,7 +153,6 @@ export interface GameState {
 	race: Race;
 	item: Item[];
 	worldMap: WorldTile[][];
-	discoveredLocations: Location[];
 	/** @deprecated Use buildings[] instead */
 	buildingCounts: Record<string, number>;
 	/** Phase 4: physically placed buildings on the map */
@@ -191,9 +190,7 @@ export interface GameState {
 	};
 	craftingQueue: CraftingInProgress[];
 	currentToolLevel: number;
-	activeExplorationMissions: ExplorationMissionInProgress[];
 	workAssignments: Record<string, WorkAssignment>;
-	productionTargets: ProductionTarget[];
 	pawns: Pawn[];
 	pawnStats: {}; // Record<pawnId, Record<statName, { value: number, sources: string[] }>>
 	/** Per-workshop pawn assignment: key = workshopType, value = pawnId or null (any) */
@@ -378,18 +375,9 @@ export interface WorkAssignment {
 	workPriorities: Record<string, number>;
 	/** Phase 5a: 5-level labor priorities (Celestia model). 0=disabled, 1=low, 2=normal, 3=high, 4=urgent */
 	laborSettings?: Record<string, LaborLevel>;
-	authorizedLocations: string[];
-	activeLocation?: string;
 	currentWork?: string;
 }
 
-export interface ProductionTarget {
-	id: string; // Unique identifier
-	workCategoryId: string;
-	locationId: string;
-	resourceTargets: Record<string, number>; // resourceId -> percentage (0-100)
-	assignedPawns: string[]; // Pawn IDs assigned to this production
-}
 // NEW: Individual pawn interfaces
 export interface EntityNeeds {
 	hunger: number; // 0-100, 100 = starving
@@ -1290,72 +1278,6 @@ export interface Equipment {
 	type: 'weapon' | 'armor' | 'accessory';
 	stats: Partial<EntityStats>;
 	magical?: boolean;
-}
-export interface Location {
-	id: string;
-	name: string;
-	description: string;
-	type:
-	| 'plains'
-	| 'hills'
-	| 'forest'
-	| 'swamp'
-	| 'mountains'
-	| 'river'
-	| 'ruins'
-	| 'caves'
-	| 'magical_forest'
-	| 'legendary_mountains'
-	| 'special'
-	| 'volcanic'
-	| 'seasonal';
-	tier: number; // 0-2, matching item/building progression
-	rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
-	discovered: boolean;
-
-	// Available resources by tier
-	availableResources: {
-		tier0: string[]; // Basic materials
-		tier1: string[]; // Advanced materials
-		tier2: string[]; // Rare/legendary materials
-	};
-
-	// Work efficiency modifiers
-	workModifiers: Record<string, number>; // jobType -> multiplier
-
-	// Exploration requirements
-	explorationRequirements: {
-		population?: number;
-		tools?: string[];
-		research?: string[];
-		buildings?: string[];
-	};
-
-	// Dangers and features
-	hazards: string[];
-	specialFeatures: string[];
-
-	// Visual representation
-	emoji: string;
-	color: string;
-}
-
-export interface ExplorationMissionInProgress {
-	id: string;
-	name: string;
-	description: string;
-	targetLocation: string;
-	explorersRequired: number;
-	toolsRequired: string[];
-	suppliesRequired: Record<string, number>;
-	duration: number;
-	successChance: number;
-	riskLevel: 'low' | 'medium' | 'high' | 'extreme';
-
-	// Progress tracking
-	startedAt: number; // Turn when mission started
-	turnsRemaining: number;
-	progress: number; // 0-1 completion percentage
 }
 
 export interface WorldTile {

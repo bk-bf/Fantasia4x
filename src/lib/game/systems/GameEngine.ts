@@ -80,14 +80,9 @@ export interface GameEngine {
   startResearch(researchId: string): void;
 
   // WorkService coordination
-  assignPawnToWork(pawnId: string, workType: string, locationId?: string): void;
+  assignPawnToWork(pawnId: string, workType: string): void;
   unassignPawnFromWork(pawnId: string): void;
   getWorkAssignments(): Record<string, any>;
-
-  // LocationService coordination
-  getAvailableLocations(): any[];
-  getLocationById(locationId: string): any;
-  exploreNewLocation(): void;
 
   // Integration
   setGameStateManager(manager: any): void;

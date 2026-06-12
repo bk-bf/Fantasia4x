@@ -19,8 +19,6 @@ import type {
   ZoneFilter,
   DroppedItem
 } from '../core/types';
-import { locationService } from '../services/LocationServices';
-import { LOCATION_TEMPLATES } from '../core/Locations';
 import itemsData from '../database/items.jsonc';
 import researchData from '../database/research.jsonc';
 
@@ -159,13 +157,7 @@ export function applyDevWorld(state: GameState, itemQty = 500): GameState {
     designationZoneId[k] = stockpileInstance.id;
   }
 
-  // --- 6. Discover all locations -----------------------------------
-  LOCATION_TEMPLATES.forEach((t) => locationService.discoverLocation(t.id));
-  const allDiscovered = locationService
-    .getDiscoveredLocations()
-    .map((loc) => ({ ...loc, discovered: true }));
-
-  // --- 7. Assemble new state --------------------------------------
+  // --- 6. Assemble new state --------------------------------------
   return {
     ...state,
     stockpile: aggregate,
@@ -179,8 +171,6 @@ export function applyDevWorld(state: GameState, itemQty = 500): GameState {
     currentResearch: undefined,
     currentToolLevel: 5,
     maxPopulation: 50,
-    turn: 100, // 08:00
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    discoveredLocations: allDiscovered as any
+    turn: 100 // 08:00
   };
 }
