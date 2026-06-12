@@ -109,8 +109,12 @@ export interface DroppedItem {
 	quantity: number;
 	/** True when this item has been hauled and placed on a stockpile zone tile. */
 	stored?: boolean;
-	/** §B elemental wear 0–100 while loose/exposed; at 100 the stack is ruined. Halted once `stored`. */
-	deterioration?: number;
+	/**
+	 * §B remaining durability of this stack. Starts at the item def's `maxDurability` (default 100)
+	 * and counts DOWN by `deteriorationRate` each tick while loose/exposed; the stack is destroyed
+	 * at 0. Halted entirely once `stored` (in a container / enclosed). Same pool tools wear from.
+	 */
+	durability?: number;
 }
 
 export interface Job {
@@ -965,12 +969,14 @@ export interface Item {
 	maxDurability?: number;
 	effects?: Record<string, number>;
 	// ── PRODUCTION-CHAIN-EXPANSION §B: wear & deterioration ──
+	// Both wear sources draw down the same `maxDurability` pool (default 100 when unset):
+	//   • tools lose `durabilityLossPerAction` per work action,
+	//   • any durable good loses `deteriorationRate` per tick while loose/unsheltered.
+	// Lifespan of an exposed stack ≈ maxDurability / deteriorationRate ticks.
 	/** Durability spent per work action when used as a tool (scaled by tier). */
 	durabilityLossPerAction?: number;
-	/** Per-tick elemental deterioration (0–100 scale) accrued only while loose/exposed. */
+	/** Per-tick durability lost to elemental exposure while a stack is loose/unsheltered. */
 	deteriorationRate?: number;
-	/** Current elemental wear 0–100; at 100 the item is ruined. Container/enclosure halts growth. */
-	deterioration?: number;
 	// ── §2: heat rating when burned as fuel (gates high-heat stations) ──
 	fuelHeat?: number;
 

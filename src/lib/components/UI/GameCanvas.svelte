@@ -50,7 +50,7 @@
 
   const ITEMS_DATABASE = itemsData as unknown as Item[];
   const FUEL_ITEMS = ITEMS_DATABASE.filter((item) => (item.fuelValue ?? 0) > 0);
-  const DEFAULT_FUEL_FILTER_IDS = ['branch', 'wood_log', 'plant_fiber'];
+  const DEFAULT_FUEL_FILTER_IDS = ['branch', 'pine_log', 'dry_firewood', 'green_firewood', 'plant_fiber'];
   const HUD_SPRITE_W = 12;
   const HUD_SPRITE_H = 18;
   const HUD_ICON_TINT = { r: 232, g: 136, b: 40, a: 0.98 };

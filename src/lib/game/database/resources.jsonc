@@ -51,11 +51,27 @@
       "toolRequirement": {"workType": "woodcutting", "minTier": 1},
       "yields"         : [
         {
-          "itemId"         : "wood_log",
+          "itemId"         : "pine_log",
           "min"            : 3,
           "max"            : 5,
           "skillId"        : "woodcutting",
           "skillMultiplier": 0.2,
+          "regrowthTurns"  : 4200
+        },
+        {
+          "itemId"         : "oak_log",
+          "min"            : 0,
+          "max"            : 2,
+          "skillId"        : "woodcutting",
+          "skillMultiplier": 0.15,
+          "regrowthTurns"  : 4200
+        },
+        {
+          "itemId"         : "birch_log",
+          "min"            : 0,
+          "max"            : 2,
+          "skillId"        : "woodcutting",
+          "skillMultiplier": 0.15,
           "regrowthTurns"  : 4200
         },
         {
@@ -95,7 +111,7 @@
         "toolRequirement": {"workType": "woodcutting", "minTier": 1},
         "yields"         : [
           {
-            "itemId"         : "wood_log",
+            "itemId"         : "pine_log",
             "min"            : 3,
             "max"            : 5,
             "skillId"        : "woodcutting",
@@ -645,14 +661,8 @@
       "toolRequirement": null,
       "yields"         : [
         {"itemId": "clay_lump", "min": 1, "max": 2, "skillId": "mining", "skillMultiplier": 0.06},
-        {
-          "itemId": "plant_fiber",
-          "min": 1,
-          "max": 2,
-          "skillId": "foraging",
-          "skillMultiplier": 0.08,
-          "_TODO": "peat item TBD — bog organic material; potential uses: fuel, soil amendment, preservative"
-        }
+        {"itemId": "peat", "min": 1, "max": 3, "skillId": "mining", "skillMultiplier": 0.1},
+        {"itemId": "plant_fiber", "min": 1, "max": 2, "skillId": "foraging", "skillMultiplier": 0.08}
       ]
     }
   },
@@ -680,7 +690,8 @@
       "toolRequirement": null,
       "yields"         : [
         {"itemId": "granite", "min": 2, "max": 5, "skillId": "mining", "skillMultiplier": 0.2},
-        {"itemId": "marble", "min": 0, "max": 1, "skillId": "mining", "skillMultiplier": 0.1} // rare: prestige stone
+        {"itemId": "marble", "min": 0, "max": 1, "skillId": "mining", "skillMultiplier": 0.1}, // rare: prestige stone
+        {"itemId": "coal", "min": 0, "max": 2, "skillId": "mining", "skillMultiplier": 0.15} // coal seams in the mountains
       ]
     }
   },

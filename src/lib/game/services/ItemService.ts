@@ -6,6 +6,26 @@ import { rng } from '../core/rng';
 
 const ITEMS_DATABASE = itemsData as unknown as Item[];
 
+// §B Durability defaults — every item weathers when left exposed (loose, unsheltered).
+// Explicit `deteriorationRate`/`maxDurability` on an item override these. Rate 0 = weather-immune.
+const DEFAULT_MAX_DURABILITY = 100;
+const DEFAULT_DETERIORATION_RATE = 0.02; // per tick
+const DETERIORATION_RATE_BY_CATEGORY: Record<string, number> = {
+  stone: 0.004, // rock barely weathers
+  primitive: 0.01,
+  metal: 0.008,
+  ingot: 0.008,
+  bar: 0.008,
+  construction: 0.01,
+  wood: 0.04,
+  fuel: 0.04,
+  organic: 0.07,
+  food: 0.08,
+  meat: 0.08,
+  storage: 0.02,
+  natural_weapon: 0 // innate attacks: never real dropped items, but immune for safety
+};
+
 /**
  * ItemService - Clean interface for item queries and operations
  * Separates business logic from data definitions
@@ -352,11 +372,15 @@ export class ItemServiceImpl implements ItemService {
   }
 
   /**
-   * §B Durable-goods deterioration. Items left loose on the ground (DroppedItem with
-   * `stored !== true`) accrue elemental wear at their def's `deteriorationRate`. At 100
-   * the stack is ruined and removed. Items in the stockpile or on a stockpile tile
-   * (`stored`) take no exposure damage — storage/enclosure halts it entirely (per spec §F).
-   * Organic spoilage is handled separately by stepItemDecay; this is durables only.
+   * §B Durability — the elements (wind/rain) physically wearing an item apart. EVERY item has a
+   * durability pool: a loose stack (DroppedItem with `stored !== true`) loses `deteriorationRate`
+   * durability per tick from its `maxDurability` pool; at 0 the stack is destroyed. Items in a
+   * container / on a stockpile tile (`stored`) are sheltered — no exposure damage (spec §F).
+   *
+   * This is SEPARATE from spoilage (`stepItemDecay`/`decaySeconds`), which rots food into
+   * `rotten_food` on a clock. A berry left out both weathers (durability) and rots (spoilage);
+   * a plank only weathers. Rate/pool default by category and can be overridden per item; a rate
+   * of 0 means weather-immune.
    */
   stepItemDeterioration(gameState: GameState): GameState {
     const dropped = gameState.droppedItems;
@@ -369,21 +393,37 @@ export class ItemServiceImpl implements ItemService {
         next.push(di);
         continue;
       }
-      const rate = this.getItemById(di.resourceId)?.deteriorationRate;
-      if (!rate) {
+      const def = this.getItemById(di.resourceId);
+      if (!def) {
         next.push(di);
         continue;
       }
-      const wear = (di.deterioration ?? 0) + rate;
-      changed = true;
-      if (wear >= 100) {
-        // ruined — the stack crumbles away (drop the DroppedItem)
+      const rate = this.deteriorationRateFor(def);
+      if (rate <= 0) {
+        next.push(di); // weather-immune
         continue;
       }
-      next.push({ ...di, deterioration: wear });
+      const max = def.maxDurability ?? DEFAULT_MAX_DURABILITY;
+      const left = (di.durability ?? max) - rate;
+      changed = true;
+      if (left <= 0) {
+        // destroyed by the elements — the stack is removed
+        continue;
+      }
+      next.push({ ...di, durability: left });
     }
 
     return changed ? { ...gameState, droppedItems: next } : gameState;
+  }
+
+  /**
+   * Per-tick durability lost to weather when exposed. Uses the item's explicit `deteriorationRate`
+   * if set, else a sensible default by category so EVERY item weathers (stone barely; organics
+   * fast). Return 0 to make an item weather-immune.
+   */
+  private deteriorationRateFor(def: Item): number {
+    if (def.deteriorationRate !== undefined) return def.deteriorationRate;
+    return DETERIORATION_RATE_BY_CATEGORY[def.category] ?? DEFAULT_DETERIORATION_RATE;
   }
 }
 

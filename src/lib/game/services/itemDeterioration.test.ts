@@ -3,55 +3,53 @@ import { itemService } from './ItemService';
 import type { GameState, DroppedItem } from '../core/types';
 
 /**
- * §B (PRODUCTION-CHAIN-EXPANSION) durable-goods deterioration.
- * Loose items on the ground (`stored !== true`) wear at their def's `deteriorationRate`
- * and are removed at 100. Stored/stockpiled items take no exposure damage (storage halts it).
- * `wood_log` carries deteriorationRate 0.05 in the item DB.
+ * §B (PRODUCTION-CHAIN-EXPANSION) durable-goods deterioration — count-down model.
+ * A loose stack (`stored !== true`) loses `deteriorationRate` durability per tick from its
+ * `maxDurability` pool (default 100); destroyed at 0. Stored items take no exposure damage.
+ * `pine_log` carries deteriorationRate 0.05 and an explicit maxDurability in the item DB.
  */
+const PINE = itemService.getItemById('pine_log')!;
+const RATE = PINE.deteriorationRate!; // 0.05
+const MAXD = PINE.maxDurability ?? 100;
+
 function makeState(dropped: DroppedItem[]): GameState {
-  return {
-    seed: 1,
-    turn: 0,
-    stockpile: {},
-    droppedItems: dropped
-  } as unknown as GameState;
+  return { seed: 1, turn: 0, stockpile: {}, droppedItems: dropped } as unknown as GameState;
 }
-
 const drop = (p: Partial<DroppedItem>): DroppedItem =>
-  ({ id: 'd1', resourceId: 'wood_log', x: 0, y: 0, quantity: 3, ...p }) as DroppedItem;
+  ({ id: 'd1', resourceId: 'pine_log', x: 0, y: 0, quantity: 3, ...p }) as DroppedItem;
 
-describe('ItemService.stepItemDeterioration (§B)', () => {
-  it('accrues wear on a loose item with a deteriorationRate', () => {
+describe('ItemService.stepItemDeterioration (§B, count-down durability)', () => {
+  it('draws durability down from maxDurability on a loose item', () => {
     const out = itemService.stepItemDeterioration(makeState([drop({})]));
-    expect(out.droppedItems![0].deterioration).toBeCloseTo(0.05);
+    expect(out.droppedItems![0].durability).toBeCloseTo(MAXD - RATE);
   });
 
   it('does NOT wear a stored (sheltered) item — storage halts deterioration', () => {
     const gs = makeState([drop({ stored: true })]);
-    // unchanged state reference is returned when nothing wears
     expect(itemService.stepItemDeterioration(gs)).toBe(gs);
   });
 
-  it('does NOT wear an item whose def has no deteriorationRate (e.g. granite)', () => {
-    const gs = makeState([drop({ resourceId: 'granite' })]);
-    expect(itemService.stepItemDeterioration(gs)).toBe(gs);
+  it('weathers EVERY item — even one without an explicit rate (granite uses the stone default)', () => {
+    const out = itemService.stepItemDeterioration(makeState([drop({ resourceId: 'granite' })]));
+    // stone category default 0.004/tick from a default 100 pool
+    expect(out.droppedItems![0].durability).toBeCloseTo(100 - 0.004);
   });
 
-  it('removes the stack once wear reaches 100 (ruined)', () => {
-    let gs = makeState([drop({ deterioration: 99.99 })]);
+  it('destroys the stack once durability reaches 0', () => {
+    let gs = makeState([drop({ durability: RATE / 2 })]);
     gs = itemService.stepItemDeterioration(gs);
     expect(gs.droppedItems!.length).toBe(0);
   });
 
-  it('ruins a fresh loose stack within the expected number of ticks', () => {
+  it('destroys a fresh loose stack after ~maxDurability/rate ticks', () => {
     let gs = makeState([drop({})]);
     let steps = 0;
-    while ((gs.droppedItems?.length ?? 0) > 0 && steps < 10000) {
+    const expected = Math.ceil(MAXD / RATE);
+    while ((gs.droppedItems?.length ?? 0) > 0 && steps < expected + 50) {
       gs = itemService.stepItemDeterioration(gs);
       steps++;
     }
-    // 100 / 0.05 = 2000 ticks (±1 for fp accumulation of repeated +0.05)
-    expect(steps).toBeGreaterThanOrEqual(2000);
-    expect(steps).toBeLessThanOrEqual(2001);
+    expect(steps).toBeGreaterThanOrEqual(expected - 1);
+    expect(steps).toBeLessThanOrEqual(expected + 1);
   });
 });

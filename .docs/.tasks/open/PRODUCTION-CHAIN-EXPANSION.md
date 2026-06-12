@@ -8,23 +8,23 @@
 
 **In progress** (implementing chapter-by-chapter; each gated on `pnpm check` + test suite green).
 
-| Chapter | State | Notes |
-| ------- | ----- | ----- |
-| Foundation (types) | ✅ | needs `thirst`/`hygiene`, `drink`/`wash` designations, item `deterioration`/`durabilityLossPerAction`/`fuelHeat`, building `minFuelHeat`/`fluxPerBatch`/`moldRequired`/`storageDecayMultiplier`/`requiresEnclosure` |
-| §A Forageables & loose stone | ✅ | 5 named rocks (granite/limestone/sandstone/marble/slate) replace `surface_stone`; terrain-distributed yields; stone `hearth` added. "Any-rock" station cost approximated by granite (Building cost takes fixed ids) |
-| §B Durability & Deterioration | 🔄 | (1) loose-item deterioration live + tested (`stepItemDeterioration`). (2) **building** condition decay + repair live + tested (`stepBuildingCondition`/`repairBuilding`; `branch_wall` decays). (3) tool work-wear blocked on per-tile item-stacks (storage refactor below) — once stacks are authoritative, per-stack tool durability lands |
-| **Storage refactor** (per-tile stacks) | 🔄 | Plan: `~/.claude/plans/streamed-napping-wave.md`. **Stages 1–3 ✅** done + green (73 tests): per-tile `stored` DroppedItems are now the **source of truth**; `addToStockpileZone`/`consumeFromStockpiles`/`absorbDropIfOnStockpileTile` rewritten drops-authoritative; aggregate summed from drops; per-tile capacity (`BASE_TILE_CAPACITY` + building `tileCapacityBonus`, advisory); zones = pure drop-off designations (`inventory` vestigial, cleared on init); UI per-zone view derives from drops; building `condition`+repair. Hauling/crafting/butchery tests intact. **Stage 4 (pending):** wire per-stack **tool durability** at work-action completion (closes §B case 3) + **tile-aware decay/deterioration/drying** (roof/enclosure, 2-tile fire proximity) — lands with §F/§1 |
-| §1 Wood | ⬜ | |
-| §2 Fuel & Heat | ⬜ | |
-| §3 Stone | ⬜ | |
-| §4 Clay & Ceramics | ⬜ | |
-| §5 Ore → Metal | ⬜ | |
-| §6 Hide → Leather | ⬜ | |
-| §C Food preservation | ⬜ | |
-| §D Water needs | ⬜ | |
-| §E Trapping | ⬜ | |
-| §F Storage & roofs | ⬜ | |
-| §G Shelter & Light | ⬜ | |
+| Chapter                                | State | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| -------------------------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Foundation (types)                     | ✅     | needs `thirst`/`hygiene`, `drink`/`wash` designations, item `deterioration`/`durabilityLossPerAction`/`fuelHeat`, building `minFuelHeat`/`fluxPerBatch`/`moldRequired`/`storageDecayMultiplier`/`requiresEnclosure`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| §A Forageables & loose stone           | ✅     | 5 named rocks (granite/limestone/sandstone/marble/slate) replace `surface_stone`; terrain-distributed yields; stone `hearth` added. "Any-rock" station cost approximated by granite (Building cost takes fixed ids)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| §B Durability & Deterioration          | 🔄     | **Durability = the elements wearing an item apart** (≠ food spoilage, which is a separate rot timer). **EVERY item** has a durability pool: `maxDurability` (default 100) drained by `deteriorationRate`/tick **only while loose/exposed** (category defaults so all items weather — stone slow, organics fast; per-item override; rate 0 = immune), **destroyed at 0**, halted when stored/sheltered. Live + tested (`stepItemDeterioration` count-down + `deteriorationRateFor`). **building** condition decay + repair also live + tested. **Pending Stage 4**: per-stack **tool** work-wear at work-action completion                                                                                                                                                                  |
+| **Storage refactor** (per-tile stacks) | 🔄     | Plan: `~/.claude/plans/streamed-napping-wave.md`. **Stages 1–3 ✅** done + green (73 tests): per-tile `stored` DroppedItems are now the **source of truth**; `addToStockpileZone`/`consumeFromStockpiles`/`absorbDropIfOnStockpileTile` rewritten drops-authoritative; aggregate summed from drops; per-tile capacity (`BASE_TILE_CAPACITY` + building `tileCapacityBonus`, advisory); zones = pure drop-off designations (`inventory` vestigial, cleared on init); UI per-zone view derives from drops; building `condition`+repair. Hauling/crafting/butchery tests intact. **Stage 4 (pending):** wire per-stack **tool durability** at work-action completion (closes §B case 3) + **tile-aware decay/deterioration/drying** (roof/enclosure, 2-tile fire proximity) — lands with §F/§1 |
+| §1 Wood                                | 🔄     | **Data ✅**: 5 species logs (pine/birch/oak/ash/yew; world-sourced from trees — pine primary + oak/birch chance), `green_firewood`→`dry_firewood`, 5 planks, `saw` (bronze-gated), `chopping_block`+`sawtable` buildings; `wood_log` fully migrated→`pine_log`. **Pending**: drying (green→dry by 2-tile fire proximity) → Stage 4; branch byproduct of chopping (one output/recipe today) |
+| §2 Fuel & Heat                         | 🔄     | **Data ✅**: `peat` (dug from bogs), `charcoal` (Charcoal Pit, from logs/firewood), `coal` (mined in mountains), `ash` (burnt at hearth → feeds §6 curing); fuel `fuelHeat` ladder set (firewood 1–2 / peat 2 / charcoal 3 / coal 4); `charcoal_pit` building. **Pending**: `minFuelHeat` gating enforced when forges/kilns exist (§4/§5)                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| §3 Stone                               | ✅     | 5 cut blocks/tiles (`granite_block`/`limestone_block`/`sandstone_block`/`marble_block`/`slate_tile`) at new `masons_bench`, from raw rock (already quarried via §A from walls/outcrops with a pick)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| §4 Clay & Ceramics                     | ⬜     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| §5 Ore → Metal                         | ⬜     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| §6 Hide → Leather                      | ⬜     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| §C Food preservation                   | ⬜     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| §D Water needs                         | ⬜     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| §E Trapping                            | ⬜     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| §F Storage & roofs                     | ⬜     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| §G Shelter & Light                     | ⬜     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 
 Phase 1 (primitives through Maker's Bench) is archived.
 
@@ -117,22 +117,22 @@ Loose surface stone is the **real rock type** of the local terrain, foraged in
 **small amounts** by hand from scree near outcrops — the same five rocks §3
 quarries in bulk once a pick exists.
 
-| Forageable      | id            | From                          | Feeds                           |
-| --------------- | ------------- | ----------------------------- | ------------------------------- |
-| Loose rock (×5) | `granite` … `slate` | scree near matching outcrop (bare hands, small yield) | Tier-1 stations, daub, hearth |
-| Flint           | `flint_shard` | gravel, stone outcrops        | knives, sickles, firestarter    |
-| Branch          | `branch`      | trees, fallen logs            | tools, traps, wattle, firewood  |
-| Hay             | `hay`         | tall grass                    | thatch roof, bedding, baskets   |
-| Plant fiber     | `plant_fiber` | grass, scrub                  | cordage → rope                  |
+| Forageable      | id                  | From                                                  | Feeds                          |
+| --------------- | ------------------- | ----------------------------------------------------- | ------------------------------ |
+| Loose rock (×5) | `granite` … `slate` | scree near matching outcrop (bare hands, small yield) | Tier-1 stations, daub, hearth  |
+| Flint           | `flint_shard`       | gravel, stone outcrops                                | knives, sickles, firestarter   |
+| Branch          | `branch`            | trees, fallen logs                                    | tools, traps, wattle, firewood |
+| Hay             | `hay`               | tall grass                                            | thatch roof, bedding, baskets  |
+| Plant fiber     | `plant_fiber`       | grass, scrub                                          | cordage → rope                 |
 
 **Tier-1 primitive stations** are built from loose rock (any type) + wood, before
 any pick or metal:
 
-| Station         | id              | Build cost (example)                | Enables                       |
-| --------------- | --------------- | ----------------------------------- | ----------------------------- |
-| Workbench       | `makers_bench`* | 6× loose rock + 4× branch + 2× rope | primitive tools, cordage      |
+| Station         | id              | Build cost (example)                | Enables                                          |
+| --------------- | --------------- | ----------------------------------- | ------------------------------------------------ |
+| Workbench       | `makers_bench`* | 6× loose rock + 4× branch + 2× rope | primitive tools, cordage                         |
 | Hearth          | `hearth`        | 8× loose rock + 4× branch           | cooking, boiling, warmth, light, **wood drying** |
-| Butcher's block | `butcher_block` | 4× loose rock + 2× log              | carcass → meat/hide/fat/bone  |
+| Butcher's block | `butcher_block` | 4× loose rock + 2× log              | carcass → meat/hide/fat/bone                     |
 
 \* `makers_bench` exists; retune its cost to loose rock. Rock *type* can flavour
 station appearance/decor but does not gate function (any rock works).
@@ -158,12 +158,12 @@ all of them are scaled by storage/enclosure (§F).
    by **tool tier**. Beginner tools are deliberately fragile — a `stone_axe`
    should break after only a handful of fells.
 
-   | Tier             | Durability loss / action | ≈ uses before break |
-   | ---------------- | ------------------------ | ------------------- |
-   | Stone (Tier 0)   | ~12                      | ~8                  |
-   | Bronze (Tier 1)  | ~5                       | ~20                 |
-   | Iron (Tier 2)    | ~2.5                     | ~40                 |
-   | Steel (ceiling)  | ~1.2                     | ~80                 |
+   | Tier            | Durability loss / action | ≈ uses before break |
+   | --------------- | ------------------------ | ------------------- |
+   | Stone (Tier 0)  | ~12                      | ~8                  |
+   | Bronze (Tier 1) | ~5                       | ~20                 |
+   | Iron (Tier 2)   | ~2.5                     | ~40                 |
+   | Steel (ceiling) | ~1.2                     | ~80                 |
 
    At 0 the tool breaks (consumed; may drop a salvage scrap). This forces an
    early, repeated tool economy — the player keeps re-knapping stone tools until
@@ -192,11 +192,11 @@ Meat is the early game's best calorie source (high `nutrition`) but rots fast
 **Salt.** Add **halite** (rock salt) — moderately rare, mined in mountains
 (`halite` node → `salt`). The gating scarcity.
 
-| Method    | Station              | Recipe                    | Result (`decaySeconds`)     |
-| --------- | -------------------- | ------------------------- | --------------------------- |
-| Salting   | Butcher's block      | `raw_meat` + `salt`       | `salted_meat` (~10× raw)    |
-| Air/smoke-dry | **Drying Rack**  | `raw_meat` + fuel (slow)  | `dried_meat` (~8× raw)      |
-| Cooking   | Hearth → Kitchen     | `raw_meat` + ingredient   | `cooked_meal` (nutri+mood)  |
+| Method        | Station          | Recipe                   | Result (`decaySeconds`)    |
+| ------------- | ---------------- | ------------------------ | -------------------------- |
+| Salting       | Butcher's block  | `raw_meat` + `salt`      | `salted_meat` (~10× raw)   |
+| Air/smoke-dry | **Drying Rack**  | `raw_meat` + fuel (slow) | `dried_meat` (~8× raw)     |
+| Cooking       | Hearth → Kitchen | `raw_meat` + ingredient  | `cooked_meal` (nutri+mood) |
 
 **Drying Rack** (`drying_rack`) — a dedicated preservation **workshop**, built
 early from branches + cordage (+ hide). Air- or smoke-dries `raw_meat` (also
@@ -215,7 +215,7 @@ Add two needs to `pawn.needs`, accruing each turn like hunger:
 | Need    | Field     | Relief                                              | Neglect                                  |
 | ------- | --------- | --------------------------------------------------- | ---------------------------------------- |
 | Thirst  | `thirst`  | drink at water tile/urn/well; **eating a meal** too | mood↓ → dehydration condition → collapse |
-| Hygiene | `hygiene` | wash at water / wash basin; passive decay           | mood↓; (deferred) disease → Living World  |
+| Hygiene | `hygiene` | wash at water / wash basin; passive decay           | mood↓; (deferred) disease → Living World |
 
 **Meals also restore thirst** (partially) — eating a `cooked_meal`/`stew` quenches
 some thirst, so hydration is a real need but not constant micro-busywork.
@@ -246,8 +246,8 @@ need walks to a `drink` zone (or any water if none set); hygiene sends it to a
 Passive hunting so a small colony need not keep standing hunters out. Traps are
 **buildings** that periodically capture small game, then must be reset.
 
-| Trap        | id            | Build cost                | Catches                 |
-| ----------- | ------------- | ------------------------- | ----------------------- |
+| Trap | id  | Build cost | Catches |
+| ---- | --- | ---------- |------------------ | ----------------------- |
 | Snare       | `snare_trap`  | 2× branch + 1× cordage    | rabbit, rat, small game |
 | Deadfall    | `deadfall`    | 3× branch + 4× loose rock | rabbit, boar (rare)     |
 | Baited trap | `baited_trap` | snare + 1× food bait      | higher catch rate       |
@@ -274,11 +274,11 @@ Storage affects the two decay tracks **differently**:
 overhead layer. A storage building earns its full multiplier only when
 **enclosed** (walls + roof + door). Roofs tier up alongside storage.
 
-| Tier | Building / container  | Build cost                              | Mult  | Roof   |
-| ---- | --------------------- | --------------------------------------- | ----- | ------ |
-| 0    | Woven basket (exists) | cordage (portable)                      | ~0.8  | no     |
-| 1    | Hay store / thatch    | hay + branch + cordage; thatch roof     | ~0.7  | thatch |
-| 2    | Log store             | logs + loose rock; plank roof*          | ~0.5  | timber |
+| Tier | Building / container  | Build cost                                       | Mult | Roof      |
+| ---- | --------------------- | ------------------------------------------------ | ---- | --------- |
+| 0    | Woven basket (exists) | cordage (portable)                               | ~0.8 | no        |
+| 1    | Hay store / thatch    | hay + branch + cordage; thatch roof              | ~0.7 | thatch    |
+| 2    | Log store             | logs + loose rock; plank roof*                   | ~0.5 | timber    |
 | 3    | Clay cellar           | fired brick + clay urns; **clay-tile roof** (§G) | ~0.3 | clay tile |
 
 \* Plank-based upgrades (§1) become available after bronze. Multipliers stack with
@@ -296,11 +296,11 @@ durables is simply **off** inside any of these — see the two tracks above.)
 `daub_wall` and `mud_brick_wall` exist. Pair them with new build tiles to enclose
 a hut and to let work happen after dark.
 
-| Build tile | id            | Cost (example)                | Role                              |
-| ---------- | ------------- | ----------------------------- | --------------------------------- |
-| Roof       | `roof_*`      | thatch/plank/tile by tier     | overhead layer; enables enclosure |
-| Door       | `door_*`      | planks (or wattle early)      | access + completes enclosure seal |
-| Window     | `window_*`    | wattle early; later shutters  | lets **daylight** in → less torch use by day |
+| Build tile | id         | Cost (example)               | Role                                         |
+| ---------- | ---------- | ---------------------------- | -------------------------------------------- |
+| Roof       | `roof_*`   | thatch/plank/tile by tier    | overhead layer; enables enclosure            |
+| Door       | `door_*`   | planks (or wattle early)     | access + completes enclosure seal            |
+| Window     | `window_*` | wattle early; later shutters | lets **daylight** in → less torch use by day |
 
 **Clay roof tiles (top tier).** The tile roof isn't just placed — it's
 **manufactured**. Cast a reusable **tile mold** (`tile_mold`) at the forge/
@@ -322,10 +322,10 @@ input and a visible effect, not just a flat overlay.
 may be blocked). Daylight, hearth/campfire light, windows (by day), and **torches**
 remove it.
 
-| Light source | id      | Recipe                                  | Notes                              |
-| ------------ | ------- | --------------------------------------- | ---------------------------------- |
-| Torch        | `torch` | 1× branch + 1× `animal_fat` + fiber     | priority early item; burns N turns |
-| Tallow candle| `candle`| `animal_fat` + fiber wick               | longer, dimmer; later              |
+| Light source  | id       | Recipe                              | Notes                              |
+| ------------- | -------- | ----------------------------------- | ---------------------------------- |
+| Torch         | `torch`  | 1× branch + 1× `animal_fat` + fiber | priority early item; burns N turns |
+| Tallow candle | `candle` | `animal_fat` + fiber wick           | longer, dimmer; later              |
 
 `animal_fat` is a **butcher** by-product — rendering fat is the realistic early
 fuel for portable light. Hearth/campfire double as fixed light. Torches feed the
@@ -392,13 +392,13 @@ The production chain runs on **heat**, and heat tiers gate what you can make.
 Each fuel has a `fuelValue` (already on items) and an effective **heat** rating;
 each fire/kiln/forge declares a `minFuelHeat` it must meet to operate.
 
-| Fuel            | id              | Source                              | Heat   | Notes                         |
-| --------------- | --------------- | ----------------------------------- | ------ | ----------------------------- |
-| Green firewood  | `green_firewood`| Chopping Block (fresh)              | low    | smoky; season it first        |
-| Dry firewood    | `dry_firewood`  | seasoned near fire (§1)             | low-mid| best wood fuel; campfire/hearth |
-| Peat            | `peat`          | **dug** from bog/mud deposits       | mid    | cheap, smoky; dry like wood   |
-| Charcoal        | `charcoal`      | **Charcoal Pit** (pyrolysis of wood)| high   | clean; needed to smelt metal  |
-| Coal            | `coal`          | **mined** (seams in mountains/cave) | high+  | iron/steel; efficient         |
+| Fuel           | id               | Source                               | Heat    | Notes                           |
+| -------------- | ---------------- | ------------------------------------ | ------- | ------------------------------- |
+| Green firewood | `green_firewood` | Chopping Block (fresh)               | low     | smoky; season it first          |
+| Dry firewood   | `dry_firewood`   | seasoned near fire (§1)              | low-mid | best wood fuel; campfire/hearth |
+| Peat           | `peat`           | **dug** from bog/mud deposits        | mid     | cheap, smoky; dry like wood     |
+| Charcoal       | `charcoal`       | **Charcoal Pit** (pyrolysis of wood) | high    | clean; needed to smelt metal    |
+| Coal           | `coal`           | **mined** (seams in mountains/cave)  | high+   | iron/steel; efficient           |
 
 **Charcoal Pit** (`charcoal_pit`) — load logs/firewood, smoulder over time →
 `charcoal` (+ `ash` by-product, which feeds hide curing §6). A slow batch job; the
@@ -455,12 +455,12 @@ the source of **casting molds** that gate all metalwork (§5).
 **Pottery Kiln** (`pottery_kiln`) — built from loose rock + clay; consumes fuel
 (needs `minFuelHeat` ≈ peat/charcoal). Fires green clay goods hard.
 
-| Product      | id            | From                          | Use                                   |
-| ------------ | ------------- | ----------------------------- | ------------------------------------- |
-| Mud brick    | `mud_brick`   | clay (sun-dried, no kiln)     | primitive walls/shelter               |
-| Fired brick  | `fired_brick` | clay → kiln                   | forges, kilns, clay cellar, sturdy walls |
-| Clay urn     | `water_urn`   | clay → kiln                   | boiled-water storage (§D)             |
-| **Clay mold**| `clay_mold`   | clay → kiln                   | **required to cast metal** (§5)       |
+| Product       | id            | From                      | Use                                      |
+| ------------- | ------------- | ------------------------- | ---------------------------------------- |
+| Mud brick     | `mud_brick`   | clay (sun-dried, no kiln) | primitive walls/shelter                  |
+| Fired brick   | `fired_brick` | clay → kiln               | forges, kilns, clay cellar, sturdy walls |
+| Clay urn      | `water_urn`   | clay → kiln               | boiled-water storage (§D)                |
+| **Clay mold** | `clay_mold`   | clay → kiln               | **required to cast metal** (§5)          |
 
 **Clay molds** are reusable but **deteriorate fast** and crack with each cast
 (§B) — an ongoing ceramics demand that ties metal output to clay supply. Different
@@ -479,18 +479,18 @@ mined.
 copper/tin and casts bronze. **Bloomery** (`bloomery`) — fired brick + rock; iron
 + flux. **Anvil** (`anvil`) — bars → tools/weapons/armor (also mold-cast or forged).
 
-| Base metal  | bar id       | Feeder ore minerals (node ids)         | Smelt needs            |
-| ----------- | ------------ | -------------------------------------- | ---------------------- |
-| Copper      | `copper_bar` | `malachite`, `chalcopyrite`, `azurite` | charcoal/coal + mold   |
-| Tin         | `tin_bar`    | `cassiterite`                          | charcoal/coal + mold   |
-| Iron        | `iron_bar`   | `hematite`, `magnetite`, `limonite`    | coal + limestone flux + mold |
-| Lead/Silver | `lead_bar` / `silver_bar` | `galena`                  | charcoal/coal + mold   |
-| Gold        | `gold_bar`   | `native_gold`, `electrum`              | charcoal/coal + mold   |
+| Base metal  | bar id                    | Feeder ore minerals (node ids)         | Smelt needs                  |
+| ----------- | ------------------------- | -------------------------------------- | ---------------------------- |
+| Copper      | `copper_bar`              | `malachite`, `chalcopyrite`, `azurite` | charcoal/coal + mold         |
+| Tin         | `tin_bar`                 | `cassiterite`                          | charcoal/coal + mold         |
+| Iron        | `iron_bar`                | `hematite`, `magnetite`, `limonite`    | coal + limestone flux + mold |
+| Lead/Silver | `lead_bar` / `silver_bar` | `galena`                               | charcoal/coal + mold         |
+| Gold        | `gold_bar`                | `native_gold`, `electrum`              | charcoal/coal + mold         |
 
-| Alloy  | bar id       | Cast from (+ fuel + clay mold)        | Tier    |
-| ------ | ------------ | ------------------------------------- | ------- |
-| Bronze | `bronze_bar` | 3× copper_bar + 1× tin_bar            | Tier 1  |
-| Steel  | `steel_bar`  | 2× iron_bar + 1× coal + 1× limestone  | ceiling |
+| Alloy  | bar id       | Cast from (+ fuel + clay mold)       | Tier    |
+| ------ | ------------ | ------------------------------------ | ------- |
+| Bronze | `bronze_bar` | 3× copper_bar + 1× tin_bar           | Tier 1  |
+| Steel  | `steel_bar`  | 2× iron_bar + 1× coal + 1× limestone | ceiling |
 
 Richer minerals (chalcopyrite) yield more bar per smelt than lean ones (azurite).
 Bronze → first **saw** → **planks** (§1), so the metal and wood chains interlock.
