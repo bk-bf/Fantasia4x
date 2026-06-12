@@ -19,7 +19,7 @@ launch() {
   local dir="$1" label="$2"
   local port=5173
   [[ -f "$dir/.devport" ]] && port=$(< "$dir/.devport")
-  (cd "$dir" && exec ./dev.sh --debug) &
+  (cd "$dir" && exec env CI=true ./dev.sh --debug) &
   PIDS+=($!)
   echo "  [$label] http://localhost:$port"
   sleep 0.3
