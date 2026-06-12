@@ -137,24 +137,6 @@
     });
   }
 
-  function getTypeIcon(type: string): string {
-    switch (type) {
-      case 'material':
-        return '[MAT]';
-      case 'tool':
-        return '[TOOL]';
-      case 'weapon':
-        return '[WPN]';
-      case 'armor':
-        return '[ARM]';
-      case 'consumable':
-        return '[CON]';
-      case 'currency':
-        return '[CUR]';
-      default:
-        return '[ITEM]';
-    }
-  }
 </script>
 
 4713:1898827
@@ -235,8 +217,9 @@
             {@const intactness = $gameState?.carcassIntactness?.[item.id] ?? 100}
             {@const pct = Math.round(intactness)}
             <BuildCard
-              icon={getTypeIcon(item.type ?? '')}
               name={item.name.toUpperCase()}
+              charSpans={item.charSpans}
+              tint={item.color ?? 'var(--accent)'}
               badge={isCarcass ? `${pct}%` : null}
               actionLabel={!affordable
                 ? 'MISSING'

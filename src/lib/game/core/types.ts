@@ -940,6 +940,8 @@ export interface Item {
 	name: string;
 	amount: number;
 	description?: string; // Optional description for lore or flavor text
+	/** Sprite-sheet glyph(s) for card/inventory icons (same shape as Building.charSpans). */
+	charSpans?: Array<{ sheet?: string; id?: number; from?: number; to?: number; literal?: string }>;
 	properties?: Record<string, any>;
 	/** Gathering work types that produce this item from the world (e.g. foraging, hunting, mining). */
 	gatheringTypes?: string[];

@@ -206,31 +206,6 @@
     });
   }
 
-  function getCategoryIcon(category: string): string {
-    switch (category) {
-      case 'housing':
-        return '🏠';
-      case 'production':
-        return '⚒️';
-      case 'knowledge':
-        return '📚';
-      case 'military':
-        return '⚔️';
-      case 'food':
-        return '🍖';
-      case 'commerce':
-        return '🏪';
-      case 'magical':
-        return '🔮';
-      case 'exploration':
-        return '🗺️';
-      case 'social':
-        return '👥';
-      default:
-        return '🏗️';
-    }
-  }
-
   function formatEffectName(camelCaseStr: string): string {
     return camelCaseStr
       .replace(/([A-Z])/g, ' $1')
@@ -345,8 +320,9 @@
           {@const affordable = canAfford(building)}
           {@const buildable = canBuild(building)}
           <BuildCard
-            icon={getCategoryIcon(building.category)}
             name={building.name.toUpperCase()}
+            charSpans={building.charSpans}
+            tint={building.color ?? 'var(--accent)'}
             badge={placed > 0 ? `×${placed}` : null}
             actionLabel={!affordable ? 'MISSING' : !buildable ? 'BLOCKED' : 'BUILD'}
             actionEnabled={buildable}
