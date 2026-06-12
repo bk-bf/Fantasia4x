@@ -488,7 +488,7 @@
   {
     "id"              : "make_mud_brick",
     "station"         : "craft_spot",
-    "inputs"          : {"clay_lump": 2},
+    "inputs"          : {"blue_clay": 2},
     "outputs"         : {"mud_brick": 1},
     "workAmount"      : 2,
     "toolTierRequired": 0
@@ -496,7 +496,7 @@
   {
     "id"              : "make_fired_brick",
     "station"         : "pottery_kiln",
-    "inputs"          : {"clay_lump": 2},
+    "inputs"          : {"blue_clay": 2},
     "outputs"         : {"fired_brick": 1},
     "workAmount"      : 5,
     "toolTierRequired": 0
@@ -504,7 +504,7 @@
   {
     "id"              : "make_water_urn",
     "station"         : "pottery_kiln",
-    "inputs"          : {"clay_lump": 1},
+    "inputs"          : {"blue_clay": 1},
     "outputs"         : {"water_urn": 1},
     "workAmount"      : 4,
     "toolTierRequired": 0
@@ -512,7 +512,7 @@
   {
     "id"              : "make_clay_mold",
     "station"         : "pottery_kiln",
-    "inputs"          : {"clay_lump": 2},
+    "inputs"          : {"blue_clay": 2},
     "outputs"         : {"clay_mold": 1},
     "workAmount"      : 4,
     "toolTierRequired": 0
@@ -528,7 +528,7 @@
   {
     "id"              : "make_clay_roof_tile",
     "station"         : "pottery_kiln",
-    "inputs"          : {"clay_lump": 2},
+    "inputs"          : {"blue_clay": 2},
     "outputs"         : {"clay_roof_tile": 1},
     "workAmount"      : 5,
     "toolTierRequired": 0
@@ -608,7 +608,7 @@
   {
     "id"              : "make_clay_cooking_pot",
     "station"         : "campfire",
-    "inputs"          : {"clay_lump": 2},
+    "inputs"          : {"blue_clay": 2},
     "outputs"         : {"clay_cooking_pot": 1},
     "workAmount"      : 2,
     "toolTierRequired": 0

@@ -1099,15 +1099,53 @@
     "toolTierRequired" : 1
   },
   {
-    "id"               : "clay_lump",
-    "name"             : "Clay Lump",
+    "id"               : "blue_clay",
+    "name"             : "Blue Clay",
     "type"             : "material",
     "category"         : "primitive",
     "maxDurability"    : 120,
     "deteriorationRate": 0.01,
-    "description"      : "Raw clay scooped from riverbank or bog.",
-    "color"            : "#B5651D",
+    "description"      : "Raw blue-grey earthenware clay dug from a clay, mud or bog bank. The bulk ceramics and construction material.",
+    "color"            : "#6B7F9E",
     "amount"           : 0,
+    "gatheringTypes"   : ["foraging", "mining"]
+  },
+  {
+    "id"               : "fire_clay",
+    "name"             : "Fire Clay",
+    "type"             : "material",
+    "category"         : "primitive",
+    "maxDurability"    : 120,
+    "deteriorationRate": 0.01,
+    "description"      : "Pale refractory clay dug from rare seams. Withstands forge heat — the raw stock for fire bricks, crucibles and casting molds.",
+    "color"            : "#DBBC80",
+    "amount"           : 0,
+    "gatheringTypes"   : ["mining"]
+  },
+  {
+    "id"               : "sand",
+    "name"             : "Sand",
+    "type"             : "material",
+    "category"         : "primitive",
+    "maxDurability"    : 120,
+    "deteriorationRate": 0,
+    "description"      : "Loose grit gathered from dry savanna soil. Abrasive, a mold-facing for casting, and the future raw stock for glass.",
+    "color"            : "#D9C9A3",
+    "amount"           : 0,
+    "gatheringTypes"   : ["foraging", "mining"]
+  },
+  {
+    "id"               : "sphagnum_moss",
+    "name"             : "Sphagnum Moss",
+    "type"             : "material",
+    "category"         : "primitive",
+    "maxDurability"    : 60,
+    "deteriorationRate": 0.04,
+    "description"      : "Soft absorbent bog moss. Packs wounds, lines bedding, and dries into ready tinder.",
+    "color"            : "#6E8B3D",
+    "amount"           : 0,
+    "fuelValue"        : 2,
+    "medicineQuality"  : 0.15,
     "gatheringTypes"   : ["foraging"]
   },
   {

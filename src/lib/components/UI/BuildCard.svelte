@@ -11,6 +11,8 @@
   /** Accent + icon tint (rgb/hex), usually the def's fg colour. */
   export let tint = 'var(--accent)';
   export let badge: string | null = null;
+  /** Work units the job costs (recipe/building workAmount). Shown as a small chip. */
+  export let workAmount: number | null = null;
   export let actionLabel: string;
   export let actionEnabled = true;
   /** ok = buildable/craftable, missing = can't afford, blocked = unmet requirement. */
@@ -24,6 +26,7 @@
     <div class="card-header">
       <SpriteIcon {charSpans} px={18} />
       <span class="card-name">{name}</span>
+      {#if workAmount != null}<span class="card-work" title="work to complete">⚒{workAmount}</span>{/if}
       {#if badge}<span class="card-badge">{badge}</span>{/if}
     </div>
     {#if description}<div class="card-desc">{description}</div>{/if}
@@ -79,6 +82,12 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+  .card-work {
+    color: var(--text-dim);
+    font-size: 9px;
+    flex-shrink: 0;
+    white-space: nowrap;
   }
   .card-badge {
     color: var(--accent-hi);

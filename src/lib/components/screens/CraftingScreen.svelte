@@ -85,22 +85,85 @@
   function craftCategory(item: Item): string {
     const t = String(item.type ?? '');
     const c = item.category ?? '';
-    // Butchering = raw carcasses and the raw meat the butcher block produces.
-    if (item.isCarcass || recipeOf(item.id)?.station === 'butcher_spot' || c === 'meat') {
-      return 'BUTCHERING';
-    }
+    // Raw cuts have category 'meat' and no dynamicRecipe; preserved/cooked meats
+    // (salted/dried) share category 'meat' but *consume* meat via a dynamicRecipe.
+    const consumesMeat = !!recipeOf(item.id)?.dynamicRecipe;
+    if (item.isCarcass || (c === 'meat' && !consumesMeat)) return 'BUTCHERING';
     if (t === 'tool') return 'TOOLS';
     if (t === 'weapon') return 'WEAPONS';
-    // Cooking = everything edible/drinkable that isn't raw butchered meat.
-    if (t === 'food' || ['food', 'cooking', 'drink'].includes(c)) return 'COOKING';
+    // Cooking = everything else edible/drinkable, incl. preserved meat.
+    if (t === 'food' || ['food', 'cooking', 'drink', 'meat'].includes(c)) return 'COOKING';
     return CAT_GROUP[c] ?? 'GOODS';
   }
+
+  // A craftable card. Dynamic recipes (e.g. spit_meat over any meat) expand into one
+  // entry per available ingredient so the player chooses by picking a card.
+  type CraftEntry = {
+    key: string;
+    item: Item;
+    name: string;
+    description: string | null;
+    category: string;
+    selectedIngredients?: Record<string, string>;
+    /** Extra inputs contributed by the chosen dynamic ingredient. */
+    dynamicCost: Record<string, number>;
+  };
+
+  function entriesFor(item: Item, amounts: Record<string, number>): CraftEntry[] {
+    const cat = craftCategory(item);
+    const recipe = recipeOf(item.id);
+    const plain = (): CraftEntry[] => [
+      {
+        key: item.id,
+        item,
+        name: item.name,
+        description: item.description ?? null,
+        category: cat,
+        dynamicCost: {}
+      }
+    ];
+    if ((item.isCarcass && item.yields) || !recipe?.dynamicRecipe) return plain();
+
+    // Single-slot dynamic recipe (the only authored shape) → a card per in-stock ingredient.
+    const [slotKey, slot] = Object.entries(recipe.dynamicRecipe)[0];
+    const variantItems = (ITEMS_DATABASE as Item[]).filter(
+      (i) => i.category === slot.acceptsCategory
+    );
+    const inStock = variantItems.filter((vi) => (amounts[vi.id] ?? 0) >= slot.quantity);
+    if (inStock.length === 0) {
+      // Empty larder: one discoverability card with the recipe's default identity (renders MISSING).
+      return [
+        {
+          key: item.id,
+          item,
+          name: slot.default?.name ?? item.name,
+          description: slot.default?.description ?? item.description ?? null,
+          category: cat,
+          dynamicCost: {}
+        }
+      ];
+    }
+    return inStock.map((vi) => {
+      const v = slot.variants?.[vi.id];
+      return {
+        key: `${item.id}:${vi.id}`,
+        item,
+        name: v?.name ?? `${slot.default?.name ?? item.name} (${vi.name})`,
+        description: v?.description ?? slot.default?.description ?? item.description ?? null,
+        category: cat,
+        selectedIngredients: { [slotKey]: vi.id },
+        dynamicCost: { [vi.id]: slot.quantity }
+      };
+    });
+  }
+
+  $: craftEntries = allCraftableItems.flatMap((i) => entriesFor(i, itemMap));
 
   $: craftCategories = CRAFT_CAT_ORDER.map((cat) => ({
     id: cat,
     label: cat,
-    items: allCraftableItems.filter((i) => craftCategory(i) === cat)
-  })).filter((c) => c.items.length > 0);
+    entries: craftEntries.filter((e) => e.category === cat)
+  })).filter((c) => c.entries.length > 0);
 
   let selectedCat = '';
   $: if (craftCategories.length && !craftCategories.some((c) => c.id === selectedCat)) {
@@ -125,9 +188,9 @@
     unsubscribeGame();
   });
 
-  function startCrafting(item: Item) {
+  function startCrafting(item: Item, selectedIngredients?: Record<string, string>) {
     if (!$gameState) return;
-    gameEngine.craftItem(item.id, 1);
+    gameEngine.craftItem(item.id, 1, selectedIngredients);
   }
 
   function cancelCrafting(queueIndex: number) {
@@ -183,20 +246,34 @@
     />
     {#if activeCat}
       <div class="card-grid">
-        {#each activeCat.items as item}
-            {@const craftable = $gameState !== null && itemService.canCraftItem(item.id, $gameState)}
+        {#each activeCat.entries as entry (entry.key)}
+            {@const item = entry.item}
+            {@const recipe = recipeOf(item.id)}
             {@const isCarcass = item.isCarcass && item.yields}
-            {@const displayCost = isCarcass ? {} : costOf(item.id)}
+            {@const isPlaceholder = !!recipe?.dynamicRecipe && !entry.selectedIngredients}
+            {@const baseCost = isCarcass ? {} : { ...costOf(item.id), ...entry.dynamicCost }}
+            {@const stationReady = $gameState !== null &&
+              itemService.hasRequiredBuilding(item.id, $gameState) &&
+              itemService.hasRequiredTools(item.id, $gameState)}
             {@const affordable = isCarcass
               ? getItemAmount(item.id) > 0
-              : Object.entries(displayCost).every(([id, n]) => getItemAmount(id) >= (n as number))}
+              : !isPlaceholder &&
+                Object.entries(baseCost).every(([id, n]) => getItemAmount(id) >= (n as number))}
+            {@const craftable = isCarcass
+              ? $gameState !== null && itemService.canCraftItem(item.id, $gameState)
+              : stationReady && affordable}
             {@const intactness = $gameState?.carcassIntactness?.[item.id] ?? 100}
             {@const pct = Math.round(intactness)}
+            {@const dynNeed =
+              isPlaceholder && recipe?.dynamicRecipe
+                ? Object.values(recipe.dynamicRecipe)[0].acceptsCategory
+                : null}
             <BuildCard
-              name={item.name.toUpperCase()}
+              name={entry.name.toUpperCase()}
               charSpans={item.charSpans}
-              description={item.description ?? null}
+              description={entry.description}
               tint={item.color ?? 'var(--accent)'}
+              workAmount={recipe?.workAmount ?? null}
               badge={isCarcass ? `${pct}%` : null}
               actionLabel={!affordable
                 ? 'MISSING'
@@ -207,7 +284,7 @@
                     : 'CRAFT'}
               actionEnabled={craftable}
               variant={!affordable ? 'missing' : !craftable ? 'blocked' : 'ok'}
-              onAction={() => startCrafting(item)}
+              onAction={() => startCrafting(item, entry.selectedIngredients)}
             >
               {#if isCarcass}
                 {#each item.yields as output, ci}
@@ -221,16 +298,18 @@
                   </span>
                 {/each}
               {:else}
-                {#if Object.keys(displayCost).length > 0}
-                  {#each Object.entries(displayCost) as [id, n], ci}
-                    {@const have = getItemAmount(id)}
-                    {#if ci > 0}<span class="cost-sep">·</span>{/if}
-                    <span class="cost-item" class:neg-text={have < (n as number)}>
-                      {id.replace(/_/g, ' ')} <span class="cost-qty">×{n}</span>
-                      <span class="cost-have" class:neg-text={have < (n as number)}>({have})</span>
-                    </span>
-                  {/each}
-                {:else}
+                {#each Object.entries(baseCost) as [id, n], ci}
+                  {@const have = getItemAmount(id)}
+                  {#if ci > 0}<span class="cost-sep">·</span>{/if}
+                  <span class="cost-item" class:neg-text={have < (n as number)}>
+                    {id.replace(/_/g, ' ')} <span class="cost-qty">×{n}</span>
+                    <span class="cost-have" class:neg-text={have < (n as number)}>({have})</span>
+                  </span>
+                {/each}
+                {#if dynNeed}
+                  {#if Object.keys(baseCost).length > 0}<span class="cost-sep">·</span>{/if}
+                  <span class="cost-item neg-text">any {dynNeed} <span class="cost-qty">×1</span></span>
+                {:else if Object.keys(baseCost).length === 0}
                   <span class="muted-text">free</span>
                 {/if}
                 {#if primaryQtyOf(item.id) > 1 || byproductsOf(item.id).length > 0}
