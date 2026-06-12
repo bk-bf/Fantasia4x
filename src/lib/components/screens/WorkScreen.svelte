@@ -8,6 +8,8 @@
   let workAssignments = $derived($gameState.workAssignments ?? {});
   let selectedPawn = $state<string | null>(null);
   let selected = $derived(pawns.find((p) => p.id === selectedPawn) ?? null);
+  // Clicking a work-priority column highlights the related stats in the attributes grid below.
+  let selectedColumn = $state<string | null>(null);
 
   $effect(() => {
     const id = $uiState.selectedPawnId;
@@ -21,10 +23,10 @@
     <button class="hdr-btn" onclick={() => uiState.setScreen('main')}>BACK</button>
   </div>
 
-  <WorkPriorities {pawns} {workAssignments} bind:selectedPawn />
+  <WorkPriorities {pawns} {workAssignments} bind:selectedPawn bind:selectedColumn />
 
   {#if selected}
-    <PopulationOverview pawn={selected} />
+    <PopulationOverview pawn={selected} highlightCategory={selectedColumn} />
   {:else if pawns.length > 0}
     <div class="section-hdr sub">| CLICK A ROW FOR PAWN DETAIL</div>
   {/if}

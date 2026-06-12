@@ -7,6 +7,9 @@
   import PawnStatBanner from './PawnStatBanner.svelte';
 
   export let pawn: Pawn;
+  /** Soft-highlight the stats related to this work category (its *_speed/yield/quality plus the
+   *  capacities those formulas use). Set by clicking a column in the work-priority grid. */
+  export let highlightCategory: string | null = null;
 
   type StatDef = {
     id: string;
@@ -16,6 +19,21 @@
     description: string;
   };
   const STATS = statsData as unknown as StatDef[];
+  const CAPACITY_IDS = STATS.filter((s) => s.category === 'capacity').map((s) => s.id);
+
+  // Stats relevant to the highlighted work category: its work stats + the capacities they depend on.
+  $: relevant = (() => {
+    const set = new Set<string>();
+    if (!highlightCategory) return set;
+    const workStats = STATS.filter((s) => s.id.startsWith(`${highlightCategory}_`));
+    for (const ws of workStats) {
+      set.add(ws.id);
+      for (const cap of CAPACITY_IDS) {
+        if (new RegExp(`\\b${cap}\\b`).test(ws.formula)) set.add(cap);
+      }
+    }
+    return set;
+  })();
 
   const CATEGORY_ORDER = ['physical', 'capacity', 'combat', 'resistance', 'work'];
   const CATEGORY_LABEL: Record<string, string> = {
@@ -32,25 +50,26 @@
     return Math.round(pawnStatService.evaluateStat(id, pawn) * 100) / 100;
   }
 
-  /** Substitute the pawn's actual numbers into the formula so the hover shows the derivation. */
-  function derivation(s: StatDef): string {
-    let e = s.formula;
+  type Deriv = { formula: string; vars: { name: string; value: string }[]; description: string };
+
+  /** Keep the symbolic formula, and list ONLY the variables it uses with this pawn's value —
+   *  so the player reads "CON = 15, consciousness = 1.01" instead of decoding raw numbers. */
+  function derivation(s: StatDef): Deriv {
+    const vars: { name: string; value: string }[] = [];
+    const add = (name: string, value: number | string) => {
+      if (new RegExp(`\\b${name}\\b`).test(s.formula)) vars.push({ name, value: String(value) });
+    };
     const st = pawn.stats;
-    const base: [RegExp, string][] = [
-      [/\bSTR\b/g, String(st.strength)],
-      [/\bDEX\b/g, String(st.dexterity)],
-      [/\bCON\b/g, String(st.constitution)],
-      [/\bPER\b/g, String(st.perception)],
-      [/\bINT\b/g, String(st.intelligence)],
-      [/\bCHA\b/g, String(st.charisma)],
-      [/\bweight\b/g, String(pawn.physicalTraits?.weight ?? 70)],
-      [/\bheight\b/g, String(pawn.physicalTraits?.height ?? 170)]
-    ];
-    for (const [re, v] of base) e = e.replace(re, v);
-    for (const [cap, cv] of Object.entries(capacities)) {
-      e = e.replace(new RegExp(`\\b${cap}\\b`, 'g'), String(Math.round(cv * 100) / 100));
-    }
-    return `${s.formula}\n  = ${e}\n\n${s.description}`;
+    add('STR', st.strength);
+    add('DEX', st.dexterity);
+    add('CON', st.constitution);
+    add('PER', st.perception);
+    add('INT', st.intelligence);
+    add('CHA', st.charisma);
+    add('weight', pawn.physicalTraits?.weight ?? 70);
+    add('height', pawn.physicalTraits?.height ?? 170);
+    for (const [cap, cv] of Object.entries(capacities)) add(cap, Math.round(cv * 100) / 100);
+    return { formula: s.formula, vars, description: s.description };
   }
 
   function fmtName(id: string): string {
@@ -81,10 +100,22 @@
       <div class="grid">
         {#each g.stats as s}
           {@const v = val(s.id)}
-          <div class="cell">
+          {@const d = derivation(s)}
+          <div class="cell" class:hl={relevant.has(s.id)}>
             <span class="nm">{fmtName(s.id)}</span>
             <span class="vl" style="color: {valColor(s, v)}">{v}</span>
-            <div class="tip">{derivation(s)}</div>
+            <div class="tip">
+              <div class="tip-formula">{d.formula}</div>
+              {#if d.vars.length}
+                <div class="tip-where">
+                  {#each d.vars as vv, i}{i > 0 ? ',  ' : ''}<span class="tv-name"
+                      >{vv.name}</span
+                    > = <span class="tv-val">{vv.value}</span>{/each}
+                </div>
+              {/if}
+              <div class="tip-result">= <span class="tv-val">{v}</span></div>
+              <div class="tip-desc">{d.description}</div>
+            </div>
           </div>
         {/each}
       </div>
@@ -125,6 +156,13 @@
   .cell:hover {
     background: var(--bg-hover, #151c26);
   }
+  .cell.hl {
+    background: color-mix(in srgb, var(--accent-hi) 16%, transparent);
+    box-shadow: inset 2px 0 0 var(--accent-hi);
+  }
+  .cell.hl .nm {
+    color: var(--text);
+  }
   .tip {
     display: none;
     position: absolute;
@@ -139,12 +177,35 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
     color: var(--text);
     font-size: 10px;
-    line-height: 1.4;
-    white-space: pre-line;
+    line-height: 1.5;
     pointer-events: none;
   }
   .cell:hover .tip {
     display: block;
+  }
+  .tip-formula {
+    color: var(--accent-hi);
+  }
+  .tip-where {
+    margin-top: 3px;
+    color: var(--text-dim);
+  }
+  .tv-name {
+    color: var(--text);
+  }
+  .tv-val {
+    color: #4caf50;
+  }
+  .tip-result {
+    margin-top: 2px;
+    color: var(--text-dim);
+  }
+  .tip-desc {
+    margin-top: 5px;
+    padding-top: 4px;
+    border-top: 1px solid var(--border);
+    color: var(--text-dim);
+    font-style: italic;
   }
   .nm {
     color: var(--text-dim);

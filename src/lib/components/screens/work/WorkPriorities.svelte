@@ -15,8 +15,19 @@
     pawns: Pawn[];
     workAssignments: Record<string, WorkAssignment>;
     selectedPawn?: string | null;
+    /** Work category whose header is clicked → highlights related stats in the attributes grid. */
+    selectedColumn?: string | null;
   }
-  let { pawns, workAssignments, selectedPawn = $bindable(null) }: Props = $props();
+  let {
+    pawns,
+    workAssignments,
+    selectedPawn = $bindable(null),
+    selectedColumn = $bindable(null)
+  }: Props = $props();
+
+  function toggleColumn(id: string) {
+    selectedColumn = selectedColumn === id ? null : id;
+  }
 
   function getPawnLaborLevel(pawnId: string, workId: string): 0 | 1 | 2 | 3 | 4 {
     const laborSettings = workAssignments[pawnId]?.laborSettings;
@@ -64,7 +75,12 @@
         <th class="name-hdr">WORKER</th>
         <th class="state-hdr">STATUS</th>
         {#each WORK_CATEGORIES as wc}
-          <th class="work-hdr" title={wc.name}>{ABBR[wc.id] ?? wc.id.slice(0, 3).toUpperCase()}</th>
+          <th
+            class="work-hdr"
+            class:col-sel={selectedColumn === wc.id}
+            title="{wc.name} — click to highlight related attributes"
+            onclick={() => toggleColumn(wc.id)}
+          >{ABBR[wc.id] ?? wc.id.slice(0, 3).toUpperCase()}</th>
         {/each}
       </tr>
     </thead>
@@ -142,6 +158,14 @@
     color: var(--text-dim);
     font-size: 10px;
     min-width: 28px;
+    cursor: pointer;
+  }
+  .work-hdr:hover {
+    color: var(--text);
+  }
+  .work-hdr.col-sel {
+    color: var(--accent-hi);
+    background: color-mix(in srgb, var(--accent-hi) 18%, transparent);
   }
   .name-cell {
     text-align: left;

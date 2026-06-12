@@ -1,31 +1,18 @@
 <script lang="ts">
   import { gameState } from '$lib/stores/gameState';
-  import { WORK_CATEGORIES } from '$lib/game/core/Work';
-  import { modifierSystem } from '$lib/game/systems/ModifierSystem';
-  import { getPawnTaskSummary, getEfficiencyColor } from '$lib/utils/pawnUtils';
+  import { getPawnTaskSummary } from '$lib/utils/pawnUtils';
   import { stateColor, stateLabel, needBar } from '$lib/utils/workUtils';
   import type { Pawn } from '$lib/game/core/types';
   import PawnAttributes from '$lib/components/pawn/PawnAttributes.svelte';
 
   interface Props {
     pawn: Pawn;
+    /** Work category whose related stats should be soft-highlighted in the attributes grid. */
+    highlightCategory?: string | null;
   }
-  let { pawn }: Props = $props();
+  let { pawn, highlightCategory = null }: Props = $props();
 
   let taskSummary = $derived(getPawnTaskSummary(pawn, $gameState));
-  let workEfficiency = $derived(
-    Object.fromEntries(
-      WORK_CATEGORIES.map((wc) => [
-        wc.id,
-        modifierSystem.calculateWorkEfficiency(pawn.id, wc.id, $gameState)
-      ])
-    )
-  );
-  let sortedCategories = $derived(
-    [...WORK_CATEGORIES].sort(
-      (a, b) => (workEfficiency[b.id]?.totalValue ?? 0) - (workEfficiency[a.id]?.totalValue ?? 0)
-    )
-  );
 </script>
 
 <div class="section-hdr">| {pawn.name.toUpperCase()} — PAWN DETAIL</div>
@@ -66,21 +53,7 @@
   >
 </div>
 <div class="section-hdr sub">| ATTRIBUTES</div>
-<PawnAttributes {pawn} />
-<div class="section-hdr sub">| WORK EFFICIENCY</div>
-<div class="eff-grid">
-  {#each sortedCategories as wc}
-    {@const eff = workEfficiency[wc.id]}
-    {#if eff}
-      <div class="eff-item" title="{wc.name}: {eff.totalValue.toFixed(2)}x">
-        <span class="eff-name">{wc.name.toUpperCase()}</span>
-        <span class="eff-val" style="color:{getEfficiencyColor(eff.totalValue)}"
-          >{eff.totalValue.toFixed(2)}x</span
-        >
-      </div>
-    {/if}
-  {/each}
-</div>
+<PawnAttributes {pawn} {highlightCategory} />
 
 <style>
   .section-hdr {
