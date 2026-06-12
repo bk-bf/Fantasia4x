@@ -502,6 +502,14 @@
     "toolTierRequired": 0
   },
   {
+    "id"              : "make_fire_bricks",
+    "station"         : "pottery_kiln",
+    "inputs"          : {"fire_clay": 2},
+    "outputs"         : {"fire_bricks": 1},
+    "workAmount"      : 6,
+    "toolTierRequired": 0
+  },
+  {
     "id"              : "make_water_urn",
     "station"         : "pottery_kiln",
     "inputs"          : {"blue_clay": 1},

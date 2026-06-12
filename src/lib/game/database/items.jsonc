@@ -1,6 +1,7 @@
 [
   {
     "id"               : "wild_berries",
+    "charSpans"        : [{ "sheet": "items", "id": 127 }],
     "name"             : "Wild Berries",
     "type"             : "food",
     "category"         : "food",
@@ -16,6 +17,7 @@
   },
   {
     "id"               : "common_carp",
+    "charSpans"        : [{ "sheet": "items", "id": 121 }],
     "name"             : "Carp",
     "type"             : "food",
     "category"         : "food",
@@ -31,6 +33,7 @@
   },
   {
     "id"               : "wild_oats",
+    "charSpans"        : [{ "sheet": "items", "id": 145 }],
     "name"             : "Wild Oats",
     "type"             : "food",
     "category"         : "food",
@@ -46,6 +49,7 @@
   },
   {
     "id": "wild_sage",
+    "charSpans" : [{ "sheet": "items", "id": 83 }],
     "name": "Wild Sage",
     "type": "food",
     "category": "food",
@@ -62,6 +66,7 @@
   },
   {
     "id": "woundwort",
+    "charSpans" : [{ "sheet": "items", "id": 83 }],
     "name": "Woundwort",
     "type": "material",
     "category": "medicine",
@@ -77,6 +82,7 @@
   },
   {
     "id": "chewed_poultice",
+    "charSpans" : [{ "sheet": "items", "id": 83 }],
     "name": "Chewed Poultice",
     "type": "consumable",
     "category": "medicine",
@@ -90,6 +96,7 @@
   },
   {
     "id"               : "river_trout",
+    "charSpans"        : [{ "sheet": "items", "id": 121 }],
     "name"             : "River Trout",
     "type"             : "food",
     "category"         : "food",
@@ -105,6 +112,7 @@
   },
   {
     "id"               : "rabbit_carcass",
+    "charSpans"        : [{ "sheet": "items", "id": 122 }],
     "name"             : "Rabbit Carcass",
     "type"             : "food",
     "category"         : "food",
@@ -120,6 +128,7 @@
   },
   {
     "id"               : "deer_carcass",
+    "charSpans"        : [{ "sheet": "items", "id": 122 }],
     "name"             : "Deer Carcass",
     "type"             : "food",
     "category"         : "food",
@@ -135,6 +144,7 @@
   },
   {
     "id"               : "rabbit_meat",
+    "charSpans"        : [{ "sheet": "items", "id": 122 }],
     "name"             : "Rabbit Meat",
     "type"             : "food",
     "category"         : "meat",
@@ -151,6 +161,7 @@
   },
   {
     "id"               : "venison",
+    "charSpans"        : [{ "sheet": "items", "id": 122 }],
     "name"             : "Venison",
     "type"             : "food",
     "category"         : "meat",
@@ -167,6 +178,7 @@
   },
   {
     "id"               : "hide",
+    "charSpans"        : [{ "sheet": "items", "id": 128 }],
     "name"             : "Raw Hide",
     "type"             : "material",
     "category"         : "organic",
@@ -181,6 +193,7 @@
   },
   {
     "id"               : "rotten_hide",
+    "charSpans"        : [{ "sheet": "items", "id": 128 }],
     "name"             : "Rotten Hide",
     "type"             : "material",
     "category"         : "organic",
@@ -192,6 +205,7 @@
   },
   {
     "id"               : "tanning_bucket",
+    "charSpans"        : [{ "sheet": "items", "id": 48 }],
     "name"             : "Tanning Bucket",
     "type"             : "material",
     "category"         : "storage",
@@ -203,6 +217,7 @@
   },
   {
     "id"               : "cured_thin_hide",
+    "charSpans"        : [{ "sheet": "items", "id": 128 }],
     "name"             : "Cured Thin Hide",
     "type"             : "material",
     "category"         : "organic",
@@ -214,6 +229,7 @@
   },
   {
     "id"               : "cured_light_hide",
+    "charSpans"        : [{ "sheet": "items", "id": 128 }],
     "name"             : "Cured Light Hide",
     "type"             : "material",
     "category"         : "organic",
@@ -225,6 +241,7 @@
   },
   {
     "id"               : "cured_sturdy_hide",
+    "charSpans"        : [{ "sheet": "items", "id": 128 }],
     "name"             : "Cured Sturdy Hide",
     "type"             : "material",
     "category"         : "organic",
@@ -236,6 +253,7 @@
   },
   {
     "id"               : "cured_heavy_hide",
+    "charSpans"        : [{ "sheet": "items", "id": 128 }],
     "name"             : "Cured Heavy Hide",
     "type"             : "material",
     "category"         : "organic",
@@ -247,6 +265,7 @@
   },
   {
     "id"               : "cured_thick_hide",
+    "charSpans"        : [{ "sheet": "items", "id": 128 }],
     "name"             : "Cured Thick Hide",
     "type"             : "material",
     "category"         : "organic",
@@ -258,6 +277,7 @@
   },
   {
     "id"               : "thin_leather",
+    "charSpans"        : [{ "sheet": "items", "id": 129 }],
     "name"             : "Thin Leather",
     "type"             : "material",
     "category"         : "leather",
@@ -269,6 +289,7 @@
   },
   {
     "id"               : "light_leather",
+    "charSpans"        : [{ "sheet": "items", "id": 129 }],
     "name"             : "Light Leather",
     "type"             : "material",
     "category"         : "leather",
@@ -280,6 +301,7 @@
   },
   {
     "id"               : "sturdy_leather",
+    "charSpans"        : [{ "sheet": "items", "id": 129 }],
     "name"             : "Sturdy Leather",
     "type"             : "material",
     "category"         : "leather",
@@ -291,6 +313,7 @@
   },
   {
     "id"               : "heavy_leather",
+    "charSpans"        : [{ "sheet": "items", "id": 129 }],
     "name"             : "Heavy Leather",
     "type"             : "material",
     "category"         : "leather",
@@ -302,6 +325,7 @@
   },
   {
     "id"               : "thick_leather",
+    "charSpans"        : [{ "sheet": "items", "id": 129 }],
     "name"             : "Thick Leather",
     "type"             : "material",
     "category"         : "leather",
@@ -313,6 +337,7 @@
   },
   {
     "id"               : "spit_meat",
+    "charSpans"        : [{ "sheet": "items", "id": 120 }],
     "name"             : "Spit-Roasted Meat",
     "type"             : "food",
     "category"         : "food",
@@ -328,6 +353,7 @@
   },
   {
     "id"               : "stew",
+    "charSpans"        : [{ "sheet": "items", "id": 136 }],
     "name"             : "Stew",
     "type"             : "food",
     "category"         : "food",
@@ -344,6 +370,7 @@
   },
   {
     "id": "branch",
+    "charSpans" : [{ "sheet": "items", "id": 2 }],
     "name": "Branch",
     "type": "material",
     "category": "primitive",
@@ -357,6 +384,7 @@
   },
   {
     "id"               : "small_stone",
+    "charSpans"        : [{ "sheet": "items", "id": 131 }],
     "name"             : "Small Stone",
     "type"             : "material",
     "category"         : "primitive",
@@ -369,6 +397,7 @@
   },
   {
     "id"               : "flint_shard",
+    "charSpans"        : [{ "sheet": "items", "id": 131 }],
     "name"             : "Flint Shard",
     "type"             : "material",
     "category"         : "primitive",
@@ -381,6 +410,7 @@
   },
   {
     "id"               : "plant_fiber",
+    "charSpans"        : [{ "sheet": "items", "id": 86 }],
     "name"             : "Plant Fiber",
     "type"             : "material",
     "category"         : "primitive",
@@ -394,6 +424,7 @@
   },
   {
     "id"               : "bark",
+    "charSpans"        : [{ "sheet": "items", "id": 86 }],
     "name"             : "Bark",
     "type"             : "material",
     "category"         : "primitive",
@@ -407,6 +438,7 @@
   },
   {
     "id"               : "hay",
+    "charSpans"        : [{ "sheet": "items", "id": 86 }],
     "name"             : "Hay",
     "type"             : "material",
     "category"         : "primitive",
@@ -420,6 +452,7 @@
   },
   {
     "id"               : "pine_log",
+    "charSpans"        : [{ "sheet": "items", "id": 80 }],
     "name"             : "Pine Log",
     "type"             : "material",
     "category"         : "wood",
@@ -434,6 +467,7 @@
   },
   {
     "id"               : "birch_log",
+    "charSpans"        : [{ "sheet": "items", "id": 80 }],
     "name"             : "Birch Log",
     "type"             : "material",
     "category"         : "wood",
@@ -448,6 +482,7 @@
   },
   {
     "id"               : "oak_log",
+    "charSpans"        : [{ "sheet": "items", "id": 80 }],
     "name"             : "Oak Log",
     "type"             : "material",
     "category"         : "wood",
@@ -462,6 +497,7 @@
   },
   {
     "id"               : "ash_log",
+    "charSpans"        : [{ "sheet": "items", "id": 131 }],
     "name"             : "Ash Log",
     "type"             : "material",
     "category"         : "wood",
@@ -476,6 +512,7 @@
   },
   {
     "id"               : "yew_log",
+    "charSpans"        : [{ "sheet": "items", "id": 80 }],
     "name"             : "Yew Log",
     "type"             : "material",
     "category"         : "wood",
@@ -490,6 +527,7 @@
   },
   {
     "id"               : "green_firewood",
+    "charSpans"        : [{ "sheet": "items", "id": 80 }],
     "name"             : "Green Firewood",
     "type"             : "material",
     "category"         : "fuel",
@@ -504,6 +542,7 @@
   },
   {
     "id"               : "dry_firewood",
+    "charSpans"        : [{ "sheet": "items", "id": 80 }],
     "name"             : "Dry Firewood",
     "type"             : "material",
     "category"         : "fuel",
@@ -517,6 +556,7 @@
   },
   {
     "id"               : "sawdust",
+    "charSpans"        : [{ "sheet": "items", "id": 80 }],
     "name"             : "Sawdust",
     "type"             : "material",
     "category"         : "fuel",
@@ -530,6 +570,7 @@
   },
   {
     "id"               : "peat",
+    "charSpans"        : [{ "sheet": "items", "id": 80 }],
     "name"             : "Peat",
     "type"             : "material",
     "category"         : "fuel",
@@ -544,6 +585,7 @@
   },
   {
     "id": "charcoal",
+    "charSpans" : [{ "sheet": "items", "id": 28 }],
     "name": "Charcoal",
     "type": "material",
     "category": "fuel",
@@ -558,6 +600,7 @@
   },
   {
     "id"               : "coal",
+    "charSpans"        : [{ "sheet": "items", "id": 28 }],
     "name"             : "Coal",
     "type"             : "material",
     "category"         : "fuel",
@@ -572,6 +615,7 @@
   },
   {
     "id"               : "malachite",
+    "charSpans"        : [{ "sheet": "items", "id": 29 }],
     "name"             : "Malachite",
     "type"             : "material",
     "category"         : "ore",
@@ -584,6 +628,7 @@
   },
   {
     "id"               : "chalcopyrite",
+    "charSpans"        : [{ "sheet": "items", "id": 29 }],
     "name"             : "Chalcopyrite",
     "type"             : "material",
     "category"         : "ore",
@@ -596,6 +641,7 @@
   },
   {
     "id"               : "azurite",
+    "charSpans"        : [{ "sheet": "items", "id": 29 }],
     "name"             : "Azurite",
     "type"             : "material",
     "category"         : "ore",
@@ -608,6 +654,7 @@
   },
   {
     "id"               : "cassiterite",
+    "charSpans"        : [{ "sheet": "items", "id": 29 }],
     "name"             : "Cassiterite",
     "type"             : "material",
     "category"         : "ore",
@@ -620,6 +667,7 @@
   },
   {
     "id"               : "hematite",
+    "charSpans"        : [{ "sheet": "items", "id": 29 }],
     "name"             : "Hematite",
     "type"             : "material",
     "category"         : "ore",
@@ -632,6 +680,7 @@
   },
   {
     "id"               : "magnetite",
+    "charSpans"        : [{ "sheet": "items", "id": 29 }],
     "name"             : "Magnetite",
     "type"             : "material",
     "category"         : "ore",
@@ -644,6 +693,7 @@
   },
   {
     "id"               : "limonite",
+    "charSpans"        : [{ "sheet": "items", "id": 29 }],
     "name"             : "Limonite",
     "type"             : "material",
     "category"         : "ore",
@@ -656,6 +706,7 @@
   },
   {
     "id"               : "galena",
+    "charSpans"        : [{ "sheet": "items", "id": 29 }],
     "name"             : "Galena",
     "type"             : "material",
     "category"         : "ore",
@@ -668,6 +719,7 @@
   },
   {
     "id"               : "native_gold",
+    "charSpans"        : [{ "sheet": "items", "id": 29 }],
     "name"             : "Native Gold",
     "type"             : "material",
     "category"         : "ore",
@@ -680,6 +732,7 @@
   },
   {
     "id"               : "electrum",
+    "charSpans"        : [{ "sheet": "items", "id": 160 }],
     "name"             : "Electrum Ore",
     "type"             : "material",
     "category"         : "ore",
@@ -692,6 +745,7 @@
   },
   {
     "id"               : "copper_bar",
+    "charSpans"        : [{ "sheet": "items", "id": 160 }],
     "name"             : "Copper Bar",
     "type"             : "material",
     "category"         : "metal",
@@ -703,6 +757,7 @@
   },
   {
     "id"               : "tin_bar",
+    "charSpans"        : [{ "sheet": "items", "id": 160 }],
     "name"             : "Tin Bar",
     "type"             : "material",
     "category"         : "metal",
@@ -714,6 +769,7 @@
   },
   {
     "id"               : "bronze_bar",
+    "charSpans"        : [{ "sheet": "items", "id": 160 }],
     "name"             : "Bronze Bar",
     "type"             : "material",
     "category"         : "metal",
@@ -725,6 +781,7 @@
   },
   {
     "id"               : "iron_bar",
+    "charSpans"        : [{ "sheet": "items", "id": 160 }],
     "name"             : "Iron Bar",
     "type"             : "material",
     "category"         : "metal",
@@ -736,6 +793,7 @@
   },
   {
     "id": "iron_nail",
+    "charSpans" : [{ "sheet": "items", "id": 162 }],
     "name": "Iron Nails",
     "type": "material",
     "category": "metal",
@@ -748,6 +806,7 @@
   },
   {
     "id"               : "lead_bar",
+    "charSpans"        : [{ "sheet": "items", "id": 160 }],
     "name"             : "Lead Bar",
     "type"             : "material",
     "category"         : "metal",
@@ -759,6 +818,7 @@
   },
   {
     "id"               : "silver_bar",
+    "charSpans"        : [{ "sheet": "items", "id": 160 }],
     "name"             : "Silver Bar",
     "type"             : "material",
     "category"         : "metal",
@@ -770,6 +830,7 @@
   },
   {
     "id"               : "gold_bar",
+    "charSpans"        : [{ "sheet": "items", "id": 160 }],
     "name"             : "Gold Bar",
     "type"             : "material",
     "category"         : "metal",
@@ -781,6 +842,7 @@
   },
   {
     "id"               : "steel_bar",
+    "charSpans"        : [{ "sheet": "items", "id": 160 }],
     "name"             : "Steel Bar",
     "type"             : "material",
     "category"         : "metal",
@@ -792,6 +854,7 @@
   },
   {
     "id"               : "ash",
+    "charSpans"        : [{ "sheet": "items", "id": 131 }],
     "name"             : "Ash",
     "type"             : "material",
     "category"         : "primitive",
@@ -804,6 +867,7 @@
   },
   {
     "id": "salt",
+    "charSpans" : [{ "sheet": "items", "id": 131 }],
     "name": "Salt",
     "type": "material",
     "category": "primitive",
@@ -816,6 +880,7 @@
   },
   {
     "id": "water",
+    "charSpans" : [{ "sheet": "items", "id": 75 }],
     "name": "Water",
     "type": "consumable",
     "category": "drink",
@@ -827,6 +892,7 @@
   },
   {
     "id"               : "animal_fat",
+    "charSpans"        : [{ "sheet": "items", "id": 138 }],
     "name"             : "Animal Fat",
     "type"             : "material",
     "category"         : "organic",
@@ -839,6 +905,7 @@
   },
   {
     "id"               : "torch",
+    "charSpans"        : [{ "sheet": "items", "id": 5 }],
     "name"             : "Torch",
     "type"             : "tool",
     "category"         : "light",
@@ -852,6 +919,7 @@
   },
   {
     "id"               : "candle",
+    "charSpans"        : [{ "sheet": "items", "id": 5 }],
     "name"             : "Tallow Candle",
     "type"             : "tool",
     "category"         : "light",
@@ -865,6 +933,7 @@
   },
   {
     "id"               : "salted_meat",
+    "charSpans"        : [{ "sheet": "items", "id": 124 }],
     "name"             : "Salted Meat",
     "type"             : "food",
     "category"         : "meat",
@@ -880,6 +949,7 @@
   },
   {
     "id"               : "dried_meat",
+    "charSpans"        : [{ "sheet": "items", "id": 124 }],
     "name"             : "Dried Meat",
     "type"             : "food",
     "category"         : "meat",
@@ -895,6 +965,7 @@
   },
   {
     "id"               : "pine_plank",
+    "charSpans"        : [{ "sheet": "items", "id": 176 }],
     "name"             : "Pine Plank",
     "type"             : "material",
     "category"         : "wood",
@@ -909,6 +980,7 @@
   },
   {
     "id"               : "oak_plank",
+    "charSpans"        : [{ "sheet": "items", "id": 176 }],
     "name"             : "Oak Plank",
     "type"             : "material",
     "category"         : "wood",
@@ -923,6 +995,7 @@
   },
   {
     "id"               : "birch_plank",
+    "charSpans"        : [{ "sheet": "items", "id": 176 }],
     "name"             : "Birch Plank",
     "type"             : "material",
     "category"         : "wood",
@@ -937,6 +1010,7 @@
   },
   {
     "id"               : "ash_plank",
+    "charSpans"        : [{ "sheet": "items", "id": 131 }],
     "name"             : "Ash Plank",
     "type"             : "material",
     "category"         : "wood",
@@ -951,6 +1025,7 @@
   },
   {
     "id"               : "yew_plank",
+    "charSpans"        : [{ "sheet": "items", "id": 176 }],
     "name"             : "Yew Plank",
     "type"             : "material",
     "category"         : "wood",
@@ -965,6 +1040,7 @@
   },
   {
     "id": "saw",
+    "charSpans" : [{ "sheet": "items", "id": 206 }],
     "name": "Saw",
     "type": "tool",
     "category": "crafting",
@@ -980,6 +1056,7 @@
   },
   {
     "id"               : "granite",
+    "charSpans"        : [{ "sheet": "items", "id": 28 }],
     "name"             : "Granite",
     "type"             : "material",
     "category"         : "stone",
@@ -992,6 +1069,7 @@
   },
   {
     "id"               : "limestone",
+    "charSpans"        : [{ "sheet": "items", "id": 28 }],
     "name"             : "Limestone",
     "type"             : "material",
     "category"         : "stone",
@@ -1004,6 +1082,7 @@
   },
   {
     "id"               : "sandstone",
+    "charSpans"        : [{ "sheet": "items", "id": 131 }],
     "name"             : "Sandstone",
     "type"             : "material",
     "category"         : "stone",
@@ -1016,6 +1095,7 @@
   },
   {
     "id"               : "marble",
+    "charSpans"        : [{ "sheet": "items", "id": 28 }],
     "name"             : "Marble",
     "type"             : "material",
     "category"         : "stone",
@@ -1028,6 +1108,7 @@
   },
   {
     "id"               : "slate",
+    "charSpans"        : [{ "sheet": "items", "id": 28 }],
     "name"             : "Slate",
     "type"             : "material",
     "category"         : "stone",
@@ -1040,6 +1121,7 @@
   },
   {
     "id"               : "granite_block",
+    "charSpans"        : [{ "sheet": "items", "id": 64 }],
     "name"             : "Granite Block",
     "type"             : "material",
     "category"         : "construction",
@@ -1052,6 +1134,7 @@
   },
   {
     "id"               : "limestone_block",
+    "charSpans"        : [{ "sheet": "items", "id": 64 }],
     "name"             : "Limestone Block",
     "type"             : "material",
     "category"         : "construction",
@@ -1064,6 +1147,7 @@
   },
   {
     "id"               : "sandstone_block",
+    "charSpans"        : [{ "sheet": "items", "id": 131 }],
     "name"             : "Sandstone Block",
     "type"             : "material",
     "category"         : "construction",
@@ -1076,6 +1160,7 @@
   },
   {
     "id"               : "marble_block",
+    "charSpans"        : [{ "sheet": "items", "id": 64 }],
     "name"             : "Marble Block",
     "type"             : "material",
     "category"         : "construction",
@@ -1088,6 +1173,7 @@
   },
   {
     "id"               : "slate_tile",
+    "charSpans"        : [{ "sheet": "items", "id": 64 }],
     "name"             : "Slate Tile",
     "type"             : "material",
     "category"         : "construction",
@@ -1100,6 +1186,7 @@
   },
   {
     "id"               : "blue_clay",
+    "charSpans"        : [{ "sheet": "items", "id": 30 }],
     "name"             : "Blue Clay",
     "type"             : "material",
     "category"         : "primitive",
@@ -1112,6 +1199,7 @@
   },
   {
     "id"               : "fire_clay",
+    "charSpans"        : [{ "sheet": "items", "id": 30 }],
     "name"             : "Fire Clay",
     "type"             : "material",
     "category"         : "primitive",
@@ -1124,6 +1212,7 @@
   },
   {
     "id"               : "sand",
+    "charSpans"        : [{ "sheet": "items", "id": 131 }],
     "name"             : "Sand",
     "type"             : "material",
     "category"         : "primitive",
@@ -1136,6 +1225,7 @@
   },
   {
     "id"               : "sphagnum_moss",
+    "charSpans"        : [{ "sheet": "items", "id": 83 }],
     "name"             : "Sphagnum Moss",
     "type"             : "material",
     "category"         : "primitive",
@@ -1150,6 +1240,7 @@
   },
   {
     "id": "cordage",
+    "charSpans" : [{ "sheet": "items", "id": 59 }],
     "name": "Cordage",
     "type": "material",
     "category": "primitive",
@@ -1163,6 +1254,7 @@
   },
   {
     "id": "rope",
+    "charSpans" : [{ "sheet": "items", "id": 59 }],
     "name": "Rope",
     "type": "material",
     "category": "primitive",
@@ -1176,6 +1268,7 @@
   },
   {
     "id"               : "mud_brick",
+    "charSpans"        : [{ "sheet": "items", "id": 30 }],
     "name"             : "Mud Brick",
     "type"             : "material",
     "category"         : "construction",
@@ -1188,6 +1281,7 @@
   },
   {
     "id"               : "fired_brick",
+    "charSpans"        : [{ "sheet": "items", "id": 64 }],
     "name"             : "Fired Brick",
     "type"             : "material",
     "category"         : "construction",
@@ -1199,7 +1293,21 @@
     "toolTierRequired" : 0
   },
   {
+    "id"               : "fire_bricks",
+    "charSpans"        : [{ "sheet": "items", "id": 64 }],
+    "name"             : "Fire Brick",
+    "type"             : "material",
+    "category"         : "construction",
+    "maxDurability"    : 600,
+    "deteriorationRate": 0.004,
+    "description"      : "Refractory brick fired from fire clay. Withstands forge and kiln heat that would crack ordinary brick — the lining for high-heat furnaces.",
+    "color"            : "#C77A3A",
+    "amount"           : 0,
+    "toolTierRequired" : 0
+  },
+  {
     "id": "water_urn",
+    "charSpans" : [{ "sheet": "items", "id": 48 }],
     "name": "Clay Urn",
     "type": "material",
     "category": "storage",
@@ -1215,6 +1323,7 @@
   },
   {
     "id": "clay_mold",
+    "charSpans" : [{ "sheet": "items", "id": 30 }],
     "name": "Clay Mold",
     "type": "tool",
     "category": "metalworking",
@@ -1228,6 +1337,7 @@
   },
   {
     "id"               : "tile_mold",
+    "charSpans"        : [{ "sheet": "items", "id": 64 }],
     "name"             : "Tile Mold",
     "type"             : "tool",
     "category"         : "metalworking",
@@ -1240,6 +1350,7 @@
   },
   {
     "id": "clay_roof_tile",
+    "charSpans" : [{ "sheet": "items", "id": 30 }],
     "name": "Clay Roof Tile",
     "type": "material",
     "category": "construction",
@@ -1252,6 +1363,7 @@
   },
   {
     "id"               : "firestarter",
+    "charSpans"        : [{ "sheet": "items", "id": 6 }],
     "name"             : "Firestarter",
     "type"             : "tool",
     "category"         : "primitive",
@@ -1267,6 +1379,7 @@
   },
   {
     "id"               : "flint_knife",
+    "charSpans"        : [{ "sheet": "items", "id": 131 }],
     "name"             : "Flint Knife",
     "type"             : "tool",
     "category"         : "primitive",
@@ -1282,6 +1395,7 @@
   },
   {
     "id"               : "flint_sickle",
+    "charSpans"        : [{ "sheet": "items", "id": 131 }],
     "name"             : "Flint Sickle",
     "type"             : "tool",
     "category"         : "harvesting",
@@ -1298,6 +1412,7 @@
   },
   {
     "id"               : "stone_chopper",
+    "charSpans"        : [{ "sheet": "items", "id": 204 }],
     "name"             : "Stone Chopper",
     "type"             : "tool",
     "category"         : "primitive",
@@ -1313,6 +1428,7 @@
   },
   {
     "id"               : "digging_stick",
+    "charSpans"        : [{ "sheet": "items", "id": 207 }],
     "name"             : "Digging Stick",
     "type"             : "tool",
     "category"         : "primitive",
@@ -1327,6 +1443,7 @@
   },
   {
     "id": "stone_axe",
+    "charSpans" : [{ "sheet": "items", "id": 204 }],
     "name": "Stone Axe",
     "type": "tool",
     "category": "woodcutting",
@@ -1343,6 +1460,7 @@
   },
   {
     "id"               : "stone_hammer",
+    "charSpans"        : [{ "sheet": "items", "id": 202 }],
     "name"             : "Stone Hammer",
     "type"             : "tool",
     "category"         : "construction",
@@ -1358,6 +1476,7 @@
   },
   {
     "id"               : "stone_spear",
+    "charSpans"        : [{ "sheet": "items", "id": 208 }],
     "name"             : "Stone Spear",
     "type"             : "weapon",
     "category"         : "hunting",
@@ -1374,6 +1493,7 @@
   },
   {
     "id"               : "stone_spade",
+    "charSpans"        : [{ "sheet": "items", "id": 207 }],
     "name"             : "Stone Spade",
     "type"             : "tool",
     "category"         : "construction",
@@ -1389,6 +1509,7 @@
   },
   {
     "id"               : "clay_cooking_pot",
+    "charSpans"        : [{ "sheet": "items", "id": 30 }],
     "name"             : "Clay Cooking Pot",
     "type"             : "tool",
     "category"         : "cooking",
@@ -1405,6 +1526,7 @@
   },
   {
     "id": "woven_basket",
+    "charSpans" : [{ "sheet": "items", "id": 16 }],
     "name": "Woven Basket",
     "type": "container",
     "category": "storage",
@@ -1420,6 +1542,7 @@
   },
   {
     "id": "wooden_chest",
+    "charSpans" : [{ "sheet": "items", "id": 64 }],
     "name": "Wooden Chest",
     "type": "container",
     "category": "storage",
@@ -1435,6 +1558,7 @@
   },
   {
     "id"               : "wolf_carcass",
+    "charSpans"        : [{ "sheet": "items", "id": 122 }],
     "name"             : "Wolf Carcass",
     "type"             : "material",
     "category"         : "organic",
@@ -1450,6 +1574,7 @@
   },
   {
     "id"               : "bear_carcass",
+    "charSpans"        : [{ "sheet": "items", "id": 122 }],
     "name"             : "Bear Carcass",
     "type"             : "material",
     "category"         : "organic",
@@ -1465,6 +1590,7 @@
   },
   {
     "id"               : "goblin_carcass",
+    "charSpans"        : [{ "sheet": "items", "id": 122 }],
     "name"             : "Goblin Remains",
     "type"             : "material",
     "category"         : "organic",
@@ -1480,6 +1606,7 @@
   },
   {
     "id"               : "giant_rat_carcass",
+    "charSpans"        : [{ "sheet": "items", "id": 122 }],
     "name"             : "Giant Rat Carcass",
     "type"             : "material",
     "category"         : "organic",
@@ -1495,6 +1622,7 @@
   },
   {
     "id"               : "boar_carcass",
+    "charSpans"        : [{ "sheet": "items", "id": 122 }],
     "name"             : "Boar Carcass",
     "type"             : "material",
     "category"         : "organic",
@@ -1510,6 +1638,7 @@
   },
   {
     "id"               : "elk_carcass",
+    "charSpans"        : [{ "sheet": "items", "id": 122 }],
     "name"             : "Elk Carcass",
     "type"             : "material",
     "category"         : "organic",
@@ -1525,6 +1654,7 @@
   },
   {
     "id"               : "mountain_goat_carcass",
+    "charSpans"        : [{ "sheet": "items", "id": 122 }],
     "name"             : "Mountain Goat Carcass",
     "type"             : "material",
     "category"         : "organic",
@@ -1540,6 +1670,7 @@
   },
   {
     "id"               : "wild_chicken_carcass",
+    "charSpans"        : [{ "sheet": "items", "id": 122 }],
     "name"             : "Wild Chicken Carcass",
     "type"             : "material",
     "category"         : "organic",
@@ -1557,6 +1688,7 @@
   // Creature-specific meats
   {
     "id"               : "wolf_meat",
+    "charSpans"        : [{ "sheet": "items", "id": 122 }],
     "name"             : "Wolf Meat",
     "type"             : "food",
     "category"         : "meat",
@@ -1573,6 +1705,7 @@
   },
   {
     "id"               : "bear_meat",
+    "charSpans"        : [{ "sheet": "items", "id": 122 }],
     "name"             : "Bear Meat",
     "type"             : "food",
     "category"         : "meat",
@@ -1589,6 +1722,7 @@
   },
   {
     "id"               : "boar_meat",
+    "charSpans"        : [{ "sheet": "items", "id": 122 }],
     "name"             : "Boar Meat",
     "type"             : "food",
     "category"         : "meat",
@@ -1605,6 +1739,7 @@
   },
   {
     "id"               : "elk_meat",
+    "charSpans"        : [{ "sheet": "items", "id": 122 }],
     "name"             : "Elk Meat",
     "type"             : "food",
     "category"         : "meat",
@@ -1621,6 +1756,7 @@
   },
   {
     "id"               : "goat_meat",
+    "charSpans"        : [{ "sheet": "items", "id": 122 }],
     "name"             : "Goat Meat",
     "type"             : "food",
     "category"         : "meat",
@@ -1637,6 +1773,7 @@
   },
   {
     "id"               : "chicken_meat",
+    "charSpans"        : [{ "sheet": "items", "id": 122 }],
     "name"             : "Chicken Meat",
     "type"             : "food",
     "category"         : "meat",
@@ -1653,6 +1790,7 @@
   },
   {
     "id"               : "rat_meat",
+    "charSpans"        : [{ "sheet": "items", "id": 122 }],
     "name"             : "Rat Meat",
     "type"             : "food",
     "category"         : "meat",
@@ -1670,6 +1808,7 @@
   // Creature-specific hides / pelts
   {
     "id"               : "rabbit_pelt",
+    "charSpans"        : [{ "sheet": "items", "id": 128 }],
     "name"             : "Rabbit Pelt",
     "type"             : "material",
     "category"         : "organic",
@@ -1685,6 +1824,7 @@
   },
   {
     "id"               : "deer_hide",
+    "charSpans"        : [{ "sheet": "items", "id": 128 }],
     "name"             : "Deer Hide",
     "type"             : "material",
     "category"         : "organic",
@@ -1700,6 +1840,7 @@
   },
   {
     "id"               : "wolf_hide",
+    "charSpans"        : [{ "sheet": "items", "id": 128 }],
     "name"             : "Wolf Hide",
     "type"             : "material",
     "category"         : "organic",
@@ -1715,6 +1856,7 @@
   },
   {
     "id"               : "bear_pelt",
+    "charSpans"        : [{ "sheet": "items", "id": 128 }],
     "name"             : "Bear Pelt",
     "type"             : "material",
     "category"         : "organic",
@@ -1730,6 +1872,7 @@
   },
   {
     "id"               : "boar_hide",
+    "charSpans"        : [{ "sheet": "items", "id": 128 }],
     "name"             : "Boar Hide",
     "type"             : "material",
     "category"         : "organic",
@@ -1745,6 +1888,7 @@
   },
   {
     "id"               : "elk_hide",
+    "charSpans"        : [{ "sheet": "items", "id": 128 }],
     "name"             : "Elk Hide",
     "type"             : "material",
     "category"         : "organic",
@@ -1760,6 +1904,7 @@
   },
   {
     "id"               : "goat_hide",
+    "charSpans"        : [{ "sheet": "items", "id": 128 }],
     "name"             : "Goat Hide",
     "type"             : "material",
     "category"         : "organic",
@@ -1775,6 +1920,7 @@
   },
   {
     "id"               : "chicken_feathers",
+    "charSpans"        : [{ "sheet": "items", "id": 128 }],
     "name"             : "Chicken Feathers",
     "type"             : "material",
     "category"         : "organic",
@@ -1788,6 +1934,7 @@
   },
   {
     "id"               : "rat_pelt",
+    "charSpans"        : [{ "sheet": "items", "id": 128 }],
     "name"             : "Rat Pelt",
     "type"             : "material",
     "category"         : "organic",
@@ -1804,6 +1951,7 @@
   // Size-based bones (alternative sources via craftingCostAlternatives)
   {
     "id"               : "small_bones",
+    "charSpans"        : [{ "sheet": "items", "id": 56 }],
     "name"             : "Small Bones",
     "type"             : "material",
     "category"         : "organic",
@@ -1817,6 +1965,7 @@
   },
   {
     "id"               : "medium_bones",
+    "charSpans"        : [{ "sheet": "items", "id": 56 }],
     "name"             : "Medium Bones",
     "type"             : "material",
     "category"         : "organic",
@@ -1830,6 +1979,7 @@
   },
   {
     "id"               : "large_bones",
+    "charSpans"        : [{ "sheet": "items", "id": 56 }],
     "name"             : "Large Bones",
     "type"             : "material",
     "category"         : "organic",
@@ -1844,6 +1994,7 @@
   // ── Spoiled / rotten items ──────────────────────────────────────────────────
   {
     "id"               : "rotten_food",
+    "charSpans"        : [{ "sheet": "items", "id": 130 }],
     "name"             : "Rotten Food",
     "type"             : "food",
     "category"         : "food",
@@ -1857,6 +2008,7 @@
   },
   {
     "id"               : "rotten_meat",
+    "charSpans"        : [{ "sheet": "items", "id": 130 }],
     "name"             : "Rotten Meat",
     "type"             : "food",
     "category"         : "food",
@@ -1870,6 +2022,7 @@
   },
   {
     "id"               : "rotten_carcass",
+    "charSpans"        : [{ "sheet": "items", "id": 122 }],
     "name"             : "Rotten Carcass",
     "type"             : "material",
     "category"         : "organic",
@@ -1882,6 +2035,7 @@
   // ── Tier 1 butchery tool ─────────────────────────────────────────────────────
   {
     "id": "bone_cleaver",
+    "charSpans" : [{ "sheet": "items", "id": 56 }],
     "name": "Bone Cleaver",
     "type": "tool",
     "category": "butchery",
@@ -1906,6 +2060,7 @@
   // staminaCost = stamina drained, critMod = added to the attacker's crit_chance.
   {
     "id"               : "fists",
+    "charSpans"        : [{ "sheet": "items", "id": 0 }],
     "name"             : "Fists",
     "type"             : "weapon",
     "category"         : "natural_weapon",
@@ -1927,6 +2082,7 @@
   },
   {
     "id"               : "kick",
+    "charSpans"        : [{ "sheet": "items", "id": 0 }],
     "name"             : "Kick",
     "type"             : "weapon",
     "category"         : "natural_weapon",
@@ -1949,6 +2105,7 @@
   },
   {
     "id"               : "bite",
+    "charSpans"        : [{ "sheet": "items", "id": 1 }],
     "name"             : "Bite",
     "type"             : "weapon",
     "category"         : "natural_weapon",
@@ -1970,6 +2127,7 @@
   },
   {
     "id"               : "claw",
+    "charSpans"        : [{ "sheet": "items", "id": 1 }],
     "name"             : "Claw",
     "type"             : "weapon",
     "category"         : "natural_weapon",
@@ -1991,6 +2149,7 @@
   },
   {
     "id"               : "slam",
+    "charSpans"        : [{ "sheet": "items", "id": 0 }],
     "name"             : "Slam",
     "type"             : "weapon",
     "category"         : "natural_weapon",
@@ -2012,6 +2171,7 @@
   },
   {
     "id"               : "tusk",
+    "charSpans"        : [{ "sheet": "items", "id": 56 }],
     "name"             : "Tusk",
     "type"             : "weapon",
     "category"         : "natural_weapon",
@@ -2033,6 +2193,7 @@
   },
   {
     "id"               : "charge",
+    "charSpans"        : [{ "sheet": "items", "id": 0 }],
     "name"             : "Charge",
     "type"             : "weapon",
     "category"         : "natural_weapon",
@@ -2054,6 +2215,7 @@
   },
   {
     "id"               : "antler",
+    "charSpans"        : [{ "sheet": "items", "id": 56 }],
     "name"             : "Antler",
     "type"             : "weapon",
     "category"         : "natural_weapon",
@@ -2074,6 +2236,7 @@
   },
   {
     "id"               : "headbutt",
+    "charSpans"        : [{ "sheet": "items", "id": 0 }],
     "name"             : "Headbutt",
     "type"             : "weapon",
     "category"         : "natural_weapon",
@@ -2095,6 +2258,7 @@
   },
   {
     "id"               : "peck",
+    "charSpans"        : [{ "sheet": "items", "id": 1 }],
     "name"             : "Peck",
     "type"             : "weapon",
     "category"         : "natural_weapon",
@@ -2115,6 +2279,7 @@
   },
   {
     "id"               : "spectral_strike",
+    "charSpans"        : [{ "sheet": "items", "id": 49 }],
     "name"             : "Spectral Strike",
     "type"             : "weapon",
     "category"         : "natural_weapon",
