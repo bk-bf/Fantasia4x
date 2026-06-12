@@ -16,6 +16,7 @@ ADR-011 [GAME]: Gated Hot-Path Logging + On-Demand Tick Profiler (2026-05-30, Ac
 ADR-012 [GAME]: Combat Wound Model — Merge-and-Escalate + Capacity-Driven Downing (2026-06-11, Accepted)
 ADR-013 [GAME]: Deferred Combat Depth — Tissue Layers, Nerves & Arteries (2026-06-11, Deferred)
 ADR-014 [GAME]: Hard Tile Occupancy via Central OccupancyService (2026-06-12, Accepted)
+ADR-015 [GAME]: Single Work Model in stats.jsonc — supersedes ADR-003 for work (2026-06-13, Accepted)
 
 ---
 
@@ -60,7 +61,7 @@ State transitions are predictable and traceable. Enables future undo/redo or tim
 ### ADR-003 [GAME]: ModifierSystem for All Stat Calculations
 
 - **Date**: 2026-05-25
-- **Status**: Accepted
+- **Status**: Accepted (superseded by ADR-015 for **work** speed/yield/quality; still authoritative for equipment & trait effect display)
 
 #### Context
 
@@ -385,3 +386,24 @@ Movement originally used a "soft" model: pathfinding ran on a terrain-only grid 
 - Pawn job-pathing now routes around bodies too; a transiently blocked job falls back to the existing unreachable-cooldown (ADR-010 plumbing), so pawns **queue** for single-access workstations instead of stacking — no path-churn.
 - Costs: a `blockedTicks` field on `Mob`; the entity-aware A\* clones only the walkable mask per route (the terrain layer stays memoized by `worldMap` reference).
 - Trade-off: a follower now trails a leader with a one-tile gap (queue cadence) rather than moving in lockstep. This is intentional and replaces the stagger.
+
+---
+
+### ADR-015 [GAME]: Single Work Model in stats.jsonc
+
+- **Date**: 2026-06-13
+- **Status**: Accepted (supersedes ADR-003 for work)
+
+#### Context
+
+Two systems independently computed how good a pawn is at work and disagreed. `ModifierSystem.calculateWorkEfficiency` produced one multiplicative "efficiency" scalar (`stat/10 × …`), while `stats.jsonc` (`pawnStatService.getWorkModifiers`) produced separate `*_speed`/`*_yield`/`*_quality`. Worse, they were wired inconsistently: harvest/craft **speed** silently ran on the efficiency scalar while **yield** ran on the formulas — so the `fishing_speed` a player saw never actually governed fishing. The efficiency system also carried dead branches (buildings/research/equipment work bonuses no content used).
+
+#### Decision
+
+`stats.jsonc` via `pawnStatService.getWorkModifiers(pawn, work, light)` is the **single** work model, returning `{speed, yield, quality}`. It folds in: stat formula × body capacities (sight/manipulation/consciousness — injury & darkness), explicit racial-trait multipliers (`workSpeed`/`workYield`/`workQuality` — renamed from the ambiguous `workEfficiency` map so trait data states its own axis), and transient state (condition-stage + status-effect `workEfficiency` scalars → speed only). The entire `calculateWorkEfficiency` path and its plumbing (`WorkService` efficiency methods, `GameEngine.calculatePawnEfficiency`, dead `PawnEquipment.getWorkEfficiency`) were deleted. `ModifierSystem` keeps only building/item/trait-effect aggregation for display.
+
+#### Consequences
+
+- Job speed and the work-grid tooltip now read the same numbers the pawn panel shows. Tooltip ranks best/worst jobs by throughput (speed × yield).
+- Trait/need re-tuning is a one-line data edit (`workSpeed: {fishing: 1.2}`); no interpretation logic.
+- Behavior shifts: speed uses the gentle `+0.05/pt` formula curve instead of `stat/10`, and the old double-count of fatigue (status effect **and** a separate needs formula) collapses to just the status effect. Intended corrections, not regressions.

@@ -1,6 +1,5 @@
 <script lang="ts">
   import type { Pawn, WorkCategory } from '$lib/game/core/types';
-  import type { WorkEfficiencyResult } from '$lib/game/systems/ModifierSystem';
   import { getEfficiencyColor } from '$lib/utils/pawnUtils';
   import {
     LVL_NAMES,
@@ -15,13 +14,14 @@
   interface Props {
     pawn: Pawn;
     wc: WorkCategory;
-    result: WorkEfficiencyResult;
+    /** speed / yield / quality from pawnStatService.getWorkModifiers — the single work model. */
+    mods: { speed: number; yield: number; quality: number };
     rank: CellRank;
     level: 0 | 1 | 2 | 3 | 4;
     x: number;
     y: number;
   }
-  let { pawn, wc, result, rank, level, x, y }: Props = $props();
+  let { pawn, wc, mods, rank, level, x, y }: Props = $props();
 
   // The work screen lives inside `.overlay-panel`, which sets `filter` (making it
   // the containing block for fixed positioning) and `overflow: hidden`. Both would
@@ -35,7 +35,7 @@
     };
   }
 
-  const pct = (n: number) => `${Math.round(n * 100)}%`;
+  const mult = (n: number) => `×${n.toFixed(2)}`;
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
   let stats = $derived(
@@ -48,12 +48,29 @@
   );
   let skill = $derived(pawn.skills?.[wc.id] ?? 0);
 
-  // Non-stat contributors (traits, buildings, equipment, research) worth surfacing.
-  let modifiers = $derived(result.sources.filter((s) => s.type !== 'stat'));
+  // Racial-trait contributions to this job, read straight from the explicit trait data
+  // (workSpeed / workYield / workQuality). Shown as a true +/- percentage.
+  type TraitMod = { name: string; axis: string; pct: number };
+  let traitMods = $derived.by(() => {
+    const out: TraitMod[] = [];
+    const axes: Array<['workSpeed' | 'workYield' | 'workQuality', string]> = [
+      ['workSpeed', 'speed'],
+      ['workYield', 'yield'],
+      ['workQuality', 'quality']
+    ];
+    for (const trait of pawn.racialTraits ?? []) {
+      for (const [key, axis] of axes) {
+        const map = trait.effects?.[key] as Record<string, number> | undefined;
+        const v = map?.[wc.id] ?? map?.['all'];
+        if (v !== undefined && v !== 1) out.push({ name: trait.name, axis, pct: (v - 1) * 100 });
+      }
+    }
+    return out;
+  });
 
   // Flip the box to the cursor's left/upper side when near a viewport edge.
   let flipX = $derived(typeof window !== 'undefined' && x > window.innerWidth - 280);
-  let flipY = $derived(typeof window !== 'undefined' && y > window.innerHeight - 220);
+  let flipY = $derived(typeof window !== 'undefined' && y > window.innerHeight - 240);
   let style = $derived(
     `${flipX ? `right:${window.innerWidth - x + 14}px` : `left:${x + 16}px`};` +
       `${flipY ? `bottom:${window.innerHeight - y + 14}px` : `top:${y + 16}px`};`
@@ -63,9 +80,6 @@
 <div class="tip" use:portal {style}>
   <div class="tip-hdr">
     <span class="tip-name">{wc.name}</span>
-    <span class="tip-eff" style="color:{getEfficiencyColor(result.totalValue)}"
-      >{pct(result.totalValue)}</span
-    >
   </div>
 
   {#if rank.best >= 0}
@@ -73,6 +87,27 @@
   {:else if rank.worst >= 0}
     <div class="tip-rank" style="color:{WORST_COLORS[rank.worst]}">▾ {WORST_TIERS[rank.worst]}</div>
   {/if}
+
+  <div class="tip-mods">
+    <div class="tip-axis">
+      <span class="tip-axis-lbl">Speed</span>
+      <span class="tip-axis-val" style="color:{getEfficiencyColor(mods.speed)}"
+        >{mult(mods.speed)}</span
+      >
+    </div>
+    <div class="tip-axis">
+      <span class="tip-axis-lbl">Yield</span>
+      <span class="tip-axis-val" style="color:{getEfficiencyColor(mods.yield)}"
+        >{mult(mods.yield)}</span
+      >
+    </div>
+    <div class="tip-axis">
+      <span class="tip-axis-lbl">Quality</span>
+      <span class="tip-axis-val" style="color:{getEfficiencyColor(mods.quality)}"
+        >{mult(mods.quality)}</span
+      >
+    </div>
+  </div>
 
   <div class="tip-row">
     <span class="tip-lbl">Assigned</span>
@@ -89,12 +124,12 @@
     <span>{skill}</span>
   </div>
 
-  {#if modifiers.length > 0}
-    <div class="tip-sep">MODIFIERS</div>
-    {#each modifiers as m}
+  {#if traitMods.length > 0}
+    <div class="tip-sep">TRAITS</div>
+    {#each traitMods as m}
       <div class="tip-mod">
-        <span class="tip-mod-name" style="color:{m.value >= 0 ? '#6bc' : '#e08'}">{m.name}</span>
-        <span class="tip-mod-val">{m.value >= 0 ? '+' : ''}{Math.round(m.value * 100)}%</span>
+        <span class="tip-mod-name" style="color:{m.pct >= 0 ? '#6bc' : '#e08'}">{m.name}</span>
+        <span class="tip-mod-val">{m.pct >= 0 ? '+' : ''}{Math.round(m.pct)}% {m.axis}</span>
       </div>
     {/each}
   {/if}
@@ -104,7 +139,7 @@
   .tip {
     position: fixed;
     z-index: 1000;
-    min-width: 180px;
+    min-width: 190px;
     max-width: 260px;
     padding: 5px 7px;
     background: var(--bg-panel, #11151c);
@@ -116,10 +151,6 @@
     pointer-events: none;
   }
   .tip-hdr {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: 8px;
     border-bottom: 1px solid var(--border);
     padding-bottom: 3px;
     margin-bottom: 3px;
@@ -128,12 +159,30 @@
     color: var(--accent-hi);
     letter-spacing: 0.04em;
   }
-  .tip-eff {
-    font-weight: bold;
-  }
   .tip-rank {
     font-size: 10px;
     margin-bottom: 3px;
+  }
+  .tip-mods {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 4px;
+  }
+  .tip-axis {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2px 0;
+    border: 1px solid var(--border);
+  }
+  .tip-axis-lbl {
+    color: var(--text-dim);
+    font-size: 9px;
+    letter-spacing: 0.04em;
+  }
+  .tip-axis-val {
+    font-weight: bold;
   }
   .tip-row {
     display: flex;

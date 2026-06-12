@@ -52,7 +52,6 @@ export interface GameEngine {
   updateGameState(updates: Partial<GameState>): SystemInteractionResult;
 
   // Basic calculations (can expand iteratively)
-  calculatePawnEfficiency(pawnId: string, workType: string): number;
   calculateBuildingEffects(buildingId: string, locationId?: string): BuildingEffectResult;
 
   // Pawn coordination methods

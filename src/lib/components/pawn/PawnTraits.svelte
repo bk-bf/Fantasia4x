@@ -19,13 +19,18 @@
           text: `${effectValue} ${effectName.replace('Penalty', '').toLowerCase()}`,
           type: 'neg'
         });
-      } else if (effectName === 'workEfficiency') {
+      } else if (
+        effectName === 'workSpeed' ||
+        effectName === 'workYield' ||
+        effectName === 'workQuality'
+      ) {
+        const axis = effectName.replace('work', '').toLowerCase();
         for (const [workType, multiplier] of Object.entries(
           effectValue as Record<string, number>
         )) {
           const pct = Math.round((multiplier - 1) * 100);
           tags.push({
-            text: `${pct >= 0 ? '+' : ''}${pct}% ${workType}`,
+            text: `${pct >= 0 ? '+' : ''}${pct}% ${workType} ${axis}`,
             type: pct >= 0 ? 'pos' : 'neg'
           });
         }

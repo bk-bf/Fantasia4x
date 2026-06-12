@@ -137,17 +137,10 @@ export function calculatePawnStats(
 ): Record<string, { value: number; sources: string[] }> {
   const stats: Record<string, { value: number; sources: string[] }> = {};
 
-  // If we have gameState, use ModifierSystem for work efficiencies and equipment
+  // If we have gameState, use ModifierSystem for equipment + trait effect display stats.
+  // (Work speed/yield/quality is NOT here — it lives solely in stats.jsonc via
+  // pawnStatService.getWorkModifiers; see ADR in DECISIONS.md.)
   if (gameState) {
-    // Use ModifierSystem for work efficiencies
-    const workResults = modifierSystem.calculateAllWorkEfficiencies(pawn.id, gameState);
-    Object.entries(workResults).forEach(([workType, result]) => {
-      stats[`${workType}Efficiency`] = {
-        value: result.totalValue,
-        sources: result.sources.map((s) => s.description)
-      };
-    });
-
     // Use ModifierSystem for equipment bonuses
     const equipmentResults = modifierSystem.calculateEquipmentBonuses(pawn);
     Object.entries(equipmentResults).forEach(([effectName, result]) => {

@@ -228,9 +228,12 @@
                   <span class="neg"
                     >{effectValue} {effectName.replace('Penalty', '').toLowerCase()}</span
                   >
-                {:else if effectName === 'workEfficiency'}
+                {:else if effectName === 'workSpeed' || effectName === 'workYield' || effectName === 'workQuality'}
                   {#each Object.entries(effectValue as Record<string, number>) as [workType, multiplier]}
-                    <span class="pos">+{Math.round((multiplier - 1) * 100)}% {workType} eff</span>
+                    <span class={multiplier >= 1 ? 'pos' : 'neg'}
+                      >{multiplier >= 1 ? '+' : ''}{Math.round((multiplier - 1) * 100)}% {workType}
+                      {effectName.replace('work', '').toLowerCase()}</span
+                    >
                   {/each}
                 {:else}
                   {effectName.replace(/([A-Z])/g, ' $1').trim()}: {formatEffectValue(

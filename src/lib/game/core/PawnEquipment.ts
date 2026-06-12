@@ -363,44 +363,6 @@ export function getEffectiveStats(pawn: Pawn): EntityStats {
   };
 }
 
-// Get work efficiency with equipment bonuses
-export function getWorkEfficiency(pawn: Pawn, workType: string): number {
-  const equipmentBonuses = getEquipmentBonuses(pawn);
-  let efficiency = 1.0;
-
-  // Apply general bonuses
-  if (
-    equipmentBonuses.craftingBonus &&
-    ['crafting', 'metalworking', 'leatherworking'].includes(workType)
-  ) {
-    efficiency *= 1 + equipmentBonuses.craftingBonus;
-  }
-
-  if (equipmentBonuses.huntingEfficiency && workType === 'hunting') {
-    efficiency *= equipmentBonuses.huntingEfficiency;
-  }
-
-  if (
-    equipmentBonuses.toolEfficiency &&
-    ['woodcutting', 'mining', 'construction'].includes(workType)
-  ) {
-    efficiency *= equipmentBonuses.toolEfficiency;
-  }
-
-  // Apply racial trait bonuses
-  pawn.racialTraits.forEach((trait) => {
-    if (trait.effects.workEfficiency) {
-      const workBonus =
-        trait.effects.workEfficiency[workType] || trait.effects.workEfficiency['all'];
-      if (workBonus) {
-        efficiency *= workBonus;
-      }
-    }
-  });
-
-  return efficiency;
-}
-
 // Damage equipment over time
 export function damageEquipment(pawn: Pawn, slot: EquipmentSlot, damage: number = 1): Pawn {
   const equippedItem = pawn.equipment[slot];

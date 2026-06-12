@@ -1,7 +1,7 @@
 <script lang="ts">
   import { gameState } from '$lib/stores/gameState';
   import { WORK_CATEGORIES } from '$lib/game/core/Work';
-  import { modifierSystem, type WorkEfficiencyResult } from '$lib/game/systems/ModifierSystem';
+  import { pawnStatService } from '$lib/game/services/PawnStatService';
   import type { Pawn, WorkAssignment } from '$lib/game/core/types';
   import {
     LABOR_LABELS,
@@ -74,14 +74,17 @@
     updatePawnLaborLevel(pawnId, workId, ((cur + 1) % 5) as 0 | 1 | 2 | 3 | 4);
   }
 
-  // Full efficiency breakdown per pawn/work — drives both the medal ranking and
-  // the hover tooltip. ModifierSystem caches per turn, so this is cheap to recompute.
-  let effMap = $derived.by(() => {
-    const map: Record<string, Record<string, WorkEfficiencyResult>> = {};
+  // Speed / yield / quality per pawn/work from the single stats.jsonc model — drives both
+  // the medal ranking (by throughput = speed × yield) and the hover tooltip.
+  type WorkMods = { speed: number; yield: number; quality: number };
+  let modMap = $derived.by(() => {
+    // Touch $gameState so this recomputes as pawns' state (needs/conditions) changes.
+    void $gameState.turn;
+    const map: Record<string, Record<string, WorkMods>> = {};
     for (const pawn of pawns) {
-      const row: Record<string, WorkEfficiencyResult> = {};
+      const row: Record<string, WorkMods> = {};
       for (const wc of WORK_CATEGORIES) {
-        row[wc.id] = modifierSystem.calculateWorkEfficiency(pawn.id, wc.id, $gameState);
+        row[wc.id] = pawnStatService.getWorkModifiers(pawn, wc.id);
       }
       map[pawn.id] = row;
     }
@@ -91,11 +94,12 @@
   let rankMap = $derived.by(() => {
     const map: Record<string, Record<string, CellRank>> = {};
     for (const pawn of pawns) {
-      const effByWork: Record<string, number> = {};
+      const throughput: Record<string, number> = {};
       for (const wc of WORK_CATEGORIES) {
-        effByWork[wc.id] = effMap[pawn.id]?.[wc.id]?.totalValue ?? 0;
+        const m = modMap[pawn.id]?.[wc.id];
+        throughput[wc.id] = m ? m.speed * m.yield : 0;
       }
-      map[pawn.id] = rankWorkCells(effByWork);
+      map[pawn.id] = rankWorkCells(throughput);
     }
     return map;
   });
@@ -182,11 +186,11 @@
   <span class="leg-hint">· click cell to cycle · hover for stats · click row for detail</span>
 </div>
 
-{#if tip && tipPawn && tipWc && effMap[tip.pawnId]?.[tip.workId] && rankMap[tip.pawnId]?.[tip.workId]}
+{#if tip && tipPawn && tipWc && modMap[tip.pawnId]?.[tip.workId] && rankMap[tip.pawnId]?.[tip.workId]}
   <WorkCellTooltip
     pawn={tipPawn}
     wc={tipWc}
-    result={effMap[tip.pawnId][tip.workId]}
+    mods={modMap[tip.pawnId][tip.workId]}
     rank={rankMap[tip.pawnId][tip.workId]}
     level={getPawnLaborLevel(tip.pawnId, tip.workId)}
     x={tip.x}

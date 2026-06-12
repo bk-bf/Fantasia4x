@@ -154,7 +154,8 @@ class ResourceObjectServiceImpl {
       : def.interaction;
 
     const result: Record<string, number> = {};
-    // Wire stats.jsonc work yield into harvest output
+    // Wire stats.jsonc work yield into harvest output. getWorkModifiers is the single source —
+    // the `*_yield` formula already folds in racial trait workYield (see PawnStatService).
     const statYieldMult = pawn
       ? pawnStatService.getWorkModifiers(pawn, interaction.workCategory).yield
       : 1;
@@ -163,18 +164,17 @@ class ResourceObjectServiceImpl {
       const roll = this.randomInt(y.min, y.max);
       const skill = this.getSkillLevel(pawn, y.skillId, interaction.workCategory);
       const multiplier = Math.max(1, 1 + skill * y.skillMultiplier);
-      // Apply workYield bonus from racial traits (e.g. Keen Senses for foraging)
-      const traitYieldMult = this.getWorkYieldMultiplier(pawn, interaction.workCategory);
-      const amount = Math.max(0, Math.round(roll * multiplier * traitYieldMult * statYieldMult));
+      const amount = Math.max(0, Math.round(roll * multiplier * statYieldMult));
       // YIELD-DBG: per-item harvest breakdown (config the build sees + every multiplier). A kept
       // debug tool — gated behind gameDebug() so it's off by default but toggleable when probing
       // yields (grep YIELD-DBG .debug/pawns.log). See dev-memory: yield-dbg-debug-tool.
+      // statx already includes trait workYield (folded into getWorkModifiers).
       if (isGameDebug()) {
         gameLogger.log(
           0,
           'JOB-EVT',
           () =>
-            `YIELD-DBG ${resourceId}/${interaction.workCategory} ${y.itemId} cfg[${y.min}-${y.max}] roll=${roll} skillx${multiplier.toFixed(2)} traitx${traitYieldMult.toFixed(2)} statx${statYieldMult.toFixed(2)} -> ${amount}`
+            `YIELD-DBG ${resourceId}/${interaction.workCategory} ${y.itemId} cfg[${y.min}-${y.max}] roll=${roll} skillx${multiplier.toFixed(2)} statx${statYieldMult.toFixed(2)} -> ${amount}`
         );
       }
       if (amount > 0) {
@@ -188,19 +188,6 @@ class ResourceObjectServiceImpl {
     }
 
     return result;
-  }
-
-  /** Aggregate workYield multiplier from all racial traits for a given work category. */
-  private getWorkYieldMultiplier(pawn: Pawn | undefined, workCategory: string): number {
-    if (!pawn) return 1;
-    let mult = 1;
-    for (const trait of pawn.racialTraits ?? []) {
-      const yieldMap = trait.effects.workYield as Record<string, number> | undefined;
-      if (!yieldMap) continue;
-      if (yieldMap[workCategory]) mult *= yieldMap[workCategory];
-      if (yieldMap['all']) mult *= yieldMap['all'];
-    }
-    return mult;
   }
 
   private getSkillLevel(pawn: Pawn | undefined, skillId: string, workCategory: string): number {

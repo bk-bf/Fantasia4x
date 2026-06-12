@@ -1,10 +1,4 @@
-import type {
-  Pawn,
-  GameState,
-  WorkAssignment,
-  WorkCategory,
-  LaborLevel
-} from '../core/types';
+import type { Pawn, GameState, WorkAssignment, WorkCategory, LaborLevel } from '../core/types';
 import { WORK_CATEGORIES } from '../core/Work';
 // Shadow the global console with a gated shim: log/debug/info/warn are silent in
 // normal play (toggle via gameDebug(true)); console.error still surfaces. This
@@ -12,44 +6,24 @@ import { WORK_CATEGORIES } from '../core/Work';
 import { gatedConsole as console } from '../core/log';
 
 /**
- * The slice of the engine WorkService needs. Typing this explicitly (instead of `any`)
- * removes the untyped circular dependency flagged in P0-3: the engine injects itself via
- * setWorkEfficiencyProvider, and only this one method is ever called back.
- */
-export interface WorkEfficiencyProvider {
-  calculatePawnEfficiency(pawnId: string, workType: string): number;
-}
-
-/**
  * WorkService - Clean interface for work assignment and management
  * Separates business logic from data definitions
+ *
+ * Work speed/yield/quality is NOT computed here — it lives entirely in the
+ * stats.jsonc model (pawnStatService.getWorkModifiers). See ADR in DECISIONS.md.
  */
 export interface WorkService {
-  // Engine injection (resolves the circular dependency without `any` — P0-3)
-  setGameEngine(gameEngine: WorkEfficiencyProvider): void;
-
   // Query Methods
   getWorkCategory(workId: string): WorkCategory | undefined;
   getAllWorkCategories(): WorkCategory[];
 
   // Assignment Methods
-  assignPawnToWork(
-    pawnId: string,
-    workType: string,
-    gameState: GameState
-  ): GameState;
+  assignPawnToWork(pawnId: string, workType: string, gameState: GameState): GameState;
   updateWorkPriorities(
     pawnId: string,
     priorities: Record<string, number>,
     gameState: GameState
   ): GameState;
-
-  // Calculation Methods
-  calculateWorkEfficiency(
-    pawn: Pawn,
-    workCategory: WorkCategory,
-    gameState?: GameState
-  ): number;
 
   // Work State Synchronization Methods
   syncPawnWorkingStates(gameState: GameState): GameState;
@@ -67,23 +41,12 @@ export interface WorkService {
 
   // Work Assignment Initialization (applied ONCE at game init, not per tick)
   ensureDefaultWorkAssignments(gameState: GameState): GameState;
-
-  // UI Helper Methods
-  getWorkEfficiencyDescription(pawn: Pawn, workType: string, gameState: GameState): string;
 }
 
 /**
  * WorkService Implementation
  */
 export class WorkServiceImpl implements WorkService {
-  private gameEngine: WorkEfficiencyProvider | null = null;
-
-  // Injected by the GameEngine constructor (see GameEngineImpl). Typed to the minimal
-  // provider interface rather than `any` to make the dependency explicit (P0-3).
-  setGameEngine(gameEngine: WorkEfficiencyProvider) {
-    this.gameEngine = gameEngine;
-  }
-
   getWorkCategory(workId: string): WorkCategory | undefined {
     return WORK_CATEGORIES.find((work) => work.id === workId);
   }
@@ -92,11 +55,7 @@ export class WorkServiceImpl implements WorkService {
     return [...WORK_CATEGORIES];
   }
 
-  assignPawnToWork(
-    pawnId: string,
-    workType: string,
-    gameState: GameState
-  ): GameState {
+  assignPawnToWork(pawnId: string, workType: string, gameState: GameState): GameState {
     const newState = { ...gameState };
 
     // Initialize work assignments if not exists
@@ -144,42 +103,6 @@ export class WorkServiceImpl implements WorkService {
     };
 
     return newState;
-  }
-
-  calculateWorkEfficiency(
-    pawn: Pawn,
-    workCategory: WorkCategory,
-    gameState?: GameState
-  ): number {
-    // Delegate to GameEngine's unified calculation system
-    if (this.gameEngine) {
-      return this.gameEngine.calculatePawnEfficiency(pawn.id, workCategory.id);
-    }
-
-    // Minimal fallback only
-    return workCategory.baseEfficiency;
-  }
-
-  getWorkEfficiencyDescription(pawn: Pawn, workType: string, gameState: GameState): string {
-    const workCategory = this.getWorkCategory(workType);
-    if (!workCategory) return 'Unknown work type';
-
-    const efficiency = this.calculateWorkEfficiency(pawn, workCategory, gameState);
-    const efficiencyPercent = Math.round(efficiency * 100);
-
-    // Build description based on available data
-    const sources = [];
-
-    if (pawn.skills[workType]) {
-      sources.push(`Skill: ${pawn.skills[workType]}`);
-    }
-
-    if (pawn.stats[workCategory.primaryStat]) {
-      sources.push(`${workCategory.primaryStat}: ${pawn.stats[workCategory.primaryStat]}`);
-    }
-
-    const sourceText = sources.length > 0 ? ` (${sources.join(', ')})` : '';
-    return `${efficiencyPercent}% efficiency${sourceText}`;
   }
 
   // ============ Work State Synchronization Methods ============
