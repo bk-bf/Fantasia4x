@@ -1,6 +1,5 @@
 <script lang="ts">
   import type {
-    GameState,
     Pawn,
     StatusEffectDef,
     ConditionDef,
@@ -16,7 +15,6 @@
   const CONDITIONS_DB = conditionsData as unknown as ConditionDef[];
 
   export let pawn: Pawn;
-  export let gameState: GameState;
 
   $: needs = pawn.needs;
   // All needs are flat 0–100.
@@ -148,21 +146,6 @@
     border-top: 1px solid var(--border);
     margin-top: 1px;
   }
-  .section-hdr.sub {
-    background: var(--bg);
-    color: var(--text-dim);
-    border-top: none;
-  }
-
-  .need-row {
-    display: flex;
-    align-items: center;
-    padding: 3px 8px;
-    gap: 8px;
-  }
-  .need-row:hover {
-    background: var(--bg-hover);
-  }
   .need-line {
     display: flex;
     align-items: baseline;
@@ -173,45 +156,11 @@
     background: var(--bg-hover);
   }
 
-  .row {
-    display: flex;
-    padding: 2px 8px;
-    align-items: baseline;
-    gap: 6px;
-  }
-  .row:hover {
-    background: var(--bg-hover);
-  }
-
-  .lbl {
-    color: var(--text-dim);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    font-size: 11px;
-    width: 70px;
-    flex-shrink: 0;
-  }
-  .val {
-    color: var(--text);
-    font-size: 11px;
-    min-width: 36px;
-    text-align: right;
-    flex-shrink: 0;
-    white-space: nowrap;
-  }
-
   .desc {
     color: var(--text-muted);
     font-size: 11px;
     font-style: italic;
     flex: 1;
-  }
-
-  .block-bar {
-    font-family: 'Courier New', monospace;
-    font-size: 11px;
-    letter-spacing: -0.02em;
-    white-space: nowrap;
   }
 
   .effects-row {

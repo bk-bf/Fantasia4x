@@ -102,51 +102,7 @@
   .val.neg {
     color: #f44;
   }
-  .stats-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    padding: 4px 8px;
-  }
-  .stat-chip {
-    display: flex;
-    gap: 2px;
-    font-size: 10px;
-    border: 1px solid var(--border);
-    padding: 1px 4px;
-    font-family: 'Courier New', monospace;
-  }
-  .slbl {
-    color: var(--text-muted, #555);
-  }
   .sval {
     color: var(--text);
-  }
-  .eff-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
-    gap: 2px;
-    padding: 4px 8px;
-  }
-  .eff-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    border: 1px solid var(--border);
-    padding: 2px 4px;
-    cursor: default;
-    font-family: 'Courier New', monospace;
-  }
-  .eff-item:hover {
-    background: var(--bg-hover);
-  }
-  .eff-name {
-    font-size: 9px;
-    color: var(--text-muted);
-    letter-spacing: 0.04em;
-  }
-  .eff-val {
-    font-size: 11px;
-    font-variant-numeric: tabular-nums;
   }
 </style>

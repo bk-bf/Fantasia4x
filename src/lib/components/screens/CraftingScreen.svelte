@@ -439,45 +439,6 @@
     letter-spacing: -1px;
   }
 
-  .recipe-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 3px 10px;
-    border-bottom: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
-    flex-wrap: wrap;
-  }
-  .recipe-row:hover {
-    background: var(--bg-hover);
-  }
-
-  .recipe-name {
-    flex: 0 0 160px;
-    font-size: 11px;
-    color: var(--text);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .intactness-badge {
-    font-size: 9px;
-    padding: 1px 4px;
-    border: 1px solid currentColor;
-    white-space: nowrap;
-    flex-shrink: 0;
-  }
-
-  .recipe-cost {
-    flex: 1;
-    display: flex;
-    gap: 4px;
-    flex-wrap: wrap;
-    align-items: center;
-    font-size: 10px;
-    color: var(--text-dim);
-  }
-
   .cost-sep {
     color: var(--text-dim);
     opacity: 0.4;
@@ -517,7 +478,6 @@
     cursor: pointer;
     white-space: nowrap;
   }
-  .act-btn-sm.active,
   .act-btn-sm:hover:not(:disabled) {
     border-color: var(--accent-hi);
     color: var(--accent-hi);

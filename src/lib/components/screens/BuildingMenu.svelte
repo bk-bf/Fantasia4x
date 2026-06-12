@@ -412,31 +412,6 @@
     cursor: pointer;
   }
 
-  .status-row {
-    display: flex;
-    gap: 6px;
-    align-items: center;
-    padding: 4px 10px;
-    background: var(--bg-panel);
-    font-size: 10px;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .stat-lbl {
-    color: var(--text-dim);
-  }
-  .stat-val {
-    color: var(--accent-hi);
-    margin-right: 4px;
-  }
-  .stat-sep {
-    color: var(--border);
-  }
-  .warn-inline {
-    color: var(--neg);
-    margin-left: 8px;
-  }
-
   .section-hdr {
     padding: 5px 10px 3px;
     color: var(--accent-hi);
@@ -471,22 +446,6 @@
     text-overflow: ellipsis;
   }
 
-  .built-badge {
-    color: var(--pos);
-    font-size: 10px;
-    margin-left: 4px;
-  }
-
-  .bldg-cost {
-    flex: 1;
-    display: flex;
-    gap: 4px;
-    flex-wrap: wrap;
-    align-items: center;
-    font-size: 10px;
-    color: var(--text-dim);
-  }
-
   .cost-sep {
     color: var(--text-dim);
     opacity: 0.4;
@@ -515,12 +474,6 @@
     color: var(--neg);
   }
 
-  .lock-req {
-    flex: 1;
-    font-size: 10px;
-    color: var(--warn);
-  }
-
   .act-btn-sm {
     flex: 0 0 auto;
     background: none;
@@ -532,7 +485,6 @@
     cursor: pointer;
     white-space: nowrap;
   }
-  .act-btn-sm.active,
   .act-btn-sm:hover:not(:disabled) {
     border-color: var(--accent-hi);
     color: var(--accent-hi);

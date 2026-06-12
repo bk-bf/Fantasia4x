@@ -153,7 +153,7 @@
       {#if activeTab === 'status'}
         <PawnOverview pawn={selectedPawn} gameState={$gameState} />
         <PawnHealth pawn={selectedPawn} />
-        <PawnNeeds pawn={selectedPawn} gameState={$gameState} />
+        <PawnNeeds pawn={selectedPawn} />
         <PawnTraits pawn={selectedPawn} />
       {:else if activeTab === 'attributes'}
         <PawnAttributes pawn={selectedPawn} />

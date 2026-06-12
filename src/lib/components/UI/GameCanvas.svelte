@@ -3048,23 +3048,6 @@
     gap: 4px;
     pointer-events: all;
   }
-  .tile-hud--selected-building {
-    position: static;
-    border-color: #f0c060;
-    background: rgba(20, 14, 4, 0.96);
-    color: #e8c870;
-    pointer-events: all;
-  }
-  .bld-side-actions {
-    display: flex;
-    flex-direction: column;
-    align-self: stretch;
-    gap: 3px;
-  }
-  .bld-side-actions .bld-btn--sq {
-    flex: 1;
-    height: auto;
-  }
   .bld-header {
     display: flex;
     gap: 5px;
@@ -3097,11 +3080,6 @@
     font-size: 9px;
     margin-top: 2px;
   }
-  .bld-refund {
-    color: #7a6030;
-    font-size: 9px;
-    margin-top: 2px;
-  }
   .bld-fuel {
     color: #c87020;
     font-size: 9px;
@@ -3116,43 +3094,6 @@
   .fuel-dark {
     color: #604020;
     margin-left: 4px;
-  }
-  .bld-btn {
-    background: #140e04;
-    border: 1px solid #7a5820;
-    color: #c08030;
-    font-family: 'Courier New', monospace;
-    font-size: 10px;
-    padding: 2px 7px;
-    cursor: pointer;
-    line-height: 1.3;
-  }
-  .bld-btn:hover {
-    background: #1e1608;
-    color: #e8a040;
-  }
-  .bld-btn--active {
-    background: #2a1c08;
-    border-color: #f0b040;
-    color: #ffd080;
-  }
-  .bld-btn--danger {
-    border-color: #aa3322;
-    color: #dd6655;
-  }
-  .bld-btn--danger:hover {
-    background: #200806;
-    color: #ff8877;
-  }
-  .bld-btn--sq {
-    padding: 2px 6px;
-    font-size: 13px;
-    line-height: 1;
-    min-width: 24px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
   }
   .hud-sprite-icon {
     width: 12px;
@@ -3322,37 +3263,6 @@
     background: #24180a;
     border-color: #b07a28;
     color: #f0c878;
-  }
-  /* ── Resource tile HUD ────────────────────────── */
-  .tile-hud--resource {
-    min-width: 160px;
-  }
-  .tile-hud--selected-resource {
-    border-color: #f0c060;
-    background: rgba(20, 14, 4, 0.96);
-    color: #e8c870;
-    pointer-events: all;
-  }
-  .panel-actions {
-    display: grid;
-    grid-template-columns: repeat(3, max-content);
-    gap: 3px;
-    margin-top: 4px;
-  }
-  /* bright gold text inside selected building/resource cards */
-  .tile-hud--selected-building .bld-name,
-  .tile-hud--selected-resource .bld-name {
-    color: #ffe890;
-  }
-  .tile-hud--selected-building .bld-status,
-  .tile-hud--selected-resource .bld-status {
-    color: #c0a040;
-  }
-  .tile-hud--selected-building .bld-desc,
-  .tile-hud--selected-resource .bld-desc,
-  .tile-hud--selected-building .bld-progress,
-  .tile-hud--selected-building .bld-refund {
-    color: #c0a040;
   }
   .tile-coord {
     color: #e8b86a;

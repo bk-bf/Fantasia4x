@@ -129,31 +129,4 @@
     text-align: right;
   }
 
-  .stats-grid {
-    display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    gap: 4px;
-    padding: 4px 8px;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .stat-cell {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1px;
-    padding: 2px 0;
-  }
-
-  .stat-lbl {
-    color: var(--text-dim);
-    font-size: 10px;
-    letter-spacing: 0.04em;
-  }
-
-  .stat-val {
-    color: var(--accent-hi);
-    font-size: 12px;
-    font-weight: 600;
-  }
 </style>
