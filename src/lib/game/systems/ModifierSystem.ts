@@ -14,7 +14,6 @@ import type {
   Building,
   WorkCategory,
   RacialTrait,
-  EquippedItem,
   ConditionDef,
   ConditionStage,
   StatusEffectDef

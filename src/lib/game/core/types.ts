@@ -121,6 +121,8 @@ export interface DroppedItem {
 	drying?: number;
 	/** §C per-stack spoilage clock (seconds, scaled by storage). At the def's decaySeconds, one unit rots. */
 	decayAcc?: number;
+	/** Present for tracked items (weapons, armour, tools with maxDurability). */
+	instance?: ItemInstance;
 }
 
 export interface Job {
@@ -689,26 +691,50 @@ export interface Pawn {
 	};
 }
 
+export interface ItemInstance {
+	instanceId: string; // unique stable ID
+	itemId: string; // references Item definition
+	durability: number; // current durability (same field everywhere — ground/inventory/equipped)
+}
+
 export interface PawnInventory {
-	items: Record<string, number>; // itemId -> quantity
-	maxSlots: number;
-	currentSlots: number;
+	items: Record<string, number>; // bulk materials: itemId → quantity
+	instances: ItemInstance[]; // tracked items: weapons, armour, tools with durability
+	weightKg: number; // current carried weight
+	maxWeightKg: number; // derived from pawn stats + equipped carry containers
+	volumeL: number; // current carried volume
+	maxVolumeL: number; // derived from pawn stats + equipped carry containers
 }
 
 export interface PawnEquipment {
-	weapon?: EquippedItem;
-	armor?: EquippedItem;
-	tool?: EquippedItem;
-	accessory?: EquippedItem;
+	mainHand?:  ItemInstance;
+	offHand?:   ItemInstance;
+	headBase?:  ItemInstance;
+	headOuter?: ItemInstance;
+	bodyBase?:  ItemInstance;
+	bodyMid?:   ItemInstance;
+	bodyOuter?: ItemInstance;
+	gloves?:    ItemInstance;
+	boots?:     ItemInstance;
+	gorget?:    ItemInstance;
+	ring?:      ItemInstance;
+	belt?:      ItemInstance;
+	back?:      ItemInstance;
 }
 
+/** @deprecated Use ItemInstance directly — EquippedItem kept for backward compat during migration. */
 export interface EquippedItem {
 	itemId: string;
 	durability: number;
 	maxDurability: number;
 	bonuses?: Record<string, number>; // Applied bonuses
 }
-export type EquipmentSlot = 'weapon' | 'armor' | 'tool' | 'accessory';
+
+export type EquipmentSlot =
+	| 'mainHand' | 'offHand'
+	| 'headBase' | 'headOuter'
+	| 'bodyBase' | 'bodyMid' | 'bodyOuter'
+	| 'gloves' | 'boots' | 'gorget' | 'ring' | 'belt' | 'back';
 export interface Building {
 	id: string;
 	name: string;
@@ -1014,6 +1040,18 @@ export interface Item {
 	/** Medicine quality 0–1 — added to a tend's treatment quality when consumed (COMBAT-SYSTEM caretaking). */
 	medicineQuality?: number;
 
+	// Weight & volume for inventory capacity system
+	weightKg?: number;
+	volumeL?: number;
+	/** Bonus carry capacity granted when equipped in belt/back slot. */
+	inventoryBonus?: { weightKg: number; volumeL: number };
+	/** Durability lost per combat hit when this item is equipped. */
+	durabilityLossPerCombatHit?: number;
+	// Future SEASONS_WEATHER stubs (no logic yet, just typed):
+	weatherResistance?: number;
+	coldProtection?: number;
+	heatProtection?: number;
+
 	// Decay properties
 	decaySeconds?: number; // in-game seconds until one unit of this item spoils
 	decaysTo?: string; // itemId it becomes on decay; omit to simply vanish
@@ -1035,6 +1073,7 @@ export interface Item {
 		armorPenetration?: number; // 0–1; fraction of armor reduction bypassed
 		bluntMod?: number; // multiplier on knockdown chance (blunt weapons)
 		critMod?: number; // added to the wielder's base crit_chance (0–1)
+		twoHanded?: boolean; // requires both mainHand and offHand slots
 		// ── Natural-weapon additions (innate attacks rolled per swing) ───────
 		weight?: number; // relative roll frequency among an entity's natural weapons (default 1)
 		staminaCost?: number; // stamina drained by this attack (default ATTACK_STAMINA_COST)
@@ -1044,6 +1083,8 @@ export interface Item {
 		defense: number;
 		armorType: 'light' | 'medium' | 'heavy' | 'shield';
 		slot: 'head' | 'chest' | 'legs' | 'feet' | 'hands' | 'offhand';
+		armorLayer?: 'gambeson' | 'mail' | 'plate';
+		equipmentSlot?: EquipmentSlot;
 		movementPenalty: number; // 0.0 to 1.0, where 0.3 = 30% movement penalty
 
 		// Resistance properties

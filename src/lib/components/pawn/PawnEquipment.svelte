@@ -71,10 +71,10 @@
   <div class="equipped-items">
     <h4>Currently Equipped:</h4>
     <div class="equipment-slots">
-      {#each ['weapon', 'armor', 'tool', 'accessory'] as slot}
+      {#each (['mainHand','offHand','headBase','headOuter','bodyBase','bodyMid','bodyOuter','gloves','boots','gorget','ring','belt','back'] as const) as slot}
         <div class="equipment-slot">
           <div class="slot-header">
-            <span class="slot-name">{slot.charAt(0).toUpperCase() + slot.slice(1)}</span>
+            <span class="slot-name">{slot}</span>
             {#if pawn.equipment && pawn.equipment[slot as EquipmentSlot]}
               <button
                 class="unequip-btn"
@@ -88,9 +88,10 @@
           </div>
 
           {#if pawn.equipment && pawn.equipment[slot as EquipmentSlot]}
-            {@const equippedItem = pawn.equipment[slot as EquipmentSlot]}
-            {#if equippedItem}
-              {@const itemInfo = gameEngine.getItemById(equippedItem.itemId)}
+            {@const inst = pawn.equipment[slot as EquipmentSlot]}
+            {#if inst}
+              {@const itemInfo = gameEngine.getItemById(inst.itemId)}
+              {@const maxDur = itemInfo?.maxDurability ?? 100}
               <div class="equipped-item">
                 <span class="item-icon">{itemInfo?.emoji || '📦'}</span>
                 <div class="item-details">
@@ -98,11 +99,11 @@
                   <div class="durability-bar">
                     <div
                       class="durability-fill"
-                      style="width: {(equippedItem.durability / equippedItem.maxDurability) * 100}%"
+                      style="width: {(inst.durability / maxDur) * 100}%"
                     ></div>
                   </div>
                   <span class="durability-text">
-                    {equippedItem.durability}/{equippedItem.maxDurability}
+                    {inst.durability}/{maxDur}
                   </span>
                 </div>
               </div>
