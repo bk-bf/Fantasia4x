@@ -168,10 +168,6 @@
 </div>
 
 <style>
-  .needs-section {
-    border-bottom: 1px solid var(--border);
-  }
-
   .section-hdr {
     padding: 4px 8px;
     background: var(--bg-panel);
@@ -179,8 +175,6 @@
     font-size: 11px;
     letter-spacing: 0.06em;
     border-bottom: 1px solid var(--border);
-    border-top: 1px solid var(--border);
-    margin-top: 1px;
   }
   .section-hdr.sub {
     background: var(--bg);
