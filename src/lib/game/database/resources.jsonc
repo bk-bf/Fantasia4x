@@ -676,7 +676,8 @@
       "yields"         : [
         {"itemId": "granite", "min": 2, "max": 5, "skillId": "mining", "skillMultiplier": 0.2},
         {"itemId": "marble", "min": 0, "max": 1, "skillId": "mining", "skillMultiplier": 0.1}, // rare: prestige stone
-        {"itemId": "coal", "min": 0, "max": 2, "skillId": "mining", "skillMultiplier": 0.15} // coal seams in the mountains
+        {"itemId": "coal", "min": 0, "max": 2, "skillId": "mining", "skillMultiplier": 0.15}, // coal seams in the mountains
+        {"itemId": "salt", "min": 0, "max": 1, "skillId": "mining", "skillMultiplier": 0.1} // rock salt — moderately rare
       ]
     }
   },

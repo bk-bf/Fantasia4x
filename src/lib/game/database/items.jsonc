@@ -804,6 +804,67 @@
     "workshopType"    : "hearth"
   },
   {
+    "id"            : "salt",
+    "name"          : "Salt",
+    "type"          : "material",
+    "category"      : "primitive",
+    "maxDurability"  : 200,
+    "deteriorationRate": 0.01,
+    "description"   : "Rock salt, ground fine. Preserves meat and cures hides — moderately rare, mined in the mountains.",
+    "color"         : "#EFEFEF",
+    "amount"        : 0,
+    "gatheringTypes": ["mining"]
+  },
+  {
+    "id"              : "salted_meat",
+    "name"            : "Salted Meat",
+    "type"            : "food",
+    "category"        : "meat",
+    "maxDurability"  : 70,
+    "deteriorationRate": 0.05,
+    "description"     : "Meat packed in salt. Keeps for a very long time.",
+    "color"           : "#B5705A",
+    "amount"          : 0,
+    "nutrition"       : 2.0,
+    "craftingCost"    : {"salt": 1},
+    "dynamicRecipe"   : {
+      "meat": {
+        "acceptsCategory": "meat",
+        "quantity"       : 1,
+        "default"        : {"name": "Salted Meat", "description": "Meat packed in salt. Keeps for a very long time."}
+      }
+    },
+    "craftingTime"    : 60,
+    "toolTierRequired": 0,
+    "workshopType"    : "butcher_spot",
+    "decaySeconds"    : 36000,
+    "decaysTo"        : "rotten_meat"
+  },
+  {
+    "id"              : "dried_meat",
+    "name"            : "Dried Meat",
+    "type"            : "food",
+    "category"        : "meat",
+    "maxDurability"  : 70,
+    "deteriorationRate": 0.05,
+    "description"     : "Wind- and smoke-dried meat. Keeps well without salt.",
+    "color"           : "#9C5A3C",
+    "amount"          : 0,
+    "nutrition"       : 1.8,
+    "dynamicRecipe"   : {
+      "meat": {
+        "acceptsCategory": "meat",
+        "quantity"       : 1,
+        "default"        : {"name": "Dried Meat", "description": "Wind- and smoke-dried meat. Keeps well without salt."}
+      }
+    },
+    "craftingTime"    : 120,
+    "toolTierRequired": 0,
+    "workshopType"    : "drying_rack",
+    "decaySeconds"    : 28000,
+    "decaysTo"        : "rotten_meat"
+  },
+  {
     "id"            : "pine_plank",
     "name"          : "Pine Plank",
     "type"          : "material",
