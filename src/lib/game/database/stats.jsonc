@@ -244,9 +244,9 @@
     {
         "id"         : "hunting_speed",
         "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "(1.0 + (DEX − 10) × 0.05 + (PER − 10) × 0.03) × sight × moving",
-        "description": "hunting speed (× sight × moving)"
+        "primaryStat": "strength",
+        "formula"    : "(1.0 + (STR − 10) × 0.04 + (DEX − 10) × 0.04) × manipulation × moving",
+        "description": "hunting speed — combat-driven: melee power (STR) + accuracy (DEX), × manipulation × moving"
     },
     {
         "id"         : "butchery_speed",

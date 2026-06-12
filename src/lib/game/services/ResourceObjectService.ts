@@ -164,7 +164,9 @@ class ResourceObjectServiceImpl {
       const roll = this.randomInt(y.min, y.max);
       const skill = this.getSkillLevel(pawn, y.skillId, interaction.workCategory);
       const multiplier = Math.max(1, 1 + skill * y.skillMultiplier);
-      const amount = Math.max(0, Math.round(roll * multiplier * statYieldMult));
+      // Yield multiplier produces a float (e.g. roll 3 × 1.2 = 3.6) — round UP so a bonus
+      // never silently rounds away.
+      const amount = Math.max(0, Math.ceil(roll * multiplier * statYieldMult));
       // YIELD-DBG: per-item harvest breakdown (config the build sees + every multiplier). A kept
       // debug tool — gated behind gameDebug() so it's off by default but toggleable when probing
       // yields (grep YIELD-DBG .debug/pawns.log). See dev-memory: yield-dbg-debug-tool.
