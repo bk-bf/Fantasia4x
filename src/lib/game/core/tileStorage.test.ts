@@ -46,7 +46,7 @@ describe('per-tile storage helpers (Stage 2 Step 1)', () => {
   });
 
   it('tileCapacity = base + storage building bonus on that tile', () => {
-    // hay_store gives +250 (added later); use an ad-hoc def-less building → base only here.
+    // A real storage building adds tileCapacityBonus; here use an ad-hoc def-less building → base only.
     const gs = state([], [
       { id: 'b', type: 'nonexistent_def', x: 1, y: 1, status: 'complete', progress: 1 } as PlacedBuilding
     ]);

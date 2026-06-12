@@ -1297,5 +1297,42 @@
     },
     "workAmount": 4,
     "toolTierRequired": 0
+  },
+  {
+    "id": "make_rope",
+    "station": "ropewalk",
+    "inputs": {
+      "cordage": 6
+    },
+    "outputs": {
+      "rope": 1
+    },
+    "workAmount": 4,
+    "toolTierRequired": 0
+  },
+  {
+    "id": "make_iron_nail",
+    "station": "anvil",
+    "inputs": {
+      "iron_bar": 1
+    },
+    "outputs": {
+      "iron_nail": 12
+    },
+    "workAmount": 6,
+    "toolTierRequired": 1
+  },
+  {
+    "id": "make_wooden_chest",
+    "station": "sawtable",
+    "inputs": {
+      "pine_plank": 4,
+      "iron_nail": 6
+    },
+    "outputs": {
+      "wooden_chest": 1
+    },
+    "workAmount": 16,
+    "toolTierRequired": 1
   }
 ]

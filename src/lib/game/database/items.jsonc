@@ -605,6 +605,12 @@
     "color"         : "#6E7378", "amount": 0
   },
   {
+    "id"            : "iron_nail", "name": "Iron Nails", "type": "material", "category": "metal",
+    "maxDurability" : 250, "deteriorationRate": 0.01,
+    "description"   : "A handful of forged iron nails. Fasten planks into chests, furniture and frames. Drawn out on the smithy anvil.",
+    "color"         : "#7A7E84", "amount": 0, "toolTierRequired": 1
+  },
+  {
     "id"            : "lead_bar", "name": "Lead Bar", "type": "material", "category": "metal",
     "maxDurability" : 250, "deteriorationRate": 0.008,
     "description"   : "Smelted lead. Heavy, soft — pipes, weights, and shot.",
@@ -955,10 +961,23 @@
     "category"        : "primitive",
     "maxDurability"  : 120,
     "deteriorationRate": 0.01,
-    "description"     : "Twisted plant fiber. Binding, lashing, weaving.",
+    "description"     : "Twisted plant fiber. Thin makeshift cord — fine for binding, lashing and weaving, but too weak for real load.",
     "color"           : "#C8A064",
     "amount"          : 0,
     "fuelValue"       : 4,
+    "toolTierRequired": 0
+  },
+  {
+    "id"              : "rope",
+    "name"            : "Rope",
+    "type"            : "material",
+    "category"        : "primitive",
+    "maxDurability"  : 200,
+    "deteriorationRate": 0.008,
+    "description"     : "Strong laid rope, walked and twisted from many strands of cordage. Bears real load — well windlasses, rigging, heavy hauling.",
+    "color"           : "#A8814E",
+    "amount"          : 0,
+    "fuelValue"       : 6,
     "toolTierRequired": 0
   },
   {
@@ -1196,12 +1215,26 @@
     "category"        : "storage",
     "maxDurability"  : 150,
     "deteriorationRate": 0.02,
-    "description"     : "cordage basket. 15-slot portable storage.",
+    "description"     : "Cordage basket. 15-slot portable storage — the first storage tier.",
     "color"           : "#C8A064",
     "amount"          : 0,
     "isContainer"     : true,
     "storageCapacity" : 15,
     "toolTierRequired": 0
+  },
+  {
+    "id"              : "wooden_chest",
+    "name"            : "Wooden Chest",
+    "type"            : "container",
+    "category"        : "storage",
+    "maxDurability"  : 220,
+    "deteriorationRate": 0.012,
+    "description"     : "A planked chest nailed together with iron. The sturdiest storage tier — 40 slots, keeps goods dry. Needs planks and forged nails.",
+    "color"           : "#8B5A2B",
+    "amount"          : 0,
+    "isContainer"     : true,
+    "storageCapacity" : 40,
+    "toolTierRequired": 1
   },
   {
     "id"            : "wolf_carcass",

@@ -17,19 +17,44 @@
   let completedResearch: string[] = [];
   let currentToolLevel = 0;
 
-  // Building category groups defined below (no per-screen filter needed)
-  const WALL_IDS = ['branch_wall', 'wicker_wall', 'daub_wall', 'mud_brick_wall', 'branch_door'];
-  const WORKSHOP_IDS = [
-    'campfire',
-    'craft_spot',
-    'makers_bench',
-    'craftsmens_workshop',
-    'tannery',
-    'advanced_kiln',
-    'smelting_furnace'
+  // UI section grouping. Derived from each building's id/effects/category via classify()
+  // below — kept here so the engine `category` field (read by ModifierSystem/BuildingService
+  // for work bonuses) is never repurposed just to drive the menu layout.
+  const SECTION_ORDER = [
+    'FIRE & COOKING',
+    'WORKSHOPS',
+    'SMELTING & FORGE',
+    'FOOD & HIDES',
+    'TRAPS & WATER',
+    'BEDS & SHELTER',
+    'FURNITURE & STORAGE',
+    'WALLS & DOORS',
+    'ROOFS & WINDOWS',
+    'KNOWLEDGE',
+    'OTHER'
   ];
-  const FURNITURE_IDS = ['sleeping_mat', 'storage_rack', 'carved_bench'];
-  const KNOWLEDGE_IDS = ['scroll_hut', 'study_hall', 'scholars_workshop'];
+
+  function classify(b: Building): string {
+    const e = (b.effects ?? {}) as Record<string, number | boolean>;
+    if (b.id === 'campfire' || b.id === 'hearth' || e.isFire) return 'FIRE & COOKING';
+    if (e.smeltingEnabled || e.smithingEnabled) return 'SMELTING & FORGE';
+    if (
+      e.butcheringEnabled ||
+      e.leatherworkingEnabled ||
+      b.id === 'drying_rack' ||
+      b.id === 'hide_rack'
+    )
+      return 'FOOD & HIDES';
+    if (e.trapEnabled || e.waterSource) return 'TRAPS & WATER';
+    if (e.roof || e.window || b.id.includes('roof') || b.id === 'window') return 'ROOFS & WINDOWS';
+    if (e.movementCost === 99 || b.id.includes('wall') || b.id.includes('door'))
+      return 'WALLS & DOORS';
+    if (e.sleepQuality || e.fatigueRecovery || b.category === 'shelter') return 'BEDS & SHELTER';
+    if (e.comfort || b.isStorage || b.category === 'furniture') return 'FURNITURE & STORAGE';
+    if (b.category === 'knowledge') return 'KNOWLEDGE';
+    if (e.craftingEnabled) return 'WORKSHOPS';
+    return 'OTHER';
+  }
 
   // All building defs from every category (no research filter — show all, lock none)
   const ALL_BUILDING_DEFS: Building[] = [
@@ -55,29 +80,12 @@
     (b) => !b.researchRequired || completedResearch.includes(b.researchRequired as string)
   );
 
-  // Grouped unlocked buildings (no SHELTER — removed; no LOCKED section)
-  $: workshopDefs = unlockedDefs.filter((b) => WORKSHOP_IDS.includes(b.id));
-  $: furnitureDefs = unlockedDefs.filter(
-    (b) => FURNITURE_IDS.includes(b.id) || b.category === 'furniture'
-  );
-  $: wallDefs = unlockedDefs.filter((b) => WALL_IDS.includes(b.id) || b.category === 'structure');
-  $: shelterDefs = unlockedDefs.filter((b) => b.category === 'shelter');
-  $: knowledgeDefs = unlockedDefs.filter(
-    (b) => KNOWLEDGE_IDS.includes(b.id) || b.category === 'knowledge'
-  );
-  $: foodDefs = unlockedDefs.filter((b) => b.category === 'food' && !WORKSHOP_IDS.includes(b.id));
-  $: otherDefs = unlockedDefs.filter(
-    (b) =>
-      !WORKSHOP_IDS.includes(b.id) &&
-      !FURNITURE_IDS.includes(b.id) &&
-      !WALL_IDS.includes(b.id) &&
-      !KNOWLEDGE_IDS.includes(b.id) &&
-      b.category !== 'food' &&
-      b.category !== 'housing' &&
-      b.category !== 'furniture' &&
-      b.category !== 'structure' &&
-      b.category !== 'shelter'
-  );
+  // Grouped unlocked buildings — one pass via classify(), ordered by SECTION_ORDER,
+  // empty sections dropped.
+  $: sections = SECTION_ORDER.map((label) => ({
+    label,
+    defs: unlockedDefs.filter((b) => classify(b) === label)
+  })).filter((s) => s.defs.length > 0);
 
   // Legacy compat
   $: availableBuildings = unlockedDefs;
@@ -327,7 +335,7 @@
   {/each}
 
   <!-- Building groups -->
-  {#each [{ label: 'WORKSHOPS', defs: workshopDefs }, { label: 'SHELTER & BEDS', defs: shelterDefs }, { label: 'PRIMITIVE FURNITURE', defs: furnitureDefs }, { label: 'FORTIFICATIONS', defs: wallDefs }, { label: 'KNOWLEDGE', defs: knowledgeDefs }, { label: 'FOOD & FORAGING', defs: foodDefs }, { label: 'OTHER', defs: otherDefs }] as grp}
+  {#each sections as grp}
     {#if grp.defs.length > 0}
       <div class="section-hdr">| {grp.label}</div>
       {#each grp.defs as building}
