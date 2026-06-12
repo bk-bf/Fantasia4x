@@ -4,6 +4,7 @@
   import type { Pawn } from '$lib/game/core/types';
   import statsData from '$lib/game/database/stats.jsonc';
   import { pawnStatService } from '$lib/game/services/PawnStatService';
+  import PawnStatBanner from './PawnStatBanner.svelte';
 
   export let pawn: Pawn;
 
@@ -56,6 +57,14 @@
     return id.replace(/_/g, ' ');
   }
 
+  /** Colour a value relative to its 1.0 baseline (most stats are multipliers); physical = neutral. */
+  function valColor(s: StatDef, v: number): string {
+    if (s.category === 'physical') return 'var(--text)';
+    if (v >= 1.05) return '#4caf50';
+    if (v <= 0.95) return '#e0704f';
+    return 'var(--text)';
+  }
+
   $: grouped = CATEGORY_ORDER.map((cat) => ({
     cat,
     label: CATEGORY_LABEL[cat] ?? cat.toUpperCase(),
@@ -64,20 +73,18 @@
 </script>
 
 <div class="attrs">
-  <div class="base-row">
-    {#each Object.entries(pawn.stats) as [k, v]}
-      <span class="base" title={k}><b>{k.slice(0, 3).toUpperCase()}</b>{v}</span>
-    {/each}
-  </div>
+  <PawnStatBanner {pawn} />
 
   {#each grouped as g}
     <div class="cat">
       <div class="cat-hdr">{g.label}</div>
       <div class="grid">
         {#each g.stats as s}
-          <div class="cell" title={derivation(s)}>
+          {@const v = val(s.id)}
+          <div class="cell">
             <span class="nm">{fmtName(s.id)}</span>
-            <span class="vl">{val(s.id)}</span>
+            <span class="vl" style="color: {valColor(s, v)}">{v}</span>
+            <div class="tip">{derivation(s)}</div>
           </div>
         {/each}
       </div>
@@ -90,21 +97,6 @@
     font-family: 'Courier New', monospace;
     font-size: 10px;
     color: var(--text-dim);
-  }
-  .base-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px 10px;
-    padding: 4px 6px;
-    border-bottom: 1px solid var(--border);
-    margin-bottom: 4px;
-  }
-  .base {
-    color: var(--text);
-  }
-  .base b {
-    color: var(--accent-hi);
-    margin-right: 3px;
   }
   .cat {
     margin-bottom: 6px;
@@ -122,6 +114,7 @@
     gap: 0 8px;
   }
   .cell {
+    position: relative;
     display: flex;
     justify-content: space-between;
     gap: 6px;
@@ -131,6 +124,27 @@
   }
   .cell:hover {
     background: var(--bg-hover, #151c26);
+  }
+  .tip {
+    display: none;
+    position: absolute;
+    z-index: 60;
+    left: 0;
+    top: 100%;
+    min-width: 220px;
+    max-width: 340px;
+    padding: 6px 8px;
+    background: var(--bg-panel, #0c1118);
+    border: 1px solid var(--border-hi, #3a4658);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+    color: var(--text);
+    font-size: 10px;
+    line-height: 1.4;
+    white-space: pre-line;
+    pointer-events: none;
+  }
+  .cell:hover .tip {
+    display: block;
   }
   .nm {
     color: var(--text-dim);

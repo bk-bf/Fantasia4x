@@ -10,6 +10,7 @@
   } from '$lib/utils/pawnUtils';
   import { pawnService } from '$lib/game/services/PawnService';
   import PawnStance from './PawnStance.svelte';
+  import PawnStatBanner from './PawnStatBanner.svelte';
 
   export let pawn: Pawn;
   export let gameState: GameState;
@@ -42,32 +43,7 @@
   <div class="section-hdr">| {pawn.name.toUpperCase()}</div>
 
   <!-- Core stats grid -->
-  <div class="stats-grid">
-    <div class="stat-cell">
-      <span class="stat-lbl">STR</span>
-      <span class="stat-val">{pawn.stats.strength}</span>
-    </div>
-    <div class="stat-cell">
-      <span class="stat-lbl">DEX</span>
-      <span class="stat-val">{pawn.stats.dexterity}</span>
-    </div>
-    <div class="stat-cell">
-      <span class="stat-lbl">CON</span>
-      <span class="stat-val">{pawn.stats.constitution}</span>
-    </div>
-    <div class="stat-cell">
-      <span class="stat-lbl">INT</span>
-      <span class="stat-val">{pawn.stats.intelligence}</span>
-    </div>
-    <div class="stat-cell">
-      <span class="stat-lbl">PER</span>
-      <span class="stat-val">{pawn.stats.perception}</span>
-    </div>
-    <div class="stat-cell">
-      <span class="stat-lbl">CHA</span>
-      <span class="stat-val">{pawn.stats.charisma}</span>
-    </div>
-  </div>
+  <PawnStatBanner {pawn} />
 
   <div class="row">
     <span class="lbl">STATE</span>

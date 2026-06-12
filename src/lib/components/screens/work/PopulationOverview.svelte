@@ -5,6 +5,7 @@
   import { getPawnTaskSummary, getEfficiencyColor } from '$lib/utils/pawnUtils';
   import { stateColor, stateLabel, needBar } from '$lib/utils/workUtils';
   import type { Pawn } from '$lib/game/core/types';
+  import PawnAttributes from '$lib/components/pawn/PawnAttributes.svelte';
 
   interface Props {
     pawn: Pawn;
@@ -64,14 +65,8 @@
     >{Math.round(pawn.needs.hygiene ?? 0)}%</span
   >
 </div>
-<div class="stats-row">
-  {#each Object.entries(pawn.stats) as [stat, val]}
-    <span class="stat-chip">
-      <span class="slbl">{stat.slice(0, 3).toUpperCase()}</span>
-      <span class="sval">{val}</span>
-    </span>
-  {/each}
-</div>
+<div class="section-hdr sub">| ATTRIBUTES</div>
+<PawnAttributes {pawn} />
 <div class="section-hdr sub">| WORK EFFICIENCY</div>
 <div class="eff-grid">
   {#each sortedCategories as wc}

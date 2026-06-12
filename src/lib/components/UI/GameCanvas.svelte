@@ -40,6 +40,7 @@
   import { TICKS_PER_SECOND } from '$lib/game/core/time.js';
   import { simTarget } from '$lib/game/systems/MovementSystem.js';
   import SelectedEntityCard from '$lib/components/UI/SelectedEntityCard.svelte';
+  import StatBar from '$lib/components/UI/StatBar.svelte';
   import type {
     SelectedEntityModel,
     EntityBar,
@@ -2851,13 +2852,9 @@
       <span class="item-name">{itemDef?.name ?? hoverDroppedItem.resourceId.replace(/_/g, ' ')}</span>
       <span class="item-qty">×{hoverDroppedItem.quantity}</span>
       {#if freshPct !== null}
-        <div class="item-bar" style="color:{itemBarColor(freshPct)}">
-          FRESH <span class="item-bar-glyph">{needBar(freshPct)}</span> {freshPct}%
-        </div>
+        <StatBar label="FRESH" value={freshPct} color={itemBarColor(freshPct)} valueText="{freshPct}%" />
       {/if}
-      <div class="item-bar" style="color:{itemBarColor(durPct)}">
-        COND&nbsp; <span class="item-bar-glyph">{needBar(durPct)}</span> {durPct}%
-      </div>
+      <StatBar label="COND" value={durPct} color={itemBarColor(durPct)} valueText="{durPct}%" />
       <div class="item-hint">{hoverDroppedItem.stored ? 'stored' : 'dropped item — awaiting hauler'}</div>
     </div>
   {:else if hoverTile}
@@ -2973,14 +2970,6 @@
     font-weight: bold;
     text-transform: uppercase;
     font-size: 10px;
-  }
-  .item-bar {
-    font-size: 9px;
-    letter-spacing: -0.5px;
-    white-space: nowrap;
-  }
-  .item-bar-glyph {
-    font-family: monospace;
   }
   .item-qty {
     color: #c8a040;

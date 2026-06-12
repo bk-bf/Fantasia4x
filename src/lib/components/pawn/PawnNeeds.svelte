@@ -7,6 +7,7 @@
     ConditionStage
   } from '$lib/game/core/types';
   import { getNeedColor, getNeedDescription } from '$lib/utils/pawnUtils';
+  import StatBar from '$lib/components/UI/StatBar.svelte';
   import statusEffectsData from '$lib/game/database/status-effects.jsonc';
   import conditionsData from '$lib/game/database/conditions.jsonc';
   import { pawnService } from '$lib/game/services/PawnService';
@@ -23,10 +24,6 @@
   $: fatiguePct = Math.round(needs.fatigue);
   $: thirstPct = Math.round(needs.thirst ?? 0);
   $: hygienePct = Math.round(needs.hygiene ?? 0);
-  function blockBar(value: number, width = 20): string {
-    const filled = Math.max(0, Math.min(width, Math.round((value / 100) * width)));
-    return '[' + '█'.repeat(filled) + '░'.repeat(width - filled) + ']';
-  }
   function getBloodColor(pct: number): string {
     if (pct >= 70) return 'var(--pos)';
     if (pct >= 40) return '#c8a030';
@@ -58,35 +55,20 @@
 <div class="needs-section">
   <div class="section-hdr">| NEEDS</div>
 
-  <div class="need-row">
-    <span class="lbl">HUNGER</span>
-    <span class="block-bar" style="color: {getNeedColor(hungerPct)}">{blockBar(hungerPct)}</span>
-    <span class="val" style="color: {getNeedColor(hungerPct)}"
-      >{Math.round(needs.hunger)}/100</span
-    >
+  <div class="need-line">
+    <StatBar label="HUNGER" value={hungerPct} color={getNeedColor(hungerPct)} valueText="{Math.round(needs.hunger)}/100" />
     <span class="desc">{getNeedDescription('hunger', needs.hunger)}</span>
   </div>
-
-  <div class="need-row">
-    <span class="lbl">REST</span>
-    <span class="block-bar" style="color: {getNeedColor(fatiguePct)}">{blockBar(fatiguePct)}</span>
-    <span class="val" style="color: {getNeedColor(fatiguePct)}"
-      >{Math.round(needs.fatigue)}/100</span
-    >
+  <div class="need-line">
+    <StatBar label="REST" value={fatiguePct} color={getNeedColor(fatiguePct)} valueText="{Math.round(needs.fatigue)}/100" />
     <span class="desc">{getNeedDescription('fatigue', needs.fatigue)}</span>
   </div>
-
-  <div class="need-row">
-    <span class="lbl">THIRST</span>
-    <span class="block-bar" style="color: {getNeedColor(thirstPct)}">{blockBar(thirstPct)}</span>
-    <span class="val" style="color: {getNeedColor(thirstPct)}">{thirstPct}/100</span>
+  <div class="need-line">
+    <StatBar label="THIRST" value={thirstPct} color={getNeedColor(thirstPct)} valueText="{thirstPct}/100" />
     <span class="desc">{getNeedDescription('thirst', thirstPct)}</span>
   </div>
-
-  <div class="need-row">
-    <span class="lbl">HYGIENE</span>
-    <span class="block-bar" style="color: {getNeedColor(hygienePct)}">{blockBar(hygienePct)}</span>
-    <span class="val" style="color: {getNeedColor(hygienePct)}">{hygienePct}/100</span>
+  <div class="need-line">
+    <StatBar label="HYGIENE" value={hygienePct} color={getNeedColor(hygienePct)} valueText="{hygienePct}/100" />
     <span class="desc">{getNeedDescription('hygiene', hygienePct)}</span>
   </div>
 
@@ -94,18 +76,10 @@
     {@const maxBV = pawn.maxBloodVolume}
     {@const curBV = pawn.bloodVolume ?? maxBV}
     {@const bloodPct = Math.round((curBV / maxBV) * 100)}
-    <div class="need-row">
-      <span class="lbl">BLOOD</span>
-      <span class="block-bar" style="color: {getBloodColor(bloodPct)}">{blockBar(bloodPct)}</span>
-      <span class="val" style="color: {getBloodColor(bloodPct)}">{Math.round(curBV)}/{maxBV}</span>
+    <div class="need-line">
+      <StatBar label="BLOOD" value={bloodPct} color={getBloodColor(bloodPct)} valueText="{Math.round(curBV)}/{maxBV}" />
       <span class="desc"
-        >{bloodPct >= 90
-          ? 'healthy'
-          : bloodPct >= 60
-            ? 'low'
-            : bloodPct >= 30
-              ? 'critical'
-              : 'near death'}</span
+        >{bloodPct >= 90 ? 'healthy' : bloodPct >= 60 ? 'low' : bloodPct >= 30 ? 'critical' : 'near death'}</span
       >
     </div>
   {/if}
@@ -114,18 +88,10 @@
     {@const maxST = pawn.maxStamina}
     {@const curST = pawn.stamina ?? maxST}
     {@const stPct = Math.round((curST / maxST) * 100)}
-    <div class="need-row">
-      <span class="lbl">STAMINA</span>
-      <span class="block-bar" style="color: {getStaminaColor(stPct)}">{blockBar(stPct)}</span>
-      <span class="val" style="color: {getStaminaColor(stPct)}">{Math.round(curST)}/{maxST}</span>
+    <div class="need-line">
+      <StatBar label="STAMINA" value={stPct} color={getStaminaColor(stPct)} valueText="{Math.round(curST)}/{maxST}" />
       <span class="desc"
-        >{stPct >= 80
-          ? 'fresh'
-          : stPct >= 50
-            ? 'tired'
-            : stPct >= 20
-              ? 'winded'
-              : 'exhausted'}</span
+        >{stPct >= 80 ? 'fresh' : stPct >= 50 ? 'tired' : stPct >= 20 ? 'winded' : 'exhausted'}</span
       >
     </div>
   {/if}
@@ -195,6 +161,15 @@
     gap: 8px;
   }
   .need-row:hover {
+    background: var(--bg-hover);
+  }
+  .need-line {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 1px 8px;
+  }
+  .need-line:hover {
     background: var(--bg-hover);
   }
 
