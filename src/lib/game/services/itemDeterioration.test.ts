@@ -29,10 +29,10 @@ describe('ItemService.stepItemDeterioration (§B, count-down durability)', () =>
     expect(itemService.stepItemDeterioration(gs)).toBe(gs);
   });
 
-  it('weathers EVERY item — even one without an explicit rate (granite uses the stone default)', () => {
+  it('weathers EVERY item — e.g. granite, from its own durability pool', () => {
+    const g = itemService.getItemById('granite')!;
     const out = itemService.stepItemDeterioration(makeState([drop({ resourceId: 'granite' })]));
-    // stone category default 0.004/tick from a default 100 pool
-    expect(out.droppedItems![0].durability).toBeCloseTo(100 - 0.004);
+    expect(out.droppedItems![0].durability).toBeCloseTo((g.maxDurability ?? 100) - g.deteriorationRate!);
   });
 
   it('destroys the stack once durability reaches 0', () => {
