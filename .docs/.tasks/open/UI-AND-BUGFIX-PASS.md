@@ -83,16 +83,16 @@ Grouped, roughly by quick-win / dependency order. Each box is one loop iteration
 - [x] **F3 — Entity row click still expands.** D3 incomplete: clicking the row middle still drops
       the health panel because `focus()`→`selectMob`→ the `selectedMobId` `$effect` auto-sets
       `expandedId`. Decouple selection from expansion so only the caret expands.
-- [ ] **F4 — Stats table polish.** Color-code stat values (good/neutral/bad), and replace the
+- [x] **F4 — Stats table polish.** Color-code stat values (good/neutral/bad), and replace the
       default-browser `title=` tooltip with a styled in-aesthetic hover box for the derivation.
-- [ ] **F5 — Fix the stalled-hunt AI loop.** Mobs re-decide to hunt the same UNREACHABLE prey
+- [x] **F5 — Fix the stalled-hunt AI loop.** Mobs re-decide to hunt the same UNREACHABLE prey
       every ~60 ticks (Wolf↔Wolf). Make a failed/unreachable hunt blacklist that prey for a while
       (or require path reachability before committing), so it doesn't thrash.
 - [x] **F6 — YIELD-DBG stays as a debug tool.** Keep it in the pipeline; gate behind
       `isGameDebug()` so it's off by default but toggleable; recorded in dev memory.
-- [ ] **F7 — Work-tab attributes match the pawn-tab.** Reuse `PawnAttributes` in the WorkScreen
+- [x] **F7 — Work-tab attributes match the pawn-tab.** Reuse `PawnAttributes` in the WorkScreen
       attributes overview.
-- [ ] **F8 — Reusable STR/DEX stat banner.** Extract the base-stat banner into a shared component
+- [x] **F8 — Reusable STR/DEX stat banner.** Extract the base-stat banner into a shared component
       used by both the status and attributes (abilities) tabs.
 
 ## E. Crafting / building tabs
