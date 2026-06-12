@@ -17,6 +17,7 @@ import itemsData from '../database/items.jsonc';
 import { resourceObjectService } from './ResourceObjectService';
 import { SUBTERRAINS, SUBTERRAIN_FALLBACK } from '../core/Terrains';
 import { itemService } from './ItemService';
+import { recipeService } from './RecipeService';
 import { buildingService } from './BuildingService';
 import { pawnStatService } from './PawnStatService';
 import {
@@ -536,6 +537,12 @@ class JobServiceImpl {
     for (const id of newDropIds) {
       state = absorbDropIfOnStockpileTile(state, id);
     }
+
+    // §B tool work-wear: a tool-gated harvest spends durability on the colony's tool for
+    // that work category (stone axe ≈ 8 fells, then it breaks).
+    if (interaction?.toolRequirement && interaction.workCategory) {
+      state = itemService.applyToolWear(interaction.workCategory, state);
+    }
     return state;
   }
 
@@ -747,18 +754,25 @@ class JobServiceImpl {
       : 'crafting';
     const qualityMult = pawn ? pawnStatService.getWorkModifiers(pawn, workCategory).quality : 1;
 
-    // Add crafted item(s) to item pool with quality stored in properties
+    // Recipe registry (Stage C): a craft completion runs the producing recipe once per queued
+    // unit and emits ALL its outputs — the primary product plus any byproducts (e.g. splitting
+    // a log yields firewood AND branches; charcoal burns yield ash).
     const itemId = entry.item.id;
     const quantity = entry.quantity ?? 1;
+    const recipe = recipeService.getRecipeForItem(itemId);
+    const outputs: Record<string, number> = recipe ? recipe.outputs : { [itemId]: 1 };
+
+    // Primary output → legacy crafted-item pool (preserves quality tracking).
+    const primaryQty = (outputs[itemId] ?? 1) * quantity;
     const newItems = [...gs.item];
     const idx = newItems.findIndex((i) => i.id === itemId);
     if (idx >= 0) {
       // Existing item: just add quantity (quality is per-batch, not tracked for stacks)
-      newItems[idx] = { ...newItems[idx], amount: newItems[idx].amount + quantity };
+      newItems[idx] = { ...newItems[idx], amount: newItems[idx].amount + primaryQty };
     } else {
       newItems.push({
         ...entry.item,
-        amount: quantity,
+        amount: primaryQty,
         properties: { ...(entry.item.properties ?? {}), quality: qualityMult }
       });
     }
@@ -766,10 +780,22 @@ class JobServiceImpl {
     // Remove from crafting queue
     const newQueue = (gs.craftingQueue ?? []).filter((e) => e.id !== job.craftQueueId);
 
+    let state: GameState = { ...gs, item: newItems, craftingQueue: newQueue };
+
+    // Byproducts → stockpile (raw materials, immediately usable).
+    const byproducts: Record<string, number> = {};
+    for (const [outId, outQty] of Object.entries(outputs)) {
+      if (outId === itemId) continue;
+      byproducts[outId] = outQty * quantity;
+    }
+    if (Object.keys(byproducts).length > 0) {
+      state = itemService.addItems(byproducts, state);
+    }
+
     console.log(
-      `[JobService] Crafting complete: ${itemId} ×${quantity} quality=${qualityMult.toFixed(2)}`
+      `[JobService] Crafting complete: ${itemId} ×${primaryQty} (+${Object.keys(byproducts).length} byproduct types) quality=${qualityMult.toFixed(2)}`
     );
-    return { ...gs, item: newItems, craftingQueue: newQueue };
+    return state;
   }
 
   /** Phase 6: generate 'light' jobs for unlit campfires that have fuel. */
@@ -875,9 +901,13 @@ class JobServiceImpl {
     }
 
     let currentFuel = building.fuel ?? 0;
+    // §2 fuel-heat gate: a station only accepts fuel hot enough for it (minFuelHeat) — a
+    // bloomery won't light on green wood; charcoal/coal are needed for smelting heat.
+    const minHeat = buildingService.getBuildingById(building.type)?.minFuelHeat ?? 0;
     // Track which items to consume (read-only from aggregate; apply via consumeFromStockpiles)
     for (const item of ITEMS_DATABASE) {
       if ((item.fuelValue ?? 0) <= 0) continue;
+      if ((item.fuelHeat ?? 1) < minHeat) continue;
       if (hasFuelFilter && !allowedFuelIds.has(item.id)) continue;
       while (currentFuel < maxFuel) {
         const available = (stockpile[item.id] ?? 0) - (consumed[item.id] ?? 0);

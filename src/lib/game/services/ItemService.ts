@@ -1,15 +1,22 @@
-import type { Item, GameState, DynamicIngredientSlot, DroppedItem } from '../core/types';
-import { consumeFromStockpiles, addToStockpileZone } from '../core/GameState';
+import type { Item, GameState, DynamicIngredientSlot, DroppedItem, Recipe } from '../core/types';
+import { consumeFromStockpiles, addToStockpileZone, aggregateFromDrops } from '../core/GameState';
+import { recipeService } from './RecipeService';
 import itemsData from '../database/items.jsonc';
+import buildingsData from '../database/buildings.jsonc';
 import { SECONDS_PER_TICK } from '../core/time';
 import { rng } from '../core/rng';
 
 const ITEMS_DATABASE = itemsData as unknown as Item[];
+// Building defs are needed for tile-aware decay (storage multipliers, roofs).
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const BUILDING_DEFS_FOR_ITEMS = buildingsData as unknown as import('../core/types').Building[];
 
 // §B Durability defaults — every item weathers when left exposed (loose, unsheltered).
 // Explicit `deteriorationRate`/`maxDurability` on an item override these. Rate 0 = weather-immune.
 const DEFAULT_MAX_DURABILITY = 100;
 const DEFAULT_DETERIORATION_RATE = 0.02; // per tick
+// §1 wood seasoning: sim-seconds within the drying ring before green firewood turns dry.
+const WOOD_DRYING_SECONDS = 1800;
 const DETERIORATION_RATE_BY_CATEGORY: Record<string, number> = {
   stone: 0.004, // rock barely weathers
   primitive: 0.01,
@@ -74,6 +81,10 @@ export interface ItemService {
   // Decay
   stepItemDecay(gameState: GameState): GameState;
   stepItemDeterioration(gameState: GameState): GameState;
+  /** §B tool work-wear: spend durability on the colony's tool for `workCategory`; break at 0. */
+  applyToolWear(workCategory: string, gameState: GameState): GameState;
+  /** §1 wood seasoning: green firewood within 2 tiles (not adjacent) of a lit fire dries over time. */
+  stepWoodDrying(gameState: GameState): GameState;
 }
 
 /**
@@ -100,9 +111,8 @@ export class ItemServiceImpl implements ItemService {
 
   getCraftableItems(gameState: GameState, pawnId?: string): Item[] {
     return ITEMS_DATABASE.filter((item) => {
-      // Must have crafting cost (primary, alternative, or dynamic recipe)
-      if (!item.craftingCost && !item.craftingCostAlternatives?.length && !item.dynamicRecipe)
-        return false;
+      // Must have a producing recipe (authored in recipes.jsonc or synthesised from inline fields)
+      if (!recipeService.getRecipeForItem(item.id)) return false;
       return this.canCraftItem(item.id, gameState, pawnId);
     });
   }
@@ -125,8 +135,9 @@ export class ItemServiceImpl implements ItemService {
       return hasButcherStation;
     }
 
-    if (!item.craftingCost && !item.craftingCostAlternatives?.length && !item.dynamicRecipe)
-      return false;
+    // Recipe registry: all craftability flows from the producing recipe.
+    const recipe = recipeService.getRecipeForItem(itemId);
+    if (!recipe) return false;
 
     // Check materials
     if (!this.hasRequiredMaterials(itemId, gameState)) return false;
@@ -138,17 +149,17 @@ export class ItemServiceImpl implements ItemService {
     if (!this.hasRequiredBuilding(itemId, gameState)) return false;
 
     // Check research
-    if (item.researchRequired && !gameState.completedResearch.includes(item.researchRequired)) {
+    if (recipe.researchRequired && !gameState.completedResearch.includes(recipe.researchRequired)) {
       return false;
     }
 
     // Check population
-    if (item.populationRequired && gameState.pawns.length < item.populationRequired) {
+    if (recipe.populationRequired && gameState.pawns.length < recipe.populationRequired) {
       return false;
     }
 
     // Phase 6: stew items require a clay_cooking_pot in the colony
-    if (item.workshopType === 'campfire' && item.id === 'stew') {
+    if (recipe.station === 'campfire' && item.id === 'stew') {
       const hasCookingPot = ((gameState.stockpile ?? {})['clay_cooking_pot'] ?? 0) > 0;
       if (!hasCookingPot) return false;
     }
@@ -157,17 +168,15 @@ export class ItemServiceImpl implements ItemService {
   }
 
   hasRequiredMaterials(itemId: string, gameState: GameState): boolean {
-    const item = this.getItemById(itemId);
-    if (!item?.craftingCost && !item?.craftingCostAlternatives?.length && !item?.dynamicRecipe)
-      return true;
+    if (!recipeService.getRecipeForItem(itemId)) return true;
     return this.resolveActiveCost(itemId, gameState) !== null;
   }
 
   autoSelectIngredients(itemId: string, gameState: GameState): Record<string, string> | null {
-    const item = this.getItemById(itemId);
-    if (!item?.dynamicRecipe) return {};
+    const recipe = recipeService.getRecipeForItem(itemId);
+    if (!recipe?.dynamicRecipe) return {};
     const selected: Record<string, string> = {};
-    for (const [slotKey, slot] of Object.entries(item.dynamicRecipe)) {
+    for (const [slotKey, slot] of Object.entries(recipe.dynamicRecipe)) {
       const candidates = ITEMS_DATABASE.filter(
         (i) =>
           i.category === slot.acceptsCategory &&
@@ -185,31 +194,27 @@ export class ItemServiceImpl implements ItemService {
     gameState: GameState,
     selectedIngredients?: Record<string, string>
   ): Record<string, number> | null {
-    const item = this.getItemById(itemId);
-    if (!item) return null;
+    const recipe = recipeService.getRecipeForItem(itemId);
+    if (!recipe) return null;
     const satisfies = (cost: Record<string, number>) =>
       Object.entries(cost).every(([id, qty]) => this.getAvailableQuantity(id, gameState) >= qty);
 
-    // Resolve base crafting cost
-    let baseCost: Record<string, number> | null = null;
-    if (item.craftingCost !== undefined) {
-      // Empty craftingCost ({}) is valid — no base materials needed
-      baseCost = satisfies(item.craftingCost) ? item.craftingCost : null;
-    }
-    if (baseCost === null && item.craftingCostAlternatives?.length) {
-      baseCost = item.craftingCostAlternatives.find(satisfies) ?? null;
+    // Resolve base crafting cost (empty inputs {} is valid — no base materials needed)
+    let baseCost: Record<string, number> | null = satisfies(recipe.inputs) ? recipe.inputs : null;
+    if (baseCost === null && recipe.inputAlternatives?.length) {
+      baseCost = recipe.inputAlternatives.find(satisfies) ?? null;
     }
     if (baseCost === null) return null;
 
     // No dynamic recipe — return base cost (original behaviour)
-    if (!item.dynamicRecipe) return baseCost;
+    if (!recipe.dynamicRecipe) return baseCost;
 
     // Resolve dynamic ingredient slots
     const selected = selectedIngredients ?? this.autoSelectIngredients(itemId, gameState);
     if (!selected) return null;
 
     const dynamicCosts: Record<string, number> = {};
-    for (const [slotKey, slot] of Object.entries(item.dynamicRecipe)) {
+    for (const [slotKey, slot] of Object.entries(recipe.dynamicRecipe)) {
       const chosenId = selected[slotKey];
       if (!chosenId || this.getAvailableQuantity(chosenId, gameState) < slot.quantity) return null;
       dynamicCosts[chosenId] = slot.quantity;
@@ -219,14 +224,17 @@ export class ItemServiceImpl implements ItemService {
   }
 
   hasRequiredTools(itemId: string, gameState: GameState): boolean {
-    const item = this.getItemById(itemId);
-    if (!item?.toolTierRequired) return true;
-
-    return gameState.currentToolLevel >= item.toolTierRequired;
+    const tier = recipeService.getRecipeForItem(itemId)?.toolTierRequired;
+    if (!tier) return true;
+    return gameState.currentToolLevel >= tier;
   }
 
   hasRequiredBuilding(itemId: string, gameState: GameState): boolean {
-    const item = this.getItemById(itemId);
+    const recipe = recipeService.getRecipeForItem(itemId);
+    const item: { workshopType?: string | null; buildingRequired?: string | null } = {
+      workshopType: recipe?.station ?? null,
+      buildingRequired: recipe?.buildingRequired ?? null
+    };
 
     // All crafting requires at minimum a craft_spot — pawns need a designated safe location
     if (!item?.workshopType) {
@@ -254,10 +262,10 @@ export class ItemServiceImpl implements ItemService {
   }
 
   calculateCraftingTime(itemId: string, gameState: GameState, pawnId?: string): number {
-    const item = this.getItemById(itemId);
-    if (!item?.craftingTime) return 0;
+    const recipe = recipeService.getRecipeForItem(itemId);
+    if (!recipe?.workAmount) return 0;
 
-    let time = item.craftingTime;
+    let time = recipe.workAmount;
 
     // Apply pawn-specific bonuses if provided
     if (pawnId) {
@@ -273,8 +281,9 @@ export class ItemServiceImpl implements ItemService {
   }
 
   calculateCraftingCost(itemId: string): Record<string, number> {
-    const item = this.getItemById(itemId);
-    return item?.craftingCost ?? item?.craftingCostAlternatives?.[0] ?? {};
+    const recipe = recipeService.getRecipeForItem(itemId);
+    if (recipe) return Object.keys(recipe.inputs).length ? recipe.inputs : (recipe.inputAlternatives?.[0] ?? {});
+    return {};
   }
 
   calculateItemEffects(itemId: string): Record<string, number> {
@@ -344,31 +353,94 @@ export class ItemServiceImpl implements ItemService {
     return { ...state, carcassIntactness: newIntactnessMap };
   }
 
+  /**
+   * §C organic spoilage — per-stack, tile-aware (Stage 4). Every stack (stored or loose) of a
+   * perishable item accrues a spoilage clock; at the def's decaySeconds one unit rots into
+   * `decaysTo`. Storage SLOWS (never halts) the clock: a stored stack on a tile with a storage
+   * building uses that building's `storageDecayMultiplier` (clay cellar 0.3 …). A building with
+   * `requiresEnclosure` grants its full multiplier only when its tile is roofed; unenclosed it
+   * works at half effect. Loose stacks on open ground rot at full speed (1.0).
+   */
   stepItemDecay(gameState: GameState): GameState {
-    const stockpile = gameState.stockpile ?? {};
-    const decayAcc: Record<string, number> = { ...(gameState.stockpileDecaySeconds ?? {}) };
-    let state: GameState = gameState;
+    const drops = gameState.droppedItems;
+    if (!drops || drops.length === 0) return gameState;
 
-    for (const [itemId, qty] of Object.entries(stockpile)) {
-      if ((qty as number) <= 0) continue;
-      const def = this.getItemById(itemId);
-      if (!def?.decaySeconds) continue;
-
-      decayAcc[itemId] = (decayAcc[itemId] ?? 0) + SECONDS_PER_TICK;
-      if (decayAcc[itemId] >= def.decaySeconds) {
-        decayAcc[itemId] -= def.decaySeconds;
-        if ((state.stockpile[itemId] ?? 0) > 0) {
-          state = this.consumeItems({ [itemId]: 1 }, state);
-          if (def.decaysTo) {
-            state = this.addItems({ [def.decaysTo]: 1 }, state);
-          }
-        } else {
-          delete decayAcc[itemId];
+    // Per-tile storage multiplier from complete storage buildings (and roof presence).
+    const storageMult = new Map<string, number>();
+    const roofed = new Set<string>();
+    const enclosureNeeded = new Set<string>();
+    for (const b of gameState.buildings ?? []) {
+      if (b.status !== 'complete') continue;
+      const key = `${b.x},${b.y}`;
+      const def = BUILDING_DEFS_FOR_ITEMS.find((d) => d.id === b.type);
+      if (!def) continue;
+      if ((def.effects as Record<string, number> | undefined)?.['roof']) roofed.add(key);
+      if (def.storageDecayMultiplier !== undefined) {
+        const cur = storageMult.get(key);
+        const entry = { mult: def.storageDecayMultiplier, requiresEnclosure: def.requiresEnclosure };
+        // keep the best (lowest) multiplier on the tile
+        if (cur === undefined || entry.mult < cur) {
+          storageMult.set(key, entry.mult);
+          if (entry.requiresEnclosure) enclosureNeeded.add(key);
+          else enclosureNeeded.delete(key);
         }
       }
     }
 
-    return { ...state, stockpileDecaySeconds: decayAcc };
+    let changed = false;
+    const next: DroppedItem[] = [];
+    const rotted: { resourceId: string; x: number; y: number; stored?: boolean; qty: number }[] = [];
+
+    for (const d of drops) {
+      const def = this.getItemById(d.resourceId);
+      if (!def?.decaySeconds || (d.quantity ?? 0) <= 0) {
+        next.push(d);
+        continue;
+      }
+      const key = `${d.x},${d.y}`;
+      let mult = 1.0;
+      if (d.stored && storageMult.has(key)) {
+        mult = storageMult.get(key)!;
+        // requiresEnclosure: full benefit only when the tile is roofed; else half effect.
+        if (enclosureNeeded.has(key) && !roofed.has(key)) {
+          mult = Math.min(1, mult * 2);
+        }
+      }
+      let acc = (d.decayAcc ?? 0) + SECONDS_PER_TICK * mult;
+      let qty = d.quantity;
+      while (acc >= def.decaySeconds && qty > 0) {
+        acc -= def.decaySeconds;
+        qty -= 1;
+        if (def.decaysTo) {
+          rotted.push({ resourceId: def.decaysTo, x: d.x, y: d.y, stored: d.stored, qty: 1 });
+        }
+      }
+      changed = true;
+      if (qty > 0) next.push({ ...d, quantity: qty, decayAcc: acc });
+      // qty 0 → stack fully rotted away; drop it
+    }
+
+    if (!changed) return gameState;
+
+    // Merge rotted output into stacks at the same tile.
+    for (const r of rotted) {
+      const idx = next.findIndex(
+        (d) => d.resourceId === r.resourceId && d.x === r.x && d.y === r.y && !!d.stored === !!r.stored
+      );
+      if (idx >= 0) next[idx] = { ...next[idx], quantity: next[idx].quantity + r.qty };
+      else {
+        next.push({
+          id: `rot-${r.resourceId}-${r.x}-${r.y}`,
+          resourceId: r.resourceId,
+          x: r.x,
+          y: r.y,
+          quantity: r.qty,
+          stored: r.stored
+        });
+      }
+    }
+
+    return { ...gameState, droppedItems: next, stockpile: aggregateFromDrops(next) };
   }
 
   /**
@@ -386,10 +458,18 @@ export class ItemServiceImpl implements ItemService {
     const dropped = gameState.droppedItems;
     if (!dropped || dropped.length === 0) return gameState;
 
+    // §G: a roof shelters the tile — loose items under it take no weather damage.
+    const roofed = new Set<string>();
+    for (const b of gameState.buildings ?? []) {
+      if (b.status !== 'complete') continue;
+      const def = BUILDING_DEFS_FOR_ITEMS.find((x) => x.id === b.type);
+      if ((def?.effects as Record<string, number> | undefined)?.['roof']) roofed.add(`${b.x},${b.y}`);
+    }
+
     let changed = false;
     const next: DroppedItem[] = [];
     for (const di of dropped) {
-      if (di.stored) {
+      if (di.stored || roofed.has(`${di.x},${di.y}`)) {
         next.push(di);
         continue;
       }
@@ -424,6 +504,75 @@ export class ItemServiceImpl implements ItemService {
   private deteriorationRateFor(def: Item): number {
     if (def.deteriorationRate !== undefined) return def.deteriorationRate;
     return DETERIORATION_RATE_BY_CATEGORY[def.category] ?? DEFAULT_DETERIORATION_RATE;
+  }
+
+  /**
+   * §1 wood seasoning. A stack of green_firewood (or peat, conceptually) stored/lying within
+   * 2 tiles — but NOT directly adjacent — of a lit fire (campfire/hearth) accrues drying time;
+   * after WOOD_DRYING_SECONDS it converts to dry_firewood (the best wood fuel). Direct adjacency
+   * doesn't season (and later carries fire-spread risk — Living World).
+   */
+  stepWoodDrying(gameState: GameState): GameState {
+    const drops = gameState.droppedItems;
+    if (!drops || drops.length === 0) return gameState;
+
+    // Lit fires: complete buildings that require lighting and are currently lit.
+    const fires: { x: number; y: number }[] = [];
+    for (const b of gameState.buildings ?? []) {
+      if (b.status === 'complete' && b.lit) fires.push({ x: b.x, y: b.y });
+    }
+    if (fires.length === 0) return gameState;
+
+    let changed = false;
+    const next = drops.map((d) => {
+      if (d.resourceId !== 'green_firewood' || (d.quantity ?? 0) <= 0) return d;
+      // Chebyshev distance to the nearest fire; seasoning ring is exactly 2 (not adjacent).
+      let nearest = Infinity;
+      for (const f of fires) {
+        nearest = Math.min(nearest, Math.max(Math.abs(d.x - f.x), Math.abs(d.y - f.y)));
+      }
+      if (nearest !== 2) return d;
+      const drying = (d.drying ?? 0) + SECONDS_PER_TICK;
+      changed = true;
+      if (drying >= WOOD_DRYING_SECONDS) {
+        return { ...d, resourceId: 'dry_firewood', drying: undefined };
+      }
+      return { ...d, drying };
+    });
+
+    if (!changed) return gameState;
+    return { ...gameState, droppedItems: next, stockpile: aggregateFromDrops(next) };
+  }
+
+  /**
+   * §B tool work-wear. Each completed work action spends `durabilityLossPerAction` from the
+   * colony's tool stock for that work category (tracked in gameState.toolWear). When the
+   * accumulated wear reaches the tool's maxDurability, one tool breaks — consumed from the
+   * stockpile — and the counter resets. Beginner stone tools are deliberately fragile
+   * (stone_axe: 40/5 → ~8 fells per axe).
+   */
+  applyToolWear(workCategory: string, gameState: GameState): GameState {
+    const stockpile = gameState.stockpile ?? {};
+    // The tool in stock that serves this work category (e.g. stone_axe → woodcutting).
+    const tool = ITEMS_DATABASE.find(
+      (i) =>
+        i.type === 'tool' &&
+        (i.processingType?.includes(workCategory) || i.category === workCategory) &&
+        (stockpile[i.id] ?? 0) > 0
+    );
+    if (!tool) return gameState; // bare hands — nothing to wear
+
+    const loss = tool.durabilityLossPerAction ?? 2;
+    const max = tool.maxDurability ?? 40;
+    const wear = { ...(gameState.toolWear ?? {}) };
+    wear[tool.id] = (wear[tool.id] ?? 0) + loss;
+
+    if (wear[tool.id] >= max) {
+      wear[tool.id] = 0;
+      console.log(`[ItemService] ${tool.name} broke from use (work: ${workCategory})`);
+      return { ...this.consumeItems({ [tool.id]: 1 }, gameState), toolWear: wear };
+    }
+    return { ...gameState, toolWear: wear };
   }
 }
 

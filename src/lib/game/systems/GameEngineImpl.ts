@@ -12,6 +12,7 @@ import { get } from 'svelte/store';
 import { modifierSystem } from './ModifierSystem';
 import { workService } from '../services/WorkService';
 import { itemService } from '../services/ItemService';
+import { recipeService } from '../services/RecipeService';
 import { locationService } from '../services/LocationServices';
 import { pawnService } from '../services/PawnService';
 import { buildingService } from '../services/BuildingService';
@@ -138,7 +139,7 @@ export class GameEngineImpl implements GameEngine {
 				id: crypto.randomUUID(),
 				item: item,
 				quantity: quantity,
-				workRequired: (item.craftingTime || 1) * 5,
+				workRequired: (recipeService.getRecipeForItem(item.id)?.workAmount || 1) * 5,
 				workDone: 0,
 				materialsReserved: true,
 				startedAt: this.gameState.turn,
@@ -340,12 +341,16 @@ export class GameEngineImpl implements GameEngine {
 
 			t('needsTick', () => {
 				this.gameState = pawnService.processNeedsTick(this.gameState!);
+				this.gameState = pawnService.processAutoDrink(this.gameState!);
 			});
 			t('itemDecay', () => {
 				this.gameState = itemService.stepItemDecay(this.gameState!);
 			});
 			t('itemDeterioration', () => {
 				this.gameState = itemService.stepItemDeterioration(this.gameState!);
+			});
+			t('woodDrying', () => {
+				this.gameState = itemService.stepWoodDrying(this.gameState!);
 			});
 			t('researchTick', () => {
 				this.gameState = researchService.processResearchTick(this.gameState!);
@@ -748,6 +753,9 @@ export class GameEngineImpl implements GameEngine {
 
 		// Refactor Stage 1: structural condition decay (opt-in per building def)
 		this.gameState = buildingService.stepBuildingCondition(this.gameState!);
+
+		// §E Trapping: complete traps roll their catch chance
+		this.gameState = buildingService.stepTraps(this.gameState!);
 	}
 
 	private _processCampfireFuel(gs: GameState): GameState {

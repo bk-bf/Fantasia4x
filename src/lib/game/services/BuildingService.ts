@@ -4,7 +4,7 @@ import { resolveCharSpans } from '../core/Terrains';
 import type { CharSpan } from '../core/Terrains';
 import { rng } from '../core/rng';
 import { perTick } from '../core/time';
-import { consumeFromStockpiles } from '../core/GameState';
+import { consumeFromStockpiles, addToStockpileZone } from '../core/GameState';
 
 const AVAILABLE_BUILDINGS = buildingsData as unknown as Building[];
 
@@ -68,6 +68,10 @@ export interface BuildingService {
   processDeconstructionQueue(gameState: GameState): GameState;
   /** Assign (or unassign) a pawn to a shelter building. Pass null to clear the assignment. */
   assignShelterPawn(instanceId: string, pawnId: string | null, gameState: GameState): GameState;
+
+  // ── §E Trapping ──
+  /** Each complete trap rolls its `catchChance` per tick; on success its `catchItem` is added. */
+  stepTraps(gameState: GameState): GameState;
 
   // ── Refactor Stage 1: structural condition (§B building wear) ──
   /** Decay complete buildings' `condition` by their def `conditionDecayPerTurn` (per-tick). */
@@ -471,6 +475,22 @@ export class BuildingServiceImpl implements BuildingService {
         b.id === instanceId ? { ...b, assignedPawnId: pawnId ?? undefined } : b
       )
     };
+  }
+
+  stepTraps(gameState: GameState): GameState {
+    let state = gameState;
+    for (const b of gameState.buildings ?? []) {
+      if (b.status !== 'complete') continue;
+      const def = AVAILABLE_BUILDINGS.find((d) => d.id === b.type);
+      const fx = def?.effects;
+      if (!fx?.['trapEnabled']) continue;
+      const chance = fx['catchChance'] ?? 0;
+      if (chance <= 0 || !rng.chance(chance)) continue;
+      const item = (fx as unknown as Record<string, unknown>)['catchItem'];
+      if (typeof item !== 'string') continue;
+      state = addToStockpileZone(state, `${b.x},${b.y}`, { [item]: 1 });
+    }
+    return state;
   }
 
   stepBuildingCondition(gameState: GameState): GameState {

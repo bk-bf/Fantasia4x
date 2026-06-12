@@ -115,6 +115,10 @@ export interface DroppedItem {
 	 * at 0. Halted entirely once `stored` (in a container / enclosed). Same pool tools wear from.
 	 */
 	durability?: number;
+	/** §1 wood seasoning: accumulated drying seconds while within 2 tiles (not adjacent) of a lit fire. */
+	drying?: number;
+	/** §C per-stack spoilage clock (seconds, scaled by storage). At the def's decaySeconds, one unit rots. */
+	decayAcc?: number;
 }
 
 export interface Job {
@@ -211,6 +215,11 @@ export interface GameState {
 	carcassIntactness?: Record<string, number>;
 	/** Accumulated decay-seconds per item type in the stockpile (for stepItemDecay). */
 	stockpileDecaySeconds?: Record<string, number>;
+	/**
+	 * §B tool work-wear: accumulated durability spent per tool item id. When it reaches the
+	 * tool's maxDurability, one tool of that type breaks (consumed) and the counter resets.
+	 */
+	toolWear?: Record<string, number>;
 }
 
 // ===== ENTITIES (ENTITIES_SPAWNING spec) =====
@@ -543,7 +552,14 @@ export interface ConditionDef {
 /** Record appended to gameState.deadPawns when a pawn dies. */
 export interface DeadPawnRecord {
 	name: string;
-	cause: 'malnutrition' | 'blood_loss' | 'critical_limb' | 'combat' | 'exhaustion_cascade' | 'infection';
+	cause:
+		| 'malnutrition'
+		| 'dehydration'
+		| 'blood_loss'
+		| 'critical_limb'
+		| 'combat'
+		| 'exhaustion_cascade'
+		| 'infection';
 	turn: number;
 	stats: { strength: number; dexterity: number; intelligence: number };
 }
@@ -907,6 +923,35 @@ export interface DynamicIngredientSlot {
 }
 
 // Fixed: Remove duplicate Tool interface - Item interface covers this
+/**
+ * A crafting recipe (PRODUCTION-CHAIN-EXPANSION recipe-registry refactor). Recipes are
+ * first-class: items are pure materials; a recipe transforms `inputs` → `outputs` (the primary
+ * product plus any byproducts) at a `station`. Authored in `recipes.jsonc`, and also
+ * *synthesised* from an item's legacy inline `craftingCost`/`workshopType` fields during
+ * migration so both sources work behind one accessor.
+ */
+export interface Recipe {
+	id: string;
+	/** workshopType / building id required to run this recipe (null/undefined = anywhere). */
+	station?: string | null;
+	/** Consumed inputs. */
+	inputs: Record<string, number>;
+	/** Alternative input sets — any ONE may be used in place of `inputs`. */
+	inputAlternatives?: Record<string, number>[];
+	/** Produced items: the primary product plus any byproducts (e.g. log → firewood + branches). */
+	outputs: Record<string, number>;
+	/** Total work points (legacy `craftingTime`). */
+	workAmount: number;
+	toolTierRequired?: number;
+	researchRequired?: string | null;
+	populationRequired?: number;
+	buildingRequired?: string | null;
+	/** Variant-output slot — folds in the legacy `dynamicRecipe` system (e.g. spit_meat, stew). */
+	dynamicRecipe?: Record<string, DynamicIngredientSlot>;
+	/** True when synthesised from an item's inline fields rather than authored in recipes.jsonc. */
+	synthesized?: boolean;
+}
+
 export interface Item {
 	id: string;
 	name: string;

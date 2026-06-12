@@ -145,6 +145,13 @@ const MALNUTRITION_SAFE_HUNGER = 40; // below this threshold, condition recovers
 const MALNUTRITION_RATE_CRITICAL = perTick(0.0002); // +/s at hunger 87–99  → lethal in ~5000s ≈ 16.7 days
 const MALNUTRITION_RATE_MAX = perTick(0.0005); // +/s at hunger 100    → lethal in ~2000s ≈ 6.7 days
 const MALNUTRITION_RECOVERY_RATE = perTick(0.0003); // −/s when hunger < 40 → fully clears in ~3333s ≈ 11 days
+
+// §D dehydration — faster than starvation (you die of thirst long before hunger).
+const DEHYDRATION_ONSET_THIRST = 95; // condition starts here
+const DEHYDRATION_SAFE_THIRST = 40; // below this threshold, condition recovers
+const DEHYDRATION_RATE_CRITICAL = perTick(0.0006); // +/s at thirst 95–99 → lethal in ~1667s ≈ 5.6 days
+const DEHYDRATION_RATE_MAX = perTick(0.0015); // +/s at thirst 100   → lethal in ~667s  ≈ 2.2 days
+const DEHYDRATION_RECOVERY_RATE = perTick(0.0008); // −/s when thirst < 40
 // Blood regen is computed per-pawn via calcBloodRegenRate(pawn.stats) × SECONDS_PER_TICK.
 // See blood_regeneration entry in stats.jsonc for the formula.
 
@@ -166,7 +173,14 @@ function getConditionStage(conditionId: string, severity: number): ConditionStag
  */
 function killPawn(
     pawn: Pawn,
-    cause: 'malnutrition' | 'blood_loss' | 'critical_limb' | 'combat' | 'exhaustion_cascade' | 'infection',
+    cause:
+        | 'malnutrition'
+        | 'dehydration'
+        | 'blood_loss'
+        | 'critical_limb'
+        | 'combat'
+        | 'exhaustion_cascade'
+        | 'infection',
     gameState: GameState
 ): GameState {
     logActivity({
@@ -269,6 +283,41 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
         return killPawn(
             { ...gameState.pawns.find((p) => p.id === pawn.id)!, ...updated },
             'malnutrition',
+            {
+                ...gameState,
+                pawns: gameState.pawns.map((p) =>
+                    p.id === pawn.id ? { ...p, conditions, bloodVolume } : p
+                )
+            }
+        );
+    }
+
+    // ── Dehydration (§D) ──────────────────────────────────────────────────────
+    const thirst = pawn.needs?.thirst ?? 0;
+    const dehydrationIdx = conditions.findIndex((c) => c.id === 'dehydration');
+    if (thirst >= DEHYDRATION_ONSET_THIRST) {
+        const rate = thirst >= 100 ? DEHYDRATION_RATE_MAX : DEHYDRATION_RATE_CRITICAL;
+        if (dehydrationIdx === -1) conditions.push({ id: 'dehydration', severity: rate });
+        else
+            conditions[dehydrationIdx] = {
+                ...conditions[dehydrationIdx],
+                severity: Math.min(1.0, conditions[dehydrationIdx].severity + rate)
+            };
+    } else if (thirst < DEHYDRATION_SAFE_THIRST && dehydrationIdx !== -1) {
+        const newSeverity = conditions[dehydrationIdx].severity - DEHYDRATION_RECOVERY_RATE;
+        if (newSeverity <= 0) conditions.splice(dehydrationIdx, 1);
+        else conditions[dehydrationIdx] = { ...conditions[dehydrationIdx], severity: newSeverity };
+    }
+    const dehydrationCurrent = conditions.find((c) => c.id === 'dehydration');
+    const dehydrationDef = CONDITIONS_DB.find((d) => d.id === 'dehydration');
+    if (
+        dehydrationCurrent &&
+        dehydrationDef &&
+        dehydrationCurrent.severity >= dehydrationDef.lethalSeverity
+    ) {
+        return killPawn(
+            { ...gameState.pawns.find((p) => p.id === pawn.id)!, conditions, bloodVolume },
+            'dehydration',
             {
                 ...gameState,
                 pawns: gameState.pawns.map((p) =>
@@ -1715,11 +1764,21 @@ function handleWorking(pawn: Pawn, gameState: GameState): GameState {
     // used only the stat-based foraging_speed formula, so a skilled forager was no faster than
     // an unskilled one and mood-reduced stats didn't slow work. Construction keeps its own
     // skill-scaled rate so building times are unchanged.
-    const workPoints =
+    let workPoints =
         activeJob.type === 'construct' || activeJob.type === 'deconstruct'
             ? Math.max(1, pawn.skills['skill_construction'] ?? 0) * workSpeedMult
             : BASE_WORK_RATE *
               Math.max(0.1, modifierSystem.calculateWorkEfficiency(pawn.id, workCategory, gameState).totalValue);
+    // §G light penalty: working in darkness is slow. Read the cached per-tile light level
+    // (LightingService recomputes it each turn; daylight/fires/torches raise it). Below 0.5
+    // the pawn fumbles — down to 40% speed in pitch dark. Daylit/firelit tiles are unaffected.
+    if (pawn.position) {
+        const tile = gameState.worldMap?.[pawn.position.y]?.[pawn.position.x];
+        const light = tile?.lightLevel ?? 1;
+        if (light < 0.5) {
+            workPoints *= Math.max(0.4, 0.4 + (light / 0.5) * 0.6);
+        }
+    }
     // workPoints is authored as work-points PER SECOND; deliver one tick's worth so
     // a job authored as N seconds of work still takes N seconds of real time.
     const afterAdvance = jobService.advanceJob(jobId, perTick(workPoints), gameState);

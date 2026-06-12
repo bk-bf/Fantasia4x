@@ -9,6 +9,7 @@ import type {
 	ConditionDef,
 	ConditionStage
 } from '../core/types';
+import { consumeFromStockpiles } from '../core/GameState';
 import { calculatePawnStats, categorizeStats, getStatDescription } from '../entities/Pawns';
 import { WORK_CATEGORIES } from '../core/Work';
 import { TICKS_PER_SECOND, SECONDS_PER_TICK, perTick } from '../core/time';
@@ -60,6 +61,9 @@ export interface PawnService {
 	/** Continuous needs accrual for one 60 Hz tick (hunger/fatigue rise + health regen). */
 	processNeedsTick(gameState: GameState): GameState;
 
+	/** §D auto-drink: thirsty pawns drink stored water, or raw from an adjacent river/lake. */
+	processAutoDrink(gameState: GameState): GameState;
+
 	// Sleep decision (still used by clearTemporaryPawnStates wake logic)
 	shouldPawnSleep(pawn: Pawn): boolean;
 
@@ -86,6 +90,13 @@ export interface PawnService {
 	 */
 	getMoveSpeed(entity: Pawn | Mob): { tilesPerSecond: number; sources: string[] };
 }
+
+// §D water needs — per-second accrual (hunger baseline is ~0.54/s for reference).
+const THIRST_INCREASE_PER_SECOND = 0.7; // thirst builds a bit faster than hunger
+const HYGIENE_INCREASE_PER_SECOND = 0.3; // grime builds slowly
+// §D auto-drink: thirst threshold to drink, and relief per unit of water.
+const AUTO_DRINK_THIRST = 70;
+const WATER_THIRST_RELIEF = 65;
 
 /**
  * PawnService Implementation - Focused on pawn behavior and needs only
@@ -397,6 +408,10 @@ export class PawnServiceImpl implements PawnService {
 			const rate = this.getNeedIncreasePerTurn(pawn);
 			const hunger = Math.min(100, pawn.needs.hunger + rate.hunger * dt);
 			const fatigue = Math.min(100, pawn.needs.fatigue + rate.fatigue * dt);
+			// §D water needs: thirst & hygiene accrue each tick like hunger. Eating quenches
+			// some thirst (handled where meals are consumed); drinking/washing reset them.
+			const thirst = Math.min(100, (pawn.needs.thirst ?? 0) + THIRST_INCREASE_PER_SECOND * dt);
+			const hygiene = Math.min(100, (pawn.needs.hygiene ?? 0) + HYGIENE_INCREASE_PER_SECOND * dt);
 
 			const prevHealth = pawn.state.health ?? 100;
 			const health =
@@ -404,20 +419,91 @@ export class PawnServiceImpl implements PawnService {
 					? Math.min(100, prevHealth + this.getHealthRegenPerTurn(pawn.needs) * dt)
 					: prevHealth;
 
-			if (hunger === pawn.needs.hunger && fatigue === pawn.needs.fatigue && health === prevHealth) {
+			if (
+				hunger === pawn.needs.hunger &&
+				fatigue === pawn.needs.fatigue &&
+				thirst === (pawn.needs.thirst ?? 0) &&
+				hygiene === (pawn.needs.hygiene ?? 0) &&
+				health === prevHealth
+			) {
 				return pawn;
 			}
 
 			changed = true;
 			return {
 				...pawn,
-				needs: { ...pawn.needs, hunger, fatigue },
+				needs: { ...pawn.needs, hunger, fatigue, thirst, hygiene },
 				state: { ...pawn.state, health }
 			};
 		});
 
 		if (!changed) return gameState;
 		return { ...gameState, pawns };
+	}
+
+	/**
+	 * §D auto-drink. A pawn whose thirst passes AUTO_DRINK_THIRST drinks:
+	 *   1. stored `water` from the colony (consumes one unit), else
+	 *   2. raw water if standing next to a river/lake tile (free, but a small hygiene hit), else
+	 *   3. nothing (thirst keeps climbing → dehydration condition).
+	 * Mirrors auto-eat: a lightweight relief pass so thirst isn't a dead-end need.
+	 */
+	processAutoDrink(gameState: GameState): GameState {
+		let state = gameState;
+		for (const pawn of gameState.pawns) {
+			if (pawn.isAlive === false) continue;
+			if ((pawn.needs.thirst ?? 0) < AUTO_DRINK_THIRST) continue;
+
+			// 1. stored water
+			if ((state.stockpile?.['water'] ?? 0) > 0) {
+				state = consumeFromStockpiles(state, { water: 1 });
+				state = this.adjustThirst(pawn.id, -WATER_THIRST_RELIEF, 0, state);
+				continue;
+			}
+			// 2. raw water from an adjacent river/lake tile
+			if (pawn.position && this.isNextToWater(pawn.position.x, pawn.position.y, state)) {
+				state = this.adjustThirst(pawn.id, -WATER_THIRST_RELIEF, 6, state); // +6 hygiene (untreated)
+			}
+		}
+		return state;
+	}
+
+	private adjustThirst(
+		pawnId: string,
+		thirstDelta: number,
+		hygieneDelta: number,
+		gameState: GameState
+	): GameState {
+		return {
+			...gameState,
+			pawns: gameState.pawns.map((p) =>
+				p.id === pawnId
+					? {
+							...p,
+							needs: {
+								...p.needs,
+								thirst: Math.max(0, (p.needs.thirst ?? 0) + thirstDelta),
+								hygiene: Math.min(100, Math.max(0, (p.needs.hygiene ?? 0) + hygieneDelta)),
+								lastDrink: gameState.turn
+							}
+						}
+					: p
+			)
+		};
+	}
+
+	private isNextToWater(x: number, y: number, gameState: GameState): boolean {
+		const map = gameState.worldMap;
+		if (!map) return false;
+		for (let dy = -1; dy <= 1; dy++) {
+			for (let dx = -1; dx <= 1; dx++) {
+				const t = map[y + dy]?.[x + dx];
+				if (t && (t.type === 'water' || t.terrainType === 'river' || t.terrainType === 'lake')) {
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 
 	private calculateStateUpdate(
@@ -446,6 +532,15 @@ export class PawnServiceImpl implements PawnService {
 			// Medium fatigue - stop working but don't force sleep
 			newState.isWorking = false;
 			newState.mood = Math.max(0, newState.mood - perTick(2));
+		}
+
+		// §D water needs: parched / filthy pawns lose mood. (Dehydration → collapse and the
+		// drink/wash AI behaviour are the remaining Stage-4 piece; this is the mood pressure.)
+		if ((needs.thirst ?? 0) > 90) {
+			newState.mood = Math.max(0, newState.mood - perTick(4));
+		}
+		if ((needs.hygiene ?? 0) > 85) {
+			newState.mood = Math.max(0, newState.mood - perTick(1));
 		}
 
 		// Positive mood from activities
@@ -784,6 +879,9 @@ export class PawnServiceImpl implements PawnService {
 		updatedPawn.needs = {
 			...pawn.needs,
 			hunger: Math.max(0, pawn.needs.hunger - hungerReduction),
+			// §D: a meal also quenches some thirst, so hydration isn't constant busywork
+			// (and isn't a pure no-relief penalty before the dedicated drinking AI lands).
+			thirst: Math.max(0, (pawn.needs.thirst ?? 0) - hungerReduction * 0.8),
 			lastMeal: gameState.turn
 		};
 		updatedPawn.state = {

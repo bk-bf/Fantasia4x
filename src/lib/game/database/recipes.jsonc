@@ -1,0 +1,51 @@
+// recipes.jsonc — First-class crafting recipes (PRODUCTION-CHAIN-EXPANSION recipe registry).
+//
+// A recipe transforms `inputs` → `outputs` (primary product + byproducts) at a `station`
+// (workshopType / building id). Items in items.jsonc are pure materials; recipes that are NOT
+// listed here are still synthesised from an item's legacy inline craftingCost/workshopType
+// fields (RecipeService.synthesizeFromItems), so migration can be gradual.
+//
+// Author a recipe HERE when it needs something the inline model can't express:
+//   • multiple outputs / byproducts (log → firewood + branches)
+//   • multiple distinct recipes producing the same item (different stations/yields)
+// A recipe authored here for an output SHADOWS the synthesised inline recipe for that output.
+//
+// Schema:
+//   id                — unique recipe id
+//   station           — workshopType / building id required (omit = anywhere)
+//   inputs            — { itemId: qty } consumed
+//   inputAlternatives — [ { itemId: qty }, … ] any one set may replace `inputs`
+//   outputs           — { itemId: qty } produced (first key = primary product)
+//   workAmount        — total work points
+//   toolTierRequired, researchRequired, buildingRequired, populationRequired — optional gates
+[
+  // ── §1 Wood: splitting a log yields firewood AND branches (byproduct) ──
+  {
+    "id"      : "split_firewood",
+    "station" : "chopping_block",
+    "inputs"  : {"pine_log": 1},
+    "inputAlternatives": [{"birch_log": 1}, {"oak_log": 1}, {"ash_log": 1}, {"yew_log": 1}],
+    "outputs" : {"green_firewood": 3, "branch": 2},
+    "workAmount": 2,
+    "toolTierRequired": 0
+  },
+  // ── §1 Wood: sawing a log into planks yields sawdust (byproduct) ──
+  {
+    "id"      : "saw_pine_planks",
+    "station" : "sawtable",
+    "inputs"  : {"pine_log": 1},
+    "outputs" : {"pine_plank": 3, "sawdust": 1},
+    "workAmount": 4,
+    "toolTierRequired": 0
+  },
+  // ── §2 Fuel: charcoal pit yields charcoal AND ash (byproduct) ──
+  {
+    "id"      : "burn_charcoal",
+    "station" : "charcoal_pit",
+    "inputs"  : {"pine_log": 2},
+    "inputAlternatives": [{"oak_log": 2}, {"birch_log": 2}, {"ash_log": 2}, {"dry_firewood": 3}],
+    "outputs" : {"charcoal": 2, "ash": 1},
+    "workAmount": 12,
+    "toolTierRequired": 0
+  }
+]

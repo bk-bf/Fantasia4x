@@ -6,8 +6,26 @@
   import ITEMS_DATABASE from '$lib/game/database/items.jsonc';
   import { gameEngine } from '$lib/game/systems/GameEngineImpl';
   import { itemService } from '$lib/game/services/ItemService';
+  import { recipeService } from '$lib/game/services/RecipeService';
+  import { buildingService } from '$lib/game/services/BuildingService';
   import { onDestroy } from 'svelte';
   import type { Item, Pawn } from '$lib/game/core/types';
+
+  // Recipe registry: per-item recipe lookups (static DBs — plain functions, not reactive).
+  const recipeOf = (itemId: string) => recipeService.getRecipeForItem(itemId);
+  const stationOf = (itemId: string) => recipeOf(itemId)?.station ?? null;
+  const costOf = (itemId: string): Record<string, number> => {
+    const r = recipeOf(itemId);
+    if (!r) return {};
+    return Object.keys(r.inputs).length ? r.inputs : (r.inputAlternatives?.[0] ?? {});
+  };
+  /** Byproduct outputs (excluding the primary item) for display. */
+  const byproductsOf = (itemId: string): [string, number][] => {
+    const r = recipeOf(itemId);
+    if (!r) return [];
+    return Object.entries(r.outputs).filter(([id]) => id !== itemId);
+  };
+  const primaryQtyOf = (itemId: string): number => recipeOf(itemId)?.outputs[itemId] ?? 1;
 
   let race: any = null;
   let craftingQueue: any[] = [];
@@ -24,13 +42,20 @@
   // Station assignment: workshopType (or 'ground') → pawnId | null (null = any)
   let stationAssignments: Record<string, string | null> = {};
 
-  // Workshop sections — all crafting requires a designated station
-  const WORKSHOP_SECTIONS: Array<{ id: string; label: string }> = [
-    { id: 'craft_spot', label: 'CRAFT SPOT' },
-    { id: 'campfire', label: 'CAMPFIRE' },
-    { id: 'makers_bench', label: "MAKER'S BENCH" },
-    { id: 'butcher_spot', label: 'BUTCHER SPOT' }
-  ];
+  // Workshop sections — derived from the recipe registry so every station with recipes
+  // gets a section (curated early-game order first, the rest appended alphabetically).
+  const SECTION_ORDER = ['craft_spot', 'campfire', 'hearth', 'makers_bench', 'butcher_spot'];
+  const WORKSHOP_SECTIONS: Array<{ id: string; label: string }> = (() => {
+    const stations = new Set<string>(SECTION_ORDER);
+    for (const r of recipeService.getAllRecipes()) {
+      if (r.station) stations.add(r.station);
+    }
+    const label = (id: string) =>
+      (buildingService.getBuildingById(id)?.name ?? id.replace(/_/g, ' ')).toUpperCase();
+    const ordered = SECTION_ORDER.filter((id) => stations.has(id));
+    const rest = [...stations].filter((id) => !SECTION_ORDER.includes(id)).sort();
+    return [...ordered, ...rest].map((id) => ({ id, label: label(id) }));
+  })();
 
   $: getItemAmount = (itemId: string): number => itemMap[itemId] || 0;
 
@@ -41,11 +66,13 @@
     ? (ITEMS_DATABASE as Item[]).filter((item) => {
         // Include carcass items for butchery
         if (item.isCarcass && item.yields) return true;
-        // Include regular craftable items
-        if (!item.craftingCost) return false;
-        if (item.researchRequired && !completedResearch.includes(item.researchRequired))
+        // Include items with a producing recipe (authored or synthesised)
+        const recipe = recipeOf(item.id);
+        if (!recipe) return false;
+        if (recipe.researchRequired && !completedResearch.includes(recipe.researchRequired))
           return false;
-        if (item.populationRequired && currentPopulation < item.populationRequired) return false;
+        if (recipe.populationRequired && currentPopulation < recipe.populationRequired)
+          return false;
         return true;
       })
     : [];
@@ -98,8 +125,9 @@
     const canceledItem = craftingQueue[queueIndex];
     const item = canceledItem.item;
     gameState.update((state) => {
+      const refundCost = costOf(item.id);
       const refundedItems = state.item.map((si) => {
-        const refund = item.craftingCost?.[si.id] || 0;
+        const refund = refundCost[si.id] || 0;
         return { ...si, amount: si.amount + refund };
       });
       const newQueue = [...(state.craftingQueue || [])];
@@ -139,7 +167,7 @@
   <div class="section-hdr sub">| CRAFTING QUEUE ({craftingQueue.length})</div>
   {#if craftingQueue.length > 0}
     {#each craftingQueue as qi, idx}
-      {@const wReq = qi.workRequired ?? (qi.item.craftingTime ?? 1) * 5}
+      {@const wReq = qi.workRequired ?? (recipeOf(qi.item.id)?.workAmount ?? 1) * 5}
       {@const wDone = qi.workDone ?? 0}
       {@const pct = Math.round(Math.min(100, (wDone / wReq) * 100))}
       <div class="queue-row">
@@ -163,10 +191,9 @@
     {@const wsItems = allCraftableItems.filter((i) => {
       // Carcass items go to butcher_spot
       if (i.isCarcass && i.yields) return ws.id === 'butcher_spot';
-      // Regular items go to their workshopType
-      return ws.id === 'craft_spot'
-        ? (i.workshopType ?? null) === 'craft_spot' || (i.workshopType ?? null) === null
-        : (i.workshopType ?? null) === ws.id;
+      // Regular items go to their recipe's station
+      const st = stationOf(i.id);
+      return ws.id === 'craft_spot' ? st === 'craft_spot' || st === null : st === ws.id;
     })}
     {@const wsBuilt = availableBuildings.includes(ws.id)}
     {@const stationKey = ws.id}
@@ -199,13 +226,10 @@
         {#each wsItems as item}
           {@const craftable = $gameState !== null && itemService.canCraftItem(item.id, $gameState)}
           {@const isCarcass = item.isCarcass && item.yields}
+          {@const displayCost = isCarcass ? {} : costOf(item.id)}
           {@const affordable = isCarcass
             ? getItemAmount(item.id) > 0
-            : item.craftingCost
-              ? Object.entries(item.craftingCost).every(
-                  ([id, n]) => getItemAmount(id) >= (n as number)
-                )
-              : true}
+            : Object.entries(displayCost).every(([id, n]) => getItemAmount(id) >= (n as number))}
           <div class="recipe-row">
             <span class="recipe-name">{getTypeIcon(item.type ?? '')} {item.name.toUpperCase()}</span
             >
@@ -233,8 +257,8 @@
               </span>
             {:else}
               <span class="recipe-cost">
-                {#if item.craftingCost && Object.keys(item.craftingCost).length > 0}
-                  {#each Object.entries(item.craftingCost) as [id, n], ci}
+                {#if Object.keys(displayCost).length > 0}
+                  {#each Object.entries(displayCost) as [id, n], ci}
                     {@const have = getItemAmount(id)}
                     {#if ci > 0}<span class="cost-sep">·</span>{/if}
                     <span class="cost-item" class:neg-text={have < (n as number)}>
@@ -244,6 +268,16 @@
                   {/each}
                 {:else}
                   <span class="muted-text">free</span>
+                {/if}
+                {#if primaryQtyOf(item.id) > 1 || byproductsOf(item.id).length > 0}
+                  <span class="cost-sep">→</span>
+                  <span class="cost-item">
+                    ×{primaryQtyOf(item.id)}
+                    {#each byproductsOf(item.id) as [bid, bq]}
+                      <span class="cost-sep">+</span>{bid.replace(/_/g, ' ')}
+                      <span class="cost-qty">×{bq}</span>
+                    {/each}
+                  </span>
                 {/if}
               </span>
             {/if}

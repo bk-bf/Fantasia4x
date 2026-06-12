@@ -1,5 +1,17 @@
 [
     {
+        "id": "dehydration",
+        "name": "Dehydration",
+        "description": "Lack of water — progressive and fast. Saps strength and work capacity; lethal within days if no water is drunk.",
+        "lethalSeverity": 1.0,
+        "stages": [
+            { "label": "thirsty", "minSeverity": 0.0, "color": "#4FC3F7", "modifiers": {"workEfficiency": 0.9} },
+            { "label": "parched", "minSeverity": 0.25, "color": "#29B6F6", "modifiers": {"workEfficiency": 0.7, "fatigueRate": 1.2} },
+            { "label": "failing", "minSeverity": 0.5, "color": "#0288D1", "lifeThreatening": true, "modifiers": {"workEfficiency": 0.45, "fatigueRate": 1.4} },
+            { "label": "collapsing", "minSeverity": 0.8, "color": "#01579B", "lifeThreatening": true, "modifiers": {"workEfficiency": 0.15, "fatigueRate": 1.6} }
+        ]
+    },
+    {
         "id": "malnutrition",
         "name": "Malnutrition",
         "description": "A diet deficiency causing progressive physical deterioration. Reduces work capacity and ultimately leads to death if unchecked.",
