@@ -1,0 +1,15 @@
+{
+  "project": "fantasia4x",
+  "worktree": "feat-equipment-inventory-expansion",
+  "services": [
+    {
+      "id": "fantasia4x-feat-equipment-web",
+      "name": "Web · feat-equipment",
+      "port": 5175,
+      "pid_file": "/home/kirill/Documents/Projects/Fantasia4x/.worktrees/launch/feat-equipment-expansion/.pids/web.pid",
+      "start_cmd": "rm -rf /home/kirill/Documents/Projects/Fantasia4x/.worktrees/launch/feat-equipment-expansion/.svelte-kit && CI=true bash /home/kirill/Documents/Projects/Fantasia4x/.worktrees/launch/feat-equipment-expansion/dev.sh --debug --pid-file /home/kirill/Documents/Projects/Fantasia4x/.worktrees/launch/feat-equipment-expansion/.pids/web.pid",
+      "stop_cmd": null,
+      "cwd": "/home/kirill/Documents/Projects/Fantasia4x/.worktrees/launch/feat-equipment-expansion"
+    }
+  ]
+}
