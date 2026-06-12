@@ -10,6 +10,7 @@
   } from '$lib/game/core/PawnEquipment';
   import { consumeFromStockpiles } from '$lib/game/core/GameState';
   import { gameEngine } from '$lib/game/systems/GameEngineImpl';
+  import EquipmentDoll from './EquipmentDoll.svelte';
 
   export let pawn: Pawn;
 
@@ -70,52 +71,11 @@
   <!-- Currently Equipped -->
   <div class="equipped-items">
     <h4>Currently Equipped:</h4>
-    <div class="equipment-slots">
-      {#each (['mainHand','offHand','headBase','headOuter','bodyBase','bodyMid','bodyOuter','gloves','boots','gorget','ring','belt','back'] as const) as slot}
-        <div class="equipment-slot">
-          <div class="slot-header">
-            <span class="slot-name">{slot}</span>
-            {#if pawn.equipment && pawn.equipment[slot as EquipmentSlot]}
-              <button
-                class="unequip-btn"
-                class:loading={equipmentLoading}
-                on:click={() => unequipPawnItem(pawn.id, slot)}
-                disabled={equipmentLoading}
-              >
-                {equipmentLoading ? 'Unequipping...' : 'Unequip'}
-              </button>
-            {/if}
-          </div>
-
-          {#if pawn.equipment && pawn.equipment[slot as EquipmentSlot]}
-            {@const inst = pawn.equipment[slot as EquipmentSlot]}
-            {#if inst}
-              {@const itemInfo = gameEngine.getItemById(inst.itemId)}
-              {@const maxDur = itemInfo?.maxDurability ?? 100}
-              <div class="equipped-item">
-                <span class="item-icon">{itemInfo?.emoji || '📦'}</span>
-                <div class="item-details">
-                  <span class="item-name">{itemInfo?.name}</span>
-                  <div class="durability-bar">
-                    <div
-                      class="durability-fill"
-                      style="width: {(inst.durability / maxDur) * 100}%"
-                    ></div>
-                  </div>
-                  <span class="durability-text">
-                    {inst.durability}/{maxDur}
-                  </span>
-                </div>
-              </div>
-            {:else}
-              <div class="empty-slot">Empty {slot} slot</div>
-            {/if}
-          {:else}
-            <div class="empty-slot">Empty {slot} slot</div>
-          {/if}
-        </div>
-      {/each}
-    </div>
+    <EquipmentDoll
+      {pawn}
+      loading={equipmentLoading}
+      onUnequip={(slot) => unequipPawnItem(pawn.id, slot)}
+    />
   </div>
 
   <!-- Available Items -->
@@ -127,7 +87,6 @@
         {#if itemInfo && quantity > 0 && itemInfo.type !== 'material'}
           <div class="inventory-item" data-type={itemInfo.type}>
             <div class="item-header">
-              <span class="item-icon">{itemInfo.emoji}</span>
               <span class="item-name">{itemInfo.name}</span>
               <span class="item-quantity">x{Math.floor(quantity)}</span>
             </div>
@@ -196,96 +155,6 @@
     margin: 0;
   }
 
-  .equipment-slots {
-    display: flex;
-    flex-direction: column;
-    margin-bottom: 0;
-  }
-
-  .equipment-slot {
-    background: var(--bg);
-    border-bottom: 1px solid var(--border);
-    padding: 3px 8px;
-  }
-  .equipment-slot:hover {
-    background: var(--bg-hover);
-  }
-
-  .slot-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-  }
-
-  .slot-name {
-    color: var(--text-dim);
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
-
-  .unequip-btn {
-    background: var(--bg-hover);
-    border: 1px solid var(--border-hi);
-    color: var(--text);
-    padding: 1px 6px;
-    cursor: pointer;
-    font-family: 'Courier New', monospace;
-    font-size: 10px;
-  }
-  .unequip-btn:hover {
-    color: var(--neg);
-    border-color: var(--neg);
-  }
-  .unequip-btn.loading {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  .equipped-item {
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-    padding: 1px 0;
-  }
-
-  .item-icon {
-    display: none;
-  }
-
-  .item-details {
-    flex: 1;
-  }
-
-  .item-name {
-    color: var(--text);
-    font-size: 11px;
-    display: block;
-  }
-
-  .durability-bar {
-    height: 3px;
-    background: var(--bg-active);
-    margin: 2px 0;
-  }
-
-  .durability-fill {
-    height: 100%;
-    background: var(--pos);
-  }
-
-  .durability-text {
-    color: var(--text-muted);
-    font-size: 10px;
-  }
-
-  .empty-slot {
-    color: var(--text-muted);
-    font-style: italic;
-    font-size: 11px;
-    padding: 1px 0;
-  }
-
   .inventory-grid {
     display: flex;
     flex-direction: column;
@@ -311,6 +180,11 @@
     display: flex;
     align-items: baseline;
     gap: 6px;
+  }
+
+  .item-name {
+    color: var(--text);
+    font-size: 11px;
   }
 
   .item-quantity {
