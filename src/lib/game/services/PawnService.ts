@@ -11,6 +11,7 @@ import type {
 } from '../core/types';
 import { consumeFromStockpiles } from '../core/GameState';
 import { calculatePawnStats, categorizeStats, getStatDescription } from '../entities/Pawns';
+import { pawnStatService } from './PawnStatService';
 import { WORK_CATEGORIES } from '../core/Work';
 import { TICKS_PER_SECOND, SECONDS_PER_TICK, perTick } from '../core/time';
 import { advanceAlongPath } from '../systems/MovementSystem';
@@ -762,7 +763,9 @@ export class PawnServiceImpl implements PawnService {
 	// Calibrated to 1 day = 300 in-game seconds: 0→70 in ~130 s ≈ 0.43 days (matches Rimworld ~10.5h hunger trigger).
 	// Per-second magnitude. Applied smoothly each tick (via perTick) by processNeedsTick().
 	private getHungerIncreasePerTurn(pawn: Pawn): number {
-		let baseHunger = 0.54;
+		// Body size drives appetite via the data-driven `hunger_rate` stat (stats.jsonc):
+		// a 70 kg pawn = 1.0×, heavier bodies hunger faster, lighter slower.
+		let baseHunger = 0.54 * pawnStatService.evaluateStat('hunger_rate', pawn);
 
 		if (pawn.state.isWorking) {
 			baseHunger *= 1.4;

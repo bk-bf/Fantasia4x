@@ -115,18 +115,11 @@
         "description": "blood recovery (× blood_filtration)"
     },
     {
-        "id"         : "hunger_capacity",
+        "id"         : "hunger_rate",
         "category"   : "physical",
         "primaryStat": "constitution",
-        "formula"    : "(weight + (CON − 10) × 3 + 30) × digestion",
-        "description": "hunger tolerance (× digestion)"
-    },
-    {
-        "id"         : "fatigue_capacity",
-        "category"   : "physical",
-        "primaryStat": "constitution",
-        "formula"    : "(weight × 0.8 + (CON − 10) × 3 + (STR − 10) + 44) × consciousness",
-        "description": "fatigue tolerance (× consciousness)"
+        "formula"    : "1.0 + (weight − 70) × 0.01",
+        "description": "hunger accrual multiplier by body size (70 kg = 1.0×; bigger bodies hunger faster)"
     },
     // ── Resistance ────────────────────────────────────────────────────────────────
     // Resistances are multiplied by consciousness (dazed = weaker) and

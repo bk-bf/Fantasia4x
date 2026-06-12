@@ -21,6 +21,7 @@ import { wasmPathfinderService } from './WasmPathfinderService';
 import { buildPathfindingGridsWithBlocked } from './PathfinderService';
 import { occupancyService } from './OccupancyService';
 import { calcMaxStamina, calcMaxBloodVolume } from '../entities/Pawns';
+import { pawnStatService } from './PawnStatService';
 import { createDefaultBodyParts } from '../systems/Combat';
 import { gameLogger } from '../dev/gameLogger';
 import { logHuntStart, logFlee, logEntityStateChange, logEntityDeath } from '../../stores/Log';
@@ -1435,8 +1436,10 @@ class EntityServiceImpl {
                         : 0.7; // omnivore
 
             const condMults = conditionNeedMultipliers(mob.conditions ?? []);
+            // Body size drives appetite via the same data-driven `hunger_rate` stat as pawns.
+            const sizeRate = pawnStatService.evaluateStat('hunger_rate', mob);
             const hungerDelta =
-                BASE_HUNGER_PER_SECOND * SECONDS_PER_TICK * dietMult * condMults.hungerRate;
+                BASE_HUNGER_PER_SECOND * SECONDS_PER_TICK * dietMult * condMults.hungerRate * sizeRate;
             const fatigueDelta = BASE_FATIGUE_PER_SECOND * SECONDS_PER_TICK * condMults.fatigueRate;
 
             // Sleeping: hunger accrues at 33% rate; fatigue recovers instead of rising.

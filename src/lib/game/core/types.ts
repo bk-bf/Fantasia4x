@@ -638,16 +638,8 @@ export interface Pawn {
 	stamina?: number;
 	/** Maximum stamina pool for this pawn. */
 	maxStamina?: number;
-	/**
-	 * Hunger tolerance before critical state — derived from CON.
-	 * Formula: round(100 + (CON − 10) × 3). Default 100.
-	 */
-	maxHunger?: number;
-	/**
-	 * Fatigue tolerance before collapse — derived from CON.
-	 * Formula: round(100 + (CON − 10) × 3). Default 100.
-	 */
-	maxFatigue?: number;
+	// hunger and fatigue are flat 0–100 needs (no per-pawn pool); body size affects the
+	// hunger *rate* via the `hunger_rate` stat, not a variable cap.
 
 	// ===== COMBAT =====
 	/**

@@ -26,15 +26,17 @@ function evaluateFormula(
     capacities: Record<string, number> = {}
 ): number {
     if (!formula) return 1.0;
+    // Stats default to 10 when absent so formulas never crash on partial entities (some mobs /
+    // minimal test fixtures may lack a full stat block).
     let expr = formula
         .replace(/×/g, '*')
         .replace(/−/g, '-')
-        .replace(/\bSTR\b/g, String(p.stats.strength))
-        .replace(/\bDEX\b/g, String(p.stats.dexterity))
-        .replace(/\bCON\b/g, String(p.stats.constitution))
-        .replace(/\bPER\b/g, String(p.stats.perception))
-        .replace(/\bINT\b/g, String(p.stats.intelligence))
-        .replace(/\bCHA\b/g, String(p.stats.charisma))
+        .replace(/\bSTR\b/g, String(p.stats?.strength ?? 10))
+        .replace(/\bDEX\b/g, String(p.stats?.dexterity ?? 10))
+        .replace(/\bCON\b/g, String(p.stats?.constitution ?? 10))
+        .replace(/\bPER\b/g, String(p.stats?.perception ?? 10))
+        .replace(/\bINT\b/g, String(p.stats?.intelligence ?? 10))
+        .replace(/\bCHA\b/g, String(p.stats?.charisma ?? 10))
         .replace(/\bweight\b/g, String(p.physicalTraits?.weight ?? 70))
         .replace(/\bheight\b/g, String(p.physicalTraits?.height ?? 170))
         .replace(/\bconsciousness\b/g, String(capacities.consciousness ?? 1))

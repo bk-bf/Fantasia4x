@@ -18,10 +18,9 @@
   export let gameState: GameState;
 
   $: needs = pawn.needs;
-  $: maxH = pawn.maxHunger ?? 100;
-  $: hungerPct = Math.round((needs.hunger / maxH) * 100);
-  $: maxF = pawn.maxFatigue ?? 100;
-  $: fatiguePct = Math.round((needs.fatigue / maxF) * 100);
+  // Hunger and fatigue are flat 0–100 needs.
+  $: hungerPct = Math.round(needs.hunger);
+  $: fatiguePct = Math.round(needs.fatigue);
   function blockBar(value: number, width = 20): string {
     const filled = Math.max(0, Math.min(width, Math.round((value / 100) * width)));
     return '[' + '█'.repeat(filled) + '░'.repeat(width - filled) + ']';
@@ -61,7 +60,7 @@
     <span class="lbl">HUNGER</span>
     <span class="block-bar" style="color: {getNeedColor(hungerPct)}">{blockBar(hungerPct)}</span>
     <span class="val" style="color: {getNeedColor(hungerPct)}"
-      >{Math.round(needs.hunger)}/{maxH}</span
+      >{Math.round(needs.hunger)}/100</span
     >
     <span class="desc">{getNeedDescription('hunger', needs.hunger)}</span>
   </div>
@@ -70,7 +69,7 @@
     <span class="lbl">REST</span>
     <span class="block-bar" style="color: {getNeedColor(fatiguePct)}">{blockBar(fatiguePct)}</span>
     <span class="val" style="color: {getNeedColor(fatiguePct)}"
-      >{Math.round(needs.fatigue)}/{maxF}</span
+      >{Math.round(needs.fatigue)}/100</span
     >
     <span class="desc">{getNeedDescription('fatigue', needs.fatigue)}</span>
   </div>

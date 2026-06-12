@@ -29,28 +29,6 @@ export function calcBloodRegenRate(stats: EntityStats): number {
   return (1.0 + (stats.constitution - 10) * 0.08) * 0.05;
 }
 
-/**
- * Hunger pool derived from body weight and constitution.
- * Formula matches hunger_capacity ability: weight + (CON − 10) × 3 + 30.
- * A 70 kg pawn with CON 10 ≈ 100; heavier/tougher pawns go higher.
- * NOTE: Gameplay thresholds in PawnStateMachine are still absolute (0–100 scale);
- *       make them proportional (maxHunger × fraction) when that system is updated.
- */
-export function calcMaxHunger(physicalTraits: { weight: number }, stats: EntityStats): number {
-  return Math.round(physicalTraits.weight + (stats.constitution - 10) * 3 + 30);
-}
-
-/**
- * Fatigue pool derived from body weight, constitution, and strength.
- * Formula matches fatigue_capacity ability: weight × 0.8 + (CON − 10) × 3 + (STR − 10) + 44.
- * A 70 kg pawn with CON 10, STR 10 ≈ 100.
- */
-export function calcMaxFatigue(physicalTraits: { weight: number }, stats: EntityStats): number {
-  return Math.round(
-    physicalTraits.weight * 0.8 + (stats.constitution - 10) * 3 + (stats.strength - 10) + 44
-  );
-}
-
 /** Blood pool derived from body weight and constitution. */
 export function calcMaxBloodVolume(physicalTraits: { weight: number }, stats: EntityStats): number {
   return Math.round(physicalTraits.weight * 1.4 + (stats.constitution - 10) * 2);
@@ -67,8 +45,6 @@ export function generatePawns(race: Race, count?: number): Pawn[] {
     const physicalTraits = rollPhysicalTraits(race.physicalTraits);
     const maxBloodVolume = calcMaxBloodVolume(physicalTraits, finalStats);
     const maxStamina = calcMaxStamina(finalStats);
-    const maxHunger = calcMaxHunger(physicalTraits, finalStats);
-    const maxFatigue = calcMaxFatigue(physicalTraits, finalStats);
 
     const pawn: Pawn = {
       id: `pawn-${i}`,
@@ -102,9 +78,6 @@ export function generatePawns(race: Race, count?: number): Pawn[] {
       // Combat — stamina
       stamina: maxStamina,
       maxStamina,
-      // Needs capacity
-      maxHunger,
-      maxFatigue,
       limbs: [
         {
           id: 'head',
