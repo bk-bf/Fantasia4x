@@ -31,9 +31,13 @@ if lsof -ti tcp:$PORT >/dev/null 2>&1; then
 fi
 
 export PATH="$HOME/.npm-global/bin:$PATH"
+
+# Pass current branch name so the UI can label itself in multi-worktree setups
+BRANCH=$(git -C "$SCRIPT_DIR" branch --show-current 2>/dev/null || echo "")
+
 if [[ "$DEBUG_MODE" == "true" ]]; then
   echo "Debug mode enabled — entity IDs and dev controls will be visible."
-  exec env VITE_DEBUG_MODE=true pnpm exec vite dev --host --port $PORT
+  exec env VITE_DEBUG_MODE=true VITE_DEV_BRANCH="$BRANCH" pnpm exec vite dev --host --port $PORT
 else
-  exec pnpm exec vite dev --host --port $PORT
+  exec env VITE_DEV_BRANCH="$BRANCH" pnpm exec vite dev --host --port $PORT
 fi
