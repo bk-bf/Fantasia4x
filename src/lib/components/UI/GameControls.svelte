@@ -138,8 +138,20 @@
   }
 </script>
 
+<svelte:head>
+  {#if import.meta.env.VITE_DEV_BRANCH && import.meta.env.VITE_DEV_BRANCH !== 'main'}
+    <title>Fantasia4x [{import.meta.env.VITE_DEV_BRANCH}]</title>
+  {:else}
+    <title>Fantasia4x</title>
+  {/if}
+</svelte:head>
+
 <div class="topbar">
   <span class="bi title">FANTASIA4X</span>
+  {#if import.meta.env.VITE_DEV_BRANCH && import.meta.env.VITE_DEV_BRANCH !== 'main'}
+    <span class="bi branch-label" title="branch: {import.meta.env.VITE_DEV_BRANCH}"
+      >{import.meta.env.VITE_DEV_BRANCH.replace(/^feat\//, '')}</span>
+  {/if}
   <span class="bi date" title="{gameDate.monthName} {gameDate.day}, Year {gameDate.year}"
     >{gameDate.dayStr}/{gameDate.monthStr}/{gameDate.yearStr} {gameDate.hourStr}:00</span
   >
@@ -220,6 +232,16 @@
     color: var(--accent-hi);
     font-weight: bold;
     letter-spacing: 0.05em;
+  }
+  .bi.branch-label {
+    color: var(--accent-hi);
+    background: color-mix(in srgb, var(--accent-hi) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent-hi) 35%, transparent);
+    border-radius: 2px;
+    padding: 0 4px;
+    font-size: 9px;
+    letter-spacing: 0.04em;
+    opacity: 0.85;
   }
   .bi.date {
     color: var(--text-dim);
