@@ -359,7 +359,6 @@ export interface WorkCategory {
 	// Requirements
 	toolsRequired?: string[];
 	skillRequired?: string;
-	locationTypesRequired?: string[]; // Location types where this work can be done
 
 	// Efficiency modifiers
 	primaryStat: keyof EntityStats;

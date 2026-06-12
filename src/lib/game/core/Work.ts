@@ -10,7 +10,6 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     name: 'Foraging',
     description: 'Gather berries, nuts, and edible plants from the wild',
     color: '#4CAF50',
-    locationTypesRequired: ['plains', 'forest'],
     primaryStat: 'perception',
     secondaryStat: 'constitution',
     baseEfficiency: 1.0
@@ -21,7 +20,6 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     description: 'Harvest wood from trees in forests and groves',
     color: '#8D6E63',
     toolsRequired: ['stone_axe', 'iron_axe', 'steel_axe'],
-    locationTypesRequired: ['forest', 'plains'],
     primaryStat: 'strength',
     secondaryStat: 'constitution',
     baseEfficiency: 1.0
@@ -32,7 +30,6 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     description: 'Extract stone, ore, and minerals from quarries and mines',
     color: '#607D8B',
     toolsRequired: ['stone_pick', 'iron_pick', 'steel_pick'],
-    locationTypesRequired: ['hills', 'mountains', 'caves'],
     primaryStat: 'strength',
     secondaryStat: 'constitution',
     baseEfficiency: 1.0
@@ -43,7 +40,6 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     description: 'Hunt animals for meat, hide, and other materials',
     color: '#8D4E85',
     toolsRequired: ['stone_spear', 'iron_spear', 'shortbow', 'longbow'],
-    locationTypesRequired: ['forest', 'plains', 'hills'],
     primaryStat: 'dexterity',
     secondaryStat: 'perception',
     baseEfficiency: 1.0
@@ -64,7 +60,6 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     description: 'Catch fish from rivers, lakes, and streams',
     color: '#4FC3F7',
     toolsRequired: ['digging_stick', 'fishing_spear', 'fishing_rod'],
-    locationTypesRequired: ['river'],
     primaryStat: 'dexterity',
     secondaryStat: 'perception',
     baseEfficiency: 1.0
@@ -75,7 +70,6 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     description: 'Sow seeds, tend crops, and manage farmland',
     color: '#66BB6A',
     toolsRequired: ['digging_stick', 'stone_hoe', 'iron_hoe'],
-    locationTypesRequired: ['plains', 'forest'],
     primaryStat: 'dexterity',
     secondaryStat: 'intelligence',
     baseEfficiency: 1.0
@@ -116,7 +110,6 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     name: 'Digging',
     description: 'Excavate soil, clay, and minerals from the ground',
     color: '#8D6E63',
-    locationTypesRequired: ['river'], // Need clay deposits
     primaryStat: 'dexterity',
     secondaryStat: 'intelligence',
     baseEfficiency: 1.0
