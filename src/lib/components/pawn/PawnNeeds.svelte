@@ -23,7 +23,7 @@
   $: fatiguePct = Math.round(needs.fatigue);
   $: thirstPct = Math.round(needs.thirst ?? 0);
   $: hygienePct = Math.round(needs.hygiene ?? 0);
-  function blockBar(value: number, width = 20): string {
+  function blockBar(value: number, width = 16): string {
     const filled = Math.max(0, Math.min(width, Math.round((value / 100) * width)));
     return '[' + '█'.repeat(filled) + '░'.repeat(width - filled) + ']';
   }
@@ -187,6 +187,7 @@
     align-items: center;
     padding: 3px 8px;
     gap: 8px;
+    min-height: 26px;
   }
   .need-row:hover {
     background: var(--bg-hover);
@@ -224,6 +225,7 @@
     font-size: 11px;
     font-style: italic;
     flex: 1;
+    white-space: nowrap;
   }
 
   .block-bar {
