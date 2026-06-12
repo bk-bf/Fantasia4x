@@ -3,6 +3,7 @@ import { resolveCharSpans, type CharSpan } from '../core/Terrains';
 import resourceObjectsData from '../database/resources.jsonc';
 import { pawnStatService } from './PawnStatService';
 import { rng } from '../core/rng';
+import { gameLogger } from '../dev/gameLogger';
 
 export interface ResourceYieldDef {
   itemId: string;
@@ -164,6 +165,14 @@ class ResourceObjectServiceImpl {
       // Apply workYield bonus from racial traits (e.g. Keen Senses for foraging)
       const traitYieldMult = this.getWorkYieldMultiplier(pawn, interaction.workCategory);
       const amount = Math.max(0, Math.round(roll * multiplier * traitYieldMult * statYieldMult));
+      // TEMP YIELD-DBG: prints the config THIS build sees + every multiplier, to settle whether
+      // low harvests are stale data (wrong cfg[min-max]) or a runtime multiplier. Remove after.
+      gameLogger.log(
+        0,
+        'JOB-EVT',
+        () =>
+          `YIELD-DBG ${resourceId}/${interaction.workCategory} ${y.itemId} cfg[${y.min}-${y.max}] roll=${roll} skillx${multiplier.toFixed(2)} traitx${traitYieldMult.toFixed(2)} statx${statYieldMult.toFixed(2)} -> ${amount}`
+      );
       if (amount > 0) {
         result[y.itemId] = (result[y.itemId] ?? 0) + amount;
       }

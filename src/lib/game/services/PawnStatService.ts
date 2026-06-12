@@ -75,8 +75,17 @@ function calculateCapacityValue(
     // Organ lookup: find a specific BodyPartState inside a limb's parts[]
     const organ = (limbId: string, organId: string): BodyPartState | undefined =>
         limb(limbId)?.parts?.find((p) => p.id === organId);
-    const organH = (limbId: string, organId: string) =>
-        organ(limbId, organId)?.health ?? organ(limbId, organId)?.maxHp ?? 100;
+    // Health as a PERCENT of the organ's own maxHp (0–100), so callsites' `/100` yields the
+    // correct 0–1 fraction. Organs carry realistic small maxHp (eyes 10, heart 20…); dividing
+    // absolute hp by a flat 100 made a fully-healthy organ read as ~10% capacity. Absent/
+    // unmodelled organ → treated as fully healthy (100), matching the prior fallback.
+    const organH = (limbId: string, organId: string) => {
+        const o = organ(limbId, organId);
+        if (!o) return 100;
+        const max = o.maxHp ?? 100;
+        const hp = o.health ?? max;
+        return max > 0 ? (hp / max) * 100 : 0;
+    };
     const organMissing = (limbId: string, organId: string) =>
         organ(limbId, organId)?.isMissing ?? false;
 

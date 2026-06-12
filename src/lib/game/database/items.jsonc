@@ -9,7 +9,7 @@
     "description"      : "Foraged berries. Small, tart, filling enough.",
     "color"            : "#673AB7",
     "amount"           : 0,
-    "nutrition"        : 1.0,
+    "nutrition"        : 0.4,
     "gatheringTypes"   : ["foraging"],
     "decaySeconds"     : 600,
     "decaysTo"         : "rotten_food"
