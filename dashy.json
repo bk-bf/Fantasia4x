@@ -4,7 +4,7 @@
     {
       "id": "fantasia4x-web",
       "name": "Web · main",
-      "port": 5173,
+      "port": 5174,
       "pid_file": "/home/kirill/Documents/Projects/Fantasia4x/.pids/web.pid",
       "start_cmd": "rm -rf /home/kirill/Documents/Projects/Fantasia4x/.svelte-kit && CI=true bash /home/kirill/Documents/Projects/Fantasia4x/dev.sh --debug --pid-file /home/kirill/Documents/Projects/Fantasia4x/.pids/web.pid",
       "stop_cmd": null,
