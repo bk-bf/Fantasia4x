@@ -978,7 +978,7 @@
       "workAmount"     : 2,
       "toolRequirement": null,
       "yields"         : [
-        {"itemId": "wild_berries", "min": 2, "max": 4, "skillId": "foraging", "skillMultiplier": 0.2}
+        {"itemId": "wild_berries", "min": 10, "max": 25, "skillId": "foraging", "skillMultiplier": 0.2}
       ],
       "persistent"     : true,
       "regrowthTurns"  : 2400 // ~8 days at 300 turns/day
@@ -1041,628 +1041,244 @@
   // chains are not yet designed. See _TODO fields.
   // ─────────────────────────────────────────────────────────────────────────
   // Most common mountain ore. Will form the backbone of the iron-age tech tier.
-    {
-    "id": "malachite",
-    "displayName": "Malachite",
-    "subterrain": "ore_vein",
-    "walkable": true,
-    "charSpans": [
-      {
-        "literal": "*"
-      }
-    ],
-    "fg": [
-      0.11,
-      0.48,
-      0.3
-    ],
-    "bg": [
-      0.08,
-      0.06,
-      0.03
-    ],
-    "color": "#1B7A4C",
-    "spawn": {
-      "subterrains": {
-        "mineral_deposit": 0.06
-      }
-    },
-    "nodeAmountRange": [
-      3,
-      7
-    ],
-    "designationTypes": [
-      "harvest"
-    ],
-    "interaction": {
-      "action": "mine",
-      "workCategory": "mining",
-      "workAmount": 10,
-      "toolRequirement": {
-        "workType": "mining",
-        "minTier": 1
-      },
-      "yields": [
-        {
-          "itemId": "malachite",
-          "min": 2,
-          "max": 6,
-          "skillId": "mining",
-          "skillMultiplier": 0.2
-        }
-      ]
+  {
+    "id"              : "malachite",
+    "displayName"     : "Malachite",
+    "subterrain"      : "ore_vein",
+    "walkable"        : true,
+    "charSpans"       : [ {"literal": "*"} ],
+    "fg"              : [0.11, 0.48, 0.3],
+    "bg"              : [0.08, 0.06, 0.03],
+    "color"           : "#1B7A4C",
+    "spawn"           : { "subterrains": {"mineral_deposit": 0.06} },
+    "nodeAmountRange" : [3, 7],
+    "designationTypes": ["harvest"],
+    "interaction"     : {
+      "action"         : "mine",
+      "workCategory"   : "mining",
+      "workAmount"     : 10,
+      "toolRequirement": {"workType": "mining", "minTier": 1},
+      "yields"         : [ {"itemId": "malachite", "min": 2, "max": 6, "skillId": "mining", "skillMultiplier": 0.2} ]
     }
   },
-    {
-    "id": "chalcopyrite",
-    "displayName": "Chalcopyrite",
-    "subterrain": "ore_vein",
-    "walkable": true,
-    "charSpans": [
-      {
-        "literal": "*"
-      }
-    ],
-    "fg": [
-      0.79,
-      0.64,
-      0.15
-    ],
-    "bg": [
-      0.08,
-      0.06,
-      0.03
-    ],
-    "color": "#C9A227",
-    "spawn": {
-      "subterrains": {
-        "mineral_deposit": 0.03
-      }
-    },
-    "nodeAmountRange": [
-      3,
-      6
-    ],
-    "designationTypes": [
-      "harvest"
-    ],
-    "interaction": {
-      "action": "mine",
-      "workCategory": "mining",
-      "workAmount": 10,
-      "toolRequirement": {
-        "workType": "mining",
-        "minTier": 1
-      },
-      "yields": [
-        {
-          "itemId": "chalcopyrite",
-          "min": 2,
-          "max": 5,
-          "skillId": "mining",
-          "skillMultiplier": 0.2
-        }
-      ]
+  {
+    "id"              : "chalcopyrite",
+    "displayName"     : "Chalcopyrite",
+    "subterrain"      : "ore_vein",
+    "walkable"        : true,
+    "charSpans"       : [ {"literal": "*"} ],
+    "fg"              : [0.79, 0.64, 0.15],
+    "bg"              : [0.08, 0.06, 0.03],
+    "color"           : "#C9A227",
+    "spawn"           : { "subterrains": {"mineral_deposit": 0.03} },
+    "nodeAmountRange" : [3, 6],
+    "designationTypes": ["harvest"],
+    "interaction"     : {
+      "action"         : "mine",
+      "workCategory"   : "mining",
+      "workAmount"     : 10,
+      "toolRequirement": {"workType": "mining", "minTier": 1},
+      "yields"         : [ {"itemId": "chalcopyrite", "min": 2, "max": 5, "skillId": "mining", "skillMultiplier": 0.2} ]
     }
   },
-    {
-    "id": "azurite",
-    "displayName": "Azurite",
-    "subterrain": "ore_vein",
-    "walkable": true,
-    "charSpans": [
-      {
-        "literal": "*"
-      }
-    ],
-    "fg": [
-      0.18,
-      0.36,
-      0.72
-    ],
-    "bg": [
-      0.08,
-      0.06,
-      0.03
-    ],
-    "color": "#2E5BB8",
-    "spawn": {
-      "subterrains": {
-        "mineral_deposit": 0.025
-      }
-    },
-    "nodeAmountRange": [
-      2,
-      5
-    ],
-    "designationTypes": [
-      "harvest"
-    ],
-    "interaction": {
-      "action": "mine",
-      "workCategory": "mining",
-      "workAmount": 10,
-      "toolRequirement": {
-        "workType": "mining",
-        "minTier": 1
-      },
-      "yields": [
-        {
-          "itemId": "azurite",
-          "min": 1,
-          "max": 4,
-          "skillId": "mining",
-          "skillMultiplier": 0.2
-        }
-      ]
+  {
+    "id"              : "azurite",
+    "displayName"     : "Azurite",
+    "subterrain"      : "ore_vein",
+    "walkable"        : true,
+    "charSpans"       : [ {"literal": "*"} ],
+    "fg"              : [0.18, 0.36, 0.72],
+    "bg"              : [0.08, 0.06, 0.03],
+    "color"           : "#2E5BB8",
+    "spawn"           : { "subterrains": {"mineral_deposit": 0.025} },
+    "nodeAmountRange" : [2, 5],
+    "designationTypes": ["harvest"],
+    "interaction"     : {
+      "action"         : "mine",
+      "workCategory"   : "mining",
+      "workAmount"     : 10,
+      "toolRequirement": {"workType": "mining", "minTier": 1},
+      "yields"         : [ {"itemId": "azurite", "min": 1, "max": 4, "skillId": "mining", "skillMultiplier": 0.2} ]
     }
   },
-    {
-    "id": "cassiterite",
-    "displayName": "Cassiterite",
-    "subterrain": "ore_vein",
-    "walkable": true,
-    "charSpans": [
-      {
-        "literal": "*"
-      }
-    ],
-    "fg": [
-      0.42,
-      0.27,
-      0.14
-    ],
-    "bg": [
-      0.08,
-      0.06,
-      0.03
-    ],
-    "color": "#6B4423",
-    "spawn": {
-      "subterrains": {
-        "mineral_deposit": 0.03
-      }
-    },
-    "nodeAmountRange": [
-      2,
-      5
-    ],
-    "designationTypes": [
-      "harvest"
-    ],
-    "interaction": {
-      "action": "mine",
-      "workCategory": "mining",
-      "workAmount": 10,
-      "toolRequirement": {
-        "workType": "mining",
-        "minTier": 1
-      },
-      "yields": [
-        {
-          "itemId": "cassiterite",
-          "min": 1,
-          "max": 4,
-          "skillId": "mining",
-          "skillMultiplier": 0.2
-        }
-      ]
+  {
+    "id"              : "cassiterite",
+    "displayName"     : "Cassiterite",
+    "subterrain"      : "ore_vein",
+    "walkable"        : true,
+    "charSpans"       : [ {"literal": "*"} ],
+    "fg"              : [0.42, 0.27, 0.14],
+    "bg"              : [0.08, 0.06, 0.03],
+    "color"           : "#6B4423",
+    "spawn"           : { "subterrains": {"mineral_deposit": 0.03} },
+    "nodeAmountRange" : [2, 5],
+    "designationTypes": ["harvest"],
+    "interaction"     : {
+      "action"         : "mine",
+      "workCategory"   : "mining",
+      "workAmount"     : 10,
+      "toolRequirement": {"workType": "mining", "minTier": 1},
+      "yields"         : [ {"itemId": "cassiterite", "min": 1, "max": 4, "skillId": "mining", "skillMultiplier": 0.2} ]
     }
   },
-    {
-    "id": "hematite",
-    "displayName": "Hematite",
-    "subterrain": "ore_vein",
-    "walkable": true,
-    "charSpans": [
-      {
-        "literal": "*"
-      }
-    ],
-    "fg": [
-      0.55,
-      0.23,
-      0.18
-    ],
-    "bg": [
-      0.08,
-      0.06,
-      0.03
-    ],
-    "color": "#8B3A2F",
-    "spawn": {
-      "subterrains": {
-        "mineral_deposit": 0.06
-      }
-    },
-    "nodeAmountRange": [
-      3,
-      7
-    ],
-    "designationTypes": [
-      "harvest"
-    ],
-    "interaction": {
-      "action": "mine",
-      "workCategory": "mining",
-      "workAmount": 10,
-      "toolRequirement": {
-        "workType": "mining",
-        "minTier": 2
-      },
-      "yields": [
-        {
-          "itemId": "hematite",
-          "min": 2,
-          "max": 6,
-          "skillId": "mining",
-          "skillMultiplier": 0.2
-        }
-      ]
+  {
+    "id"              : "hematite",
+    "displayName"     : "Hematite",
+    "subterrain"      : "ore_vein",
+    "walkable"        : true,
+    "charSpans"       : [ {"literal": "*"} ],
+    "fg"              : [0.55, 0.23, 0.18],
+    "bg"              : [0.08, 0.06, 0.03],
+    "color"           : "#8B3A2F",
+    "spawn"           : { "subterrains": {"mineral_deposit": 0.06} },
+    "nodeAmountRange" : [3, 7],
+    "designationTypes": ["harvest"],
+    "interaction"     : {
+      "action"         : "mine",
+      "workCategory"   : "mining",
+      "workAmount"     : 10,
+      "toolRequirement": {"workType": "mining", "minTier": 2},
+      "yields"         : [ {"itemId": "hematite", "min": 2, "max": 6, "skillId": "mining", "skillMultiplier": 0.2} ]
     }
   },
-    {
-    "id": "magnetite",
-    "displayName": "Magnetite",
-    "subterrain": "ore_vein",
-    "walkable": true,
-    "charSpans": [
-      {
-        "literal": "*"
-      }
-    ],
-    "fg": [
-      0.2,
-      0.22,
-      0.23
-    ],
-    "bg": [
-      0.08,
-      0.06,
-      0.03
-    ],
-    "color": "#33373B",
-    "spawn": {
-      "subterrains": {
-        "mineral_deposit": 0.03
-      }
-    },
-    "nodeAmountRange": [
-      3,
-      6
-    ],
-    "designationTypes": [
-      "harvest"
-    ],
-    "interaction": {
-      "action": "mine",
-      "workCategory": "mining",
-      "workAmount": 10,
-      "toolRequirement": {
-        "workType": "mining",
-        "minTier": 2
-      },
-      "yields": [
-        {
-          "itemId": "magnetite",
-          "min": 2,
-          "max": 5,
-          "skillId": "mining",
-          "skillMultiplier": 0.2
-        }
-      ]
+  {
+    "id"              : "magnetite",
+    "displayName"     : "Magnetite",
+    "subterrain"      : "ore_vein",
+    "walkable"        : true,
+    "charSpans"       : [ {"literal": "*"} ],
+    "fg"              : [0.2, 0.22, 0.23],
+    "bg"              : [0.08, 0.06, 0.03],
+    "color"           : "#33373B",
+    "spawn"           : { "subterrains": {"mineral_deposit": 0.03} },
+    "nodeAmountRange" : [3, 6],
+    "designationTypes": ["harvest"],
+    "interaction"     : {
+      "action"         : "mine",
+      "workCategory"   : "mining",
+      "workAmount"     : 10,
+      "toolRequirement": {"workType": "mining", "minTier": 2},
+      "yields"         : [ {"itemId": "magnetite", "min": 2, "max": 5, "skillId": "mining", "skillMultiplier": 0.2} ]
     }
   },
-    {
-    "id": "limonite",
-    "displayName": "Limonite",
-    "subterrain": "ore_vein",
-    "walkable": true,
-    "charSpans": [
-      {
-        "literal": "*"
-      }
-    ],
-    "fg": [
-      0.71,
-      0.4,
-      0.11
-    ],
-    "bg": [
-      0.08,
-      0.06,
-      0.03
-    ],
-    "color": "#B5651D",
-    "spawn": {
-      "subterrains": {
-        "mineral_deposit": 0.025
-      }
-    },
-    "nodeAmountRange": [
-      2,
-      5
-    ],
-    "designationTypes": [
-      "harvest"
-    ],
-    "interaction": {
-      "action": "mine",
-      "workCategory": "mining",
-      "workAmount": 10,
-      "toolRequirement": {
-        "workType": "mining",
-        "minTier": 2
-      },
-      "yields": [
-        {
-          "itemId": "limonite",
-          "min": 1,
-          "max": 4,
-          "skillId": "mining",
-          "skillMultiplier": 0.2
-        }
-      ]
+  {
+    "id"              : "limonite",
+    "displayName"     : "Limonite",
+    "subterrain"      : "ore_vein",
+    "walkable"        : true,
+    "charSpans"       : [ {"literal": "*"} ],
+    "fg"              : [0.71, 0.4, 0.11],
+    "bg"              : [0.08, 0.06, 0.03],
+    "color"           : "#B5651D",
+    "spawn"           : { "subterrains": {"mineral_deposit": 0.025} },
+    "nodeAmountRange" : [2, 5],
+    "designationTypes": ["harvest"],
+    "interaction"     : {
+      "action"         : "mine",
+      "workCategory"   : "mining",
+      "workAmount"     : 10,
+      "toolRequirement": {"workType": "mining", "minTier": 2},
+      "yields"         : [ {"itemId": "limonite", "min": 1, "max": 4, "skillId": "mining", "skillMultiplier": 0.2} ]
     }
   },
-    {
-    "id": "galena",
-    "displayName": "Galena",
-    "subterrain": "ore_vein",
-    "walkable": true,
-    "charSpans": [
-      {
-        "literal": "*"
-      }
-    ],
-    "fg": [
-      0.43,
-      0.45,
-      0.47
-    ],
-    "bg": [
-      0.08,
-      0.06,
-      0.03
-    ],
-    "color": "#6E7378",
-    "spawn": {
-      "subterrains": {
-        "mineral_deposit": 0.025
-      }
-    },
-    "nodeAmountRange": [
-      2,
-      5
-    ],
-    "designationTypes": [
-      "harvest"
-    ],
-    "interaction": {
-      "action": "mine",
-      "workCategory": "mining",
-      "workAmount": 10,
-      "toolRequirement": {
-        "workType": "mining",
-        "minTier": 2
-      },
-      "yields": [
-        {
-          "itemId": "galena",
-          "min": 1,
-          "max": 4,
-          "skillId": "mining",
-          "skillMultiplier": 0.2
-        }
-      ]
+  {
+    "id"              : "galena",
+    "displayName"     : "Galena",
+    "subterrain"      : "ore_vein",
+    "walkable"        : true,
+    "charSpans"       : [ {"literal": "*"} ],
+    "fg"              : [0.43, 0.45, 0.47],
+    "bg"              : [0.08, 0.06, 0.03],
+    "color"           : "#6E7378",
+    "spawn"           : { "subterrains": {"mineral_deposit": 0.025} },
+    "nodeAmountRange" : [2, 5],
+    "designationTypes": ["harvest"],
+    "interaction"     : {
+      "action"         : "mine",
+      "workCategory"   : "mining",
+      "workAmount"     : 10,
+      "toolRequirement": {"workType": "mining", "minTier": 2},
+      "yields"         : [ {"itemId": "galena", "min": 1, "max": 4, "skillId": "mining", "skillMultiplier": 0.2} ]
     }
   },
-    {
-    "id": "native_gold",
-    "displayName": "Native Gold",
-    "subterrain": "ore_vein",
-    "walkable": true,
-    "charSpans": [
-      {
-        "literal": "*"
-      }
-    ],
-    "fg": [
-      0.83,
-      0.69,
-      0.22
-    ],
-    "bg": [
-      0.08,
-      0.06,
-      0.03
-    ],
-    "color": "#D4AF37",
-    "spawn": {
-      "subterrains": {
-        "mineral_deposit": 0.01
-      }
-    },
-    "nodeAmountRange": [
-      1,
-      3
-    ],
-    "designationTypes": [
-      "harvest"
-    ],
-    "interaction": {
-      "action": "mine",
-      "workCategory": "mining",
-      "workAmount": 10,
-      "toolRequirement": {
-        "workType": "mining",
-        "minTier": 2
-      },
-      "yields": [
-        {
-          "itemId": "native_gold",
-          "min": 0,
-          "max": 2,
-          "skillId": "mining",
-          "skillMultiplier": 0.2
-        }
-      ]
+  {
+    "id"              : "native_gold",
+    "displayName"     : "Native Gold",
+    "subterrain"      : "ore_vein",
+    "walkable"        : true,
+    "charSpans"       : [ {"literal": "*"} ],
+    "fg"              : [0.83, 0.69, 0.22],
+    "bg"              : [0.08, 0.06, 0.03],
+    "color"           : "#D4AF37",
+    "spawn"           : { "subterrains": {"mineral_deposit": 0.01} },
+    "nodeAmountRange" : [1, 3],
+    "designationTypes": ["harvest"],
+    "interaction"     : {
+      "action"         : "mine",
+      "workCategory"   : "mining",
+      "workAmount"     : 10,
+      "toolRequirement": {"workType": "mining", "minTier": 2},
+      "yields"         : [ {"itemId": "native_gold", "min": 0, "max": 2, "skillId": "mining", "skillMultiplier": 0.2} ]
     }
   },
-    {
-    "id": "electrum",
-    "displayName": "Electrum Ore",
-    "subterrain": "ore_vein",
-    "walkable": true,
-    "charSpans": [
-      {
-        "literal": "*"
-      }
-    ],
-    "fg": [
-      0.9,
-      0.83,
-      0.6
-    ],
-    "bg": [
-      0.08,
-      0.06,
-      0.03
-    ],
-    "color": "#E6D49A",
-    "spawn": {
-      "subterrains": {
-        "mineral_deposit": 0.008
-      }
-    },
-    "nodeAmountRange": [
-      1,
-      3
-    ],
-    "designationTypes": [
-      "harvest"
-    ],
-    "interaction": {
-      "action": "mine",
-      "workCategory": "mining",
-      "workAmount": 10,
-      "toolRequirement": {
-        "workType": "mining",
-        "minTier": 2
-      },
-      "yields": [
-        {
-          "itemId": "electrum",
-          "min": 0,
-          "max": 2,
-          "skillId": "mining",
-          "skillMultiplier": 0.2
-        }
-      ]
+  {
+    "id"              : "electrum",
+    "displayName"     : "Electrum Ore",
+    "subterrain"      : "ore_vein",
+    "walkable"        : true,
+    "charSpans"       : [ {"literal": "*"} ],
+    "fg"              : [0.9, 0.83, 0.6],
+    "bg"              : [0.08, 0.06, 0.03],
+    "color"           : "#E6D49A",
+    "spawn"           : { "subterrains": {"mineral_deposit": 0.008} },
+    "nodeAmountRange" : [1, 3],
+    "designationTypes": ["harvest"],
+    "interaction"     : {
+      "action"         : "mine",
+      "workCategory"   : "mining",
+      "workAmount"     : 10,
+      "toolRequirement": {"workType": "mining", "minTier": 2},
+      "yields"         : [ {"itemId": "electrum", "min": 0, "max": 2, "skillId": "mining", "skillMultiplier": 0.2} ]
     }
   },
-    {
-    "id": "coal",
-    "displayName": "Coal",
-    "subterrain": "ore_vein",
-    "walkable": true,
-    "charSpans": [
-      {
-        "literal": "*"
-      }
-    ],
-    "fg": [
-      0.1,
-      0.1,
-      0.1
-    ],
-    "bg": [
-      0.08,
-      0.06,
-      0.03
-    ],
-    "color": "#1A1A1A",
-    "spawn": {
-      "subterrains": {
-        "mineral_deposit": 0.1
-      }
-    },
-    "nodeAmountRange": [
-      3,
-      6
-    ],
-    "designationTypes": [
-      "harvest"
-    ],
-    "interaction": {
-      "action": "mine",
-      "workCategory": "mining",
-      "workAmount": 10,
-      "toolRequirement": {
-        "workType": "mining",
-        "minTier": 1
-      },
-      "yields": [
-        {
-          "itemId": "coal",
-          "min": 2,
-          "max": 5,
-          "skillId": "mining",
-          "skillMultiplier": 0.2
-        }
-      ]
+  {
+    "id"              : "coal",
+    "displayName"     : "Coal",
+    "subterrain"      : "ore_vein",
+    "walkable"        : true,
+    "charSpans"       : [ {"literal": "*"} ],
+    "fg"              : [0.1, 0.1, 0.1],
+    "bg"              : [0.08, 0.06, 0.03],
+    "color"           : "#1A1A1A",
+    "spawn"           : { "subterrains": {"mineral_deposit": 0.1} },
+    "nodeAmountRange" : [3, 6],
+    "designationTypes": ["harvest"],
+    "interaction"     : {
+      "action"         : "mine",
+      "workCategory"   : "mining",
+      "workAmount"     : 10,
+      "toolRequirement": {"workType": "mining", "minTier": 1},
+      "yields"         : [ {"itemId": "coal", "min": 2, "max": 5, "skillId": "mining", "skillMultiplier": 0.2} ]
     }
   },
-    {
-    "id": "rock_salt",
-    "displayName": "Rock Salt",
-    "subterrain": "ore_vein",
-    "walkable": true,
-    "charSpans": [
-      {
-        "literal": "*"
-      }
-    ],
-    "fg": [
-      0.94,
-      0.94,
-      0.94
-    ],
-    "bg": [
-      0.08,
-      0.06,
-      0.03
-    ],
-    "color": "#EFEFEF",
-    "spawn": {
-      "subterrains": {
-        "mineral_deposit": 0.05
-      }
-    },
-    "nodeAmountRange": [
-      2,
-      5
-    ],
-    "designationTypes": [
-      "harvest"
-    ],
-    "interaction": {
-      "action": "mine",
-      "workCategory": "mining",
-      "workAmount": 10,
-      "toolRequirement": {
-        "workType": "mining",
-        "minTier": 1
-      },
-      "yields": [
-        {
-          "itemId": "salt",
-          "min": 1,
-          "max": 4,
-          "skillId": "mining",
-          "skillMultiplier": 0.2
-        }
-      ]
+  {
+    "id"              : "rock_salt",
+    "displayName"     : "Rock Salt",
+    "subterrain"      : "ore_vein",
+    "walkable"        : true,
+    "charSpans"       : [ {"literal": "*"} ],
+    "fg"              : [0.94, 0.94, 0.94],
+    "bg"              : [0.08, 0.06, 0.03],
+    "color"           : "#EFEFEF",
+    "spawn"           : { "subterrains": {"mineral_deposit": 0.05} },
+    "nodeAmountRange" : [2, 5],
+    "designationTypes": ["harvest"],
+    "interaction"     : {
+      "action"         : "mine",
+      "workCategory"   : "mining",
+      "workAmount"     : 10,
+      "toolRequirement": {"workType": "mining", "minTier": 1},
+      "yields"         : [ {"itemId": "salt", "min": 1, "max": 4, "skillId": "mining", "skillMultiplier": 0.2} ]
     }
   },
   // Softer than iron; easier to smelt. Key component of the bronze alloy (copper + tin).
