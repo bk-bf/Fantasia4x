@@ -166,14 +166,17 @@ class ResourceObjectServiceImpl {
       // Apply workYield bonus from racial traits (e.g. Keen Senses for foraging)
       const traitYieldMult = this.getWorkYieldMultiplier(pawn, interaction.workCategory);
       const amount = Math.max(0, Math.round(roll * multiplier * traitYieldMult * statYieldMult));
-      // TEMP YIELD-DBG: prints the config THIS build sees + every multiplier, to settle whether
-      // low harvests are stale data (wrong cfg[min-max]) or a runtime multiplier. Remove after.
-      gameLogger.log(
-        0,
-        'JOB-EVT',
-        () =>
-          `YIELD-DBG ${resourceId}/${interaction.workCategory} ${y.itemId} cfg[${y.min}-${y.max}] roll=${roll} skillx${multiplier.toFixed(2)} traitx${traitYieldMult.toFixed(2)} statx${statYieldMult.toFixed(2)} -> ${amount}`
-      );
+      // YIELD-DBG: per-item harvest breakdown (config the build sees + every multiplier). A kept
+      // debug tool — gated behind gameDebug() so it's off by default but toggleable when probing
+      // yields (grep YIELD-DBG .debug/pawns.log). See dev-memory: yield-dbg-debug-tool.
+      if (isGameDebug()) {
+        gameLogger.log(
+          0,
+          'JOB-EVT',
+          () =>
+            `YIELD-DBG ${resourceId}/${interaction.workCategory} ${y.itemId} cfg[${y.min}-${y.max}] roll=${roll} skillx${multiplier.toFixed(2)} traitx${traitYieldMult.toFixed(2)} statx${statYieldMult.toFixed(2)} -> ${amount}`
+        );
+      }
       if (amount > 0) {
         result[y.itemId] = (result[y.itemId] ?? 0) + amount;
       }

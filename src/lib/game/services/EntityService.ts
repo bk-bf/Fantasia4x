@@ -104,6 +104,9 @@ const CORPSE_PORTION = 0.5;
 const WANDER_MOVES_PER_SECOND = 1.0;
 /** Cooldown after a failed hunt before the entity can re-enter Hunting state (seconds). */
 const HUNT_COOLDOWN_SECONDS = 60;
+/** Give up a hunt that has dragged on this long without closing to attack range — stops the
+ *  endless uncatchable chase (equal-speed predators) that thrashed the AI + log. */
+const HUNT_GIVE_UP_SECONDS = 25;
 /** Fatigue level at which mobs enter sleep — set lower than pawn (60 vs 72) so animals
  * sleep more naturally and spend a realistic fraction of time resting. */
 const SLEEP_FATIGUE_THRESHOLD = 60;
@@ -1261,6 +1264,20 @@ class EntityServiceImpl {
             // combatService.tickCombat() resolves actual damage each tick.
             pendingMobState.set(prey.id, { state: 'Attacking', stateSince: turn, huntTargetId: mob.id });
             return { ...mob, state: 'Attacking', stateSince: turn, huntTargetId: prey.id, path: [] };
+        }
+
+        // Hunt give-up: if we've chased this whole hunt (stateSince = when Hunting began) without
+        // ever closing to attack range, abandon it and cool down. Prevents the endless chase of
+        // uncatchable prey (e.g. equal-speed Wolf↔Wolf) that re-triggered every tick.
+        if (turn - mob.stateSince > ticksFromSeconds(HUNT_GIVE_UP_SECONDS)) {
+            const restState: MobState = def.behaviour === 'passive' ? 'Grazing' : 'Wander';
+            return {
+                ...this.wanderStep(mob, def, state),
+                huntTargetId: undefined,
+                huntCooldownUntil: turn + ticksFromSeconds(HUNT_COOLDOWN_SECONDS),
+                state: restState,
+                stateSince: turn
+            };
         }
 
         // Pursue prey via A*. Re-path when our route is exhausted or the prey has

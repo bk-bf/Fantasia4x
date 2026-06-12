@@ -6,10 +6,13 @@
 PORT=5173
 DEBUG_MODE=false
 
-for arg in "$@"; do
-  if [[ "$arg" == "--debug" ]]; then
-    DEBUG_MODE=true
-  fi
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --debug) DEBUG_MODE=true ;;
+    --port) PORT="$2"; shift ;;
+    --port=*) PORT="${1#--port=}" ;;
+  esac
+  shift
 done
 
 if lsof -ti tcp:$PORT >/dev/null 2>&1; then
