@@ -14,8 +14,9 @@
   interface Props {
     pawn: Pawn;
     wc: WorkCategory;
-    /** speed / yield / quality from pawnStatService.getWorkModifiers — the single work model. */
-    mods: { speed: number; yield: number; quality: number };
+    /** speed / yield / quality from pawnStatService.getWorkModifiers — the single work model.
+     * yield/quality are null for jobs that don't have that axis (e.g. hauling = speed only). */
+    mods: { speed: number; yield: number | null; quality: number | null };
     rank: CellRank;
     level: 0 | 1 | 2 | 3 | 4;
     x: number;
@@ -38,9 +39,9 @@
   const mult = (n: number) => `×${n.toFixed(2)}`;
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-  // Single headline efficiency = speed × yield × quality, as a percentage where an
-  // average pawn (1.0 across the board) reads 100%. Drives the medal ranking too.
-  let eff = $derived(mods.speed * mods.yield * mods.quality);
+  // Single headline efficiency = product of the axes this job actually has (absent
+  // axes are null → treated as 1). An average pawn reads 100%. Drives medal ranking too.
+  let eff = $derived(mods.speed * (mods.yield ?? 1) * (mods.quality ?? 1));
 
   let stats = $derived(
     [
@@ -97,14 +98,18 @@
     <span class="tip-lbl">Speed</span>
     <span style="color:{getEfficiencyColor(mods.speed)}">{mult(mods.speed)}</span>
   </div>
-  <div class="tip-row">
-    <span class="tip-lbl">Yield</span>
-    <span style="color:{getEfficiencyColor(mods.yield)}">{mult(mods.yield)}</span>
-  </div>
-  <div class="tip-row">
-    <span class="tip-lbl">Quality</span>
-    <span style="color:{getEfficiencyColor(mods.quality)}">{mult(mods.quality)}</span>
-  </div>
+  {#if mods.yield !== null}
+    <div class="tip-row">
+      <span class="tip-lbl">Yield</span>
+      <span style="color:{getEfficiencyColor(mods.yield)}">{mult(mods.yield)}</span>
+    </div>
+  {/if}
+  {#if mods.quality !== null}
+    <div class="tip-row">
+      <span class="tip-lbl">Quality</span>
+      <span style="color:{getEfficiencyColor(mods.quality)}">{mult(mods.quality)}</span>
+    </div>
+  {/if}
 
   <div class="tip-row">
     <span class="tip-lbl">Assigned</span>

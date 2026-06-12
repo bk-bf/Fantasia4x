@@ -76,7 +76,7 @@
 
   // Speed / yield / quality per pawn/work from the single stats.jsonc model — drives both
   // the medal ranking (by throughput = speed × yield) and the hover tooltip.
-  type WorkMods = { speed: number; yield: number; quality: number };
+  type WorkMods = { speed: number; yield: number | null; quality: number | null };
   let modMap = $derived.by(() => {
     // Touch $gameState so this recomputes as pawns' state (needs/conditions) changes.
     void $gameState.turn;
@@ -97,7 +97,7 @@
       const eff: Record<string, number> = {};
       for (const wc of WORK_CATEGORIES) {
         const m = modMap[pawn.id]?.[wc.id];
-        eff[wc.id] = m ? m.speed * m.yield * m.quality : 0;
+        eff[wc.id] = m ? m.speed * (m.yield ?? 1) * (m.quality ?? 1) : 0;
       }
       map[pawn.id] = rankWorkCells(eff);
     }

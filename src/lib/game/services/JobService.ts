@@ -711,7 +711,9 @@ class JobServiceImpl {
 
     // Wire stats.jsonc construction quality into building durability
     const pawn = gs.pawns.find((p) => p.id === job.claimedBy);
-    const qualityMult = pawn ? pawnStatService.getWorkModifiers(pawn, 'construction').quality : 1;
+    const qualityMult = pawn
+      ? (pawnStatService.getWorkModifiers(pawn, 'construction').quality ?? 1)
+      : 1;
 
     const newBuildings = (gs.buildings ?? []).map((b) =>
       b.id === job.buildingId
@@ -753,7 +755,9 @@ class JobServiceImpl {
             ? 'cooking'
             : 'crafting'
       : 'crafting';
-    const qualityMult = pawn ? pawnStatService.getWorkModifiers(pawn, workCategory).quality : 1;
+    const qualityMult = pawn
+      ? (pawnStatService.getWorkModifiers(pawn, workCategory).quality ?? 1)
+      : 1;
 
     // Recipe registry (Stage C): a craft completion runs the producing recipe once per queued
     // unit and emits ALL its outputs — the primary product plus any byproducts (e.g. splitting

@@ -157,7 +157,7 @@ class ResourceObjectServiceImpl {
     // Wire stats.jsonc work yield into harvest output. getWorkModifiers is the single source —
     // the `*_yield` formula already folds in racial trait workYield (see PawnStatService).
     const statYieldMult = pawn
-      ? pawnStatService.getWorkModifiers(pawn, interaction.workCategory).yield
+      ? (pawnStatService.getWorkModifiers(pawn, interaction.workCategory).yield ?? 1)
       : 1;
     for (const y of interaction.yields) {
       if (availableItemIds && !availableItemIds.has(y.itemId)) continue;

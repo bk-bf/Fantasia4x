@@ -214,13 +214,6 @@
         "description": "foraging resource amount (× sight)"
     },
     {
-        "id"         : "foraging_quality",
-        "category"   : "work",
-        "primaryStat": "perception",
-        "formula"    : "(1.0 + (PER − 10) × 0.03) × sight × consciousness",
-        "description": "foraged food quality (× sight × consciousness)"
-    },
-    {
         "id"         : "woodcutting_speed",
         "category"   : "work",
         "primaryStat": "strength",
@@ -233,13 +226,6 @@
         "primaryStat": "strength",
         "formula"    : "(1.0 + (STR − 10) × 0.05) × manipulation",
         "description": "wood per tree (× manipulation)"
-    },
-    {
-        "id"         : "woodcutting_quality",
-        "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "(1.0 + (DEX − 10) × 0.03) × manipulation × sight",
-        "description": "wood quality (× manipulation × sight)"
     },
     {
         "id"         : "mining_speed",
@@ -256,32 +242,11 @@
         "description": "ore per vein (× manipulation)"
     },
     {
-        "id"         : "mining_quality",
-        "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "(1.0 + (DEX − 10) × 0.03 + (INT − 10) × 0.02) × manipulation × sight",
-        "description": "ore purity (× manipulation × sight)"
-    },
-    {
         "id"         : "hunting_speed",
         "category"   : "work",
         "primaryStat": "dexterity",
         "formula"    : "(1.0 + (DEX − 10) × 0.05 + (PER − 10) × 0.03) × sight × moving",
         "description": "hunting speed (× sight × moving)"
-    },
-    {
-        "id"         : "hunting_yield",
-        "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "(1.0 + (DEX − 10) × 0.03 + (STR − 10) × 0.02) × sight",
-        "description": "meat per kill (× sight)"
-    },
-    {
-        "id"         : "hunting_quality",
-        "category"   : "work",
-        "primaryStat": "perception",
-        "formula"    : "(1.0 + (PER − 10) × 0.04 + (DEX − 10) × 0.02) × sight × consciousness",
-        "description": "pelt quality (× sight × consciousness)"
     },
     {
         "id"         : "butchery_speed",
@@ -319,25 +284,11 @@
         "description": "catch size (× sight)"
     },
     {
-        "id"         : "fishing_quality",
-        "category"   : "work",
-        "primaryStat": "perception",
-        "formula"    : "(1.0 + (PER − 10) × 0.04) × sight × consciousness",
-        "description": "fish quality (× sight × consciousness)"
-    },
-    {
         "id"         : "crafting_speed",
         "category"   : "work",
         "primaryStat": "dexterity",
         "formula"    : "(1.0 + (DEX − 10) × 0.05 + (INT − 10) × 0.02) × manipulation × sight",
         "description": "crafting speed (× manipulation × sight)"
-    },
-    {
-        "id"         : "crafting_yield",
-        "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "(1.0 + (DEX − 10) × 0.03 + (INT − 10) × 0.02) × manipulation",
-        "description": "items per batch (× manipulation)"
     },
     {
         "id"         : "crafting_quality",
@@ -389,25 +340,11 @@
         "description": "soil / clay per dig (× manipulation)"
     },
     {
-        "id"         : "digging_quality",
-        "category"   : "work",
-        "primaryStat": "intelligence",
-        "formula"    : "(1.0 + (INT − 10) × 0.03) × manipulation × sight",
-        "description": "material purity (× manipulation × sight)"
-    },
-    {
         "id"         : "research_speed",
         "category"   : "work",
         "primaryStat": "intelligence",
         "formula"    : "(1.0 + (INT − 10) × 0.05 + (PER − 10) × 0.02) × sight × consciousness",
         "description": "research speed (× sight × consciousness)"
-    },
-    {
-        "id"         : "research_quality",
-        "category"   : "work",
-        "primaryStat": "intelligence",
-        "formula"    : "(1.0 + (INT − 10) × 0.05 + (PER − 10) × 0.02) × sight × consciousness",
-        "description": "breakthrough chance (× sight × consciousness)"
     },
     {
         "id"         : "construction_speed",
@@ -459,13 +396,6 @@
         "description": "hauling speed (× moving × manipulation)"
     },
     {
-        "id"         : "hauling_quality",
-        "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "(1.0 + (DEX − 10) × 0.02) × manipulation",
-        "description": "careful handling (× manipulation)"
-    },
-    {
         "id"         : "planting_speed",
         "category"   : "work",
         "primaryStat": "dexterity",
@@ -480,32 +410,11 @@
         "description": "crop yield (× manipulation)"
     },
     {
-        "id"         : "planting_quality",
-        "category"   : "work",
-        "primaryStat": "dexterity",
-        "formula"    : "(1.0 + (DEX − 10) × 0.04 + (INT − 10) × 0.03) × manipulation × sight × consciousness",
-        "description": "crop quality / growth rate (× manipulation × sight × consciousness)"
-    },
-    {
         "id"         : "caretaking_speed",
         "category"   : "work",
         "primaryStat": "intelligence",
         "formula"    : "(1.0 + (INT − 10) × 0.05 + (DEX − 10) × 0.02) × manipulation × sight",
         "description": "treatment speed (× manipulation × sight)"
-    },
-    {
-        "id"         : "caretaking_yield",
-        "category"   : "work",
-        "primaryStat": "intelligence",
-        "formula"    : "(1.0 + (INT − 10) × 0.04) × manipulation",
-        "description": "healing amount per treatment (× manipulation)"
-    },
-    {
-        "id"         : "caretaking_quality",
-        "category"   : "work",
-        "primaryStat": "intelligence",
-        "formula"    : "(1.0 + (INT − 10) × 0.05 + (DEX − 10) × 0.03) × manipulation × sight × consciousness",
-        "description": "treatment effectiveness / infection prevention (× manipulation × sight × consciousness)"
     },
     // ── Body Capacities ───────────────────────────────────────────────────────────
     // Derived from specific organ health (not parent limb health).

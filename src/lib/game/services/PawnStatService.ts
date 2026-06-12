@@ -265,12 +265,16 @@ export interface PawnStatService {
   evaluateStat(statId: string, pawn: Pawn | Mob): number;
   /** Compute all body capacities (0–1) for a pawn or mob. */
   computeCapacities(pawn: Pawn | Mob, lightMultiplier?: number): Record<string, number>;
-  /** Get speed / yield / quality multipliers for a work type. */
+  /**
+   * Speed / yield / quality multipliers for a work type. `yield` and `quality` are
+   * `null` for jobs that don't have that axis (e.g. hauling has neither, a gather job
+   * has no quality) — driven by which `*_yield` / `*_quality` formulas exist in stats.jsonc.
+   */
   getWorkModifiers(
     pawn: Pawn | Mob,
     workType: string,
     lightMultiplier?: number
-  ): { speed: number; yield: number; quality: number };
+  ): { speed: number; yield: number | null; quality: number | null };
   /** Check if a stat ID exists in stats.jsonc. */
   hasStat(statId: string): boolean;
 }
@@ -315,27 +319,32 @@ export class PawnStatServiceImpl implements PawnStatService {
     pawn: Pawn | Mob,
     workType: string,
     lightMultiplier?: number
-  ): { speed: number; yield: number; quality: number } {
+  ): { speed: number; yield: number | null; quality: number | null } {
     // §G: a light multiplier dims the `sight` capacity, which every `*_speed`/`_yield`/`_quality`
     // formula multiplies by → work (and its quality) slows in the dark through the existing model.
     const capacities = this.computeCapacities(pawn, lightMultiplier);
     // Base = stat formula × body capacities. Layer explicit trait multipliers on top.
     // Transient state (conditions/status effects) applies to throughput → speed only.
     const stateMult = pawnStateWorkMultiplier(pawn);
-    const speed =
+    const speed = Math.max(
+      0.1,
       evaluateFormula(STAT_MAP[`${workType}_speed`]?.formula, pawn, capacities) *
-      traitWorkMult(pawn, 'workSpeed', workType) *
-      stateMult;
-    const yieldVal =
-      evaluateFormula(STAT_MAP[`${workType}_yield`]?.formula, pawn, capacities) *
-      traitWorkMult(pawn, 'workYield', workType);
-    const quality =
-      evaluateFormula(STAT_MAP[`${workType}_quality`]?.formula, pawn, capacities) *
-      traitWorkMult(pawn, 'workQuality', workType);
+        traitWorkMult(pawn, 'workSpeed', workType) *
+        stateMult
+    );
+    // yield / quality are present only for jobs that define them in stats.jsonc.
+    const axis = (kind: 'yield' | 'quality', traitKey: 'workYield' | 'workQuality') => {
+      const def = STAT_MAP[`${workType}_${kind}`];
+      if (!def) return null;
+      return Math.max(
+        0.1,
+        evaluateFormula(def.formula, pawn, capacities) * traitWorkMult(pawn, traitKey, workType)
+      );
+    };
     return {
-      speed: Math.max(0.1, speed),
-      yield: Math.max(0.1, yieldVal),
-      quality: Math.max(0.1, quality)
+      speed,
+      yield: axis('yield', 'workYield'),
+      quality: axis('quality', 'workQuality')
     };
   }
 
