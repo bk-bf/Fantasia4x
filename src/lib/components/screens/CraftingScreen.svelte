@@ -1,6 +1,7 @@
 <script lang="ts">
   import { gameState, currentRace } from '$lib/stores/gameState';
   import CurrentTask from '$lib/components/UI/CurrentTask.svelte';
+  import BuildCard from '$lib/components/UI/BuildCard.svelte';
   import { uiState } from '$lib/stores/uiState';
   import TaskContainer from '$lib/components/UI/TaskContainer.svelte';
   import ITEMS_DATABASE from '$lib/game/database/items.jsonc';
@@ -223,40 +224,43 @@
       </div>
 
       {#if wsItems.length > 0}
-        {#each wsItems as item}
-          {@const craftable = $gameState !== null && itemService.canCraftItem(item.id, $gameState)}
-          {@const isCarcass = item.isCarcass && item.yields}
-          {@const displayCost = isCarcass ? {} : costOf(item.id)}
-          {@const affordable = isCarcass
-            ? getItemAmount(item.id) > 0
-            : Object.entries(displayCost).every(([id, n]) => getItemAmount(id) >= (n as number))}
-          <div class="recipe-row">
-            <span class="recipe-name">{getTypeIcon(item.type ?? '')} {item.name.toUpperCase()}</span
+        <div class="card-grid">
+          {#each wsItems as item}
+            {@const craftable = $gameState !== null && itemService.canCraftItem(item.id, $gameState)}
+            {@const isCarcass = item.isCarcass && item.yields}
+            {@const displayCost = isCarcass ? {} : costOf(item.id)}
+            {@const affordable = isCarcass
+              ? getItemAmount(item.id) > 0
+              : Object.entries(displayCost).every(([id, n]) => getItemAmount(id) >= (n as number))}
+            {@const intactness = $gameState?.carcassIntactness?.[item.id] ?? 100}
+            {@const pct = Math.round(intactness)}
+            <BuildCard
+              icon={getTypeIcon(item.type ?? '')}
+              name={item.name.toUpperCase()}
+              badge={isCarcass ? `${pct}%` : null}
+              actionLabel={!affordable
+                ? 'MISSING'
+                : !craftable
+                  ? 'BLOCKED'
+                  : isCarcass
+                    ? 'BUTCHER'
+                    : 'CRAFT'}
+              actionEnabled={craftable}
+              variant={!affordable ? 'missing' : !craftable ? 'blocked' : 'ok'}
+              onAction={() => startCrafting(item)}
             >
-            {#if isCarcass}
-              {@const intactness = $gameState?.carcassIntactness?.[item.id] ?? 100}
-              {@const pct = Math.round(intactness)}
-              <span
-                class="intactness-badge"
-                style="color:{pct >= 70 ? 'var(--pos)' : pct >= 35 ? '#e8b830' : 'var(--neg)'}"
-              >
-                {pct}%
-              </span>
-              <span class="recipe-cost">
+              {#if isCarcass}
                 {#each item.yields as output, ci}
                   {@const outputDef = itemService.getItemById(output.item)}
-                  {@const intactnessFraction = intactness / 100}
-                  {@const minScaled = Math.max(1, Math.round(output.min * intactnessFraction))}
-                  {@const maxScaled = Math.max(1, Math.round(output.max * intactnessFraction))}
+                  {@const minScaled = Math.max(1, Math.round((output.min * intactness) / 100))}
+                  {@const maxScaled = Math.max(1, Math.round((output.max * intactness) / 100))}
                   {#if ci > 0}<span class="cost-sep">·</span>{/if}
                   <span class="cost-item">
                     {outputDef?.name ?? output.item}
                     <span class="cost-qty">×{minScaled}-{maxScaled}</span>
                   </span>
                 {/each}
-              </span>
-            {:else}
-              <span class="recipe-cost">
+              {:else}
                 {#if Object.keys(displayCost).length > 0}
                   {#each Object.entries(displayCost) as [id, n], ci}
                     {@const have = getItemAmount(id)}
@@ -279,20 +283,10 @@
                     {/each}
                   </span>
                 {/if}
-              </span>
-            {/if}
-            <button
-              class="act-btn-sm"
-              class:active={craftable}
-              on:click={() => startCrafting(item)}
-              disabled={!craftable}
-            >
-              {#if !affordable}MISSING
-              {:else if !craftable}BLOCKED
-              {:else}{isCarcass ? 'BUTCHER' : 'CRAFT'}{/if}
-            </button>
-          </div>
-        {/each}
+              {/if}
+            </BuildCard>
+          {/each}
+        </div>
       {:else}
         <div class="muted-row">no recipes for this station</div>
       {/if}
@@ -312,6 +306,12 @@
 </div>
 
 <style>
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 5px;
+    padding: 5px 8px;
+  }
   .crafting-screen {
     height: 100%;
     overflow-y: auto;

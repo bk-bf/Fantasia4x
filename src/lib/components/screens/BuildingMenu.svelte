@@ -7,6 +7,7 @@
   import { onDestroy } from 'svelte';
   import CurrentTask from '../UI/CurrentTask.svelte';
   import ZonePanel from '../UI/ZonePanel.svelte';
+  import BuildCard from '../UI/BuildCard.svelte';
   import type { PlacedBuilding } from '$lib/game/core/types';
   import type { Building } from '$lib/game/core/types';
 
@@ -338,16 +339,20 @@
   {#each sections as grp}
     {#if grp.defs.length > 0}
       <div class="section-hdr">| {grp.label}</div>
-      {#each grp.defs as building}
-        {@const placed = getBuildingCount(building.id)}
-        {@const affordable = canAfford(building)}
-        {@const buildable = canBuild(building)}
-        <div class="bldg-row">
-          <span class="bldg-name">
-            {building.name.toUpperCase()}
-            {#if placed > 0}<span class="built-badge">[x{placed}]</span>{/if}
-          </span>
-          <span class="bldg-cost">
+      <div class="card-grid">
+        {#each grp.defs as building}
+          {@const placed = getBuildingCount(building.id)}
+          {@const affordable = canAfford(building)}
+          {@const buildable = canBuild(building)}
+          <BuildCard
+            icon={getCategoryIcon(building.category)}
+            name={building.name.toUpperCase()}
+            badge={placed > 0 ? `×${placed}` : null}
+            actionLabel={!affordable ? 'MISSING' : !buildable ? 'BLOCKED' : 'BUILD'}
+            actionEnabled={buildable}
+            variant={!affordable ? 'missing' : !buildable ? 'blocked' : 'ok'}
+            onAction={() => uiState.activateBlueprint(building.id)}
+          >
             {#if Object.keys(building.buildingCost).length === 0}
               <span class="muted-text">free</span>
             {:else}
@@ -360,19 +365,9 @@
                 </span>
               {/each}
             {/if}
-          </span>
-          <button
-            class="act-btn-sm"
-            class:active={buildable}
-            on:click={() => uiState.activateBlueprint(building.id)}
-            disabled={!buildable}
-          >
-            {#if !affordable}MISSING
-            {:else if !buildable}BLOCKED
-            {:else}BUILD{/if}
-          </button>
-        </div>
-      {/each}
+          </BuildCard>
+        {/each}
+      </div>
     {/if}
   {/each}
 </div>
@@ -387,6 +382,12 @@
     font-size: 11px;
     display: flex;
     flex-direction: column;
+  }
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 5px;
+    padding: 5px 8px;
   }
 
   .screen-hdr {

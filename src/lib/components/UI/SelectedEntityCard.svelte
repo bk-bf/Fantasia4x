@@ -150,8 +150,8 @@
     border: 1px solid #6b4a2a;
     color: #a07840;
     font-family: 'Courier New', monospace;
-    font-size: 10px;
-    line-height: 1.5;
+    font-size: 9px;
+    line-height: 1.25;
     padding: 2px 7px;
     pointer-events: auto;
     white-space: nowrap;
@@ -177,7 +177,7 @@
   .pawn-name {
     color: #c8a060;
     font-weight: bold;
-    font-size: 11px;
+    font-size: 10px;
   }
   .pawn-state {
     color: #7a6030;

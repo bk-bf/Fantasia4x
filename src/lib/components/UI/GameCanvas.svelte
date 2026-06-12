@@ -434,7 +434,9 @@
   function buildPawnCard(pawn: Pawn, selected: boolean): SelectedEntityModel {
     const bars: EntityBar[] = [
       { label: 'HUNGER', value: pawn.needs.hunger, warn: pawn.needs.hunger > 60 },
-      { label: 'REST', value: pawn.needs.fatigue, warn: pawn.needs.fatigue > 60 }
+      { label: 'REST', value: pawn.needs.fatigue, warn: pawn.needs.fatigue > 60 },
+      { label: 'THIRST', value: pawn.needs.thirst ?? 0, warn: (pawn.needs.thirst ?? 0) > 60 },
+      { label: 'HYGIENE', value: pawn.needs.hygiene ?? 0, warn: (pawn.needs.hygiene ?? 0) > 60 }
     ];
     if (pawn.maxBloodVolume) {
       const curBV = pawn.bloodVolume ?? pawn.maxBloodVolume;
