@@ -62,9 +62,10 @@ class ResourceGeneratorServiceImpl {
   }
 
   /**
-   * Flood-fill each connected component of a clustered subterrain (4-connectivity) and fill the
-   * ENTIRE component with one resource, weighted by that subterrain's spawn chances. Turns the
-   * mineral_deposit blobs the world generator already produces into uniform single-mineral veins.
+   * Turn the mineral_deposit blobs the world generator produces into proper single-mineral veins:
+   * each connected deposit blob gets ONE resource, and is GROWN to a 3–8 tile cluster by spreading
+   * that same mineral into adjacent mountain tiles (carving the vein out of the surrounding rock /
+   * walls). Eliminates the lone scattered ore tiles — every deposit is a cluster.
    */
   private fillResourceClusters(
     worldMap: WorldTile[][],
@@ -74,39 +75,77 @@ class ResourceGeneratorServiceImpl {
     const h = worldMap.length;
     const w = worldMap[0]?.length ?? 0;
     const visited = new Uint8Array(h * w);
+    const claimed = new Uint8Array(h * w); // tiles already assigned to some cluster
+    const idx = (x: number, y: number) => y * w + x;
+    const inBounds = (x: number, y: number) => x >= 0 && y >= 0 && x < w && y < h;
 
     for (let y = 0; y < h; y++) {
       for (let x = 0; x < w; x++) {
-        if (visited[y * w + x]) continue;
+        if (visited[idx(x, y)]) continue;
         const subType = worldMap[y][x].subType;
         if (!CLUSTERED_SUBTYPES.has(subType)) continue;
 
-        // BFS the connected blob of this subterrain.
-        const component: WorldTile[] = [];
-        const stack: Array<[number, number]> = [[x, y]];
-        visited[y * w + x] = 1;
-        while (stack.length) {
-          const [cx, cy] = stack.pop()!;
-          component.push(worldMap[cy][cx]);
-          for (const [nx, ny] of [
-            [cx + 1, cy],
-            [cx - 1, cy],
-            [cx, cy + 1],
-            [cx, cy - 1]
-          ] as Array<[number, number]>) {
-            if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
-            if (visited[ny * w + nx]) continue;
+        // BFS the connected mineral_deposit blob (the cluster seed).
+        const cluster: WorldTile[] = [];
+        const queue: WorldTile[] = [worldMap[y][x]];
+        visited[idx(x, y)] = 1;
+        claimed[idx(x, y)] = 1;
+        for (let qi = 0; qi < queue.length; qi++) {
+          const cur = queue[qi];
+          cluster.push(cur);
+          for (const [nx, ny] of this.neighbors4(cur.x, cur.y, rng)) {
+            if (!inBounds(nx, ny) || visited[idx(nx, ny)]) continue;
             if (worldMap[ny][nx].subType !== subType) continue;
-            visited[ny * w + nx] = 1;
-            stack.push([nx, ny]);
+            visited[idx(nx, ny)] = 1;
+            claimed[idx(nx, ny)] = 1;
+            queue.push(worldMap[ny][nx]);
           }
         }
 
-        // One resource for the whole blob.
         const chosen = this.pickGuaranteedResource(subType, defs, rng);
-        if (chosen) for (const t of component) this.placeResource(t, chosen, rng);
+        if (!chosen) continue;
+
+        // Grow the cluster to a target size by spreading into adjacent (unclaimed) mountain tiles.
+        const target = rng(3, 8);
+        for (let qi = 0; qi < queue.length && cluster.length < target; qi++) {
+          const cur = queue[qi];
+          for (const [nx, ny] of this.neighbors4(cur.x, cur.y, rng)) {
+            if (cluster.length >= target) break;
+            if (!inBounds(nx, ny) || claimed[idx(nx, ny)]) continue;
+            const nt = worldMap[ny][nx];
+            if (nt.terrainType !== 'mountain') continue; // keep veins in the mountains
+            claimed[idx(nx, ny)] = 1;
+            cluster.push(nt);
+            queue.push(nt);
+          }
+        }
+
+        // Fill the whole cluster with the one mineral (clearing any wall placed in pass 1).
+        for (const t of cluster) {
+          t.resources = {};
+          this.placeResource(t, chosen, rng);
+        }
       }
     }
+  }
+
+  /** 4-neighbours of (x,y) in a seeded-random order, so grown clusters take organic shapes. */
+  private neighbors4(
+    x: number,
+    y: number,
+    rng: (min: number, max: number) => number
+  ): Array<[number, number]> {
+    const n: Array<[number, number]> = [
+      [x + 1, y],
+      [x - 1, y],
+      [x, y + 1],
+      [x, y - 1]
+    ];
+    for (let i = n.length - 1; i > 0; i--) {
+      const j = rng(0, i);
+      [n[i], n[j]] = [n[j], n[i]];
+    }
+    return n;
   }
 
   /** Place a resource object on a tile and update its physics from the resource definition. */

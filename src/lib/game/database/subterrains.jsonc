@@ -261,7 +261,7 @@
     "fg"          : [0.62, 0.52, 0.37],
     "bg"          : [0.08, 0.06, 0.03],
     "color"       : "#9E855E",
-    "biomes"      : { "mountain": [null, -0.3] }
+    "biomes"      : { "mountain": [null, -0.32] }
   },
   {
     "id"          : "cave",
@@ -272,7 +272,7 @@
     "fg"          : [0.26, 0.18, 0.09],
     "bg"          : [0.08, 0.06, 0.03],
     "color"       : "#422E17",
-    "biomes"      : { "mountain": [-0.3, 0.35] }
+    "biomes"      : { "mountain": [-0.32, 0.33] }
   },
   {
     "id"          : "cliff",
@@ -283,7 +283,7 @@
     "fg"          : [0.5, 0.42, 0.27],
     "bg"          : [0.08, 0.06, 0.03],
     "color"       : "#806B45",
-    "biomes"      : { "mountain": [0.35, 0.85] }
+    "biomes"      : { "mountain": [0.33, 0.79] }
   },
   {
     "id"          : "mineral_deposit",
@@ -294,7 +294,7 @@
     "fg"          : [0.92, 0.76, 0.13],
     "bg"          : [0.08, 0.06, 0.03],
     "color"       : "#EBC221",
-    "biomes"      : { "mountain": [0.85, null] }
+    "biomes"      : { "mountain": [0.79, null] }
   },
   {
     "id"          : "crystal_formation",

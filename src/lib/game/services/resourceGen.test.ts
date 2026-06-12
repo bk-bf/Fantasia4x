@@ -8,12 +8,12 @@ import type { WorldTile } from '../core/types';
  * salt (the generator force-fills it if the independent spawn rolls all miss). Other subterrains
  * may legitimately be empty.
  */
-function tile(subType: string, x: number, y: number): WorldTile {
+function tile(subType: string, x: number, y: number, terrainType = subType): WorldTile {
   return {
     x,
     y,
     subType,
-    terrainType: subType,
+    terrainType,
     resources: {},
     walkable: true,
     movementCost: 1,
@@ -45,6 +45,28 @@ describe('ResourceGenerator — mineral_deposit guarantee + clustering', () => {
         const ids = Object.keys(t.resources).filter((k) => t.resources[k] > 0);
         expect(ids).toEqual([firstId]);
       }
+    }
+  });
+
+  it('grows a lone mineral_deposit tile into a 3–8 tile single-mineral cluster', () => {
+    for (let seed = 1; seed <= 6; seed++) {
+      // 9×9 mountain (rocky) field with one mineral_deposit tile at the centre.
+      const map: WorldTile[][] = Array.from({ length: 9 }, (_, y) =>
+        Array.from({ length: 9 }, (_, x) =>
+          tile(x === 4 && y === 4 ? 'mineral_deposit' : 'rocky', x, y, 'mountain')
+        )
+      );
+      resourceGeneratorService.generateResources(map, seed * 31);
+      // tiles carrying an ore/coal/salt mineral (mountain_wall on the other rocky tiles is excluded)
+      const oreTiles = map
+        .flat()
+        .filter((t) => Object.keys(t.resources).some((k) => t.resources[k] > 0 && VALID_FILL.has(k)));
+      expect(oreTiles.length, `cluster size seed ${seed}`).toBeGreaterThanOrEqual(3);
+      expect(oreTiles.length).toBeLessThanOrEqual(8);
+      const minerals = new Set(
+        oreTiles.map((t) => Object.keys(t.resources).find((k) => VALID_FILL.has(k)))
+      );
+      expect(minerals.size, 'cluster is a single mineral').toBe(1);
     }
   });
 
