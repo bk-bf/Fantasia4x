@@ -1338,33 +1338,33 @@
 
   // ── Phase B: carry containers ─────────────────────────────────────────────
   {
-    "id": "make_leather_satchel",
+    "id": "make_hide_scrip",
     "station": "makers_bench",
     "inputs": {
       "light_leather": 2,
       "cordage": 1
     },
     "outputs": {
-      "leather_satchel": 1
+      "hide_scrip": 1
     },
     "workAmount": 5,
     "toolTierRequired": 0
   },
   {
-    "id": "make_tool_holster",
+    "id": "make_hide_tool_roll",
     "station": "makers_bench",
     "inputs": {
       "sturdy_leather": 1,
       "cordage": 1
     },
     "outputs": {
-      "tool_holster": 1
+      "hide_tool_roll": 1
     },
     "workAmount": 4,
     "toolTierRequired": 0
   },
   {
-    "id": "make_canvas_pack",
+    "id": "make_linen_snapsack",
     "station": "makers_bench",
     "inputs": {
       "linen_cloth": 2,
@@ -1372,7 +1372,7 @@
       "cordage": 2
     },
     "outputs": {
-      "canvas_pack": 1
+      "linen_snapsack": 1
     },
     "workAmount": 8,
     "toolTierRequired": 0
