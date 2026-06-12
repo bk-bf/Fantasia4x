@@ -2394,5 +2394,105 @@
       "staminaCost": 2,
       "critMod"    : 0.05
     }
+  },
+
+  // ── Phase B: carry containers ─────────────────────────────────────────────
+  {
+    "id"               : "leather_satchel",
+    "name"             : "Leather Satchel",
+    "type"             : "tool",
+    "category"         : "storage",
+    "emoji"            : "👜",
+    "maxDurability"    : 150,
+    "deteriorationRate": 0.01,
+    "description"      : "A sturdy leather bag worn at the belt. Adds carry capacity.",
+    "color"            : "#8B4513",
+    "amount"           : 0,
+    "weightKg"         : 0.5,
+    "volumeL"          : 0.8,
+    "inventoryBonus"   : { "weightKg": 8.0, "volumeL": 10.0 },
+    "armorProperties"  : {
+      "equipmentSlot"  : "belt"
+    }
+  },
+  {
+    "id"               : "canvas_pack",
+    "name"             : "Canvas Pack",
+    "type"             : "tool",
+    "category"         : "storage",
+    "emoji"            : "🎒",
+    "maxDurability"    : 200,
+    "deteriorationRate": 0.008,
+    "description"      : "A large canvas backpack that dramatically extends carry capacity.",
+    "color"            : "#C8B89A",
+    "amount"           : 0,
+    "weightKg"         : 1.2,
+    "volumeL"          : 2.0,
+    "inventoryBonus"   : { "weightKg": 20.0, "volumeL": 25.0 },
+    "armorProperties"  : {
+      "equipmentSlot"  : "back"
+    }
+  },
+  {
+    "id"               : "wicker_frame",
+    "name"             : "Wicker Frame",
+    "type"             : "tool",
+    "category"         : "storage",
+    "emoji"            : "🧺",
+    "maxDurability"    : 80,
+    "deteriorationRate": 0.02,
+    "description"      : "A lightweight wicker backframe. Poor weight limit but exceptional volume for bulky goods.",
+    "color"            : "#C8A050",
+    "amount"           : 0,
+    "weightKg"         : 0.8,
+    "volumeL"          : 1.5,
+    "inventoryBonus"   : { "weightKg": 12.0, "volumeL": 30.0 },
+    "armorProperties"  : {
+      "equipmentSlot"  : "back"
+    }
+  },
+
+  // ── Phase B: raw materials ────────────────────────────────────────────────
+  {
+    "id"               : "sinew",
+    "name"             : "Sinew",
+    "type"             : "material",
+    "category"         : "fiber",
+    "emoji"            : "🧵",
+    "maxDurability"    : 1,
+    "deteriorationRate": 0,
+    "description"      : "Tough dried animal tendon. Used for binding, bowstrings, and stitching.",
+    "color"            : "#D4B896",
+    "amount"           : 0,
+    "weightKg"         : 0.05,
+    "volumeL"          : 0.05
+  },
+  {
+    "id"               : "flax_fiber",
+    "name"             : "Flax Fiber",
+    "type"             : "material",
+    "category"         : "fiber",
+    "emoji"            : "🌿",
+    "maxDurability"    : 1,
+    "deteriorationRate": 0,
+    "description"      : "Processed flax stalks ready for spinning into linen thread.",
+    "color"            : "#B8C8A0",
+    "amount"           : 0,
+    "weightKg"         : 0.1,
+    "volumeL"          : 0.3
+  },
+  {
+    "id"               : "linen_cloth",
+    "name"             : "Linen Cloth",
+    "type"             : "material",
+    "category"         : "cloth",
+    "emoji"            : "🪡",
+    "maxDurability"    : 1,
+    "deteriorationRate": 0,
+    "description"      : "Woven linen fabric. A basic textile for clothing and bandaging.",
+    "color"            : "#E8E0C8",
+    "amount"           : 0,
+    "weightKg"         : 0.2,
+    "volumeL"          : 0.4
   }
 ]
