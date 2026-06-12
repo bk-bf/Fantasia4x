@@ -5,6 +5,9 @@
   import { designationService } from '$lib/game/services/DesignationService';
   import type { FilterableZoneType, Item } from '$lib/game/core/types';
   import itemsData from '$lib/game/database/items.jsonc';
+  import BuildCard from './BuildCard.svelte';
+
+  type CharSpan = { sheet?: string; id?: number; literal?: string };
 
   const ITEMS_DATABASE = itemsData as unknown as Item[];
 
@@ -15,7 +18,7 @@
   const ZONE_DEFS: {
     type: FilterableZoneType;
     label: string;
-    icon: string;
+    charSpans: CharSpan[];
     desc: string;
     color: string;
     filterable?: boolean;
@@ -23,7 +26,7 @@
     {
       type: 'stockpile',
       label: 'STOCKPILE',
-      icon: '[P]',
+      charSpans: [{ literal: 'P' }],
       desc: 'Haulers deposit carried resources here',
       color: '#e8a020',
       filterable: true
@@ -31,18 +34,20 @@
     {
       type: 'drink',
       label: 'DRINK',
-      icon: '[~]',
+      charSpans: [{ literal: '~' }],
       desc: 'Thirsty pawns come here to drink (clean upstream water / urns)',
       color: '#4fc3f7'
     },
     {
       type: 'wash',
       label: 'WASH',
-      icon: '[≈]',
+      charSpans: [{ literal: '≈' }],
       desc: 'Dirty pawns come here to wash',
       color: '#80d8c0'
     }
   ];
+
+  const defOf = (type: string) => ZONE_DEFS.find((d) => d.type === type);
 
   let activeType = $derived($uiState.designationType);
   let activeInstId = $derived($uiState.activeZoneInstanceId);
@@ -108,7 +113,6 @@
 </script>
 
 <div class="zone-panel">
-  <div class="panel-hdr">| ZONES</div>
   <div class="hint">
     {#if designationActive}
       <span class="hint-active">
@@ -119,102 +123,102 @@
     {/if}
   </div>
 
-  {#each ZONE_DEFS as def}
-    {@const instances = ($gameState.zoneInstances ?? []).filter((z) => z.type === def.type)}
+  <!-- Zone types as build cards: the action spawns a new zone and enters painting mode -->
+  <div class="card-grid">
+    {#each ZONE_DEFS as def}
+      {@const count = ($gameState.zoneInstances ?? []).filter((z) => z.type === def.type).length}
+      <BuildCard
+        name={def.label}
+        charSpans={def.charSpans}
+        description={def.desc}
+        tint={def.color}
+        badge={count > 0 ? `×${count}` : null}
+        actionLabel="+ NEW"
+        actionEnabled={true}
+        variant="ok"
+        onAction={() => newZone(def.type)}
+      >
+        {#if count > 0}
+          <span class="cost-item">{count} active</span>
+        {:else}
+          <span class="muted-text">none yet — add one</span>
+        {/if}
+      </BuildCard>
+    {/each}
+  </div>
 
-    <div class="type-section" style="--zcolor: {def.color}">
-      <div class="type-hdr">
-        <span class="type-icon">{def.icon}</span>
-        <span class="type-label">{def.label}</span>
-        <span class="type-desc">{def.desc}</span>
+  <!-- Per-instance management: paint / filter / delete -->
+  {#if ($gameState.zoneInstances ?? []).length > 0}
+    <div class="section-sub">| ACTIVE ZONES</div>
+    {#each $gameState.zoneInstances ?? [] as inst}
+      {@const def = defOf(inst.type)}
+      {@const tileCount = instanceTileCounts[inst.id] ?? 0}
+      {@const isPainting = designationActive && activeInstId === inst.id}
+      {@const hasFilter = inst.filter.allowedCategories.length > 0}
+      {@const isFilterOpen = openFilterInstance === inst.id}
+
+      <div class="inst-row" class:painting={isPainting} style="--zcolor: {def?.color ?? '#888'}">
         <button
-          class="new-btn"
-          onclick={() => newZone(def.type)}
-          title="Create new {def.label} zone"
+          class="paint-btn"
+          class:active={isPainting}
+          onclick={() => paintZone(inst.type, inst.id)}
+          title={isPainting ? 'Stop painting' : 'Paint this zone on the map'}
         >
-          [+]
+          {isPainting ? '[■]' : '[▶]'}
         </button>
+        <span class="inst-label">{inst.label}</span>
+        {#if tileCount > 0}
+          <span class="tile-count">{tileCount}t</span>
+        {/if}
+        {#if def?.filterable && hasFilter}
+          <span class="filter-badge">{inst.filter.allowedCategories.length}f</span>
+        {/if}
+        {#if def?.filterable}
+          <button
+            class="icon-btn"
+            class:active={isFilterOpen}
+            onclick={() => toggleFilterPanel(inst.id)}
+            title="Configure filter">[F]</button
+          >
+        {/if}
+        <button
+          class="icon-btn del"
+          onclick={() => removeZone(inst.id)}
+          title="Delete zone and tiles">[X]</button
+        >
       </div>
 
-      {#if instances.length === 0}
-        <div class="empty-hint">no zones — click [+] to create one</div>
-      {:else}
-        {#each instances as inst}
-          {@const tileCount = instanceTileCounts[inst.id] ?? 0}
-          {@const isPainting = designationActive && activeInstId === inst.id}
-          {@const hasFilter = inst.filter.allowedCategories.length > 0}
-          {@const isFilterOpen = openFilterInstance === inst.id}
-
-          <div class="inst-row" class:painting={isPainting}>
-            <button
-              class="paint-btn"
-              class:active={isPainting}
-              onclick={() => paintZone(def.type, inst.id)}
-              title={isPainting ? 'Stop painting' : 'Paint this zone on the map'}
-            >
-              {isPainting ? '[■]' : '[▶]'}
-            </button>
-            <span class="inst-label">{inst.label}</span>
-            {#if tileCount > 0}
-              <span class="tile-count">{tileCount}t</span>
+      {#if isFilterOpen}
+        <div class="filter-panel" style="--zcolor: {def?.color ?? '#888'}">
+          <div class="filter-hdr">
+            FILTER: {inst.label}
+            <span class="filter-hint">
+              {hasFilter
+                ? `${inst.filter.allowedCategories.length}/${ALL_CATEGORIES.length} categories`
+                : 'no filter (all allowed)'}
+            </span>
+            {#if hasFilter}
+              <button class="filter-clear-all" onclick={() => clearFilter(inst.id)}>clear</button>
             {/if}
-            {#if def.filterable && hasFilter}
-              <span class="filter-badge">{inst.filter.allowedCategories.length}f</span>
-            {/if}
-            {#if def.filterable}
-              <button
-                class="icon-btn"
-                class:active={isFilterOpen}
-                onclick={() => toggleFilterPanel(inst.id)}
-                title="Configure filter">[F]</button
-              >
-            {/if}
-            <button
-              class="icon-btn del"
-              onclick={() => removeZone(inst.id)}
-              title="Delete zone and tiles">[X]</button
-            >
           </div>
-
-          {#if isFilterOpen}
-            <div class="filter-panel">
-              <div class="filter-hdr">
-                FILTER: {inst.label}
-                <span class="filter-hint">
-                  {hasFilter
-                    ? `${inst.filter.allowedCategories.length}/${ALL_CATEGORIES.length} categories`
-                    : 'no filter (all allowed)'}
-                </span>
-                {#if hasFilter}
-                  <button class="filter-clear-all" onclick={() => clearFilter(inst.id)}
-                    >clear</button
-                  >
-                {/if}
-              </div>
-              <div class="category-grid">
-                {#each ALL_CATEGORIES as cat}
-                  {@const checked = inst.filter.allowedCategories.includes(cat)}
-                  <label class="cat-label" class:checked>
-                    <input
-                      type="checkbox"
-                      {checked}
-                      onchange={() => toggleCategory(inst.id, cat)}
-                    />
-                    {cat}
-                  </label>
-                {/each}
-              </div>
-              <div class="filter-note">
-                {hasFilter
-                  ? 'Only checked categories will be worked.'
-                  : 'Check categories to restrict this zone.'}
-              </div>
-            </div>
-          {/if}
-        {/each}
+          <div class="category-grid">
+            {#each ALL_CATEGORIES as cat}
+              {@const checked = inst.filter.allowedCategories.includes(cat)}
+              <label class="cat-label" class:checked>
+                <input type="checkbox" {checked} onchange={() => toggleCategory(inst.id, cat)} />
+                {cat}
+              </label>
+            {/each}
+          </div>
+          <div class="filter-note">
+            {hasFilter
+              ? 'Only checked categories will be worked.'
+              : 'Check categories to restrict this zone.'}
+          </div>
+        </div>
       {/if}
-    </div>
-  {/each}
+    {/each}
+  {/if}
 </div>
 
 <style>
@@ -225,10 +229,28 @@
     font-family: var(--font-mono, monospace);
   }
 
-  .panel-hdr {
-    color: var(--accent, #0f0);
-    font-size: 0.75rem;
-    margin-bottom: 0.35rem;
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 5px;
+    margin-bottom: 0.6rem;
+  }
+
+  .section-sub {
+    color: var(--accent-hi);
+    font-size: 0.62rem;
+    letter-spacing: 0.08em;
+    margin: 0.2rem 0 0.3rem;
+  }
+
+  .cost-item {
+    color: var(--text-dim);
+    font-size: 10px;
+  }
+
+  .muted-text {
+    color: var(--text-muted, #777);
+    font-size: 10px;
   }
 
   .hint {
@@ -248,66 +270,7 @@
     }
   }
 
-  /* ── Type section ───────────────────────────────── */
-
-  .type-section {
-    margin-bottom: 0.6rem;
-  }
-
-  .type-hdr {
-    display: flex;
-    align-items: center;
-    gap: 0.35rem;
-    margin-bottom: 0.2rem;
-  }
-
-  .type-icon {
-    color: var(--zcolor);
-    font-size: 0.7rem;
-    min-width: 2ch;
-  }
-
-  .type-label {
-    color: var(--zcolor);
-    font-size: 0.7rem;
-    font-weight: bold;
-    letter-spacing: 0.05em;
-    min-width: 7ch;
-  }
-
-  .type-desc {
-    font-size: 0.6rem;
-    color: #555;
-    flex: 1;
-  }
-
-  .new-btn {
-    background: none;
-    border: 1px solid #444;
-    color: var(--zcolor);
-    cursor: pointer;
-    font-family: var(--font-mono, monospace);
-    font-size: 0.65rem;
-    padding: 1px 5px;
-    line-height: 1;
-    opacity: 0.7;
-    transition:
-      opacity 0.15s,
-      border-color 0.15s;
-  }
-
-  .new-btn:hover {
-    opacity: 1;
-    border-color: var(--zcolor);
-  }
-
   /* ── Instance rows ──────────────────────────────── */
-
-  .empty-hint {
-    font-size: 0.6rem;
-    color: #444;
-    padding: 0.1rem 0 0.15rem 1.5rem;
-  }
 
   .inst-row {
     display: flex;

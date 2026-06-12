@@ -782,8 +782,8 @@
         "minTier" : 0
       },  // tier-0 = any woodcutting tool, including stone chopper
       "yields"         : [
-        {"itemId": "branch", "min": 2, "max": 5, "skillId": "foraging", "skillMultiplier": 0.1 },
-        {"itemId": "wood",   "min": 1, "max": 2, "skillId": "foraging", "skillMultiplier": 0.05}
+        {"itemId": "branch",       "min": 2, "max": 5, "skillId": "foraging", "skillMultiplier": 0.1 },
+        {"itemId": "dry_firewood", "min": 1, "max": 2, "skillId": "foraging", "skillMultiplier": 0.05}
       ]
     }
   },
@@ -869,8 +869,8 @@
       "workAmount"     : 2,
       "toolRequirement": {"workType": "crafting", "minTier": 0},
       "yields"         : [
-        {"itemId": "bark", "min": 1, "max": 3, "skillId": "foraging", "skillMultiplier": 0.1 },
-        {"itemId": "wood", "min": 1, "max": 2, "skillId": "foraging", "skillMultiplier": 0.05}
+        {"itemId": "bark",         "min": 1, "max": 3, "skillId": "foraging", "skillMultiplier": 0.1 },
+        {"itemId": "dry_firewood", "min": 1, "max": 2, "skillId": "foraging", "skillMultiplier": 0.05}
       ]
     }
   },
@@ -920,8 +920,8 @@
       "workAmount"     : 4,
       "toolRequirement": {"workType": "woodcutting", "minTier": 1},
       "yields"         : [
-        {"itemId": "wood",   "min": 2, "max": 4, "skillId": "woodcutting", "skillMultiplier": 0.1 },
-        {"itemId": "branch", "min": 1, "max": 3, "skillId": "woodcutting", "skillMultiplier": 0.05}
+        {"itemId": "dry_firewood", "min": 2, "max": 4, "skillId": "woodcutting", "skillMultiplier": 0.1 },
+        {"itemId": "branch",       "min": 1, "max": 3, "skillId": "woodcutting", "skillMultiplier": 0.05}
       ]
     }
   },
