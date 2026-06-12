@@ -94,12 +94,12 @@
   let rankMap = $derived.by(() => {
     const map: Record<string, Record<string, CellRank>> = {};
     for (const pawn of pawns) {
-      const throughput: Record<string, number> = {};
+      const eff: Record<string, number> = {};
       for (const wc of WORK_CATEGORIES) {
         const m = modMap[pawn.id]?.[wc.id];
-        throughput[wc.id] = m ? m.speed * m.yield : 0;
+        eff[wc.id] = m ? m.speed * m.yield * m.quality : 0;
       }
-      map[pawn.id] = rankWorkCells(throughput);
+      map[pawn.id] = rankWorkCells(eff);
     }
     return map;
   });

@@ -38,6 +38,10 @@
   const mult = (n: number) => `×${n.toFixed(2)}`;
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
+  // Single headline efficiency = speed × yield × quality, as a percentage where an
+  // average pawn (1.0 across the board) reads 100%. Drives the medal ranking too.
+  let eff = $derived(mods.speed * mods.yield * mods.quality);
+
   let stats = $derived(
     [
       { label: cap(wc.primaryStat) + ' (primary)', val: pawn.stats[wc.primaryStat] ?? 0 },
@@ -80,6 +84,7 @@
 <div class="tip" use:portal {style}>
   <div class="tip-hdr">
     <span class="tip-name">{wc.name}</span>
+    <span class="tip-eff" style="color:{getEfficiencyColor(eff)}">{Math.round(eff * 100)}%</span>
   </div>
 
   {#if rank.best >= 0}
@@ -88,25 +93,17 @@
     <div class="tip-rank" style="color:{WORST_COLORS[rank.worst]}">▾ {WORST_TIERS[rank.worst]}</div>
   {/if}
 
-  <div class="tip-mods">
-    <div class="tip-axis">
-      <span class="tip-axis-lbl">Speed</span>
-      <span class="tip-axis-val" style="color:{getEfficiencyColor(mods.speed)}"
-        >{mult(mods.speed)}</span
-      >
-    </div>
-    <div class="tip-axis">
-      <span class="tip-axis-lbl">Yield</span>
-      <span class="tip-axis-val" style="color:{getEfficiencyColor(mods.yield)}"
-        >{mult(mods.yield)}</span
-      >
-    </div>
-    <div class="tip-axis">
-      <span class="tip-axis-lbl">Quality</span>
-      <span class="tip-axis-val" style="color:{getEfficiencyColor(mods.quality)}"
-        >{mult(mods.quality)}</span
-      >
-    </div>
+  <div class="tip-row">
+    <span class="tip-lbl">Speed</span>
+    <span style="color:{getEfficiencyColor(mods.speed)}">{mult(mods.speed)}</span>
+  </div>
+  <div class="tip-row">
+    <span class="tip-lbl">Yield</span>
+    <span style="color:{getEfficiencyColor(mods.yield)}">{mult(mods.yield)}</span>
+  </div>
+  <div class="tip-row">
+    <span class="tip-lbl">Quality</span>
+    <span style="color:{getEfficiencyColor(mods.quality)}">{mult(mods.quality)}</span>
   </div>
 
   <div class="tip-row">
@@ -125,7 +122,7 @@
   </div>
 
   {#if traitMods.length > 0}
-    <div class="tip-sep">TRAITS</div>
+    <div class="tip-sep">MODIFIERS</div>
     {#each traitMods as m}
       <div class="tip-mod">
         <span class="tip-mod-name" style="color:{m.pct >= 0 ? '#6bc' : '#e08'}">{m.name}</span>
@@ -151,6 +148,10 @@
     pointer-events: none;
   }
   .tip-hdr {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
     border-bottom: 1px solid var(--border);
     padding-bottom: 3px;
     margin-bottom: 3px;
@@ -159,30 +160,12 @@
     color: var(--accent-hi);
     letter-spacing: 0.04em;
   }
+  .tip-eff {
+    font-weight: bold;
+  }
   .tip-rank {
     font-size: 10px;
     margin-bottom: 3px;
-  }
-  .tip-mods {
-    display: flex;
-    gap: 4px;
-    margin-bottom: 4px;
-  }
-  .tip-axis {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 2px 0;
-    border: 1px solid var(--border);
-  }
-  .tip-axis-lbl {
-    color: var(--text-dim);
-    font-size: 9px;
-    letter-spacing: 0.04em;
-  }
-  .tip-axis-val {
-    font-weight: bold;
   }
   .tip-row {
     display: flex;
