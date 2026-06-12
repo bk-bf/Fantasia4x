@@ -1444,15 +1444,41 @@
       const maxX = Math.max(zoneAnchorX, zoneEndX);
       const minY = Math.min(zoneAnchorY, zoneEndY);
       const maxY = Math.max(zoneAnchorY, zoneEndY);
+      // Drink/wash zones only commit on water — preview just those tiles, not the whole rect.
+      const waterOnly =
+        designationTypeActive === 'drink' || designationTypeActive === 'wash';
+      ctx.save();
+      if (waterOnly && !zoneEraseMode) {
+        ctx.fillStyle = 'rgba(80, 200, 255, 0.30)';
+        for (let ry = Math.max(minY, viewY); ry <= maxY; ry++) {
+          for (let rx = Math.max(minX, viewX); rx <= maxX; rx++) {
+            const t = worldMap[ry]?.[rx];
+            if (!t || !(t.type === 'water' || t.terrainType === 'river' || t.terrainType === 'lake'))
+              continue;
+            ctx.fillRect(
+              (rx - viewX) * tileWidth,
+              (ry - viewY) * tileHeight,
+              tileWidth,
+              tileHeight
+            );
+          }
+        }
+        ctx.strokeStyle = 'rgba(120, 220, 255, 0.85)';
+        ctx.lineWidth = 1;
+      } else {
+        const sx = (minX - viewX) * tileWidth;
+        const sy = (minY - viewY) * tileHeight;
+        const rw = (maxX - minX + 1) * tileWidth;
+        const rh = (maxY - minY + 1) * tileHeight;
+        ctx.fillStyle = zoneEraseMode ? 'rgba(255, 60, 30, 0.30)' : 'rgba(120, 255, 120, 0.26)';
+        ctx.fillRect(sx, sy, rw, rh);
+        ctx.strokeStyle = zoneEraseMode ? 'rgba(255, 90, 60, 0.95)' : 'rgba(160, 255, 160, 0.95)';
+        ctx.lineWidth = 1;
+      }
       const sx = (minX - viewX) * tileWidth;
       const sy = (minY - viewY) * tileHeight;
       const rw = (maxX - minX + 1) * tileWidth;
       const rh = (maxY - minY + 1) * tileHeight;
-      ctx.save();
-      ctx.fillStyle = zoneEraseMode ? 'rgba(255, 60, 30, 0.30)' : 'rgba(120, 255, 120, 0.26)';
-      ctx.fillRect(sx, sy, rw, rh);
-      ctx.strokeStyle = zoneEraseMode ? 'rgba(255, 90, 60, 0.95)' : 'rgba(160, 255, 160, 0.95)';
-      ctx.lineWidth = 1;
       ctx.strokeRect(sx + 0.5, sy + 0.5, rw - 1, rh - 1);
       ctx.restore();
     }

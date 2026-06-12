@@ -23,6 +23,18 @@
   }
   let { pawn, wc, result, rank, level, x, y }: Props = $props();
 
+  // The work screen lives inside `.overlay-panel`, which sets `filter` (making it
+  // the containing block for fixed positioning) and `overflow: hidden`. Both would
+  // mis-position and clip this box, so we portal it onto <body> to escape them.
+  function portal(node: HTMLElement) {
+    document.body.appendChild(node);
+    return {
+      destroy() {
+        node.remove();
+      }
+    };
+  }
+
   const pct = (n: number) => `${Math.round(n * 100)}%`;
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -48,7 +60,7 @@
   );
 </script>
 
-<div class="tip" {style}>
+<div class="tip" use:portal {style}>
   <div class="tip-hdr">
     <span class="tip-name">{wc.name}</span>
     <span class="tip-eff" style="color:{getEfficiencyColor(result.totalValue)}"
