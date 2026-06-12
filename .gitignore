@@ -18,6 +18,9 @@ Thumbs.db
 # Env
 .env
 .env.*
+
+# Worktree-local port override (see dev.sh)
+.devport
 !.env.example
 !.env.test
 
