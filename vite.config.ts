@@ -1,6 +1,17 @@
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig, type Plugin } from 'vite';
 import wasm from 'vite-plugin-wasm';
+import path from 'path';
+import fs from 'fs';
+
+// Walks up from dir until it finds a .git DIRECTORY (worktrees have a .git FILE — skip those).
+function findGitRoot(dir: string): string {
+  const gitPath = path.join(dir, '.git');
+  if (fs.existsSync(gitPath) && fs.statSync(gitPath).isDirectory()) return dir;
+  const parent = path.dirname(dir);
+  if (parent === dir) return dir;
+  return findGitRoot(parent);
+}
 
 /** Minimal JSONC comment stripper — handles // and block comments, string-aware. */
 function stripJsoncComments(src: string): string {
@@ -48,5 +59,10 @@ function jsoncPlugin(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [jsoncPlugin(), wasm(), sveltekit()]
+  plugins: [jsoncPlugin(), wasm(), sveltekit()],
+  server: {
+    fs: {
+      allow: [findGitRoot(process.cwd())]
+    }
+  }
 });
