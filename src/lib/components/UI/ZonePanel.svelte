@@ -6,6 +6,7 @@
   import type { FilterableZoneType, Item } from '$lib/game/core/types';
   import itemsData from '$lib/game/database/items.jsonc';
   import BuildCard from './BuildCard.svelte';
+  import SpriteIcon from './SpriteIcon.svelte';
 
   type CharSpan = { sheet?: string; id?: number; literal?: string };
 
@@ -157,35 +158,39 @@
       {@const hasFilter = inst.filter.allowedCategories.length > 0}
       {@const isFilterOpen = openFilterInstance === inst.id}
 
-      <div class="inst-row" class:painting={isPainting} style="--zcolor: {def?.color ?? '#888'}">
-        <button
-          class="paint-btn"
-          class:active={isPainting}
-          onclick={() => paintZone(inst.type, inst.id)}
-          title={isPainting ? 'Stop painting' : 'Paint this zone on the map'}
-        >
-          {isPainting ? '[■]' : '[▶]'}
-        </button>
-        <span class="inst-label">{inst.label}</span>
-        {#if tileCount > 0}
-          <span class="tile-count">{tileCount}t</span>
-        {/if}
-        {#if def?.filterable && hasFilter}
-          <span class="filter-badge">{inst.filter.allowedCategories.length}f</span>
-        {/if}
-        {#if def?.filterable}
-          <button
-            class="icon-btn"
-            class:active={isFilterOpen}
-            onclick={() => toggleFilterPanel(inst.id)}
-            title="Configure filter">[F]</button
-          >
-        {/if}
-        <button
-          class="icon-btn del"
-          onclick={() => removeZone(inst.id)}
-          title="Delete zone and tiles">[X]</button
-        >
+      <div class="zone-card" class:painting={isPainting} style="--zcolor: {def?.color ?? '#888'}">
+        <div class="card-accent"></div>
+        <div class="card-body">
+          <div class="card-header">
+            <SpriteIcon charSpans={def?.charSpans} tint={def?.color} px={16} />
+            <span class="card-name">{inst.label}</span>
+            {#if tileCount > 0}
+              <span class="zc-badge">{tileCount} tiles</span>
+            {/if}
+            {#if def?.filterable && hasFilter}
+              <span class="zc-badge filtered">{inst.filter.allowedCategories.length} filtered</span>
+            {/if}
+          </div>
+          <div class="card-actions">
+            <button
+              class="zbtn"
+              class:active={isPainting}
+              onclick={() => paintZone(inst.type, inst.id)}
+            >
+              {isPainting ? 'STOP' : 'PAINT'}
+            </button>
+            {#if def?.filterable}
+              <button
+                class="zbtn"
+                class:active={isFilterOpen}
+                onclick={() => toggleFilterPanel(inst.id)}
+              >
+                FILTER
+              </button>
+            {/if}
+            <button class="zbtn del" onclick={() => removeZone(inst.id)}>DELETE</button>
+          </div>
+        </div>
       </div>
 
       {#if isFilterOpen}
@@ -198,7 +203,7 @@
                 : 'no filter (all allowed)'}
             </span>
             {#if hasFilter}
-              <button class="filter-clear-all" onclick={() => clearFilter(inst.id)}>clear</button>
+              <button class="filter-clear-all" onclick={() => clearFilter(inst.id)}>CLEAR</button>
             {/if}
           </div>
           <div class="category-grid">
@@ -270,94 +275,108 @@
     }
   }
 
-  /* ── Instance rows ──────────────────────────────── */
+  /* ── Instance cards (match the build cards above) ── */
 
-  .inst-row {
+  .zone-card {
+    display: flex;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 5px;
+    transition: border-color 0.15s ease;
+  }
+
+  .zone-card:hover {
+    border-color: var(--border-hi);
+  }
+
+  .zone-card.painting {
+    border-color: var(--zcolor);
+    background: color-mix(in srgb, var(--zcolor) 7%, var(--bg-panel));
+  }
+
+  .zone-card .card-accent {
+    width: 3px;
+    flex-shrink: 0;
+    background: var(--zcolor);
+  }
+
+  .zone-card .card-body {
+    padding: 6px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .zone-card .card-header {
     display: flex;
     align-items: center;
-    gap: 0.35rem;
-    padding: 2px 0 2px 0.5rem;
-    margin-bottom: 0.1rem;
-    border-left: 2px solid transparent;
+    gap: 6px;
   }
 
-  .inst-row.painting {
-    border-left-color: var(--zcolor);
-    background: color-mix(in srgb, var(--zcolor) 6%, transparent);
-  }
-
-  .paint-btn {
-    background: none;
-    border: 1px solid #333;
-    color: #555;
-    cursor: pointer;
-    font-family: var(--font-mono, monospace);
-    font-size: 0.65rem;
-    padding: 1px 4px;
-    line-height: 1;
-    min-width: 3ch;
-    transition:
-      border-color 0.15s,
-      color 0.15s;
-  }
-
-  .paint-btn:hover,
-  .paint-btn.active {
-    border-color: var(--zcolor);
+  .zone-card .card-name {
     color: var(--zcolor);
-  }
-
-  .inst-label {
-    font-size: 0.68rem;
-    color: #aaa;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    font-weight: 600;
     flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
-  .tile-count {
-    font-size: 0.6rem;
-    color: #555;
+  .zc-badge {
+    font-size: 9px;
+    color: var(--text-dim);
+    flex-shrink: 0;
   }
 
-  .filter-badge {
-    font-size: 0.58rem;
-    color: #e8a020;
-    background: #1a1200;
-    padding: 0 3px;
-    border: 1px solid #4a3000;
-  }
-
-  .icon-btn {
-    background: none;
-    border: 1px solid #333;
-    color: #555;
-    cursor: pointer;
-    font-family: var(--font-mono, monospace);
-    font-size: 0.6rem;
-    padding: 1px 3px;
-    line-height: 1;
-    transition:
-      border-color 0.15s,
-      color 0.15s;
-  }
-
-  .icon-btn:hover,
-  .icon-btn.active {
-    border-color: var(--zcolor);
+  .zc-badge.filtered {
     color: var(--zcolor);
   }
 
-  .icon-btn.del:hover {
-    border-color: #c44;
-    color: #c44;
+  .card-actions {
+    display: flex;
+    gap: 5px;
+  }
+
+  .zbtn {
+    padding: 3px 12px;
+    background: transparent;
+    border: 1px solid var(--zcolor);
+    color: var(--zcolor);
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: background 0.12s;
+  }
+
+  .zbtn:hover,
+  .zbtn.active {
+    background: color-mix(in srgb, var(--zcolor) 20%, transparent);
+  }
+
+  .zbtn.del {
+    border-color: #8a4a3a;
+    color: #c46a55;
+  }
+
+  .zbtn.del:hover {
+    background: color-mix(in srgb, #c44 20%, transparent);
   }
 
   /* ── Filter panel ───────────────────────────────── */
 
   .filter-panel {
-    margin: 0.15rem 0 0.6rem 1.5rem;
+    margin: -2px 0 0.6rem 0.75rem;
     padding: 0.75rem 0.9rem;
-    border: 1px solid color-mix(in srgb, var(--zcolor) 35%, #222);
-    background: #08080a;
+    border: 1px solid color-mix(in srgb, var(--zcolor) 40%, var(--border));
+    border-radius: 2px;
+    background: var(--bg-panel);
   }
 
   .filter-hdr {
@@ -375,19 +394,20 @@
   }
 
   .filter-clear-all {
-    background: none;
-    border: 1px solid #555;
-    color: #888;
+    background: transparent;
+    border: 1px solid var(--zcolor);
+    color: var(--zcolor);
     cursor: pointer;
-    font-family: var(--font-mono, monospace);
-    font-size: 0.6rem;
-    padding: 0 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    padding: 2px 10px;
     margin-left: auto;
+    transition: background 0.12s;
   }
 
   .filter-clear-all:hover {
-    border-color: #c44;
-    color: #c44;
+    background: color-mix(in srgb, var(--zcolor) 20%, transparent);
   }
 
   .category-grid {
