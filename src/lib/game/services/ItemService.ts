@@ -373,38 +373,14 @@ export class ItemServiceImpl implements ItemService {
   }
 
   /**
-   * §C organic spoilage — per-stack, tile-aware (Stage 4). Every stack (stored or loose) of a
-   * perishable item accrues a spoilage clock; at the def's decaySeconds one unit rots into
-   * `decaysTo`. Storage SLOWS (never halts) the clock: a stored stack on a tile with a storage
-   * building uses that building's `storageDecayMultiplier` (clay cellar 0.3 …). A building with
-   * `requiresEnclosure` grants its full multiplier only when its tile is roofed; unenclosed it
-   * works at half effect. Loose stacks on open ground rot at full speed (1.0).
+   * §C organic spoilage — per-stack. Every stack (stored or loose) of a perishable item accrues a
+   * spoilage clock; at the def's decaySeconds one unit rots into `decaysTo`. Preservation
+   * (cold/freezing slowing the clock) is owned by the temperature system (Living World), not by
+   * storage buildings — so the clock currently advances at full speed everywhere.
    */
   stepItemDecay(gameState: GameState): GameState {
     const drops = gameState.droppedItems;
     if (!drops || drops.length === 0) return gameState;
-
-    // Per-tile storage multiplier from complete storage buildings (and roof presence).
-    const storageMult = new Map<string, number>();
-    const roofed = new Set<string>();
-    const enclosureNeeded = new Set<string>();
-    for (const b of gameState.buildings ?? []) {
-      if (b.status !== 'complete') continue;
-      const key = `${b.x},${b.y}`;
-      const def = BUILDING_DEFS_FOR_ITEMS.find((d) => d.id === b.type);
-      if (!def) continue;
-      if ((def.effects as Record<string, number> | undefined)?.['roof']) roofed.add(key);
-      if (def.storageDecayMultiplier !== undefined) {
-        const cur = storageMult.get(key);
-        const entry = { mult: def.storageDecayMultiplier, requiresEnclosure: def.requiresEnclosure };
-        // keep the best (lowest) multiplier on the tile
-        if (cur === undefined || entry.mult < cur) {
-          storageMult.set(key, entry.mult);
-          if (entry.requiresEnclosure) enclosureNeeded.add(key);
-          else enclosureNeeded.delete(key);
-        }
-      }
-    }
 
     let changed = false;
     const next: DroppedItem[] = [];
@@ -416,16 +392,7 @@ export class ItemServiceImpl implements ItemService {
         next.push(d);
         continue;
       }
-      const key = `${d.x},${d.y}`;
-      let mult = 1.0;
-      if (d.stored && storageMult.has(key)) {
-        mult = storageMult.get(key)!;
-        // requiresEnclosure: full benefit only when the tile is roofed; else half effect.
-        if (enclosureNeeded.has(key) && !roofed.has(key)) {
-          mult = Math.min(1, mult * 2);
-        }
-      }
-      let acc = (d.decayAcc ?? 0) + SECONDS_PER_TICK * mult;
+      let acc = (d.decayAcc ?? 0) + SECONDS_PER_TICK;
       let qty = d.quantity;
       while (acc >= def.decaySeconds && qty > 0) {
         acc -= def.decaySeconds;

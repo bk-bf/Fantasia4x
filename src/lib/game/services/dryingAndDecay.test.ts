@@ -4,11 +4,11 @@ import { SECONDS_PER_TICK } from '../core/time';
 import type { GameState, DroppedItem, PlacedBuilding } from '../core/types';
 
 /**
- * Stage 4 — §1 wood seasoning + §C tile-aware spoilage.
+ * Stage 4 — §1 wood seasoning + §C spoilage.
  * Drying: green_firewood at Chebyshev distance EXACTLY 2 from a lit fire seasons into
- * dry_firewood; adjacent (1) or far (3+) stacks don't. Decay: a stored stack on a storage
- * building's tile spoils slower by its storageDecayMultiplier; requiresEnclosure buildings
- * need a roof for full effect; loose ground = full speed.
+ * dry_firewood; adjacent (1) or far (3+) stacks don't. Decay: every perishable stack accrues a
+ * spoilage clock at full speed and rots into its decaysTo (preservation via cold is owned by the
+ * temperature system, not storage buildings).
  */
 const fire = (x: number, y: number): PlacedBuilding =>
   ({ id: `f${x}`, type: 'hearth', x, y, status: 'complete', progress: 1, lit: true, fuel: 10 }) as PlacedBuilding;
@@ -47,30 +47,20 @@ describe('§1 wood seasoning (stepWoodDrying)', () => {
   });
 });
 
-describe('§C tile-aware spoilage (stepItemDecay)', () => {
-  const cellar = (x: number, y: number): PlacedBuilding =>
-    ({ id: 'c1', type: 'clay_cellar', x, y, status: 'complete', progress: 1 }) as PlacedBuilding;
-  const roof = (x: number, y: number): PlacedBuilding =>
-    ({ id: 'r1', type: 'tile_roof', x, y, status: 'complete', progress: 1 }) as PlacedBuilding;
+describe('§C spoilage (stepItemDecay)', () => {
   const meat = (p: Partial<DroppedItem>): DroppedItem =>
     drop({ resourceId: 'venison', quantity: 3, ...p });
 
-  it('loose meat spoils at full speed; stored meat in a roofed cellar at its multiplier (0.3)', () => {
+  it('both loose and stored meat spoil at full speed (no storage preservation)', () => {
     const gs = state(
-      [meat({ id: 'loose', x: 5, y: 5 }), meat({ id: 'cellar', x: 0, y: 0, stored: true })],
-      [cellar(0, 0), roof(0, 0)]
+      [meat({ id: 'loose', x: 5, y: 5 }), meat({ id: 'stored', x: 0, y: 0, stored: true })],
+      []
     );
     const out = itemService.stepItemDecay(gs);
     const loose = out.droppedItems!.find((d) => d.id === 'loose')!;
-    const stored = out.droppedItems!.find((d) => d.id === 'cellar')!;
+    const stored = out.droppedItems!.find((d) => d.id === 'stored')!;
     expect(loose.decayAcc).toBeCloseTo(SECONDS_PER_TICK);
-    expect(stored.decayAcc).toBeCloseTo(SECONDS_PER_TICK * 0.3);
-  });
-
-  it('an unroofed requiresEnclosure cellar only gets half effect (0.6)', () => {
-    const gs = state([meat({ id: 'cellar', x: 0, y: 0, stored: true })], [cellar(0, 0)]);
-    const out = itemService.stepItemDecay(gs);
-    expect(out.droppedItems![0].decayAcc).toBeCloseTo(SECONDS_PER_TICK * 0.6);
+    expect(stored.decayAcc).toBeCloseTo(SECONDS_PER_TICK);
   });
 
   it('a unit rots into decaysTo when the clock fills', () => {

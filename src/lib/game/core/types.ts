@@ -859,8 +859,6 @@ export interface Building {
 	minFuelHeat?: number; // station won't operate below this fuel heat rating (§2)
 	fluxPerBatch?: number; // limestone flux consumed per smelt batch (bloomery, §5)
 	moldRequired?: string; // clay/metal mold consumed/worn per cast (§5/§G)
-	storageDecayMultiplier?: number; // <1 slows organic spoilage of stored items (§F)
-	requiresEnclosure?: boolean; // full storage benefit only when walls+roof+door (§F)
 	fuelRequirements?: {
 		requiredFuelTypes?: number;
 		tinderItemId?: string;
