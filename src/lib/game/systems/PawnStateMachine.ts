@@ -1559,6 +1559,9 @@ function syncActiveEffects(pawn: Pawn): Pawn {
     // Eating supersedes hungry; sleeping supersedes tired.
     if (!isSleeping && (pawn.needs?.fatigue ?? 0) >= FATIGUE_THRESHOLD) effects.push('tired');
     if (!isEating && (pawn.needs?.hunger ?? 0) >= HUNGER_THRESHOLD) effects.push('hungry');
+    // §D thirst/hygiene consequences (before dehydration's lethal condition kicks in at 95).
+    if ((pawn.needs?.thirst ?? 0) >= HUNGER_THRESHOLD) effects.push('thirsty');
+    if ((pawn.needs?.hygiene ?? 0) >= HUNGER_THRESHOLD) effects.push('filthy');
 
     // Duration-based status effects (knockdown, etc.)
     for (const [effectId, remaining] of Object.entries(pawn.statusEffectDurations ?? {})) {

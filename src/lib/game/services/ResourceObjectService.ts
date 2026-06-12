@@ -4,6 +4,7 @@ import resourceObjectsData from '../database/resources.jsonc';
 import { pawnStatService } from './PawnStatService';
 import { rng } from '../core/rng';
 import { gameLogger } from '../dev/gameLogger';
+import { isGameDebug } from '../core/log';
 
 export interface ResourceYieldDef {
   itemId: string;

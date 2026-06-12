@@ -44,6 +44,20 @@
         "modifiers"  : {"workEfficiency": 0.75, "moveSpeed": 0.75}
     },
     {
+        "id"         : "thirsty",
+        "name"       : "Thirsty",
+        "description": "Parched. Concentration slips — work slows. Untreated thirst becomes lethal dehydration.",
+        "color"      : "#29b6f6",
+        "modifiers"  : {"workEfficiency": 0.8, "moveSpeed": 0.9}
+    },
+    {
+        "id"         : "filthy",
+        "name"       : "Filthy",
+        "description": "Caked in grime. Demoralising and unhealthy — slows work and sours mood (disease risk later).",
+        "color"      : "#8d6e63",
+        "modifiers"  : {"workEfficiency": 0.85}
+    },
+    {
         "id"         : "mood_ecstatic",
         "name"       : "Ecstatic",
         "description": "In high spirits. Work efficiency is greatly boosted.",

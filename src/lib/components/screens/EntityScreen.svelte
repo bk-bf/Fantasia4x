@@ -11,12 +11,9 @@
   let hostileCount = $derived(mobs.filter((m) => m.entityClass === 'mob').length);
   let neutralCount = $derived(mobs.filter((m) => m.entityClass === 'animal').length);
 
+  // Expansion is controlled ONLY by the ▸ caret (toggleExpand). Selecting / camera-focusing a mob
+  // (row click, or selecting it on the map) must NOT auto-expand its health panel.
   let expandedId = $state<string | null>(null);
-
-  $effect(() => {
-    const id = $uiState.selectedMobId;
-    if (id) expandedId = id;
-  });
 
   function rgb(c: [number, number, number]): string {
     return `rgb(${Math.round(c[0] * 255)}, ${Math.round(c[1] * 255)}, ${Math.round(c[2] * 255)})`;
