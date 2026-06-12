@@ -17,7 +17,23 @@ const FORAGING_RESOURCES = new Set([
   'fiber'
 ]);
 
-const MINING_RESOURCES = new Set(['stone', 'iron_ore', 'flint']);
+const MINING_RESOURCES = new Set([
+  'stone',
+  'flint',
+  // §5 named ore minerals + coal/salt (mineral_deposit nodes)
+  'malachite',
+  'chalcopyrite',
+  'azurite',
+  'cassiterite',
+  'hematite',
+  'magnetite',
+  'limonite',
+  'galena',
+  'native_gold',
+  'electrum',
+  'coal',
+  'rock_salt'
+]);
 
 export interface PawnTaskSummary {
   currentState: string;

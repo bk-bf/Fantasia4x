@@ -30,16 +30,16 @@
   //   woodcut  — axe required (tier 1); fells the tree; harvestDepletes:true
   //   forage   — bare hands; gathers surface materials; node stays and regrows quickly
   {
-    "id"              : "tree",
-    "displayName"     : "Tree",
+    "id"              : "pine_tree",
+    "displayName"     : "Pine Tree",
     "subterrain"      : "tree",
     "walkable"        : false,
     "charSpans"       : [ {"sheet": "plants", "from": 0, "to": 71} ],
-    "fg"              : [0.52, 0.72, 0.11],
+    "fg"              : [0.37, 0.55, 0.23],
     "bg"              : [0.07, 0.1, 0.03],
-    "color"           : "#85B81C",
+    "color"           : "#5E8C3A",
     "spawn"           : {
-      "subterrains": {"deep_grass": 0.14, "grass": 0.08, "dirt": 0.03, "tall_grass": 0.02, "savanna": 0.01}
+      "subterrains": {"deep_grass": 0.048, "grass": 0.027, "dirt": 0.01, "tall_grass": 0.007, "savanna": 0.003}
     },
     "nodeAmountRange" : [3, 6],
     "designationTypes": ["woodcut", "forage"],
@@ -56,22 +56,6 @@
           "max"            : 5,
           "skillId"        : "woodcutting",
           "skillMultiplier": 0.2,
-          "regrowthTurns"  : 4200
-        },
-        {
-          "itemId"         : "oak_log",
-          "min"            : 0,
-          "max"            : 2,
-          "skillId"        : "woodcutting",
-          "skillMultiplier": 0.15,
-          "regrowthTurns"  : 4200
-        },
-        {
-          "itemId"         : "birch_log",
-          "min"            : 0,
-          "max"            : 2,
-          "skillId"        : "woodcutting",
-          "skillMultiplier": 0.15,
           "regrowthTurns"  : 4200
         },
         {
@@ -176,6 +160,530 @@
       }
     ]
   },
+  {
+    "id"              : "birch_tree",
+    "displayName"     : "Birch Tree",
+    "subterrain"      : "tree",
+    "walkable"        : false,
+    "charSpans"       : [ {"sheet": "plants", "from": 0, "to": 71} ],
+    "fg"              : [0.72, 0.77, 0.42],
+    "bg"              : [0.07, 0.1, 0.03],
+    "color"           : "#B7C56A",
+    "spawn"           : {
+      "subterrains": {"deep_grass": 0.031, "grass": 0.018, "dirt": 0.007, "tall_grass": 0.004, "savanna": 0.002}
+    },
+    "nodeAmountRange" : [3, 6],
+    "designationTypes": ["woodcut", "forage"],
+    "interaction"     : {
+      "designationType": "woodcut",
+      "action"         : "woodcut",
+      "workCategory"   : "woodcutting",
+      "workAmount"     : 5,
+      "toolRequirement": {"workType": "woodcutting", "minTier": 1},
+      "yields"         : [
+        {
+          "itemId"         : "birch_log",
+          "min"            : 3,
+          "max"            : 5,
+          "skillId"        : "woodcutting",
+          "skillMultiplier": 0.2,
+          "regrowthTurns"  : 4200
+        },
+        {
+          "itemId"         : "bark",
+          "min"            : 1,
+          "max"            : 2,
+          "skillId"        : "woodcutting",
+          "skillMultiplier": 0.1,
+          "regrowthTurns"  : 1500
+        },
+        {
+          "itemId"         : "branch",
+          "min"            : 2,
+          "max"            : 5,
+          "skillId"        : "woodcutting",
+          "skillMultiplier": 0.15,
+          "regrowthTurns"  : 4200
+        },
+        {
+          "itemId"         : "plant_fiber",
+          "min"            : 1,
+          "max"            : 3,
+          "skillId"        : "woodcutting",
+          "skillMultiplier": 0.05,
+          "regrowthTurns"  : 4200
+        }
+      ],
+      "persistent"     : true,
+      "harvestDepletes": true
+    },
+    "interactions"    : [
+      {
+        "designationType": "woodcut",
+        "action"         : "woodcut",
+        "workCategory"   : "woodcutting",
+        "workAmount"     : 5,
+        "toolRequirement": {"workType": "woodcutting", "minTier": 1},
+        "yields"         : [
+          {
+            "itemId"         : "birch_log",
+            "min"            : 3,
+            "max"            : 5,
+            "skillId"        : "woodcutting",
+            "skillMultiplier": 0.2,
+            "regrowthTurns"  : 4200
+          },
+          {
+            "itemId"         : "bark",
+            "min"            : 1,
+            "max"            : 2,
+            "skillId"        : "woodcutting",
+            "skillMultiplier": 0.1,
+            "regrowthTurns"  : 1500
+          },
+          {
+            "itemId"         : "branch",
+            "min"            : 2,
+            "max"            : 5,
+            "skillId"        : "woodcutting",
+            "skillMultiplier": 0.15,
+            "regrowthTurns"  : 4200
+          },
+          {
+            "itemId"         : "plant_fiber",
+            "min"            : 1,
+            "max"            : 3,
+            "skillId"        : "woodcutting",
+            "skillMultiplier": 0.05,
+            "regrowthTurns"  : 4200
+          }
+        ],
+        "persistent"     : true,
+        "harvestDepletes": true
+      },
+      {
+        "designationType": "forage",
+        "action"         : "forage",
+        "workCategory"   : "foraging",
+        "workAmount"     : 3,
+        "toolRequirement": null,
+        "yields"         : [
+          {"itemId": "bark", "min": 0, "max": 2, "skillId": "foraging", "skillMultiplier": 0.1, "regrowthTurns": 600},
+          {
+            "itemId"         : "branch",
+            "min"            : 0,
+            "max"            : 2,
+            "skillId"        : "foraging",
+            "skillMultiplier": 0.1,
+            "regrowthTurns"  : 450
+          },
+          {
+            "itemId"         : "plant_fiber",
+            "min"            : 0,
+            "max"            : 2,
+            "skillId"        : "foraging",
+            "skillMultiplier": 0.1,
+            "regrowthTurns"  : 300
+          }
+        ],
+        "persistent"     : true,
+        "harvestDepletes": false
+      }
+    ]
+  },
+  {
+    "id"              : "oak_tree",
+    "displayName"     : "Oak Tree",
+    "subterrain"      : "tree",
+    "walkable"        : false,
+    "charSpans"       : [ {"sheet": "plants", "from": 0, "to": 71} ],
+    "fg"              : [0.36, 0.48, 0.18],
+    "bg"              : [0.07, 0.1, 0.03],
+    "color"           : "#5C7A2E",
+    "spawn"           : {
+      "subterrains": {"deep_grass": 0.028, "grass": 0.016, "dirt": 0.006, "tall_grass": 0.004, "savanna": 0.002}
+    },
+    "nodeAmountRange" : [3, 6],
+    "designationTypes": ["woodcut", "forage"],
+    "interaction"     : {
+      "designationType": "woodcut",
+      "action"         : "woodcut",
+      "workCategory"   : "woodcutting",
+      "workAmount"     : 5,
+      "toolRequirement": {"workType": "woodcutting", "minTier": 1},
+      "yields"         : [
+        {
+          "itemId"         : "oak_log",
+          "min"            : 3,
+          "max"            : 5,
+          "skillId"        : "woodcutting",
+          "skillMultiplier": 0.2,
+          "regrowthTurns"  : 4200
+        },
+        {
+          "itemId"         : "bark",
+          "min"            : 1,
+          "max"            : 2,
+          "skillId"        : "woodcutting",
+          "skillMultiplier": 0.1,
+          "regrowthTurns"  : 1500
+        },
+        {
+          "itemId"         : "branch",
+          "min"            : 2,
+          "max"            : 5,
+          "skillId"        : "woodcutting",
+          "skillMultiplier": 0.15,
+          "regrowthTurns"  : 4200
+        },
+        {
+          "itemId"         : "plant_fiber",
+          "min"            : 1,
+          "max"            : 3,
+          "skillId"        : "woodcutting",
+          "skillMultiplier": 0.05,
+          "regrowthTurns"  : 4200
+        }
+      ],
+      "persistent"     : true,
+      "harvestDepletes": true
+    },
+    "interactions"    : [
+      {
+        "designationType": "woodcut",
+        "action"         : "woodcut",
+        "workCategory"   : "woodcutting",
+        "workAmount"     : 5,
+        "toolRequirement": {"workType": "woodcutting", "minTier": 1},
+        "yields"         : [
+          {
+            "itemId"         : "oak_log",
+            "min"            : 3,
+            "max"            : 5,
+            "skillId"        : "woodcutting",
+            "skillMultiplier": 0.2,
+            "regrowthTurns"  : 4200
+          },
+          {
+            "itemId"         : "bark",
+            "min"            : 1,
+            "max"            : 2,
+            "skillId"        : "woodcutting",
+            "skillMultiplier": 0.1,
+            "regrowthTurns"  : 1500
+          },
+          {
+            "itemId"         : "branch",
+            "min"            : 2,
+            "max"            : 5,
+            "skillId"        : "woodcutting",
+            "skillMultiplier": 0.15,
+            "regrowthTurns"  : 4200
+          },
+          {
+            "itemId"         : "plant_fiber",
+            "min"            : 1,
+            "max"            : 3,
+            "skillId"        : "woodcutting",
+            "skillMultiplier": 0.05,
+            "regrowthTurns"  : 4200
+          }
+        ],
+        "persistent"     : true,
+        "harvestDepletes": true
+      },
+      {
+        "designationType": "forage",
+        "action"         : "forage",
+        "workCategory"   : "foraging",
+        "workAmount"     : 3,
+        "toolRequirement": null,
+        "yields"         : [
+          {"itemId": "bark", "min": 0, "max": 2, "skillId": "foraging", "skillMultiplier": 0.1, "regrowthTurns": 600},
+          {
+            "itemId"         : "branch",
+            "min"            : 0,
+            "max"            : 2,
+            "skillId"        : "foraging",
+            "skillMultiplier": 0.1,
+            "regrowthTurns"  : 450
+          },
+          {
+            "itemId"         : "plant_fiber",
+            "min"            : 0,
+            "max"            : 2,
+            "skillId"        : "foraging",
+            "skillMultiplier": 0.1,
+            "regrowthTurns"  : 300
+          }
+        ],
+        "persistent"     : true,
+        "harvestDepletes": false
+      }
+    ]
+  },
+  {
+    "id"              : "ash_tree",
+    "displayName"     : "Ash Tree",
+    "subterrain"      : "tree",
+    "walkable"        : false,
+    "charSpans"       : [ {"sheet": "plants", "from": 0, "to": 71} ],
+    "fg"              : [0.5, 0.63, 0.35],
+    "bg"              : [0.07, 0.1, 0.03],
+    "color"           : "#7FA05A",
+    "spawn"           : {
+      "subterrains": {"deep_grass": 0.02, "grass": 0.011, "dirt": 0.004, "tall_grass": 0.003, "savanna": 0.001}
+    },
+    "nodeAmountRange" : [3, 6],
+    "designationTypes": ["woodcut", "forage"],
+    "interaction"     : {
+      "designationType": "woodcut",
+      "action"         : "woodcut",
+      "workCategory"   : "woodcutting",
+      "workAmount"     : 5,
+      "toolRequirement": {"workType": "woodcutting", "minTier": 1},
+      "yields"         : [
+        {
+          "itemId"         : "ash_log",
+          "min"            : 3,
+          "max"            : 5,
+          "skillId"        : "woodcutting",
+          "skillMultiplier": 0.2,
+          "regrowthTurns"  : 4200
+        },
+        {
+          "itemId"         : "bark",
+          "min"            : 1,
+          "max"            : 2,
+          "skillId"        : "woodcutting",
+          "skillMultiplier": 0.1,
+          "regrowthTurns"  : 1500
+        },
+        {
+          "itemId"         : "branch",
+          "min"            : 2,
+          "max"            : 5,
+          "skillId"        : "woodcutting",
+          "skillMultiplier": 0.15,
+          "regrowthTurns"  : 4200
+        },
+        {
+          "itemId"         : "plant_fiber",
+          "min"            : 1,
+          "max"            : 3,
+          "skillId"        : "woodcutting",
+          "skillMultiplier": 0.05,
+          "regrowthTurns"  : 4200
+        }
+      ],
+      "persistent"     : true,
+      "harvestDepletes": true
+    },
+    "interactions"    : [
+      {
+        "designationType": "woodcut",
+        "action"         : "woodcut",
+        "workCategory"   : "woodcutting",
+        "workAmount"     : 5,
+        "toolRequirement": {"workType": "woodcutting", "minTier": 1},
+        "yields"         : [
+          {
+            "itemId"         : "ash_log",
+            "min"            : 3,
+            "max"            : 5,
+            "skillId"        : "woodcutting",
+            "skillMultiplier": 0.2,
+            "regrowthTurns"  : 4200
+          },
+          {
+            "itemId"         : "bark",
+            "min"            : 1,
+            "max"            : 2,
+            "skillId"        : "woodcutting",
+            "skillMultiplier": 0.1,
+            "regrowthTurns"  : 1500
+          },
+          {
+            "itemId"         : "branch",
+            "min"            : 2,
+            "max"            : 5,
+            "skillId"        : "woodcutting",
+            "skillMultiplier": 0.15,
+            "regrowthTurns"  : 4200
+          },
+          {
+            "itemId"         : "plant_fiber",
+            "min"            : 1,
+            "max"            : 3,
+            "skillId"        : "woodcutting",
+            "skillMultiplier": 0.05,
+            "regrowthTurns"  : 4200
+          }
+        ],
+        "persistent"     : true,
+        "harvestDepletes": true
+      },
+      {
+        "designationType": "forage",
+        "action"         : "forage",
+        "workCategory"   : "foraging",
+        "workAmount"     : 3,
+        "toolRequirement": null,
+        "yields"         : [
+          {"itemId": "bark", "min": 0, "max": 2, "skillId": "foraging", "skillMultiplier": 0.1, "regrowthTurns": 600},
+          {
+            "itemId"         : "branch",
+            "min"            : 0,
+            "max"            : 2,
+            "skillId"        : "foraging",
+            "skillMultiplier": 0.1,
+            "regrowthTurns"  : 450
+          },
+          {
+            "itemId"         : "plant_fiber",
+            "min"            : 0,
+            "max"            : 2,
+            "skillId"        : "foraging",
+            "skillMultiplier": 0.1,
+            "regrowthTurns"  : 300
+          }
+        ],
+        "persistent"     : true,
+        "harvestDepletes": false
+      }
+    ]
+  },
+  {
+    "id"              : "yew_tree",
+    "displayName"     : "Yew Tree",
+    "subterrain"      : "tree",
+    "walkable"        : false,
+    "charSpans"       : [ {"sheet": "plants", "from": 0, "to": 71} ],
+    "fg"              : [0.25, 0.37, 0.16],
+    "bg"              : [0.07, 0.1, 0.03],
+    "color"           : "#3F5E2A",
+    "spawn"           : {
+      "subterrains": {"deep_grass": 0.014, "grass": 0.008, "dirt": 0.003, "tall_grass": 0.002, "savanna": 0.001}
+    },
+    "nodeAmountRange" : [3, 6],
+    "designationTypes": ["woodcut", "forage"],
+    "interaction"     : {
+      "designationType": "woodcut",
+      "action"         : "woodcut",
+      "workCategory"   : "woodcutting",
+      "workAmount"     : 5,
+      "toolRequirement": {"workType": "woodcutting", "minTier": 1},
+      "yields"         : [
+        {
+          "itemId"         : "yew_log",
+          "min"            : 3,
+          "max"            : 5,
+          "skillId"        : "woodcutting",
+          "skillMultiplier": 0.2,
+          "regrowthTurns"  : 4200
+        },
+        {
+          "itemId"         : "bark",
+          "min"            : 1,
+          "max"            : 2,
+          "skillId"        : "woodcutting",
+          "skillMultiplier": 0.1,
+          "regrowthTurns"  : 1500
+        },
+        {
+          "itemId"         : "branch",
+          "min"            : 2,
+          "max"            : 5,
+          "skillId"        : "woodcutting",
+          "skillMultiplier": 0.15,
+          "regrowthTurns"  : 4200
+        },
+        {
+          "itemId"         : "plant_fiber",
+          "min"            : 1,
+          "max"            : 3,
+          "skillId"        : "woodcutting",
+          "skillMultiplier": 0.05,
+          "regrowthTurns"  : 4200
+        }
+      ],
+      "persistent"     : true,
+      "harvestDepletes": true
+    },
+    "interactions"    : [
+      {
+        "designationType": "woodcut",
+        "action"         : "woodcut",
+        "workCategory"   : "woodcutting",
+        "workAmount"     : 5,
+        "toolRequirement": {"workType": "woodcutting", "minTier": 1},
+        "yields"         : [
+          {
+            "itemId"         : "yew_log",
+            "min"            : 3,
+            "max"            : 5,
+            "skillId"        : "woodcutting",
+            "skillMultiplier": 0.2,
+            "regrowthTurns"  : 4200
+          },
+          {
+            "itemId"         : "bark",
+            "min"            : 1,
+            "max"            : 2,
+            "skillId"        : "woodcutting",
+            "skillMultiplier": 0.1,
+            "regrowthTurns"  : 1500
+          },
+          {
+            "itemId"         : "branch",
+            "min"            : 2,
+            "max"            : 5,
+            "skillId"        : "woodcutting",
+            "skillMultiplier": 0.15,
+            "regrowthTurns"  : 4200
+          },
+          {
+            "itemId"         : "plant_fiber",
+            "min"            : 1,
+            "max"            : 3,
+            "skillId"        : "woodcutting",
+            "skillMultiplier": 0.05,
+            "regrowthTurns"  : 4200
+          }
+        ],
+        "persistent"     : true,
+        "harvestDepletes": true
+      },
+      {
+        "designationType": "forage",
+        "action"         : "forage",
+        "workCategory"   : "foraging",
+        "workAmount"     : 3,
+        "toolRequirement": null,
+        "yields"         : [
+          {"itemId": "bark", "min": 0, "max": 2, "skillId": "foraging", "skillMultiplier": 0.1, "regrowthTurns": 600},
+          {
+            "itemId"         : "branch",
+            "min"            : 0,
+            "max"            : 2,
+            "skillId"        : "foraging",
+            "skillMultiplier": 0.1,
+            "regrowthTurns"  : 450
+          },
+          {
+            "itemId"         : "plant_fiber",
+            "min"            : 0,
+            "max"            : 2,
+            "skillId"        : "foraging",
+            "skillMultiplier": 0.1,
+            "regrowthTurns"  : 300
+          }
+        ],
+        "persistent"     : true,
+        "harvestDepletes": false
+      }
+    ]
+  },
   // ─────────────────────────────────────────────────────────────────────────
   // MINING — SURFACE DEPOSITS
   // All require a mining tool. Found in rocky and mountain terrain.
@@ -194,7 +702,6 @@
       "subterrains": {
         "rocky"          : 0.07 ,
         "cliff"          : 0.05 ,
-        "mineral_deposit": 0.03 ,
         "dirt"           : 0.015,
         "savanna"        : 0.02 ,
         "grass"          : 0.01
@@ -209,7 +716,13 @@
       "toolRequirement": {"workType": "mining", "minTier": 1},
       "yields"         : [
         {"itemId": "granite", "min": 2, "max": 4, "skillId": "mining", "skillMultiplier": 0.2},
-        {"itemId": "limestone", "min": 0, "max": 2, "skillId": "mining", "skillMultiplier": 0.15}, // chance only: min 0
+        {
+          "itemId"         : "limestone",
+          "min"            : 0,
+          "max"            : 2,
+          "skillId"        : "mining",
+          "skillMultiplier": 0.15
+        },  // chance only: min 0
         {"itemId": "flint_shard", "min": 0, "max": 2, "skillId": "mining", "skillMultiplier": 0.1} // chance only: min 0
       ]
     }
@@ -244,7 +757,9 @@
       "workCategory"   : "foraging",
       "workAmount"     : 3,
       "toolRequirement": null,
-      "yields"         : [ {"itemId": "wild_sage", "min": 1, "max": 3, "skillId": "foraging", "skillMultiplier": 0.15} ],
+      "yields"         : [
+        {"itemId": "wild_sage", "min": 1, "max": 3, "skillId": "foraging", "skillMultiplier": 0.15}
+      ],
       "persistent"     : true,
       "regrowthTurns"  : 1200 // ~4 days at 300 turns/day
     }
@@ -291,7 +806,7 @@
     "color"           : "#66D6C9",
     "spawn"           : {
       // Intentionally sparse — these are high-value arcane nodes.
-      "subterrains": {"mineral_deposit": 0.004, "cave": 0.002, "rocky": 0.002, "cliff": 0.001}
+      "subterrains": {"cave": 0.003, "rocky": 0.002, "cliff": 0.001}
     },
     "nodeAmountRange" : [1, 3],
     "designationTypes": ["harvest"],
@@ -383,7 +898,9 @@
       "workCategory"   : "foraging",
       "workAmount"     : 2,
       "toolRequirement": null,
-      "yields"         : [ {"itemId": "wild_sage", "min": 1, "max": 3, "skillId": "foraging", "skillMultiplier": 0.15} ],
+      "yields"         : [
+        {"itemId": "wild_sage", "min": 1, "max": 3, "skillId": "foraging", "skillMultiplier": 0.15}
+      ],
       "persistent"     : true,
       "regrowthTurns"  : 120 // ~5 days
     }
@@ -531,15 +1048,95 @@
   // ─────────────────────────────────────────────────────────────────────────
   // Most common mountain ore. Will form the backbone of the iron-age tech tier.
   {
-    "id"              : "iron_ore",
-    "displayName"     : "Iron Ore",
+    "id"              : "malachite",
+    "displayName"     : "Malachite",
     "subterrain"      : "ore_vein",
     "walkable"        : true,
     "charSpans"       : [ {"literal": "*"} ],
-    "fg"              : [0.72, 0.38, 0.18],
+    "fg"              : [0.11, 0.48, 0.3],
     "bg"              : [0.08, 0.06, 0.03],
-    "color"           : "#B86130",
-    "spawn"           : { "subterrains": {"mineral_deposit": 0.12, "rocky": 0.02, "cliff": 0.01, "cave": 0.008} },
+    "color"           : "#1B7A4C",
+    "spawn"           : { "subterrains": {"mineral_deposit": 0.06, "rocky": 0.012, "cave": 0.007} },
+    "nodeAmountRange" : [3, 7],
+    "designationTypes": ["harvest"],
+    "interaction"     : {
+      "action"         : "mine",
+      "workCategory"   : "mining",
+      "workAmount"     : 10,
+      "toolRequirement": {"workType": "mining", "minTier": 1},
+      "yields"         : [ {"itemId": "malachite", "min": 2, "max": 6, "skillId": "mining", "skillMultiplier": 0.2} ]
+    }
+  },
+  {
+    "id"              : "chalcopyrite",
+    "displayName"     : "Chalcopyrite",
+    "subterrain"      : "ore_vein",
+    "walkable"        : true,
+    "charSpans"       : [ {"literal": "*"} ],
+    "fg"              : [0.79, 0.64, 0.15],
+    "bg"              : [0.08, 0.06, 0.03],
+    "color"           : "#C9A227",
+    "spawn"           : { "subterrains": {"mineral_deposit": 0.03, "rocky": 0.008, "cave": 0.005} },
+    "nodeAmountRange" : [3, 6],
+    "designationTypes": ["harvest"],
+    "interaction"     : {
+      "action"         : "mine",
+      "workCategory"   : "mining",
+      "workAmount"     : 10,
+      "toolRequirement": {"workType": "mining", "minTier": 1},
+      "yields"         : [ {"itemId": "chalcopyrite", "min": 2, "max": 5, "skillId": "mining", "skillMultiplier": 0.2} ]
+    }
+  },
+  {
+    "id"              : "azurite",
+    "displayName"     : "Azurite",
+    "subterrain"      : "ore_vein",
+    "walkable"        : true,
+    "charSpans"       : [ {"literal": "*"} ],
+    "fg"              : [0.18, 0.36, 0.72],
+    "bg"              : [0.08, 0.06, 0.03],
+    "color"           : "#2E5BB8",
+    "spawn"           : { "subterrains": {"mineral_deposit": 0.025} },
+    "nodeAmountRange" : [2, 5],
+    "designationTypes": ["harvest"],
+    "interaction"     : {
+      "action"         : "mine",
+      "workCategory"   : "mining",
+      "workAmount"     : 10,
+      "toolRequirement": {"workType": "mining", "minTier": 1},
+      "yields"         : [ {"itemId": "azurite", "min": 1, "max": 4, "skillId": "mining", "skillMultiplier": 0.2} ]
+    }
+  },
+  {
+    "id"              : "cassiterite",
+    "displayName"     : "Cassiterite",
+    "subterrain"      : "ore_vein",
+    "walkable"        : true,
+    "charSpans"       : [ {"literal": "*"} ],
+    "fg"              : [0.42, 0.27, 0.14],
+    "bg"              : [0.08, 0.06, 0.03],
+    "color"           : "#6B4423",
+    "spawn"           : { "subterrains": {"mineral_deposit": 0.03} },
+    "nodeAmountRange" : [2, 5],
+    "designationTypes": ["harvest"],
+    "interaction"     : {
+      "action"         : "mine",
+      "workCategory"   : "mining",
+      "workAmount"     : 10,
+      "toolRequirement": {"workType": "mining", "minTier": 1},
+      "yields"         : [ {"itemId": "cassiterite", "min": 1, "max": 4, "skillId": "mining", "skillMultiplier": 0.2} ]
+    }
+  },
+  {
+    "id"              : "hematite",
+    "displayName"     : "Hematite",
+    "subterrain"      : "ore_vein",
+    "walkable"        : true,
+    "charSpans"       : [ {"literal": "*"} ],
+    "fg"              : [0.55, 0.23, 0.18],
+    "bg"              : [0.08, 0.06, 0.03],
+    "color"           : "#8B3A2F",
+    "spawn"           : { "subterrains": {"mineral_deposit": 0.06, "rocky": 0.014, "cave": 0.008} },
     "nodeAmountRange" : [3, 7],
     "designationTypes": ["harvest"],
     "interaction"     : {
@@ -547,63 +1144,151 @@
       "workCategory"   : "mining",
       "workAmount"     : 10,
       "toolRequirement": {"workType": "mining", "minTier": 2},
-      "yields"         : [
-        {"itemId": "hematite", "min": 2, "max": 4, "skillId": "mining", "skillMultiplier": 0.2},
-        {"itemId": "magnetite", "min": 0, "max": 2, "skillId": "mining", "skillMultiplier": 0.15},
-        {"itemId": "limonite", "min": 0, "max": 2, "skillId": "mining", "skillMultiplier": 0.15},
-        {"itemId": "galena", "min": 0, "max": 1, "skillId": "mining", "skillMultiplier": 0.1}
-      ]
+      "yields"         : [ {"itemId": "hematite", "min": 2, "max": 6, "skillId": "mining", "skillMultiplier": 0.2} ]
     }
   },
-  // Softer than iron; easier to smelt. Key component of the bronze alloy (copper + tin).
   {
-    "id"              : "copper_ore",
-    "displayName"     : "Copper Ore",
+    "id"              : "magnetite",
+    "displayName"     : "Magnetite",
     "subterrain"      : "ore_vein",
     "walkable"        : true,
     "charSpans"       : [ {"literal": "*"} ],
-    "fg"              : [0.22, 0.72, 0.48],
-    "bg"              : [0.04, 0.08, 0.06],
-    "color"           : "#38B87A",
-    "spawn"           : { "subterrains": {"mineral_deposit": 0.08, "rocky": 0.012, "cliff": 0.008, "cave": 0.006} },
+    "fg"              : [0.2, 0.22, 0.23],
+    "bg"              : [0.08, 0.06, 0.03],
+    "color"           : "#33373B",
+    "spawn"           : { "subterrains": {"mineral_deposit": 0.03, "rocky": 0.008, "cave": 0.005} },
+    "nodeAmountRange" : [3, 6],
+    "designationTypes": ["harvest"],
+    "interaction"     : {
+      "action"         : "mine",
+      "workCategory"   : "mining",
+      "workAmount"     : 10,
+      "toolRequirement": {"workType": "mining", "minTier": 2},
+      "yields"         : [ {"itemId": "magnetite", "min": 2, "max": 5, "skillId": "mining", "skillMultiplier": 0.2} ]
+    }
+  },
+  {
+    "id"              : "limonite",
+    "displayName"     : "Limonite",
+    "subterrain"      : "ore_vein",
+    "walkable"        : true,
+    "charSpans"       : [ {"literal": "*"} ],
+    "fg"              : [0.71, 0.4, 0.11],
+    "bg"              : [0.08, 0.06, 0.03],
+    "color"           : "#B5651D",
+    "spawn"           : { "subterrains": {"mineral_deposit": 0.025} },
     "nodeAmountRange" : [2, 5],
     "designationTypes": ["harvest"],
     "interaction"     : {
       "action"         : "mine",
       "workCategory"   : "mining",
-      "workAmount"     : 12,
-      "toolRequirement": {"workType": "mining", "minTier": 1},
-      "yields"         : [
-        {"itemId": "malachite", "min": 1, "max": 3, "skillId": "mining", "skillMultiplier": 0.15},
-        {"itemId": "chalcopyrite", "min": 0, "max": 2, "skillId": "mining", "skillMultiplier": 0.12},
-        {"itemId": "azurite", "min": 0, "max": 2, "skillId": "mining", "skillMultiplier": 0.12},
-        {"itemId": "native_gold", "min": 0, "max": 1, "skillId": "mining", "skillMultiplier": 0.05}
-      ]
+      "workAmount"     : 10,
+      "toolRequirement": {"workType": "mining", "minTier": 2},
+      "yields"         : [ {"itemId": "limonite", "min": 1, "max": 4, "skillId": "mining", "skillMultiplier": 0.2} ]
     }
   },
-  // Rare soft metal — scarcity is the limiting factor for bronze technology.
   {
-    "id"              : "tin_ore",
-    "displayName"     : "Tin Ore",
+    "id"              : "galena",
+    "displayName"     : "Galena",
     "subterrain"      : "ore_vein",
     "walkable"        : true,
     "charSpans"       : [ {"literal": "*"} ],
-    "fg"              : [0.62, 0.72, 0.78],
-    "bg"              : [0.06, 0.07, 0.09],
-    "color"           : "#9EB8C7",
-    "spawn"           : { "subterrains": {"mineral_deposit": 0.04, "rocky": 0.006, "cliff": 0.004, "cave": 0.003} },
-    "nodeAmountRange" : [1, 4],
+    "fg"              : [0.43, 0.45, 0.47],
+    "bg"              : [0.08, 0.06, 0.03],
+    "color"           : "#6E7378",
+    "spawn"           : { "subterrains": {"mineral_deposit": 0.025} },
+    "nodeAmountRange" : [2, 5],
     "designationTypes": ["harvest"],
     "interaction"     : {
       "action"         : "mine",
       "workCategory"   : "mining",
-      "workAmount"     : 14,
-      "toolRequirement": {"workType": "mining", "minTier": 1},
-      "yields"         : [
-        {"itemId": "cassiterite", "min": 1, "max": 2, "skillId": "mining", "skillMultiplier": 0.12}
-      ]
+      "workAmount"     : 10,
+      "toolRequirement": {"workType": "mining", "minTier": 2},
+      "yields"         : [ {"itemId": "galena", "min": 1, "max": 4, "skillId": "mining", "skillMultiplier": 0.2} ]
     }
   },
+  {
+    "id"              : "native_gold",
+    "displayName"     : "Native Gold",
+    "subterrain"      : "ore_vein",
+    "walkable"        : true,
+    "charSpans"       : [ {"literal": "*"} ],
+    "fg"              : [0.83, 0.69, 0.22],
+    "bg"              : [0.08, 0.06, 0.03],
+    "color"           : "#D4AF37",
+    "spawn"           : { "subterrains": {"mineral_deposit": 0.01} },
+    "nodeAmountRange" : [1, 3],
+    "designationTypes": ["harvest"],
+    "interaction"     : {
+      "action"         : "mine",
+      "workCategory"   : "mining",
+      "workAmount"     : 10,
+      "toolRequirement": {"workType": "mining", "minTier": 2},
+      "yields"         : [ {"itemId": "native_gold", "min": 0, "max": 2, "skillId": "mining", "skillMultiplier": 0.2} ]
+    }
+  },
+  {
+    "id"              : "electrum",
+    "displayName"     : "Electrum Ore",
+    "subterrain"      : "ore_vein",
+    "walkable"        : true,
+    "charSpans"       : [ {"literal": "*"} ],
+    "fg"              : [0.9, 0.83, 0.6],
+    "bg"              : [0.08, 0.06, 0.03],
+    "color"           : "#E6D49A",
+    "spawn"           : { "subterrains": {"mineral_deposit": 0.008} },
+    "nodeAmountRange" : [1, 3],
+    "designationTypes": ["harvest"],
+    "interaction"     : {
+      "action"         : "mine",
+      "workCategory"   : "mining",
+      "workAmount"     : 10,
+      "toolRequirement": {"workType": "mining", "minTier": 2},
+      "yields"         : [ {"itemId": "electrum", "min": 0, "max": 2, "skillId": "mining", "skillMultiplier": 0.2} ]
+    }
+  },
+  {
+    "id"              : "coal",
+    "displayName"     : "Coal Seam",
+    "subterrain"      : "ore_vein",
+    "walkable"        : true,
+    "charSpans"       : [ {"literal": "*"} ],
+    "fg"              : [0.1, 0.1, 0.1],
+    "bg"              : [0.08, 0.06, 0.03],
+    "color"           : "#1A1A1A",
+    "spawn"           : { "subterrains": {"mineral_deposit": 0.1, "rocky": 0.02, "cave": 0.012} },
+    "nodeAmountRange" : [3, 6],
+    "designationTypes": ["harvest"],
+    "interaction"     : {
+      "action"         : "mine",
+      "workCategory"   : "mining",
+      "workAmount"     : 10,
+      "toolRequirement": {"workType": "mining", "minTier": 1},
+      "yields"         : [ {"itemId": "coal", "min": 2, "max": 5, "skillId": "mining", "skillMultiplier": 0.2} ]
+    }
+  },
+  {
+    "id"              : "rock_salt",
+    "displayName"     : "Rock Salt",
+    "subterrain"      : "ore_vein",
+    "walkable"        : true,
+    "charSpans"       : [ {"literal": "*"} ],
+    "fg"              : [0.94, 0.94, 0.94],
+    "bg"              : [0.08, 0.06, 0.03],
+    "color"           : "#EFEFEF",
+    "spawn"           : { "subterrains": {"mineral_deposit": 0.05} },
+    "nodeAmountRange" : [2, 5],
+    "designationTypes": ["harvest"],
+    "interaction"     : {
+      "action"         : "mine",
+      "workCategory"   : "mining",
+      "workAmount"     : 10,
+      "toolRequirement": {"workType": "mining", "minTier": 1},
+      "yields"         : [ {"itemId": "salt", "min": 1, "max": 4, "skillId": "mining", "skillMultiplier": 0.2} ]
+    }
+  },
+  // Softer than iron; easier to smelt. Key component of the bronze alloy (copper + tin).
+  // Rare soft metal — scarcity is the limiting factor for bronze technology.
   // Muddy clay seam — lower yield than a proper clay deposit, but more widespread.
   {
     "id"              : "mud_deposit",
@@ -645,8 +1330,8 @@
       "workAmount"     : 18,  // waterlogged — worst bare-handed digging condition
       "toolRequirement": null,
       "yields"         : [
-        {"itemId": "clay_lump", "min": 1, "max": 2, "skillId": "mining", "skillMultiplier": 0.06},
-        {"itemId": "peat", "min": 1, "max": 3, "skillId": "mining", "skillMultiplier": 0.1},
+        {"itemId": "clay_lump",   "min": 1, "max": 2, "skillId": "mining",   "skillMultiplier": 0.06},
+        {"itemId": "peat",        "min": 1, "max": 3, "skillId": "mining",   "skillMultiplier": 0.1 },
         {"itemId": "plant_fiber", "min": 1, "max": 2, "skillId": "foraging", "skillMultiplier": 0.08}
       ]
     }
@@ -675,9 +1360,8 @@
       "toolRequirement": null,
       "yields"         : [
         {"itemId": "granite", "min": 2, "max": 5, "skillId": "mining", "skillMultiplier": 0.2},
-        {"itemId": "marble", "min": 0, "max": 1, "skillId": "mining", "skillMultiplier": 0.1}, // rare: prestige stone
-        {"itemId": "coal", "min": 0, "max": 2, "skillId": "mining", "skillMultiplier": 0.15}, // coal seams in the mountains
-        {"itemId": "salt", "min": 0, "max": 1, "skillId": "mining", "skillMultiplier": 0.1} // rock salt — moderately rare
+        {"itemId": "marble", "min": 0, "max": 1, "skillId": "mining", "skillMultiplier": 0.1} // rare: prestige stone
+        // coal + salt now come from mineral_deposit nodes (coal / rock_salt), not mountain walls
       ]
     }
   },
@@ -701,7 +1385,13 @@
       "toolRequirement": {"workType": "mining", "minTier": 1},
       "yields"         : [
         {"itemId": "sandstone", "min": 3, "max": 6, "skillId": "mining", "skillMultiplier": 0.2},
-        {"itemId": "slate", "min": 0, "max": 2, "skillId": "mining", "skillMultiplier": 0.15} // sedimentary cliff: roofing slate
+        {
+          "itemId"         : "slate",
+          "min"            : 0,
+          "max"            : 2,
+          "skillId"        : "mining",
+          "skillMultiplier": 0.15
+        } // sedimentary cliff: roofing slate
       ]
     }
   },

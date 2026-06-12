@@ -452,7 +452,7 @@ export const LOCATION_TEMPLATES: LocationTemplate[] = [
 
     availableResources: {
       tier0: ['granite', 'sandstone', 'limestone', 'flint'],
-      tier1: ['copper_ore', 'tin_ore', 'iron_ore', 'charcoal'],
+      tier1: ['malachite', 'cassiterite', 'hematite', 'coal'],
       tier2: []
     },
 
@@ -489,24 +489,24 @@ export const LOCATION_TEMPLATES: LocationTemplate[] = [
         renewalType: 'none',
         depletion: 1
       },
-      copper_ore: {
-        id: 'copper_ore',
+      malachite: {
+        id: 'malachite',
         currentAmountRange: [80, 200],
         maxAmountRange: [80, 200],
         renewalRate: 0,
         renewalType: 'none',
         depletion: 1
       },
-      tin_ore: {
-        id: 'tin_ore',
+      cassiterite: {
+        id: 'cassiterite',
         currentAmountRange: [40, 120],
         maxAmountRange: [40, 120],
         renewalRate: 0,
         renewalType: 'none',
         depletion: 1
       },
-      iron_ore: {
-        id: 'iron_ore',
+      hematite: {
+        id: 'hematite',
         currentAmountRange: [60, 180],
         maxAmountRange: [60, 180],
         renewalRate: 0,

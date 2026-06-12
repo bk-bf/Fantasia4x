@@ -50,7 +50,7 @@ let simAccumulatorMs = 0;
 
 // ===== WORLD GENERATION =====
 /** Bump this when the world generation algorithm changes to force a regen. */
-const WORLD_VERSION = 11; // fallen_logs → P(209)
+const WORLD_VERSION = 12; // split tree→species nodes, ore→named minerals, mineral_deposit always filled
 const WORLD_VERSION_KEY = 'fantasia4x-world-version';
 // D7: world generation is DEFERRED to the async init below rather than run at module
 // import. Generating a 240×160 world here only to overwrite it when a save loads is pure
