@@ -374,13 +374,24 @@ export class ItemServiceImpl implements ItemService {
 
   /**
    * §C organic spoilage — per-stack. Every stack (stored or loose) of a perishable item accrues a
-   * spoilage clock; at the def's decaySeconds one unit rots into `decaysTo`. Preservation
-   * (cold/freezing slowing the clock) is owned by the temperature system (Living World), not by
-   * storage buildings — so the clock currently advances at full speed everywhere.
+   * spoilage clock; at the def's decaySeconds one unit rots into `decaysTo`. Containers stored on
+   * the same tile modestly slow a stored stack's clock by their `preservationBonus` (woven basket
+   * −10%, clay urn −20%, wooden chest −30%; best one wins). Deeper preservation (cold/freezing) is
+   * owned by the temperature system (Living World), not containers.
    */
   stepItemDecay(gameState: GameState): GameState {
     const drops = gameState.droppedItems;
     if (!drops || drops.length === 0) return gameState;
+
+    // Best container preservationBonus per tile (from stored container stacks sharing the tile).
+    const tilePreserve = new Map<string, number>();
+    for (const d of drops) {
+      if (!d.stored || (d.quantity ?? 0) <= 0) continue;
+      const bonus = this.getItemById(d.resourceId)?.preservationBonus;
+      if (bonus === undefined || bonus <= 0) continue;
+      const key = `${d.x},${d.y}`;
+      if (bonus > (tilePreserve.get(key) ?? 0)) tilePreserve.set(key, bonus);
+    }
 
     let changed = false;
     const next: DroppedItem[] = [];
@@ -392,7 +403,8 @@ export class ItemServiceImpl implements ItemService {
         next.push(d);
         continue;
       }
-      let acc = (d.decayAcc ?? 0) + SECONDS_PER_TICK;
+      const mult = d.stored ? 1 - (tilePreserve.get(`${d.x},${d.y}`) ?? 0) : 1;
+      let acc = (d.decayAcc ?? 0) + SECONDS_PER_TICK * mult;
       let qty = d.quantity;
       while (acc >= def.decaySeconds && qty > 0) {
         acc -= def.decaySeconds;

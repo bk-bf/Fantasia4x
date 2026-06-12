@@ -51,7 +51,7 @@ describe('§C spoilage (stepItemDecay)', () => {
   const meat = (p: Partial<DroppedItem>): DroppedItem =>
     drop({ resourceId: 'venison', quantity: 3, ...p });
 
-  it('both loose and stored meat spoil at full speed (no storage preservation)', () => {
+  it('loose and bare-stored meat spoil at full speed; no container = no bonus', () => {
     const gs = state(
       [meat({ id: 'loose', x: 5, y: 5 }), meat({ id: 'stored', x: 0, y: 0, stored: true })],
       []
@@ -61,6 +61,22 @@ describe('§C spoilage (stepItemDecay)', () => {
     const stored = out.droppedItems!.find((d) => d.id === 'stored')!;
     expect(loose.decayAcc).toBeCloseTo(SECONDS_PER_TICK);
     expect(stored.decayAcc).toBeCloseTo(SECONDS_PER_TICK);
+  });
+
+  it('a container stored on the tile slows stored food (clay urn −20%; best wins)', () => {
+    const container = (id: string, resourceId: string): DroppedItem =>
+      drop({ id, resourceId, x: 0, y: 0, quantity: 1, stored: true });
+    const gs = state(
+      [
+        meat({ id: 'food', x: 0, y: 0, stored: true }),
+        container('basket', 'woven_basket'),
+        container('urn', 'water_urn')
+      ],
+      []
+    );
+    const out = itemService.stepItemDecay(gs);
+    const food = out.droppedItems!.find((d) => d.id === 'food')!;
+    expect(food.decayAcc).toBeCloseTo(SECONDS_PER_TICK * 0.8);
   });
 
   it('a unit rots into decaysTo when the clock fills', () => {

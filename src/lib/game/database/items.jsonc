@@ -1011,11 +1011,12 @@
     "category"        : "storage",
     "maxDurability"  : 150,
     "deteriorationRate": 0.015,
-    "description"     : "Fired clay vessel. Stores boiled water (and dry goods) safely.",
+    "description"     : "Fired clay vessel. Stores boiled water (and dry goods) safely. Keeps stored food longer (−20% spoilage).",
     "color"           : "#B07A4A",
     "amount"          : 0,
     "isContainer"     : true,
     "storageCapacity" : 20,
+    "preservationBonus": 0.2,
     "toolTierRequired": 0
   },
   {
@@ -1215,11 +1216,12 @@
     "category"        : "storage",
     "maxDurability"  : 150,
     "deteriorationRate": 0.02,
-    "description"     : "Cordage basket. 15-slot portable storage — the first storage tier.",
+    "description"     : "Cordage basket. 15-slot portable storage — the first storage tier. Keeps stored food a little longer (−10% spoilage).",
     "color"           : "#C8A064",
     "amount"          : 0,
     "isContainer"     : true,
     "storageCapacity" : 15,
+    "preservationBonus": 0.1,
     "toolTierRequired": 0
   },
   {
@@ -1229,11 +1231,12 @@
     "category"        : "storage",
     "maxDurability"  : 220,
     "deteriorationRate": 0.012,
-    "description"     : "A planked chest nailed together with iron. The sturdiest storage tier — 40 slots, keeps goods dry. Needs planks and forged nails.",
+    "description"     : "A planked chest nailed together with iron. The sturdiest storage tier — 40 slots, keeps goods dry and food longer (−30% spoilage). Needs planks and forged nails.",
     "color"           : "#8B5A2B",
     "amount"          : 0,
     "isContainer"     : true,
     "storageCapacity" : 40,
+    "preservationBonus": 0.3,
     "toolTierRequired": 1
   },
   {
