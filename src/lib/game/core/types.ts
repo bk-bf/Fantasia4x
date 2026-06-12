@@ -291,6 +291,10 @@ export interface Mob {
 	huntTargetId?: string;
 	/** Tick when the hunter can re-enter Hunting state after a failed hunt. */
 	huntCooldownUntil?: number;
+	/** Consecutive ticks this mob has been unable to enter its next tile (blocked by
+	 * another entity). Once it exceeds a threshold the path is dropped so the FSM
+	 * re-routes around the obstruction instead of waiting forever (corridor deadlock). */
+	blockedTicks?: number;
 	// ── Survival & health (same system as Pawn) ──────────────────────────────
 	/** Per-limb health state (same 6-limb model as Pawn). */
 	limbs?: LimbState[];

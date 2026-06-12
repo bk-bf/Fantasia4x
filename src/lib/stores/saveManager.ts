@@ -16,12 +16,16 @@
 
 import { browser } from '$app/environment';
 import type { GameState, WorldTile } from '$lib/game/core/types';
+import type { ActivityLogEntry } from '$lib/game/core/Events';
 
 // ── constants ──────────────────────────────────────────────────────────────
 const DB_NAME = 'fantasia4x';
 const DB_VERSION = 1;
 const STORE = 'saves';
 const SAVE_KEY = 'current';
+// The chronicle / activity log is persisted under its own key alongside the save
+// so it survives a tab reload/discard (it lives in an in-memory store, not GameState).
+const LOG_KEY = 'activity-log';
 
 // Legacy localStorage keys (for one-time migration)
 const LS_SAVE_KEY = 'fantasia4x-save';
@@ -88,31 +92,31 @@ function hydrateState(raw: GameState): GameState {
 
 // ── core IDB operations ────────────────────────────────────────────────────
 
-async function idbGet(): Promise<GameState | null> {
+async function idbGet<T>(key: string): Promise<T | null> {
   const db = await openDb();
   return new Promise((resolve) => {
     const tx = db.transaction(STORE, 'readonly');
-    const req = tx.objectStore(STORE).get(SAVE_KEY);
-    req.onsuccess = () => resolve((req.result as GameState) ?? null);
+    const req = tx.objectStore(STORE).get(key);
+    req.onsuccess = () => resolve((req.result as T) ?? null);
     req.onerror = () => resolve(null);
   });
 }
 
-async function idbPut(data: unknown): Promise<void> {
+async function idbPut(key: string, data: unknown): Promise<void> {
   const db = await openDb();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE, 'readwrite');
-    tx.objectStore(STORE).put(data, SAVE_KEY);
+    tx.objectStore(STORE).put(data, key);
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });
 }
 
-async function idbDelete(): Promise<void> {
+async function idbDelete(key: string): Promise<void> {
   const db = await openDb();
   return new Promise((resolve) => {
     const tx = db.transaction(STORE, 'readwrite');
-    tx.objectStore(STORE).delete(SAVE_KEY);
+    tx.objectStore(STORE).delete(key);
     tx.oncomplete = () => resolve();
     tx.onerror = () => resolve();
   });
@@ -144,14 +148,14 @@ function clearLegacyLocalStorage(): void {
 export async function loadSave(): Promise<GameState | null> {
   if (!browser) return null;
   try {
-    const idbState = await idbGet();
+    const idbState = await idbGet<GameState>(SAVE_KEY);
     if (idbState) return hydrateState(idbState);
 
     // One-time migration from localStorage
     const legacy = readLegacyLocalStorage();
     if (legacy) {
       console.info('[SaveManager] Migrating save from localStorage → IndexedDB');
-      idbPut(stripState(legacy)).catch(console.error);
+      idbPut(SAVE_KEY, stripState(legacy)).catch(console.error);
       clearLegacyLocalStorage();
       return legacy; // already has ascii / A* defaults from the old save
     }
@@ -161,11 +165,11 @@ export async function loadSave(): Promise<GameState | null> {
   return null;
 }
 
-/** Delete the current save from both storage backends. */
+/** Delete the current save (and its chronicle) from both storage backends. */
 export async function deleteSave(): Promise<void> {
   if (!browser) return;
   clearLegacyLocalStorage();
-  await idbDelete();
+  await Promise.all([idbDelete(SAVE_KEY), idbDelete(LOG_KEY)]);
 }
 
 // ── debounced save ─────────────────────────────────────────────────────────
@@ -181,8 +185,38 @@ export function scheduleSave(state: GameState): void {
   if (_saveTimer !== null) clearTimeout(_saveTimer);
   _saveTimer = setTimeout(() => {
     _saveTimer = null;
-    idbPut(stripState(state)).catch((err) => {
+    idbPut(SAVE_KEY, stripState(state)).catch((err) => {
       console.warn('[SaveManager] IndexedDB write failed:', err);
+    });
+  }, DEBOUNCE_MS);
+}
+
+// ── activity-log (chronicle) persistence ─────────────────────────────────────
+
+/** Load the persisted chronicle. Returns [] if none exists. */
+export async function loadActivityLog(): Promise<ActivityLogEntry[]> {
+  if (!browser) return [];
+  try {
+    return (await idbGet<ActivityLogEntry[]>(LOG_KEY)) ?? [];
+  } catch (err) {
+    console.warn('[SaveManager] Chronicle load failed:', err);
+    return [];
+  }
+}
+
+let _logSaveTimer: ReturnType<typeof setTimeout> | null = null;
+
+/**
+ * Schedule a debounced write of the chronicle. Safe to call on every log update —
+ * writes are batched into at most one IDB write every DEBOUNCE_MS milliseconds.
+ */
+export function scheduleSaveActivityLog(entries: ActivityLogEntry[]): void {
+  if (!browser) return;
+  if (_logSaveTimer !== null) clearTimeout(_logSaveTimer);
+  _logSaveTimer = setTimeout(() => {
+    _logSaveTimer = null;
+    idbPut(LOG_KEY, entries).catch((err) => {
+      console.warn('[SaveManager] Chronicle write failed:', err);
     });
   }, DEBOUNCE_MS);
 }

@@ -1108,6 +1108,18 @@ export class PawnServiceImpl implements PawnService {
 	processMovement(gameState: GameState): GameState {
 		let state = gameState;
 
+		// Hard tile occupancy: a pawn may not step onto a tile already held by another
+		// body (pawn or non-corpse mob) — no phasing through enemies, no stacking. Built
+		// once from start-of-pass positions; ≤1-tile/tick movement makes the staleness
+		// negligible. The mob movement pass enforces the same rule from its side.
+		const occupied = new Set<string>();
+		for (const m of state.mobs ?? []) {
+			if (m.state !== 'Corpse') occupied.add(`${m.x},${m.y}`);
+		}
+		for (const p of state.pawns) {
+			if (p.position) occupied.add(`${p.position.x},${p.position.y}`);
+		}
+
 		for (const pawn of state.pawns) {
 			if (pawn.isAlive === false) continue;
 			// Repair inconsistent state saved from earlier bugs: path exists but isMoving=false

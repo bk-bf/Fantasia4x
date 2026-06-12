@@ -146,6 +146,15 @@ const MALNUTRITION_RATE_CRITICAL = perTick(0.0002); // +/s at hunger 87–99  �
 const MALNUTRITION_RATE_MAX = perTick(0.0005); // +/s at hunger 100    → lethal in ~2000s ≈ 6.7 days
 const MALNUTRITION_RECOVERY_RATE = perTick(0.0003); // −/s when hunger < 40 → fully clears in ~3333s ≈ 11 days
 
+/**
+ * §G light → work. Map a tile's cached lightLevel (~0.1 pitch-dark … 1.0 daylight … 1.6 firelit)
+ * to a sight/work multiplier: full speed in good light, down to a 0.4 floor in the dark (a pawn
+ * can still fumble through coarse work). Fed into `sight` so it flows through the *_speed formulas.
+ */
+function lightWorkMultiplier(lightLevel: number): number {
+    return Math.min(1, Math.max(0.4, lightLevel));
+}
+
 // §D dehydration — faster than starvation (you die of thirst long before hunger).
 const DEHYDRATION_ONSET_THIRST = 95; // condition starts here
 const DEHYDRATION_SAFE_THIRST = 40; // below this threshold, condition recovers
@@ -1756,9 +1765,18 @@ function handleWorking(pawn: Pawn, gameState: GameState): GameState {
         return jobService.releaseJob(pawn.id, jobId, goIdle(pawn, gameState));
     }
 
+    // §G light → sight → work speed. Read the pawn's cached tile light (LightingService sets it
+    // each turn: daylight/fires/torches raise it). It scales the `sight` capacity, which every
+    // `*_speed` formula multiplies by — so darkness slows ALL work through the existing model.
+    const tileLight = pawn.position
+        ? (gameState.worldMap?.[pawn.position.y]?.[pawn.position.x]?.lightLevel ?? 1)
+        : 1;
+    const lightSightFactor = lightWorkMultiplier(tileLight);
+
     // Wire work speed into job advancement.
     const workCategory = jobService.getJobWorkCategory(activeJob, gameState);
-    const workSpeedMult = pawnStatService.getWorkModifiers(pawn, workCategory).speed;
+    // Pass the light factor so construction's sight-based `*_speed` formula is genuinely dimmed.
+    const workSpeedMult = pawnStatService.getWorkModifiers(pawn, workCategory, lightSightFactor).speed;
     // For harvest/craft/haul/etc. use the SAME unified work-efficiency the UI shows
     // (skill + stats + traits + equipment + buildings + needs/mood/health). Previously these
     // used only the stat-based foraging_speed formula, so a skilled forager was no faster than
@@ -1766,19 +1784,14 @@ function handleWorking(pawn: Pawn, gameState: GameState): GameState {
     // skill-scaled rate so building times are unchanged.
     let workPoints =
         activeJob.type === 'construct' || activeJob.type === 'deconstruct'
-            ? Math.max(1, pawn.skills['skill_construction'] ?? 0) * workSpeedMult
-            : BASE_WORK_RATE *
-              Math.max(0.1, modifierSystem.calculateWorkEfficiency(pawn.id, workCategory, gameState).totalValue);
-    // §G light penalty: working in darkness is slow. Read the cached per-tile light level
-    // (LightingService recomputes it each turn; daylight/fires/torches raise it). Below 0.5
-    // the pawn fumbles — down to 40% speed in pitch dark. Daylit/firelit tiles are unaffected.
-    if (pawn.position) {
-        const tile = gameState.worldMap?.[pawn.position.y]?.[pawn.position.x];
-        const light = tile?.lightLevel ?? 1;
-        if (light < 0.5) {
-            workPoints *= Math.max(0.4, 0.4 + (light / 0.5) * 0.6);
-        }
-    }
+            ? // construction speed already runs through getWorkModifiers → the `*_speed` formula,
+              // whose `× sight` term is now light-scaled (workSpeedMult below), so don't re-apply.
+              Math.max(1, pawn.skills['skill_construction'] ?? 0) * workSpeedMult
+            : // crafting/harvest speed comes from calculateWorkEfficiency (no capacities); apply the
+              // SAME sight-light factor here so darkness slows it identically — one unified model.
+              BASE_WORK_RATE *
+              Math.max(0.1, modifierSystem.calculateWorkEfficiency(pawn.id, workCategory, gameState).totalValue) *
+              lightSightFactor;
     // workPoints is authored as work-points PER SECOND; deliver one tick's worth so
     // a job authored as N seconds of work still takes N seconds of real time.
     const afterAdvance = jobService.advanceJob(jobId, perTick(workPoints), gameState);

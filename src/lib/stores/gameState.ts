@@ -25,6 +25,7 @@ import { generateWorld } from '$lib/game/world/WorldGenerator';
 import { resourceGeneratorService } from '$lib/game/services/ResourceGeneratorService';
 import { entityService } from '$lib/game/services/EntityService';
 import { loadSave, scheduleSave, deleteSave } from './saveManager';
+import { clearActivityLog } from './Log';
 import { applyDevWorld } from '$lib/game/dev/devWorld';
 import { TICKS_PER_SECOND, ticksFromSeconds } from '$lib/game/core/time';
 import { rng, freshSeed } from '$lib/game/core/rng';
@@ -432,6 +433,7 @@ function addItem(itemId: string, amount: number) {
 
 function resetGame() {
   deleteSave().catch(console.error);
+  clearActivityLog();
   // Fresh deterministic run: new seed, reseeded RNG, cleared module state, fresh world
   // (initialGameState.worldMap is now empty — world gen is no longer done at module load).
   const seed = freshSeed();

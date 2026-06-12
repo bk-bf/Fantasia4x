@@ -18,7 +18,7 @@ import { resourceObjectService } from './ResourceObjectService';
 import itemsData from '../database/items.jsonc';
 import { absorbDropIfOnStockpileTile } from '../core/GameState';
 import { wasmPathfinderService } from './WasmPathfinderService';
-import { buildPathfindingGrids } from './PathfinderService';
+import { buildPathfindingGridsWithBlocked, entityOccupancy } from './PathfinderService';
 import { calcMaxStamina, calcMaxBloodVolume } from '../entities/Pawns';
 import { createDefaultBodyParts } from '../systems/Combat';
 import { gameLogger } from '../dev/gameLogger';
@@ -55,6 +55,8 @@ const CORPSE_DECAY_TICKS = ticksFromSeconds(200); // corpse persists ~200s then 
 /** How long a startled animal freezes in place before it bolts into Fleeing. */
 const STARTLED_TICKS = ticksFromSeconds(1);
 const SAFE_RESET_TICKS = ticksFromSeconds(15);
+/** Ticks a mob may wait behind a blocking body before dropping its path to re-route. */
+const MAX_BLOCKED_TICKS = ticksFromSeconds(1.5);
 const FLEE_HEALTH_FRACTION = 0.2;
 
 // ── Stamina (flee/exhaust pool) ────────────────────────────────────────────────
@@ -1117,7 +1119,7 @@ class EntityServiceImpl {
 
         // Route to the food tile via A*. If unreachable, bail to wandering so the
         // animal keeps moving (and re-evaluates) instead of starving frozen in place.
-        const newPath = this.pathTo(state, mob.x, mob.y, target.x, target.y);
+        const newPath = this.pathTo(state, mob.x, mob.y, target.x, target.y, mob.id);
         if (!newPath.length) {
             gameLogger.log(
                 turn,
@@ -1271,7 +1273,7 @@ class EntityServiceImpl {
             // Path to an unoccupied tile adjacent to the prey so the wolf arrives in
             // attack range without needing to land on the prey's own tile.
             const approachTile = this.bestApproachTile(state, mob, preyPos, mob.id) ?? preyPos;
-            const newPath = this.pathTo(state, mob.x, mob.y, approachTile.x, approachTile.y);
+            const newPath = this.pathTo(state, mob.x, mob.y, approachTile.x, approachTile.y, mob.id);
             if (!newPath.length) {
                 gameLogger.log(
                     turn,
@@ -1709,14 +1711,18 @@ class EntityServiceImpl {
         const mobs = state.mobs;
         if (!mobs || mobs.length === 0) return state;
 
-        // Snapshot of occupied tiles at the start of this tick.
-        // Used to prevent two entities from coming to rest on the same tile simultaneously.
-        const startOccupied = new Set<string>();
-        for (const p of state.pawns) {
-            if (p.position) startOccupied.add(`${p.position.x},${p.position.y}`);
-        }
+        // Hard tile occupancy: one entity body per tile, no phasing. A mob may not
+        // enter a tile that holds another entity (pawn or mob) and two mobs may not
+        // converge on the same free tile in one tick. `occupancy` = every body's
+        // CURRENT tile; `claimed` = tiles a mover has committed to entering this tick.
+        const occupancy = entityOccupancy(state.pawns, mobs); // includes self; self-tile guarded below
+        const claimed = new Set<string>();
+        // A mob already mid-crossing (nextCellCostLeft set) committed to its target on a
+        // prior tick — it owns that tile, so reserve it before anyone else can claim it.
         for (const m of mobs) {
-            if (m.state !== 'Corpse') startOccupied.add(`${m.x},${m.y}`);
+            if (m.state === 'Corpse' || !m.path?.length || m.nextCellCostLeft == null) continue;
+            const t = m.path[m.pathIndex ?? 0];
+            if (t) claimed.add(`${t.x},${t.y}`);
         }
 
         let changed = false;
@@ -1724,26 +1730,38 @@ class EntityServiceImpl {
 
         for (let i = 0; i < mobs.length; i++) {
             const mob = mobs[i];
-            if (!mob.path || mob.path.length === 0) {
+            const target = mob.path?.[mob.pathIndex ?? 0];
+            if (!mob.path || mob.path.length === 0 || !target) {
                 next[i] = mob;
                 continue;
             }
+            const targetKey = `${target.x},${target.y}`;
+            const selfKey = `${mob.x},${mob.y}`;
+            const midCrossing = mob.nextCellCostLeft != null;
+            // Blocked if the target tile holds another body, or another fresh mover has
+            // already claimed it this tick (a mid-crosser already owns its own claim).
+            const blocked =
+                (occupancy.has(targetKey) && targetKey !== selfKey) ||
+                (!midCrossing && claimed.has(targetKey));
+
+            if (blocked) {
+                const bt = (mob.blockedTicks ?? 0) + 1;
+                next[i] =
+                    bt > MAX_BLOCKED_TICKS
+                        ? // Stuck too long (e.g. corridor deadlock) — drop the path so the
+                          // FSM re-routes around the obstruction next tick.
+                          { ...mob, path: [], pathIndex: 0, nextCellCostLeft: undefined, blockedTicks: 0 }
+                        : { ...mob, blockedTicks: bt };
+                changed = true;
+                continue;
+            }
+
+            if (!midCrossing) claimed.add(targetKey);
             const def = getCreatureById(mob.creatureId);
             const speed = def ? Math.max(0.5, def.stats.speed) : 1;
             const moved = advanceAlongPath(mob, speed, state.worldMap);
-            // Entities may pass THROUGH each other mid-path (RimWorld/DF model).
-            // Only enforce no-stacking when the mob has just finished its path
-            // (arrived at destination) and the destination tile is already occupied.
-            const justArrived =
-                (!moved.path || moved.path.length === 0) && mob.path && mob.path.length > 0;
-            if (justArrived && startOccupied.has(`${moved.x},${moved.y}`)) {
-                // Destination now occupied — clear path so FSM picks a new target.
-                next[i] = { ...mob, path: [], pathIndex: 0, nextCellCostLeft: undefined };
-                changed = true;
-            } else {
-                next[i] = moved;
-                if (moved !== mob) changed = true;
-            }
+            next[i] = mob.blockedTicks ? { ...moved, blockedTicks: 0 } : moved;
+            if (next[i] !== mob) changed = true;
         }
 
         return changed ? { ...state, mobs: next } : state;
@@ -1853,13 +1871,23 @@ class EntityServiceImpl {
         sx: number,
         sy: number,
         ex: number,
-        ey: number
+        ey: number,
+        selfId?: string
     ): { x: number; y: number }[] {
         if (!wasmPathfinderService.isReady()) return [];
-        const { walkable, costs, width, height } = buildPathfindingGrids(state.worldMap);
-        // Terrain-only grid: entities are not treated as walls so paths can route
-        // through occupied tiles (RimWorld / DF model). The movement engine enforces
-        // the no-stacking rule only at the final destination, not mid-path.
+        // Entities are solid: every pawn/mob body (except the mover itself) is a wall,
+        // so paths route AROUND other entities and never plan through an occupied tile.
+        // The movement engine additionally blocks entry into a tile that becomes
+        // occupied after this path was computed.
+        const blocked = entityOccupancy(state.pawns, state.mobs, selfId);
+        const { walkable, costs, width, height } = buildPathfindingGridsWithBlocked(
+            state.worldMap,
+            blocked,
+            sx,
+            sy,
+            ex,
+            ey
+        );
         return wasmPathfinderService.findPath(walkable, costs, width, height, sx, sy, ex, ey);
     }
 

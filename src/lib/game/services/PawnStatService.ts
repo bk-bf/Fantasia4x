@@ -204,7 +204,8 @@ export interface PawnStatService {
     /** Get speed / yield / quality multipliers for a work type. */
     getWorkModifiers(
         pawn: Pawn | Mob,
-        workType: string
+        workType: string,
+        lightMultiplier?: number
     ): { speed: number; yield: number; quality: number };
     /** Check if a stat ID exists in stats.jsonc. */
     hasStat(statId: string): boolean;
@@ -248,9 +249,12 @@ export class PawnStatServiceImpl implements PawnStatService {
 
     getWorkModifiers(
         pawn: Pawn | Mob,
-        workType: string
+        workType: string,
+        lightMultiplier?: number
     ): { speed: number; yield: number; quality: number } {
-        const capacities = this.computeCapacities(pawn);
+        // §G: a light multiplier dims the `sight` capacity, which every `*_speed`/`_yield`/`_quality`
+        // formula multiplies by → work (and its quality) slows in the dark through the existing model.
+        const capacities = this.computeCapacities(pawn, lightMultiplier);
         const speed = evaluateFormula(STAT_MAP[`${workType}_speed`]?.formula, pawn, capacities);
         const yieldVal = evaluateFormula(STAT_MAP[`${workType}_yield`]?.formula, pawn, capacities);
         const quality = evaluateFormula(STAT_MAP[`${workType}_quality`]?.formula, pawn, capacities);

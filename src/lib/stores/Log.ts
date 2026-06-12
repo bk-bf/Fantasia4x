@@ -1,8 +1,34 @@
 import { writable, derived } from 'svelte/store';
+import { browser } from '$app/environment';
 import type { ActivityLogEntry, CombatTurnEntry } from '$lib/game/core/Events';
 import { activityLogger } from '$lib/game/dev/activityLogger';
+import { loadActivityLog, scheduleSaveActivityLog } from './saveManager';
 
 export const activityLog = writable<ActivityLogEntry[]>([]);
+
+// The chronicle lives in this in-memory store (not in GameState), so it would be
+// lost whenever the browser reloads/discards the tab. Restore it from IndexedDB on
+// startup and persist (debounced) on every change so it survives a reload.
+if (browser) {
+  loadActivityLog().then((saved) => {
+    if (saved.length > 0) {
+      activityLog.update((live) => {
+        // Merge persisted history with anything logged during the async load,
+        // de-duped by id, keeping the most recent 1000 entries.
+        const seen = new Set(saved.map((e) => e.id));
+        return [...saved, ...live.filter((e) => !seen.has(e.id))].slice(-1000);
+      });
+    }
+    // Begin persisting only after the initial load so we never clobber saved
+    // history with the empty startup value.
+    activityLog.subscribe((log) => scheduleSaveActivityLog(log));
+  });
+}
+
+/** Clear the chronicle in memory (persistence is cleared via deleteSave on reset). */
+export function clearActivityLog() {
+  activityLog.set([]);
+}
 
 // Derived stores for different log views
 export const recentActivity = derived(
