@@ -139,8 +139,8 @@
 </script>
 
 <svelte:head>
-  {#if import.meta.env.VITE_DEV_BRANCH && import.meta.env.VITE_DEV_BRANCH !== 'main'}
-    <title>Fantasia4x [{import.meta.env.VITE_DEV_BRANCH}]</title>
+  {#if import.meta.env.VITE_DEV_BRANCH}
+    <title>Fantasia4x - {import.meta.env.VITE_DEV_BRANCH.replace(/^feat\//, '')}</title>
   {:else}
     <title>Fantasia4x</title>
   {/if}
@@ -148,7 +148,7 @@
 
 <div class="topbar">
   <span class="bi title">FANTASIA4X</span>
-  {#if import.meta.env.VITE_DEV_BRANCH && import.meta.env.VITE_DEV_BRANCH !== 'main'}
+  {#if import.meta.env.VITE_DEV_BRANCH}
     <span class="bi branch-label" title="branch: {import.meta.env.VITE_DEV_BRANCH}"
       >{import.meta.env.VITE_DEV_BRANCH.replace(/^feat\//, '')}</span>
   {/if}

@@ -8,8 +8,8 @@
 
 PORT=5173
 DEBUG_MODE=false
+PID_FILE=""
 
-# Read worktree-local port override if present
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 if [[ -f "$SCRIPT_DIR/.devport" ]]; then
   PORT=$(< "$SCRIPT_DIR/.devport")
@@ -20,9 +20,17 @@ while [[ $# -gt 0 ]]; do
     --debug) DEBUG_MODE=true ;;
     --port) PORT="$2"; shift ;;
     --port=*) PORT="${1#--port=}" ;;
+    --pid-file) PID_FILE="$2"; shift ;;
+    --pid-file=*) PID_FILE="${1#--pid-file=}" ;;
   esac
   shift
 done
+
+# Generate .svelte-kit/ type definitions if missing (fresh worktree / clean checkout)
+if [[ ! -d "$SCRIPT_DIR/.svelte-kit" ]]; then
+  echo "Generating .svelte-kit/…"
+  (cd "$SCRIPT_DIR" && CI=true pnpm exec svelte-kit sync 2>&1) || true
+fi
 
 if lsof -ti tcp:$PORT >/dev/null 2>&1; then
   echo "Dev server already running on http://localhost:$PORT"
@@ -32,8 +40,13 @@ fi
 
 export PATH="$HOME/.npm-global/bin:$PATH"
 
-# Pass current branch name so the UI can label itself in multi-worktree setups
 BRANCH=$(git -C "$SCRIPT_DIR" branch --show-current 2>/dev/null || echo "")
+
+# Write PID before exec so the process ID survives the exec replacement
+if [[ -n "$PID_FILE" ]]; then
+  mkdir -p "$(dirname "$PID_FILE")"
+  echo $$ > "$PID_FILE"
+fi
 
 if [[ "$DEBUG_MODE" == "true" ]]; then
   echo "Debug mode enabled — entity IDs and dev controls will be visible."

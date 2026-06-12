@@ -21,6 +21,9 @@ Thumbs.db
 
 # Worktree-local port override (see dev.sh)
 .devport
+
+# Runtime pid files written by dev.sh --pid-file
+.pids/
 !.env.example
 !.env.test
 
