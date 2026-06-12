@@ -77,7 +77,7 @@ Grouped, roughly by quick-win / dependency order. Each box is one loop iteration
       hygiene has NO consequence. Add a `filth`/poor-hygiene consequence (mood drain via a status
       effect, + hook for later disease) in `conditions.jsonc`/`status-effects.jsonc`, and confirm
       dehydration actually applies.
-- [ ] **F2 — Reusable bar component.** The condition bar doesn't match the needs/item bars →
+- [x] **F2 — Reusable bar component.** The condition bar doesn't match the needs/item bars →
       duplication. Extract ONE `<StatBar>` (label · block-bar · value · color) and reuse it for
       needs, conditions, item FRESH/COND, blood/stamina.
 - [x] **F3 — Entity row click still expands.** D3 incomplete: clicking the row middle still drops
