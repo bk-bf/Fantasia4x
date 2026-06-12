@@ -653,6 +653,10 @@ export interface Pawn {
    */
   combatStance?: 'aggressive' | 'defensive' | 'flee';
 
+  /** Mob id this pawn is actively hunting (work-driven, set when it picks up a
+   *  `markedForHunt` target). Chased + attacked while currentState === 'Hunting'. */
+  huntTargetId?: string;
+
   // ===== DRAFT MODE =====
   /** When true, pawn ignores jobs/needs and follows player orders. */
   drafted?: boolean;

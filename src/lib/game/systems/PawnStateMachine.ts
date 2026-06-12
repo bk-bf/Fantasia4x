@@ -22,7 +22,8 @@ import type {
   ConditionDef,
   ConditionStage,
   Injury,
-  LimbState
+  LimbState,
+  Job
 } from '../core/types';
 import { recomputeWound } from './Combat';
 import { HEALING_CONFIG, CARE_CONFIG, woundById } from '../core/Wounds';
@@ -65,6 +66,8 @@ export const PAWN_STATE = {
   // Combat states (COMBAT-SYSTEM): auto-engagement when a hostile enters aggro range.
   FIGHTING: 'Fighting',
   FLEEING: 'Fleeing',
+  // Hunting (work-driven): chase a player-marked huntable mob and fight it to the kill.
+  HUNTING: 'Hunting',
   // Downed by cumulative pain — out of the fight until pain subsides.
   COLLAPSED: 'Collapsed'
 } as const;
@@ -1215,6 +1218,122 @@ function handleFleeing(pawn: Pawn, gameState: GameState): GameState {
   return haltMovement(pawn, gameState);
 }
 
+// ===== HUNTING (work-driven) =====
+
+/** A pawn's labor level (0–4) for a work category, mirroring getAvailableJobs' default of 2. */
+function laborLevel(pawn: Pawn, workId: string, gs: GameState): number {
+  const ls = gs.workAssignments?.[pawn.id]?.laborSettings;
+  if (ls && workId in ls) return ls[workId] ?? 2;
+  const pri = gs.workAssignments?.[pawn.id]?.workPriorities?.[workId];
+  return pri ?? 2;
+}
+
+/** Nearest live mob the player has flagged `markedForHunt` (Chebyshev), or null. */
+function findNearestHuntTarget(pawn: Pawn, gs: GameState): Mob | null {
+  if (!pawn.position) return null;
+  const { x: px, y: py } = pawn.position;
+  let best: Mob | null = null;
+  let bestDist = Infinity;
+  for (const m of gs.mobs ?? []) {
+    if (!m.markedForHunt || m.isAlive === false || m.state === 'Corpse') continue;
+    const d = Math.max(Math.abs(px - m.x), Math.abs(py - m.y));
+    if (d < bestDist) {
+      best = m;
+      bestDist = d;
+    }
+  }
+  return best;
+}
+
+/** Put the pawn into HUNTING locked onto `target` (clearing any active job). */
+function enterHunting(pawn: Pawn, target: Mob, gs: GameState): GameState {
+  return {
+    ...gs,
+    pawns: gs.pawns.map((p) =>
+      p.id === pawn.id
+        ? { ...p, currentState: PAWN_STATE.HUNTING, huntTargetId: target.id, activeJob: undefined }
+        : p
+    )
+  };
+}
+
+/**
+ * If a player-marked huntable mob exists and the pawn's hunting labor is at least as high
+ * as its best available job, lock onto the nearest one and start the hunt. Returns the new
+ * state, or null to fall through to normal job selection. `bestJob` is the highest-priority
+ * reachable job (or null) — used only to compare labor levels.
+ */
+function tryStartHunt(pawn: Pawn, gs: GameState, bestJob: Job | null): GameState | null {
+  if (!pawn.position) return null;
+  const huntLevel = laborLevel(pawn, 'hunting', gs);
+  if (huntLevel <= 0) return null;
+  const jobLevel = bestJob ? laborLevel(pawn, jobService.getJobWorkCategory(bestJob, gs), gs) : 0;
+  if (huntLevel < jobLevel) return null;
+
+  const target = findNearestHuntTarget(pawn, gs);
+  if (!target) return null;
+
+  // Already in melee range — plant and let combat resolve swings.
+  if (Math.max(Math.abs(pawn.position.x - target.x), Math.abs(pawn.position.y - target.y)) <= 1) {
+    return enterHunting(pawn, target, gs);
+  }
+  // Otherwise commit only if we can actually path to it; else fall through to normal jobs
+  // so the pawn isn't stuck fixating on an unreachable mark.
+  const afterPath = tryAssignPath(pawn, target.x, target.y, gs);
+  if (!afterPath) return null;
+  return enterHunting(pawn, target, afterPath);
+}
+
+/**
+ * HUNTING: chase a marked mob and stand in melee so combatService.tickCombat() lands swings.
+ * Re-paths as the quarry moves (mirrors the predator-mob hunt circuit). Survival needs still
+ * interrupt the hunt; the kill itself, carcass drop, and butchery are handled downstream.
+ */
+function handleHunting(pawn: Pawn, gameState: GameState): GameState {
+  if (!pawn.position) return gameState;
+
+  // Survival interrupts — drop the hunt to eat/sleep, same thresholds as idle work pickup.
+  if ((pawn.needs?.hunger ?? 0) >= HUNGER_THRESHOLD && hasAvailableFood(gameState)) {
+    return endHunt(pawn, PAWN_STATE.HUNGRY, gameState);
+  }
+  if ((pawn.needs?.fatigue ?? 0) >= FATIGUE_THRESHOLD) {
+    return endHunt(pawn, PAWN_STATE.TIRED, gameState);
+  }
+
+  const target = (gameState.mobs ?? []).find(
+    (m) =>
+      m.id === pawn.huntTargetId && m.isAlive !== false && m.state !== 'Corpse' && m.markedForHunt
+  );
+  // Target dead, butchered, or un-marked — hunt over.
+  if (!target) return endHunt(pawn, PAWN_STATE.IDLE, gameState);
+
+  const adjacent =
+    Math.max(Math.abs(pawn.position.x - target.x), Math.abs(pawn.position.y - target.y)) <= 1;
+  if (adjacent) return haltMovement(pawn, gameState); // stand and trade blows
+
+  // Chase: re-path when we have no route or the quarry has drifted off the path's end tile.
+  const pathEnd = pawn.path?.length ? pawn.path[pawn.path.length - 1] : null;
+  const drifted =
+    !pathEnd || Math.max(Math.abs(pathEnd.x - target.x), Math.abs(pathEnd.y - target.y)) > 1.5;
+  if ((pawn.path?.length ?? 0) > 0 && !drifted) return gameState; // keep following
+
+  const afterPath = tryAssignPath(pawn, target.x, target.y, gameState);
+  if (afterPath) return afterPath;
+  return haltMovement(pawn, gameState); // unreachable this tick — hold; needs will free it
+}
+
+/** Leave HUNTING for `state`, clearing the target and any in-flight movement. */
+function endHunt(pawn: Pawn, state: PawnStateName, gs: GameState): GameState {
+  return {
+    ...gs,
+    pawns: gs.pawns.map((p) =>
+      p.id === pawn.id
+        ? { ...p, currentState: state, huntTargetId: undefined, path: [], isMoving: false }
+        : p
+    )
+  };
+}
+
 // ===== PER-PAWN STATE HANDLERS =====
 
 // ===== HAULING HELPERS =====
@@ -1687,6 +1806,8 @@ function tickPawn(pawn: Pawn, gameState: GameState): GameState {
       return handleFighting(pawn, gameState);
     case PAWN_STATE.FLEEING:
       return handleFleeing(pawn, gameState);
+    case PAWN_STATE.HUNTING:
+      return handleHunting(pawn, gameState);
     default:
       return gameState;
   }
@@ -1723,6 +1844,12 @@ function handleIdle(pawn: Pawn, gameState: GameState): GameState {
   // Skip jobs this pawn recently failed to reach (see _unreachableJobs). Prevents an
   // unreachable target from triggering a full-map A* search every tick.
   const job = availableJobs.find((j) => !isJobUnreachableForPawn(pawn.id, j.id, gameState.turn));
+
+  // Hunting competes with normal work by labor level: a player-marked huntable mob is
+  // pursued when the pawn's hunting priority is at least as high as its best available job.
+  const hunt = tryStartHunt(pawn, gameState, job ?? null);
+  if (hunt) return hunt;
+
   if (!job) return gameState;
 
   let gs = jobService.claimJob(pawn.id, job.id, gameState);
@@ -2372,7 +2499,9 @@ class PawnStateMachineImpl {
       // untended wounds (skipped mid-fight). Runs before conditions so infection
       // sees fresh treatment, and before healing so the tend boost applies.
       const inMeleeNow =
-        current.currentState === PAWN_STATE.FIGHTING || current.currentState === PAWN_STATE.FLEEING;
+        current.currentState === PAWN_STATE.FIGHTING ||
+        current.currentState === PAWN_STATE.FLEEING ||
+        current.currentState === PAWN_STATE.HUNTING;
       let toTick = current;
       if (!inMeleeNow && state.turn % CARE_CONFIG.tendIntervalTicks === 0) {
         const afterTend = tendWounds(current, state);
@@ -2394,7 +2523,8 @@ class PawnStateMachineImpl {
       // still marches to collapse. A collapsed pawn is down until pain subsides.
       const inMelee =
         afterConditions.currentState === PAWN_STATE.FIGHTING ||
-        afterConditions.currentState === PAWN_STATE.FLEEING;
+        afterConditions.currentState === PAWN_STATE.FLEEING ||
+        afterConditions.currentState === PAWN_STATE.HUNTING;
       if (!inMelee) {
         const healed = healWounds(afterConditions, state.turn);
         if (healed !== afterConditions) {
