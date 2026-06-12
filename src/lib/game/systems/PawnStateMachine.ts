@@ -40,7 +40,8 @@ import { itemService } from '../services/ItemService';
 import { pawnStatService } from '../services/PawnStatService';
 import { modifierSystem } from './ModifierSystem';
 import { wasmPathfinderService } from '../services/WasmPathfinderService';
-import { buildPathfindingGrids } from '../services/PathfinderService';
+import { buildPathfindingGridsWithBlocked } from '../services/PathfinderService';
+import { occupancyService } from '../services/OccupancyService';
 import { logActivity } from '../../stores/Log';
 import { gameLogger } from '../dev/gameLogger';
 import { ticksFromSeconds, perTick } from '../core/time';
@@ -59,6 +60,9 @@ export const PAWN_STATE = {
     SLEEPING: 'Sleeping',
     HAULING: 'Hauling',
     MOVING_TO_DEPOSIT: 'MovingToDeposit',
+    // §D water needs: route to a drink/wash zone (or well), then drink/wash.
+    DRINKING: 'Drinking',
+    WASHING: 'Washing',
     // Combat states (COMBAT-SYSTEM): auto-engagement when a hostile enters aggro range.
     FIGHTING: 'Fighting',
     FLEEING: 'Fleeing',
@@ -600,22 +604,6 @@ function isAdjacent(ax: number, ay: number, bx: number, by: number): boolean {
 }
 
 /** Tiles held by pawns that are currently stationary (eating, sleeping, or working). */
-function getOccupiedTiles(excludePawnId: string, gs: GameState): Set<string> {
-    const occupied = new Set<string>();
-    for (const p of gs.pawns) {
-        if (p.id === excludePawnId || !p.position) continue;
-        const state = p.currentState ?? PAWN_STATE.IDLE;
-        if (
-            state === PAWN_STATE.EATING ||
-            state === PAWN_STATE.SLEEPING ||
-            state === PAWN_STATE.WORKING
-        ) {
-            occupied.add(`${p.position.x},${p.position.y}`);
-        }
-    }
-    return occupied;
-}
-
 function findAdjacentApproach(
     tx: number,
     ty: number,
@@ -685,7 +673,7 @@ function tryAssignPath(pawn: Pawn, tx: number, ty: number, gameState: GameState)
     if (!pawn.position) return null;
     if (!wasmPathfinderService.isReady()) return null;
     if (isAdjacent(pawn.position.x, pawn.position.y, tx, ty)) return null;
-    const occupied = getOccupiedTiles(pawn.id, gameState);
+    const occupied = occupancyService.blockedTiles(gameState, pawn.id);
     const approach = findAdjacentApproach(
         tx,
         ty,
@@ -695,7 +683,17 @@ function tryAssignPath(pawn: Pawn, tx: number, ty: number, gameState: GameState)
         pawn.position.y
     );
     if (!approach) return null;
-    const { walkable, costs, width, height } = buildPathfindingGrids(gameState.worldMap);
+    // Bodies are solid: route AROUND other pawns/mobs. The approach tile is kept
+    // walkable (it was chosen as unoccupied), and the start tile too, so the pawn is
+    // never blocked by itself.
+    const { walkable, costs, width, height } = buildPathfindingGridsWithBlocked(
+        gameState.worldMap,
+        occupied,
+        pawn.position.x,
+        pawn.position.y,
+        approach.x,
+        approach.y
+    );
     const path = wasmPathfinderService.findPath(
         walkable,
         costs,
@@ -723,7 +721,16 @@ function tryAssignSleepPath(
     if (!pawn.position) return null;
     if (!wasmPathfinderService.isReady()) return null;
     if (pawn.position.x === tx && pawn.position.y === ty) return null; // already on the bed
-    const { walkable, costs, width, height } = buildPathfindingGrids(gameState.worldMap);
+    // Route around other bodies; the bed tile (goal) and the pawn's own tile stay walkable.
+    const blocked = occupancyService.blockedTiles(gameState, pawn.id);
+    const { walkable, costs, width, height } = buildPathfindingGridsWithBlocked(
+        gameState.worldMap,
+        blocked,
+        pawn.position.x,
+        pawn.position.y,
+        tx,
+        ty
+    );
     const path = wasmPathfinderService.findPath(
         walkable,
         costs,
@@ -1256,6 +1263,108 @@ function findNearestDepositPoint(pawn: Pawn, gs: GameState): { x: number; y: num
     return best ? { x: best.x, y: best.y } : null;
 }
 
+// §D water-need routing thresholds (higher than the opportunistic auto-drink/wash at 70/75, so a
+// pawn only abandons work to seek water when it's getting urgent) and relief amounts.
+const ROUTE_TO_DRINK_THIRST = 82;
+const ROUTE_TO_WASH_HYGIENE = 88;
+const DRINK_NEED_RELIEF = 65;
+const WASH_NEED_RELIEF = 70;
+
+/**
+ * §D: nearest place to satisfy a water need — a player-painted `drink`/`wash` zone tile (the way
+ * the player controls where pawns go, exactly like stockpile drop-off), or for drinking a `well`
+ * building. Mirrors findNearestDepositPoint (cheap: scans designations + buildings, not the map).
+ */
+function findNearestWaterTarget(
+    pawn: Pawn,
+    gs: GameState,
+    kind: 'drink' | 'wash'
+): { x: number; y: number } | null {
+    if (!pawn.position) return null;
+    const { x: px, y: py } = pawn.position;
+    let best: { x: number; y: number; dist: number } | null = null;
+
+    for (const [key, type] of Object.entries(gs.designations ?? {})) {
+        if (type !== kind) continue;
+        const [x, y] = key.split(',').map(Number);
+        const dist = Math.abs(x - px) + Math.abs(y - py);
+        if (!best || dist < best.dist) best = { x, y, dist };
+    }
+    if (best) return { x: best.x, y: best.y };
+
+    if (kind === 'drink') {
+        for (const b of gs.buildings ?? []) {
+            if (b.status !== 'complete' || b.type !== 'well') continue;
+            const dist = Math.abs(b.x - px) + Math.abs(b.y - py);
+            if (!best || dist < best.dist) best = { x: b.x, y: b.y, dist };
+        }
+    }
+    return best ? { x: best.x, y: best.y } : null;
+}
+
+/** §D: route a pawn to a drink/wash target via the MOVING_TO_NEED flow; null if none/unreachable. */
+function tryRouteToWaterNeed(pawn: Pawn, gameState: GameState, kind: 'drink' | 'wash'): GameState | null {
+    const target = findNearestWaterTarget(pawn, gameState, kind);
+    if (!target || !pawn.position) return null;
+    const targetState = kind === 'drink' ? PAWN_STATE.DRINKING : PAWN_STATE.WASHING;
+    // Already there → don't move, just do it next turn.
+    if (isAdjacent(pawn.position.x, pawn.position.y, target.x, target.y)) {
+        return transitionTo(pawn, targetState, gameState);
+    }
+    const afterPath = tryAssignPath(pawn, target.x, target.y, gameState);
+    if (!afterPath) return null;
+    return {
+        ...afterPath,
+        pawns: afterPath.pawns.map((p) =>
+            p.id === pawn.id
+                ? {
+                    ...p,
+                    currentState: PAWN_STATE.MOVING_TO_NEED,
+                    activeJob: {
+                        type: 'need' as const,
+                        targetX: target.x,
+                        targetY: target.y,
+                        progress: 0,
+                        timeRequired: 1,
+                        turnsInState: 0,
+                        targetState
+                    }
+                }
+                : p
+        )
+    };
+}
+
+/** §D: drink at the reached target — relieve thirst (consume stored water if any), then idle. */
+function handleDrinking(pawn: Pawn, gameState: GameState): GameState {
+    let state = gameState;
+    if ((state.stockpile?.['water'] ?? 0) > 0) {
+        state = consumeFromStockpiles(state, { water: 1 });
+    }
+    state = {
+        ...state,
+        pawns: state.pawns.map((p) =>
+            p.id === pawn.id
+                ? { ...p, needs: { ...p.needs, thirst: Math.max(0, (p.needs.thirst ?? 0) - DRINK_NEED_RELIEF), lastDrink: state.turn } }
+                : p
+        )
+    };
+    return goIdle(state.pawns.find((p) => p.id === pawn.id)!, state);
+}
+
+/** §D: wash at the reached target — relieve hygiene, then idle. */
+function handleWashing(pawn: Pawn, gameState: GameState): GameState {
+    const state = {
+        ...gameState,
+        pawns: gameState.pawns.map((p) =>
+            p.id === pawn.id
+                ? { ...p, needs: { ...p.needs, hygiene: Math.max(0, (p.needs.hygiene ?? 0) - WASH_NEED_RELIEF), lastWash: gameState.turn } }
+                : p
+        )
+    };
+    return goIdle(state.pawns.find((p) => p.id === pawn.id)!, state);
+}
+
 /** Transfer everything in pawn.inventory into the correct stockpile zone. */
 function depositInventory(pawn: Pawn, gs: GameState): GameState {
     const inv = pawn.inventory?.items ?? {};
@@ -1534,6 +1643,10 @@ function tickPawn(pawn: Pawn, gameState: GameState): GameState {
             return handleHauling(pawn, gameState);
         case PAWN_STATE.MOVING_TO_DEPOSIT:
             return handleMovingToDeposit(pawn, gameState);
+        case PAWN_STATE.DRINKING:
+            return handleDrinking(pawn, gameState);
+        case PAWN_STATE.WASHING:
+            return handleWashing(pawn, gameState);
         case PAWN_STATE.FIGHTING:
             return handleFighting(pawn, gameState);
         case PAWN_STATE.FLEEING:
@@ -1546,6 +1659,18 @@ function tickPawn(pawn: Pawn, gameState: GameState): GameState {
 function handleIdle(pawn: Pawn, gameState: GameState): GameState {
     if ((pawn.needs?.hunger ?? 0) >= HUNGER_THRESHOLD && hasAvailableFood(gameState)) {
         return transitionTo(pawn, PAWN_STATE.HUNGRY, gameState);
+    }
+    // §D water needs: when thirst/hygiene gets urgent and there's no stored water to drink in
+    // place, walk to a player-painted drink/wash zone (or a well) and drink/wash there. Reuses the
+    // MOVING_TO_NEED target+move flow (same as eating/hauling). Thirst takes priority — dehydration
+    // kills faster than hunger.
+    if ((pawn.needs?.thirst ?? 0) >= ROUTE_TO_DRINK_THIRST && (gameState.stockpile?.['water'] ?? 0) <= 0) {
+        const routed = tryRouteToWaterNeed(pawn, gameState, 'drink');
+        if (routed) return routed;
+    }
+    if ((pawn.needs?.hygiene ?? 0) >= ROUTE_TO_WASH_HYGIENE) {
+        const routed = tryRouteToWaterNeed(pawn, gameState, 'wash');
+        if (routed) return routed;
     }
     // Sleep if fatigued — pawn will collapse in-place if no shelter exists
     if ((pawn.needs?.fatigue ?? 0) >= FATIGUE_THRESHOLD) {

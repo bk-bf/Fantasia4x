@@ -1,5 +1,7 @@
 import type { Building, GameState, PlacedBuilding } from '../core/types';
 import buildingsData from '../database/buildings.jsonc';
+import itemsData from '../database/items.jsonc';
+import type { Item } from '../core/types';
 import { resolveCharSpans } from '../core/Terrains';
 import type { CharSpan } from '../core/Terrains';
 import { rng } from '../core/rng';
@@ -7,6 +9,7 @@ import { perTick } from '../core/time';
 import { consumeFromStockpiles, addToStockpileZone } from '../core/GameState';
 
 const AVAILABLE_BUILDINGS = buildingsData as unknown as Building[];
+const ITEMS_DB = itemsData as unknown as Item[];
 
 /**
  * BuildingService - Clean interface for building queries and validation
@@ -23,6 +26,8 @@ export interface BuildingService {
   // Validation Methods
   canBuildBuilding(buildingId: string, gameState: GameState): boolean;
   hasRequiredResources(buildingId: string, gameState: GameState): boolean;
+  /** Resolve buildingCost to concrete items to consume (supports `category:<cat>` slots), or null if unaffordable. */
+  resolveBuildingCost(buildingId: string, gameState: GameState): Record<string, number> | null;
   hasRequiredResearch(buildingId: string, gameState: GameState): boolean;
   hasRequiredPopulation(buildingId: string, gameState: GameState): boolean;
   hasRequiredTools(buildingId: string, gameState: GameState): boolean;
@@ -126,13 +131,46 @@ export class BuildingServiceImpl implements BuildingService {
   }
 
   hasRequiredResources(buildingId: string, gameState: GameState): boolean {
-    const building = this.getBuildingById(buildingId);
-    if (!building?.buildingCost) return true;
+    return this.resolveBuildingCost(buildingId, gameState) !== null;
+  }
 
-    return Object.entries(building.buildingCost).every(([resourceId, cost]) => {
-      const available = (gameState.stockpile ?? {})[resourceId] ?? 0;
-      return available >= cost;
-    });
+  /**
+   * §A any-rock stations. Resolve a building's `buildingCost` to concrete item ids the colony can
+   * actually pay, supporting **category cost slots** keyed `category:<cat>` (e.g. `category:stone`
+   * = "8 of any stone"). Greedily covers each category slot from available stock without
+   * double-spending across slots. Returns the concrete `{itemId: qty}` to consume, or null if
+   * unaffordable. This is the building-cost analogue of a recipe's `acceptsCategory` slot.
+   */
+  resolveBuildingCost(buildingId: string, gameState: GameState): Record<string, number> | null {
+    const building = this.getBuildingById(buildingId);
+    if (!building?.buildingCost) return {};
+    const stock = gameState.stockpile ?? {};
+    const resolved: Record<string, number> = {};
+    const used: Record<string, number> = {};
+
+    for (const [key, cost] of Object.entries(building.buildingCost)) {
+      if (key.startsWith('category:')) {
+        const cat = key.slice('category:'.length);
+        let need = cost as number;
+        for (const item of ITEMS_DB) {
+          if (need <= 0) break;
+          if (item.category !== cat) continue;
+          const avail = (stock[item.id] ?? 0) - (used[item.id] ?? 0);
+          if (avail <= 0) continue;
+          const take = Math.min(avail, need);
+          resolved[item.id] = (resolved[item.id] ?? 0) + take;
+          used[item.id] = (used[item.id] ?? 0) + take;
+          need -= take;
+        }
+        if (need > 0) return null; // not enough of this category
+      } else {
+        const avail = (stock[key] ?? 0) - (used[key] ?? 0);
+        if (avail < (cost as number)) return null;
+        resolved[key] = (resolved[key] ?? 0) + (cost as number);
+        used[key] = (used[key] ?? 0) + (cost as number);
+      }
+    }
+    return resolved;
   }
 
   hasRequiredResearch(buildingId: string, gameState: GameState): boolean {

@@ -29,9 +29,9 @@
     "charSpans": [ {"sheet": "tiles", "id": 14} ],
     "fg": [1.0, 0.45, 0.1],
     "bg": [0.06, 0.03, 0.0],
-    "description": "A stone-ringed hearth — a lasting fire. Cooks, boils water, throws light, dries firewood stored nearby, and warms an enclosed home. The heart of a settled colony.",
+    "description": "A stone-ringed hearth — a lasting fire. Cooks, boils water, throws light, dries firewood stored nearby, and warms an enclosed home. The heart of a settled colony. Built from any loose rock.",
     "category": "production",
-    "buildingCost": {"granite": 8, "branch": 4},
+    "buildingCost": {"category:stone": 8, "branch": 4},
     "workAmount": 18,
     "toolTierRequired": 0,
     "populationRequired": 1,
@@ -326,6 +326,7 @@
     "maxFuel": 120,
     "fuelConsumptionRate": 2,
     "minFuelHeat": 3,
+    "moldRequired": "clay_mold",
     "fuelRequirements": {"requiredFuelTypes": 1, "tinderItemId": "plant_fiber", "tinderAmount": 2},
     "buildingState": {"isUnique": false}
   },
@@ -350,6 +351,7 @@
     "maxFuel": 160,
     "fuelConsumptionRate": 3,
     "minFuelHeat": 4,
+    "moldRequired": "clay_mold",
     "fuelRequirements": {"requiredFuelTypes": 1, "tinderItemId": "plant_fiber", "tinderAmount": 2},
     "buildingState": {"isUnique": false}
   },

@@ -83,6 +83,10 @@ export interface ItemService {
   stepItemDeterioration(gameState: GameState): GameState;
   /** §B tool work-wear: spend durability on the colony's tool for `workCategory`; break at 0. */
   applyToolWear(workCategory: string, gameState: GameState): GameState;
+  /** §B/§5: wear a specific tool/mold by id; it breaks (consumed) at maxDurability. */
+  wearToolById(toolId: string, gameState: GameState): GameState;
+  /** §5: the casting mold a recipe's station consumes wear on, or null. */
+  moldForRecipeStation(station: string | null | undefined): string | null;
   /** §1 wood seasoning: green firewood within 2 tiles (not adjacent) of a lit fire dries over time. */
   stepWoodDrying(gameState: GameState): GameState;
 }
@@ -164,7 +168,22 @@ export class ItemServiceImpl implements ItemService {
       if (!hasCookingPot) return false;
     }
 
+    // §5 casting requires a mold: a station with `moldRequired` (forge/bloomery) needs that mold
+    // in stock to cast — the clay→kiln→mold→casting gate. The mold is reusable but wears (§B).
+    if (recipe.station) {
+      const stationDef = BUILDING_DEFS_FOR_ITEMS.find((d) => d.id === recipe.station);
+      if (stationDef?.moldRequired && (gameState.stockpile?.[stationDef.moldRequired] ?? 0) <= 0) {
+        return false;
+      }
+    }
+
     return true;
+  }
+
+  /** §5: the mold a recipe consumes wear on (from its station's `moldRequired`), or null. */
+  moldForRecipeStation(station: string | null | undefined): string | null {
+    if (!station) return null;
+    return BUILDING_DEFS_FOR_ITEMS.find((d) => d.id === station)?.moldRequired ?? null;
   }
 
   hasRequiredMaterials(itemId: string, gameState: GameState): boolean {
@@ -561,16 +580,25 @@ export class ItemServiceImpl implements ItemService {
         (stockpile[i.id] ?? 0) > 0
     );
     if (!tool) return gameState; // bare hands — nothing to wear
+    return this.wearToolById(tool.id, gameState);
+  }
 
-    const loss = tool.durabilityLossPerAction ?? 2;
-    const max = tool.maxDurability ?? 40;
+  /**
+   * §B/§5: spend one action's wear on a specific tool/mold by id (tracked in gameState.toolWear);
+   * when accumulated wear reaches its maxDurability, one unit breaks (consumed) and the counter
+   * resets. Used for work-tool wear and per-cast casting-mold wear.
+   */
+  wearToolById(toolId: string, gameState: GameState): GameState {
+    if ((gameState.stockpile?.[toolId] ?? 0) <= 0) return gameState;
+    const def = this.getItemById(toolId);
+    const loss = def?.durabilityLossPerAction ?? 2;
+    const max = def?.maxDurability ?? 40;
     const wear = { ...(gameState.toolWear ?? {}) };
-    wear[tool.id] = (wear[tool.id] ?? 0) + loss;
-
-    if (wear[tool.id] >= max) {
-      wear[tool.id] = 0;
-      console.log(`[ItemService] ${tool.name} broke from use (work: ${workCategory})`);
-      return { ...this.consumeItems({ [tool.id]: 1 }, gameState), toolWear: wear };
+    wear[toolId] = (wear[toolId] ?? 0) + loss;
+    if (wear[toolId] >= max) {
+      wear[toolId] = 0;
+      console.log(`[ItemService] ${def?.name ?? toolId} broke/cracked from use`);
+      return { ...this.consumeItems({ [toolId]: 1 }, gameState), toolWear: wear };
     }
     return { ...gameState, toolWear: wear };
   }

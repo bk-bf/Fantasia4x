@@ -122,3 +122,49 @@ describe('entity starvation (headless sim)', () => {
 		expect(collapseTurn / DAY_TICKS).toBeGreaterThan(1);
 	});
 });
+
+describe('hard tile occupancy (advanceMobMovement)', () => {
+	const movingMob = (over: Partial<Mob>) =>
+		makeGoblin({ state: 'Wander', pathIndex: 0, nextCellCostLeft: undefined, ...over });
+
+	it('a mob will not step onto a tile held by a pawn (doorway chokepoint)', () => {
+		// Pawn stands in the only tile the mob's path passes through.
+		let state = makeState([movingMob({ id: 'm', x: 5, y: 5, path: [{ x: 6, y: 5 }, { x: 7, y: 5 }] })]);
+		state = {
+			...state,
+			pawns: [{ id: 'p', isAlive: true, position: { x: 6, y: 5 } }]
+		} as unknown as GameState;
+
+		for (let t = 0; t < 200; t++) {
+			state = { ...state, turn: t };
+			state = entityService.advanceMobMovement(state);
+			// The mob must never enter the pawn's tile, no matter how long it waits.
+			expect(state.mobs!.find((m) => m.id === 'm')!.x).toBe(5);
+		}
+		// After waiting past the block threshold it drops the path so the FSM re-routes.
+		expect(state.mobs!.find((m) => m.id === 'm')!.path ?? []).toHaveLength(0);
+	});
+
+	it('two mobs converging on one tile never stack — only one lands there', () => {
+		// A from the west, B from the east, both targeting (6,5).
+		let state = makeState([
+			movingMob({ id: 'a', x: 5, y: 5, path: [{ x: 6, y: 5 }] }),
+			movingMob({ id: 'b', x: 7, y: 5, path: [{ x: 6, y: 5 }] })
+		]);
+
+		for (let t = 0; t < 400; t++) {
+			state = { ...state, turn: t };
+			state = entityService.advanceMobMovement(state);
+			// Invariant: no two non-corpse mobs ever share an integer tile.
+			const live = state.mobs!.filter((m) => m.state !== 'Corpse');
+			const tiles = new Set(live.map((m) => `${m.x},${m.y}`));
+			expect(tiles.size).toBe(live.length);
+		}
+
+		const a = state.mobs!.find((m) => m.id === 'a')!;
+		const b = state.mobs!.find((m) => m.id === 'b')!;
+		// Exactly one reaches the contested tile; the other is turned away (path dropped).
+		const atTarget = [a, b].filter((m) => m.x === 6 && m.y === 5);
+		expect(atTarget).toHaveLength(1);
+	});
+});

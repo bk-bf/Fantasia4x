@@ -86,10 +86,7 @@
     "color": "#9CCC65",
     "amount": 0,
     "medicineQuality": 0.5,
-    "craftingCost": {"woundwort": 2, "cordage": 1},
-    "craftingTime": 2,
     "toolTierRequired": 0,
-    "workshopType": "craft_spot"
   },
   {
     "id"            : "river_trout",
@@ -147,10 +144,7 @@
     "color"           : "#C8864E",
     "amount"          : 0,
     "nutrition"       : 1.8,
-    "craftingCost"    : {"rabbit_carcass": 1},
-    "craftingTime"    : 200,
     "toolTierRequired": 0,
-    "workshopType"    : "butcher_spot",
     "processingType"  : ["cooking"],
     "decaySeconds"    : 600,
     "decaysTo"        : "rotten_meat"
@@ -166,10 +160,7 @@
     "color"           : "#C8864E",
     "amount"          : 0,
     "nutrition"       : 2.5,
-    "craftingCost"    : {"deer_carcass": 1},
-    "craftingTime"    : 900,
     "toolTierRequired": 0,
-    "workshopType"    : "butcher_spot",
     "processingType"  : ["cooking"],
     "decaySeconds"    : 600,
     "decaysTo"        : "rotten_meat"
@@ -209,93 +200,66 @@
     "description"   : "Plank-staved bucket for soaking hides in tannin. Needed to build a tanning rack.",
     "color"         : "#9A7B4F",
     "amount"        : 0,
-    "craftingCost"  : {"pine_plank": 2, "cordage": 1},
-    "craftingTime"  : 5, "toolTierRequired": 0, "workshopType": "sawtable"
   },
   {
     "id": "cured_thin_hide", "name": "Cured Thin Hide", "type": "material", "category": "organic",
     "maxDurability": 120, "deteriorationRate": 0.03,
     "description": "Ash/salt-cured small pelt. Stable — won't rot. Tans into thin leather.",
     "color": "#B89878", "amount": 0,
-    "craftingCost": {"rabbit_pelt": 1, "ash": 2},
-    "craftingCostAlternatives": [{"rat_pelt": 1, "ash": 2}, {"rabbit_pelt": 1, "salt": 1}, {"rat_pelt": 1, "salt": 1}],
-    "craftingTime": 40, "toolTierRequired": 0, "workshopType": "hide_rack"
   },
   {
     "id": "cured_light_hide", "name": "Cured Light Hide", "type": "material", "category": "organic",
     "maxDurability": 120, "deteriorationRate": 0.03,
     "description": "Cured deer/goat hide. Stable. Tans into light leather.",
     "color": "#B08F6A", "amount": 0,
-    "craftingCost": {"deer_hide": 1, "ash": 2},
-    "craftingCostAlternatives": [{"goat_hide": 1, "ash": 2}, {"deer_hide": 1, "salt": 1}, {"goat_hide": 1, "salt": 1}],
-    "craftingTime": 50, "toolTierRequired": 0, "workshopType": "hide_rack"
   },
   {
     "id": "cured_sturdy_hide", "name": "Cured Sturdy Hide", "type": "material", "category": "organic",
     "maxDurability": 120, "deteriorationRate": 0.03,
     "description": "Cured wolf/boar hide. Stable. Tans into sturdy leather.",
     "color": "#8A6E4E", "amount": 0,
-    "craftingCost": {"wolf_hide": 1, "ash": 2},
-    "craftingCostAlternatives": [{"boar_hide": 1, "ash": 2}, {"wolf_hide": 1, "salt": 1}, {"boar_hide": 1, "salt": 1}],
-    "craftingTime": 60, "toolTierRequired": 0, "workshopType": "hide_rack"
   },
   {
     "id": "cured_heavy_hide", "name": "Cured Heavy Hide", "type": "material", "category": "organic",
     "maxDurability": 120, "deteriorationRate": 0.03,
     "description": "Cured elk hide. Stable. Tans into heavy leather.",
     "color": "#75593C", "amount": 0,
-    "craftingCost": {"elk_hide": 1, "ash": 2},
-    "craftingCostAlternatives": [{"elk_hide": 1, "salt": 1}],
-    "craftingTime": 70, "toolTierRequired": 0, "workshopType": "hide_rack"
   },
   {
     "id": "cured_thick_hide", "name": "Cured Thick Hide", "type": "material", "category": "organic",
     "maxDurability": 120, "deteriorationRate": 0.03,
     "description": "Cured bear pelt. Stable. Tans into thick leather.",
     "color": "#5E4632", "amount": 0,
-    "craftingCost": {"bear_pelt": 1, "ash": 2},
-    "craftingCostAlternatives": [{"bear_pelt": 1, "salt": 1}],
-    "craftingTime": 80, "toolTierRequired": 0, "workshopType": "hide_rack"
   },
   {
     "id": "thin_leather", "name": "Thin Leather", "type": "material", "category": "leather",
     "maxDurability": 140, "deteriorationRate": 0.04,
     "description": "Soft thin leather. Clothing lining and light bags.",
     "color": "#C8A878", "amount": 0,
-    "craftingCost": {"cured_thin_hide": 1, "bark": 1},
-    "craftingTime": 30, "toolTierRequired": 0, "workshopType": "tanning_rack"
   },
   {
     "id": "light_leather", "name": "Light Leather", "type": "material", "category": "leather",
     "maxDurability": 150, "deteriorationRate": 0.035,
     "description": "Supple light leather. Soft armour and packs.",
     "color": "#B8935E", "amount": 0,
-    "craftingCost": {"cured_light_hide": 1, "bark": 1},
-    "craftingTime": 35, "toolTierRequired": 0, "workshopType": "tanning_rack"
   },
   {
     "id": "sturdy_leather", "name": "Sturdy Leather", "type": "material", "category": "leather",
     "maxDurability": 160, "deteriorationRate": 0.03,
     "description": "Tough leather. Light armour and straps.",
     "color": "#9A7848", "amount": 0,
-    "craftingCost": {"cured_sturdy_hide": 1, "bark": 2},
-    "craftingTime": 40, "toolTierRequired": 0, "workshopType": "tanning_rack"
   },
   {
     "id": "heavy_leather", "name": "Heavy Leather", "type": "material", "category": "leather",
     "maxDurability": 170, "deteriorationRate": 0.03,
     "description": "Thick, stiff leather. Armour and harness.",
     "color": "#7E5E36", "amount": 0,
-    "craftingCost": {"cured_heavy_hide": 1, "bark": 2},
-    "craftingTime": 45, "toolTierRequired": 0, "workshopType": "tanning_rack"
   },
   {
     "id": "thick_leather", "name": "Thick Leather", "type": "material", "category": "leather",
     "maxDurability": 180, "deteriorationRate": 0.025,
     "description": "Heaviest leather. Best armour and prestige trim.",
     "color": "#604529", "amount": 0,
-    "craftingCost": {"cured_thick_hide": 1, "bark": 3},
-    "craftingTime": 55, "toolTierRequired": 0, "workshopType": "tanning_rack"
   },
   {
     "id"              : "spit_meat",
@@ -308,59 +272,7 @@
     "color"           : "#C8864E",
     "amount"          : 0,
     "nutrition"       : 3.0,
-    "craftingCost"    : {"branch": 2},
-    "dynamicRecipe"   : {
-      "meat": {
-        "acceptsCategory": "meat",
-        "quantity"       : 1,
-        "variants"       : {
-          "rabbit_meat" : {"name": "Rabbit on a Spit", "description": "Lean rabbit skewered over open flame."},
-          "venison"     : {
-            "name"          : "Venison on a Spit",
-            "description"   : "Rich deer meat, charred and fragrant.",
-            "nutritionBonus": 0.3
-          },
-          "wolf_meat"   : {
-            "name"          : "Wolf Meat on a Spit",
-            "description"   : "Gamey and tough, but hot food is hot food.",
-            "nutritionBonus": -0.3
-          },
-          "bear_meat"   : {
-            "name"          : "Bear Steak",
-            "description"   : "Dense, fatty bear meat over open coals.",
-            "nutritionBonus": 0.8
-          },
-          "boar_meat"   : {
-            "name"          : "Boar on a Spit",
-            "description"   : "Wild pork crackling over the fire.",
-            "nutritionBonus": 0.2
-          },
-          "elk_meat"    : {
-            "name"          : "Elk Roast",
-            "description"   : "Prime elk, slow-cooked over embers.",
-            "nutritionBonus": 0.8
-          },
-          "goat_meat"   : {"name": "Goat on a Spit", "description": "Mountain goat with a smoky char."},
-          "chicken_meat": {
-            "name"          : "Roasted Chicken",
-            "description"   : "Crispy wild chicken on a branch skewer.",
-            "nutritionBonus": -0.4
-          },
-          "rat_meat"    : {
-            "name"          : "Roasted Rat",
-            "description"   : "Scrappy and unpleasant. But cooked.",
-            "nutritionBonus": -0.8
-          }
-        },
-        "default"        : {
-          "name"       : "Spit-Roasted Meat",
-          "description": "Meat skewered on a branch and cooked over fire."
-        }
-      }
-    },
-    "craftingTime"    : 2,
     "toolTierRequired": 0,
-    "workshopType"    : "campfire",
     "decaySeconds"    : 600,
     "decaysTo"        : "rotten_food"
   },
@@ -375,60 +287,7 @@
     "color"           : "#C87941",
     "amount"          : 0,
     "nutrition"       : 5.0,
-    "craftingCost"    : {},
-    "dynamicRecipe"   : {
-      "meat": {
-        "acceptsCategory": "meat",
-        "quantity"       : 1,
-        "variants"       : {
-          "rabbit_meat" : {"name": "Rabbit Stew", "description": "A warm rabbit stew with wild herbs."},
-          "venison"     : {
-            "name"          : "Venison Stew",
-            "description"   : "Hearty deer stew, thick and rich.",
-            "nutritionBonus": 0.5
-          },
-          "wolf_meat"   : {
-            "name"          : "Wolf Stew",
-            "description"   : "Gamey wolf stew. Fills the belly if not the soul.",
-            "nutritionBonus": -0.3
-          },
-          "bear_meat"   : {
-            "name"          : "Bear Stew",
-            "description"   : "Rich, fatty bear stew. Warming and dense.",
-            "nutritionBonus": 1.0
-          },
-          "boar_meat"   : {
-            "name"          : "Boar Stew",
-            "description"   : "Wild pork boiled with roots and herbs.",
-            "nutritionBonus": 0.5
-          },
-          "elk_meat"    : {
-            "name"          : "Elk Stew",
-            "description"   : "Prime elk braised in the pot. Excellent.",
-            "nutritionBonus": 1.0
-          },
-          "goat_meat"   : {
-            "name"          : "Goat Stew",
-            "description"   : "Mountain goat stewed until tender.",
-            "nutritionBonus": 0.2
-          },
-          "chicken_meat": {
-            "name"          : "Chicken Broth",
-            "description"   : "Light wild-chicken broth. Comforting.",
-            "nutritionBonus": -0.5
-          },
-          "rat_meat"    : {
-            "name"          : "Rat Stew",
-            "description"   : "Unpleasant but surprisingly caloric.",
-            "nutritionBonus": -1.5
-          }
-        },
-        "default"        : {"name": "Stew", "description": "A hearty stew. Nutrition depends on ingredients."}
-      }
-    },
-    "craftingTime"    : 3,
     "toolTierRequired": 0,
-    "workshopType"    : "campfire",
     "components"      : [],
     "decaySeconds"    : 300,
     "decaysTo"        : "rotten_food"
@@ -591,13 +450,7 @@
     "fuelHeat"      : 1,
     "deteriorationRate": 0.04,
     "maxDurability" : 120,
-    "craftingCost"    : {"pine_log": 1},
-    "craftingCostAlternatives": [
-      {"birch_log": 1}, {"oak_log": 1}, {"ash_log": 1}, {"yew_log": 1}
-    ],
-    "craftingTime"    : 2,
     "toolTierRequired": 0,
-    "workshopType"    : "chopping_block"
   },
   {
     "id"            : "dry_firewood",
@@ -651,13 +504,7 @@
     "amount"        : 0,
     "fuelValue"     : 24,
     "fuelHeat"      : 3,
-    "craftingCost"    : {"pine_log": 2},
-    "craftingCostAlternatives": [
-      {"oak_log": 2}, {"birch_log": 2}, {"ash_log": 2}, {"dry_firewood": 3}
-    ],
-    "craftingTime"    : 12,
     "toolTierRequired": 0,
-    "workshopType"    : "charcoal_pit"
   },
   {
     "id"            : "coal",
@@ -738,67 +585,48 @@
     "maxDurability" : 250, "deteriorationRate": 0.008,
     "description"   : "Smelted copper ingot. First metal — soft tools, wire, and half of bronze.",
     "color"         : "#B87333", "amount": 0,
-    "craftingCost"  : {"malachite": 3},
-    "craftingCostAlternatives": [{"chalcopyrite": 2}, {"azurite": 4}],
-    "craftingTime"  : 8, "toolTierRequired": 0, "workshopType": "stone_forge"
   },
   {
     "id"            : "tin_bar", "name": "Tin Bar", "type": "material", "category": "metal",
     "maxDurability" : 250, "deteriorationRate": 0.008,
     "description"   : "Smelted tin ingot. Soft on its own; alloyed with copper makes bronze.",
     "color"         : "#9DA1A6", "amount": 0,
-    "craftingCost"  : {"cassiterite": 3},
-    "craftingTime"  : 8, "toolTierRequired": 0, "workshopType": "stone_forge"
   },
   {
     "id"            : "bronze_bar", "name": "Bronze Bar", "type": "material", "category": "metal",
     "maxDurability" : 250, "deteriorationRate": 0.006,
     "description"   : "Cast bronze ingot — copper and tin. Tier-1 tools, weapons, and the first saw.",
     "color"         : "#CD7F32", "amount": 0,
-    "craftingCost"  : {"copper_bar": 3, "tin_bar": 1},
-    "craftingTime"  : 10, "toolTierRequired": 1, "workshopType": "stone_forge"
   },
   {
     "id"            : "iron_bar", "name": "Iron Bar", "type": "material", "category": "metal",
     "maxDurability" : 250, "deteriorationRate": 0.008,
     "description"   : "Bloomery iron ingot. Tier-2 tools, weapons and armour. Needs limestone flux.",
     "color"         : "#6E7378", "amount": 0,
-    "craftingCost"  : {"hematite": 4, "limestone": 1},
-    "craftingCostAlternatives": [{"magnetite": 3, "limestone": 1}, {"limonite": 5, "limestone": 1}],
-    "craftingTime"  : 14, "toolTierRequired": 1, "workshopType": "bloomery"
   },
   {
     "id"            : "lead_bar", "name": "Lead Bar", "type": "material", "category": "metal",
     "maxDurability" : 250, "deteriorationRate": 0.008,
     "description"   : "Smelted lead. Heavy, soft — pipes, weights, and shot.",
     "color"           : "#5A5E63", "amount": 0,
-    "craftingCost"  : {"galena": 3},
-    "craftingTime"  : 8, "toolTierRequired": 0, "workshopType": "stone_forge"
   },
   {
     "id"            : "silver_bar", "name": "Silver Bar", "type": "material", "category": "metal",
     "maxDurability" : 250, "deteriorationRate": 0.006,
     "description"   : "Cupelled silver from galena. Coin, fine decor, and trade.",
     "color"         : "#C0C0C0", "amount": 0,
-    "craftingCost"  : {"galena": 5},
-    "craftingTime"  : 16, "toolTierRequired": 1, "workshopType": "stone_forge"
   },
   {
     "id"            : "gold_bar", "name": "Gold Bar", "type": "material", "category": "metal",
     "maxDurability" : 250, "deteriorationRate": 0.005,
     "description"   : "Cast gold ingot. Currency, prestige decor, and magical work.",
     "color"         : "#D4AF37", "amount": 0,
-    "craftingCost"  : {"native_gold": 3},
-    "craftingCostAlternatives": [{"electrum": 3}],
-    "craftingTime"  : 10, "toolTierRequired": 1, "workshopType": "stone_forge"
   },
   {
     "id"            : "steel_bar", "name": "Steel Bar", "type": "material", "category": "metal",
     "maxDurability" : 250, "deteriorationRate": 0.006,
     "description"   : "Cast steel — iron with coal and flux. The deterministic ceiling: best mundane gear.",
     "color"           : "#43484D", "amount": 0,
-    "craftingCost"  : {"iron_bar": 2, "coal": 1, "limestone": 1},
-    "craftingTime"  : 20, "toolTierRequired": 2, "workshopType": "bloomery"
   },
   {
     "id"            : "ash",
@@ -810,11 +638,7 @@
     "description"   : "Wood ash from a fire. Used to cure hides and, later, to make lye and soap.",
     "color"         : "#9E9E9E",
     "amount"        : 0,
-    "craftingCost"    : {"green_firewood": 1},
-    "craftingCostAlternatives": [{"dry_firewood": 1}, {"branch": 3}],
-    "craftingTime"    : 3,
     "toolTierRequired": 0,
-    "workshopType"    : "hearth"
   },
   {
     "id"            : "salt",
@@ -849,11 +673,7 @@
     "description"   : "Rendered fat from a fatty carcass. Fuel for torches and lamps; later, soap and tallow.",
     "color"         : "#E8D9A8",
     "amount"        : 0,
-    "craftingCost"  : {"bear_meat": 1},
-    "craftingCostAlternatives": [{"boar_meat": 1}, {"elk_meat": 1}, {"goat_meat": 1}],
-    "craftingTime"  : 6,
     "toolTierRequired": 0,
-    "workshopType"  : "hearth"
   },
   {
     "id"            : "torch",
@@ -866,10 +686,7 @@
     "color"         : "#FF9E40",
     "amount"        : 0,
     "fuelValue"     : 6,
-    "craftingCost"  : {"branch": 1, "animal_fat": 1, "plant_fiber": 1},
-    "craftingTime"  : 3,
     "toolTierRequired": 0,
-    "workshopType"  : "craft_spot"
   },
   {
     "id"            : "candle",
@@ -882,10 +699,7 @@
     "color"         : "#F2E2B0",
     "amount"        : 0,
     "fuelValue"     : 4,
-    "craftingCost"  : {"animal_fat": 2, "plant_fiber": 1},
-    "craftingTime"  : 4,
     "toolTierRequired": 0,
-    "workshopType"  : "makers_bench"
   },
   {
     "id"              : "salted_meat",
@@ -898,17 +712,7 @@
     "color"           : "#B5705A",
     "amount"          : 0,
     "nutrition"       : 2.0,
-    "craftingCost"    : {"salt": 1},
-    "dynamicRecipe"   : {
-      "meat": {
-        "acceptsCategory": "meat",
-        "quantity"       : 1,
-        "default"        : {"name": "Salted Meat", "description": "Meat packed in salt. Keeps for a very long time."}
-      }
-    },
-    "craftingTime"    : 60,
     "toolTierRequired": 0,
-    "workshopType"    : "butcher_spot",
     "decaySeconds"    : 36000,
     "decaysTo"        : "rotten_meat"
   },
@@ -923,16 +727,7 @@
     "color"           : "#9C5A3C",
     "amount"          : 0,
     "nutrition"       : 1.8,
-    "dynamicRecipe"   : {
-      "meat": {
-        "acceptsCategory": "meat",
-        "quantity"       : 1,
-        "default"        : {"name": "Dried Meat", "description": "Wind- and smoke-dried meat. Keeps well without salt."}
-      }
-    },
-    "craftingTime"    : 120,
     "toolTierRequired": 0,
-    "workshopType"    : "drying_rack",
     "decaySeconds"    : 28000,
     "decaysTo"        : "rotten_meat"
   },
@@ -948,10 +743,7 @@
     "fuelHeat"      : 1,
     "deteriorationRate": 0.03,
     "maxDurability" : 120,
-    "craftingCost"    : {"pine_log": 1},
-    "craftingTime"    : 4,
     "toolTierRequired": 0,
-    "workshopType"    : "sawtable"
   },
   {
     "id"            : "oak_plank",
@@ -965,10 +757,7 @@
     "fuelHeat"      : 1,
     "deteriorationRate": 0.025,
     "maxDurability" : 120,
-    "craftingCost"    : {"oak_log": 1},
-    "craftingTime"    : 5,
     "toolTierRequired": 0,
-    "workshopType"    : "sawtable"
   },
   {
     "id"            : "birch_plank",
@@ -982,10 +771,7 @@
     "fuelHeat"      : 1,
     "deteriorationRate": 0.03,
     "maxDurability" : 120,
-    "craftingCost"    : {"birch_log": 1},
-    "craftingTime"    : 4,
     "toolTierRequired": 0,
-    "workshopType"    : "sawtable"
   },
   {
     "id"            : "ash_plank",
@@ -999,10 +785,7 @@
     "fuelHeat"      : 1,
     "deteriorationRate": 0.025,
     "maxDurability" : 120,
-    "craftingCost"    : {"ash_log": 1},
-    "craftingTime"    : 4,
     "toolTierRequired": 0,
-    "workshopType"    : "sawtable"
   },
   {
     "id"            : "yew_plank",
@@ -1016,10 +799,7 @@
     "fuelHeat"      : 1,
     "deteriorationRate": 0.02,
     "maxDurability" : 120,
-    "craftingCost"    : {"yew_log": 1},
-    "craftingTime"    : 6,
     "toolTierRequired": 0,
-    "workshopType"    : "sawtable"
   },
   {
     "id"              : "saw",
@@ -1034,10 +814,7 @@
     "durability"      : 80,
     "maxDurability"   : 80,
     "durabilityLossPerAction": 2,
-    "craftingCost"    : {"bronze_bar": 1, "ash_log": 1},
-    "craftingTime"    : 6,
     "toolTierRequired": 1,
-    "workshopType"    : "makers_bench"
   },
   {
     "id"            : "granite",
@@ -1109,10 +886,7 @@
     "description"   : "Dressed granite block. Strong walls and prestige stonework.",
     "color"         : "#9E8E8A",
     "amount"        : 0,
-    "craftingCost"    : {"granite": 2},
-    "craftingTime"    : 6,
     "toolTierRequired": 1,
-    "workshopType"    : "masons_bench"
   },
   {
     "id"            : "limestone_block",
@@ -1124,10 +898,7 @@
     "description"   : "Dressed limestone block. Soft, easy walls and mortar work.",
     "color"         : "#C8C0A8",
     "amount"        : 0,
-    "craftingCost"    : {"limestone": 2},
-    "craftingTime"    : 5,
     "toolTierRequired": 1,
-    "workshopType"    : "masons_bench"
   },
   {
     "id"            : "sandstone_block",
@@ -1139,10 +910,7 @@
     "description"   : "Dressed sandstone block. Cheap bulk building.",
     "color"         : "#D9B88C",
     "amount"        : 0,
-    "craftingCost"    : {"sandstone": 2},
-    "craftingTime"    : 5,
     "toolTierRequired": 1,
-    "workshopType"    : "masons_bench"
   },
   {
     "id"            : "marble_block",
@@ -1154,10 +922,7 @@
     "description"   : "Dressed marble block. Statues, fine floors, prestige decor.",
     "color"         : "#E8E6E0",
     "amount"        : 0,
-    "craftingCost"    : {"marble": 2},
-    "craftingTime"    : 9,
     "toolTierRequired": 1,
-    "workshopType"    : "masons_bench"
   },
   {
     "id"            : "slate_tile",
@@ -1169,10 +934,7 @@
     "description"   : "Split slate roofing tile — the durable, low-maintenance roof.",
     "color"         : "#5A6066",
     "amount"        : 0,
-    "craftingCost"    : {"slate": 1},
-    "craftingTime"    : 3,
     "toolTierRequired": 1,
-    "workshopType"    : "masons_bench"
   },
   {
     "id"            : "clay_lump",
@@ -1197,10 +959,7 @@
     "color"           : "#C8A064",
     "amount"          : 0,
     "fuelValue"       : 4,
-    "craftingCost"    : {"plant_fiber": 5},
-    "craftingTime"    : 1,
     "toolTierRequired": 0,
-    "workshopType"    : "craft_spot"
   },
   {
     "id"              : "mud_brick",
@@ -1212,10 +971,7 @@
     "description"     : "Sun-dried mud brick. Requires no kiln.",
     "color"           : "#C4A265",
     "amount"          : 0,
-    "craftingCost"    : {"clay_lump": 2},
-    "craftingTime"    : 2,
     "toolTierRequired": 0,
-    "workshopType"    : "craft_spot"
   },
   {
     "id"              : "fired_brick",
@@ -1227,10 +983,7 @@
     "description"     : "Kiln-fired clay brick. Hard and weatherproof — forges, kilns, cellars, sturdy walls.",
     "color"           : "#A0522D",
     "amount"          : 0,
-    "craftingCost"    : {"clay_lump": 2},
-    "craftingTime"    : 5,
     "toolTierRequired": 0,
-    "workshopType"    : "pottery_kiln"
   },
   {
     "id"              : "water_urn",
@@ -1244,10 +997,7 @@
     "amount"          : 0,
     "isContainer"     : true,
     "storageCapacity" : 20,
-    "craftingCost"    : {"clay_lump": 1},
-    "craftingTime"    : 4,
     "toolTierRequired": 0,
-    "workshopType"    : "pottery_kiln"
   },
   {
     "id"              : "clay_mold",
@@ -1255,14 +1005,12 @@
     "type"            : "tool",
     "category"        : "metalworking",
     "maxDurability"  : 40,
+    "durabilityLossPerAction": 4,
     "deteriorationRate": 0.02,
     "description"     : "Fired clay ingot mold. Required to cast metal bars — cracks and wears with each pour.",
     "color"           : "#9A6B43",
     "amount"          : 0,
-    "craftingCost"    : {"clay_lump": 2},
-    "craftingTime"    : 4,
     "toolTierRequired": 0,
-    "workshopType"    : "pottery_kiln"
   },
   {
     "id"              : "tile_mold",
@@ -1274,10 +1022,7 @@
     "description"     : "Cast-metal form for pressing clay roof tiles. Made at the forge — needs bronze.",
     "color"           : "#B87333",
     "amount"          : 0,
-    "craftingCost"    : {"bronze_bar": 1},
-    "craftingTime"    : 6,
     "toolTierRequired": 1,
-    "workshopType"    : "stone_forge"
   },
   {
     "id"              : "clay_roof_tile",
@@ -1289,10 +1034,7 @@
     "description"     : "Pressed-and-fired clay tile. The durable, low-maintenance roof — slow to weather, robust against storms. (Pressing needs a reusable tile_mold — enforced once mold-required logic lands.)",
     "color"           : "#9C3B2E",
     "amount"          : 0,
-    "craftingCost"    : {"clay_lump": 2},
-    "craftingTime"    : 5,
     "toolTierRequired": 0,
-    "workshopType"    : "pottery_kiln"
   },
   {
     "id"              : "firestarter",
@@ -1306,10 +1048,7 @@
     "durability"      : 10,
     "maxDurability"   : 10,
     "tier"            : 0,
-    "craftingCost"    : {"small_stone": 1, "flint_shard": 1},
-    "craftingTime"    : 1,
     "toolTierRequired": 0,
-    "workshopType"    : "craft_spot",
     "processingType"  : ["light"]
   },
   {
@@ -1324,10 +1063,7 @@
     "tier"            : 0,
     "durability"      : 20,
     "maxDurability"   : 20,
-    "craftingCost"    : {"flint_shard": 2, "branch": 2, "cordage": 1},
-    "craftingTime"    : 1,
     "toolTierRequired": 0,
-    "workshopType"    : "craft_spot",
     "processingType"  : ["crafting", "butchery"]
   },
   {
@@ -1342,10 +1078,7 @@
     "tier"            : 0,
     "durability"      : 25,
     "maxDurability"   : 25,
-    "craftingCost"    : {"flint_shard": 3, "branch": 2, "cordage": 1},
-    "craftingTime"    : 2,
     "toolTierRequired": 0,
-    "workshopType"    : "craft_spot",
     "processingType"  : ["foraging", "harvesting"],
     "effects"         : {"foragingBonus": 0.5}
   },
@@ -1361,10 +1094,7 @@
     "tier"            : 0,
     "durability"      : 15,
     "maxDurability"   : 15,
-    "craftingCost"    : {"small_stone": 1, "branch": 3, "cordage": 1},
-    "craftingTime"    : 1,
     "toolTierRequired": 0,
-    "workshopType"    : "craft_spot",
     "processingType"  : ["crafting", "woodcutting"]
   },
   {
@@ -1378,10 +1108,7 @@
     "color"           : "#8B6914",
     "amount"          : 0,
     "tier"            : 0,
-    "craftingCost"    : {"branch": 2, "plant_fiber": 2},
-    "craftingTime"    : 1,
     "toolTierRequired": 0,
-    "workshopType"    : "craft_spot",
     "processingType"  : ["crafting", "fishing", "mining"]
   },
   {
@@ -1397,10 +1124,7 @@
     "durability"      : 40,
     "maxDurability"   : 40,
     "durabilityLossPerAction": 5,
-    "craftingCost"    : {"flint_shard": 2, "branch": 3, "cordage": 2},
-    "craftingTime"    : 3,
     "toolTierRequired": 0,
-    "workshopType"    : "makers_bench",
     "processingType"  : ["woodcutting"]
   },
   {
@@ -1415,10 +1139,7 @@
     "tier"            : 1,
     "durability"      : 40,
     "maxDurability"   : 40,
-    "craftingCost"    : {"granite": 2, "branch": 3, "cordage": 1},
-    "craftingTime"    : 3,
     "toolTierRequired": 0,
-    "workshopType"    : "makers_bench",
     "processingType"  : ["construction"]
   },
   {
@@ -1433,10 +1154,7 @@
     "tier"            : 1,
     "durability"      : 30,
     "maxDurability"   : 30,
-    "craftingCost"    : {"flint_shard": 3, "branch": 4, "cordage": 1},
-    "craftingTime"    : 3,
     "toolTierRequired": 0,
-    "workshopType"    : "makers_bench",
     "weaponProperties": {"damage": 8, "attackSpeed": 1, "range": 1},
     "processingType"  : ["hunting"]
   },
@@ -1452,10 +1170,7 @@
     "tier"            : 1,
     "durability"      : 35,
     "maxDurability"   : 35,
-    "craftingCost"    : {"granite": 2, "branch": 2, "cordage": 2},
-    "craftingTime"    : 3,
     "toolTierRequired": 0,
-    "workshopType"    : "makers_bench",
     "processingType"  : ["construction", "mining"]
   },
   {
@@ -1471,10 +1186,7 @@
     "durability"      : 30,
     "maxDurability"   : 30,
     "isCookingVessel" : true,
-    "craftingCost"    : {"clay_lump": 2},
-    "craftingTime"    : 2,
     "toolTierRequired": 0,
-    "workshopType"    : "campfire",
     "processingType"  : ["cooking"]
   },
   {
@@ -1489,10 +1201,7 @@
     "amount"          : 0,
     "isContainer"     : true,
     "storageCapacity" : 15,
-    "craftingCost"    : {"branch": 4, "cordage": 15},
-    "craftingTime"    : 2,
     "toolTierRequired": 0,
-    "workshopType"    : "makers_bench"
   },
   {
     "id"            : "wolf_carcass",
@@ -1627,10 +1336,7 @@
     "color"           : "#B06040",
     "amount"          : 0,
     "nutrition"       : 1.5,
-    "craftingCost"    : {"wolf_carcass": 1},
-    "craftingTime"    : 900,
     "toolTierRequired": 0,
-    "workshopType"    : "butcher_spot",
     "processingType"  : ["cooking"],
     "decaySeconds"    : 600,
     "decaysTo"        : "rotten_meat"
@@ -1646,10 +1352,7 @@
     "color"           : "#A05030",
     "amount"          : 0,
     "nutrition"       : 2.8,
-    "craftingCost"    : {"bear_carcass": 1},
-    "craftingTime"    : 3600,
     "toolTierRequired": 0,
-    "workshopType"    : "butcher_spot",
     "processingType"  : ["cooking"],
     "decaySeconds"    : 900,
     "decaysTo"        : "rotten_meat"
@@ -1665,10 +1368,7 @@
     "color"           : "#C87050",
     "amount"          : 0,
     "nutrition"       : 2.2,
-    "craftingCost"    : {"boar_carcass": 1},
-    "craftingTime"    : 900,
     "toolTierRequired": 0,
-    "workshopType"    : "butcher_spot",
     "processingType"  : ["cooking"],
     "decaySeconds"    : 600,
     "decaysTo"        : "rotten_meat"
@@ -1684,10 +1384,7 @@
     "color"           : "#C86040",
     "amount"          : 0,
     "nutrition"       : 2.8,
-    "craftingCost"    : {"elk_carcass": 1},
-    "craftingTime"    : 3600,
     "toolTierRequired": 0,
-    "workshopType"    : "butcher_spot",
     "processingType"  : ["cooking"],
     "decaySeconds"    : 900,
     "decaysTo"        : "rotten_meat"
@@ -1703,10 +1400,7 @@
     "color"           : "#C07858",
     "amount"          : 0,
     "nutrition"       : 1.6,
-    "craftingCost"    : {"mountain_goat_carcass": 1},
-    "craftingTime"    : 900,
     "toolTierRequired": 0,
-    "workshopType"    : "butcher_spot",
     "processingType"  : ["cooking"],
     "decaySeconds"    : 600,
     "decaysTo"        : "rotten_meat"
@@ -1722,10 +1416,7 @@
     "color"           : "#E8B870",
     "amount"          : 0,
     "nutrition"       : 0.9,
-    "craftingCost"    : {"wild_chicken_carcass": 1},
-    "craftingTime"    : 200,
     "toolTierRequired": 0,
-    "workshopType"    : "butcher_spot",
     "processingType"  : ["cooking"],
     "decaySeconds"    : 450,
     "decaysTo"        : "rotten_meat"
@@ -1741,10 +1432,7 @@
     "color"           : "#907060",
     "amount"          : 0,
     "nutrition"       : 0.8,
-    "craftingCost"    : {"giant_rat_carcass": 1},
-    "craftingTime"    : 200,
     "toolTierRequired": 0,
-    "workshopType"    : "butcher_spot",
     "processingType"  : ["cooking"],
     "decaySeconds"    : 450,
     "decaysTo"        : "rotten_meat"
@@ -1762,10 +1450,7 @@
     "description"     : "Small, soft rabbit pelt. Light insulation and trim.",
     "color"           : "#E0D8C8",
     "amount"          : 0,
-    "craftingCost"    : {"rabbit_carcass": 1},
-    "craftingTime"    : 150,
     "toolTierRequired": 0,
-    "workshopType"    : "butcher_spot",
     "processingType"  : ["leatherworking"]
   },
   {
@@ -1780,10 +1465,7 @@
     "description"     : "Supple deer skin. A foundational leatherworking material.",
     "color"           : "#A07848",
     "amount"          : 0,
-    "craftingCost"    : {"deer_carcass": 1},
-    "craftingTime"    : 600,
     "toolTierRequired": 0,
-    "workshopType"    : "butcher_spot",
     "processingType"  : ["leatherworking"]
   },
   {
@@ -1798,10 +1480,7 @@
     "description"     : "Coarse wolf skin with a dense undercoat. Excellent for cold-weather gear.",
     "color"           : "#A0A8B0",
     "amount"          : 0,
-    "craftingCost"    : {"wolf_carcass": 1},
-    "craftingTime"    : 600,
     "toolTierRequired": 0,
-    "workshopType"    : "butcher_spot",
     "processingType"  : ["leatherworking"]
   },
   {
@@ -1816,10 +1495,7 @@
     "description"     : "Thick, shaggy bear pelt. Premium winter cloak material.",
     "color"           : "#705030",
     "amount"          : 0,
-    "craftingCost"    : {"bear_carcass": 1},
-    "craftingTime"    : 2400,
     "toolTierRequired": 0,
-    "workshopType"    : "butcher_spot",
     "processingType"  : ["leatherworking"]
   },
   {
@@ -1834,10 +1510,7 @@
     "description"     : "Thick, bristle-covered boar skin. Stiff but durable.",
     "color"           : "#908070",
     "amount"          : 0,
-    "craftingCost"    : {"boar_carcass": 1},
-    "craftingTime"    : 600,
     "toolTierRequired": 0,
-    "workshopType"    : "butcher_spot",
     "processingType"  : ["leatherworking"]
   },
   {
@@ -1852,10 +1525,7 @@
     "description"     : "Large, tough elk hide. Ideal for armour lining and tents.",
     "color"           : "#887060",
     "amount"          : 0,
-    "craftingCost"    : {"elk_carcass": 1},
-    "craftingTime"    : 2400,
     "toolTierRequired": 0,
-    "workshopType"    : "butcher_spot",
     "processingType"  : ["leatherworking"]
   },
   {
@@ -1870,10 +1540,7 @@
     "description"     : "Tough mountain goat hide. Weather-resistant and hard-wearing.",
     "color"           : "#C0C0B0",
     "amount"          : 0,
-    "craftingCost"    : {"mountain_goat_carcass": 1},
-    "craftingTime"    : 600,
     "toolTierRequired": 0,
-    "workshopType"    : "butcher_spot",
     "processingType"  : ["leatherworking"]
   },
   {
@@ -1886,10 +1553,7 @@
     "description"     : "Soft wild-chicken feathers. Stuffing, fletching, and decoration.",
     "color"           : "#F0E0A0",
     "amount"          : 0,
-    "craftingCost"    : {"wild_chicken_carcass": 1},
-    "craftingTime"    : 150,
     "toolTierRequired": 0,
-    "workshopType"    : "butcher_spot",
     "processingType"  : ["crafting"]
   },
   {
@@ -1904,10 +1568,7 @@
     "description"     : "Small, coarse rat skin. Barely worth the scraping.",
     "color"           : "#807060",
     "amount"          : 0,
-    "craftingCost"    : {"giant_rat_carcass": 1},
-    "craftingTime"    : 150,
     "toolTierRequired": 0,
-    "workshopType"    : "butcher_spot",
     "processingType"  : ["leatherworking"]
   },
   // Size-based bones (alternative sources via craftingCostAlternatives)
@@ -1921,11 +1582,7 @@
     "description": "Hollow, delicate bones from small animals. Useful for needles and fishhooks.",
     "color": "#E8E0D0",
     "amount": 0,
-    "craftingCost": {"rabbit_carcass": 1},
-    "craftingCostAlternatives": [ {"giant_rat_carcass": 1}, {"wild_chicken_carcass": 1} ],
-    "craftingTime": 100,
     "toolTierRequired": 0,
-    "workshopType": "butcher_spot",
     "processingType": ["crafting"]
   },
   {
@@ -1938,11 +1595,7 @@
     "description": "Sturdy mid-sized bones. Blanched into tools, handles, and toggles.",
     "color": "#D8D0C0",
     "amount": 0,
-    "craftingCost": {"wolf_carcass": 1},
-    "craftingCostAlternatives": [ {"deer_carcass": 1}, {"boar_carcass": 1}, {"mountain_goat_carcass": 1} ],
-    "craftingTime": 300,
     "toolTierRequired": 0,
-    "workshopType": "butcher_spot",
     "processingType": ["crafting"]
   },
   {
@@ -1955,11 +1608,7 @@
     "description": "Massive load-bearing bones. Ground for fertiliser or carved into heavy tools.",
     "color": "#C8C0B0",
     "amount": 0,
-    "craftingCost": {"bear_carcass": 1},
-    "craftingCostAlternatives": [ {"elk_carcass": 1} ],
-    "craftingTime": 1200,
     "toolTierRequired": 0,
-    "workshopType": "butcher_spot",
     "processingType": ["crafting"]
   },
   // ── Spoiled / rotten items ──────────────────────────────────────────────────
@@ -2013,10 +1662,7 @@
     "tier": 1,
     "durability": 45,
     "maxDurability": 45,
-    "craftingCost": {"large_bones": 1, "flint_shard": 2, "branch": 3, "cordage": 2},
-    "craftingTime": 4,
     "toolTierRequired": 0,
-    "workshopType": "makers_bench",
     "processingType": ["butchery"],
     "effects": {"butcheryYieldBonus": 0.25}
   },

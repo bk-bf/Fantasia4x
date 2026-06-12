@@ -678,6 +678,7 @@ class JobServiceImpl {
     const refunds: Record<string, number> = {};
     if (def?.buildingCost) {
       for (const [itemId, cost] of Object.entries(def.buildingCost)) {
+        if (itemId.startsWith('category:')) continue; // category slots have no specific item to refund
         const refund = Math.floor(Number(cost) * 0.5);
         if (refund > 0) refunds[itemId] = (refunds[itemId] ?? 0) + refund;
       }
@@ -790,6 +791,13 @@ class JobServiceImpl {
     }
     if (Object.keys(byproducts).length > 0) {
       state = itemService.addItems(byproducts, state);
+    }
+
+    // §5 casting-mold wear: if this recipe's station needs a mold (forge/bloomery), the clay mold
+    // takes one cast's wear and cracks after enough pours.
+    const mold = itemService.moldForRecipeStation(recipe?.station);
+    if (mold) {
+      for (let i = 0; i < quantity; i++) state = itemService.wearToolById(mold, state);
     }
 
     console.log(

@@ -18,7 +18,8 @@ import { resourceObjectService } from './ResourceObjectService';
 import itemsData from '../database/items.jsonc';
 import { absorbDropIfOnStockpileTile } from '../core/GameState';
 import { wasmPathfinderService } from './WasmPathfinderService';
-import { buildPathfindingGridsWithBlocked, entityOccupancy } from './PathfinderService';
+import { buildPathfindingGridsWithBlocked } from './PathfinderService';
+import { occupancyService } from './OccupancyService';
 import { calcMaxStamina, calcMaxBloodVolume } from '../entities/Pawns';
 import { createDefaultBodyParts } from '../systems/Combat';
 import { gameLogger } from '../dev/gameLogger';
@@ -1638,7 +1639,7 @@ class EntityServiceImpl {
                 const nx = target.x + dx;
                 const ny = target.y + dy;
                 if (!this.isWalkable(state, nx, ny)) continue;
-                if (this.isOccupied(state, nx, ny, selfId)) continue;
+                if (occupancyService.isBlocked(state, nx, ny, selfId)) continue;
                 const d = Math.abs(nx - from.x) + Math.abs(ny - from.y);
                 if (d < bestDist) {
                     bestDist = d;
@@ -1667,7 +1668,7 @@ class EntityServiceImpl {
         ].filter((c) => c.x !== mob.x || c.y !== mob.y);
 
         for (const c of primary) {
-            if (this.isWalkable(state, c.x, c.y) && !this.isOccupied(state, c.x, c.y, mob.id)) {
+            if (this.isWalkable(state, c.x, c.y) && !occupancyService.isBlocked(state, c.x, c.y, mob.id)) {
                 const currentNext = mob.path?.[mob.pathIndex ?? 0];
                 if (currentNext && currentNext.x === c.x && currentNext.y === c.y) return mob;
                 return { ...mob, path: [c], pathIndex: 0, nextCellCostLeft: undefined };
@@ -1694,7 +1695,7 @@ class EntityServiceImpl {
         });
 
         for (const c of allNeighbours) {
-            if (this.isWalkable(state, c.x, c.y) && !this.isOccupied(state, c.x, c.y, mob.id)) {
+            if (this.isWalkable(state, c.x, c.y) && !occupancyService.isBlocked(state, c.x, c.y, mob.id)) {
                 const currentNext = mob.path?.[mob.pathIndex ?? 0];
                 if (currentNext && currentNext.x === c.x && currentNext.y === c.y) return mob;
                 return { ...mob, path: [c], pathIndex: 0, nextCellCostLeft: undefined };
@@ -1715,7 +1716,7 @@ class EntityServiceImpl {
         // enter a tile that holds another entity (pawn or mob) and two mobs may not
         // converge on the same free tile in one tick. `occupancy` = every body's
         // CURRENT tile; `claimed` = tiles a mover has committed to entering this tick.
-        const occupancy = entityOccupancy(state.pawns, mobs); // includes self; self-tile guarded below
+        const occupancy = occupancyService.blockedTiles(state); // includes self; self-tile guarded below
         const claimed = new Set<string>();
         // A mob already mid-crossing (nextCellCostLeft set) committed to its target on a
         // prior tick — it owns that tile, so reserve it before anyone else can claim it.
@@ -1814,7 +1815,7 @@ class EntityServiceImpl {
             ) {
                 continue;
             }
-            if (selfId && this.isOccupied(state, nx, ny, selfId)) continue;
+            if (selfId && occupancyService.isBlocked(state, nx, ny, selfId)) continue;
             return { x: nx, y: ny };
         }
         return null;
@@ -1823,18 +1824,6 @@ class EntityServiceImpl {
     private isWalkable(state: GameState, x: number, y: number): boolean {
         const tile = state.worldMap[y]?.[x];
         return !!tile && tile.walkable;
-    }
-
-    /** True if a non-corpse entity (pawn or mob other than `selfId`) already occupies (x, y). */
-    private isOccupied(state: GameState, x: number, y: number, selfId: string): boolean {
-        for (const p of state.pawns) {
-            if (p.position?.x === x && p.position?.y === y) return true;
-        }
-        for (const m of state.mobs ?? []) {
-            if (m.id === selfId || m.state === 'Corpse') continue;
-            if (m.x === x && m.y === y) return true;
-        }
-        return false;
     }
 
     // ===== QUERY HELPERS ===========================================================
@@ -1862,9 +1851,10 @@ class EntityServiceImpl {
 
     /**
      * WASM A* path from (sx,sy) to (ex,ey). Returns the route EXCLUDING the start
-     * tile, or [] if WASM is not ready or the target is unreachable. Grid arrays are
-     * memoized per-worldMap reference by buildPathfindingGrids, so calling this once
-     * per pursuing mob per tick collapses to a single grid build.
+     * tile, or [] if WASM is not ready or the target is unreachable. The terrain layer
+     * is memoized per-worldMap reference; the entity-aware grid clones only the walkable
+     * mask (occupancyService is the single source of "what's blocked"), so a path that
+     * routes around bodies costs one mask clone, not a full grid rebuild.
      */
     private pathTo(
         state: GameState,
@@ -1879,7 +1869,7 @@ class EntityServiceImpl {
         // so paths route AROUND other entities and never plan through an occupied tile.
         // The movement engine additionally blocks entry into a tile that becomes
         // occupied after this path was computed.
-        const blocked = entityOccupancy(state.pawns, state.mobs, selfId);
+        const blocked = occupancyService.blockedTiles(state, selfId);
         const { walkable, costs, width, height } = buildPathfindingGridsWithBlocked(
             state.worldMap,
             blocked,

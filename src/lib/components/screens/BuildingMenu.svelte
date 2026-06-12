@@ -169,7 +169,9 @@
     }
 
     gameState.updateWithSave((state) => {
-      const stateAfterCost = consumeFromStockpiles(state, building.buildingCost);
+      // Resolve category cost slots (e.g. `category:stone` → any stone in stock) to concrete items.
+      const cost = buildingService.resolveBuildingCost(building.id, state) ?? building.buildingCost;
+      const stateAfterCost = consumeFromStockpiles(state, cost);
       // Place building at (0,0) — abstract/off-map; JobService generates a construct job
       return buildingService.placeBuilding(building.id, 0, 0, stateAfterCost);
     });
@@ -182,7 +184,11 @@
     if (!buildingDef) return;
 
     gameState.updateWithSave((state) => {
-      const stateWithRefund = addToStockpileZone(state, null, buildingDef.buildingCost);
+      // Refund concrete costs; category slots (`category:*`) can't be refunded to a specific item, so skip them.
+      const refund = Object.fromEntries(
+        Object.entries(buildingDef.buildingCost).filter(([k]) => !k.startsWith('category:'))
+      );
+      const stateWithRefund = addToStockpileZone(state, null, refund);
       return {
         ...stateWithRefund,
         buildings: (state.buildings ?? []).filter((b) => b.id !== buildingId),

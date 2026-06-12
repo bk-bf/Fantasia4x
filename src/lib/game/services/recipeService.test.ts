@@ -7,10 +7,10 @@ import { recipeService } from './RecipeService';
  * ones per primary output. Behaviour-preserving until wired into the crafting path.
  */
 describe('RecipeService (recipe registry, Stage A)', () => {
-  it('synthesises a recipe from an item with inline craftingCost (venison)', () => {
+  it('resolves a migrated recipe from recipes.jsonc (venison)', () => {
+    // After the recipe migration, venison is an authored recipe (not synthesised from items).
     const r = recipeService.getRecipeForItem('venison');
     expect(r).toBeDefined();
-    expect(r!.synthesized).toBe(true);
     expect(r!.station).toBe('butcher_spot');
     expect(r!.inputs).toEqual({ deer_carcass: 1 });
     expect(r!.outputs).toEqual({ venison: 1 });

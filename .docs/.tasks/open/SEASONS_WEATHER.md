@@ -371,6 +371,34 @@ but character outlines still visible at 5% brightness — Caves of Qud feel).
 
 ---
 
+## Subsystem 7 — Shelter & Light follow-ons (carried over from PRODUCTION-CHAIN-EXPANSION §F/§G)
+
+These three depend on the lighting/temperature/weather machinery in this spec, so they live here
+rather than in the (now-implemented) production-chain spec. The production-chain data already
+exists — roofs, doors, windows, `torch`/`candle` items, storage `requiresEnclosure` — so this is
+behaviour wiring on top of that.
+
+1. **Full enclosure detection** (`isEnclosed(tile)` = surrounded by walls + a roof + a door).
+   Production-chain approximates it with *roof presence* for the storage `storageDecayMultiplier`
+   benefit and for weather-shelter of loose items; replace that with a real flood-fill / 4-wall +
+   roof + door check. **Consumers:** §F storage full-benefit gate **and** this spec's temperature
+   (an enclosed, hearth-warmed room holds heat). Design the check once, here, for both. Perf:
+   memoise per-room, recompute on wall/roof/door build or deconstruct (not per tick).
+
+2. **Window daylight injection** — a `window` build tile lets daylight into the tiles behind it,
+   raising their `lightLevel` by day (so pawns work indoors without torches) but not at night.
+   Feeds the per-tile light field this spec's day/night subsystem computes; the production-chain
+   **crafting light penalty already reads `lightLevel`**, so windows automatically help once they
+   contribute to it.
+
+3. **Torch & candle as placeable point lights** — `torch`/`candle` items exist; make a placed/
+   carried one a point light (same per-tile point-light path as the campfire in Subsystem 1),
+   consuming the item over time. Lets a colony light interiors and night work areas. Fire near
+   stored **dry firewood** (production-chain §1) is what later introduces **fire-spread risk** —
+   model that here alongside weather hazards.
+
+---
+
 ## Implementation Order
 
 | Phase | Deliverable                                                                                   | Depends on |

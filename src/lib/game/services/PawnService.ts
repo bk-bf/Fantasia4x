@@ -14,6 +14,7 @@ import { calculatePawnStats, categorizeStats, getStatDescription } from '../enti
 import { WORK_CATEGORIES } from '../core/Work';
 import { TICKS_PER_SECOND, SECONDS_PER_TICK, perTick } from '../core/time';
 import { advanceAlongPath } from '../systems/MovementSystem';
+import { occupancyService } from './OccupancyService';
 import statusEffectsData from '../database/status-effects.jsonc';
 import { getConditionCurrentStage, conditionNeedMultipliers } from '../core/needs';
 // Gated console shim — see core/log.ts. Silences per-tick log/debug/warn unless
@@ -64,6 +65,9 @@ export interface PawnService {
 	/** §D auto-drink: thirsty pawns drink stored water, or raw from an adjacent river/lake. */
 	processAutoDrink(gameState: GameState): GameState;
 
+	/** §D auto-wash: filthy pawns wash at an adjacent river/lake, lowering hygiene. */
+	processAutoWash(gameState: GameState): GameState;
+
 	// Sleep decision (still used by clearTemporaryPawnStates wake logic)
 	shouldPawnSleep(pawn: Pawn): boolean;
 
@@ -97,6 +101,9 @@ const HYGIENE_INCREASE_PER_SECOND = 0.3; // grime builds slowly
 // §D auto-drink: thirst threshold to drink, and relief per unit of water.
 const AUTO_DRINK_THIRST = 70;
 const WATER_THIRST_RELIEF = 65;
+// §D auto-wash: hygiene threshold to wash at water, and the cleanliness restored.
+const AUTO_WASH_HYGIENE = 75;
+const WASH_HYGIENE_RELIEF = 70;
 
 /**
  * PawnService Implementation - Focused on pawn behavior and needs only
@@ -466,6 +473,42 @@ export class PawnServiceImpl implements PawnService {
 			}
 		}
 		return state;
+	}
+
+	/**
+	 * §D auto-wash. A pawn whose hygiene passes AUTO_WASH_HYGIENE washes at an adjacent river/lake
+	 * (lowering hygiene). Without a water source it stays dirty — the relief that keeps hygiene
+	 * from being a dead-end mood drain. (A dedicated wash-basin building + wash-zone routing are
+	 * the deeper version, deferred with drink/wash-zone routing.)
+	 */
+	processAutoWash(gameState: GameState): GameState {
+		let state = gameState;
+		for (const pawn of gameState.pawns) {
+			if (pawn.isAlive === false) continue;
+			if ((pawn.needs.hygiene ?? 0) < AUTO_WASH_HYGIENE) continue;
+			if (pawn.position && this.isNextToWater(pawn.position.x, pawn.position.y, state)) {
+				state = this.adjustHygiene(pawn.id, -WASH_HYGIENE_RELIEF, state);
+			}
+		}
+		return state;
+	}
+
+	private adjustHygiene(pawnId: string, hygieneDelta: number, gameState: GameState): GameState {
+		return {
+			...gameState,
+			pawns: gameState.pawns.map((p) =>
+				p.id === pawnId
+					? {
+							...p,
+							needs: {
+								...p.needs,
+								hygiene: Math.min(100, Math.max(0, (p.needs.hygiene ?? 0) + hygieneDelta)),
+								lastWash: gameState.turn
+							}
+						}
+					: p
+			)
+		};
 	}
 
 	private adjustThirst(
@@ -1109,16 +1152,11 @@ export class PawnServiceImpl implements PawnService {
 		let state = gameState;
 
 		// Hard tile occupancy: a pawn may not step onto a tile already held by another
-		// body (pawn or non-corpse mob) — no phasing through enemies, no stacking. Built
-		// once from start-of-pass positions; ≤1-tile/tick movement makes the staleness
-		// negligible. The mob movement pass enforces the same rule from its side.
-		const occupied = new Set<string>();
-		for (const m of state.mobs ?? []) {
-			if (m.state !== 'Corpse') occupied.add(`${m.x},${m.y}`);
-		}
-		for (const p of state.pawns) {
-			if (p.position) occupied.add(`${p.position.x},${p.position.y}`);
-		}
+		// body (pawn or non-corpse mob) — no phasing through enemies, no stacking. One
+		// shared notion of "occupied" (occupancyService) drives both this hold check and
+		// the A* grid, so movement and pathfinding can't disagree. Built once from
+		// start-of-pass positions; ≤1-tile/tick movement makes the staleness negligible.
+		const occupied = occupancyService.blockedTiles(state);
 
 		for (const pawn of state.pawns) {
 			if (pawn.isAlive === false) continue;
@@ -1133,6 +1171,16 @@ export class PawnServiceImpl implements PawnService {
 				continue;
 			}
 			if (!pawn.isMoving || !pawn.path || pawn.path.length === 0 || !pawn.position) continue;
+
+			// Hold this tick if the next tile is occupied by another body. Keep the path
+			// and isMoving so the pawn resumes the instant the tile clears (no re-path).
+			const step = pawn.path[pawn.pathIndex ?? 0];
+			if (step) {
+				const stepKey = `${step.x},${step.y}`;
+				if (stepKey !== `${pawn.position.x},${pawn.position.y}` && occupied.has(stepKey)) {
+					continue;
+				}
+			}
 
 			// Cost-units spendable this tick. On open terrain a tile costs
 			// TICKS_PER_SECOND units, so spending `tilesPerSecond` units/tick yields

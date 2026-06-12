@@ -45,3 +45,23 @@ describe('§D auto-drink (processAutoDrink)', () => {
     expect(pawnService.processAutoDrink(gs)).toBe(gs);
   });
 });
+
+describe('§D auto-wash (processAutoWash)', () => {
+  const filthy = (hygiene: number, pos = { x: 1, y: 1 }): Pawn =>
+    ({ ...pawn(0, pos), needs: { ...pawn(0, pos).needs, hygiene } }) as Pawn;
+
+  it('washes a filthy pawn at an adjacent river, lowering hygiene', () => {
+    const out = pawnService.processAutoWash(makeState(filthy(90), 0, true));
+    expect(out.pawns[0].needs.hygiene).toBe(90 - 70);
+  });
+
+  it('does nothing if no water is adjacent', () => {
+    const gs = makeState(filthy(90), 0, false);
+    expect(pawnService.processAutoWash(gs)).toBe(gs);
+  });
+
+  it('does nothing below the hygiene threshold', () => {
+    const gs = makeState(filthy(50), 0, true);
+    expect(pawnService.processAutoWash(gs)).toBe(gs);
+  });
+});

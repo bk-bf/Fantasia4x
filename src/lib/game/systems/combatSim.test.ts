@@ -3,6 +3,7 @@ import { combatService } from './Combat';
 import { healWounds, tendWounds } from './PawnStateMachine';
 import { CREATURES } from '../core/Creatures';
 import { itemService } from '../services/ItemService';
+import { recipeService } from '../services/RecipeService';
 import type { GameState, Injury, Mob, Pawn } from '../core/types';
 
 /**
@@ -262,7 +263,9 @@ describe('wound system (stacking + healing)', () => {
 		const poultice = itemService.getItemById('chewed_poultice');
 		expect(herb?.medicineQuality).toBeGreaterThan(0);
 		expect(poultice?.medicineQuality).toBeGreaterThan(herb!.medicineQuality!);
-		expect(poultice?.craftingCost?.woundwort).toBeGreaterThan(0); // recipe references the herb
+		// recipe now lives in the registry (recipes.jsonc), not inline on the item
+		const recipe = recipeService.getRecipeForItem('chewed_poultice');
+		expect(recipe?.inputs?.woundwort).toBeGreaterThan(0); // recipe references the herb
 	});
 
 	it('wounds heal over time, restoring HP and lowering pain to zero', () => {

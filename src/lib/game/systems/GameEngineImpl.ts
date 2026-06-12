@@ -28,7 +28,8 @@ import { resourceObjectService } from '../services/ResourceObjectService';
 import { entityService } from '../services/EntityService';
 import { combatService } from './Combat';
 import { TICKS_PER_SECOND, ticksFromSeconds, perTick } from '../core/time';
-import { buildPathfindingGrids } from '../services/PathfinderService';
+import { buildPathfindingGridsWithBlocked } from '../services/PathfinderService';
+import { occupancyService } from '../services/OccupancyService';
 import { isGameDebug, gatedConsole } from '../core/log';
 import type { WorkCategory } from '../core/types';
 import type { Pawn } from '../core/types';
@@ -342,6 +343,7 @@ export class GameEngineImpl implements GameEngine {
 			t('needsTick', () => {
 				this.gameState = pawnService.processNeedsTick(this.gameState!);
 				this.gameState = pawnService.processAutoDrink(this.gameState!);
+				this.gameState = pawnService.processAutoWash(this.gameState!);
 			});
 			t('itemDecay', () => {
 				this.gameState = itemService.stepItemDecay(this.gameState!);
@@ -606,7 +608,10 @@ export class GameEngineImpl implements GameEngine {
 
 	private _processDraftOrders(state: GameState): GameState {
 		let gs = state;
-		const { walkable, costs, width, height } = buildPathfindingGrids(gs.worldMap);
+		// Solid bodies routed around (shared occupancy). Positions don't change within
+		// this loop — assignPath only sets the path — so one snapshot serves every pawn;
+		// each pawn's own start tile and its goal are kept walkable per call below.
+		const blocked = occupancyService.blockedTiles(gs);
 		for (const pawn of gs.pawns) {
 			if (pawn.isAlive === false || !pawn.drafted || !pawn.draftTarget || !pawn.position) continue;
 			const target = pawn.draftTarget;
@@ -621,6 +626,14 @@ export class GameEngineImpl implements GameEngine {
 					};
 					continue;
 				}
+				const { walkable, costs, width, height } = buildPathfindingGridsWithBlocked(
+					gs.worldMap,
+					blocked,
+					pawn.position.x,
+					pawn.position.y,
+					target.x,
+					target.y
+				);
 				const path = wasmPathfinderService.findPath(
 					walkable,
 					costs,
@@ -669,6 +682,14 @@ export class GameEngineImpl implements GameEngine {
 						gs = pawnService.assignPath(pawn.id, [], gs);
 					}
 				} else {
+					const { walkable, costs, width, height } = buildPathfindingGridsWithBlocked(
+						gs.worldMap,
+						blocked,
+						pawn.position.x,
+						pawn.position.y,
+						tx,
+						ty
+					);
 					const path = wasmPathfinderService.findPath(
 						walkable,
 						costs,

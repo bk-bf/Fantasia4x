@@ -1,4 +1,4 @@
-import type { WorldTile, Pawn, Mob } from '../core/types.js';
+import type { WorldTile } from '../core/types.js';
 
 export interface PathfinderService {
   findPath(
@@ -49,25 +49,6 @@ export function buildPathfindingGrids(worldMap: WorldTile[][]): PathfindingGrids
   _cacheKey = worldMap;
   _cache = { walkable, costs, width, height };
   return _cache;
-}
-
-/** "x,y" tiles currently held by a living pawn or non-corpse mob (an entity body).
- * `excludeId` drops one entity (the one we're pathing FOR) so it isn't blocked by itself. */
-export function entityOccupancy(
-  pawns: Pawn[],
-  mobs: Mob[] | undefined,
-  excludeId?: string
-): Set<string> {
-  const occupied = new Set<string>();
-  for (const p of pawns) {
-    if (p.id === excludeId || !p.position || p.isAlive === false) continue;
-    occupied.add(`${p.position.x},${p.position.y}`);
-  }
-  for (const m of mobs ?? []) {
-    if (m.id === excludeId || m.state === 'Corpse') continue;
-    occupied.add(`${m.x},${m.y}`);
-  }
-  return occupied;
 }
 
 /**
