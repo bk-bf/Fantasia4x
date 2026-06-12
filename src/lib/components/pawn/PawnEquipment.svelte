@@ -11,6 +11,7 @@
   import { consumeFromStockpiles } from '$lib/game/core/GameState';
   import { gameEngine } from '$lib/game/systems/GameEngineImpl';
   import EquipmentDoll from './EquipmentDoll.svelte';
+  import PawnInventory from './PawnInventory.svelte';
 
   export let pawn: Pawn;
 
@@ -68,18 +69,19 @@
   <h3>| EQUIPMENT &amp; INVENTORY</h3>
   <p class="inventory-note">All items from global storage are automatically available to equip</p>
 
-  <!-- Currently Equipped -->
-  <div class="equipped-items">
-    <h4>Currently Equipped:</h4>
-    <EquipmentDoll
-      {pawn}
-      loading={equipmentLoading}
-      onUnequip={(slot) => unequipPawnItem(pawn.id, slot)}
-    />
-  </div>
+  <div class="gear-columns">
+    <!-- Currently Equipped -->
+    <div class="equipped-items">
+      <h4>Currently Equipped:</h4>
+      <EquipmentDoll
+        {pawn}
+        loading={equipmentLoading}
+        onUnequip={(slot) => unequipPawnItem(pawn.id, slot)}
+      />
+    </div>
 
-  <!-- Available Items -->
-  <div class="inventory-items">
+    <!-- Available Items -->
+    <div class="inventory-items">
     <h4>Available Items:</h4>
     <div class="inventory-grid">
       {#each Object.entries(pawn.inventory.items || {}) as [itemId, quantity]}
@@ -113,6 +115,8 @@
         {/if}
       {/each}
     </div>
+    <PawnInventory {pawn} />
+    </div>
   </div>
 </div>
 
@@ -141,6 +145,16 @@
     font-style: italic;
     font-size: 11px;
     border-bottom: 1px solid var(--border);
+  }
+
+  .gear-columns {
+    display: grid;
+    grid-template-columns: minmax(220px, 340px) 1fr;
+    align-items: start;
+  }
+
+  .gear-columns .inventory-items {
+    border-left: 1px solid var(--border);
   }
 
   .equipped-items h4,

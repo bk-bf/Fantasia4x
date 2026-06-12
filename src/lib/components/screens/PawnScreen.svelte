@@ -35,7 +35,6 @@
   import PawnNeeds from '../pawn/PawnNeeds.svelte';
   import PawnTraits from '../pawn/PawnTraits.svelte';
   import PawnEquipment from '../pawn/PawnEquipment.svelte';
-  import PawnInventory from '../pawn/PawnInventory.svelte';
   import FollowButton from '../UI/FollowButton.svelte';
 
   // Component state - only pawn selection and navigation logic
@@ -159,7 +158,6 @@
         <PawnAttributes pawn={selectedPawn} />
       {:else if activeTab === 'gear'}
         <PawnEquipment pawn={selectedPawn} />
-        <PawnInventory pawn={selectedPawn} />
       {/if}
     </div>
   {:else}
