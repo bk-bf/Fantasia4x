@@ -61,3 +61,41 @@ export function needBar(val: number): string {
   const f = Math.round(val / 10);
   return '█'.repeat(f) + '░'.repeat(10 - f);
 }
+
+// ── Best / worst job markers ────────────────────────────────────────────────
+// A small medal star sits in the bottom-right of a pawn's three best jobs
+// (gold → silver → bronze), and a down-chevron marks their two weakest jobs.
+export const STAR_MARK = '★';
+export const STAR_COLORS = ['#ffd24a', '#cbd2d8', '#cd7f32']; // gold, silver, bronze
+export const STAR_TIERS = ['Best job', '2nd best', '3rd best'] as const;
+
+export const WORST_MARK = '▾';
+export const WORST_COLORS = ['#e0533d', '#8a4038']; // worst, 2nd worst
+export const WORST_TIERS = ['Weakest job', '2nd weakest'] as const;
+
+/** Per-cell medal/penalty rank: -1 means unranked, otherwise tier index. */
+export interface CellRank {
+  best: number; // 0=gold, 1=silver, 2=bronze, -1 none
+  worst: number; // 0=worst, 1=2nd worst, -1 none
+}
+
+/**
+ * Rank a pawn's work efficiencies, tagging the top three and bottom two.
+ * Top medals win ties over bottom markers so a cell never carries both.
+ */
+export function rankWorkCells(effByWork: Record<string, number>): Record<string, CellRank> {
+  const ids = Object.keys(effByWork);
+  const result: Record<string, CellRank> = {};
+  for (const id of ids) result[id] = { best: -1, worst: -1 };
+
+  const byDesc = [...ids].sort((a, b) => effByWork[b] - effByWork[a]);
+  const byAsc = [...ids].sort((a, b) => effByWork[a] - effByWork[b]);
+
+  byDesc.slice(0, 3).forEach((id, i) => {
+    result[id].best = i;
+  });
+  byAsc.slice(0, 2).forEach((id, i) => {
+    if (result[id].best === -1) result[id].worst = i;
+  });
+  return result;
+}

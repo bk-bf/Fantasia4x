@@ -103,7 +103,7 @@
 
   function toggleCategory(instanceId: string, category: string) {
     gameState.updateWithSave((state) =>
-      designationService.toggleInstanceCategory(instanceId, category, state)
+      designationService.toggleInstanceCategory(instanceId, category, ALL_CATEGORIES, state)
     );
   }
 
@@ -203,7 +203,7 @@
           </div>
           <div class="category-grid">
             {#each ALL_CATEGORIES as cat}
-              {@const checked = inst.filter.allowedCategories.includes(cat)}
+              {@const checked = !hasFilter || inst.filter.allowedCategories.includes(cat)}
               <label class="cat-label" class:checked>
                 <input type="checkbox" {checked} onchange={() => toggleCategory(inst.id, cat)} />
                 {cat}
@@ -212,8 +212,8 @@
           </div>
           <div class="filter-note">
             {hasFilter
-              ? 'Only checked categories will be worked.'
-              : 'Check categories to restrict this zone.'}
+              ? 'Only checked categories will be hauled here.'
+              : 'All categories allowed — uncheck to restrict this zone.'}
           </div>
         </div>
       {/if}
@@ -354,24 +354,24 @@
   /* ── Filter panel ───────────────────────────────── */
 
   .filter-panel {
-    margin: 0.1rem 0 0.4rem 1.5rem;
-    padding: 0.4rem;
+    margin: 0.15rem 0 0.6rem 1.5rem;
+    padding: 0.75rem 0.9rem;
     border: 1px solid color-mix(in srgb, var(--zcolor) 35%, #222);
     background: #08080a;
   }
 
   .filter-hdr {
-    font-size: 0.65rem;
+    font-size: 0.8rem;
     color: var(--zcolor);
-    margin-bottom: 0.4rem;
+    margin-bottom: 0.65rem;
     display: flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.5rem;
   }
 
   .filter-hint {
-    color: #555;
-    font-size: 0.6rem;
+    color: #777;
+    font-size: 0.72rem;
   }
 
   .filter-clear-all {
@@ -391,18 +391,18 @@
   }
 
   .category-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.2rem 0.5rem;
-    margin-bottom: 0.3rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 0.45rem 0.8rem;
+    margin-bottom: 0.55rem;
   }
 
   .cat-label {
     display: flex;
     align-items: center;
-    gap: 0.2rem;
-    font-size: 0.62rem;
-    color: #555;
+    gap: 0.4rem;
+    font-size: 0.78rem;
+    color: #777;
     cursor: pointer;
     user-select: none;
     transition: color 0.1s;
@@ -414,14 +414,14 @@
 
   .cat-label input[type='checkbox'] {
     accent-color: var(--zcolor);
-    width: 10px;
-    height: 10px;
+    width: 15px;
+    height: 15px;
     cursor: pointer;
   }
 
   .filter-note {
-    font-size: 0.58rem;
-    color: #444;
-    margin-top: 0.1rem;
+    font-size: 0.7rem;
+    color: #666;
+    margin-top: 0.2rem;
   }
 </style>

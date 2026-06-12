@@ -1,15 +1,22 @@
 <script lang="ts">
   import { gameState } from '$lib/stores/gameState';
   import { WORK_CATEGORIES } from '$lib/game/core/Work';
+  import { modifierSystem, type WorkEfficiencyResult } from '$lib/game/systems/ModifierSystem';
   import type { Pawn, WorkAssignment } from '$lib/game/core/types';
   import {
     LABOR_LABELS,
     LABOR_COLORS,
-    LVL_NAMES,
     ABBR,
+    STAR_MARK,
+    STAR_COLORS,
+    WORST_MARK,
+    WORST_COLORS,
+    rankWorkCells,
     stateColor,
-    stateLabel
+    stateLabel,
+    type CellRank
   } from '$lib/utils/workUtils';
+  import WorkCellTooltip from './WorkCellTooltip.svelte';
 
   interface Props {
     pawns: Pawn[];
@@ -66,6 +73,45 @@
     const cur = getPawnLaborLevel(pawnId, workId);
     updatePawnLaborLevel(pawnId, workId, ((cur + 1) % 5) as 0 | 1 | 2 | 3 | 4);
   }
+
+  // Full efficiency breakdown per pawn/work — drives both the medal ranking and
+  // the hover tooltip. ModifierSystem caches per turn, so this is cheap to recompute.
+  let effMap = $derived.by(() => {
+    const map: Record<string, Record<string, WorkEfficiencyResult>> = {};
+    for (const pawn of pawns) {
+      const row: Record<string, WorkEfficiencyResult> = {};
+      for (const wc of WORK_CATEGORIES) {
+        row[wc.id] = modifierSystem.calculateWorkEfficiency(pawn.id, wc.id, $gameState);
+      }
+      map[pawn.id] = row;
+    }
+    return map;
+  });
+
+  let rankMap = $derived.by(() => {
+    const map: Record<string, Record<string, CellRank>> = {};
+    for (const pawn of pawns) {
+      const effByWork: Record<string, number> = {};
+      for (const wc of WORK_CATEGORIES) {
+        effByWork[wc.id] = effMap[pawn.id]?.[wc.id]?.totalValue ?? 0;
+      }
+      map[pawn.id] = rankWorkCells(effByWork);
+    }
+    return map;
+  });
+
+  let tip = $state<{ pawnId: string; workId: string; x: number; y: number } | null>(null);
+  function showTip(e: MouseEvent, pawnId: string, workId: string) {
+    tip = { pawnId, workId, x: e.clientX, y: e.clientY };
+  }
+  function moveTip(e: MouseEvent) {
+    if (tip) tip = { ...tip, x: e.clientX, y: e.clientY };
+  }
+  function hideTip() {
+    tip = null;
+  }
+  let tipPawn = $derived(tip ? (pawns.find((p) => p.id === tip!.pawnId) ?? null) : null);
+  let tipWc = $derived(tip ? (WORK_CATEGORIES.find((w) => w.id === tip!.workId) ?? null) : null);
 </script>
 
 <div class="matrix-wrap">
@@ -79,8 +125,8 @@
             class="work-hdr"
             class:col-sel={selectedColumn === wc.id}
             title="{wc.name} — click to highlight related attributes"
-            onclick={() => toggleColumn(wc.id)}
-          >{ABBR[wc.id] ?? wc.id.slice(0, 3).toUpperCase()}</th>
+            onclick={() => toggleColumn(wc.id)}>{ABBR[wc.id] ?? wc.id.slice(0, 3).toUpperCase()}</th
+          >
         {/each}
       </tr>
     </thead>
@@ -94,16 +140,26 @@
           <td class="state-cell" style="color:{stateColor(pawn)}">{stateLabel(pawn)}</td>
           {#each WORK_CATEGORIES as wc}
             {@const lvl = getPawnLaborLevel(pawn.id, wc.id)}
+            {@const rk = rankMap[pawn.id]?.[wc.id]}
             <td>
               <button
                 class="cell-btn"
                 style="color:{LABOR_COLORS[lvl]}"
+                onmouseenter={(e) => showTip(e, pawn.id, wc.id)}
+                onmousemove={moveTip}
+                onmouseleave={hideTip}
                 onclick={(e) => {
                   e.stopPropagation();
                   cycleLevel(pawn.id, wc.id);
                 }}
-                title="{wc.name}: {LVL_NAMES[lvl]}">{LABOR_LABELS[lvl]}</button
               >
+                <span class="cell-lbl">{LABOR_LABELS[lvl]}</span>
+                {#if rk && rk.best >= 0}
+                  <span class="mark" style="color:{STAR_COLORS[rk.best]}">{STAR_MARK}</span>
+                {:else if rk && rk.worst >= 0}
+                  <span class="mark" style="color:{WORST_COLORS[rk.worst]}">{WORST_MARK}</span>
+                {/if}
+              </button>
             </td>
           {/each}
         </tr>
@@ -120,8 +176,23 @@
   {#each ['—=off', '1=low', '2=nrm', '3=hi', '4=urg'] as leg}
     <span class="leg">{leg}</span>
   {/each}
-  <span class="leg-hint">· click cell to cycle · click row for pawn detail</span>
+  <span class="leg-sep">·</span>
+  <span class="leg" style="color:{STAR_COLORS[0]}">{STAR_MARK} top jobs</span>
+  <span class="leg" style="color:{WORST_COLORS[0]}">{WORST_MARK} weakest</span>
+  <span class="leg-hint">· click cell to cycle · hover for stats · click row for detail</span>
 </div>
+
+{#if tip && tipPawn && tipWc && effMap[tip.pawnId]?.[tip.workId] && rankMap[tip.pawnId]?.[tip.workId]}
+  <WorkCellTooltip
+    pawn={tipPawn}
+    wc={tipWc}
+    result={effMap[tip.pawnId][tip.workId]}
+    rank={rankMap[tip.pawnId][tip.workId]}
+    level={getPawnLaborLevel(tip.pawnId, tip.workId)}
+    x={tip.x}
+    y={tip.y}
+  />
+{/if}
 
 <style>
   .matrix-wrap {
@@ -157,7 +228,8 @@
     padding: 2px 3px;
     color: var(--text-dim);
     font-size: 10px;
-    min-width: 28px;
+    width: 32px;
+    min-width: 32px;
     cursor: pointer;
   }
   .work-hdr:hover {
@@ -188,17 +260,32 @@
     cursor: pointer;
   }
   .cell-btn {
-    width: 100%;
-    padding: 2px 0;
+    position: relative;
+    width: 32px;
+    height: 32px;
+    padding: 0;
     background: transparent;
     border: none;
     font-family: 'Courier New', monospace;
-    font-size: 11px;
+    font-size: 10px;
     cursor: pointer;
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   .cell-btn:hover {
     background: var(--bg-hover, #151c26);
+  }
+  .cell-lbl {
+    line-height: 1;
+  }
+  .mark {
+    position: absolute;
+    right: 2px;
+    bottom: 1px;
+    font-size: 8px;
+    line-height: 1;
+    pointer-events: none;
   }
   .legend {
     display: flex;

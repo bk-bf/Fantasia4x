@@ -21,6 +21,17 @@ class DesignationServiceImpl {
     return `${x},${y}`;
   }
 
+  /** Drink/wash zones may only sit on water tiles (rivers, lakes, open water). */
+  private requiresWater(type: DesignationType): boolean {
+    return type === 'drink' || type === 'wash';
+  }
+
+  /** Matches the water predicate used by auto-drink routing (PawnService). */
+  isWaterTile(gameState: GameState, x: number, y: number): boolean {
+    const t = gameState.worldMap?.[y]?.[x];
+    return !!t && (t.type === 'water' || t.terrainType === 'river' || t.terrainType === 'lake');
+  }
+
   /**
    * Add or update a designation at (x, y).
    * Optionally assigns the tile to a zone instance.
@@ -33,6 +44,8 @@ class DesignationServiceImpl {
     gameState: GameState,
     zoneInstanceId?: string
   ): GameState {
+    // Drink/wash zones are only valid on water — silently ignore off-water paints.
+    if (this.requiresWater(type) && !this.isWaterTile(gameState, x, y)) return gameState;
     const k = this.key(x, y);
     let state: GameState = {
       ...gameState,
@@ -111,11 +124,14 @@ class DesignationServiceImpl {
     const mapH = gameState.worldMap?.length ?? 0;
     const mapW = gameState.worldMap?.[0]?.length ?? 0;
 
+    const waterOnly = this.requiresWater(type);
     const newDesignations = { ...(gameState.designations ?? {}) };
     const newZoneIds = zoneInstanceId ? { ...(gameState.designationZoneId ?? {}) } : undefined;
     for (let y = minY; y <= maxY; y++) {
       for (let x = minX; x <= maxX; x++) {
         if (mapH > 0 && (x < 0 || y < 0 || x >= mapW || y >= mapH)) continue;
+        // Drink/wash zones only paint onto water tiles within the dragged rect.
+        if (waterOnly && !this.isWaterTile(gameState, x, y)) continue;
         const k = this.key(x, y);
         newDesignations[k] = type;
         if (zoneInstanceId && newZoneIds) newZoneIds[k] = zoneInstanceId;
@@ -213,15 +229,35 @@ class DesignationServiceImpl {
     };
   }
 
-  /** Toggle a category in a zone instance's filter. */
-  toggleInstanceCategory(instanceId: string, category: string, gs: GameState): GameState {
+  /**
+   * Toggle a category in a zone instance's filter.
+   *
+   * An empty `allowedCategories` means "allow everything" (all boxes shown checked).
+   * `allCategories` is the full category universe so the first uncheck can materialise
+   * the set ("all except this"); re-checking everything collapses back to empty.
+   */
+  toggleInstanceCategory(
+    instanceId: string,
+    category: string,
+    allCategories: string[],
+    gs: GameState
+  ): GameState {
     return {
       ...gs,
       zoneInstances: (gs.zoneInstances ?? []).map((z) => {
         if (z.id !== instanceId) return z;
-        const allowed = z.filter.allowedCategories.includes(category)
-          ? z.filter.allowedCategories.filter((c) => c !== category)
-          : [...z.filter.allowedCategories, category];
+        const cur = z.filter.allowedCategories;
+        let allowed: string[];
+        if (cur.length === 0) {
+          // Currently all-allowed → unchecking one leaves all the others.
+          allowed = allCategories.filter((c) => c !== category);
+        } else if (cur.includes(category)) {
+          allowed = cur.filter((c) => c !== category);
+        } else {
+          allowed = [...cur, category];
+        }
+        // Everything checked == no restriction; store as empty for consistency.
+        if (allowed.length >= allCategories.length) allowed = [];
         return { ...z, filter: { ...z.filter, allowedCategories: allowed } };
       })
     };
