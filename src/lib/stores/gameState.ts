@@ -554,8 +554,9 @@ export const savedStateReady: Promise<void> = (async () => {
   rng.reseed(baseState.seed);
   resetUnreachableJobs();
 
-  // World map migrations (same logic as before, now runs after async load). World gen is
-  // seeded from baseState.seed (D7) so the same save always yields the same world.
+  // Regenerate the world only when the save has no usable map. Otherwise the persisted world is
+  // kept as-is — wipe localStorage manually to start fresh. World gen is seeded from
+  // baseState.seed (D7) so the same save always yields the same world.
   if (
     !baseState.worldMap ||
     baseState.worldMap.length === 0 ||
@@ -564,12 +565,6 @@ export const savedStateReady: Promise<void> = (async () => {
     const migratedWorld = generateWorld(240, 160, baseState.seed);
     resourceGeneratorService.generateResources(migratedWorld, baseState.seed);
     baseState = { ...baseState, worldMap: migratedWorld };
-    localStorage.setItem(WORLD_VERSION_KEY, String(WORLD_VERSION));
-  } else if (localStorage.getItem(WORLD_VERSION_KEY) !== String(WORLD_VERSION)) {
-    const migratedWorld = generateWorld(240, 160, baseState.seed);
-    resourceGeneratorService.generateResources(migratedWorld, baseState.seed);
-    baseState = { ...baseState, worldMap: migratedWorld };
-    localStorage.setItem(WORLD_VERSION_KEY, String(WORLD_VERSION));
   } else if (!baseState.worldMap[0]?.[1]?.discovered) {
     baseState = {
       ...baseState,

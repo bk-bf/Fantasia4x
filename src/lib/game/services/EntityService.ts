@@ -1884,6 +1884,25 @@ class EntityServiceImpl {
     private adjacent(mob: Mob, pos: { x: number; y: number }): boolean {
         return Math.abs(pos.x - mob.x) <= 1 && Math.abs(pos.y - mob.y) <= 1;
     }
+
+    /**
+     * Drop carcasses for mobs that were killed by the combat tick this frame.
+     * Combat sets state='Corpse' directly, bypassing stepHunger/removeDead, so
+     * without this call those corpses would never produce a carcass item.
+     */
+    handleFreshCombatCorpses(prevState: GameState, nextState: GameState): GameState {
+        const prevMobs = prevState.mobs ?? [];
+        const nextMobs = nextState.mobs ?? [];
+        let result = nextState;
+        for (let i = 0; i < nextMobs.length; i++) {
+            const prev = prevMobs[i];
+            const next = nextMobs[i];
+            if (prev?.state !== 'Corpse' && next?.state === 'Corpse') {
+                result = this.dropCarcass(result, next);
+            }
+        }
+        return result;
+    }
 }
 
 export const entityService = new EntityServiceImpl();

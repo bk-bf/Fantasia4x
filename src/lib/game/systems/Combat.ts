@@ -1056,11 +1056,13 @@ class CombatServiceImpl implements CombatService {
                 (updated as Mob).isAlive = false;
                 (updated as Mob).state = 'Corpse';
                 (updated as Mob).diedAt = state.turn;
+                (updated as Mob).intactness = 1.0;
             }
         } else if (collapsed && entityType === 'mob') {
             (updated as Mob).isAlive = false;
             (updated as Mob).state = 'Corpse';
             (updated as Mob).diedAt = state.turn;
+            (updated as Mob).intactness = 1.0;
         }
 
         if (entityType === 'pawn') {
@@ -1181,7 +1183,7 @@ class CombatServiceImpl implements CombatService {
             ? next.mobs?.find((m) => m.id === target.id)
             : next.pawns.find((p) => p.id === target.id);
         if (after && (after.isAlive === false || ('state' in after && after.state === 'Corpse'))) {
-            logCombatKill(attacker.id, target.id);
+            logCombatKill(attacker.id, attackerName, target.id, targetName, turn, pos.x, pos.y, result.weaponId);
         }
         return { state: next, staminaCost: result.staminaCost };
     }

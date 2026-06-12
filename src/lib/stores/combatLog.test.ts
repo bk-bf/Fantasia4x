@@ -37,11 +37,15 @@ describe('engagement-scoped combat logging', () => {
 		for (let t = 0; t < 5; t++) {
 			logCombatSwing('mob-g2', 'Goblin #2', 'pawn-wren', 'Wren', t, 5, 5, swing(t, true, 4));
 		}
-		logCombatKill('mob-g2', 'pawn-wren');
+		logCombatKill('mob-g2', 'Goblin #2', 'pawn-wren', 'Wren', 4, 5, 5, 'claws');
 		const entries = combatEntries();
-		expect(entries).toHaveLength(1);
-		expect(entries[0].result).toContain('killed');
-		expect(entries[0].severity).toBe('critical');
+		// Session entry + standalone kill entry
+		expect(entries).toHaveLength(2);
+		const sessionEntry = entries.find((e) => e.action.includes('engaged'));
+		const killEntry = entries.find((e) => e.action.includes('killed'));
+		expect(sessionEntry?.result).toContain('killed');
+		expect(killEntry?.severity).toBe('critical');
+		expect(killEntry?.result).toContain('claws');
 	});
 
 	it('re-engaging after a long lull opens a new entry (engagement boundary)', () => {

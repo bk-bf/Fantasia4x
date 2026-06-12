@@ -340,7 +340,9 @@ export class GameEngineImpl implements GameEngine {
 				this.gameState = entityService.removeDead(this.gameState!);
 			});
 			t('combat', () => {
+				const preCombatState = this.gameState!;
 				this.gameState = combatService.tickCombat(this.gameState!, 1000 / TICKS_PER_SECOND);
+				this.gameState = entityService.handleFreshCombatCorpses(preCombatState, this.gameState!);
 			});
 			this.debugLogPawns();
 

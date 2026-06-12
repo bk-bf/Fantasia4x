@@ -312,15 +312,42 @@ export function logCombatSwing(
   flushSession(session);
 }
 
-/** Finalize an engagement after a kill (forces an immediate summary refresh). */
-export function logCombatKill(attackerId: string, defenderId: string) {
+/**
+ * Finalize an engagement after a kill: close the session and emit a standalone
+ * kill entry that stands out in the chronicle (severity=critical, its own line).
+ */
+export function logCombatKill(
+  attackerId: string,
+  attackerName: string,
+  defenderId: string,
+  defenderName: string,
+  turn: number,
+  focusX: number,
+  focusY: number,
+  weapon?: string
+) {
   const key = combatKey(attackerId, defenderId);
   const session = combatSessions.get(key);
-  if (!session) return;
-  session.killed = true;
-  session.closed = true;
-  flushSession(session);
-  combatSessions.delete(key);
+  if (session) {
+    session.killed = true;
+    session.closed = true;
+    flushSession(session);
+    combatSessions.delete(key);
+  }
+
+  const weaponStr = weapon ? ` with ${weapon}` : '';
+  logActivity({
+    turn,
+    type: 'combat',
+    actor: attackerId,
+    action: `${attackerName} killed ${defenderName}`,
+    target: defenderId,
+    result: `Final blow${weaponStr}`,
+    severity: 'critical',
+    entityIds: [attackerId, defenderId],
+    focusX,
+    focusY
+  });
 }
 
 export function logHuntStart(
