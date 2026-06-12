@@ -511,9 +511,4 @@
     color: var(--text-dim);
   }
 
-  .muted-row {
-    padding: 4px 10px;
-    font-size: 10px;
-    color: var(--text-dim);
-  }
 </style>
