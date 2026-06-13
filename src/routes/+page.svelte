@@ -10,6 +10,7 @@
   import ExplorationScreen from '$lib/components/screens/ExplorationScreen.svelte';
   import WorkScreen from '$lib/components/screens/WorkScreen.svelte';
   import EntityScreen from '$lib/components/screens/EntityScreen.svelte';
+  import DebugLogScreen from '$lib/components/screens/DebugLogScreen.svelte';
   import ResourceSidebar from '$lib/components/UI/ResourceSidebar.svelte';
   import GameControls from '$lib/components/UI/GameControls.svelte';
   import ChroniclePanel from '$lib/components/UI/ChroniclePanel.svelte';
@@ -41,6 +42,9 @@
     return bDef?.category === 'knowledge' && b.status === 'complete';
   });
 
+  // DEBUG tab is only present when launched via dev.sh/launch.sh --debug.
+  const DEBUG_ENABLED = import.meta.env.VITE_DEBUG_MODE === 'true';
+
   const NAV_TABS = [
     { key: 'pawns', label: 'PAWNS', fkey: 'F2' },
     { key: 'work', label: 'WORK', fkey: 'F3' },
@@ -49,8 +53,9 @@
     { key: 'exploration', label: 'EXPLORE', fkey: 'F6' },
     { key: 'race', label: 'RACE', fkey: 'F7' },
     { key: 'research', label: 'RESEARCH', fkey: 'F8', needsResearch: true },
-    { key: 'entities', label: 'ENTITIES', fkey: 'F9' }
-  ] as const;
+    { key: 'entities', label: 'ENTITIES', fkey: 'F9' },
+    ...(DEBUG_ENABLED ? [{ key: 'debug', label: 'DEBUG', fkey: 'F10' }] : [])
+  ];
 
   function toggle(key: string) {
     if (key === 'research' && !hasResearch) return;
@@ -80,7 +85,7 @@
         uiState.setScreen('main');
         return;
       }
-      if (n >= 2 && n <= 9) {
+      if (n >= 2 && n <= 10) {
         e.preventDefault();
         const tab = NAV_TABS[n - 2];
         if (tab) toggle(tab.key);
@@ -145,6 +150,8 @@
                 <ResearchScreen />
               {:else if currentScreen === 'entities'}
                 <EntityScreen />
+              {:else if currentScreen === 'debug'}
+                <DebugLogScreen />
               {/if}
             </div>
           {/if}
