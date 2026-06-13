@@ -82,9 +82,26 @@ services/PathfinderService (2)  services/PawnService (2)  + Combat, Wounds, Item
    (in 6), `findAdjacentApproach`, `selectFoodForMeal` — that don't need to live
    in the AI file and overlap with the existing `utils/pawnUtils`.
 
+## Progress (2026-06-13)
+
+The decomposition has started, in the report's recommended order:
+
+- **✅ Step 1 (boundary fix) DONE.** `PathfinderService` gained `isReady()` and an interface-typed
+  `pathfinderService` singleton; `tryAssignPath`/`tryAssignSleepPath`/`handleIdle` route through it
+  and the direct `WasmPathfinderService` import is gone. `pnpm graph:check` confirms PawnStateMachine
+  is off the ADR-008 list.
+- **✅ Step 4 (extract stateless helpers) DONE.** `isAdjacent`, `findAdjacentApproach`,
+  `hasAvailableFood`, `selectFoodForMeal`, `consumeMeal` (+ `ITEM_DEF_BY_ID`, `SAFE_HUNGER`) moved to
+  **`src/lib/game/systems/pawn/pawnQueries.ts`** (the layer-correct home; `src/lib/utils/pawnUtils.ts`
+  is UI-only, so a new engine-side queries module was used instead).
+- **▶ Next:** Step 6 tests-first (Working/Hungry/Idle), then Steps 2+3 — a shared
+  **`pawn/pawnHelpers.ts`** (orchestration helpers + constants) feeding `pawn/handlers/{work,needs,combat}.ts`
+  and a thin dispatcher with a `Record<PawnState,Handler>` table. Acyclic by construction
+  (`pawnQueries ← pawnHelpers ← handlers ← dispatcher`) so `graph:check`'s cycle rule stays satisfied.
+
 ## Improvement suggestions (prioritised)
 
-**1 — Fix the pathfinding boundary (small, correctness, ADR-008).**
+**1 — Fix the pathfinding boundary (small, correctness, ADR-008). ✅ DONE.**
 Route `findPath`/`isReady` through `PathfinderService`; delete the direct
 `WasmPathfinderService` import. This is a 5-call-site change isolated to
 `tryAssignPath` / `tryAssignSleepPath` / `handleIdle` and removes a flagged
@@ -105,10 +122,12 @@ A `Record<PawnState, Handler>` lookup drops `tickPawn`'s fan-out from 16 to ~1
 and makes adding a state a one-line registration instead of editing a giant
 switch. Pairs naturally with #2.
 
-**4 — Extract stateless helpers into `pawnUtils`.**
-Move pure predicates/selectors (`isAdjacent`, `hasAvailableFood`,
-`findAdjacentApproach`, `selectFoodForMeal`) into `utils/pawnUtils` (or a new
-`pawnQueries`). They are reused, side-effect-free, and trivially unit-testable
+**4 — Extract stateless helpers into `pawnQueries`. ✅ DONE.**
+Moved pure predicates/selectors (`isAdjacent`, `hasAvailableFood`,
+`findAdjacentApproach`, `selectFoodForMeal`, `consumeMeal`) into a new
+`systems/pawn/pawnQueries.ts`. (`src/lib/utils/pawnUtils.ts` was the report's
+suggested home but is UI-layer only, so an engine-side module was the correct
+landing spot.) They are reused, side-effect-free, and trivially unit-testable
 once out of the AI file.
 
 **5 — Thin the orchestrators.**
@@ -124,9 +143,9 @@ the high-risk ones (Working, Hungry, Idle) to lock behaviour before refactoring.
 
 ## Suggested sequence
 
-`#1` (boundary fix, safe) → `#4` (extract helpers, mechanical) →
-`#2` + `#3` (split handlers + table, the real decomposition) →
-`#6` (tests alongside) → `#5` (push decisions into services, deepest change).
+~~`#1` (boundary fix, safe)~~ ✅ → ~~`#4` (extract helpers, mechanical)~~ ✅ →
+`#6` (handler tests first, to lock behaviour) → `#2` + `#3` (split handlers + table,
+the real decomposition) → `#5` (push decisions into services, deepest change).
 
 Re-run `pnpm graph` after each step: success looks like `tickPawn` fan-out
 dropping toward 1, the file splitting into <300-line units, and the

@@ -38,9 +38,12 @@
 > added to `checkNeedInterrupts`). Tests **117 → 141**.
 > **All Part I defects (R1–R12) are resolved** (R11 doc sync done: real turn order + service table
 > + comment fixes). **P-1 and P-6 done** (P-6: scoped `no-console` rule).
-> **NEW — P-7** (from the [PawnStateMachine hotspot](HOTSPOT-PawnStateMachine-2026-06-13.md)): a
-> concrete ADR-008 bypass (the pawn AI calls `WasmPathfinderService` directly instead of the
-> interface) — a small, do-now fix, not deferred. **Intentionally deferred** (the review's own
+> **P-7 — ✅ DONE** (from the [PawnStateMachine hotspot](HOTSPOT-PawnStateMachine-2026-06-13.md)):
+> the concrete ADR-008 bypass (pawn AI calling `WasmPathfinderService` directly) is fixed — pathfinding
+> now routes through the `PathfinderService` interface, and PawnStateMachine is off the `graph:check`
+> ADR-008 list. The hotspot decomposition has also **started**: step 4's stateless helpers
+> (`isAdjacent`, `findAdjacentApproach`, food selection) are extracted to
+> `systems/pawn/pawnQueries.ts`; the handler split (steps 2+3) is next, test-first. **Intentionally deferred** (the review's own
 > guidance — not "unfinished"): **P-2** engine↔store inversion (large, no functional change, needs
 > in-browser verification), **P-3** services-import-stores (injectable log sink — same caveat),
 > **P-4** god-file splits ("no big-bang"; the hotspot gives `PawnStateMachine` a concrete handler-split
@@ -53,7 +56,7 @@
 
 | Area                    | 06-10 | Now | Notes                                                                                   |
 | ----------------------- | ----- | --- | --------------------------------------------------------------------------------------- |
-| Architecture & layering | B−    | A−  | Engine near coordinator-only; per-tile storage model is the single source of truth — the `gs.item` seam is **gone** (ADR-016). Caveats: one concrete ADR-008 bypass (PawnStateMachine → `WasmPathfinderService` directly, P-7) and the engine↔store / services↔stores inversions (P-2/P-3) remain |
+| Architecture & layering | B−    | A−  | Engine near coordinator-only; per-tile storage model is the single source of truth — the `gs.item` seam is **gone** (ADR-016). The PawnStateMachine→`WasmPathfinderService` ADR-008 bypass is now **fixed** (P-7, routed through the interface). Caveats: 6 other pre-existing ADR-008 bypasses (EntityService/GameEngineImpl/UI `init`) and the engine↔store / services↔stores inversions (P-2/P-3) remain |
 | Engine correctness      | C−    | B+  | All R1–R12 fixed + regression-tested (incl. R2 drafted-pawn health); physical production (reserve-and-fetch, building hauling, passive furnaces) shipped |
 | Simulation testing      | D     | B+  | 32 → **141** tests; the cross-system seams (craft→build, draft→health, tool gating, death drops) are now covered |
 | Tick-loop structure     | C+    | C+  | Same deferred O(P²) churn (D9.1); a passive-production phase added (skips when idle); scale still fine |
@@ -414,6 +417,15 @@ ESLint rule from the last review is still the way to close the class permanently
 
 ### P-7 · ADR-008 boundary violation — PawnStateMachine reaches across the WASM boundary directly (NEW, small + actionable)
 
+> **✅ RESOLVED (2026-06-13).** The `PathfinderService` interface gained `isReady()`; a new
+> interface-typed `pathfinderService` singleton (in `PathfinderService.ts`) is the single
+> composition point that knows the WASM impl. `PawnStateMachine`'s `tryAssignPath`/
+> `tryAssignSleepPath`/`handleIdle` now call `pathfinderService.isReady()`/`.findPath()` and the
+> direct `WasmPathfinderService` import is gone. `pnpm graph:check` confirms **PawnStateMachine no
+> longer appears in the ADR-008 list** (the remaining 6 bypasses — `EntityService.pathTo`,
+> `GameEngineImpl.debugLogPawns`/`_processDraftOrders`, and the `init()` calls in
+> `GameCanvas`/`GameControls` — are separate, pre-existing, and out of this fix's scope).
+
 > Surfaced by the [PawnStateMachine hotspot](HOTSPOT-PawnStateMachine-2026-06-13.md) (graph-derived).
 > **Unlike P-2…P-5 this is a quick, safe fix — not deferred.**
 
@@ -514,12 +526,11 @@ recipes (no station) show nothing.
 _All Part I (R1–R12) and the discrete Part II items (P-1, P-6, R11) are done. What's left is one
 quick win plus deliberately-deferred structural work:_
 
-0. **Quick wins (do now):** **P-7** — route `PawnStateMachine`'s pathfinding through the
-   `PathfinderService` interface (~5 call sites, no behaviour change; closes the ADR-008 bypass the
-   [hotspot](HOTSPOT-PawnStateMachine-2026-06-13.md) found). **PT-1** (pending sign-off) — make
-   `findNearestDepositPoint` return a reachable, standable tile so haulers stop "depositing in place"
-   short of the stockpile.
+0. **Quick wins:** **✅ P-7 done** — `PawnStateMachine`'s pathfinding now routes through the
+   `PathfinderService` interface (ADR-008 bypass closed; off the `graph:check` list). **PT-1**
+   (pending sign-off) — make `findNearestDepositPoint` return a reachable, standable tile so haulers
+   stop "depositing in place" short of the stockpile.
 1. **Before Living World lands:** **P-2** (engine as the only writer; user actions as commands) and **P-3** (inject a log sink so services don't import `stores/`) — both are large, no-functional-change inversions best done with the game running in a browser to verify the activity log / combat floaters / UI snapshot still behave.
-2. **Opportunistic (no big-bang):** **P-4** god-file splits along existing seams — for the #1 hotspot `PawnStateMachine`, follow the report's order: P-7 boundary fix → extract pure helpers to `pawnUtils` → split the 15 handlers into `handlers/{work,needs,combat}.ts` + a `Record<PawnState,Handler>` table → per-handler tests → push selection into services.
+2. **Opportunistic (no big-bang):** **P-4** god-file splits along existing seams — for the #1 hotspot `PawnStateMachine`, follow the report's order: ✅ P-7 boundary fix → ✅ extract pure helpers (`systems/pawn/pawnQueries.ts`) → **next:** write per-handler tests (Working/Hungry/Idle) → split the 15 handlers into `pawn/handlers/{work,needs,combat}.ts` (importing a shared `pawn/pawnHelpers.ts`) + a `Record<PawnState,Handler>` table → push selection into services.
 3. **Profiling-gated:** **P-5** per-tick allocation churn — only when `__profOut` says so. (The hotspot confirms the convergence: `tickPawn` re-finds each pawn and handlers fan out into 14 modules.)
 4. **Physical-production follow-ups** (see [PHYSICAL-PRODUCTION](.tasks/open/PHYSICAL-PRODUCTION.md)): tool-gating step 2 (per-pawn inventory + `minTier`), per-stack craft quality on instances (R8), passive-furnace flagging for forge/hearth.
