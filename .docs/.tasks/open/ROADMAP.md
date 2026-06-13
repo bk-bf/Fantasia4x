@@ -102,6 +102,9 @@ layer (seasons / weather / fog of war), with **Ranged Combat** sequenced just af
 | **Sim perf scaling** (500+ entities, 1000×1000 maps)                                                          | [ ] Phase 2 of spec | archived: `SIMULATION-PERF-2026-05-30.md` — Phase 1+1.5 [x] (60/60 TPS, 100+ FPS) |
 | **Unified work model** (single stats.jsonc speed/yield/quality; ModifierSystem work-eff removed)              | [x] 2026-06-13      | ADR-015 in `game/DECISIONS.md`; no separate spec                                  |
 | **Work-driven pawn hunting** (mark-to-hunt → chase → resolve as combat → carcass → butchery; prey fight-back) | [x] 2026-06-13      | reuses COMBAT + ENTITIES circuits; no separate spec                               |
+| **Data-driven colony jobs** (`database/jobs.jsonc` + `JobService` handler registry; no hardcoded job switches) | [x] 2026-06-13      | ADR-017 in `game/DECISIONS.md`; drift-guarded by `jobRegistry.test.ts`            |
+| **Data-driven condition drivers** (malnutrition/dehydration onset/rate/recovery moved to `conditions.jsonc`)  | [x] 2026-06-13      | `ConditionDriver` in `conditions.jsonc`; no separate spec                         |
+| **PawnStateMachine decomposition** (2818→988 LOC; dispatch table + `pawn/*` helpers/handlers; #1 hotspot)     | [x] 2026-06-13      | archived: `CODEBASE-REVIEW-RESOLVED-2026-06-13.md`; behaviour-locked by tests     |
 
 ---
 
