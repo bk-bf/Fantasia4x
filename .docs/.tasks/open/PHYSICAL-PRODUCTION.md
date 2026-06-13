@@ -41,6 +41,14 @@ any means, a pawn must have held the input items, carried them to the production
    **on the station tile** (absorbed if the tile is also a stockpile, else they wait to be
    hauled). Quality from `pawnStatService.getWorkModifiers(...).quality`; tool/mold wear kept.
 
+**Long jobs yield to needs (ADR-010).** A craft job is a normal work job, so a pawn working it
+re-checks hunger / fatigue / thirst every tick via `checkNeedInterrupts`. When a need crosses
+its proximity-weighted threshold the pawn **releases the job** (its accumulated `workDone` stays
+in the global pool, `claimedBy` → null) and breaks off to eat / sleep / drink — so another pawn
+can claim the half-finished job meanwhile and this one resumes it later. Thirst routes to a
+drink zone/well only when there's no stored water to sip in place (auto-drink covers that
+first); hygiene stays non-interrupting (mood-only).
+
 `gameState.item` is removed entirely; its readers (craft output, eating, equip pool, events,
 blueprint cost, craft-cancel refund) move to physical stock.
 

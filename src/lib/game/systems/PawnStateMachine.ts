@@ -2083,6 +2083,25 @@ function checkNeedInterrupts(
     }
   }
 
+  // Thirst — a long job must yield to water needs too (dehydration is lethal, and faster than
+  // starvation). Stored water is sipped in place by processAutoDrink before the FSM runs, so we
+  // only break here when there's none and the pawn must walk to a drink zone / well. Releasing
+  // the job returns it to the pool with its accumulated workDone, so another pawn can pick it up
+  // meanwhile and this pawn finishes it later. (Hygiene stays non-interrupting — mood-only — and
+  // is handled from Idle / passive auto-wash.)
+  const thirst = pawn.needs?.thirst ?? 0;
+  if (thirst >= ROUTE_TO_DRINK_THIRST && (gameState.stockpile?.['water'] ?? 0) <= 0) {
+    const routed = tryRouteToWaterNeed(pawn, gameState, 'drink');
+    if (routed) {
+      gameLogger.log(
+        gameState.turn,
+        'NEED-CHECK',
+        () => `[${label}] ${pawn.name} T:${thirst.toFixed(1)} → INTERRUPT→DRINK`
+      );
+      return jobId ? jobService.releaseJob(pawn.id, jobId, routed) : routed;
+    }
+  }
+
   const fatigue = pawn.needs?.fatigue ?? 0;
   if (fatigue >= FATIGUE_THRESHOLD) {
     const minQueueRest = computeMinQueueRestDist(queue, pawn, gameState);
