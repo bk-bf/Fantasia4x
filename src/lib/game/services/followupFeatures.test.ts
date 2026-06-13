@@ -220,3 +220,46 @@ describe('station tiers + bootstrap (ADR-016 / ADR-009)', () => {
     expect(itemService.hasRequiredBuilding('stone_axe', gs)).toBe(true);
   });
 })
+
+// ─────────────────────────────────────────────────────────────────────────────
+// R4 — ADR-009 tool gating (colony-stock, step 1)
+// ─────────────────────────────────────────────────────────────────────────────
+describe('R4 tool gating (ADR-009)', () => {
+  const makePawn = () => ({ id: 'p', position: { x: 0, y: 0 } }) as unknown as Pawn;
+  const woodcutJob = {
+    id: 'wc',
+    type: 'harvest',
+    resourceId: 'pine_tree',
+    targetX: 5,
+    targetY: 5,
+    workRequired: 5,
+    workDone: 0,
+    claimedBy: null
+  } as any;
+  const scavengeJob = {
+    id: 'sc',
+    type: 'harvest',
+    resourceId: 'stone_outcrop',
+    targetX: 6,
+    targetY: 6,
+    workRequired: 6,
+    workDone: 0,
+    claimedBy: null
+  } as any;
+  const designations = { '5,5': 'woodcut', '6,6': 'harvest' } as unknown as GameState['designations'];
+
+  it('a tool-gated harvest (woodcut) is NOT claimable without an axe in the colony', () => {
+    const gs = makeState({ jobs: [woodcutJob], designations, stockpile: {} });
+    expect(jobService.getAvailableJobs(makePawn(), gs).map((j) => j.id)).not.toContain('wc');
+  });
+
+  it('it becomes claimable once a stone_axe is in stock', () => {
+    const gs = makeState({ jobs: [woodcutJob], designations, stockpile: { stone_axe: 1 } });
+    expect(jobService.getAvailableJobs(makePawn(), gs).map((j) => j.id)).toContain('wc');
+  });
+
+  it('a tool-free scavenge (surface stone) is always claimable', () => {
+    const gs = makeState({ jobs: [scavengeJob], designations, stockpile: {} });
+    expect(jobService.getAvailableJobs(makePawn(), gs).map((j) => j.id)).toContain('sc');
+  });
+})

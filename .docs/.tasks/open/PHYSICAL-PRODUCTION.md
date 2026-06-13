@@ -85,14 +85,14 @@ multi-yield carcass model is a separate follow-up; today's butchery is recipes.
 
 ### Still deferred
 
-- **R4 ADR-009 tool gating — UNBLOCKED; mechanism not yet wired.** The bootstrap that blocked it is
-  fixed: `stone_outcrop` is now a **tool-free scavenge** (`small_stone` 5–10, `flint_shard` 0–2),
-  `stone_axe`/`stone_hammer` recipes moved to **craft_spot** (tier 0), and **station tiers** let a
-  higher workshop supersede a lower one (so the Crude Workbench's tool-listing cost is no longer
-  circular). flint is the intended scarce gate. The remaining step is the gating mechanism itself —
-  filter `JobService.getAvailableJobs` on a harvest's `interaction.toolRequirement` (require a tool
-  from the matching `WorkCategory.toolsRequired` in colony stock). Note `stone_pick`/`stone_hoe`
-  have no recipes, so mining ore can't be tool-satisfied until those are added.
+- **R4 ADR-009 tool gating — DONE (colony-stock, step 1).** `JobService.getAvailableJobs` now
+  filters a harvest job whose `interaction.toolRequirement` is set unless the colony stockpile
+  holds a tool from the matching `WorkCategory.toolsRequired` (`_colonyHasHarvestTool`); the job
+  stays open until one is crafted. Tool-free scavenges (e.g. `stone_outcrop`) are exempt. Bootstrap
+  prerequisites that unblocked this: tool-free surface stone, `stone_axe`/`stone_hammer` at
+  craft_spot, station tiers (Crude Workbench). Added missing **`stone_pick`/`stone_hoe`** items +
+  recipes so mining/planting are tool-satisfiable. flint is the intended scarce early gate.
+  Deferred: step 2 (per-pawn claimed inventory + `minTier`), and craft-tool gating (e.g. forge tongs).
 
 ## Verification
 

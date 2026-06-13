@@ -601,6 +601,24 @@
     "toolTierRequired": 0
   },
   {
+    // Tier-1 (Crude Workbench): the first tool that can break rock/ore — gates mining (coal, clay).
+    "id"              : "make_stone_pick",
+    "station"         : "makers_bench",
+    "inputs"          : {"granite": 2, "branch": 3, "cordage": 2},
+    "outputs"         : {"stone_pick": 1},
+    "workAmount"      : 3,
+    "toolTierRequired": 0
+  },
+  {
+    // Tier-1 (Crude Workbench): gates planting/tilling (digging_stick is the cruder alternative).
+    "id"              : "make_stone_hoe",
+    "station"         : "makers_bench",
+    "inputs"          : {"flint_shard": 1, "branch": 2, "cordage": 1},
+    "outputs"         : {"stone_hoe": 1},
+    "workAmount"      : 2,
+    "toolTierRequired": 0
+  },
+  {
     "id"              : "make_stone_spear",
     "station"         : "makers_bench",
     "inputs"          : {"flint_shard": 3, "branch": 4, "cordage": 1},

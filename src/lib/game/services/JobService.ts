@@ -10,6 +10,7 @@
  */
 
 import type { DesignationType, GameState, Job, Pawn, DroppedItem, ZoneFilter } from '../core/types';
+import { WORK_CATEGORIES } from '../core/Work';
 // Gated console shim — see core/log.ts. Silences per-tick log/debug/warn unless
 // gameDebug(true); console.error still surfaces.
 import { gatedConsole as console, isGameDebug } from '../core/log';
@@ -195,6 +196,11 @@ class JobServiceImpl {
         const allowedPawns = building?.fuelSettings?.allowedRefuelPawnIds ?? [];
         if (allowedPawns.length > 0 && !allowedPawns.includes(pawn.id)) return false;
       }
+
+      // ADR-009 tool gating (R4): a harvest whose interaction requires a tool (woodcut→axe,
+      // mine→pick, …) is not claimable unless the colony has a matching tool in stock. The job
+      // stays open until one is crafted. Tool-free scavenges (toolRequirement null) are exempt.
+      if (j.type === 'harvest' && !this._colonyHasHarvestTool(j, gameState)) return false;
 
       // Map job type to work category key used in labor settings
       const workKey = this._jobTypeToWorkKey(j, gameState);
@@ -1303,6 +1309,31 @@ class JobServiceImpl {
   }
 
   // ------------------------------------------------------------------ //
+
+  /**
+   * ADR-009 tool gating (R4, step 1 = colony stock): does the colony hold a tool that satisfies
+   * this harvest's `interaction.toolRequirement`? Tool-free interactions (toolRequirement null —
+   * foraging, surface-stone scavenging) always pass. A required tool is satisfied when the
+   * stockpile holds ANY tool listed in the matching work category's `toolsRequired`. (Step 2 —
+   * per-pawn claimed inventory + minTier — is a later refinement.)
+   */
+  private _colonyHasHarvestTool(job: Job, gs: GameState): boolean {
+    if (!job.resourceId) return true;
+    const def = resourceObjectService.getById(job.resourceId);
+    if (!def) return true;
+    const dtype = (gs.designations ?? {})[`${job.targetX},${job.targetY}`] as
+      | DesignationType
+      | undefined;
+    const interaction =
+      (dtype
+        ? resourceObjectService.getInteractionByDesignationType(job.resourceId, dtype)
+        : undefined) ?? def.interaction;
+    const req = interaction?.toolRequirement;
+    if (!req) return true; // tool-free harvest
+    const tools = WORK_CATEGORIES.find((w) => w.id === req.workType)?.toolsRequired ?? [];
+    if (tools.length === 0) return true; // category lists no gating tools
+    return tools.some((t) => (gs.stockpile?.[t] ?? 0) > 0);
+  }
 
   /** Map Job to the work category key used in WorkAssignment.laborSettings */
   private _jobTypeToWorkKey(job: WorkKeyJob, gs?: GameState): string {
