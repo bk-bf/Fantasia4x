@@ -41,6 +41,8 @@ const FLUSH_INTERVAL_MS = 3000;
 class GameLoggerImpl {
   private buffer: string[] = [];
   private timer: ReturnType<typeof setInterval> | null = null;
+  /** Live taps (in-game Debug Log viewer). Notified per line, in addition to the file flush. */
+  private subscribers = new Set<(line: string) => void>();
   /**
    * D9.5: master gate. When false, log() returns BEFORE invoking a message thunk, so the
    * hot per-pawn-per-tick NEED-CHECK strings are never even built. Defaults to dev builds
@@ -67,6 +69,19 @@ class GameLoggerImpl {
   }
 
   /**
+   * Live tap for the in-game Debug Log viewer: invoke `fn` with each formatted
+   * line as it is logged, alongside the normal file flush. Returns an unsubscribe.
+   *
+   * This fires on the per-pawn-per-tick logging path, so `fn` must be cheap and
+   * MUST batch any reactive/UI work off the hot path (e.g. push to a plain array
+   * and drain on rAF) — never mutate framework state once per call.
+   */
+  subscribe(fn: (line: string) => void): () => void {
+    this.subscribers.add(fn);
+    return () => this.subscribers.delete(fn);
+  }
+
+  /**
    * Append a tagged line to the write buffer.
    *
    * @param turn   Current game turn (used in prefix).
@@ -79,7 +94,12 @@ class GameLoggerImpl {
     const body = typeof msg === 'function' ? msg() : msg;
     const ts = new Date().toISOString();
     const t = String(turn).padStart(4, '0');
-    this.buffer.push(`${ts} [T${t}] [${tag}] ${body}`);
+    const line = `${ts} [T${t}] [${tag}] ${body}`;
+    this.buffer.push(line);
+    // Notify live taps only when one is attached (zero cost when the viewer is closed).
+    if (this.subscribers.size > 0) {
+      for (const fn of this.subscribers) fn(line);
+    }
     if (this.buffer.length >= FLUSH_SIZE) this.flush();
   }
 

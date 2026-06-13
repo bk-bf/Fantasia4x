@@ -1,20 +1,26 @@
 <!--
-  DebugLogScreen — live in-game viewer for the `.debug/*.log` stream.
-  Dev-only: mounted by +page.svelte solely when VITE_DEBUG_MODE is set. Streams
-  from /api/debug-stream (SSE) with source switching, tag/severity/text filters,
-  tag colouring, autoscroll, and a clear button. Ported from the yact LogStreamer.
+  DebugLogScreen — live in-game viewer for the game's debug logs.
+  Dev-only: mounted by +page.svelte solely when VITE_DEBUG_MODE is set.
+
+  Default source `live` taps gameLogger's in-memory buffer directly (zero
+  latency, no server round-trip); the per-file sources stream from
+  /api/debug-stream (SSE) and include prior-session history persisted on disk.
+  Either way: source switching, tag/severity/text filters, tag colouring,
+  autoscroll, clear. Ported from the yact LogStreamer.
 -->
 <script lang="ts">
   import { browser } from '$app/environment';
+  import { gameLogger } from '$lib/game/dev/gameLogger';
   import { parseDebugLine, type ParsedDebugLine } from '$lib/game/dev/parseDebugLine';
   import DebugLogRow from './DebugLogRow.svelte';
+  import DebugLogControls from './DebugLogControls.svelte';
 
-  const SOURCES = ['all', 'pawns', 'entities', 'activity', 'game', 'perf'] as const;
+  const SOURCES = ['live', 'all', 'pawns', 'entities', 'activity', 'game', 'perf'] as const;
   const SEVERITIES = ['ALL', 'error', 'warning', 'info', 'debug'] as const;
   const BUFFER_CAP = 2000; // lines retained in memory
   const RENDER_CAP = 600; // lines actually painted
 
-  let source = $state<(typeof SOURCES)[number]>('all');
+  let source = $state<(typeof SOURCES)[number]>('live');
   let filterTag = $state('ALL');
   let filterSeverity = $state('ALL');
   let search = $state('');
@@ -24,6 +30,9 @@
   let bodyEl: HTMLElement | null = $state(null);
   let keyCounter = 0;
   let es: EventSource | null = null;
+  // Live-tap batching: plain (non-reactive) staging drained into `lines` once per frame.
+  let pending: ParsedDebugLine[] = [];
+  let rafId: number | null = null;
 
   const knownTags = $derived([...new Set(lines.flatMap((l) => (l.tag ? [l.tag] : [])))].sort());
 
@@ -45,8 +54,32 @@
   $effect(() => {
     if (!browser) return;
     const src = source;
-    es?.close();
     lines = [];
+
+    // Live source: tap gameLogger's buffer in-memory. Each line is staged into a
+    // plain array on the hot path; we coalesce into reactive `lines` once per rAF
+    // so Svelte invalidates per-frame, never per-log-call.
+    if (src === 'live') {
+      pending = [];
+      const flush = () => {
+        rafId = null;
+        if (pending.length === 0) return;
+        lines = [...lines, ...pending].slice(-BUFFER_CAP);
+        pending = [];
+      };
+      const unsub = gameLogger.subscribe((raw) => {
+        pending.push(parseDebugLine(raw, ++keyCounter));
+        if (rafId === null) rafId = requestAnimationFrame(flush);
+      });
+      return () => {
+        unsub();
+        if (rafId !== null) cancelAnimationFrame(rafId);
+        rafId = null;
+        pending = [];
+      };
+    }
+
+    es?.close();
     es = new EventSource(`/api/debug-stream?source=${src}`);
     es.onmessage = (ev: MessageEvent) => {
       const parsed = parseDebugLine(ev.data as string, ++keyCounter);
@@ -71,25 +104,19 @@
 </script>
 
 <div class="debug-log">
-  <div class="header">
-    <span class="title">DEBUG LOG</span>
-    <select class="sel" bind:value={source} aria-label="Source">
-      {#each SOURCES as s}<option value={s}>{s}</option>{/each}
-    </select>
-    <select class="sel" bind:value={filterTag} aria-label="Tag filter">
-      <option value="ALL">tag:ALL</option>
-      {#each knownTags as t (t)}<option value={t}>[{t}]</option>{/each}
-    </select>
-    <select class="sel" bind:value={filterSeverity} aria-label="Severity filter">
-      {#each SEVERITIES as s}<option value={s}>{s === 'ALL' ? 'sev:ALL' : s}</option>{/each}
-    </select>
-    <input class="search" type="text" placeholder="search…" bind:value={search} />
-    <button class="btn" class:on={autoscroll} onclick={() => (autoscroll = !autoscroll)}>
-      {autoscroll ? 'scroll■' : 'scroll□'}
-    </button>
-    <button class="btn" onclick={clearLogs}>clear</button>
-    <span class="count">{filtered.length}/{lines.length}</span>
-  </div>
+  <DebugLogControls
+    bind:source
+    bind:filterTag
+    bind:filterSeverity
+    bind:search
+    bind:autoscroll
+    sources={SOURCES}
+    severities={SEVERITIES}
+    {knownTags}
+    shown={filtered.length}
+    total={lines.length}
+    onclear={clearLogs}
+  />
 
   <div class="body" bind:this={bodyEl}>
     {#if lines.length === 0}
@@ -111,55 +138,6 @@
     height: 100%;
     min-height: 0;
     font-family: 'Courier New', monospace;
-  }
-  .header {
-    display: flex;
-    align-items: center;
-    gap: 0.4em;
-    flex-wrap: wrap;
-    padding: 4px 6px;
-    background: var(--bg-panel);
-    border-bottom: 1px solid var(--border-hi);
-    flex-shrink: 0;
-  }
-  .title {
-    color: var(--accent-hi);
-    font-size: 11px;
-    letter-spacing: 0.1em;
-    margin-right: auto;
-  }
-  .sel,
-  .search,
-  .btn {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-family: inherit;
-    font-size: 11px;
-    padding: 2px 5px;
-    cursor: pointer;
-    outline: none;
-  }
-  .sel:focus,
-  .search:focus {
-    border-color: var(--border-hi);
-  }
-  .search {
-    width: 9em;
-    cursor: text;
-  }
-  .btn:hover {
-    background: var(--bg-hover);
-    color: var(--accent-hi);
-  }
-  .btn.on {
-    color: var(--accent-hi);
-    border-color: var(--border-hi);
-  }
-  .count {
-    color: var(--text-muted);
-    font-size: 11px;
-    font-variant-numeric: tabular-nums;
   }
   .body {
     flex: 1;
