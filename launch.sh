@@ -5,6 +5,12 @@
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PIDS=()
 
+# --debug enables the live codebase-graph server (off by default).
+DEBUG=false
+for arg in "$@"; do
+  [[ "$arg" == "--debug" ]] && DEBUG=true
+done
+
 cleanup() {
   [[ ${#PIDS[@]} -eq 0 ]] && return
   echo ""
@@ -49,14 +55,16 @@ if [[ -d "$LAUNCH_DIR" ]]; then
   done
 fi
 
-# Live codebase-graph server: rebuilds + hot-reloads on any src/lib change.
-CODEGRAPH_PORT=${CODEGRAPH_PORT:-5180}
-if [[ -z "$(lsof -ti tcp:$CODEGRAPH_PORT 2>/dev/null)" ]]; then
-  (cd "$SCRIPT_DIR" && exec node tools/codegraph/serve.mjs) &
-  PIDS+=($!)
-  echo "  [codegraph] http://localhost:$CODEGRAPH_PORT"
-else
-  echo "  [codegraph] already running on http://localhost:$CODEGRAPH_PORT"
+# Live codebase-graph server (--debug only): rebuilds + hot-reloads on src/lib change.
+if [[ "$DEBUG" == true ]]; then
+  CODEGRAPH_PORT=${CODEGRAPH_PORT:-5180}
+  if [[ -z "$(lsof -ti tcp:$CODEGRAPH_PORT 2>/dev/null)" ]]; then
+    (cd "$SCRIPT_DIR" && exec node tools/codegraph/serve.mjs) &
+    PIDS+=($!)
+    echo "  [codegraph] http://localhost:$CODEGRAPH_PORT"
+  else
+    echo "  [codegraph] already running on http://localhost:$CODEGRAPH_PORT"
+  fi
 fi
 
 echo ""

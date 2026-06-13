@@ -81,7 +81,10 @@ const server = http.createServer((req, res) => {
   if (req.url === '/' || req.url === '/codegraph.html' || req.url === '/index.html') {
     fs.readFile(HTML, 'utf8', (err, data) => {
       if (err) { res.writeHead(503); res.end('codegraph.html not built yet'); return; }
-      const out = data.replace('</body>', RELOAD_SNIPPET + '</body>');
+      // Inject before the *document's* closing tag — the inlined Mermaid source
+      // contains "</body>" substrings, so target the last occurrence.
+      const i = data.lastIndexOf('</body>');
+      const out = i === -1 ? data + RELOAD_SNIPPET : data.slice(0, i) + RELOAD_SNIPPET + data.slice(i);
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
       res.end(out);
     });

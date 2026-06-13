@@ -6,13 +6,28 @@ deps, layer violations) visible at a glance.
 
 ## Use it
 
+**Live mode (recommended).** `./launch.sh` starts the graph server automatically
+alongside the dev servers:
+
+```
+[codegraph] http://localhost:5180
+```
+
+Open that URL. It rebuilds the graph on any `src/lib/**.ts` change (or edit to
+`template.html` / `descriptions.json`) and hot-reloads every open tab — no manual
+step. Run it on its own with `pnpm graph:serve`. Override the port with
+`CODEGRAPH_PORT`.
+
+**One-off static build.**
+
 ```bash
 pnpm graph        # extract + build
 ```
 
-Then open `tools/codegraph/codegraph.html` in any browser. The file is fully
-self-contained (Mermaid is vendored and inlined) — it works offline and can be
-moved or shared anywhere.
+Then open `tools/codegraph/codegraph.html` directly. The file is fully
+self-contained (Mermaid is vendored and inlined) — it works offline (`file://`)
+and can be moved or shared anywhere. The live server serves this same file with a
+small reload script injected on the fly.
 
 ## What you get
 
