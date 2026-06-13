@@ -94,10 +94,18 @@ The decomposition has started, in the report's recommended order:
   `hasAvailableFood`, `selectFoodForMeal`, `consumeMeal` (+ `ITEM_DEF_BY_ID`, `SAFE_HUNGER`) moved to
   **`src/lib/game/systems/pawn/pawnQueries.ts`** (the layer-correct home; `src/lib/utils/pawnUtils.ts`
   is UI-only, so a new engine-side queries module was used instead).
-- **▶ Next:** Step 6 tests-first (Working/Hungry/Idle), then Steps 2+3 — a shared
-  **`pawn/pawnHelpers.ts`** (orchestration helpers + constants) feeding `pawn/handlers/{work,needs,combat}.ts`
-  and a thin dispatcher with a `Record<PawnState,Handler>` table. Acyclic by construction
-  (`pawnQueries ← pawnHelpers ← handlers ← dispatcher`) so `graph:check`'s cycle rule stays satisfied.
+- **✅ Step 6 (handler behaviour-lock tests) DONE.** `systems/pawnHandlers.test.ts` — 8 tests driving
+  the public `tick()` pin the deterministic Idle/Working/Hungry branches (149 tests total). Written
+  BEFORE the file split so any behaviour drift during the move is caught.
+- **✅ Step 3 (dispatch table) DONE.** `tickPawn`'s 15-case switch is now a `Record<PawnState,Handler>`
+  lookup (fan-out 16 → ~1; `tickPawn` is 8 LOC). Verified in-place: 0 type errors, 149 tests pass.
+- **▶ Next (Step 2 — the file split):** move the 15 handlers to `pawn/handlers/{work,needs,combat}.ts`
+  and the ~35 shared orchestration helpers + constants to a shared **`pawn/pawnHelpers.ts`**
+  (+ a tiny `pawn/pawnStates.ts` for `PAWN_STATE`/`PawnStateName`), leaving PawnStateMachine as a thin
+  dispatcher + the health/lifecycle block. Acyclic by construction
+  (`pawnStates/pawnQueries ← pawnHelpers ← handlers ← dispatcher`) so `graph:check`'s cycle rule stays
+  satisfied. Because helpers and handlers are physically interleaved in the file, this is best done as
+  a **reviewed brace-span codemod** (exact text relocation) rather than dozens of hand edits.
 
 ## Improvement suggestions (prioritised)
 
@@ -117,7 +125,7 @@ This turns one 110 KB file into a thin dispatcher plus three ~focused units,
 each independently testable. Keep them as plain functions taking `(pawn,
 gameState)` so the layered architecture is unchanged.
 
-**3 — Replace the `tickPawn` switch with a handler table.**
+**3 — Replace the `tickPawn` switch with a handler table. ✅ DONE.**
 A `Record<PawnState, Handler>` lookup drops `tickPawn`'s fan-out from 16 to ~1
 and makes adding a state a one-line registration instead of editing a giant
 switch. Pairs naturally with #2.
