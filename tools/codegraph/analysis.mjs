@@ -65,6 +65,7 @@ export const ADR_RULES = [
   { adr: 'ADR-014', checkable: false, reason: 'Tile occupancy via OccupancyService — bypass detection needs field-level analysis.' },
   { adr: 'ADR-015', checkable: false, reason: 'Single work model — the superseded path was deleted; nothing to detect.' },
   { adr: 'ADR-016', checkable: false, reason: 'Physical production (reserve-and-fetch) — runtime behaviour.' },
+  { adr: 'ADR-017', checkable: false, reason: 'Data-driven jobs (jobs.jsonc ↔ Job[type] union ↔ JobService handler registry) — a data-coverage invariant, not a call edge. Drift is enforced by jobRegistry.test.ts + compile-time JobPoolType guards.' },
 ];
 
 /** Architecture rule checks. Returns { findings, errors, warnings, rules }. */
