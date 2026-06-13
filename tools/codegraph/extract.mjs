@@ -324,7 +324,7 @@ function bodyMetrics(decl, sf) {
     ts.forEachChild(n, visit);
   };
   visit(decl);
-  return { loc: Math.max(1, end - start + 1), numeric };
+  return { loc: Math.max(1, end - start + 1), chars: decl.getEnd() - decl.getStart(sf), numeric };
 }
 
 function register(decl, qualName, kind, className, sf) {
@@ -353,6 +353,7 @@ function register(decl, qualName, kind, className, sf) {
     // descriptions.json and win over this at display time.
     desc: doc || autoDescribe(qualName.split('.').pop() || qualName),
     loc: met.loc,
+    chars: met.chars,
     numeric: met.numeric,
     tested: false
   });
@@ -471,6 +472,7 @@ function registerComponent(sf) {
   const fileName = sf.fileName;
   const base = path.basename(realPath(fileName), '.svelte');
   const id = makeId(fileName, base, 1);
+  const txt = sf.getFullText(); // line-preserving twin → same size as the .svelte file
   nodes.set(id, {
     id,
     name: base,
@@ -485,7 +487,11 @@ function registerComponent(sf) {
     signature: '<svelte component>',
     doc: '',
     humanized: humanize(base),
-    desc: `${humanize(base)} — Svelte UI component.`
+    desc: `${humanize(base)} — Svelte UI component.`,
+    loc: txt.split('\n').length,
+    chars: txt.length,
+    numeric: 0,
+    tested: false
   });
   componentScan.push({ id, sf });
 }
@@ -697,11 +703,27 @@ for (const n of nodes.values()) {
   n.outDegree = outdeg.get(n.id) || 0;
 }
 
+// Full file list (incl. node-less definition files not present as module nodes).
+const fnsByModule = new Map();
+for (const n of nodes.values()) fnsByModule.set(n.module, (fnsByModule.get(n.module) || 0) + 1);
+const fileList = [];
+for (const sf of sourceFiles) {
+  const mod = moduleOf(sf.fileName);
+  fileList.push({
+    file: rel(sf.fileName), module: mod, group: groupOf(sf.fileName),
+    fns: fnsByModule.get(mod) || 0, lang: svelteVirtual.has(sf.fileName) ? 'svelte' : 'ts',
+  });
+}
+for (const rf of new Set(rust.nodes.map((n) => n.file))) {
+  const rn = rust.nodes.filter((n) => n.file === rf);
+  fileList.push({ file: rf, module: rn[0].module, group: 'rust', fns: rn.length, lang: 'rust' });
+}
+
 const out = {
   generatedAt: new Date().toISOString(),
   root: ROOT,
   stats: {
-    files: sourceFiles.length,
+    files: fileList.length,
     functions: nodes.size,
     edges: edges.size,
     modules: moduleNodes.size
@@ -709,7 +731,8 @@ const out = {
   nodes: [...nodes.values()],
   edges: [...edges.values()],
   moduleNodes: [...moduleNodes.values()],
-  moduleEdges: [...moduleEdges.values()]
+  moduleEdges: [...moduleEdges.values()],
+  files: fileList
 };
 
 const outPath = path.join(__dirname, 'graph.json');

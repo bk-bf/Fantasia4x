@@ -76,7 +76,7 @@ export function createApi(DIR) {
     return {
       id: n.id, name: n.short, module: shortMod(n.module), group: n.group, kind: n.kind,
       exported: n.exported, tested: !!n.tested, file: n.file, line: n.line,
-      loc: n.loc, numeric: n.numeric,
+      loc: n.loc, chars: n.chars, numeric: n.numeric,
       description: d.text, descriptionSource: d.source,
       inDegree: n.inDegree, outDegree: n.outDegree,
     };

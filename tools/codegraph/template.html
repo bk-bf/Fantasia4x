@@ -41,10 +41,22 @@
   .hb-field { display: flex; align-items: center; gap: 7px; white-space: nowrap; }
   .ctl-label { font-size: 10px; text-transform: uppercase; letter-spacing: .5px; color: var(--fg-dim); }
   input.modpick {
-    width: 230px; background: var(--bg); border: 1px solid var(--border); color: var(--fg);
+    width: 115px; background: var(--bg); border: 1px solid var(--border); color: var(--fg);
     padding: 6px 9px; border-radius: 6px; font-family: inherit; font-size: 12px;
   }
-  input.modpick:focus { outline: none; border-color: var(--accent2); }
+  input.modpick:focus { outline: none; border-color: var(--accent2); width: 200px; transition: width .15s; }
+
+  /* options dropdown */
+  .hb-menu { position: relative; }
+  #optBtn, #insightsBtn { background: var(--bg); border: 1px solid var(--border); color: var(--fg); font-family: inherit; font-size: 12px; padding: 6px 11px; border-radius: 6px; cursor: pointer; white-space: nowrap; }
+  #optBtn:hover, #insightsBtn:hover { border-color: var(--accent2); }
+  #optBtn.active { border-color: var(--accent2); color: var(--accent2); }
+  .hb-dropdown { position: absolute; top: calc(100% + 8px); left: 0; z-index: 30; min-width: 230px;
+    background: var(--bg-elev); border: 1px solid var(--border); border-radius: 8px; padding: 6px;
+    display: flex; flex-direction: column; box-shadow: 0 8px 24px #0009; }
+  .hb-dropdown[hidden] { display: none; }
+  .opt-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 8px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; color: var(--fg); }
+  .opt-row:hover { background: var(--bg-panel); }
   .seg { display: flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
   .seg button { background: var(--bg); color: var(--fg-dim); border: 0; padding: 6px 12px; font-family: inherit; font-size: 11px; cursor: pointer; }
   .seg button.on { background: var(--accent); color: #11151b; font-weight: 600; }
@@ -55,8 +67,6 @@
   .switch input:checked + span { background: var(--accent2); border-color: var(--accent2); }
   .switch input:checked + span::after { left: 19px; background: #11151b; }
 
-  #insightsBtn { background: var(--bg); border: 1px solid var(--border); color: var(--fg); font-family: inherit; font-size: 12px; padding: 6px 11px; border-radius: 6px; cursor: pointer; white-space: nowrap; }
-  #insightsBtn:hover { border-color: var(--accent2); }
   #insightsBtn .err { color: #ff6b6b; font-weight: 600; }
   #insightsBtn .warn { color: var(--accent); font-weight: 600; }
 
@@ -73,6 +83,27 @@
   .ins-row .meta { color: var(--fg-dim); font-size: 11px; }
   .ins-row.error { border-left-color: #ff6b6b55; }
   .ins-score { float: right; color: var(--fg-dim); font-variant-numeric: tabular-nums; }
+
+  /* clickable stats + browse list panel */
+  .stat-btn { background: none; border: 0; color: var(--fg-dim); font-family: inherit; font-size: 11px; cursor: pointer; padding: 3px 4px; border-radius: 4px; }
+  .stat-btn:hover { color: var(--accent2); background: var(--bg-elev); }
+  .stat-sep { color: var(--border); }
+  .list-controls { display: flex; gap: 6px; margin-bottom: 8px; }
+  .list-search { flex: 1; min-width: 0; background: var(--bg); border: 1px solid var(--border); color: var(--fg); padding: 7px 9px; border-radius: 6px; font-family: inherit; font-size: 12px; }
+  .list-search:focus { outline: none; border-color: var(--accent2); }
+  .list-sort { background: var(--bg); border: 1px solid var(--border); color: var(--fg); border-radius: 6px; font-family: inherit; font-size: 11px; padding: 0 4px; cursor: pointer; max-width: 130px; }
+  .list-sort:focus { outline: none; border-color: var(--accent2); }
+  .li-count { color: var(--accent2); font-variant-numeric: tabular-nums; }
+  .chips { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+  .chip { font-size: 10px; padding: 2px 8px; border-radius: 10px; border: 1px solid var(--border); color: var(--fg-dim); cursor: pointer; background: var(--bg); white-space: nowrap; }
+  .chip:hover { border-color: var(--accent2); }
+  .chip.on { background: var(--accent); color: #11151b; border-color: var(--accent); font-weight: 600; }
+  .li-row { padding: 6px 8px; border-bottom: 1px solid var(--border); cursor: pointer; }
+  .li-row:hover { background: var(--bg-elev); }
+  .li-name { color: var(--fg); font-size: 12px; word-break: break-word; }
+  .li-meta { color: var(--fg-dim); font-size: 10px; display: block; }
+  .li-count { color: var(--fg-dim); float: right; font-size: 11px; }
+  .list-foot { color: var(--fg-dim); font-size: 11px; padding: 8px 4px; position: sticky; bottom: 0; background: var(--bg-panel); }
 
   @media (max-width: 1100px) { .hb-collapse { display: none; } input.modpick { width: 150px; } }
 
@@ -145,18 +176,21 @@
       <button data-view="module">Module</button>
     </div>
     <div class="hb-field">
-      <span class="ctl-label hb-collapse">Module</span>
       <input class="modpick" id="modpick" list="modlist-data" placeholder="jump to module…" autocomplete="off" />
       <datalist id="modlist-data"></datalist>
     </div>
     <span class="vsep"></span>
-    <label class="hb-field" for="lbltoggle"><span class="ctl-label">Plain-English</span>
-      <span class="switch"><input type="checkbox" id="lbltoggle"><span></span></span></label>
-    <label class="hb-field" id="neighrow" for="neightoggle" style="display:none"><span class="ctl-label">Cross-module</span>
-      <span class="switch"><input type="checkbox" id="neightoggle" checked><span></span></span></label>
-    <label class="hb-field" for="covtoggle" title="Outline untested code red, tested green"><span class="ctl-label">Test coverage</span>
-      <span class="switch"><input type="checkbox" id="covtoggle"><span></span></span></label>
-    <span class="vsep"></span>
+    <div class="hb-menu">
+      <button id="optBtn" title="Display options">⚙ View ▾</button>
+      <div class="hb-dropdown" id="optMenu" hidden>
+        <label class="opt-row" for="lbltoggle"><span>Plain-English labels</span>
+          <span class="switch"><input type="checkbox" id="lbltoggle"><span></span></span></label>
+        <label class="opt-row" id="neighrow" for="neightoggle" style="display:none"><span>Show cross-module calls</span>
+          <span class="switch"><input type="checkbox" id="neightoggle" checked><span></span></span></label>
+        <label class="opt-row" for="covtoggle" title="Outline untested code red, tested green"><span>Test coverage</span>
+          <span class="switch"><input type="checkbox" id="covtoggle"><span></span></span></label>
+      </div>
+    </div>
     <button id="insightsBtn" title="Architecture checks, port candidates, dead code">⚑ Insights</button>
     <span class="grow"></span>
     <span class="stats" id="statline"></span>
@@ -809,7 +843,199 @@ document.getElementById('zdefault').onclick = () => {
 // =====================================================================
 function renderStats() {
   const s = GRAPH.stats;
-  document.getElementById('statline').textContent = `${s.functions} fns · ${s.edges} calls · ${s.modules} modules · ${s.files} files`;
+  const btn = (list, label) => `<button class="stat-btn" data-list="${list}">${label}</button>`;
+  document.getElementById('statline').innerHTML =
+    [btn('functions', `${s.functions} fns`), btn('calls', `${s.edges} calls`),
+     btn('modules', `${s.modules} modules`), btn('files', `${s.files} files`)]
+      .join('<span class="stat-sep">·</span>');
+  document.querySelectorAll('#statline .stat-btn').forEach((b) => (b.onclick = () => openListPanel(b.dataset.list)));
+}
+
+// Navigate to a module from anywhere: focus it (renders) + show its detail.
+function gotoMod(mod) {
+  focusModule(mod);
+  const m = modByName.get(mod);
+  if (m) showModuleDetail(m);
+}
+
+// ---- Browse list panel (Functions / Calls / Modules / Files) ----
+// Per-module aggregates (summed size + dependency degree) — memoised.
+let _modAgg = null;
+function moduleAgg() {
+  if (_modAgg) return _modAgg;
+  _modAgg = new Map();
+  for (const m of GRAPH.moduleNodes) _modAgg.set(m.module, { loc: 0, chars: 0, depIn: 0, depOut: 0 });
+  for (const n of GRAPH.nodes) { const a = _modAgg.get(n.module); if (a) { a.loc += n.loc || 0; a.chars += n.chars || 0; } }
+  for (const e of GRAPH.moduleEdges) {
+    const f = _modAgg.get(e.from), t = _modAgg.get(e.to);
+    if (f) f.depOut++; if (t) t.depIn++;
+  }
+  return _modAgg;
+}
+
+// Sort options per list kind. field = item field to sort by (desc); null = name A–Z.
+const SORTS = {
+  functions: [
+    { label: 'Most connected', field: 'conn', fmt: (v) => v + ' ⇄' },
+    { label: 'Most called', field: 'inDeg', fmt: (v) => v + ' ←' },
+    { label: 'Most calls out', field: 'outDeg', fmt: (v) => v + ' →' },
+    { label: 'Largest (lines)', field: 'loc', fmt: (v) => v + ' L' },
+    { label: 'Largest (chars)', field: 'chars', fmt: (v) => v.toLocaleString() + ' c' },
+    { label: 'Name (A–Z)', field: null },
+  ],
+  calls: [
+    { label: 'Call weight', field: 'count', fmt: (v) => '×' + v },
+    { label: 'Name (A–Z)', field: null },
+  ],
+  modules: [
+    { label: 'Most functions', field: 'count', fmt: (v) => v + ' fn' },
+    { label: 'Largest (lines)', field: 'loc', fmt: (v) => v + ' L' },
+    { label: 'Largest (chars)', field: 'chars', fmt: (v) => v.toLocaleString() + ' c' },
+    { label: 'Most depended-on', field: 'depIn', fmt: (v) => v + ' ←' },
+    { label: 'Most dependencies', field: 'depOut', fmt: (v) => v + ' →' },
+    { label: 'Most connected', field: 'conn', fmt: (v) => v + ' ⇄' },
+    { label: 'Name (A–Z)', field: null },
+  ],
+  files: [
+    { label: 'Most functions', field: 'count', fmt: (v) => v + ' fn' },
+    { label: 'Largest (lines)', field: 'loc', fmt: (v) => v + ' L' },
+    { label: 'Largest (chars)', field: 'chars', fmt: (v) => v.toLocaleString() + ' c' },
+    { label: 'Name (A–Z)', field: null },
+  ],
+};
+
+function listData(kind) {
+  if (kind === 'functions') {
+    return {
+      title: 'Functions',
+      items: GRAPH.nodes.map((n) => ({
+        group: n.group, nav: ['node', n.id], name: n.short,
+        meta: `${shortMod(n.module)} · ${n.kind}`,
+        untested: (n.kind === 'function' || n.kind === 'method') && !n.tested,
+        loc: n.loc || 0, chars: n.chars || 0, inDeg: n.inDegree || 0, outDeg: n.outDegree || 0,
+        conn: (n.inDegree || 0) + (n.outDegree || 0),
+        text: `${n.short} ${shortMod(n.module)} ${fnDesc(n)}`.toLowerCase(),
+      })),
+      extra: [{ key: 'untested', label: 'untested' }],
+    };
+  }
+  if (kind === 'calls') {
+    return {
+      title: 'Calls',
+      items: GRAPH.edges.map((e) => {
+        const a = nodeById.get(e.from), b = nodeById.get(e.to);
+        return {
+          group: a.group, nav: ['node', e.from], name: `${a.short} → ${b.short}`,
+          meta: `${shortMod(a.module)} → ${shortMod(b.module)}`,
+          cross: a.module !== b.module, count: e.count || 1,
+          text: `${a.short} ${b.short} ${shortMod(a.module)} ${shortMod(b.module)}`.toLowerCase(),
+        };
+      }),
+      extra: [{ key: 'cross', label: 'cross-module' }],
+    };
+  }
+  if (kind === 'modules') {
+    const agg = moduleAgg();
+    return {
+      title: 'Modules',
+      items: GRAPH.moduleNodes.map((m) => {
+        const a = agg.get(m.module) || { loc: 0, chars: 0, depIn: 0, depOut: 0 };
+        return {
+          group: m.group, nav: ['mod', m.module], name: shortMod(m.module), count: m.fns,
+          loc: a.loc, chars: a.chars, depIn: a.depIn, depOut: a.depOut, conn: a.depIn + a.depOut,
+          meta: (DESC.modules[m.module] || '').slice(0, 90),
+          text: `${shortMod(m.module)} ${DESC.modules[m.module] || ''}`.toLowerCase(),
+        };
+      }),
+    };
+  }
+  const agg = moduleAgg();
+  return {
+    title: 'Files',
+    items: GRAPH.files.map((f) => {
+      const a = agg.get(f.module) || { loc: 0, chars: 0 };
+      return {
+        group: f.group, nav: modByName.has(f.module) ? ['mod', f.module] : null,
+        name: f.file.replace(/^src\/lib\//, '').replace(/^src\//, ''), count: f.fns,
+        loc: a.loc, chars: a.chars,
+        meta: `${f.group} · ${f.lang}${f.fns === 0 ? ' · definitions only' : ''}`,
+        text: `${f.file} ${f.module}`.toLowerCase(),
+      };
+    }),
+  };
+}
+
+function openListPanel(kind) {
+  const { title, items, extra = [] } = listData(kind);
+  const sorts = SORTS[kind];
+  const groups = [...new Set(items.map((i) => i.group))].sort();
+  const rowsHtml = items.map((it, idx) =>
+    `<div class="li-row" data-i="${idx}"><span class="li-count"></span><span class="li-name">${escapeHtml(it.name)}</span>` +
+    (it.meta ? `<span class="li-meta">${escapeHtml(it.meta)}</span>` : '') + `</div>`).join('');
+  const chipsHtml =
+    groups.map((g) => `<span class="chip" data-grp="${g}" style="border-color:${groupColor(g)}55">${g}</span>`).join('') +
+    extra.map((x) => `<span class="chip" data-tag="${x.key}">${x.label}</span>`).join('');
+  const sortHtml = sorts.map((s, i) => `<option value="${i}">${s.label}</option>`).join('');
+
+  openDetail(`
+    <div class="dh"><span class="close">×</span><div class="kind">browse</div>
+      <h2>${title} <span style="color:var(--fg-dim);font-size:12px">(${items.length})</span></h2></div>
+    <div class="body" style="padding-top:10px">
+      <div class="list-controls">
+        <input class="list-search" id="listSearch" placeholder="filter ${title.toLowerCase()}…" autocomplete="off" />
+        <select class="list-sort" id="listSort" title="Sort">${sortHtml}</select>
+      </div>
+      <div class="chips" id="listChips">${chipsHtml}</div>
+      <div class="list-rows" id="listRows">${rowsHtml}</div>
+      <div class="list-foot" id="listFoot"></div>
+    </div>`);
+
+  const rowsEl = document.getElementById('listRows');
+  const pairs = [...rowsEl.children].map((r, idx) => ({ r, it: items[idx] }));
+  const search = document.getElementById('listSearch');
+  const sortSel = document.getElementById('listSort');
+  const activeGroups = new Set(), activeTags = new Set();
+
+  const applySort = () => {
+    const def = sorts[+sortSel.value] || sorts[0];
+    pairs.sort((p, q) => def.field
+      ? (q.it[def.field] || 0) - (p.it[def.field] || 0)
+      : String(p.it.name).localeCompare(String(q.it.name)));
+    for (const p of pairs) {
+      p.r.querySelector('.li-count').textContent = def.field ? def.fmt(p.it[def.field] || 0) : '';
+      rowsEl.appendChild(p.r); // re-order in place
+    }
+  };
+  const applyFilter = () => {
+    const q = search.value.toLowerCase().trim();
+    let shown = 0;
+    for (const { r, it } of pairs) {
+      const ok = (!q || it.text.includes(q)) &&
+        (!activeGroups.size || activeGroups.has(it.group)) &&
+        [...activeTags].every((t) => it[t]);
+      r.style.display = ok ? '' : 'none';
+      if (ok) shown++;
+    }
+    document.getElementById('listFoot').textContent = `${shown} of ${items.length}`;
+  };
+
+  rowsEl.onclick = (e) => {
+    const r = e.target.closest('.li-row');
+    if (!r) return;
+    const it = items[+r.dataset.i];
+    if (!it.nav) return;
+    if (it.nav[0] === 'node') gotoNode(it.nav[1]); else gotoMod(it.nav[1]);
+  };
+  document.querySelectorAll('#listChips .chip').forEach((c) => (c.onclick = () => {
+    if (c.dataset.grp) activeGroups.has(c.dataset.grp) ? activeGroups.delete(c.dataset.grp) : activeGroups.add(c.dataset.grp);
+    if (c.dataset.tag) activeTags.has(c.dataset.tag) ? activeTags.delete(c.dataset.tag) : activeTags.add(c.dataset.tag);
+    c.classList.toggle('on');
+    applyFilter();
+  }));
+  sortSel.onchange = applySort;
+  applySort();
+  applyFilter();
+  search.focus();
 }
 
 // type-to-filter module picker (native datalist). value -> full module name
@@ -865,6 +1091,15 @@ document.querySelectorAll('#viewseg button').forEach(b => b.onclick = () => {
 document.getElementById('lbltoggle').onchange = (e) => { state.plain = e.target.checked; render(); };
 document.getElementById('neightoggle').onchange = (e) => { state.neighbors = e.target.checked; render(); };
 document.getElementById('covtoggle').onchange = (e) => { state.coverage = e.target.checked; render(); };
+// options dropdown (open/close; clicks inside keep it open so toggles can be flipped)
+const optBtn = document.getElementById('optBtn');
+const optMenu = document.getElementById('optMenu');
+optBtn.onclick = (e) => { e.stopPropagation(); optMenu.hidden = !optMenu.hidden; optBtn.classList.toggle('active', !optMenu.hidden); };
+document.addEventListener('click', (e) => {
+  if (!optMenu.hidden && !optMenu.contains(e.target) && e.target !== optBtn) {
+    optMenu.hidden = true; optBtn.classList.remove('active');
+  }
+});
 document.getElementById('insightsBtn').onclick = renderInsights;
 // health badge in the Insights button
 (() => {
@@ -910,6 +1145,11 @@ renderModuleOptions();
   }
 })();
 render();
+
+// Deep link: #functions | #calls | #modules | #files opens that browse panel.
+if (['functions', 'calls', 'modules', 'files'].includes(location.hash.slice(1))) {
+  openListPanel(location.hash.slice(1));
+}
 
 // Live-reload: active only when served over http (graph:serve / launch.sh --debug).
 // Inert when the file is opened directly via file://.

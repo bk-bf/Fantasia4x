@@ -111,6 +111,12 @@ forming, is visible immediately.
   all persisted across reload.
 - Svelte components show edges to the stores/services they call, including
   reactive `$store` reads (so a store's "used by" reflects real UI consumption).
+- The headbar stats (`938 fns · 1130 calls · 107 modules · 120 files`) are
+  buttons — each opens a searchable, group-filterable, **sortable** list in the
+  side panel: sort by size (lines / characters), interconnectedness (in/out
+  degree), call weight, or name; click any row to jump to that node/module in the
+  graph. Deep-linkable via `codegraph.html#functions` (or `#calls` / `#modules` /
+  `#files`).
 
 ## How it works
 

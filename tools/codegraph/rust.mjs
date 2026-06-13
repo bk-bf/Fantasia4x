@@ -129,6 +129,10 @@ export function extractRust(ROOT, rel) {
           doc,
           humanized: humanize(f.name),
           desc: doc || `${humanize(f.name)}${f.wasm ? ' (WASM export)' : ''} — Rust.`,
+          loc: lineAt(src, f.bodyEnd) - f.startLine + 1,
+          chars: f.bodyEnd - f.bodyStart,
+          numeric: 0,
+          tested: false,
         });
         if (f.wasm) exports.set(f.name, id);
       }
