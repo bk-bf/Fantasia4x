@@ -4,7 +4,7 @@
 
 > **Related:** [ROADMAP](ROADMAP.md) · [game/DESIGN](../../game/DESIGN.md) · [SURVIVAL-HEALTH](SURVIVAL-HEALTH.md) · archived: [FOG-OF-WAR-DEFERRED](../archive/FOG-OF-WAR-DEFERRED-2026-05-28.md)
 
-## Status: Phase A + A2 COMPLETE [x] — Phases B–D not started
+## Status: Phase A + A2 COMPLETE — Phases B–D not started
 
 Phase A (ambient day/night uniforms + EnvironmentService) and Phase A2
 (LightingService + per-tile `a_light` + campfire point light + flicker) are shipped.

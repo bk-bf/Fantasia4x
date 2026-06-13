@@ -481,7 +481,7 @@ with a proposed fix awaiting sign-off (behavioural FSM change).
 the pawn actually arrives instead of relying on the deposit-in-place fallback. Optionally dedupe
 consecutive identical soft-queue entries.
 
-## PT-2 · Inventory weight/volume shows 0.0 — [x] FIXED
+## PT-2 · Inventory weight/volume shows 0.0 — FIXED
 
 **Symptom:** `CARRYING [0.0/20.0 kg]` while a Flint Shard ×1 is carried. **Root cause (= R5's dead
 cache):** the UI read the cached `pawn.inventory.weightKg`, a write-only initial-shape field never
@@ -489,7 +489,7 @@ updated on inventory mutation. **Fix:** [PawnInventory.svelte](../src/lib/compon
 now derives load + budget via `itemService.getCurrentCarryLoad` / `getCarryBudget` (single source of
 truth = item defs).
 
-## PT-3 · Info panel / bars — reuse the existing components — [x] FIXED
+## PT-3 · Info panel / bars — reuse the existing components — FIXED
 
 **Symptom (standing workflow complaint):** COND/FRESH bars sat in an ad-hoc `tile-hud--item` block
 in `GameCanvas`, not below the title like every other panel; new bars kept landing in the wrong
@@ -500,7 +500,7 @@ resource panels; and `SelectedEntityCard` bars now render via the one reusable
 [`StatBar`](../src/lib/components/UI/StatBar.svelte) (`EntityBar` gained optional `color`/
 `valueText`), with the panel's private `blockBar` removed. One bar implementation everywhere.
 
-## PT-4 · Crafting cards: show required workstation — [x] FIXED
+## PT-4 · Crafting cards: show required workstation — FIXED
 
 **Symptom:** crafting cards showed ingredients but not which workstation the recipe needs. **Fix:**
 [BuildCard](../src/lib/components/UI/BuildCard.svelte) gained an optional `station` prop (small
@@ -531,6 +531,6 @@ quick win plus deliberately-deferred structural work:_
    (pending sign-off) — make `findNearestDepositPoint` return a reachable, standable tile so haulers
    stop "depositing in place" short of the stockpile.
 1. **Before Living World lands:** **P-2** (engine as the only writer; user actions as commands) and **P-3** (inject a log sink so services don't import `stores/`) — both are large, no-functional-change inversions best done with the game running in a browser to verify the activity log / combat floaters / UI snapshot still behave.
-2. **Opportunistic (no big-bang):** **P-4** god-file splits along existing seams — for the (former) #1 hotspot `PawnStateMachine`, the report's order is [x] **complete through the decomposition**: P-7 boundary fix → pure helpers (`pawn/pawnQueries.ts`) → handler behaviour-lock tests → `Record<PawnState,Handler>` table → the file split into `pawn/handlers/{work,needs,combat}.ts` + shared `pawn/pawnHelpers.ts` + `pawn/pawnStates.ts` (2,818 → 988 LOC dispatcher). Remaining: optionally sub-split the 1,031-LOC `pawnHelpers.ts`, then push selection logic into services (step 5). Other god-files (GameCanvas 3,321, EntityService 2,015, Combat 1,419) are untouched — same opportunistic approach applies.
+2. **Opportunistic (no big-bang):** **P-4** god-file splits along existing seams — for the (former) #1 hotspot `PawnStateMachine`, the report's order is **complete through the decomposition**: P-7 boundary fix → pure helpers (`pawn/pawnQueries.ts`) → handler behaviour-lock tests → `Record<PawnState,Handler>` table → the file split into `pawn/handlers/{work,needs,combat}.ts` + shared `pawn/pawnHelpers.ts` + `pawn/pawnStates.ts` (2,818 → 988 LOC dispatcher). Remaining: optionally sub-split the 1,031-LOC `pawnHelpers.ts`, then push selection logic into services (step 5). Other god-files (GameCanvas 3,321, EntityService 2,015, Combat 1,419) are untouched — same opportunistic approach applies.
 3. **Profiling-gated:** **P-5** per-tick allocation churn — only when `__profOut` says so. (The hotspot confirms the convergence: `tickPawn` re-finds each pawn and handlers fan out into 14 modules.)
 4. **Physical-production follow-ups** (see [PHYSICAL-PRODUCTION](.tasks/open/PHYSICAL-PRODUCTION.md)): tool-gating step 2 (per-pawn inventory + `minTier`), per-stack craft quality on instances (R8), passive-furnace flagging for forge/hearth.

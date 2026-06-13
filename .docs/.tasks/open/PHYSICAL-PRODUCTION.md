@@ -62,28 +62,28 @@ carcass branches) was **dead code** — no item in `items.jsonc` carries `isCarc
 was **removed** in Pass 2. Reviving a one-carcass→meat+hide+bone multi-yield model is a separate
 content follow-up.
 
-## Pass 2 — follow-ups (DONE)
+## Pass 2 — follow-ups
 
-- **Passive furnaces — DONE.** `Recipe.passive` flag + a `PASSIVE_STATIONS` default
+- [x] **Passive furnaces.** `Recipe.passive` flag + a `PASSIVE_STATIONS` default
   (bloomery / charcoal_pit / pottery_kiln / advanced_kiln). A passive order's inputs are still
   fetched/staged, but no craft job is generated; `GameEngineImpl.processPassiveProduction`
   accrues work each tick once the furnace is **supplied** and **lit** (fuel-burning furnaces;
   charcoal_pit, which has no fuel tank, runs once loaded), completing through the shared
   `JobService.completeCraftOrder`. stone_forge/hearth stay active (a pawn works them) until
   their content is split from cooking/shaping — flag per-recipe via `Recipe.passive` when ready.
-- **Building-material hauling — DONE.** `placeBuilding` RESERVES the build cost to the building
+- [x] **Building-material hauling.** `placeBuilding` RESERVES the build cost to the building
   (instant zero-work buildings still consume immediately); `_syncFetchJobs` carries it to the
   build site; `_syncConstructJobs` gates the construct job on `_buildingSupplied`; completion
   consumes the staged materials; `cancelBuilding` releases the reservation. The fetch/staging
   system is now polymorphic over a reservation **owner** = craft order OR building.
-- **Butchery — DONE (dead-code removal).** Butchery was already recipe-based/physical; the
+- [x] **Butchery (dead-code removal).** Butchery was already recipe-based/physical; the
   vestigial `isCarcass`/`yields`/`processButchery`/`craftButchery` path (no item data triggered
   it) was removed.
-- **R5 carry-budget enforcement — DONE.** `ItemService.clampPickupQuantity` caps each haul/fetch
+- [x] **R5 carry-budget enforcement.** `ItemService.clampPickupQuantity` caps each haul/fetch
   pickup by the pawn's weight/volume budget (belt/back raise it); the remainder stays for another
   trip; **always floors at 1** so a single over-budget item (a heavy carcass; later a rescued pawn)
   can always be hand-carried.
-- **Station tiers + R4 tool gating + bootstrap — DONE.**
+- [x] **Station tiers + R4 tool gating + bootstrap.**
   - **Station tiers:** generic crafting stations form a tier ladder (`effects.tier`: craft_spot 0
     → Crude Workbench 1). A higher tier *supersedes* lower ones and crafts their shared recipes
     faster (`effects.craftingBonus` baked into the order's `workRequired`) —
@@ -102,11 +102,11 @@ content follow-up.
 
 ### Still deferred
 
-- **Tool gating step 2** — per-pawn *claimed-inventory* check + `minTier` (currently colony-wide,
+- [ ] **Tool gating step 2** — per-pawn *claimed-inventory* check + `minTier` (currently colony-wide,
   any-tier); **craft-tool gating** (e.g. forge tongs for metalworking) — gating is gathering-only.
-- **Per-stack craft quality** (review R8) — dropped with `gs.item`; re-attach quality to an
+- [ ] **Per-stack craft quality** (review R8) — dropped with `gs.item`; re-attach quality to an
   `ItemInstance`/stored drop when equipment quality matters.
-- **Butchery multi-yield** — one carcass → meat + hide + bone + intactness scaling (content task).
+- [ ] **Butchery multi-yield** — one carcass → meat + hide + bone + intactness scaling (content task).
 - Unrelated review items not in this spec's scope: R2 (drafted-pawn health), R9 (hunting
   need-interrupt), R10 (`killPawn` drops nothing). _(R6 dead-triad and R7 `isWorking` are now done.)_
 

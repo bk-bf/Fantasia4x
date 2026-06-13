@@ -6,7 +6,7 @@
 
 ## Status
 
-Not started. **Hard-blocked by** COMBAT-SYSTEM ([x]) and EQUIPMENT-EXPANSION (the bow
+Not started. **Hard-blocked by** COMBAT-SYSTEM (complete) and EQUIPMENT-EXPANSION (the bow
 items + `range`/`reach`/`twoHanded` weapon fields). COMBAT-SYSTEM explicitly deferred
 "ranged attacks" to a later spec — this is that spec. Magic-attuned ranged weapons
 (`staff` bolts, enchanted ammunition) belong to [MAGIC-SKILLS](MAGIC-SKILLS.md) and are

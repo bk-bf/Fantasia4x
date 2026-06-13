@@ -2,7 +2,7 @@
 
 # ENTITY SPAWNING (Mobs, Animals, Taming & Husbandry)
 
-> **Related:** [ROADMAP](ROADMAP.md) · [COMBAT-SYSTEM](COMBAT-SYSTEM.md) · [PRODUCTION-CHAIN-EXPANSION](../archive/PRODUCTION-CHAIN-EXPANSION-2026-06-12.md) ([x] archived) · [SOCIAL-LAYER](SOCIAL-LAYER.md) · [LIVING-WORLD](LIVING-WORLD.md) · [game/DESIGN](../../game/DESIGN.md) · [game/ARCHITECTURE](../../game/ARCHITECTURE.md)
+> **Related:** [ROADMAP](ROADMAP.md) · [COMBAT-SYSTEM](COMBAT-SYSTEM.md) · [PRODUCTION-CHAIN-EXPANSION](../archive/PRODUCTION-CHAIN-EXPANSION-2026-06-12.md) (archived) · [SOCIAL-LAYER](SOCIAL-LAYER.md) · [LIVING-WORLD](LIVING-WORLD.md) · [game/DESIGN](../../game/DESIGN.md) · [game/ARCHITECTURE](../../game/ARCHITECTURE.md)
 
 ## Status
 
@@ -317,7 +317,7 @@ slows to base pawn speed until healed (vet work category, Phase E2 — deferred)
 
 ## Implementation Plan
 
-### Phase A — Shared entity layer [x] DONE
+### Phase A — Shared entity layer — DONE
 
 - ~~Add `Mob` interface to `core/types.ts` (id, creatureId, x, y, health, state, entityClass)~~
 - ~~Add `mobs: Mob[]`, `tamedAnimals: TamedAnimal[]` to `GameState`~~
@@ -328,7 +328,7 @@ slows to base pawn speed until healed (vet work category, Phase E2 — deferred)
 - ~~Hover mob shows dim HUD info card (parity with pawns)~~
 - ~~ENTITIES tab (F9) listing live mobs with focus-on-map~~
 
-### Phase A.5 — Entity Hunger & Diet [x] DONE
+### Phase A.5 — Entity Hunger & Diet — DONE
 
 - ~~Add `EntityService.stepHunger(state)` — accrues `mob.hunger` each tick; triggers `Foraging`/`Hunting` FSM transitions~~
 - ~~Herbivore foraging: pathfind to nearest grass tile, consume via `eatProgress` timer~~

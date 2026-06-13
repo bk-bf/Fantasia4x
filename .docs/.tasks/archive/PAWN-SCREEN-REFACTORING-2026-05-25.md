@@ -8,7 +8,7 @@
 
 Break `PawnScreen.svelte` (2300+ lines) into focused sub-components under 200 lines each.
 
-## Status: COMPLETE [x]
+## Status: COMPLETE
 
 All 7 Phase 1 tasks done.
 
