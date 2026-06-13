@@ -85,12 +85,14 @@ multi-yield carcass model is a separate follow-up; today's butchery is recipes.
 
 ### Still deferred
 
-- **R4 ADR-009 tool gating — BLOCKED on content.** Strict claim-time tool gating would soft-lock
-  a fresh game: `flint_shard` comes only from pick-gated **mining** and `small_stone` isn't a
-  gatherable resource, yet the first tools need them (need a pick to get flint, need flint to make
-  a pick). Enabling it requires first adding tool-free **surface-flint / surface-stone foraging**
-  resources per ADR-009 (with balanced spawn rates) — a content/balance task. Mechanism not added
-  until that data exists.
+- **R4 ADR-009 tool gating — UNBLOCKED; mechanism not yet wired.** The bootstrap that blocked it is
+  fixed: `stone_outcrop` is now a **tool-free scavenge** (`small_stone` 5–10, `flint_shard` 0–2),
+  `stone_axe`/`stone_hammer` recipes moved to **craft_spot** (tier 0), and **station tiers** let a
+  higher workshop supersede a lower one (so the Crude Workbench's tool-listing cost is no longer
+  circular). flint is the intended scarce gate. The remaining step is the gating mechanism itself —
+  filter `JobService.getAvailableJobs` on a harvest's `interaction.toolRequirement` (require a tool
+  from the matching `WorkCategory.toolsRequired` in colony stock). Note `stone_pick`/`stone_hoe`
+  have no recipes, so mining ore can't be tool-satisfied until those are added.
 
 ## Verification
 
