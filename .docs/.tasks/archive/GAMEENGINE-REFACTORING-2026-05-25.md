@@ -8,7 +8,7 @@
 
 Extract pawn behavior logic out of `GameEngineImpl` so it becomes a coordination-only orchestrator. Reduce file from 900+ lines to ~600.
 
-## Status: COMPLETE ✅
+## Status: COMPLETE [x]
 
 All Phase 1 tasks done. GameEngine reduced to coordination-only role.
 

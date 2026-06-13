@@ -2,7 +2,7 @@
 
 > **Related:** [ARCHITECTURE](../../game/ARCHITECTURE.md) · [DECISIONS](../../game/DECISIONS.md) (ADR-008)
 
-> **Status: ✅ IMPLEMENTED (2026-06-06).** All phases delivered. Type-check passes with 0 errors.
+> **Status: [x] IMPLEMENTED (2026-06-06).** All phases delivered. Type-check passes with 0 errors.
 
 ## Motivation
 

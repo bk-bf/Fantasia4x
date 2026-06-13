@@ -34,6 +34,16 @@ Core data (src/lib/game/core/)         ← types, static databases, GameStateMan
 
 **New core data needs a stable id**: entries added to `Items.ts`, `Buildings.ts`, `Research.ts`, or `Work.ts` need a stable `kebab-case` string `id`. Unlock conditions reference `researchId` strings from `Research.ts`; costs reference resource `id` strings from `types.ts`.
 
+**Colony jobs are data-driven** (ADR-017): job types live in `database/jobs.jsonc` (a `JobDef` each — work-category, label, claim-gating), with behaviour bound by `id` in `JobService`'s `handlers` registry. First decide which you actually need:
+
+- **A new way to make/process an item** (cooking, butchering, drying, smelting…) is almost always **just a recipe** in `recipes.jsonc` at a station — *not* a new job type. It's already a `craft` job. Add the recipe (+ station building, + `Work.ts` category if new); no code.
+- **A genuinely new colony job *type*** (a new verb like `fetch` was) — rare. Three edits, guarded against drift by `jobRegistry.test.ts` + compile-time `JobPoolType` checks:
+  1. add a `JobDef` entry to `database/jobs.jsonc`,
+  2. bind `generate`/`complete` for that id in `JobService.handlers` (+ add the id to the `JobPoolType` union),
+  3. add the id to the `Job['type']` union in `core/types.ts`.
+
+  The work-category map (`_jobTypeToWorkKey`), labor prioritisation, UI display, and claim-gating all flow from the `JobDef` — never hand-write a `job.type` switch (the duplicated one in `pawnUtils` was deleted; use `jobService.getJobWorkCategory`). FSM-internal kinds (`eat`/`sleep`/`need`) are not colony jobs and have no `JobDef`.
+
 **Component size**: 200 line limit per component. Extract sub-components when exceeded.
 
 **Svelte 5 runes**: use `$state`, `$derived`, `$effect` — not legacy `$:` syntax.

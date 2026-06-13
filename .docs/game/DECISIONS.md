@@ -461,3 +461,45 @@ dormant dead code — no item data triggers it — hardened for R3 in case it is
   ADR-009 tool gating (R4) is blocked on content — no tool-free flint/stone source exists, so
   strict gating would soft-lock a new game's bootstrap.
 - Reservation bookkeeping (`reservedFor` on drops) is the new invariant; cancel releases it.
+
+### ADR-017 [GAME]: Data-driven colony jobs (jobs.jsonc registry)
+
+- **Date**: 2026-06-13
+- **Status**: Accepted
+
+#### Context
+
+Colony job types (`harvest`/`haul`/`fetch`/`construct`/`deconstruct`/`craft`/`refuel`) were
+**hardcoded** across ~6 sites: the `Job['type']` union, a hand-ordered generator sequence in
+`generateJobs`, a `switch` in `_completeJob`, the `job → workCategory` map in `_jobTypeToWorkKey`,
+**a second copy** of that map in `utils/pawnUtils.getWorkKeyForJob`, and claim-gating special-cases
+in `getAvailableJobs`. Every other game concept (items, buildings, recipes, research, conditions…)
+is authored in `database/*.jsonc`; jobs were the odd one out, so adding one meant editing code in
+several places with a silent UI/sim duplication.
+
+#### Decision
+
+**Jobs become data-driven like everything else.** The *declarative* half of each colony job type —
+work-category mapping, UI label, claim-gating — lives in **`database/jobs.jsonc`** (a `JobDef` per
+type). The *behavioural* half (how a job is generated into the pool and completed) stays in code,
+bound by `id` in a single `JobService.handlers` registry — exactly as `recipes.jsonc` pairs with
+`JobService._completeCraft`. `generateJobs` iterates the registry; `_completeJob` dispatches through
+it (no `switch`); `_jobTypeToWorkKey` and claim-gating read `JobDef`. The duplicated
+`pawnUtils.getWorkKeyForJob` is deleted — it now delegates to `jobService.getJobWorkCategory`, the
+one source of truth. (FSM-internal kinds `eat`/`sleep`/`need` are not colony jobs and have no
+`JobDef`.)
+
+**Adding a colony job = (1) a `jobs.jsonc` entry, (2) a `JOB_HANDLERS` binding, (3) a `Job['type']`
+union member** — down from ~6 scattered edits with a duplicate.
+
+#### Consequences
+
+- Drift is guarded on three fronts: `JobPoolType ⊆ Job['type']` and "`handlers` covers every
+  `JobPoolType`" are **compile-time** (a `Record<JobPoolType, JobHandler>` + a subset assertion);
+  "`jobs.jsonc` ids === handler ids" is a **vitest** drift test (`jobRegistry.test.ts`).
+- Not graph-checkable: this is a *data-coverage* invariant (jsonc ↔ union ↔ registry), not a
+  call-edge one, so `graph:check` can't express it — registered `checkable: false` in `ADR_RULES`,
+  like the other runtime/data ADRs, with enforcement delegated to the test + compiler above.
+- Behaviour-preserving: the generator order, completion side-effects, and work-category results are
+  identical (the only change is the dead `light` job's defunct mapping). 153 tests green.
+- Onboarding documented in `AGENTS.md` ("Adding a colony job").

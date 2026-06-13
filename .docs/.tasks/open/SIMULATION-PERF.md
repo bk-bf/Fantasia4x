@@ -8,7 +8,7 @@ Performance + observability of the simulation tick (TPS) and the WebGL renderer 
 Records what shipped, why, and what is still needed to scale to 500+ entities on
 1000×1000 maps.
 
-## Status: Phase 1 + 1.5 COMPLETE ✅ — Phase 2 (scaling) NOT STARTED
+## Status: Phase 1 + 1.5 COMPLETE [x] — Phase 2 (scaling) NOT STARTED
 
 Phase 1 (steady 60 TPS + a reliable profiler) and Phase 1.5 (rAF-accumulator sim driver +
 the lit-campfire / terrain-rebuild FPS fixes) are done: 60 TPS and 100+ FPS are both stable.

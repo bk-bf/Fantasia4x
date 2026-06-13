@@ -370,7 +370,7 @@ Health bars on HUD tile overlay + event log messages provide feedback.
 
 ## Implementation Plan
 
-Markers: ✅ done · 🟡 partial / scaffolded · ⬜ not started.
+Markers: [x] done · [-] partial / scaffolded · [ ] not started.
 
 ### Phase A — Data layer (expand the body model, don't flatten it)
 
@@ -379,20 +379,20 @@ of a hierarchical body tree — always present, always shown. Nesting is additiv
 the existing bleed / `bloodVolume` / death loop is untouched; fine parts hang off
 the roots.
 
-- ✅ Extend `LimbState` with `parts?: BodyPartState[]` — the organs, bones, and
+- [x] Extend `LimbState` with `parts?: BodyPartState[]` — the organs, bones, and
   sub-limbs contained in that root limb (fingers under hands, toes under feet…).
-- ✅ `BodyPartState { id; health; maxHp; isMissing; injuries: Injury[] }` per fine
+- [x] `BodyPartState { id; health; maxHp; isMissing; injuries: Injury[] }` per fine
   part (`health` seeded from the def's `maxHp`, e.g. hand 30). Damage rolls down to
   the struck part; bleed (`bleedRatio` × type `bleedMod`) and status roll up to its root.
-- ✅ Add `injuries`/`pain`/`attackCooldown`/`aggroRange`/`knockdown` to `Pawn`
+- [x] Add `injuries`/`pain`/`attackCooldown`/`aggroRange`/`knockdown` to `Pawn`
   (no `skillBar` — deferred to MAGIC-SKILLS).
-- ✅ Extend `Item.weaponProperties` with `damageType` (`'cutting'|'piercing'|'blunt'`),
+- [x] Extend `Item.weaponProperties` with `damageType` (`'cutting'|'piercing'|'blunt'`),
   `baseDamage`, `accuracy`, `armorPenetration`, `bluntMod`; `grantedSkills` deferred to MAGIC-SKILLS.
-- ✅ Add `fracture`, `infection`, `shock` to `conditions.jsonc` (alongside existing `blood_loss`).
+- [x] Add `fracture`, `infection`, `shock` to `conditions.jsonc` (alongside existing `blood_loss`).
 
 ### Phase B — CombatService
 
-✅ New `combatService` singleton (`systems/Combat.ts`):
+- [x] New `combatService` singleton (`systems/Combat.ts`):
 
 - `tickCombat(state, dtMs)` — finds mobs in `Attacking` state, fires every `ATTACK_INTERVAL_TICKS`, resolves hit against nearest adjacent pawn
 - `resolveHit(attacker, defender, state)` → `HitResult` (bodyPart, damage, injury, knockdown)
@@ -402,56 +402,56 @@ the roots.
 
 ### Phase C — GameEngine wiring
 
-- ✅ `combatService.tickCombat()` called from `GameEngineImpl` after Entity Step
-- ✅ Mob FSM `Attacking` (in `EntityService.stepHostile`) holds position; `combatService.tickCombat()` resolves all hits for mobs in `Attacking` state. The existing `pendingDamage` aggregation in `EntityService` handles mob-vs-mob hunting damage; `combatService` handles mob-vs-pawn combat damage.
+- [x] `combatService.tickCombat()` called from `GameEngineImpl` after Entity Step
+- [x] Mob FSM `Attacking` (in `EntityService.stepHostile`) holds position; `combatService.tickCombat()` resolves all hits for mobs in `Attacking` state. The existing `pendingDamage` aggregation in `EntityService` handles mob-vs-mob hunting damage; `combatService` handles mob-vs-pawn combat damage.
 
 ### Phase D — HUD feedback (deepen the shipped limb/blood UI)
 
 Limbs and blood are already rendered; this phase expands that depiction rather than
 building it from scratch.
 
-- ✅ PawnScreen health panel (`PawnHealth.svelte`): vertical limb **tree** — sub-parts
+- [x] PawnScreen health panel (`PawnHealth.svelte`): vertical limb **tree** — sub-parts
   nest directly beneath their root limb. Per-limb 3-state click cycle (hidden →
   injured-only → all); injured limbs auto-show their injured parts. Wound badges show
   type + severity; vital organs marked ★. Blood shown as % of capacity (matches the
   info card). Pain + DOWN state in the status row.
-- ✅ EntityScreen RimWorld-style health table; wound badges show severity.
-- ✅ Health bars on mob/pawn map tiles in `GameCanvas.svelte`.
-- ✅ Info card (`SelectedEntityCard`): HP / Mood / **PAIN** + BLOOD (capacity-normalised).
-- ⬜ Drafted-mode skill bar deferred to MAGIC-SKILLS.
+- [x] EntityScreen RimWorld-style health table; wound badges show severity.
+- [x] Health bars on mob/pawn map tiles in `GameCanvas.svelte`.
+- [x] Info card (`SelectedEntityCard`): HP / Mood / **PAIN** + BLOOD (capacity-normalised).
+- [ ] Drafted-mode skill bar deferred to MAGIC-SKILLS.
 
 ### Phase E — Engagement AI, feedback, wounds & caretaking (2026-06-11)
 
-- ✅ **Auto-combat stances** (`combatStance: aggressive | defensive(default) | flee`,
+- [x] **Auto-combat stances** (`combatStance: aggressive | defensive(default) | flee`,
   settable via `PawnStance.svelte`). Detection range from the `aggro_range` stat
   (perception + sight). Pawn FSM gains `Fighting`/`Fleeing`/`Collapsed` + a top-priority
   combat interrupt so an attacked pawn defends instead of walking off. Aggressive pawns
   chase; defensive only react when adjacent.
-- ✅ **Weighted natural weapons as a gear category.** `natural_weapon` items in
+- [x] **Weighted natural weapons as a gear category.** `natural_weapon` items in
   `items.jsonc` (fists/kick/bite/claw/slam/…); creatures + pawns reference them by id.
   Per-swing weighted roll, per-weapon `staminaCost`/`weight`/`critMod`; STR scaling
   differentiates per creature. Crafted weapons resolve through the same path.
-- ✅ **Crit system** — `crit_chance` stat (DEX/PER × capacities) + weapon `critMod`,
+- [x] **Crit system** — `crit_chance` stat (DEX/PER × capacities) + weapon `critMod`,
   ×1.5 damage, capped.
-- ✅ **Wound model** (`wounds.jsonc` + `core/Wounds.ts`): one wound per damage-type per
+- [x] **Wound model** (`wounds.jsonc` + `core/Wounds.ts`): one wound per damage-type per
   part, merge-and-escalate (cut/puncture/crush/burn); severity from accumulated damage
   fraction; pain = Σ active wounds. **ADR-012.**
-- ✅ **Capacity-driven downing** — collapse when the `consciousness` capacity (folds in
+- [x] **Capacity-driven downing** — collapse when the `consciousness` capacity (folds in
   pain + blood loss + organ damage) drops below threshold; **knockdown** (short blunt
   stagger) and **collapse** are separate status effects. Mobs defeated on collapse;
   pawns go down and recover. **ADR-012.**
-- ✅ **Wound healing** — `heal_rate` stat; recovery boosted by sleep / well-fed / good
+- [x] **Wound healing** — `heal_rate` stat; recovery boosted by sleep / well-fed / good
   mood (all in `wounds.jsonc`). Pain falls as wounds mend.
-- ✅ **Caretaking** — `medical_skill` stat; a tend rolls treatment quality
+- [x] **Caretaking** — `medical_skill` stat; a tend rolls treatment quality
   (skill × mood × variance) → faster healing + infection suppression; **infection** is a
   multi-stage condition (`conditions.jsonc`), lethal at full severity. Trigger is a
   lightweight "best available medic" auto-tend; full doctor **job loop deferred**.
-- ✅ **Engagement-scoped Chronicle logging** — one entry per engagement that accretes
+- [x] **Engagement-scoped Chronicle logging** — one entry per engagement that accretes
   every swing (hit + miss) with a live summary; expandable breakdown (`CombatBreakdown.svelte`,
   newest-first). Replaces the per-re-engagement spam.
-- ✅ **Floating combat text** — damage / crit / miss / dodge / knockdown over the tile
+- [x] **Floating combat text** — damage / crit / miss / dodge / knockdown over the tile
   (`combatFeedback` store → `WorldEffectsLayer`).
-- ⬜ **Deferred (ADR-013):** DF-style tissue layers, nerves, arteries.
+- [ ] **Deferred (ADR-013):** DF-style tissue layers, nerves, arteries.
 
 ---
 

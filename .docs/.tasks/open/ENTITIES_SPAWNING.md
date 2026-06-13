@@ -2,7 +2,7 @@
 
 # ENTITY SPAWNING (Mobs, Animals, Taming & Husbandry)
 
-> **Related:** [ROADMAP](ROADMAP.md) · [COMBAT-SYSTEM](COMBAT-SYSTEM.md) · [PRODUCTION-CHAIN-EXPANSION](../archive/PRODUCTION-CHAIN-EXPANSION-2026-06-12.md) (✅ archived) · [SOCIAL-LAYER](SOCIAL-LAYER.md) · [LIVING-WORLD](LIVING-WORLD.md) · [game/DESIGN](../../game/DESIGN.md) · [game/ARCHITECTURE](../../game/ARCHITECTURE.md)
+> **Related:** [ROADMAP](ROADMAP.md) · [COMBAT-SYSTEM](COMBAT-SYSTEM.md) · [PRODUCTION-CHAIN-EXPANSION](../archive/PRODUCTION-CHAIN-EXPANSION-2026-06-12.md) ([x] archived) · [SOCIAL-LAYER](SOCIAL-LAYER.md) · [LIVING-WORLD](LIVING-WORLD.md) · [game/DESIGN](../../game/DESIGN.md) · [game/ARCHITECTURE](../../game/ARCHITECTURE.md)
 
 ## Status
 
@@ -317,7 +317,7 @@ slows to base pawn speed until healed (vet work category, Phase E2 — deferred)
 
 ## Implementation Plan
 
-### Phase A — Shared entity layer ✅ DONE
+### Phase A — Shared entity layer [x] DONE
 
 - ~~Add `Mob` interface to `core/types.ts` (id, creatureId, x, y, health, state, entityClass)~~
 - ~~Add `mobs: Mob[]`, `tamedAnimals: TamedAnimal[]` to `GameState`~~
@@ -328,7 +328,7 @@ slows to base pawn speed until healed (vet work category, Phase E2 — deferred)
 - ~~Hover mob shows dim HUD info card (parity with pawns)~~
 - ~~ENTITIES tab (F9) listing live mobs with focus-on-map~~
 
-### Phase A.5 — Entity Hunger & Diet ✅ DONE
+### Phase A.5 — Entity Hunger & Diet [x] DONE
 
 - ~~Add `EntityService.stepHunger(state)` — accrues `mob.hunger` each tick; triggers `Foraging`/`Hunting` FSM transitions~~
 - ~~Herbivore foraging: pathfind to nearest grass tile, consume via `eatProgress` timer~~
@@ -338,11 +338,11 @@ slows to base pawn speed until healed (vet work category, Phase E2 — deferred)
 
 ### Phase B — Hunting & Butchering
 
-- ~~Add `hunting`, `butchery` work categories to `core/Work.ts`~~ ✅ done (note: id is `butchery`, not `butchering`)
-- Pawn hunting: `JobService` / `WorkService` — pathfind pawn to nearest non-tamed animal, attack roll on arrival
-- ~~Corpse tile-entity: dead mobs remain in `mobs[]` with `state: 'Corpse'`; `diedAt` + `CORPSE_DECAY_TICKS` already in `EntityService`~~ ✅ done (no separate `Corpse[]` array needed)
-- ~~Add `bone_cleaver` (Tier 1 butchery tool, `makers_bench`) — crafted from `large_bones` + flint + cordage; +25% carcass yield~~ ✅ done
-- ~~Add `dressing_stone` (Tier 1 butchery building) — flat stone slab + log stakes; unlocks at tool tier 1; +25% carcass yield stacks with `bone_cleaver`~~ ✅ done
+- [x] Add `hunting`, `butchery` work categories to `core/Work.ts` (note: id is `butchery`, not `butchering`)
+- [ ] Pawn hunting: `JobService` / `WorkService` — pathfind pawn to nearest non-tamed animal, attack roll on arrival
+- [x] Corpse tile-entity: dead mobs remain in `mobs[]` with `state: 'Corpse'`; `diedAt` + `CORPSE_DECAY_TICKS` already in `EntityService` (no separate `Corpse[]` array needed)
+- [x] Add `bone_cleaver` (Tier 1 butchery tool, `makers_bench`) — crafted from `large_bones` + flint + cordage; +25% carcass yield
+- [x] Add `dressing_stone` (Tier 1 butchery building) — flat stone slab + log stakes; unlocks at tool tier 1; +25% carcass yield stacks with `bone_cleaver`
 
 ### Phase C — Taming
 

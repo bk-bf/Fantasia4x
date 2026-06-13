@@ -41,12 +41,12 @@ Every file below exists in the project today and is ready to use.
 
 For reference, the main browser alternatives for a Caves of Qud-style colored-glyph grid are:
 
-| Library                   | Rendering    | Roguelike extras                     | Notes                                                                                                                                                                                              |
-| ------------------------- | ------------ | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **rot.js** (`rot-js`)     | Canvas 2D    | ✅ Full (FOV, noise, A\*, scheduler) | Most direct Qud analogue — `ROT.Display` supports `"rect"` (tile grid) with per-cell foreground + background color and CP437 font mode. Would replace _both_ the renderer _and_ PathfinderService. |
-| **WGLT**                  | WebGL        | ❌ Display only                      | Explicit ASCII terminal emulator; 60fps on large maps. Closest feature-match to what Exiled provides — same rendering model, minimal API.                                                          |
-| **Malwoden** (`malwoden`) | Canvas 2D    | ✅ Partial (rot.js-inspired)         | First-class TypeScript API, clean ergonomics. Younger project with a smaller community.                                                                                                            |
-| **Phaser**                | WebGL/Canvas | ❌ General engine                    | Tilemap + spritesheet pipeline; closest to Qud's actual _tile sprite_ mode. Very heavy for this use case.                                                                                          |
+| Library                   | Rendering    | Roguelike extras                      | Notes                                                                                                                                                                                              |
+| ------------------------- | ------------ | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **rot.js** (`rot-js`)     | Canvas 2D    | [x] Full (FOV, noise, A\*, scheduler) | Most direct Qud analogue — `ROT.Display` supports `"rect"` (tile grid) with per-cell foreground + background color and CP437 font mode. Would replace _both_ the renderer _and_ PathfinderService. |
+| **WGLT**                  | WebGL        | [ ] Display only                      | Explicit ASCII terminal emulator; 60fps on large maps. Closest feature-match to what Exiled provides — same rendering model, minimal API.                                                          |
+| **Malwoden** (`malwoden`) | Canvas 2D    | [x] Partial (rot.js-inspired)         | First-class TypeScript API, clean ergonomics. Younger project with a smaller community.                                                                                                            |
+| **Phaser**                | WebGL/Canvas | [ ] General engine                    | Tilemap + spritesheet pipeline; closest to Qud's actual _tile sprite_ mode. Very heavy for this use case.                                                                                          |
 
 **Decision: keep Exiled.** It is already in the project, ships CP437, runs at WebGL2 performance (equivalent to WGLT), and its `shaders.ts` layer accepts custom GLSL — meaning CRT/scanline postprocessing is addable without replacing anything. The roguelike extras rot.js provides (pathfinding, FOV, noise) are being ported from Celestia where they benefit from sitting inside the service layer alongside `ModifierSystem` and `GameStateManager`.
 
@@ -321,7 +321,7 @@ The pattern: **data file → typed loader → game object**, with zero logic in 
 
 ### Phase 1 — Wire the Renderer
 
-**Status:** `✅ complete`
+**Status:** `[x] complete`
 
 **Scope:** Visual only. Zero game model changes. The existing `worldMap` drives the WebGL tile display.
 
@@ -344,7 +344,7 @@ The pattern: **data file → typed loader → game object**, with zero logic in 
 
 ### Phase 2 — Rich World Generation
 
-**Status:** `✅ complete`
+**Status:** `[x] complete`
 
 **Scope:** Replace the random tile generator with noise-based terrain. No pawn changes.
 
@@ -371,7 +371,7 @@ The pattern: **data file → typed loader → game object**, with zero logic in 
 
 ### Phase 2b — CoQ Visual Style (Sprite Mode)
 
-**Status:** `✅ complete`
+**Status:** `[x] complete`
 
 **Scope:** Swap the font-atlas glyph renderer for a CP437 sprite-sheet + 3-color tinting shader, producing a visual style equivalent to Caves of Qud's tile mode. No gameplay changes.
 
@@ -421,7 +421,7 @@ gl_FragColor = vec4(tinted, sprite.a) * (1.0 - step(sprite.a, 0.01))
 
 ### Phase 3 — Pawns on the Map
 
-**Status:** `✅ complete`
+**Status:** `[x] complete`
 
 **Scope:** Pawns get physical positions and render on the tile grid. A\* pathfinding added.
 
@@ -474,7 +474,7 @@ gl_FragColor = vec4(tinted, sprite.a) * (1.0 - step(sprite.a, 0.01))
 
 ### Phase 4 — Map-Grounded Work and Buildings
 
-**Status:** `✅ complete`
+**Status:** `[x] complete`
 
 **Scope:** Resources become tile-local. Buildings get placed on the map. Work actions target specific tiles. Pawn state machine formalised.
 
@@ -534,7 +534,7 @@ gl_FragColor = vec4(tinted, sprite.a) * (1.0 - step(sprite.a, 0.01))
 
 ### Phase 5 — Work, Job & Economy Overhaul
 
-**Status:** `✅ complete`
+**Status:** `[x] complete`
 
 **Scope:** Replace the abstract "X units per turn" work model with a spatial job system where pawns claim discrete jobs, walk to sites, and accumulate progress per tick. Migrate building construction and crafting to the same model. Wire tile-level resource generation to the existing `WorldGenerator`. The result is the core DF/RimWorld economic loop: designate → job created → pawn claims → travels → works → completes.
 
@@ -710,7 +710,7 @@ materialsDelivered: boolean; // haul job must complete before construction start
 
 ### Phase 6 — DF Depth (Long-term)
 
-**Status:** `❌ not started`
+**Status:** `[ ] not started`
 
 Items below are optional and independent. Each can be tackled separately.
 

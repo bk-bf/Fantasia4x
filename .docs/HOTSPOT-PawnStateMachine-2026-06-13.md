@@ -86,20 +86,20 @@ services/PathfinderService (2)  services/PawnService (2)  + Combat, Wounds, Item
 
 The decomposition has started, in the report's recommended order:
 
-- **✅ Step 1 (boundary fix) DONE.** `PathfinderService` gained `isReady()` and an interface-typed
+- [x] **Step 1 (boundary fix) DONE.** `PathfinderService` gained `isReady()` and an interface-typed
   `pathfinderService` singleton; `tryAssignPath`/`tryAssignSleepPath`/`handleIdle` route through it
   and the direct `WasmPathfinderService` import is gone. `pnpm graph:check` confirms PawnStateMachine
   is off the ADR-008 list.
-- **✅ Step 4 (extract stateless helpers) DONE.** `isAdjacent`, `findAdjacentApproach`,
+- [x] **Step 4 (extract stateless helpers) DONE.** `isAdjacent`, `findAdjacentApproach`,
   `hasAvailableFood`, `selectFoodForMeal`, `consumeMeal` (+ `ITEM_DEF_BY_ID`, `SAFE_HUNGER`) moved to
   **`src/lib/game/systems/pawn/pawnQueries.ts`** (the layer-correct home; `src/lib/utils/pawnUtils.ts`
   is UI-only, so a new engine-side queries module was used instead).
-- **✅ Step 6 (handler behaviour-lock tests) DONE.** `systems/pawnHandlers.test.ts` — 8 tests driving
+- [x] **Step 6 (handler behaviour-lock tests) DONE.** `systems/pawnHandlers.test.ts` — 8 tests driving
   the public `tick()` pin the deterministic Idle/Working/Hungry branches (149 tests total). Written
   BEFORE the file split so any behaviour drift during the move is caught.
-- **✅ Step 3 (dispatch table) DONE.** `tickPawn`'s 15-case switch is now a `Record<PawnState,Handler>`
+- [x] **Step 3 (dispatch table) DONE.** `tickPawn`'s 15-case switch is now a `Record<PawnState,Handler>`
   lookup (fan-out 16 → ~1; `tickPawn` is 8 LOC). Verified in-place: 0 type errors, 149 tests pass.
-- **✅ Step 2 (the file split) DONE.** The 2818-line god-file is decomposed (via a reviewed brace-span
+- [x] **Step 2 (the file split) DONE.** The 2818-line god-file is decomposed (via a reviewed brace-span
   codemod — exact text relocation, verified against the 149 tests) into:
 
   | Module | LOC | Contents |
@@ -115,7 +115,7 @@ The decomposition has started, in the report's recommended order:
 
   Acyclic by construction (`pawnStates/pawnQueries ← pawnHelpers ← handlers ← dispatcher`);
   `graph:check` confirms no new cycle. **0 type errors · 149 tests pass · lint clean · build ok.**
-- **✅ Follow-up (a, partial):** the ADR-016 hauling/deposit pipeline (`findNearestDepositPoint`,
+- [x] **Follow-up (a, partial):** the ADR-016 hauling/deposit pipeline (`findNearestDepositPoint`,
   `orderStationTile`, `stageInventoryAtStation`, `depositInventory`) was split out of `pawnHelpers`
   into **`pawn/pawnHauling.ts`** (1031 → 788 LOC). The 788-LOC remainder could split further still
   (movement / finders / need-distance / hunt-selection), but is no longer a god-module.
@@ -124,13 +124,13 @@ The decomposition has started, in the report's recommended order:
 
 ## Improvement suggestions (prioritised)
 
-**1 — Fix the pathfinding boundary (small, correctness, ADR-008). ✅ DONE.**
+**1 — Fix the pathfinding boundary (small, correctness, ADR-008). [x] DONE.**
 Route `findPath`/`isReady` through `PathfinderService`; delete the direct
 `WasmPathfinderService` import. This is a 5-call-site change isolated to
 `tryAssignPath` / `tryAssignSleepPath` / `handleIdle` and removes a flagged
 architecture violation with no behaviour change.
 
-**2 — Split the 15 handlers into grouped files (largest structural win). ✅ DONE.**
+**2 — Split the 15 handlers into grouped files (largest structural win). [x] DONE.**
 The handlers cluster cleanly into three domains:
 - `pawn/handlers/work.ts` — Idle, MovingToResource, Working, Hauling, MovingToDeposit
 - `pawn/handlers/needs.ts` — Hungry, Tired, Eating, Sleeping, Drinking, Washing, MovingToNeed
@@ -140,12 +140,12 @@ This turned one 110 KB file into a thin dispatcher (988 LOC, health/lifecycle +
 class) plus the focused handler/helper units above. They are plain functions
 taking `(pawn, gameState)`, so the layered architecture is unchanged.
 
-**3 — Replace the `tickPawn` switch with a handler table. ✅ DONE.**
+**3 — Replace the `tickPawn` switch with a handler table. [x] DONE.**
 A `Record<PawnState, Handler>` lookup drops `tickPawn`'s fan-out from 16 to ~1
 and makes adding a state a one-line registration instead of editing a giant
 switch. Pairs naturally with #2.
 
-**4 — Extract stateless helpers into `pawnQueries`. ✅ DONE.**
+**4 — Extract stateless helpers into `pawnQueries`. [x] DONE.**
 Moved pure predicates/selectors (`isAdjacent`, `hasAvailableFood`,
 `findAdjacentApproach`, `selectFoodForMeal`, `consumeMeal`) into a new
 `systems/pawn/pawnQueries.ts`. (`src/lib/utils/pawnUtils.ts` was the report's
@@ -166,7 +166,7 @@ the high-risk ones (Working, Hungry, Idle) to lock behaviour before refactoring.
 
 ## Suggested sequence
 
-~~`#1` (boundary fix, safe)~~ ✅ → ~~`#4` (extract helpers, mechanical)~~ ✅ →
+~~`#1` (boundary fix, safe)~~ [x] → ~~`#4` (extract helpers, mechanical)~~ [x] →
 `#6` (handler tests first, to lock behaviour) → `#2` + `#3` (split handlers + table,
 the real decomposition) → `#5` (push decisions into services, deepest change).
 

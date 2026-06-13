@@ -17,16 +17,16 @@ Grouped, roughly by quick-win / dependency order. Each box is one loop iteration
 
 ## A. Gameplay bugs
 
-- [x] **A1 — Spawn only on walkable terrain.** ✅ Root cause: all 12 ore/coal/salt nodes were
+- [x] **A1 — Spawn only on walkable terrain.** Root cause: all 12 ore/coal/salt nodes were
       `walkable: true`, so mineral_deposit tiles never blocked anything (spawn already checks
       `tile.walkable`). Flipped ore veins to `walkable: false` in `resources.jsonc` — they're now
       mineable walls (mining is non-persistent → tile restores base walkability when mined out,
       like trees). Spawn now avoids them.
-- [x] **A2 — Stockpile drops land on the drop tile.** ✅ `depositInventory` was picking the
+- [x] **A2 — Stockpile drops land on the drop tile.** `depositInventory` was picking the
       first stockpile tile in designation-iteration order (top-left) for every drop, ignoring the
       pawn's position. Now orders candidate tiles nearest-first to the pawn, and same-resource
       stacking prefers the nearest pile — items appear where the pawn dropped them.
-- [x] **A3 — De-spam the chronicle/log.** ✅ Hunt-start dedup now keys on `hunter:prey` with a
+- [x] **A3 — De-spam the chronicle/log.** Hunt-start dedup now keys on `hunter:prey` with a
       1200-tick window (a new target logs at once; a stalled re-hunt of the same prey collapses to
       one line). Removed the "is now exhausted (was fleeing)" log entirely — it's a transient,
       repeating state, not chronicle-worthy. NOTE (separate AI bug, not log): mobs re-decide to
@@ -35,42 +35,42 @@ Grouped, roughly by quick-win / dependency order. Each box is one loop iteration
 
 ## B. Needs system completion (thirst / hygiene)
 
-- [x] **B1 — Thirst + hygiene bars.** ✅ Added THIRST + HYGIENE rows to `PawnNeeds.svelte` (info
+- [x] **B1 — Thirst + hygiene bars.** Added THIRST + HYGIENE rows to `PawnNeeds.svelte` (info
       panel) and `PopulationOverview.svelte` (work tab), plus thirst/hygiene descriptions in
       `getNeedDescription`.
-- [x] **B2 — Drink + wash zones in the menu.** ✅ Added DRINK + WASH entries to `ZonePanel`
+- [x] **B2 — Drink + wash zones in the menu.** Added DRINK + WASH entries to `ZonePanel`
       `ZONE_DEFS`; extended `FilterableZoneType` to include them (no item filter — guarded the
       `[F]` button to filterable zones only). `designate()` is generic, so painting sets the
       `drink`/`wash` designation that the routing reads.
-- [x] **B3 — Auto-drink / auto-wash + zone routing.** ✅ Verified complete — the gap was purely
+- [x] **B3 — Auto-drink / auto-wash + zone routing.** Verified complete — the gap was purely
       the missing zone UI (B2). `processAutoDrink`/`processAutoWash` run in the turn loop
       (GameEngineImpl 314–315); `tryRouteToWaterNeed` fires for thirst≥82 and hygiene≥threshold in
       the pawn tick; `findNearestWaterTarget` reads drink/wash designations + wells;
       `handleDrinking`/`handleWashing` relieve the need on arrival. Paint a drink zone near water →
       thirsty pawns route and drink.
-- [x] **B4 — (deferred) Entity thirst/hygiene at species rates.** ✅ Spec-only — captured as a
+- [x] **B4 — (deferred) Entity thirst/hygiene at species rates.** Spec-only — captured as a
       deferred atmospheric idea (mobs gain thirst/hygiene at per-species rates; many self-clean so
       hygiene barely applies). Reuse the `hunger_rate`-style data-driven stat pattern when built.
       Not implemented now.
 
 ## C. Item info panel
 
-- [x] **C1 — Spoilage bar.** ✅ Item hover HUD (`GameCanvas`) now shows a **FRESH** bar
+- [x] **C1 — Spoilage bar.** Item hover HUD (`GameCanvas`) now shows a **FRESH** bar
       = `1 − decayAcc/decaySeconds` for perishables (hidden for non-decaying items).
-- [x] **C2 — Durability bar.** ✅ Same HUD shows a **COND** bar = `durability/maxDurability`
+- [x] **C2 — Durability bar.** Same HUD shows a **COND** bar = `durability/maxDurability`
       (green→red via `itemBarColor`).
 
 ## D. Pawn screen / tabs
 
-- [x] **D1 — Attributes tab as a compact table of ALL stats.jsonc stats.** ✅ New
+- [x] **D1 — Attributes tab as a compact table of ALL stats.jsonc stats.** New
       `PawnAttributes.svelte`: all 79 stats grouped by category in a compact auto-fill grid (+ base
       stat strip); hovering a cell shows the formula with the pawn's own numbers substituted in
       (`derivation()` via `computeCapacities`). Swapped into the attributes tab; the old 40k
       `PawnStats.svelte` is now orphaned (left in place, not deleted). **Remaining:** reuse
       `PawnAttributes` in the WorkScreen attributes overview (component is ready; wiring TBD).
-- [x] **D2 — Body-list toggle order.** ✅ `PawnHealth` per-limb cycle is now
+- [x] **D2 — Body-list toggle order.** `PawnHealth` per-limb cycle is now
       `damaged → all → hidden`, default `injured` (show damaged sub-limbs).
-- [x] **D3 — Entity-list click = camera jump only.** ✅ `EntityScreen` row click now only
+- [x] **D3 — Entity-list click = camera jump only.** `EntityScreen` row click now only
       `focus()`es the camera; a separate ▸/▾ caret toggles the limb/health expansion.
 
 ## F. Round 2 (review feedback)
@@ -99,7 +99,7 @@ Grouped, roughly by quick-win / dependency order. Each box is one loop iteration
 
 ## E. Crafting / building tabs
 
-- [x] **E1 — Card-based crafting + building lists.** ✅ Shared `BuildCard.svelte` (icon · name ·
+- [x] **E1 — Card-based crafting + building lists.** Shared `BuildCard.svelte` (icon · name ·
       badge · cost slot · action). BuildingMenu + CraftingScreen now render their items as cards in
       a responsive `auto-fill` grid; cost/yield/byproduct markup is slotted so each screen keeps its
       rich formatting. Old `.bldg-row`/`.recipe-row` CSS now orphaned (sweep).
