@@ -55,6 +55,25 @@
   .switch input:checked + span { background: var(--accent2); border-color: var(--accent2); }
   .switch input:checked + span::after { left: 19px; background: #11151b; }
 
+  #insightsBtn { background: var(--bg); border: 1px solid var(--border); color: var(--fg); font-family: inherit; font-size: 12px; padding: 6px 11px; border-radius: 6px; cursor: pointer; white-space: nowrap; }
+  #insightsBtn:hover { border-color: var(--accent2); }
+  #insightsBtn .err { color: #ff6b6b; font-weight: 600; }
+  #insightsBtn .warn { color: var(--accent); font-weight: 600; }
+
+  /* insights panel (rendered inside #detail) */
+  .ins-sec { margin-bottom: 18px; }
+  .ins-h { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--fg-dim); margin: 0 0 8px; display: flex; justify-content: space-between; align-items: baseline; }
+  .ins-rule { margin: 10px 0 4px; font-size: 12px; }
+  .ins-rule .tag { font-size: 10px; padding: 1px 6px; border-radius: 4px; margin-right: 6px; }
+  .tag.error { background: #3a1518; color: #ff8a8a; }
+  .tag.warn { background: #3a2e10; color: var(--accent); }
+  .tag.ok { background: #16301c; color: var(--good, #7ee787); }
+  .ins-row { padding: 4px 0 4px 8px; border-left: 2px solid var(--border); margin-left: 2px; cursor: pointer; color: var(--fg); font-size: 12px; }
+  .ins-row:hover { border-left-color: var(--accent2); color: var(--accent2); }
+  .ins-row .meta { color: var(--fg-dim); font-size: 11px; }
+  .ins-row.error { border-left-color: #ff6b6b55; }
+  .ins-score { float: right; color: var(--fg-dim); font-variant-numeric: tabular-nums; }
+
   @media (max-width: 1100px) { .hb-collapse { display: none; } input.modpick { width: 150px; } }
 
   /* ---------- graph area ---------- */
@@ -137,6 +156,8 @@
       <span class="switch"><input type="checkbox" id="neightoggle" checked><span></span></span></label>
     <label class="hb-field" for="covtoggle" title="Outline untested code red, tested green"><span class="ctl-label">Test coverage</span>
       <span class="switch"><input type="checkbox" id="covtoggle"><span></span></span></label>
+    <span class="vsep"></span>
+    <button id="insightsBtn" title="Architecture checks, port candidates, dead code">⚑ Insights</button>
     <span class="grow"></span>
     <span class="stats" id="statline"></span>
   </header>
@@ -171,6 +192,12 @@ const mermaid = window.mermaid;
 
 const GRAPH = JSON.parse(document.getElementById('graphdata').textContent);
 const DESC  = JSON.parse(document.getElementById('descdata').textContent);
+
+// Shared analysis (same code as CLI graph:check + the /api endpoints), inlined.
+const CG_ANALYSIS = (() => {
+/*__ANALYSIS__*/
+return { runChecks, portCandidates, orphans };
+})();
 
 mermaid.initialize({
   startOnLoad: false,
@@ -510,11 +537,63 @@ function openDetail(html) {
   document.querySelectorAll('#detail [data-go-mod]').forEach(el =>
     el.addEventListener('click', () => focusModule(el.dataset.goMod)));
   document.querySelectorAll('#detail [data-go-node]').forEach(el =>
-    el.addEventListener('click', () => onNodeClick(el.dataset.goNode)));
+    el.addEventListener('click', () => gotoNode(el.dataset.goNode)));
   const cl = document.querySelector('#detail .close');
   if (cl) cl.addEventListener('click', closeDetail);
 }
 function closeDetail() { document.getElementById('workarea').classList.remove('detail-open'); }
+
+// Navigate to a function from anywhere: focus its module (renders it), show detail.
+function gotoNode(id) {
+  const n = nodeById.get(id);
+  if (!n) return;
+  if (state.view !== 'module' || state.module !== n.module) focusModule(n.module);
+  showFnDetail(n);
+}
+
+// ---- Insights panel: architecture check, port candidates, dead code ----
+const INS_RULES = ['ADR-008', 'cycle', 'layers', 'god-module', 'orphan'];
+function renderInsights() {
+  const chk = CG_ANALYSIS.runChecks(GRAPH);
+  const ports = CG_ANALYSIS.portCandidates(GRAPH, 12);
+  const orph = CG_ANALYSIS.orphans(GRAPH);
+  const row = (f) => {
+    const nav = f.id ? `data-go-node="${f.id}"` : f.module ? `data-go-mod="${f.module}"` : '';
+    const loc = f.file ? `<div class="meta">${f.file}:${f.line}</div>` : '';
+    return `<div class="ins-row ${f.level}" ${nav}>${escapeHtml(f.msg)}${loc}</div>`;
+  };
+  let checkHtml = '';
+  for (const rule of INS_RULES) {
+    const fs = chk.findings.filter((f) => f.rule === rule);
+    const lvl = fs.some((f) => f.level === 'error') ? 'error' : fs.length ? 'warn' : 'ok';
+    checkHtml += `<div class="ins-rule"><span class="tag ${lvl}">${fs.length || '✓'}</span>${rule}</div>`;
+    checkHtml += fs.slice(0, 12).map(row).join('');
+    if (fs.length > 12) checkHtml += `<div class="ins-row meta" style="cursor:default;border:0">… +${fs.length - 12} more (pnpm graph:check)</div>`;
+  }
+  const portHtml = ports.map((p) =>
+    `<div class="ins-row" data-go-mod="${p.fullModule}"><span class="ins-score">${p.score}</span>${escapeHtml(p.module)}` +
+    `<div class="meta">${p.numericOps} numeric ops · ${p.loc} loc · coupling ${p.couplingToHigherLayers} · ${escapeHtml(p.hottestFunction || '')}</div></div>`).join('');
+  const orphHtml = orph.slice(0, 30).map((n) =>
+    `<div class="ins-row" data-go-node="${n.id}">${escapeHtml(n.short)}<div class="meta">${shortMod(n.module)} · ${n.file}:${n.line}</div></div>`
+  ).join('') || '<div class="ins-row meta" style="cursor:default;border:0">none</div>';
+
+  openDetail(`
+    <div class="dh"><span class="close">×</span><div class="kind">insights</div><h2>Architecture insights</h2></div>
+    <div class="body">
+      <div class="ins-sec">
+        <div class="ins-h"><span>Architecture check</span><span><span class="tag error">${chk.errors}✗</span> <span class="tag warn">${chk.warnings}!</span></span></div>
+        ${checkHtml}
+      </div>
+      <div class="ins-sec">
+        <div class="ins-h"><span>TS→Rust port candidates</span><span class="meta">score = compute ÷ coupling</span></div>
+        ${portHtml}
+      </div>
+      <div class="ins-sec">
+        <div class="ins-h"><span>Dead-code candidates</span><span class="meta">${orph.length}</span></div>
+        ${orphHtml}
+      </div>
+    </div>`);
+}
 
 function onNodeClick(gid) {
   if (RENDER.kind === 'module') {
@@ -786,6 +865,15 @@ document.querySelectorAll('#viewseg button').forEach(b => b.onclick = () => {
 document.getElementById('lbltoggle').onchange = (e) => { state.plain = e.target.checked; render(); };
 document.getElementById('neightoggle').onchange = (e) => { state.neighbors = e.target.checked; render(); };
 document.getElementById('covtoggle').onchange = (e) => { state.coverage = e.target.checked; render(); };
+document.getElementById('insightsBtn').onclick = renderInsights;
+// health badge in the Insights button
+(() => {
+  try {
+    const chk = CG_ANALYSIS.runChecks(GRAPH);
+    document.getElementById('insightsBtn').innerHTML =
+      `⚑ <span class="err">${chk.errors}✗</span> <span class="warn">${chk.warnings}!</span>`;
+  } catch { /* keep default label */ }
+})();
 const modpick = document.getElementById('modpick');
 modpick.addEventListener('change', (e) => tryPick(e.target.value));
 modpick.addEventListener('keydown', (e) => { if (e.key === 'Enter') tryPick(e.target.value); });

@@ -33,13 +33,16 @@ if (!fs.existsSync(vendorPath)) {
   process.exit(1);
 }
 const mermaidSrc = read(path.join('vendor', 'mermaid.min.js'));
+// Inline the shared analysis module (export-stripped) so the viewer can run the
+// architecture checks / port-candidates client-side — same code as CLI + API.
+const analysisSrc = read('analysis.mjs').replace(/^export\s+/gm, '');
 
 const html = template
   .replace('/*__GRAPH__*/', safe(JSON.parse(read('graph.json'))))
   .replace('/*__DESC__*/', safe(desc))
-  // mermaid UMD contains no literal "</script>"; inject as-is via function to
-  // avoid $-pattern interpretation in String.replace.
-  .replace('/*__MERMAID__*/', () => mermaidSrc);
+  // injected via function to avoid $-pattern interpretation in String.replace.
+  .replace('/*__MERMAID__*/', () => mermaidSrc)
+  .replace('/*__ANALYSIS__*/', () => analysisSrc);
 
 const outPath = path.join(dir, 'codegraph.html');
 fs.writeFileSync(outPath, html);
