@@ -239,10 +239,12 @@ export function createApi(DIR) {
     endpoints: {
       'GET /api': 'this index',
       'GET /api/stats': 'counts (functions, edges, modules, files)',
-      'GET /api/graph': 'full graph: nodes (with descriptions), edges, modules, moduleEdges',
-      'GET /api/modules': 'all module summaries',
+      'GET /api/graph': 'full graph: nodes (with descriptions), edges, modules, moduleEdges, files',
+      'GET /api/modules': 'all module summaries (incl. loc, chars, dep counts)',
       'GET /api/module?name=&format=md': 'one module: description, deps, function list',
-      'GET /api/functions?module=&q=&kind=&exported=&limit=': 'list/filter functions',
+      'GET /api/functions?module=&group=&q=&kind=&exported=&tested=&sort=&limit=': 'list/filter/sort functions (sort=indegree|outdegree|connected|loc|chars|name)',
+      'GET /api/files?group=&q=&sort=&limit=': 'all source files (fns, loc, chars; sort=functions|loc|chars|name)',
+      'GET /api/calls?module=&q=&cross=&sort=&limit=': 'all call edges (caller→callee, weight; sort=weight|name)',
       'GET /api/function?name=|id=&format=md': 'one function: description, signature, callers, callees',
       'GET /api/search?q=&limit=&format=md': 'search functions + modules by name and description',
       'GET /api/callers?name=': 'functions that call the target',
@@ -396,6 +398,37 @@ export function createApi(DIR) {
           note: 'Standalone private functions with no in-graph callers — dead-code candidates. Excludes class methods and stores (dynamic dispatch / object-literal wiring make 0-callers unreliable there).',
           orphans: list,
         }), true;
+      }
+
+      if (p === '/api/files') {
+        let list = (G.files || []).map((f) => {
+          const sz = modSize.get(f.module) || { loc: f.fns ? 0 : 0, chars: 0 };
+          return { file: f.file, module: shortMod(f.module), group: f.group, lang: f.lang, functions: f.fns, loc: sz.loc, chars: sz.chars };
+        });
+        const grp = qp.get('group'); if (grp) list = list.filter((f) => f.group === grp);
+        const q = (qp.get('q') || '').toLowerCase(); if (q) list = list.filter((f) => f.file.toLowerCase().includes(q));
+        const sort = qp.get('sort') || 'functions';
+        const cmp = { functions: (a, b) => b.functions - a.functions, loc: (a, b) => b.loc - a.loc, chars: (a, b) => b.chars - a.chars, name: (a, b) => a.file.localeCompare(b.file) }[sort] || ((a, b) => b.functions - a.functions);
+        list.sort(cmp);
+        return ok(res, { count: list.length, sort, files: list.slice(0, num(qp.get('limit'), 200)) }), true;
+      }
+
+      if (p === '/api/calls') {
+        let list = G.edges.map((e) => {
+          const a = byId.get(e.from), b = byId.get(e.to);
+          return {
+            caller: a.short, callee: b.short, fromModule: shortMod(a.module), toModule: shortMod(b.module),
+            count: e.count || 1, crossModule: a.module !== b.module, callerId: e.from, calleeId: e.to,
+          };
+        });
+        const mod = qp.get('module');
+        if (mod) { const m = resolveModule(mod); const fm = m ? m.module : null; list = list.filter((c) => byId.get(c.callerId).module === fm || byId.get(c.calleeId).module === fm); }
+        const q = (qp.get('q') || '').toLowerCase();
+        if (q) list = list.filter((c) => (c.caller + ' ' + c.callee + ' ' + c.fromModule + ' ' + c.toModule).toLowerCase().includes(q));
+        if (qp.get('cross') === 'true') list = list.filter((c) => c.crossModule);
+        const sort = qp.get('sort') || 'weight';
+        list.sort(sort === 'name' ? (a, b) => a.caller.localeCompare(b.caller) : (a, b) => b.count - a.count);
+        return ok(res, { count: list.length, sort, calls: list.slice(0, num(qp.get('limit'), 200)) }), true;
       }
 
       err(res, 404, `unknown endpoint ${p}`, { see: '/api' });

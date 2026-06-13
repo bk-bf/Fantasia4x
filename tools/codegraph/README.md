@@ -60,15 +60,21 @@ to function/module/search/path for a prose summary. `GET /api` is self-documenti
 | -------- | ------- |
 | `/api/stats` | counts (functions, edges, modules, files) |
 | `/api/graph` | full dump: nodes (with descriptions), edges, modules, moduleEdges |
-| `/api/modules` · `/api/module?name=` | module summaries / one module (deps + function list) |
-| `/api/functions?module=&q=&kind=&exported=&limit=` | list / filter functions |
+| `/api/modules` · `/api/module?name=` | module summaries (loc, chars, dep counts) / one module |
+| `/api/functions?module=&group=&q=&kind=&exported=&tested=&sort=&limit=` | list / filter / sort functions (`sort=indegree\|outdegree\|connected\|loc\|chars\|name`) |
+| `/api/files?group=&q=&sort=&limit=` | all source files (fns, loc, chars; `sort=functions\|loc\|chars\|name`) |
+| `/api/calls?module=&q=&cross=&sort=&limit=` | all call edges (caller→callee, weight; `sort=weight\|name`) |
 | `/api/function?name=\|id=` | one function: description, signature, callers, callees |
 | `/api/search?q=&limit=` | search functions + modules by name and description |
 | `/api/callers?name=` · `/api/callees?name=` | direct callers / callees |
 | `/api/path?from=&to=&max=` | shortest call path between two functions |
 | `/api/hubs?limit=` | most-called functions, most-depended-on modules |
-| `/api/port-candidates?limit=` | modules ranked as TS→Rust port candidates (compute-heavy, low coupling) |
-| `/api/orphans` | standalone private functions with no callers (dead-code candidates) |
+| `/api/check` · `/api/port-candidates?limit=` · `/api/orphans` | the **Insights** panel's data: architecture findings, Rust port candidates, dead code |
+
+The four headbar/sidebar lists and the Insights panel are all queryable: the
+**lists** map to `/api/functions`, `/api/calls`, `/api/modules`, `/api/files`
+(same sort/filter options as the UI), and **Insights** maps to `/api/check`,
+`/api/port-candidates`, `/api/orphans`.
 
 Functions resolve by exact id, `Class.method`, or bare method name; ambiguous
 names return all matches. Modules resolve by full path, short path, or basename.

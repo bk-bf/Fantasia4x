@@ -78,6 +78,10 @@ can cross the WASM boundary. See `tools/codegraph/README.md`.
   `/api/search?q=`, `/api/callers?name=`, `/api/callees?name=`, `/api/path?from=&to=`,
   `/api/module?name=`, `/api/hubs`, `/api/graph`. Add `?format=md` for prose.
   e.g. `curl 'localhost:5180/api/function?name=tickPawn'`
+- Everything in the browser UI is also queryable: the four browse lists →
+  `/api/functions` · `/api/calls` · `/api/files` · `/api/modules` (same
+  `sort=`/`group=`/`q=` options), and the Insights panel →
+  `/api/check` · `/api/port-candidates` · `/api/orphans`.
 - Every function gets a description (JSDoc, else inferred); improve specific ones by
   editing `tools/codegraph/descriptions.json` (keyed `module::Class.method`).
 - Guardrails: `pnpm graph:check` enforces architecture rules (ADR-008, layer
