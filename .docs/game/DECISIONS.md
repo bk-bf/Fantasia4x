@@ -443,10 +443,10 @@ meaningless because no pawn ever held inputs.
    spends `recipe.workAmount × quantity` work points.
 4. **Produce** — staged inputs are destroyed; outputs spawn as drops **on the station tile**.
 
-`gameState.item` is removed entirely. **Butchery is not folded in** this pass — its
-multi-yield model (one carcass → meat + hide + bone, intactness-scaled) can't be expressed by
-single-output recipes, so it stays a dedicated instant transform (`processButchery`) with the
-R3 stack-consumption bug fixed (one carcass per action); full fold-in is a follow-up.
+`gameState.item` is removed entirely. **Butchery is already recipe-based** (each carcass is a
+`butcher_spot` recipe input, one consumed per run), so it flows through this pass's physical
+pipeline for free. The old `item.isCarcass`/`yields` multi-yield path (`processButchery`) is
+dormant dead code — no item data triggers it — hardened for R3 in case it is ever revived.
 
 #### Consequences
 

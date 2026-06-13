@@ -44,12 +44,15 @@ any means, a pawn must have held the input items, carried them to the production
 `gameState.item` is removed entirely; its readers (craft output, eating, equip pool, events,
 blueprint cost, craft-cancel refund) move to physical stock.
 
-**Butchery is NOT folded in this pass.** It uses a multi-yield model (one carcass → meat +
-hide + bone via `item.yields`, scaled by intactness/tools/building) that the single-output
-recipe registry can't express, so folding it into reserve-and-fetch would regress content and
-need a UI rewrite. It stays a dedicated instant transform (`ItemService.processButchery`,
-requires a butcher station) — but the R3 stack-consumption bug is fixed: **one carcass per
-action**. Full fold-in (multi-yield reconciliation + station hauling) is a follow-up.
+**Butchery is already recipe-based** — and therefore physical via this pass for free. Each
+carcass is the input to a `butcher_spot` recipe (`make_rabbit_meat`: `{rabbit_carcass: 1}` →
+`{rabbit_meat: 1}`, …), so a butchery order reserves one carcass, a pawn fetches it to the
+butcher spot, and the meat spawns there — exactly the reserve-and-fetch flow. The old
+`item.isCarcass`/`yields` multi-yield path (`ItemService.processButchery`,
+`GameEngineImpl.craftButchery`, the `CraftingScreen` carcass branches) is **dormant dead code**:
+no item in `items.jsonc` carries `isCarcass`/`yields`, so it never executes. It was hardened
+for R3 (consume one carcass, not the whole stack) in case it's ever revived, but reviving a
+multi-yield carcass model is a separate follow-up; today's butchery is recipes.
 
 ## Out of scope (follow-up passes)
 
