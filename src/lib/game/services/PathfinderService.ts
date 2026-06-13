@@ -1,6 +1,9 @@
 import type { WorldTile } from '../core/types.js';
+import { wasmPathfinderService } from './WasmPathfinderService.js';
 
 export interface PathfinderService {
+  /** Whether the underlying pathfinder (WASM) has finished initialising. */
+  isReady(): boolean;
   findPath(
     walkable: Uint8Array,
     costs: Float32Array,
@@ -12,6 +15,13 @@ export interface PathfinderService {
     ey: number
   ): { x: number; y: number }[];
 }
+
+/**
+ * The active pathfinder, typed as the interface (ADR-008). Consumers in the simulation core
+ * must depend on this binding — never import `WasmPathfinderService` (the spatial impl) directly.
+ * The concrete WASM impl is wired in here, the one composition point allowed to know it.
+ */
+export const pathfinderService: PathfinderService = wasmPathfinderService;
 
 type PathfindingGrids = {
   walkable: Uint8Array;

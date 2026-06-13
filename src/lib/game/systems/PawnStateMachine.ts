@@ -33,21 +33,29 @@ import {
   consumeFromStockpiles,
   absorbDropIfOnStockpileTile
 } from '../core/GameState';
-import ITEMS_DATABASE from '../database/items.jsonc';
 import BUILDINGS_DATABASE_RAW from '../database/buildings.jsonc';
 import conditionsData from '../database/conditions.jsonc';
 import { jobService, BASE_WORK_RATE } from '../services/JobService';
 import { pawnService } from '../services/PawnService';
 import { itemService } from '../services/ItemService';
 import { pawnStatService } from '../services/PawnStatService';
-import { wasmPathfinderService } from '../services/WasmPathfinderService';
-import { buildPathfindingGridsWithBlocked } from '../services/PathfinderService';
+import {
+  buildPathfindingGridsWithBlocked,
+  pathfinderService
+} from '../services/PathfinderService';
 import { occupancyService } from '../services/OccupancyService';
 import { logActivity } from '../../stores/Log';
 import { gameLogger } from '../dev/gameLogger';
 import { ticksFromSeconds, perTick } from '../core/time';
 import { calcBloodRegenRate } from '../entities/Pawns';
 import { rng } from '../core/rng';
+import {
+  isAdjacent,
+  findAdjacentApproach,
+  hasAvailableFood,
+  selectFoodForMeal,
+  consumeMeal
+} from './pawn/pawnQueries';
 
 // ===== STATE NAME CONSTANTS =====
 export const PAWN_STATE = {
@@ -74,10 +82,6 @@ export const PAWN_STATE = {
 } as const;
 
 export type PawnStateName = (typeof PAWN_STATE)[keyof typeof PAWN_STATE];
-
-// D9.4: index the item database by id ONCE. The hot need-interrupt path used to scan
-// ITEMS_DATABASE.find(...) per stockpile entry per call for every needy pawn each tick.
-const ITEM_DEF_BY_ID: Map<string, any> = new Map((ITEMS_DATABASE as any[]).map((d) => [d.id, d]));
 
 // ===== NEED THRESHOLDS =====
 // Calibrated to 1 in-game day = 300 turns (1 turn ≈ 5 in-game min; 1 day ≈ 5 real min at 1 turn/sec):
@@ -131,7 +135,6 @@ const EATING_TURNS = ticksFromSeconds(2); // ~2 in-game min to eat at a campfire
 const EATING_TURNS_GROUND = ticksFromSeconds(3); // eating in-place (cold, uncomfortable)
 const SLEEPING_TURNS = ticksFromSeconds(100); // Full recovery in bed: 72 / 0.72 = 100s = 1/3 day (progress bar ref)
 const SLEEPING_TURNS_GROUND = ticksFromSeconds(124); // Full recovery on ground: 72 / 0.58 ≈ 124s ≈ 9.9h
-const SAFE_HUNGER = 10; // Target hunger level after a full meal
 // Bed sleep = ground rate + the bed's fatigueRecovery bonus (see handleSleeping), so only the
 // ground rate is a constant here.
 const FATIGUE_PER_SLEEPING_GROUND = 0.58; // Ground: 72 → 0 in ~124s ≈ 9.9 in-game hours (per second; perTick at use)
@@ -640,46 +643,6 @@ export function healWounds(pawn: Pawn, turn = 0): Pawn {
   };
 }
 
-function isAdjacent(ax: number, ay: number, bx: number, by: number): boolean {
-  const dx = Math.abs(ax - bx);
-  const dy = Math.abs(ay - by);
-  return dx <= 1 && dy <= 1 && dx + dy > 0;
-}
-
-/**
- * Nearest walkable tile adjacent to (tx,ty) — the approach square for working/eating at a target.
- * `occupied` is the shared occupancy set (tiles held by any solid body, per ADR-014); occupied or
- * non-walkable neighbours are skipped, and the nearest of the rest to (fromX,fromY) is returned.
- */
-function findAdjacentApproach(
-  tx: number,
-  ty: number,
-  worldMap: GameState['worldMap'],
-  occupied?: Set<string>,
-  fromX?: number,
-  fromY?: number
-): { x: number; y: number } | null {
-  let best: { x: number; y: number } | null = null;
-  let bestDist = Infinity;
-  for (let dy = -1; dy <= 1; dy++) {
-    for (let dx = -1; dx <= 1; dx++) {
-      if (dx === 0 && dy === 0) continue;
-      const nx = tx + dx;
-      const ny = ty + dy;
-      if (!worldMap[ny]?.[nx]?.walkable || occupied?.has(`${nx},${ny}`)) continue;
-      const dist =
-        fromX !== undefined && fromY !== undefined
-          ? Math.abs(nx - fromX) + Math.abs(ny - fromY)
-          : 0;
-      if (dist < bestDist) {
-        bestDist = dist;
-        best = { x: nx, y: ny };
-      }
-    }
-  }
-  return best;
-}
-
 // Per-pawn "unreachable job" cooldown. A failed A* search to an unreachable target
 // explores the whole connected map component — very expensive. Without this, an idle
 // pawn that cannot reach its highest-priority job would claim → fail → release it every
@@ -718,7 +681,7 @@ function markJobUnreachable(pawnId: string, jobId: string, turn: number): void {
 
 function tryAssignPath(pawn: Pawn, tx: number, ty: number, gameState: GameState): GameState | null {
   if (!pawn.position) return null;
-  if (!wasmPathfinderService.isReady()) return null;
+  if (!pathfinderService.isReady()) return null;
   if (isAdjacent(pawn.position.x, pawn.position.y, tx, ty)) return null;
   const occupied = occupancyService.blockedTiles(gameState, pawn.id);
   const approach = findAdjacentApproach(
@@ -741,7 +704,7 @@ function tryAssignPath(pawn: Pawn, tx: number, ty: number, gameState: GameState)
     approach.x,
     approach.y
   );
-  const path = wasmPathfinderService.findPath(
+  const path = pathfinderService.findPath(
     walkable,
     costs,
     width,
@@ -766,7 +729,7 @@ function tryAssignSleepPath(
   gameState: GameState
 ): GameState | null {
   if (!pawn.position) return null;
-  if (!wasmPathfinderService.isReady()) return null;
+  if (!pathfinderService.isReady()) return null;
   if (pawn.position.x === tx && pawn.position.y === ty) return null; // already on the bed
   // Route around other bodies; the bed tile (goal) and the pawn's own tile stay walkable.
   const blocked = occupancyService.blockedTiles(gameState, pawn.id);
@@ -778,7 +741,7 @@ function tryAssignSleepPath(
     tx,
     ty
   );
-  const path = wasmPathfinderService.findPath(
+  const path = pathfinderService.findPath(
     walkable,
     costs,
     width,
@@ -790,72 +753,6 @@ function tryAssignSleepPath(
   );
   if (path.length === 0) return null;
   return pawnService.assignPath(pawn.id, path, gameState);
-}
-
-/** Quick check: is there any food available at all (no allocation). ADR-016: food is physical
- *  stock — the stored-drop `stockpile` aggregate, no legacy `gs.item` pool. */
-function hasAvailableFood(gs: GameState): boolean {
-  return Object.entries(gs.stockpile ?? {}).some(([id, amount]) => {
-    if (amount <= 0) return false;
-    const def = ITEM_DEF_BY_ID.get(id);
-    return def?.category === 'food' || (def?.nutrition ?? 0) > 0;
-  });
-}
-
-type MealPortion = { id: string; units: number };
-
-/**
- * Select a meal that brings the pawn to SAFE_HUNGER from physical stockpile stock. Takes the
- * most nutritious food first and eats as many units as needed (an item's `nutrition` IS the
- * hunger it removes per unit — no scaling, no per-type cap), then supplements with less
- * nutritious options.
- */
-function selectFoodForMeal(pawn: Pawn, gs: GameState): MealPortion[] {
-  const hungerToSatisfy = Math.max(0, (pawn.needs?.hunger ?? 0) - SAFE_HUNGER);
-  if (hungerToSatisfy <= 0) return [];
-
-  type FoodOption = { id: string; available: number; nutrition: number };
-  const options: FoodOption[] = [];
-  for (const [id, amount] of Object.entries(gs.stockpile ?? {})) {
-    if (amount <= 0) continue;
-    const def = ITEM_DEF_BY_ID.get(id);
-    const nutrition = def?.nutrition ?? 0;
-    if (def?.category !== 'food' && nutrition <= 0) continue;
-    options.push({ id, available: amount, nutrition });
-  }
-
-  options.sort((a, b) => b.nutrition - a.nutrition);
-
-  const meal: MealPortion[] = [];
-  let remaining = hungerToSatisfy;
-  for (const food of options) {
-    if (remaining <= 0) break;
-    const hungerPerUnit = food.nutrition;
-    if (hungerPerUnit <= 0) continue;
-    const unitsNeeded = Math.ceil(remaining / hungerPerUnit);
-    const unitsTaken = Math.min(unitsNeeded, food.available);
-    if (unitsTaken <= 0) continue;
-    meal.push({ id: food.id, units: unitsTaken });
-    remaining -= unitsTaken * hungerPerUnit;
-  }
-  return meal;
-}
-
-/** Consume a pre-selected meal from physical stockpile stock, returning updated state and total
- *  hunger to recover. */
-function consumeMeal(
-  meal: MealPortion[],
-  gs: GameState
-): { state: GameState; hungerRecovered: number } {
-  let state = gs;
-  let hungerRecovered = 0;
-  for (const { id, units } of meal) {
-    const def = ITEM_DEF_BY_ID.get(id);
-    hungerRecovered += (def?.nutrition ?? 0) * units;
-    // consumeFromStockpiles keeps the stored-drop authority and aggregate in sync.
-    state = consumeFromStockpiles(state, { [id]: units });
-  }
-  return { state, hungerRecovered };
 }
 
 // Building type lists — module-level for use in helpers
@@ -2035,7 +1932,7 @@ function handleIdle(pawn: Pawn, gameState: GameState): GameState {
   }
 
   // Don't pick jobs until the pathfinder is ready — prevents endless pick/release cycles
-  if (!wasmPathfinderService.isReady()) return gameState;
+  if (!pathfinderService.isReady()) return gameState;
 
   const availableJobs = jobService.getAvailableJobs(pawn, gameState);
   // Skip jobs this pawn recently failed to reach (see _unreachableJobs). Prevents an
