@@ -86,6 +86,7 @@ curl 'localhost:5180/api/search?q=harvest&format=md'
 | `descriptions.json` | Curated plain-English overrides for groups, modules, and specific functions.                |
 | `template.html`     | The viewer (CSS + Mermaid generation + interactivity). Edit this for UI changes.            |
 | `build-html.mjs`    | Inlines `graph.json` + `descriptions.json` + vendored Mermaid into `codegraph.html`.        |
+| `rust.mjs`          | Syntactic Rust extractor (fns, intra-crate edges, wasm-bindgen exports) merged into the graph by `extract.mjs`. |
 | `serve.mjs`         | Live server: rebuild-on-change, hot-reload, and the `/api` query endpoints.                 |
 | `api.mjs`           | The JSON query API over `graph.json` (descriptions, call edges, search, paths, hubs).       |
 | `vendor/mermaid.min.js` | Pinned Mermaid 10.9.1 UMD build (downloaded once).                                       |
@@ -106,10 +107,28 @@ curl -s -o tools/codegraph/vendor/mermaid.min.js \
   https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js
 ```
 
-## Notes / limits
+## Language coverage
 
-- Covers `.ts` under `src/lib` (game logic + stores). `.svelte` components are
-  not parsed — they are the consumers above this graph.
+| Language | What's covered | How |
+| --- | --- | --- |
+| **TypeScript** (`src/lib/**.ts`) | every fn/method, call edges | TS compiler API + type checker |
+| **Svelte** (`src/**/*.svelte`) | one node per component; edges to the stores/services/webgl it calls | each `<script>` is extracted into a line-preserving virtual TS twin fed to the same program (`extract.mjs`) |
+| **Rust** (`spatial-core/**.rs`) | fn/method nodes, intra-crate edges, `#[wasm_bindgen]` exports, **TS→Rust boundary edge** | `rust.mjs` (syntactic parse) |
+
+The graph is one connected map across all three: e.g. `/api/path?from=<a TS
+function>&to=<a Rust function>` traces a UI/engine call through the WASM
+boundary into Rust internals — useful for deciding what to port.
+
+### Notes / limits
+
+- **Svelte:** components that only read stores reactively (`$store`) and compose
+  child components produce no *call* edges — that's accurate (they make no calls).
+  Only explicit function calls are edges; reactive subscriptions are not.
+- **Rust** parsing is syntactic (name-based), not type-resolved — fine for the
+  small, self-contained spatial crates. If a crate grows, swap `rust.mjs` for a
+  `syn`-based cargo tool or tree-sitter-rust (same output shape). The TS↔Rust
+  edge is matched by wasm-bindgen export name (the boundary is opaque to the TS
+  type checker because the wrapper casts the dynamic import).
 - Edges come from statically resolvable calls. Dynamic dispatch through an
   interface resolves to the interface method where the checker can see it;
   fully dynamic indirection (e.g. calls off a `Record` of handlers) may be missed.

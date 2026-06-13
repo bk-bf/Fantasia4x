@@ -65,9 +65,11 @@ pnpm graph:serve          # live graph + JSON query API on http://localhost:5180
 
 ## Codebase Graph (`tools/codegraph/`)
 
-An interactive call-graph explorer over all of `src/lib`, plus a **JSON query API
-for agents** — use it to understand structure, find callers/callees, trace call
-paths, and spot hubs instead of grepping blind. See `tools/codegraph/README.md`.
+An interactive call-graph explorer plus a **JSON query API for agents** — use it
+to understand structure, find callers/callees, trace call paths, and spot hubs
+instead of grepping blind. Covers **TypeScript** (`src/lib`), **Svelte**
+components, and **Rust** (`spatial-core`) in one connected graph, so a call path
+can cross the WASM boundary. See `tools/codegraph/README.md`.
 
 - Browser view: `pnpm graph` then open `tools/codegraph/codegraph.html`.
 - Live server + API: `pnpm graph:serve` (also started by `./launch.sh --debug`).

@@ -15,13 +15,48 @@ import ts from 'typescript';
 import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { extractRust } from './rust.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..', '..');
 const SRC = path.join(ROOT, 'src', 'lib');
 
+// ---------------------------------------------------------------------------
+// Svelte support: each .svelte component gets a virtual TypeScript twin holding
+// just its <script> contents (line positions preserved) so the compiler can
+// resolve the calls it makes into stores/services. The twin's path is the real
+// .svelte path + this suffix; we map it back when labelling nodes.
+// ---------------------------------------------------------------------------
+const SV_SUFFIX = '.cg.ts';
+/** @type {Map<string,string>} virtual twin path -> TS content */
+const svelteVirtual = new Map();
+const realPath = (f) => (f.endsWith(SV_SUFFIX) ? f.slice(0, -SV_SUFFIX.length) : f);
+
+/** Keep only <script> contents; blank the rest but preserve newlines (so line numbers map back to the .svelte). */
+function svelteToVirtualTs(src) {
+  const arr = new Array(src.length);
+  for (let i = 0; i < src.length; i++) arr[i] = src[i] === '\n' ? '\n' : ' ';
+  const re = /<script\b[^>]*>([\s\S]*?)<\/script>/gi;
+  let m;
+  while ((m = re.exec(src))) {
+    const openEnd = m.index + m[0].indexOf('>') + 1;
+    for (let i = 0; i < m[1].length; i++) arr[openEnd + i] = src[openEnd + i];
+  }
+  return arr.join('');
+}
+
+function findSvelteFiles() {
+  const root = path.join(ROOT, 'src');
+  if (!fs.existsSync(root)) return [];
+  return fs
+    .readdirSync(root, { recursive: true })
+    .map((f) => path.join(root, String(f)))
+    .filter((f) => f.endsWith('.svelte'));
+}
+
 /** Files we treat as graph sources (definitions + logic), excluding tests. */
 function isSourceFile(fileName) {
+  if (svelteVirtual.has(fileName)) return true; // virtual .svelte twin
   const f = fileName.replace(/\\/g, '/');
   if (!f.includes('/src/lib/')) return false;
   if (!f.endsWith('.ts')) return false;
@@ -32,7 +67,8 @@ function isSourceFile(fileName) {
 
 // ---------------------------------------------------------------------------
 // Build the TypeScript program from the project's tsconfig (so $lib aliases
-// and module resolution behave exactly like the real build).
+// and module resolution behave exactly like the real build), plus the virtual
+// Svelte twins served through a custom compiler host.
 // ---------------------------------------------------------------------------
 const configPath = path.join(ROOT, 'tsconfig.json');
 const parsed = ts.getParsedCommandLineOfConfigFile(
@@ -50,22 +86,44 @@ if (!parsed) {
   process.exit(1);
 }
 
+for (const sv of findSvelteFiles()) {
+  try {
+    svelteVirtual.set(sv + SV_SUFFIX, svelteToVirtualTs(fs.readFileSync(sv, 'utf8')));
+  } catch {
+    /* unreadable component — skip */
+  }
+}
+
+const compilerOptions = { ...parsed.options, noEmit: true };
+const host = ts.createCompilerHost(compilerOptions);
+const _getSourceFile = host.getSourceFile.bind(host);
+host.getSourceFile = (fn, langVer, onErr, shouldCreate) => {
+  if (svelteVirtual.has(fn)) return ts.createSourceFile(fn, svelteVirtual.get(fn), langVer, true);
+  return _getSourceFile(fn, langVer, onErr, shouldCreate);
+};
+const _readFile = host.readFile.bind(host);
+host.readFile = (fn) => (svelteVirtual.has(fn) ? svelteVirtual.get(fn) : _readFile(fn));
+const _fileExists = host.fileExists.bind(host);
+host.fileExists = (fn) => svelteVirtual.has(fn) || _fileExists(fn);
+
 const program = ts.createProgram({
-  rootNames: parsed.fileNames,
-  options: { ...parsed.options, noEmit: true }
+  rootNames: [...parsed.fileNames, ...svelteVirtual.keys()],
+  options: compilerOptions,
+  host
 });
 const checker = program.getTypeChecker();
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-const rel = (f) => path.relative(ROOT, f).replace(/\\/g, '/');
+const rel = (f) => path.relative(ROOT, realPath(f)).replace(/\\/g, '/');
 
-/** Module label e.g. "game/services/JobService" (drop src/lib/ and .ts). */
+/** Module label e.g. "game/services/JobService" or "components/screens/WorkScreen". */
 function moduleOf(fileName) {
   return rel(fileName)
     .replace(/^src\/lib\//, '')
-    .replace(/\.ts$/, '');
+    .replace(/^src\//, '') // routes/* live outside src/lib
+    .replace(/\.(ts|svelte)$/, '');
 }
 
 /** Top-level group used for colour / clustering (services, systems, core...). */
@@ -241,6 +299,8 @@ const declToId = new Map();
 const nodes = new Map();
 /** list of { id, decl, body } to scan for calls in pass 2 */
 const scanList = [];
+/** list of { id, sf } Svelte components — every call in their script is an edge */
+const componentScan = [];
 
 let idCounter = 0;
 function makeId(fileName, qualName, line) {
@@ -357,10 +417,51 @@ function collectNodes(sf) {
   ts.forEachChild(sf, (n) => visit(n, { className: null }));
 }
 
+// A Svelte component is registered as a single node; every call its <script>
+// makes into a store/service becomes an edge (component -> function it uses).
+function registerComponent(sf) {
+  const fileName = sf.fileName;
+  const base = path.basename(realPath(fileName), '.svelte');
+  const id = makeId(fileName, base, 1);
+  nodes.set(id, {
+    id,
+    name: base,
+    short: base,
+    file: rel(fileName),
+    module: moduleOf(fileName),
+    group: groupOf(fileName),
+    line: 1,
+    kind: 'component',
+    className: null,
+    exported: true,
+    signature: '<svelte component>',
+    doc: '',
+    humanized: humanize(base),
+    desc: `${humanize(base)} — Svelte UI component.`
+  });
+  componentScan.push({ id, sf });
+}
+
 const sourceFiles = program.getSourceFiles().filter((sf) => isSourceFile(sf.fileName));
-console.error(`Scanning ${sourceFiles.length} source files...`);
-for (const sf of sourceFiles) collectNodes(sf);
-console.error(`Registered ${nodes.size} function nodes.`);
+const svelteCount = sourceFiles.filter((sf) => svelteVirtual.has(sf.fileName)).length;
+console.error(`Scanning ${sourceFiles.length} source files (${svelteCount} Svelte)...`);
+for (const sf of sourceFiles) {
+  if (svelteVirtual.has(sf.fileName)) registerComponent(sf);
+  else collectNodes(sf);
+}
+
+// Rust (WASM crates): add Rust fn/method nodes + intra-crate edges, and set up
+// the TS↔Rust boundary bridge (the wasm-bindgen export surface, matched by name).
+const rust = extractRust(ROOT, rel);
+for (const n of rust.nodes) nodes.set(n.id, n);
+const rustExports = rust.exports; // exportName -> rust node id
+const rustExportNames = new Set(rust.exports.keys());
+const wasmFiles = new Set(
+  sourceFiles
+    .filter((sf) => /spatial-core-pkg|spatial_core/.test(sf.getFullText()))
+    .map((sf) => sf.fileName)
+);
+console.error(`Registered ${nodes.size} nodes (${rust.nodes.length} Rust).`);
 
 // ---------------------------------------------------------------------------
 // Pass 2 — resolve calls into edges
@@ -401,6 +502,19 @@ function addEdge(from, to) {
   else edges.set(key, { from, to, count: 1 });
 }
 
+// TS↔Rust boundary: a call like `mod.find_path(...)` in a file that imports the
+// wasm-bindgen package is an edge into the Rust export of that name.
+function maybeRustBoundary(node, ownerId) {
+  const callee = node.expression;
+  if (
+    ts.isPropertyAccessExpression(callee) &&
+    rustExportNames.has(callee.name.text) &&
+    wasmFiles.has(node.getSourceFile().fileName)
+  ) {
+    addEdge(ownerId, rustExports.get(callee.name.text));
+  }
+}
+
 function scanCalls(body, ownerId) {
   const visit = (node) => {
     // do not descend into nested registered functions; they own their calls
@@ -414,6 +528,7 @@ function scanCalls(body, ownerId) {
       }
       const targetId = resolveTargetId(sym);
       if (targetId) addEdge(ownerId, targetId);
+      else maybeRustBoundary(node, ownerId);
     }
     ts.forEachChild(node, visit);
   };
@@ -421,6 +536,25 @@ function scanCalls(body, ownerId) {
 }
 
 for (const { id, body } of scanList) scanCalls(body, id);
+
+// Components: attribute every resolvable call in the whole <script> to the
+// component node (UI logic lives at top level / in handlers, not just in fns).
+function scanAllCalls(sf, ownerId) {
+  const visit = (node) => {
+    if (ts.isCallExpression(node) || ts.isNewExpression(node)) {
+      const callee = node.expression;
+      let sym = checker.getSymbolAtLocation(callee);
+      if (!sym && ts.isPropertyAccessExpression(callee)) sym = checker.getSymbolAtLocation(callee.name);
+      const targetId = resolveTargetId(sym);
+      if (targetId) addEdge(ownerId, targetId);
+      else maybeRustBoundary(node, ownerId);
+    }
+    ts.forEachChild(node, visit);
+  };
+  ts.forEachChild(sf, visit);
+}
+for (const { id, sf } of componentScan) scanAllCalls(sf, id);
+for (const e of rust.edges) addEdge(e.from, e.to); // intra-Rust call edges
 console.error(`Resolved ${edges.size} edges.`);
 
 // ---------------------------------------------------------------------------
