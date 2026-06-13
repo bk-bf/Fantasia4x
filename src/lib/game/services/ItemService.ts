@@ -79,7 +79,6 @@ export interface ItemService {
   autoSelectIngredients(itemId: string, gameState: GameState): Record<string, string> | null;
 
   // Calculation Methods
-  calculateCraftingTime(itemId: string, gameState: GameState, pawnId?: string): number;
   calculateCraftingCost(itemId: string): Record<string, number>;
   calculateItemEffects(itemId: string): Record<string, number>;
 
@@ -279,25 +278,6 @@ export class ItemServiceImpl implements ItemService {
     return (gameState.buildings ?? []).some(
       (b) => b.type === recipe.buildingRequired && b.status === 'complete'
     );
-  }
-
-  calculateCraftingTime(itemId: string, gameState: GameState, pawnId?: string): number {
-    const recipe = recipeService.getRecipeForItem(itemId);
-    if (!recipe?.workAmount) return 0;
-
-    let time = recipe.workAmount;
-
-    // Apply pawn-specific bonuses if provided
-    if (pawnId) {
-      const pawn = gameState.pawns.find((p) => p.id === pawnId);
-      if (pawn) {
-        // Apply stat bonuses (dexterity affects crafting speed)
-        const dexterityBonus = (pawn.stats.dexterity - 10) / 20;
-        time *= 1 - Math.max(-0.5, Math.min(0.5, dexterityBonus));
-      }
-    }
-
-    return Math.max(1, Math.round(time));
   }
 
   calculateCraftingCost(itemId: string): Record<string, number> {

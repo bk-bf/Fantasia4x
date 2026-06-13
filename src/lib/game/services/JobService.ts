@@ -547,9 +547,6 @@ class JobServiceImpl {
       case 'craft':
         state = this._completeCraft(job, state);
         break;
-      case 'light':
-        state = this._completeLight(job, state);
-        break;
       case 'refuel':
         state = this._completeRefuel(job, state);
         break;
@@ -1011,37 +1008,6 @@ class JobServiceImpl {
   }
 
   /** Phase 6: generate 'light' jobs for unlit campfires that have fuel. */
-  private _syncLightJobs(jobs: Job[], gs: GameState): Job[] {
-    // Remove light jobs for campfires that are now lit or gone
-    jobs = jobs.filter((j) => {
-      if (j.type !== 'light') return true;
-      const b = (gs.buildings ?? []).find((b) => b.id === j.buildingId);
-      return b && b.status === 'complete' && !b.lit && (b.fuel ?? 0) > 0;
-    });
-
-    // Add light job for any unlit campfire with fuel that has no light job yet
-    for (const b of gs.buildings ?? []) {
-      if (b.status !== 'complete') continue;
-      if (b.type !== 'campfire') continue;
-      if (b.lit) continue;
-      if ((b.fuel ?? 0) <= 0) continue;
-      const exists = jobs.some((j) => j.type === 'light' && j.buildingId === b.id);
-      if (!exists) {
-        jobs.push({
-          id: `light-${b.id}-${Date.now()}`,
-          type: 'light',
-          targetX: b.x,
-          targetY: b.y,
-          buildingId: b.id,
-          workRequired: 2,
-          workDone: 0,
-          claimedBy: null
-        });
-      }
-    }
-    return jobs;
-  }
-
   /** Phase 6: generate 'refuel' jobs using per-building fuel settings where present. */
   private _syncRefuelJobs(jobs: Job[], gs: GameState): Job[] {
     // Remove refuel jobs whose building is gone, at max, or stockpile no longer
@@ -1086,16 +1052,6 @@ class JobServiceImpl {
     return jobs;
   }
 
-  private _completeLight(job: Job, gs: GameState): GameState {
-    if (!job.buildingId) return gs;
-    // Campfires auto-light from fuel — no firestarter required.
-    const newBuildings = (gs.buildings ?? []).map((b) =>
-      b.id === job.buildingId ? { ...b, lit: true } : b
-    );
-    console.log(`[JobService] Campfire lit: ${job.buildingId}`);
-    return { ...gs, buildings: newBuildings };
-  }
-
   private _completeRefuel(job: Job, gs: GameState): GameState {
     if (!job.buildingId) return gs;
     const building = (gs.buildings ?? []).find((b) => b.id === job.buildingId);
@@ -1138,26 +1094,6 @@ class JobServiceImpl {
     return { ...afterConsume, buildings: newBuildings };
   }
 
-  private _hasFuelInStockpile(gs: GameState): boolean {
-    const stockpile = gs.stockpile ?? {};
-    return ITEMS_DATABASE.some(
-      (item) => (item.fuelValue ?? 0) > 0 && (stockpile[item.id] ?? 0) > 0
-    );
-  }
-
-  private _totalFuelInStockpile(
-    gs: GameState,
-    building?: import('../core/types').PlacedBuilding
-  ): number {
-    const stockpile = gs.stockpile ?? {};
-    const allowedFuelIds = new Set(building?.fuelSettings?.allowedFuelItemIds ?? []);
-    const hasFuelFilter = allowedFuelIds.size > 0;
-    return ITEMS_DATABASE.reduce((sum, item) => {
-      if ((item.fuelValue ?? 0) <= 0) return sum;
-      if (hasFuelFilter && !allowedFuelIds.has(item.id)) return sum;
-      return sum + (stockpile[item.id] ?? 0) * item.fuelValue!;
-    }, 0);
-  }
 
   private _getRefuelThresholdRatio(building: import('../core/types').PlacedBuilding): number {
     const rawPct = building.fuelSettings?.refuelThresholdPct;

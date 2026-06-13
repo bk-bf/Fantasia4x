@@ -132,7 +132,8 @@ const EATING_TURNS_GROUND = ticksFromSeconds(3); // eating in-place (cold, uncom
 const SLEEPING_TURNS = ticksFromSeconds(100); // Full recovery in bed: 72 / 0.72 = 100s = 1/3 day (progress bar ref)
 const SLEEPING_TURNS_GROUND = ticksFromSeconds(124); // Full recovery on ground: 72 / 0.58 ≈ 124s ≈ 9.9h
 const SAFE_HUNGER = 10; // Target hunger level after a full meal
-const FATIGUE_PER_SLEEPING_TURN = 0.72; // Bed: 72 fatigue → 0 in ~100s = 8 in-game hours (per second; perTick at use)
+// Bed sleep = ground rate + the bed's fatigueRecovery bonus (see handleSleeping), so only the
+// ground rate is a constant here.
 const FATIGUE_PER_SLEEPING_GROUND = 0.58; // Ground: 72 → 0 in ~124s ≈ 9.9 in-game hours (per second; perTick at use)
 // Wake thresholds — prevents yo-yo by requiring proper rest before resuming activity
 const SLEEP_WAKE_THRESHOLD_FED = 0; // Sleep until fully restored when not hungry
@@ -645,7 +646,11 @@ function isAdjacent(ax: number, ay: number, bx: number, by: number): boolean {
   return dx <= 1 && dy <= 1 && dx + dy > 0;
 }
 
-/** Tiles held by pawns that are currently stationary (eating, sleeping, or working). */
+/**
+ * Nearest walkable tile adjacent to (tx,ty) — the approach square for working/eating at a target.
+ * `occupied` is the shared occupancy set (tiles held by any solid body, per ADR-014); occupied or
+ * non-walkable neighbours are skipped, and the nearest of the rest to (fromX,fromY) is returned.
+ */
 function findAdjacentApproach(
   tx: number,
   ty: number,
@@ -2688,10 +2693,11 @@ class PawnStateMachineImpl {
       // Skip dead pawns entirely.
       if (current.isAlive === false) continue;
 
-      // Drafted pawns are player-controlled: skip AI state machine entirely.
-      // They still tick conditions (bleeding, etc.) but won't auto-eat/sleep/work.
-      // Release any job they still claim so a living, undrafted pawn can take it —
-      // otherwise the claim leaks for as long as the pawn stays drafted.
+      // Drafted pawns are player-controlled, so release any job they still claim (they don't
+      // auto-work). R2: they do NOT `continue` here — they still run the full health block below
+      // (caretaking, conditions/bleed/infection/death, healing, the collapse lifecycle, status
+      // durations). ONLY the behavioural state machine is skipped (see the drafted check after the
+      // collapse lifecycle). Otherwise a drafted pawn never bled, healed, or collapsed.
       if (current.drafted) {
         if (current.activeJob || (state.jobs ?? []).some((j) => j.claimedBy === current.id)) {
           const jobs = (state.jobs ?? []).map((j) =>
@@ -2705,7 +2711,6 @@ class PawnStateMachineImpl {
             )
           };
         }
-        continue;
       }
 
       // Periodic caretaking: the colony's best available medic tends this pawn's
@@ -2714,7 +2719,8 @@ class PawnStateMachineImpl {
       const inMeleeNow =
         current.currentState === PAWN_STATE.FIGHTING ||
         current.currentState === PAWN_STATE.FLEEING ||
-        current.currentState === PAWN_STATE.HUNTING;
+        current.currentState === PAWN_STATE.HUNTING ||
+        (current.drafted === true && current.draftTarget?.type === 'attack');
       let toTick = current;
       if (!inMeleeNow && state.turn % CARE_CONFIG.tendIntervalTicks === 0) {
         const afterTend = tendWounds(current, state);
@@ -2737,7 +2743,8 @@ class PawnStateMachineImpl {
       const inMelee =
         afterConditions.currentState === PAWN_STATE.FIGHTING ||
         afterConditions.currentState === PAWN_STATE.FLEEING ||
-        afterConditions.currentState === PAWN_STATE.HUNTING;
+        afterConditions.currentState === PAWN_STATE.HUNTING ||
+        (afterConditions.drafted === true && afterConditions.draftTarget?.type === 'attack');
       if (!inMelee) {
         const healed = healWounds(afterConditions, state.turn);
         if (healed !== afterConditions) {
@@ -2798,6 +2805,22 @@ class PawnStateMachineImpl {
       }
 
       let forCollapse = afterConditions;
+
+      // R2: drafted pawns ran the full health block above (bleed/heal/death/collapse). They are
+      // player-controlled, so skip the BEHAVIOURAL state machine (auto combat-engage, exhaustion
+      // collapse, eat/sleep/work). Still tick status-effect durations so a combat-inflicted
+      // knockdown/collapse actually expires, then sync activeEffects, and move on.
+      if (forCollapse.drafted) {
+        const stepped = tickStatusEffectDurations(forCollapse);
+        const synced = syncActiveEffects(stepped);
+        if (synced !== forCollapse) {
+          state = {
+            ...state,
+            pawns: state.pawns.map((p) => (p.id === pawn.id ? synced : p))
+          };
+        }
+        continue;
+      }
 
       // ── Combat interrupt (top priority): a hostile is within aggro range. ──
       // Drop the current job and switch to a combat state so the pawn defends
