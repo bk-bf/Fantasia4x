@@ -42,10 +42,21 @@ describe('R5 carry-budget pickup clamp', () => {
     expect(can).toBeLessThan(10);
   });
 
-  it('floors at 1 when an empty pawn faces a single over-budget unit (no deadlock)', () => {
-    // tiny/str1 budget clamps to the 1 kg / 1 L floor; a 1.5 kg carcass would compute 0.
-    const can = itemService.clampPickupQuantity(pawn('tiny', 1), 'rabbit_carcass', 1, makeState());
-    expect(can).toBe(1);
+  it('always allows ≥1 — a single over-budget item (carcass) is carried in the hands', () => {
+    // tiny/str1 budget clamps to the 1 kg / 1 L floor; a 1.5 kg carcass would compute 0, but a
+    // pawn must still be able to hand-carry one.
+    expect(itemService.clampPickupQuantity(pawn('tiny', 1), 'rabbit_carcass', 1, makeState())).toBe(
+      1
+    );
+    // Unconditional: even a pawn already near capacity can still take 1 of an over-budget item.
+    const loaded = {
+      id: 'p',
+      stats: { strength: 1 },
+      physicalTraits: { size: 'tiny' },
+      equipment: {},
+      inventory: { items: { rabbit_carcass: 5 }, instances: [] }
+    } as unknown as Pawn;
+    expect(itemService.clampPickupQuantity(loaded, 'rabbit_carcass', 3, makeState())).toBe(1);
   });
 });
 

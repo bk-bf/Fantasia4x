@@ -417,8 +417,11 @@ export class ItemServiceImpl implements ItemService {
   /**
    * R5: how many units of `itemId` the pawn can pick up without exceeding its weight/volume
    * budget (belt/back containers raise it). A pawn that can't fit a whole stack takes what fits
-   * and leaves the rest for another trip. Floors at 1 when the pawn is carrying nothing, so a
-   * single over-budget unit can still be moved instead of deadlocking the haul.
+   * and leaves the rest for another trip. **Always floors at 1**: a single item is carried in the
+   * hands, so capacity never blocks picking up ONE of it — a pawn must be able to haul a heavy
+   * carcass (or, later, carry a downed pawn to shelter) even when it exceeds the budget. In
+   * practice haulers are empty at pickup anyway (they deposit before taking new work), so this
+   * only relaxes the genuinely-over-budget single-unit case.
    */
   clampPickupQuantity(pawn: Pawn, itemId: string, qty: number, state: GameState): number {
     if (qty <= 0) return 0;
@@ -429,12 +432,7 @@ export class ItemServiceImpl implements ItemService {
     const perV = def?.volumeL ?? 0.2;
     const byW = perW > 0 ? Math.floor((budget.maxWeightKg - load.weightKg) / perW) : qty;
     const byV = perV > 0 ? Math.floor((budget.maxVolumeL - load.volumeL) / perV) : qty;
-    let can = Math.max(0, Math.min(qty, byW, byV));
-    const carryingNothing =
-      Object.values(pawn.inventory?.items ?? {}).every((q) => q <= 0) &&
-      (pawn.inventory?.instances?.length ?? 0) === 0;
-    if (can === 0 && carryingNothing) can = 1;
-    return can;
+    return Math.max(1, Math.min(qty, byW, byV));
   }
 
   /**
