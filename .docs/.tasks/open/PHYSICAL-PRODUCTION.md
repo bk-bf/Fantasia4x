@@ -41,12 +41,15 @@ any means, a pawn must have held the input items, carried them to the production
    **on the station tile** (absorbed if the tile is also a stockpile, else they wait to be
    hauled). Quality from `pawnStatService.getWorkModifiers(...).quality`; tool/mold wear kept.
 
-Butchery folds into this: a carcass is just an input item to a `butcher_spot` recipe
-(`make_rabbit_meat`, …); the order consumes exactly one carcass. The special
-`craftButchery`/`processButchery` path is deleted.
-
 `gameState.item` is removed entirely; its readers (craft output, eating, equip pool, events,
 blueprint cost, craft-cancel refund) move to physical stock.
+
+**Butchery is NOT folded in this pass.** It uses a multi-yield model (one carcass → meat +
+hide + bone via `item.yields`, scaled by intactness/tools/building) that the single-output
+recipe registry can't express, so folding it into reserve-and-fetch would regress content and
+need a UI rewrite. It stays a dedicated instant transform (`ItemService.processButchery`,
+requires a butcher station) — but the R3 stack-consumption bug is fixed: **one carcass per
+action**. Full fold-in (multi-yield reconciliation + station hauling) is a follow-up.
 
 ## Out of scope (follow-up passes)
 
@@ -55,6 +58,8 @@ blueprint cost, craft-cancel refund) move to physical stock.
   (a pawn works them) so the full recipe set keeps functioning. Adds `Recipe.passive`.
 - **Building-material hauling** — construction still consumes from `stockpile` at placement;
   making builds physically fetch materials to the site is a later pass.
+- **Butchery fold-in** — make butchery a physical haul-to-`butcher_spot` action and reconcile
+  its multi-yield/intactness model with the recipe registry (this pass only fixes R3).
 - **ADR-009 tool gating (R4)** and **carry-budget enforcement (R5)** become tractable once
   pawns physically hold inputs; sequenced after this.
 

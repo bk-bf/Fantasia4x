@@ -443,15 +443,17 @@ meaningless because no pawn ever held inputs.
    spends `recipe.workAmount × quantity` work points.
 4. **Produce** — staged inputs are destroyed; outputs spawn as drops **on the station tile**.
 
-Butchery folds in as ordinary `butcher_spot` recipes (carcass = an input item, one consumed
-per action); the special `craftButchery`/`processButchery` path is deleted. `gameState.item`
-is removed entirely.
+`gameState.item` is removed entirely. **Butchery is not folded in** this pass — its
+multi-yield model (one carcass → meat + hide + bone, intactness-scaled) can't be expressed by
+single-output recipes, so it stays a dedicated instant transform (`processButchery`) with the
+R3 stack-consumption bug fixed (one carcass per action); full fold-in is a follow-up.
 
 #### Consequences
 
 - Crafted items are real stock — usable as materials/fuel/build/research costs (fixes the
   broken intermediate chains). The workshop is now a place a pawn walks to, not just a gate.
 - Pass 1 runs **all** recipes as active (a pawn works them). **Passive furnaces** (load
-  inputs + fuel, produce over time, `Recipe.passive`) and **physical building-material
-  hauling** are deferred follow-up passes; supersedes the old queue-time-consume model.
+  inputs + fuel, produce over time, `Recipe.passive`), **physical building-material hauling**,
+  and **butchery fold-in** are deferred follow-up passes; supersedes the old
+  queue-time-consume model.
 - Reservation bookkeeping (`reservedFor` on drops) is the new invariant; cancel releases it.
