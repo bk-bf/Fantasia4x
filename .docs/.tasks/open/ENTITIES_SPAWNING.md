@@ -317,49 +317,38 @@ slows to base pawn speed until healed (vet work category, Phase E2 — deferred)
 
 ## Implementation Plan
 
-### Phase A — Shared entity layer — DONE
-
-- ~~Add `Mob` interface to `core/types.ts` (id, creatureId, x, y, health, state, entityClass)~~
-- ~~Add `mobs: Mob[]`, `tamedAnimals: TamedAnimal[]` to `GameState`~~
-- ~~Add `core/Creatures.ts` with all hostile + neutral definitions~~
-- ~~`EntityService` singleton (renamed from `MobService`): `spawnEntities()`, `stepEntities()`, `removeDead()`~~
-- ~~Rendering: draw all `mobs[]` via existing glyph pipeline in `GameCanvas.svelte`~~
-- ~~Click-to-select mob with locked HUD info card~~
-- ~~Hover mob shows dim HUD info card (parity with pawns)~~
-- ~~ENTITIES tab (F9) listing live mobs with focus-on-map~~
-
-### Phase A.5 — Entity Hunger & Diet — DONE
-
-- ~~Add `EntityService.stepHunger(state)` — accrues `mob.hunger` each tick; triggers `Foraging`/`Hunting` FSM transitions~~
-- ~~Herbivore foraging: pathfind to nearest grass tile, consume via `eatProgress` timer~~
-- ~~Carnivore hunting: pursue nearest `Corpse` or live animal via existing `moveToward`; mini-combat roll on contact~~
-- ~~Starvation damage: `hunger >= 100` → −1 HP / tick~~
-- ~~Render `eatProgress` as world-effect progress bar overlay (reuse pawn task bar pipeline)~~
-
-### Phase B — Hunting & Butchering
-
-- [x] Add `hunting`, `butchery` work categories to `core/Work.ts` (note: id is `butchery`, not `butchering`)
-- [ ] Pawn hunting: `JobService` / `WorkService` — pathfind pawn to nearest non-tamed animal, attack roll on arrival
-- [x] Corpse tile-entity: dead mobs remain in `mobs[]` with `state: 'Corpse'`; `diedAt` + `CORPSE_DECAY_TICKS` already in `EntityService` (no separate `Corpse[]` array needed)
-- [x] Add `bone_cleaver` (Tier 1 butchery tool, `makers_bench`) — crafted from `large_bones` + flint + cordage; +25% carcass yield
-- [x] Add `dressing_stone` (Tier 1 butchery building) — flat stone slab + log stakes; unlocks at tool tier 1; +25% carcass yield stacks with `bone_cleaver`
-
-### Phase C — Taming
-
-- Add `taming` work category
-- `EntityService.attemptTame(pawnId, entityId, state)` — chance roll per turn
-- Promote entity to `TamedAnimal` on success
-
-### Phase D — Husbandry
-
-- Add `Pasture` to `core/Buildings.ts`; tile capacity rule
-- Add `husbandry` work category (collect milk/eggs, assign breeding)
-- Daily product generation in `EntityService.stepHusbandry(state)`
-
-### Phase E — Riding
-
-- Add `mountId` to `Pawn` (nullable)
-- Modifier: `ModifierSystem` checks `pawn.mountId` for movement/combat bonuses
+- [x] **Phase A — Shared entity layer**
+  - [x] Add `Mob` interface to `core/types.ts` (id, creatureId, x, y, health, state, entityClass)
+  - [x] Add `mobs: Mob[]`, `tamedAnimals: TamedAnimal[]` to `GameState`
+  - [x] Add `core/Creatures.ts` with all hostile + neutral definitions
+  - [x] `EntityService` singleton (renamed from `MobService`): `spawnEntities()`, `stepEntities()`, `removeDead()`
+  - [x] Rendering: draw all `mobs[]` via existing glyph pipeline in `GameCanvas.svelte`
+  - [x] Click-to-select mob with locked HUD info card
+  - [x] Hover mob shows dim HUD info card (parity with pawns)
+  - [x] ENTITIES tab (F9) listing live mobs with focus-on-map
+- [x] **Phase A.5 — Entity Hunger & Diet**
+  - [x] Add `EntityService.stepHunger(state)` — accrues `mob.hunger` each tick; triggers `Foraging`/`Hunting` FSM transitions
+  - [x] Herbivore foraging: pathfind to nearest grass tile, consume via `eatProgress` timer
+  - [x] Carnivore hunting: pursue nearest `Corpse` or live animal via existing `moveToward`; mini-combat roll on contact
+  - [x] Starvation damage: `hunger >= 100` → −1 HP / tick
+  - [x] Render `eatProgress` as world-effect progress bar overlay (reuse pawn task bar pipeline)
+- [ ] **Phase B — Hunting & Butchering**
+  - [x] Add `hunting`, `butchery` work categories to `core/Work.ts` (note: id is `butchery`, not `butchering`)
+  - [ ] Pawn hunting: `JobService` / `WorkService` — pathfind pawn to nearest non-tamed animal, attack roll on arrival
+  - [x] Corpse tile-entity: dead mobs remain in `mobs[]` with `state: 'Corpse'`; `diedAt` + `CORPSE_DECAY_TICKS` already in `EntityService` (no separate `Corpse[]` array needed)
+  - [x] Add `bone_cleaver` (Tier 1 butchery tool, `makers_bench`) — crafted from `large_bones` + flint + cordage; +25% carcass yield
+  - [x] Add `dressing_stone` (Tier 1 butchery building) — flat stone slab + log stakes; unlocks at tool tier 1; +25% carcass yield stacks with `bone_cleaver`
+- [ ] **Phase C — Taming**
+  - [ ] Add `taming` work category
+  - [ ] `EntityService.attemptTame(pawnId, entityId, state)` — chance roll per turn
+  - [ ] Promote entity to `TamedAnimal` on success
+- [ ] **Phase D — Husbandry**
+  - [ ] Add `Pasture` to `core/Buildings.ts`; tile capacity rule
+  - [ ] Add `husbandry` work category (collect milk/eggs, assign breeding)
+  - [ ] Daily product generation in `EntityService.stepHusbandry(state)`
+- [ ] **Phase E — Riding**
+  - [ ] Add `mountId` to `Pawn` (nullable)
+  - [ ] Modifier: `ModifierSystem` checks `pawn.mountId` for movement/combat bonuses
 - Add `Mounted Charge` to `core/Abilities.ts`
 
 ---
