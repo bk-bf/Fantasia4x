@@ -99,13 +99,25 @@ The decomposition has started, in the report's recommended order:
   BEFORE the file split so any behaviour drift during the move is caught.
 - **✅ Step 3 (dispatch table) DONE.** `tickPawn`'s 15-case switch is now a `Record<PawnState,Handler>`
   lookup (fan-out 16 → ~1; `tickPawn` is 8 LOC). Verified in-place: 0 type errors, 149 tests pass.
-- **▶ Next (Step 2 — the file split):** move the 15 handlers to `pawn/handlers/{work,needs,combat}.ts`
-  and the ~35 shared orchestration helpers + constants to a shared **`pawn/pawnHelpers.ts`**
-  (+ a tiny `pawn/pawnStates.ts` for `PAWN_STATE`/`PawnStateName`), leaving PawnStateMachine as a thin
-  dispatcher + the health/lifecycle block. Acyclic by construction
-  (`pawnStates/pawnQueries ← pawnHelpers ← handlers ← dispatcher`) so `graph:check`'s cycle rule stays
-  satisfied. Because helpers and handlers are physically interleaved in the file, this is best done as
-  a **reviewed brace-span codemod** (exact text relocation) rather than dozens of hand edits.
+- **✅ Step 2 (the file split) DONE.** The 2818-line god-file is decomposed (via a reviewed brace-span
+  codemod — exact text relocation, verified against the 149 tests) into:
+
+  | Module | LOC | Contents |
+  | ------ | --- | -------- |
+  | `systems/PawnStateMachine.ts` | **988** (was 2818) | health/lifecycle (kill/conditions/tend/heal/collapse) + the per-pawn dispatcher + class |
+  | `pawn/pawnHelpers.ts` | 1031 | shared orchestration helpers + tuning constants |
+  | `pawn/handlers/work.ts` | 383 | Idle · MovingToResource · Working · Hauling · MovingToDeposit |
+  | `pawn/handlers/needs.ts` | 377 | Hungry · Tired · Eating · Sleeping · Drinking · Washing · MovingToNeed |
+  | `pawn/handlers/combat.ts` | 135 | Fighting · Fleeing · Hunting |
+  | `pawn/pawnQueries.ts` | 128 | stateless predicates/selectors (step 4) |
+  | `pawn/pawnStates.ts` | 28 | `PAWN_STATE` / `PawnStateName` |
+
+  Acyclic by construction (`pawnStates/pawnQueries ← pawnHelpers ← handlers ← dispatcher`);
+  `graph:check` confirms no new cycle. **0 type errors · 149 tests pass · lint clean · build ok.**
+- **▶ Follow-ups:** (a) `pawnHelpers.ts` (1031 LOC) is still large — it could split further into
+  pathfinding / need-distance / hauling-stage / combat-selection groups. (b) Step 5 (push the
+  selection decisions in `handleIdle`/`checkNeedInterrupts` down into `JobService`/`PawnService`)
+  remains the deepest, deferred change.
 
 ## Improvement suggestions (prioritised)
 
@@ -115,15 +127,15 @@ Route `findPath`/`isReady` through `PathfinderService`; delete the direct
 `tryAssignPath` / `tryAssignSleepPath` / `handleIdle` and removes a flagged
 architecture violation with no behaviour change.
 
-**2 — Split the 15 handlers into grouped files (largest structural win).**
+**2 — Split the 15 handlers into grouped files (largest structural win). ✅ DONE.**
 The handlers cluster cleanly into three domains:
-- `handlers/work.ts` — Idle, MovingToResource, Working, Hauling, MovingToDeposit
-- `handlers/needs.ts` — Hungry, Tired, Eating, Sleeping, Drinking, Washing, MovingToNeed
-- `handlers/combat.ts` — Fighting, Fleeing, Hunting
+- `pawn/handlers/work.ts` — Idle, MovingToResource, Working, Hauling, MovingToDeposit
+- `pawn/handlers/needs.ts` — Hungry, Tired, Eating, Sleeping, Drinking, Washing, MovingToNeed
+- `pawn/handlers/combat.ts` — Fighting, Fleeing, Hunting
 
-This turns one 110 KB file into a thin dispatcher plus three ~focused units,
-each independently testable. Keep them as plain functions taking `(pawn,
-gameState)` so the layered architecture is unchanged.
+This turned one 110 KB file into a thin dispatcher (988 LOC, health/lifecycle +
+class) plus the focused handler/helper units above. They are plain functions
+taking `(pawn, gameState)`, so the layered architecture is unchanged.
 
 **3 — Replace the `tickPawn` switch with a handler table. ✅ DONE.**
 A `Record<PawnState, Handler>` lookup drops `tickPawn`'s fan-out from 16 to ~1

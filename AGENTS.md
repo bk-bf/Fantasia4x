@@ -84,10 +84,27 @@ can cross the WASM boundary. See `tools/codegraph/README.md`.
   `/api/check` · `/api/port-candidates` · `/api/orphans`.
 - Every function gets a description (JSDoc, else inferred); improve specific ones by
   editing `tools/codegraph/descriptions.json` (keyed `module::Class.method`).
-- Guardrails: `pnpm graph:check` enforces architecture rules (ADR-008, layer
-  direction, cycles, god-modules, orphans; exit 1 on violations — CI-ready).
+- Guardrails: `pnpm graph:check` enforces architecture rules (each checkable ADR,
+  layer direction, cycles, god-modules, orphans; exit 1 on violations — CI-ready).
   `pnpm graph:snapshot` / `pnpm graph:diff` track structural change over time.
   `/api/port-candidates` ranks TS→Rust port targets; `/api/orphans` finds dead code.
+
+### Onboarding an ADR into the graph checker
+
+Every ADR in `DECISIONS.md` must be registered in `ADR_RULES` (top of
+`tools/codegraph/analysis.mjs`); `graph:check`'s `adr-coverage` rule flags any
+that isn't. When you add an ADR, add one entry — either:
+
+- a structural invariant the call graph can verify:
+  `{ adr: 'ADR-0XX', severity: 'error'|'warn', title, check: (graph, { byId }) => findings[] }`
+  where each finding is `{ msg, module?, id?, file?, line? }` (see the `ADR-008`
+  entry for the pattern), **or**
+- an acknowledgement that it isn't graph-expressible (most are design/runtime):
+  `{ adr: 'ADR-0XX', checkable: false, reason: '…' }`.
+
+Checkable ADRs then appear as their own rule in `graph:check`, the API
+(`/api/check`), and the viewer's Architecture-check panel automatically — no
+other wiring needed.
 
 ## Documentation
 
@@ -109,7 +126,7 @@ Full architecture, design decisions, philosophy, and task tracking live in `.doc
 ## When to Update
 
 - **ARCHITECTURE**: a new service, layer, or data flow is added or removed.
-- **DECISIONS**: a non-obvious design choice is made that future contributors would otherwise re-litigate.
+- **DECISIONS**: a non-obvious design choice is made that future contributors would otherwise re-litigate. **Also onboard the ADR into the graph checker** (see below) — `pnpm graph:check` fails (`adr-coverage`) until you do.
 - **DESIGN**: a gameplay mechanic, visual token, or layout rule is established or changed.
 - **ROADMAP**: a feature is planned, started, or completed.
 
