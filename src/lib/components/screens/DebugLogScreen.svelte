@@ -16,6 +16,7 @@
   // module lets a reopen paint instantly instead of flickering "waiting…".
   const lineCache = new Map<string, ParsedDebugLine[]>();
   let lastSource = 'live';
+  let lastWrap = false; // line-wrap preference survives tab close/reopen
   let keyCounter = 0;
   const nextKey = () => ++keyCounter; // monotonic across remounts so keys never collide
 </script>
@@ -37,7 +38,7 @@
   let filterSeverity = $state('ALL');
   let search = $state('');
   let autoscroll = $state(true);
-  let wrap = $state(false);
+  let wrap = $state(lastWrap);
 
   // Seed from the cache at creation so the first paint already has content.
   let lines = $state<ParsedDebugLine[]>(lineCache.get(lastSource) ?? []);
@@ -103,6 +104,11 @@
       lines = [...lines.slice(-(BUFFER_CAP - 1)), parsed];
     };
     return () => es?.close();
+  });
+
+  // Remember the wrap preference for the next time the tab is reopened.
+  $effect(() => {
+    lastWrap = wrap;
   });
 
   // Autoscroll to the newest line as content arrives.
