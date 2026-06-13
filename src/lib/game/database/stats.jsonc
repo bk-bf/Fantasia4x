@@ -121,6 +121,28 @@
         "formula"    : "1.0 + (weight − 70) × 0.01",
         "description": "hunger accrual multiplier by body size (70 kg = 1.0×; bigger bodies hunger faster)"
     },
+    {
+        "id"         : "carry_weight",
+        "category"   : "capacity",
+        "primaryStat": "strength",
+        // Base kg regardless of stats + per-STR and per-bodySize scaling.
+        // Carry containers (belt/back items with inventoryBonus) add on top at runtime.
+        "carryWeightBase"       : 5,
+        "carryWeightPerStrength": 1.5,
+        "carryWeightPerBodySize": 3.0,
+        "formula"    : "carryWeightBase + (STR − 10) × carryWeightPerStrength + bodySize × carryWeightPerBodySize",
+        "description": "maximum carry weight in kg (base 5 + STR scaling + body size scaling)"
+    },
+    {
+        "id"         : "carry_volume",
+        "category"   : "capacity",
+        "primaryStat": "constitution",
+        // Volume in litres; body size governs bulk capacity more than raw strength.
+        "carryVolumeBase"       : 8,
+        "carryVolumePerBodySize": 4.0,
+        "formula"    : "carryVolumeBase + bodySize × carryVolumePerBodySize",
+        "description": "maximum carry volume in litres (base 8 + body size scaling)"
+    },
     // ── Resistance ────────────────────────────────────────────────────────────────
     // Resistances are multiplied by consciousness (dazed = weaker) and
     // blood_filtration (for biological resistances: poison, disease).

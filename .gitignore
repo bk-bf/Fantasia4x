@@ -38,3 +38,6 @@ vite.config.ts.timestamp-*
 spatial-core/target/
 spatial-core/pkg/
 src/lib/spatial-core-pkg/
+
+# Worktree-local port override (see dev.sh)
+.devport

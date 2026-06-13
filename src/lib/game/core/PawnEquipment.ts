@@ -1,7 +1,7 @@
 import type {
   GameState,
   Pawn,
-  EquippedItem,
+  ItemInstance,
   EquipmentSlot,
   Item,
   PawnEquipment,
@@ -10,38 +10,43 @@ import type {
 } from './types';
 import { itemService } from '../services/ItemService';
 
-export function createPawnInventory(baseSlots: number = 10): PawnInventory {
+/** Default carry budget for a pawn with no stats/equipment. */
+const DEFAULT_MAX_WEIGHT_KG = 20;
+const DEFAULT_MAX_VOLUME_L = 20;
+
+export function createPawnInventory(): PawnInventory {
   return {
     items: {},
-    maxSlots: baseSlots,
-    currentSlots: 0
+    instances: [],
+    weightKg: 0,
+    maxWeightKg: DEFAULT_MAX_WEIGHT_KG,
+    volumeL: 0,
+    maxVolumeL: DEFAULT_MAX_VOLUME_L
   };
 }
 
 export function createPawnEquipment(): PawnEquipment {
-  return {
-    weapon: undefined,
-    armor: undefined,
-    tool: undefined,
-    accessory: undefined
-  };
+  return {};
 }
+
 // Add this function to sync global items with pawn inventory
 export function syncPawnInventoryWithGlobal(pawn: Pawn, globalItems: Item[]): Pawn {
   const updatedPawn = { ...pawn };
   const sharedItems: Record<string, number> = {};
 
-  // Get list of items currently equipped by this pawn
-  const equippedItemIds = Object.values(pawn.equipment)
-    .filter((equipped) => equipped !== undefined)
-    .map((equipped) => equipped!.itemId);
+  // Get list of items currently equipped by this pawn (by itemId in instances)
+  const equippedItemIds = new Set(
+    Object.values(pawn.equipment)
+      .filter((inst): inst is ItemInstance => inst !== undefined)
+      .map((inst) => inst.itemId)
+  );
 
   // Copy all global items to pawn inventory, excluding materials and equipped items
   globalItems.forEach((globalItem) => {
     if (
       globalItem.amount > 0 &&
       globalItem.type !== 'material' &&
-      !equippedItemIds.includes(globalItem.id)
+      !equippedItemIds.has(globalItem.id)
     ) {
       sharedItems[globalItem.id] = Math.floor(globalItem.amount);
     }
@@ -54,9 +59,10 @@ export function syncPawnInventoryWithGlobal(pawn: Pawn, globalItems: Item[]): Pa
 
   return updatedPawn;
 }
+
 // Add immediate sync function
 export function syncAllPawnInventories(gameState: GameState): GameState {
-  const equippedItems = getAllEquippedItems(gameState.pawns);
+  const equippedItems = getAllEquippedItemIds(gameState.pawns);
 
   // Create filtered global items (remove equipped items and reduce quantity)
   const filteredGlobalItems = gameState.item.map((globalItem) => {
@@ -64,8 +70,8 @@ export function syncAllPawnInventories(gameState: GameState): GameState {
       // Count how many times this item is equipped
       let equippedCount = 0;
       gameState.pawns.forEach((pawn) => {
-        Object.values(pawn.equipment).forEach((equipped) => {
-          if (equipped && equipped.itemId === globalItem.id) {
+        Object.values(pawn.equipment).forEach((inst) => {
+          if (inst && inst.itemId === globalItem.id) {
             equippedCount++;
           }
         });
@@ -91,21 +97,53 @@ export function syncAllPawnInventories(gameState: GameState): GameState {
   };
 }
 
-// Helper function to get all equipped items
-function getAllEquippedItems(pawns: Pawn[]): Set<string> {
+// Helper function to get all equipped item IDs across all pawns
+function getAllEquippedItemIds(pawns: Pawn[]): Set<string> {
   const equippedItems = new Set<string>();
 
   pawns.forEach((pawn) => {
-    Object.values(pawn.equipment).forEach((equipped) => {
-      if (equipped) {
-        equippedItems.add(equipped.itemId);
+    Object.values(pawn.equipment).forEach((inst) => {
+      if (inst) {
+        equippedItems.add(inst.itemId);
       }
     });
   });
 
   return equippedItems;
 }
-// Update canEquipItem to work with shared inventory
+
+/** Derive which equipment slot an item belongs to based on its type/properties. */
+export function getEquipmentSlot(item: Item): EquipmentSlot | null {
+  if (item.armorProperties?.equipmentSlot) return item.armorProperties.equipmentSlot;
+  switch (item.type) {
+    case 'weapon':
+      return 'mainHand';
+    case 'armor': {
+      const slot = item.armorProperties?.slot;
+      switch (slot) {
+        case 'head':
+          return 'headBase';
+        case 'chest':
+          return 'bodyBase';
+        case 'legs':
+          return 'bodyMid';
+        case 'feet':
+          return 'boots';
+        case 'hands':
+          return 'gloves';
+        case 'offhand':
+          return 'offHand';
+        default:
+          return 'bodyBase';
+      }
+    }
+    case 'tool':
+      return 'belt';
+    default:
+      return null;
+  }
+}
+
 export function canEquipItem(pawn: Pawn, itemId: string): boolean {
   const item = itemService.getItemById(itemId);
   if (!item) return false;
@@ -116,18 +154,6 @@ export function canEquipItem(pawn: Pawn, itemId: string): boolean {
 
   // Check if global storage has this item (since inventory is shared)
   return (pawn.inventory.items[itemId] || 0) > 0;
-}
-export function getEquipmentSlot(item: Item): EquipmentSlot | null {
-  switch (item.type) {
-    case 'weapon':
-      return 'weapon';
-    case 'armor':
-      return 'armor';
-    case 'tool':
-      return 'tool';
-    default:
-      return null;
-  }
 }
 
 export function equipItem(pawn: Pawn, itemId: string): Pawn {
@@ -144,32 +170,26 @@ export function equipItem(pawn: Pawn, itemId: string): Pawn {
     updatedPawn = unequipItem(updatedPawn, slot);
   }
 
-  // DON'T remove from inventory - just equip it
-  // (The syncPawnInventoryWithGlobal will handle hiding it from available items)
+  // Create ItemInstance for the equipped item
+  const instance: ItemInstance = {
+    instanceId: `${itemId}-${pawn.id}-${Date.now()}`,
+    itemId,
+    durability: item.maxDurability ?? 100
+  };
 
   // Equip the item
   updatedPawn.equipment = {
     ...updatedPawn.equipment,
-    [slot]: {
-      itemId,
-      durability: item.durability || item.maxDurability || 100,
-      maxDurability: item.maxDurability || 100,
-      bonuses: calculateItemBonuses(item)
-    }
+    [slot]: instance
   };
 
   return updatedPawn;
 }
 
-// Update unequipItem to NOT add back to inventory
 export function unequipItem(pawn: Pawn, slot: EquipmentSlot): Pawn {
-  const equippedItem = pawn.equipment[slot];
-  if (!equippedItem) return pawn;
+  if (!pawn.equipment[slot]) return pawn;
 
   const updatedPawn = { ...pawn };
-
-  // DON'T add back to inventory - just unequip it
-  // (The syncPawnInventoryWithGlobal will handle showing it again in available items)
 
   // Remove from equipment
   updatedPawn.equipment = {
@@ -287,6 +307,7 @@ export function removeItemFromInventory(pawn: Pawn, itemId: string, quantity: nu
 
   if (newAmount <= 0) {
     const { [itemId]: removed, ...restItems } = updatedPawn.inventory.items;
+    void removed;
     updatedPawn.inventory = {
       ...updatedPawn.inventory,
       items: restItems
@@ -337,12 +358,14 @@ export function useConsumable(pawn: Pawn, itemId: string): Pawn {
 export function getEquipmentBonuses(pawn: Pawn): Record<string, number> {
   const totalBonuses: Record<string, number> = {};
 
-  Object.values(pawn.equipment).forEach((equippedItem) => {
-    if (equippedItem?.bonuses) {
-      Object.entries(equippedItem.bonuses).forEach(([bonus, value]) => {
-        totalBonuses[bonus] = (totalBonuses[bonus] || 0) + (value as number);
-      });
-    }
+  Object.values(pawn.equipment).forEach((inst) => {
+    if (!inst) return;
+    const item = itemService.getItemById(inst.itemId);
+    if (!item) return;
+    const bonuses = calculateItemBonuses(item);
+    Object.entries(bonuses).forEach(([bonus, value]) => {
+      totalBonuses[bonus] = (totalBonuses[bonus] || 0) + (value as number);
+    });
   });
 
   return totalBonuses;
@@ -363,29 +386,32 @@ export function getEffectiveStats(pawn: Pawn): EntityStats {
   };
 }
 
-// Damage equipment over time
+// Damage equipment over time (by slot)
 export function damageEquipment(pawn: Pawn, slot: EquipmentSlot, damage: number = 1): Pawn {
-  const equippedItem = pawn.equipment[slot];
-  if (!equippedItem) return pawn;
+  const inst = pawn.equipment[slot];
+  if (!inst) return pawn;
 
-  const updatedPawn = { ...pawn };
-  const newDurability = Math.max(0, equippedItem.durability - damage);
+  const def = itemService.getItemById(inst.itemId);
+  const newDurability = Math.max(0, inst.durability - damage);
 
   if (newDurability <= 0) {
-    // Item breaks - unequip it
-    updatedPawn.equipment = {
-      ...updatedPawn.equipment,
-      [slot]: undefined
-    };
-  } else {
-    updatedPawn.equipment = {
-      ...updatedPawn.equipment,
-      [slot]: {
-        ...equippedItem,
-        durability: newDurability
+    // Item breaks — unequip it
+    return {
+      ...pawn,
+      equipment: {
+        ...pawn.equipment,
+        [slot]: undefined
       }
     };
   }
 
-  return updatedPawn;
+  return {
+    ...pawn,
+    equipment: {
+      ...pawn.equipment,
+      [slot]: { ...inst, durability: newDurability }
+    }
+  };
+
+  void def; // suppress unused warning — kept for future break notifications
 }

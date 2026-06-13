@@ -10,7 +10,8 @@ import type {
   BodyPartId,
   DamageType,
   LimbId,
-  Item
+  Item,
+  ItemInstance
 } from '../core/types';
 import { itemService } from '../services/ItemService';
 import { getCreatureById } from '../core/Creatures';
@@ -760,8 +761,8 @@ function attackerProfile(attacker: Pawn | Mob): AttackProfile {
   const dex = attacker.stats.dexterity;
 
   // Equipped weapon (pawns; future-proofed for armed mobs).
-  if ('equipment' in attacker && attacker.equipment?.weapon) {
-    const item = itemService.getItemById(attacker.equipment.weapon.itemId);
+  if ('equipment' in attacker && attacker.equipment?.mainHand) {
+    const item = itemService.getItemById(attacker.equipment.mainHand.itemId);
     if (item?.weaponProperties) {
       return profileFromWeapon(str, dex, item.weaponProperties, item.name ?? 'weapon');
     }
@@ -827,8 +828,29 @@ function physicalResistance(defender: Pawn | Mob, damageType: DamageType): numbe
 }
 
 function partArmorReduction(defender: Pawn | Mob, partId: BodyPartId, armorPen: number): number {
-  if (!('equipment' in defender) || !defender.equipment?.armor) return 0;
-  const ap = itemService.getItemById(defender.equipment.armor.itemId)?.armorProperties;
+  if (!('equipment' in defender)) return 0;
+  // Combine armor from all body-slot instances (pick the best defense across worn slots).
+  const bodySlots = [
+    'bodyOuter',
+    'bodyMid',
+    'bodyBase',
+    'headBase',
+    'headOuter',
+    'gloves',
+    'boots',
+    'gorget'
+  ] as const;
+  let ap: import('../core/types').Item['armorProperties'] | undefined;
+  let bestDef = 0;
+  for (const slot of bodySlots) {
+    const inst = (defender.equipment as Record<string, ItemInstance | undefined>)[slot];
+    if (!inst) continue;
+    const candidate = itemService.getItemById(inst.itemId)?.armorProperties;
+    if (candidate && candidate.defense > bestDef) {
+      ap = candidate;
+      bestDef = candidate.defense;
+    }
+  }
   if (!ap) return 0;
   const def = PART_DEF_MAP[partId];
   if (!def) return 0;

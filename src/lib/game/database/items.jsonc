@@ -10,6 +10,8 @@
     "description"      : "Foraged berries. Small, tart — a handful barely dents real hunger.",
     "color"            : "#673AB7",
     "amount"           : 0,
+    "weightKg"          : 0.1,
+    "volumeL"           : 0.2,
     "nutrition"        : 3,
     "gatheringTypes"   : ["foraging"],
     "decaySeconds"     : 600,
@@ -26,6 +28,8 @@
     "description"      : "Freshwater fish. Bony but nutritious.",
     "color"            : "#4FC3F7",
     "amount"           : 0,
+    "weightKg"          : 0.3,
+    "volumeL"           : 0.4,
     "nutrition"        : 48,
     "gatheringTypes"   : ["fishing"],
     "decaySeconds"     : 300,
@@ -42,6 +46,8 @@
     "description"      : "Gathered grain. Edible raw, better cooked.",
     "color"            : "#FFA726",
     "amount"           : 0,
+    "weightKg"          : 0.2,
+    "volumeL"           : 0.4,
     "nutrition"        : 39,
     "gatheringTypes"   : ["foraging"],
     "decaySeconds"     : 9000,
@@ -58,6 +64,8 @@
     "description": "Grey-green sage cropped from sunny banks. Bundled into the pot for flavour; the smoke keeps the flies off a curing hide.",
     "color": "#9DAE78",
     "amount": 0,
+    "weightKg"          : 0.1,
+    "volumeL"           : 0.2,
     "nutrition": 15,
     "effects": {"healthBonus": 0.1},
     "gatheringTypes": ["foraging"],
@@ -75,6 +83,8 @@
     "description": "Bitter staunchweed pulled from the ditches. The old folk pack it onto a gash to slow the bleeding — chew it raw in a pinch.",
     "color": "#7CB342",
     "amount": 0,
+    "weightKg"          : 0.1,
+    "volumeL"           : 0.15,
     "medicineQuality": 0.2,
     "gatheringTypes": ["foraging"],
     "decaySeconds": 1800,
@@ -91,6 +101,8 @@
     "description": "Woundwort mashed between the teeth to a green spit-paste and lashed over the wound with cord. Crude, foul, but it works.",
     "color": "#9CCC65",
     "amount": 0,
+    "weightKg"          : 0.05,
+    "volumeL"           : 0.1,
     "medicineQuality": 0.5,
     "toolTierRequired": 0
   },
@@ -105,6 +117,8 @@
     "description"      : "A prized freshwater fish. Rich and delicate.",
     "color"            : "#FF8A65",
     "amount"           : 0,
+    "weightKg"          : 0.3,
+    "volumeL"           : 0.5,
     "nutrition"        : 54,
     "gatheringTypes"   : ["fishing"],
     "decaySeconds"     : 300,
@@ -121,6 +135,8 @@
     "description"      : "Freshly hunted rabbit. Process it to get meat.",
     "color"            : "#8D4E85",
     "amount"           : 0,
+    "weightKg"          : 1.5,
+    "volumeL"           : 3,
     "gatheringTypes"   : ["hunting"],
     "processingType"   : ["butchery"],
     "decaySeconds"     : 300,
@@ -137,6 +153,8 @@
     "description"      : "A large game animal. Process for venison and hide.",
     "color"            : "#8D6E63",
     "amount"           : 0,
+    "weightKg"          : 25,
+    "volumeL"           : 35,
     "gatheringTypes"   : ["hunting"],
     "processingType"   : ["butchery"],
     "decaySeconds"     : 300,
@@ -153,6 +171,8 @@
     "description"      : "Lean rabbit meat, ready to cook.",
     "color"            : "#C8864E",
     "amount"           : 0,
+    "weightKg"          : 0.5,
+    "volumeL"           : 0.5,
     "nutrition"        : 54,
     "toolTierRequired" : 0,
     "processingType"   : ["cooking"],
@@ -170,6 +190,8 @@
     "description"      : "Rich deer meat. Filling and nutritious.",
     "color"            : "#C8864E",
     "amount"           : 0,
+    "weightKg"          : 1,
+    "volumeL"           : 1,
     "nutrition"        : 75,
     "toolTierRequired" : 0,
     "processingType"   : ["cooking"],
@@ -187,6 +209,8 @@
     "description"      : "Untreated animal skin. Rots if not cured.",
     "color"            : "#8D6E63",
     "amount"           : 0,
+    "weightKg"          : 2,
+    "volumeL"           : 4,
     "processingType"   : ["leatherworking"],
     "decaySeconds"     : 2400,
     "decaysTo"         : "rotten_hide"
@@ -201,7 +225,9 @@
     "deteriorationRate": 0.1,
     "description"      : "A hide left too long — slimy and useless. Scrap.",
     "color"            : "#5A4A3A",
-    "amount"           : 0
+    "amount"           : 0,
+    "weightKg"          : 1.5,
+    "volumeL"           : 3.5
   },
   {
     "id"               : "tanning_bucket",
@@ -213,7 +239,9 @@
     "deteriorationRate": 0.03,
     "description"      : "Plank-staved bucket for soaking hides in tannin. Needed to build a tanning rack.",
     "color"            : "#9A7B4F",
-    "amount"           : 0
+    "amount"           : 0,
+    "weightKg"          : 2.5,
+    "volumeL"           : 3.5
   },
   {
     "id"               : "cured_thin_hide",
@@ -225,7 +253,9 @@
     "deteriorationRate": 0.03,
     "description"      : "Ash/salt-cured small pelt. Stable — won't rot. Tans into thin leather.",
     "color"            : "#B89878",
-    "amount"           : 0
+    "amount"           : 0,
+    "weightKg"          : 1.5,
+    "volumeL"           : 3
   },
   {
     "id"               : "cured_light_hide",
@@ -237,7 +267,9 @@
     "deteriorationRate": 0.03,
     "description"      : "Cured deer/goat hide. Stable. Tans into light leather.",
     "color"            : "#B08F6A",
-    "amount"           : 0
+    "amount"           : 0,
+    "weightKg"          : 2,
+    "volumeL"           : 4
   },
   {
     "id"               : "cured_sturdy_hide",
@@ -249,7 +281,9 @@
     "deteriorationRate": 0.03,
     "description"      : "Cured wolf/boar hide. Stable. Tans into sturdy leather.",
     "color"            : "#8A6E4E",
-    "amount"           : 0
+    "amount"           : 0,
+    "weightKg"          : 2.5,
+    "volumeL"           : 5
   },
   {
     "id"               : "cured_heavy_hide",
@@ -261,7 +295,9 @@
     "deteriorationRate": 0.03,
     "description"      : "Cured elk hide. Stable. Tans into heavy leather.",
     "color"            : "#75593C",
-    "amount"           : 0
+    "amount"           : 0,
+    "weightKg"          : 2.8,
+    "volumeL"           : 5.5
   },
   {
     "id"               : "cured_thick_hide",
@@ -273,7 +309,9 @@
     "deteriorationRate": 0.03,
     "description"      : "Cured bear pelt. Stable. Tans into thick leather.",
     "color"            : "#5E4632",
-    "amount"           : 0
+    "amount"           : 0,
+    "weightKg"          : 3,
+    "volumeL"           : 6
   },
   {
     "id"               : "thin_leather",
@@ -285,7 +323,9 @@
     "deteriorationRate": 0.04,
     "description"      : "Soft thin leather. Clothing lining and light bags.",
     "color"            : "#C8A878",
-    "amount"           : 0
+    "amount"           : 0,
+    "weightKg"          : 0.5,
+    "volumeL"           : 1
   },
   {
     "id"               : "light_leather",
@@ -297,7 +337,9 @@
     "deteriorationRate": 0.035,
     "description"      : "Supple light leather. Soft armour and packs.",
     "color"            : "#B8935E",
-    "amount"           : 0
+    "amount"           : 0,
+    "weightKg"          : 0.8,
+    "volumeL"           : 1.5
   },
   {
     "id"               : "sturdy_leather",
@@ -309,7 +351,9 @@
     "deteriorationRate": 0.03,
     "description"      : "Tough leather. Light armour and straps.",
     "color"            : "#9A7848",
-    "amount"           : 0
+    "amount"           : 0,
+    "weightKg"          : 1.2,
+    "volumeL"           : 2.5
   },
   {
     "id"               : "heavy_leather",
@@ -321,7 +365,9 @@
     "deteriorationRate": 0.03,
     "description"      : "Thick, stiff leather. Armour and harness.",
     "color"            : "#7E5E36",
-    "amount"           : 0
+    "amount"           : 0,
+    "weightKg"          : 1.8,
+    "volumeL"           : 3.5
   },
   {
     "id"               : "thick_leather",
@@ -333,7 +379,9 @@
     "deteriorationRate": 0.025,
     "description"      : "Heaviest leather. Best armour and prestige trim.",
     "color"            : "#604529",
-    "amount"           : 0
+    "amount"           : 0,
+    "weightKg"          : 2.5,
+    "volumeL"           : 5
   },
   {
     "id"               : "spit_meat",
@@ -346,6 +394,8 @@
     "description"      : "Meat skewered on a branch and cooked over fire. Simple, filling.",
     "color"            : "#C8864E",
     "amount"           : 0,
+    "weightKg"          : 0.8,
+    "volumeL"           : 0.8,
     "nutrition"        : 90,
     "toolTierRequired" : 0,
     "decaySeconds"     : 600,
@@ -362,6 +412,8 @@
     "description"      : "A hearty stew. Nutrition depends on ingredients. Requires a clay cooking pot.",
     "color"            : "#C87941",
     "amount"           : 0,
+    "weightKg"          : 1.5,
+    "volumeL"           : 2,
     "nutrition"        : 150,
     "toolTierRequired" : 0,
     "components"       : [],
@@ -379,6 +431,8 @@
     "description": "A dry woody branch. Burns quickly and lashes together easily. Used in nearly everything early on.",
     "color": "#8B6914",
     "amount": 0,
+    "weightKg"          : 0.4,
+    "volumeL"           : 1.5,
     "fuelValue": 3,
     "gatheringTypes": ["foraging"]
   },
@@ -393,6 +447,8 @@
     "description"      : "A small, loose stone. Useful for crafting.",
     "color"            : "#888888",
     "amount"           : 0,
+    "weightKg"          : 0.5,
+    "volumeL"           : 0.4,
     "gatheringTypes"   : ["foraging", "mining"]
   },
   {
@@ -406,6 +462,8 @@
     "description"      : "A knapped flint chip. Sharp edge, primitive cutting tool blank.",
     "color"            : "#888888",
     "amount"           : 0,
+    "weightKg"          : 0.1,
+    "volumeL"           : 0.15,
     "gatheringTypes"   : ["foraging", "mining"]
   },
   {
@@ -419,6 +477,8 @@
     "description"      : "Stripped plant stalks. Twisted into rope, woven into walls.",
     "color"            : "#7EC850",
     "amount"           : 0,
+    "weightKg"          : 0.1,
+    "volumeL"           : 0.3,
     "fuelValue"        : 2,
     "gatheringTypes"   : ["foraging"]
   },
@@ -433,6 +493,8 @@
     "description"      : "Peeled tree bark. Burns slowly and steadily.",
     "color"            : "#8B5E3C",
     "amount"           : 0,
+    "weightKg"          : 0.2,
+    "volumeL"           : 0.5,
     "fuelValue"        : 8,
     "gatheringTypes"   : ["foraging"]
   },
@@ -447,6 +509,8 @@
     "description"      : "Dried grass stalks. Soft bedding material, thatching, or animal fodder.",
     "color"            : "#D4B44A",
     "amount"           : 0,
+    "weightKg"          : 0.1,
+    "volumeL"           : 0.8,
     "fuelValue"        : 4,
     "gatheringTypes"   : ["foraging"]
   },
@@ -459,6 +523,8 @@
     "description"      : "Softwood log. Cheap bulk construction and the common firewood; the workhorse timber.",
     "color"            : "#C8A064",
     "amount"           : 0,
+    "weightKg"          : 8,
+    "volumeL"           : 12,
     "fuelValue"        : 10,
     "fuelHeat"         : 1,
     "deteriorationRate": 0.05,
@@ -474,6 +540,8 @@
     "description"      : "Light utility timber; the best firewood and bark-rich for tanning.",
     "color"            : "#E8DCC0",
     "amount"           : 0,
+    "weightKg"          : 8,
+    "volumeL"           : 12,
     "fuelValue"        : 14,
     "fuelHeat"         : 1,
     "deteriorationRate": 0.05,
@@ -489,6 +557,8 @@
     "description"      : "Dense hardwood. Furniture, heavy beams, durable construction.",
     "color"            : "#8B6914",
     "amount"           : 0,
+    "weightKg"          : 8,
+    "volumeL"           : 12,
     "fuelValue"        : 12,
     "fuelHeat"         : 1,
     "deteriorationRate": 0.04,
@@ -504,6 +574,8 @@
     "description"      : "Tough, springy timber. Tool hafts, polearms, and shields.",
     "color"            : "#C2B280",
     "amount"           : 0,
+    "weightKg"          : 8,
+    "volumeL"           : 12,
     "fuelValue"        : 12,
     "fuelHeat"         : 1,
     "deteriorationRate": 0.04,
@@ -519,6 +591,8 @@
     "description"      : "Premium, rare timber. Bows and fine furniture.",
     "color"            : "#6B4226",
     "amount"           : 0,
+    "weightKg"          : 8,
+    "volumeL"           : 12,
     "fuelValue"        : 12,
     "fuelHeat"         : 1,
     "deteriorationRate": 0.03,
@@ -534,6 +608,8 @@
     "description"      : "Freshly split wood, still damp. Burns poorly and smokes. Season it near a fire to dry.",
     "color"            : "#9A7B4F",
     "amount"           : 0,
+    "weightKg"          : 1.5,
+    "volumeL"           : 2.5,
     "fuelValue"        : 6,
     "fuelHeat"         : 1,
     "deteriorationRate": 0.04,
@@ -550,6 +626,8 @@
     "description"      : "Seasoned firewood. The best wood fuel — hot and clean for hearth and campfire.",
     "color"            : "#B8884C",
     "amount"           : 0,
+    "weightKg"          : 1.5,
+    "volumeL"           : 2.5,
     "fuelValue"        : 16,
     "fuelHeat"         : 2,
     "deteriorationRate": 0.03
@@ -565,6 +643,8 @@
     "description"      : "Fine wood dust from sawing. Tinder, smoking fuel, and later a binder.",
     "color"            : "#C2A878",
     "amount"           : 0,
+    "weightKg"          : 0.3,
+    "volumeL"           : 1,
     "fuelValue"        : 3,
     "fuelHeat"         : 1
   },
@@ -577,6 +657,8 @@
     "description"      : "Cut turf from a bog. Cheap, smoky mid-heat fuel; dry it like firewood before burning.",
     "color"            : "#5C4326",
     "amount"           : 0,
+    "weightKg"          : 1,
+    "volumeL"           : 1.5,
     "fuelValue"        : 11,
     "fuelHeat"         : 2,
     "deteriorationRate": 0.03,
@@ -594,6 +676,8 @@
     "description": "Wood charred low and slow in a pit. Clean, high heat — the first fuel hot enough to smelt metal.",
     "color": "#2B2B2B",
     "amount": 0,
+    "weightKg"          : 0.5,
+    "volumeL"           : 1,
     "fuelValue": 24,
     "fuelHeat": 3,
     "toolTierRequired": 0
@@ -609,6 +693,8 @@
     "description"      : "Mined coal. The hottest, most efficient mundane fuel — iron and steel need it.",
     "color"            : "#1A1A1A",
     "amount"           : 0,
+    "weightKg"          : 1,
+    "volumeL"           : 1.5,
     "fuelValue"        : 40,
     "fuelHeat"         : 4,
     "gatheringTypes"   : ["mining"]
@@ -624,6 +710,8 @@
     "description"      : "Green copper carbonate ore. The common, easily-smelted copper ore.",
     "color"            : "#1B7A4C",
     "amount"           : 0,
+    "weightKg"          : 2,
+    "volumeL"           : 1.2,
     "gatheringTypes"   : ["mining"]
   },
   {
@@ -637,6 +725,8 @@
     "description"      : "Brassy copper-iron sulphide. Rich copper ore — more bar per smelt.",
     "color"            : "#C9A227",
     "amount"           : 0,
+    "weightKg"          : 2,
+    "volumeL"           : 1.2,
     "gatheringTypes"   : ["mining"]
   },
   {
@@ -650,6 +740,8 @@
     "description"      : "Deep-blue copper ore. Lean but pretty; also a pigment.",
     "color"            : "#2E5BB8",
     "amount"           : 0,
+    "weightKg"          : 2,
+    "volumeL"           : 1.2,
     "gatheringTypes"   : ["mining"]
   },
   {
@@ -663,6 +755,8 @@
     "description"      : "Tin oxide ore. The only common source of tin — needed for bronze.",
     "color"            : "#6B4423",
     "amount"           : 0,
+    "weightKg"          : 2,
+    "volumeL"           : 1.2,
     "gatheringTypes"   : ["mining"]
   },
   {
@@ -676,6 +770,8 @@
     "description"      : "Red iron oxide. The workhorse iron ore.",
     "color"            : "#8B3A2F",
     "amount"           : 0,
+    "weightKg"          : 2.5,
+    "volumeL"           : 1.2,
     "gatheringTypes"   : ["mining"]
   },
   {
@@ -689,6 +785,8 @@
     "description"      : "Magnetic black iron ore. Rich, but stubborn to smelt.",
     "color"            : "#33373B",
     "amount"           : 0,
+    "weightKg"          : 3,
+    "volumeL"           : 1.2,
     "gatheringTypes"   : ["mining"]
   },
   {
@@ -702,6 +800,8 @@
     "description"      : "Bog iron — yellow-brown hydrated iron ore. Lean but shallow.",
     "color"            : "#B5651D",
     "amount"           : 0,
+    "weightKg"          : 2,
+    "volumeL"           : 1.2,
     "gatheringTypes"   : ["mining"]
   },
   {
@@ -715,6 +815,8 @@
     "description"      : "Lead sulphide ore — smelts to lead, and to silver when worked finely.",
     "color"            : "#6E7378",
     "amount"           : 0,
+    "weightKg"          : 3.5,
+    "volumeL"           : 1.2,
     "gatheringTypes"   : ["mining"]
   },
   {
@@ -728,6 +830,8 @@
     "description"      : "Raw gold nuggets and flakes. Rare; smelts straight to gold.",
     "color"            : "#D4AF37",
     "amount"           : 0,
+    "weightKg"          : 4,
+    "volumeL"           : 0.8,
     "gatheringTypes"   : ["mining"]
   },
   {
@@ -741,6 +845,8 @@
     "description"      : "Natural gold-silver alloy ore. Rare prestige metal source.",
     "color"            : "#E6D49A",
     "amount"           : 0,
+    "weightKg"          : 3.5,
+    "volumeL"           : 0.8,
     "gatheringTypes"   : ["mining"]
   },
   {
@@ -753,7 +859,9 @@
     "deteriorationRate": 0.008,
     "description"      : "Smelted copper ingot. First metal — soft tools, wire, and half of bronze.",
     "color"            : "#B87333",
-    "amount"           : 0
+    "amount"           : 0,
+    "weightKg"          : 4,
+    "volumeL"           : 0.5
   },
   {
     "id"               : "tin_bar",
@@ -765,7 +873,9 @@
     "deteriorationRate": 0.008,
     "description"      : "Smelted tin ingot. Soft on its own; alloyed with copper makes bronze.",
     "color"            : "#9DA1A6",
-    "amount"           : 0
+    "amount"           : 0,
+    "weightKg"          : 4,
+    "volumeL"           : 0.5
   },
   {
     "id"               : "bronze_bar",
@@ -777,7 +887,9 @@
     "deteriorationRate": 0.006,
     "description"      : "Cast bronze ingot — copper and tin. Tier-1 tools, weapons, and the first saw.",
     "color"            : "#CD7F32",
-    "amount"           : 0
+    "amount"           : 0,
+    "weightKg"          : 4,
+    "volumeL"           : 0.5
   },
   {
     "id"               : "iron_bar",
@@ -789,7 +901,9 @@
     "deteriorationRate": 0.008,
     "description"      : "Bloomery iron ingot. Tier-2 tools, weapons and armour. Needs limestone flux.",
     "color"            : "#6E7378",
-    "amount"           : 0
+    "amount"           : 0,
+    "weightKg"          : 4,
+    "volumeL"           : 0.5
   },
   {
     "id": "iron_nail",
@@ -802,6 +916,8 @@
     "description": "A handful of forged iron nails. Fasten planks into chests, furniture and frames. Drawn out on the smithy anvil.",
     "color": "#7A7E84",
     "amount": 0,
+    "weightKg"          : 0.2,
+    "volumeL"           : 0.1,
     "toolTierRequired": 1
   },
   {
@@ -814,7 +930,9 @@
     "deteriorationRate": 0.008,
     "description"      : "Smelted lead. Heavy, soft — pipes, weights, and shot.",
     "color"            : "#5A5E63",
-    "amount"           : 0
+    "amount"           : 0,
+    "weightKg"          : 5,
+    "volumeL"           : 0.4
   },
   {
     "id"               : "silver_bar",
@@ -826,7 +944,9 @@
     "deteriorationRate": 0.006,
     "description"      : "Cupelled silver from galena. Coin, fine decor, and trade.",
     "color"            : "#C0C0C0",
-    "amount"           : 0
+    "amount"           : 0,
+    "weightKg"          : 4,
+    "volumeL"           : 0.4
   },
   {
     "id"               : "gold_bar",
@@ -838,7 +958,9 @@
     "deteriorationRate": 0.005,
     "description"      : "Cast gold ingot. Currency, prestige decor, and magical work.",
     "color"            : "#D4AF37",
-    "amount"           : 0
+    "amount"           : 0,
+    "weightKg"          : 4,
+    "volumeL"           : 0.4
   },
   {
     "id"               : "steel_bar",
@@ -850,7 +972,9 @@
     "deteriorationRate": 0.006,
     "description"      : "Cast steel — iron with coal and flux. The deterministic ceiling: best mundane gear.",
     "color"            : "#43484D",
-    "amount"           : 0
+    "amount"           : 0,
+    "weightKg"          : 4,
+    "volumeL"           : 0.5
   },
   {
     "id"               : "ash",
@@ -863,6 +987,8 @@
     "description"      : "Wood ash from a fire. Used to cure hides and, later, to make lye and soap.",
     "color"            : "#9E9E9E",
     "amount"           : 0,
+    "weightKg"          : 0.3,
+    "volumeL"           : 0.8,
     "toolTierRequired" : 0
   },
   {
@@ -876,6 +1002,8 @@
     "description": "Rock salt, ground fine. Preserves meat and cures hides — moderately rare, mined in the mountains.",
     "color": "#EFEFEF",
     "amount": 0,
+    "weightKg"          : 1,
+    "volumeL"           : 0.8,
     "gatheringTypes": ["mining"]
   },
   {
@@ -888,7 +1016,9 @@
     "deteriorationRate": 0,
     "description": "Clean drinking water — drawn from a river/well or boiled and kept in a clay urn. Quenches thirst.",
     "color": "#4FC3F7",
-    "amount": 0
+    "amount": 0,
+    "weightKg"          : 1,
+    "volumeL"           : 1
   },
   {
     "id"               : "animal_fat",
@@ -901,6 +1031,8 @@
     "description"      : "Rendered fat from a fatty carcass. Fuel for torches and lamps; later, soap and tallow.",
     "color"            : "#E8D9A8",
     "amount"           : 0,
+    "weightKg"          : 0.3,
+    "volumeL"           : 0.4,
     "toolTierRequired" : 0
   },
   {
@@ -914,6 +1046,8 @@
     "description"      : "A branch wrapped in fat-soaked fibre. Burns for a while, giving light to work after dark.",
     "color"            : "#FF9E40",
     "amount"           : 0,
+    "weightKg"          : 0.3,
+    "volumeL"           : 0.5,
     "fuelValue"        : 6,
     "toolTierRequired" : 0
   },
@@ -928,6 +1062,8 @@
     "description"      : "A fibre wick in moulded tallow. Longer, dimmer light than a torch.",
     "color"            : "#F2E2B0",
     "amount"           : 0,
+    "weightKg"          : 0.2,
+    "volumeL"           : 0.3,
     "fuelValue"        : 4,
     "toolTierRequired" : 0
   },
@@ -942,6 +1078,8 @@
     "description"      : "Meat packed in salt. Keeps for a very long time.",
     "color"            : "#B5705A",
     "amount"           : 0,
+    "weightKg"          : 1,
+    "volumeL"           : 1,
     "nutrition"        : 60,
     "toolTierRequired" : 0,
     "decaySeconds"     : 36000,
@@ -958,6 +1096,8 @@
     "description"      : "Wind- and smoke-dried meat. Keeps well without salt.",
     "color"            : "#9C5A3C",
     "amount"           : 0,
+    "weightKg"          : 0.7,
+    "volumeL"           : 0.8,
     "nutrition"        : 54,
     "toolTierRequired" : 0,
     "decaySeconds"     : 28000,
@@ -972,6 +1112,8 @@
     "description"      : "Sawn pine board. Furniture, floors, sturdy walls and roofs.",
     "color"            : "#D2B48C",
     "amount"           : 0,
+    "weightKg"          : 2,
+    "volumeL"           : 3,
     "fuelValue"        : 8,
     "fuelHeat"         : 1,
     "deteriorationRate": 0.03,
@@ -987,6 +1129,8 @@
     "description"      : "Sawn oak board. Premium furniture and heavy framing.",
     "color"            : "#A0742C",
     "amount"           : 0,
+    "weightKg"          : 2,
+    "volumeL"           : 3,
     "fuelValue"        : 10,
     "fuelHeat"         : 1,
     "deteriorationRate": 0.025,
@@ -1002,6 +1146,8 @@
     "description"      : "Sawn birch board. Light furniture and panelling.",
     "color"            : "#E0D4B0",
     "amount"           : 0,
+    "weightKg"          : 2,
+    "volumeL"           : 3,
     "fuelValue"        : 9,
     "fuelHeat"         : 1,
     "deteriorationRate": 0.03,
@@ -1017,6 +1163,8 @@
     "description"      : "Sawn ash board. Springy and strong for shields and hafts.",
     "color"            : "#C8B98E",
     "amount"           : 0,
+    "weightKg"          : 2,
+    "volumeL"           : 3,
     "fuelValue"        : 9,
     "fuelHeat"         : 1,
     "deteriorationRate": 0.025,
@@ -1032,6 +1180,8 @@
     "description"      : "Sawn yew board. Prized for bows and fine work.",
     "color"            : "#7A4E2C",
     "amount"           : 0,
+    "weightKg"          : 2,
+    "volumeL"           : 3,
     "fuelValue"        : 9,
     "fuelHeat"         : 1,
     "deteriorationRate": 0.02,
@@ -1048,6 +1198,8 @@
     "description": "A toothed bronze blade in a wooden frame. Unlocks the sawtable and plank production.",
     "color": "#B87333",
     "amount": 0,
+    "weightKg"          : 1,
+    "volumeL"           : 1.5,
     "tier": 1,
     "durability": 80,
     "maxDurability": 80,
@@ -1065,6 +1217,8 @@
     "description"      : "Hard igneous rock — the common building stone. Strong walls and prestige stonework.",
     "color"            : "#9E8E8A",
     "amount"           : 0,
+    "weightKg"          : 1.5,
+    "volumeL"           : 1,
     "gatheringTypes"   : ["foraging", "mining"]
   },
   {
@@ -1078,6 +1232,8 @@
     "description"      : "Soft sedimentary rock. Mortar, and the smelting flux iron-making depends on.",
     "color"            : "#C8C0A8",
     "amount"           : 0,
+    "weightKg"          : 1.5,
+    "volumeL"           : 1,
     "gatheringTypes"   : ["foraging", "mining"]
   },
   {
@@ -1091,6 +1247,8 @@
     "description"      : "Soft, cheap sedimentary rock. Bulk building and decorative work.",
     "color"            : "#D9B88C",
     "amount"           : 0,
+    "weightKg"          : 1.5,
+    "volumeL"           : 1,
     "gatheringTypes"   : ["foraging", "mining"]
   },
   {
@@ -1104,6 +1262,8 @@
     "description"      : "Prestige stone — statues and fine floors. Slow to cut.",
     "color"            : "#E8E6E0",
     "amount"           : 0,
+    "weightKg"          : 1.5,
+    "volumeL"           : 1,
     "gatheringTypes"   : ["foraging", "mining"]
   },
   {
@@ -1117,6 +1277,8 @@
     "description"      : "Flat-splitting stone. Roofing tiles and paving.",
     "color"            : "#5A6066",
     "amount"           : 0,
+    "weightKg"          : 1.5,
+    "volumeL"           : 1,
     "gatheringTypes"   : ["foraging", "mining"]
   },
   {
@@ -1130,6 +1292,8 @@
     "description"      : "Dressed granite block. Strong walls and prestige stonework.",
     "color"            : "#9E8E8A",
     "amount"           : 0,
+    "weightKg"          : 5,
+    "volumeL"           : 3,
     "toolTierRequired" : 1
   },
   {
@@ -1143,6 +1307,8 @@
     "description"      : "Dressed limestone block. Soft, easy walls and mortar work.",
     "color"            : "#C8C0A8",
     "amount"           : 0,
+    "weightKg"          : 5,
+    "volumeL"           : 3,
     "toolTierRequired" : 1
   },
   {
@@ -1156,6 +1322,8 @@
     "description"      : "Dressed sandstone block. Cheap bulk building.",
     "color"            : "#D9B88C",
     "amount"           : 0,
+    "weightKg"          : 5,
+    "volumeL"           : 3,
     "toolTierRequired" : 1
   },
   {
@@ -1169,6 +1337,8 @@
     "description"      : "Dressed marble block. Statues, fine floors, prestige decor.",
     "color"            : "#E8E6E0",
     "amount"           : 0,
+    "weightKg"          : 5,
+    "volumeL"           : 3,
     "toolTierRequired" : 1
   },
   {
@@ -1182,6 +1352,8 @@
     "description"      : "Split slate roofing tile — the durable, low-maintenance roof.",
     "color"            : "#5A6066",
     "amount"           : 0,
+    "weightKg"          : 2,
+    "volumeL"           : 1.5,
     "toolTierRequired" : 1
   },
   {
@@ -1195,6 +1367,8 @@
     "description"      : "Raw earthenware clay dug from a clay, mud or bog bank. The bulk ceramics and construction material.",
     "color"            : "#B5651D",
     "amount"           : 0,
+    "weightKg"         : 1.5,
+    "volumeL"          : 1.2,
     "gatheringTypes"   : ["foraging", "mining"]
   },
   {
@@ -1236,6 +1410,8 @@
     "amount"           : 0,
     "fuelValue"        : 2,
     "medicineQuality"  : 0.15,
+    "weightKg"         : 1.5,
+    "volumeL"          : 1.2,
     "gatheringTypes"   : ["foraging"]
   },
   {
@@ -1249,6 +1425,8 @@
     "description": "Twisted plant fiber. Thin makeshift cord — fine for binding, lashing and weaving, but too weak for real load.",
     "color": "#C8A064",
     "amount": 0,
+    "weightKg"          : 0.2,
+    "volumeL"           : 0.3,
     "fuelValue": 4,
     "toolTierRequired": 0
   },
@@ -1263,6 +1441,8 @@
     "description": "Strong laid rope, walked and twisted from many strands of cordage. Bears real load — well windlasses, rigging, heavy hauling.",
     "color": "#A8814E",
     "amount": 0,
+    "weightKg"          : 0.5,
+    "volumeL"           : 0.8,
     "fuelValue": 6,
     "toolTierRequired": 0
   },
@@ -1277,6 +1457,8 @@
     "description"      : "Sun-dried mud brick. Requires no kiln.",
     "color"            : "#C4A265",
     "amount"           : 0,
+    "weightKg"          : 1.8,
+    "volumeL"           : 1.2,
     "toolTierRequired" : 0
   },
   {
@@ -1290,6 +1472,8 @@
     "description"      : "Kiln-fired clay brick. Hard and weatherproof — forges, kilns, cellars, sturdy walls.",
     "color"            : "#A0522D",
     "amount"           : 0,
+    "weightKg"          : 2,
+    "volumeL"           : 1,
     "toolTierRequired" : 0
   },
   {
@@ -1316,6 +1500,8 @@
     "description": "Fired clay vessel. Stores boiled water (and dry goods) safely. Keeps stored food longer (−20% spoilage).",
     "color": "#B07A4A",
     "amount": 0,
+    "weightKg"          : 2.5,
+    "volumeL"           : 3,
     "isContainer": true,
     "storageCapacity": 20,
     "preservationBonus": 0.2,
@@ -1333,6 +1519,8 @@
     "description": "Fired clay ingot mold. Required to cast metal bars — cracks and wears with each pour.",
     "color": "#9A6B43",
     "amount": 0,
+    "weightKg"          : 0.8,
+    "volumeL"           : 0.9,
     "toolTierRequired": 0
   },
   {
@@ -1346,6 +1534,8 @@
     "description"      : "Cast-metal form for pressing clay roof tiles. Made at the forge — needs bronze.",
     "color"            : "#B87333",
     "amount"           : 0,
+    "weightKg"          : 1,
+    "volumeL"           : 1,
     "toolTierRequired" : 1
   },
   {
@@ -1359,6 +1549,8 @@
     "description": "Pressed-and-fired clay tile. The durable, low-maintenance roof — slow to weather, robust against storms. (Pressing needs a reusable tile_mold — enforced once mold-required logic lands.)",
     "color": "#9C3B2E",
     "amount": 0,
+    "weightKg"          : 1.5,
+    "volumeL"           : 0.8,
     "toolTierRequired": 0
   },
   {
@@ -1371,6 +1563,8 @@
     "description"      : "Friction fire kit. Required to light a campfire.",
     "color"            : "#FF6600",
     "amount"           : 0,
+    "weightKg"          : 0.3,
+    "volumeL"           : 0.4,
     "durability"       : 10,
     "maxDurability"    : 10,
     "tier"             : 0,
@@ -1387,6 +1581,8 @@
     "description"      : "Knapped flint blade. Cuts hide, prepares meat, required for Tier 1 crafts.",
     "color"            : "#AAAAAA",
     "amount"           : 0,
+    "weightKg"          : 0.3,
+    "volumeL"           : 0.4,
     "tier"             : 0,
     "durability"       : 20,
     "maxDurability"    : 20,
@@ -1403,6 +1599,8 @@
     "description"      : "Knapped flint chips set along a curved branch. Cuts grass and plant fiber twice as fast.",
     "color"            : "#BBBBAA",
     "amount"           : 0,
+    "weightKg"          : 0.5,
+    "volumeL"           : 0.7,
     "tier"             : 0,
     "durability"       : 25,
     "maxDurability"    : 25,
@@ -1420,6 +1618,8 @@
     "description"      : "Large flaked stone. Rough chopping and scraping.",
     "color"            : "#888888",
     "amount"           : 0,
+    "weightKg"          : 0.8,
+    "volumeL"           : 0.9,
     "tier"             : 0,
     "durability"       : 15,
     "maxDurability"    : 15,
@@ -1437,6 +1637,8 @@
     "description"      : "Fire-hardened digging rod. Improves clay and root yield. Also used for basic fishing.",
     "color"            : "#8B6914",
     "amount"           : 0,
+    "weightKg"          : 0.6,
+    "volumeL"           : 0.8,
     "tier"             : 0,
     "toolTierRequired" : 0,
     "processingType"   : ["crafting", "fishing", "mining"]
@@ -1451,6 +1653,8 @@
     "description": "Hafted flint axe head. Required for felling trees. Brittle — good for only a handful of fells.",
     "color": "#777777",
     "amount": 0,
+    "weightKg"          : 1.2,
+    "volumeL"           : 1.4,
     "tier": 1,
     "durability": 40,
     "maxDurability": 40,
@@ -1468,6 +1672,8 @@
     "description"      : "Heavy stone maul. Used for construction work and stoneworking.",
     "color"            : "#888888",
     "amount"           : 0,
+    "weightKg"          : 1.5,
+    "volumeL"           : 1.5,
     "tier"             : 1,
     "durability"       : 40,
     "maxDurability"    : 40,
@@ -1484,6 +1690,8 @@
     "description"      : "Flint-tipped wooden shaft. First proper hunting weapon.",
     "color"            : "#999999",
     "amount"           : 0,
+    "weightKg"          : 1.5,
+    "volumeL"           : 2.5,
     "tier"             : 1,
     "durability"       : 30,
     "maxDurability"    : 30,
@@ -1501,6 +1709,8 @@
     "description"      : "Flat-bladed stone spade. Earth-moving and clay extraction.",
     "color"            : "#888888",
     "amount"           : 0,
+    "weightKg"          : 1.2,
+    "volumeL"           : 1.4,
     "tier"             : 1,
     "durability"       : 35,
     "maxDurability"    : 35,
@@ -1517,6 +1727,8 @@
     "description"      : "Rough clay vessel. Fire-tempered in the campfire. Enables stew and soup recipes.",
     "color"            : "#B5651D",
     "amount"           : 0,
+    "weightKg"          : 1.2,
+    "volumeL"           : 2,
     "tier"             : 0,
     "durability"       : 30,
     "maxDurability"    : 30,
@@ -1535,6 +1747,8 @@
     "description": "Cordage basket. 15-slot portable storage — the first storage tier. Keeps stored food a little longer (−10% spoilage).",
     "color": "#C8A064",
     "amount": 0,
+    "weightKg"          : 0.5,
+    "volumeL"           : 5,
     "isContainer": true,
     "storageCapacity": 15,
     "preservationBonus": 0.1,
@@ -1551,6 +1765,8 @@
     "description": "A planked chest nailed together with iron. The sturdiest storage tier — 40 slots, keeps goods dry and food longer (−30% spoilage). Needs planks and forged nails.",
     "color": "#8B5A2B",
     "amount": 0,
+    "weightKg"          : 3,
+    "volumeL"           : 20,
     "isContainer": true,
     "storageCapacity": 40,
     "preservationBonus": 0.3,
@@ -1567,6 +1783,8 @@
     "description"      : "A slain wolf. Skin and process it for hide and meat.",
     "color"            : "#B3B8C8",
     "amount"           : 0,
+    "weightKg"          : 20,
+    "volumeL"           : 28,
     "gatheringTypes"   : ["hunting"],
     "processingType"   : ["butchery"],
     "decaySeconds"     : 300,
@@ -1583,6 +1801,8 @@
     "description"      : "A massive cave bear. Butcher it for prime cuts, hide, and fat.",
     "color"            : "#8D6040",
     "amount"           : 0,
+    "weightKg"          : 60,
+    "volumeL"           : 80,
     "gatheringTypes"   : ["hunting"],
     "processingType"   : ["butchery"],
     "decaySeconds"     : 300,
@@ -1599,6 +1819,8 @@
     "description"      : "A fallen goblin. Mostly bone and leather scraps.",
     "color"            : "#66A64D",
     "amount"           : 0,
+    "weightKg"          : 30,
+    "volumeL"           : 40,
     "gatheringTypes"   : ["hunting"],
     "processingType"   : ["butchery"],
     "decaySeconds"     : 300,
@@ -1615,6 +1837,8 @@
     "description"      : "A large dead rat. Lean, gamey meat if you're not picky.",
     "color"            : "#8D7266",
     "amount"           : 0,
+    "weightKg"          : 5,
+    "volumeL"           : 8,
     "gatheringTypes"   : ["hunting"],
     "processingType"   : ["butchery"],
     "decaySeconds"     : 300,
@@ -1631,6 +1855,8 @@
     "description"      : "A slain wild boar. Process for meat, bone, and tusks.",
     "color"            : "#C8A080",
     "amount"           : 0,
+    "weightKg"          : 40,
+    "volumeL"           : 55,
     "gatheringTypes"   : ["hunting"],
     "processingType"   : ["butchery"],
     "decaySeconds"     : 300,
@@ -1647,6 +1873,8 @@
     "description"      : "A large elk. Yields generous cuts of venison, hide, and antler.",
     "color"            : "#B09878",
     "amount"           : 0,
+    "weightKg"          : 50,
+    "volumeL"           : 65,
     "gatheringTypes"   : ["hunting"],
     "processingType"   : ["butchery"],
     "decaySeconds"     : 300,
@@ -1663,6 +1891,8 @@
     "description"      : "A mountain goat. Modest meat yield; hide is tough and durable.",
     "color"            : "#D0D0D0",
     "amount"           : 0,
+    "weightKg"          : 20,
+    "volumeL"           : 28,
     "gatheringTypes"   : ["hunting"],
     "processingType"   : ["butchery"],
     "decaySeconds"     : 300,
@@ -1679,6 +1909,8 @@
     "description"      : "A plucked wild chicken. Small but worth the effort.",
     "color"            : "#E8C880",
     "amount"           : 0,
+    "weightKg"          : 1.5,
+    "volumeL"           : 2.5,
     "gatheringTypes"   : ["hunting"],
     "processingType"   : ["butchery"],
     "decaySeconds"     : 225,
@@ -1697,6 +1929,8 @@
     "description"      : "Tough, gamey predator meat. Edible if well-seasoned.",
     "color"            : "#B06040",
     "amount"           : 0,
+    "weightKg"          : 0.8,
+    "volumeL"           : 0.8,
     "nutrition"        : 45,
     "toolTierRequired" : 0,
     "processingType"   : ["cooking"],
@@ -1714,6 +1948,8 @@
     "description"      : "Rich, fatty bear meat. Dense and warming.",
     "color"            : "#A05030",
     "amount"           : 0,
+    "weightKg"          : 1.5,
+    "volumeL"           : 1.5,
     "nutrition"        : 84,
     "toolTierRequired" : 0,
     "processingType"   : ["cooking"],
@@ -1731,6 +1967,8 @@
     "description"      : "Robust, well-marbled wild pork. Excellent in stew.",
     "color"            : "#C87050",
     "amount"           : 0,
+    "weightKg"          : 1,
+    "volumeL"           : 1,
     "nutrition"        : 66,
     "toolTierRequired" : 0,
     "processingType"   : ["cooking"],
@@ -1748,6 +1986,8 @@
     "description"      : "Lean, premium venison from a large elk.",
     "color"            : "#C86040",
     "amount"           : 0,
+    "weightKg"          : 1.5,
+    "volumeL"           : 1.5,
     "nutrition"        : 84,
     "toolTierRequired" : 0,
     "processingType"   : ["cooking"],
@@ -1765,6 +2005,8 @@
     "description"      : "Lean mountain goat. Mild flavour, modest portion.",
     "color"            : "#C07858",
     "amount"           : 0,
+    "weightKg"          : 0.8,
+    "volumeL"           : 0.8,
     "nutrition"        : 48,
     "toolTierRequired" : 0,
     "processingType"   : ["cooking"],
@@ -1782,6 +2024,8 @@
     "description"      : "Delicate wild chicken. Small but flavourful.",
     "color"            : "#E8B870",
     "amount"           : 0,
+    "weightKg"          : 0.5,
+    "volumeL"           : 0.5,
     "nutrition"        : 27,
     "toolTierRequired" : 0,
     "processingType"   : ["cooking"],
@@ -1799,6 +2043,8 @@
     "description"      : "Gamey and unpleasant. Better than starving.",
     "color"            : "#907060",
     "amount"           : 0,
+    "weightKg"          : 0.3,
+    "volumeL"           : 0.3,
     "nutrition"        : 24,
     "toolTierRequired" : 0,
     "processingType"   : ["cooking"],
@@ -1819,6 +2065,8 @@
     "description"      : "Small, soft rabbit pelt. Light insulation and trim.",
     "color"            : "#E0D8C8",
     "amount"           : 0,
+    "weightKg"          : 0.3,
+    "volumeL"           : 0.8,
     "toolTierRequired" : 0,
     "processingType"   : ["leatherworking"]
   },
@@ -1835,6 +2083,8 @@
     "description"      : "Supple deer skin. A foundational leatherworking material.",
     "color"            : "#A07848",
     "amount"           : 0,
+    "weightKg"          : 1.5,
+    "volumeL"           : 3.5,
     "toolTierRequired" : 0,
     "processingType"   : ["leatherworking"]
   },
@@ -1851,6 +2101,8 @@
     "description"      : "Coarse wolf skin with a dense undercoat. Excellent for cold-weather gear.",
     "color"            : "#A0A8B0",
     "amount"           : 0,
+    "weightKg"          : 2,
+    "volumeL"           : 4,
     "toolTierRequired" : 0,
     "processingType"   : ["leatherworking"]
   },
@@ -1867,6 +2119,8 @@
     "description"      : "Thick, shaggy bear pelt. Premium winter cloak material.",
     "color"            : "#705030",
     "amount"           : 0,
+    "weightKg"          : 3,
+    "volumeL"           : 6,
     "toolTierRequired" : 0,
     "processingType"   : ["leatherworking"]
   },
@@ -1883,6 +2137,8 @@
     "description"      : "Thick, bristle-covered boar skin. Stiff but durable.",
     "color"            : "#908070",
     "amount"           : 0,
+    "weightKg"          : 2.5,
+    "volumeL"           : 5,
     "toolTierRequired" : 0,
     "processingType"   : ["leatherworking"]
   },
@@ -1899,6 +2155,8 @@
     "description"      : "Large, tough elk hide. Ideal for armour lining and tents.",
     "color"            : "#887060",
     "amount"           : 0,
+    "weightKg"          : 2.8,
+    "volumeL"           : 5.5,
     "toolTierRequired" : 0,
     "processingType"   : ["leatherworking"]
   },
@@ -1915,6 +2173,8 @@
     "description"      : "Tough mountain goat hide. Weather-resistant and hard-wearing.",
     "color"            : "#C0C0B0",
     "amount"           : 0,
+    "weightKg"          : 1.5,
+    "volumeL"           : 3,
     "toolTierRequired" : 0,
     "processingType"   : ["leatherworking"]
   },
@@ -1929,6 +2189,8 @@
     "description"      : "Soft wild-chicken feathers. Stuffing, fletching, and decoration.",
     "color"            : "#F0E0A0",
     "amount"           : 0,
+    "weightKg"          : 0.1,
+    "volumeL"           : 0.5,
     "toolTierRequired" : 0,
     "processingType"   : ["crafting"]
   },
@@ -1945,6 +2207,8 @@
     "description"      : "Small, coarse rat skin. Barely worth the scraping.",
     "color"            : "#807060",
     "amount"           : 0,
+    "weightKg"          : 0.2,
+    "volumeL"           : 0.5,
     "toolTierRequired" : 0,
     "processingType"   : ["leatherworking"]
   },
@@ -1960,6 +2224,8 @@
     "description"      : "Hollow, delicate bones from small animals. Useful for needles and fishhooks.",
     "color"            : "#E8E0D0",
     "amount"           : 0,
+    "weightKg"          : 0.2,
+    "volumeL"           : 0.3,
     "toolTierRequired" : 0,
     "processingType"   : ["crafting"]
   },
@@ -1974,6 +2240,8 @@
     "description"      : "Sturdy mid-sized bones. Blanched into tools, handles, and toggles.",
     "color"            : "#D8D0C0",
     "amount"           : 0,
+    "weightKg"          : 0.5,
+    "volumeL"           : 0.8,
     "toolTierRequired" : 0,
     "processingType"   : ["crafting"]
   },
@@ -1988,6 +2256,8 @@
     "description"      : "Massive load-bearing bones. Ground for fertiliser or carved into heavy tools.",
     "color"            : "#C8C0B0",
     "amount"           : 0,
+    "weightKg"          : 1,
+    "volumeL"           : 1.5,
     "toolTierRequired" : 0,
     "processingType"   : ["crafting"]
   },
@@ -2003,6 +2273,8 @@
     "description"      : "Spoiled plant matter, fish, or cooked food. Causes illness if eaten.",
     "color"            : "#4E342E",
     "amount"           : 0,
+    "weightKg"          : 0.1,
+    "volumeL"           : 0.2,
     "nutrition"        : -60,
     "effects"          : {"nausea": 1, "healthBonus": -0.5}
   },
@@ -2017,6 +2289,8 @@
     "description"      : "Putrefied raw meat. Dangerous to consume. Still useful as animal bait.",
     "color"            : "#3E2723",
     "amount"           : 0,
+    "weightKg"          : 0.5,
+    "volumeL"           : 0.5,
     "nutrition"        : -45,
     "effects"          : {"nausea": 1, "healthBonus": -0.3}
   },
@@ -2030,7 +2304,9 @@
     "deteriorationRate": 0.07,
     "description"      : "A fully decomposed animal body. Inedible. Can be worked into fertiliser.",
     "color"            : "#212121",
-    "amount"           : 0
+    "amount"           : 0,
+    "weightKg"          : 10,
+    "volumeL"           : 15
   },
   // ── Tier 1 butchery tool ─────────────────────────────────────────────────────
   {
@@ -2043,6 +2319,8 @@
     "description": "A heavy blade split from large animal bone and knapped to a sharp edge, lashed to a hardwood grip with cordage. Renders 25% more yield from any carcass than a flint knife.",
     "color": "#C8A87A",
     "amount": 0,
+    "weightKg"          : 0.6,
+    "volumeL"           : 0.8,
     "tier": 1,
     "durability": 45,
     "maxDurability": 45,
@@ -2069,6 +2347,8 @@
     "description"      : "Bare knuckles. Frequent, cheap, weak.",
     "color"            : "#C8A064",
     "amount"           : 0,
+    "weightKg"          : 0,
+    "volumeL"           : 0,
     "weaponProperties" : {
       "damage"     : 2,
       "attackSpeed": 1,
@@ -2091,6 +2371,8 @@
     "description"      : "A booted heel. Rarer than a jab, hits harder, staggers, tires faster.",
     "color"            : "#C8A064",
     "amount"           : 0,
+    "weightKg"          : 0,
+    "volumeL"           : 0,
     "weaponProperties" : {
       "damage"     : 3,
       "attackSpeed": 1,
@@ -2114,6 +2396,8 @@
     "description"      : "Teeth. Crit-prone piercing attack.",
     "color"            : "#D8D0C0",
     "amount"           : 0,
+    "weightKg"          : 0,
+    "volumeL"           : 0,
     "weaponProperties" : {
       "damage"     : 3,
       "attackSpeed": 1,
@@ -2136,6 +2420,8 @@
     "description"      : "Raking claws. Fast cutting swipes that open wounds.",
     "color"            : "#D8D0C0",
     "amount"           : 0,
+    "weightKg"          : 0,
+    "volumeL"           : 0,
     "weaponProperties" : {
       "damage"     : 3,
       "attackSpeed": 1,
@@ -2158,6 +2444,8 @@
     "description"      : "A heavy body blow. Big blunt hit, strong knockdown.",
     "color"            : "#A05030",
     "amount"           : 0,
+    "weightKg"          : 0,
+    "volumeL"           : 0,
     "weaponProperties" : {
       "damage"     : 5,
       "attackSpeed": 1,
@@ -2180,6 +2468,8 @@
     "description"      : "Goring tusks. Deep piercing wounds.",
     "color"            : "#C8A080",
     "amount"           : 0,
+    "weightKg"          : 0,
+    "volumeL"           : 0,
     "weaponProperties" : {
       "damage"     : 5,
       "attackSpeed": 1,
@@ -2202,6 +2492,8 @@
     "description"      : "A full-body charge. Heavy blunt impact, brutal knockdown.",
     "color"            : "#C8A080",
     "amount"           : 0,
+    "weightKg"          : 0,
+    "volumeL"           : 0,
     "weaponProperties" : {
       "damage"     : 4,
       "attackSpeed": 1,
@@ -2224,6 +2516,8 @@
     "description"      : "Sharp antler points. Piercing gore.",
     "color"            : "#B09878",
     "amount"           : 0,
+    "weightKg"          : 0,
+    "volumeL"           : 0,
     "weaponProperties" : {
       "damage"     : 4,
       "attackSpeed": 1,
@@ -2245,6 +2539,8 @@
     "description"      : "A skull-first ram. Blunt and staggering.",
     "color"            : "#D0D0C0",
     "amount"           : 0,
+    "weightKg"          : 0,
+    "volumeL"           : 0,
     "weaponProperties" : {
       "damage"     : 3,
       "attackSpeed": 1,
@@ -2267,6 +2563,8 @@
     "description"      : "A sharp beak jab. Tiny but quick.",
     "color"            : "#E8C880",
     "amount"           : 0,
+    "weightKg"          : 0,
+    "volumeL"           : 0,
     "weaponProperties" : {
       "damage"     : 1,
       "attackSpeed": 1,
@@ -2288,6 +2586,8 @@
     "description"      : "A chilling incorporeal blow that ignores flesh and rattles the bone.",
     "color"            : "#A0C0E0",
     "amount"           : 0,
+    "weightKg"          : 0,
+    "volumeL"           : 0,
     "weaponProperties" : {
       "damage"     : 5,
       "attackSpeed": 1,
@@ -2299,5 +2599,938 @@
       "staminaCost": 2,
       "critMod"    : 0.05
     }
+  },
+
+  // ── Phase B: carry containers ─────────────────────────────────────────────
+  {
+    "id"               : "hide_tool_roll",
+    "name"             : "Hide Tool-Roll",
+    "type"             : "tool",
+    "category"         : "storage",
+    "maxDurability"    : 120,
+    "deteriorationRate": 0.01,
+    "description"      : "A strip of rawhide with thong loops, rolled up and tied to the belt to keep a few tools to hand. Crude, but it does the job.",
+    "color"            : "#6B3A1F",
+    "amount"           : 0,
+    "weightKg"         : 0.3,
+    "volumeL"          : 0.5,
+    "inventoryBonus"   : { "weightKg": 5.0, "volumeL": 8.0 },
+    "armorProperties"  : {
+      "defense"        : 0,
+      "equipmentSlot"  : "belt"
+    }
+  },
+  {
+    "id"               : "hide_scrip",
+    "name"             : "Hide Scrip",
+    "type"             : "tool",
+    "category"         : "storage",
+    "maxDurability"    : 150,
+    "deteriorationRate": 0.01,
+    "description"      : "A plain hide pouch puckered shut with a cord and hung from the belt — the poor traveller's bag. Holds a day's gleanings, little more.",
+    "color"            : "#8B4513",
+    "amount"           : 0,
+    "weightKg"         : 0.5,
+    "volumeL"          : 0.8,
+    "inventoryBonus"   : { "weightKg": 8.0, "volumeL": 10.0 },
+    "armorProperties"  : {
+      "defense"        : 0,
+      "equipmentSlot"  : "belt"
+    }
+  },
+  {
+    "id"               : "linen_snapsack",
+    "name"             : "Linen Snapsack",
+    "type"             : "tool",
+    "category"         : "storage",
+    "maxDurability"    : 200,
+    "deteriorationRate": 0.008,
+    "description"      : "A tube of coarse linen, drawn shut at both ends and slung across the back. The first thing that lets you haul a real load on foot.",
+    "color"            : "#C8B89A",
+    "amount"           : 0,
+    "weightKg"         : 1.2,
+    "volumeL"          : 2.0,
+    "inventoryBonus"   : { "weightKg": 20.0, "volumeL": 25.0 },
+    "armorProperties"  : {
+      "defense"        : 0,
+      "equipmentSlot"  : "back"
+    }
+  },
+  {
+    "id"               : "wicker_frame",
+    "name"             : "Wicker Frame",
+    "type"             : "tool",
+    "category"         : "storage",
+    "maxDurability"    : 80,
+    "deteriorationRate": 0.02,
+    "description"      : "A lightweight wicker backframe. Poor weight limit but exceptional volume for bulky goods.",
+    "color"            : "#C8A050",
+    "amount"           : 0,
+    "weightKg"         : 0.8,
+    "volumeL"          : 1.5,
+    "inventoryBonus"   : { "weightKg": 12.0, "volumeL": 30.0 },
+    "armorProperties"  : {
+      "defense"        : 0,
+      "equipmentSlot"  : "back"
+    }
+  },
+
+  // ── Phase B: Tier 0 weapons ───────────────────────────────────────────────
+  {
+    "id"               : "flint_handaxe",
+    "name"             : "Flint Handaxe",
+    "type"             : "weapon",
+    "category"         : "primitive",
+    "deteriorationRate": 0.02,
+    "description"      : "A hafted flint head. First proper melee weapon — cuts and splits.",
+    "color"            : "#AAAAAA",
+    "amount"           : 0,
+    "weightKg"         : 1.0,
+    "volumeL"          : 1.2,
+    "tier"             : 0,
+    "maxDurability"    : 20,
+    "durabilityLossPerCombatHit": 45,
+    "weaponProperties" : {
+      "damage"         : 5,
+      "attackSpeed"    : 1.0,
+      "range"          : 0,
+      "damMin"         : 3,
+      "damMax"         : 7,
+      "reach"          : 1,
+      "damageType"     : "cutting",
+      "armorPenetration": 1.0,
+      "staminaCost"    : 2
+    }
+  },
+  {
+    "id"               : "wattle_buckler",
+    "name"             : "Wattle Buckler",
+    "type"             : "armor",
+    "category"         : "primitive",
+    "deteriorationRate": 0.02,
+    "description"      : "A small woven wattle shield. Deflects blows but shatters quickly.",
+    "color"            : "#8B6914",
+    "amount"           : 0,
+    "weightKg"         : 2.0,
+    "volumeL"          : 4.0,
+    "tier"             : 0,
+    "maxDurability"    : 15,
+    "durabilityLossPerCombatHit": 45,
+    "armorProperties"  : {
+      "defense"        : 2,
+      "armorType"      : "shield",
+      "slot"           : "offHand",
+      "equipmentSlot"  : "offHand",
+      "movementPenalty": 0.0
+    }
+  },
+
+  // ── Phase B: Tier 0.5 weapons ─────────────────────────────────────────────
+  {
+    "id"               : "bone_knife",
+    "name"             : "Bone Splinter Knife",
+    "type"             : "weapon",
+    "category"         : "primitive",
+    "deteriorationRate": 0.015,
+    "description"      : "A sharp bone splinter bound with cordage. Lethal at close quarters.",
+    "color"            : "#D4C9A8",
+    "amount"           : 0,
+    "weightKg"         : 0.2,
+    "volumeL"          : 0.3,
+    "tier"             : 0,
+    "maxDurability"    : 30,
+    "durabilityLossPerCombatHit": 30,
+    "weaponProperties" : {
+      "damage"         : 4,
+      "attackSpeed"    : 1.2,
+      "range"          : 0,
+      "damMin"         : 3,
+      "damMax"         : 6,
+      "reach"          : 1,
+      "damageType"     : "piercing",
+      "armorPenetration": 1.1,
+      "staminaCost"    : 1
+    }
+  },
+  {
+    "id"               : "antler_club",
+    "name"             : "Antler War Club",
+    "type"             : "weapon",
+    "category"         : "primitive",
+    "deteriorationRate": 0.01,
+    "description"      : "A heavy antler lashed to a cordage grip. Breaks bones without cutting.",
+    "color"            : "#C8A878",
+    "amount"           : 0,
+    "weightKg"         : 1.5,
+    "volumeL"          : 2.0,
+    "tier"             : 0,
+    "maxDurability"    : 45,
+    "durabilityLossPerCombatHit": 30,
+    "weaponProperties" : {
+      "damage"         : 6,
+      "attackSpeed"    : 0.9,
+      "range"          : 0,
+      "damMin"         : 4,
+      "damMax"         : 8,
+      "reach"          : 1,
+      "damageType"     : "blunt",
+      "bluntMod"       : 0.6,
+      "staminaCost"    : 3
+    }
+  },
+  {
+    "id"               : "bone_tipped_spear",
+    "name"             : "Bone-Tipped Thrusting Spear",
+    "type"             : "weapon",
+    "category"         : "hunting",
+    "deteriorationRate": 0.015,
+    "description"      : "A wooden shaft tipped with a sharpened bone. Better reach than a knife.",
+    "color"            : "#C8B89A",
+    "amount"           : 0,
+    "weightKg"         : 1.2,
+    "volumeL"          : 2.0,
+    "tier"             : 0,
+    "maxDurability"    : 35,
+    "durabilityLossPerCombatHit": 30,
+    "weaponProperties" : {
+      "damage"         : 7,
+      "attackSpeed"    : 0.9,
+      "range"          : 0,
+      "damMin"         : 5,
+      "damMax"         : 9,
+      "reach"          : 2,
+      "damageType"     : "piercing",
+      "armorPenetration": 0.9,
+      "staminaCost"    : 3
+    }
+  },
+
+  // ── Phase B: Tier 1 weapons ───────────────────────────────────────────────
+  {
+    "id"               : "bronze_punch_dagger",
+    "name"             : "Bronze Punch Dagger",
+    "type"             : "weapon",
+    "category"         : "combat",
+    "deteriorationRate": 0.01,
+    "description"      : "A cast bronze push-dagger with bone grip scales. Quick and deadly at close range.",
+    "color"            : "#CD7F32",
+    "amount"           : 0,
+    "weightKg"         : 0.5,
+    "volumeL"          : 0.6,
+    "tier"             : 1,
+    "maxDurability"    : 60,
+    "durabilityLossPerCombatHit": 12,
+    "researchRequired" : "bronze_working",
+    "weaponProperties" : {
+      "damage"         : 7,
+      "attackSpeed"    : 1.2,
+      "range"          : 0,
+      "damMin"         : 5,
+      "damMax"         : 9,
+      "reach"          : 1,
+      "damageType"     : "piercing",
+      "armorPenetration": 1.2,
+      "critMod"        : 0.04,
+      "staminaCost"    : 1,
+      "twoHanded"      : false
+    }
+  },
+  {
+    "id"               : "leaf_blade_spear",
+    "name"             : "Leaf-Blade Spear",
+    "type"             : "weapon",
+    "category"         : "combat",
+    "deteriorationRate": 0.01,
+    "description"      : "A cast bronze leaf-shaped blade on a hafted shaft. Two-handed reach weapon.",
+    "color"            : "#CD7F32",
+    "amount"           : 0,
+    "weightKg"         : 2.0,
+    "volumeL"          : 3.0,
+    "tier"             : 1,
+    "maxDurability"    : 70,
+    "durabilityLossPerCombatHit": 12,
+    "researchRequired" : "bronze_working",
+    "weaponProperties" : {
+      "damage"         : 10,
+      "attackSpeed"    : 1.0,
+      "range"          : 0,
+      "damMin"         : 7,
+      "damMax"         : 13,
+      "reach"          : 2,
+      "damageType"     : "piercing",
+      "armorPenetration": 0.9,
+      "critMod"        : 0.02,
+      "staminaCost"    : 3,
+      "twoHanded"      : true
+    }
+  },
+  {
+    "id"               : "cast_bronze_hatchet",
+    "name"             : "Cast Bronze Hatchet",
+    "type"             : "weapon",
+    "category"         : "combat",
+    "deteriorationRate": 0.01,
+    "description"      : "A cast bronze axe head on a wooden haft. Splits mail and bone alike.",
+    "color"            : "#CD7F32",
+    "amount"           : 0,
+    "weightKg"         : 1.8,
+    "volumeL"          : 2.0,
+    "tier"             : 1,
+    "maxDurability"    : 65,
+    "durabilityLossPerCombatHit": 12,
+    "researchRequired" : "bronze_working",
+    "weaponProperties" : {
+      "damage"         : 11,
+      "attackSpeed"    : 0.9,
+      "range"          : 0,
+      "damMin"         : 8,
+      "damMax"         : 14,
+      "reach"          : 1,
+      "damageType"     : "cutting",
+      "armorPenetration": 1.0,
+      "staminaCost"    : 3,
+      "twoHanded"      : false
+    }
+  },
+  {
+    "id"               : "self_bow",
+    "name"             : "Self Bow",
+    "type"             : "weapon",
+    "category"         : "combat",
+    "deteriorationRate": 0.01,
+    "description"      : "A simple stave bow cut from a single piece of wood. Range advantage over melee.",
+    "color"            : "#8B6914",
+    "amount"           : 0,
+    "weightKg"         : 0.8,
+    "volumeL"          : 2.0,
+    "tier"             : 1,
+    "maxDurability"    : 80,
+    "durabilityLossPerCombatHit": 12,
+    "weaponProperties" : {
+      "damage"         : 7,
+      "attackSpeed"    : 1.0,
+      "range"          : 6,
+      "damMin"         : 5,
+      "damMax"         : 10,
+      "reach"          : 0,
+      "damageType"     : "piercing",
+      "armorPenetration": 1.0,
+      "critMod"        : 0.03,
+      "staminaCost"    : 2,
+      "twoHanded"      : true
+    }
+  },
+  {
+    "id"               : "rawhide_round_shield",
+    "name"             : "Rawhide-Faced Round Shield",
+    "type"             : "armor",
+    "category"         : "combat",
+    "deteriorationRate": 0.01,
+    "description"      : "An oak plank shield faced with stretched rawhide. Solid Tier 1 defence.",
+    "color"            : "#8B6914",
+    "amount"           : 0,
+    "weightKg"         : 4.5,
+    "volumeL"          : 12.0,
+    "tier"             : 1,
+    "maxDurability"    : 60,
+    "durabilityLossPerCombatHit": 12,
+    "armorProperties"  : {
+      "defense"        : 8,
+      "armorType"      : "shield",
+      "slot"           : "offHand",
+      "equipmentSlot"  : "offHand",
+      "movementPenalty": 0.0
+    }
+  },
+
+  // ── Phase B: Tier 2 weapons ───────────────────────────────────────────────
+  {
+    "id"               : "short_seax",
+    "name"             : "Short Seax",
+    "type"             : "weapon",
+    "category"         : "combat",
+    "deteriorationRate": 0.008,
+    "description"      : "A single-edged iron blade. The sidearm of every free warrior.",
+    "color"            : "#888888",
+    "amount"           : 0,
+    "weightKg"         : 0.8,
+    "volumeL"          : 1.0,
+    "tier"             : 2,
+    "maxDurability"    : 100,
+    "durabilityLossPerCombatHit": 5,
+    "researchRequired" : "iron_working",
+    "weaponProperties" : {
+      "damage"         : 11,
+      "attackSpeed"    : 1.1,
+      "range"          : 0,
+      "damMin"         : 9,
+      "damMax"         : 14,
+      "reach"          : 1,
+      "damageType"     : "cutting",
+      "armorPenetration": 0.10,
+      "staminaCost"    : 2,
+      "twoHanded"      : false
+    }
+  },
+  {
+    "id"               : "spatha",
+    "name"             : "Spatha",
+    "type"             : "weapon",
+    "category"         : "combat",
+    "deteriorationRate": 0.008,
+    "description"      : "A long cavalry sword, balanced for cutting and thrusting alike.",
+    "color"            : "#888888",
+    "amount"           : 0,
+    "weightKg"         : 1.2,
+    "volumeL"          : 2.0,
+    "tier"             : 2,
+    "maxDurability"    : 120,
+    "durabilityLossPerCombatHit": 5,
+    "researchRequired" : "iron_working",
+    "weaponProperties" : {
+      "damage"         : 16,
+      "attackSpeed"    : 1.0,
+      "range"          : 0,
+      "damMin"         : 13,
+      "damMax"         : 20,
+      "reach"          : 1,
+      "damageType"     : "cutting",
+      "armorPenetration": 0.15,
+      "staminaCost"    : 3,
+      "twoHanded"      : false
+    }
+  },
+  {
+    "id"               : "bearded_axe",
+    "name"             : "Bearded Axe",
+    "type"             : "weapon",
+    "category"         : "combat",
+    "deteriorationRate": 0.008,
+    "description"      : "A wide-bellied iron axe. Hooks shields and splits helmets.",
+    "color"            : "#777777",
+    "amount"           : 0,
+    "weightKg"         : 2.0,
+    "volumeL"          : 2.5,
+    "tier"             : 2,
+    "maxDurability"    : 110,
+    "durabilityLossPerCombatHit": 5,
+    "researchRequired" : "iron_working",
+    "weaponProperties" : {
+      "damage"         : 17,
+      "attackSpeed"    : 0.9,
+      "range"          : 0,
+      "damMin"         : 14,
+      "damMax"         : 21,
+      "reach"          : 1,
+      "damageType"     : "cutting",
+      "armorPenetration": 0.20,
+      "staminaCost"    : 4,
+      "twoHanded"      : false
+    }
+  },
+  {
+    "id"               : "framea",
+    "name"             : "Framea",
+    "type"             : "weapon",
+    "category"         : "combat",
+    "deteriorationRate": 0.008,
+    "description"      : "A thrusting spear with a narrow iron head. Reach advantage and strong armour penetration.",
+    "color"            : "#888888",
+    "amount"           : 0,
+    "weightKg"         : 2.5,
+    "volumeL"          : 3.5,
+    "tier"             : 2,
+    "maxDurability"    : 100,
+    "durabilityLossPerCombatHit": 5,
+    "researchRequired" : "iron_working",
+    "weaponProperties" : {
+      "damage"         : 14,
+      "attackSpeed"    : 0.9,
+      "range"          : 0,
+      "damMin"         : 11,
+      "damMax"         : 17,
+      "reach"          : 2,
+      "damageType"     : "piercing",
+      "armorPenetration": 0.25,
+      "staminaCost"    : 3,
+      "twoHanded"      : true
+    }
+  },
+  {
+    "id"               : "war_bow",
+    "name"             : "War Bow",
+    "type"             : "weapon",
+    "category"         : "combat",
+    "deteriorationRate": 0.008,
+    "description"      : "A heavy war bow with a long draw weight. Punches through leather and light mail.",
+    "color"            : "#6B4226",
+    "amount"           : 0,
+    "weightKg"         : 1.0,
+    "volumeL"          : 2.5,
+    "tier"             : 2,
+    "maxDurability"    : 100,
+    "durabilityLossPerCombatHit": 5,
+    "researchRequired" : "iron_working",
+    "weaponProperties" : {
+      "damage"         : 13,
+      "attackSpeed"    : 0.9,
+      "range"          : 10,
+      "damMin"         : 10,
+      "damMax"         : 17,
+      "reach"          : 0,
+      "damageType"     : "piercing",
+      "armorPenetration": 0.15,
+      "staminaCost"    : 3,
+      "twoHanded"      : true
+    }
+  },
+  {
+    "id"               : "iron_boss_shield",
+    "name"             : "Iron-Bossed Kite Shield",
+    "type"             : "armor",
+    "category"         : "combat",
+    "deteriorationRate": 0.008,
+    "description"      : "An oak kite shield with an iron boss and leather facing. Excellent defence.",
+    "color"            : "#555555",
+    "amount"           : 0,
+    "weightKg"         : 5.5,
+    "volumeL"          : 14.0,
+    "tier"             : 2,
+    "maxDurability"    : 150,
+    "durabilityLossPerCombatHit": 5,
+    "researchRequired" : "iron_working",
+    "armorProperties"  : {
+      "defense"        : 16,
+      "armorType"      : "shield",
+      "slot"           : "offHand",
+      "equipmentSlot"  : "offHand",
+      "movementPenalty": 0.0
+    }
+  },
+
+  // ── Phase B: Tier 0 armour ────────────────────────────────────────────────
+  {
+    "id"               : "raw_hide_vest",
+    "name"             : "Raw Hide Vest",
+    "type"             : "armor",
+    "category"         : "primitive",
+    "deteriorationRate": 0.02,
+    "description"      : "A rough vest of untreated hide. Basic protection against claws and blades.",
+    "color"            : "#C8A050",
+    "amount"           : 0,
+    "weightKg"         : 3.0,
+    "volumeL"          : 5.0,
+    "tier"             : 0,
+    "maxDurability"    : 40,
+    "durabilityLossPerCombatHit": 45,
+    "armorProperties"  : {
+      "defense"        : 4,
+      "armorType"      : "light",
+      "slot"           : "bodyBase",
+      "equipmentSlot"  : "bodyBase",
+      "armorLayer"     : "gambeson",
+      "armorValue"     : 4,
+      "fatiguePerTurn" : 0.10,
+      "movementPenalty": 0.0
+    }
+  },
+  {
+    "id"               : "padded_cap",
+    "name"             : "Padded Linen Cap",
+    "type"             : "armor",
+    "category"         : "primitive",
+    "deteriorationRate": 0.02,
+    "description"      : "A padded cloth cap stuffed with fiber. Minimal head protection.",
+    "color"            : "#C8C0A0",
+    "amount"           : 0,
+    "weightKg"         : 0.4,
+    "volumeL"          : 1.0,
+    "tier"             : 0,
+    "maxDurability"    : 30,
+    "durabilityLossPerCombatHit": 45,
+    "armorProperties"  : {
+      "defense"        : 2,
+      "armorType"      : "light",
+      "slot"           : "headBase",
+      "equipmentSlot"  : "headBase",
+      "armorLayer"     : "gambeson",
+      "armorValue"     : 2,
+      "fatiguePerTurn" : 0.05,
+      "movementPenalty": 0.0
+    }
+  },
+
+  // ── Phase B: Tier 1 armour ────────────────────────────────────────────────
+  {
+    "id"               : "linen_gambeson",
+    "name"             : "Linen Gambeson",
+    "type"             : "armor",
+    "category"         : "cloth",
+    "deteriorationRate": 0.01,
+    "description"      : "A quilted linen coat. The foundation layer for any serious warrior.",
+    "color"            : "#E8E0C8",
+    "amount"           : 0,
+    "weightKg"         : 4.0,
+    "volumeL"          : 8.0,
+    "tier"             : 1,
+    "maxDurability"    : 80,
+    "durabilityLossPerCombatHit": 12,
+    "researchRequired" : null,
+    "armorProperties"  : {
+      "defense"        : 8,
+      "armorType"      : "light",
+      "slot"           : "bodyBase",
+      "equipmentSlot"  : "bodyBase",
+      "armorLayer"     : "gambeson",
+      "armorValue"     : 8,
+      "fatiguePerTurn" : 0.20,
+      "movementPenalty": 0.0
+    }
+  },
+  {
+    "id"               : "boiled_leather_jerkin",
+    "name"             : "Boiled Leather Jerkin",
+    "type"             : "armor",
+    "category"         : "leather",
+    "deteriorationRate": 0.01,
+    "description"      : "A hardened leather jerkin. Mid-layer protection worn over a gambeson.",
+    "color"            : "#8B4513",
+    "amount"           : 0,
+    "weightKg"         : 3.5,
+    "volumeL"          : 4.0,
+    "tier"             : 1,
+    "maxDurability"    : 70,
+    "durabilityLossPerCombatHit": 12,
+    "armorProperties"  : {
+      "defense"        : 10,
+      "armorType"      : "medium",
+      "slot"           : "bodyMid",
+      "equipmentSlot"  : "bodyMid",
+      "armorLayer"     : "mail",
+      "armorValue"     : 10,
+      "fatiguePerTurn" : 0.25,
+      "movementPenalty": 0.0
+    }
+  },
+  {
+    "id"               : "leather_coif",
+    "name"             : "Leather Coif",
+    "type"             : "armor",
+    "category"         : "leather",
+    "deteriorationRate": 0.01,
+    "description"      : "A close-fitting leather hood protecting the head and neck.",
+    "color"            : "#7B4020",
+    "amount"           : 0,
+    "weightKg"         : 0.8,
+    "volumeL"          : 1.5,
+    "tier"             : 1,
+    "maxDurability"    : 60,
+    "durabilityLossPerCombatHit": 12,
+    "armorProperties"  : {
+      "defense"        : 4,
+      "armorType"      : "light",
+      "slot"           : "headBase",
+      "equipmentSlot"  : "headBase",
+      "armorLayer"     : "gambeson",
+      "armorValue"     : 4,
+      "fatiguePerTurn" : 0.10,
+      "movementPenalty": 0.0
+    }
+  },
+  {
+    "id"               : "cast_bronze_skullcap",
+    "name"             : "Cast Bronze Skullcap",
+    "type"             : "armor",
+    "category"         : "metal",
+    "deteriorationRate": 0.01,
+    "description"      : "A simple cast bronze dome worn over a coif. Tier 1 head protection.",
+    "color"            : "#CD7F32",
+    "amount"           : 0,
+    "weightKg"         : 1.8,
+    "volumeL"          : 2.5,
+    "tier"             : 1,
+    "maxDurability"    : 90,
+    "durabilityLossPerCombatHit": 12,
+    "researchRequired" : "bronze_working",
+    "armorProperties"  : {
+      "defense"        : 12,
+      "armorType"      : "heavy",
+      "slot"           : "headOuter",
+      "equipmentSlot"  : "headOuter",
+      "armorLayer"     : "plate",
+      "armorValue"     : 12,
+      "fatiguePerTurn" : 0.20,
+      "movementPenalty": 0.0
+    }
+  },
+  {
+    "id"               : "stitched_gauntlets",
+    "name"             : "Stitched Leather Gauntlets",
+    "type"             : "armor",
+    "category"         : "leather",
+    "deteriorationRate": 0.01,
+    "description"      : "Padded leather gloves stitched for combat. Protects hands and wrists.",
+    "color"            : "#8B4513",
+    "amount"           : 0,
+    "weightKg"         : 0.5,
+    "volumeL"          : 0.8,
+    "tier"             : 1,
+    "maxDurability"    : 50,
+    "durabilityLossPerCombatHit": 12,
+    "armorProperties"  : {
+      "defense"        : 3,
+      "armorType"      : "light",
+      "slot"           : "gloves",
+      "equipmentSlot"  : "gloves",
+      "armorValue"     : 3,
+      "fatiguePerTurn" : 0.05,
+      "movementPenalty": 0.0
+    }
+  },
+  {
+    "id"               : "tallow_boots",
+    "name"             : "Tallow-Dressed Hide Boots",
+    "type"             : "armor",
+    "category"         : "leather",
+    "deteriorationRate": 0.01,
+    "description"      : "Greased hide boots. Waterproof and protective enough for rough terrain.",
+    "color"            : "#7B4020",
+    "amount"           : 0,
+    "weightKg"         : 1.0,
+    "volumeL"          : 2.0,
+    "tier"             : 1,
+    "maxDurability"    : 50,
+    "durabilityLossPerCombatHit": 12,
+    "armorProperties"  : {
+      "defense"        : 2,
+      "armorType"      : "light",
+      "slot"           : "boots",
+      "equipmentSlot"  : "boots",
+      "armorValue"     : 2,
+      "fatiguePerTurn" : 0.05,
+      "movementPenalty": 0.0
+    }
+  },
+
+  // ── Phase B: Tier 2 armour ────────────────────────────────────────────────
+  {
+    "id"               : "mail_coif",
+    "name"             : "Riveted Mail Coif",
+    "type"             : "armor",
+    "category"         : "metal",
+    "deteriorationRate": 0.008,
+    "description"      : "A hood of riveted iron rings. Worn over a padded arming cap.",
+    "color"            : "#888888",
+    "amount"           : 0,
+    "weightKg"         : 2.5,
+    "volumeL"          : 3.0,
+    "tier"             : 2,
+    "maxDurability"    : 150,
+    "durabilityLossPerCombatHit": 5,
+    "researchRequired" : "iron_working",
+    "armorProperties"  : {
+      "defense"        : 10,
+      "armorType"      : "medium",
+      "slot"           : "headBase",
+      "equipmentSlot"  : "headBase",
+      "armorLayer"     : "mail",
+      "armorValue"     : 10,
+      "fatiguePerTurn" : 0.25,
+      "movementPenalty": 0.0
+    }
+  },
+  {
+    "id"               : "iron_nasal_helm",
+    "name"             : "Iron Nasal Helm",
+    "type"             : "armor",
+    "category"         : "metal",
+    "deteriorationRate": 0.008,
+    "description"      : "A formed iron helm with a nasal guard. Standard Tier 2 head armour.",
+    "color"            : "#777777",
+    "amount"           : 0,
+    "weightKg"         : 2.5,
+    "volumeL"          : 4.0,
+    "tier"             : 2,
+    "maxDurability"    : 170,
+    "durabilityLossPerCombatHit": 5,
+    "researchRequired" : "iron_working",
+    "armorProperties"  : {
+      "defense"        : 16,
+      "armorType"      : "heavy",
+      "slot"           : "headOuter",
+      "equipmentSlot"  : "headOuter",
+      "armorLayer"     : "plate",
+      "armorValue"     : 16,
+      "fatiguePerTurn" : 0.30,
+      "movementPenalty": 0.0
+    }
+  },
+  {
+    "id"               : "mail_hauberk",
+    "name"             : "Riveted Mail Hauberk",
+    "type"             : "armor",
+    "category"         : "metal",
+    "deteriorationRate": 0.008,
+    "description"      : "A knee-length coat of riveted iron rings. The pinnacle of Tier 2 body armour.",
+    "color"            : "#888888",
+    "amount"           : 0,
+    "weightKg"         : 10.0,
+    "volumeL"          : 6.0,
+    "tier"             : 2,
+    "maxDurability"    : 250,
+    "durabilityLossPerCombatHit": 5,
+    "researchRequired" : "iron_working",
+    "armorProperties"  : {
+      "defense"        : 22,
+      "armorType"      : "heavy",
+      "slot"           : "bodyMid",
+      "equipmentSlot"  : "bodyMid",
+      "armorLayer"     : "mail",
+      "armorValue"     : 22,
+      "fatiguePerTurn" : 0.60,
+      "movementPenalty": 0.05
+    }
+  },
+  {
+    "id"               : "brigandine_coat",
+    "name"             : "Brigandine Coat",
+    "type"             : "armor",
+    "category"         : "metal",
+    "deteriorationRate": 0.008,
+    "description"      : "Small iron plates riveted inside a leather coat. Outer-layer protection.",
+    "color"            : "#665544",
+    "amount"           : 0,
+    "weightKg"         : 8.0,
+    "volumeL"          : 7.0,
+    "tier"             : 2,
+    "maxDurability"    : 200,
+    "durabilityLossPerCombatHit": 5,
+    "researchRequired" : "iron_working",
+    "armorProperties"  : {
+      "defense"        : 20,
+      "armorType"      : "heavy",
+      "slot"           : "bodyOuter",
+      "equipmentSlot"  : "bodyOuter",
+      "armorLayer"     : "plate",
+      "armorValue"     : 20,
+      "fatiguePerTurn" : 0.50,
+      "movementPenalty": 0.05
+    }
+  },
+  {
+    "id"               : "iron_gauntlets",
+    "name"             : "Riveted Iron Gauntlets",
+    "type"             : "armor",
+    "category"         : "metal",
+    "deteriorationRate": 0.008,
+    "description"      : "Iron-plated gauntlets with a leather palm lining. Strong hand protection.",
+    "color"            : "#777777",
+    "amount"           : 0,
+    "weightKg"         : 1.5,
+    "volumeL"          : 2.0,
+    "tier"             : 2,
+    "maxDurability"    : 150,
+    "durabilityLossPerCombatHit": 5,
+    "researchRequired" : "iron_working",
+    "armorProperties"  : {
+      "defense"        : 8,
+      "armorType"      : "heavy",
+      "slot"           : "gloves",
+      "equipmentSlot"  : "gloves",
+      "armorValue"     : 8,
+      "fatiguePerTurn" : 0.20,
+      "movementPenalty": 0.0
+    }
+  },
+  {
+    "id"               : "iron_shod_boots",
+    "name"             : "Iron-Shod Boots",
+    "type"             : "armor",
+    "category"         : "metal",
+    "deteriorationRate": 0.008,
+    "description"      : "Heavy leather boots reinforced with iron plates. Brutal and protective.",
+    "color"            : "#666666",
+    "amount"           : 0,
+    "weightKg"         : 2.5,
+    "volumeL"          : 3.5,
+    "tier"             : 2,
+    "maxDurability"    : 140,
+    "durabilityLossPerCombatHit": 5,
+    "researchRequired" : "iron_working",
+    "armorProperties"  : {
+      "defense"        : 6,
+      "armorType"      : "heavy",
+      "slot"           : "boots",
+      "equipmentSlot"  : "boots",
+      "armorValue"     : 6,
+      "fatiguePerTurn" : 0.15,
+      "movementPenalty": 0.05
+    }
+  },
+  {
+    "id"               : "iron_gorget",
+    "name"             : "Riveted Iron Gorget",
+    "type"             : "armor",
+    "category"         : "metal",
+    "deteriorationRate": 0.008,
+    "description"      : "An iron neck guard riveted with a leather lining. Protects the throat.",
+    "color"            : "#777777",
+    "amount"           : 0,
+    "weightKg"         : 0.8,
+    "volumeL"          : 1.0,
+    "tier"             : 2,
+    "maxDurability"    : 130,
+    "durabilityLossPerCombatHit": 5,
+    "researchRequired" : "iron_working",
+    "armorProperties"  : {
+      "defense"        : 8,
+      "armorType"      : "heavy",
+      "slot"           : "gorget",
+      "equipmentSlot"  : "gorget",
+      "armorValue"     : 8,
+      "fatiguePerTurn" : 0.10,
+      "movementPenalty": 0.0
+    }
+  },
+
+  // ── Phase B: raw materials ────────────────────────────────────────────────
+  {
+    "id"               : "sinew",
+    "name"             : "Sinew",
+    "type"             : "material",
+    "category"         : "fiber",
+    "maxDurability"    : 1,
+    "deteriorationRate": 0,
+    "description"      : "Tough dried animal tendon. Used for binding, bowstrings, and stitching.",
+    "color"            : "#D4B896",
+    "amount"           : 0,
+    "weightKg"         : 0.05,
+    "volumeL"          : 0.05
+  },
+  {
+    "id"               : "flax_fiber",
+    "name"             : "Flax Fiber",
+    "type"             : "material",
+    "category"         : "fiber",
+    "maxDurability"    : 1,
+    "deteriorationRate": 0,
+    "description"      : "Processed flax stalks ready for spinning into linen thread.",
+    "color"            : "#B8C8A0",
+    "amount"           : 0,
+    "weightKg"         : 0.1,
+    "volumeL"          : 0.3
+  },
+  {
+    "id"               : "linen_cloth",
+    "name"             : "Linen Cloth",
+    "type"             : "material",
+    "category"         : "cloth",
+    "maxDurability"    : 1,
+    "deteriorationRate": 0,
+    "description"      : "Woven linen fabric. A basic textile for clothing and bandaging.",
+    "color"            : "#E8E0C8",
+    "amount"           : 0,
+    "weightKg"         : 0.2,
+    "volumeL"          : 0.4
   }
 ]

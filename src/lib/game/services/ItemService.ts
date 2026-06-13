@@ -1,4 +1,4 @@
-import type { Item, GameState, DynamicIngredientSlot, DroppedItem, Recipe } from '../core/types';
+import type { Item, GameState, DynamicIngredientSlot, DroppedItem, Recipe, Pawn } from '../core/types';
 import { consumeFromStockpiles, addToStockpileZone, aggregateFromDrops } from '../core/GameState';
 import { recipeService } from './RecipeService';
 import itemsData from '../database/items.jsonc';
@@ -77,6 +77,11 @@ export interface ItemService {
   consumeItems(itemIds: Record<string, number>, gameState: GameState): GameState;
   addItems(itemIds: Record<string, number>, gameState: GameState): GameState;
   processButchery(carcassItem: Item, gameState: GameState): GameState;
+
+  // Carry capacity
+  getCarryBudget(pawn: Pawn, state: GameState): { maxWeightKg: number; maxVolumeL: number };
+  canAddToInventory(pawn: Pawn, itemId: string, qty: number, state: GameState): boolean;
+  getCurrentCarryLoad(pawn: Pawn, state: GameState): { weightKg: number; volumeL: number };
 
   // Decay
   stepItemDecay(gameState: GameState): GameState;
@@ -370,6 +375,74 @@ export class ItemServiceImpl implements ItemService {
     if (carcassQty > 0) state = this.consumeItems({ [carcassItem.id]: carcassQty }, state);
     state = this.addItems(outputs, state);
     return { ...state, carcassIntactness: newIntactnessMap };
+  }
+
+  // ── Carry capacity ───────────────────────────────────────────────────────────────────────
+
+  /**
+   * Base carry weight/volume budget for this pawn.
+   * Formula mirrors stats.jsonc carry_weight / carry_volume entries:
+   *   maxWeightKg = 5 + (STR - 10) × 1.5 + bodySizeScore × 3.0
+   *   maxVolumeL  = 8 + bodySizeScore × 4.0
+   * Body-size score: tiny=-2, small=-1, medium=0, large=1, huge=2.
+   * Both values are then increased by inventoryBonus from belt/back slots.
+   */
+  getCarryBudget(pawn: Pawn, _state: GameState): { maxWeightKg: number; maxVolumeL: number } {
+    const sizeScore: Record<string, number> = {
+      tiny: -2, small: -1, medium: 0, large: 1, huge: 2
+    };
+    const bs = sizeScore[pawn.physicalTraits?.size ?? 'medium'] ?? 0;
+    const str = pawn.stats.strength ?? 10;
+
+    let maxWeightKg = 5 + (str - 10) * 1.5 + bs * 3.0;
+    let maxVolumeL = 8 + bs * 4.0;
+
+    // Add bonuses from belt and back slots
+    for (const slot of ['belt', 'back'] as const) {
+      const inst = pawn.equipment[slot];
+      if (!inst) continue;
+      const def = this.getItemById(inst.itemId);
+      if (def?.inventoryBonus) {
+        maxWeightKg += def.inventoryBonus.weightKg;
+        maxVolumeL += def.inventoryBonus.volumeL;
+      }
+    }
+
+    return { maxWeightKg: Math.max(1, maxWeightKg), maxVolumeL: Math.max(1, maxVolumeL) };
+  }
+
+  /** Current total weight and volume carried by this pawn (bulk items + instances). */
+  getCurrentCarryLoad(pawn: Pawn, _state: GameState): { weightKg: number; volumeL: number } {
+    let weightKg = 0;
+    let volumeL = 0;
+
+    // Bulk items
+    for (const [itemId, qty] of Object.entries(pawn.inventory.items)) {
+      if (qty <= 0) continue;
+      const def = this.getItemById(itemId);
+      weightKg += (def?.weightKg ?? 0.1) * qty;
+      volumeL += (def?.volumeL ?? 0.2) * qty;
+    }
+
+    // Tracked instances in inventory
+    for (const inst of pawn.inventory.instances ?? []) {
+      const def = this.getItemById(inst.itemId);
+      weightKg += def?.weightKg ?? 0.5;
+      volumeL += def?.volumeL ?? 0.5;
+    }
+
+    return { weightKg, volumeL };
+  }
+
+  /** Returns true if adding `qty` of `itemId` would not exceed weight or volume budget. */
+  canAddToInventory(pawn: Pawn, itemId: string, qty: number, state: GameState): boolean {
+    const budget = this.getCarryBudget(pawn, state);
+    const current = this.getCurrentCarryLoad(pawn, state);
+    const def = this.getItemById(itemId);
+    const addW = (def?.weightKg ?? 0.1) * qty;
+    const addV = (def?.volumeL ?? 0.2) * qty;
+    return (current.weightKg + addW <= budget.maxWeightKg) &&
+           (current.volumeL + addV <= budget.maxVolumeL);
   }
 
   /**

@@ -645,15 +645,14 @@ class JobServiceImpl {
     if (pawnId) {
       const newPawns = gs.pawns.map((p) => {
         if (p.id !== pawnId) return p;
-        const inv = p.inventory ?? { items: {}, maxSlots: 20, currentSlots: 0 };
+        const inv = p.inventory ?? { items: {}, instances: [], weightKg: 0, maxWeightKg: 20, volumeL: 0, maxVolumeL: 20 };
         const newItems = { ...inv.items };
         newItems[drop.resourceId] = (newItems[drop.resourceId] ?? 0) + drop.quantity;
-        const currentSlots = Object.values(newItems).reduce((s, v) => s + v, 0);
         console.log(
           `[HAUL-COMPLETE] ${p.name} picked up ${drop.resourceId}×${drop.quantity} — inventory now:`,
           JSON.stringify(newItems)
         );
-        return { ...p, inventory: { ...inv, items: newItems, currentSlots } };
+        return { ...p, inventory: { ...inv, items: newItems } };
       });
       return { ...gs, droppedItems: newDropped, pawns: newPawns };
     }

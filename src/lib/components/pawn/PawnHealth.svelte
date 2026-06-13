@@ -207,7 +207,6 @@
 
 <style>
   .health-section {
-    border-bottom: 1px solid var(--border);
     font-family: 'Courier New', monospace;
     font-size: 11px;
   }

@@ -6,8 +6,8 @@
   export let pawn: Pawn;
 
   $: carried = Object.entries(pawn.inventory?.items ?? {}).filter(([, qty]) => qty > 0);
-  $: maxSlots = pawn.inventory?.maxSlots ?? 20;
-  $: usedSlots = pawn.inventory?.currentSlots ?? 0;
+  $: maxWeightKg = pawn.inventory?.maxWeightKg ?? 20;
+  $: weightKg = pawn.inventory?.weightKg ?? 0;
   $: isEmpty = carried.length === 0;
 
   function itemName(id: string): string {
@@ -18,7 +18,7 @@
 <div class="inv-section">
   <div class="section-hdr">
     | CARRYING
-    <span class="capacity">[{usedSlots}/{maxSlots}]</span>
+    <span class="capacity">[{weightKg.toFixed(1)}/{maxWeightKg.toFixed(1)} kg]</span>
   </div>
 
   {#if isEmpty}

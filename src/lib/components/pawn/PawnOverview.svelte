@@ -10,7 +10,6 @@
   } from '$lib/utils/pawnUtils';
   import { pawnService } from '$lib/game/services/PawnService';
   import PawnStance from './PawnStance.svelte';
-  import PawnStatBanner from './PawnStatBanner.svelte';
 
   export let pawn: Pawn;
   export let gameState: GameState;
@@ -40,10 +39,7 @@
 
 <!-- Pawn Overview -->
 <div class="pawn-overview">
-  <div class="section-hdr">| {pawn.name.toUpperCase()}</div>
-
-  <!-- Core stats grid -->
-  <PawnStatBanner {pawn} />
+  <div class="section-hdr">| STATUS</div>
 
   <div class="row">
     <span class="lbl">STATE</span>
@@ -91,10 +87,6 @@
 </div>
 
 <style>
-  .pawn-overview {
-    border-bottom: 1px solid var(--border);
-  }
-
   .section-hdr {
     padding: 4px 8px;
     background: var(--bg-panel);
@@ -128,5 +120,4 @@
     margin-left: auto;
     text-align: right;
   }
-
 </style>

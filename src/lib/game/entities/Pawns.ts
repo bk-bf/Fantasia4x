@@ -53,7 +53,7 @@ export function generatePawns(race: Race, count?: number): Pawn[] {
       stats: finalStats,
       physicalTraits,
       racialTraits: race.racialTraits,
-      inventory: createPawnInventory(10), // 10 base inventory slots
+      inventory: createPawnInventory(),
       equipment: createPawnEquipment(),
       needs: {
         hunger: 0,

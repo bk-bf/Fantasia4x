@@ -29,13 +29,13 @@
 
   // Extracted Pawn components
   import PawnSelector from '../pawn/PawnSelector.svelte';
+  import PawnStatsBar from '../pawn/PawnStatsBar.svelte';
   import PawnOverview from '../pawn/PawnOverview.svelte';
   import PawnHealth from '../pawn/PawnHealth.svelte';
   import PawnAttributes from '../pawn/PawnAttributes.svelte';
   import PawnNeeds from '../pawn/PawnNeeds.svelte';
   import PawnTraits from '../pawn/PawnTraits.svelte';
   import PawnEquipment from '../pawn/PawnEquipment.svelte';
-  import PawnInventory from '../pawn/PawnInventory.svelte';
   import FollowButton from '../UI/FollowButton.svelte';
 
   // Component state - only pawn selection and navigation logic
@@ -151,15 +151,17 @@
     <!-- Tab panels — only the active one is rendered -->
     <div class="pawn-content">
       {#if activeTab === 'status'}
-        <PawnOverview pawn={selectedPawn} gameState={$gameState} />
-        <PawnHealth pawn={selectedPawn} />
-        <PawnNeeds pawn={selectedPawn} />
+        <PawnStatsBar pawn={selectedPawn} />
+        <div class="status-grid">
+          <div class="status-col"><PawnOverview pawn={selectedPawn} gameState={$gameState} /></div>
+          <div class="status-col"><PawnHealth pawn={selectedPawn} /></div>
+          <div class="status-col"><PawnNeeds pawn={selectedPawn} gameState={$gameState} /></div>
+        </div>
         <PawnTraits pawn={selectedPawn} />
       {:else if activeTab === 'attributes'}
         <PawnAttributes pawn={selectedPawn} />
       {:else if activeTab === 'gear'}
         <PawnEquipment pawn={selectedPawn} />
-        <PawnInventory pawn={selectedPawn} />
       {/if}
     </div>
   {:else}
@@ -244,6 +246,25 @@
     overflow-y: auto;
     flex: 1;
     min-height: 0;
+  }
+
+  .status-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: stretch;
+  }
+
+  .status-col + .status-col {
+    border-left: 1px solid var(--border);
+  }
+
+  @media (max-width: 720px) {
+    .status-grid {
+      grid-template-columns: 1fr;
+    }
+    .status-col + .status-col {
+      border-left: none;
+    }
   }
 
   .empty {

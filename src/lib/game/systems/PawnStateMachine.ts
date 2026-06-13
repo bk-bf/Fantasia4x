@@ -1592,9 +1592,15 @@ function depositInventory(pawn: Pawn, gs: GameState): GameState {
           currentState: PAWN_STATE.IDLE,
           activeJob: undefined,
           inventory: {
-            ...(p.inventory ?? { items: {}, maxSlots: 20, currentSlots: 0 }),
-            items: {},
-            currentSlots: 0
+            ...(p.inventory ?? {
+              items: {},
+              instances: [],
+              weightKg: 0,
+              maxWeightKg: 20,
+              volumeL: 0,
+              maxVolumeL: 20
+            }),
+            items: {}
           }
         }
       : p

@@ -10,6 +10,7 @@ PORT=5173
 DEBUG_MODE=false
 PID_FILE=""
 
+# Read worktree-local port override if present
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 if [[ -f "$SCRIPT_DIR/.devport" ]]; then
   PORT=$(< "$SCRIPT_DIR/.devport")
@@ -40,6 +41,7 @@ fi
 
 export PATH="$HOME/.npm-global/bin:$PATH"
 
+# Pass current branch name so the UI can label itself in multi-worktree setups
 BRANCH=$(git -C "$SCRIPT_DIR" branch --show-current 2>/dev/null || echo "")
 
 # Write PID before exec so the process ID survives the exec replacement
