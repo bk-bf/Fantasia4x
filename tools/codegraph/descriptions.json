@@ -80,6 +80,7 @@
     "game/core/GameState::consumeFromStockpiles": "Remove resources from storage to pay a cost, pulling from whichever stockpiles hold them.",
     "game/services/BuildingService::BuildingServiceImpl.getBuildingById": "Look up a building definition by its stable id.",
     "game/services/ItemService::ItemServiceImpl.getItemById": "Look up an item definition by its stable id.",
-    "game/services/ResearchService::ResearchServiceImpl.getResearchById": "Look up a tech-tree node by its stable id."
+    "game/services/ResearchService::ResearchServiceImpl.getResearchById": "Look up a tech-tree node by its stable id.",
+    "game/systems/PawnStateMachine::tickPawn": "Advance one pawn by a single simulation tick — reads its current state (idle, moving, working, hungry, tired, sleeping, hauling…) and dispatches to the matching handler. The core of pawn AI, called once per pawn per turn."
   }
 }

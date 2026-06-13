@@ -176,26 +176,38 @@ function autoDescribe(baseName) {
   return cap(full) + '.';
 }
 
-/** Extract the leading JSDoc / line-comment block of a node as a description. */
+/** A comment line that's just a divider/separator (---- / ==== / //// / ****). */
+const isDivider = (l) => /^[\s\-=*_/#~.]+$/.test(l);
+/** An ALL-CAPS section banner like "PUBLIC API" or "PRIVATE — JOB GENERATION". */
+const isBanner = (l) => l.length <= 48 && /^[A-Z0-9 _\-—&/().]+$/.test(l) && /[A-Z]/.test(l);
+
+/**
+ * Extract a clean description from a declaration's leading comment.
+ * Prefers the JSDoc block nearest the declaration; falls back to trailing
+ * `//` lines. Section banners and divider rules are stripped so they don't
+ * leak into descriptions.
+ */
 function leadingDoc(node, sf) {
   const full = sf.getFullText();
   const ranges = ts.getLeadingCommentRanges(full, node.getFullStart()) || [];
   if (!ranges.length) return '';
-  const text = ranges
+
+  // Prefer the block comment (/* */ or /** */) closest to the declaration —
+  // that's the real doc; the // banners above it are noise.
+  const block = [...ranges].reverse().find((r) => r.kind === ts.SyntaxKind.MultiLineCommentTrivia);
+  const chosen = block ? [block] : ranges.filter((r) => r.kind === ts.SyntaxKind.SingleLineCommentTrivia);
+
+  const lines = chosen
     .map((r) => full.slice(r.pos, r.end))
     .join('\n')
     .replace(/^\s*\/\*\*?/, '')
     .replace(/\*\/\s*$/, '')
     .split('\n')
-    .map((l) =>
-      l
-        .replace(/^\s*\*\s?/, '')
-        .replace(/^\s*\/\/\s?/, '')
-        .trim()
-    )
-    .filter((l) => l && !l.startsWith('@') && !l.startsWith('eslint') && !l.startsWith('@ts-'))
-    .join(' ')
-    .trim();
+    .map((l) => l.replace(/^\s*\*\s?/, '').replace(/^\s*\/\/\s?/, '').replace(/\/+\s*$/, '').trim())
+    .filter((l) => l && !isDivider(l) && !isBanner(l) && !l.startsWith('@') && !l.startsWith('eslint'));
+
+  let text = lines.join(' ').replace(/\s+/g, ' ').trim();
+  if (text.length > 280) text = text.slice(0, 277).replace(/\s+\S*$/, '') + '…';
   return text;
 }
 
