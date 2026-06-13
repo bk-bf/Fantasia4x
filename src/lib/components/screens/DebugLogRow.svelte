@@ -6,10 +6,10 @@
   import type { ParsedDebugLine } from '$lib/game/dev/parseDebugLine';
   import { tagColor, severityColor } from '$lib/game/dev/parseDebugLine';
 
-  let { line }: { line: ParsedDebugLine } = $props();
+  let { line, wrap = false }: { line: ParsedDebugLine; wrap?: boolean } = $props();
 </script>
 
-<div class="row">
+<div class="row" class:wrap>
   <span class="ts">{line.tsStr}</span>
   <span class="turn">{line.turn != null ? `T${line.turn}` : ''}</span>
   <span class="tag" style="color:{tagColor(line.tag)}">{line.tag ? `[${line.tag}]` : ''}</span>
@@ -28,6 +28,9 @@
     line-height: 1.5;
     white-space: nowrap;
     padding: 0 2px;
+  }
+  .row.wrap {
+    white-space: normal;
   }
   .row:hover {
     background: var(--bg-hover);
@@ -56,5 +59,10 @@
     color: var(--text);
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+  .row.wrap .msg {
+    overflow: visible;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
   }
 </style>

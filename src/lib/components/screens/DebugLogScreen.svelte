@@ -8,10 +8,22 @@
   Either way: source switching, tag/severity/text filters, tag colouring,
   autoscroll, clear. Ported from the yact LogStreamer.
 -->
+<script module lang="ts">
+  import type { ParsedDebugLine } from '$lib/game/dev/parseDebugLine';
+
+  // Survives tab close/reopen: the panel lives behind {#if currentScreen==='debug'},
+  // so it's destroyed when you leave. Caching the buffer (and last source) per
+  // module lets a reopen paint instantly instead of flickering "waiting…".
+  const lineCache = new Map<string, ParsedDebugLine[]>();
+  let lastSource = 'live';
+  let keyCounter = 0;
+  const nextKey = () => ++keyCounter; // monotonic across remounts so keys never collide
+</script>
+
 <script lang="ts">
   import { browser } from '$app/environment';
   import { gameLogger } from '$lib/game/dev/gameLogger';
-  import { parseDebugLine, type ParsedDebugLine } from '$lib/game/dev/parseDebugLine';
+  import { parseDebugLine } from '$lib/game/dev/parseDebugLine';
   import DebugLogRow from './DebugLogRow.svelte';
   import DebugLogControls from './DebugLogControls.svelte';
 
@@ -20,15 +32,16 @@
   const BUFFER_CAP = 2000; // lines retained in memory
   const RENDER_CAP = 600; // lines actually painted
 
-  let source = $state<(typeof SOURCES)[number]>('live');
+  let source = $state<(typeof SOURCES)[number]>(lastSource as (typeof SOURCES)[number]);
   let filterTag = $state('ALL');
   let filterSeverity = $state('ALL');
   let search = $state('');
   let autoscroll = $state(true);
+  let wrap = $state(false);
 
-  let lines = $state<ParsedDebugLine[]>([]);
+  // Seed from the cache at creation so the first paint already has content.
+  let lines = $state<ParsedDebugLine[]>(lineCache.get(lastSource) ?? []);
   let bodyEl: HTMLElement | null = $state(null);
-  let keyCounter = 0;
   let es: EventSource | null = null;
   // Live-tap batching: plain (non-reactive) staging drained into `lines` once per frame.
   let pending: ParsedDebugLine[] = [];
@@ -54,7 +67,8 @@
   $effect(() => {
     if (!browser) return;
     const src = source;
-    lines = [];
+    lastSource = src;
+    lines = lineCache.get(src) ?? []; // restore this source's buffer (empty first time)
 
     // Live source: tap gameLogger's buffer in-memory. Each line is staged into a
     // plain array on the hot path; we coalesce into reactive `lines` once per rAF
@@ -65,10 +79,11 @@
         rafId = null;
         if (pending.length === 0) return;
         lines = [...lines, ...pending].slice(-BUFFER_CAP);
+        lineCache.set(src, lines);
         pending = [];
       };
       const unsub = gameLogger.subscribe((raw) => {
-        pending.push(parseDebugLine(raw, ++keyCounter));
+        pending.push(parseDebugLine(raw, nextKey()));
         if (rafId === null) rafId = requestAnimationFrame(flush);
       });
       return () => {
@@ -79,10 +94,12 @@
       };
     }
 
+    // File sources replay their tail from disk on (re)connect, so they
+    // repopulate themselves — caching them would double up the replayed lines.
     es?.close();
     es = new EventSource(`/api/debug-stream?source=${src}`);
     es.onmessage = (ev: MessageEvent) => {
-      const parsed = parseDebugLine(ev.data as string, ++keyCounter);
+      const parsed = parseDebugLine(ev.data as string, nextKey());
       lines = [...lines.slice(-(BUFFER_CAP - 1)), parsed];
     };
     return () => es?.close();
@@ -99,6 +116,7 @@
 
   async function clearLogs() {
     await fetch('/api/logs', { method: 'DELETE' }).catch(() => {});
+    lineCache.delete(source);
     lines = [];
   }
 </script>
@@ -110,6 +128,7 @@
     bind:filterSeverity
     bind:search
     bind:autoscroll
+    bind:wrap
     sources={SOURCES}
     severities={SEVERITIES}
     {knownTags}
@@ -125,7 +144,7 @@
       <div class="waiting">no lines match filter</div>
     {:else}
       {#each filtered as line (line.key)}
-        <DebugLogRow {line} />
+        <DebugLogRow {line} {wrap} />
       {/each}
     {/if}
   </div>

@@ -10,6 +10,7 @@
     filterSeverity = $bindable(),
     search = $bindable(),
     autoscroll = $bindable(),
+    wrap = $bindable(),
     sources,
     severities,
     knownTags,
@@ -22,6 +23,7 @@
     filterSeverity: string;
     search: string;
     autoscroll: boolean;
+    wrap: boolean;
     sources: readonly string[];
     severities: readonly string[];
     knownTags: string[];
@@ -46,6 +48,9 @@
   <input class="search" type="text" placeholder="search…" bind:value={search} />
   <button class="btn" class:on={autoscroll} onclick={() => (autoscroll = !autoscroll)}>
     {autoscroll ? 'scroll■' : 'scroll□'}
+  </button>
+  <button class="btn" class:on={wrap} onclick={() => (wrap = !wrap)}>
+    {wrap ? 'wrap■' : 'wrap□'}
   </button>
   <button class="btn" onclick={onclear}>clear</button>
   <span class="count">{shown}/{total}</span>
