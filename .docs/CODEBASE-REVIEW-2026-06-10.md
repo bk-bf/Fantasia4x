@@ -1,6 +1,6 @@
 # Codebase Review — 2026-06-13 (v2)
 
-> **Related:** [game/ARCHITECTURE](game/ARCHITECTURE.md) · [game/DESIGN](game/DESIGN.md) · [game/DECISIONS](game/DECISIONS.md) · [ROADMAP](.tasks/open/ROADMAP.md)
+> **Related:** [game/ARCHITECTURE](game/ARCHITECTURE.md) · [game/DESIGN](game/DESIGN.md) · [game/DECISIONS](game/DECISIONS.md) · [ROADMAP](.tasks/open/ROADMAP.md) · [HOTSPOT: PawnStateMachine](HOTSPOT-PawnStateMachine-2026-06-13.md)
 
 > **Supersedes the 2026-06-10 review**, which was fully triaged and implemented on
 > 2026-06-11 (all D1–D10/P0/P2 items done or explicitly deferred). Items deferred there
@@ -37,12 +37,15 @@
 > Plus new: building-material hauling, passive furnaces, and "long jobs yield to needs" (thirst
 > added to `checkNeedInterrupts`). Tests **117 → 141**.
 > **All Part I defects (R1–R12) are resolved** (R11 doc sync done: real turn order + service table
-> + comment fixes). **P-1 and P-6 done** (P-6: scoped `no-console` rule). **Intentionally deferred**
-> (the review's own guidance — not "unfinished"): **P-2** engine↔store inversion (large, no
-> functional change, needs in-browser verification), **P-3** services-import-stores (injectable log
-> sink — same in-browser-verification caveat), **P-4** god-file splits ("no big-bang — split
-> opportunistically during feature work"), **P-5** per-tick allocation ("don't touch until profiling
-> says so"). Current gate: `check` 0 errors · `test` 141 passing · `lint` 0 errors · `build` ok.
+> + comment fixes). **P-1 and P-6 done** (P-6: scoped `no-console` rule).
+> **NEW — P-7** (from the [PawnStateMachine hotspot](HOTSPOT-PawnStateMachine-2026-06-13.md)): a
+> concrete ADR-008 bypass (the pawn AI calls `WasmPathfinderService` directly instead of the
+> interface) — a small, do-now fix, not deferred. **Intentionally deferred** (the review's own
+> guidance — not "unfinished"): **P-2** engine↔store inversion (large, no functional change, needs
+> in-browser verification), **P-3** services-import-stores (injectable log sink — same caveat),
+> **P-4** god-file splits ("no big-bang"; the hotspot gives `PawnStateMachine` a concrete handler-split
+> plan), **P-5** per-tick allocation ("don't touch until profiling says so"). Current gate: `check`
+> 0 errors · `test` 141 passing · `lint` 0 errors · `build` ok.
 
 ---
 
@@ -50,7 +53,7 @@
 
 | Area                    | 06-10 | Now | Notes                                                                                   |
 | ----------------------- | ----- | --- | --------------------------------------------------------------------------------------- |
-| Architecture & layering | B−    | A−  | Engine near coordinator-only; per-tile storage model is the single source of truth — the `gs.item` seam is **gone** (ADR-016) |
+| Architecture & layering | B−    | A−  | Engine near coordinator-only; per-tile storage model is the single source of truth — the `gs.item` seam is **gone** (ADR-016). Caveats: one concrete ADR-008 bypass (PawnStateMachine → `WasmPathfinderService` directly, P-7) and the engine↔store / services↔stores inversions (P-2/P-3) remain |
 | Engine correctness      | C−    | B+  | All R1–R12 fixed + regression-tested (incl. R2 drafted-pawn health); physical production (reserve-and-fetch, building hauling, passive furnaces) shipped |
 | Simulation testing      | D     | B+  | 32 → **141** tests; the cross-system seams (craft→build, draft→health, tool gating, death drops) are now covered |
 | Tick-loop structure     | C+    | C+  | Same deferred O(P²) churn (D9.1); a passive-production phase added (skips when idle); scale still fine |
@@ -356,23 +359,36 @@ state.
 
 `PawnStateMachine`, `EntityService`, `Combat` import from `stores/Log` /
 `stores/combatFeedback`. Same injectable-sink fix as before; the list grew by
-`combatFeedback`.
+`combatFeedback`. The [hotspot](HOTSPOT-PawnStateMachine-2026-06-13.md) confirms `stores/Log` as a
+direct outbound edge of `PawnStateMachine` — fold this into the P-4 decomposition (the `combat`/`work`
+handlers are where most log calls live, so a sink interface drops in naturally during the split).
 
 ### P-4 · God files (carried: old P2-8; sizes re-measured)
 
 | File | LOC | Trend |
 | ---- | --- | ----- |
 | [GameCanvas.svelte](../src/lib/components/UI/GameCanvas.svelte) | 3,321 | ↑ from 3,134 — 16× the 200-line cap; it now also drives the sim clock (`stepSimulation` from the render loop) |
-| [PawnStateMachine.ts](../src/lib/game/systems/PawnStateMachine.ts) | 2,710 | ↑ from 1,777 — absorbed combat states, hunting, water needs, caretaking, collapse |
+| [PawnStateMachine.ts](../src/lib/game/systems/PawnStateMachine.ts) | 2,710 | ↑ from 1,777 — absorbed combat states, hunting, water needs, caretaking, collapse. **The #1 hotspot**: the codebase graph ranks it the largest *and* most-connected node across the whole project (TS+Svelte+Rust) — 70 functions, 14 outbound module links, `tickPawn` fan-out 16. See the [hotspot report](HOTSPOT-PawnStateMachine-2026-06-13.md) |
 | [EntityService.ts](../src/lib/game/services/EntityService.ts) | 2,015 | ↑ — spawning + AI + movement + hunger + corpse lifecycle |
 | [Combat.ts](../src/lib/game/systems/Combat.ts) | 1,419 | new since last review |
 | [types.ts](../src/lib/game/core/types.ts) | 1,387 | ↑ |
 | [JobService.ts](../src/lib/game/services/JobService.ts) | 1,152 | fuel/refuel logic could move to BuildingService |
 
-Natural seams now exist: `PawnStateMachine` splits cleanly into needs-FSM /
-combat-FSM / health (tickConditions+healing+caretaking are already pure functions);
-20 other components are over the 200-line cap (BuildingMenu 515, ActivityLogOverlay
-525, CraftingScreen 476…). Same advice: split opportunistically, no big bang.
+The [hotspot report](HOTSPOT-PawnStateMachine-2026-06-13.md) gives `PawnStateMachine` a concrete,
+graph-validated decomposition (its 15 state handlers cluster cleanly into three domains):
+
+- `handlers/work.ts` — Idle · MovingToResource · Working · Hauling · MovingToDeposit
+- `handlers/needs.ts` — Hungry · Tired · Eating · Sleeping · Drinking · Washing · MovingToNeed
+- `handlers/combat.ts` — Fighting · Fleeing · Hunting
+
+…leaving a thin dispatcher. Pair that with **a `Record<PawnState, Handler>` table** (drops
+`tickPawn`'s fan-out from 16 to ~1; adding a state becomes a one-line registration) and **extract
+the stateless helpers** (`isAdjacent`, `hasAvailableFood`, `findAdjacentApproach`, `selectFoodForMeal`)
+into `utils/pawnUtils`. Sequence (hotspot): fix P-7 boundary → extract helpers → split handlers +
+table → add per-handler tests → push selection logic into services. The report explicitly rejects a
+Rust port (branchy game logic, not a hot numeric loop). 20 components are also over the 200-line cap
+(BuildingMenu 515, ActivityLogOverlay 525, CraftingScreen 476…). Same overall advice: split along
+these seams opportunistically, no big bang.
 
 ### P-5 · Per-tick allocation churn (carried: old D9.1/D9.6/D9.7 — still deferred, still fine at current scale)
 
@@ -395,6 +411,20 @@ updates.
 in completion paths (per-harvest, per-craft logs in JobService run on every completion)
 and `ResearchService`. The `gatedConsole` shim idiom works; the scoped `no-console`
 ESLint rule from the last review is still the way to close the class permanently.
+
+### P-7 · ADR-008 boundary violation — PawnStateMachine reaches across the WASM boundary directly (NEW, small + actionable)
+
+> Surfaced by the [PawnStateMachine hotspot](HOTSPOT-PawnStateMachine-2026-06-13.md) (graph-derived).
+> **Unlike P-2…P-5 this is a quick, safe fix — not deferred.**
+
+`tryAssignPath`, `tryAssignSleepPath`, and `handleIdle` call `WasmPathfinderServiceImpl.findPath`
+and `.isReady` **directly** instead of through the `PathfinderService` interface — even though the
+module already imports the interface too (2 call sites), so it straddles the very boundary ADR-008
+requires it to respect. With Rust now in the codebase graph the leak is traceable end to end:
+`tryAssignPath → WasmPathfinderServiceImpl.findPath → spatial-core::find_path → reconstruct`
+(`/api/path`, 3 hops). **Fix:** route `findPath`/`isReady` through `PathfinderService`; delete the
+direct `WasmPathfinderService` import. ~5 isolated call sites, no behaviour change. Success check:
+the `WasmPathfinderService` edge disappears from this module's `dependsOn` in `pnpm graph`.
 
 ---
 
@@ -420,10 +450,13 @@ ESLint rule from the last review is still the way to close the class permanently
 
 ## Suggested sequencing
 
-_All Part I (R1–R12) and the discrete Part II items (P-1, P-6, R11) are done. What's left is
-deliberately deferred structural work:_
+_All Part I (R1–R12) and the discrete Part II items (P-1, P-6, R11) are done. What's left is one
+quick win plus deliberately-deferred structural work:_
 
+0. **Quick win (do now):** **P-7** — route `PawnStateMachine`'s pathfinding through the
+   `PathfinderService` interface (~5 call sites, no behaviour change; closes the ADR-008 bypass the
+   [hotspot](HOTSPOT-PawnStateMachine-2026-06-13.md) found).
 1. **Before Living World lands:** **P-2** (engine as the only writer; user actions as commands) and **P-3** (inject a log sink so services don't import `stores/`) — both are large, no-functional-change inversions best done with the game running in a browser to verify the activity log / combat floaters / UI snapshot still behave.
-2. **Opportunistic (no big-bang):** **P-4** god-file splits along existing seams while touching those files.
-3. **Profiling-gated:** **P-5** per-tick allocation churn — only when `__profOut` says so.
+2. **Opportunistic (no big-bang):** **P-4** god-file splits along existing seams — for the #1 hotspot `PawnStateMachine`, follow the report's order: P-7 boundary fix → extract pure helpers to `pawnUtils` → split the 15 handlers into `handlers/{work,needs,combat}.ts` + a `Record<PawnState,Handler>` table → per-handler tests → push selection into services.
+3. **Profiling-gated:** **P-5** per-tick allocation churn — only when `__profOut` says so. (The hotspot confirms the convergence: `tickPawn` re-finds each pawn and handlers fan out into 14 modules.)
 4. **Physical-production follow-ups** (see [PHYSICAL-PRODUCTION](.tasks/open/PHYSICAL-PRODUCTION.md)): tool-gating step 2 (per-pawn inventory + `minTier`), per-stack craft quality on instances (R8), passive-furnace flagging for forge/hearth.
