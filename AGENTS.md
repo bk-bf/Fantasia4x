@@ -80,6 +80,10 @@ can cross the WASM boundary. See `tools/codegraph/README.md`.
   e.g. `curl 'localhost:5180/api/function?name=tickPawn'`
 - Every function gets a description (JSDoc, else inferred); improve specific ones by
   editing `tools/codegraph/descriptions.json` (keyed `module::Class.method`).
+- Guardrails: `pnpm graph:check` enforces architecture rules (ADR-008, layer
+  direction, cycles, god-modules, orphans; exit 1 on violations — CI-ready).
+  `pnpm graph:snapshot` / `pnpm graph:diff` track structural change over time.
+  `/api/port-candidates` ranks TS→Rust port targets; `/api/orphans` finds dead code.
 
 ## Documentation
 

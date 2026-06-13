@@ -16,6 +16,9 @@
     "format": "prettier --write .",
     "graph": "node tools/codegraph/extract.mjs && node tools/codegraph/build-html.mjs",
     "graph:serve": "node tools/codegraph/serve.mjs",
+    "graph:check": "node tools/codegraph/extract.mjs && node tools/codegraph/check.mjs",
+    "graph:snapshot": "node tools/codegraph/extract.mjs && node tools/codegraph/diff.mjs --save",
+    "graph:diff": "node tools/codegraph/extract.mjs && node tools/codegraph/diff.mjs",
     "add:wasm": "cd spatial-core && ~/.cargo/bin/wasm-pack build --target web --out-dir ../src/lib/spatial-core-pkg"
   },
   "devDependencies": {
