@@ -225,15 +225,18 @@ function modDesc(mod) {
 
 // Node labels. In plain mode we show the name AND the description stacked,
 // never hiding the identifier — the description is appended under the name.
+// Divider between a node's name and its plain-English description. Doubles as a
+// marker the renderer uses to dim the description text (see dimDescriptions()).
+const NAME_SEP = '────────';
 function fnNodeLabel(node, plain, w) {
   const name = wrap(node.short, w);
   if (!plain) return name;
-  return name + '<br/>' + wrap(fnLabel(node, true), w + 4);
+  return name + '<br/>' + NAME_SEP + '<br/>' + wrap(fnLabel(node, true), w + 4);
 }
 function modNodeLabel(mod, plain) {
   const name = esc(mod.module.split('/').pop());
   if (!plain) return `${name}<br/>${mod.fns} fn`;
-  return `${name}<br/>` + wrap(modLabel(mod, true), 30);
+  return `${name}<br/>` + NAME_SEP + '<br/>' + wrap(modLabel(mod, true), 30);
 }
 
 // ----- mermaid label escaping -----
@@ -413,10 +416,26 @@ async function render() {
     p.addEventListener('click', (ev) => { ev.stopPropagation(); onEdgeClick(idx); });
   });
 
+  dimDescriptions(svgEl);
   setupPanZoom(svgEl);
   applyInitialZoom();
   renderCrumbs();
   document.getElementById('neighrow').style.display = state.view === 'module' ? 'flex' : 'none';
+}
+
+// In plain-English mode, fade the divider + the description lines below it so the
+// function/module name reads as the title and the description as a subtitle.
+function dimDescriptions(svgEl) {
+  if (!state.plain) return;
+  svgEl.querySelectorAll('g.node text').forEach((txt) => {
+    const tspans = [...txt.querySelectorAll('tspan')];
+    const sep = tspans.findIndex((t) => t.textContent.includes('────'));
+    if (sep < 0) return;
+    tspans.forEach((t, i) => {
+      if (i === sep) t.setAttribute('fill-opacity', '0.28');         // the divider rule
+      else if (i > sep) t.setAttribute('fill-opacity', '0.62');      // description text
+    });
+  });
 }
 
 // ---- highlight a node's flow ----
@@ -573,6 +592,7 @@ function persist() {
       localStorage.setItem(LS_KEY, JSON.stringify({
         view: state.view, module: state.module,
         pz: { x: pz.x, y: pz.y, k: pz.k }, defaultPct,
+        plain: state.plain, neighbors: state.neighbors,
       }));
     } catch { /* private mode / quota */ }
   }, 250);
@@ -748,6 +768,15 @@ renderModuleOptions();
   if (!saved) return;
   defaultPct = saved.defaultPct || 0;
   setDefaultBtn();
+  // restore toggles (also covers hot-reload, which is a full page reload)
+  if (typeof saved.plain === 'boolean') {
+    state.plain = saved.plain;
+    document.getElementById('lbltoggle').checked = saved.plain;
+  }
+  if (typeof saved.neighbors === 'boolean') {
+    state.neighbors = saved.neighbors;
+    document.getElementById('neightoggle').checked = saved.neighbors;
+  }
   if (saved.view === 'module' && saved.module && modByName.has(saved.module)) {
     state.view = 'module'; state.module = saved.module;
     document.querySelectorAll('#viewseg button').forEach(b => b.classList.toggle('on', b.dataset.view === 'module'));
