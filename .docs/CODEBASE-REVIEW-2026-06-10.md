@@ -36,9 +36,13 @@
 > events phase still unwired).
 > Plus new: building-material hauling, passive furnaces, and "long jobs yield to needs" (thirst
 > added to `checkNeedInterrupts`). Tests **117 → 141**.
-> **All Part I defects (R1–R12) are now resolved or partial (R11).** Still open: structural
-> P-2…P-6 and the R11 doc sync. Current gate: `check` 0 errors · `test` 141 passing · `lint` 0
-> errors · `build` ok.
+> **All Part I defects (R1–R12) are resolved** (R11 doc sync done: real turn order + service table
+> + comment fixes). **P-1 and P-6 done** (P-6: scoped `no-console` rule). **Intentionally deferred**
+> (the review's own guidance — not "unfinished"): **P-2** engine↔store inversion (large, no
+> functional change, needs in-browser verification), **P-3** services-import-stores (injectable log
+> sink — same in-browser-verification caveat), **P-4** god-file splits ("no big-bang — split
+> opportunistically during feature work"), **P-5** per-tick allocation ("don't touch until profiling
+> says so"). Current gate: `check` 0 errors · `test` 141 passing · `lint` 0 errors · `build` ok.
 
 ---
 
@@ -51,8 +55,8 @@
 | Simulation testing      | D     | B+  | 32 → **141** tests; the cross-system seams (craft→build, draft→health, tool gating, death drops) are now covered |
 | Tick-loop structure     | C+    | C+  | Same deferred O(P²) churn (D9.1); a passive-production phase added (skips when idle); scale still fine |
 | Data-driven design      | A−    | A   | Recipes/wounds/stats/creatures all JSONC; `Work.toolsRequired` + `interaction.toolRequirement` now **wired** into gating; station tiers via `effects.tier` |
-| Documentation           | A     | A−  | ADR discipline excellent; the DESIGN over-promises (tool gating, inventory budget) are now true in code; events-phase mismatch (R11) remains |
-| Tooling & CI            | C     | B+  | check/lint/test/build all real and green; no CI by choice                               |
+| Documentation           | A     | A   | ADR discipline excellent; DESIGN over-promises now true in code; turn order + service table + comments synced to reality (R11) |
+| Tooling & CI            | C     | A−  | check/lint/test/build all real and green; ESLint now guards determinism (no `Math.random`) and logging (`no-console`) in the sim core; no CI by choice |
 
 ---
 
@@ -292,6 +296,14 @@ DroppedItems at the death tile (corpse item optional until burial mechanics exis
 
 ## R11 · LOW — Doc/code mismatches that will misdirect contributors
 
+> **✅ RESOLVED.** (1) ARCHITECTURE.md's turn order was rewritten to match `processGameTurn`'s real
+> phases (needs → item upkeep → research → jobs → buildings → passive production → pawns → regrowth →
+> entities → combat → commit), and the unwired "events" phase is now explicitly *not* part of the
+> contract (`Events.ts` exists but isn't ticked). (2) The ARCHITECTURE service table gained
+> `jobService`, `recipeService`, `resourceObjectService`, `entityService`, and a note on the
+> `systems/` singletons (`pawnStateMachineService`, `combatService`). (3) The stale "drink/wash
+> routing is deferred" comments in PawnService were corrected (the FSM routing is implemented).
+
 1. **Events phase**: ARCHITECTURE.md's mandatory turn order lists "5. Events — trigger random or conditional events"; `processGameTurn` has no events phase and `core/Events.ts` (still ~hundreds of lines of logic — ADR-006) is fully unwired. _(✅ partial: its resource effect now writes the physical stockpile, not `gs.item`.)_ Carried from the last review — either wire it or cut it from the turn-order contract.
 2. **AGENTS.md / ARCHITECTURE.md service table** omits the services added since: `CombatService`, `EntityService`, `JobService`, `RecipeService`, `ResourceObjectService`, `LightingService`(if present), `PawnStatService` is listed but e.g. `OccupancyService` was added correctly — do one sync pass.
 3. **DESIGN.md need table** says `WORK_PRIORITY_THRESHOLD_SHIFT` gives "Level 4 → ~78" (+8 from 70); code comment at [PawnStateMachine.ts:114](../src/lib/game/systems/PawnStateMachine.ts#L114) says the same — both fine — but DESIGN also still describes drink/wash routing as deferred in one paragraph (PawnService comment too, [PawnService.ts:482](../src/lib/game/services/PawnService.ts#L482)) while §D zone routing is implemented in the FSM. Stale comments only.
@@ -373,6 +385,12 @@ updates.
 
 ### P-6 · Logging
 
+> **✅ RESOLVED.** A scoped `no-console` ESLint rule (`['error', { allow: ['warn', 'error'] }]`) now
+> covers `src/lib/game/**`, exempting `core/log.ts`. It enforces the gated-shim convention — the
+> `import { gatedConsole as console }` local binding shadows the global so shimmed files pass,
+> `warn`/`error` stay allowed, and the `[PROF]` profiler lines carry a per-line eslint-disable
+> (ADR-011). The one stray raw `console.log` (ItemService tool-break) was routed through the shim.
+
 48 raw `console.*` calls remain under `src/lib/game/` (down from 144) — the remainder are
 in completion paths (per-harvest, per-craft logs in JobService run on every completion)
 and `ResearchService`. The `gatedConsole` shim idiom works; the scoped `no-console`
@@ -402,8 +420,10 @@ ESLint rule from the last review is still the way to close the class permanently
 
 ## Suggested sequencing
 
-_All Part I defects (R1–R12, P-1) are done or partial (R11). Remaining:_
+_All Part I (R1–R12) and the discrete Part II items (P-1, P-6, R11) are done. What's left is
+deliberately deferred structural work:_
 
-1. **Design honesty:** **R11** doc sync (events phase: wire or cut; service-table refresh).
-2. **Structural (unchanged):** P-2/P-3 layer inversions before Living World lands; P-4 splits opportunistically; P-5/P-6 as evidence demands.
-3. **Physical-production follow-ups** (see [PHYSICAL-PRODUCTION](.tasks/open/PHYSICAL-PRODUCTION.md)): tool-gating step 2 (per-pawn inventory + `minTier`), per-stack craft quality on instances (R8), passive-furnace flagging for forge/hearth.
+1. **Before Living World lands:** **P-2** (engine as the only writer; user actions as commands) and **P-3** (inject a log sink so services don't import `stores/`) — both are large, no-functional-change inversions best done with the game running in a browser to verify the activity log / combat floaters / UI snapshot still behave.
+2. **Opportunistic (no big-bang):** **P-4** god-file splits along existing seams while touching those files.
+3. **Profiling-gated:** **P-5** per-tick allocation churn — only when `__profOut` says so.
+4. **Physical-production follow-ups** (see [PHYSICAL-PRODUCTION](.tasks/open/PHYSICAL-PRODUCTION.md)): tool-gating step 2 (per-pawn inventory + `minTier`), per-stack craft quality on instances (R8), passive-furnace flagging for forge/hearth.
