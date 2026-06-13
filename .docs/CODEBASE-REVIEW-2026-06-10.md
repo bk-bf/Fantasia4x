@@ -345,7 +345,8 @@ ESLint rule from the last review is still the way to close the class permanently
 
 ## What's improved since 2026-06-10 (keep doing this)
 
-- **Test suite: 32 → 117 tests, 21 files** — including headless sim-invariant tests (entity starvation timing, combat sim, need thresholds). The new defects above are all *cross-system* seams (craft→build, draft→health, hunt→butcher) — exactly where the next tests should go.
+- **Test suite: 32 → 117 → 133 tests** — including headless sim-invariant tests (entity starvation timing, combat sim, need thresholds) and now the physical-production seams (reserve/fetch/craft, double-spend, building hauling, passive furnaces, station tiers, tool gating). The remaining open defects (R2 draft→health) are exactly where the next tests should go.
+- **Physical production (ADR-016)** — reserve-and-fetch made consumption physical: items always occupy a tile or a pawn's hands, no `gs.item` magic pocket. Crafting/building reserve inputs → pawns haul them to the workstation/site → consumed on completion; passive furnaces; carry budgets and ADR-009 tool gating are now real (closing the largest correctness seam this review opened).
 - **The per-tile storage model (Stage 2)** is genuinely clean: stored drops as single source of truth, `aggregateFromDrops` everywhere, trigger-based absorption, deterministic stored-pile ids. R1 is a hole in it, not a flaw of it.
 - **ADR-014 occupancy** — one collision authority, both pathfinding and movement defer to it; the yoyo/phasing fix is well documented and the trade-off (queue cadence) is written down.
 - **ADR-015 single work model** — the efficiency-scalar fork is actually gone (no `calculateWorkEfficiency` anywhere); speed/yield/quality flow from `stats.jsonc` through jobs, tooltips, and construction/craft quality consistently.
@@ -355,7 +356,10 @@ ESLint rule from the last review is still the way to close the class permanently
 
 ## Suggested sequencing
 
-1. **Now (correctness, small diffs):** R3 butchery stack consumption (one-line fix + test) → R2 drafted-pawn health block (move the `continue`, ~10 lines + sim test) → R1 craft-output routing (the fix is small — route primary through `addItems` — the *audit* of `gs.item` readers is the real work; do quality-on-instance in the same pass, absorbing R8).
-2. **Next (design honesty):** R4 — implement claim-time tool gating (stockpile-level) or amend ADR-009/DESIGN; R5 — enforce or un-document the carry budget; R11 doc sync pass.
-3. **Cleanups while touching those files:** R6 dead building-queue triad, R7 `isWorking` derivation + delete legacy work-priority path, R12 dead-code list.
+_R1, R3, R4, R5, R8, P-1 are done (ADR-016 pass — see status banner). Remaining:_
+
+1. **Now (correctness, small diffs):** **R2** drafted-pawn health block (move the `continue`, run tend→conditions→heal→collapse for drafted pawns too, ~10 lines + sim test — the one still-open HIGH) → **R9** hunting need-interrupt (route `handleHunting` through `checkNeedInterrupts`) → **R10** `killPawn` drops inventory + equipment.
+2. **Cleanups (net-negative LOC):** **R6** delete the dead `constructBuilding`/`processBuildingQueue`/`buildingQueue` triad (placement is physical now) → **R7** derive `isWorking` from `currentState==='Working'`, delete the legacy work-priority path → **R12** dead-code list (light-job pair, unused PawnService helpers, etc.).
+3. **Design honesty:** **R11** doc sync (events phase: wire or cut; service-table refresh).
 4. **Structural (unchanged):** P-2/P-3 layer inversions before Living World lands; P-4 splits opportunistically; P-5/P-6 as evidence demands.
+5. **Physical-production follow-ups** (see [PHYSICAL-PRODUCTION](.tasks/open/PHYSICAL-PRODUCTION.md)): tool-gating step 2 (per-pawn inventory + `minTier`), per-stack craft quality on instances (R8), passive-furnace flagging for forge/hearth.
