@@ -1,5 +1,5 @@
 import type { GameState, Job, Pawn } from '$lib/game/core/types';
-import { resourceObjectService } from '$lib/game/services/ResourceObjectService';
+import { jobService } from '$lib/game/services/JobService';
 
 export interface PawnTaskSummary {
   currentState: string;
@@ -8,30 +8,10 @@ export interface PawnTaskSummary {
   workAssignment: string;
 }
 
+/** Job → labor work-category key. Single source of truth lives in JobService (jobs.jsonc); this is
+ *  a thin pass-through so the UI and the sim never drift apart (the old duplicated switch is gone). */
 function getWorkKeyForJob(job: Job): string {
-  switch (job.type) {
-    case 'harvest': {
-      // DB-driven: read the work category straight off the resource node definition
-      // (resources.jsonc) — no hardcoded id list to drift from the database.
-      const def = resourceObjectService.getById(job.resourceId ?? '');
-      return def?.interaction?.workCategory ?? 'foraging';
-    }
-    case 'construct':
-      return 'construction';
-    case 'craft':
-      return 'crafting';
-    case 'haul':
-      return 'hauling';
-    case 'eat':
-      return 'eat';
-    case 'sleep':
-      return 'sleep';
-    case 'light':
-    case 'refuel':
-      return 'construction';
-    default:
-      return job.type;
-  }
+  return jobService.getJobWorkCategory(job);
 }
 
 function describeJob(job: Job): string {
