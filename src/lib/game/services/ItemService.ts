@@ -19,7 +19,6 @@ import { SECONDS_PER_TICK } from '../core/time';
 
 const ITEMS_DATABASE = itemsData as unknown as Item[];
 // Building defs are needed for tile-aware decay (storage multipliers, roofs).
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const BUILDING_DEFS_FOR_ITEMS = buildingsData as unknown as import('../core/types').Building[];
 
 // §B Durability defaults — every item weathers when left exposed (loose, unsheltered).

@@ -452,8 +452,12 @@ dormant dead code — no item data triggers it — hardened for R3 in case it is
 
 - Crafted items are real stock — usable as materials/fuel/build/research costs (fixes the
   broken intermediate chains). The workshop is now a place a pawn walks to, not just a gate.
-- Pass 1 runs **all** recipes as active (a pawn works them). **Passive furnaces** (load
-  inputs + fuel, produce over time, `Recipe.passive`), **physical building-material hauling**,
-  and **butchery fold-in** are deferred follow-up passes; supersedes the old
-  queue-time-consume model.
+- Supersedes the old queue-time-consume model. **Pass 2 added** passive furnaces (`Recipe.passive`
+  + `PASSIVE_STATIONS`; `GameEngineImpl.processPassiveProduction` runs supplied, lit furnaces),
+  physical **building-material hauling** (reserve at placement → fetch to site → consume on
+  completion; the fetch system is now polymorphic over a craft-order OR building owner), and
+  **carry-budget enforcement** at pickup (`clampPickupQuantity`). Butchery was already
+  recipe-physical (its dead `isCarcass`/`processButchery` path was removed). **Still deferred:**
+  ADR-009 tool gating (R4) is blocked on content — no tool-free flint/stone source exists, so
+  strict gating would soft-lock a new game's bootstrap.
 - Reservation bookkeeping (`reservedFor` on drops) is the new invariant; cancel releases it.

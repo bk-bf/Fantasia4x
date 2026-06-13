@@ -62,17 +62,35 @@ no item in `items.jsonc` carries `isCarcass`/`yields`, so it never executes. It 
 for R3 (consume one carcass, not the whole stack) in case it's ever revived, but reviving a
 multi-yield carcass model is a separate follow-up; today's butchery is recipes.
 
-## Out of scope (follow-up passes)
+## Pass 2 — follow-ups (DONE, except R4)
 
-- **Passive furnaces** — bloomery / kiln / charcoal / smelting: load inputs + fuel, produce
-  passively over time gated by fuel/heat. Until then furnace-station recipes run as **active**
-  (a pawn works them) so the full recipe set keeps functioning. Adds `Recipe.passive`.
-- **Building-material hauling** — construction still consumes from `stockpile` at placement;
-  making builds physically fetch materials to the site is a later pass.
-- **Butchery fold-in** — make butchery a physical haul-to-`butcher_spot` action and reconcile
-  its multi-yield/intactness model with the recipe registry (this pass only fixes R3).
-- **ADR-009 tool gating (R4)** and **carry-budget enforcement (R5)** become tractable once
-  pawns physically hold inputs; sequenced after this.
+- **Passive furnaces — DONE.** `Recipe.passive` flag + a `PASSIVE_STATIONS` default
+  (bloomery / charcoal_pit / pottery_kiln / advanced_kiln). A passive order's inputs are still
+  fetched/staged, but no craft job is generated; `GameEngineImpl.processPassiveProduction`
+  accrues work each tick once the furnace is **supplied** and **lit** (fuel-burning furnaces;
+  charcoal_pit, which has no fuel tank, runs once loaded), completing through the shared
+  `JobService.completeCraftOrder`. stone_forge/hearth stay active (a pawn works them) until
+  their content is split from cooking/shaping — flag per-recipe via `Recipe.passive` when ready.
+- **Building-material hauling — DONE.** `placeBuilding` RESERVES the build cost to the building
+  (instant zero-work buildings still consume immediately); `_syncFetchJobs` carries it to the
+  build site; `_syncConstructJobs` gates the construct job on `_buildingSupplied`; completion
+  consumes the staged materials; `cancelBuilding` releases the reservation. The fetch/staging
+  system is now polymorphic over a reservation **owner** = craft order OR building.
+- **Butchery — DONE (dead-code removal).** Butchery was already recipe-based/physical; the
+  vestigial `isCarcass`/`yields`/`processButchery`/`craftButchery` path (no item data triggered
+  it) was removed.
+- **R5 carry-budget enforcement — DONE.** `ItemService.clampPickupQuantity` caps each haul/fetch
+  pickup by the pawn's weight/volume budget (belt/back raise it); the remainder stays for another
+  trip; floors at 1 for an empty pawn so a single heavy unit never deadlocks.
+
+### Still deferred
+
+- **R4 ADR-009 tool gating — BLOCKED on content.** Strict claim-time tool gating would soft-lock
+  a fresh game: `flint_shard` comes only from pick-gated **mining** and `small_stone` isn't a
+  gatherable resource, yet the first tools need them (need a pick to get flint, need flint to make
+  a pick). Enabling it requires first adding tool-free **surface-flint / surface-stone foraging**
+  resources per ADR-009 (with balanced spawn rates) — a content/balance task. Mechanism not added
+  until that data exists.
 
 ## Verification
 
