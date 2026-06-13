@@ -49,14 +49,45 @@ small reload script injected on the fly.
   a description of what it does in the game.
 - Drag to pan, scroll to zoom, `+ / − / ⤢` controls, search box to filter.
 
+## Query API (for agents)
+
+When the server is running (`pnpm graph:serve` or `launch.sh --debug`) it also
+exposes a JSON API at `http://localhost:5180/api`, giving an LLM agent the same
+information the browser shows. Responses are JSON (CORS-open); add `?format=md`
+to function/module/search/path for a prose summary. `GET /api` is self-documenting.
+
+| Endpoint | Purpose |
+| -------- | ------- |
+| `/api/stats` | counts (functions, edges, modules, files) |
+| `/api/graph` | full dump: nodes (with descriptions), edges, modules, moduleEdges |
+| `/api/modules` · `/api/module?name=` | module summaries / one module (deps + function list) |
+| `/api/functions?module=&q=&kind=&exported=&limit=` | list / filter functions |
+| `/api/function?name=\|id=` | one function: description, signature, callers, callees |
+| `/api/search?q=&limit=` | search functions + modules by name and description |
+| `/api/callers?name=` · `/api/callees?name=` | direct callers / callees |
+| `/api/path?from=&to=&max=` | shortest call path between two functions |
+| `/api/hubs?limit=` | most-called functions, most-depended-on modules |
+
+Functions resolve by exact id, `Class.method`, or bare method name; ambiguous
+names return all matches. Modules resolve by full path, short path, or basename.
+The API is refreshed automatically on every rebuild.
+
+```bash
+curl localhost:5180/api/function?name=tickPawn
+curl 'localhost:5180/api/path?from=processGameTurn&to=tickPawn'
+curl 'localhost:5180/api/search?q=harvest&format=md'
+```
+
 ## How it works
 
 | File                | Role                                                                                        |
 | ------------------- | ------------------------------------------------------------------------------------------- |
-| `extract.mjs`       | Walks `src/lib/**/*.ts` with the TypeScript compiler API, resolves calls through the type checker, emits `graph.json` (nodes, edges, per-module rollup, degree stats). |
-| `descriptions.json` | Curated plain-English descriptions for groups, modules, and key hub functions.              |
+| `extract.mjs`       | Walks `src/lib/**/*.ts` with the TypeScript compiler API, resolves calls through the type checker, emits `graph.json` (nodes, edges, per-module rollup, degree stats). Generates a description for every function (JSDoc, else inferred from the name). |
+| `descriptions.json` | Curated plain-English overrides for groups, modules, and specific functions.                |
 | `template.html`     | The viewer (CSS + Mermaid generation + interactivity). Edit this for UI changes.            |
 | `build-html.mjs`    | Inlines `graph.json` + `descriptions.json` + vendored Mermaid into `codegraph.html`.        |
+| `serve.mjs`         | Live server: rebuild-on-change, hot-reload, and the `/api` query endpoints.                 |
+| `api.mjs`           | The JSON query API over `graph.json` (descriptions, call edges, search, paths, hubs).       |
 | `vendor/mermaid.min.js` | Pinned Mermaid 10.9.1 UMD build (downloaded once).                                       |
 
 ### Description resolution (per function)

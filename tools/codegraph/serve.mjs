@@ -14,6 +14,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { createApi } from './api.mjs';
 
 const DIR = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(DIR, '..', '..');
@@ -23,6 +24,8 @@ const PORT = Number(process.env.CODEGRAPH_PORT) || 5180;
 
 // The live-reload client lives in template.html (guarded to http only), so the
 // server can stream codegraph.html verbatim — no fragile HTML string surgery.
+
+const api = createApi(DIR);
 
 /** @type {Set<import('node:http').ServerResponse>} */
 const clients = new Set();
@@ -50,6 +53,7 @@ async function rebuild(reason) {
   const bd = ex === 0 ? await run('build-html.mjs') : 1;
   building = false;
   if (ex === 0 && bd === 0) {
+    api.reload();
     console.log(`done in ${((Date.now() - t) / 1000).toFixed(1)}s — reloading tabs`);
     notifyReload();
   } else {
@@ -60,6 +64,9 @@ async function rebuild(reason) {
 
 // --- http server ------------------------------------------------------------
 const server = http.createServer((req, res) => {
+  const url = new URL(req.url, 'http://localhost');
+  if (api.handle(req, res, url)) return;
+
   if (req.url === '/__reload') {
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',

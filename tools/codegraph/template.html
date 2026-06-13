@@ -429,7 +429,8 @@ function highlight(gid) {
   RENDER.eList.forEach((e, idx) => {
     if (e.from === gid || e.to === gid) {
       const p = RENDER.edgeEls[idx];
-      if (p) p.classList.add('hot', e.to === gid ? 'hot-in' : '');
+      // NB: classList.add('') throws, which would abort the loop — add separately.
+      if (p) { p.classList.add('hot'); if (e.to === gid) p.classList.add('hot-in'); }
       neighborGids.add(e.from === gid ? e.to : e.from);
     }
   });

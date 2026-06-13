@@ -81,6 +81,7 @@
     "game/services/BuildingService::BuildingServiceImpl.getBuildingById": "Look up a building definition by its stable id.",
     "game/services/ItemService::ItemServiceImpl.getItemById": "Look up an item definition by its stable id.",
     "game/services/ResearchService::ResearchServiceImpl.getResearchById": "Look up a tech-tree node by its stable id.",
-    "game/systems/PawnStateMachine::tickPawn": "Advance one pawn by a single simulation tick — reads its current state (idle, moving, working, hungry, tired, sleeping, hauling…) and dispatches to the matching handler. The core of pawn AI, called once per pawn per turn."
+    "game/systems/PawnStateMachine::tickPawn": "Advance one pawn by a single simulation tick — reads its current state (idle, moving, working, hungry, tired, sleeping, hauling…) and dispatches to the matching handler. The core of pawn AI, called once per pawn per turn.",
+    "game/systems/GameEngineImpl::GameEngineImpl.processGameTurn": "The turn coordinator. Runs the fixed per-turn pipeline (needs → work → completions → exploration → events), calling services in order. A 'tick' and a 'turn' are the same step."
   }
 }

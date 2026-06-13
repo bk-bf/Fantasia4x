@@ -203,7 +203,15 @@ function leadingDoc(node, sf) {
     .replace(/^\s*\/\*\*?/, '')
     .replace(/\*\/\s*$/, '')
     .split('\n')
-    .map((l) => l.replace(/^\s*\*\s?/, '').replace(/^\s*\/\/\s?/, '').replace(/\/+\s*$/, '').trim())
+    .map((l) =>
+      l
+        .replace(/^\s*\*\s?/, '')
+        .replace(/^\s*\/\/\s?/, '')
+        // strip surrounding divider runs (=====, -----, ////, ****) that wrap banners
+        .replace(/^[=\-*_/#~\s]+/, '')
+        .replace(/[=\-*_/#~\s]+$/, '')
+        .trim()
+    )
     .filter((l) => l && !isDivider(l) && !isBanner(l) && !l.startsWith('@') && !l.startsWith('eslint'));
 
   let text = lines.join(' ').replace(/\s+/g, ' ').trim();
