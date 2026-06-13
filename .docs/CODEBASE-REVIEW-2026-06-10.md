@@ -14,18 +14,35 @@
 **Verification gate at review time:** `pnpm check` 0 errors (10 a11y/CSS warnings) ·
 `pnpm lint` clean · `pnpm test` 117 passing in 21 files · `pnpm build` succeeds.
 
+> **STATUS UPDATE (2026-06-13 — ADR-016 physical-production pass + follow-ups).** The
+> reserve-and-fetch rework (spec: [PHYSICAL-PRODUCTION](.tasks/open/PHYSICAL-PRODUCTION.md),
+> ADR-016) and its follow-ups closed several items below:
+> **✅ R1** (`gs.item` removed entirely — craft output is real stockpile stock; ceramics/firewood
+> chains work) · **✅ P-1** (legacy `gs.item` pool + `currentItem` gone) · **✅ R3** (butchery is
+> recipe-based, one carcass/run; dead `processButchery` removed) · **✅ R4** (colony-stock tool
+> gating in `getAvailableJobs`; bootstrap unblocked — tool-free `stone_outcrop`, station tiers,
+> Crude Workbench, `stone_pick`/`stone_hoe` added) · **✅ R5** (`clampPickupQuantity` enforces
+> carry budget at pickup, floors at 1) · **✅ R8** (moot — per-stack quality dropped with `gs.item`;
+> re-attach to instances later) · **~ R11.1** (`Events.ts` no longer writes `gs.item`; events phase
+> still unwired) · **~ R6** (building placement is now physical reserve-and-fetch, but the dead
+> `constructBuilding`/`processBuildingQueue`/`buildingQueue` triad still exists — cleanup pending).
+> Plus new: building-material hauling, passive furnaces, and "long jobs yield to needs" (thirst
+> added to `checkNeedInterrupts`). Tests **117 → 133**.
+> **Still open:** R2, R7, R9, R10, R12, and structural P-2…P-6 (unchanged). Current gate:
+> `check` 0 errors · `test` 133 passing · `lint` 0 errors · `build` ok.
+
 ---
 
 ## Scorecard
 
 | Area                    | 06-10 | Now | Notes                                                                                   |
 | ----------------------- | ----- | --- | --------------------------------------------------------------------------------------- |
-| Architecture & layering | B−    | B+  | Engine is near coordinator-only; per-tile storage model is coherent; legacy `gs.item` pool is the one big seam left |
-| Engine correctness      | C−    | C+  | Old bugs fixed and regression-tested, but two new producer/consumer mismatches shipped with recent features (R1, R3) and drafted pawns bypass the health sim (R2) |
-| Simulation testing      | D     | B   | 32 → 117 tests; guard branches pinned; the new defects below are exactly the untested cross-system paths |
-| Tick-loop structure     | C+    | C+  | Same deferred O(P²) churn (D9.1); occupancy/threat scans added per-pawn-per-tick but scale is still fine |
-| Data-driven design      | A−    | A−  | Recipes/wounds/stats/creatures all JSONC; `Work.toolsRequired` is decorative data (R4)  |
-| Documentation           | A     | A−  | ADR discipline excellent; DESIGN.md now over-promises in three places (tool gating, inventory budget, events phase) |
+| Architecture & layering | B−    | A−  | Engine near coordinator-only; per-tile storage model is the single source of truth — the `gs.item` seam is **gone** (ADR-016) |
+| Engine correctness      | C−    | B   | R1/R3/R4/R5/R8 fixed + regression-tested; physical production (reserve-and-fetch, building hauling, passive furnaces) shipped. Still open: R2 drafted-pawn health |
+| Simulation testing      | D     | B+  | 32 → **133** tests; the cross-system seams (craft→build, draft→health, tool gating) are now covered |
+| Tick-loop structure     | C+    | C+  | Same deferred O(P²) churn (D9.1); a passive-production phase added (skips when idle); scale still fine |
+| Data-driven design      | A−    | A   | Recipes/wounds/stats/creatures all JSONC; `Work.toolsRequired` + `interaction.toolRequirement` now **wired** into gating; station tiers via `effects.tier` |
+| Documentation           | A     | A−  | ADR discipline excellent; the DESIGN over-promises (tool gating, inventory budget) are now true in code; events-phase mismatch (R11) remains |
 | Tooling & CI            | C     | B+  | check/lint/test/build all real and green; no CI by choice                               |
 
 ---
@@ -33,6 +50,10 @@
 # Part I — Defects, ranked by severity
 
 ## R1 · CRITICAL — Crafted primary outputs land in the legacy `gs.item` pool, invisible to the entire economy
+
+> **✅ RESOLVED (ADR-016).** `gs.item` removed; `_completeCraft`/`completeCraftOrder` spawn outputs
+> as physical drops on the station tile → real stockpile stock. Regression-tested (craft an
+> intermediate → spend it on a building/recipe).
 
 The colony economy has one source of truth: `stored` DroppedItems on tiles, aggregated
 into `gameState.stockpile` ([GameState.ts:200](../src/lib/game/core/GameState.ts#L200)
@@ -86,6 +107,10 @@ drafted pawn with a bleeding wound loses blood and can die.
 
 ## R3 · HIGH — Butchery consumes the whole carcass stack but yields one carcass's outputs
 
+> **✅ RESOLVED (ADR-016).** No item carries `isCarcass`/`yields` — the `processButchery` path was
+> dead code and was removed. Butchery is now ordinary `butcher_spot` recipes (one carcass per run),
+> flowing through reserve-and-fetch.
+
 `ItemService.processButchery` ([ItemService.ts:373-376](../src/lib/game/services/ItemService.ts#L373)):
 
 ```ts
@@ -110,6 +135,12 @@ per-type.
 
 ## R4 · MEDIUM-HIGH — ADR-009 tool gating is still enforced nowhere, while DESIGN.md sells it as a core pillar
 
+> **✅ RESOLVED (colony-stock, step 1).** `JobService.getAvailableJobs` now gates a harvest on its
+> `interaction.toolRequirement` vs the matching `WorkCategory.toolsRequired` in colony stock
+> (`_colonyHasHarvestTool`). The bootstrap was unblocked first: tool-free `stone_outcrop` scavenge,
+> `stone_axe`/`stone_hammer` → craft_spot, station tiers + "Crude Workbench", and added
+> `stone_pick`/`stone_hoe`. Deferred: per-pawn inventory + `minTier` (step 2), craft-tool gating.
+
 DESIGN.md: *"Tool-gated gathering: woodcutting requires at least a Stone Axe … Without
 the tool, the job cannot be claimed — the forest stays whole"*; ADR-009 calls the
 enforcement rules "non-negotiable". Reality:
@@ -130,6 +161,10 @@ now. Code and design doc must stop disagreeing on a core pillar.
 
 ## R5 · MEDIUM — Inventory weight/volume budget is computed, displayed, and never enforced
 
+> **✅ RESOLVED.** `ItemService.clampPickupQuantity` caps haul/fetch pickup by the pawn's
+> weight/volume budget (belt/back `inventoryBonus` now matters); the remainder waits for another
+> trip. Always floors at 1 so a single over-budget item (heavy carcass) can still be hand-carried.
+
 The equipment expansion added carry budgets: `ItemService.getCarryBudget` /
 `getCurrentCarryLoad` / `canAddToInventory`
 ([ItemService.ts:390-446](../src/lib/game/services/ItemService.ts#L390)) and DESIGN.md
@@ -145,6 +180,11 @@ the budget claim from DESIGN until it lands. Drop the dead `weightKg`/`volumeL` 
 from `PawnInventory` if load is always derived.
 
 ## R6 · MEDIUM — `constructBuilding`/`processBuildingQueue`/`queueBuilding` is a dead legacy triad that eats materials
+
+> **~ PARTIAL.** Real building placement is now physical reserve-and-fetch (`placeBuilding` reserves
+> the cost, pawns haul it to the site, construction consumes it — ADR-016). But the dead triad
+> (`GameEngine.constructBuilding`, `BuildingService.processBuildingQueue`, `GameState.buildingQueue`/
+> `BuildingInProgress`) **still exists** and is still a trap — delete it.
 
 `GameEngineImpl.constructBuilding`
 ([GameEngineImpl.ts:187-219](../src/lib/game/systems/GameEngineImpl.ts#L187)) still
@@ -179,6 +219,10 @@ remove the second sync call. This finishes the D4 cleanup the last review starte
 
 ## R8 · MEDIUM — Craft quality is stamped only on the first stack of an item
 
+> **✅ RESOLVED (moot).** `gs.item` stacking is gone; `_completeCraft` no longer writes
+> `properties.quality`. Re-attaching per-stack quality to an `ItemInstance`/stored drop is deferred
+> until equipment quality matters (tracked in PHYSICAL-PRODUCTION "Still deferred").
+
 `_completeCraft` ([JobService.ts:772-782](../src/lib/game/services/JobService.ts#L772)):
 if the item already exists in `gs.item` it just adds `amount`; `properties.quality` from
 `getWorkModifiers(...).quality` is written only when the stack is first created. A
@@ -211,7 +255,7 @@ DroppedItems at the death tile (corpse item optional until burial mechanics exis
 
 ## R11 · LOW — Doc/code mismatches that will misdirect contributors
 
-1. **Events phase**: ARCHITECTURE.md's mandatory turn order lists "5. Events — trigger random or conditional events"; `processGameTurn` has no events phase and `core/Events.ts` (412 lines, containing logic + writes to the legacy `gs.item` pool — double ADR-006 violation) is fully unwired. Carried from the last review (D4 note) — either wire it or cut it from the turn-order contract.
+1. **Events phase**: ARCHITECTURE.md's mandatory turn order lists "5. Events — trigger random or conditional events"; `processGameTurn` has no events phase and `core/Events.ts` (still ~hundreds of lines of logic — ADR-006) is fully unwired. _(✅ partial: its resource effect now writes the physical stockpile, not `gs.item`.)_ Carried from the last review — either wire it or cut it from the turn-order contract.
 2. **AGENTS.md / ARCHITECTURE.md service table** omits the services added since: `CombatService`, `EntityService`, `JobService`, `RecipeService`, `ResourceObjectService`, `LightingService`(if present), `PawnStatService` is listed but e.g. `OccupancyService` was added correctly — do one sync pass.
 3. **DESIGN.md need table** says `WORK_PRIORITY_THRESHOLD_SHIFT` gives "Level 4 → ~78" (+8 from 70); code comment at [PawnStateMachine.ts:114](../src/lib/game/systems/PawnStateMachine.ts#L114) says the same — both fine — but DESIGN also still describes drink/wash routing as deferred in one paragraph (PawnService comment too, [PawnService.ts:482](../src/lib/game/services/PawnService.ts#L482)) while §D zone routing is implemented in the FSM. Stale comments only.
 
@@ -229,6 +273,10 @@ DroppedItems at the death tile (corpse item optional until burial mechanics exis
 # Part II — Structural debt (not bugs)
 
 ### P-1 · The `gs.item` legacy pool itself
+
+> **✅ RESOLVED (ADR-016).** `GameState.item` and the `currentItem` store are gone; all readers
+> (craft output, eating, equip pool, events, blueprint cost, craft-cancel refund) migrated to
+> physical stockpile stock.
 
 Beyond R1's routing bug, the pool is a second inventory ontology: food eaten from it
 bypasses stockpile zones, equipment instances are plucked from it, Events would write to

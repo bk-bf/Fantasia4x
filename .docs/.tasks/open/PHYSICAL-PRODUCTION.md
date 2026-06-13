@@ -31,9 +31,10 @@ any means, a pawn must have held the input items, carried them to the production
    stock is physically present but excluded from "available" — so a second order can't
    double-spend it. Nothing is deleted at queue time.
 2. **Fetch.** JobService emits one `fetch` job per reserved drop not yet on the station:
-   source = the reserved drop, dest = the chosen station tile (nearest complete building of
-   the recipe's `station` type with free tile capacity). A pawn carries it (reusing the haul
-   machinery) and stages it as a `stored reservedFor` drop **on** the station.
+   source = the reserved drop, dest = the chosen station tile. The station is picked by
+   `buildingService.bestCraftStation` — the best workshop that can run the recipe (see station
+   tiers below). A pawn carries it (reusing the haul machinery) and stages it as a
+   `stored reservedFor` drop **on** the station.
 3. **Craft.** Once every reserved drop sits on the station tile, the `craft` job becomes
    claimable, targeted at the station tile. The pawn walks there and spends
    `recipe.workAmount × quantity` work points (same model as construction).
@@ -56,13 +57,12 @@ blueprint cost, craft-cancel refund) move to physical stock.
 carcass is the input to a `butcher_spot` recipe (`make_rabbit_meat`: `{rabbit_carcass: 1}` →
 `{rabbit_meat: 1}`, …), so a butchery order reserves one carcass, a pawn fetches it to the
 butcher spot, and the meat spawns there — exactly the reserve-and-fetch flow. The old
-`item.isCarcass`/`yields` multi-yield path (`ItemService.processButchery`,
-`GameEngineImpl.craftButchery`, the `CraftingScreen` carcass branches) is **dormant dead code**:
-no item in `items.jsonc` carries `isCarcass`/`yields`, so it never executes. It was hardened
-for R3 (consume one carcass, not the whole stack) in case it's ever revived, but reviving a
-multi-yield carcass model is a separate follow-up; today's butchery is recipes.
+`item.isCarcass`/`yields` multi-yield path (`processButchery`/`craftButchery` + CraftingScreen
+carcass branches) was **dead code** — no item in `items.jsonc` carries `isCarcass`/`yields` — and
+was **removed** in Pass 2. Reviving a one-carcass→meat+hide+bone multi-yield model is a separate
+content follow-up.
 
-## Pass 2 — follow-ups (DONE, except R4)
+## Pass 2 — follow-ups (DONE)
 
 - **Passive furnaces — DONE.** `Recipe.passive` flag + a `PASSIVE_STATIONS` default
   (bloomery / charcoal_pit / pottery_kiln / advanced_kiln). A passive order's inputs are still
@@ -81,22 +81,41 @@ multi-yield carcass model is a separate follow-up; today's butchery is recipes.
   it) was removed.
 - **R5 carry-budget enforcement — DONE.** `ItemService.clampPickupQuantity` caps each haul/fetch
   pickup by the pawn's weight/volume budget (belt/back raise it); the remainder stays for another
-  trip; floors at 1 for an empty pawn so a single heavy unit never deadlocks.
+  trip; **always floors at 1** so a single over-budget item (a heavy carcass; later a rescued pawn)
+  can always be hand-carried.
+- **Station tiers + R4 tool gating + bootstrap — DONE.**
+  - **Station tiers:** generic crafting stations form a tier ladder (`effects.tier`: craft_spot 0
+    → Crude Workbench 1). A higher tier *supersedes* lower ones and crafts their shared recipes
+    faster (`effects.craftingBonus` baked into the order's `workRequired`) —
+    `buildingService.stationFulfills`/`bestCraftStation`/`craftingBonusOf`. Specialised stations
+    (sawtable, forge…) have no tier → exact-match only.
+  - **ADR-009 tool gating (colony-stock, step 1):** `JobService.getAvailableJobs` filters a harvest
+    whose `interaction.toolRequirement` is set unless the colony stockpile holds a tool from the
+    matching `WorkCategory.toolsRequired` (`_colonyHasHarvestTool`); the job stays open until one is
+    crafted. Tool-free scavenges are exempt. (Closes review **R4**.)
+  - **Bootstrap (ADR-009):** `stone_outcrop` is now a **tool-free scavenge** (small_stone 5–10,
+    flint_shard 0–2 — flint is the intended scarce gate); `stone_axe`/`stone_hammer` recipes moved
+    to **craft_spot** (tier 0) and `makers_bench` renamed **"Crude Workbench"**, breaking the
+    circular build cost; added missing **`stone_pick`/`stone_hoe`** items + recipes so mining/planting
+    are tool-satisfiable. Chain: forage + scavenge stone → tier-0 tools → Crude Workbench → axe →
+    woodcutting.
 
 ### Still deferred
 
-- **R4 ADR-009 tool gating — DONE (colony-stock, step 1).** `JobService.getAvailableJobs` now
-  filters a harvest job whose `interaction.toolRequirement` is set unless the colony stockpile
-  holds a tool from the matching `WorkCategory.toolsRequired` (`_colonyHasHarvestTool`); the job
-  stays open until one is crafted. Tool-free scavenges (e.g. `stone_outcrop`) are exempt. Bootstrap
-  prerequisites that unblocked this: tool-free surface stone, `stone_axe`/`stone_hammer` at
-  craft_spot, station tiers (Crude Workbench). Added missing **`stone_pick`/`stone_hoe`** items +
-  recipes so mining/planting are tool-satisfiable. flint is the intended scarce early gate.
-  Deferred: step 2 (per-pawn claimed inventory + `minTier`), and craft-tool gating (e.g. forge tongs).
+- **Tool gating step 2** — per-pawn *claimed-inventory* check + `minTier` (currently colony-wide,
+  any-tier); **craft-tool gating** (e.g. forge tongs for metalworking) — gating is gathering-only.
+- **Per-stack craft quality** (review R8) — dropped with `gs.item`; re-attach quality to an
+  `ItemInstance`/stored drop when equipment quality matters.
+- **Butchery multi-yield** — one carcass → meat + hide + bone + intactness scaling (content task).
+- Unrelated review items not in this spec's scope: R2 (drafted-pawn health), R6 (dead
+  `constructBuilding`/`buildingQueue` triad), R7 (`isWorking`), R9 (hunting need-interrupt), R10
+  (`killPawn` drops nothing).
 
 ## Verification
 
-- Reserve→fetch→craft round trip; double-spend guard; butchery consumes exactly 1 carcass;
-  `fire_bricks` craftable → spendable on `advanced_kiln`; food eaten from stockpile; no
-  `gs.item` references remain.
-- Gates: `pnpm check` · `pnpm test` · `pnpm lint` · `pnpm build`.
+- Reserve→fetch→craft round trip; double-spend guard; output on the station; building materials
+  fetched then consumed on completion; passive furnace produces when supplied + lit; long jobs
+  release to the pool on hunger/fatigue/thirst; carry-budget clamp (≥1); station-tier supersession;
+  tool gating (woodcut needs an axe, scavenge is free); no `gs.item` references remain.
+- Gates (current): `pnpm check` 0 errors · `pnpm test` **133** passing · `pnpm lint` 0 errors ·
+  `pnpm build` succeeds.
