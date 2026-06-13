@@ -10,7 +10,8 @@ type Screen =
   | 'research'
   | 'exploration'
   | 'work'
-  | 'entities';
+  | 'entities'
+  | 'debug';
 
 interface UIState {
   currentScreen: Screen;

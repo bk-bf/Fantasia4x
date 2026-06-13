@@ -9,8 +9,17 @@
  * indirectly through PawnStateMachine (claimJob / advanceJob / releaseJob).
  */
 
-import type { DesignationType, GameState, Job, Pawn, DroppedItem, ZoneFilter } from '../core/types';
+import type {
+  DesignationType,
+  GameState,
+  Job,
+  JobDef,
+  Pawn,
+  DroppedItem,
+  ZoneFilter
+} from '../core/types';
 import { WORK_CATEGORIES } from '../core/Work';
+import jobsData from '../database/jobs.jsonc';
 // Gated console shim — see core/log.ts. Silences per-tick log/debug/warn unless
 // gameDebug(true); console.error still surfaces.
 import { gatedConsole as console, isGameDebug } from '../core/log';
@@ -30,6 +39,26 @@ import { ticksFromSeconds } from '../core/time';
 import { rng } from '../core/rng';
 
 const ITEMS_DATABASE = itemsData as unknown as import('../core/types').Item[];
+
+// ===== JOB REGISTRY (data-driven, jobs.jsonc) =====
+// The declarative half of the job system. jobs.jsonc lists the colony job types + their
+// work-category mapping / claim-gating; the behavioural half (generate + complete) is bound by id
+// in JobServiceImpl.handlers below. See ADR-017.
+const JOB_DEFS = jobsData as unknown as JobDef[];
+const JOB_DEF_BY_ID = new Map<string, JobDef>(JOB_DEFS.map((d) => [d.id, d]));
+
+/** The colony pool job types — the subset of Job['type'] that JobService generates & completes. */
+type JobPoolType = 'harvest' | 'haul' | 'construct' | 'deconstruct' | 'fetch' | 'craft' | 'refuel';
+// Compile-time guard: every JobPoolType must be a real Job['type'] member (fails to build otherwise).
+type _AssertPoolSubset = JobPoolType extends Job['type'] ? true : never;
+const _assertPoolSubset: _AssertPoolSubset = true;
+void _assertPoolSubset;
+
+/** Behaviour bound to a job type id: how it's generated into the pool and completed. */
+type JobHandler = {
+  generate: (jobs: Job[], gs: GameState) => Job[];
+  complete: (job: Job, gs: GameState) => GameState;
+};
 
 /**
  * Minimal shape needed to map a job to its labor work-category key. Both a full {@link Job}
@@ -63,6 +92,40 @@ const DEFAULT_REFUEL_TINDER_AMOUNT = 2;
 // ===== JOB SERVICE =====
 
 class JobServiceImpl {
+  // Behaviour registry: binds each jobs.jsonc id to its generate/complete implementation. This is
+  // the ONLY place a job type's behaviour is wired — generateJobs and _completeJob both dispatch
+  // through it, so there is no hardcoded type switch. (Arrow wrappers keep `this` bound.)
+  private readonly handlers: Record<JobPoolType, JobHandler> = {
+    harvest: {
+      generate: (j, gs) => this._syncHarvestJobs(j, gs),
+      complete: (job, gs) => this._completeHarvest(job, gs)
+    },
+    haul: {
+      generate: (j, gs) => this._syncHaulJobs(j, gs),
+      complete: (job, gs) => this._completeHaul(job, gs)
+    },
+    construct: {
+      generate: (j, gs) => this._syncConstructJobs(j, gs),
+      complete: (job, gs) => this._completeConstruct(job, gs)
+    },
+    deconstruct: {
+      generate: (j, gs) => this._syncDeconstructJobs(j, gs),
+      complete: (job, gs) => this._completeDeconstruct(job, gs)
+    },
+    fetch: {
+      generate: (j, gs) => this._syncFetchJobs(j, gs),
+      complete: (job, gs) => this._completeFetch(job, gs)
+    },
+    craft: {
+      generate: (j, gs) => this._syncCraftJobs(j, gs),
+      complete: (job, gs) => this._completeCraft(job, gs)
+    },
+    refuel: {
+      generate: (j, gs) => this._syncRefuelJobs(j, gs),
+      complete: (job, gs) => this._completeRefuel(job, gs)
+    }
+  };
+
   // ------------------------------------------------------------------ //
   // PUBLIC API                                                           //
   // ------------------------------------------------------------------ //
@@ -78,29 +141,16 @@ class JobServiceImpl {
   generateJobs(gameState: GameState): GameState {
     let jobs: Job[] = [...(gameState.jobs ?? [])];
 
-    // --- Harvest jobs from designations ---
-    jobs = this._syncHarvestJobs(jobs, gameState);
+    // Run each registered generator in jobs.jsonc declaration order (= the historical sequence:
+    // harvest → haul → construct → deconstruct → fetch → craft → refuel). Each generator syncs its
+    // own job type from world state (designations, dropped items, buildings, the crafting queue).
+    for (const def of JOB_DEFS) {
+      jobs = this.handlers[def.id as JobPoolType].generate(jobs, gameState);
+    }
 
-    // --- Haul jobs from dropped items ---
-    jobs = this._syncHaulJobs(jobs, gameState);
-
-    // --- Construct jobs from incomplete placed buildings ---
-    jobs = this._syncConstructJobs(jobs, gameState);
-
-    // --- Deconstruct jobs from buildings queued for demolition ---
-    jobs = this._syncDeconstructJobs(jobs, gameState);
-
-    // --- ADR-016: fetch jobs carry reserved inputs from stockpile to the order's station ---
-    jobs = this._syncFetchJobs(jobs, gameState);
-
-    // --- Craft jobs (only once an order's inputs are fully staged on its station) ---
-    jobs = this._syncCraftJobs(jobs, gameState);
-
-    // --- Phase 6: fuel-management jobs for campfires ---
-    // Light jobs removed: campfires auto-light whenever they have fuel.
-    // Stale light jobs are purged here in case of old save data.
+    // Light jobs were removed (campfires auto-light whenever they have fuel); purge any stale ones
+    // left in old save data.
     jobs = jobs.filter((j) => j.type !== 'light');
-    jobs = this._syncRefuelJobs(jobs, gameState);
 
     return { ...gameState, jobs };
   }
@@ -190,17 +240,20 @@ class JobServiceImpl {
       // Must be unclaimed or claimed by this pawn
       if (j.claimedBy !== null && j.claimedBy !== pawn.id) return false;
 
-      // If a building restricts who may refuel it, enforce here.
-      if (j.type === 'refuel' && j.buildingId) {
+      // Claim-gating is declared per job type in jobs.jsonc (`claimGate`); the rule logic stays here.
+      const claimGate = JOB_DEF_BY_ID.get(j.type)?.claimGate;
+
+      // refuelAllowlist: a building may restrict who is allowed to refuel it.
+      if (claimGate === 'refuelAllowlist' && j.buildingId) {
         const building = (gameState.buildings ?? []).find((b) => b.id === j.buildingId);
         const allowedPawns = building?.fuelSettings?.allowedRefuelPawnIds ?? [];
         if (allowedPawns.length > 0 && !allowedPawns.includes(pawn.id)) return false;
       }
 
-      // ADR-009 tool gating (R4): a harvest whose interaction requires a tool (woodcut→axe,
+      // harvestTool (ADR-009 / R4): a harvest whose interaction requires a tool (woodcut→axe,
       // mine→pick, …) is not claimable unless the colony has a matching tool in stock. The job
       // stays open until one is crafted. Tool-free scavenges (toolRequirement null) are exempt.
-      if (j.type === 'harvest' && !this._colonyHasHarvestTool(j, gameState)) return false;
+      if (claimGate === 'harvestTool' && !this._colonyHasHarvestTool(j, gameState)) return false;
 
       // Map job type to work category key used in labor settings
       const workKey = this._jobTypeToWorkKey(j, gameState);
@@ -524,35 +577,11 @@ class JobServiceImpl {
   // ------------------------------------------------------------------ //
 
   private _completeJob(job: Job, gameState: GameState): GameState {
-    // Remove the finished job from the pool
+    // Remove the finished job from the pool, then run its registered completion side-effect.
     const jobs = (gameState.jobs ?? []).filter((j) => j.id !== job.id);
-    let state: GameState = { ...gameState, jobs };
-
-    switch (job.type) {
-      case 'harvest':
-        state = this._completeHarvest(job, state);
-        break;
-      case 'haul':
-        state = this._completeHaul(job, state);
-        break;
-      case 'fetch':
-        state = this._completeFetch(job, state);
-        break;
-      case 'construct':
-        state = this._completeConstruct(job, state);
-        break;
-      case 'deconstruct':
-        state = this._completeDeconstruct(job, state);
-        break;
-      case 'craft':
-        state = this._completeCraft(job, state);
-        break;
-      case 'refuel':
-        state = this._completeRefuel(job, state);
-        break;
-    }
-
-    return state;
+    const state: GameState = { ...gameState, jobs };
+    const handler = this.handlers[job.type as JobPoolType];
+    return handler ? handler.complete(job, state) : state;
   }
 
   private _completeHarvest(job: Job, gs: GameState): GameState {
@@ -1244,6 +1273,12 @@ class JobServiceImpl {
     return this._jobTypeToWorkKey(job, gs);
   }
 
+  /** Colony job type ids that have a registered behaviour handler (= jobs.jsonc ids). Exposed for
+   *  the drift-guard test and tooling. */
+  jobTypeIds(): string[] {
+    return Object.keys(this.handlers);
+  }
+
   // ------------------------------------------------------------------ //
 
   /**
@@ -1273,43 +1308,29 @@ class JobServiceImpl {
 
   /** Map Job to the work category key used in WorkAssignment.laborSettings */
   private _jobTypeToWorkKey(job: WorkKeyJob, gs?: GameState): string {
-    switch (job.type) {
-      case 'harvest': {
-        const designationType = gs
-          ? ((gs.designations ?? {})[`${job.targetX},${job.targetY}`] as
-              | DesignationType
-              | undefined)
-          : undefined;
-        const def = resourceObjectService.getById(job.resourceId ?? '');
-        const interaction =
-          designationType && def
-            ? (resourceObjectService.getInteractionByDesignationType(
-                job.resourceId ?? '',
-                designationType
-              ) ?? def.interaction)
-            : def?.interaction;
-        return interaction?.workCategory ?? 'foraging';
-      }
-      case 'construct':
-        return 'construction';
-      case 'deconstruct':
-        return 'construction';
-      case 'craft':
-        return 'crafting';
-      case 'haul':
-        return 'hauling';
-      case 'fetch':
-        return 'hauling';
-      case 'eat':
-        return 'eat';
-      case 'sleep':
-        return 'sleep';
-      case 'light':
-      case 'refuel':
-        return 'construction'; // map to construction labor bucket
-      default:
-        return job.type;
+    const def = JOB_DEF_BY_ID.get(job.type);
+
+    // Dynamic: a harvest's labor category is read off the harvested resource's interaction
+    // (designation-specific when gs is available, else the resource's default interaction) — so a
+    // single `harvest` job type still maps to woodcutting / mining / foraging / … per resource.
+    if (def?.workCategorySource === 'designation') {
+      const designationType = gs
+        ? ((gs.designations ?? {})[`${job.targetX},${job.targetY}`] as DesignationType | undefined)
+        : undefined;
+      const rdef = resourceObjectService.getById(job.resourceId ?? '');
+      const interaction =
+        designationType && rdef
+          ? (resourceObjectService.getInteractionByDesignationType(
+              job.resourceId ?? '',
+              designationType
+            ) ?? rdef.interaction)
+          : rdef?.interaction;
+      return interaction?.workCategory ?? 'foraging';
     }
+
+    // Static mapping from jobs.jsonc. FSM-internal kinds (eat/sleep/need) have no JobDef and map to
+    // their own id, matching the historical behaviour.
+    return def?.workCategory ?? job.type;
   }
 }
 

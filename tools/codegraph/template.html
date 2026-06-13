@@ -84,6 +84,8 @@
   .ins-row.error { border-left-color: #ff6b6b55; }
   .ins-score { float: right; color: var(--fg-dim); font-variant-numeric: tabular-nums; }
   .rec-why { color: var(--fg-dim); font-size: 11px; line-height: 1.45; margin: 2px 0 6px; padding-left: 2px; }
+  .ins-group { margin-bottom: 2px; }
+  .chip-sep { width: 1px; align-self: stretch; background: var(--border); margin: 0 3px; }
 
   /* clickable stats + browse list panel */
   .stat-btn { background: none; border: 0; color: var(--fg-dim); font-family: inherit; font-size: 11px; cursor: pointer; padding: 3px 4px; border-radius: 4px; }
@@ -586,61 +588,97 @@ function gotoNode(id) {
   showFnDetail(n);
 }
 
-// ---- Insights panel: architecture check, port candidates, dead code ----
-const INS_RULES = ['ADR-008', 'cycle', 'layers', 'god-module', 'orphan'];
+// ---- Insights panel: architecture check, recommendations, ports, dead code ----
+const navAttr = (nav) => nav ? (nav[0] === 'node' ? `data-go-node="${nav[1]}"` : `data-go-mod="${nav[1]}"`) : '';
+const sevTag = (s) => (s === 'error' ? 'error' : s === 'warn' ? 'warn' : 'ok');
+const ROW_CAP = 40;
+
 function renderInsights() {
   const chk = CG_ANALYSIS.runChecks(GRAPH);
-  const ports = CG_ANALYSIS.portCandidates(GRAPH, 12);
+  const ports = CG_ANALYSIS.portCandidates(GRAPH, 15);
   const orph = CG_ANALYSIS.orphans(GRAPH);
   const recs = CG_ANALYSIS.recommendations(GRAPH);
-  const navAttr = (nav) => nav ? (nav[0] === 'node' ? `data-go-node="${nav[1]}"` : `data-go-mod="${nav[1]}"`) : '';
-  const recHtml = recs.map((r) => {
-    const rows = r.findings.slice(0, 8).map((f) =>
-      `<div class="ins-row" ${navAttr(f.nav)}>${escapeHtml(f.label)}${f.sub ? `<div class="meta">${escapeHtml(f.sub)}</div>` : ''}</div>`).join('');
-    const more = r.findings.length > 8 ? `<div class="ins-row meta" style="cursor:default;border:0">… +${r.findings.length - 8} more</div>` : '';
-    return `<div class="ins-rule"><span class="tag ${r.severity === 'error' ? 'error' : r.severity === 'warn' ? 'warn' : 'ok'}">${r.findings.length}</span>${escapeHtml(r.title)}</div>` +
-      `<div class="rec-why">${escapeHtml(r.rationale)}</div>${rows}${more}`;
-  }).join('') || '<div class="ins-row meta" style="cursor:default;border:0">no recommendations — nice 🎉</div>';
-  const row = (f) => {
-    const nav = f.id ? `data-go-node="${f.id}"` : f.module ? `data-go-mod="${f.module}"` : '';
-    const loc = f.file ? `<div class="meta">${f.file}:${f.line}</div>` : '';
-    return `<div class="ins-row ${f.level}" ${nav}>${escapeHtml(f.msg)}${loc}</div>`;
-  };
-  let checkHtml = '';
-  for (const rule of (chk.rules || INS_RULES)) {
+
+  // Build a uniform list of groups so one filter handles every section.
+  const groups = [];
+  for (const rule of (chk.rules || [])) {
     const fs = chk.findings.filter((f) => f.rule === rule);
-    const lvl = fs.some((f) => f.level === 'error') ? 'error' : fs.length ? 'warn' : 'ok';
-    checkHtml += `<div class="ins-rule"><span class="tag ${lvl}">${fs.length || '✓'}</span>${rule}</div>`;
-    checkHtml += fs.slice(0, 12).map(row).join('');
-    if (fs.length > 12) checkHtml += `<div class="ins-row meta" style="cursor:default;border:0">… +${fs.length - 12} more (pnpm graph:check)</div>`;
+    const sev = fs.some((f) => f.level === 'error') ? 'error' : fs.length ? 'warn' : 'info';
+    groups.push({ section: 'check', sev, title: rule, badge: fs.length || '✓',
+      rows: fs.map((f) => ({ label: f.msg, sub: f.file ? `${f.file}:${f.line}` : '', nav: f.id ? ['node', f.id] : f.module ? ['mod', f.module] : null })) });
   }
-  const portHtml = ports.map((p) =>
-    `<div class="ins-row" data-go-mod="${p.fullModule}"><span class="ins-score">${p.score}</span>${escapeHtml(p.module)}` +
-    `<div class="meta">${p.numericOps} numeric ops · ${p.loc} loc · coupling ${p.couplingToHigherLayers} · ${escapeHtml(p.hottestFunction || '')}</div></div>`).join('');
-  const orphHtml = orph.slice(0, 30).map((n) =>
-    `<div class="ins-row" data-go-node="${n.id}">${escapeHtml(n.short)}<div class="meta">${shortMod(n.module)} · ${n.file}:${n.line}</div></div>`
-  ).join('') || '<div class="ins-row meta" style="cursor:default;border:0">none</div>';
+  for (const r of recs) groups.push({ section: 'rec', sev: r.severity, title: r.title, badge: r.findings.length, why: r.rationale,
+    rows: r.findings.map((f) => ({ label: f.label, sub: f.sub, nav: f.nav })) });
+  groups.push({ section: 'ports', sev: 'info', title: 'TS→Rust port candidates', badge: ports.length, why: 'score = compute ÷ coupling',
+    rows: ports.map((p) => ({ label: p.module, sub: `score ${p.score} · ${p.numericOps} numeric · ${p.loc} loc · coupling ${p.couplingToHigherLayers}`, nav: ['mod', p.fullModule] })) });
+  groups.push({ section: 'orphans', sev: 'info', title: 'Dead-code candidates', badge: orph.length,
+    rows: orph.map((n) => ({ label: n.short, sub: `${shortMod(n.module)} · ${n.file}:${n.line}`, nav: ['node', n.id] })) });
+
+  const SECTIONS = [['check', 'Architecture check'], ['rec', 'Recommended for this stack'], ['ports', 'TS→Rust port candidates'], ['orphans', 'Dead-code candidates']];
+  const rowHtml = (r) =>
+    `<div class="ins-row" data-rtext="${escapeHtml((r.label + ' ' + (r.sub || '')).toLowerCase())}" ${navAttr(r.nav)}>${escapeHtml(r.label)}${r.sub ? `<div class="meta">${escapeHtml(r.sub)}</div>` : ''}</div>`;
+  const groupHtml = (g) => {
+    const rows = g.rows.slice(0, ROW_CAP).map(rowHtml).join('');
+    const more = g.rows.length > ROW_CAP ? `<div class="ins-row meta" style="cursor:default;border:0">… +${g.rows.length - ROW_CAP} more</div>` : '';
+    const why = g.why ? `<div class="rec-why">${escapeHtml(g.why)}</div>` : '';
+    return `<div class="ins-group" data-section="${g.section}" data-sev="${g.sev}" data-gtext="${escapeHtml((g.title + ' ' + (g.why || '')).toLowerCase())}">` +
+      `<div class="ins-rule"><span class="tag ${sevTag(g.sev)}">${g.badge}</span>${escapeHtml(g.title)}</div>${why}${rows}${more}</div>`;
+  };
+  let bodyHtml = '';
+  for (const [sec, label] of SECTIONS) {
+    const gs = groups.filter((g) => g.section === sec);
+    bodyHtml += `<div class="ins-sec" data-section="${sec}"><div class="ins-h"><span>${label}</span></div>${gs.map(groupHtml).join('')}</div>`;
+  }
+  const secChips = [['check', 'check'], ['rec', 'recommended'], ['ports', 'ports'], ['orphans', 'dead-code']]
+    .map(([k, l]) => `<span class="chip" data-sec="${k}">${l}</span>`).join('');
+  const sevChips = ['error', 'warn', 'info'].map((s) => `<span class="chip" data-sev="${s}">${s}</span>`).join('');
 
   openDetail(`
-    <div class="dh"><span class="close">×</span><div class="kind">insights</div><h2>Architecture insights</h2></div>
-    <div class="body">
-      <div class="ins-sec">
-        <div class="ins-h"><span>Architecture check</span><span><span class="tag error">${chk.errors}✗</span> <span class="tag warn">${chk.warnings}!</span></span></div>
-        ${checkHtml}
-      </div>
-      <div class="ins-sec">
-        <div class="ins-h"><span>Recommended for this stack</span><span class="meta">SvelteKit 5 · TS · WASM</span></div>
-        ${recHtml}
-      </div>
-      <div class="ins-sec">
-        <div class="ins-h"><span>TS→Rust port candidates</span><span class="meta">score = compute ÷ coupling</span></div>
-        ${portHtml}
-      </div>
-      <div class="ins-sec">
-        <div class="ins-h"><span>Dead-code candidates</span><span class="meta">${orph.length}</span></div>
-        ${orphHtml}
-      </div>
+    <div class="dh"><span class="close">×</span><div class="kind">insights</div>
+      <h2>Architecture insights <span style="color:var(--fg-dim);font-size:12px">${chk.errors}✗ ${chk.warnings}!</span></h2></div>
+    <div class="body" style="padding-top:10px">
+      <input class="list-search" id="insSearch" placeholder="filter insights…" autocomplete="off" />
+      <div class="chips" id="insChips">${secChips}<span class="chip-sep"></span>${sevChips}</div>
+      <div id="insBody">${bodyHtml}</div>
+      <div class="list-foot" id="insFoot"></div>
     </div>`);
+
+  const search = document.getElementById('insSearch');
+  const groupEls = [...document.querySelectorAll('#insBody .ins-group')];
+  const activeSecs = new Set(), activeSevs = new Set();
+  const applyInsFilter = () => {
+    const q = search.value.toLowerCase().trim();
+    let shown = 0;
+    for (const g of groupEls) {
+      const passSec = !activeSecs.size || activeSecs.has(g.dataset.section);
+      const passSev = !activeSevs.size || activeSevs.has(g.dataset.sev);
+      const findRows = [...g.querySelectorAll('.ins-row[data-rtext]')];
+      let visible = passSec && passSev;
+      if (visible && q) {
+        const titleMatch = g.dataset.gtext.includes(q);
+        let any = titleMatch;
+        for (const r of findRows) { const m = titleMatch || r.dataset.rtext.includes(q); r.style.display = m ? '' : 'none'; if (m) any = true; }
+        visible = any;
+      } else {
+        for (const r of findRows) r.style.display = '';
+      }
+      g.style.display = visible ? '' : 'none';
+      if (visible) shown += findRows.filter((r) => r.style.display !== 'none').length;
+    }
+    for (const sec of document.querySelectorAll('#insBody .ins-sec')) {
+      sec.style.display = [...sec.querySelectorAll('.ins-group')].some((g) => g.style.display !== 'none') ? '' : 'none';
+    }
+    document.getElementById('insFoot').textContent = `${shown} finding(s)`;
+  };
+  search.oninput = applyInsFilter;
+  document.querySelectorAll('#insChips .chip').forEach((c) => (c.onclick = () => {
+    if (c.dataset.sec) activeSecs.has(c.dataset.sec) ? activeSecs.delete(c.dataset.sec) : activeSecs.add(c.dataset.sec);
+    if (c.dataset.sev) activeSevs.has(c.dataset.sev) ? activeSevs.delete(c.dataset.sev) : activeSevs.add(c.dataset.sev);
+    c.classList.toggle('on');
+    applyInsFilter();
+  }));
+  applyInsFilter();
+  search.focus();
 }
 
 function onNodeClick(gid) {
