@@ -60,7 +60,6 @@ export const initialGameState: GameState = {
   pawns: [],
   worldMap: [], // generated lazily in the async init (D7)
   buildingCounts: {},
-  buildingQueue: [],
   /** Phase 4: placed buildings on the map */
   buildings: [],
   /** Phase 4: colony stockpile from harvesting */
@@ -143,9 +142,11 @@ function applyMigrations(state: GameState): GameState {
   if (!state.jobs) state.jobs = [];
   if (!state.mobs) state.mobs = [];
   if (!state.tamedAnimals) state.tamedAnimals = [];
-  // Phase 5c: migrate old buildingQueue entries to PlacedBuilding (work-point model)
-  if (state.buildingQueue && state.buildingQueue.length > 0) {
-    const migratedBuildings = state.buildingQueue.map((entry: any, i: number) => {
+  // Phase 5c: migrate ancient `buildingQueue` entries (field since removed — R6) into
+  // `under_construction` PlacedBuildings so old saves don't lose pending construction.
+  const legacyBuildingQueue = (state as { buildingQueue?: any[] }).buildingQueue;
+  if (legacyBuildingQueue && legacyBuildingQueue.length > 0) {
+    const migratedBuildings = legacyBuildingQueue.map((entry: any, i: number) => {
       const buildTime = entry.building?.buildTime ?? 10;
       const workRequired = buildTime * 10;
       const workDone = Math.round(
@@ -164,7 +165,7 @@ function applyMigrations(state: GameState): GameState {
       };
     });
     state.buildings = [...(state.buildings ?? []), ...migratedBuildings];
-    state.buildingQueue = [];
+    delete (state as { buildingQueue?: unknown }).buildingQueue;
   }
   // Migrate legacy zoneFilters to zoneInstances
   if ((!state.zoneInstances || state.zoneInstances.length === 0) && state.zoneFilters) {

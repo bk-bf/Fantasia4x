@@ -68,15 +68,6 @@ export class GameStateManager {
     return true;
   }
 
-  startBuilding(building: Building): boolean {
-    this.state.buildingQueue.push({
-      building,
-      turnsRemaining: building.workAmount,
-      startedAt: this.state.turn
-    });
-    return true;
-  }
-
   // ===== PHASE 4: STOCKPILE =====
 
   addToStockpile(id: string, amount: number): void {

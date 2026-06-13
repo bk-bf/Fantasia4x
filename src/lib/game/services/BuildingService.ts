@@ -53,9 +53,6 @@ export interface BuildingService {
     requirements: string[];
   };
 
-  // Building Queue Processing
-  processBuildingQueue(gameState: GameState): GameState;
-
   // ADR-016 station tiers: generic crafting stations form a tier ladder (craft_spot 0 →
   // makers_bench 1 → …); a higher tier supersedes lower ones and crafts their recipes faster.
   stationTier(buildingType: string): number | undefined;
@@ -327,43 +324,6 @@ export class BuildingServiceImpl implements BuildingService {
     return { upkeep, requirements };
   }
 
-  processBuildingQueue(gameState: GameState): GameState {
-    console.log('[BuildingService] Processing building queue');
-
-    if (gameState.buildingQueue.length === 0) return gameState;
-
-    let newBuildings = [...(gameState.buildings ?? [])];
-    const newBuildingCounts = { ...(gameState.buildingCounts ?? {}) };
-
-    const updatedBuildingQueue = gameState.buildingQueue
-      .map((entry) => ({ ...entry, turnsRemaining: entry.turnsRemaining - 1 }))
-      .filter((entry) => {
-        if (entry.turnsRemaining <= 0) {
-          // Building completed — push into buildings[] as a complete PlacedBuilding
-          const placed: PlacedBuilding = {
-            id: `${entry.building.id}-${Date.now()}-${rng.random().toString(36).slice(2, 7)}`,
-            type: entry.building.id,
-            x: 0, // abstract queue buildings have no tile coords
-            y: 0,
-            status: 'complete',
-            progress: 1
-          };
-          newBuildings = [...newBuildings, placed];
-          // Keep buildingCounts in sync for backward compat
-          newBuildingCounts[entry.building.id] = (newBuildingCounts[entry.building.id] ?? 0) + 1;
-          console.log('[BuildingService] Building completed:', entry.building.id);
-          return false;
-        }
-        return true;
-      });
-
-    return {
-      ...gameState,
-      buildingQueue: updatedBuildingQueue,
-      buildings: newBuildings,
-      buildingCounts: newBuildingCounts
-    };
-  }
 
   /**
    * Phase 4d / Phase 5c: Place a building at specific tile coordinates with status 'planned'.

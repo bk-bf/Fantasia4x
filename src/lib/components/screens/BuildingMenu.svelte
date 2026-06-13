@@ -136,7 +136,6 @@
       jobs: [],
       turn: currentTurnValue,
       race: race,
-      buildingQueue: [],
       // Required properties with default values
       worldMap: [],
       availableResearch: [],

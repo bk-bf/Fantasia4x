@@ -70,7 +70,6 @@ export interface GameEngine {
   getBuildingById(buildingId: string): any;
   getAllBuildings(): any[];
   getBuildableBuildings(): any[];
-  constructBuilding(buildingId: string, locationId?: string): void;
 
   // ResearchService coordination
   getResearchById(researchId: string): any;

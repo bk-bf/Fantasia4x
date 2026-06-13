@@ -186,7 +186,6 @@ export interface GameState {
   designationZoneId?: Record<string, string>;
   /** Phase 5a: active job pool — regenerated each turn by JobService */
   jobs: Job[];
-  buildingQueue: BuildingInProgress[];
   maxPopulation: number;
   availableResearch: string[];
   completedResearch: string[];
@@ -1191,11 +1190,6 @@ export interface Item {
     uses: number;
     consumeTime: number;
   };
-}
-export interface BuildingInProgress {
-  building: Building;
-  turnsRemaining: number;
-  startedAt: number;
 }
 export interface CraftingInProgress {
   item: Item; // The item being crafted

@@ -202,40 +202,6 @@ export class GameEngineImpl implements GameEngine {
     return buildingService.getAvailableBuildings(this.gameState);
   }
 
-  constructBuilding(buildingId: string, locationId?: string): void {
-    if (!this.gameState) return;
-    gatedConsole.log(
-      `[GameEngine] Coordinating building construction: ${buildingId} at ${locationId || 'default location'}`
-    );
-
-    // COORDINATION: Check if can build and add to building queue
-    if (buildingService.canBuildBuilding(buildingId, this.gameState)) {
-      const building = buildingService.getBuildingById(buildingId);
-      if (building) {
-        // Add to building queue
-        const buildingInProgress = {
-          building: building,
-          turnsRemaining: building.workAmount || 1,
-          startedAt: this.gameState.turn,
-          locationId: locationId || 'default'
-        };
-
-        // Consume materials
-        if (building.buildingCost) {
-          this.gameState = itemService.consumeItems(building.buildingCost, this.gameState);
-        }
-
-        // Add to queue
-        this.gameState = {
-          ...this.gameState,
-          buildingQueue: [...(this.gameState.buildingQueue || []), buildingInProgress]
-        };
-      }
-    }
-
-    this.updateStores();
-  }
-
   // COORDINATION: ResearchService methods for UI components
   getResearchById(researchId: string): any {
     return researchService.getResearchById(researchId);
@@ -760,8 +726,8 @@ export class GameEngineImpl implements GameEngine {
   }
 
   private processBuildings(): void {
-    // Phase 5c: building construction is now handled by the job system (construct jobs).
-    // processBuildingQueue countdown removed.
+    // Building construction is handled by the job system (construct jobs) + ADR-016 material
+    // hauling; the legacy buildingQueue/processBuildingQueue countdown was deleted (R6).
 
     // Process any buildings queued for deconstruction — remove and refund materials
     this.gameState = buildingService.processDeconstructionQueue(this.gameState!);
