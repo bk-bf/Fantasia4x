@@ -348,6 +348,9 @@ export class GameEngineImpl implements GameEngine {
         }
         out.TOTAL = total.toFixed(3) + 'ms';
         (globalThis as any).__profOut = out;
+        // ADR-011: the profiler must always print (GameEngineImpl deliberately does NOT shadow
+        // console), so this is the sanctioned raw-console exemption.
+        // eslint-disable-next-line no-console
         console.log('[PROF] ' + JSON.stringify(out));
         for (const k of Object.keys(prof)) {
           prof[k].sum = 0;
@@ -670,6 +673,8 @@ export class GameEngineImpl implements GameEngine {
     if (prof && this.gameState!.turn % TICKS_PER_SECOND === 0) {
       const out: Record<string, string> = {};
       for (const k of Object.keys(prof)) out[k] = (prof[k].sum / prof[k].n).toFixed(3) + 'ms';
+      // ADR-011 sanctioned profiler output (always prints).
+      // eslint-disable-next-line no-console
       console.log('[PROF-PAWN] ' + JSON.stringify(out));
       for (const k of Object.keys(prof)) {
         prof[k].sum = 0;

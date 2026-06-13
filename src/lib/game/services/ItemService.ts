@@ -17,6 +17,9 @@ import { buildingService } from './BuildingService';
 import itemsData from '../database/items.jsonc';
 import buildingsData from '../database/buildings.jsonc';
 import { SECONDS_PER_TICK } from '../core/time';
+// Gated console shim (ADR-011): per-tick/per-action log/debug/info/warn are silent unless
+// gameDebug(true); console.error still surfaces.
+import { gatedConsole as console } from '../core/log';
 
 const ITEMS_DATABASE = itemsData as unknown as Item[];
 // Building defs are needed for tile-aware decay (storage multipliers, roofs).

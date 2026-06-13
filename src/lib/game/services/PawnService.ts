@@ -449,9 +449,9 @@ export class PawnServiceImpl implements PawnService {
 
   /**
    * §D auto-wash. A pawn whose hygiene passes AUTO_WASH_HYGIENE washes at an adjacent river/lake
-   * (lowering hygiene). Without a water source it stays dirty — the relief that keeps hygiene
-   * from being a dead-end mood drain. (A dedicated wash-basin building + wash-zone routing are
-   * the deeper version, deferred with drink/wash-zone routing.)
+   * (lowering hygiene) — a lightweight opportunistic relief that keeps hygiene from being a
+   * dead-end mood drain. The deliberate version (walking to a painted wash zone) is the FSM's
+   * `tryRouteToWaterNeed`/WASHING flow; a dedicated wash-basin building is still future.
    */
   processAutoWash(gameState: GameState): GameState {
     let state = gameState;
@@ -549,8 +549,9 @@ export class PawnServiceImpl implements PawnService {
       newState.mood = Math.max(0, newState.mood - perTick(2));
     }
 
-    // §D water needs: parched / filthy pawns lose mood. (Dehydration → collapse and the
-    // drink/wash AI behaviour are the remaining Stage-4 piece; this is the mood pressure.)
+    // §D water needs: parched / filthy pawns lose mood — the mood pressure on top of the
+    // drink/wash AI (auto-drink/wash + FSM routing to drink/wash zones) and the dehydration
+    // condition that the state machine already drive.
     if ((needs.thirst ?? 0) > 90) {
       newState.mood = Math.max(0, newState.mood - perTick(4));
     }
