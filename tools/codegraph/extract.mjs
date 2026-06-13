@@ -112,7 +112,7 @@ function nameWords(name) {
 }
 
 // Leading-verb → sentence templates for inferring what a function does.
-const VERB = {
+const VERB = Object.assign(Object.create(null), {
   get: 'Return', return: 'Return', find: 'Find', fetch: 'Fetch', lookup: 'Look up',
   read: 'Read', list: 'List', collect: 'Collect', gather: 'Gather', resolve: 'Resolve',
   calculate: 'Compute', compute: 'Compute', derive: 'Derive', evaluate: 'Evaluate',
@@ -145,7 +145,7 @@ const VERB = {
   sum: 'Sum', total: 'Total', mark: 'Mark', flag: 'Flag', queue: 'Queue',
   load: 'Load', grant: 'Grant', award: 'Award', gain: 'Gain', lose: 'Lose',
   damage: 'Apply damage from', heal: 'Heal', hit: 'Resolve a hit on', attack: 'Resolve an attack by',
-};
+});
 const PREDICATE = new Set(['is', 'has', 'can', 'should', 'are', 'was', 'will', 'does', 'did', 'must', 'needs', 'wants']);
 
 /** Infer a readable sentence for a function from its name when it has no JSDoc. */
