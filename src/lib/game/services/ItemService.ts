@@ -13,6 +13,7 @@ import {
   availableQuantityFromDrops
 } from '../core/GameState';
 import { recipeService } from './RecipeService';
+import { buildingService } from './BuildingService';
 import itemsData from '../database/items.jsonc';
 import buildingsData from '../database/buildings.jsonc';
 import { SECONDS_PER_TICK } from '../core/time';
@@ -252,33 +253,15 @@ export class ItemServiceImpl implements ItemService {
 
   hasRequiredBuilding(itemId: string, gameState: GameState): boolean {
     const recipe = recipeService.getRecipeForItem(itemId);
-    const item: { workshopType?: string | null; buildingRequired?: string | null } = {
-      workshopType: recipe?.station ?? null,
-      buildingRequired: recipe?.buildingRequired ?? null
-    };
+    // null station → at minimum a craft_spot. ADR-016 station tiers: a higher generic workshop
+    // (Crude Workbench) supersedes a lower one (craft_spot), so it can fulfill the requirement.
+    const station = recipe?.station ?? 'craft_spot';
+    if (!buildingService.bestCraftStation(station, gameState)) return false;
 
-    // All crafting requires at minimum a craft_spot — pawns need a designated safe location
-    if (!item?.workshopType) {
-      const hasCraftSpot = (gameState.buildings ?? []).some(
-        (b) => b.type === 'craft_spot' && b.status === 'complete'
-      );
-      if (!hasCraftSpot) return false;
-    }
-
-    // Check Phase 5d workshopType (e.g. 'campfire', 'makers_bench', 'craft_spot')
-    if (item?.workshopType) {
-      const workshopOk = (gameState.buildings ?? []).some(
-        (b) => b.type === item.workshopType && b.status === 'complete'
-      );
-      if (!workshopOk) return false;
-    }
-
-    // Check legacy buildingRequired field
-    if (!item?.buildingRequired) return true;
-
-    // Phase 5d fix: check buildings[] instead of deprecated buildingCounts
+    // Legacy buildingRequired field (exact-type, separate from the crafting station).
+    if (!recipe?.buildingRequired) return true;
     return (gameState.buildings ?? []).some(
-      (b) => b.type === item.buildingRequired && b.status === 'complete'
+      (b) => b.type === recipe.buildingRequired && b.status === 'complete'
     );
   }
 

@@ -582,16 +582,19 @@
     "toolTierRequired": 0
   },
   {
+    // Tier-0 (craft_spot): the axe must be knappable at the free ground spot, since the Crude
+    // Workbench's own build cost lists a stone_axe — a higher-tier bench crafts it faster.
     "id"              : "make_stone_axe",
-    "station"         : "makers_bench",
+    "station"         : "craft_spot",
     "inputs"          : {"flint_shard": 2, "branch": 3, "cordage": 2},
     "outputs"         : {"stone_axe": 1},
     "workAmount"      : 3,
     "toolTierRequired": 0
   },
   {
+    // Tier-0 (craft_spot): same reason — the Crude Workbench's build cost lists a stone_hammer.
     "id"              : "make_stone_hammer",
-    "station"         : "makers_bench",
+    "station"         : "craft_spot",
     "inputs"          : {"granite": 2, "branch": 3, "cordage": 1},
     "outputs"         : {"stone_hammer": 1},
     "workAmount"      : 3,

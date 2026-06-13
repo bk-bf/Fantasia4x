@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { jobService } from './JobService';
 import { itemService } from './ItemService';
 import { recipeService } from './RecipeService';
+import { buildingService } from './BuildingService';
 import type { GameState, Pawn } from '../core/types';
 
 function makeState(partial: Partial<GameState> = {}): GameState {
@@ -180,3 +181,42 @@ describe('passive furnaces (ADR-016)', () => {
     expect(produced?.quantity).toBe(1);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Station tiers (craft_spot → Crude Workbench) + bootstrap closure
+// ─────────────────────────────────────────────────────────────────────────────
+describe('station tiers + bootstrap (ADR-016 / ADR-009)', () => {
+  it('a higher-tier generic station supersedes a lower one; specialised stations need exact match', () => {
+    expect(buildingService.stationFulfills('makers_bench', 'craft_spot')).toBe(true); // tier 1 ≥ 0
+    expect(buildingService.stationFulfills('craft_spot', 'makers_bench')).toBe(false); // tier 0 < 1
+    expect(buildingService.stationFulfills('craft_spot', 'craft_spot')).toBe(true); // exact
+    expect(buildingService.stationFulfills('sawtable', 'craft_spot')).toBe(false); // specialised
+  });
+
+  it('craftingBonus: the Crude Workbench is faster than the craft_spot', () => {
+    expect(buildingService.craftingBonusOf('craft_spot')).toBe(0);
+    expect(buildingService.craftingBonusOf('makers_bench')).toBeGreaterThan(0);
+  });
+
+  it('bestCraftStation prefers the highest-tier eligible workshop', () => {
+    const gs = {
+      buildings: [
+        { id: 'cs', type: 'craft_spot', x: 0, y: 0, status: 'complete' },
+        { id: 'mb', type: 'makers_bench', x: 1, y: 0, status: 'complete' }
+      ]
+    } as unknown as GameState;
+    expect(buildingService.bestCraftStation('craft_spot', gs)?.id).toBe('mb');
+  });
+
+  it('bootstrap: stone_axe/stone_hammer are now craft_spot-tier, so the Crude Workbench is buildable', () => {
+    // The axe/hammer moved to craft_spot (tier 0) — no longer crafted only at the bench whose
+    // build cost lists them, so the circular dependency is broken.
+    expect(recipeService.getRecipeForItem('stone_axe')?.station).toBe('craft_spot');
+    expect(recipeService.getRecipeForItem('stone_hammer')?.station).toBe('craft_spot');
+    // And a craft_spot recipe is satisfiable when only the higher-tier bench is built.
+    const gs = {
+      buildings: [{ id: 'mb', type: 'makers_bench', x: 0, y: 0, status: 'complete' }]
+    } as unknown as GameState;
+    expect(itemService.hasRequiredBuilding('stone_axe', gs)).toBe(true);
+  });
+})

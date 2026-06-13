@@ -67,12 +67,12 @@
   },
   {
     "id": "makers_bench",
-    "name": "Maker's Bench",
+    "name": "Crude Workbench",
     "color": "#8B6914",
     "charSpans": [ {"sheet": "buildings", "id": 39} ],
     "fg": [0.55, 0.41, 0.08],
     "bg": [0.06, 0.04, 0.01],
-    "description": "A pcordager workbench assembled from your first tools — laid flat, wedged with cordage, the working surface of someone who means to stay. Unlocks composite tools, leather work, and clay containers.",
+    "description": "A rough workbench lashed together from your first tools — planks laid flat, wedged and bound with cordage. A real working surface, a step up from knapping on the ground: it crafts the same primitive recipes faster and unlocks composite tools, leather work, and clay containers.",
     "category": "production",
     "buildingCost": {
       "flint_knife"  :  1,

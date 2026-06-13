@@ -56,6 +56,13 @@ export interface BuildingService {
   // Building Queue Processing
   processBuildingQueue(gameState: GameState): GameState;
 
+  // ADR-016 station tiers: generic crafting stations form a tier ladder (craft_spot 0 →
+  // makers_bench 1 → …); a higher tier supersedes lower ones and crafts their recipes faster.
+  stationTier(buildingType: string): number | undefined;
+  craftingBonusOf(buildingType: string): number;
+  stationFulfills(haveType: string, recipeStation: string): boolean;
+  bestCraftStation(recipeStation: string, gameState: GameState): PlacedBuilding | null;
+
   // Phase 4d: Tile-placed buildings
   placeBuilding(type: string, x: number, y: number, gameState: GameState): GameState;
   hasCompletedBuilding(type: string, gameState: GameState): boolean;
@@ -362,6 +369,40 @@ export class BuildingServiceImpl implements BuildingService {
    * Phase 4d / Phase 5c: Place a building at specific tile coordinates with status 'planned'.
    * Sets workRequired = workAmount so that JobService can generate a construct job.
    */
+  /** Crafting tier of a generic station (effects.tier); undefined for specialised/non-craft buildings. */
+  stationTier(buildingType: string): number | undefined {
+    return this.getBuildingById(buildingType)?.effects?.tier;
+  }
+
+  /** Crafting speed bonus of a station (effects.craftingBonus, e.g. 0.2 = +20%); 0 if none. */
+  craftingBonusOf(buildingType: string): number {
+    return this.getBuildingById(buildingType)?.effects?.craftingBonus ?? 0;
+  }
+
+  /**
+   * Can a complete building of `haveType` craft a recipe authored for `recipeStation`?
+   * Generic tiered stations supersede lower tiers (a Crude Workbench can do craft_spot recipes);
+   * a specialised station (sawtable, forge, …) needs an exact-type match.
+   */
+  stationFulfills(haveType: string, recipeStation: string): boolean {
+    if (haveType === recipeStation) return true;
+    const need = this.stationTier(recipeStation);
+    const have = this.stationTier(haveType);
+    return need !== undefined && have !== undefined && have >= need;
+  }
+
+  /** Best complete building that can craft a recipe for `recipeStation` — highest tier wins (so a
+   *  shared recipe runs at the better, faster workshop). Null if none can. */
+  bestCraftStation(recipeStation: string, gameState: GameState): PlacedBuilding | null {
+    const eligible = (gameState.buildings ?? []).filter(
+      (b) => b.status === 'complete' && this.stationFulfills(b.type, recipeStation)
+    );
+    if (eligible.length === 0) return null;
+    return eligible.reduce((best, b) =>
+      (this.stationTier(b.type) ?? -1) > (this.stationTier(best.type) ?? -1) ? b : best
+    );
+  }
+
   placeBuilding(type: string, x: number, y: number, gameState: GameState): GameState {
     const building = this.getBuildingById(type);
     if (!building) {

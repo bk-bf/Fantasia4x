@@ -141,7 +141,15 @@ export class GameEngineImpl implements GameEngine {
     for (const [id, q] of Object.entries(activeCost)) inputs[id] = q * quantity;
 
     const stationType = recipe?.station ?? null;
-    const stationBuildingId = this.pickStationInstance(stationType, this.gameState);
+    // ADR-016 station tiers: craft at the best available workshop (highest tier that can do this
+    // recipe). A higher-tier station (Crude Workbench, craftingBonus) crafts shared recipes faster.
+    const station = buildingService.bestCraftStation(stationType ?? 'craft_spot', this.gameState);
+    const stationBuildingId = station?.id;
+    const craftBonus = station ? buildingService.craftingBonusOf(station.type) : 0;
+    const workRequired = Math.max(
+      1,
+      Math.ceil(((recipe?.workAmount ?? 1) * quantity) / (1 + craftBonus))
+    );
 
     // Reserve every input from available stock (does not delete it). If anything is short,
     // release what we reserved and abort — affordability was checked but stock can race.
@@ -166,7 +174,7 @@ export class GameEngineImpl implements GameEngine {
       id: orderId,
       item,
       quantity,
-      workRequired: (recipe?.workAmount ?? 1) * quantity,
+      workRequired,
       workDone: 0,
       inputs,
       stationType,
@@ -177,20 +185,6 @@ export class GameEngineImpl implements GameEngine {
 
     this.gameState = { ...gs, craftingQueue: [...(gs.craftingQueue ?? []), order] };
     this.updateStores();
-  }
-
-  /**
-   * ADR-016: choose the workstation instance an order's inputs are fetched to and crafted at —
-   * the first complete building of the recipe's station type (craft_spot when the recipe has no
-   * explicit station). Returns undefined when none exists (canCraftItem already gates on this).
-   */
-  private pickStationInstance(
-    stationType: string | null | undefined,
-    gs: GameState
-  ): string | undefined {
-    const wanted = stationType ?? 'craft_spot';
-    const station = (gs.buildings ?? []).find((b) => b.type === wanted && b.status === 'complete');
-    return station?.id;
   }
 
   // COORDINATION: BuildingService methods for UI components
