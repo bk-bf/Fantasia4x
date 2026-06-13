@@ -491,7 +491,9 @@ function registerComponent(sf) {
     loc: txt.split('\n').length,
     chars: txt.length,
     numeric: 0,
-    tested: false
+    tested: false,
+    // Svelte 5 best practice: prefer runes. Count legacy `$:` reactive statements.
+    legacyReactive: (txt.match(/(^|\n)[ \t]*\$:/g) || []).length
   });
   componentScan.push({ id, sf });
 }
@@ -719,9 +721,19 @@ for (const rf of new Set(rust.nodes.map((n) => n.file))) {
   fileList.push({ file: rf, module: rn[0].module, group: 'rust', fns: rn.length, lang: 'rust' });
 }
 
+// ADRs declared in DECISIONS.md — so the checker can flag any not onboarded.
+let adrs = [];
+try {
+  const dec = fs.readFileSync(path.join(ROOT, '.docs/game/DECISIONS.md'), 'utf8');
+  adrs = [...dec.matchAll(/^#{2,4}\s+(ADR-\d+)\b[^:\n]*:\s*(.+?)\s*$/gm)].map((m) => ({ id: m[1], title: m[2].trim() }));
+} catch {
+  /* no DECISIONS.md */
+}
+
 const out = {
   generatedAt: new Date().toISOString(),
   root: ROOT,
+  adrs,
   stats: {
     files: fileList.length,
     functions: nodes.size,

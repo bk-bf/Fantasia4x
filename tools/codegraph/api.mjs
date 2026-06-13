@@ -13,7 +13,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { runChecks, portCandidates, orphans } from './analysis.mjs';
+import { runChecks, portCandidates, orphans, recommendations } from './analysis.mjs';
 
 const shortMod = (m) => m.replace(/^game\//, '');
 
@@ -251,6 +251,7 @@ export function createApi(DIR) {
       'GET /api/callees?name=': 'functions the target calls',
       'GET /api/path?from=&to=&max=&format=md': 'shortest call path from one function to another',
       'GET /api/check': 'architecture rule findings (ADR-008, cycles, layers, god-modules, orphans)',
+      'GET /api/recommendations': 'stack best-practice recommendations (runes, component/function size, coverage, DI, cycles)',
       'GET /api/port-candidates?limit=': 'modules ranked as TS→Rust port candidates (compute-heavy, low coupling)',
       'GET /api/orphans': 'standalone private functions with no callers (dead-code candidates)',
       'GET /api/hubs?limit=': 'most-called functions and most-depended-on modules',
@@ -382,6 +383,13 @@ export function createApi(DIR) {
       if (p === '/api/check') {
         const { findings, errors, warnings } = runChecks(G);
         return ok(res, { errors, warnings, findings }), true;
+      }
+
+      if (p === '/api/recommendations') {
+        return ok(res, {
+          note: 'Best-practice recommendations for this stack (SvelteKit 5 + TS + layered services + WASM), grounded in current ecosystem guidance and the project rules.',
+          recommendations: recommendations(G),
+        }), true;
       }
 
       if (p === '/api/port-candidates') {

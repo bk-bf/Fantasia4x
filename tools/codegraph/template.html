@@ -83,6 +83,7 @@
   .ins-row .meta { color: var(--fg-dim); font-size: 11px; }
   .ins-row.error { border-left-color: #ff6b6b55; }
   .ins-score { float: right; color: var(--fg-dim); font-variant-numeric: tabular-nums; }
+  .rec-why { color: var(--fg-dim); font-size: 11px; line-height: 1.45; margin: 2px 0 6px; padding-left: 2px; }
 
   /* clickable stats + browse list panel */
   .stat-btn { background: none; border: 0; color: var(--fg-dim); font-family: inherit; font-size: 11px; cursor: pointer; padding: 3px 4px; border-radius: 4px; }
@@ -230,7 +231,7 @@ const DESC  = JSON.parse(document.getElementById('descdata').textContent);
 // Shared analysis (same code as CLI graph:check + the /api endpoints), inlined.
 const CG_ANALYSIS = (() => {
 /*__ANALYSIS__*/
-return { runChecks, portCandidates, orphans };
+return { runChecks, portCandidates, orphans, recommendations };
 })();
 
 mermaid.initialize({
@@ -591,13 +592,22 @@ function renderInsights() {
   const chk = CG_ANALYSIS.runChecks(GRAPH);
   const ports = CG_ANALYSIS.portCandidates(GRAPH, 12);
   const orph = CG_ANALYSIS.orphans(GRAPH);
+  const recs = CG_ANALYSIS.recommendations(GRAPH);
+  const navAttr = (nav) => nav ? (nav[0] === 'node' ? `data-go-node="${nav[1]}"` : `data-go-mod="${nav[1]}"`) : '';
+  const recHtml = recs.map((r) => {
+    const rows = r.findings.slice(0, 8).map((f) =>
+      `<div class="ins-row" ${navAttr(f.nav)}>${escapeHtml(f.label)}${f.sub ? `<div class="meta">${escapeHtml(f.sub)}</div>` : ''}</div>`).join('');
+    const more = r.findings.length > 8 ? `<div class="ins-row meta" style="cursor:default;border:0">… +${r.findings.length - 8} more</div>` : '';
+    return `<div class="ins-rule"><span class="tag ${r.severity === 'error' ? 'error' : r.severity === 'warn' ? 'warn' : 'ok'}">${r.findings.length}</span>${escapeHtml(r.title)}</div>` +
+      `<div class="rec-why">${escapeHtml(r.rationale)}</div>${rows}${more}`;
+  }).join('') || '<div class="ins-row meta" style="cursor:default;border:0">no recommendations — nice 🎉</div>';
   const row = (f) => {
     const nav = f.id ? `data-go-node="${f.id}"` : f.module ? `data-go-mod="${f.module}"` : '';
     const loc = f.file ? `<div class="meta">${f.file}:${f.line}</div>` : '';
     return `<div class="ins-row ${f.level}" ${nav}>${escapeHtml(f.msg)}${loc}</div>`;
   };
   let checkHtml = '';
-  for (const rule of INS_RULES) {
+  for (const rule of (chk.rules || INS_RULES)) {
     const fs = chk.findings.filter((f) => f.rule === rule);
     const lvl = fs.some((f) => f.level === 'error') ? 'error' : fs.length ? 'warn' : 'ok';
     checkHtml += `<div class="ins-rule"><span class="tag ${lvl}">${fs.length || '✓'}</span>${rule}</div>`;
@@ -617,6 +627,10 @@ function renderInsights() {
       <div class="ins-sec">
         <div class="ins-h"><span>Architecture check</span><span><span class="tag error">${chk.errors}✗</span> <span class="tag warn">${chk.warnings}!</span></span></div>
         ${checkHtml}
+      </div>
+      <div class="ins-sec">
+        <div class="ins-h"><span>Recommended for this stack</span><span class="meta">SvelteKit 5 · TS · WASM</span></div>
+        ${recHtml}
       </div>
       <div class="ins-sec">
         <div class="ins-h"><span>TS→Rust port candidates</span><span class="meta">score = compute ÷ coupling</span></div>

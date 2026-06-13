@@ -20,13 +20,12 @@ if (!fs.existsSync(graphPath)) {
   process.exit(2);
 }
 const G = JSON.parse(fs.readFileSync(graphPath, 'utf8'));
-const { findings, errors, warnings } = runChecks(G);
+const { findings, errors, warnings, rules } = runChecks(G);
 
-const RULES = ['ADR-008', 'cycle', 'layers', 'god-module', 'orphan'];
 const C = { red: '\x1b[31m', yel: '\x1b[33m', dim: '\x1b[2m', grn: '\x1b[32m', bold: '\x1b[1m', off: '\x1b[0m' };
 
 console.log(`\n${C.bold}Codebase graph — architecture check${C.off}  (${G.stats.functions} fns, ${G.stats.modules} modules)\n`);
-for (const rule of RULES) {
+for (const rule of rules) {
   const fs_ = findings.filter((f) => f.rule === rule);
   if (!fs_.length) { console.log(`  ${C.grn}✓${C.off} ${rule}`); continue; }
   const err = fs_.some((f) => f.level === 'error');

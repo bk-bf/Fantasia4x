@@ -69,7 +69,7 @@ to function/module/search/path for a prose summary. `GET /api` is self-documenti
 | `/api/callers?name=` · `/api/callees?name=` | direct callers / callees |
 | `/api/path?from=&to=&max=` | shortest call path between two functions |
 | `/api/hubs?limit=` | most-called functions, most-depended-on modules |
-| `/api/check` · `/api/port-candidates?limit=` · `/api/orphans` | the **Insights** panel's data: architecture findings, Rust port candidates, dead code |
+| `/api/check` · `/api/recommendations` · `/api/port-candidates?limit=` · `/api/orphans` | the **Insights** panel's data: architecture findings, best-practice recommendations, Rust port candidates, dead code |
 
 The four headbar/sidebar lists and the Insights panel are all queryable: the
 **lists** map to `/api/functions`, `/api/calls`, `/api/modules`, `/api/files`
@@ -97,11 +97,17 @@ pnpm graph:diff        # show how the graph changed since the snapshot
 
 **`graph:check`** turns the graph into an enforced contract — run it in CI. Rules:
 
-- **ADR-008** — nothing may call `WasmPathfinderService` directly (only the `PathfinderService` interface). *Error.*
+- **ADR rules** — one rule per checkable ADR (e.g. ADR-008: nothing may call `WasmPathfinderService` directly). Defined in the `ADR_RULES` registry in `analysis.mjs`.
+- **adr-coverage** — every ADR in `DECISIONS.md` must be registered in `ADR_RULES` (with a `check` or marked `checkable:false`). Flags un-onboarded ADRs. *Warning.*
 - **cycles** — circular module dependencies (Tarjan SCC). *Error.*
 - **layers** — a lower layer must not depend on a higher one (`core→services`, `services→systems`, …). *Warning.*
 - **god-module** — modules with > 40 functions. *Warning.*
 - **orphans** — standalone private functions nothing calls. *Warning.*
+
+**Onboarding an ADR:** add an entry to `ADR_RULES` (top of `analysis.mjs`) —
+either a `check(graph, { byId })` returning findings, or `{ checkable:false,
+reason }`. Checkable ADRs then appear as their own rule across CLI/API/viewer
+automatically. See AGENTS.md.
 
 Exit code is non-zero on errors; `--strict` also fails on warnings.
 
@@ -112,6 +118,12 @@ forming, is visible immediately.
 
 ### In the viewer
 
+- **`⚑ Insights`** panel (headbar) with a live error/warning badge. Four sections:
+  **Architecture check** (the hard rules), **Recommended for this stack**
+  (best-practice findings for SvelteKit 5 + TS + WASM — legacy `$:`→runes,
+  component/function size, business-layer test coverage, dependency inversion,
+  cycles — each with a one-line rationale), **TS→Rust port candidates**, and
+  **Dead-code candidates**. Every finding is clickable → jumps to the node/module.
 - **Plain-English** toggle, **Test coverage** toggle (outline untested code red,
   tested green; module nodes tinted by tested fraction), cross-module toggle —
   all persisted across reload.
