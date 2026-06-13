@@ -4,7 +4,7 @@ import {
   computeMinQueueRestDist,
   computeMinQueueFoodDist,
   computeAdjustedNeedThreshold
-} from './PawnStateMachine';
+} from './pawn/pawnHelpers';
 import type { GameState } from '../core/types';
 
 function makeState(partial: Partial<GameState> = {}): GameState {

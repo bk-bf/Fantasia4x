@@ -16,47 +16,28 @@
 import type {
   GameState,
   Pawn,
-  Mob,
-  Building,
-  PlacedBuilding,
   ConditionDef,
   ConditionStage,
   Injury,
   LimbState,
-  Job,
   DroppedItem
 } from '../core/types';
 import { recomputeWound } from './Combat';
 import { HEALING_CONFIG, CARE_CONFIG, woundById } from '../core/Wounds';
-import {
-  addToStockpileZone,
-  consumeFromStockpiles,
-  absorbDropIfOnStockpileTile
-} from '../core/GameState';
-import BUILDINGS_DATABASE_RAW from '../database/buildings.jsonc';
+import { consumeFromStockpiles } from '../core/GameState';
 import conditionsData from '../database/conditions.jsonc';
-import { jobService, BASE_WORK_RATE } from '../services/JobService';
-import { pawnService } from '../services/PawnService';
 import { itemService } from '../services/ItemService';
 import { pawnStatService } from '../services/PawnStatService';
-import {
-  buildPathfindingGridsWithBlocked,
-  pathfinderService
-} from '../services/PathfinderService';
-import { occupancyService } from '../services/OccupancyService';
 import { logActivity } from '../../stores/Log';
 import { gameLogger } from '../dev/gameLogger';
-import { ticksFromSeconds, perTick } from '../core/time';
+import { perTick } from '../core/time';
 import { calcBloodRegenRate } from '../entities/Pawns';
 import { rng } from '../core/rng';
-import {
-  isAdjacent,
-  findAdjacentApproach,
-  hasAvailableFood,
-  selectFoodForMeal,
-  consumeMeal
-} from './pawn/pawnQueries';
 
+// The pawn AI was decomposed out of this file (hotspot 2026-06-13): the 15 state handlers live in
+// `pawn/handlers/{work,needs,combat}.ts`, the shared orchestration helpers + tuning constants in
+// `pawn/pawnHelpers.ts`, the stateless queries in `pawn/pawnQueries.ts`, and the state enum in
+// `pawn/pawnStates.ts`. What remains here is the health/lifecycle block + the per-pawn dispatcher.
 import { PAWN_STATE, type PawnStateName } from './pawn/pawnStates';
 import { findCombatThreat, HUNGER_THRESHOLD, FATIGUE_THRESHOLD } from './pawn/pawnHelpers';
 import { handleIdle, handleMovingToResource, handleWorking, handleHauling, handleMovingToDeposit } from './pawn/handlers/work';
@@ -65,9 +46,6 @@ import { handleFighting, handleFleeing, handleHunting } from './pawn/handlers/co
 // Re-exported for external consumers that imported them from this module historically.
 export { PAWN_STATE, type PawnStateName };
 export { resetUnreachableJobs } from './pawn/pawnHelpers';
-
-
-
 
 /** Consciousness (0–1) below which a pawn collapses (matches Combat.COLLAPSE_CONSCIOUSNESS).
  *  Folds in pain + blood loss + organ damage, so downing has one unified cause. */
