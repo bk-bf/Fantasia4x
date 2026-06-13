@@ -27,7 +27,8 @@ Each service implements an interface and exports a singleton. Import the singlet
 | Singleton         | File                           | Responsibility                                    |
 | ----------------- | ------------------------------ | ------------------------------------------------- |
 | `pawnService`     | `services/PawnService.ts`      | Automatic needs, pawn state, ability calculations |
-| `workService`     | `services/WorkService.ts`      | Work assignment, efficiency, sync                 |
+| `workService`     | `services/WorkService.ts`      | Work assignment + state sync (no efficiency — ADR-015) |
+| `pawnStatService` | `services/PawnStatService.ts`  | **Sole** work model: `getWorkModifiers` (speed/yield/quality from `stats.jsonc`) + body capacities (ADR-015) |
 | `buildingService` | `services/BuildingService.ts`  | Construction checks, building bonuses             |
 | `itemService`     | `services/ItemService.ts`      | Crafting availability, item operations            |
 | `researchService` | `services/ResearchService.ts`  | Research progression, unlock checks               |
@@ -61,15 +62,17 @@ Persistence: `localStorage['fantasia4x-save']` — serialised by `src/lib/stores
 
 ## Modifier System
 
-All stat and efficiency calculations go through `ModifierSystem`. Every result exposes `sources[]`:
+`ModifierSystem` aggregates **building, item, and trait** effects for display and stat bonuses. Every result exposes `sources[]`:
 
 ```typescript
-const result = modifierSystem.calculateWorkEfficiency(pawn, workCategory);
-// result.totalValue — final multiplier
-// result.sources    — [{ description: 'Racial trait: Hardy', value: 0.1 }, ...]
+const result = modifierSystem.calculateEquipmentBonuses(pawn);
+// result[effect].totalValue — final value
+// result[effect].sources     — [{ description: 'Iron Sword: +2 accuracy', value: 2 }, ...]
 ```
 
 Never compute flat bonus sums manually when a modifier system method exists.
+
+**Work is NOT here (ADR-015).** Work speed/yield/quality is a separate, single model in `pawnStatService.getWorkModifiers` (formulas in `database/stats.jsonc` × body capacities × explicit trait `workSpeed`/`workYield`/`workQuality`). The old `ModifierSystem.calculateWorkEfficiency` path was deleted — do not reintroduce a second work-calc path.
 
 ## Static Data Files
 

@@ -56,12 +56,13 @@ See ADR-009 in [DECISIONS](DECISIONS.md) for the locked-in enforcement rules.
 
 Each pawn tracks:
 
-- **Stats**: strength, dexterity, intelligence, wisdom, charisma, constitution (rolled from race ranges)
-- **Needs**: hunger, fatigue, sleep (decay each turn; auto-satisfied when resources/buildings allow)
-- **State**: mood, health, current activity flags
-- **Equipment**: weapon, armor, tool, accessory (durability affects bonus magnitude)
+- **Stats**: strength, dexterity, intelligence, perception, charisma, constitution (rolled from race ranges)
+- **Needs**: hunger, fatigue, thirst, hygiene (decay each turn; auto-satisfied when resources/buildings/zones allow)
+- **State / health**: mood, organ/limb-based health & body capacities, conditions, current FSM state
+- **Equipment**: layered loadout slots — `mainHand`/`offHand`, `headBase`/`headOuter`, `bodyBase`/`bodyMid`/`bodyOuter`, `gloves`/`boots`/`gorget`, `ring`/`belt`/`back` — each a tracked `ItemInstance` with its own durability (armour stacks by layer; best-defense per body part)
+- **Inventory**: weight/volume budgeted (`weightKg`/`volumeL` vs stat-derived caps); belt/back containers raise the cap
 - **Skills**: learned work bonuses
-- **50+ abilities** calculated from stats + traits + equipment via `ModifierSystem`
+- **Abilities**: stat/trait/equipment effects calculated via `ModifierSystem` (with `sources[]`); **work** speed/yield/quality is computed separately by `pawnStatService.getWorkModifiers` (see Work System + ADR-015)
 
 Pawn lifecycle: spawn → work assignment → needs decay → auto-eat/sleep → repeat.
 
@@ -110,7 +111,17 @@ See ADR-010 in [DECISIONS](DECISIONS.md) for the full design rationale and numer
 
 ## Work System
 
-Work categories define: primary stat, secondary stat, base efficiency, required buildings. Building bonuses stack multiplicatively through `buildingService.calculateBuildingWorkBonus()`. Multiple buildings of the same type provide cumulative bonuses.
+**Single source of truth (ADR-015):** every work category's effectiveness is computed by `pawnStatService.getWorkModifiers(pawn, work, light)`, driven entirely by formulas in `database/stats.jsonc`. It returns up to three axes:
+
+- **speed** — how fast the job advances (all jobs have it).
+- **yield** — output quantity per action; only gather/extract jobs (foraging, woodcutting, mining, fishing, planting, digging, butchery).
+- **quality** — output grade; only craft/build jobs (crafting, metalworking, leatherworking, alchemy, cooking, construction, butchery).
+
+A job only carries an axis if its `*_speed`/`*_yield`/`*_quality` formula exists in `stats.jsonc` — labour jobs like hauling/research/caretaking are speed-only; `getWorkModifiers` returns `null` for absent axes. Each formula multiplies stats × **body capacities** (sight/manipulation/consciousness — so injury and darkness slow work) and then folds in explicit racial-trait multipliers (`workSpeed`/`workYield`/`workQuality`) and transient state (condition/status-effect penalties → speed). The work-priority tooltip surfaces a single efficiency = product of the present axes.
+
+> The earlier parallel `ModifierSystem.calculateWorkEfficiency` path was **deleted** — it disagreed with the formulas and was wired inconsistently. See ADR-015 in [DECISIONS](DECISIONS.md).
+
+Labour is assigned per pawn via a 5-level priority grid (off/low/normal/high/urgent); building work-bonuses still stack through `ModifierSystem` building effects.
 
 ## Research System (Three-Tier, Planned)
 
@@ -122,21 +133,19 @@ See `.tasks/open/RESEARCH-ENHANCEMENT.md` for full spec.
 | 2 — Lore Items | Exploration rewards; bypass knowledge prerequisites for specific techs     |
 | 3 — Stat-Gated | Race's average stat ranges unlock unique specialisation paths              |
 
-## Combat System (Planned)
+## Combat System (Implemented)
 
-Battle Brothers–inspired tactical combat with ASCII/text graphics.
+Real-time, tile-based melee resolved by `combatService.tickCombat` each tick — full spec in [.tasks/open/COMBAT-SYSTEM.md](../.tasks/open/COMBAT-SYSTEM.md) (ADR-012/013).
 
 **Key mechanics:**
 
-- Turn order by initiative: `Base + Equipment mod + Status mod + 1d20`
-- Action Point system: `AP = 6 + (Speed/20) + Equipment mods`; standard actions cost 1–5 AP
-- Positioning and formation matter (flanking, cover bonuses). On the live real-time map this is already enforced by hard tile occupancy — one body per tile, no phasing — so a defender in a doorway is reachable only from the limited adjacent tiles (anti-surround chokepoint) and melee can't stack on one tile (ADR-014).
-- Equipment-driven abilities — abilities tied to equipped items, not flat stat tables
-- Permadeath consequences: injuries and PTSD affect the colony workforce
-- Scale: 20–50 combat-capable pawns; squad-based hierarchy for large battles
+- **Per-part wound model** — hits land on body parts and escalate in place (merge-and-escalate), bleed, and accumulate pain. Downing is **capacity-driven**: consciousness (which folds in pain, blood loss, and organ damage) below a threshold collapses the entity — no separate pain meter (ADR-012).
+- **Stances** (aggressive / defensive / flee) govern engagement; undrafted pawns auto-engage hostiles that enter aggro range, drafted pawns attack ordered targets.
+- **Loadout-driven** — the `mainHand` weapon sets damage type / accuracy / crit / reach; layered armour reduces per-part damage (best defense across worn slots); unarmed pawns roll natural weapons (fists/kick).
+- **Hard occupancy** (ADR-014) — one body per tile, so flanking and doorway chokepoints emerge naturally and melee can't stack.
+- **Healing & caretaking** — wounds mend over time but not mid-fight; the best available medic tends untended wounds, treatment quality from `medical_skill` + medicine item.
+- **Permadeath** — a slain entity drops a carcass/corpse; injuries feed back into the needs/health system.
 
-**Design constraints:**
+### Hunting (work-driven)
 
-- Must integrate with existing item system for equipment-driven abilities
-- Must use `ModifierSystem` for all stat calculations
-- Injuries feed back into pawn needs system (health decay)
+A player marks a huntable animal (`markedForHunt`); a pawn whose hunting labour comes up chases it and **resolves the kill through the same combat system** — `handleHunting` flips the quarry into the shared prey "fight-back" state, so a boar gores the hunter and a cornered deer kicks back exactly like predator-vs-prey (reuses the `EntityService` hunt circuits + `combatService`, not a parallel code path). The kill drops a carcass → butchery → meat. Hunting is **fearless** (no auto-flee) — a colonist death is a normal consequence of picking too big a target.

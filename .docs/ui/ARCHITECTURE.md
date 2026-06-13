@@ -20,20 +20,28 @@ src/routes/+page.svelte         ← root, screen router driven by uiState store
     │   └── CancelButton.svelte
     ├── screens/
     │   ├── PawnScreen.svelte       ← refactored into pawn/ sub-components ✅
-    │   ├── WorkScreen.svelte       1314 lines — needs refactoring ⚠️
+    │   ├── WorkScreen.svelte       ← refactored into work/ sub-components ✅
     │   ├── CraftingScreen.svelte   950 lines — needs refactoring ⚠️
     │   ├── ExplorationScreen.svelte 974 lines — needs refactoring ⚠️
     │   ├── BuildingMenu.svelte
     │   ├── ResearchScreen.svelte
-    │   └── RaceScreen.svelte
+    │   ├── RaceScreen.svelte
+    │   └── work/                   ← WorkScreen sub-components
+    │       ├── WorkPriorities.svelte    5-level labor grid (square cells, gold/silver/bronze medal stars)
+    │       ├── WorkCellTooltip.svelte   per-job hover (speed/yield/quality + trait mods; portaled to <body>)
+    │       └── PopulationOverview.svelte
     └── pawn/                       ← PawnScreen sub-components
         ├── PawnSelector.svelte
+        ├── PawnStatsBar.svelte / PawnStatBanner.svelte
         ├── PawnOverview.svelte
-        ├── PawnStats.svelte
+        ├── PawnAttributes.svelte
+        ├── PawnHealth.svelte
         ├── PawnNeeds.svelte
+        ├── PawnStance.svelte
         ├── PawnTraits.svelte
-        ├── PawnAbilities.svelte
-        └── PawnEquipment.svelte
+        ├── EquipmentDoll.svelte         paper-doll grid of layered equipment slots
+        ├── PawnEquipment.svelte
+        └── PawnInventory.svelte         weight/volume-budgeted carry
 ```
 
 ## Screen Navigation
