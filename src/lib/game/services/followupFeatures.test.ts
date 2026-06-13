@@ -3,6 +3,7 @@ import { jobService } from './JobService';
 import { itemService } from './ItemService';
 import { recipeService } from './RecipeService';
 import { buildingService } from './BuildingService';
+import { workService } from './WorkService';
 import type { GameState, Pawn } from '../core/types';
 
 function makeState(partial: Partial<GameState> = {}): GameState {
@@ -261,5 +262,49 @@ describe('R4 tool gating (ADR-009)', () => {
   it('a tool-free scavenge (surface stone) is always claimable', () => {
     const gs = makeState({ jobs: [scavengeJob], designations, stockpile: {} });
     expect(jobService.getAvailableJobs(makePawn(), gs).map((j) => j.id)).toContain('sc');
+  });
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// R7 — isWorking / currentWork derived from the FSM + job, not the dead priority sort
+// ─────────────────────────────────────────────────────────────────────────────
+describe('R7 working-state derivation', () => {
+  const mkPawn = (over: Record<string, any> = {}) =>
+    ({
+      id: 'p',
+      currentState: 'Idle',
+      state: { isWorking: false, isEating: false, isSleeping: false },
+      ...over
+    }) as unknown as Pawn;
+
+  it('isWorking is true in a work-loop state, false when idle or eating', () => {
+    const sync = (p: Pawn) =>
+      workService.syncPawnWorkingStates({ pawns: [p], workAssignments: {} } as unknown as GameState)
+        .pawns[0].state.isWorking;
+    expect(sync(mkPawn({ currentState: 'Working' }))).toBe(true);
+    expect(sync(mkPawn({ currentState: 'Hauling' }))).toBe(true);
+    expect(sync(mkPawn({ currentState: 'Idle' }))).toBe(false);
+    expect(
+      sync(
+        mkPawn({
+          currentState: 'Working',
+          state: { isWorking: false, isEating: true, isSleeping: false }
+        })
+      )
+    ).toBe(false);
+  });
+
+  it('currentWork is the active job’s real category (woodcutting), not the old ‘foraging’ fiction', () => {
+    const pawn = mkPawn({
+      currentState: 'Working',
+      activeJob: { type: 'harvest', resourceId: 'pine_tree', targetX: 5, targetY: 5 }
+    });
+    const gs = {
+      pawns: [pawn],
+      workAssignments: { p: { pawnId: 'p', workPriorities: {}, laborSettings: {} } },
+      designations: { '5,5': 'woodcut' }
+    } as unknown as GameState;
+    const out = workService.syncPawnWorkingStates(gs);
+    expect(out.workAssignments.p.currentWork).toBe('woodcutting');
   });
 })

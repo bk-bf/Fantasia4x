@@ -1,9 +1,22 @@
-import type { Pawn, GameState, WorkAssignment, WorkCategory, LaborLevel } from '../core/types';
+import type { Pawn, GameState, WorkCategory, LaborLevel } from '../core/types';
 import { WORK_CATEGORIES } from '../core/Work';
+import { jobService } from './JobService';
 // Shadow the global console with a gated shim: log/debug/info/warn are silent in
 // normal play (toggle via gameDebug(true)); console.error still surfaces. This
 // removes the per-tick logging that profiling showed was ~75% of turn cost.
 import { gatedConsole as console } from '../core/log';
+
+/**
+ * R7: FSM states in which a pawn is engaged in the productive work loop (so `isWorking` is true).
+ * Derived from the real state machine — NOT the dead legacy workPriorities sort.
+ */
+const WORK_LOOP_STATES = new Set([
+  'Working',
+  'MovingToResource',
+  'Hauling',
+  'MovingToDeposit',
+  'Hunting'
+]);
 
 /**
  * WorkService - Clean interface for work assignment and management
@@ -25,19 +38,8 @@ export interface WorkService {
     gameState: GameState
   ): GameState;
 
-  // Work State Synchronization Methods
+  // Work State Synchronization (derived from the FSM/job system; once per tick)
   syncPawnWorkingStates(gameState: GameState): GameState;
-  getAvailableWorkForPawn(
-    pawn: Pawn,
-    workAssignment: WorkAssignment,
-    gameState: GameState
-  ): string | null;
-  canPawnDoWorkByType(
-    pawn: Pawn,
-    workType: string,
-    workAssignment: WorkAssignment,
-    gameState: GameState
-  ): boolean;
 
   // Work Assignment Initialization (applied ONCE at game init, not per tick)
   ensureDefaultWorkAssignments(gameState: GameState): GameState;
@@ -107,44 +109,39 @@ export class WorkServiceImpl implements WorkService {
 
   // ============ Work State Synchronization Methods ============
 
+  /**
+   * R7: derive each pawn's `isWorking` flag and `currentWork` (display) label from the REAL FSM
+   * state + active job — the JobService/state-machine is the source of truth. The old version read
+   * the dead legacy `workPriorities` map (always empty under `laborSettings`), so `currentWork` was
+   * always `'foraging'` fiction and `isWorking` ≈ "not eating/sleeping". Now: `isWorking` = the pawn
+   * is in a work-loop state (not on a break); `currentWork` = its active job's work category, or
+   * `undefined`. Immutable (ADR-002); runs ONCE per tick (the duplicate call was removed).
+   */
   syncPawnWorkingStates(gameState: GameState): GameState {
-    console.debug('[WorkService] Syncing pawn working states with work assignments');
-
-    // D6/ADR-002: build new objects rather than mutating the assignment/pawn objects held
-    // inside GameState. In-place mutation here leaked into the UI's "immutable" snapshot and
-    // defeated change detection.
-    const workAssignments = { ...gameState.workAssignments };
+    const workAssignments = { ...(gameState.workAssignments ?? {}) };
     let assignmentsChanged = false;
 
     const updatedPawns = gameState.pawns.map((pawn) => {
-      let workAssignment = workAssignments[pawn.id];
-
-      if (workAssignment) {
-        // Update currentWork based on highest priority work the pawn can actually do
-        const availableWork = this.getAvailableWorkForPawn(pawn, workAssignment, gameState);
-        if (availableWork && availableWork !== workAssignment.currentWork) {
-          workAssignment = { ...workAssignment, currentWork: availableWork };
-          workAssignments[pawn.id] = workAssignment;
-          assignmentsChanged = true;
-        }
-      }
-
-      // Determine if pawn should be working
-      const shouldBeWorking = !!(
-        workAssignment &&
-        workAssignment.currentWork &&
+      const inWorkLoop =
+        WORK_LOOP_STATES.has(pawn.currentState ?? 'Idle') &&
         !pawn.state.isEating &&
-        !pawn.state.isSleeping
-      );
+        !pawn.state.isSleeping;
 
-      // Update pawn state if it doesn't match
-      if (pawn.state.isWorking !== shouldBeWorking) {
-        return {
-          ...pawn,
-          state: { ...pawn.state, isWorking: shouldBeWorking }
-        };
+      // Real current-work label from the active job (harvest→woodcutting, craft→crafting, …);
+      // `need`-type jobs (eat/sleep/drink/deposit) and idle pawns have no work category.
+      const job = pawn.activeJob;
+      const currentWork =
+        job && job.type !== 'need' ? jobService.getJobWorkCategory(job, gameState) : undefined;
+
+      const assignment = workAssignments[pawn.id];
+      if (assignment && assignment.currentWork !== currentWork) {
+        workAssignments[pawn.id] = { ...assignment, currentWork };
+        assignmentsChanged = true;
       }
 
+      if (pawn.state.isWorking !== inWorkLoop) {
+        return { ...pawn, state: { ...pawn.state, isWorking: inWorkLoop } };
+      }
       return pawn;
     });
 
@@ -184,55 +181,6 @@ export class WorkServiceImpl implements WorkService {
     return changed ? { ...gameState, workAssignments } : gameState;
   }
 
-  getAvailableWorkForPawn(
-    pawn: Pawn,
-    workAssignment: WorkAssignment,
-    gameState: GameState
-  ): string | null {
-    if (!workAssignment.workPriorities) {
-      return 'foraging'; // Default fallback
-    }
-
-    // Get work types sorted by priority (highest first)
-    const sortedWork = Object.entries(workAssignment.workPriorities)
-      .filter(([_, priority]) => (priority as number) > 0)
-      .sort((a, b) => (b[1] as number) - (a[1] as number));
-
-    console.debug(`[WorkService] ${pawn.name} work priorities:`, sortedWork);
-
-    // Find the highest priority work that the pawn can actually do
-    for (const [workType, priority] of sortedWork) {
-      if (this.canPawnDoWorkByType(pawn, workType, workAssignment, gameState)) {
-        console.debug(`[WorkService] ${pawn.name} should do ${workType} (priority ${priority})`);
-        return workType;
-      }
-    }
-
-    // Fallback to foraging if nothing else is available
-    return 'foraging';
-  }
-
-  canPawnDoWorkByType(
-    pawn: Pawn,
-    workType: string,
-    workAssignment: WorkAssignment,
-    gameState: GameState
-  ): boolean {
-    // Get work category info
-    const workCategory = WORK_CATEGORIES.find((w) => w.id === workType);
-    if (!workCategory) {
-      console.log(`[WorkService] Unknown work type: ${workType}`);
-      return false;
-    }
-
-    // D5: tool gating is NOT enforced here. The old "check" only logged the requirement
-    // and always passed, which misled readers into thinking tools were gated. Per ADR-009,
-    // tool requirements belong at job-claim time against the pawn's claimed inventory
-    // (JobService) — not against the global stockpile here. Until that lands, do not pretend.
-
-    console.debug(`[WorkService] ${pawn.name} can do ${workType}`);
-    return true;
-  }
 }
 
 // Export singleton instance

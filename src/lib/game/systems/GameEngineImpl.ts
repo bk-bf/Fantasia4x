@@ -658,15 +658,14 @@ export class GameEngineImpl implements GameEngine {
     tp('p.clearTemp', () => {
       this.gameState = pawnService.clearTemporaryPawnStates(this.gameState!);
     });
-    tp('p.syncWork1', () => {
+    // R7: derive isWorking/currentWork from the FSM state ONCE, before processPawnTurn reads
+    // isWorking for mood. (The old duplicate post-call was removed.)
+    tp('p.syncWork', () => {
       this.gameState = workService.syncPawnWorkingStates(this.gameState!);
     });
     // Phase 5e: automatic needs now handled by PawnStateMachine (HUNGRY/TIRED states).
     tp('p.pawnTurn', () => {
       this.gameState = pawnService.processPawnTurn(this.gameState!);
-    });
-    tp('p.syncWork2', () => {
-      this.gameState = workService.syncPawnWorkingStates(this.gameState!);
     });
     if (prof && this.gameState!.turn % TICKS_PER_SECOND === 0) {
       const out: Record<string, string> = {};
