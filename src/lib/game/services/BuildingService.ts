@@ -6,7 +6,11 @@ import { resolveCharSpans } from '../core/Terrains';
 import type { CharSpan } from '../core/Terrains';
 import { rng } from '../core/rng';
 import { perTick } from '../core/time';
-import { consumeFromStockpiles, addToStockpileZone } from '../core/GameState';
+import {
+  consumeFromStockpiles,
+  addToStockpileZone,
+  availableAggregateFromDrops
+} from '../core/GameState';
 
 const AVAILABLE_BUILDINGS = buildingsData as unknown as Building[];
 const ITEMS_DB = itemsData as unknown as Item[];
@@ -144,7 +148,8 @@ export class BuildingServiceImpl implements BuildingService {
   resolveBuildingCost(buildingId: string, gameState: GameState): Record<string, number> | null {
     const building = this.getBuildingById(buildingId);
     if (!building?.buildingCost) return {};
-    const stock = gameState.stockpile ?? {};
+    // ADR-016: pay from AVAILABLE stock (reserved-for-craft stacks excluded).
+    const stock = availableAggregateFromDrops(gameState.droppedItems);
     const resolved: Record<string, number> = {};
     const used: Record<string, number> = {};
 

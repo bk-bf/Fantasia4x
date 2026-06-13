@@ -206,6 +206,90 @@ export function aggregateFromDrops(drops: DroppedItem[] | undefined): Record<str
   return agg;
 }
 
+/**
+ * ADR-016: quantity of `itemId` physically available to spend — `stored` drops not reserved
+ * for a craft order. `stockpile` (aggregateFromDrops) still counts reserved stacks (they're
+ * physically present, shown in the UI); affordability/consumption must use this instead so
+ * two orders can't double-spend the same stock.
+ */
+export function availableQuantityFromDrops(
+  drops: DroppedItem[] | undefined,
+  itemId: string
+): number {
+  let total = 0;
+  for (const d of drops ?? []) {
+    if (!d.stored || d.reservedFor || d.resourceId !== itemId || (d.quantity ?? 0) <= 0) continue;
+    total += d.quantity;
+  }
+  return total;
+}
+
+/** ADR-016: full available-stock aggregate (`stored` drops minus reservations) by resourceId. */
+export function availableAggregateFromDrops(
+  drops: DroppedItem[] | undefined
+): Record<string, number> {
+  const agg: Record<string, number> = {};
+  for (const d of drops ?? []) {
+    if (!d.stored || d.reservedFor || (d.quantity ?? 0) <= 0) continue;
+    agg[d.resourceId] = (agg[d.resourceId] ?? 0) + d.quantity;
+  }
+  return agg;
+}
+
+/**
+ * ADR-016: lock up to `qty` of `itemId` from free `stored` drops for craft order `orderId`,
+ * splitting a stack when only part of it is needed. Reserved stacks stay physically present
+ * but drop out of "available". Returns the new state plus the quantity actually reserved
+ * (may be < qty if stock is short — caller should check before committing the order).
+ */
+export function reserveForOrder(
+  state: GameState,
+  itemId: string,
+  qty: number,
+  orderId: string
+): { state: GameState; reserved: number } {
+  if (qty <= 0) return { state, reserved: 0 };
+  let remaining = qty;
+  const drops: DroppedItem[] = [];
+  for (const d of state.droppedItems ?? []) {
+    if (remaining <= 0 || !d.stored || d.reservedFor || d.resourceId !== itemId || d.quantity <= 0) {
+      drops.push(d);
+      continue;
+    }
+    if (d.quantity <= remaining) {
+      // Reserve the whole stack.
+      drops.push({ ...d, reservedFor: orderId });
+      remaining -= d.quantity;
+    } else {
+      // Split: reserve a new stack of `remaining`, leave the rest free.
+      drops.push({ ...d, quantity: d.quantity - remaining });
+      drops.push({
+        id: `${d.id}-resv-${orderId.slice(-6)}`,
+        resourceId: d.resourceId,
+        x: d.x,
+        y: d.y,
+        quantity: remaining,
+        stored: true,
+        reservedFor: orderId
+      });
+      remaining = 0;
+    }
+  }
+  return { state: { ...state, droppedItems: drops }, reserved: qty - remaining };
+}
+
+/** ADR-016: clear all reservations held by craft order `orderId` (e.g. on cancel). */
+export function releaseReservation(state: GameState, orderId: string): GameState {
+  let changed = false;
+  const drops = (state.droppedItems ?? []).map((d) => {
+    if (d.reservedFor !== orderId) return d;
+    changed = true;
+    const { reservedFor, ...rest } = d;
+    return rest;
+  });
+  return changed ? { ...state, droppedItems: drops } : state;
+}
+
 /** Total stored item quantity physically held on tile (x,y). */
 export function tileStoredQuantity(state: GameState, x: number, y: number): number {
   let total = 0;
@@ -317,7 +401,8 @@ export function consumeFromStockpiles(state: GameState, items: Record<string, nu
     let remaining = amount;
     for (let i = 0; i < newDropped.length && remaining > 0; i++) {
       const d = newDropped[i];
-      if (!d.stored || d.resourceId !== itemId || (d.quantity ?? 0) <= 0) continue;
+      // ADR-016: never consume a stack reserved for a craft order from the general pool.
+      if (!d.stored || d.reservedFor || d.resourceId !== itemId || (d.quantity ?? 0) <= 0) continue;
       const take = Math.min(d.quantity, remaining);
       newDropped[i] = { ...d, quantity: d.quantity - take };
       remaining -= take;

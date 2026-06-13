@@ -6,7 +6,7 @@ import type {
 } from './GameEngine';
 import type { BuildingEffectResult } from './ModifierSystem';
 import type { GameState, EntityNeeds } from '../core/types';
-import { GameStateManager } from '../core/GameState';
+import { GameStateManager, reserveForOrder, releaseReservation } from '../core/GameState';
 import { gameState } from '$lib/stores/gameState';
 import { get } from 'svelte/store';
 import { modifierSystem } from './ModifierSystem';
@@ -119,54 +119,97 @@ export class GameEngineImpl implements GameEngine {
     const item = itemService.getItemById(itemId);
     if (!item) return;
 
-    // Special handling for butchery: process carcass to produce all outputs
+    // Butchery is a dedicated multi-yield path (not yet folded into ADR-016 reserve-and-fetch):
+    // one carcass → meat + hide + bone, scaled by intactness. Processed instantly here.
     if (item.isCarcass && item.yields) {
       this.craftButchery(item);
       this.updateStores();
       return;
     }
 
-    // COORDINATION: Check if can craft and add to crafting queue
-    if (itemService.canCraftItem(itemId, this.gameState)) {
-      // Resolve dynamic ingredient selection (auto-pick if not specified)
-      const resolved =
-        selectedIngredients ?? itemService.autoSelectIngredients(itemId, this.gameState) ?? {};
-
-      // Add to crafting queue (Phase 5d work-based shape — JobService picks this up)
-      const craftingInProgress = {
-        id: crypto.randomUUID(),
-        item: item,
-        quantity: quantity,
-        workRequired: (recipeService.getRecipeForItem(item.id)?.workAmount || 1) * 5,
-        workDone: 0,
-        materialsReserved: true,
-        startedAt: this.gameState.turn,
-        selectedIngredients: Object.keys(resolved).length > 0 ? resolved : undefined
-      };
-
-      // Consume materials — use resolved cost to support craftingCostAlternatives and dynamicRecipe
-      const activeCost = itemService.resolveActiveCost(item.id, this.gameState, resolved);
-      if (activeCost) {
-        this.gameState = itemService.consumeItems(activeCost, this.gameState);
-      }
-
-      // Add to queue
-      this.gameState = {
-        ...this.gameState,
-        craftingQueue: [...(this.gameState.craftingQueue || []), craftingInProgress]
-      };
+    // ADR-016 reserve-and-fetch: do NOT consume materials here. Lock the inputs to this order,
+    // pick a workstation, and queue the order. Pawns then fetch the reserved inputs to the
+    // station and craft them there; the output spawns on the station (see JobService).
+    if (!itemService.canCraftItem(itemId, this.gameState)) {
+      this.updateStores();
+      return;
     }
 
+    const resolved =
+      selectedIngredients ?? itemService.autoSelectIngredients(itemId, this.gameState) ?? {};
+    const activeCost = itemService.resolveActiveCost(item.id, this.gameState, resolved);
+    if (!activeCost) {
+      this.updateStores();
+      return;
+    }
+
+    const recipe = recipeService.getRecipeForItem(item.id);
+    // Inputs scale by quantity (one recipe run per queued unit).
+    const inputs: Record<string, number> = {};
+    for (const [id, q] of Object.entries(activeCost)) inputs[id] = q * quantity;
+
+    const stationType = recipe?.station ?? null;
+    const stationBuildingId = this.pickStationInstance(stationType, this.gameState);
+
+    // Reserve every input from available stock (does not delete it). If anything is short,
+    // release what we reserved and abort — affordability was checked but stock can race.
+    const orderId = crypto.randomUUID();
+    let gs = this.gameState;
+    let allReserved = true;
+    for (const [id, q] of Object.entries(inputs)) {
+      const res = reserveForOrder(gs, id, q, orderId);
+      gs = res.state;
+      if (res.reserved < q) {
+        allReserved = false;
+        break;
+      }
+    }
+    if (!allReserved) {
+      this.gameState = releaseReservation(gs, orderId);
+      this.updateStores();
+      return;
+    }
+
+    const order: import('../core/types').CraftingInProgress = {
+      id: orderId,
+      item,
+      quantity,
+      workRequired: (recipe?.workAmount ?? 1) * quantity,
+      workDone: 0,
+      inputs,
+      stationType,
+      stationBuildingId,
+      startedAt: gs.turn,
+      selectedIngredients: Object.keys(resolved).length > 0 ? resolved : undefined
+    };
+
+    this.gameState = { ...gs, craftingQueue: [...(gs.craftingQueue ?? []), order] };
     this.updateStores();
   }
 
   /**
-   * Butchery crafting — delegated to ItemService (D10: the engine coordinates, the service
-   * owns the item math). Processes a carcass to produce all outputs, scaled by intactness.
+   * Butchery — delegated to ItemService (the engine coordinates, the service owns the math).
+   * Processes one carcass into its multi-yield outputs, scaled by intactness/tools/building.
    */
   private craftButchery(carcassItem: import('../core/types').Item): void {
     if (!this.gameState) return;
     this.gameState = itemService.processButchery(carcassItem, this.gameState);
+  }
+
+  /**
+   * ADR-016: choose the workstation instance an order's inputs are fetched to and crafted at —
+   * the first complete building of the recipe's station type (craft_spot when the recipe has no
+   * explicit station). Returns undefined when none exists (canCraftItem already gates on this).
+   */
+  private pickStationInstance(
+    stationType: string | null | undefined,
+    gs: GameState
+  ): string | undefined {
+    const wanted = stationType ?? 'craft_spot';
+    const station = (gs.buildings ?? []).find(
+      (b) => b.type === wanted && b.status === 'complete'
+    );
+    return station?.id;
   }
 
   // COORDINATION: BuildingService methods for UI components

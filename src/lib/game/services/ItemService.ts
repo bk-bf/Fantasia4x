@@ -1,5 +1,10 @@
 import type { Item, GameState, DynamicIngredientSlot, DroppedItem, Recipe, Pawn } from '../core/types';
-import { consumeFromStockpiles, addToStockpileZone, aggregateFromDrops } from '../core/GameState';
+import {
+  consumeFromStockpiles,
+  addToStockpileZone,
+  aggregateFromDrops,
+  availableQuantityFromDrops
+} from '../core/GameState';
 import { recipeService } from './RecipeService';
 import itemsData from '../database/items.jsonc';
 import buildingsData from '../database/buildings.jsonc';
@@ -130,14 +135,15 @@ export class ItemServiceImpl implements ItemService {
     const item = this.getItemById(itemId);
     if (!item) return false;
 
-    // Special check for butchery: carcass must have intactness > 0
+    // Butchery stays a dedicated multi-yield path (one carcass → meat + hide + bone via
+    // `yields`, scaled by intactness/tools/building) — the single-output recipe registry can't
+    // express that, so it is NOT folded into reserve-and-fetch crafting in this pass. It still
+    // requires a butcher station + carcass in stock; see processButchery (R3: consumes 1 carcass).
     if (item.isCarcass && item.yields) {
       const intactness = gameState.carcassIntactness ?? {};
       const currentIntactness = intactness[itemId] ?? 100;
       if (currentIntactness <= 0) return false;
-      // Check if we have the carcass in stockpile
       if ((gameState.stockpile?.[itemId] ?? 0) <= 0) return false;
-      // Check if we have a butcher spot
       const hasButcherStation = (gameState.buildings ?? []).some(
         (b) => (b.type === 'butcher_spot' || b.type === 'dressing_stone') && b.status === 'complete'
       );
@@ -326,7 +332,10 @@ export class ItemServiceImpl implements ItemService {
   }
 
   getAvailableQuantity(itemId: string, gameState: GameState): number {
-    return (gameState.stockpile ?? {})[itemId] ?? 0;
+    // ADR-016: spendable stock = stored drops NOT reserved for a craft order. `stockpile`
+    // still counts reserved stacks (physically present, shown in the UI); affordability must
+    // not, or two orders could double-spend the same stock.
+    return availableQuantityFromDrops(gameState.droppedItems, itemId);
   }
 
   consumeItems(itemIds: Record<string, number>, gameState: GameState): GameState {
@@ -339,10 +348,15 @@ export class ItemServiceImpl implements ItemService {
   }
 
   /**
-   * Butchery: process a carcass into all its outputs at once (D10 — moved here from the
-   * engine so the engine stays a coordinator). Output quantities scale by current carcass
-   * intactness × tool (bone_cleaver) × building (dressing_stone) bonuses. Returns the new
-   * state (immutable); a no-op state when the carcass can't be processed.
+   * Butchery: process ONE carcass into its full multi-yield output (meat + hide + bone),
+   * scaled by carcass intactness × tool (bone_cleaver) × building (dressing_stone). Output and
+   * consumption both flow through physical stockpile drops. Returns a no-op state when the
+   * carcass can't be processed.
+   *
+   * R3 fix: consumes exactly ONE carcass per action (the prior code consumed the whole stack
+   * but yielded a single carcass's worth). NOTE: butchery is not yet part of ADR-016's
+   * haul-to-station pipeline — it remains an instant transform requiring a butcher station to
+   * exist. Folding it in (multi-yield reconciliation + station hauling) is a follow-up pass.
    */
   processButchery(carcassItem: Item, gameState: GameState): GameState {
     if (!carcassItem.isCarcass || !carcassItem.yields) return gameState;
@@ -352,13 +366,15 @@ export class ItemServiceImpl implements ItemService {
     if (currentIntactness <= 0) return gameState;
 
     if (!this.canCraftItem(carcassItem.id, gameState)) return gameState;
+    if ((gameState.stockpile?.[carcassItem.id] ?? 0) <= 0) return gameState;
 
     const intactnessFraction = currentIntactness / 100;
     const hasBoneCleaver = (gameState.stockpile?.['bone_cleaver'] ?? 0) > 0;
     const hasDressingStone = (gameState.buildings ?? []).some(
       (b) => b.type === 'dressing_stone' && b.status === 'complete'
     );
-    const yieldMult = intactnessFraction * (hasBoneCleaver ? 1.25 : 1.0) * (hasDressingStone ? 1.25 : 1.0);
+    const yieldMult =
+      intactnessFraction * (hasBoneCleaver ? 1.25 : 1.0) * (hasDressingStone ? 1.25 : 1.0);
 
     const outputs: Record<string, number> = {};
     for (const output of carcassItem.yields) {
@@ -367,14 +383,15 @@ export class ItemServiceImpl implements ItemService {
       outputs[output.item] = (outputs[output.item] ?? 0) + scaledQty;
     }
 
-    const newIntactnessMap = { ...intactness };
-    delete newIntactnessMap[carcassItem.id];
-
-    let state = gameState;
-    const carcassQty = state.stockpile[carcassItem.id] ?? 0;
-    if (carcassQty > 0) state = this.consumeItems({ [carcassItem.id]: carcassQty }, state);
+    // Consume exactly ONE carcass (R3); only clear the per-type intactness once the stack is gone.
+    let state = this.consumeItems({ [carcassItem.id]: 1 }, gameState);
     state = this.addItems(outputs, state);
-    return { ...state, carcassIntactness: newIntactnessMap };
+    if ((state.stockpile?.[carcassItem.id] ?? 0) <= 0) {
+      const newIntactnessMap = { ...intactness };
+      delete newIntactnessMap[carcassItem.id];
+      state = { ...state, carcassIntactness: newIntactnessMap };
+    }
+    return state;
   }
 
   // ── Carry capacity ───────────────────────────────────────────────────────────────────────

@@ -123,6 +123,14 @@ export interface DroppedItem {
   decayAcc?: number;
   /** Present for tracked items (weapons, armour, tools with maxDurability). */
   instance?: ItemInstance;
+  /**
+   * ADR-016 reserve-and-fetch: id of the craft order (CraftingInProgress.id) this stored stack
+   * is locked for. A reserved stack is physically present (counts in `stockpile`) but excluded
+   * from "available" stock and from haul/consume targeting, so a second order can't double-spend
+   * it. Set when an order is queued; the stack is fetched to the station and destroyed on craft
+   * completion; cleared if the order is cancelled. Undefined = free.
+   */
+  reservedFor?: string;
 }
 
 export interface Job {
@@ -131,6 +139,7 @@ export interface Job {
     | 'harvest'
     | 'construct'
     | 'haul'
+    | 'fetch' // ADR-016: carry a reserved input stack from stockpile to a workstation tile
     | 'craft'
     | 'eat'
     | 'sleep'
@@ -139,10 +148,13 @@ export interface Job {
     | 'deconstruct';
   targetX: number;
   targetY: number;
-  resourceId?: string; // harvest / haul: which resource
-  droppedItemId?: string; // haul: which DroppedItem to pick up
-  buildingId?: string; // construct: which PlacedBuilding.id
-  craftQueueId?: string; // craft: which CraftingInProgress.id
+  resourceId?: string; // harvest / haul / fetch: which resource
+  droppedItemId?: string; // haul / fetch: which DroppedItem to pick up
+  buildingId?: string; // construct: which PlacedBuilding.id; fetch/craft: the station building
+  craftQueueId?: string; // craft / fetch: which CraftingInProgress.id (the order)
+  /** fetch: where to deliver the carried input (the station tile). */
+  stationX?: number;
+  stationY?: number;
   workRequired: number; // total work points to complete
   workDone: number; // accumulated progress
   claimedBy: string | null; // pawnId claiming this job; null = open
@@ -675,23 +687,23 @@ export interface Pawn {
 
   // Job payload for active state machine job
   activeJob?: {
-    /** Phase 5: 'harvest'|'construct'|'craft'|'haul' use work-point jobs; 'need' for eat/sleep */
-    type: 'harvest' | 'construct' | 'craft' | 'haul' | 'need' | 'deconstruct';
+    /** Phase 5: 'harvest'|'construct'|'craft'|'haul'|'fetch' use work-point jobs; 'need' for eat/sleep */
+    type: 'harvest' | 'construct' | 'craft' | 'haul' | 'fetch' | 'need' | 'deconstruct';
     /** Phase 5a: id of the Job in gameState.jobs[] (null for need-type jobs) */
     jobId?: string;
     targetX: number;
     targetY: number;
     resourceId?: string;
-    droppedItemId?: string; // haul: id of the DroppedItem being picked up
-    buildingId?: string; // for construct jobs
-    craftQueueId?: string; // for craft jobs
+    droppedItemId?: string; // haul / fetch: id of the DroppedItem being picked up
+    buildingId?: string; // for construct jobs; fetch: the station building
+    craftQueueId?: string; // craft / fetch: the order id (used to tag staged inputs)
     progress: number; // 0–1 fractional (local display)
     timeRequired: number;
     targetState?: string; // for MovingToNeed, which state to enter on arrival
     turnsInState?: number; // for Eating/Sleeping duration tracking
     hungerToRecover?: number; // total hunger to restore over the eating duration
-    depositX?: number; // haul: destination x for deposit
-    depositY?: number; // haul: destination y for deposit
+    depositX?: number; // haul / fetch: destination x for deposit / staging
+    depositY?: number; // haul / fetch: destination y for deposit / staging
   };
 }
 
@@ -1179,9 +1191,15 @@ export interface CraftingInProgress {
   selectedIngredients?: Record<string, string>;
   // Phase 5d: work-based crafting (produced by craftItem, consumed by JobService)
   id: string; // unique id for job correlation
-  workRequired: number; // craftingTime × 5
+  workRequired: number; // recipe.workAmount × quantity (ADR-016)
   workDone: number; // accumulated work points
-  materialsReserved: boolean; // materials locked in stockpile?
+  // ADR-016 reserve-and-fetch:
+  /** Resolved input cost (× quantity) that must be physically staged on the station. */
+  inputs: Record<string, number>;
+  /** Workstation type required by the recipe (= recipe.station). */
+  stationType?: string | null;
+  /** Chosen workstation instance (PlacedBuilding.id) inputs are fetched to and crafted at. */
+  stationBuildingId?: string;
 }
 export interface ResearchProject {
   id: string;

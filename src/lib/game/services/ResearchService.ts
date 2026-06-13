@@ -1,5 +1,5 @@
 import type { ResearchProject, LoreItem, EntityStats, GameState } from '../core/types';
-import { consumeFromStockpiles } from '../core/GameState';
+import { consumeFromStockpiles, availableQuantityFromDrops } from '../core/GameState';
 import researchData from '../database/research.jsonc';
 import loreData from '../database/lore.jsonc';
 import { perTick } from '../core/time';
@@ -127,7 +127,7 @@ export class ResearchServiceImpl implements ResearchService {
     if (!research?.scrollRequirement) return true;
 
     return Object.entries(research.scrollRequirement).every(([scrollId, amount]) => {
-      const available = (gameState.stockpile ?? {})[scrollId] ?? 0;
+      const available = availableQuantityFromDrops(gameState.droppedItems, scrollId);
       return available >= amount;
     });
   }
@@ -137,7 +137,7 @@ export class ResearchServiceImpl implements ResearchService {
     if (!research?.materialRequirement) return true;
 
     return Object.entries(research.materialRequirement).every(([materialId, amount]) => {
-      const available = (gameState.stockpile ?? {})[materialId] ?? 0;
+      const available = availableQuantityFromDrops(gameState.droppedItems, materialId);
       return available >= amount;
     });
   }
@@ -193,7 +193,7 @@ export class ResearchServiceImpl implements ResearchService {
     // Check scroll requirements
     if (research.scrollRequirement) {
       Object.entries(research.scrollRequirement).forEach(([scrollId, required]) => {
-        const available = (gameState.stockpile ?? {})[scrollId] ?? 0;
+        const available = availableQuantityFromDrops(gameState.droppedItems, scrollId);
         if (available < required) {
           scrollsNeeded[scrollId] = required - available;
           canStart = false;
@@ -204,7 +204,7 @@ export class ResearchServiceImpl implements ResearchService {
     // Check material requirements
     if (research.materialRequirement) {
       Object.entries(research.materialRequirement).forEach(([materialId, required]) => {
-        const available = (gameState.stockpile ?? {})[materialId] ?? 0;
+        const available = availableQuantityFromDrops(gameState.droppedItems, materialId);
         if (available < required) {
           materialsNeeded[materialId] = required - available;
           canStart = false;
