@@ -105,7 +105,8 @@ The decomposition has started, in the report's recommended order:
   | Module | LOC | Contents |
   | ------ | --- | -------- |
   | `systems/PawnStateMachine.ts` | **988** (was 2818) | health/lifecycle (kill/conditions/tend/heal/collapse) + the per-pawn dispatcher + class |
-  | `pawn/pawnHelpers.ts` | 1031 | shared orchestration helpers + tuning constants |
+  | `pawn/pawnHelpers.ts` | 788 | shared orchestration helpers + tuning constants (movement/finders/needs/hunt) |
+  | `pawn/pawnHauling.ts` | 258 | ADR-016 reserve-and-fetch deposit pipeline (split out of pawnHelpers) |
   | `pawn/handlers/work.ts` | 383 | Idle · MovingToResource · Working · Hauling · MovingToDeposit |
   | `pawn/handlers/needs.ts` | 377 | Hungry · Tired · Eating · Sleeping · Drinking · Washing · MovingToNeed |
   | `pawn/handlers/combat.ts` | 135 | Fighting · Fleeing · Hunting |
@@ -114,10 +115,12 @@ The decomposition has started, in the report's recommended order:
 
   Acyclic by construction (`pawnStates/pawnQueries ← pawnHelpers ← handlers ← dispatcher`);
   `graph:check` confirms no new cycle. **0 type errors · 149 tests pass · lint clean · build ok.**
-- **▶ Follow-ups:** (a) `pawnHelpers.ts` (1031 LOC) is still large — it could split further into
-  pathfinding / need-distance / hauling-stage / combat-selection groups. (b) Step 5 (push the
-  selection decisions in `handleIdle`/`checkNeedInterrupts` down into `JobService`/`PawnService`)
-  remains the deepest, deferred change.
+- **✅ Follow-up (a, partial):** the ADR-016 hauling/deposit pipeline (`findNearestDepositPoint`,
+  `orderStationTile`, `stageInventoryAtStation`, `depositInventory`) was split out of `pawnHelpers`
+  into **`pawn/pawnHauling.ts`** (1031 → 788 LOC). The 788-LOC remainder could split further still
+  (movement / finders / need-distance / hunt-selection), but is no longer a god-module.
+- **▶ Remaining:** Step 5 (push the selection decisions in `handleIdle`/`checkNeedInterrupts` down
+  into `JobService`/`PawnService`) is the deepest, still-deferred change.
 
 ## Improvement suggestions (prioritised)
 
