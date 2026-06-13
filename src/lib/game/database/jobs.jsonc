@@ -11,11 +11,11 @@
 // NOT listed here: eat / sleep / need — those are FSM-internal activeJob kinds the pawn sets
 // directly; they are never generated into the colony job pool.
 [
-  { "id": "harvest", "label": "Harvest", "workCategorySource": "designation", "claimGate": "harvestTool" },
-  { "id": "haul", "label": "Haul", "workCategory": "hauling" },
-  { "id": "construct", "label": "Build", "workCategory": "construction" },
-  { "id": "deconstruct", "label": "Demolish", "workCategory": "construction" },
-  { "id": "fetch", "label": "Fetch", "workCategory": "hauling" },
-  { "id": "craft", "label": "Craft", "workCategory": "crafting" },
-  { "id": "refuel", "label": "Refuel", "workCategory": "construction", "claimGate": "refuelAllowlist" }
+  {"id": "harvest", "label": "Harvest", "workCategorySource": "designation", "claimGate": "harvestTool"},
+  {"id": "haul", "label": "Haul", "workCategory": "hauling"},
+  {"id": "construct", "label": "Build", "workCategory": "construction"},
+  {"id": "deconstruct", "label": "Demolish", "workCategory": "construction"},
+  {"id": "fetch", "label": "Fetch", "workCategory": "hauling"},
+  {"id": "craft", "label": "Craft", "workCategory": "crafting"},
+  {"id": "refuel", "label": "Refuel", "workCategory": "construction", "claimGate": "refuelAllowlist"}
 ]
