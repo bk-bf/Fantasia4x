@@ -29,12 +29,16 @@
 > `getAvailableWorkForPawn`/`canPawnDoWorkByType` + duplicate per-tick call removed) ·
 > **✅ R9** (hunting interrupts go through `checkNeedInterrupts` — ADR-010 proximity, job-dist =
 > distance to quarry) · **✅ R10** (`killPawn` drops carried items + equipped gear + a `dynamicName`
-> corpse "<Name>'s Corpse" on the death tile) · **~ R11.1** (`Events.ts` no longer writes `gs.item`;
+> corpse "<Name>'s Corpse" on the death tile) · **✅ R2** (drafted pawns now run the health block —
+> bleed/heal/collapse/status durations — skipping only the behavioural FSM) · **✅ R12** (dead-code
+> deletions: light/fuel helpers, `FATIGUE_PER_SLEEPING_TURN`, the PawnService force-sleep cluster,
+> `calculateCraftingTime`, comment drift) · **~ R11.1** (`Events.ts` no longer writes `gs.item`;
 > events phase still unwired).
 > Plus new: building-material hauling, passive furnaces, and "long jobs yield to needs" (thirst
-> added to `checkNeedInterrupts`). Tests **117 → 138**.
-> **Still open:** R2 (the last HIGH), R12, and structural P-2…P-6 (unchanged). Current gate:
-> `check` 0 errors · `test` 138 passing · `lint` 0 errors · `build` ok.
+> added to `checkNeedInterrupts`). Tests **117 → 141**.
+> **All Part I defects (R1–R12) are now resolved or partial (R11).** Still open: structural
+> P-2…P-6 and the R11 doc sync. Current gate: `check` 0 errors · `test` 141 passing · `lint` 0
+> errors · `build` ok.
 
 ---
 
@@ -43,8 +47,8 @@
 | Area                    | 06-10 | Now | Notes                                                                                   |
 | ----------------------- | ----- | --- | --------------------------------------------------------------------------------------- |
 | Architecture & layering | B−    | A−  | Engine near coordinator-only; per-tile storage model is the single source of truth — the `gs.item` seam is **gone** (ADR-016) |
-| Engine correctness      | C−    | B   | R1/R3/R4/R5/R8 fixed + regression-tested; physical production (reserve-and-fetch, building hauling, passive furnaces) shipped. Still open: R2 drafted-pawn health |
-| Simulation testing      | D     | B+  | 32 → **133** tests; the cross-system seams (craft→build, draft→health, tool gating) are now covered |
+| Engine correctness      | C−    | B+  | All R1–R12 fixed + regression-tested (incl. R2 drafted-pawn health); physical production (reserve-and-fetch, building hauling, passive furnaces) shipped |
+| Simulation testing      | D     | B+  | 32 → **141** tests; the cross-system seams (craft→build, draft→health, tool gating, death drops) are now covered |
 | Tick-loop structure     | C+    | C+  | Same deferred O(P²) churn (D9.1); a passive-production phase added (skips when idle); scale still fine |
 | Data-driven design      | A−    | A   | Recipes/wounds/stats/creatures all JSONC; `Work.toolsRequired` + `interaction.toolRequirement` now **wired** into gating; station tiers via `effects.tier` |
 | Documentation           | A     | A−  | ADR discipline excellent; the DESIGN over-promises (tool gating, inventory budget) are now true in code; events-phase mismatch (R11) remains |
@@ -94,6 +98,14 @@ and migrate them to stockpile so the legacy pool can die. Add a sim test: craft 
 intermediate → spend it on a building/recipe.
 
 ## R2 · HIGH — Drafted pawns are exempt from the entire health simulation
+
+> **✅ RESOLVED.** The drafted branch in `tick()` no longer `continue`s before the health block —
+> drafted pawns now run caretaking → conditions (bleed/infection/malnutrition/death) → healing →
+> the collapse lifecycle → status-effect-duration tick, and only the **behavioural** state machine
+> (auto combat-engage / exhaustion-collapse / `tickPawn`) is skipped. A drafted pawn ordered to
+> attack counts as "in melee" (no tend/heal mid-fight). So they bleed, heal, can collapse and
+> recover, and combat knockdown/collapse durations expire. Regression-tested (drafted bleeding pawn
+> loses blood at the same rate as undrafted and can die).
 
 [PawnStateMachine.ts:2507](../src/lib/game/systems/PawnStateMachine.ts#L2507): the
 `drafted` branch `continue`s **before** `tendWounds`, `tickConditions`, `healWounds`,
@@ -286,6 +298,15 @@ DroppedItems at the death tile (corpse item optional until burial mechanics exis
 
 ## R12 · LOW — Assorted dead code and drift (cheap deletions)
 
+> **✅ RESOLVED.** Deleted: `JobService._syncLightJobs`/`_completeLight` (+ the `light` switch case;
+> the type literal + per-tick purge stay for old-save cleanup), `_hasFuelInStockpile`,
+> `_totalFuelInStockpile`; `FATIGUE_PER_SLEEPING_TURN`; the dead `PawnService` cluster
+> (`forceSleep`, `forceRest`, `getSleepBuildingBonus`, `getCookingBuildingBonus`,
+> `getRacialEatingMultiplier`, `getRacialSleepMultiplier`) + the empty `racialTraits.forEach` in
+> `calculateMorale`; `ItemService.calculateCraftingTime` (conflicted with ADR-015); and fixed the
+> `findAdjacentApproach` doc drift. _(`shouldPawnSleep` was NOT dead — it's called by
+> `clearTemporaryPawnStates`; kept.)_
+
 - `JobService._syncLightJobs` + `_completeLight` — light jobs are purged every tick ([JobService.ts:98](../src/lib/game/services/JobService.ts#L98)); the generator/completer pair is unreachable. Same for `_hasFuelInStockpile`, `_totalFuelInStockpile` (no callers found).
 - `PawnStateMachine` `FATIGUE_PER_SLEEPING_TURN` (0.72) is unused — bed recovery is `GROUND + shelterBonus`, so the "bed = 0.72/s" calibration comment block is stale.
 - `PawnService`: `forceSleep`, `getCookingBuildingBonus`, `getSleepBuildingBonus`, `shouldPawnSleep` duplicate FSM thresholds (the RECOVERY_CONFIG path) — verify callers and delete; `calculateMorale` contains an empty `racialTraits.forEach` loop.
@@ -381,10 +402,8 @@ ESLint rule from the last review is still the way to close the class permanently
 
 ## Suggested sequencing
 
-_R1, R3, R4, R5, R6, R7, R8, R9, R10, P-1 are done (ADR-016 pass + cleanups — see status banner). Remaining:_
+_All Part I defects (R1–R12, P-1) are done or partial (R11). Remaining:_
 
-1. **Now (correctness):** **R2** drafted-pawn health block (move the `continue`, run tend→conditions→heal→collapse for drafted pawns too, ~10 lines + sim test — the one still-open HIGH).
-2. **Cleanups (net-negative LOC):** **R12** dead-code list (light-job pair, unused PawnService helpers, etc.).
-3. **Design honesty:** **R11** doc sync (events phase: wire or cut; service-table refresh).
-4. **Structural (unchanged):** P-2/P-3 layer inversions before Living World lands; P-4 splits opportunistically; P-5/P-6 as evidence demands.
-5. **Physical-production follow-ups** (see [PHYSICAL-PRODUCTION](.tasks/open/PHYSICAL-PRODUCTION.md)): tool-gating step 2 (per-pawn inventory + `minTier`), per-stack craft quality on instances (R8), passive-furnace flagging for forge/hearth.
+1. **Design honesty:** **R11** doc sync (events phase: wire or cut; service-table refresh).
+2. **Structural (unchanged):** P-2/P-3 layer inversions before Living World lands; P-4 splits opportunistically; P-5/P-6 as evidence demands.
+3. **Physical-production follow-ups** (see [PHYSICAL-PRODUCTION](.tasks/open/PHYSICAL-PRODUCTION.md)): tool-gating step 2 (per-pawn inventory + `minTier`), per-stack craft quality on instances (R8), passive-furnace flagging for forge/hearth.
