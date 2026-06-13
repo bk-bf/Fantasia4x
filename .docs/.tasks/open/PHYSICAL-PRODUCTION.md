@@ -107,8 +107,8 @@ content follow-up.
 - **Per-stack craft quality** (review R8) — dropped with `gs.item`; re-attach quality to an
   `ItemInstance`/stored drop when equipment quality matters.
 - **Butchery multi-yield** — one carcass → meat + hide + bone + intactness scaling (content task).
-- Unrelated review items not in this spec's scope: R2 (drafted-pawn health), R7 (`isWorking`),
-  R9 (hunting need-interrupt), R10 (`killPawn` drops nothing). _(R6 dead-triad cleanup is now done.)_
+- Unrelated review items not in this spec's scope: R2 (drafted-pawn health), R9 (hunting
+  need-interrupt), R10 (`killPawn` drops nothing). _(R6 dead-triad and R7 `isWorking` are now done.)_
 
 ## Verification
 

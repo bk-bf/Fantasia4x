@@ -25,11 +25,13 @@
 > carry budget at pickup, floors at 1) · **✅ R8** (moot — per-stack quality dropped with `gs.item`;
 > re-attach to instances later) · **✅ R6** (dead `constructBuilding`/`processBuildingQueue`/
 > `startBuilding`/`buildingQueue` triad deleted; placement is physical reserve-and-fetch) ·
+> **✅ R7** (`isWorking` now derived from FSM state, `currentWork` from the active job; dead
+> `getAvailableWorkForPawn`/`canPawnDoWorkByType` + duplicate per-tick call removed) ·
 > **~ R11.1** (`Events.ts` no longer writes `gs.item`; events phase still unwired).
 > Plus new: building-material hauling, passive furnaces, and "long jobs yield to needs" (thirst
-> added to `checkNeedInterrupts`). Tests **117 → 133**.
-> **Still open:** R2, R7, R9, R10, R12, and structural P-2…P-6 (unchanged). Current gate:
-> `check` 0 errors · `test` 133 passing · `lint` 0 errors · `build` ok.
+> added to `checkNeedInterrupts`). Tests **117 → 135**.
+> **Still open:** R2, R9, R10, R12, and structural P-2…P-6 (unchanged). Current gate:
+> `check` 0 errors · `test` 135 passing · `lint` 0 errors · `build` ok.
 
 ---
 
@@ -207,6 +209,13 @@ the exact trap the old D1 documented for crafting. **Fix:** delete all three (pl
 
 ## R7 · MEDIUM — Working-pawn `isWorking` flag is driven by a dead priority system, twice per tick
 
+> **✅ RESOLVED.** `syncPawnWorkingStates` now derives `isWorking` from the real FSM state
+> (`WORK_LOOP_STATES`: Working/MovingToResource/Hauling/MovingToDeposit/Hunting, minus
+> eating/sleeping) and `currentWork` from the pawn's active job's work category (`getJobWorkCategory`)
+> — accurate display instead of `'foraging'` fiction. The dead `getAvailableWorkForPawn`/
+> `canPawnDoWorkByType` methods are deleted and the duplicate per-tick call removed (one pass,
+> before `processPawnTurn` reads `isWorking` for mood). Regression-tested.
+
 `WorkService.syncPawnWorkingStates` runs 2×/tick from `processPawns` and derives
 `currentWork` via `getAvailableWorkForPawn`, which reads only the **legacy**
 `workPriorities` map ([WorkService.ts:192-213](../src/lib/game/services/WorkService.ts#L192)).
@@ -358,10 +367,10 @@ ESLint rule from the last review is still the way to close the class permanently
 
 ## Suggested sequencing
 
-_R1, R3, R4, R5, R6, R8, P-1 are done (ADR-016 pass — see status banner). Remaining:_
+_R1, R3, R4, R5, R6, R7, R8, P-1 are done (ADR-016 pass — see status banner). Remaining:_
 
 1. **Now (correctness, small diffs):** **R2** drafted-pawn health block (move the `continue`, run tend→conditions→heal→collapse for drafted pawns too, ~10 lines + sim test — the one still-open HIGH) → **R9** hunting need-interrupt (route `handleHunting` through `checkNeedInterrupts`) → **R10** `killPawn` drops inventory + equipment.
-2. **Cleanups (net-negative LOC):** **R7** derive `isWorking` from `currentState==='Working'`, delete the legacy work-priority path → **R12** dead-code list (light-job pair, unused PawnService helpers, etc.).
+2. **Cleanups (net-negative LOC):** **R12** dead-code list (light-job pair, unused PawnService helpers, etc.).
 3. **Design honesty:** **R11** doc sync (events phase: wire or cut; service-table refresh).
 4. **Structural (unchanged):** P-2/P-3 layer inversions before Living World lands; P-4 splits opportunistically; P-5/P-6 as evidence demands.
 5. **Physical-production follow-ups** (see [PHYSICAL-PRODUCTION](.tasks/open/PHYSICAL-PRODUCTION.md)): tool-gating step 2 (per-pawn inventory + `minTier`), per-stack craft quality on instances (R8), passive-furnace flagging for forge/hearth.
