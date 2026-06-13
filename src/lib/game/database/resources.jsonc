@@ -703,20 +703,19 @@
     },
     "nodeAmountRange" : [5, 10],
     "designationTypes": ["harvest"],
+    // ADR-009 bootstrap: surface stone is hand-SCAVENGED — no tool required (toolRequirement null),
+    // so a fresh colony can gather the small_stone / flint primitives its first tools need before
+    // it has any tools. Deeper ore (coal, clay deposits) stays pick-gated. Mining skill still
+    // boosts yield; with no toolRequirement the harvest is also exempt from R4 tool gating.
     "interaction"     : {
-      "action"         : "mine",
+      "action"         : "scavenge",
       "workCategory"   : "mining",
-      "workAmount"     : 8,
-      "toolRequirement": {"workType": "mining", "minTier": 1},
+      "workAmount"     : 6,
+      "toolRequirement": null,
       "yields"         : [
-        {"itemId": "granite", "min": 2, "max": 4, "skillId": "mining", "skillMultiplier": 0.2},
-        {
-          "itemId"         : "limestone",
-          "min"            : 0,
-          "max"            : 2,
-          "skillId"        : "mining",
-          "skillMultiplier": 0.15
-        },  // chance only: min 0
+        {"itemId": "small_stone", "min": 5, "max": 10, "skillId": "mining", "skillMultiplier": 0.2},
+        {"itemId": "granite", "min": 0, "max": 5, "skillId": "mining", "skillMultiplier": 0.15}, // chance only: min 0
+        {"itemId": "limestone", "min": 0, "max": 2, "skillId": "mining", "skillMultiplier": 0.1}, // chance only: min 0
         {"itemId": "flint_shard", "min": 0, "max": 2, "skillId": "mining", "skillMultiplier": 0.1} // chance only: min 0
       ]
     }
