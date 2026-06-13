@@ -28,6 +28,7 @@ export function createApi(DIR) {
   let moduleKey = new Map();    // lowercased alias -> canonical module
   let outAdj = new Map();       // id -> [edgeIndex]
   let inAdj = new Map();
+  let modSize = new Map();      // module -> { loc, chars, depIn, depOut }
 
   function reload() {
     try {
@@ -57,6 +58,10 @@ export function createApi(DIR) {
       (outAdj.get(e.from) || outAdj.set(e.from, []).get(e.from)).push(i);
       (inAdj.get(e.to) || inAdj.set(e.to, []).get(e.to)).push(i);
     });
+    // per-module size + dependency aggregates (parity with the viewer's lists)
+    modSize = new Map(G.moduleNodes.map((m) => [m.module, { loc: 0, chars: 0, depIn: 0, depOut: 0 }]));
+    for (const n of G.nodes) { const a = modSize.get(n.module); if (a) { a.loc += n.loc || 0; a.chars += n.chars || 0; } }
+    for (const e of G.moduleEdges) { const f = modSize.get(e.from), t = modSize.get(e.to); if (f) f.depOut++; if (t) t.depIn++; }
   }
 
   // ---- description resolution (mirrors the browser viewer) ----
@@ -90,12 +95,12 @@ export function createApi(DIR) {
     return { ...fnRow(n), signature: n.signature, calls, calledBy };
   }
   function moduleSummary(m) {
-    const outs = G.moduleEdges.filter((e) => e.from === m.module);
-    const ins = G.moduleEdges.filter((e) => e.to === m.module);
+    const sz = modSize.get(m.module) || { loc: 0, chars: 0, depIn: 0, depOut: 0 };
     return {
       module: shortMod(m.module), fullModule: m.module, group: m.group, file: m.file,
       functionCount: m.fns, description: describeModule(m),
-      dependsOnCount: outs.length, usedByCount: ins.length,
+      loc: sz.loc, chars: sz.chars,
+      dependsOnCount: sz.depOut, usedByCount: sz.depIn,
     };
   }
   function moduleDetail(m) {
