@@ -1,282 +1,313 @@
-# Codebase Review — 2026-06-10
-
-> **STATUS — IMPLEMENTED (2026-06-11).** Each item below carries a checkbox: `[x]` done,
-> `[~]` partially done (the remainder is the explicitly "large/opportunistic" work, noted
-> inline), `[ ]` intentionally deferred. Verification gate is green: `pnpm check` 0 errors,
-> `pnpm lint` clean, `pnpm test` 32 passing, `pnpm build` succeeds. The deepest architectural
-> inversions (full P0-3 engine/store dual-source + logActivity sink, D9.1 tick index-once,
-> D10 regrowth relocation, P2-8 formal file splits) remain as future work — pure-organization
-> refactors with no functional change. (The originally-added GitHub Actions CI was removed at
-> the maintainer's request; local `pnpm check`/`test`/`lint` cover the same gates on demand.)
+# Codebase Review — 2026-06-13 (v2)
 
 > **Related:** [game/ARCHITECTURE](game/ARCHITECTURE.md) · [game/DESIGN](game/DESIGN.md) · [game/DECISIONS](game/DECISIONS.md) · [ROADMAP](.tasks/open/ROADMAP.md)
 
-A function-level trace of the simulation core (`GameEngineImpl`, `WorkService`, `PawnService`, `PawnStateMachine`, `JobService`, stores), plus codebase-wide findings. Every item below is evidence-based with file references — no speculative design advice. Part I is the deep-trace defect list; Part II is foundational debt; Part III is deferred/low-priority.
+> **Supersedes the 2026-06-10 review**, which was fully triaged and implemented on
+> 2026-06-11 (all D1–D10/P0/P2 items done or explicitly deferred). Items deferred there
+> that are still relevant are carried forward in Part III with their original IDs.
+> This pass re-traces the simulation core from scratch plus everything that landed
+> since: the production-chain expansion (ceramics/smelting/fuel-heat), equipment
+> expansion (layered slots, weight/volume inventory), the combat/wound system
+> (ADR-012/014), work-driven hunting, thirst/hygiene needs, and the ADR-015 work-model
+> unification.
+
+**Verification gate at review time:** `pnpm check` 0 errors (10 a11y/CSS warnings) ·
+`pnpm lint` clean · `pnpm test` 117 passing in 21 files · `pnpm build` succeeds.
 
 ---
 
 ## Scorecard
 
-| Area                             | Grade | Notes                                                                          |
-| -------------------------------- | ----- | ------------------------------------------------------------------------------ |
-| Architecture & layering          | B−    | Strong service/ADR discipline on paper; real violations + dual state truth     |
-| Engine correctness               | C−    | Broken crafting path, job-claim leak, contradictory sorts, legacy duplicates   |
-| Simulation testing               | D     | **Zero automated tests**; non-deterministic RNG everywhere                     |
-| Tick-loop structure              | C+    | Works at current scale, but allocation churn and redundant scans are structural |
-| Data-driven design               | A−    | JSONC databases (items, creatures, conditions…) are genuinely moddable         |
-| Documentation                    | A     | ADRs, specs, roadmap dependency matrix — far above average                     |
-| Tooling & CI                     | C     | `test` script points at nonexistent Playwright setup; documented `check` missing |
+| Area                    | 06-10 | Now | Notes                                                                                   |
+| ----------------------- | ----- | --- | --------------------------------------------------------------------------------------- |
+| Architecture & layering | B−    | B+  | Engine is near coordinator-only; per-tile storage model is coherent; legacy `gs.item` pool is the one big seam left |
+| Engine correctness      | C−    | C+  | Old bugs fixed and regression-tested, but two new producer/consumer mismatches shipped with recent features (R1, R3) and drafted pawns bypass the health sim (R2) |
+| Simulation testing      | D     | B   | 32 → 117 tests; guard branches pinned; the new defects below are exactly the untested cross-system paths |
+| Tick-loop structure     | C+    | C+  | Same deferred O(P²) churn (D9.1); occupancy/threat scans added per-pawn-per-tick but scale is still fine |
+| Data-driven design      | A−    | A−  | Recipes/wounds/stats/creatures all JSONC; `Work.toolsRequired` is decorative data (R4)  |
+| Documentation           | A     | A−  | ADR discipline excellent; DESIGN.md now over-promises in three places (tool gating, inventory budget, events phase) |
+| Tooling & CI            | C     | B+  | check/lint/test/build all real and green; no CI by choice                               |
 
 ---
 
-## Completion checklist (at a glance)
+# Part I — Defects, ranked by severity
 
-- [x] D1 · Crafting path — done & tested
-- [x] D2 · Job-claim leak — done & tested
-- [x] D3 · Contradictory sort — done
-- [x] D4 · Dead legacy subsystems — done
-- [x] D5 · Tool-gating no-op/dead checks — done (ADR-009 per-inventory gating deferred)
-- [x] D6 · ADR-002 mutation — done
-- [x] D7 · Module-state lifecycle — done
-- [x] D8 · Wrong fatigue distance — done & tested
-- [~] D9 · Hot-path waste — D9.2–D9.5 done; D9.1/D9.6/D9.7 deferred (profiling-gated)
-- [~] D10 · Engine "coordinator only" — debug/butchery/misleading-methods done; regrowth move deferred
-- [x] P0-1 · Vitest suite (32 tests) — done
-- [x] P0-2 · Seeded RNG — done & tested
-- [~] P0-3 · Layer violations — typed circular dep done; store/log inversion deferred
-- [~] P2-8 · Slim god files — slimmed via deletions; formal splits deferred
-- [~] P2-10 · Logging hygiene — hot paths gated; full `no-console` sweep deferred
-- [x] P2-11 · Tooling truthfulness — done (+ prettier/jsonc noise fixed)
-- [ ] D-perf / D-bills (Part III) — deferred by design
+## R1 · CRITICAL — Crafted primary outputs land in the legacy `gs.item` pool, invisible to the entire economy
 
----
+The colony economy has one source of truth: `stored` DroppedItems on tiles, aggregated
+into `gameState.stockpile` ([GameState.ts:200](../src/lib/game/core/GameState.ts#L200)
+`aggregateFromDrops`). **Every consumer reads it**: recipe inputs
+(`ItemService.getAvailableQuantity` → stockpile only,
+[ItemService.ts:328](../src/lib/game/services/ItemService.ts#L328)), building costs
+(`BuildingService.resolveBuildingCost` reads `gameState.stockpile`,
+[BuildingService.ts:147](../src/lib/game/services/BuildingService.ts#L147)), research
+material costs ([ResearchService.ts:140](../src/lib/game/services/ResearchService.ts#L140)),
+refuel jobs ([JobService.ts:919](../src/lib/game/services/JobService.ts#L919)), tool wear
+([ItemService.ts:626](../src/lib/game/services/ItemService.ts#L626)), butchery stock checks,
+casting-mold checks.
 
-# Part I — Traced defects in the simulation core
+But `JobService._completeCraft` routes the **primary output of every craft job into the
+legacy `gs.item` array** ([JobService.ts:771](../src/lib/game/services/JobService.ts#L771)) —
+only **byproducts** go through `itemService.addItems` → stockpile. The only readers of
+`gs.item` are eating (`hasAvailableFood`/`selectFoodForMeal`), equipment
+(`PawnEquipment.ts`), the unwired Events system, and the UI's `currentItem` store.
 
-These came from tracing the largest functions end-to-end. Ordered by severity.
+**Net effect: anything you craft cannot be used as a material, fuel, building cost, or
+research cost.** Concrete broken chains, all shipped as "✅ done" on the roadmap:
 
-## D1 · The UI crafting path is broken — materials consumed, item never produced
+- `make_fire_bricks` outputs `{fire_bricks: 1}` ([recipes.jsonc:508](../src/lib/game/database/recipes.jsonc)) → `gs.item`. The `advanced_kiln` costs `{"fire_bricks": 8, "granite": 6}` ([buildings.jsonc:203](../src/lib/game/database/buildings.jsonc)) → reads stockpile. **The ceramics tier added 2026-06-12 cannot be completed.**
+- `split_firewood` puts `green_firewood` (primary) in `gs.item` and `branch` (byproduct) in stockpile — **split firewood can never refuel a campfire**; only the branches can. The test [jobCraftByproducts.test.ts:41-43](../src/lib/game/services/jobCraftByproducts.test.ts) pins this split as if intended.
+- Research costing `fire_bricks: 5` ([research.jsonc:284](../src/lib/game/database/research.jsonc)) is unfulfillable.
+- A crafted `stone_axe` is invisible to `applyToolWear` (reads stockpile), so crafted tools never wear — and would be invisible to ADR-009 claim-time gating if it existed (R4).
 
-- [x] **Done & tested** — `craftItem` builds the Phase 5d shape; `processCrafting()`/`turnsRemaining` removed. Regression test: JobService craft round-trip.
+This is the same defect class as the old D1 (producer feeds pool A, consumer reads pool
+B), one layer up. **Fix:** route the primary output through `addItems` (stockpile) like
+byproducts; carry quality on the stored drop or an `ItemInstance` instead of
+`gs.item[].properties.quality`. Then audit the remaining `gs.item` readers (food, equip)
+and migrate them to stockpile so the legacy pool can die. Add a sim test: craft an
+intermediate → spend it on a building/recipe.
 
-**Trace:** `CraftingScreen.svelte:93` → `gameEngine.craftItem(item.id, 1)` → [GameEngineImpl.ts](../src/lib/game/systems/GameEngineImpl.ts) (~line 154) builds a `CraftingInProgress` with **no `id`, no `workRequired`** — only the legacy `turnsRemaining` countdown:
+## R2 · HIGH — Drafted pawns are exempt from the entire health simulation
+
+[PawnStateMachine.ts:2507](../src/lib/game/systems/PawnStateMachine.ts#L2507): the
+`drafted` branch `continue`s **before** `tendWounds`, `tickConditions`, `healWounds`,
+collapse entry/recovery, and `tickStatusEffectDurations`. The comment on it claims the
+opposite ("They still tick conditions (bleeding, etc.)"). `tickConditions` has no other
+callsite for pawns. Consequences, in the exact scenario drafting exists for (combat):
+
+- A drafted pawn **never loses blood** (limb `bleedRate` is only applied in `tickConditions`), never progresses infection, malnutrition, or dehydration, and never heals. Un-draft it and the backlog of bleed suddenly starts applying. An undrafted bystander with the same wounds bleeds out; the drafted one is immortal short of a destroyed vital part ([Combat.ts:1094](../src/lib/game/systems/Combat.ts#L1094)).
+- Combat stamps `statusEffectDurations.collapse` when consciousness drops ([Combat.ts:1075](../src/lib/game/systems/Combat.ts#L1075)) and `isKnockedDown` then blocks its swings ([Combat.ts:1264](../src/lib/game/systems/Combat.ts#L1264)) — but nothing ever decrements that duration for a drafted pawn, so it stays "down" forever (until undrafted) while **mobs keep attacking it**: the mob disengage check looks for `currentState === 'Collapsed'` ([Combat.ts:1302](../src/lib/game/systems/Combat.ts#L1302)), a state a drafted pawn can never enter.
+- `PawnService.processPawnTurn` also skips drafted pawns ([PawnService.ts:327](../src/lib/game/services/PawnService.ts#L327)) — mood/morale freeze too. Needs still accrue (`processNeedsTick` doesn't skip), so hunger climbs to 100 with no malnutrition consequence.
+
+**Fix:** in `tick()`, run the health block (tend → conditions → heal → collapse
+lifecycle → status-duration tick) for drafted pawns too, and only skip the *behavioural*
+state machine (`tickPawn`). That is what the comment already promises. Add a sim test:
+drafted pawn with a bleeding wound loses blood and can die.
+
+## R3 · HIGH — Butchery consumes the whole carcass stack but yields one carcass's outputs
+
+`ItemService.processButchery` ([ItemService.ts:373-376](../src/lib/game/services/ItemService.ts#L373)):
 
 ```ts
-const craftingInProgress = {
-  item, quantity, turnsRemaining: item.craftingTime || 1, startedAt: ...
-};
+const carcassQty = state.stockpile[carcassItem.id] ?? 0;
+if (carcassQty > 0) state = this.consumeItems({ [carcassItem.id]: carcassQty }, state);
+state = this.addItems(outputs, state);
 ```
 
-Materials are then consumed via `itemService.consumeItems(...)` and the entry is pushed to `craftingQueue`. But:
+`outputs` is rolled **once** from `carcassItem.yields`, but `consumeItems` takes the
+**entire stack**. Hunt three deer, butcher once → all three carcasses vanish, one deer's
+meat appears. With the hunting system now driving carcass acquisition (commits c05e616,
+f54ef2b), multi-carcass stockpiles are the normal case, so this silently destroys most
+hunted food. Related smell: `carcassIntactness` is keyed by **item id**
+([ItemService.ts:350](../src/lib/game/services/ItemService.ts#L350)) — all rabbit
+carcasses share one freshness value, and `Mob.intactness` (set at death) is a separate,
+unconnected number. The existing test ([itemButchery.test.ts](../src/lib/game/services/itemButchery.test.ts))
+pins only guard branches, not quantity flow.
 
-1. `JobService._syncCraftJobs` (JobService.ts ~line 345) **explicitly skips entries without `id`**: `if (!entry.id) continue; // legacy entries without id — skip`. No craft job is ever generated, so no pawn will ever work it.
-2. The legacy countdown path is gone: `GameEngineImpl.processCrafting()` is an **empty no-op** (still called and profiled every tick). Nothing decrements `turnsRemaining`.
+**Fix:** consume exactly 1 carcass per butchery action (or roll yields × quantity).
+Longer-term, make intactness per-carcass (instance or per-drop field) instead of
+per-type.
 
-**Net effect: clicking craft in the UI eats the materials and the queue entry sits forever.** Two systems were migrated (Phase 5d work-based crafting) but the producer side of the old system was never updated to feed the new one.
+## R4 · MEDIUM-HIGH — ADR-009 tool gating is still enforced nowhere, while DESIGN.md sells it as a core pillar
 
-**Fix:** `craftItem` must create the Phase 5d shape (`id: crypto.randomUUID()`, `workRequired: craftingTime × 5`, `workDone: 0`, `materialsReserved: true`) — then delete `processCrafting()` and the `turnsRemaining` field.
+DESIGN.md: *"Tool-gated gathering: woodcutting requires at least a Stone Axe … Without
+the tool, the job cannot be claimed — the forest stays whole"*; ADR-009 calls the
+enforcement rules "non-negotiable". Reality:
 
-## D2 · `killPawn` leaks job claims — jobs become permanently unworkable
+- `JobService.getAvailableJobs`/`claimJob` contain **no** tool check of any kind.
+- `WorkService.canPawnDoWorkByType` honestly documents the gap and always passes ([WorkService.ts:228-234](../src/lib/game/services/WorkService.ts#L228)).
+- `WORK_CATEGORIES[].toolsRequired` ([Work.ts](../src/lib/game/core/Work.ts)) is referenced by zero logic — decorative data.
+- The only tool effect is **wear**: `interaction.toolRequirement` triggers `applyToolWear` *after* harvest completion ([JobService.ts:543](../src/lib/game/services/JobService.ts#L543)), and only if a matching tool happens to be in stockpile ("bare hands — nothing to wear" is a successful outcome).
 
-- [x] **Done & tested** — `killPawn` and the drafted-skip path reset `claimedBy: null`. Regression test: JobService claim-leak invariant.
+So a fresh colony with zero tools fells trees barehanded; the entire ADR-009 bootstrap
+problem (primitives → tools → workshops) is optional. This was deferred in the last
+review (D5) as "until ADR-009 job-claim work resumes" — but two production-chain
+expansions have since shipped on top of the un-gated base, and `ResourceObject`
+interactions now carry `toolRequirement` data ready to use. **Fix:** gate at claim time
+in `getAvailableJobs` (colony-stockpile check is fine as step 1; per-pawn claimed
+inventory per ADR-009 as step 2), or amend ADR-009/DESIGN to say gating is wear-only for
+now. Code and design doc must stop disagreeing on a core pillar.
 
-**Trace:** [PawnStateMachine.ts](../src/lib/game/systems/PawnStateMachine.ts) `killPawn` (line 129) clears the dead pawn's `activeJob`, path, and movement — but never touches `gameState.jobs`. Any pool job with `claimedBy === deadPawnId` stays claimed forever:
+## R5 · MEDIUM — Inventory weight/volume budget is computed, displayed, and never enforced
 
-- `getAvailableJobs` filters `j.claimedBy !== null && j.claimedBy !== pawn.id` → no living pawn can ever take it.
-- `_syncHarvestJobs` etc. only remove jobs whose *source* disappeared, so the job persists.
+The equipment expansion added carry budgets: `ItemService.getCarryBudget` /
+`getCurrentCarryLoad` / `canAddToInventory`
+([ItemService.ts:390-446](../src/lib/game/services/ItemService.ts#L390)) and DESIGN.md
+documents "Inventory: weight/volume budgeted". But `canAddToInventory` has **zero
+callers**, and the haul pickup path (`JobService._completeHaul`,
+[JobService.ts:646-657](../src/lib/game/services/JobService.ts#L646)) adds any quantity
+to `pawn.inventory.items` unconditionally (it also never touches the stored
+`weightKg`/`volumeL` cache fields, which are write-only initial-shape artifacts). The
+UI (`PawnInventory.svelte`) shows a budget the simulation ignores. Belt/back
+`inventoryBonus` therefore has no gameplay effect. **Fix:** either enforce at haul-job
+claim/pickup (split oversized stacks; cap `unitsTaken` by remaining budget) or strike
+the budget claim from DESIGN until it lands. Drop the dead `weightKg`/`volumeL` fields
+from `PawnInventory` if load is always derived.
 
-A dead hauler permanently blocks that haul; a dead builder permanently blocks that construction. **Fix:** in `killPawn`, map `jobs` and reset `claimedBy: null` where it equals the dead pawn's id. (Same audit needed for `drafted` — drafting a pawn skips its state machine but doesn't release its claim either, see `tick()`'s `if (current.drafted) continue;`.)
+## R6 · MEDIUM — `constructBuilding`/`processBuildingQueue`/`queueBuilding` is a dead legacy triad that eats materials
 
-## D3 · Two contradictory priority conventions inside `WorkService`
+`GameEngineImpl.constructBuilding`
+([GameEngineImpl.ts:187-219](../src/lib/game/systems/GameEngineImpl.ts#L187)) still
+consumes materials and pushes a `turnsRemaining`-shaped entry into
+`gameState.buildingQueue` — but the countdown was removed from the tick
+(`processBuildings` comment: "processBuildingQueue countdown removed"), and
+`BuildingService.processBuildingQueue`
+([BuildingService.ts:316](../src/lib/game/services/BuildingService.ts#L316)) plus
+`GameStateManager.queueBuilding` ([GameState.ts:72](../src/lib/game/core/GameState.ts#L72))
+have **zero callers**. The only thing that ever drains the queue is the **load-time
+migration** ([gameState.ts:150-172](../src/lib/stores/gameState.ts#L150)) — so a call
+today consumes materials and produces a building only after the next save/load, at
+(0,0). No UI calls it anymore (placement goes through `buildingService.placeBuilding`),
+but it sits on the public `GameEngine` interface as the obvious-looking "build" method —
+the exact trap the old D1 documented for crafting. **Fix:** delete all three (plus the
+`BuildingInProgress`/`buildingQueue` field once saves are migrated), or make
+`constructBuilding` delegate to `placeBuilding`.
 
-- [x] **Done** — the ascending-sort path (`processWorkHarvesting`) was deleted with D4; the surviving `getAvailableWorkForPawn` is descending, consistent with `JobService` laborLevel-desc.
+## R7 · MEDIUM — Working-pawn `isWorking` flag is driven by a dead priority system, twice per tick
 
-**Trace:** [WorkService.ts](../src/lib/game/services/WorkService.ts):
+`WorkService.syncPawnWorkingStates` runs 2×/tick from `processPawns` and derives
+`currentWork` via `getAvailableWorkForPawn`, which reads only the **legacy**
+`workPriorities` map ([WorkService.ts:192-213](../src/lib/game/services/WorkService.ts#L192)).
+Default assignments created by `ensureDefaultWorkAssignments` have `workPriorities: {}`
+and real data in `laborSettings` — so the sort is always empty and every pawn falls
+through to `'foraging'`. Result: `pawn.state.isWorking` ≈ "not eating/sleeping",
+`currentWork` is fiction, and the +1 working-mood bonus in `calculateStateUpdate` keys
+off it. The actual job system (`JobService` + FSM) never reads any of this. **Fix:**
+derive `isWorking` from `currentState === 'Working'` (one line in the FSM or a single
+sync pass), delete `getAvailableWorkForPawn`/`canPawnDoWorkByType`/`currentWork`, and
+remove the second sync call. This finishes the D4 cleanup the last review started.
 
-- `processWorkHarvesting` sorts ascending with the comment *"Sort by priority (1 = highest priority)"*.
-- `getAvailableWorkForPawn` sorts **descending** with *"highest priority first"*.
+## R8 · MEDIUM — Craft quality is stamped only on the first stack of an item
 
-These interpretations are mutually exclusive — under one convention the other function processes work in exactly inverted order. `JobService.getAvailableJobs` uses a third scheme (laborLevel desc, distance asc), and `ensureBasicWorkAssignments` writes priorities in the 1-is-highest style. Whichever convention is canonical, half the code disagrees with it. (Mitigated only by the fact that `processWorkHarvesting` is dead — see D4.)
+`_completeCraft` ([JobService.ts:772-782](../src/lib/game/services/JobService.ts#L772)):
+if the item already exists in `gs.item` it just adds `amount`; `properties.quality` from
+`getWorkModifiers(...).quality` is written only when the stack is first created. A
+master smith's batch merged into an apprentice's stack inherits the apprentice's
+quality; construction quality (stored per building, [JobService.ts:705-727](../src/lib/game/services/JobService.ts#L705))
+got this right. Becomes moot if R1's fix moves quality onto instances — fold it into
+that work.
 
-## D4 · Whole legacy subsystems still live (and partly run) alongside their replacements
+## R9 · LOW-MEDIUM — Hunting interrupts bypass the ADR-010 proximity formula
 
-- [x] **Done** — all listed dead paths deleted (`processWorkHarvesting`, auto eat/sleep chain, `getAvailableWork`, engine `calculateResourceProduction`, `processCrafting`, `currentJobIndex`, unused `eventSystem` import). `ensureBasicWorkAssignments` → one-time `ensureDefaultWorkAssignments` at game init.
+`handleHunting` aborts the hunt at flat `HUNGER_THRESHOLD`/`FATIGUE_THRESHOLD`
+([PawnStateMachine.ts:1296-1301](../src/lib/game/systems/PawnStateMachine.ts#L1296)),
+not via `checkNeedInterrupts`. A pawn 3 ticks from cornering a deer drops the chase at
+hunger 70 even when food is 60 tiles away — the exact pathology ADR-010 was written to
+kill, in the one activity where abandoning mid-task wastes the most prior effort
+(chase distance). DESIGN.md says hunting reuses "the same thresholds as idle work
+pickup", so this is arguably as-designed — but it reads as an oversight against ADR-010.
+Cheap fix: call `checkNeedInterrupts` with `jobDist = dist(pawn, quarry)`.
 
-Confirmed by call-graph search — these are parallel, conflicting implementations of systems that were replaced:
+## R10 · LOW — `killPawn` drops nothing on the map
 
-| Legacy code | Replaced by | Status |
-| --- | --- | --- |
-| `WorkService.processWorkHarvesting` (~150 lines: location-based harvest, `currentJobIndex` round-robin, the ascending sort from D3) | `JobService` + `PawnStateMachine` | **Zero callers — dead** |
-| `PawnService.processAutomaticEating` / `processAutomaticSleeping` (+ `tryAutomaticEating`, 101 lines) | `PawnStateMachine` HUNGRY/EATING/TIRED/SLEEPING states | Reachable only via `forcePawnActivity`, which itself has **zero callers**. Contains conflicting thresholds (eat at 80/50/30 vs state machine's `HUNGER_THRESHOLD`) and **mutates `updatedGameState.pawns[index]` directly** |
-| `WorkService.ensureBasicWorkAssignments` | labor settings UI | **Runs every tick.** Directly mutates `gameState.workAssignments`, auto-assigns hardcoded foraging/woodcutting/mining priorities to any unassigned pawn, and references the abstract `'plains'` location from the pre-map era via `locationService` |
-| `WorkService.getAvailableWork` `gameState.item` scan | stockpile/zones | Reads the legacy flat item list |
-| `GameEngineImpl.calculateResourceProduction` | job system | Self-described "simplified"; not part of the tick |
-| `GameEngineImpl.processCrafting` | `JobService._completeCraft` | Empty no-op, still called + profiled every tick (see D1) |
-| `eventSystem` import in [gameState.ts](../src/lib/stores/gameState.ts) | — | Imported, **never called**. Note: [ARCHITECTURE.md](game/ARCHITECTURE.md) lists "Events" in the mandatory turn order, but `processGameTurn()` has no events phase — docs and code disagree |
+A pawn dies holding hauled inventory and a full equipment loadout; `killPawn`
+([PawnStateMachine.ts:185-249](../src/lib/game/systems/PawnStateMachine.ts#L185)) writes
+a `DeadPawnRecord` and flips flags — carried items and equipped gear (now real,
+durability-tracked `ItemInstance`s from the equipment expansion) vanish from the
+economy. DESIGN.md's combat section: "a slain entity drops a carcass/corpse". Mobs do
+(`dropCarcass`); pawns don't. With Tier-2 gear being expensive, permadeath currently
+deletes the colony's best equipment. **Fix:** drop inventory + equipment as
+DroppedItems at the death tile (corpse item optional until burial mechanics exist).
 
-This is the "inefficiency in the engine" smell made concrete: every tick pays for sync/maintenance of state (`workAssignments`, `currentJobIndex`, location work data) that the actual decision path (`JobService.getAvailableJobs`) only partially reads. **Fix:** delete the dead paths outright; migrate `ensureBasicWorkAssignments` into explicit default labor settings applied once at pawn creation, not re-asserted 60×/sec.
+## R11 · LOW — Doc/code mismatches that will misdirect contributors
 
-## D5 · Tool gating contradicts ADR-009 — and one check is a no-op
+1. **Events phase**: ARCHITECTURE.md's mandatory turn order lists "5. Events — trigger random or conditional events"; `processGameTurn` has no events phase and `core/Events.ts` (412 lines, containing logic + writes to the legacy `gs.item` pool — double ADR-006 violation) is fully unwired. Carried from the last review (D4 note) — either wire it or cut it from the turn-order contract.
+2. **AGENTS.md / ARCHITECTURE.md service table** omits the services added since: `CombatService`, `EntityService`, `JobService`, `RecipeService`, `ResourceObjectService`, `LightingService`(if present), `PawnStatService` is listed but e.g. `OccupancyService` was added correctly — do one sync pass.
+3. **DESIGN.md need table** says `WORK_PRIORITY_THRESHOLD_SHIFT` gives "Level 4 → ~78" (+8 from 70); code comment at [PawnStateMachine.ts:114](../src/lib/game/systems/PawnStateMachine.ts#L114) says the same — both fine — but DESIGN also still describes drink/wash routing as deferred in one paragraph (PawnService comment too, [PawnService.ts:482](../src/lib/game/services/PawnService.ts#L482)) while §D zone routing is implemented in the FSM. Stale comments only.
 
-- [x] **Done** — removed the decorative no-op in `canPawnDoWorkByType` and the dead global-stockpile `hasRequiredTools`/`canPawnDoWork`; documented the ADR-009 job-claim intent. (Actual per-inventory gating deferred to when ADR-009 job-claim work resumes.)
+## R12 · LOW — Assorted dead code and drift (cheap deletions)
 
-**Trace:** [WorkService.ts](../src/lib/game/services/WorkService.ts):
-
-- `canPawnDoWorkByType` (~line 653): when `toolsRequired` is set, it logs the requirement and then **always passes** — *"assume pawns can do work"*. The check is decorative.
-- `hasRequiredTools` (~line 363): checks the **global stockpile** for tool existence, not the pawn. ADR-009 specifies job-claim-time tool gating from the pawn's claimed inventory. `JobService` contains no `toolsRequired` handling at all (verified by search).
-
-Net: tool requirements are currently enforced nowhere on the real (JobService) path, and the WorkService path that pretends to enforce them does so against the wrong inventory. Either wire `toolsRequired` into `JobService.getAvailableJobs`/`claimJob` per ADR-009, or delete the dead checks until that work happens — the current state misleads anyone reading it.
-
-## D6 · Mutation violations of ADR-002 in per-tick code
-
-- [x] **Done** — `syncPawnWorkingStates` rewritten immutable; the other two offenders (`ensureBasicWorkAssignments`, `processAutomaticEating/Sleeping`) were deleted in D4.
-
-- `WorkService.syncPawnWorkingStates` directly mutates `workAssignment.currentWork` (assignment objects inside `GameState`) — and is called **twice per tick** from `processPawns`.
-- `WorkService.ensureBasicWorkAssignments` assigns into `gameState.workAssignments` in place (D4).
-- `PawnService.processAutomaticEating/Sleeping` assign into the `pawns` array (dead path, but a trap).
-
-These break the immutability contract the whole store/engine sync depends on: mutated-in-place objects can leak into what the UI believes is an immutable snapshot, defeating change detection and making the dual-source-of-truth problem (P0-3) worse.
-
-## D7 · Module-level mutable state survives save/load/reset
-
-- [x] **Done** — `_unreachableJobs` cleared via `resetUnreachableJobs()` on load/reset/regen; `GameState.seed` persisted and the sim RNG reseeded from it; world-gen deferred out of module import into the async init.
-
-[PawnStateMachine.ts](../src/lib/game/systems/PawnStateMachine.ts) keeps `_unreachableJobs = new Map()` (pawnId → jobId → expiry turn) at module scope. It is not part of `GameState`, so:
-
-- Loading a save keeps stale unreachable-job memory from the previous session/run.
-- Starting a new game inherits it.
-- Expiry is compared against `gameState.turn`, which resets — entries can become effectively permanent or expire instantly.
-
-Same pattern: `WORLD_SEED = Date.now()` plus **full world generation at module import time** in [gameState.ts](../src/lib/stores/gameState.ts) — a 240×160 world is generated even when the player immediately loads a save that overwrites it. Move both into explicit lifecycle (state field / init function).
-
-## D8 · The wrong distance feeds the fatigue-interrupt formula
-
-- [x] **Done & tested** — fatigue interrupt now uses `computeMinQueueRestDist` (rest sources); `FATIGUE_THRESHOLD (72)` comment fixed. Regression tests: rest-vs-food distance + ADR-010 threshold formula.
-
-**Trace:** in both `handleWorking` and `handleMovingToResource` ([PawnStateMachine.ts](../src/lib/game/systems/PawnStateMachine.ts) ~lines 1218 and 1316):
-
-```ts
-const minQueueRest = computeMinQueueFoodDist(queue, pawn, gameState); // reuse queue; rest uses its own source
-```
-
-`computeMinQueueFoodDist` computes distance from queued jobs to the nearest **food** source. Its result is fed into `computeAdjustedNeedThreshold` for the **fatigue** threshold — so how early a pawn breaks for sleep is modulated by how far its upcoming jobs are from *food*, not from beds. The ADR-010 lookahead logic is sound; this is a copy-paste wiring bug. (Adjacent nit: the comment in `handleSleeping` says *"won't immediately re-sleep since 30 < FATIGUE_THRESHOLD (80)"* — `FATIGUE_THRESHOLD` is 72.)
-
-## D9 · Structural waste in the hot tick path
-
-- [~] **Partial** — done: D9.2 extracted `checkNeedInterrupts`, D9.3 deduped the double job lookup, D9.4 module-level `ITEM_DEF_BY_ID` map, D9.5 lazy `gameLogger` gating. Deferred (the review's profiling-gated items): D9.1 index-once tick rewrite, D9.6 deep-clone removal (tied to P0-3), D9.7 event-driven job generation.
-
-Not micro-optimization — these are structural patterns that multiply with pawn count and make the code harder to follow:
-
-1. **`PawnStateMachineImpl.tick()` re-finds each pawn up to 3× per tick** (`state.pawns.find(...)` after each sub-step), and **every state handler returns `pawns.map(...)` over the full array to update one pawn** — `handleWorking` alone can produce three full-array copies in one tick (after `advanceJob`, after interrupt checks, final progress write). With P pawns that's O(P²) object churn per tick at 60 TPS. An index-once / update-once pattern per pawn-tick (build the next pawn object, splice it in a single map at the end) removes most of it without touching ADR-002 semantics.
-2. **Duplicated need-interrupt blocks — 4 near-identical copies.** The hunger-interrupt and fatigue-interrupt blocks (~35 lines each) are pasted into both `handleWorking` and `handleMovingToResource`. This is how D8 happened — a fix to one copy won't reach the others. Extract `checkNeedInterrupts(pawn, activeJob, gs): GameState | null`.
-3. **Redundant lookups in `handleWorking`:** `(gameState.jobs ?? []).find((j) => j.id === jobId)` runs twice (once for `jobInPool`, again inside the laborLevel IIFE).
-4. **Per-pawn-per-tick linear database scans:** `hasAvailableFood`/`selectFoodForMeal`/`distToNearestFoodSource` do `ITEMS_DATABASE.find(...)` per stockpile entry per call, plus full `buildings` scans — and they're invoked inside the interrupt checks for every working pawn with elevated needs, every tick. A module-level `Map<id, ItemDef>` for the database and a per-tick cached food/rest source list would collapse this.
-5. **`gameLogger.log` has no dev gate at the call site:** `log()` unconditionally builds the line and buffers it; NEED-CHECK callers build multi-segment interpolated strings every tick for every needy pawn before `log()` is even entered. Gate at the source (`if (!import.meta.env.DEV) return;` is not enough — the string is built by the caller; use a lazy `log(turn, tag, () => msg)` or guard constant).
-6. **`GameEngineImpl.processGameTurn` re-syncs from the Svelte store every tick** (`get(gameState)` + spread) and **`getGameState()` deep-clones via `JSON.parse(JSON.stringify(...))`** — the latter over a state containing a 38,400-tile map. Both exist only because of the dual-source-of-truth design (P0-3).
-7. **`generateJobs` fully reconciles all five job categories every tick.** Fine today; flagged because it scans designations (with string-key splits per entry in `_syncHaulJobs`/`findNearestDepositPoint`) and all buildings/queue entries 60×/sec. Event-driven generation is the eventual fix, but only when profiling says so.
-
-## D10 · `GameEngineImpl` is not "coordinator only"
-
-- [~] **Partial** — done: deleted the ~130 lines of dead debug/balance methods + the hardcoded `validateSystemConsistency`, removed the misleading `calculateCraftingTime(pawnId)`, moved butchery → `ItemService.processButchery` (unit-tested). Deferred: relocating per-tile regrowth to a resource service (pure-organization).
-
-Per its own charter (AGENTS.md: *"turn coordinator only"*), the engine should be a phase sequencer. It currently also contains: butchery yield math (`craftButchery`), per-tile regrowth rules, building/crafting completion, ~200 lines of debug/balance methods (`debugWorkBalance`, `validateGameBalance`, `checkAllPawnEfficiencies`), a `validateSystemConsistency()` that returns hardcoded `{ isValid: true }`, and `calculateCraftingTime(itemId, pawnId)` whose `pawnId` parameter is **ignored entirely** (callers may believe a skilled crafter is faster — they aren't). A dozen façade methods return `any`. Move butchery → `ItemService`, regrowth → resource service, debug methods → `dev/`, and type the façade.
+- `JobService._syncLightJobs` + `_completeLight` — light jobs are purged every tick ([JobService.ts:98](../src/lib/game/services/JobService.ts#L98)); the generator/completer pair is unreachable. Same for `_hasFuelInStockpile`, `_totalFuelInStockpile` (no callers found).
+- `PawnStateMachine` `FATIGUE_PER_SLEEPING_TURN` (0.72) is unused — bed recovery is `GROUND + shelterBonus`, so the "bed = 0.72/s" calibration comment block is stale.
+- `PawnService`: `forceSleep`, `getCookingBuildingBonus`, `getSleepBuildingBonus`, `shouldPawnSleep` duplicate FSM thresholds (the RECOVERY_CONFIG path) — verify callers and delete; `calculateMorale` contains an empty `racialTraits.forEach` loop.
+- `ItemService.calculateCraftingTime(itemId, gameState, pawnId)` re-implements a dexterity speed bonus outside ADR-015's single work model — if any UI calls it, its numbers disagree with `getWorkModifiers`.
+- `GameEngineImpl.craftItem` computes `workRequired = (recipe.workAmount || 1) * 5` and `_syncCraftJobs` separately computes `entry.workRequired ?? (craftingTime ?? 1) * 5` — one constant, two homes.
+- `findAdjacentApproach`'s doc comment ("Tiles held by pawns that are currently stationary") describes a parameter that is now the full occupancy set.
 
 ---
 
-# Part II — Foundational debt (kept from v1)
+# Part II — Structural debt (not bugs)
 
-### P0-1 · Add a real test suite
+### P-1 · The `gs.item` legacy pool itself
 
-- [x] **Done** — Vitest added with 32 passing tests across 5 files: RNG determinism, JobService claim/release/advance, D1 craft round-trip, ADR-010 interrupt formula (D8), and headless sim-invariants (craft queue drains, turn monotonic, no dead-pawn claim leak). Pure-TS path used so no `wasm-pack`. (Item 4, the Actions workflow, was added then removed at the maintainer's request.)
+Beyond R1's routing bug, the pool is a second inventory ontology: food eaten from it
+bypasses stockpile zones, equipment instances are plucked from it, Events would write to
+it. Once R1 lands, the remaining readers are enumerable (≈6 sites) — finish the Stage-2
+migration and delete `GameState.item`. This also kills the `currentItem` derived store.
 
-No `*.test.ts`/`*.spec.ts` files exist anywhere. `package.json` has `"test": "playwright test"` but no Playwright config or installation. ADR-001's stated payoff — *"All game logic is testable in isolation"* — has never been cashed in.
+### P-2 · Engine↔store dual source of truth (carried: old P0-3)
 
-Every defect in Part I (broken craft path, claim leak, inverted sort, wrong-distance lookahead) is exactly the class a thin unit/sim-invariant suite catches:
+`processGameTurn` still begins with `this.gameState = { ...get(gameState) }` and ends
+with `pushFromEngine` ([GameEngineImpl.ts:291](../src/lib/game/systems/GameEngineImpl.ts#L291));
+`getGameState()` still deep-clones via `JSON.parse(JSON.stringify())` over a
+240×160-tile map. The store-side throttled-notify design (`createGameStore.setSilent`)
+is good; the read-back each tick remains the inversion. Same recommendation as before:
+engine is the only writer, user actions become commands. Large, no functional change —
+still deferred, still worth doing before the Living World layer adds more per-tick
+state.
 
-1. Add **Vitest**. Start with `JobService` claim/release/complete (D2 becomes the first regression test), the ADR-010 interrupt formula (the ADR has worked numeric examples ready-made as test cases), `ItemService.resolveActiveCost`, and a craft-queue round-trip (D1).
-2. Add **simulation golden tests**: run N ticks from a fixed seed (needs P0-2) and assert invariants — no job stays claimed by a dead pawn, stockpile aggregate == sum of zone inventories, `craftingQueue` entries always drain, `turn` monotonic.
-3. Use the pure-TS pathfinder fallback (ADR-008) so tests don't need `wasm-pack`.
-4. Wire `lint` + `svelte-check` + `vitest` into a GitHub Actions workflow (none exists).
+### P-3 · Services importing Svelte stores (carried: old P0-3 logActivity)
 
-### P0-2 · Seeded, deterministic RNG
+`PawnStateMachine`, `EntityService`, `Combat` import from `stores/Log` /
+`stores/combatFeedback`. Same injectable-sink fix as before; the list grew by
+`combatFeedback`.
 
-- [x] **Done & tested** — `core/rng.ts` (mulberry32 + reseedable `SeededRng`); all 64 sim `Math.random()` replaced; seeded from persisted `GameState.seed`; separate world-gen/sim streams; ESLint `no-restricted-properties` bans `Math.random` under `src/lib/game/`. Regression tests in `rng.test.ts`.
+### P-4 · God files (carried: old P2-8; sizes re-measured)
 
-65 raw `Math.random()` calls in `src/lib/game/`; `WORLD_SEED = Date.now()`. Reproducibility is a prerequisite for the golden tests above and for debugging "pawn did something weird at tick 48,210" reports. Introduce an injectable RNG (mulberry32/sfc32) seeded from a `GameState.seed` persisted in the save; separate world-gen and sim streams; ban `Math.random` under `src/lib/game/` via ESLint `no-restricted-syntax`.
+| File | LOC | Trend |
+| ---- | --- | ----- |
+| [GameCanvas.svelte](../src/lib/components/UI/GameCanvas.svelte) | 3,321 | ↑ from 3,134 — 16× the 200-line cap; it now also drives the sim clock (`stepSimulation` from the render loop) |
+| [PawnStateMachine.ts](../src/lib/game/systems/PawnStateMachine.ts) | 2,710 | ↑ from 1,777 — absorbed combat states, hunting, water needs, caretaking, collapse |
+| [EntityService.ts](../src/lib/game/services/EntityService.ts) | 2,015 | ↑ — spawning + AI + movement + hunger + corpse lifecycle |
+| [Combat.ts](../src/lib/game/systems/Combat.ts) | 1,419 | new since last review |
+| [types.ts](../src/lib/game/core/types.ts) | 1,387 | ↑ |
+| [JobService.ts](../src/lib/game/services/JobService.ts) | 1,152 | fuel/refuel logic could move to BuildingService |
 
-### P0-3 · Fix the layer violations
+Natural seams now exist: `PawnStateMachine` splits cleanly into needs-FSM /
+combat-FSM / health (tickConditions+healing+caretaking are already pure functions);
+20 other components are over the 200-line cap (BuildingMenu 515, ActivityLogOverlay
+525, CraftingScreen 476…). Same advice: split opportunistically, no big bang.
 
-- [~] **Partial** — done: replaced the `(workService as any).setGameEngine` circular dep with a typed `WorkEfficiencyProvider` interface. Deferred (large, no functional change, hard to verify without a browser): the engine↔store dual-source inversion and the `logActivity` → injectable-sink refactor.
+### P-5 · Per-tick allocation churn (carried: old D9.1/D9.6/D9.7 — still deferred, still fine at current scale)
 
-- [GameEngineImpl.ts](../src/lib/game/systems/GameEngineImpl.ts) imports the `gameState` **store** and re-syncs every tick — two sources of truth reconciled by convention (see D9.6).
-- `PawnStateMachine.ts`, `EntityService.ts`, `Combat.ts` import `logActivity` from `stores/Log` — services need a Svelte runtime to run.
-- `(workService as any).setGameEngine(this)` — an `any`-typed circular dependency, used for two delegated calls that belong in a shared service.
+The index-once/update-once pawn tick rewrite remains undone; new per-pawn-per-tick scans
+were added since (`findCombatThreat` over all mobs per pawn; `occupancyService.blockedTiles`
+rebuilt per pathfind attempt; `findNearestRestBuilding` scans pawns×buildings inside the
+fatigue interrupt). Profiling gate unchanged: don't touch until `__profOut` says so, but
+any new system should stop adding full-array `pawns.map(...)` writes for single-pawn
+updates.
 
-Fixes: invert the log dependency (log queue on `GameState` or injected sink, store drains it); make the engine the only writer with user actions dispatched as commands instead of store mutations the engine re-absorbs; replace `setGameEngine` with an explicit interface or extract the shared logic.
+### P-6 · Logging
 
-### P2-8 · Slim the god files
-
-- [~] **Partial** — meaningful slimming via the D4/D10 dead-code deletions and D9.2 helper extraction (GameEngineImpl −~130 lines, WorkService −~200, PawnService −~250). Formal file splits (GameCanvas, the remaining services) deferred — the review itself says "no big-bang… opportunistically during feature work."
-
-| File | LOC | Own rule broken |
-| ---- | --- | --------------- |
-| [GameCanvas.svelte](../src/lib/components/UI/GameCanvas.svelte) | 3,134 | 200-line component cap — 15× over |
-| [PawnStateMachine.ts](../src/lib/game/systems/PawnStateMachine.ts) | 1,777 | state machine + conditions + death + eating/sleeping + hauling |
-| [EntityService.ts](../src/lib/game/services/EntityService.ts) | 1,718 | spawning + AI + movement + hunger + death |
-| [PawnService.ts](../src/lib/game/services/PawnService.ts) | 1,401 | incl. dead legacy paths (D4) |
-| [GameEngineImpl.ts](../src/lib/game/systems/GameEngineImpl.ts) | 1,157 | see D10 |
-| [types.ts](../src/lib/game/core/types.ts) | 1,275 | every domain's types in one file |
-
-No big-bang refactor — split along seams that already exist, opportunistically during feature work. Note that deleting D4's dead code and extracting D9.2's shared interrupt helper shrinks three of these files for free.
-
-### P2-10 · Logging hygiene
-
-- [~] **Partial** — done: routed the named hot-path leaks (regrowth per-tile, `getLocationResourcesForWorkType`, `craftItem`/`craftButchery`, engine coordination logs) through `gatedConsole`, kept `[PROF]` raw, and added lazy `gameLogger` gating (D9.5). Deferred: the full repo-wide `no-console` ESLint sweep (conflicts with the existing `gatedConsole as console` idiom).
-
-144 raw `console.*` under `src/lib/game/`. The engine's intentional `[PROF]` exemption leaks: `processResourceRegrowth` logs per-regrown-tile, `getLocationResourcesForWorkType` logs four lines per call, `craftItem`/`craftButchery` log per invocation. Your own profiling found hot-path logging at ~75% of tick cost once already. Keep `[PROF]` raw; route the rest through `gatedConsole`; close the class permanently with scoped ESLint `no-console` (allow-list `core/log.ts`). Include `gameLogger` lazy-message gating from D9.5.
-
-### P2-11 · Tooling truthfulness
-
-- [x] **Done** — added `check` (svelte-check) and `test`/`test:watch` (Vitest) scripts; created the ESLint 9 flat config (`eslint .` previously could not run); dropped unused `blessed-contrib`/`figlet`; fixed the `npm run check` → pnpm docs. Also fixed the prettier-vs-tabs noise: prettier now ignores jsonc (FracturedJSON-owned) and is no longer a lint gate (`lint` = eslint only). _(CI workflow added then removed at maintainer's request.)_
-
-- `.github/copilot-instructions.md` documents `npm run check` — no `check` script exists (and the project mandates pnpm).
-- `"test": "playwright test"` — not installed or configured.
-- `dependencies` includes `blessed-contrib` and `figlet` — unused by the SvelteKit app.
-- No CI workflow; ADR-008 explicitly requires CI to run `wasm-pack build`.
-
-Add `"check": "svelte-check --tsconfig ./tsconfig.json"`; adopt or remove Playwright; drop unused deps; add the Actions workflow from P0-1 including the wasm build.
+48 raw `console.*` calls remain under `src/lib/game/` (down from 144) — the remainder are
+in completion paths (per-harvest, per-craft logs in JobService run on every completion)
+and `ResearchService`. The `gatedConsole` shim idiom works; the scoped `no-console`
+ESLint rule from the last review is still the way to close the class permanently.
 
 ---
 
-# Part III — Deferred (revisit only with evidence)
+# Part III — Carried-forward deferred items (unchanged status)
 
-### D-perf · Scaling work (tick buckets, cooldown indexes, incremental job board)
-
-- [ ] **Deferred (by design)** — gated on profiling at higher pawn counts.
-
-Current performance is acceptable; do **not** start this until profiling at higher pawn counts says otherwise. When that day comes, the leverage order is: cooldown index for regrowth (O(expiring) instead of O(map)); tick strides for needs/conditions (stagger pawns across buckets); event-driven job generation replacing the per-tick reconcile (D9.7); and only as a last resort, relaxing ADR-002 to mutate-within-tick + immutable snapshot at the UI push boundary. The structural fixes in D9 should land first regardless — they're correctness/maintainability wins that happen to also be the cheap 80% of any future perf work.
-
-### D-bills · Production targets / repeat orders
-
-- [ ] **Deferred (by design)** — gated on production-chain gameplay depth.
-
-`GameState.productionTargets` exists in the state shape with nothing driving it. When production-chain gameplay deepens, implement maintain-target bills (`{ itemId, mode, target }`) diffed against stockpile by a small service feeding the existing craft-job pipeline. Not needed until the chains themselves demand it.
+- **D9.1 / D9.6 / D9.7** — index-once tick, deep-clone removal (tied to P-2), event-driven job generation. Profiling-gated.
+- **D-perf** — cooldown index for regrowth (the pre-scan added in `processResourceRegrowth` is a good stopgap; full O(map) rebuild still happens on regrowth ticks), tick strides, incremental job board.
+- **D-bills** — `productionTargets` still exists in state with nothing driving it; unchanged.
+- **ADR-009 step 2** — per-pawn claimed-inventory tool gating (R4 is step 1: any gating at all).
 
 ---
 
-## What's already strong (keep doing this)
+## What's improved since 2026-06-10 (keep doing this)
 
-- **ADR discipline + roadmap dependency matrix** — better than most commercial codebases; ADR-010's worked numerical examples are exemplary.
-- **The proximity×urgency need formula** is genuinely sophisticated — it solves the "starves next to a stocked pantry" pathology. (It just needs the right distance wired in — D8.)
-- **JSONC data-driven content** (14 database files) with ADR-006's logic ban — a real modding foundation.
-- **`ModifierSystem.sources[]`** — explainability-first design.
-- **Profiling culture** — `profileTurns()`, gated logging, written-down perf findings. Rare and valuable.
-- **Rust/WASM spatial core behind TS interfaces** (ADR-008) — the right boundary, correctly enforced.
+- **Test suite: 32 → 117 tests, 21 files** — including headless sim-invariant tests (entity starvation timing, combat sim, need thresholds). The new defects above are all *cross-system* seams (craft→build, draft→health, hunt→butcher) — exactly where the next tests should go.
+- **The per-tile storage model (Stage 2)** is genuinely clean: stored drops as single source of truth, `aggregateFromDrops` everywhere, trigger-based absorption, deterministic stored-pile ids. R1 is a hole in it, not a flaw of it.
+- **ADR-014 occupancy** — one collision authority, both pathfinding and movement defer to it; the yoyo/phasing fix is well documented and the trade-off (queue cadence) is written down.
+- **ADR-015 single work model** — the efficiency-scalar fork is actually gone (no `calculateWorkEfficiency` anywhere); speed/yield/quality flow from `stats.jsonc` through jobs, tooltips, and construction/craft quality consistently.
+- **Claim hygiene** — `killPawn`, the drafted-skip path, and collapse entry all release job claims now; the old D2 leak class is closed and tested.
+- **Engine slimming** — GameEngineImpl 892 lines (from 1,157), with butchery in ItemService and honest comments; `processResourceRegrowth`'s cheap pre-scan is a textbook profiling-driven fix.
+- **Determinism discipline** — zero `Math.random` outside `core/rng.ts`; seed persisted; world/sim streams split.
 
 ## Suggested sequencing
 
-1. **Immediately (bugs):** D1 craft path, D2 claim leak, D8 wrong distance — each is a small, local fix.
-2. **Next (deletions, net-negative LOC):** D4 dead legacy paths, D3 falls out of D4, `processCrafting()`/`calculateResourceProduction` removal, D7 module-state lifecycle.
-3. **Then (foundations):** P0-2 seeded RNG → P0-1 Vitest with regression tests for the bugs just fixed → P2-11 CI.
-4. **Ongoing/opportunistic:** D6 mutation fixes and D9 structure cleanups while touching those files; P0-3 layer fixes; P2-8 splits; P2-10 logging lint; D5 tool gating when ADR-009's job-claim work resumes.
-5. **Deferred:** Part III, gated on profiler/gameplay evidence.
+1. **Now (correctness, small diffs):** R3 butchery stack consumption (one-line fix + test) → R2 drafted-pawn health block (move the `continue`, ~10 lines + sim test) → R1 craft-output routing (the fix is small — route primary through `addItems` — the *audit* of `gs.item` readers is the real work; do quality-on-instance in the same pass, absorbing R8).
+2. **Next (design honesty):** R4 — implement claim-time tool gating (stockpile-level) or amend ADR-009/DESIGN; R5 — enforce or un-document the carry budget; R11 doc sync pass.
+3. **Cleanups while touching those files:** R6 dead building-queue triad, R7 `isWorking` derivation + delete legacy work-priority path, R12 dead-code list.
+4. **Structural (unchanged):** P-2/P-3 layer inversions before Living World lands; P-4 splits opportunistically; P-5/P-6 as evidence demands.

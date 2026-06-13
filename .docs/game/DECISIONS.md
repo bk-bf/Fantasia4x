@@ -17,6 +17,7 @@ ADR-012 [GAME]: Combat Wound Model — Merge-and-Escalate + Capacity-Driven Down
 ADR-013 [GAME]: Deferred Combat Depth — Tissue Layers, Nerves & Arteries (2026-06-11, Deferred)
 ADR-014 [GAME]: Hard Tile Occupancy via Central OccupancyService (2026-06-12, Accepted)
 ADR-015 [GAME]: Single Work Model in stats.jsonc — supersedes ADR-003 for work (2026-06-13, Accepted)
+ADR-016 [GAME]: Physical Production — reserve-and-fetch crafting (2026-06-13, Accepted)
 
 ---
 
@@ -407,3 +408,50 @@ Two systems independently computed how good a pawn is at work and disagreed. `Mo
 - Job speed and the work-grid tooltip now read the same numbers the pawn panel shows. Tooltip ranks best/worst jobs by throughput (speed × yield).
 - Trait/need re-tuning is a one-line data edit (`workSpeed: {fishing: 1.2}`); no interpretation logic.
 - Behavior shifts: speed uses the gentle `+0.05/pt` formula curve instead of `stat/10`, and the old double-count of fatigue (status effect **and** a separate needs formula) collapses to just the status effect. Intended corrections, not regressions.
+
+---
+
+### ADR-016 [GAME]: Physical Production — reserve-and-fetch crafting
+
+- **Date**: 2026-06-13
+- **Status**: Accepted
+- **Spec**: [.tasks/open/PHYSICAL-PRODUCTION.md](../.tasks/open/PHYSICAL-PRODUCTION.md)
+
+#### Context
+
+Gathering was physical (harvest → drop → haul → `stored` drop on a tile) but **consumption
+was an ethereal shared pocket**: crafting/building/eating/butchery deducted from the
+aggregate `gameState.stockpile` (or the dead `gameState.item` array) from anywhere, at queue
+time, with no pawn carrying anything. Craft jobs targeted `(0,0)` (pawn crafts in place,
+never visits the workshop); craft output landed in `gameState.item`, invisible to every
+material/cost/fuel consumer (the ceramics tier was uncompletable); butchery consumed a whole
+carcass stack for one carcass's yield. The carry-weight budget and ADR-009 tool gating were
+meaningless because no pawn ever held inputs.
+
+#### Decision
+
+**Items are always physical objects occupying a location** — a tile (loose or `stored`
+`DroppedItem`) or a pawn's inventory. No global item pool. Production is reserve-and-fetch:
+
+1. **Reserve** — a craft order locks matching `stored` drops (`DroppedItem.reservedFor =
+   orderId`); reserved stock is present but excluded from "available", so no double-spend.
+   Affordability reads `availableFromDrops` (stockpile minus reservations), centralised in
+   `ItemService.getAvailableQuantity`.
+2. **Fetch** — one `fetch` job per reserved drop: a pawn carries it (haul machinery) to the
+   chosen station tile and stages it on the station.
+3. **Craft** — once all inputs are staged, the `craft` job (targeted at the station tile)
+   spends `recipe.workAmount × quantity` work points.
+4. **Produce** — staged inputs are destroyed; outputs spawn as drops **on the station tile**.
+
+Butchery folds in as ordinary `butcher_spot` recipes (carcass = an input item, one consumed
+per action); the special `craftButchery`/`processButchery` path is deleted. `gameState.item`
+is removed entirely.
+
+#### Consequences
+
+- Crafted items are real stock — usable as materials/fuel/build/research costs (fixes the
+  broken intermediate chains). The workshop is now a place a pawn walks to, not just a gate.
+- Pass 1 runs **all** recipes as active (a pawn works them). **Passive furnaces** (load
+  inputs + fuel, produce over time, `Recipe.passive`) and **physical building-material
+  hauling** are deferred follow-up passes; supersedes the old queue-time-consume model.
+- Reservation bookkeeping (`reservedFor` on drops) is the new invariant; cancel releases it.
