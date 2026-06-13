@@ -575,12 +575,34 @@ export interface ConditionStage {
 }
 
 /** A multi-stage progressive health condition definition (from conditions.jsonc). */
+/**
+ * Need-driven progression for a condition (e.g. hunger → malnutrition, thirst → dehydration). The
+ * tuning that used to be hardcoded as `MALNUTRITION_*` / `DEHYDRATION_*` constants now lives on the
+ * condition it belongs to. Rates are PER-SECOND magnitudes (the sim applies `perTick()` at use).
+ */
+export interface ConditionDriver {
+  /** The `Pawn.needs` field that feeds this condition (e.g. 'hunger', 'thirst'). */
+  need: string;
+  /** At/above this need value (0–100) the condition accrues. */
+  onset: number;
+  /** Below this need value the condition recovers. */
+  safe: number;
+  /** Per-second severity gain while the need is in [onset, 100). */
+  rateCritical: number;
+  /** Per-second severity gain while the need is maxed (= 100). */
+  rateMax: number;
+  /** Per-second severity loss while the need is below `safe`. */
+  recovery: number;
+}
+
 export interface ConditionDef {
   id: string;
   name: string;
   description: string;
   lethalSeverity: number;
   stages: ConditionStage[];
+  /** Optional: a need that drives this condition's severity up/down (conditions.jsonc). */
+  driver?: ConditionDriver;
 }
 
 /** Record appended to gameState.deadPawns when a pawn dies. */

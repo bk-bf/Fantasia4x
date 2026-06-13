@@ -56,20 +56,8 @@ const RECOVER_CONSCIOUSNESS = 0.45;
 
 // ===== CONDITION CONSTANTS (SURVIVAL-HEALTH spec) =====
 const CONDITIONS_DB = conditionsData as unknown as ConditionDef[];
-const MALNUTRITION_ONSET_HUNGER = 87; // same as CRITICAL_HUNGER — condition starts here
-const MALNUTRITION_SAFE_HUNGER = 40; // below this threshold, condition recovers
-// Lethal timers slowed ~4× so starvation is a multi-day ordeal (~a week), not ~2 days.
-const MALNUTRITION_RATE_CRITICAL = perTick(0.0002); // +/s at hunger 87–99  → lethal in ~5000s ≈ 16.7 days
-const MALNUTRITION_RATE_MAX = perTick(0.0005); // +/s at hunger 100    → lethal in ~2000s ≈ 6.7 days
-const MALNUTRITION_RECOVERY_RATE = perTick(0.0003); // −/s when hunger < 40 → fully clears in ~3333s ≈ 11 days
-
-
-// §D dehydration — faster than starvation (you die of thirst long before hunger).
-const DEHYDRATION_ONSET_THIRST = 95; // condition starts here
-const DEHYDRATION_SAFE_THIRST = 40; // below this threshold, condition recovers
-const DEHYDRATION_RATE_CRITICAL = perTick(0.0006); // +/s at thirst 95–99 → lethal in ~1667s ≈ 5.6 days
-const DEHYDRATION_RATE_MAX = perTick(0.0015); // +/s at thirst 100   → lethal in ~667s  ≈ 2.2 days
-const DEHYDRATION_RECOVERY_RATE = perTick(0.0008); // −/s when thirst < 40
+// Need-driven condition tuning (malnutrition ← hunger, dehydration ← thirst) now lives on each
+// condition's `driver` block in conditions.jsonc — read generically by applyConditionDriver below.
 // Blood regen is computed per-pawn via calcBloodRegenRate(pawn.stats) × SECONDS_PER_TICK.
 // See blood_regeneration entry in stats.jsonc for the formula.
 
@@ -200,89 +188,62 @@ export function killPawn(
  * malnutrition progression, blood loss, critical limb checks.
  * Returns updated GameState (may trigger death via killPawn).
  */
+/**
+ * Advance or recover a need-driven condition per its conditions.jsonc `driver`. Pure — returns the
+ * new conditions array. Rates are authored per-second; `perTick()` scales them to one tick.
+ */
+function applyConditionDriver(
+  conditions: NonNullable<Pawn['conditions']>,
+  def: ConditionDef,
+  needVal: number
+): NonNullable<Pawn['conditions']> {
+  const d = def.driver!;
+  const idx = conditions.findIndex((c) => c.id === def.id);
+  if (needVal >= d.onset) {
+    const rate = perTick(needVal >= 100 ? d.rateMax : d.rateCritical);
+    if (idx === -1) return [...conditions, { id: def.id, severity: rate }];
+    const next = [...conditions];
+    next[idx] = { ...next[idx], severity: Math.min(1.0, next[idx].severity + rate) };
+    return next;
+  }
+  if (needVal < d.safe && idx !== -1) {
+    const newSeverity = conditions[idx].severity - perTick(d.recovery);
+    const next = [...conditions];
+    if (newSeverity <= 0) next.splice(idx, 1);
+    else next[idx] = { ...next[idx], severity: newSeverity };
+    return next;
+  }
+  return conditions;
+}
+
 function tickConditions(pawn: Pawn, gameState: GameState): GameState {
-  const hunger = pawn.needs?.hunger ?? 0;
   let conditions = [...(pawn.conditions ?? [])];
   const maxBloodVolume = pawn.maxBloodVolume ?? 100;
   let bloodVolume = pawn.bloodVolume ?? maxBloodVolume;
   const limbs = pawn.limbs ?? [];
 
-  // ── Malnutrition ──────────────────────────────────────────────────────────
-  const malnutritionIdx = conditions.findIndex((c) => c.id === 'malnutrition');
-
-  if (hunger >= MALNUTRITION_ONSET_HUNGER) {
-    const rate = hunger >= 100 ? MALNUTRITION_RATE_MAX : MALNUTRITION_RATE_CRITICAL;
-    if (malnutritionIdx === -1) {
-      conditions.push({ id: 'malnutrition', severity: rate });
-    } else {
-      conditions[malnutritionIdx] = {
-        ...conditions[malnutritionIdx],
-        severity: Math.min(1.0, conditions[malnutritionIdx].severity + rate)
-      };
+  // ── Need-driven conditions (malnutrition ← hunger, dehydration ← thirst, …) ──
+  // Onset/safe thresholds + accrual/recovery rates are authored on each condition's `driver` block
+  // in conditions.jsonc — no hardcoded MALNUTRITION_*/DEHYDRATION_* constants.
+  const needVals = pawn.needs as unknown as Record<string, number> | undefined;
+  for (const def of CONDITIONS_DB) {
+    if (!def.driver) continue;
+    const needVal = needVals?.[def.driver.need] ?? 0;
+    conditions = applyConditionDriver(conditions, def, needVal);
+    const current = conditions.find((c) => c.id === def.id);
+    if (current && current.severity >= def.lethalSeverity) {
+      return killPawn(
+        { ...gameState.pawns.find((p) => p.id === pawn.id)!, conditions, bloodVolume },
+        // A driven condition's id (malnutrition/dehydration) is also its death cause.
+        def.id as Parameters<typeof killPawn>[1],
+        {
+          ...gameState,
+          pawns: gameState.pawns.map((p) =>
+            p.id === pawn.id ? { ...p, conditions, bloodVolume } : p
+          )
+        }
+      );
     }
-  } else if (hunger < MALNUTRITION_SAFE_HUNGER && malnutritionIdx !== -1) {
-    const newSeverity = conditions[malnutritionIdx].severity - MALNUTRITION_RECOVERY_RATE;
-    if (newSeverity <= 0) {
-      conditions.splice(malnutritionIdx, 1);
-    } else {
-      conditions[malnutritionIdx] = { ...conditions[malnutritionIdx], severity: newSeverity };
-    }
-  }
-
-  // Check malnutrition lethality (re-find in case just added)
-  const malnutritionCurrent = conditions.find((c) => c.id === 'malnutrition');
-  const malnutritionDef = CONDITIONS_DB.find((d) => d.id === 'malnutrition');
-  if (
-    malnutritionCurrent &&
-    malnutritionDef &&
-    malnutritionCurrent.severity >= malnutritionDef.lethalSeverity
-  ) {
-    const updated = { ...pawn, conditions, bloodVolume };
-    return killPawn(
-      { ...gameState.pawns.find((p) => p.id === pawn.id)!, ...updated },
-      'malnutrition',
-      {
-        ...gameState,
-        pawns: gameState.pawns.map((p) =>
-          p.id === pawn.id ? { ...p, conditions, bloodVolume } : p
-        )
-      }
-    );
-  }
-
-  // ── Dehydration (§D) ──────────────────────────────────────────────────────
-  const thirst = pawn.needs?.thirst ?? 0;
-  const dehydrationIdx = conditions.findIndex((c) => c.id === 'dehydration');
-  if (thirst >= DEHYDRATION_ONSET_THIRST) {
-    const rate = thirst >= 100 ? DEHYDRATION_RATE_MAX : DEHYDRATION_RATE_CRITICAL;
-    if (dehydrationIdx === -1) conditions.push({ id: 'dehydration', severity: rate });
-    else
-      conditions[dehydrationIdx] = {
-        ...conditions[dehydrationIdx],
-        severity: Math.min(1.0, conditions[dehydrationIdx].severity + rate)
-      };
-  } else if (thirst < DEHYDRATION_SAFE_THIRST && dehydrationIdx !== -1) {
-    const newSeverity = conditions[dehydrationIdx].severity - DEHYDRATION_RECOVERY_RATE;
-    if (newSeverity <= 0) conditions.splice(dehydrationIdx, 1);
-    else conditions[dehydrationIdx] = { ...conditions[dehydrationIdx], severity: newSeverity };
-  }
-  const dehydrationCurrent = conditions.find((c) => c.id === 'dehydration');
-  const dehydrationDef = CONDITIONS_DB.find((d) => d.id === 'dehydration');
-  if (
-    dehydrationCurrent &&
-    dehydrationDef &&
-    dehydrationCurrent.severity >= dehydrationDef.lethalSeverity
-  ) {
-    return killPawn(
-      { ...gameState.pawns.find((p) => p.id === pawn.id)!, conditions, bloodVolume },
-      'dehydration',
-      {
-        ...gameState,
-        pawns: gameState.pawns.map((p) =>
-          p.id === pawn.id ? { ...p, conditions, bloodVolume } : p
-        )
-      }
-    );
   }
 
   // ── Blood Loss ────────────────────────────────────────────────────────────

@@ -4,6 +4,7 @@
         "name": "Dehydration",
         "description": "Lack of water — progressive and fast. Saps strength and work capacity; lethal within days if no water is drunk.",
         "lethalSeverity": 1.0,
+        "driver": { "need": "thirst", "onset": 95, "safe": 40, "rateCritical": 0.0006, "rateMax": 0.0015, "recovery": 0.0008 },
         "stages": [
             { "label": "thirsty", "minSeverity": 0.0, "color": "#4FC3F7", "modifiers": {"workEfficiency": 0.9} },
             { "label": "parched", "minSeverity": 0.25, "color": "#29B6F6", "modifiers": {"workEfficiency": 0.7, "fatigueRate": 1.2} },
@@ -16,6 +17,7 @@
         "name": "Malnutrition",
         "description": "A diet deficiency causing progressive physical deterioration. Reduces work capacity and ultimately leads to death if unchecked.",
         "lethalSeverity": 1.0,
+        "driver": { "need": "hunger", "onset": 87, "safe": 40, "rateCritical": 0.0002, "rateMax": 0.0005, "recovery": 0.0003 },
         "stages": [
             { "label": "trivial", "minSeverity": 0.0, "color": "#f57c00", "modifiers": {"workEfficiency": 0.95} },
             {
