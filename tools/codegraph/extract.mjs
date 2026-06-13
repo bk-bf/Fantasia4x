@@ -88,6 +88,94 @@ function humanize(name) {
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
+// Common abbreviations expanded for readable auto-descriptions.
+// Null-prototype so a word like "constructor" can't hit Object.prototype.
+const ABBR = Object.assign(Object.create(null), {
+  calc: 'calculate', gen: 'generate', init: 'initialize', cfg: 'configure',
+  config: 'configuration', ctx: 'context', pos: 'position', dir: 'direction',
+  coord: 'coordinate', coords: 'coordinates', prev: 'previous', src: 'source',
+  dest: 'destination', msg: 'message', evt: 'event', def: 'definition',
+  desc: 'description', util: 'utility', dist: 'distance', req: 'request',
+  env: 'environment', sim: 'simulation', stat: 'stat', stats: 'stats',
+  num: 'number', avg: 'average', idx: 'index', refuel: 'refuel',
+});
+function nameWords(name) {
+  return name
+    .replace(/^_+/, '')
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
+    .replace(/[_\-]+/g, ' ')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w) => ABBR[w.toLowerCase()] || w);
+}
+
+// Leading-verb → sentence templates for inferring what a function does.
+const VERB = {
+  get: 'Return', return: 'Return', find: 'Find', fetch: 'Fetch', lookup: 'Look up',
+  read: 'Read', list: 'List', collect: 'Collect', gather: 'Gather', resolve: 'Resolve',
+  calculate: 'Compute', compute: 'Compute', derive: 'Derive', evaluate: 'Evaluate',
+  estimate: 'Estimate', measure: 'Measure', score: 'Score', roll: 'Roll',
+  update: 'Update', set: 'Set', apply: 'Apply', assign: 'Assign', adjust: 'Adjust',
+  modify: 'Modify', change: 'Change', tweak: 'Adjust', recalc: 'Recompute',
+  create: 'Create', generate: 'Generate', make: 'Create', build: 'Build', spawn: 'Spawn',
+  initialize: 'Initialize', construct: 'Construct', produce: 'Produce',
+  add: 'Add', insert: 'Insert', register: 'Register', append: 'Append', attach: 'Attach',
+  remove: 'Remove', delete: 'Delete', clear: 'Clear', destroy: 'Destroy', drop: 'Drop',
+  release: 'Release', detach: 'Detach', discard: 'Discard',
+  consume: 'Consume', spend: 'Spend', pay: 'Pay', deduct: 'Deduct', drain: 'Drain',
+  handle: 'Handle', process: 'Process', dispatch: 'Dispatch', route: 'Route',
+  render: 'Render', draw: 'Draw', paint: 'Paint', display: 'Display', show: 'Show',
+  tick: 'Advance', step: 'Advance', advance: 'Advance', run: 'Run', execute: 'Execute',
+  simulate: 'Simulate', progress: 'Progress',
+  save: 'Save', write: 'Write', persist: 'Persist', store: 'Store', flush: 'Flush',
+  sync: 'Synchronize', ensure: 'Ensure', validate: 'Validate', check: 'Check',
+  verify: 'Verify', assert: 'Assert',
+  toggle: 'Toggle', reset: 'Reset', refresh: 'Refresh', rebuild: 'Rebuild',
+  recompute: 'Recompute', reload: 'Reload', restore: 'Restore',
+  move: 'Move', place: 'Place', equip: 'Equip', unequip: 'Unequip', wield: 'Wield',
+  start: 'Start', stop: 'Stop', begin: 'Begin', end: 'End', open: 'Open', close: 'Close',
+  cancel: 'Cancel', pause: 'Pause', resume: 'Resume', complete: 'Complete', finish: 'Finish',
+  select: 'Select', pick: 'Pick', choose: 'Choose', filter: 'Filter', sort: 'Sort',
+  group: 'Group', merge: 'Merge', combine: 'Combine', split: 'Split',
+  parse: 'Parse', format: 'Format', serialize: 'Serialize', deserialize: 'Deserialize',
+  encode: 'Encode', decode: 'Decode', convert: 'Convert', normalize: 'Normalize',
+  emit: 'Emit', notify: 'Notify', log: 'Log', report: 'Report', count: 'Count',
+  sum: 'Sum', total: 'Total', mark: 'Mark', flag: 'Flag', queue: 'Queue',
+  load: 'Load', grant: 'Grant', award: 'Award', gain: 'Gain', lose: 'Lose',
+  damage: 'Apply damage from', heal: 'Heal', hit: 'Resolve a hit on', attack: 'Resolve an attack by',
+};
+const PREDICATE = new Set(['is', 'has', 'can', 'should', 'are', 'was', 'will', 'does', 'did', 'must', 'needs', 'wants']);
+
+/** Infer a readable sentence for a function from its name when it has no JSDoc. */
+function autoDescribe(baseName) {
+  const ws = nameWords(baseName);
+  if (!ws.length) return 'Unnamed function.';
+  const lc = ws.map((w) => w.toLowerCase());
+  const verb = lc[0];
+  const restWs = ws.slice(1);
+  const rest = restWs.join(' ').toLowerCase();
+  const full = lc.join(' ');
+  const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+
+  // getXById / findXById → "Look up the X with the given id."
+  if (['get', 'find', 'fetch', 'lookup', 'load'].includes(verb) && lc.includes('by') && lc[lc.length - 1] === 'id') {
+    const x = lc.slice(1, lc.indexOf('by')).join(' ') || 'record';
+    return `Look up the ${x} with the given id.`;
+  }
+  // predicates → "Report whether …"
+  if (PREDICATE.has(verb)) {
+    const tail = restWs.length ? rest : full;
+    return `Report whether ${tail}.`;
+  }
+  if (verb === 'to' && restWs.length) return `Convert to ${rest}.`;
+  if (verb === 'from' && restWs.length) return `Build from ${rest}.`;
+  if (verb === 'on' && restWs.length) return `Handle the ${rest} event.`;
+  if (VERB[verb]) return restWs.length ? `${VERB[verb]} ${rest}.` : `${VERB[verb]}.`;
+  return cap(full) + '.';
+}
+
 /** Extract the leading JSDoc / line-comment block of a node as a description. */
 function leadingDoc(node, sf) {
   const full = sf.getFullText();
@@ -158,7 +246,11 @@ function register(decl, qualName, kind, className, sf) {
     exported: isExported(decl),
     signature: signatureOf(decl, sf),
     doc,
-    humanized: humanize(qualName.split('.').pop() || qualName)
+    humanized: humanize(qualName.split('.').pop() || qualName),
+    // Description shown in the viewer: JSDoc if the function has one, else a
+    // verb-aware sentence inferred from its name. Curated overrides live in
+    // descriptions.json and win over this at display time.
+    desc: doc || autoDescribe(qualName.split('.').pop() || qualName)
   });
   const body = /** @type {any} */ (decl).body;
   if (body) scanList.push({ id, body, decl });

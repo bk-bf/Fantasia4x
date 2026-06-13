@@ -207,12 +207,11 @@ GRAPH.moduleEdges.forEach((e, i) => {
 // ----- description resolution -----
 function fnLabel(node, plain) {
   if (!plain) return node.short;
-  const key = `${node.module}::${node.short}`;
-  return DESC.functions[key] || node.doc || node.humanized;
+  return fnDesc(node);
 }
 function fnDesc(node) {
   const key = `${node.module}::${node.short}`;
-  return DESC.functions[key] || node.doc || node.humanized + ' (no doc comment — description inferred from name).';
+  return DESC.functions[key] || node.desc || node.doc || node.humanized;
 }
 function modLabel(mod, plain) {
   if (!plain) return mod.module.replace(/^game\//, '');
