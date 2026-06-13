@@ -143,6 +143,8 @@
   #detail .dh .kind { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--accent); }
   #detail .dh h2 { margin: 4px 0 0; font-size: 14px; word-break: break-word; }
   #detail .dh .close { position: absolute; top: 12px; right: 12px; cursor: pointer; color: var(--fg-dim); font-size: 18px; line-height: 1; }
+  #detail .dh .copy-btn { position: absolute; top: 11px; right: 36px; cursor: pointer; background: none; border: 1px solid var(--border); border-radius: 4px; color: var(--fg-dim); font-family: inherit; font-size: 10px; padding: 2px 6px; line-height: 1.4; }
+  #detail .dh .copy-btn:hover { color: var(--accent2); border-color: var(--accent2); }
   #detail .body { padding: 14px 16px; }
   #detail .row { margin-bottom: 14px; }
   #detail .row .lbl { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--fg-dim); margin-bottom: 4px; }
@@ -637,8 +639,24 @@ function renderInsights() {
     .map(([k, l]) => `<span class="chip" data-sec="${k}">${l}</span>`).join('');
   const sevChips = ['error', 'warn', 'info'].map((s) => `<span class="chip" data-sev="${s}">${s}</span>`).join('');
 
+  // Plain-text serialization of the whole panel, for the copy button.
+  const insightsText = (() => {
+    const lines = [`Architecture insights — ${chk.errors} error(s), ${chk.warnings} warning(s)`];
+    for (const [sec, label] of SECTIONS) {
+      const gs = groups.filter((g) => g.section === sec);
+      if (!gs.length) continue;
+      lines.push('', `== ${label} ==`);
+      for (const g of gs) {
+        lines.push('', `[${g.badge}] ${g.title}`);
+        if (g.why) lines.push(`  (${g.why})`);
+        for (const r of g.rows) lines.push(`  - ${r.label}${r.sub ? `  (${r.sub})` : ''}`);
+      }
+    }
+    return lines.join('\n');
+  })();
+
   openDetail(`
-    <div class="dh"><span class="close">×</span><div class="kind">insights</div>
+    <div class="dh"><span class="close">×</span><button class="copy-btn" id="insCopy" title="Copy all insights as text">⧉ copy</button><div class="kind">insights</div>
       <h2>Architecture insights <span style="color:var(--fg-dim);font-size:12px">${chk.errors}✗ ${chk.warnings}!</span></h2></div>
     <div class="body" style="padding-top:10px">
       <input class="list-search" id="insSearch" placeholder="filter insights…" autocomplete="off" />
@@ -682,6 +700,16 @@ function renderInsights() {
     applyInsFilter();
   }));
   applyInsFilter();
+  const copyBtn = document.getElementById('insCopy');
+  copyBtn.onclick = async () => {
+    try {
+      await navigator.clipboard.writeText(insightsText);
+      copyBtn.textContent = '✓ copied';
+    } catch {
+      copyBtn.textContent = '✗ failed';
+    }
+    setTimeout(() => (copyBtn.textContent = '⧉ copy'), 1500);
+  };
   search.focus();
 }
 
