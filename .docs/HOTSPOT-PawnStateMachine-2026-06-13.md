@@ -1,7 +1,10 @@
 # Hotspot Report — `systems/PawnStateMachine`
 
-> Generated 2026-06-13 by investigating the codebase graph (`tools/codegraph`,
-> `/api`). The most interconnected/largest node in the codebase.
+> Generated 2026-06-13 via the codebase graph (`tools/codegraph`, `/api`); the
+> most interconnected/largest node in the codebase.
+> **Updated 2026-06-13** against the now tri-language graph (TS + Svelte + Rust,
+> 922 fns / 106 modules / 119 files). Findings below re-verified; the pathfinding
+> trace now reaches into Rust, and Svelte coverage confirms the UI layering.
 
 ## How it was found
 
@@ -15,7 +18,8 @@ Querying the graph API ranked modules by size and connectivity:
 `PawnStateMachine` is the **single largest module — 70 functions, ~110 KB in one
 file** (`src/lib/game/systems/PawnStateMachine.ts`) — and one of the three most
 connected (16 distinct module links). It is the integration point where the
-whole simulation converges.
+whole simulation converges. The graph now covers Svelte and Rust too, so this is
+the largest node across the *entire* project, not just the TS engine.
 
 ## What it is
 
@@ -35,7 +39,7 @@ Fighting · Fleeing · Hunting
 | Metric | Value |
 | --- | --- |
 | Functions in file | **70** |
-| Used by | 2 (`GameEngineImpl.processPawns`, `stores/gameState`) |
+| Used by | 2 (`GameEngineImpl.processPawns`, `stores/gameState`) — **now confirmed**: with Svelte components in the graph, *no UI component calls it*, so it's purely engine-internal (correct layering) |
 | Depends on | **14 modules** |
 | Highest fan-out fns | `tickPawn` (16), `handleIdle` (12), `checkNeedInterrupts` (11), `handleWorking` (11), `tick` (9) |
 | Local hubs (fan-in) | `isAdjacent` (9), `tryAssignPath` (7), `hasAvailableFood` (6), `transitionTo` (6), `goIdle` (6) |
@@ -64,11 +68,19 @@ services/PathfinderService (2)  services/PawnService (2)  + Combat, Wounds, Item
    `tryAssignSleepPath` and `handleIdle` call `WasmPathfinderServiceImpl.findPath`
    and `.isReady` **directly** instead of through the `PathfinderService`
    interface. The module already imports the interface too (2 call sites), so it
-   straddles the boundary ADR-008 requires it to respect.
+   straddles the boundary ADR-008 requires it to respect. With Rust now in the
+   graph this is fully traceable end to end:
+   ```
+   tryAssignPath  →  WasmPathfinderServiceImpl.findPath  →  find_path  →  reconstruct
+   [PawnStateMachine]   [WasmPathfinderService, TS]      [spatial-core, Rust] ──┘
+   ```
+   `/api/path?from=tryAssignPath&to=reconstruct` (3 hops) shows the pawn AI
+   reaching across the WASM boundary into Rust — the exact path that should be
+   funnelled through the interface.
 5. **Pure helpers trapped in the file.** Several high-fan-in functions are
    stateless predicates/selectors — `isAdjacent` (in 9), `hasAvailableFood`
    (in 6), `findAdjacentApproach`, `selectFoodForMeal` — that don't need to live
-   in the AI file and overlap with the existing `game/utils/pawnUtils`.
+   in the AI file and overlap with the existing `utils/pawnUtils`.
 
 ## Improvement suggestions (prioritised)
 
@@ -95,7 +107,7 @@ switch. Pairs naturally with #2.
 
 **4 — Extract stateless helpers into `pawnUtils`.**
 Move pure predicates/selectors (`isAdjacent`, `hasAvailableFood`,
-`findAdjacentApproach`, `selectFoodForMeal`) into `game/utils/pawnUtils` (or a new
+`findAdjacentApproach`, `selectFoodForMeal`) into `utils/pawnUtils` (or a new
 `pawnQueries`). They are reused, side-effect-free, and trivially unit-testable
 once out of the AI file.
 
@@ -119,3 +131,14 @@ the high-risk ones (Working, Hungry, Idle) to lock behaviour before refactoring.
 Re-run `pnpm graph` after each step: success looks like `tickPawn` fan-out
 dropping toward 1, the file splitting into <300-line units, and the
 `WasmPathfinderService` edge disappearing from this module's `dependsOn`.
+
+## Port-to-Rust? No.
+
+Now that Rust is in the graph it's worth asking. This module is **branchy game
+logic** — a state switch fanning into 15 handlers that each call back into TS
+services (jobs, stats, needs, combat). It has no hot numeric inner loop; its cost
+is *coupling*, not computation. The Rust-shaped work already lives in Rust
+(`spatial-core::find_path`, the A* loop). The right move here is **decomposition
+in TypeScript**, not a port. Use the graph the other way for porting candidates:
+look for TS modules that are leaf-ish (low fan-out into services) and numerically
+heavy — e.g. world-gen noise, line-of-sight/visibility, large per-tile passes.

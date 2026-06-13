@@ -30,10 +30,20 @@ Each service implements an interface and exports a singleton. Import the singlet
 | `workService`     | `services/WorkService.ts`      | Work assignment + state sync (no efficiency — ADR-015) |
 | `pawnStatService` | `services/PawnStatService.ts`  | **Sole** work model: `getWorkModifiers` (speed/yield/quality from `stats.jsonc`) + body capacities (ADR-015) |
 | `buildingService` | `services/BuildingService.ts`  | Construction checks, building bonuses             |
-| `itemService`     | `services/ItemService.ts`      | Crafting availability, item operations            |
+| `itemService`     | `services/ItemService.ts`      | Crafting availability, item ops, carry budget, dynamic names |
+| `jobService`      | `services/JobService.ts`       | Central job pool: generate/claim/advance jobs; reserve-and-fetch crafting + building hauling (ADR-016); tool gating (ADR-009) |
+| `recipeService`   | `services/RecipeService.ts`    | Recipe registry ("how X is made"); station tiers; `passive` furnace flag |
+| `resourceObjectService` | `services/ResourceObjectService.ts` | World resource defs: harvest interactions, yields, `toolRequirement` |
 | `researchService` | `services/ResearchService.ts`  | Research progression, unlock checks               |
 | `locationService` | `services/LocationServices.ts` | Exploration missions, location data               |
+| `entityService`   | `services/EntityService.ts`    | Mob spawning, AI, movement, hunger, hunting, corpses |
 | `occupancyService`| `services/OccupancyService.ts` | Single source of "which tiles hold a body" — pathfinding + movement collision (ADR-014) |
+
+Two singletons live under `systems/` (they coordinate state-machine/combat logic rather than being
+pure services): **`pawnStateMachineService`** (`systems/PawnStateMachine.ts` — the pawn FSM:
+needs / work / combat / health) and **`combatService`** (`systems/Combat.ts` — the wound model,
+swings, capacity-driven downing; ADR-012). `gameEngine` (`systems/GameEngineImpl.ts`) is the turn
+coordinator above the services.
 
 **Movement & collision flow.** Pawns and mobs share one pathfinder (WASM A\*, behind the `PathfinderService` interface per ADR-008) and one movement integrator (`MovementSystem.advanceAlongPath`). Both consult `occupancyService` for solid-body collision: A\* grids are built with occupied tiles masked out (`buildPathfindingGridsWithBlocked`) so routes plan around bodies, and the per-tick advance passes hold rather than enter an occupied tile. One body per tile — see ADR-014.
 
@@ -52,13 +62,23 @@ Persistence: `localStorage['fantasia4x-save']` — serialised by `src/lib/stores
 
 ## Turn Order
 
-`GameEngineImpl.processGameTurn()` must execute in this order — do not reorder:
+`GameEngineImpl.processGameTurn()` runs these phases each tick — do not reorder, since later
+phases read state the earlier ones produce:
 
-1. **Needs** — hunger, fatigue, sleep decay (`pawnService.processAutomaticNeeds`)
-2. **Work** — process assignments, accumulate progress (`workService.syncPawnWorkStates`)
-3. **Completions** — finish buildings / crafting / research when progress ≥ cost
-4. **Exploration** — resolve pending missions
-5. **Events** — trigger random or conditional events
+1. **Needs** — per-tick hunger/fatigue/thirst/hygiene accrual + auto drink/wash (`pawnService.processNeedsTick` / `processAutoDrink` / `processAutoWash`).
+2. **Item upkeep** — spoilage, weather deterioration, wood drying (`itemService.stepItemDecay` / `stepItemDeterioration` / `stepWoodDrying`).
+3. **Research** — accumulate research progress (`researchService.processResearchTick`).
+4. **Jobs** — regenerate the job pool from world state (`jobService.generateJobs`): harvest / haul / **fetch** / construct / deconstruct / craft / refuel.
+5. **Buildings** — deconstruction, campfire/furnace fuel, structural condition, traps (`processBuildings`).
+6. **Passive production** — loaded furnaces transform staged inputs over time (`processPassiveProduction`, ADR-016).
+7. **Pawns** — draft orders → movement → state machine (`pawnStateMachineService.tick`: needs/work/combat/**health**) → work-state sync → mood/morale.
+8. **Resource regrowth** — restore tiles whose regrowth cooldown expired.
+9. **Entities** — mob spawn / step / movement / hunger / removal (`entityService.*`).
+10. **Combat** — `combatService.tickCombat` + fresh-corpse handling.
+11. **Commit + UI push** — `GameStateManager.updateState` then a throttled store notify (~15 Hz).
+
+There is **no** separate "events" phase: `core/Events.ts` / `EventSystem` exists but is not wired
+into the tick (a planned feature, not part of the current contract).
 
 ## Modifier System
 
