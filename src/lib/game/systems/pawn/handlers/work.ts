@@ -11,9 +11,9 @@ import { isAdjacent, hasAvailableFood } from '../pawnQueries';
 import {
   HUNGER_THRESHOLD, FATIGUE_THRESHOLD, ROUTE_TO_DRINK_THIRST, ROUTE_TO_WASH_HYGIENE, JOB_QUEUE_SIZE,
   transitionTo, goIdle, tryRouteToWaterNeed, isJobUnreachableForPawn, markJobUnreachable,
-  tryStartHunt, tryAssignPath, checkNeedInterrupts, lightWorkMultiplier, orderStationTile,
-  depositInventory, findNearestDepositPoint
+  tryStartHunt, tryAssignPath, checkNeedInterrupts, lightWorkMultiplier
 } from '../pawnHelpers';
+import { orderStationTile, depositInventory, findNearestDepositPoint } from '../pawnHauling';
 
 export function handleHauling(pawn: Pawn, gameState: GameState): GameState {
   // ADR-016 fetch-carry: items picked up for a craft order go to that order's station tile
