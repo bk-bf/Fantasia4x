@@ -183,7 +183,7 @@ function getConditionStage(conditionId: string, severity: number): ConditionStag
 /**
  * Kill a pawn: set isAlive=false, record DeadPawnRecord, log, apply mood penalty to survivors.
  */
-function killPawn(
+export function killPawn(
   pawn: Pawn,
   cause:
     | 'malnutrition'
