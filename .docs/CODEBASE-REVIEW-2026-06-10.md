@@ -68,9 +68,9 @@
 
 # Part I — Defects, ranked by severity
 
-## R1 · CRITICAL — Crafted primary outputs land in the legacy `gs.item` pool, invisible to the entire economy
+- [x] **R1 · CRITICAL — Crafted primary outputs land in the legacy `gs.item` pool, invisible to the entire economy.**
 
-> **[x] RESOLVED (ADR-016).** `gs.item` removed; `_completeCraft`/`completeCraftOrder` spawn outputs
+> **RESOLVED (ADR-016).** `gs.item` removed; `_completeCraft`/`completeCraftOrder` spawn outputs
 > as physical drops on the station tile → real stockpile stock. Regression-tested (craft an
 > intermediate → spend it on a building/recipe).
 
@@ -107,9 +107,9 @@ byproducts; carry quality on the stored drop or an `ItemInstance` instead of
 and migrate them to stockpile so the legacy pool can die. Add a sim test: craft an
 intermediate → spend it on a building/recipe.
 
-## R2 · HIGH — Drafted pawns are exempt from the entire health simulation
+- [x] **R2 · HIGH — Drafted pawns are exempt from the entire health simulation.**
 
-> **[x] RESOLVED.** The drafted branch in `tick()` no longer `continue`s before the health block —
+> **RESOLVED.** The drafted branch in `tick()` no longer `continue`s before the health block —
 > drafted pawns now run caretaking → conditions (bleed/infection/malnutrition/death) → healing →
 > the collapse lifecycle → status-effect-duration tick, and only the **behavioural** state machine
 > (auto combat-engage / exhaustion-collapse / `tickPawn`) is skipped. A drafted pawn ordered to
@@ -132,9 +132,9 @@ lifecycle → status-duration tick) for drafted pawns too, and only skip the *be
 state machine (`tickPawn`). That is what the comment already promises. Add a sim test:
 drafted pawn with a bleeding wound loses blood and can die.
 
-## R3 · HIGH — Butchery consumes the whole carcass stack but yields one carcass's outputs
+- [x] **R3 · HIGH — Butchery consumes the whole carcass stack but yields one carcass's outputs.**
 
-> **[x] RESOLVED (ADR-016).** No item carries `isCarcass`/`yields` — the `processButchery` path was
+> **RESOLVED (ADR-016).** No item carries `isCarcass`/`yields` — the `processButchery` path was
 > dead code and was removed. Butchery is now ordinary `butcher_spot` recipes (one carcass per run),
 > flowing through reserve-and-fetch.
 
@@ -160,9 +160,9 @@ pins only guard branches, not quantity flow.
 Longer-term, make intactness per-carcass (instance or per-drop field) instead of
 per-type.
 
-## R4 · MEDIUM-HIGH — ADR-009 tool gating is still enforced nowhere, while DESIGN.md sells it as a core pillar
+- [x] **R4 · MEDIUM-HIGH — ADR-009 tool gating is still enforced nowhere, while DESIGN.md sells it as a core pillar.**
 
-> **[x] RESOLVED (colony-stock, step 1).** `JobService.getAvailableJobs` now gates a harvest on its
+> **RESOLVED (colony-stock, step 1).** `JobService.getAvailableJobs` now gates a harvest on its
 > `interaction.toolRequirement` vs the matching `WorkCategory.toolsRequired` in colony stock
 > (`_colonyHasHarvestTool`). The bootstrap was unblocked first: tool-free `stone_outcrop` scavenge,
 > `stone_axe`/`stone_hammer` → craft_spot, station tiers + "Crude Workbench", and added
@@ -186,9 +186,9 @@ in `getAvailableJobs` (colony-stockpile check is fine as step 1; per-pawn claime
 inventory per ADR-009 as step 2), or amend ADR-009/DESIGN to say gating is wear-only for
 now. Code and design doc must stop disagreeing on a core pillar.
 
-## R5 · MEDIUM — Inventory weight/volume budget is computed, displayed, and never enforced
+- [x] **R5 · MEDIUM — Inventory weight/volume budget is computed, displayed, and never enforced.**
 
-> **[x] RESOLVED.** `ItemService.clampPickupQuantity` caps haul/fetch pickup by the pawn's
+> **RESOLVED.** `ItemService.clampPickupQuantity` caps haul/fetch pickup by the pawn's
 > weight/volume budget (belt/back `inventoryBonus` now matters); the remainder waits for another
 > trip. Always floors at 1 so a single over-budget item (heavy carcass) can still be hand-carried.
 
@@ -206,9 +206,9 @@ claim/pickup (split oversized stacks; cap `unitsTaken` by remaining budget) or s
 the budget claim from DESIGN until it lands. Drop the dead `weightKg`/`volumeL` fields
 from `PawnInventory` if load is always derived.
 
-## R6 · MEDIUM — `constructBuilding`/`processBuildingQueue`/`queueBuilding` is a dead legacy triad that eats materials
+- [x] **R6 · MEDIUM — `constructBuilding`/`processBuildingQueue`/`queueBuilding` is a dead legacy triad that eats materials.**
 
-> **[x] RESOLVED.** Building placement is physical reserve-and-fetch (`placeBuilding` reserves the
+> **RESOLVED.** Building placement is physical reserve-and-fetch (`placeBuilding` reserves the
 > cost, pawns haul it to the site, construction consumes it — ADR-016), and the dead triad is
 > **deleted**: `GameEngine(Impl).constructBuilding`, `BuildingService.processBuildingQueue`,
 > `GameStateManager.startBuilding`, and the `GameState.buildingQueue` field + `BuildingInProgress`
@@ -232,9 +232,9 @@ the exact trap the old D1 documented for crafting. **Fix:** delete all three (pl
 `BuildingInProgress`/`buildingQueue` field once saves are migrated), or make
 `constructBuilding` delegate to `placeBuilding`.
 
-## R7 · MEDIUM — Working-pawn `isWorking` flag is driven by a dead priority system, twice per tick
+- [x] **R7 · MEDIUM — Working-pawn `isWorking` flag is driven by a dead priority system, twice per tick.**
 
-> **[x] RESOLVED.** `syncPawnWorkingStates` now derives `isWorking` from the real FSM state
+> **RESOLVED.** `syncPawnWorkingStates` now derives `isWorking` from the real FSM state
 > (`WORK_LOOP_STATES`: Working/MovingToResource/Hauling/MovingToDeposit/Hunting, minus
 > eating/sleeping) and `currentWork` from the pawn's active job's work category (`getJobWorkCategory`)
 > — accurate display instead of `'foraging'` fiction. The dead `getAvailableWorkForPawn`/
@@ -253,9 +253,9 @@ derive `isWorking` from `currentState === 'Working'` (one line in the FSM or a s
 sync pass), delete `getAvailableWorkForPawn`/`canPawnDoWorkByType`/`currentWork`, and
 remove the second sync call. This finishes the D4 cleanup the last review started.
 
-## R8 · MEDIUM — Craft quality is stamped only on the first stack of an item
+- [x] **R8 · MEDIUM — Craft quality is stamped only on the first stack of an item.**
 
-> **[x] RESOLVED (moot).** `gs.item` stacking is gone; `_completeCraft` no longer writes
+> **RESOLVED (moot).** `gs.item` stacking is gone; `_completeCraft` no longer writes
 > `properties.quality`. Re-attaching per-stack quality to an `ItemInstance`/stored drop is deferred
 > until equipment quality matters (tracked in PHYSICAL-PRODUCTION "Still deferred").
 
@@ -267,9 +267,9 @@ quality; construction quality (stored per building, [JobService.ts:705-727](../s
 got this right. Becomes moot if R1's fix moves quality onto instances — fold it into
 that work.
 
-## R9 · LOW-MEDIUM — Hunting interrupts bypass the ADR-010 proximity formula
+- [x] **R9 · LOW-MEDIUM — Hunting interrupts bypass the ADR-010 proximity formula.**
 
-> **[x] RESOLVED.** `handleHunting` now runs the shared `checkNeedInterrupts` with `jobDist` =
+> **RESOLVED.** `handleHunting` now runs the shared `checkNeedInterrupts` with `jobDist` =
 > Manhattan distance to the quarry, so the hunt only breaks for hunger/fatigue/thirst per the
 > ADR-010 proximity+urgency formula (a pawn about to corner its prey resists a distant food trip).
 > On interrupt the `huntTargetId` is cleared.
@@ -283,9 +283,9 @@ kill, in the one activity where abandoning mid-task wastes the most prior effort
 pickup", so this is arguably as-designed — but it reads as an oversight against ADR-010.
 Cheap fix: call `checkNeedInterrupts` with `jobDist = dist(pawn, quarry)`.
 
-## R10 · LOW — `killPawn` drops nothing on the map
+- [x] **R10 · LOW — `killPawn` drops nothing on the map.**
 
-> **[x] RESOLVED.** `killPawn` now drops the pawn's carried bulk items, tracked inventory instances,
+> **RESOLVED.** `killPawn` now drops the pawn's carried bulk items, tracked inventory instances,
 > and equipped gear as `DroppedItem`s on the death tile, plus a `pawn_carcass` corpse — and clears
 > the gear off the dead pawn so it isn't duplicated. The corpse uses a new **`dynamicName`** item
 > flag: `itemService.makeDynamicName` builds "<Name>'s Corpse" at spawn (stored on `DroppedItem.name`),
@@ -300,9 +300,9 @@ economy. DESIGN.md's combat section: "a slain entity drops a carcass/corpse". Mo
 deletes the colony's best equipment. **Fix:** drop inventory + equipment as
 DroppedItems at the death tile (corpse item optional until burial mechanics exist).
 
-## R11 · LOW — Doc/code mismatches that will misdirect contributors
+- [x] **R11 · LOW — Doc/code mismatches that will misdirect contributors.**
 
-> **[x] RESOLVED.** (1) ARCHITECTURE.md's turn order was rewritten to match `processGameTurn`'s real
+> **RESOLVED.** (1) ARCHITECTURE.md's turn order was rewritten to match `processGameTurn`'s real
 > phases (needs → item upkeep → research → jobs → buildings → passive production → pawns → regrowth →
 > entities → combat → commit), and the unwired "events" phase is now explicitly *not* part of the
 > contract (`Events.ts` exists but isn't ticked). (2) The ARCHITECTURE service table gained
@@ -310,13 +310,13 @@ DroppedItems at the death tile (corpse item optional until burial mechanics exis
 > `systems/` singletons (`pawnStateMachineService`, `combatService`). (3) The stale "drink/wash
 > routing is deferred" comments in PawnService were corrected (the FSM routing is implemented).
 
-1. **Events phase**: ARCHITECTURE.md's mandatory turn order lists "5. Events — trigger random or conditional events"; `processGameTurn` has no events phase and `core/Events.ts` (still ~hundreds of lines of logic — ADR-006) is fully unwired. _([x] partial: its resource effect now writes the physical stockpile, not `gs.item`.)_ Carried from the last review — either wire it or cut it from the turn-order contract.
+1. **Events phase**: ARCHITECTURE.md's mandatory turn order lists "5. Events — trigger random or conditional events"; `processGameTurn` has no events phase and `core/Events.ts` (still ~hundreds of lines of logic — ADR-006) is fully unwired. _(partial: its resource effect now writes the physical stockpile, not `gs.item`.)_ Carried from the last review — either wire it or cut it from the turn-order contract.
 2. **AGENTS.md / ARCHITECTURE.md service table** omits the services added since: `CombatService`, `EntityService`, `JobService`, `RecipeService`, `ResourceObjectService`, `LightingService`(if present), `PawnStatService` is listed but e.g. `OccupancyService` was added correctly — do one sync pass.
 3. **DESIGN.md need table** says `WORK_PRIORITY_THRESHOLD_SHIFT` gives "Level 4 → ~78" (+8 from 70); code comment at [PawnStateMachine.ts:114](../src/lib/game/systems/PawnStateMachine.ts#L114) says the same — both fine — but DESIGN also still describes drink/wash routing as deferred in one paragraph (PawnService comment too, [PawnService.ts:482](../src/lib/game/services/PawnService.ts#L482)) while §D zone routing is implemented in the FSM. Stale comments only.
 
-## R12 · LOW — Assorted dead code and drift (cheap deletions)
+- [x] **R12 · LOW — Assorted dead code and drift (cheap deletions).**
 
-> **[x] RESOLVED.** Deleted: `JobService._syncLightJobs`/`_completeLight` (+ the `light` switch case;
+> **RESOLVED.** Deleted: `JobService._syncLightJobs`/`_completeLight` (+ the `light` switch case;
 > the type literal + per-tick purge stay for old-save cleanup), `_hasFuelInStockpile`,
 > `_totalFuelInStockpile`; `FATIGUE_PER_SLEEPING_TURN`; the dead `PawnService` cluster
 > (`forceSleep`, `forceRest`, `getSleepBuildingBonus`, `getCookingBuildingBonus`,
@@ -336,9 +336,9 @@ DroppedItems at the death tile (corpse item optional until burial mechanics exis
 
 # Part II — Structural debt (not bugs)
 
-### P-1 · The `gs.item` legacy pool itself
+- [x] **P-1 · The `gs.item` legacy pool itself.**
 
-> **[x] RESOLVED (ADR-016).** `GameState.item` and the `currentItem` store are gone; all readers
+> **RESOLVED (ADR-016).** `GameState.item` and the `currentItem` store are gone; all readers
 > (craft output, eating, equip pool, events, blueprint cost, craft-cancel refund) migrated to
 > physical stockpile stock.
 
@@ -347,7 +347,7 @@ bypasses stockpile zones, equipment instances are plucked from it, Events would 
 it. Once R1 lands, the remaining readers are enumerable (≈6 sites) — finish the Stage-2
 migration and delete `GameState.item`. This also kills the `currentItem` derived store.
 
-### P-2 · Engine↔store dual source of truth (carried: old P0-3)
+- [ ] **P-2 · Engine↔store dual source of truth (carried: old P0-3).**
 
 `processGameTurn` still begins with `this.gameState = { ...get(gameState) }` and ends
 with `pushFromEngine` ([GameEngineImpl.ts:291](../src/lib/game/systems/GameEngineImpl.ts#L291));
@@ -358,7 +358,7 @@ engine is the only writer, user actions become commands. Large, no functional ch
 still deferred, still worth doing before the Living World layer adds more per-tick
 state.
 
-### P-3 · Services importing Svelte stores (carried: old P0-3 logActivity)
+- [ ] **P-3 · Services importing Svelte stores (carried: old P0-3 logActivity).**
 
 `PawnStateMachine`, `EntityService`, `Combat` import from `stores/Log` /
 `stores/combatFeedback`. Same injectable-sink fix as before; the list grew by
@@ -366,7 +366,7 @@ state.
 direct outbound edge of `PawnStateMachine` — fold this into the P-4 decomposition (the `combat`/`work`
 handlers are where most log calls live, so a sink interface drops in naturally during the split).
 
-### P-4 · God files (carried: old P2-8; sizes re-measured)
+- [ ] **P-4 · God files (carried: old P2-8; sizes re-measured).**
 
 | File | LOC | Trend |
 | ---- | --- | ----- |
@@ -393,7 +393,7 @@ Rust port (branchy game logic, not a hot numeric loop). 20 components are also o
 (BuildingMenu 515, ActivityLogOverlay 525, CraftingScreen 476…). Same overall advice: split along
 these seams opportunistically, no big bang.
 
-### P-5 · Per-tick allocation churn (carried: old D9.1/D9.6/D9.7 — still deferred, still fine at current scale)
+- [ ] **P-5 · Per-tick allocation churn (carried: old D9.1/D9.6/D9.7 — still deferred, still fine at current scale).**
 
 The index-once/update-once pawn tick rewrite remains undone; new per-pawn-per-tick scans
 were added since (`findCombatThreat` over all mobs per pawn; `occupancyService.blockedTiles`
@@ -402,9 +402,9 @@ fatigue interrupt). Profiling gate unchanged: don't touch until `__profOut` says
 any new system should stop adding full-array `pawns.map(...)` writes for single-pawn
 updates.
 
-### P-6 · Logging
+- [x] **P-6 · Logging.**
 
-> **[x] RESOLVED.** A scoped `no-console` ESLint rule (`['error', { allow: ['warn', 'error'] }]`) now
+> **RESOLVED.** A scoped `no-console` ESLint rule (`['error', { allow: ['warn', 'error'] }]`) now
 > covers `src/lib/game/**`, exempting `core/log.ts`. It enforces the gated-shim convention — the
 > `import { gatedConsole as console }` local binding shadows the global so shimmed files pass,
 > `warn`/`error` stay allowed, and the `[PROF]` profiler lines carry a per-line eslint-disable
@@ -415,9 +415,9 @@ in completion paths (per-harvest, per-craft logs in JobService run on every comp
 and `ResearchService`. The `gatedConsole` shim idiom works; the scoped `no-console`
 ESLint rule from the last review is still the way to close the class permanently.
 
-### P-7 · ADR-008 boundary violation — PawnStateMachine reaches across the WASM boundary directly (NEW, small + actionable)
+- [x] **P-7 · ADR-008 boundary violation — PawnStateMachine reaches across the WASM boundary directly (NEW, small + actionable).**
 
-> **[x] RESOLVED (2026-06-13).** The `PathfinderService` interface gained `isReady()`; a new
+> **RESOLVED (2026-06-13).** The `PathfinderService` interface gained `isReady()`; a new
 > interface-typed `pathfinderService` singleton (in `PathfinderService.ts`) is the single
 > composition point that knows the WASM impl. `PawnStateMachine`'s `tryAssignPath`/
 > `tryAssignSleepPath`/`handleIdle` now call `pathfinderService.isReady()`/`.findPath()` and the
@@ -442,10 +442,10 @@ the `WasmPathfinderService` edge disappears from this module's `dependsOn` in `p
 
 # Part III — Carried-forward deferred items (unchanged status)
 
-- **D9.1 / D9.6 / D9.7** — index-once tick, deep-clone removal (tied to P-2), event-driven job generation. Profiling-gated.
-- **D-perf** — cooldown index for regrowth (the pre-scan added in `processResourceRegrowth` is a good stopgap; full O(map) rebuild still happens on regrowth ticks), tick strides, incremental job board.
-- **D-bills** — `productionTargets` still exists in state with nothing driving it; unchanged.
-- **ADR-009 step 2** — per-pawn claimed-inventory tool gating (R4 is step 1: any gating at all).
+- [ ] **D9.1 / D9.6 / D9.7** — index-once tick, deep-clone removal (tied to P-2), event-driven job generation. Profiling-gated.
+- [ ] **D-perf** — cooldown index for regrowth (the pre-scan added in `processResourceRegrowth` is a good stopgap; full O(map) rebuild still happens on regrowth ticks), tick strides, incremental job board.
+- [ ] **D-bills** — `productionTargets` still exists in state with nothing driving it; unchanged.
+- [ ] **ADR-009 step 2** — per-pawn claimed-inventory tool gating (R4 is step 1: any gating at all).
 
 ---
 
@@ -454,7 +454,7 @@ the `WasmPathfinderService` edge disappears from this module's `dependsOn` in `p
 From a play session, with `.debug/pawns.log` evidence. Three fixed inline; one investigated
 with a proposed fix awaiting sign-off (behavioural FSM change).
 
-## PT-1 · Hauling-to-stockpile "hang" — INVESTIGATED, fix proposed (not applied)
+- [ ] **PT-1 · Hauling-to-stockpile "hang" — investigated; fix proposed, not applied.**
 
 **Symptom:** pawns (#18, #20) appear to "hang for a moment" while moving to the stockpile.
 
@@ -481,7 +481,7 @@ with a proposed fix awaiting sign-off (behavioural FSM change).
 the pawn actually arrives instead of relying on the deposit-in-place fallback. Optionally dedupe
 consecutive identical soft-queue entries.
 
-## PT-2 · Inventory weight/volume shows 0.0 — FIXED
+- [x] **PT-2 · Inventory weight/volume shows 0.0.**
 
 **Symptom:** `CARRYING [0.0/20.0 kg]` while a Flint Shard ×1 is carried. **Root cause (= R5's dead
 cache):** the UI read the cached `pawn.inventory.weightKg`, a write-only initial-shape field never
@@ -489,7 +489,7 @@ updated on inventory mutation. **Fix:** [PawnInventory.svelte](../src/lib/compon
 now derives load + budget via `itemService.getCurrentCarryLoad` / `getCarryBudget` (single source of
 truth = item defs).
 
-## PT-3 · Info panel / bars — reuse the existing components — FIXED
+- [x] **PT-3 · Info panel / bars — reuse the existing components.**
 
 **Symptom (standing workflow complaint):** COND/FRESH bars sat in an ad-hoc `tile-hud--item` block
 in `GameCanvas`, not below the title like every other panel; new bars kept landing in the wrong
@@ -500,7 +500,7 @@ resource panels; and `SelectedEntityCard` bars now render via the one reusable
 [`StatBar`](../src/lib/components/UI/StatBar.svelte) (`EntityBar` gained optional `color`/
 `valueText`), with the panel's private `blockBar` removed. One bar implementation everywhere.
 
-## PT-4 · Crafting cards: show required workstation — FIXED
+- [x] **PT-4 · Crafting cards: show required workstation.**
 
 **Symptom:** crafting cards showed ingredients but not which workstation the recipe needs. **Fix:**
 [BuildCard](../src/lib/components/UI/BuildCard.svelte) gained an optional `station` prop (small
