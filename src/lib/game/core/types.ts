@@ -124,6 +124,12 @@ export interface DroppedItem {
   /** Present for tracked items (weapons, armour, tools with maxDurability). */
   instance?: ItemInstance;
   /**
+   * Per-drop display-name override (R10). Used for `dynamicName` items (e.g. a pawn corpse, which
+   * reads "Bjorn's Corpse" instead of the generic def name). Resolved at spawn; see
+   * `itemService.makeDynamicName` / `getItemDisplayName`.
+   */
+  name?: string;
+  /**
    * ADR-016 reserve-and-fetch: id of the craft order (CraftingInProgress.id) this stored stack
    * is locked for. A reserved stack is physically present (counts in `stockpile`) but excluded
    * from "available" stock and from haul/consume targeting, so a second order can't double-spend
@@ -1009,6 +1015,12 @@ export interface Item {
   id: string;
   name: string;
   amount: number;
+  /**
+   * R10: the item's display name is derived per-instance from a subject (e.g. a pawn corpse →
+   * "Bjorn's Corpse"). Spawners pass the subject to `itemService.makeDynamicName`, which stores the
+   * result on the `DroppedItem.name`; renderers resolve via `itemService.getItemDisplayName`.
+   */
+  dynamicName?: boolean;
   description?: string; // Optional description for lore or flavor text
   /** Sprite-sheet glyph(s) for card/inventory icons (same shape as Building.charSpans). */
   charSpans?: Array<{ sheet?: string; id?: number; from?: number; to?: number; literal?: string }>;

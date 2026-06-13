@@ -2877,7 +2877,9 @@
     <div class="tile-hud tile-hud--item">
       <span class="item-glyph">★</span>
       <span class="item-name"
-        >{itemDef?.name ?? hoverDroppedItem.resourceId.replace(/_/g, ' ')}</span
+        >{itemDef?.dynamicName && hoverDroppedItem.name
+          ? hoverDroppedItem.name
+          : (itemDef?.name ?? hoverDroppedItem.resourceId.replace(/_/g, ' '))}</span
       >
       <span class="item-qty">×{hoverDroppedItem.quantity}</span>
       {#if freshPct !== null}

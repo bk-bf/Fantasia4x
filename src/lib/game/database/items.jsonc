@@ -2346,6 +2346,23 @@
     "weightKg"          : 10,
     "volumeL"           : 15
   },
+  // ── Pawn corpse (R10) — spawned at a pawn's death tile; carries the dead pawn's gear is
+  //    dropped separately. `dynamicName` → the drop reads "<Name>'s Corpse". Heavy: needs hauling
+  //    (one per trip with the carry budget), pending future burial mechanics.
+  {
+    "id"               : "pawn_carcass",
+    "charSpans"        : [{ "sheet": "items", "id": 122 }],
+    "name"             : "Corpse",
+    "type"             : "material",
+    "category"         : "organic",
+    "dynamicName"      : true,
+    "deteriorationRate": 0,
+    "description"      : "The mortal remains of one of your own. Bury or haul them; do not leave them to the crows.",
+    "color"            : "#5A4A4A",
+    "amount"           : 0,
+    "weightKg"          : 40,
+    "volumeL"           : 50
+  },
   // ── Tier 1 butchery tool ─────────────────────────────────────────────────────
   {
     "id": "bone_cleaver",

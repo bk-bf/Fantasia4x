@@ -51,6 +51,10 @@ const DETERIORATION_RATE_BY_CATEGORY: Record<string, number> = {
 export interface ItemService {
   // Query Methods
   getItemById(id: string): Item | undefined;
+  /** R10: build a `dynamicName` item's per-instance name from a subject (e.g. "Bjorn's Corpse"). */
+  makeDynamicName(itemId: string, subjectName: string): string;
+  /** R10: display name for a dropped item — honours a `dynamicName` item's per-drop `name` override. */
+  getItemDisplayName(drop: { resourceId: string; name?: string }): string;
   getItemsByType(type: string): Item[];
   getItemsByCategory(category: string): Item[];
   getCraftableItems(gameState: GameState, pawnId?: string): Item[];
@@ -113,6 +117,18 @@ export interface ItemService {
 export class ItemServiceImpl implements ItemService {
   getItemById(id: string): Item | undefined {
     return ITEMS_DATABASE.find((item) => item.id === id);
+  }
+
+  makeDynamicName(itemId: string, subjectName: string): string {
+    const def = this.getItemById(itemId);
+    if (!def?.dynamicName) return def?.name ?? itemId;
+    return `${subjectName}'s ${def.name}`;
+  }
+
+  getItemDisplayName(drop: { resourceId: string; name?: string }): string {
+    const def = this.getItemById(drop.resourceId);
+    if (def?.dynamicName && drop.name) return drop.name;
+    return def?.name ?? drop.resourceId.replace(/_/g, ' ');
   }
 
   getItemsByType(type: string): Item[] {

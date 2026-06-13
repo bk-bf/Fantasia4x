@@ -23,7 +23,8 @@ import type {
   ConditionStage,
   Injury,
   LimbState,
-  Job
+  Job,
+  DroppedItem
 } from '../core/types';
 import { recomputeWound } from './Combat';
 import { HEALING_CONFIG, CARE_CONFIG, woundById } from '../core/Wounds';
@@ -215,6 +216,42 @@ function killPawn(
     }
   };
 
+  // R10: a slain pawn leaves its carried goods, equipped gear, and a corpse on the death tile so
+  // they re-enter the economy (permadeath must not silently delete the colony's best equipment).
+  // The dead pawn's inventory/equipment are cleared (now physically on the ground).
+  const pos = pawn.position;
+  const newDrops: DroppedItem[] = [];
+  if (pos) {
+    const tag = `${pawn.id}-${gameState.turn}`;
+    for (const [resourceId, qty] of Object.entries(pawn.inventory?.items ?? {})) {
+      if (qty > 0)
+        newDrops.push({ id: `death-${tag}-${resourceId}`, resourceId, x: pos.x, y: pos.y, quantity: qty });
+    }
+    const droppedInstances = [
+      ...(pawn.inventory?.instances ?? []),
+      ...Object.values(pawn.equipment ?? {}).filter((i): i is NonNullable<typeof i> => !!i)
+    ];
+    for (const inst of droppedInstances) {
+      newDrops.push({
+        id: `death-${tag}-${inst.instanceId}`,
+        resourceId: inst.itemId,
+        x: pos.x,
+        y: pos.y,
+        quantity: 1,
+        instance: inst
+      });
+    }
+    // The corpse itself, with a dynamic per-instance name ("<Name>'s Corpse").
+    newDrops.push({
+      id: `corpse-${tag}`,
+      resourceId: 'pawn_carcass',
+      x: pos.x,
+      y: pos.y,
+      quantity: 1,
+      name: itemService.makeDynamicName('pawn_carcass', pawn.name)
+    });
+  }
+
   // Apply mood penalty to all living pawns
   const pawns = gameState.pawns.map((p) => {
     if (p.id === pawn.id) {
@@ -224,7 +261,10 @@ function killPawn(
         currentState: 'Dead',
         activeJob: undefined,
         path: [],
-        isMoving: false
+        isMoving: false,
+        // Gear is on the ground now — clear it off the corpse-pawn so it isn't duplicated.
+        equipment: {},
+        inventory: p.inventory ? { ...p.inventory, items: {}, instances: [] } : p.inventory
       };
     }
     if (p.isAlive === false) return p;
@@ -244,6 +284,7 @@ function killPawn(
     ...gameState,
     pawns,
     jobs,
+    droppedItems: [...(gameState.droppedItems ?? []), ...newDrops],
     deadPawns: [...(gameState.deadPawns ?? []), deadRecord]
   };
 }
@@ -1264,20 +1305,35 @@ function tryStartHunt(pawn: Pawn, gs: GameState, bestJob: Job | null): GameState
 function handleHunting(pawn: Pawn, gameState: GameState): GameState {
   if (!pawn.position) return gameState;
 
-  // Survival interrupts — drop the hunt to eat/sleep, same thresholds as idle work pickup.
-  if ((pawn.needs?.hunger ?? 0) >= HUNGER_THRESHOLD && hasAvailableFood(gameState)) {
-    return endHunt(pawn, PAWN_STATE.HUNGRY, gameState);
-  }
-  if ((pawn.needs?.fatigue ?? 0) >= FATIGUE_THRESHOLD) {
-    return endHunt(pawn, PAWN_STATE.TIRED, gameState);
-  }
-
   const target = (gameState.mobs ?? []).find(
     (m) =>
       m.id === pawn.huntTargetId && m.isAlive !== false && m.state !== 'Corpse' && m.markedForHunt
   );
   // Target dead, butchered, or un-marked — hunt over.
   if (!target) return endHunt(pawn, PAWN_STATE.IDLE, gameState);
+
+  // R9 / ADR-010: weigh need urgency against PROXIMITY rather than a flat threshold — the "job
+  // distance" is the distance to the quarry, so a pawn about to corner its prey resists breaking
+  // off for distant food/rest (and still bolts when a need is critical or food/rest is close).
+  const jobDist =
+    Math.abs(pawn.position.x - target.x) + Math.abs(pawn.position.y - target.y);
+  const interrupted = checkNeedInterrupts(
+    pawn,
+    gameState,
+    'Hunting',
+    jobDist,
+    pawn.jobQueue ?? [],
+    laborLevel(pawn, 'hunting', gameState)
+  );
+  if (interrupted) {
+    // checkNeedInterrupts moved the pawn to its need state; also drop the hunt target.
+    return {
+      ...interrupted,
+      pawns: interrupted.pawns.map((p) =>
+        p.id === pawn.id ? { ...p, huntTargetId: undefined } : p
+      )
+    };
+  }
 
   const adjacent =
     Math.max(Math.abs(pawn.position.x - target.x), Math.abs(pawn.position.y - target.y)) <= 1;
@@ -2059,7 +2115,7 @@ function handleIdle(pawn: Pawn, gameState: GameState): GameState {
 function checkNeedInterrupts(
   pawn: Pawn,
   gameState: GameState,
-  label: 'EnRoute' | 'Working',
+  label: 'EnRoute' | 'Working' | 'Hunting',
   jobDist: number,
   queue: string[],
   laborLevel: number
