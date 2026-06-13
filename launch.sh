@@ -15,6 +15,7 @@ cleanup() {
   [[ ${#PIDS[@]} -eq 0 ]] && return
   echo ""
   echo "Stopping all dev servers..."
+  kill -CONT "${PIDS[@]}" 2>/dev/null || true  # wake any Ctrl-Z'd child so it can exit
   kill "${PIDS[@]}" 2>/dev/null || true
   wait 2>/dev/null || true
   echo "Done."
@@ -58,13 +59,17 @@ fi
 # Live codebase-graph server (--debug only): rebuilds + hot-reloads on src/lib change.
 if [[ "$DEBUG" == true ]]; then
   CODEGRAPH_PORT=${CODEGRAPH_PORT:-5180}
-  if [[ -z "$(lsof -ti tcp:$CODEGRAPH_PORT 2>/dev/null)" ]]; then
-    (cd "$SCRIPT_DIR" && exec node tools/codegraph/serve.mjs) &
-    PIDS+=($!)
-    echo "  [codegraph] http://localhost:$CODEGRAPH_PORT"
-  else
-    echo "  [codegraph] already running on http://localhost:$CODEGRAPH_PORT"
+  # Always (re)start a fresh server we own. A previous run left suspended by
+  # Ctrl-Z sits in state T holding the port and serving stale code; resume it
+  # (-CONT) so it can accept the kill, then terminate it before relaunching.
+  if pgrep -f 'tools/codegraph/serve.mjs' >/dev/null; then
+    pkill -CONT -f 'tools/codegraph/serve.mjs' 2>/dev/null
+    pkill -f 'tools/codegraph/serve.mjs' 2>/dev/null
+    sleep 0.4
   fi
+  (cd "$SCRIPT_DIR" && exec node tools/codegraph/serve.mjs) &
+  PIDS+=($!)
+  echo "  [codegraph] http://localhost:$CODEGRAPH_PORT"
 fi
 
 echo ""
