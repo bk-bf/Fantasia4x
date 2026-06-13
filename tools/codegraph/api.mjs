@@ -74,7 +74,8 @@ export function createApi(DIR) {
     const d = describe(n);
     return {
       id: n.id, name: n.short, module: shortMod(n.module), group: n.group, kind: n.kind,
-      exported: n.exported, file: n.file, line: n.line,
+      exported: n.exported, tested: !!n.tested, file: n.file, line: n.line,
+      loc: n.loc, numeric: n.numeric,
       description: d.text, descriptionSource: d.source,
       inDegree: n.inDegree, outDegree: n.outDegree,
     };
@@ -241,6 +242,8 @@ export function createApi(DIR) {
       'GET /api/callers?name=': 'functions that call the target',
       'GET /api/callees?name=': 'functions the target calls',
       'GET /api/path?from=&to=&max=&format=md': 'shortest call path from one function to another',
+      'GET /api/port-candidates?limit=': 'modules ranked as TS→Rust port candidates (compute-heavy, low coupling)',
+      'GET /api/orphans': 'standalone private functions with no callers (dead-code candidates)',
       'GET /api/hubs?limit=': 'most-called functions and most-depended-on modules',
     },
   };
@@ -351,6 +354,51 @@ export function createApi(DIR) {
           .sort((a, b) => b.used - a.used).slice(0, limit)
           .map((x) => ({ ...moduleSummary(x.m), incomingCallSites: x.used }));
         return ok(res, { mostCalledFunctions: fns, mostDependedOnModules: mods }), true;
+      }
+
+      if (p === '/api/port-candidates') {
+        const HIGHER = new Set(['services', 'systems', 'stores', 'components', 'routes']);
+        const agg = new Map();
+        for (const n of G.nodes) {
+          const a = agg.get(n.module) || { fns: 0, loc: 0, numeric: 0, topFn: null };
+          a.fns++; a.loc += n.loc || 0; a.numeric += n.numeric || 0;
+          if (!a.topFn || (n.numeric || 0) > a.topFn.numeric) a.topFn = { name: n.short, numeric: n.numeric || 0 };
+          agg.set(n.module, a);
+        }
+        const cross = new Map();
+        for (const e of G.moduleEdges) {
+          const gB = (G.moduleNodes.find((m) => m.module === e.to) || {}).group;
+          if (HIGHER.has(gB)) cross.set(e.from, (cross.get(e.from) || 0) + 1);
+        }
+        const rows = G.moduleNodes
+          .filter((m) => !['rust', 'dev'].includes(m.group))
+          .map((m) => {
+            const a = agg.get(m.module) || { fns: 0, loc: 0, numeric: 0, topFn: null };
+            const coupling = cross.get(m.module) || 0;
+            const score = +(a.numeric * Math.log2(a.loc + 2) / (1 + coupling)).toFixed(1);
+            return {
+              module: shortMod(m.module), group: m.group, functions: a.fns, loc: a.loc,
+              numericOps: a.numeric, couplingToHigherLayers: coupling,
+              hottestFunction: a.topFn && a.topFn.name, score,
+            };
+          })
+          .filter((r) => r.numericOps > 0)
+          .sort((x, y) => y.score - x.score);
+        return ok(res, {
+          note: 'Higher score = more numeric/compute-heavy and less coupled into the engine — i.e. an easier TS→Rust/WASM port. couplingToHigherLayers = distinct deps into services/systems/stores/UI, each a callback you would have to bridge. Already-Rust and dev modules excluded.',
+          candidates: rows.slice(0, num(qp.get('limit'), 15)),
+        }), true;
+      }
+
+      if (p === '/api/orphans') {
+        const list = G.nodes
+          .filter((n) => n.kind === 'function' && !n.className && !n.exported && !n.tested && !n.inDegree && n.group !== 'stores')
+          .map(fnRow);
+        return ok(res, {
+          count: list.length,
+          note: 'Standalone private functions with no in-graph callers — dead-code candidates. Excludes class methods and stores (dynamic dispatch / object-literal wiring make 0-callers unreliable there).',
+          orphans: list,
+        }), true;
       }
 
       err(res, 404, `unknown endpoint ${p}`, { see: '/api' });

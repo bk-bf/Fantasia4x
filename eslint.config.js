@@ -48,5 +48,17 @@ export default [
         }
       ]
     }
+  },
+  // P2-10: keep raw console out of the sim core — route per-tick/per-action logging through the
+  // gated shim (`import { gatedConsole as console } from '../core/log'`), which the rule does not
+  // flag because the local import shadows the global `console`. `warn`/`error` stay allowed
+  // (genuine problem reporting); `core/log.ts` (the shim itself) is exempt; the `[PROF]` profiler
+  // output in GameEngineImpl carries a per-line eslint-disable (ADR-011 exemption).
+  {
+    files: ['src/lib/game/**/*.ts'],
+    ignores: ['src/lib/game/core/log.ts'],
+    rules: {
+      'no-console': ['error', { allow: ['warn', 'error'] }]
+    }
   }
 ];

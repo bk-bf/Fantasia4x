@@ -135,6 +135,8 @@
       <span class="switch"><input type="checkbox" id="lbltoggle"><span></span></span></label>
     <label class="hb-field" id="neighrow" for="neightoggle" style="display:none"><span class="ctl-label">Cross-module</span>
       <span class="switch"><input type="checkbox" id="neightoggle" checked><span></span></span></label>
+    <label class="hb-field" for="covtoggle" title="Outline untested code red, tested green"><span class="ctl-label">Test coverage</span>
+      <span class="switch"><input type="checkbox" id="covtoggle"><span></span></span></label>
     <span class="grow"></span>
     <span class="stats" id="statline"></span>
   </header>
@@ -259,7 +261,7 @@ function wrap(s, n = 28) {
 }
 
 // ----- state -----
-const state = { view: 'overview', module: null, plain: false, neighbors: true };
+const state = { view: 'overview', module: null, plain: false, neighbors: true, coverage: false };
 let RENDER = null; // { mNodes: Map(svgKey->graphId), eList: [{from,to,idx,kind}] }
 
 // =====================================================================
@@ -417,6 +419,7 @@ async function render() {
   });
 
   dimDescriptions(svgEl);
+  applyCoverage(svgEl);
   setupPanZoom(svgEl);
   applyInitialZoom();
   renderCrumbs();
@@ -435,6 +438,33 @@ function dimDescriptions(svgEl) {
       if (i === sep) t.setAttribute('fill-opacity', '0.28');         // the divider rule
       else if (i > sep) t.setAttribute('fill-opacity', '0.62');      // description text
     });
+  });
+}
+
+// Test-coverage overlay: outline each node by whether tests exercise it.
+// Module view → per-function red(untested)/green(tested). Overview → module
+// nodes tinted by their tested fraction. Only functions/methods count.
+const COV = { good: '#7ee787', mid: '#f5a623', bad: '#ff6b6b' };
+function applyCoverage(svgEl) {
+  if (!state.coverage) return;
+  svgEl.querySelectorAll('g.node').forEach((g) => {
+    const gid = RENDER.gidBySvg.get(g);
+    if (!gid) return;
+    const shape = g.querySelector('rect, polygon, circle, path');
+    if (!shape) return;
+    let color;
+    if (RENDER.kind === 'module') {
+      const fns = GRAPH.nodes.filter((n) => n.module === gid && (n.kind === 'function' || n.kind === 'method'));
+      if (!fns.length) return;
+      const ratio = fns.filter((n) => n.tested).length / fns.length;
+      color = ratio > 0.66 ? COV.good : ratio > 0.2 ? COV.mid : COV.bad;
+    } else {
+      const n = nodeById.get(gid);
+      if (!n || (n.kind !== 'function' && n.kind !== 'method')) return;
+      color = n.tested ? COV.good : COV.bad;
+    }
+    shape.style.stroke = color;
+    shape.style.strokeWidth = '2.5px';
   });
 }
 
@@ -592,7 +622,7 @@ function persist() {
       localStorage.setItem(LS_KEY, JSON.stringify({
         view: state.view, module: state.module,
         pz: { x: pz.x, y: pz.y, k: pz.k }, defaultPct,
-        plain: state.plain, neighbors: state.neighbors,
+        plain: state.plain, neighbors: state.neighbors, coverage: state.coverage,
       }));
     } catch { /* private mode / quota */ }
   }, 250);
@@ -755,6 +785,7 @@ document.querySelectorAll('#viewseg button').forEach(b => b.onclick = () => {
 });
 document.getElementById('lbltoggle').onchange = (e) => { state.plain = e.target.checked; render(); };
 document.getElementById('neightoggle').onchange = (e) => { state.neighbors = e.target.checked; render(); };
+document.getElementById('covtoggle').onchange = (e) => { state.coverage = e.target.checked; render(); };
 const modpick = document.getElementById('modpick');
 modpick.addEventListener('change', (e) => tryPick(e.target.value));
 modpick.addEventListener('keydown', (e) => { if (e.key === 'Enter') tryPick(e.target.value); });
@@ -776,6 +807,10 @@ renderModuleOptions();
   if (typeof saved.neighbors === 'boolean') {
     state.neighbors = saved.neighbors;
     document.getElementById('neightoggle').checked = saved.neighbors;
+  }
+  if (typeof saved.coverage === 'boolean') {
+    state.coverage = saved.coverage;
+    document.getElementById('covtoggle').checked = saved.coverage;
   }
   if (saved.view === 'module' && saved.module && modByName.has(saved.module)) {
     state.view = 'module'; state.module = saved.module;

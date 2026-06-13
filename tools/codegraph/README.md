@@ -67,16 +67,50 @@ to function/module/search/path for a prose summary. `GET /api` is self-documenti
 | `/api/callers?name=` · `/api/callees?name=` | direct callers / callees |
 | `/api/path?from=&to=&max=` | shortest call path between two functions |
 | `/api/hubs?limit=` | most-called functions, most-depended-on modules |
+| `/api/port-candidates?limit=` | modules ranked as TS→Rust port candidates (compute-heavy, low coupling) |
+| `/api/orphans` | standalone private functions with no callers (dead-code candidates) |
 
 Functions resolve by exact id, `Class.method`, or bare method name; ambiguous
 names return all matches. Modules resolve by full path, short path, or basename.
+Function rows include `loc`, `numeric` (compute heaviness), and `tested`.
 The API is refreshed automatically on every rebuild.
 
 ```bash
 curl localhost:5180/api/function?name=tickPawn
 curl 'localhost:5180/api/path?from=processGameTurn&to=tickPawn'
-curl 'localhost:5180/api/search?q=harvest&format=md'
+curl 'localhost:5180/api/port-candidates?limit=10'
 ```
+
+## Analysis & guardrails
+
+```bash
+pnpm graph:check       # enforce architecture rules (exit 1 on violations)
+pnpm graph:snapshot    # save current graph as a baseline (e.g. on main)
+pnpm graph:diff        # show how the graph changed since the snapshot
+```
+
+**`graph:check`** turns the graph into an enforced contract — run it in CI. Rules:
+
+- **ADR-008** — nothing may call `WasmPathfinderService` directly (only the `PathfinderService` interface). *Error.*
+- **cycles** — circular module dependencies (Tarjan SCC). *Error.*
+- **layers** — a lower layer must not depend on a higher one (`core→services`, `services→systems`, …). *Warning.*
+- **god-module** — modules with > 40 functions. *Warning.*
+- **orphans** — standalone private functions nothing calls. *Warning.*
+
+Exit code is non-zero on errors; `--strict` also fails on warnings.
+
+**`graph:diff`** compares the current graph against a saved baseline and reports
+new/removed modules, function-count changes (flags new god-modules), and
+new/removed module dependencies — so a refactor's effect, or a regression
+forming, is visible immediately.
+
+### In the viewer
+
+- **Plain-English** toggle, **Test coverage** toggle (outline untested code red,
+  tested green; module nodes tinted by tested fraction), cross-module toggle —
+  all persisted across reload.
+- Svelte components show edges to the stores/services they call, including
+  reactive `$store` reads (so a store's "used by" reflects real UI consumption).
 
 ## How it works
 
@@ -88,7 +122,9 @@ curl 'localhost:5180/api/search?q=harvest&format=md'
 | `build-html.mjs`    | Inlines `graph.json` + `descriptions.json` + vendored Mermaid into `codegraph.html`.        |
 | `rust.mjs`          | Syntactic Rust extractor (fns, intra-crate edges, wasm-bindgen exports) merged into the graph by `extract.mjs`. |
 | `serve.mjs`         | Live server: rebuild-on-change, hot-reload, and the `/api` query endpoints.                 |
-| `api.mjs`           | The JSON query API over `graph.json` (descriptions, call edges, search, paths, hubs).       |
+| `api.mjs`           | The JSON query API over `graph.json` (descriptions, call edges, search, paths, hubs, port-candidates). |
+| `check.mjs`         | Architecture rule engine (`pnpm graph:check`) — ADR-008, layers, cycles, god-modules, orphans. |
+| `diff.mjs`          | Snapshot + diff (`pnpm graph:snapshot` / `graph:diff`) for tracking structural change.      |
 | `vendor/mermaid.min.js` | Pinned Mermaid 10.9.1 UMD build (downloaded once).                                       |
 
 ### Description resolution (per function)

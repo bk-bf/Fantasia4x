@@ -307,12 +307,33 @@ function makeId(fileName, qualName, line) {
   return `${moduleOf(fileName)}::${qualName}@${line}#${idCounter++}`;
 }
 
+const ARITH = new Set([
+  ts.SyntaxKind.PlusToken, ts.SyntaxKind.MinusToken, ts.SyntaxKind.AsteriskToken,
+  ts.SyntaxKind.SlashToken, ts.SyntaxKind.PercentToken, ts.SyntaxKind.AsteriskAsteriskToken,
+]);
+/** Lines-of-code span and a "numeric heaviness" score (arithmetic, indexing, loops). */
+function bodyMetrics(decl, sf) {
+  const start = sf.getLineAndCharacterOfPosition(decl.getStart(sf)).line;
+  const end = sf.getLineAndCharacterOfPosition(decl.getEnd()).line;
+  let numeric = 0;
+  const visit = (n) => {
+    if (ts.isBinaryExpression(n) && ARITH.has(n.operatorToken.kind)) numeric++;
+    else if (ts.isElementAccessExpression(n)) numeric++; // arr[i]
+    else if (ts.isForStatement(n) || ts.isForOfStatement(n) || ts.isWhileStatement(n)) numeric += 2;
+    else if (ts.isPrefixUnaryExpression(n) && (n.operator === ts.SyntaxKind.MinusToken || n.operator === ts.SyntaxKind.PlusToken)) numeric++;
+    ts.forEachChild(n, visit);
+  };
+  visit(decl);
+  return { loc: Math.max(1, end - start + 1), numeric };
+}
+
 function register(decl, qualName, kind, className, sf) {
   const fileName = sf.fileName;
   const { line } = sf.getLineAndCharacterOfPosition(decl.getStart(sf));
   const id = makeId(fileName, qualName, line + 1);
   declToId.set(decl, id);
   const doc = leadingDoc(decl, sf);
+  const met = bodyMetrics(decl, sf);
   nodes.set(id, {
     id,
     name: qualName,
@@ -330,7 +351,10 @@ function register(decl, qualName, kind, className, sf) {
     // Description shown in the viewer: JSDoc if the function has one, else a
     // verb-aware sentence inferred from its name. Curated overrides live in
     // descriptions.json and win over this at display time.
-    desc: doc || autoDescribe(qualName.split('.').pop() || qualName)
+    desc: doc || autoDescribe(qualName.split('.').pop() || qualName),
+    loc: met.loc,
+    numeric: met.numeric,
+    tested: false
   });
   const body = /** @type {any} */ (decl).body;
   if (body) scanList.push({ id, body, decl });
@@ -348,6 +372,21 @@ function isExported(decl) {
     }
     if (ts.isSourceFile(p)) break;
     p = p.parent;
+  }
+  return false;
+}
+
+const STORE_FACTORIES = /^(writable|readable|derived|writableLocal|persisted|tweened|spring)$/;
+function isStoreFactory(expr) {
+  const name = ts.isIdentifier(expr) ? expr.text
+    : ts.isPropertyAccessExpression(expr) ? expr.name.text : '';
+  return STORE_FACTORIES.test(name);
+}
+/** A store: writable/derived/… call, or a custom object implementing `subscribe`. */
+function isStoreInit(init) {
+  if (ts.isCallExpression(init)) return isStoreFactory(init.expression);
+  if (ts.isObjectLiteralExpression(init)) {
+    return init.properties.some((p) => p.name && p.name.getText() === 'subscribe');
   }
   return false;
 }
@@ -411,6 +450,15 @@ function collectNodes(sf) {
         sf
       );
       // still descend into the function body for nested fns
+    } else if (
+      ts.isVariableDeclaration(node) &&
+      node.initializer &&
+      node.name &&
+      ts.isIdentifier(node.name) &&
+      isStoreInit(node.initializer)
+    ) {
+      // a reactive store: `writable(...)`, `derived(...)`, or a custom store object
+      register(node, node.name.text, 'store', null, sf);
     }
     ts.forEachChild(node, (c) => visit(c, ctx));
   };
@@ -515,6 +563,15 @@ function maybeRustBoundary(node, ownerId) {
   }
 }
 
+// A method call on a store variable (`gameState.update(...)`, `.set`, `.subscribe`)
+// is an edge into that store node — captures who writes/reads the store.
+function maybeStoreEdge(node, ownerId) {
+  const callee = node.expression;
+  if (!ts.isPropertyAccessExpression(callee) || !ts.isIdentifier(callee.expression)) return;
+  const id = resolveTargetId(checker.getSymbolAtLocation(callee.expression));
+  if (id && nodes.get(id)?.kind === 'store') addEdge(ownerId, id);
+}
+
 function scanCalls(body, ownerId) {
   const visit = (node) => {
     // do not descend into nested registered functions; they own their calls
@@ -529,6 +586,7 @@ function scanCalls(body, ownerId) {
       const targetId = resolveTargetId(sym);
       if (targetId) addEdge(ownerId, targetId);
       else maybeRustBoundary(node, ownerId);
+      maybeStoreEdge(node, ownerId);
     }
     ts.forEachChild(node, visit);
   };
@@ -548,14 +606,62 @@ function scanAllCalls(sf, ownerId) {
       const targetId = resolveTargetId(sym);
       if (targetId) addEdge(ownerId, targetId);
       else maybeRustBoundary(node, ownerId);
+      maybeStoreEdge(node, ownerId);
     }
     ts.forEachChild(node, visit);
   };
   ts.forEachChild(sf, visit);
 }
-for (const { id, sf } of componentScan) scanAllCalls(sf, id);
+
+// Svelte reactive reads: `$gameState` auto-subscribes to the gameState store.
+// These aren't calls, so match them textually against the component's store imports.
+function componentStoreReads(sf, ownerId) {
+  const local = new Map(); // imported name -> store node id
+  for (const st of sf.statements) {
+    if (!ts.isImportDeclaration(st) || !st.importClause) continue;
+    const nb = st.importClause.namedBindings;
+    if (nb && ts.isNamedImports(nb)) {
+      for (const el of nb.elements) {
+        const id = resolveTargetId(checker.getSymbolAtLocation(el.name));
+        if (id && nodes.get(id)?.kind === 'store') local.set(el.name.text, id);
+      }
+    }
+  }
+  if (!local.size) return;
+  const text = sf.getFullText();
+  const re = /\$([A-Za-z_]\w*)/g;
+  let m;
+  while ((m = re.exec(text))) {
+    const id = local.get(m[1]);
+    if (id) addEdge(ownerId, id);
+  }
+}
+
+for (const { id, sf } of componentScan) {
+  scanAllCalls(sf, id);
+  componentStoreReads(sf, id);
+}
 for (const e of rust.edges) addEdge(e.from, e.to); // intra-Rust call edges
-console.error(`Resolved ${edges.size} edges.`);
+
+// Test coverage: mark any node directly called from a *.test.ts file as tested.
+const testFiles = program
+  .getSourceFiles()
+  .filter((sf) => /\.test\.ts$/.test(sf.fileName) && sf.fileName.replace(/\\/g, '/').includes('/src/'));
+function markTested(sf) {
+  const visit = (node) => {
+    if (ts.isCallExpression(node) || ts.isNewExpression(node)) {
+      const callee = node.expression;
+      let sym = checker.getSymbolAtLocation(callee);
+      if (!sym && ts.isPropertyAccessExpression(callee)) sym = checker.getSymbolAtLocation(callee.name);
+      const id = resolveTargetId(sym);
+      if (id && nodes.has(id)) nodes.get(id).tested = true;
+    }
+    ts.forEachChild(node, visit);
+  };
+  ts.forEachChild(sf, visit);
+}
+for (const sf of testFiles) markTested(sf);
+console.error(`Resolved ${edges.size} edges (${testFiles.length} test files scanned).`);
 
 // ---------------------------------------------------------------------------
 // Module-level rollup (file -> file dependency graph for the overview)
