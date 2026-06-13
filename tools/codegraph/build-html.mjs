@@ -25,9 +25,21 @@ const desc = JSON.parse(read('descriptions.json'));
 // Escape `<` so the data can never break out of the <script> tag.
 const safe = (obj) => JSON.stringify(obj).replace(/</g, '\\u003c');
 
+const vendorPath = path.join(dir, 'vendor', 'mermaid.min.js');
+if (!fs.existsSync(vendorPath)) {
+  console.error('vendor/mermaid.min.js missing. Download it once with:');
+  console.error('  curl -s -o tools/codegraph/vendor/mermaid.min.js \\');
+  console.error('    https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js');
+  process.exit(1);
+}
+const mermaidSrc = read(path.join('vendor', 'mermaid.min.js'));
+
 const html = template
   .replace('/*__GRAPH__*/', safe(JSON.parse(read('graph.json'))))
-  .replace('/*__DESC__*/', safe(desc));
+  .replace('/*__DESC__*/', safe(desc))
+  // mermaid UMD contains no literal "</script>"; inject as-is via function to
+  // avoid $-pattern interpretation in String.replace.
+  .replace('/*__MERMAID__*/', () => mermaidSrc);
 
 const outPath = path.join(dir, 'codegraph.html');
 fs.writeFileSync(outPath, html);

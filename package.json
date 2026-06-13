@@ -14,6 +14,8 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
+    "graph": "node tools/codegraph/extract.mjs && node tools/codegraph/build-html.mjs",
+    "graph:serve": "node tools/codegraph/serve.mjs",
     "add:wasm": "cd spatial-core && ~/.cargo/bin/wasm-pack build --target web --out-dir ../src/lib/spatial-core-pkg"
   },
   "devDependencies": {

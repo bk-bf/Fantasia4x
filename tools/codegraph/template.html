@@ -164,9 +164,10 @@
 
 <script type="application/json" id="graphdata">/*__GRAPH__*/</script>
 <script type="application/json" id="descdata">/*__DESC__*/</script>
+<script>/*__MERMAID__*/</script>
 
 <script type="module">
-import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs';
+const mermaid = window.mermaid;
 
 const GRAPH = JSON.parse(document.getElementById('graphdata').textContent);
 const DESC  = JSON.parse(document.getElementById('descdata').textContent);
@@ -225,19 +226,22 @@ function modDesc(mod) {
 }
 
 // ----- mermaid label escaping -----
-function esc(s) { return s.replace(/["\n]/g, ' ').replace(/[#;]/g, ' ').trim(); }
+// Mermaid is configured with htmlLabels:false, so labels are SVG text.
+// Quotes/#/; break the parser; <br/> is the supported line-break token.
+function esc(s) { return String(s).replace(/["#;{}]/g, ' ').replace(/\s+/g, ' ').trim(); }
 function wrap(s, n = 28) {
-  if (s.length <= n) return esc(s);
+  s = esc(s);
+  if (s.length <= n) return s;
   const words = s.split(' '); const lines = []; let cur = '';
   for (const w of words) {
-    if ((cur + ' ' + w).trim().length > n) { lines.push(cur.trim()); cur = w; }
-    else cur += ' ' + w;
+    if ((cur ? cur + ' ' + w : w).length > n && cur) { lines.push(cur); cur = w; }
+    else cur = cur ? cur + ' ' + w : w;
     if (lines.length >= 3) break;
   }
-  if (cur && lines.length < 3) lines.push(cur.trim());
-  let out = lines.join('\n');
-  if (out.length < s.length) out = out.replace(/\s*$/, '…');
-  return esc(out).replace(/\n/g, '<br/>');
+  if (cur && lines.length < 3) lines.push(cur);
+  const joined = lines.join(' ');
+  const truncated = joined.length < s.length;
+  return lines.join('<br/>') + (truncated ? '…' : '');
 }
 
 // ----- state -----
@@ -260,7 +264,7 @@ function buildOverview() {
     src += `subgraph G_${grp}["${grp.toUpperCase()}"]\n`;
     for (const m of mods) {
       const sid = idMap.get(m.module);
-      const lbl = state.plain ? wrap(modLabel(m, true), 30) : `${m.module.split('/').pop()}<br/><small>${m.fns} fn</small>`;
+      const lbl = state.plain ? wrap(modLabel(m, true), 30) : `${esc(m.module.split('/').pop())}<br/>${m.fns} fn`;
       src += `  ${sid}["${lbl}"]\n`;
       styleLines.push(`style ${sid} fill:${shade(groupColor(grp))},stroke:${groupColor(grp)},color:#e6edf3`);
     }
@@ -275,7 +279,6 @@ function buildOverview() {
     eList.push({ from: e.from, to: e.to });
   });
   src += styleLines.join('\n') + '\n';
-  src += `classDef default rx:6,ry:6\n`;
   return { src, idMap, eList, kind: 'module' };
 }
 

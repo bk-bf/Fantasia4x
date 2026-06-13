@@ -49,6 +49,16 @@ if [[ -d "$LAUNCH_DIR" ]]; then
   done
 fi
 
+# Live codebase-graph server: rebuilds + hot-reloads on any src/lib change.
+CODEGRAPH_PORT=${CODEGRAPH_PORT:-5180}
+if [[ -z "$(lsof -ti tcp:$CODEGRAPH_PORT 2>/dev/null)" ]]; then
+  (cd "$SCRIPT_DIR" && exec node tools/codegraph/serve.mjs) &
+  PIDS+=($!)
+  echo "  [codegraph] http://localhost:$CODEGRAPH_PORT"
+else
+  echo "  [codegraph] already running on http://localhost:$CODEGRAPH_PORT"
+fi
+
 echo ""
 echo "Ctrl-C to stop all."
 wait
