@@ -59,7 +59,25 @@ pnpm lint                 # ESLint + Prettier check
 pnpm format               # Prettier write
 pnpm test                 # Vitest unit/regression suite (test:watch for watch mode)
 pnpm add:wasm             # rebuild spatial-core WASM → src/lib/spatial-core-pkg/
+pnpm graph                # build the static codebase call-graph explorer (codegraph.html)
+pnpm graph:serve          # live graph + JSON query API on http://localhost:5180
 ```
+
+## Codebase Graph (`tools/codegraph/`)
+
+An interactive call-graph explorer over all of `src/lib`, plus a **JSON query API
+for agents** — use it to understand structure, find callers/callees, trace call
+paths, and spot hubs instead of grepping blind. See `tools/codegraph/README.md`.
+
+- Browser view: `pnpm graph` then open `tools/codegraph/codegraph.html`.
+- Live server + API: `pnpm graph:serve` (also started by `./launch.sh --debug`).
+- API (localhost-only, CORS-open, `GET /api` is self-documenting):
+  `/api/function?name=<Class.method|method>` (description, signature, callers, callees),
+  `/api/search?q=`, `/api/callers?name=`, `/api/callees?name=`, `/api/path?from=&to=`,
+  `/api/module?name=`, `/api/hubs`, `/api/graph`. Add `?format=md` for prose.
+  e.g. `curl 'localhost:5180/api/function?name=tickPawn'`
+- Every function gets a description (JSDoc, else inferred); improve specific ones by
+  editing `tools/codegraph/descriptions.json` (keyed `module::Class.method`).
 
 ## Documentation
 

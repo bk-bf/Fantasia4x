@@ -23,9 +23,9 @@
 > gating in `getAvailableJobs`; bootstrap unblocked — tool-free `stone_outcrop`, station tiers,
 > Crude Workbench, `stone_pick`/`stone_hoe` added) · **✅ R5** (`clampPickupQuantity` enforces
 > carry budget at pickup, floors at 1) · **✅ R8** (moot — per-stack quality dropped with `gs.item`;
-> re-attach to instances later) · **~ R11.1** (`Events.ts` no longer writes `gs.item`; events phase
-> still unwired) · **~ R6** (building placement is now physical reserve-and-fetch, but the dead
-> `constructBuilding`/`processBuildingQueue`/`buildingQueue` triad still exists — cleanup pending).
+> re-attach to instances later) · **✅ R6** (dead `constructBuilding`/`processBuildingQueue`/
+> `startBuilding`/`buildingQueue` triad deleted; placement is physical reserve-and-fetch) ·
+> **~ R11.1** (`Events.ts` no longer writes `gs.item`; events phase still unwired).
 > Plus new: building-material hauling, passive furnaces, and "long jobs yield to needs" (thirst
 > added to `checkNeedInterrupts`). Tests **117 → 133**.
 > **Still open:** R2, R7, R9, R10, R12, and structural P-2…P-6 (unchanged). Current gate:
@@ -181,10 +181,12 @@ from `PawnInventory` if load is always derived.
 
 ## R6 · MEDIUM — `constructBuilding`/`processBuildingQueue`/`queueBuilding` is a dead legacy triad that eats materials
 
-> **~ PARTIAL.** Real building placement is now physical reserve-and-fetch (`placeBuilding` reserves
-> the cost, pawns haul it to the site, construction consumes it — ADR-016). But the dead triad
-> (`GameEngine.constructBuilding`, `BuildingService.processBuildingQueue`, `GameState.buildingQueue`/
-> `BuildingInProgress`) **still exists** and is still a trap — delete it.
+> **✅ RESOLVED.** Building placement is physical reserve-and-fetch (`placeBuilding` reserves the
+> cost, pawns haul it to the site, construction consumes it — ADR-016), and the dead triad is
+> **deleted**: `GameEngine(Impl).constructBuilding`, `BuildingService.processBuildingQueue`,
+> `GameStateManager.startBuilding`, and the `GameState.buildingQueue` field + `BuildingInProgress`
+> type. The ancient-save migration is kept (reads `buildingQueue` loosely) so old saves still
+> convert pending entries to `under_construction` buildings.
 
 `GameEngineImpl.constructBuilding`
 ([GameEngineImpl.ts:187-219](../src/lib/game/systems/GameEngineImpl.ts#L187)) still
@@ -356,10 +358,10 @@ ESLint rule from the last review is still the way to close the class permanently
 
 ## Suggested sequencing
 
-_R1, R3, R4, R5, R8, P-1 are done (ADR-016 pass — see status banner). Remaining:_
+_R1, R3, R4, R5, R6, R8, P-1 are done (ADR-016 pass — see status banner). Remaining:_
 
 1. **Now (correctness, small diffs):** **R2** drafted-pawn health block (move the `continue`, run tend→conditions→heal→collapse for drafted pawns too, ~10 lines + sim test — the one still-open HIGH) → **R9** hunting need-interrupt (route `handleHunting` through `checkNeedInterrupts`) → **R10** `killPawn` drops inventory + equipment.
-2. **Cleanups (net-negative LOC):** **R6** delete the dead `constructBuilding`/`processBuildingQueue`/`buildingQueue` triad (placement is physical now) → **R7** derive `isWorking` from `currentState==='Working'`, delete the legacy work-priority path → **R12** dead-code list (light-job pair, unused PawnService helpers, etc.).
+2. **Cleanups (net-negative LOC):** **R7** derive `isWorking` from `currentState==='Working'`, delete the legacy work-priority path → **R12** dead-code list (light-job pair, unused PawnService helpers, etc.).
 3. **Design honesty:** **R11** doc sync (events phase: wire or cut; service-table refresh).
 4. **Structural (unchanged):** P-2/P-3 layer inversions before Living World lands; P-4 splits opportunistically; P-5/P-6 as evidence demands.
 5. **Physical-production follow-ups** (see [PHYSICAL-PRODUCTION](.tasks/open/PHYSICAL-PRODUCTION.md)): tool-gating step 2 (per-pawn inventory + `minTier`), per-stack craft quality on instances (R8), passive-furnace flagging for forge/hearth.
