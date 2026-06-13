@@ -27,11 +27,14 @@
 > `startBuilding`/`buildingQueue` triad deleted; placement is physical reserve-and-fetch) ·
 > **✅ R7** (`isWorking` now derived from FSM state, `currentWork` from the active job; dead
 > `getAvailableWorkForPawn`/`canPawnDoWorkByType` + duplicate per-tick call removed) ·
-> **~ R11.1** (`Events.ts` no longer writes `gs.item`; events phase still unwired).
+> **✅ R9** (hunting interrupts go through `checkNeedInterrupts` — ADR-010 proximity, job-dist =
+> distance to quarry) · **✅ R10** (`killPawn` drops carried items + equipped gear + a `dynamicName`
+> corpse "<Name>'s Corpse" on the death tile) · **~ R11.1** (`Events.ts` no longer writes `gs.item`;
+> events phase still unwired).
 > Plus new: building-material hauling, passive furnaces, and "long jobs yield to needs" (thirst
-> added to `checkNeedInterrupts`). Tests **117 → 135**.
-> **Still open:** R2, R9, R10, R12, and structural P-2…P-6 (unchanged). Current gate:
-> `check` 0 errors · `test` 135 passing · `lint` 0 errors · `build` ok.
+> added to `checkNeedInterrupts`). Tests **117 → 138**.
+> **Still open:** R2 (the last HIGH), R12, and structural P-2…P-6 (unchanged). Current gate:
+> `check` 0 errors · `test` 138 passing · `lint` 0 errors · `build` ok.
 
 ---
 
@@ -244,6 +247,11 @@ that work.
 
 ## R9 · LOW-MEDIUM — Hunting interrupts bypass the ADR-010 proximity formula
 
+> **✅ RESOLVED.** `handleHunting` now runs the shared `checkNeedInterrupts` with `jobDist` =
+> Manhattan distance to the quarry, so the hunt only breaks for hunger/fatigue/thirst per the
+> ADR-010 proximity+urgency formula (a pawn about to corner its prey resists a distant food trip).
+> On interrupt the `huntTargetId` is cleared.
+
 `handleHunting` aborts the hunt at flat `HUNGER_THRESHOLD`/`FATIGUE_THRESHOLD`
 ([PawnStateMachine.ts:1296-1301](../src/lib/game/systems/PawnStateMachine.ts#L1296)),
 not via `checkNeedInterrupts`. A pawn 3 ticks from cornering a deer drops the chase at
@@ -254,6 +262,12 @@ pickup", so this is arguably as-designed — but it reads as an oversight agains
 Cheap fix: call `checkNeedInterrupts` with `jobDist = dist(pawn, quarry)`.
 
 ## R10 · LOW — `killPawn` drops nothing on the map
+
+> **✅ RESOLVED.** `killPawn` now drops the pawn's carried bulk items, tracked inventory instances,
+> and equipped gear as `DroppedItem`s on the death tile, plus a `pawn_carcass` corpse — and clears
+> the gear off the dead pawn so it isn't duplicated. The corpse uses a new **`dynamicName`** item
+> flag: `itemService.makeDynamicName` builds "<Name>'s Corpse" at spawn (stored on `DroppedItem.name`),
+> and `getItemDisplayName` (+ the GameCanvas hover) resolves it. Regression-tested.
 
 A pawn dies holding hauled inventory and a full equipment loadout; `killPawn`
 ([PawnStateMachine.ts:185-249](../src/lib/game/systems/PawnStateMachine.ts#L185)) writes
@@ -367,9 +381,9 @@ ESLint rule from the last review is still the way to close the class permanently
 
 ## Suggested sequencing
 
-_R1, R3, R4, R5, R6, R7, R8, P-1 are done (ADR-016 pass — see status banner). Remaining:_
+_R1, R3, R4, R5, R6, R7, R8, R9, R10, P-1 are done (ADR-016 pass + cleanups — see status banner). Remaining:_
 
-1. **Now (correctness, small diffs):** **R2** drafted-pawn health block (move the `continue`, run tend→conditions→heal→collapse for drafted pawns too, ~10 lines + sim test — the one still-open HIGH) → **R9** hunting need-interrupt (route `handleHunting` through `checkNeedInterrupts`) → **R10** `killPawn` drops inventory + equipment.
+1. **Now (correctness):** **R2** drafted-pawn health block (move the `continue`, run tend→conditions→heal→collapse for drafted pawns too, ~10 lines + sim test — the one still-open HIGH).
 2. **Cleanups (net-negative LOC):** **R12** dead-code list (light-job pair, unused PawnService helpers, etc.).
 3. **Design honesty:** **R11** doc sync (events phase: wire or cut; service-table refresh).
 4. **Structural (unchanged):** P-2/P-3 layer inversions before Living World lands; P-4 splits opportunistically; P-5/P-6 as evidence demands.
