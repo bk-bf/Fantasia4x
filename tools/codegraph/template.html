@@ -70,9 +70,15 @@
   #graph svg { max-width: none !important; height: auto !important; }
   #viewport { transform-origin: 0 0; will-change: transform; }
   #hint { position: absolute; bottom: 12px; left: 14px; color: var(--fg-dim); font-size: 11px; z-index: 5; }
-  #zoomctl { position: absolute; bottom: 12px; right: 14px; z-index: 5; display: flex; gap: 6px; }
+  #zoomctl { position: absolute; bottom: 12px; right: 14px; z-index: 5; display: flex; gap: 6px; align-items: center; }
   #zoomctl button { background: var(--bg-panel); border: 1px solid var(--border); color: var(--fg); width: 30px; height: 30px; border-radius: 6px; cursor: pointer; font-size: 16px; }
   #zoomctl button:hover { border-color: var(--accent2); }
+  #zoomreadout { display: flex; align-items: center; height: 30px; padding: 0 4px 0 8px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 6px; }
+  #zoompct { width: 34px; background: transparent; border: 0; color: var(--fg); font-family: inherit; font-size: 12px; text-align: right; padding: 0; }
+  #zoompct:focus { outline: none; color: var(--accent2); }
+  #zoomreadout .pct { color: var(--fg-dim); font-size: 11px; padding-left: 1px; }
+  #zdefault { font-size: 14px; }
+  #zdefault.on { color: var(--accent); border-color: var(--accent); }
   #loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--fg-dim); }
 
   /* ---------- detail panel ---------- */
@@ -140,9 +146,13 @@
       <div id="loading">rendering graph…</div>
       <div id="hint">drag to pan · scroll to zoom · hover to trace · click for detail</div>
       <div id="zoomctl">
-        <button id="zin" title="Zoom in">+</button>
         <button id="zout" title="Zoom out">−</button>
-        <button id="zfit" title="Fit">⤢</button>
+        <div id="zoomreadout" title="Current zoom — type a number and press Enter to set">
+          <input id="zoompct" inputmode="numeric" autocomplete="off" /><span class="pct">%</span>
+        </div>
+        <button id="zin" title="Zoom in">+</button>
+        <button id="zfit" title="Fit to screen">⤢</button>
+        <button id="zdefault" title="Set current zoom as the default for new views">★</button>
       </div>
     </main>
 
@@ -404,7 +414,7 @@ async function render() {
   });
 
   setupPanZoom(svgEl);
-  fitView();
+  applyInitialZoom();
   renderCrumbs();
   document.getElementById('neighrow').style.display = state.view === 'module' ? 'flex' : 'none';
 }
@@ -543,27 +553,83 @@ function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;
 // Pan / zoom
 // =====================================================================
 let pz = { x: 0, y: 0, k: 1 };
-function applyPZ() { document.getElementById('viewport').style.transform = `translate(${pz.x}px,${pz.y}px) scale(${pz.k})`; }
+// Zoom bounds. Max is a hard cap; min is tied to the fit-to-screen scale so the
+// whole (often very wide) graph always fits, but can't shrink to an unreadable speck.
+const MAX_ZOOM = 3;
+let fitK = 0.2; // updated by fitView() to the current fit-to-screen scale
+const minZoom = () => Math.min(0.5, fitK * 0.5);
+const clampK = (k) => Math.max(minZoom(), Math.min(MAX_ZOOM, k));
+
+// ----- persistence (zoom/pan + view survive a reload) -----
+const LS_KEY = 'codegraph:viewstate';
+let defaultPct = 0;       // user-set default zoom %, 0 = fit-to-screen
+let pendingRestore = null; // pan/zoom to restore on the first render after boot
+let saveTimer = null;
+function persist() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    try {
+      localStorage.setItem(LS_KEY, JSON.stringify({
+        view: state.view, module: state.module,
+        pz: { x: pz.x, y: pz.y, k: pz.k }, defaultPct,
+      }));
+    } catch { /* private mode / quota */ }
+  }, 250);
+}
+function loadPersisted() {
+  try { return JSON.parse(localStorage.getItem(LS_KEY) || 'null'); } catch { return null; }
+}
+
+function applyPZ() {
+  document.getElementById('viewport').style.transform = `translate(${pz.x}px,${pz.y}px) scale(${pz.k})`;
+  const inp = document.getElementById('zoompct');
+  if (inp && document.activeElement !== inp) inp.value = Math.round(pz.k * 100);
+  persist();
+}
+// Zoom to factor k while keeping screen point (cx,cy) stationary (defaults to centre).
+function setZoom(k, cx, cy) {
+  const graph = document.getElementById('graph');
+  if (cx == null) { cx = graph.clientWidth / 2; cy = graph.clientHeight / 2; }
+  const nk = clampK(k);
+  pz.x = cx - (cx - pz.x) * (nk / pz.k);
+  pz.y = cy - (cy - pz.y) * (nk / pz.k);
+  pz.k = nk; applyPZ();
+}
+
 function setupPanZoom(svgEl) {
   const graph = document.getElementById('graph');
   let dragging = false, sx = 0, sy = 0, ox = 0, oy = 0;
   graph.onmousedown = (e) => { if (e.target.closest('.node') || e.target.closest('path')) return; dragging = true; graph.classList.add('panning'); sx = e.clientX; sy = e.clientY; ox = pz.x; oy = pz.y; };
   window.addEventListener('mousemove', (e) => { if (!dragging) return; pz.x = ox + (e.clientX - sx); pz.y = oy + (e.clientY - sy); applyPZ(); });
   window.addEventListener('mouseup', () => { dragging = false; graph.classList.remove('panning'); });
-  const ZOOM_SENSITIVITY = 0.0022; // lower = gentler zoom
+  const ZOOM_SENSITIVITY = 0.006; // higher = more zoom per scroll
   graph.onwheel = (e) => {
     e.preventDefault();
     const r = graph.getBoundingClientRect();
     const mx = e.clientX - r.left, my = e.clientY - r.top;
-    // Scale by actual scroll delta (smooth across mouse/trackpad), and cap the
-    // step per event so one big notch can't jump far.
+    // Scale by actual scroll delta (smooth across mouse/trackpad), capped per event.
     const dm = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? graph.clientHeight : 1;
     let f = Math.exp(-e.deltaY * dm * ZOOM_SENSITIVITY);
-    f = Math.min(1.12, Math.max(0.89, f));
-    const nk = Math.min(4, Math.max(0.05, pz.k * f));
-    pz.x = mx - (mx - pz.x) * (nk / pz.k); pz.y = my - (my - pz.y) * (nk / pz.k); pz.k = nk; applyPZ();
+    f = Math.min(1.25, Math.max(0.8, f));
+    setZoom(pz.k * f, mx, my);
   };
 }
+
+// Arrow-key panning (when focus isn't in a text field).
+window.addEventListener('keydown', (e) => {
+  const t = e.target;
+  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+  const step = e.shiftKey ? 220 : 70;
+  let dx = 0, dy = 0;
+  if (e.key === 'ArrowLeft') dx = step;
+  else if (e.key === 'ArrowRight') dx = -step;
+  else if (e.key === 'ArrowUp') dy = step;
+  else if (e.key === 'ArrowDown') dy = -step;
+  else return;
+  e.preventDefault();
+  pz.x += dx; pz.y += dy; applyPZ();
+});
+
 function fitView() {
   const graph = document.getElementById('graph');
   const svgEl = document.querySelector('#viewport svg'); if (!svgEl) return;
@@ -572,11 +638,41 @@ function fitView() {
   const w = svgEl.width.baseVal.value || (bb && bb.width) || gw;
   const h = svgEl.height.baseVal.value || (bb && bb.height) || gh;
   const k = Math.min(gw / w, gh / h) * 0.92;
+  fitK = k;
   pz.k = Math.min(1.4, k); pz.x = (gw - w * pz.k) / 2; pz.y = (gh - h * pz.k) / 2; applyPZ();
 }
-document.getElementById('zin').onclick = () => { pz.k = Math.min(4, pz.k * 1.2); applyPZ(); };
-document.getElementById('zout').onclick = () => { pz.k = Math.max(0.05, pz.k / 1.2); applyPZ(); };
-document.getElementById('zfit').onclick = fitView;
+// After fitView centres the view, honour a restored session or a default zoom %.
+function applyInitialZoom() {
+  fitView();
+  if (pendingRestore) {
+    pz = { x: pendingRestore.x, y: pendingRestore.y, k: clampK(pendingRestore.k) };
+    applyPZ();
+    pendingRestore = null;
+  } else if (defaultPct > 0) {
+    setZoom(defaultPct / 100);
+  }
+}
+function setDefaultBtn() {
+  const b = document.getElementById('zdefault');
+  b.classList.toggle('on', defaultPct > 0);
+  b.title = defaultPct > 0
+    ? `Default zoom: ${defaultPct}% — click to update, again to clear`
+    : 'Set current zoom as the default for new views';
+}
+document.getElementById('zin').onclick = () => setZoom(pz.k * 1.2);
+document.getElementById('zout').onclick = () => setZoom(pz.k / 1.2);
+document.getElementById('zfit').onclick = () => fitView();
+document.getElementById('zdefault').onclick = () => {
+  // toggle: set default to the current zoom, or clear it if one is already set
+  defaultPct = defaultPct > 0 ? 0 : Math.round(pz.k * 100);
+  setDefaultBtn(); persist();
+};
+(() => {
+  const inp = document.getElementById('zoompct');
+  const commit = () => { const v = parseFloat(inp.value); if (!isNaN(v) && v > 0) setZoom(v / 100); else inp.value = Math.round(pz.k * 100); };
+  inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { commit(); inp.blur(); } });
+  inp.addEventListener('blur', commit);
+})();
 
 // =====================================================================
 // Headbar / chrome
@@ -643,9 +739,23 @@ modpick.addEventListener('change', (e) => tryPick(e.target.value));
 modpick.addEventListener('keydown', (e) => { if (e.key === 'Enter') tryPick(e.target.value); });
 document.getElementById('graph').addEventListener('click', (e) => { if (e.target.id === 'graph' || e.target.id === 'viewport') closeDetail(); });
 
-// boot
+// boot — restore persisted view + zoom/pan so a reload doesn't reset
 renderStats();
 renderModuleOptions();
+(() => {
+  const saved = loadPersisted();
+  if (!saved) return;
+  defaultPct = saved.defaultPct || 0;
+  setDefaultBtn();
+  if (saved.view === 'module' && saved.module && modByName.has(saved.module)) {
+    state.view = 'module'; state.module = saved.module;
+    document.querySelectorAll('#viewseg button').forEach(b => b.classList.toggle('on', b.dataset.view === 'module'));
+    document.getElementById('modpick').value = shortMod(saved.module);
+    pendingRestore = saved.pz || null;
+  } else if (saved.view === 'overview' || !saved.view) {
+    pendingRestore = saved.pz || null;
+  }
+})();
 render();
 
 // Live-reload: active only when served over http (graph:serve / launch.sh --debug).
