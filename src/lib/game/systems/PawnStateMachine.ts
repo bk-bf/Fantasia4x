@@ -1309,7 +1309,26 @@ function handleHunting(pawn: Pawn, gameState: GameState): GameState {
 
   const adjacent =
     Math.max(Math.abs(pawn.position.x - target.x), Math.abs(pawn.position.y - target.y)) <= 1;
-  if (adjacent) return haltMovement(pawn, gameState); // stand and trade blows
+  if (adjacent) {
+    // Corner the quarry into the shared prey "fight back" state — the exact hand-off the
+    // predator→prey circuit performs (EntityService.stepHunting) — so the animal retaliates
+    // through combatService.tickCombat instead of standing inert. Then plant and trade blows.
+    const halted = haltMovement(pawn, gameState);
+    return {
+      ...halted,
+      mobs: (halted.mobs ?? []).map((m) =>
+        m.id === target.id && m.state !== 'Attacking'
+          ? {
+              ...m,
+              state: 'Attacking',
+              stateSince: gameState.turn,
+              huntTargetId: pawn.id,
+              path: []
+            }
+          : m
+      )
+    };
+  }
 
   // Chase: re-path when we have no route or the quarry has drifted off the path's end tile.
   const pathEnd = pawn.path?.length ? pawn.path[pawn.path.length - 1] : null;
