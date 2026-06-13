@@ -167,7 +167,6 @@ export interface GameState {
   seed: number;
   turn: number;
   race: Race;
-  item: Item[];
   worldMap: WorldTile[][];
   /** @deprecated Use buildings[] instead */
   buildingCounts: Record<string, number>;
@@ -684,6 +683,14 @@ export interface Pawn {
   /** Soft-preview of the next up-to-4 unclaimed job IDs the pawn would take after activeJob.
    *  Not claimed — used only for need-priority lookahead in the state machine. */
   jobQueue?: string[];
+
+  /**
+   * ADR-016: when this pawn is carrying fetched inputs for a craft order, the order id. Set on
+   * fetch pickup, read at deposit so the items are staged ON that order's station (tagged
+   * `reservedFor`) instead of dropped at the nearest stockpile; cleared after staging. Survives
+   * need interrupts so a paused carry still completes.
+   */
+  carryingForOrder?: string;
 
   // Job payload for active state machine job
   activeJob?: {

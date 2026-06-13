@@ -167,4 +167,3 @@ export function generateWorld(width: number, height: number, seed = Date.now()):
 
   return world;
 }
-

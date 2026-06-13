@@ -17,13 +17,24 @@ function pawn(thirst: number, pos = { x: 1, y: 1 }): Pawn {
 }
 
 function makeState(p: Pawn, water: number, withRiver = false): GameState {
-  const drops = water > 0 ? [{ id: 'w', resourceId: 'water', x: 0, y: 0, quantity: water, stored: true }] : [];
+  const drops =
+    water > 0 ? [{ id: 'w', resourceId: 'water', x: 0, y: 0, quantity: water, stored: true }] : [];
   // 3×3 land map; optionally make a neighbour a water tile.
   const worldMap = Array.from({ length: 3 }, (_, y) =>
-    Array.from({ length: 3 }, (_, x) => ({ x, y, type: withRiver && x === 0 && y === 1 ? 'water' : 'land' }))
+    Array.from({ length: 3 }, (_, x) => ({
+      x,
+      y,
+      type: withRiver && x === 0 && y === 1 ? 'water' : 'land'
+    }))
   );
   return {
-    seed: 1, turn: 5, pawns: [p], stockpile: { water }, stockpileZones: [], droppedItems: drops, worldMap
+    seed: 1,
+    turn: 5,
+    pawns: [p],
+    stockpile: { water },
+    stockpileZones: [],
+    droppedItems: drops,
+    worldMap
   } as unknown as GameState;
 }
 

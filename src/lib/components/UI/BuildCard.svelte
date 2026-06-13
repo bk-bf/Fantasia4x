@@ -26,7 +26,8 @@
     <div class="card-header">
       <SpriteIcon {charSpans} px={18} />
       <span class="card-name">{name}</span>
-      {#if workAmount != null}<span class="card-work" title="work to complete">⚒{workAmount}</span>{/if}
+      {#if workAmount != null}<span class="card-work" title="work to complete">⚒{workAmount}</span
+        >{/if}
       {#if badge}<span class="card-badge">{badge}</span>{/if}
     </div>
     {#if description}<div class="card-desc">{description}</div>{/if}

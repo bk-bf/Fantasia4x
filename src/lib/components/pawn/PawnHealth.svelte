@@ -184,7 +184,9 @@
                   >{/if}</span
               >
               <span class="part-hp" style="color:{partHealthColor(part)}"
-                >{part.isMissing ? 'MISSING' : `${Math.round((part.health / part.maxHp) * 100)}%`}</span
+                >{part.isMissing
+                  ? 'MISSING'
+                  : `${Math.round((part.health / part.maxHp) * 100)}%`}</span
               >
               {#if part.injuries.length > 0}
                 <span class="part-badges">

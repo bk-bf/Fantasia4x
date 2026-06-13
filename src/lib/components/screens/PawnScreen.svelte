@@ -116,7 +116,6 @@
       uiState.focusMapOn(pawn.position.x, pawn.position.y);
     }
   }
-
 </script>
 
 <div class="pawn-screen" bind:this={pawnScreenElement}>

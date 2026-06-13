@@ -7,8 +7,18 @@ import type { GameState } from '../core/types';
  * category (the building-cost analogue of a recipe's acceptsCategory). The `hearth` costs
  * `{ "category:stone": 8, branch: 4 }`, so it builds from any mix of granite/limestone/…/slate.
  */
+// ADR-016: building cost is paid from AVAILABLE stored drops (reserved-for-craft stacks
+// excluded), so seed physical stored drops — not just the derived `stockpile` aggregate.
 function gs(stock: Record<string, number>): GameState {
-  return { stockpile: stock } as unknown as GameState;
+  const droppedItems = Object.entries(stock).map(([resourceId, quantity], i) => ({
+    id: `stored-${resourceId}-${i}`,
+    resourceId,
+    x: i,
+    y: 0,
+    quantity,
+    stored: true
+  }));
+  return { stockpile: stock, droppedItems } as unknown as GameState;
 }
 
 describe('§A category building-cost (resolveBuildingCost)', () => {
@@ -18,7 +28,10 @@ describe('§A category building-cost (resolveBuildingCost)', () => {
   });
 
   it('covers a category:stone slot from a MIX of rock types', () => {
-    const out = buildingService.resolveBuildingCost('hearth', gs({ granite: 5, slate: 5, branch: 4 }));
+    const out = buildingService.resolveBuildingCost(
+      'hearth',
+      gs({ granite: 5, slate: 5, branch: 4 })
+    );
     expect(out).not.toBeNull();
     const stoneTotal = (out!['granite'] ?? 0) + (out!['slate'] ?? 0) + (out!['limestone'] ?? 0);
     expect(stoneTotal).toBe(8);
@@ -27,7 +40,9 @@ describe('§A category building-cost (resolveBuildingCost)', () => {
 
   it('returns null when there is not enough stone of any kind', () => {
     expect(buildingService.resolveBuildingCost('hearth', gs({ granite: 3, branch: 4 }))).toBeNull();
-    expect(buildingService.hasRequiredResources('hearth', gs({ granite: 3, branch: 4 }))).toBe(false);
+    expect(buildingService.hasRequiredResources('hearth', gs({ granite: 3, branch: 4 }))).toBe(
+      false
+    );
   });
 
   it('hasRequiredResources is true once any 8 stone + 4 branch are present', () => {

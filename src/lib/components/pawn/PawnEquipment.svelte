@@ -82,40 +82,40 @@
 
     <!-- Available Items -->
     <div class="inventory-items">
-    <h4>Available Items:</h4>
-    <div class="inventory-grid">
-      {#each Object.entries(pawn.inventory.items || {}) as [itemId, quantity]}
-        {@const itemInfo = gameEngine.getItemById(itemId)}
-        {#if itemInfo && quantity > 0 && itemInfo.type !== 'material'}
-          <div class="inventory-item" data-type={itemInfo.type}>
-            <div class="item-header">
-              <span class="item-name">{itemInfo.name}</span>
-              <span class="item-quantity">x{Math.floor(quantity)}</span>
-            </div>
+      <h4>Available Items:</h4>
+      <div class="inventory-grid">
+        {#each Object.entries(pawn.inventory.items || {}) as [itemId, quantity]}
+          {@const itemInfo = gameEngine.getItemById(itemId)}
+          {#if itemInfo && quantity > 0 && itemInfo.type !== 'material'}
+            <div class="inventory-item" data-type={itemInfo.type}>
+              <div class="item-header">
+                <span class="item-name">{itemInfo.name}</span>
+                <span class="item-quantity">x{Math.floor(quantity)}</span>
+              </div>
 
-            <p class="item-description">{itemInfo.description}</p>
+              <p class="item-description">{itemInfo.description}</p>
 
-            <div class="item-actions">
-              {#if itemInfo.type === 'consumable'}
-                <button class="use-btn" on:click={() => useConsumableItem(pawn.id, itemId)}>
-                  Use
-                </button>
-              {:else if ['weapon', 'armor', 'tool'].includes(itemInfo.type)}
-                <button
-                  class="equip-btn"
-                  class:loading={equipmentLoading}
-                  on:click={() => equipPawnItem(pawn.id, itemId)}
-                  disabled={!canEquipPawnItem(pawn, itemId) || equipmentLoading}
-                >
-                  {equipmentLoading ? 'Equipping...' : 'Equip'}
-                </button>
-              {/if}
+              <div class="item-actions">
+                {#if itemInfo.type === 'consumable'}
+                  <button class="use-btn" on:click={() => useConsumableItem(pawn.id, itemId)}>
+                    Use
+                  </button>
+                {:else if ['weapon', 'armor', 'tool'].includes(itemInfo.type)}
+                  <button
+                    class="equip-btn"
+                    class:loading={equipmentLoading}
+                    on:click={() => equipPawnItem(pawn.id, itemId)}
+                    disabled={!canEquipPawnItem(pawn, itemId) || equipmentLoading}
+                  >
+                    {equipmentLoading ? 'Equipping...' : 'Equip'}
+                  </button>
+                {/if}
+              </div>
             </div>
-          </div>
-        {/if}
-      {/each}
-    </div>
-    <PawnInventory {pawn} />
+          {/if}
+        {/each}
+      </div>
+      <PawnInventory {pawn} />
     </div>
   </div>
 </div>

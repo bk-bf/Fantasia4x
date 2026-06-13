@@ -1,6 +1,7 @@
 import eventData from '../database/events.jsonc';
 import { ticksFromSeconds } from './time';
 import { rng } from './rng';
+import { addToStockpileZone, consumeFromStockpiles } from './GameState';
 export interface EventConsequence {
   id: string;
   description: string;
@@ -61,15 +62,15 @@ export interface GameEvent {
   title: string;
   description: string;
   category:
-  | 'environmental'
-  | 'discovery'
-  | 'social'
-  | 'disaster'
-  | 'opportunity'
-  | 'wildlife'
-  | 'weather'
-  | 'supernatural'
-  | 'political';
+    | 'environmental'
+    | 'discovery'
+    | 'social'
+    | 'disaster'
+    | 'opportunity'
+    | 'wildlife'
+    | 'weather'
+    | 'supernatural'
+    | 'political';
   severity: 'trivial' | 'minor' | 'moderate' | 'major' | 'critical' | 'catastrophic';
   rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
   weight: number;
@@ -121,16 +122,16 @@ export interface ActivityLogEntry {
   turn: number;
   timestamp: Date;
   type:
-  | 'work'
-  | 'building'
-  | 'crafting'
-  | 'event'
-  | 'pawn_action'
-  | 'research'
-  | 'exploration'
-  | 'system'
-  | 'combat'
-  | 'entity';
+    | 'work'
+    | 'building'
+    | 'crafting'
+    | 'event'
+    | 'pawn_action'
+    | 'research'
+    | 'exploration'
+    | 'system'
+    | 'combat'
+    | 'entity';
   actor?: string; // Pawn ID or 'system'
   action: string;
   target?: string;
@@ -263,19 +264,19 @@ export class EventSystem {
   private applyConsequence(consequence: EventConsequence, gameState: any): any {
     let newState = { ...gameState };
 
-    // Apply resource effects
+    // Apply resource effects — ADR-016: against the physical stockpile, not the legacy gs.item pool.
     if (consequence.effects.resources) {
-      newState.item = newState.item.map((item: any) => {
-        const resourceEffect = consequence.effects.resources![item.id];
-        if (resourceEffect) {
-          const change = this.rollBetween(resourceEffect.min, resourceEffect.max);
-          const scaledChange = consequence.modifiers?.populationScaling
-            ? Math.floor(change * Math.sqrt(newState.pawns.length))
-            : change;
-          return { ...item, amount: Math.max(0, item.amount + scaledChange) };
+      for (const [itemId, resourceEffect] of Object.entries(consequence.effects.resources)) {
+        const change = this.rollBetween((resourceEffect as any).min, (resourceEffect as any).max);
+        const scaledChange = consequence.modifiers?.populationScaling
+          ? Math.floor(change * Math.sqrt(newState.pawns.length))
+          : change;
+        if (scaledChange > 0) {
+          newState = addToStockpileZone(newState, null, { [itemId]: scaledChange });
+        } else if (scaledChange < 0) {
+          newState = consumeFromStockpiles(newState, { [itemId]: -scaledChange });
         }
-        return item;
-      });
+      }
     }
 
     // Apply pawn effects

@@ -104,31 +104,30 @@
         {@const expanded = expandedId === m.id}
         <div class="table-row" class:expanded>
           <div class="row-line">
-          <button class="row-toggle" onclick={() => toggleExpand(m.id)} title="health details">
-            {expanded ? '▾' : '▸'}
-          </button>
-          <button
-            class="row-main"
-            onclick={() => focus(m)}
-            title="jump camera to entity"
-          >
-            <span class="col-name">
-              <span class="glyph" style="color: {def ? rgb(def.fg) : 'var(--text-dim)'}"
-                >{m.entityClass === 'mob' ? '✦' : '◆'}</span
+            <button class="row-toggle" onclick={() => toggleExpand(m.id)} title="health details">
+              {expanded ? '▾' : '▸'}
+            </button>
+            <button class="row-main" onclick={() => focus(m)} title="jump camera to entity">
+              <span class="col-name">
+                <span class="glyph" style="color: {def ? rgb(def.fg) : 'var(--text-dim)'}"
+                  >{m.entityClass === 'mob' ? '✦' : '◆'}</span
+                >
+                <span class="ename">{def?.name ?? m.creatureId}</span>
+              </span>
+              <span class="col-type col-type--{m.entityClass}"
+                >{m.entityClass === 'mob' ? 'hostile' : 'neutral'}</span
               >
-              <span class="ename">{def?.name ?? m.creatureId}</span>
-            </span>
-            <span class="col-type col-type--{m.entityClass}"
-              >{m.entityClass === 'mob' ? 'hostile' : 'neutral'}</span
-            >
-            <span class="col-blood" style="color:{bloodColor(bp)}">{bp}%</span>
-            <span class="col-limb" style="color:{wl ? limbColor(wl.health) : 'var(--text-muted)'}">
-              {wl ? `${wl.name} ${wl.health}%` : '—'}
-            </span>
-            <span class="col-pain" style="color:{painColor(pp)}">{pp}%</span>
-            <span class="col-state">{m.state}</span>
-            <span class="col-pos">({m.x},{m.y})</span>
-          </button>
+              <span class="col-blood" style="color:{bloodColor(bp)}">{bp}%</span>
+              <span
+                class="col-limb"
+                style="color:{wl ? limbColor(wl.health) : 'var(--text-muted)'}"
+              >
+                {wl ? `${wl.name} ${wl.health}%` : '—'}
+              </span>
+              <span class="col-pain" style="color:{painColor(pp)}">{pp}%</span>
+              <span class="col-state">{m.state}</span>
+              <span class="col-pos">({m.x},{m.y})</span>
+            </button>
           </div>
 
           {#if expanded}

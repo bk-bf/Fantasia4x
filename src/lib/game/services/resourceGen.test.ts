@@ -60,7 +60,9 @@ describe('ResourceGenerator — mineral_deposit guarantee + clustering', () => {
       // tiles carrying an ore/coal/salt mineral (mountain_wall on the other rocky tiles is excluded)
       const oreTiles = map
         .flat()
-        .filter((t) => Object.keys(t.resources).some((k) => t.resources[k] > 0 && VALID_FILL.has(k)));
+        .filter((t) =>
+          Object.keys(t.resources).some((k) => t.resources[k] > 0 && VALID_FILL.has(k))
+        );
       expect(oreTiles.length, `cluster size seed ${seed}`).toBeGreaterThanOrEqual(3);
       expect(oreTiles.length).toBeLessThanOrEqual(8);
       const minerals = new Set(
@@ -81,8 +83,8 @@ describe('ResourceGenerator — mineral_deposit guarantee + clustering', () => {
     expect(VALID_FILL.has(leftId)).toBe(true);
     expect(VALID_FILL.has(rightId)).toBe(true);
     // left blob uniform
-    for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++)
-      expect(Object.keys(map[y][x].resources)).toEqual([leftId]);
+    for (let y = 0; y < 4; y++)
+      for (let x = 0; x < 4; x++) expect(Object.keys(map[y][x].resources)).toEqual([leftId]);
   });
 
   it('the mineral_deposit pool is exactly ore / coal / salt (no stone or crystal)', () => {

@@ -1,3 +1,44 @@
+<script module lang="ts">
+  // Shared per-sheet canvas cache (magenta → transparent), loaded lazily.
+  const _sheetCache = new Map<string, HTMLCanvasElement | null>();
+  const _sheetWaiters = new Map<string, Set<() => void>>();
+
+  function getSheet(name: string, onReady: () => void): HTMLCanvasElement | null {
+    const cached = _sheetCache.get(name);
+    if (cached) return cached;
+    if (_sheetCache.has(name)) {
+      // still loading — queue a redraw for when it's ready
+      (
+        _sheetWaiters.get(name) ?? (_sheetWaiters.set(name, new Set()), _sheetWaiters.get(name)!)
+      ).add(onReady);
+      return null;
+    }
+    _sheetCache.set(name, null);
+    _sheetWaiters.set(name, new Set([onReady]));
+    if (typeof window === 'undefined') return null;
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement('canvas');
+      c.width = img.width;
+      c.height = img.height;
+      const cx = c.getContext('2d', { willReadFrequently: true });
+      if (!cx) return;
+      cx.drawImage(img, 0, 0);
+      const data = cx.getImageData(0, 0, c.width, c.height);
+      const d = data.data;
+      for (let i = 0; i < d.length; i += 4) {
+        if (d[i] === 255 && d[i + 1] === 0 && d[i + 2] === 255) d[i + 3] = 0;
+      }
+      cx.putImageData(data, 0, 0);
+      _sheetCache.set(name, c);
+      _sheetWaiters.get(name)?.forEach((fn) => fn());
+      _sheetWaiters.delete(name);
+    };
+    img.src = `/tilesets/bitlands_${name}.bmp`;
+    return null;
+  }
+</script>
+
 <!-- SpriteIcon.svelte — renders one cell of a bitlands sprite sheet (12×18, 16-col) as a small
      tinted canvas. Feed it a def's `charSpans`; used for building/crafting card icons. -->
 <script lang="ts">
@@ -14,9 +55,7 @@
   const COLS = 16;
 
   // Module-level cache of magenta-keyed sheet canvases, shared across all icons.
-  const span = $derived(
-    (charSpans ?? []).find((s) => s.sheet && (s.id != null || s.from != null))
-  );
+  const span = $derived((charSpans ?? []).find((s) => s.sheet && (s.id != null || s.from != null)));
   const literal = $derived((charSpans ?? []).find((s) => s.literal)?.literal ?? null);
 
   let canvasEl: HTMLCanvasElement | undefined = $state();
@@ -58,47 +97,6 @@
 {:else if literal}
   <span class="sprite-literal" style="font-size:{px}px; color:{tint ?? 'inherit'}">{literal}</span>
 {/if}
-
-<script module lang="ts">
-  // Shared per-sheet canvas cache (magenta → transparent), loaded lazily.
-  const _sheetCache = new Map<string, HTMLCanvasElement | null>();
-  const _sheetWaiters = new Map<string, Set<() => void>>();
-
-  function getSheet(name: string, onReady: () => void): HTMLCanvasElement | null {
-    const cached = _sheetCache.get(name);
-    if (cached) return cached;
-    if (_sheetCache.has(name)) {
-      // still loading — queue a redraw for when it's ready
-      (_sheetWaiters.get(name) ?? (_sheetWaiters.set(name, new Set()), _sheetWaiters.get(name)!)).add(
-        onReady
-      );
-      return null;
-    }
-    _sheetCache.set(name, null);
-    _sheetWaiters.set(name, new Set([onReady]));
-    if (typeof window === 'undefined') return null;
-    const img = new Image();
-    img.onload = () => {
-      const c = document.createElement('canvas');
-      c.width = img.width;
-      c.height = img.height;
-      const cx = c.getContext('2d', { willReadFrequently: true });
-      if (!cx) return;
-      cx.drawImage(img, 0, 0);
-      const data = cx.getImageData(0, 0, c.width, c.height);
-      const d = data.data;
-      for (let i = 0; i < d.length; i += 4) {
-        if (d[i] === 255 && d[i + 1] === 0 && d[i + 2] === 255) d[i + 3] = 0;
-      }
-      cx.putImageData(data, 0, 0);
-      _sheetCache.set(name, c);
-      _sheetWaiters.get(name)?.forEach((fn) => fn());
-      _sheetWaiters.delete(name);
-    };
-    img.src = `/tilesets/bitlands_${name}.bmp`;
-    return null;
-  }
-</script>
 
 <style>
   .sprite-icon {

@@ -31,9 +31,14 @@
   import { glyph, SHEET } from '$lib/webgl/tilesets.js';
   import { uiState } from '$lib/stores/uiState.js';
   import { worldEffects } from '$lib/stores/worldEffects.js';
-  import { combatFeedback, FLOAT_TTL_MS, type CombatTextEvent } from '$lib/stores/combatFeedback.js';
+  import {
+    combatFeedback,
+    FLOAT_TTL_MS,
+    type CombatTextEvent
+  } from '$lib/stores/combatFeedback.js';
   import { renderFps } from '$lib/stores/perfStats.js';
   import { buildingService } from '$lib/game/services/BuildingService.js';
+  import { consumeFromStockpiles } from '$lib/game/core/GameState.js';
   import { resolveCharSpans, BIOMES, SUBTERRAINS } from '$lib/game/core/Terrains.js';
   import { resourceObjectService } from '$lib/game/services/ResourceObjectService.js';
   import { getCreatureById } from '$lib/game/core/Creatures.js';
@@ -51,7 +56,13 @@
 
   const ITEMS_DATABASE = itemsData as unknown as Item[];
   const FUEL_ITEMS = ITEMS_DATABASE.filter((item) => (item.fuelValue ?? 0) > 0);
-  const DEFAULT_FUEL_FILTER_IDS = ['branch', 'pine_log', 'dry_firewood', 'green_firewood', 'plant_fiber'];
+  const DEFAULT_FUEL_FILTER_IDS = [
+    'branch',
+    'pine_log',
+    'dry_firewood',
+    'green_firewood',
+    'plant_fiber'
+  ];
   const HUD_SPRITE_W = 12;
   const HUD_SPRITE_H = 18;
   const HUD_ICON_TINT = { r: 232, g: 136, b: 40, a: 0.98 };
@@ -430,7 +441,6 @@
     }));
   }
 
-
   function buildPawnCard(pawn: Pawn, selected: boolean): SelectedEntityModel {
     const bars: EntityBar[] = [
       { label: 'HUNGER', value: pawn.needs.hunger, warn: pawn.needs.hunger > 60 },
@@ -470,9 +480,7 @@
       job: pawn.activeJob
         ? {
             text: `→ ${pawnStateLabel(pawn)}${
-              pawn.activeJob.resourceId
-                ? ` ${jobResourceName(pawn.activeJob.resourceId)}`
-                : ''
+              pawn.activeJob.resourceId ? ` ${jobResourceName(pawn.activeJob.resourceId)}` : ''
             }`
           }
         : { text: '→ Idle', idle: true },
@@ -493,8 +501,7 @@
             {
               label: cameraFollowPawnId === pawn.id ? 'UNFOLLOW' : 'FOLLOW',
               active: cameraFollowPawnId === pawn.id,
-              onClick: () =>
-                uiState.setFollowPawn(cameraFollowPawnId === pawn.id ? null : pawn.id)
+              onClick: () => uiState.setFollowPawn(cameraFollowPawnId === pawn.id ? null : pawn.id)
             },
             {
               label: pawn.drafted ? 'DRAFTED' : 'DRAFT',
@@ -591,8 +598,7 @@
             {
               label: cameraFollowMobId === mob.id ? 'UNFOLLOW' : 'FOLLOW',
               active: cameraFollowMobId === mob.id,
-              onClick: () =>
-                uiState.setFollowMob(cameraFollowMobId === mob.id ? null : mob.id)
+              onClick: () => uiState.setFollowMob(cameraFollowMobId === mob.id ? null : mob.id)
             },
             {
               label: mob.markedForHunt ? 'UNQUEUE' : 'HUNT',
@@ -670,9 +676,7 @@
     } else if (selectedBuilding.deconstructQueued) {
       const dDone = selectedBuilding.deconstructWorkDone ?? 0;
       const dReq = selectedBuilding.deconstructWorkRequired ?? 1;
-      lines.push(
-        `[${jobProgressBar(dReq > 0 ? dDone / dReq : 0)}] ${dDone}/${dReq} work`
-      );
+      lines.push(`[${jobProgressBar(dReq > 0 ? dDone / dReq : 0)}] ${dDone}/${dReq} work`);
       lines.push('⊢ demolishing…');
     } else {
       const cost = bDef?.buildingCost ?? {};
@@ -1445,15 +1449,17 @@
       const minY = Math.min(zoneAnchorY, zoneEndY);
       const maxY = Math.max(zoneAnchorY, zoneEndY);
       // Drink/wash zones only commit on water — preview just those tiles, not the whole rect.
-      const waterOnly =
-        designationTypeActive === 'drink' || designationTypeActive === 'wash';
+      const waterOnly = designationTypeActive === 'drink' || designationTypeActive === 'wash';
       ctx.save();
       if (waterOnly && !zoneEraseMode) {
         ctx.fillStyle = 'rgba(80, 200, 255, 0.30)';
         for (let ry = Math.max(minY, viewY); ry <= maxY; ry++) {
           for (let rx = Math.max(minX, viewX); rx <= maxX; rx++) {
             const t = worldMap[ry]?.[rx];
-            if (!t || !(t.type === 'water' || t.terrainType === 'river' || t.terrainType === 'lake'))
+            if (
+              !t ||
+              !(t.type === 'water' || t.terrainType === 'river' || t.terrainType === 'lake')
+            )
               continue;
             ctx.fillRect(
               (rx - viewX) * tileWidth,
@@ -2214,13 +2220,12 @@
             let current = state;
             for (const key of blueprintDragTiles) {
               const [tx, ty] = key.split(',').map(Number);
-              const newItems = current.item.map((item) => {
-                const cost =
-                  (buildingDef as unknown as { buildingCost?: Record<string, number> })
-                    .buildingCost?.[item.id] ?? 0;
-                return { ...item, amount: Math.max(0, item.amount - cost) };
-              });
-              current = buildingService.placeBuilding(bid, tx, ty, { ...current, item: newItems });
+              // ADR-016: pay the building cost from the physical stockpile (resolves category:
+              // slots), not the legacy gs.item pool — matching BuildingMenu's placement path.
+              const cost =
+                buildingService.resolveBuildingCost(bid, current) ?? buildingDef.buildingCost;
+              current = consumeFromStockpiles(current, cost);
+              current = buildingService.placeBuilding(bid, tx, ty, current);
             }
             return current;
           });
@@ -2341,17 +2346,17 @@
           (m) =>
             m.creatureId === huntDragCreatureId &&
             m.state !== 'Corpse' &&
-            m.x >= minX && m.x <= maxX &&
-            m.y >= minY && m.y <= maxY
+            m.x >= minX &&
+            m.x <= maxX &&
+            m.y >= minY &&
+            m.y <= maxY
         )
         .map((m) => m.id)
     );
     if (ids.size > 0) {
       gameState.updateWithSave((state) => ({
         ...state,
-        mobs: (state.mobs ?? []).map((m) =>
-          ids.has(m.id) ? { ...m, markedForHunt: true } : m
-        )
+        mobs: (state.mobs ?? []).map((m) => (ids.has(m.id) ? { ...m, markedForHunt: true } : m))
       }));
     }
     huntDragMode = false;
@@ -2868,22 +2873,29 @@
     {@const maxDur = itemDef?.maxDurability ?? 100}
     {@const freshPct =
       itemDef?.decaySeconds && itemDef.decaySeconds > 0
-        ? Math.round(
-            Math.max(0, 1 - (hoverDroppedItem.decayAcc ?? 0) / itemDef.decaySeconds) * 100
-          )
+        ? Math.round(Math.max(0, 1 - (hoverDroppedItem.decayAcc ?? 0) / itemDef.decaySeconds) * 100)
         : null}
     {@const durPct = Math.round(
       (Math.min(maxDur, hoverDroppedItem.durability ?? maxDur) / maxDur) * 100
     )}
     <div class="tile-hud tile-hud--item">
       <span class="item-glyph">★</span>
-      <span class="item-name">{itemDef?.name ?? hoverDroppedItem.resourceId.replace(/_/g, ' ')}</span>
+      <span class="item-name"
+        >{itemDef?.name ?? hoverDroppedItem.resourceId.replace(/_/g, ' ')}</span
+      >
       <span class="item-qty">×{hoverDroppedItem.quantity}</span>
       {#if freshPct !== null}
-        <StatBar label="FRESH" value={freshPct} color={itemBarColor(freshPct)} valueText="{freshPct}%" />
+        <StatBar
+          label="FRESH"
+          value={freshPct}
+          color={itemBarColor(freshPct)}
+          valueText="{freshPct}%"
+        />
       {/if}
       <StatBar label="COND" value={durPct} color={itemBarColor(durPct)} valueText="{durPct}%" />
-      <div class="item-hint">{hoverDroppedItem.stored ? 'stored' : 'dropped item — awaiting hauler'}</div>
+      <div class="item-hint">
+        {hoverDroppedItem.stored ? 'stored' : 'dropped item — awaiting hauler'}
+      </div>
     </div>
   {:else if hoverTile}
     <div class="tile-hud">

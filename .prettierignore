@@ -17,5 +17,10 @@ yarn.lock
 *.jsonc
 *.json
 
+# Markdown (docs / specs / AGENTS / CLAUDE / README) is hand-authored with manually aligned
+# tables — the primary working surface here. Prettier reflows tables + prose and fights that
+# layout, so it must not touch markdown. Format these by hand.
+*.md
+
 # Generated wasm bindings
 src/lib/spatial-core-pkg

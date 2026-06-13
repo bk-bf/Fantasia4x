@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Fantasia4x — Codebase Graph</title>
+<style>
+  :root {
+    --bg: #0e1116;
+    --bg-panel: #161b22;
+    --bg-elev: #1c232d;
+    --border: #2a313c;
+    --fg: #d7dce3;
+    --fg-dim: #8b94a3;
+    --accent: #f5a623;
+    --accent2: #57c7ff;
+    --dim-opacity: 0.12;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font: 13px/1.5 'JetBrains Mono', 'SF Mono', 'Fira Code', ui-monospace, Menlo, Consolas, monospace;
+    overflow: hidden;
+  }
+  #app { display: grid; grid-template-columns: 290px 1fr 0px; height: 100vh; transition: grid-template-columns .18s; }
+  #app.detail-open { grid-template-columns: 290px 1fr 360px; }
+
+  /* ---------- sidebar ---------- */
+  aside {
+    background: var(--bg-panel);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; min-height: 0;
+  }
+  aside header { padding: 14px 16px; border-bottom: 1px solid var(--border); }
+  aside header h1 { margin: 0; font-size: 15px; letter-spacing: .5px; }
+  aside header h1 b { color: var(--accent); }
+  .stats { color: var(--fg-dim); font-size: 11px; margin-top: 4px; }
+  .controls { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 10px; }
+  .controls label { font-size: 11px; color: var(--fg-dim); text-transform: uppercase; letter-spacing: .5px; }
+  input[type=search] {
+    width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--fg);
+    padding: 7px 9px; border-radius: 6px; font-family: inherit; font-size: 12px;
+  }
+  input[type=search]:focus { outline: none; border-color: var(--accent2); }
+  .seg { display: flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+  .seg button { flex: 1; background: var(--bg); color: var(--fg-dim); border: 0; padding: 7px 4px; font-family: inherit; font-size: 11px; cursor: pointer; }
+  .seg button.on { background: var(--accent); color: #11151b; font-weight: 600; }
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .switch { position: relative; width: 40px; height: 22px; flex: none; }
+  .switch input { display: none; }
+  .switch span { position: absolute; inset: 0; background: var(--bg); border: 1px solid var(--border); border-radius: 11px; transition: .15s; }
+  .switch span::after { content: ''; position: absolute; width: 16px; height: 16px; left: 2px; top: 2px; background: var(--fg-dim); border-radius: 50%; transition: .15s; }
+  .switch input:checked + span { background: var(--accent2); border-color: var(--accent2); }
+  .switch input:checked + span::after { left: 20px; background: #11151b; }
+
+  .modlist { overflow-y: auto; flex: 1; padding: 6px 8px; }
+  .grp-h { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--fg-dim); padding: 12px 8px 4px; display: flex; align-items: center; gap: 6px; }
+  .grp-dot { width: 9px; height: 9px; border-radius: 2px; flex: none; }
+  .mod-item { padding: 5px 10px 5px 22px; border-radius: 5px; cursor: pointer; color: var(--fg); display: flex; justify-content: space-between; gap: 6px; }
+  .mod-item:hover { background: var(--bg-elev); }
+  .mod-item.active { background: var(--accent); color: #11151b; }
+  .mod-item .cnt { color: var(--fg-dim); font-size: 11px; }
+  .mod-item.active .cnt { color: #11151b; }
+
+  /* ---------- graph area ---------- */
+  main { position: relative; min-width: 0; overflow: hidden; background:
+      radial-gradient(circle at 1px 1px, #1a2029 1px, transparent 0) 0 0 / 26px 26px var(--bg); }
+  #crumbs { position: absolute; top: 0; left: 0; right: 0; z-index: 5; padding: 10px 14px;
+    background: linear-gradient(var(--bg), transparent); display: flex; gap: 8px; align-items: center; font-size: 12px; pointer-events: none; }
+  #crumbs a { color: var(--accent2); cursor: pointer; pointer-events: auto; }
+  #crumbs .sep { color: var(--fg-dim); }
+  #crumbs .cur { color: var(--fg); }
+  #graph { width: 100%; height: 100%; overflow: hidden; cursor: grab; }
+  #graph.panning { cursor: grabbing; }
+  #graph svg { max-width: none !important; height: auto !important; }
+  #viewport { transform-origin: 0 0; will-change: transform; }
+  #hint { position: absolute; bottom: 12px; left: 14px; color: var(--fg-dim); font-size: 11px; z-index: 5; }
+  #zoomctl { position: absolute; bottom: 12px; right: 14px; z-index: 5; display: flex; gap: 6px; }
+  #zoomctl button { background: var(--bg-panel); border: 1px solid var(--border); color: var(--fg); width: 30px; height: 30px; border-radius: 6px; cursor: pointer; font-size: 16px; }
+  #zoomctl button:hover { border-color: var(--accent2); }
+  #loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--fg-dim); }
+
+  /* ---------- detail panel ---------- */
+  #detail { background: var(--bg-panel); border-left: 1px solid var(--border); overflow-y: auto; padding: 0; }
+  #detail .dh { padding: 14px 16px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--bg-panel); }
+  #detail .dh .kind { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--accent); }
+  #detail .dh h2 { margin: 4px 0 0; font-size: 14px; word-break: break-word; }
+  #detail .dh .close { position: absolute; top: 12px; right: 12px; cursor: pointer; color: var(--fg-dim); font-size: 18px; line-height: 1; }
+  #detail .body { padding: 14px 16px; }
+  #detail .row { margin-bottom: 14px; }
+  #detail .row .lbl { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--fg-dim); margin-bottom: 4px; }
+  #detail .sig { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; font-size: 12px; color: var(--accent2); word-break: break-word; white-space: pre-wrap; }
+  #detail .desc { color: var(--fg); }
+  #detail a.jump { color: var(--accent2); cursor: pointer; text-decoration: none; }
+  #detail a.jump:hover { text-decoration: underline; }
+  #detail ul { margin: 0; padding-left: 0; list-style: none; }
+  #detail li { padding: 4px 0; border-bottom: 1px solid var(--border); cursor: pointer; }
+  #detail li:hover { color: var(--accent); }
+  #detail li .arr { color: var(--fg-dim); margin: 0 6px; }
+  .empty-detail { padding: 30px 18px; color: var(--fg-dim); text-align: center; }
+
+  /* svg interaction states (applied to mermaid output) */
+  svg .node, svg .edgePaths > path, svg .edgeLabel { transition: opacity .12s; }
+  svg.has-focus .node { opacity: var(--dim-opacity); }
+  svg.has-focus .edgePaths > path { opacity: var(--dim-opacity); }
+  svg.has-focus .edgeLabel { opacity: var(--dim-opacity); }
+  svg .node.hot { opacity: 1 !important; }
+  svg .node.hot rect, svg .node.hot polygon, svg .node.hot circle { filter: drop-shadow(0 0 4px var(--accent)); }
+  svg .node.origin rect, svg .node.origin polygon, svg .node.origin circle { stroke: var(--accent) !important; stroke-width: 3px !important; }
+  svg .edgePaths > path.hot { opacity: 1 !important; stroke: var(--accent) !important; stroke-width: 2.5px !important; }
+  svg .edgePaths > path.hot-in { stroke: var(--accent2) !important; }
+  svg .edgeLabel.hot { opacity: 1 !important; }
+  svg .node { cursor: pointer; }
+  svg .edgePaths > path { cursor: pointer; pointer-events: stroke; }
+  svg .node tspan { pointer-events: none; }
+</style>
+</head>
+<body>
+<div id="app">
+  <aside>
+    <header>
+      <h1><b>Fantasia</b>4x · code graph</h1>
+      <div class="stats" id="statline"></div>
+    </header>
+    <div class="controls">
+      <div>
+        <label>View</label>
+        <div class="seg" id="viewseg">
+          <button data-view="overview" class="on">Architecture</button>
+          <button data-view="module">Module</button>
+        </div>
+      </div>
+      <div class="toggle-row">
+        <label for="lbltoggle" style="margin:0">Plain-English labels</label>
+        <span class="switch"><input type="checkbox" id="lbltoggle"><span></span></span>
+      </div>
+      <div class="toggle-row" id="neighrow" style="display:none">
+        <label for="neightoggle" style="margin:0">Show cross-module calls</label>
+        <span class="switch"><input type="checkbox" id="neightoggle" checked><span></span></span>
+      </div>
+      <div>
+        <input type="search" id="search" placeholder="Filter modules…" />
+      </div>
+    </div>
+    <div class="modlist" id="modlist"></div>
+  </aside>
+
+  <main>
+    <div id="crumbs"></div>
+    <div id="graph"><div id="viewport"></div></div>
+    <div id="loading">rendering graph…</div>
+    <div id="hint">drag to pan · scroll to zoom · hover to trace · click for detail</div>
+    <div id="zoomctl">
+      <button id="zin" title="Zoom in">+</button>
+      <button id="zout" title="Zoom out">−</button>
+      <button id="zfit" title="Fit">⤢</button>
+    </div>
+  </main>
+
+  <div id="detail"><div class="empty-detail">Select a node or edge.</div></div>
+</div>
+
+<script type="application/json" id="graphdata">/*__GRAPH__*/</script>
+<script type="application/json" id="descdata">/*__DESC__*/</script>
+
+<script type="module">
+import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs';
+
+const GRAPH = JSON.parse(document.getElementById('graphdata').textContent);
+const DESC  = JSON.parse(document.getElementById('descdata').textContent);
+
+mermaid.initialize({
+  startOnLoad: false,
+  theme: 'dark',
+  securityLevel: 'loose',
+  flowchart: { useMaxWidth: false, htmlLabels: false, curve: 'basis', nodeSpacing: 45, rankSpacing: 70 },
+  themeVariables: {
+    fontFamily: 'JetBrains Mono, monospace', fontSize: '13px',
+    lineColor: '#5b6675', mainBkg: '#1c232d', primaryBorderColor: '#3a4453',
+    clusterBkg: '#13181f', clusterBorder: '#2a313c', primaryTextColor: '#d7dce3',
+  },
+});
+
+// ----- group colours -----
+const GROUP_COLORS = {
+  core: '#57c7ff', services: '#f5a623', systems: '#ff6b9d', stores: '#7ee787',
+  entities: '#c792ea', utils: '#8b94a3', dev: '#4b5563', webgl: '#5cd9c7', world: '#e0af68',
+};
+const groupColor = (g) => GROUP_COLORS[g] || '#8b94a3';
+
+// ----- indexes -----
+const nodeById = new Map(GRAPH.nodes.map(n => [n.id, n]));
+const modByName = new Map(GRAPH.moduleNodes.map(m => [m.module, m]));
+const outAdj = new Map();   // nodeId -> [edgeIndex...]
+const inAdj  = new Map();
+GRAPH.edges.forEach((e, i) => {
+  (outAdj.get(e.from) || outAdj.set(e.from, []).get(e.from)).push(i);
+  (inAdj.get(e.to)  || inAdj.set(e.to,  []).get(e.to)).push(i);
+});
+const modOut = new Map(); const modIn = new Map();
+GRAPH.moduleEdges.forEach((e, i) => {
+  (modOut.get(e.from) || modOut.set(e.from, []).get(e.from)).push(i);
+  (modIn.get(e.to)  || modIn.set(e.to,  []).get(e.to)).push(i);
+});
+
+// ----- description resolution -----
+function fnLabel(node, plain) {
+  if (!plain) return node.short;
+  const key = `${node.module}::${node.short}`;
+  return DESC.functions[key] || node.doc || node.humanized;
+}
+function fnDesc(node) {
+  const key = `${node.module}::${node.short}`;
+  return DESC.functions[key] || node.doc || node.humanized + ' (no doc comment — description inferred from name).';
+}
+function modLabel(mod, plain) {
+  if (!plain) return mod.module.replace(/^game\//, '');
+  const d = DESC.modules[mod.module];
+  return d ? d.split('. ')[0] + '.' : mod.module.replace(/^game\//, '');
+}
+function modDesc(mod) {
+  return DESC.modules[mod.module] || `${mod.fns} functions. No curated description yet.`;
+}
+
+// ----- mermaid label escaping -----
+function esc(s) { return s.replace(/["\n]/g, ' ').replace(/[#;]/g, ' ').trim(); }
+function wrap(s, n = 28) {
+  if (s.length <= n) return esc(s);
+  const words = s.split(' '); const lines = []; let cur = '';
+  for (const w of words) {
+    if ((cur + ' ' + w).trim().length > n) { lines.push(cur.trim()); cur = w; }
+    else cur += ' ' + w;
+    if (lines.length >= 3) break;
+  }
+  if (cur && lines.length < 3) lines.push(cur.trim());
+  let out = lines.join('\n');
+  if (out.length < s.length) out = out.replace(/\s*$/, '…');
+  return esc(out).replace(/\n/g, '<br/>');
+}
+
+// ----- state -----
+const state = { view: 'overview', module: null, plain: false, neighbors: true };
+let RENDER = null; // { mNodes: Map(svgKey->graphId), eList: [{from,to,idx,kind}] }
+
+// =====================================================================
+// Build mermaid source for a view
+// =====================================================================
+function buildOverview() {
+  // group module nodes into subgraphs
+  const groups = {};
+  for (const m of GRAPH.moduleNodes) (groups[m.group] ||= []).push(m);
+  let src = 'flowchart LR\n';
+  const idMap = new Map(); // module -> mNN
+  let i = 0;
+  for (const m of GRAPH.moduleNodes) idMap.set(m.module, 'm' + (i++));
+  const styleLines = [];
+  for (const [grp, mods] of Object.entries(groups)) {
+    src += `subgraph G_${grp}["${grp.toUpperCase()}"]\n`;
+    for (const m of mods) {
+      const sid = idMap.get(m.module);
+      const lbl = state.plain ? wrap(modLabel(m, true), 30) : `${m.module.split('/').pop()}<br/><small>${m.fns} fn</small>`;
+      src += `  ${sid}["${lbl}"]\n`;
+      styleLines.push(`style ${sid} fill:${shade(groupColor(grp))},stroke:${groupColor(grp)},color:#e6edf3`);
+    }
+    src += 'end\n';
+  }
+  const eList = [];
+  GRAPH.moduleEdges.forEach((e) => {
+    const a = idMap.get(e.from), b = idMap.get(e.to);
+    if (!a || !b) return;
+    const w = e.count >= 6 ? '==>' : '-->';
+    src += `${a} ${w} ${b}\n`;
+    eList.push({ from: e.from, to: e.to });
+  });
+  src += styleLines.join('\n') + '\n';
+  src += `classDef default rx:6,ry:6\n`;
+  return { src, idMap, eList, kind: 'module' };
+}
+
+function buildModule(modName) {
+  const fns = GRAPH.nodes.filter(n => n.module === modName);
+  const fnIds = new Set(fns.map(n => n.id));
+  // neighbour function nodes (1 hop) grouped by their module
+  const neigh = new Set();
+  if (state.neighbors) {
+    for (const n of fns) {
+      for (const ei of (outAdj.get(n.id) || [])) { const t = GRAPH.edges[ei].to; if (!fnIds.has(t)) neigh.add(t); }
+      for (const ei of (inAdj.get(n.id) || []))  { const f = GRAPH.edges[ei].from; if (!fnIds.has(f)) neigh.add(f); }
+    }
+  }
+  const visible = new Set([...fnIds, ...neigh]);
+  const idMap = new Map(); let i = 0;
+  for (const id of visible) idMap.set(id, 'f' + (i++));
+
+  let src = 'flowchart LR\n';
+  const styleLines = [];
+  // focused module subgraph
+  src += `subgraph FOCUS["${modName.replace(/^game\//, '')}"]\n`;
+  for (const n of fns) {
+    const sid = idMap.get(n.id);
+    src += `  ${sid}["${wrap(fnLabel(n, state.plain), state.plain ? 30 : 22)}"]\n`;
+    const c = groupColor(n.group);
+    styleLines.push(`style ${sid} fill:${shade(c)},stroke:${c},color:#e6edf3`);
+  }
+  src += 'end\n';
+  // neighbours grouped by module
+  const byMod = {};
+  for (const id of neigh) { const n = nodeById.get(id); (byMod[n.module] ||= []).push(n); }
+  let gi = 0;
+  for (const [mod, list] of Object.entries(byMod)) {
+    src += `subgraph N${gi++}["${mod.replace(/^game\//, '')}"]\n`;
+    for (const n of list) {
+      const sid = idMap.get(n.id);
+      src += `  ${sid}(["${wrap(fnLabel(n, state.plain), state.plain ? 26 : 20)}"])\n`;
+      const c = groupColor(n.group);
+      styleLines.push(`style ${sid} fill:#161b22,stroke:${c},color:${c}`);
+    }
+    src += 'end\n';
+  }
+  // edges among visible
+  const eList = [];
+  GRAPH.edges.forEach((e) => {
+    if (!visible.has(e.from) || !visible.has(e.to)) return;
+    const a = idMap.get(e.from), b = idMap.get(e.to);
+    const internal = fnIds.has(e.from) && fnIds.has(e.to);
+    src += `${a} ${internal ? '-->' : '-.->'} ${b}\n`;
+    eList.push({ from: e.from, to: e.to });
+  });
+  src += styleLines.join('\n') + '\n';
+  return { src, idMap, eList, kind: 'fn', count: visible.size };
+}
+
+function shade(hex) {
+  // darken a hex colour for fills
+  const c = hex.replace('#', '');
+  const r = Math.round(parseInt(c.slice(0, 2), 16) * 0.28);
+  const g = Math.round(parseInt(c.slice(2, 4), 16) * 0.28);
+  const b = Math.round(parseInt(c.slice(4, 6), 16) * 0.28);
+  return `#${[r, g, b].map(x => x.toString(16).padStart(2, '0')).join('')}`;
+}
+
+// =====================================================================
+// Render + wire interactivity
+// =====================================================================
+let renderSeq = 0;
+async function render() {
+  const seq = ++renderSeq;
+  const loading = document.getElementById('loading');
+  loading.style.display = 'grid';
+  let built;
+  try {
+    built = state.view === 'overview' ? buildOverview() : buildModule(state.module);
+  } catch (e) { loading.textContent = 'build error: ' + e.message; return; }
+
+  let svg;
+  try {
+    const out = await mermaid.render('mmd' + seq, built.src);
+    svg = out.svg;
+  } catch (e) {
+    if (seq !== renderSeq) return;
+    loading.textContent = 'mermaid error: ' + e.message;
+    console.error(e, built.src);
+    return;
+  }
+  if (seq !== renderSeq) return;
+
+  const vp = document.getElementById('viewport');
+  vp.innerHTML = svg;
+  loading.style.display = 'none';
+  const svgEl = vp.querySelector('svg');
+
+  // map svg node <g> -> graph id
+  const idMapRev = new Map([...built.idMap.entries()].map(([gid, sid]) => [sid, gid]));
+  RENDER = { eList: built.eList, kind: built.kind, gidBySvg: new Map(), svgByGid: new Map() };
+  svgEl.querySelectorAll('g.node').forEach((g) => {
+    const m = /flowchart-(m\d+|f\d+)-/.exec(g.id) || /(m\d+|f\d+)/.exec(g.id);
+    if (!m) return;
+    const gid = idMapRev.get(m[1]);
+    if (!gid) return;
+    RENDER.gidBySvg.set(g, gid);
+    RENDER.svgByGid.set(gid, g);
+    g.addEventListener('mouseenter', () => highlight(gid));
+    g.addEventListener('mouseleave', clearHighlight);
+    g.addEventListener('click', (ev) => { ev.stopPropagation(); onNodeClick(gid); });
+  });
+
+  // edge paths follow definition order
+  RENDER.edgeEls = [...svgEl.querySelectorAll('g.edgePaths > path')];
+  RENDER.edgeEls.forEach((p, idx) => {
+    const e = built.eList[idx]; if (!e) return;
+    p.addEventListener('mouseenter', () => highlightEdge(idx));
+    p.addEventListener('mouseleave', clearHighlight);
+    p.addEventListener('click', (ev) => { ev.stopPropagation(); onEdgeClick(idx); });
+  });
+
+  setupPanZoom(svgEl);
+  fitView();
+  renderCrumbs();
+  document.getElementById('neighrow').style.display = state.view === 'module' ? 'flex' : 'none';
+}
+
+// ---- highlight a node's flow ----
+function highlight(gid) {
+  const svgEl = document.querySelector('#viewport svg');
+  if (!svgEl) return;
+  svgEl.classList.add('has-focus');
+  const og = RENDER.svgByGid.get(gid);
+  if (og) { og.classList.add('hot', 'origin'); }
+  const neighborGids = new Set();
+  RENDER.eList.forEach((e, idx) => {
+    if (e.from === gid || e.to === gid) {
+      const p = RENDER.edgeEls[idx];
+      if (p) p.classList.add('hot', e.to === gid ? 'hot-in' : '');
+      neighborGids.add(e.from === gid ? e.to : e.from);
+    }
+  });
+  neighborGids.forEach(n => { const el = RENDER.svgByGid.get(n); if (el) el.classList.add('hot'); });
+}
+function highlightEdge(idx) {
+  const svgEl = document.querySelector('#viewport svg');
+  if (!svgEl) return;
+  svgEl.classList.add('has-focus');
+  const p = RENDER.edgeEls[idx]; if (p) p.classList.add('hot');
+  const e = RENDER.eList[idx];
+  [e.from, e.to].forEach(g => { const el = RENDER.svgByGid.get(g); if (el) el.classList.add('hot'); });
+}
+function clearHighlight() {
+  const svgEl = document.querySelector('#viewport svg');
+  if (!svgEl) return;
+  svgEl.classList.remove('has-focus');
+  svgEl.querySelectorAll('.hot, .origin, .hot-in').forEach(el => el.classList.remove('hot', 'origin', 'hot-in'));
+}
+
+// =====================================================================
+// Detail panel
+// =====================================================================
+function openDetail(html) {
+  document.getElementById('detail').innerHTML = html;
+  document.getElementById('app').classList.add('detail-open');
+  document.querySelectorAll('#detail [data-go-mod]').forEach(el =>
+    el.addEventListener('click', () => focusModule(el.dataset.goMod)));
+  document.querySelectorAll('#detail [data-go-node]').forEach(el =>
+    el.addEventListener('click', () => onNodeClick(el.dataset.goNode)));
+  const cl = document.querySelector('#detail .close');
+  if (cl) cl.addEventListener('click', closeDetail);
+}
+function closeDetail() { document.getElementById('app').classList.remove('detail-open'); }
+
+function onNodeClick(gid) {
+  if (RENDER.kind === 'module') {
+    const mod = modByName.get(gid);
+    showModuleDetail(mod);
+  } else {
+    const n = nodeById.get(gid);
+    if (n) showFnDetail(n);
+  }
+}
+function onEdgeClick(idx) {
+  const e = RENDER.eList[idx];
+  if (RENDER.kind === 'module') {
+    const fromM = modByName.get(e.from), toM = modByName.get(e.to);
+    const me = GRAPH.moduleEdges.find(x => x.from === e.from && x.to === e.to);
+    openDetail(`
+      <div class="dh"><span class="close">×</span><div class="kind">dependency</div>
+        <h2>${shortMod(e.from)} → ${shortMod(e.to)}</h2></div>
+      <div class="body">
+        <div class="row"><div class="lbl">Calls</div><div>${me ? me.count : '?'} cross-module call site(s)</div></div>
+        <div class="row"><div class="lbl">From</div><a class="jump" data-go-mod="${e.from}">${e.from}</a> — ${escapeHtml(modDesc(fromM))}</div>
+        <div class="row"><div class="lbl">To</div><a class="jump" data-go-mod="${e.to}">${e.to}</a> — ${escapeHtml(modDesc(toM))}</div>
+      </div>`);
+  } else {
+    const a = nodeById.get(e.from), b = nodeById.get(e.to);
+    openDetail(`
+      <div class="dh"><span class="close">×</span><div class="kind">call</div>
+        <h2>${escapeHtml(a.short)} → ${escapeHtml(b.short)}</h2></div>
+      <div class="body">
+        <div class="row"><div class="lbl">Caller</div><a class="jump" data-go-node="${a.id}">${escapeHtml(a.short)}</a><div class="desc">${escapeHtml(fnDesc(a))}</div></div>
+        <div class="row"><div class="lbl">Callee</div><a class="jump" data-go-node="${b.id}">${escapeHtml(b.short)}</a><div class="desc">${escapeHtml(fnDesc(b))}</div></div>
+        <div class="row"><div class="lbl">Callee location</div><a class="jump" href="${vscodeUrl(b)}">${b.file}:${b.line}</a></div>
+      </div>`);
+  }
+}
+
+function showModuleDetail(mod) {
+  const fns = GRAPH.nodes.filter(n => n.module === mod.module).sort((a, b) => b.inDegree - a.inDegree);
+  const outs = (modOut.get(mod.module) || []).map(i => GRAPH.moduleEdges[i]);
+  const ins  = (modIn.get(mod.module)  || []).map(i => GRAPH.moduleEdges[i]);
+  openDetail(`
+    <div class="dh"><span class="close">×</span><div class="kind" style="color:${groupColor(mod.group)}">${mod.group} module</div>
+      <h2>${shortMod(mod.module)}</h2></div>
+    <div class="body">
+      <div class="row"><div class="desc">${escapeHtml(modDesc(mod))}</div></div>
+      <div class="row"><div class="lbl">File</div><a class="jump" href="vscode://file/${ROOT}/${mod.file}">${mod.file}</a></div>
+      <div class="row"><a class="jump" data-go-mod="${mod.module}">▸ open ${fns.length} functions in graph</a></div>
+      <div class="row"><div class="lbl">Depends on (${outs.length})</div><ul>
+        ${outs.sort((a,b)=>b.count-a.count).map(e => `<li data-go-mod="${e.to}">${shortMod(e.to)}<span class="cnt" style="float:right;color:var(--fg-dim)">${e.count}</span></li>`).join('') || '<li style="color:var(--fg-dim);cursor:default">— none —</li>'}
+      </ul></div>
+      <div class="row"><div class="lbl">Used by (${ins.length})</div><ul>
+        ${ins.sort((a,b)=>b.count-a.count).map(e => `<li data-go-mod="${e.from}">${shortMod(e.from)}<span class="cnt" style="float:right;color:var(--fg-dim)">${e.count}</span></li>`).join('') || '<li style="color:var(--fg-dim);cursor:default">— none —</li>'}
+      </ul></div>
+      <div class="row"><div class="lbl">Top functions</div><ul>
+        ${fns.slice(0, 12).map(n => `<li data-go-node="${n.id}">${escapeHtml(n.short)}<span class="cnt" style="float:right;color:var(--fg-dim)">${n.inDegree}←</span></li>`).join('')}
+      </ul></div>
+    </div>`);
+}
+
+function showFnDetail(n) {
+  const callees = (outAdj.get(n.id) || []).map(i => nodeById.get(GRAPH.edges[i].to));
+  const callers = (inAdj.get(n.id) || []).map(i => nodeById.get(GRAPH.edges[i].from));
+  openDetail(`
+    <div class="dh"><span class="close">×</span><div class="kind" style="color:${groupColor(n.group)}">${n.kind}${n.exported ? ' · exported' : ''}</div>
+      <h2>${escapeHtml(n.short)}</h2></div>
+    <div class="body">
+      <div class="row"><div class="lbl">What it does in game</div><div class="desc">${escapeHtml(fnDesc(n))}</div></div>
+      <div class="row"><div class="lbl">Signature</div><div class="sig">${escapeHtml(n.signature)}</div></div>
+      <div class="row"><div class="lbl">Location</div><a class="jump" href="${vscodeUrl(n)}">${n.file}:${n.line}</a>
+        &nbsp;·&nbsp;<a class="jump" data-go-mod="${n.module}">module graph</a></div>
+      <div class="row"><div class="lbl">Calls (${callees.length})</div><ul>
+        ${callees.map(c => `<li data-go-node="${c.id}">${escapeHtml(c.short)}<span class="cnt" style="float:right;color:var(--fg-dim)">${shortMod(c.module)}</span></li>`).join('') || '<li style="color:var(--fg-dim);cursor:default">— leaf —</li>'}
+      </ul></div>
+      <div class="row"><div class="lbl">Called by (${callers.length})</div><ul>
+        ${callers.map(c => `<li data-go-node="${c.id}">${escapeHtml(c.short)}<span class="cnt" style="float:right;color:var(--fg-dim)">${shortMod(c.module)}</span></li>`).join('') || '<li style="color:var(--fg-dim);cursor:default">— entry point —</li>'}
+      </ul></div>
+    </div>`);
+}
+
+const ROOT = GRAPH.root || '';
+function vscodeUrl(n) { return `vscode://file/${ROOT}/${n.file}:${n.line}`; }
+function shortMod(m) { return m.replace(/^game\//, ''); }
+function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+// =====================================================================
+// Pan / zoom
+// =====================================================================
+let pz = { x: 0, y: 0, k: 1 };
+function applyPZ() { document.getElementById('viewport').style.transform = `translate(${pz.x}px,${pz.y}px) scale(${pz.k})`; }
+function setupPanZoom(svgEl) {
+  const graph = document.getElementById('graph');
+  let dragging = false, sx = 0, sy = 0, ox = 0, oy = 0;
+  graph.onmousedown = (e) => { if (e.target.closest('.node') || e.target.closest('path')) return; dragging = true; graph.classList.add('panning'); sx = e.clientX; sy = e.clientY; ox = pz.x; oy = pz.y; };
+  window.addEventListener('mousemove', (e) => { if (!dragging) return; pz.x = ox + (e.clientX - sx); pz.y = oy + (e.clientY - sy); applyPZ(); });
+  window.addEventListener('mouseup', () => { dragging = false; graph.classList.remove('panning'); });
+  graph.onwheel = (e) => {
+    e.preventDefault();
+    const r = graph.getBoundingClientRect();
+    const mx = e.clientX - r.left, my = e.clientY - r.top;
+    const f = e.deltaY < 0 ? 1.12 : 1 / 1.12;
+    const nk = Math.min(4, Math.max(0.05, pz.k * f));
+    pz.x = mx - (mx - pz.x) * (nk / pz.k); pz.y = my - (my - pz.y) * (nk / pz.k); pz.k = nk; applyPZ();
+  };
+}
+function fitView() {
+  const graph = document.getElementById('graph');
+  const svgEl = document.querySelector('#viewport svg'); if (!svgEl) return;
+  const bb = svgEl.getBBox ? svgEl.getBBox() : null;
+  const gw = graph.clientWidth, gh = graph.clientHeight;
+  const w = svgEl.width.baseVal.value || (bb && bb.width) || gw;
+  const h = svgEl.height.baseVal.value || (bb && bb.height) || gh;
+  const k = Math.min(gw / w, gh / h) * 0.92;
+  pz.k = Math.min(1.4, k); pz.x = (gw - w * pz.k) / 2; pz.y = (gh - h * pz.k) / 2; applyPZ();
+}
+document.getElementById('zin').onclick = () => { pz.k = Math.min(4, pz.k * 1.2); applyPZ(); };
+document.getElementById('zout').onclick = () => { pz.k = Math.max(0.05, pz.k / 1.2); applyPZ(); };
+document.getElementById('zfit').onclick = fitView;
+
+// =====================================================================
+// Sidebar / chrome
+// =====================================================================
+function renderStats() {
+  const s = GRAPH.stats;
+  document.getElementById('statline').textContent = `${s.functions} fns · ${s.edges} calls · ${s.modules} modules · ${s.files} files`;
+}
+function renderModList(filter = '') {
+  const groups = {};
+  for (const m of GRAPH.moduleNodes) (groups[m.group] ||= []).push(m);
+  const el = document.getElementById('modlist');
+  el.innerHTML = '';
+  const f = filter.toLowerCase();
+  for (const grp of Object.keys(groups).sort()) {
+    const mods = groups[grp].filter(m => !f || m.module.toLowerCase().includes(f)).sort((a, b) => b.fns - a.fns);
+    if (!mods.length) continue;
+    const h = document.createElement('div'); h.className = 'grp-h';
+    h.innerHTML = `<span class="grp-dot" style="background:${groupColor(grp)}"></span>${grp}`;
+    el.appendChild(h);
+    for (const m of mods) {
+      const d = document.createElement('div');
+      d.className = 'mod-item' + (state.module === m.module ? ' active' : '');
+      d.innerHTML = `<span>${shortMod(m.module).split('/').pop()}</span><span class="cnt">${m.fns}</span>`;
+      d.title = m.module;
+      d.onclick = () => focusModule(m.module);
+      el.appendChild(d);
+    }
+  }
+}
+function renderCrumbs() {
+  const c = document.getElementById('crumbs');
+  if (state.view === 'overview') c.innerHTML = `<span class="cur">Architecture overview — module dependency graph</span>`;
+  else c.innerHTML = `<a id="bk">Architecture</a><span class="sep">/</span><span class="cur">${shortMod(state.module)}</span>`;
+  const bk = document.getElementById('bk'); if (bk) bk.onclick = goOverview;
+}
+
+function focusModule(mod) {
+  state.view = 'module'; state.module = mod;
+  document.querySelectorAll('#viewseg button').forEach(b => b.classList.toggle('on', b.dataset.view === 'module'));
+  renderModList(document.getElementById('search').value);
+  render();
+}
+function goOverview() {
+  state.view = 'overview';
+  document.querySelectorAll('#viewseg button').forEach(b => b.classList.toggle('on', b.dataset.view === 'overview'));
+  renderModList(document.getElementById('search').value);
+  render();
+}
+
+document.querySelectorAll('#viewseg button').forEach(b => b.onclick = () => {
+  if (b.dataset.view === 'overview') goOverview();
+  else if (state.module) focusModule(state.module);
+  else focusModule(GRAPH.moduleNodes.slice().sort((a, c) => c.fns - a.fns)[0].module);
+});
+document.getElementById('lbltoggle').onchange = (e) => { state.plain = e.target.checked; render(); };
+document.getElementById('neightoggle').onchange = (e) => { state.neighbors = e.target.checked; render(); };
+document.getElementById('search').oninput = (e) => renderModList(e.target.value);
+document.getElementById('graph').addEventListener('click', (e) => { if (e.target.id === 'graph' || e.target.id === 'viewport') closeDetail(); });
+
+// boot
+renderStats();
+renderModList();
+render();
+</script>
+</body>
+</html>

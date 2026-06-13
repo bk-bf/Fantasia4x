@@ -8,11 +8,7 @@
 
 <nav class="filter-tabs">
   {#each tabs as t}
-    <button
-      class="filter-tab"
-      class:active={selected === t.id}
-      on:click={() => onSelect(t.id)}
-    >
+    <button class="filter-tab" class:active={selected === t.id} on:click={() => onSelect(t.id)}>
       {t.label}{#if t.count != null}<span class="ft-count">{t.count}</span>{/if}
     </button>
   {/each}

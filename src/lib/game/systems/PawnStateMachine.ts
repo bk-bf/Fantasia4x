@@ -746,56 +746,36 @@ function tryAssignSleepPath(
   return pawnService.assignPath(pawn.id, path, gameState);
 }
 
-/** Quick check: is there any food available at all (no allocation). */
+/** Quick check: is there any food available at all (no allocation). ADR-016: food is physical
+ *  stock — the stored-drop `stockpile` aggregate, no legacy `gs.item` pool. */
 function hasAvailableFood(gs: GameState): boolean {
-  return (
-    gs.item.some((i) => {
-      if (i.amount <= 0) return false;
-      const def = ITEM_DEF_BY_ID.get(i.id);
-      return def?.category === 'food' || (def?.nutrition ?? 0) > 0;
-    }) ||
-    Object.entries(gs.stockpile ?? {}).some(([id, amount]) => {
-      if (amount <= 0) return false;
-      const def = ITEM_DEF_BY_ID.get(id);
-      return def?.category === 'food' || (def?.nutrition ?? 0) > 0;
-    })
-  );
+  return Object.entries(gs.stockpile ?? {}).some(([id, amount]) => {
+    if (amount <= 0) return false;
+    const def = ITEM_DEF_BY_ID.get(id);
+    return def?.category === 'food' || (def?.nutrition ?? 0) > 0;
+  });
 }
 
-type MealPortion = { source: 'item' | 'stockpile'; id: string; units: number };
+type MealPortion = { id: string; units: number };
 
 /**
- * Select a meal that brings the pawn to SAFE_HUNGER. Takes the most nutritious food first and
- * eats as many units as needed (an item's `nutrition` IS the hunger it removes per unit — no
- * scaling, no per-type cap), then supplements with less nutritious options.
+ * Select a meal that brings the pawn to SAFE_HUNGER from physical stockpile stock. Takes the
+ * most nutritious food first and eats as many units as needed (an item's `nutrition` IS the
+ * hunger it removes per unit — no scaling, no per-type cap), then supplements with less
+ * nutritious options.
  */
 function selectFoodForMeal(pawn: Pawn, gs: GameState): MealPortion[] {
   const hungerToSatisfy = Math.max(0, (pawn.needs?.hunger ?? 0) - SAFE_HUNGER);
   if (hungerToSatisfy <= 0) return [];
 
-  type FoodOption = {
-    source: 'item' | 'stockpile';
-    id: string;
-    available: number;
-    nutrition: number;
-  };
-  const seenIds = new Set<string>();
+  type FoodOption = { id: string; available: number; nutrition: number };
   const options: FoodOption[] = [];
-
-  for (const i of gs.item) {
-    if (i.amount <= 0) continue;
-    const def = ITEM_DEF_BY_ID.get(i.id);
-    const nutrition = def?.nutrition ?? 0;
-    if (def?.category !== 'food' && nutrition <= 0) continue;
-    seenIds.add(i.id);
-    options.push({ source: 'item', id: i.id, available: i.amount, nutrition });
-  }
   for (const [id, amount] of Object.entries(gs.stockpile ?? {})) {
-    if (amount <= 0 || seenIds.has(id)) continue;
+    if (amount <= 0) continue;
     const def = ITEM_DEF_BY_ID.get(id);
     const nutrition = def?.nutrition ?? 0;
     if (def?.category !== 'food' && nutrition <= 0) continue;
-    options.push({ source: 'stockpile', id, available: amount, nutrition });
+    options.push({ id, available: amount, nutrition });
   }
 
   options.sort((a, b) => b.nutrition - a.nutrition);
@@ -809,33 +789,25 @@ function selectFoodForMeal(pawn: Pawn, gs: GameState): MealPortion[] {
     const unitsNeeded = Math.ceil(remaining / hungerPerUnit);
     const unitsTaken = Math.min(unitsNeeded, food.available);
     if (unitsTaken <= 0) continue;
-    meal.push({ source: food.source, id: food.id, units: unitsTaken });
+    meal.push({ id: food.id, units: unitsTaken });
     remaining -= unitsTaken * hungerPerUnit;
   }
   return meal;
 }
 
-/** Consume a pre-selected meal, returning updated state and total hunger to recover. */
+/** Consume a pre-selected meal from physical stockpile stock, returning updated state and total
+ *  hunger to recover. */
 function consumeMeal(
   meal: MealPortion[],
   gs: GameState
 ): { state: GameState; hungerRecovered: number } {
   let state = gs;
   let hungerRecovered = 0;
-  for (const { source, id, units } of meal) {
+  for (const { id, units } of meal) {
     const def = ITEM_DEF_BY_ID.get(id);
     hungerRecovered += (def?.nutrition ?? 0) * units;
-    if (source === 'item') {
-      state = {
-        ...state,
-        item: state.item.map((i) =>
-          i.id === id ? { ...i, amount: Math.max(0, i.amount - units) } : i
-        )
-      };
-    } else {
-      // Use consumeFromStockpiles so both the aggregate and zone inventories stay in sync.
-      state = consumeFromStockpiles(state, { [id]: units });
-    }
+    // consumeFromStockpiles keeps the stored-drop authority and aggregate in sync.
+    state = consumeFromStockpiles(state, { [id]: units });
   }
   return { state, hungerRecovered };
 }
@@ -1526,8 +1498,96 @@ function handleWashing(pawn: Pawn, gameState: GameState): GameState {
   return goIdle(state.pawns.find((p) => p.id === pawn.id)!, state);
 }
 
+/** ADR-016: tile coords of a craft order's chosen workstation, or null if the order/station is gone. */
+function orderStationTile(orderId: string, gs: GameState): { x: number; y: number } | null {
+  const order = (gs.craftingQueue ?? []).find((o) => o.id === orderId);
+  if (!order?.stationBuildingId) return null;
+  const b = (gs.buildings ?? []).find(
+    (b) => b.id === order.stationBuildingId && b.status === 'complete'
+  );
+  return b ? { x: b.x, y: b.y } : null;
+}
+
+/**
+ * ADR-016: stage everything the pawn is carrying for a craft order as `stored reservedFor` drops
+ * ON the order's station tile (merging with any input stack already staged there), clear the
+ * pawn's inventory + carry marker, and idle. Once every input is staged the craft job opens
+ * (JobService._orderSupplied). Falls back to a normal stockpile deposit if the station vanished.
+ */
+function stageInventoryAtStation(pawn: Pawn, orderId: string, gs: GameState): GameState {
+  const station = orderStationTile(orderId, gs);
+  const inv = pawn.inventory?.items ?? {};
+  if (!station) {
+    // Order/station gone — don't strand the goods: clear the marker and deposit normally.
+    const cleared = {
+      ...gs,
+      pawns: gs.pawns.map((p) => (p.id === pawn.id ? { ...p, carryingForOrder: undefined } : p))
+    };
+    const self = cleared.pawns.find((p) => p.id === pawn.id)!;
+    return depositInventory(self, cleared);
+  }
+
+  const drops = [...(gs.droppedItems ?? [])];
+  for (const [resourceId, qty] of Object.entries(inv)) {
+    if (qty <= 0) continue;
+    const idx = drops.findIndex(
+      (d) =>
+        d.stored &&
+        d.reservedFor === orderId &&
+        d.resourceId === resourceId &&
+        d.x === station.x &&
+        d.y === station.y
+    );
+    if (idx >= 0) {
+      drops[idx] = { ...drops[idx], quantity: drops[idx].quantity + qty };
+    } else {
+      drops.push({
+        id: `staged-${orderId.slice(-6)}-${resourceId}-${station.x}-${station.y}`,
+        resourceId,
+        x: station.x,
+        y: station.y,
+        quantity: qty,
+        stored: true,
+        reservedFor: orderId
+      });
+    }
+  }
+
+  gameLogger.log(gs.turn, 'JOB-EVT', `${pawn.name} staged inputs at station for order ${orderId}`);
+  const next: GameState = {
+    ...gs,
+    droppedItems: drops,
+    pawns: gs.pawns.map((p) =>
+      p.id === pawn.id
+        ? {
+            ...p,
+            carryingForOrder: undefined,
+            currentState: PAWN_STATE.IDLE,
+            activeJob: undefined,
+            inventory: {
+              ...(p.inventory ?? {
+                items: {},
+                instances: [],
+                weightKg: 0,
+                maxWeightKg: 20,
+                volumeL: 0,
+                maxVolumeL: 20
+              }),
+              items: {}
+            }
+          }
+        : p
+    )
+  };
+  return next;
+}
+
 /** Transfer everything in pawn.inventory into the correct stockpile zone. */
 function depositInventory(pawn: Pawn, gs: GameState): GameState {
+  // ADR-016: a pawn carrying fetched inputs stages them ON its order's station, not the stockpile.
+  if (pawn.carryingForOrder) {
+    return stageInventoryAtStation(pawn, pawn.carryingForOrder, gs);
+  }
   const inv = pawn.inventory?.items ?? {};
   if (Object.keys(inv).length === 0) return goIdle(pawn, gs);
 
@@ -1628,6 +1688,41 @@ function depositInventory(pawn: Pawn, gs: GameState): GameState {
 }
 
 function handleHauling(pawn: Pawn, gameState: GameState): GameState {
+  // ADR-016 fetch-carry: items picked up for a craft order go to that order's station tile
+  // (and are staged there with reservedFor), not to the nearest stockpile.
+  if (pawn.carryingForOrder) {
+    const station = orderStationTile(pawn.carryingForOrder, gameState);
+    if (!station) {
+      // Station/order gone — stageInventoryAtStation handles the fallback (deposit to stockpile).
+      return depositInventory(pawn, gameState);
+    }
+    if (pawn.position && isAdjacent(pawn.position.x, pawn.position.y, station.x, station.y)) {
+      return depositInventory(pawn, gameState); // stages at station
+    }
+    const afterPath = pawn.position ? tryAssignPath(pawn, station.x, station.y, gameState) : null;
+    if (!afterPath) return depositInventory(pawn, gameState); // unreachable — stage in place fallback
+    return {
+      ...afterPath,
+      pawns: afterPath.pawns.map((p) =>
+        p.id === pawn.id
+          ? {
+              ...p,
+              currentState: PAWN_STATE.MOVING_TO_DEPOSIT,
+              activeJob: {
+                type: 'need' as const,
+                targetX: station.x,
+                targetY: station.y,
+                progress: 0,
+                timeRequired: 1,
+                depositX: station.x,
+                depositY: station.y
+              }
+            }
+          : p
+      )
+    };
+  }
+
   // Pawn just picked up an item and needs to find a deposit point
   const deposit = findNearestDepositPoint(pawn, gameState);
   if (!deposit) {
@@ -1862,6 +1957,14 @@ function handleIdle(pawn: Pawn, gameState: GameState): GameState {
     return transitionTo(pawn, PAWN_STATE.TIRED, gameState);
   }
 
+  // ADR-016 / haul recovery: a pawn that is still carrying items (a fetch or haul interrupted
+  // by a need) must deliver them before taking new work — otherwise the goods, and for a fetch
+  // the reservation they represent, would be stranded in its hands. handleHauling routes a
+  // fetch-carry to its order's station (carryingForOrder) and a plain haul to the stockpile.
+  if (Object.values(pawn.inventory?.items ?? {}).some((q) => q > 0)) {
+    return transitionTo(pawn, PAWN_STATE.HAULING, gameState);
+  }
+
   // Don't pick jobs until the pathfinder is ready — prevents endless pick/release cycles
   if (!wasmPathfinderService.isReady()) return gameState;
 
@@ -1880,7 +1983,7 @@ function handleIdle(pawn: Pawn, gameState: GameState): GameState {
   let gs = jobService.claimJob(pawn.id, job.id, gameState);
 
   const activeJob = {
-    type: job.type as 'harvest' | 'construct' | 'craft' | 'haul',
+    type: job.type as 'harvest' | 'construct' | 'craft' | 'haul' | 'fetch',
     jobId: job.id,
     targetX: job.targetX,
     targetY: job.targetY,
@@ -1892,8 +1995,9 @@ function handleIdle(pawn: Pawn, gameState: GameState): GameState {
     timeRequired: job.workRequired
   };
 
+  // ADR-016: craft jobs now target the station tile, so the pawn must walk there like any other
+  // job (no more "craft anywhere"). Only genuinely abstract (0,0) jobs are worked in place.
   const atSite =
-    job.type === 'craft' ||
     (job.targetX === 0 && job.targetY === 0) || // abstract building placed off-map
     (pawn.position && isAdjacent(pawn.position.x, pawn.position.y, job.targetX, job.targetY));
 
@@ -2080,8 +2184,9 @@ function handleWorking(pawn: Pawn, gameState: GameState): GameState {
   const interrupted = checkNeedInterrupts(pawn, gameState, 'Working', jobDist, queue, laborLevel);
   if (interrupted) return interrupted;
 
+  // Must be adjacent to the job target to work it (ADR-016: craft is no longer exempt — the
+  // pawn crafts AT the station tile). Only abstract (0,0) jobs are worked in place.
   if (
-    activeJob.type !== 'craft' &&
     !(activeJob.targetX === 0 && activeJob.targetY === 0) && // abstract building
     pawn.position &&
     !isAdjacent(pawn.position.x, pawn.position.y, activeJob.targetX, activeJob.targetY)

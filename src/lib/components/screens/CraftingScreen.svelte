@@ -7,6 +7,7 @@
   import { gameEngine } from '$lib/game/systems/GameEngineImpl';
   import { itemService } from '$lib/game/services/ItemService';
   import { recipeService } from '$lib/game/services/RecipeService';
+  import { releaseReservation } from '$lib/game/core/GameState';
   import { onDestroy } from 'svelte';
   import type { Item } from '$lib/game/core/types';
 
@@ -195,20 +196,16 @@
 
   function cancelCrafting(queueIndex: number) {
     if (queueIndex < 0 || queueIndex >= craftingQueue.length) return;
-    const canceledItem = craftingQueue[queueIndex];
-    const item = canceledItem.item;
+    const canceled = craftingQueue[queueIndex];
     gameState.update((state) => {
-      const refundCost = costOf(item.id);
-      const refundedItems = state.item.map((si) => {
-        const refund = refundCost[si.id] || 0;
-        return { ...si, amount: si.amount + refund };
-      });
-      const newQueue = [...(state.craftingQueue || [])];
+      // ADR-016: nothing was consumed at queue time — just release the reservation so the
+      // (reserved or already-staged) inputs become free stock again, then drop the order.
+      const next = releaseReservation(state, canceled.id);
+      const newQueue = [...(next.craftingQueue || [])];
       newQueue.splice(queueIndex, 1);
-      return { ...state, item: refundedItems, craftingQueue: newQueue };
+      return { ...next, craftingQueue: newQueue };
     });
   }
-
 </script>
 
 <div class="crafting-screen">
@@ -247,85 +244,88 @@
     {#if activeCat}
       <div class="card-grid">
         {#each activeCat.entries as entry (entry.key)}
-            {@const item = entry.item}
-            {@const recipe = recipeOf(item.id)}
-            {@const isCarcass = item.isCarcass && item.yields}
-            {@const isPlaceholder = !!recipe?.dynamicRecipe && !entry.selectedIngredients}
-            {@const baseCost = isCarcass ? {} : { ...costOf(item.id), ...entry.dynamicCost }}
-            {@const stationReady = $gameState !== null &&
-              itemService.hasRequiredBuilding(item.id, $gameState) &&
-              itemService.hasRequiredTools(item.id, $gameState)}
-            {@const affordable = isCarcass
-              ? getItemAmount(item.id) > 0
-              : !isPlaceholder &&
-                Object.entries(baseCost).every(([id, n]) => getItemAmount(id) >= (n as number))}
-            {@const craftable = isCarcass
-              ? $gameState !== null && itemService.canCraftItem(item.id, $gameState)
-              : stationReady && affordable}
-            {@const intactness = $gameState?.carcassIntactness?.[item.id] ?? 100}
-            {@const pct = Math.round(intactness)}
-            {@const dynNeed =
-              isPlaceholder && recipe?.dynamicRecipe
-                ? Object.values(recipe.dynamicRecipe)[0].acceptsCategory
-                : null}
-            <BuildCard
-              name={entry.name.toUpperCase()}
-              charSpans={item.charSpans}
-              description={entry.description}
-              tint={item.color ?? 'var(--accent)'}
-              workAmount={recipe?.workAmount ?? null}
-              badge={isCarcass ? `${pct}%` : null}
-              actionLabel={!affordable
-                ? 'MISSING'
-                : !craftable
-                  ? 'BLOCKED'
-                  : isCarcass
-                    ? 'BUTCHER'
-                    : 'CRAFT'}
-              actionEnabled={craftable}
-              variant={!affordable ? 'missing' : !craftable ? 'blocked' : 'ok'}
-              onAction={() => startCrafting(item, entry.selectedIngredients)}
-            >
-              {#if isCarcass}
-                {#each item.yields as output, ci}
-                  {@const outputDef = itemService.getItemById(output.item)}
-                  {@const minScaled = Math.max(1, Math.round((output.min * intactness) / 100))}
-                  {@const maxScaled = Math.max(1, Math.round((output.max * intactness) / 100))}
-                  {#if ci > 0}<span class="cost-sep">·</span>{/if}
-                  <span class="cost-item">
-                    {outputDef?.name ?? output.item}
-                    <span class="cost-qty">×{minScaled}-{maxScaled}</span>
-                  </span>
-                {/each}
-              {:else}
-                {#each Object.entries(baseCost) as [id, n], ci}
-                  {@const have = getItemAmount(id)}
-                  {#if ci > 0}<span class="cost-sep">·</span>{/if}
-                  <span class="cost-item" class:neg-text={have < (n as number)}>
-                    {id.replace(/_/g, ' ')} <span class="cost-qty">×{n}</span>
-                    <span class="cost-have" class:neg-text={have < (n as number)}>({have})</span>
-                  </span>
-                {/each}
-                {#if dynNeed}
-                  {#if Object.keys(baseCost).length > 0}<span class="cost-sep">·</span>{/if}
-                  <span class="cost-item neg-text">any {dynNeed} <span class="cost-qty">×1</span></span>
-                {:else if Object.keys(baseCost).length === 0}
-                  <span class="muted-text">free</span>
-                {/if}
-                {#if primaryQtyOf(item.id) > 1 || byproductsOf(item.id).length > 0}
-                  <span class="cost-sep">→</span>
-                  <span class="cost-item">
-                    ×{primaryQtyOf(item.id)}
-                    {#each byproductsOf(item.id) as [bid, bq]}
-                      <span class="cost-sep">+</span>{bid.replace(/_/g, ' ')}
-                      <span class="cost-qty">×{bq}</span>
-                    {/each}
-                  </span>
-                {/if}
+          {@const item = entry.item}
+          {@const recipe = recipeOf(item.id)}
+          {@const isCarcass = item.isCarcass && item.yields}
+          {@const isPlaceholder = !!recipe?.dynamicRecipe && !entry.selectedIngredients}
+          {@const baseCost = isCarcass ? {} : { ...costOf(item.id), ...entry.dynamicCost }}
+          {@const stationReady =
+            $gameState !== null &&
+            itemService.hasRequiredBuilding(item.id, $gameState) &&
+            itemService.hasRequiredTools(item.id, $gameState)}
+          {@const affordable = isCarcass
+            ? getItemAmount(item.id) > 0
+            : !isPlaceholder &&
+              Object.entries(baseCost).every(([id, n]) => getItemAmount(id) >= (n as number))}
+          {@const craftable = isCarcass
+            ? $gameState !== null && itemService.canCraftItem(item.id, $gameState)
+            : stationReady && affordable}
+          {@const intactness = $gameState?.carcassIntactness?.[item.id] ?? 100}
+          {@const pct = Math.round(intactness)}
+          {@const dynNeed =
+            isPlaceholder && recipe?.dynamicRecipe
+              ? Object.values(recipe.dynamicRecipe)[0].acceptsCategory
+              : null}
+          <BuildCard
+            name={entry.name.toUpperCase()}
+            charSpans={item.charSpans}
+            description={entry.description}
+            tint={item.color ?? 'var(--accent)'}
+            workAmount={recipe?.workAmount ?? null}
+            badge={isCarcass ? `${pct}%` : null}
+            actionLabel={!affordable
+              ? 'MISSING'
+              : !craftable
+                ? 'BLOCKED'
+                : isCarcass
+                  ? 'BUTCHER'
+                  : 'CRAFT'}
+            actionEnabled={craftable}
+            variant={!affordable ? 'missing' : !craftable ? 'blocked' : 'ok'}
+            onAction={() => startCrafting(item, entry.selectedIngredients)}
+          >
+            {#if isCarcass}
+              {#each item.yields as output, ci}
+                {@const outputDef = itemService.getItemById(output.item)}
+                {@const minScaled = Math.max(1, Math.round((output.min * intactness) / 100))}
+                {@const maxScaled = Math.max(1, Math.round((output.max * intactness) / 100))}
+                {#if ci > 0}<span class="cost-sep">·</span>{/if}
+                <span class="cost-item">
+                  {outputDef?.name ?? output.item}
+                  <span class="cost-qty">×{minScaled}-{maxScaled}</span>
+                </span>
+              {/each}
+            {:else}
+              {#each Object.entries(baseCost) as [id, n], ci}
+                {@const have = getItemAmount(id)}
+                {#if ci > 0}<span class="cost-sep">·</span>{/if}
+                <span class="cost-item" class:neg-text={have < (n as number)}>
+                  {id.replace(/_/g, ' ')} <span class="cost-qty">×{n}</span>
+                  <span class="cost-have" class:neg-text={have < (n as number)}>({have})</span>
+                </span>
+              {/each}
+              {#if dynNeed}
+                {#if Object.keys(baseCost).length > 0}<span class="cost-sep">·</span>{/if}
+                <span class="cost-item neg-text"
+                  >any {dynNeed} <span class="cost-qty">×1</span></span
+                >
+              {:else if Object.keys(baseCost).length === 0}
+                <span class="muted-text">free</span>
               {/if}
-            </BuildCard>
-          {/each}
-        </div>
+              {#if primaryQtyOf(item.id) > 1 || byproductsOf(item.id).length > 0}
+                <span class="cost-sep">→</span>
+                <span class="cost-item">
+                  ×{primaryQtyOf(item.id)}
+                  {#each byproductsOf(item.id) as [bid, bq]}
+                    <span class="cost-sep">+</span>{bid.replace(/_/g, ' ')}
+                    <span class="cost-qty">×{bq}</span>
+                  {/each}
+                </span>
+              {/if}
+            {/if}
+          </BuildCard>
+        {/each}
+      </div>
     {/if}
   {/if}
 

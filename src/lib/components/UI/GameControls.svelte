@@ -150,7 +150,8 @@
   <span class="bi title">FANTASIA4X</span>
   {#if import.meta.env.VITE_DEV_BRANCH}
     <span class="bi branch-label" title="branch: {import.meta.env.VITE_DEV_BRANCH}"
-      >{import.meta.env.VITE_DEV_BRANCH.replace(/^feat\//, '')}</span>
+      >{import.meta.env.VITE_DEV_BRANCH.replace(/^feat\//, '')}</span
+    >
   {/if}
   <span class="bi date" title="{gameDate.monthName} {gameDate.day}, Year {gameDate.year}"
     >{gameDate.dayStr}/{gameDate.monthStr}/{gameDate.yearStr} {gameDate.hourStr}:00</span

@@ -89,7 +89,10 @@ class JobServiceImpl {
     // --- Deconstruct jobs from buildings queued for demolition ---
     jobs = this._syncDeconstructJobs(jobs, gameState);
 
-    // --- Craft jobs from crafting queue ---
+    // --- ADR-016: fetch jobs carry reserved inputs from stockpile to the order's station ---
+    jobs = this._syncFetchJobs(jobs, gameState);
+
+    // --- Craft jobs (only once an order's inputs are fully staged on its station) ---
     jobs = this._syncCraftJobs(jobs, gameState);
 
     // --- Phase 6: fuel-management jobs for campfires ---
@@ -348,6 +351,96 @@ class JobServiceImpl {
     return jobs;
   }
 
+  /** ADR-016: tile coords of an order's chosen workstation, or null if it's gone. */
+  private _stationTileFor(
+    order: import('../core/types').CraftingInProgress,
+    gs: GameState
+  ): { x: number; y: number } | null {
+    if (!order.stationBuildingId) return null;
+    const b = (gs.buildings ?? []).find(
+      (b) => b.id === order.stationBuildingId && b.status === 'complete'
+    );
+    return b ? { x: b.x, y: b.y } : null;
+  }
+
+  /** Quantity of an order's reserved input `itemId` already staged ON its station tile. */
+  private _stagedQty(
+    order: import('../core/types').CraftingInProgress,
+    itemId: string,
+    station: { x: number; y: number },
+    gs: GameState
+  ): number {
+    let q = 0;
+    for (const d of gs.droppedItems ?? []) {
+      if (
+        d.stored &&
+        d.reservedFor === order.id &&
+        d.resourceId === itemId &&
+        d.x === station.x &&
+        d.y === station.y
+      ) {
+        q += d.quantity;
+      }
+    }
+    return q;
+  }
+
+  /** True when every input of an order is fully staged on its station tile. */
+  private _orderSupplied(
+    order: import('../core/types').CraftingInProgress,
+    station: { x: number; y: number },
+    gs: GameState
+  ): boolean {
+    return Object.entries(order.inputs ?? {}).every(
+      ([itemId, need]) => this._stagedQty(order, itemId, station, gs) >= need
+    );
+  }
+
+  /**
+   * ADR-016: emit one `fetch` job per reserved input stack that still sits on a stockpile tile
+   * (not yet carried to the order's station). A pawn picks it up and stages it ON the station;
+   * the craft job only opens once every input is staged (see _syncCraftJobs).
+   */
+  private _syncFetchJobs(jobs: Job[], gs: GameState): Job[] {
+    // Drop fetch jobs whose order or source drop is gone, or whose source already moved.
+    jobs = jobs.filter((j) => {
+      if (j.type !== 'fetch') return true;
+      const order = (gs.craftingQueue ?? []).find((e) => e.id === j.craftQueueId);
+      if (!order) return false;
+      const src = (gs.droppedItems ?? []).find((d) => d.id === j.droppedItemId);
+      return !!src && src.reservedFor === j.craftQueueId;
+    });
+
+    for (const order of gs.craftingQueue ?? []) {
+      const station = this._stationTileFor(order, gs);
+      if (!station) continue;
+      // Reserved stacks for this order that are NOT already on the station tile need carrying.
+      for (const drop of gs.droppedItems ?? []) {
+        if (!drop.stored || drop.reservedFor !== order.id) continue;
+        if (drop.x === station.x && drop.y === station.y) continue; // already staged
+        const exists = jobs.some((j) => j.type === 'fetch' && j.droppedItemId === drop.id);
+        if (exists) continue;
+        jobs.push({
+          id: `fetch-${drop.id}-${Date.now()}`,
+          type: 'fetch',
+          targetX: drop.x,
+          targetY: drop.y,
+          resourceId: drop.resourceId,
+          droppedItemId: drop.id,
+          craftQueueId: order.id,
+          buildingId: order.stationBuildingId,
+          stationX: station.x,
+          stationY: station.y,
+          workRequired: 1, // instant pick-up on arrival
+          workDone: 0,
+          claimedBy: null
+        });
+      }
+    }
+
+    return jobs;
+  }
+
   private _syncCraftJobs(jobs: Job[], gs: GameState): Job[] {
     // Remove craft jobs for queue entries that no longer exist
     jobs = jobs.filter((j) => {
@@ -355,19 +448,24 @@ class JobServiceImpl {
       return (gs.craftingQueue ?? []).some((e) => e.id === j.craftQueueId);
     });
 
-    // Add new craft jobs for queue entries that have an id but no job yet
-    for (const entry of gs.craftingQueue ?? []) {
-      if (!entry.id) continue; // legacy entries without id — skip
-      const exists = jobs.some((j) => j.type === 'craft' && j.craftQueueId === entry.id);
+    // Add a craft job only once the order's inputs are fully staged on its station tile, and
+    // target that tile so the pawn actually walks to the workstation to craft (ADR-016).
+    for (const order of gs.craftingQueue ?? []) {
+      if (!order.id) continue;
+      const station = this._stationTileFor(order, gs);
+      if (!station) continue;
+      if (!this._orderSupplied(order, station, gs)) continue;
+      const exists = jobs.some((j) => j.type === 'craft' && j.craftQueueId === order.id);
       if (!exists) {
         jobs.push({
-          id: `craft-${entry.id}-${Date.now()}`,
+          id: `craft-${order.id}-${Date.now()}`,
           type: 'craft',
-          targetX: 0,
-          targetY: 0,
-          craftQueueId: entry.id,
-          workRequired: entry.workRequired ?? (entry.item.craftingTime ?? 1) * 5,
-          workDone: entry.workDone ?? 0,
+          targetX: station.x,
+          targetY: station.y,
+          craftQueueId: order.id,
+          buildingId: order.stationBuildingId,
+          workRequired: order.workRequired ?? order.item.craftingTime ?? 1,
+          workDone: order.workDone ?? 0,
           claimedBy: null
         });
       }
@@ -391,6 +489,9 @@ class JobServiceImpl {
         break;
       case 'haul':
         state = this._completeHaul(job, state);
+        break;
+      case 'fetch':
+        state = this._completeFetch(job, state);
         break;
       case 'construct':
         state = this._completeConstruct(job, state);
@@ -631,6 +732,37 @@ class JobServiceImpl {
     return jobs;
   }
 
+  /**
+   * ADR-016 fetch pickup: lift the reserved source drop into the carrying pawn's inventory and
+   * tag the pawn with the order id (`carryingForOrder`) so the FSM stages it on the order's
+   * station tile (not the nearest stockpile). The reservation "moves" with the items: the source
+   * stored drop is removed here; a fresh `reservedFor` drop is created on the station when staged.
+   */
+  private _completeFetch(job: Job, gs: GameState): GameState {
+    if (!job.droppedItemId || !job.craftQueueId) return gs;
+    const drop = (gs.droppedItems ?? []).find((d) => d.id === job.droppedItemId);
+    if (!drop) return gs;
+    const newDropped = (gs.droppedItems ?? []).filter((d) => d.id !== drop.id);
+
+    const pawnId = job.claimedBy;
+    if (!pawnId) return { ...gs, droppedItems: newDropped };
+    const newPawns = gs.pawns.map((p) => {
+      if (p.id !== pawnId) return p;
+      const inv = p.inventory ?? {
+        items: {},
+        instances: [],
+        weightKg: 0,
+        maxWeightKg: 20,
+        volumeL: 0,
+        maxVolumeL: 20
+      };
+      const newItems = { ...inv.items };
+      newItems[drop.resourceId] = (newItems[drop.resourceId] ?? 0) + drop.quantity;
+      return { ...p, inventory: { ...inv, items: newItems }, carryingForOrder: job.craftQueueId };
+    });
+    return { ...gs, droppedItems: newDropped, pawns: newPawns };
+  }
+
   private _completeHaul(job: Job, gs: GameState): GameState {
     if (!job.droppedItemId) return gs;
 
@@ -645,7 +777,14 @@ class JobServiceImpl {
     if (pawnId) {
       const newPawns = gs.pawns.map((p) => {
         if (p.id !== pawnId) return p;
-        const inv = p.inventory ?? { items: {}, instances: [], weightKg: 0, maxWeightKg: 20, volumeL: 0, maxVolumeL: 20 };
+        const inv = p.inventory ?? {
+          items: {},
+          instances: [],
+          weightKg: 0,
+          maxWeightKg: 20,
+          volumeL: 0,
+          maxVolumeL: 20
+        };
         const newItems = { ...inv.items };
         newItems[drop.resourceId] = (newItems[drop.resourceId] ?? 0) + drop.quantity;
         console.log(
@@ -742,58 +881,41 @@ class JobServiceImpl {
     const entry = (gs.craftingQueue ?? []).find((e) => e.id === job.craftQueueId);
     if (!entry) return gs;
 
-    // Wire stats.jsonc crafting quality into item properties
-    const pawn = gs.pawns.find((p) => p.id === job.claimedBy);
-    // Map craft item to work category (crafting, metalworking, leatherworking, alchemy, cooking)
-    const workCategory = entry.item.workshopType
-      ? entry.item.workshopType === 'forge'
-        ? 'metalworking'
-        : entry.item.workshopType === 'alchemy_lab'
-          ? 'alchemy'
-          : entry.item.workshopType === 'kitchen'
-            ? 'cooking'
-            : 'crafting'
-      : 'crafting';
-    const qualityMult = pawn
-      ? (pawnStatService.getWorkModifiers(pawn, workCategory).quality ?? 1)
-      : 1;
-
     // Recipe registry (Stage C): a craft completion runs the producing recipe once per queued
     // unit and emits ALL its outputs — the primary product plus any byproducts (e.g. splitting
     // a log yields firewood AND branches; charcoal burns yield ash).
     const itemId = entry.item.id;
     const quantity = entry.quantity ?? 1;
     const recipe = recipeService.getRecipeForItem(itemId);
-    const outputs: Record<string, number> = recipe ? recipe.outputs : { [itemId]: 1 };
+    const recipeOutputs: Record<string, number> = recipe ? recipe.outputs : { [itemId]: 1 };
 
-    // Primary output → legacy crafted-item pool (preserves quality tracking).
-    const primaryQty = (outputs[itemId] ?? 1) * quantity;
-    const newItems = [...gs.item];
-    const idx = newItems.findIndex((i) => i.id === itemId);
-    if (idx >= 0) {
-      // Existing item: just add quantity (quality is per-batch, not tracked for stacks)
-      newItems[idx] = { ...newItems[idx], amount: newItems[idx].amount + primaryQty };
-    } else {
-      newItems.push({
-        ...entry.item,
-        amount: primaryQty,
-        properties: { ...(entry.item.properties ?? {}), quality: qualityMult }
-      });
+    const outputs: Record<string, number> = {};
+    for (const [outId, outQty] of Object.entries(recipeOutputs)) {
+      outputs[outId] = (outputs[outId] ?? 0) + outQty * quantity;
     }
 
-    // Remove from crafting queue
+    // ADR-016: destroy the inputs staged on the station (the reserved drops carried here), then
+    // spawn the outputs as drops ON the station tile. If the tile is a stockpile they're absorbed;
+    // otherwise they sit on the station until a hauler stores them — exactly the physical model.
+    const station = this._stationTileFor(entry, gs);
+    const droppedItems = (gs.droppedItems ?? []).filter((d) => d.reservedFor !== entry.id);
     const newQueue = (gs.craftingQueue ?? []).filter((e) => e.id !== job.craftQueueId);
+    let state: GameState = { ...gs, droppedItems, craftingQueue: newQueue };
 
-    let state: GameState = { ...gs, item: newItems, craftingQueue: newQueue };
-
-    // Byproducts → stockpile (raw materials, immediately usable).
-    const byproducts: Record<string, number> = {};
-    for (const [outId, outQty] of Object.entries(outputs)) {
-      if (outId === itemId) continue;
-      byproducts[outId] = outQty * quantity;
-    }
-    if (Object.keys(byproducts).length > 0) {
-      state = itemService.addItems(byproducts, state);
+    if (station) {
+      const newDropIds: string[] = [];
+      const next = [...(state.droppedItems ?? [])];
+      for (const [outId, qty] of Object.entries(outputs)) {
+        if (qty <= 0) continue;
+        const id = `craft-${outId}-${station.x}-${station.y}-${Date.now()}-${rng.random().toString(36).slice(2, 5)}`;
+        next.push({ id, resourceId: outId, x: station.x, y: station.y, quantity: qty });
+        newDropIds.push(id);
+      }
+      state = { ...state, droppedItems: next };
+      for (const id of newDropIds) state = absorbDropIfOnStockpileTile(state, id);
+    } else {
+      // Station vanished mid-craft — fall back to crediting the general stockpile so output isn't lost.
+      state = itemService.addItems(outputs, state);
     }
 
     // §5 casting-mold wear: if this recipe's station needs a mold (forge/bloomery), the clay mold
@@ -804,7 +926,7 @@ class JobServiceImpl {
     }
 
     console.log(
-      `[JobService] Crafting complete: ${itemId} ×${primaryQty} (+${Object.keys(byproducts).length} byproduct types) quality=${qualityMult.toFixed(2)}`
+      `[JobService] Crafting complete: ${itemId} ×${outputs[itemId] ?? 0} (${Object.keys(outputs).length} output types) at station ${entry.stationBuildingId ?? '—'}`
     );
     return state;
   }
@@ -1135,6 +1257,8 @@ class JobServiceImpl {
       case 'craft':
         return 'crafting';
       case 'haul':
+        return 'hauling';
+      case 'fetch':
         return 'hauling';
       case 'eat':
         return 'eat';

@@ -77,20 +77,6 @@ export class GameStateManager {
     return true;
   }
 
-  startCrafting(item: Item, quantity: number = 1): boolean {
-    const id = `craft-${item.id}-${Date.now()}-${rng.random().toString(36).slice(2, 7)}`;
-    this.state.craftingQueue.push({
-      id,
-      item,
-      quantity,
-      startedAt: this.state.turn,
-      workRequired: (item.craftingTime || 1) * 5,
-      workDone: 0,
-      materialsReserved: true
-    });
-    return true;
-  }
-
   // ===== PHASE 4: STOCKPILE =====
 
   addToStockpile(id: string, amount: number): void {
@@ -252,7 +238,13 @@ export function reserveForOrder(
   let remaining = qty;
   const drops: DroppedItem[] = [];
   for (const d of state.droppedItems ?? []) {
-    if (remaining <= 0 || !d.stored || d.reservedFor || d.resourceId !== itemId || d.quantity <= 0) {
+    if (
+      remaining <= 0 ||
+      !d.stored ||
+      d.reservedFor ||
+      d.resourceId !== itemId ||
+      d.quantity <= 0
+    ) {
       drops.push(d);
       continue;
     }

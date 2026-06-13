@@ -11,21 +11,46 @@ import type { GameState, DroppedItem, PlacedBuilding } from '../core/types';
  * temperature system, not storage buildings).
  */
 const fire = (x: number, y: number): PlacedBuilding =>
-  ({ id: `f${x}`, type: 'hearth', x, y, status: 'complete', progress: 1, lit: true, fuel: 10 }) as PlacedBuilding;
+  ({
+    id: `f${x}`,
+    type: 'hearth',
+    x,
+    y,
+    status: 'complete',
+    progress: 1,
+    lit: true,
+    fuel: 10
+  }) as PlacedBuilding;
 
 const drop = (p: Partial<DroppedItem>): DroppedItem =>
-  ({ id: `d-${p.x}-${p.y}-${p.resourceId}`, resourceId: 'green_firewood', x: 0, y: 0, quantity: 2, ...p }) as DroppedItem;
+  ({
+    id: `d-${p.x}-${p.y}-${p.resourceId}`,
+    resourceId: 'green_firewood',
+    x: 0,
+    y: 0,
+    quantity: 2,
+    ...p
+  }) as DroppedItem;
 
 function state(drops: DroppedItem[], buildings: PlacedBuilding[]): GameState {
   return {
-    seed: 1, turn: 0, stockpile: {}, stockpileZones: [], droppedItems: drops, buildings
+    seed: 1,
+    turn: 0,
+    stockpile: {},
+    stockpileZones: [],
+    droppedItems: drops,
+    buildings
   } as unknown as GameState;
 }
 
 describe('§1 wood seasoning (stepWoodDrying)', () => {
   it('seasons firewood at distance 2 from a lit fire, not adjacent or far', () => {
     const gs = state(
-      [drop({ x: 2, y: 0, id: 'ring' }), drop({ x: 1, y: 0, id: 'adj' }), drop({ x: 5, y: 0, id: 'far' })],
+      [
+        drop({ x: 2, y: 0, id: 'ring' }),
+        drop({ x: 1, y: 0, id: 'adj' }),
+        drop({ x: 5, y: 0, id: 'far' })
+      ],
       [fire(0, 0)]
     );
     const out = itemService.stepWoodDrying(gs);

@@ -168,7 +168,12 @@ function combatKey(a: string, b: string) {
 }
 
 /** Check if we should skip logging because the same entity logged the same action recently. */
-function shouldSkipLog(entityId: string, actionType: string, turn: number, cooldownTicks: number): boolean {
+function shouldSkipLog(
+  entityId: string,
+  actionType: string,
+  turn: number,
+  cooldownTicks: number
+): boolean {
   const key = `${entityId}:${actionType}`;
   const last = lastEntityLogTurn.get(key);
   if (last !== undefined && turn - last < cooldownTicks) {
@@ -211,7 +216,10 @@ const combatSessions = new Map<string, CombatSession>();
 /** Ticks of silence before an engagement is considered over (≈5s at 60 TPS). */
 const ENGAGEMENT_EXPIRE_TICKS = 300;
 
-function sessionSummary(s: CombatSession): { result: string; severity: ActivityLogEntry['severity'] } {
+function sessionSummary(s: CombatSession): {
+  result: string;
+  severity: ActivityLogEntry['severity'];
+} {
   const swings = s.hits + s.misses;
   let result = `${s.hits}/${swings} hits · ${s.totalDamage} dmg`;
   if (s.killed) result += ' · killed';
@@ -436,7 +444,16 @@ export function logEntityStateChange(
   focusY: number
 ) {
   // Only log interesting state transitions
-  const interesting = ['Attacking', 'Fleeing', 'Hunting', 'Eating', 'Sleeping', 'Startled', 'Exhausted', 'Collapsed'];
+  const interesting = [
+    'Attacking',
+    'Fleeing',
+    'Hunting',
+    'Eating',
+    'Sleeping',
+    'Startled',
+    'Exhausted',
+    'Collapsed'
+  ];
   if (!interesting.includes(toState)) return;
   if (shouldSkipLog(entityId, `state-${toState}`, turn, 30)) return;
   logActivity({

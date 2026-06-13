@@ -32,7 +32,9 @@ describe('ItemService.stepItemDeterioration (§B, count-down durability)', () =>
   it('weathers EVERY item — e.g. granite, from its own durability pool', () => {
     const g = itemService.getItemById('granite')!;
     const out = itemService.stepItemDeterioration(makeState([drop({ resourceId: 'granite' })]));
-    expect(out.droppedItems![0].durability).toBeCloseTo((g.maxDurability ?? 100) - g.deteriorationRate!);
+    expect(out.droppedItems![0].durability).toBeCloseTo(
+      (g.maxDurability ?? 100) - g.deteriorationRate!
+    );
   });
 
   it('destroys the stack once durability reaches 0', () => {

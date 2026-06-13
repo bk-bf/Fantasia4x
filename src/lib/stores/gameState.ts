@@ -59,10 +59,6 @@ export const initialGameState: GameState = {
   race: generateRace(),
   pawns: [],
   worldMap: [], // generated lazily in the async init (D7)
-  // REVERTED: Back to original - no starter food added
-  item: [...itemService.getItemsByCategory('basic').map((item) => ({ ...item, amount: 0 }))].filter(
-    (item) => item !== undefined
-  ),
   buildingCounts: {},
   buildingQueue: [],
   /** Phase 4: placed buildings on the map */
@@ -673,7 +669,6 @@ if (import.meta.hot) {
 
 // Derived stores
 export const currentTurn = derived(gameState, ($gameState) => $gameState.turn);
-export const currentItem = derived(gameState, ($gameState) => $gameState.item);
 export const currentRace = derived(gameState, ($gameState) => $gameState.race);
 export const pawnStats = derived(gameState, ($gameState) => $gameState.pawnStats || {});
 

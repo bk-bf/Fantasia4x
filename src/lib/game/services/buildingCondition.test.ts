@@ -29,7 +29,15 @@ function makeState(buildings: PlacedBuilding[], stockpile: Record<string, number
 }
 
 const wall = (p: Partial<PlacedBuilding> = {}): PlacedBuilding =>
-  ({ id: 'b1', type: 'branch_wall', x: 0, y: 0, status: 'complete', progress: 1, ...p }) as PlacedBuilding;
+  ({
+    id: 'b1',
+    type: 'branch_wall',
+    x: 0,
+    y: 0,
+    status: 'complete',
+    progress: 1,
+    ...p
+  }) as PlacedBuilding;
 
 describe('BuildingService condition (refactor Stage 1)', () => {
   it('decays a complete building with conditionDecayPerTurn', () => {

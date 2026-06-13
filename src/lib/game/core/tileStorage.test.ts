@@ -47,9 +47,19 @@ describe('per-tile storage helpers (Stage 2 Step 1)', () => {
 
   it('tileCapacity = base + storage building bonus on that tile', () => {
     // A real storage building adds tileCapacityBonus; here use an ad-hoc def-less building → base only.
-    const gs = state([], [
-      { id: 'b', type: 'nonexistent_def', x: 1, y: 1, status: 'complete', progress: 1 } as PlacedBuilding
-    ]);
+    const gs = state(
+      [],
+      [
+        {
+          id: 'b',
+          type: 'nonexistent_def',
+          x: 1,
+          y: 1,
+          status: 'complete',
+          progress: 1
+        } as PlacedBuilding
+      ]
+    );
     expect(tileCapacity(gs, 1, 1)).toBe(BASE_TILE_CAPACITY);
     expect(tileCapacity(gs, 5, 5)).toBe(BASE_TILE_CAPACITY);
   });
@@ -64,7 +74,12 @@ describe('per-tile storage helpers (Stage 2 Step 1)', () => {
 
 describe('drops-authoritative storage core (Stage 2 flip)', () => {
   const withDesig = (drops: DroppedItem[], desig: Record<string, string> = {}): GameState =>
-    ({ droppedItems: drops, buildings: [], stockpileZones: [], designations: desig } as unknown as GameState);
+    ({
+      droppedItems: drops,
+      buildings: [],
+      stockpileZones: [],
+      designations: desig
+    }) as unknown as GameState;
 
   it('addToStockpileZone creates a stored drop on the given tile and updates the aggregate', () => {
     const out = addToStockpileZone(withDesig([]), '3,4', { granite: 5 });
@@ -96,16 +111,21 @@ describe('drops-authoritative storage core (Stage 2 flip)', () => {
   });
 
   it('absorbDropIfOnStockpileTile marks a loose drop stored when on a stockpile tile', () => {
-    const gs = withDesig([drop({ id: 'loose', resourceId: 'branch', x: 2, y: 2, quantity: 3, stored: false })], {
-      '2,2': 'stockpile'
-    });
+    const gs = withDesig(
+      [drop({ id: 'loose', resourceId: 'branch', x: 2, y: 2, quantity: 3, stored: false })],
+      {
+        '2,2': 'stockpile'
+      }
+    );
     const out = absorbDropIfOnStockpileTile(gs, 'loose');
     expect(out.droppedItems!.find((x) => x.id === 'loose')!.stored).toBe(true);
     expect(out.stockpile['branch']).toBe(3);
   });
 
   it('absorbDropIfOnStockpileTile is a no-op off a stockpile tile', () => {
-    const gs = withDesig([drop({ id: 'loose', resourceId: 'branch', x: 2, y: 2, quantity: 3, stored: false })]);
+    const gs = withDesig([
+      drop({ id: 'loose', resourceId: 'branch', x: 2, y: 2, quantity: 3, stored: false })
+    ]);
     expect(absorbDropIfOnStockpileTile(gs, 'loose')).toBe(gs);
   });
 });

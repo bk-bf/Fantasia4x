@@ -31,8 +31,23 @@ const widget = (id: string) =>
   ({ id, name: id, category: 'crafted', craftingTime: 2, amount: 0 }) as any;
 
 describe('job pipeline sim invariants', () => {
-  it('every craft queue entry eventually drains and produces its item', () => {
+  it('every supplied craft order eventually drains and produces its item on the station (ADR-016)', () => {
+    // ADR-016: each order's inputs are pre-staged on the shared craft_spot station; the craft
+    // job opens, a worker advances it, and the output spawns as a drop on the station tile.
+    const station = { id: 'st', type: 'craft_spot', x: 5, y: 5, status: 'complete' } as any;
+    const staged = (id: string, resourceId: string) =>
+      ({
+        id: `d-${id}`,
+        resourceId,
+        x: 5,
+        y: 5,
+        quantity: 1,
+        stored: true,
+        reservedFor: id
+      }) as any;
     let gs = makeState({
+      buildings: [station],
+      droppedItems: [staged('a', 'wood'), staged('b', 'clay')],
       craftingQueue: [
         {
           id: 'a',
@@ -41,7 +56,9 @@ describe('job pipeline sim invariants', () => {
           workRequired: 4,
           workDone: 0,
           startedAt: 0,
-          materialsReserved: true
+          inputs: { wood: 1 },
+          stationType: 'craft_spot',
+          stationBuildingId: 'st'
         } as any,
         {
           id: 'b',
@@ -50,7 +67,9 @@ describe('job pipeline sim invariants', () => {
           workRequired: 6,
           workDone: 0,
           startedAt: 0,
-          materialsReserved: true
+          inputs: { clay: 1 },
+          stationType: 'craft_spot',
+          stationBuildingId: 'st'
         } as any
       ]
     });
@@ -65,9 +84,11 @@ describe('job pipeline sim invariants', () => {
     }
 
     expect(gs.craftingQueue).toHaveLength(0); // INVARIANT: queue always drains
-    expect(gs.item.find((i) => i.id === 'alpha')?.amount).toBe(1);
-    expect(gs.item.find((i) => i.id === 'beta')?.amount).toBe(2);
-    // No orphaned craft jobs left in the pool.
+    const drops = gs.droppedItems ?? [];
+    expect(drops.find((d) => d.resourceId === 'alpha')?.quantity).toBe(1);
+    expect(drops.find((d) => d.resourceId === 'beta')?.quantity).toBe(2);
+    // Staged inputs consumed; no orphaned craft jobs.
+    expect(drops.some((d) => d.reservedFor)).toBe(false);
     expect((gs.jobs ?? []).some((j) => j.type === 'craft')).toBe(false);
   });
 

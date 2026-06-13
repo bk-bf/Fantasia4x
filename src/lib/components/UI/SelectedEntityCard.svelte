@@ -69,7 +69,10 @@
 <div
   class="tile-hud tile-hud--pawn"
   class:tile-hud--selected={model.selected}
-  onmousedown={(e) => { e.stopPropagation(); if (!model.selected) model.onSelect?.(); }}
+  onmousedown={(e) => {
+    e.stopPropagation();
+    if (!model.selected) model.onSelect?.();
+  }}
   onmouseup={(e) => e.stopPropagation()}
   onclick={(e) => e.stopPropagation()}
 >
@@ -87,7 +90,10 @@
             class:hud-btn--active={btn.active}
             onmousedown={(e) => e.stopPropagation()}
             onmouseup={(e) => e.stopPropagation()}
-            onclick={(e) => { e.stopPropagation(); btn.onClick(); }}
+            onclick={(e) => {
+              e.stopPropagation();
+              btn.onClick();
+            }}
           >
             {btn.label}
           </button>

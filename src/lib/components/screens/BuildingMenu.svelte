@@ -321,7 +321,10 @@
   <!-- Building groups + ZONES as a tab -->
   {#if sections.length > 0}
     <FilterTabs
-      tabs={[{ id: 'ZONES', label: 'ZONES' }, ...sections.map((s) => ({ id: s.label, label: s.label }))]}
+      tabs={[
+        { id: 'ZONES', label: 'ZONES' },
+        ...sections.map((s) => ({ id: s.label, label: s.label }))
+      ]}
       selected={selectedSection}
       onSelect={(id) => (selectedSection = id)}
     />
@@ -511,5 +514,4 @@
     font-size: 10px;
     color: var(--text-dim);
   }
-
 </style>

@@ -20,8 +20,22 @@ function state(stock: Record<string, number>, buildings: { type: string }[] = []
     pawns: [],
     stockpile: { ...stock },
     stockpileZones: [zone],
-    droppedItems: Object.entries(stock).map(([id, q]) => ({ id: `d-${id}`, resourceId: id, x: 0, y: 0, quantity: q, stored: true })),
-    buildings: buildings.map((b, i) => ({ id: `b${i}`, type: b.type, x: 0, y: 0, status: 'complete', progress: 1 })),
+    droppedItems: Object.entries(stock).map(([id, q]) => ({
+      id: `d-${id}`,
+      resourceId: id,
+      x: 0,
+      y: 0,
+      quantity: q,
+      stored: true
+    })),
+    buildings: buildings.map((b, i) => ({
+      id: `b${i}`,
+      type: b.type,
+      x: 0,
+      y: 0,
+      status: 'complete',
+      progress: 1
+    })),
     completedResearch: []
   } as unknown as GameState;
 }

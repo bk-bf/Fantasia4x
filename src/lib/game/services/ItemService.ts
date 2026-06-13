@@ -1,4 +1,11 @@
-import type { Item, GameState, DynamicIngredientSlot, DroppedItem, Recipe, Pawn } from '../core/types';
+import type {
+  Item,
+  GameState,
+  DynamicIngredientSlot,
+  DroppedItem,
+  Recipe,
+  Pawn
+} from '../core/types';
 import {
   consumeFromStockpiles,
   addToStockpileZone,
@@ -312,7 +319,10 @@ export class ItemServiceImpl implements ItemService {
 
   calculateCraftingCost(itemId: string): Record<string, number> {
     const recipe = recipeService.getRecipeForItem(itemId);
-    if (recipe) return Object.keys(recipe.inputs).length ? recipe.inputs : (recipe.inputAlternatives?.[0] ?? {});
+    if (recipe)
+      return Object.keys(recipe.inputs).length
+        ? recipe.inputs
+        : (recipe.inputAlternatives?.[0] ?? {});
     return {};
   }
 
@@ -406,7 +416,11 @@ export class ItemServiceImpl implements ItemService {
    */
   getCarryBudget(pawn: Pawn, _state: GameState): { maxWeightKg: number; maxVolumeL: number } {
     const sizeScore: Record<string, number> = {
-      tiny: -2, small: -1, medium: 0, large: 1, huge: 2
+      tiny: -2,
+      small: -1,
+      medium: 0,
+      large: 1,
+      huge: 2
     };
     const bs = sizeScore[pawn.physicalTraits?.size ?? 'medium'] ?? 0;
     const str = pawn.stats.strength ?? 10;
@@ -458,8 +472,9 @@ export class ItemServiceImpl implements ItemService {
     const def = this.getItemById(itemId);
     const addW = (def?.weightKg ?? 0.1) * qty;
     const addV = (def?.volumeL ?? 0.2) * qty;
-    return (current.weightKg + addW <= budget.maxWeightKg) &&
-           (current.volumeL + addV <= budget.maxVolumeL);
+    return (
+      current.weightKg + addW <= budget.maxWeightKg && current.volumeL + addV <= budget.maxVolumeL
+    );
   }
 
   /**
@@ -485,7 +500,8 @@ export class ItemServiceImpl implements ItemService {
 
     let changed = false;
     const next: DroppedItem[] = [];
-    const rotted: { resourceId: string; x: number; y: number; stored?: boolean; qty: number }[] = [];
+    const rotted: { resourceId: string; x: number; y: number; stored?: boolean; qty: number }[] =
+      [];
 
     for (const d of drops) {
       const def = this.getItemById(d.resourceId);
@@ -513,7 +529,8 @@ export class ItemServiceImpl implements ItemService {
     // Merge rotted output into stacks at the same tile.
     for (const r of rotted) {
       const idx = next.findIndex(
-        (d) => d.resourceId === r.resourceId && d.x === r.x && d.y === r.y && !!d.stored === !!r.stored
+        (d) =>
+          d.resourceId === r.resourceId && d.x === r.x && d.y === r.y && !!d.stored === !!r.stored
       );
       if (idx >= 0) next[idx] = { ...next[idx], quantity: next[idx].quantity + r.qty };
       else {
@@ -551,7 +568,8 @@ export class ItemServiceImpl implements ItemService {
     for (const b of gameState.buildings ?? []) {
       if (b.status !== 'complete') continue;
       const def = BUILDING_DEFS_FOR_ITEMS.find((x) => x.id === b.type);
-      if ((def?.effects as Record<string, number> | undefined)?.['roof']) roofed.add(`${b.x},${b.y}`);
+      if ((def?.effects as Record<string, number> | undefined)?.['roof'])
+        roofed.add(`${b.x},${b.y}`);
     }
 
     let changed = false;

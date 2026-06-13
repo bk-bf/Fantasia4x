@@ -61,9 +61,7 @@
   <div class="need-row">
     <span class="lbl">HUNGER</span>
     <span class="block-bar" style="color: {getNeedColor(hungerPct)}">{blockBar(hungerPct)}</span>
-    <span class="val" style="color: {getNeedColor(hungerPct)}"
-      >{Math.round(needs.hunger)}/100</span
-    >
+    <span class="val" style="color: {getNeedColor(hungerPct)}">{Math.round(needs.hunger)}/100</span>
     <span class="desc">{getNeedDescription('hunger', needs.hunger)}</span>
   </div>
 

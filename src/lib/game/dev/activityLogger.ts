@@ -23,57 +23,57 @@ const FLUSH_SIZE = 20;
 const FLUSH_INTERVAL_MS = 2000;
 
 class ActivityLoggerImpl {
-    private buffer: ActivityLogEntry[] = [];
-    private timer: ReturnType<typeof setInterval> | null = null;
+  private buffer: ActivityLogEntry[] = [];
+  private timer: ReturnType<typeof setInterval> | null = null;
 
-    constructor() {
-        if (typeof window !== 'undefined') {
-            this.timer = setInterval(() => {
-                if (this.buffer.length > 0) this.flush();
-            }, FLUSH_INTERVAL_MS);
-        }
+  constructor() {
+    if (typeof window !== 'undefined') {
+      this.timer = setInterval(() => {
+        if (this.buffer.length > 0) this.flush();
+      }, FLUSH_INTERVAL_MS);
+    }
+  }
+
+  /** Append an activity entry to the write buffer. */
+  log(entry: ActivityLogEntry): void {
+    this.buffer.push(entry);
+    if (this.buffer.length >= FLUSH_SIZE) this.flush();
+  }
+
+  /** Flush buffered entries to the server immediately. */
+  flush(): void {
+    if (this.buffer.length === 0) return;
+    const entries = this.buffer.splice(0);
+
+    const body = JSON.stringify({ entries });
+    const blob = new Blob([body], { type: 'application/json' });
+
+    if (typeof navigator !== 'undefined' && navigator.sendBeacon('/api/activity-log', blob)) {
+      return;
     }
 
-    /** Append an activity entry to the write buffer. */
-    log(entry: ActivityLogEntry): void {
-        this.buffer.push(entry);
-        if (this.buffer.length >= FLUSH_SIZE) this.flush();
+    fetch('/api/activity-log', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body,
+      keepalive: true
+    }).catch(() => {
+      /* intentionally silent */
+    });
+  }
+
+  /** Flush and stop the auto-flush timer. */
+  destroy(): void {
+    this.flush();
+    if (this.timer !== null) {
+      clearInterval(this.timer);
+      this.timer = null;
     }
-
-    /** Flush buffered entries to the server immediately. */
-    flush(): void {
-        if (this.buffer.length === 0) return;
-        const entries = this.buffer.splice(0);
-
-        const body = JSON.stringify({ entries });
-        const blob = new Blob([body], { type: 'application/json' });
-
-        if (typeof navigator !== 'undefined' && navigator.sendBeacon('/api/activity-log', blob)) {
-            return;
-        }
-
-        fetch('/api/activity-log', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body,
-            keepalive: true
-        }).catch(() => {
-            /* intentionally silent */
-        });
-    }
-
-    /** Flush and stop the auto-flush timer. */
-    destroy(): void {
-        this.flush();
-        if (this.timer !== null) {
-            clearInterval(this.timer);
-            this.timer = null;
-        }
-    }
+  }
 }
 
 export const activityLogger = new ActivityLoggerImpl();
 
 if (import.meta.hot) {
-    import.meta.hot.dispose(() => activityLogger.destroy());
+  import.meta.hot.dispose(() => activityLogger.destroy());
 }

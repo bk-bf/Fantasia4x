@@ -108,9 +108,8 @@
               <div class="tip-formula">{d.formula}</div>
               {#if d.vars.length}
                 <div class="tip-where">
-                  {#each d.vars as vv, i}{i > 0 ? ',  ' : ''}<span class="tv-name"
-                      >{vv.name}</span
-                    > = <span class="tv-val">{vv.value}</span>{/each}
+                  {#each d.vars as vv, i}{i > 0 ? ',  ' : ''}<span class="tv-name">{vv.name}</span>
+                    = <span class="tv-val">{vv.value}</span>{/each}
                 </div>
               {/if}
               <div class="tip-result">= <span class="tv-val">{v}</span></div>

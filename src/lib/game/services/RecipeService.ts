@@ -130,8 +130,17 @@ export class RecipeServiceImpl implements RecipeService {
       if (!itemBonuses) continue;
       for (const [field, value] of Object.entries(itemBonuses)) {
         const weaponFields = new Set([
-          'damage', 'damMin', 'damMax', 'attackSpeed', 'range', 'reach',
-          'accuracy', 'armorPenetration', 'bluntMod', 'critMod', 'staminaCost'
+          'damage',
+          'damMin',
+          'damMax',
+          'attackSpeed',
+          'range',
+          'reach',
+          'accuracy',
+          'armorPenetration',
+          'bluntMod',
+          'critMod',
+          'staminaCost'
         ]);
         if (weaponFields.has(field)) {
           weaponDelta[field] = (weaponDelta[field] ?? 0) + value;

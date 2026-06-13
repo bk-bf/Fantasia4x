@@ -64,27 +64,26 @@ export function syncPawnInventoryWithGlobal(pawn: Pawn, globalItems: Item[]): Pa
 export function syncAllPawnInventories(gameState: GameState): GameState {
   const equippedItems = getAllEquippedItemIds(gameState.pawns);
 
-  // Create filtered global items (remove equipped items and reduce quantity)
-  const filteredGlobalItems = gameState.item.map((globalItem) => {
-    if (equippedItems.has(globalItem.id)) {
-      // Count how many times this item is equipped
+  // ADR-016: the equippable "global pool" is the colony's physical stockpile (no legacy
+  // gs.item array). Build Item-shaped entries from stockpile quantities, minus what is
+  // currently equipped. (Behaviour-preserving swap of the source; the equip UI's pool was
+  // already the shared colony storage.)
+  const filteredGlobalItems: Item[] = [];
+  for (const [id, amount] of Object.entries(gameState.stockpile ?? {})) {
+    const def = itemService.getItemById(id);
+    if (!def || amount <= 0) continue;
+    let avail = amount;
+    if (equippedItems.has(id)) {
       let equippedCount = 0;
       gameState.pawns.forEach((pawn) => {
         Object.values(pawn.equipment).forEach((inst) => {
-          if (inst && inst.itemId === globalItem.id) {
-            equippedCount++;
-          }
+          if (inst && inst.itemId === id) equippedCount++;
         });
       });
-
-      // Return item with reduced amount
-      return {
-        ...globalItem,
-        amount: Math.max(0, globalItem.amount - equippedCount)
-      };
+      avail = Math.max(0, amount - equippedCount);
     }
-    return globalItem;
-  });
+    filteredGlobalItems.push({ ...def, amount: avail });
+  }
 
   // Sync all pawns with filtered items
   const updatedPawns = gameState.pawns.map((pawn) =>

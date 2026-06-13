@@ -206,9 +206,7 @@ export class GameEngineImpl implements GameEngine {
     gs: GameState
   ): string | undefined {
     const wanted = stationType ?? 'craft_spot';
-    const station = (gs.buildings ?? []).find(
-      (b) => b.type === wanted && b.status === 'complete'
-    );
+    const station = (gs.buildings ?? []).find((b) => b.type === wanted && b.status === 'complete');
     return station?.id;
   }
 

@@ -94,7 +94,7 @@ describe('JobService advanceJob', () => {
   });
 });
 
-describe('JobService craft round-trip (D1 regression)', () => {
+describe('JobService reserve-and-fetch crafting (ADR-016)', () => {
   const craftItem = {
     id: 'test_widget',
     name: 'Test Widget',
@@ -103,58 +103,97 @@ describe('JobService craft round-trip (D1 regression)', () => {
     amount: 0
   } as any;
 
-  it('generateJobs creates a craft job for a Phase 5d queue entry (with id)', () => {
-    const gs = makeState({
-      craftingQueue: [
-        {
-          id: 'cq-1',
-          item: craftItem,
-          quantity: 1,
-          workRequired: 10,
-          workDone: 0,
-          startedAt: 0,
-          materialsReserved: true
-        } as any
-      ]
-    });
-    const out = jobService.generateJobs(gs);
+  const station = { id: 'st-1', type: 'craft_spot', x: 5, y: 5, status: 'complete' } as any;
+
+  function order(over: Record<string, any> = {}) {
+    return {
+      id: 'cq-1',
+      item: craftItem,
+      quantity: 1,
+      workRequired: 10,
+      workDone: 0,
+      startedAt: 0,
+      inputs: { wood: 2 },
+      stationType: 'craft_spot',
+      stationBuildingId: 'st-1',
+      ...over
+    } as any;
+  }
+
+  it('emits a fetch job (not a craft job) while inputs are still in the stockpile', () => {
+    // Reserved input sits on a stockpile tile (2,0), NOT the station tile (5,5).
+    const reserved = {
+      id: 'd-wood',
+      resourceId: 'wood',
+      x: 2,
+      y: 0,
+      quantity: 2,
+      stored: true,
+      reservedFor: 'cq-1'
+    } as any;
+    const out = jobService.generateJobs(
+      makeState({ buildings: [station], craftingQueue: [order()], droppedItems: [reserved] })
+    );
+    const fetchJob = out.jobs.find((j) => j.type === 'fetch');
+    expect(fetchJob).toBeDefined();
+    expect(fetchJob!.droppedItemId).toBe('d-wood');
+    expect(fetchJob!.stationX).toBe(5);
+    expect(fetchJob!.stationY).toBe(5);
+    // No craft job yet — inputs are not staged on the station.
+    expect(out.jobs.find((j) => j.type === 'craft')).toBeUndefined();
+  });
+
+  it('opens a craft job at the station tile once inputs are staged there', () => {
+    const staged = {
+      id: 'd-wood',
+      resourceId: 'wood',
+      x: 5,
+      y: 5,
+      quantity: 2,
+      stored: true,
+      reservedFor: 'cq-1'
+    } as any;
+    const out = jobService.generateJobs(
+      makeState({ buildings: [station], craftingQueue: [order()], droppedItems: [staged] })
+    );
     const craftJob = out.jobs.find((j) => j.type === 'craft');
     expect(craftJob).toBeDefined();
     expect(craftJob!.craftQueueId).toBe('cq-1');
     expect(craftJob!.workRequired).toBe(10);
+    expect(craftJob!.targetX).toBe(5);
+    expect(craftJob!.targetY).toBe(5);
+    // No fetch job — everything is already staged.
+    expect(out.jobs.find((j) => j.type === 'fetch')).toBeUndefined();
   });
 
-  it('does NOT create a craft job for a legacy entry without id', () => {
-    const gs = makeState({
-      craftingQueue: [{ item: craftItem, quantity: 1, startedAt: 0 } as any]
-    });
-    const out = jobService.generateJobs(gs);
-    expect(out.jobs.find((j) => j.type === 'craft')).toBeUndefined();
-  });
-
-  it('completing the craft job produces the item and drains the queue', () => {
+  it('completing the craft destroys staged inputs, drains the queue, and drops output on the station', () => {
+    const staged = {
+      id: 'd-wood',
+      resourceId: 'wood',
+      x: 5,
+      y: 5,
+      quantity: 2,
+      stored: true,
+      reservedFor: 'cq-1'
+    } as any;
     let gs = makeState({
-      craftingQueue: [
-        {
-          id: 'cq-1',
-          item: craftItem,
-          quantity: 3,
-          workRequired: 10,
-          workDone: 0,
-          startedAt: 0,
-          materialsReserved: true
-        } as any
-      ]
+      buildings: [station],
+      craftingQueue: [order({ quantity: 3 })],
+      droppedItems: [staged]
     });
     gs = jobService.generateJobs(gs);
     const craftJob = gs.jobs.find((j) => j.type === 'craft')!;
 
-    // Pawn works it to completion.
     gs = jobService.advanceJob(craftJob.id, 10, gs);
 
     expect(gs.craftingQueue).toHaveLength(0); // queue drained
-    const produced = gs.item.find((i) => i.id === 'test_widget');
+    // Staged input consumed — no reservedFor drop survives.
+    expect((gs.droppedItems ?? []).some((d) => d.reservedFor === 'cq-1')).toBe(false);
+    // Output is a physical drop ON the station tile (qty = 1 output × quantity 3).
+    const produced = (gs.droppedItems ?? []).find(
+      (d) => d.resourceId === 'test_widget' && d.x === 5 && d.y === 5
+    );
     expect(produced).toBeDefined();
-    expect(produced!.amount).toBe(3);
+    expect(produced!.quantity).toBe(3);
   });
 });

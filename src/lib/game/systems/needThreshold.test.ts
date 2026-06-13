@@ -11,8 +11,8 @@ function makeState(partial: Partial<GameState> = {}): GameState {
   return {
     jobs: [],
     buildings: [],
-    item: [],
     stockpile: {},
+    droppedItems: [],
     pawns: [],
     ...partial
   } as unknown as GameState;
@@ -43,8 +43,7 @@ describe('D8: fatigue lookahead reads REST sources, hunger reads FOOD sources', 
     jobs: [{ id: 'j1', type: 'haul', targetX: 1, targetY: 0, claimedBy: null } as any],
     buildings: [bed(2, 0), campfire(40, 0)],
     // stock a real food item so computeMinQueueFoodDist doesn't short-circuit to null
-    stockpile: { wild_berries: 10 },
-    item: [{ id: 'wild_berries', amount: 10 } as any]
+    stockpile: { wild_berries: 10 }
   });
 
   it('rest distance from the queued job is small (next to the bed)', () => {
