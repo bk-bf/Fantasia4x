@@ -415,7 +415,7 @@ Two systems independently computed how good a pawn is at work and disagreed. `Mo
 
 - **Date**: 2026-06-13
 - **Status**: Accepted
-- **Spec**: [.tasks/open/PHYSICAL-PRODUCTION.md](../.tasks/open/PHYSICAL-PRODUCTION.md)
+- **Spec**: [.tasks/archive/PHYSICAL-PRODUCTION-2026-06-13.md](../.tasks/archive/PHYSICAL-PRODUCTION-2026-06-13.md) (archived — shipped)
 
 #### Context
 

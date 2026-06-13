@@ -70,4 +70,4 @@ PT-2/3/4, and the full PawnStateMachine decomposition — is in the
 2. **Before Living World:** P-2 (engine as sole writer) + P-3 (inject log sink) — large, no-functional-change inversions; verify in-browser (activity log / combat floaters / UI snapshot).
 3. **Opportunistic (no big-bang):** P-4 god-file splits (GameCanvas, EntityService, Combat) along seams; P-4b Step 5 selection→services.
 4. **Profiling-gated:** P-5 per-tick allocation — only when `__profOut` says so.
-5. **Physical-production follow-ups** (see [PHYSICAL-PRODUCTION](.tasks/open/PHYSICAL-PRODUCTION.md)): tool-gating step 2, per-stack craft quality on instances (R8), passive-furnace flagging for forge/hearth.
+5. **Physical-production follow-ups** (ADR-016; spec archived at [PHYSICAL-PRODUCTION](.tasks/archive/PHYSICAL-PRODUCTION-2026-06-13.md)): tool-gating step 2 (per-pawn inventory + `minTier` + craft-tool gating), per-stack craft quality on instances (R8), butchery multi-yield (content), passive-furnace flagging for forge/hearth.

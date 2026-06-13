@@ -2,7 +2,10 @@
 
 # PHYSICAL PRODUCTION — reserve-and-fetch crafting
 
-> **Related:** [game/DESIGN](../../game/DESIGN.md) · [game/DECISIONS](../../game/DECISIONS.md) (ADR-016) · [game/ARCHITECTURE](../../game/ARCHITECTURE.md) · [ROADMAP](ROADMAP.md)
+> **Related:** [game/DESIGN](../../game/DESIGN.md) · [game/DECISIONS](../../game/DECISIONS.md) (ADR-016) · [game/ARCHITECTURE](../../game/ARCHITECTURE.md) · [ROADMAP](../open/ROADMAP.md)
+
+> **Archived 2026-06-13.** Pass 1 + Pass 2 shipped (recorded as ADR-016). The "Still deferred"
+> follow-ups below are tracked live in the [open codebase review](../../CODEBASE-REVIEW-2026-06-10.md).
 
 ## Problem
 
