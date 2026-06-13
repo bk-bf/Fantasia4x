@@ -24,45 +24,38 @@
     font: 13px/1.5 'JetBrains Mono', 'SF Mono', 'Fira Code', ui-monospace, Menlo, Consolas, monospace;
     overflow: hidden;
   }
-  #app { display: grid; grid-template-columns: 290px 1fr 0px; height: 100vh; transition: grid-template-columns .18s; }
-  #app.detail-open { grid-template-columns: 290px 1fr 360px; }
+  #app { display: grid; grid-template-rows: 50px 1fr; height: 100vh; }
+  #workarea { display: grid; grid-template-columns: 1fr 0px; min-height: 0; transition: grid-template-columns .18s; }
+  #workarea.detail-open { grid-template-columns: 1fr 360px; }
 
-  /* ---------- sidebar ---------- */
-  aside {
-    background: var(--bg-panel);
-    border-right: 1px solid var(--border);
-    display: flex; flex-direction: column; min-height: 0;
+  /* ---------- headbar ---------- */
+  .headbar {
+    display: flex; align-items: center; gap: 14px; padding: 0 16px; min-width: 0;
+    background: var(--bg-panel); border-bottom: 1px solid var(--border);
   }
-  aside header { padding: 14px 16px; border-bottom: 1px solid var(--border); }
-  aside header h1 { margin: 0; font-size: 15px; letter-spacing: .5px; }
-  aside header h1 b { color: var(--accent); }
-  .stats { color: var(--fg-dim); font-size: 11px; margin-top: 4px; }
-  .controls { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 10px; }
-  .controls label { font-size: 11px; color: var(--fg-dim); text-transform: uppercase; letter-spacing: .5px; }
-  input[type=search] {
-    width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--fg);
-    padding: 7px 9px; border-radius: 6px; font-family: inherit; font-size: 12px;
+  .headbar .brand { font-size: 14px; letter-spacing: .5px; white-space: nowrap; }
+  .headbar .brand b { color: var(--accent); }
+  .headbar .vsep { width: 1px; height: 24px; background: var(--border); flex: none; }
+  .headbar .grow { flex: 1; min-width: 8px; }
+  .stats { color: var(--fg-dim); font-size: 11px; white-space: nowrap; }
+  .hb-field { display: flex; align-items: center; gap: 7px; white-space: nowrap; }
+  .ctl-label { font-size: 10px; text-transform: uppercase; letter-spacing: .5px; color: var(--fg-dim); }
+  input.modpick {
+    width: 230px; background: var(--bg); border: 1px solid var(--border); color: var(--fg);
+    padding: 6px 9px; border-radius: 6px; font-family: inherit; font-size: 12px;
   }
-  input[type=search]:focus { outline: none; border-color: var(--accent2); }
+  input.modpick:focus { outline: none; border-color: var(--accent2); }
   .seg { display: flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
-  .seg button { flex: 1; background: var(--bg); color: var(--fg-dim); border: 0; padding: 7px 4px; font-family: inherit; font-size: 11px; cursor: pointer; }
+  .seg button { background: var(--bg); color: var(--fg-dim); border: 0; padding: 6px 12px; font-family: inherit; font-size: 11px; cursor: pointer; }
   .seg button.on { background: var(--accent); color: #11151b; font-weight: 600; }
-  .toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-  .switch { position: relative; width: 40px; height: 22px; flex: none; }
+  .switch { position: relative; width: 38px; height: 21px; flex: none; cursor: pointer; }
   .switch input { display: none; }
-  .switch span { position: absolute; inset: 0; background: var(--bg); border: 1px solid var(--border); border-radius: 11px; transition: .15s; }
-  .switch span::after { content: ''; position: absolute; width: 16px; height: 16px; left: 2px; top: 2px; background: var(--fg-dim); border-radius: 50%; transition: .15s; }
+  .switch > span { position: absolute; inset: 0; background: var(--bg); border: 1px solid var(--border); border-radius: 11px; transition: .15s; }
+  .switch > span::after { content: ''; position: absolute; width: 15px; height: 15px; left: 2px; top: 2px; background: var(--fg-dim); border-radius: 50%; transition: .15s; }
   .switch input:checked + span { background: var(--accent2); border-color: var(--accent2); }
-  .switch input:checked + span::after { left: 20px; background: #11151b; }
+  .switch input:checked + span::after { left: 19px; background: #11151b; }
 
-  .modlist { overflow-y: auto; flex: 1; padding: 6px 8px; }
-  .grp-h { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--fg-dim); padding: 12px 8px 4px; display: flex; align-items: center; gap: 6px; }
-  .grp-dot { width: 9px; height: 9px; border-radius: 2px; flex: none; }
-  .mod-item { padding: 5px 10px 5px 22px; border-radius: 5px; cursor: pointer; color: var(--fg); display: flex; justify-content: space-between; gap: 6px; }
-  .mod-item:hover { background: var(--bg-elev); }
-  .mod-item.active { background: var(--accent); color: #11151b; }
-  .mod-item .cnt { color: var(--fg-dim); font-size: 11px; }
-  .mod-item.active .cnt { color: #11151b; }
+  @media (max-width: 1100px) { .hb-collapse { display: none; } input.modpick { width: 150px; } }
 
   /* ---------- graph area ---------- */
   main { position: relative; min-width: 0; overflow: hidden; background:
@@ -119,47 +112,42 @@
 </head>
 <body>
 <div id="app">
-  <aside>
-    <header>
-      <h1><b>Fantasia</b>4x · code graph</h1>
-      <div class="stats" id="statline"></div>
-    </header>
-    <div class="controls">
-      <div>
-        <label>View</label>
-        <div class="seg" id="viewseg">
-          <button data-view="overview" class="on">Architecture</button>
-          <button data-view="module">Module</button>
-        </div>
-      </div>
-      <div class="toggle-row">
-        <label for="lbltoggle" style="margin:0">Plain-English labels</label>
-        <span class="switch"><input type="checkbox" id="lbltoggle"><span></span></span>
-      </div>
-      <div class="toggle-row" id="neighrow" style="display:none">
-        <label for="neightoggle" style="margin:0">Show cross-module calls</label>
-        <span class="switch"><input type="checkbox" id="neightoggle" checked><span></span></span>
-      </div>
-      <div>
-        <input type="search" id="search" placeholder="Filter modules…" />
-      </div>
+  <header class="headbar">
+    <span class="brand"><b>Fantasia</b>4x · code graph</span>
+    <span class="vsep"></span>
+    <div class="seg" id="viewseg">
+      <button data-view="overview" class="on">Architecture</button>
+      <button data-view="module">Module</button>
     </div>
-    <div class="modlist" id="modlist"></div>
-  </aside>
-
-  <main>
-    <div id="crumbs"></div>
-    <div id="graph"><div id="viewport"></div></div>
-    <div id="loading">rendering graph…</div>
-    <div id="hint">drag to pan · scroll to zoom · hover to trace · click for detail</div>
-    <div id="zoomctl">
-      <button id="zin" title="Zoom in">+</button>
-      <button id="zout" title="Zoom out">−</button>
-      <button id="zfit" title="Fit">⤢</button>
+    <div class="hb-field">
+      <span class="ctl-label hb-collapse">Module</span>
+      <input class="modpick" id="modpick" list="modlist-data" placeholder="jump to module…" autocomplete="off" />
+      <datalist id="modlist-data"></datalist>
     </div>
-  </main>
+    <span class="vsep"></span>
+    <label class="hb-field" for="lbltoggle"><span class="ctl-label">Plain-English</span>
+      <span class="switch"><input type="checkbox" id="lbltoggle"><span></span></span></label>
+    <label class="hb-field" id="neighrow" for="neightoggle" style="display:none"><span class="ctl-label">Cross-module</span>
+      <span class="switch"><input type="checkbox" id="neightoggle" checked><span></span></span></label>
+    <span class="grow"></span>
+    <span class="stats" id="statline"></span>
+  </header>
 
-  <div id="detail"><div class="empty-detail">Select a node or edge.</div></div>
+  <div id="workarea">
+    <main>
+      <div id="crumbs"></div>
+      <div id="graph"><div id="viewport"></div></div>
+      <div id="loading">rendering graph…</div>
+      <div id="hint">drag to pan · scroll to zoom · hover to trace · click for detail</div>
+      <div id="zoomctl">
+        <button id="zin" title="Zoom in">+</button>
+        <button id="zout" title="Zoom out">−</button>
+        <button id="zfit" title="Fit">⤢</button>
+      </div>
+    </main>
+
+    <div id="detail"><div class="empty-detail">Select a node or edge.</div></div>
+  </div>
 </div>
 
 <script type="application/json" id="graphdata">/*__GRAPH__*/</script>
@@ -225,6 +213,19 @@ function modDesc(mod) {
   return DESC.modules[mod.module] || `${mod.fns} functions. No curated description yet.`;
 }
 
+// Node labels. In plain mode we show the name AND the description stacked,
+// never hiding the identifier — the description is appended under the name.
+function fnNodeLabel(node, plain, w) {
+  const name = wrap(node.short, w);
+  if (!plain) return name;
+  return name + '<br/>' + wrap(fnLabel(node, true), w + 4);
+}
+function modNodeLabel(mod, plain) {
+  const name = esc(mod.module.split('/').pop());
+  if (!plain) return `${name}<br/>${mod.fns} fn`;
+  return `${name}<br/>` + wrap(modLabel(mod, true), 30);
+}
+
 // ----- mermaid label escaping -----
 // Mermaid is configured with htmlLabels:false, so labels are SVG text.
 // Quotes/#/; break the parser; <br/> is the supported line-break token.
@@ -264,7 +265,7 @@ function buildOverview() {
     src += `subgraph G_${grp}["${grp.toUpperCase()}"]\n`;
     for (const m of mods) {
       const sid = idMap.get(m.module);
-      const lbl = state.plain ? wrap(modLabel(m, true), 30) : `${esc(m.module.split('/').pop())}<br/>${m.fns} fn`;
+      const lbl = modNodeLabel(m, state.plain);
       src += `  ${sid}["${lbl}"]\n`;
       styleLines.push(`style ${sid} fill:${shade(groupColor(grp))},stroke:${groupColor(grp)},color:#e6edf3`);
     }
@@ -303,7 +304,7 @@ function buildModule(modName) {
   src += `subgraph FOCUS["${modName.replace(/^game\//, '')}"]\n`;
   for (const n of fns) {
     const sid = idMap.get(n.id);
-    src += `  ${sid}["${wrap(fnLabel(n, state.plain), state.plain ? 30 : 22)}"]\n`;
+    src += `  ${sid}["${fnNodeLabel(n, state.plain, 22)}"]\n`;
     const c = groupColor(n.group);
     styleLines.push(`style ${sid} fill:${shade(c)},stroke:${c},color:#e6edf3`);
   }
@@ -316,7 +317,7 @@ function buildModule(modName) {
     src += `subgraph N${gi++}["${mod.replace(/^game\//, '')}"]\n`;
     for (const n of list) {
       const sid = idMap.get(n.id);
-      src += `  ${sid}(["${wrap(fnLabel(n, state.plain), state.plain ? 26 : 20)}"])\n`;
+      src += `  ${sid}(["${fnNodeLabel(n, state.plain, 20)}"])\n`;
       const c = groupColor(n.group);
       styleLines.push(`style ${sid} fill:#161b22,stroke:${c},color:${c}`);
     }
@@ -441,7 +442,7 @@ function clearHighlight() {
 // =====================================================================
 function openDetail(html) {
   document.getElementById('detail').innerHTML = html;
-  document.getElementById('app').classList.add('detail-open');
+  document.getElementById('workarea').classList.add('detail-open');
   document.querySelectorAll('#detail [data-go-mod]').forEach(el =>
     el.addEventListener('click', () => focusModule(el.dataset.goMod)));
   document.querySelectorAll('#detail [data-go-node]').forEach(el =>
@@ -449,7 +450,7 @@ function openDetail(html) {
   const cl = document.querySelector('#detail .close');
   if (cl) cl.addEventListener('click', closeDetail);
 }
-function closeDetail() { document.getElementById('app').classList.remove('detail-open'); }
+function closeDetail() { document.getElementById('workarea').classList.remove('detail-open'); }
 
 function onNodeClick(gid) {
   if (RENDER.kind === 'module') {
@@ -569,33 +570,37 @@ document.getElementById('zout').onclick = () => { pz.k = Math.max(0.05, pz.k / 1
 document.getElementById('zfit').onclick = fitView;
 
 // =====================================================================
-// Sidebar / chrome
+// Headbar / chrome
 // =====================================================================
 function renderStats() {
   const s = GRAPH.stats;
   document.getElementById('statline').textContent = `${s.functions} fns · ${s.edges} calls · ${s.modules} modules · ${s.files} files`;
 }
-function renderModList(filter = '') {
-  const groups = {};
-  for (const m of GRAPH.moduleNodes) (groups[m.group] ||= []).push(m);
-  const el = document.getElementById('modlist');
-  el.innerHTML = '';
-  const f = filter.toLowerCase();
-  for (const grp of Object.keys(groups).sort()) {
-    const mods = groups[grp].filter(m => !f || m.module.toLowerCase().includes(f)).sort((a, b) => b.fns - a.fns);
-    if (!mods.length) continue;
-    const h = document.createElement('div'); h.className = 'grp-h';
-    h.innerHTML = `<span class="grp-dot" style="background:${groupColor(grp)}"></span>${grp}`;
-    el.appendChild(h);
-    for (const m of mods) {
-      const d = document.createElement('div');
-      d.className = 'mod-item' + (state.module === m.module ? ' active' : '');
-      d.innerHTML = `<span>${shortMod(m.module).split('/').pop()}</span><span class="cnt">${m.fns}</span>`;
-      d.title = m.module;
-      d.onclick = () => focusModule(m.module);
-      el.appendChild(d);
-    }
+
+// type-to-filter module picker (native datalist). value -> full module name
+const pickMap = new Map();
+function renderModuleOptions() {
+  const dl = document.getElementById('modlist-data');
+  dl.innerHTML = '';
+  const mods = GRAPH.moduleNodes.slice().sort((a, b) =>
+    a.group === b.group ? b.fns - a.fns : a.group.localeCompare(b.group));
+  for (const m of mods) {
+    const val = shortMod(m.module);
+    pickMap.set(val.toLowerCase(), m.module);
+    const o = document.createElement('option');
+    o.value = val;
+    o.label = `${m.group} · ${m.fns} fn`;
+    dl.appendChild(o);
   }
+}
+function tryPick(raw) {
+  const v = (raw || '').trim().toLowerCase();
+  if (!v) return;
+  let full = pickMap.get(v) || pickMap.get('game/' + v);
+  if (!full) { // partial: first module containing the text
+    for (const [k, f] of pickMap) if (k.includes(v)) { full = f; break; }
+  }
+  if (full) focusModule(full);
 }
 function renderCrumbs() {
   const c = document.getElementById('crumbs');
@@ -607,13 +612,13 @@ function renderCrumbs() {
 function focusModule(mod) {
   state.view = 'module'; state.module = mod;
   document.querySelectorAll('#viewseg button').forEach(b => b.classList.toggle('on', b.dataset.view === 'module'));
-  renderModList(document.getElementById('search').value);
+  document.getElementById('modpick').value = shortMod(mod);
   render();
 }
 function goOverview() {
   state.view = 'overview';
   document.querySelectorAll('#viewseg button').forEach(b => b.classList.toggle('on', b.dataset.view === 'overview'));
-  renderModList(document.getElementById('search').value);
+  document.getElementById('modpick').value = '';
   render();
 }
 
@@ -624,13 +629,24 @@ document.querySelectorAll('#viewseg button').forEach(b => b.onclick = () => {
 });
 document.getElementById('lbltoggle').onchange = (e) => { state.plain = e.target.checked; render(); };
 document.getElementById('neightoggle').onchange = (e) => { state.neighbors = e.target.checked; render(); };
-document.getElementById('search').oninput = (e) => renderModList(e.target.value);
+const modpick = document.getElementById('modpick');
+modpick.addEventListener('change', (e) => tryPick(e.target.value));
+modpick.addEventListener('keydown', (e) => { if (e.key === 'Enter') tryPick(e.target.value); });
 document.getElementById('graph').addEventListener('click', (e) => { if (e.target.id === 'graph' || e.target.id === 'viewport') closeDetail(); });
 
 // boot
 renderStats();
-renderModList();
+renderModuleOptions();
 render();
+
+// Live-reload: active only when served over http (graph:serve / launch.sh --debug).
+// Inert when the file is opened directly via file://.
+if (location.protocol === 'http:' || location.protocol === 'https:') {
+  try {
+    const es = new EventSource('/__reload');
+    es.onmessage = (e) => { if (e.data === 'reload') location.reload(); };
+  } catch { /* no-op */ }
+}
 </script>
 </body>
 </html>

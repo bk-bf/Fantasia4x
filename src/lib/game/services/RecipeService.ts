@@ -6,6 +6,14 @@ const ITEMS_DATABASE = itemsData as unknown as Item[];
 const AUTHORED_RECIPES = recipesData as unknown as Recipe[];
 
 /**
+ * ADR-016 passive furnaces: stations that transform loaded inputs over time without a pawn
+ * working them (gated by fuel/heat). The clear, unambiguous furnaces; other heat stations
+ * (stone_forge/hearth) stay active for now — a pawn works them — and can be flagged passive
+ * per-recipe via `Recipe.passive` when their content is split from cooking/shaping.
+ */
+const PASSIVE_STATIONS = new Set(['bloomery', 'charcoal_pit', 'pottery_kiln', 'advanced_kiln']);
+
+/**
  * RecipeService — the single source of truth for "how is X made" (PRODUCTION-CHAIN-EXPANSION
  * recipe-registry refactor). Recipes are first-class: items are pure materials.
  *
@@ -28,6 +36,13 @@ export interface RecipeService {
   getRecipesUsing(itemId: string): Recipe[];
   /** The canonical recipe used to craft `itemId` (first producer; authored beats synthesised). */
   getRecipeForItem(itemId: string): Recipe | undefined;
+  /**
+   * ADR-016: is this recipe produced passively (loaded furnace transforms it over time, no pawn
+   * working it)? `recipe.passive` wins; otherwise derived from the station being a known furnace.
+   */
+  isPassive(recipe: Recipe | undefined): boolean;
+  /** ADR-016: is `stationType` a passive furnace (bloomery/kiln/charcoal pit, …)? */
+  isPassiveStation(stationType: string | null | undefined): boolean;
   /**
    * Merge per-slot material bonuses into weaponProperties/armorProperties deltas.
    * Called during output assembly when `selectedIngredients` (slot → chosenItemId) are known.
@@ -113,6 +128,15 @@ export class RecipeServiceImpl implements RecipeService {
   }
   getRecipeForItem(itemId: string): Recipe | undefined {
     return this.producedBy.get(itemId)?.[0];
+  }
+
+  isPassive(recipe: Recipe | undefined): boolean {
+    if (!recipe) return false;
+    return recipe.passive ?? this.isPassiveStation(recipe.station);
+  }
+
+  isPassiveStation(stationType: string | null | undefined): boolean {
+    return stationType ? PASSIVE_STATIONS.has(stationType) : false;
   }
 
   applyMaterialBonuses(

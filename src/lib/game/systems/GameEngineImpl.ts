@@ -119,14 +119,6 @@ export class GameEngineImpl implements GameEngine {
     const item = itemService.getItemById(itemId);
     if (!item) return;
 
-    // Butchery is a dedicated multi-yield path (not yet folded into ADR-016 reserve-and-fetch):
-    // one carcass → meat + hide + bone, scaled by intactness. Processed instantly here.
-    if (item.isCarcass && item.yields) {
-      this.craftButchery(item);
-      this.updateStores();
-      return;
-    }
-
     // ADR-016 reserve-and-fetch: do NOT consume materials here. Lock the inputs to this order,
     // pick a workstation, and queue the order. Pawns then fetch the reserved inputs to the
     // station and craft them there; the output spawns on the station (see JobService).
@@ -185,15 +177,6 @@ export class GameEngineImpl implements GameEngine {
 
     this.gameState = { ...gs, craftingQueue: [...(gs.craftingQueue ?? []), order] };
     this.updateStores();
-  }
-
-  /**
-   * Butchery — delegated to ItemService (the engine coordinates, the service owns the math).
-   * Processes one carcass into its multi-yield outputs, scaled by intactness/tools/building.
-   */
-  private craftButchery(carcassItem: import('../core/types').Item): void {
-    if (!this.gameState) return;
-    this.gameState = itemService.processButchery(carcassItem, this.gameState);
   }
 
   /**

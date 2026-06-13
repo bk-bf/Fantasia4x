@@ -16,7 +16,6 @@ import { recipeService } from './RecipeService';
 import itemsData from '../database/items.jsonc';
 import buildingsData from '../database/buildings.jsonc';
 import { SECONDS_PER_TICK } from '../core/time';
-import { rng } from '../core/rng';
 
 const ITEMS_DATABASE = itemsData as unknown as Item[];
 // Building defs are needed for tile-aware decay (storage multipliers, roofs).
@@ -88,11 +87,11 @@ export interface ItemService {
   getAvailableQuantity(itemId: string, gameState: GameState): number;
   consumeItems(itemIds: Record<string, number>, gameState: GameState): GameState;
   addItems(itemIds: Record<string, number>, gameState: GameState): GameState;
-  processButchery(carcassItem: Item, gameState: GameState): GameState;
 
   // Carry capacity
   getCarryBudget(pawn: Pawn, state: GameState): { maxWeightKg: number; maxVolumeL: number };
   canAddToInventory(pawn: Pawn, itemId: string, qty: number, state: GameState): boolean;
+  clampPickupQuantity(pawn: Pawn, itemId: string, qty: number, state: GameState): number;
   getCurrentCarryLoad(pawn: Pawn, state: GameState): { weightKg: number; volumeL: number };
 
   // Decay
@@ -142,22 +141,8 @@ export class ItemServiceImpl implements ItemService {
     const item = this.getItemById(itemId);
     if (!item) return false;
 
-    // Butchery stays a dedicated multi-yield path (one carcass → meat + hide + bone via
-    // `yields`, scaled by intactness/tools/building) — the single-output recipe registry can't
-    // express that, so it is NOT folded into reserve-and-fetch crafting in this pass. It still
-    // requires a butcher station + carcass in stock; see processButchery (R3: consumes 1 carcass).
-    if (item.isCarcass && item.yields) {
-      const intactness = gameState.carcassIntactness ?? {};
-      const currentIntactness = intactness[itemId] ?? 100;
-      if (currentIntactness <= 0) return false;
-      if ((gameState.stockpile?.[itemId] ?? 0) <= 0) return false;
-      const hasButcherStation = (gameState.buildings ?? []).some(
-        (b) => (b.type === 'butcher_spot' || b.type === 'dressing_stone') && b.status === 'complete'
-      );
-      return hasButcherStation;
-    }
-
-    // Recipe registry: all craftability flows from the producing recipe.
+    // Recipe registry: all craftability flows from the producing recipe. (Butchery is just a
+    // butcher_spot recipe — carcass in, meat/pelt out, one carcass per run; ADR-016.)
     const recipe = recipeService.getRecipeForItem(itemId);
     if (!recipe) return false;
 
@@ -357,53 +342,6 @@ export class ItemServiceImpl implements ItemService {
     return addToStockpileZone(gameState, null, itemIds);
   }
 
-  /**
-   * Butchery: process ONE carcass into its full multi-yield output (meat + hide + bone),
-   * scaled by carcass intactness × tool (bone_cleaver) × building (dressing_stone). Output and
-   * consumption both flow through physical stockpile drops. Returns a no-op state when the
-   * carcass can't be processed.
-   *
-   * R3 fix: consumes exactly ONE carcass per action (the prior code consumed the whole stack
-   * but yielded a single carcass's worth). NOTE: butchery is not yet part of ADR-016's
-   * haul-to-station pipeline — it remains an instant transform requiring a butcher station to
-   * exist. Folding it in (multi-yield reconciliation + station hauling) is a follow-up pass.
-   */
-  processButchery(carcassItem: Item, gameState: GameState): GameState {
-    if (!carcassItem.isCarcass || !carcassItem.yields) return gameState;
-
-    const intactness = gameState.carcassIntactness ?? {};
-    const currentIntactness = intactness[carcassItem.id] ?? 100;
-    if (currentIntactness <= 0) return gameState;
-
-    if (!this.canCraftItem(carcassItem.id, gameState)) return gameState;
-    if ((gameState.stockpile?.[carcassItem.id] ?? 0) <= 0) return gameState;
-
-    const intactnessFraction = currentIntactness / 100;
-    const hasBoneCleaver = (gameState.stockpile?.['bone_cleaver'] ?? 0) > 0;
-    const hasDressingStone = (gameState.buildings ?? []).some(
-      (b) => b.type === 'dressing_stone' && b.status === 'complete'
-    );
-    const yieldMult =
-      intactnessFraction * (hasBoneCleaver ? 1.25 : 1.0) * (hasDressingStone ? 1.25 : 1.0);
-
-    const outputs: Record<string, number> = {};
-    for (const output of carcassItem.yields) {
-      const baseQty = Math.floor(rng.random() * (output.max - output.min + 1)) + output.min;
-      const scaledQty = Math.max(1, Math.round(baseQty * yieldMult));
-      outputs[output.item] = (outputs[output.item] ?? 0) + scaledQty;
-    }
-
-    // Consume exactly ONE carcass (R3); only clear the per-type intactness once the stack is gone.
-    let state = this.consumeItems({ [carcassItem.id]: 1 }, gameState);
-    state = this.addItems(outputs, state);
-    if ((state.stockpile?.[carcassItem.id] ?? 0) <= 0) {
-      const newIntactnessMap = { ...intactness };
-      delete newIntactnessMap[carcassItem.id];
-      state = { ...state, carcassIntactness: newIntactnessMap };
-    }
-    return state;
-  }
-
   // ── Carry capacity ───────────────────────────────────────────────────────────────────────
 
   /**
@@ -475,6 +413,29 @@ export class ItemServiceImpl implements ItemService {
     return (
       current.weightKg + addW <= budget.maxWeightKg && current.volumeL + addV <= budget.maxVolumeL
     );
+  }
+
+  /**
+   * R5: how many units of `itemId` the pawn can pick up without exceeding its weight/volume
+   * budget (belt/back containers raise it). A pawn that can't fit a whole stack takes what fits
+   * and leaves the rest for another trip. Floors at 1 when the pawn is carrying nothing, so a
+   * single over-budget unit can still be moved instead of deadlocking the haul.
+   */
+  clampPickupQuantity(pawn: Pawn, itemId: string, qty: number, state: GameState): number {
+    if (qty <= 0) return 0;
+    const budget = this.getCarryBudget(pawn, state);
+    const load = this.getCurrentCarryLoad(pawn, state);
+    const def = this.getItemById(itemId);
+    const perW = def?.weightKg ?? 0.1;
+    const perV = def?.volumeL ?? 0.2;
+    const byW = perW > 0 ? Math.floor((budget.maxWeightKg - load.weightKg) / perW) : qty;
+    const byV = perV > 0 ? Math.floor((budget.maxVolumeL - load.volumeL) / perV) : qty;
+    let can = Math.max(0, Math.min(qty, byW, byV));
+    const carryingNothing =
+      Object.values(pawn.inventory?.items ?? {}).every((q) => q <= 0) &&
+      (pawn.inventory?.instances?.length ?? 0) === 0;
+    if (can === 0 && carryingNothing) can = 1;
+    return can;
   }
 
   /**

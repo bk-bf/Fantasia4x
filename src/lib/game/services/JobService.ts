@@ -333,6 +333,10 @@ class JobServiceImpl {
       // Extra guard just in case:
       if ((building.workRequired ?? 1) === 0) continue;
 
+      // ADR-016: don't open the construct job until all reserved build materials are staged on
+      // the site (pawns fetch them first). The materials are consumed on completion.
+      if (!this._buildingSupplied(building, gs)) continue;
+
       const exists = jobs.some((j) => j.type === 'construct' && j.buildingId === building.id);
       if (!exists) {
         jobs.push({
@@ -402,22 +406,28 @@ class JobServiceImpl {
    * the craft job only opens once every input is staged (see _syncCraftJobs).
    */
   private _syncFetchJobs(jobs: Job[], gs: GameState): Job[] {
-    // Drop fetch jobs whose order or source drop is gone, or whose source already moved.
+    // Drop fetch jobs whose owner (craft order OR building) or source drop is gone / already moved.
     jobs = jobs.filter((j) => {
       if (j.type !== 'fetch') return true;
-      const order = (gs.craftingQueue ?? []).find((e) => e.id === j.craftQueueId);
-      if (!order) return false;
+      const owner = j.craftQueueId ?? j.buildingId;
+      if (!owner) return false;
+      const ownerExists = j.craftQueueId
+        ? (gs.craftingQueue ?? []).some((e) => e.id === j.craftQueueId)
+        : (gs.buildings ?? []).some((b) => b.id === j.buildingId && b.status !== 'complete');
+      if (!ownerExists) return false;
       const src = (gs.droppedItems ?? []).find((d) => d.id === j.droppedItemId);
-      return !!src && src.reservedFor === j.craftQueueId;
+      return !!src && src.reservedFor === owner;
     });
 
-    for (const order of gs.craftingQueue ?? []) {
-      const station = this._stationTileFor(order, gs);
-      if (!station) continue;
-      // Reserved stacks for this order that are NOT already on the station tile need carrying.
+    const addFetchJobs = (
+      ownerId: string,
+      dest: { x: number; y: number },
+      buildingId: string | undefined,
+      craftQueueId: string | undefined
+    ) => {
       for (const drop of gs.droppedItems ?? []) {
-        if (!drop.stored || drop.reservedFor !== order.id) continue;
-        if (drop.x === station.x && drop.y === station.y) continue; // already staged
+        if (!drop.stored || drop.reservedFor !== ownerId) continue;
+        if (drop.x === dest.x && drop.y === dest.y) continue; // already staged at the destination
         const exists = jobs.some((j) => j.type === 'fetch' && j.droppedItemId === drop.id);
         if (exists) continue;
         jobs.push({
@@ -427,18 +437,38 @@ class JobServiceImpl {
           targetY: drop.y,
           resourceId: drop.resourceId,
           droppedItemId: drop.id,
-          craftQueueId: order.id,
-          buildingId: order.stationBuildingId,
-          stationX: station.x,
-          stationY: station.y,
+          craftQueueId,
+          buildingId,
+          stationX: dest.x,
+          stationY: dest.y,
           workRequired: 1, // instant pick-up on arrival
           workDone: 0,
           claimedBy: null
         });
       }
+    };
+
+    // Craft orders: carry reserved inputs to the workstation tile.
+    for (const order of gs.craftingQueue ?? []) {
+      const station = this._stationTileFor(order, gs);
+      if (!station) continue;
+      addFetchJobs(order.id, station, order.stationBuildingId, order.id);
+    }
+
+    // Buildings under construction: carry reserved build materials to the build site (ADR-016).
+    for (const b of gs.buildings ?? []) {
+      if (b.status === 'complete') continue;
+      addFetchJobs(b.id, { x: b.x, y: b.y }, b.id, undefined);
     }
 
     return jobs;
+  }
+
+  /** True when no build material reserved for this building is still off the build tile. */
+  private _buildingSupplied(b: import('../core/types').PlacedBuilding, gs: GameState): boolean {
+    return !(gs.droppedItems ?? []).some(
+      (d) => d.stored && d.reservedFor === b.id && !(d.x === b.x && d.y === b.y)
+    );
   }
 
   private _syncCraftJobs(jobs: Job[], gs: GameState): Job[] {
@@ -452,6 +482,9 @@ class JobServiceImpl {
     // target that tile so the pawn actually walks to the workstation to craft (ADR-016).
     for (const order of gs.craftingQueue ?? []) {
       if (!order.id) continue;
+      // ADR-016 passive furnaces: no pawn-worked craft job — the station produces it over time
+      // (GameEngineImpl.processPassiveProduction). Inputs are still fetched/staged as usual.
+      if (recipeService.isPassiveStation(order.stationType)) continue;
       const station = this._stationTileFor(order, gs);
       if (!station) continue;
       if (!this._orderSupplied(order, station, gs)) continue;
@@ -739,13 +772,26 @@ class JobServiceImpl {
    * stored drop is removed here; a fresh `reservedFor` drop is created on the station when staged.
    */
   private _completeFetch(job: Job, gs: GameState): GameState {
-    if (!job.droppedItemId || !job.craftQueueId) return gs;
+    // The reservation owner is a craft order (craftQueueId) OR a building (buildingId).
+    const owner = job.craftQueueId ?? job.buildingId;
+    if (!job.droppedItemId || !owner) return gs;
     const drop = (gs.droppedItems ?? []).find((d) => d.id === job.droppedItemId);
     if (!drop) return gs;
-    const newDropped = (gs.droppedItems ?? []).filter((d) => d.id !== drop.id);
-
     const pawnId = job.claimedBy;
-    if (!pawnId) return { ...gs, droppedItems: newDropped };
+    if (!pawnId) return gs;
+    const pawn = gs.pawns.find((p) => p.id === pawnId);
+    if (!pawn) return gs;
+
+    // R5 carry budget: take only what fits; the rest stays reserved on the stockpile tile and a
+    // fresh fetch job is generated for it (another trip / another pawn).
+    const taken = itemService.clampPickupQuantity(pawn, drop.resourceId, drop.quantity, gs);
+    if (taken <= 0) return gs;
+    const remainder = drop.quantity - taken;
+    const newDropped =
+      remainder > 0
+        ? (gs.droppedItems ?? []).map((d) => (d.id === drop.id ? { ...d, quantity: remainder } : d))
+        : (gs.droppedItems ?? []).filter((d) => d.id !== drop.id);
+
     const newPawns = gs.pawns.map((p) => {
       if (p.id !== pawnId) return p;
       const inv = p.inventory ?? {
@@ -757,8 +803,8 @@ class JobServiceImpl {
         maxVolumeL: 20
       };
       const newItems = { ...inv.items };
-      newItems[drop.resourceId] = (newItems[drop.resourceId] ?? 0) + drop.quantity;
-      return { ...p, inventory: { ...inv, items: newItems }, carryingForOrder: job.craftQueueId };
+      newItems[drop.resourceId] = (newItems[drop.resourceId] ?? 0) + taken;
+      return { ...p, inventory: { ...inv, items: newItems }, carryingForOrder: owner };
     });
     return { ...gs, droppedItems: newDropped, pawns: newPawns };
   }
@@ -769,12 +815,22 @@ class JobServiceImpl {
     const drop = (gs.droppedItems ?? []).find((d) => d.id === job.droppedItemId);
     if (!drop) return gs;
 
-    // Remove the dropped item from the ground
-    const newDropped = (gs.droppedItems ?? []).filter((d) => d.id !== drop.id);
-
     // Add to carrying pawn's inventory
     const pawnId = job.claimedBy;
     if (pawnId) {
+      const pawn = gs.pawns.find((p) => p.id === pawnId);
+      // R5 carry budget: take only what fits; the rest stays on the ground for another trip.
+      const taken = pawn
+        ? itemService.clampPickupQuantity(pawn, drop.resourceId, drop.quantity, gs)
+        : drop.quantity;
+      if (taken <= 0) return gs;
+      const remainder = drop.quantity - taken;
+      const newDropped =
+        remainder > 0
+          ? (gs.droppedItems ?? []).map((d) =>
+              d.id === drop.id ? { ...d, quantity: remainder } : d
+            )
+          : (gs.droppedItems ?? []).filter((d) => d.id !== drop.id);
       const newPawns = gs.pawns.map((p) => {
         if (p.id !== pawnId) return p;
         const inv = p.inventory ?? {
@@ -786,15 +842,14 @@ class JobServiceImpl {
           maxVolumeL: 20
         };
         const newItems = { ...inv.items };
-        newItems[drop.resourceId] = (newItems[drop.resourceId] ?? 0) + drop.quantity;
-        console.log(
-          `[HAUL-COMPLETE] ${p.name} picked up ${drop.resourceId}×${drop.quantity} — inventory now:`,
-          JSON.stringify(newItems)
-        );
+        newItems[drop.resourceId] = (newItems[drop.resourceId] ?? 0) + taken;
         return { ...p, inventory: { ...inv, items: newItems } };
       });
       return { ...gs, droppedItems: newDropped, pawns: newPawns };
     }
+
+    // No pawn claimed it (fallback path below uses the whole drop).
+    const newDropped = (gs.droppedItems ?? []).filter((d) => d.id !== drop.id);
     console.warn(
       `[HAUL-COMPLETE] no claimedBy on haul job ${job.id} — dropping straight to stockpile`
     );
@@ -869,18 +924,30 @@ class JobServiceImpl {
     const newCounts = { ...(gs.buildingCounts ?? {}) };
     newCounts[building.type] = (newCounts[building.type] ?? 0) + 1;
 
+    // ADR-016: the build materials staged on the site (reserved to this building) are consumed
+    // by completing the construction.
+    const newDropped = (gs.droppedItems ?? []).filter((d) => d.reservedFor !== building.id);
+
     console.log(
       `[JobService] Construction complete: ${building.type} (${building.id}) quality=${qualityMult.toFixed(2)}`
     );
-    return { ...gs, buildings: newBuildings, buildingCounts: newCounts };
+    return { ...gs, buildings: newBuildings, buildingCounts: newCounts, droppedItems: newDropped };
   }
 
   private _completeCraft(job: Job, gs: GameState): GameState {
     if (!job.craftQueueId) return gs;
-
     const entry = (gs.craftingQueue ?? []).find((e) => e.id === job.craftQueueId);
     if (!entry) return gs;
+    return this.completeCraftOrder(entry, gs);
+  }
 
+  /**
+   * ADR-016: complete a craft ORDER (independent of a pawn job) — destroy the inputs staged on
+   * its station, spawn outputs on the station tile, apply mold wear, and remove the order. Used
+   * by both the pawn-worked craft completion (_completeCraft) and passive furnace production
+   * (GameEngineImpl.processPassiveProduction).
+   */
+  completeCraftOrder(entry: import('../core/types').CraftingInProgress, gs: GameState): GameState {
     // Recipe registry (Stage C): a craft completion runs the producing recipe once per queued
     // unit and emits ALL its outputs — the primary product plus any byproducts (e.g. splitting
     // a log yields firewood AND branches; charcoal burns yield ash).
@@ -899,7 +966,7 @@ class JobServiceImpl {
     // otherwise they sit on the station until a hauler stores them — exactly the physical model.
     const station = this._stationTileFor(entry, gs);
     const droppedItems = (gs.droppedItems ?? []).filter((d) => d.reservedFor !== entry.id);
-    const newQueue = (gs.craftingQueue ?? []).filter((e) => e.id !== job.craftQueueId);
+    const newQueue = (gs.craftingQueue ?? []).filter((e) => e.id !== entry.id);
     let state: GameState = { ...gs, droppedItems, craftingQueue: newQueue };
 
     if (station) {

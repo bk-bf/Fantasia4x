@@ -997,6 +997,13 @@ export interface Recipe {
   materialBonuses?: Record<string, Record<string, Record<string, number>>>;
   /** True when synthesised from an item's inline fields rather than authored in recipes.jsonc. */
   synthesized?: boolean;
+  /**
+   * ADR-016 passive furnaces: when true (or when the station is a known furnace), the recipe is
+   * produced PASSIVELY — inputs (and fuel) are loaded onto the station and it transforms them
+   * over time without a pawn working it, gated by the station being lit/hot. No craft job is
+   * generated; see GameEngineImpl.processPassiveProduction. Defaults from the station type.
+   */
+  passive?: boolean;
 }
 
 export interface Item {

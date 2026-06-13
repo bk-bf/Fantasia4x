@@ -1498,14 +1498,22 @@ function handleWashing(pawn: Pawn, gameState: GameState): GameState {
   return goIdle(state.pawns.find((p) => p.id === pawn.id)!, state);
 }
 
-/** ADR-016: tile coords of a craft order's chosen workstation, or null if the order/station is gone. */
-function orderStationTile(orderId: string, gs: GameState): { x: number; y: number } | null {
-  const order = (gs.craftingQueue ?? []).find((o) => o.id === orderId);
-  if (!order?.stationBuildingId) return null;
-  const b = (gs.buildings ?? []).find(
-    (b) => b.id === order.stationBuildingId && b.status === 'complete'
-  );
-  return b ? { x: b.x, y: b.y } : null;
+/**
+ * ADR-016: destination tile for a reservation owner — a craft order's chosen workstation, or
+ * (when the owner is a building under construction) the build site itself. Null if it's gone.
+ */
+function orderStationTile(ownerId: string, gs: GameState): { x: number; y: number } | null {
+  const order = (gs.craftingQueue ?? []).find((o) => o.id === ownerId);
+  if (order) {
+    if (!order.stationBuildingId) return null;
+    const b = (gs.buildings ?? []).find(
+      (b) => b.id === order.stationBuildingId && b.status === 'complete'
+    );
+    return b ? { x: b.x, y: b.y } : null;
+  }
+  // Building-material owner: stage at the build site (any not-yet-complete building).
+  const bld = (gs.buildings ?? []).find((b) => b.id === ownerId);
+  return bld ? { x: bld.x, y: bld.y } : null;
 }
 
 /**

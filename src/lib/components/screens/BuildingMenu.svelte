@@ -1,6 +1,6 @@
 <script lang="ts">
   import { gameState, currentRace, currentTurn } from '$lib/stores/gameState';
-  import { addToStockpileZone, consumeFromStockpiles } from '$lib/game/core/GameState';
+  import { addToStockpileZone } from '$lib/game/core/GameState';
   import { uiState } from '$lib/stores/uiState';
   import { itemService } from '$lib/game/services/ItemService';
   import { buildingService } from '$lib/game/services/BuildingService';
@@ -186,13 +186,11 @@
       return;
     }
 
-    gameState.updateWithSave((state) => {
-      // Resolve category cost slots (e.g. `category:stone` → any stone in stock) to concrete items.
-      const cost = buildingService.resolveBuildingCost(building.id, state) ?? building.buildingCost;
-      const stateAfterCost = consumeFromStockpiles(state, cost);
-      // Place building at (0,0) — abstract/off-map; JobService generates a construct job
-      return buildingService.placeBuilding(building.id, 0, 0, stateAfterCost);
-    });
+    gameState.updateWithSave((state) =>
+      // ADR-016: placeBuilding RESERVES the cost to this building (pawns fetch it to the site);
+      // it is consumed on construction completion, not here. Place at (0,0) — abstract/off-map.
+      buildingService.placeBuilding(building.id, 0, 0, state)
+    );
   }
 
   function cancelBuilding(buildingId: string) {

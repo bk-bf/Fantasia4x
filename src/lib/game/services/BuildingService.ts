@@ -9,7 +9,9 @@ import { perTick } from '../core/time';
 import {
   consumeFromStockpiles,
   addToStockpileZone,
-  availableAggregateFromDrops
+  availableAggregateFromDrops,
+  reserveForOrder,
+  releaseReservation
 } from '../core/GameState';
 
 const AVAILABLE_BUILDINGS = buildingsData as unknown as Building[];
@@ -366,23 +368,37 @@ export class BuildingServiceImpl implements BuildingService {
       console.warn(`[BuildingService] Unknown building type: ${type}`);
       return gameState;
     }
+    const instant = building.workAmount === 0;
     const placed: PlacedBuilding = {
       id: `${type}-${x}-${y}-${Date.now()}`,
       type,
+      // zero-workAmount buildings (craft_spot) are complete immediately
+      status: instant ? 'complete' : 'planned',
+      progress: instant ? 1 : 0,
       x,
       y,
-      // zero-workAmount buildings (craft_spot) are complete immediately
-      status: building.workAmount === 0 ? 'complete' : 'planned',
-      progress: building.workAmount === 0 ? 1 : 0,
       // work-point model: workRequired = workAmount directly
       workRequired: building.workAmount,
-      workDone: building.workAmount === 0 ? building.workAmount : 0,
+      workDone: instant ? building.workAmount : 0,
       materialsDelivered: false
     };
-    return {
-      ...gameState,
-      buildings: [...(gameState.buildings ?? []), placed]
-    };
+    let state: GameState = { ...gameState, buildings: [...(gameState.buildings ?? []), placed] };
+
+    // ADR-016 building-material hauling: resolve the build cost and, for a building that takes
+    // construction work, RESERVE it to this building (do not consume). Pawns then fetch the
+    // reserved materials to the build site and construction consumes them on completion (see
+    // JobService). Instant (zero-work) buildings consume their cost immediately as before.
+    const cost = this.resolveBuildingCost(type, gameState);
+    if (cost && Object.keys(cost).length > 0) {
+      if (instant) {
+        state = consumeFromStockpiles(state, cost);
+      } else {
+        for (const [itemId, qty] of Object.entries(cost)) {
+          state = reserveForOrder(state, itemId, qty, placed.id).state;
+        }
+      }
+    }
+    return state;
   }
 
   /**
@@ -460,9 +476,12 @@ export class BuildingServiceImpl implements BuildingService {
   }
 
   cancelBuilding(instanceId: string, gameState: GameState): GameState {
+    // ADR-016: release any build materials reserved/staged for this building back to free stock
+    // (nothing was consumed at placement for work-requiring buildings).
+    const released = releaseReservation(gameState, instanceId);
     return {
-      ...gameState,
-      buildings: (gameState.buildings ?? []).filter((b) => b.id !== instanceId)
+      ...released,
+      buildings: (released.buildings ?? []).filter((b) => b.id !== instanceId)
     };
   }
 

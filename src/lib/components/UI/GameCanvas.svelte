@@ -38,7 +38,6 @@
   } from '$lib/stores/combatFeedback.js';
   import { renderFps } from '$lib/stores/perfStats.js';
   import { buildingService } from '$lib/game/services/BuildingService.js';
-  import { consumeFromStockpiles } from '$lib/game/core/GameState.js';
   import { resolveCharSpans, BIOMES, SUBTERRAINS } from '$lib/game/core/Terrains.js';
   import { resourceObjectService } from '$lib/game/services/ResourceObjectService.js';
   import { getCreatureById } from '$lib/game/core/Creatures.js';
@@ -2220,11 +2219,8 @@
             let current = state;
             for (const key of blueprintDragTiles) {
               const [tx, ty] = key.split(',').map(Number);
-              // ADR-016: pay the building cost from the physical stockpile (resolves category:
-              // slots), not the legacy gs.item pool — matching BuildingMenu's placement path.
-              const cost =
-                buildingService.resolveBuildingCost(bid, current) ?? buildingDef.buildingCost;
-              current = consumeFromStockpiles(current, cost);
+              // ADR-016: placeBuilding RESERVES the cost to each building (pawns fetch it to the
+              // site); it is consumed on construction completion, not at placement.
               current = buildingService.placeBuilding(bid, tx, ty, current);
             }
             return current;

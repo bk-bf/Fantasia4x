@@ -21,15 +21,8 @@ const SRC = path.join(ROOT, 'src', 'lib');
 const HTML = path.join(DIR, 'codegraph.html');
 const PORT = Number(process.env.CODEGRAPH_PORT) || 5180;
 
-const RELOAD_SNIPPET = `
-<script>
-(function(){
-  var es = new EventSource('/__reload');
-  es.onmessage = function(e){ if(e.data==='reload') location.reload(); };
-  es.onerror = function(){ /* server restarting; EventSource auto-retries */ };
-})();
-</script>
-`;
+// The live-reload client lives in template.html (guarded to http only), so the
+// server can stream codegraph.html verbatim — no fragile HTML string surgery.
 
 /** @type {Set<import('node:http').ServerResponse>} */
 const clients = new Set();
@@ -79,14 +72,10 @@ const server = http.createServer((req, res) => {
     return;
   }
   if (req.url === '/' || req.url === '/codegraph.html' || req.url === '/index.html') {
-    fs.readFile(HTML, 'utf8', (err, data) => {
+    fs.readFile(HTML, (err, data) => {
       if (err) { res.writeHead(503); res.end('codegraph.html not built yet'); return; }
-      // Inject before the *document's* closing tag — the inlined Mermaid source
-      // contains "</body>" substrings, so target the last occurrence.
-      const i = data.lastIndexOf('</body>');
-      const out = i === -1 ? data + RELOAD_SNIPPET : data.slice(0, i) + RELOAD_SNIPPET + data.slice(i);
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-      res.end(out);
+      res.end(data);
     });
     return;
   }
