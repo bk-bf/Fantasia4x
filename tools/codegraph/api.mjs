@@ -277,6 +277,7 @@ export function createApi(DIR) {
           edges: G.edges.map((e) => ({ from: e.from, to: e.to, count: e.count })),
           modules: G.moduleNodes.map(moduleSummary),
           moduleEdges: G.moduleEdges.map((e) => ({ from: shortMod(e.from), to: shortMod(e.to), count: e.count })),
+          files: G.files || [],
         }), true;
       }
 
@@ -296,10 +297,23 @@ export function createApi(DIR) {
         const q = (qp.get('q') || '').toLowerCase();
         if (q) list = list.filter((n) => n.short.toLowerCase().includes(q) || describe(n).text.toLowerCase().includes(q));
         const kind = qp.get('kind'); if (kind) list = list.filter((n) => n.kind === kind);
+        const grp = qp.get('group'); if (grp) list = list.filter((n) => n.group === grp);
         const exp = qp.get('exported'); if (exp != null) list = list.filter((n) => String(n.exported) === exp);
+        const tst = qp.get('tested'); if (tst != null) list = list.filter((n) => String(!!n.tested) === tst);
         const limit = num(qp.get('limit'), 100);
-        const sorted = list.slice().sort((a, b) => b.inDegree - a.inDegree);
-        return ok(res, { count: list.length, functions: sorted.slice(0, limit).map(fnRow) }), true;
+        // sort: indegree(default) | outdegree | connected | loc | chars | name
+        const sort = qp.get('sort') || 'indegree';
+        const conn = (n) => (n.inDegree || 0) + (n.outDegree || 0);
+        const cmp = {
+          indegree: (a, b) => b.inDegree - a.inDegree,
+          outdegree: (a, b) => b.outDegree - a.outDegree,
+          connected: (a, b) => conn(b) - conn(a),
+          loc: (a, b) => (b.loc || 0) - (a.loc || 0),
+          chars: (a, b) => (b.chars || 0) - (a.chars || 0),
+          name: (a, b) => a.short.localeCompare(b.short),
+        }[sort] || ((a, b) => b.inDegree - a.inDegree);
+        const sorted = list.slice().sort(cmp);
+        return ok(res, { count: list.length, sort, functions: sorted.slice(0, limit).map(fnRow) }), true;
       }
 
       if (p === '/api/function') {
