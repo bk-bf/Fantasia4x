@@ -256,7 +256,9 @@ function buildOverview() {
   // group module nodes into subgraphs
   const groups = {};
   for (const m of GRAPH.moduleNodes) (groups[m.group] ||= []).push(m);
-  let src = 'flowchart LR\n';
+  // TB (top-to-bottom rank direction) renders this graph's shape landscape —
+  // wide and short — to fill the viewport; LR comes out tall/portrait here.
+  let src = 'flowchart TB\n';
   const idMap = new Map(); // module -> mNN
   let i = 0;
   for (const m of GRAPH.moduleNodes) idMap.set(m.module, 'm' + (i++));
@@ -298,7 +300,9 @@ function buildModule(modName) {
   const idMap = new Map(); let i = 0;
   for (const id of visible) idMap.set(id, 'f' + (i++));
 
-  let src = 'flowchart LR\n';
+  // TB (top-to-bottom rank direction) renders this graph's shape landscape —
+  // wide and short — to fill the viewport; LR comes out tall/portrait here.
+  let src = 'flowchart TB\n';
   const styleLines = [];
   // focused module subgraph
   src += `subgraph FOCUS["${modName.replace(/^game\//, '')}"]\n`;
@@ -546,11 +550,16 @@ function setupPanZoom(svgEl) {
   graph.onmousedown = (e) => { if (e.target.closest('.node') || e.target.closest('path')) return; dragging = true; graph.classList.add('panning'); sx = e.clientX; sy = e.clientY; ox = pz.x; oy = pz.y; };
   window.addEventListener('mousemove', (e) => { if (!dragging) return; pz.x = ox + (e.clientX - sx); pz.y = oy + (e.clientY - sy); applyPZ(); });
   window.addEventListener('mouseup', () => { dragging = false; graph.classList.remove('panning'); });
+  const ZOOM_SENSITIVITY = 0.0022; // lower = gentler zoom
   graph.onwheel = (e) => {
     e.preventDefault();
     const r = graph.getBoundingClientRect();
     const mx = e.clientX - r.left, my = e.clientY - r.top;
-    const f = e.deltaY < 0 ? 1.12 : 1 / 1.12;
+    // Scale by actual scroll delta (smooth across mouse/trackpad), and cap the
+    // step per event so one big notch can't jump far.
+    const dm = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? graph.clientHeight : 1;
+    let f = Math.exp(-e.deltaY * dm * ZOOM_SENSITIVITY);
+    f = Math.min(1.12, Math.max(0.89, f));
     const nk = Math.min(4, Math.max(0.05, pz.k * f));
     pz.x = mx - (mx - pz.x) * (nk / pz.k); pz.y = my - (my - pz.y) * (nk / pz.k); pz.k = nk; applyPZ();
   };
