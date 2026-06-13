@@ -437,6 +437,67 @@ the `WasmPathfinderService` edge disappears from this module's `dependsOn` in `p
 
 ---
 
+# Part IV — Playtest findings (2026-06-13)
+
+From a play session, with `.debug/pawns.log` evidence. Three fixed inline; one investigated
+with a proposed fix awaiting sign-off (behavioural FSM change).
+
+## PT-1 · Hauling-to-stockpile "hang" — INVESTIGATED, fix proposed (not applied)
+
+**Symptom:** pawns (#18, #20) appear to "hang for a moment" while moving to the stockpile.
+
+**Evidence:**
+
+- Pawns in `MovingToDeposit` target a **stockpile designation centre tile** — Indigo →
+  `target:(119,81)`, Uma → `target:(115,90)` — but **never stand on it**. They "deposit in place"
+  1–2 tiles short on every run (Indigo at (121,77)/(120,79); Uma at (115,92)/(115,91)). So
+  [`findNearestDepositPoint`](../src/lib/game/systems/PawnStateMachine.ts#L1409) returns the zone
+  centre, the pawn paths toward it, the path ends short (tile occupied/blocked),
+  `hasReachedDestination` flips while **not** adjacent, and the `// Didn't quite make it — deposit
+  in place anyway` branch ([PawnStateMachine.ts:1856](../src/lib/game/systems/PawnStateMachine.ts#L1856))
+  fires. Functionally the item is deposited, but the walk-up-then-stop-short reads as a stutter.
+- **Soft-queue hygiene smell:** duplicate consecutive entries
+  (`queue:[haul(116,98) > haul(116,98) > haul(116,98) > harvest(124,98)]`) and stale/dead refs
+  (`?5411`, `harvest(131,84)!`) — not the direct cause, but the queue isn't deduped/compacted.
+- **Inconclusive:** sampled `[PAWN-TICK]` lines (~every 30 ticks) show large wall-clock gaps for
+  small tick deltas, which *could* be a compute stall during deposit pathfinding — but the log is
+  sampled and the session may have been paused / on low game-speed, so this is **not** confirmed.
+  Do not implement a speculative perf fix on this evidence alone.
+
+**Proposed fix (needs sign-off):** `findNearestDepositPoint` should return the nearest
+**reachable, standable** stockpile/storage tile (or an adjacent free tile), not the zone centre, so
+the pawn actually arrives instead of relying on the deposit-in-place fallback. Optionally dedupe
+consecutive identical soft-queue entries.
+
+## PT-2 · Inventory weight/volume shows 0.0 — ✅ FIXED
+
+**Symptom:** `CARRYING [0.0/20.0 kg]` while a Flint Shard ×1 is carried. **Root cause (= R5's dead
+cache):** the UI read the cached `pawn.inventory.weightKg`, a write-only initial-shape field never
+updated on inventory mutation. **Fix:** [PawnInventory.svelte](../src/lib/components/pawn/PawnInventory.svelte)
+now derives load + budget via `itemService.getCurrentCarryLoad` / `getCarryBudget` (single source of
+truth = item defs).
+
+## PT-3 · Info panel / bars — reuse the existing components — ✅ FIXED
+
+**Symptom (standing workflow complaint):** COND/FRESH bars sat in an ad-hoc `tile-hud--item` block
+in `GameCanvas`, not below the title like every other panel; new bars kept landing in the wrong
+place because the reusable components weren't reused. **Fix:** the dropped-item hover panel now
+renders through the shared [`SelectedEntityCard`](../src/lib/components/UI/SelectedEntityCard.svelte)
+(a `hoverItemCard` model) — title on top, FRESH/COND below it, identical to pawn/mob/building/
+resource panels; and `SelectedEntityCard` bars now render via the one reusable
+[`StatBar`](../src/lib/components/UI/StatBar.svelte) (`EntityBar` gained optional `color`/
+`valueText`), with the panel's private `blockBar` removed. One bar implementation everywhere.
+
+## PT-4 · Crafting cards: show required workstation — ✅ FIXED
+
+**Symptom:** crafting cards showed ingredients but not which workstation the recipe needs. **Fix:**
+[BuildCard](../src/lib/components/UI/BuildCard.svelte) gained an optional `station` prop (small
+`⚒ <name>` row); [CraftingScreen](../src/lib/components/screens/CraftingScreen.svelte) resolves
+`recipe.station` → building display name via `buildingService.getBuildingById`. Hand-craftable
+recipes (no station) show nothing.
+
+---
+
 ## What's improved since 2026-06-10 (keep doing this)
 
 - **Test suite: 32 → 117 → 133 tests** — including headless sim-invariant tests (entity starvation timing, combat sim, need thresholds) and now the physical-production seams (reserve/fetch/craft, double-spend, building hauling, passive furnaces, station tiers, tool gating). The remaining open defects (R2 draft→health) are exactly where the next tests should go.
@@ -453,9 +514,11 @@ the `WasmPathfinderService` edge disappears from this module's `dependsOn` in `p
 _All Part I (R1–R12) and the discrete Part II items (P-1, P-6, R11) are done. What's left is one
 quick win plus deliberately-deferred structural work:_
 
-0. **Quick win (do now):** **P-7** — route `PawnStateMachine`'s pathfinding through the
+0. **Quick wins (do now):** **P-7** — route `PawnStateMachine`'s pathfinding through the
    `PathfinderService` interface (~5 call sites, no behaviour change; closes the ADR-008 bypass the
-   [hotspot](HOTSPOT-PawnStateMachine-2026-06-13.md) found).
+   [hotspot](HOTSPOT-PawnStateMachine-2026-06-13.md) found). **PT-1** (pending sign-off) — make
+   `findNearestDepositPoint` return a reachable, standable tile so haulers stop "depositing in place"
+   short of the stockpile.
 1. **Before Living World lands:** **P-2** (engine as the only writer; user actions as commands) and **P-3** (inject a log sink so services don't import `stores/`) — both are large, no-functional-change inversions best done with the game running in a browser to verify the activity log / combat floaters / UI snapshot still behave.
 2. **Opportunistic (no big-bang):** **P-4** god-file splits along existing seams — for the #1 hotspot `PawnStateMachine`, follow the report's order: P-7 boundary fix → extract pure helpers to `pawnUtils` → split the 15 handlers into `handlers/{work,needs,combat}.ts` + a `Record<PawnState,Handler>` table → per-handler tests → push selection into services.
 3. **Profiling-gated:** **P-5** per-tick allocation churn — only when `__profOut` says so. (The hotspot confirms the convergence: `tickPawn` re-finds each pawn and handlers fan out into 14 modules.)

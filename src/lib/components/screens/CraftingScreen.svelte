@@ -7,6 +7,7 @@
   import { gameEngine } from '$lib/game/systems/GameEngineImpl';
   import { itemService } from '$lib/game/services/ItemService';
   import { recipeService } from '$lib/game/services/RecipeService';
+  import { buildingService } from '$lib/game/services/BuildingService';
   import { releaseReservation } from '$lib/game/core/GameState';
   import { onDestroy } from 'svelte';
   import type { Item } from '$lib/game/core/types';
@@ -25,6 +26,12 @@
     return Object.entries(r.outputs).filter(([id]) => id !== itemId);
   };
   const primaryQtyOf = (itemId: string): number => recipeOf(itemId)?.outputs[itemId] ?? 1;
+  /** Required workstation display name for a recipe, or null when hand-craftable (no station). */
+  const stationNameOf = (itemId: string): string | null => {
+    const stationId = recipeOf(itemId)?.station;
+    if (!stationId) return null;
+    return buildingService.getBuildingById(stationId)?.name ?? stationId.replace(/_/g, ' ');
+  };
 
   let race: any = null;
   let craftingQueue: any[] = [];
@@ -272,6 +279,7 @@
             description={entry.description}
             tint={item.color ?? 'var(--accent)'}
             workAmount={recipe?.workAmount ?? null}
+            station={stationNameOf(item.id)}
             badge={isCarcass ? `${pct}%` : null}
             actionLabel={!affordable
               ? 'MISSING'

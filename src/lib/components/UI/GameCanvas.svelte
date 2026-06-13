@@ -44,7 +44,6 @@
   import { TICKS_PER_SECOND } from '$lib/game/core/time.js';
   import { simTarget } from '$lib/game/systems/MovementSystem.js';
   import SelectedEntityCard from '$lib/components/UI/SelectedEntityCard.svelte';
-  import StatBar from '$lib/components/UI/StatBar.svelte';
   import type {
     SelectedEntityModel,
     EntityBar,
@@ -810,6 +809,38 @@
     if (goodPct >= 33) return '#FFA726';
     return '#D32F2F';
   }
+
+  // Dropped-item hover panel — same shared SelectedEntityCard as pawns/mobs/buildings/resources,
+  // so the title sits on top and FRESH/COND bars (the reusable StatBar) render below it.
+  $: hoverItemCard = (() => {
+    const d = hoverDroppedItem;
+    if (!d) return null;
+    const itemDef = ITEMS_DATABASE.find((i) => i.id === d.resourceId);
+    const maxDur = itemDef?.maxDurability ?? 100;
+    const freshPct =
+      itemDef?.decaySeconds && itemDef.decaySeconds > 0
+        ? Math.round(Math.max(0, 1 - (d.decayAcc ?? 0) / itemDef.decaySeconds) * 100)
+        : null;
+    const durPct = Math.round((Math.min(maxDur, d.durability ?? maxDur) / maxDur) * 100);
+    const displayName =
+      itemDef?.dynamicName && d.name ? d.name : (itemDef?.name ?? d.resourceId.replace(/_/g, ' '));
+    const bars: EntityBar[] = [];
+    if (freshPct !== null) {
+      bars.push({
+        label: 'FRESH',
+        value: freshPct,
+        color: itemBarColor(freshPct),
+        valueText: `${freshPct}%`
+      });
+    }
+    bars.push({ label: 'COND', value: durPct, color: itemBarColor(durPct), valueText: `${durPct}%` });
+    return {
+      name: `★ ${displayName}`,
+      status: `×${d.quantity}`,
+      bars,
+      note: d.stored ? 'stored' : 'dropped item — awaiting hauler'
+    } satisfies SelectedEntityModel;
+  })();
 
   function jobProgressBar(progress: number): string {
     const clamped = Math.max(0, Math.min(1, progress));
@@ -2863,38 +2894,9 @@
         </div>
       {/if}
     </div>
-  {:else if hoverDroppedItem}
-    <!-- Dropped item on the hovered tile -->
-    {@const itemDef = ITEMS_DATABASE.find((i) => i.id === hoverDroppedItem.resourceId)}
-    {@const maxDur = itemDef?.maxDurability ?? 100}
-    {@const freshPct =
-      itemDef?.decaySeconds && itemDef.decaySeconds > 0
-        ? Math.round(Math.max(0, 1 - (hoverDroppedItem.decayAcc ?? 0) / itemDef.decaySeconds) * 100)
-        : null}
-    {@const durPct = Math.round(
-      (Math.min(maxDur, hoverDroppedItem.durability ?? maxDur) / maxDur) * 100
-    )}
-    <div class="tile-hud tile-hud--item">
-      <span class="item-glyph">★</span>
-      <span class="item-name"
-        >{itemDef?.dynamicName && hoverDroppedItem.name
-          ? hoverDroppedItem.name
-          : (itemDef?.name ?? hoverDroppedItem.resourceId.replace(/_/g, ' '))}</span
-      >
-      <span class="item-qty">×{hoverDroppedItem.quantity}</span>
-      {#if freshPct !== null}
-        <StatBar
-          label="FRESH"
-          value={freshPct}
-          color={itemBarColor(freshPct)}
-          valueText="{freshPct}%"
-        />
-      {/if}
-      <StatBar label="COND" value={durPct} color={itemBarColor(durPct)} valueText="{durPct}%" />
-      <div class="item-hint">
-        {hoverDroppedItem.stored ? 'stored' : 'dropped item — awaiting hauler'}
-      </div>
-    </div>
+  {:else if hoverItemCard}
+    <!-- Dropped item on the hovered tile — shared SelectedEntityCard, bars below the title -->
+    <SelectedEntityCard model={hoverItemCard} />
   {:else if hoverTile}
     <div class="tile-hud">
       <span class="tile-coord">({hoverTile.x},{hoverTile.y})</span><span class="tile-layers"
@@ -2991,32 +2993,6 @@
   .tile-hud--selection {
     max-width: 340px;
     white-space: normal;
-  }
-  .tile-hud--item {
-    min-width: 140px;
-    display: flex;
-    align-items: baseline;
-    gap: 5px;
-    flex-wrap: wrap;
-  }
-  .item-glyph {
-    color: #c08030;
-    font-size: 11px;
-  }
-  .item-name {
-    color: #c8a060;
-    font-weight: bold;
-    text-transform: uppercase;
-    font-size: 10px;
-  }
-  .item-qty {
-    color: #c8a040;
-    font-size: 10px;
-  }
-  .item-hint {
-    width: 100%;
-    color: #8a7030;
-    font-size: 9px;
   }
   .sel-title {
     color: #c08040;

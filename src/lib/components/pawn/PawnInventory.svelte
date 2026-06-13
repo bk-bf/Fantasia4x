@@ -2,12 +2,17 @@
 <script lang="ts">
   import type { Pawn, Item } from '$lib/game/core/types';
   import ITEMS_DATABASE from '$lib/game/database/items.jsonc';
+  import { itemService } from '$lib/game/services/ItemService';
+  import { gameState } from '$lib/stores/gameState';
 
   export let pawn: Pawn;
 
   $: carried = Object.entries(pawn.inventory?.items ?? {}).filter(([, qty]) => qty > 0);
-  $: maxWeightKg = pawn.inventory?.maxWeightKg ?? 20;
-  $: weightKg = pawn.inventory?.weightKg ?? 0;
+  // Derive load + budget from the service (single source of truth = item defs). The cached
+  // pawn.inventory.weightKg is a write-only initial-shape field that is never updated on
+  // inventory mutation, so reading it showed a stale 0.0 (review R5 / playtest 2026-06-13).
+  $: maxWeightKg = itemService.getCarryBudget(pawn, $gameState).maxWeightKg;
+  $: weightKg = itemService.getCurrentCarryLoad(pawn, $gameState).weightKg;
   $: isEmpty = carried.length === 0;
 
   function itemName(id: string): string {

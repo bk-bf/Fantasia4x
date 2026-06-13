@@ -12,6 +12,10 @@
     /** Maximum (defaults to 100). */
     max?: number;
     warn?: boolean;
+    /** Explicit bar colour. Falls back to warn-red / default-green when omitted. */
+    color?: string;
+    /** Right-hand readout. Defaults to `<rounded>%`. */
+    valueText?: string;
   }
 
   export interface EntityButton {
@@ -52,12 +56,13 @@
 </script>
 
 <script lang="ts">
+  import StatBar from './StatBar.svelte';
+
   let { model }: { model: SelectedEntityModel } = $props();
 
-  function blockBar(value: number, max: number, width = 8): string {
-    const filled = Math.max(0, Math.min(width, Math.round((value / max) * width)));
-    return '█'.repeat(filled) + '░'.repeat(width - filled);
-  }
+  // Bar colours when an EntityBar doesn't specify its own: red on warn, green otherwise.
+  const BAR_WARN = '#ee8844';
+  const BAR_OK = '#68a030';
 </script>
 
 <!--
@@ -122,13 +127,13 @@
   {#if model.bars && model.bars.length > 0}
     <div class="bar-rows">
       {#each model.bars as bar (bar.label)}
-        <div class="bar-row">
-          <span class="bar-label">{bar.label}</span>
-          <span class="bar-track" class:bar-warn={bar.warn}
-            >[{blockBar(bar.value, bar.max ?? 100)}]</span
-          >
-          <span class="bar-val" class:bar-warn={bar.warn}>{Math.floor(bar.value)}%</span>
-        </div>
+        <StatBar
+          label={bar.label}
+          value={bar.value}
+          max={bar.max ?? 100}
+          color={bar.color ?? (bar.warn ? BAR_WARN : BAR_OK)}
+          valueText={bar.valueText ?? `${Math.floor(bar.value)}%`}
+        />
       {/each}
     </div>
   {/if}
@@ -261,27 +266,6 @@
     display: flex;
     flex-direction: column;
     gap: 1px;
-  }
-  .bar-row {
-    display: flex;
-    align-items: baseline;
-    gap: 4px;
-    font-size: 9px;
-  }
-  .bar-label {
-    color: #7a6030;
-    min-width: 34px;
-  }
-  .bar-track {
-    color: #68a030;
-    letter-spacing: -0.5px;
-  }
-  .bar-val {
-    color: #c08040;
-    min-width: 24px;
-  }
-  .bar-warn {
-    color: #ee8844;
   }
   .pawn-job {
     color: #8a7040;

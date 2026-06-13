@@ -13,6 +13,8 @@
   export let badge: string | null = null;
   /** Work units the job costs (recipe/building workAmount). Shown as a small chip. */
   export let workAmount: number | null = null;
+  /** Required workstation display name (recipe.station). Omitted for hand-craftable recipes. */
+  export let station: string | null = null;
   export let actionLabel: string;
   export let actionEnabled = true;
   /** ok = buildable/craftable, missing = can't afford, blocked = unmet requirement. */
@@ -31,6 +33,7 @@
       {#if badge}<span class="card-badge">{badge}</span>{/if}
     </div>
     {#if description}<div class="card-desc">{description}</div>{/if}
+    {#if station}<div class="card-station" title="required workstation">⚒ {station}</div>{/if}
     <div class="card-cost"><slot /></div>
     <button
       class="card-action card-action--{variant}"
@@ -104,6 +107,14 @@
     line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+  }
+  .card-station {
+    color: var(--text-dim);
+    font-size: 9px;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .card-cost {
     color: var(--text-dim);
