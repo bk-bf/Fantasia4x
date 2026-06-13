@@ -400,6 +400,12 @@ class JobServiceImpl {
     );
   }
 
+  /** Public: is this craft order's station present and all inputs staged on it? (Passive furnaces.) */
+  isOrderSupplied(order: import('../core/types').CraftingInProgress, gs: GameState): boolean {
+    const station = this._stationTileFor(order, gs);
+    return station ? this._orderSupplied(order, station, gs) : false;
+  }
+
   /**
    * ADR-016: emit one `fetch` job per reserved input stack that still sits on a stockpile tile
    * (not yet carried to the order's station). A pawn picks it up and stages it ON the station;

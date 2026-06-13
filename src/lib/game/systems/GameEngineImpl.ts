@@ -352,6 +352,7 @@ export class GameEngineImpl implements GameEngine {
         this.gameState = jobService.generateJobs(this.gameState!);
       });
       t('buildings', () => this.processBuildings());
+      t('passiveProd', () => this.processPassiveProduction());
       t('pawns', () => this.processPawns());
       t('resourceRegrowth', () => this.processResourceRegrowth());
       t('entityStep', () => {
@@ -716,6 +717,52 @@ export class GameEngineImpl implements GameEngine {
         prof[k].n = 0;
       }
     }
+  }
+
+  /**
+   * ADR-016 passive furnaces: a loaded furnace (bloomery/kiln/charcoal pit) transforms its
+   * staged inputs over time WITHOUT a pawn working it — gated by the station being lit (fuel
+   * present) for fuel-burning furnaces. Each supplied passive order accrues work each tick and,
+   * on reaching workRequired, completes through the same path as a pawn-worked craft (staged
+   * inputs destroyed → outputs spawned on the station). Pawns still fetch the inputs + fuel.
+   */
+  private processPassiveProduction(): void {
+    if (!this.gameState) return;
+    const queue = this.gameState.craftingQueue ?? [];
+    if (queue.length === 0) return;
+
+    const PASSIVE_WORK_PER_SECOND = 1;
+    let state = this.gameState;
+    let changed = false;
+
+    for (const order of [...queue]) {
+      if (!recipeService.isPassiveStation(order.stationType)) continue;
+      const station = (state.buildings ?? []).find(
+        (b) => b.id === order.stationBuildingId && b.status === 'complete'
+      );
+      if (!station) continue;
+      // Inputs must be fully loaded onto the furnace first.
+      if (!jobService.isOrderSupplied(order, state)) continue;
+      // Gated by fuel/heat: a fuel-burning furnace must be lit. Furnaces without a fuel tank
+      // (e.g. charcoal_pit, where the loaded wood IS the fuel) run as soon as they're loaded.
+      const def = AVAILABLE_BUILDINGS.find((d) => d.id === station.type);
+      if ((def?.maxFuel ?? 0) > 0 && !station.lit) continue;
+
+      const newDone = (order.workDone ?? 0) + perTick(PASSIVE_WORK_PER_SECOND);
+      if (newDone >= (order.workRequired ?? 1)) {
+        state = jobService.completeCraftOrder(order, state);
+      } else {
+        state = {
+          ...state,
+          craftingQueue: (state.craftingQueue ?? []).map((o) =>
+            o.id === order.id ? { ...o, workDone: newDone } : o
+          )
+        };
+      }
+      changed = true;
+    }
+
+    if (changed) this.gameState = state;
   }
 
   private processBuildings(): void {
