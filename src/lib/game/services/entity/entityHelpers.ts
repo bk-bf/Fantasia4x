@@ -7,7 +7,7 @@ import { SECONDS_PER_TICK } from '../../core/time';
 import { stepBody, seedMidCrossClaims } from '../../systems/MovementSystem';
 import { resourceObjectService } from '../ResourceObjectService';
 import { wasmPathfinderService } from '../WasmPathfinderService';
-import { buildPathfindingGridsWithBlocked } from '../PathfinderService';
+import { buildPathfindingGridsSoftBlocked } from '../PathfinderService';
 import { occupancyService } from '../OccupancyService';
 import { profCount } from '../../core/log';
 import { rng } from '../../core/rng';
@@ -507,7 +507,7 @@ export function pathTo(
   // The movement engine additionally blocks entry into a tile that becomes
   // occupied after this path was computed.
   const blocked = occupancyService.blockedTiles(state, selfId);
-  const { walkable, costs, width, height } = buildPathfindingGridsWithBlocked(
+  const { walkable, costs, width, height } = buildPathfindingGridsSoftBlocked(
     state.worldMap,
     blocked,
     sx,

@@ -11,7 +11,7 @@ import { jobService } from '../../services/JobService';
 import { pawnService } from '../../services/PawnService';
 import {
   buildPathfindingGrids,
-  buildPathfindingGridsWithBlocked,
+  buildPathfindingGridsSoftBlocked,
   pathfinderService
 } from '../../services/PathfinderService';
 import { occupancyService } from '../../services/OccupancyService';
@@ -199,7 +199,7 @@ export function tryAssignPath(
   // Bodies are solid: route AROUND other pawns/mobs. The approach tile is kept
   // walkable (it was chosen as unoccupied), and the start tile too, so the pawn is
   // never blocked by itself.
-  const { walkable, costs, width, height } = buildPathfindingGridsWithBlocked(
+  const { walkable, costs, width, height } = buildPathfindingGridsSoftBlocked(
     gameState.worldMap,
     occupied,
     pawn.position.x,
@@ -338,7 +338,7 @@ export function tryAssignSleepPath(
   if (pawn.position.x === tx && pawn.position.y === ty) return null; // already on the bed
   // Route around other bodies; the bed tile (goal) and the pawn's own tile stay walkable.
   const blocked = occupancyService.blockedTiles(gameState, pawn.id);
-  const { walkable, costs, width, height } = buildPathfindingGridsWithBlocked(
+  const { walkable, costs, width, height } = buildPathfindingGridsSoftBlocked(
     gameState.worldMap,
     blocked,
     pawn.position.x,
