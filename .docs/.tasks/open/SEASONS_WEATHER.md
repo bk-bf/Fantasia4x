@@ -182,7 +182,7 @@ This feeds directly into existing `PawnService.getRestIncreasePerTurn()` and
 weather: WeatherState;
 
 export interface WeatherState {
-  type: 'clear' | 'rain' | 'heavy_rain' | 'snow' | 'blizzard' | 'heat_wave';
+  type: 'clear' | 'rain' | 'heavy_rain' | 'snow' | 'blizzard' | 'heat_wave' | 'fog';
   intensity: number; // 0.0–1.0
   turnsRemaining: number;
   temperatureOverride?: number; // heat_wave / blizzard delta
@@ -398,6 +398,25 @@ behaviour wiring on top of that.
    model that here alongside weather hazards.
 
 ---
+
+## Renderer decomposition — deferred until rendering is feature-complete
+
+The GameCanvas decomposition (P-4 in CODEBASE-REVIEW) is **intentionally paused** mid-way: the clean
+leaf modules are extracted (`gameCanvas/{spriteSheets,hudSpriteIcon,BuildingFuelPanel,selectionCard,
+overlay}`, ~700 LOC off), but the render/input core (`updatePawnOverlay`/`updateWorldEffectOverlays`/
+`drawDesignations` + camera + input) is left in place. Reason: the overlay/ambient path is about to
+**grow** with this spec — weather particle overlays (rain/snow, Subsystem 5) and a **fog tint**
+(below). Those are *scoped expansions of the existing ambient-tint + overlay-pass machinery*, not new
+systems, so churning the render core now would just be redone. Revisit the `OverlayRenderer`
+extraction **after** Phases C–D land and rendering is feature-complete.
+
+### Fog as an ambient-tint overlay (scoped expansion, Phase C)
+
+A `fog` weather type desaturates + greys the scene by reusing the **same ambient-tint multiply** the
+day/night cycle already applies (Subsystem 1) — a global hue shift toward flat grey + lowered
+contrast, optionally a light screen-space haze in the weather pass. This is **distinct from
+fog-of-war** (Subsystem 6, a per-tile visibility mask): fog-the-weather is atmosphere/hue; fog-of-war
+is what a pawn can see. Both can coexist.
 
 ## Implementation Order
 
