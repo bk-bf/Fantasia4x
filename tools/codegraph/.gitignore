@@ -1,4 +1,0 @@
-# Build artifacts — regenerate with `pnpm graph`
-graph.json
-codegraph.html
-graph.snapshot*.json
