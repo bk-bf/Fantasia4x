@@ -10,6 +10,7 @@ import BUILDINGS_DATABASE_RAW from '../../database/buildings.jsonc';
 import { jobService } from '../../services/JobService';
 import { pawnService } from '../../services/PawnService';
 import {
+  buildPathfindingGrids,
   buildPathfindingGridsWithBlocked,
   pathfinderService
 } from '../../services/PathfinderService';
@@ -140,6 +141,36 @@ export function markJobUnreachable(pawnId: string, jobId: string, turn: number):
   m.set(jobId, turn + UNREACHABLE_COOLDOWN_TICKS);
 }
 
+/**
+ * Diagnostic (ENGINE-PERFORMANCE §6 v3): when a path request returns empty, classify WHY,
+ * instead of assuming "unreachable". Runs ONLY under the profiler (it does a second,
+ * terrain-only A*, so it is not free — `#pathFail.*` counts are the signal, not the timing).
+ *
+ *   pathFail.startEqGoal       — start tile == goal tile (degenerate; A* returns []).
+ *   pathFail.goalOOB           — goal off the map.
+ *   pathFail.goalNotWalkable   — goal tile is non-walkable terrain (bad approach pick).
+ *   pathFail.bodyBlocked       — terrain route EXISTS; bodies (pawns/mobs) walled it off this
+ *                                tick → transient, the pawn should WAIT, not re-path.
+ *   pathFail.terrainUnreachable — no terrain route at all → genuinely disconnected region.
+ */
+function classifyPathFailure(
+  gameState: GameState,
+  sx: number,
+  sy: number,
+  ex: number,
+  ey: number
+): void {
+  if ((globalThis as Record<string, unknown>).__profileTurns !== true) return;
+  const base = buildPathfindingGrids(gameState.worldMap);
+  const { walkable, costs, width, height } = base;
+  if (sx === ex && sy === ey) return void profCount('pathFail.startEqGoal');
+  if (ex < 0 || ey < 0 || ex >= width || ey >= height) return void profCount('pathFail.goalOOB');
+  if (walkable[ey * width + ex] === 0) return void profCount('pathFail.goalNotWalkable');
+  // Body-free terrain A*: if THIS finds a route, the body-aware failure was transient blocking.
+  const terrain = pathfinderService.findPath(walkable, costs, width, height, sx, sy, ex, ey);
+  profCount(terrain.length > 0 ? 'pathFail.bodyBlocked' : 'pathFail.terrainUnreachable');
+}
+
 export function tryAssignPath(
   pawn: Pawn,
   tx: number,
@@ -194,6 +225,7 @@ export function tryAssignPath(
   );
   if (path.length === 0) {
     profCount('pathReq.fail');
+    classifyPathFailure(gameState, pawn.position.x, pawn.position.y, approach.x, approach.y);
     return null;
   }
   return pawnService.assignPath(pawn.id, path, gameState);
@@ -329,6 +361,7 @@ export function tryAssignSleepPath(
   );
   if (path.length === 0) {
     profCount('pathReq.fail');
+    classifyPathFailure(gameState, pawn.position.x, pawn.position.y, tx, ty);
     return null;
   }
   return pawnService.assignPath(pawn.id, path, gameState);
