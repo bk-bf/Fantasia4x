@@ -75,15 +75,24 @@ PT-2/3/4, and the full PawnStateMachine decomposition — is in the
   pathfind; `findNearestRestBuilding` scans pawns×buildings). Profiling-gated — don't touch until
   `__profOut` says so; but no new system should add full-array `pawns.map(...)` writes for single-pawn
   updates.
-  - **Profiling instrumented 2026-06-14 (gate unblocked, optimizations NOT done yet).** `profileTurns()`
-    now also reports per-tick call counts for the three suspect scans as `#<name>/tick` in the `[PROF]`
-    line (via a dev-gated `profCount()` in `core/log` — zero cost when off). **Next:** run
-    `profileTurns()` **in-browser under real load** (a headless harness is useless here — `WasmPathfinderService.init()`
-    early-returns when `!browser`, so pathfinding/occupancy never fire) and read `__profOut`; optimize
-    ONLY what's proven hot. _Initial code reading suggests low ROI:_ at colony scale (pawns ~5–10,
-    mobs ≤40) these are small-N scans dwarfed by the A* call they sit next to, and a naive per-tick
-    `blockedTiles` cache is **incorrect** (occupancy changes mid-tick as entities move) — so any cache
-    needs per-move invalidation. Confirm with `__profOut` before spending complexity here.
+  - **Profiling instrumented 2026-06-14.** `profileTurns()` now also reports per-tick call counts for
+    the suspect scans as `#<name>/tick` in the `[PROF]` line (dev-gated `profCount()` in `core/log` —
+    zero cost when off). Reusable harness at `src/lib/game/profileSim.test.ts` (`PROFILE=1 npx vitest
+    run …`; skipped in the normal suite).
+  - **Profiled 2026-06-14 — the three named suspects are NOT the hot spots.** Headless run (8 pawns,
+    ~40 mobs, 60 designations, 1800 ticks, 3 runs, steady-state ≈ **0.86–1.07 ms/tick total** — huge
+    headroom under the 16.6 ms/60fps budget). Per-phase share:
+    `entityStep ~42%` · `resourceRegrowth ~26%` · `generateJobs ~11%` · `pawns ~11%` · `needsTick ~8%`
+    · **`combat ~0.6%`** · rest ≈0. Suspect scan frequency: `#findCombatThreat 8/tick` (= 1 per living
+    pawn, as flagged), `#findNearestRestBuilding 4/tick`, `#blockedTiles 1/tick`. **Verdict:** the
+    P-5-named items (`findCombatThreat`, `blockedTiles`, `findNearestRestBuilding`) live in the *cheap*
+    `combat`/`pawns` phases (≤12% combined) — optimizing them is wasted complexity at this scale. The
+    actual cost is **`entityStep` (mob AI)** and **`resourceRegrowth`** (the worldMap cooldown scan =
+    the existing D-perf "cooldown index for regrowth" item) — neither named in P-5.
+  - **Caveat + next:** headless has **no WASM/A\*** (`init()` early-returns when `!browser`), so the
+    `pawns` phase and `#blockedTiles` are under-represented (real per-tick pathfinding cost is absent).
+    Run `profileTurns()` **in-browser under real load** to confirm whether A* pushes `pawns`/`entityStep`
+    up; if it does, the worthwhile target is the regrowth cooldown index (D-perf), not the named scans.
 
 ## Latent defects (found in passing — not yet scheduled)
 
