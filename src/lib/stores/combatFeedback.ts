@@ -9,8 +9,11 @@
 // nothing reads it (e.g. the canvas is unmounted). Positions are world tile
 // coordinates — never pixels — so the renderer stays the single owner of camera math.
 import { writable } from 'svelte/store';
+// P-3: the kind enum now lives in the sim's core sink so Combat can reference it without
+// importing this store. Re-exported here for the renderer (GameCanvas) which reads this channel.
+import type { CombatTextKind } from '$lib/game/core/logSink';
 
-export type CombatTextKind = 'damage' | 'crit' | 'miss' | 'dodge' | 'bleed' | 'knockdown';
+export type { CombatTextKind };
 
 export interface CombatTextEvent {
   id: string;

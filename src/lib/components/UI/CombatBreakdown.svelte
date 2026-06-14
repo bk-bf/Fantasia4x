@@ -38,6 +38,9 @@
           {:else}
             <span class="dmg">−{t.damage}</span>
           {/if}
+          {#if t.woundType}
+            <span class="tag wound sev-{t.woundSeverity}">{t.woundSeverity} {t.woundType}</span>
+          {/if}
           {#if t.knockdown}<span class="tag knock">DOWN</span>{/if}
           {#if t.bleeding}<span class="tag bleed">BLEED</span>{/if}
         </div>
@@ -135,5 +138,27 @@
   .tag.bleed {
     color: #fff;
     background: #cc2222;
+  }
+  /* Wound this swing inflicted — coloured by severity. */
+  .tag.wound {
+    text-transform: capitalize;
+    color: #1a1208;
+    background: #c98a3a;
+  }
+  .tag.wound.sev-minor {
+    color: #111;
+    background: #9a9a8a;
+  }
+  .tag.wound.sev-serious {
+    color: #1a1208;
+    background: #e0853a;
+  }
+  .tag.wound.sev-critical {
+    color: #fff;
+    background: #d23a2a;
+  }
+  .tag.wound.sev-destroyed {
+    color: #fff;
+    background: #ff2a1a;
   }
 </style>

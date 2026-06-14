@@ -20,8 +20,7 @@ import { pawnStatService } from '../services/PawnStatService';
 import { calcMaxStamina } from '../entities/Pawns';
 import statusEffectsData from '../database/status-effects.jsonc';
 import type { StatusEffectDef } from '../core/types';
-import { logCombatSwing, logCombatKill } from '../../stores/Log';
-import { combatFeedback, type CombatTextKind } from '../../stores/combatFeedback';
+import { simLog, type CombatTextKind } from '../core/logSink';
 import { rng } from '../core/rng';
 
 const STATUS_EFFECTS_DB = statusEffectsData as unknown as StatusEffectDef[];
@@ -1166,7 +1165,7 @@ class CombatServiceImpl implements CombatService {
 
   private emitFloat(x: number, y: number, kind: CombatTextKind, text: string): void {
     if (x < 0 || y < 0) return;
-    combatFeedback.push({ worldX: x, worldY: y, text, kind });
+    simLog.pushCombatText({ worldX: x, worldY: y, text, kind });
   }
 
   /**
@@ -1190,7 +1189,7 @@ class CombatServiceImpl implements CombatService {
     // Miss → no injury, but log + show the dodge. The swing still cost stamina.
     if (!result.hit) {
       this.emitFloat(pos.x, pos.y, 'dodge', 'dodge');
-      logCombatSwing(attacker.id, attackerName, target.id, targetName, turn, pos.x, pos.y, {
+      simLog.logCombatSwing(attacker.id, attackerName, target.id, targetName, turn, pos.x, pos.y, {
         turn,
         attackerName,
         defenderName: targetName,
@@ -1220,7 +1219,7 @@ class CombatServiceImpl implements CombatService {
     if (result.knockdown) this.emitFloat(pos.x, pos.y, 'knockdown', 'DOWN!');
     else if (result.injury.bleeding > 0) this.emitFloat(pos.x, pos.y, 'bleed', 'bleed');
 
-    logCombatSwing(attacker.id, attackerName, target.id, targetName, turn, pos.x, pos.y, {
+    simLog.logCombatSwing(attacker.id, attackerName, target.id, targetName, turn, pos.x, pos.y, {
       turn,
       attackerName,
       defenderName: targetName,
@@ -1234,14 +1233,16 @@ class CombatServiceImpl implements CombatService {
       damageType: result.damageType,
       partMaxHp: result.partMaxHp,
       partRemainingHp: result.partRemainingHp,
-      bleeding: result.injury.bleeding > 0
+      bleeding: result.injury.bleeding > 0,
+      woundType: result.injury.type,
+      woundSeverity: result.injury.severity
     });
 
     const after = isTargetMob
       ? next.mobs?.find((m) => m.id === target.id)
       : next.pawns.find((p) => p.id === target.id);
     if (after && (after.isAlive === false || ('state' in after && after.state === 'Corpse'))) {
-      logCombatKill(
+      simLog.logCombatKill(
         attacker.id,
         attackerName,
         target.id,
