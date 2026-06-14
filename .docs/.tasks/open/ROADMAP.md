@@ -2,7 +2,7 @@
 
 # ROADMAP
 
-> **Related:** [game/DESIGN](../game/DESIGN.md) · [game/ARCHITECTURE](../game/ARCHITECTURE.md) · [RESEARCH-ENHANCEMENT](RESEARCH-ENHANCEMENT.md) · [SEASONS_WEATHER](SEASONS_WEATHER.md) · [ENTITIES_SPAWNING](ENTITIES_SPAWNING.md) · [COMBAT-SYSTEM](COMBAT-SYSTEM.md) · [MAGIC-SKILLS](MAGIC-SKILLS.md) · [RANGED-COMBAT](RANGED-COMBAT.md) · [SOCIAL-LAYER](SOCIAL-LAYER.md) · [TAURI-DISTRIBUTION](TAURI-DISTRIBUTION.md) · archived: [EQUIPMENT-EXPANSION](../archive/EQUIPMENT-EXPANSION.md) · [PRODUCTION-CHAIN-EXPANSION](../archive/PRODUCTION-CHAIN-EXPANSION-2026-06-12.md) · [SCREEN-REFACTORING](../archive/SCREEN-REFACTORING-2026-06-03.md) · [SURVIVAL-HEALTH](../archive/SURVIVAL-HEALTH-2026-05-30.md) · [SIMULATION-PERF](../archive/SIMULATION-PERF-2026-05-30.md)
+> **Related:** [game/DESIGN](../game/DESIGN.md) · [game/ARCHITECTURE](../game/ARCHITECTURE.md) · [RESEARCH-ENHANCEMENT](RESEARCH-ENHANCEMENT.md) · [SEASONS_WEATHER](SEASONS_WEATHER.md) · [ENTITIES_SPAWNING](ENTITIES_SPAWNING.md) · [COMBAT-SYSTEM](COMBAT-SYSTEM.md) · [MAGIC-SKILLS](MAGIC-SKILLS.md) · [RANGED-COMBAT](RANGED-COMBAT.md) · [SOCIAL-LAYER](SOCIAL-LAYER.md) · [ENGINE-PERFORMANCE](ENGINE-PERFORMANCE.md) · [DISTRIBUTION](DISTRIBUTION.md) · archived: [EQUIPMENT-EXPANSION](../archive/EQUIPMENT-EXPANSION.md) · [PRODUCTION-CHAIN-EXPANSION](../archive/PRODUCTION-CHAIN-EXPANSION-2026-06-12.md) · [SCREEN-REFACTORING](../archive/SCREEN-REFACTORING-2026-06-03.md) · [SURVIVAL-HEALTH](../archive/SURVIVAL-HEALTH-2026-05-30.md) · [SIMULATION-PERF](../archive/SIMULATION-PERF-2026-05-30.md)
 
 ## Status Key
 
@@ -55,8 +55,9 @@ layer (seasons / weather / fog of war), with **Ranged Combat** sequenced just af
 | 1  | **Production Chain Expansion** (smelting, forges, mining, fuel/heat, leather, survival)                                                                                                                                | [x] 2026-06-12 | archived: [PRODUCTION-CHAIN-EXPANSION-2026-06-12.md](../archive/PRODUCTION-CHAIN-EXPANSION-2026-06-12.md) |
 | 2  | **Equipment Expansion** (layered armour slots, mainHand/offHand, weight/volume inventory, durability, material-bonus crafting)                                                                                         | [x] 2026-06-13 | archived: [EQUIPMENT-EXPANSION.md](../archive/EQUIPMENT-EXPANSION.md)                                     |
 | 2b | **Physical Production** (reserve-and-fetch crafting: items always physical, haul inputs to workstation, output on station; retire `gs.item`; passive furnaces; building-material hauling; carry budget; tool gating) | [x] 2026-06-13 | archived: [PHYSICAL-PRODUCTION-2026-06-13.md](../archive/PHYSICAL-PRODUCTION-2026-06-13.md) · ADR-016     |
+| 2c | **Engine Performance & Scaling** — validation spike **do now** (kill O(n²) threat scan, confirm speedup on profiler sandbox + WebKitGTK); then persistence/push/LoS, gated on the spike passing                            | [ ] **spike now** | [ENGINE-PERFORMANCE.md](ENGINE-PERFORMANCE.md) · ADR-018/019/020                                       |
 | 3  | **Living World B–D** (seasons, temperature, weather, fog of war)                                                                                                                                                       | [ ] B–D        | [SEASONS_WEATHER.md](SEASONS_WEATHER.md)                                                                  |
-| 4  | **Ranged Combat** (ammunition, line-of-sight, bows/sling/crossbow) — after Living World                                                                                                                                | [ ]            | [RANGED-COMBAT.md](RANGED-COMBAT.md)                                                                      |
+| 4  | **Ranged Combat** (ammunition, line-of-sight, bows/sling/crossbow) — after Living World + Perception LoS (P3)                                                                                                          | [ ]            | [RANGED-COMBAT.md](RANGED-COMBAT.md)                                                                      |
 | 5  | **Magic & Skills** (depth layer; **reorganised after Living World**)                                                                                                                                                   | [ ] deferred   | [MAGIC-SKILLS.md](MAGIC-SKILLS.md)                                                                        |
 | 6  | **Social Layer** (relationships, mood depth, death mood events, pawn traits)                                                                                                                                           | [ ]            | [SOCIAL-LAYER.md](SOCIAL-LAYER.md)                                                                        |
 | 7  | **Research Enhancement** (three-tier, lore-item driven; after item DB)                                                                                                                                                 | [ ]            | [RESEARCH-ENHANCEMENT.md](RESEARCH-ENHANCEMENT.md)                                                        |
@@ -74,11 +75,12 @@ layer (seasons / weather / fog of war), with **Ranged Combat** sequenced just af
 | ENTITIES_SPAWNING Phase A–B    | —                                                   | SEASONS_WEATHER; SURVIVAL-HEALTH                   | COMBAT-SYSTEM                                                    |
 | COMBAT-SYSTEM                  | ENTITIES_SPAWNING Phase A                           | SURVIVAL-HEALTH                                    | MAGIC-SKILLS; EQUIPMENT; SOCIAL; ENTITIES Phase E                |
 | EQUIPMENT-EXPANSION [x]        | COMBAT [x] + PRODUCTION-CHAIN [x]                   | —                                                  | MAGIC-SKILLS (staff items); RANGED-COMBAT (bow items + fields)   |
-| RANGED-COMBAT                  | COMBAT [x] + EQUIPMENT [x] + Living World (LoS/fog) | —                                                  | mob archers; MAGIC-SKILLS (enchanted ammo)                       |
+| RANGED-COMBAT                  | COMBAT [x] + EQUIPMENT [x] + ENGINE-PERFORMANCE P3 (LoS) | —                                             | mob archers; MAGIC-SKILLS (enchanted ammo)                       |
+| ENGINE-PERFORMANCE             | — (spike standalone); P3 LoS benefits from SEASONS fog | profiler sandbox (validation)                  | RANGED-COMBAT (LoS); SEASONS_WEATHER fog of war; 500+ entity scale |
 | MAGIC-SKILLS                   | COMBAT-SYSTEM                                       | RESEARCH (nodes 3+5 only); EQUIPMENT (staff items) | COMBAT depth (skills + spells)                                   |
 | SOCIAL-LAYER                   | COMBAT                                              | —                                                  | —                                                                |
 | ENTITIES_SPAWNING Phase C–E    | COMBAT (Phase E); Phase A                           | —                                                  | —                                                                |
-| TAURI-DISTRIBUTION             | Phase 3 complete                                    | —                                                  | —                                                                |
+| DISTRIBUTION             | Phase 3 complete                                    | —                                                  | —                                                                |
 
 ### Implementation Waves
 
@@ -89,9 +91,9 @@ layer (seasons / weather / fog of war), with **Ranged Combat** sequenced just af
 | **3** [x]           | COMBAT-SYSTEM (incl. wounds, stances, caretaking)                                     | complete (2026-06-11)                                                                     |
 | **4** [x]           | PRODUCTION-CHAIN-EXPANSION                                                            | complete (2026-06-12)                                                                     |
 | **5** [x]           | EQUIPMENT-EXPANSION                                                                   | complete (2026-06-13); needed PROD-CHAIN [x] (Wave 4) + COMBAT [x]                        |
-| **6** — next        | SEASONS_WEATHER B–D (Living World) · SOCIAL-LAYER                                     | independent / COMBAT [x]                                                                  |
+| **6** — next        | ENGINE-PERFORMANCE validation spike (do first) · SEASONS_WEATHER B–D (Living World) · SOCIAL-LAYER | independent / COMBAT [x]; spike gates the rest of ENGINE-PERFORMANCE            |
 | **7**               | RANGED-COMBAT · MAGIC-SKILLS · RESEARCH-ENHANCEMENT · ENTITIES C–E (deferred content) | after Living World; RANGED needs Living World LoS; MAGIC needs COMBAT [x] + EQUIPMENT [x] |
-| **8** — Phase 4     | TAURI-DISTRIBUTION                                                                    | Wave 7 complete                                                                           |
+| **8** — Phase 4     | DISTRIBUTION                                                                    | Wave 7 complete                                                                           |
 
 ### Other Phase 3 work (no dedicated spec)
 
@@ -99,7 +101,7 @@ layer (seasons / weather / fog of war), with **Ranged Combat** sequenced just af
 | ------------------------------------------------------------------------------------------------------------- | ------------------- | --------------------------------------------------------------------------------- |
 | Building-work integration (bonus stacking)                                                                    | [ ]                 | Analysis in `game/ARCHITECTURE.md`                                                |
 | AI event generation expansion                                                                                 | [ ]                 | —                                                                                 |
-| **Sim perf scaling** (500+ entities, 1000×1000 maps)                                                          | [ ] Phase 2 of spec | archived: `SIMULATION-PERF-2026-05-30.md` — Phase 1+1.5 [x] (60/60 TPS, 100+ FPS) |
+| **Sim perf scaling** (500+ entities, 1000×1000 maps)                                                          | [ ] superseded      | now driven by [ENGINE-PERFORMANCE.md](ENGINE-PERFORMANCE.md) (O(n²) perception is the measured bottleneck); archived: `SIMULATION-PERF-2026-05-30.md` (Phase 1+1.5 [x]) |
 | **Unified work model** (single stats.jsonc speed/yield/quality; ModifierSystem work-eff removed)              | [x] 2026-06-13      | ADR-015 in `game/DECISIONS.md`; no separate spec                                  |
 | **Work-driven pawn hunting** (mark-to-hunt → chase → resolve as combat → carcass → butchery; prey fight-back) | [x] 2026-06-13      | reuses COMBAT + ENTITIES circuits; no separate spec                               |
 | **Data-driven colony jobs** (`database/jobs.jsonc` + `JobService` handler registry; no hardcoded job switches) | [x] 2026-06-13      | ADR-017 in `game/DECISIONS.md`; drift-guarded by `jobRegistry.test.ts`            |
@@ -112,9 +114,9 @@ layer (seasons / weather / fog of war), with **Ranged Combat** sequenced just af
 
 | Item                                                    | Status         | Spec                                                   |
 | ------------------------------------------------------- | -------------- | ------------------------------------------------------ |
-| Tauri viability spike (WASM + saves in desktop WebView) | [ ] **do now** | [TAURI-DISTRIBUTION.md](TAURI-DISTRIBUTION.md) Phase A |
-| Adapter-static migration + AI endpoint decision         | [ ]            | [TAURI-DISTRIBUTION.md](TAURI-DISTRIBUTION.md) Phase B |
-| Linux / Windows / macOS release bundles + CI matrix     | [ ]            | [TAURI-DISTRIBUTION.md](TAURI-DISTRIBUTION.md) Phase C |
+| Tauri viability spike (WASM + saves in desktop WebView) | [ ] **do now** | [DISTRIBUTION.md](DISTRIBUTION.md) Phase A |
+| Adapter-static migration + AI endpoint decision         | [ ]            | [DISTRIBUTION.md](DISTRIBUTION.md) Phase B |
+| Linux / Windows / macOS release bundles + CI matrix     | [ ]            | [DISTRIBUTION.md](DISTRIBUTION.md) Phase C |
 
 ---
 

@@ -164,6 +164,8 @@ Do **not** speculatively update docs on every prompt. Update docs only when expl
 
 **Backlink integrity**: every doc file carries a `> **Related:**` line immediately after its `#` heading. When adding or moving a doc, update nav lines in files that reference it.
 
+**Trackable items use task-list checkboxes**: in any doc/spec, render lists of things-to-do — acceptance criteria, implementation phases/steps, open questions, validation gates, TODOs — as GitHub task-list checkboxes (`- [ ]` open, `- [x]` done), matching existing specs (e.g. DISTRIBUTION's acceptance criteria). They must be tickable for progress tracking. Reserve plain bullets for explanation/context and tables for non-trackable comparison matrices (trade-off grids, dependency matrices). ROADMAP's `[x]`/`[ ]` status cells are the same convention. Check for this before finishing a doc edit.
+
 **Code → doc mapping:**
 
 | Code path changed                                    | Check these docs                                        |

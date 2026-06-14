@@ -18,6 +18,10 @@ ADR-013 [GAME]: Deferred Combat Depth — Tissue Layers, Nerves & Arteries (2026
 ADR-014 [GAME]: Hard Tile Occupancy via Central OccupancyService (2026-06-12, Accepted)
 ADR-015 [GAME]: Single Work Model in stats.jsonc — supersedes ADR-003 for work (2026-06-13, Accepted)
 ADR-016 [GAME]: Physical Production — reserve-and-fetch crafting (2026-06-13, Accepted)
+ADR-017 [GAME]: Data-driven colony jobs (jobs.jsonc registry) (2026-06-13, Accepted)
+ADR-018 [GAME]: Perception via Target Persistence + Push Alerting (2026-06-14, Accepted — provisional, validation-gated)
+ADR-019 [GAME]: Line of Sight via `blocksSight` Occluder + WASM Raycast (2026-06-14, Accepted — design, impl deferred)
+ADR-020 [GAME]: Sim Scaling Strategy — Wrapper-Agnostic Ladder (Algorithms→WASM→Worker), wrapper decision deferred (2026-06-14, Accepted)
 
 ---
 
@@ -503,3 +507,137 @@ union member** — down from ~6 scattered edits with a duplicate.
 - Behaviour-preserving: the generator order, completion side-effects, and work-category results are
   identical (the only change is the dead `light` job's defunct mapping). 153 tests green.
 - Onboarding documented in `AGENTS.md` ("Adding a colony job").
+
+---
+
+### ADR-018 [GAME]: Perception via Target Persistence + Push Alerting
+
+- **Date**: 2026-06-14
+- **Status**: Accepted — **provisional, gated on the spec's §6 validation spike**
+- **Spec**: [.tasks/open/ENGINE-PERFORMANCE.md](../.tasks/open/ENGINE-PERFORMANCE.md)
+
+#### Context
+
+The `--profiler` sandbox (150 pawns + ~140 mobs) measured the sim at **~15 ms/tick**,
+single-thread CPU-bound (main thread ~80% busy; not GPU — canvas is 0.8 MP). The dominant
+cost is **O(n²) perception**: `findCombatThreat` and `findNearestHuntTarget`
+([pawnHelpers.ts](../../src/lib/game/systems/pawn/pawnHelpers.ts)) each linearly scan **all
+mobs, for every pawn, every tick** (`#findCombatThreat/tick ≈ 154` → ~21k checks/tick),
+re-deriving hostility on neutral animals each pass. It is also twitchy: targets are
+re-chosen from scratch 60×/s.
+
+#### Decision
+
+Replace the per-tick global scan with three composing layers:
+
+1. **Stateful hostility** — hostile = `entityClass==='mob'` **OR** `Attacking`/`Alerted`
+   **OR** *provoked* (an attacked animal gains an aggressor ref + calm-down timer, then
+   reverts). Preserves "prey fight back"; a class-only filter would break it.
+2. **Target persistence (memory)** — lock a target; re-acquire only on a trigger (target
+   dead/gone, out of perception N ticks, reached, or self-flee). Most entities do **zero**
+   perception work most ticks. New per-entity fields: `targetId`, `targetAcquiredTick`,
+   `lastSeenX/Y`, `provokedBy`, `provokedUntil`.
+3. **Bounded acquisition + push** — when a scan is needed, query the spatial index
+   (ADR-008 `SpatialIndexService`) within perception radius, LoS-prune (ADR-019), pick
+   nearest visible. Prey are **alerted by moving hostiles** (push: O(hostiles×local)), not
+   by every prey polling (pull: O(prey×mobs)).
+
+Cost-vs-frequency-vs-correctness: spatial index = *what's near*, LoS = *what's visible*,
+persistence = *how often we ask*. They multiply; none is redundant.
+
+#### Consequences
+
+- Perception drops from O(n²)/tick toward O(n·k) occasionally; expected the bulk of the
+  `pawns` phase. **Magnitude is a hypothesis** — the spec's §6 spike must confirm it (and
+  on WebKitGTK, the shipped engine) before P1+ build on it. If the tick cost does not move
+  when the scan count does, this ADR's framing is wrong and is reworked, not shipped.
+- Better game feel: predators commit instead of flip-flopping; prey react only to perceived
+  threats. Two open design Qs (provoked targeting scope; LoS-loss drop vs last-known
+  memory) are resolved in P1.
+
+---
+
+### ADR-019 [GAME]: Line of Sight via `blocksSight` Occluder + WASM Raycast
+
+- **Date**: 2026-06-14
+- **Status**: Accepted (design) — implementation deferred to spec P3 (after ADR-018 lands)
+- **Spec**: [.tasks/open/ENGINE-PERFORMANCE.md](../.tasks/open/ENGINE-PERFORMANCE.md) §4
+
+#### Context
+
+Detection is a fixed radius, so an entity perceives through walls (a wolf chases a goat
+through a mountain). Sight-blocking cannot be derived from `walkable` alone: a **window**
+is `walkable:false` but must be transparent; an open door is walkable but a closed one
+blocks sight.
+
+#### Decision
+
+Add **`blocksSight: boolean`** to `resources.jsonc` and `buildings.jsonc`, **defaulting to
+`!walkable`** when omitted (solid blocks sight for free; only exceptions are hand-authored:
+windows/transparent roofs `false`, closed doors `true`). Sight is computed in
+`spatial-core` (ADR-008's fog-of-war responsibility) over an `opaque` bitmap
+(`Uint8Array`, map-sized, **maintained incrementally**, mirrored like `walkable`/`costs`).
+
+Algorithm split: **AI** uses point-to-point line walk (Bresenham/supercover) on the small
+candidate set from ADR-018 — **per-pair-per-tick LoS is forbidden** (O(n²×ray-len), worse
+than the bug it fixes). **Player fog reveal** uses shadowcast FOV, a separate
+lower-frequency consumer, never per entity.
+
+#### Consequences
+
+- LoS is the natural **persistence-invalidation rule** (ADR-018.2): losing sight of a
+  target drops it — physically motivated, immediate, better than a timeout.
+- **Enables RANGED-COMBAT** (its Living-World LoS dependency) and feeds SEASONS_WEATHER
+  fog of war.
+- Affordable **only** when gated by persistence; must not be built before ADR-018.
+
+---
+
+### ADR-020 [GAME]: Sim Scaling Strategy — Wrapper-Agnostic Ladder, Wrapper Deferred
+
+- **Date**: 2026-06-14
+- **Status**: Accepted
+- **Spec**: [.tasks/open/ENGINE-PERFORMANCE.md](../.tasks/open/ENGINE-PERFORMANCE.md) §5, §8
+
+#### Context
+
+The sim is single-thread CPU-bound (ADR-018). The platform offers no shared-memory threads
+except Web Workers (message-passing) and SharedArrayBuffer (typed arrays only). Our
+immutable object-graph `GameState` is single-owner: `postMessage` deep-copies it;
+SAB needs an ECS/struct-of-arrays rewrite. The shipped desktop runtime is **not** the dev
+browser, and **which wrapper ships is undecided** (Tauri vs Electron — settled later, at
+the DISTRIBUTION milestone): Tauri uses the OS WebView (Linux=WebKitGTK/JSC,
+Windows=WebView2/V8, macOS=WKWebView/JSC); Electron ships uniform Chromium/V8+Node. Dev is
+Firefox (SpiderMonkey). So dev perf numbers don't transfer, Workers are universal but SAB
+is fragmented (reliable on V8-based runtimes), and **WASM runs ~identically everywhere** —
+the common denominator regardless of wrapper.
+
+#### Decision
+
+The scaling ladder is **wrapper-agnostic** — the same work whichever wrapper wins, so it
+proceeds now without blocking the wrapper decision. Do in order, stopping when fast enough
+at target scale (measured on the actual ship engine, incl. **WebKitGTK** if Tauri):
+
+1. **Kill the O(n²)** (ADR-018) — wins on every engine and wrapper.
+2. **Push hot compute into `spatial-core` WASM** (nearest-entity, LoS/FOV) — most portable
+   lever (ADR-008); runs in Tauri's webviews *and* Electron's V8.
+3. **Sim → one Web Worker** — portable across all webviews and Electron.
+4. **Defer** SAB multicore and a native sim core (Rust sidecar under Tauri / native addon
+   or Node worker under Electron) — the *form* depends on the wrapper chosen later.
+
+**Wrapper (Tauri vs Electron): explicitly OPEN**, decided at the DISTRIBUTION
+milestone with full information — Electron's uniform-V8 + Node threads vs its
++150–250 MB/RAM, against Tauri's tiny bundle + Rust synergy vs its three-engine spread.
+The algorithmic fix (step 1) may remove the perf axis entirely, tilting the choice onto
+size/feel. **Only** forking Electron/Chromium (team-years maintenance) and embedding
+SpiderMonkey (two engines, no speed win) are rejected outright — distinct from the live
+wrapper choice.
+
+#### Consequences
+
+- Engine/wrapper choice is a real but **later and smaller** lever than the algorithm; the
+  runtime is not changed before §6 + steps 1–3 prove insufficient.
+- The single concrete near-term mandate: re-measure on the real ship engine (WebKitGTK if
+  Tauri; V8 if Electron), not just Firefox — and that measurement is itself a key *input*
+  to the deferred wrapper decision, since uniform-V8 (Electron) only matters if the
+  three-engine spread (Tauri) actually hurts.

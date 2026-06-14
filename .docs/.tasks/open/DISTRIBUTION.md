@@ -2,7 +2,7 @@
 
 # TAURI DISTRIBUTION
 
-> **Related:** [ROADMAP](ROADMAP.md) · [game/ARCHITECTURE](../../game/ARCHITECTURE.md)
+> **Related:** [ROADMAP](ROADMAP.md) · [game/ARCHITECTURE](../../game/ARCHITECTURE.md) · [ENGINE-PERFORMANCE](ENGINE-PERFORMANCE.md) (the shipped WebView is the perf-measurement target) · [game/DECISIONS](../../game/DECISIONS.md) ADR-020
 
 ## Goal
 
@@ -72,6 +72,12 @@ export interface SaveAdapter {
 - [ ] New game → play two turns → quit → relaunch → game state loaded correctly.
 - [ ] Save file visible at expected path (`~/.local/share/fantasia4x/save.json`
       on Linux).
+- [ ] **Perf baseline on the real engine** — run the `--profiler` sandbox inside
+      `tauri dev` and capture `.debug/perf.log`. The dev browser is Firefox
+      (SpiderMonkey); the shipped Linux WebView is **WebKitGTK (JavaScriptCore)**, which
+      can be materially slower on hot numeric JS, so Firefox tick numbers do **not**
+      transfer. This is the WebKitGTK confirmation that [ENGINE-PERFORMANCE](ENGINE-PERFORMANCE.md)
+      §6 is gated on — the Tauri scaffold is its prerequisite.
 
 ---
 
@@ -187,6 +193,39 @@ only if release-build CI time becomes a real pain point.
 
 ---
 
+## Engine & Performance Notes (cross-ref ENGINE-PERFORMANCE / ADR-020)
+
+The shipped runtime is **not** the dev browser. Per platform: Linux = **WebKitGTK**
+(JavaScriptCore), Windows = **WebView2** (V8), macOS = **WKWebView** (JavaScriptCore);
+dev = Firefox (SpiderMonkey). Consequences this spec must respect:
+
+- **Wrapper choice (Tauri vs Electron) is OPEN — this milestone is where it gets decided**,
+  with full information, not before. This spec is named for Tauri because Tauri is the
+  default working assumption (ADR-007), but Electron is a live alternative and must be
+  evaluated here, not pre-rejected. The trade (per ADR-020):
+
+  | | Tauri | Electron |
+  | --- | --- | --- |
+  | JS engine(s) | **three** (WebKitGTK/JSC, WebView2/V8, WKWebView/JSC) | **one** (Chromium/V8) everywhere |
+  | Threading | Workers yes; SAB fragmented | Workers + **Node OS-thread multicore** |
+  | Bundle / RAM | tiny (~3–40 MB) | large (+150–250 MB) |
+  | Rust synergy | native (`spatial-core`, sidecar) | via napi-rs/neon addon |
+
+  **Decision input:** if the ENGINE-PERFORMANCE algorithmic fix (step 1) makes the sim
+  comfortably fast on WebKitGTK, the perf axis is moot and the choice tilts to Tauri on
+  size/feel. If the sim is *still* CPU-bound on WebKitGTK after the ladder (algorithms →
+  WASM → one worker), Electron's uniform V8 + real threads becomes a serious contender.
+  **So the WebKitGTK perf baseline (added to A4 above) is the data this decision waits on.**
+  *Only* forking Electron/Chromium and embedding SpiderMonkey are rejected outright.
+- **WASM is the portable performance lever regardless of wrapper** — it runs ~identically
+  on every engine, unlike JS. The A2 WASM-loading gate is therefore also a *performance*
+  gate: the more hot compute lives in `spatial-core`, the less the wrapper choice matters
+  for perf.
+- **Threading portability**: Web Workers are universal; **SharedArrayBuffer is fragmented**
+  (reliable on V8-based runtimes, spotty on WebKitGTK/WKWebView). A future "sim → one
+  worker" step is portable either way; SAB-based multicore is not — defer it
+  (ENGINE-PERFORMANCE §5/§8).
+
 ## Open Questions
 
 - [ ] Will `adapter-static` break any existing SvelteKit route that is not `api/`?
@@ -196,6 +235,9 @@ only if release-build CI time becomes a real pain point.
       `wasm-unsafe-eval` requires Chromium 91+ / WebKit 615+.)
 - [ ] Should the save file be a single JSON blob or split per-colony for
       multi-save support?
+- [ ] If "sim → one Web Worker" (ENGINE-PERFORMANCE §5) is pursued, does it need
+      cross-origin isolation headers under Tauri's custom protocol, and do all three
+      webviews honour them? (Only relevant once that step is on the table.)
 
 ---
 
