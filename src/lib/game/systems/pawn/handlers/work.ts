@@ -9,9 +9,20 @@ import { pathfinderService } from '../../../services/PathfinderService';
 import { PAWN_STATE } from '../pawnStates';
 import { isAdjacent, hasAvailableFood } from '../pawnQueries';
 import {
-  HUNGER_THRESHOLD, FATIGUE_THRESHOLD, ROUTE_TO_DRINK_THIRST, ROUTE_TO_WASH_HYGIENE, JOB_QUEUE_SIZE,
-  transitionTo, goIdle, tryRouteToWaterNeed, isJobUnreachableForPawn, markJobUnreachable,
-  tryStartHunt, tryAssignPath, checkNeedInterrupts, lightWorkMultiplier
+  HUNGER_THRESHOLD,
+  FATIGUE_THRESHOLD,
+  ROUTE_TO_DRINK_THIRST,
+  ROUTE_TO_WASH_HYGIENE,
+  JOB_QUEUE_SIZE,
+  transitionTo,
+  goIdle,
+  tryRouteToWaterNeed,
+  isJobUnreachableForPawn,
+  markJobUnreachable,
+  tryStartHunt,
+  tryAssignPath,
+  checkNeedInterrupts,
+  lightWorkMultiplier
 } from '../pawnHelpers';
 import { orderStationTile, depositInventory, findNearestDepositPoint } from '../pawnHauling';
 
@@ -188,10 +199,15 @@ export function handleIdle(pawn: Pawn, gameState: GameState): GameState {
 
   // Build a soft-preview queue of the next JOB_QUEUE_SIZE unclaimed jobs so that the
   // need-priority system can look ahead and decide when to eat/sleep more intelligently.
-  const queuePreview = availableJobs
-    .slice(1, 1 + JOB_QUEUE_SIZE)
-    .filter((j) => j.claimedBy === null)
-    .map((j) => j.id);
+  // PT-1 hygiene: dedupe ids so a repeated entry can't bias the look-ahead distance.
+  const queuePreview = [
+    ...new Set(
+      availableJobs
+        .slice(1, 1 + JOB_QUEUE_SIZE)
+        .filter((j) => j.claimedBy === null)
+        .map((j) => j.id)
+    )
+  ];
 
   if (atSite) {
     return {
@@ -380,4 +396,3 @@ export function handleWorking(pawn: Pawn, gameState: GameState): GameState {
     )
   };
 }
-

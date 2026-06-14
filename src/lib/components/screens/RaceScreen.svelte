@@ -1,6 +1,7 @@
 <script lang="ts">
   import { currentRace } from '$lib/stores/gameState';
   import { uiState } from '$lib/stores/uiState';
+  import { workAxisLabel } from '$lib/utils/pawnUtils';
   import { onMount } from 'svelte';
   import { onDestroy } from 'svelte';
 
@@ -228,11 +229,11 @@
                   <span class="neg"
                     >{effectValue} {effectName.replace('Penalty', '').toLowerCase()}</span
                   >
-                {:else if effectName === 'workSpeed' || effectName === 'workYield' || effectName === 'workQuality'}
+                {:else if effectValue && typeof effectValue === 'object'}
                   {#each Object.entries(effectValue as Record<string, number>) as [workType, multiplier]}
                     <span class={multiplier >= 1 ? 'pos' : 'neg'}
                       >{multiplier >= 1 ? '+' : ''}{Math.round((multiplier - 1) * 100)}% {workType}
-                      {effectName.replace('work', '').toLowerCase()}</span
+                      {workAxisLabel(effectName)}</span
                     >
                   {/each}
                 {:else}

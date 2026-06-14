@@ -6,10 +6,22 @@
  */
 import type { GameState, Pawn } from '../../core/types';
 import { addToStockpileZone, absorbDropIfOnStockpileTile } from '../../core/GameState';
+import { occupancyService } from '../../services/OccupancyService';
 import { gameLogger } from '../../dev/gameLogger';
 import { rng } from '../../core/rng';
 import { PAWN_STATE } from './pawnStates';
 import { goIdle } from './pawnHelpers';
+
+const NEIGHBORS8: ReadonlyArray<readonly [number, number]> = [
+  [-1, -1],
+  [0, -1],
+  [1, -1],
+  [-1, 0],
+  [1, 0],
+  [-1, 1],
+  [0, 1],
+  [1, 1]
+];
 
 /** Storage building types that accept deposited resources. */
 export const DEPOSIT_TYPES = [
@@ -23,41 +35,61 @@ export const DEPOSIT_TYPES = [
 ];
 
 /**
- * Find the nearest complete storage building to deposit hauled items.
- * Falls back to any complete building if no storage type found.
- * Returns null if no buildings exist (pawn will deposit in-place).
+ * Find where a hauling pawn should walk to deposit its load. Priority: stockpile zones →
+ * designated storage buildings → any complete building.
+ *
+ * PT-1 fix: within each tier we return the nearest **standable** tile (walkable terrain, not
+ * occupied by another body) — for a stockpile that's the zone tile itself (the pawn stands on
+ * it), for a building it's a free tile adjacent to it (you can't stand on the building). The old
+ * code returned the nearest tile by Manhattan distance regardless of whether the pawn could
+ * actually stand there, so the path ended 1–2 tiles short on a blocked/occupied tile and the
+ * pawn "deposited in place" every run — a visible stutter. If nothing in the chosen tier is
+ * standable we fall back to the nearest tile anyway (deposit-in-place beats stranding the goods).
+ * Returns null only when there's nowhere at all (depositInventory then credits the general zone).
  */
-export function findNearestDepositPoint(pawn: Pawn, gs: GameState): { x: number; y: number } | null {
+export function findNearestDepositPoint(
+  pawn: Pawn,
+  gs: GameState
+): { x: number; y: number } | null {
   if (!pawn.position) return null;
   const { x: px, y: py } = pawn.position;
+  const dist = (x: number, y: number) => Math.abs(x - px) + Math.abs(y - py);
+  const standable = (x: number, y: number) =>
+    !!gs.worldMap?.[y]?.[x]?.walkable && !occupancyService.isBlocked(gs, x, y, pawn.id);
 
-  let best: { x: number; y: number; dist: number } | null = null;
-
-  // First priority: stockpile zones designated on the map
+  // ── Tier 1: stockpile zones — stand ON the nearest standable zone tile. ──
+  let bestStandable: { x: number; y: number; dist: number } | null = null;
+  let nearestAny: { x: number; y: number; dist: number } | null = null;
   for (const [key, type] of Object.entries(gs.designations ?? {})) {
     if (type !== 'stockpile') continue;
     const [x, y] = key.split(',').map(Number);
-    const dist = Math.abs(x - px) + Math.abs(y - py);
-    if (!best || dist < best.dist) best = { x, y, dist };
+    const d = dist(x, y);
+    if (!nearestAny || d < nearestAny.dist) nearestAny = { x, y, dist: d };
+    if (standable(x, y) && (!bestStandable || d < bestStandable.dist))
+      bestStandable = { x, y, dist: d };
   }
-  if (best) return { x: best.x, y: best.y };
+  if (bestStandable) return { x: bestStandable.x, y: bestStandable.y };
+  if (nearestAny) return { x: nearestAny.x, y: nearestAny.y }; // occupied stockpile — deposit in place
 
-  // Second priority: designated storage building types
-  for (const b of gs.buildings ?? []) {
-    if (b.status !== 'complete') continue;
-    if (!DEPOSIT_TYPES.includes(b.type)) continue;
-    const dist = Math.abs(b.x - px) + Math.abs(b.y - py);
-    if (!best || dist < best.dist) best = { x: b.x, y: b.y, dist };
-  }
-  if (best) return { x: best.x, y: best.y };
+  // ── Tier 2 + 3: storage buildings, then any complete building — stand ADJACENT. ──
+  const approach = (buildings: typeof gs.buildings) => {
+    let best: { x: number; y: number; dist: number } | null = null;
+    for (const b of buildings ?? []) {
+      if (b.status !== 'complete') continue;
+      for (const [dx, dy] of NEIGHBORS8) {
+        const x = b.x + dx;
+        const y = b.y + dy;
+        if (!standable(x, y)) continue;
+        const d = dist(x, y);
+        if (!best || d < best.dist) best = { x, y, dist: d };
+      }
+    }
+    return best ? { x: best.x, y: best.y } : null;
+  };
 
-  // Fallback: any complete building
-  for (const b of gs.buildings ?? []) {
-    if (b.status !== 'complete') continue;
-    const dist = Math.abs(b.x - px) + Math.abs(b.y - py);
-    if (!best || dist < best.dist) best = { x: b.x, y: b.y, dist };
-  }
-  return best ? { x: best.x, y: best.y } : null;
+  const storage = approach((gs.buildings ?? []).filter((b) => DEPOSIT_TYPES.includes(b.type)));
+  if (storage) return storage;
+  return approach(gs.buildings);
 }
 
 /**

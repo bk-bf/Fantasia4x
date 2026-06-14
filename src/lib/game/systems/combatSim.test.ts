@@ -107,7 +107,7 @@ describe('combat sim (headless tickCombat)', () => {
     let accumulated = false;
     let maxPain = 0;
     let died = false;
-    for (let t = 0; t < 3000 && !died; t++) {
+    for (let t = 0; t < 6000 && !died; t++) {
       state = { ...state, turn: t };
       state = combatService.tickCombat(state, 16);
       const g = state.mobs![0];
@@ -187,13 +187,33 @@ describe('combat sim (headless tickCombat)', () => {
     });
     let state = makeState([hunter], [prey]);
     let died = false;
-    for (let t = 0; t < 3000 && !died; t++) {
+    for (let t = 0; t < 6000 && !died; t++) {
       state = { ...state, turn: t };
       state = combatService.tickCombat(state, 16);
       const d = state.mobs![0];
       if (d.isAlive === false || d.state === 'Corpse') died = true;
     }
     expect(died).toBe(true);
+  });
+
+  it('a drafted pawn with NO attack order auto-engages an adjacent hostile (NT-4)', () => {
+    // Player walked a drafted pawn next to a hostile but never issued an attack order.
+    // It must still defend itself rather than stand inert — damage the adjacent goblin.
+    const guard = makePawn({ drafted: true, draftTarget: undefined, currentState: 'Idle' });
+    const goblin = makeGoblin({ state: 'Attacking', stats: { ...stats, dexterity: 2 } });
+    let state = makeState([guard], [goblin]);
+    let goblinDamaged = false;
+    for (let t = 0; t < 2000 && !goblinDamaged; t++) {
+      state = { ...state, turn: t };
+      state = combatService.tickCombat(state, 16);
+      const g = state.mobs![0];
+      const hpLost = (g.limbs ?? []).reduce(
+        (s, l) => s + (l.parts ?? []).reduce((ps, p) => ps + (p.maxHp - p.health), 0),
+        0
+      );
+      if (hpLost > 0 || g.isAlive === false || g.state === 'Corpse') goblinDamaged = true;
+    }
+    expect(goblinDamaged).toBe(true);
   });
 });
 

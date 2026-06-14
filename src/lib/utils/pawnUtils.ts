@@ -355,5 +355,28 @@ export function formatEffectValue(
     }
     return `${effectValue}`;
   }
+  if (effectValue && typeof effectValue === 'object') {
+    // Work-modifier map ({ foraging: 1.1, hunting: 1.2 }) — never leak "[object Object]".
+    const axis = workAxisLabel(effectName);
+    return Object.entries(effectValue)
+      .map(([workType, mult]) => {
+        const pct = Math.round((mult - 1) * 100);
+        return `${pct >= 0 ? '+' : ''}${pct}% ${workType} ${axis}`.trim();
+      })
+      .join(', ');
+  }
   return String(effectValue);
+}
+
+/**
+ * Human label for a work-modifier effect key: `workSpeed` → "speed",
+ * `workEfficiency` → "efficiency"; non-`work` keys are humanised verbatim.
+ */
+export function workAxisLabel(effectName: string): string {
+  return effectName.startsWith('work')
+    ? effectName.slice(4).toLowerCase()
+    : effectName
+        .replace(/([A-Z])/g, ' $1')
+        .trim()
+        .toLowerCase();
 }

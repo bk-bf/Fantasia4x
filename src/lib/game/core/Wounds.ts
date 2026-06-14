@@ -37,6 +37,9 @@ export interface CareConfig {
   minTendQuality: number;
   /** Infection pressure per tick per untended open wound. */
   infectionRiskPerWound: number;
+  /** Cap on total per-tick infection pressure regardless of wound count — stops a heavily
+   *  wounded pawn from infecting to lethal within a single fight (NT-3). */
+  infectionRiskMaxPerTick: number;
   /** Infection severity recovered per tick when pressure is suppressed. */
   infectionRecoveryPerTick: number;
   /** Base immune resistance (added to CON scaling). */

@@ -31,7 +31,8 @@
     "treatmentDurationTicks": 1800,
     "treatedHealMultiplier": 2.5,
     "minTendQuality": 0.05,
-    "infectionRiskPerWound": 0.0012,
+    "infectionRiskPerWound": 0.0004,
+    "infectionRiskMaxPerTick": 0.0008,
     "infectionRecoveryPerTick": 0.0015,
     "immuneResistBase": 0.35
   },

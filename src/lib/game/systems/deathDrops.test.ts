@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { killPawn } from './PawnStateMachine';
+import { killPawn, reapDeadPawns } from './PawnStateMachine';
 import { itemService } from '../services/ItemService';
 import type { GameState, Pawn } from '../core/types';
 
@@ -22,7 +22,13 @@ function makePawn(): Pawn {
 }
 
 function makeState(pawn: Pawn): GameState {
-  return { turn: 100, pawns: [pawn], jobs: [], droppedItems: [], deadPawns: [] } as unknown as GameState;
+  return {
+    turn: 100,
+    pawns: [pawn],
+    jobs: [],
+    droppedItems: [],
+    deadPawns: []
+  } as unknown as GameState;
 }
 
 describe('R10 death drops', () => {
@@ -45,6 +51,39 @@ describe('R10 death drops', () => {
     expect(Object.keys(dead.equipment)).toHaveLength(0);
     expect(dead.inventory.items).toEqual({});
     expect(dead.inventory.instances).toEqual([]);
+  });
+});
+
+// NT-2 — the end-of-turn reaper finalises combat deaths (which bypass killPawn) and removes
+// every dead pawn from pawns[] so they leave the UI; the death survives in deadPawns + the corpse.
+describe('NT-2 reapDeadPawns', () => {
+  it('finalises a combat death (corpse + gear) and reaps the pawn from pawns[]', () => {
+    const pawn = makePawn();
+    // Combat.ts kills by setting isAlive=false directly — no corpseDropped, never went through killPawn.
+    (pawn as unknown as { isAlive: boolean }).isAlive = false;
+    const out = reapDeadPawns(makeState(pawn));
+
+    const drops = out.droppedItems ?? [];
+    expect(drops.find((d) => d.resourceId === 'pawn_carcass')?.name).toBe("Bjorn's Corpse");
+    expect(drops.find((d) => d.resourceId === 'stone_spear')?.instance?.instanceId).toBe('i-spear');
+    expect(out.deadPawns?.some((r) => r.name === 'Bjorn' && r.cause === 'combat')).toBe(true);
+    // Reaped out of the array entirely.
+    expect(out.pawns.find((p) => p.id === 'p1')).toBeUndefined();
+  });
+
+  it('does not double-drop a corpse for a killPawn death it then reaps', () => {
+    const pawn = makePawn();
+    const killed = killPawn(pawn, 'infection', makeState(pawn)); // drops 1 corpse, flags corpseDropped
+    const out = reapDeadPawns(killed);
+
+    const corpses = (out.droppedItems ?? []).filter((d) => d.resourceId === 'pawn_carcass');
+    expect(corpses).toHaveLength(1); // reaper must NOT add a second corpse
+    expect(out.pawns.find((p) => p.id === 'p1')).toBeUndefined(); // still reaped
+  });
+
+  it('is a no-op (same reference) when all pawns are alive', () => {
+    const state = makeState(makePawn());
+    expect(reapDeadPawns(state)).toBe(state);
   });
 });
 

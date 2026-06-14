@@ -681,8 +681,12 @@ export interface Pawn {
    * A 70kg pawn with CON 10 ≈ 98; heavier/tougher pawns go up to ~140.
    */
   maxBloodVolume?: number;
-  /** False once a pawn dies — dead pawns stay in pawns[] but are skipped by all processing. */
+  /** False once a pawn dies. Dead pawns are finalised (corpse + gear dropped, deadPawns
+   *  recorded) and then reaped from pawns[] at end of turn so they leave the UI. */
   isAlive?: boolean;
+  /** Set true once a dead pawn has been finalised (corpse/gear dropped, deadPawns recorded).
+   *  Guards the end-of-turn reaper against double-dropping a corpse for the same death. */
+  corpseDropped?: boolean;
 
   // ===== COMBAT (COMBAT-SYSTEM spec) =====
   /** All current open wounds; bleed/pain rolls up to root limb each turn. */

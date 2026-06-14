@@ -66,16 +66,18 @@
     pawns = state.pawns || [];
 
     // Update selected pawn when game state changes
-    if (selectedPawnId && pawns.length > 0) {
-      const updatedPawn = pawns.find((p) => p.id === selectedPawnId);
-      if (updatedPawn) {
-        selectedPawn = updatedPawn;
-      }
-    } else if (!selectedPawn && pawns.length > 0) {
-      // Auto-select first pawn if none selected
+    const updatedPawn = selectedPawnId ? pawns.find((p) => p.id === selectedPawnId) : undefined;
+    if (updatedPawn) {
+      selectedPawn = updatedPawn;
+    } else if (pawns.length > 0) {
+      // Selection is gone (pawn died and was reaped) or none was set — fall back to the
+      // first living pawn so the screen never sticks on a removed pawn.
       selectedPawn = pawns[0];
       selectedPawnId = pawns[0].id;
       uiState.selectPawn(pawns[0].id);
+    } else {
+      selectedPawn = null;
+      selectedPawnId = null;
     }
   });
 

@@ -48,10 +48,13 @@ const KNOCKDOWN_TURNS = 2;
  */
 const PAWN_NATURAL_WEAPON_IDS = ['fists', 'kick'];
 /** Base attack interval in ticks — scaled by attack_speed stat.
- *  60 TPS: 30 ticks = 0.5s = 2 attacks/sec (base).
- *  Fast attackers (DEX 20) get down to ~20 ticks = 0.33s = 3 attacks/sec.
+ *  60 TPS: 60 ticks = 1.0s = 1 attack/sec (base).
+ *  Fast attackers (DEX 20) floor at 36 ticks = 0.6s ≈ 1.7 attacks/sec.
+ *  (Halved 2026-06-14 — combat read too fast even at 1× game speed; see NT-3.)
  */
-const BASE_ATTACK_INTERVAL_TICKS = 30;
+const BASE_ATTACK_INTERVAL_TICKS = 60;
+/** Minimum ticks between attacks regardless of attack_speed (caps the fastest attacker). */
+const MIN_ATTACK_INTERVAL_TICKS = 36;
 /** Stamina drained per auto-attack. Shared by mobs; pawn attacks will use same constant. */
 const ATTACK_STAMINA_COST = 2;
 /** Stamina regenerated per tick when winded (no attack this tick). */
@@ -1278,7 +1281,10 @@ class CombatServiceImpl implements CombatService {
       if (mob.state !== 'Attacking' || mob.isAlive === false) continue;
       if (this.isKnockedDown(mob)) continue;
       const attackSpeed = Math.max(0.5, pawnStatService.evaluateStat('attack_speed', mob));
-      const interval = Math.max(18, Math.round(BASE_ATTACK_INTERVAL_TICKS / attackSpeed));
+      const interval = Math.max(
+        MIN_ATTACK_INTERVAL_TICKS,
+        Math.round(BASE_ATTACK_INTERVAL_TICKS / attackSpeed)
+      );
       if ((state.turn - mob.stateSince) % interval !== 0) continue;
 
       const curStamina = mob.stamina ?? mob.maxStamina ?? 50;
@@ -1346,6 +1352,12 @@ class CombatServiceImpl implements CombatService {
           };
           continue;
         }
+      } else if (pawn.drafted) {
+        // NT-4: a drafted pawn with no explicit attack order (idle, holding, or mid-move) still
+        // defends itself — it swings at the nearest adjacent hostile instead of standing inert
+        // when the player walks it up to an enemy. No adjacent hostile → nothing to do.
+        target = this.nearestAdjacentHostile(pawn, mobs);
+        if (!target) continue;
       } else if (pawn.currentState === 'Fighting') {
         target = this.nearestAdjacentHostile(pawn, mobs);
       } else if (pawn.currentState === 'Hunting' && pawn.huntTargetId) {
@@ -1363,7 +1375,10 @@ class CombatServiceImpl implements CombatService {
 
       // Attack cadence — scaled by attack_speed stat.
       const pawnAttackSpeed = Math.max(0.5, pawnStatService.evaluateStat('attack_speed', pawn));
-      const pawnInterval = Math.max(18, Math.round(BASE_ATTACK_INTERVAL_TICKS / pawnAttackSpeed));
+      const pawnInterval = Math.max(
+        MIN_ATTACK_INTERVAL_TICKS,
+        Math.round(BASE_ATTACK_INTERVAL_TICKS / pawnAttackSpeed)
+      );
       if (state.turn % pawnInterval !== 0) continue;
 
       const curStamina = pawn.stamina ?? pawn.maxStamina ?? 50;

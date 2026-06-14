@@ -20,7 +20,8 @@ import type {
   ConditionStage,
   Injury,
   LimbState,
-  DroppedItem
+  DroppedItem,
+  DeadPawnRecord
 } from '../core/types';
 import { recomputeWound } from './Combat';
 import { HEALING_CONFIG, CARE_CONFIG, woundById } from '../core/Wounds';
@@ -40,8 +41,22 @@ import { rng } from '../core/rng';
 // `pawn/pawnStates.ts`. What remains here is the health/lifecycle block + the per-pawn dispatcher.
 import { PAWN_STATE, type PawnStateName } from './pawn/pawnStates';
 import { findCombatThreat, HUNGER_THRESHOLD, FATIGUE_THRESHOLD } from './pawn/pawnHelpers';
-import { handleIdle, handleMovingToResource, handleWorking, handleHauling, handleMovingToDeposit } from './pawn/handlers/work';
-import { handleHungry, handleTired, handleMovingToNeed, handleEating, handleSleeping, handleDrinking, handleWashing } from './pawn/handlers/needs';
+import {
+  handleIdle,
+  handleMovingToResource,
+  handleWorking,
+  handleHauling,
+  handleMovingToDeposit
+} from './pawn/handlers/work';
+import {
+  handleHungry,
+  handleTired,
+  handleMovingToNeed,
+  handleEating,
+  handleSleeping,
+  handleDrinking,
+  handleWashing
+} from './pawn/handlers/needs';
 import { handleFighting, handleFleeing, handleHunting } from './pawn/handlers/combat';
 // Re-exported for external consumers that imported them from this module historically.
 export { PAWN_STATE, type PawnStateName };
@@ -52,7 +67,6 @@ export { resetUnreachableJobs } from './pawn/pawnHelpers';
 const COLLAPSE_CONSCIOUSNESS = 0.3;
 /** A collapsed pawn stands back up once consciousness recovers above this. */
 const RECOVER_CONSCIOUSNESS = 0.45;
-
 
 // ===== CONDITION CONSTANTS (SURVIVAL-HEALTH spec) =====
 const CONDITIONS_DB = conditionsData as unknown as ConditionDef[];
@@ -75,18 +89,13 @@ function getConditionStage(conditionId: string, severity: number): ConditionStag
 // ===== HELPERS =====
 
 /**
- * Kill a pawn: set isAlive=false, record DeadPawnRecord, log, apply mood penalty to survivors.
+ * Kill a pawn: finalise the death (corpse + gear drop, DeadPawnRecord, survivor mood, job
+ * release) and log it. The dead pawn stays in pawns[] flagged `corpseDropped` until the
+ * end-of-turn reaper (`reapDeadPawns`) removes it from the array.
  */
 export function killPawn(
   pawn: Pawn,
-  cause:
-    | 'malnutrition'
-    | 'dehydration'
-    | 'blood_loss'
-    | 'critical_limb'
-    | 'combat'
-    | 'exhaustion_cascade'
-    | 'infection',
+  cause: DeadPawnRecord['cause'],
   gameState: GameState
 ): GameState {
   logActivity({
@@ -98,7 +107,20 @@ export function killPawn(
     result: `${pawn.name} has died of ${cause.replace('_', ' ')}.`,
     severity: 'critical'
   });
+  return finalizePawnDeath(pawn, cause, gameState);
+}
 
+/**
+ * Drop a dead pawn's corpse + carried/equipped goods, record the death, apply the survivor
+ * mood penalty, release its claimed jobs, and flag it `corpseDropped`. Shared by `killPawn`
+ * (need/condition deaths) and `reapDeadPawns` (combat deaths that bypassed `killPawn`). Does
+ * NOT log — callers that already logged (combat) skip the activity entry.
+ */
+function finalizePawnDeath(
+  pawn: Pawn,
+  cause: DeadPawnRecord['cause'],
+  gameState: GameState
+): GameState {
   const deadRecord = {
     name: pawn.name,
     cause,
@@ -119,7 +141,13 @@ export function killPawn(
     const tag = `${pawn.id}-${gameState.turn}`;
     for (const [resourceId, qty] of Object.entries(pawn.inventory?.items ?? {})) {
       if (qty > 0)
-        newDrops.push({ id: `death-${tag}-${resourceId}`, resourceId, x: pos.x, y: pos.y, quantity: qty });
+        newDrops.push({
+          id: `death-${tag}-${resourceId}`,
+          resourceId,
+          x: pos.x,
+          y: pos.y,
+          quantity: qty
+        });
     }
     const droppedInstances = [
       ...(pawn.inventory?.instances ?? []),
@@ -152,6 +180,7 @@ export function killPawn(
       return {
         ...p,
         isAlive: false,
+        corpseDropped: true,
         currentState: 'Dead',
         activeJob: undefined,
         path: [],
@@ -180,6 +209,33 @@ export function killPawn(
     jobs,
     droppedItems: [...(gameState.droppedItems ?? []), ...newDrops],
     deadPawns: [...(gameState.deadPawns ?? []), deadRecord]
+  };
+}
+
+/**
+ * End-of-turn death reaper. Two jobs:
+ *  1. **Finalise combat deaths.** `Combat.ts` kills a pawn by setting `isAlive=false` directly
+ *     (it can't import `killPawn` — that would cycle), so such a pawn reaches here un-finalised
+ *     (`corpseDropped` falsy): drop its corpse + gear, record it, dock survivor mood. Combat
+ *     already logged the kill, so this path stays silent.
+ *  2. **Reap.** Remove every dead pawn from `pawns[]` so it leaves all UI (entity list, work
+ *     grid, selection). The death lives on only in `deadPawns` + the dropped corpse/gear.
+ * No-op (returns the same reference) when no dead pawns are present — cheap to call every turn.
+ */
+export function reapDeadPawns(gameState: GameState): GameState {
+  if (!gameState.pawns.some((p) => p.isAlive === false)) return gameState;
+
+  let state = gameState;
+  for (const p of gameState.pawns) {
+    if (p.isAlive === false && !p.corpseDropped) {
+      // Combat death that bypassed killPawn — finalise without re-logging.
+      state = finalizePawnDeath(p, 'combat', state);
+    }
+  }
+
+  return {
+    ...state,
+    pawns: state.pawns.filter((p) => p.isAlive !== false)
   };
 }
 
@@ -300,6 +356,9 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
       }
     }
   }
+  // Cap total pressure so many simultaneous combat wounds can't stack into a near-instant
+  // lethal infection — infection is the slow post-fight threat, not a mid-combat killer (NT-3).
+  infectionPressure = Math.min(infectionPressure, CARE_CONFIG.infectionRiskMaxPerTick);
   const immune = Math.max(
     0,
     Math.min(0.95, CARE_CONFIG.immuneResistBase + (pawn.stats.constitution - 10) * 0.02)
@@ -506,57 +565,13 @@ export function healWounds(pawn: Pawn, turn = 0): Pawn {
   };
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // ===== COMBAT STATE (COMBAT-SYSTEM) =====
 
-
-
-
-
 // ===== HUNTING (work-driven) =====
-
-
-
-
-
-
 
 // ===== PER-PAWN STATE HANDLERS =====
 
 // ===== HAULING HELPERS =====
-
-
-
-
-
-
-
-
-
-
-
-
 
 /**
  * Decrement temporary status effect durations and remove expired ones.
@@ -693,15 +708,6 @@ function tickPawn(pawn: Pawn, gameState: GameState): GameState {
   const handler = STATE_HANDLERS[state];
   return handler ? handler(pawn, gameState) : gameState;
 }
-
-
-
-
-
-
-
-
-
 
 // ===== STATE MACHINE SERVICE =====
 

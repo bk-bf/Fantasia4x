@@ -20,7 +20,7 @@ import { WORK_CATEGORIES } from '../core/Work';
 import itemsData from '../database/items.jsonc';
 import buildingsData from '../database/buildings.jsonc';
 
-import { pawnStateMachineService } from './PawnStateMachine';
+import { pawnStateMachineService, reapDeadPawns } from './PawnStateMachine';
 import { jobService } from '../services/JobService';
 import { wasmPathfinderService } from '../services/WasmPathfinderService';
 import { resourceObjectService } from '../services/ResourceObjectService';
@@ -326,6 +326,11 @@ export class GameEngineImpl implements GameEngine {
         const preCombatState = this.gameState!;
         this.gameState = combatService.tickCombat(this.gameState!, 1000 / TICKS_PER_SECOND);
         this.gameState = entityService.handleFreshCombatCorpses(preCombatState, this.gameState!);
+      });
+      // End-of-turn reaper: finalise any combat death that bypassed killPawn (drop corpse + gear,
+      // record it) and remove all dead pawns from pawns[] so they leave the UI (NT-2).
+      t('reapDead', () => {
+        this.gameState = reapDeadPawns(this.gameState!);
       });
       this.debugLogPawns();
 

@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Pawn } from '$lib/game/core/types';
-  import { formatEffectValue } from '$lib/utils/pawnUtils';
+  import { formatEffectValue, workAxisLabel } from '$lib/utils/pawnUtils';
 
   export let pawn: Pawn;
 
@@ -19,12 +19,9 @@
           text: `${effectValue} ${effectName.replace('Penalty', '').toLowerCase()}`,
           type: 'neg'
         });
-      } else if (
-        effectName === 'workSpeed' ||
-        effectName === 'workYield' ||
-        effectName === 'workQuality'
-      ) {
-        const axis = effectName.replace('work', '').toLowerCase();
+      } else if (effectValue && typeof effectValue === 'object') {
+        // Any work-modifier map (workSpeed/workYield/workQuality, or legacy workEfficiency).
+        const axis = workAxisLabel(effectName);
         for (const [workType, multiplier] of Object.entries(
           effectValue as Record<string, number>
         )) {
