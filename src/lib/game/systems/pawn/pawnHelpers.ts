@@ -726,6 +726,13 @@ export const DRINK_NEED_RELIEF = 65;
 
 export const WASH_NEED_RELIEF = 70;
 
+// Durations for drinking/washing — these take time like eating/sleeping (not instant). The need
+// relief above is distributed evenly over the duration. Drinking is quick (a few sips); washing is
+// a longer chore.
+export const DRINK_TURNS = ticksFromSeconds(2);
+
+export const WASH_TURNS = ticksFromSeconds(4);
+
 /**
  * §D: nearest place to satisfy a water need — a player-painted `drink`/`wash` zone tile (the way
  * the player controls where pawns go, exactly like stockpile drop-off), or for drinking a `well`

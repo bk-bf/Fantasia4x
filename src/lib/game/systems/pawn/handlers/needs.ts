@@ -7,20 +7,43 @@ import { consumeFromStockpiles } from '../../../core/GameState';
 import { PAWN_STATE, type PawnStateName } from '../pawnStates';
 import { isAdjacent, selectFoodForMeal, consumeMeal } from '../pawnQueries';
 import {
-  findNearestStorageBuilding, tryAssignPath, EATING_TURNS, EATING_TURNS_GROUND,
-  findNearestRestBuilding, tryAssignSleepPath, SLEEPING_TURNS, SLEEPING_TURNS_GROUND,
-  getRestBuildingAtPawn, BUILDINGS_DB, FATIGUE_PER_SLEEPING_GROUND, HUNGER_THRESHOLD,
-  SLEEP_WAKE_THRESHOLD_HUNGRY, SLEEP_WAKE_THRESHOLD_FED, transitionTo, goIdle, DRINK_NEED_RELIEF,
-  WASH_NEED_RELIEF, repathStuckMover
+  findNearestStorageBuilding,
+  tryAssignPath,
+  EATING_TURNS,
+  EATING_TURNS_GROUND,
+  findNearestRestBuilding,
+  tryAssignSleepPath,
+  SLEEPING_TURNS,
+  SLEEPING_TURNS_GROUND,
+  getRestBuildingAtPawn,
+  BUILDINGS_DB,
+  FATIGUE_PER_SLEEPING_GROUND,
+  HUNGER_THRESHOLD,
+  SLEEP_WAKE_THRESHOLD_HUNGRY,
+  SLEEP_WAKE_THRESHOLD_FED,
+  transitionTo,
+  goIdle,
+  DRINK_NEED_RELIEF,
+  WASH_NEED_RELIEF,
+  DRINK_TURNS,
+  WASH_TURNS,
+  repathStuckMover
 } from '../pawnHelpers';
 
-/** §D: drink at the reached target — relieve thirst (consume stored water if any), then idle. */
+/** §D: drink at the reached target over DRINK_TURNS (not instant — mirrors eating). Consumes one
+ *  unit of stored water on the first sip; the thirst relief is spread evenly across the duration. */
 export function handleDrinking(pawn: Pawn, gameState: GameState): GameState {
+  const activeJob = pawn.activeJob;
+  const turnsInState = (activeJob?.turnsInState ?? 0) + 1;
+  const duration = DRINK_TURNS;
   let state = gameState;
-  if ((state.stockpile?.['water'] ?? 0) > 0) {
+  // Consume one unit of stored water on the first sip (if any is stocked).
+  if (turnsInState === 1 && (state.stockpile?.['water'] ?? 0) > 0) {
     state = consumeFromStockpiles(state, { water: 1 });
   }
-  state = {
+  const reliefPerTurn = DRINK_NEED_RELIEF / duration;
+  const done = turnsInState >= duration;
+  return {
     ...state,
     pawns: state.pawns.map((p) =>
       p.id === pawn.id
@@ -28,19 +51,35 @@ export function handleDrinking(pawn: Pawn, gameState: GameState): GameState {
             ...p,
             needs: {
               ...p.needs,
-              thirst: Math.max(0, (p.needs.thirst ?? 0) - DRINK_NEED_RELIEF),
+              thirst: Math.max(0, (p.needs.thirst ?? 0) - reliefPerTurn),
               lastDrink: state.turn
-            }
+            },
+            currentState: done ? PAWN_STATE.IDLE : PAWN_STATE.DRINKING,
+            activeJob: done
+              ? undefined
+              : {
+                  type: 'need' as const,
+                  targetX: p.position?.x ?? activeJob?.targetX ?? 0,
+                  targetY: p.position?.y ?? activeJob?.targetY ?? 0,
+                  progress: turnsInState / duration,
+                  timeRequired: duration,
+                  turnsInState
+                }
           }
         : p
     )
   };
-  return goIdle(state.pawns.find((p) => p.id === pawn.id)!, state);
 }
 
-/** §D: wash at the reached target — relieve hygiene, then idle. */
+/** §D: wash at the reached target over WASH_TURNS (not instant). Hygiene relief is spread evenly
+ *  across the duration; washing is a longer chore than drinking. */
 export function handleWashing(pawn: Pawn, gameState: GameState): GameState {
-  const state = {
+  const activeJob = pawn.activeJob;
+  const turnsInState = (activeJob?.turnsInState ?? 0) + 1;
+  const duration = WASH_TURNS;
+  const reliefPerTurn = WASH_NEED_RELIEF / duration;
+  const done = turnsInState >= duration;
+  return {
     ...gameState,
     pawns: gameState.pawns.map((p) =>
       p.id === pawn.id
@@ -48,14 +87,24 @@ export function handleWashing(pawn: Pawn, gameState: GameState): GameState {
             ...p,
             needs: {
               ...p.needs,
-              hygiene: Math.max(0, (p.needs.hygiene ?? 0) - WASH_NEED_RELIEF),
+              hygiene: Math.max(0, (p.needs.hygiene ?? 0) - reliefPerTurn),
               lastWash: gameState.turn
-            }
+            },
+            currentState: done ? PAWN_STATE.IDLE : PAWN_STATE.WASHING,
+            activeJob: done
+              ? undefined
+              : {
+                  type: 'need' as const,
+                  targetX: p.position?.x ?? activeJob?.targetX ?? 0,
+                  targetY: p.position?.y ?? activeJob?.targetY ?? 0,
+                  progress: turnsInState / duration,
+                  timeRequired: duration,
+                  turnsInState
+                }
           }
         : p
     )
   };
-  return goIdle(state.pawns.find((p) => p.id === pawn.id)!, state);
 }
 
 export function handleHungry(pawn: Pawn, gameState: GameState): GameState {
@@ -381,4 +430,3 @@ export function handleSleeping(pawn: Pawn, gameState: GameState): GameState {
     )
   };
 }
-

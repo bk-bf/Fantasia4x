@@ -431,6 +431,14 @@ export function findNearbyWalkable(
   selfId?: string
 ): { x: number; y: number } | null {
   const HOME_RANGE = 10;
+  const hasHome = homeX !== undefined && homeY !== undefined;
+  // A mob that roamed (or was chased / hunted) far from home has EVERY neighbour out of range.
+  // Rejecting them all returns null → it freezes on the spot forever (e.g. a wolf stranded at its
+  // kill site after eating). So when already outside the range, drop the "stay home" filter and
+  // instead step BACK toward home. Within range, the filter still tethers it to its territory.
+  const outsideHome =
+    hasHome && (Math.abs(x - homeX!) > HOME_RANGE || Math.abs(y - homeY!) > HOME_RANGE);
+
   // Enumerate all 8 neighbours in random order (Fisher-Yates) so every walkable
   // direction is considered exactly once — no wasted random retries that could
   // leave a boxed-in animal stuck even when an exit exists.
@@ -448,6 +456,7 @@ export function findNearbyWalkable(
     const j = Math.floor(rng.random() * (i + 1));
     [dirs[i], dirs[j]] = [dirs[j], dirs[i]];
   }
+  let homeward: { x: number; y: number; d: number } | null = null;
   for (const { dx, dy } of dirs) {
     const nx = x + dx;
     const ny = y + dy;
@@ -457,17 +466,19 @@ export function findNearbyWalkable(
     if (dx !== 0 && dy !== 0 && !isWalkable(state, x + dx, y) && !isWalkable(state, x, y + dy)) {
       continue;
     }
-    if (
-      homeX !== undefined &&
-      homeY !== undefined &&
-      (Math.abs(nx - homeX) > HOME_RANGE || Math.abs(ny - homeY) > HOME_RANGE)
-    ) {
+    if (selfId && occupancyService.isBlocked(state, nx, ny, selfId)) continue;
+    if (outsideHome) {
+      // Stranded — pick the neighbour that gets us closest to home (beeline back).
+      const d = Math.abs(nx - homeX!) + Math.abs(ny - homeY!);
+      if (!homeward || d < homeward.d) homeward = { x: nx, y: ny, d };
       continue;
     }
-    if (selfId && occupancyService.isBlocked(state, nx, ny, selfId)) continue;
+    if (hasHome && (Math.abs(nx - homeX!) > HOME_RANGE || Math.abs(ny - homeY!) > HOME_RANGE)) {
+      continue; // tethered: don't wander out of the home range
+    }
     return { x: nx, y: ny };
   }
-  return null;
+  return homeward ? { x: homeward.x, y: homeward.y } : null;
 }
 
 export function isWalkable(state: GameState, x: number, y: number): boolean {
