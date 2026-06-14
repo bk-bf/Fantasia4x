@@ -14,11 +14,11 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
-    "graph": "node tools/codegraph/extract.mjs && node tools/codegraph/build-html.mjs",
-    "graph:serve": "node tools/codegraph/serve.mjs",
-    "graph:check": "node tools/codegraph/extract.mjs && node tools/codegraph/check.mjs",
-    "graph:snapshot": "node tools/codegraph/extract.mjs && node tools/codegraph/diff.mjs --save",
-    "graph:diff": "node tools/codegraph/extract.mjs && node tools/codegraph/diff.mjs",
+    "graph": "node ../codegraph/bin/codegraph.mjs extract Fantasia4x",
+    "graph:serve": "cd ../codegraph && pnpm dev -- --port 5180 --strictPort",
+    "graph:check": "node ../codegraph/bin/codegraph.mjs check Fantasia4x",
+    "graph:snapshot": "node ../codegraph/bin/codegraph.mjs snapshot Fantasia4x",
+    "graph:diff": "node ../codegraph/bin/codegraph.mjs diff Fantasia4x",
     "add:wasm": "cd spatial-core && ~/.cargo/bin/wasm-pack build --target web --out-dir ../src/lib/spatial-core-pkg"
   },
   "devDependencies": {
