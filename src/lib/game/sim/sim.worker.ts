@@ -43,14 +43,14 @@ function post(msg: unknown) {
 }
 
 /**
- * Publish state to the main thread EVERY tick (not just on flush) so the renderer interpolates from
- * per-tick-fresh entity positions — otherwise motion arrives in ~15Hz chunks and looks "wavy",
- * especially at high speed. The `flush` flag (true at the ~15Hz UI-push interval) tells the main
- * thread when to actually NOTIFY subscribers + save; between flushes it only refreshes the held
- * value (cheap; the renderer reads it via get()). worldMap is sent only when its ref changed (38k
- * tiles), so the per-tick payload stays small.
+ * Publish state to the main thread at the ~15Hz UI-push (flush) rate. Posting EVERY tick was tried
+ * and reverted: structured-cloning the full ~290-entity snapshot 50×/s overwhelmed the main thread's
+ * deserialize and crashed FPS to ~7. The freeze-frames the per-tick attempt was meant to fix were
+ * actually the terrain-rebuild storm (now handled by `_terrainRev` below), not position-update rate
+ * — so 15Hz snapshots are fine. worldMap is sent only when its ref changed (38k tiles).
  */
 function publish(state: GameState, flush: boolean) {
+  if (!flush) return;
   const worldMapChanged = state.worldMap !== lastWorldMap;
   lastWorldMap = state.worldMap;
   if (
