@@ -22,6 +22,14 @@ export function getConditionCurrentStage(condition: EntityCondition): ConditionS
   return active;
 }
 
+/** Human-readable "Name (stage)" label for a condition, e.g. "Infection (mild)". */
+export function getConditionLabel(condition: EntityCondition): string {
+  const def = CONDITIONS_DB.find((d) => d.id === condition.id);
+  const name = def?.name ?? condition.id.replace(/_/g, ' ');
+  const stage = getConditionCurrentStage(condition);
+  return stage ? `${name} (${stage.label})` : name;
+}
+
 /**
  * Aggregate hungerRate / fatigueRate multipliers from all active condition stages.
  * Returns { hungerRate: 1, fatigueRate: 1 } (identity) when no conditions are active.

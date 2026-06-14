@@ -6,17 +6,28 @@ import { uiState } from '$lib/stores/uiState.js';
 import { gameState } from '$lib/stores/gameState.js';
 import { resourceObjectService } from '$lib/game/services/ResourceObjectService.js';
 import { type CreatureDefinition } from '$lib/game/core/Creatures.js';
-import type { Pawn, Mob, LimbState, EntityCondition, LimbId } from '$lib/game/core/types.js';
-import { getConditionCurrentStage } from '$lib/game/core/needs.js';
+import type {
+  Pawn,
+  Mob,
+  LimbState,
+  LimbId,
+  EntityCondition,
+  Injury
+} from '$lib/game/core/types.js';
+import { getConditionLabel } from '$lib/game/core/needs.js';
+import { pawnService } from '$lib/game/services/PawnService.js';
 import type {
   SelectedEntityModel,
   EntityBar,
   EntityButton,
   EntityStat,
-  HealthEntry
+  HealthModel,
+  HealthLimb,
+  HealthPart,
+  HealthWound
 } from '$lib/components/UI/SelectedEntityCard.svelte';
 
-/** Short limb labels for the HEALTH panel. */
+/** Short limb labels for the HEALTH view. */
 const LIMB_LABEL: Record<LimbId, string> = {
   head: 'Head',
   torso: 'Torso',
@@ -26,32 +37,80 @@ const LIMB_LABEL: Record<LimbId, string> = {
   right_leg: 'R.Leg'
 };
 
+/** "leftUpperArm" → "left upper arm" for per-part labels. */
+function prettyPart(id: string): string {
+  return id.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toLowerCase());
+}
+
+/** A wound is highlighted when it's serious enough to matter or has gone septic. */
+function woundWarn(inj: Injury): boolean {
+  return inj.infected || inj.severity !== 'minor';
+}
+
+/** A pawn/mob's current movement speed as a compact "3.8/s" stat readout. */
+export function moveSpeedStat(entity: Pawn | Mob): EntityStat {
+  return {
+    label: 'MOVE',
+    value: `${pawnService.getMoveSpeed(entity).tilesPerSecond.toFixed(1)}/s`
+  };
+}
+
 /**
- * NT-U1: damaged limbs + active wounds/conditions for the toggleable HEALTH panel. Lists ONLY the
- * hurt parts (missing, < full HP, or bleeding) plus any conditions — an empty result renders as
- * "no damage". Shared by pawns and mobs (both carry the 6-limb model + conditions).
+ * NT-U1: whole-body health snapshot for the HEALTH pop-up. Reports blood + pain for the whole body,
+ * then every damaged limb (missing / hurt / bleeding) — with its bleed rate and each injured
+ * sub-part's individual HP (e.g. skull 41/45) and wounds — plus any active conditions. Shared by
+ * pawns and mobs (both carry the 6-limb model with nested parts, a blood pool and conditions). An
+ * undamaged body renders as "no damage".
  */
-export function buildHealthEntries(entity: {
+export function buildHealthModel(entity: {
   limbs?: LimbState[];
+  bloodVolume?: number;
+  maxBloodVolume?: number;
+  pain?: number;
   conditions?: EntityCondition[];
-}): HealthEntry[] {
-  const out: HealthEntry[] = [];
+}): HealthModel {
+  const limbs: HealthLimb[] = [];
   for (const limb of entity.limbs ?? []) {
-    const name = LIMB_LABEL[limb.id] ?? limb.id;
-    if (limb.isMissing) {
-      out.push({ text: `${name}: missing`, warn: true });
-    } else if (limb.health < 100) {
-      const bleeding = limb.bleedRate > 0;
-      out.push({
-        text: `${name}: ${Math.round(limb.health)}%${bleeding ? ' · bleeding' : ''}`,
-        warn: limb.health < 50 || bleeding
+    // Only sub-parts that are actually hurt (missing, below max HP, or carrying a wound).
+    const parts: HealthPart[] = [];
+    for (const part of limb.parts ?? []) {
+      const hurt = part.isMissing || part.health < part.maxHp || part.injuries.length > 0;
+      if (!hurt) continue;
+      parts.push({
+        label: prettyPart(part.id),
+        health: part.health,
+        maxHp: part.maxHp,
+        wounds: part.injuries.map((inj) => ({
+          text: `${inj.type} (${inj.severity})${inj.infected ? ' · infected' : ''}`,
+          warn: woundWarn(inj)
+        }))
       });
     }
+    const damaged = limb.isMissing || limb.health < 100 || limb.bleedRate > 0 || parts.length > 0;
+    if (!damaged) continue;
+    limbs.push({
+      label: LIMB_LABEL[limb.id] ?? limb.id,
+      health: limb.health,
+      missing: limb.isMissing,
+      bleedRate: limb.bleedRate,
+      parts
+    });
   }
-  for (const c of entity.conditions ?? []) {
-    out.push({ text: getConditionCurrentStage(c)?.label ?? c.id.replace(/_/g, ' '), warn: true });
-  }
-  return out;
+
+  // blood_loss is dropped here — the Blood row already conveys it; a bare "initial" stage is noise.
+  const conditions: HealthWound[] = (entity.conditions ?? [])
+    .filter((c) => c.id !== 'blood_loss')
+    .map((c) => ({ text: getConditionLabel(c), warn: true }));
+
+  return {
+    blood:
+      entity.bloodVolume != null && entity.maxBloodVolume != null
+        ? { current: entity.bloodVolume, max: entity.maxBloodVolume }
+        : undefined,
+    pain: entity.pain,
+    limbs,
+    conditions
+  };
 }
 
 /** Debug `#id` suffix shown next to entity names when VITE_DEBUG_MODE is on. */
@@ -88,6 +147,14 @@ export function jobProgressBar(progress: number): string {
   const filled = Math.round(clamped * 10);
   return '█'.repeat(filled) + '░'.repeat(10 - filled);
 }
+
+/**
+ * FSM states that have a meaningful in-place task progress bar — the same ones that draw a bar above
+ * the pawn's head (Working + the in-place need jobs). Moving/Idle/Sleeping have no "task" to complete,
+ * so neither the head overlay nor the info panel shows a bar for them. Single source of truth, also
+ * consumed by GameCanvas's over-head overlay so the two never drift apart.
+ */
+export const PROGRESS_BAR_STATES = new Set(['Working', 'Eating', 'Drinking', 'Washing']);
 
 /** Toggle a pawn's drafted flag (clears its job + draft target). */
 export function toggleDraft(pawnId: string) {
@@ -156,17 +223,15 @@ export function buildPawnCard(
       warn: curST < pawn.maxStamina * 0.25
     });
   }
-  const stats: EntityStat[] = [
-    { label: 'HP', value: Math.floor(pawn.state.health ?? 100) },
-    { label: 'Mood', value: Math.floor(pawn.state.mood) }
-  ];
-  const painPct = Math.round(pawn.pain ?? 0);
-  if (painPct > 0) stats.push({ label: 'PAIN', value: painPct, warn: painPct >= 55 });
+  // No flat "HP" stat: the body model (limbs/blood/pain) is the real health — see the HEALTH popup.
+  // Mood moves to the header (right of the name); MOVE shows current movement speed.
+  const stats: EntityStat[] = [moveSpeedStat(pawn)];
   return {
     name: pawn.name + entityDebugLabel(pawn),
     status: pawnStateLabel(pawn),
     selected,
     dismissable: selected,
+    mood: Math.floor(pawn.state.mood),
     stats,
     bars,
     job: pawn.activeJob
@@ -176,13 +241,14 @@ export function buildPawnCard(
           }`
         }
       : { text: '→ Idle', idle: true },
-    // Sleeping has no task to "complete" (it's need-driven), so don't show a progress bar for it.
+    // Only show a bar for states that also draw one above the pawn's head (Working / eat / drink /
+    // wash). Moving/Idle/Sleeping have no in-place task to complete, so no bar.
     progressBar:
-      pawn.activeJob && pawn.currentState !== 'Sleeping'
+      pawn.activeJob && pawn.currentState != null && PROGRESS_BAR_STATES.has(pawn.currentState)
         ? jobProgressBar(pawn.activeJob.progress ?? 0)
         : undefined,
     pos: selected ? (pawn.position ?? undefined) : undefined,
-    health: selected ? buildHealthEntries(pawn) : undefined,
+    health: selected ? buildHealthModel(pawn) : undefined,
     buttons: selected
       ? ([
           {
@@ -248,14 +314,11 @@ export function buildMobCard(
     status: mob.state,
     selected,
     dismissable: selected,
+    // No flat "HP" stat: the body model (limbs/blood/pain) is the real health — see the HEALTH popup.
     stats: [
-      {
-        label: 'HP',
-        value: `${Math.floor(mob.health)}/${mob.maxHealth}`,
-        warn: mob.health < mob.maxHealth * 0.35
-      },
       { label: 'STR', value: mob.stats.strength },
-      { label: 'DEX', value: mob.stats.dexterity }
+      { label: 'DEX', value: mob.stats.dexterity },
+      moveSpeedStat(mob)
     ],
     bars: [
       {
@@ -280,7 +343,7 @@ export function buildMobCard(
       def.tameable ? ' · tameable' : ''
     }`,
     pos: selected ? { x: mob.x, y: mob.y } : undefined,
-    health: selected ? buildHealthEntries(mob) : undefined,
+    health: selected ? buildHealthModel(mob) : undefined,
     buttons: selected
       ? ([
           {

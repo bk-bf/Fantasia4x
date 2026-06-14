@@ -34,7 +34,9 @@
     selected?: boolean;
     /** Show the ◈ dismiss hint (Esc to deselect). */
     dismissable?: boolean;
-    /** Inline stat readouts (HP, STR, …). */
+    /** Pawn mood 0–100, shown right-aligned in the header (next to the name). */
+    mood?: number;
+    /** Inline stat readouts (STR, MOVE, …). */
     stats?: EntityStat[];
     /** Block-character meter bars (Food, Blood, …). */
     bars?: EntityBar[];
@@ -50,30 +52,68 @@
     lines?: string[];
     /** Action buttons shown in a 3-column grid. Only rendered on selected cards. */
     buttons?: EntityButton[];
-    /** Damaged limbs / wounds for the toggleable HEALTH panel (NT-U1). An empty array shows
-     *  "no damage"; `undefined` hides the HEALTH button entirely (entity has no body model). */
-    health?: HealthEntry[];
+    /** Body health for the toggleable HEALTH popup (NT-U1). `undefined` hides the HEALTH button
+     *  entirely (entity has no body model); a present-but-undamaged model shows "no damage". */
+    health?: HealthModel;
     /** Called when a non-selected hover card is clicked (to select the entity). */
     onSelect?: () => void;
   }
 
-  /** One line in the HEALTH panel — a damaged limb or an active wound/condition. */
-  export interface HealthEntry {
-    text: string;
+  /** One wound line on a body part, or an active condition. */
+  export interface HealthWound {
+    text: string; // "crush (serious)" / "puncture · infected"
     warn?: boolean;
+  }
+
+  /** A damaged sub-part (organ/bone/finger) inside a limb, with its own HP and wounds. */
+  export interface HealthPart {
+    label: string; // "skull"
+    health: number; // current HP
+    maxHp: number;
+    wounds: HealthWound[];
+  }
+
+  /** A single damaged limb: rolled-up health + bleed, plus its injured sub-parts. */
+  export interface HealthLimb {
+    label: string; // "L.Arm"
+    health: number; // 0–100 (rolled up from parts)
+    missing?: boolean;
+    bleedRate?: number; // blood points/second while > 0
+    parts: HealthPart[]; // injured sub-parts only
+  }
+
+  /** Whole-body health snapshot rendered by the HEALTH popup. */
+  export interface HealthModel {
+    /** Whole-body blood pool. */
+    blood?: { current: number; max: number };
+    /** Whole-body pain 0–100. */
+    pain?: number;
+    /** Damaged limbs only — intact, full-health, non-bleeding limbs are omitted. */
+    limbs: HealthLimb[];
+    /** Active conditions not tied to one limb (malnutrition, infection…). */
+    conditions: HealthWound[];
   }
 </script>
 
 <script lang="ts">
   import StatBar from './StatBar.svelte';
+  import HealthPanel from './gameCanvas/HealthPanel.svelte';
 
   // `embedded`: render as an in-flow flex item instead of self-anchoring to the canvas.
   // Used when a parent (e.g. the building row, which also hosts the fuel-settings panel)
   // already owns the absolute positioning and lays the card out in a flex row.
   let { model, embedded = false }: { model: SelectedEntityModel; embedded?: boolean } = $props();
 
-  // NT-U1: the HEALTH button toggles the limbs/wounds panel inside the card.
+  // NT-U1: the HEALTH button opens a pop-up health panel (like the fuel panel) above the card.
   let showHealth = $state(false);
+  // Any damage to show? (blood loss, pain, broken limbs, or active conditions.)
+  const damaged = $derived(
+    !!model.health &&
+      (model.health.limbs.length > 0 ||
+        model.health.conditions.length > 0 ||
+        (model.health.pain ?? 0) > 0 ||
+        (!!model.health.blood && model.health.blood.current < model.health.blood.max))
+  );
 
   // Bar colours when an EntityBar doesn't specify its own: red on warn, green otherwise.
   const BAR_WARN = '#ee8844';
@@ -108,6 +148,11 @@
         {#if model.dismissable}<span class="pawn-dismiss" title="Press Esc to deselect">◈</span
           >{/if}
       </div>
+      {#if model.mood != null}
+        <span class="pawn-mood" class:pawn-warn={model.mood < 30}
+          >Mood {Math.round(model.mood)}</span
+        >
+      {/if}
     </div>
 
     {#if model.lines && model.lines.length > 0}
@@ -141,23 +186,15 @@
       </div>
     {/if}
 
-    {#if model.health && showHealth}
-      <div class="health-panel">
-        <div class="health-hdr">| HEALTH</div>
-        {#if model.health.length === 0}
-          <div class="health-ok">no damage</div>
-        {:else}
-          {#each model.health as h (h.text)}
-            <div class="health-row" class:health-warn={h.warn}>{h.text}</div>
-          {/each}
+    {#if model.job}
+      <!-- Progress bar (when the task has one) sits to the RIGHT of the task name. -->
+      <div class="pawn-job-row">
+        <span class="pawn-job" class:pawn-idle={model.job.idle}>{model.job.text}</span>
+        {#if model.progressBar}
+          <span class="pawn-progress">[{model.progressBar}]</span>
         {/if}
       </div>
-    {/if}
-
-    {#if model.job}
-      <div class="pawn-job" class:pawn-idle={model.job.idle}>{model.job.text}</div>
-    {/if}
-    {#if model.progressBar}
+    {:else if model.progressBar}
       <div class="pawn-progress">[{model.progressBar}]</div>
     {/if}
     {#if model.note}
@@ -168,6 +205,11 @@
     {/if}
   </div>
 
+  {#if model.health}
+    <!-- NT-U1: HEALTH opens as a pop-up above the card (like the campfire fuel panel). -->
+    <HealthPanel health={model.health} open={showHealth} />
+  {/if}
+
   {#if (model.buttons && model.buttons.length > 0) || model.health}
     <div class="btn-col">
       {#if model.health}
@@ -175,7 +217,7 @@
         <button
           class="hud-btn"
           class:hud-btn--active={showHealth}
-          class:hud-btn--warn={model.health.length > 0}
+          class:hud-btn--warn={damaged}
           onmousedown={(e) => e.stopPropagation()}
           onmouseup={(e) => e.stopPropagation()}
           onclick={(e) => {
@@ -268,6 +310,13 @@
     color: #886630;
     font-size: 9px;
   }
+  /* Mood pinned to the right of the header (next to the name). */
+  .pawn-mood {
+    color: #c0a040;
+    font-size: 9px;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
   /* ── Button column (NT-U2: outside the box, to the right) ────── */
   .btn-col {
     display: flex;
@@ -304,34 +353,9 @@
     border-color: #ffaa66;
     color: #ffaa66;
   }
-  /* HEALTH button tint when the entity is damaged (overridden by --active when expanded). */
+  /* HEALTH button tint when the entity is damaged (overridden by --active when open). */
   .hud-btn--warn:not(.hud-btn--active) {
     border-color: #b5532a;
-    color: #ee8844;
-  }
-  /* ── HEALTH panel (NT-U1) ────────────────────────────────────── */
-  .health-panel {
-    margin-top: 2px;
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-  }
-  .health-hdr {
-    color: #7a6030;
-    font-size: 9px;
-    letter-spacing: 0.04em;
-  }
-  .health-ok {
-    color: #68a030;
-    font-size: 9px;
-    padding-left: 4px;
-  }
-  .health-row {
-    color: #c0a040;
-    font-size: 9px;
-    padding-left: 4px;
-  }
-  .health-warn {
     color: #ee8844;
   }
   /* ── Text lines (description, progress, refund, etc.) ───────── */
@@ -370,6 +394,14 @@
     flex-direction: column;
     gap: 1px;
   }
+  /* Task name + its progress bar share one row; the bar is pinned to the right. */
+  .pawn-job-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 6px;
+    margin-top: 1px;
+  }
   .pawn-job {
     color: #8a7040;
     font-size: 9px;
@@ -377,9 +409,16 @@
     white-space: normal;
     overflow-wrap: break-word;
   }
+  .pawn-job-row .pawn-job {
+    margin-top: 0;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
   .pawn-progress {
     color: #8a7040;
     font-size: 9px;
+    flex: 0 0 auto;
+    white-space: nowrap;
   }
   .tile-hud--selected {
     border-color: #f0c060;
