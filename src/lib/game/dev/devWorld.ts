@@ -17,7 +17,8 @@ import type {
   StockpileZone,
   ZoneInstance,
   ZoneFilter,
-  DroppedItem
+  DroppedItem,
+  DesignationType
 } from '../core/types';
 import itemsData from '../database/items.jsonc';
 import researchData from '../database/research.jsonc';
@@ -155,9 +156,13 @@ export function applyDevWorld(state: GameState, itemQty = 500): GameState {
     if (v !== 'harvest') designations[k] = v;
   }
   const designationZoneId: Record<string, string> = { ...(state.designationZoneId ?? {}) };
+  // Stockpile is a standing zone — store it in zoneTiles (not the single-value designations map)
+  // so it coexists with harvest/woodcut orders on the same tile.
+  const zoneTiles: Record<string, DesignationType[]> = { ...(state.zoneTiles ?? {}) };
 
   for (const k of stockpileTiles) {
-    designations[k] = 'stockpile';
+    const cur = zoneTiles[k] ?? [];
+    if (!cur.includes('stockpile')) zoneTiles[k] = [...cur, 'stockpile'];
     designationZoneId[k] = stockpileInstance.id;
   }
 
@@ -168,6 +173,7 @@ export function applyDevWorld(state: GameState, itemQty = 500): GameState {
     stockpileZones: [stockpileZone],
     zoneInstances: [stockpileInstance],
     designations: designations as GameState['designations'],
+    zoneTiles,
     designationZoneId,
     droppedItems: storedDrops,
     completedResearch: ALL_RESEARCH_IDS,

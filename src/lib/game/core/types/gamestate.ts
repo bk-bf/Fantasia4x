@@ -30,8 +30,14 @@ export interface GameState {
   stockpile: Record<string, number>;
   /** Named stockpile zones; each tracks its own item inventory. */
   stockpileZones: StockpileZone[];
-  /** Phase 4: designated tile actions keyed as "x,y" */
+  /** Phase 4: one-shot tile *action* orders (harvest/woodcut/mine/construct/haul/clear…) keyed
+   *  as "x,y". Cleared on completion. Standing *zones* live in {@link zoneTiles}, so an order and
+   *  a zone can occupy the same tile without clobbering each other. */
   designations: Record<string, DesignationType>;
+  /** Standing-zone membership keyed as "x,y" → zone types present on that tile (e.g.
+   *  `['stockpile']`). Separate from {@link designations} so completing/clearing an action order
+   *  on a tile never destroys the zone it sits on, and a tile can belong to multiple zones. */
+  zoneTiles?: Record<string, DesignationType[]>;
   /** @deprecated Use zoneInstances instead. Legacy type-level filters for backward compat. */
   zoneFilters?: Partial<Record<FilterableZoneType, ZoneFilter>>;
   /** Named zone instances, each with their own filter. Replaces zoneFilters. */

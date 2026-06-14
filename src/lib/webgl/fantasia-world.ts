@@ -27,7 +27,8 @@ const DECONSTRUCT_GLYPH = glyph(SHEET.MAP, 88);
 export function buildGameGrid(
   worldMap: WorldTile[][],
   buildings?: PlacedBuilding[],
-  designations?: Record<string, DesignationType>
+  designations?: Record<string, DesignationType>,
+  zoneTiles?: Record<string, DesignationType[]>
 ): GameGrid {
   const grid = new GameGrid();
 
@@ -146,7 +147,9 @@ export function buildGameGrid(
   // on a separate transparent 2D canvas overlay in GameCanvas.svelte so the
   // terrain glyphs remain visible underneath.  Only the stockpile zone tint is
   // applied here because it modifies background colour rather than the glyph.
-  if (designations) {
+  // Stockpile is a standing zone, read from `zoneTiles` (not `designations`) so the
+  // tint survives a harvest/woodcut order completing on the same tile.
+  if (zoneTiles) {
     function lerp(a: number, b: number, t: number) {
       return a + (b - a) * t;
     }
@@ -158,8 +161,8 @@ export function buildGameGrid(
       fg: { r: 1.0, g: 0.8, b: 0.2 } as RGB
     };
 
-    for (const [key, type] of Object.entries(designations)) {
-      if (type !== 'stockpile') continue;
+    for (const [key, types] of Object.entries(zoneTiles)) {
+      if (!types.includes('stockpile')) continue;
       const [x, y] = key.split(',').map(Number);
       const existing = grid.getTile(x, y);
       if (!existing) continue;

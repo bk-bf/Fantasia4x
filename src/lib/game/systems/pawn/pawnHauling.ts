@@ -7,6 +7,7 @@
 import type { GameState, Pawn } from '../../core/types';
 import { addToStockpileZone, absorbDropIfOnStockpileTile } from '../../core/GameState';
 import { occupancyService } from '../../services/OccupancyService';
+import { zoneTileKeys } from '../../services/DesignationService';
 import { gameLogger } from '../../dev/gameLogger';
 import { rng } from '../../core/rng';
 import { PAWN_STATE } from './pawnStates';
@@ -60,8 +61,7 @@ export function findNearestDepositPoint(
   // ── Tier 1: stockpile zones — stand ON the nearest standable zone tile. ──
   let bestStandable: { x: number; y: number; dist: number } | null = null;
   let nearestAny: { x: number; y: number; dist: number } | null = null;
-  for (const [key, type] of Object.entries(gs.designations ?? {})) {
-    if (type !== 'stockpile') continue;
+  for (const key of zoneTileKeys(gs, 'stockpile')) {
     const [x, y] = key.split(',').map(Number);
     const d = dist(x, y);
     if (!nearestAny || d < nearestAny.dist) nearestAny = { x, y, dist: d };
@@ -199,9 +199,8 @@ export function depositInventory(pawn: Pawn, gs: GameState): GameState {
   const px = pawn.position?.x ?? 0;
   const py = pawn.position?.y ?? 0;
   const distToPawn = (x: number, y: number) => Math.abs(x - px) + Math.abs(y - py);
-  const stockpileTiles = Object.entries(gs.designations ?? {})
-    .filter(([, t]) => t === 'stockpile')
-    .map(([key]) => {
+  const stockpileTiles = zoneTileKeys(gs, 'stockpile')
+    .map((key) => {
       const [x, y] = key.split(',').map(Number);
       return { key, x, y };
     })

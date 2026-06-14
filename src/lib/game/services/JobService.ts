@@ -25,6 +25,7 @@ import jobsData from '../database/jobs.jsonc';
 import { gatedConsole as console, isGameDebug } from '../core/log';
 import itemsData from '../database/items.jsonc';
 import { resourceObjectService } from './ResourceObjectService';
+import { zoneTileKeys } from './DesignationService';
 import { SUBTERRAINS, SUBTERRAIN_FALLBACK } from '../core/Terrains';
 import { itemService } from './ItemService';
 import { recipeService } from './RecipeService';
@@ -712,14 +713,15 @@ class JobServiceImpl {
         `[JobService] Harvest complete: ${job.resourceId} at (${job.targetX},${job.targetY}) → ${dropResourceId} x${dropAmount}${shouldPersist ? ' (persistent)' : ''}`
       );
     }
-    // Clear the designation for this tile now that the harvest is complete.
+    // Clear the action order for this tile now that the harvest is complete. This only touches
+    // `designations` (action orders); a stockpile on the same tile lives in `zoneTiles` and is
+    // left untouched — so harvesting a bush growing on a stockpile no longer wipes the zone.
     const newDesignations = { ...(gs.designations ?? {}) };
     delete newDesignations[`${job.targetX},${job.targetY}`];
 
     // Trigger-based absorption: if any drop landed on a stockpile tile, absorb immediately.
-    // Note: designations is already updated above so a harvested stockpile tile has its
-    // harvest designation removed; stockpile designation is a separate designation type
-    // so this correctly absorbs items harvested on a tile that is ALSO a stockpile.
+    // The stockpile zone survives the harvest above, so a drop harvested onto a tile that is
+    // ALSO a stockpile is correctly absorbed.
     let state: GameState = {
       ...gs,
       worldMap: newWorldMap,
@@ -764,9 +766,7 @@ class JobServiceImpl {
     }
 
     // Haul jobs only make sense when there is a stockpile zone to deliver to.
-    const stockpileTiles = Object.entries(gs.designations ?? {}).filter(
-      ([, t]) => t === 'stockpile'
-    );
+    const stockpileTiles = zoneTileKeys(gs, 'stockpile');
     if (stockpileTiles.length === 0) {
       // Remove any leftover haul jobs and skip creation
       const pruned = jobs.filter((j) => j.type !== 'haul');

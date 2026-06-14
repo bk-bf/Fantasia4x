@@ -17,9 +17,63 @@ import type {
 import { rng } from '../core/rng';
 import { absorbDropIfOnStockpileTile } from '../core/GameState';
 
+/**
+ * Standing-zone designation types stored in `GameState.zoneTiles` (a per-tile array) rather than
+ * the single-value `GameState.designations` map. These persist as areas and must be able to
+ * coexist with a one-shot action order on the same tile — e.g. a `stockpile` under a bush that
+ * also carries a `harvest`/`woodcut` order. (`drink`/`wash` are water-only and never overlap a
+ * land action, so they stay in `designations` as simple location markers.)
+ */
+const STANDING_ZONE_TYPES = new Set<DesignationType>(['stockpile']);
+
+export function isStandingZoneType(type: DesignationType): boolean {
+  return STANDING_ZONE_TYPES.has(type);
+}
+
+/** Tile keys ("x,y") that belong to the given standing-zone type. */
+export function zoneTileKeys(gameState: GameState, type: DesignationType): string[] {
+  const zt = gameState.zoneTiles ?? {};
+  const out: string[] = [];
+  for (const k in zt) if (zt[k]?.includes(type)) out.push(k);
+  return out;
+}
+
+/** True when tile (x,y) belongs to the given standing-zone type. */
+export function isZoneTile(
+  gameState: GameState,
+  x: number,
+  y: number,
+  type: DesignationType
+): boolean {
+  return !!gameState.zoneTiles?.[`${x},${y}`]?.includes(type);
+}
+
 class DesignationServiceImpl {
   private key(x: number, y: number): string {
     return `${x},${y}`;
+  }
+
+  /** Add a standing-zone type to a tile's zone list (immutable, deduped). */
+  private addZoneTile(
+    zoneTiles: Record<string, DesignationType[]>,
+    k: string,
+    type: DesignationType
+  ): void {
+    const cur = zoneTiles[k] ?? [];
+    if (!cur.includes(type)) zoneTiles[k] = [...cur, type];
+  }
+
+  /** Remove a standing-zone type from a tile (dropping the key when empty). */
+  private removeZoneTile(
+    zoneTiles: Record<string, DesignationType[]>,
+    k: string,
+    type: DesignationType
+  ): void {
+    const cur = zoneTiles[k];
+    if (!cur) return;
+    const next = cur.filter((t) => t !== type);
+    if (next.length === 0) delete zoneTiles[k];
+    else zoneTiles[k] = next;
   }
 
   /**
@@ -63,10 +117,15 @@ class DesignationServiceImpl {
     // Drink/wash zones are only valid on water — silently ignore off-water paints.
     if (this.requiresWater(type) && !this.isWaterTile(gameState, x, y)) return gameState;
     const k = this.key(x, y);
-    let state: GameState = {
-      ...gameState,
-      designations: { ...(gameState.designations ?? {}), [k]: type }
-    };
+    let state: GameState;
+    if (isStandingZoneType(type)) {
+      // Standing zone: store in zoneTiles so it coexists with any action order on this tile.
+      const zoneTiles = { ...(gameState.zoneTiles ?? {}) };
+      this.addZoneTile(zoneTiles, k, type);
+      state = { ...gameState, zoneTiles };
+    } else {
+      state = { ...gameState, designations: { ...(gameState.designations ?? {}), [k]: type } };
+    }
     if (zoneInstanceId) {
       state = {
         ...state,
@@ -88,7 +147,15 @@ class DesignationServiceImpl {
     delete newDesignations[k];
     const newZoneIds = { ...(gameState.designationZoneId ?? {}) };
     delete newZoneIds[k];
-    return { ...gameState, designations: newDesignations, designationZoneId: newZoneIds };
+    // Erasing a tile clears both its action order and any standing zones on it.
+    const newZoneTiles = { ...(gameState.zoneTiles ?? {}) };
+    delete newZoneTiles[k];
+    return {
+      ...gameState,
+      designations: newDesignations,
+      designationZoneId: newZoneIds,
+      zoneTiles: newZoneTiles
+    };
   }
 
   /**
@@ -111,7 +178,8 @@ class DesignationServiceImpl {
    * Check if a tile at (x, y) has any designation.
    */
   hasDesignation(x: number, y: number, gameState: GameState): boolean {
-    return this.key(x, y) in (gameState.designations ?? {});
+    const k = this.key(x, y);
+    return k in (gameState.designations ?? {}) || (gameState.zoneTiles?.[k]?.length ?? 0) > 0;
   }
 
   /**
@@ -143,7 +211,9 @@ class DesignationServiceImpl {
     const mapW = gameState.worldMap?.[0]?.length ?? 0;
 
     const waterOnly = this.requiresWater(type);
-    const newDesignations = { ...(gameState.designations ?? {}) };
+    const standingZone = isStandingZoneType(type);
+    const newDesignations = standingZone ? undefined : { ...(gameState.designations ?? {}) };
+    const newZoneTiles = standingZone ? { ...(gameState.zoneTiles ?? {}) } : undefined;
     const newZoneIds = zoneInstanceId ? { ...(gameState.designationZoneId ?? {}) } : undefined;
     const paintedTiles = new Set<string>();
     for (let y = minY; y <= maxY; y++) {
@@ -152,14 +222,16 @@ class DesignationServiceImpl {
         // Drink/wash zones only paint onto water tiles within the dragged rect.
         if (waterOnly && !this.isWaterTile(gameState, x, y)) continue;
         const k = this.key(x, y);
-        newDesignations[k] = type;
+        if (standingZone) this.addZoneTile(newZoneTiles!, k, type);
+        else newDesignations![k] = type;
         paintedTiles.add(k);
         if (zoneInstanceId && newZoneIds) newZoneIds[k] = zoneInstanceId;
       }
     }
     let state: GameState = {
       ...gameState,
-      designations: newDesignations,
+      ...(newDesignations ? { designations: newDesignations } : {}),
+      ...(newZoneTiles ? { zoneTiles: newZoneTiles } : {}),
       ...(newZoneIds ? { designationZoneId: newZoneIds } : {})
     };
     // Painting a stockpile over existing loose items absorbs them in place (no haul needed).
@@ -177,14 +249,21 @@ class DesignationServiceImpl {
     const maxY = Math.max(y1, y2);
     const newDesignations = { ...(gameState.designations ?? {}) };
     const newZoneIds = { ...(gameState.designationZoneId ?? {}) };
+    const newZoneTiles = { ...(gameState.zoneTiles ?? {}) };
     for (let y = minY; y <= maxY; y++) {
       for (let x = minX; x <= maxX; x++) {
         const k = this.key(x, y);
         delete newDesignations[k];
         delete newZoneIds[k];
+        delete newZoneTiles[k];
       }
     }
-    return { ...gameState, designations: newDesignations, designationZoneId: newZoneIds };
+    return {
+      ...gameState,
+      designations: newDesignations,
+      designationZoneId: newZoneIds,
+      zoneTiles: newZoneTiles
+    };
   }
 
   // ------------------------------------------------------------------ //
@@ -238,17 +317,22 @@ class DesignationServiceImpl {
   removeZoneInstance(instanceId: string, gs: GameState): GameState {
     const zoneIdMap = { ...(gs.designationZoneId ?? {}) };
     const designations = { ...(gs.designations ?? {}) };
+    const zoneTiles = { ...(gs.zoneTiles ?? {}) };
+    const instType = (gs.zoneInstances ?? []).find((z) => z.id === instanceId)?.type;
     for (const [k, zId] of Object.entries(zoneIdMap)) {
       if (zId === instanceId) {
         delete zoneIdMap[k];
-        delete designations[k];
+        // Clear the tile from whichever map holds this instance's type.
+        if (instType && isStandingZoneType(instType)) this.removeZoneTile(zoneTiles, k, instType);
+        else delete designations[k];
       }
     }
     return {
       ...gs,
       zoneInstances: (gs.zoneInstances ?? []).filter((z) => z.id !== instanceId),
       designationZoneId: zoneIdMap,
-      designations
+      designations,
+      zoneTiles
     };
   }
 

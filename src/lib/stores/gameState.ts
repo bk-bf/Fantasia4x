@@ -241,12 +241,31 @@ function applyMigrations(state: GameState): GameState {
     };
   }
 
+  // Stockpile-zone split migration: standing zones moved out of the single-value `designations`
+  // map into `zoneTiles` so an action order (harvest/woodcut) can share a tile with a stockpile
+  // without clobbering it. Move any legacy `stockpile` designations across. Idempotent. Runs
+  // before the absorb backfill below so that reads `zoneTiles` (the new source of truth).
+  if (!state.zoneTiles) state.zoneTiles = {};
+  {
+    const designations = { ...(state.designations ?? {}) };
+    const zoneTiles = { ...(state.zoneTiles ?? {}) };
+    let moved = false;
+    for (const [k, type] of Object.entries(designations)) {
+      if (type !== 'stockpile') continue;
+      const cur = zoneTiles[k] ?? [];
+      if (!cur.includes('stockpile')) zoneTiles[k] = [...cur, 'stockpile'];
+      delete designations[k];
+      moved = true;
+    }
+    if (moved) state = { ...state, designations, zoneTiles };
+  }
+
   // One-time migration: absorb any unstored dropped items that are physically sitting on
   // stockpile tiles but were never credited (saves predating the trigger-based absorption).
   {
     const unabsorbed = (state.droppedItems ?? []).filter((d) => {
       if (d.stored) return false;
-      return (state.designations ?? {})[`${d.x},${d.y}`] === 'stockpile';
+      return !!state.zoneTiles?.[`${d.x},${d.y}`]?.includes('stockpile');
     });
     for (const drop of unabsorbed) {
       state = absorbDropIfOnStockpileTile(state, drop.id);

@@ -73,13 +73,23 @@ describe('per-tile storage helpers (Stage 2 Step 1)', () => {
 });
 
 describe('drops-authoritative storage core (Stage 2 flip)', () => {
-  const withDesig = (drops: DroppedItem[], desig: Record<string, string> = {}): GameState =>
-    ({
+  // Standing zones (stockpile) now live in `zoneTiles`; one-shot action orders stay in
+  // `designations`. Split the test's `desig` map accordingly.
+  const withDesig = (drops: DroppedItem[], desig: Record<string, string> = {}): GameState => {
+    const designations: Record<string, string> = {};
+    const zoneTiles: Record<string, string[]> = {};
+    for (const [k, t] of Object.entries(desig)) {
+      if (t === 'stockpile') zoneTiles[k] = [t];
+      else designations[k] = t;
+    }
+    return {
       droppedItems: drops,
       buildings: [],
       stockpileZones: [],
-      designations: desig
-    }) as unknown as GameState;
+      designations,
+      zoneTiles
+    } as unknown as GameState;
+  };
 
   it('addToStockpileZone creates a stored drop on the given tile and updates the aggregate', () => {
     const out = addToStockpileZone(withDesig([]), '3,4', { granite: 5 });

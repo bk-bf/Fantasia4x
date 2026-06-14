@@ -309,10 +309,10 @@ function pickStorageTile(state: GameState, tileKey: string | null): { x: number;
     const [x, y] = tileKey.split(',').map(Number);
     if (Number.isFinite(x) && Number.isFinite(y)) return { x, y };
   }
-  const desig = state.designations ?? {};
+  const zt = state.zoneTiles ?? {};
   let fallback: { x: number; y: number } | null = null;
-  for (const key of Object.keys(desig)) {
-    if (desig[key] !== 'stockpile') continue;
+  for (const key of Object.keys(zt)) {
+    if (!zt[key]?.includes('stockpile')) continue;
     const [x, y] = key.split(',').map(Number);
     if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
     if (!fallback) fallback = { x, y };
@@ -411,7 +411,7 @@ export function absorbDropIfOnStockpileTile(state: GameState, dropId: string): G
   if (!drop || drop.stored) return state;
 
   const tileKey = `${drop.x},${drop.y}`;
-  if ((state.designations ?? {})[tileKey] !== 'stockpile') return state;
+  if (!state.zoneTiles?.[tileKey]?.includes('stockpile')) return state;
 
   // Try to merge into an existing stored pile of the same resource at the same tile.
   const existingIdx = (state.droppedItems ?? []).findIndex(

@@ -113,6 +113,7 @@
   let _prevWorldMap: unknown;
   let _prevBuildingsSig = '';
   let _prevDesignations: unknown;
+  let _prevZoneTiles: unknown;
 
   // Viewport offset in tile coordinates
   let viewX = 0;
@@ -172,6 +173,9 @@
   // Phase 4: buildings and designations overlay
   let buildings: PlacedBuilding[] = [];
   let designations: Record<string, DesignationType> = {};
+  // Standing-zone membership (stockpile…), separate from one-shot action orders above so a
+  // tile can be both a zone and an order at once. Drives the stockpile tint + hover/selection.
+  let zoneTiles: Record<string, DesignationType[]> = {};
 
   // Phase A2 dynamic lighting: lit campfires emit warm point light, baked into
   // the tile renderer (replaces the old floating DOM radial glow).
@@ -278,7 +282,11 @@
   $: hoverResources = hoverTile
     ? Object.entries(hoverTile.resources ?? {}).filter(([, v]) => v > 0)
     : [];
-  $: hoverZoneType = hoverTile ? (designations[`${hoverTile.x},${hoverTile.y}`] ?? null) : null;
+  $: hoverZoneType = hoverTile
+    ? (zoneTiles[`${hoverTile.x},${hoverTile.y}`]?.[0] ??
+      designations[`${hoverTile.x},${hoverTile.y}`] ??
+      null)
+    : null;
   $: hoverTileLight = hoverTile
     ? computeTileLightLevel(
         $gameState?.turn ?? 0,
@@ -612,10 +620,12 @@
     const minY = Math.min(selRect.y1, selRect.y2);
     const maxY = Math.max(selRect.y1, selRect.y2);
     const counts: Record<string, number> = {};
-    for (const [key, type] of Object.entries(designations)) {
+    const tally = (key: string, type: string) => {
       const [x, y] = key.split(',').map(Number);
       if (x >= minX && x <= maxX && y >= minY && y <= maxY) counts[type] = (counts[type] ?? 0) + 1;
-    }
+    };
+    for (const [key, type] of Object.entries(designations)) tally(key, type);
+    for (const [key, types] of Object.entries(zoneTiles)) for (const t of types) tally(key, t);
     return counts;
   })();
   $: hasSelection =
@@ -632,6 +642,7 @@
     pawns = s.pawns ?? [];
     buildings = s.buildings ?? [];
     designations = s.designations ?? {};
+    zoneTiles = s.zoneTiles ?? {};
     droppedItems = s.droppedItems ?? [];
     mobs = s.mobs ?? [];
     // Only the terrain layer is expensive to rebuild (buildGameGrid scans the
@@ -649,10 +660,12 @@
     const terrainChanged =
       worldMap !== _prevWorldMap ||
       buildingsSig !== _prevBuildingsSig ||
-      designations !== _prevDesignations;
+      designations !== _prevDesignations ||
+      zoneTiles !== _prevZoneTiles;
     _prevWorldMap = worldMap;
     _prevBuildingsSig = buildingsSig;
     _prevDesignations = designations;
+    _prevZoneTiles = zoneTiles;
     // Day/night: update ambient uniforms whenever the turn changes
     if (renderer?.isReady()) {
       const { light, tint } = environmentService.getAmbient(s.turn);
@@ -1044,7 +1057,7 @@
 
   function redrawOverlayNow() {
     if (!renderer?.isReady() || worldMap.length === 0) return;
-    const grid = buildGameGrid(worldMap, buildings, designations);
+    const grid = buildGameGrid(worldMap, buildings, designations, zoneTiles);
 
     // (Live zone drag-paint preview is drawn on the 2D overlay in
     // drawDesignations(), not here, to avoid rebuilding the terrain buffer.)
@@ -1520,7 +1533,7 @@
 
       const grid =
         worldMap.length > 0
-          ? buildGameGrid(worldMap, buildings, designations)
+          ? buildGameGrid(worldMap, buildings, designations, zoneTiles)
           : generatePlaceholderGrid();
       renderer.setGrid(grid);
       renderer.setViewTileOffset(viewX, viewY);

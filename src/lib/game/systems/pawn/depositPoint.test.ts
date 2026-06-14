@@ -39,7 +39,7 @@ describe('PT-1 findNearestDepositPoint — standable selection', () => {
     const pawn = haulerAt(0, 0);
     const state = makeState({
       pawns: [pawn],
-      designations: { '2,0': 'stockpile', '5,0': 'stockpile' }
+      zoneTiles: { '2,0': ['stockpile'], '5,0': ['stockpile'] }
     });
     expect(findNearestDepositPoint(pawn, state)).toEqual({ x: 2, y: 0 });
   });
@@ -54,7 +54,7 @@ describe('PT-1 findNearestDepositPoint — standable selection', () => {
     } as unknown as Pawn;
     const state = makeState({
       pawns: [pawn, blocker],
-      designations: { '2,0': 'stockpile', '4,0': 'stockpile' }
+      zoneTiles: { '2,0': ['stockpile'], '4,0': ['stockpile'] }
     });
     // (2,0) is occupied → the standable (4,0) is chosen instead of stuttering short of (2,0).
     expect(findNearestDepositPoint(pawn, state)).toEqual({ x: 4, y: 0 });
@@ -65,7 +65,7 @@ describe('PT-1 findNearestDepositPoint — standable selection', () => {
     const state = makeState({
       pawns: [pawn],
       worldMap: makeWorld(10, 10, [[2, 0]]), // (2,0) is non-walkable terrain
-      designations: { '2,0': 'stockpile', '4,0': 'stockpile' }
+      zoneTiles: { '2,0': ['stockpile'], '4,0': ['stockpile'] }
     });
     expect(findNearestDepositPoint(pawn, state)).toEqual({ x: 4, y: 0 });
   });
@@ -75,7 +75,7 @@ describe('PT-1 findNearestDepositPoint — standable selection', () => {
     const state = makeState({
       pawns: [pawn],
       worldMap: makeWorld(10, 10, [[2, 0]]),
-      designations: { '2,0': 'stockpile' } // only tile, and it's blocked
+      zoneTiles: { '2,0': ['stockpile'] } // only tile, and it's blocked
     });
     // Better to deposit in place at the one stockpile tile than strand the goods.
     expect(findNearestDepositPoint(pawn, state)).toEqual({ x: 2, y: 0 });
