@@ -922,16 +922,17 @@ class JobServiceImpl {
     }
 
     console.log(`[JobService] Deconstruction complete: ${building.type} (${building.id})`);
-    const afterRefund = addToStockpileZone(
+    // Restore the tile's walkability if this was a solid (tile-blocking) building.
+    const afterRestore = buildingService.applyBuildingFootprint(
       {
         ...gs,
         buildingCounts: newCounts,
         buildings: (gs.buildings ?? []).filter((b) => b.id !== job.buildingId)
       },
-      null,
-      refunds
+      building,
+      false
     );
-    return afterRefund;
+    return addToStockpileZone(afterRestore, null, refunds);
   }
 
   private _completeConstruct(job: Job, gs: GameState): GameState {
@@ -969,7 +970,12 @@ class JobServiceImpl {
     console.log(
       `[JobService] Construction complete: ${building.type} (${building.id}) quality=${qualityMult.toFixed(2)}`
     );
-    return { ...gs, buildings: newBuildings, buildingCounts: newCounts, droppedItems: newDropped };
+    // A solid building (def.walkable === false) now blocks its tile — pathfinding routes around it.
+    return buildingService.applyBuildingFootprint(
+      { ...gs, buildings: newBuildings, buildingCounts: newCounts, droppedItems: newDropped },
+      { ...building, status: 'complete' },
+      true
+    );
   }
 
   private _completeCraft(job: Job, gs: GameState): GameState {
