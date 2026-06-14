@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { computeTileLightLevel, getAmbientLight, TURNS_PER_DAY } from './EnvironmentService';
 import { TICKS_PER_SECOND } from '../core/time';
 import { lightWorkMultiplier } from '../systems/pawn/pawnHelpers';
+import { jobService } from './JobService';
 
 // LIGHT-1: §G (darkness slows work) was inert because nothing computed the tile light fed to
 // lightWorkMultiplier — it always defaulted to 1. handleWorking now derives it via
@@ -48,5 +49,14 @@ describe('LIGHT-1 — tile light feeds the work-speed multiplier', () => {
     const darkByFire = lightWorkMultiplier(computeTileLightLevel(darkTurn, [fire(5, 5)], 5, 5));
     expect(darkByFire).toBeGreaterThan(darkNoFire);
     expect(darkByFire).toBe(1); // firelight brings it back to full speed
+  });
+
+  it('only sight-dependent jobs are light-affected (carrying jobs shrug off the dark)', () => {
+    for (const t of ['harvest', 'construct', 'deconstruct', 'craft']) {
+      expect(jobService.isJobLightAffected(t), t).toBe(true);
+    }
+    for (const t of ['haul', 'fetch', 'refuel']) {
+      expect(jobService.isJobLightAffected(t), t).toBe(false);
+    }
   });
 });
