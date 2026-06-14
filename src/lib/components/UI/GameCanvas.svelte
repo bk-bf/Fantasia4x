@@ -95,6 +95,10 @@
     return Math.max(canvasW / mapW, canvasH / mapH);
   }
 
+  // Chrome-only performance.memory shape (JS heap, not system RAM) — used by the
+  // profiler's [SYS]/[RENDER-PROF] readouts.
+  type PerfMemory = { usedJSHeapSize: number; totalJSHeapSize: number; jsHeapSizeLimit: number };
+
   let canvas: HTMLCanvasElement;
   let designCanvas: HTMLCanvasElement;
   // HUD sprite icons + their shared-cache painting live in gameCanvas/{hudSpriteIcon,spriteSheets}.
@@ -1618,8 +1622,49 @@
     setView(viewX + dx * alpha, viewY + dy * alpha);
   }
 
+  // One-time hardware/cap banner for the profiler. Browsers don't expose true
+  // system CPU/GPU/RAM usage; what IS available is the *caps* (cores, device RAM,
+  // GPU model, JS-heap ceiling) plus the canvas backing-store size — the latter is
+  // the key number for confirming a present/compositor bottleneck on a big map.
+  function logSystemBanner() {
+    const lines: string[] = ['[SYS] profiler host capabilities:'];
+    const nav = navigator as Navigator & { deviceMemory?: number };
+    lines.push(`  cpu: ${nav.hardwareConcurrency ?? '?'} logical cores`);
+    lines.push(
+      `  ram: deviceMemory≈${nav.deviceMemory ?? '?'}GB (browser-capped/coarse; not the true total)`
+    );
+    const mem = (performance as unknown as { memory?: PerfMemory }).memory;
+    if (mem) {
+      lines.push(`  jsHeapLimit: ${(mem.jsHeapSizeLimit / 1048576).toFixed(0)}MB`);
+    }
+    // GPU model via the unmasked-renderer extension (Chrome/FF gate it behind this).
+    const gl = renderer?.getContext?.();
+    if (gl) {
+      const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+      const gpu = dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : 'hidden';
+      lines.push(`  gpu: ${gpu}`);
+      lines.push(`  glMaxTexture: ${gl.getParameter(gl.MAX_TEXTURE_SIZE)}px`);
+    }
+    const dpr = window.devicePixelRatio || 1;
+    const cw = canvas?.width ?? 0;
+    const ch = canvas?.height ?? 0;
+    lines.push(
+      `  canvas backing store: ${cw}×${ch}px (${((cw * ch) / 1e6).toFixed(1)}MP, dpr ${dpr}) ` +
+        `— CSS ${canvas?.clientWidth ?? 0}×${canvas?.clientHeight ?? 0}`
+    );
+    // eslint-disable-next-line no-console
+    console.log(lines.join('\n'));
+  }
+
   function startLoop() {
     let lastFpsPush = 0;
+    // Render-frame profiler: when globalThis.__profileTurns is on (the --profiler
+    // sandbox sets it), accumulate the per-frame wall-time split so we can see
+    // whether the bottleneck is the sim or the render — the turn profiler only
+    // covers the sim and is blind to everything in this loop. Logged once/sec.
+    let profAccum = { sim: 0, overlay: 0, render: 0, frames: 0, wall: 0 };
+    let profLast = 0;
+    let sysBannerLogged = false;
     function frame() {
       if (!renderer || !ready) return;
       // Real elapsed time drives interpolation so motion is smooth at the display
@@ -1627,22 +1672,60 @@
       const now = performance.now();
       const dt = lastFrameTime ? (now - lastFrameTime) / 1000 : 0;
       lastFrameTime = now;
+      const prof = (globalThis as Record<string, unknown>).__profileTurns === true;
+      const tSim = prof ? performance.now() : 0;
       // Advance the simulation on this same thread/schedule. Driving the sim from
       // the render loop (rather than a competing setInterval) prevents the timer
       // starvation that throttled a <1 ms/tick sim to ~20 TPS while rendering.
       gameState.stepSimulation(dt * 1000);
+      const tOverlay = prof ? performance.now() : 0;
       updatePawnOverlay(dt);
       updateHoverEntity();
       updateCameraFollow(dt);
       updateCameraFollowMob(dt);
       updateWorldEffectOverlays();
       renderer.setOverlayGrid(pawnOverlayGrid);
+      const tRender = prof ? performance.now() : 0;
       renderer.beginFrame();
       renderer.endFrame();
       // Surface render FPS to the topbar ~4×/sec to avoid store churn.
       if (now - lastFpsPush > 250) {
         lastFpsPush = now;
         renderFps.set(Math.round(renderer.getStats().fps));
+      }
+      if (prof) {
+        const end = performance.now();
+        if (!sysBannerLogged) {
+          sysBannerLogged = true;
+          logSystemBanner();
+        }
+        profAccum.sim += tOverlay - tSim;
+        profAccum.overlay += tRender - tOverlay;
+        profAccum.render += end - tRender;
+        profAccum.wall += dt * 1000;
+        profAccum.frames++;
+        if (now - profLast > 1000 && profAccum.frames > 0) {
+          const f = profAccum.frames;
+          const js = (profAccum.sim + profAccum.overlay + profAccum.render) / f;
+          const frameMs = profAccum.wall / f;
+          // Single-thread CPU busy fraction: how much of each frame the main thread
+          // spent in our JS vs. waiting (GPU present / vsync / rAF throttle).
+          const busy = frameMs > 0 ? (js / frameMs) * 100 : 0;
+          // performance.memory is Chrome-only; JS heap, not system RAM.
+          const mem = (performance as unknown as { memory?: PerfMemory }).memory;
+          const heap = mem
+            ? ` · heap ${(mem.usedJSHeapSize / 1048576).toFixed(0)}/${(mem.jsHeapSizeLimit / 1048576).toFixed(0)}MB`
+            : '';
+          // eslint-disable-next-line no-console
+          console.log(
+            `[RENDER-PROF] ${f}fps · frame ${frameMs.toFixed(1)}ms ` +
+              `= sim ${(profAccum.sim / f).toFixed(1)} + overlay ${(profAccum.overlay / f).toFixed(1)} ` +
+              `+ render ${(profAccum.render / f).toFixed(1)}ms ` +
+              `(GPU/idle ${(frameMs - js).toFixed(1)}ms) · main-thread ${busy.toFixed(0)}% busy${heap}`
+          );
+          profAccum = { sim: 0, overlay: 0, render: 0, frames: 0, wall: 0 };
+          profLast = now;
+        }
       }
       animationId = requestAnimationFrame(frame);
     }

@@ -142,9 +142,11 @@ export class PerformanceTimer {
    * second and swings wildly whenever a single heavy frame (GC, a simulation
    * burst, a terrain rebuild) lands on the boundary, making the readout look
    * far less stable than the game actually is. The EMA reacts smoothly and
-   * tracks perceived smoothness. Frame deltas longer than 250ms (tab
-   * throttling, debugger pauses) are ignored so a stall doesn't crater the
-   * value.
+   * tracks perceived smoothness. Only genuinely pathological gaps (>2s — a
+   * backgrounded tab or a debugger pause) are ignored; everything else feeds
+   * the average so SUSTAINED slowness reads as slow. (A previous 250ms cutoff
+   * discarded every frame once the game dropped below 4fps, freezing the readout
+   * at the last healthy value — i.e. it lied exactly when it mattered.)
    */
   updateFPS(): number {
     const now = performance.now();
@@ -157,7 +159,10 @@ export class PerformanceTimer {
     const dt = now - this.lastFrameTime;
     this.lastFrameTime = now;
 
-    if (dt <= 0 || dt > 250) {
+    // Ignore only true pauses (tab background / debugger). A steady 1fps has
+    // dt≈1000ms and MUST register, so the threshold has to sit well above any
+    // real-but-slow frame time.
+    if (dt <= 0 || dt > 2000) {
       return this.smoothedFps;
     }
 
