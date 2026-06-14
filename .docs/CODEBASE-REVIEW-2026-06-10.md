@@ -5,7 +5,7 @@
 Living tracker of **open** architecture/defect items. Completed work — R1–R12, P-1/P-6/P-7,
 PT-2/3/4, and the full PawnStateMachine decomposition — is in the
 [resolved archive](.tasks/archive/CODEBASE-REVIEW-RESOLVED-2026-06-13.md). Gate at last update:
-`check` 0 errors · `test` 194 · `lint` 0 · `build` ok.
+`check` 0 errors · `test` 198 · `lint` 0 · `build` ok.
 
 ---
 
@@ -93,20 +93,17 @@ PT-2/3/4, and the full PawnStateMachine decomposition — is in the
   tiles (or compute lazily in the work handler from ambient + nearby emitters). Found 2026-06-14 while
   generalising building light. Small-ish; mostly deciding where to compute it without scanning the
   whole 240×160 map per tick.
-- [ ] **FLEE-1 · Cornered-flee ping-pong (greedy single-threat avoidance).** Prey boxed between two
-  threats on opposite sides (e.g. mountain goat #10 between pawns NE and a predator SW) sticks in
-  `Fleeing` for minutes, ping-ponging between two adjacent tiles. Root cause is *pathing, not the
-  FSM* (entityAI `case 'Fleeing'`): `moveAway` (→ `stepDirectional`, `sign=-1`) steers away from the
-  **single closest** threat each tick, so when the closest flips side to side the chosen tile flips
-  too; and the `closestDist > fleeRange → Grazing` exit can never fire when a threat sits on each
-  side. Full write-up + symptom in `game/BUGS.md` ([OPEN] Cornered-flee ping-pong). Instrumentation
-  shipped 2026-06-14: `entityAI.logFleeTrigger` → `ENTITY-FLEE` lines in `.debug/entities.log` record
-  the threat kind/pos/distance vs vision/flee ranges at each →Startled transition. **Proposed fix
-  (not yet applied):** flee toward the heading that maximises distance from the **whole** in-range
-  threat set (commit to the gap / path *past* danger) instead of greedily backing off the nearest;
-  reuse `stepDirectional`'s same-step guard at the flee level so the heading can't reverse every tick;
-  add a flee give-up / "can't escape" timeout (mirroring `HUNT_GIVE_UP_SECONDS`) so a truly boxed-in
-  prey holds (or turns to fight) rather than thrashing forever.
+- [x] **FLEE-1 · Cornered-flee ping-pong (greedy single-threat avoidance).** Done 2026-06-14. Prey
+  boxed between two threats (e.g. mountain goat #10 between pawns NE and a predator SW) stuck in
+  `Fleeing`, ping-ponging between two tiles because `moveAway` backed off the **single closest** threat
+  each tick (which flips side to side). **Fix:** new `entityHelpers.fleeFromThreats(mob, threats, state)`
+  — maximin over the threat set (pick the walkable neighbour that maximises the MIN Chebyshev distance
+  to every in-range threat): one threat → flee straight away; boxed between two → slip perpendicular
+  through the gap and commit via a same-step/heading tie-break (no reversal, crossing preserved); no
+  improving neighbour → hold (stand fast, no thrash). Both `Fleeing` cases (`stepAnimal` + `stepHostile`)
+  gather nearest pawn + nearest predator within `fleeRange` and call it; the animal case gained the
+  `SAFE_RESET_TICKS` give-up the hostile already had. Diagnostics: `logFleeTrigger` → `ENTITY-FLEE`
+  lines. Tests in `entity/fleeFromThreats.test.ts`. Full write-up in `game/BUGS.md` ([FIXED]).
 - [x] **MOVE-1 · Duplicated per-tick move pass (pawns vs mobs) → shared `stepBody`.** Done
   2026-06-14. The per-tick driver was copy-pasted between `PawnService.processMovement` and
   `entity/entityHelpers.advanceMobMovement` (~80% identical: occupancy hold, `blockedTicks`
