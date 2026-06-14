@@ -75,6 +75,15 @@ PT-2/3/4, and the full PawnStateMachine decomposition — is in the
   pathfind; `findNearestRestBuilding` scans pawns×buildings). Profiling-gated — don't touch until
   `__profOut` says so; but no new system should add full-array `pawns.map(...)` writes for single-pawn
   updates.
+  - **Profiling instrumented 2026-06-14 (gate unblocked, optimizations NOT done yet).** `profileTurns()`
+    now also reports per-tick call counts for the three suspect scans as `#<name>/tick` in the `[PROF]`
+    line (via a dev-gated `profCount()` in `core/log` — zero cost when off). **Next:** run
+    `profileTurns()` **in-browser under real load** (a headless harness is useless here — `WasmPathfinderService.init()`
+    early-returns when `!browser`, so pathfinding/occupancy never fire) and read `__profOut`; optimize
+    ONLY what's proven hot. _Initial code reading suggests low ROI:_ at colony scale (pawns ~5–10,
+    mobs ≤40) these are small-N scans dwarfed by the A* call they sit next to, and a naive per-tick
+    `blockedTiles` cache is **incorrect** (occupancy changes mid-tick as entities move) — so any cache
+    needs per-move invalidation. Confirm with `__profOut` before spending complexity here.
 
 ## Latent defects (found in passing — not yet scheduled)
 
