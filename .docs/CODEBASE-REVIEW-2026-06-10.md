@@ -79,7 +79,7 @@ PT-2/3/4, and the full PawnStateMachine decomposition — is in the
     the suspect scans as `#<name>/tick` in the `[PROF]` line (dev-gated `profCount()` in `core/log` —
     zero cost when off). Reusable harness at `src/lib/game/profileSim.test.ts` (`PROFILE=1 npx vitest
     run …`; skipped in the normal suite).
-  - **Profiled 2026-06-14 — the three named suspects are NOT the hot spots.** Headless run (8 pawns,
+  - **Profiled 2026-06-14 (in Headless) — the three named suspects are NOT the hot spots.** (8 pawns,
     ~40 mobs, 60 designations, 1800 ticks, 3 runs, steady-state ≈ **0.86–1.07 ms/tick total** — huge
     headroom under the 16.6 ms/60fps budget). Per-phase share:
     `entityStep ~42%` · `resourceRegrowth ~26%` · `generateJobs ~11%` · `pawns ~11%` · `needsTick ~8%`
@@ -110,17 +110,16 @@ PT-2/3/4, and the full PawnStateMachine decomposition — is in the
   `consumeFromStockpiles`). Dead `syncPawnInventoryWithGlobal`/`syncAllPawnInventories` imports removed
   from `gameState.ts`. `inventory.items` is now strictly the pawn's carried haul goods, so the carry
   readout/clamp are correct after the equip screen is opened.
-- [ ] **LIGHT-1 · §G light→work-speed is inert (`tile.lightLevel` never written).**
-  `WorldTile.lightLevel` is declared (`core/types/world.ts`) and READ by the work loop
-  (`pawn/handlers/work.ts` → `lightWorkMultiplier`, ~0.4 dark … 1.0 day), but **nothing ever writes
-  it** — no worldgen pass, no per-turn tick. So it's always `undefined` → defaults to `1`, and
-  darkness never actually slows work; the §G "light → sight → work speed" model does nothing in the
-  sim. (The visual point lighting + the hovered-tile readout via `computeTileLightLevel` are separate
-  and DO work — see the data-driven `lightRadius` change 2026-06-14.) Fix direction: add a per-turn
-  pass that writes `lightLevel = computeTileLightLevel(turn, buildings, x, y)` for occupied/work
-  tiles (or compute lazily in the work handler from ambient + nearby emitters). Found 2026-06-14 while
-  generalising building light. Small-ish; mostly deciding where to compute it without scanning the
-  whole 240×160 map per tick.
+- [x] **LIGHT-1 · §G light→work-speed is inert (`tile.lightLevel` never written).** Done 2026-06-14.
+  The work loop read `tile.lightLevel`, which nothing wrote → always `1` → darkness never slowed work.
+  **Fix (lazy, no map scan):** `pawn/handlers/work.ts` now computes the working pawn's tile light
+  on the spot via `computeTileLightLevel(turn, buildings, x, y)` (day/night ambient + nearby fire
+  emitters — the same function the HUD readout uses), then feeds it through `lightWorkMultiplier`.
+  Only the working pawn's tile is sampled, so there's no per-turn 240×160 pass. Effect: at night away
+  from a fire, work runs at the 0.4 floor; a lit fire (or daylight) restores full speed. The dead
+  `WorldTile.lightLevel` field was removed (nothing reads it now). Tests: `lightWorkWiring.test.ts`
+  (darkness lowers the multiplier; a lit campfire cancels the night penalty) on top of the existing
+  `lightWork.test.ts` (light → sight → speed). Ambient day length is 300 turns / 18000 ticks.
 - [x] **FLEE-1 · Cornered-flee ping-pong / stuck-in-corner.** Done 2026-06-14. Prey boxed between two
   threats stuck in `Fleeing` — first as a ping-pong (greedy `moveAway` backing off the single closest
   threat, which flips side to side), then (after a local-maximin first attempt) dead-ending in a corner
