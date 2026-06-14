@@ -4,6 +4,26 @@ Tracks confirmed bugs, root causes, and fix status. Add new entries at the top.
 
 ---
 
+## [FIXED] Predator frozen at kill site after eating (home-tether stranding)
+
+**Symptom:** A wolf (e.g. #16) hunts prey far across the map, kills + eats it, correctly transitions
+to `Wander` — and then **never moves again**, sitting on the kill tile forever (Wander → Sleep →
+Wander, `path=none`). Looks like the old "Entities freezing after eating" bug, but the FSM transition
+is fine; movement is what's dead.
+
+**Root cause:** `wanderStep` picks its next tile via `findNearbyWalkable(…, mob.homeX, mob.homeY, …)`,
+which rejects any neighbour outside `HOME_RANGE` (10 tiles) of the mob's spawn/home tile — a tether so
+grazers don't wander off. But a predator chases prey ~100 tiles from home; after the kill **every**
+neighbour is out of home range, so `findNearbyWalkable` returns `null` every tick → the wolf can't
+take a single step. Prey chased far and animals displaced by fleeing hit the same trap. (The
+"freezing after eating" fix only ensured the FSM left `Hunting`; it landed the mob in `Wander`, where
+this tether then stranded it — so the symptom recurred for a different reason.)
+
+**Fix** (`entityHelpers.findNearbyWalkable`): when the mob is **already outside** its home range, drop
+the "stay home" filter and instead return the walkable neighbour **closest to home** — it beelines
+back into range, then resumes normal tethered wandering. Within range (and the no-home / spawn /
+flee-snap callers) behaviour is unchanged. Tests in `entity/findNearbyWalkable.test.ts`.
+
 ## [FIXED] Hunt yoyo — predator sub-tile render snap-back on re-path
 
 **Symptom:** A hunting predator (e.g. wolf #16) visibly yoyos — the sprite springs forward then snaps
