@@ -87,17 +87,20 @@ PT-2/3/4, and the full PawnStateMachine decomposition — is in the
 
 ## Latent defects (found in passing — not yet scheduled)
 
-- [ ] **INV-1 · `inventory.items` overloaded: haul-carry vs equip-screen pool.**
-  `syncPawnInventoryWithGlobal` / `syncAllPawnInventories` (`core/PawnEquipment.ts`), called from
-  `components/pawn/PawnEquipment.svelte` on equip/unequip/consume, **overwrite** `pawn.inventory.items`
-  with the *colony stockpile* (non-material, minus equipped). So the same field means "what this pawn
-  is hauling" (written by haul/fetch pickup) in the sim, but "the equip-screen item pool" after the
-  equip UI runs. Effect: `getCurrentCarryLoad` (→ the `[load/max kg]` readout in `PawnInventory.svelte`,
-  and `clampPickupQuantity`) can reflect a slice of the whole colony's goods after the equip screen is
-  opened, not what the pawn actually carries. Found while fixing equipped-gear carry weight
-  (2026-06-14, equipped items now count toward weight). Fix direction: give the equip UI its own
-  derived pool (don't mutate `inventory.items`); keep `inventory.items` strictly the pawn's carried
-  goods. Medium; touches the equip screen + the legacy global-item sync.
+- [x] **INV-1 · `inventory.items` overloaded: haul-carry vs equip-screen pool.** Done 2026-06-14.
+  `syncPawnInventoryWithGlobal` / `syncAllPawnInventories` used to **overwrite** `pawn.inventory.items`
+  with the colony stockpile (non-material, minus equipped) so the equip UI + `canEquipItem`/`useConsumable`
+  could read the pool — polluting `inventory.items`, which is also the pawn's *carried* goods read by
+  `getCurrentCarryLoad` (the `[load/max kg]` readout) and `clampPickupQuantity`. **Fix:** the equip
+  screen (`components/pawn/PawnEquipment.svelte`) now derives its **Available Items** pool reactively
+  from `$gameState.stockpile` minus `equippedItemCounts($gameState.pawns)` — never written into
+  `inventory.items`. The two `sync*` functions + `getAllEquippedItemIds` were deleted (replaced by the
+  small `equippedItemCounts` helper); the equip/unequip/consume handlers dropped their `syncAll…`
+  calls; `canEquipItem`/`useConsumable` no longer read `inventory.items` (availability is the UI's
+  concern — it lists only in-stock items, and consumables decrement the stockpile via
+  `consumeFromStockpiles`). Dead `syncPawnInventoryWithGlobal`/`syncAllPawnInventories` imports removed
+  from `gameState.ts`. `inventory.items` is now strictly the pawn's carried haul goods, so the carry
+  readout/clamp are correct after the equip screen is opened.
 - [ ] **LIGHT-1 · §G light→work-speed is inert (`tile.lightLevel` never written).**
   `WorldTile.lightLevel` is declared (`core/types/world.ts`) and READ by the work loop
   (`pawn/handlers/work.ts` → `lightWorkMultiplier`, ~0.4 dark … 1.0 day), but **nothing ever writes
