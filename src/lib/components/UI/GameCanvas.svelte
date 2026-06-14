@@ -817,6 +817,10 @@
     }
   }
 
+  // States that show a head progress bar: work jobs + the in-place need jobs (eat/drink/wash/sleep),
+  // all of which set activeJob.progress. Moving/idle states don't (no meaningful in-place progress).
+  const PROGRESS_BAR_STATES = new Set(['Working', 'Eating', 'Drinking', 'Washing', 'Sleeping']);
+
   /**
    * Compute world-effect overlay positions (Zzz, progress bars, campfire sparks)
    * once per rAF frame, after the camera follow has updated viewX/viewY. Positions
@@ -860,7 +864,8 @@
         .filter(
           (p) =>
             p.position &&
-            p.currentState === 'Working' &&
+            p.currentState != null &&
+            PROGRESS_BAR_STATES.has(p.currentState) &&
             p.activeJob &&
             (p.activeJob.progress ?? 0) >= 0
         )
