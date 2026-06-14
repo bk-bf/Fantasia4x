@@ -6,7 +6,10 @@ import type {
 } from './GameEngine';
 import type { GameState } from '../core/types';
 import { GameStateManager } from '../core/GameState';
-import { gameState } from '$lib/stores/gameState';
+// NB: the engine no longer imports the Svelte store — its per-tick output goes through an
+// injected `outputSink` (set by the store on the main thread; postMessage in the sim worker).
+// This severs the only engine→store coupling, the prerequisite for running the sim off-thread
+// (ENGINE-PERFORMANCE ADR-021 / sim→Worker W0).
 import { workService } from '../services/WorkService';
 import { itemService } from '../services/ItemService';
 import { recipeService } from '../services/RecipeService';
@@ -51,6 +54,23 @@ export class GameEngineImpl implements GameEngine {
   private lastTurnProcessed = 0;
   /** Counts ticks toward the next throttled UI notification (see UI_PUSH_INTERVAL). */
   private uiPushCounter = 0;
+  /**
+   * Per-tick output sink (ENGINE-PERFORMANCE ADR-021, sim→Worker W0). The engine no longer imports
+   * the Svelte store; the owner injects how to publish each tick's state — on the main thread that's
+   * `pushFromEngine` (store), in the sim worker it'll postMessage a snapshot. `flush` mirrors the old
+   * UI-push throttle (notify subscribers this tick).
+   */
+  private outputSink: ((state: GameState, flush: boolean) => void) | null = null;
+  /** Command-path commit sink (P-2 user actions). Same decoupling as outputSink. */
+  private commitSink: ((state: GameState, save: boolean) => void) | null = null;
+
+  setOutputSink(sink: (state: GameState, flush: boolean) => void): void {
+    this.outputSink = sink;
+  }
+
+  setCommitSink(sink: (state: GameState, save: boolean) => void): void {
+    this.commitSink = sink;
+  }
 
   constructor(config: GameEngineConfig = {}) {
     this.config = {
@@ -147,7 +167,7 @@ export class GameEngineImpl implements GameEngine {
       // subscribers at ~15 Hz (see UI_PUSH_INTERVAL).
       t('uiPush', () => {
         this.uiPushCounter = (this.uiPushCounter + 1) % UI_PUSH_INTERVAL;
-        gameState.pushFromEngine(this.gameState!, this.uiPushCounter === 0);
+        this.outputSink?.(this.gameState!, this.uiPushCounter === 0);
       });
 
       if (prof && this.gameState.turn % TICKS_PER_SECOND === 0) {
@@ -599,7 +619,7 @@ export class GameEngineImpl implements GameEngine {
     if (!this.gameState) return;
     // Engine is the single writer (P-2): commit canonical state to the store as a projection
     // (notify + debounced save). Routing through updateWithSave would just bounce back here.
-    gameState.commitFromEngine(this.gameState, true);
+    this.commitSink?.(this.gameState, true);
   }
 
   /**
@@ -613,7 +633,7 @@ export class GameEngineImpl implements GameEngine {
     if (!this.gameState) return;
     this.gameState = updater(this.gameState);
     this.gameStateManager?.updateState(this.gameState);
-    gameState.commitFromEngine(this.gameState, save);
+    this.commitSink?.(this.gameState, save);
   }
 
   /**

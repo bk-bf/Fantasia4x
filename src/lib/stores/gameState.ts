@@ -630,6 +630,11 @@ const pushFromEngine = (state: GameState, flush: boolean) => {
 // ===== INITIALIZE GAMEENGINE =====
 const gameStateManager = new GameStateManager(initialGameState);
 gameEngine.setGameStateManager(gameStateManager);
+// Inject the per-tick output sink (ADR-021 W0): the engine pushes each tick's state to the store
+// through this, instead of importing the store itself — so the engine can later run in a worker
+// where the sink becomes a postMessage. Default = the existing store push (behaviour unchanged).
+gameEngine.setOutputSink(pushFromEngine);
+gameEngine.setCommitSink(commitFromEngine);
 console.log('[GameState] GameEngine initialized with GameStateManager');
 
 // ===== ASYNC SAVE LOAD + MIGRATIONS =====
