@@ -4,6 +4,56 @@ Tracks confirmed bugs, root causes, and fix status. Add new entries at the top.
 
 ---
 
+## [FIXED] Hunt yoyo — predator sub-tile render snap-back on re-path
+
+**Symptom:** A hunting predator (e.g. wolf #16) visibly yoyos — the sprite springs forward then snaps
+back toward its tile centre several times a second — while still making net forward progress toward
+fleeing prey. At the logical (per-300-turn) level the chase is clean; the jitter is sub-tile/visual.
+
+**Root cause:** The renderer derives a mob's sub-tile position from `nextCellCostLeft`
+(`MovementSystem.simTarget`: `progress = 1 − costLeft/totalCost`). `stepHunting` re-paths every 10
+ticks while the prey flees (`preyMoved && (turn − stateSince) % 10 === 0`), and each re-path returned
+`nextCellCostLeft: undefined`. A tile crossing takes ~20 ticks at wolf speed, so the reset landed
+**mid-crossing**, snapping `progress` back to 0 → the rendered sprite jumped back to tile centre
+~6×/second. Pawns never did this: `PawnService.assignPath` leaves `nextCellCostLeft` intact, and the
+flee `stepDirectional` even returns the mob unchanged when the new step equals the current one — only
+the mob hunt re-path nuked the in-progress crossing.
+
+**Fix** (`src/lib/game/services/entity/entityAI.ts`, `stepHunting`): drop the `nextCellCostLeft:
+undefined` from the re-path return so the crossing carries over to the fresh path's first step (always
+a neighbour of the same tile, since WASM `find_path` excludes the start tile — see
+`spatial-core/src/lib.rs` `reconstruct`). Mirrors pawn `assignPath` / flee `stepDirectional`. This is
+the same class as the ADR-014 "no re-path → no yoyo" principle, applied to the sub-tile interp.
+
+## [OPEN] Cornered-flee ping-pong — prey boxed between two threats
+
+**Symptom:** A prey animal (e.g. mountain goat #10) gets stuck in `Fleeing` for minutes, ping-ponging
+between two adjacent tiles (observed: (82,101)↔(83,101)). It never exits to `Grazing` and never
+reaches `Exhausted`.
+
+**Root cause (NOT the state machine):** The goat is boxed between two threats on opposite sides
+(pawns to the NE, a wolf/bear to the SW). `Fleeing` exits to `Grazing` only when the *closest* threat
+passes `def.stats.fleeRange` (entityAI `case 'Fleeing'`), but with a threat on each side the goat can
+never get beyond range of both — so it stays in `Fleeing`. Worse, `moveAway` (→ `stepDirectional`,
+`sign=-1`) only steers away from the **single closest** threat each tick; when the closest flips side
+to side, the chosen tile flips too → the greedy per-tick step oscillates instead of committing to an
+escape. (Stamina does drain to `Exhausted` normally, but here it cycles flee→exhaust→recover→flee
+near the same spot; the visible artefact is the positional ping-pong, a *pathing* weakness.)
+
+**Instrumentation added 2026-06-14:** `entityAI.logFleeTrigger` emits an `ENTITY-FLEE` line
+(→ `.debug/entities.log`) at every Grazing/Sleeping/eating→Startled transition, recording the threat
+kind (pawn/predator), its position, the distance, and the creature's vision/flee ranges — so a
+cornered flee is diagnosable instead of inferred.
+
+**Proposed fix (not yet applied):** Make flee target the direction that maximises distance from **all**
+in-range threats, and commit to it (path *through/past* the danger) rather than greedily backing away
+from the nearest one each tick. Concretely, in the `Fleeing` step: gather every threat within
+`fleeRange`, pick the walkable neighbour (or a short A* heading) that maximises the **summed** (or
+min) distance to that threat set, and — like flee `stepDirectional`'s existing same-step guard — keep
+the current heading unless a clearly better one appears, so it doesn't reverse every tick. Add a
+flee give-up / "can't escape" timeout (mirroring `HUNT_GIVE_UP_SECONDS`) so a truly boxed-in prey
+stops thrashing and holds (or turns to fight) instead of ping-ponging forever.
+
 ## [FIXED] In-sync movement stagger + entities phasing through each other
 
 **Symptom:** Two flavours of the same root problem. (1) During hunts/chases, a pursuer moving at the same speed as its quarry would stagger — stepping forward, snapping back, re-pathing every tick. (2) Enemies walked straight **through** pawns and through each other, letting them surround a defender or stack on one tile and deal stacked melee damage (no doorway/chokepoint defence possible).

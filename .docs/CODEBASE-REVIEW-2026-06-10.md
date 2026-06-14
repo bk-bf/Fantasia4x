@@ -41,7 +41,7 @@ PT-2/3/4, and the full PawnStateMachine decomposition — is in the
 
   Progress 2026-06-14: types.ts, Combat data-table, JobService fuel-rules, and EntityService
   decomposition are **done** (✅ rows below); GameCanvas is **in progress** (shared sprite-sheet +
-  HUD-icon modules extracted, build green; remaining leaves mapped below).
+  HUD-icon modules + BuildingFuelPanel extracted, build green; remaining leaves mapped below).
 
   | File | LOC | Decomposition status |
   | ---- | --- | -------------------- |
@@ -49,7 +49,7 @@ PT-2/3/4, and the full PawnStateMachine decomposition — is in the
   | `systems/Combat.ts` | 1,499 → **932** ✅ | **Done (data table).** `BODY_PART_DEFS` table + `BodyPartDef`/`PART_DEF_MAP`/`OUTER_PARTS`/`createDefaultBodyParts`/`rollBodyPart` moved to `core/BodyParts.ts` (569 LOC); Combat re-exports `PART_DEF_MAP`/`createDefaultBodyParts` for existing importers; dead `CLOT_FLOOR` export removed. Optional follow-up: lift damage/wound math into `combatMath.ts` (entangled with class tuning constants — deferred, lower value). |
   | `services/JobService.ts` | 1,337 → **1,261** ✅ (fuel) | **Partial.** Refuel **rules** (`getRefuelThresholdRatio`/`getRefuelRequirements`/`canSatisfyRefuelRequirements`/`hasRequiredFuelTypesForRefuel` + defaults + `RefuelRequirements`) extracted to a focused new `services/fuelRules.ts` (free functions; JobService calls `fuelRules.*`). _Note:_ they went to `fuelRules.ts` rather than `BuildingService` because BuildingService was already at the 40-fn god-module limit — adding them there tripped the warning, so a dedicated module is the cleaner home. **Remaining:** the per-job-type handler split into `services/jobs/<type>.ts` (ADR-017 registry) — the bigger structural piece, still open. |
   | `services/EntityService.ts` | 2,022 → **56** ✅ | **Done 2026-06-14.** Decomposed into an `entity/` dir of free-function modules (mirrors `pawn/*`): `entityConstants` (116), `entityHelpers` (430 — queries/movement/foraging lookups + `advanceMobMovement`), `entitySpawning` (238), `entityAI` (1,015 — the FSM brain + feeding sub-steps), `entityLifecycle` (211 — hunger/blood-loss/death/decay). EntityService is now a 56-line facade. The class had no instance state but `idCounter` (now a module-level counter in spawning), so every `this.X` dropped to a free-function call. `entityAI` is still 1,015 LOC — the cohesive stepping brain; optional future sub-split into hostile/passive. 188 tests green, eslint clean. |
-  | `components/UI/GameCanvas.svelte` | 3,421 → **3,341** 🔄 | **In progress (leaf-first).** Done 2026-06-14: the shared **`gameCanvas/spriteSheets.ts`** (magenta-keyed tileset cache + `getSheet`/`loadSheet`/`onSheetLoaded`) — this was the unblocker, since the sheet caches were shared by the HUD icons *and* the designation overlay — plus **`gameCanvas/hudSpriteIcon.ts`** (the `use:hudSpriteIconAction` Svelte action + tint). Component registers one `onSheetLoaded` callback that repaints both consumers. Build + 188 tests green. **Remaining leaves (next pass), by ascending coupling:** (1) `<BuildingFuelPanel>` — ~250 LOC self-contained settings UI (handlers `toggleFuelSettingsPanel`/`updateSelectedBuildingFuelSettings`/filters + animated-`open` template + scoped styles); pass `building`+`pawns` props, panel calls `gameState.updateWithSave` itself; keep the `showFuelSettings` toggle + escape-close + FUEL button in GameCanvas. (2) `selectionCard.ts` card builders (`buildPawnCard`/`buildMobCard`/`entityDebugLabel`) — thread `cameraFollow*` + callbacks (`toggleDraft`, `uiState`) as params. (3) overlay painting → `gameCanvas/overlay.ts` (now reads sheets via `getSheet`). (4) camera → `gameCanvas/camera.svelte.ts`. (5) pointer/keyboard + drag state-machines last (most coupled). **Sim-clock note:** the rAF loop calls `gameState.stepSimulation(dt)` (sim + render share one schedule); decoupling fully is a separate design change. |
+  | `components/UI/GameCanvas.svelte` | 3,421 → **2,986** 🔄 | **In progress (leaf-first).** Done 2026-06-14 (all build + 188 tests green): (a) shared **`gameCanvas/spriteSheets.ts`** (magenta-keyed tileset cache + `getSheet`/`loadSheet`/`onSheetLoaded`) — the unblocker, since the sheet caches were shared by the HUD icons *and* the designation overlay; (b) **`gameCanvas/hudSpriteIcon.ts`** (`use:hudSpriteIconAction` action + tint); (c) **`gameCanvas/BuildingFuelPanel.svelte`** (368 LOC — the per-building refuel settings UI: paused/threshold/fuel+colonist filters + animated-`open` panel + scoped styles; takes `building`+`pawns`+`open` props and writes `fuelSettings` via `gameState.updateWithSave`). GameCanvas keeps the `showFuelSettings` toggle + escape-close + FUEL button and renders `<BuildingFuelPanel>`. **Remaining leaves (next pass), by ascending coupling:** (1) `selectionCard.ts` card builders (`buildPawnCard`/`buildMobCard`/`entityDebugLabel`) — thread `cameraFollow*` + callbacks (`toggleDraft`, `uiState`) as params. (2) overlay painting → `gameCanvas/overlay.ts` (now reads sheets via `getSheet`). (3) camera → `gameCanvas/camera.svelte.ts`. (4) pointer/keyboard + drag state-machines last (most coupled). **Sim-clock note:** the rAF loop calls `gameState.stepSimulation(dt)` (sim + render share one schedule); decoupling fully is a separate design change. |
 
   Plus 21 components over the 200-line cap (ActivityLogOverlay 525, CraftingScreen/BuildingMenu 484,
   ResearchScreen 452, ZonePanel 447, EntityScreen 422…). Split along existing seams opportunistically.
@@ -93,6 +93,20 @@ PT-2/3/4, and the full PawnStateMachine decomposition — is in the
   tiles (or compute lazily in the work handler from ambient + nearby emitters). Found 2026-06-14 while
   generalising building light. Small-ish; mostly deciding where to compute it without scanning the
   whole 240×160 map per tick.
+- [ ] **MOVE-1 · Duplicated per-tick move pass + divergent path-assign (pawns vs mobs).** The
+  *core* of movement is already shared (`systems/MovementSystem.ts`: `advanceAlongPath`, `simTarget`,
+  `moveCostToEnter`), but the **per-tick driver** is copy-pasted: `PawnService.processMovement` and
+  `entity/entityHelpers.advanceMobMovement` are ~80% identical (occupancy hold, `blockedTicks`
+  drop-and-reroute, claim set, `advanceAlongPath`). Worse, **path assignment diverges**: pawn
+  `assignPath` preserves `nextCellCostLeft`; flee `stepDirectional` guards against re-issuing the same
+  step; but the mob hunt re-path *reset* `nextCellCostLeft: undefined` — which was exactly the
+  [FIXED] hunt-yoyo regression (BUGS.md). Each new movement consumer re-derives "follow path / hold
+  when blocked / (re)assign a path without breaking the crossing", so they drift and the same bug
+  class recurs. Fix direction: one shared `advanceBodies(bodies, occupancy, worldMap)` pass + one
+  shared `assignPath`/`repath` that *always* preserves mid-crossing, parameterised over a minimal
+  `Movable` body shape; pawns/mobs keep only their distinct FSM + state fields. Movement is plain TS
+  (not spatial), so ADR-008 doesn't constrain it. Real refactor (the two passes differ in claim /
+  mid-cross reservation details) — do as its own pass, don't fold into a bugfix. Found 2026-06-14.
 
 ## Carried-forward deferred (unchanged status)
 
