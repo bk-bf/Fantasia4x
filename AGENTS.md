@@ -69,52 +69,70 @@ pnpm lint                 # ESLint + Prettier check
 pnpm format               # Prettier write
 pnpm test                 # Vitest unit/regression suite (test:watch for watch mode)
 pnpm add:wasm             # rebuild spatial-core WASM → src/lib/spatial-core-pkg/
-pnpm graph                # build the static codebase call-graph explorer (codegraph.html)
-pnpm graph:serve          # live graph + JSON query API on http://localhost:5180
+pnpm graph                # (re)extract this project's graph via the standalone codegraph tool
+pnpm graph:serve          # codegraph viewer + JSON query API on http://localhost:5180
+pnpm graph:check          # architecture checks (ADRs/layers/cycles/god-modules/orphans)
+pnpm graph:snapshot       # save the current graph as a baseline
+pnpm graph:diff           # diff the graph against the saved baseline
 ```
 
-## Codebase Graph (`tools/codegraph/`)
+> These `graph:*` scripts call the standalone codegraph CLI at `../codegraph`
+> (`node ../codegraph/bin/codegraph.mjs … Fantasia4x`) — it must be checked out as a
+> sibling of this repo. Override its location with `CODEGRAPH_DIR`.
 
-An interactive call-graph explorer plus a **JSON query API for agents** — use it
-to understand structure, find callers/callees, trace call paths, and spot hubs
-instead of grepping blind. Covers **TypeScript** (`src/lib`), **Svelte**
-components, and **Rust** (`spatial-core`) in one connected graph, so a call path
-can cross the WASM boundary. See `tools/codegraph/README.md`.
+## Codebase Graph (standalone `codegraph` tool)
 
-- Browser view: `pnpm graph` then open `tools/codegraph/codegraph.html`.
-- Live server + API: `pnpm graph:serve` (also started by `./launch.sh --debug`).
-- API (localhost-only, CORS-open, `GET /api` is self-documenting):
-  `/api/function?name=<Class.method|method>` (description, signature, callers, callees),
-  `/api/search?q=`, `/api/callers?name=`, `/api/callees?name=`, `/api/path?from=&to=`,
-  `/api/module?name=`, `/api/hubs`, `/api/graph`. Add `?format=md` for prose.
-  e.g. `curl 'localhost:5180/api/function?name=tickPawn'`
-- Everything in the browser UI is also queryable: the four browse lists →
-  `/api/functions` · `/api/calls` · `/api/files` · `/api/modules` (same
-  `sort=`/`group=`/`q=` options), and the Insights panel →
-  `/api/check` · `/api/port-candidates` · `/api/orphans`.
-- Every function gets a description (JSDoc, else inferred); improve specific ones by
-  editing `tools/codegraph/descriptions.json` (keyed `module::Class.method`).
-- Guardrails: `pnpm graph:check` enforces architecture rules (each checkable ADR,
-  layer direction, cycles, god-modules, orphans; exit 1 on violations — CI-ready).
-  `pnpm graph:snapshot` / `pnpm graph:diff` track structural change over time.
-  `/api/port-candidates` ranks TS→Rust port targets; `/api/orphans` finds dead code.
+The call-graph explorer + **JSON query API for agents** lives in its own repo at
+`../codegraph` (a sibling of this one). Fantasia4x is **onboarded** as a project
+via `codegraph.config.json` + `codegraph.descriptions.json` at this repo's root
+(the config declares the layer map and ADR rules; pure JSON — analysing the
+project never runs its code). Use the API to understand structure, find
+callers/callees, trace call paths, and spot hubs instead of grepping blind.
+Covers **TypeScript** (`src/lib`), **Svelte** components, and **Rust**
+(`spatial-core`) in one connected graph, so a call path can cross the WASM
+boundary. See `../codegraph/README.md`.
+
+- **Start it:** `pnpm graph:serve` (or `./launch.sh --debug`) → SvelteKit viewer
+  + API on http://localhost:5180. `--debug` also watches `src/lib` and
+  re-extracts on change; otherwise re-extract manually with `pnpm graph`.
+- **Query the API (agents).** CORS-open; `GET /api` is self-documenting. With one
+  project onboarded the default is Fantasia4x; otherwise append
+  `?project=Fantasia4x`. Responses are JSON.
+  - `/api/function?name=<id|Class.method|method>` — description, signature,
+    callers, callees. Ambiguous names return all matches.
+  - `/api/search?q=` · `/api/callers?name=` · `/api/callees?name=`
+  - `/api/path?from=&to=` — shortest call path (crosses the TS↔Rust boundary)
+  - `/api/module?name=` · `/api/modules` · `/api/hubs` · `/api/graph` · `/api/stats`
+  - Browse lists: `/api/functions` · `/api/calls` · `/api/files` (with
+    `sort=`/`group=`/`q=`/`kind=`/`exported=`/`tested=`/`cross=`/`limit=`)
+  - Insights: `/api/check` · `/api/recommendations` · `/api/port-candidates` ·
+    `/api/orphans`
+  - e.g. `curl 'localhost:5180/api/function?name=tickPawn'`
+    · `curl 'localhost:5180/api/path?from=processGameTurn&to=tickPawn'`
+- **Descriptions:** every function gets one (curated → JSDoc → inferred). Improve
+  specific ones by editing this repo's `codegraph.descriptions.json` (keyed
+  `module::Class.method` for functions, full module path for modules), then
+  re-extract.
+- **Guardrails:** `pnpm graph:check` enforces architecture rules (each checkable
+  ADR, layer direction, cycles, god-modules, orphans; exit 1 on violations —
+  CI-ready). `pnpm graph:snapshot` / `pnpm graph:diff` track structural change.
 
 ### Onboarding an ADR into the graph checker
 
-Every ADR in `DECISIONS.md` must be registered in `ADR_RULES` (top of
-`tools/codegraph/analysis.mjs`); `graph:check`'s `adr-coverage` rule flags any
-that isn't. When you add an ADR, add one entry — either:
+Every ADR in `DECISIONS.md` must be registered in this repo's
+`codegraph.config.json` `adrRules`; `graph:check`'s `adr-coverage` rule flags any
+that isn't. When you add an ADR, add one JSON entry — either:
 
-- a structural invariant the call graph can verify:
-  `{ adr: 'ADR-0XX', severity: 'error'|'warn', title, check: (graph, { byId }) => findings[] }`
-  where each finding is `{ msg, module?, id?, file?, line? }` (see the `ADR-008`
-  entry for the pattern), **or**
+- a **declarative** structural rule the call graph can verify, e.g.
+  `{ "adr": "ADR-0XX", "severity": "error", "title": "…", "type": "forbidden-callee-module", "module": "game/services/X", "msg": "…" }`
+  (see the existing `ADR-008` entry; a new rule **type** is added once in
+  `../codegraph/src/lib/core/analysis.mjs`'s `ADR_RULE_TYPES`), **or**
 - an acknowledgement that it isn't graph-expressible (most are design/runtime):
-  `{ adr: 'ADR-0XX', checkable: false, reason: '…' }`.
+  `{ "adr": "ADR-0XX", "checkable": false, "reason": "…" }`.
 
 Checkable ADRs then appear as their own rule in `graph:check`, the API
-(`/api/check`), and the viewer's Architecture-check panel automatically — no
-other wiring needed.
+(`/api/check`), and the viewer's Insights panel automatically — no other wiring
+needed.
 
 ## Documentation
 
