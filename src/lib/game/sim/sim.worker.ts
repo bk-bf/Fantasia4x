@@ -18,6 +18,7 @@ import { rng } from '../core/rng';
 import { resetUnreachableJobs } from '../systems/PawnStateMachine';
 import { TICKS_PER_SECOND } from '../core/time';
 import { setSimLogSink, type SimLogSink } from '../core/logSink';
+import { gameLogger } from '../dev/gameLogger';
 import { applySimCommand } from './commands';
 import type { SimLogEvent } from './simProtocol';
 import type { GameState } from '../core/types';
@@ -136,6 +137,12 @@ function publish(state: GameState, flush: boolean) {
   });
 }
 
+// Always-on TPS/tick-cost meter → perf.log once/sec. Tells us the compute ceiling (achieved TPS,
+// avg ms/tick, worker busy%) so "4× does nothing" can be diagnosed as compute-bound vs. a bug.
+let tpsTicks = 0;
+let tpsTickMs = 0;
+let tpsSince = 0;
+
 function batch() {
   if (paused) {
     accMs = 0;
@@ -149,7 +156,10 @@ function batch() {
   const start = now;
   let steps = 0;
   while (accMs >= TICK_MS && steps < MAX_STEPS_PER_BATCH) {
+    const t0 = performance.now();
     const r = gameEngine.processGameTurn();
+    tpsTickMs += performance.now() - t0;
+    tpsTicks++;
     if (!r.success) {
       accMs = 0;
       post({ kind: 'error', error: 'tick failed: ' + (r.errors ?? []).join('; ') });
@@ -164,6 +174,22 @@ function batch() {
   // ticks across batches, while bounding it so it can't spiral into ever-longer locked catch-up.
   if (accMs > MAX_BACKLOG_MS) accMs = MAX_BACKLOG_MS;
   flushLog(); // ship combat-text/chronicle emitted during this batch's ticks
+
+  if (!tpsSince) tpsSince = now;
+  const elapsed = now - tpsSince;
+  if (elapsed >= 1000) {
+    const tps = (tpsTicks / elapsed) * 1000;
+    const avg = tpsTicks ? tpsTickMs / tpsTicks : 0;
+    const busy = (tpsTickMs / elapsed) * 100;
+    gameLogger.log(
+      gameEngine.getGameState()?.turn ?? 0,
+      'PERF',
+      `[SIM-TPS] speed=${speed}× tps=${tps.toFixed(0)} (target ${speed * TICKS_PER_SECOND}) avgTick=${avg.toFixed(1)}ms busy=${busy.toFixed(0)}%`
+    );
+    tpsTicks = 0;
+    tpsTickMs = 0;
+    tpsSince = now;
+  }
 }
 
 self.onmessage = async (e: MessageEvent) => {
