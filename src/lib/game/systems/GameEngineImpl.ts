@@ -26,6 +26,7 @@ import { TICKS_PER_SECOND, ticksFromSeconds, perTick } from '../core/time';
 import { buildPathfindingGridsWithBlocked } from '../services/PathfinderService';
 import { occupancyService } from '../services/OccupancyService';
 import { isGameDebug, gatedConsole } from '../core/log';
+import { gameLogger } from '../dev/gameLogger';
 import type { WorkCategory } from '../core/types';
 import type { Pawn } from '../core/types';
 import { rng } from '../core/rng';
@@ -173,6 +174,8 @@ export class GameEngineImpl implements GameEngine {
         // console), so this is the sanctioned raw-console exemption.
         // eslint-disable-next-line no-console
         console.log('[PROF] ' + JSON.stringify(out));
+        // Also persist to .debug/perf.log so a --profiler run is readable off-console.
+        gameLogger.log(this.gameState?.turn ?? 0, 'PERF', '[PROF] ' + JSON.stringify(out));
         for (const k of Object.keys(prof)) {
           prof[k].sum = 0;
           prof[k].n = 0;
@@ -497,6 +500,7 @@ export class GameEngineImpl implements GameEngine {
       // ADR-011 sanctioned profiler output (always prints).
       // eslint-disable-next-line no-console
       console.log('[PROF-PAWN] ' + JSON.stringify(out));
+      gameLogger.log(this.gameState?.turn ?? 0, 'PERF', '[PROF-PAWN] ' + JSON.stringify(out));
       for (const k of Object.keys(prof)) {
         prof[k].sum = 0;
         prof[k].n = 0;

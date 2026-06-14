@@ -19,6 +19,7 @@
   import type { GameGrid } from '$lib/webgl/game-grid.js';
   import { GameGrid as GameGridClass } from '$lib/webgl/game-grid.js';
   import { BASE_TILE_PX } from '$lib/webgl/tile-types.js';
+  import { gameLogger } from '$lib/game/dev/gameLogger';
   import { wasmPathfinderService } from '$lib/game/services/WasmPathfinderService.js';
   import { pawnService } from '$lib/game/services/PawnService.js';
   import { buildPathfindingGrids } from '$lib/game/services/PathfinderService.js';
@@ -1652,8 +1653,11 @@
       `  canvas backing store: ${cw}×${ch}px (${((cw * ch) / 1e6).toFixed(1)}MP, dpr ${dpr}) ` +
         `— CSS ${canvas?.clientWidth ?? 0}×${canvas?.clientHeight ?? 0}`
     );
+    const banner = lines.join('\n');
     // eslint-disable-next-line no-console
-    console.log(lines.join('\n'));
+    console.log(banner);
+    // Also persist to .debug/perf.log (PERF tag) so the run is readable without the console.
+    gameLogger.log(0, 'PERF', banner.replace(/\n/g, ' | '));
   }
 
   function startLoop() {
@@ -1716,13 +1720,14 @@
           const heap = mem
             ? ` · heap ${(mem.usedJSHeapSize / 1048576).toFixed(0)}/${(mem.jsHeapSizeLimit / 1048576).toFixed(0)}MB`
             : '';
-          // eslint-disable-next-line no-console
-          console.log(
+          const renderLine =
             `[RENDER-PROF] ${f}fps · frame ${frameMs.toFixed(1)}ms ` +
-              `= sim ${(profAccum.sim / f).toFixed(1)} + overlay ${(profAccum.overlay / f).toFixed(1)} ` +
-              `+ render ${(profAccum.render / f).toFixed(1)}ms ` +
-              `(GPU/idle ${(frameMs - js).toFixed(1)}ms) · main-thread ${busy.toFixed(0)}% busy${heap}`
-          );
+            `= sim ${(profAccum.sim / f).toFixed(1)} + overlay ${(profAccum.overlay / f).toFixed(1)} ` +
+            `+ render ${(profAccum.render / f).toFixed(1)}ms ` +
+            `(GPU/idle ${(frameMs - js).toFixed(1)}ms) · main-thread ${busy.toFixed(0)}% busy${heap}`;
+          // eslint-disable-next-line no-console
+          console.log(renderLine);
+          gameLogger.log(0, 'PERF', renderLine);
           profAccum = { sim: 0, overlay: 0, render: 0, frames: 0, wall: 0 };
           profLast = now;
         }
