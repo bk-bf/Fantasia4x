@@ -3,8 +3,7 @@
  * Simple interface for iterative development
  */
 
-import type { GameState, WorkAssignment } from '../core/types';
-import type { BuildingEffectResult } from './ModifierSystem';
+import type { GameState } from '../core/types';
 
 export interface TurnProcessingResult {
   success: boolean;
@@ -53,36 +52,8 @@ export interface GameEngine {
   getGameState(): GameState;
   updateGameState(updates: Partial<GameState>): SystemInteractionResult;
 
-  // Basic calculations (can expand iteratively)
-  calculateBuildingEffects(buildingId: string, locationId?: string): BuildingEffectResult;
-
-  // Pawn coordination methods
-  getPawnNeeds(pawnId: string): any;
-  getPawnActivities(pawnId: string): string[];
-  getPawnNeedStatus(pawnId: string): { critical: string[]; warning: string[]; normal: string[] };
-
-  // Service coordination methods for UI
-  // ItemService coordination
-  getItemById(itemId: string): any;
-  getAllItems(): any[];
-  getCraftableItems(): any[];
-  craftItem(itemId: string, quantity?: number): void;
-
-  // BuildingService coordination
-  getBuildingById(buildingId: string): any;
-  getAllBuildings(): any[];
-  getBuildableBuildings(): any[];
-
-  // ResearchService coordination
-  getResearchById(researchId: string): any;
-  getAllResearch(): any[];
-  getAvailableResearch(): any[];
-  startResearch(researchId: string): void;
-
-  // WorkService coordination
-  assignPawnToWork(pawnId: string, workType: string): void;
-  unassignPawnFromWork(pawnId: string): void;
-  getWorkAssignments(): Record<string, any>;
+  // UI-facing coordination (getById lookups, craftItem, startResearch, work assignment, …) lives
+  // in GameCoordinator (P-2b), not on the engine — this interface stays a turn coordinator.
 
   // Integration
   setGameStateManager(manager: any): void;

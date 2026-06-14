@@ -4,11 +4,9 @@ import type {
   TurnProcessingResult,
   SystemInteractionResult
 } from './GameEngine';
-import type { BuildingEffectResult } from './ModifierSystem';
-import type { GameState, EntityNeeds } from '../core/types';
-import { GameStateManager, reserveForOrder, releaseReservation } from '../core/GameState';
+import type { GameState } from '../core/types';
+import { GameStateManager } from '../core/GameState';
 import { gameState } from '$lib/stores/gameState';
-import { modifierSystem } from './ModifierSystem';
 import { workService } from '../services/WorkService';
 import { itemService } from '../services/ItemService';
 import { recipeService } from '../services/RecipeService';
@@ -16,7 +14,6 @@ import { pawnService } from '../services/PawnService';
 import { buildingService } from '../services/BuildingService';
 import { researchService } from '../services/ResearchService';
 import { WORK_CATEGORIES } from '../core/Work';
-import itemsData from '../database/items.jsonc';
 import buildingsData from '../database/buildings.jsonc';
 
 import { pawnStateMachineService, reapDeadPawns } from './PawnStateMachine';
@@ -33,7 +30,6 @@ import type { WorkCategory } from '../core/types';
 import type { Pawn } from '../core/types';
 import { rng } from '../core/rng';
 
-const ITEMS_DATABASE = itemsData as unknown as import('../core/types').Item[];
 const AVAILABLE_BUILDINGS = buildingsData as unknown as import('../core/types').Building[];
 
 /**
@@ -66,195 +62,9 @@ export class GameEngineImpl implements GameEngine {
     };
   }
 
-  // ===== PAWN SERVICE COORDINATION METHODS =====
-
-  getPawnNeeds(pawnId: string): EntityNeeds {
-    if (!this.gameState) return { hunger: 0, fatigue: 0, sleep: 0, lastSleep: 0, lastMeal: 0 };
-
-    // COORDINATION: Delegate to PawnService instead of direct pawn access
-    const pawn = this.gameState.pawns.find((p) => p.id === pawnId);
-    return pawn?.needs || { hunger: 0, fatigue: 0, sleep: 0, lastSleep: 0, lastMeal: 0 };
-  }
-
-  getPawnActivities(pawnId: string): string[] {
-    if (!this.gameState) return [];
-    return pawnService.getPawnActivities(pawnId, this.gameState);
-  }
-
-  getPawnNeedStatus(pawnId: string): { critical: string[]; warning: string[]; normal: string[] } {
-    if (!this.gameState) return { critical: [], warning: [], normal: [] };
-    return pawnService.getPawnNeedStatus(pawnId, this.gameState);
-  }
-
-  // ===== SERVICE COORDINATION METHODS FOR UI =====
-
-  // COORDINATION: ItemService methods for UI components
-  getItemById(itemId: string): any {
-    return itemService.getItemById(itemId);
-  }
-
-  getAllItems(): any[] {
-    // COORDINATION: Return all items from database
-    return ITEMS_DATABASE;
-  }
-
-  getCraftableItems(): any[] {
-    // Engine state is canonical and always current (P-2), so read it directly.
-    if (!this.gameState) return [];
-    return itemService.getCraftableItems(this.gameState);
-  }
-
-  craftItem(
-    itemId: string,
-    quantity: number = 1,
-    selectedIngredients?: Record<string, string>
-  ): void {
-    if (!this.gameState) return;
-    gatedConsole.log(`[GameEngine] Coordinating crafting: ${quantity}x ${itemId}`);
-
-    const item = itemService.getItemById(itemId);
-    if (!item) return;
-
-    // ADR-016 reserve-and-fetch: do NOT consume materials here. Lock the inputs to this order,
-    // pick a workstation, and queue the order. Pawns then fetch the reserved inputs to the
-    // station and craft them there; the output spawns on the station (see JobService).
-    if (!itemService.canCraftItem(itemId, this.gameState)) {
-      this.updateStores();
-      return;
-    }
-
-    const resolved =
-      selectedIngredients ?? itemService.autoSelectIngredients(itemId, this.gameState) ?? {};
-    const activeCost = itemService.resolveActiveCost(item.id, this.gameState, resolved);
-    if (!activeCost) {
-      this.updateStores();
-      return;
-    }
-
-    const recipe = recipeService.getRecipeForItem(item.id);
-    // Inputs scale by quantity (one recipe run per queued unit).
-    const inputs: Record<string, number> = {};
-    for (const [id, q] of Object.entries(activeCost)) inputs[id] = q * quantity;
-
-    const stationType = recipe?.station ?? null;
-    // ADR-016 station tiers: craft at the best available workshop (highest tier that can do this
-    // recipe). A higher-tier station (Crude Workbench, craftingBonus) crafts shared recipes faster.
-    const station = buildingService.bestCraftStation(stationType ?? 'craft_spot', this.gameState);
-    const stationBuildingId = station?.id;
-    const craftBonus = station ? buildingService.craftingBonusOf(station.type) : 0;
-    const workRequired = Math.max(
-      1,
-      Math.ceil(((recipe?.workAmount ?? 1) * quantity) / (1 + craftBonus))
-    );
-
-    // Reserve every input from available stock (does not delete it). If anything is short,
-    // release what we reserved and abort — affordability was checked but stock can race.
-    const orderId = crypto.randomUUID();
-    let gs = this.gameState;
-    let allReserved = true;
-    for (const [id, q] of Object.entries(inputs)) {
-      const res = reserveForOrder(gs, id, q, orderId);
-      gs = res.state;
-      if (res.reserved < q) {
-        allReserved = false;
-        break;
-      }
-    }
-    if (!allReserved) {
-      this.gameState = releaseReservation(gs, orderId);
-      this.updateStores();
-      return;
-    }
-
-    const order: import('../core/types').CraftingInProgress = {
-      id: orderId,
-      item,
-      quantity,
-      workRequired,
-      workDone: 0,
-      inputs,
-      stationType,
-      stationBuildingId,
-      startedAt: gs.turn,
-      selectedIngredients: Object.keys(resolved).length > 0 ? resolved : undefined
-    };
-
-    this.gameState = { ...gs, craftingQueue: [...(gs.craftingQueue ?? []), order] };
-    this.updateStores();
-  }
-
-  // COORDINATION: BuildingService methods for UI components
-  getBuildingById(buildingId: string): any {
-    return buildingService.getBuildingById(buildingId);
-  }
-
-  getAllBuildings(): any[] {
-    // COORDINATION: Return all buildings from database
-    return AVAILABLE_BUILDINGS;
-  }
-
-  getBuildableBuildings(): any[] {
-    if (!this.gameState) return [];
-    return buildingService.getAvailableBuildings(this.gameState);
-  }
-
-  // COORDINATION: ResearchService methods for UI components
-  getResearchById(researchId: string): any {
-    return researchService.getResearchById(researchId);
-  }
-
-  getAllResearch(): any[] {
-    return researchService.getAllResearch();
-  }
-
-  getAvailableResearch(): any[] {
-    if (!this.gameState) return [];
-    return researchService.getAvailableResearch(this.gameState);
-  }
-
-  startResearch(researchId: string): void {
-    if (!this.gameState) return;
-    gatedConsole.log(`[GameEngine] Coordinating research start: ${researchId}`);
-    this.gameState = researchService.startResearch(researchId, this.gameState);
-    this.updateStores();
-  }
-
-  // COORDINATION: WorkService methods for UI components
-  assignPawnToWork(pawnId: string, workType: string): void {
-    if (!this.gameState) return;
-    gatedConsole.log(`[GameEngine] Coordinating work assignment: ${pawnId} to ${workType}`);
-    this.gameState = workService.assignPawnToWork(pawnId, workType, this.gameState);
-    this.updateStores();
-  }
-
-  unassignPawnFromWork(pawnId: string): void {
-    if (!this.gameState) return;
-    gatedConsole.log(`[GameEngine] Coordinating work unassignment: ${pawnId}`);
-
-    // COORDINATION: Remove work assignment by clearing priorities
-    if (this.gameState.workAssignments && this.gameState.workAssignments[pawnId]) {
-      this.gameState = {
-        ...this.gameState,
-        workAssignments: {
-          ...this.gameState.workAssignments,
-          [pawnId]: {
-            ...this.gameState.workAssignments[pawnId],
-            workPriorities: {},
-            currentWork: undefined
-          }
-        }
-      };
-    }
-
-    this.updateStores();
-  }
-
-  getWorkAssignments(): Record<string, any> {
-    if (!this.gameState) return {};
-    return this.gameState.workAssignments || {};
-  }
-
-  // ===== CORE COORDINATION - MOVED FROM GAMESTATE =====
+  // UI-facing coordination (getById lookups, craftItem, startResearch, work assignment…) lives in
+  // GameCoordinator (P-2b) — this class stays a turn coordinator + state owner. Mutating UI actions
+  // reach canonical state via applyCommand (P-2).
 
   processGameTurn(): TurnProcessingResult {
     if (!this.gameState || !this.gameStateManager) {
@@ -803,45 +613,6 @@ export class GameEngineImpl implements GameEngine {
   /** Patch just the worldMap in the engine's internal state (used by regenWorld). */
   patchWorldMap(worldMap: import('../core/types').WorldTile[][]): void {
     if (this.gameState) this.gameState = { ...this.gameState, worldMap };
-  }
-
-  // ===== BASIC CALCULATIONS =====
-
-  calculateBuildingEffects(buildingId: string, locationId?: string): BuildingEffectResult {
-    if (!this.gameState) {
-      return {
-        buildingId,
-        effects: {},
-        workBonuses: {},
-        productionBonuses: {}
-      };
-    }
-    return modifierSystem.calculateBuildingEffects(buildingId, this.gameState);
-  }
-
-  calculateCombatEffectiveness(
-    pawnId: string,
-    combatType: 'melee_damage' | 'hit_chance' | 'dodge' | 'knockdown_resistance' | 'aggro_range'
-  ): number {
-    if (!this.gameState) return 0;
-
-    const pawn = this.gameState.pawns.find((p) => p.id === pawnId);
-    if (!pawn) return 0;
-
-    // Formulas mirror COMBAT-SYSTEM.md spec exactly.
-    const { strength: str, dexterity: dex, constitution: con, perception: per } = pawn.stats;
-    switch (combatType) {
-      case 'melee_damage':
-        return str / 100;
-      case 'hit_chance':
-        return dex * 3;
-      case 'dodge':
-        return dex * 2;
-      case 'knockdown_resistance':
-        return con / 4;
-      case 'aggro_range':
-        return 8 + Math.floor(per / 20);
-    }
   }
 
   // ===== STATE MANAGEMENT =====

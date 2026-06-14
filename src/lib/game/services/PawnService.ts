@@ -886,6 +886,7 @@ export class PawnServiceImpl implements PawnService {
                       pathIndex: 0,
                       nextCellCostLeft: undefined,
                       isMoving: false,
+                      hasReachedDestination: false,
                       blockedTicks: 0
                     }
                   : { ...p, blockedTicks: bt }
