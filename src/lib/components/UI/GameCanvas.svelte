@@ -1679,7 +1679,7 @@
     // Paused and running frames are profiled into SEPARATE buckets — they are completely
     // different workloads (paused: overlay-animation layer only; running: full sim) and must
     // never be averaged together. Each second we emit a tagged line per state that saw frames.
-    const blankProf = () => ({ sim: 0, overlay: 0, render: 0, frames: 0, wall: 0 });
+    const blankProf = () => ({ sim: 0, overlay: 0, render: 0, gpu: 0, frames: 0, wall: 0 });
     let profRun = blankProf();
     let profPause = blankProf();
     let profLast = 0;
@@ -1714,13 +1714,27 @@
       const tRender = prof ? performance.now() : 0;
       renderer.beginFrame();
       renderer.endFrame();
+      // Split render into CPU-submit (building/uploading buffers + queuing draw calls) vs
+      // GPU-execute (gl.finish blocks until the GPU drains): renderCpu large ⇒ CPU-bound on the
+      // renderer; gpuWait large ⇒ the thread is stalling on the iGPU. Profiler-only (finish forces
+      // a sync that would otherwise hurt perf).
+      let renderCpu = 0;
+      let gpuWait = 0;
+      if (prof) {
+        renderCpu = performance.now() - tRender;
+        const gl = renderer.getContext?.();
+        if (gl) {
+          const tg = performance.now();
+          gl.finish();
+          gpuWait = performance.now() - tg;
+        }
+      }
       // Surface render FPS to the topbar ~4×/sec to avoid store churn.
       if (now - lastFpsPush > 250) {
         lastFpsPush = now;
         renderFps.set(Math.round(renderer.getStats().fps));
       }
       if (prof) {
-        const end = performance.now();
         if (!sysBannerLogged) {
           sysBannerLogged = true;
           logSystemBanner();
@@ -1728,7 +1742,8 @@
         const acc = get(gameState.isPaused) ? profPause : profRun;
         acc.sim += tOverlay - tSim;
         acc.overlay += tRender - tOverlay;
-        acc.render += end - tRender;
+        acc.render += renderCpu;
+        acc.gpu += gpuWait;
         acc.wall += dt * 1000;
         acc.frames++;
         if (now - profLast > 1000 && profRun.frames + profPause.frames > 0) {
@@ -1752,14 +1767,16 @@
           ] as const) {
             if (a.frames === 0) continue;
             const f = a.frames;
-            const js = (a.sim + a.overlay + a.render) / f;
+            const cpu = (a.sim + a.overlay + a.render) / f; // pure JS/CPU on the main thread
+            const gpu = a.gpu / f; // thread blocked in gl.finish() waiting on the GPU
             const frameMs = a.wall / f;
-            const busy = frameMs > 0 ? (js / frameMs) * 100 : 0;
+            const busy = frameMs > 0 ? (cpu / frameMs) * 100 : 0;
+            const idle = frameMs - cpu - gpu; // unaccounted (rAF cadence / vsync wait)
             const line =
               `[RENDER-PROF] ${label} ~${(1000 / frameMs).toFixed(0)}fps · frame ${frameMs.toFixed(1)}ms ` +
               `= sim ${(a.sim / f).toFixed(1)} + overlay ${(a.overlay / f).toFixed(1)} ` +
-              `+ render ${(a.render / f).toFixed(1)}ms ` +
-              `(GPU/idle ${(frameMs - js).toFixed(1)}ms) · main-thread ${busy.toFixed(0)}% busy · ${f} frames${heap}${bg}`;
+              `+ renderCPU ${(a.render / f).toFixed(1)} + gpuWait ${gpu.toFixed(1)} + idle ${idle.toFixed(1)}ms ` +
+              `· CPU ${busy.toFixed(0)}% busy · ${f} frames${heap}${bg}`;
             // eslint-disable-next-line no-console
             console.log(line);
             gameLogger.log(0, 'PERF', line);
