@@ -22,7 +22,11 @@ import type {
 import itemsData from '../database/items.jsonc';
 import researchData from '../database/research.jsonc';
 
-const ALL_ITEM_IDS = (itemsData as unknown as { id: string }[]).map((i) => i.id);
+// Exclude `natural_weapon` items (fists/kick/claw/bite…) — they're innate attacks, never real
+// droppable objects, so spawning/pre-stocking them as physical piles is nonsensical.
+const ALL_ITEM_IDS = (itemsData as unknown as { id: string; category?: string }[])
+  .filter((i) => i.category !== 'natural_weapon')
+  .map((i) => i.id);
 const ALL_RESEARCH_IDS = (researchData as unknown as { id: string }[]).map((r) => r.id);
 
 const EMPTY_FILTER: ZoneFilter = { allowedCategories: [], blockedItems: [] };

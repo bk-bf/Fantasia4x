@@ -15,10 +15,26 @@ import type {
   ZoneInstance
 } from '../core/types';
 import { rng } from '../core/rng';
+import { absorbDropIfOnStockpileTile } from '../core/GameState';
 
 class DesignationServiceImpl {
   private key(x: number, y: number): string {
     return `${x},${y}`;
+  }
+
+  /**
+   * A stockpile is just a place designation, so painting one over loose items on the ground
+   * should immediately treat them as stored — no haul required. Absorbs every loose drop sitting
+   * on a now-stockpile tile within the given tile keys (reuses the same trigger as a deposit).
+   */
+  private absorbLooseDropsOnTiles(state: GameState, tileKeys: Set<string>): GameState {
+    let next = state;
+    // Snapshot ids first: absorbing merges/removes drops, mutating the array as we go.
+    const looseIds = (state.droppedItems ?? [])
+      .filter((d) => !d.stored && tileKeys.has(this.key(d.x, d.y)))
+      .map((d) => d.id);
+    for (const id of looseIds) next = absorbDropIfOnStockpileTile(next, id);
+    return next;
   }
 
   /** Drink/wash zones may only sit on water tiles (rivers, lakes, open water). */
@@ -57,6 +73,8 @@ class DesignationServiceImpl {
         designationZoneId: { ...(state.designationZoneId ?? {}), [k]: zoneInstanceId }
       };
     }
+    // Painting a stockpile over existing loose items absorbs them in place.
+    if (type === 'stockpile') state = this.absorbLooseDropsOnTiles(state, new Set([k]));
     return state;
   }
 
@@ -127,6 +145,7 @@ class DesignationServiceImpl {
     const waterOnly = this.requiresWater(type);
     const newDesignations = { ...(gameState.designations ?? {}) };
     const newZoneIds = zoneInstanceId ? { ...(gameState.designationZoneId ?? {}) } : undefined;
+    const paintedTiles = new Set<string>();
     for (let y = minY; y <= maxY; y++) {
       for (let x = minX; x <= maxX; x++) {
         if (mapH > 0 && (x < 0 || y < 0 || x >= mapW || y >= mapH)) continue;
@@ -134,14 +153,18 @@ class DesignationServiceImpl {
         if (waterOnly && !this.isWaterTile(gameState, x, y)) continue;
         const k = this.key(x, y);
         newDesignations[k] = type;
+        paintedTiles.add(k);
         if (zoneInstanceId && newZoneIds) newZoneIds[k] = zoneInstanceId;
       }
     }
-    return {
+    let state: GameState = {
       ...gameState,
       designations: newDesignations,
       ...(newZoneIds ? { designationZoneId: newZoneIds } : {})
     };
+    // Painting a stockpile over existing loose items absorbs them in place (no haul needed).
+    if (type === 'stockpile') state = this.absorbLooseDropsOnTiles(state, paintedTiles);
+    return state;
   }
 
   /**
