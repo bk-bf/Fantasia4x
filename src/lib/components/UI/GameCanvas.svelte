@@ -20,6 +20,7 @@
   import { GameGrid as GameGridClass } from '$lib/webgl/game-grid.js';
   import { BASE_TILE_PX } from '$lib/webgl/tile-types.js';
   import { gameLogger } from '$lib/game/dev/gameLogger';
+  import { profCount } from '$lib/game/core/log';
   import { wasmPathfinderService } from '$lib/game/services/WasmPathfinderService.js';
   import { pawnService } from '$lib/game/services/PawnService.js';
   import { buildPathfindingGrids } from '$lib/game/services/PathfinderService.js';
@@ -1072,6 +1073,10 @@
 
   function redrawOverlayNow() {
     if (!renderer?.isReady() || worldMap.length === 0) return;
+    // Profiler: how often the full 38k-tile terrain grid is rebuilt + re-uploaded. If this is
+    // ~1/tick during RUNNING, the renderCPU cost is rebuild churn (fix the trigger); if ~0 while
+    // renderCPU stays high, the cost is the per-frame buffer re-upload in the renderer instead.
+    profCount('gridRebuild');
     const grid = buildGameGrid(worldMap, buildings, designations, zoneTiles);
 
     // (Live zone drag-paint preview is drawn on the 2D overlay in
