@@ -174,3 +174,71 @@ export function applyDevWorld(state: GameState, itemQty = 500): GameState {
     turn: 100 // 08:00
   };
 }
+
+/**
+ * Dev timesaver that respects ADR-016 (items are ALWAYS physical objects in a location).
+ * Spawns `qty` of EVERY item as **loose `DroppedItem`s on distinct walkable ground tiles**,
+ * spiralling out from the colony (the first pawn, else map centre). They are real objects on
+ * the ground — the normal haul pipeline carries them into stockpiles (respecting tile capacity),
+ * exactly like anything gathered. Nothing is written to the derived `stockpile` aggregate, so
+ * there is **no ephemeral/magical pathway** into the colony's stock.
+ */
+export function devSpawnLooseItems(state: GameState, qty = 500): GameState {
+  const worldMap = state.worldMap;
+  const mapW = worldMap[0]?.length ?? 240;
+  const mapH = worldMap.length;
+  const start = state.pawns?.find((p) => p.position)?.position ?? {
+    x: Math.floor(mapW / 2),
+    y: Math.floor(mapH / 2)
+  };
+  const anchor = findWalkableAnchor(worldMap, start.x, start.y);
+
+  // Keep one loose pile per tile so placement stays physical — never stack unlike items.
+  const occupied = new Set((state.droppedItems ?? []).map((d) => tileKey(d.x, d.y)));
+  const newDrops: DroppedItem[] = [];
+  let placed = 0;
+  const maxR = Math.max(mapW, mapH);
+
+  for (let r = 0; r <= maxR && placed < ALL_ITEM_IDS.length; r++) {
+    for (let dy = -r; dy <= r && placed < ALL_ITEM_IDS.length; dy++) {
+      for (let dx = -r; dx <= r && placed < ALL_ITEM_IDS.length; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue; // current ring only
+        const x = anchor.x + dx;
+        const y = anchor.y + dy;
+        if (x < 0 || y < 0 || x >= mapW || y >= mapH) continue;
+        if (!worldMap[y][x].walkable) continue;
+        const key = tileKey(x, y);
+        if (occupied.has(key)) continue;
+        occupied.add(key);
+        const itemId = ALL_ITEM_IDS[placed++];
+        newDrops.push({
+          id: `dev-loose-${itemId}-${x}-${y}`,
+          resourceId: itemId,
+          x,
+          y,
+          quantity: qty,
+          stored: false
+        });
+      }
+    }
+  }
+
+  return { ...state, droppedItems: [...(state.droppedItems ?? []), ...newDrops] };
+}
+
+/**
+ * Dev inverse of {@link devSpawnLooseItems}: destroy ALL physical items in the colony — every
+ * `DroppedItem` (loose and stored) and everything carried in pawn inventories. The derived
+ * `stockpile` aggregate empties itself (it only counts `stored` drops, now none). Worn equipment
+ * is left alone. In-flight craft/build orders that reserved now-gone inputs simply go unsupplied.
+ */
+export function devDestroyAllItems(state: GameState): GameState {
+  return {
+    ...state,
+    droppedItems: [],
+    stockpile: {},
+    pawns: state.pawns.map((p) =>
+      p.inventory ? { ...p, inventory: { ...p.inventory, items: {}, instances: [] } } : p
+    )
+  };
+}

@@ -88,6 +88,9 @@
   function spawnAllItems() {
     gameState.devSpawnAllItems(DEV_ITEM_QTY);
   }
+  function clearAllItems() {
+    gameState.devClearAllItems();
+  }
 
   const unsubPaused = gameState.isPaused.subscribe((v) => (isPaused = v));
   const unsubSpeed = gameState.gameSpeed.subscribe((v) => (gameSpeed = v));
@@ -180,9 +183,16 @@
     <button
       class="ctrl-btn"
       on:click={spawnAllItems}
-      title="Dev: spawn 500× of every item into the stockpile (no regen)"
+      title="Dev: drop 500× of every item as physical piles on the ground around the colony (haul to use)"
     >
       + ITEMS
+    </button>
+    <button
+      class="ctrl-btn"
+      on:click={clearAllItems}
+      title="Dev: destroy ALL physical items (every drop + carried inventory)"
+    >
+      − ITEMS
     </button>
   {/if}
   <button class="ctrl-btn" class:is-paused={isPaused} on:click={gameState.togglePause}>

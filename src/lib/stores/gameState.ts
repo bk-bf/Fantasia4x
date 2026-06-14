@@ -25,8 +25,7 @@ import { resourceGeneratorService } from '$lib/game/services/ResourceGeneratorSe
 import { entityService } from '$lib/game/services/EntityService';
 import { loadSave, scheduleSave, deleteSave } from './saveManager';
 import { clearActivityLog } from './Log';
-import { applyDevWorld } from '$lib/game/dev/devWorld';
-import itemsData from '$lib/game/database/items.jsonc';
+import { applyDevWorld, devSpawnLooseItems, devDestroyAllItems } from '$lib/game/dev/devWorld';
 import { TICKS_PER_SECOND, ticksFromSeconds } from '$lib/game/core/time';
 import { rng, freshSeed } from '$lib/game/core/rng';
 import { resetUnreachableJobs } from '$lib/game/systems/PawnStateMachine';
@@ -421,14 +420,17 @@ function addItem(itemId: string, amount: number) {
   updateWithSave((state) => addToStockpileZone(state, null, { [itemId]: amount }));
 }
 
-/** Dev timesaver: spawn `amount` of EVERY item in items.jsonc into the current colony's
- *  stockpile as physical stored drops (ADR-016 path, so they're craftable/buildable) — no
- *  world regen, no wipe. The engine syncs from the store next tick. */
-const ALL_ITEM_IDS = (itemsData as unknown as { id: string }[]).map((i) => i.id);
+/** Dev timesaver (ADR-016-faithful): spawn `amount` of EVERY item as physical LOOSE drops on
+ *  the ground around the colony — no world regen, no wipe, no write to the derived stockpile
+ *  aggregate. Haulers carry them into stockpiles like anything gathered. The engine syncs from
+ *  the store next tick. */
 function devSpawnAllItems(amount = 500) {
-  const bulk: Record<string, number> = {};
-  for (const id of ALL_ITEM_IDS) bulk[id] = amount;
-  updateWithSave((state) => addToStockpileZone(state, null, bulk));
+  updateWithSave((state) => devSpawnLooseItems(state, amount));
+}
+
+/** Dev inverse: destroy every physical item (all drops + carried inventory). */
+function devClearAllItems() {
+  updateWithSave((state) => devDestroyAllItems(state));
 }
 
 function resetGame() {
@@ -661,6 +663,7 @@ export const gameState = {
   // Game functions
   addItem,
   devSpawnAllItems,
+  devClearAllItems,
   consumeGlobalItem,
   resetGame,
   wipeAndReload,
