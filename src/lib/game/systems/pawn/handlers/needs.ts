@@ -194,6 +194,13 @@ export function handleTired(pawn: Pawn, gameState: GameState): GameState {
 export function handleMovingToNeed(pawn: Pawn, gameState: GameState): GameState {
   const activeJob = pawn.activeJob;
   if (!activeJob) return goIdle(pawn, gameState);
+
+  // Recover from a path dropped after being blocked too long; if the need target (food
+  // tile / well / bed) is now unreachable, drop back to Idle to re-evaluate.
+  const recovered = repathStuckMover(pawn, gameState);
+  if (recovered === 'unreachable') return goIdle(pawn, gameState);
+  if (recovered) return recovered;
+
   if (pawn.hasReachedDestination && pawn.position) {
     const targetState = (activeJob.targetState ?? PAWN_STATE.EATING) as PawnStateName;
     if (targetState === PAWN_STATE.EATING) {
