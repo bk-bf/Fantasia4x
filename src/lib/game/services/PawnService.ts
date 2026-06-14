@@ -381,43 +381,54 @@ export class PawnServiceImpl implements PawnService {
     const dt = SECONDS_PER_TICK;
     let changed = false;
 
-    const pawns = gameState.pawns.map((pawn) => {
-      if (pawn.isAlive === false) return pawn;
+    // M1 (ENGINE-PERFORMANCE ★ ACTIVE): mutate need fields IN PLACE. The old per-pawn
+    // `{...pawn, needs:{...}, state:{...}}` allocated 3 objects × every pawn × every tick — the
+    // dominant tick cost the R1 benchmark isolated (immutable spread = 12.5× the mutable cost).
+    // Mutation is safe here: processGameTurn shallow-copies the top-level state (turn bump) each
+    // tick so ref-based change detection still fires, and under ?simworker the snapshot is cloned
+    // at the boundary — nothing retains a pre-tick reference to these objects.
+    const pawns = gameState.pawns;
+    for (let i = 0; i < pawns.length; i++) {
+      const pawn = pawns[i];
+      if (pawn.isAlive === false) continue;
 
       const rate = this.getNeedIncreasePerTurn(pawn);
-      const hunger = Math.min(100, pawn.needs.hunger + rate.hunger * dt);
-      const fatigue = Math.min(100, pawn.needs.fatigue + rate.fatigue * dt);
+      const needs = pawn.needs;
+      const hunger = Math.min(100, needs.hunger + rate.hunger * dt);
+      const fatigue = Math.min(100, needs.fatigue + rate.fatigue * dt);
       // §D water needs: thirst & hygiene accrue each tick like hunger. Eating quenches
       // some thirst (handled where meals are consumed); drinking/washing reset them.
-      const thirst = Math.min(100, (pawn.needs.thirst ?? 0) + THIRST_INCREASE_PER_SECOND * dt);
-      const hygiene = Math.min(100, (pawn.needs.hygiene ?? 0) + HYGIENE_INCREASE_PER_SECOND * dt);
+      const thirst = Math.min(100, (needs.thirst ?? 0) + THIRST_INCREASE_PER_SECOND * dt);
+      const hygiene = Math.min(100, (needs.hygiene ?? 0) + HYGIENE_INCREASE_PER_SECOND * dt);
 
       const prevHealth = pawn.state.health ?? 100;
       const health =
         prevHealth < 100
-          ? Math.min(100, prevHealth + this.getHealthRegenPerTurn(pawn.needs) * dt)
+          ? Math.min(100, prevHealth + this.getHealthRegenPerTurn(needs) * dt)
           : prevHealth;
 
       if (
-        hunger === pawn.needs.hunger &&
-        fatigue === pawn.needs.fatigue &&
-        thirst === (pawn.needs.thirst ?? 0) &&
-        hygiene === (pawn.needs.hygiene ?? 0) &&
+        hunger === needs.hunger &&
+        fatigue === needs.fatigue &&
+        thirst === (needs.thirst ?? 0) &&
+        hygiene === (needs.hygiene ?? 0) &&
         health === prevHealth
       ) {
-        return pawn;
+        continue;
       }
 
+      needs.hunger = hunger;
+      needs.fatigue = fatigue;
+      needs.thirst = thirst;
+      needs.hygiene = hygiene;
+      pawn.state.health = health;
       changed = true;
-      return {
-        ...pawn,
-        needs: { ...pawn.needs, hunger, fatigue, thirst, hygiene },
-        state: { ...pawn.state, health }
-      };
-    });
+    }
 
     if (!changed) return gameState;
-    return { ...gameState, pawns };
+    // Bump the array + top-level refs (entities already mutated) so ref-based "changed?" checks
+    // still fire — one array copy instead of 3 allocations per pawn.
+    return { ...gameState, pawns: pawns.slice() };
   }
 
   /**
@@ -465,22 +476,16 @@ export class PawnServiceImpl implements PawnService {
     return state;
   }
 
+  // M1: mutate the one pawn's needs in place instead of mapping the whole pawns array per call
+  // (the old form was O(pawns) allocation per thirsty/dirty pawn → O(n²) under load). The turn-bump
+  // wrapper + flush-time clone make this safe (see processNeedsTick).
   private adjustHygiene(pawnId: string, hygieneDelta: number, gameState: GameState): GameState {
-    return {
-      ...gameState,
-      pawns: gameState.pawns.map((p) =>
-        p.id === pawnId
-          ? {
-              ...p,
-              needs: {
-                ...p.needs,
-                hygiene: Math.min(100, Math.max(0, (p.needs.hygiene ?? 0) + hygieneDelta)),
-                lastWash: gameState.turn
-              }
-            }
-          : p
-      )
-    };
+    const pawn = gameState.pawns.find((p) => p.id === pawnId);
+    if (pawn) {
+      pawn.needs.hygiene = Math.min(100, Math.max(0, (pawn.needs.hygiene ?? 0) + hygieneDelta));
+      pawn.needs.lastWash = gameState.turn;
+    }
+    return gameState;
   }
 
   private adjustThirst(
@@ -489,22 +494,13 @@ export class PawnServiceImpl implements PawnService {
     hygieneDelta: number,
     gameState: GameState
   ): GameState {
-    return {
-      ...gameState,
-      pawns: gameState.pawns.map((p) =>
-        p.id === pawnId
-          ? {
-              ...p,
-              needs: {
-                ...p.needs,
-                thirst: Math.max(0, (p.needs.thirst ?? 0) + thirstDelta),
-                hygiene: Math.min(100, Math.max(0, (p.needs.hygiene ?? 0) + hygieneDelta)),
-                lastDrink: gameState.turn
-              }
-            }
-          : p
-      )
-    };
+    const pawn = gameState.pawns.find((p) => p.id === pawnId);
+    if (pawn) {
+      pawn.needs.thirst = Math.max(0, (pawn.needs.thirst ?? 0) + thirstDelta);
+      pawn.needs.hygiene = Math.min(100, Math.max(0, (pawn.needs.hygiene ?? 0) + hygieneDelta));
+      pawn.needs.lastDrink = gameState.turn;
+    }
+    return gameState;
   }
 
   private isNextToWater(x: number, y: number, gameState: GameState): boolean {
