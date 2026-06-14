@@ -101,6 +101,13 @@
         "description": "stamina pool (× moving × blood_pumping)"
     },
     {
+        "id"         : "stamina_recovery_rate",
+        "category"   : "physical",
+        "primaryStat": "constitution",
+        "formula"    : "(0.1 + (CON − 10) × 0.01) × blood_filtration × blood_pumping",
+        "description": "stamina recovered per turn while resting/winded (× blood_filtration × blood_pumping; injury slows it)"
+    },
+    {
         "id"         : "blood_volume",
         "category"   : "physical",
         "primaryStat": "constitution",

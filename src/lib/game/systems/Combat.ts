@@ -17,9 +17,14 @@ import { itemService } from '../services/ItemService';
 import { getCreatureById } from '../core/Creatures';
 import { woundForDamageType, woundById, severityFromFrac } from '../core/Wounds';
 import { pawnStatService } from '../services/PawnStatService';
+import { calcMaxStamina } from '../entities/Pawns';
+import statusEffectsData from '../database/status-effects.jsonc';
+import type { StatusEffectDef } from '../core/types';
 import { logCombatSwing, logCombatKill } from '../../stores/Log';
 import { combatFeedback, type CombatTextKind } from '../../stores/combatFeedback';
 import { rng } from '../core/rng';
+
+const STATUS_EFFECTS_DB = statusEffectsData as unknown as StatusEffectDef[];
 
 // ── Tuning constants ─────────────────────────────────────────────────────────
 /** Scales per-part bleed so a fully-severed 5%-mass hand ≈ 2 blood/turn. */
@@ -55,10 +60,13 @@ const PAWN_NATURAL_WEAPON_IDS = ['fists', 'kick'];
 const BASE_ATTACK_INTERVAL_TICKS = 60;
 /** Minimum ticks between attacks regardless of attack_speed (caps the fastest attacker). */
 const MIN_ATTACK_INTERVAL_TICKS = 36;
-/** Stamina drained per auto-attack. Shared by mobs; pawn attacks will use same constant. */
+/** Stamina drained per auto-attack when a weapon defines no `staminaCost` of its own. */
 const ATTACK_STAMINA_COST = 2;
-/** Stamina regenerated per tick when winded (no attack this tick). */
-const WINDED_STAMINA_REGEN_PER_TICK = 0.05;
+/** Status-effect id for the winded state (latches at 0 stamina, clears at full). */
+const WINDED = 'winded';
+/** While actively fighting, stamina regenerates at this fraction of the full rate, so a
+ *  sustained melee drains down to winded; a winded/resting entity recovers at the full rate. */
+const COMBAT_REGEN_FRACTION = 0.2;
 
 // ── Body-part definitions ────────────────────────────────────────────────────
 interface BodyPartDef {
@@ -904,9 +912,13 @@ class CombatServiceImpl implements CombatService {
       staminaCost,
       critMod
     } = attackerProfile(attacker);
-    const defDex = defender.stats.dexterity;
+    // Evasion uses the `dodge` stat (DEX − weight, × moving) rather than raw dexterity, so injury,
+    // load, and the winded penalty (× 0.5) all lower it. ×20 keeps baseline parity with the old
+    // `defDex × 2` term (dodge ≈ 1.0 at DEX 10 → 20).
+    const defDodge =
+      pawnStatService.evaluateStat('dodge', defender) * this.effectDodgeMult(defender);
 
-    const hitChance = clamp(dex * 3 + accuracy - defDex * 2, 5, 95);
+    const hitChance = clamp(dex * 3 + accuracy - defDodge * 20, 5, 95);
     if (rng.random() * 100 > hitChance) {
       return {
         hit: false,
@@ -1269,6 +1281,70 @@ class CombatServiceImpl implements CombatService {
     return (d?.knockdown ?? 0) > 0 || (d?.collapse ?? 0) > 0;
   }
 
+  /** True while an entity is winded (stamina bottomed out) — can't attack until stamina refills. */
+  private isWinded(e: Pawn | Mob): boolean {
+    return (e.statusEffectDurations?.winded ?? 0) > 0;
+  }
+
+  /** True while an entity is actively engaged in melee (throttles stamina regen mid-fight). */
+  private isFighting(e: Pawn | Mob): boolean {
+    if ('currentState' in e) {
+      return (
+        e.currentState === 'Fighting' ||
+        e.currentState === 'Hunting' ||
+        (!!e.drafted && e.draftTarget?.type === 'attack')
+      );
+    }
+    return (e as Mob).state === 'Attacking';
+  }
+
+  /** Product of all active status-effect `dodge` modifiers (winded → 0.5 → easier to hit). */
+  private effectDodgeMult(e: Pawn | Mob): number {
+    let m = 1;
+    for (const id of e.activeEffects ?? []) {
+      const v = STATUS_EFFECTS_DB.find((s) => s.id === id)?.modifiers.dodge;
+      if (v != null) m *= v;
+    }
+    return m;
+  }
+
+  /**
+   * Per-tick stamina regen + winded latch for one entity. Drives the "fight until winded, then
+   * pass turns until recovered" loop: regen the full `stamina_recovery_rate` while winded/resting
+   * (throttled to a fraction while actively fighting so a melee actually depletes); on hitting 0
+   * latch `winded`; clear it only once stamina is back to full. Persists through
+   * `statusEffectDurations.winded` (so `syncActiveEffects` keeps it on pawns) and mirrors it into
+   * `activeEffects` (mobs don't run that sync) so the moveSpeed/dodge modifiers apply.
+   */
+  private tickStaminaAndWinded<T extends Pawn | Mob>(e: T): T {
+    if (e.isAlive === false) return e;
+    const max = e.maxStamina ?? calcMaxStamina(e.stats);
+    const postDrain = e.stamina ?? max;
+    const wasWinded = this.isWinded(e);
+    let winded = wasWinded || postDrain <= 0;
+
+    let stamina = postDrain;
+    if (postDrain < max) {
+      const rate = pawnStatService.evaluateStat('stamina_recovery_rate', e);
+      const eff = winded || !this.isFighting(e) ? rate : rate * COMBAT_REGEN_FRACTION;
+      stamina = Math.min(max, Math.max(0, postDrain) + eff);
+    }
+    if (winded && stamina >= max) winded = false;
+
+    if (stamina === postDrain && winded === wasWinded) return e;
+
+    const durations = { ...(e.statusEffectDurations ?? {}) };
+    let activeEffects = e.activeEffects ?? [];
+    if (winded) {
+      durations.winded = 2; // refresh so the per-tick duration decrement never expires the latch
+      if (!activeEffects.includes(WINDED)) activeEffects = [...activeEffects, WINDED];
+    } else {
+      delete durations.winded;
+      if (activeEffects.includes(WINDED)) activeEffects = activeEffects.filter((x) => x !== WINDED);
+    }
+    return { ...e, stamina, statusEffectDurations: durations, activeEffects };
+  }
+
   tickCombat(state: GameState, _dtMs: number): GameState {
     let next = state;
     // Track stamina mutations for attacking entities (id → new stamina value).
@@ -1280,6 +1356,7 @@ class CombatServiceImpl implements CombatService {
     for (const mob of mobs) {
       if (mob.state !== 'Attacking' || mob.isAlive === false) continue;
       if (this.isKnockedDown(mob)) continue;
+      if (this.isWinded(mob)) continue; // out of breath — pass turns until stamina recovers
       const attackSpeed = Math.max(0.5, pawnStatService.evaluateStat('attack_speed', mob));
       const interval = Math.max(
         MIN_ATTACK_INTERVAL_TICKS,
@@ -1288,13 +1365,6 @@ class CombatServiceImpl implements CombatService {
       if ((state.turn - mob.stateSince) % interval !== 0) continue;
 
       const curStamina = mob.stamina ?? mob.maxStamina ?? 50;
-      if (curStamina <= 0) {
-        mobStaminaUpdates.set(
-          mob.id,
-          Math.min(curStamina + WINDED_STAMINA_REGEN_PER_TICK, mob.maxStamina ?? 50)
-        );
-        continue;
-      }
 
       // Determine target: huntTargetId mob first, then nearest pawn, then nearest mob
       let target: Pawn | Mob | undefined;
@@ -1334,6 +1404,7 @@ class CombatServiceImpl implements CombatService {
     for (const pawn of state.pawns) {
       if (pawn.isAlive === false || !pawn.position) continue;
       if (this.isKnockedDown(pawn)) continue;
+      if (this.isWinded(pawn)) continue; // out of breath — pass turns until stamina recovers
 
       // Resolve the pawn's target: an explicit draft order, or — for an
       // undrafted pawn the FSM has put into Fighting — the nearest adjacent hostile.
@@ -1382,36 +1453,29 @@ class CombatServiceImpl implements CombatService {
       if (state.turn % pawnInterval !== 0) continue;
 
       const curStamina = pawn.stamina ?? pawn.maxStamina ?? 50;
-      if (curStamina <= 0) {
-        pawnStaminaUpdates.set(
-          pawn.id,
-          Math.min(curStamina + WINDED_STAMINA_REGEN_PER_TICK, pawn.maxStamina ?? 50)
-        );
-        continue;
-      }
-
       const atk = this.performAttack(pawn, target, next, state.turn);
       next = atk.state;
       pawnStaminaUpdates.set(pawn.id, Math.max(0, curStamina - atk.staminaCost));
     }
 
-    // Apply stamina mutations in one pass
-    if (mobStaminaUpdates.size > 0) {
-      next = {
-        ...next,
-        mobs: next.mobs!.map((m) =>
-          mobStaminaUpdates.has(m.id) ? { ...m, stamina: mobStaminaUpdates.get(m.id)! } : m
-        )
-      };
-    }
-    if (pawnStaminaUpdates.size > 0) {
-      next = {
-        ...next,
-        pawns: next.pawns.map((p) =>
-          pawnStaminaUpdates.has(p.id) ? { ...p, stamina: pawnStaminaUpdates.get(p.id)! } : p
-        )
-      };
-    }
+    // Apply this tick's attack-drain, then regen + winded latch for EVERY alive entity (so a
+    // winded one recovers even after the fight ends). The drain map is folded in first so the
+    // latch sees the post-attack stamina.
+    next = {
+      ...next,
+      mobs: (next.mobs ?? []).map((m) => {
+        const drained = mobStaminaUpdates.has(m.id)
+          ? { ...m, stamina: mobStaminaUpdates.get(m.id)! }
+          : m;
+        return this.tickStaminaAndWinded(drained);
+      }),
+      pawns: next.pawns.map((p) => {
+        const drained = pawnStaminaUpdates.has(p.id)
+          ? { ...p, stamina: pawnStaminaUpdates.get(p.id)! }
+          : p;
+        return this.tickStaminaAndWinded(drained);
+      })
+    };
 
     return next;
   }

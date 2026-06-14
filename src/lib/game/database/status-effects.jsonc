@@ -37,6 +37,13 @@
         "modifiers"  : {"workEfficiency": 0.5, "moveSpeed": 0.5}
     },
     {
+        "id"         : "winded",
+        "name"       : "Winded",
+        "description": "Out of breath — stamina spent. Can't attack and can barely move; easier to hit until stamina recovers to full.",
+        "color"      : "#9575cd",
+        "modifiers"  : {"moveSpeed": 0.3, "dodge": 0.5}
+    },
+    {
         "id"         : "hungry",
         "name"       : "Hungry",
         "description": "Hunger is high. Work efficiency and movement speed are reduced.",

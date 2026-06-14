@@ -444,6 +444,7 @@ export interface StatusEffectDef {
     fatigueRate?: number; // multiplier on fatigue accrual
     workEfficiency?: number; // multiplier on work output
     moveSpeed?: number; // multiplier on movement steps per turn
+    dodge?: number; // multiplier on combat evasion (winded → easier to hit)
   };
 }
 
