@@ -19,8 +19,6 @@ export interface WorldTile {
   /** resourceId → turn number when that resource finishes regrowing (persistent resources). */
   resourceCooldowns?: Record<string, number>;
   territoryOwner: string;
-  /** Cached ambient + point-light brightness at this tile (0.1–1.6). Recomputed each turn. */
-  lightLevel?: number;
   // A* scratch fields (reset before each pathfind, not persisted)
   gCost?: number;
   hCost?: number;

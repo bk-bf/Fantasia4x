@@ -94,9 +94,10 @@ export const SLEEP_WAKE_THRESHOLD_HUNGRY = 30; // Allow early waking at 30% to g
 export const BUILDINGS_DB = BUILDINGS_DATABASE_RAW as unknown as Building[];
 
 /**
- * §G light → work. Map a tile's cached lightLevel (~0.1 pitch-dark … 1.0 daylight … 1.6 firelit)
- * to a sight/work multiplier: full speed in good light, down to a 0.4 floor in the dark (a pawn
- * can still fumble through coarse work). Fed into `sight` so it flows through the *_speed formulas.
+ * §G light → work. Map a tile's light level (~0.1 pitch-dark … 1.0 daylight … 1.6 firelit, from
+ * `computeTileLightLevel`) to a sight/work multiplier: full speed in good light, down to a 0.4 floor
+ * in the dark (a pawn can still fumble through coarse work). Fed into `sight` so it flows through the
+ * *_speed formulas.
  */
 export function lightWorkMultiplier(lightLevel: number): number {
   return Math.min(1, Math.max(0.4, lightLevel));

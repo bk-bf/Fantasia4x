@@ -6,6 +6,7 @@ import { perTick } from '../../../core/time';
 import { jobService, BASE_WORK_RATE } from '../../../services/JobService';
 import { pawnStatService } from '../../../services/PawnStatService';
 import { pathfinderService } from '../../../services/PathfinderService';
+import { computeTileLightLevel } from '../../../services/EnvironmentService';
 import { PAWN_STATE } from '../pawnStates';
 import { isAdjacent } from '../pawnQueries';
 import {
@@ -312,11 +313,13 @@ export function handleWorking(pawn: Pawn, gameState: GameState): GameState {
     return jobService.releaseJob(pawn.id, jobId, goIdle(pawn, gameState));
   }
 
-  // §G light → sight → work speed. Read the pawn's cached tile light (LightingService sets it
-  // each turn: daylight/fires/torches raise it). It scales the `sight` capacity, which every
-  // `*_speed` formula multiplies by — so darkness slows ALL work through the existing model.
+  // §G light → sight → work speed. Compute the pawn's tile light lazily from the day/night ambient
+  // + nearby fire emitters (computeTileLightLevel — the same field the renderer/HUD show, so the
+  // number matches what the player sees). Only the working pawn's tile is sampled, so there's no
+  // per-tick map scan. It scales the `sight` capacity every `*_speed` formula multiplies by, so
+  // darkness (night, away from a fire) slows ALL work — down to lightWorkMultiplier's 0.4 floor.
   const tileLight = pawn.position
-    ? (gameState.worldMap?.[pawn.position.y]?.[pawn.position.x]?.lightLevel ?? 1)
+    ? computeTileLightLevel(gameState.turn, gameState.buildings ?? [], pawn.position.x, pawn.position.y)
     : 1;
   const lightSightFactor = lightWorkMultiplier(tileLight);
 

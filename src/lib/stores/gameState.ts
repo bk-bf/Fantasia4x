@@ -615,6 +615,33 @@ console.log('[GameState] GameEngine initialized with GameStateManager');
 export const savedStateReady: Promise<void> = (async () => {
   if (!browser) return;
 
+  // Profiler sandbox (./dev.sh --profiler → VITE_PROFILER=true): skip the save and boot a heavy
+  // populated scenario with the turn profiler on, 4× speed, unpaused — so opening the page collects
+  // perf data immediately. Dynamic import keeps the scenario out of the normal bundle. The leading
+  // `await` also defers this past synchronous module init, so gameSpeed/isPaused are defined.
+  if (import.meta.env.VITE_PROFILER === 'true') {
+    const { buildProfilerScenario } = await import('$lib/game/dev/profilerScenario');
+    const scenario = buildProfilerScenario();
+    rng.reseed(scenario.seed);
+    resetUnreachableJobs();
+    set(scenario);
+    gameEngine.setGameStateManager(new GameStateManager(scenario));
+    const g = globalThis as Record<string, unknown>;
+    g.__profileTurns = true;
+    g.__prof = {};
+    g.__profCounts = {};
+    setGameSpeed(4);
+    unpauseGame();
+    storeReady.set(true);
+    console.info(
+      `[PROFILER] sandbox loaded: ${scenario.pawns.length} pawns, ${(scenario.mobs ?? []).length} mobs, ` +
+        `${scenario.buildings.length} buildings, ${(scenario.droppedItems ?? []).length} items, ` +
+        `${Object.keys(scenario.designations).length} designations · 4× speed, turn profiler ON. ` +
+        `Watch [PROF] logs or read globalThis.__profOut.`
+    );
+    return;
+  }
+
   const savedState = await loadSave();
   let baseState = savedState ? applyMigrations(savedState) : initialGameState;
 
