@@ -121,7 +121,9 @@ export class WorkServiceImpl implements WorkService {
     const workAssignments = { ...(gameState.workAssignments ?? {}) };
     let assignmentsChanged = false;
 
-    const updatedPawns = gameState.pawns.map((pawn) => {
+    // M2: mutate `isWorking` in place (leaf transform); only realloc the array if a flag flipped.
+    let pawnsChanged = false;
+    for (const pawn of gameState.pawns) {
       const inWorkLoop =
         WORK_LOOP_STATES.has(pawn.currentState ?? 'Idle') &&
         !pawn.state.isEating &&
@@ -140,14 +142,14 @@ export class WorkServiceImpl implements WorkService {
       }
 
       if (pawn.state.isWorking !== inWorkLoop) {
-        return { ...pawn, state: { ...pawn.state, isWorking: inWorkLoop } };
+        pawn.state.isWorking = inWorkLoop;
+        pawnsChanged = true;
       }
-      return pawn;
-    });
+    }
 
     return {
       ...gameState,
-      pawns: updatedPawns,
+      ...(pawnsChanged ? { pawns: gameState.pawns.slice() } : {}),
       ...(assignmentsChanged ? { workAssignments } : {})
     };
   }
@@ -180,7 +182,6 @@ export class WorkServiceImpl implements WorkService {
     }
     return changed ? { ...gameState, workAssignments } : gameState;
   }
-
 }
 
 // Export singleton instance

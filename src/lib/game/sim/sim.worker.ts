@@ -40,6 +40,7 @@ const MAX_BACKLOG_MS = 150;
 
 let speed = 1;
 let paused = true;
+let profile = false; // opt-in (init {profile}); gates the [PROF]/[SIM-TPS] perf.log diagnostics
 let accMs = 0;
 let lastBatch = 0;
 let loop: ReturnType<typeof setInterval> | null = null;
@@ -156,10 +157,12 @@ function batch() {
   const start = now;
   let steps = 0;
   while (accMs >= TICK_MS && steps < MAX_STEPS_PER_BATCH) {
-    const t0 = performance.now();
+    const t0 = profile ? performance.now() : 0; // per-tick timing only when profiling
     const r = gameEngine.processGameTurn();
-    tpsTickMs += performance.now() - t0;
-    tpsTicks++;
+    if (profile) {
+      tpsTickMs += performance.now() - t0;
+      tpsTicks++;
+    }
     if (!r.success) {
       accMs = 0;
       post({ kind: 'error', error: 'tick failed: ' + (r.errors ?? []).join('; ') });
@@ -175,6 +178,7 @@ function batch() {
   if (accMs > MAX_BACKLOG_MS) accMs = MAX_BACKLOG_MS;
   flushLog(); // ship combat-text/chronicle emitted during this batch's ticks
 
+  if (!profile) return;
   if (!tpsSince) tpsSince = now;
   const elapsed = now - tpsSince;
   if (elapsed >= 1000) {
@@ -212,12 +216,16 @@ self.onmessage = async (e: MessageEvent) => {
       rng.reseed(msg.seed ?? 0);
       resetUnreachableJobs();
       installForwardingLogSink();
-      // Diagnostic: enable per-phase [PROF] inside the worker (the console profileTurns() sets it on
-      // the MAIN globalThis, which the worker can't see). Cheap (per-phase timers); logs once/sec.
-      const g = globalThis as Record<string, unknown>;
-      g.__profileTurns = true;
-      g.__prof = {};
-      g.__profCounts = {};
+      // Opt-in diagnostics (init {profile}, from ?simprof): per-phase [PROF] + [SIM-TPS] to
+      // perf.log. The console profileTurns() sets the flag on the MAIN globalThis, which the worker
+      // can't see — so it's driven through init instead. Default OFF (no per-tick perf.log spam).
+      profile = !!msg.profile;
+      if (profile) {
+        const g = globalThis as Record<string, unknown>;
+        g.__profileTurns = true;
+        g.__prof = {};
+        g.__profCounts = {};
+      }
       gameEngine.setGameStateManager(new GameStateManager(msg.state));
       gameEngine.setOutputSink(publish); // per-tick → snapshot
       gameEngine.setCommitSink((s) => publish(s, true)); // command result → snapshot

@@ -675,48 +675,30 @@ export class PawnServiceImpl implements PawnService {
    */
   clearTemporaryPawnStates(gameState: GameState): GameState {
     try {
-      const updatedPawns = gameState.pawns.map((pawn, index) => {
+      // M2: mutate state flags in place (leaf transform). The old form mapped the whole pawns
+      // array + spread a new pawn/state object per affected pawn every tick.
+      let changed = false;
+      for (const pawn of gameState.pawns) {
         let shouldClearStates = false;
 
         // Clear eating state after one turn (eating is always one turn)
         if (pawn.state.isEating) {
           shouldClearStates = true;
-          console.log(`[PawnService] Clearing eating state for ${pawn.name}`);
         }
 
         // Only clear sleeping state if pawn should wake up
-        if (pawn.state.isSleeping) {
-          const shouldWakeUp = !this.shouldPawnSleep(pawn);
-          if (shouldWakeUp) {
-            shouldClearStates = true;
-            console.log(
-              `[PawnService] Waking up ${pawn.name} (fatigue: ${pawn.needs.fatigue}, hunger: ${pawn.needs.hunger})`
-            );
-          } else {
-            console.log(
-              `[PawnService] ${pawn.name} continues sleeping (fatigue: ${pawn.needs.fatigue}, hunger: ${pawn.needs.hunger})`
-            );
-          }
+        if (pawn.state.isSleeping && !this.shouldPawnSleep(pawn)) {
+          shouldClearStates = true;
         }
 
         if (shouldClearStates) {
-          return {
-            ...pawn,
-            state: {
-              ...pawn.state,
-              isEating: false,
-              isSleeping: pawn.state.isSleeping && !shouldClearStates // Only clear sleeping if should wake up
-            }
-          };
+          pawn.state.isEating = false;
+          pawn.state.isSleeping = false; // shouldClearStates ⇒ wake / clear
+          changed = true;
         }
+      }
 
-        return pawn;
-      });
-
-      return {
-        ...gameState,
-        pawns: updatedPawns
-      };
+      return changed ? { ...gameState, pawns: gameState.pawns.slice() } : gameState;
     } catch (error) {
       console.error('[PawnService] Error in clearTemporaryPawnStates:', error);
       return gameState; // Return original state on error

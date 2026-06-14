@@ -14,7 +14,7 @@ import { gameEngine } from '$lib/game/systems/GameEngineImpl';
 import './simLogBridge';
 // ADR-021: sim worker bridge (W1 verifier + W2–W4 cutover). USE_SIM_WORKER is off unless opted in
 // (?simworker / localStorage), so the default path is the in-thread engine below.
-import { simWorkerBridge, USE_SIM_WORKER } from '$lib/game/sim/simWorkerClient';
+import { simWorkerBridge, USE_SIM_WORKER, USE_SIM_PROFILE } from '$lib/game/sim/simWorkerClient';
 // ADR-021 W3: serializable command registry (shared with the future sim worker).
 import { applySimCommand } from '$lib/game/sim/commands';
 import type { SimCommand } from '$lib/game/sim/simProtocol';
@@ -890,7 +890,7 @@ if (USE_SIM_WORKER) {
   savedStateReady.then(() => {
     simWorkerBridge.start();
     const st = get(gameState) as GameState;
-    simWorkerBridge.init(st, st.seed);
+    simWorkerBridge.init(st, st.seed, USE_SIM_PROFILE);
     simWorkerBridge.setSpeed(gameSpeedValue);
     simWorkerBridge.setPaused(get(isPaused));
     console.info('[SIM-WORKER] cutover active — sim now runs in the worker.');

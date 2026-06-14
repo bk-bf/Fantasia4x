@@ -24,7 +24,7 @@ export interface SimCommand {
 
 /** Main → worker. */
 export type MainToWorker =
-  | { kind: 'init'; state: GameState; seed: number }
+  | { kind: 'init'; state: GameState; seed: number; profile?: boolean }
   | { kind: 'command'; cmd: SimCommand }
   | { kind: 'setSpeed'; speed: number }
   | { kind: 'setPaused'; paused: boolean }
