@@ -5,7 +5,7 @@
 Living tracker of **open** architecture/defect items. Completed work — R1–R12, P-1/P-6/P-7,
 PT-2/3/4, and the full PawnStateMachine decomposition — is in the
 [resolved archive](.tasks/archive/CODEBASE-REVIEW-RESOLVED-2026-06-13.md). Gate at last update:
-`check` 0 errors · `test` 168 · `lint` 0 · `build` ok.
+`check` 0 errors · `test` 170 · `lint` 0 · `build` ok.
 
 ---
 
@@ -23,11 +23,19 @@ PT-2/3/4, and the full PawnStateMachine decomposition — is in the
   instead of importing stores. `CombatTextKind` moved to `core/logSink` (re-exported from
   `combatFeedback` for the renderer). Graph layer-violation warnings 24→20; headless sims/tests get
   the no-op sink (no UI logging side effects).
-- [ ] **P-2b · `GameEngineImpl` god-module → extract UI-coordination facade.** P-2 pushed the class to
-  43 functions (> 40 codegraph threshold). Before Living World adds per-tick state/coordination here,
-  pull the pure passthrough/coordination cluster (`getXById` / `getAll*` / `craftItem` /
-  `startResearch` / `assignPawnToWork`) into a separate UI-facing facade so the engine class stays a
-  turn coordinator. Keep `processGameTurn` + state ownership in the engine.
+- [x] **P-2b · `GameEngineImpl` god-module → extract UI-coordination facade.** Done 2026-06-14.
+  Engine 43 → 23 methods (god-module check now ✓). Most of the coordination cluster turned out to be
+  **dead** (`getPawnNeeds`/`getCraftableItems`/`startResearch`/`assignPawnToWork`/`getAll*`/
+  `calculateBuildingEffects`/… — zero callers) and was deleted from the class + `GameEngine`
+  interface. The three genuinely-used methods (`getItemById`, `getBuildingById`, `craftItem`) moved
+  to a new `systems/GameCoordinator.ts` singleton — the UI-facing command/query facade; writes route
+  through `applyCommand` (P-2). Living-World UI coordination should grow there, not on the engine.
+  Call sites (CraftingScreen, EquipmentDoll, PawnEquipment, +page) repointed to `gameCoordinator`.
+  - **Codegraph blind spot (follow-up):** the dead methods were *not* flagged by `graph:check`'s
+    `orphan` rule nor `/api/orphans` — both intentionally skip class methods (`!n.className`), since a
+    method may be reached polymorphically via its interface. Only the `god-module` rule (>40 fns)
+    pointed here; the deadness was found by grepping callers. Worth a future rule: flag interface/class
+    methods whose sole reference is the interface declaration (guard against polymorphism false-positives).
 - [ ] **P-4 · God files (remaining).** PawnStateMachine is done (see archive). Still oversized:
 
   | File | LOC |
