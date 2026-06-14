@@ -71,9 +71,12 @@
   FOLLOW/UNFOLLOW glitch that deselected the pawn via handleTileClick).
   Hover cards use onSelect to forward the "select entity" action instead.
 -->
+<!-- NT-U2: the action buttons sit in their own column to the RIGHT of and OUTSIDE the
+     bordered info box. NT-U3: the info box is a fixed-width skeleton so long descriptions
+     wrap inside it instead of stretching the panel across the viewport. The wrapper carries
+     the absolute positioning so both columns stay anchored together. -->
 <div
-  class="tile-hud tile-hud--pawn"
-  class:tile-hud--selected={model.selected}
+  class="tile-hud-wrap"
   onmousedown={(e) => {
     e.stopPropagation();
     if (!model.selected) model.onSelect?.();
@@ -81,82 +84,95 @@
   onmouseup={(e) => e.stopPropagation()}
   onclick={(e) => e.stopPropagation()}
 >
-  <div class="pawn-header">
-    <div class="pawn-meta">
-      <span class="pawn-name">{model.name}</span>
-      {#if model.status}<span class="pawn-state">[{model.status}]</span>{/if}
-      {#if model.dismissable}<span class="pawn-dismiss" title="Press Esc to deselect">◈</span>{/if}
+  <div class="tile-hud tile-hud--pawn" class:tile-hud--selected={model.selected}>
+    <div class="pawn-header">
+      <div class="pawn-meta">
+        <span class="pawn-name">{model.name}</span>
+        {#if model.status}<span class="pawn-state">[{model.status}]</span>{/if}
+        {#if model.dismissable}<span class="pawn-dismiss" title="Press Esc to deselect">◈</span
+          >{/if}
+      </div>
     </div>
-    {#if model.buttons && model.buttons.length > 0}
-      <div class="btn-grid">
-        {#each model.buttons as btn (btn.label)}
-          <button
-            class="hud-btn"
-            class:hud-btn--active={btn.active}
-            onmousedown={(e) => e.stopPropagation()}
-            onmouseup={(e) => e.stopPropagation()}
-            onclick={(e) => {
-              e.stopPropagation();
-              btn.onClick();
-            }}
-          >
-            {btn.label}
-          </button>
+
+    {#if model.lines && model.lines.length > 0}
+      <div class="text-lines">
+        {#each model.lines as line}
+          <div class="text-line">{line}</div>
         {/each}
       </div>
     {/if}
+
+    {#if model.stats && model.stats.length > 0}
+      <div class="pawn-row">
+        {#each model.stats as stat (stat.label)}
+          <span class="pawn-stat-label">{stat.label}</span>
+          <span class="pawn-stat-val" class:pawn-warn={stat.warn}>{stat.value}</span>
+        {/each}
+      </div>
+    {/if}
+
+    {#if model.bars && model.bars.length > 0}
+      <div class="bar-rows">
+        {#each model.bars as bar (bar.label)}
+          <StatBar
+            label={bar.label}
+            value={bar.value}
+            max={bar.max ?? 100}
+            color={bar.color ?? (bar.warn ? BAR_WARN : BAR_OK)}
+            valueText={bar.valueText ?? `${Math.floor(bar.value)}%`}
+          />
+        {/each}
+      </div>
+    {/if}
+
+    {#if model.job}
+      <div class="pawn-job" class:pawn-idle={model.job.idle}>{model.job.text}</div>
+    {/if}
+    {#if model.progressBar}
+      <div class="pawn-progress">[{model.progressBar}]</div>
+    {/if}
+    {#if model.note}
+      <div class="pawn-job">{model.note}</div>
+    {/if}
+    {#if model.pos}
+      <div class="pawn-pos">pos ({model.pos.x},{model.pos.y})</div>
+    {/if}
   </div>
 
-  {#if model.lines && model.lines.length > 0}
-    <div class="text-lines">
-      {#each model.lines as line}
-        <div class="text-line">{line}</div>
+  {#if model.buttons && model.buttons.length > 0}
+    <div class="btn-col">
+      {#each model.buttons as btn (btn.label)}
+        <button
+          class="hud-btn"
+          class:hud-btn--active={btn.active}
+          onmousedown={(e) => e.stopPropagation()}
+          onmouseup={(e) => e.stopPropagation()}
+          onclick={(e) => {
+            e.stopPropagation();
+            btn.onClick();
+          }}
+        >
+          {btn.label}
+        </button>
       {/each}
     </div>
-  {/if}
-
-  {#if model.stats && model.stats.length > 0}
-    <div class="pawn-row">
-      {#each model.stats as stat (stat.label)}
-        <span class="pawn-stat-label">{stat.label}</span>
-        <span class="pawn-stat-val" class:pawn-warn={stat.warn}>{stat.value}</span>
-      {/each}
-    </div>
-  {/if}
-
-  {#if model.bars && model.bars.length > 0}
-    <div class="bar-rows">
-      {#each model.bars as bar (bar.label)}
-        <StatBar
-          label={bar.label}
-          value={bar.value}
-          max={bar.max ?? 100}
-          color={bar.color ?? (bar.warn ? BAR_WARN : BAR_OK)}
-          valueText={bar.valueText ?? `${Math.floor(bar.value)}%`}
-        />
-      {/each}
-    </div>
-  {/if}
-
-  {#if model.job}
-    <div class="pawn-job" class:pawn-idle={model.job.idle}>{model.job.text}</div>
-  {/if}
-  {#if model.progressBar}
-    <div class="pawn-progress">[{model.progressBar}]</div>
-  {/if}
-  {#if model.note}
-    <div class="pawn-job">{model.note}</div>
-  {/if}
-  {#if model.pos}
-    <div class="pawn-pos">pos ({model.pos.x},{model.pos.y})</div>
   {/if}
 </div>
 
 <style>
-  .tile-hud {
+  /* Wrapper anchors the card to the canvas; the info box and the button column are its
+     two children laid out side by side (NT-U2). */
+  .tile-hud-wrap {
     position: absolute;
     bottom: 6px;
     left: 6px;
+    display: flex;
+    align-items: flex-start;
+    gap: 4px;
+    pointer-events: auto;
+    z-index: 5;
+  }
+  .tile-hud {
     background: rgba(28, 16, 6, 0.92);
     border: 1px solid #6b4a2a;
     color: #a07840;
@@ -165,12 +181,12 @@
     line-height: 1.25;
     padding: 2px 7px;
     pointer-events: auto;
-    white-space: nowrap;
-    z-index: 5;
   }
+  /* NT-U3: fixed-width skeleton, identical for every object type, so long descriptions
+     wrap inside the box instead of stretching it across the map. */
   .tile-hud--pawn {
-    min-width: 180px;
-    white-space: nowrap;
+    width: 232px;
+    box-sizing: border-box;
   }
   .pawn-header {
     display: flex;
@@ -198,12 +214,13 @@
     color: #886630;
     font-size: 9px;
   }
-  /* ── 3-column button grid (right side of header) ─────────────── */
-  .btn-grid {
-    display: grid;
-    grid-template-columns: repeat(3, max-content);
+  /* ── Button column (NT-U2: outside the box, to the right) ────── */
+  .btn-col {
+    display: flex;
+    flex-direction: column;
     gap: 3px;
     flex-shrink: 0;
+    pointer-events: auto;
   }
   .hud-btn {
     background: #2a1a0a;
@@ -243,6 +260,8 @@
   .text-line {
     color: #c0a040;
     font-size: 9px;
+    white-space: normal;
+    overflow-wrap: break-word;
   }
   /* ── Stats / bars ─────────────────────────────────────────────── */
   .pawn-row {
@@ -271,6 +290,8 @@
     color: #8a7040;
     font-size: 9px;
     margin-top: 1px;
+    white-space: normal;
+    overflow-wrap: break-word;
   }
   .pawn-progress {
     color: #8a7040;
@@ -280,7 +301,6 @@
     border-color: #f0c060;
     background: rgba(20, 14, 4, 0.96);
     color: #e8c870;
-    min-width: 200px;
   }
   .tile-hud--selected .pawn-name {
     color: #ffe890;

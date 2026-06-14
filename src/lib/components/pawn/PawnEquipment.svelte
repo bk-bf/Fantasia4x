@@ -9,7 +9,7 @@
     syncAllPawnInventories
   } from '$lib/game/core/PawnEquipment';
   import { consumeFromStockpiles } from '$lib/game/core/GameState';
-  import { gameEngine } from '$lib/game/systems/GameEngineImpl';
+  import { gameCoordinator } from '$lib/game/systems/GameCoordinator';
   import EquipmentDoll from './EquipmentDoll.svelte';
   import PawnInventory from './PawnInventory.svelte';
 
@@ -85,7 +85,7 @@
       <h4>Available Items:</h4>
       <div class="inventory-grid">
         {#each Object.entries(pawn.inventory.items || {}) as [itemId, quantity]}
-          {@const itemInfo = gameEngine.getItemById(itemId)}
+          {@const itemInfo = gameCoordinator.getItemById(itemId)}
           {#if itemInfo && quantity > 0 && itemInfo.type !== 'material'}
             <div class="inventory-item" data-type={itemInfo.type}>
               <div class="item-header">

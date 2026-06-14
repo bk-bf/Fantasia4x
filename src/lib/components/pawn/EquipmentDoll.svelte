@@ -1,7 +1,7 @@
 <!-- EquipmentDoll.svelte — paper-doll grid of equipment slots (RPG-style boxes) -->
 <script lang="ts">
   import type { Pawn, EquipmentSlot } from '$lib/game/core/types';
-  import { gameEngine } from '$lib/game/systems/GameEngineImpl';
+  import { gameCoordinator } from '$lib/game/systems/GameCoordinator';
 
   let {
     pawn,
@@ -38,7 +38,7 @@
 <div class="doll">
   {#each SLOTS as { slot, label } (slot)}
     {@const it = inst(slot)}
-    {@const def = it ? gameEngine.getItemById(it.itemId) : null}
+    {@const def = it ? gameCoordinator.getItemById(it.itemId) : null}
     {@const maxDur = def?.maxDurability ?? 100}
     <div class="slot-box" class:filled={!!it} class:empty={!it} style="grid-area: {slot}">
       <span class="slot-lbl">{label}</span>

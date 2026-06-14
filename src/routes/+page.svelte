@@ -17,7 +17,7 @@
   import WorldEffectsLayer from '$lib/components/UI/WorldEffectsLayer.svelte';
   import { uiState } from '$lib/stores/uiState';
   import { gameState, storeReady } from '$lib/stores/gameState';
-  import { gameEngine } from '$lib/game/systems/GameEngineImpl';
+  import { gameCoordinator } from '$lib/game/systems/GameCoordinator';
   import { environmentService } from '$lib/game/services/EnvironmentService.js';
   import type { PlacedBuilding } from '$lib/game/core/types';
 
@@ -38,7 +38,7 @@
   gameState.subscribe((s) => (buildings = s.buildings ?? []));
 
   $: hasResearch = buildings.some((b) => {
-    const bDef = gameEngine.getBuildingById(b.type);
+    const bDef = gameCoordinator.getBuildingById(b.type);
     return bDef?.category === 'knowledge' && b.status === 'complete';
   });
 
