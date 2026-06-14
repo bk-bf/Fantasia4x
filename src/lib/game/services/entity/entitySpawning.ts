@@ -161,8 +161,6 @@ export function makeMob(def: CreatureDefinition, x: number, y: number, turn: num
     health: def.stats.health,
     maxHealth: def.stats.health,
     state: initialState,
-    homeX: x,
-    homeY: y,
     stateSince: turn,
     path: [],
     pathIndex: 0,

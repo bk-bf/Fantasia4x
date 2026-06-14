@@ -4,25 +4,29 @@ Tracks confirmed bugs, root causes, and fix status. Add new entries at the top.
 
 ---
 
-## [FIXED] Predator frozen at kill site after eating (home-tether stranding)
+## [FIXED] Predator frozen at kill site after eating (home-tether stranding) — HOME_RANGE removed
 
 **Symptom:** A wolf (e.g. #16) hunts prey far across the map, kills + eats it, correctly transitions
 to `Wander` — and then **never moves again**, sitting on the kill tile forever (Wander → Sleep →
 Wander, `path=none`). Looks like the old "Entities freezing after eating" bug, but the FSM transition
 is fine; movement is what's dead.
 
-**Root cause:** `wanderStep` picks its next tile via `findNearbyWalkable(…, mob.homeX, mob.homeY, …)`,
-which rejects any neighbour outside `HOME_RANGE` (10 tiles) of the mob's spawn/home tile — a tether so
-grazers don't wander off. But a predator chases prey ~100 tiles from home; after the kill **every**
-neighbour is out of home range, so `findNearbyWalkable` returns `null` every tick → the wolf can't
-take a single step. Prey chased far and animals displaced by fleeing hit the same trap. (The
-"freezing after eating" fix only ensured the FSM left `Hunting`; it landed the mob in `Wander`, where
-this tether then stranded it — so the symptom recurred for a different reason.)
+**Root cause:** `wanderStep` picked its next tile via `findNearbyWalkable(…, mob.homeX, mob.homeY, …)`,
+which rejected any neighbour outside `HOME_RANGE` (10 tiles) of the mob's spawn tile — a tether so
+grazers don't drift. But a predator chases prey ~100 tiles from spawn; after the kill **every**
+neighbour is out of range → `findNearbyWalkable` returns `null` every tick → it can't take a step.
+Prey chased far and animals displaced by fleeing hit the same trap.
 
-**Fix** (`entityHelpers.findNearbyWalkable`): when the mob is **already outside** its home range, drop
-the "stay home" filter and instead return the walkable neighbour **closest to home** — it beelines
-back into range, then resumes normal tethered wandering. Within range (and the no-home / spawn /
-flee-snap callers) behaviour is unchanged. Tests in `entity/findNearbyWalkable.test.ts`.
+**This is a RE-REGRESSION.** The home tether had been removed before; the EntityService→`entity/*`
+decomposition (2026-06-14) reintroduced an old `findNearbyWalkable` with `HOME_RANGE` baked back in.
+A "behaviour-preserving" file move resurrected long-dead logic.
+
+**Fix:** removed the home tether entirely (per standing decision — entities roam freely, no
+`HOME_RANGE`). `findNearbyWalkable(state, x, y, selfId?)` now just returns a random walkable,
+unoccupied neighbour from wherever the mob is. Deleted the `homeX`/`homeY` `Mob` fields and the spawn
+assignment so the var can't creep back. Tests in `entity/findNearbyWalkable.test.ts`. **Do not
+re-add a home-range tether** — if grazer drift needs bounding later, do it in the grazing FSM, not by
+crippling the shared `findNearbyWalkable`.
 
 ## [FIXED] Hunt yoyo — predator sub-tile render snap-back on re-path
 

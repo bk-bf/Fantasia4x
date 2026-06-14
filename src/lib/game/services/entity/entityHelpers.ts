@@ -157,7 +157,7 @@ export function wanderStep(mob: Mob, def: CreatureDefinition, state: GameState):
   if (mob.path && mob.path.length > 0 && (mob.pathIndex ?? 0) < mob.path.length) return mob;
   // Probabilistic idle: ~WANDER_MOVES_PER_SECOND steps/sec on average.
   if (rng.random() >= WANDER_MOVES_PER_SECOND * SECONDS_PER_TICK) return mob;
-  const tile = findNearbyWalkable(state, mob.x, mob.y, mob.homeX, mob.homeY, mob.id);
+  const tile = findNearbyWalkable(state, mob.x, mob.y, mob.id);
   if (!tile) return mob;
   return { ...mob, path: [tile], pathIndex: 0, nextCellCostLeft: undefined };
 }
@@ -298,7 +298,7 @@ export function fleeToSafety(
   for (const c of candidates) {
     const goal = isWalkable(state, c.tx, c.ty)
       ? { x: c.tx, y: c.ty }
-      : findNearbyWalkable(state, c.tx, c.ty, undefined, undefined, mob.id);
+      : findNearbyWalkable(state, c.tx, c.ty, mob.id);
     if (!goal || (goal.x === mob.x && goal.y === mob.y)) continue;
     const path = pathTo(state, mob.x, mob.y, goal.x, goal.y, mob.id);
     if (path.length > 0) return { ...mob, fleeDest: goal, path, pathIndex: 0 };
@@ -426,22 +426,12 @@ export function findNearbyWalkable(
   state: GameState,
   x: number,
   y: number,
-  homeX?: number,
-  homeY?: number,
   selfId?: string
 ): { x: number; y: number } | null {
-  const HOME_RANGE = 10;
-  const hasHome = homeX !== undefined && homeY !== undefined;
-  // A mob that roamed (or was chased / hunted) far from home has EVERY neighbour out of range.
-  // Rejecting them all returns null → it freezes on the spot forever (e.g. a wolf stranded at its
-  // kill site after eating). So when already outside the range, drop the "stay home" filter and
-  // instead step BACK toward home. Within range, the filter still tethers it to its territory.
-  const outsideHome =
-    hasHome && (Math.abs(x - homeX!) > HOME_RANGE || Math.abs(y - homeY!) > HOME_RANGE);
-
   // Enumerate all 8 neighbours in random order (Fisher-Yates) so every walkable
   // direction is considered exactly once — no wasted random retries that could
-  // leave a boxed-in animal stuck even when an exit exists.
+  // leave a boxed-in animal stuck even when an exit exists. Entities roam freely
+  // (no home tether) — they go where the AI sends them and wander from wherever they are.
   const dirs = [
     { dx: 0, dy: -1 },
     { dx: 0, dy: 1 },
@@ -456,7 +446,6 @@ export function findNearbyWalkable(
     const j = Math.floor(rng.random() * (i + 1));
     [dirs[i], dirs[j]] = [dirs[j], dirs[i]];
   }
-  let homeward: { x: number; y: number; d: number } | null = null;
   for (const { dx, dy } of dirs) {
     const nx = x + dx;
     const ny = y + dy;
@@ -467,18 +456,9 @@ export function findNearbyWalkable(
       continue;
     }
     if (selfId && occupancyService.isBlocked(state, nx, ny, selfId)) continue;
-    if (outsideHome) {
-      // Stranded — pick the neighbour that gets us closest to home (beeline back).
-      const d = Math.abs(nx - homeX!) + Math.abs(ny - homeY!);
-      if (!homeward || d < homeward.d) homeward = { x: nx, y: ny, d };
-      continue;
-    }
-    if (hasHome && (Math.abs(nx - homeX!) > HOME_RANGE || Math.abs(ny - homeY!) > HOME_RANGE)) {
-      continue; // tethered: don't wander out of the home range
-    }
     return { x: nx, y: ny };
   }
-  return homeward ? { x: homeward.x, y: homeward.y } : null;
+  return null;
 }
 
 export function isWalkable(state: GameState, x: number, y: number): boolean {

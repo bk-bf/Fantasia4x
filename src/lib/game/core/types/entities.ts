@@ -44,9 +44,6 @@ export interface Mob {
   health: number;
   maxHealth: number;
   state: MobState;
-  /** Anchor tile for grazing/wander home-range drift. */
-  homeX: number;
-  homeY: number;
   /** Tick when the FSM last changed state — drives timed transitions. */
   stateSince: number;
   /** Transient: pawn this entity is hunting or fleeing from. */
