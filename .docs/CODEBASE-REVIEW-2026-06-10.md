@@ -93,6 +93,20 @@ PT-2/3/4, and the full PawnStateMachine decomposition — is in the
   tiles (or compute lazily in the work handler from ambient + nearby emitters). Found 2026-06-14 while
   generalising building light. Small-ish; mostly deciding where to compute it without scanning the
   whole 240×160 map per tick.
+- [ ] **FLEE-1 · Cornered-flee ping-pong (greedy single-threat avoidance).** Prey boxed between two
+  threats on opposite sides (e.g. mountain goat #10 between pawns NE and a predator SW) sticks in
+  `Fleeing` for minutes, ping-ponging between two adjacent tiles. Root cause is *pathing, not the
+  FSM* (entityAI `case 'Fleeing'`): `moveAway` (→ `stepDirectional`, `sign=-1`) steers away from the
+  **single closest** threat each tick, so when the closest flips side to side the chosen tile flips
+  too; and the `closestDist > fleeRange → Grazing` exit can never fire when a threat sits on each
+  side. Full write-up + symptom in `game/BUGS.md` ([OPEN] Cornered-flee ping-pong). Instrumentation
+  shipped 2026-06-14: `entityAI.logFleeTrigger` → `ENTITY-FLEE` lines in `.debug/entities.log` record
+  the threat kind/pos/distance vs vision/flee ranges at each →Startled transition. **Proposed fix
+  (not yet applied):** flee toward the heading that maximises distance from the **whole** in-range
+  threat set (commit to the gap / path *past* danger) instead of greedily backing off the nearest;
+  reuse `stepDirectional`'s same-step guard at the flee level so the heading can't reverse every tick;
+  add a flee give-up / "can't escape" timeout (mirroring `HUNT_GIVE_UP_SECONDS`) so a truly boxed-in
+  prey holds (or turns to fight) rather than thrashing forever.
 - [ ] **MOVE-1 · Duplicated per-tick move pass + divergent path-assign (pawns vs mobs).** The
   *core* of movement is already shared (`systems/MovementSystem.ts`: `advanceAlongPath`, `simTarget`,
   `moveCostToEnter`), but the **per-tick driver** is copy-pasted: `PawnService.processMovement` and
