@@ -17,19 +17,25 @@ import { gameEngine } from '../systems/GameEngineImpl';
 import { rng } from '../core/rng';
 import { resetUnreachableJobs } from '../systems/PawnStateMachine';
 import { TICKS_PER_SECOND } from '../core/time';
+import { setSimLogSink, type SimLogSink } from '../core/logSink';
 import { applySimCommand } from './commands';
+import type { SimLogEvent } from './simProtocol';
 import type { GameState } from '../core/types';
 
 const TICK_MS = 1000 / TICKS_PER_SECOND;
-// W5 — batch governed by a WALL-CLOCK budget, not a tick count. A fixed step cap (was 30) is the
-// wrong knob off-thread: at 60 TICKS_PER_SECOND a heavy tick costs ~10-15ms, so a 30-tick catch-up
-// batch locks the worker ~360ms with no snapshots posted → stutter. Instead we run ticks until the
-// budget is spent, then yield (the setInterval re-fires) so snapshots keep flowing and the renderer
-// stays fed. Backlog beyond the budget is DROPPED (best-effort speed): under heavy load high speeds
-// are compute-bound on one core — 4×·150-pawn = ~2.9s work/s real, unachievable by any cap — so we
-// degrade to smooth-but-slower rather than locking. Light load drains fully and hits true 4×.
-const BATCH_BUDGET_MS = 8; // ≈half the 16ms interval — leaves headroom for snapshot serialize + GC
+// W5 — batch governed by a WALL-CLOCK budget, not a tick count (a fixed step cap locks the worker
+// ~360ms with no snapshots posted → stutter). Run ticks until the budget is spent, then yield so
+// snapshots keep flowing. The budget must be ≥ ~one tick-cost so a backlogged worker runs ticks
+// BACK-TO-BACK and actually uses its capacity: at 8ms (< the ~12ms heavy tick) every batch did
+// exactly 1 tick then idled until the 16ms timer → pinned ~62 TPS at EVERY speed, so the speed
+// control did nothing. At ~16ms a backlogged batch runs ~2 ticks (≈the compute ceiling, ~83 TPS /
+// ~1.4× under 150-pawn load — high speeds are compute-bound on one core, unreachable by any budget),
+// while 1× still self-limits to 60 TPS via the accumulator. Light load drains fully → true 4×.
+const BATCH_BUDGET_MS = 16;
 const MAX_STEPS_PER_BATCH = 120; // hard safety only; the budget is the real limiter
+// Cap carried backlog so high speed CARRIES across batches (drives more ticks) without spiralling
+// into ever-longer locked catch-up. ~9 ticks (150ms) of slack, then we're best-effort behind realtime.
+const MAX_BACKLOG_MS = 150;
 
 let speed = 1;
 let paused = true;
@@ -63,6 +69,38 @@ function buildingsVisualSig(bs: GameState['buildings']): string {
 
 function post(msg: unknown) {
   (self as unknown as Worker).postMessage(msg);
+}
+
+// --- sim-log forwarding (combat text + chronicle) ---------------------------------------------
+// The real SimLogSink (chronicle + combatFeedback) lives in the store/DOM layer and can't run in
+// the worker, so calls are buffered and replayed on the main thread (simWorkerClient). Without this
+// the worker's sink stays the no-op default → floating combat text + chronicle silently vanish.
+let logBuffer: SimLogEvent[] = [];
+function flushLog() {
+  if (logBuffer.length === 0) return;
+  post({ kind: 'simlog', events: logBuffer });
+  logBuffer = [];
+}
+function installForwardingLogSink() {
+  const fwd =
+    (m: string) =>
+    (...a: unknown[]) => {
+      logBuffer.push({ m, a });
+    };
+  setSimLogSink({
+    // logActivity returns an id; nothing in the sim consumes it, so '' is safe.
+    logActivity: (...a: unknown[]) => {
+      logBuffer.push({ m: 'logActivity', a });
+      return '';
+    },
+    logCombatSwing: fwd('logCombatSwing'),
+    logCombatKill: fwd('logCombatKill'),
+    pushCombatText: fwd('pushCombatText'),
+    logHuntStart: fwd('logHuntStart'),
+    logFlee: fwd('logFlee'),
+    logEntityDeath: fwd('logEntityDeath'),
+    logEntityStateChange: fwd('logEntityStateChange')
+  } as SimLogSink);
 }
 
 /**
@@ -122,9 +160,10 @@ function batch() {
     // Budget check AFTER a tick so every batch makes ≥1 tick of progress, then yields.
     if (performance.now() - start >= BATCH_BUDGET_MS) break;
   }
-  // Couldn't drain the accumulator within budget (or hit the safety cap) → compute-bound. Drop the
-  // backlog so sim-time doesn't spiral into ever-longer locked catch-up batches; runs best-effort.
-  if (accMs >= TICK_MS) accMs = 0;
+  // Compute-bound: clamp (don't zero) the carried backlog so a higher speed keeps driving extra
+  // ticks across batches, while bounding it so it can't spiral into ever-longer locked catch-up.
+  if (accMs > MAX_BACKLOG_MS) accMs = MAX_BACKLOG_MS;
+  flushLog(); // ship combat-text/chronicle emitted during this batch's ticks
 }
 
 self.onmessage = async (e: MessageEvent) => {
@@ -146,6 +185,7 @@ self.onmessage = async (e: MessageEvent) => {
     case 'init': {
       rng.reseed(msg.seed ?? 0);
       resetUnreachableJobs();
+      installForwardingLogSink();
       gameEngine.setGameStateManager(new GameStateManager(msg.state));
       gameEngine.setOutputSink(publish); // per-tick → snapshot
       gameEngine.setCommitSink((s) => publish(s, true)); // command result → snapshot
@@ -160,6 +200,7 @@ self.onmessage = async (e: MessageEvent) => {
     }
     case 'command':
       gameEngine.applyCommand((s) => applySimCommand(s, msg.cmd), msg.cmd.save ?? false);
+      flushLog(); // a command (e.g. a draft attack) can emit combat text outside the batch loop
       break;
     case 'setSpeed':
       speed = msg.speed;

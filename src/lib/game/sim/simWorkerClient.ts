@@ -9,6 +9,8 @@
  *     untouched until the user opts in to test the cutover (which needs a browser).
  */
 import { isClientRuntime } from '../core/runtime';
+import { realSimLogSink } from '../../stores/simLogBridge';
+import type { SimLogEvent } from './simProtocol';
 import type { GameState } from '../core/types';
 
 export function verifyWasmInWorker(): void {
@@ -89,6 +91,7 @@ class SimWorkerBridge {
     worldMap?: GameState['worldMap'];
     flush?: boolean;
     error?: string;
+    events?: SimLogEvent[];
   }): void {
     if (m.kind === 'snapshot') {
       if (m.worldMap) this.worldMap = m.worldMap;
@@ -96,6 +99,10 @@ class SimWorkerBridge {
         { ...(m.state as object), worldMap: this.worldMap } as GameState,
         m.flush ?? true
       );
+    } else if (m.kind === 'simlog') {
+      // Replay the worker's buffered chronicle/combat-text calls against the real (DOM) sink.
+      const sink = realSimLogSink as unknown as Record<string, (...a: unknown[]) => unknown>;
+      for (const ev of m.events ?? []) sink[ev.m]?.(...ev.a);
     } else if (m.kind === 'fullState' && m.state) {
       this.worldMap = m.state.worldMap;
       this.onFullState?.(m.state);

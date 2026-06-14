@@ -23,6 +23,7 @@ import { generateWorld } from '../world/WorldGenerator';
 import { generatePawns } from '../entities/Pawns';
 import { workService } from '../services/WorkService';
 import { entityService } from '../services/EntityService';
+import { buildingService } from '../services/BuildingService';
 import itemsData from '../database/items.jsonc';
 
 const ITEMS = itemsData as unknown as Item[];
@@ -98,6 +99,12 @@ export function buildProfilerScenario(opts: ProfilerScenarioOpts = {}): GameStat
       progress: 1,
       ...(type === 'campfire' ? { lit: true, fuel: 50 } : {})
     });
+    // Solid buildings (campfire, well…) block their tile — normal completion does this via
+    // applyBuildingFootprint, but this scenario injects complete buildings directly, so flip
+    // walkability here too. Otherwise pawns/mobs walk straight over campfires.
+    if (buildingService.getBuildingById(type)?.walkable === false && world[t.y]?.[t.x]) {
+      world[t.y][t.x] = { ...world[t.y][t.x], walkable: false };
+    }
   }
 
   // ── Dropped items: loose materials scattered → haul jobs + overlay churn. ──

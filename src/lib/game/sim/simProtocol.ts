@@ -31,11 +31,25 @@ export type MainToWorker =
   | { kind: 'requestSave' }
   | { kind: 'profile'; on: boolean };
 
+/**
+ * A buffered sim-log/feedback call forwarded worker→main. The sim emits chronicle entries + floating
+ * combat text through `simLog` (core/logSink), whose real implementation lives in the store layer
+ * (DOM/stores — main-thread only). In the worker that sink can't run, so calls are captured as
+ * `{ method, args }` and replayed against the real sink on the main thread. All args are
+ * structured-cloneable (ids, names, numbers, CombatTurnEntry). Buffered per batch to avoid a
+ * postMessage per swing.
+ */
+export interface SimLogEvent {
+  m: string;
+  a: unknown[];
+}
+
 /** Worker → main. */
 export type WorkerToMain =
   | { kind: 'ready' }
   | { kind: 'snapshot'; snapshot: RenderSnapshot }
   | { kind: 'fullState'; state: GameState } // for save/load reconciliation
+  | { kind: 'simlog'; events: SimLogEvent[] }
   | { kind: 'error'; error: string };
 
 /**

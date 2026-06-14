@@ -6,7 +6,7 @@
  * registers an implementation that delegates to the chronicle (`Log`) and the combat-feedback
  * channel. Imported for its side effect from `stores/gameState.ts`, so it runs before any tick.
  */
-import { setSimLogSink } from '$lib/game/core/logSink';
+import { setSimLogSink, type SimLogSink } from '$lib/game/core/logSink';
 import {
   logActivity,
   logHuntStart,
@@ -18,7 +18,12 @@ import {
 } from './Log';
 import { combatFeedback } from './combatFeedback';
 
-setSimLogSink({
+/**
+ * The real (DOM/store-backed) sink. Exported so the sim-worker bridge can replay buffered
+ * `simlog` events against the exact same implementation — under the worker the sim runs off-thread
+ * and forwards its sink calls here rather than registering this directly (it can't reach the DOM).
+ */
+export const realSimLogSink: SimLogSink = {
   logActivity,
   logCombatSwing,
   logCombatKill,
@@ -27,4 +32,6 @@ setSimLogSink({
   logFlee,
   logEntityDeath,
   logEntityStateChange
-});
+};
+
+setSimLogSink(realSimLogSink);
