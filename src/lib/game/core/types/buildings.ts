@@ -238,6 +238,15 @@ export interface Building {
   requiresLighting?: boolean; // must be lit before use (e.g. campfire)
   maxFuel?: number; // maximum fuel units it can hold
   fuelConsumptionRate?: number; // fuel units burned per turn when lit
+  // ── Dynamic point lighting (data-driven; see LightingService / EnvironmentService) ──
+  /** Falloff radius in tiles. PRESENCE is the toggle: any building with `lightRadius` emits
+   *  light (no per-building code). A fuelled building (maxFuel>0) only glows while `lit`; a
+   *  fuel-free one glows whenever complete. */
+  lightRadius?: number;
+  /** Peak additive light strength at the source. Defaults to the fire intensity (1.1). */
+  lightIntensity?: number;
+  /** Normalised RGB light colour [r,g,b] 0–1. Defaults to warm fire [1.0, 0.55, 0.22]. */
+  lightColor?: [number, number, number];
   // ── PRODUCTION-CHAIN-EXPANSION §2/§5/§F: heat, flux, molds, storage ──
   conditionDecayPerTurn?: number; // §B: structural wear/turn for complete instances (0/undefined = never decays)
   tileCapacityBonus?: number; // refactor Stage 2: extra item capacity this building grants to its tile (§F storage)
