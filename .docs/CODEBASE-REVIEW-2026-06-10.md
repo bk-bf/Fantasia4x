@@ -116,8 +116,11 @@ PT-2/3/4, and the full PawnStateMachine decomposition — is in the
   on the spot via `computeTileLightLevel(turn, buildings, x, y)` (day/night ambient + nearby fire
   emitters — the same function the HUD readout uses), then feeds it through `lightWorkMultiplier`.
   Only the working pawn's tile is sampled, so there's no per-turn 240×160 pass. Effect: at night away
-  from a fire, work runs at the 0.4 floor; a lit fire (or daylight) restores full speed. The dead
-  `WorldTile.lightLevel` field was removed (nothing reads it now). Tests: `lightWorkWiring.test.ts`
+  from a fire, work runs at the 0.4 floor; a lit fire (or daylight) restores full speed. **Per-job
+  opt-out:** `JobDef.lightAffected` (jobs.jsonc, default true) — set false for carrying jobs
+  (haul/fetch/refuel) so darkness only slows *sight-dependent* work (harvest/build/craft); eat/sleep
+  are FSM states (not `handleWorking`) and were never affected. The dead `WorldTile.lightLevel` field
+  was removed (nothing reads it now). Tests: `lightWorkWiring.test.ts`
   (darkness lowers the multiplier; a lit campfire cancels the night penalty) on top of the existing
   `lightWork.test.ts` (light → sight → speed). Ambient day length is 300 turns / 18000 ticks.
 - [x] **FLEE-1 · Cornered-flee ping-pong / stuck-in-corner.** Done 2026-06-14. Prey boxed between two
