@@ -158,6 +158,16 @@ export class GameEngineImpl implements GameEngine {
           total += e.sum / e.n;
         }
         out.TOTAL = total.toFixed(3) + 'ms';
+        // P-5: fold in per-tick call counts for the suspect scans (profCount → __profCounts),
+        // so a profiling run shows HOW OFTEN they fire, not just phase ms. Accumulated over the
+        // last TICKS_PER_SECOND ticks → divide for a per-tick average. Reset alongside the timings.
+        const counts = (globalThis as any).__profCounts as Record<string, number> | undefined;
+        if (counts) {
+          for (const k of Object.keys(counts)) {
+            out[`#${k}/tick`] = (counts[k] / TICKS_PER_SECOND).toFixed(1);
+            counts[k] = 0;
+          }
+        }
         (globalThis as any).__profOut = out;
         // ADR-011: the profiler must always print (GameEngineImpl deliberately does NOT shadow
         // console), so this is the sanctioned raw-console exemption.
@@ -699,14 +709,17 @@ export const gameEngine = new GameEngineImpl();
 // Dev console helper: toggle the on-demand per-phase turn profiler.
 //   profileTurns()       → start profiling (logs avg phase ms as [PROF] each second)
 //   profileTurns(false)  → stop profiling
-// Results are also available at globalThis.__profOut. Off by default — adds zero
-// cost to the tick loop until enabled.
+// The [PROF] line also includes per-tick call counts (`#<name>/tick`) for the P-5 suspect scans
+// (blockedTiles, findCombatThreat, findNearestRestBuilding) via profCount() — so a run shows both
+// how long each phase takes AND how often those scans fire. Results are also at globalThis.__profOut.
+// Off by default — adds zero cost to the tick loop until enabled.
 if (typeof globalThis !== 'undefined' && import.meta.env?.DEV) {
   (globalThis as any).profileTurns = (enable = true) => {
     (globalThis as any).__profileTurns = !!enable;
     (globalThis as any).__prof = {};
+    (globalThis as any).__profCounts = {};
     return enable
-      ? 'Turn profiler ON — avg phase timings log as [PROF] every second.'
+      ? 'Turn profiler ON — avg phase timings + #scan/tick counts log as [PROF] every second.'
       : 'Turn profiler OFF.';
   };
 }
