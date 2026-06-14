@@ -634,26 +634,31 @@ export function shouldInterruptForNeed(
   return distToSource <= maxAcceptableDist;
 }
 
+// M2-core (ENGINE-PERFORMANCE ★ ACTIVE): these single-pawn updaters mutate the live array element
+// in place (found by id, matching the old map-by-id semantics) and return the SAME state ref — no
+// per-call `pawns.map` array allocation, which was O(n) per call → O(n²)/tick (transitionTo runs
+// per-pawn-per-tick). Safe: processGameTurn shallow-copies the top-level state each tick so
+// reactivity still fires; the ?simworker snapshot is cloned at the boundary; no FSM site keys off
+// these helpers' return identity (the only `!==` checks are tendWounds/healWounds).
 export function transitionTo(pawn: Pawn, state: PawnStateName, gs: GameState): GameState {
   const prev = pawn.currentState ?? PAWN_STATE.IDLE;
   if (prev !== state) {
     gameLogger.log(gs.turn, 'STATE-CHG', `${pawn.name} ${prev} → ${state}`);
   }
-  return {
-    ...gs,
-    pawns: gs.pawns.map((p) => (p.id === pawn.id ? { ...p, currentState: state } : p))
-  };
+  const target = gs.pawns.find((p) => p.id === pawn.id);
+  if (target) target.currentState = state;
+  return gs;
 }
 
 export function goIdle(pawn: Pawn, gs: GameState): GameState {
-  return {
-    ...gs,
-    pawns: gs.pawns.map((p) =>
-      p.id === pawn.id
-        ? { ...p, currentState: PAWN_STATE.IDLE, activeJob: undefined, isMoving: false, path: [] }
-        : p
-    )
-  };
+  const target = gs.pawns.find((p) => p.id === pawn.id);
+  if (target) {
+    target.currentState = PAWN_STATE.IDLE;
+    target.activeJob = undefined;
+    target.isMoving = false;
+    target.path = [];
+  }
+  return gs;
 }
 
 // ── P0 perception pre-filter (ENGINE-PERFORMANCE §6 / ADR-018) ────────────────
@@ -715,12 +720,13 @@ export function findCombatThreat(pawn: Pawn, gs: GameState): Mob | null {
 /** Stop a pawn's current movement in place (used when planting to fight). */
 export function haltMovement(pawn: Pawn, gs: GameState): GameState {
   if ((pawn.path?.length ?? 0) === 0 && !pawn.isMoving) return gs;
-  return {
-    ...gs,
-    pawns: gs.pawns.map((p) =>
-      p.id === pawn.id ? { ...p, path: [], isMoving: false, hasReachedDestination: false } : p
-    )
-  };
+  const target = gs.pawns.find((p) => p.id === pawn.id);
+  if (target) {
+    target.path = [];
+    target.isMoving = false;
+    target.hasReachedDestination = false;
+  }
+  return gs;
 }
 
 /** A pawn's labor level (0–4) for a work category, mirroring getAvailableJobs' default of 2. */
