@@ -64,7 +64,8 @@
   import {
     buildPawnCard,
     buildMobCard,
-    jobProgressBar
+    jobProgressBar,
+    PROGRESS_BAR_STATES
   } from '$lib/components/UI/gameCanvas/selectionCard';
   import { overlayDroppedItems, buildingsVisualSig } from '$lib/components/UI/gameCanvas/overlay';
   import itemsData from '$lib/game/database/items.jsonc';
@@ -834,11 +835,6 @@
       }
     }
   }
-
-  // States that show a head progress bar: work jobs + the in-place need jobs (eat/drink/wash),
-  // all of which set activeJob.progress. Moving/idle states don't (no meaningful in-place progress).
-  // Sleeping is need-driven with no task to "complete", so it shows only the Zzz overlay, no bar.
-  const PROGRESS_BAR_STATES = new Set(['Working', 'Eating', 'Drinking', 'Washing']);
 
   /**
    * Compute world-effect overlay positions (Zzz, progress bars, campfire sparks)
@@ -1666,7 +1662,12 @@
     // sandbox sets it), accumulate the per-frame wall-time split so we can see
     // whether the bottleneck is the sim or the render — the turn profiler only
     // covers the sim and is blind to everything in this loop. Logged once/sec.
-    let profAccum = { sim: 0, overlay: 0, render: 0, frames: 0, wall: 0 };
+    // Paused and running frames are profiled into SEPARATE buckets — they are completely
+    // different workloads (paused: overlay-animation layer only; running: full sim) and must
+    // never be averaged together. Each second we emit a tagged line per state that saw frames.
+    const blankProf = () => ({ sim: 0, overlay: 0, render: 0, frames: 0, wall: 0 });
+    let profRun = blankProf();
+    let profPause = blankProf();
     let profLast = 0;
     let sysBannerLogged = false;
     function frame() {
@@ -1703,32 +1704,47 @@
           sysBannerLogged = true;
           logSystemBanner();
         }
-        profAccum.sim += tOverlay - tSim;
-        profAccum.overlay += tRender - tOverlay;
-        profAccum.render += end - tRender;
-        profAccum.wall += dt * 1000;
-        profAccum.frames++;
-        if (now - profLast > 1000 && profAccum.frames > 0) {
-          const f = profAccum.frames;
-          const js = (profAccum.sim + profAccum.overlay + profAccum.render) / f;
-          const frameMs = profAccum.wall / f;
-          // Single-thread CPU busy fraction: how much of each frame the main thread
-          // spent in our JS vs. waiting (GPU present / vsync / rAF throttle).
-          const busy = frameMs > 0 ? (js / frameMs) * 100 : 0;
+        const acc = get(gameState.isPaused) ? profPause : profRun;
+        acc.sim += tOverlay - tSim;
+        acc.overlay += tRender - tOverlay;
+        acc.render += end - tRender;
+        acc.wall += dt * 1000;
+        acc.frames++;
+        if (now - profLast > 1000 && profRun.frames + profPause.frames > 0) {
           // performance.memory is Chrome-only; JS heap, not system RAM.
           const mem = (performance as unknown as { memory?: PerfMemory }).memory;
           const heap = mem
             ? ` · heap ${(mem.usedJSHeapSize / 1048576).toFixed(0)}/${(mem.jsHeapSizeLimit / 1048576).toFixed(0)}MB`
             : '';
-          const renderLine =
-            `[RENDER-PROF] ${f}fps · frame ${frameMs.toFixed(1)}ms ` +
-            `= sim ${(profAccum.sim / f).toFixed(1)} + overlay ${(profAccum.overlay / f).toFixed(1)} ` +
-            `+ render ${(profAccum.render / f).toFixed(1)}ms ` +
-            `(GPU/idle ${(frameMs - js).toFixed(1)}ms) · main-thread ${busy.toFixed(0)}% busy${heap}`;
-          // eslint-disable-next-line no-console
-          console.log(renderLine);
-          gameLogger.log(0, 'PERF', renderLine);
-          profAccum = { sim: 0, overlay: 0, render: 0, frames: 0, wall: 0 };
+          // A hidden/unfocused tab gets its rAF throttled by the browser — that inflates the
+          // GPU/idle gap and is NOT a game cost. Flag it so such windows are discarded.
+          const bg =
+            typeof document !== 'undefined' &&
+            (document.hidden || (typeof document.hasFocus === 'function' && !document.hasFocus()))
+              ? ' · bg(rAF-throttled — ignore)'
+              : '';
+          // One line per state that saw frames; effective fps = 1000/frameMs (true rate of
+          // that state, independent of how much of the window it occupied).
+          for (const [label, a] of [
+            ['RUNNING', profRun],
+            ['PAUSED', profPause]
+          ] as const) {
+            if (a.frames === 0) continue;
+            const f = a.frames;
+            const js = (a.sim + a.overlay + a.render) / f;
+            const frameMs = a.wall / f;
+            const busy = frameMs > 0 ? (js / frameMs) * 100 : 0;
+            const line =
+              `[RENDER-PROF] ${label} ~${(1000 / frameMs).toFixed(0)}fps · frame ${frameMs.toFixed(1)}ms ` +
+              `= sim ${(a.sim / f).toFixed(1)} + overlay ${(a.overlay / f).toFixed(1)} ` +
+              `+ render ${(a.render / f).toFixed(1)}ms ` +
+              `(GPU/idle ${(frameMs - js).toFixed(1)}ms) · main-thread ${busy.toFixed(0)}% busy · ${f} frames${heap}${bg}`;
+            // eslint-disable-next-line no-console
+            console.log(line);
+            gameLogger.log(0, 'PERF', line);
+          }
+          profRun = blankProf();
+          profPause = blankProf();
           profLast = now;
         }
       }
