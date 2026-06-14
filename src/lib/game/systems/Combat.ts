@@ -32,8 +32,6 @@ const STATUS_EFFECTS_DB = statusEffectsData as unknown as StatusEffectDef[];
 // ── Tuning constants ─────────────────────────────────────────────────────────
 /** Scales per-part bleed so a fully-severed 5%-mass hand ≈ 2 blood/turn. */
 const BLEED_CONSTANT = 40;
-/** Wounds with bleedRate below this clot naturally each turn. */
-const CLOT_FLOOR = 0.5;
 /** Stats are on a ~5–22 scale; this divisor keeps damage in a sensible range. */
 const STAT_SCALE = 10;
 /** Mob base damage when it has no weapon. */
@@ -932,7 +930,3 @@ class CombatServiceImpl implements CombatService {
 }
 
 export const combatService: CombatService = new CombatServiceImpl();
-
-/** Export the body-part definitions so Phase D UI and tests can access them. */
-export { PART_DEF_MAP, BLEED_CONSTANT, CLOT_FLOOR };
-export type { BodyPartDef };
