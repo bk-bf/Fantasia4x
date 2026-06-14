@@ -1,14 +1,19 @@
 #!/usr/bin/env bash
 # launch.sh — start main + all .worktrees/launch/* dev servers with debug mode.
 # Ctrl-C kills them all.
+#
+# --profiler: focused profiling session — launches ONLY the main server in the heavy
+#   profiler sandbox (./dev.sh --profiler), skipping the worktree fan-out + codegraph.
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PIDS=()
 
 # --debug enables the live codebase-graph server (off by default).
 DEBUG=false
+PROFILER=false
 for arg in "$@"; do
   [[ "$arg" == "--debug" ]] && DEBUG=true
+  [[ "$arg" == "--profiler" ]] && PROFILER=true
 done
 
 cleanup() {
@@ -23,7 +28,7 @@ cleanup() {
 trap cleanup INT TERM
 
 launch() {
-  local dir="$1" label="$2"
+  local dir="$1" label="$2" extra="${3:-}"
   local port=5173
   [[ -f "$dir/.devport" ]] && port=$(< "$dir/.devport")
   # A Ctrl-Z'd previous launch leaves a suspended server holding the port:
@@ -37,11 +42,23 @@ launch() {
       kill -CONT $stopped 2>/dev/null
     fi
   fi
-  (cd "$dir" && exec env CI=true ./dev.sh --debug) &
+  # shellcheck disable=SC2086 -- $extra is an intentional optional flag passthrough
+  (cd "$dir" && exec env CI=true ./dev.sh --debug $extra) &
   PIDS+=($!)
   echo "  [$label] http://localhost:$port"
   sleep 0.3
 }
+
+# Profiler sandbox: a single focused server, no worktree fan-out, no codegraph.
+if [[ "$PROFILER" == true ]]; then
+  echo "Fantasia4x — profiler sandbox (main server only)"
+  echo ""
+  launch "$SCRIPT_DIR" "main" "--profiler"
+  echo ""
+  echo "Ctrl-C to stop."
+  wait
+  exit 0
+fi
 
 echo "Fantasia4x — launching all dev servers (debug mode)"
 echo ""

@@ -817,9 +817,10 @@
     }
   }
 
-  // States that show a head progress bar: work jobs + the in-place need jobs (eat/drink/wash/sleep),
+  // States that show a head progress bar: work jobs + the in-place need jobs (eat/drink/wash),
   // all of which set activeJob.progress. Moving/idle states don't (no meaningful in-place progress).
-  const PROGRESS_BAR_STATES = new Set(['Working', 'Eating', 'Drinking', 'Washing', 'Sleeping']);
+  // Sleeping is need-driven with no task to "complete", so it shows only the Zzz overlay, no bar.
+  const PROGRESS_BAR_STATES = new Set(['Working', 'Eating', 'Drinking', 'Washing']);
 
   /**
    * Compute world-effect overlay positions (Zzz, progress bars, campfire sparks)
