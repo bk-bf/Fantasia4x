@@ -14,6 +14,9 @@ import { gameEngine } from '$lib/game/systems/GameEngineImpl';
 import './simLogBridge';
 // ADR-021 W1: dev-only — exposes globalThis.verifyWasmInWorker() to check WASM-in-worker.
 import '$lib/game/sim/simWorkerClient';
+// ADR-021 W3: serializable command registry (shared with the future sim worker).
+import { applySimCommand } from '$lib/game/sim/commands';
+import type { SimCommand } from '$lib/game/sim/simProtocol';
 import type {
   GameState,
   Pawn,
@@ -441,16 +444,15 @@ function regenWorld(seed?: number, dev = false, itemQty = 500) {
 }
 
 // ===== ITEM MANAGEMENT =====
+// ADR-021 W3: routed through the serializable command registry (`commands.ts`) instead of an inline
+// closure, so the same logic can run in the sim worker after cutover. dispatchCommand on the main
+// thread is still applyCommand — behaviour identical.
 function consumeGlobalItem(itemId: string, quantity: number = 1) {
-  updateWithSave((state) => {
-    const current = (state.stockpile ?? {})[itemId] ?? 0;
-    if (current < quantity) return state;
-    return consumeFromStockpiles(state, { [itemId]: quantity });
-  });
+  dispatchCommand({ type: 'consumeGlobalItem', payload: { itemId, quantity }, save: true });
 }
 
 function addItem(itemId: string, amount: number) {
-  updateWithSave((state) => addToStockpileZone(state, null, { [itemId]: amount }));
+  dispatchCommand({ type: 'addItem', payload: { itemId, amount }, save: true });
 }
 
 /**
@@ -612,6 +614,12 @@ const set = (v: GameState) => gameEngine.applyCommand(() => v, false);
 const update = (updater: (v: GameState) => GameState) => gameEngine.applyCommand(updater, false);
 const updateWithSave = (updater: (state: GameState) => GameState) =>
   gameEngine.applyCommand(updater, true);
+
+// ADR-021 W3: dispatch a serializable command. On the main thread it applies through the engine
+// (identical to update/updateWithSave); after the worker cutover this becomes a postMessage to the
+// sim worker. The command's logic lives in `commands.ts` (worker-safe), shared by both targets.
+const dispatchCommand = (cmd: SimCommand) =>
+  gameEngine.applyCommand((s) => applySimCommand(s, cmd), cmd.save ?? false);
 
 // Engine → store projection of a user command: refresh the held value, optionally schedule a
 // debounced save, then notify subscribers immediately so user actions stay snappy.
