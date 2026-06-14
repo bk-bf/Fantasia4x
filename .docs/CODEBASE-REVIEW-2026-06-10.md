@@ -36,19 +36,25 @@ PT-2/3/4, and the full PawnStateMachine decomposition — is in the
     method may be reached polymorphically via its interface. Only the `god-module` rule (>40 fns)
     pointed here; the deadness was found by grepping callers. Worth a future rule: flag interface/class
     methods whose sole reference is the interface declaration (guard against polymorphism false-positives).
-- [ ] **P-4 · God files (remaining).** PawnStateMachine is done (see archive). Still oversized:
+- [ ] **P-4 · God files (remaining).** PawnStateMachine is done (see archive). Still oversized
+  (LOC as of 2026-06-14 — all have **grown** since the original review, hence the bump):
 
-  | File | LOC |
-  | ---- | --- |
-  | `components/UI/GameCanvas.svelte` | 3,321 — 16× the 200-line cap; also drives the sim clock |
-  | `services/EntityService.ts` | 2,015 — spawning + AI + movement + hunger + corpse lifecycle |
-  | `systems/Combat.ts` | 1,419 |
-  | `core/types.ts` | 1,387 |
-  | `services/JobService.ts` | 1,152 — fuel/refuel logic could move to BuildingService |
+  | File | LOC | Proposed decomposition (no big-bang — seam by seam, behind existing tests) |
+  | ---- | --- | -------------------------------------------------------------------------- |
+  | `core/types.ts` | 1,478 | **Lowest risk, do first.** Mechanical split into `core/types/` domain modules (`world`, `entities`, `pawn`, `combat`, `items`, `buildings`, `jobs`, `research`, `race`, `gamestate`); keep `types.ts` as a **barrel re-export** so the hundreds of `from '../core/types'` imports don't change → zero call-site churn. |
+  | `systems/Combat.ts` | 1,499 | Extract the **`BODY_PART_DEFS` table** (~530 LOC, the bulk) to `database/bodyParts.jsonc` (or `core/BodyParts.ts`) → drops Combat to ~970. Then pull damage/wound math (`recomputeWound`, `attackerProfile`, `profileFromWeapon`, `pickWeightedWeapon`, `physicalResistance`, `partArmorReduction`, `currentPartHealth`) into `systems/combatMath.ts`. `CombatServiceImpl` stays the orchestrator. |
+  | `services/JobService.ts` | 1,337 | ADR-017 already has a handlers registry — move each job type's `generate`/`complete` into `services/jobs/<type>.ts` (harvest, craft, haul, construct, fetch, refuel…); JobService keeps the registry + shared plumbing. The **refuel rules** (`_getRefuelRequirements`, `_canSatisfyRefuelRequirements`, `_hasRequiredFuelTypesForRefuel`, threshold) move to `BuildingService` (fuel is a building concern); job wiring stays. |
+  | `services/EntityService.ts` | 2,022 | Mirror the `pawn/*` decomposition (archive): split the section banners into an `entity/` dir of pure `(state,…)=>state` modules — `spawning`, `ai` (the ~700-LOC stepping brain; may sub-split hostile/passive), `feeding`, `foraging`, `decay`, `movement`, `queries`. EntityService stays the singleton facade delegating to them. |
+  | `components/UI/GameCanvas.svelte` | 3,421 | **Last, highest risk** (renderer + input + ~2,700-LOC `<script>`). Extract leaf-first: (1) `<BuildingFuelPanel>` settings UI + HUD-sprite-icon action + `selectionCard.ts` card builders (low-risk leaves); (2) overlay painting (`updatePawnOverlay`/`overlayDroppedItems`/`drawDesignations`/`redrawOverlay`) → `gameCanvas/overlay.ts`; (3) camera (`viewX/Y`, drag, clamp, follow, wheel) → `gameCanvas/camera.svelte.ts`; (4) pointer/keyboard + drag state-machines (zone/blueprint/hunt/similar-select) last — most coupled. **Sim-clock note:** the rAF loop here calls `gameState.stepSimulation(dt)` (sim + render share one schedule). Decoupling fully is a design change — flag, don't fold into this split. |
 
-  Plus 20 components over the 200-line cap (BuildingMenu 515, ActivityLogOverlay 525, CraftingScreen
-  476…). Split along existing seams opportunistically. Optional: sub-split the 788-LOC `pawnHelpers.ts`
-  (movement / finders / need-distance / hunt) — no longer a god-module, low priority.
+  Plus 21 components over the 200-line cap (ActivityLogOverlay 525, CraftingScreen/BuildingMenu 484,
+  ResearchScreen 452, ZonePanel 447, EntityScreen 422…). Split along existing seams opportunistically.
+  Optional: sub-split the 788-LOC `pawnHelpers.ts` (movement / finders / need-distance / hunt) — no
+  longer a god-module, low priority.
+
+  **Suggested order:** `types.ts` (mechanical, zero churn) → `Combat.ts` (data-table extraction is a
+  big cheap win) → `JobService.ts` (ADR-017-aligned) → `EntityService.ts` (pawn/* precedent) →
+  `GameCanvas.svelte` (opportunistic, leaf-first). Each is independent; none needs a big-bang.
 - [ ] **P-4b · PawnStateMachine Step 5 — push selection into services.** `handleIdle` and
   `checkNeedInterrupts` still make the "what should this pawn do next" decision inline. Move job
   selection into `JobService` and need-target selection into `PawnService`, leaving the handlers to
