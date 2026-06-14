@@ -671,16 +671,18 @@
     // are invisible on the map, so an identity check would force a full terrain
     // rebuild every frame while a fire burns. The signature ignores fuel/lit.
     const buildingsSig = buildingsVisualSig(buildings);
-    // Player-driven terrain changes (placed buildings, designations, zone paint) must show
-    // immediately. Sim-driven worldMap churn (regrowth/harvest depleting a tile's resource
-    // glyph) is coalesced to TERRAIN_REBUILD_MIN_MS in the render loop — a regrown tree
-    // appearing a half-second late is imperceptible, and it stops the 60ms full rebuild from
-    // running every frame.
-    const playerTerrainChanged =
+    // Terrain rebuild (buildGameGrid + setGrid) bumps the renderer's gridVersion, which
+    // invalidates the cached 38k-tile vertex buffer → a ~90ms rebuild. The trigger fields below
+    // (designations especially) churn nearly every tick during play, so an immediate rebuild ran
+    // every frame and capped FPS. ALL of them are now coalesced to TERRAIN_REBUILD_MIN_MS in the
+    // render loop — placed buildings/designations appear ≤throttle late (imperceptible), and the
+    // terrain cache finally HITS between rebuilds. (Interactive drag previews bypass this via their
+    // own direct redrawOverlay() calls, so painting stays responsive.)
+    const terrainChanged =
+      worldMap !== _prevWorldMap ||
       buildingsSig !== _prevBuildingsSig ||
       designations !== _prevDesignations ||
       zoneTiles !== _prevZoneTiles;
-    const worldMapChanged = worldMap !== _prevWorldMap;
     _prevWorldMap = worldMap;
     _prevBuildingsSig = buildingsSig;
     _prevDesignations = designations;
@@ -697,9 +699,7 @@
     // so it tracks the pawn's interpolated sub-tile position smoothly.
     if (renderer?.isReady()) {
       if (worldMap.length > 0) {
-        if (playerTerrainChanged)
-          redrawOverlay(); // immediate
-        else if (worldMapChanged) _terrainDirty = true; // coalesced in the render loop
+        if (terrainChanged) _terrainDirty = true; // coalesced in the render loop (throttled)
       } else {
         renderer.setGrid(generatePlaceholderGrid());
       }
