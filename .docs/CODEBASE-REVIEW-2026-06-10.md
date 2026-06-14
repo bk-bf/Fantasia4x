@@ -5,7 +5,7 @@
 Living tracker of **open** architecture/defect items. Completed work — R1–R12, P-1/P-6/P-7,
 PT-2/3/4, and the full PawnStateMachine decomposition — is in the
 [resolved archive](.tasks/archive/CODEBASE-REVIEW-RESOLVED-2026-06-13.md). Gate at last update:
-`check` 0 errors · `test` 178 · `lint` 0 · `build` ok.
+`check` 0 errors · `test` 188 · `lint` 0 · `build` ok.
 
 ---
 
@@ -40,15 +40,15 @@ PT-2/3/4, and the full PawnStateMachine decomposition — is in the
   (LOC as of 2026-06-14 — all have **grown** since the original review, hence the bump):
 
   Progress 2026-06-14: types.ts, Combat data-table, and the JobService→BuildingService fuel-rules
-  move are **done** (✅ rows below); EntityService + GameCanvas remain.
+  move + EntityService decomposition are **done** (✅ rows below); only GameCanvas remains.
 
   | File | LOC | Decomposition status |
   | ---- | --- | -------------------- |
   | `core/types.ts` | 1,478 → **16** ✅ | **Done.** Split into `core/types/` domain modules (`world`, `race`, `health`, `items`, `buildings`, `jobs`, `entities`, `research`, `gamestate`); `types.ts` is now a `export *` barrel — zero call-site churn. Largest module 340 LOC. |
   | `systems/Combat.ts` | 1,499 → **932** ✅ | **Done (data table).** `BODY_PART_DEFS` table + `BodyPartDef`/`PART_DEF_MAP`/`OUTER_PARTS`/`createDefaultBodyParts`/`rollBodyPart` moved to `core/BodyParts.ts` (569 LOC); Combat re-exports `PART_DEF_MAP`/`createDefaultBodyParts` for existing importers; dead `CLOT_FLOOR` export removed. Optional follow-up: lift damage/wound math into `combatMath.ts` (entangled with class tuning constants — deferred, lower value). |
   | `services/JobService.ts` | 1,337 → **1,261** ✅ (fuel) | **Partial.** Refuel **rules** (`getRefuelThresholdRatio`/`getRefuelRequirements`/`canSatisfyRefuelRequirements`/`hasRequiredFuelTypesForRefuel` + defaults + `RefuelRequirements`) extracted to a focused new `services/fuelRules.ts` (free functions; JobService calls `fuelRules.*`). _Note:_ they went to `fuelRules.ts` rather than `BuildingService` because BuildingService was already at the 40-fn god-module limit — adding them there tripped the warning, so a dedicated module is the cleaner home. **Remaining:** the per-job-type handler split into `services/jobs/<type>.ts` (ADR-017 registry) — the bigger structural piece, still open. |
-  | `services/EntityService.ts` | 2,022 | **Open.** Mirror the `pawn/*` decomposition: split the section banners into an `entity/` dir of pure `(state,…)=>state` modules — `spawning`, `ai` (the ~700-LOC stepping brain; may sub-split hostile/passive), `feeding`, `foraging`, `decay`, `movement`, `queries`. EntityService stays the singleton facade. Note: methods are `this`-coupled (e.g. `this.entityName`/`this.adjacent`), so this is a real refactor (convert to free functions), not a mechanical move. |
-  | `components/UI/GameCanvas.svelte` | 3,421 | **Open, highest risk** (renderer + input + ~2,700-LOC `<script>`). Extract leaf-first: (1) `<BuildingFuelPanel>` settings UI + HUD-sprite-icon action + `selectionCard.ts` card builders (low-risk leaves); (2) overlay painting → `gameCanvas/overlay.ts`; (3) camera → `gameCanvas/camera.svelte.ts`; (4) pointer/keyboard + drag state-machines last — most coupled. **Sim-clock note:** the rAF loop here calls `gameState.stepSimulation(dt)` (sim + render share one schedule). Decoupling fully is a design change — flag, don't fold into this split. |
+  | `services/EntityService.ts` | 2,022 → **56** ✅ | **Done 2026-06-14.** Decomposed into an `entity/` dir of free-function modules (mirrors `pawn/*`): `entityConstants` (116), `entityHelpers` (430 — queries/movement/foraging lookups + `advanceMobMovement`), `entitySpawning` (238), `entityAI` (1,015 — the FSM brain + feeding sub-steps), `entityLifecycle` (211 — hunger/blood-loss/death/decay). EntityService is now a 56-line facade. The class had no instance state but `idCounter` (now a module-level counter in spawning), so every `this.X` dropped to a free-function call. `entityAI` is still 1,015 LOC — the cohesive stepping brain; optional future sub-split into hostile/passive. 188 tests green, eslint clean. |
+  | `components/UI/GameCanvas.svelte` | 3,421 | **Open, highest risk** (renderer + input + ~2,700-LOC `<script>`). Plan unchanged (leaf-first: `<BuildingFuelPanel>`, HUD-sprite-icon action, `selectionCard.ts`, then overlay → `gameCanvas/overlay.ts`, camera → `gameCanvas/camera.svelte.ts`, input/drag last). **Coupling finding (2026-06-14):** the "leaves" are less separable than hoped — the sprite-sheet caches (`_tilesSheetCanvas`/`_itemsSheetCanvas`) are **shared** by the HUD-icon action *and* the overlay/designation renderer, and the card builders close over component-reactive state (`cameraFollow*`, callbacks). So the real first step is extracting a shared **sprite-sheet module** (used by both HUD + overlay) before HUD icons can move; the card builders need their deps threaded as params. A dedicated coordinated pass touching the canvas render path — not safe to fold into a multi-file batch. **Sim-clock note:** the rAF loop calls `gameState.stepSimulation(dt)` (sim + render share one schedule); decoupling fully is a separate design change. |
 
   Plus 21 components over the 200-line cap (ActivityLogOverlay 525, CraftingScreen/BuildingMenu 484,
   ResearchScreen 452, ZonePanel 447, EntityScreen 422…). Split along existing seams opportunistically.
