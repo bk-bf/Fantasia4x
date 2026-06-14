@@ -5,7 +5,7 @@
 Living tracker of **open** architecture/defect items. Completed work — R1–R12, P-1/P-6/P-7,
 PT-2/3/4, and the full PawnStateMachine decomposition — is in the
 [resolved archive](.tasks/archive/CODEBASE-REVIEW-RESOLVED-2026-06-13.md). Gate at last update:
-`check` 0 errors · `test` 188 · `lint` 0 · `build` ok.
+`check` 0 errors · `test` 194 · `lint` 0 · `build` ok.
 
 ---
 
@@ -107,20 +107,22 @@ PT-2/3/4, and the full PawnStateMachine decomposition — is in the
   reuse `stepDirectional`'s same-step guard at the flee level so the heading can't reverse every tick;
   add a flee give-up / "can't escape" timeout (mirroring `HUNT_GIVE_UP_SECONDS`) so a truly boxed-in
   prey holds (or turns to fight) rather than thrashing forever.
-- [ ] **MOVE-1 · Duplicated per-tick move pass + divergent path-assign (pawns vs mobs).** The
-  *core* of movement is already shared (`systems/MovementSystem.ts`: `advanceAlongPath`, `simTarget`,
-  `moveCostToEnter`), but the **per-tick driver** is copy-pasted: `PawnService.processMovement` and
-  `entity/entityHelpers.advanceMobMovement` are ~80% identical (occupancy hold, `blockedTicks`
-  drop-and-reroute, claim set, `advanceAlongPath`). Worse, **path assignment diverges**: pawn
-  `assignPath` preserves `nextCellCostLeft`; flee `stepDirectional` guards against re-issuing the same
-  step; but the mob hunt re-path *reset* `nextCellCostLeft: undefined` — which was exactly the
-  [FIXED] hunt-yoyo regression (BUGS.md). Each new movement consumer re-derives "follow path / hold
-  when blocked / (re)assign a path without breaking the crossing", so they drift and the same bug
-  class recurs. Fix direction: one shared `advanceBodies(bodies, occupancy, worldMap)` pass + one
-  shared `assignPath`/`repath` that *always* preserves mid-crossing, parameterised over a minimal
-  `Movable` body shape; pawns/mobs keep only their distinct FSM + state fields. Movement is plain TS
-  (not spatial), so ADR-008 doesn't constrain it. Real refactor (the two passes differ in claim /
-  mid-cross reservation details) — do as its own pass, don't fold into a bugfix. Found 2026-06-14.
+- [x] **MOVE-1 · Duplicated per-tick move pass (pawns vs mobs) → shared `stepBody`.** Done
+  2026-06-14. The per-tick driver was copy-pasted between `PawnService.processMovement` and
+  `entity/entityHelpers.advanceMobMovement` (~80% identical: occupancy hold, `blockedTicks`
+  drop-and-reroute, claim set, advance) and had **drifted** — the pawn pass lacked the convergence
+  `claimed` set, and `MAX_BLOCKED_TICKS` was defined in *three* places (PawnService, entityConstants,
+  implicitly the mob pass). The hunt-yoyo regression was the same disease (the mob hunt re-path reset
+  `nextCellCostLeft`, which pawn `assignPath` never did). **Fix:** `MovementSystem.ts` now owns
+  `stepBody(body, occupancy, claimed, worldMap, speed)` (the hold / blocked-ticks-drop / one-body-
+  per-tile-claim / advance step, returning `{body, status, done}`), `seedMidCrossClaims`, and the
+  single `MAX_BLOCKED_TICKS`. Both passes are now thin: build occupancy + seed claims, loop
+  `stepBody`, then map the result onto their own fields (pawns layer `isMoving`/`hasReachedDestination`;
+  mobs just take the body). Pawns *gained* the mid-cross convergence guard (one body per tile) for
+  free. The path-assign side stays per-type (pawn `assignPath` sets `isMoving`; mob re-path is inline)
+  but both now correctly preserve `nextCellCostLeft` — the invariant `stepBody` relies on. Unit test
+  `systems/movementPass.test.ts` (idle/held/dropped/moved, mid-cross preservation, claim convergence);
+  `moverDeadlock` (pawn) + `entitySim` (mob) still green. 194 tests, `check` 0, lint clean.
 
 ## Carried-forward deferred (unchanged status)
 
