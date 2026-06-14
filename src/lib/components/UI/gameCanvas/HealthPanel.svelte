@@ -7,6 +7,7 @@
 -->
 <script lang="ts">
   import type { HealthModel } from '$lib/components/UI/SelectedEntityCard.svelte';
+  import { healthPctColor, bloodColor, painColor } from './healthColors';
 
   let { health, open = false }: { health: HealthModel | undefined; open?: boolean } = $props();
 
@@ -29,9 +30,9 @@
   <div class="health-hdr">◈ HEALTH</div>
   {#if health}
     {#if health.blood}
-      <div class="hp-row" class:hp-warn={health.blood.current < health.blood.max * 0.5}>
+      <div class="hp-row">
         <span class="hp-k">Blood</span>
-        <span
+        <span style="color:{bloodColor((health.blood.current / health.blood.max) * 100)}"
           >{Math.round(health.blood.current)}/{Math.round(health.blood.max)} ({Math.round(
             (health.blood.current / health.blood.max) * 100
           )}%)</span
@@ -39,9 +40,9 @@
       </div>
     {/if}
     {#if (health.pain ?? 0) > 0}
-      <div class="hp-row" class:hp-warn={(health.pain ?? 0) >= 50}>
+      <div class="hp-row">
         <span class="hp-k">Pain</span>
-        <span>{Math.round(health.pain ?? 0)}%</span>
+        <span style="color:{painColor(health.pain ?? 0)}">{Math.round(health.pain ?? 0)}%</span>
       </div>
     {/if}
     {#if health.conditions.length > 0}
@@ -56,12 +57,12 @@
     {:else}
       {#each health.limbs as limb (limb.label)}
         <div class="hp-limb">
-          <div class="hp-limb-hdr" class:hp-warn={limb.missing || limb.health < 50}>
+          <div class="hp-limb-hdr">
             <span class="hp-limb-name">{limb.label}</span>
             {#if limb.missing}
-              <span>missing</span>
+              <span style="color:{healthPctColor(0, { missing: true })}">missing</span>
             {:else}
-              <span>{Math.round(limb.health)}%</span>
+              <span style="color:{healthPctColor(limb.health)}">{Math.round(limb.health)}%</span>
               {#if limb.bleedRate && limb.bleedRate > 0}
                 <span class="hp-bleed">▼ {limb.bleedRate.toFixed(1)} blood/s</span>
               {/if}
@@ -70,7 +71,11 @@
           {#each limb.parts as part (part.label)}
             <div class="hp-part">
               <span class="hp-part-name">{part.label}</span>
-              <span class="hp-part-hp">{Math.round(part.health)}/{Math.round(part.maxHp)}</span>
+              <span
+                class="hp-part-hp"
+                style="color:{healthPctColor((part.health / part.maxHp) * 100)}"
+                >{Math.round(part.health)}/{Math.round(part.maxHp)}</span
+              >
               {#each part.wounds as w (w.text)}
                 <span class="hp-wound" class:hp-warn={w.warn}>· {w.text}</span>
               {/each}

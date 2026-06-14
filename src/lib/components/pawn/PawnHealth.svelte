@@ -2,6 +2,11 @@
 <script lang="ts">
   import type { Pawn, LimbState, LimbId, BodyPartState, BodyPartId } from '$lib/game/core/types';
   import { PART_DEF_MAP, createDefaultBodyParts } from '$lib/game/systems/Combat';
+  import {
+    healthPctColor,
+    bloodColor as bloodColorShared,
+    painColor as painColorShared
+  } from '$lib/components/UI/gameCanvas/healthColors';
 
   let { pawn }: { pawn: Pawn } = $props();
 
@@ -67,12 +72,7 @@
   }
 
   function lc(limb: LimbState): string {
-    if (!alive) return '#2a1808';
-    if (limb.isMissing || limb.health <= 0) return '#661010';
-    if (limb.health < 25) return 'var(--neg)';
-    if (limb.health < 50) return 'var(--accent-hi)';
-    if (limb.health < 75) return 'var(--text-dim)';
-    return 'var(--pos)';
+    return healthPctColor(limb.health, { missing: limb.isMissing, alive });
   }
 
   function limbStatus(limb: LimbState): string {
@@ -81,19 +81,8 @@
     return `${limb.health}%`;
   }
 
-  function bloodColor(v: number): string {
-    if (v >= 80) return 'var(--pos)';
-    if (v >= 60) return 'var(--text-dim)';
-    if (v >= 40) return 'var(--accent-hi)';
-    return 'var(--neg)';
-  }
-
-  function painColor(v: number): string {
-    if (v >= 80) return 'var(--neg)';
-    if (v >= 55) return 'var(--accent-hi)';
-    if (v >= 30) return 'var(--text-dim)';
-    return 'var(--pos)';
-  }
+  const bloodColor = bloodColorShared;
+  const painColor = painColorShared;
 
   function partName(id: BodyPartId): string {
     return id
@@ -103,13 +92,10 @@
   }
 
   function partHealthColor(part: BodyPartState): string {
-    if (!alive) return '#2a1808';
-    if (part.isMissing || part.health <= 0) return '#661010';
-    const pct = part.health / part.maxHp;
-    if (pct < 0.25) return 'var(--neg)';
-    if (pct < 0.5) return 'var(--accent-hi)';
-    if (pct < 0.75) return 'var(--text-dim)';
-    return 'var(--pos)';
+    return healthPctColor((part.health / part.maxHp) * 100, {
+      missing: part.isMissing,
+      alive
+    });
   }
 
   function injuryBadgeClass(type: string): string {
