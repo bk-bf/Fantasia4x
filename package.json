@@ -19,7 +19,9 @@
     "graph:check": "node ../codegraph/bin/codegraph.mjs check Fantasia4x",
     "graph:snapshot": "node ../codegraph/bin/codegraph.mjs snapshot Fantasia4x",
     "graph:diff": "node ../codegraph/bin/codegraph.mjs diff Fantasia4x",
-    "add:wasm": "cd spatial-core && ~/.cargo/bin/wasm-pack build --target web --out-dir ../src/lib/spatial-core-pkg"
+    "add:wasm": "cd spatial-core && ~/.cargo/bin/wasm-pack build --target web --out-dir ../src/lib/spatial-core-pkg",
+    "add:wasm:sim": "cd sim-core && ~/.cargo/bin/wasm-pack build --target web --out-dir ../src/lib/sim-core-pkg",
+    "test:sim-core": "cd sim-core && cargo test"
   },
   "devDependencies": {
     "@eslint/js": "^9.30.0",
