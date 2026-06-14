@@ -7,25 +7,20 @@ import { jobService, BASE_WORK_RATE } from '../../../services/JobService';
 import { pawnStatService } from '../../../services/PawnStatService';
 import { pathfinderService } from '../../../services/PathfinderService';
 import { PAWN_STATE } from '../pawnStates';
-import { isAdjacent, hasAvailableFood } from '../pawnQueries';
+import { isAdjacent } from '../pawnQueries';
 import {
-  HUNGER_THRESHOLD,
-  FATIGUE_THRESHOLD,
-  ROUTE_TO_DRINK_THIRST,
-  ROUTE_TO_WASH_HYGIENE,
   JOB_QUEUE_SIZE,
   transitionTo,
   goIdle,
-  tryRouteToWaterNeed,
   isJobUnreachableForPawn,
   markJobUnreachable,
   tryStartHunt,
   tryAssignPath,
   repathStuckMover,
   tryWanderStep,
-  checkNeedInterrupts,
   lightWorkMultiplier
 } from '../pawnHelpers';
+import { checkNeedInterrupts, selectIdleNeed, applyNeed } from '../needSelection';
 import { orderStationTile, depositInventory, findNearestDepositPoint } from '../pawnHauling';
 
 export function handleHauling(pawn: Pawn, gameState: GameState): GameState {
@@ -138,28 +133,10 @@ export function handleMovingToDeposit(pawn: Pawn, gameState: GameState): GameSta
 }
 
 export function handleIdle(pawn: Pawn, gameState: GameState): GameState {
-  if ((pawn.needs?.hunger ?? 0) >= HUNGER_THRESHOLD && hasAvailableFood(gameState)) {
-    return transitionTo(pawn, PAWN_STATE.HUNGRY, gameState);
-  }
-  // §D water needs: when thirst/hygiene gets urgent and there's no stored water to drink in
-  // place, walk to a player-painted drink/wash zone (or a well) and drink/wash there. Reuses the
-  // MOVING_TO_NEED target+move flow (same as eating/hauling). Thirst takes priority — dehydration
-  // kills faster than hunger.
-  if (
-    (pawn.needs?.thirst ?? 0) >= ROUTE_TO_DRINK_THIRST &&
-    (gameState.stockpile?.['water'] ?? 0) <= 0
-  ) {
-    const routed = tryRouteToWaterNeed(pawn, gameState, 'drink');
-    if (routed) return routed;
-  }
-  if ((pawn.needs?.hygiene ?? 0) >= ROUTE_TO_WASH_HYGIENE) {
-    const routed = tryRouteToWaterNeed(pawn, gameState, 'wash');
-    if (routed) return routed;
-  }
-  // Sleep if fatigued — pawn will collapse in-place if no shelter exists
-  if ((pawn.needs?.fatigue ?? 0) >= FATIGUE_THRESHOLD) {
-    return transitionTo(pawn, PAWN_STATE.TIRED, gameState);
-  }
+  // Need-target selection (hunger / thirst→drink / hygiene→wash / fatigue) is decided by
+  // needSelection; the handler only applies the resulting state transition (P-4b).
+  const idleNeed = selectIdleNeed(pawn, gameState);
+  if (idleNeed) return applyNeed(pawn, gameState, idleNeed);
 
   // ADR-016 / haul recovery: a pawn that is still carrying items (a fetch or haul interrupted
   // by a need) must deliver them before taking new work — otherwise the goods, and for a fetch
@@ -172,10 +149,12 @@ export function handleIdle(pawn: Pawn, gameState: GameState): GameState {
   // Don't pick jobs until the pathfinder is ready — prevents endless pick/release cycles
   if (!pathfinderService.isReady()) return gameState;
 
-  const availableJobs = jobService.getAvailableJobs(pawn, gameState);
-  // Skip jobs this pawn recently failed to reach (see _unreachableJobs). Prevents an
-  // unreachable target from triggering a full-map A* search every tick.
-  const job = availableJobs.find((j) => !isJobUnreachableForPawn(pawn.id, j.id, gameState.turn));
+  // Job-target selection (which job + the need-lookahead queue preview) is decided by JobService;
+  // the handler injects the pawn-system reachability memory and only applies the result (P-4b).
+  const { job, queuePreview } = jobService.selectJobForPawn(pawn, gameState, {
+    isReachable: (id) => !isJobUnreachableForPawn(pawn.id, id, gameState.turn),
+    queueSize: JOB_QUEUE_SIZE
+  });
 
   // Hunting competes with normal work by labor level: a player-marked huntable mob is
   // pursued when the pawn's hunting priority is at least as high as its best available job.
@@ -208,17 +187,8 @@ export function handleIdle(pawn: Pawn, gameState: GameState): GameState {
     (job.targetX === 0 && job.targetY === 0) || // abstract building placed off-map
     (pawn.position && isAdjacent(pawn.position.x, pawn.position.y, job.targetX, job.targetY));
 
-  // Build a soft-preview queue of the next JOB_QUEUE_SIZE unclaimed jobs so that the
-  // need-priority system can look ahead and decide when to eat/sleep more intelligently.
-  // PT-1 hygiene: dedupe ids so a repeated entry can't bias the look-ahead distance.
-  const queuePreview = [
-    ...new Set(
-      availableJobs
-        .slice(1, 1 + JOB_QUEUE_SIZE)
-        .filter((j) => j.claimedBy === null)
-        .map((j) => j.id)
-    )
-  ];
+  // queuePreview (soft-preview of upcoming unclaimed jobs for the need-lookahead system) is
+  // computed by jobService.selectJobForPawn above.
 
   if (atSite) {
     return {

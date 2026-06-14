@@ -228,16 +228,20 @@ export function fleeFromThreats(
   return { ...mob, path: [best], pathIndex: 0, nextCellCostLeft: undefined };
 }
 
+/** A flee destination is "reached" once the mob is this close to it (paths can't always land
+ *  exactly on a far tile, and we re-evaluate near it anyway). */
+const FLEE_REACHED_DIST = 3;
+
 /**
- * Flee to a DISTANT safe destination instead of greedily stepping away tile-by-tile (which
- * dead-ends prey in corners and then strands them). Projects a goal ~⅓ of the map away in the
- * direction that maximises the minimum distance to EVERY threat, snaps it to walkable ground, and
- * A*-paths there — then **commits to that whole run** (even if the route briefly passes nearer a
- * threat to clear a pocket). The destination is recomputed ONLY when the route is used up or the
- * mover dropped it after being blocked — NOT on a timer: re-picking the "safest direction" every
- * couple of seconds made it flip as the threat moved (run south, then 1.5 s later run north) — a
- * big-range yoyo instead of a committed escape. Falls back to the local maximin step when no distant
- * point is reachable (or the pathfinder isn't ready), so a truly walled-in animal still reacts.
+ * Flee to a DISTANT safe destination and **commit to it**. The mob LOCKS a goal ~half the map away
+ * (in the direction maximising the minimum distance to every threat), stores it on `mob.fleeDest`,
+ * and runs there — re-routing around blocks toward the SAME point — until it arrives or the point
+ * stops being safe (a threat got near it). Only THEN does it pick a new goal. This is the crux of
+ * the fix: picking a fresh "safest direction" every time the path ended let two near-tied directions
+ * (e.g. south vs NE) swap winners as the threat moved → a big-range yoyo. A locked, far destination
+ * removes the per-recompute choice, and "far" means the prey usually breaks line-of-flee-range (and
+ * exits Fleeing) long before it ever arrives. Falls back to the local maximin step only when nothing
+ * distant is reachable (or the pathfinder isn't ready), so a truly walled-in animal still reacts.
  */
 export function fleeToSafety(
   mob: Mob,
@@ -246,20 +250,33 @@ export function fleeToSafety(
 ): Mob {
   if (threats.length === 0) return mob;
 
-  // Commit to the current run: only recompute once it's used up (or the mover dropped the path
-  // after being blocked too long — which also leaves it empty). Otherwise keep following it.
+  // Following a live route → keep going (commit). Only re-decide when the path is used up or the
+  // mover dropped it (blocked too long → empty path).
   const pathExhausted = !mob.path?.length || (mob.pathIndex ?? 0) >= mob.path.length;
-  if (!pathExhausted) return mob;
+  if (!pathExhausted && mob.fleeDest) return mob;
 
   const h = state.worldMap.length;
   const w = state.worldMap[0]?.length ?? 0;
-  const fleeDistance = Math.max(8, Math.floor(Math.min(w, h) / 3));
+  const fleeDistance = Math.max(8, Math.floor(Math.max(w, h) / 2));
   const minThreatDist = (x: number, y: number) =>
     threats.reduce((m, t) => Math.min(m, Math.max(Math.abs(t.x - x), Math.abs(t.y - y))), Infinity);
 
-  // Rank the 8 compass headings by how far their projected far-point sits from the threat set,
-  // then A* to the first reachable one (safest direction first; corner escapes fall through to a
-  // less-safe but reachable heading — that's the "move past the danger to get away" the prey needs).
+  // Keep heading to the LOCKED destination: re-route to it around whatever blocked us, as long as we
+  // haven't reached it and it's still far from every threat. This is what stops the direction flip.
+  const dest = mob.fleeDest;
+  if (dest) {
+    const reached = Math.max(Math.abs(dest.x - mob.x), Math.abs(dest.y - mob.y)) <= FLEE_REACHED_DIST;
+    const stillSafe = minThreatDist(dest.x, dest.y) > fleeDistance / 2;
+    if (!reached && stillSafe) {
+      const path = pathTo(state, mob.x, mob.y, dest.x, dest.y, mob.id);
+      // nextCellCostLeft preserved (MOVE-1): the new path's first step is a neighbour of this tile.
+      if (path.length > 0) return { ...mob, path, pathIndex: 0 };
+    }
+  }
+
+  // Pick a NEW destination: rank the 8 headings by how far their far-point sits from the threat set,
+  // A* to the first reachable one (safest first; a corner escape falls through to a less-safe but
+  // reachable heading — "move past the danger to get away").
   const dirs = [
     { dx: 0, dy: -1 },
     { dx: 1, dy: -1 },
@@ -279,18 +296,16 @@ export function fleeToSafety(
     .sort((a, b) => b.score - a.score);
 
   for (const c of candidates) {
-    const dest = isWalkable(state, c.tx, c.ty)
+    const goal = isWalkable(state, c.tx, c.ty)
       ? { x: c.tx, y: c.ty }
       : findNearbyWalkable(state, c.tx, c.ty, undefined, undefined, mob.id);
-    if (!dest || (dest.x === mob.x && dest.y === mob.y)) continue;
-    const path = pathTo(state, mob.x, mob.y, dest.x, dest.y, mob.id);
-    // nextCellCostLeft is intentionally preserved across the re-path (MOVE-1): the new path's first
-    // step is a neighbour of the same tile, so the crossing continues smoothly.
-    if (path.length > 0) return { ...mob, path, pathIndex: 0 };
+    if (!goal || (goal.x === mob.x && goal.y === mob.y)) continue;
+    const path = pathTo(state, mob.x, mob.y, goal.x, goal.y, mob.id);
+    if (path.length > 0) return { ...mob, fleeDest: goal, path, pathIndex: 0 };
   }
 
-  // No reachable distant safe point — take a local maximin step (or hold) so we still react.
-  return fleeFromThreats(mob, threats, state);
+  // No reachable distant safe point — clear the (now unreachable) lock and take a local step.
+  return { ...fleeFromThreats(mob, threats, state), fleeDest: undefined };
 }
 
 /**

@@ -278,6 +278,31 @@ class JobServiceImpl {
     });
   }
 
+  /**
+   * P-4b: the "which job should this pawn take next" decision, lifted out of the FSM's
+   * `handleIdle` so the handler only *applies* the result (claim + path). Returns the first
+   * reachable available job (the caller injects `isReachable` — typically the pawn-system's
+   * unreachable-job memory — so this stays free of FSM/movement state) plus a deduped soft-preview
+   * of the next `queueSize` unclaimed jobs for the need-lookahead system.
+   */
+  selectJobForPawn(
+    pawn: Pawn,
+    gameState: GameState,
+    opts: { isReachable: (jobId: string) => boolean; queueSize: number }
+  ): { job: Job | null; queuePreview: string[] } {
+    const availableJobs = this.getAvailableJobs(pawn, gameState);
+    const job = availableJobs.find((j) => opts.isReachable(j.id)) ?? null;
+    const queuePreview = [
+      ...new Set(
+        availableJobs
+          .slice(1, 1 + opts.queueSize)
+          .filter((j) => j.claimedBy === null)
+          .map((j) => j.id)
+      )
+    ];
+    return { job, queuePreview };
+  }
+
   // ------------------------------------------------------------------ //
   // PRIVATE — JOB GENERATION                                            //
   // ------------------------------------------------------------------ //

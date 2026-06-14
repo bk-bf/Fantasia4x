@@ -489,9 +489,10 @@ export function stepHostile(
       const pawnDist = nearest ? dist(mob, nearest.pos) : Infinity;
       const predDist = predThreat ? dist(mob, predThreat.pos) : Infinity;
       const closestDist = Math.min(pawnDist, predDist);
-      // Stop fleeing if threat is gone or after a safety timeout.
-      if (closestDist > def.stats.fleeRange || turn - mob.stateSince > SAFE_RESET_TICKS) {
-        return { ...mob, state: 'Wander', stateSince: turn };
+      // Stop fleeing if threat is gone, or if cornered past the safety timeout (no committed run).
+      const cantEscape = !mob.fleeDest && turn - mob.stateSince > SAFE_RESET_TICKS;
+      if (closestDist > def.stats.fleeRange || cantEscape) {
+        return { ...mob, state: 'Wander', stateSince: turn, fleeDest: undefined };
       }
       // Drain stamina while fleeing; transition to Exhausted when empty.
       const curStamina = mob.stamina ?? mob.maxStamina ?? calcMaxStamina(mob.stats);
@@ -676,7 +677,8 @@ export function stepAnimal(
       // ALWAYS bolt. Never returns to Grazing — that path would allow a
       // Grazing↔Startled flicker. Fleeing is the only exit.
       if (turn - mob.stateSince >= STARTLED_TICKS) {
-        return { ...mob, state: 'Fleeing', stateSince: turn, path: [] };
+        // Fresh flee episode → clear any stale committed destination.
+        return { ...mob, state: 'Fleeing', stateSince: turn, path: [], fleeDest: undefined };
       }
       return { ...mob, path: [] }; // frozen in place
     }
@@ -695,10 +697,20 @@ export function stepAnimal(
       if (nearest && dist(mob, nearest.pos) <= def.stats.fleeRange) fleeThreats.push(nearest.pos);
       if (predatorThreat && dist(mob, predatorThreat.pos) <= def.stats.fleeRange)
         fleeThreats.push(predatorThreat.pos);
-      // No threat left in range, OR boxed in past the safety timeout (can't escape — stop
-      // thrashing and re-evaluate) → drop back to Grazing.
-      if (fleeThreats.length === 0 || turn - mob.stateSince > SAFE_RESET_TICKS) {
-        return { ...mob, state: 'Grazing', stateSince: turn, path: [], stamina: drainedStamina };
+      // Stop fleeing when no threat is left in range, OR when CORNERED past the safety timeout —
+      // "cornered" = no committed run (fleeToSafety couldn't reach any distant point, so it cleared
+      // fleeDest and is only holding). A mob mid-run (fleeDest set) is NOT timed out — it commits to
+      // the escape so it doesn't flip direction (the yoyo).
+      const cantEscape = !mob.fleeDest && turn - mob.stateSince > SAFE_RESET_TICKS;
+      if (fleeThreats.length === 0 || cantEscape) {
+        return {
+          ...mob,
+          state: 'Grazing',
+          stateSince: turn,
+          path: [],
+          fleeDest: undefined,
+          stamina: drainedStamina
+        };
       }
       return { ...fleeToSafety(mob, fleeThreats, state), stamina: drainedStamina };
     }

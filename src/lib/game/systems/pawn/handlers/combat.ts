@@ -4,8 +4,9 @@ import type { GameState, Pawn } from '../../../core/types';
 import { PAWN_STATE } from '../pawnStates';
 import {
   findCombatThreat, haltMovement, transitionTo, tryAssignPath, tryAssignSleepPath, FLEE_DISTANCE,
-  endHunt, checkNeedInterrupts, laborLevel
+  endHunt, laborLevel
 } from '../pawnHelpers';
+import { checkNeedInterrupts } from '../needSelection';
 
 /**
  * FIGHTING: engage the hostile. Defensive pawns stand their ground (the threat is

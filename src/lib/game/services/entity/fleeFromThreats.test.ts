@@ -66,21 +66,21 @@ describe('fleeFromThreats — maximin flee', () => {
 });
 
 describe('fleeToSafety — distant-destination flee', () => {
-  it('follows the committed route between re-paths (no per-tick recompute)', () => {
-    // Has a live route and the tick isn't a re-path tick → returned unchanged so the mover advances
-    // it (re-pathing every tick is what caused the yoyo/thrash).
+  it('commits to its current run (does not recompute while a route to its locked dest is in progress)', () => {
+    // A live, un-exhausted route toward a locked fleeDest → returned unchanged so the mover advances
+    // it. Recomputing the destination mid-run is what flipped the direction and yoyo'd at big range.
     const m = mob(5, 5, {
       path: [{ x: 6, y: 5 }, { x: 7, y: 5 }],
       pathIndex: 0,
-      stateSince: 0
+      fleeDest: { x: 9, y: 5 }
     } as Partial<Mob>);
-    expect(fleeToSafety(m, [{ x: 1, y: 5 }], makeState(), 1)).toBe(m);
+    expect(fleeToSafety(m, [{ x: 1, y: 5 }], makeState())).toBe(m);
   });
 
   it('falls back to a local maximin step when no distant point is reachable (pathfinder down)', () => {
     // The WASM pathfinder isn't initialised under vitest, so pathTo returns [] for every candidate
     // → fleeToSafety degrades to the local fleeFromThreats step rather than freezing.
-    const res = fleeToSafety(mob(5, 5), [{ x: 8, y: 5 }], makeState(), 0);
+    const res = fleeToSafety(mob(5, 5), [{ x: 8, y: 5 }], makeState());
     expect(res.path?.length).toBe(1);
     expect(res.path![0].x).toBeLessThan(5); // still moved away from the eastern threat
   });
