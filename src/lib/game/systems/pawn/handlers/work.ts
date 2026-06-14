@@ -14,6 +14,7 @@ import {
   JOB_QUEUE_SIZE,
   transitionTo,
   goIdle,
+  mutatePawn,
   isJobUnreachableForPawn,
   markJobUnreachable,
   tryStartHunt,
@@ -39,26 +40,18 @@ export function handleHauling(pawn: Pawn, gameState: GameState): GameState {
     }
     const afterPath = pawn.position ? tryAssignPath(pawn, station.x, station.y, gameState) : null;
     if (!afterPath) return depositInventory(pawn, gameState); // unreachable — stage in place fallback
-    return {
-      ...afterPath,
-      pawns: afterPath.pawns.map((p) =>
-        p.id === pawn.id
-          ? {
-              ...p,
-              currentState: PAWN_STATE.MOVING_TO_DEPOSIT,
-              activeJob: {
-                type: 'need' as const,
-                targetX: station.x,
-                targetY: station.y,
-                progress: 0,
-                timeRequired: 1,
-                depositX: station.x,
-                depositY: station.y
-              }
-            }
-          : p
-      )
-    };
+    return mutatePawn(afterPath, pawn.id, (p) => {
+      p.currentState = PAWN_STATE.MOVING_TO_DEPOSIT;
+      p.activeJob = {
+        type: 'need' as const,
+        targetX: station.x,
+        targetY: station.y,
+        progress: 0,
+        timeRequired: 1,
+        depositX: station.x,
+        depositY: station.y
+      };
+    });
   }
 
   // Pawn just picked up an item and needs to find a deposit point
@@ -81,26 +74,18 @@ export function handleHauling(pawn: Pawn, gameState: GameState): GameState {
     return depositInventory(pawn, gameState);
   }
 
-  return {
-    ...afterPath,
-    pawns: afterPath.pawns.map((p) =>
-      p.id === pawn.id
-        ? {
-            ...p,
-            currentState: PAWN_STATE.MOVING_TO_DEPOSIT,
-            activeJob: {
-              type: 'need' as const,
-              targetX: deposit.x,
-              targetY: deposit.y,
-              progress: 0,
-              timeRequired: 1,
-              depositX: deposit.x,
-              depositY: deposit.y
-            }
-          }
-        : p
-    )
-  };
+  return mutatePawn(afterPath, pawn.id, (p) => {
+    p.currentState = PAWN_STATE.MOVING_TO_DEPOSIT;
+    p.activeJob = {
+      type: 'need' as const,
+      targetX: deposit.x,
+      targetY: deposit.y,
+      progress: 0,
+      timeRequired: 1,
+      depositX: deposit.x,
+      depositY: deposit.y
+    };
+  });
 }
 
 export function handleMovingToDeposit(pawn: Pawn, gameState: GameState): GameState {
@@ -121,12 +106,12 @@ export function handleMovingToDeposit(pawn: Pawn, gameState: GameState): GameSta
       activeJob.targetY
     );
     if (adjacent) {
-      return depositInventory(pawn, {
-        ...gameState,
-        pawns: gameState.pawns.map((p) =>
-          p.id === pawn.id ? { ...p, hasReachedDestination: false } : p
-        )
-      });
+      return depositInventory(
+        pawn,
+        mutatePawn(gameState, pawn.id, (p) => {
+          p.hasReachedDestination = false;
+        })
+      );
     }
     // Didn't quite make it — deposit in place anyway
     return depositInventory(pawn, gameState);
@@ -193,14 +178,11 @@ export function handleIdle(pawn: Pawn, gameState: GameState): GameState {
   // computed by jobService.selectJobForPawn above.
 
   if (atSite) {
-    return {
-      ...gs,
-      pawns: gs.pawns.map((p) =>
-        p.id === pawn.id
-          ? { ...p, currentState: PAWN_STATE.WORKING, activeJob, jobQueue: queuePreview }
-          : p
-      )
-    };
+    return mutatePawn(gs, pawn.id, (p) => {
+      p.currentState = PAWN_STATE.WORKING;
+      p.activeJob = activeJob;
+      p.jobQueue = queuePreview;
+    });
   }
 
   const afterPath = tryAssignPath(pawn, job.targetX, job.targetY, gs);
@@ -211,14 +193,11 @@ export function handleIdle(pawn: Pawn, gameState: GameState): GameState {
     return jobService.releaseJob(pawn.id, job.id, gs);
   }
 
-  return {
-    ...afterPath,
-    pawns: afterPath.pawns.map((p) =>
-      p.id === pawn.id
-        ? { ...p, currentState: PAWN_STATE.MOVING_TO_RESOURCE, activeJob, jobQueue: queuePreview }
-        : p
-    )
-  };
+  return mutatePawn(afterPath, pawn.id, (p) => {
+    p.currentState = PAWN_STATE.MOVING_TO_RESOURCE;
+    p.activeJob = activeJob;
+    p.jobQueue = queuePreview;
+  });
 }
 
 export function handleMovingToResource(pawn: Pawn, gameState: GameState): GameState {
@@ -267,14 +246,10 @@ export function handleMovingToResource(pawn: Pawn, gameState: GameState): GameSt
       activeJob.targetY
     );
     if (adjacent) {
-      return {
-        ...gameState,
-        pawns: gameState.pawns.map((p) =>
-          p.id === pawn.id
-            ? { ...p, currentState: PAWN_STATE.WORKING, hasReachedDestination: false }
-            : p
-        )
-      };
+      return mutatePawn(gameState, pawn.id, (p) => {
+        p.currentState = PAWN_STATE.WORKING;
+        p.hasReachedDestination = false;
+      });
     }
     return goIdle(pawn, gameState);
   }
@@ -375,20 +350,16 @@ export function handleWorking(pawn: Pawn, gameState: GameState): GameState {
         'JOB-EVT',
         `${pawn.name} → HAULING inv:${JSON.stringify(invItems)}`
       );
-      return {
-        ...afterAdvance,
-        pawns: afterAdvance.pawns.map((p) =>
-          p.id === pawn.id ? { ...p, currentState: PAWN_STATE.HAULING, activeJob: undefined } : p
-        )
-      };
+      return mutatePawn(afterAdvance, pawn.id, (p) => {
+        p.currentState = PAWN_STATE.HAULING;
+        p.activeJob = undefined;
+      });
     }
 
-    return {
-      ...afterAdvance,
-      pawns: afterAdvance.pawns.map((p) =>
-        p.id === pawn.id ? { ...p, currentState: PAWN_STATE.IDLE, activeJob: undefined } : p
-      )
-    };
+    return mutatePawn(afterAdvance, pawn.id, (p) => {
+      p.currentState = PAWN_STATE.IDLE;
+      p.activeJob = undefined;
+    });
   }
 
   const updatedJob = (afterAdvance.jobs ?? []).find((j) => j.id === jobId);
@@ -396,10 +367,7 @@ export function handleWorking(pawn: Pawn, gameState: GameState): GameState {
     ? Math.min(1, updatedJob.workDone / updatedJob.workRequired)
     : activeJob.progress;
 
-  return {
-    ...afterAdvance,
-    pawns: afterAdvance.pawns.map((p) =>
-      p.id === pawn.id ? { ...p, activeJob: { ...activeJob, progress } } : p
-    )
-  };
+  return mutatePawn(afterAdvance, pawn.id, (p) => {
+    p.activeJob = { ...activeJob, progress };
+  });
 }
