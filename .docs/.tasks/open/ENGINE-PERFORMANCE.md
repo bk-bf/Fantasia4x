@@ -1,25 +1,21 @@
-<!-- LOC cap: 400 (created: 2026-06-14, rewritten 2026-06-14 post-profiling; worker shipped 2026-06-14; scaling pivot → Rust-SoA core 2026-06-14) -->
+<!-- LOC cap: 400 (created: 2026-06-14, rewritten 2026-06-14 post-profiling; worker shipped 2026-06-14; Rust-SoA pivot 2026-06-14 then ABORTED after R1 2026-06-15 → mutable-in-place JS) -->
 
 # ENGINE PERFORMANCE & SCALING
 
-> **Related:** [ROADMAP](ROADMAP.md) · [game/ARCHITECTURE](../../game/ARCHITECTURE.md) · [game/DECISIONS](../../game/DECISIONS.md) (ADR-008, ADR-014, ADR-018/019/020/021, ADR-022) · [game/BUGS](../../game/BUGS.md) · [RANGED-COMBAT](RANGED-COMBAT.md) (consumes LoS) · [SEASONS_WEATHER](SEASONS_WEATHER.md) (fog of war) · [DISTRIBUTION](DISTRIBUTION.md) · archived: [SIMULATION-PERF](../archive/SIMULATION-PERF-2026-05-30.md)
+> **Related:** [ROADMAP](ROADMAP.md) · [game/ARCHITECTURE](../../game/ARCHITECTURE.md) · [game/DECISIONS](../../game/DECISIONS.md) (ADR-008, ADR-014, ADR-018/019/020/021) · [game/BUGS](../../game/BUGS.md) · [RANGED-COMBAT](RANGED-COMBAT.md) (consumes LoS) · [SEASONS_WEATHER](SEASONS_WEATHER.md) (fog of war) · [DISTRIBUTION](DISTRIBUTION.md) · archived: [SIMULATION-PERF](../archive/SIMULATION-PERF-2026-05-30.md)
 
 Profiling-driven performance work, measured on the heavy `--profiler` sandbox (150 pawns +
 ~140 mobs, 240×160 map, 4× speed; `.debug/perf.log`).
 
-> **Target scale (the goal this must serve):** ~50 pawns, **200–500 total entities**, a
-> **1000×1000 map**. The measured ceiling below proves single-thread JS cannot reach it — so the
-> **active direction is now a Rust-SoA simulation core** behind the worker boundary (see ★ ACTIVE,
-> below). Everything else in this doc is either the shipped JS-era work (historical record, §1–§7)
-> or **parked until the core lands**.
+> **Scale note.** `1000×1000` map + `200–500` entities was an aspirational **ceiling**, never a
+> committed goal. The real bar is ~50 pawns + a moderate mob count on the current map — and with the
+> render decouple + worker that runs **near 60 FPS / 60 TPS** today. The benchmark that chased the
+> ceiling (R1) is what told us the ceiling wasn't worth a rewrite (see ★ ACTIVE + §A + §9).
 
-> **This spec was rewritten after the work.** Its original premise — *"O(n²) perception is the
-> #1 cost, fix it with target persistence + LoS"* — was **FALSIFIED by the profiler**. Perception
-> was never the bottleneck. The real costs, in the order they were found, were: a lying FPS
-> counter, a pathfinding **body-block flood**, the **16-ticks-per-frame** sim multiplier, and
-> **per-frame terrain re-upload/rebuild**. This document now records what actually happened, what
-> landed, the tradeoffs taken, and the decouple endgame. Perception persistence + LoS survive as
-> **deferred AI-correctness features (§5)**, not performance fixes.
+> **This spec has been rewritten twice as the work changed direction.** Original premise — *"O(n²)
+> perception is the #1 cost"* — **FALSIFIED by the profiler** (§1). Then the sim ceiling looked like
+> it needed a **Rust-SoA core** (§A) — **also wrong**: the R1 benchmark (§9) showed the real cost is
+> the **immutable update pattern**, fixable in plain JS. The lesson each time: instrument, then act.
 
 ---
 
@@ -27,86 +23,104 @@ Profiling-driven performance work, measured on the heavy `--profiler` sandbox (1
 
 - **Render decoupled, shipped:** FPS 2 → 8–10 (main-thread fixes), then **→ 35–80** with the **sim
   moved to a Web Worker** (§4, W0–W5 shipped, flag-gated `?simworker`). `[RENDER-PROF]` shows
-  **`sim 0.0`** on the render thread — render is no longer the bottleneck.
-- **Sim ceiling found, and it's structural.** With the sim off-thread, the worker is **compute-bound
-  on one core**: 240×160 + 290 entities = **28–38 ms/tick** (`[SIM-TPS]` `busy≈100 %`), so ~26–36 TPS
-  = **0.4–0.6× realtime** under load. Cost is the *aggregate* of 290 entities running full FSM +
-  needs + combat at 60 Hz (no single bug to delete; `pawns` 8–12 ms, `entityStep` 7–8 ms, `combat`
-  0.45→4.75 ms as the colony activates). See §8.
-- **DECISION (2026-06-14): build a Rust-SoA simulation core.** The target scale (200–500 entities,
-  1000×1000 = 26× the tiles) is **10–50×** beyond this; surgical JS cuts buy only 2–3×. Single-thread
-  JS is structurally insufficient → **★ ACTIVE direction below.** The worker boundary is the seam it
-  plugs into; the render-side wins stay. **Per-tick surgical JS optimisation is HALTED.**
-- Bugs filed in [game/BUGS.md](../../game/BUGS.md); decisions in ADR-021 + **ADR-022 (Rust-SoA core, to write)**.
+  **`sim 0.0`** on the render thread, `gpuWait ~2.4 ms` — render is no longer the bottleneck.
+- **Sim ceiling found** (§8): off-thread, the worker is compute-bound on one core — 240×160 + 290
+  entities = **28–38 ms/tick**, ~0.4–0.6× realtime under load. Cost is the *aggregate* of ~290
+  entities running full FSM + needs + combat at 60 Hz.
+- **Rust-SoA core: evaluated, spiked (R0/R1), then ABORTED (2026-06-15).** The R1 benchmark (§9)
+  measured Rust-SoA at only **~1.2–1.4×** over plain *mutable* JS, and SoA-in-JS as **no win** over
+  mutable objects at this scale. Not worth a two-language rewrite. Spike kept, parked (§A).
+- **ACTIVE lever: de-immutable the hot loops (mutable in place).** R1 showed the dominant tick cost
+  is the **immutable `{...spread}`/`.map()` pattern — 12.5× the mutable cost.** Reclaiming it stays
+  in JS, no Rust, no SoA. See ★ ACTIVE below.
+- Decisions in ADR-021 (decouple). No ADR for a Rust core — it was aborted before locking in.
 
 ---
 
-## ★ ACTIVE — Scaling pivot: Rust-SoA simulation core
+## ★ ACTIVE — De-immutable the hot loops (mutable in place)
 
-**Everything in §1–§7 is the shipped JS-era record. THIS is the work going forward. All boxes open
-until the core lands; the parked items elsewhere stay parked.**
+**The current perf lever.** R1 (§9) proved the dominant per-tick cost is *allocation from the
+immutable update style*, not language or data layout. Convert the hot per-tick phases to mutate
+entity fields in place instead of rebuilding objects every tick.
 
-### Verdict (data-backed — see §8 for the capture)
+### Why this, and why it's safe now
 
-- Measured: 240×160 + 290 entities → **28–38 ms/tick, one core at 100 %**, ~0.4–0.6× realtime.
-- Target: ~50 pawns, **200–500 entities**, **1000×1000** map = ~2× entities **and 26× map area**.
-- Surgical JS cuts ≈ 2–3×; need 10–50×. **Single-thread JS cannot get there.** The walls are
-  *structural, not bugs*:
-  - [x] **Immutable object-graph state** — every phase `{...spread}`/`.map()` allocates → GC churn smeared across all phases; worsens with entity count.
-  - [x] **Full-map per-tile passes scale with area** — the regrowth pre-scan (and any fog/designation pass) walks every tile each tick: 0.3 ms at 38k tiles → ~8–13 ms at 1M.
-  - [x] **`WorldTile[][]` = one object per tile** — 1M tile objects is unviable for memory *and* for the snapshot/save clone.
+- **Evidence (R1, browser, 500 entities · 1000×1000 · 600 ticks):** `js-oop-immutable` 0.1250 vs
+  `js-oop-mutable` 0.0100 ms/tick = **12.5× allocation tax**. Rust-SoA (0.0083) was only ~1.2× over
+  mutable JS; SoA-in-JS (0.0117) was *slower* than mutable OOP. So the lever is mutable-vs-immutable,
+  not OOP-vs-SoA and not JS-vs-Rust. Full table in §9.
+- **Realistic gain (not a literal 12.5×):** only the allocation-heavy phases benefit (`needsTick`,
+  `pawns`, `entityStep`); `combat`/pathfinding allocate less. Expect TOTAL **~28–37 ms → ~12–18 ms**
+  → 60 TPS at 1× with headroom for higher speeds.
+- **The worker contains the blast radius.** Under `?simworker` the worker structured-**clones** state
+  on the way out, so the renderer/UI only ever see copies — ref-based change detection + cross-thread
+  aliasing hazards are mooted. Remaining risk is **internal to the tick**: a few before/after-diff
+  spots + tests. This is the Dwarf Fortress / RimWorld model (mutate live objects at 60 Hz; consumers
+  read copies).
 
-### Decision & rationale
+### What we keep / what we give up
 
-Build the sim core as **Struct-of-Arrays over typed buffers, in Rust→WASM**, behind the existing
-worker message boundary. The decisive lever is the **SoA data layout** (kills GC, cache-friendly,
-enables `SharedArrayBuffer` multicore); the language is secondary, and the data-model work is
-identical whether the target is TS or Rust — so go straight to Rust for: contiguous no-GC arrays,
-`rayon` multicore (22 cores idle today), and because the **spatial core already proves the
-Rust/WASM pipeline** (ADR-008). "Can't be worse than JS-over-typed-arrays, same work either way."
+- **Keep:** all gameplay, behaviour, the worker architecture, every render win. This is a *how state
+  is written* change, not a *what the sim does* change.
+- **Give up (contained):** pure `(state)=>state` services in the hot paths (become impure); ref-based
+  "did it change?" *within* a tick (replace with explicit version/dirty — already started:
+  `_terrainRev`, `uiPushCounter`); the few before/after-diff spots (e.g. combat's `preCombatState`)
+  must capture an explicit minimal copy instead of leaning on a frozen prior reference; some tests
+  assert `result !== input` and need updating.
 
-### Reusable — NOT wasted by this pivot
+### Plan (phased — convert ONE phase, measure `[PROF]`, then next)
 
-- [x] Worker boundary, `outputSink`/`commitSink` decouple, serializable **command registry**, and the
-  **snapshot protocol** = the exact integration seam the core plugs into (commands in, snapshot out).
-- [x] Render-side wins stay regardless of sim core: soft-body pathfinding, terrain VBO, `_terrainRev`.
+- [ ] **M1 — `needsTick` → mutable.** Self-contained (no before/after dependents). Mutate pawn/mob
+  need fields in place; bump an explicit dirty/version at the UI-push boundary. Re-PROF + tests.
+- [ ] **M2 — `pawns` (FSM + movement) → mutable in place.**
+- [ ] **M3 — `entityStep` (mob FSM) → mutable in place.**
+- [ ] **M4 — `combat` → mutable;** rewrite `preCombatState` / `handleFreshCombatCorpses` to capture
+  an explicit minimal snapshot instead of relying on an immutable prior reference.
+- [ ] **M5 — audit `GameStateManager` + tests** for immutability assumptions; convert remaining hot
+  allocators; gate the always-on worker `[PROF]`/`[SIM-TPS]` diagnostics back to opt-in.
 
-### Plan (R-phases — all OPEN, gated, each shippable)
-
-- [ ] **R0 — SoA data model.** Re-express the hot state of `core/types.ts` as parallel typed arrays
-  (entity x/y/state/needs/…); **chunked worldMap** (tile fields in typed arrays, chunked for 1M tiles,
-  no object-per-tile). This is the hard part — design it once, in Rust, mirrored by a TS view type.
-- [ ] **R1 — spike + benchmark (GATE).** Port ONE subsystem (entity movement + needs) for 500 entities
-  on a 1000×1000 SoA grid to Rust/WASM; benchmark vs the current JS tick. Confirms the speedup with
-  real numbers before the full commit. Keep the `[SIM-TPS]`/`[PROF]` meters for the comparison.
-- [ ] **R2 — hot-loop port.** Movement, needs decay, FSM, combat resolution, per-tick spatial queries
-  → Rust over SoA. JS keeps the cold/complex logic (research, crafting recipes, building defs,
-  world-gen, UI projection, save serialisation from snapshot).
-- [ ] **R3 — state boundary.** Rust owns canonical SoA state in `(Shared)ArrayBuffer`; the renderer
-  snapshot becomes a **view/slice** of those buffers (replaces the structured-clone snapshot — this is
-  where the deferred Float32Array position channel + worldMap deltas actually get built); player
-  commands = the existing registry, applied in Rust.
-- [ ] **R4 — multicore.** `rayon` (or multi-worker over SAB) across entity batches / map chunks — the
-  payoff SoA unlocks.
-- [ ] **R5 — save/load from SoA + parity.** Serialise from the SoA buffers; regression-test behaviour
-  against the JS reference (the 218 existing tests stay the oracle where logic is ported).
-
-**Acceptance:** target scale (500 entities, 1000×1000) at playable TPS *and* display-rate FPS;
-behaviour parity (tests green). `[SIM-TPS] busy` well under 100 % at 1×; high speeds actually multiply.
-
-### Parked until the core lands
-
-- [ ] The §4c "known gaps" (slim `Float32Array` channel, worldMap deltas) are **absorbed into R3** —
-  wiring them into the JS sim now is throwaway (the SoA core rewrites the data model + snapshot).
-- [ ] Request-response command channel (`createZoneInstance`, `craftItem`) — build once against the
-  core, not the JS sim. (Until then the worker cutover stays flag-gated / default OFF.)
-- [ ] Per-tick surgical JS cuts (auto-defend 60 Hz throttle, `needsTick` audit) — **halted**; only
-  worth it for the current small scale, which is not the goal.
-- [ ] §5 deferred features (perception persistence, LoS, designations-off-terrain) — still deferred.
+**Acceptance:** `[PROF]` TOTAL comfortably under 16.6 ms at the profiler scale (60 TPS at 1×);
+behaviour parity (tests green); no UI-staleness regressions under `?simworker`.
 
 ---
 
-## 1 · Post-mortem — how the premise was wrong
+## §A · PARKED (future research) — Rust-SoA simulation core — **port ABORTED after R1**
+
+> **ABORTED 2026-06-15.** The R1 benchmark (§9) measured Rust-SoA at only ~1.2–1.4× over *mutable*
+> JS, and SoA showed no win over mutable OOP in JS at the target entity count — not worth a
+> two-language rewrite, especially once 1000×1000/500 was recognised as a ceiling, not a goal.
+> **Kept for future research:** a *phased / partial* Rust port of specific hot pieces (or multicore
+> via SAB) may still pay off at *much* larger scale. The **R0 SoA crate (`sim-core/`) + R1 bench
+> remain** as the foundation + evidence; re-open this if the scale bar ever moves.
+
+### What got built (kept)
+
+- [x] **R0 — SoA data model** (`sim-core/` crate + `simWorldView.ts`). Field-major entity planes
+  (f32/i32/u8/i16), chunked tile grid (32², dirty tracking, no object-per-tile), zero-copy typed
+  views over wasm memory, layout-mirror guard (cargo test + vitest). Built via `pnpm add:wasm:sim`.
+- [x] **R1 — spike + benchmark** (`bench_step` in Rust + `bench.ts`, `runSimCoreBench()`). 4-way
+  apples-to-apples; produced the abort verdict (§9).
+
+### Not pursued (kept for reference — the phased-port shape, if ever resumed)
+
+- [ ] **R2 — hot-loop port** (movement/needs/FSM/combat → Rust over SoA; JS keeps cold logic).
+- [ ] **R3 — state boundary** (Rust owns SoA in `(Shared)ArrayBuffer`; snapshot = a buffer view;
+  this is where a Float32Array position channel + worldMap deltas would land).
+- [ ] **R4 — multicore** (`rayon` / multi-worker over SAB across entity batches / map chunks).
+- [ ] **R5 — save/load from SoA + parity** against the JS reference.
+
+### Why it was the wrong bet (recorded so we don't re-litigate)
+
+The pivot assumed the cost was *object-graph cache misses + GC* that only SoA/Rust could fix. R1
+isolated the variables and showed the cost is overwhelmingly **GC from the immutable pattern** —
+which mutable-in-place JS reclaims directly. SoA's wins (cache bandwidth, SAB multicore) only show up
+at far larger scale than the real target; Rust's constant factor (~1.2–1.4× here) doesn't justify the
+two-language cost. Reusable from the attempt: the worker boundary/command registry/snapshot protocol
+(still in use) and the SoA crate (parked).
+
+---
+
+## 1 · Post-mortem — how the FIRST premise was wrong
 
 - [x] **Perception O(n²) premise FALSIFIED.** It dominated exactly **one** capture — an *idle* moment (pawns 7 ms). Under realistic movement load the `pawns` phase was 94 ms and **pathfinding dwarfed perception ~13×**. The lesson: the first profiler run was unrepresentative; instrument under load before concluding.
 - [x] **The FPS counter was lying** — `updateFPS()` discarded any frame slower than 250 ms, so below 4 fps it froze at the last healthy value. This is why the regression was invisible for so long. (Fixed; threshold → 2 s, commit `02c4dfd`.)
@@ -142,42 +156,40 @@ These were the main-thread band-aids. The worker cutover (§4) made both obsolet
 **Plan (each step shipped):**
 
 - [x] **W0 — message protocol + sink decouple.** `sim.worker.ts` owns `GameEngineImpl` + services + `GameStateManager`. Engine output decoupled via injected `outputSink`/`commitSink` (engine no longer imports the store). Protocol in `simProtocol.ts`.
-- [x] **W1 — WASM in the worker.** `WasmPathfinderService` inits inside the worker. Verified with the `verifyWasmInWorker()` console check (`✅ WASM initialised IN the worker`). **Gotcha:** `$app/environment`'s `browser` can't bundle into a worker (Rollup can't resolve `__sveltekit/environment`) → replaced with worker-safe `core/runtime.ts` `isClientRuntime`. Also needed Vite `worker: { format: 'es', … }` — IIFE workers can't code-split the WASM dynamic import.
-- [x] **W2 — state snapshot → store projection.** Worker posts a full-ish snapshot (worldMap omitted unless its ref changed — it's the 38k-tile big part); `simWorkerClient` caches worldMap and reattaches it, then drives the store projection. (Slim `Float32Array` position channel deferred — see "Known gaps".)
-- [x] **W3 — player commands main→worker.** ~30 commands converted to a **serializable registry** (`sim/commands.ts`, named `(state,payload)=>state` — closures can't cross the worker boundary), dispatched via `gameState.command()`. Guarded by `jobRegistry.test.ts`.
-- [x] **W4 — save/load through the worker + cutover.** Worker owns state; `requestSave` posts the full state back to `saveManager`. Boot handoff in `gameState.ts` (`simWorkerBridge.start()` → `init`). Flag-gated cutover (`USE_SIM_WORKER`).
-- [x] **W5 — wall-clock batch budget (NOT a raised tick cap).** The sim already runs on its own clock (worker `setInterval` + accumulator) and the renderer already interpolates sub-tile positions, so the only open piece was the catch-up cap. A fixed `MAX_STEPS_PER_BATCH` turned out to be the **wrong knob off-thread** (see post-mortem below) → replaced with an **8 ms wall-clock budget per batch**: run ticks until the budget is spent, yield (snapshots keep flowing), drop backlog beyond budget (best-effort speed). Light load drains fully → true 4×; heavy load degrades to smooth-but-slower (compute-bound on one core: 4×·150-pawn ≈ 2.9 s work/s real — unachievable by **any** cap). `MAX_STEPS_PER_BATCH` kept only as a 120-tick hard safety.
+- [x] **W1 — WASM in the worker.** `WasmPathfinderService` inits inside the worker. Verified with the `verifyWasmInWorker()` console check. **Gotcha:** `$app/environment`'s `browser` can't bundle into a worker → worker-safe `core/runtime.ts` `isClientRuntime`; plus Vite `worker: { format: 'es', … }` (IIFE workers can't code-split the WASM import).
+- [x] **W2 — state snapshot → store projection.** Worker posts a full-ish snapshot (worldMap omitted unless its ref changed); `simWorkerClient` caches worldMap and reattaches it, then drives the store projection.
+- [x] **W3 — player commands main→worker.** ~30 commands converted to a **serializable registry** (`sim/commands.ts`, named `(state,payload)=>state`), dispatched via `gameState.command()`. Guarded by `jobRegistry.test.ts`.
+- [x] **W4 — save/load through the worker + cutover.** Worker owns state; `requestSave` posts full state to `saveManager`. Boot handoff in `gameState.ts`. Flag-gated cutover (`USE_SIM_WORKER`).
+- [x] **W5 — wall-clock batch budget.** A fixed `MAX_STEPS_PER_BATCH` was the wrong knob off-thread (locks the worker with no snapshots → stutter). Replaced with a ~16 ms wall-clock budget per batch: run ticks back-to-back to the compute ceiling, yield so snapshots flow, **clamp** carried backlog so higher speeds carry without spiralling. (8 ms was too tight → pinned ~62 TPS at every speed; raised + clamped so the speed control actually multiplies — see 4b.)
 
 **Acceptance — met:**
 
-- [x] Render holds display-rate FPS while the sim runs heavy — `[RENDER-PROF]` shows **`sim 0.0`** on the render thread.
-- [x] TPS no longer capped by a render-thread `MAX_STEPS`; sim runs best-effort off-thread (1× keeps up; high speeds are compute-bound, by physics not by the cap).
-- [x] Save/load, player commands, combat/needs unchanged — **218 tests green**, build ✓.
+- [x] Render holds display-rate FPS while the sim runs heavy — `[RENDER-PROF]` shows **`sim 0.0`**.
+- [x] Speed control multiplies TPS up to the compute ceiling (4× boosts TPS where headroom exists).
+- [x] Save/load, player commands, combat/needs unchanged — **221 tests green**, build ✓.
 
-### 4b · Worker-mode smoothness post-mortem (what worked / what didn't)
+### 4b · Worker-mode post-mortem (what worked / what didn't)
 
-After cutover (FPS 35–63) the user reported **"waves" / freeze frames** — pawns *and overlay animations* hitching periodically. That last detail was the key tell and drove the fix order:
+- [~] **Publish full snapshot EVERY tick** — *tried, REVERTED (`a24685c`→`22290e8`).* Cloning ~290 entities 50×/s crashed FPS to 7. The freeze it targeted was render-thread blocking (terrain), not position rate (the tell: *overlay animations* froze too). Restored flush-only (~15 Hz).
+- [x] **`_terrainRev`** (`a24685c`) + **fuel/lit-excluding building signature** (`1d52954`). structured-clone hands new refs every snapshot → defeated the ref-based terrain-change check → 90 ms rebuild every snapshot. A worker-computed revision (bumped only on *visible* terrain change; campfire fuel churn excluded) fixed the freeze storm. **User-confirmed resolved.**
+- [x] **Speed control** (`d6e7418`) — the W5 budget at 8 ms forced 1 tick/batch at every speed → "4× does nothing". Raised the budget so a backlogged worker runs to its ceiling + clamp (not drop) backlog → speed multiplies.
+- [x] **Combat-text / chronicle under the worker** (`d6e7418`) — the sim's `simLog` sink is registered only on the main thread; in the worker it was the no-op → floating damage numbers vanished. Forward sink calls worker→main (buffered per batch), replay against the real sink.
+- [x] **Campfire walkability** (`d6e7418`) — the `--profiler` scenario injected complete buildings without `applyBuildingFootprint`, so solid buildings never blocked their tile. Apply the footprint in the scenario.
 
-- [~] **Publish full snapshot EVERY tick (not just on flush)** — *tried, REVERTED (`a24685c`→`22290e8`).* Hypothesis was that 15 Hz position pushes looked chunky, so post per-tick. It **regressed FPS to 7**: structured-cloning ~290 entities **50×/s** overwhelmed the main thread's deserialize. **Wrong diagnosis** — and disproved by the user's own clue: *overlay animations* freezing means the **render thread itself blocks** (those run on the render loop's own clock, independent of sim positions), so the freeze was never about position freshness. Restored flush-only (~15 Hz) publishing.
-- [x] **`_terrainRev` — worker-computed terrain revision** (`a24685c`, kept). structured-clone hands the main thread **new refs every snapshot**, defeating its ref-based "did terrain change?" check → the 90 ms terrain rebuild fired every snapshot = the freeze storm (`🎯 GameGrid initialized` log spam ~2/s). The worker computes a revision bumped only on real change; the renderer rebuilds terrain only when it bumps. **~50 % of the freezes gone.**
-- [x] **`_terrainRev` must EXCLUDE fuel/lit churn** (`1d52954`, the residual fix). First cut compared the raw `buildings` ref — but a **lit campfire decrements fuel every tick → a fresh `buildings` array every tick** → `_terrainRev` bumped constantly → terrain rebuilt ~2/s for an *invisible* change. Profiler proof: `[RENDER-PROF]` `terrain` field spiking **4 ms → 15 ms** during the slow frames. Fixed by comparing a **fuel/lit-excluding visual signature** (mirrors `GameCanvas.buildingsVisualSig`; inlined in the worker since `overlay.ts` pulls webgl/DOM, not worker-safe). **Freezes resolved** (user-confirmed).
-- [~] **Raise `MAX_STEPS_PER_BATCH`** (the spec's original W5 wording) — *evaluated, rejected as written.* Off-thread it doesn't help render FPS (already decoupled); a higher count just makes a catch-up batch **lock the worker longer** (30 ticks × ~12 ms = 360 ms with no snapshots). Replaced by the wall-clock budget above.
+### 4c · Known gaps (before flipping the worker default ON)
 
-### 4c · Known gaps (before flipping the default ON)
-
-- [ ] **Two request-response commands not wired through the worker** — `createZoneInstance` and `gameCoordinator.craftItem` return a value to the caller, so they don't fit the fire-and-forget serializable-command registry. They are **broken under `?simworker`** until a request-response channel (postMessage with a reply id) is added. This is why the cutover stays flag-gated by default.
-- [ ] **Slim `Float32Array` position channel (W2 stretch)** — snapshots still structured-clone the full-ish `GameState` at 15 Hz, which is the dominant main-thread cost remaining and a GC source. Moving hot pawn/mob positions to a transferable `Float32Array` (and posting the heavy panel state less often) would cut clone/GC further. Only worth it if a profiler pass shows the 15 Hz clone is the next ceiling.
-- [ ] **worldMap deltas** — when a tile changes (harvest/regrowth) the worker re-sends the whole 38k-tile `worldMap`. Currently fine (only on real change), but if active-harvesting bursts re-introduce hitching, send changed-tile deltas instead of the full array.
+- [ ] **Two request-response commands** — `createZoneInstance` + `gameCoordinator.craftItem` return a value, so they don't fit the fire-and-forget registry; **broken under `?simworker`** until a reply-id channel is added. This is why the cutover stays default-OFF.
+- [ ] **Slim `Float32Array` position channel** — the 15 Hz full-state clone is the dominant remaining main-thread cost / GC source. Only worth it if a profiler pass shows it's the next ceiling. (Was "R3" under the aborted plan; do in JS if needed.)
+- [ ] **worldMap deltas** — re-sends the whole 38k-tile array on any tile change; send changed-tile deltas if active-harvesting bursts re-introduce hitching.
 
 ---
 
 ## 5 · Deferred (real features / bigger bets — NOT the perf fix)
 
-- [ ] **Perception target-persistence + push alerting** (old §3 / ADR-018) — a legit **AI-correctness/feel** feature (predators commit; prey react only to perceived; attacked animals fight back), but **not** a measured perf need. Build when AI behaviour wants it, not for FPS.
-- [ ] **Line of sight** (`blocksSight` + WASM raycast, ADR-019) — still wanted for gameplay (no chasing through walls) and **blocks RANGED-COMBAT** + feeds SEASONS fog. Independent of the perf work now.
-- [ ] **Designations/zones off the static terrain layer** (or incremental terrain upload) — removes the §3 terrain-throttle tradeoff at the source. Render polish, do after the Worker.
-- [x] **Rust sim core** — was the "only if the worker is still too slow at target scale" bet. The worker proved exactly that (§8): off-thread, one core, 28–38 ms/tick at a fraction of target scale. **Promoted to the ★ ACTIVE direction** (top of doc). No longer deferred.
-- [ ] **SAB multicore / wrapper decision** — multicore is now **R4** of the core plan (SoA unlocks it). The Electron/Tauri wrapper decision stays deferred to the DISTRIBUTION milestone (ADR-020); the wrapper is **not** a perf lever (see §6).
+- [ ] **Perception target-persistence + push alerting** (ADR-018) — an AI-correctness/feel feature, not a measured perf need. Build when AI behaviour wants it.
+- [ ] **Line of sight** (`blocksSight` + WASM raycast, ADR-019) — wanted for gameplay (no chasing through walls), **blocks RANGED-COMBAT**, feeds SEASONS fog.
+- [ ] **Designations/zones off the static terrain layer** (or incremental terrain upload) — removes the §3 terrain-throttle tradeoff at the source. Render polish.
+- [ ] **SAB multicore / wrapper decision** — deferred to the DISTRIBUTION milestone (ADR-020). The wrapper is **not** a perf lever (§6). Multicore would ride on a future SoA effort (§A).
 
 ---
 
@@ -186,40 +198,37 @@ After cutover (FPS 35–63) the user reported **"waves" / freeze frames** — pa
 | Option | Verdict | Why |
 | ------ | ------- | --- |
 | "O(n²) perception is #1" | **Falsified** | One idle capture; pathfinding dwarfed it 13× under load. |
-| Oversized-canvas / GPU bound | **Rejected** | 0.8 MP canvas, `gpuWait ~4 ms`; it's CPU/single-thread. |
+| Oversized-canvas / GPU bound | **Rejected** | 0.8 MP canvas, `gpuWait ~2–4 ms`; it's CPU/single-thread. |
 | Battery / power-saving throttle | **Rejected** | User on AC; reproduced at full clock. |
-| Connectivity pre-check for unreachable A* | **Rejected** | Profiler showed 100 % of fails were `bodyBlocked` (terrain *was* reachable) — connectivity would've done nothing. Soft-bodies was the fix. |
-| Per-pair-per-tick LoS | **Rejected** | O(n²×ray-len); only viable gated by persistence, which is itself deferred. |
-| Switch wrapper (Electron/Tauri) **for perf** | **Rejected** | Single-thread JS either way; V8 ≈1.5–2× constant factor, not structural. Decide wrapper on distribution grounds later. |
-| Fork Electron / embed SpiderMonkey | **Rejected** | Team-years / two-engine maintenance for ~zero gain. |
-| Publish full snapshot every tick (worker) | **Reverted** | Cloning ~290 entities 50×/s crashed FPS to 7; the freeze it targeted was render-thread blocking (terrain), not position-update rate. Flush-only (15 Hz) restored. |
-| Raise `MAX_STEPS_PER_BATCH` (worker) | **Rejected** | Off-thread it only lengthens worker lock per catch-up batch (no snapshots); a wall-clock budget is the right knob (W5). |
-| Keep doing surgical JS cuts to reach target scale | **Rejected** | Measured tick is the *aggregate* of 290 entities (§8); cuts buy 2–3×, target needs 10–50×. Opportunity cost too high → go to a data-oriented core. |
-| JS-SoA core (typed arrays, no Rust) | **Folded in** | Would get a big chunk (no GC, SAB multicore) and is a valid stepping stone, but the data-model work is identical to Rust's. Go straight to Rust-SoA for the extra constant factor + `rayon`; the spatial core already proves the WASM pipeline. |
+| Connectivity pre-check for unreachable A* | **Rejected** | 100 % of fails were `bodyBlocked` (terrain *was* reachable). Soft-bodies was the fix. |
+| Publish full snapshot every tick (worker) | **Reverted** | Cloning ~290 entities 50×/s crashed FPS to 7; the freeze was render-thread blocking, not position rate. |
+| Raise `MAX_STEPS_PER_BATCH` (worker) | **Rejected** | Off-thread it only lengthens the worker lock per catch-up batch; a wall-clock budget is the right knob (W5). |
+| **Rust-SoA simulation core (full port)** | **Rejected (R1, §9)** | Only ~1.2–1.4× over *mutable* JS — not worth a two-language rewrite. Spike parked (§A) for a possible partial port at far larger scale. |
+| **JS-SoA core (typed arrays, no Rust)** | **Rejected (R1)** | SoA showed *no* win over mutable OOP in JS at 500 entities (index math costs more than it saves until cache-bound). The lever is immutable→mutable, not layout. |
+| Switch wrapper (Electron/Tauri) **for perf** | **Rejected** | Single-thread JS either way; decide wrapper on distribution grounds later. |
+| Fork Electron / embed SpiderMonkey | **Rejected** | Team-years for ~zero gain. |
 
 ---
 
 ## 7 · ADRs & status
 
 - [x] ADR-021 — Sim/render decouple: soft-body pathfinding (amends ADR-014), terrain VBO/cache, sim→Worker (W0–W5 shipped, flag-gated), `_terrainRev` change-signal, wall-clock batch budget. **The accepted perf direction.**
-- [x] ADR-018 — **corrected**: its "perception is the #1 perf cost" premise was falsified; persistence/push retained as a deferred AI-correctness feature (§5), not a perf measure.
-- [x] ADR-019 (LoS) / ADR-020 (scaling ladder) — updated to point at the real findings + the Worker.
-- [ ] **ADR-022 — Rust-SoA simulation core (to write + onboard into `codegraph.config.json`).** The accepted scaling direction (★ ACTIVE): SoA-over-typed-buffers sim in Rust→WASM behind the worker boundary; supersedes the "Rust core deferred" note in ADR-020.
+- [x] ADR-018 — **corrected**: "perception is the #1 perf cost" falsified; persistence/push retained as a deferred AI-correctness feature (§5).
+- [x] ADR-019 (LoS) / ADR-020 (scaling ladder) — point at the real findings + the Worker.
+- [ ] **No ADR for a Rust core** — it was spiked (R0/R1) and aborted (§A) before locking in. If the **mutable-in-place** refactor (★ ACTIVE) is locked in as a pattern, or a partial Rust port is ever resumed, write an ADR then.
 - [ ] Re-measure on the shipped engine (WebKitGTK / V8) at the DISTRIBUTION milestone — Firefox numbers don't transfer.
 
 ---
 
-## 8 · Sim ceiling — the capture that forced the pivot (2026-06-14)
+## 8 · Sim ceiling — the capture that prompted the Rust evaluation (2026-06-14)
 
-Worker-side `[SIM-TPS]` + per-phase `[PROF]` (both now emitted from inside the worker; the console
-`profileTurns()` sets the flag on the *main* globalThis, which the worker can't see). 240×160 map,
-150 pawns + ~140 mobs, 4×:
+Worker-side `[SIM-TPS]` + per-phase `[PROF]` (emitted from inside the worker). 240×160, 150 pawns +
+~140 mobs, 4×:
 
-- `[SIM-TPS] speed=4× tps=30–38 (target 240) avgTick=27–32 ms busy≈100 %` — **compute-bound on one
-  core.** avgTick 28 ms → ~36 TPS max; realtime (1×) needs 60 TPS, so the sim runs **below realtime**
-  under load and 4× cannot help (the worker is already flat-out). Startup spikes 84–217 ms/tick
-  (one-time: initial A* grid build, job-pool gen for 300 designations, entity spawn).
-- `[PROF]` phase split, and how it **grows as the colony activates** (the "harvest tank"):
+- `[SIM-TPS] speed=4× tps=30–38 (target 240) avgTick=27–32 ms busy≈100 %` — compute-bound on one
+  core; below realtime under load. Startup spikes 84–217 ms/tick (one-time: A* grid build, job-pool
+  gen for 300 designations, spawn).
+- `[PROF]` phase split, growing as the colony activates (the "harvest tank"):
 
   | phase | start | active |
   | ----- | ----- | ------ |
@@ -229,9 +238,30 @@ Worker-side `[SIM-TPS]` + per-phase `[PROF]` (both now emitted from inside the w
   | needsTick | 2.4 ms | 5.7 ms |
   | **TOTAL** | **18 ms** | **38 ms** |
 
-- `#findCombatThreat/tick ≈ 201` — auto-defend runs a threat scan per pawn **every** tick (60 Hz).
-  Already uses the pre-filtered `hostiles` subset, so not raw O(n²); the cost is the 60 Hz frequency
-  × entity count, i.e. the same "everything runs full logic every tick" pattern.
+- `#findCombatThreat/tick ≈ 201` — auto-defend runs a per-pawn threat scan every tick (60 Hz; uses
+  the pre-filtered `hostiles` subset, so not raw O(n²) — the cost is the 60 Hz × entity-count pattern).
 
-**Conclusion:** no single hot spot — it's aggregate per-entity cost in an allocation-heavy object
-model. That is what a Rust-SoA core fixes; surgical cuts cannot. → ★ ACTIVE.
+**Conclusion (corrected by §9):** no single hot spot — aggregate per-entity cost. At the time this
+read as "needs a Rust-SoA core". R1 (§9) then showed the cost is the *immutable allocation pattern*,
+fixable in JS → ★ ACTIVE, not a rewrite.
+
+---
+
+## 9 · R1 benchmark — the capture that ABORTED the Rust port (2026-06-15)
+
+`runSimCoreBench()` — one representative hot loop (needs decay + movement + chunked tile read), the
+**identical** work four ways, 500 entities · 1000×1000 · 600 ticks × 5 reps, browser (V8 + wasm):
+
+| variant | ms/tick | reads as |
+| ------- | ------- | -------- |
+| rust-soa | **0.0083** | the proposed core |
+| js-oop-mutable | **0.0100** | mutate objects in place |
+| js-soa | 0.0117 | same layout, JS over typed arrays |
+| js-oop-immutable | **0.1250** | the CURRENT engine style (spread/map per tick) |
+
+Ratios: **alloc tax (immutable / mutable) = 12.5×**; rust over js-soa = 1.4×; **rust over mutable
+JS ≈ 1.2×**; SoA-layout "win" over mutable OOP = 0.9× (a loss).
+
+**Conclusion:** the lever is **mutable-vs-immutable (12.5×)**, not OOP-vs-SoA (≤1×) and not JS-vs-Rust
+(~1.2×). A two-language Rust-SoA rewrite buys almost nothing the immutable→mutable change doesn't —
+so the port is **aborted** (§A) and the active work is **de-immutabling the hot loops** (★ ACTIVE).
