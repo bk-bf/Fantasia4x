@@ -21,9 +21,15 @@ import { applySimCommand } from './commands';
 import type { GameState } from '../core/types';
 
 const TICK_MS = 1000 / TICKS_PER_SECOND;
-// Off the render thread, the sim can run more ticks per batch without starving anything — but cap
-// so a single batch can't lock the worker. W5 may raise this once measured.
-const MAX_STEPS_PER_BATCH = 30;
+// W5 — batch governed by a WALL-CLOCK budget, not a tick count. A fixed step cap (was 30) is the
+// wrong knob off-thread: at 60 TICKS_PER_SECOND a heavy tick costs ~10-15ms, so a 30-tick catch-up
+// batch locks the worker ~360ms with no snapshots posted → stutter. Instead we run ticks until the
+// budget is spent, then yield (the setInterval re-fires) so snapshots keep flowing and the renderer
+// stays fed. Backlog beyond the budget is DROPPED (best-effort speed): under heavy load high speeds
+// are compute-bound on one core — 4×·150-pawn = ~2.9s work/s real, unachievable by any cap — so we
+// degrade to smooth-but-slower rather than locking. Light load drains fully and hits true 4×.
+const BATCH_BUDGET_MS = 8; // ≈half the 16ms interval — leaves headroom for snapshot serialize + GC
+const MAX_STEPS_PER_BATCH = 120; // hard safety only; the budget is the real limiter
 
 let speed = 1;
 let paused = true;
@@ -102,18 +108,23 @@ function batch() {
   const dt = lastBatch ? now - lastBatch : 0;
   lastBatch = now;
   accMs += Math.min(dt, 250) * speed;
+  const start = now;
   let steps = 0;
   while (accMs >= TICK_MS && steps < MAX_STEPS_PER_BATCH) {
     const r = gameEngine.processGameTurn();
     if (!r.success) {
       accMs = 0;
       post({ kind: 'error', error: 'tick failed: ' + (r.errors ?? []).join('; ') });
-      break;
+      return;
     }
     accMs -= TICK_MS;
     steps++;
+    // Budget check AFTER a tick so every batch makes ≥1 tick of progress, then yields.
+    if (performance.now() - start >= BATCH_BUDGET_MS) break;
   }
-  if (steps >= MAX_STEPS_PER_BATCH) accMs = 0;
+  // Couldn't drain the accumulator within budget (or hit the safety cap) → compute-bound. Drop the
+  // backlog so sim-time doesn't spiral into ever-longer locked catch-up batches; runs best-effort.
+  if (accMs >= TICK_MS) accMs = 0;
 }
 
 self.onmessage = async (e: MessageEvent) => {
