@@ -1,0 +1,197 @@
+// Survival, needs, status effects, and the combat body model. Split out of core/types.ts (P-4);
+// re-exported via the barrel. (SURVIVAL-HEALTH + COMBAT-SYSTEM specs.)
+
+export interface EntityNeeds {
+  hunger: number; // 0-100, 100 = starving
+  fatigue: number; // 0-100, 100 = exhausted
+  sleep: number; // 0-100, 100 = must sleep
+  lastSleep: number; // turn when last slept
+  lastMeal: number; // turn when last ate
+  // ── PRODUCTION-CHAIN-EXPANSION §D: water needs (optional; pawns only) ──
+  thirst?: number; // 0-100, 100 = dehydrated
+  hygiene?: number; // 0-100, 100 = filthy
+  lastDrink?: number; // turn when last drank
+  lastWash?: number; // turn when last washed
+}
+
+export interface StatusEffectDef {
+  id: string;
+  name: string;
+  description: string;
+  color: string;
+  modifiers: {
+    hungerRate?: number; // multiplier on hunger accrual (0 = paused, 0.33 = ⅓ rate)
+    fatigueRate?: number; // multiplier on fatigue accrual
+    workEfficiency?: number; // multiplier on work output
+    moveSpeed?: number; // multiplier on movement steps per turn
+    dodge?: number; // multiplier on combat evasion (winded → easier to hit)
+  };
+}
+
+/** An active progressive health condition on a pawn. */
+export interface EntityCondition {
+  id: string; // matches ConditionDef.id in conditions.jsonc
+  severity: number; // 0.0–1.0; reaches lethalSeverity → pawn dies
+}
+
+export type LimbId = 'head' | 'torso' | 'left_arm' | 'right_arm' | 'left_leg' | 'right_leg';
+
+export const CRITICAL_LIMBS: LimbId[] = ['head', 'torso'];
+
+export type DamageType = 'cutting' | 'piercing' | 'blunt';
+
+export type BodyPartId =
+  // ── Head region ──────────────────────────────────────────────────────────
+  | 'skull'
+  | 'jaw'
+  | 'nose'
+  | 'leftEye'
+  | 'rightEye'
+  | 'leftEar'
+  | 'rightEar'
+  | 'brain'
+  // ── Torso ────────────────────────────────────────────────────────────────
+  | 'chest'
+  | 'abdomen'
+  | 'heart'
+  | 'leftLung'
+  | 'rightLung'
+  | 'liver'
+  | 'stomach'
+  | 'leftKidney'
+  | 'rightKidney'
+  | 'spine'
+  // ── Left arm ─────────────────────────────────────────────────────────────
+  | 'leftShoulder'
+  | 'leftUpperArm'
+  | 'leftForearm'
+  | 'leftHand'
+  | 'leftThumb'
+  | 'leftIndexFinger'
+  | 'leftMiddleFinger'
+  | 'leftRingFinger'
+  | 'leftLittleFinger'
+  // ── Right arm ────────────────────────────────────────────────────────────
+  | 'rightShoulder'
+  | 'rightUpperArm'
+  | 'rightForearm'
+  | 'rightHand'
+  | 'rightThumb'
+  | 'rightIndexFinger'
+  | 'rightMiddleFinger'
+  | 'rightRingFinger'
+  | 'rightLittleFinger'
+  // ── Left leg ─────────────────────────────────────────────────────────────
+  | 'leftHip'
+  | 'leftUpperLeg'
+  | 'leftLowerLeg'
+  | 'leftFoot'
+  | 'leftBigToe'
+  | 'leftSecondToe'
+  | 'leftMiddleToe'
+  | 'leftFourthToe'
+  | 'leftLittleToe'
+  // ── Right leg ────────────────────────────────────────────────────────────
+  | 'rightHip'
+  | 'rightUpperLeg'
+  | 'rightLowerLeg'
+  | 'rightFoot'
+  | 'rightBigToe'
+  | 'rightSecondToe'
+  | 'rightMiddleToe'
+  | 'rightFourthToe'
+  | 'rightLittleToe';
+
+export interface Injury {
+  bodyPart: BodyPartId;
+  /** Wound type id from wounds.jsonc (cut | puncture | crush | burn). One wound per type per part. */
+  type: 'cut' | 'fracture' | 'puncture' | 'crush' | 'burn';
+  severity: 'minor' | 'serious' | 'critical' | 'destroyed';
+  /** Accumulated HP of damage this wound has dealt to the part (same-type hits stack here). */
+  damage: number;
+  /** Blood volume drained per turn; clots below CLOT_FLOOR or via herbal_kit. */
+  bleeding: number;
+  painContribution: number;
+  infected: boolean; // doubles pain + bleeding after 20 untreated turns
+  treatedAt?: number; // turn when a caretaker last tended this wound
+  /** Quality 0–1 of the most recent tend; scales heal speed, treatment duration, infection resistance. */
+  treatmentQuality?: number;
+}
+
+/** State of a single fine body part (organ, bone, sub-limb). */
+export interface BodyPartState {
+  id: BodyPartId;
+  /** Current hit points; seeded from BodyPartDef.maxHp. */
+  health: number;
+  maxHp: number;
+  isMissing: boolean;
+  injuries: Injury[];
+}
+
+export interface LimbState {
+  id: LimbId;
+  health: number; // 0–100; 0 = destroyed
+  isMissing: boolean; // true after amputation
+  bleedRate: number; // blood points drained per turn while >0
+  /** Fine parts nested inside this root limb (organs, bones, fingers…). Hidden in UI until injured. */
+  parts?: BodyPartState[];
+}
+
+/** A single severity stage within a ConditionDef. */
+export interface ConditionStage {
+  label: string;
+  minSeverity: number;
+  color: string;
+  lifeThreatening?: boolean;
+  modifiers: {
+    workEfficiency?: number; // multiplier on work output
+    moveSpeed?: number; // multiplier on movement
+    hungerRate?: number; // multiplier on hunger accrual rate
+    fatigueRate?: number; // multiplier on fatigue accrual rate
+  };
+}
+
+/**
+ * Need-driven progression for a condition (e.g. hunger → malnutrition, thirst → dehydration). The
+ * tuning that used to be hardcoded as `MALNUTRITION_*` / `DEHYDRATION_*` constants now lives on the
+ * condition it belongs to. Rates are PER-SECOND magnitudes (the sim applies `perTick()` at use).
+ */
+export interface ConditionDriver {
+  /** The `Pawn.needs` field that feeds this condition (e.g. 'hunger', 'thirst'). */
+  need: string;
+  /** At/above this need value (0–100) the condition accrues. */
+  onset: number;
+  /** Below this need value the condition recovers. */
+  safe: number;
+  /** Per-second severity gain while the need is in [onset, 100). */
+  rateCritical: number;
+  /** Per-second severity gain while the need is maxed (= 100). */
+  rateMax: number;
+  /** Per-second severity loss while the need is below `safe`. */
+  recovery: number;
+}
+
+export interface ConditionDef {
+  id: string;
+  name: string;
+  description: string;
+  lethalSeverity: number;
+  stages: ConditionStage[];
+  /** Optional: a need that drives this condition's severity up/down (conditions.jsonc). */
+  driver?: ConditionDriver;
+}
+
+/** Record appended to gameState.deadPawns when a pawn dies. */
+export interface DeadPawnRecord {
+  name: string;
+  cause:
+    | 'malnutrition'
+    | 'dehydration'
+    | 'blood_loss'
+    | 'critical_limb'
+    | 'combat'
+    | 'exhaustion_cascade'
+    | 'infection';
+  turn: number;
+  stats: { strength: number; dexterity: number; intelligence: number };
+}
