@@ -533,6 +533,28 @@ export function stepHostile(
   }
 }
 
+/**
+ * Debug trace (→ .debug/entities.log): record WHAT tripped a mob into fleeing — threat kind,
+ * position, distance, and the creature's vision/flee ranges. Makes a stuck/cornered flee (a mob
+ * boxed between two threats so it can never get beyond `fleeRange`) diagnosable from the log.
+ * Gated by gameLogger.enabled, so it costs nothing in normal play.
+ */
+function logFleeTrigger(
+  mob: Mob,
+  def: CreatureDefinition,
+  threat: { pos: { x: number; y: number } },
+  isPawn: boolean,
+  turn: number
+): void {
+  if (!gameLogger.isEnabled) return;
+  const d = Math.max(Math.abs(threat.pos.x - mob.x), Math.abs(threat.pos.y - mob.y));
+  gameLogger.log(
+    turn,
+    'ENTITY-FLEE',
+    `${mob.id} @(${mob.x},${mob.y}) flee ${isPawn ? 'pawn' : 'predator'}@(${threat.pos.x},${threat.pos.y}) d=${d} vision=${def.stats.visionRange} flee=${def.stats.fleeRange}`
+  );
+}
+
 export function stepAnimal(
   mob: Mob,
   def: CreatureDefinition,
@@ -638,7 +660,10 @@ export function stepAnimal(
 
   switch (mob.state) {
     case 'Grazing': {
-      if (threat) return { ...mob, state: 'Startled', stateSince: turn, path: [] };
+      if (threat) {
+        logFleeTrigger(mob, def, threat, inVision != null, turn);
+        return { ...mob, state: 'Startled', stateSince: turn, path: [] };
+      }
       return wanderStep(mob, def, state);
     }
     case 'Startled': {
@@ -684,7 +709,10 @@ export function stepAnimal(
     }
     case 'Sleeping': {
       // Woken by any threat — bolt immediately.
-      if (threat) return { ...mob, state: 'Startled', stateSince: turn, path: [] };
+      if (threat) {
+        logFleeTrigger(mob, def, threat, inVision != null, turn);
+        return { ...mob, state: 'Startled', stateSince: turn, path: [] };
+      }
       // Natural wake-up when rested, or force-wake when ravenously hungry.
       if (
         mob.needs.fatigue <= sleepWakeThreshold(mob.needs.hunger) ||
@@ -1007,8 +1035,12 @@ export function stepHunting(
       ...mob,
       huntTargetId: prey.id,
       path: newPath,
-      pathIndex: 0,
-      nextCellCostLeft: undefined
+      pathIndex: 0
+      // nextCellCostLeft is deliberately NOT reset. The hunt re-paths every 10 ticks while the
+      // prey flees, but a tile crossing takes ~20 ticks — so a reset lands mid-crossing and snaps
+      // the renderer's sub-tile interp (simTarget reads nextCellCostLeft) back to tile-centre 6×/s,
+      // producing the hunt "yoyo". Carrying it over continues the crossing toward the fresh path's
+      // first step (a neighbour of the same tile), exactly like pawn assignPath / flee stepDirectional.
     };
   }
   return { ...mob, huntTargetId: prey.id };

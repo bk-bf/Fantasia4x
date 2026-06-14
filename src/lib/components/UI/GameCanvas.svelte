@@ -52,6 +52,18 @@
     EntityButton,
     EntityStat
   } from '$lib/components/UI/SelectedEntityCard.svelte';
+  import {
+    type HudSpriteIconRef,
+    SHEET_CELL_W,
+    SHEET_CELL_H,
+    getSheet,
+    loadSheet,
+    onSheetLoaded
+  } from '$lib/components/UI/gameCanvas/spriteSheets';
+  import {
+    hudSpriteIconAction,
+    redrawHudSpriteIcons
+  } from '$lib/components/UI/gameCanvas/hudSpriteIcon';
   import itemsData from '$lib/game/database/items.jsonc';
 
   const ITEMS_DATABASE = itemsData as unknown as Item[];
@@ -63,15 +75,9 @@
     'green_firewood',
     'plant_fiber'
   ];
-  const HUD_SPRITE_W = 12;
-  const HUD_SPRITE_H = 18;
-  const HUD_ICON_TINT = { r: 232, g: 136, b: 40, a: 0.98 };
-  const HUD_SPRITE_SHEET_URLS = {
-    tiles: '/tilesets/bitlands_tiles.bmp',
-    items: '/tilesets/bitlands_items.bmp'
-  } as const;
-  type HudSpriteIconRef = { sheet: keyof typeof HUD_SPRITE_SHEET_URLS; id: number };
-  const FUEL_SETTINGS_ICON_REF = { sheet: 'tiles', id: 11 } as const;
+  // Sheet URLs + the HudSpriteIconRef type now live in gameCanvas/spriteSheets.ts (shared cache);
+  // the HUD-icon action + tint live in gameCanvas/hudSpriteIcon.ts.
+  const FUEL_SETTINGS_ICON_REF: HudSpriteIconRef = { sheet: 'tiles', id: 11 };
 
   // Tile size range for zoom (square cells for CoQ sprite-mode)
   // MAP_W / MAP_H must match the generateWorld() call in gameState.ts
@@ -97,79 +103,7 @@
 
   let canvas: HTMLCanvasElement;
   let designCanvas: HTMLCanvasElement;
-  // Pre-processed tileset canvases for Canvas2D designation overlay (magenta stripped)
-  let _tilesSheetCanvas: HTMLCanvasElement | null = null;
-  let _itemsSheetCanvas: HTMLCanvasElement | null = null;
-  const _hudSpriteIconNodes = new Set<{ node: HTMLCanvasElement; icon: HudSpriteIconRef }>();
-
-  function _sheetCanvasByIcon(icon: HudSpriteIconRef): HTMLCanvasElement | null {
-    return icon.sheet === 'items' ? _itemsSheetCanvas : _tilesSheetCanvas;
-  }
-
-  function _ensureHudIconSheetLoaded(icon: HudSpriteIconRef): void {
-    if (icon.sheet === 'items') {
-      if (!_itemsSheetCanvas) _loadSpriteSheet(HUD_SPRITE_SHEET_URLS.items, '_itemsSheetCanvas');
-      return;
-    }
-    if (!_tilesSheetCanvas) _loadSpriteSheet(HUD_SPRITE_SHEET_URLS.tiles, '_tilesSheetCanvas');
-  }
-
-  function _paintHudSpriteIcon(node: HTMLCanvasElement, icon: HudSpriteIconRef): void {
-    node.width = HUD_SPRITE_W;
-    node.height = HUD_SPRITE_H;
-    const ctx = node.getContext('2d');
-    if (!ctx) return;
-    ctx.clearRect(0, 0, HUD_SPRITE_W, HUD_SPRITE_H);
-
-    const sheet = _sheetCanvasByIcon(icon);
-    if (!sheet) {
-      _ensureHudIconSheetLoaded(icon);
-      return;
-    }
-
-    const col = icon.id % 16;
-    const row = Math.floor(icon.id / 16);
-    ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(
-      sheet,
-      col * HUD_SPRITE_W,
-      row * HUD_SPRITE_H,
-      HUD_SPRITE_W,
-      HUD_SPRITE_H,
-      0,
-      0,
-      HUD_SPRITE_W,
-      HUD_SPRITE_H
-    );
-
-    // Tint HUD icons to the panel accent color while preserving sprite alpha.
-    ctx.globalCompositeOperation = 'source-atop';
-    ctx.fillStyle = `rgba(${HUD_ICON_TINT.r}, ${HUD_ICON_TINT.g}, ${HUD_ICON_TINT.b}, ${HUD_ICON_TINT.a})`;
-    ctx.fillRect(0, 0, HUD_SPRITE_W, HUD_SPRITE_H);
-    ctx.globalCompositeOperation = 'source-over';
-  }
-
-  function _redrawHudSpriteIcons(): void {
-    for (const entry of _hudSpriteIconNodes) {
-      _paintHudSpriteIcon(entry.node, entry.icon);
-    }
-  }
-
-  function hudSpriteIconAction(node: HTMLCanvasElement, icon: HudSpriteIconRef) {
-    const entry = { node, icon };
-    _hudSpriteIconNodes.add(entry);
-    _paintHudSpriteIcon(node, icon);
-
-    return {
-      update(nextIcon: HudSpriteIconRef) {
-        entry.icon = nextIcon;
-        _paintHudSpriteIcon(node, nextIcon);
-      },
-      destroy() {
-        _hudSpriteIconNodes.delete(entry);
-      }
-    };
-  }
+  // HUD sprite icons + their shared-cache painting live in gameCanvas/{hudSpriteIcon,spriteSheets}.
   // Current day/night ambient, mirrored from the WebGL renderer so the Canvas2D
   // designation overlay can be darkened/tinted to match the lit scene beneath it.
   let _ambientLight = 1;
@@ -1448,28 +1382,6 @@
     renderer.setGrid(grid);
     drawDesignations();
   }
-  function _loadSpriteSheet(url: string, target: '_tilesSheetCanvas' | '_itemsSheetCanvas') {
-    const img = new Image();
-    img.onload = () => {
-      const c = document.createElement('canvas');
-      c.width = img.width;
-      c.height = img.height;
-      const cx = c.getContext('2d', { willReadFrequently: true });
-      if (!cx) return;
-      cx.drawImage(img, 0, 0);
-      const id = cx.getImageData(0, 0, c.width, c.height);
-      const d = id.data;
-      for (let i = 0; i < d.length; i += 4) {
-        if (d[i] === 255 && d[i + 1] === 0 && d[i + 2] === 255) d[i + 3] = 0;
-      }
-      cx.putImageData(id, 0, 0);
-      if (target === '_tilesSheetCanvas') _tilesSheetCanvas = c;
-      else _itemsSheetCanvas = c;
-      _redrawHudSpriteIcons();
-      drawDesignations();
-    };
-    img.src = url;
-  }
 
   function drawDesignations() {
     if (!designCanvas || !container || !worldMap.length) return;
@@ -1576,18 +1488,20 @@
 
     if (!designations || Object.keys(designations).length === 0) return;
 
-    // Lazy-load sprite sheets on first designation draw
-    if (!_tilesSheetCanvas) {
-      _loadSpriteSheet('/tilesets/bitlands_tiles.bmp', '_tilesSheetCanvas');
+    // Lazy-load sprite sheets on first designation draw (shared cache → gameCanvas/spriteSheets).
+    const tilesSheet = getSheet('tiles');
+    if (!tilesSheet) {
+      loadSheet('tiles');
       return;
     }
-    if (!_itemsSheetCanvas) {
-      _loadSpriteSheet('/tilesets/bitlands_items.bmp', '_itemsSheetCanvas');
+    const itemsSheet = getSheet('items');
+    if (!itemsSheet) {
+      loadSheet('items');
       return;
     }
 
-    const SPRITE_W = 12,
-      SPRITE_H = 18;
+    const SPRITE_W = SHEET_CELL_W,
+      SPRITE_H = SHEET_CELL_H;
     // Icon drawn smaller than the tile, centred within the cell.
     const ICON_SCALE = 0.7;
     const iconW = tileWidth * ICON_SCALE;
@@ -1609,13 +1523,13 @@
       let spriteId: number;
 
       if (dtype === 'mine') {
-        sheet = _itemsSheetCanvas;
+        sheet = itemsSheet;
         spriteId = 207;
       } else if (dtype === 'woodcut') {
-        sheet = _tilesSheetCanvas;
+        sheet = tilesSheet;
         spriteId = 246;
       } else if (dtype === 'forage') {
-        sheet = _tilesSheetCanvas;
+        sheet = tilesSheet;
         spriteId = 241;
       } else if (dtype === 'harvest') {
         const tile = worldMap[wy]?.[wx];
@@ -1624,10 +1538,10 @@
           : undefined;
         const resDef = resourceId ? resourceObjectService.getById(resourceId) : undefined;
         if (resDef?.interaction.workCategory === 'mining') {
-          sheet = _itemsSheetCanvas;
+          sheet = itemsSheet;
           spriteId = 207;
         } else {
-          sheet = _tilesSheetCanvas;
+          sheet = tilesSheet;
           spriteId = 241;
         }
       } else {
@@ -1819,6 +1733,12 @@
   }
 
   onMount(async () => {
+    // A freshly-loaded sprite sheet must repaint both consumers: the HUD icons and the
+    // designation overlay (mirrors the old _loadSpriteSheet onload).
+    onSheetLoaded(() => {
+      redrawHudSpriteIcons();
+      drawDesignations();
+    });
     if (browser) await init();
   });
 
