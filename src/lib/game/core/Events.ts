@@ -115,6 +115,9 @@ export interface CombatTurnEntry {
   partMaxHp?: number;
   partRemainingHp?: number;
   bleeding?: boolean;
+  /** Wound this swing inflicted: kind (cut | fracture | puncture | crush | burn) + severity. */
+  woundType?: string;
+  woundSeverity?: 'minor' | 'serious' | 'critical' | 'destroyed';
 }
 
 export interface ActivityLogEntry {
