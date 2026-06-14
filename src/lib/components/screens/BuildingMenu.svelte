@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { gameState, currentRace, currentTurn } from '$lib/stores/gameState';
+  import { gameState, currentRace } from '$lib/stores/gameState';
   import { addToStockpileZone } from '$lib/game/core/GameState';
   import { uiState } from '$lib/stores/uiState';
   import { itemService } from '$lib/game/services/ItemService';
@@ -14,10 +14,7 @@
 
   let race: any = null;
   let buildings: PlacedBuilding[] = [];
-  let maxPopulation = 0;
-  let currentTurnValue = 0;
   let completedResearch: string[] = [];
-  let currentToolLevel = 0;
 
   // UI section grouping. Derived from each building's id/effects/category via classify()
   // below — kept here so the engine `category` field (read by ModifierSystem/BuildingService
@@ -109,58 +106,34 @@
     return buildings.filter((b) => b.type === buildingId && b.status === 'complete').length;
   };
 
-  // Enhanced affordability check using new interface
-  $: canAfford = (building: Building): boolean => {
-    if (!building.buildingCost) return false;
-    return Object.entries(building.buildingCost).every(([itemId, cost]) => {
-      const available = $gameState?.stockpile?.[itemId] ?? 0;
-      return available >= Number(cost);
-    });
+  // A `category:<cat>` slot accepts any item of that category, so it has no single
+  // stock count — sum the stockpile across every item in the category.
+  $: getCostHave = (id: string): number => {
+    if (id.startsWith('category:')) {
+      const cat = id.slice('category:'.length);
+      return itemService
+        .getItemsByCategory(cat)
+        .reduce((sum, it) => sum + ($gameState?.stockpile?.[it.id] ?? 0), 0);
+    }
+    return getItemAmount(id);
   };
 
-  // Enhanced build check with new requirements
-  $: canBuild = (building: Building): boolean => {
-    if (!race) return false;
+  // `category:stone` is an engine cost key, not an item id — render it as "any stone".
+  function formatCostLabel(id: string): string {
+    return id.startsWith('category:')
+      ? `any ${id.slice('category:'.length)}`
+      : id.replace(/_/g, ' ');
+  }
 
-    const gameStateForCheck = {
-      seed: 0,
-      pawns: Array(race.population).fill({}),
-      maxPopulation,
-      currentToolLevel,
-      completedResearch,
-      item: [],
-      buildingCounts: {},
-      buildings,
-      stockpile: $gameState?.stockpile ?? {},
-      designations: {},
-      jobs: [],
-      turn: currentTurnValue,
-      race: race,
-      // Required properties with default values
-      worldMap: [],
-      availableResearch: [],
-      discoveredLore: [],
-      equippedItems: {
-        weapon: null,
-        head: null,
-        chest: null,
-        legs: null,
-        feet: null,
-        hands: null
-      },
-      craftingQueue: [],
-      workAssignments: {},
-      pawnStats: {},
-      stockpileZones: []
-    };
+  // MISSING vs BLOCKED: resolveBuildingCost handles concrete + `category:*` slots and reads
+  // physical AVAILABLE stock (ADR-016 droppedItems), so it's the real affordability signal —
+  // the stockpile mirror double-counts reserved stacks and can't resolve category slots.
+  $: canAfford = (building: Building): boolean =>
+    !!$gameState && buildingService.resolveBuildingCost(building.id, $gameState) !== null;
 
-    return buildingService.canBuildBuilding(building.id, gameStateForCheck) && canAfford(building);
-  };
-
-  // Subscribe to turn changes to force reactivity
-  const unsubscribeTurn = currentTurn.subscribe((turn) => {
-    currentTurnValue = turn;
-  });
+  // Full build check (affordability + research/tools/population/uniqueness) against real state.
+  $: canBuild = (building: Building): boolean =>
+    !!$gameState && !!race && buildingService.canBuildBuilding(building.id, $gameState);
 
   const unsubscribeRace = currentRace.subscribe((value) => {
     race = value;
@@ -168,15 +141,12 @@
 
   const unsubscribeGame = gameState.subscribe((state) => {
     buildings = state.buildings || [];
-    maxPopulation = state.maxPopulation;
     completedResearch = state.completedResearch || [];
-    currentToolLevel = state.currentToolLevel || 0;
   });
 
   onDestroy(() => {
     unsubscribeRace();
     unsubscribeGame();
-    unsubscribeTurn();
   });
 
   function startBuilding(building: Building) {
@@ -349,10 +319,10 @@
               <span class="muted-text">free</span>
             {:else}
               {#each Object.entries(building.buildingCost) as [id, n], ci}
-                {@const have = getItemAmount(id)}
+                {@const have = getCostHave(id)}
                 {#if ci > 0}<span class="cost-sep">·</span>{/if}
                 <span class="cost-item" class:neg-text={have < (n as number)}>
-                  {id.replace(/_/g, ' ')} <span class="cost-qty">×{n}</span>
+                  {formatCostLabel(id)} <span class="cost-qty">×{n}</span>
                   <span class="cost-have" class:neg-text={have < (n as number)}>({have})</span>
                 </span>
               {/each}
