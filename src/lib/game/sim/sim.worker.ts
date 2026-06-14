@@ -1,34 +1,118 @@
 /// <reference lib="webworker" />
 /**
- * sim.worker.ts — the simulation worker (ADR-021, sim→Worker decouple).
+ * sim.worker.ts — the simulation worker (ADR-021, sim→Worker decouple, W1–W4).
  *
- * W1 scope: prove the WASM spatial core initialises in a Worker context. The risk is that
- * `$app/environment`'s `browser` flag (which `WasmPathfinderService.init` gates on) may be `false`
- * inside a worker (no `window`), which would silently skip WASM load. So we report BOTH the
- * `browser` value and the post-init `isReady()` so the failure mode is unambiguous:
- *   browser=false            → the gate blocked it; WasmPathfinderService must use a worker-safe check.
- *   browser=true, ready=false → WASM load/instantiate failed (asset path / vite worker bundling).
- *   ready=true               → WASM works in the worker; proceed to W2+ (run the tick loop here).
+ * Owns the canonical GameState and runs the whole tick loop OFF the render thread, so the main
+ * thread renders at the display rate regardless of sim cost. The engine's per-tick output and
+ * command commits (decoupled via injected sinks in W0) become postMessages here.
  *
- * Later steps (W2–W5) will run GameEngineImpl + services + the tick loop in this worker and
- * postMessage per-tick snapshots; commands arrive as messages. For now it only answers wasm-check.
+ * Protocol: see simProtocol.ts. Commands arrive as serializable {type,payload} (W3 registry);
+ * state goes back as full-ish snapshots (worldMap omitted when unchanged — it's the big part and
+ * rarely changes). WASM (W1) inits in the worker. Save (W4) = post the full state on request.
  */
 import { isClientRuntime } from '../core/runtime';
 import { wasmPathfinderService } from '../services/WasmPathfinderService';
+import { GameStateManager } from '../core/GameState';
+import { gameEngine } from '../systems/GameEngineImpl';
+import { rng } from '../core/rng';
+import { resetUnreachableJobs } from '../systems/PawnStateMachine';
+import { TICKS_PER_SECOND } from '../core/time';
+import { applySimCommand } from './commands';
+import type { GameState } from '../core/types';
 
-type InMsg = { type: 'wasm-check' };
+const TICK_MS = 1000 / TICKS_PER_SECOND;
+// Off the render thread, the sim can run more ticks per batch without starving anything — but cap
+// so a single batch can't lock the worker. W5 may raise this once measured.
+const MAX_STEPS_PER_BATCH = 30;
 
-self.onmessage = async (e: MessageEvent<InMsg>) => {
-  const msg = e.data;
-  if (msg?.type === 'wasm-check') {
-    let error: string | undefined;
-    let ready = false;
-    try {
-      await wasmPathfinderService.init();
-      ready = wasmPathfinderService.isReady();
-    } catch (err) {
-      error = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+let speed = 1;
+let paused = true;
+let accMs = 0;
+let lastBatch = 0;
+let loop: ReturnType<typeof setInterval> | null = null;
+let lastWorldMap: GameState['worldMap'] | null = null;
+
+function post(msg: unknown) {
+  (self as unknown as Worker).postMessage(msg);
+}
+
+/** Publish state to the main thread. worldMap is sent only when its reference changed (38k tiles). */
+function publish(state: GameState, flush: boolean) {
+  if (!flush) return;
+  const worldMapChanged = state.worldMap !== lastWorldMap;
+  lastWorldMap = state.worldMap;
+  // Shallow strip worldMap when unchanged; main re-attaches the cached one.
+  const { worldMap, ...rest } = state;
+  post({ kind: 'snapshot', state: rest, worldMap: worldMapChanged ? worldMap : undefined });
+}
+
+function batch() {
+  if (paused) {
+    accMs = 0;
+    lastBatch = performance.now();
+    return;
+  }
+  const now = performance.now();
+  const dt = lastBatch ? now - lastBatch : 0;
+  lastBatch = now;
+  accMs += Math.min(dt, 250) * speed;
+  let steps = 0;
+  while (accMs >= TICK_MS && steps < MAX_STEPS_PER_BATCH) {
+    const r = gameEngine.processGameTurn();
+    if (!r.success) {
+      accMs = 0;
+      post({ kind: 'error', error: 'tick failed: ' + (r.errors ?? []).join('; ') });
+      break;
     }
-    self.postMessage({ type: 'wasm-result', browser: isClientRuntime, ready, error });
+    accMs -= TICK_MS;
+    steps++;
+  }
+  if (steps >= MAX_STEPS_PER_BATCH) accMs = 0;
+}
+
+self.onmessage = async (e: MessageEvent) => {
+  const msg = e.data;
+  switch (msg?.kind) {
+    case 'wasm-check': {
+      // W1 verifier (kept).
+      let ready = false;
+      let error: string | undefined;
+      try {
+        await wasmPathfinderService.init();
+        ready = wasmPathfinderService.isReady();
+      } catch (err) {
+        error = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+      }
+      post({ type: 'wasm-result', browser: isClientRuntime, ready, error });
+      break;
+    }
+    case 'init': {
+      rng.reseed(msg.seed ?? 0);
+      resetUnreachableJobs();
+      gameEngine.setGameStateManager(new GameStateManager(msg.state));
+      gameEngine.setOutputSink(publish); // per-tick → snapshot
+      gameEngine.setCommitSink((s) => publish(s, true)); // command result → snapshot
+      await wasmPathfinderService.init();
+      lastWorldMap = (msg.state as GameState).worldMap;
+      lastBatch = performance.now();
+      if (!loop) loop = setInterval(batch, 16);
+      post({ kind: 'ready' });
+      // Push the initial state straight back so the main projection is populated.
+      publish(msg.state, true);
+      break;
+    }
+    case 'command':
+      gameEngine.applyCommand((s) => applySimCommand(s, msg.cmd), msg.cmd.save ?? false);
+      break;
+    case 'setSpeed':
+      speed = msg.speed;
+      break;
+    case 'setPaused':
+      paused = msg.paused;
+      if (!paused) lastBatch = performance.now();
+      break;
+    case 'requestSave':
+      post({ kind: 'fullState', state: gameEngine.getGameState() });
+      break;
   }
 };

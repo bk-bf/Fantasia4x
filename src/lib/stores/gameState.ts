@@ -12,8 +12,9 @@ import {
 import { gameEngine } from '$lib/game/systems/GameEngineImpl';
 // P-3: side-effect import — registers the real log/feedback sink before any tick runs.
 import './simLogBridge';
-// ADR-021 W1: dev-only — exposes globalThis.verifyWasmInWorker() to check WASM-in-worker.
-import '$lib/game/sim/simWorkerClient';
+// ADR-021: sim worker bridge (W1 verifier + W2–W4 cutover). USE_SIM_WORKER is off unless opted in
+// (?simworker / localStorage), so the default path is the in-thread engine below.
+import { simWorkerBridge, USE_SIM_WORKER } from '$lib/game/sim/simWorkerClient';
 // ADR-021 W3: serializable command registry (shared with the future sim worker).
 import { applySimCommand } from '$lib/game/sim/commands';
 import type { SimCommand } from '$lib/game/sim/simProtocol';
@@ -373,6 +374,8 @@ function stopAutoTurns() {
  * @param frameDtMs Real milliseconds since the last frame.
  */
 function stepSimulation(frameDtMs: number) {
+  // ADR-021 cutover: the worker drives the tick loop; the render thread no longer steps the sim.
+  if (USE_SIM_WORKER) return;
   if (!browser || !simRunning) return;
   if (get(isPaused)) {
     simAccumulatorMs = 0;
@@ -417,6 +420,7 @@ function togglePause() {
 // gameSpeed store subscription below), so changing speed needs no loop restart.
 function setGameSpeed(speed: number) {
   gameSpeed.set(speed);
+  if (USE_SIM_WORKER) simWorkerBridge.setSpeed(speed);
 } // ===== WORLD REGEN =====
 function regenWorld(seed?: number, dev = false, itemQty = 500) {
   const s = (seed !== undefined ? seed : freshSeed()) >>> 0 || 1;
@@ -618,8 +622,15 @@ const updateWithSave = (updater: (state: GameState) => GameState) =>
 // ADR-021 W3: dispatch a serializable command. On the main thread it applies through the engine
 // (identical to update/updateWithSave); after the worker cutover this becomes a postMessage to the
 // sim worker. The command's logic lives in `commands.ts` (worker-safe), shared by both targets.
-const dispatchCommand = (cmd: SimCommand) =>
+const dispatchCommand = (cmd: SimCommand) => {
+  // ADR-021 cutover: in worker mode the worker owns state, so commands are posted to it; otherwise
+  // they apply through the in-thread engine (identical logic via the shared registry).
+  if (USE_SIM_WORKER) {
+    simWorkerBridge.command(cmd);
+    return;
+  }
   gameEngine.applyCommand((s) => applySimCommand(s, cmd), cmd.save ?? false);
+};
 
 // Engine → store projection of a user command: refresh the held value, optionally schedule a
 // debounced save, then notify subscribers immediately so user actions stay snappy.
@@ -764,6 +775,10 @@ isPaused.subscribe((v) => {
 const gameSpeed = writable(1);
 
 // Subscribe to keep track of current speed value
+if (USE_SIM_WORKER) {
+  // ADR-021 cutover: keep the worker's loop in sync with pause/speed.
+  isPaused.subscribe((p) => simWorkerBridge.setPaused(p));
+}
 gameSpeed.subscribe((value) => {
   gameSpeedValue = value;
 });
@@ -774,6 +789,9 @@ export const gameState = {
   set,
   update,
   updateWithSave,
+  /** ADR-021 W3: dispatch a serializable command (worker-ready). Prefer this over update() for
+   *  player/dev actions — the logic lives in `sim/commands.ts`, shared with the sim worker. */
+  command: dispatchCommand,
   pushFromEngine,
   commitFromEngine,
   isPaused: { subscribe: isPaused.subscribe },
@@ -851,3 +869,25 @@ export const currentStockpileZones = derived(gameState, ($gameState) => {
     };
   });
 });
+
+// ADR-021 cutover (W2–W4): once boot (load + migrations) has produced the canonical state on the
+// in-thread engine, hand ownership to the sim worker. The worker then runs the tick loop and owns
+// GameState; this store becomes a read-only projection fed by snapshots, and player commands post
+// to the worker (see dispatchCommand). Off unless USE_SIM_WORKER (?simworker), so the default game
+// is unaffected.
+if (USE_SIM_WORKER) {
+  simWorkerBridge.onState = (s) => {
+    gameStore.setSilent(s);
+    gameStore.notify();
+    scheduleSave(s);
+  };
+  simWorkerBridge.onFullState = (s) => scheduleSave(s);
+  savedStateReady.then(() => {
+    simWorkerBridge.start();
+    const st = get(gameState) as GameState;
+    simWorkerBridge.init(st, st.seed);
+    simWorkerBridge.setSpeed(gameSpeedValue);
+    simWorkerBridge.setPaused(get(isPaused));
+    console.info('[SIM-WORKER] cutover active — sim now runs in the worker.');
+  });
+}
