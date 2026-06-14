@@ -48,7 +48,13 @@ class ActivityLoggerImpl {
     const body = JSON.stringify({ entries });
     const blob = new Blob([body], { type: 'application/json' });
 
-    if (typeof navigator !== 'undefined' && navigator.sendBeacon('/api/activity-log', blob)) {
+    // Guard the METHOD (not just `navigator`): a Web Worker (sim worker, ADR-021) has `navigator`
+    // but no `sendBeacon` — calling it throws. Fall through to `fetch` (available in workers).
+    if (
+      typeof navigator !== 'undefined' &&
+      typeof navigator.sendBeacon === 'function' &&
+      navigator.sendBeacon('/api/activity-log', blob)
+    ) {
       return;
     }
 

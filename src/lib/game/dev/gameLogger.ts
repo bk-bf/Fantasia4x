@@ -174,8 +174,10 @@ class GameLoggerImpl {
     if (this.buffer.length === 0) return;
     const lines = this.buffer.splice(0);
 
-    // sendBeacon is more reliable during page unload.
-    if (typeof navigator !== 'undefined') {
+    // sendBeacon is more reliable during page unload — but it doesn't exist in a Web Worker
+    // (the sim worker, ADR-021), where calling it throws and would fail the whole tick. Guard on
+    // the method, not just `navigator`, and fall through to `fetch` (available in workers).
+    if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
       const body = JSON.stringify({ lines });
       const blob = new Blob([body], { type: 'application/json' });
       if (navigator.sendBeacon('/api/debug-log', blob)) return;
