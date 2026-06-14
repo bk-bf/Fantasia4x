@@ -248,7 +248,8 @@ export function buildPawnCard(
         ? jobProgressBar(pawn.activeJob.progress ?? 0)
         : undefined,
     pos: selected ? (pawn.position ?? undefined) : undefined,
-    health: selected ? buildHealthModel(pawn) : undefined,
+    // Built for hover cards too so the shared HEALTH toggle works on hover, not just selection.
+    health: buildHealthModel(pawn),
     buttons: selected
       ? ([
           {
@@ -343,7 +344,8 @@ export function buildMobCard(
       def.tameable ? ' · tameable' : ''
     }`,
     pos: selected ? { x: mob.x, y: mob.y } : undefined,
-    health: selected ? buildHealthModel(mob) : undefined,
+    // Built for hover cards too so the shared HEALTH toggle works on hover, not just selection.
+    health: buildHealthModel(mob),
     buttons: selected
       ? ([
           {

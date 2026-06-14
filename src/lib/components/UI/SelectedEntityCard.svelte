@@ -98,6 +98,7 @@
 <script lang="ts">
   import StatBar from './StatBar.svelte';
   import HealthPanel from './gameCanvas/HealthPanel.svelte';
+  import { healthToggle } from './gameCanvas/healthToggle.svelte';
 
   // `embedded`: render as an in-flow flex item instead of self-anchoring to the canvas.
   // Used when a parent (e.g. the building row, which also hosts the fuel-settings panel)
@@ -105,7 +106,8 @@
   let { model, embedded = false }: { model: SelectedEntityModel; embedded?: boolean } = $props();
 
   // NT-U1: the HEALTH button opens a pop-up health panel (like the fuel panel) above the card.
-  let showHealth = $state(false);
+  // The open/closed flag is SHARED (healthToggle) so it persists across every selected/hovered
+  // entity — flip it once and it stays on for all pawns and mobs.
   // Any damage to show? (blood loss, pain, broken limbs, or active conditions.)
   const damaged = $derived(
     !!model.health &&
@@ -207,22 +209,23 @@
 
   {#if model.health}
     <!-- NT-U1: HEALTH opens as a pop-up above the card (like the campfire fuel panel). -->
-    <HealthPanel health={model.health} open={showHealth} />
+    <HealthPanel health={model.health} open={healthToggle.open} />
   {/if}
 
-  {#if (model.buttons && model.buttons.length > 0) || model.health}
+  {#if (model.buttons && model.buttons.length > 0) || (model.health && model.selected)}
     <div class="btn-col">
-      {#if model.health}
-        <!-- NT-U1: toggle the in-panel HEALTH section. Warn-tinted when something's damaged. -->
+      {#if model.health && model.selected}
+        <!-- NT-U1: HEALTH button only on the SELECTED card; the pop-up still shows on hover when the
+             shared toggle is on. Warn-tinted on damage. -->
         <button
           class="hud-btn"
-          class:hud-btn--active={showHealth}
+          class:hud-btn--active={healthToggle.open}
           class:hud-btn--warn={damaged}
           onmousedown={(e) => e.stopPropagation()}
           onmouseup={(e) => e.stopPropagation()}
           onclick={(e) => {
             e.stopPropagation();
-            showHealth = !showHealth;
+            healthToggle.open = !healthToggle.open;
           }}
         >
           HEALTH
