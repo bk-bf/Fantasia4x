@@ -64,6 +64,9 @@ export interface BuildingService {
   placeBuilding(type: string, x: number, y: number, gameState: GameState): GameState;
   hasCompletedBuilding(type: string, gameState: GameState): boolean;
   countCompletedBuildings(type: string, gameState: GameState): number;
+  /** Apply a solid building's tile-blocking on completion / restore it on removal. No-op for
+   *  passable buildings (def.walkable !== false) or if the tile already matches. */
+  applyBuildingFootprint(state: GameState, building: PlacedBuilding, blocking: boolean): GameState;
 
   // UI Helper Methods
   getBuildingIcon(buildingId: string): string;
@@ -399,7 +402,33 @@ export class BuildingServiceImpl implements BuildingService {
         }
       }
     }
+    // A solid building that completes on placement (zero-work) blocks its tile immediately.
+    // Work-built ones block at construction completion (see JobService._completeConstruct).
+    if (instant) state = this.applyBuildingFootprint(state, placed, true);
     return state;
+  }
+
+  /**
+   * Solid buildings (def.walkable === false — walls, furnaces, fires) block their tile once
+   * built. This flips worldMap[y][x].walkable, which every walkability check already honors
+   * (the A* grid builder, mob isWalkable, approach-finding, idle wander). `blocking=true` on
+   * completion, `false` when the building is removed. Passable buildings are a no-op.
+   */
+  applyBuildingFootprint(state: GameState, building: PlacedBuilding, blocking: boolean): GameState {
+    const def = this.getBuildingById(building.type);
+    if (def?.walkable !== false) return state; // passable building — nothing to do
+    const { x, y } = building;
+    const row = state.worldMap?.[y];
+    const tile = row?.[x];
+    if (!tile) return state;
+    const nextWalkable = !blocking;
+    if (tile.walkable === nextWalkable) return state; // already in the desired state
+    return {
+      ...state,
+      worldMap: state.worldMap.map((r, yy) =>
+        yy === y ? r.map((t, xx) => (xx === x ? { ...t, walkable: nextWalkable } : t)) : r
+      )
+    };
   }
 
   /**
