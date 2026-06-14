@@ -9,6 +9,7 @@ import { resourceObjectService } from '../ResourceObjectService';
 import { wasmPathfinderService } from '../WasmPathfinderService';
 import { buildPathfindingGridsWithBlocked } from '../PathfinderService';
 import { occupancyService } from '../OccupancyService';
+import { profCount } from '../../core/log';
 import { rng } from '../../core/rng';
 import {
   type TileFoodKind,
@@ -244,11 +245,7 @@ const FLEE_REACHED_DIST = 3;
  * exits Fleeing) long before it ever arrives. Falls back to the local maximin step only when nothing
  * distant is reachable (or the pathfinder isn't ready), so a truly walled-in animal still reacts.
  */
-export function fleeToSafety(
-  mob: Mob,
-  threats: { x: number; y: number }[],
-  state: GameState
-): Mob {
+export function fleeToSafety(mob: Mob, threats: { x: number; y: number }[], state: GameState): Mob {
   if (threats.length === 0) return mob;
 
   // Following a live route → keep going (commit). Only re-decide when the path is used up or the
@@ -266,7 +263,8 @@ export function fleeToSafety(
   // haven't reached it and it's still far from every threat. This is what stops the direction flip.
   const dest = mob.fleeDest;
   if (dest) {
-    const reached = Math.max(Math.abs(dest.x - mob.x), Math.abs(dest.y - mob.y)) <= FLEE_REACHED_DIST;
+    const reached =
+      Math.max(Math.abs(dest.x - mob.x), Math.abs(dest.y - mob.y)) <= FLEE_REACHED_DIST;
     const stillSafe = minThreatDist(dest.x, dest.y) > fleeDistance / 2;
     if (!reached && stillSafe) {
       const path = pathTo(state, mob.x, mob.y, dest.x, dest.y, mob.id);
@@ -517,6 +515,8 @@ export function pathTo(
     ex,
     ey
   );
+  profCount('pathReq');
+  profCount('pathReq.mob');
   return wasmPathfinderService.findPath(walkable, costs, width, height, sx, sy, ex, ey);
 }
 

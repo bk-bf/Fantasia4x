@@ -144,7 +144,10 @@ export function tryAssignPath(
   pawn: Pawn,
   tx: number,
   ty: number,
-  gameState: GameState
+  gameState: GameState,
+  // Path-churn profiler tag (ENGINE-PERFORMANCE §6 v2). 'assign' = handler routing a pawn
+  // to a job/target; 'blockedRepath' = repathStuckMover recovering a dropped path.
+  reason: string = 'assign'
 ): GameState | null {
   if (!pawn.position) return null;
   if (!pathfinderService.isReady()) return null;
@@ -158,7 +161,10 @@ export function tryAssignPath(
     pawn.position.x,
     pawn.position.y
   );
-  if (!approach) return null;
+  if (!approach) {
+    profCount('pathReq.noApproach');
+    return null;
+  }
   // Bodies are solid: route AROUND other pawns/mobs. The approach tile is kept
   // walkable (it was chosen as unoccupied), and the start tile too, so the pawn is
   // never blocked by itself.
@@ -170,6 +176,12 @@ export function tryAssignPath(
     approach.x,
     approach.y
   );
+  // Churn instrumentation: count every actual A* run, by reason, plus the two churn
+  // signals — re-planning while the pawn ALREADY holds a path (hadPath), and empty
+  // results (fail = unreachable). A high hadPath or blockedRepath rate ⇒ behaviour bug.
+  profCount('pathReq');
+  profCount('pathReq.' + reason);
+  if ((pawn.path?.length ?? 0) > 0) profCount('pathReq.hadPath');
   const path = pathfinderService.findPath(
     walkable,
     costs,
@@ -180,7 +192,10 @@ export function tryAssignPath(
     approach.x,
     approach.y
   );
-  if (path.length === 0) return null;
+  if (path.length === 0) {
+    profCount('pathReq.fail');
+    return null;
+  }
   return pawnService.assignPath(pawn.id, path, gameState);
 }
 
@@ -214,7 +229,7 @@ export function repathStuckMover(
       )
     };
   }
-  return tryAssignPath(pawn, job.targetX, job.targetY, gameState) ?? 'unreachable';
+  return tryAssignPath(pawn, job.targetX, job.targetY, gameState, 'blockedRepath') ?? 'unreachable';
 }
 
 /** Average idle wander-steps per second. Lower than the mob rate (1.0) — colonists mill
@@ -299,6 +314,9 @@ export function tryAssignSleepPath(
     tx,
     ty
   );
+  profCount('pathReq');
+  profCount('pathReq.sleep');
+  if ((pawn.path?.length ?? 0) > 0) profCount('pathReq.hadPath');
   const path = pathfinderService.findPath(
     walkable,
     costs,
@@ -309,7 +327,10 @@ export function tryAssignSleepPath(
     tx,
     ty
   );
-  if (path.length === 0) return null;
+  if (path.length === 0) {
+    profCount('pathReq.fail');
+    return null;
+  }
   return pawnService.assignPath(pawn.id, path, gameState);
 }
 
