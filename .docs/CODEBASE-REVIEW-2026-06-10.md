@@ -5,7 +5,7 @@
 Living tracker of **open** architecture/defect items. Completed work — R1–R12, P-1/P-6/P-7,
 PT-2/3/4, and the full PawnStateMachine decomposition — is in the
 [resolved archive](.tasks/archive/CODEBASE-REVIEW-RESOLVED-2026-06-13.md). Gate at last update:
-`check` 0 errors · `test` 153 · `lint` 0 · `build` ok.
+`check` 0 errors · `test` 168 · `lint` 0 · `build` ok.
 
 ---
 
@@ -16,9 +16,18 @@ PT-2/3/4, and the full PawnStateMachine decomposition — is in the
   deep-clones via `JSON.parse(JSON.stringify())` over a 240×160 map. The store-side throttled-notify
   is good; the read-back each tick is the inversion. Target: engine is the only writer, user actions
   become commands. Large, no functional change — do before the Living World layer adds per-tick state.
-- [ ] **P-3 · Services importing Svelte stores.** `PawnStateMachine`(now `pawn/*`), `EntityService`,
-  `Combat` import `stores/Log` / `stores/combatFeedback`. Inject a log/feedback sink instead. Most
-  log calls live in the `combat`/`work` handlers, so the sink interface drops in cleanly.
+- [x] **P-3 · Services importing Svelte stores.** Done 2026-06-14. New `core/logSink.ts` defines a
+  `SimLogSink` interface + live-binding `simLog` singleton (no-op default); `stores/simLogBridge.ts`
+  registers an impl delegating to `Log`/`combatFeedback`, wired via side-effect import from
+  `gameState.ts`. `Combat`, `EntityService`, and the pawn state machine now emit through `simLog.*`
+  instead of importing stores. `CombatTextKind` moved to `core/logSink` (re-exported from
+  `combatFeedback` for the renderer). Graph layer-violation warnings 24→20; headless sims/tests get
+  the no-op sink (no UI logging side effects).
+- [ ] **P-2b · `GameEngineImpl` god-module → extract UI-coordination facade.** P-2 pushed the class to
+  43 functions (> 40 codegraph threshold). Before Living World adds per-tick state/coordination here,
+  pull the pure passthrough/coordination cluster (`getXById` / `getAll*` / `craftItem` /
+  `startResearch` / `assignPawnToWork`) into a separate UI-facing facade so the engine class stays a
+  turn coordinator. Keep `processGameTurn` + state ownership in the engine.
 - [ ] **P-4 · God files (remaining).** PawnStateMachine is done (see archive). Still oversized:
 
   | File | LOC |
@@ -101,15 +110,15 @@ visibly broken; all small. Shipped 2026-06-14 — gates: `check` 0 · `test` 162
 
 ## Tier 1 / Tier 2 (after Tier 0)
 
-- **Tier 1 — before Living World:** P-2 (engine as sole writer) + P-3 (inject log sink) — large,
-  no-functional-change inversions; verify in-browser (activity log / combat floaters / UI snapshot).
-  Gate Living World on these (it adds per-tick state).
+- **Tier 1 — before Living World:** ✅ P-2 (engine as sole writer) + P-3 (inject log sink) done
+  2026-06-14 — large, no-functional-change inversions. Still worth an in-browser smoke (activity log /
+  combat floaters / UI snapshot). P-2b (facade extraction) remains open before Living World lands.
 - **Tier 2 — next feature:** Living World B–D (seasons / weather / fog) — ROADMAP Wave 6.
 
 ## Suggested sequencing
 
 1. **Tier 0 now:** NT-1 → NT-2 → NT-3 → PT-1 → NT-4 (+ UI polish NT-U* opportunistically).
-2. **Tier 1 (before Living World):** P-2 + P-3 inversions.
+2. **Tier 1 (before Living World):** ✅ P-2 + P-3 inversions done; P-2b facade extraction still open.
 3. **Tier 2:** Living World B–D.
 4. **Opportunistic (no big-bang):** P-4 god-file splits (GameCanvas, EntityService, Combat) along seams; P-4b Step 5 selection→services.
 5. **Profiling-gated:** P-5 per-tick allocation — only when `__profOut` says so.
