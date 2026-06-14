@@ -6,7 +6,7 @@
     unequipItem,
     useConsumable,
     canEquipItem,
-    syncAllPawnInventories
+    equippedItemCounts
   } from '$lib/game/core/PawnEquipment';
   import { consumeFromStockpiles } from '$lib/game/core/GameState';
   import { gameCoordinator } from '$lib/game/systems/GameCoordinator';
@@ -17,6 +17,21 @@
 
   let equipmentLoading = false;
 
+  // INV-1: the "Available Items" pool is DERIVED from the colony stockpile (minus what's already
+  // equipped across all pawns) — it is NOT written into pawn.inventory.items, which stays strictly
+  // the pawn's carried haul goods. Reactive, so equipping/unequipping updates the list immediately.
+  $: availableItems = (() => {
+    const equipped = equippedItemCounts($gameState.pawns);
+    const out: Array<{ id: string; quantity: number }> = [];
+    for (const [id, amount] of Object.entries($gameState.stockpile ?? {})) {
+      const def = gameCoordinator.getItemById(id);
+      if (!def || def.type === 'material') continue;
+      const avail = Math.floor(amount - (equipped[id] ?? 0));
+      if (avail > 0) out.push({ id, quantity: avail });
+    }
+    return out;
+  })();
+
   // Equipment management functions
   function equipPawnItem(pawnId: string, itemId: string) {
     equipmentLoading = true;
@@ -24,7 +39,6 @@
       const pawnIndex = state.pawns.findIndex((p) => p.id === pawnId);
       if (pawnIndex !== -1) {
         state.pawns[pawnIndex] = equipItem(state.pawns[pawnIndex], itemId);
-        state = syncAllPawnInventories(state);
       }
       equipmentLoading = false;
       return state;
@@ -37,7 +51,6 @@
       const pawnIndex = state.pawns.findIndex((p) => p.id === pawnId);
       if (pawnIndex !== -1) {
         state.pawns[pawnIndex] = unequipItem(state.pawns[pawnIndex], slot as EquipmentSlot);
-        state = syncAllPawnInventories(state);
       }
       equipmentLoading = false;
       return state;
@@ -51,8 +64,7 @@
         const available = (state.stockpile ?? {})[itemId] ?? 0;
         if (available >= 1) {
           state.pawns[pawnIndex] = useConsumable(state.pawns[pawnIndex], itemId);
-          const afterConsume = consumeFromStockpiles(state, { [itemId]: 1 });
-          return syncAllPawnInventories(afterConsume);
+          return consumeFromStockpiles(state, { [itemId]: 1 });
         }
       }
       return state;
@@ -84,7 +96,7 @@
     <div class="inventory-items">
       <h4>Available Items:</h4>
       <div class="inventory-grid">
-        {#each Object.entries(pawn.inventory.items || {}) as [itemId, quantity]}
+        {#each availableItems as { id: itemId, quantity } (itemId)}
           {@const itemInfo = gameCoordinator.getItemById(itemId)}
           {#if itemInfo && quantity > 0 && itemInfo.type !== 'material'}
             <div class="inventory-item" data-type={itemInfo.type}>

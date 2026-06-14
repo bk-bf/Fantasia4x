@@ -1,5 +1,4 @@
 import type {
-  GameState,
   Pawn,
   ItemInstance,
   EquipmentSlot,
@@ -29,86 +28,20 @@ export function createPawnEquipment(): PawnEquipment {
   return {};
 }
 
-// Add this function to sync global items with pawn inventory
-export function syncPawnInventoryWithGlobal(pawn: Pawn, globalItems: Item[]): Pawn {
-  const updatedPawn = { ...pawn };
-  const sharedItems: Record<string, number> = {};
-
-  // Get list of items currently equipped by this pawn (by itemId in instances)
-  const equippedItemIds = new Set(
-    Object.values(pawn.equipment)
-      .filter((inst): inst is ItemInstance => inst !== undefined)
-      .map((inst) => inst.itemId)
-  );
-
-  // Copy all global items to pawn inventory, excluding materials and equipped items
-  globalItems.forEach((globalItem) => {
-    if (
-      globalItem.amount > 0 &&
-      globalItem.type !== 'material' &&
-      !equippedItemIds.has(globalItem.id)
-    ) {
-      sharedItems[globalItem.id] = Math.floor(globalItem.amount);
+/**
+ * Count how many of each item id are currently EQUIPPED across all pawns. Equipping "borrows" an
+ * item from the shared colony stockpile without decrementing it, so the equip UI's available pool is
+ * `stockpile − equipped`. Exposed for the equip screen to derive that pool reactively (INV-1: the
+ * pool is no longer written into pawn.inventory.items).
+ */
+export function equippedItemCounts(pawns: Pawn[]): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const pawn of pawns) {
+    for (const inst of Object.values(pawn.equipment)) {
+      if (inst) counts[inst.itemId] = (counts[inst.itemId] ?? 0) + 1;
     }
-  });
-
-  updatedPawn.inventory = {
-    ...updatedPawn.inventory,
-    items: sharedItems
-  };
-
-  return updatedPawn;
-}
-
-// Add immediate sync function
-export function syncAllPawnInventories(gameState: GameState): GameState {
-  const equippedItems = getAllEquippedItemIds(gameState.pawns);
-
-  // ADR-016: the equippable "global pool" is the colony's physical stockpile (no legacy
-  // gs.item array). Build Item-shaped entries from stockpile quantities, minus what is
-  // currently equipped. (Behaviour-preserving swap of the source; the equip UI's pool was
-  // already the shared colony storage.)
-  const filteredGlobalItems: Item[] = [];
-  for (const [id, amount] of Object.entries(gameState.stockpile ?? {})) {
-    const def = itemService.getItemById(id);
-    if (!def || amount <= 0) continue;
-    let avail = amount;
-    if (equippedItems.has(id)) {
-      let equippedCount = 0;
-      gameState.pawns.forEach((pawn) => {
-        Object.values(pawn.equipment).forEach((inst) => {
-          if (inst && inst.itemId === id) equippedCount++;
-        });
-      });
-      avail = Math.max(0, amount - equippedCount);
-    }
-    filteredGlobalItems.push({ ...def, amount: avail });
   }
-
-  // Sync all pawns with filtered items
-  const updatedPawns = gameState.pawns.map((pawn) =>
-    syncPawnInventoryWithGlobal(pawn, filteredGlobalItems)
-  );
-
-  return {
-    ...gameState,
-    pawns: updatedPawns
-  };
-}
-
-// Helper function to get all equipped item IDs across all pawns
-function getAllEquippedItemIds(pawns: Pawn[]): Set<string> {
-  const equippedItems = new Set<string>();
-
-  pawns.forEach((pawn) => {
-    Object.values(pawn.equipment).forEach((inst) => {
-      if (inst) {
-        equippedItems.add(inst.itemId);
-      }
-    });
-  });
-
-  return equippedItems;
+  return counts;
 }
 
 /** Derive which equipment slot an item belongs to based on its type/properties. */
@@ -143,16 +76,14 @@ export function getEquipmentSlot(item: Item): EquipmentSlot | null {
   }
 }
 
-export function canEquipItem(pawn: Pawn, itemId: string): boolean {
+export function canEquipItem(_pawn: Pawn, itemId: string): boolean {
   const item = itemService.getItemById(itemId);
   if (!item) return false;
-
-  // Check if item type can be equipped
-  const equipSlot = getEquipmentSlot(item);
-  if (!equipSlot) return false;
-
-  // Check if global storage has this item (since inventory is shared)
-  return (pawn.inventory.items[itemId] || 0) > 0;
+  // Whether the item is in stock is the equip UI's concern (it only lists in-stock items, minus
+  // what's already equipped). Here we only answer "does this item type have an equip slot" — so
+  // availability no longer reads pawn.inventory.items (which is the pawn's CARRIED goods, not the
+  // colony equip pool — INV-1).
+  return getEquipmentSlot(item) !== null;
 }
 
 export function equipItem(pawn: Pawn, itemId: string): Pawn {
@@ -328,7 +259,8 @@ export function removeItemFromInventory(pawn: Pawn, itemId: string, quantity: nu
 export function useConsumable(pawn: Pawn, itemId: string): Pawn {
   const item = itemService.getItemById(itemId);
   if (!item || item.type !== 'consumable') return pawn;
-  if ((pawn.inventory.items[itemId] || 0) < 1) return pawn;
+  // Stock availability is checked + decremented by the caller against the colony stockpile (not
+  // pawn.inventory.items, which is the pawn's carried goods — INV-1).
 
   let updatedPawn = { ...pawn };
 

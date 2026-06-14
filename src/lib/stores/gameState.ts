@@ -25,11 +25,7 @@ import { generateRace } from '$lib/game/core/Race';
 import { itemService } from '$lib/game/services/ItemService';
 import { buildingService } from '$lib/game/services/BuildingService';
 import { workService } from '$lib/game/services/WorkService';
-import {
-  syncPawnInventoryWithGlobal,
-  syncAllPawnInventories,
-  getEquipmentSlot
-} from '$lib/game/core/PawnEquipment';
+import { getEquipmentSlot } from '$lib/game/core/PawnEquipment';
 import { calculatePawnStats } from '$lib/game/entities/Pawns';
 import { triggerEvent } from '$lib/stores/eventStore';
 import { generateWorld } from '$lib/game/world/WorldGenerator';
