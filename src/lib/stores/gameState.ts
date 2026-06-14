@@ -42,11 +42,14 @@ import { resetUnreachableJobs } from '$lib/game/systems/PawnStateMachine';
 /** Real-time duration of one simulation tick at 1× speed (ms). */
 const TICK_DURATION_MS = 1000 / TICKS_PER_SECOND;
 /**
- * Upper bound on how many sim steps a single animation frame may run. Caps the
- * cost per frame (each step ≈ 1 ms) so fast-forward / catch-up after a hitch
- * can never spiral and lock up the render thread. Backlog beyond this is dropped.
+ * Upper bound on how many sim steps a single animation frame may run. This is the decouple
+ * knob (ENGINE-PERFORMANCE): the sim runs on the render thread, so N ticks × per-tick cost is
+ * added to every frame. At 16, a slow frame ran 16 heavy ticks (~330ms) which kept the frame
+ * slow and starved render to ~2fps — and it bound identically at 1× and 4×. Capping it lower
+ * trades sim catch-up speed (at high game-speed the sim runs slower than realtime, dropping
+ * backlog) for render smoothness. 4 ticks supports 1× realtime (60 TPS) at 15 FPS.
  */
-const MAX_STEPS_PER_FRAME = 16;
+const MAX_STEPS_PER_FRAME = 4;
 
 // ===== STATE VARIABLES =====
 let gameSpeedValue = 1;
