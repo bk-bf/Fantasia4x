@@ -25,34 +25,33 @@ a neighbour of the same tile, since WASM `find_path` excludes the start tile —
 `spatial-core/src/lib.rs` `reconstruct`). Mirrors pawn `assignPath` / flee `stepDirectional`. This is
 the same class as the ADR-014 "no re-path → no yoyo" principle, applied to the sub-tile interp.
 
-## [OPEN] Cornered-flee ping-pong — prey boxed between two threats
+## [FIXED] Cornered-flee ping-pong — prey boxed between two threats
 
 **Symptom:** A prey animal (e.g. mountain goat #10) gets stuck in `Fleeing` for minutes, ping-ponging
-between two adjacent tiles (observed: (82,101)↔(83,101)). It never exits to `Grazing` and never
-reaches `Exhausted`.
+between two adjacent tiles (observed: (82,101)↔(83,101)). It never exits to `Grazing`.
 
 **Root cause (NOT the state machine):** The goat is boxed between two threats on opposite sides
-(pawns to the NE, a wolf/bear to the SW). `Fleeing` exits to `Grazing` only when the *closest* threat
-passes `def.stats.fleeRange` (entityAI `case 'Fleeing'`), but with a threat on each side the goat can
-never get beyond range of both — so it stays in `Fleeing`. Worse, `moveAway` (→ `stepDirectional`,
-`sign=-1`) only steers away from the **single closest** threat each tick; when the closest flips side
-to side, the chosen tile flips too → the greedy per-tick step oscillates instead of committing to an
-escape. (Stamina does drain to `Exhausted` normally, but here it cycles flee→exhaust→recover→flee
-near the same spot; the visible artefact is the positional ping-pong, a *pathing* weakness.)
+(pawns to the NE, a predator to the SW). `Fleeing` exited to `Grazing` only when the *closest* threat
+passed `def.stats.fleeRange`, but with a threat on each side the goat could never get beyond range of
+both — so it stayed in `Fleeing`. And `moveAway` (→ `stepDirectional`, `sign=-1`) only steered away
+from the **single closest** threat each tick; when the closest flipped side to side, the chosen tile
+flipped too → the greedy per-tick step oscillated instead of committing to an escape (a *pathing*
+weakness, not an FSM one). The animal flee also had no give-up timeout (the hostile flee did).
 
-**Instrumentation added 2026-06-14:** `entityAI.logFleeTrigger` emits an `ENTITY-FLEE` line
-(→ `.debug/entities.log`) at every Grazing/Sleeping/eating→Startled transition, recording the threat
-kind (pawn/predator), its position, the distance, and the creature's vision/flee ranges — so a
-cornered flee is diagnosable instead of inferred.
-
-**Proposed fix (not yet applied):** Make flee target the direction that maximises distance from **all**
-in-range threats, and commit to it (path *through/past* the danger) rather than greedily backing away
-from the nearest one each tick. Concretely, in the `Fleeing` step: gather every threat within
-`fleeRange`, pick the walkable neighbour (or a short A* heading) that maximises the **summed** (or
-min) distance to that threat set, and — like flee `stepDirectional`'s existing same-step guard — keep
-the current heading unless a clearly better one appears, so it doesn't reverse every tick. Add a
-flee give-up / "can't escape" timeout (mirroring `HUNT_GIVE_UP_SECONDS`) so a truly boxed-in prey
-stops thrashing and holds (or turns to fight) instead of ping-ponging forever.
+**Fix** (`src/lib/game/services/entity/`):
+- New `entityHelpers.fleeFromThreats(mob, threats[], state)`: picks the walkable, unoccupied neighbour
+  that maximises the **minimum** (Chebyshev) distance to **every** in-range threat (maximin). With one
+  threat it flees straight away; boxed between two it slips **perpendicular** (through the gap) and —
+  via a same-step/heading tie-break — commits to that direction instead of reversing each tick (which
+  also preserves the in-progress crossing, so no render snap). When no neighbour keeps the closest
+  threat as far as standing still, it **holds** (stands fast) rather than thrash into a worse tile.
+- Both `Fleeing` cases (`stepAnimal` + `stepHostile`) now gather every threat within `fleeRange`
+  (nearest pawn + nearest predator) and call `fleeFromThreats`; the animal case gained the
+  `SAFE_RESET_TICKS` give-up the hostile case already had, so a persistently boxed-in prey drops back
+  to `Grazing` to re-evaluate instead of fleeing forever. Tests in `entity/fleeFromThreats.test.ts`.
+- Diagnostics: `entityAI.logFleeTrigger` emits `ENTITY-FLEE` lines (→ `.debug/entities.log`) at each
+  →Startled transition (threat kind/pos/distance vs vision/flee ranges) so a cornered flee is
+  diagnosable from the log.
 
 ## [FIXED] In-sync movement stagger + entities phasing through each other
 
