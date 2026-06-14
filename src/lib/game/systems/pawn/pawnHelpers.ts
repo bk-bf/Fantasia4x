@@ -17,6 +17,7 @@ import {
 import { occupancyService } from '../../services/OccupancyService';
 import { gameLogger } from '../../dev/gameLogger';
 import { ticksFromSeconds, SECONDS_PER_TICK } from '../../core/time';
+import { profCount } from '../../core/log';
 import { rng } from '../../core/rng';
 import { PAWN_STATE, type PawnStateName } from './pawnStates';
 import { isAdjacent, findAdjacentApproach, hasAvailableFood } from './pawnQueries';
@@ -343,6 +344,7 @@ export function findNearestRestBuilding(
   pawn: Pawn,
   gs: GameState
 ): { x: number; y: number; buildingId: string } | null {
+  profCount('findNearestRestBuilding'); // P-5: dev profiler tallies this buildings×pawns scan
   if (!pawn.position) return null;
   // 1. Prefer a building specifically assigned to this pawn.
   const assigned = (gs.buildings ?? []).find(
@@ -609,6 +611,7 @@ export function goIdle(pawn: Pawn, gs: GameState): GameState {
  * react anywhere inside their vision range.
  */
 export function findCombatThreat(pawn: Pawn, gs: GameState): Mob | null {
+  profCount('findCombatThreat'); // P-5: dev profiler tallies this all-mobs scan's per-tick frequency
   if (!pawn.position || pawn.isAlive === false) return null;
   const stance = pawn.combatStance ?? 'defensive';
   const range = stance === 'defensive' ? 1 : pawnVisionTiles(pawn);
