@@ -212,6 +212,12 @@ self.onmessage = async (e: MessageEvent) => {
       rng.reseed(msg.seed ?? 0);
       resetUnreachableJobs();
       installForwardingLogSink();
+      // Diagnostic: enable per-phase [PROF] inside the worker (the console profileTurns() sets it on
+      // the MAIN globalThis, which the worker can't see). Cheap (per-phase timers); logs once/sec.
+      const g = globalThis as Record<string, unknown>;
+      g.__profileTurns = true;
+      g.__prof = {};
+      g.__profCounts = {};
       gameEngine.setGameStateManager(new GameStateManager(msg.state));
       gameEngine.setOutputSink(publish); // per-tick → snapshot
       gameEngine.setCommitSink((s) => publish(s, true)); // command result → snapshot
