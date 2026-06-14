@@ -50,8 +50,17 @@
     lines?: string[];
     /** Action buttons shown in a 3-column grid. Only rendered on selected cards. */
     buttons?: EntityButton[];
+    /** Damaged limbs / wounds for the toggleable HEALTH panel (NT-U1). An empty array shows
+     *  "no damage"; `undefined` hides the HEALTH button entirely (entity has no body model). */
+    health?: HealthEntry[];
     /** Called when a non-selected hover card is clicked (to select the entity). */
     onSelect?: () => void;
+  }
+
+  /** One line in the HEALTH panel — a damaged limb or an active wound/condition. */
+  export interface HealthEntry {
+    text: string;
+    warn?: boolean;
   }
 </script>
 
@@ -62,6 +71,9 @@
   // Used when a parent (e.g. the building row, which also hosts the fuel-settings panel)
   // already owns the absolute positioning and lays the card out in a flex row.
   let { model, embedded = false }: { model: SelectedEntityModel; embedded?: boolean } = $props();
+
+  // NT-U1: the HEALTH button toggles the limbs/wounds panel inside the card.
+  let showHealth = $state(false);
 
   // Bar colours when an EntityBar doesn't specify its own: red on warn, green otherwise.
   const BAR_WARN = '#ee8844';
@@ -129,6 +141,19 @@
       </div>
     {/if}
 
+    {#if model.health && showHealth}
+      <div class="health-panel">
+        <div class="health-hdr">| HEALTH</div>
+        {#if model.health.length === 0}
+          <div class="health-ok">no damage</div>
+        {:else}
+          {#each model.health as h (h.text)}
+            <div class="health-row" class:health-warn={h.warn}>{h.text}</div>
+          {/each}
+        {/if}
+      </div>
+    {/if}
+
     {#if model.job}
       <div class="pawn-job" class:pawn-idle={model.job.idle}>{model.job.text}</div>
     {/if}
@@ -143,9 +168,25 @@
     {/if}
   </div>
 
-  {#if model.buttons && model.buttons.length > 0}
+  {#if (model.buttons && model.buttons.length > 0) || model.health}
     <div class="btn-col">
-      {#each model.buttons as btn (btn.label)}
+      {#if model.health}
+        <!-- NT-U1: toggle the in-panel HEALTH section. Warn-tinted when something's damaged. -->
+        <button
+          class="hud-btn"
+          class:hud-btn--active={showHealth}
+          class:hud-btn--warn={model.health.length > 0}
+          onmousedown={(e) => e.stopPropagation()}
+          onmouseup={(e) => e.stopPropagation()}
+          onclick={(e) => {
+            e.stopPropagation();
+            showHealth = !showHealth;
+          }}
+        >
+          HEALTH
+        </button>
+      {/if}
+      {#each model.buttons ?? [] as btn (btn.label)}
         <button
           class="hud-btn"
           class:hud-btn--active={btn.active}
@@ -194,9 +235,11 @@
     pointer-events: auto;
   }
   /* NT-U3: fixed-width skeleton, identical for every object type, so long descriptions
-     wrap inside the box instead of stretching it across the map. */
+     wrap inside the box instead of stretching it across the map. 300px is the building
+     panel's reference width — every info panel (pawn/mob/resource/item/building, hover or
+     selected) uses exactly this, so none is narrower or wider than another. */
   .tile-hud--pawn {
-    width: 232px;
+    width: 300px;
     box-sizing: border-box;
   }
   .pawn-header {
@@ -260,6 +303,36 @@
     background: #5a2814;
     border-color: #ffaa66;
     color: #ffaa66;
+  }
+  /* HEALTH button tint when the entity is damaged (overridden by --active when expanded). */
+  .hud-btn--warn:not(.hud-btn--active) {
+    border-color: #b5532a;
+    color: #ee8844;
+  }
+  /* ── HEALTH panel (NT-U1) ────────────────────────────────────── */
+  .health-panel {
+    margin-top: 2px;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+  .health-hdr {
+    color: #7a6030;
+    font-size: 9px;
+    letter-spacing: 0.04em;
+  }
+  .health-ok {
+    color: #68a030;
+    font-size: 9px;
+    padding-left: 4px;
+  }
+  .health-row {
+    color: #c0a040;
+    font-size: 9px;
+    padding-left: 4px;
+  }
+  .health-warn {
+    color: #ee8844;
   }
   /* ── Text lines (description, progress, refund, etc.) ───────── */
   .text-lines {

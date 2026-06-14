@@ -2663,10 +2663,14 @@
     font-family: 'Courier New', monospace;
     font-size: 12px;
   }
+  /* NT-U3: every hover/selection panel shares the building reference width (300px, fixed)
+     so no info panel is narrower or wider than another; long content wraps inside the box. */
   .tile-hud {
     position: absolute;
     bottom: 6px;
     left: 6px;
+    width: 300px;
+    box-sizing: border-box;
     background: rgba(28, 16, 6, 0.92);
     border: 1px solid #6b4a2a;
     color: #a07840;
@@ -2675,12 +2679,12 @@
     line-height: 1.5;
     padding: 2px 7px;
     pointer-events: none;
-    white-space: nowrap;
+    white-space: normal;
+    overflow-wrap: break-word;
     z-index: 10;
   }
 
   .tile-hud--selection {
-    max-width: 340px;
     white-space: normal;
   }
   .sel-title {
@@ -2735,9 +2739,7 @@
   }
   /* ── Building HUD card ─────────────────────────── */
   .tile-hud--building {
-    min-width: 160px;
-    max-width: 300px;
-    white-space: normal;
+    /* width comes from .tile-hud (NT-U3 shared 300px) */
     pointer-events: none;
   }
   .bld-row {

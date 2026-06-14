@@ -6,13 +6,53 @@ import { uiState } from '$lib/stores/uiState.js';
 import { gameState } from '$lib/stores/gameState.js';
 import { resourceObjectService } from '$lib/game/services/ResourceObjectService.js';
 import { type CreatureDefinition } from '$lib/game/core/Creatures.js';
-import type { Pawn, Mob } from '$lib/game/core/types.js';
+import type { Pawn, Mob, LimbState, EntityCondition, LimbId } from '$lib/game/core/types.js';
+import { getConditionCurrentStage } from '$lib/game/core/needs.js';
 import type {
   SelectedEntityModel,
   EntityBar,
   EntityButton,
-  EntityStat
+  EntityStat,
+  HealthEntry
 } from '$lib/components/UI/SelectedEntityCard.svelte';
+
+/** Short limb labels for the HEALTH panel. */
+const LIMB_LABEL: Record<LimbId, string> = {
+  head: 'Head',
+  torso: 'Torso',
+  left_arm: 'L.Arm',
+  right_arm: 'R.Arm',
+  left_leg: 'L.Leg',
+  right_leg: 'R.Leg'
+};
+
+/**
+ * NT-U1: damaged limbs + active wounds/conditions for the toggleable HEALTH panel. Lists ONLY the
+ * hurt parts (missing, < full HP, or bleeding) plus any conditions — an empty result renders as
+ * "no damage". Shared by pawns and mobs (both carry the 6-limb model + conditions).
+ */
+export function buildHealthEntries(entity: {
+  limbs?: LimbState[];
+  conditions?: EntityCondition[];
+}): HealthEntry[] {
+  const out: HealthEntry[] = [];
+  for (const limb of entity.limbs ?? []) {
+    const name = LIMB_LABEL[limb.id] ?? limb.id;
+    if (limb.isMissing) {
+      out.push({ text: `${name}: missing`, warn: true });
+    } else if (limb.health < 100) {
+      const bleeding = limb.bleedRate > 0;
+      out.push({
+        text: `${name}: ${Math.round(limb.health)}%${bleeding ? ' · bleeding' : ''}`,
+        warn: limb.health < 50 || bleeding
+      });
+    }
+  }
+  for (const c of entity.conditions ?? []) {
+    out.push({ text: getConditionCurrentStage(c)?.label ?? c.id.replace(/_/g, ' '), warn: true });
+  }
+  return out;
+}
 
 /** Debug `#id` suffix shown next to entity names when VITE_DEBUG_MODE is on. */
 export function entityDebugLabel(entity: { id: string; debugId?: number }): string {
@@ -142,6 +182,7 @@ export function buildPawnCard(
         ? jobProgressBar(pawn.activeJob.progress ?? 0)
         : undefined,
     pos: selected ? (pawn.position ?? undefined) : undefined,
+    health: selected ? buildHealthEntries(pawn) : undefined,
     buttons: selected
       ? ([
           {
@@ -239,6 +280,7 @@ export function buildMobCard(
       def.tameable ? ' · tameable' : ''
     }`,
     pos: selected ? { x: mob.x, y: mob.y } : undefined,
+    health: selected ? buildHealthEntries(mob) : undefined,
     buttons: selected
       ? ([
           {
