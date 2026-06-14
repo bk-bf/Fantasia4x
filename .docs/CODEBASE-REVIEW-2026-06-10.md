@@ -11,7 +11,7 @@ PT-2/3/4, and the full PawnStateMachine decomposition — is in the
 
 ## Structural debt (deferred by design — no big-bang)
 
-- [ ] **P-2 · Engine↔store dual source of truth.** `processGameTurn` begins with
+- [x] **P-2 · Engine↔store dual source of truth.** `processGameTurn` begins with
   `this.gameState = { ...get(gameState) }` and ends with `pushFromEngine`; `getGameState()`
   deep-clones via `JSON.parse(JSON.stringify())` over a 240×160 map. The store-side throttled-notify
   is good; the read-back each tick is the inversion. Target: engine is the only writer, user actions
