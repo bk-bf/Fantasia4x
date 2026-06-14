@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { fleeFromThreats } from './entityHelpers';
+import { fleeFromThreats, fleeToSafety } from './entityHelpers';
 import type { GameState, Mob } from '../../core/types';
 
 // FLEE-1: prey boxed between two threats used to ping-pong because it backed away from the single
@@ -62,5 +62,26 @@ describe('fleeFromThreats — maximin flee', () => {
       { x: 1, y: 5 }
     ], makeState(walls));
     expect(res.path?.length ?? 0).toBe(0);
+  });
+});
+
+describe('fleeToSafety — distant-destination flee', () => {
+  it('follows the committed route between re-paths (no per-tick recompute)', () => {
+    // Has a live route and the tick isn't a re-path tick → returned unchanged so the mover advances
+    // it (re-pathing every tick is what caused the yoyo/thrash).
+    const m = mob(5, 5, {
+      path: [{ x: 6, y: 5 }, { x: 7, y: 5 }],
+      pathIndex: 0,
+      stateSince: 0
+    } as Partial<Mob>);
+    expect(fleeToSafety(m, [{ x: 1, y: 5 }], makeState(), 1)).toBe(m);
+  });
+
+  it('falls back to a local maximin step when no distant point is reachable (pathfinder down)', () => {
+    // The WASM pathfinder isn't initialised under vitest, so pathTo returns [] for every candidate
+    // → fleeToSafety degrades to the local fleeFromThreats step rather than freezing.
+    const res = fleeToSafety(mob(5, 5), [{ x: 8, y: 5 }], makeState(), 0);
+    expect(res.path?.length).toBe(1);
+    expect(res.path![0].x).toBeLessThan(5); // still moved away from the eastern threat
   });
 });

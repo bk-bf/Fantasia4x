@@ -14,7 +14,7 @@ import {
   dist,
   adjacent,
   moveToward,
-  fleeFromThreats,
+  fleeToSafety,
   wanderStep,
   nearestPredatorThreat,
   findNearestPrey,
@@ -505,7 +505,7 @@ export function stepHostile(
       if (nearest && pawnDist <= def.stats.fleeRange) fleeThreats.push(nearest.pos);
       if (predThreat && predDist <= def.stats.fleeRange) fleeThreats.push(predThreat.pos);
       if (fleeThreats.length > 0)
-        return { ...fleeFromThreats(mob, fleeThreats, state), stamina: drainedStamina };
+        return { ...fleeToSafety(mob, fleeThreats, state, turn), stamina: drainedStamina };
       return { ...wanderStep(mob, def, state), stamina: drainedStamina };
     }
     case 'Exhausted': {
@@ -700,7 +700,7 @@ export function stepAnimal(
       if (fleeThreats.length === 0 || turn - mob.stateSince > SAFE_RESET_TICKS) {
         return { ...mob, state: 'Grazing', stateSince: turn, path: [], stamina: drainedStamina };
       }
-      return { ...fleeFromThreats(mob, fleeThreats, state), stamina: drainedStamina };
+      return { ...fleeToSafety(mob, fleeThreats, state, turn), stamina: drainedStamina };
     }
     case 'Exhausted': {
       // Regenerate stamina while resting; resume normal behaviour when recovered.

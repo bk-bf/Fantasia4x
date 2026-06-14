@@ -65,6 +65,7 @@
     buildMobCard,
     jobProgressBar
   } from '$lib/components/UI/gameCanvas/selectionCard';
+  import { overlayDroppedItems, buildingsVisualSig } from '$lib/components/UI/gameCanvas/overlay';
   import itemsData from '$lib/game/database/items.jsonc';
 
   const ITEMS_DATABASE = itemsData as unknown as Item[];
@@ -626,15 +627,6 @@
   // Includes ONLY fields buildGameGrid draws (position, type, status, deconstruct,
   // paused). Deliberately excludes fuel/lit so a burning campfire's per-tick fuel
   // countdown does not force a full terrain rebuild every frame.
-  function buildingsVisualSig(bs: PlacedBuilding[]): string {
-    let sig = '';
-    for (let i = 0; i < bs.length; i++) {
-      const b = bs[i];
-      sig += `${b.id}:${b.x},${b.y}:${b.type}:${b.status}:${b.deconstructQueued ? 1 : 0}:${b.paused ? 1 : 0}|`;
-    }
-    return sig;
-  }
-
   const unsubState = gameState.subscribe((s) => {
     worldMap = s.worldMap ?? [];
     pawns = s.pawns ?? [];
@@ -695,12 +687,6 @@
   // Humanoid sprites from bitlands_map.bmp (indices 64,66,69,78,85,103,105,125)
   const PAWN_SPRITES = [64, 66, 69, 78, 85, 103, 105, 125].map((i) => glyph(SHEET.MAP, i));
 
-  /** All pawns render white so they stand out clearly against any terrain. */
-  function pawnIdColor(_id: string): { r: number; g: number; b: number } {
-    return { r: 1, g: 1, b: 1 };
-  }
-
-  /**
   /**
    * Authoritative sub-tile target for a pawn in float world-tile coords.
    * Delegates to the shared MovementSystem.simTarget, flattening pawn.position.
@@ -827,34 +813,6 @@
     if (seen.size !== pawnRenderPos.size) {
       for (const id of pawnRenderPos.keys()) {
         if (!seen.has(id)) pawnRenderPos.delete(id);
-      }
-    }
-  }
-
-  /** Render dropped items as a yellow/gold '*' glyph; stored stockpile items as a green '$'. */
-  function overlayDroppedItems(grid: GameGrid, drops: DroppedItem[]) {
-    // ASCII '*' glyph index in the sprite sheet (glyph 42 in standard CP437)
-    const STAR_GLYPH = glyph(SHEET.MAP, 42);
-    // '$' glyph (glyph 36 in CP437) for stored stockpile items
-    const DOLLAR_GLYPH = glyph(SHEET.MAP, 36);
-    for (const drop of drops) {
-      const existing = grid.getTile(drop.x, drop.y);
-      if (drop.stored) {
-        // Stored in stockpile — render as green '$'
-        grid.setTile(drop.x, drop.y, {
-          char: DOLLAR_GLYPH,
-          foreground: { r: 0.2, g: 0.9, b: 0.3 }, // green
-          background: existing?.background ?? { r: 0, g: 0, b: 0 },
-          position: { x: drop.x, y: drop.y }
-        });
-      } else {
-        // Freshly dropped, awaiting hauling — render as gold '*'
-        grid.setTile(drop.x, drop.y, {
-          char: STAR_GLYPH,
-          foreground: { r: 1.0, g: 0.85, b: 0.1 }, // gold
-          background: existing?.background ?? { r: 0, g: 0, b: 0 },
-          position: { x: drop.x, y: drop.y }
-        });
       }
     }
   }

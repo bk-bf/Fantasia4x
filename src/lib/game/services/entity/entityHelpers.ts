@@ -3,7 +3,7 @@
 // functions (the class had no instance state but `idCounter`, so `this.` simply dropped away).
 import type { GameState, Mob, Pawn } from '../../core/types';
 import { getCreatureById, type CreatureDefinition } from '../../core/Creatures';
-import { SECONDS_PER_TICK } from '../../core/time';
+import { SECONDS_PER_TICK, ticksFromSeconds } from '../../core/time';
 import { stepBody, seedMidCrossClaims } from '../../systems/MovementSystem';
 import { resourceObjectService } from '../ResourceObjectService';
 import { wasmPathfinderService } from '../WasmPathfinderService';
@@ -226,6 +226,75 @@ export function fleeFromThreats(
   // Already committed to this heading — keep going (don't reset the crossing → no render snap).
   if (heading && heading.x === best.x && heading.y === best.y) return mob;
   return { ...mob, path: [best], pathIndex: 0, nextCellCostLeft: undefined };
+}
+
+/** How often a fleeing mob recomputes its distant safe destination (between which it just follows
+ *  the committed A* route — re-pathing every tick would yoyo and thrash the pathfinder). */
+const FLEE_REPATH_TICKS = ticksFromSeconds(1.5);
+
+/**
+ * Flee to a DISTANT safe destination instead of greedily stepping away tile-by-tile (which
+ * dead-ends prey in corners and then strands them). Projects a goal ~⅓ of the map away in the
+ * direction that maximises the minimum distance to EVERY threat, snaps it to walkable ground, and
+ * A*-paths there — committing to the whole run even if the route briefly passes nearer a threat to
+ * get out of a pocket. The path is recomputed only when it runs out or every FLEE_REPATH_TICKS
+ * (so threats are tracked without per-tick churn, and the in-progress crossing is preserved → no
+ * render yoyo). Falls back to the local maximin step when no distant point is reachable (or the
+ * pathfinder isn't ready), so a truly walled-in animal still does *something*.
+ */
+export function fleeToSafety(
+  mob: Mob,
+  threats: { x: number; y: number }[],
+  state: GameState,
+  turn: number
+): Mob {
+  if (threats.length === 0) return mob;
+
+  // Between re-paths, just keep following the committed route.
+  const pathExhausted = !mob.path?.length || (mob.pathIndex ?? 0) >= mob.path.length;
+  const repathDue = pathExhausted || (turn - mob.stateSince) % FLEE_REPATH_TICKS === 0;
+  if (!repathDue) return mob;
+
+  const h = state.worldMap.length;
+  const w = state.worldMap[0]?.length ?? 0;
+  const fleeDistance = Math.max(8, Math.floor(Math.min(w, h) / 3));
+  const minThreatDist = (x: number, y: number) =>
+    threats.reduce((m, t) => Math.min(m, Math.max(Math.abs(t.x - x), Math.abs(t.y - y))), Infinity);
+
+  // Rank the 8 compass headings by how far their projected far-point sits from the threat set,
+  // then A* to the first reachable one (safest direction first; corner escapes fall through to a
+  // less-safe but reachable heading — that's the "move past the danger to get away" the prey needs).
+  const dirs = [
+    { dx: 0, dy: -1 },
+    { dx: 1, dy: -1 },
+    { dx: 1, dy: 0 },
+    { dx: 1, dy: 1 },
+    { dx: 0, dy: 1 },
+    { dx: -1, dy: 1 },
+    { dx: -1, dy: 0 },
+    { dx: -1, dy: -1 }
+  ];
+  const candidates = dirs
+    .map(({ dx, dy }) => {
+      const tx = Math.max(0, Math.min(w - 1, mob.x + dx * fleeDistance));
+      const ty = Math.max(0, Math.min(h - 1, mob.y + dy * fleeDistance));
+      return { tx, ty, score: minThreatDist(tx, ty) };
+    })
+    .sort((a, b) => b.score - a.score);
+
+  for (const c of candidates) {
+    const dest = isWalkable(state, c.tx, c.ty)
+      ? { x: c.tx, y: c.ty }
+      : findNearbyWalkable(state, c.tx, c.ty, undefined, undefined, mob.id);
+    if (!dest || (dest.x === mob.x && dest.y === mob.y)) continue;
+    const path = pathTo(state, mob.x, mob.y, dest.x, dest.y, mob.id);
+    // nextCellCostLeft is intentionally preserved across the re-path (MOVE-1): the new path's first
+    // step is a neighbour of the same tile, so the crossing continues smoothly.
+    if (path.length > 0) return { ...mob, path, pathIndex: 0 };
+  }
+
+  // No reachable distant safe point — take a local maximin step (or hold) so we still react.
+  return fleeFromThreats(mob, threats, state);
 }
 
 /**
