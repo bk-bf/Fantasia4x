@@ -41,6 +41,9 @@
     { "adr": "ADR-014", "checkable": false, "reason": "Tile occupancy via OccupancyService — bypass detection needs field-level analysis." },
     { "adr": "ADR-015", "checkable": false, "reason": "Single work model — the superseded path was deleted; nothing to detect." },
     { "adr": "ADR-016", "checkable": false, "reason": "Physical production (reserve-and-fetch) — runtime behaviour." },
-    { "adr": "ADR-017", "checkable": false, "reason": "Data-driven jobs (jobs.jsonc <-> Job[type] union <-> JobService handler registry) — a data-coverage invariant, not a call edge. Drift is enforced by jobRegistry.test.ts + compile-time JobPoolType guards." }
+    { "adr": "ADR-017", "checkable": false, "reason": "Data-driven jobs (jobs.jsonc <-> Job[type] union <-> JobService handler registry) — a data-coverage invariant, not a call edge. Drift is enforced by jobRegistry.test.ts + compile-time JobPoolType guards." },
+    { "adr": "ADR-018", "checkable": false, "reason": "Perception via target persistence + push alerting — runtime AI behaviour and per-entity state, not a call edge." },
+    { "adr": "ADR-019", "checkable": false, "reason": "Line of sight via blocksSight occluder + WASM raycast — data-schema + runtime; the 'callsites never import spatial-core directly' part is already covered by the ADR-008 forbidden-callee-module rule." },
+    { "adr": "ADR-020", "checkable": false, "reason": "Sim scaling strategy (algorithms->WASM->worker, defer multicore) — a sequencing/runtime decision, not a structural invariant." }
   ]
 }
