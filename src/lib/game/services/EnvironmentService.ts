@@ -10,6 +10,7 @@
  */
 
 import { TICKS_PER_SECOND } from '../core/time';
+import { buildingLight } from './LightingService';
 
 // In-game seconds per day. The simulation `turn` counts ticks, so a full day is
 // TURNS_PER_DAY × TICKS_PER_SECOND ticks long.
@@ -165,18 +166,17 @@ export function computeTileLightLevel(
   y: number
 ): number {
   const ambient = getAmbientLight(turn);
-  const FIRE_RADIUS = 6;
-  const FIRE_INTENSITY = 1.1;
   let point = 0;
   for (const b of buildings) {
-    if (b.type === 'campfire' && b.status === 'complete' && b.lit === true) {
-      const dx = x - b.x;
-      const dy = y - b.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < FIRE_RADIUS) {
-        const falloff = (1 - dist / FIRE_RADIUS) * (1 - dist / FIRE_RADIUS);
-        point += FIRE_INTENSITY * falloff;
-      }
+    // Same data-driven emitter resolution the renderer uses, so UI light numbers match the map.
+    const light = buildingLight(b);
+    if (!light) continue;
+    const dx = x - b.x;
+    const dy = y - b.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < light.radius) {
+      const falloff = (1 - dist / light.radius) * (1 - dist / light.radius);
+      point += light.intensity * falloff;
     }
   }
   return Math.max(0.1, ambient + point);

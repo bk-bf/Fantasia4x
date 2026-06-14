@@ -18,6 +18,7 @@
  */
 
 import type { PlacedBuilding } from '../core/types.js';
+import { buildingService } from './BuildingService';
 
 export interface LightEmitter {
   /** Tile X (world coords). */
@@ -34,10 +35,30 @@ export interface LightEmitter {
   flicker?: boolean;
 }
 
-/** Warm campfire light. */
-const FIRE_COLOR: [number, number, number] = [1.0, 0.55, 0.22];
-const FIRE_RADIUS = 6;
-const FIRE_INTENSITY = 1.1;
+/** Warm fire light — the default colour/intensity for any building that doesn't override them. */
+export const FIRE_COLOR: [number, number, number] = [1.0, 0.55, 0.22];
+export const FIRE_INTENSITY = 1.1;
+
+/**
+ * Resolve a completed building's light emission from its def, or null if it isn't currently
+ * emitting. A building emits when it has a `lightRadius` and is complete; a fuelled one
+ * (maxFuel>0) additionally must be `lit`. Shared by the renderer (collectEmitters) and the
+ * gameplay/UI tile-light readout (EnvironmentService) so both agree on what glows.
+ */
+export function buildingLight(
+  b: { type: string; status: string; lit?: boolean }
+): { radius: number; intensity: number; color: [number, number, number] } | null {
+  if (b.status !== 'complete') return null;
+  const def = buildingService.getBuildingById(b.type);
+  if (!def?.lightRadius) return null;
+  const needsFuel = (def.maxFuel ?? 0) > 0;
+  if (needsFuel && b.lit !== true) return null;
+  return {
+    radius: def.lightRadius,
+    intensity: def.lightIntensity ?? FIRE_INTENSITY,
+    color: def.lightColor ?? FIRE_COLOR
+  };
+}
 
 /** Clamp ceiling so bright stacks of lights never blow past this multiplier. */
 const MAX_LIGHT = 1.6;
@@ -82,22 +103,22 @@ class LightingServiceImpl {
   }
 
   /**
-   * Derive light emitters from the current buildings.
-   * Only lit, completed campfires emit for now.
+   * Derive light emitters from the current buildings — data-driven: any completed building with
+   * a `lightRadius` in its def emits (fuelled ones only while lit). See {@link buildingLight}.
    */
   collectEmitters(buildings: PlacedBuilding[]): LightEmitter[] {
     const out: LightEmitter[] = [];
     for (const b of buildings) {
-      if (b.type === 'campfire' && b.status === 'complete' && b.lit === true) {
-        out.push({
-          x: b.x,
-          y: b.y,
-          color: FIRE_COLOR,
-          radius: FIRE_RADIUS,
-          intensity: FIRE_INTENSITY,
-          flicker: true
-        });
-      }
+      const light = buildingLight(b);
+      if (!light) continue;
+      out.push({
+        x: b.x,
+        y: b.y,
+        color: light.color,
+        radius: light.radius,
+        intensity: light.intensity,
+        flicker: true
+      });
     }
     return out;
   }
