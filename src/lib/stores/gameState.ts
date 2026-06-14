@@ -876,10 +876,15 @@ export const currentStockpileZones = derived(gameState, ($gameState) => {
 // to the worker (see dispatchCommand). Off unless USE_SIM_WORKER (?simworker), so the default game
 // is unaffected.
 if (USE_SIM_WORKER) {
-  simWorkerBridge.onState = (s) => {
+  simWorkerBridge.onState = (s, flush) => {
+    // Mirror the in-thread split: refresh the held value EVERY tick (renderer reads positions via
+    // get() each frame → smooth interpolation), but only NOTIFY subscribers + save at flush (~15Hz)
+    // so UI reactivity isn't hammered 50×/s.
     gameStore.setSilent(s);
-    gameStore.notify();
-    scheduleSave(s);
+    if (flush) {
+      gameStore.notify();
+      scheduleSave(s);
+    }
   };
   simWorkerBridge.onFullState = (s) => scheduleSave(s);
   savedStateReady.then(() => {

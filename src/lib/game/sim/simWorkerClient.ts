@@ -53,8 +53,9 @@ export const USE_SIM_WORKER: boolean =
 class SimWorkerBridge {
   private w: Worker | null = null;
   private worldMap: GameState['worldMap'] = [];
-  /** Store hook: receive a full state projection each snapshot (setSilent + notify + scheduleSave). */
-  onState: ((s: GameState) => void) | null = null;
+  /** Store hook: full state projection per snapshot. `flush` = update held value AND notify+save
+   *  (~15Hz); between flushes only the held value is refreshed (per-tick positions for the renderer). */
+  onState: ((s: GameState, flush: boolean) => void) | null = null;
   /** Store hook: a requested full state (for explicit save). */
   onFullState: ((s: GameState) => void) | null = null;
 
@@ -86,11 +87,15 @@ class SimWorkerBridge {
     kind: string;
     state?: GameState;
     worldMap?: GameState['worldMap'];
+    flush?: boolean;
     error?: string;
   }): void {
     if (m.kind === 'snapshot') {
       if (m.worldMap) this.worldMap = m.worldMap;
-      this.onState?.({ ...(m.state as object), worldMap: this.worldMap } as GameState);
+      this.onState?.(
+        { ...(m.state as object), worldMap: this.worldMap } as GameState,
+        m.flush ?? true
+      );
     } else if (m.kind === 'fullState' && m.state) {
       this.worldMap = m.state.worldMap;
       this.onFullState?.(m.state);

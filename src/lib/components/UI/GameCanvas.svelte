@@ -121,6 +121,7 @@
   let _prevBuildingsSig = '';
   let _prevDesignations: unknown;
   let _prevZoneTiles: unknown;
+  let _prevTerrainRev: number | undefined; // ADR-021: worker-sent terrain revision (see unsubState)
   // Terrain rebuild is O(map) (38k-tile vertex buffer). worldMap churns every tick from
   // resource regrowth/harvest, which would rebuild it every frame (~60ms). Those changes are
   // invisible if they lag a fraction of a second, so coalesce sim-driven terrain rebuilds to
@@ -678,11 +679,19 @@
     // render loop — placed buildings/designations appear ≤throttle late (imperceptible), and the
     // terrain cache finally HITS between rebuilds. (Interactive drag previews bypass this via their
     // own direct redrawOverlay() calls, so painting stays responsive.)
+    // In sim-worker mode (ADR-021) structured-clone hands us NEW refs for designations/buildings/
+    // zoneTiles every snapshot, so ref-equality always reports "changed" → terrain rebuilds every
+    // frame (90ms freeze frames). The worker sends `_terrainRev` (a reliable revision computed where
+    // refs are stable); use it when present. In-thread, fall back to the ref checks.
+    const workerRev = (s as unknown as { _terrainRev?: number })._terrainRev;
     const terrainChanged =
-      worldMap !== _prevWorldMap ||
-      buildingsSig !== _prevBuildingsSig ||
-      designations !== _prevDesignations ||
-      zoneTiles !== _prevZoneTiles;
+      workerRev !== undefined
+        ? workerRev !== _prevTerrainRev
+        : worldMap !== _prevWorldMap ||
+          buildingsSig !== _prevBuildingsSig ||
+          designations !== _prevDesignations ||
+          zoneTiles !== _prevZoneTiles;
+    _prevTerrainRev = workerRev;
     _prevWorldMap = worldMap;
     _prevBuildingsSig = buildingsSig;
     _prevDesignations = designations;

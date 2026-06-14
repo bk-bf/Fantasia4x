@@ -31,19 +31,47 @@ let accMs = 0;
 let lastBatch = 0;
 let loop: ReturnType<typeof setInterval> | null = null;
 let lastWorldMap: GameState['worldMap'] | null = null;
+// Terrain-rebuild signal: structured-clone gives the main thread NEW refs for designations/buildings/
+// zoneTiles every snapshot, defeating its ref-based "did terrain change?" check (→ a 90ms rebuild
+// every throttle window = freeze frames). In the worker, immutable updates preserve unchanged refs,
+// so we compute a reliable revision here and the renderer rebuilds terrain only when it actually bumps.
+let terrainRev = 0;
+let prevWM: unknown, prevBuildings: unknown, prevDesignations: unknown, prevZoneTiles: unknown;
 
 function post(msg: unknown) {
   (self as unknown as Worker).postMessage(msg);
 }
 
-/** Publish state to the main thread. worldMap is sent only when its reference changed (38k tiles). */
+/**
+ * Publish state to the main thread EVERY tick (not just on flush) so the renderer interpolates from
+ * per-tick-fresh entity positions — otherwise motion arrives in ~15Hz chunks and looks "wavy",
+ * especially at high speed. The `flush` flag (true at the ~15Hz UI-push interval) tells the main
+ * thread when to actually NOTIFY subscribers + save; between flushes it only refreshes the held
+ * value (cheap; the renderer reads it via get()). worldMap is sent only when its ref changed (38k
+ * tiles), so the per-tick payload stays small.
+ */
 function publish(state: GameState, flush: boolean) {
-  if (!flush) return;
   const worldMapChanged = state.worldMap !== lastWorldMap;
   lastWorldMap = state.worldMap;
-  // Shallow strip worldMap when unchanged; main re-attaches the cached one.
+  if (
+    state.worldMap !== prevWM ||
+    state.buildings !== prevBuildings ||
+    state.designations !== prevDesignations ||
+    state.zoneTiles !== prevZoneTiles
+  ) {
+    terrainRev++;
+    prevWM = state.worldMap;
+    prevBuildings = state.buildings;
+    prevDesignations = state.designations;
+    prevZoneTiles = state.zoneTiles;
+  }
   const { worldMap, ...rest } = state;
-  post({ kind: 'snapshot', state: rest, worldMap: worldMapChanged ? worldMap : undefined });
+  post({
+    kind: 'snapshot',
+    state: { ...rest, _terrainRev: terrainRev },
+    worldMap: worldMapChanged ? worldMap : undefined,
+    flush
+  });
 }
 
 function batch() {
