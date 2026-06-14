@@ -648,6 +648,7 @@ export function stepAnimal(
       mob.x,
       mob.y
     );
+    logFleeTrigger(mob, def, threat, inVision != null, turn);
     return {
       ...mob,
       state: 'Startled',
