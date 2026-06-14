@@ -40,6 +40,8 @@
   import { buildingService } from '$lib/game/services/BuildingService.js';
   import { resolveCharSpans, BIOMES, SUBTERRAINS } from '$lib/game/core/Terrains.js';
   import { resourceObjectService } from '$lib/game/services/ResourceObjectService.js';
+  import { itemService } from '$lib/game/services/ItemService.js';
+  import { getEquipmentSlot } from '$lib/game/core/PawnEquipment.js';
   import { getCreatureById } from '$lib/game/core/Creatures.js';
   import { TICKS_PER_SECOND } from '$lib/game/core/time.js';
   import { simTarget } from '$lib/game/systems/MovementSystem.js';
@@ -2587,9 +2589,22 @@
     if (blueprintBuildingId) redrawOverlay();
   }
 
+  // Right-click context menu (equip-from-tile for a drafted pawn). null = hidden.
+  let equipMenu: { x: number; y: number; entries: { label: string; run: () => void }[] } | null =
+    null;
+
+  /** "mainHand" → "Main Hand", "bodyBase" → "Body Base" — friendly body-part label. */
+  function slotLabel(slot: string): string {
+    return slot
+      .replace(/([A-Z])/g, ' $1')
+      .replace(/^./, (c) => c.toUpperCase())
+      .trim();
+  }
+
   /** Right-click: clear designation at hovered tile (or drag-erase rect in zone mode). */
   function handleContextMenu(e: MouseEvent) {
     e.preventDefault();
+    equipMenu = null;
     if (hoverTileX < 0 || hoverTileY < 0) return;
 
     // ── Draft mode: right-click issues orders ────────────────────────────────
@@ -2631,15 +2646,44 @@
         }));
         return;
       }
+      const pawnId = selectedPawn.id;
+      const issueMove = () =>
+        gameState.updateWithSave((state) => ({
+          ...state,
+          pawns: state.pawns.map((p) =>
+            p.id === pawnId
+              ? { ...p, draftTarget: { type: 'move', x: hoverTileX, y: hoverTileY } }
+              : p
+          )
+        }));
+
+      // Equip: a tile holding equippable item(s) opens a menu to wear one onto the drafted pawn.
+      const equippable = droppedItems.filter((d) => {
+        if (d.x !== hoverTileX || d.y !== hoverTileY) return false;
+        const it = itemService.getItemById(d.resourceId);
+        return !!it && !!getEquipmentSlot(it);
+      });
+      if (equippable.length > 0) {
+        equipMenu = {
+          x: e.clientX,
+          y: e.clientY,
+          entries: [
+            ...equippable.map((d) => {
+              const it = itemService.getItemById(d.resourceId)!;
+              const slot = getEquipmentSlot(it)!;
+              return {
+                label: `Equip ${itemService.getItemDisplayName(d)} → ${slotLabel(slot)}`,
+                run: () => gameState.equipItemFromTile(pawnId, d.id)
+              };
+            }),
+            { label: 'Move here', run: issueMove }
+          ]
+        };
+        return;
+      }
+
       // Move to tile
-      gameState.updateWithSave((state) => ({
-        ...state,
-        pawns: state.pawns.map((p) =>
-          p.id === selectedPawn.id
-            ? { ...p, draftTarget: { type: 'move', x: hoverTileX, y: hoverTileY } }
-            : p
-        )
-      }));
+      issueMove();
       return;
     }
 
@@ -2943,9 +2987,66 @@
       </div>
     </div>
   {/if}
+
+  {#if equipMenu}
+    <!-- backdrop closes the menu on any outside click / right-click -->
+    <div
+      class="ctx-backdrop"
+      role="presentation"
+      on:click={() => (equipMenu = null)}
+      on:contextmenu|preventDefault={() => (equipMenu = null)}
+    ></div>
+    <div class="ctx-menu" style="left:{equipMenu.x}px; top:{equipMenu.y}px">
+      {#each equipMenu.entries as entry}
+        <button
+          class="ctx-item"
+          on:click={() => {
+            entry.run();
+            equipMenu = null;
+          }}>{entry.label}</button
+        >
+      {/each}
+    </div>
+  {/if}
 </div>
 
 <style>
+  .ctx-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 998;
+  }
+  .ctx-menu {
+    position: fixed;
+    z-index: 999;
+    display: flex;
+    flex-direction: column;
+    min-width: 160px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-hi);
+    border-radius: 2px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+  }
+  .ctx-item {
+    text-align: left;
+    padding: 5px 10px;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    font-size: 11px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .ctx-item:last-child {
+    border-bottom: none;
+  }
+  .ctx-item:hover {
+    background: var(--bg-active);
+    color: var(--accent-hi);
+  }
+
   .canvas-wrap {
     position: relative;
     width: 100%;

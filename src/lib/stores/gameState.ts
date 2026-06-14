@@ -10,14 +10,24 @@ import {
   absorbDropIfOnStockpileTile
 } from '$lib/game/core/GameState';
 import { gameEngine } from '$lib/game/systems/GameEngineImpl';
-import type { GameState, Pawn, WorldTile, FilterableZoneType } from '$lib/game/core/types';
+import type {
+  GameState,
+  Pawn,
+  WorldTile,
+  FilterableZoneType,
+  ItemInstance
+} from '$lib/game/core/types';
 import { generatePawns } from '$lib/game/entities/Pawns';
 import { pawnService } from '$lib/game/services/PawnService';
 import { generateRace } from '$lib/game/core/Race';
 import { itemService } from '$lib/game/services/ItemService';
 import { buildingService } from '$lib/game/services/BuildingService';
 import { workService } from '$lib/game/services/WorkService';
-import { syncPawnInventoryWithGlobal, syncAllPawnInventories } from '$lib/game/core/PawnEquipment';
+import {
+  syncPawnInventoryWithGlobal,
+  syncAllPawnInventories,
+  getEquipmentSlot
+} from '$lib/game/core/PawnEquipment';
 import { calculatePawnStats } from '$lib/game/entities/Pawns';
 import { triggerEvent } from '$lib/stores/eventStore';
 import { generateWorld } from '$lib/game/world/WorldGenerator';
@@ -420,6 +430,61 @@ function addItem(itemId: string, amount: number) {
   updateWithSave((state) => addToStockpileZone(state, null, { [itemId]: amount }));
 }
 
+/**
+ * Equip a physical item sitting on a tile onto a pawn (ADR-016-faithful): the item moves off the
+ * ground into `pawn.equipment[slot]`, and whatever was in that slot drops back onto the pawn's tile
+ * as a loose item — no item enters/leaves the world. Slot is derived from the item via
+ * `getEquipmentSlot`. Preserves the drop's `ItemInstance` (durability) if it carries one.
+ */
+function equipItemFromTile(pawnId: string, dropId: string) {
+  updateWithSave((state) => {
+    const drop = (state.droppedItems ?? []).find((d) => d.id === dropId);
+    if (!drop) return state;
+    const item = itemService.getItemById(drop.resourceId);
+    if (!item) return state;
+    const slot = getEquipmentSlot(item);
+    if (!slot) return state;
+    const pawnIdx = state.pawns.findIndex((p) => p.id === pawnId);
+    if (pawnIdx < 0) return state;
+    const pawn = state.pawns[pawnIdx];
+
+    const instance: ItemInstance = drop.instance ?? {
+      instanceId: `${item.id}-${pawnId}-${Date.now()}`,
+      itemId: item.id,
+      durability: item.maxDurability ?? 100
+    };
+    const px = pawn.position?.x ?? drop.x;
+    const py = pawn.position?.y ?? drop.y;
+
+    // Take one unit off the tile (instanced = qty 1 → gone; bulk stack → decrement).
+    let drops = (state.droppedItems ?? [])
+      .map((d) => (d.id === dropId ? { ...d, quantity: d.quantity - 1 } : d))
+      .filter((d) => d.quantity > 0);
+
+    // The previously worn item (if any) drops back onto the pawn's tile.
+    const prev = pawn.equipment[slot];
+    if (prev) {
+      drops = [
+        ...drops,
+        {
+          id: `unequip-${prev.instanceId}-${Date.now()}`,
+          resourceId: prev.itemId,
+          x: px,
+          y: py,
+          quantity: 1,
+          stored: false,
+          instance: prev
+        }
+      ];
+    }
+
+    const pawns = state.pawns.map((p, i) =>
+      i === pawnIdx ? { ...p, equipment: { ...p.equipment, [slot]: instance } } : p
+    );
+    return { ...state, pawns, droppedItems: drops, stockpile: aggregateFromDrops(drops) };
+  });
+}
+
 /** Dev timesaver (ADR-016-faithful): spawn `amount` of EVERY item as physical LOOSE drops on
  *  the ground around the colony — no world regen, no wipe, no write to the derived stockpile
  *  aggregate. Haulers carry them into stockpiles like anything gathered. The engine syncs from
@@ -662,6 +727,7 @@ export const gameState = {
 
   // Game functions
   addItem,
+  equipItemFromTile,
   devSpawnAllItems,
   devClearAllItems,
   consumeGlobalItem,
