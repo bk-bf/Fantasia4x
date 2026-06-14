@@ -292,6 +292,33 @@ export function buildMobCard(
   deps: MobCardDeps
 ): SelectedEntityModel {
   const { cameraFollowMobId, startHuntDrag } = deps;
+  const bars: EntityBar[] = [
+    {
+      label: 'HUNGER',
+      value: mob.needs.hunger,
+      warn: mob.needs.hunger > 60
+    },
+    {
+      label: 'REST',
+      value: mob.needs.fatigue,
+      warn: mob.needs.fatigue > 60
+    },
+    {
+      label: 'BLOOD',
+      value: Math.round(
+        ((mob.bloodVolume ?? mob.maxBloodVolume ?? 100) / (mob.maxBloodVolume ?? 100)) * 100
+      ),
+      warn: (mob.bloodVolume ?? mob.maxBloodVolume ?? 100) / (mob.maxBloodVolume ?? 100) < 0.6
+    }
+  ];
+  if (mob.maxStamina !== undefined) {
+    const curST = mob.stamina ?? mob.maxStamina;
+    bars.push({
+      label: 'STAMINA',
+      value: Math.round((curST / mob.maxStamina) * 100),
+      warn: curST < mob.maxStamina * 0.25
+    });
+  }
   return {
     name: def.name + entityDebugLabel(mob),
     status: mob.state,
@@ -303,25 +330,7 @@ export function buildMobCard(
       { label: 'DEX', value: mob.stats.dexterity },
       moveSpeedStat(mob)
     ],
-    bars: [
-      {
-        label: 'HUNGER',
-        value: mob.needs.hunger,
-        warn: mob.needs.hunger > 60
-      },
-      {
-        label: 'REST',
-        value: mob.needs.fatigue,
-        warn: mob.needs.fatigue > 60
-      },
-      {
-        label: 'BLOOD',
-        value: Math.round(
-          ((mob.bloodVolume ?? mob.maxBloodVolume ?? 100) / (mob.maxBloodVolume ?? 100)) * 100
-        ),
-        warn: (mob.bloodVolume ?? mob.maxBloodVolume ?? 100) / (mob.maxBloodVolume ?? 100) < 0.6
-      }
-    ] satisfies EntityBar[],
+    bars,
     note: `${def.entityClass === 'mob' ? '⚔ hostile' : '◆ neutral'} · ${def.behaviour}${
       def.tameable ? ' · tameable' : ''
     }`,
