@@ -41,14 +41,16 @@ weakness, not an FSM one). The animal flee also had no give-up timeout (the host
 **Fix** (`src/lib/game/services/entity/`): flee to a **distant destination via A\***, not greedy
 local steps — local maximin still dead-ended prey in corners and then stranded them (a first attempt;
 kept only as a fallback).
-- New `entityHelpers.fleeToSafety(mob, threats[], state, turn)`: projects a goal ~⅓ of the map away in
-  the direction that maximises the **minimum** distance to every threat, snaps it to walkable ground,
-  and **A\*-paths there** — committing to the whole run even if the route briefly passes *nearer* a
-  threat to escape a pocket (the prey disregards local proximity to reach the far safe point). The
-  route is recomputed only when exhausted or every `FLEE_REPATH_TICKS` (≈1.5 s) — so threats are
-  tracked without per-tick churn, and `nextCellCostLeft` is preserved across the re-path (no render
-  yoyo). The 8 headings are ranked by safety and tried in order, so a corner-escape falls through to a
-  less-safe-but-reachable heading.
+- New `entityHelpers.fleeToSafety(mob, threats[], state)`: projects a goal ~⅓ of the map away in the
+  direction that maximises the **minimum** distance to every threat, snaps it to walkable ground, and
+  **A\*-paths there** — committing to the whole run even if the route briefly passes *nearer* a threat
+  to escape a pocket (the prey disregards local proximity to reach the far safe point). The 8 headings
+  are ranked by safety and tried in order, so a corner-escape falls through to a less-safe-but-reachable
+  heading. **Commit:** the destination is recomputed ONLY when the route is used up or the mover dropped
+  it (blocked too long) — *not* on a timer. An earlier version re-picked the safest direction every
+  ~1.5 s, but as the predator moved the chosen direction flipped (run south, then 1.5 s later run
+  north) → a big-range yoyo. Committing to the run until it ends (then re-evaluating away from the
+  predator's new position) makes consecutive runs chain in one direction — a real escape.
 - Fallback: when no distant point is reachable (or the pathfinder isn't ready),
   `fleeFromThreats(mob, threats, state)` takes one local maximin step (or holds), so a truly walled-in
   animal still reacts.

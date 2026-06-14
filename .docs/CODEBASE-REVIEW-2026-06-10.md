@@ -99,8 +99,9 @@ PT-2/3/4, and the full PawnStateMachine decomposition — is in the
   and freezing. **Fix:** flee to a **distant destination via A\***, not greedy local steps. New
   `entityHelpers.fleeToSafety(mob, threats, state, turn)` projects a goal ~⅓ map away in the direction
   maximising the MIN distance to every threat, snaps to walkable ground, and A\*-paths there —
-  committing to the run even if it briefly passes nearer a threat to clear a pocket; re-paths only when
-  exhausted or every `FLEE_REPATH_TICKS` (≈1.5 s), preserving `nextCellCostLeft` (no yoyo). Falls back
+  **commits to the whole run** (re-picks the destination only when the route is used up or the mover
+  dropped it, NOT on a timer: a timed re-pick flipped the direction as the predator moved → big-range
+  yoyo); briefly passing nearer a threat to clear a pocket is allowed. Falls back
   to local maximin `fleeFromThreats` when no distant point is reachable / pathfinder not ready. Both
   `Fleeing` cases (`stepAnimal` + `stepHostile`) gather nearest pawn + predator within `fleeRange` and
   call it; the animal case gained the `SAFE_RESET_TICKS` give-up the hostile already had. Diagnostics:
