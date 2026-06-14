@@ -36,7 +36,24 @@ let lastWorldMap: GameState['worldMap'] | null = null;
 // every throttle window = freeze frames). In the worker, immutable updates preserve unchanged refs,
 // so we compute a reliable revision here and the renderer rebuilds terrain only when it actually bumps.
 let terrainRev = 0;
-let prevWM: unknown, prevBuildings: unknown, prevDesignations: unknown, prevZoneTiles: unknown;
+let prevWM: unknown,
+  prevBuildingsSig = '',
+  prevDesignations: unknown,
+  prevZoneTiles: unknown;
+
+/**
+ * Visual signature of the building set — ONLY the fields the terrain layer draws (pos/type/status/
+ * deconstruct/paused), deliberately EXCLUDING fuel/lit. Mirrors GameCanvas.buildingsVisualSig.
+ * Critical for terrainRev: a lit campfire decrements fuel every tick → a fresh `buildings` array
+ * every tick → a raw ref-compare would bump terrainRev constantly and rebuild the 38k-tile terrain
+ * ~2/s for an invisible change (the residual freeze frames).
+ */
+function buildingsVisualSig(bs: GameState['buildings']): string {
+  let sig = '';
+  for (const b of bs ?? [])
+    sig += `${b.id}:${b.x},${b.y}:${b.type}:${b.status}:${b.deconstructQueued ? 1 : 0}:${b.paused ? 1 : 0}|`;
+  return sig;
+}
 
 function post(msg: unknown) {
   (self as unknown as Worker).postMessage(msg);
@@ -53,15 +70,16 @@ function publish(state: GameState, flush: boolean) {
   if (!flush) return;
   const worldMapChanged = state.worldMap !== lastWorldMap;
   lastWorldMap = state.worldMap;
+  const bSig = buildingsVisualSig(state.buildings);
   if (
     state.worldMap !== prevWM ||
-    state.buildings !== prevBuildings ||
+    bSig !== prevBuildingsSig ||
     state.designations !== prevDesignations ||
     state.zoneTiles !== prevZoneTiles
   ) {
     terrainRev++;
     prevWM = state.worldMap;
-    prevBuildings = state.buildings;
+    prevBuildingsSig = bSig;
     prevDesignations = state.designations;
     prevZoneTiles = state.zoneTiles;
   }
