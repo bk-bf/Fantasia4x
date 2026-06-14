@@ -41,23 +41,27 @@ weakness, not an FSM one). The animal flee also had no give-up timeout (the host
 **Fix** (`src/lib/game/services/entity/`): flee to a **distant destination via A\***, not greedy
 local steps — local maximin still dead-ended prey in corners and then stranded them (a first attempt;
 kept only as a fallback).
-- New `entityHelpers.fleeToSafety(mob, threats[], state)`: projects a goal ~⅓ of the map away in the
-  direction that maximises the **minimum** distance to every threat, snaps it to walkable ground, and
-  **A\*-paths there** — committing to the whole run even if the route briefly passes *nearer* a threat
-  to escape a pocket (the prey disregards local proximity to reach the far safe point). The 8 headings
-  are ranked by safety and tried in order, so a corner-escape falls through to a less-safe-but-reachable
-  heading. **Commit:** the destination is recomputed ONLY when the route is used up or the mover dropped
-  it (blocked too long) — *not* on a timer. An earlier version re-picked the safest direction every
-  ~1.5 s, but as the predator moved the chosen direction flipped (run south, then 1.5 s later run
-  north) → a big-range yoyo. Committing to the run until it ends (then re-evaluating away from the
-  predator's new position) makes consecutive runs chain in one direction — a real escape.
+- New `entityHelpers.fleeToSafety(mob, threats[], state)`: the mob **locks a destination** (`mob.fleeDest`)
+  ~**half the map** away, in the direction that maximises the **minimum** distance to every threat, and
+  **runs to that exact point** — re-routing around blocks toward the SAME tile — until it arrives or the
+  point stops being safe (a threat got within half the flee distance of it). Only then does it pick a
+  new goal. The prey disregards briefly moving *nearer* a threat to clear a pocket (8 headings ranked
+  by safety; a corner-escape falls through to a less-safe-but-reachable one). **Why a locked, far
+  destination:** earlier versions re-chose the "safest direction" every time the path ended (timer, or
+  on every block/exhaustion). When two directions were near-tied (e.g. south `min-dist 44` vs NE `42`),
+  the winner flipped as the threat moved → run south, then run NE — a **big-range yoyo**. Locking the
+  goal removes the per-recompute choice; and "half the map" means the prey almost always breaks
+  flee-range and exits Fleeing long before it ever arrives. Falls back to a local maximin step only when
+  nothing distant is reachable.
 - Fallback: when no distant point is reachable (or the pathfinder isn't ready),
   `fleeFromThreats(mob, threats, state)` takes one local maximin step (or holds), so a truly walled-in
   animal still reacts.
 - Both `Fleeing` cases (`stepAnimal` + `stepHostile`) gather every threat within `fleeRange`
-  (nearest pawn + nearest predator) and call `fleeToSafety`; the animal case gained the
-  `SAFE_RESET_TICKS` give-up the hostile case already had, so a persistently boxed-in prey drops back
-  to `Grazing` to re-evaluate instead of fleeing forever. Tests in `entity/fleeFromThreats.test.ts`.
+  (nearest pawn + nearest predator) and call `fleeToSafety`. The `SAFE_RESET_TICKS` give-up now fires
+  **only when cornered** (`!mob.fleeDest` — no committed run, just holding), so a boxed-in prey still
+  drops back to `Grazing`/`Wander` to re-evaluate, but a mob mid-run is NEVER timed out (timing it out
+  re-startled it into a fresh, possibly-flipped destination — reintroducing the yoyo). `fleeDest` is
+  cleared on every flee exit and on each fresh Startled→Fleeing. Tests in `entity/fleeFromThreats.test.ts`.
 - Diagnostics: `entityAI.logFleeTrigger` emits `ENTITY-FLEE` lines (→ `.debug/entities.log`) at each
   →Startled transition (threat kind/pos/distance vs vision/flee ranges) so a cornered flee is
   diagnosable from the log.

@@ -59,10 +59,17 @@ PT-2/3/4, and the full PawnStateMachine decomposition — is in the
   **Suggested order:** `types.ts` (mechanical, zero churn) → `Combat.ts` (data-table extraction is a
   big cheap win) → `JobService.ts` (ADR-017-aligned) → `EntityService.ts` (pawn/* precedent) →
   `GameCanvas.svelte` (opportunistic, leaf-first). Each is independent; none needs a big-bang.
-- [ ] **P-4b · PawnStateMachine Step 5 — push selection into services.** `handleIdle` and
-  `checkNeedInterrupts` still make the "what should this pawn do next" decision inline. Move job
-  selection into `JobService` and need-target selection into `PawnService`, leaving the handlers to
-  *apply* a decision. The deepest, still-deferred part of the hotspot decomposition.
+- [x] **P-4b · PawnStateMachine Step 5 — push selection into services.** Done 2026-06-14.
+  **Job selection** → `JobService.selectJobForPawn(pawn, gs, { isReachable, queueSize })` (returns the
+  chosen job + need-lookahead queue preview; the pawn-system's unreachable-job memory is *injected* as
+  `isReachable`, so JobService stays free of FSM/movement state). **Need selection** → new
+  `systems/pawn/needSelection.ts` (`selectIdleNeed` raw-threshold, `selectInterruptNeed`
+  distance-weighted, `applyNeed`, + a `checkNeedInterrupts` select-apply wrapper). `handleIdle` now
+  only *applies* decisions; `checkNeedInterrupts` moved out of `pawnHelpers` (782→796 LOC) into
+  needSelection; work/combat handlers import it from there. Behaviour-identical (logging, routing,
+  job-release order preserved) — 200 tests green. _Placement note:_ need-selection lives in the pawn
+  system, **not** PawnService, because its distance/threshold helpers sit in the systems layer —
+  putting it in `services` would create a services→systems back-edge (user-confirmed decision).
 - [ ] **P-5 · Per-tick allocation churn.** Index-once/update-once tick rewrite undone; per-pawn-per-tick
   scans added since (`findCombatThreat` over all mobs; `occupancyService.blockedTiles` rebuilt per
   pathfind; `findNearestRestBuilding` scans pawns×buildings). Profiling-gated — don't touch until
@@ -98,10 +105,12 @@ PT-2/3/4, and the full PawnStateMachine decomposition — is in the
   threat, which flips side to side), then (after a local-maximin first attempt) dead-ending in a corner
   and freezing. **Fix:** flee to a **distant destination via A\***, not greedy local steps. New
   `entityHelpers.fleeToSafety(mob, threats, state, turn)` projects a goal ~⅓ map away in the direction
-  maximising the MIN distance to every threat, snaps to walkable ground, and A\*-paths there —
-  **commits to the whole run** (re-picks the destination only when the route is used up or the mover
-  dropped it, NOT on a timer: a timed re-pick flipped the direction as the predator moved → big-range
-  yoyo); briefly passing nearer a threat to clear a pocket is allowed. Falls back
+  maximising the MIN distance to every threat. **Locks** it on `mob.fleeDest` (~half the map away) and
+  runs to that exact point, re-routing around blocks toward the SAME tile until it arrives or the point
+  stops being safe — then picks a new one. Locking removes the per-recompute direction choice that
+  flipped between two near-tied headings (south `44` vs NE `42`) as the threat moved → the big-range
+  yoyo; "half map" means the prey usually breaks flee-range and exits long before arriving. The
+  `SAFE_RESET_TICKS` give-up fires only when cornered (`!fleeDest`), never mid-run. Falls back
   to local maximin `fleeFromThreats` when no distant point is reachable / pathfinder not ready. Both
   `Fleeing` cases (`stepAnimal` + `stepHostile`) gather nearest pawn + predator within `fleeRange` and
   call it; the animal case gained the `SAFE_RESET_TICKS` give-up the hostile already had. Diagnostics:
