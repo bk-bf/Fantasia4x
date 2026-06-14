@@ -29,7 +29,7 @@ import { consumeFromStockpiles } from '../core/GameState';
 import conditionsData from '../database/conditions.jsonc';
 import { itemService } from '../services/ItemService';
 import { pawnStatService } from '../services/PawnStatService';
-import { logActivity } from '../../stores/Log';
+import { simLog } from '../core/logSink';
 import { gameLogger } from '../dev/gameLogger';
 import { perTick } from '../core/time';
 import { calcBloodRegenRate } from '../entities/Pawns';
@@ -98,7 +98,7 @@ export function killPawn(
   cause: DeadPawnRecord['cause'],
   gameState: GameState
 ): GameState {
-  logActivity({
+  simLog.logActivity({
     turn: gameState.turn,
     type: 'event',
     actor: pawn.id,

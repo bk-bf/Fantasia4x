@@ -21,6 +21,7 @@ import {
   markJobUnreachable,
   tryStartHunt,
   tryAssignPath,
+  repathStuckMover,
   checkNeedInterrupts,
   lightWorkMultiplier
 } from '../pawnHelpers';
@@ -107,6 +108,12 @@ export function handleHauling(pawn: Pawn, gameState: GameState): GameState {
 export function handleMovingToDeposit(pawn: Pawn, gameState: GameState): GameState {
   const activeJob = pawn.activeJob;
   if (!activeJob) return depositInventory(pawn, gameState);
+
+  // Recover from a path dropped after being blocked too long; if the deposit point is
+  // now unreachable, drop the goods in place rather than freezing.
+  const recovered = repathStuckMover(pawn, gameState);
+  if (recovered === 'unreachable') return depositInventory(pawn, gameState);
+  if (recovered) return recovered;
 
   if (pawn.hasReachedDestination && pawn.position) {
     const adjacent = isAdjacent(
@@ -265,6 +272,16 @@ export function handleMovingToResource(pawn: Pawn, gameState: GameState): GameSt
     enRouteLaborLevel
   );
   if (interrupted) return interrupted;
+
+  // Recover from a path dropped after being blocked too long (e.g. an idle pawn parked on
+  // the build site's approach tile). Re-route around it; if the site is now unreachable,
+  // cool the job down for this pawn and release it so another pawn can try.
+  const recovered = repathStuckMover(pawn, gameState);
+  if (recovered === 'unreachable') {
+    if (activeJob.jobId) markJobUnreachable(pawn.id, activeJob.jobId, gameState.turn);
+    return jobService.releaseJob(pawn.id, activeJob.jobId ?? '', goIdle(pawn, gameState));
+  }
+  if (recovered) return recovered;
 
   if (pawn.hasReachedDestination && pawn.position) {
     const adjacent = isAdjacent(

@@ -11,7 +11,7 @@ import {
   findNearestRestBuilding, tryAssignSleepPath, SLEEPING_TURNS, SLEEPING_TURNS_GROUND,
   getRestBuildingAtPawn, BUILDINGS_DB, FATIGUE_PER_SLEEPING_GROUND, HUNGER_THRESHOLD,
   SLEEP_WAKE_THRESHOLD_HUNGRY, SLEEP_WAKE_THRESHOLD_FED, transitionTo, goIdle, DRINK_NEED_RELIEF,
-  WASH_NEED_RELIEF
+  WASH_NEED_RELIEF, repathStuckMover
 } from '../pawnHelpers';
 
 /** §D: drink at the reached target — relieve thirst (consume stored water if any), then idle. */

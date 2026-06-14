@@ -13,7 +13,7 @@ import { consumeFromStockpiles } from '../core/GameState';
 import { calculatePawnStats, categorizeStats, getStatDescription } from '../entities/Pawns';
 import { pawnStatService } from './PawnStatService';
 import { WORK_CATEGORIES } from '../core/Work';
-import { TICKS_PER_SECOND, SECONDS_PER_TICK, perTick } from '../core/time';
+import { TICKS_PER_SECOND, SECONDS_PER_TICK, perTick, ticksFromSeconds } from '../core/time';
 import { advanceAlongPath } from '../systems/MovementSystem';
 import { occupancyService } from './OccupancyService';
 import statusEffectsData from '../database/status-effects.jsonc';
@@ -23,6 +23,11 @@ import { getConditionCurrentStage, conditionNeedMultipliers } from '../core/need
 import { gatedConsole as console } from '../core/log';
 
 const STATUS_EFFECTS_DB = statusEffectsData as unknown as StatusEffectDef[];
+
+/** Ticks a pawn may wait behind a blocking body before dropping its path to re-route.
+ *  Mirrors the mob mover (EntityService) so an idle pawn parked on a build-site approach
+ *  tile can't deadlock the claimant forever — the FSM re-paths around it next tick. */
+const MAX_BLOCKED_TICKS = ticksFromSeconds(1.5);
 
 /** Resolve active effect definitions from a pawn's activeEffects id list. */
 function getActiveEffects(entity: Pawn | Mob): StatusEffectDef[] {
@@ -862,10 +867,31 @@ export class PawnServiceImpl implements PawnService {
 
       // Hold this tick if the next tile is occupied by another body. Keep the path
       // and isMoving so the pawn resumes the instant the tile clears (no re-path).
+      // But don't wait forever: after MAX_BLOCKED_TICKS (e.g. an idle pawn parked on
+      // the only approach tile to a build site) drop the path so the FSM re-routes
+      // around the obstruction next tick — mirrors the mob mover.
       const step = pawn.path[pawn.pathIndex ?? 0];
       if (step) {
         const stepKey = `${step.x},${step.y}`;
         if (stepKey !== `${pawn.position.x},${pawn.position.y}` && occupied.has(stepKey)) {
+          const bt = (pawn.blockedTicks ?? 0) + 1;
+          state = {
+            ...state,
+            pawns: state.pawns.map((p) =>
+              p.id === pawn.id
+                ? bt > MAX_BLOCKED_TICKS
+                  ? {
+                      ...p,
+                      path: [],
+                      pathIndex: 0,
+                      nextCellCostLeft: undefined,
+                      isMoving: false,
+                      blockedTicks: 0
+                    }
+                  : { ...p, blockedTicks: bt }
+                : p
+            )
+          };
           continue;
         }
       }
@@ -900,6 +926,7 @@ export class PawnServiceImpl implements PawnService {
                 pathIndex: moved.pathIndex ?? 0,
                 isMoving: !done,
                 hasReachedDestination: done,
+                blockedTicks: 0,
                 nextCellCostLeft: moved.nextCellCostLeft
               }
             : p

@@ -10,6 +10,8 @@ import {
   absorbDropIfOnStockpileTile
 } from '$lib/game/core/GameState';
 import { gameEngine } from '$lib/game/systems/GameEngineImpl';
+// P-3: side-effect import — registers the real log/feedback sink before any tick runs.
+import './simLogBridge';
 import type {
   GameState,
   Pawn,

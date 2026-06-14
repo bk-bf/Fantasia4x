@@ -665,6 +665,9 @@ export interface Pawn {
   isMoving?: boolean; // currently following a path
   hasReachedDestination?: boolean; // just finished a path
   nextCellCostLeft?: number; // remaining tick-cost to enter the next path cell (RimWorld-style budget drain)
+  /** Consecutive ticks blocked behind another body. Past MAX_BLOCKED_TICKS the path is
+   *  dropped so the FSM re-routes around the obstruction (idle-pawn-on-approach deadlock). */
+  blockedTicks?: number;
 
   // Active status effect ids (derived from state; drives UI cards and need rate modifiers)
   activeEffects?: string[];

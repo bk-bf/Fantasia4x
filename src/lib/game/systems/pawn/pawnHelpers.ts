@@ -174,6 +174,36 @@ export function tryAssignPath(pawn: Pawn, tx: number, ty: number, gameState: Gam
 }
 
 /**
+ * Recover a pawn whose path was dropped by `processMovement` after being blocked too long
+ * (another body — typically an idle pawn — parked on its route to a build site / station).
+ * The pawn is sitting in a MOVING_* state, not moving and not yet arrived. Re-route around
+ * the obstruction toward the same target.
+ *
+ *   • `null`        — not stuck (still moving, arrived, or already adjacent); proceed normally.
+ *   • a GameState   — re-path issued OR the pawn is adjacent and is flagged as arrived so the
+ *                     handler's normal arrival branch runs next tick.
+ *   • 'unreachable' — no route exists right now; caller should give up its own way
+ *                     (release the job / deposit in place / go idle).
+ */
+export function repathStuckMover(pawn: Pawn, gameState: GameState): GameState | 'unreachable' | null {
+  const job = pawn.activeJob;
+  if (!job || !pawn.position) return null;
+  // Only the dropped-path case: in a move state but neither moving nor arrived.
+  if (pawn.isMoving || pawn.hasReachedDestination) return null;
+  if (isAdjacent(pawn.position.x, pawn.position.y, job.targetX, job.targetY)) {
+    // Path was dropped right next to the target — treat it as having arrived so the
+    // handler's hasReachedDestination branch fires instead of freezing in place.
+    return {
+      ...gameState,
+      pawns: gameState.pawns.map((p) =>
+        p.id === pawn.id ? { ...p, hasReachedDestination: true } : p
+      )
+    };
+  }
+  return tryAssignPath(pawn, job.targetX, job.targetY, gameState) ?? 'unreachable';
+}
+
+/**
  * Like tryAssignPath but paths the pawn directly TO (tx, ty) — used for beds
  * where the pawn should sleep ON the tile, not adjacent to it.
  */

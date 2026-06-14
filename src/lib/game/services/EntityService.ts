@@ -24,7 +24,7 @@ import { calcMaxStamina, calcMaxBloodVolume } from '../entities/Pawns';
 import { pawnStatService } from './PawnStatService';
 import { createDefaultBodyParts } from '../systems/Combat';
 import { gameLogger } from '../dev/gameLogger';
-import { logHuntStart, logFlee, logEntityStateChange, logEntityDeath } from '../../stores/Log';
+import { simLog } from '../core/logSink';
 import { rng } from '../core/rng';
 
 /**
@@ -537,7 +537,7 @@ class EntityServiceImpl {
     // health below the flee threshold and the entity confusingly "started fleeing".
     if (mob.needs.hunger >= STARVATION_COLLAPSE_HUNGER) {
       if (mob.state === 'Collapsed') return mob;
-      logEntityStateChange(
+      simLog.logEntityStateChange(
         mob.id,
         this.entityName(mob),
         mob.state,
@@ -650,7 +650,7 @@ class EntityServiceImpl {
               Math.abs(p.position.y - mob.y) <= 1
           )?.name ?? 'predator')
         : undefined;
-      logFlee(
+      simLog.logFlee(
         mob.id,
         this.entityName(mob),
         threat ? 'threat' : undefined,
@@ -774,7 +774,7 @@ class EntityServiceImpl {
         const preyName = preyDef
           ? `${preyDef.name} #${prey.debugId ?? prey.id.slice(-4)}`
           : prey.id.slice(-6);
-        logHuntStart(mob.id, this.entityName(mob), prey.id, preyName, turn, mob.x, mob.y);
+        simLog.logHuntStart(mob.id, this.entityName(mob), prey.id, preyName, turn, mob.x, mob.y);
         return { ...mob, state: 'Hunting', stateSince: turn, path: [] };
       };
 
@@ -972,7 +972,7 @@ class EntityServiceImpl {
               Math.abs(p.position.y - mob.y) <= def.stats.visionRange
           )?.name ?? 'predator')
         : 'predator';
-      logFlee(
+      simLog.logFlee(
         mob.id,
         this.entityName(mob),
         inVision ? 'threat' : undefined,
@@ -1578,7 +1578,7 @@ class EntityServiceImpl {
 
       // Death by blood loss.
       if (bloodVolume <= 0) {
-        logEntityDeath(mob.id, this.entityName(mob), 'blood_loss', turn, mob.x, mob.y);
+        simLog.logEntityDeath(mob.id, this.entityName(mob), 'blood_loss', turn, mob.x, mob.y);
         return {
           ...mob,
           state: 'Corpse',
@@ -1595,7 +1595,14 @@ class EntityServiceImpl {
       if (limbs) {
         for (const limb of limbs) {
           if (limb.health <= 0 && (limb.id === 'head' || limb.id === 'torso')) {
-            logEntityDeath(mob.id, this.entityName(mob), 'critical_limb', turn, mob.x, mob.y);
+            simLog.logEntityDeath(
+              mob.id,
+              this.entityName(mob),
+              'critical_limb',
+              turn,
+              mob.x,
+              mob.y
+            );
             return {
               ...mob,
               state: 'Corpse',
@@ -1673,7 +1680,7 @@ class EntityServiceImpl {
             : (m.bloodVolume ?? 1) <= 0
               ? 'blood_loss'
               : 'injuries';
-        logEntityDeath(m.id, this.entityName(m), cause, state.turn, m.x, m.y);
+        simLog.logEntityDeath(m.id, this.entityName(m), cause, state.turn, m.x, m.y);
         return {
           ...m,
           state: 'Corpse' as MobState,
