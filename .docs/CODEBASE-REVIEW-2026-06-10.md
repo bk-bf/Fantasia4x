@@ -68,6 +68,31 @@ PT-2/3/4, and the full PawnStateMachine decomposition — is in the
   `__profOut` says so; but no new system should add full-array `pawns.map(...)` writes for single-pawn
   updates.
 
+## Latent defects (found in passing — not yet scheduled)
+
+- [ ] **INV-1 · `inventory.items` overloaded: haul-carry vs equip-screen pool.**
+  `syncPawnInventoryWithGlobal` / `syncAllPawnInventories` (`core/PawnEquipment.ts`), called from
+  `components/pawn/PawnEquipment.svelte` on equip/unequip/consume, **overwrite** `pawn.inventory.items`
+  with the *colony stockpile* (non-material, minus equipped). So the same field means "what this pawn
+  is hauling" (written by haul/fetch pickup) in the sim, but "the equip-screen item pool" after the
+  equip UI runs. Effect: `getCurrentCarryLoad` (→ the `[load/max kg]` readout in `PawnInventory.svelte`,
+  and `clampPickupQuantity`) can reflect a slice of the whole colony's goods after the equip screen is
+  opened, not what the pawn actually carries. Found while fixing equipped-gear carry weight
+  (2026-06-14, equipped items now count toward weight). Fix direction: give the equip UI its own
+  derived pool (don't mutate `inventory.items`); keep `inventory.items` strictly the pawn's carried
+  goods. Medium; touches the equip screen + the legacy global-item sync.
+- [ ] **LIGHT-1 · §G light→work-speed is inert (`tile.lightLevel` never written).**
+  `WorldTile.lightLevel` is declared (`core/types/world.ts`) and READ by the work loop
+  (`pawn/handlers/work.ts` → `lightWorkMultiplier`, ~0.4 dark … 1.0 day), but **nothing ever writes
+  it** — no worldgen pass, no per-turn tick. So it's always `undefined` → defaults to `1`, and
+  darkness never actually slows work; the §G "light → sight → work speed" model does nothing in the
+  sim. (The visual point lighting + the hovered-tile readout via `computeTileLightLevel` are separate
+  and DO work — see the data-driven `lightRadius` change 2026-06-14.) Fix direction: add a per-turn
+  pass that writes `lightLevel = computeTileLightLevel(turn, buildings, x, y)` for occupied/work
+  tiles (or compute lazily in the work handler from ambient + nearby emitters). Found 2026-06-14 while
+  generalising building light. Small-ish; mostly deciding where to compute it without scanning the
+  whole 240×160 map per tick.
+
 ## Carried-forward deferred (unchanged status)
 
 - [ ] **D9.1 / D9.6 / D9.7** — index-once tick, deep-clone removal (tied to P-2), event-driven job generation. Profiling-gated.
