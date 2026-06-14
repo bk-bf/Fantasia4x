@@ -155,34 +155,17 @@
       return;
     }
 
-    gameState.updateWithSave((state) =>
-      // ADR-016: placeBuilding RESERVES the cost to this building (pawns fetch it to the site);
-      // it is consumed on construction completion, not here. Place at (0,0) — abstract/off-map.
-      buildingService.placeBuilding(building.id, 0, 0, state)
-    );
+    // ADR-016: placeBuilding RESERVES the cost (pawns fetch it to the site); consumed on
+    // construction completion, not here. (0,0) — abstract/off-map.
+    gameState.command({
+      type: 'placeBuilding',
+      payload: { bid: building.id, x: 0, y: 0 },
+      save: true
+    });
   }
 
   function cancelBuilding(buildingId: string) {
-    const placed = buildings.find((b) => b.id === buildingId);
-    if (!placed) return;
-    const buildingDef = buildingService.getBuildingById(placed.type);
-    if (!buildingDef) return;
-
-    gameState.updateWithSave((state) => {
-      // Refund concrete costs; category slots (`category:*`) can't be refunded to a specific item, so skip them.
-      const refund = Object.fromEntries(
-        Object.entries(buildingDef.buildingCost).filter(([k]) => !k.startsWith('category:'))
-      );
-      const stateWithRefund = addToStockpileZone(state, null, refund);
-      return {
-        ...stateWithRefund,
-        buildings: (state.buildings ?? []).filter((b) => b.id !== buildingId),
-        // Also cancel the matching construct job
-        jobs: (state.jobs ?? []).filter(
-          (j) => !(j.type === 'construct' && j.buildingId === buildingId)
-        )
-      };
-    });
+    gameState.command({ type: 'cancelBuildingRefund', payload: { buildingId }, save: true });
   }
 
   function formatEffectName(camelCaseStr: string): string {

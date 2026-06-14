@@ -1397,15 +1397,16 @@
 
     // Designation mode: handled by drag — single-click still paints one tile
     if (designationMode) {
-      gameState.updateWithSave((state) =>
-        designationService.designate(
-          hoverTileX,
-          hoverTileY,
-          designationTypeActive,
-          state,
-          activeZoneInstanceId ?? undefined
-        )
-      );
+      gameState.command({
+        type: 'designate',
+        payload: {
+          x: hoverTileX,
+          y: hoverTileY,
+          type: designationTypeActive,
+          instanceId: activeZoneInstanceId ?? undefined
+        },
+        save: true
+      });
       redrawOverlay();
       return;
     }
@@ -1476,14 +1477,14 @@
     if (selectedPawn?.drafted && worldMap.length > 0) {
       const targetTile = worldMap[hoverTileY]?.[hoverTileX];
       if (targetTile?.walkable) {
-        gameState.updateWithSave((state) => ({
-          ...state,
-          pawns: state.pawns.map((p) =>
-            p.id === selectedPawn.id
-              ? { ...p, draftTarget: { type: 'move', x: hoverTileX, y: hoverTileY } }
-              : p
-          )
-        }));
+        gameState.command({
+          type: 'setPawnDraftTarget',
+          payload: {
+            pawnId: selectedPawn.id,
+            target: { type: 'move', x: hoverTileX, y: hoverTileY }
+          },
+          save: true
+        });
         redrawOverlay();
         return;
       }
@@ -2083,15 +2084,17 @@
       if (bid && blueprintDragTiles.size > 0) {
         const buildingDef = buildingService.getBuildingById(bid);
         if (buildingDef) {
-          gameState.updateWithSave((state) => {
-            let current = state;
-            for (const key of blueprintDragTiles) {
-              const [tx, ty] = key.split(',').map(Number);
-              // ADR-016: placeBuilding RESERVES the cost to each building (pawns fetch it to the
-              // site); it is consumed on construction completion, not at placement.
-              current = buildingService.placeBuilding(bid, tx, ty, current);
-            }
-            return current;
+          // ADR-016: placeBuilding RESERVES the cost to each building (pawns fetch it to the site);
+          // it is consumed on construction completion, not at placement.
+          gameState.command({
+            type: 'placeBuildings',
+            payload: {
+              bid,
+              tiles: [...blueprintDragTiles].map(
+                (key) => key.split(',').map(Number) as [number, number]
+              )
+            },
+            save: true
           });
         }
       }
@@ -2103,21 +2106,24 @@
     if (zoneDragActive) {
       // Commit the painted (or erased) rectangle to game state
       if (zoneEraseMode) {
-        gameState.updateWithSave((state) =>
-          designationService.clearRect(zoneAnchorX, zoneAnchorY, zoneEndX, zoneEndY, state)
-        );
+        gameState.command({
+          type: 'clearRect',
+          payload: { x1: zoneAnchorX, y1: zoneAnchorY, x2: zoneEndX, y2: zoneEndY },
+          save: true
+        });
       } else {
-        gameState.updateWithSave((state) =>
-          designationService.designateRect(
-            zoneAnchorX,
-            zoneAnchorY,
-            zoneEndX,
-            zoneEndY,
-            designationTypeActive,
-            state,
-            activeZoneInstanceId ?? undefined
-          )
-        );
+        gameState.command({
+          type: 'designateRect',
+          payload: {
+            x1: zoneAnchorX,
+            y1: zoneAnchorY,
+            x2: zoneEndX,
+            y2: zoneEndY,
+            type: designationTypeActive,
+            instanceId: activeZoneInstanceId ?? undefined
+          },
+          save: true
+        });
       }
       zoneDragActive = false;
       redrawOverlay();
@@ -2143,7 +2149,7 @@
   function cancelBlueprintBuilding() {
     if (!selectedBuilding) return;
     const id = selectedBuilding.id;
-    gameState.updateWithSave((state) => buildingService.cancelBuilding(id, state));
+    gameState.command({ type: 'cancelBuilding', payload: { id }, save: true });
     selectedBuildingId = null;
     redrawOverlay();
   }
@@ -2151,14 +2157,14 @@
   function deconstructBuilding() {
     if (!selectedBuilding) return;
     const id = selectedBuilding.id;
-    gameState.updateWithSave((state) => buildingService.deconstructBuilding(id, state));
+    gameState.command({ type: 'deconstructBuilding', payload: { id }, save: true });
     redrawOverlay();
   }
 
   function cancelDeconstructBuilding() {
     if (!selectedBuilding) return;
     const id = selectedBuilding.id;
-    gameState.updateWithSave((state) => buildingService.cancelDeconstructBuilding(id, state));
+    gameState.command({ type: 'cancelDeconstructBuilding', payload: { id }, save: true });
     redrawOverlay();
   }
 
@@ -2168,18 +2174,20 @@
       dtype ?? ((selectedResourceDef.designationTypes?.[0] ?? 'harvest') as DesignationType);
     if (highlightedResourceTiles.size > 0) {
       // Designate all tiles from the drag selection.
-      gameState.updateWithSave((state) => {
-        let current = state;
-        for (const key of highlightedResourceTiles) {
-          const [tx, ty] = key.split(',').map(Number);
-          current = designationService.designate(tx, ty, resolvedType, current);
-        }
-        return current;
+      gameState.command({
+        type: 'designateTiles',
+        payload: {
+          tiles: [...highlightedResourceTiles].map(
+            (key) => key.split(',').map(Number) as [number, number]
+          ),
+          type: resolvedType
+        },
+        save: true
       });
       highlightedResourceTiles = new Set();
     } else {
       const { x, y } = selectedResourceTile;
-      gameState.updateWithSave((state) => designationService.designate(x, y, resolvedType, state));
+      gameState.command({ type: 'designate', payload: { x, y, type: resolvedType }, save: true });
     }
     redrawOverlay();
   }
@@ -2187,7 +2195,7 @@
   function cancelResourceDesignation() {
     if (!selectedResourceTile) return;
     const { x, y } = selectedResourceTile;
-    gameState.updateWithSave((state) => designationService.clearDesignation(x, y, state));
+    gameState.command({ type: 'clearDesignation', payload: { x, y }, save: true });
     redrawOverlay();
   }
 
@@ -2218,10 +2226,7 @@
         .map((m) => m.id)
     );
     if (ids.size > 0) {
-      gameState.updateWithSave((state) => ({
-        ...state,
-        mobs: (state.mobs ?? []).map((m) => (ids.has(m.id) ? { ...m, markedForHunt: true } : m))
-      }));
+      gameState.command({ type: 'markMobsForHunt', payload: { ids: [...ids] }, save: true });
     }
     huntDragMode = false;
     huntDragActive = false;
@@ -2294,14 +2299,14 @@
   function assignShelterPawn(pawnId: string | null) {
     if (!selectedBuilding) return;
     const id = selectedBuilding.id;
-    gameState.updateWithSave((state) => buildingService.assignShelterPawn(id, pawnId, state));
+    gameState.command({ type: 'assignShelterPawn', payload: { id, pawnId }, save: true });
     showShelterAssign = false;
   }
 
   function togglePauseBlueprintBuilding() {
     if (!selectedBuilding) return;
     const id = selectedBuilding.id;
-    gameState.updateWithSave((state) => buildingService.togglePausedBuilding(id, state));
+    gameState.command({ type: 'togglePausedBuilding', payload: { id }, save: true });
     redrawOverlay();
   }
 
@@ -2345,14 +2350,14 @@
       );
       if (targetMob) {
         // Attack mob
-        gameState.updateWithSave((state) => ({
-          ...state,
-          pawns: state.pawns.map((p) =>
-            p.id === selectedPawn.id
-              ? { ...p, draftTarget: { type: 'attack', targetId: targetMob.id, targetType: 'mob' } }
-              : p
-          )
-        }));
+        gameState.command({
+          type: 'setPawnDraftTarget',
+          payload: {
+            pawnId: selectedPawn.id,
+            target: { type: 'attack', targetId: targetMob.id, targetType: 'mob' }
+          },
+          save: true
+        });
         return;
       }
       const targetPawn = pawns.find(
@@ -2364,17 +2369,14 @@
       );
       if (targetPawn) {
         // Attack pawn
-        gameState.updateWithSave((state) => ({
-          ...state,
-          pawns: state.pawns.map((p) =>
-            p.id === selectedPawn.id
-              ? {
-                  ...p,
-                  draftTarget: { type: 'attack', targetId: targetPawn.id, targetType: 'pawn' }
-                }
-              : p
-          )
-        }));
+        gameState.command({
+          type: 'setPawnDraftTarget',
+          payload: {
+            pawnId: selectedPawn.id,
+            target: { type: 'attack', targetId: targetPawn.id, targetType: 'pawn' }
+          },
+          save: true
+        });
         return;
       }
       const pawnId = selectedPawn.id;
@@ -2383,12 +2385,11 @@
       const tileX = hoverTileX;
       const tileY = hoverTileY;
       const issueMove = () =>
-        gameState.updateWithSave((state) => ({
-          ...state,
-          pawns: state.pawns.map((p) =>
-            p.id === pawnId ? { ...p, draftTarget: { type: 'move', x: tileX, y: tileY } } : p
-          )
-        }));
+        gameState.command({
+          type: 'setPawnDraftTarget',
+          payload: { pawnId, target: { type: 'move', x: tileX, y: tileY } },
+          save: true
+        });
 
       // Any item on the tile opens a menu (equip entries for gear + a Move option), so the menu
       // never silently loses to a move order. Empty tile → move straight away.
@@ -2422,14 +2423,18 @@
 
     if (designationMode) {
       // In zone mode, right-click clears a zone tile
-      gameState.updateWithSave((state) =>
-        designationService.clearDesignation(hoverTileX, hoverTileY, state)
-      );
+      gameState.command({
+        type: 'clearDesignation',
+        payload: { x: hoverTileX, y: hoverTileY },
+        save: true
+      });
       redrawOverlay();
     } else if (designationService.hasDesignation(hoverTileX, hoverTileY, $gameState)) {
-      gameState.updateWithSave((state) =>
-        designationService.clearDesignation(hoverTileX, hoverTileY, state)
-      );
+      gameState.command({
+        type: 'clearDesignation',
+        payload: { x: hoverTileX, y: hoverTileY },
+        save: true
+      });
       redrawOverlay();
     }
   }

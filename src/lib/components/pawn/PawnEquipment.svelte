@@ -35,40 +35,18 @@
   // Equipment management functions
   function equipPawnItem(pawnId: string, itemId: string) {
     equipmentLoading = true;
-    gameState.update((state) => {
-      const pawnIndex = state.pawns.findIndex((p) => p.id === pawnId);
-      if (pawnIndex !== -1) {
-        state.pawns[pawnIndex] = equipItem(state.pawns[pawnIndex], itemId);
-      }
-      equipmentLoading = false;
-      return state;
-    });
+    gameState.command({ type: 'equipPawnItem', payload: { pawnId, itemId } });
+    equipmentLoading = false;
   }
 
   function unequipPawnItem(pawnId: string, slot: string) {
     equipmentLoading = true;
-    gameState.update((state) => {
-      const pawnIndex = state.pawns.findIndex((p) => p.id === pawnId);
-      if (pawnIndex !== -1) {
-        state.pawns[pawnIndex] = unequipItem(state.pawns[pawnIndex], slot as EquipmentSlot);
-      }
-      equipmentLoading = false;
-      return state;
-    });
+    gameState.command({ type: 'unequipPawnItem', payload: { pawnId, slot } });
+    equipmentLoading = false;
   }
 
   function useConsumableItem(pawnId: string, itemId: string) {
-    gameState.update((state) => {
-      const pawnIndex = state.pawns.findIndex((p) => p.id === pawnId);
-      if (pawnIndex !== -1) {
-        const available = (state.stockpile ?? {})[itemId] ?? 0;
-        if (available >= 1) {
-          state.pawns[pawnIndex] = useConsumable(state.pawns[pawnIndex], itemId);
-          return consumeFromStockpiles(state, { [itemId]: 1 });
-        }
-      }
-      return state;
-    });
+    gameState.command({ type: 'useConsumableItem', payload: { pawnId, itemId } });
   }
 
   function canEquipPawnItem(pawn: Pawn, itemId: string): boolean {

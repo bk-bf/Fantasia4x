@@ -14,10 +14,7 @@
   $: current = (pawn.combatStance ?? 'defensive') as Stance;
 
   function setStance(stance: Stance) {
-    gameState.updateWithSave((state) => ({
-      ...state,
-      pawns: state.pawns.map((p) => (p.id === pawn.id ? { ...p, combatStance: stance } : p))
-    }));
+    gameState.command({ type: 'setPawnStance', payload: { pawnId: pawn.id, stance }, save: true });
   }
 </script>
 

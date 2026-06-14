@@ -34,14 +34,11 @@
   $: selectedRefuelPawnFilters = selectedFuelSettings.allowedRefuelPawnIds ?? [];
 
   function updateSelectedBuildingFuelSettings(updates: Partial<FuelSettings>) {
-    const id = building.id;
-    gameState.updateWithSave((state) => ({
-      ...state,
-      buildings: (state.buildings ?? []).map((b) => {
-        if (b.id !== id) return b;
-        return { ...b, fuelSettings: { ...(b.fuelSettings ?? {}), ...updates } };
-      })
-    }));
+    gameState.command({
+      type: 'setBuildingFuelSettings',
+      payload: { id: building.id, updates },
+      save: true
+    });
   }
 
   function setRefuelThresholdPct(nextPct: number) {

@@ -48,25 +48,7 @@
   }
 
   function updatePawnLaborLevel(pawnId: string, workId: string, level: 0 | 1 | 2 | 3 | 4) {
-    gameState.update((state) => {
-      const newAssignments = { ...state.workAssignments };
-      if (!newAssignments[pawnId]) {
-        newAssignments[pawnId] = {
-          pawnId,
-          workPriorities: {},
-          laborSettings: {}
-        };
-      }
-      newAssignments[pawnId] = {
-        ...newAssignments[pawnId],
-        laborSettings: { ...(newAssignments[pawnId].laborSettings ?? {}), [workId]: level },
-        workPriorities: {
-          ...(newAssignments[pawnId].workPriorities ?? {}),
-          [workId]: level === 0 ? 0 : level * 3
-        }
-      };
-      return { ...state, workAssignments: newAssignments };
-    });
+    gameState.command({ type: 'setPawnLaborLevel', payload: { pawnId, workId, level } });
   }
 
   function cycleLevel(pawnId: string, workId: string) {

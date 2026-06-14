@@ -203,14 +203,11 @@
 
   function cancelCrafting(queueIndex: number) {
     if (queueIndex < 0 || queueIndex >= craftingQueue.length) return;
-    const canceled = craftingQueue[queueIndex];
-    gameState.update((state) => {
-      // ADR-016: nothing was consumed at queue time — just release the reservation so the
-      // (reserved or already-staged) inputs become free stock again, then drop the order.
-      const next = releaseReservation(state, canceled.id);
-      const newQueue = [...(next.craftingQueue || [])];
-      newQueue.splice(queueIndex, 1);
-      return { ...next, craftingQueue: newQueue };
+    // ADR-016: nothing was consumed at queue time — releaseReservation frees the (reserved or
+    // staged) inputs, then the order is dropped (by id). See commands.ts `cancelCrafting`.
+    gameState.command({
+      type: 'cancelCrafting',
+      payload: { queueId: craftingQueue[queueIndex].id }
     });
   }
 </script>

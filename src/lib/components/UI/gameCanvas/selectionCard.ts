@@ -158,30 +158,12 @@ export const PROGRESS_BAR_STATES = new Set(['Working', 'Eating', 'Drinking', 'Wa
 
 /** Toggle a pawn's drafted flag (clears its job + draft target). */
 export function toggleDraft(pawnId: string) {
-  gameState.updateWithSave((state) => ({
-    ...state,
-    pawns: state.pawns.map((p) =>
-      p.id === pawnId
-        ? {
-            ...p,
-            drafted: !p.drafted,
-            draftTarget: undefined,
-            activeJob: undefined,
-            currentState: 'Idle'
-          }
-        : p
-    )
-  }));
+  gameState.command({ type: 'toggleDraft', payload: { pawnId }, save: true });
 }
 
 /** Toggle a mob's markedForHunt flag. */
 export function toggleHuntMark(mobId: string) {
-  gameState.updateWithSave((state) => ({
-    ...state,
-    mobs: (state.mobs ?? []).map((m) =>
-      m.id === mobId ? { ...m, markedForHunt: !m.markedForHunt } : m
-    )
-  }));
+  gameState.command({ type: 'toggleHuntMark', payload: { mobId }, save: true });
 }
 
 /** Reactive deps for {@link buildPawnCard} (camera-follow id changes over time). */

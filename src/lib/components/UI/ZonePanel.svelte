@@ -93,7 +93,7 @@
 
   /** Delete a zone instance and all its tiles. */
   function removeZone(instanceId: string) {
-    gameState.updateWithSave((state) => designationService.removeZoneInstance(instanceId, state));
+    gameState.command({ type: 'removeZoneInstance', payload: { instanceId }, save: true });
     if (openFilterInstance === instanceId) openFilterInstance = null;
     if (designationActive && activeInstId === instanceId) uiState.deactivateDesignation();
   }
@@ -103,13 +103,15 @@
   }
 
   function toggleCategory(instanceId: string, category: string) {
-    gameState.updateWithSave((state) =>
-      designationService.toggleInstanceCategory(instanceId, category, ALL_CATEGORIES, state)
-    );
+    gameState.command({
+      type: 'toggleInstanceCategory',
+      payload: { instanceId, category, allCategories: ALL_CATEGORIES },
+      save: true
+    });
   }
 
   function clearFilter(instanceId: string) {
-    gameState.updateWithSave((state) => designationService.clearInstanceFilter(instanceId, state));
+    gameState.command({ type: 'clearInstanceFilter', payload: { instanceId }, save: true });
   }
 </script>
 

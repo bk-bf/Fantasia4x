@@ -38,10 +38,7 @@
   });
 
   function startResearch(research: any) {
-    // ✅ Use service for research starting
-    gameState.update((state) => {
-      return researchService.startResearch(research.id, state);
-    });
+    gameState.command({ type: 'startResearch', payload: { researchId: research.id } });
   }
 
   function getCategoryIcon(category: string): string {
@@ -78,12 +75,7 @@
 
   function cancelCurrentResearch() {
     if (!currentResearch) return;
-    gameState.update((state) => {
-      return {
-        ...state,
-        currentResearch: undefined
-      };
-    });
+    gameState.command({ type: 'cancelResearch' });
   }
 
   function getBuildingName(buildingId: string): string {
