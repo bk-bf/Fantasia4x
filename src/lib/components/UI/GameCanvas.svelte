@@ -49,8 +49,7 @@
   import type {
     SelectedEntityModel,
     EntityBar,
-    EntityButton,
-    EntityStat
+    EntityButton
   } from '$lib/components/UI/SelectedEntityCard.svelte';
   import {
     SHEET_CELL_W,
