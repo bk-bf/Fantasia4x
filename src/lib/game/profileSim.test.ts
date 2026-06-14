@@ -64,9 +64,32 @@ describe('P-5 profiling harness (PROFILE=1)', () => {
     // A couple of beds + a campfire near the colony so rest/food finders have real targets.
     const bedSpots = spots.slice(pawns.length);
     const buildings: PlacedBuilding[] = [
-      { id: 'bed-1', type: 'hay_bed', x: bedSpots[0].x, y: bedSpots[0].y, status: 'complete', progress: 1 },
-      { id: 'bed-2', type: 'hay_bed', x: bedSpots[1].x, y: bedSpots[1].y, status: 'complete', progress: 1 },
-      { id: 'fire-1', type: 'campfire', x: bedSpots[2].x, y: bedSpots[2].y, status: 'complete', progress: 1, lit: true, fuel: 40 }
+      {
+        id: 'bed-1',
+        type: 'hay_bed',
+        x: bedSpots[0].x,
+        y: bedSpots[0].y,
+        status: 'complete',
+        progress: 1
+      },
+      {
+        id: 'bed-2',
+        type: 'hay_bed',
+        x: bedSpots[1].x,
+        y: bedSpots[1].y,
+        status: 'complete',
+        progress: 1
+      },
+      {
+        id: 'fire-1',
+        type: 'campfire',
+        x: bedSpots[2].x,
+        y: bedSpots[2].y,
+        status: 'complete',
+        progress: 1,
+        lit: true,
+        fuel: 40
+      }
     ];
 
     // A batch of harvest designations on resource tiles so generateJobs does real per-tick work.
@@ -122,32 +145,39 @@ describe('P-5 profiling harness (PROFILE=1)', () => {
     }
     const wall = performance.now() - t0;
     // eslint-disable-next-line no-console
-    console.log(`  TICKS_PER_SECOND=${TICKS_PER_SECOND} finalTurn=${gameEngine.getGameState().turn} firstErr=${firstErr || '(none)'}`);
+    console.log(
+      `  TICKS_PER_SECOND=${TICKS_PER_SECOND} finalTurn=${gameEngine.getGameState().turn} firstErr=${firstErr || '(none)'}`
+    );
 
-    const liveMobs = (gameEngine.getGameState().mobs ?? []).filter((m) => m.state !== 'Corpse').length;
+    const liveMobs = (gameEngine.getGameState().mobs ?? []).filter(
+      (m) => m.state !== 'Corpse'
+    ).length;
 
-    // Compute per-phase averages straight from __prof (sum/n) — robust to the headless save-path
-    // throw that aborts the engine's own [PROF] dump.
-    const prof = g.__prof as Record<string, { sum: number; n: number }>;
-    const phases = Object.entries(prof)
-      .map(([k, e]) => ({ k, ms: e.n ? e.sum / e.n : 0 }))
+    // The engine's per-second dump (turn % TICKS_PER_SECOND === 0) populates __profOut with each
+    // phase's avg ms/tick over the last second + `#<scan>/tick` counts, then resets the raw
+    // accumulators — so read __profOut (the last full second's steady-state profile).
+    const out = (g.__profOut as Record<string, string>) ?? {};
+    const phaseRows = Object.entries(out)
+      .filter(([k]) => !k.startsWith('#') && k !== 'TOTAL')
+      .map(([k, v]) => ({ k, ms: parseFloat(v) }))
       .sort((a, b) => b.ms - a.ms);
-    const total = phases.reduce((s, p) => s + p.ms, 0);
-    const counts = (g.__profCounts as Record<string, number>) ?? {};
+    const total = parseFloat(out.TOTAL ?? '0');
 
     const lines: string[] = [];
     lines.push(
       `\n[P-5 PROFILE] ${TICKS} ticks · pawns=${pawns.length} liveMobs=${liveMobs} designations=${added}`
     );
     lines.push(`  wall ${wall.toFixed(0)}ms (${(wall / TICKS).toFixed(3)}ms/tick)`);
-    lines.push('  per-phase avg ms/tick (desc):');
-    for (const p of phases) {
-      lines.push(`    ${p.k.padEnd(20)} ${p.ms.toFixed(4)}  (${((p.ms / total) * 100).toFixed(1)}%)`);
+    lines.push('  per-phase avg ms/tick over the last in-game second (desc):');
+    for (const p of phaseRows) {
+      lines.push(
+        `    ${p.k.padEnd(20)} ${p.ms.toFixed(4)}ms  (${total ? ((p.ms / total) * 100).toFixed(1) : '0'}%)`
+      );
     }
-    lines.push(`    ${'TOTAL'.padEnd(20)} ${total.toFixed(4)}`);
-    lines.push('  suspect scan calls/tick:');
-    for (const [k, c] of Object.entries(counts)) {
-      lines.push(`    ${('#' + k).padEnd(26)} ${(c / TICKS).toFixed(2)}/tick  (${c} total)`);
+    lines.push(`    ${'TOTAL'.padEnd(20)} ${total.toFixed(4)}ms`);
+    lines.push('  suspect scan calls/tick (last second):');
+    for (const [k, v] of Object.entries(out).filter(([k]) => k.startsWith('#'))) {
+      lines.push(`    ${k.padEnd(26)} ${v}/tick`);
     }
     // eslint-disable-next-line no-console
     console.log(lines.join('\n'));
