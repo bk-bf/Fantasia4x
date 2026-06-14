@@ -275,6 +275,58 @@ impl SimWorld {
     pub fn chunk_dirty_ptr(&self) -> usize {
         self.chunk_dirty.as_ptr() as usize
     }
+
+    // ── R1 spike workload ─────────────────────────────────────────────────────────────────────
+    /// Run `ticks` iterations of a representative hot loop over the SoA: per-entity needs decay +
+    /// one-step movement with a chunked-grid tile-cost read. This is the R1 benchmark workload (and
+    /// the seed of the real R2 needs/movement tick); the JS variants in `bench.ts` do the identical
+    /// work so the comparison is apples-to-apples. Returns a checksum so nothing is optimised away.
+    pub fn bench_step(&mut self, ticks: u32) -> f64 {
+        const DIRS: [(i32, i32); 8] = [
+            (1, 0), (0, 1), (-1, 0), (0, -1), (1, 1), (-1, 1), (1, -1), (-1, -1),
+        ];
+        let cap = self.cap;
+        let w = self.width as i32;
+        let h = self.height as i32;
+        let mut checksum = 0.0f64;
+        for _ in 0..ticks {
+            for i in 0..self.high {
+                if self.u8p[U_ALIVE * cap + i] == 0 {
+                    continue;
+                }
+                // needs decay (clamped to 100)
+                let hu = &mut self.f32p[F_HUNGER * cap + i];
+                *hu = (*hu + 0.10).min(100.0);
+                let fa = &mut self.f32p[F_FATIGUE * cap + i];
+                *fa = (*fa + 0.05).min(100.0);
+                let th = &mut self.f32p[F_THIRST * cap + i];
+                *th = (*th + 0.08).min(100.0);
+                let hy = &mut self.f32p[F_HYGIENE * cap + i];
+                *hy = (*hy + 0.02).min(100.0);
+                // movement: drain sub-tile budget, step on expiry, read new tile cost
+                let ncc = self.f32p[F_NEXT_CELL_COST * cap + i] - 1.0;
+                if ncc <= 0.0 {
+                    let (dx, dy) = DIRS[i & 7];
+                    let mut nx = self.i32p[I_X * cap + i] + dx;
+                    let mut ny = self.i32p[I_Y * cap + i] + dy;
+                    if nx < 0 || nx >= w {
+                        nx -= 2 * dx;
+                    }
+                    if ny < 0 || ny >= h {
+                        ny -= 2 * dy;
+                    }
+                    self.i32p[I_X * cap + i] = nx;
+                    self.i32p[I_Y * cap + i] = ny;
+                    let ti = self.tile_index(nx as u32, ny as u32) as usize;
+                    self.f32p[F_NEXT_CELL_COST * cap + i] = self.t_cost[ti];
+                } else {
+                    self.f32p[F_NEXT_CELL_COST * cap + i] = ncc;
+                }
+                checksum += self.i32p[I_X * cap + i] as f64 + self.f32p[F_HUNGER * cap + i] as f64;
+            }
+        }
+        checksum
+    }
 }
 
 /// The module's `WebAssembly.Memory`, so JS can build typed-array views over the SoA buffers.

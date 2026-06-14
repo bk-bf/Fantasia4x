@@ -117,4 +117,8 @@ export const simWorkerBridge = new SimWorkerBridge();
 // Dev convenience: callable from the browser console as `verifyWasmInWorker()`.
 if (isClientRuntime && import.meta.env.DEV) {
   (globalThis as Record<string, unknown>).verifyWasmInWorker = verifyWasmInWorker;
+  // R1 sim-core benchmark: `await runSimCoreBench()` (lazy — bench code stays out of the bundle
+  // until invoked). Optional args: (entities, width, height, ticks, reps).
+  (globalThis as Record<string, unknown>).runSimCoreBench = async (...args: number[]) =>
+    (await import('../sim-core/bench')).runSimCoreBench(...args);
 }

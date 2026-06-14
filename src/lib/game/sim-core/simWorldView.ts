@@ -280,6 +280,11 @@ export class SimWorldView {
     this.world.clear_dirty();
   }
 
+  /** R1 spike: run `ticks` of the Rust needs+movement hot loop over the SoA. Returns a checksum. */
+  benchStep(ticks: number): number {
+    return this.world.bench_step(ticks);
+  }
+
   /** Release the wasm allocation (the SoA buffers). The view is unusable afterwards. */
   free(): void {
     this.world.free();
