@@ -62,6 +62,13 @@ import { handleFighting, handleFleeing, handleHunting } from './pawn/handlers/co
 export { PAWN_STATE, type PawnStateName };
 export { resetUnreachableJobs } from './pawn/pawnHelpers';
 
+/** RimWorld-style staggered AI (ENGINE-PERFORMANCE): a pawn NOT already in combat re-scans for
+ *  threats once every N ticks (offset per pawn so the scans spread across ticks), instead of the
+ *  whole colony scanning every tick (findCombatThreat was ~180 calls/tick — the combat-active
+ *  spike). 6 ticks ≈ 0.1s max reaction delay, imperceptible; pawns already FIGHTING/FLEEING still
+ *  scan every tick (live targeting + exit-when-clear is the combat handler's job). */
+const COMBAT_SCAN_INTERVAL = 6;
+
 /** Consciousness (0–1) below which a pawn collapses (matches Combat.COLLAPSE_CONSCIOUSNESS).
  *  Folds in pain + blood loss + organ damage, so downing has one unified cause. */
 const COLLAPSE_CONSCIOUSNESS = 0.3;
@@ -860,11 +867,15 @@ class PawnStateMachineImpl {
       // Drop the current job and switch to a combat state so the pawn defends
       // itself instead of walking off to work. While already in a combat state we
       // leave path/movement to the handler (so a fleeing pawn can keep retreating).
-      const threat = findCombatThreat(forCollapse, state);
+      const inCombat =
+        forCollapse.currentState === PAWN_STATE.FIGHTING ||
+        forCollapse.currentState === PAWN_STATE.FLEEING;
+      // Staggered detection (COMBAT_SCAN_INTERVAL): only re-scan a non-combat pawn every Nth tick,
+      // offset by debugId so scans spread across ticks; in-combat pawns scan every tick.
+      const scanForThreat =
+        inCombat || (state.turn + (forCollapse.debugId ?? 0)) % COMBAT_SCAN_INTERVAL === 0;
+      const threat = scanForThreat ? findCombatThreat(forCollapse, state) : null;
       if (threat) {
-        const inCombat =
-          forCollapse.currentState === PAWN_STATE.FIGHTING ||
-          forCollapse.currentState === PAWN_STATE.FLEEING;
         const desired =
           (forCollapse.combatStance ?? 'defensive') === 'flee'
             ? PAWN_STATE.FLEEING
