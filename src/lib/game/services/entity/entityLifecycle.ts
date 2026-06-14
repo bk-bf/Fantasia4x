@@ -22,10 +22,18 @@ export function stepHunger(state: GameState): GameState {
   if (!mobs || mobs.length === 0) return state;
   const { turn } = state;
 
-  const next = mobs.map((mob): Mob => {
-    if (mob.state === 'Corpse' || mob.isAlive === false) return mob;
+  // M3 (ENGINE-PERFORMANCE ★ ACTIVE): mutate mob fields IN PLACE (no per-mob {...mob} spread).
+  // Deaths are captured explicitly in `justDied` because the old new-object-vs-old diff used for
+  // carcass drops (`mobs[i].state !== next[i].state`) can't work once the object is mutated.
+  // Per-mob only (hunger/blood/health) — no cross-mob dependency, so order/snapshot semantics are
+  // unaffected (unlike the FSM stepEntities, which is left immutable on purpose).
+  let changed = false;
+  const justDied: Mob[] = [];
+
+  for (const mob of mobs) {
+    if (mob.state === 'Corpse' || mob.isAlive === false) continue;
     const def = getCreatureById(mob.creatureId);
-    if (!def) return mob;
+    if (!def) continue;
 
     // Diet affects how fast hunger accrues. `none` (e.g. shadow_wraith) never gets hungry.
     const dietMult =
@@ -83,58 +91,54 @@ export function stepHunger(state: GameState): GameState {
     // Death by blood loss.
     if (bloodVolume <= 0) {
       simLog.logEntityDeath(mob.id, entityName(mob), 'blood_loss', turn, mob.x, mob.y);
-      return {
-        ...mob,
-        state: 'Corpse',
-        isAlive: false,
-        diedAt: turn,
-        intactness: 1.0,
-        bloodVolume: 0,
-        conditions,
-        limbs: limbs ?? mob.limbs
-      };
+      mob.state = 'Corpse';
+      mob.isAlive = false;
+      mob.diedAt = turn;
+      mob.intactness = 1.0;
+      mob.bloodVolume = 0;
+      mob.conditions = conditions;
+      if (limbs) mob.limbs = limbs;
+      justDied.push(mob);
+      changed = true;
+      continue;
     }
 
     // Critical limb destruction (head or torso at 0 HP).
+    let diedFromLimb = false;
     if (limbs) {
       for (const limb of limbs) {
         if (limb.health <= 0 && (limb.id === 'head' || limb.id === 'torso')) {
           simLog.logEntityDeath(mob.id, entityName(mob), 'critical_limb', turn, mob.x, mob.y);
-          return {
-            ...mob,
-            state: 'Corpse',
-            isAlive: false,
-            diedAt: turn,
-            intactness: 1.0,
-            bloodVolume,
-            conditions,
-            limbs
-          };
+          mob.state = 'Corpse';
+          mob.isAlive = false;
+          mob.diedAt = turn;
+          mob.intactness = 1.0;
+          mob.bloodVolume = bloodVolume;
+          mob.conditions = conditions;
+          mob.limbs = limbs;
+          justDied.push(mob);
+          changed = true;
+          diedFromLimb = true;
+          break;
         }
       }
     }
+    if (diedFromLimb) continue;
 
-    return {
-      ...mob,
-      needs: {
-        ...mob.needs,
-        hunger: newHunger,
-        fatigue: newFatigue
-      },
-      health: Math.max(0, mob.health + healthDelta),
-      bloodVolume,
-      conditions,
-      limbs: limbs ?? mob.limbs
-    };
-  });
-
-  // Drop a carcass item for every mob that just died this tick.
-  let result: GameState = { ...state, mobs: next };
-  for (let i = 0; i < mobs.length; i++) {
-    if (mobs[i].state !== 'Corpse' && next[i].state === 'Corpse') {
-      result = dropCarcass(result, next[i]);
-    }
+    mob.needs.hunger = newHunger;
+    mob.needs.fatigue = newFatigue;
+    mob.health = Math.max(0, mob.health + healthDelta);
+    mob.bloodVolume = bloodVolume;
+    mob.conditions = conditions;
+    if (limbs) mob.limbs = limbs;
+    changed = true;
   }
+
+  if (!changed) return state;
+  // New array ref (entities mutated in place) keeps the mob-subset memos invalidating correctly.
+  let result: GameState = { ...state, mobs: mobs.slice() };
+  // Drop a carcass item for every mob that just died this tick.
+  for (const dead of justDied) result = dropCarcass(result, dead);
   return result;
 }
 
