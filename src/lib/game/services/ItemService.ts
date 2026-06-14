@@ -361,12 +361,18 @@ export class ItemServiceImpl implements ItemService {
     return { maxWeightKg: Math.max(1, maxWeightKg), maxVolumeL: Math.max(1, maxVolumeL) };
   }
 
-  /** Current total weight and volume carried by this pawn (bulk items + instances). */
+  /**
+   * Current weight and volume load for this pawn. The pack (bulk `inventory.items` +
+   * tracked `inventory.instances`) costs both weight AND volume. Equipped gear costs WEIGHT
+   * ONLY — the pawn bears its mass (so an armoured pawn hauls less), but worn gear isn't in the
+   * pack, so it doesn't consume pack volume. Belt/back containers separately RAISE the budget
+   * via getCarryBudget's inventoryBonus.
+   */
   getCurrentCarryLoad(pawn: Pawn, _state: GameState): { weightKg: number; volumeL: number } {
     let weightKg = 0;
     let volumeL = 0;
 
-    // Bulk items
+    // Bulk items (pack) — weight + volume
     for (const [itemId, qty] of Object.entries(pawn.inventory.items)) {
       if (qty <= 0) continue;
       const def = this.getItemById(itemId);
@@ -374,11 +380,18 @@ export class ItemServiceImpl implements ItemService {
       volumeL += (def?.volumeL ?? 0.2) * qty;
     }
 
-    // Tracked instances in inventory
+    // Tracked instances in inventory (pack) — weight + volume
     for (const inst of pawn.inventory.instances ?? []) {
       const def = this.getItemById(inst.itemId);
       weightKg += def?.weightKg ?? 0.5;
       volumeL += def?.volumeL ?? 0.5;
+    }
+
+    // Equipped gear — weight only (worn, not packed; see method doc).
+    for (const inst of Object.values(pawn.equipment ?? {})) {
+      if (!inst) continue;
+      const def = this.getItemById(inst.itemId);
+      weightKg += def?.weightKg ?? 0.5;
     }
 
     return { weightKg, volumeL };

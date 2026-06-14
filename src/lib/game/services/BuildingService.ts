@@ -327,7 +327,6 @@ export class BuildingServiceImpl implements BuildingService {
     return { upkeep, requirements };
   }
 
-
   /**
    * Phase 4d / Phase 5c: Place a building at specific tile coordinates with status 'planned'.
    * Sets workRequired = workAmount so that JobService can generate a construct job.

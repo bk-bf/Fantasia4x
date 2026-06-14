@@ -29,6 +29,7 @@ import { SUBTERRAINS, SUBTERRAIN_FALLBACK } from '../core/Terrains';
 import { itemService } from './ItemService';
 import { recipeService } from './RecipeService';
 import { buildingService } from './BuildingService';
+import * as fuelRules from './fuelRules';
 import { pawnStatService } from './PawnStatService';
 import {
   addToStockpileZone,
@@ -82,12 +83,6 @@ export const BASE_WORK_RATE = 1;
 
 /** Designation types that produce harvest-category jobs. */
 const HARVEST_DTYPES: DesignationType[] = ['harvest', 'woodcut', 'forage'];
-
-/** Default refuel threshold when no per-building override is set. */
-const DEFAULT_REFUEL_THRESHOLD_RATIO = 0.3;
-const DEFAULT_REFUEL_REQUIRED_FUEL_TYPES = 2;
-const DEFAULT_REFUEL_TINDER_ITEM_ID = 'plant_fiber';
-const DEFAULT_REFUEL_TINDER_AMOUNT = 2;
 
 // ===== JOB SERVICE =====
 
@@ -1054,9 +1049,9 @@ class JobServiceImpl {
       if (b.fuelSettings?.paused) return false;
       const maxFuel = buildingService.getBuildingById(b.type)?.maxFuel ?? 60;
       const fuelRatio = (b.fuel ?? 0) / Math.max(maxFuel, 1);
-      if (fuelRatio >= this._getRefuelThresholdRatio(b)) return false;
+      if (fuelRatio >= fuelRules.getRefuelThresholdRatio(b)) return false;
       const needed = maxFuel - (b.fuel ?? 0);
-      return needed > 0 && this._canSatisfyRefuelRequirements(gs, b, needed);
+      return needed > 0 && fuelRules.canSatisfyRefuelRequirements(gs, b, needed);
     });
 
     for (const b of gs.buildings ?? []) {
@@ -1065,11 +1060,11 @@ class JobServiceImpl {
       if (!bDef?.maxFuel) continue;
       if (b.fuelSettings?.paused) continue;
       const fuelRatio = (b.fuel ?? 0) / Math.max(bDef.maxFuel, 1);
-      if (fuelRatio >= this._getRefuelThresholdRatio(b)) continue;
+      if (fuelRatio >= fuelRules.getRefuelThresholdRatio(b)) continue;
       const needed = bDef.maxFuel - (b.fuel ?? 0);
       if (needed <= 0) continue;
       // Only queue refuel when stockpile can fully top up the tank.
-      if (!this._canSatisfyRefuelRequirements(gs, b, needed)) continue;
+      if (!fuelRules.canSatisfyRefuelRequirements(gs, b, needed)) continue;
       const exists = jobs.some((j) => j.type === 'refuel' && j.buildingId === b.id);
       if (!exists) {
         jobs.push({
@@ -1096,7 +1091,7 @@ class JobServiceImpl {
     const consumed: Record<string, number> = {};
     const allowedFuelIds = new Set(building.fuelSettings?.allowedFuelItemIds ?? []);
     const hasFuelFilter = allowedFuelIds.size > 0;
-    const requirements = this._getRefuelRequirements(building.type);
+    const requirements = fuelRules.getRefuelRequirements(building.type);
 
     if ((stockpile[requirements.tinderItemId] ?? 0) < requirements.tinderAmount) return gs;
     if (requirements.tinderAmount > 0) {
@@ -1120,90 +1115,13 @@ class JobServiceImpl {
       }
     }
     if (currentFuel === (building.fuel ?? 0)) return gs; // nothing added
-    if (!this._hasRequiredFuelTypesForRefuel(consumed, requirements)) return gs;
+    if (!fuelRules.hasRequiredFuelTypesForRefuel(consumed, requirements)) return gs;
     const newBuildings = (gs.buildings ?? []).map((b) =>
       b.id === job.buildingId ? { ...b, fuel: currentFuel, lit: currentFuel > 0 } : b
     );
     console.log(`[JobService] Campfire refuelled to ${currentFuel}/${maxFuel}: ${job.buildingId}`);
     const afterConsume = consumeFromStockpiles(gs, consumed);
     return { ...afterConsume, buildings: newBuildings };
-  }
-
-
-  private _getRefuelThresholdRatio(building: import('../core/types').PlacedBuilding): number {
-    const rawPct = building.fuelSettings?.refuelThresholdPct;
-    if (rawPct === undefined || Number.isNaN(rawPct)) return DEFAULT_REFUEL_THRESHOLD_RATIO;
-    const clampedPct = Math.max(0, Math.min(100, rawPct));
-    return clampedPct / 100;
-  }
-
-  private _getRefuelRequirements(buildingType: string): {
-    requiredFuelTypes: number;
-    tinderItemId: string;
-    tinderAmount: number;
-  } {
-    const req = buildingService.getBuildingById(buildingType)?.fuelRequirements;
-    return {
-      requiredFuelTypes: Math.max(1, req?.requiredFuelTypes ?? DEFAULT_REFUEL_REQUIRED_FUEL_TYPES),
-      tinderItemId: req?.tinderItemId ?? DEFAULT_REFUEL_TINDER_ITEM_ID,
-      tinderAmount: Math.max(0, req?.tinderAmount ?? DEFAULT_REFUEL_TINDER_AMOUNT)
-    };
-  }
-
-  private _canSatisfyRefuelRequirements(
-    gs: GameState,
-    building: import('../core/types').PlacedBuilding,
-    neededFuel: number
-  ): boolean {
-    const stockpile = gs.stockpile ?? {};
-    const requirements = this._getRefuelRequirements(building.type);
-    const tinderStock = stockpile[requirements.tinderItemId] ?? 0;
-    if (tinderStock < requirements.tinderAmount) return false;
-
-    const allowedFuelIds = new Set(building.fuelSettings?.allowedFuelItemIds ?? []);
-    const hasFuelFilter = allowedFuelIds.size > 0;
-    let totalFuel = 0;
-    const availableFuelTypes = new Set<string>();
-
-    for (const item of ITEMS_DATABASE) {
-      if ((item.fuelValue ?? 0) <= 0) continue;
-      if (hasFuelFilter && !allowedFuelIds.has(item.id)) continue;
-      let available = stockpile[item.id] ?? 0;
-      if (item.id === requirements.tinderItemId) {
-        available -= requirements.tinderAmount;
-      }
-      if (available <= 0) continue;
-      totalFuel += available * item.fuelValue!;
-      availableFuelTypes.add(item.id);
-    }
-
-    if (totalFuel < neededFuel) return false;
-
-    if (requirements.requiredFuelTypes <= 1) {
-      return availableFuelTypes.size > 0;
-    }
-
-    const nonTinderTypeCount = Array.from(availableFuelTypes).filter(
-      (id) => id !== requirements.tinderItemId
-    ).length;
-
-    return nonTinderTypeCount >= Math.max(1, requirements.requiredFuelTypes - 1);
-  }
-
-  private _hasRequiredFuelTypesForRefuel(
-    consumed: Record<string, number>,
-    requirements: { requiredFuelTypes: number; tinderItemId: string; tinderAmount: number }
-  ): boolean {
-    if ((consumed[requirements.tinderItemId] ?? 0) < requirements.tinderAmount) return false;
-
-    const consumedFuelTypes = Object.keys(consumed).filter((id) => (consumed[id] ?? 0) > 0);
-    if (requirements.requiredFuelTypes <= 1) return consumedFuelTypes.length > 0;
-
-    const nonTinderTypeCount = consumedFuelTypes.filter(
-      (id) => id !== requirements.tinderItemId
-    ).length;
-
-    return nonTinderTypeCount >= Math.max(1, requirements.requiredFuelTypes - 1);
   }
 
   private _resourceMatchesDesignation(
