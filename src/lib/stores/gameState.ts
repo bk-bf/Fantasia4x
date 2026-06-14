@@ -12,6 +12,8 @@ import {
 import { gameEngine } from '$lib/game/systems/GameEngineImpl';
 // P-3: side-effect import — registers the real log/feedback sink before any tick runs.
 import './simLogBridge';
+// ADR-021 W1: dev-only — exposes globalThis.verifyWasmInWorker() to check WASM-in-worker.
+import '$lib/game/sim/simWorkerClient';
 import type {
   GameState,
   Pawn,

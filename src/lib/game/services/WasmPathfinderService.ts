@@ -1,4 +1,7 @@
-import { browser } from '$app/environment';
+// Worker-safe runtime check instead of $app/environment (which can't bundle into the sim worker
+// that imports this service — ADR-021 W1). `isClientRuntime` is true in the browser main thread
+// AND in a Web Worker, false in SSR/Node/vitest — same gate semantics as the old `browser`.
+import { isClientRuntime } from '../core/runtime';
 import type { PathfinderService } from './PathfinderService.js';
 
 type WasmMod = {
@@ -20,7 +23,7 @@ class WasmPathfinderServiceImpl implements PathfinderService {
 
   /** Initialize WASM. Idempotent — safe to call multiple times. */
   async init(): Promise<void> {
-    if (!browser || this.mod) return;
+    if (!isClientRuntime || this.mod) return;
     if (!this._initPromise) {
       this._initPromise = (async () => {
         const m = await import('$lib/spatial-core-pkg/spatial_core.js');

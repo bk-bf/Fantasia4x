@@ -60,6 +60,13 @@ function jsoncPlugin(): Plugin {
 
 export default defineConfig({
   plugins: [jsoncPlugin(), wasm(), sveltekit()],
+  // The sim worker (ADR-021) is a module worker that dynamic-imports the WASM spatial core, which
+  // needs code-splitting — unsupported by Vite's default IIFE worker format. ES format + the wasm
+  // and jsonc plugins (the worker's import graph pulls .jsonc databases) make it bundle correctly.
+  worker: {
+    format: 'es',
+    plugins: () => [jsoncPlugin(), wasm()]
+  },
   server: {
     fs: {
       allow: [findGitRoot(process.cwd())]
