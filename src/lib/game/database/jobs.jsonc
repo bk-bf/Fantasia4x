@@ -12,10 +12,10 @@
 // directly; they are never generated into the colony job pool.
 [
   {"id": "harvest", "label": "Harvest", "workCategorySource": "designation", "claimGate": "harvestTool"},
-  {"id": "haul", "label": "Haul", "workCategory": "hauling"},
+  {"id": "haul", "label": "Haul", "workCategory": "hauling", "lightAffected": false},
   {"id": "construct", "label": "Build", "workCategory": "construction"},
   {"id": "deconstruct", "label": "Demolish", "workCategory": "construction"},
-  {"id": "fetch", "label": "Fetch", "workCategory": "hauling"},
+  {"id": "fetch", "label": "Fetch", "workCategory": "hauling", "lightAffected": false},
   {"id": "craft", "label": "Craft", "workCategory": "crafting"},
-  {"id": "refuel", "label": "Refuel", "workCategory": "construction", "claimGate": "refuelAllowlist"}
+  {"id": "refuel", "label": "Refuel", "workCategory": "construction", "claimGate": "refuelAllowlist", "lightAffected": false}
 ]

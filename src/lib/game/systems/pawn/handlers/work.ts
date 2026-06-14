@@ -313,14 +313,22 @@ export function handleWorking(pawn: Pawn, gameState: GameState): GameState {
     return jobService.releaseJob(pawn.id, jobId, goIdle(pawn, gameState));
   }
 
-  // §G light → sight → work speed. Compute the pawn's tile light lazily from the day/night ambient
-  // + nearby fire emitters (computeTileLightLevel — the same field the renderer/HUD show, so the
-  // number matches what the player sees). Only the working pawn's tile is sampled, so there's no
-  // per-tick map scan. It scales the `sight` capacity every `*_speed` formula multiplies by, so
-  // darkness (night, away from a fire) slows ALL work — down to lightWorkMultiplier's 0.4 floor.
-  const tileLight = pawn.position
-    ? computeTileLightLevel(gameState.turn, gameState.buildings ?? [], pawn.position.x, pawn.position.y)
-    : 1;
+  // §G light → sight → work speed. Only sight-dependent jobs are affected (jobs.jsonc
+  // `lightAffected`, default true) — carrying jobs (haul/fetch/refuel) shrug off the dark. For an
+  // affected job, compute the pawn's tile light lazily from the day/night ambient + nearby fire
+  // emitters (computeTileLightLevel — the same value the HUD shows; only this one tile is sampled,
+  // no map scan). It scales the `sight` capacity every `*_speed` formula multiplies by, so darkness
+  // (night, away from a fire) slows the work down to lightWorkMultiplier's 0.4 floor.
+  const lightAffected = jobService.isJobLightAffected(activeJob.type);
+  const tileLight =
+    lightAffected && pawn.position
+      ? computeTileLightLevel(
+          gameState.turn,
+          gameState.buildings ?? [],
+          pawn.position.x,
+          pawn.position.y
+        )
+      : 1;
   const lightSightFactor = lightWorkMultiplier(tileLight);
 
   // Wire work speed into job advancement. getWorkModifiers (stats.jsonc) is the SINGLE

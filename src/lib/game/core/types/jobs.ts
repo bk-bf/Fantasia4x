@@ -93,6 +93,9 @@ export interface JobDef {
   /** Optional claim restriction enforced in `getAvailableJobs`. `harvestTool`: ADR-009 colony-tool
    *  gating; `refuelAllowlist`: the building's `allowedRefuelPawnIds`. */
   claimGate?: 'harvestTool' | 'refuelAllowlist';
+  /** Whether low light slows this job (§G light→work). Defaults to true. Set false for jobs that
+   *  don't need close sight — hauling/fetching/refuelling (carrying) are unaffected by darkness. */
+  lightAffected?: boolean;
 }
 
 export interface WorkCategory {

@@ -1222,6 +1222,12 @@ class JobServiceImpl {
     return this._jobTypeToWorkKey(job, gs);
   }
 
+  /** Whether low light slows this job type (§G light→work). Defaults to true; jobs.jsonc sets it
+   *  false for carrying jobs (haul/fetch/refuel) that don't need close sight. */
+  isJobLightAffected(type: string): boolean {
+    return JOB_DEF_BY_ID.get(type)?.lightAffected !== false;
+  }
+
   /** Colony job type ids that have a registered behaviour handler (= jobs.jsonc ids). Exposed for
    *  the drift-guard test and tooling. */
   jobTypeIds(): string[] {
