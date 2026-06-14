@@ -1684,7 +1684,17 @@
     // Paused and running frames are profiled into SEPARATE buckets — they are completely
     // different workloads (paused: overlay-animation layer only; running: full sim) and must
     // never be averaged together. Each second we emit a tagged line per state that saw frames.
-    const blankProf = () => ({ sim: 0, overlay: 0, render: 0, gpu: 0, frames: 0, wall: 0 });
+    const blankProf = () => ({
+      sim: 0,
+      overlay: 0,
+      render: 0,
+      gpu: 0,
+      terrainMs: 0,
+      overlayMs: 0,
+      verts: 0,
+      frames: 0,
+      wall: 0
+    });
     let profRun = blankProf();
     let profPause = blankProf();
     let profLast = 0;
@@ -1745,10 +1755,14 @@
           logSystemBanner();
         }
         const acc = get(gameState.isPaused) ? profPause : profRun;
+        const rs = renderer.getStats();
         acc.sim += tOverlay - tSim;
         acc.overlay += tRender - tOverlay;
         acc.render += renderCpu;
         acc.gpu += gpuWait;
+        acc.terrainMs += rs.terrainMs;
+        acc.overlayMs += rs.overlayMs;
+        acc.verts += rs.vertexCount;
         acc.wall += dt * 1000;
         acc.frames++;
         if (now - profLast > 1000 && profRun.frames + profPause.frames > 0) {
@@ -1780,7 +1794,8 @@
             const line =
               `[RENDER-PROF] ${label} ~${(1000 / frameMs).toFixed(0)}fps · frame ${frameMs.toFixed(1)}ms ` +
               `= sim ${(a.sim / f).toFixed(1)} + overlay ${(a.overlay / f).toFixed(1)} ` +
-              `+ renderCPU ${(a.render / f).toFixed(1)} + gpuWait ${gpu.toFixed(1)} + idle ${idle.toFixed(1)}ms ` +
+              `+ renderCPU ${(a.render / f).toFixed(1)} [terrain ${(a.terrainMs / f).toFixed(1)} + entityOverlay ${(a.overlayMs / f).toFixed(1)}, ${(a.verts / f / 1000).toFixed(0)}k verts] ` +
+              `+ gpuWait ${gpu.toFixed(1)} + idle ${idle.toFixed(1)}ms ` +
               `· CPU ${busy.toFixed(0)}% busy · ${f} frames${heap}${bg}`;
             // eslint-disable-next-line no-console
             console.log(line);

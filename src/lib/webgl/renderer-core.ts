@@ -28,6 +28,9 @@ export interface RenderStats {
   frameTime: number;
   drawCalls: number;
   vertexCount: number;
+  /** Per-pass CPU time (ms) — terrain vs entity overlay — for the profiler render breakdown. */
+  terrainMs: number;
+  overlayMs: number;
 }
 
 export interface RendererOptions {
@@ -115,7 +118,7 @@ export class WebGLRendererCore {
     this.tileWidth = options.tileWidth ?? 12;
     this.tileHeight = options.tileHeight ?? 20;
     this.timer = new PerformanceTimer();
-    this.stats = { fps: 0, frameTime: 0, drawCalls: 0, vertexCount: 0 };
+    this.stats = { fps: 0, frameTime: 0, drawCalls: 0, vertexCount: 0, terrainMs: 0, overlayMs: 0 };
 
     this.viewport = { x: 0, y: 0, width: this.canvas.width, height: this.canvas.height };
 
@@ -378,6 +381,7 @@ export class WebGLRendererCore {
     // Terrain pass — opaque, fills every cell background. Rendered as the full
     // static map so panning never changes the tile set (cache stays valid).
     this.shaderManager.setUniform('tileRenderer', 'u_glyphOnly', 0);
+    const tTerrain = performance.now();
     const gridStats = this.gridRenderer.renderGrid(this.gameGrid, {
       // Geometry baked at the fixed base size; zoom comes from u_zoom.
       tileWidth: BASE_TILE_PX,
@@ -394,6 +398,7 @@ export class WebGLRendererCore {
       litBounds: this.lightBounds,
       cacheVersion: this.gridVersion
     });
+    this.stats.terrainMs = performance.now() - tTerrain;
 
     this.stats.drawCalls++;
     this.stats.vertexCount += gridStats.tilesRendered * 6;
@@ -404,6 +409,7 @@ export class WebGLRendererCore {
       gl.enable(gl.BLEND);
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
       this.shaderManager.setUniform('tileRenderer', 'u_glyphOnly', 1);
+      const tOverlay = performance.now();
       const overlayStats = this.gridRenderer.renderGrid(this.overlayGrid, {
         // Geometry baked at the fixed base size; zoom comes from u_zoom. The
         // overlay's sub-tile animationOffset is likewise in base-tile pixels.
@@ -418,10 +424,13 @@ export class WebGLRendererCore {
         litBounds: this.lightBounds,
         renderAllTiles: true
       });
+      this.stats.overlayMs = performance.now() - tOverlay;
       this.shaderManager.setUniform('tileRenderer', 'u_glyphOnly', 0);
       gl.disable(gl.BLEND);
       this.stats.drawCalls++;
       this.stats.vertexCount += overlayStats.tilesRendered * 6;
+    } else {
+      this.stats.overlayMs = 0;
     }
   }
 
