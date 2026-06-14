@@ -127,14 +127,14 @@ The cheapest test of the premise. Falsifiable, contained, no new systems.
 
 **The experiment (Step 0):**
 
-- [ ] Pre-filter hostiles once per tick into a small array; make `findCombatThreat`/`findNearestHuntTarget` scan that (~10) instead of all mobs (~140). *Optionally* add minimal persistence (§3): lock target, re-scan only on trigger. No LoS, no push, no spatial index yet.
-- [ ] Re-run the `--profiler` sandbox; read `.debug/perf.log`.
+- [x] Pre-filter hostiles once per tick into a small array; make `findCombatThreat`/`findNearestHuntTarget` scan that (~10) instead of all mobs (~140). *Implemented:* `mobSubsets()` memo in `pawnHelpers.ts`, keyed on `gs.mobs` identity (self-invalidating). Behaviour-preserving (218 tests green); no persistence/LoS/push/spatial-index yet.
+- [ ] Re-run the `--profiler` sandbox in the browser; read `.debug/perf.log`. *(Authoritative — headless lacks WASM movement, so only the browser run validates.)*
 
-**Acceptance — premise holds only if ALL pass:**
+**Acceptance — premise holds only if ALL pass.** Note: the pre-filter is a **constant-factor** cut (each scan ~140→~10 hostiles), so its metric is the **`pawns`-phase ms**; `#findCombatThreat/tick` stays ~154 (still once per pawn) until persistence (P1) stops the per-tick re-scan.
 
-- [ ] `#findCombatThreat/tick` drops from ~154 toward ~1–2 (near-zero with persistence).
-- [ ] `pawns` phase drops materially (target: 7 ms → ≤ 2 ms).
-- [ ] tick TOTAL drops materially (target: 15 ms → ≤ 6 ms) in the **same** sandbox.
+- [ ] `pawns` phase drops materially from the pre-filter alone (directional target: 7 ms → ~4–5 ms). If it doesn't move at all → findCombatThreat isn't the cost → premise suspect (see falsification).
+- [ ] tick TOTAL trends down in the **same** sandbox (full 7 ms → ≤ 2 ms / 15 ms → ≤ 6 ms targets need P1 persistence + P2 spatial index).
+- [ ] `#findCombatThreat/tick` drops toward ~1–2 — **P1 outcome**, not P0; verify after persistence lands.
 - [ ] the win **also shows on the ship engine** (WebKitGTK under `tauri dev`, or V8 if Electron) — not just Firefox.
 
 **Falsification (premise wrong → STOP):**
@@ -148,7 +148,7 @@ The cheapest test of the premise. Falsifiable, contained, no new systems.
 Each phase gated on the previous; do not start one until its gate is met. P0–P3 are the
 algorithmic work; P4–P5 are the deferred threading steps from §5.
 
-- [ ] **P0** — §6 validation spike (pre-filter ± minimal persistence). *Gate: —*
+- [ ] **P0** — §6 validation spike. Pre-filter **landed** (`mobSubsets()` in `pawnHelpers.ts`, behaviour-preserving, 218 tests green); **awaiting browser-sandbox numbers** to confirm the `pawns`-phase drop. *Gate: —*
 - [ ] **P1** — full target persistence + stateful/provoked hostility (resolve §3 open Qs). *Gate: §6 passed.*
 - [ ] **P2** — spatial-index acquisition + push-based prey alerting (wire/verify `SpatialIndexService`). *Gate: P1.*
 - [ ] **P3** — LoS: `blocksSight` data + `opaque` bitmap + WASM raycast; persistence invalidates on LoS loss. *Gate: P2; ADR-019.* **Enables RANGED-COMBAT** (Living-World LoS dep) + SEASONS_WEATHER fog.
@@ -179,4 +179,5 @@ algorithmic work; P4–P5 are the deferred threading steps from §5.
 
 - [x] ADR-018 (perception/persistence — provisional, validation-gated), ADR-019 (LoS — design, impl deferred), ADR-020 (scaling ladder — wrapper deferred) written + registered in `codegraph.config.json` (`adr-coverage` ✓).
 - [x] Spec written 2026-06-14; profiler tooling + honest FPS counter landed (`02c4dfd`).
-- [ ] **Provisional — gated on §6.** No P1+ work (or any downstream spec feature) until the validation spike passes.
+- [x] P0 pre-filter (`mobSubsets()` memo) landed 2026-06-14, behaviour-preserving (218 tests green).
+- [ ] **Provisional — gated on §6.** No P1+ work (or any downstream spec feature) until the browser sandbox confirms the pre-filter moved the `pawns` phase.

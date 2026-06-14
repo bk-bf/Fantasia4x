@@ -602,6 +602,33 @@ export function goIdle(pawn: Pawn, gs: GameState): GameState {
   };
 }
 
+// ── P0 perception pre-filter (ENGINE-PERFORMANCE §6 / ADR-018) ────────────────
+// findCombatThreat / findNearestHuntTarget each run once per pawn per tick, and each
+// used to scan ALL mobs — most of them neutral animals — re-deriving the predicate
+// every call (O(pawns × mobs); the profiler measured ~21k checks/tick). The relevant
+// subsets (hostiles; hunt-flagged) are the SAME for every pawn within a tick, so
+// compute them once and reuse. Keyed on the gs.mobs array identity: immutable updates
+// (ADR-002) recreate the array whenever any mob changes (death, state flip, spawn), so
+// the memo self-invalidates and can never serve a stale subset. This is the constant-
+// factor cut only — true O(1)-per-tick (persistence) and spatial bounding are P1/P2.
+let _mobSubsetCache: { mobsRef: Mob[] | undefined; hostiles: Mob[]; huntTargets: Mob[] } | null =
+  null;
+
+function mobSubsets(gs: GameState): { hostiles: Mob[]; huntTargets: Mob[] } {
+  const mobs = gs.mobs;
+  if (_mobSubsetCache && _mobSubsetCache.mobsRef === mobs) return _mobSubsetCache;
+  const hostiles: Mob[] = [];
+  const huntTargets: Mob[] = [];
+  for (const m of mobs ?? []) {
+    if (m.isAlive === false || m.state === 'Corpse') continue;
+    if (m.entityClass === 'mob' || m.state === 'Attacking' || m.state === 'Alerted')
+      hostiles.push(m);
+    if (m.markedForHunt) huntTargets.push(m);
+  }
+  _mobSubsetCache = { mobsRef: mobs, hostiles, huntTargets };
+  return _mobSubsetCache;
+}
+
 /**
  * Nearest hostile mob this pawn should react to, or null. A `mob`-class creature
  * (goblins etc.) is always hostile; a neutral `animal` only counts once it has
@@ -612,7 +639,7 @@ export function goIdle(pawn: Pawn, gs: GameState): GameState {
  * react anywhere inside their vision range.
  */
 export function findCombatThreat(pawn: Pawn, gs: GameState): Mob | null {
-  profCount('findCombatThreat'); // P-5: dev profiler tallies this all-mobs scan's per-tick frequency
+  profCount('findCombatThreat'); // P-5: dev profiler tallies this scan's per-tick frequency
   if (!pawn.position || pawn.isAlive === false) return null;
   const stance = pawn.combatStance ?? 'defensive';
   const range = stance === 'defensive' ? 1 : pawnVisionTiles(pawn, gs);
@@ -620,10 +647,8 @@ export function findCombatThreat(pawn: Pawn, gs: GameState): Mob | null {
   const py = pawn.position.y;
   let best: Mob | null = null;
   let bestDist = Infinity;
-  for (const m of gs.mobs ?? []) {
-    if (m.isAlive === false || m.state === 'Corpse') continue;
-    const hostile = m.entityClass === 'mob' || m.state === 'Attacking' || m.state === 'Alerted';
-    if (!hostile) continue;
+  // Pre-filtered hostile subset (computed once per tick), not the full mob list.
+  for (const m of mobSubsets(gs).hostiles) {
     const d = Math.max(Math.abs(px - m.x), Math.abs(py - m.y));
     if (d <= range && d < bestDist) {
       best = m;
@@ -658,8 +683,8 @@ export function findNearestHuntTarget(pawn: Pawn, gs: GameState): Mob | null {
   const { x: px, y: py } = pawn.position;
   let best: Mob | null = null;
   let bestDist = Infinity;
-  for (const m of gs.mobs ?? []) {
-    if (!m.markedForHunt || m.isAlive === false || m.state === 'Corpse') continue;
+  // Pre-filtered hunt-flagged subset (computed once per tick), not the full mob list.
+  for (const m of mobSubsets(gs).huntTargets) {
     const d = Math.max(Math.abs(px - m.x), Math.abs(py - m.y));
     if (d < bestDist) {
       best = m;
