@@ -4,7 +4,7 @@
 import type { GameState, Mob, Pawn } from '../../core/types';
 import { getCreatureById, type CreatureDefinition } from '../../core/Creatures';
 import { SECONDS_PER_TICK } from '../../core/time';
-import { advanceAlongPath } from '../../systems/MovementSystem';
+import { stepBody, seedMidCrossClaims } from '../../systems/MovementSystem';
 import { resourceObjectService } from '../ResourceObjectService';
 import { wasmPathfinderService } from '../WasmPathfinderService';
 import { buildPathfindingGridsWithBlocked } from '../PathfinderService';
@@ -14,8 +14,7 @@ import {
   type TileFoodKind,
   WILD_FORAGE_RESOURCE_IDS,
   HUNT_RADIUS,
-  WANDER_MOVES_PER_SECOND,
-  MAX_BLOCKED_TICKS
+  WANDER_MOVES_PER_SECOND
 } from './entityConstants';
 
 export function entityName(mob: Mob): string {
@@ -263,57 +262,23 @@ export function advanceMobMovement(state: GameState): GameState {
   const mobs = state.mobs;
   if (!mobs || mobs.length === 0) return state;
 
-  // Hard tile occupancy: one entity body per tile, no phasing. A mob may not
-  // enter a tile that holds another entity (pawn or mob) and two mobs may not
-  // converge on the same free tile in one tick. `occupancy` = every body's
-  // CURRENT tile; `claimed` = tiles a mover has committed to entering this tick.
-  const occupancy = occupancyService.blockedTiles(state); // includes self; self-tile guarded below
+  // Hard tile occupancy: one entity body per tile, no phasing — shared with the pawn move pass
+  // via MovementSystem.stepBody so mobs and pawns enforce identical rules (MOVE-1). `occupancy` =
+  // every body's CURRENT tile; `claimed` = tiles a mover has committed to entering this tick.
+  const occupancy = occupancyService.blockedTiles(state); // includes self; self-tile guarded in stepBody
   const claimed = new Set<string>();
-  // A mob already mid-crossing (nextCellCostLeft set) committed to its target on a
-  // prior tick — it owns that tile, so reserve it before anyone else can claim it.
-  for (const m of mobs) {
-    if (m.state === 'Corpse' || !m.path?.length || m.nextCellCostLeft == null) continue;
-    const t = m.path[m.pathIndex ?? 0];
-    if (t) claimed.add(`${t.x},${t.y}`);
-  }
+  seedMidCrossClaims(mobs, claimed, (m) => m.state !== 'Corpse');
 
   let changed = false;
   const next: Mob[] = new Array(mobs.length);
 
   for (let i = 0; i < mobs.length; i++) {
     const mob = mobs[i];
-    const target = mob.path?.[mob.pathIndex ?? 0];
-    if (!mob.path || mob.path.length === 0 || !target) {
-      next[i] = mob;
-      continue;
-    }
-    const targetKey = `${target.x},${target.y}`;
-    const selfKey = `${mob.x},${mob.y}`;
-    const midCrossing = mob.nextCellCostLeft != null;
-    // Blocked if the target tile holds another body, or another fresh mover has
-    // already claimed it this tick (a mid-crosser already owns its own claim).
-    const blocked =
-      (occupancy.has(targetKey) && targetKey !== selfKey) ||
-      (!midCrossing && claimed.has(targetKey));
-
-    if (blocked) {
-      const bt = (mob.blockedTicks ?? 0) + 1;
-      next[i] =
-        bt > MAX_BLOCKED_TICKS
-          ? // Stuck too long (e.g. corridor deadlock) — drop the path so the
-            // FSM re-routes around the obstruction next tick.
-            { ...mob, path: [], pathIndex: 0, nextCellCostLeft: undefined, blockedTicks: 0 }
-          : { ...mob, blockedTicks: bt };
-      changed = true;
-      continue;
-    }
-
-    if (!midCrossing) claimed.add(targetKey);
     const def = getCreatureById(mob.creatureId);
     const speed = def ? Math.max(0.5, def.stats.speed) : 1;
-    const moved = advanceAlongPath(mob, speed, state.worldMap);
-    next[i] = mob.blockedTicks ? { ...moved, blockedTicks: 0 } : moved;
-    if (next[i] !== mob) changed = true;
+    const res = stepBody(mob, occupancy, claimed, state.worldMap, speed);
+    next[i] = res.body;
+    if (res.body !== mob) changed = true;
   }
 
   return changed ? { ...state, mobs: next } : state;

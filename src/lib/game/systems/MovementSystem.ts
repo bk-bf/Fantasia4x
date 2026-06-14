@@ -13,7 +13,7 @@
  */
 
 import type { WorldTile } from '../core/types';
-import { TICKS_PER_SECOND } from '../core/time';
+import { TICKS_PER_SECOND, ticksFromSeconds } from '../core/time';
 
 // ── Shared interface ──────────────────────────────────────────────────────────
 
@@ -24,6 +24,26 @@ export interface Movable {
   path?: { x: number; y: number }[];
   pathIndex?: number;
   nextCellCostLeft?: number;
+}
+
+/** A body that runs through the shared per-tick move pass: a Movable with a stable id and the
+ *  blocked-ticks counter that drives the drop-and-reroute deadlock breaker. */
+export interface MovableBody extends Movable {
+  id: string;
+  blockedTicks?: number;
+}
+
+/** Ticks a body may wait behind a blocking body before dropping its path to re-route. The SINGLE
+ *  source for both the pawn and mob passes — when it lived in two places the passes drifted apart. */
+export const MAX_BLOCKED_TICKS = ticksFromSeconds(1.5);
+
+export type StepStatus = 'idle' | 'held' | 'dropped' | 'moved';
+
+export interface StepResult<T extends MovableBody> {
+  body: T;
+  status: StepStatus;
+  /** For 'moved': true when the path was fully consumed this step (the body arrived). */
+  done: boolean;
 }
 
 // ── Core helpers ──────────────────────────────────────────────────────────────
@@ -127,4 +147,72 @@ export function simTarget<T extends Movable>(
   const costLeft = entity.nextCellCostLeft ?? totalCost;
   const progress = Math.min(1, Math.max(0, 1 - costLeft / totalCost));
   return { x: entity.x + dx * progress, y: entity.y + dy * progress };
+}
+
+// ── Shared per-tick move pass (pawns + mobs) ──────────────────────────────────
+
+/**
+ * Pre-seed the claim set with the target tiles of bodies already mid-crossing. A mid-crosser
+ * committed to entering that tile on a prior tick and owns it, so a fresh mover can't claim it
+ * this tick (no two bodies converging on one tile). Call once per pass before {@link stepBody}.
+ */
+export function seedMidCrossClaims<T extends MovableBody>(
+  bodies: T[],
+  claimed: Set<string>,
+  isActive: (b: T) => boolean
+): void {
+  for (const b of bodies) {
+    if (!isActive(b) || !b.path?.length || b.nextCellCostLeft == null) continue;
+    const t = b.path[b.pathIndex ?? 0];
+    if (t) claimed.add(`${t.x},${t.y}`);
+  }
+}
+
+/**
+ * Advance ONE body one tick along its path under the shared movement rules, so pawns and mobs
+ * can't diverge (they used to — the hunt-yoyo regression and the duplicated hold logic; see MOVE-1):
+ *   • HOLD when the next tile is occupied by another body, or already claimed by a fresh mover this
+ *     tick — one body per tile, no phasing, no convergence;
+ *   • after MAX_BLOCKED_TICKS held, DROP the path (status `dropped`) so the caller's FSM re-routes
+ *     around the obstruction next tick — the deadlock breaker;
+ *   • otherwise spend `speed` budget via advanceAlongPath, which preserves mid-crossing progress.
+ *
+ * `occupancy` = every body's start-of-tick tile (build once per pass). `claimed` is MUTATED: a fresh
+ * mover adds its target; pre-seed it with {@link seedMidCrossClaims}. The body's own tile is never a
+ * blocker. Callers map any type-specific fields (pawn isMoving/hasReachedDestination) from the result.
+ */
+export function stepBody<T extends MovableBody>(
+  body: T,
+  occupancy: Set<string>,
+  claimed: Set<string>,
+  worldMap: WorldTile[][],
+  speed: number
+): StepResult<T> {
+  const target = body.path?.[body.pathIndex ?? 0];
+  if (!body.path || body.path.length === 0 || !target) {
+    return { body, status: 'idle', done: false };
+  }
+  const targetKey = `${target.x},${target.y}`;
+  const selfKey = `${body.x},${body.y}`;
+  const midCrossing = body.nextCellCostLeft != null;
+  const blocked =
+    (occupancy.has(targetKey) && targetKey !== selfKey) || (!midCrossing && claimed.has(targetKey));
+
+  if (blocked) {
+    const bt = (body.blockedTicks ?? 0) + 1;
+    if (bt > MAX_BLOCKED_TICKS) {
+      return {
+        body: { ...body, path: [], pathIndex: 0, nextCellCostLeft: undefined, blockedTicks: 0 },
+        status: 'dropped',
+        done: false
+      };
+    }
+    return { body: { ...body, blockedTicks: bt }, status: 'held', done: false };
+  }
+
+  if (!midCrossing) claimed.add(targetKey);
+  const moved = advanceAlongPath(body, Math.max(0.01, speed), worldMap);
+  const done = !moved.path || moved.path.length === 0;
+  const out = body.blockedTicks ? { ...moved, blockedTicks: 0 } : moved;
+  return { body: out, status: 'moved', done };
 }

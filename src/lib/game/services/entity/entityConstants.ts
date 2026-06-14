@@ -20,8 +20,7 @@ export const CORPSE_DECAY_TICKS = ticksFromSeconds(200); // corpse persists ~200
 /** How long a startled animal freezes in place before it bolts into Fleeing. */
 export const STARTLED_TICKS = ticksFromSeconds(1);
 export const SAFE_RESET_TICKS = ticksFromSeconds(15);
-/** Ticks a mob may wait behind a blocking body before dropping its path to re-route. */
-export const MAX_BLOCKED_TICKS = ticksFromSeconds(1.5);
+// MAX_BLOCKED_TICKS now lives in MovementSystem (shared by the pawn + mob passes, MOVE-1).
 export const FLEE_HEALTH_FRACTION = 0.2;
 
 // ── Stamina (flee/exhaust pool) ────────────────────────────────────────────────
