@@ -661,6 +661,18 @@ export function goIdle(pawn: Pawn, gs: GameState): GameState {
   return gs;
 }
 
+/**
+ * M2-core: apply `mutate` to one pawn (found by id) IN PLACE and return the SAME state ref — the
+ * mutable replacement for the `{...gs, pawns: gs.pawns.map(p => p.id===id ? {...p, …} : p)}` splice
+ * that allocated a whole pawns array (+ a pawn object) per single-pawn update. `mutate` receives the
+ * live array element; set its fields (nested too: `p.needs.hunger = …`). No-op if the id isn't found.
+ */
+export function mutatePawn(gs: GameState, id: string, mutate: (p: Pawn) => void): GameState {
+  const p = gs.pawns.find((x) => x.id === id);
+  if (p) mutate(p);
+  return gs;
+}
+
 // ── P0 perception pre-filter (ENGINE-PERFORMANCE §6 / ADR-018) ────────────────
 // findCombatThreat / findNearestHuntTarget each run once per pawn per tick, and each
 // used to scan ALL mobs — most of them neutral animals — re-deriving the predicate

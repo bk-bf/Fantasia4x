@@ -1,5 +1,7 @@
 /** pawn/handlers/needs — needs state handlers, extracted from PawnStateMachine (hotspot step 2). Each
- *  is a plain (pawn, gameState) => GameState function; the dispatcher wires them into the table. */
+ *  is a plain (pawn, gameState) => GameState function; the dispatcher wires them into the table.
+ *  M2-core (ENGINE-PERFORMANCE ★ ACTIVE): single-pawn updates go through `mutatePawn` (mutate the
+ *  live array element in place, no per-call `pawns.map` array allocation). Safe — see mutatePawn. */
 import type { GameState, Pawn } from '../../../core/types';
 import { gameLogger } from '../../../dev/gameLogger';
 import { perTick } from '../../../core/time';
@@ -23,6 +25,7 @@ import {
   SLEEP_WAKE_THRESHOLD_FED,
   transitionTo,
   goIdle,
+  mutatePawn,
   DRINK_NEED_RELIEF,
   WASH_NEED_RELIEF,
   DRINK_TURNS,
@@ -43,37 +46,25 @@ export function handleDrinking(pawn: Pawn, gameState: GameState): GameState {
   }
   const reliefPerTurn = DRINK_NEED_RELIEF / duration;
   const done = turnsInState >= duration;
-  return {
-    ...state,
-    pawns: state.pawns.map((p) =>
-      p.id === pawn.id
-        ? {
-            ...p,
-            // Gate the pawn at the water tile for the whole task — clear any residual path so a
-            // pawn that entered DRINKING while still moving (e.g. interrupted mid-job next to water)
-            // can't walk off before it finishes.
-            path: [],
-            isMoving: false,
-            needs: {
-              ...p.needs,
-              thirst: Math.max(0, (p.needs.thirst ?? 0) - reliefPerTurn),
-              lastDrink: state.turn
-            },
-            currentState: done ? PAWN_STATE.IDLE : PAWN_STATE.DRINKING,
-            activeJob: done
-              ? undefined
-              : {
-                  type: 'need' as const,
-                  targetX: p.position?.x ?? activeJob?.targetX ?? 0,
-                  targetY: p.position?.y ?? activeJob?.targetY ?? 0,
-                  progress: turnsInState / duration,
-                  timeRequired: duration,
-                  turnsInState
-                }
-          }
-        : p
-    )
-  };
+  return mutatePawn(state, pawn.id, (p) => {
+    // Gate the pawn at the water tile for the whole task — clear any residual path so a pawn that
+    // entered DRINKING while still moving can't walk off before it finishes.
+    p.path = [];
+    p.isMoving = false;
+    p.needs.thirst = Math.max(0, (p.needs.thirst ?? 0) - reliefPerTurn);
+    p.needs.lastDrink = state.turn;
+    p.currentState = done ? PAWN_STATE.IDLE : PAWN_STATE.DRINKING;
+    p.activeJob = done
+      ? undefined
+      : {
+          type: 'need' as const,
+          targetX: p.position?.x ?? activeJob?.targetX ?? 0,
+          targetY: p.position?.y ?? activeJob?.targetY ?? 0,
+          progress: turnsInState / duration,
+          timeRequired: duration,
+          turnsInState
+        };
+  });
 }
 
 /** §D: wash at the reached target over WASH_TURNS (not instant). Hygiene relief is spread evenly
@@ -84,35 +75,24 @@ export function handleWashing(pawn: Pawn, gameState: GameState): GameState {
   const duration = WASH_TURNS;
   const reliefPerTurn = WASH_NEED_RELIEF / duration;
   const done = turnsInState >= duration;
-  return {
-    ...gameState,
-    pawns: gameState.pawns.map((p) =>
-      p.id === pawn.id
-        ? {
-            ...p,
-            // Gate the pawn at the water tile for the whole task (see handleDrinking).
-            path: [],
-            isMoving: false,
-            needs: {
-              ...p.needs,
-              hygiene: Math.max(0, (p.needs.hygiene ?? 0) - reliefPerTurn),
-              lastWash: gameState.turn
-            },
-            currentState: done ? PAWN_STATE.IDLE : PAWN_STATE.WASHING,
-            activeJob: done
-              ? undefined
-              : {
-                  type: 'need' as const,
-                  targetX: p.position?.x ?? activeJob?.targetX ?? 0,
-                  targetY: p.position?.y ?? activeJob?.targetY ?? 0,
-                  progress: turnsInState / duration,
-                  timeRequired: duration,
-                  turnsInState
-                }
-          }
-        : p
-    )
-  };
+  return mutatePawn(gameState, pawn.id, (p) => {
+    // Gate the pawn at the water tile for the whole task (see handleDrinking).
+    p.path = [];
+    p.isMoving = false;
+    p.needs.hygiene = Math.max(0, (p.needs.hygiene ?? 0) - reliefPerTurn);
+    p.needs.lastWash = gameState.turn;
+    p.currentState = done ? PAWN_STATE.IDLE : PAWN_STATE.WASHING;
+    p.activeJob = done
+      ? undefined
+      : {
+          type: 'need' as const,
+          targetX: p.position?.x ?? activeJob?.targetX ?? 0,
+          targetY: p.position?.y ?? activeJob?.targetY ?? 0,
+          progress: turnsInState / duration,
+          timeRequired: duration,
+          turnsInState
+        };
+  });
 }
 
 export function handleHungry(pawn: Pawn, gameState: GameState): GameState {
@@ -131,54 +111,38 @@ export function handleHungry(pawn: Pawn, gameState: GameState): GameState {
     const afterPath = tryAssignPath(pawn, storageBuilding.x, storageBuilding.y, gameState);
     if (afterPath) {
       // Food is NOT consumed yet — it will be taken on arrival at the campfire.
-      return {
-        ...afterPath,
-        pawns: afterPath.pawns.map((p) =>
-          p.id === pawn.id
-            ? {
-                ...p,
-                currentState: PAWN_STATE.MOVING_TO_NEED,
-                activeJob: {
-                  type: 'need' as const,
-                  targetX: storageBuilding.x,
-                  targetY: storageBuilding.y,
-                  progress: 0,
-                  timeRequired: EATING_TURNS,
-                  turnsInState: 0,
-                  targetState: PAWN_STATE.EATING
-                }
-              }
-            : p
-        )
-      };
+      return mutatePawn(afterPath, pawn.id, (p) => {
+        p.currentState = PAWN_STATE.MOVING_TO_NEED;
+        p.activeJob = {
+          type: 'need' as const,
+          targetX: storageBuilding.x,
+          targetY: storageBuilding.y,
+          progress: 0,
+          timeRequired: EATING_TURNS,
+          turnsInState: 0,
+          targetState: PAWN_STATE.EATING
+        };
+      });
     }
   }
 
   // Eat in place: consume all selected food now, then sit and eat for EATING_TURNS_GROUND turns.
   // Clear any residual movement so the pawn is gated at this tile, not still walking while it eats.
   const { state: afterMeal, hungerRecovered } = consumeMeal(meal, gameState);
-  return {
-    ...afterMeal,
-    pawns: afterMeal.pawns.map((p) =>
-      p.id === pawn.id
-        ? {
-            ...p,
-            path: [],
-            isMoving: false,
-            currentState: PAWN_STATE.EATING,
-            activeJob: {
-              type: 'need' as const,
-              targetX: p.position?.x ?? 0,
-              targetY: p.position?.y ?? 0,
-              progress: 0,
-              timeRequired: EATING_TURNS_GROUND,
-              turnsInState: 0,
-              hungerToRecover: hungerRecovered
-            }
-          }
-        : p
-    )
-  };
+  return mutatePawn(afterMeal, pawn.id, (p) => {
+    p.path = [];
+    p.isMoving = false;
+    p.currentState = PAWN_STATE.EATING;
+    p.activeJob = {
+      type: 'need' as const,
+      targetX: p.position?.x ?? 0,
+      targetY: p.position?.y ?? 0,
+      progress: 0,
+      timeRequired: EATING_TURNS_GROUND,
+      turnsInState: 0,
+      hungerToRecover: hungerRecovered
+    };
+  });
 }
 
 export function handleTired(pawn: Pawn, gameState: GameState): GameState {
@@ -190,26 +154,18 @@ export function handleTired(pawn: Pawn, gameState: GameState): GameState {
     if (!atBed) {
       const afterPath = tryAssignSleepPath(pawn, restBuilding.x, restBuilding.y, gameState);
       if (afterPath) {
-        return {
-          ...afterPath,
-          pawns: afterPath.pawns.map((p) =>
-            p.id === pawn.id
-              ? {
-                  ...p,
-                  currentState: PAWN_STATE.MOVING_TO_NEED,
-                  activeJob: {
-                    type: 'need' as const,
-                    targetX: restBuilding.x,
-                    targetY: restBuilding.y,
-                    progress: 0,
-                    timeRequired: SLEEPING_TURNS,
-                    turnsInState: 0,
-                    targetState: PAWN_STATE.SLEEPING
-                  }
-                }
-              : p
-          )
-        };
+        return mutatePawn(afterPath, pawn.id, (p) => {
+          p.currentState = PAWN_STATE.MOVING_TO_NEED;
+          p.activeJob = {
+            type: 'need' as const,
+            targetX: restBuilding.x,
+            targetY: restBuilding.y,
+            progress: 0,
+            timeRequired: SLEEPING_TURNS,
+            turnsInState: 0,
+            targetState: PAWN_STATE.SLEEPING
+          };
+        });
       }
       // Bed unreachable this tick — hold in TIRED and retry next tick.
       // Exhaustion-collapse guard in tick() will force sleep at fatigue=100.
@@ -228,27 +184,19 @@ export function handleTired(pawn: Pawn, gameState: GameState): GameState {
   // the UI and handleSleeping can identify which bed the pawn is using.
   const sleepTargetX = restBuilding?.x ?? pawn.position?.x ?? 0;
   const sleepTargetY = restBuilding?.y ?? pawn.position?.y ?? 0;
-  return {
-    ...gameState,
-    pawns: gameState.pawns.map((p) =>
-      p.id === pawn.id
-        ? {
-            ...p,
-            currentState: PAWN_STATE.SLEEPING,
-            path: [],
-            isMoving: false,
-            activeJob: {
-              type: 'need' as const,
-              targetX: sleepTargetX,
-              targetY: sleepTargetY,
-              progress: 0,
-              timeRequired: SLEEPING_TURNS,
-              turnsInState: 0
-            }
-          }
-        : p
-    )
-  };
+  return mutatePawn(gameState, pawn.id, (p) => {
+    p.currentState = PAWN_STATE.SLEEPING;
+    p.path = [];
+    p.isMoving = false;
+    p.activeJob = {
+      type: 'need' as const,
+      targetX: sleepTargetX,
+      targetY: sleepTargetY,
+      progress: 0,
+      timeRequired: SLEEPING_TURNS,
+      turnsInState: 0
+    };
+  });
 }
 
 export function handleMovingToNeed(pawn: Pawn, gameState: GameState): GameState {
@@ -268,40 +216,24 @@ export function handleMovingToNeed(pawn: Pawn, gameState: GameState): GameState 
       const meal = selectFoodForMeal(pawn, gameState);
       if (meal.length === 0) return goIdle(pawn, gameState);
       const { state: afterMeal, hungerRecovered } = consumeMeal(meal, gameState);
-      return {
-        ...afterMeal,
-        pawns: afterMeal.pawns.map((p) =>
-          p.id === pawn.id
-            ? {
-                ...p,
-                currentState: PAWN_STATE.EATING,
-                hasReachedDestination: false,
-                activeJob: {
-                  ...activeJob,
-                  timeRequired: EATING_TURNS,
-                  turnsInState: 0,
-                  hungerToRecover: hungerRecovered
-                }
-              }
-            : p
-        )
-      };
+      return mutatePawn(afterMeal, pawn.id, (p) => {
+        p.currentState = PAWN_STATE.EATING;
+        p.hasReachedDestination = false;
+        p.activeJob = {
+          ...activeJob,
+          timeRequired: EATING_TURNS,
+          turnsInState: 0,
+          hungerToRecover: hungerRecovered
+        };
+      });
     }
-    return {
-      ...gameState,
-      pawns: gameState.pawns.map((p) =>
-        p.id === pawn.id
-          ? {
-              ...p,
-              currentState: targetState,
-              hasReachedDestination: false,
-              // Arrived — stop any residual movement so we don't sleepwalk past the tile.
-              path: [],
-              isMoving: false
-            }
-          : p
-      )
-    };
+    return mutatePawn(gameState, pawn.id, (p) => {
+      p.currentState = targetState;
+      p.hasReachedDestination = false;
+      // Arrived — stop any residual movement so we don't sleepwalk past the tile.
+      p.path = [];
+      p.isMoving = false;
+    });
   }
   return gameState;
 }
@@ -332,43 +264,27 @@ export function handleEating(pawn: Pawn, gameState: GameState): GameState {
   };
 
   if (turnsInState >= eatDuration) {
-    return {
-      ...gameState,
-      pawns: gameState.pawns.map((p) =>
-        p.id === pawn.id
-          ? {
-              ...p,
-              path: [],
-              isMoving: false,
-              needs: updatedNeeds,
-              state: updatedState,
-              currentState: PAWN_STATE.IDLE,
-              activeJob: undefined
-            }
-          : p
-      )
-    };
+    return mutatePawn(gameState, pawn.id, (p) => {
+      p.path = [];
+      p.isMoving = false;
+      p.needs = updatedNeeds;
+      p.state = updatedState;
+      p.currentState = PAWN_STATE.IDLE;
+      p.activeJob = undefined;
+    });
   }
 
-  return {
-    ...gameState,
-    pawns: gameState.pawns.map((p) =>
-      p.id === pawn.id
-        ? {
-            ...p,
-            // Gate the pawn in place while eating — a pawn that ate in place while still wandering
-            // (or otherwise entered EATING with a residual path) must not drift off mid-meal.
-            path: [],
-            isMoving: false,
-            needs: updatedNeeds,
-            state: updatedState,
-            activeJob: activeJob
-              ? { ...activeJob, turnsInState, progress: turnsInState / eatDuration }
-              : undefined
-          }
-        : p
-    )
-  };
+  return mutatePawn(gameState, pawn.id, (p) => {
+    // Gate the pawn in place while eating — a pawn that ate in place while still wandering
+    // (or otherwise entered EATING with a residual path) must not drift off mid-meal.
+    p.path = [];
+    p.isMoving = false;
+    p.needs = updatedNeeds;
+    p.state = updatedState;
+    p.activeJob = activeJob
+      ? { ...activeJob, turnsInState, progress: turnsInState / eatDuration }
+      : undefined;
+  });
 }
 
 export function handleSleeping(pawn: Pawn, gameState: GameState): GameState {
@@ -415,35 +331,19 @@ export function handleSleeping(pawn: Pawn, gameState: GameState): GameState {
   };
 
   if (shouldWake) {
-    return {
-      ...gameState,
-      pawns: gameState.pawns.map((p) =>
-        p.id === pawn.id
-          ? {
-              ...p,
-              needs: updatedNeeds,
-              state: updatedState,
-              currentState: PAWN_STATE.IDLE,
-              activeJob: undefined
-            }
-          : p
-      )
-    };
+    return mutatePawn(gameState, pawn.id, (p) => {
+      p.needs = updatedNeeds;
+      p.state = updatedState;
+      p.currentState = PAWN_STATE.IDLE;
+      p.activeJob = undefined;
+    });
   }
 
-  return {
-    ...gameState,
-    pawns: gameState.pawns.map((p) =>
-      p.id === pawn.id
-        ? {
-            ...p,
-            needs: updatedNeeds,
-            state: updatedState,
-            activeJob: activeJob
-              ? { ...activeJob, turnsInState, progress: turnsInState / sleepDuration }
-              : undefined
-          }
-        : p
-    )
-  };
+  return mutatePawn(gameState, pawn.id, (p) => {
+    p.needs = updatedNeeds;
+    p.state = updatedState;
+    p.activeJob = activeJob
+      ? { ...activeJob, turnsInState, progress: turnsInState / sleepDuration }
+      : undefined;
+  });
 }
