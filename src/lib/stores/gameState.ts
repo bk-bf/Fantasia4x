@@ -26,6 +26,7 @@ import { entityService } from '$lib/game/services/EntityService';
 import { loadSave, scheduleSave, deleteSave } from './saveManager';
 import { clearActivityLog } from './Log';
 import { applyDevWorld } from '$lib/game/dev/devWorld';
+import itemsData from '$lib/game/database/items.jsonc';
 import { TICKS_PER_SECOND, ticksFromSeconds } from '$lib/game/core/time';
 import { rng, freshSeed } from '$lib/game/core/rng';
 import { resetUnreachableJobs } from '$lib/game/systems/PawnStateMachine';
@@ -420,6 +421,16 @@ function addItem(itemId: string, amount: number) {
   updateWithSave((state) => addToStockpileZone(state, null, { [itemId]: amount }));
 }
 
+/** Dev timesaver: spawn `amount` of EVERY item in items.jsonc into the current colony's
+ *  stockpile as physical stored drops (ADR-016 path, so they're craftable/buildable) — no
+ *  world regen, no wipe. The engine syncs from the store next tick. */
+const ALL_ITEM_IDS = (itemsData as unknown as { id: string }[]).map((i) => i.id);
+function devSpawnAllItems(amount = 500) {
+  const bulk: Record<string, number> = {};
+  for (const id of ALL_ITEM_IDS) bulk[id] = amount;
+  updateWithSave((state) => addToStockpileZone(state, null, bulk));
+}
+
 function resetGame() {
   deleteSave().catch(console.error);
   clearActivityLog();
@@ -649,6 +660,7 @@ export const gameState = {
 
   // Game functions
   addItem,
+  devSpawnAllItems,
   consumeGlobalItem,
   resetGame,
   wipeAndReload,

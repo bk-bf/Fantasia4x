@@ -80,11 +80,14 @@
     const parsed = parseInt(mapSeedInput, 10);
     const s = !isNaN(parsed) && parsed > 0 ? parsed : Date.now() >>> 0;
     mapSeedInput = String(s);
-    gameState.regenWorld(s, devMode, devItemQty);
+    gameState.regenWorld(s);
   }
 
-  let devMode = false;
-  let devItemQty = 500;
+  // Dev timesaver: drop 500 of every item into the current stockpile (no regen/wipe).
+  const DEV_ITEM_QTY = 500;
+  function spawnAllItems() {
+    gameState.devSpawnAllItems(DEV_ITEM_QTY);
+  }
 
   const unsubPaused = gameState.isPaused.subscribe((v) => (isPaused = v));
   const unsubSpeed = gameState.gameSpeed.subscribe((v) => (gameSpeed = v));
@@ -174,20 +177,13 @@
       maxlength="12"
     />
     <button class="ctrl-btn" on:click={regenMap} title="Regenerate map">↺ MAP</button>
-    <label class="dev-toggle" title="Dev mode: places zones on map and pre-stocks all items">
-      <input type="checkbox" bind:checked={devMode} />
-      DEV
-    </label>
-    {#if devMode}
-      <input
-        class="seed-input dev-qty"
-        type="number"
-        bind:value={devItemQty}
-        min="1"
-        max="99999"
-        title="Items per stack in dev stockpile"
-      />
-    {/if}
+    <button
+      class="ctrl-btn"
+      on:click={spawnAllItems}
+      title="Dev: spawn 500× of every item into the stockpile (no regen)"
+    >
+      + ITEMS
+    </button>
   {/if}
   <button class="ctrl-btn" class:is-paused={isPaused} on:click={gameState.togglePause}>
     {isPaused ? '▶ RESUME' : '⏸ PAUSE'}
@@ -325,29 +321,6 @@
     border-color: var(--border-hi);
     color: var(--text);
   }
-  .dev-qty {
-    width: 46px;
-  }
-  .dev-toggle {
-    display: flex;
-    align-items: center;
-    gap: 3px;
-    color: var(--accent);
-    font-size: 9px;
-    cursor: pointer;
-    user-select: none;
-    padding: 0 3px;
-    border: 1px solid transparent;
-  }
-  .dev-toggle:has(input:checked) {
-    border-color: var(--accent);
-  }
-  .dev-toggle input {
-    accent-color: var(--accent);
-    cursor: pointer;
-    margin: 0;
-  }
-
   .speed-wrap {
     display: flex;
     gap: 1px;
