@@ -2657,32 +2657,32 @@
           )
         }));
 
-      // Equip: a tile holding equippable item(s) opens a menu to wear one onto the drafted pawn.
-      const equippable = droppedItems.filter((d) => {
-        if (d.x !== hoverTileX || d.y !== hoverTileY) return false;
-        const it = itemService.getItemById(d.resourceId);
-        return !!it && !!getEquipmentSlot(it);
-      });
-      if (equippable.length > 0) {
+      // Any item on the tile opens a menu (equip entries for gear + a Move option), so the menu
+      // never silently loses to a move order. Empty tile → move straight away.
+      const tileItems = droppedItems.filter(
+        (d) => d.x === hoverTileX && d.y === hoverTileY && d.quantity > 0
+      );
+      if (tileItems.length > 0) {
+        const equipEntries = tileItems
+          .map((d) => {
+            const it = itemService.getItemById(d.resourceId);
+            const slot = it ? getEquipmentSlot(it) : null;
+            if (!it || !slot) return null;
+            return {
+              label: `Equip ${itemService.getItemDisplayName(d)} → ${slotLabel(slot)}`,
+              run: () => gameState.equipItemFromTile(pawnId, d.id)
+            };
+          })
+          .filter((e): e is { label: string; run: () => void } => e !== null);
         equipMenu = {
           x: e.clientX,
           y: e.clientY,
-          entries: [
-            ...equippable.map((d) => {
-              const it = itemService.getItemById(d.resourceId)!;
-              const slot = getEquipmentSlot(it)!;
-              return {
-                label: `Equip ${itemService.getItemDisplayName(d)} → ${slotLabel(slot)}`,
-                run: () => gameState.equipItemFromTile(pawnId, d.id)
-              };
-            }),
-            { label: 'Move here', run: issueMove }
-          ]
+          entries: [...equipEntries, { label: 'Move here', run: issueMove }]
         };
         return;
       }
 
-      // Move to tile
+      // Empty tile — move straight away.
       issueMove();
       return;
     }
