@@ -833,7 +833,12 @@
         valueText: `${freshPct}%`
       });
     }
-    bars.push({ label: 'COND', value: durPct, color: itemBarColor(durPct), valueText: `${durPct}%` });
+    bars.push({
+      label: 'COND',
+      value: durPct,
+      color: itemBarColor(durPct),
+      valueText: `${durPct}%`
+    });
     return {
       name: `★ ${displayName}`,
       status: `×${d.quantity}`,
@@ -1311,6 +1316,12 @@
             }
           }
           points.push({ x: (tx - viewX + 0.5) * tW, y: (ty - viewY + 0.5) * tH });
+        } else if (pathIdx >= path.length) {
+          // Move order with no remaining path yet — e.g. issued while the game is PAUSED,
+          // before _processDraftOrders computes the route on a sim tick. Draw a straight line
+          // to the destination so the order is visible immediately; the real path replaces it
+          // once the sim advances. (NT-U4)
+          points.push({ x: (target.x - viewX + 0.5) * tW, y: (target.y - viewY + 0.5) * tH });
         }
         return { id: `draft-${p.id}`, points };
       })
