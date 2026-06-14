@@ -58,7 +58,10 @@
 <script lang="ts">
   import StatBar from './StatBar.svelte';
 
-  let { model }: { model: SelectedEntityModel } = $props();
+  // `embedded`: render as an in-flow flex item instead of self-anchoring to the canvas.
+  // Used when a parent (e.g. the building row, which also hosts the fuel-settings panel)
+  // already owns the absolute positioning and lays the card out in a flex row.
+  let { model, embedded = false }: { model: SelectedEntityModel; embedded?: boolean } = $props();
 
   // Bar colours when an EntityBar doesn't specify its own: red on warn, green otherwise.
   const BAR_WARN = '#ee8844';
@@ -77,6 +80,7 @@
      the absolute positioning so both columns stay anchored together. -->
 <div
   class="tile-hud-wrap"
+  class:tile-hud-wrap--embedded={embedded}
   onmousedown={(e) => {
     e.stopPropagation();
     if (!model.selected) model.onSelect?.();
@@ -171,6 +175,13 @@
     gap: 4px;
     pointer-events: auto;
     z-index: 5;
+  }
+  /* In-flow variant: the parent owns positioning (and sizes itself to this card, which a
+     sibling absolutely-positioned panel like fuel-settings depends on for its width). */
+  .tile-hud-wrap--embedded {
+    position: static;
+    bottom: auto;
+    left: auto;
   }
   .tile-hud {
     background: rgba(28, 16, 6, 0.92);

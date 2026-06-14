@@ -2788,7 +2788,7 @@
       on:mouseup|stopPropagation
     >
       {#if buildingCard}
-        <SelectedEntityCard model={buildingCard} />
+        <SelectedEntityCard model={buildingCard} embedded />
       {/if}
       {#if canConfigureFuel}
         <!-- svelte-ignore a11y_no_static_element_interactions -->
