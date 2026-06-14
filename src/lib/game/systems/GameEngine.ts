@@ -46,6 +46,8 @@ export interface GameEngine {
   /** Advance the sim by one tick (turn = 1 tick; the whole pipeline runs every tick). */
   processTick(): void;
   updateStores(): void;
+  /** P-2 single-writer entry point: apply a user-action command (updater) to canonical state. */
+  applyCommand(updater: (state: GameState) => GameState, save: boolean): void;
 
   // State management
   getGameState(): GameState;

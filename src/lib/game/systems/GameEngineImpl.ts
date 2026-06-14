@@ -8,7 +8,6 @@ import type { BuildingEffectResult } from './ModifierSystem';
 import type { GameState, EntityNeeds } from '../core/types';
 import { GameStateManager, reserveForOrder, releaseReservation } from '../core/GameState';
 import { gameState } from '$lib/stores/gameState';
-import { get } from 'svelte/store';
 import { modifierSystem } from './ModifierSystem';
 import { workService } from '../services/WorkService';
 import { itemService } from '../services/ItemService';
@@ -42,8 +41,9 @@ const AVAILABLE_BUILDINGS = buildingsData as unknown as import('../core/types').
  * TICKS_PER_SECOND (60); notifying every 4th tick pushes UI updates at ~15 Hz.
  * The WebGL renderer interpolates pawn motion every animation frame, so movement
  * stays smooth regardless. Between notifications the engine still refreshes the
- * store's held value each tick (via pushFromEngine), so `get(gameState)` is
- * always current and manual edits are never lost.
+ * store's held value each tick (via pushFromEngine), so `get(gameState)` reads a
+ * current projection. The engine — not the store — is the single writer of
+ * canonical state (P-2); user actions reach it as commands (see applyCommand).
  */
 const UI_PUSH_INTERVAL = Math.max(1, Math.round(TICKS_PER_SECOND / 15));
 
@@ -99,10 +99,9 @@ export class GameEngineImpl implements GameEngine {
   }
 
   getCraftableItems(): any[] {
-    // Always read from the live Svelte store so building/inventory changes are reflected immediately
-    const currentState = get(gameState);
-    if (!currentState) return [];
-    return itemService.getCraftableItems(currentState);
+    // Engine state is canonical and always current (P-2), so read it directly.
+    if (!this.gameState) return [];
+    return itemService.getCraftableItems(this.gameState);
   }
 
   craftItem(
@@ -110,10 +109,7 @@ export class GameEngineImpl implements GameEngine {
     quantity: number = 1,
     selectedIngredients?: Record<string, string>
   ): void {
-    // Sync from store first so we check against the current buildings/materials
-    const currentState = get(gameState);
-    if (!currentState) return;
-    this.gameState = { ...currentState };
+    if (!this.gameState) return;
     gatedConsole.log(`[GameEngine] Coordinating crafting: ${quantity}x ${itemId}`);
 
     const item = itemService.getItemById(itemId);
@@ -271,11 +267,11 @@ export class GameEngineImpl implements GameEngine {
     }
 
     try {
-      // Sync from Svelte store so user changes (work priorities, etc.) made between ticks are preserved
-      this.gameState = { ...get(gameState) };
-
-      // Increment the tick counter (gameState.turn counts ticks).
-      this.gameState.turn += 1;
+      // P-2: no store read-back. The engine owns canonical state; user actions already mutated
+      // it via applyCommand, so there is nothing to re-sync. Shallow-copy before bumping the
+      // counter so the object last committed to the store (same reference) is never mutated in
+      // place. (gameState.turn counts ticks.)
+      this.gameState = { ...this.gameState, turn: this.gameState.turn + 1 };
 
       // On-demand per-phase profiler. Zero cost unless toggled on at runtime
       // via `profileTurns()` in the dev console (sets globalThis.__profileTurns).
@@ -777,7 +773,23 @@ export class GameEngineImpl implements GameEngine {
 
   updateStores(): void {
     if (!this.gameState) return;
-    gameState.updateWithSave(() => this.gameState!);
+    // Engine is the single writer (P-2): commit canonical state to the store as a projection
+    // (notify + debounced save). Routing through updateWithSave would just bounce back here.
+    gameState.commitFromEngine(this.gameState, true);
+  }
+
+  /**
+   * P-2 single-writer entry point for user actions. A user action is a *command*: an updater
+   * applied to the engine's canonical state. The engine applies it, keeps the GameStateManager
+   * in sync, and commits the result to the store as a read-only projection (the store never
+   * mutates state itself). `save` mirrors the previous store split — updateWithSave passes
+   * true, update/set pass false (the next tick's throttled push persists them regardless).
+   */
+  applyCommand(updater: (state: GameState) => GameState, save: boolean): void {
+    if (!this.gameState) return;
+    this.gameState = updater(this.gameState);
+    this.gameStateManager?.updateState(this.gameState);
+    gameState.commitFromEngine(this.gameState, save);
   }
 
   /**
@@ -836,7 +848,9 @@ export class GameEngineImpl implements GameEngine {
 
   getGameState(): GameState {
     if (!this.gameState) throw new Error('GameState not initialized');
-    return JSON.parse(JSON.stringify(this.gameState));
+    // Engine state is treated as immutable (replaced wholesale each tick/command, never mutated
+    // in place), so a shallow copy is a safe snapshot — no need to deep-clone the 240×160 map.
+    return { ...this.gameState };
   }
 
   getCurrentState(): GameState {

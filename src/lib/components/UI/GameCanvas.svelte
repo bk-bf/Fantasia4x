@@ -2647,20 +2647,22 @@
         return;
       }
       const pawnId = selectedPawn.id;
+      // Capture the clicked tile NOW — `hoverTileX/Y` track the cursor and change (or reset to -1)
+      // the moment the cursor moves onto the menu, so a deferred "Move here" must use these snapshots.
+      const tileX = hoverTileX;
+      const tileY = hoverTileY;
       const issueMove = () =>
         gameState.updateWithSave((state) => ({
           ...state,
           pawns: state.pawns.map((p) =>
-            p.id === pawnId
-              ? { ...p, draftTarget: { type: 'move', x: hoverTileX, y: hoverTileY } }
-              : p
+            p.id === pawnId ? { ...p, draftTarget: { type: 'move', x: tileX, y: tileY } } : p
           )
         }));
 
       // Any item on the tile opens a menu (equip entries for gear + a Move option), so the menu
       // never silently loses to a move order. Empty tile → move straight away.
       const tileItems = droppedItems.filter(
-        (d) => d.x === hoverTileX && d.y === hoverTileY && d.quantity > 0
+        (d) => d.x === tileX && d.y === tileY && d.quantity > 0
       );
       if (tileItems.length > 0) {
         const equipEntries = tileItems

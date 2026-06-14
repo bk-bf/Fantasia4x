@@ -401,8 +401,9 @@ function regenWorld(seed?: number, dev = false, itemQty = 500) {
   resetUnreachableJobs();
   const newWorld = generateWorld(240, 160, s);
   resourceGeneratorService.generateResources(newWorld, s);
-  // Patch the engine's internal state FIRST so the next auto-turn
-  // doesn't overwrite the store back to the old worldMap.
+  // Set the engine's worldMap before seeding entities (resolveWorld reads it). The updateWithSave
+  // below routes through the engine (P-2 single writer) and sets worldMap again, so this is belt-
+  // and-braces — there is no longer a store read-back to race against.
   gameEngine.patchWorldMap(newWorld);
   if (dev) {
     updateWithSave((state) =>
@@ -552,11 +553,11 @@ export const storeReady = writable(false);
 // Create the main store starting with a fresh game. The actual save is loaded
 // asynchronously below.
 //
-// This is a custom store (not a plain `writable`) so the GameEngine can update
-// the held value on EVERY tick — keeping `get(gameState)` fresh so manual edits
-// are never lost — while only NOTIFYING subscribers at a throttled rate. Manual
-// edits made through `set`/`update`/`updateWithSave` notify subscribers
-// immediately, so user actions stay snappy.
+// This is a custom store (not a plain `writable`) so the GameEngine — the single writer of
+// canonical state (P-2) — can refresh the held value (setSilent) and choose when to NOTIFY.
+// The store value is a read-only projection of engine state: it holds the value and manages
+// subscribers but never derives new state itself. All mutations flow through the engine (see
+// `set`/`update`/`updateWithSave` below → gameEngine.applyCommand → commitFromEngine).
 function createGameStore(initial: GameState) {
   let value = initial;
   const subscribers = new Set<(v: GameState) => void>();
@@ -565,14 +566,6 @@ function createGameStore(initial: GameState) {
       subscribers.add(run);
       run(value);
       return () => subscribers.delete(run);
-    },
-    set(v: GameState) {
-      value = v;
-      subscribers.forEach((run) => run(value));
-    },
-    update(updater: (v: GameState) => GameState) {
-      value = updater(value);
-      subscribers.forEach((run) => run(value));
     },
     /** Update the held value WITHOUT notifying subscribers (engine hot path). */
     setSilent(v: GameState) {
@@ -586,21 +579,28 @@ function createGameStore(initial: GameState) {
 }
 
 const gameStore = createGameStore(initialGameState);
-const { subscribe, set, update } = gameStore;
+const { subscribe } = gameStore;
 
-// Create update function — schedules a debounced IndexedDB save on every mutation.
-const updateWithSave = (updater: (state: GameState) => GameState) => {
-  update((state) => {
-    const newState = updater(state);
-    scheduleSave(newState);
-    return newState;
-  });
+// P-2 single source of truth: the GameEngine is the only writer of canonical state. Every store
+// mutation is a *command* (an updater function) handed to the engine via applyCommand, which
+// applies it to its own state and commits the result back here through commitFromEngine. The
+// store value is purely a read-only projection. `set`/`update` don't schedule a save (the next
+// tick's throttled push persists them); `updateWithSave` does — matching previous behaviour.
+const set = (v: GameState) => gameEngine.applyCommand(() => v, false);
+const update = (updater: (v: GameState) => GameState) => gameEngine.applyCommand(updater, false);
+const updateWithSave = (updater: (state: GameState) => GameState) =>
+  gameEngine.applyCommand(updater, true);
+
+// Engine → store projection of a user command: refresh the held value, optionally schedule a
+// debounced save, then notify subscribers immediately so user actions stay snappy.
+const commitFromEngine = (state: GameState, save: boolean) => {
+  gameStore.setSilent(state);
+  if (save) scheduleSave(state);
+  gameStore.notify();
 };
 
-// Engine tick push: refresh the held value every tick (so `get()` stays current
-// and manual edits survive the read-modify-write loop) but only notify
-// subscribers when `flush` is true. Saves are still scheduled (debounced) each
-// tick exactly as before.
+// Engine tick push: refresh the held value every tick (so `get()` stays current) but only notify
+// subscribers when `flush` is true (throttled ~15 Hz). Saves are debounced each tick as before.
 const pushFromEngine = (state: GameState, flush: boolean) => {
   gameStore.setSilent(state);
   scheduleSave(state);
@@ -713,6 +713,7 @@ export const gameState = {
   update,
   updateWithSave,
   pushFromEngine,
+  commitFromEngine,
   isPaused: { subscribe: isPaused.subscribe },
   gameSpeed: { subscribe: gameSpeed.subscribe },
 
