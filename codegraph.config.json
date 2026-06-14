@@ -1,0 +1,46 @@
+{
+  "name": "Fantasia4x",
+  "tsconfig": "tsconfig.json",
+  "srcDir": "src/lib",
+  "svelteRoot": "src",
+  "rustCrates": ["spatial-core"],
+  "adrsDoc": ".docs/game/DECISIONS.md",
+  "descriptions": "codegraph.descriptions.json",
+  "godFunctions": 40,
+  "group": { "namespacePrefix": "game" },
+  "layers": {
+    "rust": 0, "core": 0, "utils": 0, "database": 0,
+    "webgl": 1, "entities": 1,
+    "ai": 2, "services": 2,
+    "world": 3, "systems": 3,
+    "stores": 4,
+    "components": 5, "routes": 5,
+    "dev": -1
+  },
+  "adrRules": [
+    {
+      "adr": "ADR-008",
+      "severity": "error",
+      "title": "Spatial logic only via the PathfinderService interface",
+      "type": "forbidden-callee-module",
+      "module": "game/services/WasmPathfinderService",
+      "msg": "calls WasmPathfinderService directly (use the PathfinderService interface)"
+    },
+    { "adr": "ADR-001", "checkable": false, "reason": "Layered singletons — layer direction is enforced by the `layers` rule; \"import the singleton, never new XImpl()\" needs new-expression analysis." },
+    { "adr": "ADR-002", "checkable": false, "reason": "GameStateManager-only mutation — needs field-assignment analysis, not call edges." },
+    { "adr": "ADR-003", "checkable": false, "reason": "All stat calcs via ModifierSystem — a semantic contract, not a structural edge." },
+    { "adr": "ADR-004", "checkable": false, "reason": "AI generation server-side only — a deployment/runtime boundary." },
+    { "adr": "ADR-005", "checkable": false, "reason": "LocalStorage persistence via store — runtime behaviour." },
+    { "adr": "ADR-006", "checkable": false, "reason": "Data files = definitions not logic — partly covered by the `layers` rule (core must not call services)." },
+    { "adr": "ADR-007", "checkable": false, "reason": "Tech-stack choice (SvelteKit + WebGL2) — not an invariant." },
+    { "adr": "ADR-009", "checkable": false, "reason": "Production-chain game design — content, not structure." },
+    { "adr": "ADR-010", "checkable": false, "reason": "Need-priority interruption formula — runtime behaviour." },
+    { "adr": "ADR-011", "checkable": false, "reason": "Gated hot-path logging — runtime behaviour." },
+    { "adr": "ADR-012", "checkable": false, "reason": "Combat wound model — game design." },
+    { "adr": "ADR-013", "checkable": false, "reason": "Deferred combat depth — game design." },
+    { "adr": "ADR-014", "checkable": false, "reason": "Tile occupancy via OccupancyService — bypass detection needs field-level analysis." },
+    { "adr": "ADR-015", "checkable": false, "reason": "Single work model — the superseded path was deleted; nothing to detect." },
+    { "adr": "ADR-016", "checkable": false, "reason": "Physical production (reserve-and-fetch) — runtime behaviour." },
+    { "adr": "ADR-017", "checkable": false, "reason": "Data-driven jobs (jobs.jsonc <-> Job[type] union <-> JobService handler registry) — a data-coverage invariant, not a call edge. Drift is enforced by jobRegistry.test.ts + compile-time JobPoolType guards." }
+  ]
+}
