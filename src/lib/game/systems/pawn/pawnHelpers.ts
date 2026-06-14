@@ -13,7 +13,8 @@ import { pawnStatService } from '../../services/PawnStatService';
 import { buildPathfindingGridsWithBlocked, pathfinderService } from '../../services/PathfinderService';
 import { occupancyService } from '../../services/OccupancyService';
 import { gameLogger } from '../../dev/gameLogger';
-import { ticksFromSeconds } from '../../core/time';
+import { ticksFromSeconds, SECONDS_PER_TICK } from '../../core/time';
+import { rng } from '../../core/rng';
 import { PAWN_STATE, type PawnStateName } from './pawnStates';
 import { isAdjacent, findAdjacentApproach, hasAvailableFood } from './pawnQueries';
 
@@ -201,6 +202,65 @@ export function repathStuckMover(pawn: Pawn, gameState: GameState): GameState | 
     };
   }
   return tryAssignPath(pawn, job.targetX, job.targetY, gameState) ?? 'unreachable';
+}
+
+/** Average idle wander-steps per second. Lower than the mob rate (1.0) — colonists mill
+ *  about rather than graze. The point is they don't stand frozen on a tile forever, which
+ *  also keeps idlers off build-site approach tiles (the construct deadlock). */
+const WANDER_MOVES_PER_SECOND = 0.4;
+
+/**
+ * Pick a random walkable, unoccupied neighbour of (x, y). Neighbours are tried in random
+ * order so a boxed-in pawn still finds its one exit. Diagonal steps are disallowed when both
+ * shared orthogonal tiles are blocked (mirrors the A* wall-cut rule). Null if hemmed in.
+ */
+function randomWalkableNeighbour(
+  gameState: GameState,
+  x: number,
+  y: number,
+  selfId: string
+): { x: number; y: number } | null {
+  const dirs = [
+    { dx: 0, dy: -1 },
+    { dx: 0, dy: 1 },
+    { dx: -1, dy: 0 },
+    { dx: 1, dy: 0 },
+    { dx: -1, dy: -1 },
+    { dx: 1, dy: -1 },
+    { dx: -1, dy: 1 },
+    { dx: 1, dy: 1 }
+  ];
+  for (let i = dirs.length - 1; i > 0; i--) {
+    const j = Math.floor(rng.random() * (i + 1));
+    [dirs[i], dirs[j]] = [dirs[j], dirs[i]];
+  }
+  const walkable = (nx: number, ny: number) => gameState.worldMap?.[ny]?.[nx]?.walkable === true;
+  for (const { dx, dy } of dirs) {
+    const nx = x + dx;
+    const ny = y + dy;
+    if (!walkable(nx, ny)) continue;
+    if (dx !== 0 && dy !== 0 && !walkable(x + dx, y) && !walkable(x, y + dy)) continue;
+    if (occupancyService.isBlocked(gameState, nx, ny, selfId)) continue;
+    return { x: nx, y: ny };
+  }
+  return null;
+}
+
+/**
+ * Idle wander: an idle pawn occasionally ambles one tile to a free neighbour instead of
+ * standing perfectly still. Probabilistic (~WANDER_MOVES_PER_SECOND/s) so it reads as natural
+ * milling, and — crucially — it stops idlers from permanently camping a build-site approach
+ * tile and starving the construct job (mirrors how mobs already behave). Returns the updated
+ * state if a step was taken, else null (caller stays put). The pawn keeps its IDLE state, so it
+ * still re-evaluates jobs every tick and grabs one the instant it appears.
+ */
+export function tryWanderStep(pawn: Pawn, gameState: GameState): GameState | null {
+  if (!pawn.position) return null;
+  if (pawn.isMoving && (pawn.path?.length ?? 0) > 0) return null; // already strolling
+  if (rng.random() >= WANDER_MOVES_PER_SECOND * SECONDS_PER_TICK) return null;
+  const tile = randomWalkableNeighbour(gameState, pawn.position.x, pawn.position.y, pawn.id);
+  if (!tile) return null;
+  return pawnService.assignPath(pawn.id, [tile], gameState);
 }
 
 /**

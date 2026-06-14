@@ -22,6 +22,7 @@ import {
   tryStartHunt,
   tryAssignPath,
   repathStuckMover,
+  tryWanderStep,
   checkNeedInterrupts,
   lightWorkMultiplier
 } from '../pawnHelpers';
@@ -181,7 +182,10 @@ export function handleIdle(pawn: Pawn, gameState: GameState): GameState {
   const hunt = tryStartHunt(pawn, gameState, job ?? null);
   if (hunt) return hunt;
 
-  if (!job) return gameState;
+  // Nothing to do right now — amble about rather than stand frozen. Keeps idlers from
+  // permanently camping a build-site approach tile (the construct deadlock) and reads as
+  // natural milling. Still IDLE, so a job appearing next tick is picked up immediately.
+  if (!job) return tryWanderStep(pawn, gameState) ?? gameState;
 
   let gs = jobService.claimJob(pawn.id, job.id, gameState);
 
