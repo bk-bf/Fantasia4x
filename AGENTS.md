@@ -24,7 +24,7 @@ Core data (src/lib/game/core/)         ← types, static databases, GameStateMan
 
 **Service singletons**: import `fooService`, never instantiate `FooServiceImpl` directly.
 
-**State immutability**: never assign to `GameState` fields. Use `GameStateManager` methods only (`addResource`, `updatePawn`, `updateState`…).
+**State immutability** (command/structural path): for player actions and structural changes, never assign to `GameState` fields — use `GameStateManager` methods only (`addResource`, `updatePawn`, `updateState`…). **Exception — hot per-tick sim phases mutate entity fields IN PLACE** (ADR-002 amendment, ENGINE-PERFORMANCE.md): the immutable spread/`.map()` style was the dominant tick cost (~12.5×), so `processNeedsTick`, the pawn FSM updaters (`transitionTo`/`goIdle`/`mutatePawn` in `pawn/handlers/*`), and `stepHunger` mutate in place — safe behind the per-tick top-level copy + the `?simworker` snapshot clone. **Don't revert these to immutable** (reinstates the tax).
 
 **Modifier system**: all stat/efficiency calculations go through `ModifierSystem`. Every result includes `sources[]`.
 

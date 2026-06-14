@@ -48,7 +48,7 @@ All game logic is testable in isolation. Components stay thin. Adding a new syst
 ### ADR-002 [GAME]: GameStateManager as Only Mutation Surface
 
 - **Date**: 2026-05-25
-- **Status**: Accepted
+- **Status**: Accepted — **amended 2026-06-15** (hot-path mutable-in-place exception; see below)
 
 #### Context
 
@@ -61,6 +61,25 @@ Direct field assignment to `GameState` objects produced hard-to-trace bugs and i
 #### Consequences
 
 State transitions are predictable and traceable. Enables future undo/redo or time-travel debugging.
+
+#### Amendment (2026-06-15) — hot per-tick phases mutate entity fields IN PLACE
+
+The immutable `{...spread}`/`.map()` style was measured (R1 benchmark) to be **the dominant
+per-tick simulation cost — ~12.5× the mutable equivalent** (ENGINE-PERFORMANCE.md). So the **hot
+per-tick phases** now **mutate entity fields in place** instead of rebuilding objects every tick:
+`pawnService.processNeedsTick`/`clearTemporaryPawnStates`, `workService.syncPawnWorkingStates`, the
+pawn FSM updaters (`transitionTo`/`goIdle`/`haltMovement` + the `mutatePawn` helper used across
+`pawn/handlers/{needs,work}.ts`), and `entity/entityLifecycle.stepHunger`.
+
+This is **safe and bounded** because: (1) `GameEngineImpl.processGameTurn` shallow-copies the
+top-level state each tick (turn bump), so ref-based reactivity still fires; (2) under `?simworker`
+the worker **structured-clones** the snapshot at the boundary, so the renderer/UI never see live
+mutable objects (no cross-thread aliasing); (3) the few in-tick before/after-diff spots capture an
+explicit copy. **Scope of the exception:** only the per-tick sim hot loops, behind the worker. The
+**command/structural path stays immutable through `GameStateManager`** (it's not hot, and immutability
+keeps it traceable). The undo/time-travel consequence above is therefore **forfeited for live entity
+state** (never used). **Do not "restore" immutability in the hot loops** — it reinstates the 12.5×
+tax. The full Rust-SoA alternative was evaluated and rejected (ENGINE-PERFORMANCE §9).
 
 ---
 

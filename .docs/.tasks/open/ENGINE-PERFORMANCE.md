@@ -1,4 +1,4 @@
-<!-- LOC cap: 400 (created: 2026-06-14, rewritten 2026-06-14 post-profiling; worker shipped 2026-06-14; Rust-SoA pivot 2026-06-14 then ABORTED after R1 2026-06-15 → mutable-in-place JS) -->
+<!-- LOC cap: 400 (created: 2026-06-14, rewritten 2026-06-14 post-profiling; worker shipped 2026-06-14; Rust-SoA pivot 2026-06-14 then ABORTED after R1 2026-06-15 → mutable-in-place JS; M1–M3 + throttle landed 2026-06-15, de-immutabling plateaued) -->
 
 # ENGINE PERFORMANCE & SCALING
 
@@ -8,9 +8,11 @@ Profiling-driven performance work, measured on the heavy `--profiler` sandbox (1
 ~140 mobs, 240×160 map, 4× speed; `.debug/perf.log`).
 
 > **Scale note.** `1000×1000` map + `200–500` entities was an aspirational **ceiling**, never a
-> committed goal. The real bar is ~50 pawns + a moderate mob count on the current map — and with the
-> render decouple + worker that runs **near 60 FPS / 60 TPS** today. The benchmark that chased the
-> ceiling (R1) is what told us the ceiling wasn't worth a rewrite (see ★ ACTIVE + §A + §9).
+> committed goal. The real bar is ~50 pawns + a moderate mob count, where the sim is trivially fast
+> (the per-entity tick at that scale is ~4–5 ms → 200+ TPS, 4× works). The heavy `--profiler` stress
+> case (150 pawns + ~140 mobs) is what these numbers track: it now runs **~70 FPS / ~44 TPS** (was
+> 2 fps / ~30 TPS at the start). The benchmark that chased the ceiling (R1) told us it wasn't worth a
+> rewrite (see ★ ACTIVE + §A + §9).
 
 > **This spec has been rewritten twice as the work changed direction.** Original premise — *"O(n²)
 > perception is the #1 cost"* — **FALSIFIED by the profiler** (§1). Then the sim ceiling looked like
@@ -30,9 +32,16 @@ Profiling-driven performance work, measured on the heavy `--profiler` sandbox (1
 - **Rust-SoA core: evaluated, spiked (R0/R1), then ABORTED (2026-06-15).** The R1 benchmark (§9)
   measured Rust-SoA at only **~1.2–1.4×** over plain *mutable* JS, and SoA-in-JS as **no win** over
   mutable objects at this scale. Not worth a two-language rewrite. Spike kept, parked (§A).
-- **ACTIVE lever: de-immutable the hot loops (mutable in place).** R1 showed the dominant tick cost
-  is the **immutable `{...spread}`/`.map()` pattern — 12.5× the mutable cost.** Reclaiming it stays
-  in JS, no Rust, no SoA. See ★ ACTIVE below.
+- **De-immutabling LANDED (M1–M3) + auto-defend throttle — now PLATEAUED.** Converting the hot
+  per-tick phases to mutate in place (needsTick, the whole pawns FSM hot path, mob needs) cut TOTAL
+  **28–38 ms → ~22 ms (calm), TPS 30 → ~44** — a real ~40% gain. But it has **plateaued**: the
+  remaining cost is *distributed compute* (`pawns` 6 + `entityStep` 5.3 + `combat` 2.5) plus the
+  `uiPush` snapshot clone (~3.3 ms), none of which mutation addresses. Combat-active scenes still
+  spike to ~34–38 ms (compute, not allocation). See ★ ACTIVE "Results".
+- **The findCombatThreat throttle was a near-non-win** (180 → ~80 calls/tick, but TPS unchanged — the
+  scan was cheap/cached all along; same lesson as `mobThreatSubsets`). Kept (harmless, right model).
+- **At 290 entities, 60 TPS likely needs the parked parallelism** (multicore/SoA, §A), not more
+  single-thread grinding. At the real ~50-pawn target the engine is already fine.
 - Decisions in ADR-021 (decouple). No ADR for a Rust core — it was aborted before locking in.
 
 ---
@@ -50,8 +59,9 @@ entity fields in place instead of rebuilding objects every tick.
   mutable JS; SoA-in-JS (0.0117) was *slower* than mutable OOP. So the lever is mutable-vs-immutable,
   not OOP-vs-SoA and not JS-vs-Rust. Full table in §9.
 - **Realistic gain (not a literal 12.5×):** only the allocation-heavy phases benefit (`needsTick`,
-  `pawns`, `entityStep`); `combat`/pathfinding allocate less. Expect TOTAL **~28–37 ms → ~12–18 ms**
-  → 60 TPS at 1× with headroom for higher speeds.
+  `pawns`, `entityStep`); `combat`/pathfinding allocate less. *Predicted* TOTAL ~28–37 ms → ~12–18 ms.
+  **Actual: ~28–38 → ~22 ms** (see Results) — less than predicted because the phases are **partly
+  compute-bound** (modifier/condition math, job search, A*), which mutation doesn't touch.
 - **The worker contains the blast radius.** Under `?simworker` the worker structured-**clones** state
   on the way out, so the renderer/UI only ever see copies — ref-based change detection + cross-thread
   aliasing hazards are mooted. Remaining risk is **internal to the tick**: a few before/after-diff
@@ -70,17 +80,43 @@ entity fields in place instead of rebuilding objects every tick.
 
 ### Plan (phased — convert ONE phase, measure `[PROF]`, then next)
 
-- [ ] **M1 — `needsTick` → mutable.** Self-contained (no before/after dependents). Mutate pawn/mob
-  need fields in place; bump an explicit dirty/version at the UI-push boundary. Re-PROF + tests.
-- [ ] **M2 — `pawns` (FSM + movement) → mutable in place.**
-- [ ] **M3 — `entityStep` (mob FSM) → mutable in place.**
-- [ ] **M4 — `combat` → mutable;** rewrite `preCombatState` / `handleFreshCombatCorpses` to capture
-  an explicit minimal snapshot instead of relying on an immutable prior reference.
-- [ ] **M5 — audit `GameStateManager` + tests** for immutability assumptions; convert remaining hot
-  allocators; gate the always-on worker `[PROF]`/`[SIM-TPS]` diagnostics back to opt-in.
+- [x] **M1 — `needsTick` → mutable.** `processNeedsTick` + `adjustThirst`/`adjustHygiene` mutate need
+  fields in place (the per-call full-array `.map` in the adjusters was O(n²)). `needsTick` 4–5.7 → ~3 ms.
+- [x] **M2 — `pawns` FSM hot path → mutable.** Shared updaters `transitionTo`/`goIdle`/`haltMovement`
+  + a reusable `mutatePawn(gs,id,fn)` helper; all 12 `needs.ts` + 9 `work.ts` single-pawn splices
+  converted. `pawns` 8–12 → ~6 ms. (Cold `pawnHauling` deposit splices left — they fire on deposit
+  *events*, not per-tick.) Movement (`processMovement` / shared `stepBody`) left — see M3 note.
+- [~] **M3 — mob phase → mutable (PARTIAL).** `stepHunger` (mob needs) mutates in place (deaths
+  captured explicitly for carcass drops; array realloc keeps the mob-subset memos valid).
+  **Deliberately stopped there:** `stepEntities` (mob FSM) uses *snapshot semantics* (every mob steps
+  against the start-of-tick array) — mutating it makes mobs react to mid-tick moves and risks the
+  hunt/flee yoyo bugs; and `advanceMobMovement` routes through `stepBody`, a primitive **shared with
+  pawn movement** (ADR-014). Both are compute-bound, not alloc-bound — skipped on purpose.
+- [~] **Auto-defend throttle (RimWorld-style staggered AI)** — non-combat pawns re-scan for threats
+  every 6 ticks (offset by `debugId`), not 60 Hz; in-combat pawns scan every tick. `findCombatThreat`
+  180 → ~80/tick. **Near-non-win on TPS** (the cached scan was cheap) — kept (harmless, right model).
+- [—] **M4 — `combat` → mutable: DROPPED.** Combat-active cost is *compute* (attack resolution,
+  wounds, A*), not allocation; de-immutabling buys ~1 ms for the `preCombatState`/`handleFreshCombatCorpses`
+  before/after-diff rewrite risk. Not worth it. (Re-open only if a profiler pass says otherwise.)
+- [x] **M5 — diagnostics gated.** Worker `[PROF]`/`[SIM-TPS]` now opt-in via `?simprof`
+  (`USE_SIM_PROFILE`), default OFF (no per-tick perf.log spam). `GameStateManager` audit: no further
+  hot allocators found worth converting.
 
-**Acceptance:** `[PROF]` TOTAL comfortably under 16.6 ms at the profiler scale (60 TPS at 1×);
-behaviour parity (tests green); no UI-staleness regressions under `?simworker`.
+### Results (2026-06-15)
+
+- **TOTAL 28–38 → ~22 ms (calm); TPS 30 → ~44; FPS → ~70.** Per-phase calm: `pawns` 6, `entityStep`
+  5.3, `uiPush` 3.3, `needsTick` 3, `combat` 2.5 — no single dominant phase remains.
+- **Combat-active scenes still spike to ~34–38 ms** — every phase rises (even mutable `needsTick`
+  3 → 5.4, via wound/condition modifier math). This is compute, not allocation → de-immutabling
+  can't reach it.
+- **Plateaued.** The alloc-bound phases are done. Remaining single-thread levers: `uiPush` snapshot
+  clone (~3.3 ms steady, ~2 ms recoverable via a slim/transferable snapshot — DECISION PENDING, may
+  not be felt) and RimWorld-style staggering of *other* 60 Hz per-pawn work (job re-selection,
+  modifier eval — caching candidates, unmeasured). Past that, 60 TPS at 290 entities needs the parked
+  multicore/SoA (§A); the real ~50-pawn target is already fine.
+
+**Acceptance (revised):** ~60 TPS at the *real* (~50-pawn) scale — met. At the 290-entity stress
+case, ~44 TPS single-thread is the measured ceiling without parallelism; not a release bar.
 
 ---
 
@@ -179,7 +215,7 @@ These were the main-thread band-aids. The worker cutover (§4) made both obsolet
 ### 4c · Known gaps (before flipping the worker default ON)
 
 - [ ] **Two request-response commands** — `createZoneInstance` + `gameCoordinator.craftItem` return a value, so they don't fit the fire-and-forget registry; **broken under `?simworker`** until a reply-id channel is added. This is why the cutover stays default-OFF.
-- [ ] **Slim `Float32Array` position channel** — the 15 Hz full-state clone is the dominant remaining main-thread cost / GC source. Only worth it if a profiler pass shows it's the next ceiling. (Was "R3" under the aborted plan; do in JS if needed.)
+- [ ] **Slim `Float32Array` / transferable snapshot** — the worker→main `structured-clone` (`uiPush` ~3.3 ms steady, concentrated on flush ticks) is now the **largest single remaining lever** (~2 ms recoverable). **DECISION PENDING** (★ ACTIVE Results): a protocol change for ~2 ms the user likely won't *feel* — do it only if pushing the stress case further is wanted.
 - [ ] **worldMap deltas** — re-sends the whole 38k-tile array on any tile change; send changed-tile deltas if active-harvesting bursts re-introduce hitching.
 
 ---
@@ -205,6 +241,8 @@ These were the main-thread band-aids. The worker cutover (§4) made both obsolet
 | Raise `MAX_STEPS_PER_BATCH` (worker) | **Rejected** | Off-thread it only lengthens the worker lock per catch-up batch; a wall-clock budget is the right knob (W5). |
 | **Rust-SoA simulation core (full port)** | **Rejected (R1, §9)** | Only ~1.2–1.4× over *mutable* JS — not worth a two-language rewrite. Spike parked (§A) for a possible partial port at far larger scale. |
 | **JS-SoA core (typed arrays, no Rust)** | **Rejected (R1)** | SoA showed *no* win over mutable OOP in JS at 500 entities (index math costs more than it saves until cache-bound). The lever is immutable→mutable, not layout. |
+| Throttle `findCombatThreat`/auto-defend | **Kept, ~non-win** | 180 → ~80 calls/tick but TPS unchanged — the scan uses a cached hostile subset (cheap). Harmless + the right model (RimWorld staggering), so kept; not the lever. |
+| **M4 — de-immutable `combat`** | **Dropped** | Combat-active cost is *compute* (attack resolution, wounds, A*), not allocation. ~1 ms for the `preCombatState`/`handleFreshCombatCorpses` before/after-diff rewrite risk — not worth it. |
 | Switch wrapper (Electron/Tauri) **for perf** | **Rejected** | Single-thread JS either way; decide wrapper on distribution grounds later. |
 | Fork Electron / embed SpiderMonkey | **Rejected** | Team-years for ~zero gain. |
 
