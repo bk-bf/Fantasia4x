@@ -3,7 +3,7 @@
 // functions (the class had no instance state but `idCounter`, so `this.` simply dropped away).
 import type { GameState, Mob, Pawn } from '../../core/types';
 import { getCreatureById, type CreatureDefinition } from '../../core/Creatures';
-import { SECONDS_PER_TICK, ticksFromSeconds } from '../../core/time';
+import { SECONDS_PER_TICK } from '../../core/time';
 import { stepBody, seedMidCrossClaims } from '../../systems/MovementSystem';
 import { resourceObjectService } from '../ResourceObjectService';
 import { wasmPathfinderService } from '../WasmPathfinderService';
@@ -228,32 +228,28 @@ export function fleeFromThreats(
   return { ...mob, path: [best], pathIndex: 0, nextCellCostLeft: undefined };
 }
 
-/** How often a fleeing mob recomputes its distant safe destination (between which it just follows
- *  the committed A* route — re-pathing every tick would yoyo and thrash the pathfinder). */
-const FLEE_REPATH_TICKS = ticksFromSeconds(1.5);
-
 /**
  * Flee to a DISTANT safe destination instead of greedily stepping away tile-by-tile (which
  * dead-ends prey in corners and then strands them). Projects a goal ~⅓ of the map away in the
  * direction that maximises the minimum distance to EVERY threat, snaps it to walkable ground, and
- * A*-paths there — committing to the whole run even if the route briefly passes nearer a threat to
- * get out of a pocket. The path is recomputed only when it runs out or every FLEE_REPATH_TICKS
- * (so threats are tracked without per-tick churn, and the in-progress crossing is preserved → no
- * render yoyo). Falls back to the local maximin step when no distant point is reachable (or the
- * pathfinder isn't ready), so a truly walled-in animal still does *something*.
+ * A*-paths there — then **commits to that whole run** (even if the route briefly passes nearer a
+ * threat to clear a pocket). The destination is recomputed ONLY when the route is used up or the
+ * mover dropped it after being blocked — NOT on a timer: re-picking the "safest direction" every
+ * couple of seconds made it flip as the threat moved (run south, then 1.5 s later run north) — a
+ * big-range yoyo instead of a committed escape. Falls back to the local maximin step when no distant
+ * point is reachable (or the pathfinder isn't ready), so a truly walled-in animal still reacts.
  */
 export function fleeToSafety(
   mob: Mob,
   threats: { x: number; y: number }[],
-  state: GameState,
-  turn: number
+  state: GameState
 ): Mob {
   if (threats.length === 0) return mob;
 
-  // Between re-paths, just keep following the committed route.
+  // Commit to the current run: only recompute once it's used up (or the mover dropped the path
+  // after being blocked too long — which also leaves it empty). Otherwise keep following it.
   const pathExhausted = !mob.path?.length || (mob.pathIndex ?? 0) >= mob.path.length;
-  const repathDue = pathExhausted || (turn - mob.stateSince) % FLEE_REPATH_TICKS === 0;
-  if (!repathDue) return mob;
+  if (!pathExhausted) return mob;
 
   const h = state.worldMap.length;
   const w = state.worldMap[0]?.length ?? 0;
