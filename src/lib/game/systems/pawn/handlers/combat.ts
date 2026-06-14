@@ -3,8 +3,14 @@
 import type { GameState, Pawn } from '../../../core/types';
 import { PAWN_STATE } from '../pawnStates';
 import {
-  findCombatThreat, haltMovement, transitionTo, tryAssignPath, tryAssignSleepPath, FLEE_DISTANCE,
-  endHunt, laborLevel
+  findCombatThreat,
+  haltMovement,
+  transitionTo,
+  tryAssignPath,
+  tryAssignSleepPath,
+  FLEE_DISTANCE,
+  endHunt,
+  laborLevel
 } from '../pawnHelpers';
 import { checkNeedInterrupts } from '../needSelection';
 
@@ -80,8 +86,7 @@ export function handleHunting(pawn: Pawn, gameState: GameState): GameState {
   // R9 / ADR-010: weigh need urgency against PROXIMITY rather than a flat threshold — the "job
   // distance" is the distance to the quarry, so a pawn about to corner its prey resists breaking
   // off for distant food/rest (and still bolts when a need is critical or food/rest is close).
-  const jobDist =
-    Math.abs(pawn.position.x - target.x) + Math.abs(pawn.position.y - target.y);
+  const jobDist = Math.abs(pawn.position.x - target.x) + Math.abs(pawn.position.y - target.y);
   const interrupted = checkNeedInterrupts(
     pawn,
     gameState,
@@ -133,4 +138,3 @@ export function handleHunting(pawn: Pawn, gameState: GameState): GameState {
   if (afterPath) return afterPath;
   return haltMovement(pawn, gameState); // unreachable this tick — hold; needs will free it
 }
-

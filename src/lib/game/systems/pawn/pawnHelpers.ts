@@ -10,7 +10,10 @@ import BUILDINGS_DATABASE_RAW from '../../database/buildings.jsonc';
 import { jobService } from '../../services/JobService';
 import { pawnService } from '../../services/PawnService';
 import { pawnStatService } from '../../services/PawnStatService';
-import { buildPathfindingGridsWithBlocked, pathfinderService } from '../../services/PathfinderService';
+import {
+  buildPathfindingGridsWithBlocked,
+  pathfinderService
+} from '../../services/PathfinderService';
 import { occupancyService } from '../../services/OccupancyService';
 import { gameLogger } from '../../dev/gameLogger';
 import { ticksFromSeconds, SECONDS_PER_TICK } from '../../core/time';
@@ -135,7 +138,12 @@ export function markJobUnreachable(pawnId: string, jobId: string, turn: number):
   m.set(jobId, turn + UNREACHABLE_COOLDOWN_TICKS);
 }
 
-export function tryAssignPath(pawn: Pawn, tx: number, ty: number, gameState: GameState): GameState | null {
+export function tryAssignPath(
+  pawn: Pawn,
+  tx: number,
+  ty: number,
+  gameState: GameState
+): GameState | null {
   if (!pawn.position) return null;
   if (!pathfinderService.isReady()) return null;
   if (isAdjacent(pawn.position.x, pawn.position.y, tx, ty)) return null;
@@ -186,7 +194,10 @@ export function tryAssignPath(pawn: Pawn, tx: number, ty: number, gameState: Gam
  *   • 'unreachable' — no route exists right now; caller should give up its own way
  *                     (release the job / deposit in place / go idle).
  */
-export function repathStuckMover(pawn: Pawn, gameState: GameState): GameState | 'unreachable' | null {
+export function repathStuckMover(
+  pawn: Pawn,
+  gameState: GameState
+): GameState | 'unreachable' | null {
   const job = pawn.activeJob;
   if (!job || !pawn.position) return null;
   // Only the dropped-path case: in a move state but neither moving nor arrived.
@@ -303,7 +314,13 @@ export function tryAssignSleepPath(
 // Building type lists — module-level for use in helpers
 export const CAMPFIRE_TYPES = ['campfire'];
 
-export const REST_TYPES = ['lean_to_shelter', 'woodland_shelter', 'stone_hut', 'sleeping_spot', 'hay_bed'];
+export const REST_TYPES = [
+  'lean_to_shelter',
+  'woodland_shelter',
+  'stone_hut',
+  'sleeping_spot',
+  'hay_bed'
+];
 
 /** Phase 6: find the nearest complete storage building (campfire etc.) to a pawn. */
 export function findNearestStorageBuilding(
@@ -699,8 +716,6 @@ export function endHunt(pawn: Pawn, state: PawnStateName, gs: GameState): GameSt
   };
 }
 
-
-
 // §D water-need routing thresholds (higher than the opportunistic auto-drink/wash at 70/75, so a
 // pawn only abandons work to seek water when it's getting urgent) and relief amounts.
 export const ROUTE_TO_DRINK_THIRST = 82;
@@ -779,8 +794,3 @@ export function tryRouteToWaterNeed(
     )
   };
 }
-
-
-
-
-

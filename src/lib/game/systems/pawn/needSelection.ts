@@ -76,7 +76,11 @@ export function selectInterruptNeed(
   const hunger = pawn.needs?.hunger ?? 0;
   if (hunger >= HUNGER_THRESHOLD && hasAvailableFood(gameState)) {
     const minQueueFood = computeMinQueueFoodDist(queue, pawn, gameState);
-    const hungerThreshold = computeAdjustedNeedThreshold(HUNGER_THRESHOLD, laborLevel, minQueueFood);
+    const hungerThreshold = computeAdjustedNeedThreshold(
+      HUNGER_THRESHOLD,
+      laborLevel,
+      minQueueFood
+    );
     const foodDist = distToNearestFoodSource(pawn, gameState);
     const willInterrupt = shouldInterruptForNeed(hunger, hungerThreshold, foodDist, jobDist);
     gameLogger.log(
