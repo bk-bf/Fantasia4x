@@ -1,4 +1,4 @@
-<!-- LOC cap: 400 (created: 2026-06-14, rewritten 2026-06-14 post-profiling) -->
+<!-- LOC cap: 400 (created: 2026-06-14, rewritten 2026-06-14 post-profiling; worker shipped 2026-06-14) -->
 
 # ENGINE PERFORMANCE & SCALING
 
@@ -19,10 +19,15 @@ Profiling-driven performance work, measured on the heavy `--profiler` sandbox (1
 
 ## 0 · Status
 
-- **FPS 2 → 8–10** (identical at 1× and 4×) via render/sim bug-fixes + a sim↔render decouple cap.
-- Two tradeoffs are currently in place (`MAX_STEPS` cap, terrain throttle — §3); the **Web Worker
-  (§4) is the next work and removes them**.
+- **FPS 2 → 8–10** on the main-thread path (render/sim bug-fixes + a sim↔render decouple cap), then
+  **→ 35–80** with the **sim moved to a Web Worker** (§4, W0–W5 **shipped**, flag-gated `?simworker`).
+- The two main-thread tradeoffs (§3) are **removed under the worker**: the render-thread `MAX_STEPS`
+  cap is bypassed (sim no longer on the render thread), and the terrain throttle is superseded by a
+  worker-computed `_terrainRev` signal (rebuild only on a real, visible terrain change).
+- `[RENDER-PROF]` confirms **`sim 0.0` on the render thread** under the worker — the decouple holds.
 - Bugs filed in [game/BUGS.md](../../game/BUGS.md); decisions in ADR-021 (+ corrected ADR-018/020).
+- **Still flag-gated** (`?simworker` / `localStorage.simworker=1`), default OFF: two request-response
+  commands aren't wired through the worker yet (§4 "Known gaps"). Flip the default after those land.
 
 ---
 
@@ -46,31 +51,48 @@ Profiling-driven performance work, measured on the heavy `--profiler` sandbox (1
 
 ---
 
-## 3 · Tradeoffs currently in place (NOT free — the Worker removes them)
+## 3 · Tradeoffs that were in place (the Worker REMOVED them)
 
-- [x] **`MAX_STEPS_PER_FRAME` cap → traded TPS.** A slow frame ran 16 heavy ticks (self-perpetuating; bound identically at 1× and 4×, which is why changing speed did nothing). Capping to 4 makes render smooth but the sim runs **slower than realtime at high game-speed** (drops backlog). The Worker lets us raise this back up.
-- [x] **Terrain rebuild throttle → traded latency + smoothness.** Terrain visuals lag ≤500 ms and a ~90 ms rebuild still **hitches ~2/sec** (the `terrain 30–40 ms` *average* and the `overlay ~12 ms` `buildGameGrid` scan on flush frames). Cost moved off most frames, not removed. A proper fix (designations off the static terrain layer / incremental upload) is deferred (§5).
+These were the main-thread band-aids. The worker cutover (§4) made both obsolete:
+
+- [x] **`MAX_STEPS_PER_FRAME` cap → traded TPS.** A slow frame ran 16 heavy ticks (self-perpetuating; bound identically at 1× and 4×, which is why changing speed did nothing). Capping to 4 made render smooth but the sim ran **slower than realtime at high game-speed**. **Resolved:** under the worker `stepSimulation` is a no-op on the render thread — the render-thread cap no longer exists. The worker has its own wall-clock batch budget instead (W5).
+- [x] **Terrain rebuild throttle → traded latency + smoothness.** Terrain visuals lagged ≤500 ms and a ~90 ms rebuild still **hitched ~2/sec**. **Resolved (worker):** the worker computes `_terrainRev` (a revision bumped only when the visible terrain set actually changes) so the renderer rebuilds the 38k-tile terrain only on a real change, not on clone-induced per-snapshot ref churn. (A further "designations off the static layer / incremental upload" polish remains in §5, but the freeze-frame storm is gone.)
 
 ---
 
-## 4 · Decouple endgame — sim → Web Worker (THE NEXT WORK)
+## 4 · Decouple endgame — sim → Web Worker (SHIPPED, flag-gated)
 
-**Why:** the sim and render share one thread (the rAF loop runs `stepSimulation` then renders). That coupling is the root: any heavy sim starves render, and the `MAX_STEPS` cap is the band-aid. Moving the sim to a Worker makes render run at the display rate **regardless** of sim cost, and lets the sim run full speed off-thread → restores TPS **and** smooth FPS at once. Wrapper-agnostic (works in browser, Tauri, Electron).
+**Why:** the sim and render shared one thread (the rAF loop ran `stepSimulation` then rendered). That coupling was the root: any heavy sim starved render, and the `MAX_STEPS` cap was the band-aid. Moving the sim to a Worker makes render run at the display rate **regardless** of sim cost, and lets the sim run off-thread → smooth FPS **and** best-effort TPS at once. Wrapper-agnostic (browser, Tauri, Electron).
 
-**Plan (gated; each step shippable):**
+**Plan (each step shipped):**
 
-- [ ] **W0 — message protocol + worker scaffold.** A `sim.worker.ts` that owns `GameEngineImpl` + services + `GameStateManager`. Define the message contract: main→worker `{cmd}` (start/stop/setSpeed/pause/player-commands), worker→main per-tick snapshot.
-- [ ] **W1 — WASM in the worker.** `WasmPathfinderService` must init inside the worker (it's `browser`-gated, not window-gated; verify it loads in a Worker context). Spatial core moves with the sim.
-- [ ] **W2 — state snapshot to the render thread.** Publish the minimal render set each tick (pawn/mob positions + glyphs + the bits the overlay/HUD read), not the whole `GameState`. Start with structured-clone of a slim snapshot; move hot position data to a `Float32Array` (transferable/SAB) if clone cost shows up.
-- [ ] **W3 — player commands main→worker.** Designations, builds, draft orders, work settings, speed/pause routed as messages; the worker is the single owner of `GameState`.
-- [ ] **W4 — save/load through the worker** (it owns state now); reconcile with `saveManager`/localStorage.
-- [ ] **W5 — raise `MAX_STEPS` back up / run sim on its own clock** in the worker; render interpolates from snapshots (the renderer already interpolates sub-tile positions — half-built for this).
+- [x] **W0 — message protocol + sink decouple.** `sim.worker.ts` owns `GameEngineImpl` + services + `GameStateManager`. Engine output decoupled via injected `outputSink`/`commitSink` (engine no longer imports the store). Protocol in `simProtocol.ts`.
+- [x] **W1 — WASM in the worker.** `WasmPathfinderService` inits inside the worker. Verified with the `verifyWasmInWorker()` console check (`✅ WASM initialised IN the worker`). **Gotcha:** `$app/environment`'s `browser` can't bundle into a worker (Rollup can't resolve `__sveltekit/environment`) → replaced with worker-safe `core/runtime.ts` `isClientRuntime`. Also needed Vite `worker: { format: 'es', … }` — IIFE workers can't code-split the WASM dynamic import.
+- [x] **W2 — state snapshot → store projection.** Worker posts a full-ish snapshot (worldMap omitted unless its ref changed — it's the 38k-tile big part); `simWorkerClient` caches worldMap and reattaches it, then drives the store projection. (Slim `Float32Array` position channel deferred — see "Known gaps".)
+- [x] **W3 — player commands main→worker.** ~30 commands converted to a **serializable registry** (`sim/commands.ts`, named `(state,payload)=>state` — closures can't cross the worker boundary), dispatched via `gameState.command()`. Guarded by `jobRegistry.test.ts`.
+- [x] **W4 — save/load through the worker + cutover.** Worker owns state; `requestSave` posts the full state back to `saveManager`. Boot handoff in `gameState.ts` (`simWorkerBridge.start()` → `init`). Flag-gated cutover (`USE_SIM_WORKER`).
+- [x] **W5 — wall-clock batch budget (NOT a raised tick cap).** The sim already runs on its own clock (worker `setInterval` + accumulator) and the renderer already interpolates sub-tile positions, so the only open piece was the catch-up cap. A fixed `MAX_STEPS_PER_BATCH` turned out to be the **wrong knob off-thread** (see post-mortem below) → replaced with an **8 ms wall-clock budget per batch**: run ticks until the budget is spent, yield (snapshots keep flowing), drop backlog beyond budget (best-effort speed). Light load drains fully → true 4×; heavy load degrades to smooth-but-slower (compute-bound on one core: 4×·150-pawn ≈ 2.9 s work/s real — unachievable by **any** cap). `MAX_STEPS_PER_BATCH` kept only as a 120-tick hard safety.
 
-**Acceptance:**
+**Acceptance — met:**
 
-- [ ] Render holds ~display-rate FPS while the sim runs heavy (no main-thread sim time in `[RENDER-PROF]`).
-- [ ] TPS recovers toward target at 1× (no longer capped by `MAX_STEPS`).
-- [ ] Save/load, player commands, and combat/needs behaviour unchanged (218+ tests green).
+- [x] Render holds display-rate FPS while the sim runs heavy — `[RENDER-PROF]` shows **`sim 0.0`** on the render thread.
+- [x] TPS no longer capped by a render-thread `MAX_STEPS`; sim runs best-effort off-thread (1× keeps up; high speeds are compute-bound, by physics not by the cap).
+- [x] Save/load, player commands, combat/needs unchanged — **218 tests green**, build ✓.
+
+### 4b · Worker-mode smoothness post-mortem (what worked / what didn't)
+
+After cutover (FPS 35–63) the user reported **"waves" / freeze frames** — pawns *and overlay animations* hitching periodically. That last detail was the key tell and drove the fix order:
+
+- [~] **Publish full snapshot EVERY tick (not just on flush)** — *tried, REVERTED (`a24685c`→`22290e8`).* Hypothesis was that 15 Hz position pushes looked chunky, so post per-tick. It **regressed FPS to 7**: structured-cloning ~290 entities **50×/s** overwhelmed the main thread's deserialize. **Wrong diagnosis** — and disproved by the user's own clue: *overlay animations* freezing means the **render thread itself blocks** (those run on the render loop's own clock, independent of sim positions), so the freeze was never about position freshness. Restored flush-only (~15 Hz) publishing.
+- [x] **`_terrainRev` — worker-computed terrain revision** (`a24685c`, kept). structured-clone hands the main thread **new refs every snapshot**, defeating its ref-based "did terrain change?" check → the 90 ms terrain rebuild fired every snapshot = the freeze storm (`🎯 GameGrid initialized` log spam ~2/s). The worker computes a revision bumped only on real change; the renderer rebuilds terrain only when it bumps. **~50 % of the freezes gone.**
+- [x] **`_terrainRev` must EXCLUDE fuel/lit churn** (`1d52954`, the residual fix). First cut compared the raw `buildings` ref — but a **lit campfire decrements fuel every tick → a fresh `buildings` array every tick** → `_terrainRev` bumped constantly → terrain rebuilt ~2/s for an *invisible* change. Profiler proof: `[RENDER-PROF]` `terrain` field spiking **4 ms → 15 ms** during the slow frames. Fixed by comparing a **fuel/lit-excluding visual signature** (mirrors `GameCanvas.buildingsVisualSig`; inlined in the worker since `overlay.ts` pulls webgl/DOM, not worker-safe). **Freezes resolved** (user-confirmed).
+- [~] **Raise `MAX_STEPS_PER_BATCH`** (the spec's original W5 wording) — *evaluated, rejected as written.* Off-thread it doesn't help render FPS (already decoupled); a higher count just makes a catch-up batch **lock the worker longer** (30 ticks × ~12 ms = 360 ms with no snapshots). Replaced by the wall-clock budget above.
+
+### 4c · Known gaps (before flipping the default ON)
+
+- [ ] **Two request-response commands not wired through the worker** — `createZoneInstance` and `gameCoordinator.craftItem` return a value to the caller, so they don't fit the fire-and-forget serializable-command registry. They are **broken under `?simworker`** until a request-response channel (postMessage with a reply id) is added. This is why the cutover stays flag-gated by default.
+- [ ] **Slim `Float32Array` position channel (W2 stretch)** — snapshots still structured-clone the full-ish `GameState` at 15 Hz, which is the dominant main-thread cost remaining and a GC source. Moving hot pawn/mob positions to a transferable `Float32Array` (and posting the heavy panel state less often) would cut clone/GC further. Only worth it if a profiler pass shows the 15 Hz clone is the next ceiling.
+- [ ] **worldMap deltas** — when a tile changes (harvest/regrowth) the worker re-sends the whole 38k-tile `worldMap`. Currently fine (only on real change), but if active-harvesting bursts re-introduce hitching, send changed-tile deltas instead of the full array.
 
 ---
 
@@ -95,12 +117,14 @@ Profiling-driven performance work, measured on the heavy `--profiler` sandbox (1
 | Per-pair-per-tick LoS | **Rejected** | O(n²×ray-len); only viable gated by persistence, which is itself deferred. |
 | Switch wrapper (Electron/Tauri) **for perf** | **Rejected** | Single-thread JS either way; V8 ≈1.5–2× constant factor, not structural. Decide wrapper on distribution grounds later. |
 | Fork Electron / embed SpiderMonkey | **Rejected** | Team-years / two-engine maintenance for ~zero gain. |
+| Publish full snapshot every tick (worker) | **Reverted** | Cloning ~290 entities 50×/s crashed FPS to 7; the freeze it targeted was render-thread blocking (terrain), not position-update rate. Flush-only (15 Hz) restored. |
+| Raise `MAX_STEPS_PER_BATCH` (worker) | **Rejected** | Off-thread it only lengthens worker lock per catch-up batch (no snapshots); a wall-clock budget is the right knob (W5). |
 
 ---
 
 ## 7 · ADRs & status
 
-- [x] ADR-021 — Sim/render decouple: soft-body pathfinding (amends ADR-014), terrain VBO/cache, `MAX_STEPS` cap, sim→Worker. **The accepted perf direction.**
+- [x] ADR-021 — Sim/render decouple: soft-body pathfinding (amends ADR-014), terrain VBO/cache, sim→Worker (W0–W5 shipped, flag-gated), `_terrainRev` change-signal, wall-clock batch budget. **The accepted perf direction.**
 - [x] ADR-018 — **corrected**: its "perception is the #1 perf cost" premise was falsified; persistence/push retained as a deferred AI-correctness feature (§5), not a perf measure.
 - [x] ADR-019 (LoS) / ADR-020 (scaling ladder) — updated to point at the real findings + the Worker.
 - [ ] Re-measure on the shipped engine (WebKitGTK / V8) at the DISTRIBUTION milestone — Firefox numbers don't transfer.

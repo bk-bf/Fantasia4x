@@ -7,6 +7,36 @@ Tracks confirmed bugs, root causes, and fix status. Add new entries at the top.
 
 ---
 
+## [FIXED] Worker-mode freeze frames — terrain rebuilt on clone ref-churn + fuel churn (perf)
+
+**Symptom:** After the sim→Worker cutover (FPS 35–63) the map hitched periodically — "waves" /
+freeze frames affecting pawn movement **and overlay animations**. `[RENDER-PROF]` showed the
+`terrain` field spiking **4 ms → 15 ms** during the slow frames; `🎯 GameGrid initialized` log spam
+~2/sec.
+
+**Root cause (two compounding):** (1) The worker sends snapshots via `postMessage`, and
+structured-clone hands the main thread **brand-new object refs every snapshot** — defeating
+GameCanvas's ref-based "did terrain change?" check, so the 90 ms terrain rebuild fired on *every*
+snapshot. (2) Even after adding a worker-computed `_terrainRev` revision, the first cut compared the
+raw `buildings` ref — but a **lit campfire decrements fuel every tick → a fresh `buildings` array
+every tick** → `_terrainRev` bumped constantly → terrain still rebuilt ~2/sec for an *invisible*
+change. (The "overlay animations freeze too" detail was the key tell: those run on the render loop's
+own clock, so their freezing proved the **render thread itself was blocking** — a rebuild — not a
+sim position-update-rate issue.)
+
+**A misfix on the way (reverted):** the first attempt published the full snapshot **every tick**
+instead of on flush, on the wrong theory that 15 Hz position pushes looked chunky. Cloning ~290
+entities **50×/sec** crashed FPS to **7** (`a24685c` → reverted in `22290e8`). Flush-only (~15 Hz)
+restored.
+
+**Fix:** the worker computes `_terrainRev`, bumped only when the **visible** terrain set changes —
+comparing a **fuel/lit-excluding building signature** (mirrors `GameCanvas.buildingsVisualSig`;
+inlined in the worker since `overlay.ts` pulls webgl/DOM and isn't worker-safe), plus worldMap /
+designations / zoneTiles refs. The renderer rebuilds the 38k-tile terrain only when `_terrainRev`
+bumps. **Freezes resolved** (user-confirmed). Commits `22290e8` (revert), `1d52954` (fuel-excluding
+sig). Full context + post-mortem in
+[.tasks/open/ENGINE-PERFORMANCE.md §4b](../.tasks/open/ENGINE-PERFORMANCE.md).
+
 ## [FIXED] Pathfinding body-block flood — A* re-flooded the map every tick (perf)
 
 **Symptom:** In a busy colony the sim crawled (~2 fps). The `pawns` phase was ~94 ms/tick;
