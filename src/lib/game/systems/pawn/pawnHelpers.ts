@@ -777,9 +777,16 @@ export function tryRouteToWaterNeed(
   const target = findNearestWaterTarget(pawn, gameState, kind);
   if (!target || !pawn.position) return null;
   const targetState = kind === 'drink' ? PAWN_STATE.DRINKING : PAWN_STATE.WASHING;
-  // Already there → don't move, just do it next turn.
+  // Already there → start the task in place. Clear any in-progress movement (the pawn may have been
+  // wandering or mid-job when interrupted next to water) so it's gated at this tile, not still walking.
   if (isAdjacent(pawn.position.x, pawn.position.y, target.x, target.y)) {
-    return transitionTo(pawn, targetState, gameState);
+    const gs = transitionTo(pawn, targetState, gameState);
+    return {
+      ...gs,
+      pawns: gs.pawns.map((p) =>
+        p.id === pawn.id ? { ...p, path: [], isMoving: false, nextCellCostLeft: undefined } : p
+      )
+    };
   }
   const afterPath = tryAssignPath(pawn, target.x, target.y, gameState);
   if (!afterPath) return null;

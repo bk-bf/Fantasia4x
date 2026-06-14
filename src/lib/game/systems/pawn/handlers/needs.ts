@@ -49,6 +49,11 @@ export function handleDrinking(pawn: Pawn, gameState: GameState): GameState {
       p.id === pawn.id
         ? {
             ...p,
+            // Gate the pawn at the water tile for the whole task — clear any residual path so a
+            // pawn that entered DRINKING while still moving (e.g. interrupted mid-job next to water)
+            // can't walk off before it finishes.
+            path: [],
+            isMoving: false,
             needs: {
               ...p.needs,
               thirst: Math.max(0, (p.needs.thirst ?? 0) - reliefPerTurn),
@@ -85,6 +90,9 @@ export function handleWashing(pawn: Pawn, gameState: GameState): GameState {
       p.id === pawn.id
         ? {
             ...p,
+            // Gate the pawn at the water tile for the whole task (see handleDrinking).
+            path: [],
+            isMoving: false,
             needs: {
               ...p.needs,
               hygiene: Math.max(0, (p.needs.hygiene ?? 0) - reliefPerTurn),
