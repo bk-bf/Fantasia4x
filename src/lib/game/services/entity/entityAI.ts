@@ -14,7 +14,7 @@ import {
   dist,
   adjacent,
   moveToward,
-  moveAway,
+  fleeFromThreats,
   wanderStep,
   nearestPredatorThreat,
   findNearestPrey,
@@ -499,9 +499,13 @@ export function stepHostile(
       if (drainedStamina <= 0) {
         return { ...mob, state: 'Exhausted', stateSince: turn, stamina: 0, path: [] };
       }
-      // Always move away whenever the threat is still within flee range.
-      const fleeTarget = pawnDist <= predDist ? nearest : predThreat;
-      if (fleeTarget) return { ...moveAway(mob, fleeTarget.pos, state), stamina: drainedStamina };
+      // Flee the gap between every in-range threat (not just the nearest — that ping-pongs when
+      // boxed between two). Maximin over the threat set; commits to a heading instead of reversing.
+      const fleeThreats: { x: number; y: number }[] = [];
+      if (nearest && pawnDist <= def.stats.fleeRange) fleeThreats.push(nearest.pos);
+      if (predThreat && predDist <= def.stats.fleeRange) fleeThreats.push(predThreat.pos);
+      if (fleeThreats.length > 0)
+        return { ...fleeFromThreats(mob, fleeThreats, state), stamina: drainedStamina };
       return { ...wanderStep(mob, def, state), stamina: drainedStamina };
     }
     case 'Exhausted': {
@@ -685,16 +689,18 @@ export function stepAnimal(
         // not chronicle-worthy — logging it floods the log.
         return { ...mob, state: 'Exhausted', stateSince: turn, stamina: 0 };
       }
-      // Flee from the closest current threat (pawn or predator).
-      const pawnDist = nearest ? dist(mob, nearest.pos) : Infinity;
-      const predDist = predatorThreat ? dist(mob, predatorThreat.pos) : Infinity;
-      const closestDist = Math.min(pawnDist, predDist);
-      // Flee until the threat is beyond this creature's defined flee range.
-      if (closestDist > def.stats.fleeRange) {
+      // Flee the GAP between EVERY in-range threat (pawn + predator), not just the closest —
+      // backing off only the nearest ping-pongs when the prey is boxed between two threats.
+      const fleeThreats: { x: number; y: number }[] = [];
+      if (nearest && dist(mob, nearest.pos) <= def.stats.fleeRange) fleeThreats.push(nearest.pos);
+      if (predatorThreat && dist(mob, predatorThreat.pos) <= def.stats.fleeRange)
+        fleeThreats.push(predatorThreat.pos);
+      // No threat left in range, OR boxed in past the safety timeout (can't escape — stop
+      // thrashing and re-evaluate) → drop back to Grazing.
+      if (fleeThreats.length === 0 || turn - mob.stateSince > SAFE_RESET_TICKS) {
         return { ...mob, state: 'Grazing', stateSince: turn, path: [], stamina: drainedStamina };
       }
-      const fleeFrom = pawnDist <= predDist ? nearest!.pos : predatorThreat!.pos;
-      return { ...moveAway(mob, fleeFrom, state), stamina: drainedStamina };
+      return { ...fleeFromThreats(mob, fleeThreats, state), stamina: drainedStamina };
     }
     case 'Exhausted': {
       // Regenerate stamina while resting; resume normal behaviour when recovered.

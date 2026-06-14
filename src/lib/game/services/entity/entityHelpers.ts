@@ -171,6 +171,64 @@ export function moveAway(mob: Mob, threat: { x: number; y: number }, state: Game
 }
 
 /**
+ * Flee from MULTIPLE threats at once. Picks the walkable, unoccupied neighbour that maximises the
+ * MINIMUM (Chebyshev, matching `dist`) distance to every threat — so prey boxed between two threats
+ * slips along the gap (perpendicular to the threat line) and commits to it, instead of greedily
+ * backing away from whichever threat is nearest THIS tick (which ping-pongs between two tiles, the
+ * cornered-flee bug). Never steps to a tile that brings the closest threat nearer than standing
+ * still does; holds in place when truly cornered (no thrashing). Keeps the current flee heading on a
+ * tie so the direction can't reverse each tick — and preserves the in-progress crossing (no yoyo).
+ */
+export function fleeFromThreats(
+  mob: Mob,
+  threats: { x: number; y: number }[],
+  state: GameState
+): Mob {
+  if (threats.length === 0) return mob;
+  const minThreatDist = (x: number, y: number) =>
+    threats.reduce((m, t) => Math.min(m, Math.max(Math.abs(t.x - x), Math.abs(t.y - y))), Infinity);
+
+  const stayScore = minThreatDist(mob.x, mob.y);
+  const heading = mob.path?.[mob.pathIndex ?? 0];
+  let best: { x: number; y: number } | null = null;
+  let bestScore = -Infinity;
+  let bestIsHeading = false;
+
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      if (dx === 0 && dy === 0) continue;
+      const nx = mob.x + dx;
+      const ny = mob.y + dy;
+      if (!isWalkable(state, nx, ny)) continue;
+      // Diagonal wall-cut prevention (mirrors A*): a diagonal needs a shared orthogonal opening.
+      if (
+        dx !== 0 &&
+        dy !== 0 &&
+        !isWalkable(state, mob.x + dx, mob.y) &&
+        !isWalkable(state, mob.x, mob.y + dy)
+      )
+        continue;
+      if (occupancyService.isBlocked(state, nx, ny, mob.id)) continue;
+      const score = minThreatDist(nx, ny);
+      const isHeading = !!heading && heading.x === nx && heading.y === ny;
+      // Strictly better wins; on a tie the current heading wins so we commit (don't reverse).
+      if (score > bestScore || (score === bestScore && isHeading && !bestIsHeading)) {
+        best = { x: nx, y: ny };
+        bestScore = score;
+        bestIsHeading = isHeading;
+      }
+    }
+  }
+
+  // Cornered — no open neighbour keeps the closest threat at least as far as holding still. Stand
+  // fast instead of ping-ponging into a worse tile (give-up/timeout handles a persistent box-in).
+  if (!best || bestScore < stayScore) return { ...mob, path: [] };
+  // Already committed to this heading — keep going (don't reset the crossing → no render snap).
+  if (heading && heading.x === best.x && heading.y === best.y) return mob;
+  return { ...mob, path: [best], pathIndex: 0, nextCellCostLeft: undefined };
+}
+
+/**
  * Nearest walkable tile adjacent to `target` (excluding target itself), ranked
  * by Manhattan distance from `from`. Used so hunters path to a tile beside their
  * prey rather than onto the prey's occupied tile.
