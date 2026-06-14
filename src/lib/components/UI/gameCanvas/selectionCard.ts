@@ -136,7 +136,11 @@ export function buildPawnCard(
           }`
         }
       : { text: '→ Idle', idle: true },
-    progressBar: pawn.activeJob ? jobProgressBar(pawn.activeJob.progress ?? 0) : undefined,
+    // Sleeping has no task to "complete" (it's need-driven), so don't show a progress bar for it.
+    progressBar:
+      pawn.activeJob && pawn.currentState !== 'Sleeping'
+        ? jobProgressBar(pawn.activeJob.progress ?? 0)
+        : undefined,
     pos: selected ? (pawn.position ?? undefined) : undefined,
     buttons: selected
       ? ([

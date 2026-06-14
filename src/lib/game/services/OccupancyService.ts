@@ -18,6 +18,7 @@
  */
 
 import type { GameState } from '../core/types';
+import { profCount } from '../core/log';
 
 export interface OccupancyService {
   /** Set of "x,y" keys for every body except `excludeId`. */
@@ -28,6 +29,7 @@ export interface OccupancyService {
 
 class OccupancyServiceImpl implements OccupancyService {
   blockedTiles(state: GameState, excludeId?: string): Set<string> {
+    profCount('blockedTiles'); // P-5: dev profiler tallies how often this full scan rebuilds per tick
     const occupied = new Set<string>();
     for (const p of state.pawns) {
       if (p.id === excludeId || !p.position || p.isAlive === false) continue;

@@ -62,3 +62,17 @@ export const gatedConsole = {
 if (typeof globalThis !== 'undefined') {
   (globalThis as Record<string, unknown>).gameDebug = setGameDebug;
 }
+
+/**
+ * Dev profiler: tally a hot-path call by `label`. Zero work unless the turn profiler is active
+ * (`profileTurns()` in the dev console sets `globalThis.__profileTurns`). Counts accumulate into
+ * `globalThis.__profCounts` and are dumped + reset once per second alongside the per-phase `[PROF]`
+ * timings in GameEngineImpl — so a profiling run shows BOTH phase ms and how often the suspect
+ * per-tick scans actually fire (P-5). No-op (one boolean read) in normal play.
+ */
+export function profCount(label: string): void {
+  const g = globalThis as Record<string, unknown>;
+  if (!g.__profileTurns) return;
+  const counts = (g.__profCounts ??= {}) as Record<string, number>;
+  counts[label] = (counts[label] ?? 0) + 1;
+}
