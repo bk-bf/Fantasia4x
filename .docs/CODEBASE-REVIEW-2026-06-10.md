@@ -93,17 +93,19 @@ PT-2/3/4, and the full PawnStateMachine decomposition — is in the
   tiles (or compute lazily in the work handler from ambient + nearby emitters). Found 2026-06-14 while
   generalising building light. Small-ish; mostly deciding where to compute it without scanning the
   whole 240×160 map per tick.
-- [x] **FLEE-1 · Cornered-flee ping-pong (greedy single-threat avoidance).** Done 2026-06-14. Prey
-  boxed between two threats (e.g. mountain goat #10 between pawns NE and a predator SW) stuck in
-  `Fleeing`, ping-ponging between two tiles because `moveAway` backed off the **single closest** threat
-  each tick (which flips side to side). **Fix:** new `entityHelpers.fleeFromThreats(mob, threats, state)`
-  — maximin over the threat set (pick the walkable neighbour that maximises the MIN Chebyshev distance
-  to every in-range threat): one threat → flee straight away; boxed between two → slip perpendicular
-  through the gap and commit via a same-step/heading tie-break (no reversal, crossing preserved); no
-  improving neighbour → hold (stand fast, no thrash). Both `Fleeing` cases (`stepAnimal` + `stepHostile`)
-  gather nearest pawn + nearest predator within `fleeRange` and call it; the animal case gained the
-  `SAFE_RESET_TICKS` give-up the hostile already had. Diagnostics: `logFleeTrigger` → `ENTITY-FLEE`
-  lines. Tests in `entity/fleeFromThreats.test.ts`. Full write-up in `game/BUGS.md` ([FIXED]).
+- [x] **FLEE-1 · Cornered-flee ping-pong / stuck-in-corner.** Done 2026-06-14. Prey boxed between two
+  threats stuck in `Fleeing` — first as a ping-pong (greedy `moveAway` backing off the single closest
+  threat, which flips side to side), then (after a local-maximin first attempt) dead-ending in a corner
+  and freezing. **Fix:** flee to a **distant destination via A\***, not greedy local steps. New
+  `entityHelpers.fleeToSafety(mob, threats, state, turn)` projects a goal ~⅓ map away in the direction
+  maximising the MIN distance to every threat, snaps to walkable ground, and A\*-paths there —
+  committing to the run even if it briefly passes nearer a threat to clear a pocket; re-paths only when
+  exhausted or every `FLEE_REPATH_TICKS` (≈1.5 s), preserving `nextCellCostLeft` (no yoyo). Falls back
+  to local maximin `fleeFromThreats` when no distant point is reachable / pathfinder not ready. Both
+  `Fleeing` cases (`stepAnimal` + `stepHostile`) gather nearest pawn + predator within `fleeRange` and
+  call it; the animal case gained the `SAFE_RESET_TICKS` give-up the hostile already had. Diagnostics:
+  `logFleeTrigger` → `ENTITY-FLEE` lines. Tests in `entity/fleeFromThreats.test.ts`. Write-up in
+  `game/BUGS.md` ([FIXED]).
 - [x] **MOVE-1 · Duplicated per-tick move pass (pawns vs mobs) → shared `stepBody`.** Done
   2026-06-14. The per-tick driver was copy-pasted between `PawnService.processMovement` and
   `entity/entityHelpers.advanceMobMovement` (~80% identical: occupancy hold, `blockedTicks`

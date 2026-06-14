@@ -38,15 +38,22 @@ from the **single closest** threat each tick; when the closest flipped side to s
 flipped too → the greedy per-tick step oscillated instead of committing to an escape (a *pathing*
 weakness, not an FSM one). The animal flee also had no give-up timeout (the hostile flee did).
 
-**Fix** (`src/lib/game/services/entity/`):
-- New `entityHelpers.fleeFromThreats(mob, threats[], state)`: picks the walkable, unoccupied neighbour
-  that maximises the **minimum** (Chebyshev) distance to **every** in-range threat (maximin). With one
-  threat it flees straight away; boxed between two it slips **perpendicular** (through the gap) and —
-  via a same-step/heading tie-break — commits to that direction instead of reversing each tick (which
-  also preserves the in-progress crossing, so no render snap). When no neighbour keeps the closest
-  threat as far as standing still, it **holds** (stands fast) rather than thrash into a worse tile.
-- Both `Fleeing` cases (`stepAnimal` + `stepHostile`) now gather every threat within `fleeRange`
-  (nearest pawn + nearest predator) and call `fleeFromThreats`; the animal case gained the
+**Fix** (`src/lib/game/services/entity/`): flee to a **distant destination via A\***, not greedy
+local steps — local maximin still dead-ended prey in corners and then stranded them (a first attempt;
+kept only as a fallback).
+- New `entityHelpers.fleeToSafety(mob, threats[], state, turn)`: projects a goal ~⅓ of the map away in
+  the direction that maximises the **minimum** distance to every threat, snaps it to walkable ground,
+  and **A\*-paths there** — committing to the whole run even if the route briefly passes *nearer* a
+  threat to escape a pocket (the prey disregards local proximity to reach the far safe point). The
+  route is recomputed only when exhausted or every `FLEE_REPATH_TICKS` (≈1.5 s) — so threats are
+  tracked without per-tick churn, and `nextCellCostLeft` is preserved across the re-path (no render
+  yoyo). The 8 headings are ranked by safety and tried in order, so a corner-escape falls through to a
+  less-safe-but-reachable heading.
+- Fallback: when no distant point is reachable (or the pathfinder isn't ready),
+  `fleeFromThreats(mob, threats, state)` takes one local maximin step (or holds), so a truly walled-in
+  animal still reacts.
+- Both `Fleeing` cases (`stepAnimal` + `stepHostile`) gather every threat within `fleeRange`
+  (nearest pawn + nearest predator) and call `fleeToSafety`; the animal case gained the
   `SAFE_RESET_TICKS` give-up the hostile case already had, so a persistently boxed-in prey drops back
   to `Grazing` to re-evaluate instead of fleeing forever. Tests in `entity/fleeFromThreats.test.ts`.
 - Diagnostics: `entityAI.logFleeTrigger` emits `ENTITY-FLEE` lines (→ `.debug/entities.log`) at each
