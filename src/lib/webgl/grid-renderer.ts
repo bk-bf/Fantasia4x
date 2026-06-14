@@ -69,10 +69,20 @@ export class GridRenderer {
   private fontAtlas: FontAtlas;
   private debug: boolean;
 
-  // Grid rendering VAO/VBO for batch rendering
+  // Grid rendering VAO/VBO for batch rendering. The OVERLAY (dynamic, changes every frame)
+  // uses this pair and re-uploads each frame.
   private gridVAO: WebGLVertexArrayObject | null = null;
   private gridVBO: WebGLBuffer | null = null;
   private currentVertexCount: number = 0;
+
+  // Dedicated TERRAIN VAO/VBO. The terrain layer is static (changes only on cacheVersion bump),
+  // so it gets its OWN buffer and is uploaded ONLY when its vertex data reference changes — not
+  // every frame. Previously terrain shared gridVBO with the overlay, which clobbered it each
+  // frame and forced a full ~21MB re-upload of the 38k-tile buffer every frame (~90ms).
+  private terrainVAO: WebGLVertexArrayObject | null = null;
+  private terrainVBO: WebGLBuffer | null = null;
+  private terrainUploaded: Float32Array | null = null; // last data uploaded to terrainVBO
+  private terrainVertexCount: number = 0;
 
   // Cached vertex buffer for the static terrain layer (see GridRenderOptions.cacheVersion).
   private terrainCache: {
@@ -142,10 +152,16 @@ export class GridRenderer {
       );
     }
 
-    // Render tiles in batches
+    // Render tiles in batches. The cached terrain layer (cacheVersion set) draws from its own
+    // persistent VBO and only re-uploads when its data reference changes; the dynamic overlay
+    // (no cacheVersion) re-uploads every frame as before.
     if (visibleTiles.length > 0) {
       const vertexData = this.getVertexData(grid, visibleTiles, options);
-      this.uploadAndDraw(vertexData);
+      if (options.cacheVersion !== undefined) {
+        this.uploadAndDrawTerrain(vertexData);
+      } else {
+        this.uploadAndDraw(vertexData);
+      }
     } else {
       this.currentVertexCount = 0;
     }
@@ -246,6 +262,41 @@ export class GridRenderer {
 
     if (this.debug) {
       checkWebGLError(gl, 'grid batch rendering');
+    }
+  }
+
+  /**
+   * Draw the static terrain layer from its dedicated VBO. Re-uploads ONLY when `vertexData` is a
+   * different array than last time (i.e. the terrain cache was rebuilt) — otherwise it just binds
+   * and draws the buffer already on the GPU, skipping the ~21MB/frame upload that dominated
+   * renderCPU. `vertexData` is the terrainCache's stable reference, so identity == unchanged.
+   */
+  private uploadAndDrawTerrain(vertexData: Float32Array): void {
+    if (!this.terrainVAO || !this.terrainVBO) {
+      console.error('❌ Terrain rendering resources not initialized');
+      return;
+    }
+    if (vertexData.length === 0) return;
+    const gl = this.gl;
+
+    if (vertexData !== this.terrainUploaded) {
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.terrainVBO);
+      gl.bufferData(gl.ARRAY_BUFFER, vertexData, gl.STATIC_DRAW);
+      this.terrainUploaded = vertexData;
+      this.terrainVertexCount = vertexData.length / 23; // 23 components per vertex
+    }
+
+    if (!this.shaderManager.useProgram('tileRenderer')) {
+      console.error('❌ Failed to use tile renderer shader');
+      return;
+    }
+    gl.bindVertexArray(this.terrainVAO);
+    gl.drawArrays(gl.TRIANGLES, 0, this.terrainVertexCount);
+    gl.bindVertexArray(null);
+
+    this.currentVertexCount = this.terrainVertexCount;
+    if (this.debug) {
+      checkWebGLError(gl, 'terrain batch rendering');
     }
   }
 
@@ -543,91 +594,49 @@ export class GridRenderer {
   private initializeGridRendering(): void {
     const gl = this.gl;
 
-    // Create VAO for grid rendering
+    // Overlay (dynamic) pair.
     this.gridVAO = gl.createVertexArray();
-    if (!this.gridVAO) {
-      throw new Error('Failed to create grid VAO');
-    }
-
-    // Create VBO for grid vertices
     this.gridVBO = gl.createBuffer();
-    if (!this.gridVBO) {
-      throw new Error('Failed to create grid VBO');
-    }
+    if (!this.gridVAO || !this.gridVBO) throw new Error('Failed to create grid VAO/VBO');
+    this.setupGridAttribs(this.gridVAO, this.gridVBO);
 
-    // Set up vertex attributes (same layout as character renderer)
-    gl.bindVertexArray(this.gridVAO);
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.gridVBO);
-
-    const stride = 23 * 4; // 23 floats per vertex, 4 bytes per float
-
-    // Position attribute (a_position)
-    const positionLocation = this.shaderManager.getAttributeLocation('tileRenderer', 'a_position');
-    if (positionLocation >= 0) {
-      gl.enableVertexAttribArray(positionLocation);
-      gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, stride, 0);
-    }
-
-    // Texture coordinate attribute (a_texCoord)
-    const texCoordLocation = this.shaderManager.getAttributeLocation('tileRenderer', 'a_texCoord');
-    if (texCoordLocation >= 0) {
-      gl.enableVertexAttribArray(texCoordLocation);
-      gl.vertexAttribPointer(texCoordLocation, 2, gl.FLOAT, false, stride, 2 * 4);
-    }
-
-    // Foreground color attribute (a_foreground)
-    const foregroundLocation = this.shaderManager.getAttributeLocation(
-      'tileRenderer',
-      'a_foreground'
-    );
-    if (foregroundLocation >= 0) {
-      gl.enableVertexAttribArray(foregroundLocation);
-      gl.vertexAttribPointer(foregroundLocation, 3, gl.FLOAT, false, stride, 4 * 4);
-    }
-
-    // Background color attribute (a_background)
-    const backgroundLocation = this.shaderManager.getAttributeLocation(
-      'tileRenderer',
-      'a_background'
-    );
-    if (backgroundLocation >= 0) {
-      gl.enableVertexAttribArray(backgroundLocation);
-      gl.vertexAttribPointer(backgroundLocation, 3, gl.FLOAT, false, stride, 7 * 4);
-    }
-
-    // Detail/highlight color attribute (a_detail)
-    const detailLocation = this.shaderManager.getAttributeLocation('tileRenderer', 'a_detail');
-    if (detailLocation >= 0) {
-      gl.enableVertexAttribArray(detailLocation);
-      gl.vertexAttribPointer(detailLocation, 3, gl.FLOAT, false, stride, 10 * 4);
-    }
-
-    // Outline color attribute (a_outline)
-    const outlineLocation = this.shaderManager.getAttributeLocation('tileRenderer', 'a_outline');
-    if (outlineLocation >= 0) {
-      gl.enableVertexAttribArray(outlineLocation);
-      gl.vertexAttribPointer(outlineLocation, 3, gl.FLOAT, false, stride, 13 * 4);
-    }
-
-    // Glyph UV bounds attribute (a_uvBounds)
-    const uvBoundsLocation = this.shaderManager.getAttributeLocation('tileRenderer', 'a_uvBounds');
-    if (uvBoundsLocation >= 0) {
-      gl.enableVertexAttribArray(uvBoundsLocation);
-      gl.vertexAttribPointer(uvBoundsLocation, 4, gl.FLOAT, false, stride, 16 * 4);
-    }
-
-    // Per-corner dynamic light attribute (a_light) — Phase A2
-    const lightLocation = this.shaderManager.getAttributeLocation('tileRenderer', 'a_light');
-    if (lightLocation >= 0) {
-      gl.enableVertexAttribArray(lightLocation);
-      gl.vertexAttribPointer(lightLocation, 3, gl.FLOAT, false, stride, 20 * 4);
-    }
-
-    gl.bindVertexArray(null);
+    // Terrain (static) pair — same attribute layout, separate buffer so the overlay can't
+    // clobber it (which used to force a full re-upload every frame).
+    this.terrainVAO = gl.createVertexArray();
+    this.terrainVBO = gl.createBuffer();
+    if (!this.terrainVAO || !this.terrainVBO) throw new Error('Failed to create terrain VAO/VBO');
+    this.setupGridAttribs(this.terrainVAO, this.terrainVBO);
 
     if (this.debug) {
       console.log('✅ Grid rendering resources initialized');
     }
+  }
+
+  /** Bind the tileRenderer's 8 vertex attributes (23-float interleaved stride) for a VAO/VBO. */
+  private setupGridAttribs(vao: WebGLVertexArrayObject, vbo: WebGLBuffer): void {
+    const gl = this.gl;
+    gl.bindVertexArray(vao);
+    gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+    const stride = 23 * 4; // 23 floats per vertex, 4 bytes per float
+    // [name, size, offset-in-floats]
+    const attribs: [string, number, number][] = [
+      ['a_position', 2, 0],
+      ['a_texCoord', 2, 2],
+      ['a_foreground', 3, 4],
+      ['a_background', 3, 7],
+      ['a_detail', 3, 10],
+      ['a_outline', 3, 13],
+      ['a_uvBounds', 4, 16],
+      ['a_light', 3, 20]
+    ];
+    for (const [name, size, offset] of attribs) {
+      const loc = this.shaderManager.getAttributeLocation('tileRenderer', name);
+      if (loc >= 0) {
+        gl.enableVertexAttribArray(loc);
+        gl.vertexAttribPointer(loc, size, gl.FLOAT, false, stride, offset * 4);
+      }
+    }
+    gl.bindVertexArray(null);
   }
 
   /**
@@ -662,6 +671,16 @@ export class GridRenderer {
       gl.deleteVertexArray(this.gridVAO);
       this.gridVAO = null;
     }
+
+    if (this.terrainVBO) {
+      gl.deleteBuffer(this.terrainVBO);
+      this.terrainVBO = null;
+    }
+    if (this.terrainVAO) {
+      gl.deleteVertexArray(this.terrainVAO);
+      this.terrainVAO = null;
+    }
+    this.terrainUploaded = null;
 
     if (this.debug) {
       console.log('🧹 Grid renderer disposed');
