@@ -2,6 +2,56 @@
 
 Tracks confirmed bugs, root causes, and fix status. Add new entries at the top.
 
+> Performance bugs found in the 2026-06-14 profiling pass live with full context in
+> [.tasks/open/ENGINE-PERFORMANCE.md](../.tasks/open/ENGINE-PERFORMANCE.md) + ADR-021. Summarised here.
+
+---
+
+## [FIXED] Pathfinding body-block flood — A* re-flooded the map every tick (perf)
+
+**Symptom:** In a busy colony the sim crawled (~2 fps). The `pawns` phase was ~94 ms/tick;
+`#blockedTiles/tick ≈ 145` (≈145 A* requests/tick — ~30× a healthy rate).
+
+**Root cause:** ADR-014 hard occupancy treats every pawn/mob as an **impassable wall** in the A*
+grid. With ~290 bodies, routes to jobs/beds were constantly **body-walled**, so A* to such a goal
+**explored the entire reachable region before returning empty** (worst-case search), and the FSM
+**retried it every tick**. The profiler proved **100 % of failures were `bodyBlocked`** (terrain
+*was* reachable) — not terrain-unreachable, so a connectivity pre-check would have done nothing.
+
+**Fix** (`b9726e1`, `buildPathfindingGridsSoftBlocked`): bodies become **high-cost, not walls**
+(`BODY_SOFT_PENALTY`), so A* never fails on body-blocking — it routes around when cheap, through a
+crowd when sealed, and the **movement layer** (`stepBody`, ADR-014) still enforces no-stacking by
+holding at an occupied tile. **`pawns` 94 → 4 ms; `#pathReq` 145 → 0.5; `bodyBlocked` → 0.** Amends
+ADR-014's pathing-layer rationale (ADR-021).
+
+## [FIXED] Terrain re-rendered every frame — 38k-tile buffer rebuilt + re-uploaded (perf)
+
+**Symptom:** `renderCPU` ~90 ms while running vs ~11 ms paused (same scene, same 233k verts);
+`gpuWait` only ~4 ms, so it was CPU, not the GPU.
+
+**Root cause (two compounding):** (1) terrain and the dynamic entity-overlay **shared one VBO**, so
+the overlay clobbered it each frame and the ~21 MB terrain buffer was `bufferData`'d back every
+frame. (2) The terrain vertex **cache was invalidated every frame** — `setGrid` bumps `gridVersion`,
+and it ran every frame because `designations`/`worldMap` references churn each tick during play
+(harvest completions, regrowth); `#terrainCacheHit` was **0**.
+
+**Fix:** dedicated terrain VAO/VBO uploaded only on change (`d2738d2`) + coalesce all sim-driven
+terrain rebuilds to ~2/sec (`1c4227c`). **Terrain pass 90 → ~10 ms on most frames; cache now hits.**
+Tradeoff: terrain visuals lag ≤500 ms and a rebuild still hitches ~2/sec (tracked in
+ENGINE-PERFORMANCE §3; proper fix = designations off the static layer, deferred).
+
+## [FIXED] FPS counter froze below 4 fps (hid the regression)
+
+**Symptom:** The topbar showed a healthy FPS (e.g. 48) while the game ran at ~2 fps — the counter
+lied, which is why the perf regression went unnoticed.
+
+**Root cause:** `PerformanceTimer.updateFPS()` **discarded any frame delta > 250 ms** (meant to skip
+one-off stalls), so at a sustained <4 fps *every* frame was discarded and the EMA stayed frozen at
+the last healthy value.
+
+**Fix** (`02c4dfd`): raise the ignore threshold to 2 s (only true tab-background/debugger pauses), so
+sustained slowness registers. Added the `[RENDER-PROF]` per-frame breakdown alongside.
+
 ---
 
 ## [FIXED] Predator frozen at kill site after eating (home-tether stranding) — HOME_RANGE removed

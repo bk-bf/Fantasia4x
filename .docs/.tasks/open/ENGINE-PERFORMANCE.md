@@ -1,183 +1,106 @@
-<!-- LOC cap: 400 (created: 2026-06-14) -->
+<!-- LOC cap: 400 (created: 2026-06-14, rewritten 2026-06-14 post-profiling) -->
 
 # ENGINE PERFORMANCE & SCALING
 
-> **Related:** [ROADMAP](ROADMAP.md) · [game/ARCHITECTURE](../../game/ARCHITECTURE.md) · [game/DECISIONS](../../game/DECISIONS.md) (ADR-008, ADR-014, ADR-018/019/020) · [RANGED-COMBAT](RANGED-COMBAT.md) (consumes LoS) · [SEASONS_WEATHER](SEASONS_WEATHER.md) (fog of war) · [DISTRIBUTION](DISTRIBUTION.md) · archived: [SIMULATION-PERF](../archive/SIMULATION-PERF-2026-05-30.md)
+> **Related:** [ROADMAP](ROADMAP.md) · [game/ARCHITECTURE](../../game/ARCHITECTURE.md) · [game/DECISIONS](../../game/DECISIONS.md) (ADR-008, ADR-014, ADR-018/019/020/021) · [game/BUGS](../../game/BUGS.md) · [RANGED-COMBAT](RANGED-COMBAT.md) (consumes LoS) · [SEASONS_WEATHER](SEASONS_WEATHER.md) (fog of war) · [DISTRIBUTION](DISTRIBUTION.md) · archived: [SIMULATION-PERF](../archive/SIMULATION-PERF-2026-05-30.md)
 
-How entities perceive each other and the world (threat/prey detection, line of sight),
-and how that perception — the current #1 sim cost — scales toward hundreds of entities
-across the browser **and** the shipped desktop runtime (Tauri or Electron — **wrapper
-undecided**; see §5).
+Profiling-driven performance work, measured on the heavy `--profiler` sandbox (150 pawns +
+~140 mobs, 240×160 map, 4× speed; `.debug/perf.log`).
 
-> **This spec is provisional until §6 validates it.** Its central claim — that killing
-> the O(n²) perception scan yields a large, real speedup — is a *hypothesis backed by one
-> profiler run*, not a proven result. **Do not implement LoS, the full persistence model,
-> or any downstream spec feature until the §6 validation spike confirms the speedup on the
-> profiler sandbox.** If the spike does not move the needle, the premise here is false and
-> the spec must be reworked, not shipped.
-
----
-
-## 1 · Evidence (measured, not assumed)
-
-From the `--profiler` browser sandbox (150 pawns + ~140 mobs, 240×160 map, 4× speed),
-captured to `.debug/perf.log` (`[SYS]`/`[RENDER-PROF]`/`[PROF]`):
-
-- **`[SYS]`** — canvas backing store **1024×798 (0.8 MP)**, 22 cores, Intel HD GPU →
-  **not** GPU/canvas-bound; the oversized-canvas theory is **falsified**.
-- **`[RENDER-PROF]`** — ~3 fps, ~390 ms/frame = **sim ~230 + render ~70 + GPU-idle ~100 ms**,
-  **main-thread ~80% busy**. One core of 22 at 80% ≈ 3–4% system-wide → looks idle in a
-  monitor. **Single-thread CPU-bound on the sim**, not idle, not GPU.
-- **`[PROF]`** — **~15 ms/tick** (headless's 1.4 ms misled: no WASM pathfinding, less
-  motion). At 4× the loop runs 16 ticks/frame → ~230 ms. Per-tick: `pawns` ~7 ms ·
-  `entityStep` ~3.6 ms · `needsTick` ~2.3 ms · rest <0.6 ms.
-- **Smoking gun:** `#findCombatThreat/tick ≈ 154` — once per pawn/entity, each a linear
-  scan of all mobs (`findCombatThreat` + twin `findNearestHuntTarget`). 150 × 140 ≈ 21k
-  checks/tick, re-deriving `hostile` on every neutral animal. Bulk of the `pawns` phase.
-
-**Conclusion:** the cost is algorithmic (O(n²) perception), single-threaded, identical in
-shape on every JS engine. Everything below follows.
-
-**Actions:**
-
-- [x] Honest FPS counter (250 ms→2 s freeze fix) + render-frame profiler landed (commit `02c4dfd`).
-- [x] Profiler output persisted to `.debug/perf.log` via the `PERF` tag (no console copy-paste).
-- [ ] Re-measure tick cost on the ship engine once the Tauri/Electron scaffold exists (see §6, TAURI A4).
+> **This spec was rewritten after the work.** Its original premise — *"O(n²) perception is the
+> #1 cost, fix it with target persistence + LoS"* — was **FALSIFIED by the profiler**. Perception
+> was never the bottleneck. The real costs, in the order they were found, were: a lying FPS
+> counter, a pathfinding **body-block flood**, the **16-ticks-per-frame** sim multiplier, and
+> **per-frame terrain re-upload/rebuild**. This document now records what actually happened, what
+> landed, the tradeoffs taken, and the decouple endgame. Perception persistence + LoS survive as
+> **deferred AI-correctness features (§5)**, not performance fixes.
 
 ---
 
-## 2 · Goals / Non-goals
+## 0 · Status
 
-**Goals (this spec's definition of done):**
-
-- [ ] (a) Perception is O(n·k), not O(n²).
-- [ ] (b) Correct, legible AI: predators commit to a target; prey react only to what they perceive; attacked animals fight back.
-- [ ] (c) Line of sight — detection respects walls/terrain.
-- [ ] (d) A runtime/threading strategy that survives the desktop WebView, wrapper-agnostic (§5).
-- [ ] (e) A cheap falsification test before any of it ships (§6).
-
-**Non-goals — explicitly NOT this spec (guardrails, do not start):**
-
-- [ ] ~~Full multicore~~ · ~~ECS/struct-of-arrays rewrite~~ · ~~per-entity shadowcast FOV~~ · ~~sim off the main thread~~ (separate, later) · ~~deciding the wrapper~~ (DISTRIBUTION milestone).
+- **FPS 2 → 8–10** (identical at 1× and 4×) via render/sim bug-fixes + a sim↔render decouple cap.
+- Two tradeoffs are currently in place (`MAX_STEPS` cap, terrain throttle — §3); the **Web Worker
+  (§4) is the next work and removes them**.
+- Bugs filed in [game/BUGS.md](../../game/BUGS.md); decisions in ADR-021 (+ corrected ADR-018/020).
 
 ---
 
-## 3 · Perception & Threat AI (the O(n²) kill)
+## 1 · Post-mortem — how the premise was wrong
 
-**Current.** `findCombatThreat(pawn)` and `findNearestHuntTarget(pawn)` each loop all mobs,
-every pawn, every tick — no memory; a pawn re-asks "nearest threat" from scratch 60×/s.
-O(n²) **and** twitchy re-targeting. Three composing layers fix it (cost × frequency ×
-correctness — spatial index = *what's near*, LoS = *what's visible*, persistence = *how
-often we ask*; they multiply, none redundant):
-
-**Build:**
-
-- [ ] **Stateful hostility (correctness):** hostile = `entityClass==='mob'` ∪ `Attacking`/`Alerted` ∪ *provoked* (attacked animal gains an aggressor ref + calm-down timer, reverts on survive+disengage). Without it, a class-only pre-filter breaks "boars fight back".
-- [ ] **Target persistence (frequency — biggest lever):** lock a target; re-acquire only on a trigger (target dead/gone · out of perception N ticks · reached · self-flee). New fields (names TBD): `targetId`, `targetAcquiredTick`, `lastSeenX/Y`, `provokedBy`, `provokedUntil`.
-- [ ] **Bounded acquisition — pull (cost):** query the spatial index (ADR-008 `SpatialIndexService`; verify it's wired, may need implementing) within perception radius → LoS-prune (§4) → nearest visible. Raycasts only on the small candidate set.
-- [ ] **Push alerting:** a *moving hostile* radius-queries and alerts nearby prey (+ provocation propagation) — flips O(prey×mobs) → O(hostiles×local); idle prey never poll.
-
-**Decide (open Qs — block the state model):**
-
-- [ ] Provoked → target only the specific attacker, or general aggro toward the colony?
-- [ ] On LoS loss → drop the target immediately, or keep a "last-known position" memory window (predator investigates where prey vanished)?
+- [x] **Perception O(n²) premise FALSIFIED.** It dominated exactly **one** capture — an *idle* moment (pawns 7 ms). Under realistic movement load the `pawns` phase was 94 ms and **pathfinding dwarfed perception ~13×**. The lesson: the first profiler run was unrepresentative; instrument under load before concluding.
+- [x] **The FPS counter was lying** — `updateFPS()` discarded any frame slower than 250 ms, so below 4 fps it froze at the last healthy value. This is why the regression was invisible for so long. (Fixed; threshold → 2 s, commit `02c4dfd`.)
+- [x] **"CPU asleep" was the single-thread illusion** — one core of 22 at ~90% busy ≈ 4% aggregate. Confirmed CPU-bound (not GPU: `gpuWait ~4 ms`) via the `gl.finish` probe. The sim and render share **one thread**.
 
 ---
 
-## 4 · Line of Sight
+## 2 · What actually landed (measured, free wins = real bugs)
 
-**Goal.** Entities don't perceive through sight-blockers (no wolf chasing a goat through a
-mountain). Detection = bounded raycast, not fixed radius. Also the cleanest persistence
-invalidator (§3): "lost LoS to target" = re-acquire trigger — immediate, physical, beats a
-timeout.
-
-**Build:**
-
-- [ ] Add **`blocksSight: boolean`** to `resources.jsonc` + `buildings.jsonc`, **defaulting to `!walkable`** (solid blocks sight for free; no mass annotation).
-- [ ] Author the exceptions only: `window` (`walkable:false` but `blocksSight:false`), transparent roof, closed-vs-open door (state-dependent), low cover (scrub/shallow water) `false`.
-- [ ] `opaque` bitmap (`Uint8Array`, map-sized) in `spatial-core`, **maintained incrementally** (never rebuilt per query), mirrored like the existing `walkable`/`costs` arrays.
-- [ ] **AI raycast:** point-to-point Bresenham/supercover on the small §3 candidate set. **Per-pair-per-tick LoS is forbidden** (O(n²×ray-len) — worse than the bug).
-- [ ] **Player fog reveal:** recursive shadowcast FOV — separate, lower-frequency consumer, **not** run per entity.
+- [x] **Profiler tooling** — honest FPS counter + per-frame `[RENDER-PROF]` (sim/overlay/renderCPU/gpuWait split, paused-vs-running tagged, bg-throttle flagged), `[SYS]` host caps, all persisted to `.debug/perf.log` via the `PERF` tag. Plus per-phase `[PROF]` + `profCount` instrumentation (`#pathReq.*`, `#pathFail.*`, `#tMiss.*`, `#terrainCacheHit`). Commits `02c4dfd`, `250b55f`, `4482dba`, `cf94bed`, `0c02800`.
+- [x] **Soft-body pathfinding** (`b9726e1`) — **the big one.** Under load, 145 A*/tick with **96 % failing as `bodyBlocked`**: ADR-014 hard occupancy made every pawn/mob an impassable wall, so A* to a body-walled goal **flooded the whole reachable region** before returning empty, retried every tick. `buildPathfindingGridsSoftBlocked` makes bodies **high-cost, not walls** → A* never fails on bodies; no-stacking still enforced at the movement layer (`stepBody`). **Result: `pawns` 94 → 4 ms; `#pathReq` 145 → 0.5; `#pathFail.bodyBlocked` → 0.** (Amends ADR-014 — see ADR-021.)
+- [x] **Dedicated terrain VBO** (`d2738d2`) — terrain + entity-overlay shared one VBO, so the overlay clobbered it every frame and the 38k-tile (~21 MB) terrain buffer re-uploaded every frame. Terrain now has its own VBO, uploaded only on change.
+- [x] **Coalesced terrain rebuilds** (`1c4227c`) — `setGrid` bumped `gridVersion` every frame (designation/worldMap refs churn per tick), invalidating the vertex cache → 90 ms rebuild/frame (`#terrainCacheHit` was **0**). All sim-driven terrain rebuilds now coalesce to ~2/sec → cache hits. **Result: terrain pass 90 → ~10 ms on most frames; `#terrainCacheHit` > miss.**
+- [x] **`MAX_STEPS_PER_FRAME` 16 → 4** (`4e6e3fc`) — the decouple cap (see §3). **Result: sim/frame 330 → ~85 ms; FPS 2 → 4–5**, then → 8 with the terrain fixes.
+- [x] **Pawn `mobSubsets()` pre-filter** (`fd1163e`) — hostiles/hunt-targets filtered once/tick instead of per-pawn. Constant-factor; modest.
+- [~] **Mob `mobThreatSubsets()` pre-filter** (`1b43701`) — same idea for mob predator/prey scans. **No measurable effect** (`entityStep` ~5.7 ms unchanged — the scan wasn't the cost; `entityStep` is per-mob FSM + hunt/flee A*). Kept (behaviour-preserving, better asymptotics), but **not a win.**
 
 ---
 
-## 5 · Scaling & Runtime strategy
+## 3 · Tradeoffs currently in place (NOT free — the Worker removes them)
 
-**Reality.** Browser JS is single-threaded; parallelism = Web Workers (message-passing) or
-SharedArrayBuffer (typed arrays). Our immutable object-graph `GameState` is single-owner:
-`postMessage` deep-copies; SAB needs an ECS rewrite. The shipped runtime is **not** the dev
-browser, and **the wrapper is undecided** — Tauri (three OS WebViews: WebKitGTK/JSC,
-WebView2/V8, WKWebView/JSC) vs Electron (uniform Chromium/V8+Node). Dev is Firefox
-(SpiderMonkey). So Firefox perf numbers don't transfer; Workers are universal but SAB is
-reliable only on V8-based runtimes; **WASM runs ~identically on every engine** — the
-portable lever regardless of wrapper.
-
-The ordered work is the wrapper-agnostic ladder in **§7** (steps P0–P5). This section only
-tracks what feeds the *deferred* wrapper decision:
-
-- [ ] Re-measure on the ship engine (WebKitGTK) — perf doesn't transfer from Firefox (also §1, §6).
-- [ ] Record the fragmentation trade (3-engine Tauri vs uniform-V8+threads Electron vs +150–250 MB; SAB portability) as input for the TAURI-milestone decision (§8 table).
-- [ ] Keep all hot-compute work wrapper-agnostic (WASM common denominator) so neither wrapper is pre-committed by this spec.
+- [x] **`MAX_STEPS_PER_FRAME` cap → traded TPS.** A slow frame ran 16 heavy ticks (self-perpetuating; bound identically at 1× and 4×, which is why changing speed did nothing). Capping to 4 makes render smooth but the sim runs **slower than realtime at high game-speed** (drops backlog). The Worker lets us raise this back up.
+- [x] **Terrain rebuild throttle → traded latency + smoothness.** Terrain visuals lag ≤500 ms and a ~90 ms rebuild still **hitches ~2/sec** (the `terrain 30–40 ms` *average* and the `overlay ~12 ms` `buildGameGrid` scan on flush frames). Cost moved off most frames, not removed. A proper fix (designations off the static terrain layer / incremental upload) is deferred (§5).
 
 ---
 
-## 6 · Validation spike — **DO THIS FIRST, before anything else here**
+## 4 · Decouple endgame — sim → Web Worker (THE NEXT WORK)
 
-The cheapest test of the premise. Falsifiable, contained, no new systems.
+**Why:** the sim and render share one thread (the rAF loop runs `stepSimulation` then renders). That coupling is the root: any heavy sim starves render, and the `MAX_STEPS` cap is the band-aid. Moving the sim to a Worker makes render run at the display rate **regardless** of sim cost, and lets the sim run full speed off-thread → restores TPS **and** smooth FPS at once. Wrapper-agnostic (works in browser, Tauri, Electron).
 
-**The experiment (Step 0):**
+**Plan (gated; each step shippable):**
 
-- [x] Pre-filter hostiles once per tick into a small array; make `findCombatThreat`/`findNearestHuntTarget` scan that (~10) instead of all mobs (~140). *Implemented:* `mobSubsets()` memo in `pawnHelpers.ts`, keyed on `gs.mobs` identity (self-invalidating). Behaviour-preserving (218 tests green); no persistence/LoS/push/spatial-index yet.
-- [ ] Re-run the `--profiler` sandbox in the browser; read `.debug/perf.log`. *(Authoritative — headless lacks WASM movement, so only the browser run validates.)*
+- [ ] **W0 — message protocol + worker scaffold.** A `sim.worker.ts` that owns `GameEngineImpl` + services + `GameStateManager`. Define the message contract: main→worker `{cmd}` (start/stop/setSpeed/pause/player-commands), worker→main per-tick snapshot.
+- [ ] **W1 — WASM in the worker.** `WasmPathfinderService` must init inside the worker (it's `browser`-gated, not window-gated; verify it loads in a Worker context). Spatial core moves with the sim.
+- [ ] **W2 — state snapshot to the render thread.** Publish the minimal render set each tick (pawn/mob positions + glyphs + the bits the overlay/HUD read), not the whole `GameState`. Start with structured-clone of a slim snapshot; move hot position data to a `Float32Array` (transferable/SAB) if clone cost shows up.
+- [ ] **W3 — player commands main→worker.** Designations, builds, draft orders, work settings, speed/pause routed as messages; the worker is the single owner of `GameState`.
+- [ ] **W4 — save/load through the worker** (it owns state now); reconcile with `saveManager`/localStorage.
+- [ ] **W5 — raise `MAX_STEPS` back up / run sim on its own clock** in the worker; render interpolates from snapshots (the renderer already interpolates sub-tile positions — half-built for this).
 
-**Acceptance — premise holds only if ALL pass.** Note: the pre-filter is a **constant-factor** cut (each scan ~140→~10 hostiles), so its metric is the **`pawns`-phase ms**; `#findCombatThreat/tick` stays ~154 (still once per pawn) until persistence (P1) stops the per-tick re-scan.
+**Acceptance:**
 
-- [ ] `pawns` phase drops materially from the pre-filter alone (directional target: 7 ms → ~4–5 ms). If it doesn't move at all → findCombatThreat isn't the cost → premise suspect (see falsification).
-- [ ] tick TOTAL trends down in the **same** sandbox (full 7 ms → ≤ 2 ms / 15 ms → ≤ 6 ms targets need P1 persistence + P2 spatial index).
-- [ ] `#findCombatThreat/tick` drops toward ~1–2 — **P1 outcome**, not P0; verify after persistence lands.
-- [ ] the win **also shows on the ship engine** (WebKitGTK under `tauri dev`, or V8 if Electron) — not just Firefox.
-
-**Falsification (premise wrong → STOP):**
-
-- [ ] If the scan count drops but the tick cost does **not** move → the bottleneck is elsewhere (allocation churn? `entityStep`? state cloning?). Re-profile and rewrite §1–§3 before proceeding. **Never** backlog this as "tracked", build §3/§4/§7 on top, then find the assumption was false.
-
----
-
-## 7 · Implementation phases (the wrapper-agnostic ladder)
-
-Each phase gated on the previous; do not start one until its gate is met. P0–P3 are the
-algorithmic work; P4–P5 are the deferred threading steps from §5.
-
-- [ ] **P0** — §6 validation spike. Pre-filter **landed** (`mobSubsets()` in `pawnHelpers.ts`, behaviour-preserving, 218 tests green); **awaiting browser-sandbox numbers** to confirm the `pawns`-phase drop. *Gate: —*
-- [ ] **P1** — full target persistence + stateful/provoked hostility (resolve §3 open Qs). *Gate: §6 passed.*
-- [ ] **P2** — spatial-index acquisition + push-based prey alerting (wire/verify `SpatialIndexService`). *Gate: P1.*
-- [ ] **P3** — LoS: `blocksSight` data + `opaque` bitmap + WASM raycast; persistence invalidates on LoS loss. *Gate: P2; ADR-019.* **Enables RANGED-COMBAT** (Living-World LoS dep) + SEASONS_WEATHER fog.
-- [ ] **P4** — (optional, separate) push hot compute into WASM + sim → one Web Worker. *Gate: measured need.*
-- [ ] **P5** — (deferred) SAB multicore / native sim core (form depends on wrapper). *Gate: still CPU-bound after P1–P4.*
+- [ ] Render holds ~display-rate FPS while the sim runs heavy (no main-thread sim time in `[RENDER-PROF]`).
+- [ ] TPS recovers toward target at 1× (no longer capped by `MAX_STEPS`).
+- [ ] Save/load, player commands, and combat/needs behaviour unchanged (218+ tests green).
 
 ---
 
-## 8 · Evaluated & rejected/deferred
+## 5 · Deferred (real features / bigger bets — NOT the perf fix)
 
-- [ ] At the TAURI milestone, decide **Tauri vs Electron** using the §6 ship-engine data; keep both live until then.
+- [ ] **Perception target-persistence + push alerting** (old §3 / ADR-018) — a legit **AI-correctness/feel** feature (predators commit; prey react only to perceived; attacked animals fight back), but **not** a measured perf need. Build when AI behaviour wants it, not for FPS.
+- [ ] **Line of sight** (`blocksSight` + WASM raycast, ADR-019) — still wanted for gameplay (no chasing through walls) and **blocks RANGED-COMBAT** + feeds SEASONS fog. Independent of the perf work now.
+- [ ] **Designations/zones off the static terrain layer** (or incremental terrain upload) — removes the §3 terrain-throttle tradeoff at the source. Render polish, do after the Worker.
+- [ ] **Rust sim core** — fastest per-tick + off-thread, but a major ECS/SoA rewrite + WASM state boundary. Only if the Worker (JS sim off-thread) is still too slow at target scale.
+- [ ] **SAB multicore / wrapper decision** — deferred to the DISTRIBUTION milestone (ADR-020). The wrapper is **not** a perf lever (see §6).
+
+---
+
+## 6 · Evaluated & rejected
 
 | Option | Verdict | Why |
 | ------ | ------- | --- |
-| Oversized-canvas / GPU theory | **Rejected** | `[SYS]` shows 0.8 MP canvas, 80% main-thread busy — CPU/sim, not GPU. |
-| Naive per-pair-per-tick LoS | **Rejected** | O(n²×ray-len) — worse than the bug. Only affordable gated by persistence (§3). |
-| Shadowcast FOV per entity | **Rejected (for AI)** | O(radius²) each; overkill for "can A see B". Kept only for player fog reveal. |
-| Pre-filter hostiles *alone* | **Stepping stone** | Big constant-factor cut (§6) but still per-tick; persistence is the real fix. |
-| SAB multicore *now* | **Deferred** | Needs ECS/SoA rewrite vs the immutable model; reliable only on V8 runtimes. After P1–P4. |
-| Electron vs Tauri (wrapper) | **OPEN — decide at TAURI milestone** | Electron = uniform V8 + Node threads vs +150–250 MB/RAM; Tauri = tiny bundle + Rust synergy vs three-engine spread. The §3 fix may make perf moot, tilting it on size/feel. |
-| **Fork** Electron / Chromium | **Rejected** | Team-years maintenance (rebasing Chromium patches) for ~zero benefit; configure, don't fork. |
-| Embed SpiderMonkey | **Rejected** | Two engines + embedding maintenance for an engine no faster than V8; dominated either way. |
-| Native sim core (Rust sidecar / addon) | **Deferred** | Genuine multicore, but forks browser-vs-desktop runtime. Only if §6+P1–P4 still CPU-bound. |
+| "O(n²) perception is #1" | **Falsified** | One idle capture; pathfinding dwarfed it 13× under load. |
+| Oversized-canvas / GPU bound | **Rejected** | 0.8 MP canvas, `gpuWait ~4 ms`; it's CPU/single-thread. |
+| Battery / power-saving throttle | **Rejected** | User on AC; reproduced at full clock. |
+| Connectivity pre-check for unreachable A* | **Rejected** | Profiler showed 100 % of fails were `bodyBlocked` (terrain *was* reachable) — connectivity would've done nothing. Soft-bodies was the fix. |
+| Per-pair-per-tick LoS | **Rejected** | O(n²×ray-len); only viable gated by persistence, which is itself deferred. |
+| Switch wrapper (Electron/Tauri) **for perf** | **Rejected** | Single-thread JS either way; V8 ≈1.5–2× constant factor, not structural. Decide wrapper on distribution grounds later. |
+| Fork Electron / embed SpiderMonkey | **Rejected** | Team-years / two-engine maintenance for ~zero gain. |
 
 ---
 
-## 9 · ADRs & status
+## 7 · ADRs & status
 
-- [x] ADR-018 (perception/persistence — provisional, validation-gated), ADR-019 (LoS — design, impl deferred), ADR-020 (scaling ladder — wrapper deferred) written + registered in `codegraph.config.json` (`adr-coverage` ✓).
-- [x] Spec written 2026-06-14; profiler tooling + honest FPS counter landed (`02c4dfd`).
-- [x] P0 pre-filter (`mobSubsets()` memo) landed 2026-06-14, behaviour-preserving (218 tests green).
-- [ ] **Provisional — gated on §6.** No P1+ work (or any downstream spec feature) until the browser sandbox confirms the pre-filter moved the `pawns` phase.
+- [x] ADR-021 — Sim/render decouple: soft-body pathfinding (amends ADR-014), terrain VBO/cache, `MAX_STEPS` cap, sim→Worker. **The accepted perf direction.**
+- [x] ADR-018 — **corrected**: its "perception is the #1 perf cost" premise was falsified; persistence/push retained as a deferred AI-correctness feature (§5), not a perf measure.
+- [x] ADR-019 (LoS) / ADR-020 (scaling ladder) — updated to point at the real findings + the Worker.
+- [ ] Re-measure on the shipped engine (WebKitGTK / V8) at the DISTRIBUTION milestone — Firefox numbers don't transfer.

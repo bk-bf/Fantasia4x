@@ -19,9 +19,10 @@ ADR-014 [GAME]: Hard Tile Occupancy via Central OccupancyService (2026-06-12, Ac
 ADR-015 [GAME]: Single Work Model in stats.jsonc — supersedes ADR-003 for work (2026-06-13, Accepted)
 ADR-016 [GAME]: Physical Production — reserve-and-fetch crafting (2026-06-13, Accepted)
 ADR-017 [GAME]: Data-driven colony jobs (jobs.jsonc registry) (2026-06-13, Accepted)
-ADR-018 [GAME]: Perception via Target Persistence + Push Alerting (2026-06-14, Accepted — provisional, validation-gated)
+ADR-018 [GAME]: Perception via Target Persistence + Push Alerting (2026-06-14, Corrected — premise falsified; demoted to deferred AI feature)
 ADR-019 [GAME]: Line of Sight via `blocksSight` Occluder + WASM Raycast (2026-06-14, Accepted — design, impl deferred)
-ADR-020 [GAME]: Sim Scaling Strategy — Wrapper-Agnostic Ladder (Algorithms→WASM→Worker), wrapper decision deferred (2026-06-14, Accepted)
+ADR-020 [GAME]: Sim Scaling Strategy — Wrapper-Agnostic Ladder, wrapper decision deferred (2026-06-14, Accepted — superseded by ADR-021 for the concrete plan)
+ADR-021 [GAME]: Sim/Render Decouple — soft-body pathfinding, terrain cache, MAX_STEPS cap, sim→Worker (2026-06-14, Accepted)
 
 ---
 
@@ -513,8 +514,12 @@ union member** — down from ~6 scattered edits with a duplicate.
 ### ADR-018 [GAME]: Perception via Target Persistence + Push Alerting
 
 - **Date**: 2026-06-14
-- **Status**: Accepted — **provisional, gated on the spec's §6 validation spike**
-- **Spec**: [.tasks/open/ENGINE-PERFORMANCE.md](../.tasks/open/ENGINE-PERFORMANCE.md)
+- **Status**: **Corrected (2026-06-14)** — the premise below ("perception is the #1 sim cost") was
+  **FALSIFIED by profiling**: it dominated only one idle capture; under load, pathfinding cost ~13×
+  more (see ADR-021). Target-persistence + push-alerting are **demoted to a deferred AI-correctness
+  feature** (predators commit, prey react only to perceived, attacked animals fight back) — NOT a
+  performance fix. Do not build it for FPS. The actual perf work is ADR-021.
+- **Spec**: [.tasks/open/ENGINE-PERFORMANCE.md](../.tasks/open/ENGINE-PERFORMANCE.md) §5 (deferred)
 
 #### Context
 
@@ -596,8 +601,10 @@ lower-frequency consumer, never per entity.
 ### ADR-020 [GAME]: Sim Scaling Strategy — Wrapper-Agnostic Ladder, Wrapper Deferred
 
 - **Date**: 2026-06-14
-- **Status**: Accepted
-- **Spec**: [.tasks/open/ENGINE-PERFORMANCE.md](../.tasks/open/ENGINE-PERFORMANCE.md) §5, §8
+- **Status**: Accepted — **the ladder's "step 1: kill O(n²) perception" was the wrong target**
+  (ADR-018 falsified). The wrapper-agnostic principle and the deferred wrapper/SAB/Rust decisions
+  stand; the concrete ordered plan is **superseded by ADR-021** with the real bottlenecks.
+- **Spec**: [.tasks/open/ENGINE-PERFORMANCE.md](../.tasks/open/ENGINE-PERFORMANCE.md) §5, §6
 
 #### Context
 
@@ -641,3 +648,47 @@ wrapper choice.
   Tauri; V8 if Electron), not just Firefox — and that measurement is itself a key *input*
   to the deferred wrapper decision, since uniform-V8 (Electron) only matters if the
   three-engine spread (Tauri) actually hurts.
+
+---
+
+### ADR-021 [GAME]: Sim/Render Decouple — Soft-Body Pathfinding, Terrain Cache, MAX_STEPS Cap, Sim→Worker
+
+- **Date**: 2026-06-14
+- **Status**: Accepted (bug-fixes landed; Worker is the active work)
+- **Spec**: [.tasks/open/ENGINE-PERFORMANCE.md](../.tasks/open/ENGINE-PERFORMANCE.md) · bugs in [BUGS.md](BUGS.md)
+
+#### Context
+
+A profiling pass on the heavy sandbox (150 pawns + ~140 mobs, 4× speed) found the game at ~2 fps.
+ADR-018's premise (O(n²) perception is the #1 cost) was **falsified** — it dominated one *idle*
+capture only. Under realistic movement load the real costs were, in order: a lying FPS counter
+(hid it), a pathfinding **body-block flood**, the **16-ticks-per-frame** sim multiplier, and
+**per-frame terrain re-upload/rebuild**. The sim and render share one thread (the rAF loop runs the
+sim then renders), so a heavy sim starves render — the structural root.
+
+#### Decision
+
+Fix the measured bugs, then **decouple the sim from the render thread**:
+
+1. **Soft-body pathfinding** — bodies are **high-cost, not impassable walls**, in the A* grid
+   (`buildPathfindingGridsSoftBlocked`). A* never fails on body-blocking (no full-map flood on
+   body-walled goals); no-stacking stays enforced at the movement layer (`stepBody`). **Amends
+   ADR-014**: bodies are hard at the *movement* layer, soft at the *planning* layer.
+2. **Terrain render cache** — terrain gets its own VBO (uploaded only on change), and all
+   sim-driven terrain rebuilds coalesce to ~2/sec instead of every frame.
+3. **`MAX_STEPS_PER_FRAME` cap (16→4)** — interim decouple: bounds sim ticks per frame so a slow
+   frame can't run 16 heavy ticks and starve render. **Tradeoff: reduces TPS at high game-speed.**
+4. **Sim → Web Worker** (the endgame) — move `GameEngineImpl` + services + WASM pathfinder into a
+   worker; render interpolates from per-tick snapshots. Removes the `MAX_STEPS` tradeoff (sim runs
+   full speed off-thread) and gives display-rate FPS regardless of sim cost. Wrapper-agnostic.
+
+Deferred (not perf fixes): perception persistence/LoS (AI features), Rust sim core, SAB multicore,
+wrapper choice (ADR-020). The wrapper is **not** a performance lever — single-thread JS either way.
+
+#### Consequences
+
+- FPS 2 → 8–10 from steps 1–3 (measured). Two tradeoffs (MAX_STEPS cap, terrain throttle) remain
+  until the Worker removes them.
+- Perf bugs recorded in BUGS.md; instrumentation (`[RENDER-PROF]`/`[PROF]`/`profCount`) kept,
+  dev-gated, behind `__profileTurns`.
+- ADR-018 corrected (premise falsified); ADR-020's concrete ladder superseded here.
