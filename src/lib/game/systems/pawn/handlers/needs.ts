@@ -155,6 +155,7 @@ export function handleHungry(pawn: Pawn, gameState: GameState): GameState {
   }
 
   // Eat in place: consume all selected food now, then sit and eat for EATING_TURNS_GROUND turns.
+  // Clear any residual movement so the pawn is gated at this tile, not still walking while it eats.
   const { state: afterMeal, hungerRecovered } = consumeMeal(meal, gameState);
   return {
     ...afterMeal,
@@ -162,6 +163,8 @@ export function handleHungry(pawn: Pawn, gameState: GameState): GameState {
       p.id === pawn.id
         ? {
             ...p,
+            path: [],
+            isMoving: false,
             currentState: PAWN_STATE.EATING,
             activeJob: {
               type: 'need' as const,
@@ -335,6 +338,8 @@ export function handleEating(pawn: Pawn, gameState: GameState): GameState {
         p.id === pawn.id
           ? {
               ...p,
+              path: [],
+              isMoving: false,
               needs: updatedNeeds,
               state: updatedState,
               currentState: PAWN_STATE.IDLE,
@@ -351,6 +356,10 @@ export function handleEating(pawn: Pawn, gameState: GameState): GameState {
       p.id === pawn.id
         ? {
             ...p,
+            // Gate the pawn in place while eating — a pawn that ate in place while still wandering
+            // (or otherwise entered EATING with a residual path) must not drift off mid-meal.
+            path: [],
+            isMoving: false,
             needs: updatedNeeds,
             state: updatedState,
             activeJob: activeJob

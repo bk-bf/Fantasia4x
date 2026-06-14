@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { handleDrinking, handleWashing } from './handlers/needs';
+import { handleDrinking, handleWashing, handleEating } from './handlers/needs';
 import { PAWN_STATE } from './pawnStates';
 import type { GameState, Pawn } from '../../core/types';
 
@@ -39,6 +39,13 @@ describe('drinking/washing gate the pawn in place', () => {
     const out = handleWashing(drinkingPawn(PAWN_STATE.WASHING), stateWith(drinkingPawn(PAWN_STATE.WASHING)));
     const p = out.pawns[0];
     expect(p.currentState).toBe(PAWN_STATE.WASHING);
+    expect(p.path?.length ?? 0).toBe(0);
+    expect(p.isMoving).toBe(false);
+  });
+
+  it('handleEating clears the residual path so the pawn stays put', () => {
+    const out = handleEating(drinkingPawn(PAWN_STATE.EATING), stateWith(drinkingPawn(PAWN_STATE.EATING)));
+    const p = out.pawns[0];
     expect(p.path?.length ?? 0).toBe(0);
     expect(p.isMoving).toBe(false);
   });
