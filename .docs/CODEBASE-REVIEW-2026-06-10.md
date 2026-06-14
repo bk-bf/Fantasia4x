@@ -89,7 +89,7 @@ visibly broken; all small. Shipped 2026-06-14 — gates: `check` 0 · `test` 162
 - [ ] **NT-U2 · Info-panel buttons** moved adjacent (right) and outside the panel.
 - [ ] **NT-U3 · Fixed-width info-panel skeleton** so long descriptions wrap instead of stretching the
   panel across the viewport; unify panel width across all object types.
-- [ ] **NT-U4 · Draft target line draws while paused** (currently only renders after unpausing).
+- [x] **NT-U4 · Draft target line draws while paused** (currently only renders after unpausing).
 
 ## NT backlog (deferred — not Tier 0)
 
