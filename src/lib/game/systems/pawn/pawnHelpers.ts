@@ -9,7 +9,6 @@ import type { GameState, Pawn, Mob, Building, PlacedBuilding, Job } from '../../
 import BUILDINGS_DATABASE_RAW from '../../database/buildings.jsonc';
 import { jobService } from '../../services/JobService';
 import { pawnService } from '../../services/PawnService';
-import { pawnStatService } from '../../services/PawnStatService';
 import {
   buildPathfindingGridsWithBlocked,
   pathfinderService
@@ -19,6 +18,8 @@ import { gameLogger } from '../../dev/gameLogger';
 import { ticksFromSeconds, SECONDS_PER_TICK } from '../../core/time';
 import { profCount } from '../../core/log';
 import { rng } from '../../core/rng';
+import { computeTileLightLevel } from '../../services/EnvironmentService';
+import { effectiveVisionRange } from '../../core/vision';
 import { PAWN_STATE, type PawnStateName } from './pawnStates';
 import { isAdjacent, findAdjacentApproach, hasAvailableFood } from './pawnQueries';
 
@@ -34,18 +35,17 @@ export const HUNGER_THRESHOLD = 70; // Seek food at 70% (= Rimworld 30% saturati
 export const FATIGUE_THRESHOLD = 72; // Seek rest after ~225 turns ≈ 0.75 days (28% rest = 72% fatigue)
 
 // ===== COMBAT (COMBAT-SYSTEM) =====
-/** Base vision radius in tiles for aggressive/flee stances, scaled by the pawn's
- *  aggro_range stat (perception + sight capacity). Defensive pawns ignore this and
- *  only react to adjacent hostiles. */
-export const PAWN_BASE_VISION = 6;
-
 /** How far (tiles) a fleeing pawn tries to put between itself and the threat. */
 export const FLEE_DISTANCE = 6;
 
-/** Vision/aggro radius in tiles for this pawn (perception- and sight-scaled). */
-export function pawnVisionTiles(pawn: Pawn): number {
-  const mult = pawnStatService.evaluateStat('aggro_range', pawn);
-  return Math.max(1, Math.round(PAWN_BASE_VISION * (mult > 0 ? mult : 1)));
+/** Vision/aggro radius in tiles for this pawn. Uses the SHARED perception-based vision (same as
+ *  mobs, core/vision) scaled by the pawn's tile light + night_vision (§G) — so darkness shortens
+ *  threat detection. Defensive pawns ignore this (they only react to adjacent hostiles). */
+export function pawnVisionTiles(pawn: Pawn, gs: GameState): number {
+  const light = pawn.position
+    ? computeTileLightLevel(gs.turn, gs.buildings ?? [], pawn.position.x, pawn.position.y)
+    : 1;
+  return effectiveVisionRange(pawn, light);
 }
 
 // Dynamic need interruption (replaces flat CRITICAL_HUNGER / CRITICAL_FATIGUE thresholds).
@@ -615,7 +615,7 @@ export function findCombatThreat(pawn: Pawn, gs: GameState): Mob | null {
   profCount('findCombatThreat'); // P-5: dev profiler tallies this all-mobs scan's per-tick frequency
   if (!pawn.position || pawn.isAlive === false) return null;
   const stance = pawn.combatStance ?? 'defensive';
-  const range = stance === 'defensive' ? 1 : pawnVisionTiles(pawn);
+  const range = stance === 'defensive' ? 1 : pawnVisionTiles(pawn, gs);
   const px = pawn.position.x;
   const py = pawn.position.y;
   let best: Mob | null = null;

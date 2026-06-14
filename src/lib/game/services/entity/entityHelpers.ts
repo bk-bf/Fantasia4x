@@ -134,7 +134,8 @@ export function huntAttacker(
 export function nearestPredatorThreat(
   prey: Mob,
   def: CreatureDefinition,
-  allMobs: Mob[]
+  allMobs: Mob[],
+  visionRange: number
 ): { pos: { x: number; y: number } } | null {
   if (!def.huntable) return null;
   let best: Mob | null = null;
@@ -144,7 +145,7 @@ export function nearestPredatorThreat(
     const mDef = getCreatureById(m.creatureId);
     if (!mDef || !mDef.predator) continue; // only flagged predators frighten prey
     const d = dist(prey, { x: m.x, y: m.y });
-    if (d <= def.stats.visionRange && d < bestDist) {
+    if (d <= visionRange && d < bestDist) {
       bestDist = d;
       best = m;
     }

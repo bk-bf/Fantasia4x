@@ -23,6 +23,7 @@
         "predator"      : true,
         "intelligence"  : "primitive",
         "nocturnalAggro": true,
+        "nightVision"   : 0.7,
         "pack"          : [1, 3],
         "biomeWeights"  : {"forest": 1.0, "plains": 0.7, "mountain": 0.5},
         "carcassItemId" : "wolf_carcass",

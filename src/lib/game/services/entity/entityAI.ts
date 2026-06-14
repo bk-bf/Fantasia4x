@@ -2,7 +2,8 @@
 // hunt, forage, sleep) plus the feeding sub-steppers. Extracted from EntityService (P-4).
 import type { GameState, Mob, MobState, Pawn } from '../../core/types';
 import { getCreatureById, type CreatureDefinition } from '../../core/Creatures';
-import { getAmbientLight } from '../EnvironmentService';
+import { getAmbientLight, computeTileLightLevel } from '../EnvironmentService';
+import { effectiveVisionRange } from '../../core/vision';
 import { ticksFromSeconds, SECONDS_PER_TICK } from '../../core/time';
 import { calcMaxStamina } from '../../entities/Pawns';
 import { gameLogger } from '../../dev/gameLogger';
@@ -226,7 +227,12 @@ export function stepOne(
   }
 
   const nearest = nearestPawn(mob, pawns);
-  const inVision = nearest && dist(mob, nearest.pos) <= def.stats.visionRange ? nearest : null;
+  // §G shared vision: perception-based range scaled by this tile's light + the mob's night_vision,
+  // computed ONCE here and threaded into the FSM (so darkness shortens detection without recomputing
+  // the light per check). Daytime with nightVision 0 ≈ the old def.stats.visionRange.
+  const tileLight = computeTileLightLevel(turn, state.buildings ?? [], mob.x, mob.y);
+  const visionRange = effectiveVisionRange(mob, tileLight);
+  const inVision = nearest && dist(mob, nearest.pos) <= visionRange ? nearest : null;
   const isNight = getAmbientLight(turn) < NIGHT_THRESHOLD;
 
   // Passive creatures (herbivores, timid omnivores) use the prey FSM.
@@ -237,6 +243,7 @@ export function stepOne(
       def,
       inVision,
       nearest,
+      visionRange,
       turn,
       state,
       allMobs,
@@ -251,6 +258,7 @@ export function stepOne(
     def,
     inVision,
     nearest,
+    visionRange,
     isNight,
     turn,
     state,
@@ -283,6 +291,7 @@ export function stepHostile(
   def: CreatureDefinition,
   inVision: { pos: { x: number; y: number } } | null,
   nearest: { pos: { x: number; y: number } } | null,
+  visionRange: number,
   isNight: boolean,
   turn: number,
   state: GameState,
@@ -298,7 +307,7 @@ export function stepHostile(
 
   // Wounded entities flee regardless of state.
   if (mob.health <= mob.maxHealth * FLEE_HEALTH_FRACTION && mob.state !== 'Fleeing') {
-    const threat = inVision ?? (def.huntable ? nearestPredatorThreat(mob, def, allMobs) : null);
+    const threat = inVision ?? (def.huntable ? nearestPredatorThreat(mob, def, allMobs, visionRange) : null);
     const threatName = threat
       ? (state.pawns.find(
           (p) =>
@@ -328,7 +337,7 @@ export function stepHostile(
   // They flee from flagged predators just like passive animals do, and panic when
   // they see a corpse of the same species within vision range.
   if (def.huntable && mob.state !== 'Fleeing' && mob.state !== 'Attacking') {
-    const predThreat = nearestPredatorThreat(mob, def, allMobs);
+    const predThreat = nearestPredatorThreat(mob, def, allMobs, visionRange);
     if (predThreat) {
       return {
         ...mob,
@@ -344,7 +353,7 @@ export function stepHostile(
       (m) =>
         m.state === 'Corpse' &&
         m.creatureId === mob.creatureId &&
-        dist(mob, { x: m.x, y: m.y }) <= def.stats.visionRange
+        dist(mob, { x: m.x, y: m.y }) <= visionRange
     );
     if (packCorpse) {
       return {
@@ -457,14 +466,14 @@ export function stepHostile(
       const tooClose =
         !aggressive &&
         inVision &&
-        dist(mob, inVision.pos) <= Math.ceil(def.stats.visionRange * 0.5);
+        dist(mob, inVision.pos) <= Math.ceil(visionRange * 0.5);
       if (inVision && (aggressive || tooClose)) {
         return moveToward({ ...mob, state: 'Alerted', stateSince: turn }, inVision.pos, state);
       }
       return wanderStep(mob, def, state);
     }
     case 'Alerted': {
-      if (!nearest || dist(mob, nearest.pos) > def.stats.visionRange * 1.5) {
+      if (!nearest || dist(mob, nearest.pos) > visionRange * 1.5) {
         return { ...mob, state: 'Wander', stateSince: turn };
       }
       if (adjacent(mob, nearest.pos)) {
@@ -485,7 +494,7 @@ export function stepHostile(
     }
     case 'Fleeing': {
       // For huntable neutral animals, also flee from nearby predators.
-      const predThreat = def.huntable ? nearestPredatorThreat(mob, def, allMobs) : null;
+      const predThreat = def.huntable ? nearestPredatorThreat(mob, def, allMobs, visionRange) : null;
       const pawnDist = nearest ? dist(mob, nearest.pos) : Infinity;
       const predDist = predThreat ? dist(mob, predThreat.pos) : Infinity;
       const closestDist = Math.min(pawnDist, predDist);
@@ -549,14 +558,15 @@ function logFleeTrigger(
   def: CreatureDefinition,
   threat: { pos: { x: number; y: number } },
   isPawn: boolean,
-  turn: number
+  turn: number,
+  visionRange: number
 ): void {
   if (!gameLogger.isEnabled) return;
   const d = Math.max(Math.abs(threat.pos.x - mob.x), Math.abs(threat.pos.y - mob.y));
   gameLogger.log(
     turn,
     'ENTITY-FLEE',
-    `${mob.id} @(${mob.x},${mob.y}) flee ${isPawn ? 'pawn' : 'predator'}@(${threat.pos.x},${threat.pos.y}) d=${d} vision=${def.stats.visionRange} flee=${def.stats.fleeRange}`
+    `${mob.id} @(${mob.x},${mob.y}) flee ${isPawn ? 'pawn' : 'predator'}@(${threat.pos.x},${threat.pos.y}) d=${d} vision=${visionRange} flee=${def.stats.fleeRange}`
   );
 }
 
@@ -565,6 +575,7 @@ export function stepAnimal(
   def: CreatureDefinition,
   inVision: { pos: { x: number; y: number } } | null,
   nearest: { pos: { x: number; y: number } } | null,
+  visionRange: number,
   turn: number,
   state: GameState,
   allMobs: Mob[],
@@ -573,11 +584,11 @@ export function stepAnimal(
   pendingTileDepletion: Array<{ x: number; y: number; id: string }>,
   pendingMobState: Map<string, Partial<Mob>>
 ): Mob {
-  // Vision range is set per-creature in creatures.jsonc; herbivores have wide
-  // ranges (12-15 tiles) so detection and flee distances are fully data-driven.
+  // `visionRange` is the §G light-scaled, perception-based sight range (computed in stepOne) — the
+  // SAME model mobs and pawns share. Detection uses it; flee DISTANCE still uses def.stats.fleeRange.
 
   // Combined threat: pawn in vision OR a predatory mob nearby.
-  const predatorThreat = nearestPredatorThreat(mob, def, allMobs);
+  const predatorThreat = nearestPredatorThreat(mob, def, allMobs, visionRange);
   const threat = inVision ?? predatorThreat;
 
   // ── Hunger / fatigue FSM transitions (only when safe) ──────────────────────
@@ -640,8 +651,8 @@ export function stepAnimal(
       ? (state.pawns.find(
           (p) =>
             p.position &&
-            Math.abs(p.position.x - mob.x) <= def.stats.visionRange &&
-            Math.abs(p.position.y - mob.y) <= def.stats.visionRange
+            Math.abs(p.position.x - mob.x) <= visionRange &&
+            Math.abs(p.position.y - mob.y) <= visionRange
         )?.name ?? 'predator')
       : 'predator';
     simLog.logFlee(
@@ -653,7 +664,7 @@ export function stepAnimal(
       mob.x,
       mob.y
     );
-    logFleeTrigger(mob, def, threat, inVision != null, turn);
+    logFleeTrigger(mob, def, threat, inVision != null, turn, visionRange);
     return {
       ...mob,
       state: 'Startled',
@@ -667,7 +678,7 @@ export function stepAnimal(
   switch (mob.state) {
     case 'Grazing': {
       if (threat) {
-        logFleeTrigger(mob, def, threat, inVision != null, turn);
+        logFleeTrigger(mob, def, threat, inVision != null, turn, visionRange);
         return { ...mob, state: 'Startled', stateSince: turn, path: [] };
       }
       return wanderStep(mob, def, state);
@@ -729,7 +740,7 @@ export function stepAnimal(
     case 'Sleeping': {
       // Woken by any threat — bolt immediately.
       if (threat) {
-        logFleeTrigger(mob, def, threat, inVision != null, turn);
+        logFleeTrigger(mob, def, threat, inVision != null, turn, visionRange);
         return { ...mob, state: 'Startled', stateSince: turn, path: [] };
       }
       // Natural wake-up when rested, or force-wake when ravenously hungry.

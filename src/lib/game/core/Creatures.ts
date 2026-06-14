@@ -125,6 +125,9 @@ export interface CreatureDefinition {
   huntable: boolean;
   canSteal: boolean;
   chargesWhenWounded: boolean;
+  /** 0–1 darkness immunity (§G). 0 = sight/work scale fully with light (normal); 1 = sees and works
+   *  at full range/speed regardless of darkness (nocturnal predators). Defaults to 0. */
+  nightVision: number;
   /** Husbandry product (Phase D), when present. */
   produces?: CreatureProduces;
   /**
@@ -196,6 +199,7 @@ function toDefinition(raw: RawCreature): CreatureDefinition {
     huntable: (raw.huntable as boolean) ?? false,
     canSteal: (raw.canSteal as boolean) ?? false,
     chargesWhenWounded: (raw.chargesWhenWounded as boolean) ?? false,
+    nightVision: (raw.nightVision as number) ?? 0,
     produces: raw.produces as CreatureProduces | undefined,
     carcassItemId: (raw.carcassItemId as string) ?? undefined,
     biomeWeights: (raw.biomeWeights as Record<string, number>) ?? {},
