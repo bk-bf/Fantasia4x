@@ -120,6 +120,13 @@
   let _prevBuildingsSig = '';
   let _prevDesignations: unknown;
   let _prevZoneTiles: unknown;
+  // Terrain rebuild is O(map) (38k-tile vertex buffer). worldMap churns every tick from
+  // resource regrowth/harvest, which would rebuild it every frame (~60ms). Those changes are
+  // invisible if they lag a fraction of a second, so coalesce sim-driven terrain rebuilds to
+  // TERRAIN_REBUILD_MIN_MS; player-driven changes (buildings/designations/zones) stay immediate.
+  let _terrainDirty = false;
+  let _lastTerrainBuild = 0;
+  const TERRAIN_REBUILD_MIN_MS = 500;
 
   // Viewport offset in tile coordinates
   let viewX = 0;
@@ -663,11 +670,16 @@
     // are invisible on the map, so an identity check would force a full terrain
     // rebuild every frame while a fire burns. The signature ignores fuel/lit.
     const buildingsSig = buildingsVisualSig(buildings);
-    const terrainChanged =
-      worldMap !== _prevWorldMap ||
+    // Player-driven terrain changes (placed buildings, designations, zone paint) must show
+    // immediately. Sim-driven worldMap churn (regrowth/harvest depleting a tile's resource
+    // glyph) is coalesced to TERRAIN_REBUILD_MIN_MS in the render loop — a regrown tree
+    // appearing a half-second late is imperceptible, and it stops the 60ms full rebuild from
+    // running every frame.
+    const playerTerrainChanged =
       buildingsSig !== _prevBuildingsSig ||
       designations !== _prevDesignations ||
       zoneTiles !== _prevZoneTiles;
+    const worldMapChanged = worldMap !== _prevWorldMap;
     _prevWorldMap = worldMap;
     _prevBuildingsSig = buildingsSig;
     _prevDesignations = designations;
@@ -684,7 +696,9 @@
     // so it tracks the pawn's interpolated sub-tile position smoothly.
     if (renderer?.isReady()) {
       if (worldMap.length > 0) {
-        if (terrainChanged) redrawOverlay();
+        if (playerTerrainChanged)
+          redrawOverlay(); // immediate
+        else if (worldMapChanged) _terrainDirty = true; // coalesced in the render loop
       } else {
         renderer.setGrid(generatePlaceholderGrid());
       }
@@ -1689,6 +1703,13 @@
       updateCameraFollow(dt);
       updateCameraFollowMob(dt);
       updateWorldEffectOverlays();
+      // Coalesced sim-driven terrain rebuild: at most once per TERRAIN_REBUILD_MIN_MS instead
+      // of the full 38k-tile rebuild every frame that resource regrowth/harvest would force.
+      if (_terrainDirty && now - _lastTerrainBuild >= TERRAIN_REBUILD_MIN_MS) {
+        _terrainDirty = false;
+        _lastTerrainBuild = now;
+        redrawOverlayNow();
+      }
       renderer.setOverlayGrid(pawnOverlayGrid);
       const tRender = prof ? performance.now() : 0;
       renderer.beginFrame();
