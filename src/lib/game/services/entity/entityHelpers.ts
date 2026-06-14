@@ -71,26 +71,46 @@ export function findNearestFoodTile(
  * live huntable creature. `allowLivePrey` should be `predator || diet === 'carnivore'`:
  * scavenging a corpse doesn't require being a hunter, but stalking live prey does.
  */
+// Per-tick memo of the two mob subsets the AI repeatedly scans — predators (to flee) and prey
+// (corpses + live huntables, to hunt). Keyed on the allMobs array identity: immutable updates
+// (ADR-002) recreate it whenever any mob changes, so the memo self-invalidates. This collapses the
+// O(mobs²) re-scan + per-candidate getCreatureById that nearestPredatorThreat/findNearestPrey ran
+// for EVERY mob EVERY tick into one O(mobs) pass per tick (ENGINE-PERFORMANCE; same lever as the
+// pawn-side mobSubsets / soft-pathing).
+let _mobThreatCache: { ref: Mob[] | undefined; predators: Mob[]; prey: Mob[] } | null = null;
+
+function mobThreatSubsets(allMobs: Mob[]): { predators: Mob[]; prey: Mob[] } {
+  if (_mobThreatCache && _mobThreatCache.ref === allMobs) return _mobThreatCache;
+  const predators: Mob[] = [];
+  const prey: Mob[] = [];
+  for (const m of allMobs) {
+    if (m.state === 'Corpse') {
+      if ((m.intactness ?? 1.0) > 0) prey.push(m); // scavengeable corpse
+      continue;
+    }
+    const def = getCreatureById(m.creatureId);
+    if (def?.predator) predators.push(m);
+    if (def?.huntable && m.state !== 'Tamed') prey.push(m); // live huntable
+  }
+  _mobThreatCache = { ref: allMobs, predators, prey };
+  return _mobThreatCache;
+}
+
 export function findNearestPrey(mob: Mob, allMobs: Mob[], allowLivePrey: boolean): Mob | null {
   let best: Mob | null = null;
   let bestDist = Infinity;
-  for (const candidate of allMobs) {
+  // Pre-filtered prey subset (corpses with intactness>0 + live non-tamed huntables), once per tick.
+  for (const candidate of mobThreatSubsets(allMobs).prey) {
     if (candidate.id === mob.id) continue;
     const raw = Math.abs(candidate.x - mob.x) + Math.abs(candidate.y - mob.y);
     if (candidate.state === 'Corpse') {
-      if ((candidate.intactness ?? 1.0) <= 0) continue; // stripped — skip
       // Corpses weighted as 50% closer — free food with no danger.
       const d = raw * 0.5;
       if (d < bestDist) {
         bestDist = d;
         best = candidate;
       }
-    } else if (
-      allowLivePrey &&
-      getCreatureById(candidate.creatureId)?.huntable &&
-      candidate.state !== 'Tamed' &&
-      raw <= HUNT_RADIUS
-    ) {
+    } else if (allowLivePrey && raw <= HUNT_RADIUS) {
       if (raw < bestDist) {
         bestDist = raw;
         best = candidate;
@@ -141,10 +161,9 @@ export function nearestPredatorThreat(
   if (!def.huntable) return null;
   let best: Mob | null = null;
   let bestDist = Infinity;
-  for (const m of allMobs) {
-    if (m.id === prey.id || m.state === 'Corpse') continue;
-    const mDef = getCreatureById(m.creatureId);
-    if (!mDef || !mDef.predator) continue; // only flagged predators frighten prey
+  // Pre-filtered predator subset (non-corpse, def.predator), computed once per tick.
+  for (const m of mobThreatSubsets(allMobs).predators) {
+    if (m.id === prey.id) continue;
     const d = dist(prey, { x: m.x, y: m.y });
     if (d <= visionRange && d < bestDist) {
       bestDist = d;
