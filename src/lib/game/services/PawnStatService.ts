@@ -25,44 +25,94 @@ const WORK_STAT_IDS = new Set(STATS.filter((s) => s.category === 'work').map((s)
 
 // ── Formula evaluator: substitutes stat tokens + weight/height + capacities ──
 // Safe: expression is from project JSONC (not user input); sanitised to arithmetic chars only.
+// Formula variables in a FIXED order — used both as the compiled function's parameter list and the
+// per-call argument order. (Profiler: evaluateFormula was ~15-17% of the sim — it regex-substituted
+// 21 tokens into a string and `new Function`-compiled + number-parsed it on EVERY call, ~328×/tick.)
+const FORMULA_VARS = [
+  'STR',
+  'DEX',
+  'CON',
+  'PER',
+  'INT',
+  'CHA',
+  'weight',
+  'height',
+  'consciousness',
+  'manipulation',
+  'sight',
+  'moving',
+  'blood_pumping',
+  'blood_filtration',
+  'breathing',
+  'digestion',
+  'talking',
+  'hearing',
+  'pain'
+] as const;
+const FORMULA_VAR_RE = new RegExp('\\b(?:' + FORMULA_VARS.join('|') + ')\\b', 'g');
+
+// Compile each unique formula ONCE into a real function (vars → number), cached by formula string.
+// Formulas come from a fixed stats.jsonc set, so this turns the per-call regex+compile+parse into a
+// one-time cost + a plain function call. Invalid/unknown-token formulas cache as null → 1.0.
+const _formulaCache = new Map<string, ((...vars: number[]) => number) | null>();
+
+function compileFormula(formula: string): ((...vars: number[]) => number) | null {
+  const cached = _formulaCache.get(formula);
+  if (cached !== undefined) return cached;
+  // Normalise unicode operators; variable names stay as identifiers (they become fn params).
+  const expr = formula.replace(/×/g, '*').replace(/−/g, '-');
+  // Safety: after blanking known vars, only arithmetic may remain (formulas are project JSONC, but
+  // this still blocks a malformed/unknown-token formula from compiling to arbitrary code).
+  const stripped = expr.replace(FORMULA_VAR_RE, '0');
+  let fn: ((...vars: number[]) => number) | null = null;
+  if (/^[\d\s+\-*/.()]+$/.test(stripped)) {
+    try {
+      // eslint-disable-next-line no-new-func
+      fn = new Function(...FORMULA_VARS, '"use strict"; return (' + expr + ');') as (
+        ...vars: number[]
+      ) => number;
+    } catch {
+      fn = null;
+    }
+  }
+  _formulaCache.set(formula, fn);
+  return fn;
+}
+
 function evaluateFormula(
   formula: string | undefined,
   p: Pawn | Mob,
   capacities: Record<string, number> = {}
 ): number {
   if (!formula) return 1.0;
-  // Stats default to 10 when absent so formulas never crash on partial entities (some mobs /
-  // minimal test fixtures may lack a full stat block).
-  let expr = formula
-    .replace(/×/g, '*')
-    .replace(/−/g, '-')
-    .replace(/\bSTR\b/g, String(p.stats?.strength ?? 10))
-    .replace(/\bDEX\b/g, String(p.stats?.dexterity ?? 10))
-    .replace(/\bCON\b/g, String(p.stats?.constitution ?? 10))
-    .replace(/\bPER\b/g, String(p.stats?.perception ?? 10))
-    .replace(/\bINT\b/g, String(p.stats?.intelligence ?? 10))
-    .replace(/\bCHA\b/g, String(p.stats?.charisma ?? 10))
-    .replace(/\bweight\b/g, String(p.physicalTraits?.weight ?? 70))
-    .replace(/\bheight\b/g, String(p.physicalTraits?.height ?? 170))
-    .replace(/\bconsciousness\b/g, String(capacities.consciousness ?? 1))
-    .replace(/\bmanipulation\b/g, String(capacities.manipulation ?? 1))
-    .replace(/\bsight\b/g, String(capacities.sight ?? 1))
-    .replace(/\bmoving\b/g, String(capacities.moving ?? 1))
-    .replace(/\bblood_pumping\b/g, String(capacities.blood_pumping ?? 1))
-    .replace(/\bblood_filtration\b/g, String(capacities.blood_filtration ?? 1))
-    .replace(/\bbreathing\b/g, String(capacities.breathing ?? 1))
-    .replace(/\bdigestion\b/g, String(capacities.digestion ?? 1))
-    .replace(/\btalking\b/g, String(capacities.talking ?? 1))
-    .replace(/\bhearing\b/g, String(capacities.hearing ?? 1))
-    .replace(/\bpain\b/g, String(capacities.pain ?? 0));
-  if (!/^[\d\s+\-*/.()]+$/.test(expr)) return 1.0;
-  try {
-    // eslint-disable-next-line no-new-func
-    const v = Function('"use strict"; return (' + expr + ')')() as number;
-    return isFinite(v) ? Math.round(v * 1000) / 1000 : 1.0;
-  } catch {
-    return 1.0;
-  }
+  const fn = compileFormula(formula);
+  if (!fn) return 1.0;
+  // Args MUST match FORMULA_VARS order. Stats default to 10 when absent so formulas never crash on
+  // partial entities (some mobs / minimal test fixtures may lack a full stat block).
+  const s = p.stats;
+  const tr = p.physicalTraits;
+  const v = fn(
+    s?.strength ?? 10,
+    s?.dexterity ?? 10,
+    s?.constitution ?? 10,
+    s?.perception ?? 10,
+    s?.intelligence ?? 10,
+    s?.charisma ?? 10,
+    tr?.weight ?? 70,
+    tr?.height ?? 170,
+    capacities.consciousness ?? 1,
+    capacities.manipulation ?? 1,
+    capacities.sight ?? 1,
+    capacities.moving ?? 1,
+    capacities.blood_pumping ?? 1,
+    capacities.blood_filtration ?? 1,
+    capacities.breathing ?? 1,
+    capacities.digestion ?? 1,
+    capacities.talking ?? 1,
+    capacities.hearing ?? 1,
+    capacities.pain ?? 0
+  );
+  return isFinite(v) ? Math.round(v * 1000) / 1000 : 1.0;
 }
 
 // ── Capacity calculator: derives body capacities from specific organs ──
