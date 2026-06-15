@@ -3,17 +3,14 @@
 # Ctrl-C kills them all.
 #
 # --profiler: focused profiling session — launches ONLY the main server in the heavy
-#   profiler sandbox (./dev.sh --profiler), skipping the worktree fan-out. The
-#   codegraph viewer still runs (read-only; rebuild it with its ↻ header button).
+#   profiler sandbox (./dev.sh --profiler), skipping the worktree fan-out.
+# codegraph is a separate always-on systemd user service (see codegraph_hint below).
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PIDS=()
 
-# --debug enables the live codebase-graph server (off by default).
-DEBUG=false
 PROFILER=false
 for arg in "$@"; do
-  [[ "$arg" == "--debug" ]] && DEBUG=true
   [[ "$arg" == "--profiler" ]] && PROFILER=true
 done
 
@@ -29,7 +26,9 @@ cleanup() {
 trap cleanup INT TERM
 
 launch() {
-  local dir="$1" label="$2" extra="${3:-}"
+  # `extra` is the dev.sh flag set. Defaults to --debug (the normal launch.sh experience); the
+  # profiler branch passes "--profiler" instead, so a profiling run is CLEAN (no --debug/verbose).
+  local dir="$1" label="$2" extra="${3:---debug}"
   local port=5173
   [[ -f "$dir/.devport" ]] && port=$(< "$dir/.devport")
   # A Ctrl-Z'd previous launch leaves a suspended server holding the port:
@@ -43,46 +42,30 @@ launch() {
       kill -CONT $stopped 2>/dev/null
     fi
   fi
-  # shellcheck disable=SC2086 -- $extra is an intentional optional flag passthrough
-  (cd "$dir" && exec env CI=true ./dev.sh --debug $extra) &
+  # shellcheck disable=SC2086 -- $extra is an intentional flag passthrough (--debug by default)
+  (cd "$dir" && exec env CI=true ./dev.sh $extra) &
   PIDS+=($!)
   echo "  [$label] http://localhost:$port"
   sleep 0.3
 }
 
-# Codebase-graph viewer. The standalone codegraph tool lives in its own repo.
-# No live watcher (it hogs CPU/RAM and competes with playtesting): the graph is
-# built once only if it's missing, then served read-only — use the ↻ Refresh
-# button in the viewer's header to rebuild on demand. Override location/port with
-# CODEGRAPH_DIR / CODEGRAPH_PORT.
-start_codegraph() {
-  CODEGRAPH_PORT=${CODEGRAPH_PORT:-5185}
-  CODEGRAPH_DIR=${CODEGRAPH_DIR:-"$SCRIPT_DIR/../codegraph"}
-  if [[ ! -f "$CODEGRAPH_DIR/bin/codegraph.mjs" ]]; then
-    echo "  [codegraph] not found at $CODEGRAPH_DIR — set CODEGRAPH_DIR or run its own dev server"
-    return
+# codegraph now runs as its own always-on systemd user service, decoupled from
+# this script — no file watcher, rebuilt on demand via the ↻ button in its header,
+# so it never competes with playtesting/profiling. We only print a pointer here.
+#   manage it with:  systemctl --user {status,restart,stop} codegraph
+codegraph_hint() {
+  if systemctl --user is-active --quiet codegraph.service 2>/dev/null; then
+    echo "  [codegraph] http://localhost:5185  (systemd --user service; ↻ in header rebuilds)"
+  else
+    echo "  [codegraph] viewer not running — start it: systemctl --user start codegraph"
   fi
-  # First run only: build the graph once in the background so the viewer isn't
-  # empty. After that it's rebuilt on demand via the header's ↻ Refresh button.
-  if [[ ! -f "$CODEGRAPH_DIR/data/Fantasia4x.json" ]]; then
-    echo "  [codegraph] no graph yet — building once in the background…"
-    (cd "$CODEGRAPH_DIR" && node bin/codegraph.mjs extract Fantasia4x >/dev/null 2>&1 &)
-  fi
-  # Free the port if a previous (possibly Ctrl-Z'd) viewer is holding it.
-  local holders
-  holders=$(lsof -ti tcp:$CODEGRAPH_PORT 2>/dev/null)
-  [[ -n "$holders" ]] && { kill -CONT $holders 2>/dev/null; kill $holders 2>/dev/null; sleep 0.4; }
-  (cd "$CODEGRAPH_DIR" && exec env CI=true pnpm dev --port "$CODEGRAPH_PORT" --strictPort) &
-  PIDS+=($!)
-  echo "  [codegraph] http://localhost:$CODEGRAPH_PORT  (↻ Refresh in the header rebuilds the graph)"
 }
 
-# Profiler sandbox: a single focused server, no worktree fan-out — the codegraph
-# viewer still runs (read-only, no watcher), so it won't compete for CPU.
+# Profiler sandbox: a single focused server, no worktree fan-out.
 if [[ "$PROFILER" == true ]]; then
   echo "Fantasia4x — profiler sandbox (main server only)"
   echo ""
-  start_codegraph
+  codegraph_hint
   launch "$SCRIPT_DIR" "main" "--profiler"
   echo ""
   echo "Ctrl-C to stop."
@@ -103,10 +86,7 @@ if [[ -d "$LAUNCH_DIR" ]]; then
   done
 fi
 
-# Live codebase-graph viewer (--debug only).
-if [[ "$DEBUG" == true ]]; then
-  start_codegraph
-fi
+codegraph_hint
 
 echo ""
 echo "Ctrl-C to stop all."

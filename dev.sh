@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Start the Fantasia4x dev server on a fixed port.
 # If something is already listening on that port, print its info and exit.
-# Pass --debug to enable debug overlays (entity IDs, dev controls, map reroll).
-# Pass --profiler to boot the heavy populated profiling sandbox (4× speed, turn profiler ON,
-#   implies --debug) — open the page and watch [PROF] logs / globalThis.__profOut. See
+# Pass --debug to enable debug overlays (entity IDs, dev controls, map reroll) + verbose logging.
+# Pass --profiler to boot the heavy populated profiling sandbox (4× speed) for a CLEAN run to
+#   capture in the Firefox Profiler — it deliberately does NOT enable --debug/verbose logging, so
+#   the sim profiles clean (only the light ~1Hz TPS sampler runs). See
 #   src/lib/game/dev/profilerScenario.ts.
 #
 # Worktree-local port: create a .devport file next to dev.sh containing just the
@@ -22,7 +23,7 @@ fi
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --debug) DEBUG_MODE=true ;;
-    --profiler) PROFILER_MODE=true; DEBUG_MODE=true ;;
+    --profiler) PROFILER_MODE=true ;; # clean profiling run — deliberately does NOT imply --debug
     --port) PORT="$2"; shift ;;
     --port=*) PORT="${1#--port=}" ;;
   esac
@@ -48,8 +49,8 @@ BRANCH=$(git -C "$SCRIPT_DIR" branch --show-current 2>/dev/null || echo "")
 
 PROFILER_ENV=""
 if [[ "$PROFILER_MODE" == "true" ]]; then
-  echo "Profiler sandbox enabled — heavy populated map, 4× speed, turn profiler ON."
-  echo "  Open http://localhost:$PORT and watch the console [PROF] logs (or read globalThis.__profOut)."
+  echo "Profiler sandbox enabled — heavy populated map, 4× speed (clean run, verbose logging OFF)."
+  echo "  Open http://localhost:$PORT, record in the Firefox Profiler, then read with scripts/profile-self.mjs."
   PROFILER_ENV="VITE_PROFILER=true"
 fi
 

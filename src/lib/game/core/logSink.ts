@@ -128,12 +128,13 @@ export function setSimLogSink(sink: SimLogSink): void {
 
 /**
  * Verbose-logging gate. High-volume per-tick traces (per-pawn needs/AI decisions, entity snapshots)
- * are emitted ONLY when the dev server was started with `--debug`/`--profiler` (which set
- * `VITE_DEBUG_MODE`/`VITE_PROFILER`). In a normal run they cost nothing — `vlog` returns before
- * building the message. This is what keeps the unified log from becoming the old 100 MB firehose.
+ * are emitted ONLY under `--debug` (the in-game debug tab). In a normal run — and crucially under
+ * `--profiler` — they cost nothing: `vlog` returns before building the message, so the sim profiles
+ * clean and there's no firehose. `--profiler` no longer implies `--debug` (the scripts decouple
+ * them), so this gate needs no `--profiler` exception. Light perf logging (the 1 Hz TPS sampler)
+ * is separate and always on — that's the only logging during a profiler run.
  */
-export const LOG_VERBOSE: boolean =
-  import.meta.env.VITE_DEBUG_MODE === 'true' || import.meta.env.VITE_PROFILER === 'true';
+export const LOG_VERBOSE: boolean = import.meta.env.VITE_DEBUG_MODE === 'true';
 
 /**
  * Gated verbose log. No-op (and the message thunk is never invoked) unless `LOG_VERBOSE`. Pass a
