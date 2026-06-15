@@ -683,19 +683,19 @@ export const savedStateReady: Promise<void> = (async () => {
     resetUnreachableJobs();
     set(scenario);
     gameEngine.setGameStateManager(new GameStateManager(scenario));
+    setGameSpeed(4); // both modes run the heavy sim at 4× once unpaused
     storeReady.set(true);
 
     const autorun = import.meta.env.VITE_PROFILER_AUTORUN === 'true';
     if (autorun) {
-      // Capture mode only: run immediately at 4× and drop the overlay now, so the profiler records
-      // the running sim rather than a paused, overlaid game.
-      setGameSpeed(4);
+      // Capture mode only: unpause + drop the overlay now, so the profiler records the running sim
+      // rather than a paused, overlaid game.
       unpauseGame();
       bootReveal.set(true);
     }
     // Otherwise fall through to the normal reveal path: WebGL inits behind the overlay, then the
     // paused warmup linger drops it (rendererReady subscription) — the real-game startup, on the
-    // giant map.
+    // giant map (still 4× once the player unpauses).
     console.info(
       `[PROFILER] sandbox loaded: ${scenario.pawns.length} pawns, ${(scenario.mobs ?? []).length} mobs, ` +
         `${scenario.buildings.length} buildings, ${(scenario.droppedItems ?? []).length} items, ` +
