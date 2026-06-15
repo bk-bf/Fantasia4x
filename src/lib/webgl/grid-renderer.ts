@@ -304,7 +304,14 @@ export class GridRenderer {
    * Generate vertex data for a batch of tiles
    */
   private generateBatchVertexData(tiles: TileData[], options: GridRenderOptions): Float32Array {
-    const vertexData: number[] = [];
+    // Write straight into a preallocated typed array (ENGINE-PERFORMANCE.md §D): every tile emits
+    // exactly 6×23 = 138 floats and none is skipped, so the size is exact. This replaces a
+    // ~5.2M-element `number[]` grown via `.push(...)` plus a final `new Float32Array(it)` copy —
+    // the dominant allocation + GC cost of a full terrain rebuild, which the Chrome trace showed
+    // is what the biggest renderer dips are made of. Output is byte-identical to the old path.
+    const FLOATS_PER_TILE = 6 * 23;
+    const out = new Float32Array(tiles.length * FLOATS_PER_TILE);
+    let o = 0;
     const sampler = options.lightSampler;
     const lightTime = options.lightTime ?? 0;
     // Emitter reach. When a sampler is present but no emitters are lit (bounds ===
@@ -582,10 +589,11 @@ export class GridRenderer {
         Lbl[2] // Bottom-left
       ];
 
-      vertexData.push(...charVertices);
+      out.set(charVertices, o);
+      o += FLOATS_PER_TILE;
     }
 
-    return new Float32Array(vertexData);
+    return out;
   }
 
   /**

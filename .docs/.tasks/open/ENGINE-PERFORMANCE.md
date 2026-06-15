@@ -329,10 +329,22 @@ pure JS + GPU-upload + GC, **not** paint/layout.
 
 ### Fixes (each mirrors a win already proven on the worker side)
 
-- [ ] **D1 — incremental terrain vertices (biggest, ~47%).** worldMap deltas already exist (§C) but the
-  renderer throws them away and regenerates all 38k vertices. Patch only the changed tiles with
-  `bufferSubData` instead of `generateBatchVertexData` + full `bufferData`. Requires `_terrainRev` to
-  carry *which* tiles changed, not just "something did".
+- [~] **D1 — incremental terrain vertices: TRIED, REVERTED (made it worse).** Built it (worker
+  `terrainFull` flag → `_tileDeltas` coords → GameCanvas patches only changed tiles via
+  `bufferSubData`), but the post-D1 trace showed **median ~105→~54 fps, biggest dip 310→476 ms.**
+  Cross-check verdict: the biggest dips are **full terrain rebuilds**, and D1 *couldn't* replace them
+  because harvest **churns designations every tick** → `terrainFull` is true on most flushes → the
+  full rebuild fires anyway, with the incremental path's `buildBaseTile` + per-tile
+  `generateBatchVertexData([tile])` running *on top* (unthrottled), net more work + GC. Wrong lever.
+- [x] **D1′ — preallocate the terrain vertex buffer — LANDED (the actual fix for the biggest dips).**
+  The big dips are individual full rebuilds, expensive because `generateBatchVertexData` built a
+  ~5.2M-element `number[]` via `.push(...)` then `new Float32Array(it)`. Now it writes straight into a
+  preallocated `Float32Array` (size exact: 138 floats/tile, no skips) — output byte-identical, kills
+  the giant transient alloc + conversion + its GC. One function, `pnpm check` 0 errors, 235 tests green.
+- [ ] **D1″ — reduce rebuild FREQUENCY (next).** The remaining dips are full rebuilds forced by
+  designation/zone churn during harvest. Move designation/zone markers OFF the static terrain VBO into
+  a separate overlay pass (doc §5) so terrain only rebuilds on real terrain changes — then rebuilds
+  become rare regardless of how cheap each one is.
 - [x] **D2 — stagger the cold-field resync (~25%) — LANDED.** `syncEntities` (sim.worker.ts) now sends a
   FULL (cold-inclusive) entity only for this flush's round-robin slice (`i % RESYNC_EVERY === phase`) +
   newly-seen ids; everyone else stays slim. Over RESYNC_EVERY flushes every entity is refreshed → same

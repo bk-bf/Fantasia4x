@@ -98,10 +98,15 @@
   const unsubUI = uiState.subscribe((s) => (currentScreen = s.currentScreen));
   const unsubFps = renderFps.subscribe((v) => (fps = v));
 
-  // Measure real simulation throughput by sampling the tick counter once a second.
+  // Measure real simulation throughput by sampling the tick counter. Sampled at 250ms (matching the
+  // renderer's FPS push) and EMA-smoothed: the turn counter only advances on a worker flush (~15Hz),
+  // so a raw once-per-second delta jittered ±~66ms at each window boundary and lagged the FPS readout.
   let tpsTimer: ReturnType<typeof setInterval> | undefined;
   let lastSampleTurn = 0;
   let lastSampleTime = 0;
+  let tpsEma = 0; // smoothed TPS
+  const TPS_SAMPLE_MS = 250; // match the FPS push cadence so both numbers update in lockstep
+  const TPS_ALPHA = 0.3; // EMA weight — calm, but tracks a speed change in ~1s
 
   onMount(async () => {
     if (!browser) return;
@@ -119,12 +124,22 @@
     tpsTimer = setInterval(() => {
       const now = performance.now();
       const elapsed = (now - lastSampleTime) / 1000;
-      if (elapsed > 0) {
-        tps = Math.round((currentTurnValue - lastSampleTurn) / elapsed);
-      }
+      const dTurn = currentTurnValue - lastSampleTurn;
       lastSampleTurn = currentTurnValue;
       lastSampleTime = now;
-    }, 1000);
+      // Paused → no throughput; snap to 0 and reset the average so it ramps cleanly on resume.
+      if (isPaused) {
+        tpsEma = 0;
+        tps = 0;
+        return;
+      }
+      if (elapsed > 0) {
+        const instantaneous = dTurn / elapsed;
+        tpsEma =
+          tpsEma === 0 ? instantaneous : tpsEma * (1 - TPS_ALPHA) + instantaneous * TPS_ALPHA;
+        tps = Math.round(tpsEma);
+      }
+    }, TPS_SAMPLE_MS);
   });
 
   onDestroy(() => {
@@ -163,7 +178,9 @@
     >{gameDate.dayStr}/{gameDate.monthStr}/{gameDate.yearStr} {gameDate.hourStr}:00</span
   >
   <span class="bi turn" title="Turn {currentTurnValue}">T{currentTurnValue}</span>
-  <span class="bi perf" title="Render {fps} FPS · Simulation {tps}/{TICKS_PER_SECOND} TPS"
+  <span
+    class="bi perf"
+    title="Render {fps} FPS · Simulation {tps} TPS (target {TICKS_PER_SECOND * gameSpeed} at {gameSpeed}×)"
     >{fps}FPS · {tps}TPS</span
   >
   <span class="bi" class:running={!isPaused} class:paused={isPaused}>
