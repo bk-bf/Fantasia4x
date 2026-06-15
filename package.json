@@ -25,6 +25,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.30.0",
+    "@firefox-devtools/profiler-cli": "^0.2.1",
     "@sveltejs/adapter-auto": "^6.0.0",
     "@sveltejs/kit": "^2.16.0",
     "@sveltejs/vite-plugin-svelte": "^5.0.0",

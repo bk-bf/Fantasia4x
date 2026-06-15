@@ -9,7 +9,6 @@ import { resourceObjectService } from '../ResourceObjectService';
 import { wasmPathfinderService } from '../WasmPathfinderService';
 import { buildPathfindingGridsSoftBlocked } from '../PathfinderService';
 import { occupancyService } from '../OccupancyService';
-import { profCount } from '../../core/log';
 import { rng } from '../../core/rng';
 import {
   type TileFoodKind,
@@ -544,8 +543,6 @@ export function pathTo(
     ex,
     ey
   );
-  profCount('pathReq');
-  profCount('pathReq.mob');
   return wasmPathfinderService.findPath(walkable, costs, width, height, sx, sy, ex, ey);
 }
 

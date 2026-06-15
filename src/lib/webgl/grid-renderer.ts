@@ -10,7 +10,6 @@ import type { CharacterRenderer } from './character-renderer.js';
 import type { ShaderManager } from './shaders.js';
 import type { FontAtlas } from './types.js';
 import { checkWebGLError } from './utils.js';
-import { profCount } from '../game/core/log';
 
 /** Default fully-lit value used when no light sampler is supplied. */
 const ONE_LIGHT: [number, number, number] = [1, 1, 1];
@@ -212,18 +211,8 @@ export class GridRenderer {
       c.lightVersion === lightVersion &&
       c.count === tiles.length
     ) {
-      profCount('terrainCacheHit');
       return c.data;
     }
-
-    // Diagnostic: which key forced the rebuild? (terrain rebuild was ~80ms/frame and shouldn't
-    // happen every frame — this names the churning key without guessing.)
-    if (!c) profCount('tMiss.firstBuild');
-    else if (c.version !== options.cacheVersion) profCount('tMiss.gridVersion');
-    else if (c.lightVersion !== lightVersion) profCount('tMiss.lightVersion');
-    else if (c.count !== tiles.length) profCount('tMiss.tileCount');
-    else if (c.tileW !== options.tileWidth || c.tileH !== options.tileHeight)
-      profCount('tMiss.zoom');
 
     const data = this.generateBatchVertexData(tiles, options);
     this.terrainCache = {

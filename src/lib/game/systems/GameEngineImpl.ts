@@ -29,7 +29,6 @@ import { TICKS_PER_SECOND, ticksFromSeconds, perTick } from '../core/time';
 import { buildPathfindingGridsWithBlocked } from '../services/PathfinderService';
 import { occupancyService } from '../services/OccupancyService';
 import { isGameDebug, gatedConsole } from '../core/log';
-import { gameLogger } from '../dev/gameLogger';
 import type { WorkCategory } from '../core/types';
 import type { Pawn } from '../core/types';
 import { rng } from '../core/rng';
@@ -105,32 +104,13 @@ export class GameEngineImpl implements GameEngine {
       // place. (gameState.turn counts ticks.)
       this.gameState = { ...this.gameState, turn: this.gameState.turn + 1 };
 
-      // On-demand per-phase profiler. Zero cost unless toggled on at runtime
-      // via `profileTurns()` in the dev console (sets globalThis.__profileTurns).
-      // When active, average phase timings log as `[PROF]` once per second.
-      const prof = (globalThis as any).__profileTurns ? ((globalThis as any).__prof ??= {}) : null;
-      const t = prof
-        ? (label: string, fn: () => void) => {
-            const s = performance.now();
-            fn();
-            const e = (prof[label] ??= { sum: 0, n: 0 });
-            e.sum += performance.now() - s;
-            e.n++;
-          }
-        : (_label: string, fn: () => void) => fn();
+      // Phase runner — profiler removed; profile via the browser (Firefox Profiler) instead.
+      const t = (_label: string, fn: () => void): void => fn();
 
       t('needsTick', () => {
-        // Function-level sub-timers (free when the profiler is off — `t` is a passthrough then; once
-        // per tick when on, not per-entity, so they don't distort like the per-call counters).
-        t('need.tick', () => {
-          this.gameState = pawnService.processNeedsTick(this.gameState!);
-        });
-        t('need.drink', () => {
-          this.gameState = pawnService.processAutoDrink(this.gameState!);
-        });
-        t('need.wash', () => {
-          this.gameState = pawnService.processAutoWash(this.gameState!);
-        });
+        this.gameState = pawnService.processNeedsTick(this.gameState!);
+        this.gameState = pawnService.processAutoDrink(this.gameState!);
+        this.gameState = pawnService.processAutoWash(this.gameState!);
       });
       t('itemDecay', () => {
         this.gameState = itemService.stepItemDecay(this.gameState!);
@@ -152,21 +132,11 @@ export class GameEngineImpl implements GameEngine {
       t('pawns', () => this.processPawns());
       t('resourceRegrowth', () => this.processResourceRegrowth());
       t('entityStep', () => {
-        t('ent.spawn', () => {
-          this.gameState = entityService.spawnEntities(this.gameState!);
-        });
-        t('ent.fsm', () => {
-          this.gameState = entityService.stepEntities(this.gameState!);
-        });
-        t('ent.move', () => {
-          this.gameState = entityService.advanceMobMovement(this.gameState!);
-        });
-        t('ent.hunger', () => {
-          this.gameState = entityService.stepHunger(this.gameState!);
-        });
-        t('ent.reap', () => {
-          this.gameState = entityService.removeDead(this.gameState!);
-        });
+        this.gameState = entityService.spawnEntities(this.gameState!);
+        this.gameState = entityService.stepEntities(this.gameState!);
+        this.gameState = entityService.advanceMobMovement(this.gameState!);
+        this.gameState = entityService.stepHunger(this.gameState!);
+        this.gameState = entityService.removeDead(this.gameState!);
       });
       t('combat', () => {
         const preCombatState = this.gameState!;
@@ -193,38 +163,6 @@ export class GameEngineImpl implements GameEngine {
         if (flush) this.lastFlushMs = nowMs;
         this.outputSink?.(this.gameState!, flush);
       });
-
-      if (prof && this.gameState.turn % TICKS_PER_SECOND === 0) {
-        const out: Record<string, string> = {};
-        let total = 0;
-        for (const k of Object.keys(prof)) {
-          const e = prof[k];
-          out[k] = (e.sum / e.n).toFixed(3) + 'ms';
-          total += e.sum / e.n;
-        }
-        out.TOTAL = total.toFixed(3) + 'ms';
-        // P-5: fold in per-tick call counts for the suspect scans (profCount → __profCounts),
-        // so a profiling run shows HOW OFTEN they fire, not just phase ms. Accumulated over the
-        // last TICKS_PER_SECOND ticks → divide for a per-tick average. Reset alongside the timings.
-        const counts = (globalThis as any).__profCounts as Record<string, number> | undefined;
-        if (counts) {
-          for (const k of Object.keys(counts)) {
-            out[`#${k}/tick`] = (counts[k] / TICKS_PER_SECOND).toFixed(1);
-            counts[k] = 0;
-          }
-        }
-        (globalThis as any).__profOut = out;
-        // ADR-011: the profiler must always print (GameEngineImpl deliberately does NOT shadow
-        // console), so this is the sanctioned raw-console exemption.
-        // eslint-disable-next-line no-console
-        console.log('[PROF] ' + JSON.stringify(out));
-        // Also persist to .debug/perf.log so a --profiler run is readable off-console.
-        gameLogger.log(this.gameState?.turn ?? 0, 'PERF', '[PROF] ' + JSON.stringify(out));
-        for (const k of Object.keys(prof)) {
-          prof[k].sum = 0;
-          prof[k].n = 0;
-        }
-      }
 
       return {
         success: true,
@@ -498,16 +436,7 @@ export class GameEngineImpl implements GameEngine {
   }
 
   private processPawns(): void {
-    const prof = (globalThis as any).__profileTurns ? ((globalThis as any).__profP ??= {}) : null;
-    const tp = prof
-      ? (label: string, fn: () => void) => {
-          const s = performance.now();
-          fn();
-          const e = (prof[label] ??= { sum: 0, n: 0 });
-          e.sum += performance.now() - s;
-          e.n++;
-        }
-      : (_label: string, fn: () => void) => fn();
+    const tp = (_label: string, fn: () => void): void => fn();
     // Draft orders: pathfind and assign movement before the movement step
     if (this.gameState!.pawns?.some((p) => p.drafted && p.draftTarget)) {
       tp('p.draft', () => {
@@ -538,18 +467,6 @@ export class GameEngineImpl implements GameEngine {
     tp('p.pawnTurn', () => {
       this.gameState = pawnService.processPawnTurn(this.gameState!);
     });
-    if (prof && this.gameState!.turn % TICKS_PER_SECOND === 0) {
-      const out: Record<string, string> = {};
-      for (const k of Object.keys(prof)) out[k] = (prof[k].sum / prof[k].n).toFixed(3) + 'ms';
-      // ADR-011 sanctioned profiler output (always prints).
-      // eslint-disable-next-line no-console
-      console.log('[PROF-PAWN] ' + JSON.stringify(out));
-      gameLogger.log(this.gameState?.turn ?? 0, 'PERF', '[PROF-PAWN] ' + JSON.stringify(out));
-      for (const k of Object.keys(prof)) {
-        prof[k].sum = 0;
-        prof[k].n = 0;
-      }
-    }
   }
 
   /**
@@ -753,24 +670,6 @@ export class GameEngineImpl implements GameEngine {
 
 // Export singleton
 export const gameEngine = new GameEngineImpl();
-
-// Dev console helper: toggle the on-demand per-phase turn profiler.
-//   profileTurns()       → start profiling (logs avg phase ms as [PROF] each second)
-//   profileTurns(false)  → stop profiling
-// The [PROF] line also includes per-tick call counts (`#<name>/tick`) for the P-5 suspect scans
-// (blockedTiles, findCombatThreat, findNearestRestBuilding) via profCount() — so a run shows both
-// how long each phase takes AND how often those scans fire. Results are also at globalThis.__profOut.
-// Off by default — adds zero cost to the tick loop until enabled.
-if (typeof globalThis !== 'undefined' && import.meta.env?.DEV) {
-  (globalThis as any).profileTurns = (enable = true) => {
-    (globalThis as any).__profileTurns = !!enable;
-    (globalThis as any).__prof = {};
-    (globalThis as any).__profCounts = {};
-    return enable
-      ? 'Turn profiler ON — avg phase timings + #scan/tick counts log as [PROF] every second.'
-      : 'Turn profiler OFF.';
-  };
-}
 
 export function initializeGameEngine(gameStateManager: GameStateManager): GameEngineImpl {
   gameEngine.setGameStateManager(gameStateManager);

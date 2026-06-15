@@ -39,13 +39,6 @@ export function verifyWasmInWorker(): void {
   w.postMessage({ kind: 'wasm-check' });
 }
 
-/** Opt-in worker profiling ([PROF]/[SIM-TPS] → perf.log). Off unless `?simprof`. */
-export const USE_SIM_PROFILE: boolean =
-  isClientRuntime &&
-  import.meta.env.DEV &&
-  typeof location !== 'undefined' &&
-  new URLSearchParams(location.search).has('simprof');
-
 /** Is the sim-in-worker cutover active? Off by default; opt in with `?simworker` or localStorage. */
 export const USE_SIM_WORKER: boolean =
   isClientRuntime &&
@@ -75,9 +68,9 @@ class SimWorkerBridge {
     this.w.onerror = (e) => console.error('[SIM-WORKER] error:', e.message || e);
   }
 
-  init(state: GameState, seed: number, profile = false): void {
+  init(state: GameState, seed: number): void {
     this.worldMap = state.worldMap;
-    this.w?.postMessage({ kind: 'init', state, seed, profile });
+    this.w?.postMessage({ kind: 'init', state, seed });
   }
   command(cmd: unknown): void {
     this.w?.postMessage({ kind: 'command', cmd });

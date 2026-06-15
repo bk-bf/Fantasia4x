@@ -14,7 +14,7 @@ import { gameEngine } from '$lib/game/systems/GameEngineImpl';
 import './simLogBridge';
 // ADR-021: sim worker bridge (W1 verifier + W2–W4 cutover). USE_SIM_WORKER is off unless opted in
 // (?simworker / localStorage), so the default path is the in-thread engine below.
-import { simWorkerBridge, USE_SIM_WORKER, USE_SIM_PROFILE } from '$lib/game/sim/simWorkerClient';
+import { simWorkerBridge, USE_SIM_WORKER } from '$lib/game/sim/simWorkerClient';
 // ADR-021 W3: serializable command registry (shared with the future sim worker).
 import { applySimCommand } from '$lib/game/sim/commands';
 import type { SimCommand } from '$lib/game/sim/simProtocol';
@@ -663,9 +663,9 @@ console.log('[GameState] GameEngine initialized with GameStateManager');
 export const savedStateReady: Promise<void> = (async () => {
   if (!browser) return;
 
-  // Profiler sandbox (./dev.sh --profiler → VITE_PROFILER=true): skip the save and boot a heavy
-  // populated scenario with the turn profiler on, 4× speed, unpaused — so opening the page collects
-  // perf data immediately. Dynamic import keeps the scenario out of the normal bundle. The leading
+  // Heavy-load sandbox (./dev.sh profiler → VITE_PROFILER=true): skip the save and boot a heavy
+  // populated scenario at 4× speed, unpaused — for reproducing load to profile via the browser.
+  // Dynamic import keeps the scenario out of the normal bundle. The leading
   // `await` also defers this past synchronous module init, so gameSpeed/isPaused are defined.
   if (import.meta.env.VITE_PROFILER === 'true') {
     const { buildProfilerScenario } = await import('$lib/game/dev/profilerScenario');
@@ -674,18 +674,13 @@ export const savedStateReady: Promise<void> = (async () => {
     resetUnreachableJobs();
     set(scenario);
     gameEngine.setGameStateManager(new GameStateManager(scenario));
-    const g = globalThis as Record<string, unknown>;
-    g.__profileTurns = true;
-    g.__prof = {};
-    g.__profCounts = {};
     setGameSpeed(4);
     unpauseGame();
     storeReady.set(true);
     console.info(
       `[PROFILER] sandbox loaded: ${scenario.pawns.length} pawns, ${(scenario.mobs ?? []).length} mobs, ` +
         `${scenario.buildings.length} buildings, ${(scenario.droppedItems ?? []).length} items, ` +
-        `${Object.keys(scenario.designations).length} designations · 4× speed, turn profiler ON. ` +
-        `Watch [PROF] logs or read globalThis.__profOut.`
+        `${Object.keys(scenario.designations).length} designations · 4× speed. Profile via the browser.`
     );
     return;
   }
@@ -890,7 +885,7 @@ if (USE_SIM_WORKER) {
   savedStateReady.then(() => {
     simWorkerBridge.start();
     const st = get(gameState) as GameState;
-    simWorkerBridge.init(st, st.seed, USE_SIM_PROFILE);
+    simWorkerBridge.init(st, st.seed);
     simWorkerBridge.setSpeed(gameSpeedValue);
     simWorkerBridge.setPaused(get(isPaused));
     console.info('[SIM-WORKER] cutover active — sim now runs in the worker.');

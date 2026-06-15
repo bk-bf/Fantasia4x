@@ -21,7 +21,6 @@ import { calcMaxStamina } from '../entities/Pawns';
 import statusEffectsData from '../database/status-effects.jsonc';
 import type { StatusEffectDef } from '../core/types';
 import { simLog, type CombatTextKind } from '../core/logSink';
-import { profAdd, profCount } from '../core/log';
 import { rng } from '../core/rng';
 // P-4: the body-part anatomy table + selection helpers moved to core/BodyParts. Re-export the two
 // symbols external code imported from Combat (PawnHealth, EntityService, Pawns) so they're unchanged.
@@ -792,7 +791,6 @@ class CombatServiceImpl implements CombatService {
 
     // ── Mob attacks ──────────────────────────────────────────────────────
     const mobs = state.mobs ?? [];
-    const _tMob = performance.now();
     for (const mob of mobs) {
       if (mob.state !== 'Attacking' || mob.isAlive === false) continue;
       if (this.isKnockedDown(mob)) continue;
@@ -835,15 +833,12 @@ class CombatServiceImpl implements CombatService {
       }
       if (!target) continue;
 
-      profCount('combat.attack');
       const atk = this.performAttack(mob, target, next, state.turn);
       next = atk.state;
       mobStaminaUpdates.set(mob.id, Math.max(0, curStamina - atk.staminaCost));
     }
-    profAdd('combat.mobAtk', performance.now() - _tMob);
 
     // ── Pawn attacks (drafted order OR auto-engaged Fighting state) ───────
-    const _tPawn = performance.now();
     for (const pawn of state.pawns) {
       if (pawn.isAlive === false || !pawn.position) continue;
       if (this.isKnockedDown(pawn)) continue;
@@ -896,12 +891,10 @@ class CombatServiceImpl implements CombatService {
       if (state.turn % pawnInterval !== 0) continue;
 
       const curStamina = pawn.stamina ?? pawn.maxStamina ?? 50;
-      profCount('combat.attack');
       const atk = this.performAttack(pawn, target, next, state.turn);
       next = atk.state;
       pawnStaminaUpdates.set(pawn.id, Math.max(0, curStamina - atk.staminaCost));
     }
-    profAdd('combat.pawnAtk', performance.now() - _tPawn);
 
     // Apply this tick's attack-drain, then regen + winded latch for EVERY alive entity (so a winded
     // one recovers even after the fight ends). #2 (ENGINE-PERFORMANCE): tickStaminaAndWinded already
@@ -909,7 +902,6 @@ class CombatServiceImpl implements CombatService {
     // COPY-ON-WRITE — only allocate (and only once) if some entity actually changed. At peace nothing
     // changes → zero array allocation, vs the old unconditional double `.map`. (Inner evaluateStat is
     // now cached by #1.) Kept immutable — no mutation risk in the combat phase.
-    const _tStam = performance.now();
     const tickAll = <T extends Pawn | Mob>(arr: T[], drain: Map<string, number>): T[] => {
       let out: T[] | null = null;
       for (let i = 0; i < arr.length; i++) {
@@ -928,7 +920,6 @@ class CombatServiceImpl implements CombatService {
       mobs: tickAll(next.mobs ?? [], mobStaminaUpdates),
       pawns: tickAll(next.pawns, pawnStaminaUpdates)
     };
-    profAdd('combat.stamina', performance.now() - _tStam);
 
     return next;
   }

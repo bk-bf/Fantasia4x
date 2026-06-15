@@ -24,12 +24,11 @@ export interface SimCommand {
 
 /** Main → worker. */
 export type MainToWorker =
-  | { kind: 'init'; state: GameState; seed: number; profile?: boolean }
+  | { kind: 'init'; state: GameState; seed: number }
   | { kind: 'command'; cmd: SimCommand }
   | { kind: 'setSpeed'; speed: number }
   | { kind: 'setPaused'; paused: boolean }
-  | { kind: 'requestSave' }
-  | { kind: 'profile'; on: boolean };
+  | { kind: 'requestSave' };
 
 /**
  * A buffered sim-log/feedback call forwarded worker→main. The sim emits chronicle entries + floating

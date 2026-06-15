@@ -1,6 +1,5 @@
 import type { WorldTile } from '../core/types.js';
 import { wasmPathfinderService } from './WasmPathfinderService.js';
-import { profCount } from '../core/log';
 
 export interface PathfinderService {
   /** Whether the underlying pathfinder (WASM) has finished initialising. */
@@ -118,7 +117,6 @@ export function buildPathfindingGridsSoftBlocked(
   ex: number,
   ey: number
 ): PathfindingGrids {
-  profCount('softGrid'); // confirm the soft path-grid is the one in use (profiler check)
   const base = buildPathfindingGrids(worldMap);
   if (blocked.size === 0) return base;
   const { width, height, walkable } = base;

@@ -19,8 +19,6 @@
   import type { GameGrid } from '$lib/webgl/game-grid.js';
   import { GameGrid as GameGridClass } from '$lib/webgl/game-grid.js';
   import { BASE_TILE_PX } from '$lib/webgl/tile-types.js';
-  import { gameLogger } from '$lib/game/dev/gameLogger';
-  import { profCount } from '$lib/game/core/log';
   import { wasmPathfinderService } from '$lib/game/services/WasmPathfinderService.js';
   import { pawnService } from '$lib/game/services/PawnService.js';
   import { buildPathfindingGrids } from '$lib/game/services/PathfinderService.js';
@@ -97,10 +95,6 @@
     const mapH = worldMap.length > 0 ? worldMap.length : MAP_H;
     return Math.max(canvasW / mapW, canvasH / mapH);
   }
-
-  // Chrome-only performance.memory shape (JS heap, not system RAM) — used by the
-  // profiler's [SYS]/[RENDER-PROF] readouts.
-  type PerfMemory = { usedJSHeapSize: number; totalJSHeapSize: number; jsHeapSizeLimit: number };
 
   let canvas: HTMLCanvasElement;
   let designCanvas: HTMLCanvasElement;
@@ -1085,7 +1079,6 @@
     // Profiler: how often the full 38k-tile terrain grid is rebuilt + re-uploaded. If this is
     // ~1/tick during RUNNING, the renderCPU cost is rebuild churn (fix the trigger); if ~0 while
     // renderCPU stays high, the cost is the per-frame buffer re-upload in the renderer instead.
-    profCount('gridRebuild');
     const grid = buildGameGrid(worldMap, buildings, designations, zoneTiles);
 
     // (Live zone drag-paint preview is drawn on the 2D overlay in
@@ -1648,67 +1641,8 @@
     setView(viewX + dx * alpha, viewY + dy * alpha);
   }
 
-  // One-time hardware/cap banner for the profiler. Browsers don't expose true
-  // system CPU/GPU/RAM usage; what IS available is the *caps* (cores, device RAM,
-  // GPU model, JS-heap ceiling) plus the canvas backing-store size — the latter is
-  // the key number for confirming a present/compositor bottleneck on a big map.
-  function logSystemBanner() {
-    const lines: string[] = ['[SYS] profiler host capabilities:'];
-    const nav = navigator as Navigator & { deviceMemory?: number };
-    lines.push(`  cpu: ${nav.hardwareConcurrency ?? '?'} logical cores`);
-    lines.push(
-      `  ram: deviceMemory≈${nav.deviceMemory ?? '?'}GB (browser-capped/coarse; not the true total)`
-    );
-    const mem = (performance as unknown as { memory?: PerfMemory }).memory;
-    if (mem) {
-      lines.push(`  jsHeapLimit: ${(mem.jsHeapSizeLimit / 1048576).toFixed(0)}MB`);
-    }
-    // GPU model via the unmasked-renderer extension (Chrome/FF gate it behind this).
-    const gl = renderer?.getContext?.();
-    if (gl) {
-      const dbg = gl.getExtension('WEBGL_debug_renderer_info');
-      const gpu = dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : 'hidden';
-      lines.push(`  gpu: ${gpu}`);
-      lines.push(`  glMaxTexture: ${gl.getParameter(gl.MAX_TEXTURE_SIZE)}px`);
-    }
-    const dpr = window.devicePixelRatio || 1;
-    const cw = canvas?.width ?? 0;
-    const ch = canvas?.height ?? 0;
-    lines.push(
-      `  canvas backing store: ${cw}×${ch}px (${((cw * ch) / 1e6).toFixed(1)}MP, dpr ${dpr}) ` +
-        `— CSS ${canvas?.clientWidth ?? 0}×${canvas?.clientHeight ?? 0}`
-    );
-    const banner = lines.join('\n');
-    // eslint-disable-next-line no-console
-    console.log(banner);
-    // Also persist to .debug/perf.log (PERF tag) so the run is readable without the console.
-    gameLogger.log(0, 'PERF', banner.replace(/\n/g, ' | '));
-  }
-
   function startLoop() {
     let lastFpsPush = 0;
-    // Render-frame profiler: when globalThis.__profileTurns is on (the --profiler
-    // sandbox sets it), accumulate the per-frame wall-time split so we can see
-    // whether the bottleneck is the sim or the render — the turn profiler only
-    // covers the sim and is blind to everything in this loop. Logged once/sec.
-    // Paused and running frames are profiled into SEPARATE buckets — they are completely
-    // different workloads (paused: overlay-animation layer only; running: full sim) and must
-    // never be averaged together. Each second we emit a tagged line per state that saw frames.
-    const blankProf = () => ({
-      sim: 0,
-      overlay: 0,
-      render: 0,
-      gpu: 0,
-      terrainMs: 0,
-      overlayMs: 0,
-      verts: 0,
-      frames: 0,
-      wall: 0
-    });
-    let profRun = blankProf();
-    let profPause = blankProf();
-    let profLast = 0;
-    let sysBannerLogged = false;
     function frame() {
       if (!renderer || !ready) return;
       // Real elapsed time drives interpolation so motion is smooth at the display
@@ -1716,13 +1650,10 @@
       const now = performance.now();
       const dt = lastFrameTime ? (now - lastFrameTime) / 1000 : 0;
       lastFrameTime = now;
-      const prof = (globalThis as Record<string, unknown>).__profileTurns === true;
-      const tSim = prof ? performance.now() : 0;
-      // Advance the simulation on this same thread/schedule. Driving the sim from
-      // the render loop (rather than a competing setInterval) prevents the timer
-      // starvation that throttled a <1 ms/tick sim to ~20 TPS while rendering.
+      // Advance the simulation on this same thread/schedule (non-worker mode). Driving the sim
+      // from the render loop (rather than a competing setInterval) prevents the timer starvation
+      // that throttled a <1 ms/tick sim to ~20 TPS while rendering. (No-op under ?simworker.)
       gameState.stepSimulation(dt * 1000);
-      const tOverlay = prof ? performance.now() : 0;
       updatePawnOverlay(dt);
       updateHoverEntity();
       updateCameraFollow(dt);
@@ -1736,85 +1667,12 @@
         redrawOverlayNow();
       }
       renderer.setOverlayGrid(pawnOverlayGrid);
-      const tRender = prof ? performance.now() : 0;
       renderer.beginFrame();
       renderer.endFrame();
-      // Split render into CPU-submit (building/uploading buffers + queuing draw calls) vs
-      // GPU-execute (gl.finish blocks until the GPU drains): renderCpu large ⇒ CPU-bound on the
-      // renderer; gpuWait large ⇒ the thread is stalling on the iGPU. Profiler-only (finish forces
-      // a sync that would otherwise hurt perf).
-      let renderCpu = 0;
-      let gpuWait = 0;
-      if (prof) {
-        renderCpu = performance.now() - tRender;
-        const gl = renderer.getContext?.();
-        if (gl) {
-          const tg = performance.now();
-          gl.finish();
-          gpuWait = performance.now() - tg;
-        }
-      }
       // Surface render FPS to the topbar ~4×/sec to avoid store churn.
       if (now - lastFpsPush > 250) {
         lastFpsPush = now;
         renderFps.set(Math.round(renderer.getStats().fps));
-      }
-      if (prof) {
-        if (!sysBannerLogged) {
-          sysBannerLogged = true;
-          logSystemBanner();
-        }
-        const acc = get(gameState.isPaused) ? profPause : profRun;
-        const rs = renderer.getStats();
-        acc.sim += tOverlay - tSim;
-        acc.overlay += tRender - tOverlay;
-        acc.render += renderCpu;
-        acc.gpu += gpuWait;
-        acc.terrainMs += rs.terrainMs;
-        acc.overlayMs += rs.overlayMs;
-        acc.verts += rs.vertexCount;
-        acc.wall += dt * 1000;
-        acc.frames++;
-        if (now - profLast > 1000 && profRun.frames + profPause.frames > 0) {
-          // performance.memory is Chrome-only; JS heap, not system RAM.
-          const mem = (performance as unknown as { memory?: PerfMemory }).memory;
-          const heap = mem
-            ? ` · heap ${(mem.usedJSHeapSize / 1048576).toFixed(0)}/${(mem.jsHeapSizeLimit / 1048576).toFixed(0)}MB`
-            : '';
-          // A hidden/unfocused tab gets its rAF throttled by the browser — that inflates the
-          // GPU/idle gap and is NOT a game cost. Flag it so such windows are discarded.
-          const bg =
-            typeof document !== 'undefined' &&
-            (document.hidden || (typeof document.hasFocus === 'function' && !document.hasFocus()))
-              ? ' · bg(rAF-throttled — ignore)'
-              : '';
-          // One line per state that saw frames; effective fps = 1000/frameMs (true rate of
-          // that state, independent of how much of the window it occupied).
-          for (const [label, a] of [
-            ['RUNNING', profRun],
-            ['PAUSED', profPause]
-          ] as const) {
-            if (a.frames === 0) continue;
-            const f = a.frames;
-            const cpu = (a.sim + a.overlay + a.render) / f; // pure JS/CPU on the main thread
-            const gpu = a.gpu / f; // thread blocked in gl.finish() waiting on the GPU
-            const frameMs = a.wall / f;
-            const busy = frameMs > 0 ? (cpu / frameMs) * 100 : 0;
-            const idle = frameMs - cpu - gpu; // unaccounted (rAF cadence / vsync wait)
-            const line =
-              `[RENDER-PROF] ${label} ~${(1000 / frameMs).toFixed(0)}fps · frame ${frameMs.toFixed(1)}ms ` +
-              `= sim ${(a.sim / f).toFixed(1)} + overlay ${(a.overlay / f).toFixed(1)} ` +
-              `+ renderCPU ${(a.render / f).toFixed(1)} [terrain ${(a.terrainMs / f).toFixed(1)} + entityOverlay ${(a.overlayMs / f).toFixed(1)}, ${(a.verts / f / 1000).toFixed(0)}k verts] ` +
-              `+ gpuWait ${gpu.toFixed(1)} + idle ${idle.toFixed(1)}ms ` +
-              `· CPU ${busy.toFixed(0)}% busy · ${f} frames${heap}${bg}`;
-            // eslint-disable-next-line no-console
-            console.log(line);
-            gameLogger.log(0, 'PERF', line);
-          }
-          profRun = blankProf();
-          profPause = blankProf();
-          profLast = now;
-        }
       }
       animationId = requestAnimationFrame(frame);
     }
