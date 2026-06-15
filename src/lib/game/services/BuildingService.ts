@@ -17,6 +17,13 @@ import {
 const AVAILABLE_BUILDINGS = buildingsData as unknown as Building[];
 const ITEMS_DB = itemsData as unknown as Item[];
 
+// O(1) id lookup over the static building DB. `getBuildingById` was a per-call `.find()` and
+// showed up hot in the sim worker profile (~3.6%); the DB never mutates at runtime, so index once.
+let _buildingById: Map<string, Building> | null = null;
+function buildingIndex(): Map<string, Building> {
+  return (_buildingById ??= new Map(AVAILABLE_BUILDINGS.map((b) => [b.id, b])));
+}
+
 /**
  * BuildingService - Clean interface for building queries and validation
  * Separates business logic from data definitions
@@ -103,7 +110,7 @@ export interface BuildingService {
  */
 export class BuildingServiceImpl implements BuildingService {
   getBuildingById(id: string): Building | undefined {
-    return AVAILABLE_BUILDINGS.find((building) => building.id === id);
+    return buildingIndex().get(id);
   }
 
   getBuildingsByCategory(category: string): Building[] {

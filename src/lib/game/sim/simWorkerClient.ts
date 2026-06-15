@@ -55,6 +55,10 @@ export const USE_SIM_WORKER: boolean =
 class SimWorkerBridge {
   private w: Worker | null = null;
   private worldMap: GameState['worldMap'] = [];
+  /** Mirror of the worker's sent state, rebuilt from sectional diffs (W2). Each snapshot carries
+   *  only the top-level fields whose ref changed; unchanged sections are reused from here, so they
+   *  aren't re-cloned across the boundary. Reset on init to match the worker's `lastSent` baseline. */
+  private lastState: Partial<GameState> = {};
   /** Store hook: full state projection per snapshot. `flush` = update held value AND notify+save
    *  (~15Hz); between flushes only the held value is refreshed (per-tick positions for the renderer). */
   onState: ((s: GameState, flush: boolean) => void) | null = null;
@@ -70,6 +74,7 @@ class SimWorkerBridge {
 
   init(state: GameState, seed: number): void {
     this.worldMap = state.worldMap;
+    this.lastState = {}; // matches the worker resetting its sectional-diff baseline on init
     this.w?.postMessage({ kind: 'init', state, seed });
   }
   command(cmd: unknown): void {
@@ -95,10 +100,11 @@ class SimWorkerBridge {
   }): void {
     if (m.kind === 'snapshot') {
       if (m.worldMap) this.worldMap = m.worldMap;
-      this.onState?.(
-        { ...(m.state as object), worldMap: this.worldMap } as GameState,
-        m.flush ?? true
-      );
+      // Merge the sectional diff onto the mirror: changed fields overwrite, unchanged ones keep
+      // their refs (no re-clone). worldMap is reattached from its own cache. A new top-level object
+      // each flush keeps the store reactive while unchanged sections stay ref-stable downstream.
+      this.lastState = { ...this.lastState, ...(m.state as object) };
+      this.onState?.({ ...this.lastState, worldMap: this.worldMap } as GameState, m.flush ?? true);
     } else if (m.kind === 'simlog') {
       // Replay the worker's buffered chronicle/combat-text calls against the real (DOM) sink.
       const sink = realSimLogSink as unknown as Record<string, (...a: unknown[]) => unknown>;

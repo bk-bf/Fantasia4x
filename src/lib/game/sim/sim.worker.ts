@@ -104,11 +104,24 @@ function installForwardingLogSink() {
 }
 
 /**
+ * Last-sent ref per top-level GameState field (the W2 sectional diff). Reset on `init`. The bridge
+ * keeps the mirror copy; the two stay in lock-step because postMessage is ordered + reliable.
+ */
+let lastSent: Record<string, unknown> = {};
+
+/**
  * Publish state to the main thread at the ~15Hz UI-push (flush) rate. Posting EVERY tick was tried
  * and reverted: structured-cloning the full ~290-entity snapshot 50×/s overwhelmed the main thread's
  * deserialize and crashed FPS to ~7. The freeze-frames the per-tick attempt was meant to fix were
  * actually the terrain-rebuild storm (now handled by `_terrainRev` below), not position-update rate
- * — so 15Hz snapshots are fine. worldMap is sent only when its ref changed (38k tiles).
+ * — so 15Hz snapshots are fine.
+ *
+ * W2 sectional diff: rather than re-cloning the WHOLE state every flush (profiled at ~38% of sim
+ * time — `post` structured-clone + the `{...rest}` spread), send ONLY the top-level fields whose
+ * ref changed since the last flush. Immutable updates give changed sections a new ref and leave
+ * untouched ones (buildings, designations, research, settings, …) ref-stable, so those are skipped
+ * and the bridge reuses its cached copy — no re-clone across the boundary. pawns/mobs change every
+ * tick so they still flow; worldMap stays special-cased (38k tiles, sent only when its ref changes).
  */
 function publish(state: GameState, flush: boolean) {
   if (!flush) return;
@@ -127,11 +140,21 @@ function publish(state: GameState, flush: boolean) {
     prevDesignations = state.designations;
     prevZoneTiles = state.zoneTiles;
   }
-  const { worldMap, ...rest } = state;
+  const delta: Record<string, unknown> = {};
+  const src = state as unknown as Record<string, unknown>;
+  for (const k in state) {
+    if (k === 'worldMap') continue; // sent separately (bridge caches it)
+    const v = src[k];
+    if (v !== lastSent[k]) {
+      delta[k] = v;
+      lastSent[k] = v;
+    }
+  }
+  delta._terrainRev = terrainRev; // always present; renderer's terrain-rebuild trigger
   post({
     kind: 'snapshot',
-    state: { ...rest, _terrainRev: terrainRev },
-    worldMap: worldMapChanged ? worldMap : undefined,
+    state: delta,
+    worldMap: worldMapChanged ? state.worldMap : undefined,
     flush
   });
 }
@@ -191,6 +214,7 @@ self.onmessage = async (e: MessageEvent) => {
       gameEngine.setCommitSink((s) => publish(s, true)); // command result → snapshot
       await wasmPathfinderService.init();
       lastWorldMap = (msg.state as GameState).worldMap;
+      lastSent = {}; // reset the sectional-diff baseline so the first publish sends every field
       lastBatch = performance.now();
       if (!loop) loop = setInterval(batch, 16);
       post({ kind: 'ready' });

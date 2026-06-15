@@ -46,7 +46,15 @@ export interface SimLogEvent {
 /** Worker → main. */
 export type WorkerToMain =
   | { kind: 'ready' }
-  | { kind: 'snapshot'; snapshot: RenderSnapshot }
+  // W2 sectional diff: `state` carries ONLY the top-level GameState fields whose ref changed since
+  // the last flush (the bridge reassembles the full state from its mirror). `worldMap` is sent
+  // separately, only when its ref changes. `_terrainRev` rides inside `state`.
+  | {
+      kind: 'snapshot';
+      state: Partial<GameState>;
+      worldMap?: GameState['worldMap'];
+      flush: boolean;
+    }
   | { kind: 'fullState'; state: GameState } // for save/load reconciliation
   | { kind: 'simlog'; events: SimLogEvent[] }
   | { kind: 'error'; error: string };

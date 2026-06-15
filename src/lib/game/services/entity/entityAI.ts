@@ -25,6 +25,7 @@ import {
   pathTo,
   edibleResourceOnTile
 } from './entityHelpers';
+import { spatialIndexService, type SpatialIndex } from '../SpatialIndexService';
 import {
   type TileFoodKind,
   NIGHT_THRESHOLD,
@@ -57,6 +58,13 @@ export function stepEntities(state: GameState): GameState {
   if (!mobs || mobs.length === 0) return state;
 
   const livePawns = state.pawns.filter((p) => p.position && p.isAlive !== false);
+  // Index live pawns once per tick so each mob's nearestPawn lookup is O(nearby), not O(pawns).
+  const pawnIndex = spatialIndexService.build(
+    livePawns,
+    (p) => p.position!.x,
+    (p) => p.position!.y,
+    16
+  );
   // Accumulates entity-vs-entity damage dealt this tick (hunting mini-combat).
   const pendingDamage = new Map<string, number>();
   // Accumulates meat consumed from corpses this tick (corpseId → fraction eaten).
@@ -82,13 +90,13 @@ export function stepEntities(state: GameState): GameState {
     const stepped = stepOne(
       mob,
       def,
-      livePawns,
       mobs,
       state,
       pendingDamage,
       pendingMeatConsumption,
       pendingTileDepletion,
-      pendingMobState
+      pendingMobState,
+      pawnIndex
     );
     const ticked = tickMobStatusEffectDurations(stepped);
     next[i] = ticked;
@@ -171,13 +179,13 @@ export function stepEntities(state: GameState): GameState {
 export function stepOne(
   mob: Mob,
   def: CreatureDefinition,
-  pawns: Pawn[],
   allMobs: Mob[],
   state: GameState,
   pendingDamage: Map<string, number>,
   pendingMeatConsumption: Map<string, number>,
   pendingTileDepletion: Array<{ x: number; y: number; id: string }>,
-  pendingMobState: Map<string, Partial<Mob>>
+  pendingMobState: Map<string, Partial<Mob>>,
+  pawnIndex: SpatialIndex<Pawn>
 ): Mob {
   // FSM runs every tick. Movement advancement is handled separately by
   // advanceMobMovement(), which uses the shared MovementSystem path engine.
@@ -226,7 +234,7 @@ export function stepOne(
     return { ...mob, state: 'Wander', stateSince: turn };
   }
 
-  const nearest = nearestPawn(mob, pawns);
+  const nearest = nearestPawn(mob, pawnIndex);
   // §G shared vision: perception-based range scaled by this tile's light + the mob's night_vision,
   // computed ONCE here and threaded into the FSM (so darkness shortens detection without recomputing
   // the light per check). Daytime with nightVision 0 ≈ the old def.stats.visionRange.
@@ -307,7 +315,8 @@ export function stepHostile(
 
   // Wounded entities flee regardless of state.
   if (mob.health <= mob.maxHealth * FLEE_HEALTH_FRACTION && mob.state !== 'Fleeing') {
-    const threat = inVision ?? (def.huntable ? nearestPredatorThreat(mob, def, allMobs, visionRange) : null);
+    const threat =
+      inVision ?? (def.huntable ? nearestPredatorThreat(mob, def, allMobs, visionRange) : null);
     const threatName = threat
       ? (state.pawns.find(
           (p) =>
@@ -464,9 +473,7 @@ export function stepHostile(
       // Neutral creatures are territorial: defend personal space when a pawn
       // steps within half their vision range (e.g. bears charge if approached).
       const tooClose =
-        !aggressive &&
-        inVision &&
-        dist(mob, inVision.pos) <= Math.ceil(visionRange * 0.5);
+        !aggressive && inVision && dist(mob, inVision.pos) <= Math.ceil(visionRange * 0.5);
       if (inVision && (aggressive || tooClose)) {
         return moveToward({ ...mob, state: 'Alerted', stateSince: turn }, inVision.pos, state);
       }
@@ -494,7 +501,9 @@ export function stepHostile(
     }
     case 'Fleeing': {
       // For huntable neutral animals, also flee from nearby predators.
-      const predThreat = def.huntable ? nearestPredatorThreat(mob, def, allMobs, visionRange) : null;
+      const predThreat = def.huntable
+        ? nearestPredatorThreat(mob, def, allMobs, visionRange)
+        : null;
       const pawnDist = nearest ? dist(mob, nearest.pos) : Infinity;
       const predDist = predThreat ? dist(mob, predThreat.pos) : Infinity;
       const closestDist = Math.min(pawnDist, predDist);
