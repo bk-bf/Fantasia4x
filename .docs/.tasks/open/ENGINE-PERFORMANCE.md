@@ -65,7 +65,7 @@ Profiling-driven performance work, measured on the heavy `--profiler` sandbox (1
 
 ---
 
-## ★ ACTIVE — De-immutable the hot loops (mutable in place)
+## ★ DONE — De-immutable the hot loops (mutable in place)
 
 **The current perf lever.** R1 (§9) proved the dominant per-tick cost is *allocation from the
 immutable update style*, not language or data layout. Convert the hot per-tick phases to mutate
