@@ -14,7 +14,6 @@ import type {
   ItemInstance
 } from '../core/types';
 import { itemService } from '../services/ItemService';
-import { spatialIndexService, type SpatialIndex, CHEBYSHEV } from '../services/SpatialIndexService';
 import { getCreatureById } from '../core/Creatures';
 import { woundForDamageType, woundById, severityFromFrac } from '../core/Wounds';
 import { pawnStatService } from '../services/PawnStatService';
@@ -695,18 +694,23 @@ class CombatServiceImpl implements CombatService {
   }
 
   /** Nearest living hostile mob adjacent to a pawn (for auto-engagement). */
-  private nearestAdjacentHostile(pawn: Pawn, mobIndex: SpatialIndex<Mob>): Mob | undefined {
+  private nearestAdjacentHostile(pawn: Pawn, mobs: Mob[]): Mob | undefined {
     if (!pawn.position) return undefined;
-    return (
-      mobIndex.nearest(pawn.position.x, pawn.position.y, {
-        metric: CHEBYSHEV,
-        maxDist: 1,
-        filter: (m) =>
-          m.isAlive !== false &&
-          m.state !== 'Corpse' &&
-          (m.entityClass === 'mob' || m.state === 'Attacking' || m.state === 'Alerted')
-      }) ?? undefined
-    );
+    const px = pawn.position.x;
+    const py = pawn.position.y;
+    let best: Mob | undefined;
+    let bestDist = Infinity;
+    for (const m of mobs) {
+      if (m.isAlive === false || m.state === 'Corpse') continue;
+      const hostile = m.entityClass === 'mob' || m.state === 'Attacking' || m.state === 'Alerted';
+      if (!hostile) continue;
+      const d = Math.max(Math.abs(px - m.x), Math.abs(py - m.y));
+      if (d <= 1 && d < bestDist) {
+        best = m;
+        bestDist = d;
+      }
+    }
+    return best;
   }
 
   /** True while an entity is knocked down OR collapsed and cannot swing this tick. */
@@ -835,12 +839,6 @@ class CombatServiceImpl implements CombatService {
     }
 
     // ── Pawn attacks (drafted order OR auto-engaged Fighting state) ───────
-    // Index mobs once for the auto-engage adjacency lookups below (was an O(mobs) scan per pawn).
-    const hostileMobIndex = spatialIndexService.build(
-      mobs,
-      (m) => m.x,
-      (m) => m.y
-    );
     for (const pawn of state.pawns) {
       if (pawn.isAlive === false || !pawn.position) continue;
       if (this.isKnockedDown(pawn)) continue;
@@ -867,10 +865,10 @@ class CombatServiceImpl implements CombatService {
         // NT-4: a drafted pawn with no explicit attack order (idle, holding, or mid-move) still
         // defends itself — it swings at the nearest adjacent hostile instead of standing inert
         // when the player walks it up to an enemy. No adjacent hostile → nothing to do.
-        target = this.nearestAdjacentHostile(pawn, hostileMobIndex);
+        target = this.nearestAdjacentHostile(pawn, mobs);
         if (!target) continue;
       } else if (pawn.currentState === 'Fighting') {
-        target = this.nearestAdjacentHostile(pawn, hostileMobIndex);
+        target = this.nearestAdjacentHostile(pawn, mobs);
       } else if (pawn.currentState === 'Hunting' && pawn.huntTargetId) {
         // Work-driven hunt: swing at the marked quarry (a neutral animal isn't a
         // "hostile", so it must be targeted explicitly rather than via nearestAdjacentHostile).

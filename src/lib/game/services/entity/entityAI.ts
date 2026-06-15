@@ -25,7 +25,6 @@ import {
   pathTo,
   edibleResourceOnTile
 } from './entityHelpers';
-import { spatialIndexService, type SpatialIndex } from '../SpatialIndexService';
 import {
   type TileFoodKind,
   NIGHT_THRESHOLD,
@@ -58,13 +57,6 @@ export function stepEntities(state: GameState): GameState {
   if (!mobs || mobs.length === 0) return state;
 
   const livePawns = state.pawns.filter((p) => p.position && p.isAlive !== false);
-  // Index live pawns once per tick so each mob's nearestPawn lookup is O(nearby), not O(pawns).
-  const pawnIndex = spatialIndexService.build(
-    livePawns,
-    (p) => p.position!.x,
-    (p) => p.position!.y,
-    16
-  );
   // Accumulates entity-vs-entity damage dealt this tick (hunting mini-combat).
   const pendingDamage = new Map<string, number>();
   // Accumulates meat consumed from corpses this tick (corpseId → fraction eaten).
@@ -90,13 +82,13 @@ export function stepEntities(state: GameState): GameState {
     const stepped = stepOne(
       mob,
       def,
+      livePawns,
       mobs,
       state,
       pendingDamage,
       pendingMeatConsumption,
       pendingTileDepletion,
-      pendingMobState,
-      pawnIndex
+      pendingMobState
     );
     const ticked = tickMobStatusEffectDurations(stepped);
     next[i] = ticked;
@@ -179,13 +171,13 @@ export function stepEntities(state: GameState): GameState {
 export function stepOne(
   mob: Mob,
   def: CreatureDefinition,
+  pawns: Pawn[],
   allMobs: Mob[],
   state: GameState,
   pendingDamage: Map<string, number>,
   pendingMeatConsumption: Map<string, number>,
   pendingTileDepletion: Array<{ x: number; y: number; id: string }>,
-  pendingMobState: Map<string, Partial<Mob>>,
-  pawnIndex: SpatialIndex<Pawn>
+  pendingMobState: Map<string, Partial<Mob>>
 ): Mob {
   // FSM runs every tick. Movement advancement is handled separately by
   // advanceMobMovement(), which uses the shared MovementSystem path engine.
@@ -234,7 +226,7 @@ export function stepOne(
     return { ...mob, state: 'Wander', stateSince: turn };
   }
 
-  const nearest = nearestPawn(mob, pawnIndex);
+  const nearest = nearestPawn(mob, pawns);
   // §G shared vision: perception-based range scaled by this tile's light + the mob's night_vision,
   // computed ONCE here and threaded into the FSM (so darkness shortens detection without recomputing
   // the light per check). Daytime with nightVision 0 ≈ the old def.stats.visionRange.

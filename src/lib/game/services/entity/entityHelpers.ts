@@ -9,12 +9,6 @@ import { resourceObjectService } from '../ResourceObjectService';
 import { wasmPathfinderService } from '../WasmPathfinderService';
 import { buildPathfindingGridsSoftBlocked } from '../PathfinderService';
 import { occupancyService } from '../OccupancyService';
-import {
-  spatialIndexService,
-  type SpatialIndex,
-  MANHATTAN,
-  CHEBYSHEV
-} from '../SpatialIndexService';
 import { rng } from '../../core/rng';
 import {
   type TileFoodKind,
@@ -82,18 +76,9 @@ export function findNearestFoodTile(
 // O(mobs²) re-scan + per-candidate getCreatureById that nearestPredatorThreat/findNearestPrey ran
 // for EVERY mob EVERY tick into one O(mobs) pass per tick (ENGINE-PERFORMANCE; same lever as the
 // pawn-side mobSubsets / soft-pathing).
-let _mobThreatCache: {
-  ref: Mob[] | undefined;
-  predators: Mob[];
-  prey: Mob[];
-  predatorIndex: SpatialIndex<Mob>;
-} | null = null;
+let _mobThreatCache: { ref: Mob[] | undefined; predators: Mob[]; prey: Mob[] } | null = null;
 
-function mobThreatSubsets(allMobs: Mob[]): {
-  predators: Mob[];
-  prey: Mob[];
-  predatorIndex: SpatialIndex<Mob>;
-} {
+function mobThreatSubsets(allMobs: Mob[]): { predators: Mob[]; prey: Mob[] } {
   if (_mobThreatCache && _mobThreatCache.ref === allMobs) return _mobThreatCache;
   const predators: Mob[] = [];
   const prey: Mob[] = [];
@@ -106,14 +91,7 @@ function mobThreatSubsets(allMobs: Mob[]): {
     if (def?.predator) predators.push(m);
     if (def?.huntable && m.state !== 'Tamed') prey.push(m); // live huntable
   }
-  // Spatial index over the predator subset, built once per tick alongside the subsets so
-  // nearestPredatorThreat is O(nearby) per prey instead of O(predators).
-  const predatorIndex = spatialIndexService.build(
-    predators,
-    (m) => m.x,
-    (m) => m.y
-  );
-  _mobThreatCache = { ref: allMobs, predators, prey, predatorIndex };
+  _mobThreatCache = { ref: allMobs, predators, prey };
   return _mobThreatCache;
 }
 
@@ -180,12 +158,17 @@ export function nearestPredatorThreat(
   visionRange: number
 ): { pos: { x: number; y: number } } | null {
   if (!def.huntable) return null;
-  // Pre-filtered predator subset + spatial index, computed once per tick (see mobThreatSubsets).
-  const best = mobThreatSubsets(allMobs).predatorIndex.nearest(prey.x, prey.y, {
-    metric: CHEBYSHEV,
-    maxDist: visionRange,
-    filter: (m) => m.id !== prey.id
-  });
+  let best: Mob | null = null;
+  let bestDist = Infinity;
+  // Pre-filtered predator subset (non-corpse, def.predator), computed once per tick.
+  for (const m of mobThreatSubsets(allMobs).predators) {
+    if (m.id === prey.id) continue;
+    const d = dist(prey, { x: m.x, y: m.y });
+    if (d <= visionRange && d < bestDist) {
+      bestDist = d;
+      best = m;
+    }
+  }
   return best ? { pos: { x: best.x, y: best.y } } : null;
 }
 
@@ -512,12 +495,19 @@ export function isWalkable(state: GameState, x: number, y: number): boolean {
 
 export function nearestPawn(
   mob: Mob,
-  pawnIndex: SpatialIndex<Pawn>
+  pawns: Pawn[]
 ): { pawn: Pawn; pos: { x: number; y: number } } | null {
-  // Manhattan nearest, matching the previous linear scan's metric. The index is built once per
-  // tick from the live-pawn list (see stepEntities), so this is O(nearby) instead of O(pawns).
-  const pawn = pawnIndex.nearest(mob.x, mob.y, { metric: MANHATTAN });
-  return pawn ? { pawn, pos: pawn.position! } : null;
+  let best: { pawn: Pawn; pos: { x: number; y: number } } | null = null;
+  let bestDist = Infinity;
+  for (const p of pawns) {
+    const pos = p.position!;
+    const d = Math.abs(pos.x - mob.x) + Math.abs(pos.y - mob.y);
+    if (d < bestDist) {
+      bestDist = d;
+      best = { pawn: p, pos };
+    }
+  }
+  return best;
 }
 
 export function dist(mob: Mob, pos: { x: number; y: number }): number {
