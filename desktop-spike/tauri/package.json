@@ -1,0 +1,12 @@
+{
+  "name": "f4x-tauri-spike",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Throwaway Tauri (WebKitGTK / JSC on Linux) shell to read cross-engine TPS — DISTRIBUTION Phase A.",
+  "scripts": {
+    "tauri": "tauri"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.11.2"
+  }
+}

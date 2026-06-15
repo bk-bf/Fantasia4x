@@ -4,14 +4,23 @@
 #
 # --profiler: focused profiling session — launches ONLY the main server in the heavy
 #   profiler sandbox (./dev.sh --profiler), skipping the worktree fan-out.
+# --electron / --tauri: wrap a SINGLE main server in a desktop webview for the cross-engine
+#   TPS spike (V8/Chromium vs WebKitGTK/JSC). Combinable with --debug (default) or --profiler;
+#   skips the worktree fan-out (the shell points at one port). Closing the window stops the server.
+#     ./launch.sh --debug --electron      ./launch.sh --profiler --tauri
 # codegraph is a separate always-on systemd user service (see codegraph_hint below).
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PIDS=()
 
 PROFILER=false
+SHELL_TARGET=""
 for arg in "$@"; do
-  [[ "$arg" == "--profiler" ]] && PROFILER=true
+  case "$arg" in
+    --profiler) PROFILER=true ;;
+    --electron) SHELL_TARGET=electron ;;
+    --tauri) SHELL_TARGET=tauri ;;
+  esac
 done
 
 cleanup() {
@@ -21,6 +30,7 @@ cleanup() {
   kill -CONT "${PIDS[@]}" 2>/dev/null || true  # wake any Ctrl-Z'd child so it can exit
   kill "${PIDS[@]}" 2>/dev/null || true
   wait 2>/dev/null || true
+  PIDS=()  # idempotent: a second cleanup (e.g. Ctrl-C then normal return) no-ops
   echo "Done."
 }
 trap cleanup INT TERM
@@ -60,6 +70,52 @@ codegraph_hint() {
     echo "  [codegraph] viewer not running — start it: systemctl --user start codegraph"
   fi
 }
+
+wait_for_port() {
+  local port="$1"
+  printf '  waiting for http://localhost:%s ' "$port"
+  for _ in $(seq 1 60); do
+    if lsof -ti "tcp:$port" >/dev/null 2>&1; then echo "✓"; return 0; fi
+    printf '.'; sleep 0.5
+  done
+  echo ""; echo "  dev server did not come up." >&2; return 1
+}
+
+# Desktop webview shell over a single main server (cross-engine TPS spike).
+if [[ -n "$SHELL_TARGET" ]]; then
+  SHELL_DIR="$SCRIPT_DIR/desktop-spike/$SHELL_TARGET"
+  if [[ ! -d "$SHELL_DIR/node_modules" ]]; then
+    echo "launch.sh: $SHELL_TARGET deps not installed." >&2
+    echo "  Run: (cd $SHELL_DIR && pnpm install --ignore-workspace)" >&2
+    exit 1
+  fi
+  SERVER_FLAG="--debug"; [[ "$PROFILER" == true ]] && SERVER_FLAG="--profiler"
+  PORT=5173
+  [[ -f "$SCRIPT_DIR/.devport" ]] && PORT=$(< "$SCRIPT_DIR/.devport")
+  if [[ "$SHELL_TARGET" == "tauri" && "$PORT" != "5173" ]]; then
+    echo "launch.sh: NOTE — Tauri's devUrl is fixed at http://localhost:5173 in tauri.conf.json;" >&2
+    echo "  the .devport ($PORT) won't be followed by the Tauri window." >&2
+  fi
+
+  echo "Fantasia4x — $SHELL_TARGET shell over ${SERVER_FLAG#--} server (main only)"
+  echo ""
+  codegraph_hint
+  launch "$SCRIPT_DIR" "main" "$SERVER_FLAG"
+  wait_for_port "$PORT" || { cleanup; exit 1; }
+  echo ""
+  case "$SHELL_TARGET" in
+    electron)
+      echo "  [electron] V8/Chromium → http://localhost:$PORT (close window or Ctrl-C to stop)"
+      (cd "$SHELL_DIR" && SPIKE_URL="http://localhost:$PORT" pnpm start)
+      ;;
+    tauri)
+      echo "  [tauri] WebKitGTK/JSC → http://localhost:5173 (close window or Ctrl-C to stop)"
+      (cd "$SHELL_DIR" && pnpm tauri dev)
+      ;;
+  esac
+  cleanup
+  exit 0
+fi
 
 # Profiler sandbox: a single focused server, no worktree fan-out.
 if [[ "$PROFILER" == true ]]; then

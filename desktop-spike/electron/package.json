@@ -1,0 +1,13 @@
+{
+  "name": "f4x-electron-spike",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Throwaway Electron (V8/Chromium) shell to read cross-engine TPS — DISTRIBUTION Phase A.",
+  "main": "main.js",
+  "scripts": {
+    "start": "env -u ELECTRON_RUN_AS_NODE -u ELECTRON_NO_ATTACH_CONSOLE electron ."
+  },
+  "devDependencies": {
+    "electron": "^42.4.0"
+  }
+}
