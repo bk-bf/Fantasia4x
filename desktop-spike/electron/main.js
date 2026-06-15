@@ -15,6 +15,11 @@ function createWindow() {
     width: 1600,
     height: 1000,
     title: 'Fantasia4x — Electron / V8',
+    // Frameless: no OS title bar / menu bar. (No close button as a result — quit with Ctrl-C in the
+    // launch terminal, or Alt+F4.)
+    frame: false,
+    autoHideMenuBar: true,
+    center: true,
     // Chromium throttles timers + rAF in unfocused/background windows; that would tank the TPS
     // reading the moment you click away. Disable it so the spike measures the engine, not throttling.
     backgroundThrottling: false,
