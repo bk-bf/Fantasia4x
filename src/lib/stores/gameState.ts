@@ -529,6 +529,22 @@ function wipeAndReload() {
  */
 export const storeReady = writable(false);
 
+/**
+ * Set true by GameCanvas once the WebGL renderer has finished initialising. The single loading
+ * screen (+page.svelte) stays up until `storeReady && rendererReady`, so the WebGL init happens
+ * BEHIND it — there's no separate "Initializing renderer…" screen any more.
+ */
+export const rendererReady = writable(false);
+
+/** Human-readable phase shown on the loading screen (LoadingScreen.svelte), updated through boot. */
+export const loadingStatus = writable('Initializing…');
+
+/** How long the loading screen lingers after the worker is handed the state — lets the worker boot
+ *  (module eval + WASM + init-state deserialize, ~0–2s of native + GC) settle before the reveal, so
+ *  the game unpauses into a stable environment. Also paces the loading bar (LoadingScreen reads it).
+ *  Extend freely; load is one-time per page load. */
+export const WORKER_WARMUP_MS = 3500;
+
 // ===== MAIN STORE SETUP =====
 
 // Create the main store starting with a fresh game. The actual save is loaded
@@ -615,6 +631,7 @@ console.log('[GameState] GameEngine initialized with GameStateManager');
 /** Resolves when the persisted save (if any) has been loaded and applied. */
 export const savedStateReady: Promise<void> = (async () => {
   if (!browser) return;
+  loadingStatus.set('Loading world…');
 
   // Heavy-load sandbox (./dev.sh profiler → VITE_PROFILER=true): skip the save and boot a heavy
   // populated scenario at 4× speed, unpaused — for reproducing load to profile via the browser.
@@ -703,23 +720,21 @@ export const savedStateReady: Promise<void> = (async () => {
   // Push loaded state into the store and sync GameEngine
   set(baseState);
   gameEngine.setGameStateManager(new GameStateManager(baseState));
-  // Signal that the real state is now in the store — unblock rendering.
-  storeReady.set(true);
+  // Unblock rendering. Under the worker, this is DEFERRED to the worker-boot block below (after a
+  // warmup) so the loading screen also covers the worker boot; here it only fires on the SSR/test
+  // (non-worker) path, which has no worker to warm up.
+  if (!USE_SIM_WORKER) storeReady.set(true);
 })().catch((err) => {
   console.error('[GameState] Failed to load save, starting fresh:', err);
   // Still unblock rendering so the app doesn't stay stuck on the loading screen.
   storeReady.set(true);
 });
 
-// Create control stores — seed pause from sessionStorage so HMR doesn't unpause.
-const _pausedSeed =
-  typeof sessionStorage !== 'undefined'
-    ? sessionStorage.getItem('fantasia4x-paused') === 'true'
-    : false;
-const isPaused = writable(_pausedSeed);
-isPaused.subscribe((v) => {
-  if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('fantasia4x-paused', String(v));
-});
+// The game ALWAYS starts PAUSED — the player unpauses when ready. Better gameplay (you survey the
+// colony before it runs), and it never auto-unpauses, so the worker boot + GC get as long as the
+// player takes to hit play to settle. (Deliberately NOT restored from a prior session — a fresh
+// load is always paused; a dev hot-reload just re-pauses, which is fine.)
+const isPaused = writable(true);
 const gameSpeed = writable(1);
 
 // Subscribe to keep track of current speed value
@@ -834,12 +849,21 @@ if (USE_SIM_WORKER) {
     }
   };
   simWorkerBridge.onFullState = (s) => scheduleSave(s);
-  savedStateReady.then(() => {
+  savedStateReady.then(async () => {
     simWorkerBridge.start();
     const st = get(gameState) as GameState;
     simWorkerBridge.init(st, st.seed);
     simWorkerBridge.setSpeed(gameSpeedValue);
     simWorkerBridge.setPaused(get(isPaused));
     console.info('[SIM-WORKER] cutover active — sim now runs in the worker.');
+    // Profiler sandbox already revealed itself (storeReady set in the boot branch) and wants to run
+    // immediately to capture the startup. The normal path holds the loading screen through a short
+    // warmup so the worker boot + GC settle before the (paused) reveal.
+    if (import.meta.env.VITE_PROFILER !== 'true') {
+      loadingStatus.set('Warming up simulation…');
+      await new Promise((r) => setTimeout(r, WORKER_WARMUP_MS));
+      loadingStatus.set('Starting renderer…');
+      storeReady.set(true);
+    }
   });
 }

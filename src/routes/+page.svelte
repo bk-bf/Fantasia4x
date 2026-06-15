@@ -15,8 +15,9 @@
   import GameControls from '$lib/components/UI/GameControls.svelte';
   import ChroniclePanel from '$lib/components/UI/ChroniclePanel.svelte';
   import WorldEffectsLayer from '$lib/components/UI/WorldEffectsLayer.svelte';
+  import LoadingScreen from '$lib/components/UI/LoadingScreen.svelte';
   import { uiState } from '$lib/stores/uiState';
-  import { gameState, storeReady } from '$lib/stores/gameState';
+  import { gameState, storeReady, rendererReady } from '$lib/stores/gameState';
   import { gameCoordinator } from '$lib/game/systems/GameCoordinator';
   import { environmentService } from '$lib/game/services/EnvironmentService.js';
   import type { PlacedBuilding } from '$lib/game/core/types';
@@ -108,11 +109,7 @@
   </filter>
 </svg>
 
-{#if !$storeReady}
-  <div class="loading-screen">
-    <span class="loading-text">LOADING…</span>
-  </div>
-{:else}
+{#if $storeReady}
   <div class="game-container">
     <div class="game-header">
       <GameControls />
@@ -183,23 +180,14 @@
   </div>
 {/if}
 
+<!-- Single loading screen: held until BOTH the sim worker is warmed (storeReady) AND the WebGL
+     renderer has initialised (rendererReady) — so the game-container mounts and inits WebGL BEHIND
+     this overlay, and there's no separate "Initializing renderer…" screen. -->
+{#if !$storeReady || !$rendererReady}
+  <LoadingScreen />
+{/if}
+
 <style>
-  .loading-screen {
-    height: 100vh;
-    width: 100vw;
-    background: var(--bg);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .loading-text {
-    color: var(--text-muted, #555);
-    font-family: 'Courier New', monospace;
-    font-size: 13px;
-    letter-spacing: 0.15em;
-  }
-
   .game-container {
     height: 100vh;
     width: 100vw;

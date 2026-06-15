@@ -5,7 +5,7 @@
   import { browser } from '$app/environment';
   import { WebGLRenderer } from '$lib/webgl/renderer.js';
   import { buildGameGrid, generatePlaceholderGrid } from '$lib/webgl/fantasia-world.js';
-  import { gameState } from '$lib/stores/gameState.js';
+  import { gameState, rendererReady } from '$lib/stores/gameState.js';
   import type {
     WorldTile,
     Pawn,
@@ -1511,6 +1511,7 @@
     unsubState();
     unsubUI();
     unsubCombatFeedback();
+    rendererReady.set(false); // a remount must re-init WebGL before the game is shown again
     if (browser) {
       cancelAnimationFrame(animationId);
       renderer?.dispose();
@@ -1577,6 +1578,7 @@
       }
 
       ready = true;
+      rendererReady.set(true); // drops the single loading screen (+page.svelte) — WebGL is up
       startLoop();
 
       new ResizeObserver(() => {
@@ -2329,9 +2331,10 @@
 
   {#if errorMsg}
     <div class="error">WebGL unavailable: {errorMsg}</div>
-  {:else if !ready}
-    <div class="loading">Initializing renderer…</div>
   {/if}
+  <!-- No "Initializing renderer…" screen: the single page-level loading overlay (+page.svelte) stays
+       up until rendererReady, so WebGL init happens behind it. -->
+
   {#if designationMode}
     <div
       class="designation-hud"
@@ -2599,8 +2602,7 @@
     height: 100%;
     image-rendering: pixelated;
   }
-  .error,
-  .loading {
+  .error {
     position: absolute;
     inset: 0;
     display: flex;
@@ -2754,22 +2756,5 @@
   }
   .error {
     color: #c04040;
-  }
-  .loading {
-    background: var(--bg-panel);
-    color: var(--text-muted);
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    font-size: 11px;
-    filter: url(#ambient-tint);
-    animation: loading-pulse 1.6s ease-in-out infinite alternate;
-  }
-  @keyframes loading-pulse {
-    from {
-      opacity: 0.45;
-    }
-    to {
-      opacity: 0.9;
-    }
   }
 </style>
