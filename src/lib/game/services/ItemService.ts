@@ -35,7 +35,16 @@ const BUILDING_DEFS_FOR_ITEMS = buildingsData as unknown as import('../core/type
 // §B Durability defaults — every item weathers when left exposed (loose, unsheltered).
 // Explicit `deteriorationRate`/`maxDurability` on an item override these. Rate 0 = weather-immune.
 const DEFAULT_MAX_DURABILITY = 100;
-const DEFAULT_DETERIORATION_RATE = 0.02; // per tick
+const DEFAULT_DETERIORATION_RATE = 0.02; // per tick (before the global scale below)
+/**
+ * Global lifespan scale applied to ALL deterioration rates. The per-item/category rates below set
+ * the RELATIVE durability (stone/metal slowest → organics fastest); this single factor stretches
+ * the absolute timescale to real-feeling lifespans without editing ~200 item rows. A day = 300
+ * in-game s × 60 = 18,000 ticks; week ≈ 126k; month ≈ 540k. At 0.02 (≈1/50): most items
+ * (wood/construction ~0.01–0.04) last ~1 week, metal/ingot/bar (0.008) ~1+ months, stone ~2 months,
+ * organics/food (0.07–0.08) ~3–4 days (raw food also spoils separately via stepItemDecay).
+ */
+export const DETERIORATION_GLOBAL_SCALE = 0.02;
 // §1 wood seasoning: sim-seconds within the drying ring before green firewood turns dry.
 const WOOD_DRYING_SECONDS = 1800;
 const DETERIORATION_RATE_BY_CATEGORY: Record<string, number> = {
@@ -109,7 +118,9 @@ export interface ItemService {
 
   // Decay
   stepItemDecay(gameState: GameState): GameState;
-  stepItemDeterioration(gameState: GameState): GameState;
+  /** Weather loose items. `elapsedTicks` = ticks since the last call (the caller throttles this to
+   *  run every N ticks, not every tick — durability lifespans are days/weeks, so per-tick is waste). */
+  stepItemDeterioration(gameState: GameState, elapsedTicks?: number): GameState;
   /** §B tool work-wear: spend durability on the colony's tool for `workCategory`; break at 0. */
   applyToolWear(workCategory: string, gameState: GameState): GameState;
   /** §B/§5: wear a specific tool/mold by id; it breaks (consumed) at maxDurability. */
@@ -519,7 +530,7 @@ export class ItemServiceImpl implements ItemService {
    * a plank only weathers. Rate/pool default by category and can be overridden per item; a rate
    * of 0 means weather-immune.
    */
-  stepItemDeterioration(gameState: GameState): GameState {
+  stepItemDeterioration(gameState: GameState, elapsedTicks = 1): GameState {
     const dropped = gameState.droppedItems;
     if (!dropped || dropped.length === 0) return gameState;
 
@@ -550,7 +561,7 @@ export class ItemServiceImpl implements ItemService {
         continue;
       }
       const max = def.maxDurability ?? DEFAULT_MAX_DURABILITY;
-      const left = (di.durability ?? max) - rate;
+      const left = (di.durability ?? max) - rate * DETERIORATION_GLOBAL_SCALE * elapsedTicks;
       changed = true;
       if (left <= 0) {
         // destroyed by the elements — the stack is removed

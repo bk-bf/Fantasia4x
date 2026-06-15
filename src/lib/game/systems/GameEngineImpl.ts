@@ -46,6 +46,9 @@ const AVAILABLE_BUILDINGS = buildingsData as unknown as import('../core/types').
  */
 /** UI flush cadence in REAL milliseconds (~15 Hz) — wall-clock so it's independent of TPS. */
 const UI_PUSH_MS = 1000 / 15;
+/** Item-deterioration runs every N ticks (not every tick): durability lifespans are days/weeks, so
+ *  weathering all loose items every tick is wasted work + array churn. 600 ticks ≈ 0.8 in-game hour. */
+const DETERIORATION_INTERVAL_TICKS = 600;
 
 export class GameEngineImpl implements GameEngine {
   private gameState: GameState | null = null;
@@ -116,7 +119,13 @@ export class GameEngineImpl implements GameEngine {
         this.gameState = itemService.stepItemDecay(this.gameState!);
       });
       t('itemDeterioration', () => {
-        this.gameState = itemService.stepItemDeterioration(this.gameState!);
+        // Throttled (see DETERIORATION_INTERVAL_TICKS): apply that many ticks of wear in one pass
+        // instead of rebuilding the dropped-items array every tick for a sliver of durability.
+        if (this.gameState!.turn % DETERIORATION_INTERVAL_TICKS === 0)
+          this.gameState = itemService.stepItemDeterioration(
+            this.gameState!,
+            DETERIORATION_INTERVAL_TICKS
+          );
       });
       t('woodDrying', () => {
         this.gameState = itemService.stepWoodDrying(this.gameState!);

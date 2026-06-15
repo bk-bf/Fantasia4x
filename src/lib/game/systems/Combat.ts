@@ -54,13 +54,14 @@ const KNOCKDOWN_TURNS = 2;
  */
 const PAWN_NATURAL_WEAPON_IDS = ['fists', 'kick'];
 /** Base attack interval in ticks — scaled by attack_speed stat.
- *  60 TPS: 60 ticks = 1.0s = 1 attack/sec (base).
- *  Fast attackers (DEX 20) floor at 36 ticks = 0.6s ≈ 1.7 attacks/sec.
- *  (Halved 2026-06-14 — combat read too fast even at 1× game speed; see NT-3.)
+ *  60 TPS: 120 ticks = 2.0s = 1 attack / 2s (base).
+ *  Fast attackers (DEX 20) floor at 72 ticks = 1.2s.
+ *  (Halved 2026-06-14, then halved AGAIN 2026-06-15 — at 100+ TPS combat resolved before the player
+ *  could read it; swings should land at a watchable pace. May go to 1/4 of the original later.)
  */
-const BASE_ATTACK_INTERVAL_TICKS = 60;
+const BASE_ATTACK_INTERVAL_TICKS = 120;
 /** Minimum ticks between attacks regardless of attack_speed (caps the fastest attacker). */
-const MIN_ATTACK_INTERVAL_TICKS = 36;
+const MIN_ATTACK_INTERVAL_TICKS = 72;
 /** Stamina drained per auto-attack when a weapon defines no `staminaCost` of its own. */
 const ATTACK_STAMINA_COST = 2;
 /** Status-effect id for the winded state (latches at 0 stamina, clears at full). */

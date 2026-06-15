@@ -107,7 +107,9 @@ describe('combat sim (headless tickCombat)', () => {
     let accumulated = false;
     let maxPain = 0;
     let died = false;
-    for (let t = 0; t < 6000 && !died; t++) {
+    // 12000 ticks: attack cadence was halved (BASE_ATTACK_INTERVAL_TICKS 60→120), so the same
+    // number of swings now needs twice the tick budget to land and drive the pain collapse.
+    for (let t = 0; t < 12000 && !died; t++) {
       state = { ...state, turn: t };
       state = combatService.tickCombat(state, 16);
       const g = state.mobs![0];
