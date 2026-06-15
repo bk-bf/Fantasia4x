@@ -3,8 +3,8 @@
 # Ctrl-C kills them all.
 #
 # --profiler: focused profiling session — launches ONLY the main server in the heavy
-#   profiler sandbox (./dev.sh --profiler), skipping the worktree fan-out. The live
-#   codegraph viewer still runs (it auto-updates as you edit, same as --debug).
+#   profiler sandbox (./dev.sh --profiler), skipping the worktree fan-out. The
+#   codegraph viewer still runs (read-only; rebuild it with its ↻ header button).
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PIDS=()
@@ -50,11 +50,11 @@ launch() {
   sleep 0.3
 }
 
-# Live codebase-graph viewer + watcher. The standalone codegraph tool lives in its
-# own repo; the watcher re-extracts this project's graph on src change and the
-# viewer (CODEGRAPH_NO_WATCH=1 so it doesn't double-watch) live-reloads on each
-# re-extract. Both are PID-tracked so they stop cleanly. Override location/port
-# with CODEGRAPH_DIR / CODEGRAPH_PORT.
+# Codebase-graph viewer. The standalone codegraph tool lives in its own repo.
+# No live watcher (it hogs CPU/RAM and competes with playtesting): the graph is
+# built once only if it's missing, then served read-only — use the ↻ Refresh
+# button in the viewer's header to rebuild on demand. Override location/port with
+# CODEGRAPH_DIR / CODEGRAPH_PORT.
 start_codegraph() {
   CODEGRAPH_PORT=${CODEGRAPH_PORT:-5185}
   CODEGRAPH_DIR=${CODEGRAPH_DIR:-"$SCRIPT_DIR/../codegraph"}
@@ -62,19 +62,23 @@ start_codegraph() {
     echo "  [codegraph] not found at $CODEGRAPH_DIR — set CODEGRAPH_DIR or run its own dev server"
     return
   fi
+  # First run only: build the graph once in the background so the viewer isn't
+  # empty. After that it's rebuilt on demand via the header's ↻ Refresh button.
+  if [[ ! -f "$CODEGRAPH_DIR/data/Fantasia4x.json" ]]; then
+    echo "  [codegraph] no graph yet — building once in the background…"
+    (cd "$CODEGRAPH_DIR" && node bin/codegraph.mjs extract Fantasia4x >/dev/null 2>&1 &)
+  fi
   # Free the port if a previous (possibly Ctrl-Z'd) viewer is holding it.
   local holders
   holders=$(lsof -ti tcp:$CODEGRAPH_PORT 2>/dev/null)
   [[ -n "$holders" ]] && { kill -CONT $holders 2>/dev/null; kill $holders 2>/dev/null; sleep 0.4; }
-  (cd "$CODEGRAPH_DIR" && exec node bin/codegraph.mjs watch Fantasia4x) &
+  (cd "$CODEGRAPH_DIR" && exec env CI=true pnpm dev --port "$CODEGRAPH_PORT" --strictPort) &
   PIDS+=($!)
-  (cd "$CODEGRAPH_DIR" && exec env CI=true CODEGRAPH_NO_WATCH=1 pnpm dev --port "$CODEGRAPH_PORT" --strictPort) &
-  PIDS+=($!)
-  echo "  [codegraph] http://localhost:$CODEGRAPH_PORT  (standalone: $CODEGRAPH_DIR)"
+  echo "  [codegraph] http://localhost:$CODEGRAPH_PORT  (↻ Refresh in the header rebuilds the graph)"
 }
 
-# Profiler sandbox: a single focused server, no worktree fan-out — but the live
-# codegraph viewer still runs (auto-updating) so the graph stays current.
+# Profiler sandbox: a single focused server, no worktree fan-out — the codegraph
+# viewer still runs (read-only, no watcher), so it won't compete for CPU.
 if [[ "$PROFILER" == true ]]; then
   echo "Fantasia4x — profiler sandbox (main server only)"
   echo ""
