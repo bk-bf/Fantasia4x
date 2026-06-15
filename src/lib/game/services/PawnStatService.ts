@@ -1,4 +1,5 @@
 import type { Pawn, Mob, BodyPartState, ConditionDef, StatusEffectDef } from '../core/types';
+import { profCount } from '../core/log';
 import statsData from '../database/stats.jsonc';
 import conditionsData from '../database/conditions.jsonc';
 import statusEffectsData from '../database/status-effects.jsonc';
@@ -281,6 +282,7 @@ export interface PawnStatService {
 
 export class PawnStatServiceImpl implements PawnStatService {
   computeCapacities(pawn: Pawn | Mob, lightMultiplier?: number): Record<string, number> {
+    profCount('statCapacities'); // dev profiler: how often the capacity/formula eval fires per tick
     const capacities: Record<string, number> = {};
     // Order matters: pain → sight → hearing → consciousness → everything else
     const capacityIds = [
@@ -308,6 +310,7 @@ export class PawnStatServiceImpl implements PawnStatService {
   }
 
   evaluateStat(statId: string, pawn: Pawn | Mob): number {
+    profCount('evaluateStat');
     const def = STAT_MAP[statId];
     if (!def) return 1.0;
     const capacities =
@@ -320,6 +323,7 @@ export class PawnStatServiceImpl implements PawnStatService {
     workType: string,
     lightMultiplier?: number
   ): { speed: number; yield: number | null; quality: number | null } {
+    profCount('getWorkModifiers');
     // §G: a light multiplier dims the `sight` capacity, which every `*_speed`/`_yield`/`_quality`
     // formula multiplies by → work (and its quality) slows in the dark through the existing model.
     const capacities = this.computeCapacities(pawn, lightMultiplier);

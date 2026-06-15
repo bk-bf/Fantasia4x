@@ -21,6 +21,7 @@ import { calcMaxStamina } from '../entities/Pawns';
 import statusEffectsData from '../database/status-effects.jsonc';
 import type { StatusEffectDef } from '../core/types';
 import { simLog, type CombatTextKind } from '../core/logSink';
+import { profAdd, profCount } from '../core/log';
 import { rng } from '../core/rng';
 // P-4: the body-part anatomy table + selection helpers moved to core/BodyParts. Re-export the two
 // symbols external code imported from Combat (PawnHealth, EntityService, Pawns) so they're unchanged.
@@ -791,6 +792,7 @@ class CombatServiceImpl implements CombatService {
 
     // ── Mob attacks ──────────────────────────────────────────────────────
     const mobs = state.mobs ?? [];
+    const _tMob = performance.now();
     for (const mob of mobs) {
       if (mob.state !== 'Attacking' || mob.isAlive === false) continue;
       if (this.isKnockedDown(mob)) continue;
@@ -833,12 +835,15 @@ class CombatServiceImpl implements CombatService {
       }
       if (!target) continue;
 
+      profCount('combat.attack');
       const atk = this.performAttack(mob, target, next, state.turn);
       next = atk.state;
       mobStaminaUpdates.set(mob.id, Math.max(0, curStamina - atk.staminaCost));
     }
+    profAdd('combat.mobAtk', performance.now() - _tMob);
 
     // ── Pawn attacks (drafted order OR auto-engaged Fighting state) ───────
+    const _tPawn = performance.now();
     for (const pawn of state.pawns) {
       if (pawn.isAlive === false || !pawn.position) continue;
       if (this.isKnockedDown(pawn)) continue;
@@ -891,14 +896,18 @@ class CombatServiceImpl implements CombatService {
       if (state.turn % pawnInterval !== 0) continue;
 
       const curStamina = pawn.stamina ?? pawn.maxStamina ?? 50;
+      profCount('combat.attack');
       const atk = this.performAttack(pawn, target, next, state.turn);
       next = atk.state;
       pawnStaminaUpdates.set(pawn.id, Math.max(0, curStamina - atk.staminaCost));
     }
+    profAdd('combat.pawnAtk', performance.now() - _tPawn);
 
     // Apply this tick's attack-drain, then regen + winded latch for EVERY alive entity (so a
     // winded one recovers even after the fight ends). The drain map is folded in first so the
-    // latch sees the post-attack stamina.
+    // latch sees the post-attack stamina. NOTE: this maps ALL mobs + pawns every tick even at
+    // peace — `combat.stamina` measures that always-on baseline cost.
+    const _tStam = performance.now();
     next = {
       ...next,
       mobs: (next.mobs ?? []).map((m) => {
@@ -914,6 +923,7 @@ class CombatServiceImpl implements CombatService {
         return this.tickStaminaAndWinded(drained);
       })
     };
+    profAdd('combat.stamina', performance.now() - _tStam);
 
     return next;
   }

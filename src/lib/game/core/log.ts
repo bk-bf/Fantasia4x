@@ -76,3 +76,36 @@ export function profCount(label: string): void {
   const counts = (g.__profCounts ??= {}) as Record<string, number>;
   counts[label] = (counts[label] ?? 0) + 1;
 }
+
+/**
+ * Dev profiler: time a sub-pass `fn` under `label`, accumulating into the SAME `globalThis.__prof`
+ * map the per-phase `[PROF]` line dumps (so a custom label appears as its own `[PROF]` entry,
+ * averaged over the window and reset each second). **Call once per tick** (wrap a whole sub-loop),
+ * not per-entity — the dump reports `sum/n`, so per-call wrapping would give per-call avg, not
+ * per-tick. No-op (one boolean read) unless the turn profiler is active. Returns `fn()`'s result.
+ */
+export function profTime<T>(label: string, fn: () => T): T {
+  const g = globalThis as Record<string, unknown>;
+  if (!g.__profileTurns) return fn();
+  const prof = (g.__prof ??= {}) as Record<string, { sum: number; n: number }>;
+  const s = performance.now();
+  const r = fn();
+  const e = (prof[label] ??= { sum: 0, n: 0 });
+  e.sum += performance.now() - s;
+  e.n++;
+  return r;
+}
+
+/**
+ * Dev profiler: add a pre-measured `ms` to sub-pass `label` (the no-wrapping variant of `profTime`,
+ * for timing a section between two `performance.now()` reads without re-bracing a big loop). Same
+ * `globalThis.__prof` accumulator → appears as its own `[PROF]` entry. **Call once per tick.**
+ */
+export function profAdd(label: string, ms: number): void {
+  const g = globalThis as Record<string, unknown>;
+  if (!g.__profileTurns) return;
+  const prof = (g.__prof ??= {}) as Record<string, { sum: number; n: number }>;
+  const e = (prof[label] ??= { sum: 0, n: 0 });
+  e.sum += ms;
+  e.n++;
+}
