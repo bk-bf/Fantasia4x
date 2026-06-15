@@ -530,20 +530,55 @@ function wipeAndReload() {
 export const storeReady = writable(false);
 
 /**
- * Set true by GameCanvas once the WebGL renderer has finished initialising. The single loading
- * screen (+page.svelte) stays up until `storeReady && rendererReady`, so the WebGL init happens
- * BEHIND it — there's no separate "Initializing renderer…" screen any more.
+ * Set true by GameCanvas once the WebGL renderer has finished initialising. `storeReady` mounts the
+ * game-container so WebGL begins initialising BEHIND the loading overlay; `rendererReady` then marks
+ * it up. The overlay itself is dropped by `bootReveal`, a paused beat LATER (see below).
  */
 export const rendererReady = writable(false);
+
+/**
+ * Drops the single loading overlay (+page.svelte). Set true a short, paused `WORKER_WARMUP_MS` beat
+ * AFTER the renderer is up — that lingering window hides the worker boot + WebGL-init GC behind the
+ * overlay, so the game is revealed into a settled environment (and stays PAUSED — the player
+ * unpauses when ready). A GameCanvas remount resets it (rendererReady → false re-arms the linger).
+ */
+export const bootReveal = writable(false);
 
 /** Human-readable phase shown on the loading screen (LoadingScreen.svelte), updated through boot. */
 export const loadingStatus = writable('Initializing…');
 
-/** How long the loading screen lingers after the worker is handed the state — lets the worker boot
- *  (module eval + WASM + init-state deserialize, ~0–2s of native + GC) settle before the reveal, so
- *  the game unpauses into a stable environment. Also paces the loading bar (LoadingScreen reads it).
- *  Extend freely; load is one-time per page load. */
-export const WORKER_WARMUP_MS = 3500;
+/** How long the loading overlay lingers after the renderer is up before the reveal — lets the worker
+ *  boot (module eval + WASM + init-state deserialize, ~0–2s of native + GC) and the WebGL-init GC
+ *  settle behind the overlay before the (paused) reveal. Also paces the loading bar (LoadingScreen
+ *  reads it). Extend freely; load is one-time per page load. */
+export const WORKER_WARMUP_MS = 2500;
+
+// Drop the overlay a paused beat after the renderer comes up. A remount (rendererReady → false)
+// re-arms the linger so the overlay covers the WebGL re-init too.
+if (browser) {
+  let revealTimer: ReturnType<typeof setTimeout> | undefined;
+  rendererReady.subscribe((up) => {
+    if (up) {
+      if (revealTimer) return;
+      loadingStatus.set('Warming up simulation…');
+      revealTimer = setTimeout(() => {
+        loadingStatus.set('Ready');
+        bootReveal.set(true);
+      }, WORKER_WARMUP_MS);
+    } else {
+      clearTimeout(revealTimer);
+      revealTimer = undefined;
+      bootReveal.set(false);
+    }
+  });
+
+  // Safety net: if the renderer never reports ready (e.g. WebGL unavailable — the error lives behind
+  // the overlay), force the reveal after a generous timeout so the overlay can't strand the user.
+  const fallback = setTimeout(() => bootReveal.set(true), 15000);
+  bootReveal.subscribe((revealed) => {
+    if (revealed) clearTimeout(fallback);
+  });
+}
 
 // ===== MAIN STORE SETUP =====
 
@@ -633,10 +668,14 @@ export const savedStateReady: Promise<void> = (async () => {
   if (!browser) return;
   loadingStatus.set('Loading world…');
 
-  // Heavy-load sandbox (./dev.sh profiler → VITE_PROFILER=true): skip the save and boot a heavy
-  // populated scenario at 4× speed, unpaused — for reproducing load to profile via the browser.
-  // Dynamic import keeps the scenario out of the normal bundle. The leading
-  // `await` also defers this past synchronous module init, so gameSpeed/isPaused are defined.
+  // Heavy-load sandbox (./dev.sh --profiler → VITE_PROFILER=true): skip the save and boot a heavy
+  // populated scenario (giant map, 150 pawns…) instead of the small fresh world — so the loading
+  // hack and the sim can be exercised under realistic load. By DEFAULT it now boots like the REAL
+  // game (PAUSED, behind the lingering loading overlay) so the loading-screen hack can be measured
+  // under that load. The auto-run CAPTURE mode (unpause + 4× + instant reveal, to grab the running
+  // sim's startup in the Firefox Profiler) is gated behind the SEPARATE VITE_PROFILER_AUTORUN flag
+  // (./dev.sh --profiler-autorun). Dynamic import keeps the scenario out of the normal bundle; the
+  // leading `await` also defers this past synchronous module init, so gameSpeed/isPaused are defined.
   if (import.meta.env.VITE_PROFILER === 'true') {
     const { buildProfilerScenario } = await import('$lib/game/dev/profilerScenario');
     const scenario = buildProfilerScenario();
@@ -644,13 +683,26 @@ export const savedStateReady: Promise<void> = (async () => {
     resetUnreachableJobs();
     set(scenario);
     gameEngine.setGameStateManager(new GameStateManager(scenario));
-    setGameSpeed(4);
-    unpauseGame();
     storeReady.set(true);
+
+    const autorun = import.meta.env.VITE_PROFILER_AUTORUN === 'true';
+    if (autorun) {
+      // Capture mode only: run immediately at 4× and drop the overlay now, so the profiler records
+      // the running sim rather than a paused, overlaid game.
+      setGameSpeed(4);
+      unpauseGame();
+      bootReveal.set(true);
+    }
+    // Otherwise fall through to the normal reveal path: WebGL inits behind the overlay, then the
+    // paused warmup linger drops it (rendererReady subscription) — the real-game startup, on the
+    // giant map.
     console.info(
       `[PROFILER] sandbox loaded: ${scenario.pawns.length} pawns, ${(scenario.mobs ?? []).length} mobs, ` +
         `${scenario.buildings.length} buildings, ${(scenario.droppedItems ?? []).length} items, ` +
-        `${Object.keys(scenario.designations).length} designations · 4× speed. Profile via the browser.`
+        `${Object.keys(scenario.designations).length} designations · ` +
+        (autorun
+          ? '4× speed, AUTORUN capture mode.'
+          : 'PAUSED behind the loading overlay (real-game startup, giant map).')
     );
     return;
   }
@@ -720,10 +772,11 @@ export const savedStateReady: Promise<void> = (async () => {
   // Push loaded state into the store and sync GameEngine
   set(baseState);
   gameEngine.setGameStateManager(new GameStateManager(baseState));
-  // Unblock rendering. Under the worker, this is DEFERRED to the worker-boot block below (after a
-  // warmup) so the loading screen also covers the worker boot; here it only fires on the SSR/test
-  // (non-worker) path, which has no worker to warm up.
-  if (!USE_SIM_WORKER) storeReady.set(true);
+  // Mount the game-container so the WebGL renderer begins initialising BEHIND the loading overlay.
+  // The overlay stays up (gated on `bootReveal`) until the renderer is up AND the paused warmup
+  // linger has hidden the worker-boot/WebGL-init GC — see the `rendererReady` subscription above.
+  loadingStatus.set('Starting renderer…');
+  storeReady.set(true);
 })().catch((err) => {
   console.error('[GameState] Failed to load save, starting fresh:', err);
   // Still unblock rendering so the app doesn't stay stuck on the loading screen.
@@ -849,21 +902,14 @@ if (USE_SIM_WORKER) {
     }
   };
   simWorkerBridge.onFullState = (s) => scheduleSave(s);
-  savedStateReady.then(async () => {
+  savedStateReady.then(() => {
+    // Kick the worker off in parallel with the WebGL init that's already happening behind the
+    // overlay; the paused warmup linger (rendererReady subscription) covers the worker boot + GC.
     simWorkerBridge.start();
     const st = get(gameState) as GameState;
     simWorkerBridge.init(st, st.seed);
     simWorkerBridge.setSpeed(gameSpeedValue);
     simWorkerBridge.setPaused(get(isPaused));
     console.info('[SIM-WORKER] cutover active — sim now runs in the worker.');
-    // Profiler sandbox already revealed itself (storeReady set in the boot branch) and wants to run
-    // immediately to capture the startup. The normal path holds the loading screen through a short
-    // warmup so the worker boot + GC settle before the (paused) reveal.
-    if (import.meta.env.VITE_PROFILER !== 'true') {
-      loadingStatus.set('Warming up simulation…');
-      await new Promise((r) => setTimeout(r, WORKER_WARMUP_MS));
-      loadingStatus.set('Starting renderer…');
-      storeReady.set(true);
-    }
   });
 }

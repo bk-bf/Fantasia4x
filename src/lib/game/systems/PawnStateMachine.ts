@@ -408,12 +408,16 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
   }
 
   // ── Persist updated condition/blood state ──────────────────────────────────
-  return {
-    ...gameState,
-    pawns: gameState.pawns.map((p) =>
-      p.id === pawn.id ? { ...p, conditions, bloodVolume, limbs } : p
-    )
-  };
+  // ADR-002 amendment (hot per-tick, behind the worker): the common (non-lethal) path mutates the
+  // live pawn IN PLACE rather than rebuilding the whole pawns array each pawn each tick — that
+  // per-pawn `.map` was a top steady-state line (`tickConditions/<.pawns<`). `pawn` is the live
+  // object the caller fetched from gameState.pawns. (The lethal branches above stay immutable: rare,
+  // and they hand a patched state to killPawn.) conditions/limbs are cold snapshot fields → resync;
+  // bloodVolume is hot → every flush (ADR-021 W2b).
+  pawn.conditions = conditions;
+  pawn.bloodVolume = bloodVolume;
+  pawn.limbs = limbs;
+  return gameState;
 }
 
 /**

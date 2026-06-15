@@ -91,7 +91,7 @@ describe('combat sim (headless tickCombat)', () => {
   it('an undrafted Fighting pawn swings back at an adjacent hostile', () => {
     let state = makeState([makePawn()], [makeGoblin({ state: 'Wander' })]); // mob passive so only the pawn attacks
     let mobInjured = false;
-    for (let t = 0; t < 600 && !mobInjured; t++) {
+    for (let t = 0; t < 1500 && !mobInjured; t++) {
       state = { ...state, turn: t };
       state = combatService.tickCombat(state, 16);
       if ((state.mobs![0].injuries?.length ?? 0) > 0) mobInjured = true;
@@ -133,7 +133,7 @@ describe('combat sim (headless tickCombat)', () => {
     const target = makePawn({ currentState: 'Idle', stats: { ...stats, dexterity: 3 } });
     let state = makeState([target], [makeGoblin({ stats: { ...stats, dexterity: 16 } })]);
     let pawnInjured = false;
-    for (let t = 0; t < 600 && !pawnInjured; t++) {
+    for (let t = 0; t < 1500 && !pawnInjured; t++) {
       state = { ...state, turn: t };
       state = combatService.tickCombat(state, 16);
       if ((state.pawns[0].injuries?.length ?? 0) > 0) pawnInjured = true;
@@ -189,7 +189,9 @@ describe('combat sim (headless tickCombat)', () => {
     });
     let state = makeState([hunter], [prey]);
     let died = false;
-    for (let t = 0; t < 6000 && !died; t++) {
+    // 12000 ticks: attack cadence was halved (BASE_ATTACK_INTERVAL_TICKS 60→120), so the hunt needs
+    // twice the tick budget to land enough swings to kill the quarry.
+    for (let t = 0; t < 12000 && !died; t++) {
       state = { ...state, turn: t };
       state = combatService.tickCombat(state, 16);
       const d = state.mobs![0];
@@ -205,7 +207,7 @@ describe('combat sim (headless tickCombat)', () => {
     const goblin = makeGoblin({ state: 'Attacking', stats: { ...stats, dexterity: 2 } });
     let state = makeState([guard], [goblin]);
     let goblinDamaged = false;
-    for (let t = 0; t < 2000 && !goblinDamaged; t++) {
+    for (let t = 0; t < 4000 && !goblinDamaged; t++) {
       state = { ...state, turn: t };
       state = combatService.tickCombat(state, 16);
       const g = state.mobs![0];

@@ -181,33 +181,23 @@ export class PawnServiceImpl implements PawnService {
 
   // ===== STATE MANAGEMENT =====
 
+  // ADR-002 amendment (hot per-tick, behind the worker): mutate the live pawn IN PLACE instead of
+  // rebuilding the whole pawns array (`{...p}` spread + a fresh n-element array) once per pawn per
+  // tick. That per-pawn full-array `.map` was O(n²) allocation/GC — a top steady-state line in the
+  // profile (`updatePawnState/<.pawns<` + `CopyDataPropertiesUnfiltered`). State is a HOT snapshot
+  // field, so the change still ships to the renderer every flush (ADR-021 W2b).
   updatePawnState(pawnId: string, gameState: GameState): GameState {
     const pawn = gameState.pawns.find((p) => p.id === pawnId);
     if (!pawn) return gameState;
-
-    const updatedState = this.calculateStateUpdate(pawn.state, pawn.needs, gameState.turn);
-    const updatedPawn = { ...pawn, state: updatedState };
-
-    return {
-      ...gameState,
-      pawns: gameState.pawns.map((p) => (p.id === pawnId ? updatedPawn : p))
-    };
+    pawn.state = this.calculateStateUpdate(pawn.state, pawn.needs, gameState.turn);
+    return gameState;
   }
 
   updateMorale(pawnId: string, gameState: GameState): GameState {
     const pawn = gameState.pawns.find((p) => p.id === pawnId);
     if (!pawn) return gameState;
-
-    const newMorale = this.calculateMorale(pawn, gameState);
-    const updatedPawn = {
-      ...pawn,
-      state: { ...pawn.state, mood: newMorale }
-    };
-
-    return {
-      ...gameState,
-      pawns: gameState.pawns.map((p) => (p.id === pawnId ? updatedPawn : p))
-    };
+    pawn.state.mood = this.calculateMorale(pawn, gameState);
+    return gameState;
   }
 
   // ===== ACTIVITY MANAGEMENT =====
@@ -832,18 +822,17 @@ export class PawnServiceImpl implements PawnService {
       if (t) claimed.add(`${t.x},${t.y}`);
     }
 
-    const patch = (id: string, fields: Partial<Pawn>) => {
-      state = {
-        ...state,
-        pawns: state.pawns.map((p) => (p.id === id ? { ...p, ...fields } : p))
-      };
-    };
+    // ADR-002 amendment: apply each mover's result IN PLACE on the live pawn the loop already holds
+    // (Object.assign), not via a fresh `state.pawns.map` per mover (O(n²) array churn). Movement
+    // decisions read the start-of-pass `occupied` set + live `claimed`, never the live pawn objects,
+    // so mutating positions as we go doesn't perturb later movers (the snapshot semantics hold).
+    const patch = (p: Pawn, fields: Partial<Pawn>) => Object.assign(p, fields);
 
     for (const pawn of state.pawns) {
       if (pawn.isAlive === false) continue;
       // Repair inconsistent state saved from earlier bugs: path exists but isMoving=false.
       if (!pawn.isMoving && pawn.path && pawn.path.length > 0) {
-        patch(pawn.id, { path: [], pathIndex: 0, nextCellCostLeft: undefined });
+        patch(pawn, { path: [], pathIndex: 0, nextCellCostLeft: undefined });
         continue;
       }
       if (!pawn.isMoving || !pawn.path || pawn.path.length === 0 || !pawn.position) continue;
@@ -869,10 +858,10 @@ export class PawnServiceImpl implements PawnService {
 
       if (res.status === 'held' || res.status === 'idle') {
         // Held behind another body — keep path + isMoving, only the blocked counter advances.
-        patch(pawn.id, { blockedTicks: res.body.blockedTicks });
+        patch(pawn, { blockedTicks: res.body.blockedTicks });
       } else if (res.status === 'dropped') {
         // Blocked too long — drop the path so the FSM re-routes; did NOT arrive.
-        patch(pawn.id, {
+        patch(pawn, {
           path: [],
           pathIndex: 0,
           nextCellCostLeft: undefined,
@@ -883,7 +872,7 @@ export class PawnServiceImpl implements PawnService {
       } else {
         // Moved (possibly arriving this tick when res.done).
         const b = res.body;
-        patch(pawn.id, {
+        patch(pawn, {
           position: { x: b.x, y: b.y },
           path: b.path ?? [],
           pathIndex: b.pathIndex ?? 0,
