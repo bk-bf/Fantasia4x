@@ -18,6 +18,7 @@ import { occupancyService } from '../../services/OccupancyService';
 import { gameLogger } from '../../dev/gameLogger';
 import { ticksFromSeconds, SECONDS_PER_TICK } from '../../core/time';
 import { rng } from '../../core/rng';
+import { pawnById } from '../../core/pawnIndex';
 import { computeTileLightLevel } from '../../services/EnvironmentService';
 import { effectiveVisionRange } from '../../core/vision';
 import { PAWN_STATE, type PawnStateName } from './pawnStates';
@@ -602,13 +603,13 @@ export function transitionTo(pawn: Pawn, state: PawnStateName, gs: GameState): G
   if (prev !== state) {
     gameLogger.log(gs.turn, 'STATE-CHG', `${pawn.name} ${prev} → ${state}`);
   }
-  const target = gs.pawns.find((p) => p.id === pawn.id);
+  const target = pawnById(gs.pawns, pawn.id);
   if (target) target.currentState = state;
   return gs;
 }
 
 export function goIdle(pawn: Pawn, gs: GameState): GameState {
-  const target = gs.pawns.find((p) => p.id === pawn.id);
+  const target = pawnById(gs.pawns, pawn.id);
   if (target) {
     target.currentState = PAWN_STATE.IDLE;
     target.activeJob = undefined;
@@ -625,7 +626,7 @@ export function goIdle(pawn: Pawn, gs: GameState): GameState {
  * live array element; set its fields (nested too: `p.needs.hunger = …`). No-op if the id isn't found.
  */
 export function mutatePawn(gs: GameState, id: string, mutate: (p: Pawn) => void): GameState {
-  const p = gs.pawns.find((x) => x.id === id);
+  const p = pawnById(gs.pawns, id);
   if (p) mutate(p);
   return gs;
 }
@@ -688,7 +689,7 @@ export function findCombatThreat(pawn: Pawn, gs: GameState): Mob | null {
 /** Stop a pawn's current movement in place (used when planting to fight). */
 export function haltMovement(pawn: Pawn, gs: GameState): GameState {
   if ((pawn.path?.length ?? 0) === 0 && !pawn.isMoving) return gs;
-  const target = gs.pawns.find((p) => p.id === pawn.id);
+  const target = pawnById(gs.pawns, pawn.id);
   if (target) {
     target.path = [];
     target.isMoving = false;

@@ -34,6 +34,7 @@ import { gameLogger } from '../dev/gameLogger';
 import { perTick } from '../core/time';
 import { calcBloodRegenRate } from '../entities/Pawns';
 import { rng } from '../core/rng';
+import { pawnById } from '../core/pawnIndex';
 
 // The pawn AI was decomposed out of this file (hotspot 2026-06-13): the 15 state handlers live in
 // `pawn/handlers/{work,needs,combat}.ts`, the shared orchestration helpers + tuning constants in
@@ -740,7 +741,7 @@ class PawnStateMachineImpl {
 
     let state = gameState;
     for (const pawn of state.pawns) {
-      const current = state.pawns.find((p) => p.id === pawn.id);
+      const current = pawnById(state.pawns, pawn.id);
       if (!current) continue;
       // Skip dead pawns entirely.
       if (current.isAlive === false) continue;
@@ -778,14 +779,14 @@ class PawnStateMachineImpl {
         const afterTend = tendWounds(current, state);
         if (afterTend !== state) {
           state = afterTend;
-          toTick = state.pawns.find((p) => p.id === pawn.id) ?? current;
+          toTick = pawnById(state.pawns, pawn.id) ?? current;
         }
       }
 
       // Tick conditions (malnutrition, blood loss, infection, limb checks) — may kill pawn.
       state = tickConditions(toTick, state);
       // Re-fetch pawn in case tickConditions updated it.
-      let afterConditions = state.pawns.find((p) => p.id === pawn.id);
+      let afterConditions = pawnById(state.pawns, pawn.id);
       if (!afterConditions || afterConditions.isAlive === false) continue;
 
       // ── Wound healing + collapse lifecycle (COMBAT-SYSTEM) ────────────────
@@ -923,7 +924,7 @@ class PawnStateMachineImpl {
         // Run the combat handler and tick status effects, then move to next pawn —
         // skip the need/work state machine entirely while a threat is present.
         state = tickPawn(forCollapse, state);
-        const afterCombat = state.pawns.find((p) => p.id === pawn.id);
+        const afterCombat = pawnById(state.pawns, pawn.id);
         if (afterCombat) {
           const stepped = tickStatusEffectDurations(afterCombat);
           const synced = syncActiveEffects(stepped);
@@ -959,7 +960,7 @@ class PawnStateMachineImpl {
       // Run state machine for this pawn.
       state = tickPawn(forCollapse, state);
       // Tick status effect durations, then sync activeEffects so PawnService reads fresh values.
-      const updated = state.pawns.find((p) => p.id === pawn.id);
+      const updated = pawnById(state.pawns, pawn.id);
       if (updated) {
         let stepped = tickStatusEffectDurations(updated);
         const synced = syncActiveEffects(stepped);

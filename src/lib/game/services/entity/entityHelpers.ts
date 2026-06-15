@@ -3,6 +3,7 @@
 // functions (the class had no instance state but `idCounter`, so `this.` simply dropped away).
 import type { GameState, Mob, Pawn } from '../../core/types';
 import { getCreatureById, type CreatureDefinition } from '../../core/Creatures';
+import { pawnById } from '../../core/pawnIndex';
 import { SECONDS_PER_TICK } from '../../core/time';
 import { stepBody, seedMidCrossClaims } from '../../systems/MovementSystem';
 import { resourceObjectService } from '../ResourceObjectService';
@@ -139,7 +140,7 @@ export function huntAttacker(
   if (!mob.huntTargetId) return null;
   const m = allMobs.find((a) => a.id === mob.huntTargetId);
   if (m) return m.state === 'Attacking' ? { x: m.x, y: m.y } : null;
-  const p = state.pawns.find((pp) => pp.id === mob.huntTargetId);
+  const p = pawnById(state.pawns, mob.huntTargetId);
   if (
     p &&
     p.isAlive !== false &&

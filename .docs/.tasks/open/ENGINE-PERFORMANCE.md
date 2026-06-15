@@ -1,4 +1,4 @@
-<!-- LOC cap: 505 (created: 2026-06-14, rewritten 2026-06-14 post-profiling; worker shipped 2026-06-14; Rust-SoA pivot 2026-06-14 then ABORTED after R1 2026-06-15 → mutable-in-place JS; M1–M3 + throttle landed 2026-06-15, de-immutabling plateaued; 2026-06-15 custom profiler RETIRED → Firefox Profiler + pq; capacity/formula caches + the WORKER→MAIN SNAPSHOT (W2/W2b) broke the plateau → 80–100 TPS @4×; then de-immutabled pawn-patch spreads + paused warmup screen → 200+ TPS @4× after ~5s, GOAL CRUSHED 2026-06-15; then JS-allocation capture (§C) verified the de-immutable win + drove the harvest-time worldMap-delta fix) -->
+<!-- LOC cap: 515 (created: 2026-06-14, rewritten 2026-06-14 post-profiling; worker shipped 2026-06-14; Rust-SoA pivot 2026-06-14 then ABORTED after R1 2026-06-15 → mutable-in-place JS; M1–M3 + throttle landed 2026-06-15, de-immutabling plateaued; 2026-06-15 custom profiler RETIRED → Firefox Profiler + pq; capacity/formula caches + the WORKER→MAIN SNAPSHOT (W2/W2b) broke the plateau → 80–100 TPS @4×; then de-immutabled pawn-patch spreads + paused warmup screen → 200+ TPS @4× after ~5s, GOAL CRUSHED 2026-06-15; then JS-allocation capture (§C) verified the de-immutable win + drove the harvest-time worldMap-delta fix) -->
 
 # ENGINE PERFORMANCE & SCALING
 
@@ -256,6 +256,17 @@ per-func via stack walk).
   linear-scanned the whole harvest pool to test existence, every tick. Index existing harvest jobs in a
   `Set<"x,y,resourceId">` once, then O(1) `has`. Behaviour-identical (no dup jobs, stale jobs still
   filtered) — `harvestJobSync.test.ts`. *(This is what the now-comparable CPU captures bought us.)*
+
+### pawn-id → index Map — kill the `find` O(n) lookups (DONE)
+
+- [x] **`find` was 12.6%** of worker CPU — `gameState.pawns.find(p => p.id === id)` scans (140 mobs ×
+  150 pawns for hunt targets + per-pawn state/morale/FSM passes). New `core/pawnIndex.ts` `pawnById`
+  memoises a `Map<id,Pawn>` **on the pawns ARRAY REF** (rebuilds only on add/remove — always a new
+  array via map/filter; no in-place push/splice). Hot callers query a STABLE array across many lookups
+  (mob FSM in `stepEntities`; `processPawnTurn` + FSM tick under in-place updates), so one O(n) build
+  serves hundreds of O(1) gets. Applied to PawnService state/morale, the in-place updaters
+  `mutatePawn`/`transitionTo`/`goIdle`/`haltMovement`, the mob hunt-target, and the FSM re-fetches.
+  Holds live refs (ADR-002-safe); death-path `killPawn` keeps `.find`. Guarded by `pawnIndex.test.ts`.
 
 ### Next target — RE-CAPTURE FIRST
 

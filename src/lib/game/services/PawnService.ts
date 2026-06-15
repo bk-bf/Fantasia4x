@@ -10,6 +10,7 @@ import type {
   ConditionStage
 } from '../core/types';
 import { consumeFromStockpiles } from '../core/GameState';
+import { pawnById } from '../core/pawnIndex';
 import { calculatePawnStats, categorizeStats, getStatDescription } from '../entities/Pawns';
 import { pawnStatService } from './PawnStatService';
 import { WORK_CATEGORIES } from '../core/Work';
@@ -187,14 +188,14 @@ export class PawnServiceImpl implements PawnService {
   // profile (`updatePawnState/<.pawns<` + `CopyDataPropertiesUnfiltered`). State is a HOT snapshot
   // field, so the change still ships to the renderer every flush (ADR-021 W2b).
   updatePawnState(pawnId: string, gameState: GameState): GameState {
-    const pawn = gameState.pawns.find((p) => p.id === pawnId);
+    const pawn = pawnById(gameState.pawns, pawnId);
     if (!pawn) return gameState;
     pawn.state = this.calculateStateUpdate(pawn.state, pawn.needs, gameState.turn);
     return gameState;
   }
 
   updateMorale(pawnId: string, gameState: GameState): GameState {
-    const pawn = gameState.pawns.find((p) => p.id === pawnId);
+    const pawn = pawnById(gameState.pawns, pawnId);
     if (!pawn) return gameState;
     pawn.state.mood = this.calculateMorale(pawn, gameState);
     return gameState;
