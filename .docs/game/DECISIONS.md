@@ -677,7 +677,7 @@ wrapper choice.
 ### ADR-021 [GAME]: Sim/Render Decouple — Soft-Body Pathfinding, Terrain Cache, MAX_STEPS Cap, Sim→Worker
 
 - **Date**: 2026-06-14 (Worker + snapshot protocol landed 2026-06-15)
-- **Status**: Accepted (bug-fixes + Worker + W2/W2b snapshot protocol shipped; `?simworker` becoming default)
+- **Status**: Accepted (bug-fixes + Worker + W2/W2b snapshot protocol shipped; **worker is the only sim path — `?simworker` flag retired**)
 - **Spec**: [.tasks/open/ENGINE-PERFORMANCE.md](../.tasks/open/ENGINE-PERFORMANCE.md) (§B = the snapshot win) · bugs in [BUGS.md](BUGS.md)
 
 #### Context

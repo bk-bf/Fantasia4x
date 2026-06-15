@@ -4,7 +4,6 @@
   import FilterTabs from '$lib/components/UI/FilterTabs.svelte';
   import { uiState } from '$lib/stores/uiState';
   import ITEMS_DATABASE from '$lib/game/database/items.jsonc';
-  import { gameCoordinator } from '$lib/game/systems/GameCoordinator';
   import { itemService } from '$lib/game/services/ItemService';
   import { recipeService } from '$lib/game/services/RecipeService';
   import { buildingService } from '$lib/game/services/BuildingService';
@@ -198,7 +197,11 @@
 
   function startCrafting(item: Item, selectedIngredients?: Record<string, string>) {
     if (!$gameState) return;
-    gameCoordinator.craftItem(item.id, 1, selectedIngredients);
+    gameState.command({
+      type: 'craftItem',
+      payload: { itemId: item.id, quantity: 1, selectedIngredients },
+      save: true
+    });
   }
 
   function cancelCrafting(queueIndex: number) {

@@ -2,7 +2,6 @@
 <script lang="ts">
   import { uiState } from '$lib/stores/uiState';
   import { gameState } from '$lib/stores/gameState';
-  import { designationService } from '$lib/game/services/DesignationService';
   import type { FilterableZoneType, Item } from '$lib/game/core/types';
   import itemsData from '$lib/game/database/items.jsonc';
   import BuildCard from './BuildCard.svelte';
@@ -70,16 +69,14 @@
 
   /** Create a new zone instance and immediately enter painting mode. */
   function newZone(type: FilterableZoneType) {
-    let newId: string | undefined;
     const existing = ($gameState.zoneInstances ?? []).filter((z) => z.type === type).length;
     const def = ZONE_DEFS.find((d) => d.type === type)!;
     const label = `${def.label[0]}${def.label.slice(1).toLowerCase()} ${existing + 1}`;
-    gameState.updateWithSave((state) => {
-      const result = designationService.createZoneInstance(type, label, state);
-      newId = result.id;
-      return result.state;
-    });
-    if (newId) uiState.activateDesignation(type, newId);
+    // The id is generated here so paint mode can activate immediately (the worker command is
+    // fire-and-forget — no round-trip to read back a worker-assigned id).
+    const id = `${type}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+    gameState.command({ type: 'createZoneInstance', payload: { type, label, id }, save: true });
+    uiState.activateDesignation(type, id);
   }
 
   /** Toggle painting mode for an existing instance. */

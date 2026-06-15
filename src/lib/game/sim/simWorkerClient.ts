@@ -3,10 +3,10 @@
  *
  * Two things:
  *  1. `verifyWasmInWorker()` — W1 standalone WASM-in-worker check (console, dev).
- *  2. `simWorkerBridge` — W2–W4 cutover: spawns the sim worker, forwards commands + lifecycle, and
- *     surfaces the worker's state snapshots to the store. Gated by `USE_SIM_WORKER` (default OFF —
- *     enable with `?simworker` or localStorage `simworker=1`), so the live main-thread path is
- *     untouched until the user opts in to test the cutover (which needs a browser).
+ *  2. `simWorkerBridge` — the sim runs here (ADR-021 W4 complete): spawns the sim worker, forwards
+ *     commands + lifecycle, and reassembles the worker's snapshots into the store projection. This is
+ *     now the ONLY sim path in the browser (`USE_SIM_WORKER` = `isClientRuntime`); the `?simworker`
+ *     opt-in flag is retired.
  */
 import { isClientRuntime } from '../core/runtime';
 import { realSimLogSink } from '../../stores/simLogBridge';
@@ -62,13 +62,12 @@ export function verifyWasmInWorker(): void {
   w.postMessage({ kind: 'wasm-check' });
 }
 
-/** Is the sim-in-worker cutover active? Off by default; opt in with `?simworker` or localStorage. */
-export const USE_SIM_WORKER: boolean =
-  isClientRuntime &&
-  import.meta.env.DEV &&
-  typeof location !== 'undefined' &&
-  (new URLSearchParams(location.search).has('simworker') ||
-    (typeof localStorage !== 'undefined' && localStorage.getItem('simworker') === '1'));
+/**
+ * The sim ALWAYS runs in the worker now (ADR-021 W4 complete — the `?simworker` opt-in flag is
+ * retired). True in any browser runtime; false only under SSR/tests (no worker, no tick loop), where
+ * the engine is driven directly by the test/headless caller.
+ */
+export const USE_SIM_WORKER: boolean = isClientRuntime;
 
 /**
  * Bridge to the sim worker. The worker owns GameState + the tick loop; this forwards commands and

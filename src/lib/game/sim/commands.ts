@@ -13,16 +13,32 @@
  * now calls `gameState.command({ type, payload, save })`. On the main thread that's still
  * `applyCommand` (behaviour identical); the worker will postMessage instead.
  *
- * **Not here (request-response):** `createZoneInstance` (returns a new id the caller reads back) and
- * `gameCoordinator.craftItem` need a *reply*, not fire-and-forget — they stay on their current path
- * until the worker's request-response channel exists (W3 follow-up). Everything else is converted.
+ * **All player/dev mutations are converted** (W4 complete). The two former request-response holdouts
+ * are now fire-and-forget: `createZoneInstance` takes a caller-generated id (the caller needs it
+ * immediately for paint mode, so no reply is required), and `craftItem` moved here wholesale from
+ * GameCoordinator. State-REPLACING actions (regenWorld/resetGame) re-init the worker instead.
  */
-import type { GameState, EquipmentSlot } from '../core/types';
-import { addToStockpileZone, consumeFromStockpiles, releaseReservation } from '../core/GameState';
-import { equipItem, unequipItem, useConsumable } from '../core/PawnEquipment';
+import type {
+  GameState,
+  EquipmentSlot,
+  ItemInstance,
+  CraftingInProgress,
+  FilterableZoneType
+} from '../core/types';
+import {
+  addToStockpileZone,
+  consumeFromStockpiles,
+  releaseReservation,
+  reserveForOrder,
+  aggregateFromDrops
+} from '../core/GameState';
+import { equipItem, unequipItem, useConsumable, getEquipmentSlot } from '../core/PawnEquipment';
 import { designationService } from '../services/DesignationService';
 import { buildingService } from '../services/BuildingService';
+import { itemService } from '../services/ItemService';
+import { recipeService } from '../services/RecipeService';
 import { researchService } from '../services/ResearchService';
+import { devSpawnLooseItems, devDestroyAllItems } from '../dev/devWorld';
 import type { SimCommand } from './simProtocol';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -159,6 +175,10 @@ export const COMMANDS: Record<string, Cmd> = {
     s,
     p: { x1: number; y1: number; x2: number; y2: number; type: string; instanceId?: string }
   ) => designationService.designateRect(p.x1, p.y1, p.x2, p.y2, p.type as never, s, p.instanceId),
+  // The caller generates the id (it needs it immediately to enter paint mode) and passes it in,
+  // so this is fire-and-forget instead of the old request-response that returned a new id.
+  createZoneInstance: (s, p: { type: FilterableZoneType; label: string; id: string }) =>
+    designationService.createZoneInstanceWithId(p.type, p.label, p.id, s),
   removeZoneInstance: (s, p: { instanceId: string }) =>
     designationService.removeZoneInstance(p.instanceId, s),
   toggleInstanceCategory: (
@@ -174,7 +194,102 @@ export const COMMANDS: Record<string, Cmd> = {
   cancelCrafting: (s, p: { queueId: string }) => {
     const next = releaseReservation(s, p.queueId);
     return { ...next, craftingQueue: (next.craftingQueue || []).filter((q) => q.id !== p.queueId) };
-  }
+  },
+  /** Queue a crafting order (ADR-016 reserve-and-fetch). Moved here from GameCoordinator so it runs
+   *  on the worker's canonical state instead of the stale main-thread projection. */
+  craftItem: (
+    s,
+    p: { itemId: string; quantity?: number; selectedIngredients?: Record<string, string> }
+  ) => {
+    const quantity = p.quantity ?? 1;
+    const item = itemService.getItemById(p.itemId);
+    if (!item) return s;
+    if (!itemService.canCraftItem(p.itemId, s)) return s;
+    const resolved = p.selectedIngredients ?? itemService.autoSelectIngredients(p.itemId, s) ?? {};
+    const activeCost = itemService.resolveActiveCost(item.id, s, resolved);
+    if (!activeCost) return s;
+    const recipe = recipeService.getRecipeForItem(item.id);
+    const inputs: Record<string, number> = {};
+    for (const [id, q] of Object.entries(activeCost)) inputs[id] = q * quantity;
+    const stationType = recipe?.station ?? null;
+    const station = buildingService.bestCraftStation(stationType ?? 'craft_spot', s);
+    const stationBuildingId = station?.id;
+    const craftBonus = station ? buildingService.craftingBonusOf(station.type) : 0;
+    const workRequired = Math.max(
+      1,
+      Math.ceil(((recipe?.workAmount ?? 1) * quantity) / (1 + craftBonus))
+    );
+    const orderId = crypto.randomUUID();
+    let gs = s;
+    let allReserved = true;
+    for (const [id, q] of Object.entries(inputs)) {
+      const res = reserveForOrder(gs, id, q, orderId);
+      gs = res.state;
+      if (res.reserved < q) {
+        allReserved = false;
+        break;
+      }
+    }
+    if (!allReserved) return releaseReservation(gs, orderId);
+    const order: CraftingInProgress = {
+      id: orderId,
+      item,
+      quantity,
+      workRequired,
+      workDone: 0,
+      inputs,
+      stationType,
+      stationBuildingId,
+      startedAt: gs.turn,
+      selectedIngredients: Object.keys(resolved).length > 0 ? resolved : undefined
+    };
+    return { ...gs, craftingQueue: [...(gs.craftingQueue ?? []), order] };
+  },
+
+  // ── equipment / dev ──────────────────────────────────────────────────────────
+  /** Equip a loose item off a tile onto a pawn (ADR-016: the swapped-out item drops back). */
+  equipFromTile: (s, p: { pawnId: string; dropId: string }) => {
+    const drop = (s.droppedItems ?? []).find((d) => d.id === p.dropId);
+    if (!drop) return s;
+    const item = itemService.getItemById(drop.resourceId);
+    if (!item) return s;
+    const slot = getEquipmentSlot(item);
+    if (!slot) return s;
+    const pawnIdx = s.pawns.findIndex((pw) => pw.id === p.pawnId);
+    if (pawnIdx < 0) return s;
+    const pawn = s.pawns[pawnIdx];
+    const instance: ItemInstance = drop.instance ?? {
+      instanceId: `${item.id}-${p.pawnId}-${Date.now()}`,
+      itemId: item.id,
+      durability: item.maxDurability ?? 100
+    };
+    const px = pawn.position?.x ?? drop.x;
+    const py = pawn.position?.y ?? drop.y;
+    let drops = (s.droppedItems ?? [])
+      .map((d) => (d.id === p.dropId ? { ...d, quantity: d.quantity - 1 } : d))
+      .filter((d) => d.quantity > 0);
+    const prev = pawn.equipment[slot];
+    if (prev) {
+      drops = [
+        ...drops,
+        {
+          id: `unequip-${prev.instanceId}-${Date.now()}`,
+          resourceId: prev.itemId,
+          x: px,
+          y: py,
+          quantity: 1,
+          stored: false,
+          instance: prev
+        }
+      ];
+    }
+    const pawns = s.pawns.map((pw, i) =>
+      i === pawnIdx ? { ...pw, equipment: { ...pw.equipment, [slot]: instance } } : pw
+    );
+    return { ...s, pawns, droppedItems: drops, stockpile: aggregateFromDrops(drops) };
+  },
+  devSpawnAllItems: (s, p: { amount?: number }) => devSpawnLooseItems(s, p.amount ?? 500),
+  devClearAllItems: (s) => devDestroyAllItems(s)
 };
 
 /** Apply a serializable command to a state, returning the new state. Unknown ids are a no-op. */

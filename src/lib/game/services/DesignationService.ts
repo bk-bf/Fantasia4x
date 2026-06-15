@@ -304,13 +304,24 @@ class DesignationServiceImpl {
     gs: GameState
   ): { state: GameState; id: string } {
     const id = `${type}-${Date.now().toString(36)}-${rng.random().toString(36).slice(2, 6)}`;
+    return { state: this.createZoneInstanceWithId(type, label, id, gs), id };
+  }
+
+  /** Create a zone instance with a caller-supplied id (worker command path — the UI generates the
+   *  id up front so it can enter paint mode immediately; no request-response reply needed). */
+  createZoneInstanceWithId(
+    type: FilterableZoneType,
+    label: string,
+    id: string,
+    gs: GameState
+  ): GameState {
     const instance: ZoneInstance = {
       id,
       type,
       label,
       filter: { allowedCategories: [], blockedItems: [] }
     };
-    return { state: { ...gs, zoneInstances: [...(gs.zoneInstances ?? []), instance] }, id };
+    return { ...gs, zoneInstances: [...(gs.zoneInstances ?? []), instance] };
   }
 
   /** Remove a zone instance and all its tile designations. */

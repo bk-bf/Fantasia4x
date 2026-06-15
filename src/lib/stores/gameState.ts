@@ -12,26 +12,20 @@ import {
 import { gameEngine } from '$lib/game/systems/GameEngineImpl';
 // P-3: side-effect import — registers the real log/feedback sink before any tick runs.
 import './simLogBridge';
-// ADR-021: sim worker bridge (W1 verifier + W2–W4 cutover). USE_SIM_WORKER is off unless opted in
-// (?simworker / localStorage), so the default path is the in-thread engine below.
+// ADR-021: the sim runs in the worker (W4 complete). USE_SIM_WORKER = isClientRuntime — true in any
+// browser, false only under SSR/tests (the `?simworker` opt-in flag is retired). The in-thread loop
+// below is now the SSR/test-only fallback.
 import { simWorkerBridge, USE_SIM_WORKER } from '$lib/game/sim/simWorkerClient';
 // ADR-021 W3: serializable command registry (shared with the future sim worker).
 import { applySimCommand } from '$lib/game/sim/commands';
 import type { SimCommand } from '$lib/game/sim/simProtocol';
-import type {
-  GameState,
-  Pawn,
-  WorldTile,
-  FilterableZoneType,
-  ItemInstance
-} from '$lib/game/core/types';
+import type { GameState, Pawn, WorldTile, FilterableZoneType } from '$lib/game/core/types';
 import { generatePawns } from '$lib/game/entities/Pawns';
 import { pawnService } from '$lib/game/services/PawnService';
 import { generateRace } from '$lib/game/core/Race';
 import { itemService } from '$lib/game/services/ItemService';
 import { buildingService } from '$lib/game/services/BuildingService';
 import { workService } from '$lib/game/services/WorkService';
-import { getEquipmentSlot } from '$lib/game/core/PawnEquipment';
 import { calculatePawnStats } from '$lib/game/entities/Pawns';
 import { triggerEvent } from '$lib/stores/eventStore';
 import { generateWorld } from '$lib/game/world/WorldGenerator';
@@ -39,7 +33,7 @@ import { resourceGeneratorService } from '$lib/game/services/ResourceGeneratorSe
 import { entityService } from '$lib/game/services/EntityService';
 import { loadSave, scheduleSave, deleteSave } from './saveManager';
 import { clearActivityLog } from './Log';
-import { applyDevWorld, devSpawnLooseItems, devDestroyAllItems } from '$lib/game/dev/devWorld';
+import { applyDevWorld } from '$lib/game/dev/devWorld';
 import { TICKS_PER_SECOND, ticksFromSeconds } from '$lib/game/core/time';
 import { rng, freshSeed } from '$lib/game/core/rng';
 import { resetUnreachableJobs } from '$lib/game/systems/PawnStateMachine';
@@ -422,6 +416,26 @@ function setGameSpeed(speed: number) {
   gameSpeed.set(speed);
   if (USE_SIM_WORKER) simWorkerBridge.setSpeed(speed);
 } // ===== WORLD REGEN =====
+/**
+ * Adopt a freshly-built GameState as the canonical state (world regen / reset). Under the worker
+ * (the only browser path) a full-state REPLACE can't go through the command registry — it re-inits
+ * the worker with the new state (which resets its snapshot baselines + restarts the tick loop). The
+ * store projection is updated immediately so the UI repaints without waiting for the first snapshot.
+ */
+function loadStateIntoWorker(state: GameState) {
+  gameStore.setSilent(state);
+  gameStore.notify();
+  scheduleSave(state);
+  if (USE_SIM_WORKER) {
+    simWorkerBridge.init(state, state.seed);
+    simWorkerBridge.setSpeed(gameSpeedValue);
+    simWorkerBridge.setPaused(get(isPaused));
+  } else {
+    // SSR/test fallback: drive the in-thread engine directly.
+    gameEngine.setGameStateManager(new GameStateManager(state));
+  }
+}
+
 function regenWorld(seed?: number, dev = false, itemQty = 500) {
   const s = (seed !== undefined ? seed : freshSeed()) >>> 0 || 1;
   // P0-2/D7: regenerating the world starts a fresh deterministic run — persist the seed,
@@ -430,21 +444,11 @@ function regenWorld(seed?: number, dev = false, itemQty = 500) {
   resetUnreachableJobs();
   const newWorld = generateWorld(240, 160, s);
   resourceGeneratorService.generateResources(newWorld, s);
-  // Set the engine's worldMap before seeding entities (resolveWorld reads it). The updateWithSave
-  // below routes through the engine (P-2 single writer) and sets worldMap again, so this is belt-
-  // and-braces — there is no longer a store read-back to race against.
-  gameEngine.patchWorldMap(newWorld);
-  if (dev) {
-    updateWithSave((state) =>
-      entityService.seedInitialEntities(
-        applyDevWorld({ ...state, seed: s, worldMap: newWorld, mobs: [] }, itemQty)
-      )
-    );
-  } else {
-    updateWithSave((state) =>
-      entityService.seedInitialEntities({ ...state, seed: s, worldMap: newWorld, mobs: [] })
-    );
-  }
+  const base = get(gameState) as GameState;
+  let next: GameState = { ...base, seed: s, worldMap: newWorld, mobs: [] };
+  if (dev) next = applyDevWorld(next, itemQty);
+  next = entityService.seedInitialEntities(next);
+  loadStateIntoWorker(next);
 }
 
 // ===== ITEM MANAGEMENT =====
@@ -459,72 +463,21 @@ function addItem(itemId: string, amount: number) {
   dispatchCommand({ type: 'addItem', payload: { itemId, amount }, save: true });
 }
 
-/**
- * Equip a physical item sitting on a tile onto a pawn (ADR-016-faithful): the item moves off the
- * ground into `pawn.equipment[slot]`, and whatever was in that slot drops back onto the pawn's tile
- * as a loose item — no item enters/leaves the world. Slot is derived from the item via
- * `getEquipmentSlot`. Preserves the drop's `ItemInstance` (durability) if it carries one.
- */
+/** Equip a physical item off a tile onto a pawn (ADR-016-faithful). Logic in the `equipFromTile`
+ *  worker command (`sim/commands.ts`): the swapped-out item drops back onto the pawn's tile. */
 function equipItemFromTile(pawnId: string, dropId: string) {
-  updateWithSave((state) => {
-    const drop = (state.droppedItems ?? []).find((d) => d.id === dropId);
-    if (!drop) return state;
-    const item = itemService.getItemById(drop.resourceId);
-    if (!item) return state;
-    const slot = getEquipmentSlot(item);
-    if (!slot) return state;
-    const pawnIdx = state.pawns.findIndex((p) => p.id === pawnId);
-    if (pawnIdx < 0) return state;
-    const pawn = state.pawns[pawnIdx];
-
-    const instance: ItemInstance = drop.instance ?? {
-      instanceId: `${item.id}-${pawnId}-${Date.now()}`,
-      itemId: item.id,
-      durability: item.maxDurability ?? 100
-    };
-    const px = pawn.position?.x ?? drop.x;
-    const py = pawn.position?.y ?? drop.y;
-
-    // Take one unit off the tile (instanced = qty 1 → gone; bulk stack → decrement).
-    let drops = (state.droppedItems ?? [])
-      .map((d) => (d.id === dropId ? { ...d, quantity: d.quantity - 1 } : d))
-      .filter((d) => d.quantity > 0);
-
-    // The previously worn item (if any) drops back onto the pawn's tile.
-    const prev = pawn.equipment[slot];
-    if (prev) {
-      drops = [
-        ...drops,
-        {
-          id: `unequip-${prev.instanceId}-${Date.now()}`,
-          resourceId: prev.itemId,
-          x: px,
-          y: py,
-          quantity: 1,
-          stored: false,
-          instance: prev
-        }
-      ];
-    }
-
-    const pawns = state.pawns.map((p, i) =>
-      i === pawnIdx ? { ...p, equipment: { ...p.equipment, [slot]: instance } } : p
-    );
-    return { ...state, pawns, droppedItems: drops, stockpile: aggregateFromDrops(drops) };
-  });
+  dispatchCommand({ type: 'equipFromTile', payload: { pawnId, dropId }, save: true });
 }
 
 /** Dev timesaver (ADR-016-faithful): spawn `amount` of EVERY item as physical LOOSE drops on
- *  the ground around the colony — no world regen, no wipe, no write to the derived stockpile
- *  aggregate. Haulers carry them into stockpiles like anything gathered. The engine syncs from
- *  the store next tick. */
+ *  the ground around the colony — haulers carry them into stockpiles like anything gathered. */
 function devSpawnAllItems(amount = 500) {
-  updateWithSave((state) => devSpawnLooseItems(state, amount));
+  dispatchCommand({ type: 'devSpawnAllItems', payload: { amount }, save: true });
 }
 
 /** Dev inverse: destroy every physical item (all drops + carried inventory). */
 function devClearAllItems() {
-  updateWithSave((state) => devDestroyAllItems(state));
+  dispatchCommand({ type: 'devClearAllItems', payload: {}, save: true });
 }
 
 function resetGame() {
@@ -537,7 +490,7 @@ function resetGame() {
   resetUnreachableJobs();
   const world = generateWorld(240, 160, seed);
   resourceGeneratorService.generateResources(world, seed);
-  set({ ...initialGameState, seed, worldMap: world });
+  loadStateIntoWorker({ ...initialGameState, seed, worldMap: world });
   console.info('[GameState] Game reset to initial state.');
 }
 
@@ -865,11 +818,10 @@ export const currentStockpileZones = derived(gameState, ($gameState) => {
   });
 });
 
-// ADR-021 cutover (W2–W4): once boot (load + migrations) has produced the canonical state on the
+// ADR-021 (W4 complete): once boot (load + migrations) has produced the canonical state on the
 // in-thread engine, hand ownership to the sim worker. The worker then runs the tick loop and owns
 // GameState; this store becomes a read-only projection fed by snapshots, and player commands post
-// to the worker (see dispatchCommand). Off unless USE_SIM_WORKER (?simworker), so the default game
-// is unaffected.
+// to the worker (see dispatchCommand). Always on in the browser; skipped only under SSR/tests.
 if (USE_SIM_WORKER) {
   simWorkerBridge.onState = (s, flush) => {
     // Mirror the in-thread split: refresh the held value EVERY tick (renderer reads positions via

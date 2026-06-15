@@ -289,7 +289,7 @@ These were the main-thread band-aids. The worker cutover (§4) made both obsolet
 
 ### 4c · Known gaps (before flipping the worker default ON)
 
-- [ ] **Two request-response commands** — `createZoneInstance` + `gameCoordinator.craftItem` return a value, so they don't fit the fire-and-forget registry; they **bypass the worker** (operate on the stale projection) under `?simworker`. Being converted to real worker commands as part of flipping the default ON.
+- [x] **Worker is now the ONLY sim path (W4 complete, `?simworker` flag RETIRED).** The two former holdouts (`createZoneInstance`, `craftItem`) are converted to worker commands (`createZoneInstance` takes a caller-generated id; `craftItem` moved into `sim/commands.ts`), and the other direct-mutation sites (`equipFromTile`, dev spawn/clear) too; world-regen/reset re-init the worker. `USE_SIM_WORKER = isClientRuntime` (browser always; SSR/tests use the in-thread fallback).
 - [x] **Slim snapshot — DONE, and it was the whole game (§B).** The hunch here ("~2 ms the user won't feel") was *wrong*: measured on the worker thread, the snapshot clone was **~32%**, the dominant cost. Slimmed via the W2 sectional diff + W2b per-entity slim/resync → `post` 31.6 → 6.5%, 44 → 80–100 TPS. (No `Float32Array` needed yet — slim structured-clone was enough.)
 - [ ] **worldMap deltas** — re-sends the whole 38k-tile array on any tile change; send changed-tile deltas if active-harvesting bursts re-introduce hitching.
 
