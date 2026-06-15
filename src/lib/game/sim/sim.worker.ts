@@ -19,8 +19,8 @@ import { resetUnreachableJobs } from '../systems/PawnStateMachine';
 import { TICKS_PER_SECOND } from '../core/time';
 import { setSimLogSink, type SimLogSink } from '../core/logSink';
 import { applySimCommand } from './commands';
-import type { SimLogEvent } from './simProtocol';
-import type { GameState } from '../core/types';
+import type { SimLogEvent, EntitySync } from './simProtocol';
+import type { GameState, Pawn, Mob } from '../core/types';
 
 const TICK_MS = 1000 / TICKS_PER_SECOND;
 // W5 — batch governed by a WALL-CLOCK budget, not a tick count (a fixed step cap locks the worker
@@ -106,8 +106,85 @@ function installForwardingLogSink() {
 /**
  * Last-sent ref per top-level GameState field (the W2 sectional diff). Reset on `init`. The bridge
  * keeps the mirror copy; the two stay in lock-step because postMessage is ordered + reliable.
+ * pawns/mobs/worldMap are handled by dedicated paths and excluded here.
  */
 let lastSent: Record<string, unknown> = {};
+const SECTIONAL_SKIP = new Set(['pawns', 'mobs', 'worldMap']);
+
+// ── W2b per-entity sync ───────────────────────────────────────────────────────────────────────
+// Heavy/static fields dropped from the per-flush SLIM projection and only re-sent on a periodic
+// FULL resync. Everything NOT listed (position, needs, state, path, combat scalars…) stays fresh at
+// the flush rate; these deep/rarely-changing trees are what made the full-entity clone expensive.
+const PAWN_COLD = new Set<string>([
+  'inventory',
+  'equipment',
+  'stats',
+  'physicalTraits',
+  'racialTraits',
+  'skills',
+  'limbs',
+  'injuries',
+  'conditions',
+  'statusEffectDurations'
+]);
+const MOB_COLD = new Set<string>([
+  'stats',
+  'physicalTraits',
+  'skills',
+  'limbs',
+  'injuries',
+  'conditions',
+  'statusEffectDurations'
+]);
+// Resync the full (cold-inclusive) entities every Nth flush (~2/s at the 15Hz flush rate). The cold
+// fields are thus ≤ this many flushes stale on the main thread — fine for limbs/inventory/skills,
+// while position/needs/state/pain/blood stay live every flush.
+const RESYNC_EVERY = 8;
+let flushSeq = 0;
+let lastPawnIds = new Set<string>();
+let lastMobIds = new Set<string>();
+
+/** Project an entity to its slim form (all fields except the cold set). */
+function slimEntity<T extends { id: string }>(
+  e: T,
+  cold: Set<string>
+): Partial<T> & { id: string } {
+  const o: Record<string, unknown> = {};
+  for (const k in e) if (!cold.has(k)) o[k] = (e as Record<string, unknown>)[k];
+  return o as Partial<T> & { id: string };
+}
+
+/**
+ * Build the per-entity sync for one array. On a resync flush, send everything FULL and reset the
+ * id baseline. Otherwise send a slim upsert for every known id (fresh hot fields) and a FULL entity
+ * for any newly-seen id (so the mirror is never missing cold fields), plus `removed`/`order`.
+ */
+function syncEntities<T extends { id: string }>(
+  arr: readonly T[],
+  prevIds: Set<string>,
+  cold: Set<string>,
+  full: boolean
+): EntitySync<T> {
+  if (full) {
+    prevIds.clear();
+    for (const e of arr) prevIds.add(e.id);
+    return { full: arr as T[] };
+  }
+  const upserts: Array<Partial<T> & { id: string }> = new Array(arr.length);
+  const order: string[] = new Array(arr.length);
+  const cur = new Set<string>();
+  for (let i = 0; i < arr.length; i++) {
+    const e = arr[i];
+    order[i] = e.id;
+    cur.add(e.id);
+    upserts[i] = prevIds.has(e.id) ? slimEntity(e, cold) : e; // new id → full
+  }
+  const removed: string[] = [];
+  for (const id of prevIds) if (!cur.has(id)) removed.push(id);
+  prevIds.clear();
+  for (const id of cur) prevIds.add(id);
+  return { upserts, removed, order };
+}
 
 /**
  * Publish state to the main thread at the ~15Hz UI-push (flush) rate. Posting EVERY tick was tried
@@ -143,7 +220,7 @@ function publish(state: GameState, flush: boolean) {
   const delta: Record<string, unknown> = {};
   const src = state as unknown as Record<string, unknown>;
   for (const k in state) {
-    if (k === 'worldMap') continue; // sent separately (bridge caches it)
+    if (SECTIONAL_SKIP.has(k)) continue; // pawns/mobs → EntitySync; worldMap → its own cache
     const v = src[k];
     if (v !== lastSent[k]) {
       delta[k] = v;
@@ -151,9 +228,17 @@ function publish(state: GameState, flush: boolean) {
     }
   }
   delta._terrainRev = terrainRev; // always present; renderer's terrain-rebuild trigger
+
+  const full = flushSeq % RESYNC_EVERY === 0;
+  flushSeq++;
+  const pawns = syncEntities(state.pawns, lastPawnIds, PAWN_COLD, full);
+  const mobs = syncEntities(state.mobs ?? [], lastMobIds, MOB_COLD, full);
+
   post({
     kind: 'snapshot',
     state: delta,
+    pawns,
+    mobs,
     worldMap: worldMapChanged ? state.worldMap : undefined,
     flush
   });
@@ -215,6 +300,9 @@ self.onmessage = async (e: MessageEvent) => {
       await wasmPathfinderService.init();
       lastWorldMap = (msg.state as GameState).worldMap;
       lastSent = {}; // reset the sectional-diff baseline so the first publish sends every field
+      flushSeq = 0; // first publish is a full entity resync (flushSeq % RESYNC_EVERY === 0)
+      lastPawnIds = new Set();
+      lastMobIds = new Set();
       lastBatch = performance.now();
       if (!loop) loop = setInterval(batch, 16);
       post({ kind: 'ready' });

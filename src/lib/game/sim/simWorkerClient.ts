@@ -10,8 +10,31 @@
  */
 import { isClientRuntime } from '../core/runtime';
 import { realSimLogSink } from '../../stores/simLogBridge';
-import type { SimLogEvent } from './simProtocol';
-import type { GameState } from '../core/types';
+import type { SimLogEvent, EntitySync } from './simProtocol';
+import type { GameState, Pawn, Mob } from '../core/types';
+
+/**
+ * Apply a per-entity sync (W2b) onto a per-id mirror, returning the reconstructed array in order.
+ * A `full` resync replaces the mirror; otherwise slim upserts are merged onto the mirror (so cold
+ * fields persist between resyncs), full upserts (newly-seen ids) replace, and `removed` ids are
+ * reaped. Each merge makes a NEW object so downstream reactivity still fires.
+ */
+function applyEntitySync<T extends { id: string }>(
+  mirror: Map<string, T>,
+  sync: EntitySync<T>
+): T[] {
+  if ('full' in sync) {
+    mirror.clear();
+    for (const e of sync.full) mirror.set(e.id, e);
+    return sync.full;
+  }
+  for (const u of sync.upserts) {
+    const prev = mirror.get(u.id);
+    mirror.set(u.id, prev ? ({ ...prev, ...u } as T) : (u as T));
+  }
+  for (const id of sync.removed) mirror.delete(id);
+  return sync.order.map((id) => mirror.get(id)!);
+}
 
 export function verifyWasmInWorker(): void {
   if (!isClientRuntime) {
@@ -59,6 +82,10 @@ class SimWorkerBridge {
    *  only the top-level fields whose ref changed; unchanged sections are reused from here, so they
    *  aren't re-cloned across the boundary. Reset on init to match the worker's `lastSent` baseline. */
   private lastState: Partial<GameState> = {};
+  /** Per-id entity mirrors (W2b): pawns/mobs arrive as slim-per-flush + periodic full resync, merged
+   *  here so cold fields persist between resyncs. Reset on init to match the worker's id baselines. */
+  private pawnMirror = new Map<string, Pawn>();
+  private mobMirror = new Map<string, Mob>();
   /** Store hook: full state projection per snapshot. `flush` = update held value AND notify+save
    *  (~15Hz); between flushes only the held value is refreshed (per-tick positions for the renderer). */
   onState: ((s: GameState, flush: boolean) => void) | null = null;
@@ -75,6 +102,8 @@ class SimWorkerBridge {
   init(state: GameState, seed: number): void {
     this.worldMap = state.worldMap;
     this.lastState = {}; // matches the worker resetting its sectional-diff baseline on init
+    this.pawnMirror.clear();
+    this.mobMirror.clear();
     this.w?.postMessage({ kind: 'init', state, seed });
   }
   command(cmd: unknown): void {
@@ -93,6 +122,8 @@ class SimWorkerBridge {
   private handle(m: {
     kind: string;
     state?: GameState;
+    pawns?: EntitySync<Pawn>;
+    mobs?: EntitySync<Mob>;
     worldMap?: GameState['worldMap'];
     flush?: boolean;
     error?: string;
@@ -101,10 +132,17 @@ class SimWorkerBridge {
     if (m.kind === 'snapshot') {
       if (m.worldMap) this.worldMap = m.worldMap;
       // Merge the sectional diff onto the mirror: changed fields overwrite, unchanged ones keep
-      // their refs (no re-clone). worldMap is reattached from its own cache. A new top-level object
-      // each flush keeps the store reactive while unchanged sections stay ref-stable downstream.
+      // their refs (no re-clone). pawns/mobs are reconstructed from their per-entity mirrors and
+      // worldMap from its own cache. A new top-level object each flush keeps the store reactive.
       this.lastState = { ...this.lastState, ...(m.state as object) };
-      this.onState?.({ ...this.lastState, worldMap: this.worldMap } as GameState, m.flush ?? true);
+      const pawns = m.pawns
+        ? applyEntitySync(this.pawnMirror, m.pawns)
+        : (this.lastState.pawns ?? []);
+      const mobs = m.mobs ? applyEntitySync(this.mobMirror, m.mobs) : (this.lastState.mobs ?? []);
+      this.onState?.(
+        { ...this.lastState, pawns, mobs, worldMap: this.worldMap } as GameState,
+        m.flush ?? true
+      );
     } else if (m.kind === 'simlog') {
       // Replay the worker's buffered chronicle/combat-text calls against the real (DOM) sink.
       const sink = realSimLogSink as unknown as Record<string, (...a: unknown[]) => unknown>;

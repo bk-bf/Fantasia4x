@@ -10,7 +10,21 @@
  * SAME command registry (`commands.ts`) is dispatched on the MAIN thread (behaviour-preserving), so
  * the game keeps working at every step. The worker cutover flips the dispatch target only.
  */
-import type { GameState } from '../core/types';
+import type { GameState, Pawn, Mob } from '../core/types';
+
+/**
+ * Per-entity sync for pawns/mobs (W2b). Cloning whole pawns/mobs every flush dominated the boundary
+ * (deep limbs/skills/inventory/equipment trees on ~290 entities). Instead each flush sends a SLIM
+ * projection (every field EXCEPT the heavy/static cold ones — see ENTITY_COLD_FIELDS in the worker),
+ * which keeps position/needs/state/combat-scalars fresh at the flush rate; the heavy cold fields are
+ * re-sent in FULL on a periodic resync (`{ full }`). The bridge keeps a per-id mirror and merges
+ * slim upserts onto it, so the cold fields persist between resyncs (≤ resync-interval stale) and no
+ * field is ever undefined (a newly-seen id is always sent full). `order` re-establishes array order;
+ * `removed` reaps despawned ids.
+ */
+export type EntitySync<T extends { id: string }> =
+  | { full: T[] }
+  | { upserts: Array<Partial<T> & { id: string }>; removed: string[]; order: string[] };
 
 /** A serializable command: a registry key + a plain-object payload. No closures. */
 export interface SimCommand {
@@ -47,11 +61,14 @@ export interface SimLogEvent {
 export type WorkerToMain =
   | { kind: 'ready' }
   // W2 sectional diff: `state` carries ONLY the top-level GameState fields whose ref changed since
-  // the last flush (the bridge reassembles the full state from its mirror). `worldMap` is sent
+  // the last flush (the bridge reassembles the full state from its mirror), EXCLUDING pawns/mobs/
+  // worldMap. pawns/mobs ride in their own per-entity `EntitySync` (W2b); worldMap is sent
   // separately, only when its ref changes. `_terrainRev` rides inside `state`.
   | {
       kind: 'snapshot';
       state: Partial<GameState>;
+      pawns: EntitySync<Pawn>;
+      mobs: EntitySync<Mob>;
       worldMap?: GameState['worldMap'];
       flush: boolean;
     }
