@@ -1,4 +1,4 @@
-<!-- LOC cap: 440 (created: 2026-06-14, rewritten 2026-06-14 post-profiling; worker shipped 2026-06-14; Rust-SoA pivot 2026-06-14 then ABORTED after R1 2026-06-15 → mutable-in-place JS; M1–M3 + throttle landed 2026-06-15, de-immutabling plateaued; 2026-06-15 custom profiler RETIRED → Firefox Profiler + pq; capacity/formula caches + the WORKER→MAIN SNAPSHOT (W2/W2b) broke the plateau → 80–100 TPS @4×; then de-immutabled pawn-patch spreads + paused warmup screen → 200+ TPS @4× after ~5s, GOAL CRUSHED 2026-06-15) -->
+<!-- LOC cap: 480 (created: 2026-06-14, rewritten 2026-06-14 post-profiling; worker shipped 2026-06-14; Rust-SoA pivot 2026-06-14 then ABORTED after R1 2026-06-15 → mutable-in-place JS; M1–M3 + throttle landed 2026-06-15, de-immutabling plateaued; 2026-06-15 custom profiler RETIRED → Firefox Profiler + pq; capacity/formula caches + the WORKER→MAIN SNAPSHOT (W2/W2b) broke the plateau → 80–100 TPS @4×; then de-immutabled pawn-patch spreads + paused warmup screen → 200+ TPS @4× after ~5s, GOAL CRUSHED 2026-06-15; then JS-allocation capture (§C) verified the de-immutable win + drove the harvest-time worldMap-delta fix) -->
 
 # ENGINE PERFORMANCE & SCALING
 
@@ -34,6 +34,11 @@ Profiling-driven performance work, measured on the heavy `--profiler` sandbox (1
   mirror in `simWorkerClient` racing under starved CPU). Single-instance is the supported case; this
   is just how "too much load" now expresses itself since the snapshot protocol replaced full-state
   sync. If it ever surfaces single-instance, suspect the diff/resync reassembly in W2b.
+- **🌿 HARVEST-TIME COLLAPSE FIXED (2026-06-15, §C).** TPS dropped 150 → sub-50 once pawns harvested:
+  `processResourceRegrowth` rebuilt + re-sent the **whole 38k-tile worldMap every tick** a cooldown
+  expired (≈every tick under 150-pawn harvest). Now mutates expired tiles **in place** + ships a
+  `worldMapDelta` (changed tiles only). A JS-allocation capture (§C) drove this — it was 18.9% of JS
+  alloc — and the same capture confirmed the de-immutable pawn win (those sites now ~0%).
 - **🏆 PLATEAU BROKEN (2026-06-15): the worker→main SNAPSHOT was the real ceiling, not sim compute.**
   After de-immutabling plateaued at ~44 TPS (below), function-level profiling of the *worker thread*
   (Firefox Profiler, §10) showed the dominant cost was **`post`** — the per-flush `structured-clone`
@@ -180,9 +185,11 @@ worker-thread JS self-time across three captures (§10 has the workflow; shares 
 | `post` (snapshot clone) | **31.6%** | 20.7% | **6.5%** ✅ |
 | `getBuildingById` | 3.6% | 1.4% | 2.1%¹ |
 | spatial-grid overhead | — | ~8.8%² | **0%** (reverted) |
-| `CopyDataPropertiesUnfiltered` | 6.9% | 7.4% | **10.3%** (now #1) |
+| `CopyDataPropertiesUnfiltered` | 6.9% | 7.4% | **10.3%** (then #1)³ |
 
 ¹ Reads higher in C only because the denominator collapsed (post got out of the way), not slower.
+³ Historical — from the retired custom profiler / a non-JIT view. **Not reproducible in the Firefox CPU
+sampler** (JIT inlines the helper); the de-immutable win was instead confirmed via a JS-allocation capture (§C).
 ² `nearest/<` 3.3 + `scanCell` 1.6 + `stepEntities/pawnIndex<` 2.4 + `add` 1.5 — see "rejected" below.
 
 ### Rejected & reverted (measured worse — recorded so we don't re-litigate)
@@ -196,15 +203,53 @@ worker-thread JS self-time across three captures (§10 has the workflow; shares 
   `pawns` array on every patch → the cache key invalidated constantly (near-zero hit rate), and the
   extra bookkeeping cost more than the plain scan (1.0% → ~2.1%). **Reverted** to the plain per-tick scan.
 
-### Next lever (open — not yet pursued)
+### Next lever — DONE
 
-- [ ] **De-immutable the residual pawn-patch spreads.** `CopyDataPropertiesUnfiltered` (~10%, now #1)
-  is `tickConditions`/`updateMorale`/`updatePawnState`/`processMovement` doing `.map(p => ({...p}))`
-  over all pawns each tick. It didn't get *worse* — it's just the last big thing standing now the
-  snapshot is solved. This is the ADR-002 mutable-in-place direction (★ ACTIVE), the natural path to
-  100+ TPS. Deferred until wanted.
-- [ ] **worldMap deltas** — still re-sends the whole 38k-tile array on any tile change (§4c). Only if
-  active-harvest bursts re-introduce hitching.
+- [x] **De-immutabled the residual pawn-patch spreads** (2026-06-15). `tickConditions`/`updateMorale`/
+  `updatePawnState`/`processMovement` were doing `.map(p => ({...p}))` over all pawns each tick
+  (`CopyDataPropertiesUnfiltered`). Now mutate the live pawn in place (★ DONE). **Verified by a JS-allocation
+  capture (§C):** those four now allocate **~0.1–2%** each — the spread churn is gone from the heap.
+- [x] **worldMap tile deltas** (2026-06-15) — see §C. `processResourceRegrowth` was re-sending the whole
+  38k-tile array (and rebuilding it) every tick during harvest; now mutates expired tiles in place and
+  ships only the changed tiles (`tileDeltas.ts` + `worldMapDelta` in the snapshot). Fixes the
+  active-harvest TPS collapse.
+
+---
+
+## §C · JS-allocation capture — verifying the de-immutable win + the harvest fix (2026-06-15)
+
+**Why an allocation capture.** The CPU sampler (§10) **can't** confirm the de-immutable win: JIT
+(Ion/Baseline) hides spread/copy inside unsymbolicated `fun_XXXX` frames and inlines the C++ helper
+`CopyDataPropertiesUnfiltered` → it reads **0%** in *every* CPU profile (the §B "~10% #1 line" was the
+retired custom profiler / a non-JIT view — historical). Instead capture **Firefox Profiler → "Record
+allocations" (`jsallocations`)**: keep JS+CPU+Native Stacks on, record ~10–15 s warm (TPS is meaningless
+under alloc tracking — only the *distribution* matters), read `thread.jsAllocations` (bytes, inclusive
+per-func via stack walk).
+
+### What the ~15 MB capture showed
+
+- ✅ **De-immutable win confirmed.** The four de-immutabled sites now allocate ~nothing: `updatePawnState`
+  **0.19%**, `updateMorale` **0.12%**, `processMovement` 1.97%, `processNeedsTick` 1.63%. `post` doesn't
+  appear (structured-clone is native, off the JS-alloc path).
+- ⚠️ **Next-lever ordering (inclusive JS-alloc):** `processResourceRegrowth` **18.9%** (FIXED below) ·
+  mob FSM `stepEntities`/`stepOne` 18.6% · `tickConditions` internals 13.0% (still builds `conditions`/
+  `limbs` arrays per tick — *separate* from the spread we fixed) · `nearestPawn` 10.6% (Rust-core
+  candidate) · `generateJobs`+`_syncHarvestJobs` ~8.6%. By class: 78% `Object`, **~13%
+  `LexicalEnvironment`+`Call`+`Function`** = **hot-loop closures** (per-tick `.map`/`.filter` lambdas) —
+  a cheap broad future win.
+
+### The harvest fix — `processResourceRegrowth` in place + worldMap deltas (DONE)
+
+- [x] **Symptom→cause:** harvesting dropped TPS 150 → sub-50. With ~150 pawns harvesting, *some* regrowth
+  cooldown expires almost every tick → the old code ran `worldMap.map(row=>row.map(...))` (rebuild all 38k
+  tiles) **and** flipped the worldMap ref → the publisher re-`structured-clone`d the **whole 38k-tile
+  worldMap** every tick. Double cost: the 18.9% JS-alloc + the full re-send (the §4c gap, now biting).
+- [x] **Fix (ADR-002 amendment + §4c):** mutate only expired tiles **in place** (no rebuild, no ref flip)
+  + ship changed tiles. New `core/tileDeltas.ts` (worker singleton: `markTileDirty`/`drain`/`clear`);
+  regrowth marks tiles; the publisher drains them into `worldMapDelta` (sent *instead of* the full worldMap
+  when the ref is unchanged) + bumps `_terrainRev`; `simWorkerClient` patches its cached worldMap in place.
+  A full worldMap send supersedes + clears pending deltas. Guarded by `resourceRegrowth.test.ts`. *(Harvest
+  depletion `_completeHarvest` still full-sends its one rebuilt row on the completion tick — event-rate, fine.)*
 
 ---
 
@@ -304,7 +349,7 @@ These were the main-thread band-aids. The worker cutover (§4) made both obsolet
 
 - [x] **Worker is now the ONLY sim path (W4 complete, `?simworker` flag RETIRED).** The two former holdouts (`createZoneInstance`, `craftItem`) are converted to worker commands (`createZoneInstance` takes a caller-generated id; `craftItem` moved into `sim/commands.ts`), and the other direct-mutation sites (`equipFromTile`, dev spawn/clear) too; world-regen/reset re-init the worker. `USE_SIM_WORKER = isClientRuntime` (browser always; SSR/tests use the in-thread fallback).
 - [x] **Slim snapshot — DONE, and it was the whole game (§B).** The hunch here ("~2 ms the user won't feel") was *wrong*: measured on the worker thread, the snapshot clone was **~32%**, the dominant cost. Slimmed via the W2 sectional diff + W2b per-entity slim/resync → `post` 31.6 → 6.5%, 44 → 80–100 TPS. (No `Float32Array` needed yet — slim structured-clone was enough.)
-- [ ] **worldMap deltas** — re-sends the whole 38k-tile array on any tile change; send changed-tile deltas if active-harvesting bursts re-introduce hitching.
+- [x] **worldMap deltas — DONE (§C, 2026-06-15).** Active-harvest hitching *did* show up (TPS 150 → sub-50): `processResourceRegrowth` rebuilt + re-sent the whole 38k worldMap every tick. Now mutates expired tiles in place + ships `worldMapDelta` (changed tiles only). *(Harvest depletion still full-sends its one row on the completion tick — event-rate, fine.)*
 
 ---
 
@@ -407,10 +452,16 @@ see the worker→main boundary — the very cost that turned out to dominate (§
   `.json` into `.debug/`. (Automated headless capture via `MOZ_PROFILER_STARTUP` was attempted and
   **abandoned** — a 2nd Zen instance hits "channel error" alongside a running one, and headless WebGL
   fails the framebuffer; manual record→download is the working loop.)
-- [x] **Read (headless, scriptable):** `node scripts/profile-self.mjs [file] [topN]` — attributes each
-  sample to its deepest `isJS` frame and prints **true JS self-time per function** for each worker
-  thread, flagging the sim worker. This is how the §B cross-comparison was produced. The
-  `@firefox-devtools/profiler-cli` (`pq`) is also a devDep for interactive querying of the same exports.
+- [x] **Read (headless, scriptable):** parse the JSON with an ad-hoc node script over the shared tables
+  (`shared.{stackTable,frameTable,funcTable,stringArray}` + `thread.samples`). Two gotchas: **(1)** weight
+  by `samples.threadCPUDelta`, not `timeDeltas` — the worker sleeps between ticks at high TPS, so wall-clock
+  shows the idle-park native frame `fun_b4df0` at ~100% while CPU-delta shows real work; **(2)** JIT hides
+  JS in unsymbolicated `fun_XXXX` leaves (C++ symbols *are* named), so **inclusive** per-func (walk the
+  stack) is the only readable view, not leaf-self. Detect the sim worker by stacks containing
+  `processGameTurn`/`tickPawn`. This produced §B and §C. (`pq` is a devDep for interactive querying too.)
+- [x] **Allocation capture (the only way to verify de-immutabling, §C):** Firefox Profiler → **"Record
+  allocations"** (`jsallocations`) → `thread.jsAllocations` (bytes, inclusive per-func). Sees the inlined
+  JIT allocation the CPU sampler can't; TPS is meaningless under it (only the distribution).
 - **`firefox-devtools-mcp`** can drive a live browser but has **no profiler-capture tool** and rejects
   Zen's binary (`--version` reports "Zen" not "Firefox") — not usable for capture here.
 - **Lesson of the whole arc:** instrument the *boundary*, not just the sim. Every wrong turn (O(n²)
