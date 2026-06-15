@@ -329,6 +329,15 @@ class JobServiceImpl {
       return (tile?.resources?.[j.resourceId ?? ''] ?? 0) > 0;
     });
 
+    // Index existing harvest jobs by "x,y,resourceId" so the per-yield existence check below is O(1).
+    // The old `jobs.some(...)` scan per designated yield was O(designations × jobs) every tick — with
+    // hundreds of designations and a deep harvest pool it was a top steady-state cost (~8% of worker
+    // CPU; the `some` hot line in the profiler).
+    const harvestKeys = new Set<string>();
+    for (const j of jobs) {
+      if (j.type === 'harvest') harvestKeys.add(`${j.targetX},${j.targetY},${j.resourceId}`);
+    }
+
     // Add harvest jobs only for designated tiles that currently hold matching resources.
     for (const [key, dtype] of Object.entries(gs.designations ?? {})) {
       if (!HARVEST_DTYPES.includes(dtype)) continue;
@@ -341,14 +350,9 @@ class JobServiceImpl {
         if (!this._resourceMatchesDesignation(dtype, resourceId)) continue;
         if (!this._resourceMatchesFilter(dtype, resourceId, gs, key)) continue;
 
-        const exists = jobs.some(
-          (j) =>
-            j.type === 'harvest' &&
-            j.targetX === x &&
-            j.targetY === y &&
-            j.resourceId === resourceId
-        );
-        if (exists) continue;
+        const existKey = `${x},${y},${resourceId}`;
+        if (harvestKeys.has(existKey)) continue;
+        harvestKeys.add(existKey);
 
         jobs.push({
           id: `harvest-${x}-${y}-${resourceId}-${Date.now()}-${rng.random().toString(36).slice(2, 5)}`,

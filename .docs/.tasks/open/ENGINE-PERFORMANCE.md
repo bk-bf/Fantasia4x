@@ -1,4 +1,4 @@
-<!-- LOC cap: 495 (created: 2026-06-14, rewritten 2026-06-14 post-profiling; worker shipped 2026-06-14; Rust-SoA pivot 2026-06-14 then ABORTED after R1 2026-06-15 → mutable-in-place JS; M1–M3 + throttle landed 2026-06-15, de-immutabling plateaued; 2026-06-15 custom profiler RETIRED → Firefox Profiler + pq; capacity/formula caches + the WORKER→MAIN SNAPSHOT (W2/W2b) broke the plateau → 80–100 TPS @4×; then de-immutabled pawn-patch spreads + paused warmup screen → 200+ TPS @4× after ~5s, GOAL CRUSHED 2026-06-15; then JS-allocation capture (§C) verified the de-immutable win + drove the harvest-time worldMap-delta fix) -->
+<!-- LOC cap: 505 (created: 2026-06-14, rewritten 2026-06-14 post-profiling; worker shipped 2026-06-14; Rust-SoA pivot 2026-06-14 then ABORTED after R1 2026-06-15 → mutable-in-place JS; M1–M3 + throttle landed 2026-06-15, de-immutabling plateaued; 2026-06-15 custom profiler RETIRED → Firefox Profiler + pq; capacity/formula caches + the WORKER→MAIN SNAPSHOT (W2/W2b) broke the plateau → 80–100 TPS @4×; then de-immutabled pawn-patch spreads + paused warmup screen → 200+ TPS @4× after ~5s, GOAL CRUSHED 2026-06-15; then JS-allocation capture (§C) verified the de-immutable win + drove the harvest-time worldMap-delta fix) -->
 
 # ENGINE PERFORMANCE & SCALING
 
@@ -248,6 +248,14 @@ per-func via stack walk).
   `push`/`splice`/index-assigns, returns `void`) → common path allocates **nothing**. conditions is a cold
   snapshot field (resync) so in-place is safe; lethal branches keep immutable killPawn patches; logic
   byte-identical (death-path suite green).
+
+### \_syncHarvestJobs — O(designations × jobs) → O(1) Set dedup (DONE)
+
+- [x] **Found via the deterministic re-capture (CPU, §10 seed fix):** `_syncHarvestJobs` was **12.5%** of
+  worker CPU, **~8% of it a single `jobs.some(...)`** — for every designated tile×resource (hundreds) it
+  linear-scanned the whole harvest pool to test existence, every tick. Index existing harvest jobs in a
+  `Set<"x,y,resourceId">` once, then O(1) `has`. Behaviour-identical (no dup jobs, stale jobs still
+  filtered) — `harvestJobSync.test.ts`. *(This is what the now-comparable CPU captures bought us.)*
 
 ### Next target — RE-CAPTURE FIRST
 
