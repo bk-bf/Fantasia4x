@@ -116,6 +116,7 @@
   let _prevDesignations: unknown;
   let _prevZoneTiles: unknown;
   let _prevTerrainRev: number | undefined; // ADR-021: worker-sent terrain revision (see unsubState)
+  let _prevDesignationRev: number | undefined; // §D: worker-sent designation revision → cheap 2D overlay redraw (no terrain rebuild)
   // Terrain rebuild is O(map) (38k-tile vertex buffer). worldMap churns every tick from
   // resource regrowth/harvest, which would rebuild it every frame (~60ms). Those changes are
   // invisible if they lag a fraction of a second, so coalesce sim-driven terrain rebuilds to
@@ -690,6 +691,16 @@
     _prevBuildingsSig = buildingsSig;
     _prevDesignations = designations;
     _prevZoneTiles = zoneTiles;
+    // §D: designations changed → redraw ONLY the cheap 2D designation overlay, NOT the 38k-tile
+    // terrain buffer (buildGameGrid doesn't render designations). This is the dominant-harvest-dip fix:
+    // designation churn was forcing full terrain rebuilds ~2×/s for a layer the terrain doesn't contain.
+    const workerDesigRev = (s as unknown as { _designationRev?: number })._designationRev;
+    const designationsChanged =
+      workerDesigRev !== undefined
+        ? workerDesigRev !== _prevDesignationRev
+        : designations !== _prevDesignations;
+    _prevDesignationRev = workerDesigRev;
+    if (designationsChanged && renderer?.isReady() && worldMap.length > 0) drawDesignations();
     // Day/night: update ambient uniforms whenever the turn changes
     if (renderer?.isReady()) {
       const { light, tint } = environmentService.getAmbient(s.turn);

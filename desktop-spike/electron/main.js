@@ -10,6 +10,14 @@ const { app, BrowserWindow } = require('electron');
 
 const URL = process.env.SPIKE_URL || 'http://localhost:5173';
 
+// GC tuning experiment (§D). The renderer deserializes the whole sim snapshot every flush → high
+// transient-garbage rate → the GC sawtooth you see (TPS/FPS recover on pause, dip on resume). A
+// bigger V8 young generation lets that per-flush garbage die in cheap "scavenge" GCs instead of being
+// promoted to old space (which triggers the expensive MAJOR GCs felt as dips). Applies to renderer +
+// worker V8. Band-aid — the real fix is a smaller snapshot — and it's an A/B knob: comment out to
+// compare. 128 = MB; dial down if individual scavenge pauses grow.
+app.commandLine.appendSwitch('js-flags', '--max-semi-space-size=128');
+
 function createWindow() {
   const win = new BrowserWindow({
     width: 1600,

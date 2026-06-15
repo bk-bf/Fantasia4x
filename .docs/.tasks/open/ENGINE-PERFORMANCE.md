@@ -341,10 +341,23 @@ pure JS + GPU-upload + GC, **not** paint/layout.
   ~5.2M-element `number[]` via `.push(...)` then `new Float32Array(it)`. Now it writes straight into a
   preallocated `Float32Array` (size exact: 138 floats/tile, no skips) — output byte-identical, kills
   the giant transient alloc + conversion + its GC. One function, `pnpm check` 0 errors, 235 tests green.
-- [ ] **D1″ — reduce rebuild FREQUENCY (next).** The remaining dips are full rebuilds forced by
+- [ ] **D1″ — reduce rebuild FREQUENCY (open).** Some dips are still full rebuilds forced by
   designation/zone churn during harvest. Move designation/zone markers OFF the static terrain VBO into
-  a separate overlay pass (doc §5) so terrain only rebuilds on real terrain changes — then rebuilds
-  become rare regardless of how cheap each one is.
+  a separate overlay pass (doc §5) so terrain only rebuilds on real terrain changes.
+- [x] **D4 — the harvest cliff is the worldMapDelta SNAPSHOT, not the job logic — slimmed it. LANDED.**
+  Post-D1′ trace + a time-split (early vs harvest) showed the real harvest degradation: the renderer's
+  `w.onmessage` (snapshot deserialize) and the worker's `post` (serialize) **spike 5–8× the instant
+  harvest starts** (153→1313 ms/window renderer; 157→957 ms worker) and move in lockstep — two ends of
+  the same payload. `_syncHarvestJobs` (~5%), `processResourceRegrowth`, and the mob FSM are all **flat
+  across the run** — *not* the cliff. Cause: 150 pawns harvesting → hundreds of distinct tiles change/s,
+  each shipped as a **full `WorldTile`** cloned out (`post`) + back in (`onmessage`). Fix: the
+  worldMapDelta now sends a **slim tile** — only the 9 fields the main thread reads (`type/terrainType/
+  subType/movementCost/walkable/resources/resourceCooldowns/x/y`), dropping the 10 worker/save-only ones
+  (A* scratch + `ascii/discovered/density/moisture/temperature/territoryOwner`, the same set
+  `saveManager` strips). The bridge MERGES it onto the cached full tile, so dropped fields keep their
+  values (none change on a harvest delta). `pnpm check` 0 errors, 235 tests green. **Verify:** re-trace —
+  `post` + `w.onmessage` should drop sharply during harvest. (`_syncHarvestJobs` ~5% steady is a
+  separate, smaller worker lever for later.)
 - [x] **D2 — stagger the cold-field resync (~25%) — LANDED.** `syncEntities` (sim.worker.ts) now sends a
   FULL (cold-inclusive) entity only for this flush's round-robin slice (`i % RESYNC_EVERY === phase`) +
   newly-seen ids; everyone else stays slim. Over RESYNC_EVERY flushes every entity is refreshed → same

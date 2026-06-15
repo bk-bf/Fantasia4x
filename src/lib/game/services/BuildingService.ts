@@ -3,6 +3,7 @@ import buildingsData from '../database/buildings.jsonc';
 import itemsData from '../database/items.jsonc';
 import type { Item } from '../core/types';
 import { resolveCharSpans } from '../core/Terrains';
+import { markTileDirty } from '../core/tileDeltas';
 import type { CharSpan } from '../core/Terrains';
 import { rng } from '../core/rng';
 import { perTick } from '../core/time';
@@ -429,12 +430,13 @@ export class BuildingServiceImpl implements BuildingService {
     if (!tile) return state;
     const nextWalkable = !blocking;
     if (tile.walkable === nextWalkable) return state; // already in the desired state
-    return {
-      ...state,
-      worldMap: state.worldMap.map((r, yy) =>
-        yy === y ? r.map((t, xx) => (xx === x ? { ...t, walkable: nextWalkable } : t)) : r
-      )
-    };
+    // Mutate the one tile IN PLACE + mark it dirty (§D — like §C regrowth / harvest completion),
+    // rather than `worldMap.map()` rebuilding all 38k tiles to flip one `walkable` flag (which flipped
+    // the worldMap ref → full re-clone + terrain rebuild). Event-rate (build/deconstruct), but the
+    // pattern is the same. Return a fresh top-level state ref (worldMap ref stays stable → ships a delta).
+    tile.walkable = nextWalkable;
+    markTileDirty(y, x, tile);
+    return { ...state };
   }
 
   /**

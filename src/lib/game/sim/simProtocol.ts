@@ -10,8 +10,7 @@
  * SAME command registry (`commands.ts`) is dispatched on the MAIN thread (behaviour-preserving), so
  * the game keeps working at every step. The worker cutover flips the dispatch target only.
  */
-import type { GameState, Pawn, Mob } from '../core/types';
-import type { TileDelta } from '../core/tileDeltas';
+import type { GameState, Pawn, Mob, WorldTile } from '../core/types';
 
 /**
  * Per-entity sync for pawns/mobs (W2b). Cloning whole pawns/mobs every flush dominated the boundary
@@ -72,9 +71,11 @@ export type WorkerToMain =
       mobs: EntitySync<Mob>;
       worldMap?: GameState['worldMap'];
       // Changed-tile deltas (ADR-021 §4c): sent INSTEAD of the full worldMap when only a few tiles
-      // were mutated in place (e.g. resource regrowth). The bridge patches these onto its cached
-      // worldMap. Mutually exclusive with `worldMap` (a full send already carries the changes).
-      worldMapDelta?: TileDelta[];
+      // were mutated in place (e.g. resource regrowth). Each tile is a SLIM projection (§D — only the
+      // fields the main thread reads, to shrink the clone during harvest); the bridge MERGES it onto
+      // its cached full tile. Mutually exclusive with `worldMap` (a full send already carries changes).
+      // (The worker-internal accumulator type is the full `TileDelta` in core/tileDeltas.ts.)
+      worldMapDelta?: Array<{ y: number; x: number; tile: Partial<WorldTile> }>;
       flush: boolean;
     }
   | { kind: 'fullState'; state: GameState } // for save/load reconciliation

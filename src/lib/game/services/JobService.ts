@@ -27,6 +27,7 @@ import itemsData from '../database/items.jsonc';
 import { resourceObjectService } from './ResourceObjectService';
 import { zoneTileKeys } from './DesignationService';
 import { SUBTERRAINS, SUBTERRAIN_FALLBACK } from '../core/Terrains';
+import { markTileDirty } from '../core/tileDeltas';
 import { itemService } from './ItemService';
 import { recipeService } from './RecipeService';
 import { buildingService } from './BuildingService';
@@ -660,45 +661,39 @@ class JobServiceImpl {
     );
     const yieldEntries = Object.entries(yields);
 
-    // Build updated tile — zero resources + set per-yield or interaction-level cooldowns.
-    const newWorldMap = gs.worldMap.map((row, ry) =>
-      ry === job.targetY
-        ? row.map((col, rx) => {
-            if (rx !== job.targetX) return col;
-            const updatedResources = { ...col.resources, [job.resourceId!]: 0 };
-            if (!shouldPersist) {
-              // Resource removed permanently — restore tile walkability to base subterrain.
-              const baseSub = SUBTERRAINS[col.subType] ?? SUBTERRAIN_FALLBACK;
-              return {
-                ...col,
-                resources: updatedResources,
-                walkable: baseSub.walkable,
-                movementCost: baseSub.movementCost
-              };
-            }
-
-            const newCooldowns = { ...(col.resourceCooldowns ?? {}) };
-            const yieldHasPerItemCooldowns = interaction!.yields.some(
-              (y) => y.regrowthTurns !== undefined
-            );
-
-            if (yieldHasPerItemCooldowns) {
-              // Per-yield compound keys: "resourceId:itemId" → turn
-              for (const y of interaction!.yields) {
-                if (y.regrowthTurns && (availableItemIds?.has(y.itemId) ?? true)) {
-                  newCooldowns[`${job.resourceId!}:${y.itemId}`] =
-                    gs.turn + ticksFromSeconds(y.regrowthTurns);
-                }
-              }
-            } else if (interaction?.regrowthTurns) {
-              // Simple whole-resource cooldown
-              newCooldowns[job.resourceId!] = gs.turn + ticksFromSeconds(interaction.regrowthTurns);
-            }
-
-            return { ...col, resources: updatedResources, resourceCooldowns: newCooldowns };
-          })
-        : row
-    );
+    // Update the harvested tile IN PLACE + mark it dirty (§D — ADR-002 amendment, mirroring §C
+    // regrowth). Harvest completion is per-tick-hot during mass harvest; the old code rebuilt the
+    // ENTIRE 38k-tile worldMap via `.map()` to change this one tile, flipping the worldMap ref every
+    // completion → a full worldMap re-clone across the worker boundary AND a full terrain rebuild,
+    // several times a second (the dip-correlated trace's `worldMapRef` trigger). Now only the changed
+    // tile ships as a `worldMapDelta`, and the worldMap ref stays stable.
+    const col = gs.worldMap[job.targetY][job.targetX];
+    col.resources = { ...col.resources, [job.resourceId!]: 0 };
+    if (!shouldPersist) {
+      // Resource removed permanently — restore tile walkability to base subterrain.
+      const baseSub = SUBTERRAINS[col.subType] ?? SUBTERRAIN_FALLBACK;
+      col.walkable = baseSub.walkable;
+      col.movementCost = baseSub.movementCost;
+    } else {
+      const newCooldowns = { ...(col.resourceCooldowns ?? {}) };
+      const yieldHasPerItemCooldowns = interaction!.yields.some(
+        (y) => y.regrowthTurns !== undefined
+      );
+      if (yieldHasPerItemCooldowns) {
+        // Per-yield compound keys: "resourceId:itemId" → turn
+        for (const y of interaction!.yields) {
+          if (y.regrowthTurns && (availableItemIds?.has(y.itemId) ?? true)) {
+            newCooldowns[`${job.resourceId!}:${y.itemId}`] =
+              gs.turn + ticksFromSeconds(y.regrowthTurns);
+          }
+        }
+      } else if (interaction?.regrowthTurns) {
+        // Simple whole-resource cooldown
+        newCooldowns[job.resourceId!] = gs.turn + ticksFromSeconds(interaction.regrowthTurns);
+      }
+      col.resourceCooldowns = newCooldowns;
+    }
+    markTileDirty(job.targetY, job.targetX, col);
 
     // Spawn one DroppedItem per yield type.
     const newDropped = [...(gs.droppedItems ?? [])];
@@ -726,9 +721,9 @@ class JobServiceImpl {
     // Trigger-based absorption: if any drop landed on a stockpile tile, absorb immediately.
     // The stockpile zone survives the harvest above, so a drop harvested onto a tile that is
     // ALSO a stockpile is correctly absorbed.
+    // worldMap is mutated in place above (no ref flip) → NOT spread here, so it ships as a delta.
     let state: GameState = {
       ...gs,
-      worldMap: newWorldMap,
       droppedItems: newDropped,
       designations: newDesignations
     };

@@ -11,8 +11,7 @@
 import { isClientRuntime } from '../core/runtime';
 import { realSimLogSink } from '../../stores/simLogBridge';
 import type { SimLogEvent, EntitySync } from './simProtocol';
-import type { TileDelta } from '../core/tileDeltas';
-import type { GameState, Pawn, Mob } from '../core/types';
+import type { GameState, Pawn, Mob, WorldTile } from '../core/types';
 
 /**
  * Apply a per-entity sync (W2b) onto a per-id mirror, returning the reconstructed array in order.
@@ -125,7 +124,7 @@ class SimWorkerBridge {
     pawns?: EntitySync<Pawn>;
     mobs?: EntitySync<Mob>;
     worldMap?: GameState['worldMap'];
-    worldMapDelta?: TileDelta[];
+    worldMapDelta?: Array<{ y: number; x: number; tile: Partial<WorldTile> }>;
     flush?: boolean;
     error?: string;
     events?: SimLogEvent[];
@@ -134,11 +133,12 @@ class SimWorkerBridge {
       if (m.worldMap) {
         this.worldMap = m.worldMap;
       } else if (m.worldMapDelta) {
-        // Patch the cached worldMap in place with the changed tiles (resource regrowth, …). Cheap vs.
-        // re-cloning all 38k tiles; the renderer rebuilds off the bumped _terrainRev, not a new ref.
+        // Merge each SLIM delta tile (§D) onto the full cached tile: only render/movement fields are
+        // shipped during harvest; the rest are preserved from the cached tile (they don't change on a
+        // regrowth/harvest delta). Cheap vs. re-cloning full tiles; renderer rebuilds off _terrainRev.
         for (const d of m.worldMapDelta) {
           const row = this.worldMap[d.y];
-          if (row) row[d.x] = d.tile;
+          if (row) row[d.x] = { ...row[d.x], ...d.tile };
         }
       }
       // Merge the sectional diff onto the mirror: changed fields overwrite, unchanged ones keep

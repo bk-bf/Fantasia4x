@@ -21,7 +21,7 @@ import { setSimLogSink, simLog, type SimLogSink } from '../core/logSink';
 import { applySimCommand } from './commands';
 import type { SimLogEvent, EntitySync } from './simProtocol';
 import { drainTileDeltas, clearTileDeltas } from '../core/tileDeltas';
-import type { GameState, Pawn, Mob } from '../core/types';
+import type { GameState, Pawn, Mob, WorldTile } from '../core/types';
 
 const TICK_MS = 1000 / TICKS_PER_SECOND;
 // W5 — batch governed by a WALL-CLOCK budget, not a tick count (a fixed step cap locks the worker
@@ -53,6 +53,19 @@ let lastWorldMap: GameState['worldMap'] | null = null;
 // every throttle window = freeze frames). In the worker, immutable updates preserve unchanged refs,
 // so we compute a reliable revision here and the renderer rebuilds terrain only when it actually bumps.
 let terrainRev = 0;
+// §D: a SEPARATE, cheap signal for the 2D designation overlay. The dip-correlated trace showed the
+// dominant harvest dip was the full 38k-tile terrain rebuild, fired ~2×/s by designation churn —
+// even though buildGameGrid doesn't render designations (their icons are a separate 2D canvas). So
+// designations get their own revision and never force a terrain rebuild.
+let designationRev = 0;
+// TEMP §D: count what TRIGGERS a terrain-rev bump per SNAP window, so we know whether the harvest
+// terrain rebuilds come from designations (now decoupled), tile deltas (regrowth/depletion), or
+// buildings/zones. Reset each [SNAP] log. Remove with the probe.
+let _trigWM = 0,
+  _trigDelta = 0,
+  _trigBSig = 0,
+  _trigZone = 0,
+  _trigDesig = 0;
 let prevWM: unknown,
   prevBuildingsSig = '',
   prevDesignations: unknown,
@@ -142,12 +155,18 @@ const MOB_COLD = new Set<string>([
   'conditions',
   'statusEffectDurations'
 ]);
-// Cold-field (limbs/inventory/skills/…) resync cadence. Each flush refreshes a rotating 1/RESYNC_EVERY
-// slice of entities FULL (§D2 — staggered, not all-at-once), so over RESYNC_EVERY flushes every entity
-// is refreshed → cold fields stay ≤ RESYNC_EVERY flushes stale, while position/needs/state/pain/blood
-// stay live every flush. Staggering avoids the ~150ms `onmessage` wall the old every-8th full resync
-// caused on the renderer (Chrome trace, ENGINE-PERFORMANCE.md §D).
-const RESYNC_EVERY = 8;
+// Cold-field (limbs/inventory/skills/injuries/…) resync cadence. Each flush refreshes a rotating
+// 1/RESYNC_EVERY slice of entities FULL (§D2 — staggered), so over RESYNC_EVERY flushes every entity
+// is refreshed → cold fields stay ≤ RESYNC_EVERY flushes stale, while the live scalars
+// (position/needs/state/pain/blood) flow every flush in the slim projection. The [SNAP] probe showed
+// this resync slice was ~131k/flush (the ~19 full pawns) — the single biggest snapshot payload AND
+// GC source (full entity trees deserialized + discarded every flush). The cold trees only feed the
+// selected-pawn detail panel, which tolerates ~2s staleness, so the cadence is raised 8→32 to cut
+// that bandwidth ~4× (≈2.1s stale @15Hz). (§D — entity-sync is the harvest/haul cliff, not the jobs.)
+const RESYNC_EVERY = 32;
+// TEMP §D: log the snapshot payload size breakdown (~every 2s) to find which field dominates the
+// structured-clone. Set false / remove once the heavy field is identified.
+const SNAP_SIZE_LOG = true;
 let flushSeq = 0;
 let lastPawnIds = new Set<string>();
 let lastMobIds = new Set<string>();
@@ -160,6 +179,36 @@ function slimEntity<T extends { id: string }>(
   const o: Record<string, unknown> = {};
   for (const k in e) if (!cold.has(k)) o[k] = (e as Record<string, unknown>)[k];
   return o as Partial<T> & { id: string };
+}
+
+/**
+ * Project a worldMap tile to ONLY the fields the main thread reads — render
+ * (subType/resources/resourceCooldowns), movement preview (movementCost/walkable), GameCanvas
+ * (type/terrainType) — plus identity. Everything else (A* scratch gCost/hCost/fCost/parent, ascii,
+ * discovered/density/moisture/temperature/territoryOwner) is worker/sim-only, so it's dropped from
+ * the worldMapDelta to shrink the post/onmessage structured-clone during HARVEST (§D — the harvest
+ * cliff: hundreds of tiles change/s, each was shipped as a full WorldTile, cloned out + back in). The
+ * bridge MERGES this onto its full cached tile, so dropped fields keep their values — safe because
+ * none of them change on a regrowth/harvest delta.
+ */
+const TILE_RENDER_FIELDS = [
+  'x',
+  'y',
+  'type',
+  'terrainType',
+  'subType',
+  'movementCost',
+  'walkable',
+  'resources',
+  'resourceCooldowns'
+] as const;
+function slimTile(tile: WorldTile): Partial<WorldTile> {
+  const o: Record<string, unknown> = {};
+  for (const k of TILE_RENDER_FIELDS) {
+    const v = (tile as unknown as Record<string, unknown>)[k];
+    if (v !== undefined) o[k] = v;
+  }
+  return o as Partial<WorldTile>;
 }
 
 /**
@@ -217,18 +266,27 @@ function publish(state: GameState, flush: boolean) {
   // ship the deltas. Either way a visible terrain change must bump _terrainRev (renderer rebuild).
   const tileDeltas = worldMapChanged ? (clearTileDeltas(), null) : drainTileDeltas();
   const bSig = buildingsVisualSig(state.buildings);
-  if (
-    state.worldMap !== prevWM ||
-    tileDeltas !== null ||
-    bSig !== prevBuildingsSig ||
-    state.designations !== prevDesignations ||
-    state.zoneTiles !== prevZoneTiles
-  ) {
+  // Terrain rebuild trigger — designations are DELIBERATELY excluded (see designationRev above):
+  // buildGameGrid renders worldMap + buildings + stockpile zone tint, NOT designations, so designation
+  // churn must not force the 38k-tile rebuild (the dominant harvest dip, trace §D).
+  const cWM = state.worldMap !== prevWM;
+  const cDelta = tileDeltas !== null;
+  const cBSig = bSig !== prevBuildingsSig;
+  const cZone = state.zoneTiles !== prevZoneTiles;
+  if (cWM || cDelta || cBSig || cZone) {
     terrainRev++;
     prevWM = state.worldMap;
     prevBuildingsSig = bSig;
-    prevDesignations = state.designations;
     prevZoneTiles = state.zoneTiles;
+    if (cWM) _trigWM++;
+    if (cDelta) _trigDelta++;
+    if (cBSig) _trigBSig++;
+    if (cZone) _trigZone++;
+  }
+  if (state.designations !== prevDesignations) {
+    designationRev++;
+    prevDesignations = state.designations;
+    _trigDesig++;
   }
   const delta: Record<string, unknown> = {};
   const src = state as unknown as Record<string, unknown>;
@@ -241,11 +299,58 @@ function publish(state: GameState, flush: boolean) {
     }
   }
   delta._terrainRev = terrainRev; // always present; renderer's terrain-rebuild trigger
+  delta._designationRev = designationRev; // renderer's cheap 2D designation-overlay redraw trigger
 
   const resyncPhase = flushSeq % RESYNC_EVERY;
   flushSeq++;
   const pawns = syncEntities(state.pawns, lastPawnIds, PAWN_COLD, resyncPhase);
   const mobs = syncEntities(state.mobs ?? [], lastMobIds, MOB_COLD, resyncPhase);
+  const wmDelta = tileDeltas
+    ? tileDeltas.map((d) => ({ y: d.y, x: d.x, tile: slimTile(d.tile) }))
+    : undefined;
+
+  // TEMP §D snapshot-size probe: `post`/`onmessage` are 100% native structured-clone, so the only
+  // way to see WHICH field dominates the clone is to measure the serialized payload. Sampled ~every
+  // 2s; `[SNAP]` lines show per-component bytes + the biggest `state`-delta fields. Remove when done.
+  if (SNAP_SIZE_LOG && flushSeq % 30 === 0) {
+    const sz = (x: unknown) => {
+      try {
+        return x === undefined ? 0 : JSON.stringify(x).length;
+      } catch {
+        return -1;
+      }
+    };
+    const topFields = Object.keys(delta)
+      .map((k) => [k, sz(delta[k])] as [string, number])
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([k, v]) => `${k}=${(v / 1000).toFixed(1)}k`)
+      .join(' ');
+    console.info(
+      `[SNAP] state=${(sz(delta) / 1000).toFixed(1)}k pawns=${(sz(pawns) / 1000).toFixed(1)}k ` +
+        `mobs=${(sz(mobs) / 1000).toFixed(1)}k wmDelta=${(sz(wmDelta) / 1000).toFixed(1)}k ` +
+        `| top state fields: ${topFields}`
+    );
+    // Per-field breakdown of ONE slim pawn → tells us exactly which fields to demote to the cold set.
+    const sp = ('upserts' in pawns ? pawns.upserts[0] : pawns.full?.[0]) as
+      | Record<string, unknown>
+      | undefined;
+    if (sp) {
+      const pf = Object.keys(sp)
+        .map((k) => [k, sz(sp[k])] as [string, number])
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 12)
+        .map(([k, v]) => `${k}=${v}`)
+        .join(' ');
+      console.info(`[SNAP-PAWN] one slim pawn = ${sz(sp)}B · fields(bytes): ${pf}`);
+    }
+    // Which trigger fired the terrain rebuild over the last ~30 flushes (~2s)?
+    console.info(
+      `[TRIG] terrain bumps/30flush: worldMapDelta=${_trigDelta} worldMapRef=${_trigWM} ` +
+        `buildings=${_trigBSig} zones=${_trigZone} | designations(decoupled)=${_trigDesig}`
+    );
+    _trigWM = _trigDelta = _trigBSig = _trigZone = _trigDesig = 0;
+  }
 
   post({
     kind: 'snapshot',
@@ -253,7 +358,9 @@ function publish(state: GameState, flush: boolean) {
     pawns,
     mobs,
     worldMap: worldMapChanged ? state.worldMap : undefined,
-    worldMapDelta: tileDeltas ?? undefined,
+    // Slim each changed tile to the render/movement fields (§D) — the heavy part of the harvest-time
+    // post/onmessage cost was cloning full WorldTiles for every changed tile.
+    worldMapDelta: wmDelta,
     flush
   });
 }

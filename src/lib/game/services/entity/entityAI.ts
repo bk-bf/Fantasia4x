@@ -9,6 +9,7 @@ import { calcMaxStamina } from '../../entities/Pawns';
 import { gameLogger } from '../../dev/gameLogger';
 import { simLog } from '../../core/logSink';
 import { rng } from '../../core/rng';
+import { markTileDirty } from '../../core/tileDeltas';
 import {
   entityName,
   nearestPawn,
@@ -148,21 +149,18 @@ export function stepEntities(state: GameState): GameState {
 
   let finalState = changed ? { ...state, mobs: next } : state;
 
-  // Apply foraging tile depletions immutably after the mob loop.
-  if (pendingTileDepletion.length > 0) {
-    let worldMap = finalState.worldMap;
-    for (const { x, y, id } of pendingTileDepletion) {
-      const tile = worldMap[y]?.[x];
-      if (!tile) continue;
-      const current = tile.resources?.[id] ?? 0;
-      if (current <= 0) continue;
-      const newAmount = Math.max(0, current - 1);
-      const newTile = { ...tile, resources: { ...tile.resources, [id]: newAmount } };
-      worldMap = worldMap.map((row, ry) =>
-        ry === y ? row.map((col, rx) => (rx === x ? newTile : col)) : row
-      );
-    }
-    finalState = { ...finalState, worldMap };
+  // Apply foraging tile depletions IN PLACE + mark them dirty (§D — ADR-002 amendment, like §C
+  // regrowth / harvest completion). The old code rebuilt the ENTIRE 38k-tile worldMap via `.map()`
+  // *once per depletion inside this loop* — with 140 mobs foraging that flipped the worldMap ref
+  // several times per tick, each one forcing a full worldMap re-clone across the worker boundary AND
+  // a full terrain rebuild. Now each depleted tile mutates in place and ships as a `worldMapDelta`.
+  for (const { x, y, id } of pendingTileDepletion) {
+    const tile = finalState.worldMap[y]?.[x];
+    if (!tile) continue;
+    const current = tile.resources?.[id] ?? 0;
+    if (current <= 0) continue;
+    tile.resources = { ...tile.resources, [id]: Math.max(0, current - 1) };
+    markTileDirty(y, x, tile);
   }
 
   return finalState;
