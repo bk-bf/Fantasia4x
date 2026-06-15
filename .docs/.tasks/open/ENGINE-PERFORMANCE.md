@@ -1,4 +1,4 @@
-<!-- LOC cap: 525 (created: 2026-06-14, rewritten 2026-06-14 post-profiling; worker shipped 2026-06-14; Rust-SoA pivot 2026-06-14 then ABORTED after R1 2026-06-15 → mutable-in-place JS; M1–M3 + throttle landed 2026-06-15, de-immutabling plateaued; 2026-06-15 custom profiler RETIRED → Firefox Profiler + pq; capacity/formula caches + the WORKER→MAIN SNAPSHOT (W2/W2b) broke the plateau → 80–100 TPS @4×; then de-immutabled pawn-patch spreads + paused warmup screen → 200+ TPS @4× after ~5s, GOAL CRUSHED 2026-06-15; then JS-allocation capture (§C) verified the de-immutable win + drove the harvest-time worldMap-delta fix) -->
+<!-- LOC cap: 580 (created: 2026-06-14, rewritten 2026-06-14 post-profiling; worker shipped 2026-06-14; Rust-SoA pivot 2026-06-14 then ABORTED after R1 2026-06-15 → mutable-in-place JS; M1–M3 + throttle landed 2026-06-15, de-immutabling plateaued; 2026-06-15 custom profiler RETIRED → Firefox Profiler + pq; capacity/formula caches + the WORKER→MAIN SNAPSHOT (W2/W2b) broke the plateau → 80–100 TPS @4×; then de-immutabled pawn-patch spreads + paused warmup screen → 200+ TPS @4× after ~5s, GOAL CRUSHED 2026-06-15; then JS-allocation capture (§C) verified the de-immutable win + drove the harvest-time worldMap-delta fix; 2026-06-15 Electron chosen over Tauri (A/B), and the Electron renderer trace opened §D — renderer-side hitches D1–D3) -->
 
 # ENGINE PERFORMANCE & SCALING
 
@@ -299,6 +299,48 @@ per-func via stack walk).
   when the ref is unchanged) + bumps `_terrainRev`; `simWorkerClient` patches its cached worldMap in place.
   A full worldMap send supersedes + clears pending deltas. Guarded by `resourceRegrowth.test.ts`. *(Harvest
   depletion `_completeHarvest` still full-sends its one rebuilt row on the completion tick — event-rate, fine.)*
+
+---
+
+## §D · RENDERER-side hitches — the Electron trace (2026-06-15)
+
+**New surface: §B/§C all optimised the *worker* + the worker→main boundary. The renderer main thread
+itself was never profiled until the Electron cutover** ([[electron-over-tauri-distribution]] — Electron
+~250 TPS won the A/B over Tauri ~100). A Chrome DevTools trace of the heavy `--profiler` scene
+(`.debug/Trace-*.json`, parsed with an ad-hoc node script — Chrome format, **not** the Firefox `pq`
+pipeline) shows the renderer is **smooth at baseline but hitches periodically**, and the hitches are
+pure JS + GPU-upload + GC, **not** paint/layout.
+
+- **Baseline fine:** median frame gap **8.4 ms (~119 fps)**, p95 17 ms, thread **13% idle**. Steady
+  per-frame cost: `generateBatchVertexData` (~1.8 ms), `updateWorldEffectOverlays` (~1 ms, the day/night
+  hue overlay), snapshot ingest.
+- **Stutters:** **16 tasks >50 ms (up to 209 ms), 21 janky frames in 11 s.** Window-attributed CPU
+  self-time inside the hitches:
+
+  | share of stutter | function(s) | cause |
+  | ---------------- | ----------- | ----- |
+  | **~47%** | `generateBatchVertexData` 31% + `bufferData` 6% + `setTile` 5% + `buildGameGrid`/`getVertexData` | **full 38k-tile vertex rebuild + whole-VBO re-upload** on terrain change — the §C "rebuild everything" bug, now on the *renderer's vertex buffer* |
+  | **~25%** | `w.onmessage` (`simWorkerClient`) | **ingesting a big snapshot synchronously** — the every-8th-flush full cold-field resync = one giant message |
+  | **~4%** | `saveManager` + `stripTile` | **autosave serialising 38k tiles on the main thread** mid-frame |
+  | **8%** | `(garbage collector)` (max 21 ms pause) | churn from the vertex arrays + snapshot objects above |
+
+- **Engine-independent:** these are *our* render functions; SpiderMonkey/JSC hitch on the same ops
+  (Tauri just amplified it). The fixes are the same regardless of engine.
+
+### Fixes (each mirrors a win already proven on the worker side)
+
+- [ ] **D1 — incremental terrain vertices (biggest, ~47%).** worldMap deltas already exist (§C) but the
+  renderer throws them away and regenerates all 38k vertices. Patch only the changed tiles with
+  `bufferSubData` instead of `generateBatchVertexData` + full `bufferData`. Requires `_terrainRev` to
+  carry *which* tiles changed, not just "something did".
+- [x] **D2 — stagger the cold-field resync (~25%) — LANDED.** `syncEntities` (sim.worker.ts) now sends a
+  FULL (cold-inclusive) entity only for this flush's round-robin slice (`i % RESYNC_EVERY === phase`) +
+  newly-seen ids; everyone else stays slim. Over RESYNC_EVERY flushes every entity is refreshed → same
+  staleness backstop, no 150 ms `onmessage` wall. The old `{full}` all-at-once branch is retired (the
+  type variant + client branch remain as harmless dead code). 235 tests green. *Re-measure pending.*
+- [x] **D3 — autosave off the render hot path (~4%+) — LANDED.** `scheduleSave` (saveManager.ts) now runs
+  the `stripState` 38k-tile clone + IDB write inside `requestIdleCallback` (macrotask fallback), off the
+  frame-critical path. *Re-measure pending.*
 
 ---
 

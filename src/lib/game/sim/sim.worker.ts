@@ -142,9 +142,11 @@ const MOB_COLD = new Set<string>([
   'conditions',
   'statusEffectDurations'
 ]);
-// Resync the full (cold-inclusive) entities every Nth flush (~2/s at the 15Hz flush rate). The cold
-// fields are thus ≤ this many flushes stale on the main thread — fine for limbs/inventory/skills,
-// while position/needs/state/pain/blood stay live every flush.
+// Cold-field (limbs/inventory/skills/…) resync cadence. Each flush refreshes a rotating 1/RESYNC_EVERY
+// slice of entities FULL (§D2 — staggered, not all-at-once), so over RESYNC_EVERY flushes every entity
+// is refreshed → cold fields stay ≤ RESYNC_EVERY flushes stale, while position/needs/state/pain/blood
+// stay live every flush. Staggering avoids the ~150ms `onmessage` wall the old every-8th full resync
+// caused on the renderer (Chrome trace, ENGINE-PERFORMANCE.md §D).
 const RESYNC_EVERY = 8;
 let flushSeq = 0;
 let lastPawnIds = new Set<string>();
@@ -161,21 +163,18 @@ function slimEntity<T extends { id: string }>(
 }
 
 /**
- * Build the per-entity sync for one array. On a resync flush, send everything FULL and reset the
- * id baseline. Otherwise send a slim upsert for every known id (fresh hot fields) and a FULL entity
- * for any newly-seen id (so the mirror is never missing cold fields), plus `removed`/`order`.
+ * Build the per-entity sync for one array (§D2 — staggered resync). Every flush sends a slim upsert
+ * for known ids (fresh hot fields), a FULL entity for any newly-seen id (so the mirror is never
+ * missing cold fields), AND a FULL entity for this flush's round-robin slice (`i % RESYNC_EVERY ===
+ * resyncPhase`) so cold fields are refreshed across RESYNC_EVERY flushes without ever shipping every
+ * entity's cold trees in one message. Plus `removed`/`order`.
  */
 function syncEntities<T extends { id: string }>(
   arr: readonly T[],
   prevIds: Set<string>,
   cold: Set<string>,
-  full: boolean
+  resyncPhase: number
 ): EntitySync<T> {
-  if (full) {
-    prevIds.clear();
-    for (const e of arr) prevIds.add(e.id);
-    return { full: arr as T[] };
-  }
   const upserts: Array<Partial<T> & { id: string }> = new Array(arr.length);
   const order: string[] = new Array(arr.length);
   const cur = new Set<string>();
@@ -183,7 +182,10 @@ function syncEntities<T extends { id: string }>(
     const e = arr[i];
     order[i] = e.id;
     cur.add(e.id);
-    upserts[i] = prevIds.has(e.id) ? slimEntity(e, cold) : e; // new id → full
+    // FULL if newly-seen OR in this flush's resync slice; otherwise slim (cold fields persist on the
+    // main-thread mirror between refreshes).
+    const resync = i % RESYNC_EVERY === resyncPhase;
+    upserts[i] = prevIds.has(e.id) && !resync ? slimEntity(e, cold) : e;
   }
   const removed: string[] = [];
   for (const id of prevIds) if (!cur.has(id)) removed.push(id);
@@ -240,10 +242,10 @@ function publish(state: GameState, flush: boolean) {
   }
   delta._terrainRev = terrainRev; // always present; renderer's terrain-rebuild trigger
 
-  const full = flushSeq % RESYNC_EVERY === 0;
+  const resyncPhase = flushSeq % RESYNC_EVERY;
   flushSeq++;
-  const pawns = syncEntities(state.pawns, lastPawnIds, PAWN_COLD, full);
-  const mobs = syncEntities(state.mobs ?? [], lastMobIds, MOB_COLD, full);
+  const pawns = syncEntities(state.pawns, lastPawnIds, PAWN_COLD, resyncPhase);
+  const mobs = syncEntities(state.mobs ?? [], lastMobIds, MOB_COLD, resyncPhase);
 
   post({
     kind: 'snapshot',
@@ -332,7 +334,7 @@ self.onmessage = async (e: MessageEvent) => {
       await wasmPathfinderService.init();
       lastWorldMap = (msg.state as GameState).worldMap;
       lastSent = {}; // reset the sectional-diff baseline so the first publish sends every field
-      flushSeq = 0; // first publish is a full entity resync (flushSeq % RESYNC_EVERY === 0)
+      flushSeq = 0; // first publish sends every entity full (empty id baseline → all "newly-seen")
       lastPawnIds = new Set();
       lastMobIds = new Set();
       lastBatch = performance.now();

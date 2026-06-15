@@ -181,6 +181,20 @@ export async function deleteSave(): Promise<void> {
 let _saveTimer: ReturnType<typeof setTimeout> | null = null;
 
 /**
+ * Run `fn` when the main thread is next idle, falling back to a macrotask. ENGINE-PERFORMANCE.md §D3:
+ * `stripState` clones all 38k worldMap tiles (`worldMap.map(row => row.map(stripTile))`) — a Chrome
+ * trace of the heavy scene caught this running *synchronously inside the debounce timer*, hitching a
+ * frame ~every 2 s during play. Deferring it to idle keeps the (already async) IDB write off the
+ * frame-critical path; the `timeout` guarantees it still runs under sustained load.
+ */
+function runWhenIdle(fn: () => void): void {
+  const ric = (globalThis as { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => void })
+    .requestIdleCallback;
+  if (ric) ric(fn, { timeout: 1000 });
+  else setTimeout(fn, 0);
+}
+
+/**
  * Schedule a debounced save. Safe to call on every store update — writes are
  * batched into at most one IDB write every DEBOUNCE_MS milliseconds.
  */
@@ -189,8 +203,11 @@ export function scheduleSave(state: GameState): void {
   if (_saveTimer !== null) clearTimeout(_saveTimer);
   _saveTimer = setTimeout(() => {
     _saveTimer = null;
-    idbPut(SAVE_KEY, stripState(state)).catch((err) => {
-      console.warn('[SaveManager] IndexedDB write failed:', err);
+    // Strip + write off the frame-critical path (§D3) — the 38k-tile clone is too heavy to run mid-frame.
+    runWhenIdle(() => {
+      idbPut(SAVE_KEY, stripState(state)).catch((err) => {
+        console.warn('[SaveManager] IndexedDB write failed:', err);
+      });
     });
   }, DEBOUNCE_MS);
 }
