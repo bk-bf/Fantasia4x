@@ -45,15 +45,16 @@ const AVAILABLE_BUILDINGS = buildingsData as unknown as import('../core/types').
  * current projection. The engine — not the store — is the single writer of
  * canonical state (P-2); user actions reach it as commands (see applyCommand).
  */
-const UI_PUSH_INTERVAL = Math.max(1, Math.round(TICKS_PER_SECOND / 15));
+/** UI flush cadence in REAL milliseconds (~15 Hz) — wall-clock so it's independent of TPS. */
+const UI_PUSH_MS = 1000 / 15;
 
 export class GameEngineImpl implements GameEngine {
   private gameState: GameState | null = null;
   private gameStateManager: GameStateManager | null = null;
   private config: GameEngineConfig;
   private lastTurnProcessed = 0;
-  /** Counts ticks toward the next throttled UI notification (see UI_PUSH_INTERVAL). */
-  private uiPushCounter = 0;
+  /** `performance.now()` of the last UI flush — throttles notify/snapshot to ~15 Hz (UI_PUSH_MS). */
+  private lastFlushMs = 0;
   /**
    * Per-tick output sink (ENGINE-PERFORMANCE ADR-021, sim→Worker W0). The engine no longer imports
    * the Svelte store; the owner injects how to publish each tick's state — on the main thread that's
@@ -119,9 +120,17 @@ export class GameEngineImpl implements GameEngine {
         : (_label: string, fn: () => void) => fn();
 
       t('needsTick', () => {
-        this.gameState = pawnService.processNeedsTick(this.gameState!);
-        this.gameState = pawnService.processAutoDrink(this.gameState!);
-        this.gameState = pawnService.processAutoWash(this.gameState!);
+        // Function-level sub-timers (free when the profiler is off — `t` is a passthrough then; once
+        // per tick when on, not per-entity, so they don't distort like the per-call counters).
+        t('need.tick', () => {
+          this.gameState = pawnService.processNeedsTick(this.gameState!);
+        });
+        t('need.drink', () => {
+          this.gameState = pawnService.processAutoDrink(this.gameState!);
+        });
+        t('need.wash', () => {
+          this.gameState = pawnService.processAutoWash(this.gameState!);
+        });
       });
       t('itemDecay', () => {
         this.gameState = itemService.stepItemDecay(this.gameState!);
@@ -143,11 +152,21 @@ export class GameEngineImpl implements GameEngine {
       t('pawns', () => this.processPawns());
       t('resourceRegrowth', () => this.processResourceRegrowth());
       t('entityStep', () => {
-        this.gameState = entityService.spawnEntities(this.gameState!);
-        this.gameState = entityService.stepEntities(this.gameState!);
-        this.gameState = entityService.advanceMobMovement(this.gameState!);
-        this.gameState = entityService.stepHunger(this.gameState!);
-        this.gameState = entityService.removeDead(this.gameState!);
+        t('ent.spawn', () => {
+          this.gameState = entityService.spawnEntities(this.gameState!);
+        });
+        t('ent.fsm', () => {
+          this.gameState = entityService.stepEntities(this.gameState!);
+        });
+        t('ent.move', () => {
+          this.gameState = entityService.advanceMobMovement(this.gameState!);
+        });
+        t('ent.hunger', () => {
+          this.gameState = entityService.stepHunger(this.gameState!);
+        });
+        t('ent.reap', () => {
+          this.gameState = entityService.removeDead(this.gameState!);
+        });
       });
       t('combat', () => {
         const preCombatState = this.gameState!;
@@ -163,11 +182,16 @@ export class GameEngineImpl implements GameEngine {
 
       this.lastTurnProcessed = this.gameState.turn;
       t('mgrUpdate', () => this.gameStateManager!.updateState(this.gameState!));
-      // Throttled UI push: refresh the store value every tick, notify
-      // subscribers at ~15 Hz (see UI_PUSH_INTERVAL).
+      // Throttled UI push — WALL-CLOCK gated, not tick-gated. The old `% UI_PUSH_INTERVAL` (4 ticks)
+      // assumed 60 TPS; once the sim ran at 80+ (and fluctuating) TPS it flushed at 20+ Hz tracking
+      // the tick rate, so the main thread's snapshot deserialize/notify/GC load swung with TPS →
+      // FPS sawtooth. Capping to ~15 Hz of real time decouples UI cost from TPS (the renderer
+      // interpolates positions from get() every frame, so UI never needs faster).
       t('uiPush', () => {
-        this.uiPushCounter = (this.uiPushCounter + 1) % UI_PUSH_INTERVAL;
-        this.outputSink?.(this.gameState!, this.uiPushCounter === 0);
+        const nowMs = performance.now();
+        const flush = nowMs - this.lastFlushMs >= UI_PUSH_MS;
+        if (flush) this.lastFlushMs = nowMs;
+        this.outputSink?.(this.gameState!, flush);
       });
 
       if (prof && this.gameState.turn % TICKS_PER_SECOND === 0) {
