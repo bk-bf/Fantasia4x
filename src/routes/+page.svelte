@@ -17,7 +17,7 @@
   import WorldEffectsLayer from '$lib/components/UI/WorldEffectsLayer.svelte';
   import LoadingScreen from '$lib/components/UI/LoadingScreen.svelte';
   import { uiState } from '$lib/stores/uiState';
-  import { gameState, storeReady, rendererReady } from '$lib/stores/gameState';
+  import { gameState, storeReady, bootReveal } from '$lib/stores/gameState';
   import { gameCoordinator } from '$lib/game/systems/GameCoordinator';
   import { environmentService } from '$lib/game/services/EnvironmentService.js';
   import type { PlacedBuilding } from '$lib/game/core/types';
@@ -64,6 +64,9 @@
   }
 
   function handleKeydown(e: KeyboardEvent) {
+    // Ignore ALL keyboard input while the loading overlay is up — otherwise Space would toggle pause
+    // (unpausing the game behind the overlay), defeating the paused-warmup reveal hack.
+    if (!$bootReveal) return;
     if (e.code === 'Space') {
       e.preventDefault();
       gameState.togglePause();
@@ -180,10 +183,11 @@
   </div>
 {/if}
 
-<!-- Single loading screen: held until BOTH the sim worker is warmed (storeReady) AND the WebGL
-     renderer has initialised (rendererReady) — so the game-container mounts and inits WebGL BEHIND
-     this overlay, and there's no separate "Initializing renderer…" screen. -->
-{#if !$storeReady || !$rendererReady}
+<!-- Single loading overlay: the game-container mounts at storeReady and inits WebGL BEHIND this
+     overlay (no separate "Initializing renderer…" screen). The overlay is dropped by `bootReveal`,
+     which fires a paused warmup beat AFTER the renderer is up — hiding the worker-boot/WebGL-init GC.
+     Keyboard input is gated on the same flag (handleKeydown) so Space can't unpause behind it. -->
+{#if !$bootReveal}
   <LoadingScreen />
 {/if}
 

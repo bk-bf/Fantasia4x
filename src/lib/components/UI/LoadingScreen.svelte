@@ -1,39 +1,34 @@
 <!--
   LoadingScreen — the single full-screen loading overlay.
 
-  Shown by +page.svelte while `!storeReady || !rendererReady`, i.e. through the whole boot: save
-  load → sim-worker warmup → WebGL init (which happens BEHIND this overlay). Replaces the two old
-  inline screens ("LOADING…" in +page + "Initializing renderer…" in GameCanvas).
+  Shown by +page.svelte while `!bootReveal`, i.e. through the whole boot: save load → WebGL init
+  (which happens BEHIND this overlay, once storeReady mounts the game-container) → a paused warmup
+  linger that hides the worker-boot/WebGL-init GC. Replaces the two old inline screens ("LOADING…"
+  in +page + "Initializing renderer…" in GameCanvas).
 
   The bar is indeterminate-but-smooth: it eases toward ~95% over the expected load window; the parent
-  unmounts this component the instant the game is actually ready, so it never sits at a fake 100%.
-  Phase text comes from the `loadingStatus` store, updated through the boot in stores/gameState.
+  unmounts this component the instant `bootReveal` fires, so it never sits at a fake 100%. Phase text
+  comes from the `loadingStatus` store, updated through the boot in stores/gameState.
 -->
 <script lang="ts">
   import { onMount } from 'svelte';
   import { tweened } from 'svelte/motion';
   import { cubicOut } from 'svelte/easing';
   import { fade } from 'svelte/transition';
-  import {
-    loadingStatus,
-    storeReady,
-    rendererReady,
-    WORKER_WARMUP_MS
-  } from '$lib/stores/gameState';
+  import { loadingStatus, bootReveal, WORKER_WARMUP_MS } from '$lib/stores/gameState';
 
   const progress = tweened(0, { duration: 400, easing: cubicOut });
 
   onMount(() => {
-    // Pace the fill to the warmup window (the dominant boot phase) so the bar is ~full right as the
-    // worker finishes warming. WORKER_WARMUP_MS is the single knob for both the warmup and this.
-    progress.set(0.95, { duration: WORKER_WARMUP_MS, easing: cubicOut });
+    // Ease the fill toward ~95% over a window a touch longer than the warmup linger so the bar keeps
+    // creeping through save-load + WebGL-init too, and never sits at a fake 100%.
+    progress.set(0.95, { duration: WORKER_WARMUP_MS * 1.6, easing: cubicOut });
   });
 
-  // Top the bar off to 100% the instant the game is actually ready — this is the same condition
-  // +page uses to remove the overlay, so the bar reaches the end EXACTLY as the screen drops
-  // (no popping at a partial fill).
+  // Top the bar off to 100% the instant the overlay is dropped (same `bootReveal` flag +page uses),
+  // so the bar reaches the end EXACTLY as the screen fades out — no popping at a partial fill.
   $effect(() => {
-    if ($storeReady && $rendererReady) progress.set(1, { duration: 200 });
+    if ($bootReveal) progress.set(1, { duration: 200 });
   });
 </script>
 

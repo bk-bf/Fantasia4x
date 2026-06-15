@@ -1578,7 +1578,7 @@
       }
 
       ready = true;
-      rendererReady.set(true); // drops the single loading screen (+page.svelte) — WebGL is up
+      rendererReady.set(true); // WebGL is up — arms the paused warmup linger that drops the overlay
       startLoop();
 
       new ResizeObserver(() => {
@@ -2333,7 +2333,7 @@
     <div class="error">WebGL unavailable: {errorMsg}</div>
   {/if}
   <!-- No "Initializing renderer…" screen: the single page-level loading overlay (+page.svelte) stays
-       up until rendererReady, so WebGL init happens behind it. -->
+       up past rendererReady (until the paused warmup linger ends), so WebGL init happens behind it. -->
 
   {#if designationMode}
     <div
