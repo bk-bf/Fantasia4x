@@ -92,10 +92,6 @@ if [[ -n "$SHELL_TARGET" ]]; then
   SERVER_FLAG="--debug"; [[ "$PROFILER" == true ]] && SERVER_FLAG="--profiler"
   PORT=5173
   [[ -f "$SCRIPT_DIR/.devport" ]] && PORT=$(< "$SCRIPT_DIR/.devport")
-  if [[ "$SHELL_TARGET" == "tauri" && "$PORT" != "5173" ]]; then
-    echo "launch.sh: NOTE — Tauri's devUrl is fixed at http://localhost:5173 in tauri.conf.json;" >&2
-    echo "  the .devport ($PORT) won't be followed by the Tauri window." >&2
-  fi
 
   echo "Fantasia4x — $SHELL_TARGET shell over ${SERVER_FLAG#--} server (main only)"
   echo ""
@@ -109,8 +105,11 @@ if [[ -n "$SHELL_TARGET" ]]; then
       (cd "$SHELL_DIR" && SPIKE_URL="http://localhost:$PORT" pnpm start)
       ;;
     tauri)
-      echo "  [tauri] WebKitGTK/JSC → http://localhost:5173 (close window or Ctrl-C to stop)"
-      (cd "$SHELL_DIR" && pnpm tauri dev)
+      echo "  [tauri] WebKitGTK/JSC → http://127.0.0.1:$PORT (close window or Ctrl-C to stop)"
+      # Tauri polls devUrl literally — override the hardcoded conf to the real .devport AND force
+      # IPv4: here `localhost` resolves to ::1 first, but `vite --host` binds 0.0.0.0 (IPv4 only),
+      # so a `localhost` poll hits an unserved ::1 and hangs on "Waiting for frontend dev server".
+      (cd "$SHELL_DIR" && pnpm tauri dev -c "{\"build\":{\"devUrl\":\"http://127.0.0.1:$PORT\"}}")
       ;;
   esac
   cleanup
