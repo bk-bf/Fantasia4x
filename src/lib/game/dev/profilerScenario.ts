@@ -25,6 +25,7 @@ import { workService } from '../services/WorkService';
 import { entityService } from '../services/EntityService';
 import { buildingService } from '../services/BuildingService';
 import itemsData from '../database/items.jsonc';
+import { rng } from '../core/rng';
 
 const ITEMS = itemsData as unknown as Item[];
 
@@ -60,6 +61,14 @@ function walkableTiles(world: WorldTile[][], limit: number): Array<{ x: number; 
 
 export function buildProfilerScenario(opts: ProfilerScenarioOpts = {}): GameState {
   const seed = opts.seed ?? 0xf00d;
+  // Reseed the RNG BEFORE any generation so the whole scenario is a perfect reproduction every launch:
+  // generatePawns (stats/traits/names) and seedInitialEntities (mob types/positions) both draw from the
+  // shared `rng`, so without this they diverged run-to-run — the variance that made profiler captures
+  // incomparable. generateWorld takes the seed explicitly; this covers everything else. The sim then
+  // replays deterministically too (the worker reseeds to `state.seed` on init; no Math.random/wall-clock
+  // in sim logic). NOTE: real-time TPS still varies with machine load — only the colony TRAJECTORY is
+  // pinned, which is what removes the "different pawns each run" confound.
+  rng.reseed(seed);
   const pawnCount = opts.pawns ?? 150;
   const mobTarget = opts.mobs ?? 140;
   const buildingCount = opts.buildings ?? 40;

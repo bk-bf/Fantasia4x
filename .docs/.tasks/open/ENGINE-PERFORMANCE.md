@@ -1,4 +1,4 @@
-<!-- LOC cap: 490 (created: 2026-06-14, rewritten 2026-06-14 post-profiling; worker shipped 2026-06-14; Rust-SoA pivot 2026-06-14 then ABORTED after R1 2026-06-15 → mutable-in-place JS; M1–M3 + throttle landed 2026-06-15, de-immutabling plateaued; 2026-06-15 custom profiler RETIRED → Firefox Profiler + pq; capacity/formula caches + the WORKER→MAIN SNAPSHOT (W2/W2b) broke the plateau → 80–100 TPS @4×; then de-immutabled pawn-patch spreads + paused warmup screen → 200+ TPS @4× after ~5s, GOAL CRUSHED 2026-06-15; then JS-allocation capture (§C) verified the de-immutable win + drove the harvest-time worldMap-delta fix) -->
+<!-- LOC cap: 495 (created: 2026-06-14, rewritten 2026-06-14 post-profiling; worker shipped 2026-06-14; Rust-SoA pivot 2026-06-14 then ABORTED after R1 2026-06-15 → mutable-in-place JS; M1–M3 + throttle landed 2026-06-15, de-immutabling plateaued; 2026-06-15 custom profiler RETIRED → Firefox Profiler + pq; capacity/formula caches + the WORKER→MAIN SNAPSHOT (W2/W2b) broke the plateau → 80–100 TPS @4×; then de-immutabled pawn-patch spreads + paused warmup screen → 200+ TPS @4× after ~5s, GOAL CRUSHED 2026-06-15; then JS-allocation capture (§C) verified the de-immutable win + drove the harvest-time worldMap-delta fix) -->
 
 # ENGINE PERFORMANCE & SCALING
 
@@ -470,6 +470,11 @@ see the worker→main boundary — the very cost that turned out to dominate (§
   `.json` into `.debug/`. (Automated headless capture via `MOZ_PROFILER_STARTUP` was attempted and
   **abandoned** — a 2nd Zen instance hits "channel error" alongside a running one, and headless WebGL
   fails the framebuffer; manual record→download is the working loop.)
+- [x] **Reproducible scenario (2026-06-15):** `buildProfilerScenario` now `rng.reseed(seed)`s (seed
+  `0xf00d`) **before** `generatePawns`/`seedInitialEntities`, so every `--profiler` launch spawns the
+  identical colony + event trajectory and the worker replays it deterministically (no `Math.random`/
+  wall-clock in sim logic) — removes the run-to-run variance that made captures incomparable. **Caveat:**
+  real-time TPS still varies with machine load; only the colony *trajectory* is pinned.
 - [x] **Read (headless, scriptable):** parse the JSON with an ad-hoc node script over the shared tables
   (`shared.{stackTable,frameTable,funcTable,stringArray}` + `thread.samples`). Two gotchas: **(1)** weight
   by `samples.threadCPUDelta`, not `timeDeltas` — the worker sleeps between ticks at high TPS, so wall-clock
