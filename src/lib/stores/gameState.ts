@@ -35,6 +35,7 @@ import { loadSave, scheduleSave, deleteSave } from './saveManager';
 import { clearActivityLog } from './Log';
 import { applyDevWorld } from '$lib/game/dev/devWorld';
 import { TICKS_PER_SECOND, ticksFromSeconds } from '$lib/game/core/time';
+import { clearTileDeltas } from '$lib/game/core/tileDeltas';
 import { rng, freshSeed } from '$lib/game/core/rng';
 import { resetUnreachableJobs } from '$lib/game/systems/PawnStateMachine';
 
@@ -650,6 +651,10 @@ const pushFromEngine = (state: GameState, flush: boolean) => {
   gameStore.setSilent(state);
   scheduleSave(state);
   if (flush) gameStore.notify();
+  // In-thread path (tests/SSR): the engine mutates worldMap tiles in place on the live state we just
+  // pushed, so changes are already reflected — just discard the worker-only tile-delta buffer so it
+  // doesn't accumulate. (Under the worker this drain happens in publish(); see tileDeltas.ts.)
+  clearTileDeltas();
 };
 
 // ===== INITIALIZE GAMEENGINE =====

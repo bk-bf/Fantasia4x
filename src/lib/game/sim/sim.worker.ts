@@ -20,6 +20,7 @@ import { TICKS_PER_SECOND } from '../core/time';
 import { setSimLogSink, simLog, type SimLogSink } from '../core/logSink';
 import { applySimCommand } from './commands';
 import type { SimLogEvent, EntitySync } from './simProtocol';
+import { drainTileDeltas, clearTileDeltas } from '../core/tileDeltas';
 import type { GameState, Pawn, Mob } from '../core/types';
 
 const TICK_MS = 1000 / TICKS_PER_SECOND;
@@ -209,9 +210,14 @@ function publish(state: GameState, flush: boolean) {
   if (!flush) return;
   const worldMapChanged = state.worldMap !== lastWorldMap;
   lastWorldMap = state.worldMap;
+  // In-place tile mutations (resource regrowth) don't flip the worldMap ref — they accumulate as
+  // deltas. A full worldMap send already carries them, so drain-and-discard in that case; otherwise
+  // ship the deltas. Either way a visible terrain change must bump _terrainRev (renderer rebuild).
+  const tileDeltas = worldMapChanged ? (clearTileDeltas(), null) : drainTileDeltas();
   const bSig = buildingsVisualSig(state.buildings);
   if (
     state.worldMap !== prevWM ||
+    tileDeltas !== null ||
     bSig !== prevBuildingsSig ||
     state.designations !== prevDesignations ||
     state.zoneTiles !== prevZoneTiles
@@ -245,6 +251,7 @@ function publish(state: GameState, flush: boolean) {
     pawns,
     mobs,
     worldMap: worldMapChanged ? state.worldMap : undefined,
+    worldMapDelta: tileDeltas ?? undefined,
     flush
   });
 }

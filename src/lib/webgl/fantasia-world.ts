@@ -82,7 +82,12 @@ export function buildGameGrid(
           } else {
             fg = resDef.fg;
           }
-          bg = resDef.bg;
+          // Background ALWAYS comes from the subterrain, never the resource — a resource is a glyph
+          // (fg char) drawn over uniform terrain. Using resDef.bg leaked the resource's own colour
+          // (e.g. trees' green [0.07,0.1,0.03]) into the tile background, and it lingered after harvest
+          // while the tile was on cooldown. The land subterrains all share the dirt-brown bg, so this
+          // keeps the map background uniform.
+          bg = sub.bg as [number, number, number];
         } else {
           // Resource depleted or unknown — show base subterrain
           char = pickChar(sub, tile.x, tile.y);

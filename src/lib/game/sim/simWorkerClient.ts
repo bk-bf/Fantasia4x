@@ -11,6 +11,7 @@
 import { isClientRuntime } from '../core/runtime';
 import { realSimLogSink } from '../../stores/simLogBridge';
 import type { SimLogEvent, EntitySync } from './simProtocol';
+import type { TileDelta } from '../core/tileDeltas';
 import type { GameState, Pawn, Mob } from '../core/types';
 
 /**
@@ -124,12 +125,22 @@ class SimWorkerBridge {
     pawns?: EntitySync<Pawn>;
     mobs?: EntitySync<Mob>;
     worldMap?: GameState['worldMap'];
+    worldMapDelta?: TileDelta[];
     flush?: boolean;
     error?: string;
     events?: SimLogEvent[];
   }): void {
     if (m.kind === 'snapshot') {
-      if (m.worldMap) this.worldMap = m.worldMap;
+      if (m.worldMap) {
+        this.worldMap = m.worldMap;
+      } else if (m.worldMapDelta) {
+        // Patch the cached worldMap in place with the changed tiles (resource regrowth, …). Cheap vs.
+        // re-cloning all 38k tiles; the renderer rebuilds off the bumped _terrainRev, not a new ref.
+        for (const d of m.worldMapDelta) {
+          const row = this.worldMap[d.y];
+          if (row) row[d.x] = d.tile;
+        }
+      }
       // Merge the sectional diff onto the mirror: changed fields overwrite, unchanged ones keep
       // their refs (no re-clone). pawns/mobs are reconstructed from their per-entity mirrors and
       // worldMap from its own cache. A new top-level object each flush keeps the store reactive.

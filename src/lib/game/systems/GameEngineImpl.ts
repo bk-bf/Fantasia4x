@@ -32,6 +32,7 @@ import { isGameDebug, gatedConsole } from '../core/log';
 import type { WorkCategory } from '../core/types';
 import type { Pawn } from '../core/types';
 import { rng } from '../core/rng';
+import { markTileDirty } from '../core/tileDeltas';
 
 const AVAILABLE_BUILDINGS = buildingsData as unknown as import('../core/types').Building[];
 
@@ -202,13 +203,9 @@ export class GameEngineImpl implements GameEngine {
   private processResourceRegrowth(): void {
     if (!this.gameState) return;
     const gs = this.gameState;
-    let anyChanged = false;
 
-    // Cheap pre-scan: most ticks have no cooldown expiring. Rebuilding the whole
-    // worldMap (38,400 tiles → new row arrays + per-tile closure) every tick is a
-    // fixed O(map) tax independent of pawn count — catastrophic on large maps. Skip
-    // the allocation entirely unless at least one tile actually has an expired
-    // cooldown this tick.
+    // Cheap pre-scan: most ticks have no cooldown expiring. Skip the whole pass unless at least one
+    // tile actually has an expired cooldown this tick (the per-tile work below only runs then).
     let needsRegrowth = false;
     outer: for (const row of gs.worldMap) {
       for (const tile of row) {
@@ -224,17 +221,27 @@ export class GameEngineImpl implements GameEngine {
     }
     if (!needsRegrowth) return;
 
-    const newWorldMap = gs.worldMap.map((row) =>
-      row.map((tile) => {
+    // ADR-002 amendment + ADR-021 §4c: mutate the handful of expired tiles IN PLACE and ship them as
+    // worldMap *deltas* (markTileDirty). The old code rebuilt the whole 38k-tile worldMap (and flipped
+    // its ref → full structured-clone re-send) on every tick a cooldown expired — which during active
+    // 150-pawn harvesting is nearly every tick, the harvest-time TPS collapse. Tiles live only in the
+    // worldMap and are shipped via the dedicated delta channel, so in-place mutation is safe.
+    for (let y = 0; y < gs.worldMap.length; y++) {
+      const row = gs.worldMap[y];
+      for (let x = 0; x < row.length; x++) {
+        const tile = row[x];
         const cooldowns = tile.resourceCooldowns;
-        if (!cooldowns || Object.keys(cooldowns).length === 0) return tile;
+        if (!cooldowns) continue;
 
-        // Take a snapshot of the entries we need to process this turn.
-        const expiredEntries = Object.entries(cooldowns).filter(([, turn]) => gs.turn >= turn);
-        if (expiredEntries.length === 0) return tile;
+        // Collect the keys expiring this turn (snapshot before we start deleting).
+        let expiredKeys: string[] | null = null;
+        for (const k in cooldowns) {
+          if (gs.turn >= cooldowns[k]) (expiredKeys ??= []).push(k);
+        }
+        if (!expiredKeys) continue;
 
-        let updatedTile = tile;
-        for (const [key] of expiredEntries) {
+        let tileChanged = false;
+        for (const key of expiredKeys) {
           const isCompound = key.includes(':');
 
           if (isCompound) {
@@ -242,64 +249,56 @@ export class GameEngineImpl implements GameEngine {
             const colonIdx = key.indexOf(':');
             const resourceId = key.slice(0, colonIdx);
 
-            // Remove this yield's cooldown.
-            const newCooldowns = { ...updatedTile.resourceCooldowns };
-            delete newCooldowns[key];
-
-            // Check whether any other per-yield cooldowns for this resource remain.
-            const anyStillCooling = Object.keys(newCooldowns).some((k) =>
-              k.startsWith(resourceId + ':')
-            );
+            // Remove this yield's cooldown, then check whether any others for this resource remain.
+            delete cooldowns[key];
+            let anyStillCooling = false;
+            for (const k in cooldowns) {
+              if (k.startsWith(resourceId + ':')) {
+                anyStillCooling = true;
+                break;
+              }
+            }
 
             const def = resourceObjectService.getById(resourceId);
-            let newResourceCount: number;
             if (anyStillCooling) {
               // Partial recovery — make node available (count = 1) so a job can be
               // created, but only the non-cooled yields will actually be harvested.
-              newResourceCount = 1;
+              tile.resources[resourceId] = 1;
               gatedConsole.log(
                 `[Regrowth] ${key} at (${tile.x},${tile.y}) recovered (partial — other yields still cooling)`
               );
             } else {
               // All yields recovered — full random restore.
               const [minAmt, maxAmt] = def?.nodeAmountRange ?? [1, 3];
-              newResourceCount = minAmt + Math.floor(rng.random() * (maxAmt - minAmt + 1));
+              const newResourceCount = minAmt + Math.floor(rng.random() * (maxAmt - minAmt + 1));
+              tile.resources[resourceId] = newResourceCount;
+              // Restore blocking for non-walkable resources that have fully regrown.
+              if (def?.walkable === false) tile.walkable = false;
               gatedConsole.log(
                 `[Regrowth] ${resourceId} at (${tile.x},${tile.y}) fully restored ×${newResourceCount}`
               );
             }
-
-            updatedTile = {
-              ...updatedTile,
-              resources: { ...updatedTile.resources, [resourceId]: newResourceCount },
-              resourceCooldowns: newCooldowns,
-              // Restore blocking for non-walkable resources that have fully regrown.
-              ...(!anyStillCooling && def?.walkable === false ? { walkable: false } : {})
-            };
           } else {
             // Simple whole-resource cooldown.
             const def = resourceObjectService.getById(key);
             const [minAmt, maxAmt] = def?.nodeAmountRange ?? [1, 3];
             const restored = minAmt + Math.floor(rng.random() * (maxAmt - minAmt + 1));
 
-            const newCooldowns = { ...updatedTile.resourceCooldowns };
-            delete newCooldowns[key];
-            updatedTile = {
-              ...updatedTile,
-              resources: { ...updatedTile.resources, [key]: restored },
-              resourceCooldowns: newCooldowns,
-              // Restore blocking for non-walkable resources that have regrown.
-              ...(def?.walkable === false ? { walkable: false } : {})
-            };
+            delete cooldowns[key];
+            tile.resources[key] = restored;
+            // Restore blocking for non-walkable resources that have regrown.
+            if (def?.walkable === false) tile.walkable = false;
             gatedConsole.log(`[Regrowth] ${key} at (${tile.x},${tile.y}) regrew ×${restored}`);
           }
-          anyChanged = true;
+          tileChanged = true;
         }
-        return updatedTile;
-      })
-    );
 
-    if (anyChanged) this.gameState = { ...gs, worldMap: newWorldMap };
+        if (tileChanged) markTileDirty(y, x, tile);
+      }
+    }
+
+    // worldMap mutated in place (ref unchanged) → the snapshot publisher ships the marked tiles as a
+    // delta and bumps _terrainRev. No `this.gameState` reassignment, no full-map re-clone.
   }
 
   private debugLogPawns(): void {
