@@ -1,4 +1,4 @@
-<!-- LOC cap: 480 (created: 2026-06-14, rewritten 2026-06-14 post-profiling; worker shipped 2026-06-14; Rust-SoA pivot 2026-06-14 then ABORTED after R1 2026-06-15 → mutable-in-place JS; M1–M3 + throttle landed 2026-06-15, de-immutabling plateaued; 2026-06-15 custom profiler RETIRED → Firefox Profiler + pq; capacity/formula caches + the WORKER→MAIN SNAPSHOT (W2/W2b) broke the plateau → 80–100 TPS @4×; then de-immutabled pawn-patch spreads + paused warmup screen → 200+ TPS @4× after ~5s, GOAL CRUSHED 2026-06-15; then JS-allocation capture (§C) verified the de-immutable win + drove the harvest-time worldMap-delta fix) -->
+<!-- LOC cap: 490 (created: 2026-06-14, rewritten 2026-06-14 post-profiling; worker shipped 2026-06-14; Rust-SoA pivot 2026-06-14 then ABORTED after R1 2026-06-15 → mutable-in-place JS; M1–M3 + throttle landed 2026-06-15, de-immutabling plateaued; 2026-06-15 custom profiler RETIRED → Firefox Profiler + pq; capacity/formula caches + the WORKER→MAIN SNAPSHOT (W2/W2b) broke the plateau → 80–100 TPS @4×; then de-immutabled pawn-patch spreads + paused warmup screen → 200+ TPS @4× after ~5s, GOAL CRUSHED 2026-06-15; then JS-allocation capture (§C) verified the de-immutable win + drove the harvest-time worldMap-delta fix) -->
 
 # ENGINE PERFORMANCE & SCALING
 
@@ -231,12 +231,30 @@ per-func via stack walk).
 - ✅ **De-immutable win confirmed.** The four de-immutabled sites now allocate ~nothing: `updatePawnState`
   **0.19%**, `updateMorale` **0.12%**, `processMovement` 1.97%, `processNeedsTick` 1.63%. `post` doesn't
   appear (structured-clone is native, off the JS-alloc path).
-- ⚠️ **Next-lever ordering (inclusive JS-alloc):** `processResourceRegrowth` **18.9%** (FIXED below) ·
-  mob FSM `stepEntities`/`stepOne` 18.6% · `tickConditions` internals 13.0% (still builds `conditions`/
-  `limbs` arrays per tick — *separate* from the spread we fixed) · `nearestPawn` 10.6% (Rust-core
-  candidate) · `generateJobs`+`_syncHarvestJobs` ~8.6%. By class: 78% `Object`, **~13%
-  `LexicalEnvironment`+`Call`+`Function`** = **hot-loop closures** (per-tick `.map`/`.filter` lambdas) —
-  a cheap broad future win.
+- ⚠️ **Next-lever ordering (inclusive JS-alloc):** `processResourceRegrowth` **18.9%** (FIXED) · mob FSM
+  `stepEntities`/`stepOne` 18.6% · `tickConditions` internals 13.0% (**FIXED** — see below) · `nearestPawn`
+  10.6% (Rust-core candidate) · `generateJobs`+`_syncHarvestJobs` ~8.6%. By class: 78% `Object`, **~13%
+  `LexicalEnvironment`+`Call`+`Function`** = **hot-loop closures** (per-tick `.map`/`.filter` lambdas).
+- **The dominant single allocator is `next` (49% / 7.3 MB)** — a SpiderMonkey self-hosted iterator `.next`
+  (`next@392`, not our code), driven by allocation-heavy iteration in the *callers*: pre-fix
+  `processResourceRegrowth` **38%**, `tickConditions` 20.7%, `nearestPawn` 20.4%, then light/combat scans.
+  **Fixing `next` = killing `for…of`/`Object.entries` churn in the hot callers, not `next` itself.**
+
+### tickConditions — drop the per-tick clone (DONE)
+
+- [x] **Cause→fix:** `tickConditions` did `let conditions = [...pawn.conditions]` **every pawn every tick**
+  (a wasted clone for healthy pawns) + `applyConditionDriver` rebuilt the array on each change — 20.7% of
+  `next`. Now operates on the **live `pawn.conditions` in place** (`??=` once per pawn; `applyConditionDriver`
+  `push`/`splice`/index-assigns, returns `void`) → common path allocates **nothing**. conditions is a cold
+  snapshot field (resync) so in-place is safe; lethal branches keep immutable killPawn patches; logic
+  byte-identical (death-path suite green).
+
+### Next target — RE-CAPTURE FIRST
+
+- [ ] The remaining ordering above is from a capture that **predates both the regrowth and tickConditions
+  fixes** (which removed the #1 and a top-3 allocator). Don't optimise the mob FSM / `nearestPawn` / closures
+  blind against it — **take a fresh JS-allocation capture** so the next target reflects reality. (Project
+  lesson, §1/§10: every wrong turn came from optimising what was *assumed* hot.)
 
 ### The harvest fix — `processResourceRegrowth` in place + worldMap deltas (DONE)
 
