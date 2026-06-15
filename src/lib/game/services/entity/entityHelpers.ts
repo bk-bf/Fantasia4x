@@ -498,17 +498,22 @@ export function nearestPawn(
   mob: Mob,
   pawns: Pawn[]
 ): { pawn: Pawn; pos: { x: number; y: number } } | null {
-  let best: { pawn: Pawn; pos: { x: number; y: number } } | null = null;
+  // Hot path: called once per mob per tick (O(mobs × pawns) aggregate) — the #1 dip-correlated
+  // spatial cost (ENGINE-PERFORMANCE §C). Indexed loop (no `for…of` iterator allocation — the
+  // self-hosted `next` churn) + build the result object ONCE at the end (not per improvement).
+  let best: Pawn | null = null;
   let bestDist = Infinity;
-  for (const p of pawns) {
-    const pos = p.position!;
-    const d = Math.abs(pos.x - mob.x) + Math.abs(pos.y - mob.y);
+  const mx = mob.x;
+  const my = mob.y;
+  for (let i = 0; i < pawns.length; i++) {
+    const pos = pawns[i].position!;
+    const d = Math.abs(pos.x - mx) + Math.abs(pos.y - my);
     if (d < bestDist) {
       bestDist = d;
-      best = { pawn: p, pos };
+      best = pawns[i];
     }
   }
-  return best;
+  return best ? { pawn: best, pos: best.position! } : null;
 }
 
 export function dist(mob: Mob, pos: { x: number; y: number }): number {
