@@ -1,4 +1,4 @@
-<!-- LOC cap: 440 (created: 2026-06-14, rewritten 2026-06-14 post-profiling; worker shipped 2026-06-14; Rust-SoA pivot 2026-06-14 then ABORTED after R1 2026-06-15 → mutable-in-place JS; M1–M3 + throttle landed 2026-06-15, de-immutabling plateaued; 2026-06-15 custom profiler RETIRED → Firefox Profiler + pq; capacity/formula caches + the WORKER→MAIN SNAPSHOT (W2/W2b) broke the plateau → 80–100 TPS @4×) -->
+<!-- LOC cap: 440 (created: 2026-06-14, rewritten 2026-06-14 post-profiling; worker shipped 2026-06-14; Rust-SoA pivot 2026-06-14 then ABORTED after R1 2026-06-15 → mutable-in-place JS; M1–M3 + throttle landed 2026-06-15, de-immutabling plateaued; 2026-06-15 custom profiler RETIRED → Firefox Profiler + pq; capacity/formula caches + the WORKER→MAIN SNAPSHOT (W2/W2b) broke the plateau → 80–100 TPS @4×; then de-immutabled pawn-patch spreads + paused warmup screen → 200+ TPS @4× after ~5s, GOAL CRUSHED 2026-06-15) -->
 
 # ENGINE PERFORMANCE & SCALING
 
@@ -10,9 +10,9 @@ Profiling-driven performance work, measured on the heavy `--profiler` sandbox (1
 > **Scale note.** `1000×1000` map + `200–500` entities was an aspirational **ceiling**, never a
 > committed goal. The real bar is ~50 pawns + a moderate mob count, where the sim is trivially fast
 > (the per-entity tick at that scale is ~4–5 ms → 200+ TPS, 4× works). The heavy `--profiler` stress
-> case (150 pawns + ~140 mobs) is what these numbers track: it now runs **~70 FPS / ~44 TPS** (was
-> 2 fps / ~30 TPS at the start). The benchmark that chased the ceiling (R1) told us it wasn't worth a
-> rewrite (see ★ ACTIVE + §A + §9).
+> case (150 pawns + ~140 mobs) is what these numbers track: it now runs **comfortably 200+ TPS @4×**
+> after ~5 s warmup (was 2 fps / ~30 TPS at the start) — see §0. The benchmark that chased the ceiling
+> (R1) told us it wasn't worth a rewrite (see ★ ACTIVE + §A + §9).
 
 > **This spec has been rewritten twice as the work changed direction.** Original premise — *"O(n²)
 > perception is the #1 cost"* — **FALSIFIED by the profiler** (§1). Then the sim ceiling looked like
@@ -23,6 +23,17 @@ Profiling-driven performance work, measured on the heavy `--profiler` sandbox (1
 
 ## 0 · Status
 
+- **🏁 GOAL CRUSHED (2026-06-15, validated in-game): comfortably 200+ TPS @4×** on the giant
+  `--profiler` map after ~5 s of play (settles in 2–3 s post-unpause, climbs past 200 by ~5 s). The
+  full arc — worker decouple → W2/W2b snapshot → de-immutabling the residual pawn-patch spreads
+  (below) → **paused loading-screen warmup** (hides the worker-boot + WebGL-init GC ramp; player
+  unpauses manually) — lands far past the original 60-TPS bar. Firefox Profiler attached costs
+  **~2–3× TPS** (expected instrumentation tax); unprofiled is the real number.
+- **⚠️ Overload symptom (documented, NOT a priority):** running **multiple game instances at once**
+  produces **visuals glitching back-and-forth** — a sign of worker↔main bridge desync (the snapshot
+  mirror in `simWorkerClient` racing under starved CPU). Single-instance is the supported case; this
+  is just how "too much load" now expresses itself since the snapshot protocol replaced full-state
+  sync. If it ever surfaces single-instance, suspect the diff/resync reassembly in W2b.
 - **🏆 PLATEAU BROKEN (2026-06-15): the worker→main SNAPSHOT was the real ceiling, not sim compute.**
   After de-immutabling plateaued at ~44 TPS (below), function-level profiling of the *worker thread*
   (Firefox Profiler, §10) showed the dominant cost was **`post`** — the per-flush `structured-clone`
@@ -42,8 +53,10 @@ Profiling-driven performance work, measured on the heavy `--profiler` sandbox (1
 - **De-immutabling LANDED (M1–M3) + auto-defend throttle — plateaued, then SUPERSEDED.** Mutating the
   hot per-tick phases in place cut TOTAL **28–38 → ~22 ms (calm), TPS 30 → ~44**. It plateaued there
   (remaining sim cost is distributed compute) — and the snapshot work then leapfrogged it. The
-  residual **immutable pawn-patch spreads** (`CopyDataPropertiesUnfiltered`, now the #1 line at ~10%)
-  are the *next* lever if 100+ TPS is wanted (§B "next lever"). See ★ ACTIVE.
+  residual **immutable pawn-patch spreads** (`CopyDataPropertiesUnfiltered`, then the #1 line at ~10%)
+  were the *next* lever — **now LANDED (2026-06-15):** `updatePawnState`/`updateMorale`/`processMovement`
+  (PawnService) + `tickConditions` (PawnStateMachine) mutate the live pawn in place instead of rebuilding
+  the pawns array, killing the spread + O(n²) churn. Combined with the warmup screen → **200+ TPS** (top).
 - **Rust-SoA core: evaluated, spiked (R0/R1), then ABORTED (2026-06-15).** R1 (§9) measured it at
   ~1.2–1.4× over *mutable* JS — not worth a two-language rewrite. Parked (§A).
 - **At 290 entities, 60 TPS no longer needs parallelism** — the snapshot fix got the stress case to
