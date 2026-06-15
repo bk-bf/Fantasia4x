@@ -255,32 +255,39 @@ export function reapDeadPawns(gameState: GameState): GameState {
  * Advance or recover a need-driven condition per its conditions.jsonc `driver`. Pure — returns the
  * new conditions array. Rates are authored per-second; `perTick()` scales them to one tick.
  */
+// ADR-002 amendment (hot per-tick, behind the worker): mutate the live `conditions` array IN PLACE
+// rather than returning a fresh array. Called per driven-condition per pawn per tick; the immutable
+// `[...conditions]` rebuild was a top allocator (`next`/iterator churn, §C). The common case (need
+// below onset, condition absent) now allocates NOTHING.
 function applyConditionDriver(
   conditions: NonNullable<Pawn['conditions']>,
   def: ConditionDef,
   needVal: number
-): NonNullable<Pawn['conditions']> {
+): void {
   const d = def.driver!;
   const idx = conditions.findIndex((c) => c.id === def.id);
   if (needVal >= d.onset) {
     const rate = perTick(needVal >= 100 ? d.rateMax : d.rateCritical);
-    if (idx === -1) return [...conditions, { id: def.id, severity: rate }];
-    const next = [...conditions];
-    next[idx] = { ...next[idx], severity: Math.min(1.0, next[idx].severity + rate) };
-    return next;
+    if (idx === -1) conditions.push({ id: def.id, severity: rate });
+    else
+      conditions[idx] = {
+        ...conditions[idx],
+        severity: Math.min(1.0, conditions[idx].severity + rate)
+      };
+    return;
   }
   if (needVal < d.safe && idx !== -1) {
     const newSeverity = conditions[idx].severity - perTick(d.recovery);
-    const next = [...conditions];
-    if (newSeverity <= 0) next.splice(idx, 1);
-    else next[idx] = { ...next[idx], severity: newSeverity };
-    return next;
+    if (newSeverity <= 0) conditions.splice(idx, 1);
+    else conditions[idx] = { ...conditions[idx], severity: newSeverity };
   }
-  return conditions;
 }
 
 function tickConditions(pawn: Pawn, gameState: GameState): GameState {
-  let conditions = [...(pawn.conditions ?? [])];
+  // ADR-002 amendment: operate on the LIVE conditions array in place (no per-tick `[...]` clone — it
+  // was a top allocator for healthy pawns that never change, §C). conditions is a cold snapshot field
+  // (resync, ADR-021 W2b), so in-place mutation is safe. Initialised once per pawn if absent.
+  const conditions = (pawn.conditions ??= []);
   const maxBloodVolume = pawn.maxBloodVolume ?? 100;
   let bloodVolume = pawn.bloodVolume ?? maxBloodVolume;
   const limbs = pawn.limbs ?? [];
@@ -292,7 +299,7 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
   for (const def of CONDITIONS_DB) {
     if (!def.driver) continue;
     const needVal = needVals?.[def.driver.need] ?? 0;
-    conditions = applyConditionDriver(conditions, def, needVal);
+    applyConditionDriver(conditions, def, needVal);
     const current = conditions.find((c) => c.id === def.id);
     if (current && current.severity >= def.lethalSeverity) {
       return killPawn(
