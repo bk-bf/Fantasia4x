@@ -73,9 +73,13 @@ pawn FSM updaters (`transitionTo`/`goIdle`/`haltMovement` + the `mutatePawn` hel
 
 This is **safe and bounded** because: (1) `GameEngineImpl.processGameTurn` shallow-copies the
 top-level state each tick (turn bump), so ref-based reactivity still fires; (2) under `?simworker`
-the worker **structured-clones** the snapshot at the boundary, so the renderer/UI never see live
-mutable objects (no cross-thread aliasing); (3) the few in-tick before/after-diff spots capture an
-explicit copy. **Scope of the exception:** only the per-tick sim hot loops, behind the worker. The
+the worker→main snapshot crosses the boundary via `postMessage` (structured-clone), and the bridge
+reassembles entities onto a fresh per-id mirror (slim merge / full-resync — ADR-021 W2b), so the
+renderer/UI only ever see copies, never the worker's live mutable objects (no cross-thread aliasing);
+(3) the few in-tick before/after-diff spots capture an explicit copy. **Corollary the W2b snapshot
+relies on:** because hot fields mutate *in place* (no ref change), the snapshot can't detect changes
+by ref — so it sends a fixed slim projection every flush + periodic full resync, rather than a
+per-field ref-diff (ENGINE-PERFORMANCE §B). **Scope of the exception:** only the per-tick sim hot loops, behind the worker. The
 **command/structural path stays immutable through `GameStateManager`** (it's not hot, and immutability
 keeps it traceable). The undo/time-travel consequence above is therefore **forfeited for live entity
 state** (never used). **Do not "restore" immutability in the hot loops** — it reinstates the 12.5×
@@ -331,9 +335,9 @@ import { gatedConsole as console } from '../core/log';
 
 No call sites change. Applied to the per-tick services: `WorkService`, `PawnService`, `JobService`, `ResearchService`, `LocationServices`. Toggle at runtime from the dev console with `gameDebug(true)` (exposed via `globalThis.gameDebug = setGameDebug`); `isGameDebug()` gates any remaining heavy log-building (e.g. `GameEngineImpl.debugLogPawns()`).
 
-**2. On-demand tick profiler (in `GameEngineImpl`).** `processGameTurn()` wraps each phase in a `t(label, fn)` timer that is a pass-through no-op unless `globalThis.__profileTurns` is set. Enable with `profileTurns()` / disable with `profileTurns(false)` in the dev console. Average phase timings print as `[PROF] {...}` once per in-game second and persist at `globalThis.__profOut`. A nested `[PROF-PAWN]` breakdown inside `processPawns()` is gated by the same flag. **Trust `__profOut` (wall-clock), not the TPS counter, for sim cost.**
+**2. On-demand tick profiler — RETIRED 2026-06-15.** `processGameTurn()` used to wrap each phase in a `t(label, fn)` timer toggled by `profileTurns()` (`[PROF]`/`[PROF-PAWN]`/`__profOut`). **Removed:** the instrumentation scaled with entity count and, crucially, couldn't see the worker→main boundary — the cost that actually dominated once the sim went off-thread (ADR-021 §B). Profiling is now **browser-native**: Firefox Profiler → `pq` / `scripts/profile-self.mjs`. The `t()` runners are now no-op pass-throughs. *(The gated logger, point 1, stays.)*
 
-**3. `GameEngineImpl` itself does NOT shadow `console`** — its `[PROF]`/`[PROF-PAWN]` output must always print when the profiler is toggled on, independent of `gameDebug`.
+**3. `GameEngineImpl` console shadowing** — moot now the `[PROF]` output is gone; it still avoids shadowing `console` so real warnings surface.
 
 #### Consequences
 
@@ -672,9 +676,9 @@ wrapper choice.
 
 ### ADR-021 [GAME]: Sim/Render Decouple — Soft-Body Pathfinding, Terrain Cache, MAX_STEPS Cap, Sim→Worker
 
-- **Date**: 2026-06-14
-- **Status**: Accepted (bug-fixes landed; Worker is the active work)
-- **Spec**: [.tasks/open/ENGINE-PERFORMANCE.md](../.tasks/open/ENGINE-PERFORMANCE.md) · bugs in [BUGS.md](BUGS.md)
+- **Date**: 2026-06-14 (Worker + snapshot protocol landed 2026-06-15)
+- **Status**: Accepted (bug-fixes + Worker + W2/W2b snapshot protocol shipped; `?simworker` becoming default)
+- **Spec**: [.tasks/open/ENGINE-PERFORMANCE.md](../.tasks/open/ENGINE-PERFORMANCE.md) (§B = the snapshot win) · bugs in [BUGS.md](BUGS.md)
 
 #### Context
 
@@ -700,14 +704,25 @@ Fix the measured bugs, then **decouple the sim from the render thread**:
 4. **Sim → Web Worker** (the endgame) — move `GameEngineImpl` + services + WASM pathfinder into a
    worker; render interpolates from per-tick snapshots. Removes the `MAX_STEPS` tradeoff (sim runs
    full speed off-thread) and gives display-rate FPS regardless of sim cost. Wrapper-agnostic.
+5. **Slim worker→main snapshot protocol** (W2/W2b, the decisive win — added 2026-06-15). Once the sim
+   was off-thread, function-level profiling showed the **`structured-clone` of the whole `GameState`
+   every flush** was the dominant cost (~32%), not the sim. The fix: a **sectional diff** (send only
+   top-level fields whose ref changed; the bridge reassembles from a mirror) + **per-entity
+   slim/resync** for pawns/mobs (a slim projection of hot fields every flush, heavy/static cold fields
+   full-resynced ~every 8th flush; bridge merges onto a per-id mirror). `EntitySync` in `simProtocol.ts`.
 
 Deferred (not perf fixes): perception persistence/LoS (AI features), Rust sim core, SAB multicore,
 wrapper choice (ADR-020). The wrapper is **not** a performance lever — single-thread JS either way.
 
 #### Consequences
 
-- FPS 2 → 8–10 from steps 1–3 (measured). Two tradeoffs (MAX_STEPS cap, terrain throttle) remain
-  until the Worker removes them.
-- Perf bugs recorded in BUGS.md; instrumentation (`[RENDER-PROF]`/`[PROF]`/`profCount`) kept,
-  dev-gated, behind `__profileTurns`.
+- FPS 2 → 8–10 from steps 1–3; then the Worker (4) + slim snapshot (5) took the heavy stress case
+  to **80–100 TPS @4×, FPS 60–80, no sub-40 dips** — `post` (snapshot clone) 31.6% → 6.5%.
+- The `MAX_STEPS`/terrain-throttle tradeoffs are gone (Worker + `_terrainRev`).
+- **The custom in-game profiler was RETIRED** (it scaled with entity count and couldn't see the
+  worker boundary — the cost that actually mattered). Profiling is now **browser-native** (Firefox
+  Profiler → `pq`/`scripts/profile-self.mjs`); `[PROF]`/`profCount`/`?simprof`/`__profileTurns` removed.
+- **Two rejected sub-attempts (measured worse, reverted):** a TS uniform-grid for nearest-entity
+  queries (per-tick allocation > linear scan at ~290 entities) and `(pawns,mobs)`-memoized occupancy
+  (near-zero hit rate). See ENGINE-PERFORMANCE §B.
 - ADR-018 corrected (premise falsified); ADR-020's concrete ladder superseded here.

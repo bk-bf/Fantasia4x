@@ -1,4 +1,4 @@
-<!-- LOC cap: 400 (created: 2026-06-14, rewritten 2026-06-14 post-profiling; worker shipped 2026-06-14; Rust-SoA pivot 2026-06-14 then ABORTED after R1 2026-06-15 → mutable-in-place JS; M1–M3 + throttle landed 2026-06-15, de-immutabling plateaued) -->
+<!-- LOC cap: 440 (created: 2026-06-14, rewritten 2026-06-14 post-profiling; worker shipped 2026-06-14; Rust-SoA pivot 2026-06-14 then ABORTED after R1 2026-06-15 → mutable-in-place JS; M1–M3 + throttle landed 2026-06-15, de-immutabling plateaued; 2026-06-15 custom profiler RETIRED → Firefox Profiler + pq; capacity/formula caches + the WORKER→MAIN SNAPSHOT (W2/W2b) broke the plateau → 80–100 TPS @4×) -->
 
 # ENGINE PERFORMANCE & SCALING
 
@@ -23,26 +23,32 @@ Profiling-driven performance work, measured on the heavy `--profiler` sandbox (1
 
 ## 0 · Status
 
-- **Render decoupled, shipped:** FPS 2 → 8–10 (main-thread fixes), then **→ 35–80** with the **sim
-  moved to a Web Worker** (§4, W0–W5 shipped, flag-gated `?simworker`). `[RENDER-PROF]` shows
-  **`sim 0.0`** on the render thread, `gpuWait ~2.4 ms` — render is no longer the bottleneck.
-- **Sim ceiling found** (§8): off-thread, the worker is compute-bound on one core — 240×160 + 290
-  entities = **28–38 ms/tick**, ~0.4–0.6× realtime under load. Cost is the *aggregate* of ~290
-  entities running full FSM + needs + combat at 60 Hz.
-- **Rust-SoA core: evaluated, spiked (R0/R1), then ABORTED (2026-06-15).** The R1 benchmark (§9)
-  measured Rust-SoA at only **~1.2–1.4×** over plain *mutable* JS, and SoA-in-JS as **no win** over
-  mutable objects at this scale. Not worth a two-language rewrite. Spike kept, parked (§A).
-- **De-immutabling LANDED (M1–M3) + auto-defend throttle — now PLATEAUED.** Converting the hot
-  per-tick phases to mutate in place (needsTick, the whole pawns FSM hot path, mob needs) cut TOTAL
-  **28–38 ms → ~22 ms (calm), TPS 30 → ~44** — a real ~40% gain. But it has **plateaued**: the
-  remaining cost is *distributed compute* (`pawns` 6 + `entityStep` 5.3 + `combat` 2.5) plus the
-  `uiPush` snapshot clone (~3.3 ms), none of which mutation addresses. Combat-active scenes still
-  spike to ~34–38 ms (compute, not allocation). See ★ ACTIVE "Results".
-- **The findCombatThreat throttle was a near-non-win** (180 → ~80 calls/tick, but TPS unchanged — the
-  scan was cheap/cached all along; same lesson as `mobThreatSubsets`). Kept (harmless, right model).
-- **At 290 entities, 60 TPS likely needs the parked parallelism** (multicore/SoA, §A), not more
-  single-thread grinding. At the real ~50-pawn target the engine is already fine.
-- Decisions in ADR-021 (decouple). No ADR for a Rust core — it was aborted before locking in.
+- **🏆 PLATEAU BROKEN (2026-06-15): the worker→main SNAPSHOT was the real ceiling, not sim compute.**
+  After de-immutabling plateaued at ~44 TPS (below), function-level profiling of the *worker thread*
+  (Firefox Profiler, §10) showed the dominant cost was **`post`** — the per-flush `structured-clone`
+  of the whole `GameState` — at **~32%**, not the per-entity sim. Slimming that snapshot (§B, W2 +
+  W2b) took it **31.6% → 6.5%** and the heavy stress case from **~44 → 80–100 TPS @4×, FPS solid
+  60–80, no sub-40 dips.** This is **the** win of the perf arc. See §B + §10.
+- **Render decoupled, shipped:** FPS 2 → 8–10 (main-thread fixes), then **→ 60–80** with the **sim
+  moved to a Web Worker** (§4, W0–W5 shipped, `?simworker`). `sim 0.0` on the render thread — render
+  was never the bottleneck after the decouple; the worker→main boundary was.
+- **Two cheap caches also landed (pre-snapshot, §B):** per-pawn **capacity cache** (statCapacities
+  615→50 calls) and the **`evaluateFormula` compile-cache** (`new Function` was recompiling the
+  formula string ~328×/tick → cached). Both fell off the hot list entirely.
+- **Custom in-game profiler RETIRED (2026-06-15).** The `[PROF]`/`profCount`/`?simprof`
+  instrumentation *itself* starved the sim (~75% of per-tick cost was its console/log traffic). All
+  removed; profiling is now **browser-native**: Firefox Profiler → export → `pq` /
+  `scripts/profile-self.mjs` (headless JS-self-time reader). See §2 + §10.
+- **De-immutabling LANDED (M1–M3) + auto-defend throttle — plateaued, then SUPERSEDED.** Mutating the
+  hot per-tick phases in place cut TOTAL **28–38 → ~22 ms (calm), TPS 30 → ~44**. It plateaued there
+  (remaining sim cost is distributed compute) — and the snapshot work then leapfrogged it. The
+  residual **immutable pawn-patch spreads** (`CopyDataPropertiesUnfiltered`, now the #1 line at ~10%)
+  are the *next* lever if 100+ TPS is wanted (§B "next lever"). See ★ ACTIVE.
+- **Rust-SoA core: evaluated, spiked (R0/R1), then ABORTED (2026-06-15).** R1 (§9) measured it at
+  ~1.2–1.4× over *mutable* JS — not worth a two-language rewrite. Parked (§A).
+- **At 290 entities, 60 TPS no longer needs parallelism** — the snapshot fix got the stress case to
+  80–100 TPS @4× single-thread. The parked multicore/SoA (§A) is a *far*-larger-scale concern now.
+- Decisions in ADR-021 (decouple + snapshot protocol). No ADR for a Rust core — aborted before lock-in.
 
 ---
 
@@ -109,14 +115,83 @@ entity fields in place instead of rebuilding objects every tick.
 - **Combat-active scenes still spike to ~34–38 ms** — every phase rises (even mutable `needsTick`
   3 → 5.4, via wound/condition modifier math). This is compute, not allocation → de-immutabling
   can't reach it.
-- **Plateaued.** The alloc-bound phases are done. Remaining single-thread levers: `uiPush` snapshot
-  clone (~3.3 ms steady, ~2 ms recoverable via a slim/transferable snapshot — DECISION PENDING, may
-  not be felt) and RimWorld-style staggering of *other* 60 Hz per-pawn work (job re-selection,
-  modifier eval — caching candidates, unmeasured). Past that, 60 TPS at 290 entities needs the parked
-  multicore/SoA (§A); the real ~50-pawn target is already fine.
+- **Plateaued — then leapfrogged by the snapshot (§B).** The alloc-bound *sim* phases were done, but
+  the "remaining lever" flagged here — the `uiPush`/snapshot clone — turned out to be the **dominant**
+  cost once measured on the worker thread (not ~3.3 ms steady but **~32%** of worker time on flush
+  ticks). Slimming it (§B, W2/W2b) is what actually broke the plateau (44 → 80–100 TPS). Lesson again:
+  the suspected-minor lever was the real ceiling — **measure the boundary, not just the sim.**
 
 **Acceptance (revised):** ~60 TPS at the *real* (~50-pawn) scale — met. At the 290-entity stress
-case, ~44 TPS single-thread is the measured ceiling without parallelism; not a release bar.
+case, ~44 TPS single-thread *was* the measured ceiling without parallelism — **until §B** lifted it
+to 80–100 TPS @4× by attacking the worker→main boundary instead of the sim.
+
+---
+
+## §B · 🏆 THE BREAKTHROUGH — slimming the worker→main snapshot (W2/W2b, 2026-06-15)
+
+**The whole plateau was a measurement gap.** De-immutabling optimised the *sim*; nobody had profiled
+the **worker→main boundary**. Function-level Firefox-Profiler captures of the worker thread (§10)
+showed `post` — the per-flush `structured-clone` of the whole `GameState` — was the **single biggest
+cost (~32%)**, dwarfing any sim phase. The sim was never the ceiling at this scale; **shipping state
+to the renderer was.**
+
+### What landed (in order, each measured)
+
+- [x] **Capacity cache + `evaluateFormula` compile-cache** (pre-snapshot). `computeCapacities` memoised
+  per pawn (invalidated by `limbs`/`injuries` ref identity — combat replaces both by-ref, so O(1)
+  exact); `evaluateFormula` caches the compiled `new Function` per formula string (was recompiling
+  ~328×/tick). Both dropped off the hot list (`statCapacities` 615→50; `evaluateFormula` ~15-17% → 0.4%).
+- [x] **id → `Map` indexes.** `getBuildingById`/`getItemById` were per-call `.find()` over the static
+  DBs → indexed once. `getBuildingById/<` **3.6% → 1.4%**, `find` 2.9% → 1.8%. *(Not Rust — these are
+  static-array lookups; a `Map` is correct, WASM would mean marshalling objects.)*
+- [x] **W2 — sectional-diff snapshot.** Instead of re-cloning the whole `GameState` every flush, send
+  only the **top-level fields whose ref changed** (immutable updates leave unchanged sections ref-stable
+  → skipped); the bridge reassembles from a mirror. worldMap stays special-cased. **`post` 31.6 → 20.7%.**
+- [x] **W2b — per-entity slim + periodic resync** (`EntitySync` in `simProtocol.ts`). pawns/mobs were
+  still the bulk. Each flush now sends a **slim projection** (every field *except* the heavy/static cold
+  set: `limbs/injuries/inventory/equipment/skills/conditions/stats/traits/…`), keeping
+  position/needs/state/combat-scalars live; the cold fields **full-resync every 8th flush (~2 Hz)**.
+  The bridge keeps a per-id mirror and merges slim onto it. **`post` 20.7 → 6.5%.** *This is the win.*
+  - **Why slim-projection, not per-field ref-diff:** the mutable-in-place model (★ ACTIVE) means
+    `mutatePawn`/`processNeedsTick` change fields *without* changing refs → ref-diffing silently
+    misses them. The periodic full resync is the correctness backstop (≤8 flushes / ~0.5 s stale on
+    cold fields, never permanently wrong); new entities are always sent full so no field is undefined.
+
+### Result (user-confirmed)
+
+**~44 → 80–100 TPS @4×; FPS solid 60–80; the volatile sub-40 dips are gone.** Cross-comparison of
+worker-thread JS self-time across three captures (§10 has the workflow; shares are within-capture):
+
+| function | A: pre-session | B: +sectional+maps+grid+occ | C: +W2b, grid/occ reverted |
+| -------- | -------------- | --------------------------- | -------------------------- |
+| `post` (snapshot clone) | **31.6%** | 20.7% | **6.5%** ✅ |
+| `getBuildingById` | 3.6% | 1.4% | 2.1%¹ |
+| spatial-grid overhead | — | ~8.8%² | **0%** (reverted) |
+| `CopyDataPropertiesUnfiltered` | 6.9% | 7.4% | **10.3%** (now #1) |
+
+¹ Reads higher in C only because the denominator collapsed (post got out of the way), not slower.
+² `nearest/<` 3.3 + `scanCell` 1.6 + `stepEntities/pawnIndex<` 2.4 + `add` 1.5 — see "rejected" below.
+
+### Rejected & reverted (measured worse — recorded so we don't re-litigate)
+
+- [x] **TS uniform-grid spatial index for `nearest*`** (`nearestPawn`/`Predator`/`AdjacentHostile`).
+  Theory: O(n²) scans → grid. **Reality at ~290 entities: a net LOSS** — building a Map + buckets +
+  `getX/getY` closures *every tick* cost ~8.8% vs the ~5.7% the linear scans cost, and the per-tick
+  allocations caused GC churn (frame instability). Grids only pay off in the thousands; the
+  JIT-inlined linear scan wins here. **Reverted.** (Re-open only if entity counts explode.)
+- [x] **`(pawns,mobs)`-identity memoization of `blockedTiles`.** `processMovement` rebuilds the
+  `pawns` array on every patch → the cache key invalidated constantly (near-zero hit rate), and the
+  extra bookkeeping cost more than the plain scan (1.0% → ~2.1%). **Reverted** to the plain per-tick scan.
+
+### Next lever (open — not yet pursued)
+
+- [ ] **De-immutable the residual pawn-patch spreads.** `CopyDataPropertiesUnfiltered` (~10%, now #1)
+  is `tickConditions`/`updateMorale`/`updatePawnState`/`processMovement` doing `.map(p => ({...p}))`
+  over all pawns each tick. It didn't get *worse* — it's just the last big thing standing now the
+  snapshot is solved. This is the ADR-002 mutable-in-place direction (★ ACTIVE), the natural path to
+  100+ TPS. Deferred until wanted.
+- [ ] **worldMap deltas** — still re-sends the whole 38k-tile array on any tile change (§4c). Only if
+  active-harvest bursts re-introduce hitching.
 
 ---
 
@@ -166,7 +241,7 @@ two-language cost. Reusable from the attempt: the worker boundary/command regist
 
 ## 2 · What actually landed (measured, free wins = real bugs)
 
-- [x] **Profiler tooling** — honest FPS counter + per-frame `[RENDER-PROF]` (sim/overlay/renderCPU/gpuWait split, paused-vs-running tagged, bg-throttle flagged), `[SYS]` host caps, all persisted to `.debug/perf.log` via the `PERF` tag. Plus per-phase `[PROF]` + `profCount` instrumentation (`#pathReq.*`, `#pathFail.*`, `#tMiss.*`, `#terrainCacheHit`). Commits `02c4dfd`, `250b55f`, `4482dba`, `cf94bed`, `0c02800`.
+- [x] **Profiler tooling — built, used, then RETIRED (2026-06-15).** The honest FPS counter + per-frame `[RENDER-PROF]` + per-phase `[PROF]`/`profCount` instrumentation found the early wins (below), but the instrumentation *itself* became ~75% of per-tick cost (console/log traffic scaling with entity count) and couldn't see the worker→main boundary. **All removed** (`[PROF]`/`profCount`/`?simprof`/`USE_SIM_PROFILE`/the custom profiler scenario auto-enable). Replaced by browser-native profiling — see §10. The free wins it *did* surface (soft-body pathfinding, terrain VBO/cache) are below; commits `02c4dfd`, `250b55f`, `4482dba`, `cf94bed`, `0c02800`.
 - [x] **Soft-body pathfinding** (`b9726e1`) — **the big one.** Under load, 145 A*/tick with **96 % failing as `bodyBlocked`**: ADR-014 hard occupancy made every pawn/mob an impassable wall, so A* to a body-walled goal **flooded the whole reachable region** before returning empty, retried every tick. `buildPathfindingGridsSoftBlocked` makes bodies **high-cost, not walls** → A* never fails on bodies; no-stacking still enforced at the movement layer (`stepBody`). **Result: `pawns` 94 → 4 ms; `#pathReq` 145 → 0.5; `#pathFail.bodyBlocked` → 0.** (Amends ADR-014 — see ADR-021.)
 - [x] **Dedicated terrain VBO** (`d2738d2`) — terrain + entity-overlay shared one VBO, so the overlay clobbered it every frame and the 38k-tile (~21 MB) terrain buffer re-uploaded every frame. Terrain now has its own VBO, uploaded only on change.
 - [x] **Coalesced terrain rebuilds** (`1c4227c`) — `setGrid` bumped `gridVersion` every frame (designation/worldMap refs churn per tick), invalidating the vertex cache → 90 ms rebuild/frame (`#terrainCacheHit` was **0**). All sim-driven terrain rebuilds now coalesce to ~2/sec → cache hits. **Result: terrain pass 90 → ~10 ms on most frames; `#terrainCacheHit` > miss.**
@@ -214,8 +289,8 @@ These were the main-thread band-aids. The worker cutover (§4) made both obsolet
 
 ### 4c · Known gaps (before flipping the worker default ON)
 
-- [ ] **Two request-response commands** — `createZoneInstance` + `gameCoordinator.craftItem` return a value, so they don't fit the fire-and-forget registry; **broken under `?simworker`** until a reply-id channel is added. This is why the cutover stays default-OFF.
-- [ ] **Slim `Float32Array` / transferable snapshot** — the worker→main `structured-clone` (`uiPush` ~3.3 ms steady, concentrated on flush ticks) is now the **largest single remaining lever** (~2 ms recoverable). **DECISION PENDING** (★ ACTIVE Results): a protocol change for ~2 ms the user likely won't *feel* — do it only if pushing the stress case further is wanted.
+- [ ] **Two request-response commands** — `createZoneInstance` + `gameCoordinator.craftItem` return a value, so they don't fit the fire-and-forget registry; they **bypass the worker** (operate on the stale projection) under `?simworker`. Being converted to real worker commands as part of flipping the default ON.
+- [x] **Slim snapshot — DONE, and it was the whole game (§B).** The hunch here ("~2 ms the user won't feel") was *wrong*: measured on the worker thread, the snapshot clone was **~32%**, the dominant cost. Slimmed via the W2 sectional diff + W2b per-entity slim/resync → `post` 31.6 → 6.5%, 44 → 80–100 TPS. (No `Float32Array` needed yet — slim structured-clone was enough.)
 - [ ] **worldMap deltas** — re-sends the whole 38k-tile array on any tile change; send changed-tile deltas if active-harvesting bursts re-introduce hitching.
 
 ---
@@ -243,6 +318,8 @@ These were the main-thread band-aids. The worker cutover (§4) made both obsolet
 | **JS-SoA core (typed arrays, no Rust)** | **Rejected (R1)** | SoA showed *no* win over mutable OOP in JS at 500 entities (index math costs more than it saves until cache-bound). The lever is immutable→mutable, not layout. |
 | Throttle `findCombatThreat`/auto-defend | **Kept, ~non-win** | 180 → ~80 calls/tick but TPS unchanged — the scan uses a cached hostile subset (cheap). Harmless + the right model (RimWorld staggering), so kept; not the lever. |
 | **M4 — de-immutable `combat`** | **Dropped** | Combat-active cost is *compute* (attack resolution, wounds, A*), not allocation. ~1 ms for the `preCombatState`/`handleFreshCombatCorpses` before/after-diff rewrite risk — not worth it. |
+| **TS uniform-grid for `nearest*`** | **Reverted (§B)** | At ~290 entities, building a grid (Map+buckets+closures) every tick cost ~8.8% vs ~5.7% for the linear scans + GC churn. Grids win only in the thousands; JIT-inlined linear scan wins here. |
+| **`(pawns,mobs)`-memoized `blockedTiles`** | **Reverted (§B)** | `processMovement` rebuilds `pawns` every patch → near-zero cache hit rate; bookkeeping cost more than the plain scan (1.0 → ~2.1%). |
 | Switch wrapper (Electron/Tauri) **for perf** | **Rejected** | Single-thread JS either way; decide wrapper on distribution grounds later. |
 | Fork Electron / embed SpiderMonkey | **Rejected** | Team-years for ~zero gain. |
 
@@ -250,7 +327,7 @@ These were the main-thread band-aids. The worker cutover (§4) made both obsolet
 
 ## 7 · ADRs & status
 
-- [x] ADR-021 — Sim/render decouple: soft-body pathfinding (amends ADR-014), terrain VBO/cache, sim→Worker (W0–W5 shipped, flag-gated), `_terrainRev` change-signal, wall-clock batch budget. **The accepted perf direction.**
+- [x] ADR-021 — Sim/render decouple: soft-body pathfinding (amends ADR-014), terrain VBO/cache, sim→Worker (W0–W5 shipped), `_terrainRev` change-signal, wall-clock batch budget, **and the W2/W2b snapshot protocol (sectional diff + per-entity slim/resync, §B) — the cost that actually mattered.** **The accepted perf direction.**
 - [x] ADR-018 — **corrected**: "perception is the #1 perf cost" falsified; persistence/push retained as a deferred AI-correctness feature (§5).
 - [x] ADR-019 (LoS) / ADR-020 (scaling ladder) — point at the real findings + the Worker.
 - [ ] **No ADR for a Rust core** — it was spiked (R0/R1) and aborted (§A) before locking in. If the **mutable-in-place** refactor (★ ACTIVE) is locked in as a pattern, or a partial Rust port is ever resumed, write an ADR then.
@@ -303,3 +380,26 @@ JS ≈ 1.2×**; SoA-layout "win" over mutable OOP = 0.9× (a loss).
 **Conclusion:** the lever is **mutable-vs-immutable (12.5×)**, not OOP-vs-SoA (≤1×) and not JS-vs-Rust
 (~1.2×). A two-language Rust-SoA rewrite buys almost nothing the immutable→mutable change doesn't —
 so the port is **aborted** (§A) and the active work is **de-immutabling the hot loops** (★ ACTIVE).
+
+---
+
+## 10 · Profiling workflow — browser-native (replaced the custom profiler, 2026-06-15)
+
+The in-game `[PROF]`/`profCount` profiler was retired (§2): it scaled with entity count and couldn't
+see the worker→main boundary — the very cost that turned out to dominate (§B). Profiling is now done
+**by the browser**, off the game's hot path entirely:
+
+- [x] **Capture:** run the heavy sandbox (`./dev.sh --profiler` → `VITE_PROFILER` heavy scene, 4×,
+  `?simworker`) in Firefox/Zen, record a heavy-moment with the **Firefox Profiler**, *Download* the
+  `.json` into `.debug/`. (Automated headless capture via `MOZ_PROFILER_STARTUP` was attempted and
+  **abandoned** — a 2nd Zen instance hits "channel error" alongside a running one, and headless WebGL
+  fails the framebuffer; manual record→download is the working loop.)
+- [x] **Read (headless, scriptable):** `node scripts/profile-self.mjs [file] [topN]` — attributes each
+  sample to its deepest `isJS` frame and prints **true JS self-time per function** for each worker
+  thread, flagging the sim worker. This is how the §B cross-comparison was produced. The
+  `@firefox-devtools/profiler-cli` (`pq`) is also a devDep for interactive querying of the same exports.
+- **`firefox-devtools-mcp`** can drive a live browser but has **no profiler-capture tool** and rejects
+  Zen's binary (`--version` reports "Zen" not "Firefox") — not usable for capture here.
+- **Lesson of the whole arc:** instrument the *boundary*, not just the sim. Every wrong turn (O(n²)
+  perception §1, the Rust pivot §A, the de-immutable plateau ★ ACTIVE) came from optimising what was
+  *assumed* hot; every win came from a function-level capture of what *actually* was.

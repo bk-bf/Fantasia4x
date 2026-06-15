@@ -114,10 +114,11 @@ Gemini API calls live exclusively in `src/routes/api/`. Client code calls the ro
 
 ## Performance & Observability
 
-`processGameTurn()` is one tick; the sim runs at `TICKS_PER_SECOND = 60` (`core/time.ts`) on a `setInterval` in `stores/gameState.ts`. See ADR-011 and [SIMULATION-PERF](../.tasks/open/SIMULATION-PERF.md) for full detail.
+`processGameTurn()` is one tick. The sim runs in a **Web Worker** (`sim/sim.worker.ts`, ADR-021) at `TICKS_PER_SECOND = 60`; the worker owns the canonical `GameState` and the main thread is a **read-only projection** fed by per-flush snapshots. Player/dev actions are serializable **commands** posted to the worker (`sim/commands.ts`). Full detail: [ENGINE-PERFORMANCE](../.tasks/open/ENGINE-PERFORMANCE.md).
 
-- **Tick profiler** — `profileTurns()` / `profileTurns(false)` in the dev console toggles a per-phase wall-clock timer (zero cost when off). Averages print as `[PROF]` once per second and persist at `globalThis.__profOut`. Trust `__profOut`, not the TPS counter (unreliable under CDP/HMR).
-- **Gated logging** (`core/log.ts`) — hot-path modules do `import { gatedConsole as console } from '../core/log'` to silence per-tick `log`/`debug`/`info`/`warn` (errors stay live). Off by default; enable at runtime with `gameDebug(true)`. Hot-path logging was ~75% of per-tick cost before this. New per-tick code must use the shim, not the global `console`.
+- **Worker→main snapshot (the perf-critical path, ADR-021 W2/W2b — ENGINE-PERFORMANCE §B).** Cloning the whole `GameState` every flush was ~32% of worker time. Now: a **sectional diff** (only top-level fields whose ref changed) + **per-entity slim/resync** for pawns/mobs (slim hot-field projection every flush; heavy cold fields full-resynced ~every 8th flush), reassembled on a per-id mirror in `simWorkerClient`. Took the heavy stress case to **80–100 TPS @4×**. Protocol in `sim/simProtocol.ts` (`EntitySync`).
+- **Profiling is browser-native** (the custom in-game profiler was retired — it scaled with entity count and couldn't see the worker boundary). Capture with the **Firefox Profiler** on the `--profiler` sandbox, read headless via `scripts/profile-self.mjs` (JS self-time per worker function) or `pq`. See ENGINE-PERFORMANCE §10.
+- **Gated logging** (`core/log.ts`) — hot-path modules do `import { gatedConsole as console } from '../core/log'` to silence per-tick `log`/`debug`/`info`/`warn` (errors stay live). Hot-path logging was ~75% of per-tick cost before this. New per-tick code must use the shim, not the global `console`.
 
 ## Known Architectural Debt
 
