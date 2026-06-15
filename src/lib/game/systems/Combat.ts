@@ -903,25 +903,30 @@ class CombatServiceImpl implements CombatService {
     }
     profAdd('combat.pawnAtk', performance.now() - _tPawn);
 
-    // Apply this tick's attack-drain, then regen + winded latch for EVERY alive entity (so a
-    // winded one recovers even after the fight ends). The drain map is folded in first so the
-    // latch sees the post-attack stamina. NOTE: this maps ALL mobs + pawns every tick even at
-    // peace — `combat.stamina` measures that always-on baseline cost.
+    // Apply this tick's attack-drain, then regen + winded latch for EVERY alive entity (so a winded
+    // one recovers even after the fight ends). #2 (ENGINE-PERFORMANCE): tickStaminaAndWinded already
+    // returns the SAME ref for a full/not-winded entity (the common case), so rebuild each array
+    // COPY-ON-WRITE — only allocate (and only once) if some entity actually changed. At peace nothing
+    // changes → zero array allocation, vs the old unconditional double `.map`. (Inner evaluateStat is
+    // now cached by #1.) Kept immutable — no mutation risk in the combat phase.
     const _tStam = performance.now();
+    const tickAll = <T extends Pawn | Mob>(arr: T[], drain: Map<string, number>): T[] => {
+      let out: T[] | null = null;
+      for (let i = 0; i < arr.length; i++) {
+        const e = arr[i];
+        const drained = drain.has(e.id) ? { ...e, stamina: drain.get(e.id)! } : e;
+        const r = this.tickStaminaAndWinded(drained);
+        if (r !== e) {
+          if (!out) out = arr.slice();
+          out[i] = r;
+        }
+      }
+      return out ?? arr;
+    };
     next = {
       ...next,
-      mobs: (next.mobs ?? []).map((m) => {
-        const drained = mobStaminaUpdates.has(m.id)
-          ? { ...m, stamina: mobStaminaUpdates.get(m.id)! }
-          : m;
-        return this.tickStaminaAndWinded(drained);
-      }),
-      pawns: next.pawns.map((p) => {
-        const drained = pawnStaminaUpdates.has(p.id)
-          ? { ...p, stamina: pawnStaminaUpdates.get(p.id)! }
-          : p;
-        return this.tickStaminaAndWinded(drained);
-      })
+      mobs: tickAll(next.mobs ?? [], mobStaminaUpdates),
+      pawns: tickAll(next.pawns, pawnStaminaUpdates)
     };
     profAdd('combat.stamina', performance.now() - _tStam);
 

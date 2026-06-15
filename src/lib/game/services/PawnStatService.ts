@@ -281,8 +281,33 @@ export interface PawnStatService {
 }
 
 export class PawnStatServiceImpl implements PawnStatService {
+  // #1 capacity cache (ENGINE-PERFORMANCE): keyed by entity id, validated by limbs+injuries ARRAY
+  // IDENTITY. Capacities depend only on those two (+ light for sight); both are replaced
+  // by-reference when they change (combat damage / healing are immutable), so ref-equality is an
+  // exact O(1) "unchanged?" check — RimWorld-style recompute-only-on-change. Profiler showed ~615
+  // computeCapacities/tick; most entities are unwounded most ticks → cache hit → ~0.
+  private _capCache = new Map<
+    string,
+    { limbs: unknown; injuries: unknown; caps: Record<string, number> }
+  >();
+
   computeCapacities(pawn: Pawn | Mob, lightMultiplier?: number): Record<string, number> {
-    profCount('statCapacities'); // dev profiler: how often the capacity/formula eval fires per tick
+    // Light varies per tile/time and feeds `sight` (→ consciousness), so light-affected calls
+    // (getWorkModifiers) can't share the cache — only the no-light path (evaluateStat + direct
+    // calls, the ~465/tick bulk) is cached.
+    if (lightMultiplier === undefined) {
+      const c = this._capCache.get(pawn.id);
+      if (c && c.limbs === pawn.limbs && c.injuries === pawn.injuries) return c.caps;
+      const caps = this._buildCapacities(pawn, undefined);
+      if (this._capCache.size > 2048) this._capCache.clear(); // bound memory across entity churn
+      this._capCache.set(pawn.id, { limbs: pawn.limbs, injuries: pawn.injuries, caps });
+      return caps;
+    }
+    return this._buildCapacities(pawn, lightMultiplier);
+  }
+
+  private _buildCapacities(pawn: Pawn | Mob, lightMultiplier?: number): Record<string, number> {
+    profCount('statCapacities'); // counts ACTUAL formula evals (post-cache) — verifies the cache
     const capacities: Record<string, number> = {};
     // Order matters: pain → sight → hearing → consciousness → everything else
     const capacityIds = [

@@ -65,7 +65,9 @@ export function stepHunger(state: GameState): GameState {
     const healthDelta = newHunger >= 100 ? -(STARVATION_DAMAGE_PER_SECOND * SECONDS_PER_TICK) : 0;
 
     // ── Blood loss ──────────────────────────────────────────────────────────────────
-    const limbs = mob.limbs ? [...mob.limbs] : undefined;
+    // Read limbs by reference (never mutated here) — copying it each tick would needlessly churn the
+    // array AND break the limbs-identity capacity cache (PawnStatService) for every mob.
+    const limbs = mob.limbs;
     const totalBleedRate = (limbs ?? []).reduce((sum, l) => sum + (l.bleedRate ?? 0), 0);
     const maxBV = mob.maxBloodVolume ?? 100;
     let bloodVolume = mob.bloodVolume ?? maxBV;
