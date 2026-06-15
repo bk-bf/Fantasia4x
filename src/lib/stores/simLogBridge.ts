@@ -9,6 +9,7 @@
 import { setSimLogSink, type SimLogSink } from '$lib/game/core/logSink';
 import {
   logActivity,
+  logDiag,
   logHuntStart,
   logFlee,
   logEntityStateChange,
@@ -25,6 +26,7 @@ import { combatFeedback } from './combatFeedback';
  */
 export const realSimLogSink: SimLogSink = {
   logActivity,
+  logEvent: logDiag,
   logCombatSwing,
   logCombatKill,
   pushCombatText: (req) => combatFeedback.push(req),

@@ -134,7 +134,13 @@ export interface ActivityLogEntry {
     | 'exploration'
     | 'system'
     | 'combat'
-    | 'entity';
+    | 'entity'
+    // Diagnostic categories (unified logging): low-volume always-on (job, perf) +
+    // high-volume verbose traces (ai, needs) gated behind --debug/--profiler.
+    | 'ai'
+    | 'needs'
+    | 'job'
+    | 'perf';
   actor?: string; // Pawn ID or 'system'
   action: string;
   target?: string;
@@ -150,6 +156,10 @@ export interface ActivityLogEntry {
   /** Per-turn combat breakdown — shown when expanding a combat log entry. */
   combatBreakdown?: CombatTurnEntry[];
 }
+
+/** Log categories = the `ActivityLogEntry.type` union — the single dimension the unified log
+ *  pipeline routes/filters on (in-game tab + per-category `.debug/<category>.log` agent files). */
+export type LogCategory = ActivityLogEntry['type'];
 
 // Enhanced Event System
 export class EventSystem {

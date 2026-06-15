@@ -17,7 +17,7 @@ import { gameEngine } from '../systems/GameEngineImpl';
 import { rng } from '../core/rng';
 import { resetUnreachableJobs } from '../systems/PawnStateMachine';
 import { TICKS_PER_SECOND } from '../core/time';
-import { setSimLogSink, type SimLogSink } from '../core/logSink';
+import { setSimLogSink, simLog, type SimLogSink } from '../core/logSink';
 import { applySimCommand } from './commands';
 import type { SimLogEvent, EntitySync } from './simProtocol';
 import type { GameState, Pawn, Mob } from '../core/types';
@@ -39,6 +39,10 @@ const MAX_BACKLOG_MS = 150;
 
 let speed = 1;
 let paused = true;
+// perf sampler (~1 Hz): a low-rate TPS/load line into the unified log's `perf` category, so the
+// agent can fetch `.debug/perf.log` without the retired per-tick firehose. Cheap (one entry/sec).
+let perfTicksAccum = 0;
+let perfWindowStart = 0;
 let accMs = 0;
 let lastBatch = 0;
 let loop: ReturnType<typeof setInterval> | null = null;
@@ -93,6 +97,7 @@ function installForwardingLogSink() {
       logBuffer.push({ m: 'logActivity', a });
       return '';
     },
+    logEvent: fwd('logEvent'),
     logCombatSwing: fwd('logCombatSwing'),
     logCombatKill: fwd('logCombatKill'),
     pushCombatText: fwd('pushCombatText'),
@@ -271,6 +276,26 @@ function batch() {
   // Compute-bound: clamp (don't zero) the carried backlog so a higher speed keeps driving extra
   // ticks across batches, while bounding it so it can't spiral into ever-longer locked catch-up.
   if (accMs > MAX_BACKLOG_MS) accMs = MAX_BACKLOG_MS;
+
+  // ── perf sampler (~1 Hz) ──
+  perfTicksAccum += steps;
+  if (perfWindowStart === 0) perfWindowStart = now;
+  const perfElapsed = now - perfWindowStart;
+  if (perfElapsed >= 1000) {
+    // Skip windows bloated by a pause/stall (they'd report a bogus TPS).
+    if (perfElapsed < 3000 && perfTicksAccum > 0) {
+      const tps = Math.round((perfTicksAccum * 1000) / perfElapsed);
+      const gs = gameEngine.getGameState();
+      simLog.logEvent({
+        category: 'perf',
+        turn: gs.turn,
+        message: `tps=${tps} speed=${speed}x pawns=${gs.pawns.length} mobs=${(gs.mobs ?? []).length}`
+      });
+    }
+    perfTicksAccum = 0;
+    perfWindowStart = now;
+  }
+
   flushLog(); // ship combat-text/chronicle emitted during this batch's ticks
 }
 

@@ -1,4 +1,16 @@
-import type { ActivityLogEntry, CombatTurnEntry } from './Events';
+import type { ActivityLogEntry, CombatTurnEntry, LogCategory } from './Events';
+
+/**
+ * A lean structured log entry for the unified log pipeline (combat/work/event narrative still use
+ * the richer `logActivity`). Routed by `category` to the in-game debug tab + `.debug/<category>.log`.
+ */
+export interface LogEventInput {
+  category: LogCategory;
+  severity?: ActivityLogEntry['severity'];
+  turn: number;
+  message: string;
+  data?: Record<string, unknown>;
+}
 
 /**
  * P-3: log/feedback sink for the simulation layer.
@@ -24,6 +36,9 @@ export interface CombatTextRequest {
 export interface SimLogSink {
   /** Append a raw chronicle entry; returns the generated entry id. */
   logActivity(entry: Omit<ActivityLogEntry, 'id' | 'timestamp'>): string;
+
+  /** Append a lean structured diagnostic entry (perf/ai/needs/job/system) to the unified log. */
+  logEvent(e: LogEventInput): void;
 
   // ----- combat (systems/Combat) -----
   logCombatSwing(
@@ -90,6 +105,7 @@ export interface SimLogSink {
 /** Default no-op sink: a headless sim (and the test suite) logs nothing until a real sink is set. */
 const noopSink: SimLogSink = {
   logActivity: () => '',
+  logEvent: () => {},
   logCombatSwing: () => {},
   logCombatKill: () => {},
   pushCombatText: () => {},
@@ -108,4 +124,32 @@ export let simLog: SimLogSink = noopSink;
 /** Register the real sink (called once from the store layer at startup). */
 export function setSimLogSink(sink: SimLogSink): void {
   simLog = sink;
+}
+
+/**
+ * Verbose-logging gate. High-volume per-tick traces (per-pawn needs/AI decisions, entity snapshots)
+ * are emitted ONLY when the dev server was started with `--debug`/`--profiler` (which set
+ * `VITE_DEBUG_MODE`/`VITE_PROFILER`). In a normal run they cost nothing — `vlog` returns before
+ * building the message. This is what keeps the unified log from becoming the old 100 MB firehose.
+ */
+export const LOG_VERBOSE: boolean =
+  import.meta.env.VITE_DEBUG_MODE === 'true' || import.meta.env.VITE_PROFILER === 'true';
+
+/**
+ * Gated verbose log. No-op (and the message thunk is never invoked) unless `LOG_VERBOSE`. Pass a
+ * thunk for hot-path callers so the string is only built when verbose logging is actually on.
+ */
+export function vlog(
+  category: LogCategory,
+  turn: number,
+  message: string | (() => string),
+  severity: ActivityLogEntry['severity'] = 'info'
+): void {
+  if (!LOG_VERBOSE) return;
+  simLog.logEvent({
+    category,
+    severity,
+    turn,
+    message: typeof message === 'function' ? message() : message
+  });
 }

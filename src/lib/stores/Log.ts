@@ -1,8 +1,13 @@
 import { writable, derived } from 'svelte/store';
 import { browser } from '$app/environment';
 import type { ActivityLogEntry, CombatTurnEntry } from '$lib/game/core/Events';
-import { activityLogger } from '$lib/game/dev/activityLogger';
-import { loadActivityLog, scheduleSaveActivityLog } from './saveManager';
+import type { LogEventInput } from '$lib/game/core/logSink';
+import {
+  loadActivityLog,
+  scheduleSaveActivityLog,
+  loadDebugLog,
+  scheduleSaveDebugLog
+} from './saveManager';
 
 export const activityLog = writable<ActivityLogEntry[]>([]);
 
@@ -72,8 +77,98 @@ export function logActivity(entry: Omit<ActivityLogEntry, 'id' | 'timestamp'>): 
     return newLog.slice(-1000);
   });
 
-  activityLogger.log(fullEntry);
+  mirrorToFile(fullEntry);
   return fullEntry.id;
+}
+
+// ── Unified diagnostic log (perf/ai/needs/job/system + verbose traces) ───────────────────────────
+// Kept in its OWN bounded store so high-churn diagnostics never evict the player chronicle. Same
+// persistence pattern as the chronicle (survives reload). The in-game debug tab reads `allLogEntries`
+// (chronicle ⊕ debug, merged); the agent reads the per-category `.debug/<category>.log` file mirror.
+
+const DEBUG_LOG_CAP = 2500;
+export const debugLog = writable<ActivityLogEntry[]>([]);
+
+if (browser) {
+  loadDebugLog().then((saved) => {
+    if (saved.length > 0) {
+      debugLog.update((live) => {
+        const seen = new Set(saved.map((e) => e.id));
+        return [...saved, ...live.filter((e) => !seen.has(e.id))].slice(-DEBUG_LOG_CAP);
+      });
+    }
+    debugLog.subscribe((log) => scheduleSaveDebugLog(log));
+  });
+}
+
+/** Clear the diagnostic log in memory. */
+export function clearDebugLog() {
+  debugLog.set([]);
+}
+
+/** Append a lean structured diagnostic entry (the `simLog.logEvent` sink target). */
+export function logDiag(e: LogEventInput): string {
+  const entry: ActivityLogEntry = {
+    id: crypto.randomUUID(),
+    timestamp: new Date(),
+    turn: e.turn,
+    type: e.category,
+    actor: 'system',
+    action: e.message,
+    result: '',
+    severity: e.severity ?? 'info',
+    details: e.data
+  };
+  debugLog.update((log) => {
+    const next = [...log, entry];
+    return next.length > DEBUG_LOG_CAP ? next.slice(-DEBUG_LOG_CAP) : next;
+  });
+  mirrorToFile(entry);
+  return entry.id;
+}
+
+/** Merged chronicle + diagnostic view for the in-game debug tab (newest-trailing, capped). */
+const TAB_RENDER = 1200;
+export const allLogEntries = derived([activityLog, debugLog], ([$a, $d]) => {
+  const merged = [...$a.slice(-TAB_RENDER), ...$d.slice(-TAB_RENDER)];
+  merged.sort((x, y) => x.timestamp.getTime() - y.timestamp.getTime());
+  return merged.slice(-TAB_RENDER);
+});
+
+// ── File mirror (agent fetch): batch new entries by category, debounced POST to /api/log ─────────
+// Runs on the MAIN thread (the worker forwards log calls here per flush), so file I/O never touches
+// the sim hot path / TPS. The agent greps the resulting `.debug/<category>.log` files after the fact.
+interface MirrorLine {
+  category: ActivityLogEntry['type'];
+  line: string;
+}
+const _mirrorPending: MirrorLine[] = [];
+let _mirrorTimer: ReturnType<typeof setTimeout> | null = null;
+
+function mirrorToFile(entry: ActivityLogEntry): void {
+  if (!browser || !import.meta.env.DEV) return; // /api/log is a no-op in prod — don't fire fetches
+  const t = String(entry.turn).padStart(5, '0');
+  const who = entry.actor && entry.actor !== 'system' ? ` <${entry.actor}>` : '';
+  const tail = entry.result ? ` — ${entry.result}` : '';
+  _mirrorPending.push({
+    category: entry.type,
+    line: `[T${t}] [${entry.severity}]${who} ${entry.action}${tail}`
+  });
+  if (_mirrorTimer === null) _mirrorTimer = setTimeout(flushMirror, 1000);
+}
+
+function flushMirror(): void {
+  _mirrorTimer = null;
+  if (_mirrorPending.length === 0) return;
+  const entries = _mirrorPending.splice(0);
+  fetch('/api/log', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ entries }),
+    keepalive: true
+  }).catch(() => {
+    /* dev-only mirror; never block the game on a failed write */
+  });
 }
 
 // Convenience functions for different activity types

@@ -1,30 +1,26 @@
 <!--
-  DebugLogControls — header bar for DebugLogScreen: source switch, tag/severity/
-  text filters, autoscroll toggle, clear, and a shown/total counter. Pure view;
-  all filter state is bound back to the parent.
+  DebugLogControls — header bar for DebugLogScreen: category/severity/text filters,
+  autoscroll toggle, clear, and a shown/total counter. Pure view; all filter state is
+  bound back to the parent.
 -->
 <script lang="ts">
   let {
-    source = $bindable(),
     filterTag = $bindable(),
     filterSeverity = $bindable(),
     search = $bindable(),
     autoscroll = $bindable(),
     wrap = $bindable(),
-    sources,
     severities,
     knownTags,
     shown,
     total,
     onclear
   }: {
-    source: string;
     filterTag: string;
     filterSeverity: string;
     search: string;
     autoscroll: boolean;
     wrap: boolean;
-    sources: readonly string[];
     severities: readonly string[];
     knownTags: string[];
     shown: number;
@@ -35,12 +31,9 @@
 
 <div class="header">
   <span class="title">DEBUG LOG</span>
-  <select class="sel" bind:value={source} aria-label="Source">
-    {#each sources as s}<option value={s}>{s}</option>{/each}
-  </select>
-  <select class="sel" bind:value={filterTag} aria-label="Tag filter">
-    <option value="ALL">tag:ALL</option>
-    {#each knownTags as t (t)}<option value={t}>[{t}]</option>{/each}
+  <select class="sel" bind:value={filterTag} aria-label="Category filter">
+    <option value="ALL">cat:ALL</option>
+    {#each knownTags as t (t)}<option value={t}>{t}</option>{/each}
   </select>
   <select class="sel" bind:value={filterSeverity} aria-label="Severity filter">
     {#each severities as s}<option value={s}>{s === 'ALL' ? 'sev:ALL' : s}</option>{/each}

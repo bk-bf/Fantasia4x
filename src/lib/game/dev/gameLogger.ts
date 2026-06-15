@@ -1,212 +1,52 @@
 /**
- * gameLogger — dev-only file-backed structured logger.
+ * gameLogger — thin compatibility adapter over the unified log pipeline.
  *
- * Buffers tagged log lines and flushes them to the server-side
- * /api/debug-log endpoint, which appends to .debug/game.log.
- * Only active in development; the server endpoint is a no-op in production.
+ * Historically this buffered tagged lines and POSTed them to /api/debug-log (a per-tick firehose
+ * that wrote 100 MB files and starved the sim). That is RETIRED. It now forwards each call to the
+ * gated `vlog` (core/logSink): nothing is emitted unless the dev server was started with
+ * `--debug`/`--profiler` (`LOG_VERBOSE`), and when it is, entries flow through the SAME pipeline as
+ * everything else → the in-game debug tab + `.debug/<category>.log` (see stores/Log.ts).
  *
- * ─── Usage ────────────────────────────────────────────────────────────────
- *
- *   import { gameLogger } from '$lib/game/dev/gameLogger';
- *   gameLogger.log(gs.turn, 'MY-TAG', 'some message');
- *   gameLogger.logMapSnap(gs);   // full settlement snapshot
- *
- * ─── Tags (grep targets) ─────────────────────────────────────────────────
- *
- *   [PAWN-TICK]   Per-pawn per-turn status snapshot
- *   [NEED-CHECK]  Need-interruption decision trace (eat/sleep thresholds)
- *   [STATE-CHG]   Pawn state transition events
- *   [JOB-EVT]     Job claim / release events
- *   [MAP-SNAP]    Periodic full-settlement snapshot (every N turns)
- *
- * ─── Filtering examples ───────────────────────────────────────────────────
- *
- *   grep '\[NEED-CHECK\]' .debug/game.log
- *   grep '\[MAP-SNAP\]'   .debug/game.log
- *   grep 'Zara Ironforge' .debug/game.log
- *   grep 'INTERRUPT'      .debug/game.log
- *
- * ─── File location ────────────────────────────────────────────────────────
- *
- *   .debug/game.log  (project root, gitignored)
+ * Kept as a shim so the existing `gameLogger.log(turn, 'TAG', msg)` call sites don't change; the
+ * tag is mapped to a log category. New code should prefer `vlog(category, turn, msg)` directly.
  */
-
+import { vlog, LOG_VERBOSE } from '../core/logSink';
 import type { GameState } from '../core/types';
+import type { LogCategory } from '../core/Events';
 
-/** Flush the buffer when it reaches this many lines. */
-const FLUSH_SIZE = 40;
-/** Also flush every N milliseconds even if buffer is small. */
-const FLUSH_INTERVAL_MS = 3000;
+/** Map a legacy gameLogger tag to a unified log category. */
+function tagToCategory(tag: string): LogCategory {
+  if (tag.startsWith('ENTITY') || tag === 'MOB-SNAP' || tag === 'HUNT-UNREACHABLE') return 'ai';
+  if (tag === 'PAWN-TICK' || tag === 'NEED-CHECK') return 'needs';
+  if (tag === 'STATE-CHG' || tag === 'JOB-EVT') return 'job';
+  if (tag === 'YIELD-DBG') return 'work';
+  if (tag === 'PERF') return 'perf';
+  return 'system'; // MAP-SNAP and any catch-all
+}
 
 class GameLoggerImpl {
-  private buffer: string[] = [];
-  private timer: ReturnType<typeof setInterval> | null = null;
-  /** Live taps (in-game Debug Log viewer). Notified per line, in addition to the file flush. */
-  private subscribers = new Set<(line: string) => void>();
-  /**
-   * D9.5: master gate. When false, log() returns BEFORE invoking a message thunk, so the
-   * hot per-pawn-per-tick NEED-CHECK strings are never even built. Defaults to dev builds
-   * (where the .debug logs are wanted); zero cost in production.
-   */
-  private enabled = import.meta.env.DEV;
-
-  constructor() {
-    // Start auto-flush timer in browser only.
-    if (typeof window !== 'undefined') {
-      this.timer = setInterval(() => {
-        if (this.buffer.length > 0) this.flush();
-      }, FLUSH_INTERVAL_MS);
-    }
-  }
-
-  /** Returns whether file logging is currently active (callers can skip extra work). */
+  /** Verbose logging is on only under `--debug`/`--profiler` (the call-site fast-path guard). */
   get isEnabled(): boolean {
-    return this.enabled;
+    return LOG_VERBOSE;
   }
 
-  setEnabled(on: boolean): void {
-    this.enabled = on;
-  }
-
-  /**
-   * Live tap for the in-game Debug Log viewer: invoke `fn` with each formatted
-   * line as it is logged, alongside the normal file flush. Returns an unsubscribe.
-   *
-   * This fires on the per-pawn-per-tick logging path, so `fn` must be cheap and
-   * MUST batch any reactive/UI work off the hot path (e.g. push to a plain array
-   * and drain on rAF) — never mutate framework state once per call.
-   */
-  subscribe(fn: (line: string) => void): () => void {
-    this.subscribers.add(fn);
-    return () => this.subscribers.delete(fn);
-  }
-
-  /**
-   * Append a tagged line to the write buffer.
-   *
-   * @param turn   Current game turn (used in prefix).
-   * @param tag    Uppercase tag string — e.g. 'PAWN-TICK', 'NEED-CHECK'.
-   * @param msg    Message body, or a thunk producing it. Pass a thunk for hot-path callers
-   *               so the (often multi-segment) string is only built when logging is enabled.
-   */
+  /** Forward a tagged line into the gated unified pipeline. No-op unless `LOG_VERBOSE`. */
   log(turn: number, tag: string, msg: string | (() => string)): void {
-    if (!this.enabled) return;
-    const body = typeof msg === 'function' ? msg() : msg;
-    const ts = new Date().toISOString();
-    const t = String(turn).padStart(4, '0');
-    const line = `${ts} [T${t}] [${tag}] ${body}`;
-    this.buffer.push(line);
-    // Notify live taps only when one is attached (zero cost when the viewer is closed).
-    if (this.subscribers.size > 0) {
-      for (const fn of this.subscribers) fn(line);
-    }
-    if (this.buffer.length >= FLUSH_SIZE) this.flush();
+    vlog(tagToCategory(tag), turn, msg);
   }
 
-  /**
-   * Emit a [MAP-SNAP] line: full settlement + all-pawn summary.
-   * Intended to be called every N turns from PawnStateMachineImpl.tick().
-   */
+  /** Periodic compact settlement snapshot (system category). No-op unless `LOG_VERBOSE`. */
   logMapSnap(gs: GameState): void {
-    const livePawns = (gs.pawns ?? []).filter((p) => p.isAlive !== false);
-    const allJobs = gs.jobs ?? [];
-    const claimedJobs = allJobs.filter((j) => j.claimedBy);
-    const buildings = gs.buildings ?? [];
-    const campfires = buildings.filter(
-      (b) => b.status === 'complete' && /campfire|bonfire|hearth/i.test(b.type)
+    if (!LOG_VERBOSE) return;
+    const pawns = (gs.pawns ?? []).filter((p) => p.isAlive !== false).length;
+    const mobs = (gs.mobs ?? []).filter((m) => m.state !== 'Corpse').length;
+    const claimed = (gs.jobs ?? []).filter((j) => j.claimedBy).length;
+    vlog(
+      'system',
+      gs.turn,
+      `snapshot pawns=${pawns} mobs=${mobs} jobs=${(gs.jobs ?? []).length}(${claimed} claimed)`
     );
-    const shelters = buildings.filter(
-      (b) => b.status === 'complete' && /shelter|bed|hut|tent/i.test(b.type)
-    );
-
-    const pawnLines = livePawns.map((p) => {
-      const pos = p.position ? `(${p.position.x},${p.position.y})` : '(-,-)';
-      const h = (p.needs?.hunger ?? 0).toFixed(0);
-      const f = (p.needs?.fatigue ?? 0).toFixed(0);
-      const idTag = p.debugId != null ? `#${p.debugId} ` : '';
-      return `${idTag}${p.name}:${p.currentState ?? 'Idle'}@${pos} H${h}/F${f}`;
-    });
-
-    const msg =
-      `pawns:${livePawns.length}` +
-      ` jobs:${allJobs.length}(${claimedJobs.length}claimed)` +
-      ` campfires:${campfires.length} shelters:${shelters.length}` +
-      ` | ${pawnLines.join(' | ')}`;
-
-    this.log(gs.turn, 'MAP-SNAP', msg);
-
-    // Mob summary — emit if any entities are present.
-    const mobs = gs.mobs ?? [];
-    if (mobs.length > 0) {
-      const byState: Record<string, number> = {};
-      let hungry = 0;
-      let dead = 0;
-      for (const m of mobs) {
-        byState[m.state] = (byState[m.state] ?? 0) + 1;
-        if (m.state === 'Corpse') dead++;
-        else if (m.needs.hunger >= 80) hungry++;
-      }
-      const stateSummary = Object.entries(byState)
-        .map(([s, n]) => `${s}:${n}`)
-        .join(' ');
-      const mobLines = mobs
-        .filter((m) => m.state !== 'Corpse')
-        .slice(0, 10)
-        .map((m) => {
-          const idTag = m.debugId != null ? `#${m.debugId} ` : '';
-          return `${idTag}${m.creatureId}:${m.state}@(${m.x},${m.y})`;
-        })
-        .join(' | ');
-      const mobSuffix = mobs.filter((m) => m.state !== 'Corpse').length > 10 ? ' …' : '';
-      this.log(
-        gs.turn,
-        'MOB-SNAP',
-        `total:${mobs.length} ${stateSummary} hungry(≥80):${hungry} corpses:${dead} | ${mobLines}${mobSuffix}`
-      );
-    }
-  }
-
-  /**
-   * Flush buffered lines to the server immediately.
-   * Fire-and-forget; errors are silently dropped so game never stalls.
-   */
-  flush(): void {
-    if (this.buffer.length === 0) return;
-    const lines = this.buffer.splice(0);
-
-    // sendBeacon is more reliable during page unload — but it doesn't exist in a Web Worker
-    // (the sim worker, ADR-021), where calling it throws and would fail the whole tick. Guard on
-    // the method, not just `navigator`, and fall through to `fetch` (available in workers).
-    if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
-      const body = JSON.stringify({ lines });
-      const blob = new Blob([body], { type: 'application/json' });
-      if (navigator.sendBeacon('/api/debug-log', blob)) return;
-    }
-
-    // Fallback: fetch with keepalive.
-    fetch('/api/debug-log', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ lines }),
-      keepalive: true
-    }).catch(() => {
-      /* intentionally silent */
-    });
-  }
-
-  /** Flush and stop the auto-flush timer. Call on hot-module replacement. */
-  destroy(): void {
-    this.flush();
-    if (this.timer !== null) {
-      clearInterval(this.timer);
-      this.timer = null;
-    }
   }
 }
 
 export const gameLogger = new GameLoggerImpl();
-
-// Hot-module replacement: flush and recreate on code changes.
-if (import.meta.hot) {
-  import.meta.hot.dispose(() => gameLogger.destroy());
-}

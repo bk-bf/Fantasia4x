@@ -26,6 +26,10 @@ const SAVE_KEY = 'current';
 // The chronicle / activity log is persisted under its own key alongside the save
 // so it survives a tab reload/discard (it lives in an in-memory store, not GameState).
 const LOG_KEY = 'activity-log';
+// The diagnostic debug log (unified logging: perf/ai/needs/job/system + verbose traces) is
+// persisted under its own key too — same reason, but kept separate so its higher churn never
+// competes with the chronicle's retention.
+const DEBUG_LOG_KEY = 'debug-log';
 
 // Legacy localStorage keys (for one-time migration)
 const LS_SAVE_KEY = 'fantasia4x-save';
@@ -217,6 +221,33 @@ export function scheduleSaveActivityLog(entries: ActivityLogEntry[]): void {
     _logSaveTimer = null;
     idbPut(LOG_KEY, entries).catch((err) => {
       console.warn('[SaveManager] Chronicle write failed:', err);
+    });
+  }, DEBOUNCE_MS);
+}
+
+// ── debug-log (diagnostics) persistence ──────────────────────────────────────
+
+/** Load the persisted debug log. Returns [] if none exists. */
+export async function loadDebugLog(): Promise<ActivityLogEntry[]> {
+  if (!browser) return [];
+  try {
+    return (await idbGet<ActivityLogEntry[]>(DEBUG_LOG_KEY)) ?? [];
+  } catch (err) {
+    console.warn('[SaveManager] Debug-log load failed:', err);
+    return [];
+  }
+}
+
+let _debugLogSaveTimer: ReturnType<typeof setTimeout> | null = null;
+
+/** Schedule a debounced write of the debug log (batched, same as the chronicle). */
+export function scheduleSaveDebugLog(entries: ActivityLogEntry[]): void {
+  if (!browser) return;
+  if (_debugLogSaveTimer !== null) clearTimeout(_debugLogSaveTimer);
+  _debugLogSaveTimer = setTimeout(() => {
+    _debugLogSaveTimer = null;
+    idbPut(DEBUG_LOG_KEY, entries).catch((err) => {
+      console.warn('[SaveManager] Debug-log write failed:', err);
     });
   }, DEBOUNCE_MS);
 }

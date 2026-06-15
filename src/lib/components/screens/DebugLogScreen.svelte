@@ -1,156 +1,121 @@
 <!--
-  DebugLogScreen — live in-game viewer for the game's debug logs.
-  Dev-only: mounted by +page.svelte solely when VITE_DEBUG_MODE is set.
+  DebugLogScreen — in-game viewer for the unified log (dev-only; mounted by +page.svelte only
+  when VITE_DEBUG_MODE is set, i.e. launched via dev.sh/launch.sh --debug).
 
-  Default source `live` taps gameLogger's in-memory buffer directly (zero
-  latency, no server round-trip); the per-file sources stream from
-  /api/debug-stream (SSE) and include prior-session history persisted on disk.
-  Either way: source switching, tag/severity/text filters, tag colouring,
-  autoscroll, clear. Ported from the yact LogStreamer.
+  Reads the store (chronicle ⊕ diagnostics via `allLogEntries`), not a live file/SSE tap — so it
+  streams in realtime, survives tab close/reopen, never leaks (the stores are bounded + persisted),
+  and works under the sim worker (the worker forwards log calls to these stores). Filter by
+  category/severity/text. The agent fetches the same data after the fact from `.debug/<category>.log`.
 -->
 <script module lang="ts">
-  import type { ParsedDebugLine } from '$lib/game/dev/parseDebugLine';
-
-  // Survives tab close/reopen: the panel lives behind {#if currentScreen==='debug'},
-  // so it's destroyed when you leave. Caching the buffer (and last source) per
-  // module lets a reopen paint instantly instead of flickering "waiting…".
-  const lineCache = new Map<string, ParsedDebugLine[]>();
-  let lastSource = 'live';
-  let lastWrap = false; // line-wrap preference survives tab close/reopen
-  let keyCounter = 0;
-  const nextKey = () => ++keyCounter; // monotonic across remounts so keys never collide
+  // Filter prefs survive tab close/reopen (the panel is destroyed when you leave the tab).
+  let lastTag = 'ALL';
+  let lastSeverity = 'ALL';
+  let lastSearch = '';
+  let lastWrap = false;
 </script>
 
 <script lang="ts">
-  import { browser } from '$app/environment';
-  import { gameLogger } from '$lib/game/dev/gameLogger';
-  import { parseDebugLine } from '$lib/game/dev/parseDebugLine';
-  import DebugLogRow from './DebugLogRow.svelte';
+  import { allLogEntries, clearDebugLog } from '$lib/stores/Log';
   import DebugLogControls from './DebugLogControls.svelte';
 
-  const SOURCES = ['live', 'all', 'pawns', 'entities', 'activity', 'game', 'perf'] as const;
-  const SEVERITIES = ['ALL', 'error', 'warning', 'info', 'debug'] as const;
-  const BUFFER_CAP = 2000; // lines retained in memory
+  const SEVERITIES = ['ALL', 'critical', 'error', 'warning', 'success', 'info'] as const;
   const RENDER_CAP = 600; // lines actually painted
 
-  let source = $state<(typeof SOURCES)[number]>(lastSource as (typeof SOURCES)[number]);
-  let filterTag = $state('ALL');
-  let filterSeverity = $state('ALL');
-  let search = $state('');
+  let filterTag = $state(lastTag);
+  let filterSeverity = $state(lastSeverity);
+  let search = $state(lastSearch);
   let autoscroll = $state(true);
   let wrap = $state(lastWrap);
-
-  // Seed from the cache at creation so the first paint already has content.
-  let lines = $state<ParsedDebugLine[]>(lineCache.get(lastSource) ?? []);
   let bodyEl: HTMLElement | null = $state(null);
-  let es: EventSource | null = null;
-  // Live-tap batching: plain (non-reactive) staging drained into `lines` once per frame.
-  let pending: ParsedDebugLine[] = [];
-  let rafId: number | null = null;
 
-  const knownTags = $derived([...new Set(lines.flatMap((l) => (l.tag ? [l.tag] : [])))].sort());
+  $effect(() => void (lastTag = filterTag));
+  $effect(() => void (lastSeverity = filterSeverity));
+  $effect(() => void (lastSearch = search));
+  $effect(() => void (lastWrap = wrap));
+
+  const knownTags = $derived([...new Set($allLogEntries.map((e) => e.type))].sort());
 
   const filtered = $derived.by(() => {
     const q = search.trim().toLowerCase();
-    let out = lines;
-    if (filterTag !== 'ALL') out = out.filter((l) => l.tag === filterTag);
-    if (filterSeverity !== 'ALL') out = out.filter((l) => l.severity === filterSeverity);
-    if (q) out = out.filter((l) => l.raw.toLowerCase().includes(q));
+    let out = $allLogEntries;
+    if (filterTag !== 'ALL') out = out.filter((e) => e.type === filterTag);
+    if (filterSeverity !== 'ALL') out = out.filter((e) => e.severity === filterSeverity);
+    if (q)
+      out = out.filter(
+        (e) =>
+          e.action.toLowerCase().includes(q) ||
+          (e.result ?? '').toLowerCase().includes(q) ||
+          (e.actor ?? '').toLowerCase().includes(q)
+      );
     return out.slice(-RENDER_CAP);
   });
 
-  // Drop a stale tag filter when the source switch makes it invalid.
+  // Drop a stale category filter when it no longer matches any entry.
   $effect(() => {
-    if (filterTag !== 'ALL' && !knownTags.includes(filterTag)) filterTag = 'ALL';
+    if (filterTag !== 'ALL' && !knownTags.includes(filterTag as (typeof knownTags)[number]))
+      filterTag = 'ALL';
   });
 
-  // (Re)connect whenever the source changes.
-  $effect(() => {
-    if (!browser) return;
-    const src = source;
-    lastSource = src;
-    lines = lineCache.get(src) ?? []; // restore this source's buffer (empty first time)
-
-    // Live source: tap gameLogger's buffer in-memory. Each line is staged into a
-    // plain array on the hot path; we coalesce into reactive `lines` once per rAF
-    // so Svelte invalidates per-frame, never per-log-call.
-    if (src === 'live') {
-      pending = [];
-      const flush = () => {
-        rafId = null;
-        if (pending.length === 0) return;
-        lines = [...lines, ...pending].slice(-BUFFER_CAP);
-        lineCache.set(src, lines);
-        pending = [];
-      };
-      const unsub = gameLogger.subscribe((raw) => {
-        pending.push(parseDebugLine(raw, nextKey()));
-        if (rafId === null) rafId = requestAnimationFrame(flush);
-      });
-      return () => {
-        unsub();
-        if (rafId !== null) cancelAnimationFrame(rafId);
-        rafId = null;
-        pending = [];
-      };
-    }
-
-    // File sources replay their tail from disk on (re)connect, so they
-    // repopulate themselves — caching them would double up the replayed lines.
-    es?.close();
-    es = new EventSource(`/api/debug-stream?source=${src}`);
-    es.onmessage = (ev: MessageEvent) => {
-      const parsed = parseDebugLine(ev.data as string, nextKey());
-      lines = [...lines.slice(-(BUFFER_CAP - 1)), parsed];
-    };
-    return () => es?.close();
-  });
-
-  // Remember the wrap preference for the next time the tab is reopened.
-  $effect(() => {
-    lastWrap = wrap;
-  });
-
-  // Autoscroll to the newest line as content arrives.
+  // Autoscroll to newest as content arrives.
   $effect(() => {
     const _ = filtered.length;
-    if (browser && autoscroll && bodyEl) {
+    if (autoscroll && bodyEl) {
       const el = bodyEl;
       requestAnimationFrame(() => (el.scrollTop = el.scrollHeight));
     }
   });
 
+  function sevColor(sev: string): string {
+    switch (sev) {
+      case 'critical':
+        return 'var(--danger, #ff5555)';
+      case 'error':
+        return '#ff7b72';
+      case 'warning':
+        return '#e3b341';
+      case 'success':
+        return '#7ee787';
+      default:
+        return 'var(--text-muted)';
+    }
+  }
+
   async function clearLogs() {
+    clearDebugLog();
     await fetch('/api/logs', { method: 'DELETE' }).catch(() => {});
-    lineCache.delete(source);
-    lines = [];
   }
 </script>
 
 <div class="debug-log">
   <DebugLogControls
-    bind:source
     bind:filterTag
     bind:filterSeverity
     bind:search
     bind:autoscroll
     bind:wrap
-    sources={SOURCES}
     severities={SEVERITIES}
     {knownTags}
     shown={filtered.length}
-    total={lines.length}
+    total={$allLogEntries.length}
     onclear={clearLogs}
   />
 
   <div class="body" bind:this={bodyEl}>
-    {#if lines.length === 0}
-      <div class="waiting">waiting for log stream…</div>
+    {#if $allLogEntries.length === 0}
+      <div class="waiting">no log entries yet — unpause the game</div>
     {:else if filtered.length === 0}
-      <div class="waiting">no lines match filter</div>
+      <div class="waiting">no entries match filter</div>
     {:else}
-      {#each filtered as line (line.key)}
-        <DebugLogRow {line} {wrap} />
+      {#each filtered as e (e.id)}
+        <div class="row" class:wrap>
+          <span class="turn">T{String(e.turn).padStart(5, '0')}</span>
+          <span class="cat">{e.type}</span>
+          <span class="msg" style:color={sevColor(e.severity)}>
+            {#if e.actor && e.actor !== 'system'}<span class="actor">{e.actor}</span
+              >{/if}{e.action}{#if e.result}<span class="result"> — {e.result}</span>{/if}
+          </span>
+        </div>
       {/each}
     {/if}
   </div>
@@ -171,6 +136,39 @@
     overflow-x: hidden;
     padding: 3px 4px;
     scrollbar-width: thin;
+  }
+  .row {
+    display: flex;
+    gap: 0.6em;
+    font-size: 11px;
+    line-height: 1.35;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .row.wrap {
+    white-space: normal;
+  }
+  .turn {
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+  }
+  .cat {
+    color: var(--accent-hi);
+    flex-shrink: 0;
+    width: 5.5em;
+  }
+  .msg {
+    flex: 1;
+    min-width: 0;
+  }
+  .actor {
+    color: var(--text);
+    margin-right: 0.4em;
+  }
+  .result {
+    color: var(--text-muted);
   }
   .waiting {
     color: var(--text-muted);
