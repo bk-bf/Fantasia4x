@@ -383,6 +383,7 @@ export function stepDirectional(
 
   // All primary directions blocked (cornered against terrain) — try the full 8
   // neighbours sorted by how well they move away from / toward the reference point.
+  const curDist = Math.abs(mob.x - ref.x) + Math.abs(mob.y - ref.y);
   const allNeighbours = [
     { x: mob.x - 1, y: mob.y - 1 },
     { x: mob.x, y: mob.y - 1 },
@@ -401,13 +402,22 @@ export function stepDirectional(
   });
 
   for (const c of allNeighbours) {
+    // Anti-jitter (approach only): never fall back to a tile that doesn't get strictly CLOSER to the
+    // target. When a mob is hemmed in by other bodies in a combat cluster (soft-body A* now packs
+    // them in — ADR-021), the old code stepped to a sideways/equal fallback that alternated tick to
+    // tick → the Alerted back-and-forth. Holding at the cluster edge until an opening appears reads
+    // as "surrounding the target" instead of twitching. (Flee, sign −1, still uses every neighbour.)
+    if (sign === 1) {
+      const cDist = Math.abs(c.x - ref.x) + Math.abs(c.y - ref.y);
+      if (cDist >= curDist) break; // sorted ascending: nothing further in the list is closer either
+    }
     if (isWalkable(state, c.x, c.y) && !occupancyService.isBlocked(state, c.x, c.y, mob.id)) {
       const currentNext = mob.path?.[mob.pathIndex ?? 0];
       if (currentNext && currentNext.x === c.x && currentNext.y === c.y) return mob;
       return { ...mob, path: [c], pathIndex: 0, nextCellCostLeft: undefined };
     }
   }
-  return mob; // truly boxed in on all sides
+  return mob; // truly boxed in (or, for approach, no strictly-closer opening) — hold position
 }
 
 /**
