@@ -372,7 +372,7 @@
     : null;
   $: hoverTileLight = hoverTile
     ? computeTileLightLevel(
-        $gameState?.turn ?? 0,
+        environmentService.ambientTurn($gameState ?? { turn: 0 }),
         $gameState?.buildings ?? [],
         hoverTile.x,
         hoverTile.y
@@ -791,7 +791,7 @@
     // Day/night: update ambient uniforms whenever the turn changes. Season + weather hue is folded
     // into the ambient tint here (PERF-5: a uniform multiply, never a terrain rebuild).
     if (renderer?.isReady()) {
-      const { light, tint } = environmentService.getAmbient(s.turn);
+      const { light, tint } = environmentService.getAmbient(environmentService.ambientTurn(s));
       const env = environmentService.getEnvironmentTint(s.season, s.weather);
       const tinted: [number, number, number] = [
         tint[0] * env[0],

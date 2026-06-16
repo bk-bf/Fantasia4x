@@ -46,6 +46,18 @@
     const v = (e.target as HTMLSelectElement).value;
     cmd('setSeason', { season: v === '' ? null : (v as Season) });
   }
+
+  // Time-of-day presets (fraction of day; 0=midnight, 0.5=noon) for testing weather at day/night.
+  const TIME_OF_DAY: { label: string; value: number }[] = [
+    { label: 'Dawn', value: 0.3 },
+    { label: 'Day (noon)', value: 0.5 },
+    { label: 'Dusk', value: 0.82 },
+    { label: 'Night', value: 0.0 }
+  ];
+  function setTimeOfDay(e: Event) {
+    const v = (e.target as HTMLSelectElement).value;
+    cmd('setTimeOfDay', { timeOfDay: v === '' ? null : Number(v) });
+  }
   function armBrush(kind: 'regrow' | 'building' | 'resource', id: string | null = null) {
     if (brush?.kind === kind) uiState.deactivateDebugBrush();
     else uiState.activateDebugBrush(kind, id);
@@ -105,6 +117,14 @@
     <select value={$gameState._debugSeason ?? ''} onchange={setSeason}>
       <option value="">natural (turn)</option>
       {#each SEASON_IDS as s (s)}<option value={s}>{SEASON_LABELS[s]}</option>{/each}
+    </select>
+  </section>
+
+  <section>
+    <h4>Time of day</h4>
+    <select value={$gameState._debugTimeOfDay ?? ''} onchange={setTimeOfDay}>
+      <option value="">natural (turn)</option>
+      {#each TIME_OF_DAY as t (t.label)}<option value={t.value}>{t.label}</option>{/each}
     </select>
   </section>
 

@@ -683,6 +683,18 @@ export function getEnvironmentTint(
 }
 
 class EnvironmentServiceImpl {
+  /**
+   * Turn to feed into ambient light/tint calculations. Honours the debug `_debugTimeOfDay` override
+   * (a fixed fraction of the day) by mapping it to a synthetic turn, so the renderer can hold the
+   * world at a chosen day/night phase while the real sim turn keeps advancing. Falls back to the
+   * live turn when no override is set.
+   */
+  ambientTurn(gs: { turn: number; _debugTimeOfDay?: number }): number {
+    return gs._debugTimeOfDay != null
+      ? Math.round(gs._debugTimeOfDay * TICKS_PER_DAY)
+      : gs.turn;
+  }
+
   getAmbient(turn: number): AmbientState {
     return {
       light: getAmbientLight(turn),

@@ -31,6 +31,10 @@ export interface GameState {
   /** Debug override: when set, `processEnvironment` forces this season instead of the turn-derived
    *  one (the in-game debug menu's "change season" button). Clear it to resume the natural cycle. */
   _debugSeason?: Season;
+  /** Debug override: when set (fraction in [0,1), 0=midnight, 0.5=noon), the renderer computes ambient
+   *  light/tint from this fixed time-of-day instead of the live turn — lets the debug menu hold the
+   *  world at day/night to test weather effects. Visual only; the sim turn keeps advancing. */
+  _debugTimeOfDay?: number;
   /** Average effective map temperature (°C, baked tile avg + weather delta), computed worker-side
    *  for the HUD readout. A scalar — tile `temperature` itself stays worker-only (PERF-2). */
   avgTemperature?: number;

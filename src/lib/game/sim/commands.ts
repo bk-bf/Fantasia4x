@@ -452,6 +452,13 @@ export const COMMANDS: Record<string, Cmd> = {
   /** Override the season (null/undefined resumes the natural turn-derived cycle). */
   setSeason: (s, p: { season: Season | null }) => ({ ...s, _debugSeason: p.season ?? undefined }),
 
+  /** Override the rendered time-of-day (fraction [0,1); null resumes the natural turn-derived cycle).
+   *  Visual only — the sim turn keeps ticking; this just freezes the ambient light/tint for testing. */
+  setTimeOfDay: (s, p: { timeOfDay: number | null }) => ({
+    ...s,
+    _debugTimeOfDay: p.timeOfDay ?? undefined
+  }),
+
   /** Instantly place a complete building on a tile (no cost, no construction work). */
   devSpawnBuildingAt: (s, p: { buildingId: string; x: number; y: number }) => {
     const def = buildingService.getBuildingById(p.buildingId);

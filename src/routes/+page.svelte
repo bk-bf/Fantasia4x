@@ -32,7 +32,7 @@
   // panelTint is a per-channel RGB multiplier fed into an SVG feColorMatrix so panels are tinted by
   // exactly the same hue as the map (no pink hue-rotate bug). Weather then DESATURATES the panels —
   // fog drains the colour most (`panelSaturation` in weather.jsonc) for a bleak, washed-out feel.
-  $: panelTint = environmentService.getAmbient($gameState.turn).panelTint;
+  $: panelTint = environmentService.getAmbient(environmentService.ambientTurn($gameState)).panelTint;
   $: panelSaturation = weatherPanelSaturation($gameState.weather?.type);
   $: ambientMatrix = buildPanelMatrix(panelTint, panelSaturation);
 
