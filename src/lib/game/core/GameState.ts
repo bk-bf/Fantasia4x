@@ -247,7 +247,11 @@ export function reserveForOrder(
       // Split: reserve a new stack of `remaining`, leave the rest free.
       drops.push({ ...d, quantity: d.quantity - remaining });
       drops.push({
-        id: `${d.id}-resv-${orderId.slice(-6)}`,
+        // Use the FULL orderId, not `slice(-6)`: the last-6 was the placement timestamp's tail,
+        // which COLLIDES for every building drag-placed in the same batch (they share one Date.now()).
+        // Colliding drop ids made `_syncFetchJobs` match the wrong stack's `reservedFor` and re-mint
+        // the fetch job every tick → the Idle↔MovingToResource oscillation. orderId is unique/building.
+        id: `${d.id}-resv-${orderId}`,
         resourceId: d.resourceId,
         x: d.x,
         y: d.y,

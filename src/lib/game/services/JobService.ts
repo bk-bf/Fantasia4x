@@ -385,7 +385,7 @@ class JobServiceImpl {
       const exists = jobs.some((j) => j.type === 'deconstruct' && j.buildingId === building.id);
       if (!exists) {
         jobs.push({
-          id: `deconstruct-${building.id}-${Date.now()}`,
+          id: `deconstruct-${building.id}`,
           type: 'deconstruct',
           targetX: building.x,
           targetY: building.y,
@@ -425,7 +425,7 @@ class JobServiceImpl {
       const exists = jobs.some((j) => j.type === 'construct' && j.buildingId === building.id);
       if (!exists) {
         jobs.push({
-          id: `construct-${building.id}-${Date.now()}`,
+          id: `construct-${building.id}`,
           type: 'construct',
           targetX: building.x,
           targetY: building.y,
@@ -506,8 +506,13 @@ class JobServiceImpl {
         ? (gs.craftingQueue ?? []).some((e) => e.id === j.craftQueueId)
         : (gs.buildings ?? []).some((b) => b.id === j.buildingId && b.status !== 'complete');
       if (!ownerExists) return false;
-      const src = (gs.droppedItems ?? []).find((d) => d.id === j.droppedItemId);
-      return !!src && src.reservedFor === owner;
+      // Match the drop reserved for THIS owner — not merely the first drop sharing the id. Reserved
+      // stacks can share an id (legacy saves from the `slice(-6)` collision); keying on id alone made
+      // the filter inspect a sibling wall's `reservedFor`, cull the valid job, and churn it every tick.
+      const src = (gs.droppedItems ?? []).find(
+        (d) => d.id === j.droppedItemId && d.reservedFor === owner
+      );
+      return !!src;
     });
 
     const addFetchJobs = (
@@ -519,10 +524,18 @@ class JobServiceImpl {
       for (const drop of gs.droppedItems ?? []) {
         if (!drop.stored || drop.reservedFor !== ownerId) continue;
         if (drop.x === dest.x && drop.y === dest.y) continue; // already staged at the destination
-        const exists = jobs.some((j) => j.type === 'fetch' && j.droppedItemId === drop.id);
+        // Dedup per (drop, owner): with colliding drop ids, distinct owners must still each get a job.
+        const exists = jobs.some(
+          (j) =>
+            j.type === 'fetch' &&
+            j.droppedItemId === drop.id &&
+            (j.craftQueueId ?? j.buildingId) === ownerId
+        );
         if (exists) continue;
         jobs.push({
-          id: `fetch-${drop.id}-${Date.now()}`,
+          // Deterministic + stable per (drop, owner): no `Date.now()`, so a transient filter miss
+          // can no longer re-mint a new id and dangle a pawn's claim (the oscillation's amplifier).
+          id: `fetch-${drop.id}-${ownerId}`,
           type: 'fetch',
           targetX: drop.x,
           targetY: drop.y,
@@ -582,7 +595,7 @@ class JobServiceImpl {
       const exists = jobs.some((j) => j.type === 'craft' && j.craftQueueId === order.id);
       if (!exists) {
         jobs.push({
-          id: `craft-${order.id}-${Date.now()}`,
+          id: `craft-${order.id}`,
           type: 'craft',
           targetX: station.x,
           targetY: station.y,
@@ -1092,7 +1105,7 @@ class JobServiceImpl {
       const exists = jobs.some((j) => j.type === 'refuel' && j.buildingId === b.id);
       if (!exists) {
         jobs.push({
-          id: `refuel-${b.id}-${Date.now()}`,
+          id: `refuel-${b.id}`,
           type: 'refuel',
           targetX: b.x,
           targetY: b.y,
