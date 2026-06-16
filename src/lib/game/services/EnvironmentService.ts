@@ -308,13 +308,15 @@ interface WeatherTransition {
 interface WeatherDef extends WeatherEffects {
   id: string;
   label: string;
-  /** The UI particle animation: 'none' (no animation) | 'rain' | 'snow'. Purely visual. */
-  overlay: 'none' | 'rain' | 'snow';
+  /** The UI animation: 'none' | 'rain' | 'snow' | 'fog' (haze). Purely visual. */
+  overlay: 'none' | 'rain' | 'snow' | 'fog';
   heavy?: boolean;
   /** Overlay particle fall speed, px/sec (visual). Defaults by overlay kind. */
   fallSpeed?: number;
   /** Overlay particle count per megapixel of screen (visual), before intensity/zoom. Defaults by kind. */
   density?: number;
+  /** Side-panel colour saturation while active (1 = normal, <1 = washed-out/bleak). Default 1. */
+  panelSaturation?: number;
   intensity: number;
   moistureBonus: number;
   tint: [number, number, number];
@@ -353,9 +355,14 @@ export function weatherLabel(type?: string): string {
   return weatherDef(type).label;
 }
 
-/** Particle overlay the WeatherCanvas should draw for a weather id (`none` = no animation). */
-export function weatherOverlayKind(type?: string): 'none' | 'rain' | 'snow' {
+/** Particle/haze overlay the WeatherCanvas should draw for a weather id (`none` = no animation). */
+export function weatherOverlayKind(type?: string): 'none' | 'rain' | 'snow' | 'fog' {
   return weatherDef(type).overlay;
+}
+
+/** Side-panel colour saturation for a weather id (1 = normal, <1 = washed-out). Default 1. */
+export function weatherPanelSaturation(type?: string): number {
+  return weatherDef(type).panelSaturation ?? 1;
 }
 /** Whether a weather id is "heavy" (bigger/faster overlay — e.g. heavy_rain / blizzard). */
 export function weatherIsHeavy(type?: string): boolean {

@@ -21,7 +21,7 @@
     weatherDensity
   } from '$lib/game/services/EnvironmentService';
 
-  type Mode = 'none' | 'rain' | 'snow';
+  type Mode = 'none' | 'rain' | 'snow' | 'fog';
 
   let canvas: HTMLCanvasElement;
   let ctx: CanvasRenderingContext2D | null = null;
@@ -85,6 +85,19 @@
         ph: 0
       };
     }
+    if (mode === 'fog') {
+      // A big, soft, slow-drifting haze cloud. `spd` is horizontal drift (px/sec, either direction);
+      // `r` is the blob radius; `ph` a slow vertical-bob phase.
+      const dir = Math.random() < 0.5 ? -1 : 1;
+      return {
+        x: Math.random() * (w + 600) - 300,
+        y: Math.random() * h,
+        len: 0,
+        spd: (8 + Math.random() * 22) * dir,
+        r: 130 + Math.random() * 200,
+        ph: Math.random() * TWO_PI
+      };
+    }
     // snow
     const spd = fallSpeed * (0.6 + Math.random() * 0.9);
     return {
@@ -103,6 +116,8 @@
     const w = canvas.width;
     const h = canvas.height;
     if (w <= 0 || h <= 0) return 0;
+    // Fog is a handful of big soft blobs, not a per-pixel particle field (no zoom scaling).
+    if (mode === 'fog') return Math.min(22, Math.max(5, Math.round((w * h) / 180_000)));
     const perPx = density / 1_000_000; // density is per-megapixel for readable data values
     return Math.min(1600, Math.floor(w * h * perPx * (0.5 + intensity) * densityMul()));
   }
@@ -160,7 +175,7 @@
         }
       }
       ctx.stroke();
-    } else {
+    } else if (mode === 'snow') {
       const wind = heavy ? 60 : 14; // sideways drift px/sec
       ctx.fillStyle = `rgba(255, 255, 255, ${0.5 + 0.4 * intensity})`;
       ctx.beginPath();
@@ -180,6 +195,26 @@
         else if (p.x < -12) p.x = w + 12;
       }
       ctx.fill();
+    } else if (mode === 'fog') {
+      // A faint flat veil + big soft drifting blobs = slow rolling fog. Radial gradients can't batch
+      // into one path, so each blob is its own fill — but there are only a couple dozen of them.
+      ctx.fillStyle = `rgba(206, 210, 216, ${0.05 + 0.07 * intensity})`;
+      ctx.fillRect(0, 0, w, h);
+      const blobAlpha = 0.05 + 0.08 * intensity;
+      for (const p of parts) {
+        p.x += p.spd * dt;
+        p.ph += dt * 0.2;
+        const cy = p.y + Math.sin(p.ph) * 18; // slow vertical bob
+        const g = ctx.createRadialGradient(p.x, cy, 0, p.x, cy, p.r);
+        g.addColorStop(0, `rgba(216, 220, 226, ${blobAlpha})`);
+        g.addColorStop(1, 'rgba(216, 220, 226, 0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(p.x, cy, p.r, 0, TWO_PI);
+        ctx.fill();
+        if (p.spd > 0 && p.x - p.r > w) p.x = -p.r;
+        else if (p.spd < 0 && p.x + p.r < 0) p.x = w + p.r;
+      }
     }
   }
 

@@ -43,7 +43,9 @@
       for (const cat of itemService.getAllCategories()) map.set(cat, []);
     }
     for (const item of stockpile) {
-      const cat = itemService.getItemById(item.id)?.category ?? 'other';
+      const def = itemService.getItemById(item.id);
+      if (def?.hidden) continue; // internal items (natural weapons…) never show as resources
+      const cat = def?.category ?? 'other';
       (map.get(cat) ?? map.set(cat, []).get(cat)!).push(item);
     }
     return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));

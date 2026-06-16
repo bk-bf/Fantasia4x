@@ -28,6 +28,7 @@ import {
   weatherIsHeavy,
   weatherFallSpeed,
   weatherDensity,
+  weatherPanelSaturation,
   weatherChronicleSeverity,
   SEASON_LABELS,
   type ThermalSample
@@ -394,11 +395,20 @@ describe('EnvironmentService — data-driven weather/season metadata (jsonc)', (
     expect(weatherOverlayKind('heavy_rain')).toBe('rain');
     expect(weatherOverlayKind('snow')).toBe('snow');
     expect(weatherOverlayKind('blizzard')).toBe('snow');
+    expect(weatherOverlayKind('fog')).toBe('fog');
     expect(weatherOverlayKind('clear')).toBe('none');
     expect(weatherOverlayKind('heat_wave')).toBe('none');
     expect(weatherIsHeavy('heavy_rain')).toBe(true);
     expect(weatherIsHeavy('blizzard')).toBe(true);
     expect(weatherIsHeavy('rain')).toBe(false);
+  });
+
+  it('panel saturation is data-driven — fog washes panels out the most', () => {
+    expect(weatherPanelSaturation('clear')).toBe(1); // default, no field
+    expect(weatherPanelSaturation('heat_wave')).toBe(1);
+    expect(weatherPanelSaturation('fog')).toBe(0.45);
+    expect(weatherPanelSaturation('fog')).toBeLessThan(weatherPanelSaturation('rain'));
+    expect(weatherPanelSaturation(undefined)).toBe(1);
   });
 
   it('overlay fall speed + density are data-driven (with kind defaults)', () => {

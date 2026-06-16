@@ -19,21 +19,42 @@
   import { uiState } from '$lib/stores/uiState';
   import { gameState, storeReady, bootReveal } from '$lib/stores/gameState';
   import { gameCoordinator } from '$lib/game/systems/GameCoordinator';
-  import { environmentService } from '$lib/game/services/EnvironmentService.js';
+  import {
+    environmentService,
+    weatherPanelSaturation
+  } from '$lib/game/services/EnvironmentService.js';
   import type { PlacedBuilding } from '$lib/game/core/types';
 
   let currentScreen = 'main';
   let buildings: PlacedBuilding[] = [];
 
   // Ambient panel tint — updated reactively on every turn via the gameState store.
-  // panelTint is a per-channel RGB multiplier fed into an SVG feColorMatrix so
-  // panels are tinted by exactly the same hue as the map (no pink hue-rotate bug).
+  // panelTint is a per-channel RGB multiplier fed into an SVG feColorMatrix so panels are tinted by
+  // exactly the same hue as the map (no pink hue-rotate bug). Weather then DESATURATES the panels —
+  // fog drains the colour most (`panelSaturation` in weather.jsonc) for a bleak, washed-out feel.
   $: panelTint = environmentService.getAmbient($gameState.turn).panelTint;
-  $: ambientMatrix =
-    `${panelTint[0].toFixed(3)} 0 0 0 0 ` +
-    `0 ${panelTint[1].toFixed(3)} 0 0 0 ` +
-    `0 0 ${panelTint[2].toFixed(3)} 0 0 ` +
-    `0 0 0 1 0`;
+  $: panelSaturation = weatherPanelSaturation($gameState.weather?.type);
+  $: ambientMatrix = buildPanelMatrix(panelTint, panelSaturation);
+
+  /**
+   * Compose the panel feColorMatrix from the day/night RGB tint and the weather saturation: desaturate
+   * by `s` (luminance-weighted) and lift slightly toward grey as it drops, then scale each output row
+   * by the tint channel. At s=1 this is exactly the old diagonal tint matrix.
+   */
+  function buildPanelMatrix(tint: [number, number, number], s: number): string {
+    const lr = 0.2126;
+    const lg = 0.7152;
+    const lb = 0.0722;
+    const [tr, tg, tb] = tint;
+    const wash = (1 - s) * 0.08; // faded grey lift — more as colour drains
+    const f = (n: number) => n.toFixed(4);
+    return (
+      `${f(tr * ((1 - s) * lr + s))} ${f(tr * (1 - s) * lg)} ${f(tr * (1 - s) * lb)} 0 ${f(wash)} ` +
+      `${f(tg * (1 - s) * lr)} ${f(tg * ((1 - s) * lg + s))} ${f(tg * (1 - s) * lb)} 0 ${f(wash)} ` +
+      `${f(tb * (1 - s) * lr)} ${f(tb * (1 - s) * lg)} ${f(tb * ((1 - s) * lb + s))} 0 ${f(wash)} ` +
+      `0 0 0 1 0`
+    );
+  }
 
   uiState.subscribe((s) => (currentScreen = s.currentScreen));
   gameState.subscribe((s) => (buildings = s.buildings ?? []));
