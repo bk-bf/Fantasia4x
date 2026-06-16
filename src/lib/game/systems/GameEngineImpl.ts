@@ -38,6 +38,7 @@ import {
   recomputeWorldTemperature,
   advanceWeatherForDay,
   weatherEffects,
+  rebuildThermalField,
   TURNS_PER_DAY
 } from '../services/EnvironmentService';
 import { markTileDirty } from '../core/tileDeltas';
@@ -302,6 +303,9 @@ export class GameEngineImpl implements GameEngine {
       const avg = Math.round(this.avgTileTemp + weatherEffects(gs.weather).tempDelta);
       if (avg !== gs.avgTemperature) gs.avgTemperature = avg;
     }
+
+    // Rebuild the fire-warmth + roof-shelter field once per tick (before needs/conditions read it).
+    rebuildThermalField(gs.buildings);
   }
 
   /**
