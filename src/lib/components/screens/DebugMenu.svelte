@@ -108,7 +108,7 @@
   <section>
     <h4>Weather</h4>
     <select value={$gameState.weather?.type ?? 'clear'} onchange={setWeather}>
-      {#each WEATHER_IDS as w (w)}<option value={w}>{WEATHER_LABELS[w]}</option>{/each}
+      {#each WEATHER_IDS as w (w)}<option value={w}>{w} — {WEATHER_LABELS[w]}</option>{/each}
     </select>
   </section>
 
