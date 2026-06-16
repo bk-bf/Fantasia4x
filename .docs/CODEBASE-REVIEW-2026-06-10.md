@@ -85,11 +85,16 @@ are pre-existing survival-loop tuning.
   scan cost ~1/6. Claim/advance/complete still run every tick, so claimed/in-progress jobs are untouched between
   rebuilds. See [DECISIONS ADR-022](game/DECISIONS.md). The two-clocks insight (board-refresh cadence ≠ per-pawn
   job-selection cadence) is captured in the ADR.
-- [ ] **ADR-009 step 2 — per-pawn tool gating** (deferred by design, not a defect). Harvest gating works today off
-  **colony stock** (`_colonyHasHarvestTool`, step 1); `minTier` exists in `resources.jsonc` + `ResourceObjectService`.
-  The refinement — a pawn must physically *carry* the required tool (per-pawn claimed inventory) and enforce `minTier`
-  per-pawn — is explicit sim depth, marked a "later refinement" in code. Only pursue if/when pawns-hold-tools becomes
-  a desired mechanic.
+- [x] **ADR-009 step 2 — per-pawn tool gating.** Done 2026-06-16. A pawn now must physically **hold** a qualifying
+  tool (equipped, e.g. the `belt` tool slot) to *work* a tool-gated harvest; the colony-stock check is gone as the
+  work gate. **Auto-grab:** a toolless pawn claiming a gated job (still claimable while a tool exists in stock)
+  detours to the nearest stored tool, equips it (`activeJob.toolFetch` first leg → `acquireToolAndProceed`), then
+  proceeds — no soft-lock, no player micro; if no tool exists anywhere the job stays open (bootstrap-safe).
+  **minTier enforced** per-pawn (tool `tier` ≥ `toolRequirement.minTier`). **Per-pawn wear:** the working pawn's
+  equipped tool loses durability and breaks → auto-unequipped → the gate sends the pawn to grab a replacement
+  (the full loop). New `jobService.{requiredToolForJob,pawnHasToolFor,colonyHasToolFor,findStockToolDropFor}`;
+  gate in `getAvailableJobs`; FSM detour in `handlers/work`; wear in `jobs/harvest`. Tests in
+  `followupFeatures.test.ts`. `check` 0 · `test` 255.
 - [ ] **R11 — random-events system: wire or cut.** _(Reworded — the old "Events.ts fully unwired" is stale.)_
   `core/Events.ts`'s log/chronicle **types** (`ActivityLogEntry`/`LogCategory`/`CombatTurnEntry`) **are** used (logging
   + chronicle UI). But the **gameplay** half — `EventSystem` + `EVENT_DATABASE` + `events.jsonc` (fire, building

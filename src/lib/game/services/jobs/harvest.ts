@@ -187,10 +187,41 @@ export function complete(job: Job, gs: GameState): GameState {
     state = absorbDropIfOnStockpileTile(state, id);
   }
 
-  // §B tool work-wear: a tool-gated harvest spends durability on the colony's tool for
-  // that work category (stone axe ≈ 8 fells, then it breaks).
-  if (interaction?.toolRequirement && interaction.workCategory) {
-    state = itemService.applyToolWear(interaction.workCategory, state);
+  // §B tool work-wear (ADR-009 step 2): a tool-gated harvest spends durability on the WORKING
+  // PAWN's equipped tool (it's on the pawn now, not in colony stock). When it breaks it's unequipped
+  // → the per-pawn gate sees no tool → the pawn auto-grabs a replacement from stock.
+  if (interaction?.toolRequirement && interaction.workCategory && job.claimedBy) {
+    state = wearWorkingPawnTool(job.claimedBy, interaction.workCategory, state);
   }
   return state;
+}
+
+/** Decrement the working pawn's equipped tool for `workCategory`; unequip it (broke) at ≤0 durability. */
+function wearWorkingPawnTool(pawnId: string, workCategory: string, gs: GameState): GameState {
+  const pawn = gs.pawns.find((p) => p.id === pawnId);
+  if (!pawn?.equipment) return gs;
+  const slot = (Object.keys(pawn.equipment) as (keyof typeof pawn.equipment)[]).find((s) => {
+    const inst = pawn.equipment[s];
+    if (!inst) return false;
+    const def = itemService.getItemById(inst.itemId);
+    return (
+      def?.type === 'tool' &&
+      (def.processingType?.includes(workCategory) || def.category === workCategory)
+    );
+  });
+  if (!slot) return gs; // bare hands / tool not equipped — nothing to wear
+  const inst = pawn.equipment[slot]!;
+  const def = itemService.getItemById(inst.itemId);
+  const loss = def?.durabilityLossPerAction ?? 2;
+  const nextDur = (inst.durability ?? def?.maxDurability ?? 40) - loss;
+  return {
+    ...gs,
+    pawns: gs.pawns.map((p) => {
+      if (p.id !== pawnId) return p;
+      const equipment = { ...p.equipment };
+      if (nextDur <= 0) delete equipment[slot];
+      else equipment[slot] = { ...inst, durability: nextDur };
+      return { ...p, equipment };
+    })
+  };
 }

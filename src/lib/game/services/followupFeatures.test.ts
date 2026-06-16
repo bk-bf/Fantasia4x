@@ -308,3 +308,52 @@ describe('R7 working-state derivation', () => {
     expect(out.workAssignments.p.currentWork).toBe('woodcutting');
   });
 })
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ADR-009 step 2 — per-pawn tool gating (a pawn must carry the tool; minTier enforced)
+// ─────────────────────────────────────────────────────────────────────────────
+describe('ADR-009 step 2 — per-pawn tool gating', () => {
+  const withTool = (itemId: string) =>
+    ({
+      id: 'p',
+      position: { x: 0, y: 0 },
+      equipment: { belt: { instanceId: 't', itemId, durability: 40 } },
+      inventory: { items: {}, instances: [] }
+    }) as unknown as Pawn;
+  const bare = () =>
+    ({ id: 'p', position: { x: 0, y: 0 }, equipment: {}, inventory: { items: {}, instances: [] } }) as unknown as Pawn;
+
+  const woodcutJob = {
+    id: 'wc',
+    type: 'harvest',
+    resourceId: 'pine_tree',
+    targetX: 5,
+    targetY: 5,
+    workRequired: 5,
+    workDone: 0,
+    claimedBy: null
+  } as any;
+  const designations = { '5,5': 'woodcut' } as unknown as GameState['designations'];
+
+  it('pawnHasToolFor: a pawn carrying a qualifying tool passes; a bare pawn does not', () => {
+    expect(jobService.pawnHasToolFor(withTool('stone_axe'), 'woodcutting', 1)).toBe(true);
+    expect(jobService.pawnHasToolFor(bare(), 'woodcutting', 1)).toBe(false);
+  });
+
+  it('enforces minTier — a tier-1 tool does not satisfy minTier 2', () => {
+    expect(jobService.pawnHasToolFor(withTool('stone_axe'), 'woodcutting', 1)).toBe(true);
+    expect(jobService.pawnHasToolFor(withTool('stone_axe'), 'woodcutting', 2)).toBe(false);
+  });
+
+  it('a pawn carrying the tool can claim a gated harvest even with EMPTY colony stock', () => {
+    const gs = makeState({ jobs: [woodcutJob], designations, stockpile: {} });
+    expect(jobService.getAvailableJobs(withTool('stone_axe'), gs).map((j) => j.id)).toContain('wc');
+  });
+
+  it('a toolless pawn can still claim it when colony stock has a tool (auto-grab), but not when neither has one', () => {
+    const stocked = makeState({ jobs: [woodcutJob], designations, stockpile: { stone_axe: 1 } });
+    expect(jobService.getAvailableJobs(bare(), stocked).map((j) => j.id)).toContain('wc');
+    const none = makeState({ jobs: [woodcutJob], designations, stockpile: {} });
+    expect(jobService.getAvailableJobs(bare(), none).map((j) => j.id)).not.toContain('wc');
+  });
+});

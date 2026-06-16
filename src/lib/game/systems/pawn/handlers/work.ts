@@ -25,6 +25,8 @@ import {
 } from '../pawnHelpers';
 import { checkNeedInterrupts, selectIdleNeed, applyNeed } from '../needSelection';
 import { orderStationTile, depositInventory, findNearestDepositPoint } from '../pawnHauling';
+import { equipItem } from '../../../core/PawnEquipment';
+import { aggregateFromDrops } from '../../../core/GameState';
 
 export function handleHauling(pawn: Pawn, gameState: GameState): GameState {
   // ADR-016 fetch-carry: items picked up for a craft order go to that order's station tile
@@ -155,24 +157,52 @@ export function handleIdle(pawn: Pawn, gameState: GameState): GameState {
 
   let gs = jobService.claimJob(pawn.id, job.id, gameState);
 
+  // ADR-009 step 2: if this is a tool-gated job and the pawn isn't already holding the tool, detour
+  // to grab one from colony stock first (auto-equip), THEN proceed to the job. `toolFetch` makes the
+  // first leg target the tool's stockpile tile; the pickup (handleMovingToResource) re-targets the site.
+  let toolFetch: { itemId: string; siteX: number; siteY: number } | undefined;
+  let destX = job.targetX;
+  let destY = job.targetY;
+  const toolReq = jobService.requiredToolForJob(job, gs);
+  if (toolReq && !jobService.pawnHasToolFor(pawn, toolReq.workType, toolReq.minTier)) {
+    const drop = jobService.findStockToolDropFor(
+      gs,
+      toolReq.workType,
+      toolReq.minTier,
+      pawn.position ?? undefined
+    );
+    if (!drop) {
+      // Claimable only because the colony had a tool a moment ago; it's gone now — cool the job
+      // down for this pawn and release so a tool-bearing pawn can take it.
+      markJobUnreachable(pawn.id, job.id, gameState.turn);
+      return jobService.releaseJob(pawn.id, job.id, gs);
+    }
+    toolFetch = { itemId: drop.resourceId, siteX: job.targetX, siteY: job.targetY };
+    destX = drop.x;
+    destY = drop.y;
+  }
+
   const activeJob = {
     type: job.type as 'harvest' | 'construct' | 'craft' | 'haul' | 'fetch',
     jobId: job.id,
-    targetX: job.targetX,
-    targetY: job.targetY,
+    targetX: destX,
+    targetY: destY,
     resourceId: job.resourceId,
     droppedItemId: job.droppedItemId,
     buildingId: job.buildingId,
     craftQueueId: job.craftQueueId,
     progress: 0,
-    timeRequired: job.workRequired
+    timeRequired: job.workRequired,
+    toolFetch
   };
 
   // ADR-016: craft jobs now target the station tile, so the pawn must walk there like any other
-  // job (no more "craft anywhere"). Only genuinely abstract (0,0) jobs are worked in place.
+  // job (no more "craft anywhere"). Only genuinely abstract (0,0) jobs are worked in place. A
+  // tool-fetch detour never starts AT the site — the first leg is always the tool tile.
   const atSite =
-    (job.targetX === 0 && job.targetY === 0) || // abstract building placed off-map
-    (pawn.position && isAdjacent(pawn.position.x, pawn.position.y, job.targetX, job.targetY));
+    !toolFetch &&
+    ((job.targetX === 0 && job.targetY === 0) || // abstract building placed off-map
+      (pawn.position && isAdjacent(pawn.position.x, pawn.position.y, job.targetX, job.targetY)));
 
   // queuePreview (soft-preview of upcoming unclaimed jobs for the need-lookahead system) is
   // computed by jobService.selectJobForPawn above.
@@ -185,18 +215,95 @@ export function handleIdle(pawn: Pawn, gameState: GameState): GameState {
     });
   }
 
-  const afterPath = tryAssignPath(pawn, job.targetX, job.targetY, gs);
-  if (!afterPath) {
-    // Unreachable right now — cool the job down for this pawn so we don't re-run the
-    // expensive failed pathfind every tick, then drop the claim.
-    markJobUnreachable(pawn.id, job.id, gameState.turn);
-    return jobService.releaseJob(pawn.id, job.id, gs);
+  const afterPath = tryAssignPath(pawn, destX, destY, gs);
+  if (afterPath) {
+    return mutatePawn(afterPath, pawn.id, (p) => {
+      p.currentState = PAWN_STATE.MOVING_TO_RESOURCE;
+      p.activeJob = activeJob;
+      p.jobQueue = queuePreview;
+    });
   }
 
+  // tryAssignPath returned null = already adjacent to the destination OR genuinely unreachable.
+  // A tool-fetch leg that's already adjacent enters MovingToResource flagged arrived, so the pickup
+  // branch fires next tick (the job-target adjacency was handled by `atSite` above).
+  if (toolFetch && pawn.position && isAdjacent(pawn.position.x, pawn.position.y, destX, destY)) {
+    return mutatePawn(gs, pawn.id, (p) => {
+      p.currentState = PAWN_STATE.MOVING_TO_RESOURCE;
+      p.activeJob = activeJob;
+      p.jobQueue = queuePreview;
+      p.hasReachedDestination = true;
+    });
+  }
+
+  // Unreachable right now — cool the job down for this pawn so we don't re-run the expensive failed
+  // pathfind every tick, then drop the claim.
+  markJobUnreachable(pawn.id, job.id, gameState.turn);
+  return jobService.releaseJob(pawn.id, job.id, gs);
+}
+
+/**
+ * ADR-009 step 2 — the pawn has reached the tool's stockpile tile: take one tool from stock, equip
+ * it (mints an ItemInstance into the `belt` slot), clear the detour, and re-path to the real job
+ * site. If the tool was taken by someone else first, release the job + cool it down so the pawn
+ * re-selects (and may grab from another stock tile).
+ */
+function acquireToolAndProceed(pawn: Pawn, gameState: GameState): GameState {
+  const aj = pawn.activeJob!;
+  const tf = aj.toolFetch!;
+  const drop = (gameState.droppedItems ?? []).find(
+    (d) =>
+      d.stored &&
+      d.resourceId === tf.itemId &&
+      d.x === aj.targetX &&
+      d.y === aj.targetY &&
+      (d.quantity ?? 0) > 0
+  );
+  if (!drop) {
+    if (aj.jobId) markJobUnreachable(pawn.id, aj.jobId, gameState.turn);
+    return jobService.releaseJob(pawn.id, aj.jobId ?? '', goIdle(pawn, gameState));
+  }
+
+  // Remove one tool from stock + recompute the aggregate (it's now on the pawn, not the colony).
+  const remainder = (drop.quantity ?? 1) - 1;
+  const newDropped =
+    remainder > 0
+      ? (gameState.droppedItems ?? []).map((d) =>
+          d.id === drop.id ? { ...d, quantity: remainder } : d
+        )
+      : (gameState.droppedItems ?? []).filter((d) => d.id !== drop.id);
+
+  // Equip the tool (mints the instance into the belt slot) + re-target to the job site.
+  const withTool: GameState = {
+    ...gameState,
+    droppedItems: newDropped,
+    stockpile: aggregateFromDrops(newDropped),
+    pawns: gameState.pawns.map((p) => {
+      if (p.id !== pawn.id) return p;
+      const equipped = equipItem(p, tf.itemId);
+      return {
+        ...equipped,
+        activeJob: { ...aj, toolFetch: undefined, targetX: tf.siteX, targetY: tf.siteY },
+        hasReachedDestination: false
+      };
+    })
+  };
+
+  const updated = withTool.pawns.find((p) => p.id === pawn.id)!;
+  // Already at the site (tool tile == site or adjacent)? Work next tick. Otherwise path there.
+  if (updated.position && isAdjacent(updated.position.x, updated.position.y, tf.siteX, tf.siteY)) {
+    return mutatePawn(withTool, pawn.id, (p) => {
+      p.currentState = PAWN_STATE.MOVING_TO_RESOURCE;
+      p.hasReachedDestination = true;
+    });
+  }
+  const afterPath = tryAssignPath(updated, tf.siteX, tf.siteY, withTool);
+  if (!afterPath) {
+    if (aj.jobId) markJobUnreachable(pawn.id, aj.jobId, withTool.turn);
+    return jobService.releaseJob(pawn.id, aj.jobId ?? '', goIdle(updated, withTool));
+  }
   return mutatePawn(afterPath, pawn.id, (p) => {
     p.currentState = PAWN_STATE.MOVING_TO_RESOURCE;
-    p.activeJob = activeJob;
-    p.jobQueue = queuePreview;
   });
 }
 
@@ -245,6 +352,11 @@ export function handleMovingToResource(pawn: Pawn, gameState: GameState): GameSt
       activeJob.targetX,
       activeJob.targetY
     );
+    // ADR-009 step 2: arrived at the tool's stockpile tile — grab + equip it, then continue to the
+    // job site (still MovingToResource). Must run BEFORE the WORKING transition (no tool, no work).
+    if (adjacent && activeJob.toolFetch) {
+      return acquireToolAndProceed(pawn, gameState);
+    }
     if (adjacent) {
       return mutatePawn(gameState, pawn.id, (p) => {
         p.currentState = PAWN_STATE.WORKING;

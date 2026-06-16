@@ -207,6 +207,10 @@ The goal is "peak production chain complexity" comparable to RimWorld: Hardcore 
 
 The early game has a genuine bootstrap problem: hand-gathered primitives → tools → workshops → better tools → better workshops. This is the intended design. Tutorials and documentation must communicate the starting dependency chain clearly. Balancing requires that starting map always spawns enough surface flint and twigs to reach Tier 0 tools without needing to move more than 20 tiles.
 
+#### Amendment (2026-06-16) — step 2: per-pawn carried tools (was colony-stock)
+
+Tool gating shipped in two steps. **Step 1** (R4) gated at job-claim on **colony stock** (`_colonyHasHarvestTool`). **Step 2** (2026-06-16) makes the *work* gate **per-pawn**: a pawn must physically **hold** a qualifying tool (equipped — tools go in the `belt` slot) to work a tool-gated harvest, and `minTier` is enforced against the held tool's `tier`. To avoid a soft-lock, a toolless pawn can still *claim* a gated job while a tool exists in colony stock, then **auto-grabs** it: an `activeJob.toolFetch` first leg routes the pawn to the nearest stored tool, equips it (`acquireToolAndProceed`), and proceeds to the site. When no tool exists anywhere the job stays open (bootstrap-safe). Wear moved with the tool — the **working pawn's** equipped tool loses durability and is unequipped on break, after which the gate sends the pawn to grab a replacement. Logic: `jobService.{requiredToolForJob,pawnHasToolFor,colonyHasToolFor,findStockToolDropFor}` (gate in `getAvailableJobs`), `handlers/work` (detour), `jobs/harvest` (per-pawn wear). The old colony-level `applyToolWear` is now unused for harvest.
+
 ---
 
 ### ADR-008 [GAME]: Rust/WASM Spatial Core via wasm-pack

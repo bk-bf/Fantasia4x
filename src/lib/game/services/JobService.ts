@@ -15,10 +15,11 @@
  * services/jobs/filters.ts; refuel rules in services/fuelRules.ts.
  */
 
-import type { DesignationType, GameState, Job, JobDef, Pawn } from '../core/types';
+import type { DesignationType, DroppedItem, GameState, Job, JobDef, Pawn } from '../core/types';
 import { WORK_CATEGORIES } from '../core/Work';
 import jobsData from '../database/jobs.jsonc';
 import { resourceObjectService } from './ResourceObjectService';
+import { itemService } from './ItemService';
 import * as harvest from './jobs/harvest';
 import * as haul from './jobs/haul';
 import * as construct from './jobs/construct';
@@ -208,10 +209,19 @@ class JobServiceImpl {
         if (allowedPawns.length > 0 && !allowedPawns.includes(pawn.id)) return false;
       }
 
-      // harvestTool (ADR-009 / R4): a harvest whose interaction requires a tool (woodcut→axe,
-      // mine→pick, …) is not claimable unless the colony has a matching tool in stock. The job
-      // stays open until one is crafted. Tool-free scavenges (toolRequirement null) are exempt.
-      if (claimGate === 'harvestTool' && !this._colonyHasHarvestTool(j, gameState)) return false;
+      // harvestTool (ADR-009 step 2): a tool-gated harvest (woodcut→axe, mine→pick, …) is claimable
+      // when this pawn already holds a qualifying tool, OR the colony has one in stock (the pawn
+      // auto-grabs it en route — see the tool-fetch detour in handlers/work). When NEITHER has one,
+      // the job stays open until a tool is crafted. Tool-free scavenges (no toolRequirement) pass.
+      if (claimGate === 'harvestTool') {
+        const req = this.requiredToolForJob(j, gameState);
+        if (
+          req &&
+          !this.pawnHasToolFor(pawn, req.workType, req.minTier) &&
+          !this.colonyHasToolFor(gameState, req.workType, req.minTier)
+        )
+          return false;
+      }
 
       // Map job type to work category key used in labor settings
       const workKey = this._jobTypeToWorkKey(j, gameState);
@@ -331,16 +341,14 @@ class JobServiceImpl {
   // ------------------------------------------------------------------ //
 
   /**
-   * ADR-009 tool gating (R4, step 1 = colony stock): does the colony hold a tool that satisfies
-   * this harvest's `interaction.toolRequirement`? Tool-free interactions (toolRequirement null —
-   * foraging, surface-stone scavenging) always pass. A required tool is satisfied when the
-   * stockpile holds ANY tool listed in the matching work category's `toolsRequired`. (Step 2 —
-   * per-pawn claimed inventory + minTier — is a later refinement.)
+   * ADR-009 step 2 — the tool requirement for a tool-gated harvest job (`{workType, minTier}`), or
+   * null when the job is tool-free / not a gated harvest. Reads the resource's interaction
+   * (designation-specific when available) and the matching work category's gating tool list.
    */
-  private _colonyHasHarvestTool(job: Job, gs: GameState): boolean {
-    if (!job.resourceId) return true;
+  requiredToolForJob(job: Job, gs: GameState): { workType: string; minTier: number } | null {
+    if (!job.resourceId) return null;
     const def = resourceObjectService.getById(job.resourceId);
-    if (!def) return true;
+    if (!def) return null;
     const dtype = (gs.designations ?? {})[`${job.targetX},${job.targetY}`] as
       | DesignationType
       | undefined;
@@ -349,10 +357,63 @@ class JobServiceImpl {
         ? resourceObjectService.getInteractionByDesignationType(job.resourceId, dtype)
         : undefined) ?? def.interaction;
     const req = interaction?.toolRequirement;
-    if (!req) return true; // tool-free harvest
+    if (!req) return null; // tool-free harvest
     const tools = WORK_CATEGORIES.find((w) => w.id === req.workType)?.toolsRequired ?? [];
-    if (tools.length === 0) return true; // category lists no gating tools
-    return tools.some((t) => (gs.stockpile?.[t] ?? 0) > 0);
+    if (tools.length === 0) return null; // category lists no gating tools
+    return { workType: req.workType, minTier: req.minTier ?? 1 };
+  }
+
+  /** Tool ids in a work category whose item `tier` meets `minTier` (default tier 1). */
+  private _qualifyingToolIds(workType: string, minTier: number): string[] {
+    const tools = WORK_CATEGORIES.find((w) => w.id === workType)?.toolsRequired ?? [];
+    return tools.filter(
+      (id) => ((itemService.getItemById(id) as { tier?: number } | undefined)?.tier ?? 1) >= minTier
+    );
+  }
+
+  /**
+   * ADR-009 step 2 — does this pawn PERSONALLY hold a qualifying tool (equipped in a slot, e.g. the
+   * `belt` tool slot, or carried as a tracked inventory instance)? This is the real per-pawn gate: a
+   * pawn can only WORK a tool-gated job while holding the tool. Tools are NOT read from
+   * `inventory.items` (that's haul cargo — INV-1).
+   */
+  pawnHasToolFor(pawn: Pawn, workType: string, minTier: number): boolean {
+    const ids = this._qualifyingToolIds(workType, minTier);
+    if (ids.length === 0) return false;
+    if (Object.values(pawn.equipment ?? {}).some((inst) => inst && ids.includes(inst.itemId)))
+      return true;
+    return (pawn.inventory?.instances ?? []).some((inst) => ids.includes(inst.itemId));
+  }
+
+  /** Does the colony hold a qualifying tool in stock? Keeps a gated job claimable so a toolless pawn
+   *  can be sent to grab one (the auto-grab detour in handlers/work); when NEITHER the pawn nor the
+   *  colony has a tool, the job stays open until one is crafted (bootstrap-safe). */
+  colonyHasToolFor(gs: GameState, workType: string, minTier: number): boolean {
+    return this._qualifyingToolIds(workType, minTier).some((id) => (gs.stockpile?.[id] ?? 0) > 0);
+  }
+
+  /** Nearest stored, unreserved tool drop satisfying (workType, minTier) — the auto-grab target. */
+  findStockToolDropFor(
+    gs: GameState,
+    workType: string,
+    minTier: number,
+    near?: { x: number; y: number }
+  ): DroppedItem | null {
+    const ids = new Set(this._qualifyingToolIds(workType, minTier));
+    if (ids.size === 0) return null;
+    let best: DroppedItem | null = null;
+    let bestD = Infinity;
+    for (const d of gs.droppedItems ?? []) {
+      if (!d.stored || (d.quantity ?? 0) <= 0 || d.reservedFor) continue;
+      if (!ids.has(d.resourceId)) continue;
+      if (!near) return d;
+      const dd = Math.abs(d.x - near.x) + Math.abs(d.y - near.y);
+      if (dd < bestD) {
+        bestD = dd;
+        best = d;
+      }
+    }
+    return best;
   }
 
   /** Map Job to the work category key used in WorkAssignment.laborSettings */

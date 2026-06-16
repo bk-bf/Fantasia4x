@@ -285,5 +285,9 @@ export interface Pawn {
     hungerToRecover?: number; // total hunger to restore over the eating duration
     depositX?: number; // haul / fetch: destination x for deposit / staging
     depositY?: number; // haul / fetch: destination y for deposit / staging
+    /** ADR-009 step 2: when set, the pawn is detouring to grab the required tool BEFORE the job —
+     *  targetX/targetY currently point at the tool's stockpile tile, and `siteX`/`siteY` is the real
+     *  job tile to re-target once the tool is in hand. Cleared on pickup. */
+    toolFetch?: { itemId: string; siteX: number; siteY: number };
   };
 }
