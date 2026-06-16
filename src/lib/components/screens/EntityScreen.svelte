@@ -122,7 +122,7 @@
                 class="col-limb"
                 style="color:{wl ? limbColor(wl.health) : 'var(--text-muted)'}"
               >
-                {wl ? `${wl.name} ${wl.health}%` : '—'}
+                {wl ? `${wl.name} ${Math.round(wl.health)}%` : '—'}
               </span>
               <span class="col-pain" style="color:{painColor(pp)}">{pp}%</span>
               <span class="col-state">{m.state}</span>
@@ -147,7 +147,7 @@
                     <div class="expand-limb">
                       <span class="expand-limb-name">{limb.id.replace('_', ' ')}</span>
                       <span class="expand-limb-hp" style="color:{limbColor(limb.health)}">
-                        {limb.isMissing ? 'MISSING' : `${limb.health}%`}
+                        {limb.isMissing ? 'MISSING' : `${Math.round(limb.health)}%`}
                       </span>
                       {#if limb.bleedRate && limb.bleedRate > 0}
                         <span class="expand-limb-bleed">▼{limb.bleedRate.toFixed(1)}</span>

@@ -417,12 +417,12 @@
     if (bDef?.description) lines.push(bDef.description);
     if (isBlueprint) {
       lines.push(
-        `[${jobProgressBar(workReq > 0 ? workDone / workReq : 0)}] ${workDone}/${workReq} work`
+        `[${jobProgressBar(workReq > 0 ? workDone / workReq : 0)}] ${Math.round(workDone)}/${workReq} work`
       );
     } else if (selectedBuilding.deconstructQueued) {
       const dDone = selectedBuilding.deconstructWorkDone ?? 0;
       const dReq = selectedBuilding.deconstructWorkRequired ?? 1;
-      lines.push(`[${jobProgressBar(dReq > 0 ? dDone / dReq : 0)}] ${dDone}/${dReq} work`);
+      lines.push(`[${jobProgressBar(dReq > 0 ? dDone / dReq : 0)}] ${Math.round(dDone)}/${dReq} work`);
       lines.push('⊢ demolishing…');
     } else {
       const cost = bDef?.buildingCost ?? {};
@@ -2466,13 +2466,13 @@
         {@const workDone = hoverBuilding.workDone ?? 0}
         {@const workReq = hoverBuilding.workRequired ?? bDef?.workAmount ?? 1}
         <div class="bld-progress">
-          [{jobProgressBar(workReq > 0 ? workDone / workReq : 0)}] {workDone}/{workReq} work
+          [{jobProgressBar(workReq > 0 ? workDone / workReq : 0)}] {Math.round(workDone)}/{workReq} work
         </div>
       {:else if hoverBuilding.deconstructQueued}
         {@const dDone = hoverBuilding.deconstructWorkDone ?? 0}
         {@const dReq = hoverBuilding.deconstructWorkRequired ?? 1}
         <div class="bld-progress">
-          [{jobProgressBar(dReq > 0 ? dDone / dReq : 0)}] {dDone}/{dReq} work
+          [{jobProgressBar(dReq > 0 ? dDone / dReq : 0)}] {Math.round(dDone)}/{dReq} work
         </div>
         <div class="bld-note">⊢ demolishing…</div>
       {/if}

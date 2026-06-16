@@ -78,7 +78,7 @@
   function limbStatus(limb: LimbState): string {
     if (limb.isMissing) return 'MISSING';
     if (limb.health <= 0) return 'GONE';
-    return `${limb.health}%`;
+    return `${Math.round(limb.health)}%`;
   }
 
   const bloodColor = bloodColorShared;
