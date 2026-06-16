@@ -176,6 +176,73 @@ Sourced from playtest + `game/NOTES.md`; made the existing combat/survival/produ
   adjacent + outside the panel; fixed-width panel skeleton so long descriptions wrap (unified width across object
   types); draft target line draws while paused.
 
+## 2026-06-16 pass — playtest N-items + carried-forward + physical-production follow-ups (moved here 2026-06-16)
+
+Shipped after the ENGINE-PERFORMANCE arc. Gate at archival: `check` 0 · `test` 264. **N-1 (can't place
+buildings under `--profiler`) stays open** in the tracker — the rest of the playtest + deferred backlog closed.
+
+### Playtest findings (N-2 / N-3 / N-4 / N-5)
+
+- **N-2 · Stamina regen too fast.** Resolved. Regen now runs through `perTick(stamina_recovery_rate)` so the
+  per-second rate is divided across the 60 ticks/s — stamina is a real pressure again instead of effectively infinite.
+- **N-3 · Exhaustion decoupled from stamina (all entities).** Resolved. Exhaustion is now a pure function of the
+  stamina value in one shared place (`Combat.tickStaminaAndWinded`), reusing the shared **`winded`** status for pawns
+  *and* mobs — chickens no longer sit "exhausted" at full stamina.
+- **N-4 · Haul one-item-per-trip.** Resolved via **source-tile top-up**: a hauling pawn fills its weight/volume budget
+  from the source tile before walking to the stockpile, instead of grabbing a single item per round trip.
+  (`clampPickupQuantity` already capped by budget; the gap was the multi-item pickup loop.)
+- **N-5 · Idle↔MovingToResource jank after drag-placing blueprints.** Resolved 2026-06-16 — a latent
+  **duplicate-drop-id** bug, not a perf regression. `reserveForOrder` keyed reserved stacks on
+  `${d.id}-resv-${orderId.slice(-6)}`, and `slice(-6)` is the placement-timestamp tail shared by every building in one
+  drag batch → all their reserved stacks collided on one id; `_syncFetchJobs`'s `find(d => d.id === …)` matched a
+  sibling's stack, culled the valid fetch job, re-minted it with a fresh id, dangled the pawn's claim → Idle → re-claim
+  → repeat. Fix: (1) reservation ids use the full `orderId`; (2) fetch filter + dedup match on **id AND
+  `reservedFor`/owner** (self-heals collided saves); (3) **deterministic job ids** (`fetch-${drop.id}-${ownerId}`,
+  dropped the `-${Date.now()}` from construct/craft/deconstruct/refuel). Verified live via CDP state dump.
+
+### Carried-forward deferred (D9.7 / ADR-009 step 2 / R11)
+
+- **D9.7 · Event-driven job generation → throttled reconcile (ADR-022).** Resolved. A true event-driven rewrite isn't
+  worth it: the per-tick `generateJobs` is already emission-derived and self-healing (rebuilds the board from current
+  sources each pass — a gone source just stops producing a job). **Resolution: throttle the rebuild to every 6 ticks**
+  (`JOB_GENERATION_INTERVAL_TICKS`); claim/advance/complete still run every tick. Board-appearance latency ≤6 ticks
+  (~0.1 in-game-sec), scan cost ~1/6. See [ADR-022](../../game/DECISIONS.md).
+- **ADR-009 step 2 · per-pawn tool gating.** Resolved. A pawn must physically **hold** a qualifying tool (equipped
+  `belt` slot) to work a tool-gated job; the colony-stock check is gone as the work gate. **Auto-grab:** a toolless
+  pawn claiming a gated job detours to the nearest stored tool, equips it, then proceeds (`activeJob.toolFetch` →
+  `acquireToolAndProceed`) — no soft-lock, no micro. **minTier** enforced per-pawn; **per-pawn wear** breaks the tool →
+  auto-unequip → grab a replacement. New `jobService.{requiredToolForJob,pawnHasToolFor,colonyHasToolFor,findStockToolDropFor}`.
+- **R11 · random-events system wired (was dead code).** Resolved. `EventSystem` + `EVENT_DATABASE` (25 events) run in a
+  new **`events` turn phase** (after `reapDead`); events surface in the chronicle via the same
+  `simLog.logActivity({type:'event'})` path combat/death use (not the old `eventStore` modal). Consequence application
+  reconciled to the current model (building effects hit physical `PlacedBuilding.condition`) and made immutable (events
+  aren't a hot phase). _Known follow-ups:_ `deathChance` is a no-op (real death needs a systems-layer `killPawn`);
+  building "destroy" sets `condition:0` in place; `seasonSpecific` triggers ungated (seasons unwired); the singleton's
+  cooldown/history isn't in `GameState` so it resets on reload.
+
+  _Removed as stale 2026-06-16:_ **D-perf remainder (tick strides)** (both concrete items shipped; perf at a clean stop)
+  and **D-bills (`productionTargets`)** (dead field gone; a repeat-craft "bills" feature would be a fresh DESIGN item).
+
+### Physical-production follow-ups (ADR-016)
+
+- **Tool-gating step 2 (craft side, data-driven).** Resolved. Craft gating mirrors the harvest gate: a per-station
+  **`toolRequirement: {workType, minTier}`** on the building def (`buildings.jsonc`), with a per-recipe
+  `Recipe.toolRequirement` override. `recipeService.toolRequirementForRecipe` resolves override→station;
+  `jobService.requiredToolForJob` is craft-aware (`craftQueueId → order → recipe → station tool`), so the per-pawn
+  gate + auto-grab + wear light up for craft jobs for free (new `craftTool` claim-gate). Gated stations:
+  **butcher_spot→butchery, tanning_rack→leatherworking, anvil + stone_forge→metalworking**, all `minTier 0`.
+  Bootstrap-safe: butchery/leatherworking take `flint_knife`; metalworking gets a tool-free **`wooden_tongs`**
+  (Green-Wood Tongs, `craft_spot`) ahead of the new `iron_tongs`/`steel_tongs` items — so the forge/anvil gate can't
+  soft-lock. Forge *smelting* is passive (no pawn job) so only active shaping gates. _Known limitation:_ one `belt`
+  tool slot → a pawn holds one tool at a time (swaps via auto-grab); multi-tool belt is a future refinement.
+- **Butchery multi-yield.** Resolved (pure data). Each carcass's butcher recipe yields **meat + hide/pelt + bones** in
+  one run (`make_venison`: `deer_carcass → {venison, deer_hide, medium_bones}`); the redundant per-product recipes
+  (each consumed a whole carcass) were removed.
+- **Passive-furnace flag for forge/hearth.** Resolved (data-driven). Passive is a per-recipe `"passive": true` flag in
+  `recipes.jsonc` (16 recipes: all bloomery/kiln/charcoal-pit + `stone_forge` smelting + `hearth` ash/animal-fat); the
+  dispatch honours `isPassive(recipe) || isPassiveStation(stationType)`, so forge/hearth smelt passively while their
+  shaping recipes stay pawn-worked. `PASSIVE_STATIONS` remains only as a fallback for orders with no resolvable recipe.
+
 ## What's improved since 2026-06-10 (keep doing this)
 
 - **Tests 32 → 153** — headless sim-invariant tests (starvation timing, combat sim, need thresholds) + the physical-production and job-registry seams.

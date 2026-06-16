@@ -1,8 +1,8 @@
-<!-- LOC cap: 400 (created: 2026-05-28) -->
+<!-- LOC cap: 460 (created: 2026-05-28; 2026-06-16 made ENGINE-PERFORMANCE-aware: added §0.5 perf constraints + per-subsystem perf notes) -->
 
 # LIVING WORLD — Day/Night, Seasons, Weather & Visual Atmosphere
 
-> **Related:** [ROADMAP](ROADMAP.md) · [game/DESIGN](../../game/DESIGN.md) · [SURVIVAL-HEALTH](SURVIVAL-HEALTH.md) · archived: [FOG-OF-WAR-DEFERRED](../archive/FOG-OF-WAR-DEFERRED-2026-05-28.md)
+> **Related:** [ROADMAP](ROADMAP.md) · [game/DESIGN](../../game/DESIGN.md) · [SURVIVAL-HEALTH](SURVIVAL-HEALTH.md) · [ENGINE-PERFORMANCE](ENGINE-PERFORMANCE.md) (the perf budget this spec must respect — §0.5) · archived: [FOG-OF-WAR-DEFERRED](../archive/FOG-OF-WAR-DEFERRED-2026-05-28.md)
 
 ## Status: Phase A + A2 COMPLETE — Phases B–D not started
 
@@ -24,6 +24,73 @@ Visual delivery is via existing WebGL2 renderer extended with:
 
 1. Ambient uniforms in the tile fragment shader (day/night tint)
 2. A secondary fullscreen overlay render pass (weather particles)
+
+---
+
+## Subsystem 0.5 — Performance constraints (READ FIRST)
+
+This spec lands **after** the engine-perf arc ([ENGINE-PERFORMANCE](ENGINE-PERFORMANCE.md)). That arc
+proved two costs dominate at the heavy `--profiler` scale (150 pawns + ~140 mobs, 240×160), and
+*every* new system here touches both. Honour these or you reintroduce a cliff that was just fixed.
+
+### Constraint 1 — the 38k-tile `worldMap` is THE cliff. Never rebuild it, never flip its ref.
+
+`tile.temperature` (Subsystem 3) and any future per-tile field are added to the **worldMap**, which is
+38k `WorldTile`s. The single biggest perf bug of the whole arc (§C, §D6) was code that ran
+`worldMap.map(row => row.map(...))` to change a handful of tiles — flipping the worldMap **ref** does
+two expensive things at once: a full **terrain vertex rebuild** on the renderer *and* a full 38k-tile
+**re-clone across the worker→main boundary** (the 211 ms `onmessage` spikes). The fix everywhere was
+the same:
+
+- **Mutate the changed tiles IN PLACE** (ADR-002 amendment — hot/structural worldMap writes mutate;
+  the per-tick top-level copy + the worker snapshot clone contain the blast radius).
+- **`markTileDirty(x,y)`** (`core/tileDeltas.ts`, worker singleton) for each changed tile. The
+  publisher drains these into a **`worldMapDelta`** (changed tiles only) instead of re-sending the
+  whole array; `simWorkerClient` patches its cached worldMap in place.
+- **Never** assign a new array to `gameState.worldMap` for a per-tile change.
+
+So the spec's "recompute `tile.temperature` once per season change" (Subsystem 3) **must** be an
+in-place pass over the affected tiles + `markTileDirty`, *not* a worldMap rebuild — even at season
+cadence a 38k rebuild + re-clone is a visible hitch.
+
+### Constraint 2 — temperature is worker-only; it already costs nothing on the wire.
+
+The worldMapDelta ships a **slim tile** (D4): only the 9 fields the main thread reads (`type/
+terrainType/subType/movementCost/walkable/resources/resourceCooldowns/x/y`). `temperature` is **already
+in the dropped set** (alongside `density/moisture/territoryOwner`) — it's a worker/save-only field the
+renderer never receives. So temperature → need-rate math is free on the snapshot. **If a feature ever
+needs temperature *visually* (e.g. a heat-map overlay), add it to the slim-tile allowlist deliberately
+and measure** — don't assume it's already there.
+
+### Constraint 3 — need-rate effects run in the per-tick hot path: scalar math, zero allocation.
+
+The temperature/weather/night multipliers (Subsystems 1, 3, 4) feed `PawnService.getRestIncreasePerTurn()` /
+`getHungerIncreasePerTurn()`, which run **per-pawn, every tick**. Those phases were just de-immutabled
+to mutate in place (the 12.5× allocation tax, §9). Add **plain scalar arithmetic** reading cached
+`tile.temperature` / `gameState.weather` — **no per-tick `.map()`, no `{...spread}`, no per-tick tile
+temperature recompute** (read the cached value). Anything that allocates per pawn per tick reinstates
+the tax.
+
+### Constraint 4 — season/weather are cheap scalars; fog-of-war is NOT.
+
+- `season`/`seasonDay`/`weather` are small top-level `GameState` scalars → the sectional-diff snapshot
+  (W2) ships only the section that changed. Adding them is essentially free. ✅
+- **Fog of war (`tile.visible`, Subsystem 6) is the trap.** A per-tile boolean that flips **every turn**
+  is exactly the worldMap-churn pattern Constraint 1 forbids — it would invalidate the worldMap ref or
+  bloat `worldMapDelta` every turn. Do **not** persist `visible` on `WorldTile` and ship it. Either
+  **compute visibility renderer-side from pawn positions** (already in the snapshot), or route it
+  through the **WASM spatial service** (ADR-008). ENGINE-PERFORMANCE §C explicitly defers the
+  `nearestPawn` spatial index to be built **once, shared** by fog-of-war + ranged-combat LoS + nearest
+  queries — fog must fold into that amortised service, not stand up its own per-tile mask. See
+  Subsystem 6.
+
+### Constraint 5 — renderer overlays must not trigger terrain rebuilds.
+
+The weather overlay pass (Subsystem 5) is a GPU-side fullscreen quad — cheap, correct. The day/night
+`a_light` field and tint are already shipped (Phase A/A2). The renderer-trace lesson (D1″) was that
+**designation churn was wrongly triggering full 38k terrain rebuilds**; keep new ambient/season/weather
+state on their own revision/uniform path so a tint or weather change updates a uniform, never bumps
+`_terrainRev` (which forces a vertex rebuild).
 
 ---
 
@@ -154,6 +221,12 @@ tile.temperature = biomeBaseTemp + seasonOffset + weatherMod + shelterMod
 - `shelterMod`: tiles inside a complete building with walls → `+10` in winter / `-5` in summer
 - Temperature is recomputed once per season change (not per turn — too expensive)
 
+> **⚠ Perf (Constraints 1 & 2).** `temperature` is a **worldMap** field. The season-change recompute
+> **must mutate affected tiles IN PLACE + `markTileDirty(x,y)`** — never `worldMap.map()` (a 38k rebuild
+> + cross-worker re-clone, the §C/§D6 cliff). `temperature` is already dropped from the slim-tile
+> `worldMapDelta`, so it stays worker-only and costs nothing on the wire — fine, because nothing here
+> renders it; the need-rate effects below read the cached value.
+
 ### Pawn comfort range
 
 Each pawn (or race template) defines `[comfortMin, comfortMax]` in conceptual °C.
@@ -170,6 +243,11 @@ hungerRateMultiplier  += heat * 0.02
 
 This feeds directly into existing `PawnService.getRestIncreasePerTurn()` and
 `getHungerIncreasePerTurn()` multiplier chains.
+
+> **⚠ Perf (Constraint 3).** These multiplier chains run per-pawn every tick on the de-immutabled hot
+> path. Compute them as **scalar arithmetic reading the cached `tile.temperature`** — no per-tick tile
+> recompute, no allocation. Same rule for the night `FATIGUE_THRESHOLD`/`sleepDrive` effects (Subsystem 1)
+> and the weather multipliers (Subsystem 4): scalar reads only.
 
 ---
 
@@ -366,6 +444,17 @@ if (ambientLight < 0.4) visionRadius = Math.floor(visionRadius * (ambientLight /
 `GameEngineImpl` (O(pawns × radius²) — acceptable for colony scale).
 `tile.discovered` persists (never reset).
 
+> **⚠ Perf (Constraint 4) — do NOT persist `visible` on `WorldTile` and ship it.** A per-tile boolean
+> that flips every turn is the exact worldMap-churn pattern Constraint 1 forbids: it would either flip
+> the worldMap ref (full re-clone + terrain rebuild) or push a large `worldMapDelta` *every turn*. Two
+> acceptable shapes instead: **(a)** compute visibility **renderer-side from pawn positions** (already in
+> the snapshot every flush) — zero new wire cost; or **(b)** route it through the **WASM spatial service**
+> (ADR-008). ENGINE-PERFORMANCE §C defers the `nearestPawn` spatial index specifically so fog-of-war +
+> ranged-combat LoS + nearest queries are built **once, amortised, in one spatial service** — fog must
+> fold into that, not stand up its own per-tile mask. The shadow-casting form is already gated to the
+> WASM interface (Subsystem 5 spatial-boundary note); the cheap night-dimming form below is
+> renderer-side.
+
 Night tiles outside vision are rendered with `u_ambient` forced to `0.05` (near-black,
 but character outlines still visible at 5% brightness — Caves of Qud feel).
 
@@ -458,3 +547,8 @@ is what a pawn can see. Both can coexist.
 9. A lit campfire visibly brightens and warms the tiles around it, falling off smoothly with distance, and lifts them out of the night tint.
 10. Point light is per-tile but smoothly interpolated (no visible square blocking) and flickers subtly over time.
 11. The old DOM `campfire-glow` overlay is removed; illumination comes from the tile renderer.
+12. **Perf (§0.5):** enabling seasons/temperature/weather/fog on the heavy `--profiler` scene holds the
+    post-arc TPS bar (comfortably 200+ TPS @4× after warmup) — no harvest-style cliff. Specifically: the
+    season-change temperature pass mutates tiles in place + `markTileDirty` (no `worldMap.map()`, no ref
+    flip → `worldMapRef` stays 0 in the `[TRIG]` probe); need-rate effects allocate nothing per tick; and
+    fog-of-war ships no per-tile `visible` field on the worldMap.
