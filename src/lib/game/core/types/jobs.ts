@@ -90,9 +90,10 @@ export interface JobDef {
   /** Dynamic work-category resolution. `designation`: read it off the harvested resource's
    *  interaction (designation-specific). */
   workCategorySource?: 'designation';
-  /** Optional claim restriction enforced in `getAvailableJobs`. `harvestTool`: ADR-009 colony-tool
-   *  gating; `refuelAllowlist`: the building's `allowedRefuelPawnIds`. */
-  claimGate?: 'harvestTool' | 'refuelAllowlist';
+  /** Optional claim restriction enforced in `getAvailableJobs`. `harvestTool`/`craftTool`: ADR-009
+   *  per-pawn tool gating (carry a qualifying tool, auto-grab otherwise); `refuelAllowlist`: the
+   *  building's `allowedRefuelPawnIds`. */
+  claimGate?: 'harvestTool' | 'craftTool' | 'refuelAllowlist';
   /** Whether low light slows this job (§G light→work). Defaults to true. Set false for jobs that
    *  don't need close sight — hauling/fetching/refuelling (carrying) are unaffected by darkness. */
   lightAffected?: boolean;

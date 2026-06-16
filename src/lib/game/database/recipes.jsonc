@@ -734,6 +734,36 @@
     "workAmount"      : 4,
     "toolTierRequired": 0
   },
+  // ── Metalworking tools (the forge/anvil craft-tool gate) ──────────────────
+  // Crude green-wood tongs are knappable at the free craft spot with NO tool, so a colony can make
+  // its first metalworking tool and never soft-lock the (tool-gated) forge/anvil. Iron/steel tongs
+  // are the durable upgrades, forged once you already hold a pair.
+  {
+    "id"              : "make_wooden_tongs",
+    "station"         : "craft_spot",
+    "inputs"          : {"branch": 3, "cordage": 1},
+    "outputs"         : {"wooden_tongs": 1},
+    "workAmount"      : 2,
+    "toolTierRequired": 0
+  },
+  {
+    "id"              : "make_iron_tongs",
+    "station"         : "anvil",
+    "inputs"          : {"iron_bar": 1, "cordage": 1},
+    "outputs"         : {"iron_tongs": 1},
+    "workAmount"      : 6,
+    "toolTierRequired": 1,
+    "researchRequired": "iron_working"
+  },
+  {
+    "id"              : "make_steel_tongs",
+    "station"         : "anvil",
+    "inputs"          : {"steel_bar": 1, "cordage": 1},
+    "outputs"         : {"steel_tongs": 1},
+    "workAmount"      : 8,
+    "toolTierRequired": 2,
+    "researchRequired": "iron_working"
+  },
   {
     "id"              : "make_rope",
     "station"         : "ropewalk",

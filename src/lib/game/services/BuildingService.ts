@@ -379,6 +379,10 @@ export class BuildingServiceImpl implements BuildingService {
       console.warn(`[BuildingService] Unknown building type: ${type}`);
       return gameState;
     }
+    // Can't build on an already-blocked tile: a mountain/cliff wall, water, or an existing solid
+    // building all set worldMap[y][x].walkable = false. Reject placement there so wall blueprints
+    // can't be painted onto non-walkable terrain (mine it out first).
+    if (gameState.worldMap?.[y]?.[x]?.walkable === false) return gameState;
     const instant = building.workAmount === 0;
     const placed: PlacedBuilding = {
       id: `${type}-${x}-${y}-${Date.now()}`,

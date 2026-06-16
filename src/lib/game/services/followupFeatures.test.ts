@@ -357,3 +357,62 @@ describe('ADR-009 step 2 — per-pawn tool gating', () => {
     expect(jobService.getAvailableJobs(bare(), none).map((j) => j.id)).not.toContain('wc');
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ADR-009 step 2 — CRAFT-tool gating (data-driven via the recipe's station building)
+// ─────────────────────────────────────────────────────────────────────────────
+describe('ADR-009 step 2 — craft-tool gating (station-derived)', () => {
+  const withKnife = () =>
+    ({
+      id: 'p',
+      position: { x: 0, y: 0 },
+      equipment: { belt: { instanceId: 't', itemId: 'flint_knife', durability: 40 } },
+      inventory: { items: {}, instances: [] }
+    }) as unknown as Pawn;
+  const bare = () =>
+    ({ id: 'p', position: { x: 0, y: 0 }, equipment: {}, inventory: { items: {}, instances: [] } }) as unknown as Pawn;
+
+  // make_rabbit_meat is at butcher_spot → buildings.jsonc gates it on butchery (a knife).
+  const butcherJob = {
+    id: 'bj',
+    type: 'craft',
+    craftQueueId: 'o1',
+    targetX: 5,
+    targetY: 5,
+    workRequired: 1,
+    workDone: 0,
+    claimedBy: null
+  } as any;
+  const order = { id: 'o1', item: { id: 'rabbit_meat' }, quantity: 1, stationType: 'butcher_spot' } as any;
+
+  it('resolves the station tool requirement from the building (butcher_spot → butchery)', () => {
+    const req = recipeService.toolRequirementForRecipe(recipeService.getRecipeForItem('rabbit_meat'));
+    expect(req).toEqual({ workType: 'butchery', minTier: 0 });
+    // A craft_spot recipe (cordage) has no station tool → null.
+    expect(recipeService.toolRequirementForRecipe(recipeService.getRecipeForItem('cordage'))).toBeNull();
+  });
+
+  it('a butcher craft job is claimable with a knife in hand, or in colony stock, but not when neither has one', () => {
+    const stocked = makeState({ jobs: [butcherJob], craftingQueue: [order], stockpile: { flint_knife: 1 } });
+    expect(jobService.getAvailableJobs(bare(), stocked).map((j) => j.id)).toContain('bj'); // auto-grab
+    expect(jobService.getAvailableJobs(withKnife(), makeState({ jobs: [butcherJob], craftingQueue: [order], stockpile: {} })).map((j) => j.id)).toContain('bj');
+    const none = makeState({ jobs: [butcherJob], craftingQueue: [order], stockpile: {} });
+    expect(jobService.getAvailableJobs(bare(), none).map((j) => j.id)).not.toContain('bj');
+  });
+
+  it('metalworking (anvil) is gated, but the bootstrap green-wood tongs are tool-free → no soft-lock', () => {
+    // An anvil recipe inherits the anvil's metalworking gate.
+    expect(recipeService.toolRequirementForRecipe(recipeService.getRecipeForItem('short_seax'))).toEqual({
+      workType: 'metalworking',
+      minTier: 0
+    });
+    // The bootstrap tongs themselves need NO tool (craft_spot), so the gate can never soft-lock.
+    expect(recipeService.toolRequirementForRecipe(recipeService.getRecipeForItem('wooden_tongs'))).toBeNull();
+    // …and green-wood tongs (tier 0) satisfy the metalworking gate.
+    const tongsPawn = {
+      equipment: { belt: { instanceId: 't', itemId: 'wooden_tongs', durability: 18 } },
+      inventory: { items: {}, instances: [] }
+    } as unknown as Pawn;
+    expect(jobService.pawnHasToolFor(tongsPawn, 'metalworking', 0)).toBe(true);
+  });
+});

@@ -90,7 +90,7 @@ export const WORK_CATEGORIES: WorkCategory[] = [
     name: 'Metalworking',
     description: 'Smelt ores and forge metal items',
     color: '#FF5722',
-    toolsRequired: ['iron_tongs', 'steel_tongs'],
+    toolsRequired: ['wooden_tongs', 'iron_tongs', 'steel_tongs'],
     primaryStat: 'strength',
     secondaryStat: 'intelligence',
     baseEfficiency: 1.0

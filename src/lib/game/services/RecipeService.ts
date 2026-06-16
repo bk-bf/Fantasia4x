@@ -1,9 +1,18 @@
-import type { Item, Recipe } from '../core/types';
+import type { Item, Recipe, Building } from '../core/types';
 import itemsData from '../database/items.jsonc';
 import recipesData from '../database/recipes.jsonc';
+import buildingsData from '../database/buildings.jsonc';
 
 const ITEMS_DATABASE = itemsData as unknown as Item[];
 const AUTHORED_RECIPES = recipesData as unknown as Recipe[];
+
+/** ADR-009 step 2: station id → its craft-tool requirement (data-driven, mirrors resources.jsonc).
+ *  Imported as raw data (not buildingService) to keep RecipeService free of service cycles. */
+const STATION_TOOL_REQ = new Map<string, { workType: string; minTier: number }>(
+  (buildingsData as unknown as Building[])
+    .filter((b) => b.toolRequirement)
+    .map((b) => [b.id, b.toolRequirement as { workType: string; minTier: number }])
+);
 
 /**
  * ADR-016 passive furnaces: stations that transform loaded inputs over time without a pawn
@@ -43,6 +52,11 @@ export interface RecipeService {
   isPassive(recipe: Recipe | undefined): boolean;
   /** ADR-016: is `stationType` a passive furnace (bloomery/kiln/charcoal pit, …)? */
   isPassiveStation(stationType: string | null | undefined): boolean;
+  /** ADR-009 step 2 — the craft-tool requirement for a recipe: the per-recipe `toolRequirement`
+   *  override if present, else the recipe's station's `toolRequirement`. null = no tool needed. */
+  toolRequirementForRecipe(
+    recipe: Recipe | undefined
+  ): { workType: string; minTier: number } | null;
   /**
    * Merge per-slot material bonuses into weaponProperties/armorProperties deltas.
    * Called during output assembly when `selectedIngredients` (slot → chosenItemId) are known.
@@ -137,6 +151,14 @@ export class RecipeServiceImpl implements RecipeService {
 
   isPassiveStation(stationType: string | null | undefined): boolean {
     return stationType ? PASSIVE_STATIONS.has(stationType) : false;
+  }
+
+  toolRequirementForRecipe(
+    recipe: Recipe | undefined
+  ): { workType: string; minTier: number } | null {
+    if (!recipe) return null;
+    if (recipe.toolRequirement) return recipe.toolRequirement;
+    return (recipe.station && STATION_TOOL_REQ.get(recipe.station)) || null;
   }
 
   applyMaterialBonuses(

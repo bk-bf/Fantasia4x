@@ -105,6 +105,9 @@ export interface Recipe {
   /** Total work points (legacy `craftingTime`). */
   workAmount: number;
   toolTierRequired?: number;
+  /** ADR-009 step 2 — per-recipe craft-tool gate (overrides the recipe's station `toolRequirement`).
+   *  A pawn must carry a qualifying tool to work this recipe. Omitted = inherit the station's. */
+  toolRequirement?: { workType: string; minTier: number };
   researchRequired?: string | null;
   populationRequired?: number;
   buildingRequired?: string | null;

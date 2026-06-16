@@ -109,49 +109,30 @@ export function buildGameGrid(
     }
   }
 
-  // Phase 4d: overlay placed buildings
+  // Phase 4d: overlay *completed* buildings only — they're opaque, so they live on the glyph grid.
+  // Planned / under-construction blueprints are drawn separately on the 2D overlay (drawDesignations
+  // in GameCanvas) where real alpha is available, so they can be semi-transparent ghosts.
   if (buildings) {
     for (const b of buildings) {
-      if (b.status === 'complete') {
-        const def = buildingService.getBuildingById(b.type);
-        const char = def?.charSpans
-          ? (resolveCharSpans(def.charSpans as Parameters<typeof resolveCharSpans>[0])[0] ?? '#')
-          : '#';
-        const fg = def?.fg ?? [0.87, 0.62, 0.12];
-        const bg = def?.bg ?? [0.06, 0.04, 0.01];
+      if (b.status !== 'complete') continue;
+      const def = buildingService.getBuildingById(b.type);
+      const char = def?.charSpans
+        ? (resolveCharSpans(def.charSpans as Parameters<typeof resolveCharSpans>[0])[0] ?? '#')
+        : '#';
+      const fg = def?.fg ?? [0.87, 0.62, 0.12];
+      const bg = def?.bg ?? [0.06, 0.04, 0.01];
+      grid.setTile(b.x, b.y, {
+        char,
+        foreground: { r: fg[0], g: fg[1], b: fg[2] },
+        background: { r: bg[0], g: bg[1], b: bg[2] },
+        position: { x: b.x, y: b.y }
+      });
+      // Deconstruct-queued overlay: render the demolition glyph in orange-red
+      if (b.deconstructQueued) {
         grid.setTile(b.x, b.y, {
-          char,
-          foreground: { r: fg[0], g: fg[1], b: fg[2] },
+          char: DECONSTRUCT_GLYPH,
+          foreground: { r: 1.0, g: 0.25, b: 0.05 },
           background: { r: bg[0], g: bg[1], b: bg[2] },
-          position: { x: b.x, y: b.y }
-        });
-        // Deconstruct-queued overlay: render the demolition glyph in orange-red
-        if (b.deconstructQueued) {
-          grid.setTile(b.x, b.y, {
-            char: DECONSTRUCT_GLYPH,
-            foreground: { r: 1.0, g: 0.25, b: 0.05 },
-            background: { r: bg[0], g: bg[1], b: bg[2] },
-            position: { x: b.x, y: b.y }
-          });
-        }
-      } else if (b.status === 'under_construction' || b.status === 'planned') {
-        // Ghost the building's *own* sprite while it's being built: white until work begins,
-        // amber-yellow once the build meter is above 0. The terrain background is preserved so it
-        // reads as a translucent blueprint rather than a solid tile. Paused builds are dimmed.
-        const def = buildingService.getBuildingById(b.type);
-        const char = def?.charSpans
-          ? (resolveCharSpans(def.charSpans as Parameters<typeof resolveCharSpans>[0])[0] ?? '#')
-          : '#';
-        const started = (b.workDone ?? 0) > 0 || (b.progress ?? 0) > 0;
-        const dim = b.paused ? 0.4 : 1.0;
-        const fg = started
-          ? { r: 1.0 * dim, g: 0.82 * dim, b: 0.2 * dim } // amber: work underway
-          : { r: 0.9 * dim, g: 0.92 * dim, b: 0.96 * dim }; // white: placed, not yet started
-        const existing = grid.getTile(b.x, b.y);
-        grid.setTile(b.x, b.y, {
-          char,
-          foreground: fg,
-          background: existing?.background ?? { r: 0.02, g: 0.06, b: 0.06 },
           position: { x: b.x, y: b.y }
         });
       }

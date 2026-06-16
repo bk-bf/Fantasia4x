@@ -6,7 +6,7 @@
 // `onSheetLoaded` callback lets the component refresh whatever depends on a freshly-loaded sheet
 // (HUD icons + the designation overlay).
 
-export type SheetName = 'tiles' | 'items';
+export type SheetName = 'tiles' | 'items' | 'buildings' | 'plants' | 'map' | 'workshops' | 'crops';
 export type HudSpriteIconRef = { sheet: SheetName; id: number };
 
 /** Sprite cell size in the source sheets (16 columns per row). */
@@ -15,11 +15,20 @@ export const SHEET_CELL_H = 18;
 
 const SHEET_URLS: Record<SheetName, string> = {
   tiles: '/tilesets/bitlands_tiles.bmp',
-  items: '/tilesets/bitlands_items.bmp'
+  items: '/tilesets/bitlands_items.bmp',
+  buildings: '/tilesets/bitlands_buildings.bmp',
+  plants: '/tilesets/bitlands_plants.bmp',
+  map: '/tilesets/bitlands_map.bmp',
+  workshops: '/tilesets/bitlands_workshops.bmp',
+  crops: '/tilesets/bitlands_crops.bmp'
 };
 
-const cache: Record<SheetName, HTMLCanvasElement | null> = { tiles: null, items: null };
-const loading: Record<SheetName, boolean> = { tiles: false, items: false };
+const cache = Object.fromEntries(
+  Object.keys(SHEET_URLS).map((k) => [k, null])
+) as Record<SheetName, HTMLCanvasElement | null>;
+const loading = Object.fromEntries(
+  Object.keys(SHEET_URLS).map((k) => [k, false])
+) as Record<SheetName, boolean>;
 let onLoadedCb: (() => void) | null = null;
 
 /** Register a callback fired whenever a sheet finishes loading (component redraws HUD + overlay). */

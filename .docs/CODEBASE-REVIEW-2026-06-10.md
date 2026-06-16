@@ -118,15 +118,20 @@ are pre-existing survival-loop tuning.
 
 Spec archived at [PHYSICAL-PRODUCTION](.tasks/archive/PHYSICAL-PRODUCTION-2026-06-13.md).
 
-- [~] Tool-gating step 2 — **harvest done; craft-tool data-driven design pending.** Harvest half shipped (ADR-009
-  step 2: per-pawn carried tool + `minTier` + auto-grab + per-pawn wear, 2026-06-16). Craft-tool gating is still a
-  **colony research-tier gate** (`currentToolLevel >= recipe.toolTierRequired`, set by `ResearchService` — NOT a
-  physical tool), and every `craft` job maps to the tool-less `crafting` work category, so there's **no recipe→tool
-  mapping** to drive a per-pawn gate. The agreed data-driven path: add `toolRequirement: {workType, minTier}` to the
-  `Recipe` type + recipes.jsonc (mirroring `resources.jsonc`); make `jobService.requiredToolForJob` craft-aware
-  (craftQueueId → order → recipe.toolRequirement) — which makes the existing per-pawn gate + auto-grab detour +
-  per-pawn wear all work for craft jobs **for free**; plus author which recipes need which tool (the content piece —
-  subjective, the bulk of the work).
+- [x] Tool-gating step 2 — **done 2026-06-16 (harvest + craft, data-driven).** Harvest: per-pawn carried tool +
+  `minTier` + auto-grab + per-pawn wear. Craft: a per-station **`toolRequirement: {workType, minTier}`** on the
+  building def (`buildings.jsonc`, mirroring `resources.jsonc`'s harvest gate), with a per-recipe `Recipe.toolRequirement`
+  override; `recipeService.toolRequirementForRecipe(recipe)` resolves override→station, and `jobService.requiredToolForJob`
+  is now craft-aware (`craftQueueId → order → recipe → station tool`), so the existing per-pawn gate + auto-grab detour
+  + per-pawn wear all light up for craft jobs **for free** (new `craftTool` claim-gate on the craft `JobDef`). Gated
+  stations: **butcher_spot → butchery, tanning_rack → leatherworking, anvil + stone_forge → metalworking**, all at
+  `minTier 0`. Bootstrap-safe: butchery/leatherworking take `flint_knife` (early tool-free craft); metalworking now has
+  **`wooden_tongs` (Green-Wood Tongs)** — a tool-free `craft_spot` recipe — added ahead of `iron_tongs`/`steel_tongs`
+  (also added as items + anvil recipes), so the forge/anvil gate can't soft-lock. Forge *smelting* is passive (no pawn
+  job) so it's unaffected — only active shaping gates. Tests in `followupFeatures.test.ts`. `check` 0 · `test` 264.
+  _Known limitation:_ tools live in the single `belt`
+  equipment slot, so a pawn can hold one tool at a time (swaps via auto-grab per task) — fine for now, a multi-tool
+  belt is a future refinement.
 - [x] Butchery multi-yield — done 2026-06-16. Each carcass's butcher recipe now yields **meat + hide/pelt + bones**
   in one run (`make_venison`: `deer_carcass → {venison, deer_hide, medium_bones}`, etc.); the redundant separate
   hide/pelt/bone butcher recipes (each consumed a whole carcass) were removed. Pure data. Test updated. `test` 257.

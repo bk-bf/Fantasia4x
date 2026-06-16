@@ -16,6 +16,6 @@
   {"id": "construct", "label": "Build", "workCategory": "construction"},
   {"id": "deconstruct", "label": "Demolish", "workCategory": "construction"},
   {"id": "fetch", "label": "Fetch", "workCategory": "hauling", "lightAffected": false},
-  {"id": "craft", "label": "Craft", "workCategory": "crafting"},
+  {"id": "craft", "label": "Craft", "workCategory": "crafting", "claimGate": "craftTool"},
   {"id": "refuel", "label": "Refuel", "workCategory": "construction", "claimGate": "refuelAllowlist", "lightAffected": false}
 ]

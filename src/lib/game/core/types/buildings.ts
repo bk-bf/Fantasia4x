@@ -119,6 +119,10 @@ export interface Building {
   buildingCost: Record<string, number>; // Renamed from 'cost' to match item system
   workAmount: number;
   toolTierRequired: number; // Matches item system progression
+  /** ADR-009 step 2 — craft-tool gate: a pawn must carry a qualifying tool to WORK a craft job at
+   *  this station (mirrors resources.jsonc's harvest `toolRequirement`). The recipe's station maps
+   *  here; a per-recipe `Recipe.toolRequirement` overrides it. Omitted = station needs no tool. */
+  toolRequirement?: { workType: string; minTier: number };
   populationRequired: number;
 
   // Prerequisites

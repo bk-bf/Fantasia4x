@@ -196,8 +196,9 @@ export function complete(job: Job, gs: GameState): GameState {
   return state;
 }
 
-/** Decrement the working pawn's equipped tool for `workCategory`; unequip it (broke) at ≤0 durability. */
-function wearWorkingPawnTool(pawnId: string, workCategory: string, gs: GameState): GameState {
+/** Decrement the working pawn's equipped tool for `workCategory`; unequip it (broke) at ≤0 durability.
+ *  Shared with craft jobs (ADR-009 step 2 — craft-tool wear). */
+export function wearWorkingPawnTool(pawnId: string, workCategory: string, gs: GameState): GameState {
   const pawn = gs.pawns.find((p) => p.id === pawnId);
   if (!pawn?.equipment) return gs;
   const slot = (Object.keys(pawn.equipment) as (keyof typeof pawn.equipment)[]).find((s) => {

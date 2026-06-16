@@ -20,6 +20,7 @@ import { WORK_CATEGORIES } from '../core/Work';
 import jobsData from '../database/jobs.jsonc';
 import { resourceObjectService } from './ResourceObjectService';
 import { itemService } from './ItemService';
+import { recipeService } from './RecipeService';
 import * as harvest from './jobs/harvest';
 import * as haul from './jobs/haul';
 import * as construct from './jobs/construct';
@@ -213,7 +214,9 @@ class JobServiceImpl {
       // when this pawn already holds a qualifying tool, OR the colony has one in stock (the pawn
       // auto-grabs it en route — see the tool-fetch detour in handlers/work). When NEITHER has one,
       // the job stays open until a tool is crafted. Tool-free scavenges (no toolRequirement) pass.
-      if (claimGate === 'harvestTool') {
+      // Same per-pawn tool gate for harvest (axe/pick) AND craft (knife at butcher/tannery): the job
+      // is claimable if the pawn holds a qualifying tool OR the colony has one (auto-grab en route).
+      if (claimGate === 'harvestTool' || claimGate === 'craftTool') {
         const req = this.requiredToolForJob(j, gameState);
         if (
           req &&
@@ -341,11 +344,24 @@ class JobServiceImpl {
   // ------------------------------------------------------------------ //
 
   /**
-   * ADR-009 step 2 — the tool requirement for a tool-gated harvest job (`{workType, minTier}`), or
-   * null when the job is tool-free / not a gated harvest. Reads the resource's interaction
-   * (designation-specific when available) and the matching work category's gating tool list.
+   * ADR-009 step 2 — the tool requirement for a tool-gated job (`{workType, minTier}`), or null when
+   * tool-free. CRAFT jobs read the recipe's `toolRequirement` (override) or its station's
+   * (data-driven, recipes.jsonc/buildings.jsonc). HARVEST jobs read the resource's interaction
+   * (designation-specific when available) + the matching work category's gating tool list.
    */
   requiredToolForJob(job: Job, gs: GameState): { workType: string; minTier: number } | null {
+    // Craft jobs: gate on the recipe's station tool (e.g. butcher_spot → a knife, tannery → a knife).
+    if (job.type === 'craft' || job.craftQueueId) {
+      const order = (gs.craftingQueue ?? []).find((e) => e.id === job.craftQueueId);
+      if (!order) return null;
+      const recipe = recipeService.getRecipeForItem(order.item.id);
+      const req = recipeService.toolRequirementForRecipe(recipe);
+      if (!req) return null;
+      const tools = WORK_CATEGORIES.find((w) => w.id === req.workType)?.toolsRequired ?? [];
+      if (tools.length === 0) return null; // category lists no gating tools
+      return req;
+    }
+    // Harvest jobs:
     if (!job.resourceId) return null;
     const def = resourceObjectService.getById(job.resourceId);
     if (!def) return null;

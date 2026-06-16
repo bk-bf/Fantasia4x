@@ -11,6 +11,7 @@ import { recipeService } from '../RecipeService';
 import { absorbDropIfOnStockpileTile } from '../../core/GameState';
 import { rng } from '../../core/rng';
 import { stationTileFor, orderSupplied } from './staging';
+import { wearWorkingPawnTool } from './harvest';
 
 export function generate(jobs: Job[], gs: GameState): Job[] {
   // Remove craft jobs for queue entries that no longer exist
@@ -58,7 +59,12 @@ export function complete(job: Job, gs: GameState): GameState {
   if (!job.craftQueueId) return gs;
   const entry = (gs.craftingQueue ?? []).find((e) => e.id === job.craftQueueId);
   if (!entry) return gs;
-  return completeCraftOrder(entry, gs);
+  let state = completeCraftOrder(entry, gs);
+  // ADR-009 step 2: wear the WORKING pawn's craft tool (e.g. the knife used at a butcher spot /
+  // tannery). Only the pawn-worked path wears a tool — passive furnace production has no pawn.
+  const req = recipeService.toolRequirementForRecipe(recipeService.getRecipeForItem(entry.item.id));
+  if (req && job.claimedBy) state = wearWorkingPawnTool(job.claimedBy, req.workType, state);
+  return state;
 }
 
 /**

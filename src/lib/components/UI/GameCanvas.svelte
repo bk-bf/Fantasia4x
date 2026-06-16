@@ -57,7 +57,8 @@
     SHEET_CELL_H,
     getSheet,
     loadSheet,
-    onSheetLoaded
+    onSheetLoaded,
+    type SheetName
   } from '$lib/components/UI/gameCanvas/spriteSheets';
   import { redrawHudSpriteIcons } from '$lib/components/UI/gameCanvas/hudSpriteIcon';
   import BuildingFuelPanel from '$lib/components/UI/gameCanvas/BuildingFuelPanel.svelte';
@@ -1349,6 +1350,59 @@
       ctx.restore();
     }
 
+    // Blueprint pass: planned / under-construction buildings as semi-transparent ghosts of their
+    // own sprite — white before work begins, amber once the build meter is above 0. Drawn here on
+    // the 2D overlay (real alpha) rather than the opaque glyph grid, so terrain shows through;
+    // completed buildings are the opaque ones on the WebGL grid (buildGameGrid).
+    if (buildings.length > 0) {
+      const tintCanvas = document.createElement('canvas');
+      tintCanvas.width = SHEET_CELL_W;
+      tintCanvas.height = SHEET_CELL_H;
+      const tctx = tintCanvas.getContext('2d');
+      if (tctx) {
+        tctx.imageSmoothingEnabled = false;
+        ctx.imageSmoothingEnabled = false;
+        for (const b of buildings) {
+          if (b.status === 'complete') continue;
+          const span = buildingService.getBuildingById(b.type)?.charSpans?.[0];
+          const id = span?.id ?? span?.from;
+          if (!span?.sheet || id == null) continue;
+          const sheet = getSheet(span.sheet as SheetName);
+          if (!sheet) {
+            loadSheet(span.sheet as SheetName); // re-runs drawDesignations via onSheetLoaded
+            continue;
+          }
+          const dx = (b.x - viewX) * tileWidth;
+          const dy = (b.y - viewY) * tileHeight;
+          if (dx < -tileWidth || dy < -tileHeight || dx > W + tileWidth || dy > H + tileHeight)
+            continue;
+          // Recolour the sprite cell white/amber on the tint canvas (source-atop keeps the glyph's
+          // transparency), then blit it scaled to the tile at reduced alpha.
+          tctx.clearRect(0, 0, SHEET_CELL_W, SHEET_CELL_H);
+          tctx.globalCompositeOperation = 'source-over';
+          tctx.drawImage(
+            sheet,
+            (id % 16) * SHEET_CELL_W,
+            Math.floor(id / 16) * SHEET_CELL_H,
+            SHEET_CELL_W,
+            SHEET_CELL_H,
+            0,
+            0,
+            SHEET_CELL_W,
+            SHEET_CELL_H
+          );
+          const started = (b.workDone ?? 0) > 0 || (b.progress ?? 0) > 0;
+          tctx.globalCompositeOperation = 'source-atop';
+          tctx.fillStyle = started ? '#ffd23a' : '#ffffff';
+          tctx.fillRect(0, 0, SHEET_CELL_W, SHEET_CELL_H);
+          tctx.globalCompositeOperation = 'source-over';
+          ctx.globalAlpha = b.paused ? 0.25 : 0.5;
+          ctx.drawImage(tintCanvas, dx, dy, tileWidth, tileHeight);
+        }
+        ctx.globalAlpha = 1;
+      }
+    }
+
     if (!designations || Object.keys(designations).length === 0) return;
 
     // Lazy-load sprite sheets on first designation draw (shared cache → gameCanvas/spriteSheets).
@@ -1448,6 +1502,9 @@
 
   function _blueprintPreviewTile(grid: GameGrid, tx: number, ty: number) {
     if (tx < 0 || ty < 0 || ty >= worldMap.length || tx >= (worldMap[0]?.length ?? 0)) return;
+    // Can't build on a blocked tile (mountain/cliff wall, water, existing solid building) — show no
+    // placement ghost there, matching the BuildingService.placeBuilding guard that rejects it.
+    if (worldMap[ty]?.[tx]?.walkable === false) return;
     const building = buildingService.getBuildingById(blueprintBuildingId!);
     if (!building) return;
     const charSpans = building.charSpans;
