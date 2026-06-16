@@ -8,20 +8,26 @@
 #   TPS spike (V8/Chromium vs WebKitGTK/JSC). Combinable with --debug (default) or --profiler;
 #   skips the worktree fan-out (the shell points at one port). Closing the window stops the server.
 #     ./launch.sh --debug --electron      ./launch.sh --profiler --tauri
+# --log: add the in-game DEBUG log tab + verbose firehose (no other dev UI) to any launch — handy
+#   to watch the log under --profiler/--electron, e.g. ./launch.sh --profiler --electron --log.
 # codegraph is a separate always-on systemd user service (see codegraph_hint below).
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PIDS=()
 
 PROFILER=false
+LOG=false
 SHELL_TARGET=""
 for arg in "$@"; do
   case "$arg" in
     --profiler) PROFILER=true ;;
+    --log) LOG=true ;;
     --electron) SHELL_TARGET=electron ;;
     --tauri) SHELL_TARGET=tauri ;;
   esac
 done
+# Suffix appended to a server's dev.sh flag set when --log is requested (dev.sh parses multiple flags).
+LOG_FLAG=""; [[ "$LOG" == true ]] && LOG_FLAG=" --log"
 
 cleanup() {
   [[ ${#PIDS[@]} -eq 0 ]] && return
@@ -89,12 +95,10 @@ if [[ -n "$SHELL_TARGET" ]]; then
     echo "  Run: (cd $SHELL_DIR && pnpm install --ignore-workspace)" >&2
     exit 1
   fi
+  # --profiler boots WITHOUT --debug so the sim profiles clean (no verbose firehose). Add --log to
+  # surface the DEBUG log tab + firehose on demand (e.g. ./launch.sh --profiler --electron --log).
   SERVER_FLAG="--debug"; [[ "$PROFILER" == true ]] && SERVER_FLAG="--profiler"
-  # The desktop shell loads a single server whichever mode it's in; --profiler boots WITHOUT --debug
-  # (so the sim profiles clean, no verbose-log firehose) but we still want the in-game DEBUG tab.
-  # VITE_DEBUG_UI lights up the debug UI ONLY (no firehose); Vite picks it up from the env, and
-  # dev.sh's `env … pnpm exec vite` inherits it. Harmless under --debug (VITE_DEBUG_MODE already on).
-  export VITE_DEBUG_UI=true
+  SERVER_FLAG="$SERVER_FLAG$LOG_FLAG"
   PORT=5173
   [[ -f "$SCRIPT_DIR/.devport" ]] && PORT=$(< "$SCRIPT_DIR/.devport")
 
@@ -126,7 +130,7 @@ if [[ "$PROFILER" == true ]]; then
   echo "Fantasia4x — profiler sandbox (main server only)"
   echo ""
   codegraph_hint
-  launch "$SCRIPT_DIR" "main" "--profiler"
+  launch "$SCRIPT_DIR" "main" "--profiler$LOG_FLAG"
   echo ""
   echo "Ctrl-C to stop."
   wait
@@ -136,7 +140,7 @@ fi
 echo "Fantasia4x — launching all dev servers (debug mode)"
 echo ""
 
-launch "$SCRIPT_DIR" "main"
+launch "$SCRIPT_DIR" "main" "--debug$LOG_FLAG"
 
 LAUNCH_DIR="$SCRIPT_DIR/.worktrees/launch"
 if [[ -d "$LAUNCH_DIR" ]]; then

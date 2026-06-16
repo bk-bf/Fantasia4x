@@ -187,7 +187,7 @@
     {isPaused ? '■ PAUSED' : '● RUNNING'}
   </span>
   <span class="spacer" />
-  {#if currentScreen === 'main' && (import.meta.env.VITE_DEBUG_MODE === 'true' || import.meta.env.VITE_DEBUG_UI === 'true')}
+  {#if currentScreen === 'main' && import.meta.env.VITE_DEBUG_MODE === 'true'}
     <input
       class="seed-input"
       type="text"

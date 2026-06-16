@@ -43,10 +43,10 @@
     return bDef?.category === 'knowledge' && b.status === 'complete';
   });
 
-  // DEBUG tab is present when launched via dev.sh/launch.sh --debug (VITE_DEBUG_MODE) or any
-  // desktop-shell launch (VITE_DEBUG_UI — the tab without the verbose-log firehose).
+  // DEBUG (log) tab is present under --debug (VITE_DEBUG_MODE) or the standalone --log
+  // (VITE_DEBUG_LOG) flag — the latter shows the log viewer without the rest of the dev UI.
   const DEBUG_ENABLED =
-    import.meta.env.VITE_DEBUG_MODE === 'true' || import.meta.env.VITE_DEBUG_UI === 'true';
+    import.meta.env.VITE_DEBUG_MODE === 'true' || import.meta.env.VITE_DEBUG_LOG === 'true';
 
   const NAV_TABS = [
     { key: 'pawns', label: 'PAWNS', fkey: 'F2' },

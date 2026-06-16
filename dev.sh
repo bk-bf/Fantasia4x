@@ -2,6 +2,8 @@
 # Start the Fantasia4x dev server on a fixed port.
 # If something is already listening on that port, print its info and exit.
 # Pass --debug to enable debug overlays (entity IDs, dev controls, map reroll) + verbose logging.
+# Pass --log to enable ONLY the in-game DEBUG log tab + verbose firehose (no other dev UI). Composable
+#   with --profiler (e.g. ./dev.sh --profiler --log) to watch the log during an otherwise-clean run.
 # Pass --profiler to boot the heavy populated sandbox (giant map, 150 pawns…) but with the REAL-game
 #   startup: PAUSED, behind the lingering loading overlay — for measuring the loading-screen hack
 #   (and gameplay) under realistic load. It deliberately does NOT enable --debug/verbose logging.
@@ -14,6 +16,7 @@
 
 PORT=5173
 DEBUG_MODE=false
+LOG_MODE=false
 PROFILER_MODE=false
 PROFILER_AUTORUN=false
 
@@ -26,6 +29,7 @@ fi
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --debug) DEBUG_MODE=true ;;
+    --log) LOG_MODE=true ;; # log tab + verbose firehose only; no other dev UI (composable w/ --profiler)
     --profiler) PROFILER_MODE=true ;; # heavy sandbox, real-game (paused) startup — NOT --debug
     --profiler-autorun) PROFILER_MODE=true; PROFILER_AUTORUN=true ;; # heavy sandbox, capture run
     --port) PORT="$2"; shift ;;
@@ -64,9 +68,16 @@ if [[ "$PROFILER_MODE" == "true" ]]; then
   fi
 fi
 
+# Compose the debug-flavour env: --debug is the superset (dev UI + log + firehose); --log is just the
+# DEBUG log tab + verbose firehose. Vite reads these VITE_-prefixed vars from the environment.
+DEBUG_ENV=""
 if [[ "$DEBUG_MODE" == "true" ]]; then
-  echo "Debug mode enabled — entity IDs and dev controls will be visible."
-  exec env $PROFILER_ENV VITE_DEBUG_MODE=true VITE_DEV_BRANCH="$BRANCH" pnpm exec vite dev --host --port $PORT
-else
-  exec env $PROFILER_ENV VITE_DEV_BRANCH="$BRANCH" pnpm exec vite dev --host --port $PORT
+  echo "Debug mode enabled — entity IDs, dev controls, and the DEBUG log tab will be visible."
+  DEBUG_ENV="VITE_DEBUG_MODE=true"
+elif [[ "$LOG_MODE" == "true" ]]; then
+  echo "Log mode enabled — the DEBUG log tab + verbose logging are on (no other dev UI)."
+  DEBUG_ENV="VITE_DEBUG_LOG=true"
 fi
+
+# shellcheck disable=SC2086 -- $PROFILER_ENV/$DEBUG_ENV are intentional VAR=val flag passthroughs
+exec env $PROFILER_ENV $DEBUG_ENV VITE_DEV_BRANCH="$BRANCH" pnpm exec vite dev --host --port $PORT

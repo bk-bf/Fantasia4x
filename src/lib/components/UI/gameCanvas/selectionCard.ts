@@ -113,10 +113,9 @@ export function buildHealthModel(entity: {
   };
 }
 
-/** Debug `#id` suffix shown next to entity names when debug UI is on (VITE_DEBUG_MODE or _UI). */
+/** Debug `#id` suffix shown next to entity names when VITE_DEBUG_MODE is on. */
 export function entityDebugLabel(entity: { id: string; debugId?: number }): string {
-  if (import.meta.env.VITE_DEBUG_MODE !== 'true' && import.meta.env.VITE_DEBUG_UI !== 'true')
-    return '';
+  if (import.meta.env.VITE_DEBUG_MODE !== 'true') return '';
   if (entity.debugId != null) return ` #${entity.debugId}`;
   const m = entity.id.match(/(\d+)(?!.*\d)/);
   return m ? ` #${m[1]}` : ` #${entity.id.slice(-4)}`;
