@@ -1,20 +1,20 @@
 // Refuel job handler (ADR-017). Queues a refuel job when a fuel-burning building drops below its
-// threshold and the stockpile can fully top it up, and on completion consumes tinder + fuel (honoring
-// per-building fuel filters and the station's heat gate) to refill the tank. Refuel *rules* live in
-// services/fuelRules.ts. Extracted from JobService (P-4 handler split).
-import type { GameState, Item, Job } from '../../core/types';
+// threshold AND the stockpile can actually refuel it, and on completion consumes the planned tinder +
+// fuel to refill the tank. The plan (which items, honoring per-building fuel filters + the station's
+// heat gate) is computed once in services/fuelRules.ts (`planRefuel`) and shared by both halves so a
+// queued job can never complete as a no-op. Extracted from JobService (P-4 handler split).
+import type { GameState, Job } from '../../core/types';
 // Gated console shim — see core/log.ts. Silences per-tick log/debug/warn unless gameDebug(true).
 import { gatedConsole as console } from '../../core/log';
-import itemsData from '../../database/items.jsonc';
 import { buildingService } from '../BuildingService';
 import { consumeFromStockpiles } from '../../core/GameState';
 import * as fuelRules from '../fuelRules';
 
-const ITEMS_DATABASE = itemsData as unknown as Item[];
-
 export function generate(jobs: Job[], gs: GameState): Job[] {
-  // Remove refuel jobs whose building is gone, at max, or stockpile no longer
-  // has enough fuel to fill to max (prevents partial top-ups).
+  // Remove refuel jobs whose building is gone, paused, at threshold, or that the stockpile can no
+  // longer actually refuel. `planRefuel` is the SAME logic `complete` runs, so a queued job can never
+  // be a no-op — which is what made pawns loop at the fire forever working with no result (a high-heat
+  // station with only low-heat fuel passed the old gate but consumed nothing on completion).
   jobs = jobs.filter((j) => {
     if (j.type !== 'refuel') return true;
     const b = (gs.buildings ?? []).find((b) => b.id === j.buildingId);
@@ -23,8 +23,7 @@ export function generate(jobs: Job[], gs: GameState): Job[] {
     const maxFuel = buildingService.getBuildingById(b.type)?.maxFuel ?? 60;
     const fuelRatio = (b.fuel ?? 0) / Math.max(maxFuel, 1);
     if (fuelRatio >= fuelRules.getRefuelThresholdRatio(b)) return false;
-    const needed = maxFuel - (b.fuel ?? 0);
-    return needed > 0 && fuelRules.canSatisfyRefuelRequirements(gs, b, needed);
+    return fuelRules.planRefuel(gs, b) !== null;
   });
 
   for (const b of gs.buildings ?? []) {
@@ -34,10 +33,8 @@ export function generate(jobs: Job[], gs: GameState): Job[] {
     if (b.fuelSettings?.paused) continue;
     const fuelRatio = (b.fuel ?? 0) / Math.max(bDef.maxFuel, 1);
     if (fuelRatio >= fuelRules.getRefuelThresholdRatio(b)) continue;
-    const needed = bDef.maxFuel - (b.fuel ?? 0);
-    if (needed <= 0) continue;
-    // Only queue refuel when stockpile can fully top up the tank.
-    if (!fuelRules.canSatisfyRefuelRequirements(gs, b, needed)) continue;
+    // Only queue when an actual refuel is possible (tinder + heat-eligible fuel + required diversity).
+    if (fuelRules.planRefuel(gs, b) === null) continue;
     const exists = jobs.some((j) => j.type === 'refuel' && j.buildingId === b.id);
     if (!exists) {
       jobs.push({
@@ -59,40 +56,19 @@ export function complete(job: Job, gs: GameState): GameState {
   if (!job.buildingId) return gs;
   const building = (gs.buildings ?? []).find((b) => b.id === job.buildingId);
   if (!building) return gs;
-  const maxFuel = buildingService.getBuildingById(building.type)?.maxFuel ?? 60;
-  const stockpile = gs.stockpile ?? {};
-  const consumed: Record<string, number> = {};
-  const allowedFuelIds = new Set(building.fuelSettings?.allowedFuelItemIds ?? []);
-  const hasFuelFilter = allowedFuelIds.size > 0;
-  const requirements = fuelRules.getRefuelRequirements(building.type);
 
-  if ((stockpile[requirements.tinderItemId] ?? 0) < requirements.tinderAmount) return gs;
-  if (requirements.tinderAmount > 0) {
-    consumed[requirements.tinderItemId] = requirements.tinderAmount;
-  }
+  // Single source of truth (shared with generate): if a refuel can't actually be performed now
+  // (stockpile drained since the job was queued, etc.) this returns null and the job is just dropped.
+  const plan = fuelRules.planRefuel(gs, building);
+  if (!plan) return gs;
 
-  let currentFuel = building.fuel ?? 0;
-  // §2 fuel-heat gate: a station only accepts fuel hot enough for it (minFuelHeat) — a
-  // bloomery won't light on green wood; charcoal/coal are needed for smelting heat.
-  const minHeat = buildingService.getBuildingById(building.type)?.minFuelHeat ?? 0;
-  // Track which items to consume (read-only from aggregate; apply via consumeFromStockpiles)
-  for (const item of ITEMS_DATABASE) {
-    if ((item.fuelValue ?? 0) <= 0) continue;
-    if ((item.fuelHeat ?? 1) < minHeat) continue;
-    if (hasFuelFilter && !allowedFuelIds.has(item.id)) continue;
-    while (currentFuel < maxFuel) {
-      const available = (stockpile[item.id] ?? 0) - (consumed[item.id] ?? 0);
-      if (available <= 0) break;
-      consumed[item.id] = (consumed[item.id] ?? 0) + 1;
-      currentFuel = Math.min(currentFuel + item.fuelValue!, maxFuel);
-    }
-  }
-  if (currentFuel === (building.fuel ?? 0)) return gs; // nothing added
-  if (!fuelRules.hasRequiredFuelTypesForRefuel(consumed, requirements)) return gs;
   const newBuildings = (gs.buildings ?? []).map((b) =>
-    b.id === job.buildingId ? { ...b, fuel: currentFuel, lit: currentFuel > 0 } : b
+    b.id === job.buildingId ? { ...b, fuel: plan.newFuel, lit: plan.newFuel > 0 } : b
   );
-  console.log(`[JobService] Campfire refuelled to ${currentFuel}/${maxFuel}: ${job.buildingId}`);
-  const afterConsume = consumeFromStockpiles(gs, consumed);
+  const maxFuel = buildingService.getBuildingById(building.type)?.maxFuel ?? 60;
+  console.log(
+    `[JobService] ${building.type} refuelled to ${plan.newFuel}/${maxFuel}: ${job.buildingId}`
+  );
+  const afterConsume = consumeFromStockpiles(gs, plan.consumed);
   return { ...afterConsume, buildings: newBuildings };
 }

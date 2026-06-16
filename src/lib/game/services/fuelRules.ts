@@ -38,45 +38,62 @@ export function getRefuelRequirements(buildingType: string): RefuelRequirements 
   };
 }
 
-/** Whether the colony stockpile can satisfy a refuel of `neededFuel` units for this building. */
-export function canSatisfyRefuelRequirements(
-  gs: GameState,
-  building: PlacedBuilding,
-  neededFuel: number
-): boolean {
-  const stockpile = gs.stockpile ?? {};
-  const requirements = getRefuelRequirements(building.type);
-  const tinderStock = stockpile[requirements.tinderItemId] ?? 0;
-  if (tinderStock < requirements.tinderAmount) return false;
+/** The concrete plan for one refuel: exactly which items to consume and the resulting fuel level. */
+export interface RefuelPlan {
+  consumed: Record<string, number>;
+  newFuel: number;
+}
 
+/**
+ * Plan a refuel from the colony stockpile, or `null` if one can't be performed right now.
+ *
+ * This is the SINGLE SOURCE OF TRUTH for refuelling: both `generate` (to decide whether to queue a
+ * refuel job) and `complete` (to actually apply it) call this. Previously `generate` used a separate
+ * "can satisfy?" check that ignored the station's `minFuelHeat` gate and the diversity the consume
+ * step actually achieves — so a high-heat station (e.g. bloomery, minFuelHeat 4) with only low-heat
+ * fuel (green wood) in the stockpile would queue a job whose `complete` consumed nothing, get the job
+ * removed, then re-queued next reconcile → the pawn looped at the fire forever working with no result.
+ * Sharing one plan makes that impossible: if `generate` queues it, `complete` will add fuel.
+ *
+ * Mirrors the old greedy fill: reserve tinder, then fill from each eligible fuel item (passes the
+ * `minFuelHeat` gate + the per-building fuel filter) in DB order until the tank is full or fuel runs
+ * out. Returns null when there isn't enough tinder, no eligible fuel adds anything, or the consumed
+ * set doesn't meet the building's required fuel-type diversity.
+ */
+export function planRefuel(gs: GameState, building: PlacedBuilding): RefuelPlan | null {
+  const def = buildingService.getBuildingById(building.type);
+  const maxFuel = def?.maxFuel ?? 60;
+  const startFuel = building.fuel ?? 0;
+  if (maxFuel - startFuel <= 0) return null;
+
+  const requirements = getRefuelRequirements(building.type);
+  const stockpile = gs.stockpile ?? {};
+  if ((stockpile[requirements.tinderItemId] ?? 0) < requirements.tinderAmount) return null;
+
+  const consumed: Record<string, number> = {};
+  if (requirements.tinderAmount > 0)
+    consumed[requirements.tinderItemId] = requirements.tinderAmount;
+
+  const minHeat = def?.minFuelHeat ?? 0;
   const allowedFuelIds = new Set(building.fuelSettings?.allowedFuelItemIds ?? []);
   const hasFuelFilter = allowedFuelIds.size > 0;
-  let totalFuel = 0;
-  const availableFuelTypes = new Set<string>();
 
+  let currentFuel = startFuel;
   for (const item of ITEMS_DB) {
     if ((item.fuelValue ?? 0) <= 0) continue;
+    if ((item.fuelHeat ?? 1) < minHeat) continue; // §2 heat gate — same as the consume step
     if (hasFuelFilter && !allowedFuelIds.has(item.id)) continue;
-    let available = stockpile[item.id] ?? 0;
-    if (item.id === requirements.tinderItemId) {
-      available -= requirements.tinderAmount;
+    while (currentFuel < maxFuel) {
+      const available = (stockpile[item.id] ?? 0) - (consumed[item.id] ?? 0);
+      if (available <= 0) break;
+      consumed[item.id] = (consumed[item.id] ?? 0) + 1;
+      currentFuel = Math.min(currentFuel + item.fuelValue!, maxFuel);
     }
-    if (available <= 0) continue;
-    totalFuel += available * item.fuelValue!;
-    availableFuelTypes.add(item.id);
   }
 
-  if (totalFuel < neededFuel) return false;
-
-  if (requirements.requiredFuelTypes <= 1) {
-    return availableFuelTypes.size > 0;
-  }
-
-  const nonTinderTypeCount = Array.from(availableFuelTypes).filter(
-    (id) => id !== requirements.tinderItemId
-  ).length;
-
-  return nonTinderTypeCount >= Math.max(1, requirements.requiredFuelTypes - 1);
+  if (currentFuel === startFuel) return null; // no eligible fuel actually added anything
+  if (!hasRequiredFuelTypesForRefuel(consumed, requirements)) return null;
+  return { consumed, newFuel: currentFuel };
 }
 
 /** Whether an actually-consumed fuel set meets the building's required fuel-type diversity + tinder. */
