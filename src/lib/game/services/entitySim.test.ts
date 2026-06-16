@@ -80,8 +80,24 @@ describe('entity starvation (headless sim)', () => {
     expect(daysToDie).toBeLessThan(10);
   });
 
-  it('an entity collapses (not flees) once hunger passes the collapse threshold', () => {
+  it('a merely-hungry entity does NOT collapse — it keeps acting and tries to feed', () => {
+    // hunger 85 is below malnutrition onset (87) and nowhere near severe; the old model collapsed it
+    // instantly. Now it stays mobile (wander/forage/hunt), only collapsing once malnutrition is severe.
     let state = makeState([makeGoblin({ needs: { hunger: 85, fatigue: 0 } as any })]);
+    state = entityService.stepEntities(state);
+    const g = state.mobs!.find((m) => m.id === 'g1')!;
+    expect(g.state).not.toBe('Collapsed');
+  });
+
+  it('an entity collapses once malnutrition reaches its severe (life-threatening) stage', () => {
+    // Drive the data-driven condition directly: severe malnutrition (severity ≥ 0.65) is what now
+    // incapacitates — reached only after in-game days of starving, never instantly from raw hunger.
+    let state = makeState([
+      makeGoblin({
+        needs: { hunger: 100, fatigue: 0 } as any,
+        conditions: [{ id: 'malnutrition', severity: 0.7 }]
+      })
+    ]);
     state = entityService.stepEntities(state);
     const g = state.mobs!.find((m) => m.id === 'g1')!;
     expect(g.state).toBe('Collapsed');

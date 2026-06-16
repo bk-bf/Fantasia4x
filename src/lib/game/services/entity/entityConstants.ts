@@ -37,13 +37,12 @@ export const EXHAUST_EXIT_STAMINA = 30;
 export const BASE_HUNGER_PER_SECOND = 0.27;
 /** Fatigue accrual per second at neutral condition. */
 export const BASE_FATIGUE_PER_SECOND = 0.32;
-/** HP drained per second once hunger reaches 100 (starving). Greatly reduced so a starving
- *  entity lingers (collapsed) for days rather than dying in under a minute. With ~50 HP this
- *  is ~28 in-game minutes-of-real-time → several in-game days from full hunger to death. */
-export const STARVATION_DAMAGE_PER_SECOND = 0.03;
-/** Hunger at which an entity collapses into an immobile, incapacitated state — it stops
- *  fleeing/hunting/wandering and simply lies starving until it dies or (rarely) is relieved. */
-export const STARVATION_COLLAPSE_HUNGER = 80;
+/** Malnutrition severity (0–1) at which an entity collapses into an immobile, incapacitated state —
+ *  it stops fleeing/hunting/wandering and lies down until it dies (malnutrition reaching lethal
+ *  severity, in entityLifecycle) or recovers. 0.65 = the "severe" life-threatening malnutrition stage
+ *  (conditions.jsonc), so reaching it takes in-game DAYS of starving — NOT the old instant hunger≥80
+ *  collapse that dropped a mob mid-hunt. Mob starvation now reuses the pawn malnutrition condition. */
+export const STARVATION_COLLAPSE_SEVERITY = 0.65;
 /** Hunger threshold at which an entity transitions to a feeding state. */
 export const HUNGER_EAT_THRESHOLD = 50;
 /** Hunger threshold at which a feeding entity considers itself sated. */

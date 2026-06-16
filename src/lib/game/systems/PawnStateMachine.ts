@@ -32,6 +32,7 @@ import { pawnStatService } from '../services/PawnStatService';
 import { simLog } from '../core/logSink';
 import { gameLogger } from '../dev/gameLogger';
 import { perTick } from '../core/time';
+import { driveNeedConditions } from '../core/needs';
 import { calcBloodRegenRate } from '../entities/Pawns';
 import { rng } from '../core/rng';
 import { pawnById } from '../core/pawnIndex';
@@ -252,38 +253,6 @@ export function reapDeadPawns(gameState: GameState): GameState {
  * malnutrition progression, blood loss, critical limb checks.
  * Returns updated GameState (may trigger death via killPawn).
  */
-/**
- * Advance or recover a need-driven condition per its conditions.jsonc `driver`. Pure — returns the
- * new conditions array. Rates are authored per-second; `perTick()` scales them to one tick.
- */
-// ADR-002 amendment (hot per-tick, behind the worker): mutate the live `conditions` array IN PLACE
-// rather than returning a fresh array. Called per driven-condition per pawn per tick; the immutable
-// `[...conditions]` rebuild was a top allocator (`next`/iterator churn, §C). The common case (need
-// below onset, condition absent) now allocates NOTHING.
-function applyConditionDriver(
-  conditions: NonNullable<Pawn['conditions']>,
-  def: ConditionDef,
-  needVal: number
-): void {
-  const d = def.driver!;
-  const idx = conditions.findIndex((c) => c.id === def.id);
-  if (needVal >= d.onset) {
-    const rate = perTick(needVal >= 100 ? d.rateMax : d.rateCritical);
-    if (idx === -1) conditions.push({ id: def.id, severity: rate });
-    else
-      conditions[idx] = {
-        ...conditions[idx],
-        severity: Math.min(1.0, conditions[idx].severity + rate)
-      };
-    return;
-  }
-  if (needVal < d.safe && idx !== -1) {
-    const newSeverity = conditions[idx].severity - perTick(d.recovery);
-    if (newSeverity <= 0) conditions.splice(idx, 1);
-    else conditions[idx] = { ...conditions[idx], severity: newSeverity };
-  }
-}
-
 function tickConditions(pawn: Pawn, gameState: GameState): GameState {
   // ADR-002 amendment: operate on the LIVE conditions array in place (no per-tick `[...]` clone — it
   // was a top allocator for healthy pawns that never change, §C). conditions is a cold snapshot field
@@ -297,24 +266,17 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
   // Onset/safe thresholds + accrual/recovery rates are authored on each condition's `driver` block
   // in conditions.jsonc — no hardcoded MALNUTRITION_*/DEHYDRATION_* constants.
   const needVals = pawn.needs as unknown as Record<string, number> | undefined;
-  for (const def of CONDITIONS_DB) {
-    if (!def.driver) continue;
-    const needVal = needVals?.[def.driver.need] ?? 0;
-    applyConditionDriver(conditions, def, needVal);
-    const current = conditions.find((c) => c.id === def.id);
-    if (current && current.severity >= def.lethalSeverity) {
-      return killPawn(
-        { ...gameState.pawns.find((p) => p.id === pawn.id)!, conditions, bloodVolume },
-        // A driven condition's id (malnutrition/dehydration) is also its death cause.
-        def.id as Parameters<typeof killPawn>[1],
-        {
-          ...gameState,
-          pawns: gameState.pawns.map((p) =>
-            p.id === pawn.id ? { ...p, conditions, bloodVolume } : p
-          )
-        }
-      );
-    }
+  const lethalCause = driveNeedConditions(conditions, needVals);
+  if (lethalCause) {
+    return killPawn(
+      { ...gameState.pawns.find((p) => p.id === pawn.id)!, conditions, bloodVolume },
+      // A driven condition's id (malnutrition/dehydration) is also its death cause.
+      lethalCause as Parameters<typeof killPawn>[1],
+      {
+        ...gameState,
+        pawns: gameState.pawns.map((p) => (p.id === pawn.id ? { ...p, conditions, bloodVolume } : p))
+      }
+    );
   }
 
   // ── Blood Loss ────────────────────────────────────────────────────────────

@@ -29,7 +29,7 @@ import {
 import {
   type TileFoodKind,
   NIGHT_THRESHOLD,
-  STARVATION_COLLAPSE_HUNGER,
+  STARVATION_COLLAPSE_SEVERITY,
   FLEE_HEALTH_FRACTION,
   HUNGER_SATED_THRESHOLD,
   HUNGER_EAT_THRESHOLD,
@@ -195,11 +195,15 @@ export function stepOne(
     );
   }
 
-  // Starvation collapse: once hunger passes the collapse threshold the entity is
-  // incapacitated — it does NOT flee, hunt, or wander. It lies in place (path cleared)
-  // and slowly dies. This replaces the old behaviour where starvation HP-drain dropped
-  // health below the flee threshold and the entity confusingly "started fleeing".
-  if (mob.needs.hunger >= STARVATION_COLLAPSE_HUNGER) {
+  // Starvation collapse: gated on the data-driven `malnutrition` condition (driven from hunger in
+  // entityLifecycle.stepHunger, the SAME model pawns use), NOT on raw hunger. Only once malnutrition
+  // reaches its severe, life-threatening stage is the entity too weak to act — it stops
+  // fleeing/hunting/wandering, lies in place (path cleared), and dies when malnutrition hits lethal
+  // severity. Because malnutrition onsets at hunger 87 and accrues slowly, this takes in-game DAYS of
+  // starving — it no longer drops a mob mid-hunt the instant hunger crosses 80.
+  const malnutritionSeverity =
+    mob.conditions?.find((c) => c.id === 'malnutrition')?.severity ?? 0;
+  if (malnutritionSeverity >= STARVATION_COLLAPSE_SEVERITY) {
     if (mob.state === 'Collapsed') return mob;
     simLog.logEntityStateChange(
       mob.id,
@@ -219,7 +223,7 @@ export function stepOne(
       eatProgress: undefined
     };
   }
-  // Recovered (e.g. fed): leave the collapsed state and resume normal behaviour.
+  // Recovered (e.g. fed enough to drop below the severe stage): resume normal behaviour.
   if (mob.state === 'Collapsed') {
     return { ...mob, state: 'Wander', stateSince: turn };
   }

@@ -3,7 +3,7 @@
 import type { GameState, Mob, MobState, DroppedItem } from '../../core/types';
 import { getCreatureById } from '../../core/Creatures';
 import { SECONDS_PER_TICK, perTick } from '../../core/time';
-import { conditionNeedMultipliers } from '../../core/needs';
+import { conditionNeedMultipliers, driveNeedConditions } from '../../core/needs';
 import { absorbDropIfOnStockpileTile } from '../../core/GameState';
 import { pawnStatService } from '../PawnStatService';
 import { simLog } from '../../core/logSink';
@@ -11,7 +11,6 @@ import { entityName } from './entityHelpers';
 import {
   BASE_HUNGER_PER_SECOND,
   BASE_FATIGUE_PER_SECOND,
-  STARVATION_DAMAGE_PER_SECOND,
   SLEEP_HUNGER_RATE,
   SLEEP_RECOVERY_PER_SECOND,
   CORPSE_DECAY_TICKS
@@ -61,8 +60,6 @@ export function stepHunger(state: GameState): GameState {
     const newFatigue = sleepingNow
       ? Math.max(0, mob.needs.fatigue - SLEEP_RECOVERY_PER_SECOND * SECONDS_PER_TICK)
       : Math.min(100, mob.needs.fatigue + fatigueDelta);
-    // Starvation: drain HP once hunger is capped at 100.
-    const healthDelta = newHunger >= 100 ? -(STARVATION_DAMAGE_PER_SECOND * SECONDS_PER_TICK) : 0;
 
     // ── Blood loss ──────────────────────────────────────────────────────────────────
     // Read limbs by reference (never mutated here) — copying it each tick would needlessly churn the
@@ -88,6 +85,32 @@ export function stepHunger(state: GameState): GameState {
       else conditions[bloodLossIdx] = { ...conditions[bloodLossIdx], severity: bloodSeverity };
     } else if (bloodLossIdx !== -1) {
       conditions.splice(bloodLossIdx, 1);
+    }
+
+    // ── Need-driven conditions (malnutrition ← hunger) — the SAME data-driven model as pawns ──
+    // Malnutrition onsets at hunger 87 and accrues slowly (conditions.jsonc), so a starving mob keeps
+    // acting (trying to hunt/forage) for in-game DAYS, growing progressively weaker, and only dies
+    // when malnutrition reaches lethal severity. The severe stage trips the FSM into Collapsed
+    // (entityAI). Mobs carry no `thirst` need, so dehydration never onsets.
+    const lethalCondition = driveNeedConditions(conditions, {
+      ...(mob.needs as unknown as Record<string, number>),
+      hunger: newHunger
+    });
+    if (lethalCondition) {
+      const cause = lethalCondition === 'malnutrition' ? 'starvation' : lethalCondition;
+      simLog.logEntityDeath(mob.id, entityName(mob), cause, turn, mob.x, mob.y);
+      mob.state = 'Corpse';
+      mob.isAlive = false;
+      mob.diedAt = turn;
+      mob.intactness = 1.0;
+      mob.needs.hunger = newHunger;
+      mob.needs.fatigue = newFatigue;
+      mob.bloodVolume = bloodVolume;
+      mob.conditions = conditions;
+      if (limbs) mob.limbs = limbs;
+      justDied.push(mob);
+      changed = true;
+      continue;
     }
 
     // Death by blood loss.
@@ -129,7 +152,6 @@ export function stepHunger(state: GameState): GameState {
 
     mob.needs.hunger = newHunger;
     mob.needs.fatigue = newFatigue;
-    mob.health = Math.max(0, mob.health + healthDelta);
     mob.bloodVolume = bloodVolume;
     mob.conditions = conditions;
     if (limbs) mob.limbs = limbs;
