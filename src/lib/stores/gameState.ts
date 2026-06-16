@@ -73,7 +73,7 @@ export const initialGameState: GameState = {
   /** Living-world (SEASONS_WEATHER): start in spring, clear skies. */
   season: 'spring',
   seasonDay: 0,
-  weather: { type: 'clear', intensity: 0, turnsRemaining: 0 },
+  weather: { type: 'clear', intensity: 0, turnsRemaining: 0, wind: 0.3 },
   buildingCounts: {},
   /** Phase 4: placed buildings on the map */
   buildings: [],

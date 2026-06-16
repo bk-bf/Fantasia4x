@@ -32,9 +32,22 @@
   // panelTint is a per-channel RGB multiplier fed into an SVG feColorMatrix so panels are tinted by
   // exactly the same hue as the map (no pink hue-rotate bug). Weather then DESATURATES the panels —
   // fog drains the colour most (`panelSaturation` in weather.jsonc) for a bleak, washed-out feel.
-  $: panelTint = environmentService.getAmbient(environmentService.ambientTurn($gameState)).panelTint;
-  $: panelSaturation = weatherPanelSaturation($gameState.weather?.type);
+  $: ambient = environmentService.getAmbient(environmentService.ambientTurn($gameState));
+  $: panelTint = ambient.panelTint;
+  $: panelSaturation = bleakSaturation(
+    weatherPanelSaturation($gameState.weather?.type),
+    ambient.light
+  );
   $: ambientMatrix = buildPanelMatrix(panelTint, panelSaturation);
+
+  // Low light deepens the bleakness of already-bleak weather. The extra desaturation is weighted by
+  // how washed-out the weather already is (1 - baseSat), so clear skies stay untouched and FOG drains
+  // hardest, and by darkness (1 - light), so dawn/dusk/night look bleaker than midday under fog.
+  const NIGHT_BLEAK = 0.5;
+  function bleakSaturation(baseSat: number, light: number): number {
+    const extra = (1 - baseSat) * (1 - light) * NIGHT_BLEAK;
+    return Math.max(0, baseSat - extra);
+  }
 
   /**
    * Compose the panel feColorMatrix from the day/night RGB tint and the weather saturation: desaturate

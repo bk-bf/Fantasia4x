@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { SeededRng } from '../core/rng';
 import { TICKS_PER_SECOND } from '../core/time';
-import type { WorldTile, WeatherType } from '../core/types';
+import type { WorldTile, WeatherType, WeatherState } from '../core/types';
 import {
   TURNS_PER_DAY,
   DAYS_PER_SEASON,
@@ -30,6 +30,8 @@ import {
   weatherDensity,
   weatherPanelSaturation,
   weatherChronicleSeverity,
+  weatherSightMul,
+  weatherWindStrength,
   SEASON_LABELS,
   type ThermalSample
 } from './EnvironmentService';
@@ -180,11 +182,18 @@ describe('EnvironmentService — weather (Phase C)', () => {
     expect(a).toEqual(b);
   });
 
-  it('a fresh roll draws a duration in [50, 600] and a valid type', () => {
+  it('a fresh roll draws a duration in [50, 400] and a valid type', () => {
     const valid: WeatherType[] = [
       'clear',
+      'spring_windy',
+      'summer_windy',
+      'autumn_windy',
+      'winter_windy',
+      'drizzle',
       'rain',
+      'windy_rain',
       'heavy_rain',
+      'storm',
       'snow',
       'blizzard',
       'heat_wave',
@@ -193,13 +202,23 @@ describe('EnvironmentService — weather (Phase C)', () => {
     const rng = new SeededRng(7);
     for (let i = 0; i < 200; i++) {
       const w = advanceWeatherForDay(
-        { type: 'clear', intensity: 0, turnsRemaining: 0 },
+        { type: 'clear', intensity: 0, turnsRemaining: 0, wind: 0.5 },
         'winter',
         rng
       );
       expect(valid).toContain(w.type);
       expect(w.turnsRemaining).toBeGreaterThanOrEqual(50);
-      expect(w.turnsRemaining).toBeLessThanOrEqual(600);
+      expect(w.turnsRemaining).toBeLessThanOrEqual(400);
+    }
+  });
+
+  it('ambient wind random-walks but stays within [0, 1]', () => {
+    const rng = new SeededRng(3);
+    let w: WeatherState = { type: 'clear', intensity: 0, turnsRemaining: 0, wind: 0.5 };
+    for (let i = 0; i < 400; i++) {
+      w = advanceWeatherForDay(w, 'autumn', rng);
+      expect(w.wind ?? 0).toBeGreaterThanOrEqual(0);
+      expect(w.wind ?? 0).toBeLessThanOrEqual(1);
     }
   });
 
@@ -213,7 +232,7 @@ describe('EnvironmentService — weather (Phase C)', () => {
     expect(w.turnsRemaining).toBe(TICKS_PER_DAY * 2);
   });
 
-  it('winter precipitation is snow, warm seasons rain (over many rolls)', () => {
+  it('clear steps to season-appropriate precip: winter→snow, warm→drizzle (over many rolls)', () => {
     const rng = new SeededRng(99);
     const winterTypes = new Set<WeatherType>();
     const springTypes = new Set<WeatherType>();
@@ -225,10 +244,43 @@ describe('EnvironmentService — weather (Phase C)', () => {
         advanceWeatherForDay({ type: 'clear', intensity: 0, turnsRemaining: 0 }, 'spring', rng).type
       );
     }
+    // Winter's wet branch off clear is snow (never the warm-season drizzle); spring's is drizzle.
     expect(winterTypes.has('snow')).toBe(true);
-    expect(winterTypes.has('rain')).toBe(false);
-    expect(springTypes.has('rain')).toBe(true);
+    expect(winterTypes.has('drizzle')).toBe(false);
+    expect(springTypes.has('drizzle')).toBe(true);
     expect(springTypes.has('snow')).toBe(false);
+  });
+
+  it('a windy day biases the rain chain toward storm/windy branches (windScaled)', () => {
+    // From `rain`, count how often we step into a wind branch (windy_rain / storm / heavy_rain) at
+    // low vs high ambient wind. windScaled branches must be strictly more likely when it's windy.
+    const windBranches = new Set(['windy_rain', 'storm', 'heavy_rain']);
+    const count = (wind: number) => {
+      const rng = new SeededRng(123);
+      let n = 0;
+      for (let i = 0; i < 2000; i++) {
+        const w = advanceWeatherForDay(
+          { type: 'rain', intensity: 0.5, turnsRemaining: 0, wind },
+          'autumn',
+          rng
+        );
+        if (windBranches.has(w.type)) n++;
+      }
+      return n;
+    };
+    expect(count(0.9)).toBeGreaterThan(count(0.05));
+  });
+
+  it('weatherSightMul shortens sight in fog/storm and is 1 in clear', () => {
+    expect(weatherSightMul('clear')).toBe(1);
+    expect(weatherSightMul('fog')).toBeLessThan(0.6);
+    expect(weatherSightMul('storm')).toBeLessThan(1);
+    expect(weatherSightMul('fog')).toBeLessThan(weatherSightMul('rain'));
+  });
+
+  it('weatherWindStrength is far higher for a storm than for clear', () => {
+    expect(weatherWindStrength('storm')).toBeGreaterThan(weatherWindStrength('clear'));
+    expect(weatherWindStrength('storm')).toBeGreaterThan(0.8);
   });
 });
 
@@ -406,7 +458,7 @@ describe('EnvironmentService — data-driven weather/season metadata (jsonc)', (
   it('panel saturation is data-driven — fog washes panels out the most', () => {
     expect(weatherPanelSaturation('clear')).toBe(1); // default, no field
     expect(weatherPanelSaturation('heat_wave')).toBe(1);
-    expect(weatherPanelSaturation('fog')).toBe(0.45);
+    expect(weatherPanelSaturation('fog')).toBe(0.68);
     expect(weatherPanelSaturation('fog')).toBeLessThan(weatherPanelSaturation('rain'));
     expect(weatherPanelSaturation(undefined)).toBe(1);
   });
@@ -417,9 +469,9 @@ describe('EnvironmentService — data-driven weather/season metadata (jsonc)', (
     expect(weatherFallSpeed('snow')).toBe(80);
     expect(weatherDensity('rain')).toBe(160);
     expect(weatherDensity('heavy_rain')).toBe(240); // heavier rain = more drops
-    // Unknown type → falls back to clear's def; clear has no fallSpeed/density → kind defaults.
-    expect(weatherFallSpeed('not_a_weather')).toBe(680);
-    expect(weatherDensity('not_a_weather')).toBe(160);
+    // Unknown type → falls back to clear's def; clear's overlay is 'none' → no particles (0/0).
+    expect(weatherFallSpeed('not_a_weather')).toBe(0);
+    expect(weatherDensity('not_a_weather')).toBe(0);
   });
 
   it('chronicle severity is data-driven', () => {
@@ -436,7 +488,7 @@ describe('EnvironmentService — data-driven weather/season metadata (jsonc)', (
 describe('EnvironmentService — environment tint (Subsystem 2/5)', () => {
   it('multiplies season hue by weather hue', () => {
     const t = getEnvironmentTint('winter', { type: 'fog', intensity: 0.5, turnsRemaining: 0 });
-    expect(t[0]).toBeCloseTo(SEASONS.winter.tint[0] * 0.85);
+    expect(t[0]).toBeCloseTo(SEASONS.winter.tint[0] * 0.88);
   });
 
   it('clear weather + no season is neutral white', () => {

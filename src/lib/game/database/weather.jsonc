@@ -1,38 +1,48 @@
-// Weather (SEASONS_WEATHER Subsystem 4) — fully data-driven. Loaded by EnvironmentService. Add a new
-// weather event by adding a `types[]` entry and wiring it into other types' `transitions`.
+// Weather (SEASONS_WEATHER Subsystem 4) — fully data-driven. Loaded by EnvironmentService.
+//
+// CONNECTED CHAINS, not isolated events. `transitions` is a WEIGHTED graph: weather flows along
+// intensity ladders (clear → drizzle → rain → heavy_rain → storm; snow → blizzard) with windy
+// parallels (spring_windy/…/windy_rain). Each day the current type either steps to a neighbour or
+// persists — see EnvironmentService.rollWeatherType.
 //
 //   durationRange — [min,max] turns a spell lasts before it's re-rolled (per-type override allowed).
 //   default       — the starting / fallback weather id.
 //
 //   types[] fields:
-//     overlay       — the UI animation the WeatherCanvas draws: "none" | "rain" | "snow" | "fog"
-//                     (fog = a soft drifting haze, not particles). Purely visual.
-//     panelSaturation — side-panel colour saturation while active (1 = normal, <1 = washed-out/bleak;
-//                     fog drains it most). Drives the panel feColorMatrix; lower also lifts toward grey.
-//     heavy         — harder wind / slant + longer streaks on the overlay (heavy_rain / blizzard).
-//     fallSpeed     — overlay particle fall speed in px/sec (visual). Default 680 rain / 80 snow.
-//     density       — overlay particle count per megapixel of screen (visual), before intensity/zoom
-//                     scaling. Default 160 rain / 80 snow. More = thicker precipitation.
+//     overlay       — UI animation the WeatherCanvas draws:
+//                     "none" | "rain" | "snow" | "fog" | "leaves" | "dust" | "snowdust". Visual only.
+//     particleColor — [r,g,b] 0–255 tint for "leaves"/"dust" particles (green spring vs red autumn).
+//     windStrength  — inherent windiness 0–1; drives the overlay slant (combined with ambient wind).
+//                     Default 0.2 (0.6 if "heavy").
+//     sightMul      — environmental sight multiplier 0–1 (1 = clear); fog/storm shorten detection
+//                     range for BOTH pawns and mobs (folds into effectiveVisionRange). Default 1.
+//     panelSaturation — side-panel colour saturation while active (1 = normal, <1 = washed-out).
+//     heavy         — harder wind / slant + longer streaks on the overlay.
+//     fallSpeed     — overlay particle fall speed px/sec. Default 680 rain / 80 snow.
+//     density       — overlay particle count per megapixel (before intensity/zoom). Default 160/80.
 //     intensity     — 0–1; drives overlay opacity AND (× density) particle count.
-//     tempDelta     — °C added to effective temperature while active (cold/heat exposure).
+//     tempDelta     — °C added to effective temperature (cold/heat exposure). Windy cold = windchill;
+//                     summer wind is a small negative = cooling relief in the heat.
 //     fatigueMul / hungerMul — multipliers on those need rates.
 //     moveCostMul   — movement-cost multiplier (gameplay hook).
 //     mood          — per-second mood drift (+ pleasant, − miserable).
 //     moistureBonus — added to tile wetness % while active (soaks pawns); negative dries (heat wave).
 //     tint          — normalised RGB multiplied into the ambient tint.
 //     severity      — chronicle severity on onset: "info" | "warning".
-//     transitions[] — Markov re-roll: evaluated IN ORDER, first hit wins, else the weather persists.
-//                     { to, chance } — fixed per-roll probability.
-//                     { to, seasonPrecip:true } — probability = the current season's `precipitation`.
-//                     seasons:[...] — gate a transition to specific seasons.
+//     transitions[] — weighted neighbours. { to, chance } = weight; { to, seasonPrecip:true } pulls
+//                     the season's precipitation as the weight; seasons:[...] gates by season;
+//                     windScaled:true amplifies the weight with ambient wind (rain→storm on a gale).
+//                     The leftover weight (1 − Σ) is the chance the weather simply persists.
 {
-  "durationRange": [50, 600],
+  "durationRange": [50, 400],
   "default"      : "clear",
   "types"        : [
     {
       "id"           : "clear",
       "label"        : "Clear skies",
       "overlay"      : "none",
+      "windStrength" : 0.1,
+      "sightMul"     : 1.0,
       "intensity"    : 0,
       "tempDelta"    : 0,
       "fatigueMul"   : 1.0,
@@ -43,9 +53,129 @@
       "tint"         : [1.0, 1.0, 1.0],
       "severity"     : "info",
       "transitions"  : [
-        { "to": "heat_wave", "chance": 0.1, "seasons": ["summer"                    ]                       },
-        { "to": "snow",                     "seasons": ["winter"                    ], "seasonPrecip": true },
-        { "to": "rain",                     "seasons": ["spring", "summer", "autumn"], "seasonPrecip": true }
+        { "to": "spring_windy", "chance": 0.18, "seasons": ["spring"] },
+        { "to": "summer_windy", "chance": 0.18, "seasons": ["summer"] },
+        { "to": "autumn_windy", "chance": 0.18, "seasons": ["autumn"] },
+        { "to": "winter_windy", "chance": 0.18, "seasons": ["winter"] },
+        { "to": "drizzle",   "seasons": ["spring", "summer", "autumn"], "seasonPrecip": true },
+        { "to": "snow",      "chance": 0.18, "seasons": ["winter"] },
+        { "to": "heat_wave", "chance": 0.08, "seasons": ["summer"] },
+        { "to": "fog",       "chance": 0.05 }
+      ]
+    },
+
+    {
+      "id"           : "spring_windy",
+      "label"        : "Windy",
+      "overlay"      : "leaves",
+      "particleColor": [150, 190, 95],
+      "windStrength" : 0.45,
+      "sightMul"     : 1.0,
+      "intensity"    : 0.5,
+      "tempDelta"    : 0,
+      "fatigueMul"   : 1.0,
+      "hungerMul"    : 1.0,
+      "moveCostMul"  : 1.05,
+      "mood"         : 0.4,
+      "moistureBonus": 0,
+      "tint"         : [0.97, 1.0, 0.94],
+      "severity"     : "info",
+      "transitions"  : [
+        { "to": "clear",      "chance": 0.15 },
+        { "to": "drizzle",    "chance": 0.15 },
+        { "to": "windy_rain", "chance": 0.08, "windScaled": true }
+      ]
+    },
+    {
+      "id"           : "summer_windy",
+      "label"        : "Windy",
+      "overlay"      : "dust",
+      "particleColor": [200, 180, 130],
+      "windStrength" : 0.4,
+      "sightMul"     : 0.95,
+      "intensity"    : 0.5,
+      "tempDelta"    : -3,
+      "fatigueMul"   : 1.0,
+      "hungerMul"    : 1.0,
+      "moveCostMul"  : 1.05,
+      "mood"         : 0.3,
+      "moistureBonus": -5,
+      "tint"         : [1.0, 0.98, 0.9],
+      "severity"     : "info",
+      "transitions"  : [
+        { "to": "clear",      "chance": 0.18 },
+        { "to": "heat_wave",  "chance": 0.1 },
+        { "to": "drizzle",    "chance": 0.08 },
+        { "to": "windy_rain", "chance": 0.06, "windScaled": true }
+      ]
+    },
+    {
+      "id"           : "autumn_windy",
+      "label"        : "Windy",
+      "overlay"      : "leaves",
+      "particleColor": [205, 95, 40],
+      "windStrength" : 0.5,
+      "sightMul"     : 0.95,
+      "intensity"    : 0.6,
+      "tempDelta"    : -2,
+      "fatigueMul"   : 1.05,
+      "hungerMul"    : 1.0,
+      "moveCostMul"  : 1.05,
+      "mood"         : 0.1,
+      "moistureBonus": 0,
+      "tint"         : [1.0, 0.9, 0.72],
+      "severity"     : "info",
+      "transitions"  : [
+        { "to": "clear",      "chance": 0.12 },
+        { "to": "drizzle",    "chance": 0.18 },
+        { "to": "fog",        "chance": 0.08 },
+        { "to": "windy_rain", "chance": 0.1, "windScaled": true }
+      ]
+    },
+    {
+      "id"           : "winter_windy",
+      "label"        : "Windy",
+      "overlay"      : "snowdust",
+      "windStrength" : 0.6,
+      "sightMul"     : 0.85,
+      "intensity"    : 0.6,
+      "tempDelta"    : -6,
+      "fatigueMul"   : 1.1,
+      "hungerMul"    : 1.05,
+      "moveCostMul"  : 1.1,
+      "mood"         : -0.4,
+      "moistureBonus": 5,
+      "tint"         : [0.9, 0.94, 1.0],
+      "severity"     : "info",
+      "transitions"  : [
+        { "to": "clear",    "chance": 0.1 },
+        { "to": "snow",     "chance": 0.18 },
+        { "to": "blizzard", "chance": 0.1, "windScaled": true }
+      ]
+    },
+
+    {
+      "id"             : "drizzle",
+      "label"          : "Drizzle",
+      "overlay"        : "rain",
+      "fallSpeed"      : 520,
+      "density"        : 70,
+      "windStrength"   : 0.2,
+      "sightMul"       : 0.95,
+      "intensity"      : 0.3,
+      "tempDelta"      : -1,
+      "fatigueMul"     : 1.05,
+      "hungerMul"      : 1.0,
+      "moveCostMul"    : 1.05,
+      "mood"           : -0.2,
+      "moistureBonus"  : 10,
+      "tint"           : [0.88, 0.91, 1.0],
+      "panelSaturation": 0.97,
+      "severity"       : "info",
+      "transitions"    : [
+        { "to": "rain",  "chance": 0.3 },
+        { "to": "clear", "chance": 0.15 },
+        { "to": "fog",   "chance": 0.08 }
       ]
     },
     {
@@ -54,6 +184,8 @@
       "overlay"        : "rain",
       "fallSpeed"      : 680,
       "density"        : 160,
+      "windStrength"   : 0.3,
+      "sightMul"       : 0.85,
       "intensity"      : 0.5,
       "tempDelta"      : -3,
       "fatigueMul"     : 1.1,
@@ -64,7 +196,38 @@
       "tint"           : [0.8, 0.85, 1.0],
       "panelSaturation": 0.95,
       "severity"       : "info",
-      "transitions"    : [ {"to": "clear", "chance": 0.6}, {"to": "heavy_rain", "chance": 0.2} ]
+      "transitions"    : [
+        { "to": "drizzle",    "chance": 0.2 },
+        { "to": "heavy_rain", "chance": 0.18, "windScaled": true },
+        { "to": "windy_rain", "chance": 0.12, "windScaled": true },
+        { "to": "clear",      "chance": 0.08 }
+      ]
+    },
+    {
+      "id"             : "windy_rain",
+      "label"          : "Windswept rain",
+      "overlay"        : "rain",
+      "heavy"          : true,
+      "fallSpeed"      : 820,
+      "density"        : 200,
+      "windStrength"   : 0.75,
+      "sightMul"       : 0.7,
+      "intensity"      : 0.7,
+      "tempDelta"      : -4,
+      "fatigueMul"     : 1.2,
+      "hungerMul"      : 1.05,
+      "moveCostMul"    : 1.3,
+      "mood"           : -1.0,
+      "moistureBonus"  : 30,
+      "tint"           : [0.8, 0.85, 1.0],
+      "panelSaturation": 0.85,
+      "severity"       : "warning",
+      "transitions"    : [
+        { "to": "rain",       "chance": 0.25 },
+        { "to": "storm",      "chance": 0.2, "windScaled": true },
+        { "to": "heavy_rain", "chance": 0.15 },
+        { "to": "clear",      "chance": 0.06 }
+      ]
     },
     {
       "id"             : "heavy_rain",
@@ -73,6 +236,8 @@
       "heavy"          : true,
       "fallSpeed"      : 950,
       "density"        : 240,
+      "windStrength"   : 0.5,
+      "sightMul"       : 0.7,
       "intensity"      : 0.75,
       "tempDelta"      : -5,
       "fatigueMul"     : 1.25,
@@ -80,17 +245,50 @@
       "moveCostMul"    : 1.3,
       "mood"           : -1.0,
       "moistureBonus"  : 35,
-      "tint"           : [0.8, 0.85, 1.0],
-      "panelSaturation": 0.85,
+      "tint"           : [0.78, 0.83, 1.0],
+      "panelSaturation": 0.82,
       "severity"       : "warning",
-      "transitions"    : [ {"to": "clear", "chance": 0.6} ]
+      "transitions"    : [
+        { "to": "rain",       "chance": 0.25 },
+        { "to": "storm",      "chance": 0.2, "windScaled": true },
+        { "to": "windy_rain", "chance": 0.12 },
+        { "to": "drizzle",    "chance": 0.1 }
+      ]
     },
+    {
+      "id"             : "storm",
+      "label"          : "Storm",
+      "overlay"        : "rain",
+      "heavy"          : true,
+      "fallSpeed"      : 1050,
+      "density"        : 300,
+      "windStrength"   : 0.95,
+      "sightMul"       : 0.5,
+      "intensity"      : 1.0,
+      "tempDelta"      : -6,
+      "fatigueMul"     : 1.5,
+      "hungerMul"      : 1.15,
+      "moveCostMul"    : 1.6,
+      "mood"           : -2.0,
+      "moistureBonus"  : 40,
+      "tint"           : [0.72, 0.78, 0.95],
+      "panelSaturation": 0.72,
+      "severity"       : "warning",
+      "transitions"    : [
+        { "to": "heavy_rain", "chance": 0.35 },
+        { "to": "windy_rain", "chance": 0.2 },
+        { "to": "rain",       "chance": 0.15 }
+      ]
+    },
+
     {
       "id"             : "snow",
       "label"          : "Snow",
       "overlay"        : "snow",
       "fallSpeed"      : 80,
       "density"        : 90,
+      "windStrength"   : 0.3,
+      "sightMul"       : 0.8,
       "intensity"      : 0.5,
       "tempDelta"      : -10,
       "fatigueMul"     : 1.3,
@@ -102,8 +300,10 @@
       "panelSaturation": 0.85,
       "severity"       : "info",
       "transitions"    : [
-        { "to": "clear",    "chance": 0.6                         },
-        { "to": "blizzard", "chance": 0.15, "seasons": ["winter"] }
+        { "to": "clear",        "chance": 0.22 },
+        { "to": "winter_windy", "chance": 0.12, "seasons": ["winter"] },
+        { "to": "blizzard",     "chance": 0.15, "seasons": ["winter"], "windScaled": true },
+        { "to": "fog",          "chance": 0.08 }
       ]
     },
     {
@@ -112,7 +312,9 @@
       "overlay"        : "snow",
       "heavy"          : true,
       "fallSpeed"      : 170,
-      "density"        : 200,
+      "density"        : 220,
+      "windStrength"   : 0.9,
+      "sightMul"       : 0.45,
       "intensity"      : 1.0,
       "tempDelta"      : -20,
       "fatigueMul"     : 1.8,
@@ -123,27 +325,19 @@
       "tint"           : [0.92, 0.96, 1.0],
       "panelSaturation": 0.7,
       "severity"       : "warning",
-      "transitions"    : [ {"to": "clear", "chance": 0.6} ]
+      "transitions"    : [
+        { "to": "snow",         "chance": 0.4 },
+        { "to": "winter_windy", "chance": 0.15 },
+        { "to": "clear",        "chance": 0.1 }
+      ]
     },
-    {
-      "id"           : "heat_wave",
-      "label"        : "Heat wave",
-      "overlay"      : "none",
-      "intensity"    : 0.75,
-      "tempDelta"    : 15,
-      "fatigueMul"   : 1.2,
-      "hungerMul"    : 1.4,
-      "moveCostMul"  : 1.1,
-      "mood"         : -1.0,
-      "moistureBonus": -15,
-      "tint"         : [1.0, 0.92, 0.8],
-      "severity"     : "warning",
-      "transitions"  : [ {"to": "clear", "chance": 0.6} ]
-    },
+
     {
       "id"             : "fog",
       "label"          : "Fog",
       "overlay"        : "fog",
+      "windStrength"   : 0.1,
+      "sightMul"       : 0.4,
       "intensity"      : 0.5,
       "tempDelta"      : 0,
       "fatigueMul"     : 1.0,
@@ -154,7 +348,31 @@
       "tint"           : [0.88, 0.88, 0.9],
       "panelSaturation": 0.68,
       "severity"       : "info",
-      "transitions"    : [ {"to": "clear", "chance": 0.6} ]
+      "transitions"    : [
+        { "to": "clear",   "chance": 0.35 },
+        { "to": "drizzle", "chance": 0.12, "seasons": ["spring", "summer", "autumn"] },
+        { "to": "rain",    "chance": 0.08, "seasons": ["spring", "summer", "autumn"] }
+      ]
+    },
+    {
+      "id"           : "heat_wave",
+      "label"        : "Heat wave",
+      "overlay"      : "none",
+      "windStrength" : 0.05,
+      "sightMul"     : 1.0,
+      "intensity"    : 0.75,
+      "tempDelta"    : 15,
+      "fatigueMul"   : 1.2,
+      "hungerMul"    : 1.4,
+      "moveCostMul"  : 1.1,
+      "mood"         : -1.0,
+      "moistureBonus": -15,
+      "tint"         : [1.0, 0.92, 0.8],
+      "severity"     : "warning",
+      "transitions"  : [
+        { "to": "clear",        "chance": 0.4 },
+        { "to": "summer_windy", "chance": 0.2, "seasons": ["summer"] }
+      ]
     }
   ]
 }

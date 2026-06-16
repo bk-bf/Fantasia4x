@@ -297,21 +297,26 @@ export interface WeatherEffects {
   mood: number;
 }
 
+/** The overlay animation the WeatherCanvas draws for a weather type. */
+export type WeatherOverlayKind = 'none' | 'rain' | 'snow' | 'fog' | 'leaves' | 'dust' | 'snowdust';
+
 // Data-driven (database/weather.jsonc): every weather id + its effects, visuals, and transitions.
 interface WeatherTransition {
   to: string;
-  /** Fixed per-roll probability. */
+  /** Fixed per-roll weight (a probability before normalisation; the leftover weight = "stays put"). */
   chance?: number;
-  /** Use the current season's `precipitation` as the chance (clear → rain/snow). */
+  /** Use the current season's `precipitation` as the weight (clear → rain/snow). */
   seasonPrecip?: boolean;
   /** Gate this transition to specific seasons. */
   seasons?: Season[];
+  /** Scale this branch's weight by ambient wind (high wind → far more likely; e.g. rain→storm). */
+  windScaled?: boolean;
 }
 interface WeatherDef extends WeatherEffects {
   id: string;
   label: string;
-  /** The UI animation: 'none' | 'rain' | 'snow' | 'fog' (haze). Purely visual. */
-  overlay: 'none' | 'rain' | 'snow' | 'fog';
+  /** The UI animation. Purely visual. */
+  overlay: WeatherOverlayKind;
   heavy?: boolean;
   /** Overlay particle fall speed, px/sec (visual). Defaults by overlay kind. */
   fallSpeed?: number;
@@ -319,6 +324,12 @@ interface WeatherDef extends WeatherEffects {
   density?: number;
   /** Side-panel colour saturation while active (1 = normal, <1 = washed-out/bleak). Default 1. */
   panelSaturation?: number;
+  /** Inherent windiness 0–1 — drives the visual overlay slant. Combined with ambient `wind` at runtime. */
+  windStrength?: number;
+  /** Environmental sight multiplier 0–1 (1 = clear; fog/storm shorten detection). Default 1. */
+  sightMul?: number;
+  /** Tint for `leaves`/`dust` overlay particles, 0–255 RGB. */
+  particleColor?: [number, number, number];
   intensity: number;
   moistureBonus: number;
   tint: [number, number, number];
@@ -347,10 +358,16 @@ function weatherDef(type?: string): WeatherDef {
 export const WEATHER_IDS: string[] = WEATHER_FILE.types.map((t) => t.id);
 
 /** Build a sticky WeatherState for a given type (debug): the spell runs effectively forever so the
- *  daily Markov chain won't re-roll it until the player changes it again. */
+ *  daily Markov chain won't re-roll it until the player changes it again. Ambient wind seeds from the
+ *  type's own `windStrength` so a debug storm immediately looks/feels windy. */
 export function makeWeather(type: string): WeatherState {
   const def = weatherDef(type);
-  return { type: def.id, intensity: def.intensity, turnsRemaining: Number.MAX_SAFE_INTEGER };
+  return {
+    type: def.id,
+    intensity: def.intensity,
+    turnsRemaining: Number.MAX_SAFE_INTEGER,
+    wind: def.windStrength ?? DEFAULT_WIND
+  };
 }
 
 /** Gameplay effects for a weather state (defaults to the fallback weather when undefined). */
@@ -368,8 +385,25 @@ export function weatherLabel(type?: string): string {
 }
 
 /** Particle/haze overlay the WeatherCanvas should draw for a weather id (`none` = no animation). */
-export function weatherOverlayKind(type?: string): 'none' | 'rain' | 'snow' | 'fog' {
+export function weatherOverlayKind(type?: string): WeatherOverlayKind {
   return weatherDef(type).overlay;
+}
+
+/** Inherent windiness 0–1 for a weather id (default by overlay kind). The WeatherCanvas combines this
+ *  with the live ambient `wind` to set the overlay slant. */
+export function weatherWindStrength(type?: string): number {
+  const def = weatherDef(type);
+  return def.windStrength ?? (def.heavy ? 0.6 : 0.2);
+}
+
+/** Environmental sight multiplier 0–1 for a weather id (1 = clear; fog/storm shorten detection). */
+export function weatherSightMul(type?: string): number {
+  return weatherDef(type).sightMul ?? 1;
+}
+
+/** Particle tint (0–255 RGB) for a `leaves`/`dust` overlay, or null when the type has none. */
+export function weatherParticleColor(type?: string): [number, number, number] | null {
+  return weatherDef(type).particleColor ?? null;
 }
 
 /** Side-panel colour saturation for a weather id (1 = normal, <1 = washed-out). Default 1. */
@@ -381,16 +415,35 @@ export function weatherIsHeavy(type?: string): boolean {
   return weatherDef(type).heavy === true;
 }
 
+const FALL_SPEED_DEFAULT: Record<WeatherOverlayKind, number> = {
+  none: 0,
+  rain: 680,
+  snow: 80,
+  snowdust: 90,
+  leaves: 60,
+  dust: 40,
+  fog: 0
+};
+const DENSITY_DEFAULT: Record<WeatherOverlayKind, number> = {
+  none: 0,
+  rain: 160,
+  snow: 80,
+  snowdust: 90,
+  leaves: 45,
+  dust: 70,
+  fog: 0
+};
+
 /** Overlay particle fall speed (px/sec) for a weather id — from weather.jsonc, default by overlay kind. */
 export function weatherFallSpeed(type?: string): number {
   const def = weatherDef(type);
-  return def.fallSpeed ?? (def.overlay === 'snow' ? 80 : 680);
+  return def.fallSpeed ?? FALL_SPEED_DEFAULT[def.overlay] ?? 680;
 }
 
 /** Overlay particle count per megapixel for a weather id — from weather.jsonc, default by overlay kind. */
 export function weatherDensity(type?: string): number {
   const def = weatherDef(type);
-  return def.density ?? (def.overlay === 'snow' ? 80 : 160);
+  return def.density ?? DENSITY_DEFAULT[def.overlay] ?? 160;
 }
 
 /** Chronicle severity for a weather onset (from weather.jsonc). */
@@ -621,42 +674,76 @@ export function tileTemperature(
   return effectiveTemperature(base, weatherEffects(weather).tempDelta, thermal);
 }
 
+/** Ambient-wind starting/fallback value when a WeatherState carries none (back-compat). */
+const DEFAULT_WIND = 0.3;
+/** Per-day ambient-wind random-walk step magnitude (±). */
+const WIND_DRIFT = 0.18;
+/** How hard ambient wind boosts a `windScaled` transition branch: weight × (1 + wind × this). */
+const WIND_TRANSITION_BOOST = 2.5;
+
 /**
- * Data-driven Markov transition (weather.jsonc `transitions`): evaluate the current weather's
- * transitions in order — first that passes its season gate AND its probability roll wins; otherwise
- * the weather persists. `seasonPrecip` pulls the probability from the season's `precipitation`.
+ * Data-driven connected-chain transition (weather.jsonc `transitions`). Unlike a first-match chain,
+ * this is a WEIGHTED pick: each season-valid transition contributes a weight (its `chance`, or the
+ * season `precipitation` for `seasonPrecip`, optionally amplified by ambient `wind` for `windScaled`
+ * branches). One draw selects among them; the leftover weight (1 − Σ) is the chance the weather
+ * simply persists. This is what makes weather flow along intensity ladders (clear→drizzle→rain→
+ * heavy_rain→storm) and lets a windy day push toward the storm/windy branches.
  */
-function rollWeatherType(prev: WeatherType, season: Season, rng: SeededRng): WeatherType {
+function rollWeatherType(
+  prev: WeatherType,
+  season: Season,
+  wind: number,
+  rng: SeededRng
+): WeatherType {
   const transitions = weatherDef(prev).transitions ?? [];
+  const weighted: Array<{ to: string; w: number }> = [];
+  let total = 0;
   for (const tr of transitions) {
     if (tr.seasons && !tr.seasons.includes(season)) continue;
-    const chance = tr.seasonPrecip ? SEASONS[season].precipitation : (tr.chance ?? 0);
-    if (rng.chance(chance)) return tr.to;
+    let w = tr.seasonPrecip ? SEASONS[season].precipitation : (tr.chance ?? 0);
+    if (tr.windScaled) w *= 1 + wind * WIND_TRANSITION_BOOST;
+    if (w <= 0) continue;
+    weighted.push({ to: tr.to, w });
+    total += w;
+  }
+  if (total <= 0) return prev;
+  // Draw over [0,1): walk the weighted branches; falling past the end (when Σ < 1) = stay put.
+  const r = rng.random();
+  let acc = 0;
+  for (const { to, w } of weighted) {
+    acc += w;
+    if (r < acc) return to;
   }
   return prev;
 }
 
 /**
  * Advance the weather one in-game day (called on day boundaries only — at most one new
- * WeatherState object per day, so snapshot churn is negligible). Re-rolls the type when the
- * current spell's `turnsRemaining` has elapsed; otherwise the spell simply runs down.
+ * WeatherState object per day, so snapshot churn is negligible). Ambient wind random-walks every day
+ * (so the "wind trajectory" drifts independently of the weather type); the type only re-rolls when
+ * the current spell's `turnsRemaining` has elapsed, otherwise the spell simply runs down.
  */
 export function advanceWeatherForDay(
   weather: WeatherState,
   season: Season,
   rng: SeededRng
 ): WeatherState {
+  const wind = Math.max(
+    0,
+    Math.min(1, (weather.wind ?? DEFAULT_WIND) + (rng.random() * 2 - 1) * WIND_DRIFT)
+  );
   const remaining = weather.turnsRemaining - TICKS_PER_DAY;
   if (remaining > 0) {
-    return { ...weather, turnsRemaining: remaining };
+    return { ...weather, wind, turnsRemaining: remaining };
   }
-  const type = rollWeatherType(weather.type, season, rng);
+  const type = rollWeatherType(weather.type, season, wind, rng);
   const def = weatherDef(type);
   const [minDur, maxDur] = def.durationRange ?? DURATION_RANGE;
   return {
     type,
     intensity: def.intensity,
-    turnsRemaining: rng.int(minDur, maxDur)
+    turnsRemaining: rng.int(minDur, maxDur),
+    wind
   };
 }
 
@@ -690,9 +777,7 @@ class EnvironmentServiceImpl {
    * live turn when no override is set.
    */
   ambientTurn(gs: { turn: number; _debugTimeOfDay?: number }): number {
-    return gs._debugTimeOfDay != null
-      ? Math.round(gs._debugTimeOfDay * TICKS_PER_DAY)
-      : gs.turn;
+    return gs._debugTimeOfDay != null ? Math.round(gs._debugTimeOfDay * TICKS_PER_DAY) : gs.turn;
   }
 
   getAmbient(turn: number): AmbientState {

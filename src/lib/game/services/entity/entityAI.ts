@@ -2,7 +2,7 @@
 // hunt, forage, sleep) plus the feeding sub-steppers. Extracted from EntityService (P-4).
 import type { GameState, Mob, MobState, Pawn } from '../../core/types';
 import { getCreatureById, type CreatureDefinition } from '../../core/Creatures';
-import { getAmbientLight, computeTileLightLevel } from '../EnvironmentService';
+import { getAmbientLight, computeTileLightLevel, weatherSightMul } from '../EnvironmentService';
 import { effectiveVisionRange } from '../../core/vision';
 import { ticksFromSeconds, SECONDS_PER_TICK } from '../../core/time';
 import { calcMaxStamina } from '../../entities/Pawns';
@@ -219,7 +219,9 @@ export function stepOne(
   // computed ONCE here and threaded into the FSM (so darkness shortens detection without recomputing
   // the light per check). Daytime with nightVision 0 ≈ the old def.stats.visionRange.
   const tileLight = computeTileLightLevel(turn, state.buildings ?? [], mob.x, mob.y);
-  const visionRange = effectiveVisionRange(mob, tileLight);
+  // Weather shortens detection too (fog/storm/blizzard — SEASONS_WEATHER): folds into the shared
+  // vision model so both this mob's sight and (via the same fn) pawn detection degrade in murk.
+  const visionRange = effectiveVisionRange(mob, tileLight, weatherSightMul(state.weather?.type));
   const inVision = nearest && dist(mob, nearest.pos) <= visionRange ? nearest : null;
   const isNight = getAmbientLight(turn) < NIGHT_THRESHOLD;
 

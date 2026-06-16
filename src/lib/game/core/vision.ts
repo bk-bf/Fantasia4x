@@ -40,11 +40,21 @@ export function dampenLightByNightVision(lightLevel: number, nightVision: number
 /** Light → vision multiplier in [VISION_LIGHT_FLOOR, 1]. Bright light/fire only RESTORES range up to
  *  the base (capped at 1); it never extends sight beyond daytime. */
 export function lightVisionMultiplier(lightLevel: number, nightVision: number): number {
-  return Math.min(1, Math.max(VISION_LIGHT_FLOOR, dampenLightByNightVision(lightLevel, nightVision)));
+  return Math.min(
+    1,
+    Math.max(VISION_LIGHT_FLOOR, dampenLightByNightVision(lightLevel, nightVision))
+  );
 }
 
-/** Effective sight range (tiles) for a pawn or mob at the given tile light level. Floors at 1. */
-export function effectiveVisionRange(entity: Pawn | Mob, lightLevel: number): number {
+/** Effective sight range (tiles) for a pawn or mob at the given tile light level. `weatherSightMul`
+ *  (1 = clear; <1 for fog/rain/storm — SEASONS_WEATHER) shortens detection on top of the light
+ *  dampening, for BOTH pawns and mobs. Floors at 1. */
+export function effectiveVisionRange(
+  entity: Pawn | Mob,
+  lightLevel: number,
+  weatherSightMul = 1
+): number {
   const base = baseVisionRange(entity.stats?.perception ?? 10);
-  return Math.max(1, Math.round(base * lightVisionMultiplier(lightLevel, getNightVision(entity))));
+  const lit = base * lightVisionMultiplier(lightLevel, getNightVision(entity));
+  return Math.max(1, Math.round(lit * weatherSightMul));
 }

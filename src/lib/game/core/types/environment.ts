@@ -22,4 +22,11 @@ export interface WeatherState {
   intensity: number;
   /** Turns (ticks) until this weather is re-rolled by the Markov chain. */
   turnsRemaining: number;
+  /**
+   * Ambient wind 0.0–1.0 — a slowly-varying world scalar (its own daily random-walk), independent of
+   * the weather *type*. It biases the connected-chain transitions (a `windScaled` branch like
+   * rain→storm gets more likely as wind rises) and feeds the visual overlay slant alongside each
+   * type's own `windStrength`. Optional for back-compat; defaults applied in EnvironmentService.
+   */
+  wind?: number;
 }
