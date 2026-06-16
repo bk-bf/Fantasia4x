@@ -50,6 +50,15 @@ describe('pinned carried items are never deposited', () => {
     expect(Object.values(out.pawns[0].inventory.items).every((q) => q === 0)).toBe(true);
   });
 
+  it('dropCarriedItem puts the whole stack on the pawn tile, empties it, and clears the pin', () => {
+    const s = makeState(hauler({ wood: 5 }, ['wood'])); // pawn at (0,0); stockpile tiles are 1,0/2,0
+    const out = COMMANDS.dropCarriedItem(s, { pawnId: 'h', itemId: 'wood' });
+    expect(out.pawns[0].inventory.items.wood ?? 0).toBe(0);
+    expect(out.pawns[0].pinnedItems).not.toContain('wood');
+    const drop = (out.droppedItems ?? []).find((d) => d.resourceId === 'wood');
+    expect(drop).toMatchObject({ quantity: 5, x: 0, y: 0 });
+  });
+
   it('togglePinItem flips the pin on and off for the right pawn', () => {
     const s = makeState(hauler({}, []));
     const on = COMMANDS.togglePinItem(s, { pawnId: 'h', itemId: 'stone_axe' });

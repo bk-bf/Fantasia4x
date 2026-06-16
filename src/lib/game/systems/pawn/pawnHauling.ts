@@ -5,13 +5,110 @@
  * work-state handlers; depends only on core/services + goIdle, so the import graph stays acyclic.
  */
 import type { GameState, Pawn } from '../../core/types';
-import { addToStockpileZone, absorbDropIfOnStockpileTile } from '../../core/GameState';
+import {
+  addToStockpileZone,
+  absorbDropIfOnStockpileTile,
+  aggregateFromDrops
+} from '../../core/GameState';
 import { occupancyService } from '../../services/OccupancyService';
 import { zoneTileKeys } from '../../services/DesignationService';
+import { itemService } from '../../services/ItemService';
 import { gameLogger } from '../../dev/gameLogger';
 import { rng } from '../../core/rng';
 import { PAWN_STATE } from './pawnStates';
 import { goIdle } from './pawnHelpers';
+
+const EMPTY_INVENTORY = {
+  items: {},
+  instances: [],
+  weightKg: 0,
+  maxWeightKg: 20,
+  volumeL: 0,
+  maxVolumeL: 20
+} as const;
+
+/**
+ * Pick up ground items at tile (x,y) into a pawn's inventory, clamped by its weight/volume carry
+ * budget (belt/back containers raise it). Pure + worker-safe — used by the right-click "pick up"
+ * context menu (a specific `dropId`) and the drafted "haul to stockpile" loop (every loose drop on
+ * the tile). Items that don't fit stay on the ground for another trip.
+ *
+ * @param opts.dropId     restrict to one DroppedItem (the menu lists drops individually)
+ * @param opts.resourceId restrict to one resource id
+ * @param opts.maxQty     cap the TOTAL units taken across matching drops (default: all that fit)
+ * @param opts.looseOnly  ignore `stored` (stockpiled) drops — used by haul so it never re-grabs stock
+ *
+ * Always lets the pawn take at least ONE unit (mirrors `itemService.clampPickupQuantity`'s floor) so
+ * a single over-budget item is never un-pickable. Recomputes `stockpile` since a picked-up `stored`
+ * drop reduces colony stock.
+ */
+export function pickUpFromTile(
+  gs: GameState,
+  pawnId: string,
+  x: number,
+  y: number,
+  opts: { dropId?: string; resourceId?: string; maxQty?: number; looseOnly?: boolean } = {}
+): GameState {
+  const pawn = gs.pawns.find((p) => p.id === pawnId);
+  if (!pawn) return gs;
+  const cands = (gs.droppedItems ?? []).filter(
+    (d) =>
+      d.x === x &&
+      d.y === y &&
+      d.quantity > 0 &&
+      !d.reservedFor &&
+      (!opts.looseOnly || !d.stored) &&
+      (!opts.dropId || d.id === opts.dropId) &&
+      (!opts.resourceId || d.resourceId === opts.resourceId)
+  );
+  if (cands.length === 0) return gs;
+
+  const budget = itemService.getCarryBudget(pawn, gs);
+  const load = itemService.getCurrentCarryLoad(pawn, gs);
+  let remW = budget.maxWeightKg - load.weightKg;
+  let remV = budget.maxVolumeL - load.volumeL;
+  let remCap = opts.maxQty ?? Infinity;
+
+  const reduceQty = new Map<string, number>();
+  const removeIds = new Set<string>();
+  const gained: Record<string, number> = {};
+  let tookAny = false;
+
+  for (const d of cands) {
+    if (remCap <= 0) break;
+    const def = itemService.getItemById(d.resourceId);
+    const perW = def?.weightKg ?? 0.1;
+    const perV = def?.volumeL ?? 0.2;
+    const byW = perW > 0 ? Math.floor(remW / perW) : d.quantity;
+    const byV = perV > 0 ? Math.floor(remV / perV) : d.quantity;
+    let take = Math.min(d.quantity, byW, byV, remCap);
+    // Floor of one: never let capacity block picking up a single (possibly heavy) unit.
+    if (take <= 0 && !tookAny && remCap >= 1) take = 1;
+    if (take <= 0) continue;
+    tookAny = true;
+    gained[d.resourceId] = (gained[d.resourceId] ?? 0) + take;
+    remW -= take * perW;
+    remV -= take * perV;
+    remCap -= take;
+    const rem = d.quantity - take;
+    if (rem > 0) reduceQty.set(d.id, rem);
+    else removeIds.add(d.id);
+  }
+
+  if (!tookAny) return gs;
+
+  const droppedItems = (gs.droppedItems ?? [])
+    .filter((d) => !removeIds.has(d.id))
+    .map((d) => (reduceQty.has(d.id) ? { ...d, quantity: reduceQty.get(d.id)! } : d));
+  const pawns = gs.pawns.map((p) => {
+    if (p.id !== pawnId) return p;
+    const inv = p.inventory ?? { ...EMPTY_INVENTORY };
+    const items = { ...inv.items };
+    for (const [rid, q] of Object.entries(gained)) items[rid] = (items[rid] ?? 0) + q;
+    return { ...p, inventory: { ...inv, items } };
+  });
+  return { ...gs, droppedItems, pawns, stockpile: aggregateFromDrops(droppedItems) };
+}
 
 const NEIGHBORS8: ReadonlyArray<readonly [number, number]> = [
   [-1, -1],

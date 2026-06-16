@@ -16,6 +16,10 @@
   function togglePin(itemId: string) {
     gameState.command({ type: 'togglePinItem', payload: { pawnId: pawn.id, itemId }, save: true });
   }
+
+  function dropItem(itemId: string) {
+    gameState.command({ type: 'dropCarriedItem', payload: { pawnId: pawn.id, itemId }, save: true });
+  }
   // Derive load + budget from the service (single source of truth = item defs). The cached
   // pawn.inventory.weightKg is a write-only initial-shape field that is never updated on
   // inventory mutation, so reading it showed a stale 0.0 (review R5 / playtest 2026-06-13).
@@ -49,6 +53,11 @@
         >
         <span class="item-name">{itemName(itemId)}</span>
         <span class="qty">×{qty}</span>
+        <button
+          class="drop-btn"
+          title="Drop now — put this stack down on the pawn's tile."
+          on:click={() => dropItem(itemId)}>↓</button
+        >
       </div>
     {/each}
   {/if}
@@ -104,6 +113,19 @@
   }
   .pin-btn.active {
     color: var(--accent-hi, #ffd24a);
+  }
+
+  .drop-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0 0 0 0.3rem;
+    font-size: 0.8rem;
+    line-height: 1;
+    color: var(--text-dim, #666);
+  }
+  .drop-btn:hover {
+    color: var(--neg, #e05a5a);
   }
 
   .row.pinned .item-name {

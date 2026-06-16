@@ -30,9 +30,11 @@ import {
   consumeFromStockpiles,
   releaseReservation,
   reserveForOrder,
-  aggregateFromDrops
+  aggregateFromDrops,
+  absorbDropIfOnStockpileTile
 } from '../core/GameState';
 import { equipItem, unequipItem, useConsumable, getEquipmentSlot } from '../core/PawnEquipment';
+import { pickUpFromTile } from '../systems/pawn/pawnHauling';
 import { designationService } from '../services/DesignationService';
 import { buildingService } from '../services/BuildingService';
 import { itemService } from '../services/ItemService';
@@ -125,6 +127,39 @@ export const COMMANDS: Record<string, Cmd> = {
       };
     })
   }),
+
+  /** Drop a carried item NOW: the whole stack lands as a loose drop on the pawn's tile (absorbed
+   *  if that tile is a stockpile) and leaves the pawn's hands. Overrides a pin (explicit player act),
+   *  so the pin is cleared too. */
+  dropCarriedItem: (s, p: { pawnId: string; itemId: string }) => {
+    const pawn = s.pawns.find((pw) => pw.id === p.pawnId);
+    const qty = pawn?.inventory?.items?.[p.itemId] ?? 0;
+    if (!pawn?.position || qty <= 0) return s;
+    const drop = {
+      id: `drop-${p.pawnId}-${p.itemId}-${Date.now()}`,
+      resourceId: p.itemId,
+      x: pawn.position.x,
+      y: pawn.position.y,
+      quantity: qty,
+      stored: false
+    };
+    const next: GameState = {
+      ...s,
+      droppedItems: [...(s.droppedItems ?? []), drop],
+      pawns: s.pawns.map((pw) => {
+        if (pw.id !== p.pawnId) return pw;
+        const items = { ...(pw.inventory?.items ?? {}) };
+        delete items[p.itemId];
+        return {
+          ...pw,
+          inventory: { ...pw.inventory, items },
+          pinnedItems: (pw.pinnedItems ?? []).filter((id) => id !== p.itemId)
+        };
+      })
+    };
+    // If the pawn is standing on a stockpile tile, the dropped stack is absorbed (stored) immediately.
+    return absorbDropIfOnStockpileTile(next, drop.id);
+  },
 
   // ── mobs ───────────────────────────────────────────────────────────────────
   toggleHuntMark: (s, p: { mobId: string }) => ({
@@ -304,6 +339,24 @@ export const COMMANDS: Record<string, Cmd> = {
     );
     return { ...s, pawns, droppedItems: drops, stockpile: aggregateFromDrops(drops) };
   },
+  /** Pick `quantity` units of a specific tile drop straight into a pawn's inventory (instant, like
+   *  equipFromTile). Carry budget is respected — only what fits is taken (floor of 1). */
+  pickUpItemFromTile: (s, p: { pawnId: string; dropId: string; quantity: number }) => {
+    const drop = (s.droppedItems ?? []).find((d) => d.id === p.dropId);
+    if (!drop) return s;
+    return pickUpFromTile(s, p.pawnId, drop.x, drop.y, {
+      dropId: p.dropId,
+      maxQty: Math.max(1, Math.floor(p.quantity))
+    });
+  },
+  /** Order a (drafted) pawn to shuttle the loose stack on a tile to the nearest stockpile. The
+   *  draft-haul branch in _processDraftOrders carries one budget-load at a time until it's clear. */
+  haulTileToStockpile: (s, p: { pawnId: string; x: number; y: number }) => ({
+    ...s,
+    pawns: s.pawns.map((pw) =>
+      pw.id === p.pawnId ? { ...pw, draftTarget: { type: 'haul', x: p.x, y: p.y } } : pw
+    )
+  }),
   devSpawnAllItems: (s, p: { amount?: number }) => devSpawnLooseItems(s, p.amount ?? 500),
   devClearAllItems: (s) => devDestroyAllItems(s)
 };
