@@ -166,6 +166,9 @@ export interface Item {
   // Unified categorization
   type: 'material' | 'tool' | 'weapon' | 'armor' | 'consumable' | 'currency';
   category: string; // wood, iron, harvesting, combat, head, etc.
+  /** Internal item never surfaced as a player resource (e.g. natural weapons like fists/claws).
+   *  Excluded from the resource sidebar — its category won't appear in the "show all" list. */
+  hidden?: boolean;
 
   // Visual
   emoji?: string;

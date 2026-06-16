@@ -162,7 +162,13 @@ export class ItemServiceImpl implements ItemService {
   }
 
   getAllCategories(): string[] {
-    return [...new Set(ITEMS_DATABASE.map((item) => item.category).filter(Boolean))].sort();
+    return [
+      ...new Set(
+        ITEMS_DATABASE.filter((item) => !item.hidden)
+          .map((item) => item.category)
+          .filter(Boolean)
+      )
+    ].sort();
   }
 
   getItemsByWorkType(workType: string): Item[] {
