@@ -1306,6 +1306,43 @@
       ctx.restore();
     }
 
+    // Item stack counts: a subtle count badge in each item tile's bottom-right corner, drawn only
+    // when zoomed in close enough to be legible (and only for piles of 2+) so loose/stockpiled
+    // goods read as item stacks rather than buildings. Aggregated per tile, so a mixed pile shows
+    // one total. Lives on this 2D world overlay because the WebGL glyph grid is one char per cell
+    // and can't carry a second mark.
+    const STACK_BADGE_MIN_TILE = 16;
+    if (tileWidth >= STACK_BADGE_MIN_TILE && droppedItems.length > 0) {
+      const tileTotals = new Map<string, number>();
+      for (const d of droppedItems) {
+        const k = `${d.x},${d.y}`;
+        tileTotals.set(k, (tileTotals.get(k) ?? 0) + (d.quantity ?? 1));
+      }
+      const fs = Math.max(7, Math.min(11, Math.round(tileWidth * 0.42)));
+      ctx.save();
+      ctx.font = `bold ${fs}px monospace`;
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'bottom';
+      ctx.lineWidth = Math.max(2, fs * 0.3);
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.85)';
+      for (const [k, total] of tileTotals) {
+        if (total < 2) continue;
+        const [wx, wy] = k.split(',').map(Number);
+        const sx = (wx - viewX) * tileWidth;
+        const sy = (wy - viewY) * tileHeight;
+        if (sx < -tileWidth || sy < -tileHeight || sx > W + tileWidth || sy > H + tileHeight)
+          continue;
+        const label = total > 999 ? '999+' : String(total);
+        const tx = sx + tileWidth - 1;
+        const ty = sy + tileHeight - 1;
+        ctx.strokeText(label, tx, ty);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
+        ctx.fillText(label, tx, ty);
+      }
+      ctx.restore();
+    }
+
     if (!designations || Object.keys(designations).length === 0) return;
 
     // Lazy-load sprite sheets on first designation draw (shared cache → gameCanvas/spriteSheets).
