@@ -28,14 +28,17 @@
   let intensity = 0; // 0–1
   let heavy = false; // heavy_rain / blizzard
 
-  // Zoom-out "in the clouds" feel: the further out the camera, the more (and faster, longer) the
-  // particles — as if flying up through the weather. `zoom` ≈ how many times more zoomed-out than the
-  // reference tile size (1 = reference, >1 = zoomed out, <1 = zoomed in).
-  const REF_TILE = 16;
-  let zoom = 1;
-  const densityMul = () => Math.max(0.7, Math.min(4, zoom)); // up to 4× particles zoomed way out
-  const speedMul = () => Math.max(0.8, Math.min(2.4, 0.85 + (zoom - 1) * 0.5));
-  const sizeMul = () => Math.max(0.8, Math.min(1.8, 0.9 + (zoom - 1) * 0.3));
+  // Zoom-out "in the clouds" feel: the further the camera zooms OUT, the MORE particles (count only —
+  // speed and size stay constant). The multiplier is LINEAR in tile size across the real zoom range so
+  // it ramps gently as you scroll, rather than staying flat then doubling near the end (a hyperbola
+  // did that). The pool grows/shrinks by the delta (reconcile) so the change is gradual, not a pop.
+  const MIN_TILE = 6; // ~ fully zoomed out (whole map fits)
+  const MAX_TILE = 40; // fully zoomed in
+  let tileSize = 8; // current zoom (px per tile), from the camera store
+  const densityMul = () => {
+    const frac = Math.max(0, Math.min(1, (MAX_TILE - tileSize) / (MAX_TILE - MIN_TILE)));
+    return 0.8 + frac * 1.4; // 0.8× zoomed in → 2.2× zoomed out, gentle linear ramp
+  };
 
   interface Particle {
     x: number;
@@ -59,47 +62,57 @@
   }
 
   function makeParticle(w: number, h: number, atTop: boolean): Particle {
-    const sm = speedMul();
-    const zm = sizeMul();
     if (mode === 'rain') {
-      const spd = (heavy ? 950 : 680) * (0.7 + Math.random() * 0.6) * sm;
+      const spd = (heavy ? 950 : 680) * (0.7 + Math.random() * 0.6);
       return {
         x: Math.random() * w * 1.15 - w * 0.1, // bias left so the slant still fills the right edge
         y: atTop ? -20 - Math.random() * 40 : Math.random() * h,
-        len: (9 + Math.random() * 13 + (heavy ? 6 : 0)) * zm,
+        len: 9 + Math.random() * 13 + (heavy ? 6 : 0),
         spd,
         r: 0,
         ph: 0
       };
     }
     // snow
-    const spd = (heavy ? 150 : 80) * (0.6 + Math.random() * 0.9) * sm;
+    const spd = (heavy ? 150 : 80) * (0.6 + Math.random() * 0.9);
     return {
       x: Math.random() * w,
       y: atTop ? -10 - Math.random() * 30 : Math.random() * h,
       len: 0,
       spd,
-      r: (1 + Math.random() * 2.2) * zm,
+      r: 1 + Math.random() * 2.2,
       ph: Math.random() * TWO_PI
     };
   }
 
-  function spawn() {
-    if (!canvas) return;
+  /** How many particles we want right now (screen area × intensity × zoom-out), capped. */
+  function targetCount(): number {
+    if (!canvas || mode === 'none') return 0;
     const w = canvas.width;
     const h = canvas.height;
-    if (w <= 0 || h <= 0 || mode === 'none') {
-      parts = [];
+    if (w <= 0 || h <= 0) return 0;
+    const density = mode === 'rain' ? 0.00016 : 0.00008; // per px²
+    return Math.min(1600, Math.floor(w * h * density * (0.5 + intensity) * densityMul()));
+  }
+
+  /** Grow/shrink the pool toward the target — adds/removes only the delta, so zoom/intensity/resize
+   *  changes are gradual (no full-respawn pop). Existing drops keep falling. */
+  function reconcile() {
+    if (!canvas) return;
+    const target = targetCount();
+    if (target < parts.length) {
+      parts.length = target;
       return;
     }
-    // Count scales with screen area × intensity × zoom-out (more particles the further out you are).
-    const density = mode === 'rain' ? 0.00016 : 0.00008; // per px²
-    const count = Math.min(
-      1600,
-      Math.floor(w * h * density * (0.5 + intensity) * densityMul())
-    );
-    parts = new Array(count);
-    for (let i = 0; i < count; i++) parts[i] = makeParticle(w, h, false);
+    const w = canvas.width;
+    const h = canvas.height;
+    while (parts.length < target) parts.push(makeParticle(w, h, false));
+  }
+
+  /** Full rebuild — only on a mode switch (rain↔snow), where the particle kind changes. */
+  function spawn() {
+    parts = [];
+    reconcile();
   }
 
   function clear() {
@@ -170,24 +183,25 @@
     heavy = type === 'heavy_rain' || type === 'blizzard';
     const changed = next !== mode;
     mode = next;
-    if (mode === 'none') clear();
-    else if (canvas) {
+    if (mode === 'none') {
+      clear();
+      parts = [];
+    } else if (canvas) {
       resize();
-      spawn(); // (re)seed for a mode change or an intensity/heavy change
-      if (changed) lastT = 0;
+      if (changed) {
+        spawn(); // full rebuild on a rain↔snow switch
+        lastT = 0;
+      } else {
+        reconcile(); // intensity/heavy change — adjust count, keep existing drops
+      }
     }
   });
 
-  // Re-seed particle count/speed/size as the camera zooms — more, faster, longer when zoomed out.
-  let zoomReseed: ReturnType<typeof setTimeout> | undefined;
-  const unsubZoom = cameraTileSize.subscribe((tileSize) => {
-    const z = Math.max(0.5, Math.min(4, REF_TILE / Math.max(1, tileSize)));
-    if (Math.abs(z - zoom) < 0.05) return; // ignore tiny changes
-    zoom = z;
-    if (mode === 'none' || !canvas) return;
-    // Debounce: a zoom gesture fires many steps; respawn once it settles.
-    if (zoomReseed) clearTimeout(zoomReseed);
-    zoomReseed = setTimeout(() => spawn(), 120);
+  // Camera zoom → more particles as you zoom out. Reconcile (grow/shrink the delta) every step so the
+  // density ramps smoothly while scrolling, with no respawn pop.
+  const unsubZoom = cameraTileSize.subscribe((ts) => {
+    tileSize = ts;
+    if (mode !== 'none') reconcile();
   });
 
   onMount(() => {
@@ -197,7 +211,7 @@
     resize();
     ro = new ResizeObserver(() => {
       resize();
-      if (mode !== 'none') spawn();
+      if (mode !== 'none') reconcile();
     });
     ro.observe(canvas);
     if (mode !== 'none') spawn();
@@ -209,6 +223,7 @@
     if (raf) cancelAnimationFrame(raf);
     ro?.disconnect();
     unsub();
+    unsubZoom();
   });
 </script>
 

@@ -45,16 +45,6 @@
         <span style="color:{painColor(health.pain ?? 0)}">{Math.round(health.pain ?? 0)}%</span>
       </div>
     {/if}
-    {#if health.combat && health.combat.length > 0}
-      <div class="hp-combat">
-        {#each health.combat as c (c.label)}
-          <span class="hp-combat-item" title={c.title}>
-            <span class="hp-k-inline">{c.label}</span>
-            <span class="hp-combat-v">{c.value}</span>
-          </span>
-        {/each}
-      </div>
-    {/if}
     {#if health.conditions.length > 0}
       <div class="hp-conditions">
         {#each health.conditions as c (c.name)}
@@ -72,6 +62,16 @@
       </div>
     {:else}
       <div class="hp-no-conditions">no conditions</div>
+    {/if}
+    {#if health.combat && health.combat.length > 0}
+      <div class="hp-combat">
+        {#each health.combat as c (c.label)}
+          <span class="hp-combat-item" title={c.title}>
+            <span class="hp-k-inline">{c.label}</span>
+            <span class="hp-combat-v">{c.value}</span>
+          </span>
+        {/each}
+      </div>
     {/if}
 
     {#if !damaged}

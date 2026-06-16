@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { recentActivity } from '$lib/stores/Log';
+  import { recentActivity, clearActivityLog } from '$lib/stores/Log';
   import { uiState } from '$lib/stores/uiState';
   import type { ActivityLogEntry } from '$lib/game/core/Events';
   import CombatBreakdown from './CombatBreakdown.svelte';
@@ -72,7 +72,16 @@
 </script>
 
 <aside class="panel">
-  <div class="section-hdr">| CHRONICLE</div>
+  <div class="section-hdr">
+    <span>| CHRONICLE</span>
+    <button
+      class="clear-btn"
+      title="Clear chronicle"
+      aria-label="Clear chronicle"
+      disabled={$recentActivity.length === 0}
+      on:click={clearActivityLog}>✕</button
+    >
+  </div>
 
   <div class="log-list">
     {#if $recentActivity.length === 0}
@@ -116,13 +125,44 @@
   }
 
   .section-hdr {
-    padding: 4px 8px 3px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 6px 3px 0;
     color: var(--accent-hi);
     font-size: 10px;
     letter-spacing: 0.06em;
     border-bottom: 1px solid var(--border);
     background: var(--bg);
     flex-shrink: 0;
+  }
+
+  .clear-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    padding: 0;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-dim);
+    font-family: inherit;
+    font-size: 10px;
+    line-height: 1;
+    letter-spacing: 0;
+    cursor: pointer;
+  }
+
+  .clear-btn:hover:not(:disabled) {
+    color: var(--neg);
+    border-color: var(--neg);
+    background: var(--bg-hover);
+  }
+
+  .clear-btn:disabled {
+    opacity: 0.3;
+    cursor: default;
   }
 
   .log-list {
