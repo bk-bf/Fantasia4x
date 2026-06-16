@@ -94,8 +94,10 @@ fi
 # live playtest. --hmr opts back in.
 HMR_ENV=""
 if [[ "$HMR_MODE" == "true" ]]; then
-  echo "HMR enabled — Vite hot-reload / live page-reload is ON."
-  HMR_ENV="F4X_HMR=true"
+  echo "HMR enabled — Vite hot-reload / live page-reload is ON (loading-overlay warmup linger skipped)."
+  # F4X_HMR drives vite.config (server.hmr); VITE_HMR is the client-visible mirror so the app can skip
+  # the paused WORKER_WARMUP_MS reveal linger when you're iterating with hot-reload.
+  HMR_ENV="F4X_HMR=true VITE_HMR=true"
 else
   echo "HMR disabled (default) — pass --hmr to enable hot-reload."
 fi

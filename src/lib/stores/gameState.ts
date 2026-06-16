@@ -551,8 +551,9 @@ export const loadingStatus = writable('Initializing…');
 /** How long the loading overlay lingers after the renderer is up before the reveal — lets the worker
  *  boot (module eval + WASM + init-state deserialize, ~0–2s of native + GC) and the WebGL-init GC
  *  settle behind the overlay before the (paused) reveal. Also paces the loading bar (LoadingScreen
- *  reads it). Extend freely; load is one-time per page load. */
-export const WORKER_WARMUP_MS = 2500;
+ *  reads it). Extend freely; load is one-time per page load. Skipped (0) under --hmr (VITE_HMR): when
+ *  you're iterating with hot-reload the GC-hiding linger is just dead time on every reload. */
+export const WORKER_WARMUP_MS = import.meta.env.VITE_HMR === 'true' ? 0 : 2500;
 
 // Drop the overlay a paused beat after the renderer comes up. A remount (rendererReady → false)
 // re-arms the linger so the overlay covers the WebGL re-init too.
