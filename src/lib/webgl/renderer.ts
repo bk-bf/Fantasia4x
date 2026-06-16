@@ -39,11 +39,20 @@ export class WebGLRenderer {
   }
 
   /**
-   * Inject (or clear) the entity-overlay grid (pawns/items). Rendered as a
+   * Inject (or clear) the entity-overlay grid (pawns/mobs). Rendered as a
    * glyph-only, alpha-blended pass on top of the terrain grid.
    */
   setOverlayGrid(grid: GameGrid | null): void {
     this.core.setOverlayGrid(grid);
+  }
+
+  /**
+   * Inject (or clear) the item-overlay grid. Rendered as a glyph-only,
+   * alpha-blended pass between the terrain and the entity overlay, so a pawn
+   * standing on a dropped item composites over it instead of hiding it.
+   */
+  setItemOverlayGrid(grid: GameGrid | null): void {
+    this.core.setItemOverlayGrid(grid);
   }
 
   /**

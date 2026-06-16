@@ -148,6 +148,10 @@
   // keeps the terrain tile beneath a pawn intact and lets us interpolate motion
   // every animation frame, independent of the simulation tick rate.
   const pawnOverlayGrid: GameGrid = new GameGridClass();
+  // Dropped/stored items get their OWN overlay grid, rendered beneath the pawn
+  // overlay (terrain → items → entities). Keeping items out of pawnOverlayGrid is
+  // what stops a pawn from blanking the item glyph on the tile it walks over.
+  const itemOverlayGrid: GameGrid = new GameGridClass();
   // Per-pawn rendered position in float world-tile coords, eased toward the
   // simulation's authoritative sub-tile position each frame for smooth 60fps motion.
   const pawnRenderPos = new Map<string, { x: number; y: number }>();
@@ -756,9 +760,11 @@
    */
   function updatePawnOverlay(dt: number) {
     pawnOverlayGrid.clear();
-    // Dropped/stored items are a layer BENEATH pawns: draw them first so a pawn
-    // standing on an item's tile overwrites (renders on top of) it.
-    overlayDroppedItems(pawnOverlayGrid, droppedItems);
+    // Dropped/stored items render in a SEPARATE grid beneath the pawn overlay, so
+    // a pawn standing on an item's tile composites on top of the item glyph
+    // instead of overwriting it (terrain → items → entities, three glyph layers).
+    itemOverlayGrid.clear();
+    overlayDroppedItems(itemOverlayGrid, droppedItems);
     // Clamp dt so a CPU-stall frame (e.g. pathfinding for many entities) doesn't
     // produce alpha≈1 and snap all entities to their new positions at once.
     const clampedDt = Math.min(dt, 0.05);
@@ -797,13 +803,12 @@
       const cellX = Math.round(rm.x);
       const cellY = Math.round(rm.y);
       const isSelected = mob.id === selectedMobId;
-      const existing = pawnOverlayGrid.getTile(cellX, cellY);
       pawnOverlayGrid.setTile(cellX, cellY, {
         char: def.chars[0],
         foreground: isSelected
           ? { r: 1.0, g: 0.9, b: 0.1 }
           : { r: def.fg[0], g: def.fg[1], b: def.fg[2] },
-        background: existing?.background ?? { r: 0, g: 0, b: 0 },
+        background: { r: 0, g: 0, b: 0 },
         position: { x: cellX, y: cellY },
         animationOffset: { x: (rm.x - cellX) * BASE_TILE_PX, y: (rm.y - cellY) * BASE_TILE_PX }
       });
@@ -1679,6 +1684,7 @@
         _lastTerrainBuild = now;
         redrawOverlayNow();
       }
+      renderer.setItemOverlayGrid(itemOverlayGrid);
       renderer.setOverlayGrid(pawnOverlayGrid);
       renderer.beginFrame();
       renderer.endFrame();

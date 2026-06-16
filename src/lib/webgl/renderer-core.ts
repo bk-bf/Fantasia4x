@@ -76,10 +76,15 @@ export class WebGLRendererCore {
   // Bumped every time the terrain grid is replaced; lets the grid renderer
   // cache the static terrain vertex buffer and skip per-frame regeneration.
   private gridVersion = 0;
-  // Sparse entity-overlay grid (pawns, dropped items…) rendered as a second,
-  // alpha-blended pass on top of the terrain grid so entities never destroy the
-  // terrain glyph in their cell and can slide smoothly between tiles.
+  // Sparse entity-overlay grid (pawns, mobs) rendered as an alpha-blended pass on
+  // top of the terrain grid so entities never destroy the terrain glyph in their
+  // cell and can slide smoothly between tiles.
   private overlayGrid: GameGrid | null = null;
+  // Dropped/stored items live in their OWN overlay grid, rendered between terrain
+  // and entities. Items are a separate single-glyph grid so a pawn standing on an
+  // item's tile composites on top of it instead of overwriting the item glyph
+  // (which is what happened when both shared one grid).
+  private itemOverlayGrid: GameGrid | null = null;
 
   // Day/night ambient (Phase A — EnvironmentService drives these each turn).
   // Applied as the u_ambient fragment uniform, combined with the baked additive
@@ -143,9 +148,14 @@ export class WebGLRendererCore {
     this.gridVersion++;
   }
 
-  /** Inject the entity-overlay grid (pawns/items) rendered on top of the terrain. */
+  /** Inject the entity-overlay grid (pawns/mobs) rendered on top of the terrain. */
   setOverlayGrid(grid: GameGrid | null): void {
     this.overlayGrid = grid;
+  }
+
+  /** Inject the item-overlay grid, rendered between the terrain and entities. */
+  setItemOverlayGrid(grid: GameGrid | null): void {
+    this.itemOverlayGrid = grid;
   }
 
   /** Set the top-left viewport tile position. */
@@ -403,35 +413,50 @@ export class WebGLRendererCore {
     this.stats.drawCalls++;
     this.stats.vertexCount += gridStats.tilesRendered * 6;
 
-    // Entity overlay pass — glyph-only, alpha-blended on top of the terrain so
-    // the tile underneath a pawn keeps rendering and motion can be sub-tile.
-    if (this.overlayGrid) {
+    // Overlay passes — glyph-only, alpha-blended on top of the terrain so the tile
+    // underneath keeps rendering and motion can be sub-tile. Draw order is
+    // terrain → items → entities: each is its own single-glyph grid, so a pawn
+    // composites OVER a dropped item instead of overwriting its glyph.
+    if (this.overlayGrid || this.itemOverlayGrid) {
       gl.enable(gl.BLEND);
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
       this.shaderManager.setUniform('tileRenderer', 'u_glyphOnly', 1);
       const tOverlay = performance.now();
-      const overlayStats = this.gridRenderer.renderGrid(this.overlayGrid, {
-        // Geometry baked at the fixed base size; zoom comes from u_zoom. The
-        // overlay's sub-tile animationOffset is likewise in base-tile pixels.
-        tileWidth: BASE_TILE_PX,
-        tileHeight: BASE_TILE_PX,
-        viewportX: this.viewTileX,
-        viewportY: this.viewTileY,
-        viewportWidth: viewportTilesW,
-        viewportHeight: viewportTilesH,
-        lightSampler: this.lightSampler ?? undefined,
-        lightTime,
-        litBounds: this.lightBounds,
-        renderAllTiles: true
-      });
+      // Items first (beneath), then entities (on top).
+      this.renderGlyphOverlay(this.itemOverlayGrid, viewportTilesW, viewportTilesH, lightTime);
+      this.renderGlyphOverlay(this.overlayGrid, viewportTilesW, viewportTilesH, lightTime);
       this.stats.overlayMs = performance.now() - tOverlay;
       this.shaderManager.setUniform('tileRenderer', 'u_glyphOnly', 0);
       gl.disable(gl.BLEND);
-      this.stats.drawCalls++;
-      this.stats.vertexCount += overlayStats.tilesRendered * 6;
     } else {
       this.stats.overlayMs = 0;
     }
+  }
+
+  /** Render one glyph-only overlay grid (no-op when null). Caller sets up blend + u_glyphOnly. */
+  private renderGlyphOverlay(
+    grid: GameGrid | null,
+    viewportTilesW: number,
+    viewportTilesH: number,
+    lightTime: number
+  ): void {
+    if (!grid || !this.gridRenderer) return;
+    const stats = this.gridRenderer.renderGrid(grid, {
+      // Geometry baked at the fixed base size; zoom comes from u_zoom. The
+      // overlay's sub-tile animationOffset is likewise in base-tile pixels.
+      tileWidth: BASE_TILE_PX,
+      tileHeight: BASE_TILE_PX,
+      viewportX: this.viewTileX,
+      viewportY: this.viewTileY,
+      viewportWidth: viewportTilesW,
+      viewportHeight: viewportTilesH,
+      lightSampler: this.lightSampler ?? undefined,
+      lightTime,
+      litBounds: this.lightBounds,
+      renderAllTiles: true
+    });
+    this.stats.drawCalls++;
+    this.stats.vertexCount += stats.tilesRendered * 6;
   }
 
   endFrame(): void {
