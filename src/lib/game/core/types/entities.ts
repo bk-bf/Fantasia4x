@@ -153,6 +153,9 @@ export interface Pawn {
   name: string;
   inventory: PawnInventory;
   equipment: PawnEquipment;
+  /** Player-pinned item ids (by resourceId/itemId). A pinned carried item is never deposited during
+   *  hauling — the pawn keeps it indefinitely — and pinned items sort to the top of the gear lists. */
+  pinnedItems?: string[];
   // Individual stats (rolled from race ranges)
   stats: EntityStats;
 

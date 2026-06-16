@@ -110,6 +110,22 @@ export const COMMANDS: Record<string, Cmd> = {
     return consumeFromStockpiles({ ...s, pawns }, { [p.itemId]: 1 });
   },
 
+  /** Toggle a player "pin" on an item id for one pawn: pinned carried items are never deposited
+   *  during hauling (the pawn keeps them) and sort to the top of the gear lists. */
+  togglePinItem: (s, p: { pawnId: string; itemId: string }) => ({
+    ...s,
+    pawns: s.pawns.map((pw) => {
+      if (pw.id !== p.pawnId) return pw;
+      const pinned = pw.pinnedItems ?? [];
+      return {
+        ...pw,
+        pinnedItems: pinned.includes(p.itemId)
+          ? pinned.filter((id) => id !== p.itemId)
+          : [...pinned, p.itemId]
+      };
+    })
+  }),
+
   // ── mobs ───────────────────────────────────────────────────────────────────
   toggleHuntMark: (s, p: { mobId: string }) => ({
     ...s,

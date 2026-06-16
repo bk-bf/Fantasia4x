@@ -193,6 +193,10 @@ export function depositInventory(pawn: Pawn, gs: GameState): GameState {
   const inv = pawn.inventory?.items ?? {};
   if (Object.keys(inv).length === 0) return goIdle(pawn, gs);
 
+  // Pinned items are never deposited — the pawn keeps carrying them (player request). Deposit
+  // everything else; the pinned subset is written back into the pawn's inventory below.
+  const pinned = new Set(pawn.pinnedItems ?? []);
+
   // Collect all stockpile tile coordinates, ordered NEAREST-FIRST to the pawn so items land
   // where the pawn actually dropped them (its current tile / the one it walked to), not on
   // whatever tile happens to come first in designation-iteration order (the old "top row" bug).
@@ -215,6 +219,7 @@ export function depositInventory(pawn: Pawn, gs: GameState): GameState {
 
   for (const [resourceId, qty] of Object.entries(inv)) {
     if (qty <= 0) continue;
+    if (pinned.has(resourceId)) continue; // keep pinned items — never deposited
 
     // Prefer the NEAREST tile already holding this resource (stack near the pawn); else the
     // nearest free tile (stockpileTiles is already sorted nearest-first).
@@ -261,7 +266,10 @@ export function depositInventory(pawn: Pawn, gs: GameState): GameState {
               volumeL: 0,
               maxVolumeL: 20
             }),
-            items: {}
+            // Keep pinned items in hand; everything else was just deposited.
+            items: Object.fromEntries(
+              Object.entries(inv).filter(([rid, qty]) => pinned.has(rid) && qty > 0)
+            )
           }
         }
       : p

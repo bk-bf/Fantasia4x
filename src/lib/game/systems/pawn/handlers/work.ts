@@ -131,7 +131,12 @@ export function handleIdle(pawn: Pawn, gameState: GameState): GameState {
   // by a need) must deliver them before taking new work — otherwise the goods, and for a fetch
   // the reservation they represent, would be stranded in its hands. handleHauling routes a
   // fetch-carry to its order's station (carryingForOrder) and a plain haul to the stockpile.
-  if (Object.values(pawn.inventory?.items ?? {}).some((q) => q > 0)) {
+  // Pinned items are kept in hand and never deposited, so they must NOT trigger haul-recovery —
+  // otherwise a pawn carrying only pinned items would loop Idle→Hauling→deposit(keeps)→Idle forever.
+  const pinnedSet = new Set(pawn.pinnedItems ?? []);
+  if (
+    Object.entries(pawn.inventory?.items ?? {}).some(([id, q]) => q > 0 && !pinnedSet.has(id))
+  ) {
     return transitionTo(pawn, PAWN_STATE.HAULING, gameState);
   }
 
