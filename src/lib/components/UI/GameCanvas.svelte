@@ -79,7 +79,7 @@
   // MAP_W / MAP_H must match the generateWorld() call in gameState.ts
   const MAP_W = 240;
   const MAP_H = 160;
-  const MAX_TILE_W = 24;
+  const MAX_TILE_W = 40;
   const ZOOM_STEP = 2;
   const SCROLL_STEP = 4; // tiles per arrow key press
   const CAMERA_STORAGE_KEY = 'fantasia4x-camera';
@@ -263,7 +263,9 @@
     redrawOverlay();
     if (s.mapFocusRequest && ready && renderer?.isReady()) {
       const { x, y } = s.mapFocusRequest;
-      const targetZoom = MAX_TILE_W;
+      // Focus snaps to a comfortable zoom, not the manual-zoom ceiling (MAX_TILE_W), which is
+      // closer than you'd want auto-applied.
+      const targetZoom = Math.min(MAX_TILE_W, 24);
       tileWidth = targetZoom;
       tileHeight = targetZoom;
       renderer.setTileSize(tileWidth, tileHeight);
