@@ -34,7 +34,8 @@
     computeTileLightLevel,
     tileTemperature,
     tileWetness,
-    computeThermalAt
+    computeThermalAt,
+    weatherWindStrength
   } from '$lib/game/services/EnvironmentService.js';
   import { lightingService } from '$lib/game/services/LightingService.js';
   import { glyph, SHEET } from '$lib/webgl/tilesets.js';
@@ -2837,6 +2838,8 @@
       tileThermal
     )}
     {@const tileWet = tileWetness(hoverTile.terrainType, $currentWeather, tileThermal)}
+    {@const windy =
+      Math.max(weatherWindStrength($currentWeather?.type), $currentWeather?.wind ?? 0) >= 0.4}
     <div class="tile-hud">
       <span class="tile-coord">({hoverTile.x},{hoverTile.y})</span><span class="tile-layers"
         >{BIOMES[hoverTile.terrainType]?.displayName ?? hoverTile.terrainType},{SUBTERRAINS[
@@ -2876,6 +2879,7 @@
         <span style="color:{tileWet >= 60 ? '#3a9ed0' : tileWet >= 30 ? '#6aa0a0' : '#a08a5a'}"
           >wet {tileWet}%</span
         >
+        {#if windy}<span style="color:#8fc8a0">windy</span>{/if}
         {#if tileThermal.roofed}<span style="color:#7e9fbf">roofed</span>{/if}
       </div>
     </div>
