@@ -19,7 +19,7 @@ import { resetUnreachableJobs } from '../systems/PawnStateMachine';
 import { TICKS_PER_SECOND } from '../core/time';
 import { setSimLogSink, simLog, type SimLogSink } from '../core/logSink';
 import { applySimCommand } from './commands';
-import { truncateSentPath } from './entityProjection';
+import { projectSentEntity } from './entityProjection';
 import type { SimLogEvent, EntitySync } from './simProtocol';
 import { drainTileDeltas, clearTileDeltas } from '../core/tileDeltas';
 import type { GameState, Pawn, Mob, WorldTile } from '../core/types';
@@ -182,10 +182,10 @@ function slimEntity<T extends { id: string }>(
   return o as Partial<T> & { id: string };
 }
 
-// §D entity-baseline lever — see entityProjection.ts: `path` is the dominant variable per-flush cost
-// (every pawn pathing at start inflates a slim entity to ~900B), and the renderer needs only the next
-// cell (simTarget) except for drafted pawns' order polyline. truncateSentPath rewrites the SENT
-// projection accordingly; the canonical entity is never touched.
+// §D entity-baseline lever — see entityProjection.ts. The per-flush entity payload is dominated by
+// `needs` (~150B) + `activeJob` (~117B) + `state`; projectSentEntity drops the worker-only sub-fields
+// the main thread never reads (needs `lastX` timestamps; activeJob ids/coords/scratch) and truncates
+// `path`, rewriting the SENT object only — the worker's canonical state + saves stay intact.
 
 /**
  * Project a worldMap tile to ONLY the fields the main thread reads — render
@@ -238,20 +238,15 @@ function syncEntities<T extends { id: string }>(
     order[i] = e.id;
     cur.add(e.id);
     // FULL if newly-seen OR in this flush's resync slice; otherwise slim (cold fields persist on the
-    // main-thread mirror between refreshes).
+    // main-thread mirror between refreshes). Either way we project the SENT object down to the fields
+    // the main thread reads (path/needs/activeJob) — on a fresh slim object, or a shallow clone of the
+    // full entity so the canonical state is never mutated (projectSentEntity rebuilds nested objects).
     const resync = i % RESYNC_EVERY === resyncPhase;
-    let o: Record<string, unknown>;
-    if (prevIds.has(e.id) && !resync) {
-      o = slimEntity(e, cold); // fresh object — safe to rewrite path in place
-    } else {
-      // Full send (newly-seen / resync). Shallow-clone ONLY when we must rewrite the path, so the
-      // canonical entity is never mutated; otherwise pass it through by reference (no realloc).
-      const er = e as Record<string, unknown>;
-      const path = er.path as unknown[] | undefined;
-      const truncatable = !!path && path.length > 0 && !(er.drafted && er.draftTarget);
-      o = truncatable ? { ...er } : er;
-    }
-    truncateSentPath(o);
+    const o: Record<string, unknown> =
+      prevIds.has(e.id) && !resync
+        ? (slimEntity(e, cold) as Record<string, unknown>)
+        : { ...(e as Record<string, unknown>) };
+    projectSentEntity(o);
     upserts[i] = o as Partial<T> & { id: string };
   }
   const removed: string[] = [];

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { truncateSentPath, PATH_LOOKAHEAD } from './entityProjection';
+import { truncateSentPath, projectSentEntity, PATH_LOOKAHEAD } from './entityProjection';
 
 const cells = (n: number) => Array.from({ length: n }, (_, i) => ({ x: i, y: 0 }));
 
@@ -57,5 +57,77 @@ describe('truncateSentPath (§D entity projection)', () => {
     const b: Record<string, unknown> = { path: [], pathIndex: 0 };
     truncateSentPath(b);
     expect(b.path).toEqual([]);
+  });
+});
+
+describe('projectSentEntity (§D entity projection — drop worker-only sub-fields)', () => {
+  it('keeps every continuously-drifting need (incl. thirst & hygiene), drops only lastX timestamps', () => {
+    const canonicalNeeds = {
+      hunger: 50,
+      fatigue: 30,
+      sleep: 10,
+      thirst: 40,
+      hygiene: 20,
+      lastSleep: 123,
+      lastMeal: 456,
+      lastDrink: 789,
+      lastWash: 101
+    };
+    const o: Record<string, unknown> = { id: 'p1', needs: { ...canonicalNeeds } };
+    projectSentEntity(o);
+    expect(o.needs).toEqual({ hunger: 50, fatigue: 30, sleep: 10, thirst: 40, hygiene: 20 });
+    // thirst (fastest-drifting) and hygiene (shown live in the work list) are NOT demoted.
+    expect((o.needs as Record<string, unknown>).thirst).toBe(40);
+    expect((o.needs as Record<string, unknown>).hygiene).toBe(20);
+  });
+
+  it('projects activeJob to the only main-thread reads (type/resourceId/progress)', () => {
+    const o: Record<string, unknown> = {
+      id: 'p1',
+      activeJob: {
+        type: 'harvest',
+        resourceId: 'pine_tree',
+        progress: 0.4,
+        jobId: 'job-7',
+        targetX: 12,
+        targetY: 34,
+        depositX: 1,
+        depositY: 2,
+        timeRequired: 5,
+        buildingId: 'b1'
+      }
+    };
+    projectSentEntity(o);
+    expect(o.activeJob).toEqual({ type: 'harvest', resourceId: 'pine_tree', progress: 0.4 });
+  });
+
+  it('never mutates the canonical entity (nested objects rebuilt fresh)', () => {
+    const needs = { hunger: 5, lastMeal: 99 };
+    const activeJob = { type: 'craft', progress: 0.1, jobId: 'j1' };
+    const e = { id: 'p1', needs, activeJob };
+    const o: Record<string, unknown> = { ...e }; // shallow clone, as the worker does for full sends
+    projectSentEntity(o);
+    expect(needs).toEqual({ hunger: 5, lastMeal: 99 }); // untouched
+    expect(activeJob).toEqual({ type: 'craft', progress: 0.1, jobId: 'j1' }); // untouched
+    expect(o.needs).not.toBe(needs);
+    expect(o.activeJob).not.toBe(activeJob);
+  });
+
+  it('handles entities without needs/activeJob (mobs, idle pawns)', () => {
+    const o: Record<string, unknown> = { id: 'm1', path: [{ x: 0, y: 0 }], pathIndex: 0 };
+    expect(() => projectSentEntity(o)).not.toThrow();
+    expect(o.needs).toBeUndefined();
+    expect(o.activeJob).toBeUndefined();
+  });
+
+  it('drops jobQueue (worker-only FSM lookahead) and the redundant state FSM booleans', () => {
+    const o: Record<string, unknown> = {
+      id: 'p1',
+      jobQueue: ['job-1', 'job-2', 'job-3', 'job-4'],
+      state: { mood: 60, health: 90, isWorking: true, isSleeping: false, isEating: false }
+    };
+    projectSentEntity(o);
+    expect(o.jobQueue).toBeUndefined();
+    expect(o.state).toEqual({ mood: 60, health: 90 }); // mood/health kept; booleans dropped
   });
 });
