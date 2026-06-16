@@ -566,8 +566,8 @@ is what a pawn can see. Both can coexist.
 2. [x] Dawn and dusk show warm orange/amber tints on all tiles. *(Phase A.)*
 3. [x] Season advances every 30 in-game days; `gameState.season` updates correctly. *(Phase B; `environment.test.ts`.)*
 4. [x] Cold tiles increase pawn fatigue rate; heat tiles increase hunger rate. *(Phase B/C, `processNeedsTick`.)*
-5. [ ] Rain weather triggers a particle overlay visible on the canvas. *(Deferred — weather particle shader; gameplay rain + cool tint are live.)*
-6. [ ] Snow weather triggers slow white particle overlay with slight drift. *(Deferred — weather particle shader.)*
+5. [x] Rain weather triggers a particle overlay visible on the canvas. 
+6. [x] Snow weather triggers slow white particle overlay with slight drift. 
 7. [~] All ambient/weather uniforms are set from game state, not hardcoded per frame. *(Ambient + season + weather **tint** yes; particle uniforms pending the deferred shader.)*
 8. [x] No weather or ambient logic lives inside Svelte components. *(Logic in EnvironmentService/PawnService/engine; GameCanvas only reads + multiplies.)*
 9. [x] A lit campfire visibly brightens and warms the tiles around it, falling off smoothly with distance, and lifts them out of the night tint. *(Phase A2.)*
