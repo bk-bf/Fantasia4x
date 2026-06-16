@@ -27,6 +27,7 @@
   let ctx: CanvasRenderingContext2D | null = null;
   let raf = 0;
   let lastT = 0;
+  let fogTime = 0; // seconds accumulator driving the fog's slow gust/shift
   let ro: ResizeObserver | undefined;
   let reduceMotion = false;
 
@@ -198,19 +199,25 @@
     } else if (mode === 'fog') {
       // A faint flat veil + big soft drifting blobs = slow rolling fog. Radial gradients can't batch
       // into one path, so each blob is its own fill — but there are only a couple dozen of them.
-      ctx.fillStyle = `rgba(206, 210, 216, ${0.05 + 0.07 * intensity})`;
+      // Toned-down alphas (less bleak than before). A shared `gust` sine shifts the whole bank
+      // sideways together so it reads as wind rolling through, not just independent drift.
+      fogTime += dt;
+      const gust = Math.sin(fogTime * 0.25) * 26; // bank-wide sway (px)
+      const gustDrift = Math.cos(fogTime * 0.15) * 5; // slow breathing of drift speed (px/sec)
+      ctx.fillStyle = `rgba(210, 213, 219, ${0.035 + 0.05 * intensity})`;
       ctx.fillRect(0, 0, w, h);
-      const blobAlpha = 0.05 + 0.08 * intensity;
+      const blobAlpha = 0.04 + 0.06 * intensity;
       for (const p of parts) {
-        p.x += p.spd * dt;
+        p.x += (p.spd + gustDrift) * dt;
         p.ph += dt * 0.2;
+        const cx = p.x + gust + Math.sin(fogTime * 0.2 + p.ph) * 10; // per-blob phase on the gust
         const cy = p.y + Math.sin(p.ph) * 18; // slow vertical bob
-        const g = ctx.createRadialGradient(p.x, cy, 0, p.x, cy, p.r);
-        g.addColorStop(0, `rgba(216, 220, 226, ${blobAlpha})`);
-        g.addColorStop(1, 'rgba(216, 220, 226, 0)');
+        const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, p.r);
+        g.addColorStop(0, `rgba(220, 223, 229, ${blobAlpha})`);
+        g.addColorStop(1, 'rgba(220, 223, 229, 0)');
         ctx.fillStyle = g;
         ctx.beginPath();
-        ctx.arc(p.x, cy, p.r, 0, TWO_PI);
+        ctx.arc(cx, cy, p.r, 0, TWO_PI);
         ctx.fill();
         if (p.spd > 0 && p.x - p.r > w) p.x = -p.r;
         else if (p.spd < 0 && p.x + p.r < 0) p.x = w + p.r;
