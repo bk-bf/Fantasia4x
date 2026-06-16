@@ -2950,6 +2950,9 @@
     border-radius: 2px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
     overflow: hidden;
+    /* Day/night hue + weather desaturation, matching the chrome panels and info card
+       (see +page.svelte #ambient-tint) — the drafted-pawn equip/pick-up menu. */
+    filter: url(#ambient-tint);
   }
   .ctx-item {
     text-align: left;
@@ -3056,6 +3059,9 @@
     white-space: normal;
     overflow-wrap: break-word;
     z-index: 10;
+    /* Day/night hue + weather desaturation, matching the chrome panels and selection card
+       (see +page.svelte #ambient-tint) — tile inspector / hover-building info panels. */
+    filter: url(#ambient-tint);
   }
 
   .tile-hud--selection {

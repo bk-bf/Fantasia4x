@@ -220,6 +220,9 @@
     color: #d4a860;
     font-size: 9px;
     z-index: 20;
+    /* Day/night hue + weather desaturation, matching the info card and chrome panels
+       (see +page.svelte #ambient-tint). */
+    filter: url(#ambient-tint);
     transition:
       opacity 140ms ease,
       transform 140ms ease,

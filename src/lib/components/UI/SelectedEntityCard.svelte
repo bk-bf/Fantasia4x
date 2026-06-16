@@ -306,6 +306,9 @@
     gap: 4px;
     pointer-events: auto;
     z-index: 5;
+    /* Same day/night hue + weather desaturation the chrome panels get (see +page.svelte
+       #ambient-tint), so the selection/hover info card matches the lit scene beneath it. */
+    filter: url(#ambient-tint);
   }
   /* In-flow variant: the parent owns positioning (and sizes itself to this card, which a
      sibling absolutely-positioned panel like fuel-settings depends on for its width). */
