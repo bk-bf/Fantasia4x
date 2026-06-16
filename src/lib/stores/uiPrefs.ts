@@ -3,6 +3,7 @@
 import { writable } from 'svelte/store';
 
 const COLLAPSED_RES_CATS_KEY = 'fx.resourcePanel.collapsedCategories';
+const HIDE_EMPTY_RES_CATS_KEY = 'fx.resourcePanel.hideEmptyCategories';
 
 function loadStringList(key: string): string[] {
   if (typeof localStorage === 'undefined') return [];
@@ -46,3 +47,34 @@ function createCollapsedResourceCategories() {
 }
 
 export const collapsedResourceCategories = createCollapsedResourceCategories();
+
+function loadBool(key: string, fallback: boolean): boolean {
+  if (typeof localStorage === 'undefined') return fallback;
+  const raw = localStorage.getItem(key);
+  return raw === null ? fallback : raw === 'true';
+}
+
+/**
+ * Whether the resource sidebar hides categories that currently hold no resources. Enabled by
+ * default; persisted across sessions.
+ */
+function createPersistedBool(key: string, fallback: boolean) {
+  const { subscribe, set, update } = writable<boolean>(loadBool(key, fallback));
+  const save = (v: boolean) => {
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.setItem(key, String(v));
+      } catch {
+        /* quota / private mode */
+      }
+    }
+    return v;
+  };
+  return {
+    subscribe,
+    set: (v: boolean) => set(save(v)),
+    toggle: () => update((v) => save(!v))
+  };
+}
+
+export const hideEmptyResourceCategories = createPersistedBool(HIDE_EMPTY_RES_CATS_KEY, true);

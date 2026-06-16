@@ -1,6 +1,6 @@
 <script lang="ts">
   import { currentStockpile, currentRace, gameState } from '$lib/stores/gameState';
-  import { collapsedResourceCategories } from '$lib/stores/uiPrefs';
+  import { collapsedResourceCategories, hideEmptyResourceCategories } from '$lib/stores/uiPrefs';
   import { itemService } from '$lib/game/services/ItemService';
 
   type StockItem = { id: string; name: string; amount: number; color?: string };
@@ -36,8 +36,12 @@
   });
 
   // ── Group resources by their raw items.jsonc `category` (data-driven) ───────
+  // When "hide empty" is off, every known category is seeded (so empty ones still show).
   const groups = $derived.by(() => {
     const map = new Map<string, StockItem[]>();
+    if (!$hideEmptyResourceCategories) {
+      for (const cat of itemService.getAllCategories()) map.set(cat, []);
+    }
     for (const item of stockpile) {
       const cat = itemService.getItemById(item.id)?.category ?? 'other';
       (map.get(cat) ?? map.set(cat, []).get(cat)!).push(item);
@@ -96,13 +100,24 @@
 
       <div class="section-hdr top-sep res-hdr">
         <span>| RESOURCES</span>
-        <button
-          class="toggle-all"
-          title={allExpanded ? 'Collapse all categories' : 'Expand all categories'}
-          aria-label={allExpanded ? 'Collapse all categories' : 'Expand all categories'}
-          disabled={groups.length === 0}
-          onclick={toggleAll}>{allExpanded ? '⊟' : '⊞'}</button
-        >
+        <span class="hdr-btns">
+          <button
+            class="hdr-btn"
+            class:active={$hideEmptyResourceCategories}
+            title={$hideEmptyResourceCategories
+              ? 'Showing only non-empty categories — click to show all'
+              : 'Showing all categories — click to hide empty ones'}
+            aria-label="Toggle empty categories"
+            onclick={() => hideEmptyResourceCategories.toggle()}>∅</button
+          >
+          <button
+            class="hdr-btn"
+            title={allExpanded ? 'Collapse all categories' : 'Expand all categories'}
+            aria-label={allExpanded ? 'Collapse all categories' : 'Expand all categories'}
+            disabled={groups.length === 0}
+            onclick={toggleAll}>{allExpanded ? '⊟' : '⊞'}</button
+          >
+        </span>
       </div>
     </div>
 
@@ -120,6 +135,9 @@
             <span class="cat-count">{items.length}</span>
           </div>
           {#if open}
+            {#if items.length === 0}
+              <div class="cat-empty">none</div>
+            {/if}
             {#each items as item (item.id)}
               <div class="res-row">
                 {#if itemChanges[item.id]}
@@ -195,7 +213,12 @@
     gap: 6px;
   }
 
-  .toggle-all {
+  .hdr-btns {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+  .hdr-btn {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -210,12 +233,16 @@
     line-height: 1;
     cursor: pointer;
   }
-  .toggle-all:hover:not(:disabled) {
+  .hdr-btn:hover:not(:disabled) {
     color: var(--accent-hi);
     border-color: var(--accent-hi);
     background: var(--bg-hover);
   }
-  .toggle-all:disabled {
+  .hdr-btn.active {
+    color: var(--accent-hi);
+    border-color: var(--accent-hi);
+  }
+  .hdr-btn:disabled {
     opacity: 0.3;
     cursor: default;
   }
@@ -322,6 +349,12 @@
     color: var(--text-muted);
     font-size: 9px;
     flex-shrink: 0;
+  }
+  .cat-empty {
+    padding: 1px 8px 1px 24px;
+    color: var(--text-muted);
+    font-size: 9px;
+    font-style: italic;
   }
 
   .res-row {
