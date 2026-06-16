@@ -1320,7 +1320,7 @@
     // one total. Lives on this 2D world overlay because the WebGL glyph grid is one char per cell
     // and can't carry a second mark.
     const STACK_BADGE_MIN_TILE = 16;
-    const STACK_BADGE_FONT_PX = 10; // fixed CSS px, independent of tile/zoom — tweak to taste
+    const STACK_BADGE_FONT_PX = 5; // fixed CSS px, independent of tile/zoom — tweak to taste
     if (tileWidth >= STACK_BADGE_MIN_TILE && droppedItems.length > 0) {
       const tileTotals = new Map<string, number>();
       for (const d of droppedItems) {
