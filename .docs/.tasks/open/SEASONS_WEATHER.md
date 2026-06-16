@@ -232,6 +232,21 @@ tile.temperature = biomeBaseTemp + seasonOffset + weatherMod + shelterMod
 - `shelterMod`: tiles inside a complete building with walls → `+10` in winter / `-5` in summer
 - Temperature is recomputed once per season change (not per turn — too expensive)
 
+> **✅ As built (2026-06-16) — thermal model landed.** `tile.temperature` is baked = biome + season
+> (recomputed in place on season change). The weather, fire, and shelter terms are applied **live** as
+> an *effective* temperature (`EnvironmentService.effectiveTemperature`), not baked into the tile, so
+> weather/fire/roof changes never touch the 38k worldMap (PERF-1/2):
+> `outdoor = tileTemp + weatherDelta·(1 − roofWeatherProtection)`, then
+> `insulated = 15 + (outdoor − 15)·(1 − roofInsulation)`, then `+ Σ fire warmth`. A per-tick
+> **thermal field** (`rebuildThermalField` in the environment phase → `thermalAt(x,y)`) gives the
+> per-pawn lookup O(fires)+O(1); the HUD computes one tile on demand (`computeThermalAt`). Fires
+> (`effects.warmth` on campfire/hearth/forges/kilns) radiate with light-radius falloff; roofs
+> (`effects.thermalInsulation` + `weatherProtection`) shelter the tile beneath. **Equipment**
+> (`armorProperties.coldResistance`/`heatResistance` on hide/leather/cloth) + the CON-derived
+> `cold_resistance`/`fire_resistance` stats reduce exposure. Roofed pawns get the **`sheltered`**
+> status → 2.5× faster hypothermia/heat-stroke recovery + dampened storm-mood. *(Full 4-wall flood-fill
+> enclosure — Subsystem 7 item 1 — is still approximated by roof presence.)*
+
 > **⚠ Perf (PERF-1 & PERF-2).** `temperature` is a **worldMap** field. The season-change recompute
 > **must mutate affected tiles IN PLACE + `markTileDirty(x,y)`** — never `worldMap.map()` (a 38k rebuild
 > + cross-worker re-clone, the §C/§D6 cliff). `temperature` is already dropped from the slim-tile
