@@ -289,6 +289,9 @@
   // click when the follow camera has moved viewX/viewY since the last mousemove.
   let lastCursorCx = 0;
   let lastCursorCy = 0;
+  // Whether the cursor is currently over the canvas — gates the per-frame hover re-derive
+  // during follow (so a stale tile isn't recomputed after the cursor has left the map).
+  let cursorOverCanvas = false;
   $: hoverTile =
     hoverTileX >= 0 && hoverTileY >= 0 && worldMap.length > 0
       ? (worldMap[hoverTileY]?.[hoverTileX] ?? null)
@@ -1673,6 +1676,14 @@
       // that throttled a <1 ms/tick sim to ~20 TPS while rendering. (No-op under ?simworker.)
       gameState.stepSimulation(dt * 1000);
       updatePawnOverlay(dt);
+      // While a follow camera is panning, the cursor stays put but the world slides under it — so
+      // the hovered tile (world coords, only refreshed on mousemove) goes stale within a frame and
+      // the hover card flickers off the followed entity. Re-derive it from the live cursor pixel +
+      // current view each frame so hover stays pinned to whatever is physically under the cursor.
+      if (cursorOverCanvas && (cameraFollowPawnId || cameraFollowMobId)) {
+        hoverTileX = Math.floor(lastCursorCx / tileWidth + viewX);
+        hoverTileY = Math.floor(lastCursorCy / tileHeight + viewY);
+      }
       updateHoverEntity();
       updateCameraFollow(dt);
       updateCameraFollowMob(dt);
@@ -1909,8 +1920,12 @@
       const cy = e.clientY - rect.top;
       lastCursorCx = cx;
       lastCursorCy = cy;
-      hoverTileX = Math.floor(cx / tileWidth) + viewX;
-      hoverTileY = Math.floor(cy / tileHeight) + viewY;
+      // Floor the COMBINED world coord, not `floor(px) + viewX`: during follow `viewX/viewY` are
+      // fractional (sub-tile smooth scroll), so the old form yielded a fractional tile index that
+      // matched no entity or worldMap cell — breaking hover/click picking while following.
+      hoverTileX = Math.floor(cx / tileWidth + viewX);
+      hoverTileY = Math.floor(cy / tileHeight + viewY);
+      cursorOverCanvas = true;
       updateHoverEntity();
     }
     if (zoneDragActive) {
@@ -2025,8 +2040,9 @@
     if (dragDistance < 3) {
       // Recompute hover tile from current viewX/viewY — the follow camera may
       // have shifted the view since the last mousemove, making the stored tile stale.
-      hoverTileX = Math.floor(lastCursorCx / tileWidth) + viewX;
-      hoverTileY = Math.floor(lastCursorCy / tileHeight) + viewY;
+      // (Floor the combined coord — viewX/viewY are fractional under smooth follow.)
+      hoverTileX = Math.floor(lastCursorCx / tileWidth + viewX);
+      hoverTileY = Math.floor(lastCursorCy / tileHeight + viewY);
       handleTileClick();
     }
     dragging = false;
@@ -2208,6 +2224,7 @@
     }
     hoverTileX = -1;
     hoverTileY = -1;
+    cursorOverCanvas = false;
     if (blueprintBuildingId) redrawOverlay();
   }
 
