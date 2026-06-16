@@ -1318,14 +1318,14 @@
         const k = `${d.x},${d.y}`;
         tileTotals.set(k, (tileTotals.get(k) ?? 0) + (d.quantity ?? 1));
       }
-      const fs = Math.max(7, Math.min(11, Math.round(tileWidth * 0.42)));
+      const fs = Math.max(6, Math.min(9, Math.round(tileWidth * 0.3)));
       ctx.save();
-      ctx.font = `bold ${fs}px monospace`;
+      ctx.font = `lighter ${fs}px monospace`;
       ctx.textAlign = 'right';
       ctx.textBaseline = 'bottom';
-      ctx.lineWidth = Math.max(2, fs * 0.3);
+      ctx.lineWidth = Math.max(1.5, fs * 0.22);
       ctx.lineJoin = 'round';
-      ctx.strokeStyle = 'rgba(0, 0, 0, 0.85)';
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
       for (const [k, total] of tileTotals) {
         if (total < 2) continue;
         const [wx, wy] = k.split(',').map(Number);
