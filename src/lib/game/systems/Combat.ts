@@ -71,6 +71,16 @@ const WINDED = 'winded';
  *  sustained melee drains down to winded; a winded/resting entity recovers at the full rate. */
 const COMBAT_REGEN_FRACTION = 0.2;
 
+/** Max fatigue penalty on stamina: at fatigue 0 → 1.0×, at fatigue 100 → 1.3× (linear between).
+ *  Recovery is DIVIDED by this and drain MULTIPLIED, so a tired entity recovers slower AND tires
+ *  faster. This is the SINGLE indirect channel by which anything that raises the fatigue need
+ *  (weather fatigueMul, conditions, …) also degrades stamina — no double counting on stamina itself. */
+const FATIGUE_STAMINA_MAX = 1.3;
+function fatigueStaminaFactor(e: Pawn | Mob): number {
+  const fatigue = Math.max(0, Math.min(100, e.needs?.fatigue ?? 0));
+  return 1 + (FATIGUE_STAMINA_MAX - 1) * (fatigue / 100);
+}
+
 // ── Public types ─────────────────────────────────────────────────────────────
 export interface HitResult {
   hit: boolean;
@@ -780,7 +790,9 @@ class CombatServiceImpl implements CombatService {
       // `stamina_recovery_rate` is a PER-SECOND value (like every other rate — mob flee drain,
       // needs via perTick); scale it to this tick. Previously the raw per-second number was added
       // every tick (~60×), so stamina refilled in ~1s and `winded` never bit (N-2).
-      const rate = perTick(pawnStatService.evaluateStat('stamina_recovery_rate', e));
+      // Fatigue slows recovery (rate ÷ factor) — a tired entity catches its breath slower.
+      const rate =
+        perTick(pawnStatService.evaluateStat('stamina_recovery_rate', e)) / fatigueStaminaFactor(e);
       const eff = winded || !this.isFighting(e) ? rate : rate * COMBAT_REGEN_FRACTION;
       stamina = Math.min(max, Math.max(0, postDrain) + eff);
     }
@@ -852,7 +864,11 @@ class CombatServiceImpl implements CombatService {
 
       const atk = this.performAttack(mob, target, next, state.turn);
       next = atk.state;
-      mobStaminaUpdates.set(mob.id, Math.max(0, curStamina - atk.staminaCost));
+      // Fatigue raises the effective drain (cost × factor) — a tired attacker winds faster.
+      mobStaminaUpdates.set(
+        mob.id,
+        Math.max(0, curStamina - atk.staminaCost * fatigueStaminaFactor(mob))
+      );
     }
 
     // ── Pawn attacks (drafted order OR auto-engaged Fighting state) ───────
@@ -910,7 +926,11 @@ class CombatServiceImpl implements CombatService {
       const curStamina = pawn.stamina ?? pawn.maxStamina ?? 50;
       const atk = this.performAttack(pawn, target, next, state.turn);
       next = atk.state;
-      pawnStaminaUpdates.set(pawn.id, Math.max(0, curStamina - atk.staminaCost));
+      // Fatigue raises the effective drain (cost × factor) — a tired attacker winds faster.
+      pawnStaminaUpdates.set(
+        pawn.id,
+        Math.max(0, curStamina - atk.staminaCost * fatigueStaminaFactor(pawn))
+      );
     }
 
     // Apply this tick's attack-drain, then regen + winded latch for EVERY alive entity (so a winded
