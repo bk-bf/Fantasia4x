@@ -19,7 +19,13 @@ import { stepBody } from '../systems/MovementSystem';
 import { occupancyService } from './OccupancyService';
 import statusEffectsData from '../database/status-effects.jsonc';
 import { getConditionCurrentStage, conditionNeedMultipliers, comfortRange } from '../core/needs';
-import { getAmbientLight, weatherEffects } from './EnvironmentService';
+import {
+  getAmbientLight,
+  weatherEffects,
+  thermalAt,
+  effectiveTemperature,
+  isRoofedTile
+} from './EnvironmentService';
 // Gated console shim — see core/log.ts. Silences per-tick log/debug/warn unless
 // gameDebug(true); console.error still surfaces.
 import { gatedConsole as console } from '../core/log';
@@ -200,12 +206,12 @@ export class PawnServiceImpl implements PawnService {
   updatePawnState(pawnId: string, gameState: GameState): GameState {
     const pawn = pawnById(gameState.pawns, pawnId);
     if (!pawn) return gameState;
-    pawn.state = this.calculateStateUpdate(
-      pawn.state,
-      pawn.needs,
-      gameState.turn,
-      weatherEffects(gameState.weather).mood
-    );
+    // Weather mood drift; a sheltered (roofed) pawn feels a storm's gloom much less.
+    let weatherMood = weatherEffects(gameState.weather).mood;
+    if (weatherMood < 0 && pawn.position && isRoofedTile(pawn.position.x, pawn.position.y)) {
+      weatherMood *= 0.4;
+    }
+    pawn.state = this.calculateStateUpdate(pawn.state, pawn.needs, gameState.turn, weatherMood);
     return gameState;
   }
 
@@ -407,10 +413,14 @@ export class PawnServiceImpl implements PawnService {
       if (pawn.isAlive === false) continue;
 
       const rate = this.getNeedIncreasePerTurn(pawn);
-      // Effective temperature at the pawn = cached tile temperature + live weather delta.
+      // Effective temperature at the pawn = cached tile temperature + live weather delta, shaped by
+      // fire warmth + roof shelter (insulation/weather protection) from the per-tick thermal field.
       const pos = pawn.position;
       const tile = pos ? worldMap[pos.y]?.[pos.x] : undefined;
-      const temp = (tile?.temperature ?? DEFAULT_COMFORT_TEMP) + weatherTemp;
+      const base = tile?.temperature ?? DEFAULT_COMFORT_TEMP;
+      const temp = pos
+        ? effectiveTemperature(base, weatherTemp, thermalAt(pos.x, pos.y))
+        : base + weatherTemp;
       // Comfort range (default ± trait shifts) — shared with the hypothermia/heat-stroke driver.
       const comfort = comfortRange(pawn.racialTraits);
       const cold = comfort.min - temp; // >0 when too cold → tires faster

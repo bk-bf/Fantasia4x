@@ -17,10 +17,31 @@ import {
   tileTemperature,
   tileWetness,
   coldExposure,
-  heatExposure
+  heatExposure,
+  effectiveTemperature,
+  computeThermalAt,
+  rebuildThermalField,
+  thermalAt,
+  isRoofedTile,
+  type ThermalSample
 } from './EnvironmentService';
 import { comfortRange, driveTemperatureConditions } from '../core/needs';
-import type { EntityCondition } from '../core/types';
+import type { EntityCondition, PlacedBuilding } from '../core/types';
+
+function bld(
+  type: string,
+  x: number,
+  y: number,
+  extra: Partial<PlacedBuilding> = {}
+): PlacedBuilding {
+  return { id: `${type}-${x}-${y}`, type, x, y, status: 'complete', progress: 1, ...extra };
+}
+const NO_THERMAL: ThermalSample = {
+  warmth: 0,
+  insulation: 0,
+  weatherProtection: 0,
+  roofed: false
+};
 
 const TICKS_PER_DAY = TURNS_PER_DAY * TICKS_PER_SECOND;
 const TICKS_PER_SEASON = TICKS_PER_DAY * DAYS_PER_SEASON;
@@ -286,6 +307,70 @@ describe('Temperature comfort + exposure (hypothermia / heat stroke)', () => {
     for (let i = 0; i < 500; i++) driveTemperatureConditions(conditions, 0, 100);
     expect(conditions.find((c) => c.id === 'heat_stroke')).toBeDefined();
     expect(conditions.find((c) => c.id === 'hypothermia')).toBeUndefined();
+  });
+});
+
+describe('Thermal model — fire warmth, roof shelter, effective temperature', () => {
+  it('effectiveTemperature: roof weather protection blocks the weather swing', () => {
+    expect(effectiveTemperature(10, -20, NO_THERMAL)).toBe(-10); // exposed: full delta
+    expect(
+      effectiveTemperature(10, -20, { ...NO_THERMAL, weatherProtection: 1, roofed: true })
+    ).toBe(10); // fully protected: no delta
+  });
+
+  it('effectiveTemperature: insulation pulls the interior toward the neutral baseline', () => {
+    // base 35°C, full insulation → neutral 15°C
+    expect(effectiveTemperature(35, 0, { ...NO_THERMAL, insulation: 1, roofed: true })).toBe(15);
+  });
+
+  it('effectiveTemperature: fire warmth adds on top', () => {
+    expect(effectiveTemperature(0, 0, { ...NO_THERMAL, warmth: 10 })).toBe(10);
+  });
+
+  it('computeThermalAt: a lit campfire radiates warmth that falls off and stops past its radius', () => {
+    const fire = [bld('campfire', 5, 5, { lit: true })];
+    expect(computeThermalAt(5, 5, fire).warmth).toBeGreaterThan(0);
+    expect(computeThermalAt(6, 5, fire).warmth).toBeGreaterThan(0);
+    // campfire lightRadius is 6 → a tile 7 away gets nothing.
+    expect(computeThermalAt(5, 12, fire).warmth).toBe(0);
+    // closer is warmer than farther.
+    expect(computeThermalAt(5, 5, fire).warmth).toBeGreaterThan(
+      computeThermalAt(8, 5, fire).warmth
+    );
+  });
+
+  it('computeThermalAt: an UNLIT fuelled fire gives no warmth', () => {
+    expect(computeThermalAt(5, 5, [bld('campfire', 5, 5, { lit: false })]).warmth).toBe(0);
+  });
+
+  it('computeThermalAt: a roof shelters its tile with insulation + weather protection', () => {
+    const at = computeThermalAt(3, 3, [bld('thatch_roof', 3, 3)]);
+    expect(at.roofed).toBe(true);
+    expect(at.insulation).toBeGreaterThan(0);
+    expect(at.weatherProtection).toBeGreaterThan(0);
+    // a neighbouring tile is not roofed.
+    expect(computeThermalAt(4, 3, [bld('thatch_roof', 3, 3)]).roofed).toBe(false);
+  });
+
+  it('rebuildThermalField + thermalAt + isRoofedTile mirror the on-demand compute', () => {
+    rebuildThermalField([bld('thatch_roof', 1, 1), bld('campfire', 1, 1, { lit: true })]);
+    expect(isRoofedTile(1, 1)).toBe(true);
+    expect(isRoofedTile(9, 9)).toBe(false);
+    expect(thermalAt(1, 1).roofed).toBe(true);
+    expect(thermalAt(1, 1).warmth).toBeGreaterThan(0);
+    rebuildThermalField([]); // reset shared singleton so later tests see a clean field
+    expect(isRoofedTile(1, 1)).toBe(false);
+  });
+
+  it('tileTemperature/tileWetness factor a thermal sample (roof keeps a tile warmer + drier)', () => {
+    const roof: ThermalSample = { warmth: 0, insulation: 0.5, weatherProtection: 1, roofed: true };
+    const rain = { type: 'heavy_rain' as const, intensity: 0.75, turnsRemaining: 0 };
+    // Under a roof during winter rain, the tile is warmer than fully exposed.
+    expect(tileTemperature('plains', 'winter', rain, roof)).toBeGreaterThan(
+      tileTemperature('plains', 'winter', rain, NO_THERMAL)
+    );
+    // …and drier (rain kept out).
+    expect(tileWetness('plains', rain, roof)).toBeLessThan(tileWetness('plains', rain, NO_THERMAL));
   });
 });
 

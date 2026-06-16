@@ -190,7 +190,7 @@
     "populationRequired": 1,
     "researchRequired": null,
     "upkeepCost": {},
-    "effects": {"craftingEnabled": true},
+    "effects": {"craftingEnabled": true, "warmth": 0.5},
     "storageCapacity": {},
     "requiresLighting": true,
     "maxFuel": 100,
@@ -216,7 +216,7 @@
     "populationRequired": 1,
     "researchRequired": "pottery",
     "upkeepCost": {},
-    "effects": {"craftingEnabled": true},
+    "effects": {"craftingEnabled": true, "warmth": 0.6},
     "storageCapacity": {},
     "requiresLighting": true,
     "maxFuel": 120,
@@ -379,7 +379,7 @@
     "populationRequired": 1,
     "researchRequired": null,
     "upkeepCost": {},
-    "effects": {"craftingEnabled": true, "smeltingEnabled": true},
+    "effects": {"craftingEnabled": true, "smeltingEnabled": true, "warmth": 0.7},
     "storageCapacity": {},
     "requiresLighting": true,
     "maxFuel": 120,
@@ -407,7 +407,7 @@
     "populationRequired": 1,
     "researchRequired": null,
     "upkeepCost": {},
-    "effects": {"craftingEnabled": true, "smeltingEnabled": true},
+    "effects": {"craftingEnabled": true, "smeltingEnabled": true, "warmth": 0.8},
     "storageCapacity": {},
     "requiresLighting": true,
     "maxFuel": 160,
@@ -492,7 +492,7 @@
     "researchRequired": null,
     "upkeepCost": {},
     "conditionDecayPerTurn": 0.6,
-    "effects": {"roof": 1, "weatherProtection": 0.4},
+    "effects": {"roof": 1, "weatherProtection": 0.4, "thermalInsulation": 0.3},
     "storageCapacity": {},
     "buildingState": {"isUnique": false}
   },
@@ -511,7 +511,7 @@
     "populationRequired": 1,
     "researchRequired": null,
     "upkeepCost": {},
-    "effects": {"roof": 1, "weatherProtection": 1.0, "transparentRoof": 1},
+    "effects": {"roof": 1, "weatherProtection": 1.0, "transparentRoof": 1, "thermalInsulation": 0.5},
     "storageCapacity": {},
     "buildingState": {"isUnique": false}
   },
@@ -609,7 +609,7 @@
     "populationRequired": 1,
     "researchRequired": null,
     "upkeepCost": {},
-    "effects": {"movementCost": 99},
+    "effects": {"movementCost": 99, "weatherProtection": 0.1, "thermalInsulation": 0.1},
     "storageCapacity": {}
   },
   {
@@ -628,7 +628,7 @@
     "populationRequired": 1,
     "researchRequired"  : null,
     "upkeepCost"        : {},
-    "effects"           : {"movementCost": 99, "weatherProtection": 0.2},
+    "effects"           : {"movementCost": 99, "weatherProtection": 0.2, "thermalInsulation": 0.2},
     "storageCapacity"   : {}
   },
   {
@@ -647,7 +647,7 @@
     "populationRequired": 1,
     "researchRequired"  : null,
     "upkeepCost"        : {},
-    "effects"           : {"movementCost": 99, "weatherProtection": 0.4},
+    "effects"           : {"movementCost": 99, "weatherProtection": 0.4, "thermalInsulation": 0.4},
     "storageCapacity"   : {}
   },
   {
@@ -666,7 +666,7 @@
     "populationRequired": 1,
     "researchRequired"  : null,
     "upkeepCost"        : {},
-    "effects"           : {"movementCost": 99, "weatherProtection": 0.6},
+    "effects"           : {"movementCost": 99, "weatherProtection": 0.6, "thermalInsulation": 0.6},
     "storageCapacity"   : {}
   },
   {

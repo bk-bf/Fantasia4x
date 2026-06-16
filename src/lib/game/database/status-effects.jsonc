@@ -58,6 +58,13 @@
         "modifiers"  : {"workEfficiency": 0.8, "moveSpeed": 0.9}
     },
     {
+        "id"         : "sheltered",
+        "name"       : "Sheltered",
+        "description": "Under a roof, out of the weather. Recovers from cold and heat far faster, and a storm's gloom is held at bay.",
+        "color"      : "#7E9FBF",
+        "modifiers"  : {"fatigueRate": 0.95}
+    },
+    {
         "id"         : "filthy",
         "name"       : "Filthy",
         "description": "Caked in grime. Demoralising and unhealthy — slows work and sours mood (disease risk later).",

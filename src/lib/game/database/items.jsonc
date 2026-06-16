@@ -3243,7 +3243,8 @@
       "armorLayer"     : "gambeson",
       "armorValue"     : 4,
       "fatiguePerTurn" : 0.10,
-      "movementPenalty": 0.0
+      "movementPenalty": 0.0,
+      "coldResistance" : 0.12
     }
   },
   {
@@ -3269,7 +3270,9 @@
       "armorLayer"     : "gambeson",
       "armorValue"     : 2,
       "fatiguePerTurn" : 0.05,
-      "movementPenalty": 0.0
+      "movementPenalty": 0.0,
+      "coldResistance" : 0.05,
+      "heatResistance" : 0.04
     }
   },
   // ── Phase B: Tier 1 armour ────────────────────────────────────────────────
@@ -3297,7 +3300,8 @@
       "armorLayer"     : "gambeson",
       "armorValue"     : 8,
       "fatiguePerTurn" : 0.20,
-      "movementPenalty": 0.0
+      "movementPenalty": 0.0,
+      "coldResistance" : 0.1
     }
   },
   {
@@ -3323,7 +3327,8 @@
       "armorLayer"     : "mail",
       "armorValue"     : 10,
       "fatiguePerTurn" : 0.25,
-      "movementPenalty": 0.0
+      "movementPenalty": 0.0,
+      "coldResistance" : 0.1
     }
   },
   {
@@ -3349,7 +3354,8 @@
       "armorLayer"     : "gambeson",
       "armorValue"     : 4,
       "fatiguePerTurn" : 0.10,
-      "movementPenalty": 0.0
+      "movementPenalty": 0.0,
+      "coldResistance" : 0.06
     }
   },
   {
@@ -3401,7 +3407,8 @@
       "equipmentSlot"  : "gloves",
       "armorValue"     : 3,
       "fatiguePerTurn" : 0.05,
-      "movementPenalty": 0.0
+      "movementPenalty": 0.0,
+      "coldResistance" : 0.05
     }
   },
   {
@@ -3426,7 +3433,8 @@
       "equipmentSlot"  : "boots",
       "armorValue"     : 2,
       "fatiguePerTurn" : 0.05,
-      "movementPenalty": 0.0
+      "movementPenalty": 0.0,
+      "coldResistance" : 0.06
     }
   },
   // ── Phase B: Tier 2 armour ────────────────────────────────────────────────

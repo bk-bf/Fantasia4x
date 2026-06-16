@@ -40,7 +40,8 @@ export function getConditionLabel(condition: EntityCondition): string {
 export function applyConditionDriver(
   conditions: EntityCondition[],
   def: ConditionDef,
-  needVal: number
+  needVal: number,
+  recoveryMul = 1
 ): void {
   const d = def.driver!;
   const idx = conditions.findIndex((c) => c.id === def.id);
@@ -55,7 +56,8 @@ export function applyConditionDriver(
     return;
   }
   if (needVal < d.safe && idx !== -1) {
-    const newSeverity = conditions[idx].severity - perTick(d.recovery);
+    // `recoveryMul` accelerates recovery (e.g. a sheltered pawn warms/cools faster — SEASONS_WEATHER).
+    const newSeverity = conditions[idx].severity - perTick(d.recovery) * recoveryMul;
     if (newSeverity <= 0) conditions.splice(idx, 1);
     else conditions[idx] = { ...conditions[idx], severity: newSeverity };
   }
@@ -95,12 +97,18 @@ export function driveNeedConditions(
 export function driveTemperatureConditions(
   conditions: EntityCondition[],
   coldExposure: number,
-  heatExposure: number
+  heatExposure: number,
+  recoveryMul = 1
 ): string | null {
   for (const def of CONDITIONS_DB) {
     const src = def.driver?.source;
     if (!src) continue;
-    applyConditionDriver(conditions, def, src === 'heat' ? heatExposure : coldExposure);
+    applyConditionDriver(
+      conditions,
+      def,
+      src === 'heat' ? heatExposure : coldExposure,
+      recoveryMul
+    );
     const current = conditions.find((c) => c.id === def.id);
     if (current && current.severity >= def.lethalSeverity) return def.id;
   }

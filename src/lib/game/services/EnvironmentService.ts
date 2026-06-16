@@ -12,9 +12,10 @@
 
 import { TICKS_PER_SECOND } from '../core/time';
 import { buildingLight } from './LightingService';
+import { buildingService } from './BuildingService';
 import { BIOMES } from '../core/Terrains';
 import type { SeededRng } from '../core/rng';
-import type { Season, WeatherState, WeatherType, WorldTile } from '../core/types';
+import type { Season, WeatherState, WeatherType, WorldTile, PlacedBuilding } from '../core/types';
 
 // In-game seconds per day. The simulation `turn` counts ticks, so a full day is
 // TURNS_PER_DAY × TICKS_PER_SECOND ticks long.
@@ -313,6 +314,174 @@ export function heatExposure(temp: number, comfortMax: number): number {
   return Math.max(0, Math.min(100, (temp - comfortMax) * EXPOSURE_PER_DEGREE));
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Thermal field — fire warmth + roof shelter (SEASONS_WEATHER)
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Fires (`effects.warmth`) radiate heat to nearby tiles; roofs (`effects.roof`) shelter the tiles
+// under them — their `thermalInsulation` holds the interior near a neutral baseline and their
+// `weatherProtection` keeps weather (temperature delta + rain) out. Effective temperature at a pawn:
+//
+//   outdoor   = tileTemp + weatherDelta·(1 − weatherProtection)   // roof blocks the weather swing
+//   insulated = NEUTRAL + (outdoor − NEUTRAL)·(1 − insulation)     // roof holds interior near neutral
+//   effective = insulated + Σ fire warmth                          // fires heat the interior on top
+//
+// The worker rebuilds a lightweight field once per tick (rebuildThermalField) so the per-pawn query
+// (thermalAt) is O(fires)+O(1) — see GameEngineImpl.processEnvironment. The renderer/HUD, which has
+// no field, computes one tile on demand from the buildings array (computeThermalAt).
+
+/** °C produced at a fire's centre per unit of `effects.warmth` (0–1). */
+const WARMTH_SCALE = 25;
+/** Interior temperature (°C) a fully-insulated roof tends toward. */
+const NEUTRAL_TEMP = 15;
+
+export interface ThermalSample {
+  /** Additive °C from nearby fires. */
+  warmth: number;
+  /** 0–1 roof insulation (dampens deviation from NEUTRAL_TEMP). */
+  insulation: number;
+  /** 0–1 roof weather protection (blocks weather temp delta + keeps the tile dry). */
+  weatherProtection: number;
+  /** True when the tile is under a roof. */
+  roofed: boolean;
+}
+const NO_THERMAL: ThermalSample = {
+  warmth: 0,
+  insulation: 0,
+  weatherProtection: 0,
+  roofed: false
+};
+
+interface FireSource {
+  x: number;
+  y: number;
+  degrees: number;
+  radius: number;
+}
+
+/** A lit, complete fire building's warmth contribution (°C at centre + radius), or null. */
+function buildingWarmth(b: { type: string; status: string; lit?: boolean }): FireSource | null {
+  if (b.status !== 'complete') return null;
+  const def = buildingService.getBuildingById(b.type);
+  const warmth = def?.effects?.warmth;
+  if (!warmth || !def?.lightRadius) return null;
+  const needsFuel = (def.maxFuel ?? 0) > 0;
+  if (needsFuel && b.lit !== true) return null;
+  return {
+    x: (b as PlacedBuilding).x,
+    y: (b as PlacedBuilding).y,
+    degrees: warmth * WARMTH_SCALE,
+    radius: def.lightRadius
+  };
+}
+
+/** A complete roof's shelter (insulation + weather protection) at its tile, or null. */
+function buildingShelter(b: {
+  type: string;
+  status: string;
+}): { insulation: number; weatherProtection: number } | null {
+  if (b.status !== 'complete') return null;
+  const eff = buildingService.getBuildingById(b.type)?.effects;
+  if (!eff?.roof) return null;
+  return { insulation: eff.thermalInsulation ?? 0, weatherProtection: eff.weatherProtection ?? 0 };
+}
+
+// Worker-side per-tick field (rebuilt in the environment phase; queried per pawn).
+let fireSources: FireSource[] = [];
+let shelterTiles = new Map<string, { insulation: number; weatherProtection: number }>();
+
+/** Rebuild the thermal field from current buildings — once per tick (O(buildings)). */
+export function rebuildThermalField(buildings: PlacedBuilding[] | undefined): void {
+  const fires: FireSource[] = [];
+  const shelter = new Map<string, { insulation: number; weatherProtection: number }>();
+  for (const b of buildings ?? []) {
+    const f = buildingWarmth(b);
+    if (f) fires.push(f);
+    const s = buildingShelter(b);
+    if (s) {
+      const key = b.y + ',' + b.x;
+      const prev = shelter.get(key);
+      shelter.set(
+        key,
+        prev
+          ? {
+              insulation: Math.max(prev.insulation, s.insulation),
+              weatherProtection: Math.max(prev.weatherProtection, s.weatherProtection)
+            }
+          : s
+      );
+    }
+  }
+  fireSources = fires;
+  shelterTiles = shelter;
+}
+
+/** Sample the prebuilt thermal field at a tile (worker hot path: O(fires) + O(1)). */
+export function thermalAt(x: number, y: number): ThermalSample {
+  let warmth = 0;
+  for (let i = 0; i < fireSources.length; i++) {
+    const f = fireSources[i];
+    const dx = x - f.x;
+    const dy = y - f.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < f.radius) warmth += f.degrees * (1 - dist / f.radius);
+  }
+  const s = shelterTiles.get(y + ',' + x);
+  if (!s && warmth === 0) return NO_THERMAL;
+  return {
+    warmth,
+    insulation: s?.insulation ?? 0,
+    weatherProtection: s?.weatherProtection ?? 0,
+    roofed: !!s
+  };
+}
+
+/** Is the tile under a roof? (Reads the prebuilt field — used for the `sheltered` status.) */
+export function isRoofedTile(x: number, y: number): boolean {
+  return shelterTiles.has(y + ',' + x);
+}
+
+/** On-demand thermal sample from a buildings array (renderer/HUD has no prebuilt field). */
+export function computeThermalAt(
+  x: number,
+  y: number,
+  buildings: PlacedBuilding[] | undefined
+): ThermalSample {
+  let warmth = 0;
+  let insulation = 0;
+  let weatherProtection = 0;
+  let roofed = false;
+  for (const b of buildings ?? []) {
+    const f = buildingWarmth(b);
+    if (f) {
+      const dx = x - f.x;
+      const dy = y - f.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < f.radius) warmth += f.degrees * (1 - dist / f.radius);
+    }
+    if (b.x === x && b.y === y) {
+      const s = buildingShelter(b);
+      if (s) {
+        roofed = true;
+        insulation = Math.max(insulation, s.insulation);
+        weatherProtection = Math.max(weatherProtection, s.weatherProtection);
+      }
+    }
+  }
+  return { warmth, insulation, weatherProtection, roofed };
+}
+
+/** Effective temperature (°C) at a tile = weather-shielded outdoor temp, insulated toward neutral, plus fire warmth. */
+export function effectiveTemperature(
+  baseTileTemp: number,
+  weatherTempDelta: number,
+  thermal: ThermalSample
+): number {
+  const outdoor = baseTileTemp + weatherTempDelta * (1 - thermal.weatherProtection);
+  const insulated = NEUTRAL_TEMP + (outdoor - NEUTRAL_TEMP) * (1 - thermal.insulation);
+  return insulated + thermal.warmth;
+}
+
 // Per-biome baseline wetness (0–100%) lives in terrains.jsonc (`baseMoisture`). Weather adds/removes
 // on top. Derived display value — not a persisted per-tile field, so it never rides the snapshot
 // (computed on demand for the hovered tile).
@@ -343,23 +512,30 @@ function weatherMoistureBonus(weather?: WeatherState): number {
 }
 
 /** Display wetness (0–100%) for a tile = biome baseline + current weather contribution. */
-export function tileWetness(terrainType: string, weather?: WeatherState): number {
-  return Math.max(0, Math.min(100, biomeBaseMoisture(terrainType) + weatherMoistureBonus(weather)));
+export function tileWetness(
+  terrainType: string,
+  weather?: WeatherState,
+  thermal: ThermalSample = NO_THERMAL
+): number {
+  // Biome base wetness stays; the weather (rain) contribution is kept out under a roof.
+  const fromWeather = weatherMoistureBonus(weather) * (1 - thermal.weatherProtection);
+  return Math.max(0, Math.min(100, biomeBaseMoisture(terrainType) + fromWeather));
 }
 
 /**
  * Effective temperature (°C) at a tile for display — mirrors what the need-rate hot path computes:
- * baked tile temperature (biome base + season offset) + the live weather delta. Computed on demand
- * from `terrainType` + season + weather (all main-thread-available), so the worker-only
- * `tile.temperature` field never needs to ship.
+ * baked tile temperature (biome base + season offset) + the live weather delta, then shelter
+ * (roof insulation + weather protection) + nearby fire warmth. Computed on demand from `terrainType`
+ * + season + weather (+ optional thermal sample), so the worker-only `tile.temperature` never ships.
  */
 export function tileTemperature(
   terrainType: string,
   season: Season | undefined,
-  weather?: WeatherState
+  weather?: WeatherState,
+  thermal: ThermalSample = NO_THERMAL
 ): number {
-  const offset = season ? SEASONS[season].tempOffset : 0;
-  return biomeBaseTemp(terrainType) + offset + weatherEffects(weather).tempDelta;
+  const base = biomeBaseTemp(terrainType) + (season ? SEASONS[season].tempOffset : 0);
+  return effectiveTemperature(base, weatherEffects(weather).tempDelta, thermal);
 }
 
 /** Default visual intensity per weather type (0–1). */

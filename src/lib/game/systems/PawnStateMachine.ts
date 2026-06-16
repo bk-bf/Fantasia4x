@@ -33,7 +33,15 @@ import { simLog } from '../core/logSink';
 import { gameLogger } from '../dev/gameLogger';
 import { perTick } from '../core/time';
 import { driveNeedConditions, driveTemperatureConditions, comfortRange } from '../core/needs';
-import { weatherEffects, coldExposure, heatExposure } from '../services/EnvironmentService';
+import {
+  weatherEffects,
+  coldExposure,
+  heatExposure,
+  thermalAt,
+  isRoofedTile,
+  effectiveTemperature
+} from '../services/EnvironmentService';
+import { equippedTemperatureResistance } from '../core/PawnEquipment';
 import { calcBloodRegenRate } from '../entities/Pawns';
 import { rng } from '../core/rng';
 import { pawnById } from '../core/pawnIndex';
@@ -71,6 +79,9 @@ export { resetUnreachableJobs } from './pawn/pawnHelpers';
  *  spike). 6 ticks ≈ 0.1s max reaction delay, imperceptible; pawns already FIGHTING/FLEEING still
  *  scan every tick (live targeting + exit-when-clear is the combat handler's job). */
 const COMBAT_SCAN_INTERVAL = 6;
+
+/** SEASONS_WEATHER: a sheltered (roofed) pawn recovers from hypothermia/heat stroke this much faster. */
+const SHELTER_RECOVERY_MUL = 2.5;
 
 /** Consciousness (0–1) below which a pawn collapses (matches Combat.COLLAPSE_CONSCIOUSNESS).
  *  Folds in pain + blood loss + organ damage, so downing has one unified cause. */
@@ -293,19 +304,30 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
       (c) => c.id === 'hypothermia' || c.id === 'heat_stroke'
     );
     if (tile || hasTempCondition) {
-      const temp = (tile?.temperature ?? 15) + weatherEffects(gameState.weather).tempDelta;
+      const thermal = pos ? thermalAt(pos.x, pos.y) : undefined;
+      const weatherDelta = weatherEffects(gameState.weather).tempDelta;
+      const base = tile?.temperature ?? 15;
+      const temp = thermal
+        ? effectiveTemperature(base, weatherDelta, thermal)
+        : base + weatherDelta;
       const comfort = comfortRange(pawn.racialTraits);
       let cold = coldExposure(temp, comfort.min);
       let heat = heatExposure(temp, comfort.max);
-      if (cold > 0) {
-        const r = pawnStatService.evaluateStat('cold_resistance', pawn);
-        cold *= 1 - Math.min(0.9, Math.max(0, r));
+      if (cold > 0 || heat > 0) {
+        // Resistance = CON-derived stat + worn armour (SEASONS_WEATHER equipment), capped.
+        const worn = equippedTemperatureResistance(pawn);
+        if (cold > 0) {
+          const r = pawnStatService.evaluateStat('cold_resistance', pawn) + worn.cold;
+          cold *= 1 - Math.min(0.9, Math.max(0, r));
+        }
+        if (heat > 0) {
+          const r = pawnStatService.evaluateStat('fire_resistance', pawn) + worn.heat;
+          heat *= 1 - Math.min(0.9, Math.max(0, r));
+        }
       }
-      if (heat > 0) {
-        const r = pawnStatService.evaluateStat('fire_resistance', pawn);
-        heat *= 1 - Math.min(0.9, Math.max(0, r));
-      }
-      const lethalTemp = driveTemperatureConditions(conditions, cold, heat);
+      // A pawn under a roof recovers from temperature conditions faster ("sheltered").
+      const recoveryMul = pos && isRoofedTile(pos.x, pos.y) ? SHELTER_RECOVERY_MUL : 1;
+      const lethalTemp = driveTemperatureConditions(conditions, cold, heat, recoveryMul);
       if (lethalTemp) {
         return killPawn(
           { ...gameState.pawns.find((p) => p.id === pawn.id)!, conditions, bloodVolume },
@@ -642,6 +664,9 @@ function syncActiveEffects(pawn: Pawn): Pawn {
   for (const [effectId, remaining] of Object.entries(pawn.statusEffectDurations ?? {})) {
     if (remaining > 0) effects.push(effectId);
   }
+
+  // SEASONS_WEATHER: under a roof → sheltered (faster cold/heat recovery + storm-mood relief).
+  if (pawn.position && isRoofedTile(pawn.position.x, pawn.position.y)) effects.push('sheltered');
 
   // Mood-based status effects (discrete ranges replace continuous morale calculation)
   const mood = pawn.state?.mood ?? 50;

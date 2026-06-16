@@ -304,7 +304,8 @@ export interface Item {
     fullBodyProtection?: number;
 
     // Environmental bonuses
-    coldResistance?: number;
+    coldResistance?: number; // 0–1: reduces cold exposure (hypothermia) while worn (SEASONS_WEATHER)
+    heatResistance?: number; // 0–1: reduces heat exposure (heat stroke) while worn (SEASONS_WEATHER)
     stealthBonus?: number;
     terrainBonus?: number;
 

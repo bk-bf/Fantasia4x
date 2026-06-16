@@ -32,7 +32,8 @@
     environmentService,
     computeTileLightLevel,
     tileTemperature,
-    tileWetness
+    tileWetness,
+    computeThermalAt
   } from '$lib/game/services/EnvironmentService.js';
   import { lightingService } from '$lib/game/services/LightingService.js';
   import { glyph, SHEET } from '$lib/webgl/tilesets.js';
@@ -2784,8 +2785,14 @@
     <!-- Dropped item on the hovered tile — shared SelectedEntityCard, bars below the title -->
     <SelectedEntityCard model={hoverItemCard} />
   {:else if hoverTile}
-    {@const tileTemp = tileTemperature(hoverTile.terrainType, $currentSeason, $currentWeather)}
-    {@const tileWet = tileWetness(hoverTile.terrainType, $currentWeather)}
+    {@const tileThermal = computeThermalAt(hoverTile.x, hoverTile.y, buildings)}
+    {@const tileTemp = tileTemperature(
+      hoverTile.terrainType,
+      $currentSeason,
+      $currentWeather,
+      tileThermal
+    )}
+    {@const tileWet = tileWetness(hoverTile.terrainType, $currentWeather, tileThermal)}
     <div class="tile-hud">
       <span class="tile-coord">({hoverTile.x},{hoverTile.y})</span><span class="tile-layers"
         >{BIOMES[hoverTile.terrainType]?.displayName ?? hoverTile.terrainType},{SUBTERRAINS[
@@ -2825,6 +2832,7 @@
         <span style="color:{tileWet >= 60 ? '#3a9ed0' : tileWet >= 30 ? '#6aa0a0' : '#a08a5a'}"
           >wet {tileWet}%</span
         >
+        {#if tileThermal.roofed}<span style="color:#7e9fbf">roofed</span>{/if}
       </div>
     </div>
   {/if}
