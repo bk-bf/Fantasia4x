@@ -73,6 +73,7 @@
 
   $: firstBuildingInProgress = buildings.find((b) => b.status !== 'complete') ?? null;
   $: allBuildingsInProgress = buildings.filter((b) => b.status !== 'complete');
+  $: campfires = buildings.filter((b) => b.type === 'campfire' && b.status === 'complete');
 
   // Only show unlocked buildings — locked buildings are hidden entirely
   $: unlockedDefs = ALL_BUILDING_DEFS.filter(
@@ -233,22 +234,6 @@
     <button class="hdr-btn" on:click={() => uiState.setScreen('main')}>BACK</button>
   </div>
 
-  <!-- Campfire status -->
-  {#each buildings.filter((b) => b.type === 'campfire' && b.status === 'complete') as cf (cf.id)}
-    {@const fuelPct = Math.round(((cf.fuel ?? 0) / 60) * 100)}
-    <div class="bldg-row">
-      <span class="bldg-name" style="color:{cf.lit ? '#fa0' : '#555'}"
-        >{cf.lit ? '🔥' : '⬛'} CAMPFIRE</span
-      >
-      <span class="fuel-bar">
-        FUEL <span class="bar-ascii"
-          >{'█'.repeat(Math.round(fuelPct / 10)) + '░'.repeat(10 - Math.round(fuelPct / 10))}</span
-        >
-        {Math.floor(cf.fuel ?? 0)}/60
-      </span>
-    </div>
-  {/each}
-
   <!-- Building groups + ZONES as a tab -->
   {#if sections.length > 0}
     <FilterTabs
@@ -295,6 +280,25 @@
         {/each}
       </div>
     {/if}
+  {/if}
+
+  <!-- Campfire fuel — compact chips, same footer as the build jobs -->
+  {#if campfires.length > 0}
+    <div class="build-jobs">
+      <div class="jobs-hdr">| FIRES ({campfires.length})</div>
+      <div class="jobs-grid">
+        {#each campfires as cf (cf.id)}
+          {@const fuelPct = Math.round(((cf.fuel ?? 0) / 60) * 100)}
+          <div class="job-chip" title="Campfire fuel {Math.floor(cf.fuel ?? 0)}/60">
+            <span class="job-fill" class:lit={cf.lit} style="width:{fuelPct}%"></span>
+            <span class="job-name" style="color:{cf.lit ? '#fa0' : '#555'}"
+              >{cf.lit ? '🔥' : '⬛'} CAMPFIRE</span
+            >
+            <span class="job-pct">{Math.floor(cf.fuel ?? 0)}/60</span>
+          </div>
+        {/each}
+      </div>
+    </div>
   {/if}
 
   <!-- Active construction queue — compact chips, kept below the build/zone tabs -->
@@ -357,27 +361,6 @@
     cursor: pointer;
   }
 
-  .bldg-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 3px 10px;
-    border-bottom: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
-    flex-wrap: wrap;
-  }
-  .bldg-row:hover {
-    background: var(--bg-hover);
-  }
-
-  .bldg-name {
-    flex: 0 0 160px;
-    font-size: 11px;
-    color: var(--text);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
   .cost-sep {
     color: var(--text-dim);
     opacity: 0.4;
@@ -406,13 +389,7 @@
     color: var(--neg);
   }
 
-  .bar-ascii {
-    color: var(--accent);
-    font-size: 9px;
-    letter-spacing: -1px;
-  }
-
-  /* ── Active build jobs (compact chips, below the tabs) ── */
+  /* ── Active build jobs / fires (compact chips, below the tabs) ── */
   .build-jobs {
     padding: 4px 8px 8px;
     border-top: 1px solid var(--border);
@@ -448,6 +425,9 @@
     pointer-events: none;
     z-index: 0;
   }
+  .job-fill.lit {
+    background: color-mix(in srgb, #ff8800 32%, transparent);
+  }
   .job-name {
     position: relative;
     z-index: 1;
@@ -479,12 +459,4 @@
     color: var(--neg);
   }
 
-  .fuel-bar {
-    flex: 1;
-    display: flex;
-    gap: 4px;
-    align-items: center;
-    font-size: 10px;
-    color: var(--text-dim);
-  }
 </style>
