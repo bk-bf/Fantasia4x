@@ -135,5 +135,4 @@ Spec archived at [PHYSICAL-PRODUCTION](.tasks/archive/PHYSICAL-PRODUCTION-2026-0
   `stone_forge` smelting bars + `hearth` ash/animal-fat), and the dispatch (`_syncCraftJobs` + `processPassiveProduction`)
   honours `isPassive(recipe) || isPassiveStation(stationType)` — so forge/hearth smelt/render passively while their
   shaping recipes stay pawn-worked. `PASSIVE_STATIONS` is kept only as a fallback for orders with no resolvable recipe.
-- [→] Per-stack craft quality on instances (R8) — **moved to [ROADMAP](.tasks/open/ROADMAP.md)** (Other Phase 3 work),
-  blocked on equipment quality affecting combat/equip.
+

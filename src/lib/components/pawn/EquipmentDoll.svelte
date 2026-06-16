@@ -6,12 +6,16 @@
   let {
     pawn,
     onUnequip,
+    onTogglePin,
     loading = false
   }: {
     pawn: Pawn;
     onUnequip: (slot: EquipmentSlot) => void;
+    onTogglePin?: (itemId: string) => void;
     loading?: boolean;
   } = $props();
+
+  const isPinned = (itemId: string) => (pawn.pinnedItems ?? []).includes(itemId);
 
   // Order here drives nothing visually — grid-area placement (CSS) lays out the doll.
   const SLOTS: { slot: EquipmentSlot; label: string }[] = [
@@ -43,6 +47,16 @@
     <div class="slot-box" class:filled={!!it} class:empty={!it} style="grid-area: {slot}">
       <span class="slot-lbl">{label}</span>
       {#if it && def}
+        {#if onTogglePin}
+          <button
+            class="pin"
+            class:active={isPinned(it.itemId)}
+            title={isPinned(it.itemId)
+              ? 'Pinned — kept, never deposited. Click to unpin.'
+              : 'Pin — the pawn keeps this item (never deposited).'}
+            onclick={() => onTogglePin?.(it.itemId)}>{isPinned(it.itemId) ? '★' : '☆'}</button
+          >
+        {/if}
         <span class="it-name" title={def.name}>{def.name}</span>
         <div class="dur-bar" title="{it.durability}/{maxDur}">
           <div
@@ -104,6 +118,10 @@
     text-transform: uppercase;
     color: var(--text-dim);
   }
+  /* Filled slots show the pin (top-left) + unequip (top-right) — clear the label past the pin. */
+  .slot-box.filled .slot-lbl {
+    padding: 0 12px;
+  }
 
   .it-name {
     font-size: 11px;
@@ -128,6 +146,26 @@
     color: var(--text-muted);
     font-size: 10px;
     margin: auto;
+  }
+
+  .pin {
+    position: absolute;
+    top: 2px;
+    left: 3px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 10px;
+    line-height: 1;
+    padding: 1px 2px;
+  }
+  .pin:hover {
+    color: var(--text);
+  }
+  .pin.active {
+    color: var(--accent-hi, #ffd24a);
   }
 
   .unequip {

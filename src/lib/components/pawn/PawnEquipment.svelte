@@ -1,15 +1,6 @@
 <script lang="ts">
   import { gameState } from '$lib/stores/gameState';
-  import type { Pawn, EquipmentSlot } from '$lib/game/core/types';
-  import {
-    equipItem,
-    unequipItem,
-    useConsumable,
-    canEquipItem,
-    equippedItemCounts
-  } from '$lib/game/core/PawnEquipment';
-  import { consumeFromStockpiles } from '$lib/game/core/GameState';
-  import { gameCoordinator } from '$lib/game/systems/GameCoordinator';
+  import type { Pawn } from '$lib/game/core/types';
   import EquipmentDoll from './EquipmentDoll.svelte';
   import PawnInventory from './PawnInventory.svelte';
 
@@ -17,47 +8,16 @@
 
   let equipmentLoading = false;
 
-  // INV-1: the "Available Items" pool is DERIVED from the colony stockpile (minus what's already
-  // equipped across all pawns) — it is NOT written into pawn.inventory.items, which stays strictly
-  // the pawn's carried haul goods. Reactive, so equipping/unequipping updates the list immediately.
-  $: availableItems = (() => {
-    const equipped = equippedItemCounts($gameState.pawns);
-    const out: Array<{ id: string; quantity: number }> = [];
-    for (const [id, amount] of Object.entries($gameState.stockpile ?? {})) {
-      const def = gameCoordinator.getItemById(id);
-      if (!def || def.type === 'material') continue;
-      const avail = Math.floor(amount - (equipped[id] ?? 0));
-      if (avail > 0) out.push({ id, quantity: avail });
-    }
-    return out;
-  })();
-
-  // Equipment management functions
-  function equipPawnItem(pawnId: string, itemId: string) {
-    equipmentLoading = true;
-    gameState.command({ type: 'equipPawnItem', payload: { pawnId, itemId } });
-    equipmentLoading = false;
-  }
-
   function unequipPawnItem(pawnId: string, slot: string) {
     equipmentLoading = true;
     gameState.command({ type: 'unequipPawnItem', payload: { pawnId, slot } });
     equipmentLoading = false;
-  }
-
-  function useConsumableItem(pawnId: string, itemId: string) {
-    gameState.command({ type: 'useConsumableItem', payload: { pawnId, itemId } });
-  }
-
-  function canEquipPawnItem(pawn: Pawn, itemId: string): boolean {
-    return canEquipItem(pawn, itemId);
   }
 </script>
 
 <!-- Equipment and Inventory -->
 <div class="equipment-section" id="equipment">
   <h3>| EQUIPMENT &amp; INVENTORY</h3>
-  <p class="inventory-note">All items from global storage are automatically available to equip</p>
 
   <div class="gear-columns">
     <!-- Currently Equipped -->
@@ -67,44 +27,13 @@
         {pawn}
         loading={equipmentLoading}
         onUnequip={(slot) => unequipPawnItem(pawn.id, slot)}
+        onTogglePin={(itemId) =>
+          gameState.command({ type: 'togglePinItem', payload: { pawnId: pawn.id, itemId }, save: true })}
       />
     </div>
 
-    <!-- Available Items -->
+    <!-- Carried Items -->
     <div class="inventory-items">
-      <h4>Available Items:</h4>
-      <div class="inventory-grid">
-        {#each availableItems as { id: itemId, quantity } (itemId)}
-          {@const itemInfo = gameCoordinator.getItemById(itemId)}
-          {#if itemInfo && quantity > 0 && itemInfo.type !== 'material'}
-            <div class="inventory-item" data-type={itemInfo.type}>
-              <div class="item-header">
-                <span class="item-name">{itemInfo.name}</span>
-                <span class="item-quantity">x{Math.floor(quantity)}</span>
-              </div>
-
-              <p class="item-description">{itemInfo.description}</p>
-
-              <div class="item-actions">
-                {#if itemInfo.type === 'consumable'}
-                  <button class="use-btn" on:click={() => useConsumableItem(pawn.id, itemId)}>
-                    Use
-                  </button>
-                {:else if ['weapon', 'armor', 'tool'].includes(itemInfo.type)}
-                  <button
-                    class="equip-btn"
-                    class:loading={equipmentLoading}
-                    on:click={() => equipPawnItem(pawn.id, itemId)}
-                    disabled={!canEquipPawnItem(pawn, itemId) || equipmentLoading}
-                  >
-                    {equipmentLoading ? 'Equipping...' : 'Equip'}
-                  </button>
-                {/if}
-              </div>
-            </div>
-          {/if}
-        {/each}
-      </div>
       <PawnInventory {pawn} />
     </div>
   </div>
@@ -129,14 +58,6 @@
     font-weight: normal;
   }
 
-  .inventory-note {
-    color: var(--text-muted);
-    padding: 2px 8px;
-    font-style: italic;
-    font-size: 11px;
-    border-bottom: 1px solid var(--border);
-  }
-
   .gear-columns {
     display: grid;
     grid-template-columns: minmax(220px, 340px) 1fr;
@@ -147,8 +68,7 @@
     border-left: 1px solid var(--border);
   }
 
-  .equipped-items h4,
-  .inventory-items h4 {
+  .equipped-items h4 {
     padding: 3px 8px;
     color: var(--text-dim);
     font-size: 11px;
@@ -157,84 +77,5 @@
     border-bottom: 1px solid var(--border);
     font-weight: normal;
     margin: 0;
-  }
-
-  .inventory-grid {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .inventory-item {
-    background: var(--bg);
-    border-bottom: 1px solid var(--border);
-    padding: 3px 8px;
-  }
-  .inventory-item:hover {
-    background: var(--bg-hover);
-  }
-
-  .inventory-item[data-type='weapon'],
-  .inventory-item[data-type='armor'],
-  .inventory-item[data-type='tool'],
-  .inventory-item[data-type='consumable'] {
-    border-left: none;
-  }
-
-  .item-header {
-    display: flex;
-    align-items: baseline;
-    gap: 6px;
-  }
-
-  .item-name {
-    color: var(--text);
-    font-size: 11px;
-  }
-
-  .item-quantity {
-    color: var(--text-muted);
-    font-size: 11px;
-    margin-left: auto;
-  }
-
-  .item-description {
-    color: var(--text-muted);
-    font-size: 11px;
-    margin: 0;
-    font-style: italic;
-  }
-
-  .item-actions {
-    display: flex;
-    gap: 4px;
-    margin-top: 2px;
-  }
-
-  .use-btn,
-  .equip-btn {
-    padding: 2px 8px;
-    cursor: pointer;
-    font-family: 'Courier New', monospace;
-    font-size: 10px;
-    background: var(--bg-hover);
-    border: 1px solid var(--border-hi);
-    color: var(--text);
-  }
-
-  .use-btn:hover {
-    color: var(--pos);
-  }
-  .equip-btn:hover {
-    color: var(--accent-hi);
-  }
-
-  .equip-btn:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
-
-  .equip-btn.loading {
-    opacity: 0.5;
-    cursor: not-allowed;
   }
 </style>
