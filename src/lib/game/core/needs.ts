@@ -23,6 +23,12 @@ export function getConditionCurrentStage(condition: EntityCondition): ConditionS
   return active;
 }
 
+/** Display name for a condition (def name, else prettified id), without the stage suffix. */
+export function getConditionName(condition: EntityCondition): string {
+  const def = CONDITIONS_DB.find((d) => d.id === condition.id);
+  return def?.name ?? condition.id.replace(/_/g, ' ');
+}
+
 /** Human-readable "Name (stage)" label for a condition, e.g. "Infection (mild)". */
 export function getConditionLabel(condition: EntityCondition): string {
   const def = CONDITIONS_DB.find((d) => d.id === condition.id);

@@ -131,7 +131,7 @@ export function killPawn(
 ): GameState {
   simLog.logActivity({
     turn: gameState.turn,
-    type: 'event',
+    type: 'pawn_action',
     actor: pawn.id,
     action: 'died',
     target: cause,

@@ -75,37 +75,10 @@ export interface SimLogSink {
   pushAttackLunge(req: CombatLungeRequest): void;
 
   // ----- entities (services/EntityService) -----
-  logHuntStart(
-    hunterId: string,
-    hunterName: string,
-    preyId: string,
-    preyName: string,
-    turn: number,
-    focusX: number,
-    focusY: number
-  ): void;
-  logFlee(
-    entityId: string,
-    entityName: string,
-    threatId: string | undefined,
-    threatName: string | undefined,
-    turn: number,
-    focusX: number,
-    focusY: number
-  ): void;
   logEntityDeath(
     entityId: string,
     entityName: string,
     cause: string,
-    turn: number,
-    focusX: number,
-    focusY: number
-  ): void;
-  logEntityStateChange(
-    entityId: string,
-    entityName: string,
-    fromState: string,
-    toState: string,
     turn: number,
     focusX: number,
     focusY: number
@@ -120,10 +93,7 @@ const noopSink: SimLogSink = {
   logCombatKill: () => {},
   pushCombatText: () => {},
   pushAttackLunge: () => {},
-  logHuntStart: () => {},
-  logFlee: () => {},
-  logEntityDeath: () => {},
-  logEntityStateChange: () => {}
+  logEntityDeath: () => {}
 };
 
 /**

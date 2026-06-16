@@ -7,11 +7,9 @@ import { effectiveVisionRange } from '../../core/vision';
 import { ticksFromSeconds, SECONDS_PER_TICK } from '../../core/time';
 import { calcMaxStamina } from '../../entities/Pawns';
 import { gameLogger } from '../../dev/gameLogger';
-import { simLog } from '../../core/logSink';
 import { rng } from '../../core/rng';
 import { markTileDirty } from '../../core/tileDeltas';
 import {
-  entityName,
   nearestPawn,
   dist,
   adjacent,
@@ -199,19 +197,9 @@ export function stepOne(
   // fleeing/hunting/wandering, lies in place (path cleared), and dies when malnutrition hits lethal
   // severity. Because malnutrition onsets at hunger 87 and accrues slowly, this takes in-game DAYS of
   // starving — it no longer drops a mob mid-hunt the instant hunger crosses 80.
-  const malnutritionSeverity =
-    mob.conditions?.find((c) => c.id === 'malnutrition')?.severity ?? 0;
+  const malnutritionSeverity = mob.conditions?.find((c) => c.id === 'malnutrition')?.severity ?? 0;
   if (malnutritionSeverity >= STARVATION_COLLAPSE_SEVERITY) {
     if (mob.state === 'Collapsed') return mob;
-    simLog.logEntityStateChange(
-      mob.id,
-      entityName(mob),
-      mob.state,
-      'Collapsed',
-      turn,
-      mob.x,
-      mob.y
-    );
     return {
       ...mob,
       state: 'Collapsed',
@@ -307,23 +295,6 @@ export function stepHostile(
 
   // Wounded entities flee regardless of state.
   if (mob.health <= mob.maxHealth * FLEE_HEALTH_FRACTION && mob.state !== 'Fleeing') {
-    const threat =
-      inVision ?? (def.huntable ? nearestPredatorThreat(mob, def, allMobs, visionRange) : null);
-    const threatName = threat
-      ? (state.pawns.find(
-          (p) =>
-            p.position && Math.abs(p.position.x - mob.x) <= 1 && Math.abs(p.position.y - mob.y) <= 1
-        )?.name ?? 'predator')
-      : undefined;
-    simLog.logFlee(
-      mob.id,
-      entityName(mob),
-      threat ? 'threat' : undefined,
-      threatName,
-      turn,
-      mob.x,
-      mob.y
-    );
     return {
       ...mob,
       state: 'Fleeing',
@@ -433,11 +404,6 @@ export function stepHostile(
       if (!canScavengeOrHunt) return null;
       const prey = findNearestPrey(mob, allMobs, canHunt);
       if (!prey) return null;
-      const preyDef = getCreatureById(prey.creatureId);
-      const preyName = preyDef
-        ? `${preyDef.name} #${prey.debugId ?? prey.id.slice(-4)}`
-        : prey.id.slice(-6);
-      simLog.logHuntStart(mob.id, entityName(mob), prey.id, preyName, turn, mob.x, mob.y);
       return { ...mob, state: 'Hunting', stateSince: turn, path: [] };
     };
 
@@ -647,23 +613,6 @@ export function stepAnimal(
     }
   } else if (mob.state === 'Foraging' || mob.state === 'Hunting' || mob.state === 'Eating') {
     // Threatened while eating — drop food and flee.
-    const threatName = inVision
-      ? (state.pawns.find(
-          (p) =>
-            p.position &&
-            Math.abs(p.position.x - mob.x) <= visionRange &&
-            Math.abs(p.position.y - mob.y) <= visionRange
-        )?.name ?? 'predator')
-      : 'predator';
-    simLog.logFlee(
-      mob.id,
-      entityName(mob),
-      inVision ? 'threat' : undefined,
-      threatName,
-      turn,
-      mob.x,
-      mob.y
-    );
     logFleeTrigger(mob, def, threat, inVision != null, turn, visionRange);
     return {
       ...mob,

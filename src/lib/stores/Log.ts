@@ -255,27 +255,8 @@ export function logSystem(
 
 // ── Combat & Entity Logging ─────────────────────────────────────────────────
 
-/** Deduplication: last turn an entity logged a specific action type. */
-const lastEntityLogTurn = new Map<string, number>();
-
 function combatKey(a: string, b: string) {
   return a < b ? `${a}|${b}` : `${b}|${a}`;
-}
-
-/** Check if we should skip logging because the same entity logged the same action recently. */
-function shouldSkipLog(
-  entityId: string,
-  actionType: string,
-  turn: number,
-  cooldownTicks: number
-): boolean {
-  const key = `${entityId}:${actionType}`;
-  const last = lastEntityLogTurn.get(key);
-  if (last !== undefined && turn - last < cooldownTicks) {
-    return true;
-  }
-  lastEntityLogTurn.set(key, turn);
-  return false;
 }
 
 // ── Engagement-scoped combat sessions ────────────────────────────────────────
@@ -453,59 +434,6 @@ export function logCombatKill(
   });
 }
 
-export function logHuntStart(
-  hunterId: string,
-  hunterName: string,
-  preyId: string,
-  preyName: string,
-  turn: number,
-  focusX: number,
-  focusY: number
-) {
-  // Key on the prey so a NEW target logs immediately, but a stalled/repeated hunt of the SAME
-  // prey (the mob keeps re-deciding to chase it) collapses to one entry per long window.
-  if (shouldSkipLog(hunterId, `hunt-start:${preyId}`, turn, 1200)) return;
-  logActivity({
-    turn,
-    type: 'entity',
-    actor: hunterId,
-    action: `${hunterName} has started hunting ${preyName}`,
-    target: preyId,
-    result: '',
-    severity: 'info',
-    entityIds: [hunterId, preyId],
-    focusX,
-    focusY
-  });
-}
-
-export function logFlee(
-  entityId: string,
-  entityName: string,
-  threatId: string | undefined,
-  threatName: string | undefined,
-  turn: number,
-  focusX: number,
-  focusY: number
-) {
-  if (shouldSkipLog(entityId, 'flee', turn, 60)) return;
-  const action = threatName
-    ? `${entityName} is fleeing from ${threatName}`
-    : `${entityName} is fleeing`;
-  logActivity({
-    turn,
-    type: 'entity',
-    actor: entityId,
-    action,
-    target: threatId,
-    result: '',
-    severity: 'warning',
-    entityIds: threatId ? [entityId, threatId] : [entityId],
-    focusX,
-    focusY
-  });
-}
-
 /** Logs an entity death with its cause (starvation, blood loss, combat, …). */
 export function logEntityDeath(
   entityId: string,
@@ -523,41 +451,6 @@ export function logEntityDeath(
     target: cause,
     result: `of ${cause.replace(/_/g, ' ')}`,
     severity: 'critical',
-    entityIds: [entityId],
-    focusX,
-    focusY
-  });
-}
-
-export function logEntityStateChange(
-  entityId: string,
-  entityName: string,
-  fromState: string,
-  toState: string,
-  turn: number,
-  focusX: number,
-  focusY: number
-) {
-  // Only log interesting state transitions
-  const interesting = [
-    'Attacking',
-    'Fleeing',
-    'Hunting',
-    'Eating',
-    'Sleeping',
-    'Startled',
-    'Exhausted',
-    'Collapsed'
-  ];
-  if (!interesting.includes(toState)) return;
-  if (shouldSkipLog(entityId, `state-${toState}`, turn, 30)) return;
-  logActivity({
-    turn,
-    type: 'entity',
-    actor: entityId,
-    action: `${entityName} is now ${toState.toLowerCase()}`,
-    result: fromState !== toState ? `(was ${fromState.toLowerCase()})` : '',
-    severity: toState === 'Attacking' || toState === 'Fleeing' ? 'warning' : 'info',
     entityIds: [entityId],
     focusX,
     focusY

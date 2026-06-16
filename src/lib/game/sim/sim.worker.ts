@@ -117,10 +117,7 @@ function installForwardingLogSink() {
     logCombatKill: fwd('logCombatKill'),
     pushCombatText: fwd('pushCombatText'),
     pushAttackLunge: fwd('pushAttackLunge'),
-    logHuntStart: fwd('logHuntStart'),
-    logFlee: fwd('logFlee'),
-    logEntityDeath: fwd('logEntityDeath'),
-    logEntityStateChange: fwd('logEntityStateChange')
+    logEntityDeath: fwd('logEntityDeath')
   } as SimLogSink);
 }
 

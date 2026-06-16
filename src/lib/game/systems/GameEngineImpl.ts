@@ -42,10 +42,12 @@ import {
   advanceWeatherForDay,
   weatherEffects,
   rebuildThermalField,
-  TURNS_PER_DAY
+  TURNS_PER_DAY,
+  WEATHER_LABELS,
+  SEASON_LABELS,
+  weatherChronicleSeverity
 } from '../services/EnvironmentService';
 import { markTileDirty } from '../core/tileDeltas';
-import { eventSystem, type GameEvent } from '../core/Events';
 import { simLog } from '../core/logSink';
 
 const AVAILABLE_BUILDINGS = buildingsData as unknown as import('../core/types').Building[];
@@ -71,26 +73,6 @@ const DETERIORATION_INTERVAL_TICKS = 600;
  *  to ~1/6 the cost. Claim/advance/complete still run every tick (independent of this pass), so
  *  claimed/in-progress jobs are untouched between rebuilds. */
 const JOB_GENERATION_INTERVAL_TICKS = 6;
-
-/** Map a GameEvent's narrative severity/category to the chronicle log severity (opportunities and
- *  discoveries read as good news; disasters escalate). */
-function eventLogSeverity(event: GameEvent): 'info' | 'success' | 'warning' | 'error' | 'critical' {
-  if (event.category === 'opportunity' || event.category === 'discovery') return 'success';
-  switch (event.severity) {
-    case 'trivial':
-    case 'minor':
-      return 'info';
-    case 'moderate':
-    case 'major':
-      return 'warning';
-    case 'critical':
-      return 'error';
-    case 'catastrophic':
-      return 'critical';
-    default:
-      return 'info';
-  }
-}
 
 export class GameEngineImpl implements GameEngine {
   private gameState: GameState | null = null;
@@ -216,26 +198,9 @@ export class GameEngineImpl implements GameEngine {
       t('reapDead', () => {
         this.gameState = reapDeadPawns(this.gameState!);
       });
-      // Events phase (ADR-006 content, R11): roll a random world event on its own cadence, apply
-      // its consequences, and surface it in the chronicle via the same logActivity path combat uses.
-      t('events', () => {
-        const rolled = eventSystem.generateEvent(this.gameState!);
-        if (!rolled) return;
-        this.gameState = eventSystem.processEventConsequences(
-          rolled.consequences,
-          this.gameState!
-        ) as GameState;
-        const outcomes = rolled.consequences.map((c) => c.description).join(' ');
-        simLog.logActivity({
-          turn: this.gameState!.turn,
-          type: 'event',
-          actor: 'system',
-          action: rolled.event.id,
-          target: rolled.event.title,
-          result: outcomes ? `${rolled.event.description} — ${outcomes}` : rolled.event.description,
-          severity: eventLogSeverity(rolled.event)
-        });
-      });
+      // (World-event phase removed — the previous random-event system was half-built spam, not
+      // gameplay. A proper event system is planned later; see core/Events.ts. The Chronicle now
+      // records combat, weather, and season changes only.)
       this.debugLogPawns();
 
       this.lastTurnProcessed = this.gameState.turn;
@@ -284,7 +249,22 @@ export class GameEngineImpl implements GameEngine {
     if (!gs) return;
 
     const { season, seasonDay } = seasonForTurn(gs.turn);
-    if (season !== gs.season) gs.season = season;
+    if (season !== gs.season) {
+      const prevSeason = gs.season;
+      gs.season = season;
+      // Chronicle the turn of the season — skip the initial undefined→first-season assignment on a
+      // fresh world (turn 0), which isn't a transition the player witnessed.
+      if (prevSeason) {
+        simLog.logActivity({
+          turn: gs.turn,
+          type: 'season',
+          actor: 'system',
+          action: `${SEASON_LABELS[season]} has arrived`,
+          result: `(was ${SEASON_LABELS[prevSeason]})`,
+          severity: 'info'
+        });
+      }
+    }
     if (seasonDay !== gs.seasonDay) gs.seasonDay = seasonDay;
 
     // Recompute temperatures once when the season the map was baked for changes (or on first
@@ -297,7 +277,19 @@ export class GameEngineImpl implements GameEngine {
     // Weather: one Markov step per in-game day at midnight.
     const ticksPerDay = TURNS_PER_DAY * TICKS_PER_SECOND;
     if (gs.turn % ticksPerDay === 0 && gs.weather) {
+      const prevType = gs.weather.type;
       gs.weather = advanceWeatherForDay(gs.weather, season, rng);
+      // Chronicle only an actual change of weather type (a spell merely running down isn't news).
+      if (gs.weather.type !== prevType) {
+        simLog.logActivity({
+          turn: gs.turn,
+          type: 'weather',
+          actor: 'system',
+          action: WEATHER_LABELS[gs.weather.type],
+          result: `(was ${WEATHER_LABELS[prevType]})`,
+          severity: weatherChronicleSeverity(gs.weather.type)
+        });
+      }
     }
 
     // HUD readout: average effective map temperature = baked tile average + live weather delta.

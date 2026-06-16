@@ -7,16 +7,7 @@
  * channel. Imported for its side effect from `stores/gameState.ts`, so it runs before any tick.
  */
 import { setSimLogSink, type SimLogSink } from '$lib/game/core/logSink';
-import {
-  logActivity,
-  logDiag,
-  logHuntStart,
-  logFlee,
-  logEntityStateChange,
-  logEntityDeath,
-  logCombatSwing,
-  logCombatKill
-} from './Log';
+import { logActivity, logDiag, logEntityDeath, logCombatSwing, logCombatKill } from './Log';
 import { combatFeedback } from './combatFeedback';
 import { attackLunges } from './attackLunges';
 
@@ -32,10 +23,7 @@ export const realSimLogSink: SimLogSink = {
   logCombatKill,
   pushCombatText: (req) => combatFeedback.push(req),
   pushAttackLunge: (req) => attackLunges.push(req),
-  logHuntStart,
-  logFlee,
-  logEntityDeath,
-  logEntityStateChange
+  logEntityDeath
 };
 
 setSimLogSink(realSimLogSink);
