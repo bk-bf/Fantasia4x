@@ -6,16 +6,10 @@ import { uiState } from '$lib/stores/uiState.js';
 import { gameState } from '$lib/stores/gameState.js';
 import { resourceObjectService } from '$lib/game/services/ResourceObjectService.js';
 import { type CreatureDefinition } from '$lib/game/core/Creatures.js';
-import type {
-  Pawn,
-  Mob,
-  LimbState,
-  LimbId,
-  EntityCondition,
-  Injury
-} from '$lib/game/core/types.js';
+import type { Pawn, Mob, LimbId, EntityCondition, Injury } from '$lib/game/core/types.js';
 import { getConditionLabel } from '$lib/game/core/needs.js';
 import { pawnService } from '$lib/game/services/PawnService.js';
+import { pawnStatService } from '$lib/game/services/PawnStatService.js';
 import type {
   SelectedEntityModel,
   EntityBar,
@@ -24,7 +18,8 @@ import type {
   HealthModel,
   HealthLimb,
   HealthPart,
-  HealthWound
+  HealthWound,
+  CombatStat
 } from '$lib/components/UI/SelectedEntityCard.svelte';
 
 /** Short limb labels for the HEALTH view. */
@@ -56,19 +51,41 @@ export function moveSpeedStat(entity: Pawn | Mob): EntityStat {
 }
 
 /**
+ * Compact combat-readiness rows for the HEALTH panel. hit/dodge are stat multipliers (×, baseline
+ * 1.0); crit is a probability shown as a percent. All three are evaluated against the live body, so
+ * injuries (lower manipulation/moving/consciousness) visibly drop them next to the wounds causing it.
+ */
+function combatStats(entity: Pawn | Mob): CombatStat[] {
+  const hit = pawnStatService.evaluateStat('hit_chance', entity);
+  const dodge = pawnStatService.evaluateStat('dodge', entity);
+  const crit = pawnStatService.evaluateStat('crit_chance', entity);
+  return [
+    {
+      label: 'Hit',
+      value: `×${hit.toFixed(2)}`,
+      title: 'attack accuracy multiplier (× sight × manipulation)'
+    },
+    {
+      label: 'Dodge',
+      value: `×${dodge.toFixed(2)}`,
+      title: 'evasion multiplier (× moving; lower when injured or burdened)'
+    },
+    {
+      label: 'Crit',
+      value: `${Math.round(crit * 100)}%`,
+      title: 'base critical-hit chance (weapons add their own on top)'
+    }
+  ];
+}
+
+/**
  * NT-U1: whole-body health snapshot for the HEALTH pop-up. Reports blood + pain for the whole body,
  * then every damaged limb (missing / hurt / bleeding) — with its bleed rate and each injured
  * sub-part's individual HP (e.g. skull 41/45) and wounds — plus any active conditions. Shared by
  * pawns and mobs (both carry the 6-limb model with nested parts, a blood pool and conditions). An
  * undamaged body renders as "no damage".
  */
-export function buildHealthModel(entity: {
-  limbs?: LimbState[];
-  bloodVolume?: number;
-  maxBloodVolume?: number;
-  pain?: number;
-  conditions?: EntityCondition[];
-}): HealthModel {
+export function buildHealthModel(entity: Pawn | Mob): HealthModel {
   const limbs: HealthLimb[] = [];
   for (const limb of entity.limbs ?? []) {
     // Only sub-parts that are actually hurt (missing, below max HP, or carrying a wound).
@@ -108,6 +125,7 @@ export function buildHealthModel(entity: {
         ? { current: entity.bloodVolume, max: entity.maxBloodVolume }
         : undefined,
     pain: entity.pain,
+    combat: combatStats(entity),
     limbs,
     conditions
   };

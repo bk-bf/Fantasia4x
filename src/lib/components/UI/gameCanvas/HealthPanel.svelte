@@ -45,6 +45,16 @@
         <span style="color:{painColor(health.pain ?? 0)}">{Math.round(health.pain ?? 0)}%</span>
       </div>
     {/if}
+    {#if health.combat && health.combat.length > 0}
+      <div class="hp-combat">
+        {#each health.combat as c (c.label)}
+          <div class="hp-row" title={c.title}>
+            <span class="hp-k">{c.label}</span>
+            <span class="hp-combat-v">{c.value}</span>
+          </div>
+        {/each}
+      </div>
+    {/if}
     {#if health.conditions.length > 0}
       <div class="hp-row hp-warn">
         <span class="hp-k">Status</span>
@@ -137,6 +147,15 @@
   .hp-ok {
     color: #68a030;
     padding-left: 2px;
+  }
+  /* Combat readiness sits with blood/pain in the summary block, set off by a faint rule. */
+  .hp-combat {
+    margin-top: 3px;
+    padding-top: 2px;
+    border-top: 1px solid rgba(122, 94, 40, 0.4);
+  }
+  .hp-combat-v {
+    color: #d0a850;
   }
   .hp-limb {
     margin-top: 3px;

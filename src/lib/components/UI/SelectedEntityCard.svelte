@@ -82,12 +82,21 @@
     parts: HealthPart[]; // injured sub-parts only
   }
 
+  /** A compact combat-stat row (label + formatted value) shown beside blood/pain. */
+  export interface CombatStat {
+    label: string;
+    value: string;
+    title?: string;
+  }
+
   /** Whole-body health snapshot rendered by the HEALTH popup. */
   export interface HealthModel {
     /** Whole-body blood pool. */
     blood?: { current: number; max: number };
     /** Whole-body pain 0–100. */
     pain?: number;
+    /** Combat-readiness stats (hit/dodge/crit), reflecting current injuries. Pawns/mobs only. */
+    combat?: CombatStat[];
     /** Damaged limbs only — intact, full-health, non-bleeding limbs are omitted. */
     limbs: HealthLimb[];
     /** Active conditions not tied to one limb (malnutrition, infection…). */
