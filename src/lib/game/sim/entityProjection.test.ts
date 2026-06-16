@@ -130,4 +130,12 @@ describe('projectSentEntity (§D entity projection — drop worker-only sub-fiel
     expect(o.jobQueue).toBeUndefined();
     expect(o.state).toEqual({ mood: 60, health: 90 }); // mood/health kept; booleans dropped
   });
+
+  it("leaves a mob's STRING state intact (not turned into a char-indexed object)", () => {
+    // Regression: omit() over a string `for…in`s its char-indices → {0:'C',…} → "[object Object]"
+    // in the mob HUD. Mobs carry a MobState string, not the pawn's object state.
+    const o: Record<string, unknown> = { id: 'm1', state: 'Collapsed' };
+    projectSentEntity(o);
+    expect(o.state).toBe('Collapsed');
+  });
 });

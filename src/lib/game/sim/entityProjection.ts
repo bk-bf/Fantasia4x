@@ -87,6 +87,10 @@ export function projectSentEntity(o: Record<string, unknown>): void {
   truncateSentPath(o);
   if (o.needs) o.needs = omit(o.needs as Record<string, unknown>, NEEDS_DROP);
   if (o.activeJob) o.activeJob = omit(o.activeJob as Record<string, unknown>, ACTIVE_JOB_DROP);
-  if (o.state) o.state = omit(o.state as Record<string, unknown>, STATE_DROP);
+  // Only pawns carry an OBJECT `state` ({ mood, health, isWorking… }); a mob's `state` is a plain
+  // MobState string. Running `omit` (a `for…in`) over a string would iterate its char-indices and
+  // hand back `{0:'C',1:'o',…}` — surfacing as "[object Object]" in the mob's HUD state tag.
+  if (o.state && typeof o.state === 'object')
+    o.state = omit(o.state as Record<string, unknown>, STATE_DROP);
   for (const k of ENTITY_DROP) if (k in o) delete o[k];
 }
