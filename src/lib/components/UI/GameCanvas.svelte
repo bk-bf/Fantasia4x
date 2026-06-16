@@ -33,7 +33,7 @@
     environmentService,
     computeTileLightLevel,
     tileTemperature,
-    tileWetness,
+    tileWetnessAt,
     computeThermalAt,
     weatherWindStrength
   } from '$lib/game/services/EnvironmentService.js';
@@ -2837,7 +2837,13 @@
       $currentWeather,
       tileThermal
     )}
-    {@const tileWet = tileWetness(hoverTile.terrainType, $currentWeather, tileThermal)}
+    {@const tileWet = tileWetnessAt(
+      hoverTile.x,
+      hoverTile.y,
+      hoverTile.terrainType,
+      $currentWeather,
+      tileThermal
+    )}
     {@const windy =
       Math.max(weatherWindStrength($currentWeather?.type), $currentWeather?.wind ?? 0) >= 0.4}
     <div class="tile-hud">
