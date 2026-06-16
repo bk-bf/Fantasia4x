@@ -15,61 +15,61 @@
 //   fed, content pawn recovers far faster than a starving, miserable one.
 {
   "healing": {
-    "baseHealPerTick": 0.02,
-    "sleepingMultiplier": 2.5,
-    "wellFedHunger": 40,
-    "wellFedMultiplier": 1.4,
-    "goodMood": 65,
-    "goodMoodMultiplier": 1.3
+    "baseHealPerTick"   :  0.02,
+    "sleepingMultiplier":  2.5 ,
+    "wellFedHunger"     : 40   ,
+    "wellFedMultiplier" :  1.4 ,
+    "goodMood"          : 65   ,
+    "goodMoodMultiplier":  1.3
   },
   // Caretaking & infection. A tend rolls quality 0–1 (medical_skill × mood × variance);
   // quality scales how much faster treated wounds heal, how long the tend lasts, and how
   // strongly it suppresses infection. Untended open wounds build infection pressure each
   // tick; the immune system (CON) pushes back. Infection is the `infection` condition.
-  "care": {
-    "tendIntervalTicks": 240,
-    "treatmentDurationTicks": 1800,
-    "treatedHealMultiplier": 2.5,
-    "minTendQuality": 0.05,
+  "care"   : {
+    "tendIntervalTicks"       :   240     ,
+    "treatmentDurationTicks"  :  1800     ,
+    "treatedHealMultiplier"   :     2.5   ,
+    "minTendQuality"          :     0.05  ,
     // Wounds must be ~2.5 in-game days old (18000 ticks/day) before they can fester — a fresh
     // injury never infects on the spot; infection is a days-later threat of neglect.
-    "infectionIncubationTicks": 45000,
-    "infectionRiskPerWound": 0.0004,
-    "infectionRiskMaxPerTick": 0.0008,
-    "infectionRecoveryPerTick": 0.0015,
-    "immuneResistBase": 0.35
+    "infectionIncubationTicks": 45000     ,  // TODO: Cosider replacing this with a full health immunity stat system
+    "infectionRiskPerWound"   :     0.0004,
+    "infectionRiskMaxPerTick" :     0.0008,
+    "infectionRecoveryPerTick":     0.0015,
+    "immuneResistBase"        :     0.35
   },
-  "wounds": [
+  "wounds" : [
     {
-      "id": "cut",
-      "name": "Cut",
+      "id"            : "cut",
+      "name"          : "Cut",
       "fromDamageType": "cutting",
-      "bleedMod": 1.0,
-      "painPerDamage": 0.6,
+      "bleedMod"      : 1.0,
+      "painPerDamage" : 0.6,
       "healDifficulty": 1.0
     },
     {
-      "id": "puncture",
-      "name": "Puncture",
+      "id"            : "puncture",
+      "name"          : "Puncture",
       "fromDamageType": "piercing",
-      "bleedMod": 0.5,
-      "painPerDamage": 0.7,
+      "bleedMod"      : 0.5,
+      "painPerDamage" : 0.7,
       "healDifficulty": 1.2
     },
     {
-      "id": "crush",
-      "name": "Crush",
+      "id"            : "crush",
+      "name"          : "Crush",
       "fromDamageType": "blunt",
-      "bleedMod": 0.0,
-      "painPerDamage": 0.9,
+      "bleedMod"      : 0.0,
+      "painPerDamage" : 0.9,
       "healDifficulty": 1.4
     },
     {
-      "id": "burn",
-      "name": "Burn",
+      "id"            : "burn",
+      "name"          : "Burn",
       "fromDamageType": "fire",
-      "bleedMod": 0.0,
-      "painPerDamage": 1.1,
+      "bleedMod"      : 0.0,
+      "painPerDamage" : 1.1,
       "healDifficulty": 2.0
     }
   ]
