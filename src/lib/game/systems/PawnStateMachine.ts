@@ -32,7 +32,8 @@ import { pawnStatService } from '../services/PawnStatService';
 import { simLog } from '../core/logSink';
 import { gameLogger } from '../dev/gameLogger';
 import { perTick } from '../core/time';
-import { driveNeedConditions } from '../core/needs';
+import { driveNeedConditions, driveTemperatureConditions, comfortRange } from '../core/needs';
+import { weatherEffects, coldExposure, heatExposure } from '../services/EnvironmentService';
 import { calcBloodRegenRate } from '../entities/Pawns';
 import { rng } from '../core/rng';
 import { pawnById } from '../core/pawnIndex';
@@ -274,9 +275,50 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
       lethalCause as Parameters<typeof killPawn>[1],
       {
         ...gameState,
-        pawns: gameState.pawns.map((p) => (p.id === pawn.id ? { ...p, conditions, bloodVolume } : p))
+        pawns: gameState.pawns.map((p) =>
+          p.id === pawn.id ? { ...p, conditions, bloodVolume } : p
+        )
       }
     );
+  }
+
+  // ── Temperature exposure → hypothermia / heat stroke (SEASONS_WEATHER) ──────
+  // Effective temperature at the pawn = cached tile temperature + live weather delta (same value the
+  // need-rate path uses). Cold/heat exposure past the comfort range drives the conditions, reduced by
+  // the pawn's cold_resistance / fire_resistance stats — which were previously defined but unused.
+  {
+    const pos = pawn.position;
+    const tile = pos ? gameState.worldMap[pos.y]?.[pos.x] : undefined;
+    const hasTempCondition = conditions.some(
+      (c) => c.id === 'hypothermia' || c.id === 'heat_stroke'
+    );
+    if (tile || hasTempCondition) {
+      const temp = (tile?.temperature ?? 15) + weatherEffects(gameState.weather).tempDelta;
+      const comfort = comfortRange(pawn.racialTraits);
+      let cold = coldExposure(temp, comfort.min);
+      let heat = heatExposure(temp, comfort.max);
+      if (cold > 0) {
+        const r = pawnStatService.evaluateStat('cold_resistance', pawn);
+        cold *= 1 - Math.min(0.9, Math.max(0, r));
+      }
+      if (heat > 0) {
+        const r = pawnStatService.evaluateStat('fire_resistance', pawn);
+        heat *= 1 - Math.min(0.9, Math.max(0, r));
+      }
+      const lethalTemp = driveTemperatureConditions(conditions, cold, heat);
+      if (lethalTemp) {
+        return killPawn(
+          { ...gameState.pawns.find((p) => p.id === pawn.id)!, conditions, bloodVolume },
+          lethalTemp as Parameters<typeof killPawn>[1],
+          {
+            ...gameState,
+            pawns: gameState.pawns.map((p) =>
+              p.id === pawn.id ? { ...p, conditions, bloodVolume } : p
+            )
+          }
+        );
+      }
+    }
   }
 
   // ── Blood Loss ────────────────────────────────────────────────────────────

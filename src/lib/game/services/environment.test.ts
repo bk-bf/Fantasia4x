@@ -15,8 +15,12 @@ import {
   weatherEffects,
   getEnvironmentTint,
   tileTemperature,
-  tileWetness
+  tileWetness,
+  coldExposure,
+  heatExposure
 } from './EnvironmentService';
+import { comfortRange, driveTemperatureConditions } from '../core/needs';
+import type { EntityCondition } from '../core/types';
 
 const TICKS_PER_DAY = TURNS_PER_DAY * TICKS_PER_SECOND;
 const TICKS_PER_SEASON = TICKS_PER_DAY * DAYS_PER_SEASON;
@@ -232,6 +236,56 @@ describe('EnvironmentService — per-tile display fields (HUD)', () => {
 
   it('wetter biomes read wetter than drier ones', () => {
     expect(tileWetness('river', undefined)).toBeGreaterThan(tileWetness('mountain', undefined));
+  });
+});
+
+describe('EnvironmentService — weather mood', () => {
+  it('clear skies lift mood, storms depress it', () => {
+    expect(weatherEffects({ type: 'clear', intensity: 0, turnsRemaining: 0 }).mood).toBeGreaterThan(
+      0
+    );
+    expect(weatherEffects({ type: 'blizzard', intensity: 1, turnsRemaining: 0 }).mood).toBeLessThan(
+      0
+    );
+    expect(weatherEffects({ type: 'blizzard', intensity: 1, turnsRemaining: 0 }).mood).toBeLessThan(
+      weatherEffects({ type: 'rain', intensity: 0.5, turnsRemaining: 0 }).mood
+    );
+  });
+});
+
+describe('Temperature comfort + exposure (hypothermia / heat stroke)', () => {
+  it('comfortRange shifts with traits', () => {
+    expect(comfortRange(undefined)).toEqual({ min: 5, max: 30 });
+    expect(comfortRange([{ name: 'Insulated' }])).toEqual({ min: -5, max: 25 });
+    expect(comfortRange([{ name: 'Cold Blooded' }])).toEqual({ min: 15, max: 40 });
+  });
+
+  it('exposure is 0 inside the comfort band and grows outside it', () => {
+    expect(coldExposure(20, 5)).toBe(0);
+    expect(heatExposure(20, 30)).toBe(0);
+    expect(coldExposure(-5, 5)).toBeGreaterThan(0); // 10°C below comfort
+    expect(heatExposure(45, 30)).toBeGreaterThan(0); // 15°C above comfort
+    expect(coldExposure(-100, 5)).toBe(100); // clamped
+    expect(heatExposure(200, 30)).toBe(100); // clamped
+  });
+
+  it('driveTemperatureConditions onsets hypothermia under sustained cold and recovers in warmth', () => {
+    const conditions: EntityCondition[] = [];
+    // High cold exposure for many ticks → hypothermia appears and climbs.
+    for (let i = 0; i < 500; i++) driveTemperatureConditions(conditions, 100, 0);
+    const cold = conditions.find((c) => c.id === 'hypothermia');
+    expect(cold).toBeDefined();
+    expect(cold!.severity).toBeGreaterThan(0);
+    // No exposure → it recovers back toward 0 and clears.
+    for (let i = 0; i < 5000; i++) driveTemperatureConditions(conditions, 0, 0);
+    expect(conditions.find((c) => c.id === 'hypothermia')).toBeUndefined();
+  });
+
+  it('heat exposure drives heat_stroke, not hypothermia', () => {
+    const conditions: EntityCondition[] = [];
+    for (let i = 0; i < 500; i++) driveTemperatureConditions(conditions, 0, 100);
+    expect(conditions.find((c) => c.id === 'heat_stroke')).toBeDefined();
+    expect(conditions.find((c) => c.id === 'hypothermia')).toBeUndefined();
   });
 });
 

@@ -18,7 +18,7 @@ import { TICKS_PER_SECOND, SECONDS_PER_TICK, perTick } from '../core/time';
 import { stepBody } from '../systems/MovementSystem';
 import { occupancyService } from './OccupancyService';
 import statusEffectsData from '../database/status-effects.jsonc';
-import { getConditionCurrentStage, conditionNeedMultipliers } from '../core/needs';
+import { getConditionCurrentStage, conditionNeedMultipliers, comfortRange } from '../core/needs';
 import { getAmbientLight, weatherEffects } from './EnvironmentService';
 // Gated console shim — see core/log.ts. Silences per-tick log/debug/warn unless
 // gameDebug(true); console.error still surfaces.
@@ -108,10 +108,8 @@ const AUTO_WASH_HYGIENE = 75;
 const WASH_HYGIENE_RELIEF = 70;
 
 // SEASONS_WEATHER Subsystem 3 — temperature/night need effects (PERF-3: scalar constants, read in
-// the per-tick loop; no allocation). Comfort range in conceptual °C; per-degree multipliers match
-// the spec (cold→fatigue, heat→hunger).
-const COMFORT_MIN_DEFAULT = 5;
-const COMFORT_MAX_DEFAULT = 30;
+// the per-tick loop; no allocation). Per-degree multipliers match the spec (cold→fatigue, heat→hunger).
+// Comfort range lives in core/needs.ts (comfortRange), shared with the hypothermia/heat-stroke driver.
 const DEFAULT_COMFORT_TEMP = 15; // fallback when a pawn has no tile (unspawned)
 const COLD_FATIGUE_PER_DEG = 0.03;
 const HEAT_HUNGER_PER_DEG = 0.02;
@@ -202,7 +200,12 @@ export class PawnServiceImpl implements PawnService {
   updatePawnState(pawnId: string, gameState: GameState): GameState {
     const pawn = pawnById(gameState.pawns, pawnId);
     if (!pawn) return gameState;
-    pawn.state = this.calculateStateUpdate(pawn.state, pawn.needs, gameState.turn);
+    pawn.state = this.calculateStateUpdate(
+      pawn.state,
+      pawn.needs,
+      gameState.turn,
+      weatherEffects(gameState.weather).mood
+    );
     return gameState;
   }
 
@@ -408,22 +411,10 @@ export class PawnServiceImpl implements PawnService {
       const pos = pawn.position;
       const tile = pos ? worldMap[pos.y]?.[pos.x] : undefined;
       const temp = (tile?.temperature ?? DEFAULT_COMFORT_TEMP) + weatherTemp;
-      // Comfort range (default ± trait shifts) — indexed loop, no iterator/closure allocation.
-      let comfortMin = COMFORT_MIN_DEFAULT;
-      let comfortMax = COMFORT_MAX_DEFAULT;
-      const traits = pawn.racialTraits;
-      for (let ti = 0; ti < traits.length; ti++) {
-        const name = traits[ti].name;
-        if (name === 'Cold Blooded') {
-          comfortMin = 15;
-          comfortMax = 40;
-        } else if (name === 'Insulated') {
-          comfortMin = -5;
-          comfortMax = 25;
-        }
-      }
-      const cold = comfortMin - temp; // >0 when too cold → tires faster
-      const heat = temp - comfortMax; // >0 when too hot → hungers faster
+      // Comfort range (default ± trait shifts) — shared with the hypothermia/heat-stroke driver.
+      const comfort = comfortRange(pawn.racialTraits);
+      const cold = comfort.min - temp; // >0 when too cold → tires faster
+      const heat = temp - comfort.max; // >0 when too hot → hungers faster
       const fatigueMul =
         weatherFx.fatigueMul * nightFatigueMul * (cold > 0 ? 1 + cold * COLD_FATIGUE_PER_DEG : 1);
       const hungerMul = weatherFx.hungerMul * (heat > 0 ? 1 + heat * HEAT_HUNGER_PER_DEG : 1);
@@ -555,9 +546,15 @@ export class PawnServiceImpl implements PawnService {
   private calculateStateUpdate(
     state: PawnState,
     needs: EntityNeeds,
-    currentTurn: number
+    currentTurn: number,
+    weatherMood = 0
   ): PawnState {
     const newState = { ...state };
+
+    // SEASONS_WEATHER: weather sets a gentle mood drift (pleasant skies lift, storms depress).
+    if (weatherMood !== 0) {
+      newState.mood = Math.max(0, Math.min(100, newState.mood + perTick(weatherMood)));
+    }
 
     // Critical needs override current activities.
     // NOTE: isEating=true here is safe for sleeping pawns because handleSleeping in

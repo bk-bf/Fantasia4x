@@ -160,8 +160,12 @@ export interface ConditionStage {
  * condition it belongs to. Rates are PER-SECOND magnitudes (the sim applies `perTick()` at use).
  */
 export interface ConditionDriver {
-  /** The `Pawn.needs` field that feeds this condition (e.g. 'hunger', 'thirst'). */
-  need: string;
+  /** The `Pawn.needs` field that feeds this condition (e.g. 'hunger', 'thirst'). Omitted for
+   *  environment-driven conditions, which use {@link source} instead and are driven separately. */
+  need?: string;
+  /** Environment driver (SEASONS_WEATHER): 'cold' → hypothermia, 'heat' → heat stroke. Driven by
+   *  temperature exposure (not a `Pawn.needs` field), so these are skipped by the need loop. */
+  source?: 'cold' | 'heat';
   /** At/above this need value (0–100) the condition accrues. */
   onset: number;
   /** Below this need value the condition recovers. */
@@ -194,7 +198,9 @@ export interface DeadPawnRecord {
     | 'critical_limb'
     | 'combat'
     | 'exhaustion_cascade'
-    | 'infection';
+    | 'infection'
+    | 'hypothermia'
+    | 'heat_stroke';
   turn: number;
   stats: { strength: number; dexterity: number; intelligence: number };
 }

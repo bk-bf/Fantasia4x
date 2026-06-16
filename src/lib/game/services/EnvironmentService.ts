@@ -280,21 +280,37 @@ export interface WeatherEffects {
   hungerMul: number;
   /** Multiplier on movement cost (gameplay hook; not yet consumed by movement). */
   moveCostMul: number;
+  /** Per-second mood drift while this weather holds (+ pleasant, − miserable). */
+  mood: number;
 }
 
 const WEATHER_EFFECTS: Record<WeatherType, WeatherEffects> = {
-  clear: { tempDelta: 0, fatigueMul: 1.0, hungerMul: 1.0, moveCostMul: 1.0 },
-  rain: { tempDelta: -3, fatigueMul: 1.1, hungerMul: 1.0, moveCostMul: 1.1 },
-  heavy_rain: { tempDelta: -5, fatigueMul: 1.25, hungerMul: 1.1, moveCostMul: 1.3 },
-  snow: { tempDelta: -10, fatigueMul: 1.3, hungerMul: 1.2, moveCostMul: 1.5 },
-  blizzard: { tempDelta: -20, fatigueMul: 1.8, hungerMul: 1.4, moveCostMul: 2.5 },
-  heat_wave: { tempDelta: 15, fatigueMul: 1.2, hungerMul: 1.4, moveCostMul: 1.1 },
-  fog: { tempDelta: 0, fatigueMul: 1.0, hungerMul: 1.0, moveCostMul: 1.0 }
+  clear: { tempDelta: 0, fatigueMul: 1.0, hungerMul: 1.0, moveCostMul: 1.0, mood: 0.5 },
+  rain: { tempDelta: -3, fatigueMul: 1.1, hungerMul: 1.0, moveCostMul: 1.1, mood: -0.5 },
+  heavy_rain: { tempDelta: -5, fatigueMul: 1.25, hungerMul: 1.1, moveCostMul: 1.3, mood: -1.0 },
+  snow: { tempDelta: -10, fatigueMul: 1.3, hungerMul: 1.2, moveCostMul: 1.5, mood: -0.8 },
+  blizzard: { tempDelta: -20, fatigueMul: 1.8, hungerMul: 1.4, moveCostMul: 2.5, mood: -2.0 },
+  heat_wave: { tempDelta: 15, fatigueMul: 1.2, hungerMul: 1.4, moveCostMul: 1.1, mood: -1.0 },
+  fog: { tempDelta: 0, fatigueMul: 1.0, hungerMul: 1.0, moveCostMul: 1.0, mood: -0.3 }
 };
 
 /** Gameplay effects for a weather state (defaults to `clear` when undefined). */
 export function weatherEffects(weather?: WeatherState): WeatherEffects {
   return WEATHER_EFFECTS[weather?.type ?? 'clear'];
+}
+
+// Temperature exposure → a 0–100 "need-like" value driving hypothermia / heat stroke conditions.
+// 1°C past the comfort band ≈ EXPOSURE_PER_DEGREE points, so ~20°C past comfort saturates at 100.
+const EXPOSURE_PER_DEGREE = 5;
+
+/** Cold exposure 0–100: how far `temp` (°C) is below `comfortMin`, scaled. 0 when within comfort. */
+export function coldExposure(temp: number, comfortMin: number): number {
+  return Math.max(0, Math.min(100, (comfortMin - temp) * EXPOSURE_PER_DEGREE));
+}
+
+/** Heat exposure 0–100: how far `temp` (°C) is above `comfortMax`, scaled. 0 when within comfort. */
+export function heatExposure(temp: number, comfortMax: number): number {
+  return Math.max(0, Math.min(100, (temp - comfortMax) * EXPOSURE_PER_DEGREE));
 }
 
 // Per-biome baseline wetness (0–100%) lives in terrains.jsonc (`baseMoisture`). Weather adds/removes

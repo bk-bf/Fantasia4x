@@ -75,12 +75,66 @@ export function driveNeedConditions(
 ): string | null {
   for (const def of CONDITIONS_DB) {
     if (!def.driver) continue;
-    const needVal = needVals?.[def.driver.need] ?? 0;
+    if (def.driver.source) continue; // environment-driven (temperature) — see driveTemperatureConditions
+    const needVal = needVals?.[def.driver.need!] ?? 0;
     applyConditionDriver(conditions, def, needVal);
     const current = conditions.find((c) => c.id === def.id);
     if (current && current.severity >= def.lethalSeverity) return def.id;
   }
   return null;
+}
+
+/**
+ * Drive the temperature-exposure conditions (SEASONS_WEATHER): hypothermia ← cold exposure,
+ * heat stroke ← heat exposure. `coldExposure`/`heatExposure` are 0–100 "need-like" values (degrees
+ * past the pawn's comfort range, after resistance) computed by the caller — see
+ * EnvironmentService.coldExposure/heatExposure + PawnStateMachine.tickConditions. Mutates
+ * `conditions` in place; returns the first lethal condition id this tick, else `null`. Two scalar
+ * params (no per-pawn object allocation), reusing the same `applyConditionDriver` onset/recovery model.
+ */
+export function driveTemperatureConditions(
+  conditions: EntityCondition[],
+  coldExposure: number,
+  heatExposure: number
+): string | null {
+  for (const def of CONDITIONS_DB) {
+    const src = def.driver?.source;
+    if (!src) continue;
+    applyConditionDriver(conditions, def, src === 'heat' ? heatExposure : coldExposure);
+    const current = conditions.find((c) => c.id === def.id);
+    if (current && current.severity >= def.lethalSeverity) return def.id;
+  }
+  return null;
+}
+
+// ── Temperature comfort (SEASONS_WEATHER Subsystem 3) ──────────────────────────
+/** Default comfortable temperature band in conceptual °C; traits widen/shift it. */
+export const COMFORT_MIN_DEFAULT = 5;
+export const COMFORT_MAX_DEFAULT = 30;
+
+/**
+ * A pawn/entity's comfortable temperature range, shifted by racial traits. Outside this band cold
+ * tires and heat starves (PawnService need-rate) and drives hypothermia / heat stroke.
+ */
+export function comfortRange(traits: ReadonlyArray<{ name: string }> | undefined): {
+  min: number;
+  max: number;
+} {
+  let min = COMFORT_MIN_DEFAULT;
+  let max = COMFORT_MAX_DEFAULT;
+  if (traits) {
+    for (let i = 0; i < traits.length; i++) {
+      const name = traits[i].name;
+      if (name === 'Cold Blooded') {
+        min = 15;
+        max = 40;
+      } else if (name === 'Insulated') {
+        min = -5;
+        max = 25;
+      }
+    }
+  }
+  return { min, max };
 }
 
 /**
