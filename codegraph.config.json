@@ -45,6 +45,7 @@
     { "adr": "ADR-018", "checkable": false, "reason": "Perception via target persistence + push alerting — runtime AI behaviour and per-entity state, not a call edge." },
     { "adr": "ADR-019", "checkable": false, "reason": "Line of sight via blocksSight occluder + WASM raycast — data-schema + runtime; the 'callsites never import spatial-core directly' part is already covered by the ADR-008 forbidden-callee-module rule." },
     { "adr": "ADR-020", "checkable": false, "reason": "Sim scaling strategy (algorithms->WASM->worker, defer multicore) — a sequencing/runtime decision, not a structural invariant." },
-    { "adr": "ADR-021", "checkable": false, "reason": "Sim/render decouple (soft-body pathfinding, terrain cache, MAX_STEPS cap, sim->Worker) — runtime/perf behaviour, not a call-edge invariant." }
+    { "adr": "ADR-021", "checkable": false, "reason": "Sim/render decouple (soft-body pathfinding, terrain cache, MAX_STEPS cap, sim->Worker) — runtime/perf behaviour, not a call-edge invariant." },
+    { "adr": "ADR-022", "checkable": false, "reason": "Throttled job-board reconcile (6-tick cadence, not event-driven) — a runtime cadence/perf decision, not a structural call-edge invariant." }
   ]
 }
