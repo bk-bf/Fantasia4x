@@ -174,6 +174,11 @@
       >{import.meta.env.VITE_DEV_BRANCH.replace(/^feat\//, '')}</span
     >
   {/if}
+  {#if import.meta.env.VITE_DEV_COMMIT && (import.meta.env.VITE_DEBUG_MODE === 'true' || import.meta.env.VITE_PROFILER === 'true')}
+    <span class="bi commit-label" title="build commit: {import.meta.env.VITE_DEV_COMMIT}"
+      >@{import.meta.env.VITE_DEV_COMMIT}</span
+    >
+  {/if}
   <span class="bi date" title="{gameDate.monthName} {gameDate.day}, Year {gameDate.year}"
     >{gameDate.dayStr}/{gameDate.monthStr}/{gameDate.yearStr} {gameDate.hourStr}:00</span
   >
@@ -266,6 +271,13 @@
     font-size: 9px;
     letter-spacing: 0.04em;
     opacity: 0.85;
+  }
+  .bi.commit-label {
+    color: var(--text-muted);
+    font-size: 9px;
+    letter-spacing: 0.04em;
+    opacity: 0.7;
+    font-family: var(--font-mono, monospace);
   }
   .bi.date {
     color: var(--text-dim);
