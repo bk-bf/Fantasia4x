@@ -1,105 +1,157 @@
 <script lang="ts">
   import { currentStockpile, currentRace, gameState } from '$lib/stores/gameState';
+  import { collapsedResourceCategories } from '$lib/stores/uiPrefs';
   import { itemService } from '$lib/game/services/ItemService';
-  import { onDestroy } from 'svelte';
 
-  let stockpile: { id: string; name: string; amount: number; color?: string; emoji?: string }[] =
-    [];
-  let race: any = null;
-  let turnValue = 0;
-  let itemChanges: Record<string, number> = {};
-  let carcassIntactness: Record<string, number> = {};
+  type StockItem = { id: string; name: string; amount: number; color?: string };
 
-  const unsubStockpile = currentStockpile.subscribe((newStockpile) => {
-    newStockpile.forEach((ni) => {
-      const old = stockpile.find((i) => i.id === ni.id);
-      if (old && old.amount !== ni.amount) {
-        const delta = ni.amount - old.amount;
+  // ── Live state ────────────────────────────────────────────────────────────
+  const stockpile = $derived($currentStockpile as StockItem[]);
+  const race = $derived($currentRace);
+  // POPULATION reflects the live pawn count (race.population is stale).
+  const population = $derived($gameState?.pawns?.length ?? 0);
+  const carcassIntactness = $derived($gameState?.carcassIntactness ?? {});
+
+  // ── Recent +/- deltas (fade out after 2.5s) ────────────────────────────────
+  let itemChanges = $state<Record<string, number>>({});
+  const prevAmounts: Record<string, number> = {};
+  const timers: Record<string, ReturnType<typeof setTimeout>> = {};
+
+  $effect(() => {
+    for (const ni of stockpile) {
+      const old = prevAmounts[ni.id];
+      if (old !== undefined && old !== ni.amount) {
+        const delta = ni.amount - old;
         if (delta !== 0) {
-          itemChanges[ni.id] = delta;
-          setTimeout(() => {
-            itemChanges[ni.id] = 0;
+          itemChanges = { ...itemChanges, [ni.id]: delta };
+          clearTimeout(timers[ni.id]);
+          timers[ni.id] = setTimeout(() => {
+            const { [ni.id]: _, ...rest } = itemChanges;
+            itemChanges = rest;
           }, 2500);
         }
       }
-    });
-    stockpile = newStockpile;
+      prevAmounts[ni.id] = ni.amount;
+    }
   });
 
-  const unsubRace = currentRace.subscribe((v) => (race = v));
-  const unsubState = gameState.subscribe((s) => {
-    turnValue = s.turn;
-    carcassIntactness = s.carcassIntactness ?? {};
+  // ── Group resources by their raw items.jsonc `category` (data-driven) ───────
+  const groups = $derived.by(() => {
+    const map = new Map<string, StockItem[]>();
+    for (const item of stockpile) {
+      const cat = itemService.getItemById(item.id)?.category ?? 'other';
+      (map.get(cat) ?? map.set(cat, []).get(cat)!).push(item);
+    }
+    return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   });
+
+  function catLabel(cat: string): string {
+    return cat.replace(/_/g, ' ').toUpperCase();
+  }
+
+  // ── Collapse state: persisted set of COLLAPSED categories (default: expanded) ─
+  const collapsed = $derived(new Set($collapsedResourceCategories));
+  const allExpanded = $derived(groups.length > 0 && groups.every(([cat]) => !collapsed.has(cat)));
+
+  function toggleCat(cat: string) {
+    collapsedResourceCategories.toggle(cat);
+  }
+
+  function toggleAll() {
+    if (allExpanded) collapsedResourceCategories.setAll(groups.map(([cat]) => cat));
+    else collapsedResourceCategories.clear();
+  }
+
+  // ── Scrollbar: only visible while actively scrolling ────────────────────────
+  let scrolling = $state(false);
+  let scrollTimer: ReturnType<typeof setTimeout>;
+  function onScroll() {
+    scrolling = true;
+    clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(() => (scrolling = false), 700);
+  }
 
   function intactnessColor(pct: number): string {
     if (pct >= 70) return 'var(--pos)';
     if (pct >= 35) return '#e8b830';
     return 'var(--neg)';
   }
-
-  onDestroy(() => {
-    unsubStockpile();
-    unsubRace();
-    unsubState();
-  });
 </script>
 
 <aside class="sidebar">
   {#if race}
-    <!-- Kingdom section -->
-    <div class="section-hdr">| KINGDOM</div>
-    <div class="rows">
-      <div class="row">
-        <span class="lbl">SETTLEMENT</span>
-        <span class="val hi">{race.name}</span>
+    <!-- Sticky header block: Kingdom + Resources header never scroll away. -->
+    <div class="sticky-top">
+      <div class="section-hdr">| KINGDOM</div>
+      <div class="rows">
+        <div class="row">
+          <span class="lbl">SETTLEMENT</span>
+          <span class="val hi">{race.name}</span>
+        </div>
+        <div class="row">
+          <span class="lbl">POPULATION</span>
+          <span class="val">{population}</span>
+        </div>
       </div>
-      <div class="row">
-        <span class="lbl">POPULATION</span>
-        <span class="val">{race.population}</span>
-      </div>
-      <div class="row">
-        <span class="lbl">TURN</span>
-        <span class="val">{turnValue}</span>
+
+      <div class="section-hdr top-sep res-hdr">
+        <span>| RESOURCES</span>
+        <button
+          class="toggle-all"
+          title={allExpanded ? 'Collapse all categories' : 'Expand all categories'}
+          aria-label={allExpanded ? 'Collapse all categories' : 'Expand all categories'}
+          disabled={groups.length === 0}
+          onclick={toggleAll}>{allExpanded ? '⊟' : '⊞'}</button
+        >
       </div>
     </div>
 
-    <!-- Resources section -->
-    <div class="section-hdr top-sep">| RESOURCES</div>
-    <div class="res-list">
-      {#if stockpile.length === 0}
+    <!-- Scrolling category list -->
+    <div class="res-area" class:scrolling onscroll={onScroll}>
+      {#if groups.length === 0}
         <div class="empty">no resources gathered</div>
       {:else}
-        {#each stockpile as item}
-          <div class="res-row">
-            <span class="res-name">{item.name}</span>
-            <span class="dots"></span>
-            <span class="res-amt" style="color:{item.color || 'var(--text)'}">
-              {Math.floor(item.amount)}
-            </span>
-            {#if itemChanges[item.id]}
-              <span
-                class="delta"
-                class:pos={itemChanges[item.id] > 0}
-                class:neg={itemChanges[item.id] < 0}
-              >
-                {itemChanges[item.id] > 0 ? '+' : ''}{Math.floor(itemChanges[item.id])}
-              </span>
-            {/if}
+        {#each groups as [cat, items] (cat)}
+          {@const open = !collapsed.has(cat)}
+          <div class="cat-hdr" class:open onclick={() => toggleCat(cat)} role="button" tabindex="0"
+            onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleCat(cat)}>
+            <span class="caret">{open ? '▾' : '▸'}</span>
+            <span class="cat-name">{catLabel(cat)}</span>
+            <span class="cat-count">{items.length}</span>
           </div>
-          {#if itemService.getItemById(item.id)?.isCarcass}
-            {@const pct = Math.round(carcassIntactness[item.id] ?? 100)}
-            <div class="carcass-row">
-              <span class="intactness-lbl" style="color:{intactnessColor(pct)}">INTACT</span>
-              <span class="intactness-bar">
-                {#each Array(10) as _, i}
-                  <span style="color:{intactnessColor(pct)}"
-                    >{i < Math.round(pct / 10) ? '█' : '░'}</span
+          {#if open}
+            {#each items as item (item.id)}
+              <div class="res-row">
+                {#if itemChanges[item.id]}
+                  <span
+                    class="delta"
+                    class:pos={itemChanges[item.id] > 0}
+                    class:neg={itemChanges[item.id] < 0}
                   >
-                {/each}
-              </span>
-              <span class="intactness-pct" style="color:{intactnessColor(pct)}">{pct}%</span>
-            </div>
+                    {itemChanges[item.id] > 0 ? '+' : ''}{Math.floor(itemChanges[item.id])}
+                  </span>
+                {/if}
+                <span class="res-name">{item.name}</span>
+                <span class="dots"></span>
+                <span class="res-amt" style="color:{item.color || 'var(--text)'}">
+                  {Math.floor(item.amount)}
+                </span>
+              </div>
+              {#if itemService.getItemById(item.id)?.isCarcass}
+                {@const pct = Math.round(carcassIntactness[item.id] ?? 100)}
+                <div class="carcass-row">
+                  <span class="intactness-lbl" style="color:{intactnessColor(pct)}">INTACT</span>
+                  <span class="intactness-bar">
+                    {#each Array(10) as _, i}
+                      <span style="color:{intactnessColor(pct)}"
+                        >{i < Math.round(pct / 10) ? '█' : '░'}</span
+                      >
+                    {/each}
+                  </span>
+                  <span class="intactness-pct" style="color:{intactnessColor(pct)}">{pct}%</span>
+                </div>
+              {/if}
+            {/each}
           {/if}
         {/each}
       {/if}
@@ -117,9 +169,14 @@
     font-family: 'Courier New', monospace;
     font-size: 11px;
     color: var(--text);
-    overflow-y: auto;
     display: flex;
     flex-direction: column;
+    overflow: hidden; /* the inner .res-area scrolls, not the whole sidebar */
+  }
+
+  /* Kingdom + Resources header stay pinned at the top. */
+  .sticky-top {
+    flex-shrink: 0;
   }
 
   .section-hdr {
@@ -129,7 +186,38 @@
     letter-spacing: 0.06em;
     border-bottom: 1px solid var(--border);
     background: var(--bg);
-    flex-shrink: 0;
+  }
+
+  .res-hdr {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+  }
+
+  .toggle-all {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 15px;
+    height: 15px;
+    padding: 0;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-dim);
+    font-family: inherit;
+    font-size: 11px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .toggle-all:hover:not(:disabled) {
+    color: var(--accent-hi);
+    border-color: var(--accent-hi);
+    background: var(--bg-hover);
+  }
+  .toggle-all:disabled {
+    opacity: 0.3;
+    cursor: default;
   }
 
   .top-sep {
@@ -170,16 +258,77 @@
     color: var(--accent-hi);
   }
 
-  /* Resources */
-  .res-list {
-    padding: 2px 0;
+  /* Scrolling resource area */
+  .res-area {
     flex: 1;
+    overflow-y: auto;
+    padding: 2px 0;
+    /* Reserve the scrollbar gutter at all times so content width never changes when the
+       (auto-hiding) scrollbar appears/disappears — otherwise right-aligned amounts jump. */
+    scrollbar-gutter: stable;
+    /* Firefox: scrollbar hidden until scrolling. */
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+    transition: scrollbar-color 0.3s ease;
+  }
+  .res-area.scrolling {
+    scrollbar-color: var(--border) transparent;
+  }
+  /* WebKit: thumb only paints while scrolling. */
+  .res-area::-webkit-scrollbar {
+    width: 8px;
+  }
+  .res-area::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 4px;
+  }
+  .res-area.scrolling::-webkit-scrollbar-thumb {
+    background: var(--border);
+  }
+
+  /* Category block header (collapsible — nesting mirrors the chronicle panel). */
+  .cat-hdr {
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+    padding: 3px 8px;
+    cursor: pointer;
+    color: var(--text-dim);
+    border-bottom: 1px solid var(--border);
+    user-select: none;
+  }
+  .cat-hdr:hover {
+    background: var(--bg-hover);
+  }
+  .cat-hdr.open {
+    color: var(--accent-hi);
+  }
+  .caret {
+    flex-shrink: 0;
+    width: 8px;
+    color: var(--text-muted);
+  }
+  .cat-hdr.open .caret {
+    color: var(--accent-hi);
+  }
+  .cat-name {
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .cat-count {
+    margin-left: auto;
+    color: var(--text-muted);
+    font-size: 9px;
+    flex-shrink: 0;
   }
 
   .res-row {
+    position: relative; /* anchors the absolutely-positioned delta gutter */
     display: flex;
     align-items: baseline;
-    padding: 1px 8px;
+    padding: 1px 8px 1px 24px; /* left gutter holds the delta + nesting indent */
     gap: 3px;
   }
   .res-row:hover {
@@ -210,9 +359,15 @@
     font-size: 10px;
   }
 
+  /* Delta floats in the left gutter so it never reflows the name/amount. */
   .delta {
+    position: absolute;
+    left: 3px;
+    top: 1px;
     font-size: 9px;
-    flex-shrink: 0;
+    font-weight: bold;
+    white-space: nowrap;
+    pointer-events: none;
     animation: fadeout 2.5s ease-out forwards;
   }
   .delta.pos {
@@ -244,7 +399,7 @@
   .carcass-row {
     display: flex;
     align-items: center;
-    padding: 0 8px 2px 16px;
+    padding: 0 8px 2px 24px;
     gap: 4px;
     font-size: 9px;
     font-family: 'Courier New', monospace;
