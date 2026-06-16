@@ -894,13 +894,45 @@ class JobServiceImpl {
         ? itemService.clampPickupQuantity(pawn, drop.resourceId, drop.quantity, gs)
         : drop.quantity;
       if (taken <= 0) return gs;
-      const remainder = drop.quantity - taken;
-      const newDropped =
-        remainder > 0
-          ? (gs.droppedItems ?? []).map((d) =>
-              d.id === drop.id ? { ...d, quantity: remainder } : d
-            )
-          : (gs.droppedItems ?? []).filter((d) => d.id !== drop.id);
+
+      // N-4: top up the remaining carry budget with OTHER loose, unreserved drops of the same
+      // resource on the same tile, so a harvested tile of many small drops clears in one trip
+      // instead of one item per round-trip. (Opportunistic en-route pickup is a future extension.)
+      let total = taken;
+      const removeIds = new Set<string>();
+      const reduceQty = new Map<string, number>();
+      const targetRem = drop.quantity - taken;
+      if (targetRem > 0) reduceQty.set(drop.id, targetRem);
+      else removeIds.add(drop.id);
+
+      if (pawn) {
+        const def = itemService.getItemById(drop.resourceId);
+        const perW = def?.weightKg ?? 0.1;
+        const perV = def?.volumeL ?? 0.2;
+        const budget = itemService.getCarryBudget(pawn, gs);
+        const load = itemService.getCurrentCarryLoad(pawn, gs);
+        let remW = budget.maxWeightKg - load.weightKg - taken * perW;
+        let remV = budget.maxVolumeL - load.volumeL - taken * perV;
+        for (const cand of gs.droppedItems ?? []) {
+          if (remW <= 0 || remV <= 0) break;
+          if (cand.id === drop.id || cand.stored || cand.reservedFor) continue;
+          if (cand.resourceId !== drop.resourceId || cand.x !== drop.x || cand.y !== drop.y) continue;
+          const byW = perW > 0 ? Math.floor(remW / perW) : cand.quantity;
+          const byV = perV > 0 ? Math.floor(remV / perV) : cand.quantity;
+          const take = Math.min(cand.quantity, byW, byV);
+          if (take <= 0) continue;
+          total += take;
+          remW -= take * perW;
+          remV -= take * perV;
+          const rem = cand.quantity - take;
+          if (rem > 0) reduceQty.set(cand.id, rem);
+          else removeIds.add(cand.id);
+        }
+      }
+
+      const newDropped = (gs.droppedItems ?? [])
+        .filter((d) => !removeIds.has(d.id))
+        .map((d) => (reduceQty.has(d.id) ? { ...d, quantity: reduceQty.get(d.id)! } : d));
       const newPawns = gs.pawns.map((p) => {
         if (p.id !== pawnId) return p;
         const inv = p.inventory ?? {
@@ -912,7 +944,7 @@ class JobServiceImpl {
           maxVolumeL: 20
         };
         const newItems = { ...inv.items };
-        newItems[drop.resourceId] = (newItems[drop.resourceId] ?? 0) + taken;
+        newItems[drop.resourceId] = (newItems[drop.resourceId] ?? 0) + total;
         return { ...p, inventory: { ...inv, items: newItems } };
       });
       return { ...gs, droppedItems: newDropped, pawns: newPawns };

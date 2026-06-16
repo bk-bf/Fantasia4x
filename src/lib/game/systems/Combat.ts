@@ -22,6 +22,7 @@ import statusEffectsData from '../database/status-effects.jsonc';
 import type { StatusEffectDef } from '../core/types';
 import { simLog, type CombatTextKind } from '../core/logSink';
 import { rng } from '../core/rng';
+import { perTick } from '../core/time';
 // P-4: the body-part anatomy table + selection helpers moved to core/BodyParts. Re-export the two
 // symbols external code imported from Combat (PawnHealth, EntityService, Pawns) so they're unchanged.
 import { PART_DEF_MAP, rollBodyPart, createDefaultBodyParts } from '../core/BodyParts';
@@ -764,7 +765,10 @@ class CombatServiceImpl implements CombatService {
 
     let stamina = postDrain;
     if (postDrain < max) {
-      const rate = pawnStatService.evaluateStat('stamina_recovery_rate', e);
+      // `stamina_recovery_rate` is a PER-SECOND value (like every other rate — mob flee drain,
+      // needs via perTick); scale it to this tick. Previously the raw per-second number was added
+      // every tick (~60×), so stamina refilled in ~1s and `winded` never bit (N-2).
+      const rate = perTick(pawnStatService.evaluateStat('stamina_recovery_rate', e));
       const eff = winded || !this.isFighting(e) ? rate : rate * COMBAT_REGEN_FRACTION;
       stamina = Math.min(max, Math.max(0, postDrain) + eff);
     }

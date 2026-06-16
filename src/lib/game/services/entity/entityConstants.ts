@@ -26,10 +26,9 @@ export const FLEE_HEALTH_FRACTION = 0.2;
 // ── Stamina (flee/exhaust pool) ────────────────────────────────────────────────
 /** Stamina drained per second while an entity is actively fleeing. */
 export const FLEE_STAMINA_DRAIN_PER_SECOND = 2.5;
-/** Stamina regenerated per second while exhausted (standing still). */
-export const EXHAUST_STAMINA_REGEN_PER_SECOND = 3.0;
-/** Stamina threshold to exit Exhausted and resume normal behaviour. */
-export const EXHAUST_EXIT_STAMINA = 30;
+// N-3: regen + the exit-from-Exhausted decision now live in the SHARED winded system
+// (Combat.tickStaminaAndWinded regenerates stamina and clears `winded` at full); the mob FSM's
+// Exhausted case just stands still until no longer winded. The bespoke EXHAUST_* constants are gone.
 
 // ── Hunger / fatigue tunables ──────────────────────────────────────────────────
 /** Hunger accrual per second for an omnivore at neutral condition. Halved so the whole

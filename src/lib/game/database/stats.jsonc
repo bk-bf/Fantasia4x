@@ -104,8 +104,8 @@
         "id"         : "stamina_recovery_rate",
         "category"   : "physical",
         "primaryStat": "constitution",
-        "formula"    : "(0.1 + (CON − 10) × 0.01) × blood_filtration × blood_pumping",
-        "description": "stamina recovered per turn while resting/winded (× blood_filtration × blood_pumping; injury slows it)"
+        "formula"    : "(2 + (CON − 10) × 0.15) × blood_filtration × blood_pumping",
+        "description": "stamina recovered PER SECOND while resting/winded (scaled to ticks by Combat.tickStaminaAndWinded; × blood_filtration × blood_pumping; injury slows it). ~2/s at CON 10 → a ~50 pool refills in ~25s; in-fight regen (×0.2) trails the ~2/s attack drain so long fights wind you (N-2 tuning dial)"
     },
     {
         "id"         : "blood_volume",
