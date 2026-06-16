@@ -179,6 +179,8 @@ Full architecture, design decisions, philosophy, and task tracking live in `.doc
 
 Do **not** speculatively update docs on every prompt. Update docs only when explicitly asked to sync.
 
+**Always close out the tracker after finishing a tracked task.** When a task came from a tracking file — a checkbox/row/table in `CODEBASE-REVIEW-*.md`, a `ROADMAP.md` entry, a spec's acceptance criteria, etc. — update that file as part of completing the work (tick the box / mark the row done with the date + a one-line outcome, e.g. `check`/`test` gate). This is **not** speculative doc-sync: closing the record for the thing you just did is part of the task. Leaving a finished item showing "open/Partial" is the failure mode to avoid.
+
 **Backlink integrity**: every doc file carries a `> **Related:**` line immediately after its `#` heading. When adding or moving a doc, update nav lines in files that reference it.
 
 **Trackable items use task-list checkboxes**: in any doc/spec, render lists of things-to-do — acceptance criteria, implementation phases/steps, open questions, validation gates, TODOs — as GitHub task-list checkboxes (`- [ ]` open, `- [x]` done), matching existing specs (e.g. DISTRIBUTION's acceptance criteria). They must be tickable for progress tracking. Reserve plain bullets for explanation/context and tables for non-trackable comparison matrices (trade-off grids, dependency matrices). ROADMAP's `[x]`/`[ ]` status cells are the same convention. Check for this before finishing a doc edit.

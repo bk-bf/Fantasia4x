@@ -5,7 +5,7 @@
 Living tracker of **open** architecture/defect items. The resolved half is in the
 [resolved archive](.tasks/archive/CODEBASE-REVIEW-RESOLVED-2026-06-13.md): R1–R12, the PawnStateMachine
 decomposition, and the **2026-06-14/16 second wave** — P-2/P-2b/P-3/P-4b, the done P-4 god-file splits
-(`types.ts`/`Combat.ts`/`EntityService.ts`/`JobService` fuel rules), INV-1/LIGHT-1/FLEE-1/MOVE-1, the full
+(`types.ts`/`Combat.ts`/`EntityService.ts`/`JobService` fuel rules + per-job-type handler split), INV-1/LIGHT-1/FLEE-1/MOVE-1, the full
 Tier 0 (NT-1..4 + PT-1 + NT-U1..4), and **P-5 + the D9/D-perf tick-cost items, resolved by the long
 [ENGINE-PERFORMANCE](.tasks/open/ENGINE-PERFORMANCE.md) arc** (de-immutabling, worker decouple + slim snapshot,
 pawn-id index, regrowth tile-deltas → the heavy stress case 30 → **200+ TPS @4×**).
@@ -55,11 +55,11 @@ are pre-existing survival-loop tuning.
 ## Structural debt (deferred by design — no big-bang)
 
 - [ ] **P-4 · God files (remaining).** Done rows (`types.ts`, `Combat.ts` data table, `EntityService`, JobService
-  fuel rules) are in the archive. Still open:
+  fuel rules **and the per-job-type handler split**) are in the archive. Still open:
 
   | File | LOC | Decomposition status |
   | ---- | --- | -------------------- |
-  | `services/JobService.ts` | ~1,261 | **Partial.** Refuel rules extracted (`services/fuelRules.ts`). **Remaining:** the per-job-type handler split into `services/jobs/<type>.ts` (ADR-017 registry) — the bigger structural piece, still open. |
+  | ~~`services/JobService.ts`~~ | ~~~1,261~~ | **Done 2026-06-16.** Refuel rules were already in `services/fuelRules.ts`; the per-job-type handlers are now split into `services/jobs/<type>.ts` (ADR-017 registry) — one module per type (`harvest`/`haul`/`construct`/`deconstruct`/`fetch`/`craft`/`refuel`) exporting `generate`/`complete`, plus shared `jobs/staging.ts` (reserve-and-fetch helpers) and `jobs/filters.ts` (zone/designation predicates). JobService (1,337 → 386 LOC) now owns only the registry binding, public API, dispatch, claim-gating, and the job→work-category map. Public surface unchanged; `check` 0 · `test` 251. |
   | `components/UI/GameCanvas.svelte` | ~2,720 | **Paused (user decision):** the render/input core refactor is deferred until the overlay/ambient path is feature-complete (weather + fog overlays — [SEASONS_WEATHER](.tasks/open/SEASONS_WEATHER.md) — are scoped expansions of the existing path, so refactoring the core now would be redone). Five clean leaf modules already extracted (`gameCanvas/spriteSheets.ts`, `hudSpriteIcon.ts`, `BuildingFuelPanel.svelte`, `selectionCard.ts`, `overlay.ts`). **The clean leaf extractions are exhausted** — what remains is the render/input core (the per-frame painters → a stateful `OverlayRenderer`; camera → `camera.svelte.ts`; pointer/keyboard drag state-machines), NOT a mechanical move. |
 
   Plus ~21 components over the 200-line cap (ActivityLogOverlay 525, CraftingScreen/BuildingMenu 484, ResearchScreen
@@ -118,7 +118,15 @@ are pre-existing survival-loop tuning.
 
 Spec archived at [PHYSICAL-PRODUCTION](.tasks/archive/PHYSICAL-PRODUCTION-2026-06-13.md).
 
-- [ ] Tool-gating step 2 (per-pawn inventory + `minTier` + craft-tool gating) — same as ADR-009 step 2 above.
-- [ ] Per-stack craft quality on instances (R8) — deferred until equipment quality matters.
-- [ ] Butchery multi-yield (content).
-- [ ] Passive-furnace flagging for forge/hearth.
+- [~] Tool-gating step 2 — **harvest half done** (ADR-009 step 2: per-pawn carried tool + `minTier` + auto-grab,
+  2026-06-16). **Remaining:** *craft*-tool gating is still colony-level (`currentToolLevel >= recipe.toolTierRequired`
+  in `ItemService`), not "the crafting pawn carries the tool." Make crafting require/consume a per-pawn tool the same
+  way harvesting now does, if/when craft tools should be physical too.
+- [ ] Per-stack craft quality on instances (R8) — still deferred, **precondition unmet**: crafting computes a `quality`
+  work-axis but never stamps it on the output instance, and nothing reads item `.quality` (Combat/PawnEquipment/
+  PawnStatService don't consume it). Do this when equipment quality starts affecting combat/equip.
+- [ ] Butchery multi-yield — **pure content/data**: butcher recipes are single-output (`rabbit_carcass→rabbit_meat:1`);
+  the recipe `outputs` field already supports multiple, so add hide/bone/fat to the `outputs` map. No code.
+- [ ] Passive-furnace flag for forge/hearth — **intentionally deferred (content-gated)**: the mechanism exists
+  (`recipe.passive` / `PASSIVE_STATIONS` covers bloomery/kilns/charcoal-pit); `stone_forge`/`hearth` stay pawn-worked
+  until their cooking/shaping recipes are split, then flip the flag. No engine work.
