@@ -286,6 +286,7 @@ export interface Pawn {
     craftQueueId?: string; // craft / fetch: the order id (used to tag staged inputs)
     progress: number; // 0–1 fractional (local display)
     timeRequired: number;
+    startedTurn?: number; // turn the work job was claimed; used for debug job-duration logging
     targetState?: string; // for MovingToNeed, which state to enter on arrival
     turnsInState?: number; // for Eating/Sleeping duration tracking
     hungerToRecover?: number; // total hunger to restore over the eating duration

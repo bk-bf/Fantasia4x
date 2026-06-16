@@ -196,6 +196,7 @@ export function handleIdle(pawn: Pawn, gameState: GameState): GameState {
     craftQueueId: job.craftQueueId,
     progress: 0,
     timeRequired: job.workRequired,
+    startedTurn: gameState.turn,
     toolFetch
   };
 
@@ -453,10 +454,24 @@ export function handleWorking(pawn: Pawn, gameState: GameState): GameState {
     const updatedPawn = afterAdvance.pawns.find((p) => p.id === pawn.id);
     const invItems = updatedPawn?.inventory?.items ?? {};
     const hasInventory = Object.values(invItems).some((v) => v > 0);
+    // What was completed: prefer the most specific target (harvested resource / built building /
+    // craft order / hauled item), falling back to the job type. Duration is turns since claim
+    // (includes travel + work for this attempt).
+    const what =
+      activeJob.resourceId ??
+      activeJob.buildingId ??
+      activeJob.craftQueueId ??
+      activeJob.droppedItemId ??
+      activeJob.type;
+    const tookTurns =
+      activeJob.startedTurn != null ? afterAdvance.turn - activeJob.startedTurn : undefined;
+    const pos = pawn.position ? `(${pawn.position.x},${pawn.position.y})` : '(?,?)';
     gameLogger.log(
       afterAdvance.turn,
       'JOB-EVT',
-      `${pawn.name} job-complete hasInventory:${hasInventory} inv:${JSON.stringify(invItems)}`
+      `${pawn.name} completed ${activeJob.type}:${what} at ${pos}` +
+        (tookTurns != null ? ` took=${tookTurns} turns` : '') +
+        (hasInventory ? ` carrying:${JSON.stringify(invItems)}` : '')
     );
 
     if (hasInventory) {

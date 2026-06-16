@@ -33,6 +33,14 @@ import {
   repathStuckMover
 } from '../pawnHelpers';
 
+/** Debug helpers — compact need-event formatting (only built when LOG_VERBOSE; logs use thunks). */
+function fmtMeal(meal: { id: string; units: number }[]): string {
+  return meal.map((m) => `${m.id}x${m.units}`).join(',') || '∅';
+}
+function fmtPos(pawn: Pawn): string {
+  return pawn.position ? `(${pawn.position.x},${pawn.position.y})` : '(?,?)';
+}
+
 /** §D: drink at the reached target over DRINK_TURNS (not instant — mirrors eating). Consumes one
  *  unit of stored water on the first sip; the thirst relief is spread evenly across the duration. */
 export function handleDrinking(pawn: Pawn, gameState: GameState): GameState {
@@ -46,6 +54,19 @@ export function handleDrinking(pawn: Pawn, gameState: GameState): GameState {
   }
   const reliefPerTurn = DRINK_NEED_RELIEF / duration;
   const done = turnsInState >= duration;
+  if (turnsInState === 1)
+    gameLogger.log(
+      state.turn,
+      'NEED-CHECK',
+      () => `${pawn.name} starts drinking thirst=${(pawn.needs?.thirst ?? 0).toFixed(1)} at ${fmtPos(pawn)}`
+    );
+  if (done)
+    gameLogger.log(
+      state.turn,
+      'NEED-CHECK',
+      () =>
+        `${pawn.name} finished drinking thirst=${Math.max(0, (pawn.needs?.thirst ?? 0) - reliefPerTurn).toFixed(1)} at ${fmtPos(pawn)}`
+    );
   return mutatePawn(state, pawn.id, (p) => {
     // Gate the pawn at the water tile for the whole task — clear any residual path so a pawn that
     // entered DRINKING while still moving can't walk off before it finishes.
@@ -75,6 +96,19 @@ export function handleWashing(pawn: Pawn, gameState: GameState): GameState {
   const duration = WASH_TURNS;
   const reliefPerTurn = WASH_NEED_RELIEF / duration;
   const done = turnsInState >= duration;
+  if (turnsInState === 1)
+    gameLogger.log(
+      gameState.turn,
+      'NEED-CHECK',
+      () => `${pawn.name} starts washing hygiene=${(pawn.needs?.hygiene ?? 0).toFixed(1)} at ${fmtPos(pawn)}`
+    );
+  if (done)
+    gameLogger.log(
+      gameState.turn,
+      'NEED-CHECK',
+      () =>
+        `${pawn.name} finished washing hygiene=${Math.max(0, (pawn.needs?.hygiene ?? 0) - reliefPerTurn).toFixed(1)} at ${fmtPos(pawn)}`
+    );
   return mutatePawn(gameState, pawn.id, (p) => {
     // Gate the pawn at the water tile for the whole task (see handleDrinking).
     p.path = [];
@@ -129,6 +163,12 @@ export function handleHungry(pawn: Pawn, gameState: GameState): GameState {
   // Eat in place: consume all selected food now, then sit and eat for EATING_TURNS_GROUND turns.
   // Clear any residual movement so the pawn is gated at this tile, not still walking while it eats.
   const { state: afterMeal, hungerRecovered } = consumeMeal(meal, gameState);
+  gameLogger.log(
+    gameState.turn,
+    'NEED-CHECK',
+    () =>
+      `${pawn.name} starts eating [${fmtMeal(meal)}] hunger=${(pawn.needs?.hunger ?? 0).toFixed(1)} at ${fmtPos(pawn)} (in place)`
+  );
   return mutatePawn(afterMeal, pawn.id, (p) => {
     p.path = [];
     p.isMoving = false;
@@ -184,6 +224,12 @@ export function handleTired(pawn: Pawn, gameState: GameState): GameState {
   // the UI and handleSleeping can identify which bed the pawn is using.
   const sleepTargetX = restBuilding?.x ?? pawn.position?.x ?? 0;
   const sleepTargetY = restBuilding?.y ?? pawn.position?.y ?? 0;
+  gameLogger.log(
+    gameState.turn,
+    'NEED-CHECK',
+    () =>
+      `${pawn.name} goes to sleep at ${fmtPos(pawn)} fatigue=${(pawn.needs?.fatigue ?? 0).toFixed(1)} (${restBuilding ? 'on bed' : 'on ground'})`
+  );
   return mutatePawn(gameState, pawn.id, (p) => {
     p.currentState = PAWN_STATE.SLEEPING;
     p.path = [];
@@ -216,6 +262,12 @@ export function handleMovingToNeed(pawn: Pawn, gameState: GameState): GameState 
       const meal = selectFoodForMeal(pawn, gameState);
       if (meal.length === 0) return goIdle(pawn, gameState);
       const { state: afterMeal, hungerRecovered } = consumeMeal(meal, gameState);
+      gameLogger.log(
+        gameState.turn,
+        'NEED-CHECK',
+        () =>
+          `${pawn.name} starts eating [${fmtMeal(meal)}] hunger=${(pawn.needs?.hunger ?? 0).toFixed(1)} at ${fmtPos(pawn)} (at campfire)`
+      );
       return mutatePawn(afterMeal, pawn.id, (p) => {
         p.currentState = PAWN_STATE.EATING;
         p.hasReachedDestination = false;
@@ -226,6 +278,14 @@ export function handleMovingToNeed(pawn: Pawn, gameState: GameState): GameState 
           hungerToRecover: hungerRecovered
         };
       });
+    }
+    if (targetState === PAWN_STATE.SLEEPING) {
+      gameLogger.log(
+        gameState.turn,
+        'NEED-CHECK',
+        () =>
+          `${pawn.name} goes to sleep at ${fmtPos(pawn)} fatigue=${(pawn.needs?.fatigue ?? 0).toFixed(1)} (at bed)`
+      );
     }
     return mutatePawn(gameState, pawn.id, (p) => {
       p.currentState = targetState;
@@ -264,6 +324,12 @@ export function handleEating(pawn: Pawn, gameState: GameState): GameState {
   };
 
   if (turnsInState >= eatDuration) {
+    gameLogger.log(
+      gameState.turn,
+      'NEED-CHECK',
+      () =>
+        `${pawn.name} finished eating ate=${turnsInState} turns hunger=${newHunger.toFixed(1)} at ${fmtPos(pawn)}`
+    );
     return mutatePawn(gameState, pawn.id, (p) => {
       p.path = [];
       p.isMoving = false;
@@ -331,6 +397,12 @@ export function handleSleeping(pawn: Pawn, gameState: GameState): GameState {
   };
 
   if (shouldWake) {
+    gameLogger.log(
+      gameState.turn,
+      'NEED-CHECK',
+      () =>
+        `${pawn.name} wakes up slept=${turnsInState} turns at ${fmtPos(pawn)} fatigue=${newFatigue.toFixed(1)} hunger=${(pawn.needs?.hunger ?? 0).toFixed(1)}`
+    );
     return mutatePawn(gameState, pawn.id, (p) => {
       p.needs = updatedNeeds;
       p.state = updatedState;
