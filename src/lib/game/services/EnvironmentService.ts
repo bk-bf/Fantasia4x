@@ -11,6 +11,7 @@
  */
 
 import { TICKS_PER_SECOND } from '../core/time';
+import { markTileDirty } from '../core/tileDeltas';
 import { buildingLight } from './LightingService';
 import { buildingService } from './BuildingService';
 import { BIOMES } from '../core/Terrains';
@@ -682,6 +683,65 @@ export function tileTemperature(
 ): number {
   const base = biomeBaseTemp(terrainType) + (season ? SEASONS[season].tempOffset : 0);
   return effectiveTemperature(base, weatherEffects(weather).tempDelta, thermal);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Snow cover (SEASONS_WEATHER) — per-tile accumulation, mutated IN PLACE.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Wetter tiles collect snow faster: dry ≈ 0.4×, soaked ≈ 1.8×. */
+function snowWetFactor(wetness: number): number {
+  return 0.4 + (Math.max(0, Math.min(100, wetness)) / 100) * 1.4;
+}
+/** Snow gained per in-game hour on a wet-neutral tile while it's snowing and below freezing. */
+const SNOW_ACCRUAL_PER_HOUR = 3.5;
+/** Snow lost per in-game hour once the tile is at/above 0°C. */
+const SNOW_MELT_PER_HOUR = 4;
+/** Only re-bake/ship a tile when its snow crosses one of these buckets (keeps deltas bounded). */
+const SNOW_RENDER_STEP = 5;
+
+/** True for the weather overlays that actually deposit snow. */
+function isSnowingWeather(weather?: WeatherState): boolean {
+  const o = weatherOverlayKind(weather?.type);
+  return o === 'snow' || o === 'snowdust';
+}
+
+/**
+ * Accumulate / melt snow across the whole map IN PLACE (PERF-1: mutate `tile.snow`, never rebuild
+ * the worldMap). Snow builds only while it's snowing AND the tile's effective temperature is below
+ * 0°C, scaled by the tile's wetness; it melts once at/above freezing. Call on a SLOW cadence (hourly)
+ * — only tiles whose snow crosses a render bucket are marked dirty, so the worldMapDelta stays small.
+ * Uses the baked `tile.temperature` (biome+season) + the live weather delta — all cheap scalars.
+ */
+export function accumulateSnow(
+  worldMap: WorldTile[][],
+  weather: WeatherState | undefined,
+  hours = 1
+): void {
+  const snowing = isSnowingWeather(weather);
+  const wDelta = weatherEffects(weather).tempDelta;
+  for (const row of worldMap) {
+    for (const tile of row) {
+      const prev = tile.snow ?? 0;
+      const temp = (tile.temperature ?? 0) + wDelta;
+      let next = prev;
+      if (snowing && temp < 0) {
+        next = Math.min(
+          100,
+          prev +
+            SNOW_ACCRUAL_PER_HOUR * snowWetFactor(tileWetness(tile.terrainType, weather)) * hours
+        );
+      } else if (temp >= 0 && prev > 0) {
+        next = Math.max(0, prev - SNOW_MELT_PER_HOUR * hours);
+      }
+      if (next === prev) continue;
+      tile.snow = next;
+      // Only ship a delta when the change is visible (crossed a render bucket) — bounds churn.
+      if (Math.floor(next / SNOW_RENDER_STEP) !== Math.floor(prev / SNOW_RENDER_STEP)) {
+        markTileDirty(tile.y, tile.x, tile);
+      }
+    }
+  }
 }
 
 /** Ambient-wind starting/fallback value when a WeatherState carries none (back-compat). */

@@ -18,6 +18,10 @@ export interface WorldTile {
   resources: Record<string, number>;
   /** resourceId → turn number when that resource finishes regrowing (persistent resources). */
   resourceCooldowns?: Record<string, number>;
+  /** Accumulated snow cover 0–100 (SEASONS_WEATHER). Builds while it's snowing AND temp < 0°C,
+   *  faster on wetter tiles; melts above 0°C. Whitens the terrain/resource layer in buildGameGrid.
+   *  Ships to the renderer in the slim worldMapDelta (it is a visible per-tile field). */
+  snow?: number;
   territoryOwner: string;
   // A* scratch fields (reset before each pathfind, not persisted)
   gCost?: number;

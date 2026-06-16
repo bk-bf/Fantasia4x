@@ -42,6 +42,7 @@ import {
   advanceWeatherForDay,
   weatherEffects,
   rebuildThermalField,
+  accumulateSnow,
   TURNS_PER_DAY,
   WEATHER_LABELS,
   SEASON_LABELS,
@@ -300,6 +301,13 @@ export class GameEngineImpl implements GameEngine {
     if (this.avgTileTemp !== undefined) {
       const avg = Math.round(this.avgTileTemp + weatherEffects(gs.weather).tempDelta);
       if (avg !== gs.avgTemperature) gs.avgTemperature = avg;
+    }
+
+    // Snow cover: a slow (hourly) IN-PLACE pass — builds while snowing & below freezing, melts above.
+    // Cadence-gated so the per-tile snow churn stays bounded (only bucket-crossing tiles ship a delta).
+    const snowInterval = Math.max(1, Math.floor(ticksPerDay / 24));
+    if (gs.worldMap.length > 0 && gs.turn % snowInterval === 0) {
+      accumulateSnow(gs.worldMap, gs.weather, 1);
     }
 
     // Rebuild the fire-warmth + roof-shelter field once per tick (before needs/conditions read it).

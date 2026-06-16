@@ -45,7 +45,7 @@ import { researchService } from '../services/ResearchService';
 import { devSpawnLooseItems, devDestroyAllItems } from '../dev/devWorld';
 import { generatePawns } from '../entities/Pawns';
 import { devSpawnMobs } from '../services/entity/entitySpawning';
-import { makeWeather } from '../services/EnvironmentService';
+import { makeWeather, tileWetness } from '../services/EnvironmentService';
 import { resourceObjectService } from '../services/ResourceObjectService';
 import { patchPathfindingWalkable } from '../services/PathfinderService';
 import { markTileDirty } from '../core/tileDeltas';
@@ -516,6 +516,23 @@ export const COMMANDS: Record<string, Cmd> = {
     }
     tile.resources = resources;
     markTileDirty(p.y, p.x, tile);
+    return { ...s };
+  },
+
+  /** Debug: set snow cover across the whole map to `value` (0–100), scaled per tile by its wetness
+   *  (wetter = whiter) so you can eyeball the non-uniform cover. 0 clears it. One-shot full-map pass. */
+  devSetMapSnow: (s, p: { value: number }) => {
+    const v = Math.max(0, Math.min(100, p.value ?? 0));
+    for (const row of s.worldMap) {
+      for (const tile of row) {
+        const wet = tileWetness(tile.terrainType, s.weather);
+        const factor = 0.4 + (Math.max(0, Math.min(100, wet)) / 100) * 1.4;
+        const next = v <= 0 ? 0 : Math.max(0, Math.min(100, Math.round(v * factor)));
+        if (next === (tile.snow ?? 0)) continue;
+        tile.snow = next;
+        markTileDirty(tile.y, tile.x, tile);
+      }
+    }
     return { ...s };
   }
 };

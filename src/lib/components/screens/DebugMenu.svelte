@@ -34,6 +34,7 @@
   let entityCount = $state(5);
   let buildingId = $state(BUILDINGS[0]?.id ?? '');
   let resourceId = $state(RESOURCES[0]?.id ?? '');
+  let snowValue = $state(0);
 
   const brush = $derived($uiState.debugBrush);
   const cmd = (type: string, payload: Record<string, unknown> = {}) =>
@@ -61,6 +62,10 @@
   function armBrush(kind: 'regrow' | 'building' | 'resource', id: string | null = null) {
     if (brush?.kind === kind) uiState.deactivateDebugBrush();
     else uiState.activateDebugBrush(kind, id);
+  }
+  function setMapSnow(v: number) {
+    snowValue = v;
+    cmd('devSetMapSnow', { value: v });
   }
 </script>
 
@@ -126,6 +131,28 @@
       <option value="">natural (turn)</option>
       {#each TIME_OF_DAY as t (t.label)}<option value={t.value}>{t.label}</option>{/each}
     </select>
+  </section>
+
+  <section>
+    <h4>Snow cover <span class="hint">(× tile wetness)</span></h4>
+    <div class="row">
+      <input
+        type="range"
+        min="0"
+        max="100"
+        step="1"
+        value={snowValue}
+        oninput={(e) => setMapSnow(Number((e.target as HTMLInputElement).value))}
+      />
+      <input
+        type="number"
+        min="0"
+        max="100"
+        bind:value={snowValue}
+        onchange={() => setMapSnow(snowValue)}
+      />
+    </div>
+    <button onclick={() => setMapSnow(0)}>Clear snow</button>
   </section>
 
   <section>
@@ -230,6 +257,13 @@
   input[type='number'] {
     width: 3.5em;
     appearance: textfield;
+  }
+  input[type='range'] {
+    flex: 1;
+    padding: 0;
+    accent-color: #c8a048;
+    background: transparent;
+    border: none;
   }
   button {
     background: #160f06;

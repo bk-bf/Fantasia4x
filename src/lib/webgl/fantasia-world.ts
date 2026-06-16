@@ -19,6 +19,9 @@ import type { RGB } from './tile-types.js';
 /** Glyph used as a demolition-queued overlay on top of buildings. */
 const DECONSTRUCT_GLYPH = glyph(SHEET.MAP, 88);
 
+/** Cool white that snow-covered terrain blends toward (SEASONS_WEATHER snow cover). */
+const SNOW_WHITE: [number, number, number] = [0.92, 0.94, 0.97];
+
 /** `#rrggbb` → [r,g,b] in 0..1, or null on a missing/bad hex. */
 function hexToRgb01(hex?: string): [number, number, number] | null {
   if (!hex) return null;
@@ -109,6 +112,26 @@ export function buildGameGrid(
         char = pickChar(sub, tile.x, tile.y);
         fg = sub.fg as [number, number, number];
         bg = sub.bg as [number, number, number];
+      }
+
+      // Snow cover (SEASONS_WEATHER): blend the terrain/resource colours toward a cool white by the
+      // tile's accumulated `snow` (0–100). Applied to the TERRAIN layer only — buildings & dropped
+      // items are drawn on top (below / separate sprite pass) so they're never whitened.
+      const snow = tile.snow ?? 0;
+      if (snow > 0) {
+        const t = Math.min(1, snow / 100);
+        const wb = t * 0.9; // background whitens the most (the ground goes under snow)
+        const wf = t * 0.75; // glyph fades toward white but stays faintly legible
+        bg = [
+          bg[0] + (SNOW_WHITE[0] - bg[0]) * wb,
+          bg[1] + (SNOW_WHITE[1] - bg[1]) * wb,
+          bg[2] + (SNOW_WHITE[2] - bg[2]) * wb
+        ];
+        fg = [
+          fg[0] + (SNOW_WHITE[0] - fg[0]) * wf,
+          fg[1] + (SNOW_WHITE[1] - fg[1]) * wf,
+          fg[2] + (SNOW_WHITE[2] - fg[2]) * wf
+        ];
       }
 
       grid.setTile(tile.x, tile.y, {
