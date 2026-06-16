@@ -650,7 +650,7 @@
     "id"                : "mud_brick_wall",
     "name"              : "Mud Brick Wall",
     "color"             : "#C4A265",
-    "charSpans"         : [ {"sheet": "tiles", "id": 153} ],
+    "charSpans"         : [ {"sheet": "tiles", "id": 149} ],
     "fg"                : [0.77, 0.64, 0.4],
     "bg"                : [0.09, 0.07, 0.02],
     "description"       : "A wall of sun-dried mud bricks. Pcordager permanent construction.",

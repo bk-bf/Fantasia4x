@@ -454,7 +454,9 @@
     } else if (selectedBuilding.deconstructQueued) {
       const dDone = selectedBuilding.deconstructWorkDone ?? 0;
       const dReq = selectedBuilding.deconstructWorkRequired ?? 1;
-      lines.push(`[${jobProgressBar(dReq > 0 ? dDone / dReq : 0)}] ${Math.round(dDone)}/${dReq} work`);
+      lines.push(
+        `[${jobProgressBar(dReq > 0 ? dDone / dReq : 0)}] ${Math.round(dDone)}/${dReq} work`
+      );
       lines.push('⊢ demolishing…');
     } else {
       const cost = bDef?.buildingCost ?? {};
@@ -2307,9 +2309,28 @@
     if (blueprintBuildingId) redrawOverlay();
   }
 
-  // Right-click context menu (equip-from-tile for a drafted pawn). null = hidden.
+  // Right-click context menu (equip / pick-up / haul for a drafted pawn). null = hidden.
   let equipMenu: { x: number; y: number; entries: { label: string; run: () => void }[] } | null =
     null;
+
+  // "Pick up X…" quantity popup — opened from a menu entry, captures the target so a later
+  // selection change can't redirect the pickup. null = hidden.
+  let qtyPrompt: {
+    pawnId: string;
+    dropId: string;
+    name: string;
+    max: number;
+    value: number;
+    x: number;
+    y: number;
+  } | null = null;
+
+  function confirmQtyPickup() {
+    if (!qtyPrompt) return;
+    const n = Math.max(1, Math.min(qtyPrompt.max, Math.floor(qtyPrompt.value || 1)));
+    gameState.pickUpItemFromTile(qtyPrompt.pawnId, qtyPrompt.dropId, n);
+    qtyPrompt = null;
+  }
 
   /** "mainHand" → "Main Hand", "bodyBase" → "Body Base" — friendly body-part label. */
   function slotLabel(slot: string): string {
@@ -2373,27 +2394,67 @@
           save: true
         });
 
-      // Any item on the tile opens a menu (equip entries for gear + a Move option), so the menu
-      // never silently loses to a move order. Empty tile → move straight away.
+      // Any item on the tile opens a menu (equip / pick-up / haul entries + a Move option), so the
+      // menu never silently loses to a move order. Empty tile → move straight away.
       const tileItems = droppedItems.filter(
         (d) => d.x === tileX && d.y === tileY && d.quantity > 0
       );
       if (tileItems.length > 0) {
-        const equipEntries = tileItems
-          .map((d) => {
-            const it = itemService.getItemById(d.resourceId);
-            const slot = it ? getEquipmentSlot(it) : null;
-            if (!it || !slot) return null;
-            return {
-              label: `Equip ${itemService.getItemDisplayName(d)} → ${slotLabel(slot)}`,
+        const entries: { label: string; run: () => void }[] = [];
+        for (const d of tileItems) {
+          const it = itemService.getItemById(d.resourceId);
+          if (!it) continue;
+          const name = itemService.getItemDisplayName(d);
+          const slot = getEquipmentSlot(it);
+          if (slot) {
+            // Equippable gear → equip onto the pawn (existing behaviour).
+            entries.push({
+              label: `Equip ${name} → ${slotLabel(slot)}`,
               run: () => gameState.equipItemFromTile(pawnId, d.id)
-            };
-          })
-          .filter((e): e is { label: string; run: () => void } => e !== null);
+            });
+            continue;
+          }
+          // Non-equippable → three pick-up tiers into the pawn's inventory.
+          const qty = Math.floor(d.quantity);
+          entries.push({
+            label: `Pick up 1 ${name}`,
+            run: () => gameState.pickUpItemFromTile(pawnId, d.id, 1)
+          });
+          if (qty > 1) {
+            entries.push({
+              label: `Pick up X ${name}…`,
+              run: () => {
+                qtyPrompt = {
+                  pawnId,
+                  dropId: d.id,
+                  name,
+                  max: qty,
+                  value: qty,
+                  x: e.clientX,
+                  y: e.clientY
+                };
+              }
+            });
+            entries.push({
+              label: `Pick up all ${name} (×${qty})`,
+              run: () => gameState.pickUpItemFromTile(pawnId, d.id, qty)
+            });
+          }
+        }
+        // Haul the loose stack to a stockpile (multi-trip), if one exists and this tile isn't one.
+        const looseHere = tileItems.some((d) => !d.stored && !d.reservedFor);
+        const tileIsStockpile = (zoneTiles[`${tileX},${tileY}`] ?? []).includes('stockpile');
+        const stockpileExists = Object.values(zoneTiles).some((t) => t.includes('stockpile'));
+        if (looseHere && stockpileExists && !tileIsStockpile) {
+          entries.push({
+            label: 'Haul to stockpile',
+            run: () => gameState.haulTileToStockpile(pawnId, tileX, tileY)
+          });
+        }
         equipMenu = {
           x: e.clientX,
           y: e.clientY,
-          entries: [...equipEntries, { label: 'Move here', run: issueMove }]
+          entries: [...entries, { label: 'Move here', run: issueMove }]
         };
         return;
       }
@@ -2647,6 +2708,36 @@
       {/each}
     </div>
   {/if}
+
+  {#if qtyPrompt}
+    <!-- backdrop closes the prompt on any outside click / right-click -->
+    <div
+      class="ctx-backdrop"
+      role="presentation"
+      on:click={() => (qtyPrompt = null)}
+      on:contextmenu|preventDefault={() => (qtyPrompt = null)}
+    ></div>
+    <div class="ctx-menu qty-prompt" style="left:{qtyPrompt.x}px; top:{qtyPrompt.y}px">
+      <div class="qty-label">Pick up {qtyPrompt.name} (max {qtyPrompt.max})</div>
+      <!-- svelte-ignore a11y_autofocus -->
+      <input
+        class="qty-input"
+        type="number"
+        min="1"
+        max={qtyPrompt.max}
+        bind:value={qtyPrompt.value}
+        on:keydown={(ev) => {
+          if (ev.key === 'Enter') confirmQtyPickup();
+          else if (ev.key === 'Escape') qtyPrompt = null;
+        }}
+        autofocus
+      />
+      <div class="qty-actions">
+        <button class="ctx-item" on:click={confirmQtyPickup}>OK</button>
+        <button class="ctx-item" on:click={() => (qtyPrompt = null)}>Cancel</button>
+      </div>
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -2684,6 +2775,35 @@
   .ctx-item:hover {
     background: var(--bg-active);
     color: var(--accent-hi);
+  }
+  .qty-prompt {
+    padding: 6px;
+    gap: 6px;
+  }
+  .qty-label {
+    font-size: 11px;
+    color: var(--text);
+    white-space: nowrap;
+  }
+  .qty-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 3px 6px;
+    background: var(--bg);
+    border: 1px solid var(--border-hi);
+    color: var(--text);
+    font-size: 12px;
+    font-family: inherit;
+  }
+  .qty-actions {
+    display: flex;
+    gap: 6px;
+  }
+  .qty-actions .ctx-item {
+    flex: 1;
+    text-align: center;
+    border: 1px solid var(--border-hi);
+    border-bottom: 1px solid var(--border-hi);
   }
 
   .canvas-wrap {

@@ -1,5 +1,6 @@
 import terrainsData from '../database/terrains.jsonc';
 import subterrainsData from '../database/subterrains.jsonc';
+import { CP437_TO_UNICODE } from './cp437.js';
 
 /**
  * Terrains.ts — Biome and subterrain definitions
@@ -23,19 +24,12 @@ export interface SubterrainDef {
 }
 
 // ── Char helpers ──────────────────────────────────────────────────────────────
-/** tiles.bmp index → CP437-mapped Unicode char */
-const T = (n: number): string => {
-  if (n >= 32 && n <= 126) return String.fromCharCode(n);
-  if (n === 11) return '\u2642'; // ♂  CP437 11 (used by tiles picker id:11)
-  if (n === 3) return '\u2665'; // ♥  cave mouth
-  if (n === 14) return '\u266B'; // ♫  campfire / double eighth note
-  if (n === 176) return '\u2591'; // ░  light shade
-  if (n === 177) return '\u2592'; // ▒  medium shade
-  if (n === 178) return '\u2593'; // ▓  dark shade
-  if (n === 209) return '\u2564'; // ╤  trunk cross-section
-  if (n === 219) return '\u2588'; // █  full block
-  return String.fromCharCode(n); // best-effort fallback
-};
+/**
+ * tiles.bmp raw cell index (0–255, as shown in the dev spritesheet-viewer) → the Unicode char the
+ * atlas registered that cell under. This MUST be the exact CP437 table `loadBitlandsAtlas` uses, or
+ * a `{sheet:"tiles", id}` resolves to the wrong/blank cell — so both share `core/cp437`.
+ */
+const T = (n: number): string => CP437_TO_UNICODE[n] ?? String.fromCharCode(n);
 /** Range of tiles.bmp indices → array of Unicode chars */
 const TR = (from: number, to: number): string[] =>
   Array.from({ length: to - from + 1 }, (_, i) => T(from + i));
