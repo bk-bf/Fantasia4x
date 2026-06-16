@@ -85,12 +85,22 @@ are pre-existing survival-loop tuning.
   scan cost ~1/6. Claim/advance/complete still run every tick, so claimed/in-progress jobs are untouched between
   rebuilds. See [DECISIONS ADR-022](game/DECISIONS.md). The two-clocks insight (board-refresh cadence ≠ per-pawn
   job-selection cadence) is captured in the ADR.
-- [ ] **D-perf remainder** — tick strides. (The regrowth cooldown index landed — see archive; the incremental job
-  board is now the ADR-022 throttle.)
-- [ ] **D-bills** — `productionTargets` exists in state with nothing driving it.
-- [ ] **ADR-009 step 2** — per-pawn claimed-inventory tool gating (`minTier` + craft-tool gating; R4 was step 1).
-- [ ] **R11 remainder — Events phase.** ARCHITECTURE's turn order no longer lists it, but `core/Events.ts`
-  (~hundreds of lines, ADR-006) is still fully unwired — either wire it or cut it.
+- [ ] **ADR-009 step 2 — per-pawn tool gating** (deferred by design, not a defect). Harvest gating works today off
+  **colony stock** (`_colonyHasHarvestTool`, step 1); `minTier` exists in `resources.jsonc` + `ResourceObjectService`.
+  The refinement — a pawn must physically *carry* the required tool (per-pawn claimed inventory) and enforce `minTier`
+  per-pawn — is explicit sim depth, marked a "later refinement" in code. Only pursue if/when pawns-hold-tools becomes
+  a desired mechanic.
+- [ ] **R11 — random-events system: wire or cut.** _(Reworded — the old "Events.ts fully unwired" is stale.)_
+  `core/Events.ts`'s log/chronicle **types** (`ActivityLogEntry`/`LogCategory`/`CombatTurnEntry`) **are** used (logging
+  + chronicle UI). But the **gameplay** half — `EventSystem` + `EVENT_DATABASE` + `events.jsonc` (fire, building
+  destruction…) + `triggerEvent` — is **defined and never invoked** (zero callers; nothing rolls events per turn).
+  Decide: wire random events into the turn loop (a feature) or delete the dead `EventSystem`/`EVENT_DATABASE`/
+  `events.jsonc`.
+
+  _Removed as stale 2026-06-16:_ **D-perf remainder (tick strides)** — moot: both concrete D-perf items shipped
+  (regrowth cooldown index; job board = ADR-022), the stride technique is already applied where it paid, and perf is
+  at a clean stopping point. **D-bills (`productionTargets`)** — the dead field is gone (0 references repo-wide); a
+  RimWorld-style repeat-craft "bills" feature would be a fresh DESIGN item, not this leftover.
 
 ## Physical-production follow-ups (ADR-016)
 
@@ -100,14 +110,3 @@ Spec archived at [PHYSICAL-PRODUCTION](.tasks/archive/PHYSICAL-PRODUCTION-2026-0
 - [ ] Per-stack craft quality on instances (R8) — deferred until equipment quality matters.
 - [ ] Butchery multi-yield (content).
 - [ ] Passive-furnace flagging for forge/hearth.
-
-## Sequencing
-
-1. **Now — fix the building regression:** N-1 (can't place buildings; `--debug` works, `--profiler` doesn't) —
-   bisect the perf commits. (N-5 blueprint-queue jank is **done** — duplicate-drop-id, not a perf regression.)
-2. **Cheap survival-loop tuning:** N-2 / N-3 (stamina + exhaustion) together; N-4 (multi-item haul).
-3. **Tier 2 — next feature:** Living World B–D (seasons / weather / fog) — ROADMAP Wave 6; folds the heavy
-   `nearestPawn` spatial index in with fog-of-war/LoS (ENGINE-PERFORMANCE §C defers it there).
-4. **Opportunistic (no big-bang):** P-4 god-file splits (JobService handler registry; GameCanvas render/input core
-   once the overlay path is feature-complete).
-5. **Profiling-gated:** D-perf remainder (tick strides) — only when a profiler pass says so. (D9.7 done — ADR-022.)
