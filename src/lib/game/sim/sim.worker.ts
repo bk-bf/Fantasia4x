@@ -116,6 +116,7 @@ function installForwardingLogSink() {
     logCombatSwing: fwd('logCombatSwing'),
     logCombatKill: fwd('logCombatKill'),
     pushCombatText: fwd('pushCombatText'),
+    pushAttackLunge: fwd('pushAttackLunge'),
     logHuntStart: fwd('logHuntStart'),
     logFlee: fwd('logFlee'),
     logEntityDeath: fwd('logEntityDeath'),

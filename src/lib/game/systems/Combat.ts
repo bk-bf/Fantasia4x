@@ -624,6 +624,15 @@ class CombatServiceImpl implements CombatService {
   ): { state: GameState; staminaCost: number } {
     const result = this.resolveHit(attacker, target, state);
     const pos = this.entityPos(target);
+
+    // Visual lunge: thrust the attacker glyph toward the struck tile and snap it back
+    // (renderer-only; emitted for hit AND miss so the swing reads regardless of outcome).
+    const apos = this.entityPos(attacker);
+    const ldx = pos.x - apos.x;
+    const ldy = pos.y - apos.y;
+    const lmag = Math.hypot(ldx, ldy) || 1;
+    simLog.pushAttackLunge({ attackerId: attacker.id, dirX: ldx / lmag, dirY: ldy / lmag });
+
     const attackerName = this.entityName(attacker);
     const targetName = this.entityName(target);
     const isTargetMob = 'entityClass' in target;

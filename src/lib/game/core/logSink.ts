@@ -33,6 +33,14 @@ export interface CombatTextRequest {
   kind: CombatTextKind;
 }
 
+/** A visual lunge request: nudge the attacker's glyph toward the struck tile and back. */
+export interface CombatLungeRequest {
+  attackerId: string;
+  /** Unit direction toward the target (tile space). */
+  dirX: number;
+  dirY: number;
+}
+
 export interface SimLogSink {
   /** Append a raw chronicle entry; returns the generated entry id. */
   logActivity(entry: Omit<ActivityLogEntry, 'id' | 'timestamp'>): string;
@@ -63,6 +71,8 @@ export interface SimLogSink {
   ): void;
   /** Push a floating combat label for the renderer. */
   pushCombatText(req: CombatTextRequest): void;
+  /** Push an attacker-glyph lunge for the renderer (visual only). */
+  pushAttackLunge(req: CombatLungeRequest): void;
 
   // ----- entities (services/EntityService) -----
   logHuntStart(
@@ -109,6 +119,7 @@ const noopSink: SimLogSink = {
   logCombatSwing: () => {},
   logCombatKill: () => {},
   pushCombatText: () => {},
+  pushAttackLunge: () => {},
   logHuntStart: () => {},
   logFlee: () => {},
   logEntityDeath: () => {},

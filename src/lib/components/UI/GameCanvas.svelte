@@ -36,6 +36,7 @@
     FLOAT_TTL_MS,
     type CombatTextEvent
   } from '$lib/stores/combatFeedback.js';
+  import { attackLunges, LUNGE_TTL_MS, type AttackLungeEvent } from '$lib/stores/attackLunges.js';
   import { renderFps } from '$lib/stores/perfStats.js';
   import { buildingService } from '$lib/game/services/BuildingService.js';
   import { resolveCharSpans, BIOMES, SUBTERRAINS } from '$lib/game/core/Terrains.js';
@@ -183,6 +184,32 @@
   const unsubCombatFeedback = combatFeedback.subscribe((list) => {
     combatTexts = list;
   });
+
+  // Attack lunges: active thrusts keyed by attacker id, read every frame in updatePawnOverlay.
+  let attackLungeList: AttackLungeEvent[] = [];
+  const unsubAttackLunges = attackLunges.subscribe((list) => {
+    attackLungeList = list;
+  });
+  // Peak thrust distance, in tiles — how far "into" the target tile the attacker reaches.
+  const LUNGE_DISTANCE = 0.4;
+
+  /**
+   * Sub-tile pixel offset for an attacker's lunge this frame: a quick out-and-back
+   * thrust toward the struck tile. Returns {x:0,y:0} when the attacker has no active
+   * lunge. The sine curve peaks at the lunge midpoint and returns to 0 at the TTL,
+   * so the glyph snaps back to its resting position well before the next swing.
+   */
+  function lungeOffset(id: string, now: number): { x: number; y: number } {
+    for (let i = attackLungeList.length - 1; i >= 0; i--) {
+      const e = attackLungeList[i];
+      if (e.attackerId !== id) continue;
+      const t = (now - e.spawnTime) / LUNGE_TTL_MS;
+      if (t < 0 || t >= 1) return { x: 0, y: 0 };
+      const amp = Math.sin(t * Math.PI) * LUNGE_DISTANCE * BASE_TILE_PX;
+      return { x: e.dirX * amp, y: e.dirY * amp };
+    }
+    return { x: 0, y: 0 };
+  }
 
   // Phase 4: buildings and designations overlay
   let buildings: PlacedBuilding[] = [];
@@ -773,6 +800,8 @@
     const clampedDt = Math.min(dt, 0.05);
     // Exponential smoothing factor — shared for pawns and mobs this frame.
     const alpha = clampedDt > 0 ? 1 - Math.exp(-clampedDt / MOVE_SMOOTH_TAU) : 1;
+    // Wall-clock for attack-lunge curves (lunge spawn times are Date.now-based).
+    const nowMs = Date.now();
 
     // Read the freshest game state directly from the store's held value.
     // The engine calls gameStore.setSilent() every tick, so get(gameState) is
@@ -806,6 +835,7 @@
       const cellX = Math.round(rm.x);
       const cellY = Math.round(rm.y);
       const isSelected = mob.id === selectedMobId;
+      const mLunge = lungeOffset(mob.id, nowMs);
       pawnOverlayGrid.setTile(cellX, cellY, {
         char: def.chars[0],
         foreground: isSelected
@@ -813,7 +843,10 @@
           : { r: def.fg[0], g: def.fg[1], b: def.fg[2] },
         background: { r: 0, g: 0, b: 0 },
         position: { x: cellX, y: cellY },
-        animationOffset: { x: (rm.x - cellX) * BASE_TILE_PX, y: (rm.y - cellY) * BASE_TILE_PX }
+        animationOffset: {
+          x: (rm.x - cellX) * BASE_TILE_PX + mLunge.x,
+          y: (rm.y - cellY) * BASE_TILE_PX + mLunge.y
+        }
       });
     }
     if (seenMobs.size !== mobRenderPos.size) {
@@ -855,12 +888,16 @@
             ? { r: 1.0, g: 0.45, b: 0.05 }
             : { r: 1, g: 1, b: 1 };
 
+      const pLunge = lungeOffset(pawn.id, nowMs);
       pawnOverlayGrid.setTile(cellX, cellY, {
         char: PAWN_SPRITES[i % PAWN_SPRITES.length],
         foreground: isSelected ? { r: 1.0, g: 0.9, b: 0.1 } : baseColor,
         background: isDrafted ? { r: 0.3, g: 0, b: 0 } : { r: 0, g: 0, b: 0 },
         position: { x: cellX, y: cellY },
-        animationOffset: { x: (rp.x - cellX) * BASE_TILE_PX, y: (rp.y - cellY) * BASE_TILE_PX },
+        animationOffset: {
+          x: (rp.x - cellX) * BASE_TILE_PX + pLunge.x,
+          y: (rp.y - cellY) * BASE_TILE_PX + pLunge.y
+        },
         rotation: isSleeping ? 90 : undefined
       });
     }
@@ -1530,6 +1567,7 @@
     unsubState();
     unsubUI();
     unsubCombatFeedback();
+    unsubAttackLunges();
     rendererReady.set(false); // a remount must re-init WebGL before the game is shown again
     if (browser) {
       cancelAnimationFrame(animationId);

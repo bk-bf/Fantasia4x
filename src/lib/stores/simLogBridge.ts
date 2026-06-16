@@ -18,6 +18,7 @@ import {
   logCombatKill
 } from './Log';
 import { combatFeedback } from './combatFeedback';
+import { attackLunges } from './attackLunges';
 
 /**
  * The real (DOM/store-backed) sink. Exported so the sim-worker bridge can replay buffered
@@ -30,6 +31,7 @@ export const realSimLogSink: SimLogSink = {
   logCombatSwing,
   logCombatKill,
   pushCombatText: (req) => combatFeedback.push(req),
+  pushAttackLunge: (req) => attackLunges.push(req),
   logHuntStart,
   logFlee,
   logEntityDeath,
