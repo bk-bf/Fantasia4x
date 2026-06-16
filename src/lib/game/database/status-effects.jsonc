@@ -6,7 +6,7 @@
         "name"       : "Knocked Down",
         "description": "Prone from a heavy blunt blow. Loses the next attack; recovers after a couple of turns.",
         "color"      : "#ff5722",
-        "icon"       : "💫",
+        "charSpans"  : [ {"sheet": "font", "id": 15} ],
         "modifiers"  : {"moveSpeed": 0.0, "workEfficiency": 0.0}
     },
     {
@@ -14,7 +14,7 @@
         "name"       : "Collapsed",
         "description": "Overwhelmed by pain — incapacitated and out of the fight. Recovers only as the pain subsides.",
         "color"      : "#b71c1c",
-        "icon"       : "😵",
+        "charSpans"  : [ {"sheet": "font", "id": 19} ],
         "modifiers"  : {"moveSpeed": 0.0, "workEfficiency": 0.0}
     },
     {
@@ -38,7 +38,7 @@
         "name"       : "Exhausted",
         "description": "Severe fatigue. Work efficiency and movement speed are reduced.",
         "color"      : "#ff7043",
-        "icon"       : "🥱",
+        "charSpans"  : [ {"sheet": "items", "id": 25} ],
         "modifiers"  : {"workEfficiency": 0.5, "moveSpeed": 0.5}
     },
     {
@@ -46,7 +46,7 @@
         "name"       : "Winded",
         "description": "Out of breath — stamina spent. Can't attack and can barely move; easier to hit until stamina recovers to full.",
         "color"      : "#9575cd",
-        "icon"       : "💨",
+        "charSpans"  : [ {"sheet": "font", "id": 126} ],
         "modifiers"  : {"moveSpeed": 0.3, "dodge": 0.5}
     },
     {
@@ -54,7 +54,7 @@
         "name"       : "Hungry",
         "description": "Hunger is high. Work efficiency and movement speed are reduced.",
         "color"      : "#e53935",
-        "icon"       : "🍖",
+        "charSpans"  : [ {"sheet": "items", "id": 67} ],
         "modifiers"  : {"workEfficiency": 0.75, "moveSpeed": 0.75}
     },
     {
@@ -62,7 +62,7 @@
         "name"       : "Thirsty",
         "description": "Parched. Concentration slips — work slows. Untreated thirst becomes lethal dehydration.",
         "color"      : "#29b6f6",
-        "icon"       : "💧",
+        "charSpans"  : [ {"sheet": "items", "id": 41} ],
         "modifiers"  : {"workEfficiency": 0.8, "moveSpeed": 0.9}
     },
     {
@@ -70,7 +70,7 @@
         "name"       : "Wet",
         "description": "Soaked through from rain or wet ground. Chilled and sluggish — cold bites far harder (and heat far less). Dries off in the warmth or under a roof.",
         "color"      : "#4FA3D1",
-        "icon"       : "💦",
+        "charSpans"  : [ {"sheet": "font", "id": 247} ],
         "modifiers"  : {"moveSpeed": 0.9, "workEfficiency": 0.95}
     },
     {
@@ -78,7 +78,7 @@
         "name"       : "Sheltered",
         "description": "Under a roof, out of the weather. Recovers from cold and heat far faster, and a storm's gloom is held at bay.",
         "color"      : "#7E9FBF",
-        "icon"       : "🏠",
+        "charSpans"  : [ {"sheet": "font", "id": 127} ],
         "modifiers"  : {"fatigueRate": 0.95}
     },
     {
@@ -86,7 +86,7 @@
         "name"       : "Filthy",
         "description": "Caked in grime. Demoralising and unhealthy — slows work and sours mood (disease risk later).",
         "color"      : "#8d6e63",
-        "icon"       : "🦠",
+        "charSpans"  : [ {"sheet": "font", "id": 177} ],
         "modifiers"  : {"workEfficiency": 0.85}
     },
     {
@@ -94,7 +94,7 @@
         "name"       : "Ecstatic",
         "description": "In high spirits. Work efficiency is greatly boosted.",
         "color"      : "#4CAF50",
-        "icon"       : "😄",
+        "charSpans"  : [ {"sheet": "font", "id": 2} ],
         "modifiers"  : {"workEfficiency": 1.2}
     },
     {
@@ -102,7 +102,7 @@
         "name"       : "Content",
         "description": "Feeling good. Work efficiency is slightly boosted.",
         "color"      : "#8BC34A",
-        "icon"       : "🙂",
+        "charSpans"  : [ {"sheet": "font", "id": 1} ],
         "modifiers"  : {"workEfficiency": 1.1}
     },
     {
@@ -110,7 +110,7 @@
         "name"       : "Somewhat Sad",
         "description": "Feeling down. Work efficiency is reduced.",
         "color"      : "#FF5722",
-        "icon"       : "🙁",
+        "charSpans"  : [ {"sheet": "font", "id": 25} ],
         "modifiers"  : {"workEfficiency": 0.8}
     },
     {
@@ -118,7 +118,7 @@
         "name"       : "Deeply Depressed",
         "description": "Severely depressed. Work efficiency is greatly reduced.",
         "color"      : "#D32F2F",
-        "icon"       : "😢",
+        "charSpans"  : [ {"sheet": "font", "id": 31} ],
         "modifiers"  : {"workEfficiency": 0.6}
     }
 ]

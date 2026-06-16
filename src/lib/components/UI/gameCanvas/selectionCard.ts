@@ -43,11 +43,11 @@ function woundWarn(inj: Injury): boolean {
   return inj.infected || inj.severity !== 'minor';
 }
 
-/** Visible status effects as compact HUD pills. Hidden (internal) effects are filtered by the
- *  service; the glyph falls back to the effect name's first letter when no icon is defined. */
+/** Visible status effects as HUD chips (sprite glyph + colour). Hidden (internal) effects are
+ *  filtered by the service; the glyph comes from the effect's charSpans (sheet:id, as items do). */
 function statusEffectPills(entity: Pawn | Mob): EntityEffect[] {
   return pawnService.getStatusEffects(entity).map((e) => ({
-    icon: e.icon ?? e.name.charAt(0),
+    charSpans: e.charSpans,
     name: e.name,
     color: e.color
   }));

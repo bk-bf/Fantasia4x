@@ -25,9 +25,9 @@
     active?: boolean;
   }
 
-  /** A compact status-effect pill (glyph + colour) shown beside the stats; name on hover. */
+  /** A status-effect chip (sprite glyph + colour) shown beside the stats; name on hover. */
   export interface EntityEffect {
-    icon: string;
+    charSpans?: Array<{ sheet?: string; id?: number; from?: number; to?: number; literal?: string }>;
     name: string;
     color: string;
   }
@@ -115,6 +115,7 @@
 
 <script lang="ts">
   import StatBar from './StatBar.svelte';
+  import SpriteIcon from './SpriteIcon.svelte';
   import HealthPanel from './gameCanvas/HealthPanel.svelte';
   import { healthToggle } from './gameCanvas/healthToggle.svelte';
 
@@ -190,13 +191,15 @@
           <span class="pawn-stat-val" class:pawn-warn={stat.warn}>{stat.value}</span>
         {/each}
         {#if model.effects && model.effects.length > 0}
-          <span class="effect-pills">
+          <span class="effect-chips">
             {#each model.effects as effect (effect.name)}
               <span
-                class="effect-pill"
+                class="effect-chip"
                 style="border-color: {effect.color}; color: {effect.color};"
-                title={effect.name}>{effect.icon}</span
+                title={effect.name}
               >
+                <SpriteIcon charSpans={effect.charSpans} tint={effect.color} px={12} />
+              </span>
             {/each}
           </span>
         {/if}
@@ -424,20 +427,19 @@
   .pawn-warn {
     color: #ee8844 !important;
   }
-  /* Status-effect pills sit at the end of the stats row (next to MOVE). */
-  .effect-pills {
+  /* Status-effect chips sit inline on the stats row, just right of MOVE (left-aligned).
+     Same chip styling as the Pawns-tab effect cards (square border + faint colour-mix fill). */
+  .effect-chips {
     display: inline-flex;
     gap: 3px;
-    margin-left: auto;
     align-items: center;
   }
-  .effect-pill {
+  .effect-chip {
+    display: inline-flex;
+    align-items: center;
     border: 1px solid;
-    border-radius: 6px;
-    padding: 0 3px;
-    font-size: 9px;
-    line-height: 1.3;
-    background: rgba(0, 0, 0, 0.25);
+    padding: 0 2px;
+    background: color-mix(in srgb, currentColor 12%, var(--bg, #1c1006));
     cursor: default;
   }
   .bar-rows {

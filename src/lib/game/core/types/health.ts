@@ -22,8 +22,8 @@ export interface StatusEffectDef {
   name: string;
   description: string;
   color: string;
-  /** Compact glyph shown in the tile-HUD status pills (falls back to the name's first letter). */
-  icon?: string;
+  /** Sprite-sheet glyph for the status icon (same shape as Item/Building.charSpans). */
+  charSpans?: Array<{ sheet?: string; id?: number; from?: number; to?: number; literal?: string }>;
   /** Internal effect: never surfaced in any UI (pills, needs panel…). Its modifiers still apply.
    *  Used for FSM-driven states like eating/sleeping that would duplicate info already shown. */
   hidden?: boolean;
