@@ -357,10 +357,18 @@ export class GridRenderer {
       const u2 = charInfo ? (charInfo.x + charInfo.width) / this.fontAtlas.atlasWidth : 0;
       const v2 = charInfo ? (charInfo.y + charInfo.height) / this.fontAtlas.atlasHeight : 0;
 
-      // Get colors — detail defaults to foreground when not set
-      const fg = [tile.foreground.r, tile.foreground.g, tile.foreground.b];
+      // Get colors. The bitlands sprites are a white body + black line-work on magenta. The shader
+      // blends a_foreground↔a_detail by sprite luminance: black px (luma 0) → a_foreground, white px
+      // (luma 1) → a_detail. With no explicit detail set, map the white body to the tile colour and
+      // the black line-work to a darkened shade, so each cell's own pattern survives the tint.
+      // (Previously detail defaulted to the foreground, so black + white both became the tile colour
+      // → flat fill, which made distinct cells like mud_brick_wall and mountain_wall identical.)
+      const tileColor = [tile.foreground.r, tile.foreground.g, tile.foreground.b];
       const bg = [tile.background.r, tile.background.g, tile.background.b];
-      const dt = tile.detail ? [tile.detail.r, tile.detail.g, tile.detail.b] : fg;
+      const fg = tile.detail
+        ? tileColor
+        : [tileColor[0] * 0.3, tileColor[1] * 0.3, tileColor[2] * 0.3];
+      const dt = tile.detail ? [tile.detail.r, tile.detail.g, tile.detail.b] : tileColor;
       const ol = tile.outline ? [tile.outline.r, tile.outline.g, tile.outline.b] : [0, 0, 0];
       // UV bounds for the current glyph (needed by outline edge-detection in fragment shader)
       const ub = charInfo

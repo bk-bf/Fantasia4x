@@ -19,6 +19,15 @@ import type { RGB } from './tile-types.js';
 /** Glyph used as a demolition-queued overlay on top of buildings. */
 const DECONSTRUCT_GLYPH = glyph(SHEET.MAP, 88);
 
+/** `#rrggbb` → [r,g,b] in 0..1, or null on a missing/bad hex. */
+function hexToRgb01(hex?: string): [number, number, number] | null {
+  if (!hex) return null;
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return null;
+  const n = parseInt(m[1], 16);
+  return [((n >> 16) & 0xff) / 255, ((n >> 8) & 0xff) / 255, (n & 0xff) / 255];
+}
+
 /**
  * Build a GameGrid from a Fantasia4x WorldTile 2D array.
  * Uses subterrain glyph + color when available, falls back to legacy type.
@@ -119,7 +128,9 @@ export function buildGameGrid(
       const char = def?.charSpans
         ? (resolveCharSpans(def.charSpans as Parameters<typeof resolveCharSpans>[0])[0] ?? '#')
         : '#';
-      const fg = def?.fg ?? [0.87, 0.62, 0.12];
+      // Render from the building's `color` tag (its single tunable hex), falling back to the legacy
+      // `fg` array, then a default. So editing `color` in buildings.jsonc actually recolours it.
+      const fg = hexToRgb01(def?.color) ?? def?.fg ?? [0.87, 0.62, 0.12];
       const bg = def?.bg ?? [0.06, 0.04, 0.01];
       grid.setTile(b.x, b.y, {
         char,
