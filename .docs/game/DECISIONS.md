@@ -23,6 +23,7 @@ ADR-018 [GAME]: Perception via Target Persistence + Push Alerting (2026-06-14, C
 ADR-019 [GAME]: Line of Sight via `blocksSight` Occluder + WASM Raycast (2026-06-14, Accepted — design, impl deferred)
 ADR-020 [GAME]: Sim Scaling Strategy — Wrapper-Agnostic Ladder, wrapper decision deferred (2026-06-14, Accepted — superseded by ADR-021 for the concrete plan)
 ADR-021 [GAME]: Sim/Render Decouple — soft-body pathfinding, terrain cache, MAX_STEPS cap, sim→Worker (2026-06-14, Accepted)
+ADR-022 [GAME]: Throttled job-board reconcile (not event-driven) — emission-derived board, 6-tick cadence (2026-06-16, Accepted)
 
 ---
 
@@ -726,3 +727,64 @@ wrapper choice (ADR-020). The wrapper is **not** a performance lever — single-
   queries (per-tick allocation > linear scan at ~290 entities) and `(pawns,mobs)`-memoized occupancy
   (near-zero hit rate). See ENGINE-PERFORMANCE §B.
 - ADR-018 corrected (premise falsified); ADR-020's concrete ladder superseded here.
+
+---
+
+### ADR-022 [GAME]: Throttled Job-Board Reconcile (not event-driven)
+
+- **Date**: 2026-06-16
+- **Status**: Accepted
+- **Spec**: closes D9.7 in [CODEBASE-REVIEW](../CODEBASE-REVIEW-2026-06-10.md)
+
+#### Context
+
+`JobService.generateJobs` runs every tick in `GameEngineImpl.processGameTurn` (before pawn
+processing). It reconciles `gameState.jobs` against current world state: 7 generators
+(`_syncHarvestJobs`/`_syncHaulJobs`/`_syncConstruct`/`_syncDeconstruct`/`_syncFetchJobs`/
+`_syncCraftJobs`/`_syncRefuelJobs`) each re-scan their source domain (designations, droppedItems,
+buildings, craftingQueue) and add-or-prune. D9.7 proposed making this **event-driven** to drop the
+per-tick O(sources) scan. A long design pass weighed it.
+
+The key realisations: (1) the per-tick reconcile is **already emission-derived and self-healing** —
+the board is a projection of who's currently asserting a job; a gone source (cancelled blueprint,
+deconstructed building, consumed/destroyed drop) simply stops being asserted and its job is pruned
+on the next pass, with **no removal signal needed**. (2) True event-driven would *trade away* that
+self-healing for fragile per-mutation-site signalling (dozens of sites touch droppedItems/buildings/
+designations/craftingQueue) — one missed signal = a permanently missing or stale job. (3) The hot
+part of the scan was already removed (`_syncHarvestJobs` O(designations×jobs) → O(1) `Set` dedup;
+the pawn-id `Map` killed the `find()` O(n) lookups — ENGINE-PERFORMANCE §C), so `generateJobs` is no
+longer on the hot list. So the *only* axis worth changing is **how often the board is rebuilt** — a
+pure CPU-vs-latency trade, no behavioural upside.
+
+#### Decision
+
+**Keep the central emission-derived reconcile; throttle it** — run `generateJobs` every
+`JOB_GENERATION_INTERVAL_TICKS = 6` ticks instead of every tick (a `turn % N === 0` gate, mirroring
+`DETERIORATION_INTERVAL_TICKS`). Board-appearance latency is then ≤6 ticks (~0.1 in-game-sec) for
+**everything**, including player actions — imperceptible, so **no per-event "kick" path is needed**
+(a 30s cadence *would* need kicks to stay responsive; 6 ticks does not, and the extra CPU saved past
+~6 is negligible). Explicitly **rejected**: the full event-driven rewrite, and the object-as-emitter
+(registry / "object owns its job rule") refactor — same runtime, pure code-relocation churn plus a
+TTL + claimed-exemption the central reconcile doesn't need.
+
+**Two-clocks invariant (the design's crux):** *board-refresh cadence* (this throttle, slow) is
+distinct from *per-pawn job-selection cadence* (every idle tick, unchanged). A pawn reads the
+already-standing board every idle tick and selects by priority-then-distance; it never waits on a
+re-emit. (This is why an interrupted pawn's job is filled by another pawn instantly — release sets
+`claimedBy=null`, visible next tick — with no idle gap.) Needs stay a **per-pawn, per-tick** input,
+not board entries: need *accrual* must run every tick for everyone (a downed pawn still starves) and
+the need *decision* is already gated to actionable pawns (drafted skip the behavioural FSM, ADR-002
+R2; collapsed pawns are in the collapse lifecycle).
+
+#### Consequences
+
+- `generateJobs` scan cost drops to ~1/6; no new machinery (claim/advance/complete already run every
+  tick independently of the reconcile, so claimed/in-progress jobs are untouched between rebuilds —
+  no TTL, no claim-exemption).
+- Behaviour is unchanged except ≤6-tick latency on job board appearance/cleanup; a pawn can briefly
+  see a job whose source just vanished (same class as the N-5 ghost-job window) — the FSM already
+  bails via the `jobInPool` check and the `_complete*` handlers no-op on a missing source.
+- **Self-healing preserved** (each pass is a full reconcile), unlike a push/event model.
+- Revisit only if a profile at real scale puts the scan back on the hot list — then lengthen the
+  cadence with event kicks for player-intent / completion-chains / source-removal; the object-emitter
+  refactor remains a *cohesion* choice, never a perf necessity.

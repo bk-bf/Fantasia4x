@@ -50,6 +50,13 @@ const UI_PUSH_MS = 1000 / 15;
 /** Item-deterioration runs every N ticks (not every tick): durability lifespans are days/weeks, so
  *  weathering all loose items every tick is wasted work + array churn. 600 ticks ≈ 0.8 in-game hour. */
 const DETERIORATION_INTERVAL_TICKS = 600;
+/** Job-board reconcile cadence (ADR-022). `generateJobs` rebuilds the board from current world
+ *  sources — a self-healing, emission-derived pass — but that's wasted at 60 Hz when designations/
+ *  buildings/drops change far slower. Running it every 6 ticks caps job-appearance latency at ≤6
+ *  ticks (~0.1 in-game-sec — imperceptible, so no per-event "kick" is needed) while cutting the scan
+ *  to ~1/6 the cost. Claim/advance/complete still run every tick (independent of this pass), so
+ *  claimed/in-progress jobs are untouched between rebuilds. */
+const JOB_GENERATION_INTERVAL_TICKS = 6;
 
 export class GameEngineImpl implements GameEngine {
   private gameState: GameState | null = null;
@@ -135,7 +142,10 @@ export class GameEngineImpl implements GameEngine {
         this.gameState = researchService.processResearchTick(this.gameState!);
       });
       t('generateJobs', () => {
-        this.gameState = jobService.generateJobs(this.gameState!);
+        // ADR-022: throttled reconcile (every JOB_GENERATION_INTERVAL_TICKS). The board persists
+        // between passes; only its sync against world sources is amortised.
+        if (this.gameState!.turn % JOB_GENERATION_INTERVAL_TICKS === 0)
+          this.gameState = jobService.generateJobs(this.gameState!);
       });
       t('buildings', () => this.processBuildings());
       t('passiveProd', () => this.processPassiveProduction());
