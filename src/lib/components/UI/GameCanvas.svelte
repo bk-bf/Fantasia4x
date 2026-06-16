@@ -1376,25 +1376,22 @@
           const dy = (b.y - viewY) * tileHeight;
           if (dx < -tileWidth || dy < -tileHeight || dx > W + tileWidth || dy > H + tileHeight)
             continue;
-          // Recolour the sprite cell white/amber on the tint canvas (source-atop keeps the glyph's
-          // transparency), then blit it scaled to the tile at reduced alpha.
+          // Tint the cell on the tint canvas, preserving its pattern. The bitlands sprite is a
+          // white body + black line-work on transparent. `multiply` maps white→tint and black→black
+          // (so the line-work survives instead of flattening like source-atop did), then
+          // `destination-in` re-masks to the sprite's own alpha so transparent stays transparent.
+          // Mirrors the world-tile shader so a blueprint reads as its real tile, not a flat block.
+          const srcX = (id % 16) * SHEET_CELL_W;
+          const srcY = Math.floor(id / 16) * SHEET_CELL_H;
           tctx.clearRect(0, 0, SHEET_CELL_W, SHEET_CELL_H);
           tctx.globalCompositeOperation = 'source-over';
-          tctx.drawImage(
-            sheet,
-            (id % 16) * SHEET_CELL_W,
-            Math.floor(id / 16) * SHEET_CELL_H,
-            SHEET_CELL_W,
-            SHEET_CELL_H,
-            0,
-            0,
-            SHEET_CELL_W,
-            SHEET_CELL_H
-          );
+          tctx.drawImage(sheet, srcX, srcY, SHEET_CELL_W, SHEET_CELL_H, 0, 0, SHEET_CELL_W, SHEET_CELL_H);
           const started = (b.workDone ?? 0) > 0 || (b.progress ?? 0) > 0;
-          tctx.globalCompositeOperation = 'source-atop';
+          tctx.globalCompositeOperation = 'multiply';
           tctx.fillStyle = started ? '#ffd23a' : '#ffffff';
           tctx.fillRect(0, 0, SHEET_CELL_W, SHEET_CELL_H);
+          tctx.globalCompositeOperation = 'destination-in';
+          tctx.drawImage(sheet, srcX, srcY, SHEET_CELL_W, SHEET_CELL_H, 0, 0, SHEET_CELL_W, SHEET_CELL_H);
           tctx.globalCompositeOperation = 'source-over';
           ctx.globalAlpha = b.paused ? 0.25 : 0.5;
           ctx.drawImage(tintCanvas, dx, dy, tileWidth, tileHeight);
