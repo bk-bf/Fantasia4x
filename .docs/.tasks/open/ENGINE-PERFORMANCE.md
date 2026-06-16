@@ -1,4 +1,4 @@
-<!-- LOC cap: 580 (created: 2026-06-14, rewritten 2026-06-14 post-profiling; worker shipped 2026-06-14; Rust-SoA pivot 2026-06-14 then ABORTED after R1 2026-06-15 → mutable-in-place JS; M1–M3 + throttle landed 2026-06-15, de-immutabling plateaued; 2026-06-15 custom profiler RETIRED → Firefox Profiler + pq; capacity/formula caches + the WORKER→MAIN SNAPSHOT (W2/W2b) broke the plateau → 80–100 TPS @4×; then de-immutabled pawn-patch spreads + paused warmup screen → 200+ TPS @4× after ~5s, GOAL CRUSHED 2026-06-15; then JS-allocation capture (§C) verified the de-immutable win + drove the harvest-time worldMap-delta fix; 2026-06-15 Electron chosen over Tauri (A/B), and the Electron renderer trace opened §D — renderer-side hitches D1–D3) -->
+<!-- LOC cap: 680 (created: 2026-06-14, rewritten 2026-06-14 post-profiling; worker shipped 2026-06-14; Rust-SoA pivot 2026-06-14 then ABORTED after R1 2026-06-15 → mutable-in-place JS; M1–M3 + throttle landed 2026-06-15, de-immutabling plateaued; 2026-06-15 custom profiler RETIRED → Firefox Profiler + pq; capacity/formula caches + the WORKER→MAIN SNAPSHOT (W2/W2b) broke the plateau → 80–100 TPS @4×; then de-immutabled pawn-patch spreads + paused warmup screen → 200+ TPS @4× after ~5s, GOAL CRUSHED 2026-06-15; then JS-allocation capture (§C) verified the de-immutable win + drove the harvest-time worldMap-delta fix; 2026-06-15 Electron chosen over Tauri (A/B), and the Electron renderer trace opened §D — renderer-side hitches D1–D3; 2026-06-16 §D extended: prealloc + designation-decouple + RESYNC 8→32 + worldMapDelta-slim landed, and the BIG one — three `worldMap.map()` full-rebuilds (harvest completion / mob forage / building footprint) found via the `[TRIG]` probe and de-immutabled in place → `worldMapRef=0`; sectional throttle TRIED+REVERTED; perf arc PAUSED on the entity baseline) -->
 
 # ENGINE PERFORMANCE & SCALING
 
@@ -23,6 +23,17 @@ Profiling-driven performance work, measured on the heavy `--profiler` sandbox (1
 
 ## 0 · Status
 
+- **🖥️ RENDERER-side arc (§D, 2026-06-16) — the cliffs are fixed; perf arc PAUSED on the entity baseline.**
+  After the Electron cutover ([[electron-over-tauri-distribution]], ~250 TPS vs Tauri ~100) Chrome-trace
+  profiling of the *render thread* opened a new surface (§D). What landed: terrain vertex prealloc (D1′),
+  designation→terrain decouple (D1″), resync cadence 8→32 (D5), worldMapDelta tile-slim (D4), staggered
+  resync (D2), async autosave (D3). **The big one (D6):** three `worldMap.map()` sites — harvest completion,
+  **mob foraging (per-tick, in a loop — worst)**, building footprint — rebuilt the whole 38k worldMap to
+  change a few tiles, flipping its ref → full re-clone across the boundary (the 211 ms `onmessage` spikes)
+  **and** a full terrain rebuild. Found via the `[TRIG]` probe (`worldMapRef=5–11/30flush` during harvest);
+  de-immutabled in place → **`worldMapRef=0`**, only `worldMapDelta`s flow. **The sectional throttle (D7)
+  was TRIED and REVERTED** (worsened start FPS). **Remaining = the entity baseline** (`pawns+mobs ≈
+  400–500k/flush`, peak at start) — a *project* (scalar projection / transferable buffers), not a cut. See §D.
 - **🏁 GOAL CRUSHED (2026-06-15, validated in-game): comfortably 200+ TPS @4×** on the giant
   `--profiler` map after ~5 s of play (settles in 2–3 s post-unpause, climbs past 200 by ~5 s). The
   full arc — worker decouple → W2/W2b snapshot → de-immutabling the residual pawn-patch spreads
@@ -341,9 +352,40 @@ pure JS + GPU-upload + GC, **not** paint/layout.
   ~5.2M-element `number[]` via `.push(...)` then `new Float32Array(it)`. Now it writes straight into a
   preallocated `Float32Array` (size exact: 138 floats/tile, no skips) — output byte-identical, kills
   the giant transient alloc + conversion + its GC. One function, `pnpm check` 0 errors, 235 tests green.
-- [ ] **D1″ — reduce rebuild FREQUENCY (open).** Some dips are still full rebuilds forced by
-  designation/zone churn during harvest. Move designation/zone markers OFF the static terrain VBO into
-  a separate overlay pass (doc §5) so terrain only rebuilds on real terrain changes.
+- [x] **D1″ — decouple designations from the terrain rebuild — LANDED (2026-06-16).** A *dip-correlated*
+  trace (worst renderer tasks × what BOTH threads ran in that window — see §D-method) showed **10/12 worst
+  dips were the full 38k terrain rebuild** (`redrawOverlayNow → buildGameGrid → setTile×38k →
+  generateBatchVertexData → bufferData`), fired ~2×/s by **designation churn** — yet `buildGameGrid` doesn't
+  even read `designations` (icons are a separate 2D `drawDesignations` overlay; only `zoneTiles` tints the
+  grid). So the worker now bumps `_terrainRev` only on worldMap/buildings/zones, and a SEPARATE
+  `_designationRev` drives the cheap 2D overlay. Designation churn no longer triggers a terrain rebuild.
+- [x] **D5 — resync cadence `RESYNC_EVERY` 8 → 32 — LANDED.** The `[SNAP]` payload probe showed the
+  per-flush **resync slice** (~19 full pawns/flush carrying cold trees — inventory/limbs/skills/injuries) was
+  ~131k/flush — the single biggest snapshot payload AND GC source (full entity objects deserialized + tossed
+  every flush). Those cold trees feed only the selected-entity panel (tolerates ~2 s staleness), so 4× the
+  interval cut that bandwidth ~4× (`pawns` floor ~241k → ~176k). Live scalars (position/needs/state) still
+  flow every flush.
+- [x] **D6 — THE harvest cliff: three `worldMap.map()` full-rebuilds → in-place + `markTileDirty`. LANDED
+  (the big one, 2026-06-16).** The `[TRIG]` probe (counts what bumps the terrain-rev) pinned it: during
+  harvest **`worldMapRef = 5–11 / 30 flush`** — the whole worldMap ARRAY getting a NEW ref — everything else
+  (deltas, buildings, zones, designations) `= 0`. A new worldMap ref does TWO expensive things at once: a full
+  terrain rebuild AND a full 38k-tile **re-clone across the worker boundary** (the 211 ms `message handler`
+  violations). Three sites rebuilt the entire 38k array via `.map()` to change a handful of tiles:
+  - `JobService._completeHarvest` — per-completion (~2–5×/s under 150-pawn harvest).
+  - `entityAI` mob-foraging tile depletion — **per-tick, in a `for` LOOP (one full rebuild PER depletion ×
+    140 mobs) — the worst offender**, and one I'd never have looked at without the user's "check other jobs".
+  - `BuildingService.applyBuildingFootprint` — event-rate (build/deconstruct).
+  All three now mutate the changed tile IN PLACE + `markTileDirty` (ADR-002 amendment, mirroring §C regrowth)
+  → no ref flip, ships a `worldMapDelta`. **Result: `worldMapRef → 0`; `worldMapDelta` now flows (3–12/30flush,
+  `wmDelta ≈ 0–0.4k` payload); the full re-clone is gone.** (Found by grep for `worldMap.map`; codegraph's
+  reachability *couldn't* see `_completeHarvest` — registry-dispatched — see [[codegraph-registry-blindspot]],
+  since FIXED in the extractor.)
+- [~] **D7 — sectional throttle (jobs/workAssignments/droppedItems/stockpile @ ~4Hz): TRIED, REVERTED.**
+  Aimed at the constant `jobs ≈ 50k/flush` tax + harvest-time `droppedItems` growth, staggered onto phases so
+  they never land on one flush. **The data killed it:** at game START (pre-harvest) the `state` payload is
+  already tiny (~0–4k) — the dominant cost there is the ENTITY baseline (~465k), untouched by the throttle.
+  And throttling the *most volatile* fields (the job pool churns hardest during startup colony setup)
+  concentrated their reactive work into bursts → **FPS got WORSE at start.** Wrong target + bursty. Reverted.
 - [x] **D4 — the harvest cliff is the worldMapDelta SNAPSHOT, not the job logic — slimmed it. LANDED.**
   Post-D1′ trace + a time-split (early vs harvest) showed the real harvest degradation: the renderer's
   `w.onmessage` (snapshot deserialize) and the worker's `post` (serialize) **spike 5–8× the instant
@@ -362,10 +404,49 @@ pure JS + GPU-upload + GC, **not** paint/layout.
   FULL (cold-inclusive) entity only for this flush's round-robin slice (`i % RESYNC_EVERY === phase`) +
   newly-seen ids; everyone else stays slim. Over RESYNC_EVERY flushes every entity is refreshed → same
   staleness backstop, no 150 ms `onmessage` wall. The old `{full}` all-at-once branch is retired (the
-  type variant + client branch remain as harmless dead code). 235 tests green. *Re-measure pending.*
-- [x] **D3 — autosave off the render hot path (~4%+) — LANDED.** `scheduleSave` (saveManager.ts) now runs
-  the `stripState` 38k-tile clone + IDB write inside `requestIdleCallback` (macrotask fallback), off the
-  frame-critical path. *Re-measure pending.*
+  type variant + client branch remain as harmless dead code). 235 tests green.
+- [x] **D3 — autosave off the render hot path (~4%+) — LANDED + CONFIRMED.** `scheduleSave` (saveManager.ts)
+  runs the `stripState` 38k-tile clone + IDB write inside `requestIdleCallback` (macrotask fallback), off the
+  frame-critical path. Post-fix trace cross-check: `saveManager`+`stripTile` dropped **~4.4% → ~0.9%** of
+  stutter time. ✅
+
+### §D-method · the trace toolchain this session built (TEMP — strip before ship)
+
+Chrome DevTools traces (Electron) parsed by **ad-hoc node scripts in `/tmp`** (not committed; Chrome format,
+not the Firefox `pq` pipeline): per-thread JS self-time; **dip-correlation** (worst renderer tasks × what
+BOTH the renderer AND worker ran in that window — this is what pinned D1″/D6); and three in-worker console
+probes in `sim.worker.ts` gated by `SNAP_SIZE_LOG`:
+- **`[SNAP]`** — serialized byte size of each snapshot component + the biggest `state`-delta fields (sampled
+  ~every 2 s). Revealed the payload is dominated by `pawns+mobs`, with `jobs≈50k` a constant tax.
+- **`[SNAP-PAWN]`** — one slim pawn broken down by field (`needs`/`activeJob`/`state` ≈ 350B; `path` 100–650B
+  when moving).
+- **`[TRIG]`** — what bumps the terrain-rev each window (worldMapDelta vs worldMapRef vs buildings/zones vs
+  designations). This is what found D6 (`worldMapRef=5–11→0`).
+
+These probes + the `--max-semi-space-size=128` GC band-aid in `desktop-spike/electron/main.js` are **temporary
+instrumentation still in the tree** — strip them before committing for real.
+
+### Where it stands — perf arc PAUSED (2026-06-16)
+
+Every **cliff** is fixed and measured: worldMap rebuilds (`worldMapRef=0`, D6), the full re-clone (gone, D6),
+terrain vertex cost (halved, D1′), designation-driven rebuilds (decoupled, D1″), the resync slice (4× smaller,
+D5), the worldMapDelta tile (slimmed, D4). At the real ~50-pawn target this is trivially fast; the harvest
+collapse and the renderer hitches the user *felt* are gone or much reduced.
+
+**The remaining cost is the ENTITY BASELINE — `pawns + mobs ≈ 400–500k/flush`, peaking at game START** (all
+140 mobs alive + every pawn pathing → `path` inflates each slim pawn to ~900B). This is no longer a spider-web
+strand; it's the load-bearing wall, and **there is no surgical cut left** (D7 proved throttling the *small*
+state fields can't help the start and can backfire). The only real levers are PROJECTS:
+- [ ] **Render-scalar entity projection** — ship per entity only the scalars the renderer draws
+  (`position`/`needs.hunger`/`activeJob.progress`/`state.health`/`currentState`) + **truncate `path` to the
+  next 1–2 cells** (the renderer's `simTarget` reads only `path[pathIndex]`); demote the rest to the 32-flush
+  resync. ~50–60% off entities, but it touches per-frame renderer reads → needs a render-read audit (like D4's
+  worldMap-tile audit), NOT a blind cut.
+- [ ] **Transferable `Float32Array` positions** — the §A/R3 idea; biggest win, biggest rewrite.
+
+**Decision: stop the surgical-cut loop here.** Either ship for the real scale, or greenlight the entity
+projection as a deliberate, scoped project. Lesson of §D: every win came from a *correlated* capture (dip ×
+both threads, `[TRIG]`, `[SNAP]`); the one blind/assumed cut (D7) is the only one that regressed.
 
 ---
 

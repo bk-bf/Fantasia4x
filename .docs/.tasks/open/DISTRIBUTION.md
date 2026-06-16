@@ -1,23 +1,34 @@
 <!-- LOC cap: 300 (created: 2026-05-30) -->
 
-# TAURI DISTRIBUTION
+# DISTRIBUTION (wrapper: ELECTRON — decided 2026-06-15)
 
-> **Related:** [ROADMAP](ROADMAP.md) · [game/ARCHITECTURE](../../game/ARCHITECTURE.md) · [ENGINE-PERFORMANCE](ENGINE-PERFORMANCE.md) (the shipped WebView is the perf-measurement target) · [game/DECISIONS](../../game/DECISIONS.md) ADR-020
+> **Related:** [ROADMAP](ROADMAP.md) · [game/ARCHITECTURE](../../game/ARCHITECTURE.md) · [ENGINE-PERFORMANCE](ENGINE-PERFORMANCE.md) (the shipped WebView is the perf-measurement target) · [game/DECISIONS](../../game/DECISIONS.md) ADR-020 · [[electron-over-tauri-distribution]]
+
+> **⚡ WRAPPER DECIDED: ELECTRON, not Tauri (2026-06-15, A/B measured).** Phase A's viability spike was run
+> for BOTH (`desktop-spike/{electron,tauri}`, launched via `./launch.sh --electron|--tauri`). On the heavy
+> `--profiler` scene: **Electron/V8 ~250 TPS** (beats even Zen/SpiderMonkey) with better colour rendering
+> (matters for the hue-dominant day/night UI) and Chromium devtools; **Tauri/WebKitGTK(JSC) ~100 TPS** with
+> more lag + dips under 80. Tauri compiled cleanly against system `webkit2gtk-4.1` and is **kept as a
+> second-engine test canary**, but dev + ship target is now **Electron** (one predictable V8 everywhere;
+> Tauri-on-Linux/Mac is JSC, the weak wildcard). The Tauri-specific Phase A/B steps below are **superseded**
+> for the wrapper choice; the adapter-static migration + save-adapter work (Phase B) still apply to Electron.
+> See ENGINE-PERFORMANCE §D — the Electron renderer trace is what opened the whole renderer-hitch arc.
 
 ## Goal
 
 Ship Fantasia4x as a standalone desktop application (Linux AppImage/deb, Windows
-NSIS/MSI, macOS dmg) using Tauri 2. The SvelteKit frontend is unchanged; Tauri
-wraps the Vite-built output. Save files migrate from `localStorage` to the native
-filesystem so they survive browser-data clears. WASM spatial core must load
-correctly inside the bundled WebView.
+NSIS/MSI, macOS dmg) using **Electron** (was: Tauri 2 — see the decision note above). The SvelteKit frontend
+is unchanged; the wrapper loads the Vite-built output. Save files migrate from `localStorage` to the native
+filesystem so they survive browser-data clears. WASM spatial core must load correctly inside the bundled
+runtime (✅ verified working in both Electron and Tauri during the spike).
 
 ---
 
-## Phase A — Viability Spike (do now)
+## Phase A — Viability Spike — ✅ DONE (both wrappers A/B'd; Electron chosen)
 
-Minimum goal: one complete turn cycle runs inside a Tauri window with saves
-working and WASM loaded. Gate further investment on this passing.
+Minimum goal *(met)*: one complete turn cycle runs inside a desktop window with WASM loaded — verified in
+BOTH Electron and Tauri (`desktop-spike/`). The A/B gate (above) chose Electron. Original Tauri-scaffold
+steps kept below for reference / the canary build.
 
 ### A1 — Tauri scaffold
 
