@@ -19,6 +19,7 @@ import { stepBody } from '../systems/MovementSystem';
 import { occupancyService } from './OccupancyService';
 import statusEffectsData from '../database/status-effects.jsonc';
 import { getConditionCurrentStage, conditionNeedMultipliers } from '../core/needs';
+import { getAmbientLight, weatherEffects } from './EnvironmentService';
 // Gated console shim — see core/log.ts. Silences per-tick log/debug/warn unless
 // gameDebug(true); console.error still surfaces.
 import { gatedConsole as console } from '../core/log';
@@ -105,6 +106,17 @@ const WATER_THIRST_RELIEF = 65;
 // §D auto-wash: hygiene threshold to wash at water, and the cleanliness restored.
 const AUTO_WASH_HYGIENE = 75;
 const WASH_HYGIENE_RELIEF = 70;
+
+// SEASONS_WEATHER Subsystem 3 — temperature/night need effects (PERF-3: scalar constants, read in
+// the per-tick loop; no allocation). Comfort range in conceptual °C; per-degree multipliers match
+// the spec (cold→fatigue, heat→hunger).
+const COMFORT_MIN_DEFAULT = 5;
+const COMFORT_MAX_DEFAULT = 30;
+const DEFAULT_COMFORT_TEMP = 15; // fallback when a pawn has no tile (unspawned)
+const COLD_FATIGUE_PER_DEG = 0.03;
+const HEAT_HUNGER_PER_DEG = 0.02;
+const NIGHT_LIGHT_THRESHOLD = 0.3; // ambient below this counts as "night" for the fatigue bump
+const NIGHT_FATIGUE_MUL = 1.1;
 
 /**
  * PawnService Implementation - Focused on pawn behavior and needs only
@@ -379,14 +391,46 @@ export class PawnServiceImpl implements PawnService {
     // tick so ref-based change detection still fires, and under ?simworker the snapshot is cloned
     // at the boundary — nothing retains a pre-tick reference to these objects.
     const pawns = gameState.pawns;
+    // SEASONS_WEATHER (PERF-3): precompute the GLOBAL env factors ONCE per tick — scalar reads, no
+    // allocation. Per-pawn temperature is read from the cached `tile.temperature` (baked per season)
+    // plus this live weather delta, so weather changes never touch the 38k-tile worldMap.
+    const weatherFx = weatherEffects(gameState.weather);
+    const weatherTemp = weatherFx.tempDelta;
+    const nightFatigueMul =
+      getAmbientLight(gameState.turn) < NIGHT_LIGHT_THRESHOLD ? NIGHT_FATIGUE_MUL : 1;
+    const worldMap = gameState.worldMap;
     for (let i = 0; i < pawns.length; i++) {
       const pawn = pawns[i];
       if (pawn.isAlive === false) continue;
 
       const rate = this.getNeedIncreasePerTurn(pawn);
+      // Effective temperature at the pawn = cached tile temperature + live weather delta.
+      const pos = pawn.position;
+      const tile = pos ? worldMap[pos.y]?.[pos.x] : undefined;
+      const temp = (tile?.temperature ?? DEFAULT_COMFORT_TEMP) + weatherTemp;
+      // Comfort range (default ± trait shifts) — indexed loop, no iterator/closure allocation.
+      let comfortMin = COMFORT_MIN_DEFAULT;
+      let comfortMax = COMFORT_MAX_DEFAULT;
+      const traits = pawn.racialTraits;
+      for (let ti = 0; ti < traits.length; ti++) {
+        const name = traits[ti].name;
+        if (name === 'Cold Blooded') {
+          comfortMin = 15;
+          comfortMax = 40;
+        } else if (name === 'Insulated') {
+          comfortMin = -5;
+          comfortMax = 25;
+        }
+      }
+      const cold = comfortMin - temp; // >0 when too cold → tires faster
+      const heat = temp - comfortMax; // >0 when too hot → hungers faster
+      const fatigueMul =
+        weatherFx.fatigueMul * nightFatigueMul * (cold > 0 ? 1 + cold * COLD_FATIGUE_PER_DEG : 1);
+      const hungerMul = weatherFx.hungerMul * (heat > 0 ? 1 + heat * HEAT_HUNGER_PER_DEG : 1);
+
       const needs = pawn.needs;
-      const hunger = Math.min(100, needs.hunger + rate.hunger * dt);
-      const fatigue = Math.min(100, needs.fatigue + rate.fatigue * dt);
+      const hunger = Math.min(100, needs.hunger + rate.hunger * hungerMul * dt);
+      const fatigue = Math.min(100, needs.fatigue + rate.fatigue * fatigueMul * dt);
       // §D water needs: thirst & hygiene accrue each tick like hunger. Eating quenches
       // some thirst (handled where meals are consumed); drinking/washing reset them.
       const thirst = Math.min(100, (needs.thirst ?? 0) + THIRST_INCREASE_PER_SECOND * dt);

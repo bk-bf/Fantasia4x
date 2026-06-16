@@ -71,6 +71,10 @@ export const initialGameState: GameState = {
   race: generateRace(),
   pawns: [],
   worldMap: [], // generated lazily in the async init (D7)
+  /** Living-world (SEASONS_WEATHER): start in spring, clear skies. */
+  season: 'spring',
+  seasonDay: 0,
+  weather: { type: 'clear', intensity: 0, turnsRemaining: 0 },
   buildingCounts: {},
   /** Phase 4: placed buildings on the map */
   buildings: [],
@@ -121,6 +125,10 @@ export const initialGameState: GameState = {
 function applyMigrations(state: GameState): GameState {
   // P0-2: old saves predate the deterministic seed — assign one so future ticks replay.
   if (typeof state.seed !== 'number') state.seed = freshSeed();
+  // SEASONS_WEATHER: backfill living-world fields for pre-season saves.
+  if (!state.season) state.season = 'spring';
+  if (typeof state.seasonDay !== 'number') state.seasonDay = 0;
+  if (!state.weather) state.weather = { type: 'clear', intensity: 0, turnsRemaining: 0 };
   // Phase 4 migration: backfill new fields for old saves
   if (!state.buildings) {
     state.buildings = Object.entries(state.buildingCounts ?? {}).flatMap(([type, count]) =>
@@ -870,6 +878,9 @@ if (import.meta.hot) {
 
 // Derived stores
 export const currentTurn = derived(gameState, ($gameState) => $gameState.turn);
+/** SEASONS_WEATHER: lightweight topbar readouts (avoid subscribing the whole state in the HUD). */
+export const currentSeason = derived(gameState, ($gameState) => $gameState.season ?? 'spring');
+export const currentWeather = derived(gameState, ($gameState) => $gameState.weather);
 export const currentRace = derived(gameState, ($gameState) => $gameState.race);
 export const pawnStats = derived(gameState, ($gameState) => $gameState.pawnStats || {});
 

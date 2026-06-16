@@ -10,6 +10,7 @@ import { SUBTERRAINS, SUBTERRAIN_FALLBACK } from '../../core/Terrains';
 import { markTileDirty } from '../../core/tileDeltas';
 import { absorbDropIfOnStockpileTile } from '../../core/GameState';
 import { ticksFromSeconds } from '../../core/time';
+import { seasonRegrowthMultiplier } from '../EnvironmentService';
 import { rng } from '../../core/rng';
 import { HARVEST_DTYPES, resourceMatchesDesignation, resourceMatchesFilter } from './filters';
 
@@ -134,18 +135,22 @@ export function complete(job: Job, gs: GameState): GameState {
     col.movementCost = baseSub.movementCost;
   } else {
     const newCooldowns = { ...(col.resourceCooldowns ?? {}) };
+    // SEASONS_WEATHER Subsystem 2: scale regrowth duration by the season rate (spring fast, winter
+    // slow). Higher rate ⇒ cooldown divided ⇒ shorter wait.
+    const regrowthRate = seasonRegrowthMultiplier(gs.season);
+    const cooldownTicks = (turns: number) =>
+      gs.turn + Math.round(ticksFromSeconds(turns) / regrowthRate);
     const yieldHasPerItemCooldowns = interaction!.yields.some((y) => y.regrowthTurns !== undefined);
     if (yieldHasPerItemCooldowns) {
       // Per-yield compound keys: "resourceId:itemId" → turn
       for (const y of interaction!.yields) {
         if (y.regrowthTurns && (availableItemIds?.has(y.itemId) ?? true)) {
-          newCooldowns[`${job.resourceId!}:${y.itemId}`] =
-            gs.turn + ticksFromSeconds(y.regrowthTurns);
+          newCooldowns[`${job.resourceId!}:${y.itemId}`] = cooldownTicks(y.regrowthTurns);
         }
       }
     } else if (interaction?.regrowthTurns) {
       // Simple whole-resource cooldown
-      newCooldowns[job.resourceId!] = gs.turn + ticksFromSeconds(interaction.regrowthTurns);
+      newCooldowns[job.resourceId!] = cooldownTicks(interaction.regrowthTurns);
     }
     col.resourceCooldowns = newCooldowns;
   }
@@ -198,7 +203,11 @@ export function complete(job: Job, gs: GameState): GameState {
 
 /** Decrement the working pawn's equipped tool for `workCategory`; unequip it (broke) at ≤0 durability.
  *  Shared with craft jobs (ADR-009 step 2 — craft-tool wear). */
-export function wearWorkingPawnTool(pawnId: string, workCategory: string, gs: GameState): GameState {
+export function wearWorkingPawnTool(
+  pawnId: string,
+  workCategory: string,
+  gs: GameState
+): GameState {
   const pawn = gs.pawns.find((p) => p.id === pawnId);
   if (!pawn?.equipment) return gs;
   const slot = (Object.keys(pawn.equipment) as (keyof typeof pawn.equipment)[]).find((s) => {

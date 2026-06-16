@@ -33,6 +33,13 @@ import { isGameDebug, gatedConsole } from '../core/log';
 import type { WorkCategory } from '../core/types';
 import type { Pawn } from '../core/types';
 import { rng } from '../core/rng';
+import {
+  seasonForTurn,
+  recomputeWorldTemperature,
+  advanceWeatherForDay,
+  SEASONS,
+  TURNS_PER_DAY
+} from '../services/EnvironmentService';
 import { markTileDirty } from '../core/tileDeltas';
 import { eventSystem, type GameEvent } from '../core/Events';
 import { simLog } from '../core/logSink';
@@ -89,6 +96,13 @@ export class GameEngineImpl implements GameEngine {
   /** `performance.now()` of the last UI flush — throttles notify/snapshot to ~15 Hz (UI_PUSH_MS). */
   private lastFlushMs = 0;
   /**
+   * The season the worldMap temperatures were last recomputed for (SEASONS_WEATHER Phase B).
+   * `undefined` until the first non-empty recompute, so a fresh world (temperature: 0) and a
+   * reloaded save both get their temperatures populated on the first tick — and a season change
+   * triggers exactly one in-place recompute (PERF-1), not one per tick.
+   */
+  private temperatureSeason: import('../core/types').Season | undefined = undefined;
+  /**
    * Per-tick output sink (ENGINE-PERFORMANCE ADR-021, sim→Worker W0). The engine no longer imports
    * the Svelte store; the owner injects how to publish each tick's state — on the main thread that's
    * `pushFromEngine` (store), in the sim worker it'll postMessage a snapshot. `flush` mirrors the old
@@ -140,6 +154,10 @@ export class GameEngineImpl implements GameEngine {
 
       // Phase runner — profiler removed; profile via the browser (Firefox Profiler) instead.
       const t = (_label: string, fn: () => void): void => fn();
+
+      // Living-world environment (SEASONS_WEATHER Phase B/C): advance season + weather and refresh
+      // tile temperature BEFORE needs tick, so the need-rate hot path reads current values.
+      t('environment', () => this.processEnvironment());
 
       t('needsTick', () => {
         this.gameState = pawnService.processNeedsTick(this.gameState!);
@@ -240,6 +258,39 @@ export class GameEngineImpl implements GameEngine {
         systemsUpdated: [],
         errors: [error instanceof Error ? error.message : 'Unknown error']
       };
+    }
+  }
+
+  /**
+   * Living-world environment update (SEASONS_WEATHER Phases B & C).
+   *
+   * - Season/seasonDay are derived from the turn and written only when they change.
+   * - On a season change (or first non-empty tick), tile temperatures are recomputed IN PLACE
+   *   (PERF-1: no `worldMap.map()`, no ref flip → `worldMapRef` stays 0; temperature is worker-only
+   *   so it is not shipped as a tile delta — PERF-2).
+   * - Weather is re-rolled once per in-game day (midnight boundary), so at most one new WeatherState
+   *   object per day rides the sectional snapshot — negligible churn (PERF-4: season/weather are
+   *   cheap top-level scalars, never per-tile worldMap fields).
+   */
+  private processEnvironment(): void {
+    const gs = this.gameState;
+    if (!gs) return;
+
+    const { season, seasonDay } = seasonForTurn(gs.turn);
+    if (season !== gs.season) gs.season = season;
+    if (seasonDay !== gs.seasonDay) gs.seasonDay = seasonDay;
+
+    // Recompute temperatures once when the season the map was baked for changes (or on first
+    // populated tick — fresh worlds carry temperature 0 until baked here).
+    if (gs.worldMap.length > 0 && this.temperatureSeason !== season) {
+      recomputeWorldTemperature(gs.worldMap, season);
+      this.temperatureSeason = season;
+    }
+
+    // Weather: one Markov step per in-game day at midnight.
+    const ticksPerDay = TURNS_PER_DAY * TICKS_PER_SECOND;
+    if (gs.turn % ticksPerDay === 0 && gs.weather) {
+      gs.weather = advanceWeatherForDay(gs.weather, season, rng);
     }
   }
 

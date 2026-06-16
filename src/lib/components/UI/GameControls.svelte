@@ -1,6 +1,12 @@
 <script lang="ts">
   import { browser } from '$app/environment';
-  import { gameState, currentTurn, savedStateReady } from '$lib/stores/gameState';
+  import {
+    gameState,
+    currentTurn,
+    currentSeason,
+    currentWeather,
+    savedStateReady
+  } from '$lib/stores/gameState';
   import { uiState } from '$lib/stores/uiState';
   import { renderFps } from '$lib/stores/perfStats';
   import { wasmPathfinderService } from '$lib/game/services/WasmPathfinderService';
@@ -75,6 +81,27 @@
   }
 
   $: gameDate = turnToGameDate(currentTurnValue);
+
+  // ===== SEASON & WEATHER READOUT (SEASONS_WEATHER) =====
+  const SEASON_LABEL: Record<string, string> = {
+    spring: 'Spring',
+    summer: 'Summer',
+    autumn: 'Autumn',
+    winter: 'Winter'
+  };
+  const WEATHER_LABEL: Record<string, string> = {
+    clear: 'Clear',
+    rain: 'Rain',
+    heavy_rain: 'Heavy Rain',
+    snow: 'Snow',
+    blizzard: 'Blizzard',
+    heat_wave: 'Heat Wave',
+    fog: 'Fog'
+  };
+  $: weatherLabel =
+    $currentWeather && $currentWeather.type !== 'clear'
+      ? (WEATHER_LABEL[$currentWeather.type] ?? '')
+      : '';
 
   function regenMap() {
     const parsed = parseInt(mapSeedInput, 10);
@@ -182,11 +209,16 @@
   <span class="bi date" title="{gameDate.monthName} {gameDate.day}, Year {gameDate.year}"
     >{gameDate.dayStr}/{gameDate.monthStr}/{gameDate.yearStr} {gameDate.hourStr}:00</span
   >
+  <span class="bi season" title="Season &amp; weather"
+    >{SEASON_LABEL[$currentSeason] ?? $currentSeason}{weatherLabel
+      ? ` · ${weatherLabel}`
+      : ''}</span
+  >
   <span class="bi turn" title="Turn {currentTurnValue}">T{currentTurnValue}</span>
   <span
     class="bi perf"
-    title="Render {fps} FPS · Simulation {tps} TPS (target {TICKS_PER_SECOND * gameSpeed} at {gameSpeed}×)"
-    >{fps}FPS · {tps}TPS</span
+    title="Render {fps} FPS · Simulation {tps} TPS (target {TICKS_PER_SECOND *
+      gameSpeed} at {gameSpeed}×)">{fps}FPS · {tps}TPS</span
   >
   <span class="bi" class:running={!isPaused} class:paused={isPaused}>
     {isPaused ? '■ PAUSED' : '● RUNNING'}

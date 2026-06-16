@@ -1,0 +1,209 @@
+import { describe, it, expect } from 'vitest';
+import { SeededRng } from '../core/rng';
+import { TICKS_PER_SECOND } from '../core/time';
+import type { WorldTile, WeatherType } from '../core/types';
+import {
+  TURNS_PER_DAY,
+  DAYS_PER_SEASON,
+  SEASONS,
+  seasonForTurn,
+  dayIndexForTurn,
+  recomputeWorldTemperature,
+  biomeBaseTemp,
+  seasonRegrowthMultiplier,
+  advanceWeatherForDay,
+  weatherEffects,
+  getEnvironmentTint
+} from './EnvironmentService';
+
+const TICKS_PER_DAY = TURNS_PER_DAY * TICKS_PER_SECOND;
+const TICKS_PER_SEASON = TICKS_PER_DAY * DAYS_PER_SEASON;
+
+function tile(terrainType: string): WorldTile {
+  return {
+    x: 0,
+    y: 0,
+    type: 'land',
+    discovered: true,
+    ascii: '.',
+    terrainType,
+    subType: 'dirt',
+    density: 0.4,
+    moisture: 0,
+    temperature: 0,
+    movementCost: 1,
+    walkable: true,
+    resources: {},
+    territoryOwner: ''
+  };
+}
+
+describe('EnvironmentService — seasons (Phase B)', () => {
+  it('maps turn 0 to spring day 0', () => {
+    expect(seasonForTurn(0)).toEqual({ season: 'spring', seasonDay: 0 });
+  });
+
+  it('advances through the four seasons and wraps after a year', () => {
+    expect(seasonForTurn(TICKS_PER_SEASON).season).toBe('summer');
+    expect(seasonForTurn(2 * TICKS_PER_SEASON).season).toBe('autumn');
+    expect(seasonForTurn(3 * TICKS_PER_SEASON).season).toBe('winter');
+    // 4 seasons = one full year → back to spring.
+    expect(seasonForTurn(4 * TICKS_PER_SEASON).season).toBe('spring');
+  });
+
+  it('tracks the 0-indexed day within a season', () => {
+    expect(seasonForTurn(TICKS_PER_DAY * 5).seasonDay).toBe(5);
+    expect(seasonForTurn(TICKS_PER_DAY * (DAYS_PER_SEASON - 1)).seasonDay).toBe(
+      DAYS_PER_SEASON - 1
+    );
+    // day 30 rolls into the next season at day 0.
+    expect(seasonForTurn(TICKS_PER_DAY * DAYS_PER_SEASON)).toEqual({
+      season: 'summer',
+      seasonDay: 0
+    });
+  });
+
+  it('dayIndexForTurn counts whole in-game days', () => {
+    expect(dayIndexForTurn(0)).toBe(0);
+    expect(dayIndexForTurn(TICKS_PER_DAY - 1)).toBe(0);
+    expect(dayIndexForTurn(TICKS_PER_DAY)).toBe(1);
+  });
+});
+
+describe('EnvironmentService — temperature (Phase B, PERF-1)', () => {
+  it('recomputes temperature = biome base + season offset', () => {
+    const map = [[tile('plains'), tile('mountain')]];
+    recomputeWorldTemperature(map, 'summer');
+    expect(map[0][0].temperature).toBe(biomeBaseTemp('plains') + SEASONS.summer.tempOffset);
+    expect(map[0][1].temperature).toBe(biomeBaseTemp('mountain') + SEASONS.summer.tempOffset);
+  });
+
+  it('winter is colder than summer for the same biome', () => {
+    const summer = [[tile('plains')]];
+    const winter = [[tile('plains')]];
+    recomputeWorldTemperature(summer, 'summer');
+    recomputeWorldTemperature(winter, 'winter');
+    expect(winter[0][0].temperature).toBeLessThan(summer[0][0].temperature);
+  });
+
+  it('mutates IN PLACE — same array AND same tile refs (PERF-1: no worldMap.map / ref flip)', () => {
+    const map = [[tile('plains')]];
+    const rowRef = map[0];
+    const tileRef = map[0][0];
+    recomputeWorldTemperature(map, 'autumn');
+    expect(map[0]).toBe(rowRef);
+    expect(map[0][0]).toBe(tileRef);
+  });
+
+  it('biomeBaseTemp falls back for unknown biomes', () => {
+    expect(biomeBaseTemp('not-a-biome')).toBeTypeOf('number');
+  });
+});
+
+describe('EnvironmentService — seasonal regrowth (Subsystem 2)', () => {
+  it('spring regrows faster than winter', () => {
+    expect(seasonRegrowthMultiplier('spring')).toBeGreaterThan(seasonRegrowthMultiplier('winter'));
+  });
+
+  it('defaults to 1 when season is undefined', () => {
+    expect(seasonRegrowthMultiplier(undefined)).toBe(1);
+  });
+});
+
+describe('EnvironmentService — weather (Phase C)', () => {
+  it('weatherEffects defaults to clear when undefined', () => {
+    const fx = weatherEffects(undefined);
+    expect(fx).toEqual(weatherEffects({ type: 'clear', intensity: 0, turnsRemaining: 0 }));
+    expect(fx.fatigueMul).toBe(1);
+  });
+
+  it('harsher weather raises the fatigue multiplier and lowers temperature', () => {
+    expect(
+      weatherEffects({ type: 'blizzard', intensity: 1, turnsRemaining: 0 }).fatigueMul
+    ).toBeGreaterThan(
+      weatherEffects({ type: 'rain', intensity: 0.5, turnsRemaining: 0 }).fatigueMul
+    );
+    expect(
+      weatherEffects({ type: 'blizzard', intensity: 1, turnsRemaining: 0 }).tempDelta
+    ).toBeLessThan(0);
+    expect(
+      weatherEffects({ type: 'heat_wave', intensity: 0.75, turnsRemaining: 0 }).tempDelta
+    ).toBeGreaterThan(0);
+  });
+
+  it('advanceWeatherForDay is deterministic for a given seed', () => {
+    const a = advanceWeatherForDay(
+      { type: 'clear', intensity: 0, turnsRemaining: 0 },
+      'autumn',
+      new SeededRng(42)
+    );
+    const b = advanceWeatherForDay(
+      { type: 'clear', intensity: 0, turnsRemaining: 0 },
+      'autumn',
+      new SeededRng(42)
+    );
+    expect(a).toEqual(b);
+  });
+
+  it('a fresh roll draws a duration in [50, 600] and a valid type', () => {
+    const valid: WeatherType[] = [
+      'clear',
+      'rain',
+      'heavy_rain',
+      'snow',
+      'blizzard',
+      'heat_wave',
+      'fog'
+    ];
+    const rng = new SeededRng(7);
+    for (let i = 0; i < 200; i++) {
+      const w = advanceWeatherForDay(
+        { type: 'clear', intensity: 0, turnsRemaining: 0 },
+        'winter',
+        rng
+      );
+      expect(valid).toContain(w.type);
+      expect(w.turnsRemaining).toBeGreaterThanOrEqual(50);
+      expect(w.turnsRemaining).toBeLessThanOrEqual(600);
+    }
+  });
+
+  it('an unexpired spell runs down its timer without re-rolling the type', () => {
+    const w = advanceWeatherForDay(
+      { type: 'rain', intensity: 0.5, turnsRemaining: TICKS_PER_DAY * 3 },
+      'spring',
+      new SeededRng(1)
+    );
+    expect(w.type).toBe('rain');
+    expect(w.turnsRemaining).toBe(TICKS_PER_DAY * 2);
+  });
+
+  it('winter precipitation is snow, warm seasons rain (over many rolls)', () => {
+    const rng = new SeededRng(99);
+    const winterTypes = new Set<WeatherType>();
+    const springTypes = new Set<WeatherType>();
+    for (let i = 0; i < 500; i++) {
+      winterTypes.add(
+        advanceWeatherForDay({ type: 'clear', intensity: 0, turnsRemaining: 0 }, 'winter', rng).type
+      );
+      springTypes.add(
+        advanceWeatherForDay({ type: 'clear', intensity: 0, turnsRemaining: 0 }, 'spring', rng).type
+      );
+    }
+    expect(winterTypes.has('snow')).toBe(true);
+    expect(winterTypes.has('rain')).toBe(false);
+    expect(springTypes.has('rain')).toBe(true);
+    expect(springTypes.has('snow')).toBe(false);
+  });
+});
+
+describe('EnvironmentService — environment tint (Subsystem 2/5)', () => {
+  it('multiplies season hue by weather hue', () => {
+    const t = getEnvironmentTint('winter', { type: 'fog', intensity: 0.5, turnsRemaining: 0 });
+    expect(t[0]).toBeCloseTo(SEASONS.winter.tint[0] * 0.85);
+  });
+
+  it('clear weather + no season is neutral white', () => {
+    expect(getEnvironmentTint(undefined, undefined)).toEqual([1, 1, 1]);
+  });
+});

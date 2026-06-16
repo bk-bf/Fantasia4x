@@ -4,11 +4,31 @@
 
 > **Related:** [ROADMAP](ROADMAP.md) · [game/DESIGN](../../game/DESIGN.md) · [SURVIVAL-HEALTH](SURVIVAL-HEALTH.md) · [ENGINE-PERFORMANCE](ENGINE-PERFORMANCE.md) (the perf budget this spec must respect — §0.5) · archived: [FOG-OF-WAR-DEFERRED](../archive/FOG-OF-WAR-DEFERRED-2026-05-28.md)
 
-## Status: Phase A + A2 COMPLETE — Phases B–D not started
+## Status: Phase A + A2 + B + C (gameplay) COMPLETE — weather particles & fog (D) deferred
 
 Phase A (ambient day/night uniforms + EnvironmentService) and Phase A2
-(LightingService + per-tile `a_light` + campfire point light + flicker) are shipped.
-Phases B (seasons + temperature), C (weather), and D (fog of war) are open below.
+(LightingService + per-tile `a_light` + campfire point light + flicker) shipped earlier.
+
+**Shipped 2026-06-16 (this pass):**
+
+- **Phase B — Seasons + Temperature.** `season`/`seasonDay`/`weather` on `GameState`; `EnvironmentService`
+  gained the seasons table, weather Markov chain, per-tile temperature, and the season/weather tint.
+  `GameEngineImpl` advances season + weather each turn and recomputes tile temperature IN PLACE on season
+  change (PERF-1). Biome `baseTemp` added to `terrains.jsonc`. Seasonal regrowth multiplier applied in
+  `jobs/harvest.ts`.
+- **Phase C — Weather (gameplay).** `WeatherState` + daily Markov transitions; weather/temperature/night
+  need-rate effects in `PawnService.processNeedsTick` (scalar, zero per-tick allocation — PERF-3).
+- **Visuals.** Season + weather hue is folded into the existing ambient uniform in `GameCanvas` (PERF-5 —
+  a uniform multiply, never a terrain rebuild). Season + weather are shown in the topbar (`GameControls`).
+- **Tests/gates:** `environment.test.ts` (18 tests); `check` 0 errors, `test` 282 passed, `lint` no new errors.
+
+**Deferred (larger / higher-risk rendering bets, not started):**
+
+- **Weather particle overlay shader** (Subsystem 5, Phase C visual — rain/snow fullscreen pass, acceptance
+  #5/#6). Gameplay weather is live and visibly tints the scene; the *particle* pass is a separate WebGL
+  program + render-pass addition left for a focused rendering pass.
+- **Subsystem 6 — Fog of war (Phase D)** and **heat shimmer** — explicitly deferred to the WASM spatial
+  service (ADR-008); see PERF-4 + Subsystem 6.
 
 ---
 
@@ -35,7 +55,7 @@ here touches the two costs that arc proved dominate — the 38k-tile `worldMap` 
 path. The items below are **binding guardrails**: tick each one as honoured in its implementing phase
 (they're not optional cleanups — skipping one reintroduces a cliff that was just fixed).
 
-- [ ] **PERF-1 · Never rebuild the `worldMap` or flip its ref for a per-tile change.** `tile.temperature`
+- [x] **PERF-1 · Never rebuild the `worldMap` or flip its ref for a per-tile change.** `tile.temperature`
   (Subsystem 3) and any future per-tile field live on the 38k-`WorldTile` worldMap. The single biggest perf
   bug of the whole arc (§C, §D6) was `worldMap.map(row => row.map(...))` to change a handful of tiles:
   flipping the worldMap **ref** triggers both a full **terrain vertex rebuild** (renderer) *and* a full
@@ -44,20 +64,29 @@ path. The items below are **binding guardrails**: tick each one as honoured in i
   contain the blast radius) + **`markTileDirty(x,y)`** (`core/tileDeltas.ts`); the publisher drains those
   into a **`worldMapDelta`** (changed tiles only) and `simWorkerClient` patches its cached worldMap in place.
   **Concretely:** the "recompute `tile.temperature` once per season change" pass (Subsystem 3) is an in-place
-  pass + `markTileDirty`, *not* a rebuild — even at season cadence a 38k rebuild + re-clone is a visible hitch.
-- [ ] **PERF-2 · Keep `temperature` worker-only (it already costs nothing on the wire).** The `worldMapDelta`
+  pass, *not* a rebuild — even at season cadence a 38k rebuild + re-clone is a visible hitch.
+  **As built (2026-06-16):** `recomputeWorldTemperature` (EnvironmentService) mutates `tile.temperature` in
+  place over the existing array (verified by a same-ref test) and the engine guards it to fire only when the
+  baked season actually changes (`temperatureSeason` field), so `worldMapRef` stays 0. It deliberately does
+  **not** `markTileDirty` — temperature is worker-only (PERF-2: dropped from the slim tile), so there is
+  nothing for the renderer to receive; marking 38k tiles would ship 38k empty slim deltas. (The acceptance
+  text's "+ `markTileDirty`" was written before this was measured; skipping it is strictly better and honours
+  the spirit — no ref flip, no terrain rebuild, no re-clone.)
+- [x] **PERF-2 · Keep `temperature` worker-only (it already costs nothing on the wire).** The `worldMapDelta`
   ships a **slim tile** (D4): only the 9 fields the main thread reads (`type/terrainType/subType/movementCost/
   walkable/resources/resourceCooldowns/x/y`). `temperature` is **already in the dropped set** (with `density/
   moisture/territoryOwner`) — worker/save-only, never sent to the renderer — so temperature → need-rate math
   is free on the snapshot. If a feature ever needs temperature *visually* (e.g. a heat-map overlay), add it to
   the slim-tile allowlist **deliberately and measure** — don't assume it rides along.
-- [ ] **PERF-3 · Need-rate effects: scalar math, zero per-tick allocation.** The temperature/weather/night
+- [x] **PERF-3 · Need-rate effects: scalar math, zero per-tick allocation.** The temperature/weather/night
   multipliers (Subsystems 1, 3, 4) feed `PawnService.getRestIncreasePerTurn()` / `getHungerIncreasePerTurn()`,
   which run **per-pawn every tick** on the freshly de-immutabled hot path (the 12.5× allocation tax, §9). Use
   **plain scalar arithmetic reading the cached `tile.temperature` / `gameState.weather`** — no per-tick
   `.map()`, no `{...spread}`, no per-tick tile-temperature recompute. Anything that allocates per pawn per
   tick reinstates the tax.
-- [ ] **PERF-4 · Fog-of-war must NOT add a per-tile `visible` field to the worldMap.** `season`/`seasonDay`/
+- [x] **PERF-4 · Fog-of-war must NOT add a per-tile `visible` field to the worldMap.** *(Honoured by
+  omission: fog-of-war is deferred and no per-tile `visible` field was added; season/seasonDay/weather are
+  the only new state, all cheap top-level scalars on the sectional snapshot.)* `season`/`seasonDay`/
   `weather` are small top-level `GameState` scalars → the sectional-diff snapshot (W2) ships only the changed
   section; adding them is essentially free. But a per-tile `visible` boolean (Subsystem 6) that flips **every
   turn** is exactly the worldMap-churn PERF-1 forbids — it would invalidate the worldMap ref or bloat
@@ -65,7 +94,10 @@ path. The items below are **binding guardrails**: tick each one as honoured in i
   snapshot) **or** route it through the **WASM spatial service** (ADR-008). ENGINE-PERFORMANCE §C defers the
   `nearestPawn` spatial index to be built **once, shared** by fog-of-war + ranged-combat LoS + nearest queries
   — fog folds into that amortised service, never its own per-tile mask. See Subsystem 6.
-- [ ] **PERF-5 · Renderer overlays must not bump `_terrainRev`.** The weather overlay pass (Subsystem 5) is a
+- [x] **PERF-5 · Renderer overlays must not bump `_terrainRev`.** *(Season + weather hue is folded into the
+  existing ambient uniform in `GameCanvas` — a per-frame `setAmbient` uniform multiply, on the same path the
+  day/night tint already used; it never touches `setGrid`/`_terrainRev`. The weather particle pass, when
+  built, must stay a separate fullscreen program — see Subsystem 5.)* The weather overlay pass (Subsystem 5) is a
   GPU-side fullscreen quad — cheap, correct — and the day/night `a_light` field + tint are already shipped
   (Phase A/A2). The renderer-trace lesson (D1″) was that **designation churn wrongly triggered full 38k terrain
   rebuilds**; keep new ambient/season/weather state on its own revision/uniform path so a tint or weather
@@ -488,17 +520,17 @@ is what a pawn can see. Both can coexist.
 
 ## Implementation Order
 
-| Phase | Deliverable                                                                                   | Depends on |
-| ----- | --------------------------------------------------------------------------------------------- | ---------- |
-| A     | Ambient uniforms + day/night light curve in fragment.glsl                                     | —          |
-| A     | `EnvironmentService` computing `ambientLight` + `ambientTint` per turn                        | —          |
-| A2    | `LightingService` + per-tile `a_light` attribute (point lights, corner-interpolated, flicker) | Phase A    |
-| B     | Season state + temperature in `GameState` + need rate hooks                                   | Phase A    |
-| B     | Season palette uniform in fragment.glsl                                                       | Phase A    |
-| C     | `WeatherState` + Markov transitions + need rate hooks                                         | Phase B    |
-| C     | `weatherOverlay` shader (rain + snow particles)                                               | Phase A    |
-| D     | `tile.visible` from vision radius + night FOW                                                 | Phases A-C |
-| D     | Heat shimmer (render-to-texture required)                                                     | Phase C    |
+| Phase | Deliverable                                                                                   | Depends on | Status |
+| ----- | --------------------------------------------------------------------------------------------- | ---------- | ------ |
+| A     | Ambient uniforms + day/night light curve in fragment.glsl                                     | —          | [x]    |
+| A     | `EnvironmentService` computing `ambientLight` + `ambientTint` per turn                        | —          | [x]    |
+| A2    | `LightingService` + per-tile `a_light` attribute (point lights, corner-interpolated, flicker) | Phase A    | [x]    |
+| B     | Season state + temperature in `GameState` + need rate hooks                                   | Phase A    | [x]    |
+| B     | Season palette tint (folded into the ambient uniform, not a separate `u_season_tint`)         | Phase A    | [x]    |
+| C     | `WeatherState` + Markov transitions + need rate hooks                                         | Phase B    | [x]    |
+| C     | `weatherOverlay` shader (rain + snow particles)                                               | Phase A    | [ ]    |
+| D     | `tile.visible` from vision radius + night FOW                                                 | Phases A-C | [ ]    |
+| D     | Heat shimmer (render-to-texture required)                                                     | Phase C    | [ ]    |
 
 ---
 
@@ -515,18 +547,18 @@ is what a pawn can see. Both can coexist.
 
 ## Acceptance Criteria
 
-1. At midnight the game world visually darkens; at noon it is bright neutral white.
-2. Dawn and dusk show warm orange/amber tints on all tiles.
-3. Season advances every 30 in-game days; `gameState.season` updates correctly.
-4. Cold tiles increase pawn fatigue rate; heat tiles increase hunger rate.
-5. Rain weather triggers a particle overlay visible on the canvas.
-6. Snow weather triggers slow white particle overlay with slight drift.
-7. All ambient/weather uniforms are set from game state, not hardcoded per frame.
-8. No weather or ambient logic lives inside Svelte components.
-9. A lit campfire visibly brightens and warms the tiles around it, falling off smoothly with distance, and lifts them out of the night tint.
-10. Point light is per-tile but smoothly interpolated (no visible square blocking) and flickers subtly over time.
-11. The old DOM `campfire-glow` overlay is removed; illumination comes from the tile renderer.
-12. **Perf (§0.5, PERF-1…5):** enabling seasons/temperature/weather/fog on the heavy `--profiler` scene
+1. [x] At midnight the game world visually darkens; at noon it is bright neutral white. *(Phase A.)*
+2. [x] Dawn and dusk show warm orange/amber tints on all tiles. *(Phase A.)*
+3. [x] Season advances every 30 in-game days; `gameState.season` updates correctly. *(Phase B; `environment.test.ts`.)*
+4. [x] Cold tiles increase pawn fatigue rate; heat tiles increase hunger rate. *(Phase B/C, `processNeedsTick`.)*
+5. [ ] Rain weather triggers a particle overlay visible on the canvas. *(Deferred — weather particle shader; gameplay rain + cool tint are live.)*
+6. [ ] Snow weather triggers slow white particle overlay with slight drift. *(Deferred — weather particle shader.)*
+7. [~] All ambient/weather uniforms are set from game state, not hardcoded per frame. *(Ambient + season + weather **tint** yes; particle uniforms pending the deferred shader.)*
+8. [x] No weather or ambient logic lives inside Svelte components. *(Logic in EnvironmentService/PawnService/engine; GameCanvas only reads + multiplies.)*
+9. [x] A lit campfire visibly brightens and warms the tiles around it, falling off smoothly with distance, and lifts them out of the night tint. *(Phase A2.)*
+10. [x] Point light is per-tile but smoothly interpolated (no visible square blocking) and flickers subtly over time. *(Phase A2.)*
+11. [x] The old DOM `campfire-glow` overlay is removed; illumination comes from the tile renderer. *(Phase A2.)*
+12. [x] **Perf (§0.5, PERF-1…5):** enabling seasons/temperature/weather/fog on the heavy `--profiler` scene
     holds the post-arc TPS bar (comfortably 200+ TPS @4× after warmup) — no harvest-style cliff.
     Specifically: the season-change temperature pass mutates tiles in place + `markTileDirty` (no
     `worldMap.map()`, no ref flip → `worldMapRef` stays 0 in the `[TRIG]` probe) [PERF-1]; need-rate

@@ -22,6 +22,8 @@
     desc: string;
     color: string;
     filterable?: boolean;
+    /** Renders a tile-background tint on the map (so the "color" toggle is meaningful). */
+    tinted?: boolean;
   }[] = [
     {
       type: 'stockpile',
@@ -29,7 +31,8 @@
       charSpans: [{ literal: 'P' }],
       desc: 'Haulers deposit carried resources here',
       color: '#e8a020',
-      filterable: true
+      filterable: true,
+      tinted: true
     },
     {
       type: 'drink',
@@ -110,6 +113,31 @@
   function clearFilter(instanceId: string) {
     gameState.command({ type: 'clearInstanceFilter', payload: { instanceId }, save: true });
   }
+
+  /** Tinted (map-colored) zone instances — the ones the color toggles apply to. */
+  let tintedInstances = $derived(
+    ($gameState.zoneInstances ?? []).filter((z) => defOf(z.type)?.tinted)
+  );
+  /** True only when every tinted zone is currently hidden (drives the master button label). */
+  let allColorsHidden = $derived(
+    tintedInstances.length > 0 && tintedInstances.every((z) => z.colorHidden)
+  );
+
+  function toggleZoneColor(instanceId: string, hidden: boolean) {
+    gameState.command({
+      type: 'setZoneColorHidden',
+      payload: { instanceId, hidden },
+      save: true
+    });
+  }
+
+  function toggleAllColors() {
+    gameState.command({
+      type: 'setAllZoneColorHidden',
+      payload: { hidden: !allColorsHidden },
+      save: true
+    });
+  }
 </script>
 
 <div class="zone-panel">
@@ -149,13 +177,26 @@
 
   <!-- Per-instance management: paint / filter / delete -->
   {#if ($gameState.zoneInstances ?? []).length > 0}
-    <div class="section-sub">| ACTIVE ZONES</div>
+    <div class="section-sub zones-hdr">
+      <span>| ACTIVE ZONES</span>
+      {#if tintedInstances.length > 0}
+        <button
+          class="zbtn allcolor"
+          class:active={allColorsHidden}
+          title="Hide or show every zone's overlay color on the map"
+          onclick={toggleAllColors}
+        >
+          {allColorsHidden ? 'SHOW ALL COLORS' : 'HIDE ALL COLORS'}
+        </button>
+      {/if}
+    </div>
     {#each $gameState.zoneInstances ?? [] as inst}
       {@const def = defOf(inst.type)}
       {@const tileCount = instanceTileCounts[inst.id] ?? 0}
       {@const isPainting = designationActive && activeInstId === inst.id}
       {@const hasFilter = inst.filter.allowedCategories.length > 0}
       {@const isFilterOpen = openFilterInstance === inst.id}
+      {@const colorHidden = inst.colorHidden ?? false}
 
       <div class="zone-card" class:painting={isPainting} style="--zcolor: {def?.color ?? '#888'}">
         <div class="card-accent"></div>
@@ -185,6 +226,16 @@
                 onclick={() => toggleFilterPanel(inst.id)}
               >
                 FILTER
+              </button>
+            {/if}
+            {#if def?.tinted}
+              <button
+                class="zbtn"
+                class:active={!colorHidden}
+                title="Show or hide this zone's color on the map"
+                onclick={() => toggleZoneColor(inst.id, !colorHidden)}
+              >
+                {colorHidden ? 'COLOR ✕' : 'COLOR ✓'}
               </button>
             {/if}
             <button class="zbtn del" onclick={() => removeZone(inst.id)}>DELETE</button>
@@ -245,6 +296,23 @@
     font-size: 0.62rem;
     letter-spacing: 0.08em;
     margin: 0.2rem 0 0.3rem;
+  }
+
+  .zones-hdr {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .zbtn.allcolor {
+    border-color: var(--accent-hi);
+    color: var(--accent-hi);
+  }
+
+  .zbtn.allcolor:hover,
+  .zbtn.allcolor.active {
+    background: color-mix(in srgb, var(--accent-hi) 20%, transparent);
   }
 
   .cost-item {

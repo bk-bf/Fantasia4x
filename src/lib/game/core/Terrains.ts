@@ -10,6 +10,8 @@ import { CP437_TO_UNICODE } from './cp437.js';
 export interface BiomeDef {
   displayName: string;
   densityRange: [number, number];
+  /** Baseline temperature in conceptual °C (SEASONS_WEATHER Subsystem 3). */
+  baseTemp?: number;
 }
 
 export interface SubterrainDef {

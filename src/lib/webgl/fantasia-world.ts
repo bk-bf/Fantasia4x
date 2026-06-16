@@ -37,7 +37,9 @@ export function buildGameGrid(
   worldMap: WorldTile[][],
   buildings?: PlacedBuilding[],
   designations?: Record<string, DesignationType>,
-  zoneTiles?: Record<string, DesignationType[]>
+  zoneTiles?: Record<string, DesignationType[]>,
+  /** Tile keys ("x,y") whose standing-zone tint should be suppressed (player toggled it off). */
+  hiddenZoneTiles?: ReadonlySet<string>
 ): GameGrid {
   const grid = new GameGrid();
 
@@ -171,6 +173,7 @@ export function buildGameGrid(
 
     for (const [key, types] of Object.entries(zoneTiles)) {
       if (!types.includes('stockpile')) continue;
+      if (hiddenZoneTiles?.has(key)) continue; // player hid this zone's overlay color
       const [x, y] = key.split(',').map(Number);
       const existing = grid.getTile(x, y);
       if (!existing) continue;

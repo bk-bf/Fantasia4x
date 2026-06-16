@@ -6,6 +6,7 @@
 // exports (LABOR_LEVEL, CRITICAL_LIMBS).
 
 export * from './types/world';
+export * from './types/environment';
 export * from './types/race';
 export * from './types/health';
 export * from './types/items';

@@ -36,6 +36,8 @@ export interface ZoneInstance {
   type: FilterableZoneType;
   label: string;
   filter: ZoneFilter;
+  /** View-only: when true, this zone's tint is suppressed on the map. Persisted with the save. */
+  colorHidden?: boolean;
 }
 
 /**

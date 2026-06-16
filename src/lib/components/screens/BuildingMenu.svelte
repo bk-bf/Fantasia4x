@@ -233,25 +233,6 @@
     <button class="hdr-btn" on:click={() => uiState.setScreen('main')}>BACK</button>
   </div>
 
-  <!-- Active construction queue — only shown while something is building -->
-  {#if allBuildingsInProgress.length > 0}
-    <div class="section-hdr sub">| ACTIVE BUILD JOBS ({allBuildingsInProgress.length})</div>
-    {#each allBuildingsInProgress as bp}
-      {@const bDef = buildingService.getBuildingById(bp.type)}
-      {@const prog = Math.round(((bp.workDone ?? 0) / (bp.workRequired ?? 50)) * 100)}
-      <div class="bldg-row">
-        <span class="bldg-name">{bDef?.name.toUpperCase() ?? bp.type}</span>
-        <span class="progress-mini">
-          <span class="prog-bar-ascii"
-            >{'█'.repeat(Math.round(prog / 10)) + '░'.repeat(10 - Math.round(prog / 10))}</span
-          >
-          {prog}%
-        </span>
-        <button class="act-btn-sm" on:click={() => cancelBuilding(bp.id)}>CANCEL</button>
-      </div>
-    {/each}
-  {/if}
-
   <!-- Campfire status -->
   {#each buildings.filter((b) => b.type === 'campfire' && b.status === 'complete') as cf (cf.id)}
     {@const fuelPct = Math.round(((cf.fuel ?? 0) / 60) * 100)}
@@ -315,6 +296,25 @@
       </div>
     {/if}
   {/if}
+
+  <!-- Active construction queue — compact chips, kept below the build/zone tabs -->
+  {#if allBuildingsInProgress.length > 0}
+    <div class="build-jobs">
+      <div class="jobs-hdr">| ACTIVE BUILD JOBS ({allBuildingsInProgress.length})</div>
+      <div class="jobs-grid">
+        {#each allBuildingsInProgress as bp (bp.id)}
+          {@const bDef = buildingService.getBuildingById(bp.type)}
+          {@const prog = Math.round(((bp.workDone ?? 0) / (bp.workRequired ?? 50)) * 100)}
+          <div class="job-chip" title="{bDef?.name ?? bp.type} — {prog}%">
+            <span class="job-fill" style="width:{prog}%"></span>
+            <span class="job-name">{bDef?.name.toUpperCase() ?? bp.type}</span>
+            <span class="job-pct">{prog}%</span>
+            <button class="job-x" title="Cancel" on:click={() => cancelBuilding(bp.id)}>✕</button>
+          </div>
+        {/each}
+      </div>
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -355,19 +355,6 @@
     font-size: 10px;
     padding: 2px 6px;
     cursor: pointer;
-  }
-
-  .section-hdr {
-    padding: 5px 10px 3px;
-    color: var(--accent-hi);
-    font-size: 10px;
-    letter-spacing: 0.08em;
-    border-bottom: 1px solid var(--border);
-    margin-top: 4px;
-  }
-  .section-hdr.sub {
-    color: var(--accent);
-    margin-top: 2px;
   }
 
   .bldg-row {
@@ -419,41 +406,77 @@
     color: var(--neg);
   }
 
-  .act-btn-sm {
-    flex: 0 0 auto;
-    background: none;
-    border: 1px solid var(--border);
-    color: var(--accent);
-    font-family: 'Courier New', monospace;
-    font-size: 10px;
-    padding: 2px 6px;
-    cursor: pointer;
-    white-space: nowrap;
-  }
-  .act-btn-sm:hover:not(:disabled) {
-    border-color: var(--accent-hi);
-    color: var(--accent-hi);
-    background: var(--bg-active);
-  }
-  .act-btn-sm:disabled {
-    opacity: 0.35;
-    cursor: not-allowed;
-  }
-
-  .progress-mini {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 10px;
-    color: var(--text-dim);
-  }
-
-  .prog-bar-ascii,
   .bar-ascii {
     color: var(--accent);
     font-size: 9px;
     letter-spacing: -1px;
+  }
+
+  /* ── Active build jobs (compact chips, below the tabs) ── */
+  .build-jobs {
+    padding: 4px 8px 8px;
+    border-top: 1px solid var(--border);
+    margin-top: 4px;
+  }
+  .jobs-hdr {
+    color: var(--accent);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    padding: 2px 0 5px;
+  }
+  .jobs-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .job-chip {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    max-width: 170px;
+    padding: 2px 5px;
+    border: 1px solid var(--border);
+    background: var(--bg-panel);
+    overflow: hidden;
+    font-size: 10px;
+  }
+  .job-fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    background: color-mix(in srgb, var(--accent) 20%, transparent);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .job-name {
+    position: relative;
+    z-index: 1;
+    max-width: 100px;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .job-pct {
+    position: relative;
+    z-index: 1;
+    color: var(--accent);
+    font-size: 9px;
+  }
+  .job-x {
+    position: relative;
+    z-index: 1;
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    line-height: 1;
+    padding: 0 1px;
+    cursor: pointer;
+  }
+  .job-x:hover {
+    color: var(--neg);
   }
 
   .fuel-bar {

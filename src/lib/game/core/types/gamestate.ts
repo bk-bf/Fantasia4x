@@ -2,6 +2,7 @@
 
 import type { Race } from './race';
 import type { WorldTile } from './world';
+import type { Season, WeatherState } from './environment';
 import type {
   PlacedBuilding,
   StockpileZone,
@@ -22,6 +23,11 @@ export interface GameState {
   turn: number;
   race: Race;
   worldMap: WorldTile[][];
+  /** Living-world (SEASONS_WEATHER Phase B): current season + 0-indexed day within it. */
+  season?: Season;
+  seasonDay?: number;
+  /** Living-world (SEASONS_WEATHER Phase C): active weather, re-rolled by the Markov chain daily. */
+  weather?: WeatherState;
   /** @deprecated Use buildings[] instead */
   buildingCounts: Record<string, number>;
   /** Phase 4: physically placed buildings on the map */

@@ -238,6 +238,10 @@ export const COMMANDS: Record<string, Cmd> = {
   ) => designationService.toggleInstanceCategory(p.instanceId, p.category, p.allCategories, s),
   clearInstanceFilter: (s, p: { instanceId: string }) =>
     designationService.clearInstanceFilter(p.instanceId, s),
+  setZoneColorHidden: (s, p: { instanceId: string; hidden: boolean }) =>
+    designationService.setInstanceColorHidden(p.instanceId, p.hidden, s),
+  setAllZoneColorHidden: (s, p: { hidden: boolean }) =>
+    designationService.setAllColorHidden(p.hidden, s),
 
   // ── research / crafting ──────────────────────────────────────────────────────
   startResearch: (s, p: { researchId: string }) => researchService.startResearch(p.researchId, s),

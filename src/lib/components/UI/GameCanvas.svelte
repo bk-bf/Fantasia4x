@@ -191,6 +191,7 @@
   const unsubAttackLunges = attackLunges.subscribe((list) => {
     attackLungeList = list;
   });
+
   // Peak thrust distance, in tiles — how far "into" the target tile the attacker reaches.
   const LUNGE_DISTANCE = 0.4;
 
@@ -218,6 +219,27 @@
   // Standing-zone membership (stockpile…), separate from one-shot action orders above so a
   // tile can be both a zone and an order at once. Drives the stockpile tint + hover/selection.
   let zoneTiles: Record<string, DesignationType[]> = {};
+  // Tile → zone-instance id (from game state); lets us suppress a single zone's
+  // overlay tint when the player hides that instance's color in the Building tab.
+  let designationZoneId: Record<string, string> = {};
+  // Zone-instance ids whose color the player has hidden (persisted on the instance
+  // in the save). Derived from zoneInstances in the gameState snapshot below.
+  let hiddenZoneInstances = new Set<string>();
+  // Change-detection signature so toggling colorHidden (which doesn't touch zoneTiles)
+  // still forces a terrain rebuild.
+  let _prevHiddenZoneSig = '';
+
+  /** Tile keys whose stockpile tint should be suppressed, per the player's per-zone toggles. */
+  function computeHiddenZoneTiles(): ReadonlySet<string> | undefined {
+    if (hiddenZoneInstances.size === 0) return undefined;
+    const out = new Set<string>();
+    for (const [key, types] of Object.entries(zoneTiles)) {
+      if (!types.includes('stockpile')) continue;
+      const inst = designationZoneId[key];
+      if (inst && hiddenZoneInstances.has(inst)) out.add(key);
+    }
+    return out;
+  }
 
   // Phase A2 dynamic lighting: lit campfires emit warm point light, baked into
   // the tile renderer (replaces the old floating DOM radial glow).
@@ -692,6 +714,10 @@
     buildings = s.buildings ?? [];
     designations = s.designations ?? {};
     zoneTiles = s.zoneTiles ?? {};
+    designationZoneId = s.designationZoneId ?? {};
+    hiddenZoneInstances = new Set(
+      (s.zoneInstances ?? []).filter((z) => z.colorHidden).map((z) => z.id)
+    );
     droppedItems = s.droppedItems ?? [];
     mobs = s.mobs ?? [];
     // Only the terrain layer is expensive to rebuild (buildGameGrid scans the
@@ -718,13 +744,18 @@
     // frame (90ms freeze frames). The worker sends `_terrainRev` (a reliable revision computed where
     // refs are stable); use it when present. In-thread, fall back to the ref checks.
     const workerRev = (s as unknown as { _terrainRev?: number })._terrainRev;
+    // Hiding/showing a zone's color changes what buildGameGrid paints but touches
+    // neither zoneTiles nor _terrainRev, so track it with its own signature.
+    const hiddenZoneSig = [...hiddenZoneInstances].sort().join(',');
     const terrainChanged =
-      workerRev !== undefined
+      hiddenZoneSig !== _prevHiddenZoneSig ||
+      (workerRev !== undefined
         ? workerRev !== _prevTerrainRev
         : worldMap !== _prevWorldMap ||
           buildingsSig !== _prevBuildingsSig ||
           designations !== _prevDesignations ||
-          zoneTiles !== _prevZoneTiles;
+          zoneTiles !== _prevZoneTiles);
+    _prevHiddenZoneSig = hiddenZoneSig;
     _prevTerrainRev = workerRev;
     _prevWorldMap = worldMap;
     _prevBuildingsSig = buildingsSig;
@@ -740,13 +771,16 @@
         : designations !== _prevDesignations;
     _prevDesignationRev = workerDesigRev;
     if (designationsChanged && renderer?.isReady() && worldMap.length > 0) drawDesignations();
-    // Day/night: update ambient uniforms whenever the turn changes
+    // Day/night: update ambient uniforms whenever the turn changes. Season + weather hue is folded
+    // into the ambient tint here (PERF-5: a uniform multiply, never a terrain rebuild).
     if (renderer?.isReady()) {
       const { light, tint } = environmentService.getAmbient(s.turn);
-      renderer.setAmbient(light, tint);
-      lightingService.setAmbient(light, tint);
+      const env = environmentService.getEnvironmentTint(s.season, s.weather);
+      const tinted: [number, number, number] = [tint[0] * env[0], tint[1] * env[1], tint[2] * env[2]];
+      renderer.setAmbient(light, tinted);
+      lightingService.setAmbient(light, tinted);
       _ambientLight = light;
-      _ambientTint = tint;
+      _ambientTint = tinted;
     }
     // Camera follow is driven per-frame in the render loop (updateCameraFollow)
     // so it tracks the pawn's interpolated sub-tile position smoothly.
@@ -1140,7 +1174,13 @@
     // Profiler: how often the full 38k-tile terrain grid is rebuilt + re-uploaded. If this is
     // ~1/tick during RUNNING, the renderCPU cost is rebuild churn (fix the trigger); if ~0 while
     // renderCPU stays high, the cost is the per-frame buffer re-upload in the renderer instead.
-    const grid = buildGameGrid(worldMap, buildings, designations, zoneTiles);
+    const grid = buildGameGrid(
+      worldMap,
+      buildings,
+      designations,
+      zoneTiles,
+      computeHiddenZoneTiles()
+    );
 
     // (Live zone drag-paint preview is drawn on the 2D overlay in
     // drawDesignations(), not here, to avoid rebuilding the terrain buffer.)
@@ -1711,7 +1751,7 @@
 
       const grid =
         worldMap.length > 0
-          ? buildGameGrid(worldMap, buildings, designations, zoneTiles)
+          ? buildGameGrid(worldMap, buildings, designations, zoneTiles, computeHiddenZoneTiles())
           : generatePlaceholderGrid();
       renderer.setGrid(grid);
       renderer.setViewTileOffset(viewX, viewY);
@@ -1722,13 +1762,19 @@
       // Initialise ambient from current turn so the first frame is correctly lit
       {
         const { light, tint } = environmentService.getAmbient($gameState?.turn ?? 0);
-        renderer.setAmbient(light, tint);
-        lightingService.setAmbient(light, tint);
+        const env = environmentService.getEnvironmentTint($gameState?.season, $gameState?.weather);
+        const tinted: [number, number, number] = [
+          tint[0] * env[0],
+          tint[1] * env[1],
+          tint[2] * env[2]
+        ];
+        renderer.setAmbient(light, tinted);
+        lightingService.setAmbient(light, tinted);
         lightingService.setEmitters(lightingService.collectEmitters(buildings));
         renderer.setDynamicLight(lightingService.hasEmitters());
         renderer.setLightVersion(lightingService.getEmittersVersion());
         _ambientLight = light;
-        _ambientTint = tint;
+        _ambientTint = tinted;
       }
 
       ready = true;

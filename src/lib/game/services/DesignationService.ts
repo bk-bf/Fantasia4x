@@ -390,6 +390,24 @@ class DesignationServiceImpl {
       )
     };
   }
+
+  /** Show/hide a single zone instance's map tint (view-only, persisted with the save). */
+  setInstanceColorHidden(instanceId: string, hidden: boolean, gs: GameState): GameState {
+    return {
+      ...gs,
+      zoneInstances: (gs.zoneInstances ?? []).map((z) =>
+        z.id === instanceId ? { ...z, colorHidden: hidden } : z
+      )
+    };
+  }
+
+  /** Show/hide every zone instance's map tint at once. */
+  setAllColorHidden(hidden: boolean, gs: GameState): GameState {
+    return {
+      ...gs,
+      zoneInstances: (gs.zoneInstances ?? []).map((z) => ({ ...z, colorHidden: hidden }))
+    };
+  }
 }
 
 export const designationService = new DesignationServiceImpl();

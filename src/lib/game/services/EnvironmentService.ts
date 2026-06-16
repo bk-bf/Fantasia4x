@@ -5,12 +5,16 @@
  * Computes per-turn ambient brightness and colour tint driven by the
  * sinusoidal day/night curve specified in LIVING-WORLD.md §Subsystem 1.
  *
- * No mutable state — all methods are pure functions of turn number.
- * Season / weather phases (B–D) will be added here when implemented.
+ * No mutable state — all methods are pure functions of turn (and, for seasons/weather,
+ * of the season/weather scalars in GameState). Phase B (seasons + temperature) and
+ * Phase C (weather) live in the lower half of this file.
  */
 
 import { TICKS_PER_SECOND } from '../core/time';
 import { buildingLight } from './LightingService';
+import { BIOMES } from '../core/Terrains';
+import type { SeededRng } from '../core/rng';
+import type { Season, WeatherState, WeatherType, WorldTile } from '../core/types';
 
 // In-game seconds per day. The simulation `turn` counts ticks, so a full day is
 // TURNS_PER_DAY × TICKS_PER_SECOND ticks long.
@@ -182,6 +186,213 @@ export function computeTileLightLevel(
   return Math.max(0.1, ambient + point);
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase B — Seasons & Temperature (SEASONS_WEATHER Subsystems 2 & 3)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Days in one season. One full year = 4 × DAYS_PER_SEASON in-game days. */
+export const DAYS_PER_SEASON = 30;
+const SEASON_ORDER: Season[] = ['spring', 'summer', 'autumn', 'winter'];
+
+export interface SeasonDef {
+  /** °C added to each tile's biome base temperature for the whole season. */
+  tempOffset: number;
+  /** Multiplier applied to resource regrowth cooldowns (×<1 = faster regrowth). */
+  regrowthMultiplier: number;
+  /** Per-day chance the sky turns to precipitation (rain in warm seasons, snow in winter). */
+  precipitation: number;
+  /** Normalised RGB hue multiplied into the ambient tint (Subsystem 2 palette). */
+  tint: [number, number, number];
+}
+
+export const SEASONS: Record<Season, SeasonDef> = {
+  spring: { tempOffset: 0, regrowthMultiplier: 1.2, precipitation: 0.3, tint: [0.95, 1.0, 0.9] },
+  summer: { tempOffset: 15, regrowthMultiplier: 1.0, precipitation: 0.1, tint: [1.0, 1.0, 0.95] },
+  autumn: { tempOffset: -5, regrowthMultiplier: 0.8, precipitation: 0.4, tint: [1.0, 0.85, 0.6] },
+  winter: { tempOffset: -20, regrowthMultiplier: 0.3, precipitation: 0.6, tint: [0.85, 0.9, 1.0] }
+};
+
+/** Fallback biome temperature for tiles whose biome carries no `baseTemp`. */
+const DEFAULT_BIOME_TEMP = 12;
+
+/** Whole in-game days elapsed since turn 0. */
+export function dayIndexForTurn(turn: number): number {
+  return Math.floor(turn / TICKS_PER_DAY);
+}
+
+/** Map an absolute turn (ticks) → the season + 0-indexed day within it. */
+export function seasonForTurn(turn: number): { season: Season; seasonDay: number } {
+  const day = dayIndexForTurn(turn);
+  return {
+    season: SEASON_ORDER[Math.floor(day / DAYS_PER_SEASON) % SEASON_ORDER.length],
+    seasonDay: day % DAYS_PER_SEASON
+  };
+}
+
+/**
+ * Seasonal regrowth-rate multiplier (×1.2 spring … ×0.3 winter). Resource regrowth *cooldowns*
+ * are DIVIDED by this when set, so a higher rate ⇒ a shorter cooldown ⇒ faster regrowth.
+ */
+export function seasonRegrowthMultiplier(season: Season | undefined): number {
+  return season ? SEASONS[season].regrowthMultiplier : 1;
+}
+
+/** Biome baseline temperature (°C, conceptual) for a tile's terrainType. */
+export function biomeBaseTemp(terrainType: string): number {
+  return BIOMES[terrainType]?.baseTemp ?? DEFAULT_BIOME_TEMP;
+}
+
+/**
+ * Recompute every tile's temperature IN PLACE for the given season (PERF-1: never
+ * `worldMap.map()`, never flip the worldMap ref → no terrain rebuild / re-clone).
+ *
+ * `temperature` is a worker-only field (dropped from the slim worldMapDelta — PERF-2),
+ * so this deliberately does NOT call `markTileDirty`: there is nothing for the renderer
+ * to receive. The need-rate hot path (PawnService) reads the cached value; the live
+ * weather delta is added there, not baked here, so weather changes never touch 38k tiles.
+ */
+export function recomputeWorldTemperature(worldMap: WorldTile[][], season: Season): void {
+  const offset = SEASONS[season].tempOffset;
+  for (const row of worldMap) {
+    for (const tile of row) {
+      tile.temperature = biomeBaseTemp(tile.terrainType) + offset;
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase C — Weather (SEASONS_WEATHER Subsystem 4)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface WeatherEffects {
+  /** °C delta added to effective temperature while this weather is active. */
+  tempDelta: number;
+  /** Multiplier on the fatigue (rest) need rate. */
+  fatigueMul: number;
+  /** Multiplier on the hunger need rate. */
+  hungerMul: number;
+  /** Multiplier on movement cost (gameplay hook; not yet consumed by movement). */
+  moveCostMul: number;
+}
+
+const WEATHER_EFFECTS: Record<WeatherType, WeatherEffects> = {
+  clear: { tempDelta: 0, fatigueMul: 1.0, hungerMul: 1.0, moveCostMul: 1.0 },
+  rain: { tempDelta: -3, fatigueMul: 1.1, hungerMul: 1.0, moveCostMul: 1.1 },
+  heavy_rain: { tempDelta: -5, fatigueMul: 1.25, hungerMul: 1.1, moveCostMul: 1.3 },
+  snow: { tempDelta: -10, fatigueMul: 1.3, hungerMul: 1.2, moveCostMul: 1.5 },
+  blizzard: { tempDelta: -20, fatigueMul: 1.8, hungerMul: 1.4, moveCostMul: 2.5 },
+  heat_wave: { tempDelta: 15, fatigueMul: 1.2, hungerMul: 1.4, moveCostMul: 1.1 },
+  fog: { tempDelta: 0, fatigueMul: 1.0, hungerMul: 1.0, moveCostMul: 1.0 }
+};
+
+/** Gameplay effects for a weather state (defaults to `clear` when undefined). */
+export function weatherEffects(weather?: WeatherState): WeatherEffects {
+  return WEATHER_EFFECTS[weather?.type ?? 'clear'];
+}
+
+/** Default visual intensity per weather type (0–1). */
+function weatherIntensity(type: WeatherType): number {
+  switch (type) {
+    case 'clear':
+      return 0;
+    case 'rain':
+    case 'snow':
+    case 'fog':
+      return 0.5;
+    case 'heavy_rain':
+    case 'heat_wave':
+      return 0.75;
+    case 'blizzard':
+      return 1.0;
+  }
+}
+
+function weatherTempOverride(type: WeatherType): number | undefined {
+  if (type === 'heat_wave') return WEATHER_EFFECTS.heat_wave.tempDelta;
+  if (type === 'blizzard') return WEATHER_EFFECTS.blizzard.tempDelta;
+  return undefined;
+}
+
+/** Markov transition for the weather *type*, given the current type + season. */
+function rollWeatherType(prev: WeatherType, season: Season, rng: SeededRng): WeatherType {
+  // Any non-clear weather clears with base 60% per re-roll (weather passes naturally).
+  if (prev !== 'clear' && rng.chance(0.6)) return 'clear';
+
+  switch (prev) {
+    case 'clear': {
+      // Summer occasionally spikes into a heat wave; otherwise precipitation per the season table.
+      if (season === 'summer' && rng.chance(0.1)) return 'heat_wave';
+      if (rng.chance(SEASONS[season].precipitation)) return season === 'winter' ? 'snow' : 'rain';
+      return 'clear';
+    }
+    case 'rain':
+      return rng.chance(0.2) ? 'heavy_rain' : 'rain';
+    case 'snow':
+      return season === 'winter' && rng.chance(0.15) ? 'blizzard' : 'snow';
+    // heavy_rain / blizzard / heat_wave / fog persist until the clear roll above fires.
+    default:
+      return prev;
+  }
+}
+
+/**
+ * Advance the weather one in-game day (called on day boundaries only — at most one new
+ * WeatherState object per day, so snapshot churn is negligible). Re-rolls the type when the
+ * current spell's `turnsRemaining` has elapsed; otherwise the spell simply runs down.
+ */
+export function advanceWeatherForDay(
+  weather: WeatherState,
+  season: Season,
+  rng: SeededRng
+): WeatherState {
+  const remaining = weather.turnsRemaining - TICKS_PER_DAY;
+  if (remaining > 0) {
+    return { ...weather, turnsRemaining: remaining };
+  }
+  const type = rollWeatherType(weather.type, season, rng);
+  return {
+    type,
+    intensity: weatherIntensity(type),
+    turnsRemaining: rng.int(50, 600),
+    temperatureOverride: weatherTempOverride(type)
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Combined seasonal + weather visual tint (Subsystems 2 & 5 — folded into the
+// existing ambient uniform, PERF-5: a uniform update, never a terrain rebuild).
+// ─────────────────────────────────────────────────────────────────────────────
+
+const WHITE: [number, number, number] = [1, 1, 1];
+
+/** Hue multiplier for a weather type — cool/desaturated for precip, flat grey for fog. */
+function weatherTint(weather?: WeatherState): [number, number, number] {
+  switch (weather?.type) {
+    case 'rain':
+    case 'heavy_rain':
+      return [0.8, 0.85, 1.0]; // cool, rain-washed
+    case 'snow':
+    case 'blizzard':
+      return [0.92, 0.96, 1.0]; // bright cold
+    case 'heat_wave':
+      return [1.0, 0.92, 0.8]; // warm haze
+    case 'fog':
+      return [0.85, 0.85, 0.85]; // flat grey
+    default:
+      return WHITE;
+  }
+}
+
+/** Season hue × weather hue, multiplied into the day/night ambient tint by the renderer. */
+export function getEnvironmentTint(
+  season: Season | undefined,
+  weather: WeatherState | undefined
+): [number, number, number] {
+  const s = season ? SEASONS[season].tint : WHITE;
+  const w = weatherTint(weather);
+  return [s[0] * w[0], s[1] * w[1], s[2] * w[2]];
+}
+
 class EnvironmentServiceImpl {
   getAmbient(turn: number): AmbientState {
     return {
@@ -189,6 +400,24 @@ class EnvironmentServiceImpl {
       tint: getAmbientTint(turn),
       panelTint: getPanelTint(turn)
     };
+  }
+
+  /** Season + 0-indexed day for a turn. */
+  getSeason(turn: number): { season: Season; seasonDay: number } {
+    return seasonForTurn(turn);
+  }
+
+  /** Gameplay effects for the current weather. */
+  getWeatherEffects(weather?: WeatherState): WeatherEffects {
+    return weatherEffects(weather);
+  }
+
+  /** Combined season + weather hue for the renderer's ambient multiply. */
+  getEnvironmentTint(
+    season: Season | undefined,
+    weather: WeatherState | undefined
+  ): [number, number, number] {
+    return getEnvironmentTint(season, weather);
   }
 }
 
