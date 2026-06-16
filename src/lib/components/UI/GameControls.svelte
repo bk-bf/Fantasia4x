@@ -11,6 +11,10 @@
   import { uiState } from '$lib/stores/uiState';
   import { renderFps } from '$lib/stores/perfStats';
   import { wasmPathfinderService } from '$lib/game/services/WasmPathfinderService';
+  import {
+    SEASON_LABELS,
+    weatherLabel as getWeatherLabel
+  } from '$lib/game/services/EnvironmentService';
   import { TICKS_PER_SECOND } from '$lib/game/core/time';
   import { onMount, onDestroy } from 'svelte';
 
@@ -83,23 +87,8 @@
 
   $: gameDate = turnToGameDate(currentTurnValue);
 
-  // ===== SEASON & WEATHER READOUT (SEASONS_WEATHER) =====
-  const SEASON_LABEL: Record<string, string> = {
-    spring: 'Spring',
-    summer: 'Summer',
-    autumn: 'Autumn',
-    winter: 'Winter'
-  };
-  const WEATHER_LABEL: Record<string, string> = {
-    clear: 'Clear',
-    rain: 'Rain',
-    heavy_rain: 'Heavy Rain',
-    snow: 'Snow',
-    blizzard: 'Blizzard',
-    heat_wave: 'Heat Wave',
-    fog: 'Fog'
-  };
-  $: weatherLabel = WEATHER_LABEL[$currentWeather?.type ?? 'clear'] ?? 'Clear';
+  // ===== SEASON & WEATHER READOUT (SEASONS_WEATHER) — labels are data-driven (seasons/weather.jsonc) =====
+  $: weatherLabel = getWeatherLabel($currentWeather?.type);
   $: tempLabel = $currentAvgTemperature !== undefined ? `${$currentAvgTemperature}°C` : '';
 
   function regenMap() {
@@ -209,7 +198,7 @@
     >{gameDate.dayStr}/{gameDate.monthStr}/{gameDate.yearStr} {gameDate.hourStr}:00</span
   >
   <span class="bi season" title="Season · average map temperature · weather"
-    >{SEASON_LABEL[$currentSeason] ?? $currentSeason}{tempLabel ? ` ${tempLabel}` : ''} · {weatherLabel}</span
+    >{SEASON_LABELS[$currentSeason] ?? $currentSeason}{tempLabel ? ` ${tempLabel}` : ''} · {weatherLabel}</span
   >
   <span class="bi turn" title="Turn {currentTurnValue}">T{currentTurnValue}</span>
   <span

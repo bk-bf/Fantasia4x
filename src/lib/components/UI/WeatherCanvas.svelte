@@ -14,6 +14,7 @@
   import { browser } from '$app/environment';
   import { currentWeather } from '$lib/stores/gameState';
   import { cameraTileSize } from '$lib/stores/cameraView';
+  import { weatherOverlayKind, weatherIsHeavy } from '$lib/game/services/EnvironmentService';
 
   type Mode = 'none' | 'rain' | 'snow';
 
@@ -176,15 +177,11 @@
   }
 
   const unsub = currentWeather.subscribe((wx) => {
-    const type = wx?.type;
-    const next: Mode =
-      type === 'rain' || type === 'heavy_rain'
-        ? 'rain'
-        : type === 'snow' || type === 'blizzard'
-          ? 'snow'
-          : 'none';
+    // Data-driven: the overlay kind ('none' | 'rain' | 'snow') and "heavy" flag come from
+    // weather.jsonc, so a new weather type renders the right overlay with no code change here.
+    const next: Mode = weatherOverlayKind(wx?.type);
     intensity = Math.max(0.2, Math.min(1, wx?.intensity ?? 0));
-    heavy = type === 'heavy_rain' || type === 'blizzard';
+    heavy = weatherIsHeavy(wx?.type);
     const changed = next !== mode;
     mode = next;
     if (mode === 'none') {

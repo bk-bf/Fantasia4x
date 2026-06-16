@@ -1,0 +1,18 @@
+// Seasons (SEASONS_WEATHER Subsystem 2) — data-driven. Loaded by EnvironmentService.
+//   daysPerSeason — in-game days each season lasts (one year = daysPerSeason × seasons.length).
+//   seasons[]     — the year cycle, IN ORDER. ids must be the canonical four (spring/summer/autumn/
+//                   winter) since GameState.season is typed to them.
+//     tempOffset         — °C added to every tile's biome base temperature all season.
+//     regrowthMultiplier — resource regrowth speed (×>1 faster, ×<1 slower; cooldowns are divided by it).
+//     precipitation      — per-day chance the sky breaks into precipitation (rain in warm seasons,
+//                          snow in winter); referenced by weather.jsonc transitions via "seasonPrecip".
+//     tint               — normalised RGB multiplied into the ambient day/night tint (the seasonal palette).
+{
+  "daysPerSeason": 30,
+  "seasons": [
+    { "id": "spring", "label": "Spring", "tempOffset": 0,   "regrowthMultiplier": 1.2, "precipitation": 0.3, "tint": [0.95, 1.0, 0.9] },
+    { "id": "summer", "label": "Summer", "tempOffset": 15,  "regrowthMultiplier": 1.0, "precipitation": 0.1, "tint": [1.0, 1.0, 0.95] },
+    { "id": "autumn", "label": "Autumn", "tempOffset": -5,  "regrowthMultiplier": 0.8, "precipitation": 0.4, "tint": [1.0, 0.85, 0.6] },
+    { "id": "winter", "label": "Winter", "tempOffset": -20, "regrowthMultiplier": 0.3, "precipitation": 0.6, "tint": [0.85, 0.9, 1.0] }
+  ]
+}

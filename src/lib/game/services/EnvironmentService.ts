@@ -14,6 +14,8 @@ import { TICKS_PER_SECOND } from '../core/time';
 import { buildingLight } from './LightingService';
 import { buildingService } from './BuildingService';
 import { BIOMES } from '../core/Terrains';
+import seasonsData from '../database/seasons.jsonc';
+import weatherData from '../database/weather.jsonc';
 import type { SeededRng } from '../core/rng';
 import type { Season, WeatherState, WeatherType, WorldTile, PlacedBuilding } from '../core/types';
 
@@ -191,10 +193,6 @@ export function computeTileLightLevel(
 // Phase B — Seasons & Temperature (SEASONS_WEATHER Subsystems 2 & 3)
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Days in one season. One full year = 4 × DAYS_PER_SEASON in-game days. */
-export const DAYS_PER_SEASON = 30;
-const SEASON_ORDER: Season[] = ['spring', 'summer', 'autumn', 'winter'];
-
 export interface SeasonDef {
   /** °C added to each tile's biome base temperature for the whole season. */
   tempOffset: number;
@@ -206,12 +204,24 @@ export interface SeasonDef {
   tint: [number, number, number];
 }
 
-export const SEASONS: Record<Season, SeasonDef> = {
-  spring: { tempOffset: 0, regrowthMultiplier: 1.2, precipitation: 0.3, tint: [0.95, 1.0, 0.9] },
-  summer: { tempOffset: 15, regrowthMultiplier: 1.0, precipitation: 0.1, tint: [1.0, 1.0, 0.95] },
-  autumn: { tempOffset: -5, regrowthMultiplier: 0.8, precipitation: 0.4, tint: [1.0, 0.85, 0.6] },
-  winter: { tempOffset: -20, regrowthMultiplier: 0.3, precipitation: 0.6, tint: [0.85, 0.9, 1.0] }
-};
+// Data-driven (database/seasons.jsonc): the year cycle, its length, and each season's parameters.
+interface SeasonFileEntry extends SeasonDef {
+  id: Season;
+  label: string;
+}
+const SEASON_FILE = seasonsData as unknown as { daysPerSeason: number; seasons: SeasonFileEntry[] };
+
+/** Days in one season. One full year = DAYS_PER_SEASON × (number of seasons) in-game days. */
+export const DAYS_PER_SEASON = SEASON_FILE.daysPerSeason;
+/** The year cycle order (from seasons.jsonc). */
+const SEASON_ORDER: Season[] = SEASON_FILE.seasons.map((s) => s.id);
+export const SEASONS: Record<Season, SeasonDef> = Object.fromEntries(
+  SEASON_FILE.seasons.map((s) => [s.id, s])
+) as unknown as Record<Season, SeasonDef>;
+/** Human-readable season names (Chronicle / HUD), from seasons.jsonc. */
+export const SEASON_LABELS: Record<Season, string> = Object.fromEntries(
+  SEASON_FILE.seasons.map((s) => [s.id, s.label])
+) as unknown as Record<Season, string>;
 
 /** Fallback biome temperature for tiles whose biome carries no `baseTemp`. */
 const DEFAULT_BIOME_TEMP = 12;
@@ -285,43 +295,71 @@ export interface WeatherEffects {
   mood: number;
 }
 
-const WEATHER_EFFECTS: Record<WeatherType, WeatherEffects> = {
-  clear: { tempDelta: 0, fatigueMul: 1.0, hungerMul: 1.0, moveCostMul: 1.0, mood: 0.5 },
-  rain: { tempDelta: -3, fatigueMul: 1.1, hungerMul: 1.0, moveCostMul: 1.1, mood: -0.5 },
-  heavy_rain: { tempDelta: -5, fatigueMul: 1.25, hungerMul: 1.1, moveCostMul: 1.3, mood: -1.0 },
-  snow: { tempDelta: -10, fatigueMul: 1.3, hungerMul: 1.2, moveCostMul: 1.5, mood: -0.8 },
-  blizzard: { tempDelta: -20, fatigueMul: 1.8, hungerMul: 1.4, moveCostMul: 2.5, mood: -2.0 },
-  heat_wave: { tempDelta: 15, fatigueMul: 1.2, hungerMul: 1.4, moveCostMul: 1.1, mood: -1.0 },
-  fog: { tempDelta: 0, fatigueMul: 1.0, hungerMul: 1.0, moveCostMul: 1.0, mood: -0.3 }
+// Data-driven (database/weather.jsonc): every weather id + its effects, visuals, and transitions.
+interface WeatherTransition {
+  to: string;
+  /** Fixed per-roll probability. */
+  chance?: number;
+  /** Use the current season's `precipitation` as the chance (clear → rain/snow). */
+  seasonPrecip?: boolean;
+  /** Gate this transition to specific seasons. */
+  seasons?: Season[];
+}
+interface WeatherDef extends WeatherEffects {
+  id: string;
+  label: string;
+  overlay: 'none' | 'rain' | 'snow';
+  heavy?: boolean;
+  intensity: number;
+  moistureBonus: number;
+  tint: [number, number, number];
+  severity: 'info' | 'warning';
+  /** Optional per-type spell duration; falls back to the global durationRange. */
+  durationRange?: [number, number];
+  transitions: WeatherTransition[];
+}
+const WEATHER_FILE = weatherData as unknown as {
+  durationRange: [number, number];
+  default: string;
+  types: WeatherDef[];
 };
+const DEFAULT_WEATHER = WEATHER_FILE.default;
+const DURATION_RANGE = WEATHER_FILE.durationRange;
+const WEATHER: Record<string, WeatherDef> = Object.fromEntries(
+  WEATHER_FILE.types.map((t) => [t.id, t])
+);
 
-/** Gameplay effects for a weather state (defaults to `clear` when undefined). */
-export function weatherEffects(weather?: WeatherState): WeatherEffects {
-  return WEATHER_EFFECTS[weather?.type ?? 'clear'];
+/** Resolve a weather def by id, falling back to the default (clear) for unknown/undefined. */
+function weatherDef(type?: string): WeatherDef {
+  return WEATHER[type ?? DEFAULT_WEATHER] ?? WEATHER[DEFAULT_WEATHER];
 }
 
-/** Human-readable weather names (Chronicle / HUD). */
-export const WEATHER_LABELS: Record<WeatherType, string> = {
-  clear: 'Clear skies',
-  rain: 'Rain',
-  heavy_rain: 'Heavy rain',
-  snow: 'Snow',
-  blizzard: 'Blizzard',
-  heat_wave: 'Heat wave',
-  fog: 'Fog'
-};
+/** Gameplay effects for a weather state (defaults to the fallback weather when undefined). */
+export function weatherEffects(weather?: WeatherState): WeatherEffects {
+  return weatherDef(weather?.type);
+}
 
-/** Human-readable season names (Chronicle / HUD). */
-export const SEASON_LABELS: Record<Season, string> = {
-  spring: 'Spring',
-  summer: 'Summer',
-  autumn: 'Autumn',
-  winter: 'Winter'
-};
+/** Human-readable weather names (Chronicle / HUD), keyed by id — from weather.jsonc. */
+export const WEATHER_LABELS: Record<string, string> = Object.fromEntries(
+  WEATHER_FILE.types.map((t) => [t.id, t.label])
+);
+/** Display label for a weather id (falls back through the default). */
+export function weatherLabel(type?: string): string {
+  return weatherDef(type).label;
+}
 
-/** Chronicle severity for a weather onset — harsh weather is worth flagging. */
+/** Particle overlay the WeatherCanvas should draw for a weather id. */
+export function weatherOverlayKind(type?: string): 'none' | 'rain' | 'snow' {
+  return weatherDef(type).overlay;
+}
+/** Whether a weather id is "heavy" (bigger/faster overlay — e.g. heavy_rain / blizzard). */
+export function weatherIsHeavy(type?: string): boolean {
+  return weatherDef(type).heavy === true;
+}
+
+/** Chronicle severity for a weather onset (from weather.jsonc). */
 export function weatherChronicleSeverity(type: WeatherType): 'info' | 'warning' {
-  return type === 'blizzard' || type === 'heat_wave' || type === 'heavy_rain' ? 'warning' : 'info';
+  return weatherDef(type).severity;
 }
 
 // Temperature exposure → a 0–100 "need-like" value driving hypothermia / heat stroke conditions.
@@ -517,22 +555,7 @@ export function biomeBaseMoisture(terrainType: string): number {
 }
 
 function weatherMoistureBonus(weather?: WeatherState): number {
-  switch (weather?.type) {
-    case 'rain':
-      return 20;
-    case 'heavy_rain':
-      return 35;
-    case 'snow':
-      return 15;
-    case 'blizzard':
-      return 25;
-    case 'fog':
-      return 10;
-    case 'heat_wave':
-      return -15;
-    default:
-      return 0;
-  }
+  return weatherDef(weather?.type).moistureBonus;
 }
 
 /** Display wetness (0–100%) for a tile = biome baseline + current weather contribution. */
@@ -562,49 +585,19 @@ export function tileTemperature(
   return effectiveTemperature(base, weatherEffects(weather).tempDelta, thermal);
 }
 
-/** Default visual intensity per weather type (0–1). */
-function weatherIntensity(type: WeatherType): number {
-  switch (type) {
-    case 'clear':
-      return 0;
-    case 'rain':
-    case 'snow':
-    case 'fog':
-      return 0.5;
-    case 'heavy_rain':
-    case 'heat_wave':
-      return 0.75;
-    case 'blizzard':
-      return 1.0;
-  }
-}
-
-function weatherTempOverride(type: WeatherType): number | undefined {
-  if (type === 'heat_wave') return WEATHER_EFFECTS.heat_wave.tempDelta;
-  if (type === 'blizzard') return WEATHER_EFFECTS.blizzard.tempDelta;
-  return undefined;
-}
-
-/** Markov transition for the weather *type*, given the current type + season. */
+/**
+ * Data-driven Markov transition (weather.jsonc `transitions`): evaluate the current weather's
+ * transitions in order — first that passes its season gate AND its probability roll wins; otherwise
+ * the weather persists. `seasonPrecip` pulls the probability from the season's `precipitation`.
+ */
 function rollWeatherType(prev: WeatherType, season: Season, rng: SeededRng): WeatherType {
-  // Any non-clear weather clears with base 60% per re-roll (weather passes naturally).
-  if (prev !== 'clear' && rng.chance(0.6)) return 'clear';
-
-  switch (prev) {
-    case 'clear': {
-      // Summer occasionally spikes into a heat wave; otherwise precipitation per the season table.
-      if (season === 'summer' && rng.chance(0.1)) return 'heat_wave';
-      if (rng.chance(SEASONS[season].precipitation)) return season === 'winter' ? 'snow' : 'rain';
-      return 'clear';
-    }
-    case 'rain':
-      return rng.chance(0.2) ? 'heavy_rain' : 'rain';
-    case 'snow':
-      return season === 'winter' && rng.chance(0.15) ? 'blizzard' : 'snow';
-    // heavy_rain / blizzard / heat_wave / fog persist until the clear roll above fires.
-    default:
-      return prev;
+  const transitions = weatherDef(prev).transitions ?? [];
+  for (const tr of transitions) {
+    if (tr.seasons && !tr.seasons.includes(season)) continue;
+    const chance = tr.seasonPrecip ? SEASONS[season].precipitation : (tr.chance ?? 0);
+    if (rng.chance(chance)) return tr.to;
   }
+  return prev;
 }
 
 /**
@@ -622,11 +615,12 @@ export function advanceWeatherForDay(
     return { ...weather, turnsRemaining: remaining };
   }
   const type = rollWeatherType(weather.type, season, rng);
+  const def = weatherDef(type);
+  const [minDur, maxDur] = def.durationRange ?? DURATION_RANGE;
   return {
     type,
-    intensity: weatherIntensity(type),
-    turnsRemaining: rng.int(50, 600),
-    temperatureOverride: weatherTempOverride(type)
+    intensity: def.intensity,
+    turnsRemaining: rng.int(minDur, maxDur)
   };
 }
 
@@ -637,22 +631,9 @@ export function advanceWeatherForDay(
 
 const WHITE: [number, number, number] = [1, 1, 1];
 
-/** Hue multiplier for a weather type — cool/desaturated for precip, flat grey for fog. */
+/** Hue multiplier for a weather type — from weather.jsonc `tint`. */
 function weatherTint(weather?: WeatherState): [number, number, number] {
-  switch (weather?.type) {
-    case 'rain':
-    case 'heavy_rain':
-      return [0.8, 0.85, 1.0]; // cool, rain-washed
-    case 'snow':
-    case 'blizzard':
-      return [0.92, 0.96, 1.0]; // bright cold
-    case 'heat_wave':
-      return [1.0, 0.92, 0.8]; // warm haze
-    case 'fog':
-      return [0.85, 0.85, 0.85]; // flat grey
-    default:
-      return WHITE;
-  }
+  return weatherDef(weather?.type).tint;
 }
 
 /** Season hue × weather hue, multiplied into the day/night ambient tint by the renderer. */

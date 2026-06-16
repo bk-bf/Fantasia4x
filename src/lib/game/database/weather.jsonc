@@ -1,0 +1,144 @@
+// Weather (SEASONS_WEATHER Subsystem 4) — fully data-driven. Loaded by EnvironmentService. Add a new
+// weather event by adding a `types[]` entry and wiring it into other types' `transitions`.
+//
+//   durationRange — [min,max] turns a spell lasts before it's re-rolled (per-type override allowed).
+//   default       — the starting / fallback weather id.
+//
+//   types[] fields:
+//     overlay       — particle overlay the WeatherCanvas draws: "none" | "rain" | "snow".
+//     heavy         — bigger/faster overlay + harder wind (heavy_rain / blizzard).
+//     intensity     — 0–1; drives overlay opacity/density.
+//     tempDelta     — °C added to effective temperature while active (cold/heat exposure).
+//     fatigueMul / hungerMul — multipliers on those need rates.
+//     moveCostMul   — movement-cost multiplier (gameplay hook).
+//     mood          — per-second mood drift (+ pleasant, − miserable).
+//     moistureBonus — added to tile wetness % while active (soaks pawns); negative dries (heat wave).
+//     tint          — normalised RGB multiplied into the ambient tint.
+//     severity      — chronicle severity on onset: "info" | "warning".
+//     transitions[] — Markov re-roll: evaluated IN ORDER, first hit wins, else the weather persists.
+//                     { to, chance } — fixed per-roll probability.
+//                     { to, seasonPrecip:true } — probability = the current season's `precipitation`.
+//                     seasons:[...] — gate a transition to specific seasons.
+{
+  "durationRange": [50, 600],
+  "default": "clear",
+  "types": [
+    {
+      "id": "clear",
+      "label": "Clear skies",
+      "overlay": "none",
+      "intensity": 0,
+      "tempDelta": 0,
+      "fatigueMul": 1.0,
+      "hungerMul": 1.0,
+      "moveCostMul": 1.0,
+      "mood": 0.5,
+      "moistureBonus": 0,
+      "tint": [1.0, 1.0, 1.0],
+      "severity": "info",
+      "transitions": [
+        { "to": "heat_wave", "chance": 0.1, "seasons": ["summer"] },
+        { "to": "snow", "seasonPrecip": true, "seasons": ["winter"] },
+        { "to": "rain", "seasonPrecip": true, "seasons": ["spring", "summer", "autumn"] }
+      ]
+    },
+    {
+      "id": "rain",
+      "label": "Rain",
+      "overlay": "rain",
+      "intensity": 0.5,
+      "tempDelta": -3,
+      "fatigueMul": 1.1,
+      "hungerMul": 1.0,
+      "moveCostMul": 1.1,
+      "mood": -0.5,
+      "moistureBonus": 20,
+      "tint": [0.8, 0.85, 1.0],
+      "severity": "info",
+      "transitions": [
+        { "to": "clear", "chance": 0.6 },
+        { "to": "heavy_rain", "chance": 0.2 }
+      ]
+    },
+    {
+      "id": "heavy_rain",
+      "label": "Heavy rain",
+      "overlay": "rain",
+      "heavy": true,
+      "intensity": 0.75,
+      "tempDelta": -5,
+      "fatigueMul": 1.25,
+      "hungerMul": 1.1,
+      "moveCostMul": 1.3,
+      "mood": -1.0,
+      "moistureBonus": 35,
+      "tint": [0.8, 0.85, 1.0],
+      "severity": "warning",
+      "transitions": [{ "to": "clear", "chance": 0.6 }]
+    },
+    {
+      "id": "snow",
+      "label": "Snow",
+      "overlay": "snow",
+      "intensity": 0.5,
+      "tempDelta": -10,
+      "fatigueMul": 1.3,
+      "hungerMul": 1.2,
+      "moveCostMul": 1.5,
+      "mood": -0.8,
+      "moistureBonus": 15,
+      "tint": [0.92, 0.96, 1.0],
+      "severity": "info",
+      "transitions": [
+        { "to": "clear", "chance": 0.6 },
+        { "to": "blizzard", "chance": 0.15, "seasons": ["winter"] }
+      ]
+    },
+    {
+      "id": "blizzard",
+      "label": "Blizzard",
+      "overlay": "snow",
+      "heavy": true,
+      "intensity": 1.0,
+      "tempDelta": -20,
+      "fatigueMul": 1.8,
+      "hungerMul": 1.4,
+      "moveCostMul": 2.5,
+      "mood": -2.0,
+      "moistureBonus": 25,
+      "tint": [0.92, 0.96, 1.0],
+      "severity": "warning",
+      "transitions": [{ "to": "clear", "chance": 0.6 }]
+    },
+    {
+      "id": "heat_wave",
+      "label": "Heat wave",
+      "overlay": "none",
+      "intensity": 0.75,
+      "tempDelta": 15,
+      "fatigueMul": 1.2,
+      "hungerMul": 1.4,
+      "moveCostMul": 1.1,
+      "mood": -1.0,
+      "moistureBonus": -15,
+      "tint": [1.0, 0.92, 0.8],
+      "severity": "warning",
+      "transitions": [{ "to": "clear", "chance": 0.6 }]
+    },
+    {
+      "id": "fog",
+      "label": "Fog",
+      "overlay": "none",
+      "intensity": 0.5,
+      "tempDelta": 0,
+      "fatigueMul": 1.0,
+      "hungerMul": 1.0,
+      "moveCostMul": 1.0,
+      "mood": -0.3,
+      "moistureBonus": 10,
+      "tint": [0.85, 0.85, 0.85],
+      "severity": "info",
+      "transitions": [{ "to": "clear", "chance": 0.6 }]
+    }
+  ]
+}

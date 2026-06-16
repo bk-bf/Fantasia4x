@@ -23,6 +23,11 @@ import {
   rebuildThermalField,
   thermalAt,
   isRoofedTile,
+  weatherLabel,
+  weatherOverlayKind,
+  weatherIsHeavy,
+  weatherChronicleSeverity,
+  SEASON_LABELS,
   type ThermalSample
 } from './EnvironmentService';
 import { comfortRange, driveTemperatureConditions } from '../core/needs';
@@ -371,6 +376,37 @@ describe('Thermal model — fire warmth, roof shelter, effective temperature', (
     );
     // …and drier (rain kept out).
     expect(tileWetness('plains', rain, roof)).toBeLessThan(tileWetness('plains', rain, NO_THERMAL));
+  });
+});
+
+describe('EnvironmentService — data-driven weather/season metadata (jsonc)', () => {
+  it('weather labels come from the data file', () => {
+    expect(weatherLabel('rain')).toBe('Rain');
+    expect(weatherLabel('heavy_rain')).toBe('Heavy rain');
+    expect(weatherLabel(undefined)).toBe('Clear skies'); // falls back to default
+    expect(weatherLabel('not_a_weather')).toBe('Clear skies'); // unknown → default
+  });
+
+  it('overlay kind + heavy flag are data-driven (drives the particle canvas)', () => {
+    expect(weatherOverlayKind('rain')).toBe('rain');
+    expect(weatherOverlayKind('heavy_rain')).toBe('rain');
+    expect(weatherOverlayKind('snow')).toBe('snow');
+    expect(weatherOverlayKind('blizzard')).toBe('snow');
+    expect(weatherOverlayKind('clear')).toBe('none');
+    expect(weatherOverlayKind('heat_wave')).toBe('none');
+    expect(weatherIsHeavy('heavy_rain')).toBe(true);
+    expect(weatherIsHeavy('blizzard')).toBe(true);
+    expect(weatherIsHeavy('rain')).toBe(false);
+  });
+
+  it('chronicle severity is data-driven', () => {
+    expect(weatherChronicleSeverity('blizzard')).toBe('warning');
+    expect(weatherChronicleSeverity('rain')).toBe('info');
+  });
+
+  it('season labels come from the data file', () => {
+    expect(SEASON_LABELS.spring).toBe('Spring');
+    expect(SEASON_LABELS.winter).toBe('Winter');
   });
 });
 

@@ -8,14 +8,13 @@
 
 export type Season = 'spring' | 'summer' | 'autumn' | 'winter';
 
-export type WeatherType =
-  | 'clear'
-  | 'rain'
-  | 'heavy_rain'
-  | 'snow'
-  | 'blizzard'
-  | 'heat_wave'
-  | 'fog';
+/**
+ * A weather id. DATA-DRIVEN: the set of weather types — and all their effects, visuals, and Markov
+ * transitions — live in `database/weather.jsonc` (loaded by EnvironmentService). This is a plain
+ * `string` so new weather can be added in the JSONC alone. The built-ins are: clear, rain, heavy_rain,
+ * snow, blizzard, heat_wave, fog.
+ */
+export type WeatherType = string;
 
 export interface WeatherState {
   type: WeatherType;
@@ -23,6 +22,4 @@ export interface WeatherState {
   intensity: number;
   /** Turns (ticks) until this weather is re-rolled by the Markov chain. */
   turnsRemaining: number;
-  /** Optional absolute temperature delta for heat_wave / blizzard, °C (conceptual). */
-  temperatureOverride?: number;
 }
