@@ -7,6 +7,42 @@ Tracks confirmed bugs, root causes, and fix status. Add new entries at the top.
 
 ---
 
+## [FIXED] Blueprint-queue jank — fetch jobs churn from colliding reserved-drop ids
+
+**Symptom:** After drag-queuing a row of building blueprints (e.g. mud-brick walls), the assigned
+builders **ping-pong rapidly between `MovingToResource` and `Idle`** and never deliver materials —
+construction stalls. Reported as "pawns jank back and forth after queuing blueprints" (CODEBASE-REVIEW
+N-5). Suspected at first to be a movement/approach-tile yoyo (FLEE-1 class) or a perf-arc regression;
+it was neither.
+
+**Root cause (confirmed via a live CDP state dump of the running Electron app):** **duplicate dropped-item
+ids.** When `reserveForOrder` (`core/GameState.ts`) splits a stockpile stack to reserve build materials,
+it minted the reserved sub-stack's id as `` `${d.id}-resv-${orderId.slice(-6)}` `` — and `slice(-6)` is the
+**tail of the building's placement timestamp**. Every building **drag-placed in one batch shares a single
+`Date.now()`**, so all of their reserved stacks of the same item, sitting on the same shared stockpile tile,
+**collided on one id** (observed: ~15 distinct cordage drops all id `dev-loose-cordage-121-87-resv-548129`,
+each with a different `reservedFor`). That detonated `JobService._syncFetchJobs`: its keep-filter did
+`find(d => d.id === j.droppedItemId)` → returned the **first** stack sharing the id, whose `reservedFor`
+belonged to a *sibling* wall → `reservedFor !== owner` → the valid fetch job was culled → re-added with a
+**fresh `Date.now()` id** the same tick. The pawn's claimed `jobId` then dangled (`!jobInPool` in
+`handleMovingToResource`) → it dropped to `Idle`, re-claimed the new id next tick, and repeated — a two-tick
+oscillation. The latent fragility was old (ADR-016); drag-placing many buildings is what triggered the
+collision, so the "since the perf work" association was incidental.
+
+**Fix (three parts, `core/GameState.ts` + `services/JobService.ts`):**
+- **Unique reservation ids** — use the **full `orderId`** (unique per building/order), not `slice(-6)`, so
+  reserved stacks can no longer collide.
+- **Owner-aware fetch matching** — the `_syncFetchJobs` keep-filter and the add-dedup match on **`id` AND
+  `reservedFor`/owner**, so even a legacy save with already-collided ids resolves the correct stack and
+  stops churning (self-healing).
+- **Deterministic job ids** — fetch ids are `` `fetch-${drop.id}-${ownerId}` `` (no `Date.now()`), and the
+  redundant `-${Date.now()}` was dropped from construct/craft/deconstruct/refuel too (all key on a unique
+  entity id). A transient filter miss can no longer re-mint an id and dangle a claim.
+
+**Verified live** (CDP, drag-placed wall scenario): `Date.now()`-format fetch jobs → 0, builders return to
+`Working` and walls complete; no Idle↔MovingToResource flip. `check` 0 errors · `test` 246. (The probe that
+caught it — per-transition + filter-reason logging in `work.ts`/`JobService.ts` — was removed after diagnosis.)
+
 ## [FIXED] Worker-mode freeze frames — terrain rebuilt on clone ref-churn + fuel churn (perf)
 
 **Symptom:** After the sim→Worker cutover (FPS 35–63) the map hitched periodically — "waves" /
