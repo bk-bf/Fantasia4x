@@ -59,6 +59,13 @@ export PATH="$HOME/.npm-global/bin:$PATH"
 # Pass current branch name so the UI can label itself in multi-worktree setups
 BRANCH=$(git -C "$SCRIPT_DIR" branch --show-current 2>/dev/null || echo "")
 
+# Pass the build's commit so the debug/profiler header shows which build is running. Append "*" when
+# the working tree is dirty (uncommitted changes — the running build is ahead of the named commit).
+COMMIT=$(git -C "$SCRIPT_DIR" rev-parse --short HEAD 2>/dev/null || echo "")
+if [[ -n "$COMMIT" ]] && ! git -C "$SCRIPT_DIR" diff --quiet HEAD 2>/dev/null; then
+  COMMIT="$COMMIT*"
+fi
+
 PROFILER_ENV=""
 if [[ "$PROFILER_MODE" == "true" ]]; then
   PROFILER_ENV="VITE_PROFILER=true"
@@ -94,4 +101,4 @@ else
 fi
 
 # shellcheck disable=SC2086 -- $PROFILER_ENV/$DEBUG_ENV/$HMR_ENV are intentional VAR=val flag passthroughs
-exec env $PROFILER_ENV $DEBUG_ENV $HMR_ENV VITE_DEV_BRANCH="$BRANCH" pnpm exec vite dev --host --port $PORT
+exec env $PROFILER_ENV $DEBUG_ENV $HMR_ENV VITE_DEV_BRANCH="$BRANCH" VITE_DEV_COMMIT="$COMMIT" pnpm exec vite dev --host --port $PORT
