@@ -300,6 +300,30 @@ export function weatherEffects(weather?: WeatherState): WeatherEffects {
   return WEATHER_EFFECTS[weather?.type ?? 'clear'];
 }
 
+/** Human-readable weather names (Chronicle / HUD). */
+export const WEATHER_LABELS: Record<WeatherType, string> = {
+  clear: 'Clear skies',
+  rain: 'Rain',
+  heavy_rain: 'Heavy rain',
+  snow: 'Snow',
+  blizzard: 'Blizzard',
+  heat_wave: 'Heat wave',
+  fog: 'Fog'
+};
+
+/** Human-readable season names (Chronicle / HUD). */
+export const SEASON_LABELS: Record<Season, string> = {
+  spring: 'Spring',
+  summer: 'Summer',
+  autumn: 'Autumn',
+  winter: 'Winter'
+};
+
+/** Chronicle severity for a weather onset — harsh weather is worth flagging. */
+export function weatherChronicleSeverity(type: WeatherType): 'info' | 'warning' {
+  return type === 'blizzard' || type === 'heat_wave' || type === 'heavy_rain' ? 'warning' : 'info';
+}
+
 // Temperature exposure → a 0–100 "need-like" value driving hypothermia / heat stroke conditions.
 // 1°C past the comfort band ≈ EXPOSURE_PER_DEGREE points, so ~20°C past comfort saturates at 100.
 const EXPOSURE_PER_DEGREE = 5;

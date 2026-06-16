@@ -14,7 +14,9 @@
     exploration: 'EXP',
     system: 'SYS',
     combat: 'CBT',
-    entity: 'ENT'
+    entity: 'ENT',
+    weather: 'WTR',
+    season: 'SEA'
   };
 
   const SEV_CLASS: Record<string, string> = {

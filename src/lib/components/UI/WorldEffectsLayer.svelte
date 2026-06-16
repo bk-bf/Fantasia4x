@@ -3,6 +3,7 @@
      To add a new effect: extend WorldEffectsState in worldEffects.ts and render it below. -->
 <script lang="ts">
   import { worldEffects } from '$lib/stores/worldEffects';
+  import WeatherCanvas from './WeatherCanvas.svelte';
 </script>
 
 <div class="world-effects-layer">
@@ -87,10 +88,9 @@
     </div>
   {/each}
 
-  <!-- ── Fullscreen Weather / Shader Overlays ──────────────────────────────────── -->
-  <!-- To add rain: create RainCanvas.svelte and mount it here when weather='rain'  -->
-  <!-- Example:                                                                      -->
-  <!--   {#if $worldEffects.weather === 'rain'}<RainCanvas />{/if}                  -->
+  <!-- ── Fullscreen Weather Overlay (SEASONS_WEATHER) ──────────────────────────── -->
+  <!-- Rain/snow particle system on a 2D canvas — reads the weather store itself, idles when clear. -->
+  <WeatherCanvas />
 </div>
 
 <style>
