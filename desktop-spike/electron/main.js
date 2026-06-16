@@ -23,6 +23,9 @@ function createWindow() {
     width: 1600,
     height: 1000,
     title: 'Fantasia4x — Electron / V8',
+    // Paint the window with the app's --bg before the renderer's first paint, so startup shows the
+    // loading screen's dark brown instead of a white flash.
+    backgroundColor: '#0d0b07',
     // Frameless: no OS title bar / menu bar. (No close button as a result — quit with Ctrl-C in the
     // launch terminal, or Alt+F4.)
     frame: false,
