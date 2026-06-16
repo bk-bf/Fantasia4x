@@ -68,6 +68,10 @@ export default defineConfig({
     plugins: () => [jsoncPlugin(), wasm()]
   },
   server: {
+    // HMR is OFF by default so an agent editing the tree never reloads a live playtest
+    // (dev.sh/launch.sh only set F4X_HMR=true when --hmr is passed). `false` disables both
+    // hot updates and full-page reloads; `undefined` restores Vite's default behaviour.
+    hmr: process.env.F4X_HMR === 'true' ? undefined : false,
     fs: {
       allow: [findGitRoot(process.cwd())]
     }

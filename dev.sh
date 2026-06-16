@@ -2,6 +2,8 @@
 # Start the Fantasia4x dev server on a fixed port.
 # If something is already listening on that port, print its info and exit.
 # Pass --debug to enable debug overlays (entity IDs, dev controls, map reroll) + verbose logging.
+# Pass --hmr to opt INTO Vite hot-reload / live page-reload. It is OFF by default so an agent editing
+#   the tree never reloads a live playtest. Composable with any other flag (e.g. ./dev.sh --debug --hmr).
 # Pass --log to enable ONLY the in-game DEBUG log tab + verbose firehose (no other dev UI). Composable
 #   with --profiler (e.g. ./dev.sh --profiler --log) to watch the log during an otherwise-clean run.
 # Pass --profiler to boot the heavy populated sandbox (giant map, 150 pawns…) but with the REAL-game
@@ -19,6 +21,7 @@ DEBUG_MODE=false
 LOG_MODE=false
 PROFILER_MODE=false
 PROFILER_AUTORUN=false
+HMR_MODE=false
 
 # Read worktree-local port override if present
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -32,6 +35,7 @@ while [[ $# -gt 0 ]]; do
     --log) LOG_MODE=true ;; # log tab + verbose firehose only; no other dev UI (composable w/ --profiler)
     --profiler) PROFILER_MODE=true ;; # heavy sandbox, real-game (paused) startup — NOT --debug
     --profiler-autorun) PROFILER_MODE=true; PROFILER_AUTORUN=true ;; # heavy sandbox, capture run
+    --hmr) HMR_MODE=true ;; # opt into Vite hot-reload / live page-reload (off by default)
     --port) PORT="$2"; shift ;;
     --port=*) PORT="${1#--port=}" ;;
   esac
@@ -79,5 +83,15 @@ elif [[ "$LOG_MODE" == "true" ]]; then
   DEBUG_ENV="VITE_DEBUG_LOG=true"
 fi
 
-# shellcheck disable=SC2086 -- $PROFILER_ENV/$DEBUG_ENV are intentional VAR=val flag passthroughs
-exec env $PROFILER_ENV $DEBUG_ENV VITE_DEV_BRANCH="$BRANCH" pnpm exec vite dev --host --port $PORT
+# HMR is OFF by default (vite.config.ts reads F4X_HMR) so an agent editing the tree never reloads a
+# live playtest. --hmr opts back in.
+HMR_ENV=""
+if [[ "$HMR_MODE" == "true" ]]; then
+  echo "HMR enabled — Vite hot-reload / live page-reload is ON."
+  HMR_ENV="F4X_HMR=true"
+else
+  echo "HMR disabled (default) — pass --hmr to enable hot-reload."
+fi
+
+# shellcheck disable=SC2086 -- $PROFILER_ENV/$DEBUG_ENV/$HMR_ENV are intentional VAR=val flag passthroughs
+exec env $PROFILER_ENV $DEBUG_ENV $HMR_ENV VITE_DEV_BRANCH="$BRANCH" pnpm exec vite dev --host --port $PORT

@@ -10,6 +10,8 @@
 #     ./launch.sh --debug --electron      ./launch.sh --profiler --tauri
 # --log: add the in-game DEBUG log tab + verbose firehose (no other dev UI) to any launch — handy
 #   to watch the log under --profiler/--electron, e.g. ./launch.sh --profiler --electron --log.
+# --hmr: opt INTO Vite hot-reload / live page-reload. OFF by default for EVERY launch (including
+#   --debug/--profiler/--electron/--tauri) so an agent editing the tree never reloads a live playtest.
 # codegraph is a separate always-on systemd user service (see codegraph_hint below).
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -17,17 +19,21 @@ PIDS=()
 
 PROFILER=false
 LOG=false
+HMR=false
 SHELL_TARGET=""
 for arg in "$@"; do
   case "$arg" in
     --profiler) PROFILER=true ;;
     --log) LOG=true ;;
+    --hmr) HMR=true ;;
     --electron) SHELL_TARGET=electron ;;
     --tauri) SHELL_TARGET=tauri ;;
   esac
 done
-# Suffix appended to a server's dev.sh flag set when --log is requested (dev.sh parses multiple flags).
+# Suffixes appended to a server's dev.sh flag set (dev.sh parses multiple flags). HMR is OFF for every
+# launch unless --hmr is passed, so an agent editing the tree never reloads a live playtest.
 LOG_FLAG=""; [[ "$LOG" == true ]] && LOG_FLAG=" --log"
+HMR_FLAG=""; [[ "$HMR" == true ]] && HMR_FLAG=" --hmr"
 
 cleanup() {
   [[ ${#PIDS[@]} -eq 0 ]] && return
@@ -98,7 +104,7 @@ if [[ -n "$SHELL_TARGET" ]]; then
   # --profiler boots WITHOUT --debug so the sim profiles clean (no verbose firehose). Add --log to
   # surface the DEBUG log tab + firehose on demand (e.g. ./launch.sh --profiler --electron --log).
   SERVER_FLAG="--debug"; [[ "$PROFILER" == true ]] && SERVER_FLAG="--profiler"
-  SERVER_FLAG="$SERVER_FLAG$LOG_FLAG"
+  SERVER_FLAG="$SERVER_FLAG$LOG_FLAG$HMR_FLAG"
   PORT=5173
   [[ -f "$SCRIPT_DIR/.devport" ]] && PORT=$(< "$SCRIPT_DIR/.devport")
 
@@ -130,7 +136,7 @@ if [[ "$PROFILER" == true ]]; then
   echo "Fantasia4x — profiler sandbox (main server only)"
   echo ""
   codegraph_hint
-  launch "$SCRIPT_DIR" "main" "--profiler$LOG_FLAG"
+  launch "$SCRIPT_DIR" "main" "--profiler$LOG_FLAG$HMR_FLAG"
   echo ""
   echo "Ctrl-C to stop."
   wait
@@ -140,13 +146,13 @@ fi
 echo "Fantasia4x — launching all dev servers (debug mode)"
 echo ""
 
-launch "$SCRIPT_DIR" "main" "--debug$LOG_FLAG"
+launch "$SCRIPT_DIR" "main" "--debug$LOG_FLAG$HMR_FLAG"
 
 LAUNCH_DIR="$SCRIPT_DIR/.worktrees/launch"
 if [[ -d "$LAUNCH_DIR" ]]; then
   for wt in "$LAUNCH_DIR"/*/; do
     [[ -f "$wt/dev.sh" ]] || continue
-    launch "$wt" "$(basename "$wt")"
+    launch "$wt" "$(basename "$wt")" "--debug$HMR_FLAG"
   done
 fi
 
