@@ -87,7 +87,10 @@ export function getEquipmentSlot(item: Item): EquipmentSlot | null {
       }
     }
     case 'tool':
-      return 'belt';
+      // A tool is held in hand, not worn on the belt — the belt slot is for belts/pouches
+      // (inventoryBonus carry containers). Pawns carry tools in their inventory and only equip one
+      // to the hand when actually working a tool-gated job (see handlers/work).
+      return 'mainHand';
     default:
       return null;
   }
@@ -101,6 +104,27 @@ export function canEquipItem(_pawn: Pawn, itemId: string): boolean {
   // availability no longer reads pawn.inventory.items (which is the pawn's CARRIED goods, not the
   // colony equip pool — INV-1).
   return getEquipmentSlot(item) !== null;
+}
+
+/**
+ * Add one tracked instance of `itemId` to the pawn's CARRIED inventory (`inventory.instances`), not a
+ * worn slot. Used for tools a pawn fetches for a tool-gated job: the job gate (`pawnHasToolFor`)
+ * accepts a carried tool, so the pawn keeps it in inventory rather than occupying the belt slot.
+ * Deposit + craft-staging both preserve `instances`, so the carried tool isn't dropped at a stockpile.
+ */
+export function addInstanceToInventory(pawn: Pawn, itemId: string): Pawn {
+  const item = itemService.getItemById(itemId);
+  if (!item) return pawn;
+  const instance: ItemInstance = {
+    instanceId: `${itemId}-${pawn.id}-${Date.now()}`,
+    itemId,
+    durability: item.maxDurability ?? 100
+  };
+  const inv = pawn.inventory ?? { items: {}, instances: [] };
+  return {
+    ...pawn,
+    inventory: { ...inv, instances: [...(inv.instances ?? []), instance] }
+  };
 }
 
 export function equipItem(pawn: Pawn, itemId: string): Pawn {

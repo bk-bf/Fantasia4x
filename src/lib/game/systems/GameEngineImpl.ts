@@ -27,7 +27,10 @@ import { resourceObjectService } from '../services/ResourceObjectService';
 import { entityService } from '../services/EntityService';
 import { combatService } from './Combat';
 import { TICKS_PER_SECOND, ticksFromSeconds, perTick } from '../core/time';
-import { buildPathfindingGridsWithBlocked } from '../services/PathfinderService';
+import {
+  buildPathfindingGridsWithBlocked,
+  patchPathfindingWalkable
+} from '../services/PathfinderService';
 import { occupancyService } from '../services/OccupancyService';
 import { isGameDebug, gatedConsole } from '../core/log';
 import type { WorkCategory } from '../core/types';
@@ -391,7 +394,10 @@ export class GameEngineImpl implements GameEngine {
               const newResourceCount = minAmt + Math.floor(rng.random() * (maxAmt - minAmt + 1));
               tile.resources[resourceId] = newResourceCount;
               // Restore blocking for non-walkable resources that have fully regrown.
-              if (def?.walkable === false) tile.walkable = false;
+              if (def?.walkable === false) {
+                tile.walkable = false;
+                patchPathfindingWalkable(tile.x, tile.y, false); // keep memoized A* grid in sync (worldMap ref unchanged)
+              }
               gatedConsole.log(
                 `[Regrowth] ${resourceId} at (${tile.x},${tile.y}) fully restored ×${newResourceCount}`
               );
@@ -405,7 +411,10 @@ export class GameEngineImpl implements GameEngine {
             delete cooldowns[key];
             tile.resources[key] = restored;
             // Restore blocking for non-walkable resources that have regrown.
-            if (def?.walkable === false) tile.walkable = false;
+            if (def?.walkable === false) {
+              tile.walkable = false;
+              patchPathfindingWalkable(tile.x, tile.y, false); // keep memoized A* grid in sync (worldMap ref unchanged)
+            }
             gatedConsole.log(`[Regrowth] ${key} at (${tile.x},${tile.y}) regrew ×${restored}`);
           }
           tileChanged = true;

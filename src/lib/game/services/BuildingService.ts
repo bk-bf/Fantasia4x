@@ -4,6 +4,7 @@ import itemsData from '../database/items.jsonc';
 import type { Item } from '../core/types';
 import { resolveCharSpans } from '../core/Terrains';
 import { markTileDirty } from '../core/tileDeltas';
+import { patchPathfindingWalkable } from './PathfinderService';
 import type { CharSpan } from '../core/Terrains';
 import { rng } from '../core/rng';
 import { perTick } from '../core/time';
@@ -439,6 +440,9 @@ export class BuildingServiceImpl implements BuildingService {
     // the worldMap ref → full re-clone + terrain rebuild). Event-rate (build/deconstruct), but the
     // pattern is the same. Return a fresh top-level state ref (worldMap ref stays stable → ships a delta).
     tile.walkable = nextWalkable;
+    // Keep the memoized A* grid in sync — the worldMap ref is unchanged, so the pathfinding
+    // cache (keyed on worldMap identity) would otherwise stay stale and route pawns onto the wall.
+    patchPathfindingWalkable(x, y, nextWalkable);
     markTileDirty(y, x, tile);
     return { ...state };
   }

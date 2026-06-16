@@ -8,6 +8,7 @@ import { resourceObjectService } from '../ResourceObjectService';
 import { itemService } from '../ItemService';
 import { SUBTERRAINS, SUBTERRAIN_FALLBACK } from '../../core/Terrains';
 import { markTileDirty } from '../../core/tileDeltas';
+import { patchPathfindingWalkable } from '../PathfinderService';
 import { absorbDropIfOnStockpileTile } from '../../core/GameState';
 import { ticksFromSeconds } from '../../core/time';
 import { seasonRegrowthMultiplier } from '../EnvironmentService';
@@ -133,6 +134,9 @@ export function complete(job: Job, gs: GameState): GameState {
     const baseSub = SUBTERRAINS[col.subType] ?? SUBTERRAIN_FALLBACK;
     col.walkable = baseSub.walkable;
     col.movementCost = baseSub.movementCost;
+    // Keep the memoized A* grid in sync — the worldMap ref is unchanged, so the pathfinding cache
+    // would otherwise keep treating the now-cleared tile as a blocking node (pawns route around it).
+    patchPathfindingWalkable(col.x, col.y, baseSub.walkable);
   } else {
     const newCooldowns = { ...(col.resourceCooldowns ?? {}) };
     // SEASONS_WEATHER Subsystem 2: scale regrowth duration by the season rate (spring fast, winter

@@ -62,6 +62,20 @@ export function buildPathfindingGrids(worldMap: WorldTile[][]): PathfindingGrids
 }
 
 /**
+ * Patch a single tile's walkability in the memoized base grid. Required because the cache is keyed
+ * on `worldMap` identity, but several hot paths flip `tile.walkable` IN PLACE (build/deconstruct
+ * footprints, regrowth restore) while deliberately keeping the worldMap ref stable — so the memo
+ * would otherwise serve a stale grid and A* would route pawns straight onto a freshly-built wall.
+ * O(1), keeps the cache warm; the WithBlocked/SoftBlocked builders `.slice()` this base per call,
+ * so the patch propagates. No-op if the cache isn't built yet (it'll be built correct on first use).
+ */
+export function patchPathfindingWalkable(x: number, y: number, walkable: boolean): void {
+  if (!_cache) return;
+  if (x < 0 || y < 0 || x >= _cache.width || y >= _cache.height) return;
+  _cache.walkable[y * _cache.width + x] = walkable ? 1 : 0;
+}
+
+/**
  * Like buildPathfindingGrids but treats entity-occupied tiles as walls so A* routes
  * AROUND other bodies (a pawn standing in a doorway becomes a real chokepoint). The
  * start (sx,sy) and goal (ex,ey) tiles are kept walkable — the mover stands on the

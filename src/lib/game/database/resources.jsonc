@@ -1275,7 +1275,7 @@
       "action"         : "mine",
       "workCategory"   : "mining",
       "workAmount"     : 10,
-      "toolRequirement": null,
+      "toolRequirement": {"workType": "mining", "minTier": 1},   // a pick — barehanded mining a solid wall was a bug
       "yields"         : [
         {"itemId": "granite", "min": 2, "max": 5, "skillId": "mining", "skillMultiplier": 0.2},
         {"itemId": "marble",  "min": 0, "max": 1, "skillId": "mining", "skillMultiplier": 0.1}   // rare: prestige stone

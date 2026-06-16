@@ -25,7 +25,7 @@ import {
 } from '../pawnHelpers';
 import { checkNeedInterrupts, selectIdleNeed, applyNeed } from '../needSelection';
 import { orderStationTile, depositInventory, findNearestDepositPoint } from '../pawnHauling';
-import { equipItem } from '../../../core/PawnEquipment';
+import { addInstanceToInventory } from '../../../core/PawnEquipment';
 import { aggregateFromDrops } from '../../../core/GameState';
 
 export function handleHauling(pawn: Pawn, gameState: GameState): GameState {
@@ -134,9 +134,7 @@ export function handleIdle(pawn: Pawn, gameState: GameState): GameState {
   // Pinned items are kept in hand and never deposited, so they must NOT trigger haul-recovery —
   // otherwise a pawn carrying only pinned items would loop Idle→Hauling→deposit(keeps)→Idle forever.
   const pinnedSet = new Set(pawn.pinnedItems ?? []);
-  if (
-    Object.entries(pawn.inventory?.items ?? {}).some(([id, q]) => q > 0 && !pinnedSet.has(id))
-  ) {
+  if (Object.entries(pawn.inventory?.items ?? {}).some(([id, q]) => q > 0 && !pinnedSet.has(id))) {
     return transitionTo(pawn, PAWN_STATE.HAULING, gameState);
   }
 
@@ -163,8 +161,8 @@ export function handleIdle(pawn: Pawn, gameState: GameState): GameState {
   let gs = jobService.claimJob(pawn.id, job.id, gameState);
 
   // ADR-009 step 2: if this is a tool-gated job and the pawn isn't already holding the tool, detour
-  // to grab one from colony stock first (auto-equip), THEN proceed to the job. `toolFetch` makes the
-  // first leg target the tool's stockpile tile; the pickup (handleMovingToResource) re-targets the site.
+  // to grab one from colony stock first (carried in inventory, not belted), THEN proceed to the job.
+  // `toolFetch` makes the first leg target the tool's stockpile tile; the pickup re-targets the site.
   let toolFetch: { itemId: string; siteX: number; siteY: number } | undefined;
   let destX = job.targetX;
   let destY = job.targetY;
@@ -248,10 +246,10 @@ export function handleIdle(pawn: Pawn, gameState: GameState): GameState {
 }
 
 /**
- * ADR-009 step 2 — the pawn has reached the tool's stockpile tile: take one tool from stock, equip
- * it (mints an ItemInstance into the `belt` slot), clear the detour, and re-path to the real job
- * site. If the tool was taken by someone else first, release the job + cool it down so the pawn
- * re-selects (and may grab from another stock tile).
+ * ADR-009 step 2 — the pawn has reached the tool's stockpile tile: take one tool from stock, carry
+ * it in its inventory (NOT the belt slot — the gate accepts a carried tool), clear the detour, and
+ * re-path to the real job site. If the tool was taken by someone else first, release the job + cool
+ * it down so the pawn re-selects (and may grab from another stock tile).
  */
 function acquireToolAndProceed(pawn: Pawn, gameState: GameState): GameState {
   const aj = pawn.activeJob!;
@@ -278,16 +276,18 @@ function acquireToolAndProceed(pawn: Pawn, gameState: GameState): GameState {
         )
       : (gameState.droppedItems ?? []).filter((d) => d.id !== drop.id);
 
-  // Equip the tool (mints the instance into the belt slot) + re-target to the job site.
+  // Carry the tool in the pawn's inventory (NOT the belt slot — belts go there). The tool-gate
+  // (`pawnHasToolFor`) accepts a carried tool, so the pawn can work the job while holding it in its
+  // pack; deposit/craft-staging preserve carried instances, so it isn't dropped at a stockpile.
   const withTool: GameState = {
     ...gameState,
     droppedItems: newDropped,
     stockpile: aggregateFromDrops(newDropped),
     pawns: gameState.pawns.map((p) => {
       if (p.id !== pawn.id) return p;
-      const equipped = equipItem(p, tf.itemId);
+      const carried = addInstanceToInventory(p, tf.itemId);
       return {
-        ...equipped,
+        ...carried,
         activeJob: { ...aj, toolFetch: undefined, targetX: tf.siteX, targetY: tf.siteY },
         hasReachedDestination: false
       };
