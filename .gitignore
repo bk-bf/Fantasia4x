@@ -43,3 +43,6 @@ src/lib/sim-core-pkg/
 
 # Worktree-local port override (see dev.sh)
 .devport
+
+# Per-user MCP config (machine-local paths; see AGENTS.md → Performance Profiling)
+.mcp.json

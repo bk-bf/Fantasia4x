@@ -18,6 +18,11 @@ const URL = process.env.SPIKE_URL || 'http://localhost:5173';
 // compare. 128 = MB; dial down if individual scavenge pauses grow.
 app.commandLine.appendSwitch('js-flags', '--max-semi-space-size=128');
 
+// Expose the Chrome DevTools Protocol so an external debugger (the electron-debug
+// MCP server) can attach to the renderer/main: targets at http://localhost:9222/json.
+// Debug-only shell, so it's always on; override the port with ELECTRON_DEBUG_PORT.
+app.commandLine.appendSwitch('remote-debugging-port', process.env.ELECTRON_DEBUG_PORT || '9222');
+
 function createWindow() {
   const win = new BrowserWindow({
     width: 1600,
