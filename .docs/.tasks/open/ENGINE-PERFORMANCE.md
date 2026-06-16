@@ -1,4 +1,4 @@
-<!-- LOC cap: 680 (created: 2026-06-14, rewritten 2026-06-14 post-profiling; worker shipped 2026-06-14; Rust-SoA pivot 2026-06-14 then ABORTED after R1 2026-06-15 → mutable-in-place JS; M1–M3 + throttle landed 2026-06-15, de-immutabling plateaued; 2026-06-15 custom profiler RETIRED → Firefox Profiler + pq; capacity/formula caches + the WORKER→MAIN SNAPSHOT (W2/W2b) broke the plateau → 80–100 TPS @4×; then de-immutabled pawn-patch spreads + paused warmup screen → 200+ TPS @4× after ~5s, GOAL CRUSHED 2026-06-15; then JS-allocation capture (§C) verified the de-immutable win + drove the harvest-time worldMap-delta fix; 2026-06-15 Electron chosen over Tauri (A/B), and the Electron renderer trace opened §D — renderer-side hitches D1–D3; 2026-06-16 §D extended: prealloc + designation-decouple + RESYNC 8→32 + worldMapDelta-slim landed, and the BIG one — three `worldMap.map()` full-rebuilds (harvest completion / mob forage / building footprint) found via the `[TRIG]` probe and de-immutabled in place → `worldMapRef=0`; sectional throttle TRIED+REVERTED; perf arc PAUSED on the entity baseline) -->
+<!-- LOC cap: 730 (created: 2026-06-14, rewritten 2026-06-14 post-profiling; worker shipped 2026-06-14; Rust-SoA pivot 2026-06-14 then ABORTED after R1 2026-06-15 → mutable-in-place JS; M1–M3 + throttle landed 2026-06-15, de-immutabling plateaued; 2026-06-15 custom profiler RETIRED → Firefox Profiler + pq; capacity/formula caches + the WORKER→MAIN SNAPSHOT (W2/W2b) broke the plateau → 80–100 TPS @4×; then de-immutabled pawn-patch spreads + paused warmup screen → 200+ TPS @4× after ~5s, GOAL CRUSHED 2026-06-15; then JS-allocation capture (§C) verified the de-immutable win + drove the harvest-time worldMap-delta fix; 2026-06-15 Electron chosen over Tauri (A/B), and the Electron renderer trace opened §D — renderer-side hitches D1–D3; 2026-06-16 §D extended: prealloc + designation-decouple + RESYNC 8→32 + worldMapDelta-slim landed, and the BIG one — three `worldMap.map()` full-rebuilds (harvest completion / mob forage / building footprint) found via the `[TRIG]` probe and de-immutabled in place → `worldMapRef=0`; sectional throttle TRIED+REVERTED; then the ENTITY BASELINE got its surgical cut after all (D8) — `[SNAP-PAWN]` field-audit + drop-never-read-fields projection (`entityProjection.ts`), slim pawn 766→~535B / pawns 152k→109k, the path≈900B premise was STALE; next non-entity lever = `droppedItems` deltas) -->
 
 # ENGINE PERFORMANCE & SCALING
 
@@ -23,7 +23,23 @@ Profiling-driven performance work, measured on the heavy `--profiler` sandbox (1
 
 ## 0 · Status
 
-- **🖥️ RENDERER-side arc (§D, 2026-06-16) — the cliffs are fixed; perf arc PAUSED on the entity baseline.**
+- **🪶 ENTITY BASELINE CUT (D8, 2026-06-16) — the snapshot projection got its surgical cut after all.**
+  The `[SNAP-PAWN]` field probe (measured, not assumed) showed the per-flush slim pawn was ~766B dominated by
+  `needs` (150) + `activeJob` (117) + `jobQueue` (168 *when populated*) + `state` (77) — **`path` was only 35B**,
+  so the old "path ≈ 900B" premise (§D-below) was **stale/wrong for this scenario** (real-game local harvest/haul,
+  not cross-map treks). A full main-thread read-audit (components/stores/routes + GameCanvas) found most of those
+  bytes are **worker-only fields the renderer/HUD never read**. `projectSentEntity` (`sim/entityProjection.ts`)
+  DROPS them from the SENT projection — the `slimTile` pattern for entities: needs `lastX` timestamps, activeJob
+  ids/coords/scratch, the `jobQueue` lookahead, the `state` FSM booleans (redundant with the hot `currentState`)
+  — plus truncates `path` to the next 2 cells (drafted pawns keep the full path for the order overlay). **Zero
+  staleness** — only never-read fields are dropped, so no resync/merge machinery was needed (unlike the
+  demote-to-resync the doc had proposed). Result: slim pawn **766 → ~535B**, **`pawns` 152k → ~109k (~28%)**.
+  Guarded by `entityProjection.test.ts`. **Lesson (again):** the first attempt truncated `path` off the doc's
+  stale number and did ~nothing — only the `[SNAP-PAWN]` field measurement found the real cost. *Measure the
+  field, don't trust the prior note.* Remaining entity cost is now genuinely-read scalars; the next entity lever
+  is transferable `Float32Array` positions (a rewrite, not a cut). **Next non-entity lever: `droppedItems` —
+  it ships whole every flush and GROWS unbounded with harvest (16k → 31k+ in one session); D6-style item deltas.**
+- **🖥️ RENDERER-side arc (§D, 2026-06-16) — the cliffs are fixed; then the entity baseline was cut (D8, above).**
   After the Electron cutover ([[electron-over-tauri-distribution]], ~250 TPS vs Tauri ~100) Chrome-trace
   profiling of the *render thread* opened a new surface (§D). What landed: terrain vertex prealloc (D1′),
   designation→terrain decouple (D1″), resync cadence 8→32 (D5), worldMapDelta tile-slim (D4), staggered
@@ -32,8 +48,8 @@ Profiling-driven performance work, measured on the heavy `--profiler` sandbox (1
   change a few tiles, flipping its ref → full re-clone across the boundary (the 211 ms `onmessage` spikes)
   **and** a full terrain rebuild. Found via the `[TRIG]` probe (`worldMapRef=5–11/30flush` during harvest);
   de-immutabled in place → **`worldMapRef=0`**, only `worldMapDelta`s flow. **The sectional throttle (D7)
-  was TRIED and REVERTED** (worsened start FPS). **Remaining = the entity baseline** (`pawns+mobs ≈
-  400–500k/flush`, peak at start) — a *project* (scalar projection / transferable buffers), not a cut. See §D.
+  was TRIED and REVERTED** (worsened start FPS). The entity baseline (`pawns+mobs ≈ 400–500k/flush`) looked like a
+  *project, not a cut* — **but D8 (above) found a clean surgical cut after all** (drop the never-read fields). See §D.
 - **🏁 GOAL CRUSHED (2026-06-15, validated in-game): comfortably 200+ TPS @4×** on the giant
   `--profiler` map after ~5 s of play (settles in 2–3 s post-unpause, climbs past 200 by ~5 s). The
   full arc — worker decouple → W2/W2b snapshot → de-immutabling the residual pawn-patch spreads
@@ -426,27 +442,45 @@ probes in `sim.worker.ts` gated by `SNAP_SIZE_LOG`:
 These probes + the `--max-semi-space-size=128` GC band-aid in `desktop-spike/electron/main.js` are **temporary
 instrumentation still in the tree** — strip them before committing for real.
 
-### Where it stands — perf arc PAUSED (2026-06-16)
+### §D8 · the entity-baseline cut — drop the never-read fields (2026-06-16, LANDED)
 
 Every **cliff** is fixed and measured: worldMap rebuilds (`worldMapRef=0`, D6), the full re-clone (gone, D6),
 terrain vertex cost (halved, D1′), designation-driven rebuilds (decoupled, D1″), the resync slice (4× smaller,
-D5), the worldMapDelta tile (slimmed, D4). At the real ~50-pawn target this is trivially fast; the harvest
-collapse and the renderer hitches the user *felt* are gone or much reduced.
+D5), the worldMapDelta tile (slimmed, D4). At the real ~50-pawn target this is trivially fast.
 
-**The remaining cost is the ENTITY BASELINE — `pawns + mobs ≈ 400–500k/flush`, peaking at game START** (all
-140 mobs alive + every pawn pathing → `path` inflates each slim pawn to ~900B). This is no longer a spider-web
-strand; it's the load-bearing wall, and **there is no surgical cut left** (D7 proved throttling the *small*
-state fields can't help the start and can backfire). The only real levers are PROJECTS:
-- [ ] **Render-scalar entity projection** — ship per entity only the scalars the renderer draws
-  (`position`/`needs.hunger`/`activeJob.progress`/`state.health`/`currentState`) + **truncate `path` to the
-  next 1–2 cells** (the renderer's `simTarget` reads only `path[pathIndex]`); demote the rest to the 32-flush
-  resync. ~50–60% off entities, but it touches per-frame renderer reads → needs a render-read audit (like D4's
-  worldMap-tile audit), NOT a blind cut.
-- [ ] **Transferable `Float32Array` positions** — the §A/R3 idea; biggest win, biggest rewrite.
+The entity baseline (`pawns + mobs ≈ 400–500k/flush`) was framed above as a *project, not a cut* — and the
+proposed lever assumed **`path` inflated each slim pawn to ~900B**. **The `[SNAP-PAWN]` field probe falsified
+that:** the ~766B slim pawn was `needs` (150) + `activeJob` (117) + `jobQueue` (168 *when populated*) +
+`state` (77); **`path` was only 35B** (this scenario is local harvest/haul, not cross-map travel). The first
+attempt truncated `path` off the stale number and saved ~nothing — *measure the field, don't trust the note.*
 
-**Decision: stop the surgical-cut loop here.** Either ship for the real scale, or greenlight the entity
-projection as a deliberate, scoped project. Lesson of §D: every win came from a *correlated* capture (dip ×
-both threads, `[TRIG]`, `[SNAP]`); the one blind/assumed cut (D7) is the only one that regressed.
+- [x] **Render-projection by DROPPING never-read fields** (`sim/entityProjection.ts` · `projectSentEntity`).
+  A full main-thread read-audit (components/stores/routes + GameCanvas) showed the renderer/HUD read only:
+  `needs.{hunger,fatigue,sleep,thirst,hygiene}` (all five drift-prone bars — kept hot; **thirst 0.70/s actually
+  drifts *faster* than hunger**, so none were demoted), `activeJob.{type,resourceId,progress}`, `state.{mood,
+  health}`, `position`, `currentState`, `nextCellCostLeft`, and `path[pathIndex]`. Everything else is worker-only.
+  So the projection DROPS — never resyncs — the unread fields (the `slimTile` pattern for entities): needs `lastX`
+  timestamps, the ~12 activeJob ids/coords/scratch fields, the `jobQueue` FSM lookahead (168B!), the three
+  `state` FSM booleans (redundant with the hot `currentState`); and truncates `path` to the next 2 cells (drafted
+  pawns keep the full path for the order overlay). **Denylists, not allowlists** → a newly-added *read* field stays
+  included (fail-safe). The worker's canonical state + saves keep the full objects (nested objects rebuilt fresh,
+  never mutated). **Zero staleness — only never-read fields drop, so NO resync/merge machinery was needed** (a
+  cleaner outcome than the demote-to-resync first sketched). **slim pawn 766 → ~535B; `pawns` 152k → ~109k (~28%).**
+  Guarded by `entityProjection.test.ts`.
+- [ ] **Transferable `Float32Array` positions** — the §A/R3 idea; the next entity lever, but a rewrite not a cut.
+  The remaining slim-pawn bytes are now genuinely-read render/HUD scalars (`needs` bars, mood/health, position,
+  path, activeJob display) — no more free drops.
+
+**Now the biggest growing cost is NOT entities — it's `droppedItems`.** The `[SNAP]` probe shows it shipped whole
+every flush and **climbing unbounded with harvest (16k → 31k+ in one session)**; this is the D6 worldMap problem
+for items. Next lever:
+- [ ] **`droppedItems` deltas** — ship only added/removed/changed items (id-keyed mirror like the per-entity sync),
+  not the whole array every flush. The `state` payload also spikes to ~120k whenever `workAssignments` (~46k) +
+  `jobs` (~40–52k) ride along (the D7-reverted territory) — a separate, later lever.
+
+**Lesson of §D, reaffirmed:** every win came from a *correlated/field-level* capture (`[TRIG]`, `[SNAP]`,
+`[SNAP-PAWN]`); both blind/assumed moves regressed or no-op'd (D7's throttle; the path-only first cut off the
+stale ~900B figure).
 
 ---
 
