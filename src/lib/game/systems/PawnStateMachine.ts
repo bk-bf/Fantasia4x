@@ -327,7 +327,12 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
           w.severity === 'serious' ||
           w.severity === 'critical' ||
           w.severity === 'destroyed';
-        if (open && !isTended(w, gameState.turn)) {
+        // Incubation grace: a wound only starts to fester once it's been open + untended for
+        // `infectionIncubationTicks` (~2.5 days). Fresh combat wounds carry no infection risk, so a
+        // pawn can't infect to lethal during or right after a fight — it's the days-later neglect
+        // threat. (Wounds from a pre-change save have no `inflictedAt` → their clock starts at load.)
+        const age = gameState.turn - (w.inflictedAt ?? gameState.turn);
+        if (open && !isTended(w, gameState.turn) && age >= CARE_CONFIG.infectionIncubationTicks) {
           infectionPressure += CARE_CONFIG.infectionRiskPerWound;
         }
       }
@@ -513,7 +518,7 @@ export function healWounds(pawn: Pawn, turn = 0): Pawn {
           continue;
         }
         healed += heal;
-        newWounds.push(recomputeWound(part.id, w.type, newDamage, w));
+        newWounds.push(recomputeWound(part.id, w.type, newDamage, w, turn));
       }
       return { ...part, health: Math.min(part.maxHp, part.health + healed), injuries: newWounds };
     });

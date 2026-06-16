@@ -114,6 +114,9 @@ export interface Injury {
   painContribution: number;
   infected: boolean; // doubles pain + bleeding after 20 untreated turns
   treatedAt?: number; // turn when a caretaker last tended this wound
+  /** Turn the wound was first inflicted (preserved as same-type hits stack). Fresh wounds don't
+   *  fester until they're `infectionIncubationTicks` old — see the infection block in PawnStateMachine. */
+  inflictedAt?: number;
   /** Quality 0–1 of the most recent tend; scales heal speed, treatment duration, infection resistance. */
   treatmentQuality?: number;
 }

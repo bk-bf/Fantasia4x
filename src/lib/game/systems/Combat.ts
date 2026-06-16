@@ -122,7 +122,8 @@ export function recomputeWound(
   bodyPart: BodyPartId,
   type: Injury['type'],
   accumDamage: number,
-  prev?: Pick<Injury, 'infected' | 'treatedAt'>
+  prev?: Pick<Injury, 'infected' | 'treatedAt' | 'inflictedAt'>,
+  turn?: number
 ): Injury {
   const partDef = PART_DEF_MAP[bodyPart];
   const wd = woundById(type);
@@ -139,7 +140,9 @@ export function recomputeWound(
     painContribution:
       Math.round(accumDamage * (wd?.painPerDamage ?? 0.5) * (partDef?.isVital ? 2 : 1) * 10) / 10,
     infected: prev?.infected ?? false,
-    treatedAt: prev?.treatedAt
+    treatedAt: prev?.treatedAt,
+    // Age clock for the infection incubation gate: keep the original time as same-type hits stack.
+    inflictedAt: prev?.inflictedAt ?? turn
   };
 }
 
@@ -464,7 +467,7 @@ class CombatServiceImpl implements CombatService {
       const wIdx = prev.injuries.findIndex((w) => w.type === injury.type);
       const prevW = wIdx >= 0 ? prev.injuries[wIdx] : undefined;
       const accum = Math.min((prevW?.damage ?? 0) + injury.damage, partDef.maxHp);
-      const merged = recomputeWound(injury.bodyPart, injury.type, accum, prevW);
+      const merged = recomputeWound(injury.bodyPart, injury.type, accum, prevW, state.turn);
       const woundList =
         wIdx >= 0
           ? prev.injuries.map((w, i) => (i === wIdx ? merged : w))

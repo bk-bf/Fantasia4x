@@ -35,6 +35,10 @@ export interface CareConfig {
   treatedHealMultiplier: number;
   /** A tend below this rolled quality fails (no treatment applied). */
   minTendQuality: number;
+  /** Incubation grace: a wound must be this many ticks old before it can start to fester. Fresh
+   *  wounds carry no infection risk — infection is a days-later threat, not an at-the-moment-of-injury
+   *  one. 18000 ticks = 1 in-game day (TURNS_PER_DAY 300 × 60 tps). */
+  infectionIncubationTicks: number;
   /** Infection pressure per tick per untended open wound. */
   infectionRiskPerWound: number;
   /** Cap on total per-tick infection pressure regardless of wound count — stops a heavily

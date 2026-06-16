@@ -31,6 +31,9 @@
     "treatmentDurationTicks": 1800,
     "treatedHealMultiplier": 2.5,
     "minTendQuality": 0.05,
+    // Wounds must be ~2.5 in-game days old (18000 ticks/day) before they can fester — a fresh
+    // injury never infects on the spot; infection is a days-later threat of neglect.
+    "infectionIncubationTicks": 45000,
     "infectionRiskPerWound": 0.0004,
     "infectionRiskMaxPerTick": 0.0008,
     "infectionRecoveryPerTick": 0.0015,
