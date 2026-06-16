@@ -64,8 +64,12 @@
   function makeParticle(w: number, h: number, atTop: boolean): Particle {
     if (mode === 'rain') {
       const spd = (heavy ? 950 : 680) * (0.7 + Math.random() * 0.6);
+      // Drops slant LEFT as they fall, drifting `|wind| × height` px over a full descent. Seed them
+      // across a width extended by that slant so they still cover the bottom-right corner — otherwise
+      // the coverage is a left-leaning parallelogram with a triangular gap bottom-right.
+      const slant = Math.abs(heavy ? -0.4 : -0.2) * h;
       return {
-        x: Math.random() * w * 1.15 - w * 0.1, // bias left so the slant still fills the right edge
+        x: Math.random() * (w + slant),
         y: atTop ? -20 - Math.random() * 40 : Math.random() * h,
         len: 9 + Math.random() * 13 + (heavy ? 6 : 0),
         spd,
