@@ -37,7 +37,7 @@ import {
   seasonForTurn,
   recomputeWorldTemperature,
   advanceWeatherForDay,
-  SEASONS,
+  weatherEffects,
   TURNS_PER_DAY
 } from '../services/EnvironmentService';
 import { markTileDirty } from '../core/tileDeltas';
@@ -102,6 +102,9 @@ export class GameEngineImpl implements GameEngine {
    * triggers exactly one in-place recompute (PERF-1), not one per tick.
    */
   private temperatureSeason: import('../core/types').Season | undefined = undefined;
+  /** Average baked tile temperature (biome + season, no weather) — combined with the live weather
+   *  delta into `gameState.avgTemperature` for the HUD. Set whenever temperatures are recomputed. */
+  private avgTileTemp: number | undefined = undefined;
   /**
    * Per-tick output sink (ENGINE-PERFORMANCE ADR-021, sim→Worker W0). The engine no longer imports
    * the Svelte store; the owner injects how to publish each tick's state — on the main thread that's
@@ -283,7 +286,7 @@ export class GameEngineImpl implements GameEngine {
     // Recompute temperatures once when the season the map was baked for changes (or on first
     // populated tick — fresh worlds carry temperature 0 until baked here).
     if (gs.worldMap.length > 0 && this.temperatureSeason !== season) {
-      recomputeWorldTemperature(gs.worldMap, season);
+      this.avgTileTemp = recomputeWorldTemperature(gs.worldMap, season);
       this.temperatureSeason = season;
     }
 
@@ -291,6 +294,13 @@ export class GameEngineImpl implements GameEngine {
     const ticksPerDay = TURNS_PER_DAY * TICKS_PER_SECOND;
     if (gs.turn % ticksPerDay === 0 && gs.weather) {
       gs.weather = advanceWeatherForDay(gs.weather, season, rng);
+    }
+
+    // HUD readout: average effective map temperature = baked tile average + live weather delta.
+    // Assigned only on change to keep the sectional snapshot quiet (PERF-4: a cheap top-level scalar).
+    if (this.avgTileTemp !== undefined) {
+      const avg = Math.round(this.avgTileTemp + weatherEffects(gs.weather).tempDelta);
+      if (avg !== gs.avgTemperature) gs.avgTemperature = avg;
     }
   }
 

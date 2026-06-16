@@ -251,13 +251,20 @@ export function biomeBaseTemp(terrainType: string): number {
  * to receive. The need-rate hot path (PawnService) reads the cached value; the live
  * weather delta is added there, not baked here, so weather changes never touch 38k tiles.
  */
-export function recomputeWorldTemperature(worldMap: WorldTile[][], season: Season): void {
+export function recomputeWorldTemperature(worldMap: WorldTile[][], season: Season): number {
   const offset = SEASONS[season].tempOffset;
+  let sum = 0;
+  let count = 0;
   for (const row of worldMap) {
     for (const tile of row) {
-      tile.temperature = biomeBaseTemp(tile.terrainType) + offset;
+      const temp = biomeBaseTemp(tile.terrainType) + offset;
+      tile.temperature = temp;
+      sum += temp;
+      count++;
     }
   }
+  // Average baked tile temperature (biome + season, no weather) — the topbar adds the weather delta.
+  return count > 0 ? sum / count : offset;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -288,6 +295,55 @@ const WEATHER_EFFECTS: Record<WeatherType, WeatherEffects> = {
 /** Gameplay effects for a weather state (defaults to `clear` when undefined). */
 export function weatherEffects(weather?: WeatherState): WeatherEffects {
   return WEATHER_EFFECTS[weather?.type ?? 'clear'];
+}
+
+// Per-biome baseline wetness (0–100%) lives in terrains.jsonc (`baseMoisture`). Weather adds/removes
+// on top. Derived display value — not a persisted per-tile field, so it never rides the snapshot
+// (computed on demand for the hovered tile).
+const DEFAULT_BIOME_MOISTURE = 35;
+
+/** Biome baseline wetness (0–100%) for a tile's terrainType. */
+export function biomeBaseMoisture(terrainType: string): number {
+  return BIOMES[terrainType]?.baseMoisture ?? DEFAULT_BIOME_MOISTURE;
+}
+
+function weatherMoistureBonus(weather?: WeatherState): number {
+  switch (weather?.type) {
+    case 'rain':
+      return 20;
+    case 'heavy_rain':
+      return 35;
+    case 'snow':
+      return 15;
+    case 'blizzard':
+      return 25;
+    case 'fog':
+      return 10;
+    case 'heat_wave':
+      return -15;
+    default:
+      return 0;
+  }
+}
+
+/** Display wetness (0–100%) for a tile = biome baseline + current weather contribution. */
+export function tileWetness(terrainType: string, weather?: WeatherState): number {
+  return Math.max(0, Math.min(100, biomeBaseMoisture(terrainType) + weatherMoistureBonus(weather)));
+}
+
+/**
+ * Effective temperature (°C) at a tile for display — mirrors what the need-rate hot path computes:
+ * baked tile temperature (biome base + season offset) + the live weather delta. Computed on demand
+ * from `terrainType` + season + weather (all main-thread-available), so the worker-only
+ * `tile.temperature` field never needs to ship.
+ */
+export function tileTemperature(
+  terrainType: string,
+  season: Season | undefined,
+  weather?: WeatherState
+): number {
+  const offset = season ? SEASONS[season].tempOffset : 0;
+  return biomeBaseTemp(terrainType) + offset + weatherEffects(weather).tempDelta;
 }
 
 /** Default visual intensity per weather type (0–1). */

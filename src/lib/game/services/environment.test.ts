@@ -13,7 +13,9 @@ import {
   seasonRegrowthMultiplier,
   advanceWeatherForDay,
   weatherEffects,
-  getEnvironmentTint
+  getEnvironmentTint,
+  tileTemperature,
+  tileWetness
 } from './EnvironmentService';
 
 const TICKS_PER_DAY = TURNS_PER_DAY * TICKS_PER_SECOND;
@@ -194,6 +196,42 @@ describe('EnvironmentService — weather (Phase C)', () => {
     expect(winterTypes.has('rain')).toBe(false);
     expect(springTypes.has('rain')).toBe(true);
     expect(springTypes.has('snow')).toBe(false);
+  });
+});
+
+describe('EnvironmentService — per-tile display fields (HUD)', () => {
+  it('tileTemperature = biome base + season offset + weather delta', () => {
+    const base = tileTemperature('plains', 'spring', {
+      type: 'clear',
+      intensity: 0,
+      turnsRemaining: 0
+    });
+    const cold = tileTemperature('plains', 'spring', {
+      type: 'snow',
+      intensity: 0.5,
+      turnsRemaining: 0
+    });
+    expect(cold).toBeLessThan(base);
+    // winter is colder than summer for the same tile.
+    expect(tileTemperature('plains', 'winter', undefined)).toBeLessThan(
+      tileTemperature('plains', 'summer', undefined)
+    );
+  });
+
+  it('tileWetness is 0–100 and rises with rain', () => {
+    const dry = tileWetness('plains', { type: 'clear', intensity: 0, turnsRemaining: 0 });
+    const wet = tileWetness('plains', { type: 'heavy_rain', intensity: 0.75, turnsRemaining: 0 });
+    expect(wet).toBeGreaterThan(dry);
+    expect(
+      tileWetness('river', { type: 'heavy_rain', intensity: 1, turnsRemaining: 0 })
+    ).toBeLessThanOrEqual(100);
+    expect(
+      tileWetness('mountain', { type: 'heat_wave', intensity: 1, turnsRemaining: 0 })
+    ).toBeGreaterThanOrEqual(0);
+  });
+
+  it('wetter biomes read wetter than drier ones', () => {
+    expect(tileWetness('river', undefined)).toBeGreaterThan(tileWetness('mountain', undefined));
   });
 });
 

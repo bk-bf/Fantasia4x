@@ -5,6 +5,7 @@
     currentTurn,
     currentSeason,
     currentWeather,
+    currentAvgTemperature,
     savedStateReady
   } from '$lib/stores/gameState';
   import { uiState } from '$lib/stores/uiState';
@@ -98,10 +99,8 @@
     heat_wave: 'Heat Wave',
     fog: 'Fog'
   };
-  $: weatherLabel =
-    $currentWeather && $currentWeather.type !== 'clear'
-      ? (WEATHER_LABEL[$currentWeather.type] ?? '')
-      : '';
+  $: weatherLabel = WEATHER_LABEL[$currentWeather?.type ?? 'clear'] ?? 'Clear';
+  $: tempLabel = $currentAvgTemperature !== undefined ? `${$currentAvgTemperature}°C` : '';
 
   function regenMap() {
     const parsed = parseInt(mapSeedInput, 10);
@@ -209,10 +208,8 @@
   <span class="bi date" title="{gameDate.monthName} {gameDate.day}, Year {gameDate.year}"
     >{gameDate.dayStr}/{gameDate.monthStr}/{gameDate.yearStr} {gameDate.hourStr}:00</span
   >
-  <span class="bi season" title="Season &amp; weather"
-    >{SEASON_LABEL[$currentSeason] ?? $currentSeason}{weatherLabel
-      ? ` · ${weatherLabel}`
-      : ''}</span
+  <span class="bi season" title="Season · average map temperature · weather"
+    >{SEASON_LABEL[$currentSeason] ?? $currentSeason}{tempLabel ? ` ${tempLabel}` : ''} · {weatherLabel}</span
   >
   <span class="bi turn" title="Turn {currentTurnValue}">T{currentTurnValue}</span>
   <span

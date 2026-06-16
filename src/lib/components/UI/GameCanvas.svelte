@@ -5,7 +5,12 @@
   import { browser } from '$app/environment';
   import { WebGLRenderer } from '$lib/webgl/renderer.js';
   import { buildGameGrid, generatePlaceholderGrid } from '$lib/webgl/fantasia-world.js';
-  import { gameState, rendererReady } from '$lib/stores/gameState.js';
+  import {
+    gameState,
+    rendererReady,
+    currentSeason,
+    currentWeather
+  } from '$lib/stores/gameState.js';
   import type {
     WorldTile,
     Pawn,
@@ -25,7 +30,9 @@
   import { designationService } from '$lib/game/services/DesignationService.js';
   import {
     environmentService,
-    computeTileLightLevel
+    computeTileLightLevel,
+    tileTemperature,
+    tileWetness
   } from '$lib/game/services/EnvironmentService.js';
   import { lightingService } from '$lib/game/services/LightingService.js';
   import { glyph, SHEET } from '$lib/webgl/tilesets.js';
@@ -776,7 +783,11 @@
     if (renderer?.isReady()) {
       const { light, tint } = environmentService.getAmbient(s.turn);
       const env = environmentService.getEnvironmentTint(s.season, s.weather);
-      const tinted: [number, number, number] = [tint[0] * env[0], tint[1] * env[1], tint[2] * env[2]];
+      const tinted: [number, number, number] = [
+        tint[0] * env[0],
+        tint[1] * env[1],
+        tint[2] * env[2]
+      ];
       renderer.setAmbient(light, tinted);
       lightingService.setAmbient(light, tinted);
       _ambientLight = light;
@@ -1425,13 +1436,33 @@
           const srcY = Math.floor(id / 16) * SHEET_CELL_H;
           tctx.clearRect(0, 0, SHEET_CELL_W, SHEET_CELL_H);
           tctx.globalCompositeOperation = 'source-over';
-          tctx.drawImage(sheet, srcX, srcY, SHEET_CELL_W, SHEET_CELL_H, 0, 0, SHEET_CELL_W, SHEET_CELL_H);
+          tctx.drawImage(
+            sheet,
+            srcX,
+            srcY,
+            SHEET_CELL_W,
+            SHEET_CELL_H,
+            0,
+            0,
+            SHEET_CELL_W,
+            SHEET_CELL_H
+          );
           const started = (b.workDone ?? 0) > 0 || (b.progress ?? 0) > 0;
           tctx.globalCompositeOperation = 'multiply';
           tctx.fillStyle = started ? '#ffd23a' : '#ffffff';
           tctx.fillRect(0, 0, SHEET_CELL_W, SHEET_CELL_H);
           tctx.globalCompositeOperation = 'destination-in';
-          tctx.drawImage(sheet, srcX, srcY, SHEET_CELL_W, SHEET_CELL_H, 0, 0, SHEET_CELL_W, SHEET_CELL_H);
+          tctx.drawImage(
+            sheet,
+            srcX,
+            srcY,
+            SHEET_CELL_W,
+            SHEET_CELL_H,
+            0,
+            0,
+            SHEET_CELL_W,
+            SHEET_CELL_H
+          );
           tctx.globalCompositeOperation = 'source-over';
           ctx.globalAlpha = b.paused ? 0.25 : 0.5;
           ctx.drawImage(tintCanvas, dx, dy, tileWidth, tileHeight);
@@ -2753,6 +2784,8 @@
     <!-- Dropped item on the hovered tile — shared SelectedEntityCard, bars below the title -->
     <SelectedEntityCard model={hoverItemCard} />
   {:else if hoverTile}
+    {@const tileTemp = tileTemperature(hoverTile.terrainType, $currentSeason, $currentWeather)}
+    {@const tileWet = tileWetness(hoverTile.terrainType, $currentWeather)}
     <div class="tile-hud">
       <span class="tile-coord">({hoverTile.x},{hoverTile.y})</span><span class="tile-layers"
         >{BIOMES[hoverTile.terrainType]?.displayName ?? hoverTile.terrainType},{SUBTERRAINS[
@@ -2784,6 +2817,14 @@
             : '#c83018'}"
       >
         light {Math.round(hoverTileLight * 100)}%
+      </div>
+      <div class="tile-env">
+        <span style="color:{tileTemp <= 0 ? '#5aa0e0' : tileTemp >= 30 ? '#e07a2a' : '#b0a060'}"
+          >temp {tileTemp}°C</span
+        >
+        <span style="color:{tileWet >= 60 ? '#3a9ed0' : tileWet >= 30 ? '#6aa0a0' : '#a08a5a'}"
+          >wet {tileWet}%</span
+        >
       </div>
     </div>
   {/if}
@@ -3001,6 +3042,12 @@
   .tile-light {
     font-size: 9px;
     margin-top: 1px;
+  }
+  .tile-env {
+    font-size: 9px;
+    margin-top: 1px;
+    display: flex;
+    gap: 8px;
   }
   .designation-hud {
     position: absolute;

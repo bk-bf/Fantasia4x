@@ -881,6 +881,7 @@ export const currentTurn = derived(gameState, ($gameState) => $gameState.turn);
 /** SEASONS_WEATHER: lightweight topbar readouts (avoid subscribing the whole state in the HUD). */
 export const currentSeason = derived(gameState, ($gameState) => $gameState.season ?? 'spring');
 export const currentWeather = derived(gameState, ($gameState) => $gameState.weather);
+export const currentAvgTemperature = derived(gameState, ($gameState) => $gameState.avgTemperature);
 export const currentRace = derived(gameState, ($gameState) => $gameState.race);
 export const pawnStats = derived(gameState, ($gameState) => $gameState.pawnStats || {});
 

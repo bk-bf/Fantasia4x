@@ -12,6 +12,8 @@ export interface BiomeDef {
   densityRange: [number, number];
   /** Baseline temperature in conceptual °C (SEASONS_WEATHER Subsystem 3). */
   baseTemp?: number;
+  /** Baseline wetness 0–100% (SEASONS_WEATHER display; weather adds on top). */
+  baseMoisture?: number;
 }
 
 export interface SubterrainDef {

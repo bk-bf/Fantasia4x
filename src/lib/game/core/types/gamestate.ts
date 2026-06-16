@@ -28,6 +28,9 @@ export interface GameState {
   seasonDay?: number;
   /** Living-world (SEASONS_WEATHER Phase C): active weather, re-rolled by the Markov chain daily. */
   weather?: WeatherState;
+  /** Average effective map temperature (°C, baked tile avg + weather delta), computed worker-side
+   *  for the HUD readout. A scalar — tile `temperature` itself stays worker-only (PERF-2). */
+  avgTemperature?: number;
   /** @deprecated Use buildings[] instead */
   buildingCounts: Record<string, number>;
   /** Phase 4: physically placed buildings on the map */
