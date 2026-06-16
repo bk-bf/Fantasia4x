@@ -470,6 +470,20 @@ function equipItemFromTile(pawnId: string, dropId: string) {
   dispatchCommand({ type: 'equipFromTile', payload: { pawnId, dropId }, save: true });
 }
 
+/** Pick `quantity` units of a tile drop straight into a pawn's inventory (carry-budget clamped). */
+function pickUpItemFromTile(pawnId: string, dropId: string, quantity: number) {
+  dispatchCommand({
+    type: 'pickUpItemFromTile',
+    payload: { pawnId, dropId, quantity },
+    save: true
+  });
+}
+
+/** Order a drafted pawn to shuttle the loose stack on a tile to the nearest stockpile (multi-trip). */
+function haulTileToStockpile(pawnId: string, x: number, y: number) {
+  dispatchCommand({ type: 'haulTileToStockpile', payload: { pawnId, x, y }, save: true });
+}
+
 /** Dev timesaver (ADR-016-faithful): spawn `amount` of EVERY item as physical LOOSE drops on
  *  the ground around the colony — haulers carry them into stockpiles like anything gathered. */
 function devSpawnAllItems(amount = 500) {
@@ -831,6 +845,8 @@ export const gameState = {
   // Game functions
   addItem,
   equipItemFromTile,
+  pickUpItemFromTile,
+  haulTileToStockpile,
   devSpawnAllItems,
   devClearAllItems,
   consumeGlobalItem,

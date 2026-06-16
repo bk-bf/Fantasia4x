@@ -20,6 +20,7 @@ import { WORK_CATEGORIES } from '../core/Work';
 import buildingsData from '../database/buildings.jsonc';
 
 import { pawnStateMachineService, reapDeadPawns } from './PawnStateMachine';
+import { findNearestDepositPoint, depositInventory, pickUpFromTile } from './pawn/pawnHauling';
 import { jobService } from '../services/JobService';
 import { wasmPathfinderService } from '../services/WasmPathfinderService';
 import { resourceObjectService } from '../services/ResourceObjectService';
@@ -62,9 +63,7 @@ const JOB_GENERATION_INTERVAL_TICKS = 6;
 
 /** Map a GameEvent's narrative severity/category to the chronicle log severity (opportunities and
  *  discoveries read as good news; disasters escalate). */
-function eventLogSeverity(
-  event: GameEvent
-): 'info' | 'success' | 'warning' | 'error' | 'critical' {
+function eventLogSeverity(event: GameEvent): 'info' | 'success' | 'warning' | 'error' | 'critical' {
   if (event.category === 'opportunity' || event.category === 'discovery') return 'success';
   switch (event.severity) {
     case 'trivial':
@@ -208,9 +207,7 @@ export class GameEngineImpl implements GameEngine {
           actor: 'system',
           action: rolled.event.id,
           target: rolled.event.title,
-          result: outcomes
-            ? `${rolled.event.description} — ${outcomes}`
-            : rolled.event.description,
+          result: outcomes ? `${rolled.event.description} — ${outcomes}` : rolled.event.description,
           severity: eventLogSeverity(rolled.event)
         });
       });
@@ -493,6 +490,70 @@ export class GameEngineImpl implements GameEngine {
           if (path && path.length > 0) {
             gs = pawnService.assignPath(pawn.id, path, gs);
           }
+        }
+      } else if (target.type === 'haul') {
+        // Drafted "haul to stockpile": shuttle the loose stack on (target.x, target.y) to the
+        // nearest stockpile a budget-load at a time. Pinned items don't count as cargo (they're
+        // never deposited), so they can't stall the loop.
+        const pinned = new Set(pawn.pinnedItems ?? []);
+        const carrying = Object.entries(pawn.inventory?.items ?? {}).some(
+          ([id, q]) => q > 0 && !pinned.has(id)
+        );
+        const srcHasLoose = (gs.droppedItems ?? []).some(
+          (d) =>
+            d.x === target.x && d.y === target.y && !d.stored && !d.reservedFor && d.quantity > 0
+        );
+        const clearHaul = () => {
+          gs = {
+            ...gs,
+            pawns: gs.pawns.map((p) => (p.id === pawn.id ? { ...p, draftTarget: undefined } : p))
+          };
+        };
+        const walkTo = (tx: number, ty: number) => {
+          const grids = buildPathfindingGridsWithBlocked(
+            gs.worldMap,
+            blocked,
+            pawn.position!.x,
+            pawn.position!.y,
+            tx,
+            ty
+          );
+          const path = wasmPathfinderService.findPath(
+            grids.walkable,
+            grids.costs,
+            grids.width,
+            grids.height,
+            pawn.position!.x,
+            pawn.position!.y,
+            tx,
+            ty
+          );
+          if (path && path.length > 0) gs = pawnService.assignPath(pawn.id, path, gs);
+        };
+
+        if (carrying) {
+          // Deposit phase — walk to the nearest stockpile and unload.
+          const dp = findNearestDepositPoint(pawn, gs);
+          if (!dp) {
+            clearHaul(); // nowhere to deliver — abandon
+          } else if (pawn.position.x === dp.x && pawn.position.y === dp.y) {
+            gs = pawnService.assignPath(pawn.id, [], gs);
+            const here = gs.pawns.find((p) => p.id === pawn.id);
+            // depositInventory keeps draftTarget, so the next tick fetches the next load.
+            if (here) gs = depositInventory(here, gs);
+          } else {
+            walkTo(dp.x, dp.y);
+          }
+        } else if (srcHasLoose) {
+          // Pickup phase — walk to the source and grab a budget-load of loose goods.
+          if (pawn.position.x === target.x && pawn.position.y === target.y) {
+            gs = pawnService.assignPath(pawn.id, [], gs);
+            gs = pickUpFromTile(gs, pawn.id, target.x, target.y, { looseOnly: true });
+          } else {
+            walkTo(target.x, target.y);
+          }
+        } else {
+          clearHaul(); // nothing carried and the source is clear — done
         }
       }
     }

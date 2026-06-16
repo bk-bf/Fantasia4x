@@ -135,12 +135,23 @@ export function buildGameGrid(
           });
         }
       } else if (b.status === 'under_construction' || b.status === 'planned') {
-        // Under construction/planned: cyan '+'; paused buildings are dimmed
-        const dim = b.paused ? 0.35 : 1.0;
+        // Ghost the building's *own* sprite while it's being built: white until work begins,
+        // amber-yellow once the build meter is above 0. The terrain background is preserved so it
+        // reads as a translucent blueprint rather than a solid tile. Paused builds are dimmed.
+        const def = buildingService.getBuildingById(b.type);
+        const char = def?.charSpans
+          ? (resolveCharSpans(def.charSpans as Parameters<typeof resolveCharSpans>[0])[0] ?? '#')
+          : '#';
+        const started = (b.workDone ?? 0) > 0 || (b.progress ?? 0) > 0;
+        const dim = b.paused ? 0.4 : 1.0;
+        const fg = started
+          ? { r: 1.0 * dim, g: 0.82 * dim, b: 0.2 * dim } // amber: work underway
+          : { r: 0.9 * dim, g: 0.92 * dim, b: 0.96 * dim }; // white: placed, not yet started
+        const existing = grid.getTile(b.x, b.y);
         grid.setTile(b.x, b.y, {
-          char: b.paused ? '…' : '+',
-          foreground: { r: 0.3 * dim, g: 0.7 * dim, b: 0.7 * dim },
-          background: { r: 0.02, g: 0.06, b: 0.06 },
+          char,
+          foreground: fg,
+          background: existing?.background ?? { r: 0.02, g: 0.06, b: 0.06 },
           position: { x: b.x, y: b.y }
         });
       }
