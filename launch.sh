@@ -90,6 +90,11 @@ if [[ -n "$SHELL_TARGET" ]]; then
     exit 1
   fi
   SERVER_FLAG="--debug"; [[ "$PROFILER" == true ]] && SERVER_FLAG="--profiler"
+  # The desktop shell loads a single server whichever mode it's in; --profiler boots WITHOUT --debug
+  # (so the sim profiles clean, no verbose-log firehose) but we still want the in-game DEBUG tab.
+  # VITE_DEBUG_UI lights up the debug UI ONLY (no firehose); Vite picks it up from the env, and
+  # dev.sh's `env … pnpm exec vite` inherits it. Harmless under --debug (VITE_DEBUG_MODE already on).
+  export VITE_DEBUG_UI=true
   PORT=5173
   [[ -f "$SCRIPT_DIR/.devport" ]] && PORT=$(< "$SCRIPT_DIR/.devport")
 

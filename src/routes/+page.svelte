@@ -43,8 +43,10 @@
     return bDef?.category === 'knowledge' && b.status === 'complete';
   });
 
-  // DEBUG tab is only present when launched via dev.sh/launch.sh --debug.
-  const DEBUG_ENABLED = import.meta.env.VITE_DEBUG_MODE === 'true';
+  // DEBUG tab is present when launched via dev.sh/launch.sh --debug (VITE_DEBUG_MODE) or any
+  // desktop-shell launch (VITE_DEBUG_UI — the tab without the verbose-log firehose).
+  const DEBUG_ENABLED =
+    import.meta.env.VITE_DEBUG_MODE === 'true' || import.meta.env.VITE_DEBUG_UI === 'true';
 
   const NAV_TABS = [
     { key: 'pawns', label: 'PAWNS', fkey: 'F2' },

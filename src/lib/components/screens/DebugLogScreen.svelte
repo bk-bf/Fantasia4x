@@ -1,6 +1,7 @@
 <!--
   DebugLogScreen — in-game viewer for the unified log (dev-only; mounted by +page.svelte only
-  when VITE_DEBUG_MODE is set, i.e. launched via dev.sh/launch.sh --debug).
+  when the DEBUG tab is present, i.e. VITE_DEBUG_MODE via dev.sh/launch.sh --debug, or VITE_DEBUG_UI
+  via any desktop-shell launch.sh --electron run).
 
   Reads the store (chronicle ⊕ diagnostics via `allLogEntries`), not a live file/SSE tap — so it
   streams in realtime, survives tab close/reopen, never leaks (the stores are bounded + persisted),
