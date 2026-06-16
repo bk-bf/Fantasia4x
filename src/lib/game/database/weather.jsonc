@@ -137,7 +137,7 @@
     },
     {
       "id"           : "winter_windy",
-      "label"        : "Windy",
+      "label"        : "Windy snow",
       "overlay"      : "snowdust",
       "windStrength" : 0.6,
       "sightMul"     : 0.85,
@@ -177,9 +177,10 @@
       "panelSaturation": 0.97,
       "severity"       : "info",
       "transitions"    : [
-        { "to": "rain",  "chance": 0.3 },
-        { "to": "clear", "chance": 0.15 },
-        { "to": "fog",   "chance": 0.08 }
+        { "to": "rain",       "chance": 0.3 },
+        { "to": "clear",      "chance": 0.15 },
+        { "to": "fog",        "chance": 0.08 },
+        { "to": "foggy_rain", "chance": 0.08 }
       ]
     },
     {
@@ -204,12 +205,13 @@
         { "to": "drizzle",    "chance": 0.2 },
         { "to": "heavy_rain", "chance": 0.18, "windScaled": true },
         { "to": "windy_rain", "chance": 0.12, "windScaled": true },
+        { "to": "foggy_rain", "chance": 0.08 },
         { "to": "clear",      "chance": 0.08 }
       ]
     },
     {
       "id"             : "windy_rain",
-      "label"          : "Windswept rain",
+      "label"          : "Windy rain",
       "overlay"        : "rain",
       "heavy"          : true,
       "fallSpeed"      : 820,
@@ -353,9 +355,35 @@
       "panelSaturation": 0.68,
       "severity"       : "info",
       "transitions"    : [
-        { "to": "clear",   "chance": 0.35 },
-        { "to": "drizzle", "chance": 0.12, "seasons": ["spring", "summer", "autumn"] },
-        { "to": "rain",    "chance": 0.08, "seasons": ["spring", "summer", "autumn"] }
+        { "to": "clear",      "chance": 0.35 },
+        { "to": "foggy_rain", "chance": 0.12, "seasons": ["spring", "summer", "autumn"] },
+        { "to": "drizzle",    "chance": 0.1, "seasons": ["spring", "summer", "autumn"] },
+        { "to": "rain",       "chance": 0.06, "seasons": ["spring", "summer", "autumn"] }
+      ]
+    },
+    {
+      "id"             : "foggy_rain",
+      "label"          : "Foggy rain",
+      "overlay"        : "foggy_rain",
+      "fallSpeed"      : 560,
+      "density"        : 110,
+      "windStrength"   : 0.15,
+      "sightMul"       : 0.5,
+      "intensity"      : 0.45,
+      "tempDelta"      : -2,
+      "fatigueMul"     : 1.1,
+      "hungerMul"      : 1.0,
+      "moveCostMul"    : 1.1,
+      "mood"           : -0.6,
+      "moistureBonus"  : 25,
+      "tint"           : [0.82, 0.85, 0.92],
+      "panelSaturation": 0.78,
+      "severity"       : "info",
+      "transitions"    : [
+        { "to": "fog",     "chance": 0.2 },
+        { "to": "rain",    "chance": 0.2 },
+        { "to": "drizzle", "chance": 0.15 },
+        { "to": "clear",   "chance": 0.1 }
       ]
     },
     {

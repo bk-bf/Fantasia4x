@@ -298,7 +298,15 @@ export interface WeatherEffects {
 }
 
 /** The overlay animation the WeatherCanvas draws for a weather type. */
-export type WeatherOverlayKind = 'none' | 'rain' | 'snow' | 'fog' | 'leaves' | 'dust' | 'snowdust';
+export type WeatherOverlayKind =
+  | 'none'
+  | 'rain'
+  | 'snow'
+  | 'fog'
+  | 'leaves'
+  | 'dust'
+  | 'snowdust'
+  | 'foggy_rain';
 
 // Data-driven (database/weather.jsonc): every weather id + its effects, visuals, and transitions.
 interface WeatherTransition {
@@ -422,7 +430,8 @@ const FALL_SPEED_DEFAULT: Record<WeatherOverlayKind, number> = {
   snowdust: 90,
   leaves: 60,
   dust: 40,
-  fog: 0
+  fog: 0,
+  foggy_rain: 560
 };
 const DENSITY_DEFAULT: Record<WeatherOverlayKind, number> = {
   none: 0,
@@ -431,7 +440,8 @@ const DENSITY_DEFAULT: Record<WeatherOverlayKind, number> = {
   snowdust: 90,
   leaves: 45,
   dust: 70,
-  fog: 0
+  fog: 0,
+  foggy_rain: 110
 };
 
 /** Overlay particle fall speed (px/sec) for a weather id — from weather.jsonc, default by overlay kind. */

@@ -25,7 +25,7 @@
     getAmbientTint
   } from '$lib/game/services/EnvironmentService';
 
-  type Mode = 'none' | 'rain' | 'snow' | 'fog' | 'leaves' | 'dust' | 'snowdust';
+  type Mode = 'none' | 'rain' | 'snow' | 'fog' | 'leaves' | 'dust' | 'snowdust' | 'foggy_rain';
 
   let canvas: HTMLCanvasElement;
   let ctx: CanvasRenderingContext2D | null = null;
@@ -59,6 +59,10 @@
   const rainSlant = () => -(0.12 + windStrength * 0.8);
   const sideDrift = () => 8 + windStrength * 120;
   const isDots = () => mode === 'snow' || mode === 'dust' || mode === 'snowdust';
+  const isRain = () => mode === 'rain' || mode === 'foggy_rain';
+
+  // foggy_rain composites rain drops (in `parts`) with a separate, small pool of slow fog blobs.
+  let fogBlobs: Particle[] = [];
 
   // Zoom-out "in the clouds" feel: the further the camera zooms OUT, the MORE particles (count only —
   // speed and size stay constant). The multiplier is LINEAR in tile size across the real zoom range so
@@ -100,8 +104,22 @@
     if (canvas.height !== h) canvas.height = h;
   }
 
+  /** A big, soft, slow-drifting haze cloud blob (shared by `fog` and the veil under `foggy_rain`).
+   *  `spd` is horizontal drift; `r` the base radius; `ph` a bob phase; `len` a radius-breathing phase. */
+  function makeFogBlob(w: number, h: number): Particle {
+    const dir = Math.random() < 0.5 ? -1 : 1;
+    return {
+      x: Math.random() * (w + 800) - 400,
+      y: Math.random() * h,
+      len: Math.random() * TWO_PI,
+      spd: (16 + Math.random() * 26) * dir,
+      r: 220 + Math.random() * 280,
+      ph: Math.random() * TWO_PI
+    };
+  }
+
   function makeParticle(w: number, h: number, atTop: boolean): Particle {
-    if (mode === 'rain') {
+    if (isRain()) {
       const spd = fallSpeed * (0.7 + Math.random() * 0.6); // ±variance around the data fall speed
       // Drops slant LEFT as they fall, drifting `|slant| × height` px over a full descent. Seed them
       // across a width extended by that slant so they still cover the bottom-right corner — otherwise
@@ -123,29 +141,17 @@
       return {
         x: Math.random() * (w + sideDrift() * 2),
         y: atTop ? -20 - Math.random() * 40 : Math.random() * h,
-        len: 3 + Math.random() * 3, // half-length of the leaf
+        len: 2 + Math.random() * 2, // half-length of the leaf (~⅓ smaller, less distracting)
         spd,
         r: 2 + Math.random() * 2,
         ph: Math.random() * TWO_PI
       };
     }
-    if (mode === 'fog') {
-      // A big, soft, slow-drifting haze cloud. `spd` is horizontal drift (px/sec, either direction);
-      // `r` is the base blob radius; `ph` a slow vertical-bob phase; `len` a separate phase driving a
-      // gentle radius "breathing" so the bank morphs over time instead of holding rigid discs.
-      const dir = Math.random() < 0.5 ? -1 : 1;
-      return {
-        x: Math.random() * (w + 800) - 400,
-        y: Math.random() * h,
-        len: Math.random() * TWO_PI,
-        spd: (16 + Math.random() * 26) * dir,
-        r: 220 + Math.random() * 280,
-        ph: Math.random() * TWO_PI
-      };
-    }
+    if (mode === 'fog') return makeFogBlob(w, h);
     // dots: snow / snowdust / dust — a falling, wind-drifting speck. Dust is finer than snow.
     const spd = fallSpeed * (0.6 + Math.random() * 0.9);
-    const sz = mode === 'dust' ? 0.6 + Math.random() * 1.2 : 1 + Math.random() * 2.2;
+    // snow/snowdust ~⅓ smaller (less distracting); dust stays fine.
+    const sz = mode === 'dust' ? 0.6 + Math.random() * 1.2 : 0.67 + Math.random() * 1.47;
     return {
       x: Math.random() * (w + sideDrift() * 1.5), // extend for the sideways drift's covered corner
       y: atTop ? -10 - Math.random() * 30 : Math.random() * h,
@@ -202,7 +208,12 @@
     const h = canvas.height;
     ctx.clearRect(0, 0, w, h);
 
-    if (mode === 'rain') {
+    if (isRain()) {
+      // foggy_rain lays a soft fog veil BEHIND the rain first, then the drops fall over it.
+      if (mode === 'foggy_rain') {
+        ensureFogBlobs();
+        renderFog(w, h, fogBlobs, dt, 0.85);
+      }
       const wind = rainSlant(); // horizontal slant (px per px fallen), wind-driven
       ctx.strokeStyle = `rgba(180, 205, 235, ${0.25 + 0.35 * intensity})`;
       ctx.lineWidth = 1.1;
@@ -291,48 +302,60 @@
         else if (p.x < -16) p.x = w + 16;
       }
     } else if (mode === 'fog') {
-      // A faint flat veil + many big, soft, OVERLAPPING blobs = slow rolling fog. Radial gradients
-      // can't batch into one path, so each blob is its own fill — but there are only a few dozen.
-      // Two slow sines (bank-wide gust + per-blob phase) plus a gentle radius "breathing" make the
-      // field continuously morph, so it reads as drifting haze rather than a ring of hard discs.
-      fogTime += dt;
-      const gust = Math.sin(fogTime * 0.5) * 55; // bank-wide sway (px)
-      const gust2 = Math.cos(fogTime * 0.31) * 30; // second cross-rhythm so the motion never obviously repeats
-      const gustDrift = Math.cos(fogTime * 0.27) * 10; // breathing of drift speed (px/sec)
-      // Fog colour is the MIDWAY blend between the plain pale haze (its daytime look) and the fully
-      // ambient-dimmed colour. Pure-white washed out the dark night map; fully dimming it made the fog
-      // vanish — averaging the two keeps night fog clearly visible but cool and muted, not white.
-      const fb = Math.max(0.18, ambLight);
-      const mid = (base: number, i: number) => Math.round((base + base * ambTint[i] * fb) / 2);
-      const rgb = `${mid(220, 0)}, ${mid(223, 1)}, ${mid(229, 2)}`;
-      ctx.fillStyle = `rgba(${rgb}, ${0.04 + 0.05 * intensity})`;
-      ctx.fillRect(0, 0, w, h);
-      // Lower per-blob alpha than before — density now comes from OVERLAP, not from each disc being
-      // dense (which is what made the individual circles visible).
-      const blobAlpha = 0.028 + 0.045 * intensity;
-      for (const p of parts) {
-        p.x += (p.spd + gustDrift) * dt;
-        p.ph += dt * 0.45; // bob/drift phase
-        p.len += dt * 0.6; // breathing phase
-        // Radius breathes ±20% so blob edges keep moving and never settle into a fixed circle.
-        const rad = p.r * (1 + Math.sin(p.len) * 0.2);
-        const cx = p.x + gust + Math.sin(fogTime * 0.37 + p.ph) * 32;
-        const cy = p.y + Math.sin(p.ph) * 34 + Math.cos(p.ph * 0.6 + gust2 * 0.01) * 18;
-        const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, rad);
-        // Soft, convex falloff (extra mid-stops) drains the outer half toward zero well before the
-        // edge, hiding the hard circular rim a plain 2-stop gradient leaves behind.
-        g.addColorStop(0, `rgba(${rgb}, ${blobAlpha})`);
-        g.addColorStop(0.4, `rgba(${rgb}, ${blobAlpha * 0.5})`);
-        g.addColorStop(0.75, `rgba(${rgb}, ${blobAlpha * 0.13})`);
-        g.addColorStop(1, `rgba(${rgb}, 0)`);
-        ctx.fillStyle = g;
-        ctx.beginPath();
-        ctx.arc(cx, cy, rad, 0, TWO_PI);
-        ctx.fill();
-        if (p.spd > 0 && p.x - rad > w) p.x = -rad;
-        else if (p.spd < 0 && p.x + rad < 0) p.x = w + rad;
-      }
+      renderFog(w, h, parts, dt, 1);
     }
+  }
+
+  /**
+   * Draw the rolling-haze layer (a faint flat veil + many big, soft, OVERLAPPING radial blobs).
+   * Shared by `fog` (blobs = `parts`) and the veil under `foggy_rain` (blobs = `fogBlobs`, lighter
+   * via `alphaScale`). Two slow sines (bank-wide gust + per-blob phase) plus a radius "breathing"
+   * keep it morphing so it reads as drifting haze, not a ring of discs. Colour is the midway blend
+   * between pale daytime haze and the ambient-dimmed colour, so night fog stays visible but muted.
+   */
+  function renderFog(w: number, h: number, blobs: Particle[], dt: number, alphaScale: number) {
+    if (!ctx) return;
+    fogTime += dt;
+    const gust = Math.sin(fogTime * 0.5) * 55;
+    const gust2 = Math.cos(fogTime * 0.31) * 30;
+    const gustDrift = Math.cos(fogTime * 0.27) * 10;
+    const fb = Math.max(0.18, ambLight);
+    const mid = (base: number, i: number) => Math.round((base + base * ambTint[i] * fb) / 2);
+    const rgb = `${mid(220, 0)}, ${mid(223, 1)}, ${mid(229, 2)}`;
+    ctx.fillStyle = `rgba(${rgb}, ${(0.04 + 0.05 * intensity) * alphaScale})`;
+    ctx.fillRect(0, 0, w, h);
+    const blobAlpha = (0.028 + 0.045 * intensity) * alphaScale;
+    for (const p of blobs) {
+      p.x += (p.spd + gustDrift) * dt;
+      p.ph += dt * 0.45;
+      p.len += dt * 0.6;
+      const rad = p.r * (1 + Math.sin(p.len) * 0.2);
+      const cx = p.x + gust + Math.sin(fogTime * 0.37 + p.ph) * 32;
+      const cy = p.y + Math.sin(p.ph) * 34 + Math.cos(p.ph * 0.6 + gust2 * 0.01) * 18;
+      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, rad);
+      g.addColorStop(0, `rgba(${rgb}, ${blobAlpha})`);
+      g.addColorStop(0.4, `rgba(${rgb}, ${blobAlpha * 0.5})`);
+      g.addColorStop(0.75, `rgba(${rgb}, ${blobAlpha * 0.13})`);
+      g.addColorStop(1, `rgba(${rgb}, 0)`);
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(cx, cy, rad, 0, TWO_PI);
+      ctx.fill();
+      if (p.spd > 0 && p.x - rad > w) p.x = -rad;
+      else if (p.spd < 0 && p.x + rad < 0) p.x = w + rad;
+    }
+  }
+
+  /** Keep the foggy_rain veil's blob pool at a screen-sized count (independent of zoom, like fog). */
+  function ensureFogBlobs() {
+    if (!canvas) return;
+    const target = Math.min(18, Math.max(4, Math.round((canvas.width * canvas.height) / 220_000)));
+    if (fogBlobs.length === target) return;
+    if (fogBlobs.length > target) {
+      fogBlobs.length = target;
+      return;
+    }
+    while (fogBlobs.length < target) fogBlobs.push(makeFogBlob(canvas.width, canvas.height));
   }
 
   const unsub = currentWeather.subscribe((wx) => {
@@ -347,6 +370,7 @@
     particleColor = weatherParticleColor(wx?.type) ?? particleColor;
     const changed = next !== mode;
     mode = next;
+    if (mode !== 'foggy_rain') fogBlobs = []; // free the veil pool when not in foggy rain
     if (mode === 'none') {
       clear();
       parts = [];
