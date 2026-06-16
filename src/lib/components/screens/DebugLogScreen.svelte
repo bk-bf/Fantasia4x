@@ -30,6 +30,16 @@
   let wrap = $state(lastWrap);
   let bodyEl: HTMLElement | null = $state(null);
 
+  // Auto-hiding scrollbar: reveal the thumb while the body is actively scrolling, then fade it back
+  // out after a short idle (hover also reveals it, via CSS). Keeps the panel clean when static.
+  let scrolling = $state(false);
+  let scrollIdle: ReturnType<typeof setTimeout> | null = null;
+  function onBodyScroll() {
+    scrolling = true;
+    if (scrollIdle) clearTimeout(scrollIdle);
+    scrollIdle = setTimeout(() => (scrolling = false), 700);
+  }
+
   $effect(() => void (lastTag = filterTag));
   $effect(() => void (lastSeverity = filterSeverity));
   $effect(() => void (lastSearch = search));
@@ -102,7 +112,7 @@
     onclear={clearLogs}
   />
 
-  <div class="body" bind:this={bodyEl}>
+  <div class="body" class:scrolling bind:this={bodyEl} onscroll={onBodyScroll}>
     {#if $allLogEntries.length === 0}
       <div class="waiting">no log entries yet — unpause the game</div>
     {:else if filtered.length === 0}
@@ -136,7 +146,33 @@
     overflow-y: auto;
     overflow-x: hidden;
     padding: 3px 4px;
+    /* Firefox: thin, themed, hidden until hover/scroll. */
     scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+    transition: scrollbar-color 0.3s ease;
+  }
+  .body:hover,
+  .body.scrolling {
+    scrollbar-color: var(--border-hi) transparent;
+  }
+  /* Chromium/Electron: override the 3px global bar with a themed, auto-hiding one. */
+  .body::-webkit-scrollbar {
+    width: 7px;
+  }
+  .body::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .body::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 4px;
+    transition: background 0.3s ease;
+  }
+  .body:hover::-webkit-scrollbar-thumb,
+  .body.scrolling::-webkit-scrollbar-thumb {
+    background: var(--border-hi);
+  }
+  .body::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-hi);
   }
   .row {
     display: flex;

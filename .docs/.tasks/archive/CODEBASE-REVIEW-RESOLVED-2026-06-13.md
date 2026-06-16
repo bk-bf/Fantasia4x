@@ -5,8 +5,11 @@
 
 > **Related:** [open review](../../CODEBASE-REVIEW-2026-06-10.md) · [game/DECISIONS](../../game/DECISIONS.md)
 
-The completed half of the 2026-06-13 review pass and the PawnStateMachine hotspot decomposition.
-Gate at archival: `check` 0 errors · `test` 153 passing · `lint` 0 · `build` ok.
+The completed half of the 2026-06-13 review pass and the PawnStateMachine hotspot decomposition,
+**plus the 2026-06-14/16 second wave** (P-2/P-2b/P-3/P-4b, the done P-4 god-file splits, INV-1/LIGHT-1/
+FLEE-1/MOVE-1, P-5 and the tick-cost items resolved by the ENGINE-PERFORMANCE arc) — moved here
+2026-06-16. The Tier 0 combat/death/hauling slice (NT-1..4 + PT-1 + NT-U1..4) is in the open tracker's
+own "DONE" sections. Gate at the 06-16 archival: `check` 0 · `test` 246 · `lint` 0 · `build` ok.
 
 ## Scorecard (snapshot)
 
@@ -71,6 +74,107 @@ tests → dispatch table → file split), verified against the test suite at eac
 - Behaviour locked first by `systems/pawnHandlers.test.ts` (8 tests on the public `tick()`); the move was a reviewed brace-span codemod (exact text relocation), verified against the suite.
 - **Port-to-Rust? No.** Branchy game logic (a switch fanning into 15 handlers that call back into TS services), no hot numeric inner loop — its cost was *coupling*, not computation. The Rust-shaped work already lives in Rust (`spatial-core::find_path`). Porting candidates are leaf-ish, numerically-heavy TS (world-gen noise, line-of-sight, large per-tile passes).
 - **Open remainder:** Step 5 (push the selection decisions in `handleIdle`/`checkNeedInterrupts` into `JobService`/`PawnService`) — tracked in the open review.
+
+## 2026-06-14/16 pass — resolved (moved from the open tracker 2026-06-16)
+
+The second wave of the review, shipped alongside the ENGINE-PERFORMANCE arc. Gate at archival:
+`check` 0 · `test` 246 · `lint` 0 · `build` ok.
+
+### Structural debt (P-2 / P-2b / P-3 / P-4b)
+
+- **P-2 · Engine↔store dual source of truth.** Resolved. `processGameTurn`'s `this.gameState = {...get(gameState)}`
+  read-back + `JSON.parse(JSON.stringify())` deep-clone per tick is gone; the engine is the sole writer and user
+  actions are commands (`applyCommand`). This unblocked the worker cutover (ENGINE-PERFORMANCE §4) — the deep-clone
+  removal (old D9.6) fell out of it.
+- **P-3 · Services importing Svelte stores.** Done 2026-06-14. New `core/logSink.ts` (`SimLogSink` interface +
+  live-binding `simLog` singleton, no-op default); `stores/simLogBridge.ts` registers an impl delegating to
+  `Log`/`combatFeedback`, wired via side-effect import from `gameState.ts`. `Combat`, `EntityService`, and the pawn
+  state machine emit through `simLog.*`. `CombatTextKind` moved to `core/logSink`. Headless sims/tests get the no-op
+  sink. Graph layer-violation warnings 24→20.
+- **P-2b · `GameEngineImpl` god-module → UI-coordination facade.** Done 2026-06-14. Engine 43→23 methods. Most of
+  the coordination cluster was **dead** (zero callers) and deleted from class + interface; the three used methods
+  (`getItemById`/`getBuildingById`/`craftItem`) moved to a new `systems/GameCoordinator.ts` singleton (writes route
+  through `applyCommand`). Call sites repointed to `gameCoordinator`. _Codegraph follow-up:_ the dead methods were
+  not flagged by the `orphan` rule (it skips class methods to avoid polymorphism false-positives); only `god-module`
+  pointed here. A future rule could flag methods whose sole reference is the interface declaration.
+- **P-4b · PawnStateMachine Step 5 — push selection into services.** Done 2026-06-14. **Job selection** →
+  `JobService.selectJobForPawn(pawn, gs, { isReachable, queueSize })` (the unreachable-job memory is *injected* so
+  JobService stays free of FSM state). **Need selection** → new `systems/pawn/needSelection.ts` (`selectIdleNeed`,
+  `selectInterruptNeed`, `applyNeed`, `checkNeedInterrupts`). `handleIdle` now only *applies* decisions.
+  Behaviour-identical. Need-selection lives in the pawn system (not PawnService) to avoid a services→systems back-edge.
+
+### P-4 god-file splits (the done rows)
+
+- **`core/types.ts` 1,478 → 16.** Split into `core/types/` domain modules (`world`/`race`/`health`/`items`/
+  `buildings`/`jobs`/`entities`/`research`/`gamestate`); `types.ts` is a `export *` barrel — zero call-site churn.
+- **`systems/Combat.ts` 1,499 → 932.** `BODY_PART_DEFS` table + helpers moved to `core/BodyParts.ts` (569 LOC);
+  Combat re-exports `PART_DEF_MAP`/`createDefaultBodyParts`. (Optional `combatMath.ts` lift deferred.)
+- **`services/EntityService.ts` 2,022 → 56.** Decomposed into an `entity/` dir of free-function modules
+  (`entityConstants`/`entityHelpers`/`entitySpawning`/`entityAI`/`entityLifecycle`), mirroring `pawn/*`.
+  EntityService is now a 56-line facade.
+- **`services/JobService.ts` (fuel rules).** Refuel rules extracted to `services/fuelRules.ts` (free functions;
+  went there rather than BuildingService, already at the 40-fn god-module limit). _Open remainder:_ the per-job-type
+  handler split into `services/jobs/<type>.ts` (ADR-017 registry) — still in the open tracker under P-4.
+
+### Latent defects (INV-1 / LIGHT-1 / FLEE-1 / MOVE-1)
+
+- **INV-1 · `inventory.items` overloaded: haul-carry vs equip pool.** Done 2026-06-14. The equip screen
+  (`PawnEquipment.svelte`) now derives its Available Items pool reactively from `$gameState.stockpile` minus
+  `equippedItemCounts($gameState.pawns)` — never written into `inventory.items`. The two `sync*` functions +
+  `getAllEquippedItemIds` deleted. `inventory.items` is now strictly the pawn's carried haul goods, so the carry
+  readout/clamp are correct after the equip screen is opened.
+- **LIGHT-1 · §G light→work-speed inert (`tile.lightLevel` never written).** Done 2026-06-14. `pawn/handlers/work.ts`
+  computes the working pawn's tile light on the spot via `computeTileLightLevel(turn, buildings, x, y)` (no map scan)
+  → `lightWorkMultiplier`. Per-job opt-out `JobDef.lightAffected` (default true; false for carry jobs). Dead
+  `WorldTile.lightLevel` field removed. Tests `lightWorkWiring.test.ts`.
+- **FLEE-1 · Cornered-flee ping-pong / stuck-in-corner.** Done 2026-06-14. New `entityHelpers.fleeToSafety` flees to
+  a **distant A\*** destination (~half map away in the MIN-distance-maximising direction), **locked** on
+  `mob.fleeDest` so it doesn't yoyo between two near-tied headings; `SAFE_RESET_TICKS` give-up fires only when
+  cornered. Both `Fleeing` cases call it. Tests `entity/fleeFromThreats.test.ts`; `game/BUGS.md` [FIXED].
+- **MOVE-1 · Duplicated per-tick move pass → shared `stepBody`.** Done 2026-06-14. `MovementSystem.ts` now owns
+  `stepBody`/`seedMidCrossClaims`/the single `MAX_BLOCKED_TICKS`; both `PawnService.processMovement` and the mob pass
+  are thin wrappers. Pawns *gained* the mid-cross convergence guard for free; both preserve `nextCellCostLeft` (the
+  hunt-yoyo regression class). Test `systems/movementPass.test.ts`.
+
+### P-5 + carried-forward tick-cost items — resolved by the ENGINE-PERFORMANCE arc
+
+- **P-5 · Per-tick allocation churn.** Resolved/superseded by [ENGINE-PERFORMANCE](../open/ENGINE-PERFORMANCE.md).
+  The profiling (instrumented 2026-06-14) showed the named suspects (`findCombatThreat`/`blockedTiles`/
+  `findNearestRestBuilding`) were *not* the hot spots — `entityStep`, `resourceRegrowth`, and the worker→main
+  snapshot were. All addressed there: de-immutabling the hot phases (M1–M5), the worker decouple + slim snapshot
+  (W2/W2b), pawn-id index Map, `_syncHarvestJobs` Set dedup, `nearestPawn` iterator removal. **Result: the heavy
+  stress case 30 → 200+ TPS @4×.** The one remaining sliver — a heavy spatial index for `nearestPawn` — is
+  deliberately deferred to the fog-of-war/LoS work that will build that index anyway (ENGINE-PERFORMANCE §C).
+- **D9.1 / D9.6 · index-once tick + deep-clone removal.** Resolved. `core/pawnIndex.ts` memoises a `Map<id,Pawn>` on
+  the pawns-array ref (O(n) build serves hundreds of O(1) gets); the per-tick `JSON.parse(JSON.stringify())`
+  deep-clone is gone with P-2 + the worker snapshot protocol.
+- **D-perf · cooldown index for regrowth.** Resolved (ENGINE-PERFORMANCE §C). `processResourceRegrowth` mutates
+  expired tiles in place + ships a `worldMapDelta` (`core/tileDeltas.ts`) instead of rebuilding/re-sending the whole
+  38k-tile worldMap every tick — the fix for the active-harvest TPS collapse. (_Open remainder:_ tick strides /
+  incremental job board stay in the open tracker.)
+
+### Tier 0 — broken-loop bugs (NT-1..4 / PT-1) + UI polish (NT-U1..4), shipped 2026-06-14
+
+Sourced from playtest + `game/NOTES.md`; made the existing combat/survival/production slice visibly broken.
+
+- **NT-1 · Trait cards leaked `Efficiency: [object Object]`.** `PawnTraits`/`RaceScreen` now handle any
+  object-valued effect generically via a shared `workAxisLabel(key)`; `formatEffectValue` formats objects as a `%`
+  list. (Root cause: only the literal `workSpeed/workYield/workQuality` keys were special-cased; legacy
+  `workEfficiency` maps fell through.)
+- **NT-2 · Death not finalised — pawn lingered in UI.** New `reapDeadPawns(state)` end-of-turn reaper (in
+  `processGameTurn` after combat) finalises any un-flagged dead pawn (`corpseDropped`) and **removes dead pawns from
+  `pawns[]`** so they leave every UI list. `PawnScreen` falls back to the first living pawn. Tests `deathDrops.test.ts`.
+- **NT-3 · Combat + infection too fast.** `BASE_ATTACK_INTERVAL_TICKS` 30→60 (floor 18→36) halves attack speed;
+  `infectionRiskPerWound` 0.0012→0.0004 + a new `infectionRiskMaxPerTick` 0.0008 cap so stacked wounds can't go
+  near-instantly lethal. _(Follow-up hit-accuracy rebalance is in the open tracker's NT backlog.)_
+- **NT-4 · Drafted pawn auto-engages adjacent hostile.** Decision: auto-attack. A drafted pawn with no explicit
+  `attack` order swings at the nearest adjacent hostile. Test `combatSim.test.ts`.
+- **PT-1 · Hauling deposited short ("hang").** `findNearestDepositPoint` returns the nearest **standable** tile
+  (walkable + unoccupied) instead of nearest-by-distance; falls back to deposit-in-place only when nothing in the
+  tier is standable. Tests `pawn/depositPoint.test.ts`.
+- **NT-U1..U4 · Info-panel polish.** Toggleable health panel (damaged limbs/wounds only); info-panel buttons moved
+  adjacent + outside the panel; fixed-width panel skeleton so long descriptions wrap (unified width across object
+  types); draft target line draws while paused.
 
 ## What's improved since 2026-06-10 (keep doing this)
 
