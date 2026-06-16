@@ -12,6 +12,9 @@ export interface EntityNeeds {
   hygiene?: number; // 0-100, 100 = filthy
   lastDrink?: number; // turn when last drank
   lastWash?: number; // turn when last washed
+  /** SEASONS_WEATHER: how soaked the pawn is, 0-100. Accrues on wet (>50%) tiles / rain, dries by
+   *  temperature + shelter. High wetness amplifies cold (hypothermia) and dampens heat (heat stroke). */
+  wetness?: number;
 }
 
 export interface StatusEffectDef {
@@ -19,6 +22,11 @@ export interface StatusEffectDef {
   name: string;
   description: string;
   color: string;
+  /** Compact glyph shown in the tile-HUD status pills (falls back to the name's first letter). */
+  icon?: string;
+  /** Internal effect: never surfaced in any UI (pills, needs panel…). Its modifiers still apply.
+   *  Used for FSM-driven states like eating/sleeping that would duplicate info already shown. */
+  hidden?: boolean;
   modifiers: {
     hungerRate?: number; // multiplier on hunger accrual (0 = paused, 0.33 = ⅓ rate)
     fatigueRate?: number; // multiplier on fatigue accrual

@@ -517,6 +517,9 @@
     } else if (selectedBuilding.deconstructQueued) {
       btns.push({ label: 'CANCEL', onClick: cancelDeconstructBuilding });
     } else {
+      // BUILD: jump straight into blueprint-placement mode for another of the same
+      // building, skipping the Buildings tab.
+      btns.push({ label: 'BUILD', onClick: buildAnother });
       btns.push({ label: 'DEMOLISH', onClick: deconstructBuilding });
       if (canConfigFuel) {
         btns.push({ label: 'FUEL', active: showFuelSettings, onClick: toggleFuelSettingsPanel });
@@ -2273,6 +2276,15 @@
     if (!selectedBuilding) return;
     const id = selectedBuilding.id;
     gameState.command({ type: 'deconstructBuilding', payload: { id }, save: true });
+    redrawOverlay();
+  }
+
+  // Start placing a new blueprint of the selected building's type. Deselect the
+  // existing building so its card doesn't linger over the placement preview.
+  function buildAnother() {
+    if (!selectedBuilding) return;
+    uiState.activateBlueprint(selectedBuilding.type);
+    selectedBuildingId = null;
     redrawOverlay();
   }
 
