@@ -27,7 +27,6 @@ import { itemService } from '$lib/game/services/ItemService';
 import { buildingService } from '$lib/game/services/BuildingService';
 import { workService } from '$lib/game/services/WorkService';
 import { calculatePawnStats } from '$lib/game/entities/Pawns';
-import { triggerEvent } from '$lib/stores/eventStore';
 import { generateWorld } from '$lib/game/world/WorldGenerator';
 import { resourceGeneratorService } from '$lib/game/services/ResourceGeneratorService';
 import { entityService } from '$lib/game/services/EntityService';

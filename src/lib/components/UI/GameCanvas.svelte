@@ -11,6 +11,7 @@
     currentSeason,
     currentWeather
   } from '$lib/stores/gameState.js';
+  import { cameraTileSize } from '$lib/stores/cameraView.js';
   import type {
     WorldTile,
     Pawn,
@@ -99,6 +100,8 @@
   let fitTileSize = 8;
   let tileWidth = 8;
   let tileHeight = 8;
+  // Publish the zoom (tile px size) so the out-of-canvas weather overlay can scale particle density.
+  $: cameraTileSize.set(tileWidth);
 
   function computeFitTileSize(canvasW: number, canvasH: number): number {
     const mapW = worldMap.length > 0 ? worldMap[0].length : MAP_W;

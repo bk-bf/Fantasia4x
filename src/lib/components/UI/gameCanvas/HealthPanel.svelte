@@ -70,6 +70,8 @@
           </span>
         {/each}
       </div>
+    {:else}
+      <div class="hp-no-conditions">no conditions</div>
     {/if}
 
     {#if !damaged}
@@ -185,6 +187,12 @@
     display: flex;
     flex-wrap: wrap;
     gap: 4px;
+  }
+  /* Placeholder shown where condition pills would appear, when there are none. */
+  .hp-no-conditions {
+    margin-top: 4px;
+    font-style: italic;
+    color: #7a6030;
   }
   .cond-chip {
     border: 1px solid;

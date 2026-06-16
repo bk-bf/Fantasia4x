@@ -13,6 +13,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { browser } from '$app/environment';
   import { currentWeather } from '$lib/stores/gameState';
+  import { cameraTileSize } from '$lib/stores/cameraView';
 
   type Mode = 'none' | 'rain' | 'snow';
 
@@ -26,6 +27,15 @@
   let mode: Mode = 'none';
   let intensity = 0; // 0–1
   let heavy = false; // heavy_rain / blizzard
+
+  // Zoom-out "in the clouds" feel: the further out the camera, the more (and faster, longer) the
+  // particles — as if flying up through the weather. `zoom` ≈ how many times more zoomed-out than the
+  // reference tile size (1 = reference, >1 = zoomed out, <1 = zoomed in).
+  const REF_TILE = 16;
+  let zoom = 1;
+  const densityMul = () => Math.max(0.7, Math.min(4, zoom)); // up to 4× particles zoomed way out
+  const speedMul = () => Math.max(0.8, Math.min(2.4, 0.85 + (zoom - 1) * 0.5));
+  const sizeMul = () => Math.max(0.8, Math.min(1.8, 0.9 + (zoom - 1) * 0.3));
 
   interface Particle {
     x: number;
@@ -49,25 +59,27 @@
   }
 
   function makeParticle(w: number, h: number, atTop: boolean): Particle {
+    const sm = speedMul();
+    const zm = sizeMul();
     if (mode === 'rain') {
-      const spd = (heavy ? 950 : 680) * (0.7 + Math.random() * 0.6);
+      const spd = (heavy ? 950 : 680) * (0.7 + Math.random() * 0.6) * sm;
       return {
         x: Math.random() * w * 1.15 - w * 0.1, // bias left so the slant still fills the right edge
         y: atTop ? -20 - Math.random() * 40 : Math.random() * h,
-        len: 9 + Math.random() * 13 + (heavy ? 6 : 0),
+        len: (9 + Math.random() * 13 + (heavy ? 6 : 0)) * zm,
         spd,
         r: 0,
         ph: 0
       };
     }
     // snow
-    const spd = (heavy ? 150 : 80) * (0.6 + Math.random() * 0.9);
+    const spd = (heavy ? 150 : 80) * (0.6 + Math.random() * 0.9) * sm;
     return {
       x: Math.random() * w,
       y: atTop ? -10 - Math.random() * 30 : Math.random() * h,
       len: 0,
       spd,
-      r: 1 + Math.random() * 2.2,
+      r: (1 + Math.random() * 2.2) * zm,
       ph: Math.random() * TWO_PI
     };
   }
@@ -80,9 +92,12 @@
       parts = [];
       return;
     }
-    // Particle count scales with screen area + intensity, capped for safety.
+    // Count scales with screen area × intensity × zoom-out (more particles the further out you are).
     const density = mode === 'rain' ? 0.00016 : 0.00008; // per px²
-    const count = Math.min(700, Math.floor(w * h * density * (0.5 + intensity)));
+    const count = Math.min(
+      1600,
+      Math.floor(w * h * density * (0.5 + intensity) * densityMul())
+    );
     parts = new Array(count);
     for (let i = 0; i < count; i++) parts[i] = makeParticle(w, h, false);
   }
@@ -161,6 +176,18 @@
       spawn(); // (re)seed for a mode change or an intensity/heavy change
       if (changed) lastT = 0;
     }
+  });
+
+  // Re-seed particle count/speed/size as the camera zooms — more, faster, longer when zoomed out.
+  let zoomReseed: ReturnType<typeof setTimeout> | undefined;
+  const unsubZoom = cameraTileSize.subscribe((tileSize) => {
+    const z = Math.max(0.5, Math.min(4, REF_TILE / Math.max(1, tileSize)));
+    if (Math.abs(z - zoom) < 0.05) return; // ignore tiny changes
+    zoom = z;
+    if (mode === 'none' || !canvas) return;
+    // Debounce: a zoom gesture fires many steps; respawn once it settles.
+    if (zoomReseed) clearTimeout(zoomReseed);
+    zoomReseed = setTimeout(() => spawn(), 120);
   });
 
   onMount(() => {
