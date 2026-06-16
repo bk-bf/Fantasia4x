@@ -5,6 +5,7 @@ import type { LogEventInput } from '$lib/game/core/logSink';
 import {
   loadActivityLog,
   scheduleSaveActivityLog,
+  saveActivityLogNow,
   loadDebugLog,
   scheduleSaveDebugLog
 } from './saveManager';
@@ -30,9 +31,11 @@ if (browser) {
   });
 }
 
-/** Clear the chronicle in memory (persistence is cleared via deleteSave on reset). */
+/** Clear the chronicle, in memory AND in storage. The eager flush (not the debounced save) means a
+ *  refresh right after clearing won't restore the old log from a never-written debounce. */
 export function clearActivityLog() {
   activityLog.set([]);
+  saveActivityLogNow([]);
 }
 
 // Derived stores for different log views

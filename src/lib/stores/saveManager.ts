@@ -188,8 +188,9 @@ let _saveTimer: ReturnType<typeof setTimeout> | null = null;
  * frame-critical path; the `timeout` guarantees it still runs under sustained load.
  */
 function runWhenIdle(fn: () => void): void {
-  const ric = (globalThis as { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => void })
-    .requestIdleCallback;
+  const ric = (
+    globalThis as { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => void }
+  ).requestIdleCallback;
   if (ric) ric(fn, { timeout: 1000 });
   else setTimeout(fn, 0);
 }
@@ -240,6 +241,22 @@ export function scheduleSaveActivityLog(entries: ActivityLogEntry[]): void {
       console.warn('[SaveManager] Chronicle write failed:', err);
     });
   }, DEBOUNCE_MS);
+}
+
+/**
+ * Persist the chronicle IMMEDIATELY, cancelling any pending debounced write. Used when the player
+ * clears the log: the debounced save is dropped on a page refresh, so without an eager flush a
+ * quick reload after clearing would restore the old (never-written) log from IDB.
+ */
+export function saveActivityLogNow(entries: ActivityLogEntry[]): Promise<void> {
+  if (!browser) return Promise.resolve();
+  if (_logSaveTimer !== null) {
+    clearTimeout(_logSaveTimer);
+    _logSaveTimer = null;
+  }
+  return idbPut(LOG_KEY, entries).catch((err) => {
+    console.warn('[SaveManager] Chronicle write failed:', err);
+  });
 }
 
 // ── debug-log (diagnostics) persistence ──────────────────────────────────────
