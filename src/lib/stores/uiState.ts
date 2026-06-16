@@ -38,6 +38,9 @@ interface UIState {
   blueprintBuildingId: string | null;
   /** Requests the pawn screen to open a specific tab. Cleared after reading. */
   pawnScreenTab: 'status' | 'attributes' | 'gear' | null;
+  /** Debug click-brush (in-game DEBUG tab). null = inactive. `id` is the resource/building id the
+   *  spawn brushes paint; unused by `regrow`. Clicking the map applies the brush at that tile. */
+  debugBrush: { kind: 'regrow' | 'building' | 'resource'; id: string | null } | null;
 }
 
 function createUIState() {
@@ -55,7 +58,8 @@ function createUIState() {
     selectedMobId: null,
     cameraFollowMobId: null,
     blueprintBuildingId: null,
-    pawnScreenTab: null
+    pawnScreenTab: null,
+    debugBrush: null
   };
 
   const { subscribe, set, update } = writable(initialState);
@@ -129,6 +133,24 @@ function createUIState() {
       update((state) => ({
         ...state,
         blueprintBuildingId: null,
+        currentScreen: state._screenBeforeDesignation ?? state.currentScreen,
+        _screenBeforeDesignation: null
+      })),
+
+    /** Arm a debug click-brush and drop to the map so the next clicks apply it. */
+    activateDebugBrush: (kind: 'regrow' | 'building' | 'resource', id: string | null = null) =>
+      update((state) => ({
+        ...state,
+        debugBrush: { kind, id },
+        _screenBeforeDesignation:
+          state.currentScreen !== 'main' ? state.currentScreen : state._screenBeforeDesignation,
+        currentScreen: 'main'
+      })),
+
+    deactivateDebugBrush: () =>
+      update((state) => ({
+        ...state,
+        debugBrush: null,
         currentScreen: state._screenBeforeDesignation ?? state.currentScreen,
         _screenBeforeDesignation: null
       }))

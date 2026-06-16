@@ -10,7 +10,7 @@
   import ExplorationScreen from '$lib/components/screens/ExplorationScreen.svelte';
   import WorkScreen from '$lib/components/screens/WorkScreen.svelte';
   import EntityScreen from '$lib/components/screens/EntityScreen.svelte';
-  import DebugLogScreen from '$lib/components/screens/DebugLogScreen.svelte';
+  import DebugScreen from '$lib/components/screens/DebugScreen.svelte';
   import ResourceSidebar from '$lib/components/UI/ResourceSidebar.svelte';
   import GameControls from '$lib/components/UI/GameControls.svelte';
   import ChroniclePanel from '$lib/components/UI/ChroniclePanel.svelte';
@@ -174,7 +174,7 @@
               {:else if currentScreen === 'entities'}
                 <EntityScreen />
               {:else if currentScreen === 'debug'}
-                <DebugLogScreen />
+                <DebugScreen />
               {/if}
             </div>
           {/if}

@@ -28,6 +28,9 @@ export interface GameState {
   seasonDay?: number;
   /** Living-world (SEASONS_WEATHER Phase C): active weather, re-rolled by the Markov chain daily. */
   weather?: WeatherState;
+  /** Debug override: when set, `processEnvironment` forces this season instead of the turn-derived
+   *  one (the in-game debug menu's "change season" button). Clear it to resume the natural cycle. */
+  _debugSeason?: Season;
   /** Average effective map temperature (°C, baked tile avg + weather delta), computed worker-side
    *  for the HUD readout. A scalar — tile `temperature` itself stays worker-only (PERF-2). */
   avgTemperature?: number;

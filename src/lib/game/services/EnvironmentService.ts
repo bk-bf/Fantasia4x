@@ -215,6 +215,8 @@ const SEASON_FILE = seasonsData as unknown as { daysPerSeason: number; seasons: 
 export const DAYS_PER_SEASON = SEASON_FILE.daysPerSeason;
 /** The year cycle order (from seasons.jsonc). */
 const SEASON_ORDER: Season[] = SEASON_FILE.seasons.map((s) => s.id);
+/** The year cycle order, exported for the debug menu / pickers. */
+export const SEASON_IDS: Season[] = SEASON_ORDER;
 export const SEASONS: Record<Season, SeasonDef> = Object.fromEntries(
   SEASON_FILE.seasons.map((s) => [s.id, s])
 ) as unknown as Record<Season, SeasonDef>;
@@ -339,6 +341,16 @@ const WEATHER: Record<string, WeatherDef> = Object.fromEntries(
 /** Resolve a weather def by id, falling back to the default (clear) for unknown/undefined. */
 function weatherDef(type?: string): WeatherDef {
   return WEATHER[type ?? DEFAULT_WEATHER] ?? WEATHER[DEFAULT_WEATHER];
+}
+
+/** All weather ids in declaration order (for the debug menu / pickers). */
+export const WEATHER_IDS: string[] = WEATHER_FILE.types.map((t) => t.id);
+
+/** Build a sticky WeatherState for a given type (debug): the spell runs effectively forever so the
+ *  daily Markov chain won't re-roll it until the player changes it again. */
+export function makeWeather(type: string): WeatherState {
+  const def = weatherDef(type);
+  return { type: def.id, intensity: def.intensity, turnsRemaining: Number.MAX_SAFE_INTEGER };
 }
 
 /** Gameplay effects for a weather state (defaults to the fallback weather when undefined). */

@@ -23,7 +23,9 @@ import type {
   EquipmentSlot,
   ItemInstance,
   CraftingInProgress,
-  FilterableZoneType
+  FilterableZoneType,
+  PlacedBuilding,
+  Season
 } from '../core/types';
 import {
   addToStockpileZone,
@@ -41,7 +43,40 @@ import { itemService } from '../services/ItemService';
 import { recipeService } from '../services/RecipeService';
 import { researchService } from '../services/ResearchService';
 import { devSpawnLooseItems, devDestroyAllItems } from '../dev/devWorld';
+import { generatePawns } from '../entities/Pawns';
+import { devSpawnMobs } from '../services/entity/entitySpawning';
+import { makeWeather } from '../services/EnvironmentService';
+import { resourceObjectService } from '../services/ResourceObjectService';
+import { patchPathfindingWalkable } from '../services/PathfinderService';
+import { markTileDirty } from '../core/tileDeltas';
 import type { SimCommand } from './simProtocol';
+
+/** Spiral out from (cx,cy) for the nearest walkable, un-occupied tile (worker-safe pawn placement). */
+function nearestFreeTile(
+  worldMap: GameState['worldMap'],
+  cx: number,
+  cy: number,
+  occupied: Set<string>
+): { x: number; y: number } | null {
+  const h = worldMap.length;
+  const w = worldMap[0]?.length ?? 0;
+  const maxR = Math.max(w, h);
+  for (let r = 0; r <= maxR; r++) {
+    for (let dy = -r; dy <= r; dy++) {
+      for (let dx = -r; dx <= r; dx++) {
+        if (Math.abs(dx) !== r && Math.abs(dy) !== r) continue; // ring only
+        const x = cx + dx;
+        const y = cy + dy;
+        if (x < 0 || y < 0 || x >= w || y >= h) continue;
+        if (!worldMap[y]?.[x]?.walkable) continue;
+        const key = `${x},${y}`;
+        if (occupied.has(key)) continue;
+        return { x, y };
+      }
+    }
+  }
+  return null;
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Cmd = (state: GameState, payload: any) => GameState;
@@ -362,7 +397,120 @@ export const COMMANDS: Record<string, Cmd> = {
     )
   }),
   devSpawnAllItems: (s, p: { amount?: number }) => devSpawnLooseItems(s, p.amount ?? 500),
-  devClearAllItems: (s) => devDestroyAllItems(s)
+  devClearAllItems: (s) => devDestroyAllItems(s),
+
+  // ── debug menu (in-game DEBUG tab) ───────────────────────────────────────────
+  /** Spawn a loose pile of one item id on a chosen tile (or near the colony when x/y omitted). */
+  devSpawnItem: (s, p: { itemId: string; amount?: number; x?: number; y?: number }) => {
+    const item = itemService.getItemById(p.itemId);
+    if (!item) return s;
+    const start = s.pawns?.find((pw) => pw.position)?.position ?? {
+      x: Math.floor((s.worldMap[0]?.length ?? 0) / 2),
+      y: Math.floor(s.worldMap.length / 2)
+    };
+    const x = p.x ?? start.x;
+    const y = p.y ?? start.y;
+    const drop = {
+      id: `dev-spawn-${p.itemId}-${x}-${y}-${Date.now()}`,
+      resourceId: p.itemId,
+      x,
+      y,
+      quantity: p.amount ?? 50,
+      stored: false
+    };
+    return absorbDropIfOnStockpileTile(
+      { ...s, droppedItems: [...(s.droppedItems ?? []), drop] },
+      drop.id
+    );
+  },
+
+  /** Spawn `count` fresh pawns of the colony's race, placed on walkable tiles near map centre. */
+  devSpawnPawns: (s, p: { count?: number }) => {
+    const pawns = generatePawns(s.race, p.count ?? 1);
+    const w = s.worldMap[0]?.length ?? 0;
+    const h = s.worldMap.length;
+    const cx = Math.floor(w / 2);
+    const cy = Math.floor(h / 2);
+    const occupied = new Set<string>(
+      s.pawns.filter((pw) => pw.position).map((pw) => `${pw.position!.x},${pw.position!.y}`)
+    );
+    const placed = pawns.map((pw) => {
+      const pos = nearestFreeTile(s.worldMap, cx, cy, occupied) ?? { x: cx, y: cy };
+      occupied.add(`${pos.x},${pos.y}`);
+      return { ...pw, position: pos, path: [], pathIndex: 0 };
+    });
+    return { ...s, pawns: [...s.pawns, ...placed] };
+  },
+
+  /** Force-spawn `count` mobs (ignores caps / current count). Optional specific creature id. */
+  devSpawnEntities: (s, p: { count?: number; creatureId?: string }) =>
+    devSpawnMobs(s, p.count ?? 5, p.creatureId),
+
+  /** Set the weather to a fixed type (sticky — won't re-roll until changed again). */
+  setWeather: (s, p: { type: string }) => ({ ...s, weather: makeWeather(p.type) }),
+
+  /** Override the season (null/undefined resumes the natural turn-derived cycle). */
+  setSeason: (s, p: { season: Season | null }) => ({ ...s, _debugSeason: p.season ?? undefined }),
+
+  /** Instantly place a complete building on a tile (no cost, no construction work). */
+  devSpawnBuildingAt: (s, p: { buildingId: string; x: number; y: number }) => {
+    const def = buildingService.getBuildingById(p.buildingId);
+    if (!def) return s;
+    if (s.worldMap?.[p.y]?.[p.x]?.walkable === false) return s;
+    const placed: PlacedBuilding = {
+      id: `${p.buildingId}-${p.x}-${p.y}-${Date.now()}`,
+      type: p.buildingId,
+      status: 'complete',
+      progress: 1,
+      x: p.x,
+      y: p.y,
+      workRequired: def.workAmount ?? 0,
+      workDone: def.workAmount ?? 0,
+      materialsDelivered: true
+    };
+    const state: GameState = { ...s, buildings: [...(s.buildings ?? []), placed] };
+    return buildingService.applyBuildingFootprint(state, placed, true);
+  },
+
+  /** Place a resource node on a tile (full node amount), updating walkability from its def. */
+  devSpawnResourceAt: (s, p: { resourceId: string; x: number; y: number }) => {
+    const def = resourceObjectService.getById(p.resourceId);
+    const tile = s.worldMap?.[p.y]?.[p.x];
+    if (!def || !tile) return s;
+    const max = def.nodeAmountRange?.[1] ?? 3;
+    tile.resources = { ...tile.resources, [p.resourceId]: max };
+    const walkable = def.walkable ?? true;
+    tile.walkable = walkable;
+    patchPathfindingWalkable(p.x, p.y, walkable);
+    markTileDirty(p.y, p.x, tile);
+    return { ...s };
+  },
+
+  /** Regrow a tile's resources: clear any cooldowns and restore every present/cooling node to full. */
+  devRegrowTileAt: (s, p: { x: number; y: number }) => {
+    const tile = s.worldMap?.[p.y]?.[p.x];
+    if (!tile) return s;
+    const ids = new Set<string>([
+      ...Object.keys(tile.resources ?? {}),
+      ...Object.keys(tile.resourceCooldowns ?? {}).map((k) =>
+        k.includes(':') ? k.slice(0, k.indexOf(':')) : k
+      )
+    ]);
+    if (ids.size === 0) return s;
+    tile.resourceCooldowns = {};
+    const resources = { ...tile.resources };
+    for (const id of ids) {
+      const def = resourceObjectService.getById(id);
+      resources[id] = def?.nodeAmountRange?.[1] ?? 3;
+      if (def?.walkable === false) {
+        tile.walkable = false;
+        patchPathfindingWalkable(p.x, p.y, false);
+      }
+    }
+    tile.resources = resources;
+    markTileDirty(p.y, p.x, tile);
+    return { ...s };
+  }
 };
 
 /** Apply a serializable command to a state, returning the new state. Unknown ids are a no-op. */

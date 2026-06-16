@@ -274,6 +274,8 @@
   let zoneEraseMode = false;
   // Blueprint placement mode — set when BUILD is clicked in BuildingMenu
   let blueprintBuildingId: string | null = null;
+  // Debug click-brush (DEBUG tab) — regrow / spawn building / spawn resource on click
+  let debugBrush: { kind: 'regrow' | 'building' | 'resource'; id: string | null } | null = null;
   // Selected building (click-locked, like selectedPawnId)
   let selectedBuildingId: string | null = null;
   // Selected mob/animal (click-locked, like selectedPawnId)
@@ -281,6 +283,7 @@
   const unsubUI = uiState.subscribe((s) => {
     designationMode = s.designationActive;
     blueprintBuildingId = s.blueprintBuildingId ?? null;
+    debugBrush = s.debugBrush ?? null;
     activeZoneInstanceId = s.activeZoneInstanceId ?? null;
     if (!s.designationActive) zoneEraseMode = false;
     if (s.designationType) designationTypeActive = s.designationType as DesignationType;
@@ -1627,6 +1630,32 @@
 
   async function handleTileClick() {
     if (hoverTileX < 0 || hoverTileY < 0) return;
+
+    // Debug click-brush (DEBUG tab): apply the armed brush at this tile and stop (stays armed for
+    // repeated clicks; deactivate from the debug menu). Takes priority over normal selection.
+    if (debugBrush) {
+      if (debugBrush.kind === 'regrow') {
+        gameState.command({
+          type: 'devRegrowTileAt',
+          payload: { x: hoverTileX, y: hoverTileY },
+          save: true
+        });
+      } else if (debugBrush.kind === 'building' && debugBrush.id) {
+        gameState.command({
+          type: 'devSpawnBuildingAt',
+          payload: { buildingId: debugBrush.id, x: hoverTileX, y: hoverTileY },
+          save: true
+        });
+      } else if (debugBrush.kind === 'resource' && debugBrush.id) {
+        gameState.command({
+          type: 'devSpawnResourceAt',
+          payload: { resourceId: debugBrush.id, x: hoverTileX, y: hoverTileY },
+          save: true
+        });
+      }
+      redrawOverlay();
+      return;
+    }
 
     // Designation mode: handled by drag — single-click still paints one tile
     if (designationMode) {

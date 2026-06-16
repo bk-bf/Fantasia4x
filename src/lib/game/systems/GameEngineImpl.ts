@@ -248,7 +248,10 @@ export class GameEngineImpl implements GameEngine {
     const gs = this.gameState;
     if (!gs) return;
 
-    const { season, seasonDay } = seasonForTurn(gs.turn);
+    const derived = seasonForTurn(gs.turn);
+    // Debug override (in-game debug menu): force a season but keep the natural day index.
+    const season = gs._debugSeason ?? derived.season;
+    const seasonDay = derived.seasonDay;
     if (season !== gs.season) {
       const prevSeason = gs.season;
       gs.season = season;

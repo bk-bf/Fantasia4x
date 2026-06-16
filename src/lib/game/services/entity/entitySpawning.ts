@@ -58,6 +58,29 @@ export function seedInitialEntities(state: GameState, packs = 10): GameState {
   return { ...state, mobs: [...(state.mobs ?? []), ...seeded] };
 }
 
+/**
+ * Debug spawner: force `count` mobs onto the map regardless of the current mob count or caps
+ * (the in-game debug menu's "spawn entities" button). When `creatureId` is given, spawns that
+ * species; otherwise picks day-creatures at random. Each spawn lands on a biome-valid tile away
+ * from the colony (falls back to a nearby walkable). Worker-safe — pure transform.
+ */
+export function devSpawnMobs(state: GameState, count = 5, creatureId?: string): GameState {
+  const pool = creatureId
+    ? CREATURES.filter((c) => c.id === creatureId)
+    : CREATURES.filter((c) => !c.nightOnly);
+  if (pool.length === 0) return state;
+
+  const seeded: Mob[] = [];
+  for (let i = 0; i < count; i++) {
+    const def = pool[Math.floor(rng.random() * pool.length)];
+    const origin = findSpawnTile(state, def) ?? findNearbyWalkable(state, 0, 0);
+    if (!origin) continue;
+    seeded.push(makeMob(def, origin.x, origin.y, state.turn));
+  }
+  if (seeded.length === 0) return state;
+  return { ...state, mobs: [...(state.mobs ?? []), ...seeded] };
+}
+
 // ===== SPAWNING =================================================================
 
 export function spawnEntities(state: GameState): GameState {
