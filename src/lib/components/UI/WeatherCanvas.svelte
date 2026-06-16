@@ -71,6 +71,13 @@
     const frac = Math.max(0, Math.min(1, (MAX_TILE - tileSize) / (MAX_TILE - MIN_TILE)));
     return 0.8 + frac * 1.4; // 0.8× zoomed in → 2.2× zoomed out, gentle linear ramp
   };
+  // Leaves are scenery-scale (a leaf is roughly a tile), so unlike rain/snow they should shrink as
+  // you zoom OUT — combined with the higher count from densityMul, zoomed-out leaves read as a fine,
+  // dense flurry rather than a few huge blobs. Linear in tile size, clamped.
+  const leafScale = () => {
+    const frac = Math.max(0, Math.min(1, (tileSize - MIN_TILE) / (MAX_TILE - MIN_TILE)));
+    return 0.4 + frac * 0.9; // 0.4× fully zoomed out → 1.3× fully zoomed in
+  };
 
   interface Particle {
     x: number;
@@ -219,7 +226,11 @@
       // snow / snowdust / dust — falling specks with wind-driven sideways drift + a gentle sway.
       // snowdust (blowing snow) and dust drift hard sideways; plain snow only when it's windy.
       const drift = sideDrift() * (mode === 'snowdust' ? 1.4 : 1);
-      const [cr, cg, cb] = mode === 'dust' ? particleColor : [255, 255, 255];
+      // Dust is coloured debris (dim it by ambient so it doesn't glow at night); snow stays white.
+      const [cr, cg, cb] =
+        mode === 'dust'
+          ? particleColor.map((c, i) => Math.round(c * ambLight * ambTint[i]))
+          : [255, 255, 255];
       const baseA = mode === 'dust' ? 0.18 + 0.22 * intensity : 0.5 + 0.4 * intensity;
       ctx.fillStyle = `rgba(${cr}, ${cg}, ${cb}, ${baseA})`;
       ctx.beginPath();
@@ -242,21 +253,32 @@
     } else if (mode === 'leaves') {
       // Tumbling leaves/petals in the type's particleColor (green spring, red/orange autumn). Each
       // drifts hard sideways on the wind, bobs, and rotates — drawn as a small rotated ellipse.
+      // - leafScale() shrinks them as you zoom out (dense fine flurry, not big blobs).
+      // - colour is multiplied by ambient day/night light so they sit UNDER the brightness and don't
+      //   glow at night (foliage goes dark like the scene).
+      // - `swirl` (windStrength × intensity) drives gusts: an extreme dry gale whips them sideways
+      //   and tosses them up/down, so strong wind reads as chaotic swirl rather than a steady fall.
       const drift = sideDrift();
-      const [cr, cg, cb] = particleColor;
+      const scale = leafScale();
+      const swirl = windStrength * Math.max(0.3, intensity);
+      const [cr, cg, cb] = particleColor.map((c) => Math.round(c * ambLight));
+      const a0 = ambTint[0];
+      const a1 = ambTint[1];
+      const a2 = ambTint[2];
       for (const p of parts) {
-        p.ph += dt * 2.2;
-        p.y += p.spd * dt;
-        p.x += (drift + Math.sin(p.ph) * 30) * dt; // gusty sideways flutter
-        const sway = Math.sin(p.ph * 0.8) * 10;
+        p.ph += dt * (1.8 + swirl * 2.6); // faster tumble in high wind
+        p.y += p.spd * dt + Math.sin(p.ph * 1.3) * swirl * 55 * dt; // updraughts/downdraughts
+        p.x += (drift + Math.sin(p.ph) * (24 + swirl * 90)) * dt; // gusty sideways flutter
+        const sway = Math.sin(p.ph * 0.8) * (8 + swirl * 22);
         const drawX = p.x + sway;
         const wobble = 0.45 + 0.55 * Math.abs(Math.cos(p.ph)); // tumble → width pinches as it spins
+        const rad = p.len * scale;
         ctx.save();
         ctx.translate(drawX, p.y);
         ctx.rotate(p.ph);
-        ctx.fillStyle = `rgba(${cr}, ${cg}, ${cb}, ${0.55 + 0.35 * intensity})`;
+        ctx.fillStyle = `rgba(${Math.round(cr * a0)}, ${Math.round(cg * a1)}, ${Math.round(cb * a2)}, ${0.55 + 0.35 * intensity})`;
         ctx.beginPath();
-        ctx.ellipse(0, 0, p.len, p.len * wobble, 0, 0, TWO_PI);
+        ctx.ellipse(0, 0, rad, rad * wobble, 0, 0, TWO_PI);
         ctx.fill();
         ctx.restore();
         if (p.y > h + 8) {
@@ -277,14 +299,12 @@
       const gust = Math.sin(fogTime * 0.5) * 55; // bank-wide sway (px)
       const gust2 = Math.cos(fogTime * 0.31) * 30; // second cross-rhythm so the motion never obviously repeats
       const gustDrift = Math.cos(fogTime * 0.27) * 10; // breathing of drift speed (px/sec)
-      // Fog colour tracks the day/night ambient so it dims and cools at night instead of washing the
-      // dark map white. Brightness floors low (0.18) so a hint of haze survives midnight; the hue comes
-      // from the ambient tint (cool blue at night, warm by day) — same palette as the map beneath it.
+      // Fog colour is the MIDWAY blend between the plain pale haze (its daytime look) and the fully
+      // ambient-dimmed colour. Pure-white washed out the dark night map; fully dimming it made the fog
+      // vanish — averaging the two keeps night fog clearly visible but cool and muted, not white.
       const fb = Math.max(0.18, ambLight);
-      const fr = Math.round(220 * ambTint[0] * fb);
-      const fgc = Math.round(223 * ambTint[1] * fb);
-      const fbl = Math.round(229 * ambTint[2] * fb);
-      const rgb = `${fr}, ${fgc}, ${fbl}`;
+      const mid = (base: number, i: number) => Math.round((base + base * ambTint[i] * fb) / 2);
+      const rgb = `${mid(220, 0)}, ${mid(223, 1)}, ${mid(229, 2)}`;
       ctx.fillStyle = `rgba(${rgb}, ${0.04 + 0.05 * intensity})`;
       ctx.fillRect(0, 0, w, h);
       // Lower per-blob alpha than before — density now comes from OVERLAP, not from each disc being

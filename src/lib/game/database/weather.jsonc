@@ -83,7 +83,8 @@
       "transitions"  : [
         { "to": "clear",      "chance": 0.15 },
         { "to": "drizzle",    "chance": 0.15 },
-        { "to": "windy_rain", "chance": 0.08, "windScaled": true }
+        { "to": "windy_rain", "chance": 0.08, "windScaled": true },
+        { "to": "gale",       "chance": 0.05, "windScaled": true }
       ]
     },
     {
@@ -106,7 +107,8 @@
         { "to": "clear",      "chance": 0.18 },
         { "to": "heat_wave",  "chance": 0.1 },
         { "to": "drizzle",    "chance": 0.08 },
-        { "to": "windy_rain", "chance": 0.06, "windScaled": true }
+        { "to": "windy_rain", "chance": 0.06, "windScaled": true },
+        { "to": "gale",       "chance": 0.05, "windScaled": true }
       ]
     },
     {
@@ -129,7 +131,8 @@
         { "to": "clear",      "chance": 0.12 },
         { "to": "drizzle",    "chance": 0.18 },
         { "to": "fog",        "chance": 0.08 },
-        { "to": "windy_rain", "chance": 0.1, "windScaled": true }
+        { "to": "windy_rain", "chance": 0.1, "windScaled": true },
+        { "to": "gale",       "chance": 0.07, "windScaled": true }
       ]
     },
     {
@@ -150,7 +153,8 @@
       "transitions"  : [
         { "to": "clear",    "chance": 0.1 },
         { "to": "snow",     "chance": 0.18 },
-        { "to": "blizzard", "chance": 0.1, "windScaled": true }
+        { "to": "blizzard", "chance": 0.1, "windScaled": true },
+        { "to": "gale",     "chance": 0.06, "windScaled": true }
       ]
     },
 
@@ -372,6 +376,32 @@
       "transitions"  : [
         { "to": "clear",        "chance": 0.4 },
         { "to": "summer_windy", "chance": 0.2, "seasons": ["summer"] }
+      ]
+    },
+    {
+      "id"           : "gale",
+      "label"        : "Gale",
+      "overlay"      : "leaves",
+      "particleColor": [165, 135, 80],
+      "windStrength" : 1.0,
+      "sightMul"     : 0.75,
+      "intensity"    : 1.0,
+      "tempDelta"    : -3,
+      "fatigueMul"   : 1.4,
+      "hungerMul"    : 1.05,
+      "moveCostMul"  : 1.6,
+      "mood"         : -1.2,
+      "moistureBonus": 0,
+      "tint"         : [0.93, 0.92, 0.88],
+      "severity"     : "warning",
+      "durationRange": [30, 120],
+      "transitions"  : [
+        { "to": "clear",        "chance": 0.3 },
+        { "to": "spring_windy", "chance": 0.2, "seasons": ["spring"] },
+        { "to": "summer_windy", "chance": 0.2, "seasons": ["summer"] },
+        { "to": "autumn_windy", "chance": 0.2, "seasons": ["autumn"] },
+        { "to": "winter_windy", "chance": 0.2, "seasons": ["winter"] },
+        { "to": "fog",          "chance": 0.05 }
       ]
     }
   ]

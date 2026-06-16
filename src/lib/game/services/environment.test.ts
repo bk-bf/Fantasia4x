@@ -197,7 +197,8 @@ describe('EnvironmentService — weather (Phase C)', () => {
       'snow',
       'blizzard',
       'heat_wave',
-      'fog'
+      'fog',
+      'gale'
     ];
     const rng = new SeededRng(7);
     for (let i = 0; i < 200; i++) {
