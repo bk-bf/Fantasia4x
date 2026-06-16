@@ -23,6 +23,16 @@
   $: fatiguePct = Math.round(needs.fatigue);
   $: thirstPct = Math.round(needs.thirst ?? 0);
   $: hygienePct = Math.round(needs.hygiene ?? 0);
+  $: wetnessPct = Math.round(needs.wetness ?? 0);
+  function getWetColor(pct: number): string {
+    if (pct < 25) return '#7a8a90'; // dry — muted
+    if (pct < 50) return '#4fa3d1'; // damp
+    if (pct < 90) return '#2980c0'; // wet
+    return '#c86030'; // soaked — chill risk
+  }
+  function wetDesc(pct: number): string {
+    return pct < 25 ? 'dry' : pct < 50 ? 'damp' : pct < 90 ? 'wet' : 'soaked';
+  }
   function blockBar(value: number, width = 16): string {
     const filled = Math.max(0, Math.min(width, Math.round((value / 100) * width)));
     return '[' + '█'.repeat(filled) + '░'.repeat(width - filled) + ']';
@@ -40,7 +50,7 @@
   }
   $: activeEffects = (pawn.activeEffects ?? [])
     .map((id) => STATUS_EFFECTS_DB.find((e) => e.id === id))
-    .filter((e): e is StatusEffectDef => e !== undefined);
+    .filter((e): e is StatusEffectDef => e !== undefined && !e.hidden);
 
   type ActiveCond = { name: string; severity: number; stage: ConditionStage };
   $: activeConditions = (pawn.conditions ?? [])
@@ -86,6 +96,13 @@
     <span class="block-bar" style="color: {getNeedColor(hygienePct)}">{blockBar(hygienePct)}</span>
     <span class="val" style="color: {getNeedColor(hygienePct)}">{hygienePct}/100</span>
     <span class="desc">{getNeedDescription('hygiene', hygienePct)}</span>
+  </div>
+
+  <div class="need-row">
+    <span class="lbl">WETNESS</span>
+    <span class="block-bar" style="color: {getWetColor(wetnessPct)}">{blockBar(wetnessPct)}</span>
+    <span class="val" style="color: {getWetColor(wetnessPct)}">{wetnessPct}/100</span>
+    <span class="desc">{wetDesc(wetnessPct)}</span>
   </div>
 
   {#if pawn.maxBloodVolume}

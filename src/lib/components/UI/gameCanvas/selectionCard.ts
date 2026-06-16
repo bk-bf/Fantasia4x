@@ -14,6 +14,7 @@ import type {
   SelectedEntityModel,
   EntityBar,
   EntityButton,
+  EntityEffect,
   EntityStat,
   HealthModel,
   HealthLimb,
@@ -40,6 +41,16 @@ function prettyPart(id: string): string {
 /** A wound is highlighted when it's serious enough to matter or has gone septic. */
 function woundWarn(inj: Injury): boolean {
   return inj.infected || inj.severity !== 'minor';
+}
+
+/** Visible status effects as compact HUD pills. Hidden (internal) effects are filtered by the
+ *  service; the glyph falls back to the effect name's first letter when no icon is defined. */
+function statusEffectPills(entity: Pawn | Mob): EntityEffect[] {
+  return pawnService.getStatusEffects(entity).map((e) => ({
+    icon: e.icon ?? e.name.charAt(0),
+    name: e.name,
+    color: e.color
+  }));
 }
 
 /** A pawn/mob's current movement speed as a compact "3.8/s" stat readout. */
@@ -223,6 +234,13 @@ export function buildPawnCard(
       warn: curST < pawn.maxStamina * 0.25
     });
   }
+  // SEASONS_WEATHER: how soaked the pawn is, as a body-state bar like BLOOD (blue = water). This
+  // replaces the old redundant job line — the activity is already shown by the [state] tag + pills.
+  bars.push({
+    label: 'WETNESS',
+    value: Math.round(pawn.needs.wetness ?? 0),
+    color: '#4FA3D1'
+  });
   // No flat "HP" stat: the body model (limbs/blood/pain) is the real health — see the HEALTH popup.
   // Mood moves to the header (right of the name); MOVE shows current movement speed.
   const stats: EntityStat[] = [moveSpeedStat(pawn)];
@@ -233,14 +251,9 @@ export function buildPawnCard(
     dismissable: selected,
     mood: Math.floor(pawn.state.mood),
     stats,
+    effects: statusEffectPills(pawn),
     bars,
-    job: pawn.activeJob
-      ? {
-          text: `→ ${pawnStateLabel(pawn)}${
-            pawn.activeJob.resourceId ? ` ${jobResourceName(pawn.activeJob.resourceId)}` : ''
-          }`
-        }
-      : { text: '→ Idle', idle: true },
+    // (No `job` line: it just repeated the [state] tag next to the name — replaced by the WETNESS bar.)
     // Only show a bar for states that also draw one above the pawn's head (Working / eat / drink /
     // wash). Moving/Idle/Sleeping have no in-place task to complete, so no bar.
     progress:
@@ -348,6 +361,7 @@ export function buildMobCard(
       { label: 'DEX', value: mob.stats.dexterity },
       moveSpeedStat(mob)
     ],
+    effects: statusEffectPills(mob),
     bars,
     note: `${def.entityClass === 'mob' ? '⚔ hostile' : '◆ neutral'} · ${def.behaviour}${
       def.tameable ? ' · tameable' : ''

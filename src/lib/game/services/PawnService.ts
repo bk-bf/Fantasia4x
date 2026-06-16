@@ -24,7 +24,8 @@ import {
   weatherEffects,
   thermalAt,
   effectiveTemperature,
-  isRoofedTile
+  isRoofedTile,
+  tileWetness
 } from './EnvironmentService';
 // Gated console shim — see core/log.ts. Silences per-tick log/debug/warn unless
 // gameDebug(true); console.error still surfaces.
@@ -101,6 +102,10 @@ export interface PawnService {
    * each contributing factor for UI display.
    */
   getMoveSpeed(entity: Pawn | Mob): { tilesPerSecond: number; sources: string[] };
+
+  /** Active status-effect defs for an entity, with `hidden` (internal) effects filtered out.
+   *  The single source for surfacing effects in any UI (tile-HUD pills, needs panel). */
+  getStatusEffects(entity: Pawn | Mob): StatusEffectDef[];
 }
 
 // §D water needs — per-second accrual (hunger baseline is ~0.54/s for reference).
@@ -121,6 +126,15 @@ const COLD_FATIGUE_PER_DEG = 0.03;
 const HEAT_HUNGER_PER_DEG = 0.02;
 const NIGHT_LIGHT_THRESHOLD = 0.3; // ambient below this counts as "night" for the fatigue bump
 const NIGHT_FATIGUE_MUL = 1.1;
+
+// SEASONS_WEATHER — pawn wetness meter (0-100). Soaks slowly on wet tiles (rain raises tile wetness),
+// dries faster when warm and/or sheltered. Not instant: a pawn must linger on wet ground / in rain.
+const WET_TILE_THRESHOLD = 50; // tile wetness % above which a pawn starts to soak
+const WET_GAIN_PER_SEC = 0.5; // at a fully-wet (100%) tile → ~200s (0→100); scaled by how wet the tile is
+const WET_DRY_PER_SEC = 0.45; // base drying when off wet ground
+const WET_DRY_TEMP_REF = 10; // °C above which warmth speeds drying
+const WET_DRY_TEMP_K = 0.05; // per-°C drying speedup (30°C → +1.0× → 2× base)
+const WET_DRY_SHELTER_MUL = 1.5; // under a roof, drying is 1.5× faster
 
 /**
  * PawnService Implementation - Focused on pawn behavior and needs only
@@ -417,10 +431,9 @@ export class PawnServiceImpl implements PawnService {
       // fire warmth + roof shelter (insulation/weather protection) from the per-tick thermal field.
       const pos = pawn.position;
       const tile = pos ? worldMap[pos.y]?.[pos.x] : undefined;
+      const thermal = pos ? thermalAt(pos.x, pos.y) : undefined;
       const base = tile?.temperature ?? DEFAULT_COMFORT_TEMP;
-      const temp = pos
-        ? effectiveTemperature(base, weatherTemp, thermalAt(pos.x, pos.y))
-        : base + weatherTemp;
+      const temp = thermal ? effectiveTemperature(base, weatherTemp, thermal) : base + weatherTemp;
       // Comfort range (default ± trait shifts) — shared with the hypothermia/heat-stroke driver.
       const comfort = comfortRange(pawn.racialTraits);
       const cold = comfort.min - temp; // >0 when too cold → tires faster
@@ -437,6 +450,21 @@ export class PawnServiceImpl implements PawnService {
       const thirst = Math.min(100, (needs.thirst ?? 0) + THIRST_INCREASE_PER_SECOND * dt);
       const hygiene = Math.min(100, (needs.hygiene ?? 0) + HYGIENE_INCREASE_PER_SECOND * dt);
 
+      // SEASONS_WEATHER wetness: soak slowly on wet (>50%) tiles (roofs keep tiles dry — tileWetness
+      // already cuts the rain contribution under cover); otherwise dry off, faster when warm/sheltered.
+      const wet0 = needs.wetness ?? 0;
+      let wetness = wet0;
+      const tileWet = tile ? tileWetness(tile.terrainType, gameState.weather, thermal) : 0;
+      if (tileWet > WET_TILE_THRESHOLD) {
+        const soak = (tileWet - WET_TILE_THRESHOLD) / (100 - WET_TILE_THRESHOLD); // 0–1 by how wet
+        wetness = Math.min(100, wetness + WET_GAIN_PER_SEC * soak * dt);
+      } else if (wetness > 0) {
+        const dryFactor =
+          (1 + Math.max(0, temp - WET_DRY_TEMP_REF) * WET_DRY_TEMP_K) *
+          (thermal?.roofed ? WET_DRY_SHELTER_MUL : 1);
+        wetness = Math.max(0, wetness - WET_DRY_PER_SEC * dryFactor * dt);
+      }
+
       const prevHealth = pawn.state.health ?? 100;
       const health =
         prevHealth < 100
@@ -448,6 +476,7 @@ export class PawnServiceImpl implements PawnService {
         fatigue === needs.fatigue &&
         thirst === (needs.thirst ?? 0) &&
         hygiene === (needs.hygiene ?? 0) &&
+        wetness === wet0 &&
         health === prevHealth
       ) {
         continue;
@@ -457,6 +486,7 @@ export class PawnServiceImpl implements PawnService {
       needs.fatigue = fatigue;
       needs.thirst = thirst;
       needs.hygiene = hygiene;
+      needs.wetness = wetness;
       pawn.state.health = health;
       changed = true;
     }
@@ -846,6 +876,10 @@ export class PawnServiceImpl implements PawnService {
       base * dexFactor * weightFactor * legFactor * needsFactor * effectFactor
     );
     return { tilesPerSecond, sources };
+  }
+
+  getStatusEffects(entity: Pawn | Mob): StatusEffectDef[] {
+    return getActiveEffects(entity).filter((e) => !e.hidden);
   }
 
   /**

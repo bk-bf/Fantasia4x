@@ -25,6 +25,13 @@
     active?: boolean;
   }
 
+  /** A compact status-effect pill (glyph + colour) shown beside the stats; name on hover. */
+  export interface EntityEffect {
+    icon: string;
+    name: string;
+    color: string;
+  }
+
   export interface SelectedEntityModel {
     /** Display name shown in the header. */
     name: string;
@@ -38,6 +45,8 @@
     mood?: number;
     /** Inline stat readouts (STR, MOVE, …). */
     stats?: EntityStat[];
+    /** Active status effects, rendered as compact pills on the stats row (next to MOVE). */
+    effects?: EntityEffect[];
     /** Block-character meter bars (Food, Blood, …). */
     bars?: EntityBar[];
     /** Activity / job line. `idle` greys it out. */
@@ -174,12 +183,23 @@
       </div>
     {/if}
 
-    {#if model.stats && model.stats.length > 0}
+    {#if (model.stats && model.stats.length > 0) || (model.effects && model.effects.length > 0)}
       <div class="pawn-row">
-        {#each model.stats as stat (stat.label)}
+        {#each model.stats ?? [] as stat (stat.label)}
           <span class="pawn-stat-label">{stat.label}</span>
           <span class="pawn-stat-val" class:pawn-warn={stat.warn}>{stat.value}</span>
         {/each}
+        {#if model.effects && model.effects.length > 0}
+          <span class="effect-pills">
+            {#each model.effects as effect (effect.name)}
+              <span
+                class="effect-pill"
+                style="border-color: {effect.color}; color: {effect.color};"
+                title={effect.name}>{effect.icon}</span
+              >
+            {/each}
+          </span>
+        {/if}
       </div>
     {/if}
 
@@ -403,6 +423,22 @@
   }
   .pawn-warn {
     color: #ee8844 !important;
+  }
+  /* Status-effect pills sit at the end of the stats row (next to MOVE). */
+  .effect-pills {
+    display: inline-flex;
+    gap: 3px;
+    margin-left: auto;
+    align-items: center;
+  }
+  .effect-pill {
+    border: 1px solid;
+    border-radius: 6px;
+    padding: 0 3px;
+    font-size: 9px;
+    line-height: 1.3;
+    background: rgba(0, 0, 0, 0.25);
+    cursor: default;
   }
   .bar-rows {
     margin-top: 2px;

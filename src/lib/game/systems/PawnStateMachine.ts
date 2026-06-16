@@ -83,6 +83,16 @@ const COMBAT_SCAN_INTERVAL = 6;
 /** SEASONS_WEATHER: a sheltered (roofed) pawn recovers from hypothermia/heat stroke this much faster. */
 const SHELTER_RECOVERY_MUL = 2.5;
 
+// SEASONS_WEATHER — being WET (needs.wetness) shifts temperature resistance: cold bites far harder,
+// heat far less. Scaled by how soaked the pawn is (wetness/100).
+const WET_COLD_EXTRA = 0.8; // at 100% wet, cold exposure ×1.8 ("greatly lower cold resistance")
+const WET_HEAT_REDUCT = 0.6; // at 100% wet, heat exposure ×0.4 ("greatly raise fire resistance")
+// Fully soaked + cool → a per-second chance to catch a chill (seeds hypothermia) — the rain consequence.
+const WET_SOAKED = 95;
+const WET_CHILL_TEMP = 12; // only when the effective temperature is below this (°C)
+const WET_CHILL_CHANCE_PER_SEC = 0.04;
+const WET_CHILL_SEVERITY = 0.04;
+
 /** Consciousness (0–1) below which a pawn collapses (matches Combat.COLLAPSE_CONSCIOUSNESS).
  *  Folds in pain + blood loss + organ damage, so downing has one unified cause. */
 const COLLAPSE_CONSCIOUSNESS = 0.3;
@@ -325,6 +335,13 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
           heat *= 1 - Math.min(0.9, Math.max(0, r));
         }
       }
+      // Being WET amplifies cold and dampens heat, scaled by how soaked the pawn is.
+      const wetness = pawn.needs?.wetness ?? 0;
+      if (wetness > 0) {
+        const f = wetness / 100;
+        cold *= 1 + WET_COLD_EXTRA * f;
+        heat *= 1 - WET_HEAT_REDUCT * f;
+      }
       // A pawn under a roof recovers from temperature conditions faster ("sheltered").
       const recoveryMul = pos && isRoofedTile(pos.x, pos.y) ? SHELTER_RECOVERY_MUL : 1;
       const lethalTemp = driveTemperatureConditions(conditions, cold, heat, recoveryMul);
@@ -339,6 +356,21 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
             )
           }
         );
+      }
+      // Fully soaked in cool air → a chance to catch a chill (kickstarts hypothermia even when the
+      // ambient cold alone wouldn't) — the headline "rain consequence" at 100% wetness.
+      if (
+        wetness >= WET_SOAKED &&
+        temp < WET_CHILL_TEMP &&
+        rng.chance(perTick(WET_CHILL_CHANCE_PER_SEC))
+      ) {
+        const idx = conditions.findIndex((c) => c.id === 'hypothermia');
+        if (idx === -1) conditions.push({ id: 'hypothermia', severity: WET_CHILL_SEVERITY });
+        else
+          conditions[idx] = {
+            ...conditions[idx],
+            severity: Math.min(1, conditions[idx].severity + WET_CHILL_SEVERITY)
+          };
       }
     }
   }
@@ -667,6 +699,8 @@ function syncActiveEffects(pawn: Pawn): Pawn {
 
   // SEASONS_WEATHER: under a roof → sheltered (faster cold/heat recovery + storm-mood relief).
   if (pawn.position && isRoofedTile(pawn.position.x, pawn.position.y)) effects.push('sheltered');
+  // SEASONS_WEATHER: soaked → wet (cold bites harder, heat less; chance of a chill when soaked + cold).
+  if ((pawn.needs?.wetness ?? 0) >= 50) effects.push('wet');
 
   // Mood-based status effects (discrete ranges replace continuous morale calculation)
   const mood = pawn.state?.mood ?? 50;
