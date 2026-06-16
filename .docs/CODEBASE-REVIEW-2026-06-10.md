@@ -16,8 +16,9 @@ Gate at last update (2026-06-16): `check` 0 · `test` 246 · `lint` 0 · `build`
 
 ## New from playtest (`game/NOTES.md`, 2026-06-16)
 
-Surfaced after the ENGINE-PERFORMANCE arc. **N-1 and N-5 are regressions and the top priority** — the perf work
-broke the building/blueprint loop. N-2/N-3/N-4 are pre-existing survival-loop tuning.
+Surfaced after the ENGINE-PERFORMANCE arc. **N-1 is the top priority** (a real regression — placement broken under
+`--profiler`). **N-5 is fixed** (turned out to be a latent duplicate-drop-id bug, not a perf regression). N-2/N-3/N-4
+are pre-existing survival-loop tuning.
 
 - [ ] **N-1 · Can't place buildings since the performance work.** REGRESSION — building placement broke somewhere
   in the worker / snapshot / de-immutable arc. A broken core loop → highest priority. **Key clue: it works in
@@ -36,11 +37,20 @@ broke the building/blueprint loop. N-2/N-3/N-4 are pre-existing survival-loop tu
   repeats. It should fill its volume/weight budget per trip, opportunistically picking up compatible items between
   the source and the stockpile. (`clampPickupQuantity` already caps pickup by budget — the gap is the
   multi-item/opportunistic pickup loop, not the cap.)
-- [ ] **N-5 · Pawns jank back-and-forth after queuing building blueprints.** Once blueprints are queued, pawns
-  oscillate (a movement/target ping-pong). Likely a fetch/deposit or approach-tile flip-flop in the build-job path
-  (cf. the FLEE-1 / hunt-yoyo class — a per-tick target recompute that alternates between two near-tied tiles).
-  Repro by queuing a blueprint and watching the assigned builders; check the build-job's approach-tile selection
-  and `nextCellCostLeft` preservation across re-paths (MOVE-1 invariant). //actually the state rapidly oscilates between moving to resource and idle
+- [x] **N-5 · Pawns jank back-and-forth (Idle↔MovingToResource) after queuing building blueprints.** Done
+  2026-06-16. **Not a perf regression** — a latent **duplicate-drop-id** bug, triggered by drag-placing many walls
+  at once. Root cause (confirmed via live CDP state dump of the running Electron app): `reserveForOrder` built the
+  reserved stack's id as `${d.id}-resv-${orderId.slice(-6)}` ([GameState.ts](game/../../src/lib/game/core/GameState.ts)),
+  and `slice(-6)` is the **placement-timestamp tail** — every building placed in the same drag batch shares one
+  `Date.now()`, so all their reserved cordage stacks at the shared stockpile tile collided on ONE id (≈15 drops
+  with id `…-resv-548129`, distinct `reservedFor`). `_syncFetchJobs`'s filter did `find(d => d.id === droppedItemId)`
+  → matched a **sibling wall's** stack → `reservedFor !== owner` → culled the valid fetch job → re-minted it with a
+  fresh `Date.now()` id → the pawn's claimed `jobId` dangled → `!jobInPool` → Idle → re-claim the new id → repeat.
+  **Fix (three parts):** (1) reservation ids use the **full `orderId`** (unique per building), not `slice(-6)`;
+  (2) the fetch filter + dedup match on **`id` AND `reservedFor`/owner** (self-heals existing collided saves);
+  (3) **deterministic job ids** (`fetch-${drop.id}-${ownerId}`, and dropped the redundant `-${Date.now()}` from
+  construct/craft/deconstruct/refuel) so a transient filter miss can't dangle a claim. Verified live: `Date.now()`
+  job ids → 0, pawns return to `Working`, walls build. `check` 0 · `test` 246.
 
 ## Structural debt (deferred by design — no big-bang)
 
@@ -84,9 +94,8 @@ Spec archived at [PHYSICAL-PRODUCTION](.tasks/archive/PHYSICAL-PRODUCTION-2026-0
 
 ## Sequencing
 
-1. **Now — fix the building regressions:** N-1 (can't place buildings; `--debug` works, `--profiler` doesn't) and
-   N-5 (blueprint-queue jank) — both broke a core loop in the perf arc; likely related (the blueprint path). Bisect
-   the perf commits.
+1. **Now — fix the building regression:** N-1 (can't place buildings; `--debug` works, `--profiler` doesn't) —
+   bisect the perf commits. (N-5 blueprint-queue jank is **done** — duplicate-drop-id, not a perf regression.)
 2. **Cheap survival-loop tuning:** N-2 / N-3 (stamina + exhaustion) together; N-4 (multi-item haul).
 3. **Tier 2 — next feature:** Living World B–D (seasons / weather / fog) — ROADMAP Wave 6; folds the heavy
    `nearestPawn` spatial index in with fog-of-war/LoS (ENGINE-PERFORMANCE §C defers it there).

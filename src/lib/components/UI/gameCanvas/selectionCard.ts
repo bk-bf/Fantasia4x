@@ -225,9 +225,9 @@ export function buildPawnCard(
       : { text: '→ Idle', idle: true },
     // Only show a bar for states that also draw one above the pawn's head (Working / eat / drink /
     // wash). Moving/Idle/Sleeping have no in-place task to complete, so no bar.
-    progressBar:
+    progress:
       pawn.activeJob && pawn.currentState != null && PROGRESS_BAR_STATES.has(pawn.currentState)
-        ? jobProgressBar(pawn.activeJob.progress ?? 0)
+        ? (pawn.activeJob.progress ?? 0)
         : undefined,
     pos: selected ? (pawn.position ?? undefined) : undefined,
     // Built for hover cards too so the shared HEALTH toggle works on hover, not just selection.

@@ -42,8 +42,8 @@
     bars?: EntityBar[];
     /** Activity / job line. `idle` greys it out. */
     job?: { text: string; idle?: boolean };
-    /** Pre-formatted progress bar string (e.g. from jobProgressBar()). */
-    progressBar?: string;
+    /** Active-task completion fraction (0–1), rendered as a StatBar aligned with the need bars. */
+    progress?: number;
     /** Extra descriptive line (e.g. behaviour tags). */
     note?: string;
     /** Map position footer. */
@@ -189,15 +189,19 @@
     {/if}
 
     {#if model.job}
-      <!-- Progress bar (when the task has one) sits to the RIGHT of the task name. -->
-      <div class="pawn-job-row">
-        <span class="pawn-job" class:pawn-idle={model.job.idle}>{model.job.text}</span>
-        {#if model.progressBar}
-          <span class="pawn-progress">[{model.progressBar}]</span>
-        {/if}
+      <div class="pawn-job" class:pawn-idle={model.job.idle}>{model.job.text}</div>
+    {/if}
+    {#if model.progress != null}
+      <!-- Task progress as a StatBar (empty label) so its track lines up with the need bars above. -->
+      <div class="job-progress">
+        <StatBar
+          label=""
+          value={model.progress * 100}
+          max={100}
+          color={BAR_OK}
+          valueText={`${Math.round(model.progress * 100)}%`}
+        />
       </div>
-    {:else if model.progressBar}
-      <div class="pawn-progress">[{model.progressBar}]</div>
     {/if}
     {#if model.note}
       <div class="pawn-job">{model.note}</div>
@@ -397,14 +401,6 @@
     flex-direction: column;
     gap: 1px;
   }
-  /* Task name + its progress bar share one row; the bar is pinned to the right. */
-  .pawn-job-row {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 6px;
-    margin-top: 1px;
-  }
   .pawn-job {
     color: #8a7040;
     font-size: 9px;
@@ -412,16 +408,9 @@
     white-space: normal;
     overflow-wrap: break-word;
   }
-  .pawn-job-row .pawn-job {
-    margin-top: 0;
-    flex: 1 1 auto;
-    min-width: 0;
-  }
-  .pawn-progress {
-    color: #8a7040;
-    font-size: 9px;
-    flex: 0 0 auto;
-    white-space: nowrap;
+  /* Task-progress StatBar row — slight gap so it reads as part of the bar stack above. */
+  .job-progress {
+    margin-top: 1px;
   }
   .tile-hud--selected {
     border-color: #f0c060;
