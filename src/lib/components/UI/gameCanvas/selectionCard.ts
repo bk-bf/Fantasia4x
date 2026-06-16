@@ -7,7 +7,7 @@ import { gameState } from '$lib/stores/gameState.js';
 import { resourceObjectService } from '$lib/game/services/ResourceObjectService.js';
 import { type CreatureDefinition } from '$lib/game/core/Creatures.js';
 import type { Pawn, Mob, LimbId, EntityCondition, Injury } from '$lib/game/core/types.js';
-import { getConditionLabel } from '$lib/game/core/needs.js';
+import { getConditionName, getConditionCurrentStage } from '$lib/game/core/needs.js';
 import { pawnService } from '$lib/game/services/PawnService.js';
 import { pawnStatService } from '$lib/game/services/PawnStatService.js';
 import type {
@@ -20,6 +20,7 @@ import type {
   HealthLimb,
   HealthPart,
   HealthWound,
+  HealthCondition,
   CombatStat
 } from '$lib/components/UI/SelectedEntityCard.svelte';
 
@@ -126,9 +127,18 @@ export function buildHealthModel(entity: Pawn | Mob): HealthModel {
   }
 
   // blood_loss is dropped here — the Blood row already conveys it; a bare "initial" stage is noise.
-  const conditions: HealthWound[] = (entity.conditions ?? [])
-    .filter((c) => c.id !== 'blood_loss')
-    .map((c) => ({ text: getConditionLabel(c), warn: true }));
+  const conditions: HealthCondition[] = (entity.conditions ?? [])
+    .filter((c) => c.id !== 'blood_loss' && c.severity > 0)
+    .map((c) => {
+      const stage = getConditionCurrentStage(c);
+      return {
+        name: getConditionName(c),
+        color: stage?.color ?? '#ee8844',
+        label: stage?.label,
+        severity: c.severity,
+        threatening: stage?.lifeThreatening
+      };
+    });
 
   return {
     blood:

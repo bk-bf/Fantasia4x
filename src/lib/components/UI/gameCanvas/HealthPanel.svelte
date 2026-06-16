@@ -48,17 +48,27 @@
     {#if health.combat && health.combat.length > 0}
       <div class="hp-combat">
         {#each health.combat as c (c.label)}
-          <div class="hp-row" title={c.title}>
-            <span class="hp-k">{c.label}</span>
+          <span class="hp-combat-item" title={c.title}>
+            <span class="hp-k-inline">{c.label}</span>
             <span class="hp-combat-v">{c.value}</span>
-          </div>
+          </span>
         {/each}
       </div>
     {/if}
     {#if health.conditions.length > 0}
-      <div class="hp-row hp-warn">
-        <span class="hp-k">Status</span>
-        <span>{health.conditions.map((c) => c.text).join(', ')}</span>
+      <div class="hp-conditions">
+        {#each health.conditions as c (c.name)}
+          <span
+            class="cond-chip"
+            class:threatening={c.threatening}
+            style="border-color:{c.color}; color:{c.color}"
+            title="{c.name}{c.label ? ` — ${c.label}` : ''}{c.severity != null
+              ? ` · ${Math.round(c.severity * 100)}%`
+              : ''}{c.threatening ? ' ⚠ life-threatening' : ''}"
+          >
+            {c.name.toUpperCase()}
+          </span>
+        {/each}
       </div>
     {/if}
 
@@ -148,14 +158,53 @@
     color: #68a030;
     padding-left: 2px;
   }
-  /* Combat readiness sits with blood/pain in the summary block, set off by a faint rule. */
+  /* Combat readiness sits with blood/pain in the summary block, set off by a faint rule.
+     Hit / Dodge / Crit share one row. */
   .hp-combat {
     margin-top: 3px;
     padding-top: 2px;
     border-top: 1px solid rgba(122, 94, 40, 0.4);
+    display: flex;
+    gap: 14px;
+  }
+  .hp-combat-item {
+    display: inline-flex;
+    gap: 5px;
+    align-items: baseline;
+  }
+  .hp-k-inline {
+    color: #7a6030;
   }
   .hp-combat-v {
     color: #d0a850;
+  }
+  /* Active conditions as coloured name pills, below the combat row (same chip look as the
+     Pawns-tab effect cards). */
+  .hp-conditions {
+    margin-top: 4px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .cond-chip {
+    border: 1px solid;
+    padding: 0 5px;
+    font-weight: bold;
+    letter-spacing: 0.05em;
+    background: color-mix(in srgb, currentColor 12%, #0d0903);
+    cursor: default;
+  }
+  .cond-chip.threatening {
+    animation: pulse-threat 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse-threat {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.45;
+    }
   }
   .hp-limb {
     margin-top: 3px;
