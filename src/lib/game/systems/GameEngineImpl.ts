@@ -550,7 +550,14 @@ export class GameEngineImpl implements GameEngine {
     let changed = false;
 
     for (const order of [...queue]) {
-      if (!recipeService.isPassiveStation(order.stationType)) continue;
+      // Per-RECIPE passive flag (data-driven): a recipe marked `passive` in recipes.jsonc produces
+      // here without a pawn job, even at a mixed station (stone_forge smelts passively but its
+      // shaping recipes stay pawn-worked). `isPassive` falls back to the legacy passive-station set.
+      if (
+        !recipeService.isPassive(recipeService.getRecipeForItem(order.item.id)) &&
+        !recipeService.isPassiveStation(order.stationType)
+      )
+        continue;
       const station = (state.buildings ?? []).find(
         (b) => b.id === order.stationBuildingId && b.status === 'complete'
       );

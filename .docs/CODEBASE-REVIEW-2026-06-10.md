@@ -70,7 +70,7 @@ are pre-existing survival-loop tuning.
 
 - [ ] **MOOD spec** — companion death → strong negative mood; defeating a hostile → positive mood; consider a
   `mood.jsonc` to centralise mood effects. *Content/feature — defer per skateboard model.*
-- [ ] **Hit-accuracy rebalance** — after the NT-3 attack-speed halving, cross-reference combat logs vs entity stats;
+- [ ] (under consideration) **Hit-accuracy rebalance** — after the NT-3 attack-speed halving, cross-reference combat logs vs entity stats;
   likely buff accuracy. Do it *with* the speed change in view so they're tuned together.
 
 ## Carried-forward deferred
@@ -118,15 +118,22 @@ are pre-existing survival-loop tuning.
 
 Spec archived at [PHYSICAL-PRODUCTION](.tasks/archive/PHYSICAL-PRODUCTION-2026-06-13.md).
 
-- [~] Tool-gating step 2 — **harvest half done** (ADR-009 step 2: per-pawn carried tool + `minTier` + auto-grab,
-  2026-06-16). **Remaining:** *craft*-tool gating is still colony-level (`currentToolLevel >= recipe.toolTierRequired`
-  in `ItemService`), not "the crafting pawn carries the tool." Make crafting require/consume a per-pawn tool the same
-  way harvesting now does, if/when craft tools should be physical too.
-- [ ] Per-stack craft quality on instances (R8) — still deferred, **precondition unmet**: crafting computes a `quality`
-  work-axis but never stamps it on the output instance, and nothing reads item `.quality` (Combat/PawnEquipment/
-  PawnStatService don't consume it). Do this when equipment quality starts affecting combat/equip.
-- [ ] Butchery multi-yield — **pure content/data**: butcher recipes are single-output (`rabbit_carcass→rabbit_meat:1`);
-  the recipe `outputs` field already supports multiple, so add hide/bone/fat to the `outputs` map. No code.
-- [ ] Passive-furnace flag for forge/hearth — **intentionally deferred (content-gated)**: the mechanism exists
-  (`recipe.passive` / `PASSIVE_STATIONS` covers bloomery/kilns/charcoal-pit); `stone_forge`/`hearth` stay pawn-worked
-  until their cooking/shaping recipes are split, then flip the flag. No engine work.
+- [~] Tool-gating step 2 — **harvest done; craft-tool data-driven design pending.** Harvest half shipped (ADR-009
+  step 2: per-pawn carried tool + `minTier` + auto-grab + per-pawn wear, 2026-06-16). Craft-tool gating is still a
+  **colony research-tier gate** (`currentToolLevel >= recipe.toolTierRequired`, set by `ResearchService` — NOT a
+  physical tool), and every `craft` job maps to the tool-less `crafting` work category, so there's **no recipe→tool
+  mapping** to drive a per-pawn gate. The agreed data-driven path: add `toolRequirement: {workType, minTier}` to the
+  `Recipe` type + recipes.jsonc (mirroring `resources.jsonc`); make `jobService.requiredToolForJob` craft-aware
+  (craftQueueId → order → recipe.toolRequirement) — which makes the existing per-pawn gate + auto-grab detour +
+  per-pawn wear all work for craft jobs **for free**; plus author which recipes need which tool (the content piece —
+  subjective, the bulk of the work).
+- [x] Butchery multi-yield — done 2026-06-16. Each carcass's butcher recipe now yields **meat + hide/pelt + bones**
+  in one run (`make_venison`: `deer_carcass → {venison, deer_hide, medium_bones}`, etc.); the redundant separate
+  hide/pelt/bone butcher recipes (each consumed a whole carcass) were removed. Pure data. Test updated. `test` 257.
+- [x] Passive-furnace flag for forge/hearth — done 2026-06-16, **data-driven per your call**: passive is now a
+  per-recipe `"passive": true` flag in recipes.jsonc (16 recipes flagged: all bloomery/kiln/charcoal-pit + the
+  `stone_forge` smelting bars + `hearth` ash/animal-fat), and the dispatch (`_syncCraftJobs` + `processPassiveProduction`)
+  honours `isPassive(recipe) || isPassiveStation(stationType)` — so forge/hearth smelt/render passively while their
+  shaping recipes stay pawn-worked. `PASSIVE_STATIONS` is kept only as a fallback for orders with no resolvable recipe.
+- [→] Per-stack craft quality on instances (R8) — **moved to [ROADMAP](.tasks/open/ROADMAP.md)** (Other Phase 3 work),
+  blocked on equipment quality affecting combat/equip.

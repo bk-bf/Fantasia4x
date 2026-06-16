@@ -24,8 +24,14 @@ export function generate(jobs: Job[], gs: GameState): Job[] {
   for (const order of gs.craftingQueue ?? []) {
     if (!order.id) continue;
     // ADR-016 passive furnaces: no pawn-worked craft job — the station produces it over time
-    // (GameEngineImpl.processPassiveProduction). Inputs are still fetched/staged as usual.
-    if (recipeService.isPassiveStation(order.stationType)) continue;
+    // (GameEngineImpl.processPassiveProduction). Inputs are still fetched/staged as usual. Honour
+    // per-RECIPE `passive` (not just passive STATIONS) so a mixed station like stone_forge/hearth can
+    // smelt/render passively while its shaping/cooking recipes stay pawn-worked.
+    if (
+      recipeService.isPassive(recipeService.getRecipeForItem(order.item.id)) ||
+      recipeService.isPassiveStation(order.stationType)
+    )
+      continue;
     const station = stationTileFor(order, gs);
     if (!station) continue;
     if (!orderSupplied(order, station, gs)) continue;

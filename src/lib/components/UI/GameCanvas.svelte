@@ -1207,12 +1207,20 @@
     if (!designCanvas || !container || !worldMap.length) return;
     const W = container.clientWidth;
     const H = container.clientHeight;
-    if (designCanvas.width !== W || designCanvas.height !== H) {
-      designCanvas.width = W;
-      designCanvas.height = H;
+    // Back the 2D overlay with the *device* pixel grid (not CSS px). Without this the canvas is
+    // rendered at half-resolution on HiDPI screens and nearest-neighbour upscaled, which turns
+    // small text (the item-count badges) to mush. All drawing below stays in CSS-pixel coords via
+    // the dpr transform, so nothing else needs to change.
+    const dpr = window.devicePixelRatio || 1;
+    const bw = Math.round(W * dpr);
+    const bh = Math.round(H * dpr);
+    if (designCanvas.width !== bw || designCanvas.height !== bh) {
+      designCanvas.width = bw;
+      designCanvas.height = bh;
     }
     const ctx = designCanvas.getContext('2d');
     if (!ctx) return;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, W, H);
 
     // Live zone drag-paint preview. Drawn here on the lightweight 2D overlay
@@ -1312,20 +1320,18 @@
     // one total. Lives on this 2D world overlay because the WebGL glyph grid is one char per cell
     // and can't carry a second mark.
     const STACK_BADGE_MIN_TILE = 16;
+    const STACK_BADGE_FONT_PX = 10; // fixed CSS px, independent of tile/zoom — tweak to taste
     if (tileWidth >= STACK_BADGE_MIN_TILE && droppedItems.length > 0) {
       const tileTotals = new Map<string, number>();
       for (const d of droppedItems) {
         const k = `${d.x},${d.y}`;
         tileTotals.set(k, (tileTotals.get(k) ?? 0) + (d.quantity ?? 1));
       }
-      const fs = Math.max(6, Math.min(9, Math.round(tileWidth * 0.3)));
       ctx.save();
-      ctx.font = `lighter ${fs}px monospace`;
+      ctx.font = `bold ${STACK_BADGE_FONT_PX}px monospace`;
       ctx.textAlign = 'right';
       ctx.textBaseline = 'bottom';
-      ctx.lineWidth = Math.max(1.5, fs * 0.22);
-      ctx.lineJoin = 'round';
-      ctx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
+      ctx.fillStyle = '#ffffff';
       for (const [k, total] of tileTotals) {
         if (total < 2) continue;
         const [wx, wy] = k.split(',').map(Number);
@@ -1334,11 +1340,7 @@
         if (sx < -tileWidth || sy < -tileHeight || sx > W + tileWidth || sy > H + tileHeight)
           continue;
         const label = total > 999 ? '999+' : String(total);
-        const tx = sx + tileWidth - 1;
-        const ty = sy + tileHeight - 1;
-        ctx.strokeText(label, tx, ty);
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
-        ctx.fillText(label, tx, ty);
+        ctx.fillText(label, sx + tileWidth - 1, sy + tileHeight - 1);
       }
       ctx.restore();
     }

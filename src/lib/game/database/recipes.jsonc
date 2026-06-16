@@ -28,6 +28,7 @@
   {
     "id"               : "burn_charcoal",
     "station"          : "charcoal_pit",
+    "passive"          : true,
     "inputs"           : {"pine_log": 2},
     "inputAlternatives": [ {"oak_log": 2}, {"birch_log": 2}, {"ash_log": 2}, {"dry_firewood": 3} ],
     "outputs"          : {"charcoal": 2, "ash": 1},
@@ -46,7 +47,7 @@
     "id"              : "make_rabbit_meat",
     "station"         : "butcher_spot",
     "inputs"          : {"rabbit_carcass": 1},
-    "outputs"         : {"rabbit_meat": 1},
+    "outputs"         : {"rabbit_meat": 1, "rabbit_pelt": 1, "small_bones": 1},
     "workAmount"      : 200,
     "toolTierRequired": 0
   },
@@ -54,7 +55,7 @@
     "id"              : "make_venison",
     "station"         : "butcher_spot",
     "inputs"          : {"deer_carcass": 1},
-    "outputs"         : {"venison": 1},
+    "outputs"         : {"venison": 1, "deer_hide": 1, "medium_bones": 1},
     "workAmount"      : 900,
     "toolTierRequired": 0
   },
@@ -268,6 +269,7 @@
   },
   {
     "id"               : "make_copper_bar",
+    "passive"          : true,
     "station"          : "stone_forge",
     "inputs"           : {"malachite": 3},
     "inputAlternatives": [ {"chalcopyrite": 2}, {"azurite": 4} ],
@@ -277,6 +279,7 @@
   },
   {
     "id"              : "make_tin_bar",
+    "passive"          : true,
     "station"         : "stone_forge",
     "inputs"          : {"cassiterite": 3},
     "outputs"         : {"tin_bar": 1},
@@ -285,6 +288,7 @@
   },
   {
     "id"              : "make_bronze_bar",
+    "passive"          : true,
     "station"         : "stone_forge",
     "inputs"          : {"copper_bar": 3, "tin_bar": 1},
     "outputs"         : {"bronze_bar": 1},
@@ -294,6 +298,7 @@
   {
     "id"               : "make_iron_bar",
     "station"          : "bloomery",
+    "passive"          : true,
     "inputs"           : {"hematite": 4, "limestone": 1},
     "inputAlternatives": [ {"magnetite": 3, "limestone": 1}, {"limonite": 5, "limestone": 1} ],
     "outputs"          : {"iron_bar": 1},
@@ -302,6 +307,7 @@
   },
   {
     "id"              : "make_lead_bar",
+    "passive"          : true,
     "station"         : "stone_forge",
     "inputs"          : {"galena": 3},
     "outputs"         : {"lead_bar": 1},
@@ -310,6 +316,7 @@
   },
   {
     "id"              : "make_silver_bar",
+    "passive"          : true,
     "station"         : "stone_forge",
     "inputs"          : {"galena": 5},
     "outputs"         : {"silver_bar": 1},
@@ -318,6 +325,7 @@
   },
   {
     "id"               : "make_gold_bar",
+    "passive"          : true,
     "station"          : "stone_forge",
     "inputs"           : {"native_gold": 3},
     "inputAlternatives": [ {"electrum": 3} ],
@@ -328,6 +336,7 @@
   {
     "id"              : "make_steel_bar",
     "station"         : "bloomery",
+    "passive"          : true,
     "inputs"          : {"iron_bar": 2, "coal": 1, "limestone": 1},
     "outputs"         : {"steel_bar": 1},
     "workAmount"      : 20,
@@ -335,6 +344,7 @@
   },
   {
     "id"               : "make_ash",
+    "passive"          : true,
     "station"          : "hearth",
     "inputs"           : {"green_firewood": 1},
     "inputAlternatives": [ {"dry_firewood": 1}, {"branch": 3} ],
@@ -344,6 +354,7 @@
   },
   {
     "id"               : "make_animal_fat",
+    "passive"          : true,
     "station"          : "hearth",
     "inputs"           : {"bear_meat": 1},
     "inputAlternatives": [ {"boar_meat": 1}, {"elk_meat": 1}, {"goat_meat": 1} ],
@@ -496,6 +507,7 @@
   {
     "id"              : "make_fired_brick",
     "station"         : "pottery_kiln",
+    "passive"          : true,
     "inputs"          : {"blue_clay": 2},
     "outputs"         : {"fired_brick": 1},
     "workAmount"      : 5,
@@ -504,6 +516,7 @@
   {
     "id"              : "make_fire_bricks",
     "station"         : "pottery_kiln",
+    "passive"          : true,
     "inputs"          : {"fire_clay": 2},
     "outputs"         : {"fire_bricks": 1},
     "workAmount"      : 6,
@@ -512,6 +525,7 @@
   {
     "id"              : "make_water_urn",
     "station"         : "pottery_kiln",
+    "passive"          : true,
     "inputs"          : {"blue_clay": 1},
     "outputs"         : {"water_urn": 1},
     "workAmount"      : 4,
@@ -520,6 +534,7 @@
   {
     "id"              : "make_clay_mold",
     "station"         : "pottery_kiln",
+    "passive"          : true,
     "inputs"          : {"blue_clay": 2},
     "outputs"         : {"clay_mold": 1},
     "workAmount"      : 4,
@@ -536,6 +551,7 @@
   {
     "id"              : "make_clay_roof_tile",
     "station"         : "pottery_kiln",
+    "passive"          : true,
     "inputs"          : {"blue_clay": 2},
     "outputs"         : {"clay_roof_tile": 1},
     "workAmount"      : 5,
@@ -650,11 +666,15 @@
     "workAmount"      : 2,
     "toolTierRequired": 0
   },
+  // Butchery multi-yield (ADR-016 follow-up): one butcher run on a carcass yields meat + hide/pelt +
+  // bones together, instead of the old one-product-per-carcass recipes (which each consumed a whole
+  // carcass for just the meat OR the hide OR the bones). The separate hide/pelt/bone butcher recipes
+  // were removed — those outputs now ride the single meat recipe per carcass.
   {
     "id"              : "make_wolf_meat",
     "station"         : "butcher_spot",
     "inputs"          : {"wolf_carcass": 1},
-    "outputs"         : {"wolf_meat": 1},
+    "outputs"         : {"wolf_meat": 1, "wolf_hide": 1, "medium_bones": 1},
     "workAmount"      : 900,
     "toolTierRequired": 0
   },
@@ -662,7 +682,7 @@
     "id"              : "make_bear_meat",
     "station"         : "butcher_spot",
     "inputs"          : {"bear_carcass": 1},
-    "outputs"         : {"bear_meat": 1},
+    "outputs"         : {"bear_meat": 1, "bear_pelt": 1, "large_bones": 1},
     "workAmount"      : 3600,
     "toolTierRequired": 0
   },
@@ -670,7 +690,7 @@
     "id"              : "make_boar_meat",
     "station"         : "butcher_spot",
     "inputs"          : {"boar_carcass": 1},
-    "outputs"         : {"boar_meat": 1},
+    "outputs"         : {"boar_meat": 1, "boar_hide": 1, "medium_bones": 1},
     "workAmount"      : 900,
     "toolTierRequired": 0
   },
@@ -678,7 +698,7 @@
     "id"              : "make_elk_meat",
     "station"         : "butcher_spot",
     "inputs"          : {"elk_carcass": 1},
-    "outputs"         : {"elk_meat": 1},
+    "outputs"         : {"elk_meat": 1, "elk_hide": 1, "large_bones": 1},
     "workAmount"      : 3600,
     "toolTierRequired": 0
   },
@@ -686,7 +706,7 @@
     "id"              : "make_goat_meat",
     "station"         : "butcher_spot",
     "inputs"          : {"mountain_goat_carcass": 1},
-    "outputs"         : {"goat_meat": 1},
+    "outputs"         : {"goat_meat": 1, "goat_hide": 1, "medium_bones": 1},
     "workAmount"      : 900,
     "toolTierRequired": 0
   },
@@ -694,7 +714,7 @@
     "id"              : "make_chicken_meat",
     "station"         : "butcher_spot",
     "inputs"          : {"wild_chicken_carcass": 1},
-    "outputs"         : {"chicken_meat": 1},
+    "outputs"         : {"chicken_meat": 1, "chicken_feathers": 1, "small_bones": 1},
     "workAmount"      : 200,
     "toolTierRequired": 0
   },
@@ -702,108 +722,9 @@
     "id"              : "make_rat_meat",
     "station"         : "butcher_spot",
     "inputs"          : {"giant_rat_carcass": 1},
-    "outputs"         : {"rat_meat": 1},
+    "outputs"         : {"rat_meat": 1, "rat_pelt": 1, "small_bones": 1},
     "workAmount"      : 200,
     "toolTierRequired": 0
-  },
-  {
-    "id"              : "make_rabbit_pelt",
-    "station"         : "butcher_spot",
-    "inputs"          : {"rabbit_carcass": 1},
-    "outputs"         : {"rabbit_pelt": 1},
-    "workAmount"      : 150,
-    "toolTierRequired": 0
-  },
-  {
-    "id"              : "make_deer_hide",
-    "station"         : "butcher_spot",
-    "inputs"          : {"deer_carcass": 1},
-    "outputs"         : {"deer_hide": 1},
-    "workAmount"      : 600,
-    "toolTierRequired": 0
-  },
-  {
-    "id"              : "make_wolf_hide",
-    "station"         : "butcher_spot",
-    "inputs"          : {"wolf_carcass": 1},
-    "outputs"         : {"wolf_hide": 1},
-    "workAmount"      : 600,
-    "toolTierRequired": 0
-  },
-  {
-    "id"              : "make_bear_pelt",
-    "station"         : "butcher_spot",
-    "inputs"          : {"bear_carcass": 1},
-    "outputs"         : {"bear_pelt": 1},
-    "workAmount"      : 2400,
-    "toolTierRequired": 0
-  },
-  {
-    "id"              : "make_boar_hide",
-    "station"         : "butcher_spot",
-    "inputs"          : {"boar_carcass": 1},
-    "outputs"         : {"boar_hide": 1},
-    "workAmount"      : 600,
-    "toolTierRequired": 0
-  },
-  {
-    "id"              : "make_elk_hide",
-    "station"         : "butcher_spot",
-    "inputs"          : {"elk_carcass": 1},
-    "outputs"         : {"elk_hide": 1},
-    "workAmount"      : 2400,
-    "toolTierRequired": 0
-  },
-  {
-    "id"              : "make_goat_hide",
-    "station"         : "butcher_spot",
-    "inputs"          : {"mountain_goat_carcass": 1},
-    "outputs"         : {"goat_hide": 1},
-    "workAmount"      : 600,
-    "toolTierRequired": 0
-  },
-  {
-    "id"              : "make_chicken_feathers",
-    "station"         : "butcher_spot",
-    "inputs"          : {"wild_chicken_carcass": 1},
-    "outputs"         : {"chicken_feathers": 1},
-    "workAmount"      : 150,
-    "toolTierRequired": 0
-  },
-  {
-    "id"              : "make_rat_pelt",
-    "station"         : "butcher_spot",
-    "inputs"          : {"giant_rat_carcass": 1},
-    "outputs"         : {"rat_pelt": 1},
-    "workAmount"      : 150,
-    "toolTierRequired": 0
-  },
-  {
-    "id"               : "make_small_bones",
-    "station"          : "butcher_spot",
-    "inputs"           : {"rabbit_carcass": 1},
-    "inputAlternatives": [ {"giant_rat_carcass": 1}, {"wild_chicken_carcass": 1} ],
-    "outputs"          : {"small_bones": 1},
-    "workAmount"       : 100,
-    "toolTierRequired" : 0
-  },
-  {
-    "id"               : "make_medium_bones",
-    "station"          : "butcher_spot",
-    "inputs"           : {"wolf_carcass": 1},
-    "inputAlternatives": [ {"deer_carcass": 1}, {"boar_carcass": 1}, {"mountain_goat_carcass": 1} ],
-    "outputs"          : {"medium_bones": 1},
-    "workAmount"       : 300,
-    "toolTierRequired" : 0
-  },
-  {
-    "id"               : "make_large_bones",
-    "station"          : "butcher_spot",
-    "inputs"           : {"bear_carcass": 1},
-    "inputAlternatives": [ {"elk_carcass": 1} ],
-    "outputs"          : {"large_bones": 1},
-    "workAmount"       : 1200,
-    "toolTierRequired" : 0
   },
   {
     "id"              : "make_bone_cleaver",
