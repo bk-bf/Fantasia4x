@@ -206,6 +206,13 @@ export interface Item {
   // Lifespan of an exposed stack ≈ maxDurability / deteriorationRate ticks.
   /** Durability spent per work action when used as a tool (scaled by tier). */
   durabilityLossPerAction?: number;
+  /**
+   * Additive work boost while this tool is held (equipped or carried). `speed`/`yield` are ADDED to
+   * the matching work category's `*_speed`/`*_yield` modifier (stats.jsonc) in getWorkModifiers — e.g.
+   * a stone_pick {speed:0.5,yield:0.4} turns a 1.0 mining mult into 1.5 speed / 1.4 yield. The tool's
+   * work category comes from Work.ts `toolsRequired`.
+   */
+  toolBoost?: { speed?: number; yield?: number };
   /** Per-tick durability lost to elemental exposure while a stack is loose/unsheltered. */
   deteriorationRate?: number;
   // ── §2: heat rating when burned as fuel (gates high-heat stations) ──

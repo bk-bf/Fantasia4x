@@ -1,10 +1,13 @@
-import type { Pawn, Mob, BodyPartState, ConditionDef, StatusEffectDef } from '../core/types';
+import type { Pawn, Mob, BodyPartState, ConditionDef, StatusEffectDef, Item } from '../core/types';
 import statsData from '../database/stats.jsonc';
 import conditionsData from '../database/conditions.jsonc';
 import statusEffectsData from '../database/status-effects.jsonc';
+import itemsData from '../database/items.jsonc';
+import { WORK_CATEGORIES } from '../core/Work';
 
 const CONDITIONS_DB = conditionsData as unknown as ConditionDef[];
 const STATUS_EFFECTS_DB = statusEffectsData as unknown as StatusEffectDef[];
+const ITEMS_DB = itemsData as unknown as Item[];
 
 // ── Stat definitions loaded from JSONC ────────────────────────────────────
 type StatDef = {
@@ -22,6 +25,50 @@ STATS.forEach((st) => {
 });
 
 const WORK_STAT_IDS = new Set(STATS.filter((s) => s.category === 'work').map((s) => s.id));
+
+// ── Tool work boosts (additive) ───────────────────────────────────────────────
+// A held tool ADDS its `toolBoost.speed` / `toolBoost.yield` to the matching work category's speed /
+// yield modifier (so a stone_pick with {speed:0.5,yield:0.4} turns a 1.0 mining mult into 1.5 / 1.4).
+// The magnitudes live on the tool ITEMS (items.jsonc); which category a tool serves comes from
+// Work.ts `toolsRequired`. Built once.
+const CATEGORY_TOOLS: Record<string, Set<string>> = {};
+for (const cat of WORK_CATEGORIES) {
+  if (cat.toolsRequired?.length) CATEGORY_TOOLS[cat.id] = new Set(cat.toolsRequired);
+}
+const TOOL_BOOST: Record<string, { speed: number; yield: number }> = {};
+for (const item of ITEMS_DB) {
+  const b = (item as { toolBoost?: { speed?: number; yield?: number } }).toolBoost;
+  if (b) TOOL_BOOST[item.id] = { speed: b.speed ?? 0, yield: b.yield ?? 0 };
+}
+
+/**
+ * Additive work boost from the best HELD tool (equipped or carried) qualifying for `workType`, or null
+ * if the entity holds none. Takes the strongest speed/yield boost independently across held tools.
+ * Mobs have no equipment/inventory → always null.
+ */
+function heldToolBoost(
+  entity: Pawn | Mob,
+  workType: string
+): { speed: number; yield: number } | null {
+  const tools = CATEGORY_TOOLS[workType];
+  if (!tools) return null;
+  let speed = 0;
+  let yieldB = 0;
+  let found = false;
+  const consider = (itemId: string) => {
+    if (!tools.has(itemId)) return;
+    const b = TOOL_BOOST[itemId];
+    if (!b) return;
+    found = true;
+    if (b.speed > speed) speed = b.speed;
+    if (b.yield > yieldB) yieldB = b.yield;
+  };
+  const eq = (entity as Pawn).equipment;
+  if (eq) for (const inst of Object.values(eq)) if (inst) consider(inst.itemId);
+  const carried = (entity as Pawn).inventory?.instances;
+  if (carried) for (const inst of carried) consider(inst.itemId);
+  return found ? { speed, yield: yieldB } : null;
+}
 
 // ── Formula evaluator: substitutes stat tokens + weight/height + capacities ──
 // Safe: expression is from project JSONC (not user input); sanitised to arithmetic chars only.
@@ -398,12 +445,15 @@ export class PawnStatServiceImpl implements PawnStatService {
     // §G: a light multiplier dims the `sight` capacity, which every `*_speed`/`_yield`/`_quality`
     // formula multiplies by → work (and its quality) slows in the dark through the existing model.
     const capacities = this.computeCapacities(pawn, lightMultiplier);
+    // A held tool ADDS its toolBoost to the speed/yield modifier (items.jsonc `toolBoost`).
+    const toolBoost = heldToolBoost(pawn, workType);
     // Base = stat formula × body capacities. Layer explicit trait multipliers on top.
     // Transient state (conditions/status effects) applies to throughput → speed only.
     const stateMult = pawnStateWorkMultiplier(pawn);
     const speed = Math.max(
       0.1,
-      evaluateFormula(STAT_MAP[`${workType}_speed`]?.formula, pawn, capacities) *
+      (evaluateFormula(STAT_MAP[`${workType}_speed`]?.formula, pawn, capacities) +
+        (toolBoost?.speed ?? 0)) *
         traitWorkMult(pawn, 'workSpeed', workType) *
         stateMult
     );
@@ -411,9 +461,12 @@ export class PawnStatServiceImpl implements PawnStatService {
     const axis = (kind: 'yield' | 'quality', traitKey: 'workYield' | 'workQuality') => {
       const def = STAT_MAP[`${workType}_${kind}`];
       if (!def) return null;
+      // Tools add to yield (not quality — a sharp axe fells faster + recovers more, not "better wood").
+      const toolAdd = kind === 'yield' ? (toolBoost?.yield ?? 0) : 0;
       return Math.max(
         0.1,
-        evaluateFormula(def.formula, pawn, capacities) * traitWorkMult(pawn, traitKey, workType)
+        (evaluateFormula(def.formula, pawn, capacities) + toolAdd) *
+          traitWorkMult(pawn, traitKey, workType)
       );
     };
     return {

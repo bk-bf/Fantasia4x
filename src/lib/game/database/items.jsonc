@@ -1587,6 +1587,7 @@
     "durability"       : 20,
     "maxDurability"    : 20,
     "toolTierRequired" : 0,
+    "toolBoost"        : {"speed": 0.4, "yield": 0.3},
     "processingType"   : ["crafting", "butchery"]
   },
   {
@@ -1641,6 +1642,7 @@
     "volumeL"          : 0.8,
     "tier"             : 0,
     "toolTierRequired" : 0,
+    "toolBoost"        : {"speed": 0.3, "yield": 0.2},
     "processingType"   : ["crafting", "fishing", "mining"]
   },
   {
@@ -1660,6 +1662,7 @@
     "maxDurability": 40,
     "durabilityLossPerAction": 5,
     "toolTierRequired": 0,
+    "toolBoost": {"speed": 0.5, "yield": 0.4},
     "processingType": ["woodcutting"]
   },
   {
@@ -1697,6 +1700,7 @@
     "maxDurability": 40,
     "durabilityLossPerAction": 5,
     "toolTierRequired": 0,
+    "toolBoost": {"speed": 0.5, "yield": 0.4},
     "processingType": ["mining"]
   },
   {
@@ -1716,6 +1720,7 @@
     "maxDurability": 40,
     "durabilityLossPerAction": 4,
     "toolTierRequired": 0,
+    "toolBoost": {"speed": 0.45, "yield": 0.3},
     "processingType": ["planting"]
   },
   {
@@ -1735,6 +1740,7 @@
     "maxDurability"    : 30,
     "toolTierRequired" : 0,
     "weaponProperties" : {"damage": 8, "attackSpeed": 1, "range": 1},
+    "toolBoost"        : {"speed": 0.4},
     "processingType"   : ["hunting"]
   },
   {
@@ -2380,6 +2386,7 @@
     "durability": 45,
     "maxDurability": 45,
     "toolTierRequired": 0,
+    "toolBoost": {"speed": 0.5, "yield": 0.45},
     "processingType": ["butchery"],
     "effects": {"butcheryYieldBonus": 0.25}
   },
@@ -2399,6 +2406,7 @@
     "durability": 18,
     "maxDurability": 18,
     "toolTierRequired": 0,
+    "toolBoost": {"speed": 0.2},
     "processingType": ["metalworking"]
   },
   {
@@ -2417,6 +2425,7 @@
     "durability": 80,
     "maxDurability": 80,
     "toolTierRequired": 1,
+    "toolBoost": {"speed": 0.4},
     "processingType": ["metalworking"]
   },
   {
@@ -2435,6 +2444,7 @@
     "durability": 160,
     "maxDurability": 160,
     "toolTierRequired": 2,
+    "toolBoost": {"speed": 0.6},
     "processingType": ["metalworking"]
   },
   // ── Natural weapons ─────────────────────────────────────────────────────────
