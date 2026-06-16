@@ -308,8 +308,13 @@ interface WeatherTransition {
 interface WeatherDef extends WeatherEffects {
   id: string;
   label: string;
+  /** The UI particle animation: 'none' (no animation) | 'rain' | 'snow'. Purely visual. */
   overlay: 'none' | 'rain' | 'snow';
   heavy?: boolean;
+  /** Overlay particle fall speed, px/sec (visual). Defaults by overlay kind. */
+  fallSpeed?: number;
+  /** Overlay particle count per megapixel of screen (visual), before intensity/zoom. Defaults by kind. */
+  density?: number;
   intensity: number;
   moistureBonus: number;
   tint: [number, number, number];
@@ -348,13 +353,25 @@ export function weatherLabel(type?: string): string {
   return weatherDef(type).label;
 }
 
-/** Particle overlay the WeatherCanvas should draw for a weather id. */
+/** Particle overlay the WeatherCanvas should draw for a weather id (`none` = no animation). */
 export function weatherOverlayKind(type?: string): 'none' | 'rain' | 'snow' {
   return weatherDef(type).overlay;
 }
 /** Whether a weather id is "heavy" (bigger/faster overlay — e.g. heavy_rain / blizzard). */
 export function weatherIsHeavy(type?: string): boolean {
   return weatherDef(type).heavy === true;
+}
+
+/** Overlay particle fall speed (px/sec) for a weather id — from weather.jsonc, default by overlay kind. */
+export function weatherFallSpeed(type?: string): number {
+  const def = weatherDef(type);
+  return def.fallSpeed ?? (def.overlay === 'snow' ? 80 : 680);
+}
+
+/** Overlay particle count per megapixel for a weather id — from weather.jsonc, default by overlay kind. */
+export function weatherDensity(type?: string): number {
+  const def = weatherDef(type);
+  return def.density ?? (def.overlay === 'snow' ? 80 : 160);
 }
 
 /** Chronicle severity for a weather onset (from weather.jsonc). */

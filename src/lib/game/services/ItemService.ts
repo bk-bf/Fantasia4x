@@ -76,6 +76,8 @@ export interface ItemService {
   getItemDisplayName(drop: { resourceId: string; name?: string }): string;
   getItemsByType(type: string): Item[];
   getItemsByCategory(category: string): Item[];
+  /** Distinct item categories (sorted), across the whole item DB. */
+  getAllCategories(): string[];
   getCraftableItems(gameState: GameState, pawnId?: string): Item[];
   getItemsByWorkType(workType: string): Item[];
 
@@ -157,6 +159,10 @@ export class ItemServiceImpl implements ItemService {
 
   getItemsByCategory(category: string): Item[] {
     return ITEMS_DATABASE.filter((item) => item.category === category);
+  }
+
+  getAllCategories(): string[] {
+    return [...new Set(ITEMS_DATABASE.map((item) => item.category).filter(Boolean))].sort();
   }
 
   getItemsByWorkType(workType: string): Item[] {

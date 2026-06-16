@@ -14,7 +14,12 @@
   import { browser } from '$app/environment';
   import { currentWeather } from '$lib/stores/gameState';
   import { cameraTileSize } from '$lib/stores/cameraView';
-  import { weatherOverlayKind, weatherIsHeavy } from '$lib/game/services/EnvironmentService';
+  import {
+    weatherOverlayKind,
+    weatherIsHeavy,
+    weatherFallSpeed,
+    weatherDensity
+  } from '$lib/game/services/EnvironmentService';
 
   type Mode = 'none' | 'rain' | 'snow';
 
@@ -28,6 +33,8 @@
   let mode: Mode = 'none';
   let intensity = 0; // 0–1
   let heavy = false; // heavy_rain / blizzard
+  let fallSpeed = 680; // px/sec, from weather.jsonc
+  let density = 160; // particles per megapixel, from weather.jsonc
 
   // Zoom-out "in the clouds" feel: the further the camera zooms OUT, the MORE particles (count only —
   // speed and size stay constant). The multiplier is LINEAR in tile size across the real zoom range so
@@ -64,7 +71,7 @@
 
   function makeParticle(w: number, h: number, atTop: boolean): Particle {
     if (mode === 'rain') {
-      const spd = (heavy ? 950 : 680) * (0.7 + Math.random() * 0.6);
+      const spd = fallSpeed * (0.7 + Math.random() * 0.6); // ±variance around the data fall speed
       // Drops slant LEFT as they fall, drifting `|wind| × height` px over a full descent. Seed them
       // across a width extended by that slant so they still cover the bottom-right corner — otherwise
       // the coverage is a left-leaning parallelogram with a triangular gap bottom-right.
@@ -79,7 +86,7 @@
       };
     }
     // snow
-    const spd = (heavy ? 150 : 80) * (0.6 + Math.random() * 0.9);
+    const spd = fallSpeed * (0.6 + Math.random() * 0.9);
     return {
       x: Math.random() * w,
       y: atTop ? -10 - Math.random() * 30 : Math.random() * h,
@@ -90,14 +97,14 @@
     };
   }
 
-  /** How many particles we want right now (screen area × intensity × zoom-out), capped. */
+  /** How many particles we want right now: data `density` (per megapixel) × intensity × zoom-out, capped. */
   function targetCount(): number {
     if (!canvas || mode === 'none') return 0;
     const w = canvas.width;
     const h = canvas.height;
     if (w <= 0 || h <= 0) return 0;
-    const density = mode === 'rain' ? 0.00016 : 0.00008; // per px²
-    return Math.min(1600, Math.floor(w * h * density * (0.5 + intensity) * densityMul()));
+    const perPx = density / 1_000_000; // density is per-megapixel for readable data values
+    return Math.min(1600, Math.floor(w * h * perPx * (0.5 + intensity) * densityMul()));
   }
 
   /** Grow/shrink the pool toward the target — adds/removes only the delta, so zoom/intensity/resize
@@ -182,6 +189,8 @@
     const next: Mode = weatherOverlayKind(wx?.type);
     intensity = Math.max(0.2, Math.min(1, wx?.intensity ?? 0));
     heavy = weatherIsHeavy(wx?.type);
+    fallSpeed = weatherFallSpeed(wx?.type);
+    density = weatherDensity(wx?.type);
     const changed = next !== mode;
     mode = next;
     if (mode === 'none') {

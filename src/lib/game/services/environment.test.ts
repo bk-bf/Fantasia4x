@@ -26,6 +26,8 @@ import {
   weatherLabel,
   weatherOverlayKind,
   weatherIsHeavy,
+  weatherFallSpeed,
+  weatherDensity,
   weatherChronicleSeverity,
   SEASON_LABELS,
   type ThermalSample
@@ -397,6 +399,17 @@ describe('EnvironmentService — data-driven weather/season metadata (jsonc)', (
     expect(weatherIsHeavy('heavy_rain')).toBe(true);
     expect(weatherIsHeavy('blizzard')).toBe(true);
     expect(weatherIsHeavy('rain')).toBe(false);
+  });
+
+  it('overlay fall speed + density are data-driven (with kind defaults)', () => {
+    expect(weatherFallSpeed('rain')).toBe(680);
+    expect(weatherFallSpeed('heavy_rain')).toBe(950);
+    expect(weatherFallSpeed('snow')).toBe(80);
+    expect(weatherDensity('rain')).toBe(160);
+    expect(weatherDensity('heavy_rain')).toBe(240); // heavier rain = more drops
+    // Unknown type → falls back to clear's def; clear has no fallSpeed/density → kind defaults.
+    expect(weatherFallSpeed('not_a_weather')).toBe(680);
+    expect(weatherDensity('not_a_weather')).toBe(160);
   });
 
   it('chronicle severity is data-driven', () => {

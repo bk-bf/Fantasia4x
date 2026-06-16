@@ -5,9 +5,13 @@
 //   default       — the starting / fallback weather id.
 //
 //   types[] fields:
-//     overlay       — particle overlay the WeatherCanvas draws: "none" | "rain" | "snow".
-//     heavy         — bigger/faster overlay + harder wind (heavy_rain / blizzard).
-//     intensity     — 0–1; drives overlay opacity/density.
+//     overlay       — the UI particle animation the WeatherCanvas draws: "none" (no animation) |
+//                     "rain" | "snow". Purely visual — gameplay effects are unaffected by it.
+//     heavy         — harder wind / slant + longer streaks on the overlay (heavy_rain / blizzard).
+//     fallSpeed     — overlay particle fall speed in px/sec (visual). Default 680 rain / 80 snow.
+//     density       — overlay particle count per megapixel of screen (visual), before intensity/zoom
+//                     scaling. Default 160 rain / 80 snow. More = thicker precipitation.
+//     intensity     — 0–1; drives overlay opacity AND (× density) particle count.
 //     tempDelta     — °C added to effective temperature while active (cold/heat exposure).
 //     fatigueMul / hungerMul — multipliers on those need rates.
 //     moveCostMul   — movement-cost multiplier (gameplay hook).
@@ -46,6 +50,9 @@
       "id": "rain",
       "label": "Rain",
       "overlay": "rain",
+      "animated": true,
+      "fallSpeed": 680,
+      "density": 160,
       "intensity": 0.5,
       "tempDelta": -3,
       "fatigueMul": 1.1,
@@ -64,7 +71,10 @@
       "id": "heavy_rain",
       "label": "Heavy rain",
       "overlay": "rain",
+      "animated": true,
       "heavy": true,
+      "fallSpeed": 950,
+      "density": 240,
       "intensity": 0.75,
       "tempDelta": -5,
       "fatigueMul": 1.25,
@@ -80,6 +90,8 @@
       "id": "snow",
       "label": "Snow",
       "overlay": "snow",
+      "fallSpeed": 80,
+      "density": 90,
       "intensity": 0.5,
       "tempDelta": -10,
       "fatigueMul": 1.3,
@@ -99,6 +111,8 @@
       "label": "Blizzard",
       "overlay": "snow",
       "heavy": true,
+      "fallSpeed": 170,
+      "density": 200,
       "intensity": 1.0,
       "tempDelta": -20,
       "fatigueMul": 1.8,
