@@ -33,6 +33,8 @@ import type { WorkCategory } from '../core/types';
 import type { Pawn } from '../core/types';
 import { rng } from '../core/rng';
 import { markTileDirty } from '../core/tileDeltas';
+import { eventSystem, type GameEvent } from '../core/Events';
+import { simLog } from '../core/logSink';
 
 const AVAILABLE_BUILDINGS = buildingsData as unknown as import('../core/types').Building[];
 
@@ -57,6 +59,28 @@ const DETERIORATION_INTERVAL_TICKS = 600;
  *  to ~1/6 the cost. Claim/advance/complete still run every tick (independent of this pass), so
  *  claimed/in-progress jobs are untouched between rebuilds. */
 const JOB_GENERATION_INTERVAL_TICKS = 6;
+
+/** Map a GameEvent's narrative severity/category to the chronicle log severity (opportunities and
+ *  discoveries read as good news; disasters escalate). */
+function eventLogSeverity(
+  event: GameEvent
+): 'info' | 'success' | 'warning' | 'error' | 'critical' {
+  if (event.category === 'opportunity' || event.category === 'discovery') return 'success';
+  switch (event.severity) {
+    case 'trivial':
+    case 'minor':
+      return 'info';
+    case 'moderate':
+    case 'major':
+      return 'warning';
+    case 'critical':
+      return 'error';
+    case 'catastrophic':
+      return 'critical';
+    default:
+      return 'info';
+  }
+}
 
 export class GameEngineImpl implements GameEngine {
   private gameState: GameState | null = null;
@@ -167,6 +191,28 @@ export class GameEngineImpl implements GameEngine {
       // record it) and remove all dead pawns from pawns[] so they leave the UI (NT-2).
       t('reapDead', () => {
         this.gameState = reapDeadPawns(this.gameState!);
+      });
+      // Events phase (ADR-006 content, R11): roll a random world event on its own cadence, apply
+      // its consequences, and surface it in the chronicle via the same logActivity path combat uses.
+      t('events', () => {
+        const rolled = eventSystem.generateEvent(this.gameState!);
+        if (!rolled) return;
+        this.gameState = eventSystem.processEventConsequences(
+          rolled.consequences,
+          this.gameState!
+        ) as GameState;
+        const outcomes = rolled.consequences.map((c) => c.description).join(' ');
+        simLog.logActivity({
+          turn: this.gameState!.turn,
+          type: 'event',
+          actor: 'system',
+          action: rolled.event.id,
+          target: rolled.event.title,
+          result: outcomes
+            ? `${rolled.event.description} — ${outcomes}`
+            : rolled.event.description,
+          severity: eventLogSeverity(rolled.event)
+        });
       });
       this.debugLogPawns();
 

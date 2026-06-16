@@ -168,8 +168,10 @@ export class EventSystem {
   private lastEventTurn = 0;
 
   generateEvent(gameState: any): { event: GameEvent; consequences: EventConsequence[] } | null {
-    // Reduce frequency for more meaningful events (gap authored in in-game seconds)
-    if (gameState.turn - this.lastEventTurn < ticksFromSeconds(Math.floor(rng.random() * 3) + 2))
+    // Minimum gap between events (in-game seconds; TURNS_PER_DAY = 300/day). 90–180s ≈ one event
+    // every ~½ in-game day → a couple per day. The early-return keeps the per-tick cost ~nil between
+    // events (the candidate scan only runs once the gap elapses). Tunable.
+    if (gameState.turn - this.lastEventTurn < ticksFromSeconds(90 + Math.floor(rng.random() * 90)))
       return null;
 
     const availableEvents = this.getAvailableEvents(gameState);
@@ -251,10 +253,12 @@ export class EventSystem {
       weight *= 1.3; // More disasters with larger settlements
     }
 
-    // Building modifiers
+    // Building modifiers — buildings are physical PlacedBuilding[] now (the `buildingCounts` map is gone).
     if (event.triggers.requiredBuildings) {
-      const hasAllBuildings = event.triggers.requiredBuildings.every(
-        (building) => gameState.buildingCounts[building] > 0
+      const hasAllBuildings = event.triggers.requiredBuildings.every((building) =>
+        (gameState.buildings ?? []).some(
+          (b: any) => b.type === building && b.status === 'complete'
+        )
       );
       if (hasAllBuildings) {
         weight *= 2.0; // Double chance if all required buildings present
@@ -275,9 +279,9 @@ export class EventSystem {
   }
 
   private applyConsequence(consequence: EventConsequence, gameState: any): any {
-    let newState = { ...gameState };
+    let newState = gameState;
 
-    // Apply resource effects — ADR-016: against the physical stockpile, not the legacy gs.item pool.
+    // Resource effects — ADR-016: against the physical stockpile (these helpers return new state).
     if (consequence.effects.resources) {
       for (const [itemId, resourceEffect] of Object.entries(consequence.effects.resources)) {
         const change = this.rollBetween((resourceEffect as any).min, (resourceEffect as any).max);
@@ -292,66 +296,85 @@ export class EventSystem {
       }
     }
 
-    // Apply pawn effects
+    // Pawn effects — immutable (events are NOT a hot per-tick phase, so ADR-002 immutability holds:
+    // build new pawn objects rather than mutating live ones). mood/stat are real; `state.health` is
+    // the legacy scalar (combat uses limbs). Lethal/injury effects need killPawn (systems layer),
+    // which core/Events cannot reach — injury is applied as bounded legacy-health damage; deathChance
+    // is intentionally NOT applied here (a lethal-events pass is a follow-up).
     if (consequence.effects.pawnEffects) {
       const pawnEffect = consequence.effects.pawnEffects;
-      const targetPawns = this.selectTargetPawns(pawnEffect, newState.pawns);
-
-      targetPawns.forEach((pawn: any) => {
-        // Health changes (legacy field — kept for backwards compat)
-        if (pawnEffect.effects.healthChange) {
-          const change = this.rollBetween(
-            pawnEffect.effects.healthChange.min,
-            pawnEffect.effects.healthChange.max
-          );
-          pawn.state.health = Math.max(0, Math.min(100, (pawn.state.health ?? 100) + change));
-        }
-
-        // Mood changes
-        if (pawnEffect.effects.moodChange) {
-          const change = this.rollBetween(
-            pawnEffect.effects.moodChange.min,
-            pawnEffect.effects.moodChange.max
-          );
-          pawn.state.mood = Math.max(0, Math.min(100, pawn.state.mood + change));
-        }
-
-        // Stat changes
-        if (pawnEffect.effects.statChanges) {
-          Object.entries(pawnEffect.effects.statChanges).forEach(([stat, range]) => {
-            if (pawn.stats[stat] !== undefined) {
-              const change = this.rollBetween(range.min, range.max);
-              pawn.stats[stat] = Math.max(1, Math.min(20, pawn.stats[stat] + change));
+      const targetIds = new Set(
+        this.selectTargetPawns(pawnEffect, newState.pawns).map((p: any) => p.id)
+      );
+      if (targetIds.size > 0) {
+        const e = pawnEffect.effects;
+        newState = {
+          ...newState,
+          pawns: newState.pawns.map((pawn: any) => {
+            if (!targetIds.has(pawn.id)) return pawn;
+            let state = pawn.state;
+            if (e.moodChange) {
+              const v = this.clamp(state.mood + this.rollBetween(e.moodChange.min, e.moodChange.max), 0, 100);
+              state = { ...state, mood: v };
             }
-          });
-        }
-
-        // Injury and death chances
-        if (pawnEffect.effects.injuryChance && rng.random() < pawnEffect.effects.injuryChance) {
-          // TODO: Add injury system
-          pawn.state.health = Math.max(10, (pawn.state.health ?? 100) - 15);
-        }
-
-        if (pawnEffect.effects.deathChance && rng.random() < pawnEffect.effects.deathChance) {
-          // TODO: Handle pawn death via killPawn
-          pawn.state.health = 0;
-        }
-      });
+            if (e.healthChange) {
+              const v = this.clamp((state.health ?? 100) + this.rollBetween(e.healthChange.min, e.healthChange.max), 0, 100);
+              state = { ...state, health: v };
+            }
+            if (e.injuryChance && rng.random() < e.injuryChance) {
+              state = { ...state, health: Math.max(10, (state.health ?? 100) - 15) };
+            }
+            let stats = pawn.stats;
+            if (e.statChanges) {
+              stats = { ...stats };
+              for (const [stat, range] of Object.entries(e.statChanges)) {
+                if (stats[stat] !== undefined)
+                  stats[stat] = this.clamp(stats[stat] + this.rollBetween((range as any).min, (range as any).max), 1, 20);
+              }
+            }
+            return state === pawn.state && stats === pawn.stats ? pawn : { ...pawn, state, stats };
+          })
+        };
+      }
     }
 
-    // Apply building effects
-    if (consequence.effects.buildingEffects) {
-      const buildingEffect = consequence.effects.buildingEffects;
-
-      if (buildingEffect.destroyChance && rng.random() < buildingEffect.destroyChance) {
-        const targetBuilding = buildingEffect.targetBuilding || 'house';
-        if (newState.buildingCounts[targetBuilding] > 0) {
-          newState.buildingCounts[targetBuilding]--;
-        }
+    // Building effects — immutable, against physical PlacedBuilding[]. Damage/destroy reduce a target
+    // building's structural `condition` (destroy → 0). NOTE: this wrecks the building in place; full
+    // removal + footprint clear (BuildingService) belongs to a higher layer — a follow-up.
+    const be = consequence.effects.buildingEffects;
+    if (be) {
+      const targetType = be.targetBuilding;
+      const candidates = (newState.buildings ?? []).filter(
+        (b: any) =>
+          b.status === 'complete' &&
+          (!targetType || targetType === 'random' || b.type === targetType)
+      );
+      if (candidates.length > 0) {
+        const n = Math.min(be.targetCount ?? 1, candidates.length);
+        const chosen = new Set(this.getRandomPawns(candidates, n).map((b: any) => b.id));
+        newState = {
+          ...newState,
+          buildings: newState.buildings.map((b: any) => {
+            if (!chosen.has(b.id)) return b;
+            const cur = b.condition ?? 100;
+            if (be.destroyChance && rng.random() < be.destroyChance) return { ...b, condition: 0 };
+            if (be.damageChance && rng.random() < be.damageChance) {
+              const dmg = be.damageAmount
+                ? this.rollBetween(be.damageAmount.min, be.damageAmount.max)
+                : 10;
+              return { ...b, condition: Math.max(0, cur - dmg) };
+            }
+            return b;
+          })
+        };
       }
     }
 
     return newState;
+  }
+
+  private clamp(v: number, lo: number, hi: number): number {
+    return Math.max(lo, Math.min(hi, v));
   }
 
   private selectTargetPawns(pawnEffect: any, pawns: any[]): any[] {

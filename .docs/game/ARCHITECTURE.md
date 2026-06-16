@@ -75,10 +75,9 @@ phases read state the earlier ones produce:
 8. **Resource regrowth** — restore tiles whose regrowth cooldown expired.
 9. **Entities** — mob spawn / step / movement / hunger / removal (`entityService.*`).
 10. **Combat** — `combatService.tickCombat` + fresh-corpse handling.
-11. **Commit + UI push** — `GameStateManager.updateState` then a throttled store notify (~15 Hz).
-
-There is **no** separate "events" phase: `core/Events.ts` / `EventSystem` exists but is not wired
-into the tick (a planned feature, not part of the current contract).
+11. **Reap dead** — `reapDeadPawns`: finalise any combat death that bypassed `killPawn` (corpse/gear drop, record) and remove dead pawns from `pawns[]` (NT-2).
+12. **Events** — `eventSystem.generateEvent` rolls a random world event on its own cadence; consequences are applied (`processEventConsequences`) and the event is logged to the chronicle via `simLog.logActivity({type:'event'})` (R11, ADR-006 content). Events fire rarely (cadence in `core/Events.ts`); most ticks this is a cheap early-return.
+13. **Commit + UI push** — `GameStateManager.updateState` then a throttled store notify (~15 Hz).
 
 ## Modifier System
 

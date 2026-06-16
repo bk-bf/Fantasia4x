@@ -27,13 +27,13 @@ are pre-existing survival-loop tuning.
   `BuildingService`. Suspect the command path crossing the worker boundary, or the in-place worldMap/footprint
   mutation (ENGINE-PERFORMANCE D6 — `applyBuildingFootprint` now mutates the tile in place + `markTileDirty`).
   Diff the `--debug` vs `--profiler` setup, then bisect against the perf commits.
-- [ ] **N-2 · Stamina regen too fast — effectively infinite.** Pawns (especially) regen stamina so quickly it
+- [x] **N-2 · Stamina regen too fast — effectively infinite.** Pawns (especially) regen stamina so quickly it
   rarely constrains them. Tune the regen rate down so stamina is a real pressure.
-- [ ] **N-3 · Exhaustion state not tied to stamina (all entities).** Chickens sit "exhausted" at max stamina — the
+- [x] **N-3 · Exhaustion state not tied to stamina (all entities).** Chickens sit "exhausted" at max stamina — the
   exhaustion flag is decoupled from the stamina value. Make exhaustion a pure function of the stamina value for
   every pawn **and** mob, in one place. (Supersedes/merges the NT-backlog "entity stamina/breaks" item — the
   mechanic exists, it's just mis-wired.)
-- [ ] **N-4 · Haul picks up a single item per trip.** A hauling pawn grabs 1 item, walks to the stockpile, and
+- [x] **N-4 · Haul picks up a single item per trip.** A hauling pawn grabs 1 item, walks to the stockpile, and
   repeats. It should fill its volume/weight budget per trip, opportunistically picking up compatible items between
   the source and the stockpile. (`clampPickupQuantity` already caps pickup by budget — the gap is the
   multi-item/opportunistic pickup loop, not the cap.)
@@ -95,12 +95,19 @@ are pre-existing survival-loop tuning.
   (the full loop). New `jobService.{requiredToolForJob,pawnHasToolFor,colonyHasToolFor,findStockToolDropFor}`;
   gate in `getAvailableJobs`; FSM detour in `handlers/work`; wear in `jobs/harvest`. Tests in
   `followupFeatures.test.ts`. `check` 0 · `test` 255.
-- [ ] **R11 — random-events system: wire or cut.** _(Reworded — the old "Events.ts fully unwired" is stale.)_
-  `core/Events.ts`'s log/chronicle **types** (`ActivityLogEntry`/`LogCategory`/`CombatTurnEntry`) **are** used (logging
-  + chronicle UI). But the **gameplay** half — `EventSystem` + `EVENT_DATABASE` + `events.jsonc` (fire, building
-  destruction…) + `triggerEvent` — is **defined and never invoked** (zero callers; nothing rolls events per turn).
-  Decide: wire random events into the turn loop (a feature) or delete the dead `EventSystem`/`EVENT_DATABASE`/
-  `events.jsonc`.
+- [x] **R11 — random-events system wired (was dead gameplay code).** Done 2026-06-16. The `EventSystem` +
+  `EVENT_DATABASE` (25 events in `events.jsonc`) now run in a new **`events` turn phase** (GameEngineImpl, after
+  `reapDead`): `generateEvent` rolls on its own cadence (gap bumped from the 2–4 s placeholder to ~½ in-game day),
+  consequences are applied, and the event surfaces in the **chronicle via the same `simLog.logActivity({type:'event'})`
+  path combat/death use** (per the chosen approach — not the old `eventStore` modal). Consequence application was
+  reconciled to the current model: building effects hit physical `PlacedBuilding.condition` (the dead `buildingCounts`
+  map is gone) and the whole apply path is now **immutable** (events aren't a hot phase, so ADR-002 immutability
+  holds). Tests in `core/eventsSystem.test.ts`. ARCHITECTURE turn order updated to re-list the events phase.
+  **Known follow-ups:** lethal/injury consequences are applied only as bounded legacy-`state.health` damage —
+  `deathChance` is a no-op (real death needs `killPawn`, a systems-layer call `core/Events` can't make); building
+  "destroy" sets `condition: 0` in place (full removal + footprint clear needs `BuildingService`); `seasonSpecific`
+  triggers aren't gated yet (seasons unwired — SEASONS_WEATHER); the `EventSystem` singleton's cooldown/history isn't
+  in `GameState`, so it resets on reload. The old `eventStore` modal path is now unused.
 
   _Removed as stale 2026-06-16:_ **D-perf remainder (tick strides)** — moot: both concrete D-perf items shipped
   (regrowth cooldown index; job board = ADR-022), the stride technique is already applied where it paid, and perf is
