@@ -5,6 +5,21 @@
   import type { Item, Recipe } from '$lib/game/core/types';
   import { recipeService } from '$lib/game/services/RecipeService';
   import { itemService } from '$lib/game/services/ItemService';
+  import { TURNS_PER_DAY } from '$lib/game/services/EnvironmentService';
+
+  // decaySeconds is authored in in-game seconds; one in-game day = TURNS_PER_DAY (300) of them.
+  const spoilDuration = (s: number): string => {
+    const days = s / TURNS_PER_DAY;
+    if (days >= 1)
+      return `${Number.isInteger(days) ? days : days.toFixed(1)} day${days === 1 ? '' : 's'}`;
+    const hours = days * 24;
+    return `${hours >= 1 ? Math.round(hours) : hours.toFixed(1)} hr`;
+  };
+  // Qualitative spoilage speed (shelf life in days), so the player gets an at-a-glance read.
+  const spoilSpeed = (s: number): string => {
+    const days = s / TURNS_PER_DAY;
+    return days <= 1 ? 'Fast' : days <= 5 ? 'Moderate' : 'Slow';
+  };
 
   interface Props {
     item: Item;
@@ -144,6 +159,17 @@
     if (item.preservationBonus != null)
       out.push({ label: 'Preservation', val: pct(item.preservationBonus) });
     if (item.fuelValue != null) out.push({ label: 'Fuel value', val: `${item.fuelValue}` });
+
+    // Spoilage (decaySeconds): shelf life (duration) + qualitative speed + what it rots into.
+    if (item.decaySeconds != null) {
+      out.push({ label: 'Spoils in', val: spoilDuration(item.decaySeconds) });
+      out.push({ label: 'Spoilage', val: spoilSpeed(item.decaySeconds) });
+      if (item.decaysTo) {
+        const into =
+          itemService.getItemById(item.decaysTo)?.name ?? item.decaysTo.replace(/_/g, ' ');
+        out.push({ label: 'Spoils into', val: into });
+      }
+    }
 
     if (item.maxDurability != null) out.push({ label: 'Durability', val: `${item.maxDurability}` });
     if (item.weightKg != null) out.push({ label: 'Weight', val: `${item.weightKg} kg` });

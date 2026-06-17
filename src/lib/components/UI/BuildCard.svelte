@@ -74,6 +74,7 @@
       (statItem.type === 'tool' && !!statItem.toolBoost) ||
       statItem.nutrition != null ||
       statItem.medicineQuality != null ||
+      statItem.decaySeconds != null ||
       Object.keys(statItem.effects ?? {}).length > 0);
   $: hasStats = hasItemStats || !!buildingDef;
 </script>
