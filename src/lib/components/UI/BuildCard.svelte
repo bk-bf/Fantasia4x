@@ -4,7 +4,8 @@
   import SpriteIcon from './SpriteIcon.svelte';
   import HoverTip from './HoverTip.svelte';
   import ItemStatTooltip from './ItemStatTooltip.svelte';
-  import type { Item, Recipe } from '$lib/game/core/types';
+  import BuildingStatTooltip from './BuildingStatTooltip.svelte';
+  import type { Item, Recipe, Building } from '$lib/game/core/types';
 
   // Show the full description in a hover panel, but only when it's actually clamped/truncated.
   let descTip: { x: number; y: number } | null = null;
@@ -62,9 +63,11 @@
   /** Producing recipe + chosen ingredients — feeds per-material stat/nutrition deltas to the tooltip. */
   export let statRecipe: Recipe | null = null;
   export let statIngredients: Record<string, string> = {};
+  /** Building def whose effects/enabled-recipes pop in a hover breakdown (buildings tab). */
+  export let buildingDef: Building | null = null;
 
-  // Only show the stat tooltip for items that actually carry stats / effects worth a breakdown.
-  $: hasStats =
+  // Only fire the header hover when there's an item OR building breakdown worth showing.
+  $: hasItemStats =
     !!statItem &&
     (!!statItem.weaponProperties ||
       !!statItem.armorProperties ||
@@ -72,6 +75,7 @@
       statItem.nutrition != null ||
       statItem.medicineQuality != null ||
       Object.keys(statItem.effects ?? {}).length > 0);
+  $: hasStats = hasItemStats || !!buildingDef;
 </script>
 
 <div class="build-card" class:disabled={!actionEnabled}>
@@ -136,7 +140,9 @@
   <HoverTip x={descTip.x} y={descTip.y}>{description}</HoverTip>
 {/if}
 
-{#if statTip && hasStats && statItem}
+{#if statTip && buildingDef}
+  <BuildingStatTooltip building={buildingDef} x={statTip.x} y={statTip.y} />
+{:else if statTip && hasItemStats && statItem}
   <ItemStatTooltip
     item={statItem}
     recipe={statRecipe}

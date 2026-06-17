@@ -48,4 +48,27 @@ describe('§A category building-cost (resolveBuildingCost)', () => {
   it('hasRequiredResources is true once any 8 stone + 4 branch are present', () => {
     expect(buildingService.hasRequiredResources('hearth', gs({ marble: 8, branch: 4 }))).toBe(true);
   });
+
+  it('spends the player-chosen material first for a category slot (materialOverride)', () => {
+    // Plenty of both rocks; choosing slate must spend slate, not the auto-pick (granite).
+    const out = buildingService.resolveBuildingCost(
+      'hearth',
+      gs({ granite: 10, slate: 10, branch: 4 }),
+      { 'category:stone': 'slate' }
+    );
+    expect(out).toEqual({ slate: 8, branch: 4 });
+  });
+
+  it('auto-fills the shortfall when the chosen material runs short', () => {
+    // Only 5 slate available for an 8 slot → spend all 5 slate, top up the remaining 3 from granite.
+    const out = buildingService.resolveBuildingCost(
+      'hearth',
+      gs({ granite: 10, slate: 5, branch: 4 }),
+      { 'category:stone': 'slate' }
+    );
+    expect(out).not.toBeNull();
+    expect(out!['slate']).toBe(5);
+    expect(out!['granite']).toBe(3);
+    expect(out!['branch']).toBe(4);
+  });
 });

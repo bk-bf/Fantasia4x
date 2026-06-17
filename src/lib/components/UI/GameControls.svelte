@@ -85,7 +85,21 @@
     };
   }
 
+  // Phase-of-day label, keyed off the in-game hour. Boundaries roughly track the ambient
+  // light keyframes in EnvironmentService (dawn glow ~06:00, dusk ~18:00, deepest night ~00:00).
+  function hourToDayPhase(hour: number): string {
+    if (hour === 23 || hour === 0) return 'Midnight';
+    if (hour <= 4) return 'Night';
+    if (hour <= 7) return 'Dawn';
+    if (hour <= 10) return 'Morning';
+    if (hour <= 13) return 'Midday';
+    if (hour <= 17) return 'Afternoon';
+    if (hour <= 20) return 'Evening';
+    return 'Night'; // 21–22
+  }
+
   $: gameDate = turnToGameDate(currentTurnValue);
+  $: dayPhase = hourToDayPhase(gameDate.hour);
 
   // ===== SEASON & WEATHER READOUT (SEASONS_WEATHER) — labels are data-driven (seasons/weather.jsonc) =====
   $: weatherLabel = getWeatherLabel($currentWeather?.type);
@@ -197,6 +211,7 @@
   <span class="bi date" title="{gameDate.monthName} {gameDate.day}, Year {gameDate.year}"
     >{gameDate.dayStr}/{gameDate.monthStr}/{gameDate.yearStr} {gameDate.hourStr}:00</span
   >
+  <span class="bi phase" title="Time of day">{dayPhase}</span>
   <span class="bi season" title="Season · average map temperature · weather"
     >{SEASON_LABELS[$currentSeason] ?? $currentSeason}{tempLabel ? ` ${tempLabel}` : ''} · {weatherLabel}</span
   >
@@ -299,6 +314,10 @@
   }
   .bi.date {
     color: var(--text-dim);
+    letter-spacing: 0.02em;
+  }
+  .bi.phase {
+    color: var(--accent);
     letter-spacing: 0.02em;
   }
   .bi.turn {

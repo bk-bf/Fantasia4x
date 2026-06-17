@@ -18,7 +18,9 @@
 
   // Per-material weapon/armour deltas for the chosen ingredient(s) (e.g. ash shaft → +3 accuracy).
   let deltas = $derived(
-    recipe ? recipeService.applyMaterialBonuses(recipe, selectedIngredients) : { weaponDelta: {}, armorDelta: {} }
+    recipe
+      ? recipeService.applyMaterialBonuses(recipe, selectedIngredients)
+      : { weaponDelta: {}, armorDelta: {} }
   );
   let matDelta = $derived([
     ...Object.entries(deltas.weaponDelta),
@@ -179,7 +181,10 @@
   {/each}
 
   {#if matDelta.length > 0}
-    <div class="tip-sep">MATERIAL{#if matNames} · {matNames}{/if}</div>
+    <div class="tip-sep">
+      MATERIAL{#if matNames}
+        · {matNames}{/if}
+    </div>
     {#each matDelta as [field, val]}
       <div class="tip-mod">
         <span class="tip-mod-name">{fieldLabel(field)}</span>

@@ -209,10 +209,18 @@ export const COMMANDS: Record<string, Cmd> = {
   }),
 
   // ── buildings ──────────────────────────────────────────────────────────────
-  placeBuilding: (s, p: { bid: string; x: number; y: number }) =>
-    buildingService.placeBuilding(p.bid, p.x, p.y, s),
-  placeBuildings: (s, p: { bid: string; tiles: [number, number][] }) =>
-    p.tiles.reduce((cur, [tx, ty]) => buildingService.placeBuilding(p.bid, tx, ty, cur), s),
+  placeBuilding: (
+    s,
+    p: { bid: string; x: number; y: number; materials?: Record<string, string> }
+  ) => buildingService.placeBuilding(p.bid, p.x, p.y, s, p.materials),
+  placeBuildings: (
+    s,
+    p: { bid: string; tiles: [number, number][]; materials?: Record<string, string> }
+  ) =>
+    p.tiles.reduce(
+      (cur, [tx, ty]) => buildingService.placeBuilding(p.bid, tx, ty, cur, p.materials),
+      s
+    ),
   cancelBuilding: (s, p: { id: string }) => buildingService.cancelBuilding(p.id, s),
   /** BuildingMenu's refund-and-remove (distinct from the service cancel above). */
   cancelBuildingRefund: (s, p: { buildingId: string }) => {

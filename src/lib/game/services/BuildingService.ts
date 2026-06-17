@@ -41,8 +41,14 @@ export interface BuildingService {
   // Validation Methods
   canBuildBuilding(buildingId: string, gameState: GameState): boolean;
   hasRequiredResources(buildingId: string, gameState: GameState): boolean;
-  /** Resolve buildingCost to concrete items to consume (supports `category:<cat>` slots), or null if unaffordable. */
-  resolveBuildingCost(buildingId: string, gameState: GameState): Record<string, number> | null;
+  /** Resolve buildingCost to concrete items to consume (supports `category:<cat>` slots), or null if
+   *  unaffordable. `materialOverride` maps a cost key (e.g. `category:stone`) → a chosen itemId to
+   *  spend preferentially for that slot (player's material pick); any shortfall auto-fills as before. */
+  resolveBuildingCost(
+    buildingId: string,
+    gameState: GameState,
+    materialOverride?: Record<string, string>
+  ): Record<string, number> | null;
   hasRequiredResearch(buildingId: string, gameState: GameState): boolean;
   hasRequiredPopulation(buildingId: string, gameState: GameState): boolean;
   hasRequiredTools(buildingId: string, gameState: GameState): boolean;
@@ -69,8 +75,15 @@ export interface BuildingService {
   stationFulfills(haveType: string, recipeStation: string): boolean;
   bestCraftStation(recipeStation: string, gameState: GameState): PlacedBuilding | null;
 
-  // Phase 4d: Tile-placed buildings
-  placeBuilding(type: string, x: number, y: number, gameState: GameState): GameState;
+  // Phase 4d: Tile-placed buildings. `materialOverride` (cost-key → chosen itemId) picks which
+  // concrete item fills a `category:` cost slot (player's material choice).
+  placeBuilding(
+    type: string,
+    x: number,
+    y: number,
+    gameState: GameState,
+    materialOverride?: Record<string, string>
+  ): GameState;
   hasCompletedBuilding(type: string, gameState: GameState): boolean;
   countCompletedBuildings(type: string, gameState: GameState): number;
   /** Apply a solid building's tile-blocking on completion / restore it on removal. No-op for
@@ -163,7 +176,11 @@ export class BuildingServiceImpl implements BuildingService {
    * double-spending across slots. Returns the concrete `{itemId: qty}` to consume, or null if
    * unaffordable. This is the building-cost analogue of a recipe's `acceptsCategory` slot.
    */
-  resolveBuildingCost(buildingId: string, gameState: GameState): Record<string, number> | null {
+  resolveBuildingCost(
+    buildingId: string,
+    gameState: GameState,
+    materialOverride?: Record<string, string>
+  ): Record<string, number> | null {
     const building = this.getBuildingById(buildingId);
     if (!building?.buildingCost) return {};
     // ADR-016: pay from AVAILABLE stock (reserved-for-craft stacks excluded).
@@ -175,6 +192,20 @@ export class BuildingServiceImpl implements BuildingService {
       if (key.startsWith('category:')) {
         const cat = key.slice('category:'.length);
         let need = cost as number;
+        // Player's material pick for this slot is spent first; the auto-fill below covers any shortfall.
+        const chosen = materialOverride?.[key];
+        if (chosen) {
+          const item = ITEMS_DB.find((i) => i.id === chosen);
+          if (item && item.category === cat) {
+            const avail = (stock[item.id] ?? 0) - (used[item.id] ?? 0);
+            const take = Math.min(Math.max(avail, 0), need);
+            if (take > 0) {
+              resolved[item.id] = (resolved[item.id] ?? 0) + take;
+              used[item.id] = (used[item.id] ?? 0) + take;
+              need -= take;
+            }
+          }
+        }
         for (const item of ITEMS_DB) {
           if (need <= 0) break;
           if (item.category !== cat) continue;
@@ -374,7 +405,13 @@ export class BuildingServiceImpl implements BuildingService {
     );
   }
 
-  placeBuilding(type: string, x: number, y: number, gameState: GameState): GameState {
+  placeBuilding(
+    type: string,
+    x: number,
+    y: number,
+    gameState: GameState,
+    materialOverride?: Record<string, string>
+  ): GameState {
     const building = this.getBuildingById(type);
     if (!building) {
       console.warn(`[BuildingService] Unknown building type: ${type}`);
@@ -404,7 +441,7 @@ export class BuildingServiceImpl implements BuildingService {
     // construction work, RESERVE it to this building (do not consume). Pawns then fetch the
     // reserved materials to the build site and construction consumes them on completion (see
     // JobService). Instant (zero-work) buildings consume their cost immediately as before.
-    const cost = this.resolveBuildingCost(type, gameState);
+    const cost = this.resolveBuildingCost(type, gameState, materialOverride);
     if (cost && Object.keys(cost).length > 0) {
       if (instant) {
         state = consumeFromStockpiles(state, cost);

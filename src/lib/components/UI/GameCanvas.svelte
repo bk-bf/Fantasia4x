@@ -280,6 +280,8 @@
   let zoneEraseMode = false;
   // Blueprint placement mode — set when BUILD is clicked in BuildingMenu
   let blueprintBuildingId: string | null = null;
+  // Chosen materials for the blueprint's `category:` cost slots (cost-key → itemId).
+  let blueprintMaterials: Record<string, string> | null = null;
   // Debug click-brush (DEBUG tab) — regrow / spawn building / spawn resource on click
   let debugBrush: { kind: 'regrow' | 'building' | 'resource'; id: string | null } | null = null;
   // Selected building (click-locked, like selectedPawnId)
@@ -289,6 +291,7 @@
   const unsubUI = uiState.subscribe((s) => {
     designationMode = s.designationActive;
     blueprintBuildingId = s.blueprintBuildingId ?? null;
+    blueprintMaterials = s.blueprintMaterials ?? null;
     debugBrush = s.debugBrush ?? null;
     activeZoneInstanceId = s.activeZoneInstanceId ?? null;
     if (!s.designationActive) zoneEraseMode = false;
@@ -2270,7 +2273,8 @@
               bid,
               tiles: [...blueprintDragTiles].map(
                 (key) => key.split(',').map(Number) as [number, number]
-              )
+              ),
+              materials: blueprintMaterials ?? undefined
             },
             save: true
           });

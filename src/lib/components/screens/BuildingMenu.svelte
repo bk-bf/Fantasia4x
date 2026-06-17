@@ -133,6 +133,24 @@
       : id.replace(/_/g, ' ');
   }
 
+  // Player's material pick per building def for `category:` cost slots: buildingId → costKey → itemId.
+  // Eventually these picks will drive durability/beauty; for now they just choose which stock is spent.
+  let selectedMaterials: Record<string, Record<string, string>> = {};
+  function setMaterial(buildingId: string, costKey: string, itemId: string) {
+    const forBuilding = { ...(selectedMaterials[buildingId] ?? {}) };
+    if (itemId) forBuilding[costKey] = itemId;
+    else delete forBuilding[costKey];
+    selectedMaterials = { ...selectedMaterials, [buildingId]: forBuilding };
+  }
+  // Candidate items for a `category:<cat>` slot — in-stock first, then the rest of the category.
+  function categoryItemsFor(costKey: string) {
+    const cat = costKey.slice('category:'.length);
+    return itemService
+      .getItemsByCategory(cat)
+      .slice()
+      .sort((a, b) => (getItemAmount(b.id) > 0 ? 1 : 0) - (getItemAmount(a.id) > 0 ? 1 : 0));
+  }
+
   // MISSING vs BLOCKED: resolveBuildingCost handles concrete + `category:*` slots and reads
   // physical AVAILABLE stock (ADR-016 droppedItems), so it's the real affordability signal —
   // the stockpile mirror double-counts reserved stacks and can't resolve category slots.
@@ -281,13 +299,15 @@
             name={building.name.toUpperCase()}
             charSpans={building.charSpans}
             description={building.description ?? null}
+            buildingDef={building}
             tint={building.color ?? 'var(--accent)'}
             workAmount={building.workAmount ?? null}
             badge={placed > 0 ? `×${placed}` : null}
             actionLabel={!affordable ? 'MISSING' : !buildable ? 'BLOCKED' : 'BUILD'}
             actionEnabled={buildable}
             variant={!affordable ? 'missing' : !buildable ? 'blocked' : 'ok'}
-            onAction={() => uiState.activateBlueprint(building.id)}
+            onAction={() =>
+              uiState.activateBlueprint(building.id, selectedMaterials[building.id] ?? null)}
           >
             {#if Object.keys(building.buildingCost).length === 0}
               <span class="muted-text">free</span>
@@ -295,10 +315,29 @@
               {#each Object.entries(building.buildingCost) as [id, n], ci}
                 {@const have = getCostHave(id)}
                 {#if ci > 0}<span class="cost-sep">·</span>{/if}
-                <span class="cost-item" class:neg-text={have < (n as number)}>
-                  {formatCostLabel(id)} <span class="cost-qty">×{n}</span>
-                  <span class="cost-have" class:neg-text={have < (n as number)}>({have})</span>
-                </span>
+                {#if id.startsWith('category:')}
+                  <!-- svelte-ignore a11y_no_onchange -->
+                  <span class="cost-item" class:neg-text={have < (n as number)}>
+                    <select
+                      class="mat-select"
+                      value={selectedMaterials[building.id]?.[id] ?? ''}
+                      on:change={(e) => setMaterial(building.id, id, e.currentTarget.value)}
+                      title="choose {id.slice('category:'.length)} to spend"
+                    >
+                      <option value="">any {id.slice('category:'.length)}</option>
+                      {#each categoryItemsFor(id) as opt}
+                        <option value={opt.id}>{opt.name} ({getItemAmount(opt.id)})</option>
+                      {/each}
+                    </select>
+                    <span class="cost-qty">×{n}</span>
+                    <span class="cost-have" class:neg-text={have < (n as number)}>({have})</span>
+                  </span>
+                {:else}
+                  <span class="cost-item" class:neg-text={have < (n as number)}>
+                    {formatCostLabel(id)} <span class="cost-qty">×{n}</span>
+                    <span class="cost-have" class:neg-text={have < (n as number)}>({have})</span>
+                  </span>
+                {/if}
               {/each}
             {/if}
           </BuildCard>
@@ -462,6 +501,25 @@
     color: var(--accent);
   }
 
+  /* Material picker for `category:` cost slots — retro terminal select (fuel-panel concept). */
+  .mat-select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--accent-hi);
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
+    padding: 0 2px;
+    max-width: 110px;
+    cursor: pointer;
+    outline: none;
+  }
+  .mat-select:hover {
+    border-color: var(--border-hi);
+  }
+  .mat-select:focus {
+    border-color: var(--accent-hi);
+  }
+
   .cost-have {
     opacity: 0.6;
   }
@@ -543,5 +601,4 @@
   .job-x:hover {
     color: var(--neg);
   }
-
 </style>
