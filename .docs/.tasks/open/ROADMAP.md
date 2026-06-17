@@ -2,7 +2,7 @@
 
 # ROADMAP
 
-> **Related:** [game/DESIGN](../game/DESIGN.md) · [game/ARCHITECTURE](../game/ARCHITECTURE.md) · [RESEARCH-ENHANCEMENT](RESEARCH-ENHANCEMENT.md) · [ENTITIES_SPAWNING](ENTITIES_SPAWNING.md) · [COMBAT-SYSTEM](COMBAT-SYSTEM.md) · [MAGIC-SKILLS](MAGIC-SKILLS.md) · [RANGED-COMBAT](RANGED-COMBAT.md) · [SOCIAL-LAYER](SOCIAL-LAYER.md) · [ENGINE-PERFORMANCE](ENGINE-PERFORMANCE.md) · [DISTRIBUTION](DISTRIBUTION.md) · archived: [SEASONS_WEATHER](../archive/SEASONS_WEATHER-2026-06-17.md) · [EQUIPMENT-EXPANSION](../archive/EQUIPMENT-EXPANSION.md) · [PRODUCTION-CHAIN-EXPANSION](../archive/PRODUCTION-CHAIN-EXPANSION-2026-06-12.md) · [SCREEN-REFACTORING](../archive/SCREEN-REFACTORING-2026-06-03.md) · [SURVIVAL-HEALTH](../archive/SURVIVAL-HEALTH-2026-05-30.md) · [SIMULATION-PERF](../archive/SIMULATION-PERF-2026-05-30.md)
+> **Related:** [game/DESIGN](../game/DESIGN.md) · [game/ARCHITECTURE](../game/ARCHITECTURE.md) · [RESEARCH-ENHANCEMENT](RESEARCH-ENHANCEMENT.md) · [ENTITIES_SPAWNING](ENTITIES_SPAWNING.md) · [COMBAT-SYSTEM](COMBAT-SYSTEM.md) · [MAGIC-SKILLS](MAGIC-SKILLS.md) · [RANGED-COMBAT](RANGED-COMBAT.md) · [SOCIAL-LAYER](SOCIAL-LAYER.md) · [RACE-SYSTEM](RACE-SYSTEM.md) · [ENGINE-PERFORMANCE](ENGINE-PERFORMANCE.md) · [DISTRIBUTION](DISTRIBUTION.md) · archived: [SEASONS_WEATHER](../archive/SEASONS_WEATHER-2026-06-17.md) · [EQUIPMENT-EXPANSION](../archive/EQUIPMENT-EXPANSION.md) · [PRODUCTION-CHAIN-EXPANSION](../archive/PRODUCTION-CHAIN-EXPANSION-2026-06-12.md) · [SCREEN-REFACTORING](../archive/SCREEN-REFACTORING-2026-06-03.md) · [SURVIVAL-HEALTH](../archive/SURVIVAL-HEALTH-2026-05-30.md) · [SIMULATION-PERF](../archive/SIMULATION-PERF-2026-05-30.md)
 
 ## Status Key
 
@@ -78,7 +78,8 @@ layer (seasons / weather / fog of war), with **Ranged Combat** sequenced just af
 | RANGED-COMBAT                  | COMBAT [x] + EQUIPMENT [x] + ENGINE-PERFORMANCE P3 (LoS) | —                                             | mob archers; MAGIC-SKILLS (enchanted ammo)                       |
 | ENGINE-PERFORMANCE             | — (spike standalone); P3 LoS benefits from SEASONS fog | profiler sandbox (validation)                  | RANGED-COMBAT (LoS); SEASONS_WEATHER fog of war; 500+ entity scale |
 | MAGIC-SKILLS                   | COMBAT-SYSTEM                                       | RESEARCH (nodes 3+5 only); EQUIPMENT (staff items) | COMBAT depth (skills + spells)                                   |
-| SOCIAL-LAYER                   | COMBAT                                              | —                                                  | —                                                                |
+| SOCIAL-LAYER                   | COMBAT                                              | RACE-SYSTEM [x] Ph0 (`raceRelations` baseline)     | —                                                                |
+| RACE-SYSTEM (fwd Ph1–3)        | Ph1: SOCIAL-LAYER · Ph2: an other-faction entity source | —                                             | SOCIAL-LAYER (cross-race friction baseline)                      |
 | ENTITIES_SPAWNING Phase C–E    | COMBAT (Phase E); Phase A                           | —                                                  | —                                                                |
 | DISTRIBUTION             | Phase 3 complete                                    | —                                                  | —                                                                |
 
@@ -107,6 +108,7 @@ layer (seasons / weather / fog of war), with **Ranged Combat** sequenced just af
 | **Work-driven pawn hunting** (mark-to-hunt → chase → resolve as combat → carcass → butchery; prey fight-back) | [x] 2026-06-13      | reuses COMBAT + ENTITIES circuits; no separate spec                               |
 | **Data-driven colony jobs** (`database/jobs.jsonc` + `JobService` handler registry; no hardcoded job switches) | [x] 2026-06-13      | ADR-017 in `game/DECISIONS.md`; drift-guarded by `jobRegistry.test.ts`            |
 | **Data-driven condition drivers** (malnutrition/dehydration onset/rate/recovery moved to `conditions.jsonc`)  | [x] 2026-06-13      | `ConditionDriver` in `conditions.jsonc`; no separate spec                         |
+| **Race overhaul** (procedural 15–25 race pool, mixed colonies + pawn `raceId`, procedural lore/description, trait DB fixed to `stats.jsonc` + condition-resistance hook, Race tab → known-races pokédex, `raceRelations` stub seam for SOCIAL-LAYER) | [x] 2026-06-17 (Phase 0) | [RACE-SYSTEM.md](RACE-SYSTEM.md) · ADR-023; `Race.test.ts`; `check`+`test` (340) green. **Forward phases** (relations→social, encounter pokédex, variety) tracked in the spec |
 | **PawnStateMachine decomposition** (2818→988 LOC; dispatch table + `pawn/*` helpers/handlers; #1 hotspot)     | [x] 2026-06-13      | archived: `CODEBASE-REVIEW-RESOLVED-2026-06-13.md`; behaviour-locked by tests     |
 
 ---

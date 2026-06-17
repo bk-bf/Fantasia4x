@@ -24,6 +24,7 @@ ADR-019 [GAME]: Line of Sight via `blocksSight` Occluder + WASM Raycast (2026-06
 ADR-020 [GAME]: Sim Scaling Strategy — Wrapper-Agnostic Ladder, wrapper decision deferred (2026-06-14, Accepted — superseded by ADR-021 for the concrete plan)
 ADR-021 [GAME]: Sim/Render Decouple — soft-body pathfinding, terrain cache, MAX_STEPS cap, sim→Worker (2026-06-14, Accepted)
 ADR-022 [GAME]: Throttled job-board reconcile (not event-driven) — emission-derived board, 6-tick cadence (2026-06-16, Accepted)
+ADR-023 [GAME]: Procedural race pool + pawn `raceId` — `racePool` canonical, `race` = home alias (2026-06-17, Accepted)
 
 ---
 
@@ -794,3 +795,39 @@ R2; collapsed pawns are in the collapse lifecycle).
 - Revisit only if a profile at real scale puts the scan back on the hot list — then lengthen the
   cadence with event kicks for player-intent / completion-chains / source-removal; the object-emitter
   refactor remains a *cohesion* choice, never a perf necessity.
+
+---
+
+### ADR-023 [GAME]: Procedural Race Pool + Pawn `raceId` — pool canonical, `race` = home alias
+
+**Status:** Accepted (2026-06-17)
+
+**Context.** Race was the most deprecated system: `GameState.race` was a single `Race`
+generated once at module load, every colony was mono-racial, pawns carried a denormalized
+`racialTraits[]` copy with no race identity, and the trait `effects` shape had drifted from
+`stats.jsonc` (stale work axes + ~20 effect fields nothing read).
+
+**Decision.**
+
+- A **pool of 15–25 procedural races** (`generateRacePool`) is prerolled per run and stored on
+  `GameState.racePool` — the canonical, known-races (pokédex) backing store. Each race gets a
+  unique kebab `id`, an `archetype` that biases stat ranges / size / trait selection, and
+  procedural `lore` including an immersive `description` (authored trait `flavorLine`s + lore
+  clause banks assembled by numeric buckets — the prose is authored, only the scaffolding is
+  generated).
+- `GameState.race` is **kept as a back-compat alias** for the colony's home race (`racePool[0]`)
+  so existing `currentRace` consumers don't churn.
+- The starting colony is **fully mixed**: `generateColonyPawns` draws each pawn from a random
+  pool race; pawns now carry `raceId`/`raceName`.
+- **Race-based conditions reuse existing machinery**: trait resistance effects
+  (`coldResistance`…) are added on top of the matching `*_resistance` stat in
+  `PawnStatService.evaluateStat`, so they flow into condition onset (cold→hypothermia) with no
+  new condition code.
+- `GameState.raceRelations` is a **data-only stub** (symmetric procedural dispositions, shown in
+  the pokédex) — the seam for the unbuilt SOCIAL-LAYER; no pawn-mood wiring this pass.
+
+**Consequences.** Old single-race saves migrate to a one-entry pool tagged onto existing pawns.
+The dead trait effect fields were pruned (only `nightVision` was genuinely consumed and was
+kept). New core data (`race-lore.jsonc`, trait `id`/`flavorLine`) follows ADR-006 (definitions,
+not logic). Drift on the generator is guarded by `Race.test.ts`. Not graph-checkable — a
+data/runtime decision, not a call-edge invariant.

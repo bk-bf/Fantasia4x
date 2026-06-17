@@ -2,7 +2,7 @@
 
 # PAWN SOCIAL LAYER & MOOD DEPTH
 
-> **Related:** [ROADMAP](ROADMAP.md) · [COMBAT-SYSTEM](COMBAT-SYSTEM.md) · [game/DESIGN](../../game/DESIGN.md) · [LIVING-WORLD](LIVING-WORLD.md)
+> **Related:** [ROADMAP](ROADMAP.md) · [COMBAT-SYSTEM](COMBAT-SYSTEM.md) · [RACE-SYSTEM](RACE-SYSTEM.md) · [game/DESIGN](../../game/DESIGN.md) · [LIVING-WORLD](LIVING-WORLD.md)
 
 ## Status
 
@@ -36,6 +36,13 @@ interface PawnRelationship {
 ```
 
 `relationships: PawnRelationship[]` added to `GameState`.
+
+> **Seam already in place (ADR-023, Race overhaul).** `GameState.raceRelations` holds a procedural
+> symmetric disposition (`allied`…`hostile`, score −100…+100) for every pair of pool races, and
+> pawns carry `raceId`. When this layer lands, **seed each `PawnRelationship.score` with the racial
+> baseline** of the two pawns' races (so members of mutually `wary`/`hostile` races start disliking
+> each other) before the proximity/event deltas accumulate. No mood wiring exists yet — that's this
+> spec's job.
 
 ### Score deltas (per turn or per event)
 

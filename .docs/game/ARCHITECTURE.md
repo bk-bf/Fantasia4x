@@ -103,7 +103,7 @@ Never compute flat bonus sums manually when a modifier system method exists.
 | `core/Buildings.ts` | Building definitions and unlock conditions                               |
 | `core/Research.ts`  | Research tree and unlock costs                                           |
 | `core/Work.ts`      | Work category definitions                                                |
-| `core/Race.ts`      | Race generation ranges and racial traits                                 |
+| `core/Race.ts`      | Race generation: archetype-biased pool (15–25), procedural lore/description, relations (ADR-023) |
 | `core/Locations.ts` | Exploration zone definitions                                             |
 | `core/Events.ts`    | Event type definitions                                                   |
 

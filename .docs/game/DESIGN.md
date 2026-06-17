@@ -39,19 +39,26 @@ Fantasia4x targets **peak production chain complexity** — the design reference
 
 See ADR-009 in [DECISIONS](DECISIONS.md) for the locked-in enforcement rules.
 
-## Race Generation
+## Race Generation (ADR-023)
 
-- Each stat gets a base range (8–15) with 30% chance of specialisation per stat (+2/+3 or -2 penalty)
-- 2–4 racial traits chosen from 25+ options; conflict prevention enforced (e.g. Flame Touched ≠ Frost Born)
-- Physical traits (size, height, weight) rolled within race ranges
-- Cultural flavour generated for lore (food customs, combat practices, diplomatic methods)
+A **pool of 15–25 procedural races** is prerolled per run (`Race.generateRacePool`) and stored on
+`GameState.racePool` — the canonical known-races store (the Race tab is a **pokédex** over it).
+`race` remains a back-compat alias for the colony's home race (`racePool[0]`). Each race:
 
-**Race archetypes that emerge naturally:**
+- Has an **archetype** (Mountain-born, Forest-kin, Deep-dwellers, Marsh-folk, Ember-kin…) that
+  biases stat ranges, size, and trait selection (banks in `database/race-lore.jsonc`).
+- Stat ranges: base 8–15 biased by the archetype's focus/dump stats; each pawn rolls within them.
+- 2–4 racial traits (archetype-weighted) from `database/racial-traits.jsonc`; conflict prevention
+  enforced (e.g. Flame Touched ≠ Frost Born). Every trait has a `flavorLine`.
+- **Procedural lore** including an immersive `description` paragraph — assembled from authored trait
+  `flavorLine`s + lore clause banks chosen by numeric buckets (stats/size/build): the poetry is
+  authored, only the scaffolding is generated.
 
-- Specialist: extreme stat ranges, strong in one domain
-- Balanced: consistent 10–13 across all stats
-- Trait-driven: average stats, powerful racial passives
-- Adaptive: moderate stats, flexible trait combinations
+The **starting colony is fully mixed** — each pawn (`Pawn.raceId`/`raceName`) is drawn from a random
+pool race. **Inter-race relations** (`GameState.raceRelations`) are a procedural symmetric stub shown
+in the pokédex — the seam the SOCIAL-LAYER will read to seed pawn-pair baselines (no mood wiring yet).
+Trait resistance effects (`coldResistance`…) feed the matching `*_resistance` stat, so race biology
+flows into condition onset (cold→hypothermia) via the existing machinery.
 
 ## Pawn System
 
