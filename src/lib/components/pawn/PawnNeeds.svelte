@@ -1,26 +1,7 @@
 <script lang="ts">
-  import type {
-    GameState,
-    Pawn,
-    TransientConditionDef,
-    ConditionDef,
-    ConditionStage
-  } from '$lib/game/core/types';
+  import type { GameState, Pawn } from '$lib/game/core/types';
   import { getNeedColor, getNeedDescription } from '$lib/utils/pawnUtils';
-  import conditionsData from '$lib/game/database/conditions.jsonc';
-  import { pawnService } from '$lib/game/services/PawnService';
-
-  // conditions.jsonc holds persistent conditions (severity/stages) and transient ones
-  // (re-derived each tick); split them by the `duration` discriminant — see the file header.
-  const ALL_CONDITION_DEFS = conditionsData as unknown as Array<
-    ConditionDef | TransientConditionDef
-  >;
-  const TRANSIENT_CONDITIONS_DB = ALL_CONDITION_DEFS.filter(
-    (d): d is TransientConditionDef => d.duration === 'transient'
-  );
-  const CONDITIONS_DB = ALL_CONDITION_DEFS.filter(
-    (d): d is ConditionDef => d.duration === 'persistent'
-  );
+  import ConditionChips from './ConditionChips.svelte';
 
   export let pawn: Pawn;
   export let gameState: GameState;
@@ -56,21 +37,6 @@
     if (pct >= 30) return '#c8a030';
     return '#c86030';
   }
-  $: transientConditions = (pawn.transientConditions ?? [])
-    .map((id) => TRANSIENT_CONDITIONS_DB.find((e) => e.id === id))
-    .filter((e): e is TransientConditionDef => e !== undefined && !e.hidden);
-
-  type ActiveCond = { name: string; severity: number; stage: ConditionStage };
-  $: activeConditions = (pawn.conditions ?? [])
-    .filter((c) => c.severity > 0)
-    .reduce<ActiveCond[]>((acc, c) => {
-      const def = CONDITIONS_DB.find((d) => d.id === c.id);
-      if (!def) return acc;
-      let stage: ConditionStage | undefined;
-      for (const s of def.stages) if (c.severity >= s.minSeverity) stage = s;
-      if (stage) acc.push({ name: def.name, severity: c.severity, stage });
-      return acc;
-    }, []);
 </script>
 
 <div class="needs-section">
@@ -153,33 +119,7 @@
     </div>
   {/if}
 
-  {#if transientConditions.length > 0 || activeConditions.length > 0}
-    <div class="section-hdr sub">| CONDITIONS</div>
-    <div class="conditions-row">
-      {#each activeConditions as { name, severity, stage }}
-        <div
-          class="condition-card cond-card"
-          class:threatening={stage.lifeThreatening}
-          style="border-color: {stage.color}; color: {stage.color}"
-          title="{name} — {Math.round(severity * 100)}% severity{stage.lifeThreatening
-            ? ' ⚠ life-threatening'
-            : ''}"
-        >
-          <span class="condition-name">{name.toUpperCase()}</span>
-          <span class="cond-meta">{stage.label.toUpperCase()} · {Math.round(severity * 100)}%</span>
-        </div>
-      {/each}
-      {#each transientConditions as cond}
-        <div
-          class="condition-card"
-          style="border-color: {cond.color}; color: {cond.color}"
-          title={cond.description}
-        >
-          <span class="condition-name">{cond.name.toUpperCase()}</span>
-        </div>
-      {/each}
-    </div>
-  {/if}
+  <ConditionChips {pawn} />
 
   <!-- TODO: draft-control mode will re-enable direct REST/EAT/WORK/IDLE commands later.
   <div class="btn-row">
@@ -200,12 +140,6 @@
     letter-spacing: 0.06em;
     border-bottom: 1px solid var(--border);
   }
-  .section-hdr.sub {
-    background: var(--bg);
-    color: var(--text-dim);
-    border-top: none;
-  }
-
   .need-row {
     display: flex;
     align-items: center;
@@ -257,52 +191,5 @@
     font-size: 11px;
     letter-spacing: -0.02em;
     white-space: nowrap;
-  }
-
-  .conditions-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    padding: 4px 8px;
-    border-top: 1px solid var(--border);
-  }
-
-  .condition-card {
-    border: 1px solid;
-    padding: 1px 6px;
-    font-size: 10px;
-    letter-spacing: 0.06em;
-    background: color-mix(in srgb, currentColor 8%, var(--bg));
-    cursor: default;
-  }
-
-  .condition-name {
-    font-weight: bold;
-  }
-
-  .cond-card {
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-  }
-
-  .cond-meta {
-    font-size: 9px;
-    letter-spacing: 0.03em;
-    opacity: 0.85;
-  }
-
-  .cond-card.threatening {
-    animation: pulse-threat 1.5s ease-in-out infinite;
-  }
-
-  @keyframes pulse-threat {
-    0%,
-    100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.45;
-    }
   }
 </style>

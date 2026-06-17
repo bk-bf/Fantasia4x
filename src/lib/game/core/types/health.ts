@@ -211,6 +211,9 @@ export interface ConditionDef {
   id: string;
   name: string;
   description: string;
+  /** Sprite-sheet glyph for the condition icon (same shape as Item/Building.charSpans). Tinted by
+   *  the active stage colour in the UI. Optional — falls back to a coloured glyph if absent. */
+  charSpans?: Array<{ sheet?: string; id?: number; from?: number; to?: number; literal?: string }>;
   lethalSeverity: number;
   stages: ConditionStage[];
   /** Optional: a need that drives this condition's severity up/down (conditions.jsonc). */

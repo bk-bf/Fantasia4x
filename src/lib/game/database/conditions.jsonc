@@ -10,6 +10,7 @@
         "duration": "persistent",
         "id": "dehydration",
         "name": "Dehydration",
+        "charSpans": [{ "sheet": "font", "id": 247 }],
         "description": "Lack of water — progressive and fast. Saps strength and work capacity; lethal within days if no water is drunk.",
         "lethalSeverity": 1.0,
         "driver": {
@@ -48,6 +49,7 @@
         "duration": "persistent",
         "id": "malnutrition",
         "name": "Malnutrition",
+        "charSpans": [{ "sheet": "font", "id": 31 }],
         "description": "A diet deficiency causing progressive physical deterioration. Reduces work capacity and ultimately leads to death if unchecked.",
         "lethalSeverity": 1.0,
         "driver": {
@@ -105,6 +107,7 @@
         "duration": "persistent",
         "id": "blood_loss",
         "name": "Blood Loss",
+        "charSpans": [{ "sheet": "font", "id": 3 }],
         "description": "Insufficient blood volume impairs consciousness and movement. Extreme blood loss leads to death.",
         "lethalSeverity": 1.0,
         "stages": [
@@ -143,6 +146,7 @@
         "duration": "persistent",
         "id"            : "fracture",
         "name"          : "Fracture",
+        "charSpans"     : [{ "sheet": "font", "id": 197 }],
         "description"   : "A broken bone impairing movement and combat ability. Worsens without rest.",
         "lethalSeverity": 1.0,
         "stages"        : [
@@ -177,6 +181,7 @@
         "duration": "persistent",
         "id"            : "infection",
         "name"          : "Infection",
+        "charSpans"     : [{ "sheet": "font", "id": 21 }],
         "description"   : "A wound has become infected. Untreated infections spread, doubling pain and bleeding.",
         "lethalSeverity": 1.0,
         "stages"        : [
@@ -213,6 +218,7 @@
         "duration": "persistent",
         "id"            : "shock",
         "name"          : "Shock",
+        "charSpans"     : [{ "sheet": "font", "id": 19 }],
         "description"   : "Severe pain or blood loss has sent the body into shock. The pawn is barely functional.",
         "lethalSeverity": 1.0,
         "stages"        : [
@@ -248,6 +254,7 @@
         "duration": "persistent",
         "id": "infection",
         "name": "Infection",
+        "charSpans": [{ "sheet": "font", "id": 21 }],
         "description": "An untended wound has festered. Worsens without treatment and can turn fatal; good care drives it back.",
         "lethalSeverity": 1.0,
         "stages": [
@@ -279,6 +286,7 @@
         "duration": "persistent",
         "id": "hypothermia",
         "name": "Hypothermia",
+        "charSpans": [{ "sheet": "font", "id": 42 }],
         "description": "Prolonged exposure to cold below the pawn's comfort range. Slows work and movement and tires the body; lethal if the pawn never warms up. Cold resistance (CON) slows onset; shelter, fire, and warmer seasons drive it back.",
         "lethalSeverity": 1.0,
         "driver": {
@@ -317,6 +325,7 @@
         "duration": "persistent",
         "id": "heat_stroke",
         "name": "Heat Stroke",
+        "charSpans": [{ "sheet": "font", "id": 15 }],
         "description": "Prolonged exposure to heat above the pawn's comfort range. Saps work and movement and drives up appetite/thirst; lethal if the pawn never cools down. Fire resistance (CON) slows onset; shade, water, and cooler seasons drive it back.",
         "lethalSeverity": 1.0,
         "driver": {
