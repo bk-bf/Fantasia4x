@@ -15,6 +15,10 @@
   export let workAmount: number | null = null;
   /** Required workstation display name (recipe.station). Omitted for hand-craftable recipes. */
   export let station: string | null = null;
+  /** Required tool tier (recipe.toolTierRequired). Shown only when the recipe is tool-gated (>0). */
+  export let toolTier: number | null = null;
+  /** Whether the colony's current tool level satisfies {toolTier}; unmet tiers render in red. */
+  export let toolMet = true;
   export let actionLabel: string;
   export let actionEnabled = true;
   /** ok = buildable/craftable, missing = can't afford, blocked = unmet requirement. */
@@ -34,6 +38,11 @@
     </div>
     {#if description}<div class="card-desc">{description}</div>{/if}
     {#if station}<div class="card-station" title="required workstation">⚒ {station}</div>{/if}
+    {#if toolTier}<div
+        class="card-tool"
+        class:unmet={!toolMet}
+        title="required tool tier"
+      >🔧 tier {toolTier} tools{#if !toolMet} (locked){/if}</div>{/if}
     <div class="card-cost"><slot /></div>
     <button
       class="card-action card-action--{variant}"
@@ -115,6 +124,17 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+  .card-tool {
+    color: var(--text-dim);
+    font-size: 9px;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .card-tool.unmet {
+    color: var(--neg, #d05050);
   }
   .card-cost {
     color: var(--text-dim);

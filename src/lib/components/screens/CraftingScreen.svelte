@@ -178,6 +178,14 @@
   }
   $: activeCat = craftCategories.find((c) => c.id === selectedCat) ?? craftCategories[0];
 
+  // Live search. When the query is non-empty it spans every category (tabs are bypassed);
+  // otherwise the active category's entries are shown.
+  let searchQuery = '';
+  $: searchTerm = searchQuery.trim().toLowerCase();
+  $: displayedEntries = searchTerm
+    ? craftEntries.filter((e) => e.name.toLowerCase().includes(searchTerm))
+    : (activeCat?.entries ?? []);
+
   const unsubscribeRace = currentRace.subscribe((value) => {
     race = value;
     currentPopulation = value?.population || 0;
@@ -241,16 +249,34 @@
     {/each}
   {/if}
 
-  <!-- Category tabs: pick a category, see its recipes -->
+  <!-- Category tabs: pick a category, see its recipes. Sticky so they stay reachable on scroll. -->
   {#if craftCategories.length > 0}
-    <FilterTabs
-      tabs={craftCategories.map((c) => ({ id: c.id, label: c.label }))}
-      selected={selectedCat}
-      onSelect={(id) => (selectedCat = id)}
-    />
-    {#if activeCat}
+    <div class="filter-bar">
+      <div class="filter-bar-tabs">
+        <FilterTabs
+          tabs={craftCategories.map((c) => ({ id: c.id, label: c.label }))}
+          selected={selectedCat}
+          onSelect={(id) => (selectedCat = id)}
+        />
+      </div>
+      <div class="filter-search">
+        <input
+          type="text"
+          placeholder="search recipes…"
+          bind:value={searchQuery}
+          spellcheck="false"
+          autocomplete="off"
+        />
+        {#if searchQuery}
+          <button class="search-clear" title="clear search" on:click={() => (searchQuery = '')}
+            >×</button
+          >
+        {/if}
+      </div>
+    </div>
+    {#if displayedEntries.length > 0}
       <div class="card-grid">
-        {#each activeCat.entries as entry (entry.key)}
+        {#each displayedEntries as entry (entry.key)}
           {@const item = entry.item}
           {@const recipe = recipeOf(item.id)}
           {@const isCarcass = item.isCarcass && item.yields}
@@ -280,6 +306,8 @@
             tint={item.color ?? 'var(--accent)'}
             workAmount={recipe?.workAmount ?? null}
             station={stationNameOf(item.id)}
+            toolTier={recipe?.toolTierRequired ?? null}
+            toolMet={(recipe?.toolTierRequired ?? 0) <= currentToolLevel}
             badge={isCarcass ? `${pct}%` : null}
             actionLabel={!affordable
               ? 'MISSING'
@@ -307,9 +335,10 @@
               {#each Object.entries(baseCost) as [id, n], ci}
                 {@const have = getItemAmount(id)}
                 {#if ci > 0}<span class="cost-sep">·</span>{/if}
-                <span class="cost-item" class:neg-text={have < (n as number)}>
-                  {id.replace(/_/g, ' ')} <span class="cost-qty">×{n}</span>
-                  <span class="cost-have" class:neg-text={have < (n as number)}>({have})</span>
+                <span class="cost-item">
+                  {id.replace(/_/g, ' ')}
+                  <span class="cost-qty" class:pos-text={have >= (n as number)} class:neg-text={have < (n as number)}>×{n}</span>
+                  <span class="cost-have" class:pos-text={have >= (n as number)} class:neg-text={have < (n as number)}>({have})</span>
                 </span>
               {/each}
               {#if dynNeed}
@@ -334,6 +363,8 @@
           </BuildCard>
         {/each}
       </div>
+    {:else if searchTerm}
+      <div class="muted-row">no recipes match "{searchQuery}"</div>
     {/if}
   {/if}
 
@@ -348,6 +379,63 @@
     grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
     gap: 5px;
     padding: 5px 8px;
+  }
+
+  /* Sticky filter + search bar — stays pinned while the card grid scrolls under it. */
+  .filter-bar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    align-items: stretch;
+    background: var(--bg);
+    border-bottom: 2px solid var(--border-hi);
+  }
+  .filter-bar-tabs {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  /* FilterTabs renders its own bottom border; the wrapper owns it here. */
+  .filter-bar-tabs :global(.filter-tabs) {
+    border-bottom: none;
+  }
+  .filter-search {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    position: relative;
+    border-left: 1px solid var(--border);
+  }
+  .filter-search input {
+    background: var(--bg-panel);
+    border: none;
+    color: var(--text);
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    padding: 4px 18px 4px 8px;
+    width: 150px;
+    outline: none;
+  }
+  .filter-search input::placeholder {
+    color: var(--text-muted);
+  }
+  .filter-search input:focus {
+    background: var(--bg-active, var(--bg-panel));
+  }
+  .search-clear {
+    position: absolute;
+    right: 4px;
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-size: 13px;
+    line-height: 1;
+    padding: 0 2px;
+    cursor: pointer;
+  }
+  .search-clear:hover {
+    color: var(--accent-hi);
   }
   .crafting-screen {
     height: 100%;
@@ -436,7 +524,8 @@
   .cost-item {
     display: inline-flex;
     gap: 2px;
-    align-items: center;
+    align-items: baseline;
+    white-space: nowrap;
   }
 
   .cost-qty {
@@ -453,6 +542,11 @@
 
   .neg-text {
     color: var(--neg);
+  }
+
+  .pos-text {
+    color: var(--pos);
+    opacity: 1;
   }
 
   .act-btn-sm {
