@@ -1,35 +1,27 @@
 <script lang="ts">
   import type { CombatTurnEntry } from '$lib/game/core/Events';
+  import { describeSwing } from './combatNarration';
 
   export let turns: CombatTurnEntry[];
 
   // Newest swing first, so a live engagement trails from the top — no scrolling to follow.
-  $: ordered = [...turns].reverse();
-
-  /** camelCase body-part id → readable name, e.g. rightUpperLeg → "right upper leg". */
-  function partName(id?: string): string {
-    if (!id) return '';
-    return id
-      .replace(/([A-Z])/g, ' $1')
-      .toLowerCase()
-      .trim();
-  }
+  // Each swing is narrated into a vivid sentence (verb scaled by damage + injury severity).
+  $: ordered = [...turns].reverse().map((t) => ({ t, n: describeSwing(t) }));
 </script>
 
 <div class="breakdown">
-  {#each ordered as t}
-    <div class="line" class:crit={t.crit} class:miss={!t.hit}>
+  {#each ordered as { t, n }}
+    <div class="line t-{n.tier}" class:crit={t.crit} class:miss={!t.hit}>
       <div class="head">
         <span class="turn">T{t.turn}</span>
-        <span class="who atk">{t.attackerName}</span>
-        <span class="arrow">{t.hit ? '→' : '⨯'}</span>
-        <span class="who">{t.defenderName}</span>
-        {#if !t.hit}<span class="dodge">dodged</span>{/if}
+        <span class="who atk">{n.attacker}</span>
+        <span class="verb t-{n.tier}">{n.verb}</span>
+        <span class="who">{n.target}</span>
+        {#if n.dodged}<span class="dodge">— dodged</span>{/if}
       </div>
       {#if t.hit}
         <div class="detail">
           {#if t.weapon}<span class="weapon">{t.weapon}</span>{/if}
-          {#if t.bodyPart}<span class="part">{partName(t.bodyPart)}</span>{/if}
           {#if t.partRemainingHp !== undefined && t.partMaxHp !== undefined}
             <span class="hp">{t.partRemainingHp}/{t.partMaxHp}</span>
           {/if}
@@ -61,6 +53,14 @@
     padding: 2px 0 2px 5px;
     border-left: 2px solid var(--border-hi);
     line-height: 1.4;
+  }
+  /* Left accent tracks how grievous the blow was, so a wall of swings reads at a glance. */
+  .line.t-critical {
+    border-left-color: #ff8c44;
+  }
+  .line.t-destroyed {
+    border-left-color: #ff3322;
+    background: rgba(255, 51, 34, 0.06);
   }
   .line.crit {
     border-left-color: #ff3322;
@@ -98,15 +98,32 @@
   .who.atk {
     color: var(--accent-hi);
   }
-  .arrow {
+  /* The vivid verb, coloured by how nasty the hit was. */
+  .verb {
+    font-weight: 600;
+    color: var(--text);
+  }
+  .verb.t-minor {
+    color: #b89850;
+    font-weight: 500;
+  }
+  .verb.t-serious {
+    color: #e0a040;
+  }
+  .verb.t-critical {
+    color: #ff8c44;
+  }
+  .verb.t-destroyed {
+    color: #ff3322;
+  }
+  .miss .verb {
     color: var(--text-muted);
+    font-weight: 400;
+    font-style: italic;
   }
   .weapon {
     color: var(--text-dim);
     font-style: italic;
-  }
-  .part {
-    color: #66ccee;
   }
   .hp {
     color: var(--text-dim);

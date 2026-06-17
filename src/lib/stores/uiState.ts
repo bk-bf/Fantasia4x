@@ -36,6 +36,8 @@ interface UIState {
   cameraFollowMobId: string | null;
   /** Blueprint placement mode: id of the building being placed, null = inactive. */
   blueprintBuildingId: string | null;
+  /** Chosen materials for the active blueprint's `category:` cost slots (cost-key → itemId). */
+  blueprintMaterials: Record<string, string> | null;
   /** Requests the pawn screen to open a specific tab. Cleared after reading. */
   pawnScreenTab: 'status' | 'attributes' | 'gear' | null;
   /** Debug click-brush (in-game DEBUG tab). null = inactive. `id` is the resource/building id the
@@ -58,6 +60,7 @@ function createUIState() {
     selectedMobId: null,
     cameraFollowMobId: null,
     blueprintBuildingId: null,
+    blueprintMaterials: null,
     pawnScreenTab: null,
     debugBrush: null
   };
@@ -120,10 +123,11 @@ function createUIState() {
     setPawnTab: (tab: 'status' | 'attributes' | 'gear' | null) =>
       update((state) => ({ ...state, pawnScreenTab: tab })),
 
-    activateBlueprint: (buildingId: string) =>
+    activateBlueprint: (buildingId: string, materials: Record<string, string> | null = null) =>
       update((state) => ({
         ...state,
         blueprintBuildingId: buildingId,
+        blueprintMaterials: materials,
         _screenBeforeDesignation:
           state.currentScreen !== 'main' ? state.currentScreen : state._screenBeforeDesignation,
         currentScreen: 'main'
@@ -133,6 +137,7 @@ function createUIState() {
       update((state) => ({
         ...state,
         blueprintBuildingId: null,
+        blueprintMaterials: null,
         currentScreen: state._screenBeforeDesignation ?? state.currentScreen,
         _screenBeforeDesignation: null
       })),
