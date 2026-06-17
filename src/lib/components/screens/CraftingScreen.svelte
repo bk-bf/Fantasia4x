@@ -285,6 +285,7 @@
             name={entry.name.toUpperCase()}
             charSpans={item.charSpans}
             description={entry.description}
+            statItem={item}
             tint={item.color ?? 'var(--accent)'}
             workAmount={recipe?.workAmount ?? null}
             station={stationNameOf(item.id)}

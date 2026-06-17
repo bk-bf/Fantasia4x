@@ -200,7 +200,7 @@
     margin-top: 4px;
     display: flex;
     flex-wrap: wrap;
-    gap: 4px;
+    gap: 3px;
   }
   /* Placeholder shown where condition pills would appear, when there are none. */
   .hp-no-conditions {
@@ -210,9 +210,11 @@
   }
   .cond-chip {
     border: 1px solid;
-    padding: 0 5px;
+    padding: 0 3px;
+    font-size: 8px;
+    line-height: 1.35;
     font-weight: bold;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.02em;
     background: color-mix(in srgb, currentColor 12%, #0d0903);
     cursor: default;
   }

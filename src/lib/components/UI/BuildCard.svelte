@@ -3,6 +3,8 @@
 <script lang="ts">
   import SpriteIcon from './SpriteIcon.svelte';
   import HoverTip from './HoverTip.svelte';
+  import ItemStatTooltip from './ItemStatTooltip.svelte';
+  import type { Item } from '$lib/game/core/types';
 
   // Show the full description in a hover panel, but only when it's actually clamped/truncated.
   let descTip: { x: number; y: number } | null = null;
@@ -15,6 +17,18 @@
   }
   function onDescLeave() {
     descTip = null;
+  }
+
+  // Stat/ability breakdown for gear: shown when hovering a card that carries a `statItem`.
+  let statTip: { x: number; y: number } | null = null;
+  function onStatEnter(e: MouseEvent) {
+    if (hasStats) statTip = { x: e.clientX, y: e.clientY };
+  }
+  function onStatMove(e: MouseEvent) {
+    if (statTip) statTip = { x: e.clientX, y: e.clientY };
+  }
+  function onStatLeave() {
+    statTip = null;
   }
 
   type CharSpan = { sheet?: string; id?: number; from?: number; to?: number; literal?: string };
@@ -43,12 +57,29 @@
    *  action button. Used by crafting to batch-queue orders. */
   export let quantities: number[] | null = null;
   export let onQuantity: ((n: number) => void) | null = null;
+  /** Item whose combat/gear stats + abilities pop in a hover breakdown (weapons/armour/tools). */
+  export let statItem: Item | null = null;
+
+  // Only show the stat tooltip for items that actually carry gear stats / effects worth a breakdown.
+  $: hasStats =
+    !!statItem &&
+    (!!statItem.weaponProperties ||
+      !!statItem.armorProperties ||
+      (statItem.type === 'tool' && !!statItem.toolBoost) ||
+      Object.keys(statItem.effects ?? {}).length > 0);
 </script>
 
 <div class="build-card" class:disabled={!actionEnabled}>
   <div class="card-accent" style="background: {tint}"></div>
   <div class="card-body">
-    <div class="card-header">
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div
+      class="card-header"
+      class:has-stats={hasStats}
+      on:mouseenter={onStatEnter}
+      on:mousemove={onStatMove}
+      on:mouseleave={onStatLeave}
+    >
       <SpriteIcon {charSpans} px={18} />
       <span class="card-name">{name}</span>
       {#if workAmount != null}<span class="card-work" title="work to complete">⚒{workAmount}</span
@@ -100,6 +131,10 @@
   <HoverTip x={descTip.x} y={descTip.y}>{description}</HoverTip>
 {/if}
 
+{#if statTip && hasStats && statItem}
+  <ItemStatTooltip item={statItem} x={statTip.x} y={statTip.y} />
+{/if}
+
 <style>
   .build-card {
     display: flex;
@@ -131,6 +166,9 @@
     display: flex;
     align-items: center;
     gap: 5px;
+  }
+  .card-header.has-stats {
+    cursor: help;
   }
   .card-name {
     color: var(--accent-hi);

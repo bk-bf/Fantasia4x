@@ -62,4 +62,42 @@ describe('engagement-scoped combat logging', () => {
     expect(entry.combatBreakdown?.every((b) => b.hit === false)).toBe(true);
     expect(entry.result).toContain('0/2 hits');
   });
+
+  it('reciprocal swings (A→B and B→A) stay on one entry, not two', () => {
+    logCombatSwing('mob-g2', 'Goblin #2', 'pawn-wren', 'Wren', 0, 5, 5, swing(0, true, 3));
+    logCombatSwing('pawn-wren', 'Wren', 'mob-g2', 'Goblin #2', 1, 5, 5, swing(1, true, 4));
+    const entries = combatEntries();
+    expect(entries).toHaveLength(1);
+    expect(entries[0].combatBreakdown?.length).toBe(2);
+    expect(entries[0].action).toBe('Goblin #2 engaged Wren');
+  });
+
+  it('a joining combatant accretes onto the existing engagement, not a new row', () => {
+    // Goblin opens on Wren; Bo joins against the same goblin; goblin swings back at Bo.
+    logCombatSwing('mob-g2', 'Goblin #2', 'pawn-wren', 'Wren', 0, 5, 5, swing(0, true, 3));
+    logCombatSwing('pawn-bo', 'Bo', 'mob-g2', 'Goblin #2', 1, 5, 5, swing(1, true, 2));
+    logCombatSwing('mob-g2', 'Goblin #2', 'pawn-bo', 'Bo', 2, 5, 5, swing(2, false));
+    const entries = combatEntries();
+    expect(entries).toHaveLength(1);
+    expect(entries[0].combatBreakdown?.length).toBe(3);
+    // 3 distinct fighters are surfaced in the summary.
+    expect(entries[0].result).toContain('3 fighters');
+    expect(entries[0].entityIds).toEqual(
+      expect.arrayContaining(['mob-g2', 'pawn-wren', 'pawn-bo'])
+    );
+  });
+
+  it('a kill keeps the brawl open while other fighters remain', () => {
+    // Two goblins both fighting Wren — same brawl (joined via Wren).
+    logCombatSwing('mob-g1', 'Goblin #1', 'pawn-wren', 'Wren', 0, 5, 5, swing(0, true, 3));
+    logCombatSwing('mob-g2', 'Goblin #2', 'pawn-wren', 'Wren', 1, 5, 5, swing(1, true, 3));
+    // Wren downs Goblin #1; Goblin #2 is still up, so the engagement entry lives on.
+    logCombatKill('pawn-wren', 'Wren', 'mob-g1', 'Goblin #1', 2, 5, 5, 'spear');
+    logCombatSwing('mob-g2', 'Goblin #2', 'pawn-wren', 'Wren', 3, 5, 5, swing(3, true, 2));
+    const engaged = combatEntries().filter((e) => e.action.includes('engaged'));
+    const killed = combatEntries().filter((e) => e.action.includes('killed'));
+    expect(engaged).toHaveLength(1);
+    expect(killed).toHaveLength(1);
+    expect(engaged[0].combatBreakdown?.length).toBe(3);
+  });
 });
