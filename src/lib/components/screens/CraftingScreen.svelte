@@ -203,11 +203,7 @@
     unsubscribeGame();
   });
 
-  function startCrafting(
-    item: Item,
-    selectedIngredients?: Record<string, string>,
-    quantity = 1
-  ) {
+  function startCrafting(item: Item, selectedIngredients?: Record<string, string>, quantity = 1) {
     if (!$gameState) return;
     gameState.command({
       type: 'craftItem',
@@ -232,7 +228,6 @@
     | CRAFTING
     <button class="hdr-btn" on:click={() => uiState.setScreen('main')}>BACK</button>
   </div>
-
 
   <!-- Category tabs: pick a category, see its recipes. Sticky so they stay reachable on scroll. -->
   {#if craftCategories.length > 0}
@@ -284,8 +279,7 @@
             isPlaceholder && recipe?.dynamicRecipe
               ? Object.values(recipe.dynamicRecipe)[0].acceptsCategory
               : null}
-          {@const canQueue =
-            $gameState !== null && itemService.canQueueCraft(item.id, $gameState)}
+          {@const canQueue = $gameState !== null && itemService.canQueueCraft(item.id, $gameState)}
           {@const useQty = !isCarcass && !isPlaceholder}
           <BuildCard
             name={entry.name.toUpperCase()}
@@ -322,10 +316,8 @@
                 : !craftable
                   ? 'blocked'
                   : 'ok'}
-            quantities={useQty ? [1, 5, 10] : null}
-            onQuantity={useQty
-              ? (n) => startCrafting(item, entry.selectedIngredients, n)
-              : null}
+            quantities={useQty ? [3, 5, 10] : null}
+            onQuantity={useQty ? (n) => startCrafting(item, entry.selectedIngredients, n) : null}
             onAction={() => startCrafting(item, entry.selectedIngredients)}
           >
             {#if isCarcass}
@@ -345,8 +337,16 @@
                 {#if ci > 0}<span class="cost-sep">·</span>{/if}
                 <span class="cost-item">
                   {id.replace(/_/g, ' ')}
-                  <span class="cost-qty" class:pos-text={have >= (n as number)} class:neg-text={have < (n as number)}>×{n}</span>
-                  <span class="cost-have" class:pos-text={have >= (n as number)} class:neg-text={have < (n as number)}>({have})</span>
+                  <span
+                    class="cost-qty"
+                    class:pos-text={have >= (n as number)}
+                    class:neg-text={have < (n as number)}>×{n}</span
+                  >
+                  <span
+                    class="cost-have"
+                    class:pos-text={have >= (n as number)}
+                    class:neg-text={have < (n as number)}>({have})</span
+                  >
                 </span>
               {/each}
               {#if dynNeed}
@@ -397,7 +397,10 @@
               : `${qi.item.name} ×${qty} — ${prog}%`}
           >
             {#if !qi.pending}<span class="job-fill" style="width:{prog}%"></span>{/if}
-            <span class="job-name">{qi.item.name.toUpperCase()}{#if qty > 1} ×{qty}{/if}</span>
+            <span class="job-name"
+              >{qi.item.name.toUpperCase()}{#if qty > 1}
+                ×{qty}{/if}</span
+            >
             <span class="job-pct">{qi.pending ? 'WAIT' : `${prog}%`}</span>
             <button class="job-x" title="Cancel" on:click={() => cancelCrafting(idx)}>✕</button>
           </div>

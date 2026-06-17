@@ -65,11 +65,10 @@
         {description}
       </div>{/if}
     {#if station}<div class="card-station" title="required workstation">⚒ {station}</div>{/if}
-    {#if toolTier}<div
-        class="card-tool"
-        class:unmet={!toolMet}
-        title="required tool tier"
-      >🔧 tier {toolTier} tools{#if !toolMet} (locked){/if}</div>{/if}
+    {#if toolTier}<div class="card-tool" class:unmet={!toolMet} title="required tool tier">
+        🔧 tier {toolTier} tools{#if !toolMet}
+          (locked){/if}
+      </div>{/if}
     <div class="card-cost"><slot /></div>
     {#if quantities && onQuantity}
       <div class="card-actions">
