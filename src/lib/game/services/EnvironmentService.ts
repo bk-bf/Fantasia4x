@@ -424,18 +424,17 @@ export function weatherPanelSaturation(type?: string): number {
 const BLEAK_PANEL_SAT = 0.7;
 
 /**
- * Effective side-panel saturation: the per-weather value, BUT clamped to a blizzard-level wash
- * whenever the world should feel bleak — i.e. all of winter, and during ANY active weather event
- * (anything but clear skies). Fog and the storms already sit below this, so they're unchanged; clear
- * non-winter skies stay full colour.
+ * Effective side-panel saturation. Each weather carries its own `panelSaturation` (rain/storm/fog
+ * bleak, the mild windy variants barely so) — that's the daytime look. WINTER additionally clamps to
+ * a blizzard-level wash so the whole cold season feels bleak regardless of weather. Non-winter weather
+ * just uses its own value, so a light breeze barely desaturates while a storm still does.
  */
 export function effectivePanelSaturation(
   season: Season | undefined,
   weather: WeatherState | undefined
 ): number {
   const base = weatherPanelSaturation(weather?.type);
-  const bleak = season === 'winter' || (weather?.type ?? 'clear') !== 'clear';
-  return bleak ? Math.min(base, BLEAK_PANEL_SAT) : base;
+  return season === 'winter' ? Math.min(base, BLEAK_PANEL_SAT) : base;
 }
 /** Whether a weather id is "heavy" (bigger/faster overlay — e.g. heavy_rain / blizzard). */
 export function weatherIsHeavy(type?: string): boolean {
@@ -949,6 +948,16 @@ class EnvironmentServiceImpl {
    */
   ambientTurn(gs: { turn: number; _debugTimeOfDay?: number }): number {
     return gs._debugTimeOfDay != null ? Math.round(gs._debugTimeOfDay * TICKS_PER_DAY) : gs.turn;
+  }
+
+  /**
+   * Season to drive visuals (panel bleakness, map-tint desaturation). Honours the debug `_debugSeason`
+   * override IMMEDIATELY — `gs.season` only catches up after `processEnvironment` runs a tick, so while
+   * paused the override wouldn't apply and the UI would read the stale season (e.g. stay winter-bleak
+   * after toggling to summer). Falls back to the live season.
+   */
+  effectiveSeason(gs: { season?: Season; _debugSeason?: Season }): Season | undefined {
+    return gs._debugSeason ?? gs.season;
   }
 
   getAmbient(turn: number): AmbientState {

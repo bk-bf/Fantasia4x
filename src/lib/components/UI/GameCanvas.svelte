@@ -794,7 +794,12 @@
     if (renderer?.isReady()) {
       const { light, tint } = environmentService.getAmbient(environmentService.ambientTurn(s));
       // Season+weather hue, winter-desaturated so snow isn't painted by the dawn/dusk/night hues.
-      const tinted = environmentService.getMapAmbientTint(tint, s.season, s.weather);
+      // Debug-aware season so a season override applies immediately even while paused.
+      const tinted = environmentService.getMapAmbientTint(
+        tint,
+        environmentService.effectiveSeason(s),
+        s.weather
+      );
       renderer.setAmbient(light, tinted);
       lightingService.setAmbient(light, tinted);
       _ambientLight = light;
@@ -1828,7 +1833,7 @@
         const { light, tint } = environmentService.getAmbient($gameState?.turn ?? 0);
         const tinted = environmentService.getMapAmbientTint(
           tint,
-          $gameState?.season,
+          $gameState ? environmentService.effectiveSeason($gameState) : undefined,
           $gameState?.weather
         );
         renderer.setAmbient(light, tinted);

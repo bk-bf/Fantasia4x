@@ -35,7 +35,7 @@
   $: ambient = environmentService.getAmbient(environmentService.ambientTurn($gameState));
   $: panelTint = ambient.panelTint;
   $: panelSaturation = bleakSaturation(
-    effectivePanelSaturation($gameState.season, $gameState.weather),
+    effectivePanelSaturation(environmentService.effectiveSeason($gameState), $gameState.weather),
     ambient.light
   );
   $: ambientMatrix = buildPanelMatrix(panelTint, panelSaturation);
