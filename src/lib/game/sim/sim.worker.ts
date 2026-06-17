@@ -143,7 +143,7 @@ const PAWN_COLD = new Set<string>([
   'limbs',
   'injuries',
   'conditions',
-  'statusEffectDurations'
+  'conditionTimers'
 ]);
 const MOB_COLD = new Set<string>([
   'stats',
@@ -152,7 +152,7 @@ const MOB_COLD = new Set<string>([
   'limbs',
   'injuries',
   'conditions',
-  'statusEffectDurations'
+  'conditionTimers'
 ]);
 // Cold-field (limbs/inventory/skills/injuries/…) resync cadence. Each flush refreshes a rotating
 // 1/RESYNC_EVERY slice of entities FULL (§D2 — staggered), so over RESYNC_EVERY flushes every entity

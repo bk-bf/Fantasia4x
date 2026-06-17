@@ -686,10 +686,10 @@ export function healWounds(pawn: Pawn, turn = 0): Pawn {
 // ===== HAULING HELPERS =====
 
 /**
- * Decrement temporary status effect durations and remove expired ones.
+ * Decrement temporary transient condition durations and remove expired ones.
  */
-function tickStatusEffectDurations(pawn: Pawn): Pawn {
-  const durations = pawn.statusEffectDurations;
+function tickConditionTimers(pawn: Pawn): Pawn {
+  const durations = pawn.conditionTimers;
   if (!durations || Object.keys(durations).length === 0) return pawn;
   const next: Record<string, number> = {};
   for (const [key, val] of Object.entries(durations)) {
@@ -700,14 +700,14 @@ function tickStatusEffectDurations(pawn: Pawn): Pawn {
     Object.keys(next).length !== Object.keys(durations).length ||
     Object.entries(next).some(([k, v]) => v !== durations[k]);
   if (!changed) return pawn;
-  return { ...pawn, statusEffectDurations: next };
+  return { ...pawn, conditionTimers: next };
 }
 
 /**
- * Derive the pawn's activeEffects list from current state flags, needs, and durations.
+ * Derive the pawn's transientConditions list from current state flags, needs, and durations.
  * Called after each tick so PawnService.calculateNeedsUpdate always reads fresh values.
  */
-function syncActiveEffects(pawn: Pawn): Pawn {
+function syncTransientConditions(pawn: Pawn): Pawn {
   const effects: string[] = [];
   const isEating = pawn.state?.isEating || pawn.currentState === PAWN_STATE.EATING;
   const isSleeping = pawn.state?.isSleeping || pawn.currentState === PAWN_STATE.SLEEPING;
@@ -722,8 +722,8 @@ function syncActiveEffects(pawn: Pawn): Pawn {
   if ((pawn.needs?.thirst ?? 0) >= HUNGER_THRESHOLD) effects.push('thirsty');
   if ((pawn.needs?.hygiene ?? 0) >= HUNGER_THRESHOLD) effects.push('filthy');
 
-  // Duration-based status effects (knockdown, etc.)
-  for (const [effectId, remaining] of Object.entries(pawn.statusEffectDurations ?? {})) {
+  // Duration-based transient conditions (knockdown, etc.)
+  for (const [effectId, remaining] of Object.entries(pawn.conditionTimers ?? {})) {
     if (remaining > 0) effects.push(effectId);
   }
 
@@ -732,7 +732,7 @@ function syncActiveEffects(pawn: Pawn): Pawn {
   // SEASONS_WEATHER: soaked → wet (cold bites harder, heat less; chance of a chill when soaked + cold).
   if ((pawn.needs?.wetness ?? 0) >= 50) effects.push('wet');
 
-  // Mood-based status effects (discrete ranges replace continuous morale calculation)
+  // Mood-based transient conditions (discrete ranges replace continuous morale calculation)
   const mood = pawn.state?.mood ?? 50;
   if (mood >= 80) effects.push('mood_ecstatic');
   else if (mood >= 60) effects.push('mood_content');
@@ -747,9 +747,9 @@ function syncActiveEffects(pawn: Pawn): Pawn {
     if (stage) effects.push(`${condition.id}:${stage.label}`);
   }
 
-  const current = pawn.activeEffects ?? [];
+  const current = pawn.transientConditions ?? [];
   if (effects.length === current.length && effects.every((e, i) => e === current[i])) return pawn;
-  return { ...pawn, activeEffects: effects };
+  return { ...pawn, transientConditions: effects };
 }
 
 // ===== PER-PAWN STATE HANDLERS =====
@@ -909,22 +909,22 @@ class PawnStateMachineImpl {
       const consciousness = pawnStatService.computeCapacities(afterConditions).consciousness ?? 1;
 
       if (afterConditions.currentState === PAWN_STATE.COLLAPSED) {
-        const durations = { ...(afterConditions.statusEffectDurations ?? {}) };
+        const durations = { ...(afterConditions.conditionTimers ?? {}) };
         let downed: Pawn;
         if (consciousness >= RECOVER_CONSCIOUSNESS) {
           delete durations.collapse; // recovered — stand back up
           downed = {
             ...afterConditions,
             currentState: PAWN_STATE.IDLE,
-            statusEffectDurations: durations
+            conditionTimers: durations
           };
         } else {
           durations.collapse = Math.max(durations.collapse ?? 0, 2); // keep it active
-          downed = { ...afterConditions, statusEffectDurations: durations };
+          downed = { ...afterConditions, conditionTimers: durations };
         }
         state = {
           ...state,
-          pawns: state.pawns.map((p) => (p.id === pawn.id ? syncActiveEffects(downed) : p))
+          pawns: state.pawns.map((p) => (p.id === pawn.id ? syncTransientConditions(downed) : p))
         };
         continue;
       }
@@ -936,16 +936,16 @@ class PawnStateMachineImpl {
               j.claimedBy === afterConditions.id ? { ...j, claimedBy: null } : j
             )
           : state.jobs;
-        const durations = { ...(afterConditions.statusEffectDurations ?? {}) };
+        const durations = { ...(afterConditions.conditionTimers ?? {}) };
         durations.collapse = Math.max(durations.collapse ?? 0, 2);
-        const downed = syncActiveEffects({
+        const downed = syncTransientConditions({
           ...afterConditions,
           currentState: PAWN_STATE.COLLAPSED,
           activeJob: undefined,
           path: [],
           isMoving: false,
           hasReachedDestination: false,
-          statusEffectDurations: durations
+          conditionTimers: durations
         });
         state = {
           ...state,
@@ -959,11 +959,11 @@ class PawnStateMachineImpl {
 
       // R2: drafted pawns ran the full health block above (bleed/heal/death/collapse). They are
       // player-controlled, so skip the BEHAVIOURAL state machine (auto combat-engage, exhaustion
-      // collapse, eat/sleep/work). Still tick status-effect durations so a combat-inflicted
-      // knockdown/collapse actually expires, then sync activeEffects, and move on.
+      // collapse, eat/sleep/work). Still tick transient condition durations so a combat-inflicted
+      // knockdown/collapse actually expires, then sync transientConditions, and move on.
       if (forCollapse.drafted) {
-        const stepped = tickStatusEffectDurations(forCollapse);
-        const synced = syncActiveEffects(stepped);
+        const stepped = tickConditionTimers(forCollapse);
+        const synced = syncTransientConditions(stepped);
         if (synced !== forCollapse) {
           state = {
             ...state,
@@ -1019,13 +1019,13 @@ class PawnStateMachineImpl {
             pawns: state.pawns.map((p) => (p.id === pawn.id ? forCollapse : p))
           };
         }
-        // Run the combat handler and tick status effects, then move to next pawn —
+        // Run the combat handler and tick transient conditions, then move to next pawn —
         // skip the need/work state machine entirely while a threat is present.
         state = tickPawn(forCollapse, state);
         const afterCombat = pawnById(state.pawns, pawn.id);
         if (afterCombat) {
-          const stepped = tickStatusEffectDurations(afterCombat);
-          const synced = syncActiveEffects(stepped);
+          const stepped = tickConditionTimers(afterCombat);
+          const synced = syncTransientConditions(stepped);
           if (synced !== afterCombat) {
             state = {
               ...state,
@@ -1057,11 +1057,11 @@ class PawnStateMachineImpl {
 
       // Run state machine for this pawn.
       state = tickPawn(forCollapse, state);
-      // Tick status effect durations, then sync activeEffects so PawnService reads fresh values.
+      // Tick transient condition durations, then sync transientConditions so PawnService reads fresh values.
       const updated = pawnById(state.pawns, pawn.id);
       if (updated) {
-        let stepped = tickStatusEffectDurations(updated);
-        const synced = syncActiveEffects(stepped);
+        let stepped = tickConditionTimers(updated);
+        const synced = syncTransientConditions(stepped);
         if (synced !== stepped) {
           state = { ...state, pawns: state.pawns.map((p) => (p.id === pawn.id ? synced : p)) };
         } else if (stepped !== updated) {

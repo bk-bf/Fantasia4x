@@ -44,10 +44,10 @@ function woundWarn(inj: Injury): boolean {
   return inj.infected || inj.severity !== 'minor';
 }
 
-/** Visible status effects as HUD chips (sprite glyph + colour). Hidden (internal) effects are
+/** Visible transient conditions as HUD chips (sprite glyph + colour). Hidden (internal) effects are
  *  filtered by the service; the glyph comes from the effect's charSpans (sheet:id, as items do). */
-function statusEffectPills(entity: Pawn | Mob): EntityEffect[] {
-  return pawnService.getStatusEffects(entity).map((e) => ({
+function conditionPills(entity: Pawn | Mob): EntityEffect[] {
+  return pawnService.getTransientConditions(entity).map((e) => ({
     charSpans: e.charSpans,
     name: e.name,
     color: e.color
@@ -264,7 +264,7 @@ export function buildPawnCard(
     dismissable: selected,
     mood: Math.floor(pawn.state.mood),
     stats,
-    effects: statusEffectPills(pawn),
+    effects: conditionPills(pawn),
     bars,
     // (No `job` line: it just repeated the [state] tag next to the name — replaced by the WETNESS bar.)
     // Only show a bar for states that also draw one above the pawn's head (Working / eat / drink /
@@ -374,7 +374,7 @@ export function buildMobCard(
       { label: 'DEX', value: mob.stats.dexterity },
       moveSpeedStat(mob)
     ],
-    effects: statusEffectPills(mob),
+    effects: conditionPills(mob),
     bars,
     note: `${def.entityClass === 'mob' ? '⚔ hostile' : '◆ neutral'} · ${def.behaviour}${
       def.tameable ? ' · tameable' : ''

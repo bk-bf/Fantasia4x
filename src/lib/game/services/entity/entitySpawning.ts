@@ -194,7 +194,7 @@ export function makeMob(def: CreatureDefinition, x: number, y: number, turn: num
     bloodVolume: def.stats.health,
     maxBloodVolume: def.stats.health,
     isAlive: true,
-    activeEffects: [],
+    transientConditions: [],
     skills: {},
     stamina: calcMaxStamina(stats),
     maxStamina: calcMaxStamina(stats),
@@ -254,6 +254,6 @@ export function makeMob(def: CreatureDefinition, x: number, y: number, turn: num
     pain: 0,
     aggroRange: def.behaviour === 'aggressive' ? 8 : 3,
     attackCooldown: 0,
-    statusEffectDurations: {}
+    conditionTimers: {}
   };
 }

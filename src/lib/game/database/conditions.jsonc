@@ -336,10 +336,10 @@
         ]
     },
 
-    // ── Status effects (flags) ───────────────────────────────────────────────
+    // ── Transient conditions (flags) ───────────────────────────────────────────────
     // Transient states with no severity/stages: derived fresh each tick from the
-    // pawn's flags/needs/mood/durations (see PawnStateMachine.syncActiveEffects)
-    // and stored as plain ids in `pawn.activeEffects`. Distinguished from the
+    // pawn's flags/needs/mood/durations (see PawnStateMachine.syncTransientConditions)
+    // and stored as plain ids in `pawn.transientConditions`. Distinguished from the
     // graded conditions above by having a flat `modifiers` block and NO `stages`.
     // modifiers are multipliers unless noted: 1.0 = full rate, 0.0 = paused, 0.33 = one-third.
     {

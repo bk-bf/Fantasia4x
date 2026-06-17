@@ -3,7 +3,7 @@ import type {
   Mob,
   BodyPartState,
   ConditionDef,
-  StatusEffectDef,
+  TransientConditionDef,
   Item,
   RacialTrait
 } from '../core/types';
@@ -12,12 +12,12 @@ import conditionsData from '../database/conditions.jsonc';
 import itemsData from '../database/items.jsonc';
 import { WORK_CATEGORIES } from '../core/Work';
 
-// conditions.jsonc holds both graded conditions (with `stages`) and flat status-effect
+// conditions.jsonc holds both graded conditions (with `stages`) and flat transient condition
 // "flags" (no `stages`). Split them by shape — see the file header.
-const ALL_CONDITION_DEFS = conditionsData as unknown as Array<ConditionDef | StatusEffectDef>;
+const ALL_CONDITION_DEFS = conditionsData as unknown as Array<ConditionDef | TransientConditionDef>;
 const CONDITIONS_DB = ALL_CONDITION_DEFS.filter((d): d is ConditionDef => 'stages' in d);
-const STATUS_EFFECTS_DB = ALL_CONDITION_DEFS.filter(
-  (d): d is StatusEffectDef => !('stages' in d)
+const TRANSIENT_CONDITIONS_DB = ALL_CONDITION_DEFS.filter(
+  (d): d is TransientConditionDef => !('stages' in d)
 );
 const ITEMS_DB = itemsData as unknown as Item[];
 
@@ -365,8 +365,8 @@ function traitResistanceBonus(pawn: Pawn | Mob, statId: string): number {
   return bonus;
 }
 
-// ── Transient state work penalty (conditions + status effects) ───────────────
-// Health conditions (thirst, malnutrition, blood loss …) and status effects
+// ── Transient state work penalty (conditions + transient conditions) ───────────────
+// Health conditions (thirst, malnutrition, blood loss …) and transient conditions
 // (tired, hungry, inspired …) carry a `workEfficiency` scalar = overall work-rate
 // multiplier. It applies to SPEED only (matching the prior model). Organ/limb damage
 // is NOT included here — that already flows through the capacity terms in the formulas.
@@ -384,8 +384,8 @@ function pawnStateWorkMultiplier(pawn: Pawn | Mob): number {
     if (we !== undefined) mult *= we;
   }
 
-  for (const effectId of pawn.activeEffects ?? []) {
-    const def = STATUS_EFFECTS_DB.find((e) => e.id === effectId);
+  for (const effectId of pawn.transientConditions ?? []) {
+    const def = TRANSIENT_CONDITIONS_DB.find((e) => e.id === effectId);
     const we = def?.modifiers.workEfficiency;
     if (we !== undefined) mult *= we;
   }
@@ -485,7 +485,7 @@ export class PawnStatServiceImpl implements PawnStatService {
     // A held tool ADDS its toolBoost to the speed/yield modifier (items.jsonc `toolBoost`).
     const toolBoost = heldToolBoost(pawn, workType);
     // Base = stat formula × body capacities. Layer explicit trait multipliers on top.
-    // Transient state (conditions/status effects) applies to throughput → speed only.
+    // Transient state (conditions/transient conditions) applies to throughput → speed only.
     const stateMult = pawnStateWorkMultiplier(pawn);
     const speed = Math.max(
       0.1,

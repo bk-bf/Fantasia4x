@@ -4,7 +4,7 @@ import type {
   Mob,
   EntityNeeds,
   PawnState,
-  StatusEffectDef,
+  TransientConditionDef,
   EntityCondition,
   ConditionDef,
   ConditionStage
@@ -31,17 +31,17 @@ import {
 // gameDebug(true); console.error still surfaces.
 import { gatedConsole as console } from '../core/log';
 
-// conditions.jsonc holds both graded conditions (with `stages`) and flat status-effect
-// "flags" (no `stages`); the flags are what `pawn.activeEffects` references.
-const STATUS_EFFECTS_DB = (
-  conditionsData as unknown as Array<ConditionDef | StatusEffectDef>
-).filter((d): d is StatusEffectDef => !('stages' in d));
+// conditions.jsonc holds both graded conditions (with `stages`) and flat transient condition
+// "flags" (no `stages`); the flags are what `pawn.transientConditions` references.
+const TRANSIENT_CONDITIONS_DB = (
+  conditionsData as unknown as Array<ConditionDef | TransientConditionDef>
+).filter((d): d is TransientConditionDef => !('stages' in d));
 
-/** Resolve active effect definitions from a pawn's activeEffects id list. */
-function getActiveEffects(entity: Pawn | Mob): StatusEffectDef[] {
-  return (entity.activeEffects ?? [])
-    .map((id) => STATUS_EFFECTS_DB.find((e) => e.id === id))
-    .filter((e): e is StatusEffectDef => e !== undefined);
+/** Resolve active effect definitions from a pawn's transientConditions id list. */
+function getActiveTransientConditions(entity: Pawn | Mob): TransientConditionDef[] {
+  return (entity.transientConditions ?? [])
+    .map((id) => TRANSIENT_CONDITIONS_DB.find((e) => e.id === id))
+    .filter((e): e is TransientConditionDef => e !== undefined);
 }
 
 /**
@@ -107,9 +107,9 @@ export interface PawnService {
    */
   getMoveSpeed(entity: Pawn | Mob): { tilesPerSecond: number; sources: string[] };
 
-  /** Active status-effect defs for an entity, with `hidden` (internal) effects filtered out.
+  /** Active transient condition defs for an entity, with `hidden` (internal) effects filtered out.
    *  The single source for surfacing effects in any UI (tile-HUD pills, needs panel). */
-  getStatusEffects(entity: Pawn | Mob): StatusEffectDef[];
+  getTransientConditions(entity: Pawn | Mob): TransientConditionDef[];
 }
 
 // §D water needs — per-second accrual (hunger baseline is ~0.54/s for reference).
@@ -367,7 +367,7 @@ export class PawnServiceImpl implements PawnService {
    * legacy per-turn path and the per-tick accrual (processNeedsTick) scale this value.
    */
   private getNeedIncreasePerTurn(pawn: Pawn): { hunger: number; fatigue: number } {
-    const effects = getActiveEffects(pawn);
+    const effects = getActiveTransientConditions(pawn);
 
     // Combine hungerRate/fatigueRate multipliers from all active effects (multiply together).
     // e.g. 'eating' sets hungerRate=0 (paused), 'sleeping' sets hungerRate=0.33 and fatigueRate=0.
@@ -602,7 +602,7 @@ export class PawnServiceImpl implements PawnService {
 
     // Critical needs override current activities.
     // NOTE: isEating=true here is safe for sleeping pawns because handleSleeping in
-    // PawnStateMachine explicitly sets isEating:false each tick before syncActiveEffects
+    // PawnStateMachine explicitly sets isEating:false each tick before syncTransientConditions
     // reads it, preventing the stale "eating while sleeping" badge.
     if (needs.hunger > 90) {
       newState.isWorking = false;
@@ -826,7 +826,7 @@ export class PawnServiceImpl implements PawnService {
    *   • Body load — own weight carried by strength (weight ≈ STR×6kg = ×1.0)
    *   • Legs — each leg ≈ half of locomotion; missing/injured legs cripple speed
    *   • Needs — hunger/fatigue above 50% progressively slow the pawn
-   *   • Effects — status-effect & condition moveSpeed multipliers
+   *   • Effects — transient condition & condition moveSpeed multipliers
    */
   getMoveSpeed(entity: Pawn | Mob): { tilesPerSecond: number; sources: string[] } {
     const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
@@ -864,8 +864,8 @@ export class PawnServiceImpl implements PawnService {
     const needsFactor = clamp(1 - hungerPenalty - fatiguePenalty, 0.5, 1);
     if (needsFactor < 0.999) sources.push(`needs ×${needsFactor.toFixed(2)}`);
 
-    // Status effects + condition stages that modify movement.
-    let effectFactor = getActiveEffects(entity).reduce(
+    // Transient conditions + condition stages that modify movement.
+    let effectFactor = getActiveTransientConditions(entity).reduce(
       (r, e) => r * (e.modifiers.moveSpeed ?? 1),
       1
     );
@@ -882,8 +882,8 @@ export class PawnServiceImpl implements PawnService {
     return { tilesPerSecond, sources };
   }
 
-  getStatusEffects(entity: Pawn | Mob): StatusEffectDef[] {
-    return getActiveEffects(entity).filter((e) => !e.hidden);
+  getTransientConditions(entity: Pawn | Mob): TransientConditionDef[] {
+    return getActiveTransientConditions(entity).filter((e) => !e.hidden);
   }
 
   /**

@@ -88,8 +88,8 @@ export interface Mob {
   bloodVolume?: number;
   /** Maximum blood pool; derived from maxHealth (= con×5) at spawn. */
   maxBloodVolume?: number;
-  /** Active status effect ids (drives modifier lookups, same as Pawn). */
-  activeEffects?: string[];
+  /** Active transient condition ids (drives modifier lookups, same as Pawn). */
+  transientConditions?: string[];
   /** False once the mob dies. Stays in mobs[] as a Corpse for loot/butchering. */
   isAlive?: boolean;
   /**
@@ -121,8 +121,8 @@ export interface Mob {
   aggroRange?: number;
   /** Milliseconds remaining until next auto-attack fires. */
   attackCooldown?: number;
-  /** Remaining turns for temporary status effects (e.g. knockdown). */
-  statusEffectDurations?: Record<string, number>;
+  /** Remaining turns for temporary transient conditions (e.g. knockdown). */
+  conditionTimers?: Record<string, number>;
   /** Player has queued this mob for hunting — drafted pawns with hunting work will prioritise it. */
   markedForHunt?: boolean;
   /** Player has tagged this mob for attention (generic marker, not task-specific). */
@@ -195,8 +195,8 @@ export interface Pawn {
    *  dropped so the FSM re-routes around the obstruction (idle-pawn-on-approach deadlock). */
   blockedTicks?: number;
 
-  // Active status effect ids (derived from state; drives UI cards and need rate modifiers)
-  activeEffects?: string[];
+  // Active transient condition ids (derived from state; drives UI cards and need rate modifiers)
+  transientConditions?: string[];
 
   // ===== SURVIVAL & HEALTH (SURVIVAL-HEALTH spec) =====
   /** Active progressive health conditions (malnutrition, blood_loss, …). */
@@ -227,8 +227,8 @@ export interface Pawn {
   attackCooldown?: number;
   /** Radius in tiles within which this pawn auto-engages hostiles. */
   aggroRange?: number;
-  /** Remaining turns for temporary status effects (e.g. knockdown). */
-  statusEffectDurations?: Record<string, number>;
+  /** Remaining turns for temporary transient conditions (e.g. knockdown). */
+  conditionTimers?: Record<string, number>;
   /**
    * Current stamina 0–maxStamina. Drains while fleeing/sprinting or attacking;
    * regenerates at rest. Reaching 0 forces a rest turn (attack skipped / Exhausted).

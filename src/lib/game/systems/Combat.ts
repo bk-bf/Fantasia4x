@@ -19,7 +19,7 @@ import { woundForDamageType, woundById, severityFromFrac } from '../core/Wounds'
 import { pawnStatService } from '../services/PawnStatService';
 import { calcMaxStamina } from '../entities/Pawns';
 import conditionsData from '../database/conditions.jsonc';
-import type { ConditionDef, StatusEffectDef } from '../core/types';
+import type { ConditionDef, TransientConditionDef } from '../core/types';
 import { simLog, type CombatTextKind } from '../core/logSink';
 import { rng } from '../core/rng';
 import { perTick } from '../core/time';
@@ -28,11 +28,11 @@ import { perTick } from '../core/time';
 import { PART_DEF_MAP, rollBodyPart, createDefaultBodyParts } from '../core/BodyParts';
 export { PART_DEF_MAP, createDefaultBodyParts };
 
-// conditions.jsonc holds both graded conditions (with `stages`) and flat status-effect
+// conditions.jsonc holds both graded conditions (with `stages`) and flat transient condition
 // "flags" (no `stages`); combat only needs the flags (winded → dodge).
-const STATUS_EFFECTS_DB = (
-  conditionsData as unknown as Array<ConditionDef | StatusEffectDef>
-).filter((d): d is StatusEffectDef => !('stages' in d));
+const TRANSIENT_CONDITIONS_DB = (
+  conditionsData as unknown as Array<ConditionDef | TransientConditionDef>
+).filter((d): d is TransientConditionDef => !('stages' in d));
 
 // ── Tuning constants ─────────────────────────────────────────────────────────
 /** Scales per-part bleed so a fully-severed 5%-mass hand ≈ 2 blood/turn. */
@@ -69,7 +69,7 @@ const BASE_ATTACK_INTERVAL_TICKS = 120;
 const MIN_ATTACK_INTERVAL_TICKS = 72;
 /** Stamina drained per auto-attack when a weapon defines no `staminaCost` of its own. */
 const ATTACK_STAMINA_COST = 2;
-/** Status-effect id for the winded state (latches at 0 stamina, clears at full). */
+/** Transient condition id for the winded state (latches at 0 stamina, clears at full). */
 const WINDED = 'winded';
 /** While actively fighting, stamina regenerates at this fraction of the full rate, so a
  *  sustained melee drains down to winded; a winded/resting entity recovers at the full rate. */
@@ -371,7 +371,7 @@ class CombatServiceImpl implements CombatService {
     // load, and the winded penalty (× 0.5) all lower it. ×20 keeps baseline parity with the old
     // `defDex × 2` term (dodge ≈ 1.0 at DEX 10 → 20).
     const defDodge =
-      pawnStatService.evaluateStat('dodge', defender) * this.effectDodgeMult(defender);
+      pawnStatService.evaluateStat('dodge', defender) * this.conditionDodgeMult(defender);
 
     const hitChance = clamp(dex * 3 + accuracy - defDodge * 20, 5, 95);
     if (rng.random() * 100 > hitChance) {
@@ -531,7 +531,7 @@ class CombatServiceImpl implements CombatService {
     const bloodLossSev = clamp(1 - (entity.bloodVolume ?? maxBV) / maxBV, 0, 1);
     const newConditions = upsertCondition(entity.conditions ?? [], 'blood_loss', bloodLossSev);
 
-    // Status effects. Knockdown = a short blunt stagger (this swing rolled one).
+    // Transient conditions. Knockdown = a short blunt stagger (this swing rolled one).
     // Collapse = loss of consciousness (pain + blood loss + organ damage, via the
     // capacity), kept active while it stays low; the pawn state machine clears it as
     // the pawn recovers. Deliberately distinct: a stagger is momentary, a collapse
@@ -540,12 +540,12 @@ class CombatServiceImpl implements CombatService {
       pawnStatService.computeCapacities({ ...entity, limbs, injuries: newInjuries } as T)
         .consciousness ?? 1;
     const collapsed = consciousness < COLLAPSE_CONSCIOUSNESS;
-    const durations = { ...(entity.statusEffectDurations ?? {}) };
+    const durations = { ...(entity.conditionTimers ?? {}) };
     if (knockdown) durations.knockdown = Math.max(durations.knockdown ?? 0, KNOCKDOWN_TURNS);
     if (collapsed) durations.collapse = Math.max(durations.collapse ?? 0, KNOCKDOWN_TURNS);
-    const activeEffects = [...(entity.activeEffects ?? [])];
+    const transientConditions = [...(entity.transientConditions ?? [])];
     for (const id of ['knockdown', 'collapse']) {
-      if ((durations[id] ?? 0) > 0 && !activeEffects.includes(id)) activeEffects.push(id);
+      if ((durations[id] ?? 0) > 0 && !transientConditions.includes(id)) transientConditions.push(id);
     }
 
     const updated = {
@@ -553,8 +553,8 @@ class CombatServiceImpl implements CombatService {
       limbs,
       injuries: newInjuries,
       pain: newPain,
-      statusEffectDurations: durations,
-      activeEffects,
+      conditionTimers: durations,
+      transientConditions,
       conditions: newConditions
     };
 
@@ -743,13 +743,13 @@ class CombatServiceImpl implements CombatService {
 
   /** True while an entity is knocked down OR collapsed and cannot swing this tick. */
   private isKnockedDown(e: Pawn | Mob): boolean {
-    const d = e.statusEffectDurations;
+    const d = e.conditionTimers;
     return (d?.knockdown ?? 0) > 0 || (d?.collapse ?? 0) > 0;
   }
 
   /** True while an entity is winded (stamina bottomed out) — can't attack until stamina refills. */
   private isWinded(e: Pawn | Mob): boolean {
-    return (e.statusEffectDurations?.winded ?? 0) > 0;
+    return (e.conditionTimers?.winded ?? 0) > 0;
   }
 
   /** True while an entity is actively engaged in melee (throttles stamina regen mid-fight). */
@@ -764,11 +764,11 @@ class CombatServiceImpl implements CombatService {
     return (e as Mob).state === 'Attacking';
   }
 
-  /** Product of all active status-effect `dodge` modifiers (winded → 0.5 → easier to hit). */
-  private effectDodgeMult(e: Pawn | Mob): number {
+  /** Product of all active transient condition `dodge` modifiers (winded → 0.5 → easier to hit). */
+  private conditionDodgeMult(e: Pawn | Mob): number {
     let m = 1;
-    for (const id of e.activeEffects ?? []) {
-      const v = STATUS_EFFECTS_DB.find((s) => s.id === id)?.modifiers.dodge;
+    for (const id of e.transientConditions ?? []) {
+      const v = TRANSIENT_CONDITIONS_DB.find((s) => s.id === id)?.modifiers.dodge;
       if (v != null) m *= v;
     }
     return m;
@@ -779,8 +779,8 @@ class CombatServiceImpl implements CombatService {
    * pass turns until recovered" loop: regen the full `stamina_recovery_rate` while winded/resting
    * (throttled to a fraction while actively fighting so a melee actually depletes); on hitting 0
    * latch `winded`; clear it only once stamina is back to full. Persists through
-   * `statusEffectDurations.winded` (so `syncActiveEffects` keeps it on pawns) and mirrors it into
-   * `activeEffects` (mobs don't run that sync) so the moveSpeed/dodge modifiers apply.
+   * `conditionTimers.winded` (so `syncTransientConditions` keeps it on pawns) and mirrors it into
+   * `transientConditions` (mobs don't run that sync) so the moveSpeed/dodge modifiers apply.
    */
   private tickStaminaAndWinded<T extends Pawn | Mob>(e: T): T {
     if (e.isAlive === false) return e;
@@ -804,16 +804,16 @@ class CombatServiceImpl implements CombatService {
 
     if (stamina === postDrain && winded === wasWinded) return e;
 
-    const durations = { ...(e.statusEffectDurations ?? {}) };
-    let activeEffects = e.activeEffects ?? [];
+    const durations = { ...(e.conditionTimers ?? {}) };
+    let transientConditions = e.transientConditions ?? [];
     if (winded) {
       durations.winded = 2; // refresh so the per-tick duration decrement never expires the latch
-      if (!activeEffects.includes(WINDED)) activeEffects = [...activeEffects, WINDED];
+      if (!transientConditions.includes(WINDED)) transientConditions = [...transientConditions, WINDED];
     } else {
       delete durations.winded;
-      if (activeEffects.includes(WINDED)) activeEffects = activeEffects.filter((x) => x !== WINDED);
+      if (transientConditions.includes(WINDED)) transientConditions = transientConditions.filter((x) => x !== WINDED);
     }
-    return { ...e, stamina, statusEffectDurations: durations, activeEffects };
+    return { ...e, stamina, conditionTimers: durations, transientConditions };
   }
 
   tickCombat(state: GameState, _dtMs: number): GameState {

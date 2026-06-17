@@ -38,8 +38,8 @@
   let bleedRate = $derived(limbs.reduce((s, l) => s + (l.bleedRate ?? 0), 0));
   let pain = $derived(pawn.pain ?? 0);
   let prone = $derived(
-    (pawn.activeEffects ?? []).includes('knockdown') ||
-      (pawn.activeEffects ?? []).includes('collapse')
+    (pawn.transientConditions ?? []).includes('knockdown') ||
+      (pawn.transientConditions ?? []).includes('collapse')
   );
 
   // Per-limb reveal cycle: damaged sub-limbs (default) → show all → hide everything → back.

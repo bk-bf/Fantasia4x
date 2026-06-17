@@ -2,7 +2,7 @@
   import type {
     GameState,
     Pawn,
-    StatusEffectDef,
+    TransientConditionDef,
     ConditionDef,
     ConditionStage
   } from '$lib/game/core/types';
@@ -10,11 +10,11 @@
   import conditionsData from '$lib/game/database/conditions.jsonc';
   import { pawnService } from '$lib/game/services/PawnService';
 
-  // conditions.jsonc holds both graded conditions (with `stages`) and flat status-effect
+  // conditions.jsonc holds both graded conditions (with `stages`) and flat transient condition
   // "flags" (no `stages`). Split them by shape — see the file header.
-  const ALL_CONDITION_DEFS = conditionsData as unknown as Array<ConditionDef | StatusEffectDef>;
-  const STATUS_EFFECTS_DB = ALL_CONDITION_DEFS.filter(
-    (d): d is StatusEffectDef => !('stages' in d)
+  const ALL_CONDITION_DEFS = conditionsData as unknown as Array<ConditionDef | TransientConditionDef>;
+  const TRANSIENT_CONDITIONS_DB = ALL_CONDITION_DEFS.filter(
+    (d): d is TransientConditionDef => !('stages' in d)
   );
   const CONDITIONS_DB = ALL_CONDITION_DEFS.filter((d): d is ConditionDef => 'stages' in d);
 
@@ -52,9 +52,9 @@
     if (pct >= 30) return '#c8a030';
     return '#c86030';
   }
-  $: activeEffects = (pawn.activeEffects ?? [])
-    .map((id) => STATUS_EFFECTS_DB.find((e) => e.id === id))
-    .filter((e): e is StatusEffectDef => e !== undefined && !e.hidden);
+  $: transientConditions = (pawn.transientConditions ?? [])
+    .map((id) => TRANSIENT_CONDITIONS_DB.find((e) => e.id === id))
+    .filter((e): e is TransientConditionDef => e !== undefined && !e.hidden);
 
   type ActiveCond = { name: string; severity: number; stage: ConditionStage };
   $: activeConditions = (pawn.conditions ?? [])
@@ -149,9 +149,9 @@
     </div>
   {/if}
 
-  {#if activeEffects.length > 0 || activeConditions.length > 0}
+  {#if transientConditions.length > 0 || activeConditions.length > 0}
     <div class="effects-row">
-      {#each activeEffects as effect}
+      {#each transientConditions as effect}
         <div
           class="effect-card"
           style="border-color: {effect.color}; color: {effect.color}"

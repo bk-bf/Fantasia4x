@@ -1,4 +1,4 @@
-// Survival, needs, status effects, and the combat body model. Split out of core/types.ts (P-4);
+// Survival, needs, transient conditions, and the combat body model. Split out of core/types.ts (P-4);
 // re-exported via the barrel. (SURVIVAL-HEALTH + COMBAT-SYSTEM specs.)
 
 export interface EntityNeeds {
@@ -23,7 +23,7 @@ export interface EntityNeeds {
   heatExposure?: number;
 }
 
-export interface StatusEffectDef {
+export interface TransientConditionDef {
   id: string;
   name: string;
   description: string;

@@ -226,7 +226,7 @@ describe('combat sim (headless tickCombat)', () => {
       currentState: 'Fighting',
       stamina: 0,
       maxStamina: 50,
-      statusEffectDurations: { winded: 2 }
+      conditionTimers: { winded: 2 }
     });
     const goblin = makeGoblin({ state: 'Wander', stats: { ...stats, dexterity: 1 } }); // peaceful, won't hit back
     let state = makeState([winded], [goblin]);
@@ -240,7 +240,7 @@ describe('combat sim (headless tickCombat)', () => {
       0
     );
     expect(hpLost).toBe(0); // never swung while winded
-    expect((state.pawns[0].statusEffectDurations?.winded ?? 0) > 0).toBe(true); // still winded (stamina ≪ max)
+    expect((state.pawns[0].conditionTimers?.winded ?? 0) > 0).toBe(true); // still winded (stamina ≪ max)
   });
 
   it('a winded entity recovers stamina each turn and un-winds at full', () => {
@@ -249,7 +249,7 @@ describe('combat sim (headless tickCombat)', () => {
       currentState: 'Idle',
       stamina: 0,
       maxStamina: 1,
-      statusEffectDurations: { winded: 2 }
+      conditionTimers: { winded: 2 }
     });
     let state = makeState([winded], []);
     for (let t = 0; t < 40; t++) {
@@ -258,8 +258,8 @@ describe('combat sim (headless tickCombat)', () => {
     }
     const p = state.pawns[0];
     expect(p.stamina).toBe(1); // recovered to full
-    expect(p.statusEffectDurations?.winded ?? 0).toBe(0); // latch cleared
-    expect(p.activeEffects ?? []).not.toContain('winded');
+    expect(p.conditionTimers?.winded ?? 0).toBe(0); // latch cleared
+    expect(p.transientConditions ?? []).not.toContain('winded');
   });
 });
 

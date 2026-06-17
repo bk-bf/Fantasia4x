@@ -25,7 +25,7 @@
     active?: boolean;
   }
 
-  /** A status-effect chip (sprite glyph + colour) shown beside the stats; name on hover. */
+  /** A transient condition chip (sprite glyph + colour) shown beside the stats; name on hover. */
   export interface EntityEffect {
     charSpans?: Array<{
       sheet?: string;
@@ -51,7 +51,7 @@
     mood?: number;
     /** Inline stat readouts (STR, MOVE, …). */
     stats?: EntityStat[];
-    /** Active status effects, rendered as compact pills on the stats row (next to MOVE). */
+    /** Active transient conditions, rendered as compact pills on the stats row (next to MOVE). */
     effects?: EntityEffect[];
     /** Block-character meter bars (Food, Blood, …). */
     bars?: EntityBar[];
@@ -450,7 +450,7 @@
   .pawn-warn {
     color: #ee8844 !important;
   }
-  /* Status-effect chips sit inline on the stats row, just right of MOVE (left-aligned).
+  /* Transient condition chips sit inline on the stats row, just right of MOVE (left-aligned).
      Same chip styling as the Pawns-tab effect cards (square border + faint colour-mix fill). */
   .effect-chips {
     display: inline-flex;
