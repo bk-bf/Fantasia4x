@@ -83,6 +83,9 @@ export interface ItemService {
 
   // Validation Methods
   canCraftItem(itemId: string, gameState: GameState, pawnId?: string): boolean;
+  /** Non-material craftability gates (station/tools/research/population/mold). Materials may be
+   *  absent — a queued order then waits as `pending` until they're stocked. */
+  canQueueCraft(itemId: string, gameState: GameState): boolean;
   hasRequiredMaterials(itemId: string, gameState: GameState): boolean;
   hasRequiredTools(itemId: string, gameState: GameState): boolean;
   hasRequiredBuilding(itemId: string, gameState: GameState): boolean;
@@ -186,6 +189,13 @@ export class ItemServiceImpl implements ItemService {
   }
 
   canCraftItem(itemId: string, gameState: GameState, pawnId?: string): boolean {
+    // Materials gate first; the remaining (non-material) gates live in canQueueCraft so an order
+    // can be QUEUED without stock and wait as `pending` until the materials are stocked.
+    if (!this.hasRequiredMaterials(itemId, gameState)) return false;
+    return this.canQueueCraft(itemId, gameState);
+  }
+
+  canQueueCraft(itemId: string, gameState: GameState): boolean {
     const item = this.getItemById(itemId);
     if (!item) return false;
 
@@ -193,9 +203,6 @@ export class ItemServiceImpl implements ItemService {
     // butcher_spot recipe — carcass in, meat/pelt out, one carcass per run; ADR-016.)
     const recipe = recipeService.getRecipeForItem(itemId);
     if (!recipe) return false;
-
-    // Check materials
-    if (!this.hasRequiredMaterials(itemId, gameState)) return false;
 
     // Check tools
     if (!this.hasRequiredTools(itemId, gameState)) return false;

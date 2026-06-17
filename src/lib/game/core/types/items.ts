@@ -347,6 +347,10 @@ export interface CraftingInProgress {
   // ADR-016 reserve-and-fetch:
   /** Resolved input cost (× quantity) that must be physically staged on the station. */
   inputs: Record<string, number>;
+  /** Queued without its inputs reserved yet (materials not in stock). A pending order generates no
+   *  fetch/craft jobs and accrues no work; the engine retries reservation each tick and clears this
+   *  flag once the full input set is reservable. */
+  pending?: boolean;
   /** Workstation type required by the recipe (= recipe.station). */
   stationType?: string | null;
   /** Chosen workstation instance (PlacedBuilding.id) inputs are fetched to and crafted at. */

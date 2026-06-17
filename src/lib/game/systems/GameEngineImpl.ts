@@ -172,6 +172,12 @@ export class GameEngineImpl implements GameEngine {
       t('researchTick', () => {
         this.gameState = researchService.processResearchTick(this.gameState!);
       });
+      t('pendingCrafts', () => {
+        // ADR-016 queue-without-materials: reserve inputs for `pending` orders as soon as the stock
+        // exists (cheap no-op guard when none are pending). Runs unthrottled so a stocked order isn't
+        // stalled waiting on the next generateJobs cadence.
+        this.gameState = jobService.reservePendingCraftOrders(this.gameState!);
+      });
       t('generateJobs', () => {
         // ADR-022: throttled reconcile (every JOB_GENERATION_INTERVAL_TICKS). The board persists
         // between passes; only its sync against world sources is amortised.

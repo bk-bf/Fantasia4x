@@ -8,10 +8,52 @@ import type { CraftingInProgress, GameState, Job } from '../../core/types';
 import { gatedConsole as console } from '../../core/log';
 import { itemService } from '../ItemService';
 import { recipeService } from '../RecipeService';
-import { absorbDropIfOnStockpileTile } from '../../core/GameState';
+import {
+  absorbDropIfOnStockpileTile,
+  reserveForOrder,
+  releaseReservation
+} from '../../core/GameState';
 import { rng } from '../../core/rng';
 import { stationTileFor, orderSupplied } from './staging';
 import { wearWorkingPawnTool } from './harvest';
+
+/**
+ * Queue-without-materials (ADR-016): a `pending` craft order holds no input reservations. Each tick
+ * we retry reserving its full input set ATOMICALLY — only when every input is reservable do we commit
+ * the reservations and clear `pending`, at which point the fetch/craft generators take over. A partial
+ * reservation is discarded so the stock stays free for other (already-active) orders meanwhile.
+ */
+export function reservePendingOrders(gs: GameState): GameState {
+  const queue = gs.craftingQueue ?? [];
+  if (!queue.some((o) => o.pending)) return gs;
+
+  let state = gs;
+  let changed = false;
+  const newQueue = queue.map((order) => {
+    if (!order.pending) return order;
+    let trial = state;
+    let allReserved = true;
+    for (const [id, q] of Object.entries(order.inputs)) {
+      const res = reserveForOrder(trial, id, q, order.id);
+      trial = res.state;
+      if (res.reserved < q) {
+        allReserved = false;
+        break;
+      }
+    }
+    if (!allReserved) {
+      // Discard the partial reservations (they only ever touched the throwaway `trial`).
+      releaseReservation(trial, order.id);
+      return order; // still pending
+    }
+    state = trial; // commit
+    changed = true;
+    const { pending: _drop, ...rest } = order;
+    return rest;
+  });
+
+  return changed ? { ...state, craftingQueue: newQueue } : gs;
+}
 
 export function generate(jobs: Job[], gs: GameState): Job[] {
   // Remove craft jobs for queue entries that no longer exist

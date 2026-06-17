@@ -294,10 +294,16 @@ export const COMMANDS: Record<string, Cmd> = {
     const quantity = p.quantity ?? 1;
     const item = itemService.getItemById(p.itemId);
     if (!item) return s;
-    if (!itemService.canCraftItem(p.itemId, s)) return s;
+    // Allow queueing without the materials in stock — only the non-material gates (station/tools/
+    // research/population/mold) block queueing. A materials-short order is created `pending` and the
+    // engine reserves its inputs once they're stocked (reservePendingOrders).
+    if (!itemService.canQueueCraft(p.itemId, s)) return s;
     const resolved = p.selectedIngredients ?? itemService.autoSelectIngredients(p.itemId, s) ?? {};
-    const activeCost = itemService.resolveActiveCost(item.id, s, resolved);
-    if (!activeCost) return s;
+    // resolveActiveCost returns null for a dynamic recipe whose chosen ingredient isn't stocked. Fall
+    // back to the recipe's static/base cost so a dynamic order can still be queued pending materials.
+    const activeCost =
+      itemService.resolveActiveCost(item.id, s, resolved) ??
+      itemService.calculateCraftingCost(item.id);
     const recipe = recipeService.getRecipeForItem(item.id);
     const inputs: Record<string, number> = {};
     for (const [id, q] of Object.entries(activeCost)) inputs[id] = q * quantity;
@@ -320,7 +326,9 @@ export const COMMANDS: Record<string, Cmd> = {
         break;
       }
     }
-    if (!allReserved) return releaseReservation(gs, orderId);
+    // Materials short → queue the order `pending` with NO reservations held (release the partial
+    // ones). The engine reserves its inputs once they're stocked (reservePendingOrders).
+    if (!allReserved) gs = releaseReservation(gs, orderId);
     const order: CraftingInProgress = {
       id: orderId,
       item,
@@ -328,6 +336,7 @@ export const COMMANDS: Record<string, Cmd> = {
       workRequired,
       workDone: 0,
       inputs,
+      pending: !allReserved || undefined,
       stationType,
       stationBuildingId,
       startedAt: gs.turn,

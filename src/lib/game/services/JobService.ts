@@ -98,6 +98,12 @@ class JobServiceImpl {
    *
    * Called once per turn from GameEngineImpl BEFORE pawn processing.
    */
+  /** ADR-016: retry input reservation for `pending` craft orders (queued without materials). Run
+   *  each tick before generateJobs so a newly-stocked order starts fetching promptly. */
+  reservePendingCraftOrders(gameState: GameState): GameState {
+    return craft.reservePendingOrders(gameState);
+  }
+
   generateJobs(gameState: GameState): GameState {
     let jobs: Job[] = [...(gameState.jobs ?? [])];
 

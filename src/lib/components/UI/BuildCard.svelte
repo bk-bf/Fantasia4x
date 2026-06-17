@@ -35,9 +35,14 @@
   export let toolMet = true;
   export let actionLabel: string;
   export let actionEnabled = true;
-  /** ok = buildable/craftable, missing = can't afford, blocked = unmet requirement. */
-  export let variant: 'ok' | 'missing' | 'blocked' = 'ok';
+  /** ok = buildable/craftable, missing = can't afford, blocked = unmet requirement,
+   *  pending = queueable now but will wait for materials. */
+  export let variant: 'ok' | 'missing' | 'blocked' | 'pending' = 'ok';
   export let onAction: () => void;
+  /** When set, render a +N quantity button group (each queues that many) INSTEAD of the single
+   *  action button. Used by crafting to batch-queue orders. */
+  export let quantities: number[] | null = null;
+  export let onQuantity: ((n: number) => void) | null = null;
 </script>
 
 <div class="build-card" class:disabled={!actionEnabled}>
@@ -66,13 +71,29 @@
         title="required tool tier"
       >🔧 tier {toolTier} tools{#if !toolMet} (locked){/if}</div>{/if}
     <div class="card-cost"><slot /></div>
-    <button
-      class="card-action card-action--{variant}"
-      disabled={!actionEnabled}
-      on:click={onAction}
-    >
-      {actionLabel}
-    </button>
+    {#if quantities && onQuantity}
+      <div class="card-actions">
+        <span class="card-action-lbl card-action-lbl--{variant}">{actionLabel}</span>
+        {#each quantities as q}
+          <button
+            class="card-action card-action--{variant}"
+            disabled={!actionEnabled}
+            title="queue {q}"
+            on:click={() => onQuantity?.(q)}
+          >
+            +{q}
+          </button>
+        {/each}
+      </div>
+    {:else}
+      <button
+        class="card-action card-action--{variant}"
+        disabled={!actionEnabled}
+        on:click={onAction}
+      >
+        {actionLabel}
+      </button>
+    {/if}
   </div>
 </div>
 
@@ -168,6 +189,31 @@
     line-height: 1.4;
     min-height: 14px;
   }
+  .card-actions {
+    margin-top: 2px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+  .card-action-lbl {
+    font-size: 9px;
+    letter-spacing: 0.05em;
+    color: var(--text-dim);
+    margin-right: 1px;
+  }
+  .card-action-lbl--ok {
+    color: var(--accent-hi);
+  }
+  .card-action-lbl--pending {
+    color: var(--text-dim);
+  }
+  .card-action-lbl--missing {
+    color: var(--neg, #d05050);
+  }
+  .card-action-lbl--blocked {
+    color: var(--text-muted, #777);
+  }
   .card-action {
     margin-top: 2px;
     align-self: flex-start;
@@ -180,12 +226,23 @@
     letter-spacing: 0.05em;
     cursor: pointer;
   }
+  .card-actions .card-action {
+    margin-top: 0;
+    padding: 2px 6px;
+  }
   .card-action--ok {
     border-color: var(--accent-hi);
     color: var(--accent-hi);
   }
   .card-action--ok:hover {
     background: color-mix(in srgb, var(--accent-hi) 18%, transparent);
+  }
+  .card-action--pending {
+    border-color: var(--text-dim);
+    color: var(--text-dim);
+  }
+  .card-action--pending:hover {
+    background: color-mix(in srgb, var(--text-dim) 18%, transparent);
   }
   .card-action--missing {
     color: var(--neg, #d05050);

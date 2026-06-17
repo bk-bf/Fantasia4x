@@ -203,11 +203,15 @@
     unsubscribeGame();
   });
 
-  function startCrafting(item: Item, selectedIngredients?: Record<string, string>) {
+  function startCrafting(
+    item: Item,
+    selectedIngredients?: Record<string, string>,
+    quantity = 1
+  ) {
     if (!$gameState) return;
     gameState.command({
       type: 'craftItem',
-      payload: { itemId: item.id, quantity: 1, selectedIngredients },
+      payload: { itemId: item.id, quantity, selectedIngredients },
       save: true
     });
   }
@@ -280,6 +284,9 @@
             isPlaceholder && recipe?.dynamicRecipe
               ? Object.values(recipe.dynamicRecipe)[0].acceptsCategory
               : null}
+          {@const canQueue =
+            $gameState !== null && itemService.canQueueCraft(item.id, $gameState)}
+          {@const useQty = !isCarcass && !isPlaceholder}
           <BuildCard
             name={entry.name.toUpperCase()}
             charSpans={item.charSpans}
@@ -290,15 +297,35 @@
             toolTier={recipe?.toolTierRequired ?? null}
             toolMet={(recipe?.toolTierRequired ?? 0) <= currentToolLevel}
             badge={isCarcass ? `${pct}%` : null}
-            actionLabel={!affordable
-              ? 'MISSING'
-              : !craftable
+            actionLabel={useQty
+              ? !canQueue
                 ? 'BLOCKED'
-                : isCarcass
-                  ? 'BUTCHER'
-                  : 'CRAFT'}
-            actionEnabled={craftable}
-            variant={!affordable ? 'missing' : !craftable ? 'blocked' : 'ok'}
+                : affordable
+                  ? 'CRAFT'
+                  : 'QUEUE'
+              : !affordable
+                ? 'MISSING'
+                : !craftable
+                  ? 'BLOCKED'
+                  : isCarcass
+                    ? 'BUTCHER'
+                    : 'CRAFT'}
+            actionEnabled={useQty ? canQueue : craftable}
+            variant={useQty
+              ? !canQueue
+                ? 'blocked'
+                : affordable
+                  ? 'ok'
+                  : 'pending'
+              : !affordable
+                ? 'missing'
+                : !craftable
+                  ? 'blocked'
+                  : 'ok'}
+            quantities={useQty ? [1, 5, 10] : null}
+            onQuantity={useQty
+              ? (n) => startCrafting(item, entry.selectedIngredients, n)
+              : null}
             onAction={() => startCrafting(item, entry.selectedIngredients)}
           >
             {#if isCarcass}
@@ -361,10 +388,17 @@
         {#each craftingQueue as qi, idx (qi.id)}
           {@const wReq = qi.workRequired ?? (recipeOf(qi.item.id)?.workAmount ?? 1) * 5}
           {@const prog = Math.round(Math.min(100, ((qi.workDone ?? 0) / wReq) * 100))}
-          <div class="job-chip" title="{qi.item.name} — {prog}%">
-            <span class="job-fill" style="width:{prog}%"></span>
-            <span class="job-name">{qi.item.name.toUpperCase()}</span>
-            <span class="job-pct">{prog}%</span>
+          {@const qty = qi.quantity ?? 1}
+          <div
+            class="job-chip"
+            class:pending={qi.pending}
+            title={qi.pending
+              ? `${qi.item.name} ×${qty} — waiting for materials`
+              : `${qi.item.name} ×${qty} — ${prog}%`}
+          >
+            {#if !qi.pending}<span class="job-fill" style="width:{prog}%"></span>{/if}
+            <span class="job-name">{qi.item.name.toUpperCase()}{#if qty > 1} ×{qty}{/if}</span>
+            <span class="job-pct">{qi.pending ? 'WAIT' : `${prog}%`}</span>
             <button class="job-x" title="Cancel" on:click={() => cancelCrafting(idx)}>✕</button>
           </div>
         {/each}
@@ -538,6 +572,10 @@
     background: var(--bg-panel);
     overflow: hidden;
     font-size: 10px;
+  }
+  .job-chip.pending {
+    border-style: dashed;
+    opacity: 0.7;
   }
   .job-fill {
     position: absolute;
