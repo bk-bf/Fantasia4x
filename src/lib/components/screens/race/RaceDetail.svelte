@@ -50,7 +50,9 @@
       const other = knownRaces.find((r) => r.id === otherId);
       return other ? { other, score: rel.score, disposition: rel.disposition } : null;
     })
-    .filter((v): v is { other: Race; score: number; disposition: RaceRelation['disposition'] } => !!v)
+    .filter(
+      (v): v is { other: Race; score: number; disposition: RaceRelation['disposition'] } => !!v
+    )
     .sort((a, b) => b.score - a.score);
 
   // Format a single trait effect entry the way the old screen did (kept verbatim).
@@ -72,20 +74,32 @@
   <p class="lore-desc">{race.lore.description}</p>
   <div class="row"><span class="lbl">ARCHETYPE</span><span class="val">{race.archetype}</span></div>
   <div class="row"><span class="lbl">COLONY</span><span class="val">{headcount} living</span></div>
-  <div class="row"><span class="lbl">HOMELAND</span><span class="val">{race.lore.homeland}</span></div>
-  <div class="row"><span class="lbl">TEMPERAMENT</span><span class="val">{race.lore.temperament}</span></div>
-  <div class="row"><span class="lbl">BELIEF</span><span class="val small">{race.lore.belief}</span></div>
+  <div class="row">
+    <span class="lbl">HOMELAND</span><span class="val">{race.lore.homeland}</span>
+  </div>
+  <div class="row">
+    <span class="lbl">TEMPERAMENT</span><span class="val">{race.lore.temperament}</span>
+  </div>
+  <div class="row">
+    <span class="lbl">BELIEF</span><span class="val small">{race.lore.belief}</span>
+  </div>
 
   <!-- Physique ranges -->
   <div class="section-hdr">| PHYSIQUE <span class="hint">(rolled per pawn)</span></div>
-  <div class="row"><span class="lbl">BUILD</span><span class="val">{race.physicalTraits.size}</span></div>
+  <div class="row">
+    <span class="lbl">BUILD</span><span class="val">{race.physicalTraits.size}</span>
+  </div>
   <div class="row">
     <span class="lbl">HEIGHT</span>
-    <span class="val">{race.physicalTraits.heightRange[0]}–{race.physicalTraits.heightRange[1]} cm</span>
+    <span class="val"
+      >{race.physicalTraits.heightRange[0]}–{race.physicalTraits.heightRange[1]} cm</span
+    >
   </div>
   <div class="row">
     <span class="lbl">WEIGHT</span>
-    <span class="val">{race.physicalTraits.weightRange[0]}–{race.physicalTraits.weightRange[1]} kg</span>
+    <span class="val"
+      >{race.physicalTraits.weightRange[0]}–{race.physicalTraits.weightRange[1]} kg</span
+    >
   </div>
 
   <!-- Stat ranges + trait boosts -->
@@ -122,7 +136,9 @@
             >
           {/each}
         {:else}
-          <span class="eff {name.includes('Penalty') ? 'neg' : 'pos'}">{fmtEffect(name, value)}</span>
+          <span class="eff {name.includes('Penalty') ? 'neg' : 'pos'}"
+            >{fmtEffect(name, value)}</span
+          >
         {/if}
       {/each}
     </div>

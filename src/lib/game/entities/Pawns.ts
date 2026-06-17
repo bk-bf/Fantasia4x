@@ -52,76 +52,76 @@ export function buildPawnFromRace(race: Race, index: number): Pawn {
     raceId: race.id,
     raceName: race.name,
     racialTraits: race.racialTraits,
-      inventory: createPawnInventory(),
-      equipment: createPawnEquipment(),
-      needs: {
-        hunger: 0,
-        fatigue: 0,
-        sleep: 0,
-        lastSleep: 0,
-        lastMeal: 0
+    inventory: createPawnInventory(),
+    equipment: createPawnEquipment(),
+    needs: {
+      hunger: 0,
+      fatigue: 0,
+      sleep: 0,
+      lastSleep: 0,
+      lastMeal: 0
+    },
+    state: {
+      mood: 50,
+      isWorking: false,
+      isSleeping: false,
+      isEating: false
+    },
+    currentState: 'Idle',
+    skills: {},
+    // Survival & Health
+    isAlive: true,
+    maxBloodVolume,
+    bloodVolume: maxBloodVolume,
+    conditions: [],
+    // Combat — stamina
+    stamina: maxStamina,
+    maxStamina,
+    limbs: [
+      {
+        id: 'head',
+        health: 100,
+        isMissing: false,
+        bleedRate: 0,
+        parts: createDefaultBodyParts('head')
       },
-      state: {
-        mood: 50,
-        isWorking: false,
-        isSleeping: false,
-        isEating: false
+      {
+        id: 'torso',
+        health: 100,
+        isMissing: false,
+        bleedRate: 0,
+        parts: createDefaultBodyParts('torso')
       },
-      currentState: 'Idle',
-      skills: {},
-      // Survival & Health
-      isAlive: true,
-      maxBloodVolume,
-      bloodVolume: maxBloodVolume,
-      conditions: [],
-      // Combat — stamina
-      stamina: maxStamina,
-      maxStamina,
-      limbs: [
-        {
-          id: 'head',
-          health: 100,
-          isMissing: false,
-          bleedRate: 0,
-          parts: createDefaultBodyParts('head')
-        },
-        {
-          id: 'torso',
-          health: 100,
-          isMissing: false,
-          bleedRate: 0,
-          parts: createDefaultBodyParts('torso')
-        },
-        {
-          id: 'left_arm',
-          health: 100,
-          isMissing: false,
-          bleedRate: 0,
-          parts: createDefaultBodyParts('left_arm')
-        },
-        {
-          id: 'right_arm',
-          health: 100,
-          isMissing: false,
-          bleedRate: 0,
-          parts: createDefaultBodyParts('right_arm')
-        },
-        {
-          id: 'left_leg',
-          health: 100,
-          isMissing: false,
-          bleedRate: 0,
-          parts: createDefaultBodyParts('left_leg')
-        },
-        {
-          id: 'right_leg',
-          health: 100,
-          isMissing: false,
-          bleedRate: 0,
-          parts: createDefaultBodyParts('right_leg')
-        }
-      ]
-    };
+      {
+        id: 'left_arm',
+        health: 100,
+        isMissing: false,
+        bleedRate: 0,
+        parts: createDefaultBodyParts('left_arm')
+      },
+      {
+        id: 'right_arm',
+        health: 100,
+        isMissing: false,
+        bleedRate: 0,
+        parts: createDefaultBodyParts('right_arm')
+      },
+      {
+        id: 'left_leg',
+        health: 100,
+        isMissing: false,
+        bleedRate: 0,
+        parts: createDefaultBodyParts('left_leg')
+      },
+      {
+        id: 'right_leg',
+        health: 100,
+        isMissing: false,
+        bleedRate: 0,
+        parts: createDefaultBodyParts('right_leg')
+      }
+    ]
+  };
 
   return pawn;
 }

@@ -293,4 +293,46 @@
   .entry.expanded {
     border-bottom: none;
   }
+
+  /* Immersive hover panel — slotted into the shared HoverTip, so these styles ride along
+     under the parent's scope. */
+  .tip-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 3px;
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .tip-cat {
+    color: var(--accent-hi);
+  }
+  .tip-turn {
+    color: var(--text-muted);
+  }
+  .tip-action {
+    color: var(--text);
+  }
+  .tip-action.grave {
+    color: var(--neg);
+  }
+  .tip-result {
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+  .tip-loc {
+    color: var(--text-muted);
+    margin-top: 2px;
+    font-style: italic;
+  }
+  .tip-hint {
+    margin-top: 5px;
+    padding-top: 4px;
+    border-top: 1px solid var(--border);
+    color: var(--accent-hi);
+    font-size: 9px;
+    opacity: 0.85;
+  }
 </style>

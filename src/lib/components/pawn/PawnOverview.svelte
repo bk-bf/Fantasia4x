@@ -90,7 +90,9 @@
   <div class="row">
     <span class="lbl">HEALTH</span>
     <span class="val" style="color: {getHealthColor(pawn.state.health ?? 100)}"
-      >{Math.round(pawn.state.health ?? 100)}% — {getHealthDescription(pawn.state.health ?? 100)}</span
+      >{Math.round(pawn.state.health ?? 100)}% — {getHealthDescription(
+        pawn.state.health ?? 100
+      )}</span
     >
   </div>
 </div>

@@ -256,7 +256,12 @@ export function generateRaceDescription(race: Race): string {
   // Sentence 1 — physique.
   const sizeP = rng.pick(P.size[SIZE_BUCKET[race.physicalTraits.size]]);
   const buildP = rng.pick(P.build[buildBucket(race.physicalTraits)]);
-  const gaitKey = dex >= 12 ? 'quick' : dex < 9.5 || buildBucket(race.physicalTraits) === 'heavyset' ? 'slow' : 'steady';
+  const gaitKey =
+    dex >= 12
+      ? 'quick'
+      : dex < 9.5 || buildBucket(race.physicalTraits) === 'heavyset'
+        ? 'slow'
+        : 'steady';
   const gaitP = rng.pick(P.gait[gaitKey]);
   const compP = rng.pick(P.comparative[comparativeKey(str, dex, con)]);
   const s1 = `The ${race.name}, ${race.lore.epithet}, are ${sizeP} — ${buildP}, ${gaitP} — ${compP}.`;
@@ -340,17 +345,56 @@ function pickFlavorLine(traits: RacialTrait[]): string | null {
 // ─── Naming ────────────────────────────────────────────────────────────────
 
 function slugify(name: string): string {
-  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
 }
 
 function generateRaceName(): string {
   const prefixes = [
-    'Astra', 'Zeph', 'Nyx', 'Vor', 'Keth', 'Lum', 'Drak', 'Vel', 'Mor', 'Syl',
-    'Tharn', 'Krix', 'Vex', 'Zol', 'Quin', 'Hex', 'Flux', 'Ryn', 'Thal', 'Skorn'
+    'Astra',
+    'Zeph',
+    'Nyx',
+    'Vor',
+    'Keth',
+    'Lum',
+    'Drak',
+    'Vel',
+    'Mor',
+    'Syl',
+    'Tharn',
+    'Krix',
+    'Vex',
+    'Zol',
+    'Quin',
+    'Hex',
+    'Flux',
+    'Ryn',
+    'Thal',
+    'Skorn'
   ];
   const suffixes = [
-    'ani', 'ori', 'ith', 'ara', 'eon', 'ys', 'eth', 'ian', 'oth', 'ael',
-    'ix', 'ock', 'ung', 'ast', 'orn', 'ek', 'ul', 'an', 'ur', 'ex'
+    'ani',
+    'ori',
+    'ith',
+    'ara',
+    'eon',
+    'ys',
+    'eth',
+    'ian',
+    'oth',
+    'ael',
+    'ix',
+    'ock',
+    'ung',
+    'ast',
+    'orn',
+    'ek',
+    'ul',
+    'an',
+    'ur',
+    'ex'
   ];
   return rng.pick(prefixes) + rng.pick(suffixes);
 }
