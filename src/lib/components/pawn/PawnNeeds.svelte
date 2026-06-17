@@ -1,12 +1,14 @@
 <script lang="ts">
   import type { GameState, Pawn } from '$lib/game/core/types';
   import { getNeedColor, getNeedDescription } from '$lib/utils/pawnUtils';
+  import { getActiveConditionViews } from '$lib/utils/conditionInfo';
   import ConditionChips from './ConditionChips.svelte';
 
   export let pawn: Pawn;
   export let gameState: GameState;
 
   $: needs = pawn.needs;
+  $: conditionViews = getActiveConditionViews(pawn);
   // All needs are flat 0–100.
   $: hungerPct = Math.round(needs.hunger);
   $: fatiguePct = Math.round(needs.fatigue);
@@ -119,7 +121,7 @@
     </div>
   {/if}
 
-  <ConditionChips {pawn} />
+  <ConditionChips views={conditionViews} />
 
   <!-- TODO: draft-control mode will re-enable direct REST/EAT/WORK/IDLE commands later.
   <div class="btn-row">

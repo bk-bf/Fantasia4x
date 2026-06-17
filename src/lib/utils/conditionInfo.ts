@@ -3,7 +3,7 @@
 // exposure, or the specific wounds) and a summary of the modifiers it applies. Pure read-only
 // derivation over the pawn + conditions.jsonc; consumed by ConditionChips.svelte.
 
-import type { Pawn, ConditionDef, TransientConditionDef, Injury } from '$lib/game/core/types';
+import type { Pawn, Mob, ConditionDef, TransientConditionDef, Injury } from '$lib/game/core/types';
 import conditionsData from '$lib/game/database/conditions.jsonc';
 
 type CharSpan = { sheet?: string; id?: number; from?: number; to?: number; literal?: string };
@@ -60,15 +60,15 @@ function prettyPart(id: string): string {
   return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 }
 
-function allInjuries(pawn: Pawn): Injury[] {
+function allInjuries(entity: Pawn | Mob): Injury[] {
   const out: Injury[] = [];
-  for (const limb of pawn.limbs ?? [])
+  for (const limb of entity.limbs ?? [])
     for (const part of limb.parts ?? []) out.push(...part.injuries);
   return out;
 }
 
-function persistentSources(pawn: Pawn, def: ConditionDef): string[] {
-  const needs = pawn.needs as unknown as Record<string, number | undefined> | undefined;
+function persistentSources(entity: Pawn | Mob, def: ConditionDef): string[] {
+  const needs = entity.needs as unknown as Record<string, number | undefined> | undefined;
   const d = def.driver;
   if (d?.need) {
     const val = r(needs?.[d.need]);
@@ -84,7 +84,7 @@ function persistentSources(pawn: Pawn, def: ConditionDef): string[] {
   // No driver → sourced from wounds. Name the specific contributing injuries.
   switch (def.id) {
     case 'blood_loss': {
-      const bleeders = allInjuries(pawn).filter((i) => (i.bleeding ?? 0) > 0);
+      const bleeders = allInjuries(entity).filter((i) => (i.bleeding ?? 0) > 0);
       return bleeders.length
         ? bleeders.map(
             (i) =>
@@ -93,18 +93,18 @@ function persistentSources(pawn: Pawn, def: ConditionDef): string[] {
         : ['Recent heavy bleeding'];
     }
     case 'infection': {
-      const inf = allInjuries(pawn).filter((i) => i.infected);
+      const inf = allInjuries(entity).filter((i) => i.infected);
       return inf.length
         ? inf.map((i) => `${prettyPart(i.bodyPart)} — ${i.type} (infected)`)
         : ['An untended wound has festered'];
     }
     case 'fracture': {
-      const fx = allInjuries(pawn).filter((i) => i.type === 'fracture');
+      const fx = allInjuries(entity).filter((i) => i.type === 'fracture');
       return fx.length ? fx.map((i) => `${prettyPart(i.bodyPart)} — fractured`) : ['A broken bone'];
     }
     case 'shock': {
       const lines = ['Severe pain or blood loss'];
-      if (pawn.pain != null) lines.push(`Pain ${Math.round(pawn.pain)}`);
+      if (entity.pain != null) lines.push(`Pain ${Math.round(entity.pain)}`);
       return lines;
     }
     default:
@@ -112,8 +112,8 @@ function persistentSources(pawn: Pawn, def: ConditionDef): string[] {
   }
 }
 
-function transientSources(pawn: Pawn, id: string): string[] {
-  const n = pawn.needs ?? ({} as Pawn['needs']);
+function transientSources(entity: Pawn | Mob, id: string): string[] {
+  const n = entity.needs;
   switch (id) {
     case 'hungry':
       return [`Hunger ${r(n?.hunger)}/100`];
@@ -135,11 +135,13 @@ function transientSources(pawn: Pawn, id: string): string[] {
       return ['Stamina spent in combat'];
     case 'knockdown':
     case 'collapse': {
-      const t = pawn.conditionTimers?.[id];
+      const t = entity.conditionTimers?.[id];
       return [t ? `Recovering — ${t} turn${t === 1 ? '' : 's'} left` : 'Recovering'];
     }
     default:
-      if (id.startsWith('mood_')) return [`Mood ${Math.round(pawn.state?.mood ?? 50)}/100`];
+      // Mood conditions are pawn-only (mobs never sync them).
+      if (id.startsWith('mood_'))
+        return [`Mood ${Math.round((entity as Pawn).state?.mood ?? 50)}/100`];
       return [];
   }
 }
@@ -148,10 +150,10 @@ function transientSources(pawn: Pawn, id: string): string[] {
  * Build the display model for every active condition on a pawn — persistent (severity-bearing) first,
  * then transient — for the conditions chip row + hover panel.
  */
-export function getActiveConditionViews(pawn: Pawn): ConditionView[] {
+export function getActiveConditionViews(entity: Pawn | Mob): ConditionView[] {
   const views: ConditionView[] = [];
 
-  for (const c of pawn.conditions ?? []) {
+  for (const c of entity.conditions ?? []) {
     if (c.severity <= 0) continue;
     const def = PERSISTENT.find((d) => d.id === c.id);
     if (!def) continue;
@@ -167,12 +169,12 @@ export function getActiveConditionViews(pawn: Pawn): ConditionView[] {
       severityPct: Math.round(c.severity * 100),
       stageLabel: stage?.label,
       lifeThreatening: stage?.lifeThreatening,
-      sources: persistentSources(pawn, def),
+      sources: persistentSources(entity, def),
       effects: effectLines(stage?.modifiers ?? {})
     });
   }
 
-  for (const id of pawn.transientConditions ?? []) {
+  for (const id of entity.transientConditions ?? []) {
     const def = TRANSIENT.find((d) => d.id === id);
     if (!def || def.hidden) continue;
     views.push({
@@ -182,7 +184,7 @@ export function getActiveConditionViews(pawn: Pawn): ConditionView[] {
       charSpans: def.charSpans,
       description: def.description,
       kind: 'transient',
-      sources: transientSources(pawn, id),
+      sources: transientSources(entity, id),
       effects: effectLines(def.modifiers)
     });
   }

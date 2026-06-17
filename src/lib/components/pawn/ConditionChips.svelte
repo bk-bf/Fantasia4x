@@ -2,14 +2,15 @@
      condition (persistent + transient), with a cursor-following hover panel (HoverTip) that explains
      the condition, where the pawn got it from, and what it does. Derivation lives in conditionInfo.ts. -->
 <script lang="ts">
-  import type { Pawn } from '$lib/game/core/types';
   import SpriteIcon from '$lib/components/UI/SpriteIcon.svelte';
   import HoverTip from '$lib/components/UI/HoverTip.svelte';
-  import { getActiveConditionViews, type ConditionView } from '$lib/utils/conditionInfo';
+  import type { ConditionView } from '$lib/utils/conditionInfo';
 
-  let { pawn }: { pawn: Pawn } = $props();
-
-  const views = $derived(getActiveConditionViews(pawn));
+  let {
+    views,
+    showHeader = true,
+    iconPx = 14
+  }: { views: ConditionView[]; showHeader?: boolean; iconPx?: number } = $props();
 
   let hovered = $state<ConditionView | null>(null);
   let mx = $state(0);
@@ -27,7 +28,7 @@
 </script>
 
 {#if views.length > 0}
-  <div class="section-hdr sub">| CONDITIONS</div>
+  {#if showHeader}<div class="section-hdr sub">| CONDITIONS</div>{/if}
   <div class="cond-chips">
     {#each views as v (v.kind + ':' + v.id)}
       <div
@@ -36,13 +37,12 @@
         style="border-color: {v.color}; color: {v.color}"
         role="img"
         aria-label={v.name}
-        title={v.name}
         onmouseenter={(e) => enter(v, e)}
         onmousemove={move}
         onmouseleave={() => (hovered = null)}
       >
         {#if v.charSpans}
-          <SpriteIcon charSpans={v.charSpans} tint={v.color} px={14} />
+          <SpriteIcon charSpans={v.charSpans} tint={v.color} px={iconPx} />
         {:else}
           <span class="cond-glyph">{v.name.charAt(0)}</span>
         {/if}

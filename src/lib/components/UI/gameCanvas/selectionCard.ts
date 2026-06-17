@@ -8,13 +8,13 @@ import { resourceObjectService } from '$lib/game/services/ResourceObjectService.
 import { type CreatureDefinition } from '$lib/game/core/Creatures.js';
 import type { Pawn, Mob, LimbId, EntityCondition, Injury } from '$lib/game/core/types.js';
 import { getConditionName, getConditionCurrentStage } from '$lib/game/core/needs.js';
+import { getActiveConditionViews } from '$lib/utils/conditionInfo.js';
 import { pawnService } from '$lib/game/services/PawnService.js';
 import { pawnStatService } from '$lib/game/services/PawnStatService.js';
 import type {
   SelectedEntityModel,
   EntityBar,
   EntityButton,
-  EntityEffect,
   EntityStat,
   HealthModel,
   HealthLimb,
@@ -42,16 +42,6 @@ function prettyPart(id: string): string {
 /** A wound is highlighted when it's serious enough to matter or has gone septic. */
 function woundWarn(inj: Injury): boolean {
   return inj.infected || inj.severity !== 'minor';
-}
-
-/** Visible transient conditions as HUD chips (sprite glyph + colour). Hidden (internal) effects are
- *  filtered by the service; the glyph comes from the effect's charSpans (sheet:id, as items do). */
-function conditionPills(entity: Pawn | Mob): EntityEffect[] {
-  return pawnService.getTransientConditions(entity).map((e) => ({
-    charSpans: e.charSpans,
-    name: e.name,
-    color: e.color
-  }));
 }
 
 /** A pawn/mob's current movement speed as a compact "3.8/s" stat readout. */
@@ -264,7 +254,7 @@ export function buildPawnCard(
     dismissable: selected,
     mood: Math.floor(pawn.state.mood),
     stats,
-    effects: conditionPills(pawn),
+    conditionViews: getActiveConditionViews(pawn),
     bars,
     // (No `job` line: it just repeated the [state] tag next to the name — replaced by the WETNESS bar.)
     // Only show a bar for states that also draw one above the pawn's head (Working / eat / drink /
@@ -374,7 +364,7 @@ export function buildMobCard(
       { label: 'DEX', value: mob.stats.dexterity },
       moveSpeedStat(mob)
     ],
-    effects: conditionPills(mob),
+    conditionViews: getActiveConditionViews(mob),
     bars,
     note: `${def.entityClass === 'mob' ? '⚔ hostile' : '◆ neutral'} · ${def.behaviour}${
       def.tameable ? ' · tameable' : ''

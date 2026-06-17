@@ -1,4 +1,6 @@
 <script lang="ts" module>
+  import type { ConditionView } from '$lib/utils/conditionInfo';
+
   export interface EntityStat {
     label: string;
     value: string | number;
@@ -25,19 +27,6 @@
     active?: boolean;
   }
 
-  /** A transient condition chip (sprite glyph + colour) shown beside the stats; name on hover. */
-  export interface EntityEffect {
-    charSpans?: Array<{
-      sheet?: string;
-      id?: number;
-      from?: number;
-      to?: number;
-      literal?: string;
-    }>;
-    name: string;
-    color: string;
-  }
-
   export interface SelectedEntityModel {
     /** Display name shown in the header. */
     name: string;
@@ -51,8 +40,8 @@
     mood?: number;
     /** Inline stat readouts (STR, MOVE, …). */
     stats?: EntityStat[];
-    /** Active transient conditions, rendered as compact pills on the stats row (next to MOVE). */
-    effects?: EntityEffect[];
+    /** Active conditions (persistent + transient) rendered as icon chips with a hover panel. */
+    conditionViews?: ConditionView[];
     /** Block-character meter bars (Food, Blood, …). */
     bars?: EntityBar[];
     /** Activity / job line. `idle` greys it out. */
@@ -133,7 +122,7 @@
 
 <script lang="ts">
   import StatBar from './StatBar.svelte';
-  import SpriteIcon from './SpriteIcon.svelte';
+  import ConditionChips from '../pawn/ConditionChips.svelte';
   import HealthPanel from './gameCanvas/HealthPanel.svelte';
   import { healthToggle } from './gameCanvas/healthToggle.svelte';
 
@@ -204,26 +193,17 @@
       </div>
     {/if}
 
-    {#if (model.stats && model.stats.length > 0) || (model.effects && model.effects.length > 0)}
+    {#if model.stats && model.stats.length > 0}
       <div class="pawn-row">
-        {#each model.stats ?? [] as stat (stat.label)}
+        {#each model.stats as stat (stat.label)}
           <span class="pawn-stat-label">{stat.label}</span>
           <span class="pawn-stat-val" class:pawn-warn={stat.warn}>{stat.value}</span>
         {/each}
-        {#if model.effects && model.effects.length > 0}
-          <span class="effect-chips">
-            {#each model.effects as effect (effect.name)}
-              <span
-                class="effect-chip"
-                style="border-color: {effect.color}; color: {effect.color};"
-                title={effect.name}
-              >
-                <SpriteIcon charSpans={effect.charSpans} tint={effect.color} px={12} />
-              </span>
-            {/each}
-          </span>
-        {/if}
       </div>
+    {/if}
+
+    {#if model.conditionViews && model.conditionViews.length > 0}
+      <ConditionChips views={model.conditionViews} showHeader={false} iconPx={12} />
     {/if}
 
     {#if model.bars && model.bars.length > 0}
@@ -449,21 +429,6 @@
   }
   .pawn-warn {
     color: #ee8844 !important;
-  }
-  /* Transient condition chips sit inline on the stats row, just right of MOVE (left-aligned).
-     Same chip styling as the Pawns-tab effect cards (square border + faint colour-mix fill). */
-  .effect-chips {
-    display: inline-flex;
-    gap: 3px;
-    align-items: center;
-  }
-  .effect-chip {
-    display: inline-flex;
-    align-items: center;
-    border: 1px solid;
-    padding: 0 2px;
-    background: color-mix(in srgb, currentColor 12%, var(--bg, #1c1006));
-    cursor: default;
   }
   .bar-rows {
     margin-top: 2px;
