@@ -70,6 +70,9 @@ export interface Mob {
   huntTargetId?: string;
   /** Tick when the hunter can re-enter Hunting state after a failed hunt. */
   huntCooldownUntil?: number;
+  /** Tick when the entity can re-enter Foraging after finding no REACHABLE food tile — stops a
+   *  boxed-in forager re-scanning/re-pathing (and re-logging) the same unreachable tile every tick. */
+  forageCooldownUntil?: number;
   /** Committed flee destination (a distant safe tile). While fleeing the mob runs to THIS point,
    *  re-routing around blocks, and only re-picks when it arrives or the point stops being safe —
    *  so it can't flip direction each time the path ends (the flee-yoyo). */

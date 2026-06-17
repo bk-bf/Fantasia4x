@@ -67,6 +67,47 @@ export function findNearestFoodTile(
 }
 
 /**
+ * Nearest edible tile within `radius` that is ACTUALLY reachable by A*, plus the path to it.
+ *
+ * `findNearestFoodTile` only checks `tile.walkable`, but walkable ≠ reachable — a berry bush across
+ * a river/cliff is walkable yet unpathable. A forager that locked onto such a tile re-pathed it
+ * (and re-logged FORAGE-UNREACHABLE) every tick while a slightly-farther REACHABLE bush sat ignored.
+ * This collects edible tiles nearest-first and probes them with `pathTo`, returning the first that
+ * paths. Capped at `maxCandidates` A* probes so a boxed-in mob can't run unbounded pathfinding per
+ * tick (the caller additionally backs off via forageCooldownUntil when this returns null).
+ */
+export function findReachableFoodTile(
+  state: GameState,
+  mob: Mob,
+  radius: number,
+  kinds: Set<TileFoodKind>,
+  maxCandidates = 6
+): { target: { x: number; y: number }; path: { x: number; y: number }[] } | null {
+  if (kinds.size === 0) return null;
+  const candidates: { x: number; y: number; d: number }[] = [];
+  for (let dy = -radius; dy <= radius; dy++) {
+    for (let dx = -radius; dx <= radius; dx++) {
+      const nx = mob.x + dx;
+      const ny = mob.y + dy;
+      const tile = state.worldMap[ny]?.[nx];
+      if (!tile?.walkable) continue;
+      if (!edibleResourceOnTile(tile, kinds)) continue;
+      candidates.push({ x: nx, y: ny, d: Math.abs(dx) + Math.abs(dy) });
+    }
+  }
+  if (candidates.length === 0) return null;
+  candidates.sort((a, b) => a.d - b.d);
+  const probeCount = Math.min(candidates.length, maxCandidates);
+  for (let i = 0; i < probeCount; i++) {
+    const c = candidates[i];
+    if (c.x === mob.x && c.y === mob.y) return { target: { x: c.x, y: c.y }, path: [] };
+    const path = pathTo(state, mob.x, mob.y, c.x, c.y, mob.id);
+    if (path.length) return { target: { x: c.x, y: c.y }, path };
+  }
+  return null;
+}
+
+/**
  * Nearest corpse (preferred) within HUNT_RADIUS, or — if `allowLivePrey` — the nearest
  * live huntable creature. `allowLivePrey` should be `predator || diet === 'carnivore'`:
  * scavenging a corpse doesn't require being a hunter, but stalking live prey does.

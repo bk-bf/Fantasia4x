@@ -64,6 +64,9 @@ export const CORPSE_PORTION = 0.5;
 export const WANDER_MOVES_PER_SECOND = 1.0;
 /** Cooldown after a failed hunt before the entity can re-enter Hunting state (seconds). */
 export const HUNT_COOLDOWN_SECONDS = 60;
+/** Cooldown after finding no reachable food tile before re-entering Foraging (seconds). Mirrors
+ *  HUNT_COOLDOWN so a boxed-in forager backs off instead of oscillating Grazing/Wander↔Foraging. */
+export const FORAGE_COOLDOWN_SECONDS = 30;
 /** Give up a hunt that has dragged on this long without closing to attack range — stops the
  *  endless uncatchable chase (equal-speed predators) that thrashed the AI + log. */
 export const HUNT_GIVE_UP_SECONDS = 25;

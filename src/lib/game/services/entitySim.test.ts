@@ -261,3 +261,112 @@ describe('prey reacts to a pawn hunter (same circuits as predator-prey)', () => 
     expect(state.mobs![0].state).toBe('Fleeing');
   });
 });
+
+describe('feeding states do not oscillate (hostile FSM + unreachable forage)', () => {
+  function makePrey(over: Partial<Mob> = {}): Mob {
+    return {
+      id: 'prey',
+      creatureId: 'boar', // huntable, neutral
+      entityClass: 'animal',
+      state: 'Wander',
+      isAlive: true,
+      x: 5,
+      y: 5,
+      health: 60,
+      maxHealth: 60,
+      bloodVolume: 100,
+      maxBloodVolume: 100,
+      limbs: [],
+      conditions: [],
+      needs: { hunger: 0, fatigue: 0 },
+      stateSince: 0,
+      ...(over as object)
+    } as unknown as Mob;
+  }
+  function makeWolf(over: Partial<Mob> = {}): Mob {
+    return {
+      id: 'wolf',
+      creatureId: 'wolf', // predator, neutral → hostile FSM
+      entityClass: 'animal',
+      state: 'Wander',
+      isAlive: true,
+      x: 5,
+      y: 6,
+      health: 40,
+      maxHealth: 40,
+      bloodVolume: 100,
+      maxBloodVolume: 100,
+      limbs: [],
+      conditions: [],
+      needs: { hunger: 0, fatigue: 0 },
+      stateSince: 0,
+      ...(over as object)
+    } as unknown as Mob;
+  }
+
+  it('a predator fighting a prey MOB (no pawn present) HOLDS in Attacking, not oscillating', () => {
+    // Bug 1: the hostile Attacking/Alerted cases resolved their target from the nearest PAWN only.
+    // With a predator locked onto a prey mob and no pawn anywhere, that ejected it from combat every
+    // tick → Wander↔Hunting flicker. Now it engages the actual prey via huntTargetId.
+    const wolf = makeWolf({
+      state: 'Attacking',
+      huntTargetId: 'prey',
+      needs: { hunger: 80, fatigue: 0 }
+    });
+    const prey = makePrey({ state: 'Attacking', huntTargetId: 'wolf' }); // mutual melee (5,5)/(5,6)
+    let state = makeState([wolf, prey]);
+    for (let t = 1; t <= 5; t++) {
+      state = entityService.stepEntities({ ...state, turn: t });
+      expect(state.mobs!.find((m) => m.id === 'wolf')!.state).toBe('Attacking');
+    }
+  });
+
+  it('a predator whose prey breaks melee resumes Hunting (not Alerted toward a non-existent pawn)', () => {
+    const wolf = makeWolf({
+      state: 'Attacking',
+      huntTargetId: 'prey',
+      needs: { hunger: 80, fatigue: 0 }
+    });
+    const prey = makePrey({ x: 5, y: 9 }); // two+ tiles away — out of melee
+    let state = makeState([wolf, prey]);
+    state = entityService.stepEntities({ ...state, turn: 1 });
+    expect(state.mobs!.find((m) => m.id === 'wolf')!.state).toBe('Hunting');
+  });
+
+  it('a hungry forager with only UNREACHABLE food backs off instead of flipping every tick', () => {
+    // Bug 2: walkable ≠ reachable. With pathfinding unavailable in-test (pathTo → []), the forage
+    // tile is unreachable; the forager must set forageCooldownUntil and stop re-entering Foraging
+    // every tick (the FORAGE-UNREACHABLE log flood + Grazing↔Foraging flicker).
+    const world = smallWorld();
+    world[5][8].resources = { grass_patch: 5 }; // edible + walkable, but unreachable (no wasm)
+    const deer: Mob = {
+      id: 'deer',
+      creatureId: 'deer', // passive, grazes, eats food
+      entityClass: 'animal',
+      state: 'Grazing',
+      isAlive: true,
+      x: 5,
+      y: 5,
+      health: 50,
+      maxHealth: 50,
+      bloodVolume: 100,
+      maxBloodVolume: 100,
+      limbs: [],
+      conditions: [],
+      needs: { hunger: 80, fatigue: 0 }, // hungry → wants to forage
+      stateSince: 0
+    } as unknown as Mob;
+    let state = { ...makeState([deer]), worldMap: world } as GameState;
+
+    let foragingTicks = 0;
+    for (let t = 1; t <= 20; t++) {
+      state = entityService.stepEntities({ ...state, turn: t });
+      const s = state.mobs![0].state;
+      if (s === 'Foraging' || s === 'Eating') foragingTicks++;
+    }
+    // Pre-fix this flicked into Foraging on roughly every other tick; the cooldown backoff means it
+    // should attempt to forage at most a couple of times across 20 ticks, not ~10.
+    expect(foragingTicks).toBeLessThanOrEqual(2);
+    expect(state.mobs![0].forageCooldownUntil).toBeGreaterThan(0);
+  });
+});

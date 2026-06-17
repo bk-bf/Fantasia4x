@@ -19,6 +19,7 @@ import {
   nearestPredatorThreat,
   findNearestPrey,
   findNearestFoodTile,
+  findReachableFoodTile,
   huntAttacker,
   bestApproachTile,
   pathTo,
@@ -45,6 +46,7 @@ import {
   EAT_FORAGE_HUNGER_RESTORE,
   CORPSE_PORTION,
   HUNT_COOLDOWN_SECONDS,
+  FORAGE_COOLDOWN_SECONDS,
   HUNT_GIVE_UP_SECONDS,
   WILD_FORAGE_RESOURCE_IDS
 } from './entityConstants';
@@ -384,12 +386,20 @@ export function stepHostile(
       pendingMobState
     );
   }
+  const huntCooldownExpired = !mob.huntCooldownUntil || turn >= mob.huntCooldownUntil;
+  const forageCooldownExpired = !mob.forageCooldownUntil || turn >= mob.forageCooldownUntil;
   if (
     !inVision &&
     mob.needs.hunger >= HUNGER_EAT_THRESHOLD &&
     mob.state !== 'Fleeing' &&
-    mob.state !== 'Sleeping'
-    // (Hunting/Eating/Foraging already excluded by the early-return guard above)
+    mob.state !== 'Sleeping' &&
+    mob.state !== 'Attacking' &&
+    mob.state !== 'Alerted'
+    // (Hunting/Eating/Foraging already excluded by the early-return guard above.) Attacking/Alerted
+    // are ACTIVE engagements — feeding must NOT preempt them. A hungry hunter fighting a prey MOB has
+    // no pawn in vision (inVision is pawn-only), so without this guard it got ejected into Foraging/
+    // Hunting every tick → the Wander↔Hunting oscillation reported mid-engagement. The sleep gate
+    // below already excludes these two states for the same reason.
   ) {
     // Forage real food (and graze, for herbivores) first; fall back to hunting live
     // prey or scavenging a corpse only if nothing forageable is in range. A creature
@@ -401,9 +411,13 @@ export function stepHostile(
     const canForage = tileKinds.size > 0;
     const canScavengeOrHunt = canHunt || def.eats.includes('meat') || def.eats.includes('organic');
     const forageReachable = () =>
-      canForage && findNearestFoodTile(state, mob.x, mob.y, FORAGE_RADIUS, tileKinds) !== null;
+      canForage &&
+      forageCooldownExpired &&
+      findNearestFoodTile(state, mob.x, mob.y, FORAGE_RADIUS, tileKinds) !== null;
     const tryHunt = (): Mob | null => {
-      if (!canScavengeOrHunt) return null;
+      // Honor the post-give-up cooldown, exactly as stepAnimal does — re-entering Hunting the tick
+      // after bailing an unreachable hunt was the other half of the oscillation for hostile mobs.
+      if (!canScavengeOrHunt || !huntCooldownExpired) return null;
       const prey = findNearestPrey(mob, allMobs, canHunt);
       if (!prey) return null;
       return { ...mob, state: 'Hunting', stateSince: turn, path: [] };
@@ -451,9 +465,22 @@ export function stepHostile(
       return moveToward(mob, nearest.pos, state);
     }
     case 'Attacking': {
-      // COMBAT-SYSTEM owns damage resolution.
-      // combatService.tickCombat() (called from GameEngineImpl after entityStep)
-      // resolves hits for all mobs in Attacking state. The FSM only holds position.
+      // COMBAT-SYSTEM owns damage resolution. combatService.tickCombat() (called from
+      // GameEngineImpl after entityStep) resolves hits for all mobs in Attacking state; the FSM only
+      // holds position. The engagement target is EITHER a hunted prey MOB (huntTargetId, set by
+      // stepHunting on contact) OR the nearest pawn. Resolving it pawn-only (the old `nearest` check)
+      // ejected a mob fighting ANOTHER mob out of combat every tick — no pawn nearby → Alerted →
+      // Wander → re-Hunt → Attacking — the mid-engagement oscillation. Hold while the ACTUAL target
+      // is adjacent. (The passive FSM already does this via huntAttacker.)
+      const preyTarget = mob.huntTargetId
+        ? allMobs.find((m) => m.id === mob.huntTargetId)
+        : null;
+      if (preyTarget && preyTarget.state !== 'Corpse') {
+        if (adjacent(mob, { x: preyTarget.x, y: preyTarget.y })) return mob; // hold; combat resolves
+        // Prey broke contact — resume the hunt against IT (not the nearest pawn).
+        return { ...mob, state: 'Hunting', stateSince: turn };
+      }
+      // Pawn engagement (or the prey just died / vanished): fall back to pawn-based logic.
       if (!nearest || !adjacent(mob, nearest.pos)) {
         return { ...mob, state: 'Alerted', stateSince: turn };
       }
@@ -593,9 +620,12 @@ export function stepAnimal(
       const canHuntLive = def.predator || def.diet === 'carnivore';
       const canScavengeOrHunt =
         canHuntLive || def.eats.includes('meat') || def.eats.includes('organic');
-      // Check hunt cooldown before entering Hunting state.
+      // Check cooldowns before re-entering a feeding state — forage cooldown lets a boxed-in
+      // omnivore fall through to hunting instead of flicking Grazing↔Foraging on unreachable food.
       const huntCooldownExpired = !mob.huntCooldownUntil || turn >= mob.huntCooldownUntil;
-      if (canForage) return { ...mob, state: 'Foraging', stateSince: turn, path: [] };
+      const forageCooldownExpired = !mob.forageCooldownUntil || turn >= mob.forageCooldownUntil;
+      if (canForage && forageCooldownExpired)
+        return { ...mob, state: 'Foraging', stateSince: turn, path: [] };
       if (canScavengeOrHunt && huntCooldownExpired)
         return { ...mob, state: 'Hunting', stateSince: turn, path: [] };
     }
@@ -798,41 +828,40 @@ export function stepForaging(
     return mob;
   }
 
-  // Path done — decide next step. Search in priority order so herbivores head for
-  // grass before wild forage, and omnivores head for real forage food (berries/mushrooms).
-  let target: { x: number; y: number } | null = null;
+  // Path done — decide next step. Search in priority order so herbivores head for grass before
+  // wild forage, and omnivores head for real forage food (berries/mushrooms). findReachableFoodTile
+  // returns the nearest tile that ACTUALLY paths (walkable ≠ reachable — a bush across a river is
+  // walkable but unreachable), trying the next-nearest candidates when one can't be pathed. This is
+  // why a marooned forager used to fixate on a single unreachable tile while a reachable bush sat
+  // ignored.
+  let found: { target: { x: number; y: number }; path: { x: number; y: number }[] } | null = null;
   for (const kind of tileKindOrder) {
-    target = findNearestFoodTile(state, mob.x, mob.y, FORAGE_RADIUS, new Set([kind]));
-    if (target) break;
+    found = findReachableFoodTile(state, mob, FORAGE_RADIUS, new Set([kind]));
+    if (found) break;
   }
-  if (!target) {
-    // No edible tile in range — exit Foraging state and wander.
+  if (!found) {
+    // No REACHABLE edible tile in range — back off (cooldown) so a boxed-in forager stops
+    // re-scanning/re-pathing/re-logging it every tick, and wander to re-evaluate from elsewhere.
     if (turn % 300 === 0) {
       gameLogger.log(
         turn,
         'ENTITY-FEED',
-        `FORAGE-NO-TARGET ${mob.id} @(${mob.x},${mob.y}) hunger=${mob.needs.hunger.toFixed(1)}`
+        `FORAGE-NO-REACHABLE ${mob.id} @(${mob.x},${mob.y}) hunger=${mob.needs.hunger.toFixed(1)}`
       );
     }
-    return { ...wanderStep(mob, def, state), state: idleState, stateSince: turn };
+    return {
+      ...wanderStep(mob, def, state),
+      state: idleState,
+      stateSince: turn,
+      forageCooldownUntil: turn + ticksFromSeconds(FORAGE_COOLDOWN_SECONDS)
+    };
   }
 
-  if (target.x === mob.x && target.y === mob.y) {
+  if (found.path.length === 0) {
+    // Standing on the food tile already — start eating.
     return { ...mob, eatProgress: SECONDS_PER_TICK / EAT_GRASS_SECONDS, path: [] };
   }
-
-  // Route to the food tile via A*. If unreachable, bail to wandering so the
-  // animal keeps moving (and re-evaluates) instead of starving frozen in place.
-  const newPath = pathTo(state, mob.x, mob.y, target.x, target.y, mob.id);
-  if (!newPath.length) {
-    gameLogger.log(
-      turn,
-      'ENTITY-FEED',
-      `FORAGE-UNREACHABLE ${mob.id} @(${mob.x},${mob.y}) food@(${target.x},${target.y})`
-    );
-    return { ...wanderStep(mob, def, state), state: idleState, stateSince: turn };
-  }
-  return { ...mob, path: newPath, pathIndex: 0, nextCellCostLeft: undefined };
+  return { ...mob, path: found.path, pathIndex: 0, nextCellCostLeft: undefined };
 }
 
 /**
