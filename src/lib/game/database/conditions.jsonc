@@ -1,5 +1,13 @@
+// Conditions — every transient or lasting state a pawn/mob can be in. One list, two shapes
+// keyed by the "duration" discriminant:
+//   "persistent" → tracked `severity` (0–1) in `pawn.conditions` that worsens/recovers through
+//                  `stages` and can be lethal (malnutrition, blood_loss, hypothermia, …).
+//   "transient"  → re-derived each tick into `pawn.transientConditions` (ids); a flat `modifiers`
+//                  block, no severity/stages; clears itself when its cause goes away (hungry,
+//                  tired, knockdown, mood_*, …). See the "Transient conditions" section below.
 [
     {
+        "duration": "persistent",
         "id": "dehydration",
         "name": "Dehydration",
         "description": "Lack of water — progressive and fast. Saps strength and work capacity; lethal within days if no water is drunk.",
@@ -37,6 +45,7 @@
         ]
     },
     {
+        "duration": "persistent",
         "id": "malnutrition",
         "name": "Malnutrition",
         "description": "A diet deficiency causing progressive physical deterioration. Reduces work capacity and ultimately leads to death if unchecked.",
@@ -93,6 +102,7 @@
         ]
     },
     {
+        "duration": "persistent",
         "id": "blood_loss",
         "name": "Blood Loss",
         "description": "Insufficient blood volume impairs consciousness and movement. Extreme blood loss leads to death.",
@@ -130,6 +140,7 @@
         ]
     },
     {
+        "duration": "persistent",
         "id"            : "fracture",
         "name"          : "Fracture",
         "description"   : "A broken bone impairing movement and combat ability. Worsens without rest.",
@@ -163,6 +174,7 @@
         ]
     },
     {
+        "duration": "persistent",
         "id"            : "infection",
         "name"          : "Infection",
         "description"   : "A wound has become infected. Untreated infections spread, doubling pain and bleeding.",
@@ -198,6 +210,7 @@
         ]
     },
     {
+        "duration": "persistent",
         "id"            : "shock",
         "name"          : "Shock",
         "description"   : "Severe pain or blood loss has sent the body into shock. The pawn is barely functional.",
@@ -232,6 +245,7 @@
         ]
     },
     {
+        "duration": "persistent",
         "id": "infection",
         "name": "Infection",
         "description": "An untended wound has festered. Worsens without treatment and can turn fatal; good care drives it back.",
@@ -262,6 +276,7 @@
         ]
     },
     {
+        "duration": "persistent",
         "id": "hypothermia",
         "name": "Hypothermia",
         "description": "Prolonged exposure to cold below the pawn's comfort range. Slows work and movement and tires the body; lethal if the pawn never warms up. Cold resistance (CON) slows onset; shelter, fire, and warmer seasons drive it back.",
@@ -299,6 +314,7 @@
         ]
     },
     {
+        "duration": "persistent",
         "id": "heat_stroke",
         "name": "Heat Stroke",
         "description": "Prolonged exposure to heat above the pawn's comfort range. Saps work and movement and drives up appetite/thirst; lethal if the pawn never cools down. Fire resistance (CON) slows onset; shade, water, and cooler seasons drive it back.",
@@ -336,13 +352,15 @@
         ]
     },
 
-    // ── Transient conditions (flags) ───────────────────────────────────────────────
-    // Transient states with no severity/stages: derived fresh each tick from the
-    // pawn's flags/needs/mood/durations (see PawnStateMachine.syncTransientConditions)
-    // and stored as plain ids in `pawn.transientConditions`. Distinguished from the
-    // graded conditions above by having a flat `modifiers` block and NO `stages`.
+    // ── Transient conditions ("duration": "transient") ───────────────────────
+    // No severity/stages: re-derived fresh each tick from the pawn's state
+    // (see PawnStateMachine.syncTransientConditions) and stored as plain ids in
+    // `pawn.transientConditions`; they appear/clear on their own when their cause
+    // does. The "duration" field is the discriminant vs the persistent conditions
+    // above ("duration": "persistent"), which carry tracked severity through stages.
     // modifiers are multipliers unless noted: 1.0 = full rate, 0.0 = paused, 0.33 = one-third.
     {
+        "duration": "transient",
         "id"         : "knockdown",
         "name"       : "Knocked Down",
         "description": "Prone from a heavy blunt blow. Loses the next attack; recovers after a couple of turns.",
@@ -351,6 +369,7 @@
         "modifiers"  : {"moveSpeed": 0.0, "workEfficiency": 0.0}
     },
     {
+        "duration": "transient",
         "id"         : "collapse",
         "name"       : "Collapsed",
         "description": "Overwhelmed by pain — incapacitated and out of the fight. Recovers only as the pain subsides.",
@@ -359,6 +378,7 @@
         "modifiers"  : {"moveSpeed": 0.0, "workEfficiency": 0.0}
     },
     {
+        "duration": "transient",
         "id"         : "eating",
         "name"       : "Eating",
         "description": "Mid-meal. Hunger is not accumulating.",
@@ -367,6 +387,7 @@
         "modifiers"  : {"hungerRate": 0.0}
     },
     {
+        "duration": "transient",
         "id"         : "sleeping",
         "name"       : "Sleeping",
         "description": "Resting. Metabolism slows; hunger accrues at one-third the normal rate.",
@@ -375,6 +396,7 @@
         "modifiers"  : {"hungerRate": 0.33, "fatigueRate": 0.0}
     },
     {
+        "duration": "transient",
         "id"         : "tired",
         "name"       : "Exhausted",
         "description": "Severe fatigue. Work efficiency and movement speed are reduced.",
@@ -383,6 +405,7 @@
         "modifiers"  : {"workEfficiency": 0.5, "moveSpeed": 0.5}
     },
     {
+        "duration": "transient",
         "id"         : "winded",
         "name"       : "Winded",
         "description": "Out of breath — stamina spent. Can't attack and can barely move; easier to hit until stamina recovers to full.",
@@ -391,6 +414,7 @@
         "modifiers"  : {"moveSpeed": 0.3, "dodge": 0.5}
     },
     {
+        "duration": "transient",
         "id"         : "hungry",
         "name"       : "Hungry",
         "description": "Hunger is high. Work efficiency and movement speed are reduced.",
@@ -399,6 +423,7 @@
         "modifiers"  : {"workEfficiency": 0.75, "moveSpeed": 0.75}
     },
     {
+        "duration": "transient",
         "id"         : "thirsty",
         "name"       : "Thirsty",
         "description": "Parched. Concentration slips — work slows. Untreated thirst becomes lethal dehydration.",
@@ -407,6 +432,7 @@
         "modifiers"  : {"workEfficiency": 0.8, "moveSpeed": 0.9}
     },
     {
+        "duration": "transient",
         "id"         : "wet",
         "name"       : "Wet",
         "description": "Soaked through from rain or wet ground. Chilled and sluggish — cold bites far harder (and heat far less). Dries off in the warmth or under a roof.",
@@ -415,6 +441,7 @@
         "modifiers"  : {"moveSpeed": 0.9, "workEfficiency": 0.95}
     },
     {
+        "duration": "transient",
         "id"         : "sheltered",
         "name"       : "Sheltered",
         "description": "Under a roof, out of the weather. Recovers from cold and heat far faster, and a storm's gloom is held at bay.",
@@ -423,6 +450,7 @@
         "modifiers"  : {"fatigueRate": 0.95}
     },
     {
+        "duration": "transient",
         "id"         : "filthy",
         "name"       : "Filthy",
         "description": "Caked in grime. Demoralising and unhealthy — slows work and sours mood (disease risk later).",
@@ -431,6 +459,7 @@
         "modifiers"  : {"workEfficiency": 0.85}
     },
     {
+        "duration": "transient",
         "id"         : "mood_ecstatic",
         "name"       : "Ecstatic",
         "description": "In high spirits. Work efficiency is greatly boosted.",
@@ -439,6 +468,7 @@
         "modifiers"  : {"workEfficiency": 1.2}
     },
     {
+        "duration": "transient",
         "id"         : "mood_content",
         "name"       : "Content",
         "description": "Feeling good. Work efficiency is slightly boosted.",
@@ -447,6 +477,7 @@
         "modifiers"  : {"workEfficiency": 1.1}
     },
     {
+        "duration": "transient",
         "id"         : "mood_sad",
         "name"       : "Somewhat Sad",
         "description": "Feeling down. Work efficiency is reduced.",
@@ -455,6 +486,7 @@
         "modifiers"  : {"workEfficiency": 0.8}
     },
     {
+        "duration": "transient",
         "id"         : "mood_depressed",
         "name"       : "Deeply Depressed",
         "description": "Severely depressed. Work efficiency is greatly reduced.",

@@ -10,13 +10,17 @@
   import conditionsData from '$lib/game/database/conditions.jsonc';
   import { pawnService } from '$lib/game/services/PawnService';
 
-  // conditions.jsonc holds both graded conditions (with `stages`) and flat transient condition
-  // "flags" (no `stages`). Split them by shape — see the file header.
-  const ALL_CONDITION_DEFS = conditionsData as unknown as Array<ConditionDef | TransientConditionDef>;
+  // conditions.jsonc holds persistent conditions (severity/stages) and transient ones
+  // (re-derived each tick); split them by the `duration` discriminant — see the file header.
+  const ALL_CONDITION_DEFS = conditionsData as unknown as Array<
+    ConditionDef | TransientConditionDef
+  >;
   const TRANSIENT_CONDITIONS_DB = ALL_CONDITION_DEFS.filter(
-    (d): d is TransientConditionDef => !('stages' in d)
+    (d): d is TransientConditionDef => d.duration === 'transient'
   );
-  const CONDITIONS_DB = ALL_CONDITION_DEFS.filter((d): d is ConditionDef => 'stages' in d);
+  const CONDITIONS_DB = ALL_CONDITION_DEFS.filter(
+    (d): d is ConditionDef => d.duration === 'persistent'
+  );
 
   export let pawn: Pawn;
   export let gameState: GameState;
@@ -150,27 +154,28 @@
   {/if}
 
   {#if transientConditions.length > 0 || activeConditions.length > 0}
-    <div class="effects-row">
-      {#each transientConditions as effect}
-        <div
-          class="effect-card"
-          style="border-color: {effect.color}; color: {effect.color}"
-          title={effect.description}
-        >
-          <span class="effect-name">{effect.name.toUpperCase()}</span>
-        </div>
-      {/each}
+    <div class="section-hdr sub">| CONDITIONS</div>
+    <div class="conditions-row">
       {#each activeConditions as { name, severity, stage }}
         <div
-          class="effect-card cond-card"
+          class="condition-card cond-card"
           class:threatening={stage.lifeThreatening}
           style="border-color: {stage.color}; color: {stage.color}"
           title="{name} — {Math.round(severity * 100)}% severity{stage.lifeThreatening
             ? ' ⚠ life-threatening'
             : ''}"
         >
-          <span class="effect-name">{name.toUpperCase()}</span>
+          <span class="condition-name">{name.toUpperCase()}</span>
           <span class="cond-meta">{stage.label.toUpperCase()} · {Math.round(severity * 100)}%</span>
+        </div>
+      {/each}
+      {#each transientConditions as cond}
+        <div
+          class="condition-card"
+          style="border-color: {cond.color}; color: {cond.color}"
+          title={cond.description}
+        >
+          <span class="condition-name">{cond.name.toUpperCase()}</span>
         </div>
       {/each}
     </div>
@@ -254,7 +259,7 @@
     white-space: nowrap;
   }
 
-  .effects-row {
+  .conditions-row {
     display: flex;
     flex-wrap: wrap;
     gap: 4px;
@@ -262,7 +267,7 @@
     border-top: 1px solid var(--border);
   }
 
-  .effect-card {
+  .condition-card {
     border: 1px solid;
     padding: 1px 6px;
     font-size: 10px;
@@ -271,7 +276,7 @@
     cursor: default;
   }
 
-  .effect-name {
+  .condition-name {
     font-weight: bold;
   }
 

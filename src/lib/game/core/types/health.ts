@@ -23,14 +23,22 @@ export interface EntityNeeds {
   heatExposure?: number;
 }
 
+/**
+ * A transient condition (conditions.jsonc, `"duration": "transient"`). Re-derived from the pawn's
+ * live state every tick (PawnStateMachine.syncTransientConditions) and stored as plain ids in
+ * `pawn.transientConditions`; it appears/clears on its own when its cause does — no severity, no
+ * stages. The persistent counterpart is {@link ConditionDef} (`"duration": "persistent"`).
+ */
 export interface TransientConditionDef {
+  /** Discriminant against {@link ConditionDef} — always `"transient"` for this shape. */
+  duration: 'transient';
   id: string;
   name: string;
   description: string;
   color: string;
-  /** Sprite-sheet glyph for the status icon (same shape as Item/Building.charSpans). */
+  /** Sprite-sheet glyph for the condition icon (same shape as Item/Building.charSpans). */
   charSpans?: Array<{ sheet?: string; id?: number; from?: number; to?: number; literal?: string }>;
-  /** Internal effect: never surfaced in any UI (pills, needs panel…). Its modifiers still apply.
+  /** Internal condition: never surfaced in any UI (pills, needs panel…). Its modifiers still apply.
    *  Used for FSM-driven states like eating/sleeping that would duplicate info already shown. */
   hidden?: boolean;
   modifiers: {
@@ -192,7 +200,14 @@ export interface ConditionDriver {
   recovery: number;
 }
 
+/**
+ * A persistent condition (conditions.jsonc, `"duration": "persistent"`). Carries its own tracked
+ * `severity` in `pawn.conditions` that worsens/recovers gradually across ticks and graduates through
+ * {@link ConditionStage}s; can be lethal. The transient counterpart is {@link TransientConditionDef}.
+ */
 export interface ConditionDef {
+  /** Discriminant against {@link TransientConditionDef} — always `"persistent"` for this shape. */
+  duration: 'persistent';
   id: string;
   name: string;
   description: string;
