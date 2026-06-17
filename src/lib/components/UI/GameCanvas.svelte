@@ -793,12 +793,8 @@
     // into the ambient tint here (PERF-5: a uniform multiply, never a terrain rebuild).
     if (renderer?.isReady()) {
       const { light, tint } = environmentService.getAmbient(environmentService.ambientTurn(s));
-      const env = environmentService.getEnvironmentTint(s.season, s.weather);
-      const tinted: [number, number, number] = [
-        tint[0] * env[0],
-        tint[1] * env[1],
-        tint[2] * env[2]
-      ];
+      // Season+weather hue, winter-desaturated so snow isn't painted by the dawn/dusk/night hues.
+      const tinted = environmentService.getMapAmbientTint(tint, s.season, s.weather);
       renderer.setAmbient(light, tinted);
       lightingService.setAmbient(light, tinted);
       _ambientLight = light;
@@ -1830,12 +1826,11 @@
       // Initialise ambient from current turn so the first frame is correctly lit
       {
         const { light, tint } = environmentService.getAmbient($gameState?.turn ?? 0);
-        const env = environmentService.getEnvironmentTint($gameState?.season, $gameState?.weather);
-        const tinted: [number, number, number] = [
-          tint[0] * env[0],
-          tint[1] * env[1],
-          tint[2] * env[2]
-        ];
+        const tinted = environmentService.getMapAmbientTint(
+          tint,
+          $gameState?.season,
+          $gameState?.weather
+        );
         renderer.setAmbient(light, tinted);
         lightingService.setAmbient(light, tinted);
         lightingService.setEmitters(lightingService.collectEmitters(buildings));

@@ -21,7 +21,7 @@
   import { gameCoordinator } from '$lib/game/systems/GameCoordinator';
   import {
     environmentService,
-    weatherPanelSaturation
+    effectivePanelSaturation
   } from '$lib/game/services/EnvironmentService.js';
   import type { PlacedBuilding } from '$lib/game/core/types';
 
@@ -35,7 +35,7 @@
   $: ambient = environmentService.getAmbient(environmentService.ambientTurn($gameState));
   $: panelTint = ambient.panelTint;
   $: panelSaturation = bleakSaturation(
-    weatherPanelSaturation($gameState.weather?.type),
+    effectivePanelSaturation($gameState.season, $gameState.weather),
     ambient.light
   );
   $: ambientMatrix = buildPanelMatrix(panelTint, panelSaturation);
@@ -43,10 +43,14 @@
   // Low light deepens the bleakness of already-bleak weather. The extra desaturation is weighted by
   // how washed-out the weather already is (1 - baseSat), so clear skies stay untouched and FOG drains
   // hardest, and by darkness (1 - light), so dawn/dusk/night look bleaker than midday under fog.
-  const NIGHT_BLEAK = 0.5;
+  // Night exception: now that all of winter + every weather event is bleak by day, piling the full
+  // night deepening on top made nights too grey — so it's gentle (NIGHT_BLEAK) and floored
+  // (NIGHT_SAT_FLOOR) so panels keep some colour after dark.
+  const NIGHT_BLEAK = 0.25;
+  const NIGHT_SAT_FLOOR = 0.6;
   function bleakSaturation(baseSat: number, light: number): number {
     const extra = (1 - baseSat) * (1 - light) * NIGHT_BLEAK;
-    return Math.max(0, baseSat - extra);
+    return Math.max(Math.min(baseSat, NIGHT_SAT_FLOOR), baseSat - extra);
   }
 
   /**

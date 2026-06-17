@@ -419,6 +419,24 @@ export function weatherParticleColor(type?: string): [number, number, number] | 
 export function weatherPanelSaturation(type?: string): number {
   return weatherDef(type).panelSaturation ?? 1;
 }
+
+/** Blizzard-level wash the panels are clamped to whenever the world should feel bleak. */
+const BLEAK_PANEL_SAT = 0.7;
+
+/**
+ * Effective side-panel saturation: the per-weather value, BUT clamped to a blizzard-level wash
+ * whenever the world should feel bleak — i.e. all of winter, and during ANY active weather event
+ * (anything but clear skies). Fog and the storms already sit below this, so they're unchanged; clear
+ * non-winter skies stay full colour.
+ */
+export function effectivePanelSaturation(
+  season: Season | undefined,
+  weather: WeatherState | undefined
+): number {
+  const base = weatherPanelSaturation(weather?.type);
+  const bleak = season === 'winter' || (weather?.type ?? 'clear') !== 'clear';
+  return bleak ? Math.min(base, BLEAK_PANEL_SAT) : base;
+}
 /** Whether a weather id is "heavy" (bigger/faster overlay — e.g. heavy_rain / blizzard). */
 export function weatherIsHeavy(type?: string): boolean {
   return weatherDef(type).heavy === true;
@@ -895,6 +913,33 @@ export function getEnvironmentTint(
   return [s[0] * w[0], s[1] * w[1], s[2] * w[2]];
 }
 
+/** How far winter pulls the map's ambient hue toward neutral (0 = unchanged, 1 = fully grey). */
+const WINTER_TINT_DESAT = 0.82;
+
+/**
+ * Final ambient tint the RENDERER multiplies onto the map = day/night `baseTint` × season/weather
+ * hue, then — in WINTER — desaturated toward neutral. With the map under white snow, the strong
+ * dawn/dusk/night hues (orange/purple) paint the snow garishly; winter mutes the HUE while leaving
+ * brightness (the separate `light` scalar) alone, so winter nights read as a normal dark, not violet.
+ * Other seasons are unchanged.
+ */
+export function getMapAmbientTint(
+  baseTint: [number, number, number],
+  season: Season | undefined,
+  weather: WeatherState | undefined
+): [number, number, number] {
+  const env = getEnvironmentTint(season, weather);
+  const t: [number, number, number] = [
+    baseTint[0] * env[0],
+    baseTint[1] * env[1],
+    baseTint[2] * env[2]
+  ];
+  if (season !== 'winter') return t;
+  const lum = 0.299 * t[0] + 0.587 * t[1] + 0.114 * t[2];
+  const k = WINTER_TINT_DESAT;
+  return [lerp(t[0], lum, k), lerp(t[1], lum, k), lerp(t[2], lum, k)];
+}
+
 class EnvironmentServiceImpl {
   /**
    * Turn to feed into ambient light/tint calculations. Honours the debug `_debugTimeOfDay` override
@@ -930,6 +975,15 @@ class EnvironmentServiceImpl {
     weather: WeatherState | undefined
   ): [number, number, number] {
     return getEnvironmentTint(season, weather);
+  }
+
+  /** Final map ambient tint (day/night × season/weather, winter-desaturated). See getMapAmbientTint. */
+  getMapAmbientTint(
+    baseTint: [number, number, number],
+    season: Season | undefined,
+    weather: WeatherState | undefined
+  ): [number, number, number] {
+    return getMapAmbientTint(baseTint, season, weather);
   }
 }
 
