@@ -258,26 +258,32 @@ export function logSystem(
 
 // ── Combat & Entity Logging ─────────────────────────────────────────────────
 
-function combatKey(a: string, b: string) {
-  return a < b ? `${a}|${b}` : `${b}|${a}`;
-}
-
 // ── Engagement-scoped combat sessions ────────────────────────────────────────
 //
-// One Chronicle entry per *engagement* (an unordered attacker/defender pair),
-// not per swing. Every hit/miss appends a CombatTurnEntry to that entry's
-// breakdown and refreshes its summary in place — so a 40-swing brawl reads as a
-// single expandable line instead of 40 "engaged in combat" lines.
+// One Chronicle entry per *engagement* — a cluster of combatants fighting each
+// other, NOT a fixed attacker/defender pair. Every hit/miss appends a
+// CombatTurnEntry to that entry's breakdown and refreshes its summary in place,
+// so a 40-swing brawl reads as a single expandable line instead of 40 lines.
+//
+// Why a cluster, not a pair: in a real fight A swings at B *and* B swings back,
+// and other pawns/mobs pile onto the same melee. Keying by an unordered pair
+// still split those into separate rows ("A engaged B" + "C engaged B" + …). We
+// instead grow ONE session that owns every participant: any swing whose attacker
+// OR defender is already in an open session joins that session (transitively
+// merging everyone in the same brawl); the swing's own attacker→defender
+// direction is preserved in the nested breakdown.
 //
 // A session stays open across brief disengage/re-engage flickers; it only closes
-// on death or after ENGAGEMENT_EXPIRE_TICKS of no activity (lazily, on the next
-// event for that pair). This is what kills the re-engagement log spam.
+// when it empties out (all but one combatant dead/gone) or after
+// ENGAGEMENT_EXPIRE_TICKS of no activity (lazily, on the next event touching a
+// participant). This is what kills the re-engagement / reciprocal log spam.
 
 interface CombatSession {
   entryId: string;
-  attackerId: string;
-  attackerName: string;
-  defenderName: string;
+  /** Every entity currently in this brawl (both sides). */
+  participants: Set<string>;
+  /** id → display name, for the summary line. */
+  names: Map<string, string>;
   startTurn: number;
   lastActivityTurn: number;
   hits: number;
@@ -290,7 +296,10 @@ interface CombatSession {
   focusY: number;
 }
 
+/** entryId → session. */
 const combatSessions = new Map<string, CombatSession>();
+/** participantId → entryId, so a swing finds the brawl its combatants are already in. */
+const sessionByParticipant = new Map<string, string>();
 
 /** Ticks of silence before an engagement is considered over (≈5s at 60 TPS). */
 const ENGAGEMENT_EXPIRE_TICKS = 300;
@@ -301,6 +310,8 @@ function sessionSummary(s: CombatSession): {
 } {
   const swings = s.hits + s.misses;
   let result = `${s.hits}/${swings} hits · ${s.totalDamage} dmg`;
+  // A multi-combatant melee announces its scale up front.
+  if (s.participants.size > 2) result = `${s.participants.size} fighters · ${result}`;
   if (s.killed) result += ' · killed';
   else if (s.closed) result += ' · disengaged';
   const severity: ActivityLogEntry['severity'] = s.killed ? 'critical' : 'warning';
@@ -315,21 +326,67 @@ function sessionSummary(s: CombatSession): {
 function flushSession(s: CombatSession) {
   const { result, severity } = sessionSummary(s);
   const breakdownCopy = [...s.breakdown];
+  const ids = [...s.participants];
   activityLog.update((log) =>
     log.map((e) =>
-      e.id === s.entryId ? { ...e, result, severity, combatBreakdown: breakdownCopy } : e
+      e.id === s.entryId
+        ? { ...e, result, severity, combatBreakdown: breakdownCopy, entityIds: ids }
+        : e
     )
   );
+}
+
+/** Close a session: mark it done, flush once, and drop all its bookkeeping. */
+function closeSession(s: CombatSession) {
+  if (!s.closed) {
+    s.closed = true;
+    flushSession(s);
+  }
+  combatSessions.delete(s.entryId);
+  for (const pid of s.participants) {
+    if (sessionByParticipant.get(pid) === s.entryId) sessionByParticipant.delete(pid);
+  }
+}
+
+/** Add a combatant to an open brawl (idempotent); always refreshes the display name. */
+function addParticipant(s: CombatSession, id: string, name: string) {
+  s.participants.add(id);
+  s.names.set(id, name);
+  sessionByParticipant.set(id, s.entryId);
+}
+
+/**
+ * Find the open engagement either combatant already belongs to, closing it out
+ * first if it has gone stale (so a re-engagement after a long lull starts fresh).
+ */
+function findActiveSession(turn: number, a: string, b: string): CombatSession | undefined {
+  for (const id of [a, b]) {
+    const entryId = sessionByParticipant.get(id);
+    if (!entryId) continue;
+    const s = combatSessions.get(entryId);
+    if (!s) {
+      sessionByParticipant.delete(id);
+      continue;
+    }
+    if (s.closed || turn - s.lastActivityTurn > ENGAGEMENT_EXPIRE_TICKS) {
+      closeSession(s);
+      continue;
+    }
+    return s;
+  }
+  return undefined;
 }
 
 /** Test-only: clear in-flight engagement sessions so module state doesn't leak. */
 export function __resetCombatSessions() {
   combatSessions.clear();
+  sessionByParticipant.clear();
 }
 
 /**
  * Record one resolved combat swing (hit OR miss) between an attacker and defender.
- * Opens the engagement entry lazily on the first swing; appends to it thereafter.
+ * Opens the engagement entry lazily on the first swing of a brawl; thereafter every
+ * swing touching any current combatant accretes onto that same entry.
  */
 export function logCombatSwing(
   attackerId: string,
@@ -341,18 +398,7 @@ export function logCombatSwing(
   focusY: number,
   swing: CombatTurnEntry
 ) {
-  const key = combatKey(attackerId, defenderId);
-  let session = combatSessions.get(key);
-
-  // Stale session (engagement lapsed) → close it out and start a fresh one.
-  if (session && (session.closed || turn - session.lastActivityTurn > ENGAGEMENT_EXPIRE_TICKS)) {
-    if (!session.closed) {
-      session.closed = true;
-      flushSession(session);
-    }
-    combatSessions.delete(key);
-    session = undefined;
-  }
+  let session = findActiveSession(turn, attackerId, defenderId);
 
   if (!session) {
     const entry: Omit<ActivityLogEntry, 'id' | 'timestamp'> = {
@@ -371,9 +417,8 @@ export function logCombatSwing(
     const entryId = logActivity(entry);
     session = {
       entryId,
-      attackerId,
-      attackerName,
-      defenderName,
+      participants: new Set(),
+      names: new Map(),
       startTurn: turn,
       lastActivityTurn: turn,
       hits: 0,
@@ -385,8 +430,12 @@ export function logCombatSwing(
       focusX,
       focusY
     };
-    combatSessions.set(key, session);
+    combatSessions.set(entryId, session);
   }
+
+  // Register both combatants (the defender or a late joiner may be new to the brawl).
+  addParticipant(session, attackerId, attackerName);
+  addParticipant(session, defenderId, defenderName);
 
   session.breakdown.push(swing);
   if (swing.hit) {
@@ -400,8 +449,11 @@ export function logCombatSwing(
 }
 
 /**
- * Finalize an engagement after a kill: close the session and emit a standalone
- * kill entry that stands out in the chronicle (severity=critical, its own line).
+ * Mark the slain combatant out of the brawl and flag the engagement as having a
+ * kill, then emit a standalone kill entry that stands out in the chronicle
+ * (severity=critical, its own line). The engagement entry itself stays open so
+ * the surviving fighters keep accreting onto it — it only closes once the brawl
+ * has emptied out (≤1 combatant left).
  */
 export function logCombatKill(
   attackerId: string,
@@ -413,13 +465,17 @@ export function logCombatKill(
   focusY: number,
   weapon?: string
 ) {
-  const key = combatKey(attackerId, defenderId);
-  const session = combatSessions.get(key);
+  const session = findActiveSession(turn, attackerId, defenderId);
   if (session) {
     session.killed = true;
-    session.closed = true;
-    flushSession(session);
-    combatSessions.delete(key);
+    session.lastActivityTurn = turn;
+    // The slain combatant is done fighting — drop them from the live brawl.
+    session.participants.delete(defenderId);
+    if (sessionByParticipant.get(defenderId) === session.entryId) {
+      sessionByParticipant.delete(defenderId);
+    }
+    if (session.participants.size <= 1) closeSession(session);
+    else flushSession(session);
   }
 
   const weaponStr = weapon ? ` with ${weapon}` : '';
