@@ -2003,6 +2003,11 @@
         e.preventDefault();
         break;
       case 'Escape':
+        if (debugBrush) {
+          uiState.deactivateDebugBrush();
+          redrawOverlay();
+          break;
+        }
         if (showFuelSettings) {
           showFuelSettings = false;
           break;
@@ -2686,7 +2691,15 @@
   <!-- No "Initializing renderer…" screen: the single page-level loading overlay (+page.svelte) stays
        up past rendererReady (until the paused warmup linger ends), so WebGL init happens behind it. -->
 
-  {#if designationMode}
+  {#if debugBrush}
+    <div class="designation-hud" style:border-color="#c8a048" style:color="#e0b868">
+      [DEBUG: {debugBrush.kind === 'regrow'
+        ? 'REGROW'
+        : debugBrush.kind === 'building'
+          ? 'SPAWN BUILDING'
+          : 'SPAWN RESOURCE'}] click tiles to apply · Esc to stop
+    </div>
+  {:else if designationMode}
     <div
       class="designation-hud"
       style:border-color={zoneEraseMode ? '#cc3322' : undefined}
