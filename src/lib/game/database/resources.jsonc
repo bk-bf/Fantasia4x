@@ -13,7 +13,11 @@
 //   interaction:
 //     action           — verb shown in job queue display
 //     workCategory     — skill domain: foraging | woodcutting | mining
-//     workAmount       — total work units needed; tools reduce effective cost via ModifierSystem
+//     workAmount       — total work-points to complete this interaction, authored DIRECTLY (1:1,
+//                        like a building's `workAmount` in buildings.jsonc — no hidden multiplier).
+//                        At the base rate (1 pt/sec, speed 1) it takes `workAmount` sim-seconds,
+//                        i.e. ≈ workAmount × 4.8 in-game minutes (a day = 300 sim-sec = 1440 in-game
+//                        min). Stats/tools/skills scale the effective rate via getWorkModifiers.
 //     toolRequirement  — null = bare hands allowed | {workType, minTier} = tool required
 //     yields[]:
 //       skillMultiplier  — bonus items granted per level of skillId
@@ -47,7 +51,7 @@
       "designationType": "woodcut",
       "action"         : "woodcut",
       "workCategory"   : "woodcutting",
-      "workAmount"     : 5,
+      "workAmount"     : 15,
       "toolRequirement": {"workType": "woodcutting", "minTier": 1},
       "yields"         : [
         {
@@ -91,7 +95,7 @@
         "designationType": "woodcut",
         "action"         : "woodcut",
         "workCategory"   : "woodcutting",
-        "workAmount"     : 5,
+        "workAmount"     : 15,
         "toolRequirement": {"workType": "woodcutting", "minTier": 1},
         "yields"         : [
           {
@@ -134,7 +138,7 @@
         "designationType": "forage",
         "action"         : "forage",
         "workCategory"   : "foraging",
-        "workAmount"     : 3,
+        "workAmount"     : 9,
         "toolRequirement": null,
         "yields"         : [
           {"itemId": "bark", "min": 0, "max": 2, "skillId": "foraging", "skillMultiplier": 0.1, "regrowthTurns": 600},
@@ -178,7 +182,7 @@
       "designationType": "woodcut",
       "action"         : "woodcut",
       "workCategory"   : "woodcutting",
-      "workAmount"     : 5,
+      "workAmount"     : 15,
       "toolRequirement": {"workType": "woodcutting", "minTier": 1},
       "yields"         : [
         {
@@ -222,7 +226,7 @@
         "designationType": "woodcut",
         "action"         : "woodcut",
         "workCategory"   : "woodcutting",
-        "workAmount"     : 5,
+        "workAmount"     : 15,
         "toolRequirement": {"workType": "woodcutting", "minTier": 1},
         "yields"         : [
           {
@@ -265,7 +269,7 @@
         "designationType": "forage",
         "action"         : "forage",
         "workCategory"   : "foraging",
-        "workAmount"     : 3,
+        "workAmount"     : 9,
         "toolRequirement": null,
         "yields"         : [
           {"itemId": "bark", "min": 0, "max": 2, "skillId": "foraging", "skillMultiplier": 0.1, "regrowthTurns": 600},
@@ -309,7 +313,7 @@
       "designationType": "woodcut",
       "action"         : "woodcut",
       "workCategory"   : "woodcutting",
-      "workAmount"     : 5,
+      "workAmount"     : 15,
       "toolRequirement": {"workType": "woodcutting", "minTier": 1},
       "yields"         : [
         {
@@ -353,7 +357,7 @@
         "designationType": "woodcut",
         "action"         : "woodcut",
         "workCategory"   : "woodcutting",
-        "workAmount"     : 5,
+        "workAmount"     : 15,
         "toolRequirement": {"workType": "woodcutting", "minTier": 1},
         "yields"         : [
           {
@@ -396,7 +400,7 @@
         "designationType": "forage",
         "action"         : "forage",
         "workCategory"   : "foraging",
-        "workAmount"     : 3,
+        "workAmount"     : 9,
         "toolRequirement": null,
         "yields"         : [
           {"itemId": "bark", "min": 0, "max": 2, "skillId": "foraging", "skillMultiplier": 0.1, "regrowthTurns": 600},
@@ -440,7 +444,7 @@
       "designationType": "woodcut",
       "action"         : "woodcut",
       "workCategory"   : "woodcutting",
-      "workAmount"     : 5,
+      "workAmount"     : 15,
       "toolRequirement": {"workType": "woodcutting", "minTier": 1},
       "yields"         : [
         {
@@ -484,7 +488,7 @@
         "designationType": "woodcut",
         "action"         : "woodcut",
         "workCategory"   : "woodcutting",
-        "workAmount"     : 5,
+        "workAmount"     : 15,
         "toolRequirement": {"workType": "woodcutting", "minTier": 1},
         "yields"         : [
           {
@@ -527,7 +531,7 @@
         "designationType": "forage",
         "action"         : "forage",
         "workCategory"   : "foraging",
-        "workAmount"     : 3,
+        "workAmount"     : 9,
         "toolRequirement": null,
         "yields"         : [
           {"itemId": "bark", "min": 0, "max": 2, "skillId": "foraging", "skillMultiplier": 0.1, "regrowthTurns": 600},
@@ -571,7 +575,7 @@
       "designationType": "woodcut",
       "action"         : "woodcut",
       "workCategory"   : "woodcutting",
-      "workAmount"     : 5,
+      "workAmount"     : 15,
       "toolRequirement": {"workType": "woodcutting", "minTier": 1},
       "yields"         : [
         {
@@ -615,7 +619,7 @@
         "designationType": "woodcut",
         "action"         : "woodcut",
         "workCategory"   : "woodcutting",
-        "workAmount"     : 5,
+        "workAmount"     : 15,
         "toolRequirement": {"workType": "woodcutting", "minTier": 1},
         "yields"         : [
           {
@@ -658,7 +662,7 @@
         "designationType": "forage",
         "action"         : "forage",
         "workCategory"   : "foraging",
-        "workAmount"     : 3,
+        "workAmount"     : 9,
         "toolRequirement": null,
         "yields"         : [
           {"itemId": "bark", "min": 0, "max": 2, "skillId": "foraging", "skillMultiplier": 0.1, "regrowthTurns": 600},
@@ -710,7 +714,7 @@
     "interaction"     : {
       "action"         : "scavenge",
       "workCategory"   : "mining",
-      "workAmount"     : 6,
+      "workAmount"     : 18,
       "toolRequirement": null,
       "yields"         : [
         {"itemId": "small_stone", "min": 5, "max": 10, "skillId": "mining", "skillMultiplier": 0.2},
@@ -748,7 +752,7 @@
     "interaction"     : {
       "action"         : "harvest",
       "workCategory"   : "foraging",
-      "workAmount"     : 3,
+      "workAmount"     : 9,
       "toolRequirement": null,
       "yields"         : [
         {"itemId": "wild_sage", "min": 1, "max": 3, "skillId": "foraging", "skillMultiplier": 0.15}
@@ -775,7 +779,7 @@
     "interaction"     : {
       "action"         : "gather",
       "workCategory"   : "foraging",
-      "workAmount"     : 1,
+      "workAmount"     : 3,
       "toolRequirement": {
         "workType": "woodcutting",
         "minTier" : 0
@@ -806,7 +810,7 @@
     "interaction"     : {
       "action"         : "scavenge",
       "workCategory"   : "mining",
-      "workAmount"     : 5,
+      "workAmount"     : 15,
       "toolRequirement": {"workType": "mining", "minTier": 2},  // requires a proper mining pick
       "yields"         : [
         {
@@ -838,7 +842,7 @@
     "interaction"     : {
       "action"         : "harvest",
       "workCategory"   : "foraging",
-      "workAmount"     : 2,
+      "workAmount"     : 6,
       "toolRequirement": null,
       "yields"         : [
         {"itemId": "plant_fiber", "min": 2, "max": 4, "skillId": "foraging", "skillMultiplier": 0.15}
@@ -865,7 +869,7 @@
     "interaction"     : {
       "action"         : "strip",
       "workCategory"   : "foraging",
-      "workAmount"     : 2,
+      "workAmount"     : 6,
       "toolRequirement": {"workType": "crafting", "minTier": 0},
       "yields"         : [
         {"itemId": "bark",         "min": 1, "max": 3, "skillId": "foraging", "skillMultiplier": 0.1 },
@@ -889,7 +893,7 @@
     "interaction"     : {
       "action"         : "harvest",
       "workCategory"   : "foraging",
-      "workAmount"     : 2,
+      "workAmount"     : 6,
       "toolRequirement": null,
       "yields"         : [
         {"itemId": "wild_sage", "min": 1, "max": 3, "skillId": "foraging", "skillMultiplier": 0.15}
@@ -916,7 +920,7 @@
     "interaction"     : {
       "action"         : "woodcut",
       "workCategory"   : "woodcutting",
-      "workAmount"     : 4,
+      "workAmount"     : 12,
       "toolRequirement": {"workType": "woodcutting", "minTier": 1},
       "yields"         : [
         {"itemId": "dry_firewood", "min": 2, "max": 4, "skillId": "woodcutting", "skillMultiplier": 0.1 },
@@ -948,7 +952,7 @@
     "interaction"     : {
       "action"         : "forage",
       "workCategory"   : "foraging",
-      "workAmount"     : 2,
+      "workAmount"     : 6,
       "toolRequirement": null,
       "yields"         : [
         {"itemId": "wild_berries", "min": 25, "max": 40, "skillId": "foraging", "skillMultiplier": 0.2}
@@ -973,7 +977,7 @@
     "interaction"     : {
       "action"         : "gather",
       "workCategory"   : "foraging",
-      "workAmount"     : 2,
+      "workAmount"     : 6,
       "toolRequirement": null,
       "yields"         : [
         {"itemId": "wild_oats", "min": 2, "max": 4, "skillId": "foraging", "skillMultiplier": 0.15}
@@ -998,7 +1002,7 @@
     "interaction"     : {
       "action"         : "gather",
       "workCategory"   : "foraging",
-      "workAmount"     : 2,
+      "workAmount"     : 6,
       "toolRequirement": null,
       "yields"         : [
         {"itemId": "wild_oats",   "min": 1, "max": 3, "skillId": "foraging", "skillMultiplier": 0.15},
@@ -1029,7 +1033,7 @@
     "interaction"     : {
       "action"         : "mine",
       "workCategory"   : "mining",
-      "workAmount"     : 10,
+      "workAmount"     : 30,
       "toolRequirement": {"workType": "mining", "minTier": 1},
       "yields"         : [ {"itemId": "malachite", "min": 2, "max": 6, "skillId": "mining", "skillMultiplier": 0.2} ]
     }
@@ -1049,7 +1053,7 @@
     "interaction"     : {
       "action"         : "mine",
       "workCategory"   : "mining",
-      "workAmount"     : 10,
+      "workAmount"     : 30,
       "toolRequirement": {"workType": "mining", "minTier": 1},
       "yields"         : [ {"itemId": "chalcopyrite", "min": 2, "max": 5, "skillId": "mining", "skillMultiplier": 0.2} ]
     }
@@ -1069,7 +1073,7 @@
     "interaction"     : {
       "action"         : "mine",
       "workCategory"   : "mining",
-      "workAmount"     : 10,
+      "workAmount"     : 30,
       "toolRequirement": {"workType": "mining", "minTier": 1},
       "yields"         : [ {"itemId": "azurite", "min": 1, "max": 4, "skillId": "mining", "skillMultiplier": 0.2} ]
     }
@@ -1089,7 +1093,7 @@
     "interaction"     : {
       "action"         : "mine",
       "workCategory"   : "mining",
-      "workAmount"     : 10,
+      "workAmount"     : 30,
       "toolRequirement": {"workType": "mining", "minTier": 1},
       "yields"         : [ {"itemId": "cassiterite", "min": 1, "max": 4, "skillId": "mining", "skillMultiplier": 0.2} ]
     }
@@ -1109,7 +1113,7 @@
     "interaction"     : {
       "action"         : "mine",
       "workCategory"   : "mining",
-      "workAmount"     : 10,
+      "workAmount"     : 30,
       "toolRequirement": {"workType": "mining", "minTier": 2},
       "yields"         : [ {"itemId": "hematite", "min": 2, "max": 6, "skillId": "mining", "skillMultiplier": 0.2} ]
     }
@@ -1129,7 +1133,7 @@
     "interaction"     : {
       "action"         : "mine",
       "workCategory"   : "mining",
-      "workAmount"     : 10,
+      "workAmount"     : 30,
       "toolRequirement": {"workType": "mining", "minTier": 2},
       "yields"         : [ {"itemId": "magnetite", "min": 2, "max": 5, "skillId": "mining", "skillMultiplier": 0.2} ]
     }
@@ -1149,7 +1153,7 @@
     "interaction"     : {
       "action"         : "mine",
       "workCategory"   : "mining",
-      "workAmount"     : 10,
+      "workAmount"     : 30,
       "toolRequirement": {"workType": "mining", "minTier": 2},
       "yields"         : [ {"itemId": "limonite", "min": 1, "max": 4, "skillId": "mining", "skillMultiplier": 0.2} ]
     }
@@ -1169,7 +1173,7 @@
     "interaction"     : {
       "action"         : "mine",
       "workCategory"   : "mining",
-      "workAmount"     : 10,
+      "workAmount"     : 30,
       "toolRequirement": {"workType": "mining", "minTier": 2},
       "yields"         : [ {"itemId": "galena", "min": 1, "max": 4, "skillId": "mining", "skillMultiplier": 0.2} ]
     }
@@ -1189,7 +1193,7 @@
     "interaction"     : {
       "action"         : "mine",
       "workCategory"   : "mining",
-      "workAmount"     : 10,
+      "workAmount"     : 30,
       "toolRequirement": {"workType": "mining", "minTier": 2},
       "yields"         : [ {"itemId": "native_gold", "min": 0, "max": 2, "skillId": "mining", "skillMultiplier": 0.2} ]
     }
@@ -1209,7 +1213,7 @@
     "interaction"     : {
       "action"         : "mine",
       "workCategory"   : "mining",
-      "workAmount"     : 10,
+      "workAmount"     : 30,
       "toolRequirement": {"workType": "mining", "minTier": 2},
       "yields"         : [ {"itemId": "electrum", "min": 0, "max": 2, "skillId": "mining", "skillMultiplier": 0.2} ]
     }
@@ -1229,7 +1233,7 @@
     "interaction"     : {
       "action"         : "mine",
       "workCategory"   : "mining",
-      "workAmount"     : 10,
+      "workAmount"     : 30,
       "toolRequirement": {"workType": "mining", "minTier": 1},
       "yields"         : [ {"itemId": "coal", "min": 2, "max": 5, "skillId": "mining", "skillMultiplier": 0.2} ]
     }
@@ -1249,7 +1253,7 @@
     "interaction"     : {
       "action"         : "mine",
       "workCategory"   : "mining",
-      "workAmount"     : 10,
+      "workAmount"     : 30,
       "toolRequirement": {"workType": "mining", "minTier": 1},
       "yields"         : [ {"itemId": "salt", "min": 1, "max": 4, "skillId": "mining", "skillMultiplier": 0.2} ]
     }
@@ -1274,7 +1278,7 @@
     "interaction"     : {
       "action"         : "mine",
       "workCategory"   : "mining",
-      "workAmount"     : 10,
+      "workAmount"     : 30,
       "toolRequirement": {"workType": "mining", "minTier": 1},   // a pick — barehanded mining a solid wall was a bug
       "yields"         : [
         {"itemId": "granite", "min": 2, "max": 5, "skillId": "mining", "skillMultiplier": 0.2},
@@ -1299,7 +1303,7 @@
     "interaction"     : {
       "action"         : "mine",
       "workCategory"   : "mining",
-      "workAmount"     : 12,
+      "workAmount"     : 36,
       "toolRequirement": {"workType": "mining", "minTier": 1},
       "yields"         : [
         {"itemId": "sandstone", "min": 3, "max": 6, "skillId": "mining", "skillMultiplier": 0.2},
@@ -1335,7 +1339,7 @@
     "interaction"     : {
       "action"         : "cut",
       "workCategory"   : "foraging",
-      "workAmount"     : 6,
+      "workAmount"     : 3,
       "toolRequirement": null,
       "yields"         : [
         {"itemId": "hay",         "min": 2, "max": 5, "skillId": "foraging", "skillMultiplier": 0.15},
@@ -1362,7 +1366,7 @@
     "interaction"     : {
       "action"         : "cut",
       "workCategory"   : "foraging",
-      "workAmount"     : 7,
+      "workAmount"     : 6,
       "toolRequirement": null,
       "yields"         : [
         {"itemId": "hay",         "min": 10, "max": 15, "skillId": "foraging", "skillMultiplier": 0.15},
@@ -1389,7 +1393,7 @@
     "interaction"     : {
       "action"         : "cut",
       "workCategory"   : "foraging",
-      "workAmount"     : 8,
+      "workAmount"     : 6,
       "toolRequirement": null,
       "yields"         : [
         {"itemId": "hay",         "min": 5, "max": 10, "skillId": "foraging", "skillMultiplier": 0.15},
@@ -1439,7 +1443,7 @@
     "interaction"     : {
       "action"         : "gather",
       "workCategory"   : "foraging",
-      "workAmount"     : 5,
+      "workAmount"     : 15,
       "toolRequirement": null,
       "yields"         : [
         {"itemId": "woundwort",     "min": 0, "max": 1, "skillId": "foraging", "skillMultiplier": 0.1},
@@ -1467,7 +1471,7 @@
     "interaction"     : {
       "action"         : "dig",
       "workCategory"   : "mining",
-      "workAmount"     : 15,  // slow bare-handed — a digging_stick or stone_spade is much faster
+      "workAmount"     : 45,  // slow bare-handed — a digging_stick or stone_spade is much faster
       "toolRequirement": null,
       "yields"         : [ {"itemId": "blue_clay", "min": 1, "max": 2, "skillId": "mining", "skillMultiplier": 0.08} ]
     }
@@ -1489,7 +1493,7 @@
     "interaction"     : {
       "action"         : "dig",
       "workCategory"   : "mining",
-      "workAmount"     : 18,  // waterlogged — worst bare-handed digging condition
+      "workAmount"     : 54,  // waterlogged — worst bare-handed digging condition
       "toolRequirement": null,
       "yields"         : [
         {"itemId": "blue_clay",   "min": 0, "max": 1, "skillId": "mining",   "skillMultiplier": 0.06},
@@ -1516,7 +1520,7 @@
     "interaction"     : {
       "action"         : "dig",
       "workCategory"   : "mining",
-      "workAmount"     : 22,  // dense refractory clay — tools strongly preferable
+      "workAmount"     : 66,  // dense refractory clay — tools strongly preferable
       "toolRequirement": null,
       "yields"         : [ {"itemId": "fire_clay", "min": 1, "max": 2, "skillId": "mining", "skillMultiplier": 0.1} ]
     }
@@ -1540,7 +1544,7 @@
     "interaction"     : {
       "action"         : "dig",
       "workCategory"   : "mining",
-      "workAmount"     : 18,  // slow bare-handed — a digging_stick or stone_spade is much faster
+      "workAmount"     : 54,  // slow bare-handed — a digging_stick or stone_spade is much faster
       "toolRequirement": null,
       "yields"         : [ {"itemId": "blue_clay", "min": 1, "max": 3, "skillId": "mining", "skillMultiplier": 0.1} ]
     }

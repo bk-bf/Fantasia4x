@@ -116,11 +116,14 @@ class ResourceObjectServiceImpl {
 
   getWorkAmount(resourceId: string, dtype?: DesignationType): number {
     const def = this.getById(resourceId);
-    if (!def) return 5 * 3;
+    if (!def) return 15;
     const interaction = dtype
       ? (this.getInteractionByDesignationType(resourceId, dtype) ?? def.interaction)
       : def.interaction;
-    return interaction.workAmount * 3;
+    // `workAmount` is the direct work-point requirement (1:1, like a building's `workAmount`) — the
+    // authored value in resources.jsonc IS the work, no hidden multiplier. At BASE_WORK_RATE 1 pt/s a
+    // pawn clears `workAmount` work-points in `workAmount` sim-seconds (≈ workAmount × 4.8 in-game min).
+    return interaction.workAmount;
   }
 
   /**
