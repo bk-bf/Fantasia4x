@@ -159,6 +159,22 @@ class DesignationServiceImpl {
   }
 
   /**
+   * Clear EVERY designated tile that still holds `resourceId` — the symmetric inverse of the
+   * "MARK" bulk-designate (which marks all matching resource tiles). Without this, cancelling a
+   * batch-marked resource only cleared the one selected tile. Returns the updated GameState.
+   */
+  clearDesignationsForResource(resourceId: string, gameState: GameState): GameState {
+    let state = gameState;
+    for (const k of Object.keys(gameState.designations ?? {})) {
+      const [x, y] = k.split(',').map(Number);
+      if ((gameState.worldMap?.[y]?.[x]?.resources?.[resourceId] ?? 0) > 0) {
+        state = this.clearDesignation(x, y, state);
+      }
+    }
+    return state;
+  }
+
+  /**
    * Return all current designations, optionally filtered by type.
    * Each entry includes the tile coordinates plus type.
    */

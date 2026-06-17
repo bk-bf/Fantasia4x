@@ -263,6 +263,9 @@ export const COMMANDS: Record<string, Cmd> = {
     ),
   clearDesignation: (s, p: { x: number; y: number }) =>
     designationService.clearDesignation(p.x, p.y, s),
+  /** Clear every designated tile holding this resource (symmetric inverse of bulk MARK). */
+  clearDesignationsForResource: (s, p: { resourceId: string }) =>
+    designationService.clearDesignationsForResource(p.resourceId, s),
   clearRect: (s, p: { x1: number; y1: number; x2: number; y2: number }) =>
     designationService.clearRect(p.x1, p.y1, p.x2, p.y2, s),
   designateRect: (
