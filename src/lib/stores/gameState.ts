@@ -875,12 +875,12 @@ export const savedStateReady: Promise<void> = (async () => {
   // saves) BEFORE pawn generation so a fresh colony can be drawn mixed from the pool.
   baseState = ensureRacePool(baseState);
 
-  // Pawn generation — ONLY for a genuinely empty colony (fresh game / save with no pawns).
-  // We deliberately do NOT top up an under-5 roster: a colony that lost members to permadeath
-  // must stay shrunk. The old `length < 5` backfill silently resurrected dead colonies with
-  // fresh random pawns on every reload/HMR, which both undid permadeath and orphaned the save
-  // anyway (corpses persisted next to brand-new strangers). Removed.
-  if (!baseState.pawns || baseState.pawns.length === 0) {
+  // Pawn generation — ONLY on a genuinely fresh boot (no save on disk). A LOADED save with an empty
+  // roster is a colony wiped out by permadeath: we leave it empty so the UI shows GAME OVER (see
+  // `isGameOver`) instead of resurrecting it. We also do NOT top up an under-5 roster — a colony
+  // that lost members stays shrunk. (The old `length < 5` backfill silently undid permadeath on
+  // every reload/HMR, spawning strangers next to the persisted corpses. Removed.)
+  if (!savedState && (!baseState.pawns || baseState.pawns.length === 0)) {
     // Fresh colony — fully mixed: each pawn rolled from a random pool race.
     baseState = { ...baseState, pawns: generateColonyPawns(baseState.racePool, 5) };
   }
@@ -981,6 +981,11 @@ if (import.meta.hot) {
 }
 
 // Derived stores
+/** Permadeath: the whole colony is dead once the roster is empty (reapDeadPawns strips the dead).
+ *  Drives the GAME OVER overlay. The load path never resurrects a wiped save, so an empty roster
+ *  post-boot is always a genuine wipe — not a mid-boot transient. */
+export const isGameOver = derived(gameState, ($gameState) => ($gameState.pawns?.length ?? 0) === 0);
+
 export const currentTurn = derived(gameState, ($gameState) => $gameState.turn);
 /** SEASONS_WEATHER: lightweight topbar readouts (avoid subscribing the whole state in the HUD). */
 export const currentSeason = derived(gameState, ($gameState) => $gameState.season ?? 'spring');

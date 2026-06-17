@@ -16,9 +16,10 @@
   import ChroniclePanel from '$lib/components/UI/ChroniclePanel.svelte';
   import WorldEffectsLayer from '$lib/components/UI/WorldEffectsLayer.svelte';
   import LoadingScreen from '$lib/components/UI/LoadingScreen.svelte';
+  import GameOverScreen from '$lib/components/UI/GameOverScreen.svelte';
   import { autohideScroll } from '$lib/actions/autohideScroll';
   import { uiState } from '$lib/stores/uiState';
-  import { gameState, storeReady, bootReveal } from '$lib/stores/gameState';
+  import { gameState, storeReady, bootReveal, isGameOver } from '$lib/stores/gameState';
   import { gameCoordinator } from '$lib/game/systems/GameCoordinator';
   import {
     environmentService,
@@ -230,6 +231,12 @@
      Keyboard input is gated on the same flag (handleKeydown) so Space can't unpause behind it. -->
 {#if !$bootReveal}
   <LoadingScreen />
+{/if}
+
+<!-- Permadeath: once the colony is wiped (empty roster), the run is over. Gated on bootReveal so a
+     mid-boot transient empty state can't flash it before the loaded roster is applied. -->
+{#if $bootReveal && $isGameOver}
+  <GameOverScreen />
 {/if}
 
 <style>
