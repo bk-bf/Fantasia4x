@@ -2841,6 +2841,7 @@
     )}
     {@const windy =
       Math.max(weatherWindStrength($currentWeather?.type), $currentWeather?.wind ?? 0) >= 0.4}
+    {@const tileSnow = Math.round(hoverTile.snow ?? 0)}
     <div class="tile-hud">
       <span class="tile-coord">({hoverTile.x},{hoverTile.y})</span><span class="tile-layers"
         >{BIOMES[hoverTile.terrainType]?.displayName ?? hoverTile.terrainType},{SUBTERRAINS[
@@ -2878,8 +2879,9 @@
           >temp {tileTemp}°C</span
         >
         <span style="color:{tileWet >= 60 ? '#3a9ed0' : tileWet >= 30 ? '#6aa0a0' : '#a08a5a'}"
-          >wet {tileWet}%</span
+          >wet {Math.round(tileWet)}%</span
         >
+        {#if tileSnow > 0}<span style="color:#cdd6e0">snow {tileSnow}%</span>{/if}
         {#if windy}<span style="color:#8fc8a0">windy</span>{/if}
         {#if tileThermal.roofed}<span style="color:#7e9fbf">roofed</span>{/if}
       </div>
