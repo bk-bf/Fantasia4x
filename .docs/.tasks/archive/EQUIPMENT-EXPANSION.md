@@ -2,7 +2,7 @@
 
 # EQUIPMENT, INVENTORY & COMBAT LOADOUT
 
-> **Related:** [ROADMAP](ROADMAP.md) · [COMBAT-SYSTEM](COMBAT-SYSTEM.md) · [RANGED-COMBAT](RANGED-COMBAT.md) · [MAGIC-SKILLS](MAGIC-SKILLS.md) · [PRODUCTION-CHAIN-EXPANSION](../archive/PRODUCTION-CHAIN-EXPANSION-2026-06-12.md) (archived) · [SEASONS_WEATHER](SEASONS_WEATHER.md) · [game/DESIGN](../../game/DESIGN.md)
+> **Related:** [ROADMAP](ROADMAP.md) · [COMBAT-SYSTEM](COMBAT-SYSTEM.md) · [RANGED-COMBAT](RANGED-COMBAT.md) · [MAGIC-SKILLS](MAGIC-SKILLS.md) · [PRODUCTION-CHAIN-EXPANSION](../archive/PRODUCTION-CHAIN-EXPANSION-2026-06-12.md) (archived) · [SEASONS_WEATHER](SEASONS_WEATHER-2026-06-17.md) · [game/DESIGN](../../game/DESIGN.md)
 
 ## Status
 
@@ -27,7 +27,7 @@ items (`staff`, `focus`, `grimoire`) and spell-granting gear belong to
    material bonuses** so any wood/hide/bone type works but better choices give
    better results.
 5. Flat optional item fields so climate attributes (`weatherResistance`,
-   `coldProtection`, `heatProtection`) from [SEASONS_WEATHER](SEASONS_WEATHER.md)
+   `coldProtection`, `heatProtection`) from [SEASONS_WEATHER](SEASONS_WEATHER-2026-06-17.md)
    drop in without schema migration.
 
 ---

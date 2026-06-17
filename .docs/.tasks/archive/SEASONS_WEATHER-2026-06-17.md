@@ -2,14 +2,44 @@
 
 # LIVING WORLD — Day/Night, Seasons, Weather & Visual Atmosphere
 
-> **Related:** [ROADMAP](ROADMAP.md) · [game/DESIGN](../../game/DESIGN.md) · [SURVIVAL-HEALTH](SURVIVAL-HEALTH.md) · [ENGINE-PERFORMANCE](ENGINE-PERFORMANCE.md) (the perf budget this spec must respect — §0.5) · archived: [FOG-OF-WAR-DEFERRED](../archive/FOG-OF-WAR-DEFERRED-2026-05-28.md)
+> **Related:** [ROADMAP](../open/ROADMAP.md) · [game/DESIGN](../../game/DESIGN.md) · [ENGINE-PERFORMANCE](../open/ENGINE-PERFORMANCE.md) (the perf budget this spec must respect — §0.5; also owns the deferred fog-of-war) · archived: [SURVIVAL-HEALTH](SURVIVAL-HEALTH-2026-05-30.md) · [FOG-OF-WAR-DEFERRED](FOG-OF-WAR-DEFERRED-2026-05-28.md)
 
-## Status: Phase A + A2 + B + C (gameplay) COMPLETE — weather particles & fog (D) deferred
+## Status: COMPLETE (2026-06-17) — Living World atmosphere shipped; fog-of-war (Subsystem 6 / Phase D) deferred to ENGINE-PERFORMANCE + WASM spatial (ADR-008)
 
-Phase A (ambient day/night uniforms + EnvironmentService) and Phase A2
-(LightingService + per-tile `a_light` + campfire point light + flicker) shipped earlier.
+Phases A, A2, B, C are done **plus** the full weather-visual + wind + snow arc below. The only
+unbuilt piece is **fog-of-war** (Subsystem 6, Phase D) and **heat-shimmer** — both deliberately
+owned by the WASM spatial service (ADR-008) / [ENGINE-PERFORMANCE](ENGINE-PERFORMANCE.md), not this
+spec. The weather *particle* pass was delivered as a **2D-canvas overlay** (`WeatherCanvas.svelte`),
+not the originally-planned GPU `weatherOverlay` shader — the canvas route is glitch-free, data-driven,
+and never touches the terrain renderer (PERF-5 honoured).
 
-**Shipped 2026-06-16 (this pass):**
+**Shipped 2026-06-17 (final pass — weather visuals, wind, snow, atmosphere):**
+
+- **Data-driven seasons + weather** (`database/seasons.jsonc`, `database/weather.jsonc`): weather is a
+  **connected weighted graph** (intensity ladders clear→drizzle→rain→heavy_rain→storm; snow→blizzard)
+  with `*_windy` / `windy_rain` / `foggy_rain` / `gale` branches. An ambient **wind** scalar (0–1,
+  daily random-walk on `WeatherState`) biases `windScaled` transitions and drives the overlay slant.
+- **Weather overlays** (`WeatherCanvas.svelte`, 2D canvas): rain (slant from wind), snow, snowdust,
+  leaves (season-tinted, tumbling, ambient-dimmed), dust, fog (drifting ambient-dimmed haze), and
+  `foggy_rain` (rain + fog veil composited). Zoom-scaled density; leaves shrink + densify zoomed out.
+- **Wind mechanic**: `windStrength`/`sightMul`/`particleColor` per type; **windchill via `tempDelta`**
+  (cold-season wind feeds hypothermia, summer wind cools); a wind-only **`gale`** extreme event.
+- **Sight**: `weatherSightMul` folds into the shared `effectiveVisionRange` (pawns + mobs) — fog/storm/
+  blizzard shorten detection.
+- **Fatigue → stamina** coupling (Combat): anything raising fatigue (weather `fatigueMul`, conditions)
+  also slows stamina recovery + speeds drain (≤1.3×), so weather indirectly saps stamina.
+- **Snow cover**: per-tile `snow` (0–100) accumulates while snowing & below 0 °C, **scaled by tile
+  wetness** (smooth value-noise so it varies gradually), melts above 0; whitens the terrain layer in
+  `buildGameGrid`; raises per-tile movement cost (×2 at 100%); in-place + bucketed delta (PERF-1).
+- **Panel atmosphere**: side panels go bleak (blizzard-level) in **all of winter + any weather event**
+  (`effectivePanelSaturation`, debug-season-aware via `effectiveSeason`); night-softened with a floor;
+  winter desaturates the **map** ambient tint (`getMapAmbientTint`) so snow isn't painted orange/purple.
+- **Debug menu** (`DebugScreen` MENU|LOG tabs): spawn items/pawns/entities, set weather/season/
+  time-of-day, snow slider, and map click-brushes (regrow / spawn building / spawn resource).
+- **Tile HUD**: temp / wet (int) / snow% / windy / roofed; building info card shows fuel refuel needs.
+- **Tests/gates:** `environment.test.ts` (40 tests); `check` 0 errors, `test` 329 passed, lint clean.
+
+**Shipped 2026-06-16 (earlier pass):**
 
 - **Phase B — Seasons + Temperature.** `season`/`seasonDay`/`weather` on `GameState`; `EnvironmentService`
   gained the seasons table, weather Markov chain, per-tile temperature, and the season/weather tint.
@@ -22,13 +52,15 @@ Phase A (ambient day/night uniforms + EnvironmentService) and Phase A2
   a uniform multiply, never a terrain rebuild). Season + weather are shown in the topbar (`GameControls`).
 - **Tests/gates:** `environment.test.ts` (18 tests); `check` 0 errors, `test` 282 passed, `lint` no new errors.
 
-**Deferred (larger / higher-risk rendering bets, not started):**
+**Deferred (owned by ENGINE-PERFORMANCE / WASM spatial — NOT this spec):**
 
-- **Weather particle overlay shader** (Subsystem 5, Phase C visual — rain/snow fullscreen pass, acceptance
-  #5/#6). Gameplay weather is live and visibly tints the scene; the *particle* pass is a separate WebGL
-  program + render-pass addition left for a focused rendering pass.
 - **Subsystem 6 — Fog of war (Phase D)** and **heat shimmer** — explicitly deferred to the WASM spatial
-  service (ADR-008); see PERF-4 + Subsystem 6.
+  service (ADR-008); see PERF-4 + Subsystem 6. ENGINE-PERFORMANCE's shared `nearestPawn` spatial index
+  is the home for fog-of-war visibility; this spec ships everything else.
+
+> The weather *particle* overlay (Subsystem 5's planned GPU `weatherOverlay` shader) was instead built
+> as a **2D-canvas** overlay (`WeatherCanvas.svelte`) — see the final-pass note above. Acceptance #5–#7
+> are met by that route.
 
 ---
 
@@ -543,9 +575,9 @@ is what a pawn can see. Both can coexist.
 | B     | Season state + temperature in `GameState` + need rate hooks                                   | Phase A    | [x]    |
 | B     | Season palette tint (folded into the ambient uniform, not a separate `u_season_tint`)         | Phase A    | [x]    |
 | C     | `WeatherState` + Markov transitions + need rate hooks                                         | Phase B    | [x]    |
-| C     | `weatherOverlay` shader (rain + snow particles)                                               | Phase A    | [ ]    |
-| D     | `tile.visible` from vision radius + night FOW                                                 | Phases A-C | [ ]    |
-| D     | Heat shimmer (render-to-texture required)                                                     | Phase C    | [ ]    |
+| C     | Weather particle overlay — **shipped as a 2D canvas** (`WeatherCanvas.svelte`), not the GPU shader | Phase A    | [x] 2026-06-17 |
+| D     | `tile.visible` from vision radius + night FOW                                                 | Phases A-C | [ ] deferred → ENGINE-PERFORMANCE / WASM spatial |
+| D     | Heat shimmer (render-to-texture required)                                                     | Phase C    | [ ] deferred |
 
 ---
 
@@ -568,7 +600,7 @@ is what a pawn can see. Both can coexist.
 4. [x] Cold tiles increase pawn fatigue rate; heat tiles increase hunger rate. *(Phase B/C, `processNeedsTick`.)*
 5. [x] Rain weather triggers a particle overlay visible on the canvas. 
 6. [x] Snow weather triggers slow white particle overlay with slight drift. 
-7. [~] All ambient/weather uniforms are set from game state, not hardcoded per frame. *(Ambient + season + weather **tint** yes; particle uniforms pending the deferred shader.)*
+7. [x] All ambient/weather visuals are driven from game state, not hardcoded per frame. *(Ambient + season + weather tint via uniforms; the particle overlay reads the `currentWeather` store + `weather.jsonc` data — `WeatherCanvas.svelte`.)*
 8. [x] No weather or ambient logic lives inside Svelte components. *(Logic in EnvironmentService/PawnService/engine; GameCanvas only reads + multiplies.)*
 9. [x] A lit campfire visibly brightens and warms the tiles around it, falling off smoothly with distance, and lifts them out of the night tint. *(Phase A2.)*
 10. [x] Point light is per-tile but smoothly interpolated (no visible square blocking) and flickers subtly over time. *(Phase A2.)*
