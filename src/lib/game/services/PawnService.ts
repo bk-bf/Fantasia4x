@@ -31,11 +31,11 @@ import {
 // gameDebug(true); console.error still surfaces.
 import { gatedConsole as console } from '../core/log';
 
-// conditions.jsonc holds both graded conditions (with `stages`) and flat transient condition
-// "flags" (no `stages`); the flags are what `pawn.transientConditions` references.
+// conditions.jsonc holds persistent and transient conditions; `pawn.transientConditions`
+// references the transient ones — pick them out by the `duration` discriminant.
 const TRANSIENT_CONDITIONS_DB = (
   conditionsData as unknown as Array<ConditionDef | TransientConditionDef>
-).filter((d): d is TransientConditionDef => !('stages' in d));
+).filter((d): d is TransientConditionDef => d.duration === 'transient');
 
 /** Resolve active effect definitions from a pawn's transientConditions id list. */
 function getActiveTransientConditions(entity: Pawn | Mob): TransientConditionDef[] {
@@ -362,17 +362,17 @@ export class PawnServiceImpl implements PawnService {
   // ===== PRIVATE HELPER METHODS =====
 
   /**
-   * Per-turn hunger/fatigue increase including every active-effect and condition-stage
-   * multiplier. This is the single source of truth for the need-drain rate; both the
-   * legacy per-turn path and the per-tick accrual (processNeedsTick) scale this value.
+   * Per-turn hunger/fatigue increase including every active transient-condition and
+   * condition-stage multiplier. This is the single source of truth for the need-drain rate;
+   * both the legacy per-turn path and the per-tick accrual (processNeedsTick) scale this value.
    */
   private getNeedIncreasePerTurn(pawn: Pawn): { hunger: number; fatigue: number } {
-    const effects = getActiveTransientConditions(pawn);
+    const transientConditions = getActiveTransientConditions(pawn);
 
-    // Combine hungerRate/fatigueRate multipliers from all active effects (multiply together).
-    // e.g. 'eating' sets hungerRate=0 (paused), 'sleeping' sets hungerRate=0.33 and fatigueRate=0.
-    let hungerRate = effects.reduce((r, e) => r * (e.modifiers.hungerRate ?? 1), 1);
-    let fatigueRate = effects.reduce((r, e) => r * (e.modifiers.fatigueRate ?? 1), 1);
+    // Combine hungerRate/fatigueRate multipliers from all active transient conditions (multiply
+    // together). e.g. 'eating' sets hungerRate=0 (paused), 'sleeping' sets hungerRate=0.33, fatigueRate=0.
+    let hungerRate = transientConditions.reduce((r, e) => r * (e.modifiers.hungerRate ?? 1), 1);
+    let fatigueRate = transientConditions.reduce((r, e) => r * (e.modifiers.fatigueRate ?? 1), 1);
 
     // Also apply condition stage hungerRate/fatigueRate modifiers (e.g. malnutrition increases hunger rate).
     const condMults = conditionNeedMultipliers(pawn.conditions ?? []);
@@ -826,7 +826,7 @@ export class PawnServiceImpl implements PawnService {
    *   • Body load — own weight carried by strength (weight ≈ STR×6kg = ×1.0)
    *   • Legs — each leg ≈ half of locomotion; missing/injured legs cripple speed
    *   • Needs — hunger/fatigue above 50% progressively slow the pawn
-   *   • Effects — transient condition & condition moveSpeed multipliers
+   *   • Conditions — transient & persistent condition moveSpeed multipliers
    */
   getMoveSpeed(entity: Pawn | Mob): { tilesPerSecond: number; sources: string[] } {
     const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
@@ -864,20 +864,21 @@ export class PawnServiceImpl implements PawnService {
     const needsFactor = clamp(1 - hungerPenalty - fatiguePenalty, 0.5, 1);
     if (needsFactor < 0.999) sources.push(`needs ×${needsFactor.toFixed(2)}`);
 
-    // Transient conditions + condition stages that modify movement.
-    let effectFactor = getActiveTransientConditions(entity).reduce(
+    // Transient + persistent conditions that modify movement.
+    let conditionFactor = getActiveTransientConditions(entity).reduce(
       (r, e) => r * (e.modifiers.moveSpeed ?? 1),
       1
     );
     for (const c of entity.conditions ?? []) {
       const stage = getConditionCurrentStage(c);
-      if (stage?.modifiers.moveSpeed != null) effectFactor *= stage.modifiers.moveSpeed;
+      if (stage?.modifiers.moveSpeed != null) conditionFactor *= stage.modifiers.moveSpeed;
     }
-    if (Math.abs(effectFactor - 1) > 0.001) sources.push(`effects ×${effectFactor.toFixed(2)}`);
+    if (Math.abs(conditionFactor - 1) > 0.001)
+      sources.push(`conditions ×${conditionFactor.toFixed(2)}`);
 
     const tilesPerSecond = Math.max(
       0.05,
-      base * dexFactor * weightFactor * legFactor * needsFactor * effectFactor
+      base * dexFactor * weightFactor * legFactor * needsFactor * conditionFactor
     );
     return { tilesPerSecond, sources };
   }

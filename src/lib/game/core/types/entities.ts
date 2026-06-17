@@ -121,7 +121,7 @@ export interface Mob {
   aggroRange?: number;
   /** Milliseconds remaining until next auto-attack fires. */
   attackCooldown?: number;
-  /** Remaining turns for temporary transient conditions (e.g. knockdown). */
+  /** Remaining turns for timer-based transient conditions (e.g. knockdown). */
   conditionTimers?: Record<string, number>;
   /** Player has queued this mob for hunting — drafted pawns with hunting work will prioritise it. */
   markedForHunt?: boolean;
@@ -227,7 +227,7 @@ export interface Pawn {
   attackCooldown?: number;
   /** Radius in tiles within which this pawn auto-engages hostiles. */
   aggroRange?: number;
-  /** Remaining turns for temporary transient conditions (e.g. knockdown). */
+  /** Remaining turns for timer-based transient conditions (e.g. knockdown). */
   conditionTimers?: Record<string, number>;
   /**
    * Current stamina 0–maxStamina. Drains while fleeing/sprinting or attacking;

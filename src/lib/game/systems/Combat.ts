@@ -28,11 +28,11 @@ import { perTick } from '../core/time';
 import { PART_DEF_MAP, rollBodyPart, createDefaultBodyParts } from '../core/BodyParts';
 export { PART_DEF_MAP, createDefaultBodyParts };
 
-// conditions.jsonc holds both graded conditions (with `stages`) and flat transient condition
-// "flags" (no `stages`); combat only needs the flags (winded → dodge).
+// conditions.jsonc holds persistent and transient conditions; combat only needs the
+// transient ones (winded → dodge) — pick them out by the `duration` discriminant.
 const TRANSIENT_CONDITIONS_DB = (
   conditionsData as unknown as Array<ConditionDef | TransientConditionDef>
-).filter((d): d is TransientConditionDef => !('stages' in d));
+).filter((d): d is TransientConditionDef => d.duration === 'transient');
 
 // ── Tuning constants ─────────────────────────────────────────────────────────
 /** Scales per-part bleed so a fully-severed 5%-mass hand ≈ 2 blood/turn. */
@@ -545,7 +545,8 @@ class CombatServiceImpl implements CombatService {
     if (collapsed) durations.collapse = Math.max(durations.collapse ?? 0, KNOCKDOWN_TURNS);
     const transientConditions = [...(entity.transientConditions ?? [])];
     for (const id of ['knockdown', 'collapse']) {
-      if ((durations[id] ?? 0) > 0 && !transientConditions.includes(id)) transientConditions.push(id);
+      if ((durations[id] ?? 0) > 0 && !transientConditions.includes(id))
+        transientConditions.push(id);
     }
 
     const updated = {
@@ -808,10 +809,12 @@ class CombatServiceImpl implements CombatService {
     let transientConditions = e.transientConditions ?? [];
     if (winded) {
       durations.winded = 2; // refresh so the per-tick duration decrement never expires the latch
-      if (!transientConditions.includes(WINDED)) transientConditions = [...transientConditions, WINDED];
+      if (!transientConditions.includes(WINDED))
+        transientConditions = [...transientConditions, WINDED];
     } else {
       delete durations.winded;
-      if (transientConditions.includes(WINDED)) transientConditions = transientConditions.filter((x) => x !== WINDED);
+      if (transientConditions.includes(WINDED))
+        transientConditions = transientConditions.filter((x) => x !== WINDED);
     }
     return { ...e, stamina, conditionTimers: durations, transientConditions };
   }

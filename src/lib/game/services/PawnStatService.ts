@@ -12,12 +12,14 @@ import conditionsData from '../database/conditions.jsonc';
 import itemsData from '../database/items.jsonc';
 import { WORK_CATEGORIES } from '../core/Work';
 
-// conditions.jsonc holds both graded conditions (with `stages`) and flat transient condition
-// "flags" (no `stages`). Split them by shape — see the file header.
+// conditions.jsonc holds both persistent conditions (severity/stages) and transient ones
+// (re-derived each tick); split them by the `duration` discriminant — see the file header.
 const ALL_CONDITION_DEFS = conditionsData as unknown as Array<ConditionDef | TransientConditionDef>;
-const CONDITIONS_DB = ALL_CONDITION_DEFS.filter((d): d is ConditionDef => 'stages' in d);
+const CONDITIONS_DB = ALL_CONDITION_DEFS.filter(
+  (d): d is ConditionDef => d.duration === 'persistent'
+);
 const TRANSIENT_CONDITIONS_DB = ALL_CONDITION_DEFS.filter(
-  (d): d is TransientConditionDef => !('stages' in d)
+  (d): d is TransientConditionDef => d.duration === 'transient'
 );
 const ITEMS_DB = itemsData as unknown as Item[];
 
@@ -384,8 +386,8 @@ function pawnStateWorkMultiplier(pawn: Pawn | Mob): number {
     if (we !== undefined) mult *= we;
   }
 
-  for (const effectId of pawn.transientConditions ?? []) {
-    const def = TRANSIENT_CONDITIONS_DB.find((e) => e.id === effectId);
+  for (const conditionId of pawn.transientConditions ?? []) {
+    const def = TRANSIENT_CONDITIONS_DB.find((e) => e.id === conditionId);
     const we = def?.modifiers.workEfficiency;
     if (we !== undefined) mult *= we;
   }

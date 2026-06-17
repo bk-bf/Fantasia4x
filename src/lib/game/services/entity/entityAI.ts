@@ -472,9 +472,7 @@ export function stepHostile(
       // ejected a mob fighting ANOTHER mob out of combat every tick — no pawn nearby → Alerted →
       // Wander → re-Hunt → Attacking — the mid-engagement oscillation. Hold while the ACTUAL target
       // is adjacent. (The passive FSM already does this via huntAttacker.)
-      const preyTarget = mob.huntTargetId
-        ? allMobs.find((m) => m.id === mob.huntTargetId)
-        : null;
+      const preyTarget = mob.huntTargetId ? allMobs.find((m) => m.id === mob.huntTargetId) : null;
       if (preyTarget && preyTarget.state !== 'Corpse') {
         if (adjacent(mob, { x: preyTarget.x, y: preyTarget.y })) return mob; // hold; combat resolves
         // Prey broke contact — resume the hunt against IT (not the nearest pawn).

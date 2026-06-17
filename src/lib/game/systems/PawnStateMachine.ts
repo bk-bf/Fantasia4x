@@ -708,48 +708,48 @@ function tickConditionTimers(pawn: Pawn): Pawn {
  * Called after each tick so PawnService.calculateNeedsUpdate always reads fresh values.
  */
 function syncTransientConditions(pawn: Pawn): Pawn {
-  const effects: string[] = [];
+  const ids: string[] = [];
   const isEating = pawn.state?.isEating || pawn.currentState === PAWN_STATE.EATING;
   const isSleeping = pawn.state?.isSleeping || pawn.currentState === PAWN_STATE.SLEEPING;
 
-  if (isEating) effects.push('eating');
-  if (isSleeping) effects.push('sleeping');
+  if (isEating) ids.push('eating');
+  if (isSleeping) ids.push('sleeping');
   // Only show need-state badges when the pawn is NOT already acting on them.
   // Eating supersedes hungry; sleeping supersedes tired.
-  if (!isSleeping && (pawn.needs?.fatigue ?? 0) >= FATIGUE_THRESHOLD) effects.push('tired');
-  if (!isEating && (pawn.needs?.hunger ?? 0) >= HUNGER_THRESHOLD) effects.push('hungry');
+  if (!isSleeping && (pawn.needs?.fatigue ?? 0) >= FATIGUE_THRESHOLD) ids.push('tired');
+  if (!isEating && (pawn.needs?.hunger ?? 0) >= HUNGER_THRESHOLD) ids.push('hungry');
   // §D thirst/hygiene consequences (before dehydration's lethal condition kicks in at 95).
-  if ((pawn.needs?.thirst ?? 0) >= HUNGER_THRESHOLD) effects.push('thirsty');
-  if ((pawn.needs?.hygiene ?? 0) >= HUNGER_THRESHOLD) effects.push('filthy');
+  if ((pawn.needs?.thirst ?? 0) >= HUNGER_THRESHOLD) ids.push('thirsty');
+  if ((pawn.needs?.hygiene ?? 0) >= HUNGER_THRESHOLD) ids.push('filthy');
 
-  // Duration-based transient conditions (knockdown, etc.)
-  for (const [effectId, remaining] of Object.entries(pawn.conditionTimers ?? {})) {
-    if (remaining > 0) effects.push(effectId);
+  // Timer-based transient conditions (knockdown, etc.)
+  for (const [id, remaining] of Object.entries(pawn.conditionTimers ?? {})) {
+    if (remaining > 0) ids.push(id);
   }
 
   // SEASONS_WEATHER: under a roof → sheltered (faster cold/heat recovery + storm-mood relief).
-  if (pawn.position && isRoofedTile(pawn.position.x, pawn.position.y)) effects.push('sheltered');
+  if (pawn.position && isRoofedTile(pawn.position.x, pawn.position.y)) ids.push('sheltered');
   // SEASONS_WEATHER: soaked → wet (cold bites harder, heat less; chance of a chill when soaked + cold).
-  if ((pawn.needs?.wetness ?? 0) >= 50) effects.push('wet');
+  if ((pawn.needs?.wetness ?? 0) >= 50) ids.push('wet');
 
   // Mood-based transient conditions (discrete ranges replace continuous morale calculation)
   const mood = pawn.state?.mood ?? 50;
-  if (mood >= 80) effects.push('mood_ecstatic');
-  else if (mood >= 60) effects.push('mood_content');
+  if (mood >= 80) ids.push('mood_ecstatic');
+  else if (mood >= 60) ids.push('mood_content');
   else if (mood >= 40) {
-    /* neutral — no effect */
-  } else if (mood >= 20) effects.push('mood_sad');
-  else effects.push('mood_depressed');
+    /* neutral — no condition */
+  } else if (mood >= 20) ids.push('mood_sad');
+  else ids.push('mood_depressed');
 
-  // Push condition stage labels as active effects (e.g. "malnutrition:moderate").
+  // Push persistent-condition stage labels too (e.g. "malnutrition:moderate").
   for (const condition of pawn.conditions ?? []) {
     const stage = getConditionStage(condition.id, condition.severity);
-    if (stage) effects.push(`${condition.id}:${stage.label}`);
+    if (stage) ids.push(`${condition.id}:${stage.label}`);
   }
 
   const current = pawn.transientConditions ?? [];
-  if (effects.length === current.length && effects.every((e, i) => e === current[i])) return pawn;
-  return { ...pawn, transientConditions: effects };
+  if (ids.length === current.length && ids.every((e, i) => e === current[i])) return pawn;
+  return { ...pawn, transientConditions: ids };
 }
 
 // ===== PER-PAWN STATE HANDLERS =====
