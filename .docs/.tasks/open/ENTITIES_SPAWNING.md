@@ -366,8 +366,55 @@ slows to base pawn speed until healed (vet work category, Phase E2 — deferred)
 
 ---
 
+## Future — Hauling & Logistics Progression (capture only; unspecced, do not build yet)
+
+> Parked ideas from a 2026-06-17 design chat. **Far too early to spec** — current
+> priority is getting the existing item/carry sheet right. Recorded so we can explore
+> later. The animal-hauling rungs are the natural extension of Phases C–E below.
+
+**Core principle (the spine):** split **personal carry** from **bulk logistics**.
+
+- _Personal carry_ (worn: pouches → backpacks → eventually a "bag of holding"): kit,
+  tools, small/medium goods, a day's foraging. **Hard-capped low by realism** — must
+  _never_ scale to stacks of ore/logs/hay no matter how late-game the pack is.
+- _Bulk logistics_ (carts → pack/draft animals → ?): the **only** way to move heavy /
+  bulky goods (ore, logs, hay, stone, field goods) at quantity. Separate budget entirely.
+
+This rule makes every later item self-answering: a bag of holding is still _personal_,
+so it just makes your kit weightless — bulk always routes through the logistics layer.
+
+| Rung | Mechanic | Role / notes |
+| ---- | -------- | ------------ |
+| Worn — light | bronze/leather light pack | small cap, ~no encumbrance → scouts / dodge / skirmisher builds |
+| Worn — heavy | iron-framed backpack | big personal cap **but real movement/evasion penalty** (loaded pawn is slower); dedicated haulers |
+| Bulk — near base | handcart / wheelbarrow | pawn-pushed; wants roads/cleared terrain; first bulk hauler |
+| Bulk — anywhere | pack animal (panniers) | tamed/bred draft stock, follows a hauler pawn through forest/mountain a cart can't; medium bulk |
+| Bulk — long haul | draft animal + cart | roads, big capacity; makes far-corner mining/forestry viable; **the big-map spine** |
+| Late / magic | bag of holding | _personal_, weightless kit only; gate hard (bind-on-use / mana upkeep / hard cap) so a rich colony can't kit everyone |
+
+**Why animals are the backbone:** target map is **1000×1000 (maybe effectively
+infinite via chunking)**. Even the best cart+road system has a natural tedium ceiling —
+roads only reach so far before round-trips dominate play. Animal pack-trains/caravans
+are the distinctive answer (few colony sims use draft animals for player logistics),
+and they make husbandry (Phase D) _matter_ — you breed draft stock, not just milk goats.
+Backpacks need an encumbrance cost or the light-vs-heavy fork isn't a real choice
+(small modifier-path change, big design payoff).
+
+**Portals — reframed, deliberately deferred:** a node↔base on-map portal would
+trivialise the whole cart/animal ladder, so drop that framing. Instead: **portals to
+_another dimension_** (nether-like) — you build one and _don't know where you come out_
+(could open into a hostile realm). Not a map-logistics shortcut at all; a separate
+exploration/risk system. Capstone-tier, costly, dangerous. Pure speculation for now.
+
+---
+
 ## Open Questions
 
+- [ ] Personal-carry vs bulk-logistics split — confirm as a hard design rule before any pack/cart work
+- [ ] Cart mechanic model: vehicle entity on map vs equippable cart (budget override) vs deployable site + batch-haul job
+- [ ] Draft/pack animals — new tameable roster + breeding for draft stock; reuse `TamedAnimal` + riding-assignment infra (Phase D/E)
+- [ ] Backpack encumbrance → movement/evasion penalty in `ModifierSystem` (enables light-vs-heavy fork)
+- [ ] Dimensional portals — separate exploration system, not logistics; capstone, far future
 - [ ] Do tamed animals persist across saves? (yes — serialise `tamedAnimals[]`)
 - [ ] Can mobs attack buildings? (deferred — Phase 2)
 - [ ] Mob-vs-animal combat? (wolf eats deer — deferred, emergent fun)
