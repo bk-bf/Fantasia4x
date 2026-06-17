@@ -18,7 +18,11 @@
   }
 
   function dropItem(itemId: string) {
-    gameState.command({ type: 'dropCarriedItem', payload: { pawnId: pawn.id, itemId }, save: true });
+    gameState.command({
+      type: 'dropCarriedItem',
+      payload: { pawnId: pawn.id, itemId },
+      save: true
+    });
   }
   // Derive load + budget from the service (single source of truth = item defs). The cached
   // pawn.inventory.weightKg is a write-only initial-shape field that is never updated on
@@ -69,12 +73,14 @@
         {#if cap.gearSources.length}
           <div class="tip-gear">
             {#each cap.gearSources as g}
-              <div>{g.name}: <span class="tv">+{r1(g.weightKg)}</span> kg,
-                <span class="tv">+{r1(g.volumeL)}</span> L</div>
+              <div>
+                {g.name}: <span class="tv">+{r1(g.weightKg)}</span> kg,
+                <span class="tv">+{r1(g.volumeL)}</span> L
+              </div>
             {/each}
           </div>
         {:else}
-          <div class="tip-gear">no belt/back container — equip one to raise the budget</div>
+          <div class="tip-gear">no belt/back container — equip one to raise capacity</div>
         {/if}
       </div>
     </span>
