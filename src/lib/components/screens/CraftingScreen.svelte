@@ -229,25 +229,6 @@
     <button class="hdr-btn" on:click={() => uiState.setScreen('main')}>BACK</button>
   </div>
 
-  <!-- Crafting queue — only shown while something is crafting -->
-  {#if craftingQueue.length > 0}
-    <div class="section-hdr sub">| CRAFTING QUEUE ({craftingQueue.length})</div>
-    {#each craftingQueue as qi, idx}
-      {@const wReq = qi.workRequired ?? (recipeOf(qi.item.id)?.workAmount ?? 1) * 5}
-      {@const wDone = qi.workDone ?? 0}
-      {@const pct = Math.round(Math.min(100, (wDone / wReq) * 100))}
-      <div class="queue-row">
-        <span class="q-name">{qi.item.name.toUpperCase()}</span>
-        <span class="q-prog">
-          <span class="bar-ascii"
-            >{'█'.repeat(Math.round(pct / 10)) + '░'.repeat(10 - Math.round(pct / 10))}</span
-          >
-          {pct}%
-        </span>
-        <button class="act-btn-sm" on:click={() => cancelCrafting(idx)}>CANCEL</button>
-      </div>
-    {/each}
-  {/if}
 
   <!-- Category tabs: pick a category, see its recipes. Sticky so they stay reachable on scroll. -->
   {#if craftCategories.length > 0}
@@ -371,6 +352,25 @@
   {#if allCraftableItems.length === 0}
     <div class="muted-row">no recipes available</div>
   {/if}
+
+  <!-- Active crafting queue — compact chips, kept below the recipe tabs (mirrors CONSTRUCTION) -->
+  {#if craftingQueue.length > 0}
+    <div class="build-jobs">
+      <div class="jobs-hdr">| CRAFTING QUEUE ({craftingQueue.length})</div>
+      <div class="jobs-grid">
+        {#each craftingQueue as qi, idx (qi.id)}
+          {@const wReq = qi.workRequired ?? (recipeOf(qi.item.id)?.workAmount ?? 1) * 5}
+          {@const prog = Math.round(Math.min(100, ((qi.workDone ?? 0) / wReq) * 100))}
+          <div class="job-chip" title="{qi.item.name} — {prog}%">
+            <span class="job-fill" style="width:{prog}%"></span>
+            <span class="job-name">{qi.item.name.toUpperCase()}</span>
+            <span class="job-pct">{prog}%</span>
+            <button class="job-x" title="Cancel" on:click={() => cancelCrafting(idx)}>✕</button>
+          </div>
+        {/each}
+      </div>
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -470,51 +470,6 @@
     cursor: pointer;
   }
 
-  .section-hdr {
-    padding: 5px 10px 3px;
-    color: var(--accent-hi);
-    font-size: 10px;
-    letter-spacing: 0.08em;
-    border-bottom: 1px solid var(--border);
-    margin-top: 4px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .section-hdr.sub {
-    color: var(--accent);
-    margin-top: 2px;
-  }
-
-  .queue-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 3px 10px;
-    border-bottom: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
-  }
-
-  .q-name {
-    flex: 0 0 160px;
-    font-size: 11px;
-    color: var(--text);
-  }
-
-  .q-prog {
-    flex: 1;
-    display: flex;
-    gap: 4px;
-    align-items: center;
-    font-size: 10px;
-    color: var(--text-dim);
-  }
-
-  .bar-ascii {
-    color: var(--accent);
-    font-size: 9px;
-    letter-spacing: -1px;
-  }
-
   .cost-sep {
     color: var(--text-dim);
     opacity: 0.4;
@@ -549,30 +504,76 @@
     opacity: 1;
   }
 
-  .act-btn-sm {
-    flex: 0 0 auto;
-    background: none;
-    border: 1px solid var(--border);
-    color: var(--accent);
-    font-family: 'Courier New', monospace;
-    font-size: 10px;
-    padding: 2px 6px;
-    cursor: pointer;
-    white-space: nowrap;
-  }
-  .act-btn-sm:hover:not(:disabled) {
-    border-color: var(--accent-hi);
-    color: var(--accent-hi);
-    background: var(--bg-active);
-  }
-  .act-btn-sm:disabled {
-    opacity: 0.35;
-    cursor: not-allowed;
-  }
-
   .muted-row {
     padding: 4px 10px;
     font-size: 10px;
     color: var(--text-dim);
+  }
+
+  /* ── Active crafting queue (compact chips, below the tabs — mirrors CONSTRUCTION) ── */
+  .build-jobs {
+    padding: 4px 8px 8px;
+    border-top: 1px solid var(--border);
+    margin-top: 4px;
+  }
+  .jobs-hdr {
+    color: var(--accent);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    padding: 2px 0 5px;
+  }
+  .jobs-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .job-chip {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    max-width: 170px;
+    padding: 2px 5px;
+    border: 1px solid var(--border);
+    background: var(--bg-panel);
+    overflow: hidden;
+    font-size: 10px;
+  }
+  .job-fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    background: color-mix(in srgb, var(--accent) 20%, transparent);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .job-name {
+    position: relative;
+    z-index: 1;
+    max-width: 100px;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .job-pct {
+    position: relative;
+    z-index: 1;
+    color: var(--accent);
+    font-size: 9px;
+  }
+  .job-x {
+    position: relative;
+    z-index: 1;
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    line-height: 1;
+    padding: 0 1px;
+    cursor: pointer;
+  }
+  .job-x:hover {
+    color: var(--neg);
   }
 </style>
