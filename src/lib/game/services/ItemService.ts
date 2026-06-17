@@ -63,6 +63,16 @@ const DETERIORATION_RATE_BY_CATEGORY: Record<string, number> = {
   natural_weapon: 0 // innate attacks: never real dropped items, but immune for safety
 };
 
+/** Itemised carry-budget breakdown for the UI (see ItemService.getCarryCapacityBreakdown). */
+export interface CarryCapacityBreakdown {
+  size: string;
+  bodySizeScore: number;
+  strength: number;
+  weight: { base: number; strength: number; bodySize: number; gear: number; total: number };
+  volume: { base: number; bodySize: number; gear: number; total: number };
+  gearSources: { name: string; weightKg: number; volumeL: number }[];
+}
+
 /**
  * ItemService - Clean interface for item queries and operations
  * Separates business logic from data definitions
@@ -117,6 +127,9 @@ export interface ItemService {
 
   // Carry capacity
   getCarryBudget(pawn: Pawn, state: GameState): { maxWeightKg: number; maxVolumeL: number };
+  /** Itemised carry-budget breakdown (base + STR + body-size + gear) — single source of
+   *  truth for the CAPACITIES panel and the CARRYING header so the UI can show the maths. */
+  getCarryCapacityBreakdown(pawn: Pawn): CarryCapacityBreakdown;
   canAddToInventory(pawn: Pawn, itemId: string, qty: number, state: GameState): boolean;
   clampPickupQuantity(pawn: Pawn, itemId: string, qty: number, state: GameState): number;
   getCurrentCarryLoad(pawn: Pawn, state: GameState): { weightKg: number; volumeL: number };
@@ -371,6 +384,11 @@ export class ItemServiceImpl implements ItemService {
    * Both values are then increased by inventoryBonus from belt/back slots.
    */
   getCarryBudget(pawn: Pawn, _state: GameState): { maxWeightKg: number; maxVolumeL: number } {
+    const b = this.getCarryCapacityBreakdown(pawn);
+    return { maxWeightKg: b.weight.total, maxVolumeL: b.volume.total };
+  }
+
+  getCarryCapacityBreakdown(pawn: Pawn): CarryCapacityBreakdown {
     const sizeScore: Record<string, number> = {
       tiny: -2,
       small: -1,
@@ -378,24 +396,35 @@ export class ItemServiceImpl implements ItemService {
       large: 1,
       huge: 2
     };
-    const bs = sizeScore[pawn.physicalTraits?.size ?? 'medium'] ?? 0;
+    const size = pawn.physicalTraits?.size ?? 'medium';
+    const bs = sizeScore[size] ?? 0;
     const str = pawn.stats.strength ?? 10;
 
-    let maxWeightKg = 5 + (str - 10) * 1.5 + bs * 3.0;
-    let maxVolumeL = 8 + bs * 4.0;
+    // Mirrors stats.jsonc carry_weight / carry_volume formulas.
+    const weight = { base: 5, strength: (str - 10) * 1.5, bodySize: bs * 3.0, gear: 0, total: 0 };
+    const volume = { base: 8, bodySize: bs * 4.0, gear: 0, total: 0 };
 
-    // Add bonuses from belt and back slots
+    // Belt + back containers add inventoryBonus on top.
+    const gearSources: CarryCapacityBreakdown['gearSources'] = [];
     for (const slot of ['belt', 'back'] as const) {
-      const inst = pawn.equipment[slot];
+      const inst = pawn.equipment?.[slot];
       if (!inst) continue;
       const def = this.getItemById(inst.itemId);
       if (def?.inventoryBonus) {
-        maxWeightKg += def.inventoryBonus.weightKg;
-        maxVolumeL += def.inventoryBonus.volumeL;
+        weight.gear += def.inventoryBonus.weightKg;
+        volume.gear += def.inventoryBonus.volumeL;
+        gearSources.push({
+          name: def.name,
+          weightKg: def.inventoryBonus.weightKg,
+          volumeL: def.inventoryBonus.volumeL
+        });
       }
     }
 
-    return { maxWeightKg: Math.max(1, maxWeightKg), maxVolumeL: Math.max(1, maxVolumeL) };
+    weight.total = Math.max(1, weight.base + weight.strength + weight.bodySize + weight.gear);
+    volume.total = Math.max(1, volume.base + volume.bodySize + volume.gear);
+
+    return { size, bodySizeScore: bs, strength: str, weight, volume, gearSources };
   }
 
   /**
