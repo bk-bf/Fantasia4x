@@ -52,6 +52,11 @@
   import { resolveCharSpans, BIOMES, SUBTERRAINS } from '$lib/game/core/Terrains.js';
   import { resourceObjectService } from '$lib/game/services/ResourceObjectService.js';
   import { itemService } from '$lib/game/services/ItemService.js';
+  import {
+    getRefuelRequirements,
+    getRefuelThresholdRatio,
+    planRefuel
+  } from '$lib/game/services/fuelRules.js';
   import { getEquipmentSlot } from '$lib/game/core/PawnEquipment.js';
   import { getCreatureById } from '$lib/game/core/Creatures.js';
   import { TICKS_PER_SECOND } from '$lib/game/core/time.js';
@@ -512,6 +517,24 @@
         lines.push(
           `FUEL [${jobProgressBar(fuelMax > 0 ? fuelCurr / fuelMax : 0)}] ${Math.floor(fuelCurr)}/${Math.floor(fuelMax)} ${litStr}`
         );
+        // Make the refuel requirement explicit on the card (it always needs tinder + N distinct fuel
+        // types), and flag when the colony can't currently satisfy it — so "won't refuel" is obvious.
+        const req = getRefuelRequirements(selectedBuilding.type);
+        const tinderName =
+          itemService.getItemById(req.tinderItemId)?.name ?? req.tinderItemId.replace(/_/g, ' ');
+        lines.push(
+          `needs: ${req.tinderAmount}× ${tinderName} + ${req.requiredFuelTypes} fuel types`
+        );
+        const wantsFuel =
+          fuelCurr / Math.max(fuelMax, 1) < getRefuelThresholdRatio(selectedBuilding);
+        if (wantsFuel && planRefuel($gameState, selectedBuilding) === null) {
+          const tinderStock = ($gameState.stockpile ?? {})[req.tinderItemId] ?? 0;
+          lines.push(
+            tinderStock < req.tinderAmount
+              ? `⚠ won't refuel — need ${req.tinderAmount}× ${tinderName} (have ${tinderStock})`
+              : `⚠ won't refuel — not enough distinct fuel in stock`
+          );
+        }
       }
     }
     const btns: EntityButton[] = [];
