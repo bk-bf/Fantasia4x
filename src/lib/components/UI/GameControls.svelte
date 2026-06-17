@@ -317,7 +317,7 @@
     letter-spacing: 0.02em;
   }
   .bi.phase {
-    color: var(--accent);
+    color: var(--text-dim);
     letter-spacing: 0.02em;
   }
   .bi.turn {
