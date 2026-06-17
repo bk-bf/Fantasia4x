@@ -593,7 +593,7 @@
     }
     const btns: EntityButton[] = [];
     if (selectedResourceDesignation) {
-      btns.push({ label: 'CANCEL', onClick: cancelResourceDesignation });
+      btns.push({ label: 'CANCEL ALL', onClick: cancelResourceDesignation });
     } else {
       for (const iact of activeInteractions) {
         const label =
@@ -2386,8 +2386,13 @@
 
   function cancelResourceDesignation() {
     if (!selectedResourceTile) return;
-    const { x, y } = selectedResourceTile;
-    gameState.command({ type: 'clearDesignation', payload: { x, y }, save: true });
+    // Symmetric with MARK: clear every designated tile of this resource, not just the selected one,
+    // so a batch-marked resource cancels in full.
+    gameState.command({
+      type: 'clearDesignationsForResource',
+      payload: { resourceId: selectedResourceTile.resourceId },
+      save: true
+    });
     redrawOverlay();
   }
 

@@ -16,6 +16,7 @@
   import ChroniclePanel from '$lib/components/UI/ChroniclePanel.svelte';
   import WorldEffectsLayer from '$lib/components/UI/WorldEffectsLayer.svelte';
   import LoadingScreen from '$lib/components/UI/LoadingScreen.svelte';
+  import { autohideScroll } from '$lib/actions/autohideScroll';
   import { uiState } from '$lib/stores/uiState';
   import { gameState, storeReady, bootReveal } from '$lib/stores/gameState';
   import { gameCoordinator } from '$lib/game/systems/GameCoordinator';
@@ -173,7 +174,7 @@
 
           <!-- Overlay panel: slides up from bottom, covers 50% of map -->
           {#if currentScreen !== 'main'}
-            <div class="overlay-panel">
+            <div class="overlay-panel" use:autohideScroll>
               {#if currentScreen === 'pawns'}
                 <PawnScreen />
               {:else if currentScreen === 'work'}

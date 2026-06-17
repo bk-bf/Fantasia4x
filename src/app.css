@@ -45,3 +45,32 @@ body {
 ::-webkit-scrollbar-thumb {
   background: var(--border-hi);
 }
+
+/* ── Tab panels: sticky header + auto-hide scrollbars ──────────────────────────
+   Every tab screen (Pawn/Work/Race/…) headers it with `.screen-hdr`. Pin it to the
+   top of its scroll area so it never scrolls away. */
+.screen-hdr {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+/* Inside the tab overlay panel the scrollbar thumb stays invisible until the element is
+   actively scrolling — the `is-scrolling` class is toggled by the autohideScroll action
+   (src/lib/actions/autohideScroll.ts). The 3px track is always reserved, so revealing the
+   thumb never reflows content. */
+.overlay-panel ::-webkit-scrollbar-thumb {
+  background: transparent;
+  transition: background 0.2s ease;
+}
+.overlay-panel .is-scrolling::-webkit-scrollbar-thumb {
+  background: var(--border-hi);
+}
+/* Firefox fallback (Electron/V8 is the ship target, but keep the dev canary tidy). */
+.overlay-panel :where(*) {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.overlay-panel .is-scrolling {
+  scrollbar-color: var(--border-hi) transparent;
+}
