@@ -4,7 +4,7 @@
  * station tile, and deposits a pawn's inventory into the nearest stockpile zone. Consumed by the
  * work-state handlers; depends only on core/services + goIdle, so the import graph stays acyclic.
  */
-import type { GameState, Pawn } from '../../core/types';
+import type { GameState, Pawn, ItemInstance } from '../../core/types';
 import {
   addToStockpileZone,
   absorbDropIfOnStockpileTile,
@@ -288,7 +288,13 @@ export function depositInventory(pawn: Pawn, gs: GameState): GameState {
     return stageInventoryAtStation(pawn, pawn.carryingForOrder, gs);
   }
   const inv = pawn.inventory?.items ?? {};
-  if (Object.keys(inv).length === 0) return goIdle(pawn, gs);
+  // Identity-tracked carried items (dynamicName instances, e.g. carcasses) are deposited too — so a
+  // pawn hauling ONLY a carcass (empty `items` map) must not short-circuit to idle.
+  const carriedInstances = pawn.inventory?.instances ?? [];
+  const hasDepositableInstance = carriedInstances.some(
+    (i) => itemService.getItemById(i.itemId)?.dynamicName
+  );
+  if (Object.keys(inv).length === 0 && !hasDepositableInstance) return goIdle(pawn, gs);
 
   // Pinned items are never deposited — the pawn keeps carrying them (player request). Deposit
   // everything else; the pinned subset is written back into the pawn's inventory below.
@@ -348,6 +354,42 @@ export function depositInventory(pawn: Pawn, gs: GameState): GameState {
     }
   }
 
+  // Identity-tracked instances (dynamicName, e.g. named carcasses) are laid into the stockpile as
+  // individual, NON-stacking stored drops so each keeps its per-pawn name. Ordinary tracked items
+  // (tools/weapons the pawn keeps) stay in hand. A carcass with nowhere to go also stays in hand.
+  const usedTileCoords = new Set(
+    newDropped.filter((d) => d.stored).map((d) => `${d.x},${d.y}`)
+  );
+  for (const id of newDropIds) {
+    const d = newDropped.find((x) => x.id === id);
+    if (d) usedTileCoords.add(`${d.x},${d.y}`);
+  }
+  const keptInstances: ItemInstance[] = [];
+  for (const instance of carriedInstances) {
+    if (!itemService.getItemById(instance.itemId)?.dynamicName) {
+      keptInstances.push(instance);
+      continue;
+    }
+    const freeTile = stockpileTiles.find((t) => !usedTileCoords.has(t.key));
+    if (!freeTile) {
+      keptInstances.push(instance); // no room — keep carrying it
+      continue;
+    }
+    usedTileCoords.add(freeTile.key);
+    const id = `stored-${instance.instanceId}`;
+    newDropIds.push(id);
+    newDropped.push({
+      id,
+      resourceId: instance.itemId,
+      x: freeTile.x,
+      y: freeTile.y,
+      quantity: 1,
+      name: instance.name,
+      instance,
+      stored: false
+    });
+  }
+
   const newPawns = gs.pawns.map((p) =>
     p.id === pawn.id
       ? {
@@ -366,7 +408,8 @@ export function depositInventory(pawn: Pawn, gs: GameState): GameState {
             // Keep pinned items in hand; everything else was just deposited.
             items: Object.fromEntries(
               Object.entries(inv).filter(([rid, qty]) => pinned.has(rid) && qty > 0)
-            )
+            ),
+            instances: keptInstances
           }
         }
       : p

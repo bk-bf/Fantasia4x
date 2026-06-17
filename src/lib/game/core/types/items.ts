@@ -7,6 +7,12 @@ export interface ItemInstance {
   instanceId: string; // unique stable ID
   itemId: string; // references Item definition
   durability: number; // current durability (same field everywhere — ground/inventory/equipped)
+  /**
+   * Per-instance display name override for `dynamicName` items (R10) — e.g. a pawn carcass carries
+   * "Vale's Carcass" so its identity survives being hauled into and stored in the stockpile, instead
+   * of collapsing into the generic counted def name. Undefined for ordinary tracked items.
+   */
+  name?: string;
 }
 
 export interface PawnInventory {

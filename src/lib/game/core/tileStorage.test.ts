@@ -138,4 +138,30 @@ describe('drops-authoritative storage core (Stage 2 flip)', () => {
     ]);
     expect(absorbDropIfOnStockpileTile(gs, 'loose')).toBe(gs);
   });
+
+  // R10: identity-tracked drops (named carcasses) must NOT merge into a counted pile — each keeps
+  // its per-pawn name so it can be buried/identified individually.
+  it('absorbDropIfOnStockpileTile keeps a named drop distinct instead of merging', () => {
+    const gs = withDesig(
+      [
+        drop({ id: 'c1', resourceId: 'pawn_carcass', x: 2, y: 2, quantity: 1, name: "Vale's Carcass" }),
+        drop({
+          id: 'c2',
+          resourceId: 'pawn_carcass',
+          x: 2,
+          y: 2,
+          quantity: 1,
+          name: "Jax's Carcass",
+          stored: false
+        })
+      ],
+      { '2,2': 'stockpile' }
+    );
+    const out = absorbDropIfOnStockpileTile(gs, 'c2');
+    const carcasses = out.droppedItems!.filter((x) => x.resourceId === 'pawn_carcass');
+    expect(carcasses).toHaveLength(2); // not merged
+    expect(out.droppedItems!.find((x) => x.id === 'c2')!.stored).toBe(true);
+    expect(carcasses.map((c) => c.name).sort()).toEqual(["Jax's Carcass", "Vale's Carcass"]);
+    expect(out.stockpile['pawn_carcass']).toBe(2); // aggregate count still correct
+  });
 });

@@ -1,7 +1,7 @@
 // Haul job handler (ADR-017). Syncs haul jobs for loose drops when a stockpile zone exists (gated by
 // free capacity) and, on completion, lifts the drop — plus N-4 same-tile top-up — into the carrying
 // pawn's inventory. Extracted from JobService (P-4 handler split).
-import type { GameState, Job } from '../../core/types';
+import type { GameState, Job, ItemInstance } from '../../core/types';
 // Gated console shim — see core/log.ts. Silences per-tick log/debug/warn unless gameDebug(true).
 import { gatedConsole as console, isGameDebug } from '../../core/log';
 import { itemService } from '../ItemService';
@@ -106,6 +106,34 @@ export function complete(job: Job, gs: GameState): GameState {
       ? itemService.clampPickupQuantity(pawn, drop.resourceId, drop.quantity, gs)
       : drop.quantity;
     if (taken <= 0) return gs;
+
+    // Identity-tracked drop (R10): a `dynamicName` item (e.g. a pawn carcass "Vale's Carcass")
+    // must keep its per-instance name through the haul. Carry it as a named ItemInstance — never
+    // folded into the counted `items` map and never N-4-merged with other carcasses — so deposit
+    // can lay it into the stockpile as its own distinct, named pile.
+    const dropDef = itemService.getItemById(drop.resourceId);
+    if (dropDef?.dynamicName) {
+      const newDropped = (gs.droppedItems ?? []).filter((d) => d.id !== drop.id);
+      const newPawns = gs.pawns.map((p) => {
+        if (p.id !== pawnId) return p;
+        const inv = p.inventory ?? {
+          items: {},
+          instances: [],
+          weightKg: 0,
+          maxWeightKg: 20,
+          volumeL: 0,
+          maxVolumeL: 20
+        };
+        const instance: ItemInstance = {
+          instanceId: drop.instance?.instanceId ?? drop.id,
+          itemId: drop.resourceId,
+          durability: drop.instance?.durability ?? 0,
+          name: drop.name
+        };
+        return { ...p, inventory: { ...inv, instances: [...inv.instances, instance] } };
+      });
+      return { ...gs, droppedItems: newDropped, pawns: newPawns };
+    }
 
     // N-4: top up the remaining carry budget with OTHER loose, unreserved drops of the same
     // resource on the same tile, so a harvested tile of many small drops clears in one trip

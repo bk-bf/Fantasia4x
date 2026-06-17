@@ -49,13 +49,59 @@
   // carry_weight / carry_volume aren't evaluable through the generic formula engine (their
   // formulas use custom vars + gear bonuses), so pull the real budget from ItemService.
   $: carry = itemService.getCarryCapacityBreakdown(pawn);
+
+  // Neutral reference pawn — all stats 10, average body (70 kg / 170 cm), uninjured. Every stat is
+  // coloured by how far THIS pawn sits above/below this baseline, so racial strengths/weaknesses
+  // (carry, hunger, blood pool, work speeds…) read at a glance instead of hiding behind a bare "1".
+  const BASELINE = {
+    id: '__statbaseline__',
+    stats: {
+      strength: 10,
+      dexterity: 10,
+      constitution: 10,
+      perception: 10,
+      intelligence: 10,
+      charisma: 10
+    },
+    physicalTraits: { weight: 70, height: 170, size: 'medium' }
+  } as unknown as Pawn;
+  const baseCaps = pawnStatService.computeCapacities(BASELINE);
+  const baseCarry = itemService.getCarryCapacityBreakdown(BASELINE);
+  // Stats where a LOWER number is the better outcome — colouring inverts for these.
+  const LOWER_BETTER = new Set(['hunger_rate', 'pain']);
+
   const round2 = (n: number) => Math.round(n * 100) / 100;
   const signed = (n: number) => (n >= 0 ? '+' : '−') + round2(Math.abs(n));
 
+  // Raw computed values. Capacities come from the organ model (computeCapacities), NOT the literal
+  // "1.0" placeholder formula — so injury actually shows and the bare healthy value is exposed.
+  function actualRaw(id: string): number {
+    if (id === 'carry_weight') return carry.weight.total;
+    if (id === 'carry_volume') return carry.volume.total;
+    if (id in capacities) return capacities[id];
+    return pawnStatService.evaluateStat(id, pawn);
+  }
+  function baseRaw(id: string): number {
+    if (id === 'carry_weight') return baseCarry.weight.total;
+    if (id === 'carry_volume') return baseCarry.volume.total;
+    if (id in baseCaps) return baseCaps[id];
+    return pawnStatService.evaluateStat(id, BASELINE);
+  }
+
+  // Body capacities display as a fraction of healthy (1.00 = full) so injury reads as a clear drop;
+  // pain stays raw (0 = none). Everything else shows its computed value.
   function val(id: string): number {
-    if (id === 'carry_weight') return round2(carry.weight.total);
-    if (id === 'carry_volume') return round2(carry.volume.total);
-    return Math.round(pawnStatService.evaluateStat(id, pawn) * 100) / 100;
+    const raw = actualRaw(id);
+    if (id in capacities && id !== 'pain') {
+      const b = baseCaps[id];
+      return round2(b ? raw / b : raw);
+    }
+    return round2(raw);
+  }
+  // Baseline in the SAME space the value is displayed in (normalised capacities → 1.00).
+  function baseDisplay(id: string): number {
+    if (id in capacities && id !== 'pain') return 1;
+    return round2(baseRaw(id));
   }
 
   function unit(id: string): string {
@@ -66,12 +112,13 @@
 
   type Deriv = { formula: string; vars: { name: string; value: string }[]; description: string };
 
-  /** Keep the symbolic formula, and list ONLY the variables it uses with this pawn's value —
-   *  so the player reads "CON = 15, consciousness = 1.01" instead of decoding raw numbers. */
+  /** Keep the symbolic formula and list ONLY the variables it uses with this pawn's value, so the
+   *  player reads "CON = 15, consciousness = 1.01" instead of decoding raw numbers. Capacities have
+   *  no real formula (placeholder "1.0"), so surface their organ breakdown + injury note instead. */
   function derivation(s: StatDef): Deriv {
     if (s.id === 'carry_weight') {
       return {
-        formula: '5 + (STR−10)×1.5 + bodySize×3 + gear',
+        formula: '5 + (STR−10)×1.5 + bodySize×2 + gear',
         vars: [
           { name: 'STR', value: String(carry.strength) },
           { name: 'bodySize', value: `${carry.size} (${signed(carry.bodySizeScore)})` },
@@ -82,12 +129,22 @@
     }
     if (s.id === 'carry_volume') {
       return {
-        formula: '8 + bodySize×4 + gear',
+        formula: '8 + bodySize×2 + gear',
         vars: [
           { name: 'bodySize', value: `${carry.size} (${signed(carry.bodySizeScore)})` },
           { name: 'gear', value: signed(carry.volume.gear) }
         ],
         description: s.description
+      };
+    }
+    if (s.id in capacities) {
+      return {
+        formula: s.description, // the organ breakdown, e.g. "brain × 0.5 + heart × 0.15 + …"
+        vars: [],
+        description:
+          s.id === 'pain'
+            ? '0 when unhurt — injuries, limb damage and bleeding raise it, sapping consciousness.'
+            : '1.00 when healthy — injury or organ loss lowers it.'
       };
     }
     const vars: { name: string; value: string }[] = [];
@@ -111,14 +168,64 @@
     return id.replace(/_/g, ' ');
   }
 
-  /** Colour a value relative to its 1.0 baseline (most stats are multipliers); physical = neutral. */
-  function valColor(s: StatDef, v: number): string {
-    // carry_weight/carry_volume are kg/L magnitudes, not 1.0-baseline multipliers — keep neutral.
-    if (s.category === 'physical' || s.id === 'carry_weight' || s.id === 'carry_volume')
-      return 'var(--text)';
-    if (v >= 1.05) return '#4caf50';
-    if (v <= 0.95) return '#e0704f';
-    return 'var(--text)';
+  // Direction-aware, GRADED comparison to the baseline pawn → arrow glyph + colour whose intensity
+  // tracks how far off baseline the value is, so 1.08 (faint) and 1.5 (vivid) read as different
+  // tiers. Deviation is fractional (a/b − 1); near-zero baselines (resistances, pain) compare on a
+  // fixed absolute scale instead of a ratio. LOWER_BETTER stats (hunger, pain) invert.
+  // Hue progression (lime → green → cyan), not three samey greens — green hue space is too narrow
+  // for brightness alone to separate tiers on the dark panel.
+  const GREEN = ['#b8e03a', '#1ec46a', '#00d6d6']; // lime → emerald → cyan (better)
+  const WORSE = ['#e0a64a', '#e07a4f', '#e04f4f']; // amber → orange → red (worse)
+  function trend(id: string): { glyph: string; color: string } {
+    const a = actualRaw(id);
+    const b = baseRaw(id);
+    if (!isFinite(a) || !isFinite(b)) return { glyph: '–', color: 'var(--text-dim)' };
+    let dev = Math.abs(b) < 0.02 ? a / 0.15 : a / b - 1;
+    if (LOWER_BETTER.has(id)) dev = -dev;
+    const tier = (m: number) => (m >= 0.3 ? 2 : m >= 0.12 ? 1 : 0);
+    if (dev > 0.03) return { glyph: '▲', color: GREEN[tier(dev)] };
+    if (dev < -0.03) return { glyph: '▼', color: WORSE[tier(-dev)] };
+    return { glyph: '–', color: 'var(--text-dim)' };
+  }
+
+  // The hover tooltip opens below its cell; on low rows that clips past the panel's scroll
+  // viewport. A Svelte action measures against the nearest scrollable ancestor on enter and flips
+  // the tooltip ABOVE the cell when there isn't room below (CSS `.cell.up .tip`). An action (vs an
+  // on:mouseenter handler) keeps it off the a11y static-interaction path.
+  function flipTip(cell: HTMLElement) {
+    const onEnter = () => {
+      const tip = cell.querySelector<HTMLElement>('.tip');
+      if (!tip) return;
+      let clip: HTMLElement | null = cell.parentElement;
+      while (clip && clip !== document.body) {
+        const oy = getComputedStyle(clip).overflowY;
+        if (oy === 'auto' || oy === 'scroll' || oy === 'hidden') break;
+        clip = clip.parentElement;
+      }
+      const cr =
+        clip && clip !== document.body
+          ? clip.getBoundingClientRect()
+          : ({ top: 0, bottom: window.innerHeight } as DOMRect);
+      // Tip is display:none until hover — make it briefly measurable (uncapped), then restore.
+      const prev = tip.style.cssText;
+      tip.style.visibility = 'hidden';
+      tip.style.display = 'block';
+      tip.style.maxHeight = 'none';
+      const tipH = tip.offsetHeight;
+      tip.style.cssText = prev;
+      const r = cell.getBoundingClientRect();
+      const margin = 6;
+      const below = cr.bottom - r.bottom - margin;
+      const above = r.top - cr.top - margin;
+      // Open downward if it fits, else upward if it fits, else whichever side has more room.
+      const up = tipH <= below ? false : tipH <= above ? true : above > below;
+      cell.classList.toggle('up', up);
+      // Never overrun the viewport: cap to the chosen side's space (the tip scrolls if longer).
+      const avail = up ? above : below;
+      tip.style.maxHeight = tipH > avail ? `${Math.max(60, avail)}px` : '';
+    };
+    cell.addEventListener('mouseenter', onEnter);
+    return { destroy: () => cell.removeEventListener('mouseenter', onEnter) };
   }
 
   $: grouped = CATEGORY_ORDER.map((cat) => ({
@@ -138,9 +245,12 @@
         {#each g.stats as s}
           {@const v = val(s.id)}
           {@const d = derivation(s)}
-          <div class="cell" class:hl={relevant.has(s.id)}>
+          {@const t = trend(s.id)}
+          {@const base = baseDisplay(s.id)}
+          <div class="cell" class:hl={relevant.has(s.id)} use:flipTip>
             <span class="nm">{fmtName(s.id)}</span>
-            <span class="vl" style="color: {valColor(s, v)}">{v}{unit(s.id)}</span>
+            <span class="vl" style="color: {t.color}"
+              >{v}{unit(s.id)}<span class="trend">{t.glyph}</span></span>
             <div class="tip">
               <div class="tip-formula">{d.formula}</div>
               {#if d.vars.length}
@@ -149,7 +259,11 @@
                     = <span class="tv-val">{vv.value}</span>{/each}
                 </div>
               {/if}
-              <div class="tip-result">= <span class="tv-val">{v}</span></div>
+              <div class="tip-result">
+                = <span class="tv-val">{v}{unit(s.id)}</span>
+                <span class="tip-cmp" style="color: {t.color}">{t.glyph}</span>
+                <span class="tip-avg">vs avg {base}{unit(s.id)}</span>
+              </div>
               <div class="tip-desc">{d.description}</div>
             </div>
           </div>
@@ -207,6 +321,8 @@
     top: 100%;
     min-width: 220px;
     max-width: 340px;
+    max-height: 60vh;
+    overflow-y: auto;
     padding: 6px 8px;
     background: var(--bg-panel, #0c1118);
     border: 1px solid var(--border-hi, #3a4658);
@@ -214,10 +330,17 @@
     color: var(--text);
     font-size: 10px;
     line-height: 1.5;
-    pointer-events: none;
+    /* auto (not none) so an over-tall tip — capped by flipTip — can be scrolled to read */
+    pointer-events: auto;
   }
   .cell:hover .tip {
     display: block;
+  }
+  /* Low rows: positionTip toggles `.up` (via JS, hence :global) to flip the tooltip above the
+     cell so it doesn't clip past the panel's scroll viewport. */
+  .cell:global(.up) .tip {
+    top: auto;
+    bottom: 100%;
   }
   .tip-formula {
     color: var(--accent-hi);
@@ -235,6 +358,17 @@
   .tip-result {
     margin-top: 2px;
     color: var(--text-dim);
+  }
+  .tip-cmp {
+    font-weight: bold;
+  }
+  .tip-avg {
+    color: var(--text-dim);
+  }
+  .trend {
+    font-size: 8px;
+    margin-left: 3px;
+    vertical-align: middle;
   }
   .tip-desc {
     margin-top: 5px;

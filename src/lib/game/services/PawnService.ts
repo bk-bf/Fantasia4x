@@ -17,7 +17,7 @@ import { WORK_CATEGORIES } from '../core/Work';
 import { TICKS_PER_SECOND, SECONDS_PER_TICK, perTick } from '../core/time';
 import { stepBody } from '../systems/MovementSystem';
 import { occupancyService } from './OccupancyService';
-import statusEffectsData from '../database/status-effects.jsonc';
+import conditionsData from '../database/conditions.jsonc';
 import { getConditionCurrentStage, conditionNeedMultipliers, comfortRange } from '../core/needs';
 import {
   getAmbientLight,
@@ -31,7 +31,11 @@ import {
 // gameDebug(true); console.error still surfaces.
 import { gatedConsole as console } from '../core/log';
 
-const STATUS_EFFECTS_DB = statusEffectsData as unknown as StatusEffectDef[];
+// conditions.jsonc holds both graded conditions (with `stages`) and flat status-effect
+// "flags" (no `stages`); the flags are what `pawn.activeEffects` references.
+const STATUS_EFFECTS_DB = (
+  conditionsData as unknown as Array<ConditionDef | StatusEffectDef>
+).filter((d): d is StatusEffectDef => !('stages' in d));
 
 /** Resolve active effect definitions from a pawn's activeEffects id list. */
 function getActiveEffects(entity: Pawn | Mob): StatusEffectDef[] {

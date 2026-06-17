@@ -210,7 +210,9 @@ function finalizePawnDeath(
         instance: inst
       });
     }
-    // The corpse itself, with a dynamic per-instance name ("<Name>'s Corpse").
+    // The carcass itself, with a dynamic per-instance name ("<Name>'s Carcass"). Identity-tracked:
+    // the name rides the drop through hauling into the stockpile (carried as a named ItemInstance),
+    // so it never collapses into an anonymous counted "Carcass ×N" pile.
     newDrops.push({
       id: `corpse-${tag}`,
       resourceId: 'pawn_carcass',

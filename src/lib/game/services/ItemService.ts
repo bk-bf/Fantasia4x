@@ -401,8 +401,8 @@ export class ItemServiceImpl implements ItemService {
     const str = pawn.stats.strength ?? 10;
 
     // Mirrors stats.jsonc carry_weight / carry_volume formulas.
-    const weight = { base: 5, strength: (str - 10) * 1.5, bodySize: bs * 3.0, gear: 0, total: 0 };
-    const volume = { base: 8, bodySize: bs * 4.0, gear: 0, total: 0 };
+    const weight = { base: 5, strength: (str - 10) * 1.5, bodySize: bs * 2.0, gear: 0, total: 0 };
+    const volume = { base: 8, bodySize: bs * 2.0, gear: 0, total: 0 };
 
     // Belt + back containers add inventoryBonus on top.
     const gearSources: CarryCapacityBreakdown['gearSources'] = [];

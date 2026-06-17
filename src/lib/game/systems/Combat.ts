@@ -18,8 +18,8 @@ import { getCreatureById } from '../core/Creatures';
 import { woundForDamageType, woundById, severityFromFrac } from '../core/Wounds';
 import { pawnStatService } from '../services/PawnStatService';
 import { calcMaxStamina } from '../entities/Pawns';
-import statusEffectsData from '../database/status-effects.jsonc';
-import type { StatusEffectDef } from '../core/types';
+import conditionsData from '../database/conditions.jsonc';
+import type { ConditionDef, StatusEffectDef } from '../core/types';
 import { simLog, type CombatTextKind } from '../core/logSink';
 import { rng } from '../core/rng';
 import { perTick } from '../core/time';
@@ -28,7 +28,11 @@ import { perTick } from '../core/time';
 import { PART_DEF_MAP, rollBodyPart, createDefaultBodyParts } from '../core/BodyParts';
 export { PART_DEF_MAP, createDefaultBodyParts };
 
-const STATUS_EFFECTS_DB = statusEffectsData as unknown as StatusEffectDef[];
+// conditions.jsonc holds both graded conditions (with `stages`) and flat status-effect
+// "flags" (no `stages`); combat only needs the flags (winded → dodge).
+const STATUS_EFFECTS_DB = (
+  conditionsData as unknown as Array<ConditionDef | StatusEffectDef>
+).filter((d): d is StatusEffectDef => !('stages' in d));
 
 // ── Tuning constants ─────────────────────────────────────────────────────────
 /** Scales per-part bleed so a fully-severed 5%-mass hand ≈ 2 blood/turn. */

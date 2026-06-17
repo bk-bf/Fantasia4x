@@ -9,12 +9,16 @@ import type {
 } from '../core/types';
 import statsData from '../database/stats.jsonc';
 import conditionsData from '../database/conditions.jsonc';
-import statusEffectsData from '../database/status-effects.jsonc';
 import itemsData from '../database/items.jsonc';
 import { WORK_CATEGORIES } from '../core/Work';
 
-const CONDITIONS_DB = conditionsData as unknown as ConditionDef[];
-const STATUS_EFFECTS_DB = statusEffectsData as unknown as StatusEffectDef[];
+// conditions.jsonc holds both graded conditions (with `stages`) and flat status-effect
+// "flags" (no `stages`). Split them by shape — see the file header.
+const ALL_CONDITION_DEFS = conditionsData as unknown as Array<ConditionDef | StatusEffectDef>;
+const CONDITIONS_DB = ALL_CONDITION_DEFS.filter((d): d is ConditionDef => 'stages' in d);
+const STATUS_EFFECTS_DB = ALL_CONDITION_DEFS.filter(
+  (d): d is StatusEffectDef => !('stages' in d)
+);
 const ITEMS_DB = itemsData as unknown as Item[];
 
 // ── Stat definitions loaded from JSONC ────────────────────────────────────

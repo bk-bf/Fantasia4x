@@ -7,12 +7,16 @@
     ConditionStage
   } from '$lib/game/core/types';
   import { getNeedColor, getNeedDescription } from '$lib/utils/pawnUtils';
-  import statusEffectsData from '$lib/game/database/status-effects.jsonc';
   import conditionsData from '$lib/game/database/conditions.jsonc';
   import { pawnService } from '$lib/game/services/PawnService';
 
-  const STATUS_EFFECTS_DB = statusEffectsData as unknown as StatusEffectDef[];
-  const CONDITIONS_DB = conditionsData as unknown as ConditionDef[];
+  // conditions.jsonc holds both graded conditions (with `stages`) and flat status-effect
+  // "flags" (no `stages`). Split them by shape — see the file header.
+  const ALL_CONDITION_DEFS = conditionsData as unknown as Array<ConditionDef | StatusEffectDef>;
+  const STATUS_EFFECTS_DB = ALL_CONDITION_DEFS.filter(
+    (d): d is StatusEffectDef => !('stages' in d)
+  );
+  const CONDITIONS_DB = ALL_CONDITION_DEFS.filter((d): d is ConditionDef => 'stages' in d);
 
   export let pawn: Pawn;
   export let gameState: GameState;

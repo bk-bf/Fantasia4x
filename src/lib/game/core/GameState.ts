@@ -417,6 +417,16 @@ export function absorbDropIfOnStockpileTile(state: GameState, dropId: string): G
   const tileKey = `${drop.x},${drop.y}`;
   if (!state.zoneTiles?.[tileKey]?.includes('stockpile')) return state;
 
+  // Identity-tracked drops (a per-instance `name` override or a tracked `instance`, e.g. a named
+  // pawn carcass) must NOT be folded into a counted pile — that would erase the identity. Mark it
+  // stored in place as its own distinct pile.
+  if (drop.name != null || drop.instance != null) {
+    const newDropped = (state.droppedItems ?? []).map((d) =>
+      d.id === dropId ? { ...d, stored: true } : d
+    );
+    return { ...state, droppedItems: newDropped, stockpile: aggregateFromDrops(newDropped) };
+  }
+
   // Try to merge into an existing stored pile of the same resource at the same tile.
   const existingIdx = (state.droppedItems ?? []).findIndex(
     (d) => d.stored && d.resourceId === drop.resourceId && d.x === drop.x && d.y === drop.y

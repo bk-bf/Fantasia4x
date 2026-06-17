@@ -43,7 +43,7 @@ describe('R10 death drops', () => {
     expect(at('stone_spear')?.instance?.instanceId).toBe('i-spear'); // equipped gear
     const corpse = at('pawn_carcass');
     expect(corpse).toBeDefined();
-    expect(corpse!.name).toBe("Bjorn's Corpse"); // dynamic per-instance name
+    expect(corpse!.name).toBe("Bjorn's Carcass"); // dynamic per-instance name
 
     // The corpse-pawn no longer carries the gear (it's on the ground now).
     const dead = out.pawns.find((p) => p.id === 'p1')!;
@@ -64,7 +64,7 @@ describe('NT-2 reapDeadPawns', () => {
     const out = reapDeadPawns(makeState(pawn));
 
     const drops = out.droppedItems ?? [];
-    expect(drops.find((d) => d.resourceId === 'pawn_carcass')?.name).toBe("Bjorn's Corpse");
+    expect(drops.find((d) => d.resourceId === 'pawn_carcass')?.name).toBe("Bjorn's Carcass");
     expect(drops.find((d) => d.resourceId === 'stone_spear')?.instance?.instanceId).toBe('i-spear');
     expect(out.deadPawns?.some((r) => r.name === 'Bjorn' && r.cause === 'combat')).toBe(true);
     // Reaped out of the array entirely.
@@ -89,7 +89,7 @@ describe('NT-2 reapDeadPawns', () => {
 
 describe('R10 dynamic item name', () => {
   it('makeDynamicName builds "<subject>’s <name>" only for dynamicName items', () => {
-    expect(itemService.makeDynamicName('pawn_carcass', 'Bjorn')).toBe("Bjorn's Corpse");
+    expect(itemService.makeDynamicName('pawn_carcass', 'Bjorn')).toBe("Bjorn's Carcass");
     // A normal item ignores the subject.
     expect(itemService.makeDynamicName('branch', 'Bjorn')).toBe(
       itemService.getItemById('branch')!.name
@@ -98,9 +98,9 @@ describe('R10 dynamic item name', () => {
 
   it('getItemDisplayName honours the per-drop override for dynamicName items only', () => {
     expect(
-      itemService.getItemDisplayName({ resourceId: 'pawn_carcass', name: "Bjorn's Corpse" })
-    ).toBe("Bjorn's Corpse");
-    expect(itemService.getItemDisplayName({ resourceId: 'pawn_carcass' })).toBe('Corpse'); // no override
+      itemService.getItemDisplayName({ resourceId: 'pawn_carcass', name: "Bjorn's Carcass" })
+    ).toBe("Bjorn's Carcass");
+    expect(itemService.getItemDisplayName({ resourceId: 'pawn_carcass' })).toBe('Carcass'); // no override
     // Non-dynamic item ignores any stray override.
     expect(itemService.getItemDisplayName({ resourceId: 'branch', name: 'Hacked' })).toBe(
       itemService.getItemById('branch')!.name

@@ -875,15 +875,14 @@ export const savedStateReady: Promise<void> = (async () => {
   // saves) BEFORE pawn generation so a fresh colony can be drawn mixed from the pool.
   baseState = ensureRacePool(baseState);
 
-  // Pawn generation / backfill
+  // Pawn generation — ONLY for a genuinely empty colony (fresh game / save with no pawns).
+  // We deliberately do NOT top up an under-5 roster: a colony that lost members to permadeath
+  // must stay shrunk. The old `length < 5` backfill silently resurrected dead colonies with
+  // fresh random pawns on every reload/HMR, which both undid permadeath and orphaned the save
+  // anyway (corpses persisted next to brand-new strangers). Removed.
   if (!baseState.pawns || baseState.pawns.length === 0) {
     // Fresh colony — fully mixed: each pawn rolled from a random pool race.
     baseState = { ...baseState, pawns: generateColonyPawns(baseState.racePool, 5) };
-  } else if (baseState.pawns.length < 5) {
-    const extra = generateColonyPawns(baseState.racePool, 5 - baseState.pawns.length).map(
-      (p, i) => ({ ...p, id: `pawn-extra-${i}-${Date.now()}` })
-    );
-    baseState = { ...baseState, pawns: [...baseState.pawns, ...extra] };
   }
 
   // Spawn pawns that have no map position yet
@@ -999,15 +998,30 @@ export const discoveredRaces = derived(gameState, ($gameState) =>
 export const pawnStats = derived(gameState, ($gameState) => $gameState.pawnStats || {});
 
 /** Items currently in the colony stockpile, enriched from the items database, sorted by name. */
-export const currentStockpile = derived(gameState, ($gameState) =>
-  Object.entries($gameState.stockpile ?? {})
+export const currentStockpile = derived(gameState, ($gameState) => {
+  // Identity-tracked stored drops (named carcasses etc.) surface as individual rows by name so a
+  // dead colonist reads as "Vale's Carcass", not an anonymous "Carcass ×N". Their count is netted
+  // out of the aggregate row for that resource (any remaining un-named stock still shows normally).
+  const drops = $gameState.droppedItems ?? [];
+  const namedStored = drops.filter((d) => d.stored && (d.quantity ?? 0) > 0 && d.name != null);
+  const namedCount: Record<string, number> = {};
+  for (const d of namedStored) namedCount[d.resourceId] = (namedCount[d.resourceId] ?? 0) + d.quantity;
+
+  const rows = Object.entries($gameState.stockpile ?? {})
+    .map(([id, amount]) => [id, amount - (namedCount[id] ?? 0)] as const)
     .filter(([, amount]) => amount > 0)
     .map(([id, amount]) => {
       const def = itemService.getItemById(id);
       return { id, name: def?.name ?? id, amount, color: def?.color, emoji: def?.emoji };
-    })
-    .sort((a, b) => a.name.localeCompare(b.name))
-);
+    });
+
+  for (const d of namedStored) {
+    const def = itemService.getItemById(d.resourceId);
+    rows.push({ id: d.id, name: d.name!, amount: d.quantity, color: def?.color, emoji: def?.emoji });
+  }
+
+  return rows.sort((a, b) => a.name.localeCompare(b.name));
+});
 
 /** Per-zone inventory view, derived from the `stored` DroppedItems on each zone's tiles. */
 export const currentStockpileZones = derived(gameState, ($gameState) => {
@@ -1015,9 +1029,29 @@ export const currentStockpileZones = derived(gameState, ($gameState) => {
   return ($gameState.stockpileZones ?? []).map((zone) => {
     const tileSet = new Set(zone.tiles);
     const inv: Record<string, number> = {};
+    // Identity-tracked stored drops (named carcasses) show as individual rows; netted out of the
+    // counted aggregate so the zone view matches the main sidebar (see currentStockpile).
+    const namedRows: {
+      id: string;
+      name: string;
+      amount: number;
+      color: string | undefined;
+      emoji: string | undefined;
+    }[] = [];
     for (const d of drops) {
       if (!d.stored || (d.quantity ?? 0) <= 0) continue;
       if (!tileSet.has(`${d.x},${d.y}`)) continue;
+      if (d.name != null) {
+        const def = itemService.getItemById(d.resourceId);
+        namedRows.push({
+          id: d.id,
+          name: d.name,
+          amount: d.quantity,
+          color: def?.color,
+          emoji: def?.emoji
+        });
+        continue;
+      }
       inv[d.resourceId] = (inv[d.resourceId] ?? 0) + d.quantity;
     }
     return {
@@ -1028,6 +1062,7 @@ export const currentStockpileZones = derived(gameState, ($gameState) => {
           const def = itemService.getItemById(id);
           return { id, name: def?.name ?? id, amount, color: def?.color, emoji: def?.emoji };
         })
+        .concat(namedRows)
         .sort((a, b) => a.name.localeCompare(b.name))
     };
   });
