@@ -27,7 +27,13 @@
 
   /** A status-effect chip (sprite glyph + colour) shown beside the stats; name on hover. */
   export interface EntityEffect {
-    charSpans?: Array<{ sheet?: string; id?: number; from?: number; to?: number; literal?: string }>;
+    charSpans?: Array<{
+      sheet?: string;
+      id?: number;
+      from?: number;
+      to?: number;
+      literal?: string;
+    }>;
     name: string;
     color: string;
   }
@@ -113,6 +119,9 @@
     blood?: { current: number; max: number };
     /** Whole-body pain 0–100. */
     pain?: number;
+    /** SEASONS_WEATHER tracked exposure meters 0–100 (cold/heat); shown as % next to Blood. */
+    coldExposure?: number;
+    heatExposure?: number;
     /** Combat-readiness stats (hit/dodge/crit), reflecting current injuries. Pawns/mobs only. */
     combat?: CombatStat[];
     /** Damaged limbs only — intact, full-health, non-bleeding limbs are omitted. */
@@ -142,6 +151,8 @@
       (model.health.limbs.length > 0 ||
         model.health.conditions.length > 0 ||
         (model.health.pain ?? 0) > 0 ||
+        (model.health.coldExposure ?? 0) > 0 ||
+        (model.health.heatExposure ?? 0) > 0 ||
         (!!model.health.blood && model.health.blood.current < model.health.blood.max))
   );
 

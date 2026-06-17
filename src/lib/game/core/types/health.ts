@@ -15,6 +15,12 @@ export interface EntityNeeds {
   /** SEASONS_WEATHER: how soaked the pawn is, 0-100. Accrues on wet (>50%) tiles / rain, dries by
    *  temperature + shelter. High wetness amplifies cold (hypothermia) and dampens heat (heat stroke). */
   wetness?: number;
+  /** SEASONS_WEATHER: tracked cold exposure 0-100 (NOT instantaneous). Lags toward the environmental
+   *  cold past the comfort band (after resistance/wetness) and drains when comfortable/sheltered — the
+   *  value that drives hypothermia onset/recovery. Mutually exclusive with `heatExposure`. */
+  coldExposure?: number;
+  /** SEASONS_WEATHER: tracked heat exposure 0-100 (mirror of `coldExposure`); drives heat stroke. */
+  heatExposure?: number;
 }
 
 export interface StatusEffectDef {

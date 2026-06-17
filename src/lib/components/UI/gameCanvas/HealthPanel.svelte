@@ -16,6 +16,8 @@
       (health.limbs.length > 0 ||
         health.conditions.length > 0 ||
         (health.pain ?? 0) > 0 ||
+        (health.coldExposure ?? 0) > 0 ||
+        (health.heatExposure ?? 0) > 0 ||
         (!!health.blood && health.blood.current < health.blood.max))
   );
 </script>
@@ -37,6 +39,18 @@
             (health.blood.current / health.blood.max) * 100
           )}%)</span
         >
+      </div>
+    {/if}
+    {#if (health.coldExposure ?? 0) > 0}
+      <div class="hp-row">
+        <span class="hp-k">Cold</span>
+        <span style="color:#4fc3f7">{Math.round(health.coldExposure ?? 0)}%</span>
+      </div>
+    {/if}
+    {#if (health.heatExposure ?? 0) > 0}
+      <div class="hp-row">
+        <span class="hp-k">Heat</span>
+        <span style="color:#fb8c00">{Math.round(health.heatExposure ?? 0)}%</span>
       </div>
     {/if}
     {#if (health.pain ?? 0) > 0}

@@ -83,6 +83,22 @@ const COMBAT_SCAN_INTERVAL = 6;
 /** SEASONS_WEATHER: a sheltered (roofed) pawn recovers from hypothermia/heat stroke this much faster. */
 const SHELTER_RECOVERY_MUL = 2.5;
 
+// SEASONS_WEATHER — cold/heat exposure is a TRACKED per-pawn meter (needs.coldExposure/heatExposure),
+// not an instantaneous read: it lags toward the environmental exposure (degrees past comfort, after
+// resistance + wetness) and drains back down when comfortable/sheltered — like the wetness meter. The
+// tracked value (capped at the live environmental target so mild cold can't run it away) is what
+// drives the hypothermia / heat-stroke conditions, and what the HEALTH panel shows as a %.
+const EXPOSURE_GAIN_PER_SEC = 4; // how fast the meter rises toward the environmental target
+const EXPOSURE_DRAIN_PER_SEC = 5; // how fast it falls when below target (× SHELTER_RECOVERY_MUL if roofed)
+
+/** Move a tracked exposure meter one tick toward `target`, capped at it; drains faster when sheltered. */
+function approachExposure(current: number, target: number, recoveryMul: number): number {
+  if (target > current) return Math.min(target, current + perTick(EXPOSURE_GAIN_PER_SEC));
+  if (target < current)
+    return Math.max(target, current - perTick(EXPOSURE_DRAIN_PER_SEC) * recoveryMul);
+  return current;
+}
+
 // SEASONS_WEATHER — being WET (needs.wetness) shifts temperature resistance: cold bites far harder,
 // heat far less. Scaled by how soaked the pawn is (wetness/100).
 const WET_COLD_EXTRA = 0.8; // at 100% wet, cold exposure ×1.8 ("greatly lower cold resistance")
@@ -310,10 +326,12 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
   {
     const pos = pawn.position;
     const tile = pos ? gameState.worldMap[pos.y]?.[pos.x] : undefined;
+    const needs = pawn.needs;
+    const hasExposure = !!needs && ((needs.coldExposure ?? 0) > 0 || (needs.heatExposure ?? 0) > 0);
     const hasTempCondition = conditions.some(
       (c) => c.id === 'hypothermia' || c.id === 'heat_stroke'
     );
-    if (tile || hasTempCondition) {
+    if (tile || hasTempCondition || hasExposure) {
       const thermal = pos ? thermalAt(pos.x, pos.y) : undefined;
       const weatherDelta = weatherEffects(gameState.weather).tempDelta;
       const base = tile?.temperature ?? 15;
@@ -321,29 +339,39 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
         ? effectiveTemperature(base, weatherDelta, thermal)
         : base + weatherDelta;
       const comfort = comfortRange(pawn.racialTraits);
-      let cold = coldExposure(temp, comfort.min);
-      let heat = heatExposure(temp, comfort.max);
-      if (cold > 0 || heat > 0) {
+      // Instantaneous environmental exposure past the comfort band = the TARGET the tracked meter
+      // lags toward (after resistance + wetness). The meter — not this raw value — drives the condition.
+      let coldTarget = coldExposure(temp, comfort.min);
+      let heatTarget = heatExposure(temp, comfort.max);
+      if (coldTarget > 0 || heatTarget > 0) {
         // Resistance = CON-derived stat + worn armour (SEASONS_WEATHER equipment), capped.
         const worn = equippedTemperatureResistance(pawn);
-        if (cold > 0) {
+        if (coldTarget > 0) {
           const r = pawnStatService.evaluateStat('cold_resistance', pawn) + worn.cold;
-          cold *= 1 - Math.min(0.9, Math.max(0, r));
+          coldTarget *= 1 - Math.min(0.9, Math.max(0, r));
         }
-        if (heat > 0) {
+        if (heatTarget > 0) {
           const r = pawnStatService.evaluateStat('fire_resistance', pawn) + worn.heat;
-          heat *= 1 - Math.min(0.9, Math.max(0, r));
+          heatTarget *= 1 - Math.min(0.9, Math.max(0, r));
         }
       }
       // Being WET amplifies cold and dampens heat, scaled by how soaked the pawn is.
-      const wetness = pawn.needs?.wetness ?? 0;
+      const wetness = needs?.wetness ?? 0;
       if (wetness > 0) {
         const f = wetness / 100;
-        cold *= 1 + WET_COLD_EXTRA * f;
-        heat *= 1 - WET_HEAT_REDUCT * f;
+        coldTarget *= 1 + WET_COLD_EXTRA * f;
+        heatTarget *= 1 - WET_HEAT_REDUCT * f;
       }
       // A pawn under a roof recovers from temperature conditions faster ("sheltered").
       const recoveryMul = pos && isRoofedTile(pos.x, pos.y) ? SHELTER_RECOVERY_MUL : 1;
+      // Advance the TRACKED meters toward the targets (memory: builds up / drains over time), then
+      // drive the conditions from the tracked values — not the instantaneous environmental read.
+      const cold = approachExposure(needs?.coldExposure ?? 0, coldTarget, recoveryMul);
+      const heat = approachExposure(needs?.heatExposure ?? 0, heatTarget, recoveryMul);
+      if (needs) {
+        needs.coldExposure = cold;
+        needs.heatExposure = heat;
+      }
       const lethalTemp = driveTemperatureConditions(conditions, cold, heat, recoveryMul);
       if (lethalTemp) {
         return killPawn(
