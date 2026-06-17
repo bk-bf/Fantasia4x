@@ -2854,9 +2854,12 @@
       {#if !hoverTile.walkable}
         <div class="tile-move" style="color:#cc4444">move: impassable</div>
       {:else}
-        {@const mc = moveCostLabel(hoverTile.movementCost ?? 1)}
+        {@const effMoveCost = (hoverTile.movementCost ?? 1) * (1 + tileSnow / 100)}
+        {@const mc = moveCostLabel(effMoveCost)}
         <div class="tile-move" style="color:{mc.color}">
-          move ×{(hoverTile.movementCost ?? 1).toFixed(1)}
+          move ×{effMoveCost.toFixed(1)}{#if tileSnow > 0}<span style="color:#cdd6e0">
+              (snow)</span
+            >{/if}
         </div>
       {/if}
       {#if hoverZoneType && ZONE_META[hoverZoneType]}

@@ -59,8 +59,12 @@ export function moveCostToEnter(
 ): number {
   const tile = worldMap[to.y]?.[to.x];
   const base = tile && tile.movementCost > 0 ? tile.movementCost : 1;
+  // Snow cover slows traversal: +1×base per 100% snow (so 100% snow ⇒ double cost). Applied to the
+  // movement budget only (route choice still uses the cached A* grid), so it slows pawns crossing
+  // deep snow without rebuilding pathfinding every accumulation tick (SEASONS_WEATHER).
+  const snowMul = 1 + (tile?.snow ?? 0) / 100;
   const diagonal = from.x !== to.x && from.y !== to.y ? Math.SQRT2 : 1;
-  return base * diagonal * TICKS_PER_SECOND;
+  return base * snowMul * diagonal * TICKS_PER_SECOND;
 }
 
 /**
