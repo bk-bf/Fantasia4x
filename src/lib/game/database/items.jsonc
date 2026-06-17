@@ -10,8 +10,8 @@
     "description"      : "Foraged berries. Small, tart — a handful barely dents real hunger.",
     "color"            : "#673AB7",
     "amount"           : 0,
-    "weightKg"         : 0.1,
-    "volumeL"          : 0.2,
+    "weightKg"         : 0.01,
+    "volumeL"          : 0.02,
     "nutrition"        : 3,
     "gatheringTypes"   : ["foraging"],
     "decaySeconds"     : 600,
@@ -431,8 +431,8 @@
     "description": "A dry woody branch. Burns quickly and lashes together easily. Used in nearly everything early on.",
     "color": "#8B6914",
     "amount": 0,
-    "weightKg": 0.4,
-    "volumeL": 1.5,
+    "weightKg": 0.3,
+    "volumeL": 1.2,
     "fuelValue": 3,
     "gatheringTypes": ["foraging"]
   },
@@ -447,8 +447,8 @@
     "description"      : "A small, loose stone. Useful for crafting.",
     "color"            : "#888888",
     "amount"           : 0,
-    "weightKg"         : 0.5,
-    "volumeL"          : 0.4,
+    "weightKg"         : 0.05,
+    "volumeL"          : 0.04,
     "gatheringTypes"   : ["foraging", "mining"]
   },
   {
@@ -462,8 +462,8 @@
     "description"      : "A knapped flint chip. Sharp edge, primitive cutting tool blank.",
     "color"            : "#888888",
     "amount"           : 0,
-    "weightKg"         : 0.1,
-    "volumeL"          : 0.15,
+    "weightKg"         : 0.05,
+    "volumeL"          : 0.08,
     "gatheringTypes"   : ["foraging", "mining"]
   },
   {
@@ -477,8 +477,8 @@
     "description"      : "Stripped plant stalks. Twisted into rope, woven into walls.",
     "color"            : "#7EC850",
     "amount"           : 0,
-    "weightKg"         : 0.1,
-    "volumeL"          : 0.3,
+    "weightKg"         : 0.05,
+    "volumeL"          : 0.2,
     "fuelValue"        : 2,
     "gatheringTypes"   : ["foraging"]
   },
@@ -493,8 +493,8 @@
     "description"      : "Peeled tree bark. Burns slowly and steadily.",
     "color"            : "#8B5E3C",
     "amount"           : 0,
-    "weightKg"         : 0.2,
-    "volumeL"          : 0.5,
+    "weightKg"         : 0.1,
+    "volumeL"          : 0.4,
     "fuelValue"        : 8,
     "gatheringTypes"   : ["foraging"]
   },
@@ -523,8 +523,8 @@
     "description"      : "Softwood log. Cheap bulk construction and the common firewood; the workhorse timber.",
     "color"            : "#C8A064",
     "amount"           : 0,
-    "weightKg"         : 8,
-    "volumeL"          : 12,
+    "weightKg"         : 6,
+    "volumeL"          : 8,
     "fuelValue"        : 10,
     "fuelHeat"         : 1,
     "deteriorationRate": 0.05,
@@ -540,8 +540,8 @@
     "description"      : "Light utility timber; the best firewood and bark-rich for tanning.",
     "color"            : "#E8DCC0",
     "amount"           : 0,
-    "weightKg"         : 8,
-    "volumeL"          : 12,
+    "weightKg"         : 6,
+    "volumeL"          : 8,
     "fuelValue"        : 14,
     "fuelHeat"         : 1,
     "deteriorationRate": 0.05,
@@ -557,8 +557,8 @@
     "description"      : "Dense hardwood. Furniture, heavy beams, durable construction.",
     "color"            : "#8B6914",
     "amount"           : 0,
-    "weightKg"         : 8,
-    "volumeL"          : 12,
+    "weightKg"         : 6,
+    "volumeL"          : 8,
     "fuelValue"        : 12,
     "fuelHeat"         : 1,
     "deteriorationRate": 0.04,
@@ -574,8 +574,8 @@
     "description"      : "Tough, springy timber. Tool hafts, polearms, and shields.",
     "color"            : "#C2B280",
     "amount"           : 0,
-    "weightKg"         : 8,
-    "volumeL"          : 12,
+    "weightKg"         : 6,
+    "volumeL"          : 8,
     "fuelValue"        : 12,
     "fuelHeat"         : 1,
     "deteriorationRate": 0.04,
@@ -591,8 +591,8 @@
     "description"      : "Premium, rare timber. Bows and fine furniture.",
     "color"            : "#6B4226",
     "amount"           : 0,
-    "weightKg"         : 8,
-    "volumeL"          : 12,
+    "weightKg"         : 6,
+    "volumeL"          : 8,
     "fuelValue"        : 12,
     "fuelHeat"         : 1,
     "deteriorationRate": 0.03,
@@ -643,8 +643,8 @@
     "description"      : "Fine wood dust from sawing. Tinder, smoking fuel, and later a binder.",
     "color"            : "#C2A878",
     "amount"           : 0,
-    "weightKg"         : 0.3,
-    "volumeL"          : 1,
+    "weightKg"         : 0.2,
+    "volumeL"          : 0.7,
     "fuelValue"        : 3,
     "fuelHeat"         : 1
   },
@@ -710,8 +710,8 @@
     "description"      : "Green copper carbonate ore. The common, easily-smelted copper ore.",
     "color"            : "#1B7A4C",
     "amount"           : 0,
-    "weightKg"         : 2,
-    "volumeL"          : 1.2,
+    "weightKg"         : 3.5,
+    "volumeL"          : 1.5,
     "gatheringTypes"   : ["mining"]
   },
   {
@@ -725,8 +725,8 @@
     "description"      : "Brassy copper-iron sulphide. Rich copper ore — more bar per smelt.",
     "color"            : "#C9A227",
     "amount"           : 0,
-    "weightKg"         : 2,
-    "volumeL"          : 1.2,
+    "weightKg"         : 3.5,
+    "volumeL"          : 1.5,
     "gatheringTypes"   : ["mining"]
   },
   {
@@ -740,8 +740,8 @@
     "description"      : "Deep-blue copper ore. Lean but pretty; also a pigment.",
     "color"            : "#2E5BB8",
     "amount"           : 0,
-    "weightKg"         : 2,
-    "volumeL"          : 1.2,
+    "weightKg"         : 3.5,
+    "volumeL"          : 1.5,
     "gatheringTypes"   : ["mining"]
   },
   {
@@ -755,8 +755,8 @@
     "description"      : "Tin oxide ore. The only common source of tin — needed for bronze.",
     "color"            : "#6B4423",
     "amount"           : 0,
-    "weightKg"         : 2,
-    "volumeL"          : 1.2,
+    "weightKg"         : 3.5,
+    "volumeL"          : 1.5,
     "gatheringTypes"   : ["mining"]
   },
   {
@@ -770,8 +770,8 @@
     "description"      : "Red iron oxide. The workhorse iron ore.",
     "color"            : "#8B3A2F",
     "amount"           : 0,
-    "weightKg"         : 2.5,
-    "volumeL"          : 1.2,
+    "weightKg"         : 4,
+    "volumeL"          : 1.5,
     "gatheringTypes"   : ["mining"]
   },
   {
@@ -785,8 +785,8 @@
     "description"      : "Magnetic black iron ore. Rich, but stubborn to smelt.",
     "color"            : "#33373B",
     "amount"           : 0,
-    "weightKg"         : 3,
-    "volumeL"          : 1.2,
+    "weightKg"         : 4.5,
+    "volumeL"          : 1.5,
     "gatheringTypes"   : ["mining"]
   },
   {
@@ -800,8 +800,8 @@
     "description"      : "Bog iron — yellow-brown hydrated iron ore. Lean but shallow.",
     "color"            : "#B5651D",
     "amount"           : 0,
-    "weightKg"         : 2,
-    "volumeL"          : 1.2,
+    "weightKg"         : 3.5,
+    "volumeL"          : 1.5,
     "gatheringTypes"   : ["mining"]
   },
   {
@@ -815,8 +815,8 @@
     "description"      : "Lead sulphide ore — smelts to lead, and to silver when worked finely.",
     "color"            : "#6E7378",
     "amount"           : 0,
-    "weightKg"         : 3.5,
-    "volumeL"          : 1.2,
+    "weightKg"         : 4.5,
+    "volumeL"          : 1.5,
     "gatheringTypes"   : ["mining"]
   },
   {
@@ -830,8 +830,8 @@
     "description"      : "Raw gold nuggets and flakes. Rare; smelts straight to gold.",
     "color"            : "#D4AF37",
     "amount"           : 0,
-    "weightKg"         : 4,
-    "volumeL"          : 0.8,
+    "weightKg"         : 5,
+    "volumeL"          : 1,
     "gatheringTypes"   : ["mining"]
   },
   {
@@ -845,8 +845,8 @@
     "description"      : "Natural gold-silver alloy ore. Rare prestige metal source.",
     "color"            : "#E6D49A",
     "amount"           : 0,
-    "weightKg"         : 3.5,
-    "volumeL"          : 0.8,
+    "weightKg"         : 4.5,
+    "volumeL"          : 1,
     "gatheringTypes"   : ["mining"]
   },
   {
@@ -987,8 +987,8 @@
     "description"      : "Wood ash from a fire. Used to cure hides and, later, to make lye and soap.",
     "color"            : "#9E9E9E",
     "amount"           : 0,
-    "weightKg"         : 0.3,
-    "volumeL"          : 0.8,
+    "weightKg"         : 0.15,
+    "volumeL"          : 0.5,
     "toolTierRequired" : 0
   },
   {
@@ -1410,8 +1410,8 @@
     "amount"           : 0,
     "fuelValue"        : 2,
     "medicineQuality"  : 0.15,
-    "weightKg"         : 1.5,
-    "volumeL"          : 1.2,
+    "weightKg"         : 0.1,
+    "volumeL"          : 0.6,
     "gatheringTypes"   : ["foraging"]
   },
   {
@@ -2358,7 +2358,7 @@
   {
     "id"               : "pawn_carcass",
     "charSpans"        : [ {"sheet": "items", "id": 138} ],
-    "name"             : "Corpse",
+    "name"             : "Carcass",
     "type"             : "material",
     "category"         : "organic",
     "dynamicName"      : true,
