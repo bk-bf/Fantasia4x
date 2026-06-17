@@ -10,19 +10,15 @@
   import { hudSpriteIconAction } from '$lib/components/UI/gameCanvas/hudSpriteIcon';
   import type { HudSpriteIconRef } from '$lib/components/UI/gameCanvas/spriteSheets';
   import itemsData from '$lib/game/database/items.jsonc';
+  import { itemService } from '$lib/game/services/ItemService';
+  import { buildingService } from '$lib/game/services/BuildingService';
+  import { getRefuelRequirements, planRefuel } from '$lib/game/services/fuelRules';
 
   export let building: PlacedBuilding;
   export let pawns: Pawn[];
   export let open = false;
 
   const FUEL_ITEMS = (itemsData as unknown as Item[]).filter((item) => (item.fuelValue ?? 0) > 0);
-  const DEFAULT_FUEL_FILTER_IDS = [
-    'branch',
-    'pine_log',
-    'dry_firewood',
-    'green_firewood',
-    'plant_fiber'
-  ];
   const FUEL_SETTINGS_ICON_REF: HudSpriteIconRef = { sheet: 'tiles', id: 11 };
 
   $: selectedFuelSettings = (building.fuelSettings ?? {}) as FuelSettings;
@@ -30,8 +26,20 @@
     0,
     Math.min(100, selectedFuelSettings.refuelThresholdPct ?? 30)
   );
-  $: selectedFuelItemFilters = selectedFuelSettings.allowedFuelItemIds ?? DEFAULT_FUEL_FILTER_IDS;
+  // Empty = "all allowed" (matches planRefuel, which applies no filter when none is saved) → every
+  // fuel shows checked by default, instead of the old 5-item default that contradicted the behaviour.
+  $: selectedFuelItemFilters = selectedFuelSettings.allowedFuelItemIds ?? [];
   $: selectedRefuelPawnFilters = selectedFuelSettings.allowedRefuelPawnIds ?? [];
+
+  // Refuel requirements (source of truth: fuelRules) shown so the player understands WHY a fire won't
+  // refuel — e.g. it always needs tinder + a minimum number of distinct fuel types in the stockpile.
+  $: refuelReq = getRefuelRequirements(building.type);
+  $: tinderName = itemService.getItemById(refuelReq.tinderItemId)?.name ?? refuelReq.tinderItemId;
+  $: tinderStock = ($gameState.stockpile ?? {})[refuelReq.tinderItemId] ?? 0;
+  $: maxFuel = buildingService.getBuildingById(building.type)?.maxFuel ?? 60;
+  $: wantsFuel = (building.fuel ?? 0) / Math.max(maxFuel, 1) < selectedFuelThresholdPct / 100;
+  // Below threshold but no valid plan = the stockpile can't satisfy the requirement right now.
+  $: cannotRefuel = wantsFuel && planRefuel($gameState, building) === null;
 
   function updateSelectedBuildingFuelSettings(updates: Partial<FuelSettings>) {
     gameState.command({
@@ -43,14 +51,6 @@
 
   function setRefuelThresholdPct(nextPct: number) {
     updateSelectedBuildingFuelSettings({ refuelThresholdPct: Math.max(0, Math.min(100, nextPct)) });
-  }
-
-  function isFuelItemAllowed(itemId: string): boolean {
-    return selectedFuelItemFilters.length === 0 || selectedFuelItemFilters.includes(itemId);
-  }
-
-  function isRefuelPawnAllowed(pawnId: string): boolean {
-    return selectedRefuelPawnFilters.length === 0 || selectedRefuelPawnFilters.includes(pawnId);
   }
 
   function toggleFuelItemFilter(itemId: string) {
@@ -116,7 +116,13 @@
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="fuel-settings-panel" class:open on:mousedown|stopPropagation on:mouseup|stopPropagation>
+<div
+  class="fuel-settings-panel"
+  class:open
+  on:mousedown|stopPropagation
+  on:mouseup|stopPropagation
+  on:wheel|stopPropagation
+>
   <div class="fuel-settings-hdr">
     <canvas
       class="hud-sprite-icon hud-sprite-icon--inline"
@@ -124,6 +130,22 @@
       aria-hidden="true"
     ></canvas>
     fuel settings
+  </div>
+
+  <!-- Refuel requirements — makes it clear WHY a fire won't refuel (it always needs tinder + a
+       minimum number of distinct fuel types in stock, even with plenty of one fuel). -->
+  <div class="fuel-settings-block">
+    <div class="fuel-settings-label">refuel needs</div>
+    <div class="fuel-req">
+      {refuelReq.tinderAmount}× {tinderName} (tinder) + {refuelReq.requiredFuelTypes} fuel types
+    </div>
+    {#if cannotRefuel}
+      <div class="fuel-warn">
+        ⚠ can't refuel now{tinderStock < refuelReq.tinderAmount
+          ? ` — need ${refuelReq.tinderAmount}× ${tinderName} (have ${tinderStock})`
+          : ' — not enough distinct fuel in stock'}
+      </div>
+    {/if}
   </div>
   <label class="fuel-settings-row">
     <input
@@ -164,7 +186,8 @@
         <label class="fuel-settings-row fuel-settings-row--compact">
           <input
             type="checkbox"
-            checked={isFuelItemAllowed(item.id)}
+            checked={selectedFuelItemFilters.length === 0 ||
+              selectedFuelItemFilters.includes(item.id)}
             on:change={() => toggleFuelItemFilter(item.id)}
           />
           <span>{item.name}</span>
@@ -181,7 +204,8 @@
         <label class="fuel-settings-row fuel-settings-row--compact">
           <input
             type="checkbox"
-            checked={isRefuelPawnAllowed(pawn.id)}
+            checked={selectedRefuelPawnFilters.length === 0 ||
+              selectedRefuelPawnFilters.includes(pawn.id)}
             on:change={() => toggleRefuelPawnFilter(pawn.id)}
           />
           <span>{pawn.name}</span>
@@ -253,6 +277,13 @@
     margin-bottom: 3px;
     text-transform: uppercase;
     letter-spacing: 0.05em;
+  }
+  .fuel-req {
+    color: #d4a860;
+  }
+  .fuel-warn {
+    color: #e3833f;
+    margin-top: 2px;
   }
   .fuel-settings-row {
     display: flex;
