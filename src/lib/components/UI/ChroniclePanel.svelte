@@ -3,6 +3,7 @@
   import { uiState } from '$lib/stores/uiState';
   import type { ActivityLogEntry } from '$lib/game/core/Events';
   import CombatBreakdown from './CombatBreakdown.svelte';
+  import HoverTip from './HoverTip.svelte';
 
   const TYPE_ABBR: Record<string, string> = {
     work: 'WRK',
@@ -18,6 +19,27 @@
     weather: 'WTR',
     season: 'SEA'
   };
+
+  // Readable, in-world category names for the hover panel (the compact row keeps the
+  // 3-letter tag; the tooltip speaks the chronicler's language).
+  const CATEGORY_LABEL: Record<string, string> = {
+    work: 'Labour',
+    building: 'Construction',
+    crafting: 'Crafting',
+    event: 'Event',
+    pawn_action: 'Colonist',
+    research: 'Discovery',
+    exploration: 'Expedition',
+    system: 'Chronicle',
+    combat: 'Battle',
+    entity: 'Wildlife',
+    weather: 'Weather',
+    season: 'Season'
+  };
+
+  function categoryLabel(e: ActivityLogEntry) {
+    return CATEGORY_LABEL[e.type] ?? 'Chronicle';
+  }
 
   const SEV_CLASS: Record<string, string> = {
     info: '',
@@ -54,20 +76,24 @@
     }
   }
 
-  function fullLogLine(entry: ActivityLogEntry): string {
-    const parts: string[] = [];
-    parts.push(`[${abbr(entry)}]`);
-    parts.push(`T${entry.turn}`);
-    if (entry.severity) parts.push(`(${entry.severity})`);
-    if (entry.actor) parts.push(`actor: ${entry.actor}`);
-    parts.push(`action: ${entry.action}`);
-    if (entry.target) parts.push(`target: ${entry.target}`);
-    if (entry.result) parts.push(`result: ${entry.result}`);
-    if (entry.location) parts.push(`loc: ${entry.location}`);
-    if (entry.focusX !== undefined && entry.focusY !== undefined) {
-      parts.push(`pos: (${entry.focusX}, ${entry.focusY})`);
+  // Immersive hover panel (reuses the shared HoverTip styling) — replaces the old raw
+  // `title` dump of ids / severity / pixel coords that read like a debug print.
+  let hoverEntry: ActivityLogEntry | null = null;
+  let hoverX = 0;
+  let hoverY = 0;
+  function onEntryEnter(e: MouseEvent, entry: ActivityLogEntry) {
+    hoverEntry = entry;
+    hoverX = e.clientX;
+    hoverY = e.clientY;
+  }
+  function onEntryMove(e: MouseEvent) {
+    if (hoverEntry) {
+      hoverX = e.clientX;
+      hoverY = e.clientY;
     }
-    return parts.join(' | ');
+  }
+  function onEntryLeave() {
+    hoverEntry = null;
   }
 </script>
 
@@ -93,8 +119,10 @@
             ? 'clickable'
             : ''}"
           class:expanded={expandedId === entry.id}
-          title={fullLogLine(entry)}
           on:click={() => handleClick(entry)}
+          on:mouseenter={(e) => onEntryEnter(e, entry)}
+          on:mousemove={onEntryMove}
+          on:mouseleave={onEntryLeave}
           role="button"
           tabindex="0"
           on:keydown={(e) => e.key === 'Enter' && handleClick(entry)}
@@ -109,6 +137,25 @@
       {/each}
     {/if}
   </div>
+
+  {#if hoverEntry}
+    <HoverTip x={hoverX} y={hoverY}>
+      <div class="tip-head">
+        <span class="tip-cat">{categoryLabel(hoverEntry)}</span>
+        <span class="tip-turn">Turn {hoverEntry.turn}</span>
+      </div>
+      <div class="tip-action" class:grave={SEV_CLASS[hoverEntry.severity] === 'sev-crit'}>
+        {hoverEntry.action}
+      </div>
+      {#if hoverEntry.result}<div class="tip-result">{hoverEntry.result}</div>{/if}
+      {#if hoverEntry.location}<div class="tip-loc">at {hoverEntry.location}</div>{/if}
+      {#if hoverEntry.combatBreakdown && hoverEntry.combatBreakdown.length > 0}
+        <div class="tip-hint">
+          {hoverEntry.combatBreakdown.length} blows traded · click to relive the exchange
+        </div>
+      {/if}
+    </HoverTip>
+  {/if}
 </aside>
 
 <style>

@@ -1,4 +1,12 @@
-import type { Pawn, Mob, BodyPartState, ConditionDef, StatusEffectDef, Item } from '../core/types';
+import type {
+  Pawn,
+  Mob,
+  BodyPartState,
+  ConditionDef,
+  StatusEffectDef,
+  Item,
+  RacialTrait
+} from '../core/types';
 import statsData from '../database/stats.jsonc';
 import conditionsData from '../database/conditions.jsonc';
 import statusEffectsData from '../database/status-effects.jsonc';
@@ -328,6 +336,31 @@ function traitWorkMult(
   return mult;
 }
 
+// ── Racial resistance bonuses (Race overhaul) ────────────────────────────────
+// Trait resistance effects add on top of the matching *_resistance stat formula, so a
+// race's biology flows into both combat mitigation AND condition onset — e.g. coldResistance
+// raises cold_resistance, which PawnStateMachine reads to slow HYPOTHERMIA onset. No new
+// condition machinery: it reuses the existing resistance→onset wiring.
+const RESISTANCE_TRAIT_KEY: Record<string, keyof RacialTrait['effects']> = {
+  cold_resistance: 'coldResistance',
+  fire_resistance: 'fireResistance',
+  poison_resistance: 'poisonResistance',
+  disease_resistance: 'diseaseResistance',
+  mental_resistance: 'mentalResistance'
+};
+
+function traitResistanceBonus(pawn: Pawn | Mob, statId: string): number {
+  const key = RESISTANCE_TRAIT_KEY[statId];
+  if (!key) return 0;
+  const traits = 'racialTraits' in pawn ? pawn.racialTraits : [];
+  let bonus = 0;
+  for (const trait of traits ?? []) {
+    const v = trait.effects?.[key];
+    if (typeof v === 'number') bonus += v;
+  }
+  return bonus;
+}
+
 // ── Transient state work penalty (conditions + status effects) ───────────────
 // Health conditions (thirst, malnutrition, blood loss …) and status effects
 // (tired, hungry, inspired …) carry a `workEfficiency` scalar = overall work-rate
@@ -434,7 +467,7 @@ export class PawnStatServiceImpl implements PawnStatService {
     if (!def) return 1.0;
     const capacities =
       def.category === 'capacity' ? this.computeCapacities(pawn) : this.computeCapacities(pawn);
-    return evaluateFormula(def.formula, pawn, capacities);
+    return evaluateFormula(def.formula, pawn, capacities) + traitResistanceBonus(pawn, statId);
   }
 
   getWorkModifiers(

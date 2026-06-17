@@ -286,6 +286,8 @@
             charSpans={item.charSpans}
             description={entry.description}
             statItem={item}
+            statRecipe={recipe}
+            statIngredients={entry.selectedIngredients ?? {}}
             tint={item.color ?? 'var(--accent)'}
             workAmount={recipe?.workAmount ?? null}
             station={stationNameOf(item.id)}

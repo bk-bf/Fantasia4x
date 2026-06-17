@@ -16,6 +16,11 @@
 
   $: taskSummary = getPawnTaskSummary(pawn, gameState);
   $: moveSpeed = pawnService.getMoveSpeed(pawn);
+  // Race overhaul: surface the pawn's race + archetype (colonies are mixed now).
+  $: race = gameState.racePool?.find((r) => r.id === pawn.raceId);
+  $: raceLabel = pawn.raceName
+    ? `${pawn.raceName}${race?.archetype ? ` · ${race.archetype}` : ''}`
+    : 'unknown';
 
   function stateColor(state: string | undefined): string {
     const normalized = (state ?? 'Idle').replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase();
@@ -41,6 +46,10 @@
 <div class="pawn-overview">
   <div class="section-hdr">| STATUS</div>
 
+  <div class="row">
+    <span class="lbl">RACE</span>
+    <span class="val race-val" title={race?.lore?.epithet ?? ''}>{raceLabel}</span>
+  </div>
   <div class="row">
     <span class="lbl">STATE</span>
     <span class="val" style="color: {stateColor(pawn.currentState)}"
@@ -119,5 +128,10 @@
     color: var(--text);
     margin-left: auto;
     text-align: right;
+  }
+  .race-val {
+    color: var(--accent-hi);
+    font-weight: bold;
+    letter-spacing: 0.03em;
   }
 </style>

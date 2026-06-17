@@ -34,25 +34,24 @@ export function calcMaxBloodVolume(physicalTraits: { weight: number }, stats: En
   return Math.round(physicalTraits.weight * 1.4 + (stats.constitution - 10) * 2);
 }
 
-// Update generatePawns function
-export function generatePawns(race: Race, count?: number): Pawn[] {
-  const pawns: Pawn[] = [];
-  const pawnCount = count || 3;
+/** Roll a single pawn from a specific race (stats within the race's ranges, traits copied,
+ *  race identity stamped). Shared by single-race and mixed-colony generation. */
+export function buildPawnFromRace(race: Race, index: number): Pawn {
+  const baseStats = rollStatsFromRanges(race.statRanges);
+  const finalStats = applyRacialTraitBonuses(baseStats, race.racialTraits);
+  const physicalTraits = rollPhysicalTraits(race.physicalTraits);
+  const maxBloodVolume = calcMaxBloodVolume(physicalTraits, finalStats);
+  const maxStamina = calcMaxStamina(finalStats);
 
-  for (let i = 0; i < pawnCount; i++) {
-    const baseStats = rollStatsFromRanges(race.statRanges);
-    const finalStats = applyRacialTraitBonuses(baseStats, race.racialTraits);
-    const physicalTraits = rollPhysicalTraits(race.physicalTraits);
-    const maxBloodVolume = calcMaxBloodVolume(physicalTraits, finalStats);
-    const maxStamina = calcMaxStamina(finalStats);
-
-    const pawn: Pawn = {
-      id: `pawn-${i}`,
-      debugId: _pawnDebugIdCounter++,
-      name: generatePawnName(),
-      stats: finalStats,
-      physicalTraits,
-      racialTraits: race.racialTraits,
+  const pawn: Pawn = {
+    id: `pawn-${index}`,
+    debugId: _pawnDebugIdCounter++,
+    name: generatePawnName(),
+    stats: finalStats,
+    physicalTraits,
+    raceId: race.id,
+    raceName: race.name,
+    racialTraits: race.racialTraits,
       inventory: createPawnInventory(),
       equipment: createPawnEquipment(),
       needs: {
@@ -124,10 +123,18 @@ export function generatePawns(race: Race, count?: number): Pawn[] {
       ]
     };
 
-    pawns.push(pawn);
-  }
+  return pawn;
+}
 
-  return pawns;
+/** Generate `count` pawns from a single race (back-compat: extra-pawn backfill path). */
+export function generatePawns(race: Race, count = 3): Pawn[] {
+  return Array.from({ length: count }, (_, i) => buildPawnFromRace(race, i));
+}
+
+/** Generate a fully-mixed starting colony: each pawn is rolled from a random pool race. */
+export function generateColonyPawns(racePool: Race[], count = 5): Pawn[] {
+  if (racePool.length === 0) return [];
+  return Array.from({ length: count }, (_, i) => buildPawnFromRace(rng.pick(racePool), i));
 }
 
 // UPDATED: Use ModifierSystem for complex calculations

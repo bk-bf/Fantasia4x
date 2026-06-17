@@ -14,6 +14,7 @@
       on:click={() => onSelect(pawn)}
     >
       <span class="name">{pawn.name}</span>
+      {#if pawn.raceName}<span class="race">{pawn.raceName}</span>{/if}
       <span class="state">{(pawn.currentState ?? 'idle').toUpperCase()}</span>
     </button>
   {/each}
@@ -63,6 +64,13 @@
 
   .name {
     font-size: 11px;
+  }
+
+  .race {
+    font-size: 9px;
+    color: var(--accent-hi);
+    opacity: 0.85;
+    letter-spacing: 0.04em;
   }
 
   .state {

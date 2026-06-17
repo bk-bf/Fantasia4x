@@ -2,14 +2,43 @@
      before crafting. Reuses the work-tab job-priority tooltip format (WorkCellTooltip): portaled
      panel, header line, label/value rows, and a separated MODIFIERS/ABILITIES block. -->
 <script lang="ts">
-  import type { Item } from '$lib/game/core/types';
+  import type { Item, Recipe } from '$lib/game/core/types';
+  import { recipeService } from '$lib/game/services/RecipeService';
+  import { itemService } from '$lib/game/services/ItemService';
 
   interface Props {
     item: Item;
     x: number;
     y: number;
+    /** Producing recipe + chosen ingredients — drives the per-material stat/nutrition deltas. */
+    recipe?: Recipe | null;
+    selectedIngredients?: Record<string, string>;
   }
-  let { item, x, y }: Props = $props();
+  let { item, x, y, recipe = null, selectedIngredients = {} }: Props = $props();
+
+  // Per-material weapon/armour deltas for the chosen ingredient(s) (e.g. ash shaft → +3 accuracy).
+  let deltas = $derived(
+    recipe ? recipeService.applyMaterialBonuses(recipe, selectedIngredients) : { weaponDelta: {}, armorDelta: {} }
+  );
+  let matDelta = $derived([
+    ...Object.entries(deltas.weaponDelta),
+    ...Object.entries(deltas.armorDelta)
+  ] as [string, number][]);
+  // Names of the chosen materials, for the section header.
+  let matNames = $derived(
+    Object.values(selectedIngredients)
+      .map((id) => itemService.getItemById(id)?.name ?? id.replace(/_/g, ' '))
+      .join(', ')
+  );
+  // Dynamic-recipe variant nutrition tweak (e.g. cooked-meat-over-venison), added to base nutrition.
+  let nutritionBonus = $derived.by(() => {
+    if (!recipe?.dynamicRecipe) return 0;
+    let sum = 0;
+    for (const [slot, chosen] of Object.entries(selectedIngredients)) {
+      sum += recipe.dynamicRecipe[slot]?.variants?.[chosen]?.nutritionBonus ?? 0;
+    }
+    return sum;
+  });
 
   function portal(node: HTMLElement) {
     document.body.appendChild(node);
@@ -23,6 +52,24 @@
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
   const pct = (n: number) => `${n > 0 ? '+' : ''}${Math.round(n * 100)}%`;
   const signed = (n: number) => `${n > 0 ? '+' : ''}${n}`;
+
+  const FIELD_LABELS: Record<string, string> = {
+    damMin: 'Min dmg',
+    damMax: 'Max dmg',
+    damage: 'Damage',
+    accuracy: 'Accuracy',
+    armorPenetration: 'Armor pen.',
+    critMod: 'Crit',
+    attackSpeed: 'Atk speed',
+    reach: 'Reach',
+    range: 'Range',
+    staminaCost: 'Stamina',
+    bluntMod: 'Blunt',
+    maxDurability: 'Durability',
+    defense: 'Defense'
+  };
+  const fieldLabel = (f: string) => FIELD_LABELS[f] ?? cap(f.replace(/([A-Z])/g, ' $1').trim());
+  const fmtDelta = (f: string, v: number) => (f === 'critMod' ? pct(v) : signed(v));
 
   type Row = { label: string; val: string };
 
@@ -83,6 +130,19 @@
         out.push({ label: 'Work yield', val: pct(item.toolBoost.yield) });
     }
 
+    if (item.nutrition != null || nutritionBonus) {
+      const base = item.nutrition ?? 0;
+      out.push({
+        label: 'Nutrition',
+        val: `${base + nutritionBonus}${nutritionBonus ? ` (+${nutritionBonus})` : ''}`
+      });
+    }
+    if (item.medicineQuality != null)
+      out.push({ label: 'Medicine quality', val: pct(item.medicineQuality) });
+    if (item.preservationBonus != null)
+      out.push({ label: 'Preservation', val: pct(item.preservationBonus) });
+    if (item.fuelValue != null) out.push({ label: 'Fuel value', val: `${item.fuelValue}` });
+
     if (item.maxDurability != null) out.push({ label: 'Durability', val: `${item.maxDurability}` });
     if (item.weightKg != null) out.push({ label: 'Weight', val: `${item.weightKg} kg` });
     if (item.rarity && item.rarity !== 'common')
@@ -117,6 +177,18 @@
       <span>{r.val}</span>
     </div>
   {/each}
+
+  {#if matDelta.length > 0}
+    <div class="tip-sep">MATERIAL{#if matNames} · {matNames}{/if}</div>
+    {#each matDelta as [field, val]}
+      <div class="tip-mod">
+        <span class="tip-mod-name">{fieldLabel(field)}</span>
+        <span class="tip-mod-val" style="color:{val >= 0 ? '#6bc' : '#e08'}"
+          >{fmtDelta(field, val)}</span
+        >
+      </div>
+    {/each}
+  {/if}
 
   {#if abilities.length > 0}
     <div class="tip-sep">ABILITIES</div>

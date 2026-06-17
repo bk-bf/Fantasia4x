@@ -98,6 +98,13 @@
   }
   $: activeSection = sections.find((s) => s.label === selectedSection) ?? sections[0];
 
+  // Live search across every section (bypasses tabs/ZONES while a query is present).
+  let searchQuery = '';
+  $: searchTerm = searchQuery.trim().toLowerCase();
+  $: displayedDefs = searchTerm
+    ? unlockedDefs.filter((b) => b.name.toLowerCase().includes(searchTerm))
+    : (activeSection?.defs ?? []);
+
   // Legacy compat
   $: availableBuildings = unlockedDefs;
 
@@ -234,21 +241,39 @@
     <button class="hdr-btn" on:click={() => uiState.setScreen('main')}>BACK</button>
   </div>
 
-  <!-- Building groups + ZONES as a tab -->
+  <!-- Building groups + ZONES as a tab. Sticky filter bar so tabs/search stay reachable on scroll. -->
   {#if sections.length > 0}
-    <FilterTabs
-      tabs={[
-        { id: 'ZONES', label: 'ZONES' },
-        ...sections.map((s) => ({ id: s.label, label: s.label }))
-      ]}
-      selected={selectedSection}
-      onSelect={(id) => (selectedSection = id)}
-    />
-    {#if selectedSection === 'ZONES'}
+    <div class="filter-bar">
+      <div class="filter-bar-tabs">
+        <FilterTabs
+          tabs={[
+            { id: 'ZONES', label: 'ZONES' },
+            ...sections.map((s) => ({ id: s.label, label: s.label }))
+          ]}
+          selected={selectedSection}
+          onSelect={(id) => (selectedSection = id)}
+        />
+      </div>
+      <div class="filter-search">
+        <input
+          type="text"
+          placeholder="search buildings…"
+          bind:value={searchQuery}
+          spellcheck="false"
+          autocomplete="off"
+        />
+        {#if searchQuery}
+          <button class="search-clear" title="clear search" on:click={() => (searchQuery = '')}
+            >×</button
+          >
+        {/if}
+      </div>
+    </div>
+    {#if selectedSection === 'ZONES' && !searchTerm}
       <ZonePanel />
-    {:else if activeSection}
+    {:else if displayedDefs.length > 0}
       <div class="card-grid">
-        {#each activeSection.defs as building}
+        {#each displayedDefs as building}
           {@const placed = getBuildingCount(building.id)}
           {@const affordable = canAfford(building)}
           {@const buildable = canBuild(building)}
@@ -279,6 +304,8 @@
           </BuildCard>
         {/each}
       </div>
+    {:else if searchTerm}
+      <div class="muted-row">no buildings match "{searchQuery}"</div>
     {/if}
   {/if}
 
@@ -337,6 +364,64 @@
     grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
     gap: 5px;
     padding: 5px 8px;
+  }
+
+  /* Sticky filter + search bar — stays pinned while the card grid scrolls under it. */
+  .filter-bar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    align-items: stretch;
+    background: var(--bg);
+    border-bottom: 2px solid var(--border-hi);
+  }
+  .filter-bar-tabs {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .filter-bar-tabs :global(.filter-tabs) {
+    border-bottom: none;
+  }
+  .filter-search {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    position: relative;
+    border-left: 1px solid var(--border);
+  }
+  .filter-search input {
+    background: var(--bg-panel);
+    border: none;
+    color: var(--text);
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    padding: 4px 18px 4px 8px;
+    width: 150px;
+    outline: none;
+  }
+  .filter-search input::placeholder {
+    color: var(--text-muted);
+  }
+  .search-clear {
+    position: absolute;
+    right: 4px;
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-size: 13px;
+    line-height: 1;
+    padding: 0 2px;
+    cursor: pointer;
+  }
+  .search-clear:hover {
+    color: var(--accent-hi);
+  }
+  .muted-row {
+    padding: 4px 10px;
+    font-size: 10px;
+    color: var(--text-dim);
   }
 
   .screen-hdr {

@@ -20,9 +20,9 @@ import { simWorkerBridge, USE_SIM_WORKER } from '$lib/game/sim/simWorkerClient';
 import { applySimCommand } from '$lib/game/sim/commands';
 import type { SimCommand } from '$lib/game/sim/simProtocol';
 import type { GameState, Pawn, WorldTile, FilterableZoneType } from '$lib/game/core/types';
-import { generatePawns } from '$lib/game/entities/Pawns';
+import { generateColonyPawns } from '$lib/game/entities/Pawns';
 import { pawnService } from '$lib/game/services/PawnService';
-import { generateRace } from '$lib/game/core/Race';
+import { generateRace, generateRacePool, generateRaceRelations } from '$lib/game/core/Race';
 import { itemService } from '$lib/game/services/ItemService';
 import { buildingService } from '$lib/game/services/BuildingService';
 import { workService } from '$lib/game/services/WorkService';
@@ -67,7 +67,11 @@ let simAccumulatorMs = 0;
 export const initialGameState: GameState = {
   seed: freshSeed(), // P0-2: deterministic sim seed; reseeded from the save on load
   turn: ticksFromSeconds(100), // 08:00 — turn counts ticks; 100 in-game s × TICKS_PER_SECOND (TURNS_PER_DAY=300 s)
+  // race == racePool[0] (home race); both are filled by bootstrapColony on a fresh run. The
+  // single placeholder here is discarded once the pool is generated against the run's seed.
   race: generateRace(),
+  racePool: [],
+  raceRelations: [],
   pawns: [],
   worldMap: [], // generated lazily in the async init (D7)
   /** Living-world (SEASONS_WEATHER): start in spring, clear skies. */
@@ -286,6 +290,83 @@ function applyMigrations(state: GameState): GameState {
   return state;
 }
 
+// ===== RACE POOL HELPERS (Race overhaul) =====
+
+/** Ensure the state has a prerolled race pool + relations. Idempotent.
+ *  - Fresh run (no pool, no pawns): generate a full pool, relations, and a home race.
+ *  - Legacy save (no pool, but pawns exist): synthesize a single-entry pool from the
+ *    existing `race`, normalising it to the new shape, and tag pawns to it. */
+function ensureRacePool(state: GameState): GameState {
+  if (state.racePool && state.racePool.length > 0) {
+    // Backfill relations if a pool exists but relations were never generated.
+    if (!state.raceRelations || state.raceRelations.length === 0) {
+      return { ...state, raceRelations: generateRaceRelations(state.racePool) };
+    }
+    return state;
+  }
+
+  const legacyAndPopulated = state.pawns && state.pawns.length > 0;
+  if (legacyAndPopulated) {
+    const home = normalizeLegacyRace(state.race);
+    const pawns = state.pawns.map((p) => ({
+      ...p,
+      raceId: p.raceId ?? home.id,
+      raceName: p.raceName ?? home.name
+    }));
+    return { ...state, race: home, racePool: [home], raceRelations: [], pawns };
+  }
+
+  const racePool = generateRacePool();
+  return {
+    ...state,
+    race: racePool[0],
+    racePool,
+    raceRelations: generateRaceRelations(racePool)
+  };
+}
+
+/** Bring a pre-overhaul race up to the new shape (archetype/lore/unique id) so old saves
+ *  still render in the pokédex without a procedural lore paragraph. */
+function normalizeLegacyRace(race: GameState['race']): GameState['race'] {
+  if (race?.lore?.description && race.archetype) return { ...race, discovered: true };
+  const fresh = generateRace();
+  return {
+    ...fresh,
+    // keep the player's existing identity + ranges; only fill the missing new fields.
+    id: race?.id && race.id !== 'player' ? race.id : fresh.id,
+    name: race?.name ?? fresh.name,
+    statRanges: race?.statRanges ?? fresh.statRanges,
+    physicalTraits: race?.physicalTraits ?? fresh.physicalTraits,
+    racialTraits: race?.racialTraits ?? fresh.racialTraits,
+    population: race?.population ?? 0,
+    discovered: true
+  };
+}
+
+/** Mark every race that has a colony pawn as discovered, and refresh per-race headcounts. */
+function markColonyRacesDiscovered(state: GameState): GameState {
+  const counts = new Map<string, number>();
+  for (const p of state.pawns) {
+    if (p.raceId) counts.set(p.raceId, (counts.get(p.raceId) ?? 0) + 1);
+  }
+  const racePool = state.racePool.map((r) => ({
+    ...r,
+    discovered: r.discovered || counts.has(r.id),
+    population: counts.get(r.id) ?? r.population
+  }));
+  return { ...state, racePool, race: racePool.find((r) => r.id === state.race?.id) ?? racePool[0] };
+}
+
+/** Pokédex hook: flag a race as encountered. Called by future faction/visitor encounters —
+ *  no such entity source exists yet, so this is currently exercised only by colony bootstrap. */
+export function discoverRace(state: GameState, raceId: string): GameState {
+  if (!state.racePool.some((r) => r.id === raceId && !r.discovered)) return state;
+  return {
+    ...state,
+    racePool: state.racePool.map((r) => (r.id === raceId ? { ...r, discovered: true } : r))
+  };
+}
+
 // ===== PAWN SPAWN HELPERS =====
 function findNearestWalkable(
   worldMap: WorldTile[][],
@@ -454,6 +535,8 @@ function regenWorld(seed?: number, dev = false, itemQty = 500) {
   resourceGeneratorService.generateResources(newWorld, s);
   const base = get(gameState) as GameState;
   let next: GameState = { ...base, seed: s, worldMap: newWorld, mobs: [] };
+  // Keep the race pool/relations intact across a world regen (idempotent if already present).
+  next = ensureRacePool(next);
   if (dev) next = applyDevWorld(next, itemQty);
   next = entityService.seedInitialEntities(next);
   loadStateIntoWorker(next);
@@ -512,7 +595,23 @@ function resetGame() {
   resetUnreachableJobs();
   const world = generateWorld(240, 160, seed);
   resourceGeneratorService.generateResources(world, seed);
-  loadStateIntoWorker({ ...initialGameState, seed, worldMap: world });
+  // Fresh mixed colony: regenerate the race pool + relations, draw pawns across it, then run
+  // the same spawn/work/entity bootstrap the load path uses (Race overhaul).
+  let fresh: GameState = {
+    ...initialGameState,
+    seed,
+    worldMap: world,
+    pawns: [],
+    racePool: [],
+    raceRelations: []
+  };
+  fresh = ensureRacePool(fresh);
+  fresh = { ...fresh, pawns: generateColonyPawns(fresh.racePool, 5) };
+  fresh = { ...fresh, pawns: spawnPawnsOnMap(fresh.pawns, world) };
+  fresh = markColonyRacesDiscovered(fresh);
+  fresh = workService.ensureDefaultWorkAssignments(fresh);
+  fresh = entityService.seedInitialEntities(fresh);
+  loadStateIntoWorker(fresh);
   console.info('[GameState] Game reset to initial state.');
 }
 
@@ -772,14 +871,18 @@ export const savedStateReady: Promise<void> = (async () => {
     resourceGeneratorService.generateResources(baseState.worldMap, Date.now());
   }
 
+  // Race overhaul: ensure a prerolled race pool + relations exist (migrates legacy single-race
+  // saves) BEFORE pawn generation so a fresh colony can be drawn mixed from the pool.
+  baseState = ensureRacePool(baseState);
+
   // Pawn generation / backfill
   if (!baseState.pawns || baseState.pawns.length === 0) {
-    baseState = { ...baseState, pawns: generatePawns(baseState.race, 5) };
+    // Fresh colony — fully mixed: each pawn rolled from a random pool race.
+    baseState = { ...baseState, pawns: generateColonyPawns(baseState.racePool, 5) };
   } else if (baseState.pawns.length < 5) {
-    const extra = generatePawns(baseState.race, 5 - baseState.pawns.length).map((p, i) => ({
-      ...p,
-      id: `pawn-extra-${i}-${Date.now()}`
-    }));
+    const extra = generateColonyPawns(baseState.racePool, 5 - baseState.pawns.length).map(
+      (p, i) => ({ ...p, id: `pawn-extra-${i}-${Date.now()}` })
+    );
     baseState = { ...baseState, pawns: [...baseState.pawns, ...extra] };
   }
 
@@ -787,6 +890,9 @@ export const savedStateReady: Promise<void> = (async () => {
   if (baseState.pawns.some((p) => !p.position)) {
     baseState = { ...baseState, pawns: spawnPawnsOnMap(baseState.pawns, baseState.worldMap) };
   }
+
+  // Flag colony races as discovered + set per-race headcounts for the pokédex.
+  baseState = markColonyRacesDiscovered(baseState);
 
   // Give any pawn without a work assignment explicit default labor settings — ONCE.
   // (Replaces the old per-tick workService.ensureBasicWorkAssignments — see D4.)
@@ -882,6 +988,14 @@ export const currentSeason = derived(gameState, ($gameState) => $gameState.seaso
 export const currentWeather = derived(gameState, ($gameState) => $gameState.weather);
 export const currentAvgTemperature = derived(gameState, ($gameState) => $gameState.avgTemperature);
 export const currentRace = derived(gameState, ($gameState) => $gameState.race);
+/** The full prerolled race pool (pokédex backing store). */
+export const racePool = derived(gameState, ($gameState) => $gameState.racePool ?? []);
+/** Procedural inter-race relations (stub — data + pokédex display only). */
+export const raceRelations = derived(gameState, ($gameState) => $gameState.raceRelations ?? []);
+/** Known (encountered) races — what the Race-tab pokédex lists. */
+export const discoveredRaces = derived(gameState, ($gameState) =>
+  ($gameState.racePool ?? []).filter((r) => r.discovered)
+);
 export const pawnStats = derived(gameState, ($gameState) => $gameState.pawnStats || {});
 
 /** Items currently in the colony stockpile, enriched from the items database, sorted by name. */

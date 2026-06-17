@@ -4,7 +4,7 @@
   import SpriteIcon from './SpriteIcon.svelte';
   import HoverTip from './HoverTip.svelte';
   import ItemStatTooltip from './ItemStatTooltip.svelte';
-  import type { Item } from '$lib/game/core/types';
+  import type { Item, Recipe } from '$lib/game/core/types';
 
   // Show the full description in a hover panel, but only when it's actually clamped/truncated.
   let descTip: { x: number; y: number } | null = null;
@@ -57,15 +57,20 @@
    *  action button. Used by crafting to batch-queue orders. */
   export let quantities: number[] | null = null;
   export let onQuantity: ((n: number) => void) | null = null;
-  /** Item whose combat/gear stats + abilities pop in a hover breakdown (weapons/armour/tools). */
+  /** Item whose combat/gear stats + abilities pop in a hover breakdown (weapons/armour/tools/food). */
   export let statItem: Item | null = null;
+  /** Producing recipe + chosen ingredients — feeds per-material stat/nutrition deltas to the tooltip. */
+  export let statRecipe: Recipe | null = null;
+  export let statIngredients: Record<string, string> = {};
 
-  // Only show the stat tooltip for items that actually carry gear stats / effects worth a breakdown.
+  // Only show the stat tooltip for items that actually carry stats / effects worth a breakdown.
   $: hasStats =
     !!statItem &&
     (!!statItem.weaponProperties ||
       !!statItem.armorProperties ||
       (statItem.type === 'tool' && !!statItem.toolBoost) ||
+      statItem.nutrition != null ||
+      statItem.medicineQuality != null ||
       Object.keys(statItem.effects ?? {}).length > 0);
 </script>
 
@@ -132,7 +137,13 @@
 {/if}
 
 {#if statTip && hasStats && statItem}
-  <ItemStatTooltip item={statItem} x={statTip.x} y={statTip.y} />
+  <ItemStatTooltip
+    item={statItem}
+    recipe={statRecipe}
+    selectedIngredients={statIngredients}
+    x={statTip.x}
+    y={statTip.y}
+  />
 {/if}
 
 <style>

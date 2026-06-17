@@ -170,7 +170,11 @@ export interface Pawn {
   needs: EntityNeeds;
   state: PawnState;
 
-  // Reference to racial traits for bonuses
+  // Race identity — which pool race this pawn was drawn from (mixed colonies).
+  raceId?: string;
+  raceName?: string;
+
+  // Reference to racial traits for bonuses (denormalized copy from the pawn's race)
   racialTraits: RacialTrait[];
 
   skills: Record<string, number>; // skillId -> level

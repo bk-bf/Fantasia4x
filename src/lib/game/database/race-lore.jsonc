@@ -1,0 +1,215 @@
+// Race lore database — data-only word/phrase banks consumed by core/Race.ts.
+// No logic lives here (AGENTS.md: data files are definitions only).
+//
+//  archetypes[] — each biases a generated race: which stats it favours/dumps, preferred
+//                 size, thematically-fitting trait ids, and the lore field option pools
+//                 (epithet / origin / homeland / temperament / belief).
+//  phrases      — the description clause banks. The generator buckets a race's stats/size
+//                 to a key, then picks a variant at random (see generateRaceDescription).
+{
+    "archetypes": [
+        {
+            "name"     : "Mountain-born",
+            "statFocus": ["strength", "constitution"],
+            "statDump" : ["dexterity"],
+            "sizeBias" : ["large", "huge"],
+            "traits"   : ["earth-bound", "stone-bones", "iron-skin", "scaled-hide", "industrious"],
+            "epithets" : ["the Stoneborn", "the Peakfolk", "the Unbowed"],
+            "origins"  : ["carved, the old songs say, from the living roots of the mountains",
+                          "the first to wake when the high stone cracked and breathed"],
+            "homelands": ["the high crags and deep mountain halls",
+                          "wind-scoured peaks above the cloud line"],
+            "temperaments": ["stoic", "obstinate", "patient"],
+            "beliefs"  : ["that nothing worth having comes without weight",
+                          "that the mountain remembers every oath sworn upon it"]
+        },
+        {
+            "name"     : "Forest-kin",
+            "statFocus": ["dexterity", "perception"],
+            "statDump" : ["strength"],
+            "sizeBias" : ["small", "medium"],
+            "traits"   : ["wind-walker", "keen-senses", "feathered", "photosynthetic", "nocturnal"],
+            "epithets" : ["the Greenwise", "the Quiet-foot", "the Leafkin"],
+            "origins"  : ["born of seed and shadow beneath the first great canopy",
+                          "shaped, they hold, from sunlight caught in old leaves"],
+            "homelands": ["the deep evergreen forests", "tangled woodland and dappled glade"],
+            "temperaments": ["watchful", "elusive", "serene"],
+            "beliefs"  : ["that the forest gives only to those who take little",
+                          "that every felled tree must be answered with a planted one"]
+        },
+        {
+            "name"     : "Deep-dwellers",
+            "statFocus": ["constitution", "intelligence"],
+            "statDump" : ["charisma"],
+            "sizeBias" : ["small", "medium"],
+            "traits"   : ["earth-bound", "crystalline-eyes", "loner", "iron-skin", "meticulous"],
+            "epithets" : ["the Underfolk", "the Delvers", "the Lightless"],
+            "origins"  : ["delved up from the roots of the world and never wholly leaving them",
+                          "the children of caverns no sun has touched"],
+            "homelands": ["lightless caverns and tunnel-cities", "the cold dark beneath the hills"],
+            "temperaments": ["reclusive", "exacting", "secretive"],
+            "beliefs"  : ["that the surface world is a passing thing, but stone is forever",
+                          "that knowledge buried deep is knowledge kept safe"]
+        },
+        {
+            "name"     : "Sky-touched",
+            "statFocus": ["intelligence", "perception"],
+            "statDump" : ["constitution"],
+            "sizeBias" : ["small", "medium"],
+            "traits"   : ["stargazer", "crystalline-eyes", "dream-walker", "ancient", "curious"],
+            "epithets" : ["the Star-read", "the Cloudborn", "the Far-seeing"],
+            "origins"  : ["said to have fallen, long ago, as light from a dying star",
+                          "born under an omen-sky and marked by it ever since"],
+            "homelands": ["high windswept plateaus and observatory-towers", "the thin air of the upper ranges"],
+            "temperaments": ["contemplative", "aloof", "dreaming"],
+            "beliefs"  : ["that all things are written first in the turning of the stars",
+                          "that to understand is the only worship worth the name"]
+        },
+        {
+            "name"     : "Marsh-folk",
+            "statFocus": ["constitution", "dexterity"],
+            "statDump" : ["charisma"],
+            "sizeBias" : ["small", "medium"],
+            "traits"   : ["marsh-dweller", "amphibious", "venomous", "scaled-hide", "regenerative"],
+            "epithets" : ["the Fenborn", "the Mire-kin", "the Drowned-blooded"],
+            "origins"  : ["risen, mud-slick and blinking, from the first warm swamp",
+                          "the spawn of black water and patient rot"],
+            "homelands": ["fetid marshes and flooded lowlands", "reed-choked deltas and tidal fens"],
+            "temperaments": ["patient", "wary", "inscrutable"],
+            "beliefs"  : ["that the swamp takes the hasty and keeps the still",
+                          "that poison and medicine are the same gift, differently measured"]
+        },
+        {
+            "name"     : "Tundra-clans",
+            "statFocus": ["constitution", "strength"],
+            "statDump" : ["intelligence"],
+            "sizeBias" : ["medium", "large"],
+            "traits"   : ["frost-born", "feathered", "robust", "pack-hunter", "berserker-blood"],
+            "epithets" : ["the Frostkin", "the White-wanderers", "the Cold-hardened"],
+            "origins"  : ["bred in the long winter, where only the unyielding endured",
+                          "the last folk standing after the ice took all the rest"],
+            "homelands": ["frozen tundra and glacier-fields", "the endless white of the far north"],
+            "temperaments": ["hardy", "blunt", "loyal"],
+            "beliefs"  : ["that warmth is shared or it is wasted",
+                          "that the cold is an honest enemy, unlike folk"]
+        },
+        {
+            "name"     : "Ember-kin",
+            "statFocus": ["strength", "intelligence"],
+            "statDump" : ["perception"],
+            "sizeBias" : ["medium", "large"],
+            "traits"   : ["flame-touched", "dragon-heritage", "iron-skin", "meticulous", "berserker-blood"],
+            "epithets" : ["the Ashborn", "the Forge-blooded", "the Ember-kin"],
+            "origins"  : ["forged, the smiths say, in the heart of a mountain's fire",
+                          "born of cinder and bellows-breath in the first great forge"],
+            "homelands": ["volcanic slopes and forge-cities", "the smoking calderas of the deep south"],
+            "temperaments": ["fierce", "industrious", "proud"],
+            "beliefs"  : ["that anything of worth must pass through fire to earn it",
+                          "that a cold forge is a kind of death"]
+        },
+        {
+            "name"     : "River-people",
+            "statFocus": ["dexterity", "charisma"],
+            "statDump" : ["strength"],
+            "sizeBias" : ["small", "medium"],
+            "traits"   : ["amphibious", "hearthkeeper", "shapeshifter", "keen-senses", "industrious"],
+            "epithets" : ["the Streamborn", "the Ferryfolk", "the Bright-watered"],
+            "origins"  : ["born where the great rivers braid, and never far from running water since",
+                          "shaped from river-silt and morning mist"],
+            "homelands": ["fertile river valleys and trade-deltas", "the broad slow rivers of the heartland"],
+            "temperaments": ["genial", "shrewd", "open-handed"],
+            "beliefs"  : ["that a stranger fed is a friend made",
+                          "that all things, like water, are meant to move and be shared"]
+        },
+        {
+            "name"     : "Wastrel-nomads",
+            "statFocus": ["constitution", "perception"],
+            "statDump" : ["intelligence"],
+            "sizeBias" : ["medium", "large"],
+            "traits"   : ["wind-walker", "robust", "pack-hunter", "keen-senses", "tanner-caste"],
+            "epithets" : ["the Dustwalkers", "the Sand-clans", "the Far-roving"],
+            "origins"  : ["weathered into being by a sun that never relents",
+                          "the get of the open road, owning nothing they cannot carry"],
+            "homelands": ["scorched badlands and shifting dunes", "the trackless desert and dry steppe"],
+            "temperaments": ["resilient", "freeborn", "hospitable"],
+            "beliefs"  : ["that the horizon owes nothing and promises less",
+                          "that a debt of water is never forgotten"]
+        },
+        {
+            "name"     : "Verdant",
+            "statFocus": ["intelligence", "constitution"],
+            "statDump" : ["strength"],
+            "sizeBias" : ["medium", "large"],
+            "traits"   : ["photosynthetic", "regenerative", "hearthkeeper", "ancient", "curious"],
+            "epithets" : ["the Greenborn", "the Sunfed", "the Rooted"],
+            "origins"  : ["grown, not birthed, from the first flowering of a kinder age",
+                          "the slow green folk who count their years in growing seasons"],
+            "homelands": ["sun-drenched orchards and terraced gardens", "warm fertile lowlands thick with growth"],
+            "temperaments": ["gentle", "deliberate", "abiding"],
+            "beliefs"  : ["that haste is the enemy of every growing thing",
+                          "that to nurture is the highest of the virtues"]
+        }
+    ],
+    "phrases": {
+        "size": {
+            "towering"   : ["a towering people", "a giant folk who loom over lesser races", "tall enough to dim a doorway"],
+            "tall"       : ["a tall, long-limbed people", "a high-statured folk"],
+            "average"    : ["a folk of middling height", "of common humanoid stature"],
+            "small"      : ["a small and compact people", "short of stature"],
+            "diminutive" : ["a diminutive people", "a tiny folk easily overlooked"]
+        },
+        "build": {
+            "heavyset" : ["heavy-framed and broad", "thick-bodied and ponderous"],
+            "sturdy"   : ["sturdily built", "thickset and solid"],
+            "lean"     : ["lean of frame", "spare and economical of build"],
+            "wiry"     : ["wiry and light", "whip-thin"],
+            "gaunt"    : ["gaunt and hollow-cheeked", "lean to the point of frailty"]
+        },
+        "gait": {
+            "slow"   : ["slow afoot but tireless", "ponderous yet unflagging", "unhurried and sure"],
+            "quick"  : ["quick and surefooted", "swift on their feet", "light and darting in motion"],
+            "steady" : ["steady and deliberate in motion", "measured in every step"]
+        },
+        "comparative": {
+            "con_over_dex" : ["built for endurance far more than for speed", "made to outlast rather than outrun"],
+            "dex_over_con" : ["built for speed and evasion over brute stamina", "made to slip a blow rather than weather it"],
+            "str_over_dex" : ["made for force rather than finesse", "all power where others have polish"],
+            "dex_over_str" : ["made for finesse rather than force", "trading raw power for a deft and certain hand"],
+            "balanced"     : ["even-matched in vigour and grace", "neither swift nor strong beyond the common run"]
+        },
+        "mind": {
+            "mighty"  : ["keen and quick of mind", "brilliant past the reckoning of most folk"],
+            "strong"  : ["clever and curious", "sharp-witted and given to questions"],
+            "average" : ["of plain and practical wit", "shrewd in the moment if not the abstract"],
+            "frail"   : ["slow to abstraction, but cunning where it counts", "no scholars, but no fools either"]
+        },
+        "perception": {
+            "high" : ["watchful and missing little", "alert to every shift in the world around them"],
+            "low"  : ["inattentive to the small details", "easily caught off their guard"]
+        },
+        "charisma": {
+            "high" : ["warm and easy among strangers", "persuasive of tongue and quick to befriend"],
+            "low"  : ["plain of tongue and slow to trust", "gruff and reticent with outsiders"]
+        },
+        "vocation": {
+            "mining"        : ["masters of mine and quarry", "peerless at the working of stone and ore"],
+            "metalworking"  : ["born to the forge and anvil", "smiths without equal"],
+            "research"      : ["keepers of long learning", "tireless seekers of hidden knowledge"],
+            "hunting"       : ["tireless and patient hunters", "drivers of prey to ground"],
+            "crafting"      : ["gifted and painstaking craftsfolk", "makers of fine and lasting things"],
+            "fishing"       : ["unmatched upon the water", "drawers of the deep's own bounty"],
+            "foraging"      : ["gleaners who read the wild as a larder", "foragers who let no growing thing go to waste"],
+            "cooking"       : ["cooks who turn the plainest fare into a feast", "keepers of the laden table"],
+            "leatherworking": ["tanners who make second skins of beast-hide", "curers of hide by inherited art"],
+            "planting"      : ["coaxers of green life from any soil", "patient tillers of the earth"],
+            "construction"  : ["raisers of walls that outlast their makers", "builders of enduring works"],
+            "caretaking"    : ["menders of the broken body", "healers gentle in the tending of wounds"],
+            "butchery"      : ["butchers who waste nothing of a fallen beast", "swift and clean at the butcher's block"],
+            "alchemy"       : ["brewers of potent and subtle draughts", "students of essence and reaction"],
+            "digging"       : ["movers of earth on a tireless scale", "earth-shapers who reshape the ground at will"],
+            "woodcutting"   : ["fellers of the great timber", "woodsfolk who bring down the tallest timber"],
+            "hauling"       : ["bearers of loads that break lesser backs", "tireless beasts of burden"]
+        },
+        "quirkLeads": ["Strangest of all,", "Stranger still,", "Most curious of all,", "And it is whispered that"]
+    }
+}
