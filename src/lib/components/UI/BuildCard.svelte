@@ -2,6 +2,20 @@
      left accent · sprite icon + name + badge · cost (slot) · action. Shared by Buildings/Crafting. -->
 <script lang="ts">
   import SpriteIcon from './SpriteIcon.svelte';
+  import HoverTip from './HoverTip.svelte';
+
+  // Show the full description in a hover panel, but only when it's actually clamped/truncated.
+  let descTip: { x: number; y: number } | null = null;
+  function onDescEnter(e: MouseEvent) {
+    const el = e.currentTarget as HTMLElement;
+    if (el.scrollHeight > el.clientHeight + 1) descTip = { x: e.clientX, y: e.clientY };
+  }
+  function onDescMove(e: MouseEvent) {
+    if (descTip) descTip = { x: e.clientX, y: e.clientY };
+  }
+  function onDescLeave() {
+    descTip = null;
+  }
 
   type CharSpan = { sheet?: string; id?: number; from?: number; to?: number; literal?: string };
 
@@ -36,7 +50,15 @@
         >{/if}
       {#if badge}<span class="card-badge">{badge}</span>{/if}
     </div>
-    {#if description}<div class="card-desc">{description}</div>{/if}
+    {#if description}<div
+        class="card-desc"
+        role="note"
+        on:mouseenter={onDescEnter}
+        on:mousemove={onDescMove}
+        on:mouseleave={onDescLeave}
+      >
+        {description}
+      </div>{/if}
     {#if station}<div class="card-station" title="required workstation">⚒ {station}</div>{/if}
     {#if toolTier}<div
         class="card-tool"
@@ -53,6 +75,10 @@
     </button>
   </div>
 </div>
+
+{#if descTip && description}
+  <HoverTip x={descTip.x} y={descTip.y}>{description}</HoverTip>
+{/if}
 
 <style>
   .build-card {

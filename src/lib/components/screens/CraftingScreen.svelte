@@ -351,13 +351,13 @@
               {/if}
               {#if primaryQtyOf(item.id) > 1 || byproductsOf(item.id).length > 0}
                 <span class="cost-sep">→</span>
-                <span class="cost-item">
-                  ×{primaryQtyOf(item.id)}
-                  {#each byproductsOf(item.id) as [bid, bq]}
-                    <span class="cost-sep">+</span>{bid.replace(/_/g, ' ')}
-                    <span class="cost-qty">×{bq}</span>
-                  {/each}
-                </span>
+                <span class="cost-item">×{primaryQtyOf(item.id)}</span>
+                {#each byproductsOf(item.id) as [bid, bq]}
+                  <span class="cost-sep">+</span>
+                  <span class="cost-item">
+                    {bid.replace(/_/g, ' ')} <span class="cost-qty">×{bq}</span>
+                  </span>
+                {/each}
               {/if}
             {/if}
           </BuildCard>
