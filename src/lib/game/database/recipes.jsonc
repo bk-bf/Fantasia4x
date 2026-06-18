@@ -1412,6 +1412,42 @@
     "researchRequired": "steel_making"
   },
   {
+    "id": "make_iron_rondel",
+    "station": "anvil",
+    "inputs": { "iron_bar": 1, "clay_mold": 1, "cordage": 1 },
+    "outputs": { "iron_rondel": 1 },
+    "workAmount": 7,
+    "toolTierRequired": 2,
+    "researchRequired": "iron_working"
+  },
+  {
+    "id": "make_steel_stiletto",
+    "station": "anvil",
+    "inputs": { "steel_bar": 1, "clay_mold": 1, "cordage": 1 },
+    "outputs": { "steel_stiletto": 1 },
+    "workAmount": 9,
+    "toolTierRequired": 2,
+    "researchRequired": "steel_making"
+  },
+  {
+    "id": "make_iron_estoc",
+    "station": "anvil",
+    "inputs": { "iron_bar": 1, "clay_mold": 1, "cordage": 1 },
+    "outputs": { "iron_estoc": 1 },
+    "workAmount": 12,
+    "toolTierRequired": 2,
+    "researchRequired": "iron_working"
+  },
+  {
+    "id": "make_steel_rapier",
+    "station": "anvil",
+    "inputs": { "steel_bar": 1, "clay_mold": 1, "cordage": 1 },
+    "outputs": { "steel_rapier": 1 },
+    "workAmount": 15,
+    "toolTierRequired": 2,
+    "researchRequired": "steel_making"
+  },
+  {
     "id": "make_war_bow",
     "station": "makers_bench",
     "inputs": {

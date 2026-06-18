@@ -192,6 +192,8 @@ interface AttackProfile {
   staminaCost: number;
   /** Crit chance this attack adds on top of the attacker's base crit_chance stat. */
   critMod: number;
+  /** Finesse weapon (rapier): melee damage scales with PERCEPTION, not STRENGTH. */
+  finesse: boolean;
 }
 
 /**
@@ -246,7 +248,8 @@ function profileFromWeapon(
     armorPen: wp.armorPenetration ?? 0,
     weaponId,
     staminaCost: wp.staminaCost ?? ATTACK_STAMINA_COST,
-    critMod: wp.critMod ?? 0
+    critMod: wp.critMod ?? 0,
+    finesse: wp.finesse ?? false
   };
 }
 
@@ -325,7 +328,8 @@ function attackerProfile(attacker: Pawn | Mob): AttackProfile {
     armorPen: 0,
     weaponId: 'strike',
     staminaCost: ATTACK_STAMINA_COST,
-    critMod: 0
+    critMod: 0,
+    finesse: false
   };
 }
 
@@ -438,7 +442,8 @@ class CombatServiceImpl implements CombatService {
       armorPen,
       weaponId,
       staminaCost,
-      critMod
+      critMod,
+      finesse
     } = override ? override.profile : attackerProfile(attacker);
     // Evasion uses the `dodge` stat (DEX − weight, × moving) rather than raw dexterity, so injury,
     // load, and the winded penalty (× 0.5) all lower it. ×20 keeps baseline parity with the old
@@ -484,7 +489,11 @@ class CombatServiceImpl implements CombatService {
     // Damage: baseDamage × str / STAT_SCALE, then armour + resistance reduce it,
     // then the crit multiplier. STAT_SCALE=10 matches the real stat range (5–22).
     // Ranged weapons with strScaled:false (crossbow/sling) bypass STR scaling — mechanical advantage.
-    const raw = override && !override.strScaled ? baseDamage : (baseDamage * str) / STAT_SCALE;
+    // Power stat for the damage roll: STR normally, but a FINESSE weapon (rapier) scales with PER —
+    // a precise thrust finds the vital, no brute force needed. Ranged (strScaled:false) bypasses both.
+    const powerStat = finesse ? (attacker.stats.perception ?? 10) : str;
+    const raw =
+      override && !override.strScaled ? baseDamage : (baseDamage * powerStat) / STAT_SCALE;
     const armorRed = partArmorReduction(defender, partId, armorPen);
     const physRes = physicalResistance(defender, damageType);
     const mitigated = raw * (1 - armorRed) * (1 - physRes);

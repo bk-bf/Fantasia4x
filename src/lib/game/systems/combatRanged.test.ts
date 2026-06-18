@@ -309,6 +309,52 @@ describe('ranged combat (headless tickCombat)', () => {
     expect(hammerArmor).toBeLessThan(cleaverArmor); // the hammer caves the plate; the cleaver leaves it
   });
 
+  it('FINESSE: a rapier scales melee damage with PER (a sword scales with STR)', () => {
+    const empty = makeState([], []);
+    const defender = makeGoblin({ stats: { ...stats, dexterity: 2 } }); // low dodge → hits land
+    const avgDmg = (weapon: string, st: Partial<typeof stats>) => {
+      const atk = makeArcher({
+        equipment: { mainHand: { itemId: weapon } },
+        stats: { ...stats, ...st }
+      } as unknown as Partial<Pawn>);
+      let total = 0;
+      let hits = 0;
+      for (let i = 0; i < 600; i++) {
+        const r = combatService.resolveHit(atk, defender, empty);
+        if (r.hit) {
+          total += r.damage;
+          hits++;
+        }
+      }
+      return hits ? total / hits : 0;
+    };
+    // Rapier (finesse): high PER massively out-damages low PER at the SAME strength.
+    expect(avgDmg('steel_rapier', { strength: 10, perception: 20 })).toBeGreaterThan(
+      avgDmg('steel_rapier', { strength: 10, perception: 4 }) * 1.4
+    );
+    // Longsword (not finesse): PER barely matters (only a little crit); STR is the driver.
+    const swHiPer = avgDmg('steel_longsword', { strength: 10, perception: 20 });
+    const swLoPer = avgDmg('steel_longsword', { strength: 10, perception: 4 });
+    expect(Math.abs(swHiPer - swLoPer) / swHiPer).toBeLessThan(0.2);
+    expect(avgDmg('steel_longsword', { strength: 20, perception: 10 })).toBeGreaterThan(
+      avgDmg('steel_longsword', { strength: 5, perception: 10 }) * 1.4
+    );
+  });
+
+  it('daggers are fast, crit-heavy and inaccurate; specialists are iron+ gated', () => {
+    const wp = (id: string) => itemService.getItemById(id)!.weaponProperties!;
+    expect(wp('steel_stiletto').attackSpeed).toBeGreaterThan(1.3); // very fast
+    expect(wp('steel_stiletto').critMod!).toBeGreaterThan(0.1); // crit-heavy
+    expect(wp('iron_rondel').accuracy!).toBeLessThanOrEqual(0); // no accuracy bonus
+    // The specialists never appear at bronze — iron at the earliest.
+    for (const id of ['iron_warhammer', 'iron_greatsword', 'iron_estoc']) {
+      expect(itemService.getItemById(id)!.tier).toBeGreaterThanOrEqual(2);
+    }
+    for (const id of ['steel_cleaver', 'steel_flail', 'steel_rapier']) {
+      expect(itemService.getItemById(id)!.researchRequired).toBe('steel_making');
+    }
+  });
+
   it('classifies the melee GRIP from the hands (2H / shield / duelist / one-handed)', () => {
     const twoH = makeArcher(); // self_bow is twoHanded
     const duelist = makeArcher({

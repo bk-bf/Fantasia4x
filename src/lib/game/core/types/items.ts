@@ -299,6 +299,7 @@ export interface Item {
     bluntMod?: number; // multiplier on knockdown chance (blunt weapons)
     stunChance?: number; // 0–1 FLAT chance to stun (knock down) the target on a hit, regardless of damage type — maces/hammers/heavy stocks. Adds on top of the blunt damage-based knockdown.
     armorDamage?: number; // armour CONDITION stripped per landed hit (× the attacker's armor_damage stat), SEPARATE from flesh damage. Hammers high, maces mid, cleavers ~0. Omitted = a sensible default by damageType (blunt > piercing > cutting).
+    finesse?: boolean; // a FINESSE weapon (rapier/estoc): melee damage scales with PERCEPTION (precision/timing — finding the gap) instead of STRENGTH. Lets a high-PER duelist hit hard in melee, not just at range.
     critMod?: number; // added to the wielder's base crit_chance (0–1)
     twoHanded?: boolean; // requires both mainHand and offHand slots
     tags?: string[]; // ability grants from COMBAT-SYSTEM
