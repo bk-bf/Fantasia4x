@@ -2,7 +2,7 @@
 
 # MAGIC FRAMEWORK & SKILL TREES
 
-> **Related:** [ROADMAP](ROADMAP.md) · [COMBAT-SYSTEM](COMBAT-SYSTEM.md) · [EQUIPMENT-EXPANSION](../archive/EQUIPMENT-EXPANSION.md) · [RESEARCH-ENHANCEMENT](RESEARCH-ENHANCEMENT.md) · [PRODUCTION-CHAIN-II](PRODUCTION-CHAIN-II.md) (§M foci/heartwood materials) · [game/DESIGN](../../game/DESIGN.md)
+> **Related:** [ROADMAP](ROADMAP.md) · [COMBAT-SYSTEM](COMBAT-SYSTEM.md) · [EQUIPMENT-EXPANSION](../archive/EQUIPMENT-EXPANSION.md) · [RESEARCH-ENHANCEMENT](RESEARCH-ENHANCEMENT.md) · [PRODUCTION-CHAIN-II](PRODUCTION-CHAIN-II.md) (**§M = this spec's Phase 0**: passive foundation + foci materials) · [game/DESIGN](../../game/DESIGN.md)
 
 ## Status
 
@@ -11,6 +11,15 @@ added on top of the physical combat foundation, not the other way round. Ship
 COMBAT-SYSTEM first; this spec then slots skills and spells into its existing
 combat loop (the optional skill bar, `triggerSkill`, and the `Injury`/damage
 pipeline).
+
+**Phase 0 is [PRODUCTION-CHAIN-II](PRODUCTION-CHAIN-II.md) §M.**
+The magic layer ships passive-first: §M delivers the materials (ancient woods, infused crystals),
+the attuned gear, and — critically — the **buff-delivery mechanism**. A magical buff is *just a
+`conditions.jsonc` entry* (transient, `magical: true`); attuned gear grants it while worn via the
+existing condition pipeline. This spec's **active** layer (spells, skill-tree nodes) is then built
+**on top of that same mechanism** — an active spell or a passive skill node applies the *same*
+magical conditions, adding only the trigger, duration, and mana/research gate. Do not invent a
+parallel buff system here; reuse §M's.
 
 ---
 
@@ -99,12 +108,17 @@ interface SpellDefinition {
 ## Skill Trees
 
 Skill trees represent **learned proficiency**, not equipment grants. They apply
-passive bonuses that stack with equipment abilities through `ModifierSystem`.
+passive bonuses — delivered as **magical conditions** (the §M Phase-0 mechanism), so a learned
+passive node and a worn attuned gem grant buffs through the *same* condition pipeline rather than
+two parallel systems.
 
 ### How skills work
 
 - Pawns accumulate skill XP by performing actions (fighting, crafting, exploring)
 - XP thresholds unlock passive nodes in the skill tree
+- An unlocked passive node grants its magical condition(s) (same `conditions.jsonc` entries §M
+  introduces) while the node is active — same plumbing as attuned gear, just gated by XP/research
+  instead of by an equipped item
 - Nodes are stat-scaled; high-Int pawns benefit more from arcane nodes
 - Trees do NOT gate abilities — they amplify them
 
