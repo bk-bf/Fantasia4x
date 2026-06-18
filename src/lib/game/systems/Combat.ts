@@ -816,7 +816,15 @@ class CombatServiceImpl implements CombatService {
       wp ?? { damage: 1, attackSpeed: 1, range: rw.range },
       rw.itemName
     );
-    profile.baseDamage += ammo?.props.damageBonus ?? 0;
+    // Damage comes from the AMMUNITION, not the launcher: the arrowhead's `damage` × the bow's draw
+    // power (war bow ≫ self bow on the same arrow). A bow/crossbow/sling authors `damage: 0`, so a shot
+    // with no ammo would do nothing. THROWN weapons (no ammo) keep their own `damage` — they ARE the
+    // projectile. The ammo also picks the wound type (broadhead → cutting/bleed, bodkin → piercing/AP).
+    if (ammo) {
+      const drawPower = rawWp?.drawPower ?? 1;
+      profile.baseDamage = (ammo.props.damage ?? 0) * drawPower + (ammo.props.damageBonus ?? 0);
+      if (ammo.props.damageType) profile.damageType = ammo.props.damageType;
+    }
     profile.armorPen = clamp(profile.armorPen + (ammo?.props.armorPen ?? 0), 0, 1);
     // Hit chance: the PER-driven `aim_accuracy` stat + flat gear/ammo accuracy − a LINEAR distance
     // penalty − cover. (Replaces the old optimal-band curve with the requested linear falloff.)

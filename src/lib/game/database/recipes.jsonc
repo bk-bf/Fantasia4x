@@ -1463,6 +1463,90 @@
     "toolTierRequired": 0
   },
   {
+    "id": "make_cast_sling_bullet",
+    "station": "stone_forge",
+    "inputs": {
+      "copper_bar": 1,
+      "clay_mold": 1
+    },
+    "outputs": {
+      "cast_sling_bullet": 8
+    },
+    "workAmount": 4,
+    "toolTierRequired": 1
+  },
+  {
+    "id": "make_broadhead_arrow",
+    "station": "stone_forge",
+    "inputs": {
+      "branch": 1,
+      "iron_bar": 1,
+      "cordage": 1
+    },
+    "outputs": {
+      "broadhead_arrow": 6
+    },
+    "workAmount": 5,
+    "toolTierRequired": 1,
+    "researchRequired": "iron_working"
+  },
+  {
+    "id": "make_barbed_arrow",
+    "station": "stone_forge",
+    "inputs": {
+      "branch": 1,
+      "iron_bar": 1,
+      "cordage": 1
+    },
+    "outputs": {
+      "barbed_arrow": 4
+    },
+    "workAmount": 6,
+    "toolTierRequired": 1,
+    "researchRequired": "iron_working"
+  },
+  {
+    "id": "make_heavy_quarrel",
+    "station": "anvil",
+    "inputs": {
+      "branch": 1,
+      "iron_bar": 1,
+      "cordage": 1
+    },
+    "outputs": {
+      "heavy_quarrel": 6
+    },
+    "workAmount": 7,
+    "toolTierRequired": 1,
+    "researchRequired": "iron_working"
+  },
+  {
+    "id": "make_back_quiver",
+    "station": "makers_bench",
+    "inputs": {
+      "light_leather": 2,
+      "cordage": 1
+    },
+    "outputs": {
+      "back_quiver": 1
+    },
+    "workAmount": 6,
+    "toolTierRequired": 0
+  },
+  {
+    "id": "make_belt_quiver",
+    "station": "makers_bench",
+    "inputs": {
+      "light_leather": 1,
+      "cordage": 1
+    },
+    "outputs": {
+      "belt_quiver": 1
+    },
+    "workAmount": 5,
+    "toolTierRequired": 0
+  },
+  {
     "id": "make_iron_boss_shield",
     "station": "anvil",
     "inputs": {

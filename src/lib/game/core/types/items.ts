@@ -291,6 +291,14 @@ export interface Item {
     reload?: number; // attack ticks of cooldown ADDED after a ranged shot (default 0); a crossbow at 3 fires a third as often
     strScaled?: boolean; // does damage scale with STR? (default true; crossbows/slings set false — mechanical advantage)
     warmup?: number; // attack ticks to aim before the first shot at a NEW target (default 0); rewards holding a bead
+    /**
+     * Draw weight / mechanical advantage of a LAUNCHER (bow/crossbow/sling): a multiplier on the
+     * AMMUNITION's `damage` — the launcher itself deals ~no damage, the projectile does (set the
+     * launcher's `damage`/`damMin`/`damMax` to 0). A war bow (1.7) drives the same arrow far harder than
+     * a self bow (1.0); a crossbow (2.0) is all mechanism. Default 1.0. Thrown weapons ignore this (they
+     * ARE the projectile and keep their own `damage`).
+     */
+    drawPower?: number;
     // ── Natural-weapon additions (innate attacks rolled per swing) ───────
     weight?: number; // relative roll frequency among an entity's natural weapons (default 1)
     staminaCost?: number; // stamina drained by this attack (default ATTACK_STAMINA_COST)
@@ -303,10 +311,24 @@ export interface Item {
    */
   ammoProperties?: {
     ammoCategory: string; // "arrow" | "bolt" | "sling_stone"; matched against a weapon's weaponProperties.ammoCategory
-    damageBonus?: number; // flat add to the weapon's damage roll (default 0)
+    damage?: number; // the projectile's BASE damage — the real source of a shot's damage (× the launcher's drawPower, × STR for self-powered bows). The arrowhead, not the bow, kills.
+    damageType?: DamageType; // wound type the projectile inflicts (broadhead → cutting/bleed, bodkin → piercing/AP); overrides the launcher's damageType for the shot
+    damageBonus?: number; // legacy flat add on top of (damage × drawPower) (default 0)
     accuracyBonus?: number; // flat add to the hit roll (default 0)
     armorPen?: number; // added to the weapon's armorPenetration (default 0)
     recoverable?: number; // 0–1 chance to recover the spent projectile as a DroppedItem after a shot (default 0)
+  };
+
+  /**
+   * RANGED-COMBAT: a carry container that holds AMMUNITION (its mechanical role + the eventual
+   * capacity gate for the haul loop). The slot it occupies (`armorProperties.equipmentSlot`) drives the
+   * loadout trade-off: a BACK quiver holds long arrows but blocks a backpack (bows lose general carry);
+   * a BELT quiver holds short bolts and leaves the back free for a backpack (crossbowmen keep carry).
+   * Carry capacity itself rides the normal `inventoryBonus` (belt/back) channel.
+   */
+  quiver?: {
+    ammoCategory: string; // which ammo bucket this quiver carries ("arrow" | "bolt" | "sling_stone")
+    capacity: number; // how many rounds it holds (the future haul/ammo-capacity gate)
   };
 
   /**

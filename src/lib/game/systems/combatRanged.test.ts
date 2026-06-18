@@ -163,6 +163,22 @@ describe('rangedCombat helpers', () => {
     expect(getEquipmentSlot(itemService.getItemById('throwing_spear')!)).toBe('offHand');
     expect(getEquipmentSlot(itemService.getItemById('self_bow')!)).toBe('mainHand');
   });
+
+  it('the launcher deals no damage bare — the ammunition carries it (× drawPower)', () => {
+    const bow = itemService.getItemById('self_bow')!.weaponProperties!;
+    const warBow = itemService.getItemById('war_bow')!.weaponProperties!;
+    expect(bow.damage).toBe(0); // bow alone does nothing
+    expect(bow.drawPower).toBeGreaterThan(0);
+    expect(warBow.drawPower!).toBeGreaterThan(bow.drawPower!); // war bow drives the same arrow harder
+    expect(itemService.getItemById('flint_arrow')!.ammoProperties!.damage!).toBeGreaterThan(0); // arrow kills
+  });
+
+  it('quivers route by ammo: arrows to the BACK (blocks a pack), bolts to the BELT (keeps it)', () => {
+    expect(getEquipmentSlot(itemService.getItemById('back_quiver')!)).toBe('back');
+    expect(getEquipmentSlot(itemService.getItemById('belt_quiver')!)).toBe('belt');
+    expect(itemService.getItemById('back_quiver')!.quiver?.ammoCategory).toBe('arrow');
+    expect(itemService.getItemById('belt_quiver')!.quiver?.ammoCategory).toBe('bolt');
+  });
 });
 
 describe('ranged combat (headless tickCombat)', () => {
@@ -211,6 +227,26 @@ describe('ranged combat (headless tickCombat)', () => {
       if (wounds.some((w) => w.type === 'crush')) bluntWound = true; // blunt → crush wound
     }
     expect(bluntWound).toBe(true);
+  });
+
+  it('the arrowhead picks the wound type — a broadhead cuts (bleeds), not pierces', () => {
+    const archer = makeArcher({
+      inventory: {
+        items: { broadhead_arrow: 20 },
+        instances: [],
+        weightKg: 0,
+        maxWeightKg: 50,
+        volumeL: 0,
+        maxVolumeL: 50
+      }
+    } as unknown as Partial<Pawn>);
+    let state = makeState([archer], [makeGoblin()]);
+    let cut = false;
+    for (let t = 0; t < 2000 && !cut; t++) {
+      state = combatService.tickCombat({ ...state, turn: t }, 16);
+      if ((state.mobs![0].injuries ?? []).some((w) => w.type === 'cut')) cut = true; // cutting → cut wound
+    }
+    expect(cut).toBe(true);
   });
 
   it('hybrid: a melee main-hand + off-hand throwing spear throws at range, melees up close', () => {
