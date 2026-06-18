@@ -93,16 +93,8 @@
     title?: string;
   }
 
-  /** An active condition rendered as a coloured name pill (malnutrition, infection…). */
-  export interface HealthCondition {
-    name: string; // "Infection"
-    color: string; // stage colour
-    label?: string; // stage label, e.g. "mild"
-    severity?: number; // 0–1
-    threatening?: boolean; // life-threatening stage → pulses
-  }
-
-  /** Whole-body health snapshot rendered by the HEALTH popup. */
+  /** Whole-body health snapshot rendered by the HEALTH popup. Active conditions are no longer shown
+   *  here — they live in the main card's condition chips (see `conditionViews`). */
   export interface HealthModel {
     /** Whole-body blood pool. */
     blood?: { current: number; max: number };
@@ -115,8 +107,6 @@
     combat?: CombatStat[];
     /** Damaged limbs only — intact, full-health, non-bleeding limbs are omitted. */
     limbs: HealthLimb[];
-    /** Active conditions not tied to one limb (malnutrition, infection…), as coloured pills. */
-    conditions: HealthCondition[];
   }
 </script>
 
@@ -138,7 +128,6 @@
   const damaged = $derived(
     !!model.health &&
       (model.health.limbs.length > 0 ||
-        model.health.conditions.length > 0 ||
         (model.health.pain ?? 0) > 0 ||
         (model.health.coldExposure ?? 0) > 0 ||
         (model.health.heatExposure ?? 0) > 0 ||

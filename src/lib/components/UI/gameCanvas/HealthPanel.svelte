@@ -14,7 +14,6 @@
   const damaged = $derived(
     !!health &&
       (health.limbs.length > 0 ||
-        health.conditions.length > 0 ||
         (health.pain ?? 0) > 0 ||
         (health.coldExposure ?? 0) > 0 ||
         (health.heatExposure ?? 0) > 0 ||
@@ -58,24 +57,6 @@
         <span class="hp-k">Pain</span>
         <span style="color:{painColor(health.pain ?? 0)}">{Math.round(health.pain ?? 0)}%</span>
       </div>
-    {/if}
-    {#if health.conditions.length > 0}
-      <div class="hp-conditions">
-        {#each health.conditions as c (c.name)}
-          <span
-            class="cond-chip"
-            class:threatening={c.threatening}
-            style="border-color:{c.color}; color:{c.color}"
-            title="{c.name}{c.label ? ` — ${c.label}` : ''}{c.severity != null
-              ? ` · ${Math.round(c.severity * 100)}%`
-              : ''}{c.threatening ? ' ⚠ life-threatening' : ''}"
-          >
-            {c.name.toUpperCase()}
-          </span>
-        {/each}
-      </div>
-    {:else}
-      <div class="hp-no-conditions">no conditions</div>
     {/if}
     {#if health.combat && health.combat.length > 0}
       <div class="hp-combat">
@@ -193,42 +174,6 @@
   }
   .hp-combat-v {
     color: #d0a850;
-  }
-  /* Active conditions as coloured name pills, below the combat row (same chip look as the
-     Pawns-tab effect cards). */
-  .hp-conditions {
-    margin-top: 4px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 3px;
-  }
-  /* Placeholder shown where condition pills would appear, when there are none. */
-  .hp-no-conditions {
-    margin-top: 4px;
-    font-style: italic;
-    color: #7a6030;
-  }
-  .cond-chip {
-    border: 1px solid;
-    padding: 0 3px;
-    font-size: 8px;
-    line-height: 1.35;
-    font-weight: bold;
-    letter-spacing: 0.02em;
-    background: color-mix(in srgb, currentColor 12%, #0d0903);
-    cursor: default;
-  }
-  .cond-chip.threatening {
-    animation: pulse-threat 1.5s ease-in-out infinite;
-  }
-  @keyframes pulse-threat {
-    0%,
-    100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.45;
-    }
   }
   .hp-limb {
     margin-top: 3px;
