@@ -34,12 +34,13 @@
   $: weightKg = load.weightKg;
   $: volumeL = load.volumeL;
   // Raw (pre-floor) sums — when below 1 the budget is clamped to the 1.0 minimum.
-  $: wRaw = cap.weight.base + cap.weight.strength + cap.weight.build + cap.weight.gear;
-  $: vRaw = cap.volume.base + cap.volume.build + cap.volume.gear;
+  $: wRaw = cap.weight.capacity + cap.weight.gear;
+  $: vRaw = cap.volume.capacity + cap.volume.gear;
   $: isEmpty = carried.length === 0;
 
   const r1 = (n: number) => Math.round(n * 10) / 10;
   const signed = (n: number) => (n >= 0 ? '+' : '−') + r1(Math.abs(n));
+  const pct = (f: number) => `${Math.round(f * 100)}%`;
 
   function itemName(id: string): string {
     return (ITEMS_DATABASE as Item[]).find((i) => i.id === id)?.name ?? id;
@@ -54,18 +55,17 @@
         1
       )} L]
       <div class="cap-tip">
-        <div class="tip-formula">CARRY CAPACITY — {cap.size} · {cap.height}cm</div>
+        <div class="tip-formula">CARRY CAPACITY — {cap.size} · {cap.bodyWeight}kg</div>
         <div class="tip-row">
-          weight = <span class="tv">{r1(cap.weight.base)}</span> base
-          <span class="tv">{signed(cap.weight.strength)}</span> STR({cap.strength})
-          <span class="tv">{signed(cap.weight.build)}</span> build{#if cap.weight.gear}
+          weight = <span class="tv">{cap.bodyWeight}kg</span> ×
+          <span class="tv">{pct(cap.weight.loadFraction)}</span> load (STR {cap.strength}){#if cap.weight.gear}
             <span class="tv">{signed(cap.weight.gear)}</span> gear{/if} =
           <span class="tv">{r1(maxWeightKg)}</span> kg{#if wRaw < maxWeightKg}
             <span class="floor">(min 1)</span>{/if}
         </div>
         <div class="tip-row">
-          volume = <span class="tv">{r1(cap.volume.base)}</span> base
-          <span class="tv">{signed(cap.volume.build)}</span> build{#if cap.volume.gear}
+          volume = <span class="tv">{cap.bodyWeight}kg</span> ×
+          <span class="tv">{pct(cap.volume.fraction)}</span>{#if cap.volume.gear}
             <span class="tv">{signed(cap.volume.gear)}</span> gear{/if} =
           <span class="tv">{r1(maxVolumeL)}</span> L{#if vRaw < maxVolumeL}
             <span class="floor">(min 1)</span>{/if}

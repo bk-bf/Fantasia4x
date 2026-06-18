@@ -68,12 +68,21 @@ const DETERIORATION_RATE_BY_CATEGORY: Record<string, number> = {
 export interface CarryCapacityBreakdown {
   /** Size category derived from the pawn's actual height (a description of height, not the race box). */
   size: string;
-  /** The pawn's actual height in cm — what the `build` carry term is computed from. */
+  /** Height in cm (shown for context — carry is driven by body mass, not height). */
   height: number;
+  /** Body mass in kg — the realistic driver of carry capacity. */
+  bodyWeight: number;
   strength: number;
-  /** `build` = the height contribution: (height − 170) × 0.05 kg/cm. */
-  weight: { base: number; strength: number; build: number; gear: number; total: number };
-  volume: { base: number; build: number; gear: number; total: number };
+  /** Realistic carry weight = bodyWeight × loadFraction (a STR-dependent % of body mass) + gear. */
+  weight: {
+    bodyWeight: number;
+    loadFraction: number;
+    capacity: number;
+    gear: number;
+    total: number;
+  };
+  /** Carry volume = bodyWeight × a frame fraction (strength-independent bulk) + gear. */
+  volume: { bodyWeight: number; fraction: number; capacity: number; gear: number; total: number };
   gearSources: { name: string; weightKg: number; volumeL: number }[];
 }
 
@@ -131,8 +140,8 @@ export interface ItemService {
 
   // Carry capacity
   getCarryBudget(pawn: Pawn, state: GameState): { maxWeightKg: number; maxVolumeL: number };
-  /** Itemised carry-budget breakdown (base + STR + body-size + gear) — single source of
-   *  truth for the CAPACITIES panel and the CARRYING header so the UI can show the maths. */
+  /** Itemised carry-budget breakdown (body mass × strength-scaled load fraction + gear) — single
+   *  source of truth for the CAPACITIES panel and the CARRYING header so the UI can show the maths. */
   getCarryCapacityBreakdown(pawn: Pawn): CarryCapacityBreakdown;
   canAddToInventory(pawn: Pawn, itemId: string, qty: number, state: GameState): boolean;
   clampPickupQuantity(pawn: Pawn, itemId: string, qty: number, state: GameState): number;
@@ -380,13 +389,13 @@ export class ItemServiceImpl implements ItemService {
   // ── Carry capacity ───────────────────────────────────────────────────────────────────────
 
   /**
-   * Base carry weight/volume budget for this pawn.
-   * Formula mirrors stats.jsonc carry_weight / carry_volume entries:
-   *   maxWeightKg = 5 + (STR - 10) × 1.5 + (height − 170) × 0.05
-   *   maxVolumeL  = 8 + (height − 170) × 0.05
-   * The build term uses the pawn's ACTUAL height (cm), not a discrete size bucket — so a tall pawn
-   * carries more than a short one of the same race. Both values are then increased by inventoryBonus
-   * from belt/back slots.
+   * Carry weight/volume budget for this pawn — physically grounded:
+   *   maxWeightKg = bodyWeight × loadFraction      (loadFraction = clamp(STR × 0.012, 0.05, 0.30))
+   *   maxVolumeL  = bodyWeight × 0.13
+   * Carry capacity scales with BODY MASS and STRENGTH (a porter bears a higher fraction of their own
+   * weight than a weakling), not a flat base or a distance-from-10 term — so doubling STR ~doubles the
+   * load fraction instead of swinging a low-STR pawn to near-zero. Belt/back containers (inventoryBonus)
+   * add on top.
    */
   getCarryBudget(pawn: Pawn, _state: GameState): { maxWeightKg: number; maxVolumeL: number } {
     const b = this.getCarryCapacityBreakdown(pawn);
@@ -395,14 +404,29 @@ export class ItemServiceImpl implements ItemService {
 
   getCarryCapacityBreakdown(pawn: Pawn): CarryCapacityBreakdown {
     const height = pawn.physicalTraits?.height ?? 170;
+    const bodyWeight = pawn.physicalTraits?.weight ?? 70;
     const size = sizeFromHeight(height);
     const str = pawn.stats.strength ?? 10;
 
-    // Build term from ACTUAL height (cm): +0.05 kg/L per cm over the 170 cm reference (so a 230 cm
-    // pawn gets +3, a 120 cm one −2.5) — replaces the old discrete tiny/…/huge bucket score.
-    const build = (height - 170) * 0.05;
-    const weight = { base: 5, strength: (str - 10) * 1.5, build, gear: 0, total: 0 };
-    const volume = { base: 8, build, gear: 0, total: 0 };
+    // A pawn bears a STRENGTH-dependent fraction of its OWN body mass — ~1.2% per STR point, clamped to
+    // a realistic 5%–30% of body weight (STR 10 ≈ 12%; a strong porter ~25%). Volume (bulk) tracks the
+    // frame, ~13% of body mass, independent of strength.
+    const loadFraction = Math.min(0.3, Math.max(0.05, str * 0.012));
+    const VOLUME_FRACTION = 0.13;
+    const weight = {
+      bodyWeight,
+      loadFraction,
+      capacity: bodyWeight * loadFraction,
+      gear: 0,
+      total: 0
+    };
+    const volume = {
+      bodyWeight,
+      fraction: VOLUME_FRACTION,
+      capacity: bodyWeight * VOLUME_FRACTION,
+      gear: 0,
+      total: 0
+    };
 
     // Belt + back containers add inventoryBonus on top.
     const gearSources: CarryCapacityBreakdown['gearSources'] = [];
@@ -421,10 +445,10 @@ export class ItemServiceImpl implements ItemService {
       }
     }
 
-    weight.total = Math.max(1, weight.base + weight.strength + weight.build + weight.gear);
-    volume.total = Math.max(1, volume.base + volume.build + volume.gear);
+    weight.total = Math.max(1, weight.capacity + weight.gear);
+    volume.total = Math.max(1, volume.capacity + volume.gear);
 
-    return { size, height, strength: str, weight, volume, gearSources };
+    return { size, height, bodyWeight, strength: str, weight, volume, gearSources };
   }
 
   /**

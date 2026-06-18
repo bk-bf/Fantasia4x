@@ -139,24 +139,23 @@
         "id"         : "carry_weight",
         "category"   : "capacity",
         "primaryStat": "strength",
-        // Base kg + per-STR + a build term from the pawn's ACTUAL height (cm), not a size bucket.
-        // Carry containers (belt/back items with inventoryBonus) add on top at runtime.
-        // NB: computed in ItemService.getCarryCapacityBreakdown (custom vars + gear), not the formula engine.
-        "carryWeightBase"       : 5,
-        "carryWeightPerStrength": 1.5,
-        "carryWeightPerCm"      : 0.05,
-        "formula"    : "carryWeightBase + (STR − 10) × carryWeightPerStrength + (height − 170) × carryWeightPerCm",
-        "description": "maximum carry weight in kg (base 5 + STR scaling + height/build scaling)"
+        // Realistic: a fraction of the pawn's OWN body mass, scaling with strength (porters bear a higher
+        // % than weaklings). loadFraction = clamp(STR × 0.012, 0.05, 0.30). Belt/back containers add on top.
+        // NB: computed in ItemService.getCarryCapacityBreakdown (body mass + gear), not the formula engine.
+        "carryLoadPerStrength": 0.012,
+        "carryLoadMin"        : 0.05,
+        "carryLoadMax"        : 0.30,
+        "formula"    : "bodyWeight × clamp(STR × carryLoadPerStrength, carryLoadMin, carryLoadMax)",
+        "description": "maximum carry weight in kg — a strength-scaled fraction of body mass (STR 10 ≈ 12%)"
     },
     {
         "id"         : "carry_volume",
         "category"   : "capacity",
         "primaryStat": "constitution",
-        // Volume in litres; a taller/bigger build packs more. Build term from actual height (cm).
-        "carryVolumeBase"  : 8,
-        "carryVolumePerCm" : 0.05,
-        "formula"    : "carryVolumeBase + (height − 170) × carryVolumePerCm",
-        "description": "maximum carry volume in litres (base 8 + height/build scaling)"
+        // Volume in litres tracks frame size: ~13% of body mass, independent of strength.
+        "carryVolumePerKg" : 0.13,
+        "formula"    : "bodyWeight × carryVolumePerKg",
+        "description": "maximum carry volume in litres — a fixed fraction of body mass (frame bulk)"
     },
     // ── Resistance ────────────────────────────────────────────────────────────────
     // Resistances are multiplied by consciousness (dazed = weaker) and
