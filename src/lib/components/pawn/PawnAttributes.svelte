@@ -199,24 +199,39 @@
     return id.replace(/_/g, ' ');
   }
 
-  // Direction-aware, GRADED comparison to the baseline pawn → arrow glyph + colour whose intensity
-  // tracks how far off baseline the value is, so 1.08 (faint) and 1.5 (vivid) read as different
-  // tiers. Deviation is fractional (a/b − 1); near-zero baselines (resistances, pain) compare on a
-  // fixed absolute scale instead of a ratio. LOWER_BETTER stats (hunger, pain) invert.
-  // Hue progression (lime → green → cyan), not three samey greens — green hue space is too narrow
-  // for brightness alone to separate tiers on the dark panel.
-  const GREEN = ['#b8e03a', '#1ec46a', '#00d6d6']; // lime → emerald → cyan (better)
-  const WORSE = ['#e0a64a', '#e07a4f', '#e04f4f']; // amber → orange → red (worse)
+  // Colour by the MULTIPLE of the baseline ("average") pawn's value, with tight bands so only a truly
+  // exceptional stat goes blue (the old fractional scale saturated to cyan at just +30%, blueing
+  // everything). Bands: 1.0–1.15× = average (grey), 1.15–1.5× = light green, 1.5–2.0× = green,
+  // 2.0×+ = blue. The worse direction mirrors them with the inverse multiple (amber/orange/red).
+  // Works for multiplier stats (value ≈ ratio, baseline ≈ 1) AND absolute ones (blood volume green at
+  // 1.5× avg, blue at 2×). LOWER_BETTER stats (hunger/fatigue rate, pain) flip which side is "good".
+  const COOL = ['#9ccc65', '#43a047', '#2196f3']; // light green → green → blue (better)
+  const WARM = ['#e0a64a', '#e07a4f', '#e04f4f']; // amber → orange → red (worse)
+  const NEUTRAL = 'var(--text-dim)';
+  // Multiple (≥1) → band tier 0/1/2, or -1 when inside the average band.
+  const band = (m: number): number => (m >= 2.0 ? 2 : m >= 1.5 ? 1 : m >= 1.15 ? 0 : -1);
   function trend(id: string): { glyph: string; color: string } {
     const a = actualRaw(id);
     const b = baseRaw(id);
-    if (!isFinite(a) || !isFinite(b)) return { glyph: '–', color: 'var(--text-dim)' };
-    let dev = Math.abs(b) < 0.02 ? a / 0.15 : a / b - 1;
-    if (LOWER_BETTER.has(id)) dev = -dev;
-    const tier = (m: number) => (m >= 0.3 ? 2 : m >= 0.12 ? 1 : 0);
-    if (dev > 0.03) return { glyph: '▲', color: GREEN[tier(dev)] };
-    if (dev < -0.03) return { glyph: '▼', color: WORSE[tier(-dev)] };
-    return { glyph: '–', color: 'var(--text-dim)' };
+    if (!isFinite(a) || !isFinite(b)) return { glyph: '–', color: NEUTRAL };
+
+    // Multiple of the baseline value. Near-zero baselines (resistances, pain) have no ratio, so anchor
+    // on a gentle absolute reference (pain 0–100 vs resistances ~0–0.25) so they don't saturate.
+    let mult: number;
+    if (Math.abs(b) < 0.02) {
+      if (Math.abs(a) < 1e-4) return { glyph: '–', color: NEUTRAL };
+      const ref = id === 'pain' ? 25 : 0.25;
+      mult = Math.max(0.01, 1 + a / ref);
+    } else {
+      mult = a / b;
+    }
+
+    const good = LOWER_BETTER.has(id) ? 1 / mult : mult; // >1 = better than average
+    const up = band(good);
+    if (up >= 0) return { glyph: '▲', color: COOL[up] };
+    const down = band(1 / good);
+    if (down >= 0) return { glyph: '▼', color: WARM[down] };
+    return { glyph: '–', color: NEUTRAL };
   }
 
   // The hover tooltip opens below its cell; on low rows that clips past the panel's scroll
