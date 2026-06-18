@@ -21,6 +21,7 @@ import {
   effectiveRangedRange,
   rangedAccuracyMod,
   aimIntervalTicks,
+  drawSpeedModifier,
   sumAimBonuses,
   hasMeleeMainHand,
   type RangedWeapon,
@@ -898,7 +899,8 @@ class CombatServiceImpl implements CombatService {
       rw.reload,
       dist,
       pawnStatService.evaluateStat('aim_speed', pawn),
-      sumAimBonuses(pawn).speed
+      // General aim gear (bracers…) + the category-aware quiver draw bonus / no-quiver pack penalty.
+      sumAimBonuses(pawn).speed + drawSpeedModifier(pawn, rw.ammoCategory)
     );
     if (turn % interval !== 0) return null;
 

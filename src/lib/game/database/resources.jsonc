@@ -1542,5 +1542,155 @@
       "toolRequirement": null,
       "yields"         : [ {"itemId": "blue_clay", "min": 1, "max": 3, "skillId": "mining", "skillMultiplier": 0.1} ]
     }
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PRODUCTION-CHAIN-II §M — crystal nodes (typed) + ancient-wood groves
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Crystal nodes — one per mineral (amethyst reuses the `crystal_formation` node above). Each
+  // mostly yields its NORMAL crystal (1–2) plus an occasional MAGIC-INFUSED crystal (0–1). Rarity
+  // comes from the sparse spawn + the 0-floor infused roll, not from the uniform min/max engine.
+  // All share the `crystal_formation` render subterrain; mined with a tier-2 pick. They deliberately
+  // do NOT spawn on `mineral_deposit`, so they stay out of the ore/coal/salt vein pool.
+  {
+    "id": "ruby_node", "displayName": "Ruby Crystals", "subterrain": "crystal_formation", "walkable": false,
+    "charSpans": [ {"sheet": "tiles", "from": 48, "to": 55} ], "fg": [0.78, 0.12, 0.23], "bg": [0.1, 0.04, 0.05], "color": "#C81E3A",
+    "spawn": {"subterrains": {"cave": 0.0025, "rocky": 0.0015, "cliff": 0.001}},
+    "nodeAmountRange": [1, 3], "designationTypes": ["harvest"],
+    "interaction": {
+      "action": "scavenge", "workCategory": "mining", "workAmount": 15, "toolRequirement": {"workType": "mining", "minTier": 2},
+      "yields": [
+        {"itemId": "ruby", "min": 1, "max": 2, "skillId": "mining", "skillMultiplier": 0.1},
+        {"itemId": "infused_ruby", "min": 0, "max": 1, "skillId": "mining", "skillMultiplier": 0.05}
+      ]
+    }
+  },
+  {
+    "id": "sapphire_node", "displayName": "Sapphire Crystals", "subterrain": "crystal_formation", "walkable": false,
+    "charSpans": [ {"sheet": "tiles", "from": 48, "to": 55} ], "fg": [0.12, 0.31, 0.78], "bg": [0.04, 0.05, 0.1], "color": "#1E4FC8",
+    "spawn": {"subterrains": {"cave": 0.0025, "rocky": 0.0015, "cliff": 0.001}},
+    "nodeAmountRange": [1, 3], "designationTypes": ["harvest"],
+    "interaction": {
+      "action": "scavenge", "workCategory": "mining", "workAmount": 15, "toolRequirement": {"workType": "mining", "minTier": 2},
+      "yields": [
+        {"itemId": "sapphire", "min": 1, "max": 2, "skillId": "mining", "skillMultiplier": 0.1},
+        {"itemId": "infused_sapphire", "min": 0, "max": 1, "skillId": "mining", "skillMultiplier": 0.05}
+      ]
+    }
+  },
+  {
+    "id": "emerald_node", "displayName": "Emerald Crystals", "subterrain": "crystal_formation", "walkable": false,
+    "charSpans": [ {"sheet": "tiles", "from": 48, "to": 55} ], "fg": [0.12, 0.66, 0.35], "bg": [0.04, 0.09, 0.05], "color": "#1EA85A",
+    "spawn": {"subterrains": {"cave": 0.0025, "rocky": 0.0015, "cliff": 0.001}},
+    "nodeAmountRange": [1, 3], "designationTypes": ["harvest"],
+    "interaction": {
+      "action": "scavenge", "workCategory": "mining", "workAmount": 15, "toolRequirement": {"workType": "mining", "minTier": 2},
+      "yields": [
+        {"itemId": "emerald", "min": 1, "max": 2, "skillId": "mining", "skillMultiplier": 0.1},
+        {"itemId": "infused_emerald", "min": 0, "max": 1, "skillId": "mining", "skillMultiplier": 0.05}
+      ]
+    }
+  },
+  {
+    "id": "topaz_node", "displayName": "Topaz Crystals", "subterrain": "crystal_formation", "walkable": false,
+    "charSpans": [ {"sheet": "tiles", "from": 48, "to": 55} ], "fg": [0.78, 0.64, 0.12], "bg": [0.1, 0.08, 0.04], "color": "#C8A41E",
+    "spawn": {"subterrains": {"cave": 0.0025, "rocky": 0.0015, "cliff": 0.001}},
+    "nodeAmountRange": [1, 3], "designationTypes": ["harvest"],
+    "interaction": {
+      "action": "scavenge", "workCategory": "mining", "workAmount": 15, "toolRequirement": {"workType": "mining", "minTier": 2},
+      "yields": [
+        {"itemId": "topaz", "min": 1, "max": 2, "skillId": "mining", "skillMultiplier": 0.1},
+        {"itemId": "infused_topaz", "min": 0, "max": 1, "skillId": "mining", "skillMultiplier": 0.05}
+      ]
+    }
+  },
+  {
+    "id": "citrine_node", "displayName": "Citrine Crystals", "subterrain": "crystal_formation", "walkable": false,
+    "charSpans": [ {"sheet": "tiles", "from": 48, "to": 55} ], "fg": [0.78, 0.58, 0.12], "bg": [0.1, 0.07, 0.04], "color": "#C8941E",
+    "spawn": {"subterrains": {"cave": 0.0025, "rocky": 0.0015, "cliff": 0.001}},
+    "nodeAmountRange": [1, 3], "designationTypes": ["harvest"],
+    "interaction": {
+      "action": "scavenge", "workCategory": "mining", "workAmount": 15, "toolRequirement": {"workType": "mining", "minTier": 2},
+      "yields": [
+        {"itemId": "citrine", "min": 1, "max": 2, "skillId": "mining", "skillMultiplier": 0.1},
+        {"itemId": "infused_citrine", "min": 0, "max": 1, "skillId": "mining", "skillMultiplier": 0.05}
+      ]
+    }
+  },
+  {
+    "id": "moonstone_node", "displayName": "Moonstone Crystals", "subterrain": "crystal_formation", "walkable": false,
+    "charSpans": [ {"sheet": "tiles", "from": 48, "to": 55} ], "fg": [0.66, 0.71, 0.78], "bg": [0.08, 0.09, 0.1], "color": "#A8B4C0",
+    "spawn": {"subterrains": {"cave": 0.0025, "rocky": 0.0015, "cliff": 0.001}},
+    "nodeAmountRange": [1, 3], "designationTypes": ["harvest"],
+    "interaction": {
+      "action": "scavenge", "workCategory": "mining", "workAmount": 15, "toolRequirement": {"workType": "mining", "minTier": 2},
+      "yields": [
+        {"itemId": "moonstone", "min": 1, "max": 2, "skillId": "mining", "skillMultiplier": 0.1},
+        {"itemId": "infused_moonstone", "min": 0, "max": 1, "skillId": "mining", "skillMultiplier": 0.05}
+      ]
+    }
+  },
+
+  // Ancient-wood groves — very rare tree variants (one species per grove), felled with an axe like
+  // any tree. Each yields its premium `*_log` plus the usual branch/bark byproducts.
+  {
+    "id": "heartwood_grove", "displayName": "Heartwood Tree", "subterrain": "tree", "walkable": false,
+    "charSpans": [ {"sheet": "plants", "from": 0, "to": 71} ], "fg": [0.48, 0.29, 0.42], "bg": [0.08, 0.05, 0.07], "color": "#7A4B6B",
+    "spawn": {"subterrains": {"deep_grass": 0.0016, "grass": 0.0009, "dirt": 0.0004}},
+    "nodeAmountRange": [2, 4], "designationTypes": ["woodcut", "forage"],
+    "interaction": {
+      "designationType": "woodcut", "action": "woodcut", "workCategory": "woodcutting", "workAmount": 18, "toolRequirement": {"workType": "woodcutting", "minTier": 1},
+      "yields": [
+        {"itemId": "heartwood_log", "min": 2, "max": 4, "skillId": "woodcutting", "skillMultiplier": 0.2, "regrowthTurns": 6000},
+        {"itemId": "branch", "min": 2, "max": 4, "skillId": "woodcutting", "skillMultiplier": 0.15, "regrowthTurns": 4200},
+        {"itemId": "bark", "min": 1, "max": 2, "skillId": "woodcutting", "skillMultiplier": 0.1, "regrowthTurns": 1500}
+      ],
+      "persistent": true, "harvestDepletes": true
+    }
+  },
+  {
+    "id": "moonwood_grove", "displayName": "Moonwood Tree", "subterrain": "tree", "walkable": false,
+    "charSpans": [ {"sheet": "plants", "from": 0, "to": 71} ], "fg": [0.79, 0.83, 0.88], "bg": [0.08, 0.09, 0.1], "color": "#C9D4E0",
+    "spawn": {"subterrains": {"deep_grass": 0.0016, "grass": 0.0009, "tall_grass": 0.0005}},
+    "nodeAmountRange": [2, 4], "designationTypes": ["woodcut", "forage"],
+    "interaction": {
+      "designationType": "woodcut", "action": "woodcut", "workCategory": "woodcutting", "workAmount": 16, "toolRequirement": {"workType": "woodcutting", "minTier": 1},
+      "yields": [
+        {"itemId": "moonwood_log", "min": 2, "max": 4, "skillId": "woodcutting", "skillMultiplier": 0.2, "regrowthTurns": 6000},
+        {"itemId": "branch", "min": 2, "max": 4, "skillId": "woodcutting", "skillMultiplier": 0.15, "regrowthTurns": 4200},
+        {"itemId": "bark", "min": 1, "max": 2, "skillId": "woodcutting", "skillMultiplier": 0.1, "regrowthTurns": 1500}
+      ],
+      "persistent": true, "harvestDepletes": true
+    }
+  },
+  {
+    "id": "ironwood_grove", "displayName": "Ironwood Tree", "subterrain": "tree", "walkable": false,
+    "charSpans": [ {"sheet": "plants", "from": 0, "to": 71} ], "fg": [0.23, 0.2, 0.18], "bg": [0.05, 0.04, 0.03], "color": "#3A332E",
+    "spawn": {"subterrains": {"deep_grass": 0.0014, "dirt": 0.0008, "rocky": 0.0006}},
+    "nodeAmountRange": [2, 4], "designationTypes": ["woodcut", "forage"],
+    "interaction": {
+      "designationType": "woodcut", "action": "woodcut", "workCategory": "woodcutting", "workAmount": 22, "toolRequirement": {"workType": "woodcutting", "minTier": 1},
+      "yields": [
+        {"itemId": "ironwood_log", "min": 2, "max": 4, "skillId": "woodcutting", "skillMultiplier": 0.2, "regrowthTurns": 7200},
+        {"itemId": "branch", "min": 2, "max": 4, "skillId": "woodcutting", "skillMultiplier": 0.15, "regrowthTurns": 4200},
+        {"itemId": "bark", "min": 1, "max": 2, "skillId": "woodcutting", "skillMultiplier": 0.1, "regrowthTurns": 1500}
+      ],
+      "persistent": true, "harvestDepletes": true
+    }
+  },
+  {
+    "id": "emberwood_grove", "displayName": "Emberwood Tree", "subterrain": "tree", "walkable": false,
+    "charSpans": [ {"sheet": "plants", "from": 0, "to": 71} ], "fg": [0.71, 0.28, 0.12], "bg": [0.1, 0.05, 0.03], "color": "#B5481E",
+    "spawn": {"subterrains": {"savanna": 0.0014, "dirt": 0.0008, "scrubland": 0.0006}},
+    "nodeAmountRange": [2, 4], "designationTypes": ["woodcut", "forage"],
+    "interaction": {
+      "designationType": "woodcut", "action": "woodcut", "workCategory": "woodcutting", "workAmount": 18, "toolRequirement": {"workType": "woodcutting", "minTier": 1},
+      "yields": [
+        {"itemId": "emberwood_log", "min": 2, "max": 4, "skillId": "woodcutting", "skillMultiplier": 0.2, "regrowthTurns": 6000},
+        {"itemId": "branch", "min": 2, "max": 4, "skillId": "woodcutting", "skillMultiplier": 0.15, "regrowthTurns": 4200},
+        {"itemId": "bark", "min": 1, "max": 2, "skillId": "woodcutting", "skillMultiplier": 0.1, "regrowthTurns": 1500}
+      ],
+      "persistent": true, "harvestDepletes": true
+    }
   }
 ]

@@ -3556,30 +3556,74 @@
     }
   },
   {
-    "id": "back_quiver",
+    "id": "hide_arrow_sheath",
     "charSpans": [ {"sheet": "items", "id": 158} ],
-    "name": "Back Quiver",
+    "name": "Hide Arrow-Sheath",
+    "type": "tool",
+    "category": "storage",
+    "maxDurability": 40,
+    "deteriorationRate": 0.03,
+    "description": "A crude tube of stiffened green hide lashed shut at one end and slung on the back. It keeps a bundle of arrows to hand far better than groping in a sack — the first hunter's quiver. Owns the shoulders, so no pack rides with it.",
+    "color": "#6E5A40",
+    "amount": 0,
+    "weightKg": 0.5,
+    "volumeL": 1.0,
+    "tier": 0,
+    "inventoryBonus": { "weightKg": 3, "volumeL": 8 },
+    "armorProperties": {
+      "defense"       : 0,
+      "equipmentSlot" : "back"
+    },
+    "quiver": { "ammoCategory": "arrow", "capacity": 25, "drawSpeed": 0.15 }
+  },
+  {
+    "id": "leather_back_quiver",
+    "charSpans": [ {"sheet": "items", "id": 158} ],
+    "name": "Leather Back Quiver",
     "type": "tool",
     "category": "storage",
     "maxDurability": 70,
     "deteriorationRate": 0.02,
-    "description": "A tall hide quiver slung across the back, holding a sheaf of long arrows where a fletcher's reach can find them. Its bulk owns the shoulders, though — there is no room for a pack with it on.",
+    "description": "A tall sewn-leather quiver worn across the back, its mouth flared so a fletcher's reach finds a shaft without a glance. The standing archer's tool — but its bulk owns the shoulders, leaving no room for a pack.",
     "color": "#7B4020",
     "amount": 0,
     "weightKg": 0.6,
     "volumeL": 1.2,
     "tier": 1,
+    "researchRequired": "leather_working",
     "inventoryBonus": { "weightKg": 5, "volumeL": 12 },
     "armorProperties": {
       "defense"       : 0,
       "equipmentSlot" : "back"
     },
-    "quiver": { "ammoCategory": "arrow", "capacity": 60 }
+    "quiver": { "ammoCategory": "arrow", "capacity": 45, "drawSpeed": 0.25 }
   },
   {
-    "id": "belt_quiver",
+    "id": "stiffened_war_quiver",
     "charSpans": [ {"sheet": "items", "id": 158} ],
-    "name": "Belt Bolt-Case",
+    "name": "Stiffened War Quiver",
+    "type": "tool",
+    "category": "storage",
+    "maxDurability": 100,
+    "deteriorationRate": 0.015,
+    "description": "A war quiver of boiled leather over an iron spine, its arrows held nock-up in a fitted spacer so a full sheaf comes to the string fast and clean. The drilled bowman's edge — and still no shoulder for a pack.",
+    "color": "#5A4632",
+    "amount": 0,
+    "weightKg": 0.9,
+    "volumeL": 1.4,
+    "tier": 2,
+    "researchRequired": "iron_working",
+    "inventoryBonus": { "weightKg": 6, "volumeL": 14 },
+    "armorProperties": {
+      "defense"       : 1,
+      "equipmentSlot" : "back"
+    },
+    "quiver": { "ammoCategory": "arrow", "capacity": 65, "drawSpeed": 0.32 }
+  },
+  {
+    "id": "leather_bolt_case",
+    "charSpans": [ {"sheet": "items", "id": 158} ],
+    "name": "Leather Bolt-Case",
     "type": "tool",
     "category": "storage",
     "maxDurability": 60,
@@ -3589,13 +3633,36 @@
     "amount": 0,
     "weightKg": 0.5,
     "volumeL": 0.9,
-    "tier": 1,
+    "tier": 2,
+    "researchRequired": "iron_working",
     "inventoryBonus": { "weightKg": 3, "volumeL": 4 },
     "armorProperties": {
       "defense"       : 0,
       "equipmentSlot" : "belt"
     },
-    "quiver": { "ammoCategory": "bolt", "capacity": 30 }
+    "quiver": { "ammoCategory": "bolt", "capacity": 25, "drawSpeed": 0.25 }
+  },
+  {
+    "id": "banded_bolt_quiver",
+    "charSpans": [ {"sheet": "items", "id": 158} ],
+    "name": "Iron-Banded Bolt-Case",
+    "type": "tool",
+    "category": "storage",
+    "maxDurability": 90,
+    "deteriorationRate": 0.015,
+    "description": "An iron-banded hardwood bolt-case with a sprung lip that feeds quarrels one-handed while the other spans the bow. The siege-crew's belt kit — fast to feed, and the back stays free for the march pack.",
+    "color": "#54545A",
+    "amount": 0,
+    "weightKg": 0.8,
+    "volumeL": 1.0,
+    "tier": 2,
+    "researchRequired": "iron_working",
+    "inventoryBonus": { "weightKg": 4, "volumeL": 5 },
+    "armorProperties": {
+      "defense"       : 1,
+      "equipmentSlot" : "belt"
+    },
+    "quiver": { "ammoCategory": "bolt", "capacity": 40, "drawSpeed": 0.30 }
   },
   {
     "id": "iron_boss_shield",

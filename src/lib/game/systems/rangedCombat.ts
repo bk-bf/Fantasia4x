@@ -24,6 +24,8 @@ const AIM_ACC_STAT_POINTS = 50;
 const ACC_FALLOFF_PER_TILE = 2.5;
 /** LINEAR aim-time falloff: each tile of range lengthens the aim interval by this fraction. */
 const AIM_TIME_PER_TILE = 0.08;
+/** Aim-speed penalty for drawing arrows/bolts from a pack (no ready quiver) — a fumbling nock. */
+const DRAW_FUMBLE_PENALTY = -0.2;
 
 /** A weapon counts as ranged when its `range` reaches past melee (all melee weapons author range 0). */
 export function isRangedWeaponProps(
@@ -201,10 +203,43 @@ export function aimIntervalTicks(
   aimSpeedStat: number,
   equipSpeedBonus: number
 ): number {
-  const speedFactor = Math.max(0.4, aimSpeedStat) * (1 + equipSpeedBonus);
+  const speedFactor = Math.max(0.4, aimSpeedStat) * Math.max(0.2, 1 + equipSpeedBonus);
   const distanceFactor = 1 + dist * AIM_TIME_PER_TILE;
   return Math.max(
     1,
     Math.round((baseInterval * Math.max(1, reload) * distanceFactor) / speedFactor)
   );
+}
+
+/**
+ * Draw-speed delta for the `aim_speed` cadence, by how a pawn carries this weapon's ammo. STORAGE is
+ * universal (ammo rides general inventory) — this only models how fast the next round comes to hand:
+ *   • a ready QUIVER matching the ammo (`quiver.drawSpeed`) → fast nock (bonus);
+ *   • else if a pack / other carry container is worn → the ammo is stowed, not ready → fumble penalty;
+ *   • else neutral (on the belt, or planted in the ground — historically quick).
+ * ONLY arrows and bolts care — sling stones and thrown weapons deploy equally fast from a belt pouch
+ * or the hand, so they never take the penalty and need no quiver item.
+ */
+export function drawSpeedModifier(pawn: Pawn, ammoCategory: string | undefined): number {
+  if (ammoCategory !== 'arrow' && ammoCategory !== 'bolt') return 0;
+  const eq = pawn.equipment as Record<string, ItemInstance | undefined> | undefined;
+  if (!eq) return 0;
+  let quiverBonus = 0;
+  let hasMatchingQuiver = false;
+  let hasContainer = false;
+  for (const slot in eq) {
+    const inst = eq[slot];
+    if (!inst) continue;
+    const item = itemService.getItemById(inst.itemId);
+    if (!item) continue;
+    if (item.quiver?.ammoCategory === ammoCategory) {
+      hasMatchingQuiver = true;
+      quiverBonus = Math.max(quiverBonus, item.quiver.drawSpeed);
+    } else if (item.inventoryBonus && (slot === 'back' || slot === 'belt')) {
+      hasContainer = true;
+    }
+  }
+  if (hasMatchingQuiver) return quiverBonus;
+  if (hasContainer) return DRAW_FUMBLE_PENALTY;
+  return 0;
 }

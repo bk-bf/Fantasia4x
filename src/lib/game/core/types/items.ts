@@ -341,8 +341,15 @@ export interface Item {
    * Carry capacity itself rides the normal `inventoryBonus` (belt/back) channel.
    */
   quiver?: {
-    ammoCategory: string; // which ammo bucket this quiver carries ("arrow" | "bolt" | "sling_stone")
+    ammoCategory: string; // which ammo bucket this quiver speeds ("arrow" | "bolt")
     capacity: number; // how many rounds it holds (the future haul/ammo-capacity gate)
+    /**
+     * Fast-draw bonus folded into the `aim_speed` cadence (NOT a new stat) when this quiver's
+     * `ammoCategory` matches the equipped weapon — nocking from a ready quiver beats fumbling a shaft
+     * out of a pack. Storage stays universal (ammo rides general inventory); the quiver only sells
+     * SPEED. Better/later quivers draw faster. See `rangedCombat.drawSpeedModifier`.
+     */
+    drawSpeed: number;
   };
 
   /**

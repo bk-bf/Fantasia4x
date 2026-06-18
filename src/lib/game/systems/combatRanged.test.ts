@@ -9,6 +9,7 @@ import {
   effectiveRangedRange,
   rangedAccuracyMod,
   aimIntervalTicks,
+  drawSpeedModifier,
   sumAimBonuses,
   hasMeleeMainHand
 } from './rangedCombat';
@@ -174,10 +175,31 @@ describe('rangedCombat helpers', () => {
   });
 
   it('quivers route by ammo: arrows to the BACK (blocks a pack), bolts to the BELT (keeps it)', () => {
-    expect(getEquipmentSlot(itemService.getItemById('back_quiver')!)).toBe('back');
-    expect(getEquipmentSlot(itemService.getItemById('belt_quiver')!)).toBe('belt');
-    expect(itemService.getItemById('back_quiver')!.quiver?.ammoCategory).toBe('arrow');
-    expect(itemService.getItemById('belt_quiver')!.quiver?.ammoCategory).toBe('bolt');
+    expect(getEquipmentSlot(itemService.getItemById('leather_back_quiver')!)).toBe('back');
+    expect(getEquipmentSlot(itemService.getItemById('leather_bolt_case')!)).toBe('belt');
+    expect(itemService.getItemById('leather_back_quiver')!.quiver?.ammoCategory).toBe('arrow');
+    expect(itemService.getItemById('leather_bolt_case')!.quiver?.ammoCategory).toBe('bolt');
+    // Later-age quivers draw faster than earlier ones.
+    expect(itemService.getItemById('stiffened_war_quiver')!.quiver!.drawSpeed).toBeGreaterThan(
+      itemService.getItemById('hide_arrow_sheath')!.quiver!.drawSpeed
+    );
+  });
+
+  it('draw speed: a matching quiver is fast, a pack (no quiver) fumbles, slings never care', () => {
+    const quivered = makeArcher({
+      equipment: { mainHand: { itemId: 'self_bow' }, back: { itemId: 'leather_back_quiver' } }
+    } as unknown as Partial<Pawn>);
+    const packed = makeArcher({
+      equipment: { mainHand: { itemId: 'self_bow' }, back: { itemId: 'wicker_frame' } }
+    } as unknown as Partial<Pawn>);
+    const bare = makeArcher({ equipment: { mainHand: { itemId: 'self_bow' } } } as unknown as Partial<Pawn>);
+
+    expect(drawSpeedModifier(quivered, 'arrow')).toBeCloseTo(0.25, 5); // ready quiver → fast
+    expect(drawSpeedModifier(packed, 'arrow')).toBeLessThan(0); // arrows stowed in a pack → fumble
+    expect(drawSpeedModifier(bare, 'arrow')).toBe(0); // on the belt / planted → neutral
+    // Item-type specific: sling stones (and thrown) never take the pack penalty, need no quiver.
+    expect(drawSpeedModifier(packed, 'sling_stone')).toBe(0);
+    expect(drawSpeedModifier(packed, undefined)).toBe(0);
   });
 });
 

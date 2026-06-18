@@ -1521,30 +1521,77 @@
     "researchRequired": "iron_working"
   },
   {
-    "id": "make_back_quiver",
+    "id": "make_hide_arrow_sheath",
     "station": "makers_bench",
     "inputs": {
-      "light_leather": 2,
+      "hide": 1,
       "cordage": 1
     },
     "outputs": {
-      "back_quiver": 1
+      "hide_arrow_sheath": 1
     },
-    "workAmount": 6,
+    "workAmount": 3,
     "toolTierRequired": 0
   },
   {
-    "id": "make_belt_quiver",
+    "id": "make_leather_back_quiver",
     "station": "makers_bench",
     "inputs": {
-      "light_leather": 1,
+      "light_leather": 2,
+      "sinew": 1,
       "cordage": 1
     },
     "outputs": {
-      "belt_quiver": 1
+      "leather_back_quiver": 1
+    },
+    "workAmount": 6,
+    "toolTierRequired": 0,
+    "researchRequired": "leather_working"
+  },
+  {
+    "id": "make_stiffened_war_quiver",
+    "station": "stone_forge",
+    "inputs": {
+      "heavy_leather": 1,
+      "iron_bar": 1,
+      "sinew": 1
+    },
+    "outputs": {
+      "stiffened_war_quiver": 1
+    },
+    "workAmount": 9,
+    "toolTierRequired": 1,
+    "researchRequired": "iron_working"
+  },
+  {
+    "id": "make_leather_bolt_case",
+    "station": "makers_bench",
+    "inputs": {
+      "light_leather": 1,
+      "sinew": 1,
+      "cordage": 1
+    },
+    "outputs": {
+      "leather_bolt_case": 1
     },
     "workAmount": 5,
-    "toolTierRequired": 0
+    "toolTierRequired": 0,
+    "researchRequired": "iron_working"
+  },
+  {
+    "id": "make_banded_bolt_quiver",
+    "station": "anvil",
+    "inputs": {
+      "heavy_leather": 1,
+      "iron_bar": 1,
+      "oak_plank": 1
+    },
+    "outputs": {
+      "banded_bolt_quiver": 1
+    },
+    "workAmount": 8,
+    "toolTierRequired": 1,
+    "researchRequired": "iron_working"
   },
   {
     "id": "make_iron_boss_shield",
