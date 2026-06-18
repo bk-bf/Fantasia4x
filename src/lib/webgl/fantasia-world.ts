@@ -46,8 +46,56 @@ export function buildGameGrid(
 ): GameGrid {
   const grid = new GameGrid();
 
+  // Interior-mountain hiding: a SOLID tile (a mountain_wall / cliff_wall / ore — i.e. impassable rock
+  // you'd have to mine through) whose whole 8-neighbourhood is also solid is buried and can never be
+  // seen, so it renders as a blank tile in the dirt-bg colour (melting into the map background). A
+  // solid tile with ANY non-solid neighbour (cave, open land, water, or already-mined floor) is an
+  // exposed face and stays drawn — so a mountain shows exactly its one-tile silhouette, and the walls
+  // lining caves stay visible (the earlier bug: caves were wrongly counted as "mountain").
+  //   • Solid = a rocky/cliff/mineral_deposit tile that still carries its wall/ore resource. Mining a
+  //     wall clears the resource → the tile becomes non-solid → its neighbours re-expose on the next
+  //     terrain rebuild (the dig reveals inward, DF-style). Caves are open floor → never solid.
+  //   • Map-edge (out-of-bounds) neighbours count as solid, so a massif running off the map still
+  //     hides its buried interior.
+  const SOLID_SUBTYPES = new Set(['rocky', 'cliff', 'mineral_deposit']);
+  const DIRT_BG = (SUBTERRAINS['dirt']?.bg ?? [0.08, 0.06, 0.03]) as [number, number, number];
+  const mh = worldMap.length;
+  const mw = worldMap[0]?.length ?? 0;
+  // Precompute the solid mask once (avoids re-scanning resources for every neighbour lookup).
+  const solid: boolean[][] = worldMap.map((row) =>
+    row.map(
+      (t) =>
+        SOLID_SUBTYPES.has(t.subType) &&
+        !!t.resources &&
+        Object.values(t.resources).some((a) => a > 0)
+    )
+  );
+  const isBuried = (x: number, y: number): boolean => {
+    if (!solid[y][x]) return false;
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        if (dx === 0 && dy === 0) continue;
+        const nx = x + dx;
+        const ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= mw || ny >= mh) continue; // OOB counts as solid
+        if (!solid[ny][nx]) return false; // an exposed (non-solid) face → keep this tile drawn
+      }
+    }
+    return true;
+  };
+
   for (const row of worldMap) {
     for (const tile of row) {
+      // Buried interior rock → blank dirt-coloured tile (only the mountain's outer rim stays drawn).
+      if (isBuried(tile.x, tile.y)) {
+        grid.setTile(tile.x, tile.y, {
+          char: ' ',
+          foreground: { r: DIRT_BG[0], g: DIRT_BG[1], b: DIRT_BG[2] },
+          background: { r: DIRT_BG[0], g: DIRT_BG[1], b: DIRT_BG[2] },
+          position: { x: tile.x, y: tile.y }
+        });
+        continue;
+      }
       // Layer 1: base subterrain
       const sub = SUBTERRAINS[tile.subType] ?? SUBTERRAIN_FALLBACK;
 
