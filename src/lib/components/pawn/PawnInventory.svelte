@@ -34,8 +34,8 @@
   $: weightKg = load.weightKg;
   $: volumeL = load.volumeL;
   // Raw (pre-floor) sums — when below 1 the budget is clamped to the 1.0 minimum.
-  $: wRaw = cap.weight.base + cap.weight.strength + cap.weight.bodySize + cap.weight.gear;
-  $: vRaw = cap.volume.base + cap.volume.bodySize + cap.volume.gear;
+  $: wRaw = cap.weight.base + cap.weight.strength + cap.weight.build + cap.weight.gear;
+  $: vRaw = cap.volume.base + cap.volume.build + cap.volume.gear;
   $: isEmpty = carried.length === 0;
 
   const r1 = (n: number) => Math.round(n * 10) / 10;
@@ -54,18 +54,18 @@
         1
       )} L]
       <div class="cap-tip">
-        <div class="tip-formula">CARRY CAPACITY — size: {cap.size}</div>
+        <div class="tip-formula">CARRY CAPACITY — {cap.size} · {cap.height}cm</div>
         <div class="tip-row">
           weight = <span class="tv">{r1(cap.weight.base)}</span> base
           <span class="tv">{signed(cap.weight.strength)}</span> STR({cap.strength})
-          <span class="tv">{signed(cap.weight.bodySize)}</span> size{#if cap.weight.gear}
+          <span class="tv">{signed(cap.weight.build)}</span> build{#if cap.weight.gear}
             <span class="tv">{signed(cap.weight.gear)}</span> gear{/if} =
           <span class="tv">{r1(maxWeightKg)}</span> kg{#if wRaw < maxWeightKg}
             <span class="floor">(min 1)</span>{/if}
         </div>
         <div class="tip-row">
           volume = <span class="tv">{r1(cap.volume.base)}</span> base
-          <span class="tv">{signed(cap.volume.bodySize)}</span> size{#if cap.volume.gear}
+          <span class="tv">{signed(cap.volume.build)}</span> build{#if cap.volume.gear}
             <span class="tv">{signed(cap.volume.gear)}</span> gear{/if} =
           <span class="tv">{r1(maxVolumeL)}</span> L{#if vRaw < maxVolumeL}
             <span class="floor">(min 1)</span>{/if}

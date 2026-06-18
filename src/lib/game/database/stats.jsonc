@@ -139,23 +139,24 @@
         "id"         : "carry_weight",
         "category"   : "capacity",
         "primaryStat": "strength",
-        // Base kg regardless of stats + per-STR and per-bodySize scaling.
+        // Base kg + per-STR + a build term from the pawn's ACTUAL height (cm), not a size bucket.
         // Carry containers (belt/back items with inventoryBonus) add on top at runtime.
+        // NB: computed in ItemService.getCarryCapacityBreakdown (custom vars + gear), not the formula engine.
         "carryWeightBase"       : 5,
         "carryWeightPerStrength": 1.5,
-        "carryWeightPerBodySize": 2.0,
-        "formula"    : "carryWeightBase + (STR − 10) × carryWeightPerStrength + bodySize × carryWeightPerBodySize",
-        "description": "maximum carry weight in kg (base 5 + STR scaling + body size scaling)"
+        "carryWeightPerCm"      : 0.05,
+        "formula"    : "carryWeightBase + (STR − 10) × carryWeightPerStrength + (height − 170) × carryWeightPerCm",
+        "description": "maximum carry weight in kg (base 5 + STR scaling + height/build scaling)"
     },
     {
         "id"         : "carry_volume",
         "category"   : "capacity",
         "primaryStat": "constitution",
-        // Volume in litres; body size governs bulk capacity more than raw strength.
-        "carryVolumeBase"       : 8,
-        "carryVolumePerBodySize": 2.0,
-        "formula"    : "carryVolumeBase + bodySize × carryVolumePerBodySize",
-        "description": "maximum carry volume in litres (base 8 + body size scaling)"
+        // Volume in litres; a taller/bigger build packs more. Build term from actual height (cm).
+        "carryVolumeBase"  : 8,
+        "carryVolumePerCm" : 0.05,
+        "formula"    : "carryVolumeBase + (height − 170) × carryVolumePerCm",
+        "description": "maximum carry volume in litres (base 8 + height/build scaling)"
     },
     // ── Resistance ────────────────────────────────────────────────────────────────
     // Resistances are multiplied by consciousness (dazed = weaker) and

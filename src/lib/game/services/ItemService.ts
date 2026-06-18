@@ -17,6 +17,7 @@ import { buildingService } from './BuildingService';
 import itemsData from '../database/items.jsonc';
 import buildingsData from '../database/buildings.jsonc';
 import { SECONDS_PER_TICK } from '../core/time';
+import { sizeFromHeight } from '../core/Race';
 // Gated console shim (ADR-011): per-tick/per-action log/debug/info/warn are silent unless
 // gameDebug(true); console.error still surfaces.
 import { gatedConsole as console } from '../core/log';
@@ -65,11 +66,14 @@ const DETERIORATION_RATE_BY_CATEGORY: Record<string, number> = {
 
 /** Itemised carry-budget breakdown for the UI (see ItemService.getCarryCapacityBreakdown). */
 export interface CarryCapacityBreakdown {
+  /** Size category derived from the pawn's actual height (a description of height, not the race box). */
   size: string;
-  bodySizeScore: number;
+  /** The pawn's actual height in cm — what the `build` carry term is computed from. */
+  height: number;
   strength: number;
-  weight: { base: number; strength: number; bodySize: number; gear: number; total: number };
-  volume: { base: number; bodySize: number; gear: number; total: number };
+  /** `build` = the height contribution: (height − 170) × 0.05 kg/cm. */
+  weight: { base: number; strength: number; build: number; gear: number; total: number };
+  volume: { base: number; build: number; gear: number; total: number };
   gearSources: { name: string; weightKg: number; volumeL: number }[];
 }
 
@@ -378,10 +382,11 @@ export class ItemServiceImpl implements ItemService {
   /**
    * Base carry weight/volume budget for this pawn.
    * Formula mirrors stats.jsonc carry_weight / carry_volume entries:
-   *   maxWeightKg = 5 + (STR - 10) × 1.5 + bodySizeScore × 3.0
-   *   maxVolumeL  = 8 + bodySizeScore × 4.0
-   * Body-size score: tiny=-2, small=-1, medium=0, large=1, huge=2.
-   * Both values are then increased by inventoryBonus from belt/back slots.
+   *   maxWeightKg = 5 + (STR - 10) × 1.5 + (height − 170) × 0.05
+   *   maxVolumeL  = 8 + (height − 170) × 0.05
+   * The build term uses the pawn's ACTUAL height (cm), not a discrete size bucket — so a tall pawn
+   * carries more than a short one of the same race. Both values are then increased by inventoryBonus
+   * from belt/back slots.
    */
   getCarryBudget(pawn: Pawn, _state: GameState): { maxWeightKg: number; maxVolumeL: number } {
     const b = this.getCarryCapacityBreakdown(pawn);
@@ -389,20 +394,15 @@ export class ItemServiceImpl implements ItemService {
   }
 
   getCarryCapacityBreakdown(pawn: Pawn): CarryCapacityBreakdown {
-    const sizeScore: Record<string, number> = {
-      tiny: -2,
-      small: -1,
-      medium: 0,
-      large: 1,
-      huge: 2
-    };
-    const size = pawn.physicalTraits?.size ?? 'medium';
-    const bs = sizeScore[size] ?? 0;
+    const height = pawn.physicalTraits?.height ?? 170;
+    const size = sizeFromHeight(height);
     const str = pawn.stats.strength ?? 10;
 
-    // Mirrors stats.jsonc carry_weight / carry_volume formulas.
-    const weight = { base: 5, strength: (str - 10) * 1.5, bodySize: bs * 2.0, gear: 0, total: 0 };
-    const volume = { base: 8, bodySize: bs * 2.0, gear: 0, total: 0 };
+    // Build term from ACTUAL height (cm): +0.05 kg/L per cm over the 170 cm reference (so a 230 cm
+    // pawn gets +3, a 120 cm one −2.5) — replaces the old discrete tiny/…/huge bucket score.
+    const build = (height - 170) * 0.05;
+    const weight = { base: 5, strength: (str - 10) * 1.5, build, gear: 0, total: 0 };
+    const volume = { base: 8, build, gear: 0, total: 0 };
 
     // Belt + back containers add inventoryBonus on top.
     const gearSources: CarryCapacityBreakdown['gearSources'] = [];
@@ -421,10 +421,10 @@ export class ItemServiceImpl implements ItemService {
       }
     }
 
-    weight.total = Math.max(1, weight.base + weight.strength + weight.bodySize + weight.gear);
-    volume.total = Math.max(1, volume.base + volume.bodySize + volume.gear);
+    weight.total = Math.max(1, weight.base + weight.strength + weight.build + weight.gear);
+    volume.total = Math.max(1, volume.base + volume.build + volume.gear);
 
-    return { size, bodySizeScore: bs, strength: str, weight, volume, gearSources };
+    return { size, height, strength: str, weight, volume, gearSources };
   }
 
   /**

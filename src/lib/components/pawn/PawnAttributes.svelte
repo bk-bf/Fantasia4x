@@ -143,10 +143,13 @@
   function derivation(s: StatDef): Deriv {
     if (s.id === 'carry_weight') {
       return {
-        formula: '5 + (STR−10)×1.5 + bodySize×2 + gear',
+        formula: '5 + (STR−10)×1.5 + (height−170)×0.05 + gear',
         vars: [
           { name: 'STR', value: String(carry.strength) },
-          { name: 'bodySize', value: `${carry.size} (${signed(carry.bodySizeScore)})` },
+          {
+            name: 'height',
+            value: `${carry.height}cm · ${carry.size} (${signed(carry.weight.build)})`
+          },
           { name: 'gear', value: signed(carry.weight.gear) }
         ],
         description: s.description
@@ -154,9 +157,12 @@
     }
     if (s.id === 'carry_volume') {
       return {
-        formula: '8 + bodySize×2 + gear',
+        formula: '8 + (height−170)×0.05 + gear',
         vars: [
-          { name: 'bodySize', value: `${carry.size} (${signed(carry.bodySizeScore)})` },
+          {
+            name: 'height',
+            value: `${carry.height}cm · ${carry.size} (${signed(carry.volume.build)})`
+          },
           { name: 'gear', value: signed(carry.volume.gear) }
         ],
         description: s.description

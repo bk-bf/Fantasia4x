@@ -9,6 +9,7 @@
     getPawnTaskSummary
   } from '$lib/utils/pawnUtils';
   import { pawnService } from '$lib/game/services/PawnService';
+  import { sizeFromHeight } from '$lib/game/core/Race';
   import PawnStance from './PawnStance.svelte';
 
   export let pawn: Pawn;
@@ -79,7 +80,9 @@
     <span class="lbl">WEIGHT</span><span class="val">{pawn.physicalTraits.weight}kg</span>
   </div>
   <div class="row">
-    <span class="lbl">SIZE</span><span class="val">{pawn.physicalTraits.size}</span>
+    <span class="lbl">SIZE</span><span class="val"
+      >{sizeFromHeight(pawn.physicalTraits.height)}</span
+    >
   </div>
   <div class="row">
     <span class="lbl">MOOD</span>

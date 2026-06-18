@@ -149,6 +149,19 @@ const SIZE_BOX: Record<Size, { height: [number, number]; weight: [number, number
   huge: { height: [230, 280], weight: [160, 250] }
 };
 
+/**
+ * Size category for an actual height (cm). Size is a *description* of height, so a pawn's category
+ * follows its real height — a 200 cm pawn reads `large`, regardless of its race's nominal size box
+ * (the per-pawn height roll can land outside that box). Thresholds are the SIZE_BOX upper bounds.
+ */
+export function sizeFromHeight(cm: number): Size {
+  if (cm < 120) return 'tiny';
+  if (cm < 150) return 'small';
+  if (cm < 190) return 'medium';
+  if (cm < 230) return 'large';
+  return 'huge';
+}
+
 function generatePhysicalTraits(archetype: Archetype): Race['physicalTraits'] {
   const sizes: Size[] = ['tiny', 'small', 'medium', 'large', 'huge'];
   // 75% honour the archetype's size bias, else fully random for variety.
