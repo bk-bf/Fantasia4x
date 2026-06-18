@@ -24,6 +24,7 @@ import {
   drawSpeedModifier,
   sumAimBonuses,
   getGrip,
+  armorEncumbrance,
   type RangedWeapon,
   type AmmoPick,
   type MeleeGrip
@@ -182,6 +183,8 @@ interface AttackProfile {
   accuracy: number;
   damageType: DamageType;
   bluntMod: number;
+  /** Flat 0–1 chance to stun (knock down) on hit, regardless of damage type (maces/hammers). */
+  stunChance: number;
   armorPen: number;
   /** Which attack was rolled this swing (weapon name / natural-weapon id) — for logs & floaters. */
   weaponId: string;
@@ -239,6 +242,7 @@ function profileFromWeapon(
     accuracy: wp.accuracy ?? 0,
     damageType: dtype,
     bluntMod: wp.bluntMod ?? (dtype === 'blunt' ? 1.0 : 0),
+    stunChance: wp.stunChance ?? 0,
     armorPen: wp.armorPenetration ?? 0,
     weaponId,
     staminaCost: wp.staminaCost ?? ATTACK_STAMINA_COST,
@@ -255,6 +259,14 @@ const TWOHAND_DAMAGE_MULT = 1.15;
 const TWOHAND_ARMOR_PEN = 0.05;
 /** Multiplier a shield applies to the WEARER's dodge (no active block — BB-style, defence = dodge). */
 const SHIELD_DODGE_MULT = 1.25;
+/** Encumbrance: at full load (enc 1.0) dodge is cut by this, and per-swing stamina drain rises by this. */
+const ENCUMBRANCE_DODGE = 0.5;
+const ENCUMBRANCE_STAMINA = 0.6;
+
+/** Per-swing stamina-drain multiplier from an attacker's worn-armor encumbrance (heavy = winds faster). */
+function encumbranceStaminaMult(e: Pawn | Mob): number {
+  return 'equipment' in e ? 1 + armorEncumbrance(e as Pawn) * ENCUMBRANCE_STAMINA : 1;
+}
 
 /** Apply the MELEE grip's offensive modifier to a built profile (duelist + two-hand add offense; a
  *  shield trades offense for the defender-side dodge bonus, applied separately in resolveHit). */
@@ -314,6 +326,7 @@ function attackerProfile(attacker: Pawn | Mob): AttackProfile {
     accuracy: 0,
     damageType: 'blunt',
     bluntMod: 1.0,
+    stunChance: 0,
     armorPen: 0,
     weaponId: 'strike',
     staminaCost: ATTACK_STAMINA_COST,
@@ -426,6 +439,7 @@ class CombatServiceImpl implements CombatService {
       accuracy,
       damageType,
       bluntMod,
+      stunChance,
       armorPen,
       weaponId,
       staminaCost,
@@ -434,10 +448,12 @@ class CombatServiceImpl implements CombatService {
     // Evasion uses the `dodge` stat (DEX − weight, × moving) rather than raw dexterity, so injury,
     // load, and the winded penalty (× 0.5) all lower it. ×20 keeps baseline parity with the old
     // `defDex × 2` term (dodge ≈ 1.0 at DEX 10 → 20).
+    const defEnc = 'equipment' in defender ? armorEncumbrance(defender as Pawn) : 0;
     const defDodge =
       pawnStatService.evaluateStat('dodge', defender) *
       this.conditionDodgeMult(defender) *
-      (getGrip(defender) === 'shield' ? SHIELD_DODGE_MULT : 1); // BB: a shield raises evasion, not a block
+      (getGrip(defender) === 'shield' ? SHIELD_DODGE_MULT : 1) * // BB: a shield raises evasion, not a block
+      (1 - defEnc * ENCUMBRANCE_DODGE); // heavy armour = easier to hit (light/medium/heavy tradeoff)
 
     const hitChance = clamp(dex * 3 + accuracy + (override?.hitMod ?? 0) - defDodge * 20, 5, 95);
     if (rng.random() * 100 > hitChance) {
@@ -494,9 +510,15 @@ class CombatServiceImpl implements CombatService {
       infected: false
     };
 
-    // Knockdown: blunt/crush hits roll chance based on damage vs constitution.
+    // Knockdown/stun: blunt hits roll chance from damage vs constitution, PLUS the weapon's flat
+    // `stunChance` (maces/hammers stun regardless of damage type). Reduced by knockdown_resistance.
     const defCon = defender.stats.constitution ?? 10;
-    const knockChance = damageType === 'blunt' ? clamp((final - defCon / 4) * bluntMod, 0, 100) : 0;
+    const stunResist = clamp(pawnStatService.evaluateStat('knockdown_resistance', defender), 0.1, 2);
+    const knockChance = clamp(
+      ((damageType === 'blunt' ? (final - defCon / 4) * bluntMod : 0) + stunChance * 100) / stunResist,
+      0,
+      100
+    );
     const knockdown = knockChance > 0 && rng.random() * 100 < knockChance;
 
     return {
@@ -787,7 +809,60 @@ class CombatServiceImpl implements CombatService {
         result.weaponId
       );
     }
-    return { state: next, staminaCost: result.staminaCost };
+    // Every landed blow chips condition: the attacker's weapon + the defender's struck armour.
+    return { state: this.applyGearWear(next, attacker, target), staminaCost: result.staminaCost };
+  }
+
+  /** The worn-armour slot with the highest `defense` (the piece that takes a blow — mirrors
+   *  partArmorReduction's best-of selection). Null if the pawn wears no armour. */
+  private bestArmorSlot(pawn: Pawn): string | null {
+    const slots = ['bodyOuter', 'bodyMid', 'bodyBase', 'headOuter', 'headBase', 'gloves', 'boots', 'gorget'];
+    const eq = pawn.equipment as Record<string, ItemInstance | undefined>;
+    let best: string | null = null;
+    let bestDef = 0;
+    for (const s of slots) {
+      const inst = eq[s];
+      if (!inst) continue;
+      const def = itemService.getItemById(inst.itemId)?.armorProperties?.defense ?? 0;
+      if (def > bestDef) {
+        bestDef = def;
+        best = s;
+      }
+    }
+    return best;
+  }
+
+  /** Immutably reduce one equipped instance's durability by `loss` (floored at 0). */
+  private decrEquipDurability(pawn: Pawn, slot: string, loss: number): Pawn {
+    const eq = pawn.equipment as Record<string, ItemInstance | undefined>;
+    const inst = eq[slot];
+    if (!inst) return pawn;
+    const dur = Math.max(0, (inst.durability ?? 0) - loss);
+    return { ...pawn, equipment: { ...pawn.equipment, [slot]: { ...inst, durability: dur } } };
+  }
+
+  /** ON A HIT: wear the attacker's main-hand weapon and the defender's struck armour piece by their
+   *  `durabilityLossPerCombatHit` (pawns only — mobs carry no gear). One gated pawns-array rebuild. */
+  private applyGearWear(state: GameState, attacker: Pawn | Mob, defender: Pawn | Mob): GameState {
+    const weaponInst =
+      'equipment' in attacker ? attacker.equipment?.mainHand : undefined;
+    const weaponLoss = weaponInst
+      ? (itemService.getItemById(weaponInst.itemId)?.durabilityLossPerCombatHit ?? 0)
+      : 0;
+    const armorSlot = 'equipment' in defender ? this.bestArmorSlot(defender as Pawn) : null;
+    if (weaponLoss <= 0 && !armorSlot) return state;
+    return {
+      ...state,
+      pawns: state.pawns.map((p) => {
+        if (weaponLoss > 0 && p.id === attacker.id) return this.decrEquipDurability(p, 'mainHand', weaponLoss);
+        if (armorSlot && p.id === defender.id) {
+          const inst = (p.equipment as Record<string, ItemInstance | undefined>)[armorSlot];
+          const loss = inst ? (itemService.getItemById(inst.itemId)?.durabilityLossPerCombatHit ?? 0) : 0;
+          if (loss > 0) return this.decrEquipDurability(p, armorSlot, loss);
+        }
+        return p;
+      })
+    };
   }
 
   /** Nearest living hostile mob within `maxRange` tiles of a pawn (auto-engagement; ranged
@@ -1151,7 +1226,10 @@ class CombatServiceImpl implements CombatService {
           next = shot.state;
           pawnStaminaUpdates.set(
             pawn.id,
-            Math.max(0, curStamina - shot.staminaCost * fatigueStaminaFactor(pawn))
+            Math.max(
+              0,
+              curStamina - shot.staminaCost * fatigueStaminaFactor(pawn) * encumbranceStaminaMult(pawn)
+            )
           );
         }
         continue; // out of range/sight/ammo → the FSM closes; never a melee swing at distance
@@ -1171,10 +1249,13 @@ class CombatServiceImpl implements CombatService {
 
       const atk = this.performAttack(pawn, target, next, state.turn);
       next = atk.state;
-      // Fatigue raises the effective drain (cost × factor) — a tired attacker winds faster.
+      // Fatigue + worn-armour encumbrance raise the effective drain — a tired/laden attacker winds faster.
       pawnStaminaUpdates.set(
         pawn.id,
-        Math.max(0, curStamina - atk.staminaCost * fatigueStaminaFactor(pawn))
+        Math.max(
+          0,
+          curStamina - atk.staminaCost * fatigueStaminaFactor(pawn) * encumbranceStaminaMult(pawn)
+        )
       );
     }
 

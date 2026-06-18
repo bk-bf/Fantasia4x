@@ -281,6 +281,15 @@ describe('ranged combat (headless tickCombat)', () => {
     expect(getGrip(dualWield)).toBe('oneHanded'); // off-hand occupied, not a shield
   });
 
+  it('combat wears equipment: a weapon loses condition as it lands blows', () => {
+    const fighter = makeArcher({
+      equipment: { mainHand: { itemId: 'bone_knife', durability: 60 } }
+    } as unknown as Partial<Pawn>);
+    let state = makeState([fighter], [makeGoblin({ y: 6 })]); // goblin adjacent + passive → the pawn lands hits
+    for (let t = 0; t < 2000; t++) state = combatService.tickCombat({ ...state, turn: t }, 16);
+    expect(state.pawns[0].equipment.mainHand!.durability).toBeLessThan(60); // every landed blow chips it
+  });
+
   it('the arrowhead picks the wound type — a broadhead cuts (bleeds), not pierces', () => {
     const archer = makeArcher({
       inventory: {

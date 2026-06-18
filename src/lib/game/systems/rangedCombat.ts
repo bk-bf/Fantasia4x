@@ -137,6 +137,28 @@ export function sumAimBonuses(pawn: Pawn): { accuracy: number; speed: number; ra
   return out;
 }
 
+/**
+ * Armor ENCUMBRANCE 0..1.5 = total worn-armor weight ÷ the pawn's carry capacity (STR-scaled, already
+ * stored as `inventory.maxWeightKg`). The light/medium/heavy axis WITHOUT armor classes: a strong/CON
+ * pawn carries plate near 0 (tank), a DEX/weak pawn is crushed by it → pushed to light gear (skirmisher).
+ * Combat turns this into a dodge cut (heavy = easier to hit) + a stamina-drain bump (heavy = winds faster).
+ * Mobs carry no equipment → 0.
+ */
+export function armorEncumbrance(pawn: Pawn): number {
+  const eq = 'equipment' in pawn ? pawn.equipment : undefined;
+  if (!eq) return 0;
+  let armorKg = 0;
+  for (const slot in eq) {
+    const inst = eq[slot as keyof typeof eq];
+    if (!inst) continue;
+    const item = itemService.getItemById(inst.itemId);
+    if (item?.armorProperties) armorKg += item.weightKg ?? 0;
+  }
+  if (armorKg <= 0) return 0;
+  const cap = pawn.inventory?.maxWeightKg ?? 0;
+  return cap > 0 ? Math.min(armorKg / cap, 1.5) : 0;
+}
+
 export interface AmmoPick {
   itemId: string;
   props: NonNullable<Item['ammoProperties']>;
