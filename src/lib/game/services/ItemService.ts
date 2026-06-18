@@ -4,8 +4,10 @@ import type {
   DynamicIngredientSlot,
   DroppedItem,
   Recipe,
-  Pawn
+  Pawn,
+  ItemQuality
 } from '../core/types';
+import { qualityPrefix } from '../core/itemQuality';
 import {
   consumeFromStockpiles,
   addToStockpileZone,
@@ -96,7 +98,7 @@ export interface ItemService {
   /** R10: build a `dynamicName` item's per-instance name from a subject (e.g. "Bjorn's Corpse"). */
   makeDynamicName(itemId: string, subjectName: string): string;
   /** R10: display name for a dropped item — honours a `dynamicName` item's per-drop `name` override. */
-  getItemDisplayName(drop: { resourceId: string; name?: string }): string;
+  getItemDisplayName(drop: { resourceId: string; name?: string; quality?: ItemQuality }): string;
   getItemsByType(type: string): Item[];
   getItemsByCategory(category: string): Item[];
   /** Distinct item categories (sorted), across the whole item DB. */
@@ -176,10 +178,13 @@ export class ItemServiceImpl implements ItemService {
     return `${subjectName}'s ${def.name}`;
   }
 
-  getItemDisplayName(drop: { resourceId: string; name?: string }): string {
+  getItemDisplayName(drop: { resourceId: string; name?: string; quality?: ItemQuality }): string {
     const def = this.getItemById(drop.resourceId);
     if (def?.dynamicName && drop.name) return drop.name;
-    return def?.name ?? drop.resourceId.replace(/_/g, ' ');
+    const base = def?.name ?? drop.resourceId.replace(/_/g, ' ');
+    // §Q: prepend the craft-quality prefix ("Masterwork Iron Sword"); Standard/undefined adds nothing.
+    const prefix = qualityPrefix(drop.quality);
+    return prefix ? `${prefix} ${base}` : base;
   }
 
   getItemsByType(type: string): Item[] {

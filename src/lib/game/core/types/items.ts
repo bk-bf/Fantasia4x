@@ -3,6 +3,14 @@
 
 import type { DamageType } from './health';
 
+/**
+ * PRODUCTION-CHAIN-II §Q discrete craft-quality tier (R8). 0=Crude, 1=Standard (unmarked baseline),
+ * 2=Fine, 3=Superior, 4=Masterwork, 5=Legendary. Rolled from the `crafting_quality` work-axis at
+ * craft completion and stamped per-stack/per-instance, like durability. See `core/itemQuality.ts`
+ * for the tier table, roll, and the multiplier/prefix/colour helpers.
+ */
+export type ItemQuality = 0 | 1 | 2 | 3 | 4 | 5;
+
 export interface ItemInstance {
   instanceId: string; // unique stable ID
   itemId: string; // references Item definition
@@ -13,6 +21,13 @@ export interface ItemInstance {
    * of collapsing into the generic counted def name. Undefined for ordinary tracked items.
    */
   name?: string;
+  /**
+   * §Q craft-quality tier (R8). Stamped at craft completion from the crafter's `crafting_quality`
+   * axis and carried for the life of the item; readers (Combat weapon/armor, PawnStatService tool
+   * boost) scale the item's quality-relevant stats by `qualityMultiplier(quality)`. Undefined =
+   * Standard (×1.0) — uncrafted / world-spawned items and bulk materials carry no quality.
+   */
+  quality?: ItemQuality;
 }
 
 export interface PawnInventory {
@@ -271,9 +286,27 @@ export interface Item {
     critMod?: number; // added to the wielder's base crit_chance (0–1)
     twoHanded?: boolean; // requires both mainHand and offHand slots
     tags?: string[]; // ability grants from COMBAT-SYSTEM
+    // ── RANGED-COMBAT additions ──────────────────────────────────────────
+    ammoCategory?: string; // links a ranged weapon to its ammo (e.g. "arrow" | "bolt" | "sling_stone"); omit = no ammo (thrown weapons self-consume)
+    reload?: number; // attack ticks of cooldown ADDED after a ranged shot (default 0); a crossbow at 3 fires a third as often
+    strScaled?: boolean; // does damage scale with STR? (default true; crossbows/slings set false — mechanical advantage)
+    warmup?: number; // attack ticks to aim before the first shot at a NEW target (default 0); rewards holding a bead
     // ── Natural-weapon additions (innate attacks rolled per swing) ───────
     weight?: number; // relative roll frequency among an entity's natural weapons (default 1)
     staminaCost?: number; // stamina drained by this attack (default ATTACK_STAMINA_COST)
+  };
+
+  /**
+   * RANGED-COMBAT: tags an item as ammunition. Any ammo feeds any ranged weapon sharing its
+   * `ammoCategory` (better ammo = better result — the dynamic-material philosophy). Ammo is a
+   * bulk consumable in pawn inventory, not an ItemInstance.
+   */
+  ammoProperties?: {
+    ammoCategory: string; // "arrow" | "bolt" | "sling_stone"; matched against a weapon's weaponProperties.ammoCategory
+    damageBonus?: number; // flat add to the weapon's damage roll (default 0)
+    accuracyBonus?: number; // flat add to the hit roll (default 0)
+    armorPen?: number; // added to the weapon's armorPenetration (default 0)
+    recoverable?: number; // 0–1 chance to recover the spent projectile as a DroppedItem after a shot (default 0)
   };
 
   armorProperties?: {

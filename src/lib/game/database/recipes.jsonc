@@ -1298,6 +1298,132 @@
     }
   },
   {
+    "id": "make_throwing_stone",
+    "station": "makers_bench",
+    "inputs": {
+      "small_stone": 1
+    },
+    "outputs": {
+      "throwing_stone": 2
+    },
+    "workAmount": 1,
+    "toolTierRequired": 0
+  },
+  {
+    "id": "make_sling",
+    "station": "makers_bench",
+    "inputs": {
+      "light_leather": 1,
+      "cordage": 1
+    },
+    "outputs": {
+      "sling": 1
+    },
+    "workAmount": 3,
+    "toolTierRequired": 0
+  },
+  {
+    "id": "make_throwing_spear",
+    "station": "makers_bench",
+    "inputs": {
+      "branch": 1,
+      "flint_shard": 1,
+      "cordage": 1
+    },
+    "outputs": {
+      "throwing_spear": 1
+    },
+    "workAmount": 3,
+    "toolTierRequired": 0
+  },
+  {
+    "id": "make_crossbow",
+    "station": "anvil",
+    "inputs": {
+      "oak_plank": 2,
+      "iron_bar": 1,
+      "clay_mold": 1,
+      "sinew": 1,
+      "cordage": 1
+    },
+    "outputs": {
+      "crossbow": 1
+    },
+    "workAmount": 14,
+    "toolTierRequired": 1,
+    "researchRequired": "iron_working"
+  },
+  {
+    "id": "make_sling_stone",
+    "station": "makers_bench",
+    "inputs": {
+      "small_stone": 1
+    },
+    "outputs": {
+      "sling_stone": 4
+    },
+    "workAmount": 2,
+    "toolTierRequired": 0
+  },
+  {
+    "id": "make_flint_arrow",
+    "station": "makers_bench",
+    "inputs": {
+      "branch": 1,
+      "flint_shard": 1,
+      "cordage": 1
+    },
+    "outputs": {
+      "flint_arrow": 4
+    },
+    "workAmount": 4,
+    "toolTierRequired": 0
+  },
+  {
+    "id": "make_bone_arrow",
+    "station": "makers_bench",
+    "inputs": {
+      "branch": 1,
+      "medium_bones": 1,
+      "cordage": 1
+    },
+    "outputs": {
+      "bone_arrow": 4
+    },
+    "workAmount": 4,
+    "toolTierRequired": 0
+  },
+  {
+    "id": "make_iron_arrow",
+    "station": "stone_forge",
+    "inputs": {
+      "branch": 1,
+      "iron_bar": 1,
+      "cordage": 1
+    },
+    "outputs": {
+      "iron_arrow": 8
+    },
+    "workAmount": 6,
+    "toolTierRequired": 1,
+    "researchRequired": "iron_working"
+  },
+  {
+    "id": "make_iron_bolt",
+    "station": "anvil",
+    "inputs": {
+      "branch": 1,
+      "iron_bar": 1,
+      "cordage": 1
+    },
+    "outputs": {
+      "iron_bolt": 6
+    },
+    "workAmount": 6,
+    "toolTierRequired": 1,
+    "researchRequired": "iron_working"
+  },
+  {
     "id": "make_iron_boss_shield",
     "station": "anvil",
     "inputs": {

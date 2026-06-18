@@ -3,11 +3,13 @@
 // producing recipe: destroy staged inputs, spawn outputs on the station tile, apply mold wear, drain
 // the queue. `completeCraftOrder` is also called directly for passive furnace production. Extracted
 // from JobService (P-4 handler split).
-import type { CraftingInProgress, GameState, Job } from '../../core/types';
+import type { CraftingInProgress, GameState, Job, ItemQuality } from '../../core/types';
 // Gated console shim — see core/log.ts. Silences per-tick log/debug/warn unless gameDebug(true).
 import { gatedConsole as console } from '../../core/log';
 import { itemService } from '../ItemService';
 import { recipeService } from '../RecipeService';
+import { pawnStatService } from '../PawnStatService';
+import { rollCraftQuality } from '../../core/itemQuality';
 import {
   absorbDropIfOnStockpileTile,
   reserveForOrder,
@@ -101,7 +103,17 @@ export function complete(job: Job, gs: GameState): GameState {
   if (!job.craftQueueId) return gs;
   const entry = (gs.craftingQueue ?? []).find((e) => e.id === job.craftQueueId);
   if (!entry) return gs;
-  let state = completeCraftOrder(entry, gs);
+  // §Q (R8): roll the output's quality tier from the working pawn's `crafting_quality` work-axis
+  // (stats.jsonc) — DEX/INT skill plus the sight/manipulation/consciousness capacities, so a wounded
+  // or in-the-dark crafter produces worse work through the existing model. Passive furnace production
+  // has no working pawn (handled by completeCraftOrder's undefined default → Standard).
+  let quality: ItemQuality | undefined;
+  const pawn = job.claimedBy ? gs.pawns.find((p) => p.id === job.claimedBy) : undefined;
+  if (pawn) {
+    const axis = pawnStatService.getWorkModifiers(pawn, 'crafting').quality ?? 1;
+    quality = rollCraftQuality(axis, () => rng.random());
+  }
+  let state = completeCraftOrder(entry, gs, quality);
   // ADR-009 step 2: wear the WORKING pawn's craft tool (e.g. the knife used at a butcher spot /
   // tannery). Only the pawn-worked path wears a tool — passive furnace production has no pawn.
   const req = recipeService.toolRequirementForRecipe(recipeService.getRecipeForItem(entry.item.id));
@@ -115,7 +127,15 @@ export function complete(job: Job, gs: GameState): GameState {
  * by both the pawn-worked craft completion (complete) and passive furnace production
  * (GameEngineImpl.processPassiveProduction).
  */
-export function completeCraftOrder(entry: CraftingInProgress, gs: GameState): GameState {
+/** Output item types that carry a per-stack §Q quality tier (instance-bearing equipment & tools).
+ *  Bulk materials/consumables stack freely and don't carry per-unit quality (batch-quality open Q). */
+const QUALITY_STAMPED_TYPES = new Set(['weapon', 'armor', 'tool']);
+
+export function completeCraftOrder(
+  entry: CraftingInProgress,
+  gs: GameState,
+  quality?: ItemQuality
+): GameState {
   // Recipe registry (Stage C): a craft completion runs the producing recipe once per queued
   // unit and emits ALL its outputs — the primary product plus any byproducts (e.g. splitting
   // a log yields firewood AND branches; charcoal burns yield ash).
@@ -143,7 +163,18 @@ export function completeCraftOrder(entry: CraftingInProgress, gs: GameState): Ga
     for (const [outId, qty] of Object.entries(outputs)) {
       if (qty <= 0) continue;
       const id = `craft-${outId}-${station.x}-${station.y}-${Date.now()}-${rng.random().toString(36).slice(2, 5)}`;
-      next.push({ id, resourceId: outId, x: station.x, y: station.y, quantity: qty });
+      // §Q: stamp the rolled tier onto instance-bearing equipment/tools only; bulk byproducts go plain.
+      const stamp =
+        quality !== undefined &&
+        QUALITY_STAMPED_TYPES.has(itemService.getItemById(outId)?.type ?? '');
+      next.push({
+        id,
+        resourceId: outId,
+        x: station.x,
+        y: station.y,
+        quantity: qty,
+        ...(stamp ? { quality } : {})
+      });
       newDropIds.push(id);
     }
     state = { ...state, droppedItems: next };

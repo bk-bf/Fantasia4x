@@ -417,10 +417,10 @@ export function absorbDropIfOnStockpileTile(state: GameState, dropId: string): G
   const tileKey = `${drop.x},${drop.y}`;
   if (!state.zoneTiles?.[tileKey]?.includes('stockpile')) return state;
 
-  // Identity-tracked drops (a per-instance `name` override or a tracked `instance`, e.g. a named
-  // pawn carcass) must NOT be folded into a counted pile — that would erase the identity. Mark it
-  // stored in place as its own distinct pile.
-  if (drop.name != null || drop.instance != null) {
+  // Identity-tracked drops (a per-instance `name` override, a tracked `instance`, or a §Q craft
+  // `quality` tier) must NOT be folded into a counted pile — that would erase the identity / merge
+  // across quality tiers. Mark it stored in place as its own distinct pile.
+  if (drop.name != null || drop.instance != null || drop.quality != null) {
     const newDropped = (state.droppedItems ?? []).map((d) =>
       d.id === dropId ? { ...d, stored: true } : d
     );

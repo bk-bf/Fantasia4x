@@ -1,7 +1,7 @@
 // Labor, dropped items, jobs, and work-assignment types. Split out of core/types.ts (P-4);
 // re-exported via the barrel.
 
-import type { ItemInstance } from './items';
+import type { ItemInstance, ItemQuality } from './items';
 import type { EntityStats } from './race';
 
 /** Celestia-compatible 5-level labor priority. 0 = disabled. */
@@ -29,6 +29,13 @@ export interface DroppedItem {
   decayAcc?: number;
   /** Present for tracked items (weapons, armour, tools with maxDurability). */
   instance?: ItemInstance;
+  /**
+   * §Q craft-quality tier of this stack (R8). Stamped at craft completion and propagated onto the
+   * `ItemInstance` when the stack is equipped/picked up (mirrors how per-stack `durability` becomes
+   * `instance.durability`). Undefined = Standard. A stack mixes only same-quality units (no
+   * cross-tier merge).
+   */
+  quality?: ItemQuality;
   /**
    * Per-drop display-name override (R10). Used for `dynamicName` items (e.g. a pawn corpse, which
    * reads "Bjorn's Corpse" instead of the generic def name). Resolved at spawn; see

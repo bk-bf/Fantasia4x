@@ -371,7 +371,9 @@ export const COMMANDS: Record<string, Cmd> = {
     const instance: ItemInstance = drop.instance ?? {
       instanceId: `${item.id}-${p.pawnId}-${Date.now()}`,
       itemId: item.id,
-      durability: item.maxDurability ?? 100
+      durability: item.maxDurability ?? 100,
+      // §Q: carry the stack's craft-quality tier onto the equipped instance (like durability).
+      ...(drop.quality !== undefined ? { quality: drop.quality } : {})
     };
     const px = pawn.position?.x ?? drop.x;
     const py = pawn.position?.y ?? drop.y;

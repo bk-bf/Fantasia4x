@@ -5,12 +5,14 @@ import type {
   ConditionDef,
   TransientConditionDef,
   Item,
+  ItemInstance,
   RacialTrait
 } from '../core/types';
 import statsData from '../database/stats.jsonc';
 import conditionsData from '../database/conditions.jsonc';
 import itemsData from '../database/items.jsonc';
 import { WORK_CATEGORIES } from '../core/Work';
+import { qualityMultiplier } from '../core/itemQuality';
 
 // conditions.jsonc holds both persistent conditions (severity/stages) and transient ones
 // (re-derived each tick); split them by the `duration` discriminant — see the file header.
@@ -69,18 +71,20 @@ function heldToolBoost(
   let speed = 0;
   let yieldB = 0;
   let found = false;
-  const consider = (itemId: string) => {
-    if (!tools.has(itemId)) return;
-    const b = TOOL_BOOST[itemId];
+  const consider = (inst: ItemInstance) => {
+    if (!tools.has(inst.itemId)) return;
+    const b = TOOL_BOOST[inst.itemId];
     if (!b) return;
     found = true;
-    if (b.speed > speed) speed = b.speed;
-    if (b.yield > yieldB) yieldB = b.yield;
+    // §Q: a higher-quality tool gives a bigger work boost (and, separately, wears slower).
+    const q = qualityMultiplier(inst.quality);
+    if (b.speed * q > speed) speed = b.speed * q;
+    if (b.yield * q > yieldB) yieldB = b.yield * q;
   };
   const eq = (entity as Pawn).equipment;
-  if (eq) for (const inst of Object.values(eq)) if (inst) consider(inst.itemId);
+  if (eq) for (const inst of Object.values(eq)) if (inst) consider(inst);
   const carried = (entity as Pawn).inventory?.instances;
-  if (carried) for (const inst of carried) consider(inst.itemId);
+  if (carried) for (const inst of carried) consider(inst);
   return found ? { speed, yield: yieldB } : null;
 }
 

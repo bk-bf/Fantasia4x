@@ -6,7 +6,8 @@
 
 ## Status
 
-**[ ] Not started.** This is the **second** production/items/buildings/resources pass on top
+**[~] In progress** — **§Q (Item Quality) is DONE (2026-06-18)**, closing R8; **§M / §L / §F not started.**
+This is the **second** production/items/buildings/resources pass on top
 of the completed [Pass I](../archive/PRODUCTION-CHAIN-EXPANSION-2026-06-12.md) (forage → fire →
 tools → metal → leather). Pass I delivered the *mundane foundation*; Pass II adds the four
 depth layers that make a mature colony feel distinct: **craft quality**, **magic materials &
@@ -66,7 +67,7 @@ intermediate goods, quality spread, fermentation timers, draft animals).
 
 ---
 
-## §Q — Item Quality Prefixes
+## §Q — Item Quality Prefixes ✅ DONE 2026-06-18
 
 **Goal:** every crafted item is rolled to a **quality tier** at completion; the tier stamps a
 **bonus/penalty delta** onto the item and shows as a **name prefix + colour**. Closes R8.
@@ -291,14 +292,16 @@ best rungs wait on husbandry anyway). Each step: `pnpm check` + `pnpm test` gree
 `recipes.jsonc`/`items.jsonc`/`buildings.jsonc`/`resources.jsonc` (definitions only — logic in
 services); new ADR if a non-obvious choice is locked.
 
-### §Q — Item Quality
+### §Q — Item Quality ✅ **DONE 2026-06-18**
 
-- [ ] `core/types/items.ts`: `quality?: 0–5` on the per-stack instance (`DroppedItem`); `ItemQuality` tier/prefix/multiplier table.
-- [ ] `rollCraftQuality(qualityAxis, pawn, rng)` helper; thresholds + master-crafter long tail.
-- [ ] `JobService` craft-completion **stamps** `quality` on the output stack (qty-1 for equipment; no cross-tier merge).
-- [ ] Apply quality delta through the existing **`materialBonuses` application path** (Combat/PawnStatService/equip/food read it with no new plumbing) — closes R8 consumer side.
-- [ ] Name-prefix + tier colour in the item display (reuse existing palette + `SelectedEntityCard`).
-- [ ] Tests: roll distribution, stamp-on-output, weapon/armor/tool/food delta applied. Tick the R8 row in ROADMAP.
+- [x] `core/types/items.ts`: `ItemQuality = 0–5` + `quality?` on `ItemInstance`; `core/types/jobs.ts`: `quality?` on the per-stack `DroppedItem`. Tier/prefix/multiplier/colour table in `core/itemQuality.ts`.
+- [x] `rollCraftQuality(craftingQualityAxis, rand)` helper; thresholds + ±0.18 jitter + skill-scaled master long tail (Legendary reachable for masters, ~never for journeymen).
+- [x] `JobService` craft-completion (`jobs/craft.ts`) **stamps** `quality` on the output stack — rolled from the working pawn's `crafting_quality` work-axis (stats.jsonc); equipment/tools only; no cross-tier merge (guarded in `absorbDropIfOnStockpileTile`); passive/no-pawn production → unstamped (Standard).
+- [x] Quality propagated `DroppedItem.quality` → `ItemInstance.quality` on equip (`equipFromTile`), then **consumed**: Combat scales equipped weapon (`scaleWeaponQuality`) + worn armour (`scaleArmorQuality`); PawnStatService scales held-tool work boost. — closes R8 consumer side. **NB:** the EQUIPMENT `materialBonuses`/`applyMaterialBonuses` machinery was never wired into craft completion (dead code) and readers pull stats from the item *definition*, so the consumer was built as a fresh per-instance scaling layer rather than "riding" that path.
+- [x] Name-prefix in `getItemDisplayName` (`qualityPrefix`); tier colour via `qualityColor` (grey→amber→green→blue→purple→gold palette).
+- [x] Tests: `core/itemQuality.test.ts` (18) — seeded roll distribution + deterministic band boundaries + long tail, tier accessors, weapon/armour scaling, stamp-on-output (equipment vs bulk material vs passive), display prefix. R8 row ticked in ROADMAP. `pnpm test` green (380); `pnpm check` clean for §Q (2 pre-existing `entitySim.test.ts` errors are unrelated).
+- [ ] **Deferred to §F:** cooked-meal quality (cooking nutrition/mood) rides §F's cooking chain, not the `crafting` category.
+- [ ] **Deferred:** quality through the bulk-`items` tool-fetch path — tools auto-fetched from colony stock are bulk counts (no per-stack instance), so carry no quality; tools equipped from a loose drop do.
 
 ### §F — Farming, Food & Drink
 
