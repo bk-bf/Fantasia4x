@@ -2,7 +2,7 @@
 
 # ENTITY SPAWNING (Mobs, Animals, Taming & Husbandry)
 
-> **Related:** [ROADMAP](ROADMAP.md) · [COMBAT-SYSTEM](COMBAT-SYSTEM.md) · [PRODUCTION-CHAIN-EXPANSION](../archive/PRODUCTION-CHAIN-EXPANSION-2026-06-12.md) (archived) · [SOCIAL-LAYER](SOCIAL-LAYER.md) · [LIVING-WORLD](LIVING-WORLD.md) · [game/DESIGN](../../game/DESIGN.md) · [game/ARCHITECTURE](../../game/ARCHITECTURE.md)
+> **Related:** [ROADMAP](ROADMAP.md) · [COMBAT-SYSTEM](COMBAT-SYSTEM.md) · [PRODUCTION-CHAIN-EXPANSION](../archive/PRODUCTION-CHAIN-EXPANSION-2026-06-12.md) (archived) · [PRODUCTION-CHAIN-II](PRODUCTION-CHAIN-II.md) (§L logistics) · [SOCIAL-LAYER](SOCIAL-LAYER.md) · [LIVING-WORLD](LIVING-WORLD.md) · [game/DESIGN](../../game/DESIGN.md) · [game/ARCHITECTURE](../../game/ARCHITECTURE.md)
 
 ## Status
 
@@ -368,9 +368,11 @@ slows to base pawn speed until healed (vet work category, Phase E2 — deferred)
 
 ## Future — Hauling & Logistics Progression (capture only; unspecced, do not build yet)
 
-> Parked ideas from a 2026-06-17 design chat. **Far too early to spec** — current
-> priority is getting the existing item/carry sheet right. Recorded so we can explore
-> later. The animal-hauling rungs are the natural extension of Phases C–E below.
+> Parked ideas from a 2026-06-17 design chat. **Now spec'd** in
+> [PRODUCTION-CHAIN-II §L](PRODUCTION-CHAIN-II.md#l--bulk-logistics-wheelbarrows-carts-roads):
+> the pawn-pushed wheelbarrow/handcart/road rungs ship there independently; the **animal-hauling
+> rungs (pack/draft)** remain the natural extension of Phases C–D below and hard-block on them.
+> The notes below are retained as the originating design rationale.
 
 **Core principle (the spine):** split **personal carry** from **bulk logistics**.
 
