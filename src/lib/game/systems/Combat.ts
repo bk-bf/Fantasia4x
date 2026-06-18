@@ -887,8 +887,8 @@ class CombatServiceImpl implements CombatService {
       if (!ammo) return null; // out of ammo — fall back to closing/melee
     }
 
-    // Aim cadence: base interval × reload, LENGTHENED linearly by distance, SHORTENED by the DEX-driven
-    // `aim_speed` stat + gear (far targets take longer to line up; quick-draws fire faster).
+    // Aim cadence = AIM time (aim_speed/DEX, distance-scaled, draw gear) + SPAN time (reload_speed/STR,
+    // crossbow crank only). Quick-draws fire bows fast; strong arms span crossbows fast.
     const attackSpeed = Math.max(0.5, pawnStatService.evaluateStat('attack_speed', pawn));
     const baseInterval = Math.max(
       MIN_ATTACK_INTERVAL_TICKS,
@@ -900,7 +900,8 @@ class CombatServiceImpl implements CombatService {
       dist,
       pawnStatService.evaluateStat('aim_speed', pawn),
       // General aim gear (bracers…) + the category-aware quiver draw bonus / no-quiver pack penalty.
-      sumAimBonuses(pawn).speed + drawSpeedModifier(pawn, rw.ammoCategory)
+      sumAimBonuses(pawn).speed + drawSpeedModifier(pawn, rw.ammoCategory),
+      pawnStatService.evaluateStat('reload_speed', pawn)
     );
     if (turn % interval !== 0) return null;
 

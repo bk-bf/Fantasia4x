@@ -131,9 +131,18 @@ describe('rangedCombat helpers', () => {
   });
 
   it('aim interval lengthens with distance and shortens with aim_speed', () => {
-    expect(aimIntervalTicks(90, 1, 8, 1.0, 0)).toBeGreaterThan(aimIntervalTicks(90, 1, 2, 1.0, 0));
-    expect(aimIntervalTicks(90, 1, 4, 1.5, 0)).toBeLessThan(aimIntervalTicks(90, 1, 4, 1.0, 0));
-    expect(aimIntervalTicks(90, 3, 4, 1.0, 0)).toBeGreaterThan(aimIntervalTicks(90, 1, 4, 1.0, 0)); // reload
+    expect(aimIntervalTicks(90, 1, 8, 1.0, 0, 1.0)).toBeGreaterThan(aimIntervalTicks(90, 1, 2, 1.0, 0, 1.0));
+    expect(aimIntervalTicks(90, 1, 4, 1.5, 0, 1.0)).toBeLessThan(aimIntervalTicks(90, 1, 4, 1.0, 0, 1.0));
+    expect(aimIntervalTicks(90, 3, 4, 1.0, 0, 1.0)).toBeGreaterThan(aimIntervalTicks(90, 1, 4, 1.0, 0, 1.0)); // crossbow span
+  });
+
+  it('reload_speed (STR) shortens only a crossbow span — bows ignore it (the build fork)', () => {
+    // reload 3 = crossbow: a stronger cranker (higher reload_speed) spans faster.
+    expect(aimIntervalTicks(90, 3, 4, 1.0, 0, 1.4)).toBeLessThan(aimIntervalTicks(90, 3, 4, 1.0, 0, 0.8));
+    // reload 1 = bow: no span step, so reload_speed makes no difference.
+    expect(aimIntervalTicks(90, 1, 4, 1.0, 0, 1.4)).toBe(aimIntervalTicks(90, 1, 4, 1.0, 0, 0.8));
+    // aim_speed (DEX) still governs the AIM portion regardless.
+    expect(aimIntervalTicks(90, 3, 4, 1.5, 0, 1.0)).toBeLessThan(aimIntervalTicks(90, 3, 4, 1.0, 0, 1.0));
   });
 
   it('effective range scales weapon range by STR (aim_range), capped by vision', () => {

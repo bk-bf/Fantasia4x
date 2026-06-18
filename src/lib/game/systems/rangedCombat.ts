@@ -193,22 +193,26 @@ export function rangedAccuracyMod(
 }
 
 /**
- * Aim cadence for one shot: the base attack interval × mechanical reload, LENGTHENED linearly by
- * distance (far targets take longer to line up) and SHORTENED by the `aim_speed` stat (DEX) + gear.
+ * Cadence for one shot = AIM time + mechanical SPAN time, each governed by its OWN stat:
+ *   • AIM time  — base interval LENGTHENED linearly by distance (far targets take longer to line up),
+ *     SHORTENED by `aim_speed` (DEX) + draw gear. Every ranged weapon pays this.
+ *   • SPAN time — the crossbow's windlass crank: `(reload − 1)` extra base intervals, SHORTENED by
+ *     `reload_speed` (STR). Zero for bows/slings/thrown (reload ≤ 1). Distance-independent — cranking
+ *     takes the same time whatever the range.
+ * So DEX builds fire bows fast; STR builds span crossbows fast — a real bow-vs-crossbow fork.
  */
 export function aimIntervalTicks(
   baseInterval: number,
   reload: number,
   dist: number,
   aimSpeedStat: number,
-  equipSpeedBonus: number
+  equipSpeedBonus: number,
+  reloadSpeedStat: number
 ): number {
-  const speedFactor = Math.max(0.4, aimSpeedStat) * Math.max(0.2, 1 + equipSpeedBonus);
-  const distanceFactor = 1 + dist * AIM_TIME_PER_TILE;
-  return Math.max(
-    1,
-    Math.round((baseInterval * Math.max(1, reload) * distanceFactor) / speedFactor)
-  );
+  const aimFactor = Math.max(0.4, aimSpeedStat) * Math.max(0.2, 1 + equipSpeedBonus);
+  const aimTime = (baseInterval * (1 + dist * AIM_TIME_PER_TILE)) / aimFactor;
+  const spanTime = (baseInterval * Math.max(0, reload - 1)) / Math.max(0.4, reloadSpeedStat);
+  return Math.max(1, Math.round(aimTime + spanTime));
 }
 
 /**

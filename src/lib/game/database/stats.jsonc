@@ -64,12 +64,14 @@
         "formula"    : "(0.05 + (DEX − 10) × 0.005 + (PER − 10) × 0.0025) × consciousness × sight",
         "description": "base critical-hit probability 0–1 (× consciousness × sight); weapons add their own critMod on top"
     },
-    // ── Ranged (RANGED-COMBAT) — three INDEPENDENT primary stats so ranged builds diverge:
-    //    a PER deadeye (accuracy), a DEX quick-draw (speed), a STR power-archer (range). Each is a
-    //    ~1.0-baseline multiplier the combat path turns into hit points / aim cadence / effective tiles,
-    //    with a LINEAR distance term added in Combat (farther = less accurate AND slower to aim). Gear
-    //    + the weapon contribute flat `aimBonuses` on top (read directly — equipment doesn't reach the
-    //    stat engine). All fold in body capacities, so a wounded/dim-sighted archer aims worse.
+    // ── Ranged (RANGED-COMBAT) — FOUR primary stats on different attributes so ranged builds diverge:
+    //    PER deadeye (accuracy), DEX quick-draw (aim_speed), STR power-archer (range), STR cranker
+    //    (reload_speed). Each is a ~1.0-baseline multiplier the combat path turns into hit points /
+    //    cadence / effective tiles, with a LINEAR distance term added in Combat (farther = less accurate
+    //    AND slower to aim). The per-shot interval splits into AIM time (aim_speed, distance-scaled) +
+    //    SPAN time (reload_speed, crossbow crank only) — so DEX favours bows, STR favours crossbows.
+    //    Gear + the weapon contribute flat `aimBonuses` on top (read directly — equipment doesn't reach
+    //    the stat engine). All fold in body capacities, so a wounded/dim-sighted archer aims worse.
     {
         "id"         : "aim_accuracy",
         "category"   : "combat",
@@ -82,7 +84,14 @@
         "category"   : "combat",
         "primaryStat": "dexterity",
         "formula"    : "(1.0 + (DEX − 10) × 0.04 + (PER − 10) × 0.01) × manipulation",
-        "description": "ranged aim cadence — DEX quick-draw, × manipulation; Combat divides the per-shot aim interval by this and multiplies it by distance (far targets take longer to line up)"
+        "description": "ranged AIM cadence — DEX quick-draw, × manipulation. The gap between shots is AIM time (this, lengthened by distance — far targets take longer to line up) PLUS span time (reload_speed, crossbows only); BOTH shorten the interval. A ready quiver + bracers speed the aim further."
+    },
+    {
+        "id"         : "reload_speed",
+        "category"   : "combat",
+        "primaryStat": "strength",
+        "formula"    : "(1.0 + (STR − 10) × 0.03 + (DEX − 10) × 0.015) × manipulation",
+        "description": "ranged RELOAD/spanning cadence — STR cranks a crossbow's windlass (DEX steadies it), × manipulation. Only weapons with a mechanical reload (crossbows) have a span step, so this is the crossbowman's stat: the per-shot interval = aim time (aim_speed) + span time (reload_speed). Bows/slings have no span → reload_speed doesn't touch them. (Pairs with aim_speed: DEX favours bows, STR favours crossbows.)"
     },
     {
         "id"         : "aim_range",
