@@ -262,6 +262,11 @@ const TWOHAND_DAMAGE_MULT = 1.15;
 const TWOHAND_ARMOR_PEN = 0.05;
 /** Multiplier a shield applies to the WEARER's dodge (no active block — BB-style, defence = dodge). */
 const SHIELD_DODGE_MULT = 1.25;
+// Weight on a weapon's flat `accuracy` in the melee hit roll. The raw weapon spread (spear/rapier high,
+// hammer/flail/cleaver low) was only ~±7 against a ~48-pt base (DEX×3) + ~20-pt dodge term, so the
+// "accurate vs. brutish weapon" axis barely moved hit chance. ×2 makes it bite without re-touching every
+// weapon. Ranged uses `hitMod` (rangedAccuracyMod), not this term, so launchers are unaffected.
+const MELEE_ACCURACY_WEIGHT = 2;
 // Encumbrance is no longer a combat-local hook: worn-armour + pack load drives the staged `encumbered`
 // CONDITION (PawnStateMachine.tickConditions → driveEncumbrance), whose dodge/hitChance/fatigue
 // modifiers flow through conditionDodgeMult / conditionHitMult below — one unified model.
@@ -455,7 +460,8 @@ class CombatServiceImpl implements CombatService {
 
     // The attacker's encumbrance spoils their aim too (encumbered → hitChance modifier < 1).
     const hitChance = clamp(
-      (dex * 3 + accuracy + (override?.hitMod ?? 0) - defDodge * 20) * this.conditionHitMult(attacker),
+      (dex * 3 + accuracy * MELEE_ACCURACY_WEIGHT + (override?.hitMod ?? 0) - defDodge * 20) *
+        this.conditionHitMult(attacker),
       5,
       95
     );
