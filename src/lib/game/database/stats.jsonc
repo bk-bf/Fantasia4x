@@ -20,7 +20,7 @@
         "category"   : "combat",
         "primaryStat": "strength",
         "formula"    : "(1.0 + (STR − 10) × 0.01) × manipulation",
-        "description": "physical attack damage multiplier (× manipulation)"
+        "description": "melee attack damage multiplier — STR is the muscle behind a blow (× manipulation)."
     },
     {
         "id"         : "hit_chance",
@@ -58,10 +58,10 @@
         "description": "attack cadence multiplier — higher = faster strikes (× manipulation)"
     },
     {
-        "id"         : "crit_chance",
-        "category"   : "combat",
+        "id": "crit_chance",
+        "category": "combat",
         "primaryStat": "dexterity",
-        "formula"    : "(0.05 + (DEX − 10) × 0.005 + (PER − 10) × 0.0025) × consciousness × sight",
+        "formula": "(0.05 + (DEX − 10) × 0.005 + (PER − 10) × 0.0025) × consciousness × sight",
         "description": "base critical-hit probability 0–1 (× consciousness × sight); weapons add their own critMod on top"
     },
     // ── Ranged (RANGED-COMBAT) — ONE attribute per formula, STR stays MELEE-only (clean build space).
@@ -75,45 +75,52 @@
     //    reach the stat engine); all fold in body capacities, so a wounded/dim-sighted archer aims worse.
     //    (Loose heuristic only — finer build identity, e.g. a DEX+PER sling specialist, comes from TRAITS.)
     {
-        "id"         : "aim_accuracy",
-        "category"   : "combat",
+        "id": "aim_accuracy",
+        "category": "combat",
         "primaryStat": "perception",
-        "formula"    : "(1.0 + (PER − 10) × 0.04) × sight × manipulation",
+        "formula": "(1.0 + (PER − 10) × 0.04) × sight × manipulation",
         "description": "ranged hit accuracy — the PER PRECISION axis (deadeye), × sight × manipulation; Combat adds a LINEAR distance penalty + gear/ammo aimBonuses. The sniper stat — pairs with aim_range."
     },
     {
-        "id"         : "aim_speed",
-        "category"   : "combat",
+        "id": "aim_speed",
+        "category": "combat",
         "primaryStat": "dexterity",
-        "formula"    : "(1.0 + (DEX − 10) × 0.04) × manipulation",
+        "formula": "(1.0 + (DEX − 10) × 0.04) × manipulation",
         "description": "ranged AIM cadence — the DEX SPEED axis (quick hands → fast loose), × manipulation. The shot gap is AIM time (this, lengthened by distance — far targets take longer to line up) PLUS span time (reload_speed, crossbows only); both shorten it. A ready quiver + bracers speed the aim further. The skirmisher/sling stat."
     },
     {
-        "id"         : "reload_speed",
-        "category"   : "combat",
+        "id": "reload_speed",
+        "category": "combat",
         "primaryStat": "dexterity",
-        "formula"    : "(1.0 + (DEX − 10) × 0.03) × manipulation",
+        "formula": "(1.0 + (DEX − 10) × 0.03) × manipulation",
         "description": "ranged RELOAD/spanning cadence — DEX works the crossbow's windlass/lever fast, × manipulation. Only weapons with a mechanical reload (crossbows) have a span step, so it's a crossbow stat: interval = aim time (aim_speed) + span time (reload_speed). Bows/slings have no span → unaffected. Same DEX SPEED axis as aim_speed — a deft shooter cycles a crossbow fast."
     },
     {
-        "id"         : "aim_range",
-        "category"   : "combat",
+        "id": "aim_range",
+        "category": "combat",
         "primaryStat": "perception",
-        "formula"    : "(1.0 + (PER − 10) × 0.025) × sight",
+        "formula": "(1.0 + (PER − 10) × 0.025) × sight",
         "description": "ranged reach multiplier — the PER PRECISION axis (a sharp eye sights + holds a far mark), × sight; scales the weapon's base range, capped by visionRange (effectiveRange = min(vision, weaponRange × aim_range + gear)). The sniper stat — pairs with aim_accuracy."
     },
     {
-        "id"         : "heal_rate",
-        "category"   : "physical",
+        "id": "ranged_damage",
+        "category": "combat",
+        "primaryStat": "strength",
+        "formula": "(1.0 + (STR − 10) × 0.01) × manipulation",
+        "description": "ranged attack damage multiplier — the DRAW/THROW power behind a shot (× manipulation). STR's ONLY ranged role: a bow's draw-weight and a thrown weapon's force scale with it (ammo damage × weapon drawPower × this). Crossbows & slings are MECHANICAL — they ignore it (the stock/cord does the work)."
+    },
+    {
+        "id": "heal_rate",
+        "category": "physical",
         "primaryStat": "constitution",
-        "formula"    : "(1.0 + (CON − 10) × 0.05) × blood_filtration × consciousness",
+        "formula": "(1.0 + (CON − 10) × 0.05) × blood_filtration × consciousness",
         "description": "wound recovery speed multiplier (× blood_filtration × consciousness); boosted further by rest, food, and mood"
     },
     {
-        "id"         : "medical_skill",
-        "category"   : "physical",
+        "id": "medical_skill",
+        "category": "physical",
         "primaryStat": "intelligence",
-        "formula"    : "(0.3 + (INT − 10) × 0.025 + (PER − 10) × 0.015) × manipulation × sight × consciousness",
+        "formula": "(0.3 + (INT − 10) × 0.025 + (PER − 10) × 0.015) × manipulation × sight × consciousness",
         "description": "caretaking ability 0–1 — a tend rolls treatment quality against this (× manipulation × sight × consciousness; mood applies on the roll)"
     },
     // ── Physical ──────────────────────────────────────────────────────────────────
@@ -139,10 +146,10 @@
         "description": "stamina pool (× moving × blood_pumping)"
     },
     {
-        "id"         : "stamina_recovery_rate",
-        "category"   : "physical",
+        "id": "stamina_recovery_rate",
+        "category": "physical",
         "primaryStat": "constitution",
-        "formula"    : "(2 + (CON − 10) × 0.15) × blood_filtration × blood_pumping",
+        "formula": "(2 + (CON − 10) × 0.15) × blood_filtration × blood_pumping",
         "description": "stamina recovered PER SECOND while resting/winded (scaled to ticks by Combat.tickStaminaAndWinded; × blood_filtration × blood_pumping; injury slows it). ~2/s at CON 10 → a ~50 pool refills in ~25s; in-fight regen (×0.2) trails the ~2/s attack drain so long fights wind you (N-2 tuning dial). Fatigue divides this (up to ÷1.3 at fatigue 100) and multiplies attack stamina drain, so anything that raises fatigue — weather fatigueMul, conditions — indirectly saps stamina without double counting"
     },
     {
@@ -160,40 +167,40 @@
         "description": "blood recovery (× blood_filtration)"
     },
     {
-        "id"         : "hunger_rate",
-        "category"   : "physical",
+        "id": "hunger_rate",
+        "category": "physical",
         "primaryStat": "constitution",
-        "formula"    : "1.0 + (weight − 70) × 0.01",
+        "formula": "1.0 + (weight − 70) × 0.01",
         "description": "hunger accrual multiplier by body size (70 kg = 1.0×; bigger bodies hunger faster). Scaled at runtime by work, heat/weather and conditions (malnutrition, infection…)"
     },
     {
-        "id"         : "fatigue_rate",
-        "category"   : "physical",
+        "id": "fatigue_rate",
+        "category": "physical",
         "primaryStat": "constitution",
-        "formula"    : "1.0 − (CON − 10) × 0.02",
+        "formula": "1.0 − (CON − 10) × 0.02",
         "description": "fatigue accrual multiplier by fitness (CON 10 = 1.0×; fitter pawns tire slower). The base rate everything multiplies — scaled at runtime by work/combat, cold weather + night, and conditions (dehydration, hypothermia…)"
     },
     {
-        "id"         : "carry_weight",
-        "category"   : "capacity",
+        "id": "carry_weight",
+        "category": "capacity",
         "primaryStat": "strength",
         // Realistic: a fraction of the pawn's OWN body mass, scaling with strength (porters bear a higher
         // % than weaklings). loadFraction = clamp(STR × 0.012, 0.05, 0.30). Belt/back containers add on top.
         // NB: computed in ItemService.getCarryCapacityBreakdown (body mass + gear), not the formula engine.
         "carryLoadPerStrength": 0.012,
-        "carryLoadMin"        : 0.05,
-        "carryLoadMax"        : 0.30,
-        "formula"    : "bodyWeight × clamp(STR × carryLoadPerStrength, carryLoadMin, carryLoadMax)",
+        "carryLoadMin": 0.05,
+        "carryLoadMax": 0.30,
+        "formula": "bodyWeight × clamp(STR × carryLoadPerStrength, carryLoadMin, carryLoadMax)",
         "description": "maximum carry weight in kg — a strength-scaled fraction of body mass (STR 10 ≈ 12%)"
     },
     {
-        "id"         : "carry_volume",
-        "category"   : "capacity",
-        "primaryStat": "constitution",
+        "id"              : "carry_volume",
+        "category"        : "capacity",
+        "primaryStat"     : "constitution",
         // Volume in litres tracks frame size: ~13% of body mass, independent of strength.
-        "carryVolumePerKg" : 0.13,
-        "formula"    : "bodyWeight × carryVolumePerKg",
-        "description": "maximum carry volume in litres — a fixed fraction of body mass (frame bulk)"
+        "carryVolumePerKg": 0.13,
+        "formula"         : "bodyWeight × carryVolumePerKg",
+        "description"     : "maximum carry volume in litres — a fixed fraction of body mass (frame bulk)"
     },
     // ── Resistance ────────────────────────────────────────────────────────────────
     // Resistances are multiplied by consciousness (dazed = weaker) and
@@ -220,17 +227,17 @@
         "description": "blunt damage reduction (× consciousness)"
     },
     {
-        "id"         : "fire_resistance",
-        "category"   : "resistance",
+        "id": "fire_resistance",
+        "category": "resistance",
         "primaryStat": "constitution",
-        "formula"    : "(0.0 + (CON − 10) × 0.01) × consciousness",
+        "formula": "(0.0 + (CON − 10) × 0.01) × consciousness",
         "description": "fire damage reduction (× consciousness); also slows HEAT-STROKE onset from hot weather/temperature (SEASONS_WEATHER) — reduces heat exposure before the condition driver"
     },
     {
-        "id"         : "cold_resistance",
-        "category"   : "resistance",
+        "id": "cold_resistance",
+        "category": "resistance",
         "primaryStat": "constitution",
-        "formula"    : "(0.0 + (CON − 10) × 0.01) × consciousness",
+        "formula": "(0.0 + (CON − 10) × 0.01) × consciousness",
         "description": "cold damage reduction (× consciousness); also slows HYPOTHERMIA onset from cold weather/temperature (SEASONS_WEATHER) — reduces cold exposure before the condition driver"
     },
     {

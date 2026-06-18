@@ -23,9 +23,10 @@ import {
   aimIntervalTicks,
   drawSpeedModifier,
   sumAimBonuses,
-  hasMeleeMainHand,
+  getGrip,
   type RangedWeapon,
-  type AmmoPick
+  type AmmoPick,
+  type MeleeGrip
 } from './rangedCombat';
 import { getCreatureById } from '../core/Creatures';
 import { woundForDamageType, woundById, severityFromFrac } from '../core/Wounds';
@@ -245,6 +246,30 @@ function profileFromWeapon(
   };
 }
 
+/** Bonus a duelist (one-handed, off-hand free) adds to damage/armorPen/crit. */
+const DUELIST_DAMAGE_MULT = 1.2;
+const DUELIST_ARMOR_PEN = 0.1;
+const DUELIST_CRIT = 0.05;
+/** Bonus a two-handed grip adds. */
+const TWOHAND_DAMAGE_MULT = 1.15;
+const TWOHAND_ARMOR_PEN = 0.05;
+/** Multiplier a shield applies to the WEARER's dodge (no active block — BB-style, defence = dodge). */
+const SHIELD_DODGE_MULT = 1.25;
+
+/** Apply the MELEE grip's offensive modifier to a built profile (duelist + two-hand add offense; a
+ *  shield trades offense for the defender-side dodge bonus, applied separately in resolveHit). */
+function applyMeleeGrip(p: AttackProfile, grip: MeleeGrip): AttackProfile {
+  if (grip === 'duelist') {
+    p.baseDamage *= DUELIST_DAMAGE_MULT;
+    p.armorPen = clamp(p.armorPen + DUELIST_ARMOR_PEN, 0, 1);
+    p.critMod += DUELIST_CRIT;
+  } else if (grip === 'twoHanded') {
+    p.baseDamage *= TWOHAND_DAMAGE_MULT;
+    p.armorPen = clamp(p.armorPen + TWOHAND_ARMOR_PEN, 0, 1);
+  }
+  return p;
+}
+
 /** Resolve the attack used for one swing. An equipped weapon wins; otherwise a
  *  weighted roll over the attacker's `natural_weapon` items (creature def, or a
  *  pawn's bare hands/feet); finally an unarmed fallback. Both gear paths resolve
@@ -260,7 +285,8 @@ function attackerProfile(attacker: Pawn | Mob): AttackProfile {
     if (item?.weaponProperties) {
       // §Q: a Masterwork blade hits harder — scale the quality-relevant fields by the stamped tier.
       const wp = scaleWeaponQuality(item.weaponProperties, mh.quality);
-      return profileFromWeapon(str, dex, wp, item.name ?? 'weapon');
+      const p = profileFromWeapon(str, dex, wp, item.name ?? 'weapon');
+      return applyMeleeGrip(p, getGrip(attacker)); // BB grip: duelist/2H add offense (melee only)
     }
   }
 
@@ -409,7 +435,9 @@ class CombatServiceImpl implements CombatService {
     // load, and the winded penalty (× 0.5) all lower it. ×20 keeps baseline parity with the old
     // `defDex × 2` term (dodge ≈ 1.0 at DEX 10 → 20).
     const defDodge =
-      pawnStatService.evaluateStat('dodge', defender) * this.conditionDodgeMult(defender);
+      pawnStatService.evaluateStat('dodge', defender) *
+      this.conditionDodgeMult(defender) *
+      (getGrip(defender) === 'shield' ? SHIELD_DODGE_MULT : 1); // BB: a shield raises evasion, not a block
 
     const hitChance = clamp(dex * 3 + accuracy + (override?.hitMod ?? 0) - defDodge * 20, 5, 95);
     if (rng.random() * 100 > hitChance) {
@@ -839,27 +867,6 @@ class CombatServiceImpl implements CombatService {
     return { profile, hitMod, strScaled: rw.strScaled };
   }
 
-  /** Bow-butt: a cornered ranged user makes a weak blunt strike (damMax×0.4) rather than firing into contact. */
-  private buildBowButtOverride(pawn: Pawn, rw: RangedWeapon): RangedOverride {
-    const rawWp = itemService.getItemById(rw.itemId)?.weaponProperties;
-    const wp = rawWp ? scaleWeaponQuality(rawWp, rw.quality) : undefined;
-    const base = Math.max(1, (wp?.damMax ?? wp?.damage ?? 4) * 0.4);
-    const profile = profileFromWeapon(
-      pawn.stats.strength,
-      pawn.stats.dexterity,
-      {
-        damage: base,
-        attackSpeed: wp?.attackSpeed ?? 1,
-        range: 0,
-        damageType: 'blunt',
-        bluntMod: 1.0,
-        staminaCost: wp?.staminaCost
-      },
-      `${rw.itemName} (butt)`
-    );
-    return { profile, hitMod: 0, strScaled: true };
-  }
-
   /**
    * Attempt one ranged shot. Returns the new state + stamina cost if it fired, or null when the
    * target is out of range / out of sight / out of ammo / off-cadence (the FSM then closes to melee).
@@ -887,8 +894,8 @@ class CombatServiceImpl implements CombatService {
       if (!ammo) return null; // out of ammo — fall back to closing/melee
     }
 
-    // Aim cadence = AIM time (aim_speed/DEX, distance-scaled, draw gear) + SPAN time (reload_speed/STR,
-    // crossbow crank only). Quick-draws fire bows fast; strong arms span crossbows fast.
+    // Aim cadence = AIM time (aim_speed/DEX, distance-scaled, draw gear) + SPAN time (reload_speed/DEX,
+    // crossbow crank only). The DEX SPEED axis governs both; PER governs precision (accuracy/range).
     const attackSpeed = Math.max(0.5, pawnStatService.evaluateStat('attack_speed', pawn));
     const baseInterval = Math.max(
       MIN_ATTACK_INTERVAL_TICKS,
@@ -1150,7 +1157,8 @@ class CombatServiceImpl implements CombatService {
         continue; // out of range/sight/ammo → the FSM closes; never a melee swing at distance
       }
 
-      // ── Melee: requires adjacency. A cornered ranged user makes a weak bow-butt strike. ──
+      // ── Melee: requires adjacency. A ranged weapon in contact swings as a (weak) melee weapon via
+      //    its own melee profile (bow stave / crossbow stock / sling pommel) — no special bow-butt path. ──
       if (tdist > 1) continue;
 
       // Attack cadence — scaled by attack_speed stat.
@@ -1161,11 +1169,7 @@ class CombatServiceImpl implements CombatService {
       );
       if (state.turn % pawnInterval !== 0) continue;
 
-      // Bow-butt only when the ranged weapon IS the main weapon. A hybrid (melee main-hand + off-hand
-      // thrown weapon) melees normally with the real weapon instead of pommel-striking the spear.
-      const meleeOverride =
-        rw && !hasMeleeMainHand(pawn) ? this.buildBowButtOverride(pawn, rw) : undefined;
-      const atk = this.performAttack(pawn, target, next, state.turn, meleeOverride);
+      const atk = this.performAttack(pawn, target, next, state.turn);
       next = atk.state;
       // Fatigue raises the effective drain (cost × factor) — a tired attacker winds faster.
       pawnStaminaUpdates.set(

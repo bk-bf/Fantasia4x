@@ -11,7 +11,8 @@ import {
   aimIntervalTicks,
   drawSpeedModifier,
   sumAimBonuses,
-  hasMeleeMainHand
+  hasMeleeMainHand,
+  getGrip
 } from './rangedCombat';
 import { getEquipmentSlot } from '../core/PawnEquipment';
 import { itemService } from '../services/ItemService';
@@ -136,8 +137,8 @@ describe('rangedCombat helpers', () => {
     expect(aimIntervalTicks(90, 3, 4, 1.0, 0, 1.0)).toBeGreaterThan(aimIntervalTicks(90, 1, 4, 1.0, 0, 1.0)); // crossbow span
   });
 
-  it('reload_speed (STR) shortens only a crossbow span — bows ignore it (the build fork)', () => {
-    // reload 3 = crossbow: a stronger cranker (higher reload_speed) spans faster.
+  it('reload_speed (DEX) shortens only a crossbow span — bows ignore it (the build fork)', () => {
+    // reload 3 = crossbow: a defter loader (higher reload_speed) spans faster.
     expect(aimIntervalTicks(90, 3, 4, 1.0, 0, 1.4)).toBeLessThan(aimIntervalTicks(90, 3, 4, 1.0, 0, 0.8));
     // reload 1 = bow: no span step, so reload_speed makes no difference.
     expect(aimIntervalTicks(90, 1, 4, 1.0, 0, 1.4)).toBe(aimIntervalTicks(90, 1, 4, 1.0, 0, 0.8));
@@ -145,13 +146,13 @@ describe('rangedCombat helpers', () => {
     expect(aimIntervalTicks(90, 3, 4, 1.5, 0, 1.0)).toBeLessThan(aimIntervalTicks(90, 3, 4, 1.0, 0, 1.0));
   });
 
-  it('effective range scales weapon range by STR (aim_range), capped by vision', () => {
-    const weak = makeArcher({ stats: { ...stats, strength: 5 } } as Partial<Pawn>);
-    const strong = makeArcher({ stats: { ...stats, strength: 22 } } as Partial<Pawn>);
-    const rw = getRangedWeapon(weak)!;
-    expect(effectiveRangedRange(strong, rw)).toBeGreaterThan(effectiveRangedRange(weak, rw));
-    // Never exceeds the pawn's vision range (PER 10 → 10).
-    expect(effectiveRangedRange(strong, rw)).toBeLessThanOrEqual(pawnVisionRange(strong));
+  it('effective range scales weapon range by PER (aim_range), capped by vision', () => {
+    const low = makeArcher({ stats: { ...stats, perception: 10 } } as Partial<Pawn>);
+    const sharp = makeArcher({ stats: { ...stats, perception: 22 } } as Partial<Pawn>);
+    const rw = getRangedWeapon(low)!;
+    expect(effectiveRangedRange(sharp, rw)).toBeGreaterThan(effectiveRangedRange(low, rw));
+    // Never exceeds the pawn's own vision range.
+    expect(effectiveRangedRange(sharp, rw)).toBeLessThanOrEqual(pawnVisionRange(sharp));
   });
 
   it('sums aimBonuses across equipped gear', () => {
@@ -174,13 +175,15 @@ describe('rangedCombat helpers', () => {
     expect(getEquipmentSlot(itemService.getItemById('self_bow')!)).toBe('mainHand');
   });
 
-  it('the launcher deals no damage bare — the ammunition carries it (× drawPower)', () => {
+  it('the SHOT damage comes from ammo × drawPower; the bow’s own damage is only its weak melee stave', () => {
     const bow = itemService.getItemById('self_bow')!.weaponProperties!;
     const warBow = itemService.getItemById('war_bow')!.weaponProperties!;
-    expect(bow.damage).toBe(0); // bow alone does nothing
-    expect(bow.drawPower).toBeGreaterThan(0);
+    // The launcher's `damage`/`damageType` is now its MELEE profile (a blunt stave) — small, and
+    // IGNORED by the shot (buildRangedOverride replaces baseDamage with ammo × drawPower).
+    expect(bow.damageType).toBe('blunt'); // melee stave, not the piercing shot
+    expect(bow.damage).toBeLessThanOrEqual(6); // weak in melee
     expect(warBow.drawPower!).toBeGreaterThan(bow.drawPower!); // war bow drives the same arrow harder
-    expect(itemService.getItemById('flint_arrow')!.ammoProperties!.damage!).toBeGreaterThan(0); // arrow kills
+    expect(itemService.getItemById('flint_arrow')!.ammoProperties!.damage!).toBeGreaterThan(0); // the arrow carries the kill
   });
 
   it('quivers route by ammo: arrows to the BACK (blocks a pack), bolts to the BELT (keeps it)', () => {
@@ -248,8 +251,9 @@ describe('ranged combat (headless tickCombat)', () => {
     expect(drops[0]).toMatchObject({ x: 5, y: 8, quantity: 1 });
   });
 
-  it('bow-butts (blunt) a mob that closes into melee instead of firing piercing', () => {
-    // Goblin adjacent (5,6): the archer cannot fire into contact → weak blunt stave strike.
+  it('a bow in contact melees with its own (weak, blunt) stave profile — not the piercing shot', () => {
+    // Goblin adjacent (5,6): the bow can't fire into contact, so it swings as a blunt stave via the
+    // NORMAL melee path (self_bow now authors melee damage=4/blunt) → a crush wound, not a puncture.
     let state = makeState([makeArcher()], [makeGoblin({ y: 6 })]);
     let bluntWound = false;
     for (let t = 0; t < 2000 && !bluntWound; t++) {
@@ -258,6 +262,23 @@ describe('ranged combat (headless tickCombat)', () => {
       if (wounds.some((w) => w.type === 'crush')) bluntWound = true; // blunt → crush wound
     }
     expect(bluntWound).toBe(true);
+  });
+
+  it('classifies the melee GRIP from the hands (2H / shield / duelist / one-handed)', () => {
+    const twoH = makeArcher(); // self_bow is twoHanded
+    const duelist = makeArcher({
+      equipment: { mainHand: { itemId: 'bone_knife' } }
+    } as unknown as Partial<Pawn>);
+    const shield = makeArcher({
+      equipment: { mainHand: { itemId: 'bone_knife' }, offHand: { itemId: 'rawhide_round_shield' } }
+    } as unknown as Partial<Pawn>);
+    const dualWield = makeArcher({
+      equipment: { mainHand: { itemId: 'bone_knife' }, offHand: { itemId: 'bone_knife' } }
+    } as unknown as Partial<Pawn>);
+    expect(getGrip(twoH)).toBe('twoHanded');
+    expect(getGrip(duelist)).toBe('duelist'); // 1H + free off-hand
+    expect(getGrip(shield)).toBe('shield');
+    expect(getGrip(dualWield)).toBe('oneHanded'); // off-hand occupied, not a shield
   });
 
   it('the arrowhead picks the wound type — a broadhead cuts (bleeds), not pierces', () => {

@@ -93,6 +93,32 @@ export function hasMeleeMainHand(pawn: Pawn): boolean {
   return !!wp && !isRangedWeaponProps(wp);
 }
 
+/**
+ * MELEE grip (Battle-Brothers-style soft spec), derived from what's in the hands:
+ *   • twoHanded — a `twoHanded:true` weapon (incl. bows used as a stave): +offense.
+ *   • shield    — an `armorType:"shield"` in the off-hand: no offense bonus, but raises the WEARER's
+ *                 dodge (there is NO active block — defence is all dodge, BB-style).
+ *   • duelist   — a 1H weapon with the off-hand FREE (BB duelist grip): +damage/+armorPen/+crit.
+ *   • oneHanded — a 1H weapon with the off-hand occupied by something that isn't a shield (torch,
+ *                 off-hand thrown weapon, dual-wield): neutral.
+ * Grips apply to MELEE only (the ranged path never calls `attackerProfile`).
+ */
+export type MeleeGrip = 'twoHanded' | 'shield' | 'duelist' | 'oneHanded';
+export function getGrip(entity: Pawn | Mob): MeleeGrip {
+  const eq = 'equipment' in entity ? entity.equipment : undefined;
+  if (!eq) return 'oneHanded';
+  const mainWp = eq.mainHand
+    ? itemService.getItemById(eq.mainHand.itemId)?.weaponProperties
+    : undefined;
+  if (mainWp?.twoHanded) return 'twoHanded';
+  const offArmor = eq.offHand
+    ? itemService.getItemById(eq.offHand.itemId)?.armorProperties
+    : undefined;
+  if (offArmor?.armorType === 'shield') return 'shield';
+  if (mainWp && !eq.offHand) return 'duelist';
+  return 'oneHanded';
+}
+
 /** Sum the flat `aimBonuses` across every equipped slot (the ranged weapon's personality + worn
  *  marksman gear). Read directly because equipment never reaches `evaluateStat`. */
 export function sumAimBonuses(pawn: Pawn): { accuracy: number; speed: number; range: number } {
@@ -197,9 +223,9 @@ export function rangedAccuracyMod(
  *   • AIM time  — base interval LENGTHENED linearly by distance (far targets take longer to line up),
  *     SHORTENED by `aim_speed` (DEX) + draw gear. Every ranged weapon pays this.
  *   • SPAN time — the crossbow's windlass crank: `(reload − 1)` extra base intervals, SHORTENED by
- *     `reload_speed` (STR). Zero for bows/slings/thrown (reload ≤ 1). Distance-independent — cranking
+ *     `reload_speed` (DEX). Zero for bows/slings/thrown (reload ≤ 1). Distance-independent — cranking
  *     takes the same time whatever the range.
- * So DEX builds fire bows fast; STR builds span crossbows fast — a real bow-vs-crossbow fork.
+ * Both aim_speed and reload_speed are the DEX SPEED axis; PER (accuracy/range) is the precision axis.
  */
 export function aimIntervalTicks(
   baseInterval: number,
