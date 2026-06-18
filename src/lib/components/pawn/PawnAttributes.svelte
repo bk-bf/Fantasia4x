@@ -261,39 +261,59 @@
     label: CATEGORY_LABEL[cat] ?? cat.toUpperCase(),
     stats: STATS.filter((s) => s.category === cat)
   })).filter((g) => g.stats.length > 0);
+
+  // val()/derivation()/trend() read the pawn + its derived state (capacities, carry, conditions)
+  // INSIDE their bodies — Svelte's template/reactive dep-tracking can't see through a function call,
+  // so a pawn switch wouldn't re-run the grid cells (stale stats). buildRows takes those reactive
+  // values as args purely so Svelte tracks them as dependencies and recomputes the whole table on any
+  // change; the body reads them via closure. Without this, switching pawn left the previous stats.
+  $: catRows = buildRows(pawn, capacities, carry, condWorkMult, condMoveMult, condNeed, relevant);
+
+  function buildRows(..._deps: unknown[]) {
+    return grouped.map((g) => ({
+      label: g.label,
+      cells: g.stats.map((s) => ({
+        id: s.id,
+        name: fmtName(s.id),
+        unit: unit(s.id),
+        v: val(s.id),
+        d: derivation(s),
+        t: trend(s.id),
+        base: baseDisplay(s.id),
+        hl: relevant.has(s.id)
+      }))
+    }));
+  }
 </script>
 
 <div class="attrs">
   <PawnStatBanner {pawn} />
 
-  {#each grouped as g}
+  {#each catRows as g}
     <div class="cat">
       <div class="cat-hdr">{g.label}</div>
       <div class="grid">
-        {#each g.stats as s}
-          {@const v = val(s.id)}
-          {@const d = derivation(s)}
-          {@const t = trend(s.id)}
-          {@const base = baseDisplay(s.id)}
-          <div class="cell" class:hl={relevant.has(s.id)} use:flipTip>
-            <span class="nm">{fmtName(s.id)}</span>
-            <span class="vl" style="color: {t.color}"
-              >{v}{unit(s.id)}<span class="trend">{t.glyph}</span></span
+        {#each g.cells as c (c.id)}
+          <div class="cell" class:hl={c.hl} use:flipTip>
+            <span class="nm">{c.name}</span>
+            <span class="vl" style="color: {c.t.color}"
+              >{c.v}{c.unit}<span class="trend">{c.t.glyph}</span></span
             >
             <div class="tip">
-              <div class="tip-formula">{d.formula}</div>
-              {#if d.vars.length}
+              <div class="tip-formula">{c.d.formula}</div>
+              {#if c.d.vars.length}
                 <div class="tip-where">
-                  {#each d.vars as vv, i}{i > 0 ? ',  ' : ''}<span class="tv-name">{vv.name}</span>
+                  {#each c.d.vars as vv, i}{i > 0 ? ',  ' : ''}<span class="tv-name">{vv.name}</span
+                    >
                     = <span class="tv-val">{vv.value}</span>{/each}
                 </div>
               {/if}
               <div class="tip-result">
-                = <span class="tv-val">{v}{unit(s.id)}</span>
-                <span class="tip-cmp" style="color: {t.color}">{t.glyph}</span>
-                <span class="tip-avg">vs avg {base}{unit(s.id)}</span>
+                = <span class="tv-val">{c.v}{c.unit}</span>
+                <span class="tip-cmp" style="color: {c.t.color}">{c.t.glyph}</span>
+                <span class="tip-avg">vs avg {c.base}{c.unit}</span>
               </div>
-              <div class="tip-desc">{d.description}</div>
+              <div class="tip-desc">{c.d.description}</div>
             </div>
           </div>
         {/each}
