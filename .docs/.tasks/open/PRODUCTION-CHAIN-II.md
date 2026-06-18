@@ -6,7 +6,7 @@
 
 ## Status
 
-**[~] In progress** — **§Q (Item Quality) is DONE (2026-06-18)**, closing R8; **§M / §L / §F not started.**
+**[~] In progress** — **§Q (Item Quality) DONE (2026-06-18)** closing R8, and **§M (Magical Resources & Gear) DONE (2026-06-18)** as the MAGIC-SKILLS passive foundation; **§L / §F not started.**
 This is the **second** production/items/buildings/resources pass on top
 of the completed [Pass I](../archive/PRODUCTION-CHAIN-EXPANSION-2026-06-12.md) (forage → fire →
 tools → metal → leather). Pass I delivered the *mundane foundation*; Pass II adds the four
@@ -438,16 +438,18 @@ services); new ADR if a non-obvious choice is locked.
 - [ ] Meal-variety mood signal (recent-meal memory → mood delta); alcohol mood lift + `intoxicated` condition (`conditions.jsonc`).
 - [ ] Manure path stub behind ENTITIES D; dairy/egg recipes stubbed for when husbandry lands.
 
-### §M — Magical Resources & Gear (MAGIC-SKILLS Phase 0 — passive foundation)
+### §M — Magical Resources & Gear (MAGIC-SKILLS Phase 0 — passive foundation) ✅ DONE 2026-06-18 (`pnpm check`/`pnpm test` green, 9 new tests)
 
-- [ ] `resources.jsonc`: **one rare grove per ancient wood** (heartwood/moonwood/ironwood/emberwood); `crystal_node` veins (clustered like minerals) with a **normal-vs-infused yield roll**.
-- [ ] `items.jsonc` (per-type pattern, no generic item): the `*_log` `magic_wood` species; per mineral a **normal `<crystal>`** AND an **`infused_<crystal>`** (+ `cut_<crystal>` trade gem and `attuned_<crystal>` enchant gem); rings, amulets; `affinity` field on woods.
-- [ ] `conditions.jsonc`: the magical buff conditions (`might`/`insight`/`vigor`/`quickness`/`keen_senses`/`charm`/`moonlit`), each `"duration": "transient"` + **`"magical": true`** + a `modifiers` block (extend the condition `modifiers` key set with the few combat/work keys these need).
-- [ ] `Item.grantsConditions?: string[]` field; `syncTransientConditions` pushes a worn item's `grantsConditions` ids (auto-clear on unequip). **No** `statBonuses`/`grantsTraits`/ModifierSystem reader work — buffs ride the existing condition pipeline.
-- [ ] `EquipmentSlot`: add `amulet`; cap rings.
-- [ ] `lapidary_bench` building + **two recipe families** (trade-gem cutting; attunement+assembly → gear with `grantsConditions`); research gate ("Arcane Lapidary"/"Attunement").
-- [ ] Gem-quality (§Q) picks the buff strength (tiered condition variant or per-tier modifier scale); ancient-wood `materialBonuses` per niche + `affinity` hook; normal cut gems carry trade value only (no condition).
-- [ ] **Foundation hook:** confirm the magical-condition layer is shaped so MAGIC-SKILLS' active spells / skill-tree nodes can apply the *same* conditions on demand (trigger + duration + mana/research gate on top).
+- [x] `resources.jsonc`: a rare grove per ancient wood (`heartwood_grove`/`moonwood_grove`/`ironwood_grove`/`emberwood_grove`); 7 typed crystal nodes (`ruby_node`…+ the repurposed `crystal_formation`→amethyst) on cave/rocky/cliff, each yielding its normal crystal (1–2) + an occasional infused (0–1). Data-driven world-gen picks them up automatically. **Note:** the uniform `min/max` yield engine can't do an exact 85/15 split, so infused rarity comes from sparse node spawn + the 0-floor roll (not a weighted pick — engine left untouched).
+- [x] **Grove polish (2026-06-18):** each grove carries a dim affinity-coloured `glow` (new optional `ResourceObjectDef.glow`) — a steady soft point-light (emberwood flickers) collected by `LightingService.collectResourceEmitters` and baked into the tile-light field like a campfire but dimmer (intensity ~0.4–0.5 vs fire 1.1), so groves stand out. Harvest is **tool-tier gated for balance**: heartwood/moonwood/emberwood need a tier-2 axe, ironwood a tier-3. Added the missing `iron_axe` (t2) + `steel_axe` (t3) woodcutting tools (already referenced by `Work.ts`) + anvil recipes (gated by iron_working/steel_making).
+- [x] `items.jsonc` (per-type pattern, no generic item): 4 `*_log` `magic_wood` species (+ `affinity`); per mineral a normal `<crystal>` + `infused_<crystal>` + `cut_<crystal>` (trade gem) + `attuned_<crystal>` (enchant gem); 7 rings + 7 amulets (`type: armor`, `grantsConditions`).
+- [x] `conditions.jsonc`: 7 magical buff conditions (`might`/`insight`/`vigor`/`quickness`/`keen_senses`/`charm`/`moonlit`), each `"duration": "transient"` + `"magical": true`. **They use the already-consumed modifier keys** (workEfficiency/moveSpeed/fatigueRate/hungerRate/dodge) so they apply with zero new consumption wiring; channels are a tunable first pass (no key-set extension was needed).
+- [x] `Item.grantsConditions?: string[]` field; `syncTransientConditions` (now exported) pushes a worn item's `grantsConditions` ids each tick (auto-clear on unequip). **No** `statBonuses`/`grantsTraits`/ModifierSystem reader work — buffs ride the existing condition pipeline. `TransientConditionDef.magical?` flag added.
+- [x] `EquipmentSlot` + `PawnEquipment`: added `amulet` (distinct neck slot from `gorget`). Rings cap is the single `ring` slot; with the `amulet` slot that's 2 jewellery slots total (the intended loadout cap) — no multi-ring plumbing.
+- [x] `lapidary_bench` building (gated by `arcane_lapidary`) + recipes.jsonc two families: trade-gem cutting (gate `arcane_lapidary`) and attunement→assembly into rings/amulets (gate `attunement`). `research.jsonc`: added `arcane_lapidary` + `attunement` nodes.
+- [x] **Foundation hook:** MAGIC-SKILLS' active spells/skill-nodes apply the *same* magical conditions on demand — the buff layer is built once here. (Also updated MAGIC-SKILLS.md to point at this as its Phase 0.)
+- [ ] **Deferred:** §Q quality→buff-strength scaling — rings/amulets (armor) DO get a §Q quality tier stamped at craft, but the granted buff is currently fixed per item id (quality doesn't yet pick a stronger condition variant). Amulet "stronger than ring" is likewise deferred (both grant the same buff today; amulet's edge is the extra slot + larger gem cost).
+- [ ] **Deferred:** ancient-wood `materialBonuses` per niche — the woods exist (gatherable, carry `affinity`) but no bow/staff recipe consumes them with a per-niche bonus yet.
 
 ### §L — Bulk Logistics
 

@@ -183,28 +183,38 @@ Ammo:
 
 ---
 
-## Part IV — Reload & Cadence
+## Part IV — Aim Cadence (`aim_speed`) — IMPLEMENTED
 
-`weaponProperties.reload` (new, optional; default 0) = attack ticks the weapon needs
-between shots. Modeled with the **existing** `attackCooldown` field on Pawn/Mob
-(COMBAT-SYSTEM) — a ranged weapon adds `reload` to the post-shot cooldown:
+**Supersedes the v1 `attackCooldown` + `warmup` reload model** (both **removed**). Rate of fire is one
+unified per-shot **aim interval**, computed by `aimIntervalTicks` ([rangedCombat.ts](../../../src/lib/game/systems/rangedCombat.ts))
+and gated by the `turn % interval === 0` cadence the FSM already runs — no per-entity cooldown
+bookkeeping, no new turn structure:
+
+The interval splits into two phases, **each governed by its own stat** — total = AIM + SPAN:
 
 ```
-afterShot: attacker.attackCooldown += reload   // on top of the normal swing cooldown
+interval = aimTime + spanTime
+  aimTime  = baseInterval × (1 + dist × 0.08) ÷ ( aim_speed × (1 + drawSpeedBonus) )   // DEX; distance LINEAR: far = slower to line up
+  spanTime = baseInterval × max(0, reload − 1) ÷ reload_speed                          // DEX; crossbow crank — distance-INDEPENDENT
 ```
 
-So a crossbow (`reload 3`) genuinely fires a third as often as a sling. No new turn
-structure — it rides the cooldown the FSM already ticks down.
+- **`aim_speed` (stats.jsonc, DEX)** governs AIM — drawing/nocking/lining up/loosing. Every ranged
+  weapon pays it; distance lengthens it. Folds in `manipulation`/sight (a wounded archer slows).
+- **`reload_speed` (stats.jsonc, DEX)** governs SPAN — a crossbow's windlass crank. Only weapons with
+  `reload > 1` have a span step (`reload − 1` extra base intervals), so this is the **crossbow stat**;
+  bows/slings ignore it. `weaponProperties.reload` is the per-weapon size of that step (crossbow `3`),
+  now *divided by the loader's `reload_speed`* rather than an `attackCooldown` add.
+- **`drawSpeedBonus`** = a matching quiver's fast-draw (`quiver.drawSpeed`) **minus** the no-quiver
+  pack-fumble penalty, plus general aim gear (`aimBonuses.speed`, e.g. archer's bracers) — summed by
+  `drawSpeedModifier` + `sumAimBonuses`. Speeds the AIM phase only. **Arrows/bolts only**; slings/thrown
+  ignore it (a pouch is equally quick). See the quiver model (§II / Part III).
 
-### Aim warmup (RimWorld lineage, optional refinement)
-
-RimWorld splits a ranged attack into **warmup (aim) → fire → cooldown**, not cooldown alone.
-The warmup is what makes *target-switching* costly and rewards holding a bead on one enemy — real
-tactical texture for ~one extra scalar. Optional `weaponProperties.warmup` (default 0): on first
-acquiring/changing target, set `attacker.attackCooldown = warmup` **before** the shot resolves;
-re-firing on the *same* target skips it. Rides the same cooldown the FSM ticks (zero new
-structure), so it's a pure data knob — a sniper-y war bow can have a long warmup + long range, a
-sling near-zero. Land it only if cadence feels flat with reload alone.
+**Two ranged axes (one attribute per formula, STR is melee-only):** **PER = precision** (`aim_accuracy`
++ `aim_range`), **DEX = speed** (`aim_speed` + `reload_speed`). So PER-only = a sniper (accurate, long,
+average rate), DEX-only = a fast skirmisher/slinger, PER+DEX = the complete shooter; crossbows lean DEX
+(fast cycle) and bows lean PER (precision). `attackCooldown` (the v1 plan — never wired) and `warmup`
+(the optional RimWorld aim-delay) are **dropped**. (Finer identity — e.g. a sling specialist — is a
+**trait** concern, not raw stats.)
 
 ### Melee fallback (bow-butt)
 
@@ -228,7 +238,7 @@ decision so it isn't re-litigated:
 | **Shot = traveling projectile** — RimWorld `Projectile` things; DF physical bolts with trajectory/momentum | **Rejected (perf).** Abstracted hitscan + post-hoc effects instead — see "Resolution model", §I. A projectile pool is a new hot-loop phase (§VI). |
 | **Wild/forced-miss shots hit something else** — RimWorld misses keep flying; DF bolts ricochet | **Adapted (deferred).** No live projectile to deflect → friendly-fire becomes an *optional* roll along the sampled LoS line (Open Questions), off by default. |
 | **Range-banded accuracy** — RimWorld weapons author 4 accuracy values (touch/short/medium/long) | **Considered.** We ship a single continuous `distancePenalty` curve (§I) for now; per-weapon bands are the data-driven upgrade if weapons need stronger individual "personality". |
-| **Aim warmup before fire** — RimWorld warmup → fire → cooldown | **Borrowed (optional).** `weaponProperties.warmup`, target-switch cost, rides `attackCooldown` — §IV. |
+| **Aim warmup before fire** — RimWorld warmup → fire → cooldown | **Dropped.** Superseded by the unified `aim_speed` cadence + linear distance (§IV) — no separate warmup scalar or `attackCooldown` channel. |
 | **Ammo is hauled items + quiver assignment** — DF marksdwarf bolt logistics | **Adapted.** Ammo is bulk-consumable from inventory now (§II); the `quiver`/hauling supply-loop is the deferred DF-style layer (Open Questions) — fits the existing job/haul system. |
 | **Directional / fractional cover** — RimWorld per-cell cover sampled near the target | **Simplified.** Binary 0.20 adjacency penalty (§I); RimWorld's directional model is the richer later version once positioning matters. |
 | **Marksdwarf switches to melee in contact** — DF; RimWorld pawns melee when adjacent | **Borrowed.** The bow-butt fallback (§IV). |
