@@ -302,9 +302,8 @@ export interface Item {
     tags?: string[]; // ability grants from COMBAT-SYSTEM
     // ── RANGED-COMBAT additions ──────────────────────────────────────────
     ammoCategory?: string; // links a ranged weapon to its ammo (e.g. "arrow" | "bolt" | "sling_stone"); omit = no ammo (thrown weapons self-consume)
-    reload?: number; // attack ticks of cooldown ADDED after a ranged shot (default 0); a crossbow at 3 fires a third as often
+    reload?: number; // mechanical SPANNING multiplier on the aim_speed cadence (default 0→1×); a crossbow at 3 fires a third as often as a bow. See rangedCombat.aimIntervalTicks.
     strScaled?: boolean; // does damage scale with STR? (default true; crossbows/slings set false — mechanical advantage)
-    warmup?: number; // attack ticks to aim before the first shot at a NEW target (default 0); rewards holding a bead
     /**
      * Draw weight / mechanical advantage of a LAUNCHER (bow/crossbow/sling): a multiplier on the
      * AMMUNITION's `damage` — the launcher itself deals ~no damage, the projectile does (set the

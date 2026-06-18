@@ -1666,6 +1666,48 @@
     "processingType": ["woodcutting"]
   },
   {
+    "id": "iron_axe",
+    "charSpans": [ {"sheet": "items", "id": 204} ],
+    "name": "Iron Axe",
+    "type": "tool",
+    "category": "woodcutting",
+    "deteriorationRate": 0.008,
+    "description": "A forged iron felling axe. Bites deep — fells faster and lasts far longer than stone, and is hard enough to work the ancient hardwoods.",
+    "color": "#9AA0A6",
+    "amount": 0,
+    "weightKg": 1.6,
+    "volumeL": 1.4,
+    "tier": 2,
+    "durability": 150,
+    "maxDurability": 150,
+    "durabilityLossPerAction": 2,
+    "toolTierRequired": 1,
+    "researchRequired": "iron_working",
+    "toolBoost": {"speed": 0.8, "yield": 0.6},
+    "processingType": ["woodcutting"]
+  },
+  {
+    "id": "steel_axe",
+    "charSpans": [ {"sheet": "items", "id": 204} ],
+    "name": "Steel Axe",
+    "type": "tool",
+    "category": "woodcutting",
+    "deteriorationRate": 0.004,
+    "description": "A tempered steel felling axe. Holds an edge through the densest ironwood — the woodsman's finest tool.",
+    "color": "#C8CDD2",
+    "amount": 0,
+    "weightKg": 1.7,
+    "volumeL": 1.4,
+    "tier": 3,
+    "durability": 260,
+    "maxDurability": 260,
+    "durabilityLossPerAction": 1,
+    "toolTierRequired": 2,
+    "researchRequired": "steel_making",
+    "toolBoost": {"speed": 1.0, "yield": 0.8},
+    "processingType": ["woodcutting"]
+  },
+  {
     "id"               : "stone_hammer",
     "charSpans"        : [ {"sheet": "items", "id": 159} ],
     "name"             : "Stone Hammer",
@@ -3222,8 +3264,7 @@
       "twoHanded"       : true,
       "ammoCategory"    : "arrow",
       "reload"          : 1,
-      "strScaled"       : true,
-      "warmup"          : 2
+      "strScaled"       : true
     },
     "aimBonuses": { "accuracy": 4, "range": 3 }
   },

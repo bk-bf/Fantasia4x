@@ -765,6 +765,24 @@
     "researchRequired": "iron_working"
   },
   {
+    "id"              : "make_iron_axe",
+    "station"         : "anvil",
+    "inputs"          : {"iron_bar": 2, "branch": 1, "cordage": 1},
+    "outputs"         : {"iron_axe": 1},
+    "workAmount"      : 8,
+    "toolTierRequired": 1,
+    "researchRequired": "iron_working"
+  },
+  {
+    "id"              : "make_steel_axe",
+    "station"         : "anvil",
+    "inputs"          : {"steel_bar": 2, "branch": 1, "cordage": 1},
+    "outputs"         : {"steel_axe": 1},
+    "workAmount"      : 10,
+    "toolTierRequired": 2,
+    "researchRequired": "steel_making"
+  },
+  {
     "id"              : "make_rope",
     "station"         : "ropewalk",
     "inputs"          : {"cordage": 6},
