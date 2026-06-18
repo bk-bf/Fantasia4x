@@ -10,7 +10,9 @@ import type { Pawn, Mob, Item, ItemQuality } from '../core/types';
 import { itemService } from '../services/ItemService';
 
 /** A weapon counts as ranged when its `range` reaches past melee (all melee weapons author range 0). */
-export function isRangedWeaponProps(wp: NonNullable<Item['weaponProperties']> | undefined): boolean {
+export function isRangedWeaponProps(
+  wp: NonNullable<Item['weaponProperties']> | undefined
+): boolean {
   return !!wp && (wp.range ?? 0) > 1;
 }
 
