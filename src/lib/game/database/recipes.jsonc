@@ -1286,6 +1286,51 @@
     }
   },
   {
+    "id": "make_stone_maul",
+    "station": "craft_spot",
+    "inputs": {
+      "small_stone": 2,
+      "branch": 1,
+      "cordage": 1
+    },
+    "outputs": {
+      "stone_maul": 1
+    },
+    "workAmount": 4,
+    "toolTierRequired": 0
+  },
+  {
+    "id": "make_iron_mace",
+    "station": "anvil",
+    "inputs": {
+      "iron_bar": 1,
+      "clay_mold": 1,
+      "cordage": 1
+    },
+    "outputs": {
+      "iron_mace": 1
+    },
+    "workAmount": 9,
+    "toolTierRequired": 2,
+    "researchRequired": "iron_working"
+  },
+  {
+    "id": "make_iron_warhammer",
+    "station": "anvil",
+    "inputs": {
+      "iron_bar": 2,
+      "clay_mold": 1,
+      "oak_plank": 1,
+      "cordage": 1
+    },
+    "outputs": {
+      "iron_warhammer": 1
+    },
+    "workAmount": 13,
+    "toolTierRequired": 2,
+    "researchRequired": "iron_working"
+  },
+  {
     "id": "make_war_bow",
     "station": "makers_bench",
     "inputs": {

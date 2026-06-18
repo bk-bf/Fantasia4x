@@ -10,6 +10,8 @@ import type { Pawn, Mob, LimbId, Injury } from '$lib/game/core/types.js';
 import { getActiveConditionViews } from '$lib/utils/conditionInfo.js';
 import { pawnService } from '$lib/game/services/PawnService.js';
 import { pawnStatService } from '$lib/game/services/PawnStatService.js';
+import { itemService } from '$lib/game/services/ItemService.js';
+import { armorEncumbrance } from '$lib/game/systems/rangedCombat.js';
 import type {
   SelectedEntityModel,
   EntityBar,
@@ -55,27 +57,55 @@ export function moveSpeedStat(entity: Pawn | Mob): EntityStat {
  * 1.0); crit is a probability shown as a percent. All three are evaluated against the live body, so
  * injuries (lower manipulation/moving/consciousness) visibly drop them next to the wounds causing it.
  */
+/** Best worn-armour `defense` (the % of a hit it can turn before armour-pen). 0 if unarmoured. */
+function bestArmorDefense(entity: Pawn | Mob): number {
+  const eq = 'equipment' in entity ? entity.equipment : undefined;
+  if (!eq) return 0;
+  let best = 0;
+  for (const slot in eq) {
+    const inst = (eq as Record<string, { itemId: string } | undefined>)[slot];
+    if (!inst) continue;
+    const def = itemService.getItemById(inst.itemId)?.armorProperties?.defense ?? 0;
+    if (def > best) best = def;
+  }
+  return best;
+}
+
 function combatStats(entity: Pawn | Mob): CombatStat[] {
-  const hit = pawnStatService.evaluateStat('hit_chance', entity);
-  const dodge = pawnStatService.evaluateStat('dodge', entity);
-  const crit = pawnStatService.evaluateStat('crit_chance', entity);
-  return [
-    {
-      label: 'Hit',
-      value: `×${hit.toFixed(2)}`,
-      title: 'attack accuracy multiplier (× sight × manipulation)'
-    },
+  const s = (id: string) => pawnStatService.evaluateStat(id, entity);
+  const dodge = s('dodge');
+  const enc = 'equipment' in entity ? armorEncumbrance(entity as Pawn) : 0;
+  const armor = bestArmorDefense(entity);
+  const out: CombatStat[] = [
+    { label: 'Hit', value: `×${s('hit_chance').toFixed(2)}`, title: 'melee accuracy (× sight × manipulation)' },
     {
       label: 'Dodge',
-      value: `×${dodge.toFixed(2)}`,
-      title: 'evasion multiplier (× moving; lower when injured or burdened)'
+      value: `×${(dodge * (1 - enc * 0.5)).toFixed(2)}`,
+      title:
+        enc > 0.01
+          ? `evasion ×${dodge.toFixed(2)}, −${Math.round(enc * 50)}% from armour load`
+          : 'evasion multiplier (× moving; lower when injured)'
     },
-    {
-      label: 'Crit',
-      value: `${Math.round(crit * 100)}%`,
-      title: 'base critical-hit chance (weapons add their own on top)'
-    }
+    { label: 'Crit', value: `${Math.round(s('crit_chance') * 100)}%`, title: 'base crit chance (weapons add their own)' },
+    { label: 'Armor', value: `${armor}`, title: 'best worn armour — % of a hit it turns (before armour-pen)' }
   ];
+  if (enc > 0.05) {
+    out.push({
+      label: 'Load',
+      value: `${Math.round(enc * 100)}%`,
+      title: 'worn-armour weight ÷ carry capacity — cuts dodge and tires you faster (heavy = tank, light = nimble)'
+    });
+  }
+  // Ranged potential (PER = precision, DEX = speed, STR = draw power) — shown for every pawn so a
+  // build reads at a glance whether they'd make an archer (PER), a crossbowman (DEX), etc.
+  out.push(
+    { label: 'Aim', value: `×${s('aim_accuracy').toFixed(2)}`, title: 'ranged accuracy — PER (precision)' },
+    { label: 'Fire', value: `×${s('aim_speed').toFixed(2)}`, title: 'ranged fire-rate — DEX (speed)' },
+    { label: 'Reach', value: `×${s('aim_range').toFixed(2)}`, title: 'ranged reach — PER, capped by vision' },
+    { label: 'Reload', value: `×${s('reload_speed').toFixed(2)}`, title: 'crossbow reload — DEX' },
+    { label: 'Shot', value: `×${s('ranged_damage').toFixed(2)}`, title: 'bow/throw damage — STR (draw/throw power)' }
+  );
+  return out;
 }
 
 /**
