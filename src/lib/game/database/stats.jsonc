@@ -64,14 +64,15 @@
         "formula"    : "(0.05 + (DEX − 10) × 0.005 + (PER − 10) × 0.0025) × consciousness × sight",
         "description": "base critical-hit probability 0–1 (× consciousness × sight); weapons add their own critMod on top"
     },
-    // ── Ranged (RANGED-COMBAT) — FOUR primary stats on different attributes so ranged builds diverge:
-    //    PER deadeye (accuracy), DEX quick-draw (aim_speed), STR power-archer (range), STR cranker
-    //    (reload_speed). Each is a ~1.0-baseline multiplier the combat path turns into hit points /
-    //    cadence / effective tiles, with a LINEAR distance term added in Combat (farther = less accurate
-    //    AND slower to aim). The per-shot interval splits into AIM time (aim_speed, distance-scaled) +
-    //    SPAN time (reload_speed, crossbow crank only) — so DEX favours bows, STR favours crossbows.
-    //    Gear + the weapon contribute flat `aimBonuses` on top (read directly — equipment doesn't reach
-    //    the stat engine). All fold in body capacities, so a wounded/dim-sighted archer aims worse.
+    // ── Ranged (RANGED-COMBAT) — ONE attribute per formula, STR stays MELEE-only (clean build space):
+    //    PER is the marksman core — accuracy, aim_speed, AND aim_range all key off it (see, line up,
+    //    reach). DEX is the loader's hands — reload_speed only. Each is a ~1.0-baseline multiplier the
+    //    combat path turns into hit points / cadence / effective tiles, with a LINEAR distance term added
+    //    in Combat (farther = less accurate AND slower to aim). The per-shot interval splits into AIM
+    //    time (aim_speed/PER, distance-scaled) + SPAN time (reload_speed/DEX, crossbow crank only) — so a
+    //    bow build is pure PER, a crossbow build adds DEX for the span. Gear + the weapon contribute flat
+    //    `aimBonuses` on top (read directly — equipment doesn't reach the stat engine). All fold in body
+    //    capacities, so a wounded/dim-sighted archer aims worse.
     {
         "id"         : "aim_accuracy",
         "category"   : "combat",
