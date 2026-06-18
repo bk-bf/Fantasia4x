@@ -64,42 +64,43 @@
         "formula"    : "(0.05 + (DEX − 10) × 0.005 + (PER − 10) × 0.0025) × consciousness × sight",
         "description": "base critical-hit probability 0–1 (× consciousness × sight); weapons add their own critMod on top"
     },
-    // ── Ranged (RANGED-COMBAT) — ONE attribute per formula, STR stays MELEE-only (clean build space):
-    //    PER is the marksman core — accuracy, aim_speed, AND aim_range all key off it (see, line up,
-    //    reach). DEX is the loader's hands — reload_speed only. Each is a ~1.0-baseline multiplier the
-    //    combat path turns into hit points / cadence / effective tiles, with a LINEAR distance term added
-    //    in Combat (farther = less accurate AND slower to aim). The per-shot interval splits into AIM
-    //    time (aim_speed/PER, distance-scaled) + SPAN time (reload_speed/DEX, crossbow crank only) — so a
-    //    bow build is pure PER, a crossbow build adds DEX for the span. Gear + the weapon contribute flat
-    //    `aimBonuses` on top (read directly — equipment doesn't reach the stat engine). All fold in body
-    //    capacities, so a wounded/dim-sighted archer aims worse.
+    // ── Ranged (RANGED-COMBAT) — ONE attribute per formula, STR stays MELEE-only (clean build space).
+    //    TWO ranged axes: PER = PRECISION (aim_accuracy + aim_range — the sniper: hits true at distance);
+    //    DEX = SPEED (aim_speed + reload_speed — the skirmisher: high rate of fire, fast crossbow cycle).
+    //    So PER-only = sniper, DEX-only = a fast sling/skirmisher, PER+DEX = the complete shooter; STR is
+    //    melee (and throw power for hybrids), never an aiming stat. Each is a ~1.0-baseline multiplier
+    //    Combat turns into hit points / cadence / effective tiles, + a LINEAR distance term (farther =
+    //    less accurate AND slower to aim). Interval = AIM time (aim_speed) + SPAN time (reload_speed,
+    //    crossbow crank only). Gear + the weapon add flat `aimBonuses` (read directly — equipment doesn't
+    //    reach the stat engine); all fold in body capacities, so a wounded/dim-sighted archer aims worse.
+    //    (Loose heuristic only — finer build identity, e.g. a DEX+PER sling specialist, comes from TRAITS.)
     {
         "id"         : "aim_accuracy",
         "category"   : "combat",
         "primaryStat": "perception",
-        "formula"    : "(1.0 + (PER − 10) × 0.04 + (DEX − 10) × 0.01) × sight × manipulation",
-        "description": "ranged hit accuracy — PER deadeye (DEX steadies), × sight × manipulation; Combat adds a linear distance penalty + gear/ammo aimBonuses"
+        "formula"    : "(1.0 + (PER − 10) × 0.04) × sight × manipulation",
+        "description": "ranged hit accuracy — the PER PRECISION axis (deadeye), × sight × manipulation; Combat adds a LINEAR distance penalty + gear/ammo aimBonuses. The sniper stat — pairs with aim_range."
     },
     {
         "id"         : "aim_speed",
         "category"   : "combat",
         "primaryStat": "dexterity",
-        "formula"    : "(1.0 + (DEX − 10) × 0.04 + (PER − 10) × 0.01) × manipulation",
-        "description": "ranged AIM cadence — DEX quick-draw, × manipulation. The gap between shots is AIM time (this, lengthened by distance — far targets take longer to line up) PLUS span time (reload_speed, crossbows only); BOTH shorten the interval. A ready quiver + bracers speed the aim further."
+        "formula"    : "(1.0 + (DEX − 10) × 0.04) × manipulation",
+        "description": "ranged AIM cadence — the DEX SPEED axis (quick hands → fast loose), × manipulation. The shot gap is AIM time (this, lengthened by distance — far targets take longer to line up) PLUS span time (reload_speed, crossbows only); both shorten it. A ready quiver + bracers speed the aim further. The skirmisher/sling stat."
     },
     {
         "id"         : "reload_speed",
         "category"   : "combat",
-        "primaryStat": "strength",
-        "formula"    : "(1.0 + (STR − 10) × 0.03 + (DEX − 10) × 0.015) × manipulation",
-        "description": "ranged RELOAD/spanning cadence — STR cranks a crossbow's windlass (DEX steadies it), × manipulation. Only weapons with a mechanical reload (crossbows) have a span step, so this is the crossbowman's stat: the per-shot interval = aim time (aim_speed) + span time (reload_speed). Bows/slings have no span → reload_speed doesn't touch them. (Pairs with aim_speed: DEX favours bows, STR favours crossbows.)"
+        "primaryStat": "dexterity",
+        "formula"    : "(1.0 + (DEX − 10) × 0.03) × manipulation",
+        "description": "ranged RELOAD/spanning cadence — DEX works the crossbow's windlass/lever fast, × manipulation. Only weapons with a mechanical reload (crossbows) have a span step, so it's a crossbow stat: interval = aim time (aim_speed) + span time (reload_speed). Bows/slings have no span → unaffected. Same DEX SPEED axis as aim_speed — a deft shooter cycles a crossbow fast."
     },
     {
         "id"         : "aim_range",
         "category"   : "combat",
-        "primaryStat": "strength",
-        "formula"    : "(1.0 + (STR − 10) × 0.025 + (PER − 10) × 0.01) × sight",
-        "description": "ranged reach multiplier — STR draw/throw power (PER spots farther), × sight; scales the weapon's base range, capped by visionRange (effectiveRange = min(vision, weaponRange × aim_range + gear))"
+        "primaryStat": "perception",
+        "formula"    : "(1.0 + (PER − 10) × 0.025) × sight",
+        "description": "ranged reach multiplier — the PER PRECISION axis (a sharp eye sights + holds a far mark), × sight; scales the weapon's base range, capped by visionRange (effectiveRange = min(vision, weaponRange × aim_range + gear)). The sniper stat — pairs with aim_accuracy."
     },
     {
         "id"         : "heal_rate",
