@@ -1,23 +1,18 @@
-<!-- LOC cap: 400 (created: 2026-06-12; reworked 2026-06-18 — prior-art pass over ../ZED + ../dnd-combat-loop, ENGINE-PERFORMANCE compliance) -->
+<!-- LOC cap: 360 (created: 2026-06-12) -->
 
 # RANGED COMBAT & AMMUNITION
 
-> **Related:** [ROADMAP](ROADMAP.md) · [COMBAT-SYSTEM](COMBAT-SYSTEM.md) · [ENGINE-PERFORMANCE](ENGINE-PERFORMANCE.md) (this consumes LoS — read §C/§D before touching the tick) · [EQUIPMENT-EXPANSION](../archive/EQUIPMENT-EXPANSION.md) · [ENTITIES_SPAWNING](ENTITIES_SPAWNING.md) · [MAGIC-SKILLS](MAGIC-SKILLS.md) · [game/DESIGN](../game/DESIGN.md) · [game/DECISIONS](../game/DECISIONS.md) (ADR-008 spatial, ADR-002 mutate-in-place)
+> **Related:** [ROADMAP](ROADMAP.md) · [COMBAT-SYSTEM](COMBAT-SYSTEM.md) · [EQUIPMENT-EXPANSION](../archive/EQUIPMENT-EXPANSION.md) · [ENTITIES_SPAWNING](ENTITIES_SPAWNING.md) · [MAGIC-SKILLS](MAGIC-SKILLS.md) · [ENGINE-PERFORMANCE](ENGINE-PERFORMANCE.md) (LoS dep + hot-loop rules) · [game/DESIGN](../game/DESIGN.md)
 
 ## Status
 
-Not started. **Hard-blocked by** COMBAT-SYSTEM (complete) and EQUIPMENT-EXPANSION (the bow
-items + `range`/`reach`/`twoHanded` weapon fields). COMBAT-SYSTEM explicitly deferred
+Not started. **Hard-blocked by** COMBAT-SYSTEM (complete), EQUIPMENT-EXPANSION (the bow
+items + `range`/`reach`/`twoHanded` weapon fields), **and line-of-sight** — the `blocksSight`
+WASM raycast (ADR-019) is still **deferred/parked** in [ENGINE-PERFORMANCE §5](ENGINE-PERFORMANCE.md);
+ranged resolution consumes it (§I) and cannot land before it. COMBAT-SYSTEM explicitly deferred
 "ranged attacks" to a later spec — this is that spec. Magic-attuned ranged weapons
 (`staff` bolts, enchanted ammunition) belong to [MAGIC-SKILLS](MAGIC-SKILLS.md) and are
 excluded here.
-
-**2026-06-18 rework:** investigated two sibling combat prototypes for portable parts
-(`../ZED`, `../dnd-combat-loop`) and aligned the plan with [ENGINE-PERFORMANCE](ENGINE-PERFORMANCE.md).
-See Part 0 (prior art) and Part VI (performance compliance) — both are new and **gate** the
-design. Net effect on scope: LoS is folded into the planned **unified spatial service**, not a
-standalone ray-cast; resolution stays **instantaneous** (no projectile entities); ammo recovery
-is **deferred behind the `droppedItems` delta work** it would otherwise regress.
 
 ---
 
@@ -34,57 +29,10 @@ is **deferred behind the `droppedItems` delta work** it would otherwise regress.
 
 ---
 
-## Part 0 — Prior art: what ports from the sibling prototypes (and what doesn't)
-
-Two sibling Godot/GDScript prototypes were mined for reusable design. **Neither ports as
-code** — Fantasia is SvelteKit/TS with a tick-based sim in a Web Worker. They port as
-**algorithms and design**, and the line between them is the **temporal model**:
-
-- **`../dnd-combat-loop` is TURN-BASED.** Its *turn scaffolding* is the wrong model for us and
-  is **rejected wholesale**: action economy (`ActionEconomy.gd`: action/bonus/reaction budgets),
-  **opportunity attacks as reactions** (`OpportunityAttack.gd`), advantage/disadvantage as a
-  discrete-roll mechanic, per-turn movement budgets, and flood-fill "reachable tiles". Fantasia
-  has no turns — combat is a continuous FSM ticking down `attackCooldown` (COMBAT-SYSTEM). What
-  **does** port is its **stateless, tick-agnostic grid math**, which doesn't care about turns:
-  - **`LineOfSightManager.gd`** → cached **symmetric Bresenham** LoS (`{from:{to:bool}}`,
-    A↔B symmetric, per-position invalidation on move). This is the LoS this spec needs (§I).
-    Note its own header TODO ("replace grid check with physics ray when on TileSet") — we keep
-    the **grid** form (cheap, deterministic, worker-safe); we do **not** want physics rays.
-  - **`CoverManager.gd`** → cover from **intervening tiles along the shot line**, reusing the
-    *same* Bresenham tile list as LoS (DRY), taking the max cover on the line, tiered
-    (none / half / three-quarter). Richer than the current "0.20 if adjacent to a wall" and
-    upgrades §I's cover rule (§I-cover).
-  - **`CombatMath.gd`** → the hit-probability **clamp** (never 0%/100% — a min miss and min hit
-    chance) and the `max(STR, DEX)`-style "use the better stat for ranged" idea, which cleans up
-    the `strScaled` boolean (§I-hit). *Advantage/disadvantage itself is turn-based → dropped.*
-  - **`TacticalPositioning.gd`** → `chebyshev` adjacency helpers — but we already have
-    `nearestPawn`/adjacency in the sim, so this is a **naming/parity reference only**.
-
-- **`../ZED` is REAL-TIME.** Its *cadence* is closer to ours (continuous, no turns), but its
-  *mechanisms* are physics-engine-bound and **rejected**: `bullet.gd` is a traveling `Area2D`
-  projectile in `_physics_process`; `player_sight.gd` does LoS via `PhysicsDirectSpaceState2D.
-  intersect_ray()` and tracks sight with `Area2D` overlap signals every frame. We have no physics
-  world and a tick/worker/SoA sim, so spawning projectile entities or per-frame ray queries is the
-  wrong shape (and a snapshot/alloc cost — Part VI). What **does** port is conceptual:
-  - **Instantaneous resolution.** ZED's bullet *travels*; we resolve the shot as a single hit
-    roll on the firing tick (Part I). We borrow the *feel* (real-time, no turn gate), not the
-    traveling object. **Explicitly: no `Bullet`/projectile entity.**
-  - **Last-seen memory + debounce.** `player_sight.gd` keeps a unit's last-known position when
-    LoS drops, and gates state flips behind a `min_state_change_interval` to stop oscillation.
-    The debounce is the directly useful bit: it's the same hazard ENGINE-PERFORMANCE names as the
-    **"hunt/flee yoyo"** (§M3). Applies to the kite/close decision (Part IV). Full last-seen
-    *fog memory* is deferred with fog-of-war (out of scope here).
-
-**One-line takeaway:** take the **turn-based** project's *stateless grid math*, take the
-**real-time** project's *cadence + debounce*, and reject both engines' scaffolding (turn economy;
-physics projectiles/rays).
-
----
-
 ## Part I — Combat Resolution
 
-Ranged resolution slots into the **existing** auto-combat FSM (COMBAT-SYSTEM turn loop). It is
-**not** a new mode and **not** turn-based. When a pawn/mob in Combat mode holds a weapon with
+Ranged resolution slots into the **existing** auto-combat FSM (COMBAT-SYSTEM Part: turn
+loop). It is **not** a new mode. When a pawn/mob in Combat mode holds a weapon with
 `range > 0` and has compatible ammunition, its attack each tick resolves as ranged:
 
 ```
@@ -93,10 +41,22 @@ target beyond reach but ≤ range tiles?    → ranged attack IF line-of-sight A
 target beyond range, or no LoS, or no ammo → close distance (move toward target) this tick
 ```
 
-Resolution is **instantaneous** on the firing tick — a hit roll + damage, no projectile entity
-travels (the ZED-rejection, Part 0 / Part VI). The shot rides the FSM's existing `attackCooldown`.
+### Resolution model — abstracted hitscan, NOT a projectile entity (DF/RimWorld lineage)
 
-### Hit chance (§I-hit)
+**The key architectural fork.** RimWorld and Dwarf Fortress both model a shot as a **real
+traveling projectile** — a spawned thing/item that advances tile-by-tile and resolves on
+arrival. That buys emergent *wild shots* (a miss continues and may hit a wall/ally), trajectory,
+knockback, and a bolt that physically lands where it can be recovered. We **deliberately do not**
+copy that here: a projectile pool is a **new per-tick sim phase** advancing N flying entities, and
+ENGINE-PERFORMANCE's whole arc was about *not* adding hot-loop work + entities to the snapshot
+(§VI). Instead we **resolve the hit instantly on the firing tick** (hitscan) and reproduce only the
+outcomes we want as cheap post-hoc effects: recovery = spawn the bolt as a `DroppedItem` on the
+target tile (§II), "wild shot" friendly-fire = an *optional* roll along the sampled LoS line (Open
+Questions), never a live projectile. This keeps ranged inside the existing FSM tick at ~zero added
+allocation. *(Reconsider only if a projectile-physics layer is ever wanted for its own sake — it is
+a feature, not a perf need.)*
+
+### Hit chance
 
 Reuse the COMBAT-SYSTEM hit formula, with ranged-specific modifiers folded in:
 
@@ -104,44 +64,29 @@ Reuse the COMBAT-SYSTEM hit formula, with ranged-specific modifiers folded in:
 rangedHit = baseHit(attacker)                        // hit_chance stat (× sight × manipulation)
           + weaponProperties.accuracy
           − distancePenalty(dist, range)             // see below
-          − coverPenalty(target)                     // from §I-cover (was: flat 0.20 adjacency)
+          − coverPenalty(target)                     // 0.20 if target adjacent to wall/tree (existing rule)
           + flankingBonus                            // existing 0.15 — does not apply to ranged; set 0
-rangedHit = clamp(rangedHit, MIN_HIT, MAX_HIT)       // CombatMath idea: never a guaranteed hit/miss
 ```
 
 `distancePenalty = clamp((dist − optimalRange) × 0.04, 0, 0.4)` where
 `optimalRange = ceil(range × 0.5)`. Firing at the edge of your range is hard; mid-range
 is the sweet spot; point-blank is fine. This makes `range` a real stat, not just reach.
 
-STR scaling applies to **bows** (draw weight) but **not** crossbows/slings (mechanical
-advantage). Modeled with a `strScaled?: boolean` weapon flag (default true; crossbows/slings
-false). *(dnd's `max(STR,DEX)` is the cleaner abstraction but Fantasia's stat model differs —
-keep the boolean; noted as the idiomatic alternative if a DEX-equivalent stat is ever added.)*
+### Line-of-sight
 
-### Line-of-sight (§I-los)
-
-A straight Bresenham line from attacker to target; if any intervening tile is a **sight-blocker**
-(wall, full-canopy tree, cliff) the shot is blocked → attacker closes instead. **This must go
-through the spatial service interface (ADR-008), never an inline ray-cast in `Combat.ts`.**
-
-- **Add `hasLineOfSight(ax, ay, bx, by): boolean` to the spatial service** alongside
-  `PathfinderService.findPath` (`src/lib/game/services/PathfinderService.ts`; concrete impl
-  `WasmPathfinderService`). Callsites depend on the interface only.
-- **Algorithm = `dnd-combat-loop`'s cached symmetric Bresenham** (Part 0): a line walk over an
-  **opacity grid**, with a `{from:{to}}` cache, symmetric (A↔B), invalidated per-position on
-  movement and on the terrain-rev bump. The opacity grid is a sibling of the existing
-  `buildPathfindingGrids` flat-grid (reuse the same worldMap-ref memoization — Part VI).
-- **Fold into the unified spatial service, do not build standalone.** ENGINE-PERFORMANCE §C is
-  explicit: *"the upcoming fog-of-war (visibility) + ranged-combat LoS are spatial (ADR-008) and
-  will build that index anyway — fold nearest/vision/LoS/fog into ONE amortised spatial service
-  then."* LoS shares the opacity grid (and ultimately the spatial index) with `nearestPawn` and
-  future fog. Building a one-off LoS ray now re-litigates the reverted uniform-grid (Part VI).
+A straight Bresenham line from attacker to target; if any tile on it is a sight-blocker
+(wall, full-canopy tree, cliff) the shot is blocked → attacker closes instead. **Reuse
+the existing fog-of-war / visibility spatial service** (ADR-008) — do **not** inline a
+new ray-cast in Combat.ts. If the visibility service does not yet expose a
+`hasLineOfSight(a, b)` query, add it **to that service interface**, not to combat code.
 
 ### Damage & wounds
 
 Damage uses `damMin..damMax` (EQUIPMENT-EXPANSION) rolled as normal, `damageType`
 usually `piercing` → routes through the existing wound table (arrow = piercing, organ-
-penetration chance). Armour layer cascade applies unchanged.
+penetration chance). Armour layer cascade applies unchanged. STR scaling applies to
+**bows** (draw weight) but **not** to crossbows or slings (mechanical advantage) — gated
+by a `strScaled?: boolean` weapon flag (default true; crossbows/slings set false).
 
 ---
 
@@ -172,11 +117,6 @@ On each ranged attack: decrement the attacker's ammo stack by 1. When the stack 
 the weapon stops firing and the pawn closes to melee. **Recovery** (post-combat): for each
 spent projectile, roll `recoverable` → spawn it as a `DroppedItem` on the target's tile
 (haulable like any drop). Cheap arrows shatter; good ones can be retrieved.
-
-> ⚠️ **Recovery is gated by performance — see Part VI.** Per-arrow `DroppedItem` spawning
-> directly worsens the `droppedItems` snapshot cost ENGINE-PERFORMANCE §D8 flags as the *next
-> biggest growing payload*. Recovery ships **only after** `droppedItems` deltas land, and even
-> then **batches** spent ammo into one stacked drop per tile (not one entity per arrow).
 
 ### Where ammo lives
 
@@ -234,7 +174,7 @@ Ammo:
 
 ---
 
-## Part IV — Reload, Cadence & the kite/close decision
+## Part IV — Reload & Cadence
 
 `weaponProperties.reload` (new, optional; default 0) = attack ticks the weapon needs
 between shots. Modeled with the **existing** `attackCooldown` field on Pawn/Mob
@@ -247,6 +187,16 @@ afterShot: attacker.attackCooldown += reload   // on top of the normal swing coo
 So a crossbow (`reload 3`) genuinely fires a third as often as a sling. No new turn
 structure — it rides the cooldown the FSM already ticks down.
 
+### Aim warmup (RimWorld lineage, optional refinement)
+
+RimWorld splits a ranged attack into **warmup (aim) → fire → cooldown**, not cooldown alone.
+The warmup is what makes *target-switching* costly and rewards holding a bead on one enemy — real
+tactical texture for ~one extra scalar. Optional `weaponProperties.warmup` (default 0): on first
+acquiring/changing target, set `attacker.attackCooldown = warmup` **before** the shot resolves;
+re-firing on the *same* target skips it. Rides the same cooldown the FSM ticks (zero new
+structure), so it's a pure data knob — a sniper-y war bow can have a long warmup + long range, a
+sling near-zero. Land it only if cadence feels flat with reload alone.
+
 ### Melee fallback (bow-butt)
 
 A pawn cornered (enemy in melee reach) with a ranged weapon still defends: it makes a weak
@@ -254,15 +204,26 @@ A pawn cornered (enemy in melee reach) with a ranged weapon still defends: it ma
 contact. This reuses the unarmed-fallback path in `attackerProfile()` — gate it on
 "enemy within reach and weapon is ranged."
 
-### Kite/close debounce (the ZED lesson)
+---
 
-The per-tick "ranged-fire vs close-distance vs bow-butt" decision (Part I) can **oscillate** at
-the reach/range boundary — a target stepping in and out of melee reach flips the pawn between
-firing and closing every tick. This is the **same hunt/flee yoyo** ENGINE-PERFORMANCE §M3 warns
-about, and the fix is ZED's `min_state_change_interval` debounce (Part 0): commit to
-"close" / "hold and fire" for a few ticks before re-deciding, with hysteresis at the boundary
-(close until comfortably inside `optimalRange`, not just inside `range`). Reuses the existing
-auto-defend throttle cadence (staggered by `debugId`) rather than re-scanning every tick.
+## Architecture lineage — Dwarf Fortress / RimWorld
+
+These two are the genre's reference implementations of colony-sim ranged combat; the spec borrows
+their *proven* structure and consciously diverges only where our constraints differ (no positioning
+layer; the per-tick worker budget, §VI). The matrix below records each borrowed/adapted/rejected
+decision so it isn't re-litigated:
+
+| Insight (source) | How this spec applies it |
+| ---------------- | ------------------------ |
+| **Unified attack abstraction** — RimWorld *Verbs* (one class spans melee+ranged: range, warmup, cooldown) | **Borrowed.** Ranged reuses `attackerProfile()` + the existing FSM, not a parallel system (Part I) — `range > 0` is the only branch. |
+| **Shot = traveling projectile** — RimWorld `Projectile` things; DF physical bolts with trajectory/momentum | **Rejected (perf).** Abstracted hitscan + post-hoc effects instead — see "Resolution model", §I. A projectile pool is a new hot-loop phase (§VI). |
+| **Wild/forced-miss shots hit something else** — RimWorld misses keep flying; DF bolts ricochet | **Adapted (deferred).** No live projectile to deflect → friendly-fire becomes an *optional* roll along the sampled LoS line (Open Questions), off by default. |
+| **Range-banded accuracy** — RimWorld weapons author 4 accuracy values (touch/short/medium/long) | **Considered.** We ship a single continuous `distancePenalty` curve (§I) for now; per-weapon bands are the data-driven upgrade if weapons need stronger individual "personality". |
+| **Aim warmup before fire** — RimWorld warmup → fire → cooldown | **Borrowed (optional).** `weaponProperties.warmup`, target-switch cost, rides `attackCooldown` — §IV. |
+| **Ammo is hauled items + quiver assignment** — DF marksdwarf bolt logistics | **Adapted.** Ammo is bulk-consumable from inventory now (§II); the `quiver`/hauling supply-loop is the deferred DF-style layer (Open Questions) — fits the existing job/haul system. |
+| **Directional / fractional cover** — RimWorld per-cell cover sampled near the target | **Simplified.** Binary 0.20 adjacency penalty (§I); RimWorld's directional model is the richer later version once positioning matters. |
+| **Marksdwarf switches to melee in contact** — DF; RimWorld pawns melee when adjacent | **Borrowed.** The bow-butt fallback (§IV). |
+| **Staggered threat AI; mutate live entities at 60 Hz, consumers read copies** — DF/RimWorld tick model | **Already in place** — ENGINE-PERFORMANCE's auto-defend throttle + the worker snapshot (§VI-1/2). Ranged AI re-uses it, doesn't add a 60 Hz scan. |
 
 ---
 
@@ -277,77 +238,80 @@ auto-defend throttle cadence (staggered by `debugId`) rather than re-scanning ev
 3. New `arrow`/`bolt`/`sling_stone` item categories; ammo recipes (dynamic where they use
    `wood`/`metal` category slots).
 
-### Phase B — Line-of-sight in the spatial service (do FIRST — it gates resolution)
+### Phase B — Combat resolution (the meat)
 
-4. Add `hasLineOfSight(ax, ay, bx, by)` to `PathfinderService` (interface) + `WasmPathfinderService`
-   (impl), backed by an **opacity grid** memoized on the worldMap ref like `buildPathfindingGrids`.
-   Cached symmetric Bresenham (Part 0 / §I-los). Cover penalty (§I-cover) reuses the *same* line tiles.
-5. Unit-test LoS in isolation (blocked-by-wall, clear, symmetry, cache invalidation) before wiring
-   combat — mirrors `dnd-combat-loop`'s LoS being its own tested manager.
-
-### Phase C — Combat resolution (the meat)
-
-6. `Combat.ts` `attackerProfile()` (line ~225): branch on `range > 0` + ammo availability → build a
-   ranged profile (distance penalty, cover, clamp, no flanking, conditional STR scaling).
-7. FSM tick (COMBAT-SYSTEM turn loop): if target beyond `reach` but within `range` and LoS
+4. `Combat.ts` `attackerProfile()`: branch on `range > 0` + ammo availability → build a
+   ranged profile (distance penalty, no flanking, conditional STR scaling). **Perf (§VI-1):**
+   this runs in the per-tick worker combat phase — compute scalars inline / into a reused
+   scratch object; do **not** allocate a fresh profile object per attacker per tick.
+5. FSM tick (COMBAT-SYSTEM turn loop): if target beyond `reach` but within `range` and LoS
    and ammo > 0 → ranged attack; else if beyond range/no LoS → move-to-close; else melee.
-   **Apply the kite/close debounce (§IV).**
-8. Ammo decrement + the bow-butt melee fallback. `reload` → `attackCooldown` addition.
-   **Mutate in place — no per-tick allocation in the resolution path (Part VI).**
+6. Ammo decrement + the bow-butt melee fallback. **Perf (§VI-1):** mutate the live pawn/ammo
+   stack **in place** (pawns are already mutated in place — ADR-002 amendment / M2); no
+   pawns-array rebuild or `{...pawn}` patch.
+7. `reload` → `attackCooldown` addition (in-place scalar bump on the pawn).
 
-### Phase D — Recovery, UI & feedback
+### Phase C — Line-of-sight & recovery
 
-9. Combat log lines for ranged hits/misses/out-of-ammo ("Bjorn looses his last arrow").
-10. Equipment/inventory panel: show equipped ranged weapon's ammo count and a low-ammo warning.
-11. **Ammo recovery — gated behind `droppedItems` deltas (Part VI / ENGINE-PERF §D8).** Post-combat,
-    batch spent recoverable ammo into one stacked `DroppedItem` per tile; thrown-weapon self-consume
-    drops the weapon `ItemInstance`. **Do not ship per-arrow drops on the whole-array snapshot.**
+8. Add `hasLineOfSight(a, b)` to the **spatial/visibility service interface** (ADR-008);
+   Combat calls the interface only. Cover penalty reuses the existing adjacency check.
+   **Perf (§VI-2):** the query is WASM; do **not** inline a JS Bresenham in the combat hot
+   loop. Amortise — only re-test LoS when attacker or target moved (cache the last result),
+   or stagger like the auto-defend threat scan (every N ticks, offset by `debugId`), not 60 Hz.
+9. Post-combat ammo recovery → spawn `DroppedItem`s; thrown-weapon self-consume → drop the
+   weapon `ItemInstance` on the target tile. **Perf (§VI-3):** batch recovery into ONE pass at
+   combat end (not per-shot per-tick) — `droppedItems` ships whole every snapshot flush and is
+   the next growth lever (ENGINE-PERFORMANCE §D8).
+
+### Phase D — UI & feedback
+
+10. Combat log lines for ranged hits/misses/out-of-ammo ("Bjorn looses his last arrow").
+11. Equipment/inventory panel: show equipped ranged weapon's ammo count and a low-ammo warning.
+    **Perf (§VI-4):** ammo lives in `inventory`, a **cold resync field** (refreshed ~every 32nd
+    flush, ENGINE-PERFORMANCE D5) — the count read in `projectSentEntity` will be ≤~2 s stale.
+    Fine for a low-ammo *warning*; if a live readout is wanted, promote a small `ammoCount`
+    scalar into the **sent** entity projection (`entityProjection.ts`) rather than un-cold-ing
+    the whole inventory.
 
 ---
 
-## Part VI — Performance & ENGINE-PERFORMANCE compliance
+## Part VI — Performance compliance (ENGINE-PERFORMANCE)
 
-This feature touches the sim hot path and the worker→main snapshot — the two surfaces
-[ENGINE-PERFORMANCE](ENGINE-PERFORMANCE.md) spent the whole perf arc on. Compliance is a design
-constraint, not an afterthought:
+Ranged combat lands inside the **per-tick worker combat phase** and touches `droppedItems` +
+the snapshot — exactly the surfaces ENGINE-PERFORMANCE spent its arc fixing. Honour these so the
+feature doesn't re-introduce a known regression (each maps to a finding there):
 
-- [ ] **Resolution mutates in place (ADR-002 amendment).** The ranged attack path runs inside the
-  per-tick combat phase. Follow the established hot-loop rule: mutate entity fields in place
-  (ammo count, `attackCooldown`, wounds), **no `{...spread}`/`.map()` per tick**. The immutable
-  style was the 12.5× tick tax (ENGINE-PERF ★).
-- [ ] **No projectile entities (the ZED rejection).** Resolution is a single hit roll on the firing
-  tick. A traveling `Bullet` would add per-tick entities to step *and* to the snapshot — exactly the
-  growth ENGINE-PERF fights. Instantaneous only.
-- [ ] **LoS is amortised + cached, never a per-tick rebuild.** The TS uniform-grid spatial index was
-  **built and reverted** (§B "rejected") — per-tick rebuild/alloc lost to the JIT'd linear scan at
-  this entity count. So: (a) reuse the worldMap-ref-memoized opacity grid (rebuild only when terrain
-  changes, like `buildPathfindingGrids`); (b) cache LoS results symmetric + invalidate on move/terrain-rev
-  (dnd pattern); (c) gate LoS to **ranged combatants with a target beyond reach but within range**, and
-  throttle the re-check on the staggered auto-defend cadence — not every pawn every tick.
-- [ ] **Fold into the ONE spatial service (ADR-008), don't add a second.** ENGINE-PERF §C commits
-  nearest/vision/LoS/fog to a single amortised spatial service. Add `hasLineOfSight` there; share the
-  grid. A standalone LoS ray re-opens the reverted-grid debate for ~3pp.
-- [ ] **Ammo recovery must not regress `droppedItems`.** §D8 names `droppedItems` as the next biggest
-  *growing* snapshot payload (ships whole every flush, grows unbounded with harvest). Per-arrow drops
-  would compound it. Recovery is **deferred until `droppedItems` deltas land**, then **batched** (one
-  stacked drop per tile). Verify with the `[SNAP]` probe that recovery doesn't spike the payload.
-- [ ] **No new always-on hot allocators or `find` scans.** Ammo/weapon lookups go through the existing
-  id→`Map` indexes (§B), not `.find()` over arrays. New snapshot fields (if any) ride the slim
-  projection (§D8 `entityProjection.ts`) — don't add cold fields to the per-flush hot set.
+- [ ] **§VI-1 — no per-tick allocation in the combat tick (ADR-002 amendment / ★ DONE, M2/M4).**
+  M4 left `combat` immutable *because it's compute-bound, not alloc-bound* — that licence only
+  holds if ranged code **adds no allocation**: reuse a scratch attacker profile, mutate the live
+  pawn + ammo stack in place, bump `attackCooldown` in place. No `{...pawn}` / pawns-array rebuild
+  on the hot path (that's the 12.5× immutable tax, §9).
+- [ ] **§VI-2 — LoS through the WASM spatial service, amortised (ADR-008/019, §C).** No JS
+  Bresenham in the loop; ENGINE-PERFORMANCE defers the spatial index precisely to fold
+  nearest/vision/**LoS**/fog into ONE amortised service. Cache per attacker–target and only
+  re-query on movement, or stagger off `debugId` — a 60 Hz O(range) raycast per attacker is the
+  per-tick spatial cost §C warns against (cf. the reverted uniform-grid, §B).
+- [ ] **§VI-3 — `droppedItems` stays bounded.** Recovery + thrown-weapon drops spawn into
+  `droppedItems`, which ships **whole every flush and grows unbounded** (the next D8 lever). Batch
+  recovery once at combat end; don't drop-per-shot-per-tick. Recovered ammo benefits automatically
+  once `droppedItems` deltas land.
+- [ ] **§VI-4 — snapshot cost: don't un-cold inventory for the HUD ammo count** (D5/D8) — see step 11.
+- [ ] **§VI-5 — touch no worldMap tiles.** Drops go to `droppedItems`, LoS reads tiles read-only.
+  If anything ever writes a tile (scorch, etc.), mutate **in place + `markTileDirty`** (D6) — never
+  `worldMap.map()` (that flips the ref → full 38k re-clone + terrain rebuild, the harvest cliff).
 
 ---
 
 ## Open Questions
 
-- [ ] Dedicated `quiver` (belt-slot ammo container, +ammo volume) — deferred; ammo rides
-  normal inventory for now.
+- [ ] Dedicated `quiver` (belt-slot ammo container, +ammo volume) + the DF-style **ammo
+  haul/assignment** supply-loop — deferred; ammo rides normal inventory for now.
 - [ ] Friendly-fire on the LoS line (ally between shooter and target) — deferred; assume
-  shooters pick clear lines. *(Cheap to add later: the §I-los Bresenham tile walk already
-  enumerates the line — test it for an intervening ally, same as cover.)*
-- [ ] Mob ranged attackers (archer goblins) — data-only once Phase C lands; creatures get a
+  shooters pick clear lines. *(This is RimWorld's emergent wild-shot, but since we hitscan
+  rather than spawn a projectile, it'd be an explicit roll over the sampled LoS cells, not a
+  deflected entity — see "Resolution model", §I.)*
+- [ ] Mob ranged attackers (archer goblins) — data-only once Phase B lands; creatures get a
   ranged `naturalWeapon`/equipped bow + an ammo pool. Tracked, not in initial scope.
 - [ ] Moving-shot accuracy penalty (fire-on-the-move vs. braced) — deferred; needs the
   positioning layer to distinguish, which we don't model yet.
-- [ ] Last-seen fog memory for ranged AI (the ZED `player_sight` memory system) — deferred with
-  fog-of-war; only the **debounce** half of that system is in scope now (§IV).
 - [ ] Enchanted/elemental ammo and `staff` bolts → [MAGIC-SKILLS](MAGIC-SKILLS.md).
