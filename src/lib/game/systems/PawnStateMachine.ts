@@ -726,7 +726,7 @@ function tickConditionTimers(pawn: Pawn): Pawn {
  * Derive the pawn's transientConditions list from current state flags, needs, and durations.
  * Called after each tick so PawnService.calculateNeedsUpdate always reads fresh values.
  */
-function syncTransientConditions(pawn: Pawn): Pawn {
+export function syncTransientConditions(pawn: Pawn): Pawn {
   const ids: string[] = [];
   const isEating = pawn.state?.isEating || pawn.currentState === PAWN_STATE.EATING;
   const isSleeping = pawn.state?.isSleeping || pawn.currentState === PAWN_STATE.SLEEPING;
@@ -757,6 +757,18 @@ function syncTransientConditions(pawn: Pawn): Pawn {
     /* neutral — no condition */
   } else if (mood >= 20) ids.push('mood_sad');
   else ids.push('mood_depressed');
+
+  // §M passive magical buffs: any worn item that lists `grantsConditions` pushes those condition
+  // ids while equipped (auto-clear on unequip — they're re-derived fresh each tick like every other
+  // transient condition). This is the foundation MAGIC-SKILLS' active spells/skill-nodes reuse.
+  const equipment = pawn.equipment;
+  if (equipment) {
+    for (const inst of Object.values(equipment)) {
+      if (!inst) continue;
+      const granted = itemService.getItemById(inst.itemId)?.grantsConditions;
+      if (granted) for (const cid of granted) if (!ids.includes(cid)) ids.push(cid);
+    }
+  }
 
   // Push persistent-condition stage labels too (e.g. "malnutrition:moderate").
   for (const condition of pawn.conditions ?? []) {

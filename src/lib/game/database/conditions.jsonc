@@ -421,5 +421,82 @@
         "color"      : "#D32F2F",
         "charSpans"  : [ {"sheet": "font", "id": 31} ],
         "modifiers"  : {"workEfficiency": 0.6}
+    },
+    // ── Magical buffs ("magical": true) — PRODUCTION-CHAIN-II §M ──────────────
+    // Passive buffs granted by worn attuned gear (and, later, by MAGIC-SKILLS spells/skill nodes
+    // through the SAME pipeline). Pushed into transientConditions by syncTransientConditions while
+    // the granting item is equipped; they auto-clear on unequip. Modifiers use the existing consumed
+    // keys (workEfficiency/moveSpeed/fatigueRate/hungerRate/dodge), so the buffs apply with no new
+    // wiring; the exact channels are a tunable first pass. The "magical" flag is for UI/lore and a
+    // future dispel/anti-magic hook.
+    {
+        "duration"   : "transient",
+        "magical"    : true,
+        "id"         : "might",
+        "name"       : "Might",
+        "description": "An attuned ruby lends raw strength — physical labour comes easier.",
+        "color"      : "#FF3355",
+        "charSpans"  : [ {"sheet": "font", "id": 2} ],
+        "modifiers"  : {"workEfficiency": 1.12}
+    },
+    {
+        "duration"   : "transient",
+        "magical"    : true,
+        "id"         : "insight",
+        "name"       : "Insight",
+        "description": "An attuned sapphire sharpens the mind — focused, more productive work.",
+        "color"      : "#4A90D8",
+        "charSpans"  : [ {"sheet": "font", "id": 2} ],
+        "modifiers"  : {"workEfficiency": 1.12}
+    },
+    {
+        "duration"   : "transient",
+        "magical"    : true,
+        "id"         : "vigor",
+        "name"       : "Vigor",
+        "description": "An attuned emerald bolsters endurance — the body tires more slowly.",
+        "color"      : "#3FB36B",
+        "charSpans"  : [ {"sheet": "font", "id": 2} ],
+        "modifiers"  : {"fatigueRate": 0.85}
+    },
+    {
+        "duration"   : "transient",
+        "magical"    : true,
+        "id"         : "quickness",
+        "name"       : "Quickness",
+        "description": "An attuned topaz quickens the limbs — faster on foot and harder to land a blow on.",
+        "color"      : "#E0B83A",
+        "charSpans"  : [ {"sheet": "font", "id": 2} ],
+        "modifiers"  : {"moveSpeed": 1.15, "dodge": 1.12}
+    },
+    {
+        "duration"   : "transient",
+        "magical"    : true,
+        "id"         : "keen_senses",
+        "name"       : "Keen Senses",
+        "description": "An attuned amethyst heightens awareness — quicker to read and evade danger.",
+        "color"      : "#A060D0",
+        "charSpans"  : [ {"sheet": "font", "id": 2} ],
+        "modifiers"  : {"dodge": 1.12}
+    },
+    {
+        "duration"   : "transient",
+        "magical"    : true,
+        "id"         : "charm",
+        "name"       : "Charm",
+        "description": "An attuned citrine warms the bearing — work flows easier and appetite settles.",
+        "color"      : "#E8B84B",
+        "charSpans"  : [ {"sheet": "font", "id": 2} ],
+        "modifiers"  : {"workEfficiency": 1.06, "hungerRate": 0.92}
+    },
+    {
+        "duration"   : "transient",
+        "magical"    : true,
+        "id"         : "moonlit",
+        "name"       : "Moonlit",
+        "description": "An attuned moonstone lends calm and sure footing — steady and untiring.",
+        "color"      : "#C9D4E0",
+        "charSpans"  : [ {"sheet": "font", "id": 2} ],
+        "modifiers"  : {"moveSpeed": 1.08, "fatigueRate": 0.92}
     }
 ]

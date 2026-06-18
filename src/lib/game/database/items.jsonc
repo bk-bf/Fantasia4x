@@ -4152,5 +4152,322 @@
     "amount"           : 0,
     "weightKg"         : 0.2,
     "volumeL"          : 0.4
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PRODUCTION-CHAIN-II §M — Magical Resources & Gear
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Ancient woods — premium `magic_wood` species (one per rare grove), same shape as the mundane
+  // `*_log` woods but with an `affinity` hook. Best materialBonuses for their niche (future), a
+  // quality/flavour edge now. Gathered with an axe like any tree.
+  {
+    "id": "heartwood_log", "charSpans": [ {"sheet": "items", "id": 225} ], "name": "Heartwood Log",
+    "type": "material", "category": "magic_wood", "affinity": "arcane",
+    "description": "Timber from an ancient elder grove, grain coiled like a slow heartbeat. Prized for staves and prestige work.",
+    "color": "#7A4B6B", "amount": 0, "weightKg": 6, "volumeL": 8, "fuelValue": 12, "fuelHeat": 1,
+    "deteriorationRate": 0.02, "maxDurability": 160, "gatheringTypes": ["woodcutting"]
+  },
+  {
+    "id": "moonwood_log", "charSpans": [ {"sheet": "items", "id": 225} ], "name": "Moonwood Log",
+    "type": "material", "category": "magic_wood", "affinity": "lunar",
+    "description": "Pale, near-weightless timber from a moonlit silver-birch grove. Sings under a bowyer's knife.",
+    "color": "#C9D4E0", "amount": 0, "weightKg": 5, "volumeL": 8, "fuelValue": 12, "fuelHeat": 1,
+    "deteriorationRate": 0.02, "maxDurability": 140, "gatheringTypes": ["woodcutting"]
+  },
+  {
+    "id": "ironwood_log", "charSpans": [ {"sheet": "items", "id": 225} ], "name": "Ironwood Log",
+    "type": "material", "category": "magic_wood", "affinity": "earth",
+    "description": "Black, iron-dense timber from a deep darkwood grove. Unyielding — hafts, shafts, and shields.",
+    "color": "#3A332E", "amount": 0, "weightKg": 8, "volumeL": 8, "fuelValue": 12, "fuelHeat": 1,
+    "deteriorationRate": 0.015, "maxDurability": 200, "gatheringTypes": ["woodcutting"]
+  },
+  {
+    "id": "emberwood_log", "charSpans": [ {"sheet": "items", "id": 225} ], "name": "Emberwood Log",
+    "type": "material", "category": "magic_wood", "affinity": "fire",
+    "description": "Warm-to-the-touch timber from a sun-scorched grove, embers glowing in the grain. For fire foci and braziers.",
+    "color": "#B5481E", "amount": 0, "weightKg": 6, "volumeL": 8, "fuelValue": 18, "fuelHeat": 2,
+    "deteriorationRate": 0.02, "maxDurability": 150, "gatheringTypes": ["woodcutting"]
+  },
+
+  // ── Crystals — per mineral: normal (trade) + infused (enchant) raw, then cut/attuned gems,
+  //    then a ring + amulet that grant the mineral's magical buff condition while worn. ──
+  // RUBY → Might (strength / labour)
+  {
+    "id": "ruby", "charSpans": [ {"sheet": "items", "id": 30} ], "name": "Ruby",
+    "type": "material", "category": "crystal",
+    "description": "A cut-grade gemstone. Polished and sold, or set into fine (non-magical) jewellery.",
+    "color": "#C81E3A", "amount": 0, "weightKg": 0.2, "volumeL": 0.1, "deteriorationRate": 0, "gatheringTypes": ["mining"]
+  },
+  {
+    "id": "infused_ruby", "charSpans": [ {"sheet": "items", "id": 31} ], "name": "Infused Ruby",
+    "type": "material", "category": "magic_crystal",
+    "description": "A ruby threaded with raw mana. Attuned and set, it lends the wearer might.",
+    "color": "#FF3355", "amount": 0, "weightKg": 0.2, "volumeL": 0.1, "deteriorationRate": 0, "gatheringTypes": ["mining"]
+  },
+  {
+    "id": "cut_ruby", "charSpans": [ {"sheet": "items", "id": 31} ], "name": "Cut Ruby",
+    "type": "material", "category": "gem",
+    "description": "A polished ruby — a valuable trade good and prestige adornment.",
+    "color": "#E0445E", "amount": 0, "weightKg": 0.1, "volumeL": 0.05, "deteriorationRate": 0
+  },
+  {
+    "id": "attuned_ruby", "charSpans": [ {"sheet": "items", "id": 31} ], "name": "Attuned Ruby",
+    "type": "material", "category": "magic_gem", "affinity": "fire",
+    "description": "A ruby cut and attuned at the lapidary. Set into a ring or amulet, it grants Might.",
+    "color": "#FF5577", "amount": 0, "weightKg": 0.1, "volumeL": 0.05, "deteriorationRate": 0
+  },
+  {
+    "id": "ruby_ring", "charSpans": [ {"sheet": "items", "id": 32} ], "name": "Ruby Ring",
+    "type": "armor", "category": "jewelry", "grantsConditions": ["might"],
+    "armorProperties": {"defense": 0, "armorValue": 0, "equipmentSlot": "ring"},
+    "description": "A gold ring set with an attuned ruby. Grants Might while worn.",
+    "color": "#FF3355", "amount": 0, "weightKg": 0.1, "volumeL": 0.05, "maxDurability": 200, "deteriorationRate": 0.002
+  },
+  {
+    "id": "ruby_amulet", "charSpans": [ {"sheet": "items", "id": 33} ], "name": "Ruby Amulet",
+    "type": "armor", "category": "jewelry", "grantsConditions": ["might"],
+    "armorProperties": {"defense": 0, "armorValue": 0, "equipmentSlot": "amulet"},
+    "description": "A gold amulet set with a large attuned ruby. Grants Might while worn (neck slot — stacks with a ring).",
+    "color": "#FF3355", "amount": 0, "weightKg": 0.15, "volumeL": 0.08, "maxDurability": 200, "deteriorationRate": 0.002
+  },
+
+  // SAPPHIRE → Insight (focused work)
+  {
+    "id": "sapphire", "charSpans": [ {"sheet": "items", "id": 30} ], "name": "Sapphire",
+    "type": "material", "category": "crystal",
+    "description": "A cut-grade gemstone. Polished and sold, or set into fine (non-magical) jewellery.",
+    "color": "#1E4FC8", "amount": 0, "weightKg": 0.2, "volumeL": 0.1, "deteriorationRate": 0, "gatheringTypes": ["mining"]
+  },
+  {
+    "id": "infused_sapphire", "charSpans": [ {"sheet": "items", "id": 31} ], "name": "Infused Sapphire",
+    "type": "material", "category": "magic_crystal",
+    "description": "A sapphire threaded with raw mana. Attuned and set, it sharpens the mind.",
+    "color": "#4A90D8", "amount": 0, "weightKg": 0.2, "volumeL": 0.1, "deteriorationRate": 0, "gatheringTypes": ["mining"]
+  },
+  {
+    "id": "cut_sapphire", "charSpans": [ {"sheet": "items", "id": 31} ], "name": "Cut Sapphire",
+    "type": "material", "category": "gem",
+    "description": "A polished sapphire — a valuable trade good and prestige adornment.",
+    "color": "#4060C8", "amount": 0, "weightKg": 0.1, "volumeL": 0.05, "deteriorationRate": 0
+  },
+  {
+    "id": "attuned_sapphire", "charSpans": [ {"sheet": "items", "id": 31} ], "name": "Attuned Sapphire",
+    "type": "material", "category": "magic_gem", "affinity": "arcane",
+    "description": "A sapphire cut and attuned at the lapidary. Set into a ring or amulet, it grants Insight.",
+    "color": "#5AA0E8", "amount": 0, "weightKg": 0.1, "volumeL": 0.05, "deteriorationRate": 0
+  },
+  {
+    "id": "sapphire_ring", "charSpans": [ {"sheet": "items", "id": 32} ], "name": "Sapphire Ring",
+    "type": "armor", "category": "jewelry", "grantsConditions": ["insight"],
+    "armorProperties": {"defense": 0, "armorValue": 0, "equipmentSlot": "ring"},
+    "description": "A gold ring set with an attuned sapphire. Grants Insight while worn.",
+    "color": "#4A90D8", "amount": 0, "weightKg": 0.1, "volumeL": 0.05, "maxDurability": 200, "deteriorationRate": 0.002
+  },
+  {
+    "id": "sapphire_amulet", "charSpans": [ {"sheet": "items", "id": 33} ], "name": "Sapphire Amulet",
+    "type": "armor", "category": "jewelry", "grantsConditions": ["insight"],
+    "armorProperties": {"defense": 0, "armorValue": 0, "equipmentSlot": "amulet"},
+    "description": "A gold amulet set with a large attuned sapphire. Grants Insight while worn (neck slot).",
+    "color": "#4A90D8", "amount": 0, "weightKg": 0.15, "volumeL": 0.08, "maxDurability": 200, "deteriorationRate": 0.002
+  },
+
+  // EMERALD → Vigor (endurance)
+  {
+    "id": "emerald", "charSpans": [ {"sheet": "items", "id": 30} ], "name": "Emerald",
+    "type": "material", "category": "crystal",
+    "description": "A cut-grade gemstone. Polished and sold, or set into fine (non-magical) jewellery.",
+    "color": "#1EA85A", "amount": 0, "weightKg": 0.2, "volumeL": 0.1, "deteriorationRate": 0, "gatheringTypes": ["mining"]
+  },
+  {
+    "id": "infused_emerald", "charSpans": [ {"sheet": "items", "id": 31} ], "name": "Infused Emerald",
+    "type": "material", "category": "magic_crystal",
+    "description": "An emerald threaded with raw mana. Attuned and set, it bolsters endurance.",
+    "color": "#3FB36B", "amount": 0, "weightKg": 0.2, "volumeL": 0.1, "deteriorationRate": 0, "gatheringTypes": ["mining"]
+  },
+  {
+    "id": "cut_emerald", "charSpans": [ {"sheet": "items", "id": 31} ], "name": "Cut Emerald",
+    "type": "material", "category": "gem",
+    "description": "A polished emerald — a valuable trade good and prestige adornment.",
+    "color": "#35A862", "amount": 0, "weightKg": 0.1, "volumeL": 0.05, "deteriorationRate": 0
+  },
+  {
+    "id": "attuned_emerald", "charSpans": [ {"sheet": "items", "id": 31} ], "name": "Attuned Emerald",
+    "type": "material", "category": "magic_gem", "affinity": "earth",
+    "description": "An emerald cut and attuned at the lapidary. Set into a ring or amulet, it grants Vigor.",
+    "color": "#4FC37B", "amount": 0, "weightKg": 0.1, "volumeL": 0.05, "deteriorationRate": 0
+  },
+  {
+    "id": "emerald_ring", "charSpans": [ {"sheet": "items", "id": 32} ], "name": "Emerald Ring",
+    "type": "armor", "category": "jewelry", "grantsConditions": ["vigor"],
+    "armorProperties": {"defense": 0, "armorValue": 0, "equipmentSlot": "ring"},
+    "description": "A gold ring set with an attuned emerald. Grants Vigor while worn.",
+    "color": "#3FB36B", "amount": 0, "weightKg": 0.1, "volumeL": 0.05, "maxDurability": 200, "deteriorationRate": 0.002
+  },
+  {
+    "id": "emerald_amulet", "charSpans": [ {"sheet": "items", "id": 33} ], "name": "Emerald Amulet",
+    "type": "armor", "category": "jewelry", "grantsConditions": ["vigor"],
+    "armorProperties": {"defense": 0, "armorValue": 0, "equipmentSlot": "amulet"},
+    "description": "A gold amulet set with a large attuned emerald. Grants Vigor while worn (neck slot).",
+    "color": "#3FB36B", "amount": 0, "weightKg": 0.15, "volumeL": 0.08, "maxDurability": 200, "deteriorationRate": 0.002
+  },
+
+  // TOPAZ → Quickness (speed / dodge)
+  {
+    "id": "topaz", "charSpans": [ {"sheet": "items", "id": 30} ], "name": "Topaz",
+    "type": "material", "category": "crystal",
+    "description": "A cut-grade gemstone. Polished and sold, or set into fine (non-magical) jewellery.",
+    "color": "#C8A41E", "amount": 0, "weightKg": 0.2, "volumeL": 0.1, "deteriorationRate": 0, "gatheringTypes": ["mining"]
+  },
+  {
+    "id": "infused_topaz", "charSpans": [ {"sheet": "items", "id": 31} ], "name": "Infused Topaz",
+    "type": "material", "category": "magic_crystal",
+    "description": "A topaz threaded with raw mana. Attuned and set, it quickens the limbs.",
+    "color": "#E0B83A", "amount": 0, "weightKg": 0.2, "volumeL": 0.1, "deteriorationRate": 0, "gatheringTypes": ["mining"]
+  },
+  {
+    "id": "cut_topaz", "charSpans": [ {"sheet": "items", "id": 31} ], "name": "Cut Topaz",
+    "type": "material", "category": "gem",
+    "description": "A polished topaz — a valuable trade good and prestige adornment.",
+    "color": "#D4B030", "amount": 0, "weightKg": 0.1, "volumeL": 0.05, "deteriorationRate": 0
+  },
+  {
+    "id": "attuned_topaz", "charSpans": [ {"sheet": "items", "id": 31} ], "name": "Attuned Topaz",
+    "type": "material", "category": "magic_gem", "affinity": "lunar",
+    "description": "A topaz cut and attuned at the lapidary. Set into a ring or amulet, it grants Quickness.",
+    "color": "#EAC850", "amount": 0, "weightKg": 0.1, "volumeL": 0.05, "deteriorationRate": 0
+  },
+  {
+    "id": "topaz_ring", "charSpans": [ {"sheet": "items", "id": 32} ], "name": "Topaz Ring",
+    "type": "armor", "category": "jewelry", "grantsConditions": ["quickness"],
+    "armorProperties": {"defense": 0, "armorValue": 0, "equipmentSlot": "ring"},
+    "description": "A gold ring set with an attuned topaz. Grants Quickness while worn.",
+    "color": "#E0B83A", "amount": 0, "weightKg": 0.1, "volumeL": 0.05, "maxDurability": 200, "deteriorationRate": 0.002
+  },
+  {
+    "id": "topaz_amulet", "charSpans": [ {"sheet": "items", "id": 33} ], "name": "Topaz Amulet",
+    "type": "armor", "category": "jewelry", "grantsConditions": ["quickness"],
+    "armorProperties": {"defense": 0, "armorValue": 0, "equipmentSlot": "amulet"},
+    "description": "A gold amulet set with a large attuned topaz. Grants Quickness while worn (neck slot).",
+    "color": "#E0B83A", "amount": 0, "weightKg": 0.15, "volumeL": 0.08, "maxDurability": 200, "deteriorationRate": 0.002
+  },
+
+  // AMETHYST → Keen Senses (awareness / dodge)
+  {
+    "id": "amethyst", "charSpans": [ {"sheet": "items", "id": 30} ], "name": "Amethyst",
+    "type": "material", "category": "crystal",
+    "description": "A cut-grade gemstone. Polished and sold, or set into fine (non-magical) jewellery.",
+    "color": "#7A3FB0", "amount": 0, "weightKg": 0.2, "volumeL": 0.1, "deteriorationRate": 0, "gatheringTypes": ["mining"]
+  },
+  {
+    "id": "infused_amethyst", "charSpans": [ {"sheet": "items", "id": 31} ], "name": "Infused Amethyst",
+    "type": "material", "category": "magic_crystal",
+    "description": "An amethyst threaded with raw mana. Attuned and set, it heightens awareness.",
+    "color": "#A060D0", "amount": 0, "weightKg": 0.2, "volumeL": 0.1, "deteriorationRate": 0, "gatheringTypes": ["mining"]
+  },
+  {
+    "id": "cut_amethyst", "charSpans": [ {"sheet": "items", "id": 31} ], "name": "Cut Amethyst",
+    "type": "material", "category": "gem",
+    "description": "A polished amethyst — a valuable trade good and prestige adornment.",
+    "color": "#8C50C0", "amount": 0, "weightKg": 0.1, "volumeL": 0.05, "deteriorationRate": 0
+  },
+  {
+    "id": "attuned_amethyst", "charSpans": [ {"sheet": "items", "id": 31} ], "name": "Attuned Amethyst",
+    "type": "material", "category": "magic_gem", "affinity": "arcane",
+    "description": "An amethyst cut and attuned at the lapidary. Set into a ring or amulet, it grants Keen Senses.",
+    "color": "#B070E0", "amount": 0, "weightKg": 0.1, "volumeL": 0.05, "deteriorationRate": 0
+  },
+  {
+    "id": "amethyst_ring", "charSpans": [ {"sheet": "items", "id": 32} ], "name": "Amethyst Ring",
+    "type": "armor", "category": "jewelry", "grantsConditions": ["keen_senses"],
+    "armorProperties": {"defense": 0, "armorValue": 0, "equipmentSlot": "ring"},
+    "description": "A gold ring set with an attuned amethyst. Grants Keen Senses while worn.",
+    "color": "#A060D0", "amount": 0, "weightKg": 0.1, "volumeL": 0.05, "maxDurability": 200, "deteriorationRate": 0.002
+  },
+  {
+    "id": "amethyst_amulet", "charSpans": [ {"sheet": "items", "id": 33} ], "name": "Amethyst Amulet",
+    "type": "armor", "category": "jewelry", "grantsConditions": ["keen_senses"],
+    "armorProperties": {"defense": 0, "armorValue": 0, "equipmentSlot": "amulet"},
+    "description": "A gold amulet set with a large attuned amethyst. Grants Keen Senses while worn (neck slot).",
+    "color": "#A060D0", "amount": 0, "weightKg": 0.15, "volumeL": 0.08, "maxDurability": 200, "deteriorationRate": 0.002
+  },
+
+  // CITRINE → Charm (ease / appetite)
+  {
+    "id": "citrine", "charSpans": [ {"sheet": "items", "id": 30} ], "name": "Citrine",
+    "type": "material", "category": "crystal",
+    "description": "A cut-grade gemstone. Polished and sold, or set into fine (non-magical) jewellery.",
+    "color": "#C8941E", "amount": 0, "weightKg": 0.2, "volumeL": 0.1, "deteriorationRate": 0, "gatheringTypes": ["mining"]
+  },
+  {
+    "id": "infused_citrine", "charSpans": [ {"sheet": "items", "id": 31} ], "name": "Infused Citrine",
+    "type": "material", "category": "magic_crystal",
+    "description": "A citrine threaded with raw mana. Attuned and set, it warms the bearer's bearing.",
+    "color": "#E8B84B", "amount": 0, "weightKg": 0.2, "volumeL": 0.1, "deteriorationRate": 0, "gatheringTypes": ["mining"]
+  },
+  {
+    "id": "cut_citrine", "charSpans": [ {"sheet": "items", "id": 31} ], "name": "Cut Citrine",
+    "type": "material", "category": "gem",
+    "description": "A polished citrine — a valuable trade good and prestige adornment.",
+    "color": "#D8A838", "amount": 0, "weightKg": 0.1, "volumeL": 0.05, "deteriorationRate": 0
+  },
+  {
+    "id": "attuned_citrine", "charSpans": [ {"sheet": "items", "id": 31} ], "name": "Attuned Citrine",
+    "type": "material", "category": "magic_gem", "affinity": "fire",
+    "description": "A citrine cut and attuned at the lapidary. Set into a ring or amulet, it grants Charm.",
+    "color": "#F0C860", "amount": 0, "weightKg": 0.1, "volumeL": 0.05, "deteriorationRate": 0
+  },
+  {
+    "id": "citrine_ring", "charSpans": [ {"sheet": "items", "id": 32} ], "name": "Citrine Ring",
+    "type": "armor", "category": "jewelry", "grantsConditions": ["charm"],
+    "armorProperties": {"defense": 0, "armorValue": 0, "equipmentSlot": "ring"},
+    "description": "A gold ring set with an attuned citrine. Grants Charm while worn.",
+    "color": "#E8B84B", "amount": 0, "weightKg": 0.1, "volumeL": 0.05, "maxDurability": 200, "deteriorationRate": 0.002
+  },
+  {
+    "id": "citrine_amulet", "charSpans": [ {"sheet": "items", "id": 33} ], "name": "Citrine Amulet",
+    "type": "armor", "category": "jewelry", "grantsConditions": ["charm"],
+    "armorProperties": {"defense": 0, "armorValue": 0, "equipmentSlot": "amulet"},
+    "description": "A gold amulet set with a large attuned citrine. Grants Charm while worn (neck slot).",
+    "color": "#E8B84B", "amount": 0, "weightKg": 0.15, "volumeL": 0.08, "maxDurability": 200, "deteriorationRate": 0.002
+  },
+
+  // MOONSTONE → Moonlit (calm / sure footing)
+  {
+    "id": "moonstone", "charSpans": [ {"sheet": "items", "id": 30} ], "name": "Moonstone",
+    "type": "material", "category": "crystal",
+    "description": "A cut-grade gemstone with an inner glow. Polished and sold, or set into fine (non-magical) jewellery.",
+    "color": "#A8B4C0", "amount": 0, "weightKg": 0.2, "volumeL": 0.1, "deteriorationRate": 0, "gatheringTypes": ["mining"]
+  },
+  {
+    "id": "infused_moonstone", "charSpans": [ {"sheet": "items", "id": 31} ], "name": "Infused Moonstone",
+    "type": "material", "category": "magic_crystal",
+    "description": "A moonstone threaded with raw mana. Attuned and set, it lends calm and sure footing.",
+    "color": "#C9D4E0", "amount": 0, "weightKg": 0.2, "volumeL": 0.1, "deteriorationRate": 0, "gatheringTypes": ["mining"]
+  },
+  {
+    "id": "cut_moonstone", "charSpans": [ {"sheet": "items", "id": 31} ], "name": "Cut Moonstone",
+    "type": "material", "category": "gem",
+    "description": "A polished moonstone — a valuable trade good and prestige adornment.",
+    "color": "#B8C4D0", "amount": 0, "weightKg": 0.1, "volumeL": 0.05, "deteriorationRate": 0
+  },
+  {
+    "id": "attuned_moonstone", "charSpans": [ {"sheet": "items", "id": 31} ], "name": "Attuned Moonstone",
+    "type": "material", "category": "magic_gem", "affinity": "lunar",
+    "description": "A moonstone cut and attuned at the lapidary. Set into a ring or amulet, it grants Moonlit.",
+    "color": "#D9E4F0", "amount": 0, "weightKg": 0.1, "volumeL": 0.05, "deteriorationRate": 0
+  },
+  {
+    "id": "moonstone_ring", "charSpans": [ {"sheet": "items", "id": 32} ], "name": "Moonstone Ring",
+    "type": "armor", "category": "jewelry", "grantsConditions": ["moonlit"],
+    "armorProperties": {"defense": 0, "armorValue": 0, "equipmentSlot": "ring"},
+    "description": "A silver ring set with an attuned moonstone. Grants Moonlit while worn.",
+    "color": "#C9D4E0", "amount": 0, "weightKg": 0.1, "volumeL": 0.05, "maxDurability": 200, "deteriorationRate": 0.002
+  },
+  {
+    "id": "moonstone_amulet", "charSpans": [ {"sheet": "items", "id": 33} ], "name": "Moonstone Amulet",
+    "type": "armor", "category": "jewelry", "grantsConditions": ["moonlit"],
+    "armorProperties": {"defense": 0, "armorValue": 0, "equipmentSlot": "amulet"},
+    "description": "A silver amulet set with a large attuned moonstone. Grants Moonlit while worn (neck slot).",
+    "color": "#C9D4E0", "amount": 0, "weightKg": 0.15, "volumeL": 0.08, "maxDurability": 200, "deteriorationRate": 0.002
   }
 ]

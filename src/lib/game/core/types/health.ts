@@ -41,6 +41,12 @@ export interface TransientConditionDef {
   /** Internal condition: never surfaced in any UI (pills, needs panel…). Its modifiers still apply.
    *  Used for FSM-driven states like eating/sleeping that would duplicate info already shown. */
   hidden?: boolean;
+  /**
+   * PRODUCTION-CHAIN-II §M — marks a magically-sourced condition (a passive buff granted by attuned
+   * gear, and later by MAGIC-SKILLS spells/skill nodes through the SAME pipeline). Cosmetic/lore +
+   * a future dispel/anti-magic hook; the modifiers apply exactly like any other transient condition.
+   */
+  magical?: boolean;
   modifiers: {
     hungerRate?: number; // multiplier on hunger accrual (0 = paused, 0.33 = ⅓ rate)
     fatigueRate?: number; // multiplier on fatigue accrual

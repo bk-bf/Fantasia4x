@@ -1936,5 +1936,47 @@
         }
       }
     }
-  }
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PRODUCTION-CHAIN-II §M — Lapidary Bench
+  //   1) trade-gem cutting (normal crystal → cut gem)  — gate: arcane_lapidary
+  //   2) attunement       (infused crystal → attuned gem) — gate: attunement
+  //   3) assembly         (attuned gem + gold/silver → ring/amulet) — gate: attunement
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 1) Trade-gem cutting
+  { "id": "cut_ruby_recipe",      "station": "lapidary_bench", "inputs": {"ruby": 1},      "outputs": {"cut_ruby": 1},      "workAmount": 5, "toolTierRequired": 1, "researchRequired": "arcane_lapidary" },
+  { "id": "cut_sapphire_recipe",  "station": "lapidary_bench", "inputs": {"sapphire": 1},  "outputs": {"cut_sapphire": 1},  "workAmount": 5, "toolTierRequired": 1, "researchRequired": "arcane_lapidary" },
+  { "id": "cut_emerald_recipe",   "station": "lapidary_bench", "inputs": {"emerald": 1},   "outputs": {"cut_emerald": 1},   "workAmount": 5, "toolTierRequired": 1, "researchRequired": "arcane_lapidary" },
+  { "id": "cut_topaz_recipe",     "station": "lapidary_bench", "inputs": {"topaz": 1},     "outputs": {"cut_topaz": 1},     "workAmount": 5, "toolTierRequired": 1, "researchRequired": "arcane_lapidary" },
+  { "id": "cut_amethyst_recipe",  "station": "lapidary_bench", "inputs": {"amethyst": 1},  "outputs": {"cut_amethyst": 1},  "workAmount": 5, "toolTierRequired": 1, "researchRequired": "arcane_lapidary" },
+  { "id": "cut_citrine_recipe",   "station": "lapidary_bench", "inputs": {"citrine": 1},   "outputs": {"cut_citrine": 1},   "workAmount": 5, "toolTierRequired": 1, "researchRequired": "arcane_lapidary" },
+  { "id": "cut_moonstone_recipe", "station": "lapidary_bench", "inputs": {"moonstone": 1}, "outputs": {"cut_moonstone": 1}, "workAmount": 5, "toolTierRequired": 1, "researchRequired": "arcane_lapidary" },
+
+  // 2) Attunement (infused → attuned gem)
+  { "id": "attune_ruby",      "station": "lapidary_bench", "inputs": {"infused_ruby": 1},      "outputs": {"attuned_ruby": 1},      "workAmount": 8, "toolTierRequired": 1, "researchRequired": "attunement" },
+  { "id": "attune_sapphire",  "station": "lapidary_bench", "inputs": {"infused_sapphire": 1},  "outputs": {"attuned_sapphire": 1},  "workAmount": 8, "toolTierRequired": 1, "researchRequired": "attunement" },
+  { "id": "attune_emerald",   "station": "lapidary_bench", "inputs": {"infused_emerald": 1},   "outputs": {"attuned_emerald": 1},   "workAmount": 8, "toolTierRequired": 1, "researchRequired": "attunement" },
+  { "id": "attune_topaz",     "station": "lapidary_bench", "inputs": {"infused_topaz": 1},     "outputs": {"attuned_topaz": 1},     "workAmount": 8, "toolTierRequired": 1, "researchRequired": "attunement" },
+  { "id": "attune_amethyst",  "station": "lapidary_bench", "inputs": {"infused_amethyst": 1},  "outputs": {"attuned_amethyst": 1},  "workAmount": 8, "toolTierRequired": 1, "researchRequired": "attunement" },
+  { "id": "attune_citrine",   "station": "lapidary_bench", "inputs": {"infused_citrine": 1},   "outputs": {"attuned_citrine": 1},   "workAmount": 8, "toolTierRequired": 1, "researchRequired": "attunement" },
+  { "id": "attune_moonstone", "station": "lapidary_bench", "inputs": {"infused_moonstone": 1}, "outputs": {"attuned_moonstone": 1}, "workAmount": 8, "toolTierRequired": 1, "researchRequired": "attunement" },
+
+  // 3a) Rings (1 attuned gem + 1 gold bar)
+  { "id": "make_ruby_ring",      "station": "lapidary_bench", "inputs": {"attuned_ruby": 1, "gold_bar": 1},      "outputs": {"ruby_ring": 1},      "workAmount": 10, "toolTierRequired": 1, "researchRequired": "attunement" },
+  { "id": "make_sapphire_ring",  "station": "lapidary_bench", "inputs": {"attuned_sapphire": 1, "gold_bar": 1},  "outputs": {"sapphire_ring": 1},  "workAmount": 10, "toolTierRequired": 1, "researchRequired": "attunement" },
+  { "id": "make_emerald_ring",   "station": "lapidary_bench", "inputs": {"attuned_emerald": 1, "gold_bar": 1},   "outputs": {"emerald_ring": 1},   "workAmount": 10, "toolTierRequired": 1, "researchRequired": "attunement" },
+  { "id": "make_topaz_ring",     "station": "lapidary_bench", "inputs": {"attuned_topaz": 1, "gold_bar": 1},     "outputs": {"topaz_ring": 1},     "workAmount": 10, "toolTierRequired": 1, "researchRequired": "attunement" },
+  { "id": "make_amethyst_ring",  "station": "lapidary_bench", "inputs": {"attuned_amethyst": 1, "gold_bar": 1},  "outputs": {"amethyst_ring": 1},  "workAmount": 10, "toolTierRequired": 1, "researchRequired": "attunement" },
+  { "id": "make_citrine_ring",   "station": "lapidary_bench", "inputs": {"attuned_citrine": 1, "gold_bar": 1},   "outputs": {"citrine_ring": 1},   "workAmount": 10, "toolTierRequired": 1, "researchRequired": "attunement" },
+  { "id": "make_moonstone_ring", "station": "lapidary_bench", "inputs": {"attuned_moonstone": 1, "silver_bar": 1}, "outputs": {"moonstone_ring": 1}, "workAmount": 10, "toolTierRequired": 1, "researchRequired": "attunement" },
+
+  // 3b) Amulets (larger gem — 2 attuned gems + 2 gold bars → stronger loadout piece, neck slot)
+  { "id": "make_ruby_amulet",      "station": "lapidary_bench", "inputs": {"attuned_ruby": 2, "gold_bar": 2},      "outputs": {"ruby_amulet": 1},      "workAmount": 14, "toolTierRequired": 1, "researchRequired": "attunement" },
+  { "id": "make_sapphire_amulet",  "station": "lapidary_bench", "inputs": {"attuned_sapphire": 2, "gold_bar": 2},  "outputs": {"sapphire_amulet": 1},  "workAmount": 14, "toolTierRequired": 1, "researchRequired": "attunement" },
+  { "id": "make_emerald_amulet",   "station": "lapidary_bench", "inputs": {"attuned_emerald": 2, "gold_bar": 2},   "outputs": {"emerald_amulet": 1},   "workAmount": 14, "toolTierRequired": 1, "researchRequired": "attunement" },
+  { "id": "make_topaz_amulet",     "station": "lapidary_bench", "inputs": {"attuned_topaz": 2, "gold_bar": 2},     "outputs": {"topaz_amulet": 1},     "workAmount": 14, "toolTierRequired": 1, "researchRequired": "attunement" },
+  { "id": "make_amethyst_amulet",  "station": "lapidary_bench", "inputs": {"attuned_amethyst": 2, "gold_bar": 2},  "outputs": {"amethyst_amulet": 1},  "workAmount": 14, "toolTierRequired": 1, "researchRequired": "attunement" },
+  { "id": "make_citrine_amulet",   "station": "lapidary_bench", "inputs": {"attuned_citrine": 2, "gold_bar": 2},   "outputs": {"citrine_amulet": 1},   "workAmount": 14, "toolTierRequired": 1, "researchRequired": "attunement" },
+  { "id": "make_moonstone_amulet", "station": "lapidary_bench", "inputs": {"attuned_moonstone": 2, "silver_bar": 2}, "outputs": {"moonstone_amulet": 1}, "workAmount": 14, "toolTierRequired": 1, "researchRequired": "attunement" }
 ]

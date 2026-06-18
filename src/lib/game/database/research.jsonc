@@ -756,5 +756,52 @@
     },
     "researchTime": 12,
     "color": "#795548"
+  },
+  {
+    "id": "arcane_lapidary",
+    "name": "Arcane Lapidary",
+    "description": "Gem-cutting and the jeweller's craft. Unlocks the Lapidary Bench and cutting crystals into polished trade gems.",
+    "category": "crafting",
+    "tier": 1,
+    "prerequisites": ["stone_masonry"],
+    "scrollRequirement": {
+      "parchment": 6
+    },
+    "materialRequirement": {
+      "bronze_bar": 2
+    },
+    "canBypassWithLore": true,
+    "loreItemRequired": "lapidary_treatise",
+    "unlocks": {
+      "buildings": ["lapidary_bench"],
+      "items": ["cut_ruby", "cut_sapphire", "cut_emerald", "cut_topaz", "cut_amethyst", "cut_citrine", "cut_moonstone"]
+    },
+    "researchTime": 10,
+    "color": "#A060D0"
+  },
+  {
+    "id": "attunement",
+    "name": "Attunement",
+    "description": "Binding raw mana within an infused crystal and setting it into wearable gear. Unlocks attuned gems and the rings and amulets that grant passive magical buffs while worn.",
+    "category": "crafting",
+    "tier": 2,
+    "prerequisites": ["arcane_lapidary"],
+    "scrollRequirement": {
+      "parchment": 12
+    },
+    "materialRequirement": {
+      "gold_bar": 2
+    },
+    "canBypassWithLore": true,
+    "loreItemRequired": "tome_of_attunement",
+    "unlocks": {
+      "items": [
+        "attuned_ruby", "attuned_sapphire", "attuned_emerald", "attuned_topaz", "attuned_amethyst", "attuned_citrine", "attuned_moonstone",
+        "ruby_ring", "sapphire_ring", "emerald_ring", "topaz_ring", "amethyst_ring", "citrine_ring", "moonstone_ring",
+        "ruby_amulet", "sapphire_amulet", "emerald_amulet", "topaz_amulet", "amethyst_amulet", "citrine_amulet", "moonstone_amulet"
+      ]
+    },
+    "researchTime": 16,
+    "color": "#FF5577"
   }
 ]

@@ -780,5 +780,24 @@
     "effects"           : {"craftingEnabled": true},
     "storageCapacity"   : {},
     "buildingState"     : {"isUnique": false}
+  },
+  {
+    "id"                : "lapidary_bench",
+    "name"              : "Lapidary Bench",
+    "color"             : "#A060D0",
+    "charSpans"         : [ {"sheet": "buildings", "id": 39} ],
+    "fg"                : [0.63, 0.38, 0.82],
+    "bg"                : [0.05, 0.03, 0.07],
+    "description"       : "A jeweller's bench of shaped stone and bronze tools. Cuts and polishes crystals into trade gems, and — once Attunement is researched — attunes mana-infused crystals and sets them into rings and amulets.",
+    "category"          : "production",
+    "buildingCost"      : {"granite_block": 2, "bronze_bar": 1, "branch": 4, "cordage": 2},
+    "workAmount"        : 40,
+    "toolTierRequired"  : 1,
+    "populationRequired": 1,
+    "researchRequired"  : "arcane_lapidary",
+    "upkeepCost"        : {},
+    "effects"           : {"craftingEnabled": true, "tier": 1},
+    "storageCapacity"   : {},
+    "buildingState"     : {"isUnique": false, "maxCount": 2}
   }
 ]

@@ -51,6 +51,7 @@ export interface PawnEquipment {
   boots?: ItemInstance;
   gorget?: ItemInstance;
   ring?: ItemInstance;
+  amulet?: ItemInstance; // §M neck slot for attuned amulets (distinct from the `gorget` neck armour)
   belt?: ItemInstance;
   back?: ItemInstance;
 }
@@ -75,6 +76,7 @@ export type EquipmentSlot =
   | 'boots'
   | 'gorget'
   | 'ring'
+  | 'amulet'
   | 'belt'
   | 'back';
 
@@ -268,6 +270,18 @@ export interface Item {
   researchRequired?: string | null;
   level?: number;
   rarity?: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
+
+  // ── PRODUCTION-CHAIN-II §M: magical materials & passive-buff gear ──
+  /**
+   * Transient condition id(s) (conditions.jsonc, `magical: true`) granted while this item is worn.
+   * Wired by `PawnStateMachine.syncTransientConditions`: each tick it pushes a worn item's
+   * `grantsConditions` onto the pawn's `transientConditions`, so the buff applies through the
+   * existing condition `modifiers` pipeline and auto-clears on unequip. No bespoke stat-bonus system.
+   */
+  grantsConditions?: string[];
+  /** §M magic-material affinity hook (e.g. "lunar"|"fire"|"earth") — quality/flavour edge now; a
+   *  mana/affinity bonus consumed by MAGIC-SKILLS later. Carried by ancient `magic_wood` species. */
+  affinity?: string;
 
   // Item-specific properties
   weaponProperties?: {

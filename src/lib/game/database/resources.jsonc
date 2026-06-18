@@ -813,14 +813,8 @@
       "workAmount"     : 15,
       "toolRequirement": {"workType": "mining", "minTier": 2},  // requires a proper mining pick
       "yields"         : [
-        {
-          "itemId": "magic_crystal",
-          "min": 1,
-          "max": 2,
-          "skillId": "mining",
-          "skillMultiplier": 0.1,
-          "_TODO": "magic_crystal item TBD — rare arcane material; possible uses: enchanting reagent, mana amplification, spell catalyst, arcane focus component"
-        }
+        {"itemId": "amethyst", "min": 1, "max": 2, "skillId": "mining", "skillMultiplier": 0.1},
+        {"itemId": "infused_amethyst", "min": 0, "max": 1, "skillId": "mining", "skillMultiplier": 0.05}
       ]
     }
   },
