@@ -4,9 +4,27 @@
   import { getCreatureById } from '$lib/game/core/Creatures';
   import type { Mob, LimbState } from '$lib/game/core/types';
   import FollowButton from '../UI/FollowButton.svelte';
+  import SearchBar from '../UI/SearchBar.svelte';
 
   let mobs = $derived(($gameState.mobs ?? []).filter((m) => m.state !== 'Corpse'));
   let corpses = $derived(($gameState.mobs ?? []).filter((m) => m.state === 'Corpse'));
+
+  // Live name/type/state search (the Crafting tab's filter, shared via SearchBar).
+  let query = $state('');
+  let term = $derived(query.trim().toLowerCase());
+  let filteredMobs = $derived(
+    term
+      ? mobs.filter((m) => {
+          const name = (getCreatureById(m.creatureId)?.name ?? m.creatureId).toLowerCase();
+          const kind = m.entityClass === 'mob' ? 'hostile' : 'neutral';
+          return (
+            name.includes(term) ||
+            kind.includes(term) ||
+            (m.state ?? '').toLowerCase().includes(term)
+          );
+        })
+      : mobs
+  );
 
   let hostileCount = $derived(mobs.filter((m) => m.entityClass === 'mob').length);
   let neutralCount = $derived(mobs.filter((m) => m.entityClass === 'animal').length);
@@ -78,11 +96,16 @@
     | LIVE ENTITIES &nbsp;<span class="dim"
       >{hostileCount} hostile · {neutralCount} neutral · {corpses.length} corpses</span
     >
-    <button class="hdr-btn" onclick={() => uiState.setScreen('main')}>BACK</button>
+    <div class="hdr-tools">
+      <SearchBar bind:value={query} placeholder="search entities…" />
+      <button class="hdr-btn" onclick={() => uiState.setScreen('main')}>BACK</button>
+    </div>
   </div>
 
   {#if mobs.length === 0}
     <div class="empty">No creatures roaming the map right now.</div>
+  {:else if filteredMobs.length === 0}
+    <div class="empty">No entities match "{query}".</div>
   {:else}
     <div class="table">
       <!-- Header -->
@@ -96,7 +119,7 @@
         <span class="col-pos">POS</span>
       </div>
 
-      {#each mobs as m (m.id)}
+      {#each filteredMobs as m (m.id)}
         {@const def = getCreatureById(m.creatureId)}
         {@const bp = bloodPct(m)}
         {@const wl = worstLimb(m)}
@@ -226,8 +249,13 @@
     color: var(--text-muted);
     letter-spacing: 0;
   }
-  .hdr-btn {
+  .hdr-tools {
     margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .hdr-btn {
     padding: 2px 8px;
     background: transparent;
     border: 1px solid var(--border);
