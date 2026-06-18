@@ -19,7 +19,7 @@ One combined spec, four chapters. They are largely independent and can ship in a
 | Chapter                              | Theme                                                   | Headline dependency                          |
 | ------------------------------------ | ------------------------------------------------------- | -------------------------------------------- |
 | **§Q — Item Quality Prefixes**       | quality tiers stamp bonus stats onto crafted items      | completes the blocked **R8**; rides EQUIPMENT `materialBonuses` |
-| **§M — Magical Resources & Gear**    | ancient trees + crystals → rings/amulets (stats/traits) | independent of MAGIC-SKILLS (passive gear)   |
+| **§M — Magical Resources & Gear**    | ancient woods (multi-species) + crystals (normal→trade / infused→enchant) → attuned gear granting passive **magical conditions** | **MAGIC-SKILLS Phase 0** — the passive foundation its active layer builds on |
 | **§L — Bulk Logistics**              | wheelbarrows, handcarts, draft-animal carts, roads      | animal carts need ENTITIES C–D (husbandry)   |
 | **§F — Farming, Food & Drink**       | crops, seeds, fertilizer, brewing, meal variety         | benefits SEASONS (growing seasons) + ENTITIES D (manure/dairy) |
 
@@ -56,8 +56,10 @@ intermediate goods, quality spread, fermentation timers, draft animals).
   §Q quality is just **another delta layer** on the same application path.
 - **Equipment slots** (`core/types/items.ts` `EquipmentSlot`): `ring` exists; `gorget` is the
   neck *armor* slot. §M adds an `amulet` slot (or reuses `ring`).
-- **No `statBonuses` / `grantsTraits` item fields yet** — §M adds them (read by
-  `PawnStatService` / `ModifierSystem`). Trait ids come from `database/racial-traits.jsonc`.
+- **Condition pipeline already delivers passive effects** — `conditions.jsonc` (transient entries) +
+  `PawnStateMachine.syncTransientConditions` + the `modifiers` consumers. §M's passive magical buffs
+  are *just* transient conditions (+ a `magical: true` flag); the only new item field is
+  `grantsConditions?: string[]`. No `statBonuses`/`grantsTraits`/`ModifierSystem` reader work.
 - **Work categories exist**: `planting` (tools `digging_stick`/`stone_hoe`/`iron_hoe`),
   `cooking`, `alchemy`, `hauling`. **No crop/seed/fertilizer/brewing data exists** — §F adds it.
 - **Per-stack instance data** already works: `DroppedItem` carries per-stack `durability`/
@@ -115,63 +117,187 @@ Higher pawn skill/stats shift the distribution up; poor light / rushed work shif
 
 ---
 
-## §M — Magical Resources & Gear
+## §M — Magical Resources & Gear (the passive foundation of MAGIC-SKILLS)
 
-**Goal:** rare magical materials feed **passive stat/trait equipment** (rings, amulets, and
-better foci/bows). Ships **without** the spell engine — these are equip-time stat modifiers.
-MAGIC-SKILLS later consumes the same materials for spell foci (forward hook, not a dependency).
+**Goal:** §M is **MAGIC-SKILLS Phase 0** — not an independent feature. It delivers the *passive*
+half of the magic layer first: rare magical materials → **attuned gear (rings, amulets, foci,
+bows)** that grants a **passive magical buff while worn**. It ships **without** the spell engine,
+but it is the foundation the active layer builds on: the buff-delivery plumbing it lays down (a
+magical buff *is a condition*) is exactly what [MAGIC-SKILLS](MAGIC-SKILLS.md)' active spells and
+skill-tree nodes reuse — they apply the *same* magical conditions, just triggered on demand and
+gated by mana/research instead of by a worn item. Crafting the staff/focus first (the production
+chain) stays the gate, consistent with MAGIC-SKILLS' "attunement, not classes" model.
+
+**Key design rule (user):** a passive magical buff is **just a `conditions.jsonc` entry** — a normal
+transient condition with at most a `magical: true` flag for distinction. No bespoke
+`statBonuses`/`grantsTraits` item system, no new `ModifierSystem`/`PawnStatService` readers: it
+rides the condition pipeline that already exists (`syncTransientConditions` → `modifiers`).
 
 ### New resources (world-gen)
 
-| Resource              | Node                          | Yields                    | Rarity      | Feeds                                |
-| --------------------- | ----------------------------- | ------------------------- | ----------- | ------------------------------------ |
-| **Ancient tree**      | `heartwood_tree` (rare grove) | `heartwood` (magic log)   | very rare   | staves, magic bows, prestige furniture, high quality+ material bonus |
-| **Mana crystal (×N)** | `crystal_node` on mountain    | raw `*_crystal` (coloured)| rare        | cut gems → rings/amulets             |
+Two material families, both following the **per-type material pattern** already used for wood
+(`pine_log`/`oak_log`/`ash_log`/`yew_log`, all `category: "wood"`) and stone
+(`granite`/`limestone`/`marble`/…, all `category: "stone"`) in `items.jsonc` — **not** a single
+generic "magic log" / "crystal" item. Each variant is its own item id sharing a category, with
+its own name/description/colour/tuned fields and `gatheringTypes`.
 
-Heartwood groves are a rare biome feature (a handful per map); crystal nodes cluster like the
-Pass I mineral veins (`fillResourceClusters`). Both are **research-gated** before they can be
-worked (an "Arcane Lapidary" / "Attunement" unlock — light tie to RESEARCH-ENHANCEMENT).
+| Resource          | Node(s)                              | Yields                                            | Rarity    | Feeds                                              |
+| ----------------- | ------------------------------------ | ------------------------------------------------- | --------- | -------------------------------------------------- |
+| **Ancient woods** | several rare groves (one per wood)   | the matching `*_log` (`category: "magic_wood"`)   | very rare | staves, magic bows, shields, prestige furniture; affinity + top quality material bonus |
+| **Crystal node**  | `crystal_node` on mountain (clusters)| a typed raw crystal — **rolled normal *or* magic-infused** | rare      | normal → cut gems = **trade goods**; infused → attuned gems = **enchanted gear** |
+
+Groves are a rare biome feature (a handful per map, each grove grows one ancient-wood species);
+crystal nodes cluster like the Pass I mineral veins (`fillResourceClusters`). Both are
+**research-gated** before they can be worked (an "Arcane Lapidary" / "Attunement" unlock — light
+tie to RESEARCH-ENHANCEMENT).
+
+### Ancient woods (multiple species — follow the `*_log` wood pattern)
+
+Distinct premium woods, each from its own rare grove and each with a niche, mirroring how
+pine/birch/oak/ash/yew already differ. They share `category: "magic_wood"` so they're gated out of
+mundane wood recipes but slot into the same recipe *shape* (a `*_log` shaft/handle/stock input),
+and each carries a small `affinity` hook (consumed by MAGIC-SKILLS later; a cosmetic + quality
+edge until then).
+
+| Wood (`*_log`)   | Grove                       | Niche / best material bonus                          | Affinity   |
+| ---------------- | --------------------------- | ---------------------------------------------------- | ---------- |
+| `heartwood_log`  | ancient elder/oak grove     | structural + prestige; **staves**, fine furniture    | general    |
+| `moonwood_log`   | moonlit silver-birch grove  | light & springy; **magic bows**, foci                | lunar/cold |
+| `ironwood_log`   | dense darkwood grove        | hardest; **hafts, shields**, blunt durability        | earth      |
+| `emberwood_log`  | sun-scorched/volcanic grove | warm; **fire foci**, braziers                        | fire       |
+
+```jsonc
+// items.jsonc — one entry PER species, same shape as oak_log/yew_log (rare premium variant).
+{
+  "id"               : "moonwood_log",
+  "charSpans"        : [ {"sheet": "items", "id": 225} ],
+  "name"             : "Moonwood Log",
+  "type"             : "material",
+  "category"         : "magic_wood",          // gated apart from "wood"; same recipe shape
+  "description"      : "Pale, near-weightless timber from a moonlit grove. Sings under a bowyer's knife.",
+  "color"            : "#C9D4E0",
+  "amount"           : 0,
+  "weightKg"         : 5,
+  "volumeL"          : 8,
+  "fuelValue"        : 12, "fuelHeat": 1,
+  "deteriorationRate": 0.02,
+  "maxDurability"    : 140,
+  "affinity"         : "lunar",               // §M hook (forward to MAGIC-SKILLS; quality edge now)
+  "gatheringTypes"   : ["woodcutting"]
+}
+```
+
+### Crystals — normal (trade) vs magic-infused (enchanting), per type
+
+`crystal_node` mining yields a **typed raw crystal**, and each unit is rolled to one of two
+forms — **normal** (common) or **magic-infused** (rare). Both come in the same enumerated mineral
+types (the per-type pattern, like the stone list); the form decides the downstream chain:
+
+- **Normal crystal** (`category: "crystal"`) → cut/polished at the lapidary into a `cut_<type>`
+  gem → a **trade good** (value, decorative jewellery, prestige) — *no* stat effect.
+- **Magic-infused crystal** (`category: "magic_crystal"`) → attuned/cut into an `attuned_<type>`
+  gem → set into a **ring/amulet** that, while worn, grants the type's **magical condition**
+  (see [Passive buffs are conditions](#passive-buffs-are-conditions-not-a-new-stat-system) below).
+
+The normal-vs-infused split is a **harvest yield roll** (e.g. ~85% normal / ~15% infused, the
+infused odds nudged up by the "Attunement" research and richer nodes) — the same shape as the
+existing `yields` min/max tables, just a weighted pick. Magic-infused stacks **never merge** with
+normal stacks (distinct item ids).
+
+| Mineral  | normal (trade)  | infused (enchant) | cut → enchant gem | Granted magical condition (while worn) |
+| -------- | --------------- | ----------------- | ----------------- | -------------------------------------- |
+| Ruby     | `ruby`          | `infused_ruby`    | `attuned_ruby`    | **Might** — melee/strength-work boost  |
+| Sapphire | `sapphire`      | `infused_sapphire`| `attuned_sapphire`| **Insight** — research/craft boost     |
+| Emerald  | `emerald`       | `infused_emerald` | `attuned_emerald` | **Vigor** — stamina/fatigue relief     |
+| Topaz    | `topaz`         | `infused_topaz`   | `attuned_topaz`   | **Quickness** — move/attack speed, dodge |
+| Amethyst | `amethyst`      | `infused_amethyst`| `attuned_amethyst`| **Keen Senses** — sight/accuracy/aggro |
+| Citrine  | `citrine`       | `infused_citrine` | `attuned_citrine` | **Charm** — social/trade               |
+| Moonstone| `moonstone`     | `infused_moonstone`| `attuned_moonstone`| **Moonlit** — night-sight / calm     |
+
+```jsonc
+// items.jsonc — each mineral appears as a normal AND an infused entry (same shape, different category).
+{ "id": "ruby",         "name": "Ruby",            "type": "material", "category": "crystal",
+  "charSpans": [ {"sheet": "items", "id": 30} ], "color": "#C81E3A", "amount": 0,
+  "description": "A cut-grade gemstone. Polished and sold, or set into fine (non-magical) jewellery.",
+  "weightKg": 0.2, "volumeL": 0.1, "deteriorationRate": 0, "gatheringTypes": ["mining"] },
+
+{ "id": "infused_ruby", "name": "Infused Ruby",     "type": "material", "category": "magic_crystal",
+  "charSpans": [ {"sheet": "items", "id": 31} ], "color": "#FF3355", "amount": 0,
+  "description": "A ruby threaded with raw mana. Attuned and set, it lends the wearer might.",
+  "weightKg": 0.2, "volumeL": 0.1, "deteriorationRate": 0, "gatheringTypes": ["mining"] }
+```
+
+> **Note:** an earlier draft listed a "+wisdom" effect — there is no `wisdom` base stat (base stats
+> are STR/DEX/CON/PER/INT/CHA). The buffs are expressed as **condition `modifiers`**, not raw stat
+> deltas, so they're framed by role (Might/Insight/…) rather than by stat letter; Citrine covers the
+> social axis.
 
 ### New station — Lapidary / Jeweler's Bench
 
-`lapidary_bench` (cut stone block + bronze tools): cuts/polishes raw crystal → `cut_<crystal>`
-gems, and assembles gems + precious metal (`gold_bar`/`silver_bar`) into rings & amulets.
+`lapidary_bench` (cut stone block + bronze tools) runs **two recipe families**:
 
-### New item fields (read by PawnStatService / ModifierSystem)
+1. **Trade-gem cutting** — normal `<crystal>` → `cut_<crystal>` gem (a polished trade good; also
+   plain gold/silver jewellery for prestige/trade value). The mundane, always-available chain.
+2. **Attunement & assembly** (gated by "Attunement" research) — magic-infused `infused_<crystal>`
+   → `attuned_<crystal>` gem, then `attuned_<crystal>` + precious metal (`gold_bar`/`silver_bar`)
+   → a **ring**/**amulet** whose item def lists the magical condition(s) it grants while worn.
 
-```typescript
-// core/types/items.ts additions
-statBonuses?: Partial<Record<StatId, number>>; // flat stat boost while equipped
-grantsTraits?: string[];                         // trait ids granted while equipped (racial-traits.jsonc)
+### Passive buffs are conditions, not a new stat system
+
+A passive magical buff **is a `conditions.jsonc` entry** — a normal **transient** condition with one
+new `magical: true` flag for distinction (UI tint, lore, and a future dispel/anti-magic hook). No
+`statBonuses`/`grantsTraits` item fields, no new `ModifierSystem`/`PawnStatService` readers: the buff
+rides the existing condition pipeline (`PawnStateMachine.syncTransientConditions` derives active ids
+each tick; `modifiers` are consumed where conditions already apply — work/move/fatigue/dodge…).
+
+The only new wiring:
+
+- **one item field** — `grantsConditions?: string[]` on `Item` (the attuned ring/amulet/focus lists
+  the condition id(s) it grants while equipped). Far smaller than a bespoke bonus system.
+- **a few lines in `syncTransientConditions`** — scan `pawn.equipment` for items whose
+  `grantsConditions` apply and push those ids (they auto-clear when the gear is removed, exactly like
+  every other transient condition).
+- **a handful of `conditions.jsonc` entries** — `Might`/`Insight`/`Vigor`/`Quickness`/`Keen Senses`/
+  `Charm`/`Moonlit`, each `"duration": "transient"`, `"magical": true`, with a `modifiers` block.
+  (Combat/work buff modifier keys beyond the current set are a small, existing-shaped extension to the
+  condition `modifiers` map — not a new system.)
+
+```jsonc
+// conditions.jsonc — a magical buff is an ordinary transient condition + the magical flag.
+{
+  "duration"   : "transient",
+  "magical"    : true,
+  "id"         : "might",
+  "name"       : "Might",
+  "description": "An attuned ruby lends the wearer raw strength.",
+  "color"      : "#FF3355",
+  "modifiers"  : { "workEfficiency": 1.10, "meleeDamage": 1.10 }
+}
 ```
 
-`ModifierSystem` adds equipped-item `statBonuses` to the pawn's stat roll (with `sources[]`
-entries, per the modifier rule) and folds `grantsTraits` into the trait set while worn.
+**Quality scaling (§Q):** the attuned cut's quality tier picks the buff strength — either a tiered
+variant id (`might`/`might_fine`/`might_master`) or a per-tier modifier scale — so a Masterwork-cut
+`attuned_ruby` grants a stronger Might than a Crude one. Amulets (new `amulet` slot) take a larger
+gem than rings → the stronger variant.
 
-### Crystal → effect mapping (Phase 1)
-
-| Crystal     | cut gem        | Effect (while equipped)                  |
-| ----------- | -------------- | ---------------------------------------- |
-| Ruby        | `cut_ruby`     | +strength                                |
-| Sapphire    | `cut_sapphire` | +intelligence                            |
-| Emerald     | `cut_emerald`  | +constitution                            |
-| Topaz       | `cut_topaz`    | +dexterity                               |
-| Amethyst    | `cut_amethyst` | +wisdom                                  |
-| Moonstone   | `cut_moonstone`| grants a **trait** (e.g. night-sight / calm) |
-
-Magnitude scales with **gem quality** (§Q applies to the cut — a Masterwork-cut ruby gives a
-bigger boost). Amulets (new `amulet` slot) take a larger gem than rings → stronger bonus.
+**Why this is the foundation, not a dead end:** MAGIC-SKILLS' active spells and skill-tree passive
+nodes apply the *same* magical conditions — a buff spell just pushes `might` for N turns at a mana
+cost; a skill-tree node grants it passively. §M builds the condition-buff layer once; the active
+layer is then "trigger + duration + mana/research gate" on top.
 
 ### New equip slot
 
 Add `amulet` to `EquipmentSlot`. Rings use the existing `ring` slot. Cap rings (e.g. 2) so gem
 gear is a real loadout choice, not a stat-stick pile-on.
 
-### Heartwood gear
+### Ancient-wood gear
 
-`heartwood` is a premium wood material: it gives the best `materialBonuses` shaft/handle roll
-for bows/staves and a small **affinity** stat hook (mana/affinity bonus consumed by MAGIC-SKILLS
-later; until then a cosmetic + quality edge). This is what makes a `heartwood_self_bow` distinct.
+Each ancient wood (`heartwood_log`/`moonwood_log`/`ironwood_log`/`emberwood_log`) is a premium
+`magic_wood` material giving the **best `materialBonuses`** roll for its niche (heartwood → staves &
+prestige, moonwood → magic bows/foci, ironwood → hafts/shields, emberwood → fire foci) plus a small
+`affinity` hook (mana/affinity bonus consumed by MAGIC-SKILLS later; a cosmetic + quality edge until
+then). This is what makes a `moonwood_self_bow` or a `heartwood_staff` distinct — and gives each
+grove a reason to seek out.
 
 ---
 
@@ -278,7 +404,7 @@ cooked meals (a Masterwork cook → tastier, higher-mood food). Dairy/eggs from
 | This chapter | Hard blocker                          | Benefits from                                   | Feeds forward                          |
 | ------------ | ------------------------------------- | ----------------------------------------------- | -------------------------------------- |
 | §Q Quality   | —                                     | EQUIPMENT [x] (materialBonuses path)            | every other chapter's craftables       |
-| §M Magic     | — (passive; no spell engine)          | RESEARCH (gating); §Q (gem quality scales boost)| MAGIC-SKILLS (foci/heartwood materials)|
+| §M Magic     | — (passive; no spell engine)          | RESEARCH (gating); §Q (gem quality scales boost)| **MAGIC-SKILLS Phase 0** — the magical-condition buff layer + foci materials its active spells/skill-nodes reuse |
 | §L Logistics | animal rungs: **ENTITIES C–D**        | Pass I masonry (roads); §F (hauling field goods)| big-map play; husbandry payoff         |
 | §F Farming   | —                                     | SEASONS [x] (growing seasons); ENTITIES D (manure/dairy); §Q (meal quality) | cooking, brewing, husbandry feed |
 
@@ -312,14 +438,16 @@ services); new ADR if a non-obvious choice is locked.
 - [ ] Meal-variety mood signal (recent-meal memory → mood delta); alcohol mood lift + `intoxicated` condition (`conditions.jsonc`).
 - [ ] Manure path stub behind ENTITIES D; dairy/egg recipes stubbed for when husbandry lands.
 
-### §M — Magical Resources & Gear
+### §M — Magical Resources & Gear (MAGIC-SKILLS Phase 0 — passive foundation)
 
-- [ ] `resources.jsonc`: `heartwood_tree` rare grove; `crystal_node` veins (clustered like minerals).
-- [ ] `items.jsonc`: `heartwood`, raw crystals, `cut_<crystal>` gems, rings, amulets; `statBonuses`/`grantsTraits` fields.
+- [ ] `resources.jsonc`: **one rare grove per ancient wood** (heartwood/moonwood/ironwood/emberwood); `crystal_node` veins (clustered like minerals) with a **normal-vs-infused yield roll**.
+- [ ] `items.jsonc` (per-type pattern, no generic item): the `*_log` `magic_wood` species; per mineral a **normal `<crystal>`** AND an **`infused_<crystal>`** (+ `cut_<crystal>` trade gem and `attuned_<crystal>` enchant gem); rings, amulets; `affinity` field on woods.
+- [ ] `conditions.jsonc`: the magical buff conditions (`might`/`insight`/`vigor`/`quickness`/`keen_senses`/`charm`/`moonlit`), each `"duration": "transient"` + **`"magical": true`** + a `modifiers` block (extend the condition `modifiers` key set with the few combat/work keys these need).
+- [ ] `Item.grantsConditions?: string[]` field; `syncTransientConditions` pushes a worn item's `grantsConditions` ids (auto-clear on unequip). **No** `statBonuses`/`grantsTraits`/ModifierSystem reader work — buffs ride the existing condition pipeline.
 - [ ] `EquipmentSlot`: add `amulet`; cap rings.
-- [ ] `lapidary_bench` building + cut/assemble recipes; research gate ("Arcane Lapidary").
-- [ ] `ModifierSystem`/`PawnStatService`: apply equipped `statBonuses` (with `sources[]`) + `grantsTraits` while worn.
-- [ ] Gem-quality (§Q) scales bonus magnitude; heartwood `materialBonuses` + affinity hook.
+- [ ] `lapidary_bench` building + **two recipe families** (trade-gem cutting; attunement+assembly → gear with `grantsConditions`); research gate ("Arcane Lapidary"/"Attunement").
+- [ ] Gem-quality (§Q) picks the buff strength (tiered condition variant or per-tier modifier scale); ancient-wood `materialBonuses` per niche + `affinity` hook; normal cut gems carry trade value only (no condition).
+- [ ] **Foundation hook:** confirm the magical-condition layer is shaped so MAGIC-SKILLS' active spells / skill-tree nodes can apply the *same* conditions on demand (trigger + duration + mana/research gate on top).
 
 ### §L — Bulk Logistics
 
