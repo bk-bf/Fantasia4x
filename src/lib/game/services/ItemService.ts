@@ -450,6 +450,22 @@ export class ItemServiceImpl implements ItemService {
       }
     }
 
+    // Unified load model: worn ARMOUR adds VOLUME capacity (belt pouches / strap points) even as its
+    // weight fills the weight budget — so armour isn't a pure carry sink. ~0.5 L per kg of armour.
+    // Excludes containers (their inventoryBonus is already counted above) and shields.
+    let armorPocketL = 0;
+    for (const inst of Object.values(pawn.equipment ?? {})) {
+      if (!inst) continue;
+      const def = this.getItemById(inst.itemId);
+      const ap = def?.armorProperties;
+      if (!ap || ap.armorType === 'shield' || def?.inventoryBonus) continue;
+      armorPocketL += (def?.weightKg ?? 0) * 0.5;
+    }
+    if (armorPocketL > 0.05) {
+      volume.gear += armorPocketL;
+      gearSources.push({ name: 'armour pockets', weightKg: 0, volumeL: Math.round(armorPocketL * 10) / 10 });
+    }
+
     weight.total = Math.max(1, weight.capacity + weight.gear);
     volume.total = Math.max(1, volume.capacity + volume.gear);
 
@@ -468,7 +484,7 @@ export class ItemServiceImpl implements ItemService {
     let volumeL = 0;
 
     // Bulk items (pack) — weight + volume
-    for (const [itemId, qty] of Object.entries(pawn.inventory.items)) {
+    for (const [itemId, qty] of Object.entries(pawn.inventory?.items ?? {})) {
       if (qty <= 0) continue;
       const def = this.getItemById(itemId);
       weightKg += (def?.weightKg ?? 0.1) * qty;
@@ -476,7 +492,7 @@ export class ItemServiceImpl implements ItemService {
     }
 
     // Tracked instances in inventory (pack) — weight + volume
-    for (const inst of pawn.inventory.instances ?? []) {
+    for (const inst of pawn.inventory?.instances ?? []) {
       const def = this.getItemById(inst.itemId);
       weightKg += def?.weightKg ?? 0.5;
       volumeL += def?.volumeL ?? 0.5;

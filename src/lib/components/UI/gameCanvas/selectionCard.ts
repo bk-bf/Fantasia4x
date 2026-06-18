@@ -11,7 +11,7 @@ import { getActiveConditionViews } from '$lib/utils/conditionInfo.js';
 import { pawnService } from '$lib/game/services/PawnService.js';
 import { pawnStatService } from '$lib/game/services/PawnStatService.js';
 import { itemService } from '$lib/game/services/ItemService.js';
-import { armorEncumbrance } from '$lib/game/systems/rangedCombat.js';
+import { getConditionCurrentStage } from '$lib/game/core/needs.js';
 import type {
   SelectedEntityModel,
   EntityBar,
@@ -73,27 +73,33 @@ function bestArmorDefense(entity: Pawn | Mob): number {
 
 function combatStats(entity: Pawn | Mob): CombatStat[] {
   const s = (id: string) => pawnStatService.evaluateStat(id, entity);
-  const dodge = s('dodge');
-  const enc = 'equipment' in entity ? armorEncumbrance(entity as Pawn) : 0;
+  // The live `encumbered` condition (set by the sim from worn-armour + pack load ÷ capacity) carries
+  // the dodge/move/aim penalty — read its active stage so the panel matches what combat applies.
+  const encCond = ('conditions' in entity ? entity.conditions : undefined)?.find(
+    (c) => c.id === 'encumbered'
+  );
+  const encStage = encCond ? getConditionCurrentStage(encCond) : undefined;
+  const dodge = s('dodge') * (encStage?.modifiers.dodge ?? 1);
   const armor = bestArmorDefense(entity);
   const out: CombatStat[] = [
     { label: 'Hit', value: `×${s('hit_chance').toFixed(2)}`, title: 'melee accuracy (× sight × manipulation)' },
     {
       label: 'Dodge',
-      value: `×${(dodge * (1 - enc * 0.5)).toFixed(2)}`,
-      title:
-        enc > 0.01
-          ? `evasion ×${dodge.toFixed(2)}, −${Math.round(enc * 50)}% from armour load`
-          : 'evasion multiplier (× moving; lower when injured)'
+      value: `×${dodge.toFixed(2)}`,
+      title: encStage
+        ? `evasion, including −${Math.round((1 - (encStage.modifiers.dodge ?? 1)) * 100)}% from being ${encStage.label}`
+        : 'evasion multiplier (× moving; lower when injured)'
     },
     { label: 'Crit', value: `${Math.round(s('crit_chance') * 100)}%`, title: 'base crit chance (weapons add their own)' },
     { label: 'Armor', value: `${armor}`, title: 'best worn armour — % of a hit it turns (before armour-pen)' }
   ];
-  if (enc > 0.05) {
+  if (encCond) {
+    // Reconstruct the load ratio from severity (sev = (ratio−0.8)/0.6) for a readable %.
+    const ratio = 0.8 + encCond.severity * 0.6;
     out.push({
       label: 'Load',
-      value: `${Math.round(enc * 100)}%`,
-      title: 'worn-armour weight ÷ carry capacity — cuts dodge and tires you faster (heavy = tank, light = nimble)'
+      value: `${Math.round(ratio * 100)}% · ${encStage?.label ?? ''}`.trim(),
+      title: 'carried weight (worn armour + pack) ÷ carry capacity — past ~100% encumbers: slower, easier to hit, worse aim. STR + bags raise the limit.'
     });
   }
   // Ranged potential (PER = precision, DEX = speed, STR = draw power) — shown for every pawn so a

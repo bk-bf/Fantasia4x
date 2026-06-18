@@ -24,11 +24,11 @@ import {
   drawSpeedModifier,
   sumAimBonuses,
   getGrip,
-  armorEncumbrance,
   type RangedWeapon,
   type AmmoPick,
   type MeleeGrip
 } from './rangedCombat';
+import { getConditionCurrentStage } from '../core/needs';
 import { getCreatureById } from '../core/Creatures';
 import { woundForDamageType, woundById, severityFromFrac } from '../core/Wounds';
 import { scaleWeaponQuality, scaleArmorQuality } from '../core/itemQuality';
@@ -259,14 +259,9 @@ const TWOHAND_DAMAGE_MULT = 1.15;
 const TWOHAND_ARMOR_PEN = 0.05;
 /** Multiplier a shield applies to the WEARER's dodge (no active block — BB-style, defence = dodge). */
 const SHIELD_DODGE_MULT = 1.25;
-/** Encumbrance: at full load (enc 1.0) dodge is cut by this, and per-swing stamina drain rises by this. */
-const ENCUMBRANCE_DODGE = 0.5;
-const ENCUMBRANCE_STAMINA = 0.6;
-
-/** Per-swing stamina-drain multiplier from an attacker's worn-armor encumbrance (heavy = winds faster). */
-function encumbranceStaminaMult(e: Pawn | Mob): number {
-  return 'equipment' in e ? 1 + armorEncumbrance(e as Pawn) * ENCUMBRANCE_STAMINA : 1;
-}
+// Encumbrance is no longer a combat-local hook: worn-armour + pack load drives the staged `encumbered`
+// CONDITION (PawnStateMachine.tickConditions → driveEncumbrance), whose dodge/hitChance/fatigue
+// modifiers flow through conditionDodgeMult / conditionHitMult below — one unified model.
 
 /** Apply the MELEE grip's offensive modifier to a built profile (duelist + two-hand add offense; a
  *  shield trades offense for the defender-side dodge bonus, applied separately in resolveHit). */
@@ -448,14 +443,17 @@ class CombatServiceImpl implements CombatService {
     // Evasion uses the `dodge` stat (DEX − weight, × moving) rather than raw dexterity, so injury,
     // load, and the winded penalty (× 0.5) all lower it. ×20 keeps baseline parity with the old
     // `defDex × 2` term (dodge ≈ 1.0 at DEX 10 → 20).
-    const defEnc = 'equipment' in defender ? armorEncumbrance(defender as Pawn) : 0;
     const defDodge =
       pawnStatService.evaluateStat('dodge', defender) *
-      this.conditionDodgeMult(defender) *
-      (getGrip(defender) === 'shield' ? SHIELD_DODGE_MULT : 1) * // BB: a shield raises evasion, not a block
-      (1 - defEnc * ENCUMBRANCE_DODGE); // heavy armour = easier to hit (light/medium/heavy tradeoff)
+      this.conditionDodgeMult(defender) * // injuries, winded, AND encumbrance (heavy load = easier to hit)
+      (getGrip(defender) === 'shield' ? SHIELD_DODGE_MULT : 1); // BB: a shield raises evasion, not a block
 
-    const hitChance = clamp(dex * 3 + accuracy + (override?.hitMod ?? 0) - defDodge * 20, 5, 95);
+    // The attacker's encumbrance spoils their aim too (encumbered → hitChance modifier < 1).
+    const hitChance = clamp(
+      (dex * 3 + accuracy + (override?.hitMod ?? 0) - defDodge * 20) * this.conditionHitMult(attacker),
+      5,
+      95
+    );
     if (rng.random() * 100 > hitChance) {
       return {
         hit: false,
@@ -1048,6 +1046,22 @@ class CombatServiceImpl implements CombatService {
       const v = TRANSIENT_CONDITIONS_DB.find((s) => s.id === id)?.modifiers.dodge;
       if (v != null) m *= v;
     }
+    // Persistent conditions (encumbered…) — the active stage's `dodge` modifier.
+    for (const c of e.conditions ?? []) {
+      const v = getConditionCurrentStage(c)?.modifiers.dodge;
+      if (v != null) m *= v;
+    }
+    return m;
+  }
+
+  /** Product of active persistent conditions' `hitChance` modifiers (encumbered → the attacker's aim
+   *  suffers). Transient conditions carry no hitChance today. */
+  private conditionHitMult(e: Pawn | Mob): number {
+    let m = 1;
+    for (const c of e.conditions ?? []) {
+      const v = getConditionCurrentStage(c)?.modifiers.hitChance;
+      if (v != null) m *= v;
+    }
     return m;
   }
 
@@ -1226,10 +1240,7 @@ class CombatServiceImpl implements CombatService {
           next = shot.state;
           pawnStaminaUpdates.set(
             pawn.id,
-            Math.max(
-              0,
-              curStamina - shot.staminaCost * fatigueStaminaFactor(pawn) * encumbranceStaminaMult(pawn)
-            )
+            Math.max(0, curStamina - shot.staminaCost * fatigueStaminaFactor(pawn))
           );
         }
         continue; // out of range/sight/ammo → the FSM closes; never a melee swing at distance
@@ -1249,13 +1260,11 @@ class CombatServiceImpl implements CombatService {
 
       const atk = this.performAttack(pawn, target, next, state.turn);
       next = atk.state;
-      // Fatigue + worn-armour encumbrance raise the effective drain — a tired/laden attacker winds faster.
+      // Fatigue raises the effective drain (armour load tires you via the `encumbered` condition's
+      // fatigueRate → the fatigue need → fatigueStaminaFactor — one channel, no double-count).
       pawnStaminaUpdates.set(
         pawn.id,
-        Math.max(
-          0,
-          curStamina - atk.staminaCost * fatigueStaminaFactor(pawn) * encumbranceStaminaMult(pawn)
-        )
+        Math.max(0, curStamina - atk.staminaCost * fatigueStaminaFactor(pawn))
       );
     }
 

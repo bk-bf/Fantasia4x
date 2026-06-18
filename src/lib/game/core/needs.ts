@@ -121,6 +121,33 @@ export function driveTemperatureConditions(
   return null;
 }
 
+/** Load ratio below which a pawn is unencumbered; ratio at/above which encumbrance is maxed. */
+export const ENC_BURDEN_START = 0.8;
+export const ENC_OVERLOAD_FULL = 1.4;
+
+/**
+ * Set the `encumbered` condition's severity DIRECTLY from the carry-load ratio (load ÷ weight
+ * capacity). Unlike need/temperature conditions this is INSTANTANEOUS — a pawn is encumbered *now*
+ * because of what it bears, not after sustained exposure — so severity snaps to the load each tick
+ * (like combat's `blood_loss`), not accruing via `applyConditionDriver`. severity 0 at/below
+ * `ENC_BURDEN_START`, 1 at `ENC_OVERLOAD_FULL`. Mutates `conditions` in place (ADR-002 hot path:
+ * nothing allocated while the pawn is light + the condition absent).
+ */
+export function driveEncumbrance(conditions: EntityCondition[], loadRatio: number): void {
+  const sev = Math.min(
+    1,
+    Math.max(0, (loadRatio - ENC_BURDEN_START) / (ENC_OVERLOAD_FULL - ENC_BURDEN_START))
+  );
+  const idx = conditions.findIndex((c) => c.id === 'encumbered');
+  if (sev <= 0) {
+    if (idx !== -1) conditions.splice(idx, 1);
+    return;
+  }
+  if (idx === -1) conditions.push({ id: 'encumbered', severity: sev });
+  else if (Math.abs(conditions[idx].severity - sev) > 1e-3)
+    conditions[idx] = { ...conditions[idx], severity: sev };
+}
+
 // ── Temperature comfort (SEASONS_WEATHER Subsystem 3) ──────────────────────────
 /** Default comfortable temperature band in conceptual °C; traits widen/shift it. */
 export const COMFORT_MIN_DEFAULT = 5;

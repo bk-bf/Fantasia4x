@@ -179,6 +179,8 @@ export interface ConditionStage {
     moveSpeed?: number; // multiplier on movement
     hungerRate?: number; // multiplier on hunger accrual rate
     fatigueRate?: number; // multiplier on fatigue accrual rate
+    dodge?: number; // multiplier on the defender's evasion in combat (encumbered → easier to hit)
+    hitChance?: number; // multiplier on the attacker's to-hit in combat (encumbered → hits worse)
   };
 }
 

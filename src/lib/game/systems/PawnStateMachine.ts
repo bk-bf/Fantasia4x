@@ -32,7 +32,12 @@ import { pawnStatService } from '../services/PawnStatService';
 import { simLog } from '../core/logSink';
 import { gameLogger } from '../dev/gameLogger';
 import { perTick } from '../core/time';
-import { driveNeedConditions, driveTemperatureConditions, comfortRange } from '../core/needs';
+import {
+  driveNeedConditions,
+  driveTemperatureConditions,
+  driveEncumbrance,
+  comfortRange
+} from '../core/needs';
 import {
   weatherEffects,
   coldExposure,
@@ -405,6 +410,16 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
           };
       }
     }
+  }
+
+  // ── Encumbrance ← carry load ─────────────────────────────────────────────
+  // Unified load model: worn armour + pack weight vs the STR-scaled capacity (bags raise it). Drives
+  // the staged `encumbered` condition (move/dodge/hit/work/fatigue), set DIRECTLY from the ratio each
+  // tick — instantaneous, not exposure. Replaces the old ad-hoc combat-only armour-encumbrance hook.
+  {
+    const cap = itemService.getCarryCapacityBreakdown(pawn).weight.total;
+    const load = itemService.getCurrentCarryLoad(pawn, gameState).weightKg;
+    driveEncumbrance(conditions, cap > 0 ? load / cap : 0);
   }
 
   // ── Blood Loss ────────────────────────────────────────────────────────────

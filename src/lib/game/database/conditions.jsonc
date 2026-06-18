@@ -8,6 +8,18 @@
 [
     {
         "duration": "persistent",
+        "id": "encumbered",
+        "name": "Encumbered",
+        "description": "Carrying more than the body comfortably bears — worn armour plus pack weight against a strength-scaled limit. Slows movement, spoils evasion and aim, and tires the body faster. Overload is allowed, at a price: strength and bags (belt/back) raise the limit, armour eats most of it. Severity = load ÷ capacity (driven directly, not over time).",
+        "lethalSeverity": 99,
+        "stages": [
+            { "label": "burdened",   "minSeverity": 0.0,  "color": "#C8A064", "modifiers": {"moveSpeed": 0.95, "dodge": 0.9, "fatigueRate": 1.1} },
+            { "label": "encumbered", "minSeverity": 0.33, "color": "#D08040", "modifiers": {"moveSpeed": 0.85, "dodge": 0.75, "hitChance": 0.9, "workEfficiency": 0.9, "fatigueRate": 1.25} },
+            { "label": "overloaded", "minSeverity": 0.83, "color": "#C04030", "modifiers": {"moveSpeed": 0.7, "dodge": 0.5, "hitChance": 0.8, "workEfficiency": 0.75, "fatigueRate": 1.5} }
+        ]
+    },
+    {
+        "duration": "persistent",
         "id": "dehydration",
         "name": "Dehydration",
         "charSpans": [ {"sheet": "font", "id": 247} ],
