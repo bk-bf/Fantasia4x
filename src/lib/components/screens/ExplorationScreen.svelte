@@ -68,11 +68,24 @@
   });
 
   let typeCount = $derived(new Set(rows.map((r) => r.id)).size);
+  // Total node count per resource type — shown (uniformly) on every row of that type, instead of the
+  // per-tile node "amount" which varied meaninglessly row to row.
+  let countById = $derived.by(() => {
+    const m = new Map<string, number>();
+    for (const r of rows) m.set(r.id, (m.get(r.id) ?? 0) + 1);
+    return m;
+  });
 
   let query = $state('');
   let term = $derived(query.trim().toLowerCase());
+  // Match the display name, the work-type, AND the internal id — so searching e.g. "grove" finds the
+  // ancient-wood groves even though their display name is "Heartwood Tree" (id `heartwood_grove`).
   let filtered = $derived(
-    term ? rows.filter((r) => r.name.toLowerCase().includes(term) || r.type.includes(term)) : rows
+    term
+      ? rows.filter(
+          (r) => r.name.toLowerCase().includes(term) || r.type.includes(term) || r.id.includes(term)
+        )
+      : rows
   );
 
   // ── Virtualisation: render only the rows visible in the scroll viewport ──
@@ -111,7 +124,7 @@
     <div class="table-hdr">
       <span class="col-name">RESOURCE</span>
       <span class="col-type">TYPE</span>
-      <span class="col-amt">AMOUNT</span>
+      <span class="col-amt">COUNT</span>
       <span class="col-pos">POS</span>
       <span class="col-count">{filtered.length}{term ? ` / ${rows.length}` : ''}</span>
     </div>
@@ -135,7 +148,7 @@
                 <span class="rname">{r.name}</span>
               </span>
               <span class="col-type">{r.type}</span>
-              <span class="col-amt">{r.amount}</span>
+              <span class="col-amt">×{countById.get(r.id) ?? 1}</span>
               <span class="col-pos">({r.x},{r.y})</span>
               <span class="col-count"></span>
             </button>
