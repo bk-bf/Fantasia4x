@@ -17,8 +17,9 @@
  * light occlusion is deferred to the WASM spatial service.
  */
 
-import type { PlacedBuilding } from '../core/types.js';
+import type { PlacedBuilding, WorldTile } from '../core/types.js';
 import { buildingService } from './BuildingService';
+import { resourceObjectService } from './ResourceObjectService';
 
 export interface LightEmitter {
   /** Tile X (world coords). */
@@ -45,9 +46,11 @@ export const FIRE_INTENSITY = 1.1;
  * (maxFuel>0) additionally must be `lit`. Shared by the renderer (collectEmitters) and the
  * gameplay/UI tile-light readout (EnvironmentService) so both agree on what glows.
  */
-export function buildingLight(
-  b: { type: string; status: string; lit?: boolean }
-): { radius: number; intensity: number; color: [number, number, number] } | null {
+export function buildingLight(b: {
+  type: string;
+  status: string;
+  lit?: boolean;
+}): { radius: number; intensity: number; color: [number, number, number] } | null {
   if (b.status !== 'complete') return null;
   const def = buildingService.getBuildingById(b.type);
   if (!def?.lightRadius) return null;
@@ -119,6 +122,36 @@ class LightingServiceImpl {
         intensity: light.intensity,
         flicker: true
       });
+    }
+    return out;
+  }
+
+  /**
+   * §M soft resource glow: scan the world map for tiles carrying a resource whose def declares a
+   * `glow` (the ancient-wood groves) and emit a dim point light there, baked into the tile-light
+   * field like a building's. These nodes are static, so the canvas recomputes this only when the
+   * terrain changes (not per frame) and merges it with the building emitters.
+   */
+  collectResourceEmitters(worldMap: WorldTile[][]): LightEmitter[] {
+    const out: LightEmitter[] = [];
+    for (const row of worldMap) {
+      for (const tile of row) {
+        const res = tile.resources;
+        if (!res) continue;
+        for (const id in res) {
+          if ((res[id] ?? 0) <= 0) continue;
+          const glow = resourceObjectService.getById(id)?.glow;
+          if (glow)
+            out.push({
+              x: tile.x,
+              y: tile.y,
+              color: glow.color,
+              radius: glow.radius,
+              intensity: glow.intensity,
+              flicker: glow.flicker ?? false
+            });
+        }
+      }
     }
     return out;
   }

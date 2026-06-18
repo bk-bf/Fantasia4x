@@ -65,6 +65,18 @@ export interface ResourceObjectDef {
     subterrains: Record<string, number>;
   };
   nodeAmountRange: [number, number];
+  /**
+   * PRODUCTION-CHAIN-II §M — optional soft point-light overlay (a dim, campfire-style glow that
+   * makes a resource stand out). Collected by `LightingService.collectResourceEmitters` and baked
+   * into the tile-light field exactly like a building's light, just dimmer. Used by the ancient-wood
+   * groves so their tiles read as faintly magical. Colour is normalised RGB.
+   */
+  glow?: {
+    color: [number, number, number];
+    radius: number;
+    intensity: number;
+    flicker?: boolean;
+  };
   /** Which designation types can target this resource. */
   designationTypes: DesignationType[];
   /**

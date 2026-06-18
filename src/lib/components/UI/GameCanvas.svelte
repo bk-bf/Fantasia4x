@@ -259,12 +259,22 @@
   }
 
   // Phase A2 dynamic lighting: lit campfires emit warm point light, baked into
-  // the tile renderer (replaces the old floating DOM radial glow).
-  $: {
-    lightingService.setEmitters(lightingService.collectEmitters(buildings));
+  // the tile renderer (replaces the old floating DOM radial glow). §M: the dim, static
+  // ancient-wood grove glows (collected on terrain change into `resourceGlowEmitters`) are
+  // merged in here so they bake alongside the building lights.
+  let resourceGlowEmitters: import('$lib/game/services/LightingService.js').LightEmitter[] = [];
+  function refreshEmitters() {
+    lightingService.setEmitters([
+      ...lightingService.collectEmitters(buildings),
+      ...resourceGlowEmitters
+    ]);
     renderer?.setDynamicLight(lightingService.hasEmitters());
     renderer?.setLightVersion(lightingService.getEmittersVersion());
     renderer?.setLightBounds(lightingService.getLitBounds());
+  }
+  $: {
+    buildings; // re-run when buildings change (lit/built/extinguished)
+    refreshEmitters();
   }
 
   // Phase 7: dropped items overlay
@@ -835,7 +845,14 @@
     // so it tracks the pawn's interpolated sub-tile position smoothly.
     if (renderer?.isReady()) {
       if (worldMap.length > 0) {
-        if (terrainChanged) _terrainDirty = true; // coalesced in the render loop (throttled)
+        if (terrainChanged) {
+          _terrainDirty = true; // coalesced in the render loop (throttled)
+          // §M: recompute the static grove glows on the same (gated) cadence as terrain rebuilds —
+          // groves rarely change, and this O(map) scan piggybacks on the rebuild that's happening
+          // anyway. Then re-merge with the building lights.
+          resourceGlowEmitters = lightingService.collectResourceEmitters(worldMap);
+          refreshEmitters();
+        }
       } else {
         renderer.setGrid(generatePlaceholderGrid());
       }
@@ -1864,9 +1881,10 @@
         );
         renderer.setAmbient(light, tinted);
         lightingService.setAmbient(light, tinted);
-        lightingService.setEmitters(lightingService.collectEmitters(buildings));
-        renderer.setDynamicLight(lightingService.hasEmitters());
-        renderer.setLightVersion(lightingService.getEmittersVersion());
+        // §M: seed grove glows from the current map, then merge with building lights.
+        if (worldMap.length > 0)
+          resourceGlowEmitters = lightingService.collectResourceEmitters(worldMap);
+        refreshEmitters();
         _ambientLight = light;
         _ambientTint = tinted;
       }
