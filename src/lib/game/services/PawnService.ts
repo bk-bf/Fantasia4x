@@ -681,7 +681,11 @@ export class PawnServiceImpl implements PawnService {
   // Calibrated to 1 day = 300 in-game seconds: 0→72 in ~225 s ≈ 0.75 days (matches Rimworld ~18h wake cycle).
   // Per-second magnitude. Applied smoothly each tick (via perTick) by processNeedsTick().
   private getRestIncreasePerTurn(pawn: Pawn): number {
-    let baseRest = 0.32;
+    // Per-pawn base from the `fatigue_rate` stat (CON-driven — fitter pawns tire slower), mirroring
+    // how hunger keys off `hunger_rate`. 0.32 is the reference rate at a 1.0× stat. Everything below
+    // (work/combat/traits) plus the condition fatigueRate (getNeedIncreasePerTurn) and weather/night/
+    // cold (processNeedsTick) multiply this stat-based base.
+    let baseRest = 0.32 * pawnStatService.evaluateStat('fatigue_rate', pawn);
 
     if (pawn.state.isWorking) {
       baseRest *= 1.5;

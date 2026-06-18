@@ -126,7 +126,14 @@
         "category"   : "physical",
         "primaryStat": "constitution",
         "formula"    : "1.0 + (weight − 70) × 0.01",
-        "description": "hunger accrual multiplier by body size (70 kg = 1.0×; bigger bodies hunger faster)"
+        "description": "hunger accrual multiplier by body size (70 kg = 1.0×; bigger bodies hunger faster). Scaled at runtime by work, heat/weather and conditions (malnutrition, infection…)"
+    },
+    {
+        "id"         : "fatigue_rate",
+        "category"   : "physical",
+        "primaryStat": "constitution",
+        "formula"    : "1.0 − (CON − 10) × 0.02",
+        "description": "fatigue accrual multiplier by fitness (CON 10 = 1.0×; fitter pawns tire slower). The base rate everything multiplies — scaled at runtime by work/combat, cold weather + night, and conditions (dehydration, hypothermia…)"
     },
     {
         "id"         : "carry_weight",

@@ -6,6 +6,7 @@
   import { pawnStatService } from '$lib/game/services/PawnStatService';
   import { itemService } from '$lib/game/services/ItemService';
   import { getActiveConditionViews } from '$lib/utils/conditionInfo';
+  import { conditionNeedMultipliers } from '$lib/game/core/needs';
   import PawnStatBanner from './PawnStatBanner.svelte';
 
   export let pawn: Pawn;
@@ -35,9 +36,14 @@
   $: condViews = getActiveConditionViews(pawn);
   $: condWorkMult = condViews.reduce((m, v) => m * (v.modifiers.workEfficiency ?? 1), 1);
   $: condMoveMult = condViews.reduce((m, v) => m * (v.modifiers.moveSpeed ?? 1), 1);
+  // Persistent-condition hunger/fatigue rate multipliers (malnutrition, dehydration, hypothermia…),
+  // the same product the sim applies to the *_rate accrual — surfaced on the hunger_rate/fatigue_rate stats.
+  $: condNeed = conditionNeedMultipliers(pawn.conditions ?? []);
   function conditionMult(id: string): number {
     if (WORK_SPEED_IDS.has(id)) return condWorkMult;
     if (id === 'movement_speed') return condMoveMult;
+    if (id === 'hunger_rate') return condNeed.hungerRate;
+    if (id === 'fatigue_rate') return condNeed.fatigueRate;
     return 1;
   }
 
@@ -87,7 +93,7 @@
   const baseCaps = pawnStatService.computeCapacities(BASELINE);
   const baseCarry = itemService.getCarryCapacityBreakdown(BASELINE);
   // Stats where a LOWER number is the better outcome — colouring inverts for these.
-  const LOWER_BETTER = new Set(['hunger_rate', 'pain']);
+  const LOWER_BETTER = new Set(['hunger_rate', 'fatigue_rate', 'pain']);
 
   const round2 = (n: number) => Math.round(n * 100) / 100;
   const signed = (n: number) => (n >= 0 ? '+' : '−') + round2(Math.abs(n));
