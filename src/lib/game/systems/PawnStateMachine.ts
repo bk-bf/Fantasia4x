@@ -108,6 +108,8 @@ const WET_SOAKED = 95;
 const WET_CHILL_TEMP = 12; // only when the effective temperature is below this (°C)
 const WET_CHILL_CHANCE_PER_SEC = 0.04;
 const WET_CHILL_SEVERITY = 0.04;
+/** Pain (0–100) at/above which the `shock` condition starts; severity scales linearly to 1 at pain 100. */
+const SHOCK_PAIN_ONSET = 40;
 
 /** Consciousness (0–1) below which a pawn collapses (matches Combat.COLLAPSE_CONSCIOUSNESS).
  *  Folds in pain + blood loss + organ damage, so downing has one unified cause. */
@@ -508,6 +510,23 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
     }
   }
 
+  // ── Shock ──────────────────────────────────────────────────────────────────
+  // Severe pain sends the body into shock. Reflected (not accumulating) like blood_loss — severity
+  // tracks current pain and clears as it subsides. Non-lethal here: the underlying pain/blood loss
+  // already drives consciousness → collapse → death, so shock just layers its work/move penalty on top.
+  const pain = pawn.pain ?? 0;
+  const shockSeverity = Math.min(
+    0.99,
+    Math.max(0, (pain - SHOCK_PAIN_ONSET) / (100 - SHOCK_PAIN_ONSET))
+  );
+  const shockIdx = conditions.findIndex((c) => c.id === 'shock');
+  if (shockSeverity > 0) {
+    if (shockIdx === -1) conditions.push({ id: 'shock', severity: shockSeverity });
+    else conditions[shockIdx] = { ...conditions[shockIdx], severity: shockSeverity };
+  } else if (shockIdx !== -1) {
+    conditions.splice(shockIdx, 1);
+  }
+
   // ── Persist updated condition/blood state ──────────────────────────────────
   // ADR-002 amendment (hot per-tick, behind the worker): the common (non-lethal) path mutates the
   // live pawn IN PLACE rather than rebuilding the whole pawns array each pawn each tick — that
@@ -714,12 +733,10 @@ function syncTransientConditions(pawn: Pawn): Pawn {
 
   if (isEating) ids.push('eating');
   if (isSleeping) ids.push('sleeping');
-  // Only show need-state badges when the pawn is NOT already acting on them.
-  // Eating supersedes hungry; sleeping supersedes tired.
+  // Fatigue badge when not already sleeping. (Hunger/thirst no longer surface a transient flag —
+  // they fold into the malnutrition/dehydration conditions, which now onset at the same need=70
+  // threshold and escalate; the HUNGER/THIRST need bars are the live indicator.)
   if (!isSleeping && (pawn.needs?.fatigue ?? 0) >= FATIGUE_THRESHOLD) ids.push('tired');
-  if (!isEating && (pawn.needs?.hunger ?? 0) >= HUNGER_THRESHOLD) ids.push('hungry');
-  // §D thirst/hygiene consequences (before dehydration's lethal condition kicks in at 95).
-  if ((pawn.needs?.thirst ?? 0) >= HUNGER_THRESHOLD) ids.push('thirsty');
   if ((pawn.needs?.hygiene ?? 0) >= HUNGER_THRESHOLD) ids.push('filthy');
 
   // Timer-based transient conditions (knockdown, etc.)

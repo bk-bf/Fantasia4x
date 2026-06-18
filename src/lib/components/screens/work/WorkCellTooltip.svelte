@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Pawn, WorkCategory } from '$lib/game/core/types';
   import { getEfficiencyColor } from '$lib/utils/pawnUtils';
+  import { getActiveConditionViews } from '$lib/utils/conditionInfo';
   import {
     LVL_NAMES,
     LABOR_COLORS,
@@ -73,6 +74,19 @@
     return out;
   });
 
+  // Active conditions that drag work throughput (hungry, dehydration, infection…). Their
+  // `workEfficiency` multiplier already folds into `mods.speed`; this just itemises WHY.
+  let condMods = $derived.by(() => {
+    const out: { name: string; pct: number }[] = [];
+    for (const v of getActiveConditionViews(pawn)) {
+      const we = v.modifiers.workEfficiency;
+      if (we == null || we === 1) continue;
+      const name = v.stageLabel ? `${v.name} (${v.stageLabel})` : v.name;
+      out.push({ name, pct: (we - 1) * 100 });
+    }
+    return out;
+  });
+
   // Flip the box to the cursor's left/upper side when near a viewport edge.
   let flipX = $derived(typeof window !== 'undefined' && x > window.innerWidth - 280);
   let flipY = $derived(typeof window !== 'undefined' && y > window.innerHeight - 240);
@@ -126,12 +140,18 @@
     <span>{skill}</span>
   </div>
 
-  {#if traitMods.length > 0}
+  {#if traitMods.length > 0 || condMods.length > 0}
     <div class="tip-sep">MODIFIERS</div>
     {#each traitMods as m}
       <div class="tip-mod">
         <span class="tip-mod-name" style="color:{m.pct >= 0 ? '#6bc' : '#e08'}">{m.name}</span>
         <span class="tip-mod-val">{m.pct >= 0 ? '+' : ''}{Math.round(m.pct)}% {m.axis}</span>
+      </div>
+    {/each}
+    {#each condMods as m}
+      <div class="tip-mod">
+        <span class="tip-mod-name" style="color:{m.pct >= 0 ? '#6bc' : '#e08'}">{m.name}</span>
+        <span class="tip-mod-val">{m.pct >= 0 ? '+' : ''}{Math.round(m.pct)}% speed</span>
       </div>
     {/each}
   {/if}

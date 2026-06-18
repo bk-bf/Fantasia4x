@@ -28,6 +28,10 @@ export interface ConditionView {
   sources: string[];
   /** Readable summary of the modifiers this condition applies (e.g. "Work −25%"). */
   effects: string[];
+  /** Raw active modifiers (active stage for persistent, def for transient) — multipliers keyed by
+   *  workEfficiency / moveSpeed / hungerRate / fatigueRate / dodge. For numeric consumers (e.g. the
+   *  work-tab speed breakdown). */
+  modifiers: Record<string, number>;
 }
 
 const MOD_LABEL: Record<string, string> = {
@@ -98,15 +102,8 @@ function persistentSources(entity: Pawn | Mob, def: ConditionDef): string[] {
         ? inf.map((i) => `${prettyPart(i.bodyPart)} — ${i.type} (infected)`)
         : ['An untended wound has festered'];
     }
-    case 'fracture': {
-      const fx = allInjuries(entity).filter((i) => i.type === 'fracture');
-      return fx.length ? fx.map((i) => `${prettyPart(i.bodyPart)} — fractured`) : ['A broken bone'];
-    }
-    case 'shock': {
-      const lines = ['Severe pain or blood loss'];
-      if (entity.pain != null) lines.push(`Pain ${Math.round(entity.pain)}`);
-      return lines;
-    }
+    case 'shock':
+      return [`Pain ${Math.round(entity.pain ?? 0)}/100`];
     default:
       return [];
   }
@@ -115,12 +112,8 @@ function persistentSources(entity: Pawn | Mob, def: ConditionDef): string[] {
 function transientSources(entity: Pawn | Mob, id: string): string[] {
   const n = entity.needs;
   switch (id) {
-    case 'hungry':
-      return [`Hunger ${r(n?.hunger)}/100`];
     case 'tired':
       return [`Fatigue ${r(n?.fatigue)}/100`];
-    case 'thirsty':
-      return [`Thirst ${r(n?.thirst)}/100`];
     case 'filthy':
       return [`Hygiene ${r(n?.hygiene)}/100`];
     case 'wet':
@@ -170,7 +163,8 @@ export function getActiveConditionViews(entity: Pawn | Mob): ConditionView[] {
       stageLabel: stage?.label,
       lifeThreatening: stage?.lifeThreatening,
       sources: persistentSources(entity, def),
-      effects: effectLines(stage?.modifiers ?? {})
+      effects: effectLines(stage?.modifiers ?? {}),
+      modifiers: stage?.modifiers ?? {}
     });
   }
 
@@ -185,7 +179,8 @@ export function getActiveConditionViews(entity: Pawn | Mob): ConditionView[] {
       description: def.description,
       kind: 'transient',
       sources: transientSources(entity, id),
-      effects: effectLines(def.modifiers)
+      effects: effectLines(def.modifiers),
+      modifiers: def.modifiers as Record<string, number>
     });
   }
 

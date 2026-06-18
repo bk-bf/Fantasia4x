@@ -5,6 +5,7 @@
   import statsData from '$lib/game/database/stats.jsonc';
   import { pawnStatService } from '$lib/game/services/PawnStatService';
   import { itemService } from '$lib/game/services/ItemService';
+  import { getActiveConditionViews } from '$lib/utils/conditionInfo';
   import PawnStatBanner from './PawnStatBanner.svelte';
 
   export let pawn: Pawn;
@@ -21,6 +22,24 @@
   };
   const STATS = statsData as unknown as StatDef[];
   const CAPACITY_IDS = STATS.filter((s) => s.category === 'capacity').map((s) => s.id);
+  // Work *_speed stats are throughput → scaled by the active-condition workEfficiency at runtime
+  // (getWorkModifiers). yield/quality are NOT (conditions don't touch them), so they stay raw.
+  const WORK_SPEED_IDS = new Set(
+    STATS.filter((s) => s.category === 'work' && s.id.endsWith('_speed')).map((s) => s.id)
+  );
+
+  // Active conditions multiply work throughput (speed) and movement — the same factors
+  // getWorkModifiers / getMoveSpeed apply at runtime but the raw stat formulas (evaluateStat) omit.
+  // Fold them in so the table matches what the pawn actually achieves (as injury already does via
+  // capacities). Hidden FSM states (eating/sleeping) carry no work/move modifier → no effect.
+  $: condViews = getActiveConditionViews(pawn);
+  $: condWorkMult = condViews.reduce((m, v) => m * (v.modifiers.workEfficiency ?? 1), 1);
+  $: condMoveMult = condViews.reduce((m, v) => m * (v.modifiers.moveSpeed ?? 1), 1);
+  function conditionMult(id: string): number {
+    if (WORK_SPEED_IDS.has(id)) return condWorkMult;
+    if (id === 'movement_speed') return condMoveMult;
+    return 1;
+  }
 
   // Stats relevant to the highlighted work category: its work stats + the capacities they depend on.
   $: relevant = (() => {
@@ -79,7 +98,7 @@
     if (id === 'carry_weight') return carry.weight.total;
     if (id === 'carry_volume') return carry.volume.total;
     if (id in capacities) return capacities[id];
-    return pawnStatService.evaluateStat(id, pawn);
+    return pawnStatService.evaluateStat(id, pawn) * conditionMult(id);
   }
   function baseRaw(id: string): number {
     if (id === 'carry_weight') return baseCarry.weight.total;
@@ -161,6 +180,9 @@
     add('weight', pawn.physicalTraits?.weight ?? 70);
     add('height', pawn.physicalTraits?.height ?? 170);
     for (const [cap, cv] of Object.entries(capacities)) add(cap, Math.round(cv * 100) / 100);
+    // Surface the active-condition multiplier so the formula and the displayed result reconcile.
+    const cm = conditionMult(s.id);
+    if (cm !== 1) vars.push({ name: 'conditions', value: '×' + round2(cm) });
     return { formula: s.formula, vars, description: s.description };
   }
 
@@ -250,7 +272,8 @@
           <div class="cell" class:hl={relevant.has(s.id)} use:flipTip>
             <span class="nm">{fmtName(s.id)}</span>
             <span class="vl" style="color: {t.color}"
-              >{v}{unit(s.id)}<span class="trend">{t.glyph}</span></span>
+              >{v}{unit(s.id)}<span class="trend">{t.glyph}</span></span
+            >
             <div class="tip">
               <div class="tip-formula">{d.formula}</div>
               {#if d.vars.length}
