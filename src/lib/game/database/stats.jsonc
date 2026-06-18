@@ -20,7 +20,14 @@
         "category"   : "combat",
         "primaryStat": "strength",
         "formula"    : "(1.0 + (STR − 10) × 0.01) × manipulation",
-        "description": "melee attack damage multiplier — STR is the muscle behind a blow (× manipulation)."
+        "description": "melee attack damage multiplier — STR is the muscle behind a blow (× manipulation). Breaking ARMOUR is its own stat (armor_damage); ranged damage is ranged_damage."
+    },
+    {
+        "id"         : "armor_damage",
+        "category"   : "combat",
+        "primaryStat": "strength",
+        "formula"    : "(1.0 + (STR − 10) × 0.02) × manipulation",
+        "description": "armour-breaking multiplier — how fast your blows wreck a foe's ARMOUR condition, SEPARATE from the flesh damage you deal through it (× manipulation). STR drives the force. Armour lost per landed hit = weapon.armorDamage × this: a hammer caves plate in a few blows, a mace dents it, a cleaver's edge barely scratches it (made to open flesh, not crack steel). Wreck the armour, then later blows land clean."
     },
     {
         "id"         : "hit_chance",

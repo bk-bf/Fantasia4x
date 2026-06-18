@@ -1331,6 +1331,87 @@
     "researchRequired": "iron_working"
   },
   {
+    "id": "make_iron_greatsword",
+    "station": "anvil",
+    "inputs": { "iron_bar": 2, "clay_mold": 1, "cordage": 1 },
+    "outputs": { "iron_greatsword": 1 },
+    "workAmount": 14,
+    "toolTierRequired": 2,
+    "researchRequired": "iron_working"
+  },
+  {
+    "id": "make_steel_longsword",
+    "station": "anvil",
+    "inputs": { "steel_bar": 1, "clay_mold": 1, "cordage": 1 },
+    "outputs": { "steel_longsword": 1 },
+    "workAmount": 14,
+    "toolTierRequired": 2,
+    "researchRequired": "steel_making"
+  },
+  {
+    "id": "make_steel_greatsword",
+    "station": "anvil",
+    "inputs": { "steel_bar": 2, "clay_mold": 1, "cordage": 1 },
+    "outputs": { "steel_greatsword": 1 },
+    "workAmount": 18,
+    "toolTierRequired": 2,
+    "researchRequired": "steel_making"
+  },
+  {
+    "id": "make_steel_pike",
+    "station": "anvil",
+    "inputs": { "steel_bar": 1, "oak_plank": 1, "cordage": 1 },
+    "outputs": { "steel_pike": 1 },
+    "workAmount": 13,
+    "toolTierRequired": 2,
+    "researchRequired": "steel_making"
+  },
+  {
+    "id": "make_steel_mace",
+    "station": "anvil",
+    "inputs": { "steel_bar": 1, "clay_mold": 1, "cordage": 1 },
+    "outputs": { "steel_mace": 1 },
+    "workAmount": 13,
+    "toolTierRequired": 2,
+    "researchRequired": "steel_making"
+  },
+  {
+    "id": "make_steel_warhammer",
+    "station": "anvil",
+    "inputs": { "steel_bar": 2, "clay_mold": 1, "oak_plank": 1, "cordage": 1 },
+    "outputs": { "steel_warhammer": 1 },
+    "workAmount": 17,
+    "toolTierRequired": 2,
+    "researchRequired": "steel_making"
+  },
+  {
+    "id": "make_steel_cleaver",
+    "station": "anvil",
+    "inputs": { "steel_bar": 2, "clay_mold": 1, "cordage": 1 },
+    "outputs": { "steel_cleaver": 1 },
+    "workAmount": 15,
+    "toolTierRequired": 2,
+    "researchRequired": "steel_making"
+  },
+  {
+    "id": "make_steel_greatcleaver",
+    "station": "anvil",
+    "inputs": { "steel_bar": 3, "clay_mold": 1, "cordage": 1 },
+    "outputs": { "steel_greatcleaver": 1 },
+    "workAmount": 20,
+    "toolTierRequired": 2,
+    "researchRequired": "steel_making"
+  },
+  {
+    "id": "make_steel_flail",
+    "station": "anvil",
+    "inputs": { "steel_bar": 1, "iron_bar": 1, "clay_mold": 1, "cordage": 1 },
+    "outputs": { "steel_flail": 1 },
+    "workAmount": 14,
+    "toolTierRequired": 2,
+    "researchRequired": "steel_making"
+  },
+  {
     "id": "make_war_bow",
     "station": "makers_bench",
     "inputs": {

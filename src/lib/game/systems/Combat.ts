@@ -808,7 +808,11 @@ class CombatServiceImpl implements CombatService {
       );
     }
     // Every landed blow chips condition: the attacker's weapon + the defender's struck armour.
-    return { state: this.applyGearWear(next, attacker, target), staminaCost: result.staminaCost };
+    const armorLoss = this.computeArmorDamage(attacker, result.damageType, !!override);
+    return {
+      state: this.applyGearWear(next, attacker, target, armorLoss),
+      staminaCost: result.staminaCost
+    };
   }
 
   /** The worn-armour slot with the highest `defense` (the piece that takes a blow — mirrors
@@ -841,26 +845,51 @@ class CombatServiceImpl implements CombatService {
 
   /** ON A HIT: wear the attacker's main-hand weapon and the defender's struck armour piece by their
    *  `durabilityLossPerCombatHit` (pawns only — mobs carry no gear). One gated pawns-array rebuild. */
-  private applyGearWear(state: GameState, attacker: Pawn | Mob, defender: Pawn | Mob): GameState {
+  private applyGearWear(
+    state: GameState,
+    attacker: Pawn | Mob,
+    defender: Pawn | Mob,
+    armorLoss: number
+  ): GameState {
+    // The attacker's weapon wears from use (its own durability/hit); the defender's struck armour
+    // takes `armorLoss` condition — driven by the WEAPON's armorDamage × the attacker's armor_damage
+    // stat (computed by the caller), so a hammer caves plate fast and a cleaver barely scratches it.
     const weaponInst =
       'equipment' in attacker ? attacker.equipment?.mainHand : undefined;
     const weaponLoss = weaponInst
       ? (itemService.getItemById(weaponInst.itemId)?.durabilityLossPerCombatHit ?? 0)
       : 0;
-    const armorSlot = 'equipment' in defender ? this.bestArmorSlot(defender as Pawn) : null;
+    const armorSlot = armorLoss > 0 && 'equipment' in defender ? this.bestArmorSlot(defender as Pawn) : null;
     if (weaponLoss <= 0 && !armorSlot) return state;
     return {
       ...state,
       pawns: state.pawns.map((p) => {
         if (weaponLoss > 0 && p.id === attacker.id) return this.decrEquipDurability(p, 'mainHand', weaponLoss);
-        if (armorSlot && p.id === defender.id) {
-          const inst = (p.equipment as Record<string, ItemInstance | undefined>)[armorSlot];
-          const loss = inst ? (itemService.getItemById(inst.itemId)?.durabilityLossPerCombatHit ?? 0) : 0;
-          if (loss > 0) return this.decrEquipDurability(p, armorSlot, loss);
-        }
+        if (armorSlot && p.id === defender.id) return this.decrEquipDurability(p, armorSlot, armorLoss);
         return p;
       })
     };
+  }
+
+  /** Default armour condition stripped per hit, by damage type, when a weapon doesn't author its own
+   *  `armorDamage`: blunt crushes armour, piercing punches small holes, cutting skids off it. */
+  private static readonly DEFAULT_ARMOR_DAMAGE: Record<string, number> = {
+    blunt: 4,
+    piercing: 2,
+    cutting: 1.5
+  };
+
+  /** Armour condition this swing strips: weapon.armorDamage (or the by-type default) × the attacker's
+   *  STR-driven `armor_damage` stat. A ranged shot pierces rather than wrecks → much less. */
+  private computeArmorDamage(attacker: Pawn | Mob, damageType: DamageType, isRanged: boolean): number {
+    const stat = pawnStatService.evaluateStat('armor_damage', attacker);
+    const byType = CombatServiceImpl.DEFAULT_ARMOR_DAMAGE[damageType] ?? 2;
+    if (isRanged) return byType * 0.4 * stat; // arrows/bolts pierce, they don't cave armour
+    const wp =
+      'equipment' in attacker && attacker.equipment?.mainHand
+        ? itemService.getItemById(attacker.equipment.mainHand.itemId)?.weaponProperties
+        : undefined;
+    return (wp?.armorDamage ?? byType) * stat;
   }
 
   /** Nearest living hostile mob within `maxRange` tiles of a pawn (auto-engagement; ranged

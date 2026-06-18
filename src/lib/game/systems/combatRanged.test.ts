@@ -98,6 +98,32 @@ function makeGoblin(over: Partial<Mob> = {}): Mob {
   } as unknown as Mob;
 }
 
+/** A low-dodge pawn wearing a mail hauberk (bodyMid), so blows land + chew its armour. */
+function makeArmored(id: string): Pawn {
+  return makeArcher({
+    id,
+    position: { x: 5, y: 5 },
+    currentState: 'Idle',
+    combatStance: 'defensive',
+    drafted: false,
+    stats: { ...stats, dexterity: 2, constitution: 16 },
+    equipment: { bodyMid: { itemId: 'mail_hauberk', durability: 100 } }
+  } as unknown as Partial<Pawn>);
+}
+
+/** A drafted attacker swinging `weapon` at pawn `targetId`, standing adjacent to the armoured defender. */
+function makeMeleeAttacker(id: string, weapon: string, targetId: string): Pawn {
+  return makeArcher({
+    id,
+    position: { x: 5, y: 6 },
+    currentState: 'Idle',
+    drafted: true,
+    draftTarget: { type: 'attack', targetType: 'pawn', targetId },
+    stats: { ...stats, strength: 16, dexterity: 16 },
+    equipment: { mainHand: { itemId: weapon } }
+  } as unknown as Partial<Pawn>);
+}
+
 function makeState(pawns: Pawn[], mobs: Mob[]): GameState {
   return { turn: 0, pawns, mobs, worldMap: [], droppedItems: [] } as unknown as GameState;
 }
@@ -262,6 +288,25 @@ describe('ranged combat (headless tickCombat)', () => {
       if (wounds.some((w) => w.type === 'crush')) bluntWound = true; // blunt → crush wound
     }
     expect(bluntWound).toBe(true);
+  });
+
+  it('armorDamage differentiates the archetypes: hammer ≫ mace ≫ … ≫ cleaver', () => {
+    const ad = (id: string) => itemService.getItemById(id)!.weaponProperties!.armorDamage;
+    expect(ad('steel_warhammer')!).toBeGreaterThan(ad('steel_mace')!); // hammer wrecks armour most
+    expect(ad('steel_mace')!).toBeGreaterThan(ad('steel_cleaver')!); // mace dents, cleaver barely scratches
+    expect(ad('steel_cleaver')!).toBeLessThanOrEqual(2); // a cleaver is made for flesh, not steel
+  });
+
+  it('a hammer strips a foe’s armour far faster than a cleaver (armour damage ≠ flesh damage)', () => {
+    let h = makeState([makeMeleeAttacker('ha', 'steel_warhammer', 'hd'), makeArmored('hd')], []);
+    for (let t = 0; t < 3000; t++) h = combatService.tickCombat({ ...h, turn: t }, 16);
+    const hammerArmor = h.pawns.find((p) => p.id === 'hd')!.equipment.bodyMid!.durability!;
+
+    let c = makeState([makeMeleeAttacker('ca', 'steel_cleaver', 'cd'), makeArmored('cd')], []);
+    for (let t = 0; t < 3000; t++) c = combatService.tickCombat({ ...c, turn: t }, 16);
+    const cleaverArmor = c.pawns.find((p) => p.id === 'cd')!.equipment.bodyMid!.durability!;
+
+    expect(hammerArmor).toBeLessThan(cleaverArmor); // the hammer caves the plate; the cleaver leaves it
   });
 
   it('classifies the melee GRIP from the hands (2H / shield / duelist / one-handed)', () => {
