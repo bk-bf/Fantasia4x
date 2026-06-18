@@ -27,6 +27,81 @@
 //     harvestDepletes  — true: removes only this yield; the node itself stays
 [
   // ─────────────────────────────────────────────────────────────────────────
+  // PRODUCTION-CHAIN-II §M — ANCIENT-WOOD GROVES (listed FIRST on purpose)
+  // ─────────────────────────────────────────────────────────────────────────
+  // Pass-1 scatter is first-match-wins in array order (ResourceGeneratorService): the first def
+  // whose roll succeeds on a tile claims it and breaks. The common trees + grass patches that
+  // follow are FAR more probable, so a grove listed after them on a contested grassy subtype
+  // (grass/deep_grass/tall_grass) almost never gets rolled — that starved moonwood to ~1/15th of
+  // its intended rate. Listing the (very low-probability) groves FIRST gives each species a fair,
+  // independent shot, so all four spawn reliably. Probabilities are tuned for ~10–15 of each per
+  // 240×160 map — uncommon and worth seeking, but reliably findable.
+  {
+    "id": "heartwood_grove", "displayName": "Heartwood Tree", "subterrain": "tree", "walkable": false,
+    "charSpans": [ {"sheet": "plants", "from": 0, "to": 71} ], "fg": [0.48, 0.29, 0.42], "bg": [0.08, 0.05, 0.07], "color": "#7A4B6B",
+    "glow": {"color": [0.62, 0.40, 0.72], "radius": 2.5, "intensity": 0.45, "flicker": false},
+    "spawn": {"subterrains": {"deep_grass": 0.0014, "grass": 0.0006, "dirt": 0.0003}},
+    "nodeAmountRange": [2, 4], "designationTypes": ["woodcut", "forage"],
+    "interaction": {
+      "designationType": "woodcut", "action": "woodcut", "workCategory": "woodcutting", "workAmount": 18, "toolRequirement": {"workType": "woodcutting", "minTier": 2},
+      "yields": [
+        {"itemId": "heartwood_log", "min": 2, "max": 4, "skillId": "woodcutting", "skillMultiplier": 0.2, "regrowthTurns": 6000},
+        {"itemId": "branch", "min": 2, "max": 4, "skillId": "woodcutting", "skillMultiplier": 0.15, "regrowthTurns": 4200},
+        {"itemId": "bark", "min": 1, "max": 2, "skillId": "woodcutting", "skillMultiplier": 0.1, "regrowthTurns": 1500}
+      ],
+      "persistent": true, "harvestDepletes": true
+    }
+  },
+  {
+    "id": "moonwood_grove", "displayName": "Moonwood Tree", "subterrain": "tree", "walkable": false,
+    "charSpans": [ {"sheet": "plants", "from": 0, "to": 71} ], "fg": [0.79, 0.83, 0.88], "bg": [0.08, 0.09, 0.1], "color": "#C9D4E0",
+    "glow": {"color": [0.60, 0.72, 0.90], "radius": 2.5, "intensity": 0.45, "flicker": false},
+    "spawn": {"subterrains": {"deep_grass": 0.0016, "grass": 0.0006, "tall_grass": 0.0004}},
+    "nodeAmountRange": [2, 4], "designationTypes": ["woodcut", "forage"],
+    "interaction": {
+      "designationType": "woodcut", "action": "woodcut", "workCategory": "woodcutting", "workAmount": 16, "toolRequirement": {"workType": "woodcutting", "minTier": 2},
+      "yields": [
+        {"itemId": "moonwood_log", "min": 2, "max": 4, "skillId": "woodcutting", "skillMultiplier": 0.2, "regrowthTurns": 6000},
+        {"itemId": "branch", "min": 2, "max": 4, "skillId": "woodcutting", "skillMultiplier": 0.15, "regrowthTurns": 4200},
+        {"itemId": "bark", "min": 1, "max": 2, "skillId": "woodcutting", "skillMultiplier": 0.1, "regrowthTurns": 1500}
+      ],
+      "persistent": true, "harvestDepletes": true
+    }
+  },
+  {
+    "id": "ironwood_grove", "displayName": "Ironwood Tree", "subterrain": "tree", "walkable": false,
+    "charSpans": [ {"sheet": "plants", "from": 0, "to": 71} ], "fg": [0.23, 0.2, 0.18], "bg": [0.05, 0.04, 0.03], "color": "#3A332E",
+    "glow": {"color": [0.50, 0.62, 0.42], "radius": 2.5, "intensity": 0.40, "flicker": false},
+    "spawn": {"subterrains": {"deep_grass": 0.0014, "dirt": 0.0005, "rocky": 0.0008}},
+    "nodeAmountRange": [2, 4], "designationTypes": ["woodcut", "forage"],
+    "interaction": {
+      "designationType": "woodcut", "action": "woodcut", "workCategory": "woodcutting", "workAmount": 22, "toolRequirement": {"workType": "woodcutting", "minTier": 3},
+      "yields": [
+        {"itemId": "ironwood_log", "min": 2, "max": 4, "skillId": "woodcutting", "skillMultiplier": 0.2, "regrowthTurns": 7200},
+        {"itemId": "branch", "min": 2, "max": 4, "skillId": "woodcutting", "skillMultiplier": 0.15, "regrowthTurns": 4200},
+        {"itemId": "bark", "min": 1, "max": 2, "skillId": "woodcutting", "skillMultiplier": 0.1, "regrowthTurns": 1500}
+      ],
+      "persistent": true, "harvestDepletes": true
+    }
+  },
+  {
+    "id": "emberwood_grove", "displayName": "Emberwood Tree", "subterrain": "tree", "walkable": false,
+    "charSpans": [ {"sheet": "plants", "from": 0, "to": 71} ], "fg": [0.71, 0.28, 0.12], "bg": [0.1, 0.05, 0.03], "color": "#B5481E",
+    "glow": {"color": [1.0, 0.55, 0.25], "radius": 3.0, "intensity": 0.5, "flicker": true},
+    "spawn": {"subterrains": {"savanna": 0.005, "dirt": 0.0007}},
+    "nodeAmountRange": [2, 4], "designationTypes": ["woodcut", "forage"],
+    "interaction": {
+      "designationType": "woodcut", "action": "woodcut", "workCategory": "woodcutting", "workAmount": 18, "toolRequirement": {"workType": "woodcutting", "minTier": 2},
+      "yields": [
+        {"itemId": "emberwood_log", "min": 2, "max": 4, "skillId": "woodcutting", "skillMultiplier": 0.2, "regrowthTurns": 6000},
+        {"itemId": "branch", "min": 2, "max": 4, "skillId": "woodcutting", "skillMultiplier": 0.15, "regrowthTurns": 4200},
+        {"itemId": "bark", "min": 1, "max": 2, "skillId": "woodcutting", "skillMultiplier": 0.1, "regrowthTurns": 1500}
+      ],
+      "persistent": true, "harvestDepletes": true
+    }
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────
   // WOODCUTTING
   // ─────────────────────────────────────────────────────────────────────────
   // Standard living tree — primary source of wood and bark.
@@ -793,17 +868,18 @@
   // Rare arcane crystal formation — deep mountain/cave occurrence only.
   // TODO: magic_crystal item properties TBD. High rarity is intentional.
   {
-    "id"              : "crystal_formation",
-    "displayName"     : "Crystal Formation",
+    "id"              : "amethyst_node",
+    "displayName"     : "Amethyst Crystals",
     "subterrain"      : "crystal_formation",
     "walkable"        : false,
     "charSpans"       : [ {"sheet": "tiles", "from": 48, "to": 55} ],
-    "fg"              : [0.4, 0.84, 0.79],
-    "bg"              : [0.06, 0.08, 0.1],
-    "color"           : "#66D6C9",
+    "fg"              : [0.63, 0.38, 0.82],
+    "bg"              : [0.08, 0.05, 0.1],
+    "color"           : "#A060D0",
     "spawn"           : {
-      // Intentionally sparse — these are high-value arcane nodes.
-      "subterrains": {"cave": 0.003, "rocky": 0.002, "cliff": 0.001}
+      // Intentionally sparse — these are high-value arcane nodes. Matches the other crystal nodes
+      // (cave/rocky/cliff) so the seven minerals spawn at comparable rates.
+      "subterrains": {"cave": 0.0025, "rocky": 0.0015, "cliff": 0.001}
     },
     "nodeAmountRange" : [1, 3],
     "designationTypes": ["harvest"],
@@ -1547,7 +1623,7 @@
   // ═══════════════════════════════════════════════════════════════════════════
   // PRODUCTION-CHAIN-II §M — crystal nodes (typed) + ancient-wood groves
   // ═══════════════════════════════════════════════════════════════════════════
-  // Crystal nodes — one per mineral (amethyst reuses the `crystal_formation` node above). Each
+  // Crystal nodes — one per mineral (amethyst is the `amethyst_node` in the mining section above). Each
   // mostly yields its NORMAL crystal (1–2) plus an occasional MAGIC-INFUSED crystal (0–1). Rarity
   // comes from the sparse spawn + the 0-floor infused roll, not from the uniform min/max engine.
   // All share the `crystal_formation` render subterrain; mined with a tier-2 pick. They deliberately
@@ -1628,73 +1704,6 @@
         {"itemId": "moonstone", "min": 1, "max": 2, "skillId": "mining", "skillMultiplier": 0.1},
         {"itemId": "infused_moonstone", "min": 0, "max": 1, "skillId": "mining", "skillMultiplier": 0.05}
       ]
-    }
-  },
-
-  // Ancient-wood groves — very rare tree variants (one species per grove), felled with an axe like
-  // any tree. Each yields its premium `*_log` plus the usual branch/bark byproducts.
-  {
-    "id": "heartwood_grove", "displayName": "Heartwood Tree", "subterrain": "tree", "walkable": false,
-    "charSpans": [ {"sheet": "plants", "from": 0, "to": 71} ], "fg": [0.48, 0.29, 0.42], "bg": [0.08, 0.05, 0.07], "color": "#7A4B6B",
-    "glow": {"color": [0.62, 0.40, 0.72], "radius": 2.5, "intensity": 0.45, "flicker": false},
-    "spawn": {"subterrains": {"deep_grass": 0.0016, "grass": 0.0009, "dirt": 0.0004}},
-    "nodeAmountRange": [2, 4], "designationTypes": ["woodcut", "forage"],
-    "interaction": {
-      "designationType": "woodcut", "action": "woodcut", "workCategory": "woodcutting", "workAmount": 18, "toolRequirement": {"workType": "woodcutting", "minTier": 2},
-      "yields": [
-        {"itemId": "heartwood_log", "min": 2, "max": 4, "skillId": "woodcutting", "skillMultiplier": 0.2, "regrowthTurns": 6000},
-        {"itemId": "branch", "min": 2, "max": 4, "skillId": "woodcutting", "skillMultiplier": 0.15, "regrowthTurns": 4200},
-        {"itemId": "bark", "min": 1, "max": 2, "skillId": "woodcutting", "skillMultiplier": 0.1, "regrowthTurns": 1500}
-      ],
-      "persistent": true, "harvestDepletes": true
-    }
-  },
-  {
-    "id": "moonwood_grove", "displayName": "Moonwood Tree", "subterrain": "tree", "walkable": false,
-    "charSpans": [ {"sheet": "plants", "from": 0, "to": 71} ], "fg": [0.79, 0.83, 0.88], "bg": [0.08, 0.09, 0.1], "color": "#C9D4E0",
-    "glow": {"color": [0.60, 0.72, 0.90], "radius": 2.5, "intensity": 0.45, "flicker": false},
-    "spawn": {"subterrains": {"deep_grass": 0.0016, "grass": 0.0009, "tall_grass": 0.0005}},
-    "nodeAmountRange": [2, 4], "designationTypes": ["woodcut", "forage"],
-    "interaction": {
-      "designationType": "woodcut", "action": "woodcut", "workCategory": "woodcutting", "workAmount": 16, "toolRequirement": {"workType": "woodcutting", "minTier": 2},
-      "yields": [
-        {"itemId": "moonwood_log", "min": 2, "max": 4, "skillId": "woodcutting", "skillMultiplier": 0.2, "regrowthTurns": 6000},
-        {"itemId": "branch", "min": 2, "max": 4, "skillId": "woodcutting", "skillMultiplier": 0.15, "regrowthTurns": 4200},
-        {"itemId": "bark", "min": 1, "max": 2, "skillId": "woodcutting", "skillMultiplier": 0.1, "regrowthTurns": 1500}
-      ],
-      "persistent": true, "harvestDepletes": true
-    }
-  },
-  {
-    "id": "ironwood_grove", "displayName": "Ironwood Tree", "subterrain": "tree", "walkable": false,
-    "charSpans": [ {"sheet": "plants", "from": 0, "to": 71} ], "fg": [0.23, 0.2, 0.18], "bg": [0.05, 0.04, 0.03], "color": "#3A332E",
-    "glow": {"color": [0.50, 0.62, 0.42], "radius": 2.5, "intensity": 0.40, "flicker": false},
-    "spawn": {"subterrains": {"deep_grass": 0.0014, "dirt": 0.0008, "rocky": 0.0006}},
-    "nodeAmountRange": [2, 4], "designationTypes": ["woodcut", "forage"],
-    "interaction": {
-      "designationType": "woodcut", "action": "woodcut", "workCategory": "woodcutting", "workAmount": 22, "toolRequirement": {"workType": "woodcutting", "minTier": 3},
-      "yields": [
-        {"itemId": "ironwood_log", "min": 2, "max": 4, "skillId": "woodcutting", "skillMultiplier": 0.2, "regrowthTurns": 7200},
-        {"itemId": "branch", "min": 2, "max": 4, "skillId": "woodcutting", "skillMultiplier": 0.15, "regrowthTurns": 4200},
-        {"itemId": "bark", "min": 1, "max": 2, "skillId": "woodcutting", "skillMultiplier": 0.1, "regrowthTurns": 1500}
-      ],
-      "persistent": true, "harvestDepletes": true
-    }
-  },
-  {
-    "id": "emberwood_grove", "displayName": "Emberwood Tree", "subterrain": "tree", "walkable": false,
-    "charSpans": [ {"sheet": "plants", "from": 0, "to": 71} ], "fg": [0.71, 0.28, 0.12], "bg": [0.1, 0.05, 0.03], "color": "#B5481E",
-    "glow": {"color": [1.0, 0.55, 0.25], "radius": 3.0, "intensity": 0.5, "flicker": true},
-    "spawn": {"subterrains": {"savanna": 0.0014, "dirt": 0.0008, "scrubland": 0.0006}},
-    "nodeAmountRange": [2, 4], "designationTypes": ["woodcut", "forage"],
-    "interaction": {
-      "designationType": "woodcut", "action": "woodcut", "workCategory": "woodcutting", "workAmount": 18, "toolRequirement": {"workType": "woodcutting", "minTier": 2},
-      "yields": [
-        {"itemId": "emberwood_log", "min": 2, "max": 4, "skillId": "woodcutting", "skillMultiplier": 0.2, "regrowthTurns": 6000},
-        {"itemId": "branch", "min": 2, "max": 4, "skillId": "woodcutting", "skillMultiplier": 0.15, "regrowthTurns": 4200},
-        {"itemId": "bark", "min": 1, "max": 2, "skillId": "woodcutting", "skillMultiplier": 0.1, "regrowthTurns": 1500}
-      ],
-      "persistent": true, "harvestDepletes": true
     }
   }
 ]

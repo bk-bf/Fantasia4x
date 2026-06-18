@@ -297,6 +297,7 @@ export interface Item {
     accuracy?: number; // added to hitChance formula
     armorPenetration?: number; // 0–1; fraction of armor reduction bypassed
     bluntMod?: number; // multiplier on knockdown chance (blunt weapons)
+    stunChance?: number; // 0–1 FLAT chance to stun (knock down) the target on a hit, regardless of damage type — maces/hammers/heavy stocks. Adds on top of the blunt damage-based knockdown.
     critMod?: number; // added to the wielder's base crit_chance (0–1)
     twoHanded?: boolean; // requires both mainHand and offHand slots
     tags?: string[]; // ability grants from COMBAT-SYSTEM

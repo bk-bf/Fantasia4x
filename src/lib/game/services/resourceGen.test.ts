@@ -92,6 +92,6 @@ describe('ResourceGenerator — mineral_deposit guarantee + clustering', () => {
     expect(VALID_FILL.has('rock_salt')).toBe(true);
     expect(VALID_FILL.has('hematite')).toBe(true);
     expect(VALID_FILL.has('stone_outcrop')).toBe(false);
-    expect(VALID_FILL.has('crystal_formation')).toBe(false);
+    expect(VALID_FILL.has('amethyst_node')).toBe(false); // crystal nodes aren't mineral-vein fill
   });
 });
