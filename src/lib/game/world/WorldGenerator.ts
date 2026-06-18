@@ -16,6 +16,12 @@ const DETAIL_FREQUENCY = 0.05;
 const TERRAIN_OCTAVES = 5;
 const TERRAIN_LACUNARITY = 2.0;
 const TERRAIN_GAIN = 0.6;
+// Domain-warp frequency for biome boundaries. MUST be in the terrain's frequency range (≈0.005), NOT
+// the detail frequency (0.05): warping the large, smooth elevation field with a 10×-higher-frequency
+// noise jittered mountain/biome edges every ~20 tiles → jagged, fragmented coastlines. A low-frequency
+// warp displaces whole regions slowly, giving organic, smoothly-meandering mountain shapes.
+const WARP_FREQUENCY = 0.01;
+const WARP_AMOUNT = 35; // tiles of max displacement — bigger, sweeping meanders
 
 /** Simple seeded PRNG (xorshift32) — returns values in [0, 1). */
 function makeRng(seed: number) {
@@ -108,12 +114,11 @@ export function generateWorld(width: number, height: number, seed = Date.now()):
   for (let y = 0; y < height; y++) {
     world[y] = [];
     for (let x = 0; x < width; x++) {
-      // Domain-warp the biome sampling so river (and all biome boundary) contours
-      // meander organically rather than running in straight diagonal bands.
-      // Mirrors Celestia's get_warped_noise(), which was defined but never wired up.
-      const warpAmt = 20;
-      const wx = detailNoise(x * DETAIL_FREQUENCY + 17.3, y * DETAIL_FREQUENCY + 17.3) * warpAmt;
-      const wy = detailNoise(x * DETAIL_FREQUENCY - 17.3, y * DETAIL_FREQUENCY - 17.3) * warpAmt;
+      // Domain-warp the elevation sampling with a LOW-frequency noise so biome boundaries (mountain
+      // silhouettes, coastlines, river courses) meander organically over large spans instead of
+      // jittering. (Sampling the warp at DETAIL_FREQUENCY fragmented the edges — see WARP_FREQUENCY.)
+      const wx = detailNoise(x * WARP_FREQUENCY + 17.3, y * WARP_FREQUENCY + 17.3) * WARP_AMOUNT;
+      const wy = detailNoise(x * WARP_FREQUENCY - 17.3, y * WARP_FREQUENCY - 17.3) * WARP_AMOUNT;
       const raw = fbm(terrainNoise, x + wx, y + wy);
       const density = Math.max(0, Math.min(1, (raw + 1) / 2));
 

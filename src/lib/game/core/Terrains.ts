@@ -105,6 +105,69 @@ export const BIOMES: Record<string, BiomeDef> = Object.fromEntries(
   ])
 ) as unknown as Record<string, BiomeDef>;
 
+// ── Runtime biome tuning (Custom Map menu) ──────────────────────────────────────
+// The Custom Map popup edits these live and re-runs world generation. `pickBiome` reads `BIOMES`
+// directly, so mutating a biome's densityRange/baseTemp/baseMoisture here changes the next generated
+// map with no other plumbing. Insertion order in BIOMES is preserved (Object.fromEntries), which is
+// the order `pickBiome` scans — relevant because density ranges should stay contiguous.
+export interface BiomeConfigEntry {
+  id: string;
+  displayName: string;
+  densityRange: [number, number];
+  baseTemp: number;
+  baseMoisture: number;
+}
+
+// Snapshot of the on-disk defaults, captured once at load, so the menu's "reset" restores them.
+const DEFAULT_BIOME_CONFIG: Record<string, BiomeConfigEntry> = Object.fromEntries(
+  Object.entries(BIOMES).map(([id, d]) => [
+    id,
+    {
+      id,
+      displayName: d.displayName,
+      densityRange: [d.densityRange[0], d.densityRange[1]] as [number, number],
+      baseTemp: d.baseTemp ?? 0,
+      baseMoisture: d.baseMoisture ?? 0
+    }
+  ])
+);
+
+/** Current biome config as a plain, editable list (in pickBiome scan order). */
+export function getBiomeConfig(): BiomeConfigEntry[] {
+  return Object.entries(BIOMES).map(([id, d]) => ({
+    id,
+    displayName: d.displayName,
+    densityRange: [d.densityRange[0], d.densityRange[1]],
+    baseTemp: d.baseTemp ?? 0,
+    baseMoisture: d.baseMoisture ?? 0
+  }));
+}
+
+/** Live-edit one biome field; takes effect on the next `generateWorld`/`regenWorld`. */
+export function setBiomeField(
+  id: string,
+  field: 'min' | 'max' | 'baseTemp' | 'baseMoisture',
+  value: number
+): void {
+  const d = BIOMES[id];
+  if (!d) return;
+  if (field === 'min') d.densityRange = [value, d.densityRange[1]];
+  else if (field === 'max') d.densityRange = [d.densityRange[0], value];
+  else if (field === 'baseTemp') d.baseTemp = value;
+  else d.baseMoisture = value;
+}
+
+/** Restore the on-disk terrains.jsonc defaults. */
+export function resetBiomeConfig(): void {
+  for (const [id, def] of Object.entries(DEFAULT_BIOME_CONFIG)) {
+    const d = BIOMES[id];
+    if (!d) continue;
+    d.densityRange = [def.densityRange[0], def.densityRange[1]];
+    d.baseTemp = def.baseTemp;
+    d.baseMoisture = def.baseMoisture;
+  }
+}
+
 // ── Subterrains ───────────────────────────────────────────────────────────────
 // Chars are resolved at load time from tile-index descriptors (charSpans) stored
 // in terrains.json.  Each span references tiles.bmp or plants.bmp by sheet + index.

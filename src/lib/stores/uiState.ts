@@ -43,6 +43,9 @@ interface UIState {
   /** Debug click-brush (in-game DEBUG tab). null = inactive. `id` is the resource/building id the
    *  spawn brushes paint; unused by `regrow`. Clicking the map applies the brush at that tile. */
   debugBrush: { kind: 'regrow' | 'building' | 'resource'; id: string | null } | null;
+  /** Custom Map popup (biome-tuning sliders) open? Rendered at the page root, outside the filtered
+   *  header, so it stacks above the WebGL canvas (a `filter` on `.game-header` traps fixed children). */
+  customMapOpen: boolean;
 }
 
 function createUIState() {
@@ -62,7 +65,8 @@ function createUIState() {
     blueprintBuildingId: null,
     blueprintMaterials: null,
     pawnScreenTab: null,
-    debugBrush: null
+    debugBrush: null,
+    customMapOpen: false
   };
 
   const { subscribe, set, update } = writable(initialState);
@@ -73,6 +77,9 @@ function createUIState() {
     update,
 
     setScreen: (screen: Screen) => update((state) => ({ ...state, currentScreen: screen })),
+
+    toggleCustomMap: () => update((state) => ({ ...state, customMapOpen: !state.customMapOpen })),
+    setCustomMap: (open: boolean) => update((state) => ({ ...state, customMapOpen: open })),
 
     toggleScreen: (screen: Screen) =>
       update((state) => ({

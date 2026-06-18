@@ -22,7 +22,6 @@
   let gameSpeed = 1;
   let currentTurnValue = 0;
   let currentScreen = 'main';
-  let mapSeedInput = String(Date.now() >>> 0);
 
   // ===== PERFORMANCE TRACKERS =====
   let fps = 0; // render frames/sec (from the WebGL canvas)
@@ -104,13 +103,6 @@
   // ===== SEASON & WEATHER READOUT (SEASONS_WEATHER) — labels are data-driven (seasons/weather.jsonc) =====
   $: weatherLabel = getWeatherLabel($currentWeather?.type);
   $: tempLabel = $currentAvgTemperature !== undefined ? `${$currentAvgTemperature}°C` : '';
-
-  function regenMap() {
-    const parsed = parseInt(mapSeedInput, 10);
-    const s = !isNaN(parsed) && parsed > 0 ? parsed : Date.now() >>> 0;
-    mapSeedInput = String(s);
-    gameState.regenWorld(s);
-  }
 
   // Dev timesaver: drop 500 of every item into the current stockpile (no regen/wipe).
   const DEV_ITEM_QTY = 500;
@@ -226,15 +218,14 @@
   </span>
   <span class="spacer" />
   {#if currentScreen === 'main' && import.meta.env.VITE_DEBUG_MODE === 'true'}
-    <input
-      class="seed-input"
-      type="text"
-      bind:value={mapSeedInput}
-      placeholder="SEED"
-      title="World seed"
-      maxlength="12"
-    />
-    <button class="ctrl-btn" on:click={regenMap} title="Regenerate map">↺ MAP</button>
+    <button
+      class="ctrl-btn"
+      class:is-paused={$uiState.customMapOpen}
+      on:click={() => uiState.toggleCustomMap()}
+      title="Custom map: tune biome generation with live sliders"
+    >
+      ⚙ CUSTOM MAP
+    </button>
     <button
       class="ctrl-btn"
       on:click={spawnAllItems}
@@ -382,21 +373,6 @@
     color: #fff;
   }
 
-  .seed-input {
-    width: 82px;
-    padding: 2px 4px;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    color: var(--text-dim);
-    font-family: 'Courier New', monospace;
-    font-size: 9px;
-    text-align: center;
-  }
-  .seed-input:focus {
-    outline: none;
-    border-color: var(--border-hi);
-    color: var(--text);
-  }
   .speed-wrap {
     display: flex;
     gap: 1px;

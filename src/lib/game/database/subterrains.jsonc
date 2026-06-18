@@ -261,7 +261,7 @@
     "fg"          : [0.62, 0.52, 0.37],
     "bg"          : [0.08, 0.06, 0.03],
     "color"       : "#9E855E",
-    "biomes"      : { "mountain": [null, -0.21] }
+    "biomes"      : { "mountain": [null, -0.08] }
   },
   {
     "id"          : "cave",
@@ -271,11 +271,9 @@
     "charSpans"   : [ {"sheet": "tiles", "id": 3} ],
     "fg"          : [0.26, 0.18, 0.09],
     "bg"          : [0.08, 0.06, 0.03],
-    "color"       : "#422E17",
-    // Cave band shrunk three times by ~30% (orig [-0.36, 0.29] w0.65 → 0.46 → 0.32 → 0.22, ~66%
-    // smaller total); the freed range is handed to rocky/cliff/mineral_deposit below so mountains are
-    // mostly solid wall/cliff/ore (and gem-bearing), with caves a minority.
-    "biomes"      : { "mountain": [-0.21, 0.01] }
+    "color"       : "#422E17"
+    // Cave generation was removed (the noise approaches all produced webs/blocky/straight tunnels).
+    // Cave has no biome range, so it does not spawn; the subterrain def is kept for future use.
   },
   {
     "id"          : "cliff",
@@ -286,7 +284,7 @@
     "fg"          : [0.5, 0.42, 0.27],
     "bg"          : [0.08, 0.06, 0.03],
     "color"       : "#806B45",
-    "biomes"      : { "mountain": [0.01, 0.54] }
+    "biomes"      : { "mountain": [-0.08, 0.57] }
   },
   {
     "id"          : "mineral_deposit",
@@ -297,7 +295,7 @@
     "fg"          : [0.92, 0.76, 0.13],
     "bg"          : [0.08, 0.06, 0.03],
     "color"       : "#EBC221",
-    "biomes"      : { "mountain": [0.54, null] }
+    "biomes"      : { "mountain": [0.57, null] }
   },
   {
     "id"          : "crystal_formation",

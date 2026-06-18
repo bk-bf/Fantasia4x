@@ -13,6 +13,7 @@
   import DebugScreen from '$lib/components/screens/DebugScreen.svelte';
   import ResourceSidebar from '$lib/components/UI/ResourceSidebar.svelte';
   import GameControls from '$lib/components/UI/GameControls.svelte';
+  import CustomMapMenu from '$lib/components/UI/CustomMapMenu.svelte';
   import ChroniclePanel from '$lib/components/UI/ChroniclePanel.svelte';
   import WorldEffectsLayer from '$lib/components/UI/WorldEffectsLayer.svelte';
   import LoadingScreen from '$lib/components/UI/LoadingScreen.svelte';
@@ -75,7 +76,11 @@
     );
   }
 
-  uiState.subscribe((s) => (currentScreen = s.currentScreen));
+  let customMapOpen = false;
+  uiState.subscribe((s) => {
+    currentScreen = s.currentScreen;
+    customMapOpen = s.customMapOpen;
+  });
   gameState.subscribe((s) => (buildings = s.buildings ?? []));
 
   $: hasResearch = buildings.some((b) => {
@@ -222,6 +227,12 @@
         <ChroniclePanel />
       </aside>
     </div>
+
+    <!-- Custom Map popup — rendered at the container root (NOT inside the filtered .game-header) so
+         its position:fixed escapes that stacking trap and floats above the WebGL canvas. -->
+    {#if customMapOpen}
+      <CustomMapMenu onClose={() => uiState.setCustomMap(false)} />
+    {/if}
   </div>
 {/if}
 
