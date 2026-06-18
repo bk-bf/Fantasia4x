@@ -15,6 +15,7 @@ import {
   pathfinderService
 } from '../../services/PathfinderService';
 import { occupancyService } from '../../services/OccupancyService';
+import { getRangedWeapon } from '../rangedCombat';
 import { gameLogger } from '../../dev/gameLogger';
 import { ticksFromSeconds, SECONDS_PER_TICK } from '../../core/time';
 import { rng } from '../../core/rng';
@@ -670,7 +671,12 @@ function mobSubsets(gs: GameState): { hostiles: Mob[]; huntTargets: Mob[] } {
 export function findCombatThreat(pawn: Pawn, gs: GameState): Mob | null {
   if (!pawn.position || pawn.isAlive === false) return null;
   const stance = pawn.combatStance ?? 'defensive';
-  const range = stance === 'defensive' ? 1 : pawnVisionTiles(pawn, gs);
+  const vision = pawnVisionTiles(pawn, gs);
+  let range = stance === 'defensive' ? 1 : vision;
+  // RANGED-COMBAT: a ranged pawn engages approaching threats out to its weapon range (capped by
+  // sight) even on the defensive — otherwise it would hold fire until an enemy is already adjacent.
+  const rw = getRangedWeapon(pawn);
+  if (rw) range = Math.min(Math.max(range, rw.range), vision);
   const px = pawn.position.x;
   const py = pawn.position.y;
   let best: Mob | null = null;

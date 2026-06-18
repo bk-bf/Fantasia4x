@@ -6,13 +6,22 @@
 
 ## Status
 
-Not started. **Hard-blocked by** COMBAT-SYSTEM (complete), EQUIPMENT-EXPANSION (the bow
-items + `range`/`reach`/`twoHanded` weapon fields), **and line-of-sight** — the `blocksSight`
-WASM raycast (ADR-019) is still **deferred/parked** in [ENGINE-PERFORMANCE §5](ENGINE-PERFORMANCE.md);
-ranged resolution consumes it (§I) and cannot land before it. COMBAT-SYSTEM explicitly deferred
-"ranged attacks" to a later spec — this is that spec. Magic-attuned ranged weapons
-(`staff` bolts, enchanted ammunition) belong to [MAGIC-SKILLS](MAGIC-SKILLS.md) and are
-excluded here.
+**Core implemented 2026-06-18** (Phases A–C + log feedback; `pnpm check` clean bar 2 pre-existing
+`entitySim.test.ts` errors, full suite 362 green incl. 8 new `combatRanged.test.ts`). Weapons + ammo
++ recipes are in the databases; `combatService.tickCombat` resolves ranged shots (distance penalty,
+ammo spend, reload cadence, STR-scaling gate, cover, bow-butt) and the pawn FSM stands-and-fires /
+closes to range; spent ammo recovers as `DroppedItem`s.
+
+**LoS scope reduced (user decision):** "line of sight" is a **`distance ≤ visionRange` stat check**
+(`pawnVisionRange`, base perception formula — a scalar comparison, ADR-008/Rust untouched), **not** the
+`blocksSight` WASM raycast (ADR-019, still parked in [ENGINE-PERFORMANCE §5](ENGINE-PERFORMANCE.md)).
+The real occluder raycast can replace `withinSight` later without changing callers.
+
+**Deferred (not in this cut):** aim `warmup` (data field added, behaviour optional/unwired);
+thrown-weapon self-consume (throwing_stone/spear fire without consuming for now); dynamic wood/metal
+ammo recipe slots (fixed inputs); the dedicated equipped-weapon low-ammo badge (ammo counts already
+show in `PawnInventory`); mob ranged attackers. COMBAT-SYSTEM deferred "ranged attacks" to this spec;
+magic-attuned ranged weapons belong to [MAGIC-SKILLS](MAGIC-SKILLS.md).
 
 ---
 
@@ -231,47 +240,44 @@ decision so it isn't re-litigated:
 
 ### Phase A — Data & types (no behaviour change)
 
-1. `types.ts`: add `ammoCategory?`, `reload?`, `strScaled?` to `weaponProperties`; add
-   `ammoProperties?` block to `Item`.
-2. `items.jsonc` + `recipes.jsonc`: add the weapons and ammo above. (`self_bow`/`war_bow`
-   already exist from EQUIPMENT-EXPANSION — just add the new fields to them.)
-3. New `arrow`/`bolt`/`sling_stone` item categories; ammo recipes (dynamic where they use
-   `wood`/`metal` category slots).
+- [x] 1. `types/items.ts`: added `ammoCategory?`, `reload?`, `strScaled?`, `warmup?` to
+  `weaponProperties`; added the `ammoProperties?` block to `Item`.
+- [x] 2. `items.jsonc` + `recipes.jsonc`: added `throwing_stone`/`sling`/`throwing_spear`/`crossbow`
+  + the ammo items + recipes; `self_bow`/`war_bow` got the new fields.
+- [x] 3. Ammo items use `category: "ammunition"` + an `ammoProperties.ammoCategory` tag
+  (`arrow`/`bolt`/`sling_stone`). Recipes use **fixed** inputs (dynamic wood/metal slots deferred).
 
 ### Phase B — Combat resolution (the meat)
 
-4. `Combat.ts` `attackerProfile()`: branch on `range > 0` + ammo availability → build a
-   ranged profile (distance penalty, no flanking, conditional STR scaling). **Perf (§VI-1):**
-   this runs in the per-tick worker combat phase — compute scalars inline / into a reused
-   scratch object; do **not** allocate a fresh profile object per attacker per tick.
-5. FSM tick (COMBAT-SYSTEM turn loop): if target beyond `reach` but within `range` and LoS
-   and ammo > 0 → ranged attack; else if beyond range/no LoS → move-to-close; else melee.
-6. Ammo decrement + the bow-butt melee fallback. **Perf (§VI-1):** mutate the live pawn/ammo
-   stack **in place** (pawns are already mutated in place — ADR-002 amendment / M2); no
-   pawns-array rebuild or `{...pawn}` patch.
-7. `reload` → `attackCooldown` addition (in-place scalar bump on the pawn).
+- [x] 4. New `systems/rangedCombat.ts` (pure helpers) + `Combat.ts` `buildRangedOverride()`: a ranged
+  `RangedOverride` (distance penalty, ammo bonuses, conditional STR scaling) fed into `resolveHit`.
+  **Perf (§VI-1):** built once per shot (cadence-gated), no per-tick allocation; flanking already
+  absent from the base formula.
+- [x] 5. `tickCombat` pawn loop: target beyond `reach`, within `range` + sight + ammo → ranged shot;
+  else the FSM (`handleFighting`) closes; cornered (≤1) → bow-butt. `findCombatThreat` extended so a
+  ranged pawn acquires threats out to weapon range.
+- [x] 6. Ammo decrement + bow-butt (`buildBowButtOverride`, blunt `damMax×0.4`). **Perf (§VI-1):** ammo
+  spend coalesced into a Map applied once in the final merge (gated — no rebuild at peace).
+- [~] 7. `reload` → cadence: implemented as an **interval multiplier** (`baseInterval × max(1, reload)`),
+  not an `attackCooldown` bump — gives "crossbow fires a third as often" without per-tick cooldown
+  state. `warmup` data field added but unwired (optional).
 
 ### Phase C — Line-of-sight & recovery
 
-8. Add `hasLineOfSight(a, b)` to the **spatial/visibility service interface** (ADR-008);
-   Combat calls the interface only. Cover penalty reuses the existing adjacency check.
-   **Perf (§VI-2):** the query is WASM; do **not** inline a JS Bresenham in the combat hot
-   loop. Amortise — only re-test LoS when attacker or target moved (cache the last result),
-   or stagger like the auto-defend threat scan (every N ticks, offset by `debugId`), not 60 Hz.
-9. Post-combat ammo recovery → spawn `DroppedItem`s; thrown-weapon self-consume → drop the
-   weapon `ItemInstance` on the target tile. **Perf (§VI-3):** batch recovery into ONE pass at
-   combat end (not per-shot per-tick) — `droppedItems` ships whole every snapshot flush and is
-   the next growth lever (ENGINE-PERFORMANCE §D8).
+- [~] 8. **LoS reduced to `withinSight(dist, pawnVisionRange)`** (user decision) — a scalar
+  `distance ≤ visionRange` check, no WASM raycast (ADR-008 untouched). Cover = a cheap read-only
+  neighbour-tile scan (`rangedCoverPenalty`, 0.20 if the target hugs a non-walkable tile).
+- [x] 9. Per-shot ammo recovery roll → `DroppedItem` on the target tile, **collected and appended once**
+  per tick (§VI-3, bounded by shots/tick). Thrown-weapon self-consume deferred.
 
 ### Phase D — UI & feedback
 
-10. Combat log lines for ranged hits/misses/out-of-ammo ("Bjorn looses his last arrow").
-11. Equipment/inventory panel: show equipped ranged weapon's ammo count and a low-ammo warning.
-    **Perf (§VI-4):** ammo lives in `inventory`, a **cold resync field** (refreshed ~every 32nd
-    flush, ENGINE-PERFORMANCE D5) — the count read in `projectSentEntity` will be ≤~2 s stale.
-    Fine for a low-ammo *warning*; if a live readout is wanted, promote a small `ammoCount`
-    scalar into the **sent** entity projection (`entityProjection.ts`) rather than un-cold-ing
-    the whole inventory.
+- [x] 10. Ranged hits/misses log through the existing `logCombatSwing` (weapon name shows); a one-time
+  "looses the last <ammo>" chronicle line fires when the stack empties.
+- [~] 11. Ammo counts already render in `PawnInventory` (bulk items). The dedicated equipped-weapon
+  low-ammo **badge** is deferred. **Perf (§VI-4):** ammo is a cold-resync field, so any badge reads
+  ≤~2 s stale — fine for a warning; promote a scalar into `entityProjection.ts` only if a live readout
+  is wanted.
 
 ---
 
@@ -281,24 +287,22 @@ Ranged combat lands inside the **per-tick worker combat phase** and touches `dro
 the snapshot — exactly the surfaces ENGINE-PERFORMANCE spent its arc fixing. Honour these so the
 feature doesn't re-introduce a known regression (each maps to a finding there):
 
-- [ ] **§VI-1 — no per-tick allocation in the combat tick (ADR-002 amendment / ★ DONE, M2/M4).**
-  M4 left `combat` immutable *because it's compute-bound, not alloc-bound* — that licence only
-  holds if ranged code **adds no allocation**: reuse a scratch attacker profile, mutate the live
-  pawn + ammo stack in place, bump `attackCooldown` in place. No `{...pawn}` / pawns-array rebuild
-  on the hot path (that's the 12.5× immutable tax, §9).
-- [ ] **§VI-2 — LoS through the WASM spatial service, amortised (ADR-008/019, §C).** No JS
-  Bresenham in the loop; ENGINE-PERFORMANCE defers the spatial index precisely to fold
-  nearest/vision/**LoS**/fog into ONE amortised service. Cache per attacker–target and only
-  re-query on movement, or stagger off `debugId` — a 60 Hz O(range) raycast per attacker is the
-  per-tick spatial cost §C warns against (cf. the reverted uniform-grid, §B).
-- [ ] **§VI-3 — `droppedItems` stays bounded.** Recovery + thrown-weapon drops spawn into
-  `droppedItems`, which ships **whole every flush and grows unbounded** (the next D8 lever). Batch
-  recovery once at combat end; don't drop-per-shot-per-tick. Recovered ammo benefits automatically
-  once `droppedItems` deltas land.
-- [ ] **§VI-4 — snapshot cost: don't un-cold inventory for the HUD ammo count** (D5/D8) — see step 11.
-- [ ] **§VI-5 — touch no worldMap tiles.** Drops go to `droppedItems`, LoS reads tiles read-only.
-  If anything ever writes a tile (scorch, etc.), mutate **in place + `markTileDirty`** (D6) — never
-  `worldMap.map()` (that flips the ref → full 38k re-clone + terrain rebuild, the harvest cliff).
+- [x] **§VI-1 — no per-tick allocation in the combat tick (ADR-002 amendment / ★ DONE, M2/M4).** Met:
+  the `RangedOverride` is built once per shot (cadence-gated), not per attacker per tick; ammo spend +
+  recovery are coalesced into a Map/array applied once in the final merge — no `{...pawn}`/pawns-array
+  rebuild at peace (gated on `pawnAmmoUpdates.size`).
+- [~] **§VI-2 — LoS through the WASM spatial service, amortised — MOOTED by the reduced-LoS cut.** No
+  WASM raycast and no per-tick ray walk exist: LoS is a single `distance ≤ visionRange` scalar compare
+  (`withinSight`). When the real `blocksSight` raycast (ADR-019) lands, route it through the amortised
+  spatial service then (cache per pair / stagger off `debugId`) — this checkbox re-opens with it.
+- [x] **§VI-3 — `droppedItems` stays bounded.** Met: recovery rolls per shot but the drops are collected
+  in one array and appended **once** at tick end (bounded by shots/tick), not spliced per-shot. Benefits
+  automatically once `droppedItems` deltas (D8) land.
+- [x] **§VI-4 — snapshot cost: didn't un-cold inventory for the HUD.** Ammo stays a bulk inventory field
+  surfaced by the existing `PawnInventory`; no scalar was promoted into the sent projection (the live
+  low-ammo badge was deferred rather than forced into the hot snapshot).
+- [x] **§VI-5 — touched no worldMap tiles.** Drops go to `droppedItems`; the cover check is a read-only
+  neighbour-tile scan. No `worldMap.map()` / tile writes anywhere in the ranged path.
 
 ---
 

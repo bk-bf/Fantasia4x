@@ -11,11 +11,22 @@ import type {
   DamageType,
   LimbId,
   Item,
-  ItemInstance
+  ItemInstance,
+  DroppedItem
 } from '../core/types';
 import { itemService } from '../services/ItemService';
+import {
+  getRangedWeapon,
+  pickAmmo,
+  rangedDistancePenalty,
+  withinSight,
+  pawnVisionRange,
+  type RangedWeapon,
+  type AmmoPick
+} from './rangedCombat';
 import { getCreatureById } from '../core/Creatures';
 import { woundForDamageType, woundById, severityFromFrac } from '../core/Wounds';
+import { scaleWeaponQuality, scaleArmorQuality } from '../core/itemQuality';
 import { pawnStatService } from '../services/PawnStatService';
 import { calcMaxStamina } from '../entities/Pawns';
 import conditionsData from '../database/conditions.jsonc';
@@ -176,6 +187,19 @@ interface AttackProfile {
   critMod: number;
 }
 
+/**
+ * RANGED-COMBAT: a precomputed attack used in place of `attackerProfile` for a ranged shot (or the
+ * bow-butt fallback). Carries the resolved profile plus the ranged-only hit modifier and STR-scaling
+ * flag so `resolveHit` stays a single code path. (§VI-1: built once per shot, not per tick.)
+ */
+export interface RangedOverride {
+  profile: AttackProfile;
+  /** Additive hit-chance points: ammo accuracy − distance penalty×100 − cover×100. */
+  hitMod: number;
+  /** When false (crossbow/sling), damage does NOT scale with STR. */
+  strScaled: boolean;
+}
+
 type WeaponProps = NonNullable<Item['weaponProperties']>;
 
 /** One natural-weapon candidate this swing could roll: its item id + properties. */
@@ -228,9 +252,12 @@ function attackerProfile(attacker: Pawn | Mob): AttackProfile {
 
   // Equipped weapon (pawns; future-proofed for armed mobs).
   if ('equipment' in attacker && attacker.equipment?.mainHand) {
-    const item = itemService.getItemById(attacker.equipment.mainHand.itemId);
+    const mh = attacker.equipment.mainHand;
+    const item = itemService.getItemById(mh.itemId);
     if (item?.weaponProperties) {
-      return profileFromWeapon(str, dex, item.weaponProperties, item.name ?? 'weapon');
+      // §Q: a Masterwork blade hits harder — scale the quality-relevant fields by the stamped tier.
+      const wp = scaleWeaponQuality(item.weaponProperties, mh.quality);
+      return profileFromWeapon(str, dex, wp, item.name ?? 'weapon');
     }
   }
 
@@ -311,8 +338,11 @@ function partArmorReduction(defender: Pawn | Mob, partId: BodyPartId, armorPen: 
   for (const slot of bodySlots) {
     const inst = (defender.equipment as Record<string, ItemInstance | undefined>)[slot];
     if (!inst) continue;
-    const candidate = itemService.getItemById(inst.itemId)?.armorProperties;
-    if (candidate && candidate.defense > bestDef) {
+    const baseAp = itemService.getItemById(inst.itemId)?.armorProperties;
+    if (!baseAp) continue;
+    // §Q: a Masterwork breastplate absorbs more — scale armour value by the stamped tier.
+    const candidate = scaleArmorQuality(baseAp, inst.quality);
+    if (candidate.defense > bestDef) {
       ap = candidate;
       bestDef = candidate.defense;
     }
@@ -354,7 +384,12 @@ function upsertCondition(
 
 // ── Implementation ────────────────────────────────────────────────────────────
 class CombatServiceImpl implements CombatService {
-  resolveHit(attacker: Pawn | Mob, defender: Pawn | Mob, _state: GameState): HitResult {
+  resolveHit(
+    attacker: Pawn | Mob,
+    defender: Pawn | Mob,
+    _state: GameState,
+    override?: RangedOverride
+  ): HitResult {
     const {
       str,
       dex,
@@ -366,14 +401,14 @@ class CombatServiceImpl implements CombatService {
       weaponId,
       staminaCost,
       critMod
-    } = attackerProfile(attacker);
+    } = override ? override.profile : attackerProfile(attacker);
     // Evasion uses the `dodge` stat (DEX − weight, × moving) rather than raw dexterity, so injury,
     // load, and the winded penalty (× 0.5) all lower it. ×20 keeps baseline parity with the old
     // `defDex × 2` term (dodge ≈ 1.0 at DEX 10 → 20).
     const defDodge =
       pawnStatService.evaluateStat('dodge', defender) * this.conditionDodgeMult(defender);
 
-    const hitChance = clamp(dex * 3 + accuracy - defDodge * 20, 5, 95);
+    const hitChance = clamp(dex * 3 + accuracy + (override?.hitMod ?? 0) - defDodge * 20, 5, 95);
     if (rng.random() * 100 > hitChance) {
       return {
         hit: false,
@@ -403,7 +438,8 @@ class CombatServiceImpl implements CombatService {
 
     // Damage: baseDamage × str / STAT_SCALE, then armour + resistance reduce it,
     // then the crit multiplier. STAT_SCALE=10 matches the real stat range (5–22).
-    const raw = (baseDamage * str) / STAT_SCALE;
+    // Ranged weapons with strScaled:false (crossbow/sling) bypass STR scaling — mechanical advantage.
+    const raw = override && !override.strScaled ? baseDamage : (baseDamage * str) / STAT_SCALE;
     const armorRed = partArmorReduction(defender, partId, armorPen);
     const physRes = physicalResistance(defender, damageType);
     const mitigated = raw * (1 - armorRed) * (1 - physRes);
@@ -635,9 +671,10 @@ class CombatServiceImpl implements CombatService {
     attacker: Pawn | Mob,
     target: Pawn | Mob,
     state: GameState,
-    turn: number
+    turn: number,
+    override?: RangedOverride
   ): { state: GameState; staminaCost: number } {
-    const result = this.resolveHit(attacker, target, state);
+    const result = this.resolveHit(attacker, target, state, override);
     const pos = this.entityPos(target);
 
     // Visual lunge: thrust the attacker glyph toward the struck tile and snap it back
@@ -722,8 +759,9 @@ class CombatServiceImpl implements CombatService {
     return { state: next, staminaCost: result.staminaCost };
   }
 
-  /** Nearest living hostile mob adjacent to a pawn (for auto-engagement). */
-  private nearestAdjacentHostile(pawn: Pawn, mobs: Mob[]): Mob | undefined {
+  /** Nearest living hostile mob within `maxRange` tiles of a pawn (auto-engagement; ranged
+   *  acquisition passes the weapon range, melee passes 1 = adjacent). */
+  private nearestHostileInRange(pawn: Pawn, mobs: Mob[], maxRange: number): Mob | undefined {
     if (!pawn.position) return undefined;
     const px = pawn.position.x;
     const py = pawn.position.y;
@@ -734,12 +772,143 @@ class CombatServiceImpl implements CombatService {
       const hostile = m.entityClass === 'mob' || m.state === 'Attacking' || m.state === 'Alerted';
       if (!hostile) continue;
       const d = Math.max(Math.abs(px - m.x), Math.abs(py - m.y));
-      if (d <= 1 && d < bestDist) {
+      if (d <= maxRange && d < bestDist) {
         best = m;
         bestDist = d;
       }
     }
     return best;
+  }
+
+  /** Binary cover: 0.20 if the target hugs a sight-blocker (a non-walkable neighbour tile). Read-only. */
+  private rangedCoverPenalty(state: GameState, x: number, y: number): number {
+    const map = state.worldMap;
+    const h = map.length;
+    const w = h > 0 ? map[0].length : 0;
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        if (dx === 0 && dy === 0) continue;
+        const nx = x + dx;
+        const ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+        if (map[ny][nx]?.walkable === false) return 0.2;
+      }
+    }
+    return 0;
+  }
+
+  /** Build the ranged attack profile (weapon + ammo bonuses) and hit modifier for one shot (§VI-1). */
+  private buildRangedOverride(
+    pawn: Pawn,
+    rw: RangedWeapon,
+    ammo: AmmoPick | null,
+    dist: number,
+    coverPenalty: number
+  ): RangedOverride {
+    const rawWp = itemService.getItemById(rw.itemId)?.weaponProperties;
+    // §Q: a Masterwork bow shoots harder/truer — scale the quality-relevant fields by the tier.
+    const wp = rawWp ? scaleWeaponQuality(rawWp, rw.quality) : undefined;
+    const profile = profileFromWeapon(
+      pawn.stats.strength,
+      pawn.stats.dexterity,
+      wp ?? { damage: 1, attackSpeed: 1, range: rw.range },
+      rw.itemName
+    );
+    profile.baseDamage += ammo?.props.damageBonus ?? 0;
+    profile.armorPen = clamp(profile.armorPen + (ammo?.props.armorPen ?? 0), 0, 1);
+    const hitMod =
+      (ammo?.props.accuracyBonus ?? 0) -
+      rangedDistancePenalty(dist, rw.range) * 100 -
+      coverPenalty * 100;
+    return { profile, hitMod, strScaled: rw.strScaled };
+  }
+
+  /** Bow-butt: a cornered ranged user makes a weak blunt strike (damMax×0.4) rather than firing into contact. */
+  private buildBowButtOverride(pawn: Pawn, rw: RangedWeapon): RangedOverride {
+    const rawWp = itemService.getItemById(rw.itemId)?.weaponProperties;
+    const wp = rawWp ? scaleWeaponQuality(rawWp, rw.quality) : undefined;
+    const base = Math.max(1, (wp?.damMax ?? wp?.damage ?? 4) * 0.4);
+    const profile = profileFromWeapon(
+      pawn.stats.strength,
+      pawn.stats.dexterity,
+      {
+        damage: base,
+        attackSpeed: wp?.attackSpeed ?? 1,
+        range: 0,
+        damageType: 'blunt',
+        bluntMod: 1.0,
+        staminaCost: wp?.staminaCost
+      },
+      `${rw.itemName} (butt)`
+    );
+    return { profile, hitMod: 0, strScaled: true };
+  }
+
+  /**
+   * Attempt one ranged shot. Returns the new state + stamina cost if it fired, or null when the
+   * target is out of range / out of sight / out of ammo / off-cadence (the FSM then closes to melee).
+   * Records ammo spend + a recovery drop into the caller's collections (applied once in the merge).
+   */
+  private tryRangedShot(
+    pawn: Pawn,
+    target: Pawn | Mob,
+    tpos: { x: number; y: number },
+    dist: number,
+    rw: RangedWeapon,
+    state: GameState,
+    turn: number,
+    ammoUpdates: Map<string, { itemId: string; newQty: number }>,
+    recovered: DroppedItem[]
+  ): { state: GameState; staminaCost: number } | null {
+    if (dist > rw.range) return null; // out of range — close the distance (FSM)
+    if (!withinSight(dist, pawnVisionRange(pawn))) return null; // reduced LoS: not in sight
+
+    // Ammo: weapons with an ammoCategory need a matching stack; self-thrown weapons (no category)
+    // fire freely for now (true self-consume is deferred — see the spec's Open Questions).
+    let ammo: AmmoPick | null = null;
+    if (rw.ammoCategory) {
+      ammo = pickAmmo(pawn, rw.ammoCategory);
+      if (!ammo) return null; // out of ammo — fall back to closing/melee
+    }
+
+    // Cadence: base interval × reload multiplier (crossbow reload 3 → a third the rate of a bow).
+    const attackSpeed = Math.max(0.5, pawnStatService.evaluateStat('attack_speed', pawn));
+    const baseInterval = Math.max(
+      MIN_ATTACK_INTERVAL_TICKS,
+      Math.round(BASE_ATTACK_INTERVAL_TICKS / attackSpeed)
+    );
+    const interval = baseInterval * Math.max(1, rw.reload || 1);
+    if (turn % interval !== 0) return null;
+
+    const cover = this.rangedCoverPenalty(state, tpos.x, tpos.y);
+    const override = this.buildRangedOverride(pawn, rw, ammo, dist, cover);
+    const atk = this.performAttack(pawn, target, state, turn, override);
+
+    if (ammo) {
+      const have = pawn.inventory?.items?.[ammo.itemId] ?? 0;
+      const newQty = Math.max(0, have - 1);
+      ammoUpdates.set(pawn.id, { itemId: ammo.itemId, newQty });
+      // One-time chronicle line as the quiver runs dry — the pawn then closes to melee/bow-butt.
+      if (newQty === 0) {
+        const ammoName = (itemService.getItemById(ammo.itemId)?.name ?? 'ammunition').toLowerCase();
+        simLog.logEvent({
+          category: 'combat',
+          turn,
+          message: `${pawn.name} looses the last ${ammoName} and falls back to melee.`
+        });
+      }
+      const recover = ammo.props.recoverable ?? 0;
+      if (recover > 0 && rng.random() < recover) {
+        recovered.push({
+          id: `recovered-${ammo.itemId}-${turn}-${tpos.x}-${tpos.y}-${Math.floor(rng.random() * 1e6)}`,
+          resourceId: ammo.itemId,
+          x: tpos.x,
+          y: tpos.y,
+          quantity: 1
+        });
+      }
+    }
+    return atk;
   }
 
   /** True while an entity is knocked down OR collapsed and cannot swing this tick. */
@@ -824,6 +993,10 @@ class CombatServiceImpl implements CombatService {
     // Track stamina mutations for attacking entities (id → new stamina value).
     const mobStaminaUpdates = new Map<string, number>();
     const pawnStaminaUpdates = new Map<string, number>();
+    // RANGED-COMBAT: ammo spent this tick (pawnId → new stack qty) and recovered projectiles to drop,
+    // both applied once in the final merge (§VI-1/§VI-3: no per-shot pawns-array rebuild, bounded drops).
+    const pawnAmmoUpdates = new Map<string, { itemId: string; newQty: number }>();
+    const recoveredAmmo: DroppedItem[] = [];
 
     // ── Mob attacks ──────────────────────────────────────────────────────
     const mobs = state.mobs ?? [];
@@ -884,8 +1057,12 @@ class CombatServiceImpl implements CombatService {
       if (this.isKnockedDown(pawn)) continue;
       if (this.isWinded(pawn)) continue; // out of breath — pass turns until stamina recovers
 
-      // Resolve the pawn's target: an explicit draft order, or — for an
-      // undrafted pawn the FSM has put into Fighting — the nearest adjacent hostile.
+      // RANGED-COMBAT: a ranged pawn acquires hostiles out to its weapon range, not just adjacent.
+      const rw = getRangedWeapon(pawn);
+      const acquireRange = rw ? Math.min(rw.range, pawnVisionRange(pawn)) : 1;
+
+      // Resolve the pawn's target: an explicit draft order, or — for an undrafted pawn the FSM has
+      // put into Fighting — the nearest hostile within reach (melee adjacent, or ranged weapon range).
       let target: Pawn | Mob | undefined;
       if (pawn.drafted && pawn.draftTarget?.type === 'attack') {
         const dt = pawn.draftTarget;
@@ -903,12 +1080,12 @@ class CombatServiceImpl implements CombatService {
         }
       } else if (pawn.drafted) {
         // NT-4: a drafted pawn with no explicit attack order (idle, holding, or mid-move) still
-        // defends itself — it swings at the nearest adjacent hostile instead of standing inert
-        // when the player walks it up to an enemy. No adjacent hostile → nothing to do.
-        target = this.nearestAdjacentHostile(pawn, mobs);
+        // defends itself — it swings at the nearest hostile in reach instead of standing inert
+        // when the player walks it up to an enemy. No hostile in reach → nothing to do.
+        target = this.nearestHostileInRange(pawn, mobs, acquireRange);
         if (!target) continue;
       } else if (pawn.currentState === 'Fighting') {
-        target = this.nearestAdjacentHostile(pawn, mobs);
+        target = this.nearestHostileInRange(pawn, mobs, acquireRange);
       } else if (pawn.currentState === 'Hunting' && pawn.huntTargetId) {
         // Work-driven hunt: swing at the marked quarry (a neutral animal isn't a
         // "hostile", so it must be targeted explicitly rather than via nearestAdjacentHostile).
@@ -919,8 +1096,37 @@ class CombatServiceImpl implements CombatService {
       if (!target) continue;
 
       const tpos = this.entityPos(target);
-      if (Math.abs(pawn.position.x - tpos.x) > 1 || Math.abs(pawn.position.y - tpos.y) > 1)
-        continue;
+      const tdist = Math.max(
+        Math.abs(pawn.position.x - tpos.x),
+        Math.abs(pawn.position.y - tpos.y)
+      );
+      const curStamina = pawn.stamina ?? pawn.maxStamina ?? 50;
+
+      // ── Ranged: fire at a target beyond melee but within range + sight + ammo (on cadence). ──
+      if (rw && tdist > 1) {
+        const shot = this.tryRangedShot(
+          pawn,
+          target,
+          tpos,
+          tdist,
+          rw,
+          next,
+          state.turn,
+          pawnAmmoUpdates,
+          recoveredAmmo
+        );
+        if (shot) {
+          next = shot.state;
+          pawnStaminaUpdates.set(
+            pawn.id,
+            Math.max(0, curStamina - shot.staminaCost * fatigueStaminaFactor(pawn))
+          );
+        }
+        continue; // out of range/sight/ammo → the FSM closes; never a melee swing at distance
+      }
+
+      // ── Melee: requires adjacency. A cornered ranged user makes a weak bow-butt strike. ──
+      if (tdist > 1) continue;
 
       // Attack cadence — scaled by attack_speed stat.
       const pawnAttackSpeed = Math.max(0.5, pawnStatService.evaluateStat('attack_speed', pawn));
@@ -930,8 +1136,8 @@ class CombatServiceImpl implements CombatService {
       );
       if (state.turn % pawnInterval !== 0) continue;
 
-      const curStamina = pawn.stamina ?? pawn.maxStamina ?? 50;
-      const atk = this.performAttack(pawn, target, next, state.turn);
+      const meleeOverride = rw ? this.buildBowButtOverride(pawn, rw) : undefined;
+      const atk = this.performAttack(pawn, target, next, state.turn, meleeOverride);
       next = atk.state;
       // Fatigue raises the effective drain (cost × factor) — a tired attacker winds faster.
       pawnStaminaUpdates.set(
@@ -964,6 +1170,25 @@ class CombatServiceImpl implements CombatService {
       mobs: tickAll(next.mobs ?? [], mobStaminaUpdates),
       pawns: tickAll(next.pawns, pawnStaminaUpdates)
     };
+
+    // RANGED-COMBAT: apply ammo spend (decrement the fired stack) — gated, so no rebuild at peace.
+    if (pawnAmmoUpdates.size > 0) {
+      next = {
+        ...next,
+        pawns: next.pawns.map((p) => {
+          const upd = pawnAmmoUpdates.get(p.id);
+          if (!upd || !p.inventory) return p;
+          const items = { ...p.inventory.items };
+          if (upd.newQty <= 0) delete items[upd.itemId];
+          else items[upd.itemId] = upd.newQty;
+          return { ...p, inventory: { ...p.inventory, items } };
+        })
+      };
+    }
+    // Recovered projectiles drop on the struck tiles (haulable like any drop). §VI-3: appended once.
+    if (recoveredAmmo.length > 0) {
+      next = { ...next, droppedItems: [...(next.droppedItems ?? []), ...recoveredAmmo] };
+    }
 
     return next;
   }

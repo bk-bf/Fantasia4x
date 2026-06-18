@@ -12,6 +12,7 @@ import {
   endHunt,
   laborLevel
 } from '../pawnHelpers';
+import { getRangedWeapon } from '../../rangedCombat';
 import { checkNeedInterrupts } from '../needSelection';
 
 /**
@@ -26,8 +27,22 @@ export function handleFighting(pawn: Pawn, gameState: GameState): GameState {
   if (!threat || !pawn.position) {
     return threat ? haltMovement(pawn, gameState) : transitionTo(pawn, PAWN_STATE.IDLE, gameState);
   }
-  const adjacent =
-    Math.max(Math.abs(pawn.position.x - threat.x), Math.abs(pawn.position.y - threat.y)) <= 1;
+  const dist = Math.max(
+    Math.abs(pawn.position.x - threat.x),
+    Math.abs(pawn.position.y - threat.y)
+  );
+
+  // RANGED-COMBAT: a ranged pawn stands and shoots once the threat is within weapon range (combatService
+  // resolves the shot); only when the target is beyond range does it close to get into range.
+  const rw = getRangedWeapon(pawn);
+  if (rw) {
+    if (dist <= rw.range) return haltMovement(pawn, gameState); // in range (or cornered → bow-butt): hold and fire
+    if ((pawn.path?.length ?? 0) > 0) return gameState; // already closing
+    const afterPath = tryAssignPath(pawn, threat.x, threat.y, gameState);
+    return afterPath ?? haltMovement(pawn, gameState);
+  }
+
+  const adjacent = dist <= 1;
   if (adjacent) {
     // Stand and trade blows — combatService.tickCombat() resolves Fighting-pawn swings.
     return haltMovement(pawn, gameState);
