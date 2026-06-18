@@ -64,6 +64,33 @@
         "formula"    : "(0.05 + (DEX − 10) × 0.005 + (PER − 10) × 0.0025) × consciousness × sight",
         "description": "base critical-hit probability 0–1 (× consciousness × sight); weapons add their own critMod on top"
     },
+    // ── Ranged (RANGED-COMBAT) — three INDEPENDENT primary stats so ranged builds diverge:
+    //    a PER deadeye (accuracy), a DEX quick-draw (speed), a STR power-archer (range). Each is a
+    //    ~1.0-baseline multiplier the combat path turns into hit points / aim cadence / effective tiles,
+    //    with a LINEAR distance term added in Combat (farther = less accurate AND slower to aim). Gear
+    //    + the weapon contribute flat `aimBonuses` on top (read directly — equipment doesn't reach the
+    //    stat engine). All fold in body capacities, so a wounded/dim-sighted archer aims worse.
+    {
+        "id"         : "aim_accuracy",
+        "category"   : "combat",
+        "primaryStat": "perception",
+        "formula"    : "(1.0 + (PER − 10) × 0.04 + (DEX − 10) × 0.01) × sight × manipulation",
+        "description": "ranged hit accuracy — PER deadeye (DEX steadies), × sight × manipulation; Combat adds a linear distance penalty + gear/ammo aimBonuses"
+    },
+    {
+        "id"         : "aim_speed",
+        "category"   : "combat",
+        "primaryStat": "dexterity",
+        "formula"    : "(1.0 + (DEX − 10) × 0.04 + (PER − 10) × 0.01) × manipulation",
+        "description": "ranged aim cadence — DEX quick-draw, × manipulation; Combat divides the per-shot aim interval by this and multiplies it by distance (far targets take longer to line up)"
+    },
+    {
+        "id"         : "aim_range",
+        "category"   : "combat",
+        "primaryStat": "strength",
+        "formula"    : "(1.0 + (STR − 10) × 0.025 + (PER − 10) × 0.01) × sight",
+        "description": "ranged reach multiplier — STR draw/throw power (PER spots farther), × sight; scales the weapon's base range, capped by visionRange (effectiveRange = min(vision, weaponRange × aim_range + gear))"
+    },
     {
         "id"         : "heal_rate",
         "category"   : "physical",

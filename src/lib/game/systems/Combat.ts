@@ -18,9 +18,11 @@ import { itemService } from '../services/ItemService';
 import {
   getRangedWeapon,
   pickAmmo,
-  rangedDistancePenalty,
-  withinSight,
-  pawnVisionRange,
+  effectiveRangedRange,
+  rangedAccuracyMod,
+  aimIntervalTicks,
+  sumAimBonuses,
+  hasMeleeMainHand,
   type RangedWeapon,
   type AmmoPick
 } from './rangedCombat';
@@ -816,10 +818,15 @@ class CombatServiceImpl implements CombatService {
     );
     profile.baseDamage += ammo?.props.damageBonus ?? 0;
     profile.armorPen = clamp(profile.armorPen + (ammo?.props.armorPen ?? 0), 0, 1);
-    const hitMod =
-      (ammo?.props.accuracyBonus ?? 0) -
-      rangedDistancePenalty(dist, rw.range) * 100 -
-      coverPenalty * 100;
+    // Hit chance: the PER-driven `aim_accuracy` stat + flat gear/ammo accuracy − a LINEAR distance
+    // penalty − cover. (Replaces the old optimal-band curve with the requested linear falloff.)
+    const hitMod = rangedAccuracyMod(
+      pawnStatService.evaluateStat('aim_accuracy', pawn),
+      sumAimBonuses(pawn).accuracy,
+      ammo?.props.accuracyBonus ?? 0,
+      dist,
+      coverPenalty
+    );
     return { profile, hitMod, strScaled: rw.strScaled };
   }
 
@@ -860,8 +867,8 @@ class CombatServiceImpl implements CombatService {
     ammoUpdates: Map<string, { itemId: string; newQty: number }>,
     recovered: DroppedItem[]
   ): { state: GameState; staminaCost: number } | null {
-    if (dist > rw.range) return null; // out of range — close the distance (FSM)
-    if (!withinSight(dist, pawnVisionRange(pawn))) return null; // reduced LoS: not in sight
+    // Effective range = STR-scaled weapon reach + gear, capped by vision — subsumes the sight check.
+    if (dist > effectiveRangedRange(pawn, rw)) return null; // out of range/sight — close (FSM)
 
     // Ammo: weapons with an ammoCategory need a matching stack; self-thrown weapons (no category)
     // fire freely for now (true self-consume is deferred — see the spec's Open Questions).
@@ -871,13 +878,20 @@ class CombatServiceImpl implements CombatService {
       if (!ammo) return null; // out of ammo — fall back to closing/melee
     }
 
-    // Cadence: base interval × reload multiplier (crossbow reload 3 → a third the rate of a bow).
+    // Aim cadence: base interval × reload, LENGTHENED linearly by distance, SHORTENED by the DEX-driven
+    // `aim_speed` stat + gear (far targets take longer to line up; quick-draws fire faster).
     const attackSpeed = Math.max(0.5, pawnStatService.evaluateStat('attack_speed', pawn));
     const baseInterval = Math.max(
       MIN_ATTACK_INTERVAL_TICKS,
       Math.round(BASE_ATTACK_INTERVAL_TICKS / attackSpeed)
     );
-    const interval = baseInterval * Math.max(1, rw.reload || 1);
+    const interval = aimIntervalTicks(
+      baseInterval,
+      rw.reload,
+      dist,
+      pawnStatService.evaluateStat('aim_speed', pawn),
+      sumAimBonuses(pawn).speed
+    );
     if (turn % interval !== 0) return null;
 
     const cover = this.rangedCoverPenalty(state, tpos.x, tpos.y);
@@ -1059,7 +1073,7 @@ class CombatServiceImpl implements CombatService {
 
       // RANGED-COMBAT: a ranged pawn acquires hostiles out to its weapon range, not just adjacent.
       const rw = getRangedWeapon(pawn);
-      const acquireRange = rw ? Math.min(rw.range, pawnVisionRange(pawn)) : 1;
+      const acquireRange = rw ? effectiveRangedRange(pawn, rw) : 1;
 
       // Resolve the pawn's target: an explicit draft order, or — for an undrafted pawn the FSM has
       // put into Fighting — the nearest hostile within reach (melee adjacent, or ranged weapon range).
@@ -1136,7 +1150,10 @@ class CombatServiceImpl implements CombatService {
       );
       if (state.turn % pawnInterval !== 0) continue;
 
-      const meleeOverride = rw ? this.buildBowButtOverride(pawn, rw) : undefined;
+      // Bow-butt only when the ranged weapon IS the main weapon. A hybrid (melee main-hand + off-hand
+      // thrown weapon) melees normally with the real weapon instead of pommel-striking the spear.
+      const meleeOverride =
+        rw && !hasMeleeMainHand(pawn) ? this.buildBowButtOverride(pawn, rw) : undefined;
       const atk = this.performAttack(pawn, target, next, state.turn, meleeOverride);
       next = atk.state;
       // Fatigue raises the effective drain (cost × factor) — a tired attacker winds faster.

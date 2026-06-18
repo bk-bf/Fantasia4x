@@ -3,10 +3,16 @@ import { combatService } from './Combat';
 import {
   getRangedWeapon,
   pickAmmo,
-  rangedDistancePenalty,
   pawnVisionRange,
-  isRangedWeaponProps
+  isRangedWeaponProps,
+  isThrownWeaponProps,
+  effectiveRangedRange,
+  rangedAccuracyMod,
+  aimIntervalTicks,
+  sumAimBonuses,
+  hasMeleeMainHand
 } from './rangedCombat';
+import { getEquipmentSlot } from '../core/PawnEquipment';
 import { itemService } from '../services/ItemService';
 import type { GameState, Mob, Pawn } from '../core/types';
 
@@ -108,16 +114,54 @@ describe('rangedCombat helpers', () => {
     expect(pickAmmo(archer, 'bolt')).toBeNull();
   });
 
-  it('distance penalty is 0 at the optimal band and climbs toward the range edge', () => {
-    // self_bow range 6 → optimal = ceil(3) = 3.
-    expect(rangedDistancePenalty(3, 6)).toBe(0);
-    expect(rangedDistancePenalty(6, 6)).toBeGreaterThan(rangedDistancePenalty(4, 6));
-    expect(rangedDistancePenalty(100, 6)).toBeLessThanOrEqual(0.4);
-  });
-
   it('vision range follows perception (not the evaluateStat 1.0 fallback)', () => {
     expect(pawnVisionRange(makeArcher())).toBe(10);
     expect(pawnVisionRange(makeArcher({ stats: { ...stats, perception: 20 } } as Partial<Pawn>))).toBe(15);
+  });
+
+  it('accuracy falls off LINEARLY with distance and rewards the aim stat', () => {
+    const near = rangedAccuracyMod(1.0, 0, 0, 2, 0);
+    const far = rangedAccuracyMod(1.0, 0, 0, 8, 0);
+    expect(near).toBeGreaterThan(far); // farther = less likely
+    expect(near - far).toBeCloseTo((8 - 2) * 2.5, 5); // strictly linear in distance
+    // A higher aim_accuracy stat lifts the whole curve; cover lowers it.
+    expect(rangedAccuracyMod(1.4, 0, 0, 4, 0)).toBeGreaterThan(rangedAccuracyMod(1.0, 0, 0, 4, 0));
+    expect(rangedAccuracyMod(1.0, 0, 0, 4, 0.2)).toBeLessThan(rangedAccuracyMod(1.0, 0, 0, 4, 0));
+  });
+
+  it('aim interval lengthens with distance and shortens with aim_speed', () => {
+    expect(aimIntervalTicks(90, 1, 8, 1.0, 0)).toBeGreaterThan(aimIntervalTicks(90, 1, 2, 1.0, 0));
+    expect(aimIntervalTicks(90, 1, 4, 1.5, 0)).toBeLessThan(aimIntervalTicks(90, 1, 4, 1.0, 0));
+    expect(aimIntervalTicks(90, 3, 4, 1.0, 0)).toBeGreaterThan(aimIntervalTicks(90, 1, 4, 1.0, 0)); // reload
+  });
+
+  it('effective range scales weapon range by STR (aim_range), capped by vision', () => {
+    const weak = makeArcher({ stats: { ...stats, strength: 5 } } as Partial<Pawn>);
+    const strong = makeArcher({ stats: { ...stats, strength: 22 } } as Partial<Pawn>);
+    const rw = getRangedWeapon(weak)!;
+    expect(effectiveRangedRange(strong, rw)).toBeGreaterThan(effectiveRangedRange(weak, rw));
+    // Never exceeds the pawn's vision range (PER 10 → 10).
+    expect(effectiveRangedRange(strong, rw)).toBeLessThanOrEqual(pawnVisionRange(strong));
+  });
+
+  it('sums aimBonuses across equipped gear', () => {
+    const geared = makeArcher({
+      equipment: {
+        mainHand: { itemId: 'self_bow', durability: 80 },
+        gloves: { itemId: 'archers_bracers', durability: 50 }, // speed 0.2
+        back: { itemId: 'marksmans_cloak', durability: 60 } // range 1, accuracy 2
+      }
+    } as Partial<Pawn>);
+    const b = sumAimBonuses(geared);
+    expect(b.speed).toBeGreaterThan(0); // bracers
+    expect(b.range).toBeGreaterThanOrEqual(2); // self_bow(1) + cloak(1)
+    expect(b.accuracy).toBeGreaterThanOrEqual(5); // self_bow(3) + cloak(2)
+  });
+
+  it('routes thrown weapons to the OFF hand and bows to the main hand (one-handed hybrid)', () => {
+    expect(isThrownWeaponProps(itemService.getItemById('throwing_spear')?.weaponProperties)).toBe(true);
+    expect(getEquipmentSlot(itemService.getItemById('throwing_spear')!)).toBe('offHand');
+    expect(getEquipmentSlot(itemService.getItemById('self_bow')!)).toBe('mainHand');
   });
 });
 
@@ -167,5 +211,35 @@ describe('ranged combat (headless tickCombat)', () => {
       if (wounds.some((w) => w.type === 'crush')) bluntWound = true; // blunt → crush wound
     }
     expect(bluntWound).toBe(true);
+  });
+
+  it('hybrid: a melee main-hand + off-hand throwing spear throws at range, melees up close', () => {
+    // Sword (bone_knife) main-hand + throwing_spear off-hand — getRangedWeapon finds the off-hand
+    // thrown weapon, and the melee main-hand suppresses the bow-butt.
+    const hybrid = makeArcher({
+      equipment: {
+        mainHand: { itemId: 'bone_knife', durability: 60 },
+        offHand: { itemId: 'throwing_spear', durability: 20 }
+      },
+      inventory: {
+        items: {},
+        instances: [],
+        weightKg: 0,
+        maxWeightKg: 50,
+        volumeL: 0,
+        maxVolumeL: 50
+      }
+    } as unknown as Partial<Pawn>);
+    expect(getRangedWeapon(hybrid)?.itemId).toBe('throwing_spear');
+    expect(hasMeleeMainHand(hybrid)).toBe(true);
+
+    // Mob 3 tiles away → thrown (piercing); thrown weapons need no ammo stack.
+    let state = makeState([hybrid], [makeGoblin()]);
+    let pierced = false;
+    for (let t = 0; t < 2000 && !pierced; t++) {
+      state = combatService.tickCombat({ ...state, turn: t }, 16);
+      if ((state.mobs![0].injuries ?? []).some((w) => w.type === 'puncture')) pierced = true;
+    }
+    expect(pierced).toBe(true);
   });
 });

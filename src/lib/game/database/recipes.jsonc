@@ -1424,6 +1424,45 @@
     "researchRequired": "iron_working"
   },
   {
+    "id": "make_rangers_hood",
+    "station": "makers_bench",
+    "inputs": {
+      "light_leather": 1,
+      "cordage": 1
+    },
+    "outputs": {
+      "rangers_hood": 1
+    },
+    "workAmount": 4,
+    "toolTierRequired": 0
+  },
+  {
+    "id": "make_archers_bracers",
+    "station": "makers_bench",
+    "inputs": {
+      "light_leather": 1,
+      "cordage": 1
+    },
+    "outputs": {
+      "archers_bracers": 1
+    },
+    "workAmount": 4,
+    "toolTierRequired": 0
+  },
+  {
+    "id": "make_marksmans_cloak",
+    "station": "makers_bench",
+    "inputs": {
+      "light_leather": 2,
+      "cordage": 1
+    },
+    "outputs": {
+      "marksmans_cloak": 1
+    },
+    "workAmount": 6,
+    "toolTierRequired": 0
+  },
+  {
     "id": "make_iron_boss_shield",
     "station": "anvil",
     "inputs": {

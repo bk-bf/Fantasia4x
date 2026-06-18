@@ -12,7 +12,7 @@ import {
   endHunt,
   laborLevel
 } from '../pawnHelpers';
-import { getRangedWeapon } from '../../rangedCombat';
+import { getRangedWeapon, effectiveRangedRange } from '../../rangedCombat';
 import { checkNeedInterrupts } from '../needSelection';
 
 /**
@@ -36,7 +36,7 @@ export function handleFighting(pawn: Pawn, gameState: GameState): GameState {
   // resolves the shot); only when the target is beyond range does it close to get into range.
   const rw = getRangedWeapon(pawn);
   if (rw) {
-    if (dist <= rw.range) return haltMovement(pawn, gameState); // in range (or cornered → bow-butt): hold and fire
+    if (dist <= effectiveRangedRange(pawn, rw)) return haltMovement(pawn, gameState); // in range (or cornered → bow-butt): hold and fire
     if ((pawn.path?.length ?? 0) > 0) return gameState; // already closing
     const afterPath = tryAssignPath(pawn, threat.x, threat.y, gameState);
     return afterPath ?? haltMovement(pawn, gameState);

@@ -309,6 +309,21 @@ export interface Item {
     recoverable?: number; // 0–1 chance to recover the spent projectile as a DroppedItem after a shot (default 0)
   };
 
+  /**
+   * RANGED-COMBAT: flat aim boosts contributed by an EQUIPPED item — both a ranged weapon's own
+   * "personality" (a war bow boosts `range`, a short bow `speed`, a crossbow `accuracy`) and worn
+   * marksman gear (bracers/hood/cloak). Summed across ALL equipped slots in the ranged combat path
+   * (equipment doesn't reach the stat engine, so these are read directly, NOT via `evaluateStat`).
+   *   accuracy — flat hit-chance points added to the shot.
+   *   speed    — fractional aim-cadence bonus (0.2 = aim 20% faster), stacks on the `aim_speed` stat.
+   *   range    — flat tiles of effective reach added (still capped by visionRange).
+   */
+  aimBonuses?: {
+    accuracy?: number;
+    speed?: number;
+    range?: number;
+  };
+
   armorProperties?: {
     defense: number;
     armorType?: 'light' | 'medium' | 'heavy' | 'shield';

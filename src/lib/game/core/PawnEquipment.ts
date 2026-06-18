@@ -65,8 +65,14 @@ export function equippedTemperatureResistance(pawn: Pawn): { cold: number; heat:
 export function getEquipmentSlot(item: Item): EquipmentSlot | null {
   if (item.armorProperties?.equipmentSlot) return item.armorProperties.equipmentSlot;
   switch (item.type) {
-    case 'weapon':
-      return 'mainHand';
+    case 'weapon': {
+      // RANGED-COMBAT: a thrown weapon (ranged, no ammo bucket, one-handed) is worn in the OFF hand so
+      // it pairs with a melee main-hand — the hybrid STR/PER build, instead of a shield. Mirrors
+      // `rangedCombat.isThrownWeaponProps` (inlined: core/ must not import upward from systems/).
+      const wp = item.weaponProperties;
+      const thrown = !!wp && (wp.range ?? 0) > 1 && !wp.ammoCategory && !wp.twoHanded;
+      return thrown ? 'offHand' : 'mainHand';
+    }
     case 'armor': {
       const slot = item.armorProperties?.slot;
       switch (slot) {

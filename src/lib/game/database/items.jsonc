@@ -3048,7 +3048,8 @@
       "ammoCategory"    : "arrow",
       "reload"          : 1,
       "strScaled"       : true
-    }
+    },
+    "aimBonuses": { "accuracy": 3, "range": 1 }
   },
   {
     "id": "rawhide_round_shield",
@@ -3221,7 +3222,8 @@
       "reload"          : 1,
       "strScaled"       : true,
       "warmup"          : 2
-    }
+    },
+    "aimBonuses": { "accuracy": 4, "range": 3 }
   },
   {
     "id": "throwing_stone",
@@ -3249,7 +3251,8 @@
       "staminaCost"     : 2,
       "twoHanded"       : false,
       "strScaled"       : true
-    }
+    },
+    "aimBonuses": { "speed": 0.1 }
   },
   {
     "id": "sling",
@@ -3280,7 +3283,8 @@
       "ammoCategory"    : "sling_stone",
       "reload"          : 1,
       "strScaled"       : false
-    }
+    },
+    "aimBonuses": { "speed": 0.3, "accuracy": -2 }
   },
   {
     "id": "throwing_spear",
@@ -3309,7 +3313,8 @@
       "staminaCost"     : 3,
       "twoHanded"       : false,
       "strScaled"       : true
-    }
+    },
+    "aimBonuses": { "accuracy": 4, "range": 2, "speed": 0.1 }
   },
   {
     "id": "crossbow",
@@ -3342,7 +3347,8 @@
       "ammoCategory"    : "bolt",
       "reload"          : 3,
       "strScaled"       : false
-    }
+    },
+    "aimBonuses": { "accuracy": 10 }
   },
   {
     "id": "sling_stone",
@@ -3608,6 +3614,90 @@
       "movementPenalty": 0.0,
       "coldResistance" : 0.06
     }
+  },
+  {
+    "id": "rangers_hood",
+    "charSpans": [ {"sheet": "items", "id": 80} ],
+    "name": "Ranger's Hood",
+    "type": "armor",
+    "category": "leather",
+    "deteriorationRate": 0.01,
+    "description": "A soft leather hood with a low brim that cuts glare and steadies the eye. Favoured by marksmen.",
+    "color": "#5A6B3C",
+    "amount": 0,
+    "weightKg": 0.7,
+    "volumeL": 1.4,
+    "tier": 1,
+    "maxDurability": 55,
+    "durabilityLossPerCombatHit": 12,
+    "armorProperties": {
+      "defense"        : 3,
+      "armorType"      : "light",
+      "slot"           : "headBase",
+      "equipmentSlot"  : "headBase",
+      "armorLayer"     : "gambeson",
+      "armorValue"     : 3,
+      "fatiguePerTurn" : 0.08,
+      "movementPenalty": 0.0,
+      "coldResistance" : 0.05
+    },
+    "aimBonuses": { "accuracy": 4 }
+  },
+  {
+    "id": "archers_bracers",
+    "charSpans": [ {"sheet": "items", "id": 81} ],
+    "name": "Archer's Bracers",
+    "type": "armor",
+    "category": "leather",
+    "deteriorationRate": 0.01,
+    "description": "Stiff leather vambraces that guard the forearm from the string and free a faster draw.",
+    "color": "#7B4020",
+    "amount": 0,
+    "weightKg": 0.5,
+    "volumeL": 1.0,
+    "tier": 1,
+    "maxDurability": 55,
+    "durabilityLossPerCombatHit": 12,
+    "armorProperties": {
+      "defense"        : 3,
+      "armorType"      : "light",
+      "slot"           : "hands",
+      "equipmentSlot"  : "gloves",
+      "armorLayer"     : "gambeson",
+      "armorValue"     : 3,
+      "fatiguePerTurn" : 0.06,
+      "movementPenalty": 0.0,
+      "coldResistance" : 0.04
+    },
+    "aimBonuses": { "speed": 0.2 }
+  },
+  {
+    "id": "marksmans_cloak",
+    "charSpans": [ {"sheet": "items", "id": 82} ],
+    "name": "Marksman's Cloak",
+    "type": "armor",
+    "category": "leather",
+    "deteriorationRate": 0.01,
+    "description": "A long oiled-leather cloak for a steady stance on open ground; its weight settles the aim for the long shot.",
+    "color": "#4C5A3A",
+    "amount": 0,
+    "weightKg": 1.6,
+    "volumeL": 3.0,
+    "tier": 1,
+    "maxDurability": 60,
+    "durabilityLossPerCombatHit": 10,
+    "armorProperties": {
+      "defense"        : 4,
+      "armorType"      : "light",
+      "slot"           : "back",
+      "equipmentSlot"  : "back",
+      "armorLayer"     : "gambeson",
+      "armorValue"     : 4,
+      "fatiguePerTurn" : 0.10,
+      "movementPenalty": 0.0,
+      "coldResistance" : 0.12
+    },
+    "aimBonuses": { "range": 1, "accuracy": 2 }
   },
   {
     "id": "cast_bronze_skullcap",
