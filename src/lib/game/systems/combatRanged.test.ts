@@ -16,6 +16,7 @@ import {
 } from './rangedCombat';
 import { getEquipmentSlot } from '../core/PawnEquipment';
 import { itemService } from '../services/ItemService';
+import { recipeService } from '../services/RecipeService';
 import type { GameState, Mob, Pawn } from '../core/types';
 
 /**
@@ -346,13 +347,13 @@ describe('ranged combat (headless tickCombat)', () => {
     expect(wp('steel_stiletto').attackSpeed).toBeGreaterThan(1.3); // very fast
     expect(wp('steel_stiletto').critMod!).toBeGreaterThan(0.1); // crit-heavy
     expect(wp('iron_rondel').accuracy!).toBeLessThanOrEqual(0); // no accuracy bonus
-    // The specialists never appear at bronze — iron at the earliest.
-    for (const id of ['iron_warhammer', 'iron_greatsword', 'iron_estoc']) {
-      expect(itemService.getItemById(id)!.tier).toBeGreaterThanOrEqual(2);
-    }
-    for (const id of ['steel_cleaver', 'steel_flail', 'steel_rapier']) {
-      expect(itemService.getItemById(id)!.researchRequired).toBe('steel_making');
-    }
+    // The specialists never appear at bronze — gated by research on their recipe (iron at the
+    // earliest, the rest at steel).
+    const research = (id: string) => recipeService.getRecipeForItem(id)?.researchRequired;
+    for (const id of ['iron_warhammer', 'iron_greatsword', 'iron_estoc'])
+      expect(research(id)).toBe('iron_working');
+    for (const id of ['steel_cleaver', 'steel_flail', 'steel_rapier'])
+      expect(research(id)).toBe('steel_making');
   });
 
   it('classifies the melee GRIP from the hands (2H / shield / duelist / one-handed)', () => {

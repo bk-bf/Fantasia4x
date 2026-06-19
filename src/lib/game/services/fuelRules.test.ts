@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { planRefuel } from './fuelRules';
+import { recipeService } from './RecipeService';
 import type { GameState, PlacedBuilding } from '../core/types';
 
 function gs(stockpile: Record<string, number>): GameState {
@@ -11,7 +12,7 @@ function building(type: string, fuel = 0, extra: Partial<PlacedBuilding> = {}): 
 
 describe('planRefuel — shared generate/complete plan (refuel-loop fix)', () => {
   it('high-heat station with ONLY low-heat fuel → null (the bug: gate passed, complete consumed nothing → loop)', () => {
-    // bloomery minFuelHeat 4; branch fuelHeat defaults to 1 → ineligible. Tons of branch, still null.
+    // bloomery minFuelHeat 3; branch fuelHeat defaults to 1 → ineligible. Tons of branch, still null.
     expect(planRefuel(gs({ plant_fiber: 10, branch: 100 }), building('bloomery'))).toBeNull();
   });
 
@@ -40,6 +41,30 @@ describe('planRefuel — shared generate/complete plan (refuel-loop fix)', () =>
 
   it('already-full tank → null (nothing to add)', () => {
     expect(planRefuel(gs({ plant_fiber: 10, branch: 100 }), building('campfire', 60))).toBeNull();
+  });
+
+  it('iron bloomery (heat 3) runs on charcoal, the historical bloomery fuel', () => {
+    const plan = planRefuel(gs({ plant_fiber: 10, charcoal: 10 }), building('bloomery'));
+    expect(plan).not.toBeNull();
+    expect(plan!.consumed.charcoal).toBeGreaterThan(0);
+  });
+
+  it('steel finery (heat 5) accepts ONLY coke — charcoal and coal are too cool/dirty', () => {
+    expect(planRefuel(gs({ plant_fiber: 10, charcoal: 50 }), building('finery_forge'))).toBeNull();
+    expect(planRefuel(gs({ plant_fiber: 10, coal: 50 }), building('finery_forge'))).toBeNull();
+    const plan = planRefuel(gs({ plant_fiber: 10, coke: 50 }), building('finery_forge'));
+    expect(plan).not.toBeNull();
+    expect(plan!.consumed.coke).toBeGreaterThan(0);
+  });
+});
+
+describe('passive furnaces are a building-def flag, not a hardcoded list', () => {
+  it('flagged furnaces are passive; the anvil/casting hearth (mixed) are not', () => {
+    expect(recipeService.isPassiveStation('bloomery')).toBe(true);
+    expect(recipeService.isPassiveStation('pottery_kiln')).toBe(true);
+    expect(recipeService.isPassiveStation('charcoal_pit')).toBe(true);
+    expect(recipeService.isPassiveStation('anvil')).toBe(false);
+    expect(recipeService.isPassiveStation('casting_hearth')).toBe(false); // mixed: bars passive per-recipe
   });
 
   it('partial fill drains the available fuel rather than no-op (self-terminating, not a loop)', () => {

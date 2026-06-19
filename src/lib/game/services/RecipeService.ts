@@ -15,12 +15,15 @@ const STATION_TOOL_REQ = new Map<string, { workType: string; minTier: number }>(
 );
 
 /**
- * ADR-016 passive furnaces: stations that transform loaded inputs over time without a pawn
- * working them (gated by fuel/heat). The clear, unambiguous furnaces; other heat stations
- * (stone_forge/hearth) stay active for now — a pawn works them — and can be flagged passive
- * per-recipe via `Recipe.passive` when their content is split from cooking/shaping.
+ * ADR-016 passive furnaces: a station whose building def carries `passive: true` transforms
+ * loaded inputs over time without a pawn working it (gated by fuel/heat). Data-driven — set the
+ * flag on the building in buildings.jsonc, not in a hardcoded list here. A mixed/active station
+ * (stone_forge, casting_hearth) is NOT flagged; its individual passive recipes opt in via
+ * `Recipe.passive` so its pawn-worked recipes (shaping/casting) stay active.
  */
-const PASSIVE_STATIONS = new Set(['bloomery', 'charcoal_pit', 'pottery_kiln', 'advanced_kiln']);
+const PASSIVE_STATIONS = new Set(
+  (buildingsData as unknown as Building[]).filter((b) => b.passive).map((b) => b.id)
+);
 
 /**
  * RecipeService — the single source of truth for "how is X made" (PRODUCTION-CHAIN-EXPANSION

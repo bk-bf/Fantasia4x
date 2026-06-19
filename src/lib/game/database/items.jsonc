@@ -690,7 +690,7 @@
     "category"         : "fuel",
     "maxDurability"    : 120,
     "deteriorationRate": 0.04,
-    "description"      : "Mined coal. The hottest, most efficient mundane fuel — iron and steel need it.",
+    "description"      : "Mined coal. A hot, efficient fuel that smelts iron — but its sulphur spoils steel, so it must first be baked into coke.",
     "color"            : "#1A1A1A",
     "amount"           : 0,
     "weightKg"         : 1,
@@ -698,6 +698,23 @@
     "fuelValue"        : 40,
     "fuelHeat"         : 4,
     "gatheringTypes"   : ["mining"]
+  },
+  {
+    "id"               : "coke",
+    "charSpans"        : [ {"sheet": "items", "id": 29} ],
+    "name"             : "Coke",
+    "type"             : "material",
+    "category"         : "fuel",
+    "maxDurability"    : 120,
+    "deteriorationRate": 0.04,
+    "description"      : "Coal baked airless in an oven until the sulphur and tar burn off, leaving near-pure carbon. The fiercest mundane fire there is — the only fuel that will make steel.",
+    "color"            : "#0D0D0D",
+    "amount"           : 0,
+    "weightKg"         : 0.8,
+    "volumeL"          : 1.5,
+    "fuelValue"        : 60,
+    "fuelHeat"         : 5,
+    "toolTierRequired" : 0
   },
   {
     "id"               : "malachite",

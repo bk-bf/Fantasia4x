@@ -156,10 +156,8 @@ export interface ItemService {
   stepItemDeterioration(gameState: GameState, elapsedTicks?: number): GameState;
   /** §B tool work-wear: spend durability on the colony's tool for `workCategory`; break at 0. */
   applyToolWear(workCategory: string, gameState: GameState): GameState;
-  /** §B/§5: wear a specific tool/mold by id; it breaks (consumed) at maxDurability. */
+  /** §B: wear a specific tool by id; it breaks (consumed) at maxDurability. */
   wearToolById(toolId: string, gameState: GameState): GameState;
-  /** §5: the casting mold a recipe's station consumes wear on, or null. */
-  moldForRecipeStation(station: string | null | undefined): string | null;
   /** §1 wood seasoning: green firewood within 2 tiles (not adjacent) of a lit fire dries over time. */
   stepWoodDrying(gameState: GameState): GameState;
 }
@@ -257,22 +255,10 @@ export class ItemServiceImpl implements ItemService {
       if (!hasCookingPot) return false;
     }
 
-    // §5 casting requires a mold: a station with `moldRequired` (forge/bloomery) needs that mold
-    // in stock to cast — the clay→kiln→mold→casting gate. The mold is reusable but wears (§B).
-    if (recipe.station) {
-      const stationDef = BUILDING_DEFS_FOR_ITEMS.find((d) => d.id === recipe.station);
-      if (stationDef?.moldRequired && (gameState.stockpile?.[stationDef.moldRequired] ?? 0) <= 0) {
-        return false;
-      }
-    }
+    // §5 casting molds are ordinary single-use inputs now: a casting recipe lists `clay_mold` in
+    // its inputs, so the generic material check below already gates on having one in stock.
 
     return true;
-  }
-
-  /** §5: the mold a recipe consumes wear on (from its station's `moldRequired`), or null. */
-  moldForRecipeStation(station: string | null | undefined): string | null {
-    if (!station) return null;
-    return BUILDING_DEFS_FOR_ITEMS.find((d) => d.id === station)?.moldRequired ?? null;
   }
 
   hasRequiredMaterials(itemId: string, gameState: GameState): boolean {

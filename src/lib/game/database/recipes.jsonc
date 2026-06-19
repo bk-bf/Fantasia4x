@@ -36,6 +36,15 @@
     "toolTierRequired" : 0
   },
   {
+    "id"              : "make_coke",
+    "station"         : "charcoal_pit",
+    "passive"         : true,
+    "inputs"          : {"coal": 2},
+    "outputs"         : {"coke": 2, "ash": 1},
+    "workAmount"      : 14,
+    "toolTierRequired": 0
+  },
+  {
     "id"              : "make_chewed_poultice",
     "station"         : "craft_spot",
     "inputs"          : {"woundwort": 2, "cordage": 1},
@@ -271,8 +280,8 @@
     "id"               : "make_copper_bar",
     "passive"          : true,
     "station"          : "stone_forge",
-    "inputs"           : {"malachite": 3},
-    "inputAlternatives": [ {"chalcopyrite": 2}, {"azurite": 4} ],
+    "inputs"           : {"malachite": 3, "clay_mold": 1},
+    "inputAlternatives": [ {"chalcopyrite": 2, "clay_mold": 1}, {"azurite": 4, "clay_mold": 1} ],
     "outputs"          : {"copper_bar": 1},
     "workAmount"       : 8,
     "toolTierRequired" : 0
@@ -281,7 +290,7 @@
     "id"              : "make_tin_bar",
     "passive"          : true,
     "station"         : "stone_forge",
-    "inputs"          : {"cassiterite": 3},
+    "inputs"          : {"cassiterite": 3, "clay_mold": 1},
     "outputs"         : {"tin_bar": 1},
     "workAmount"      : 8,
     "toolTierRequired": 0
@@ -290,7 +299,7 @@
     "id"              : "make_bronze_bar",
     "passive"          : true,
     "station"         : "casting_hearth",
-    "inputs"          : {"copper_bar": 3, "tin_bar": 1},
+    "inputs"          : {"copper_bar": 3, "tin_bar": 1, "clay_mold": 1},
     "outputs"         : {"bronze_bar": 1},
     "workAmount"      : 10,
     "toolTierRequired": 1
@@ -309,7 +318,7 @@
     "id"              : "make_lead_bar",
     "passive"          : true,
     "station"         : "stone_forge",
-    "inputs"          : {"galena": 3},
+    "inputs"          : {"galena": 3, "clay_mold": 1},
     "outputs"         : {"lead_bar": 1},
     "workAmount"      : 8,
     "toolTierRequired": 0
@@ -318,7 +327,7 @@
     "id"              : "make_silver_bar",
     "passive"          : true,
     "station"         : "stone_forge",
-    "inputs"          : {"galena": 5},
+    "inputs"          : {"galena": 5, "clay_mold": 1},
     "outputs"         : {"silver_bar": 1},
     "workAmount"      : 16,
     "toolTierRequired": 1
@@ -327,8 +336,8 @@
     "id"               : "make_gold_bar",
     "passive"          : true,
     "station"          : "stone_forge",
-    "inputs"           : {"native_gold": 3},
-    "inputAlternatives": [ {"electrum": 3} ],
+    "inputs"           : {"native_gold": 3, "clay_mold": 1},
+    "inputAlternatives": [ {"electrum": 3, "clay_mold": 1} ],
     "outputs"          : {"gold_bar": 1},
     "workAmount"       : 10,
     "toolTierRequired" : 1
@@ -535,8 +544,8 @@
     "id"              : "make_clay_mold",
     "station"         : "pottery_kiln",
     "passive"          : true,
-    "inputs"          : {"blue_clay": 2},
-    "outputs"         : {"clay_mold": 1},
+    "inputs"          : {"blue_clay": 1},
+    "outputs"         : {"clay_mold": 4},
     "workAmount"      : 4,
     "toolTierRequired": 0
   },
@@ -1156,7 +1165,7 @@
   // ── Phase B: Tier 2 weapon recipes ───────────────────────────────────────
   {
     "id": "make_short_seax",
-    "station": "grindstone",
+    "station": "anvil",
     "inputs": {
       "iron_bar": 1,
       "cordage": 1
@@ -1181,7 +1190,7 @@
   },
   {
     "id": "make_spatha",
-    "station": "grindstone",
+    "station": "anvil",
     "inputs": {
       "iron_bar": 2,
       "cordage": 1
@@ -1221,7 +1230,7 @@
   },
   {
     "id": "make_bearded_axe",
-    "station": "grindstone",
+    "station": "anvil",
     "inputs": {
       "iron_bar": 2,
       "cordage": 1
@@ -1252,7 +1261,7 @@
   },
   {
     "id": "make_framea",
-    "station": "grindstone",
+    "station": "anvil",
     "inputs": {
       "iron_bar": 1,
       "cordage": 1
@@ -1326,7 +1335,7 @@
   },
   {
     "id": "make_iron_greatsword",
-    "station": "grindstone",
+    "station": "anvil",
     "inputs": { "iron_bar": 2, "cordage": 1 },
     "outputs": { "iron_greatsword": 1 },
     "workAmount": 14,
@@ -1335,7 +1344,7 @@
   },
   {
     "id": "make_steel_longsword",
-    "station": "grindstone",
+    "station": "anvil",
     "inputs": { "steel_bar": 1, "cordage": 1 },
     "outputs": { "steel_longsword": 1 },
     "workAmount": 14,
@@ -1344,7 +1353,7 @@
   },
   {
     "id": "make_steel_greatsword",
-    "station": "grindstone",
+    "station": "anvil",
     "inputs": { "steel_bar": 2, "cordage": 1 },
     "outputs": { "steel_greatsword": 1 },
     "workAmount": 18,
@@ -1353,7 +1362,7 @@
   },
   {
     "id": "make_steel_pike",
-    "station": "grindstone",
+    "station": "anvil",
     "inputs": { "steel_bar": 1, "oak_plank": 1, "cordage": 1 },
     "outputs": { "steel_pike": 1 },
     "workAmount": 13,
@@ -1380,7 +1389,7 @@
   },
   {
     "id": "make_steel_cleaver",
-    "station": "grindstone",
+    "station": "anvil",
     "inputs": { "steel_bar": 2, "cordage": 1 },
     "outputs": { "steel_cleaver": 1 },
     "workAmount": 15,
@@ -1389,7 +1398,7 @@
   },
   {
     "id": "make_steel_greatcleaver",
-    "station": "grindstone",
+    "station": "anvil",
     "inputs": { "steel_bar": 3, "cordage": 1 },
     "outputs": { "steel_greatcleaver": 1 },
     "workAmount": 20,
@@ -1407,7 +1416,7 @@
   },
   {
     "id": "make_iron_rondel",
-    "station": "grindstone",
+    "station": "anvil",
     "inputs": { "iron_bar": 1, "cordage": 1 },
     "outputs": { "iron_rondel": 1 },
     "workAmount": 7,
@@ -1416,7 +1425,7 @@
   },
   {
     "id": "make_steel_stiletto",
-    "station": "grindstone",
+    "station": "anvil",
     "inputs": { "steel_bar": 1, "cordage": 1 },
     "outputs": { "steel_stiletto": 1 },
     "workAmount": 9,
@@ -1425,7 +1434,7 @@
   },
   {
     "id": "make_iron_estoc",
-    "station": "grindstone",
+    "station": "anvil",
     "inputs": { "iron_bar": 1, "cordage": 1 },
     "outputs": { "iron_estoc": 1 },
     "workAmount": 12,
@@ -1434,7 +1443,7 @@
   },
   {
     "id": "make_steel_rapier",
-    "station": "grindstone",
+    "station": "anvil",
     "inputs": { "steel_bar": 1, "cordage": 1 },
     "outputs": { "steel_rapier": 1 },
     "workAmount": 15,

@@ -257,6 +257,7 @@ export interface Building {
   conditionDecayPerTurn?: number; // §B: structural wear/turn for complete instances (0/undefined = never decays)
   tileCapacityBonus?: number; // refactor Stage 2: extra item capacity this building grants to its tile (§F storage)
   minFuelHeat?: number; // station won't operate below this fuel heat rating (§2)
+  passive?: boolean; // ADR-016: a furnace that transforms loaded inputs over time with no pawn job
   fluxPerBatch?: number; // limestone flux consumed per smelt batch (bloomery, §5)
   moldRequired?: string; // clay/metal mold consumed/worn per cast (§5/§G)
   fuelRequirements?: {

@@ -184,12 +184,9 @@ export function completeCraftOrder(
     state = itemService.addItems(outputs, state);
   }
 
-  // §5 casting-mold wear: if this recipe's station needs a mold (forge/bloomery), the clay mold
-  // takes one cast's wear and cracks after enough pours.
-  const mold = itemService.moldForRecipeStation(recipe?.station);
-  if (mold) {
-    for (let i = 0; i < quantity; i++) state = itemService.wearToolById(mold, state);
-  }
+  // §5 casting molds are single-use raw material: a casting recipe lists `clay_mold` in its
+  // inputs and consumes it like any other ingredient (the mold is broken to free the casting).
+  // No separate wear pass — input consumption already spent it.
 
   console.log(
     `[JobService] Crafting complete: ${itemId} ×${outputs[itemId] ?? 0} (${Object.keys(outputs).length} output types) at station ${entry.stationBuildingId ?? '—'}`
