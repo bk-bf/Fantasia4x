@@ -429,6 +429,12 @@ export function makeMob(def: CreatureDefinition, x: number, y: number, turn: num
   const initialState: MobState = def.behaviour === 'passive' ? 'Grazing' : 'Wander';
   const sizeClass: 'large' | 'medium' | 'small' =
     def.stats.str >= 14 ? 'large' : def.stats.str >= 6 ? 'medium' : 'small';
+  // bodyScale (default 1.0) enlarges the creature's blood/health POOL so a big beast soaks a whole
+  // squad's hits before bleeding out — the durability half of the big-creature fix (the shared body-part
+  // HP table is intentionally NOT rescaled; naturalArmor + this larger pool carry it). RANGED note: this
+  // is the same field that softly scales its natural-weapon damage in Combat.attackerProfile.
+  const bodyScale = def.bodyScale ?? 1;
+  const scaledHealth = Math.round(def.stats.health * bodyScale);
   const stats: EntityStats = {
     strength: def.stats.str,
     dexterity: def.stats.dex,
@@ -451,8 +457,8 @@ export function makeMob(def: CreatureDefinition, x: number, y: number, turn: num
     entityClass: def.entityClass,
     x,
     y,
-    health: def.stats.health,
-    maxHealth: def.stats.health,
+    health: scaledHealth,
+    maxHealth: scaledHealth,
     state: initialState,
     stateSince: turn,
     path: [],
@@ -461,8 +467,8 @@ export function makeMob(def: CreatureDefinition, x: number, y: number, turn: num
     conditions: [],
     stats,
     // ── Full health/survival parity with Pawn ────────────────────────────────────────
-    bloodVolume: def.stats.health,
-    maxBloodVolume: def.stats.health,
+    bloodVolume: scaledHealth,
+    maxBloodVolume: scaledHealth,
     isAlive: true,
     transientConditions: [],
     skills: {},

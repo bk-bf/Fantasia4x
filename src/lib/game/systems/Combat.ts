@@ -52,10 +52,14 @@ const TRANSIENT_CONDITIONS_DB = (
 ).filter((d): d is TransientConditionDef => d.duration === 'transient');
 
 // ── Tuning constants ─────────────────────────────────────────────────────────
-/** Scales per-part bleed so a fully-severed 5%-mass hand ≈ 2 blood/turn. */
-const BLEED_CONSTANT = 40;
+/** Scales per-part bleed (bleeding = bleedRatio × this × bleedMod × wound-frac, per second). Raised so
+ *  an open wound visibly drains blood and forces a treat-or-collapse decision rather than a token trickle. */
+const BLEED_CONSTANT = 52;
 /** Stats are on a ~5–22 scale; this divisor keeps damage in a sensible range. */
 const STAT_SCALE = 10;
+/** How strongly a creature's `bodyScale` boosts its natural-weapon damage (softened, see attackerProfile):
+ *  damageMult = 1 + (bodyScale − 1) × this. 0.5 → a mammoth (3.5) hits ≈2.25×, a wolf (1.1) ≈1.05×. */
+const NATURAL_DAMAGE_BODYSCALE_FACTOR = 0.5;
 /** Mob base damage when it has no weapon. */
 const MOB_BASE_DAMAGE = 5;
 /** Damage multiplier applied on a critical hit. */
@@ -330,7 +334,15 @@ function attackerProfile(attacker: Pawn | Mob): AttackProfile {
   }
   if (candidates.length > 0) {
     const chosen = pickWeightedWeapon(candidates);
-    return profileFromWeapon(str, dex, chosen.wp, chosen.id);
+    const p = profileFromWeapon(str, dex, chosen.wp, chosen.id);
+    // A big beast hits proportionally harder: scale natural-weapon base damage by the creature's
+    // `bodyScale`, SOFTENED so a mammoth (scale 3.5) maims (≈2.25×) without one-shotting a limb —
+    // one field drives both its blood pool (entitySpawning) and its hitting power.
+    if ('creatureId' in attacker) {
+      const scale = getCreatureById(attacker.creatureId)?.bodyScale ?? 1;
+      if (scale !== 1) p.baseDamage *= 1 + (scale - 1) * NATURAL_DAMAGE_BODYSCALE_FACTOR;
+    }
+    return p;
   }
 
   // Unarmed fallback (body-slam) — entity with no weapon and no natural-weapon items.
@@ -392,40 +404,46 @@ function physicalResistance(defender: Pawn | Mob, damageType: DamageType): numbe
 }
 
 function partArmorReduction(defender: Pawn | Mob, partId: BodyPartId, armorPen: number): number {
-  if (!('equipment' in defender)) return 0;
-  // Combine armor from all body-slot instances (pick the best defense across worn slots).
-  const bodySlots = [
-    'bodyOuter',
-    'bodyMid',
-    'bodyBase',
-    'headBase',
-    'headOuter',
-    'gloves',
-    'boots',
-    'gorget'
-  ] as const;
-  let ap: import('../core/types').Item['armorProperties'] | undefined;
-  let bestDef = 0;
-  for (const slot of bodySlots) {
-    const inst = (defender.equipment as Record<string, ItemInstance | undefined>)[slot];
-    if (!inst) continue;
-    const baseAp = itemService.getItemById(inst.itemId)?.armorProperties;
-    if (!baseAp) continue;
-    // §Q: a Masterwork breastplate absorbs more — scale armour value by the stamped tier.
-    const candidate = scaleArmorQuality(baseAp, inst.quality);
-    if (candidate.defense > bestDef) {
-      ap = candidate;
-      bestDef = candidate.defense;
-    }
-  }
-  if (!ap) return 0;
   const def = PART_DEF_MAP[partId];
   if (!def) return 0;
+  // Best 0–100 defence value protecting this part: the strongest worn armour layer (pawns) OR the
+  // creature's natural hide/scale/chitin (mobs). They compete — take whichever is higher.
+  let bestDef = 0;
+  if ('equipment' in defender && defender.equipment) {
+    // Combine armor from all body-slot instances (pick the best defense across worn slots).
+    const bodySlots = [
+      'bodyOuter',
+      'bodyMid',
+      'bodyBase',
+      'headBase',
+      'headOuter',
+      'gloves',
+      'boots',
+      'gorget'
+    ] as const;
+    for (const slot of bodySlots) {
+      const inst = (defender.equipment as Record<string, ItemInstance | undefined>)[slot];
+      if (!inst) continue;
+      const baseAp = itemService.getItemById(inst.itemId)?.armorProperties;
+      if (!baseAp) continue;
+      // §Q: a Masterwork breastplate absorbs more — scale armour value by the stamped tier.
+      const candidate = scaleArmorQuality(baseAp, inst.quality);
+      if (candidate.defense > bestDef) bestDef = candidate.defense;
+    }
+  }
+  // Creature natural armour (hide/scale/chitin) — a flat defence layer that behaves exactly like worn
+  // armour, so a 0-armorPen attack (bare fists, raking claws) barely scratches a thick-hided beast
+  // while an armour-piercing bodkin/pick still bites. The keystone of big-beast durability.
+  if ('creatureId' in defender) {
+    const natural = getCreatureById(defender.creatureId)?.naturalArmor ?? 0;
+    if (natural > bestDef) bestDef = natural;
+  }
+  if (bestDef <= 0) return 0;
   // Torso/head get full armour benefit; limbs only partial
   const base =
     def.parentLimb === 'torso' || def.parentLimb === 'head'
-      ? ap.defense / 100
-      : (ap.defense / 100) * 0.3;
+      ? bestDef / 100
+      : (bestDef / 100) * 0.3;
   return clamp(base * (1 - armorPen), 0, 0.9);
 }
 

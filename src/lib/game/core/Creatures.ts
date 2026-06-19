@@ -150,6 +150,23 @@ export interface CreatureDefinition {
    * still clamped 0–0.9, so a vulnerability can pull a creature's resistance down to 0 but not below.
    */
   resistances?: Partial<Record<DamageType, number>>;
+  /**
+   * Natural armour (hide / scale / chitin), a flat 0–100 defence value used EXACTLY like a worn
+   * armour layer in Combat.partArmorReduction: torso/head get the full value, limbs 0.3×, and it is
+   * reduced by the attacker's `armorPen`. The keystone of big-beast durability — a 0-armorPen attack
+   * (bare fists, claws) is almost fully soaked by a thick hide, while an armour-piercing bodkin/pick
+   * still bites. Stacks with worn equipment by taking the BEST defence (mobs carry no equipment).
+   * Omitted = bare flesh (0). Final reduction still clamps 0–0.9, so nothing is ever immune.
+   */
+  naturalArmor?: number;
+  /**
+   * Body-size multiplier (default 1.0). Scales the creature's blood/health POOL at spawn
+   * (entitySpawning) and softly scales its natural-weapon damage (attackerProfile) — one field that
+   * makes a woolly mammoth (≈3.5) both soak a whole squad's hits AND maim with a tusk, while a wolf
+   * (≈1.1) stays roughly human-scaled. Does NOT rescale the shared body-part HP table (Combat keeps a
+   * single anatomy); durability comes from the larger blood pool + naturalArmor instead. Omitted = 1.0.
+   */
+  bodyScale?: number;
   /** Spawn-gate overrides (ENTITIES_SPAWNING). The default gate restricts spawns to walkable
    *  forest/plains/swamp land (isSpawnableTile). These let specific creatures bend that:
    *  - `spawnsInMountain`: spawn on ANY mountain tile, even non-walkable rock — for incorporeal
@@ -239,6 +256,8 @@ function toDefinition(raw: RawCreature): CreatureDefinition {
     lootTable: (raw.lootTable as CreatureLootEntry[]) ?? [],
     naturalWeapons: (raw.naturalWeapons as string[]) ?? [],
     resistances: (raw.resistances as Partial<Record<DamageType, number>> | undefined) ?? undefined,
+    naturalArmor: (raw.naturalArmor as number | undefined) ?? undefined,
+    bodyScale: (raw.bodyScale as number | undefined) ?? undefined,
     spawnsInMountain: (raw.spawnsInMountain as boolean | undefined) ?? undefined,
     maxMountainDistance: (raw.maxMountainDistance as number | undefined) ?? undefined,
     lair: (raw.lair as string | undefined) ?? undefined,

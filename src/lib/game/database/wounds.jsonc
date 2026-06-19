@@ -60,7 +60,9 @@
       "id"            : "crush",
       "name"          : "Crush",
       "fromDamageType": "blunt",
-      "bleedMod"      : 0.0,
+      // Blunt trauma now draws SOME blood (contusion / internal bleeding) so a bare-fist or club fight
+      // actually bleeds a foe down over time instead of only chipping part HP — far below a cut (1.0).
+      "bleedMod"      : 0.25,
       "painPerDamage" : 0.9,
       "healDifficulty": 1.4
     },
