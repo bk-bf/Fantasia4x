@@ -71,7 +71,7 @@
   {
     "id": "ironwood_grove", "displayName": "Ironwood Tree", "subterrain": "tree", "walkable": false,
     "charSpans": [ {"sheet": "plants", "from": 0, "to": 71} ], "fg": [0.23, 0.2, 0.18], "bg": [0.05, 0.04, 0.03], "color": "#3A332E",
-    "glow": {"color": [0.56, 0.88, 0.50], "radius": 2.6, "intensity": 0.52, "flicker": false},
+    "glow": {"color": [0.42, 0.66, 0.95], "radius": 2.6, "intensity": 0.52, "flicker": false},
     "spawn": {"subterrains": {"deep_grass": 0.0014, "dirt": 0.0005, "rocky": 0.0008}},
     "nodeAmountRange": [2, 4], "designationTypes": ["woodcut", "forage"],
     "interaction": {
