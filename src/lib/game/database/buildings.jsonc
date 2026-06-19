@@ -759,7 +759,7 @@
     "populationRequired": 1,
     "researchRequired": null,
     "upkeepCost": {},
-    "effects": {"sleepQuality": 0.1},
+    "effects": {"sleepQuality": 0.1, "treatmentBonus": 0.1},
     "storageCapacity": {}
   },
   {
@@ -777,7 +777,7 @@
     "populationRequired": 1,
     "researchRequired": null,
     "upkeepCost": {},
-    "effects": {"sleepQuality": 0.5, "fatigueRecovery": 0.3},
+    "effects": {"sleepQuality": 0.5, "fatigueRecovery": 0.3, "treatmentBonus": 0.3},
     "storageCapacity": {},
     "buildingState": {"isUnique": false, "maxCount": 10}
   },
@@ -796,7 +796,7 @@
     "populationRequired": 1,
     "researchRequired": null,
     "upkeepCost": {},
-    "effects": {"sleepQuality": 0.65, "fatigueRecovery": 0.45},
+    "effects": {"sleepQuality": 0.65, "fatigueRecovery": 0.45, "treatmentBonus": 0.45},
     "storageCapacity": {},
     "buildingState": {"isUnique": false, "maxCount": 10}
   },
@@ -815,7 +815,7 @@
     "populationRequired": 1,
     "researchRequired": null,
     "upkeepCost": {},
-    "effects": {"sleepQuality": 0.8, "fatigueRecovery": 0.6},
+    "effects": {"sleepQuality": 0.8, "fatigueRecovery": 0.6, "treatmentBonus": 0.6},
     "storageCapacity": {},
     "buildingState": {"isUnique": false, "maxCount": 10}
   },

@@ -36,6 +36,31 @@ export const HUNGER_THRESHOLD = 70; // Seek food at 70% (= Rimworld 30% saturati
 
 export const FATIGUE_THRESHOLD = 72; // Seek rest after ~225 turns ≈ 0.75 days (28% rest = 72% fatigue)
 
+// ===== WOUND RECOVERY =====
+/** Pain (0–100) at/above which a wounded pawn breaks off to rest and recover. */
+export const RECOVER_PAIN_THRESHOLD = 12;
+/** Total bleed (blood/s) at/above which a pawn must stop and rest — a real wound, not a graze (a
+ *  single small cut bleeds ~0.5/s, so the floor sits above that; stacked/serious bleeders clear it). */
+const RECOVER_BLEED_THRESHOLD = 1.5;
+
+/**
+ * Should this pawn drop what it's doing and lie down to recover? True for a MEANINGFUL wound — pain
+ * past the threshold, a serious+ wound, or bleeding faster than a graze — since wounds only mend at
+ * full rate while resting (healWounds activity gate). A minor, barely-bleeding scratch does NOT pull
+ * a pawn off work ("only minor wounds can be risked left untreated"); it self-closes slowly meanwhile.
+ */
+export function needsRecovery(pawn: Pawn): boolean {
+  if (pawn.isAlive === false) return false;
+  if ((pawn.pain ?? 0) >= RECOVER_PAIN_THRESHOLD) return true;
+  let bleed = 0;
+  for (const l of pawn.limbs ?? []) {
+    bleed += l.bleedRate ?? 0;
+    for (const p of l.parts ?? [])
+      for (const w of p.injuries) if (w.severity !== 'minor') return true;
+  }
+  return bleed >= RECOVER_BLEED_THRESHOLD;
+}
+
 // ===== COMBAT (COMBAT-SYSTEM) =====
 /** How far (tiles) a fleeing pawn tries to put between itself and the threat. */
 export const FLEE_DISTANCE = 6;

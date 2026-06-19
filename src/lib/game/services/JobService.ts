@@ -27,6 +27,7 @@ import * as construct from './jobs/construct';
 import * as deconstruct from './jobs/deconstruct';
 import * as fetch from './jobs/fetch';
 import * as craft from './jobs/craft';
+import * as caretake from './jobs/caretake';
 import * as refuel from './jobs/refuel';
 import { isOrderSupplied as stagingIsOrderSupplied } from './jobs/staging';
 
@@ -38,7 +39,15 @@ const JOB_DEFS = jobsData as unknown as JobDef[];
 const JOB_DEF_BY_ID = new Map<string, JobDef>(JOB_DEFS.map((d) => [d.id, d]));
 
 /** The colony pool job types — the subset of Job['type'] that JobService generates & completes. */
-type JobPoolType = 'harvest' | 'haul' | 'construct' | 'deconstruct' | 'fetch' | 'craft' | 'refuel';
+type JobPoolType =
+  | 'harvest'
+  | 'haul'
+  | 'construct'
+  | 'deconstruct'
+  | 'fetch'
+  | 'craft'
+  | 'caretake'
+  | 'refuel';
 // Compile-time guard: every JobPoolType must be a real Job['type'] member (fails to build otherwise).
 type _AssertPoolSubset = JobPoolType extends Job['type'] ? true : never;
 const _assertPoolSubset: _AssertPoolSubset = true;
@@ -83,6 +92,7 @@ class JobServiceImpl {
     deconstruct: { generate: deconstruct.generate, complete: deconstruct.complete },
     fetch: { generate: fetch.generate, complete: fetch.complete },
     craft: { generate: craft.generate, complete: craft.complete },
+    caretake: { generate: caretake.generate, complete: caretake.complete },
     refuel: { generate: refuel.generate, complete: refuel.complete }
   };
 

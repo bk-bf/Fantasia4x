@@ -47,7 +47,9 @@
   let override = $state<Map<LimbId, Reveal>>(new Map());
 
   function isInjured(p: BodyPartState): boolean {
-    return p.isMissing || p.health < p.maxHp || p.injuries.length > 0;
+    // −0.5 tolerance so a part healed to within rounding of full is treated as whole (the heal pass
+    // snaps to maxHp; this guards float drift) and the panel auto-hides it.
+    return p.isMissing || p.health < p.maxHp - 0.5 || p.injuries.length > 0;
   }
   function reveal(id: LimbId, _limb: LimbState): Reveal {
     // Default everywhere = 'injured' (show only damaged sub-limbs; healthy limbs show none).

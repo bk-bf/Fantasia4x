@@ -23,6 +23,7 @@ import {
   HUNGER_THRESHOLD,
   SLEEP_WAKE_THRESHOLD_HUNGRY,
   SLEEP_WAKE_THRESHOLD_FED,
+  needsRecovery,
   transitionTo,
   goIdle,
   mutatePawn,
@@ -376,7 +377,10 @@ export function handleSleeping(pawn: Pawn, gameState: GameState): GameState {
     (pawn.needs?.hunger ?? 0) >= HUNGER_THRESHOLD
       ? SLEEP_WAKE_THRESHOLD_HUNGRY
       : SLEEP_WAKE_THRESHOLD_FED;
-  const shouldWake = newFatigue <= wakeThreshold;
+  // A wounded pawn keeps resting even at zero fatigue — it stays down until its wounds clear (wounds
+  // only mend at full rate while resting), unless hunger forces it up to eat first.
+  const recovering = (pawn.needs?.hunger ?? 0) < HUNGER_THRESHOLD && needsRecovery(pawn);
+  const shouldWake = newFatigue <= wakeThreshold && !recovering;
 
   const updatedNeeds = {
     ...(pawn.needs ?? { hunger: 0, fatigue: 0, sleep: 0, lastSleep: 0, lastMeal: 0 }),

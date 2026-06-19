@@ -7,6 +7,7 @@ import { conditionNeedMultipliers, driveNeedConditions } from '../../core/needs'
 import { absorbDropIfOnStockpileTile } from '../../core/GameState';
 import { pawnStatService } from '../PawnStatService';
 import { simLog } from '../../core/logSink';
+import { healLimbs } from '../../systems/PawnStateMachine';
 import { entityName } from './entityHelpers';
 import {
   BASE_HUNGER_PER_SECOND,
@@ -15,6 +16,10 @@ import {
   SLEEP_RECOVERY_PER_SECOND,
   CORPSE_DECAY_TICKS
 } from './entityConstants';
+
+/** Per-tick natural wound mend for creatures (no rest gate, no tending) — slow, so a serious wound
+ *  takes in-game DAYS to close, but a beast that breaks off a fight recovers instead of bleeding out. */
+const MOB_WOUND_HEAL_PER_TICK = 0.02;
 
 export function stepHunger(state: GameState): GameState {
   const mobs = state.mobs;
@@ -158,11 +163,26 @@ export function stepHunger(state: GameState): GameState {
     }
     if (diedFromLimb) continue;
 
+    // Creatures can't dress wounds — they heal them OFF slowly over days (no tending, no severity
+    // stall). Reuses the shared mend formula; a beast that escapes a fight closes its wounds and its
+    // bleed tapers instead of bleeding out off-screen. healLimbs returns the same ref when unwounded,
+    // so this only allocates for actually-wounded mobs (keeps the limbs-identity capacity cache warm).
+    let nextLimbs = limbs;
+    if (limbs) {
+      nextLimbs = healLimbs(limbs, MOB_WOUND_HEAL_PER_TICK, turn, false);
+      if (nextLimbs !== limbs) {
+        let pain = 0;
+        for (const l of nextLimbs)
+          for (const p of l.parts ?? []) for (const w of p.injuries) pain += w.painContribution;
+        mob.pain = Math.max(0, Math.min(100, Math.round(pain)));
+      }
+    }
+
     mob.needs.hunger = newHunger;
     mob.needs.fatigue = newFatigue;
     mob.bloodVolume = bloodVolume;
     mob.conditions = conditions;
-    if (limbs) mob.limbs = limbs;
+    if (nextLimbs) mob.limbs = nextLimbs;
     changed = true;
   }
 

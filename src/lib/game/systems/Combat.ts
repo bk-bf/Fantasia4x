@@ -157,7 +157,7 @@ export function recomputeWound(
   bodyPart: BodyPartId,
   type: Injury['type'],
   accumDamage: number,
-  prev?: Pick<Injury, 'infected' | 'treatedAt' | 'inflictedAt'>,
+  prev?: Pick<Injury, 'infected' | 'treatedAt' | 'treatmentQuality' | 'inflictedAt'>,
   turn?: number
 ): Injury {
   const partDef = PART_DEF_MAP[bodyPart];
@@ -175,7 +175,10 @@ export function recomputeWound(
     painContribution:
       Math.round(accumDamage * (wd?.painPerDamage ?? 0.5) * (partDef?.isVital ? 2 : 1) * 10) / 10,
     infected: prev?.infected ?? false,
+    // Carry the active dressing across recomputes — otherwise a wound reverts to "untended" the first
+    // heal tick (treatmentQuality lost) and stalls (severity rule), undoing the medic's work.
     treatedAt: prev?.treatedAt,
+    treatmentQuality: prev?.treatmentQuality,
     // Age clock for the infection incubation gate: keep the original time as same-type hits stack.
     inflictedAt: prev?.inflictedAt ?? turn
   };

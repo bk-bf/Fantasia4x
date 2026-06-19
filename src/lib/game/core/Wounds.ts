@@ -3,6 +3,7 @@
 // wound's accumulated damage relative to the struck part's max HP.
 import woundsRaw from '../database/wounds.jsonc';
 import type { DamageType } from './types';
+import type { Injury } from './types/health';
 
 export interface WoundDef {
   id: string;
@@ -80,4 +81,11 @@ export function severityFromFrac(frac: number): WoundSeverity {
   if (frac >= 0.7) return 'critical';
   if (frac >= 0.4) return 'serious';
   return 'minor';
+}
+
+/** Is this wound currently under active treatment? A higher-quality tend lasts proportionally longer
+ *  (treatmentDurationTicks × quality). Shared by the heal loop, infection check, and the caretake job. */
+export function isTended(w: Injury, turn: number): boolean {
+  if (w.treatedAt == null) return false;
+  return turn - w.treatedAt < CARE_CONFIG.treatmentDurationTicks * (w.treatmentQuality ?? 0);
 }

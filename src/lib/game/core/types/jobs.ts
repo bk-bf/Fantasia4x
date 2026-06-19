@@ -60,6 +60,7 @@ export interface Job {
     | 'haul'
     | 'fetch' // ADR-016: carry a reserved input stack from stockpile to a workstation tile
     | 'craft'
+    | 'caretake' // ADR-017: a medic walks to a resting wounded patient and dresses its wounds
     | 'eat'
     | 'sleep'
     | 'light'
@@ -67,6 +68,8 @@ export interface Job {
     | 'deconstruct';
   targetX: number;
   targetY: number;
+  /** caretake: id of the wounded pawn being tended (the job targets that pawn's tile). */
+  patientId?: string;
   resourceId?: string; // harvest / haul / fetch: which resource
   droppedItemId?: string; // haul / fetch: which DroppedItem to pick up
   buildingId?: string; // construct: which PlacedBuilding.id; fetch/craft: the station building

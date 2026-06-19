@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { combatService } from './Combat';
-import { healWounds, tendWounds } from './PawnStateMachine';
+import { healWounds } from './PawnStateMachine';
+import { tendPatient } from '../services/jobs/caretake';
 import { CREATURES } from '../core/Creatures';
 import { itemService } from '../services/ItemService';
 import { recipeService } from '../services/RecipeService';
@@ -329,11 +330,15 @@ describe('wound system (stacking + healing)', () => {
   });
 
   it('tending consumes the best medicine and boosts treatment quality', () => {
-    // Wound a pawn, then tend with a Chewed Poultice in the stockpile.
-    let state = makeState([makePawn({ currentState: 'Idle' })], []) as GameState;
+    // Wound a pawn, then tend with a Chewed Poultice in the stockpile. The patient rests on a bed
+    // (treatmentBonus) so the dressing is viable — off-shelter it would be heavily penalised.
+    let state = makeState([makePawn({ currentState: 'Sleeping' })], []) as GameState;
     state = combatService.applyInjury('p1', { ...crush(20), bodyPart: 'chest' }, state);
     state = {
       ...state,
+      buildings: [
+        { id: 'bed1', type: 'hay_bed', x: 5, y: 5, status: 'complete', progress: 1 }
+      ],
       stockpile: { chewed_poultice: 1 },
       stockpileZones: [
         {
@@ -344,9 +349,10 @@ describe('wound system (stacking + healing)', () => {
           inventory: { chewed_poultice: 1 }
         }
       ]
-    } as GameState;
+    } as unknown as GameState;
 
-    const after = tendWounds(state.pawns[0], state);
+    // The patient self-tends here (single pawn); in play a separate Caretaking pawn claims the job.
+    const after = tendPatient(state.pawns[0], state.pawns[0], state);
     const wound = after.pawns[0].limbs!.flatMap((l) => l.parts ?? []).find((p) => p.id === 'chest')!
       .injuries[0];
     // Poultice medicineQuality 0.5 → treated, and quality is at least that.
@@ -367,7 +373,8 @@ describe('wound system (stacking + healing)', () => {
   });
 
   it('wounds heal over time, restoring HP and lowering pain to zero', () => {
-    let state = makeState([makePawn({ currentState: 'Idle' })], []);
+    // Resting (Sleeping) so wounds mend at full rate — an active pawn barely knits (heal gate).
+    let state = makeState([makePawn({ currentState: 'Sleeping' })], []);
     state = combatService.applyInjury('p1', { ...crush(20), bodyPart: 'chest' }, state);
     let pawn = state.pawns[0];
     expect(pawn.pain ?? 0).toBeGreaterThan(0);

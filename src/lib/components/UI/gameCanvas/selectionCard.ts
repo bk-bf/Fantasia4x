@@ -127,7 +127,9 @@ export function buildHealthModel(entity: Pawn | Mob): HealthModel {
     // Only sub-parts that are actually hurt (missing, below max HP, or carrying a wound).
     const parts: HealthPart[] = [];
     for (const part of limb.parts ?? []) {
-      const hurt = part.isMissing || part.health < part.maxHp || part.injuries.length > 0;
+      // −0.5 tolerance: a part that healed to within rounding of full counts as whole, so the panel
+      // drops it instead of showing a "80/80" part forever (the heal pass snaps to maxHp, this guards rounding).
+      const hurt = part.isMissing || part.health < part.maxHp - 0.5 || part.injuries.length > 0;
       if (!hurt) continue;
       parts.push({
         label: prettyPart(part.id),
@@ -139,7 +141,8 @@ export function buildHealthModel(entity: Pawn | Mob): HealthModel {
         }))
       });
     }
-    const damaged = limb.isMissing || limb.health < 100 || limb.bleedRate > 0 || parts.length > 0;
+    const damaged =
+      limb.isMissing || Math.round(limb.health) < 100 || limb.bleedRate > 0 || parts.length > 0;
     if (!damaged) continue;
     limbs.push({
       label: LIMB_LABEL[limb.id] ?? limb.id,
