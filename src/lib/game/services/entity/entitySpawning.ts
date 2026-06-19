@@ -16,32 +16,52 @@ import {
   EDGE_BUFFER,
   MIN_PAWN_DISTANCE,
   MAX_HOSTILE,
-  MAX_NEUTRAL
+  MAX_NEUTRAL,
+  targetEntityCount,
+  populationCaps
 } from './entityConstants';
 
 let idCounter = 0;
 
-export function seedInitialEntities(state: GameState, packs = 10): GameState {
+/**
+ * Seed the initial wild population. Normal play (no `packsOverride`) scales the count with map AREA
+ * via `targetEntityCount` — a 500×500 map seeds ~325 entities — and stops once the total target is
+ * reached. The roster is cycled evenly so the species mix is diverse and hostiles stay the minority.
+ * An explicit `packsOverride` (profiler/dev) keeps the legacy fixed-pack behaviour + flat caps for
+ * benchmark comparability.
+ */
+export function seedInitialEntities(state: GameState, packsOverride?: number): GameState {
   if ((state.mobs?.length ?? 0) > 0) return state;
   const dayCreatures = CREATURES.filter((c) => !c.nightOnly);
   if (dayCreatures.length === 0) return state;
+
+  const h = state.worldMap.length;
+  const w = state.worldMap[0]?.length ?? 0;
+  const fixed = packsOverride !== undefined;
+  // Total population target (null = no total cap → fixed-pack profiler path runs exactly `packs`).
+  const target = fixed ? null : targetEntityCount(w, h);
+  const caps = fixed ? { hostile: MAX_HOSTILE, neutral: MAX_NEUTRAL } : populationCaps(w, h);
+  // Generous pack count: avg pack ≈ 4, so target/2 packs guarantees the total target is the real
+  // limit (we break on it), not the pack count.
+  const packs = fixed ? packsOverride! : Math.ceil(target! / 2);
 
   const seeded: Mob[] = [];
   let hostile = 0;
   let neutral = 0;
 
-  // Guarantee variety: attempt one pack of EACH distinct day creature first (shuffled),
-  // then fill any remaining slots at random. Without this, the seeded RNG could pick the
-  // same few creatures every time, so a species like wolf would "never spawn anymore".
+  // Guarantee variety: attempt one pack of EACH distinct day creature first (shuffled), then cycle
+  // the roster for the remaining slots. Without this, the seeded RNG could pick the same few
+  // creatures every time, so a species like wolf would "never spawn anymore".
   const shuffled = [...dayCreatures].sort(() => rng.random() - 0.5);
-  const picks: CreatureDefinition[] = shuffled.slice(0, packs);
-  while (picks.length < packs) {
-    picks.push(dayCreatures[Math.floor(rng.random() * dayCreatures.length)]);
-  }
+  const picks: CreatureDefinition[] = Array.from(
+    { length: packs },
+    (_, i) => shuffled[i % shuffled.length]
+  );
 
   for (const def of picks) {
-    if (def.entityClass === 'mob' && hostile >= MAX_HOSTILE) continue;
-    if (def.entityClass === 'animal' && neutral >= MAX_NEUTRAL) continue;
+    if (target !== null && seeded.length >= target) break;
+    if (def.entityClass === 'mob' && hostile >= caps.hostile) continue;
+    if (def.entityClass === 'animal' && neutral >= caps.neutral) continue;
 
     const origin = findSpawnTile(state, def);
     if (!origin) continue;
@@ -99,15 +119,19 @@ export function spawnEntities(state: GameState): GameState {
   const chance = BASE_SPAWN_CHANCE * (isNight ? NIGHT_SPAWN_MULT : 1);
   if (rng.random() > chance) return state;
 
-  const hostileCount = mobs.filter((m) => m.entityClass === 'mob' && m.state !== 'Corpse').length;
-  const neutralCount = mobs.filter(
-    (m) => m.entityClass === 'animal' && m.state !== 'Corpse'
-  ).length;
+  const live = mobs.filter((m) => m.state !== 'Corpse');
+  const hostileCount = live.filter((m) => m.entityClass === 'mob').length;
+  const neutralCount = live.filter((m) => m.entityClass === 'animal').length;
+
+  // Area-scaled caps from the live map. The total guard keeps the population near the map's target
+  // instead of letting both per-class caps stack to a larger combined total.
+  const caps = populationCaps(state.worldMap[0]?.length ?? 0, state.worldMap.length);
+  if (live.length >= caps.total) return state;
 
   const def = pickSpawnCreature(isNight);
   if (!def) return state;
-  if (def.entityClass === 'mob' && hostileCount >= MAX_HOSTILE) return state;
-  if (def.entityClass === 'animal' && neutralCount >= MAX_NEUTRAL) return state;
+  if (def.entityClass === 'mob' && hostileCount >= caps.hostile) return state;
+  if (def.entityClass === 'animal' && neutralCount >= caps.neutral) return state;
 
   const origin = findSpawnTile(state, def);
   if (!origin) return state;

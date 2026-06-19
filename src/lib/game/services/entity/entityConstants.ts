@@ -12,8 +12,38 @@ export const NIGHT_SPAWN_MULT = 3; // ×multiplier when ambient light is low
 export const NIGHT_THRESHOLD = 0.3; // ambient light below this counts as night
 export const EDGE_BUFFER = 8; // tiles; no spawns within this band of the map edge
 export const MIN_PAWN_DISTANCE = 12; // tiles; do not spawn packs on top of the colony
+// Legacy flat caps — retained ONLY for the fixed-pack profiler/dev path (seedInitialEntities with an
+// explicit pack count) so its benchmark population stays comparable. Normal play uses the
+// area-scaled caps below.
 export const MAX_HOSTILE = 40;
 export const MAX_NEUTRAL = 40;
+
+// ── Wild population scaling (area-based) ───────────────────────────────────────
+// Wild population scales with map AREA rather than a fixed count. Tuned so a 500×500 map targets
+// ~325 wild entities (≈10× the old fixed ~33). Clamped so tiny maps still feel alive and a huge
+// 1000×1000 map doesn't melt the sim.
+export const TARGET_ENTITIES_PER_TILE = 325 / (500 * 500); // ≈ 0.0013
+export const MIN_TARGET_ENTITIES = 40;
+export const MAX_TARGET_ENTITIES = 1400;
+
+/** Target wild population for a map of `width`×`height`. */
+export function targetEntityCount(width: number, height: number): number {
+  const raw = Math.round(width * height * TARGET_ENTITIES_PER_TILE);
+  return Math.max(MIN_TARGET_ENTITIES, Math.min(MAX_TARGET_ENTITIES, raw));
+}
+
+/**
+ * Population ceilings for a map of this size. `total` bounds the whole wild population; the per-class
+ * caps are loose guards (hostiles kept the minority) — with the roster cycled evenly during seeding,
+ * the class mix follows the roster, not these caps.
+ */
+export function populationCaps(
+  width: number,
+  height: number
+): { total: number; hostile: number; neutral: number } {
+  const total = targetEntityCount(width, height);
+  return { total, hostile: Math.ceil(total * 0.6), neutral: total };
+}
 export const CORPSE_DECAY_TICKS = ticksFromSeconds(200); // corpse persists ~200s then vanishes
 
 // Movement / FSM timings
