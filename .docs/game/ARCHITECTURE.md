@@ -2,7 +2,7 @@
 
 # ARCHITECTURE [GAME]
 
-> **Related:** [DESIGN](DESIGN.md) · [DECISIONS](DECISIONS.md) · [PHILOSOPHY](PHILOSOPHY.md) · [ui/ARCHITECTURE](../ui/ARCHITECTURE.md) · [ROADMAP](../.tasks/open/ROADMAP.md) · [SIMULATION-PERF](../.tasks/open/SIMULATION-PERF.md)
+> **Related:** [DESIGN](DESIGN.md) · [DECISIONS](DECISIONS.md) · [PHILOSOPHY](PHILOSOPHY.md) · [ui/ARCHITECTURE](../ui/ARCHITECTURE.md) · [ROADMAP](../.tasks/open/ROADMAP.md) · [SIMULATION-PERF](../.tasks/archive/SIMULATION-PERF-2026-05-30.md)
 
 ## Layer Map
 

@@ -2,13 +2,19 @@
 
 # ENTITY SPAWNING (Mobs, Animals, Taming & Husbandry)
 
-> **Related:** [ROADMAP](ROADMAP.md) · [COMBAT-SYSTEM](COMBAT-SYSTEM.md) · [PRODUCTION-CHAIN-EXPANSION](../archive/PRODUCTION-CHAIN-EXPANSION-2026-06-12.md) (archived) · [PRODUCTION-CHAIN-II](PRODUCTION-CHAIN-II.md) (§L logistics) · [SOCIAL-LAYER](SOCIAL-LAYER.md) · [LIVING-WORLD](LIVING-WORLD.md) · [game/DESIGN](../../game/DESIGN.md) · [game/ARCHITECTURE](../../game/ARCHITECTURE.md)
+> **Related:** [ROADMAP](ROADMAP.md) · [COMBAT-SYSTEM](../archive/COMBAT-SYSTEM-2026-06-11.md) (archived) · [PRODUCTION-CHAIN-EXPANSION](../archive/PRODUCTION-CHAIN-EXPANSION-2026-06-12.md) (archived) · [PRODUCTION-CHAIN-II](PRODUCTION-CHAIN-II.md) (§L logistics) · [SOCIAL-LAYER](SOCIAL-LAYER.md) · [SEASONS_WEATHER](../archive/SEASONS_WEATHER-2026-06-17.md) (archived) · [game/DESIGN](../../game/DESIGN.md) · [game/ARCHITECTURE](../../game/ARCHITECTURE.md)
 
 ## Status
 
 **Phases A and A.5 complete.** `Mob` type, `EntityService`, `Creatures.ts`, rendering, click/hover HUD cards, ENTITIES tab, hunger/diet/starvation/eatProgress — all done.
-Phases B–E not started. Two entity classes share a spawn
-model: hostile mobs (threat) and neutral animals (food/taming/mounts).
+Phases B–E not started. Two entity classes share the infrastructure: hostile mobs (threat)
+and neutral animals (food/taming/mounts).
+
+**Spawn model REVISED → lair / territory system (implemented).** The original "DF-like edge
+spawner, no territory" plan (the superseded [MOB-SPAWNING](../archive/MOB-SPAWNING.md) stub) was
+replaced: hostile packs now live in **lairs** — rare `lair: true` resource tiles they are bound to
+and leashed within — while only **free-roaming wildlife** (prey/neutral) is seeded across the open
+map. See "Spawn Model" below; this is the part the lair switch rewrote.
 
 ---
 
@@ -24,14 +30,62 @@ Both use the same `Mob` type and FSM infrastructure. Class is determined by
 
 ---
 
-## Shared Spawn Model
+## Spawn Model (IMPLEMENTED — lair / territory)
 
-| Parameter               | Value                                   |
-| ----------------------- | --------------------------------------- |
-| Base spawns per day     | 1–3 (scales with colony size milestone) |
-| Night weight multiplier | ×2–4 (from `ambientLight`)              |
-| Spawn edge buffer       | 8 tiles from map edge                   |
-| Max active entities     | 40 hard cap (20 hostile / 20 neutral)   |
+The map carries **two distinct populations**, seeded and maintained separately
+(`services/entity/entitySpawning.ts`). This replaced the original "DF-like edge spawner, no
+territory" design — see the superseded [MOB-SPAWNING](../archive/MOB-SPAWNING.md) stub.
+
+### 1. Free-roaming wildlife (prey + neutral roamers)
+
+Creatures with **no `lair`** are scattered across the open map.
+
+| Parameter                | Value                                                                  |
+| ------------------------ | ---------------------------------------------------------------------- |
+| Initial seed             | area-scaled (`targetEntityCount`, ~325 on a 500×500 map), roster cycled for variety |
+| Periodic top-up          | `spawnEntities` rolls on a 20 s cadence (`SPAWN_CHECK_INTERVAL`)        |
+| Night weight multiplier  | ×3 (`NIGHT_SPAWN_MULT`) when `ambientLight < 0.3`                       |
+| Spawn edge buffer        | 8 tiles from map edge (`EDGE_BUFFER`)                                   |
+| Min pawn distance        | 12 tiles — never spawn a pack on the colony (`MIN_PAWN_DISTANCE`)       |
+| Caps                     | area-scaled `populationCaps` (profiler path uses flat `MAX_HOSTILE`/`MAX_NEUTRAL` 40) |
+
+Tile choice is biome-weighted (`findSpawnTile`): only walkable forest/plains/swamp land (never
+water/mountain unless `spawnsInMountain`), accepted probabilistically by `biomeWeights`. `nightOnly`
+creatures (e.g. the wraith) come **only** from the periodic spawner at night.
+
+### 2. Laired hostiles (bound packs) — the territory system
+
+Dangerous packs do **not** free-roam. A creature with a **`lair`** field is bound to a matching
+**`lair: true` resource tile** (`resources.jsonc`): `wolf_den`, `predator_den`, `goblin_warren`,
+`swamp_nest`, `harpy_roost`. These are **rare landmark tiles** scattered at world-gen on
+biome-appropriate subterrains (tiny spawn probabilities, listed first so each gets a fair roll).
+
+- **Seeding** (`seedLairs`): every lair tile seeds **one bound pack** of a creature whose `lair`
+  matches the tile's resource id. Each member is anchored with a stable `lairId` + `lairX/lairY` +
+  `lairRange`. Lair tiles are the **sole source** of laired hostiles — they never come from the
+  periodic spawner or the wildlife seed.
+- **Territory leash** (`entityAI.stepHostile`): a laired mob only wanders/aggros within `lairRange`
+  (Chebyshev) of its anchor. Stray beyond it (drifted or over-chased) → it abandons the action and
+  heads home; it only **engages a pawn that is inside its territory** (pawns passing outside are seen
+  but ignored, so the player can travel safely between lairs). `Fleeing`/`Exhausted` are exempt —
+  survival overrides territory. A mob **never adopts another lair**.
+- **Slow metabolism** (`hungerRate < 1`, `foodOverflow`): a leashed pack isn't on a starvation clock —
+  it idles its territory and hunts opportunistically rather than starving and roaming.
+- **Lifecycle** (`tickLairs`, once per in-game day, `LAIR_TICK_INTERVAL`):
+  - **Repopulate** — an emptied (pack wiped) but un-destroyed lair re-occupies after ~weeks
+    (`LAIR_REPOP_CHANCE` 0.08/day).
+  - **Grow** — while below the world cap (`maxLairCount`), a new lair grows on a random eligible tile
+    after ~weeks (`LAIR_GROW_CHANCE` 0.06/day), never on an occupied tile.
+  - **Destroy** — the lair tile is destructible via the DESTROY designation (`foraging` work,
+    `workAmount` 80); razing it stops both repopulation and growth. *(TODO in data: drop loot on
+    destroy — a cleared den should reward the player.)*
+
+**Design intent:** keep the map from being a churning mass of free-hunting hostiles. Threat is
+**place-based** — the player learns where the dens are, routes around them, and can choose to clear
+one. Each lair type carries an ambient particle "tell" (smoke / bloodmist / miasma / flies / feathers)
+so a den reads as dangerous from a distance.
+
+### Creature definition (shape)
 
 ```typescript
 interface CreatureDefinition {
@@ -41,18 +95,18 @@ interface CreatureDefinition {
   color: string;
   entityClass: 'mob' | 'animal';
   diet: 'herbivore' | 'carnivore' | 'omnivore'; // drives feeding FSM
-  stats: {
-    health: number;
-    strength: number;
-    speed: number; // tiles/turn
-    visionRange: number;
-  };
+  stats: { health: number; strength: number; speed: number; visionRange: number };
   behaviour: 'passive' | 'neutral' | 'aggressive';
   tameable: boolean;
   mountable: boolean; // eligible as riding mount (Phase E)
   biomeWeights: Partial<Record<TerrainType, number>>;
   lootTable: Array<{ itemId: string; chance: number; qty: [number, number] }>;
   xpValue: number;
+  // ── Lair / territory binding (omitted = free roamer) ─────────────────────
+  lair?: string;        // matching `lair: true` resource id; bound + leashed to it
+  lairRange?: number;   // leash radius in tiles (tight for dangerous packs, wide ~80–100 far-rangers)
+  hungerRate?: number;  // <1 = slow metabolism so a leashed pack doesn't starve/roam
+  foodOverflow?: number;// laired predators hunt opportunistically before fully hungry
 }
 ```
 
@@ -326,6 +380,12 @@ slows to base pawn speed until healed (vet work category, Phase E2 — deferred)
   - [x] Click-to-select mob with locked HUD info card
   - [x] Hover mob shows dim HUD info card (parity with pawns)
   - [x] ENTITIES tab (F9) listing live mobs with focus-on-map
+- [x] **Lair / territory spawn model** (replaced the DF-like edge spawner — see "Spawn Model")
+  - [x] `lair: true` resource tiles (`wolf_den`/`predator_den`/`goblin_warren`/`swamp_nest`/`harpy_roost`) scattered at world-gen; ambient particle "tells"
+  - [x] `seedLairs` binds one pack per lair tile (`lairId`/`lairX/Y`/`lairRange`); `seedInitialEntities` seeds only free-roaming wildlife (area-scaled)
+  - [x] Territory leash in `entityAI.stepHostile`: laired mobs wander/aggro/engage only within `lairRange`; stray → return home; `Fleeing`/`Exhausted` exempt
+  - [x] Slow metabolism (`hungerRate < 1`, `foodOverflow`) so leashed packs idle instead of starving/roaming
+  - [x] `tickLairs` daily lifecycle: repopulate emptied lairs, grow toward `maxLairCount`, DESTROY designation razes a den (stops both)
 - [x] **Phase A.5 — Entity Hunger & Diet**
   - [x] Add `EntityService.stepHunger(state)` — accrues `mob.hunger` each tick; triggers `Foraging`/`Hunting` FSM transitions
   - [x] Herbivore foraging: pathfind to nearest grass tile, consume via `eatProgress` timer

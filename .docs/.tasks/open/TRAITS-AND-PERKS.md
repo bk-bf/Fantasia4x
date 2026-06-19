@@ -2,7 +2,7 @@
 
 # TRAITS & PERKS — Unified Trait System
 
-> **Related:** [ROADMAP](ROADMAP.md) · [RACE-SYSTEM](RACE-SYSTEM.md) · [RANGED-COMBAT](RANGED-COMBAT.md) (the combat axes perks tune) · [COMBAT-SYSTEM](COMBAT-SYSTEM.md) · [game/DESIGN](../../game/DESIGN.md)
+> **Related:** [ROADMAP](ROADMAP.md) · [RACE-SYSTEM](RACE-SYSTEM.md) · [RANGED-COMBAT](RANGED-COMBAT.md) (the combat axes perks tune) · [COMBAT-SYSTEM](../archive/COMBAT-SYSTEM-2026-06-11.md) · [game/DESIGN](../../game/DESIGN.md)
 
 ## Status
 

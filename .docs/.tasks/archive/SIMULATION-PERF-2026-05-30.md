@@ -2,13 +2,13 @@
 
 # SIMULATION-PERF
 
-> ⚠️ **SUPERSEDED (2026-06-15) by [ENGINE-PERFORMANCE](ENGINE-PERFORMANCE.md).** This is the
+> ⚠️ **SUPERSEDED (2026-06-15) by [ENGINE-PERFORMANCE](../open/ENGINE-PERFORMANCE.md).** This is the
 > *earlier* perf spec (Phase 1/1.5). The profiler it describes (`profileTurns()`/`[PROF]`/`__profOut`)
 > has been **RETIRED** (browser-native profiling now — ENGINE-PERFORMANCE §10), and the scaling story
 > moved on: sim→Worker + the W2/W2b snapshot protocol got the heavy stress case to 80–100 TPS @4×
 > (ENGINE-PERFORMANCE §B). Kept for the Phase-1 history; **read ENGINE-PERFORMANCE for current state.**
 
-> **Related:** [ENGINE-PERFORMANCE](ENGINE-PERFORMANCE.md) (current) · [ROADMAP](ROADMAP.md) · [game/ARCHITECTURE](../../game/ARCHITECTURE.md) · [game/DECISIONS](../../game/DECISIONS.md) (ADR-011)
+> **Related:** [ENGINE-PERFORMANCE](../open/ENGINE-PERFORMANCE.md) (current) · [ROADMAP](../open/ROADMAP.md) · [game/ARCHITECTURE](../../game/ARCHITECTURE.md) · [game/DECISIONS](../../game/DECISIONS.md) (ADR-011)
 
 Performance + observability of the simulation tick (TPS) and the WebGL renderer (FPS).
 Records what shipped, why, and what is still needed to scale to 500+ entities on

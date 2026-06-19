@@ -2,7 +2,7 @@
 
 # PAWN SOCIAL LAYER & MOOD DEPTH
 
-> **Related:** [ROADMAP](ROADMAP.md) · [COMBAT-SYSTEM](COMBAT-SYSTEM.md) · [RACE-SYSTEM](RACE-SYSTEM.md) · [game/DESIGN](../../game/DESIGN.md) · [LIVING-WORLD](LIVING-WORLD.md)
+> **Related:** [ROADMAP](ROADMAP.md) · [COMBAT-SYSTEM](../archive/COMBAT-SYSTEM-2026-06-11.md) · [RACE-SYSTEM](RACE-SYSTEM.md) · [game/DESIGN](../../game/DESIGN.md) · [LIVING-WORLD](LIVING-WORLD.md)
 
 ## Status
 

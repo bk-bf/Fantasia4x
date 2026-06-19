@@ -327,7 +327,7 @@ adjustedThreshold = baseThreshold
 
 - **Date**: 2026-05-30
 - **Status**: Accepted
-- **Spec**: [.tasks/open/SIMULATION-PERF.md](../.tasks/open/SIMULATION-PERF.md)
+- **Spec**: [.tasks/archive/SIMULATION-PERF-2026-05-30.md](../.tasks/archive/SIMULATION-PERF-2026-05-30.md)
 
 #### Context
 
@@ -360,7 +360,7 @@ No call sites change. Applied to the per-tick services: `WorkService`, `PawnServ
 
 - **Date**: 2026-06-11
 - **Status**: Accepted
-- **Spec**: [.tasks/open/COMBAT-SYSTEM.md](../.tasks/open/COMBAT-SYSTEM.md)
+- **Spec**: [.tasks/archive/COMBAT-SYSTEM-2026-06-11.md](../.tasks/archive/COMBAT-SYSTEM-2026-06-11.md)
 
 #### Context
 

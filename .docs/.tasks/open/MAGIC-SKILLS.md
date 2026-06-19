@@ -2,7 +2,7 @@
 
 # MAGIC FRAMEWORK & SKILL TREES
 
-> **Related:** [ROADMAP](ROADMAP.md) · [COMBAT-SYSTEM](COMBAT-SYSTEM.md) · [EQUIPMENT-EXPANSION](../archive/EQUIPMENT-EXPANSION.md) · [RESEARCH-ENHANCEMENT](RESEARCH-ENHANCEMENT.md) · [PRODUCTION-CHAIN-II](PRODUCTION-CHAIN-II.md) (**§M = this spec's Phase 0**: passive foundation + foci materials) · [game/DESIGN](../../game/DESIGN.md)
+> **Related:** [ROADMAP](ROADMAP.md) · [COMBAT-SYSTEM](../archive/COMBAT-SYSTEM-2026-06-11.md) · [EQUIPMENT-EXPANSION](../archive/EQUIPMENT-EXPANSION.md) · [RESEARCH-ENHANCEMENT](RESEARCH-ENHANCEMENT.md) · [PRODUCTION-CHAIN-II](PRODUCTION-CHAIN-II.md) (**§M = this spec's Phase 0**: passive foundation + foci materials) · [game/DESIGN](../../game/DESIGN.md)
 
 ## Status
 

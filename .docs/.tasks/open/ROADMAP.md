@@ -2,7 +2,7 @@
 
 # ROADMAP
 
-> **Related:** [game/DESIGN](../game/DESIGN.md) · [game/ARCHITECTURE](../game/ARCHITECTURE.md) · [RESEARCH-ENHANCEMENT](RESEARCH-ENHANCEMENT.md) · [ENTITIES_SPAWNING](ENTITIES_SPAWNING.md) · [COMBAT-SYSTEM](COMBAT-SYSTEM.md) · [MAGIC-SKILLS](MAGIC-SKILLS.md) · [RANGED-COMBAT](RANGED-COMBAT.md) · [PRODUCTION-CHAIN-II](PRODUCTION-CHAIN-II.md) · [SOCIAL-LAYER](SOCIAL-LAYER.md) · [RACE-SYSTEM](RACE-SYSTEM.md) · [ENGINE-PERFORMANCE](ENGINE-PERFORMANCE.md) · [DISTRIBUTION](DISTRIBUTION.md) · archived: [SEASONS_WEATHER](../archive/SEASONS_WEATHER-2026-06-17.md) · [EQUIPMENT-EXPANSION](../archive/EQUIPMENT-EXPANSION.md) · [PRODUCTION-CHAIN-EXPANSION](../archive/PRODUCTION-CHAIN-EXPANSION-2026-06-12.md) · [SCREEN-REFACTORING](../archive/SCREEN-REFACTORING-2026-06-03.md) · [SURVIVAL-HEALTH](../archive/SURVIVAL-HEALTH-2026-05-30.md) · [SIMULATION-PERF](../archive/SIMULATION-PERF-2026-05-30.md)
+> **Related:** [game/DESIGN](../game/DESIGN.md) · [game/ARCHITECTURE](../game/ARCHITECTURE.md) · [RESEARCH-ENHANCEMENT](RESEARCH-ENHANCEMENT.md) · [ENTITIES_SPAWNING](ENTITIES_SPAWNING.md) · [MAGIC-SKILLS](MAGIC-SKILLS.md) · [RANGED-COMBAT](RANGED-COMBAT.md) · [PRODUCTION-CHAIN-II](PRODUCTION-CHAIN-II.md) · [SOCIAL-LAYER](SOCIAL-LAYER.md) · [RACE-SYSTEM](RACE-SYSTEM.md) · [ENGINE-PERFORMANCE](ENGINE-PERFORMANCE.md) · [DISTRIBUTION](DISTRIBUTION.md) · archived: [COMBAT-SYSTEM](../archive/COMBAT-SYSTEM-2026-06-11.md) · [SEASONS_WEATHER](../archive/SEASONS_WEATHER-2026-06-17.md) · [EQUIPMENT-EXPANSION](../archive/EQUIPMENT-EXPANSION.md) · [PRODUCTION-CHAIN-EXPANSION](../archive/PRODUCTION-CHAIN-EXPANSION-2026-06-12.md) · [SCREEN-REFACTORING](../archive/SCREEN-REFACTORING-2026-06-03.md) · [SURVIVAL-HEALTH](../archive/SURVIVAL-HEALTH-2026-05-30.md) · [SIMULATION-PERF](../archive/SIMULATION-PERF-2026-05-30.md)
 
 ## Status Key
 
@@ -31,7 +31,7 @@ All critical architectural debt resolved. Core survival loop is functional.
 | Screen refactoring (WorkScreen only)                                     | [x]    | archived: `SCREEN-REFACTORING-2026-06-03.md`                                             |
 | **Survival consequences** (starvation death, collapse, injuries, health) | [x]    | archived: `SURVIVAL-HEALTH-2026-05-30.md`                                                |
 | Production chains (primitives → Maker's Bench, then full expansion)      | [x]    | archived: `PRODUCTION-CHAINS-2026-05-28.md` + `PRODUCTION-CHAIN-EXPANSION-2026-06-12.md` |
-| Healthcare jobs                                                          | [x]    | delivered as caretaking/healing in `COMBAT-SYSTEM.md`                                    |
+| Healthcare jobs                                                          | [x]    | delivered as caretaking/healing in `COMBAT-SYSTEM` (archived)                            |
 | Cooking as a dedicated job                                               | [ ]    | Hearth/Kitchen/Drying-Rack buildings exist; standalone cooking job unclaimed             |
 
 ---
@@ -51,7 +51,7 @@ Layer, Research Enhancement, and the deferred Entity Spawning C–E content.
 
 | #  | Item                                                                                                                                                                                                                   | Status         | Spec                                                                                                      |
 | -- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- | --------------------------------------------------------------------------------------------------------- |
-| —  | **Combat System** (stances, weapons/crit, wounds, pain→collapse, healing, caretaking)                                                                                                                                  | [x] 2026-06-11 | [COMBAT-SYSTEM.md](COMBAT-SYSTEM.md) · ADR-012/013                                                        |
+| —  | **Combat System** (stances, weapons/crit, wounds, pain→collapse, healing, caretaking)                                                                                                                                  | [x] 2026-06-11 | archived: [COMBAT-SYSTEM-2026-06-11.md](../archive/COMBAT-SYSTEM-2026-06-11.md) · ADR-012/013             |
 | —  | **Entity Spawning** Phase A–B (mobs, animals, hunting, foraging, butchering)                                                                                                                                           | [x]            | [ENTITIES_SPAWNING.md](ENTITIES_SPAWNING.md)                                                              |
 | 1  | **Production Chain Expansion** (smelting, forges, mining, fuel/heat, leather, survival)                                                                                                                                | [x] 2026-06-12 | archived: [PRODUCTION-CHAIN-EXPANSION-2026-06-12.md](../archive/PRODUCTION-CHAIN-EXPANSION-2026-06-12.md) |
 | 2  | **Equipment Expansion** (layered armour slots, mainHand/offHand, weight/volume inventory, durability, material-bonus crafting)                                                                                         | [x] 2026-06-13 | archived: [EQUIPMENT-EXPANSION.md](../archive/EQUIPMENT-EXPANSION.md)                                     |
@@ -143,3 +143,5 @@ See `.tasks/archive/` for full specs.
 | Production & early-survival expansion (§A–§G, §1–§6; durability, recipes)      | 2026-06-12 | `PRODUCTION-CHAIN-EXPANSION-2026-06-12.md` |
 | Equipment, inventory & combat loadout (layered slots, weight/volume, material-bonus crafting, paper-doll UI) | 2026-06-13 | `EQUIPMENT-EXPANSION.md` |
 | Living World (day/night, seasons, temperature, weather + canvas particle overlays, wind, snow cover, panel/map atmosphere); fog-of-war deferred to ENGINE-PERFORMANCE | 2026-06-17 | `SEASONS_WEATHER-2026-06-17.md` |
+| Combat System (stances, natural/crafted weapons, crit, wounds, pain→collapse, healing, caretaking) | 2026-06-11 | `COMBAT-SYSTEM-2026-06-11.md` |
+| Mob spawning (superseded — folded into ENTITIES_SPAWNING; spawn model later switched to lairs) | — | `MOB-SPAWNING.md` |

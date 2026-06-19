@@ -143,7 +143,7 @@ See `.tasks/open/RESEARCH-ENHANCEMENT.md` for full spec.
 
 ## Combat System (Implemented)
 
-Real-time, tile-based melee resolved by `combatService.tickCombat` each tick — full spec in [.tasks/open/COMBAT-SYSTEM.md](../.tasks/open/COMBAT-SYSTEM.md) (ADR-012/013).
+Real-time, tile-based melee resolved by `combatService.tickCombat` each tick — full spec in [.tasks/archive/COMBAT-SYSTEM-2026-06-11.md](../.tasks/archive/COMBAT-SYSTEM-2026-06-11.md) (ADR-012/013).
 
 **Key mechanics:**
 

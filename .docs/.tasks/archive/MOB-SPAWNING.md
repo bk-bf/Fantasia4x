@@ -2,15 +2,19 @@
 
 # MOB SPAWNING (moved)
 
-This spec has been expanded into [ENTITIES_SPAWNING.md](ENTITIES_SPAWNING.md),
+This spec has been expanded into [ENTITIES_SPAWNING.md](../open/ENTITIES_SPAWNING.md),
 which covers hostile mobs, neutral animals, hunting, butchering, taming,
-husbandry, and riding.
+husbandry, and riding — including the **lair / territory spawn model** that
+replaced the DF-like edge spawning described below.
 
-> **Related:** [ROADMAP](ROADMAP.md) · [COMBAT-SYSTEM](COMBAT-SYSTEM.md) · [LIVING-WORLD](LIVING-WORLD.md) · [game/DESIGN](../../game/DESIGN.md) · [game/ARCHITECTURE](../../game/ARCHITECTURE.md)
+> **Related:** [ROADMAP](../open/ROADMAP.md) · [ENTITIES_SPAWNING](../open/ENTITIES_SPAWNING.md) · [COMBAT-SYSTEM](COMBAT-SYSTEM-2026-06-11.md) · [game/DESIGN](../../game/DESIGN.md) · [game/ARCHITECTURE](../../game/ARCHITECTURE.md)
 
 ## Status
 
-Not started. No territory system — DF-like biome-weighted spawning only.
+Superseded. The original plan was a DF-like biome-weighted edge spawner with **no
+territory system**; the shipped game instead uses a **lair / territory model**
+(laired hostiles bound to rare `lair` resource tiles, leashed within `lairRange`;
+free-roaming wildlife seeded separately). See ENTITIES_SPAWNING "Spawn Model".
 
 ---
 
