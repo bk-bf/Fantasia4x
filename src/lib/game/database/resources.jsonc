@@ -1712,5 +1712,48 @@
         {"itemId": "infused_moonstone", "min": 0, "max": 1, "skillId": "mining", "skillMultiplier": 0.05}
       ]
     }
+  },
+  // ─────────────────────────────────────────────────────────────────────────
+  // LAIRS / NESTS (ENTITIES_SPAWNING territory) — `lair: true`
+  // ─────────────────────────────────────────────────────────────────────────
+  // Each placed lair tile seeds ONE bound pack of a creature whose `lair` (creatures.jsonc) matches
+  // its id; that pack stays leashed within `lairRange` of this tile. NOT harvestable
+  // (designationTypes: []) — a landmark to learn, avoid, or clear. Spawn probabilities are LOW on
+  // purpose: lairs are the SOLE source of laired hostiles, so few lairs = far fewer day-1 ambushes.
+  // The trivial `interaction` is never reached (no designations); it satisfies the schema.
+  {
+    "id": "wolf_den", "displayName": "Wolf Den", "subterrain": "dirt", "walkable": true, "lair": true,
+    "charSpans": [ {"literal": "&"} ], "fg": [0.6, 0.6, 0.66], "bg": [0.08, 0.06, 0.03], "color": "#9A9AA6",
+    "spawn": {"subterrains": {"grass": 0.00035, "deep_grass": 0.0005, "tall_grass": 0.0004, "dirt": 0.0003}},
+    "nodeAmountRange": [1, 1], "designationTypes": [],
+    "interaction": {"action": "investigate", "workCategory": "foraging", "workAmount": 1, "toolRequirement": null, "yields": []}
+  },
+  {
+    "id": "predator_den", "displayName": "Predator Den", "subterrain": "dirt", "walkable": true, "lair": true,
+    "charSpans": [ {"literal": "&"} ], "fg": [0.66, 0.42, 0.3], "bg": [0.08, 0.06, 0.03], "color": "#A86B4D",
+    "spawn": {"subterrains": {"deep_grass": 0.0004, "grass": 0.00025, "moss": 0.0004}},
+    "nodeAmountRange": [1, 1], "designationTypes": [],
+    "interaction": {"action": "investigate", "workCategory": "foraging", "workAmount": 1, "toolRequirement": null, "yields": []}
+  },
+  {
+    "id": "goblin_warren", "displayName": "Goblin Warren", "subterrain": "dirt", "walkable": true, "lair": true,
+    "charSpans": [ {"literal": "&"} ], "fg": [0.5, 0.62, 0.34], "bg": [0.08, 0.06, 0.03], "color": "#7F9E56",
+    "spawn": {"subterrains": {"bog": 0.0004, "grass": 0.0003, "deep_grass": 0.0004, "dirt": 0.0003}},
+    "nodeAmountRange": [1, 1], "designationTypes": [],
+    "interaction": {"action": "investigate", "workCategory": "foraging", "workAmount": 1, "toolRequirement": null, "yields": []}
+  },
+  {
+    "id": "swamp_nest", "displayName": "Swamp Nest", "subterrain": "bog", "walkable": true, "lair": true,
+    "charSpans": [ {"literal": "&"} ], "fg": [0.45, 0.55, 0.34], "bg": [0.06, 0.08, 0.05], "color": "#738C56",
+    "spawn": {"subterrains": {"bog": 0.0007, "mud": 0.0006, "clay": 0.0005}},
+    "nodeAmountRange": [1, 1], "designationTypes": [],
+    "interaction": {"action": "investigate", "workCategory": "foraging", "workAmount": 1, "toolRequirement": null, "yields": []}
+  },
+  {
+    "id": "harpy_roost", "displayName": "Harpy Roost", "subterrain": "dirt", "walkable": true, "lair": true,
+    "charSpans": [ {"literal": "&"} ], "fg": [0.72, 0.5, 0.56], "bg": [0.08, 0.06, 0.03], "color": "#B8808F",
+    "spawn": {"subterrains": {"tall_grass": 0.0004, "savanna": 0.0004, "grass": 0.00025}},
+    "nodeAmountRange": [1, 1], "designationTypes": [],
+    "interaction": {"action": "investigate", "workCategory": "foraging", "workAmount": 1, "toolRequirement": null, "yields": []}
   }
 ]

@@ -47,8 +47,16 @@ export function stepHunger(state: GameState): GameState {
     const condMults = conditionNeedMultipliers(mob.conditions ?? []);
     // Body size drives appetite via the same data-driven `hunger_rate` stat as pawns.
     const sizeRate = pawnStatService.evaluateStat('hunger_rate', mob);
+    // Laired hostiles run a slow metabolism (def.hungerRate < 1) so a leashed pack penned near its
+    // lair isn't on a starvation clock — they idle their territory instead of starving and roaming.
+    const lairHungerMult = def.hungerRate ?? 1;
     const hungerDelta =
-      BASE_HUNGER_PER_SECOND * SECONDS_PER_TICK * dietMult * condMults.hungerRate * sizeRate;
+      BASE_HUNGER_PER_SECOND *
+      SECONDS_PER_TICK *
+      dietMult *
+      condMults.hungerRate *
+      sizeRate *
+      lairHungerMult;
     const fatigueDelta = BASE_FATIGUE_PER_SECOND * SECONDS_PER_TICK * condMults.fatigueRate;
 
     // Sleeping: hunger accrues at 33% rate; fatigue recovers instead of rising.

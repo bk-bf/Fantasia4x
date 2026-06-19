@@ -84,6 +84,12 @@ export interface ResourceObjectDef {
    * Used by EntityService to discover edible tiles without a hardcoded ID list.
    */
   grazing?: boolean;
+  /**
+   * Territory marker (ENTITIES_SPAWNING territory): a lair/nest tile. At world-gen, each placed lair
+   * tile seeds ONE bound pack of a creature whose `lair` matches this id (entitySpawning.seedLairs).
+   * Not harvestable (designationTypes: []) — a landmark to learn and avoid (or clear).
+   */
+  lair?: boolean;
   /** Primary interaction (backward-compat; also used when `interactions` is absent). */
   interaction: ResourceInteractionDef;
   /**

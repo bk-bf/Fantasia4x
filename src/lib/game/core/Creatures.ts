@@ -150,6 +150,21 @@ export interface CreatureDefinition {
    *    out entirely now that mountains aren't spawnable. */
   spawnsInMountain?: boolean;
   maxMountainDistance?: number;
+  /**
+   * Territory / lair binding (ENTITIES_SPAWNING territory). When set, this creature is a LAIRED
+   * hostile: it spawns ONLY at tiles bearing the matching `lair` resource (resources.jsonc, lair:true),
+   * bound to one as its pack's anchor, and only wanders/aggros within `lairRange` tiles of it. Creatures
+   * with no `lair` are free roamers (prey/neutral wildlife) seeded across the map as before.
+   *   `lairRange`   — leash radius in tiles (tight for dangerous packs, wide ~80–100 for far-rangers).
+   *   `hungerRate`  — multiplier on hunger accrual (default 1); tight lairs run low so a leashed pack
+   *                   isn't stuck on a starvation clock.
+   *   `foodOverflow`— 0–1 buffer that lowers the hunt threshold, so a leashed predator hunts
+   *                   opportunistically before it's fully hungry (prey that wanders into its turf).
+   */
+  lair?: string;
+  lairRange?: number;
+  hungerRate?: number;
+  foodOverflow?: number;
 }
 
 type RawCreature = Record<string, unknown>;
@@ -215,7 +230,11 @@ function toDefinition(raw: RawCreature): CreatureDefinition {
     lootTable: (raw.lootTable as CreatureLootEntry[]) ?? [],
     naturalWeapons: (raw.naturalWeapons as string[]) ?? [],
     spawnsInMountain: (raw.spawnsInMountain as boolean | undefined) ?? undefined,
-    maxMountainDistance: (raw.maxMountainDistance as number | undefined) ?? undefined
+    maxMountainDistance: (raw.maxMountainDistance as number | undefined) ?? undefined,
+    lair: (raw.lair as string | undefined) ?? undefined,
+    lairRange: (raw.lairRange as number | undefined) ?? undefined,
+    hungerRate: (raw.hungerRate as number | undefined) ?? undefined,
+    foodOverflow: (raw.foodOverflow as number | undefined) ?? undefined
   };
 }
 

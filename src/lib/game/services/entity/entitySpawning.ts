@@ -8,6 +8,7 @@ import { createDefaultBodyParts } from '../../systems/Combat';
 import { rng } from '../../core/rng';
 import { findNearbyWalkable } from './entityHelpers';
 import { isSpawnableTile } from '../../core/Terrains';
+import { resourceObjectService } from '../ResourceObjectService';
 import {
   SPAWN_CHECK_INTERVAL,
   BASE_SPAWN_CHANCE,
@@ -32,7 +33,9 @@ let idCounter = 0;
  */
 export function seedInitialEntities(state: GameState, packsOverride?: number): GameState {
   if ((state.mobs?.length ?? 0) > 0) return state;
-  const dayCreatures = CREATURES.filter((c) => !c.nightOnly);
+  // Free-roaming pool EXCLUDES laired hostiles — those come only from their lair tiles (seedLairs).
+  // So this area-scaled seeding is now pure wildlife (prey + neutral roamers).
+  const dayCreatures = CREATURES.filter((c) => !c.nightOnly && !c.lair);
   if (dayCreatures.length === 0) return state;
 
   const h = state.worldMap.length;
@@ -82,7 +85,80 @@ export function seedInitialEntities(state: GameState, packsOverride?: number): G
     }
   }
 
-  return { ...state, mobs: [...(state.mobs ?? []), ...seeded] };
+  // Laired hostiles: one bound pack per lair tile (skipped on the fixed/profiler path for benchmark
+  // stability). These are the SOLE source of laired hostiles — controlled, leashed, sparse.
+  const lairMobs = fixed ? [] : seedLairs(state);
+
+  return { ...state, mobs: [...(state.mobs ?? []), ...seeded, ...lairMobs] };
+}
+
+/**
+ * Seed one bound pack at every lair tile (resources.jsonc `lair: true`). Each pack is anchored to its
+ * lair (stable `lairId`, `lairX/Y`, `lairRange` from the creature def) and stays leashed there — see
+ * the territory checks in entityAI.stepHostile. A mob NEVER adopts another lair, so packs can't drift
+ * onto a neighbour's lair and reclaim/extend it.
+ */
+function seedLairs(state: GameState): Mob[] {
+  const lairIds = new Set(
+    resourceObjectService
+      .getAll()
+      .filter((r) => r.lair)
+      .map((r) => r.id)
+  );
+  if (lairIds.size === 0) return [];
+  // Day creatures bound to each lair id (nightOnly excluded — they spawn via the periodic spawner).
+  const byLair = new Map<string, CreatureDefinition[]>();
+  for (const c of CREATURES) {
+    if (c.lair && lairIds.has(c.lair) && !c.nightOnly) {
+      const arr = byLair.get(c.lair);
+      if (arr) arr.push(c);
+      else byLair.set(c.lair, [c]);
+    }
+  }
+
+  const map = state.worldMap;
+  const h = map.length;
+  const w = map[0]?.length ?? 0;
+  const seeded: Mob[] = [];
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const res = map[y]?.[x]?.resources;
+      if (!res) continue;
+      let lairResId: string | undefined;
+      for (const k of Object.keys(res)) {
+        if (lairIds.has(k)) {
+          lairResId = k;
+          break;
+        }
+      }
+      if (!lairResId) continue;
+      const candidates = byLair.get(lairResId);
+      if (!candidates || candidates.length === 0) continue;
+      const def = candidates[Math.floor(rng.random() * candidates.length)];
+      const lairId = `lair-${lairResId}-${x}-${y}`;
+      const range = def.lairRange ?? 40;
+      const [packMin, packMax] = def.pack;
+      const packSize = packMin + Math.floor(rng.random() * (packMax - packMin + 1));
+      for (let i = 0; i < packSize; i++) {
+        let tx = x;
+        let ty = y;
+        if (i > 0) {
+          const cand = findNearbyWalkable(state, x, y);
+          if (cand && isSpawnableTile(map[cand.y]?.[cand.x])) {
+            tx = cand.x;
+            ty = cand.y;
+          }
+        }
+        const mob = makeMob(def, tx, ty, state.turn);
+        mob.lairId = lairId;
+        mob.lairX = x;
+        mob.lairY = y;
+        mob.lairRange = range;
+        seeded.push(mob);
+      }
+    }
+  }
+  return seeded;
 }
 
 /**
@@ -154,7 +230,8 @@ export function spawnEntities(state: GameState): GameState {
 }
 
 export function pickSpawnCreature(isNight: boolean): CreatureDefinition | undefined {
-  const pool = CREATURES.filter((c) => !c.nightOnly || isNight);
+  // Laired hostiles never spawn via the periodic spawner — their population is fixed by lair tiles.
+  const pool = CREATURES.filter((c) => !c.lair && (!c.nightOnly || isNight));
   if (pool.length === 0) return undefined;
   return pool[Math.floor(rng.random() * pool.length)];
 }

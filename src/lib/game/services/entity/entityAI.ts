@@ -278,6 +278,11 @@ export function tickMobConditionTimers(mob: Mob): Mob {
   return { ...mob, conditionTimers: next, transientConditions };
 }
 
+/** Chebyshev distance between two points (matches `dist`'s metric) — for lair-anchor checks. */
+function chebDist(ax: number, ay: number, bx: number, by: number): number {
+  return Math.max(Math.abs(ax - bx), Math.abs(ay - by));
+}
+
 export function stepHostile(
   mob: Mob,
   def: CreatureDefinition,
@@ -307,6 +312,31 @@ export function stepHostile(
       huntTargetId: undefined,
       path: []
     };
+  }
+
+  // ── Territory leash (lair system) ───────────────────────────────────────
+  // A laired mob that has strayed beyond its leash — drifted while wandering, or over-chased a target
+  // — abandons whatever it's doing and heads home. Fleeing/Exhausted are exempt: survival overrides
+  // territory. This (plus the Wander aggro gate below) keeps each pack penned to its lair, so the map
+  // isn't a churning mass of 300 free-hunting hostiles.
+  if (
+    mob.lairId != null &&
+    mob.state !== 'Fleeing' &&
+    mob.state !== 'Exhausted' &&
+    chebDist(mob.x, mob.y, mob.lairX ?? mob.x, mob.lairY ?? mob.y) > (mob.lairRange ?? Infinity)
+  ) {
+    return moveToward(
+      {
+        ...mob,
+        state: 'Wander',
+        stateSince: turn,
+        huntTargetId: undefined,
+        eatProgress: undefined,
+        path: []
+      },
+      { x: mob.lairX!, y: mob.lairY! },
+      state
+    );
   }
 
   // Huntable neutral animals (boar, elk, etc.) also react to predators and pack deaths.
@@ -388,9 +418,12 @@ export function stepHostile(
   }
   const huntCooldownExpired = !mob.huntCooldownUntil || turn >= mob.huntCooldownUntil;
   const forageCooldownExpired = !mob.forageCooldownUntil || turn >= mob.forageCooldownUntil;
+  // food_overflow: a laired predator hunts opportunistically BEFORE it's fully hungry — the buffer
+  // lowers the eat threshold by that fraction, so prey (or a pawn) wandering into its turf is fair game.
+  const eatThreshold = HUNGER_EAT_THRESHOLD * (1 - (def.foodOverflow ?? 0));
   if (
     !inVision &&
-    mob.needs.hunger >= HUNGER_EAT_THRESHOLD &&
+    mob.needs.hunger >= eatThreshold &&
     mob.state !== 'Fleeing' &&
     mob.state !== 'Sleeping' &&
     mob.state !== 'Attacking' &&
@@ -448,7 +481,15 @@ export function stepHostile(
       // steps within half their vision range (e.g. bears charge if approached).
       const tooClose =
         !aggressive && inVision && dist(mob, inVision.pos) <= Math.ceil(visionRange * 0.5);
-      if (inVision && (aggressive || tooClose)) {
+      // Territory: a laired mob only engages a pawn that's INSIDE its lair's range. Pawns passing
+      // outside the territory are seen but ignored — so the player can travel safely between lairs and
+      // only triggers a pack by entering its turf.
+      const pawnInTerritory =
+        !inVision ||
+        mob.lairId == null ||
+        chebDist(mob.lairX ?? mob.x, mob.lairY ?? mob.y, inVision.pos.x, inVision.pos.y) <=
+          (mob.lairRange ?? Infinity);
+      if (inVision && (aggressive || tooClose) && pawnInTerritory) {
         return moveToward({ ...mob, state: 'Alerted', stateSince: turn }, inVision.pos, state);
       }
       return wanderStep(mob, def, state);

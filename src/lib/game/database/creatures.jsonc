@@ -26,6 +26,7 @@
         "nightVision"   : 0.9,
         "pack"          : [1, 3],
         "biomeWeights"  : {"forest": 1.0, "plains": 0.7, "mountain": 0.5},
+        "lair"          : "wolf_den", "lairRange": 55, "hungerRate": 0.5, "foodOverflow": 0.3,
         "carcassItemId" : "wolf_carcass",
         "naturalWeapons": ["bite", "claw"]
     },
@@ -49,6 +50,7 @@
         "tameable": true,
         "mountable": false,
         "biomeWeights": {"mountain": 1.0, "forest": 0.6},
+        "lair": "predator_den", "lairRange": 32, "hungerRate": 0.3, "foodOverflow": 0.4,
         "carcassItemId": "bear_carcass",
         "naturalWeapons": ["claw", "slam"]
     },
@@ -71,6 +73,7 @@
         "pack"          : [1, 3],
         "tameable"      : false,
         "biomeWeights"  : {"swamp": 1.0, "forest": 0.5},
+        "lair"          : "goblin_warren", "lairRange": 65, "hungerRate": 0.6, "foodOverflow": 0.25,
         "carcassItemId" : "goblin_carcass",
         "naturalWeapons": ["fists", "kick"]
     },
@@ -390,6 +393,7 @@
         "intelligence"  : "primitive",
         "pack"          : [2, 5],
         "biomeWeights"  : {"forest": 1.0, "plains": 0.8},
+        "lair"          : "wolf_den", "lairRange": 50, "hungerRate": 0.5, "foodOverflow": 0.3,
         "carcassItemId" : "worg_carcass",
         "naturalWeapons": ["bite", "claw"]
     },
@@ -409,6 +413,7 @@
         "intelligence"  : "primitive",
         "pack"          : [3, 6],
         "biomeWeights"  : {"plains": 1.0, "swamp": 0.5},
+        "lair"          : "wolf_den", "lairRange": 60, "hungerRate": 0.5, "foodOverflow": 0.35,
         "carcassItemId" : "jackal_carcass",
         "naturalWeapons": ["bite"]
     },
@@ -429,6 +434,7 @@
         "tameable"      : true,
         "tameResistance": 0.9,
         "biomeWeights"  : {"forest": 1.0},
+        "lair"          : "predator_den", "lairRange": 28, "hungerRate": 0.3, "foodOverflow": 0.45,
         "carcassItemId" : "owlbear_carcass",
         "naturalWeapons": ["claw", "bite", "slam"]
     },
@@ -448,6 +454,7 @@
         "intelligence"  : "primitive",
         "pack"          : [1, 2],
         "biomeWeights"  : {"forest": 0.8, "swamp": 0.6},
+        "lair"          : "predator_den", "lairRange": 30, "hungerRate": 0.35, "foodOverflow": 0.4,
         "carcassItemId" : "sabretooth_carcass",
         "naturalWeapons": ["bite", "claw"]
     },
@@ -466,6 +473,7 @@
         "intelligence"  : "primitive",
         "pack"          : [1, 1],
         "biomeWeights"  : {"swamp": 1.0},
+        "lair"          : "swamp_nest", "lairRange": 24, "hungerRate": 0.3, "foodOverflow": 0.4,
         "carcassItemId" : "mire_crocodile_carcass",
         "naturalWeapons": ["bite", "slam"]
     },
@@ -485,6 +493,7 @@
         "intelligence"  : "primitive",
         "pack"          : [1, 2],
         "biomeWeights"  : {"swamp": 1.0, "plains": 0.4},
+        "lair"          : "swamp_nest", "lairRange": 30, "hungerRate": 0.3, "foodOverflow": 0.4,
         "carcassItemId" : "marsh_viper_carcass",
         "naturalWeapons": ["venom_bite"]
     },
@@ -504,6 +513,7 @@
         "intelligence"  : "primitive",
         "pack"          : [3, 6],
         "biomeWeights"  : {"swamp": 1.0, "forest": 0.4},
+        "lair"          : "swamp_nest", "lairRange": 40, "hungerRate": 0.3, "foodOverflow": 0.4,
         "carcassItemId" : "stirge_carcass",
         "naturalWeapons": ["proboscis"]
     },
@@ -522,6 +532,7 @@
         "intelligence"  : "primitive",
         "pack"          : [1, 3],
         "biomeWeights"  : {"swamp": 1.0},
+        "lair"          : "swamp_nest", "lairRange": 28,
         "carcassItemId" : "grimeling_carcass",
         "naturalWeapons": ["claw"]
     },
@@ -559,6 +570,7 @@
         "intelligence"  : "primitive",
         "pack"          : [1, 2],
         "biomeWeights"  : {"forest": 1.0},
+        "lair"          : "predator_den", "lairRange": 26, "hungerRate": 0.3, "foodOverflow": 0.4,
         "carcassItemId" : "thornwood_spider_carcass",
         "naturalWeapons": ["venom_bite"]
     },
@@ -579,6 +591,7 @@
         "intelligence"  : "primitive",
         "pack"          : [3, 6],
         "biomeWeights"  : {"forest": 0.8, "swamp": 0.8},
+        "lair"          : "goblin_warren", "lairRange": 60, "hungerRate": 0.6, "foodOverflow": 0.3,
         "carcassItemId" : "kobold_skulker_carcass",
         "naturalWeapons": ["fists", "bite"]
     },
@@ -597,6 +610,7 @@
         "intelligence"  : "primitive",
         "pack"          : [2, 5],
         "biomeWeights"  : {"plains": 1.0, "forest": 0.5},
+        "lair"          : "goblin_warren", "lairRange": 70, "hungerRate": 0.6, "foodOverflow": 0.3,
         "carcassItemId" : "gnoll_marauder_carcass",
         "naturalWeapons": ["claw", "bite"]
     },
@@ -615,6 +629,7 @@
         "intelligence"  : "primitive",
         "pack"          : [2, 4],
         "biomeWeights"  : {"forest": 0.8, "plains": 0.8},
+        "lair"          : "goblin_warren", "lairRange": 60, "hungerRate": 0.6, "foodOverflow": 0.25,
         "carcassItemId" : "orc_reaver_carcass",
         "naturalWeapons": ["fists", "slam"]
     },
@@ -633,6 +648,7 @@
         "intelligence"  : "primitive",
         "pack"          : [2, 4],
         "biomeWeights"  : {"plains": 0.8, "forest": 0.6},
+        "lair"          : "harpy_roost", "lairRange": 85, "hungerRate": 0.7, "foodOverflow": 0.3,
         "carcassItemId" : "harpy_carcass",
         "naturalWeapons": ["claw", "peck", "screech"]
     },
@@ -651,6 +667,7 @@
         "intelligence"  : "primitive",
         "pack"          : [3, 5],
         "biomeWeights"  : {"swamp": 1.0},
+        "lair"          : "swamp_nest", "lairRange": 35, "hungerRate": 0.4, "foodOverflow": 0.3,
         "carcassItemId" : "bullywug_carcass",
         "naturalWeapons": ["fists", "bite", "tongue"]
     }

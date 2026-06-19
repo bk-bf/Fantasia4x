@@ -127,6 +127,15 @@ export interface Mob {
   markedForHunt?: boolean;
   /** Player has tagged this mob for attention (generic marker, not task-specific). */
   marked?: boolean;
+  // ── Territory / lair (ENTITIES_SPAWNING territory) ───────────────────────
+  /** Stable id of the lair this mob's pack belongs to (`lair-<resource>-<x>-<y>`). Bound at spawn;
+   *  a mob NEVER adopts another lair — so packs can't drift onto a neighbour's lair and reclaim it. */
+  lairId?: string;
+  /** Lair anchor tile + leash radius. The mob wanders and aggros only within `lairRange` tiles of
+   *  (lairX,lairY); beyond it, it abandons the chase/forage and returns home. */
+  lairX?: number;
+  lairY?: number;
+  lairRange?: number;
 }
 
 /** An animal tamed and bound to an owning pawn (Phase C+). */
