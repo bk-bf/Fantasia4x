@@ -4,7 +4,7 @@
  */
 
 import { GameGrid } from './game-grid.js';
-import type { WorldTile, PlacedBuilding, DesignationType } from '$lib/game/core/types.js';
+import type { WorldTile, PlacedBuilding } from '$lib/game/core/types.js';
 import {
   SUBTERRAINS,
   SUBTERRAIN_FALLBACK,
@@ -36,14 +36,7 @@ function hexToRgb01(hex?: string): [number, number, number] | null {
  * Uses subterrain glyph + color when available, falls back to legacy type.
  * Overlays placed buildings and designations on top of terrain tiles.
  */
-export function buildGameGrid(
-  worldMap: WorldTile[][],
-  buildings?: PlacedBuilding[],
-  designations?: Record<string, DesignationType>,
-  zoneTiles?: Record<string, DesignationType[]>,
-  /** Tile keys ("x,y") whose standing-zone tint should be suppressed (player toggled it off). */
-  hiddenZoneTiles?: ReadonlySet<string>
-): GameGrid {
+export function buildGameGrid(worldMap: WorldTile[][], buildings?: PlacedBuilding[]): GameGrid {
   const grid = new GameGrid();
 
   // Interior-mountain hiding (flood-fill). "Solid" = a rocky/cliff/mineral_deposit tile still carrying
@@ -246,39 +239,10 @@ export function buildGameGrid(
     }
   }
 
-  // Phase 4b: overlay designation zone tints
-  // Work designation icons (harvest, mine, construct, haul, clear) are rendered
-  // on a separate transparent 2D canvas overlay in GameCanvas.svelte so the
-  // terrain glyphs remain visible underneath.  Only the stockpile zone tint is
-  // applied here because it modifies background colour rather than the glyph.
-  // Stockpile is a standing zone, read from `zoneTiles` (not `designations`) so the
-  // tint survives a harvest/woodcut order completing on the same tile.
-  if (zoneTiles) {
-    function lerp(a: number, b: number, t: number) {
-      return a + (b - a) * t;
-    }
-    function blendRGB(a: RGB, b: RGB, t: number): RGB {
-      return { r: lerp(a.r, b.r, t), g: lerp(a.g, b.g, t), b: lerp(a.b, b.b, t) };
-    }
-    const STOCKPILE_TINT = {
-      bg: { r: 0.3, g: 0.18, b: 0.02 } as RGB,
-      fg: { r: 1.0, g: 0.8, b: 0.2 } as RGB
-    };
-
-    for (const [key, types] of Object.entries(zoneTiles)) {
-      if (!types.includes('stockpile')) continue;
-      if (hiddenZoneTiles?.has(key)) continue; // player hid this zone's overlay color
-      const [x, y] = key.split(',').map(Number);
-      const existing = grid.getTile(x, y);
-      if (!existing) continue;
-      grid.setTile(x, y, {
-        char: existing.char,
-        foreground: blendRGB(existing.foreground, STOCKPILE_TINT.fg, 0.3),
-        background: blendRGB(existing.background, STOCKPILE_TINT.bg, 0.65),
-        position: { x, y }
-      });
-    }
-  }
+  // NOTE: standing-zone tints (stockpile/drink/wash) are NOT baked here anymore. They — like the
+  // work-designation icons — are painted on the lightweight 2D overlay in GameCanvas.drawDesignations,
+  // so drawing/toggling a zone never triggers a full terrain-grid rebuild (the old cause of the
+  // "map lags then the color appears" hitch). buildGameGrid is now purely terrain + buildings.
 
   return grid;
 }

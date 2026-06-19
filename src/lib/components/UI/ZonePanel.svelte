@@ -39,14 +39,16 @@
       label: 'DRINK',
       charSpans: [{ literal: '~' }],
       desc: 'Thirsty pawns come here to drink (clean upstream water / urns)',
-      color: '#4fc3f7'
+      color: '#4fc3f7',
+      tinted: true
     },
     {
       type: 'wash',
       label: 'WASH',
       charSpans: [{ literal: '≈' }],
       desc: 'Dirty pawns come here to wash',
-      color: '#80d8c0'
+      color: '#80d8c0',
+      tinted: true
     }
   ];
 

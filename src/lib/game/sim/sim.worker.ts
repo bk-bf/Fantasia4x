@@ -278,27 +278,32 @@ function publish(state: GameState, flush: boolean) {
   // ship the deltas. Either way a visible terrain change must bump _terrainRev (renderer rebuild).
   const tileDeltas = worldMapChanged ? (clearTileDeltas(), null) : drainTileDeltas();
   const bSig = buildingsVisualSig(state.buildings);
-  // Terrain rebuild trigger — designations are DELIBERATELY excluded (see designationRev above):
-  // buildGameGrid renders worldMap + buildings + stockpile zone tint, NOT designations, so designation
-  // churn must not force the 38k-tile rebuild (the dominant harvest dip, trace §D).
+  // Terrain rebuild trigger — designations AND standing-zone tints are DELIBERATELY excluded: both are
+  // painted on GameCanvas's 2D overlay now (buildGameGrid renders neither), so their churn must not
+  // force the 38k-tile rebuild (the dominant harvest dip, trace §D; and the zone-commit hitch).
   const cWM = state.worldMap !== prevWM;
   const cDelta = tileDeltas !== null;
   const cBSig = bSig !== prevBuildingsSig;
   const cZone = state.zoneTiles !== prevZoneTiles;
-  if (cWM || cDelta || cBSig || cZone) {
+  if (cWM || cDelta || cBSig) {
     terrainRev++;
     prevWM = state.worldMap;
     prevBuildingsSig = bSig;
-    prevZoneTiles = state.zoneTiles;
     if (cWM) _trigWM++;
     if (cDelta) _trigDelta++;
     if (cBSig) _trigBSig++;
-    if (cZone) _trigZone++;
   }
-  if (state.designations !== prevDesignations) {
+  // Designation icons + zone tints share the cheap 2D-overlay redraw rev.
+  if (state.designations !== prevDesignations || cZone) {
     designationRev++;
-    prevDesignations = state.designations;
-    _trigDesig++;
+    if (state.designations !== prevDesignations) {
+      prevDesignations = state.designations;
+      _trigDesig++;
+    }
+    if (cZone) {
+      prevZoneTiles = state.zoneTiles;
+      _trigZone++;
+    }
   }
   const delta: Record<string, unknown> = {};
   const src = state as unknown as Record<string, unknown>;

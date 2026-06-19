@@ -253,17 +253,16 @@
   // still forces a terrain rebuild.
   let _prevHiddenZoneSig = '';
 
-  /** Tile keys whose stockpile tint should be suppressed, per the player's per-zone toggles. */
-  function computeHiddenZoneTiles(): ReadonlySet<string> | undefined {
-    if (hiddenZoneInstances.size === 0) return undefined;
-    const out = new Set<string>();
-    for (const [key, types] of Object.entries(zoneTiles)) {
-      if (!types.includes('stockpile')) continue;
-      const inst = designationZoneId[key];
-      if (inst && hiddenZoneInstances.has(inst)) out.add(key);
-    }
-    return out;
-  }
+  // Translucent fill colour for each standing-zone type, painted on the 2D overlay (drawDesignations).
+  // Kept in sync with ZONE_DEFS in ZonePanel.svelte (stockpile/drink/wash). A type absent here gets no
+  // tint. (Was a background blend baked into the WebGL grid; moved to the overlay to avoid rebuilds.)
+  const ZONE_TINT_COLORS: Record<string, string> = {
+    stockpile: 'rgba(232, 160, 32, 0.30)',
+    // Drink/wash sit on (blue) water, so they need a stronger fill than the land stockpile tint to
+    // read at all — plus a tile outline (see drawDesignations) so they stand out against the water.
+    drink: 'rgba(120, 210, 255, 0.45)',
+    wash: 'rgba(150, 240, 215, 0.45)'
+  };
 
   // Phase A2 dynamic lighting: lit campfires emit warm point light, baked into
   // the tile renderer (replaces the old floating DOM radial glow). §M: the dim, static
@@ -753,6 +752,8 @@
       color: '#e8a020',
       desc: 'Haulers deposit carried resources here'
     },
+    drink: { label: 'DRINK ZONE', color: '#4fc3f7', desc: 'Thirsty pawns come here to drink' },
+    wash: { label: 'WASH ZONE', color: '#80d8c0', desc: 'Dirty pawns come here to wash' },
     harvest: { label: 'HARVEST', color: '#4ccc44', desc: 'Single-tile harvest designation' },
     mine: { label: 'MINE', color: '#cc8833', desc: 'Single-tile mining designation' },
     construct: { label: 'CONSTRUCT', color: '#44aacc', desc: 'Construction site' }
@@ -845,33 +846,39 @@
     // frame (90ms freeze frames). The worker sends `_terrainRev` (a reliable revision computed where
     // refs are stable); use it when present. In-thread, fall back to the ref checks.
     const workerRev = (s as unknown as { _terrainRev?: number })._terrainRev;
-    // Hiding/showing a zone's color changes what buildGameGrid paints but touches
-    // neither zoneTiles nor _terrainRev, so track it with its own signature.
+    const workerDesigRev = (s as unknown as { _designationRev?: number })._designationRev;
+    // Hiding/showing a zone's colour is a stable string signature (it survives the worker's structured
+    // clone), so it's compared directly in both modes to trigger a cheap overlay redraw.
     const hiddenZoneSig = [...hiddenZoneInstances].sort().join(',');
+
+    // Terrain (WebGL grid) rebuild trigger — worldMap + buildings ONLY. Designation icons AND standing-
+    // zone tints both live on the cheap 2D overlay now (buildGameGrid renders neither), so they must
+    // NOT force the ~90ms 38k-tile rebuild. This is what removes the "map lags then the zone colour
+    // appears a second later" hitch when committing a stockpile/drink/wash zone.
     const terrainChanged =
-      hiddenZoneSig !== _prevHiddenZoneSig ||
-      (workerRev !== undefined
+      workerRev !== undefined
         ? workerRev !== _prevTerrainRev
-        : worldMap !== _prevWorldMap ||
-          buildingsSig !== _prevBuildingsSig ||
-          designations !== _prevDesignations ||
-          zoneTiles !== _prevZoneTiles);
-    _prevHiddenZoneSig = hiddenZoneSig;
+        : worldMap !== _prevWorldMap || buildingsSig !== _prevBuildingsSig;
+
+    // 2D overlay (designation icons + zone tints) redraw trigger. In worker mode the worker bumps
+    // _designationRev for designation AND zone changes (structured-clone breaks ref-equality, so refs
+    // are useless); in-thread we ref-check designations/zoneTiles. The colour-hidden toggle is the
+    // string sig above (so SHOW/HIDE ALL COLORS just repaints the overlay — no terrain rebuild).
+    const overlayChanged =
+      hiddenZoneSig !== _prevHiddenZoneSig ||
+      (workerDesigRev !== undefined
+        ? workerDesigRev !== _prevDesignationRev
+        : designations !== _prevDesignations || zoneTiles !== _prevZoneTiles);
+
     _prevTerrainRev = workerRev;
+    _prevDesignationRev = workerDesigRev;
+    _prevHiddenZoneSig = hiddenZoneSig;
     _prevWorldMap = worldMap;
     _prevBuildingsSig = buildingsSig;
     _prevDesignations = designations;
     _prevZoneTiles = zoneTiles;
-    // §D: designations changed → redraw ONLY the cheap 2D designation overlay, NOT the 38k-tile
-    // terrain buffer (buildGameGrid doesn't render designations). This is the dominant-harvest-dip fix:
-    // designation churn was forcing full terrain rebuilds ~2×/s for a layer the terrain doesn't contain.
-    const workerDesigRev = (s as unknown as { _designationRev?: number })._designationRev;
-    const designationsChanged =
-      workerDesigRev !== undefined
-        ? workerDesigRev !== _prevDesignationRev
-        : designations !== _prevDesignations;
-    _prevDesignationRev = workerDesigRev;
-    if (designationsChanged && renderer?.isReady() && worldMap.length > 0) drawDesignations();
+
+    if (overlayChanged && renderer?.isReady() && worldMap.length > 0) drawDesignations();
     // Day/night: update ambient uniforms whenever the turn changes. Season + weather hue is folded
     // into the ambient tint here (PERF-5: a uniform multiply, never a terrain rebuild).
     if (renderer?.isReady()) {
@@ -1328,13 +1335,7 @@
     // Profiler: how often the full 38k-tile terrain grid is rebuilt + re-uploaded. If this is
     // ~1/tick during RUNNING, the renderCPU cost is rebuild churn (fix the trigger); if ~0 while
     // renderCPU stays high, the cost is the per-frame buffer re-upload in the renderer instead.
-    const grid = buildGameGrid(
-      worldMap,
-      buildings,
-      designations,
-      zoneTiles,
-      computeHiddenZoneTiles()
-    );
+    const grid = buildGameGrid(worldMap, buildings);
 
     // (Live zone drag-paint preview, the Shift+drag selection rectangle, the committed selection
     // rectangle and the selected-resource highlight are all drawn on the lightweight 2D overlay in
@@ -1379,6 +1380,91 @@
     if (!ctx) return;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, W, H);
+
+    // Standing-zone tints (stockpile / drink / wash). Painted here on the 2D overlay — bottom-most so
+    // designation icons, previews and selection draw over them — instead of being baked into the WebGL
+    // terrain grid. That's the fix for the commit hitch: drawing or toggling a zone now repaints just
+    // this cheap overlay, so the tint appears immediately with no full terrain rebuild. Only on-screen
+    // tiles are filled, and a tile whose zone instance has its colour hidden is skipped.
+    {
+      // Group every zone tile by its tint colour. Stockpile lives in zoneTiles (per-tile arrays);
+      // drink/wash are water-only markers in `designations` (NOT zoneTiles — see DesignationService).
+      // Other designation types (harvest/mine/…) have no ZONE_TINT_COLORS entry and are skipped here —
+      // they get icons below instead. Tiles whose zone instance has its colour hidden are excluded.
+      const byColor = new Map<string, Set<string>>();
+      const add = (key: string, color: string) => {
+        const inst = designationZoneId[key];
+        if (inst && hiddenZoneInstances.has(inst)) return;
+        let set = byColor.get(color);
+        if (!set) byColor.set(color, (set = new Set()));
+        set.add(key);
+      };
+      for (const key in zoneTiles) {
+        for (const t of zoneTiles[key]) {
+          const c = ZONE_TINT_COLORS[t];
+          if (c) {
+            add(key, c);
+            break;
+          }
+        }
+      }
+      for (const key in designations) {
+        const c = ZONE_TINT_COLORS[designations[key]];
+        if (c) add(key, c);
+      }
+
+      if (byColor.size > 0) {
+        const colW = Math.ceil(W / tileWidth);
+        const rowH = Math.ceil(H / tileHeight);
+        const onScreen = (wx: number, wy: number) =>
+          wx >= viewX - 1 && wy >= viewY - 1 && wx <= viewX + colW && wy <= viewY + rowH;
+        ctx.save();
+        ctx.lineWidth = 1.5;
+        for (const [color, set] of byColor) {
+          // Translucent fill for every tile of this zone.
+          ctx.fillStyle = color;
+          for (const key of set) {
+            const ci = key.indexOf(',');
+            const wx = +key.slice(0, ci);
+            const wy = +key.slice(ci + 1);
+            if (!onScreen(wx, wy)) continue;
+            ctx.fillRect((wx - viewX) * tileWidth, (wy - viewY) * tileHeight, tileWidth, tileHeight);
+          }
+          // Outline ONLY the region's outer edge — an edge is drawn on a side only where the neighbour
+          // tile isn't part of this same zone. Adjacency uses the full set (incl. off-screen tiles) so
+          // no false border appears at the viewport edge. This replaces the per-tile box that read as a
+          // grid; interior shared edges get no line.
+          ctx.strokeStyle = color.replace(/[\d.]+\)$/, '0.95)');
+          ctx.beginPath();
+          for (const key of set) {
+            const ci = key.indexOf(',');
+            const wx = +key.slice(0, ci);
+            const wy = +key.slice(ci + 1);
+            if (!onScreen(wx, wy)) continue;
+            const sx = (wx - viewX) * tileWidth;
+            const sy = (wy - viewY) * tileHeight;
+            if (!set.has(`${wx - 1},${wy}`)) {
+              ctx.moveTo(sx, sy);
+              ctx.lineTo(sx, sy + tileHeight);
+            }
+            if (!set.has(`${wx + 1},${wy}`)) {
+              ctx.moveTo(sx + tileWidth, sy);
+              ctx.lineTo(sx + tileWidth, sy + tileHeight);
+            }
+            if (!set.has(`${wx},${wy - 1}`)) {
+              ctx.moveTo(sx, sy);
+              ctx.lineTo(sx + tileWidth, sy);
+            }
+            if (!set.has(`${wx},${wy + 1}`)) {
+              ctx.moveTo(sx, sy + tileHeight);
+              ctx.lineTo(sx + tileWidth, sy + tileHeight);
+            }
+          }
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+    }
 
     // Live zone drag-paint preview. Drawn here on the lightweight 2D overlay
     // (rather than tinting the WebGL grid) so the heavy terrain vertex buffer
@@ -1830,7 +1916,8 @@
         },
         save: true
       });
-      redrawOverlay();
+      // Designations + zone tints are 2D-overlay layers now — repaint just that, no terrain rebuild.
+      drawDesignations();
       return;
     }
 
@@ -1929,7 +2016,7 @@
 
       const grid =
         worldMap.length > 0
-          ? buildGameGrid(worldMap, buildings, designations, zoneTiles, computeHiddenZoneTiles())
+          ? buildGameGrid(worldMap, buildings)
           : generatePlaceholderGrid();
       renderer.setGrid(grid);
       renderer.setViewTileOffset(viewX, viewY);
@@ -2399,7 +2486,9 @@
         });
       }
       zoneDragActive = false;
-      redrawOverlay();
+      // Zone tints live on the 2D overlay now — repaint it, don't rebuild the terrain grid (this is
+      // what made committing a stockpile/drink/wash zone hitch the map for a second).
+      drawDesignations();
       return;
     }
     if (selDragActive) {
@@ -2472,7 +2561,8 @@
       const { x, y } = selectedResourceTile;
       gameState.command({ type: 'designate', payload: { x, y, type: resolvedType }, save: true });
     }
-    redrawOverlay();
+    // Designation icons are a 2D-overlay layer — repaint that, not the terrain grid.
+    drawDesignations();
   }
 
   function cancelResourceDesignation() {
@@ -2484,7 +2574,7 @@
       payload: { resourceId: selectedResourceTile.resourceId },
       save: true
     });
-    redrawOverlay();
+    drawDesignations();
   }
 
   function startHuntDrag(mob: Mob) {
