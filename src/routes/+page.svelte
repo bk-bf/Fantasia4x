@@ -334,16 +334,24 @@
     height: 30px;
     display: flex;
     align-items: stretch;
+    overflow-x: auto;
+    overflow-y: hidden;
     background: var(--bg-panel);
     border-top: 1px solid var(--border-hi);
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .bottom-nav::-webkit-scrollbar {
+    display: none;
   }
 
   .nav-tab {
-    flex: 1;
+    flex: 1 0 auto;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 3px;
+    padding: 0 14px;
     background: transparent;
     border: none;
     border-right: 1px solid var(--border);

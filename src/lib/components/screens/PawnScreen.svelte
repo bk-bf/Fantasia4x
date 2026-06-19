@@ -206,13 +206,21 @@
   .pawn-tabs {
     display: flex;
     flex-shrink: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
     background: var(--bg);
     border-bottom: 2px solid var(--border-hi);
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .pawn-tabs::-webkit-scrollbar {
+    display: none;
   }
 
   .pawn-tab {
-    flex: 1;
-    padding: 6px 0 5px;
+    flex: 1 0 auto;
+    white-space: nowrap;
+    padding: 6px 14px 5px;
     background: transparent;
     border: none;
     border-right: 1px solid var(--border);
@@ -238,7 +246,7 @@
   .pawn-tab.active::after {
     content: '';
     position: absolute;
-    bottom: -2px;
+    bottom: 0;
     left: 0;
     right: 0;
     height: 2px;
