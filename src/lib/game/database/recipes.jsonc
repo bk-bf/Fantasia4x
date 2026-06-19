@@ -275,7 +275,8 @@
     "inputAlternatives": [ {"chalcopyrite": 2}, {"azurite": 4} ],
     "outputs"          : {"copper_bar": 1},
     "workAmount"       : 8,
-    "toolTierRequired" : 0
+    "toolTierRequired" : 0,
+    "researchRequired" : "copper_smelting"
   },
   {
     "id"              : "make_tin_bar",
@@ -284,7 +285,8 @@
     "inputs"          : {"cassiterite": 3},
     "outputs"         : {"tin_bar": 1},
     "workAmount"      : 8,
-    "toolTierRequired": 0
+    "toolTierRequired": 0,
+    "researchRequired": "tin_smelting"
   },
   {
     "id"              : "make_bronze_bar",
@@ -293,7 +295,8 @@
     "inputs"          : {"copper_bar": 3, "tin_bar": 1},
     "outputs"         : {"bronze_bar": 1},
     "workAmount"      : 10,
-    "toolTierRequired": 1
+    "toolTierRequired": 1,
+    "researchRequired": "bronze_working"
   },
   {
     "id"               : "make_iron_bar",
@@ -303,7 +306,8 @@
     "inputAlternatives": [ {"magnetite": 3, "limestone": 1}, {"limonite": 5, "limestone": 1} ],
     "outputs"          : {"iron_bar": 1},
     "workAmount"       : 14,
-    "toolTierRequired" : 1
+    "toolTierRequired" : 1,
+    "researchRequired" : "iron_smelting"
   },
   {
     "id"              : "make_lead_bar",
@@ -340,7 +344,8 @@
     "inputs"          : {"iron_bar": 2, "coal": 1, "limestone": 1},
     "outputs"         : {"steel_bar": 1},
     "workAmount"      : 20,
-    "toolTierRequired": 2
+    "toolTierRequired": 2,
+    "researchRequired": "steel_making"
   },
   {
     "id"               : "make_ash",
