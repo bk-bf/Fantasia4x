@@ -1,12 +1,14 @@
 <script lang="ts">
-  // Custom Map popup — live-edits the terrains.jsonc biome config (density bands + climate) and
-  // regenerates the world as you drag the sliders. `pickBiome` reads BIOMES directly, so
-  // `setBiomeField` + `regenWorld(seed)` is all the wiring needed. Density ranges are scanned in
-  // order and should stay contiguous (a gap → bare land in that band; that's fine for experimenting).
+  // Custom Map popup — live-tune biome generation and regenerate the world as you drag.
+  // Each biome has ONE "share" slider (0 = none of that terrain, 100 = only it). Moving one
+  // rebalances the others proportionally so the shares always partition the elevation axis — no
+  // raw min/max bands to juggle. `applyBiomeShares` rewrites BIOMES' contiguous density ranges,
+  // which `pickBiome` reads on the next `regenWorld`.
   import { get } from 'svelte/store';
   import { gameState } from '$lib/stores/gameState';
   import {
     getBiomeConfig,
+    applyBiomeShares,
     setBiomeField,
     resetBiomeConfig,
     type BiomeConfigEntry
@@ -24,10 +26,24 @@
     regenTimer = setTimeout(() => gameState.regenWorld(seed), 120);
   }
 
-  function edit(id: string, field: 'min' | 'max' | 'baseTemp' | 'baseMoisture', e: Event) {
-    const value = Number((e.currentTarget as HTMLInputElement).value);
-    setBiomeField(id, field, value);
-    biomes = getBiomeConfig(); // refresh value labels
+  // Set one biome's share to `pct`% and spread the remaining (100−pct)% across the others in
+  // proportion to their current shares — so the sliders counterbalance and always sum to 100%.
+  function setShare(id: string, pct: number) {
+    const newShare = Math.max(0, Math.min(1, pct / 100));
+    const others = biomes.filter((b) => b.id !== id);
+    const othersTotal = others.reduce((s, b) => s + b.share, 0);
+    const remaining = 1 - newShare;
+    const next: Record<string, number> = { [id]: newShare };
+    if (othersTotal > 1e-6) for (const b of others) next[b.id] = (b.share / othersTotal) * remaining;
+    else for (const b of others) next[b.id] = remaining / others.length;
+    applyBiomeShares(next);
+    biomes = getBiomeConfig();
+    scheduleRegen();
+  }
+
+  function climate(id: string, field: 'baseTemp' | 'baseMoisture', e: Event) {
+    setBiomeField(id, field, Number((e.currentTarget as HTMLInputElement).value));
+    biomes = getBiomeConfig();
     scheduleRegen();
   }
   function reset() {
@@ -61,38 +77,26 @@
     <button class="cm-btn close" onclick={onClose} title="close">✕</button>
   </div>
   <div class="cm-note">
-    Density bands partition the elevation noise (0–1) into biomes — drag to repaint the world live.
+    Each biome's share of the world — 0 removes it, 100 fills the map; the rest rebalance to match.
   </div>
 
   <div class="cm-grid">
     <span class="col-h">BIOME</span>
-    <span class="col-h">density min</span>
-    <span class="col-h">density max</span>
-    <span class="col-h">temp °C</span>
-    <span class="col-h">moisture</span>
+    <span class="col-h">SHARE %</span>
+    <span class="col-h">TEMP °C</span>
+    <span class="col-h">MOISTURE</span>
     {#each biomes as b (b.id)}
       <span class="bname">{b.displayName}</span>
       <label class="cell">
         <input
           type="range"
           min="0"
-          max="1"
-          step="0.01"
-          value={b.densityRange[0]}
-          oninput={(e) => edit(b.id, 'min', e)}
+          max="100"
+          step="1"
+          value={Math.round(b.share * 100)}
+          oninput={(e) => setShare(b.id, Number((e.currentTarget as HTMLInputElement).value))}
         />
-        <span class="val">{b.densityRange[0].toFixed(2)}</span>
-      </label>
-      <label class="cell">
-        <input
-          type="range"
-          min="0"
-          max="1"
-          step="0.01"
-          value={b.densityRange[1]}
-          oninput={(e) => edit(b.id, 'max', e)}
-        />
-        <span class="val">{b.densityRange[1].toFixed(2)}</span>
+        <span class="val">{Math.round(b.share * 100)}</span>
       </label>
       <label class="cell">
         <input
@@ -101,7 +105,7 @@
           max="40"
           step="1"
           value={b.baseTemp}
-          oninput={(e) => edit(b.id, 'baseTemp', e)}
+          oninput={(e) => climate(b.id, 'baseTemp', e)}
         />
         <span class="val">{b.baseTemp}</span>
       </label>
@@ -112,7 +116,7 @@
           max="100"
           step="1"
           value={b.baseMoisture}
-          oninput={(e) => edit(b.id, 'baseMoisture', e)}
+          oninput={(e) => climate(b.id, 'baseMoisture', e)}
         />
         <span class="val">{b.baseMoisture}</span>
       </label>
@@ -123,19 +127,21 @@
 <style>
   .custom-map {
     position: fixed;
-    top: 44px;
-    left: 8px;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
     z-index: 1200; /* above the WebGL canvas overlays (which reach z-index 999) */
-    width: 420px;
-    max-height: calc(100vh - 56px);
+    width: min(1100px, 96vw);
+    max-height: 46vh;
     overflow-y: auto;
+    overflow-x: hidden;
     background: var(--bg-panel);
     border: 1px solid var(--border-hi);
     color: var(--text);
     font-family: 'Courier New', monospace;
     font-size: 11px;
-    padding: 6px 8px 10px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+    padding: 6px 12px 10px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7);
   }
   .cm-hdr {
     display: flex;
@@ -156,7 +162,7 @@
     gap: 4px;
   }
   .seed-in {
-    width: 92px;
+    width: 96px;
     background: var(--bg);
     border: 1px solid var(--border);
     color: var(--text);
@@ -187,8 +193,8 @@
   }
   .cm-grid {
     display: grid;
-    grid-template-columns: 1.1fr 1.4fr 1.4fr 1.2fr 1.2fr;
-    gap: 3px 6px;
+    grid-template-columns: 90px 1fr 1fr 1fr;
+    gap: 5px 16px;
     align-items: center;
   }
   .col-h {
@@ -200,11 +206,12 @@
   }
   .bname {
     color: var(--text);
+    white-space: nowrap;
   }
   .cell {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 8px;
   }
   .cell input {
     flex: 1;

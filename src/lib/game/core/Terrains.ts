@@ -113,47 +113,69 @@ export const BIOMES: Record<string, BiomeDef> = Object.fromEntries(
 export interface BiomeConfigEntry {
   id: string;
   displayName: string;
-  densityRange: [number, number];
+  /** This biome's slice of the elevation axis (0–1), i.e. its width on [0,1]. The Custom Map menu
+   *  exposes this as a single 0–100 slider per biome instead of the raw min/max band. */
+  share: number;
   baseTemp: number;
   baseMoisture: number;
 }
 
 // Snapshot of the on-disk defaults, captured once at load, so the menu's "reset" restores them.
-const DEFAULT_BIOME_CONFIG: Record<string, BiomeConfigEntry> = Object.fromEntries(
-  Object.entries(BIOMES).map(([id, d]) => [
-    id,
-    {
+const DEFAULT_BIOME_CONFIG: Record<string, { densityRange: [number, number]; baseTemp: number; baseMoisture: number }> =
+  Object.fromEntries(
+    Object.entries(BIOMES).map(([id, d]) => [
+      id,
+      {
+        densityRange: [d.densityRange[0], d.densityRange[1]] as [number, number],
+        baseTemp: d.baseTemp ?? 0,
+        baseMoisture: d.baseMoisture ?? 0
+      }
+    ])
+  );
+
+// Biomes ordered low→high along the elevation axis (by default range start). Density bands are laid
+// out contiguously in THIS order, so editing shares only changes widths, never the ordering.
+const DENSITY_ORDER: string[] = Object.entries(DEFAULT_BIOME_CONFIG)
+  .sort((a, b) => a[1].densityRange[0] - b[1].densityRange[0])
+  .map(([id]) => id);
+
+/** Current biome config (in elevation order), with each biome's share = its width on the [0,1] axis. */
+export function getBiomeConfig(): BiomeConfigEntry[] {
+  return DENSITY_ORDER.map((id) => {
+    const d = BIOMES[id];
+    return {
       id,
       displayName: d.displayName,
-      densityRange: [d.densityRange[0], d.densityRange[1]] as [number, number],
+      share: d.densityRange[1] - d.densityRange[0],
       baseTemp: d.baseTemp ?? 0,
       baseMoisture: d.baseMoisture ?? 0
-    }
-  ])
-);
-
-/** Current biome config as a plain, editable list (in pickBiome scan order). */
-export function getBiomeConfig(): BiomeConfigEntry[] {
-  return Object.entries(BIOMES).map(([id, d]) => ({
-    id,
-    displayName: d.displayName,
-    densityRange: [d.densityRange[0], d.densityRange[1]],
-    baseTemp: d.baseTemp ?? 0,
-    baseMoisture: d.baseMoisture ?? 0
-  }));
+    };
+  });
 }
 
-/** Live-edit one biome field; takes effect on the next `generateWorld`/`regenWorld`. */
-export function setBiomeField(
-  id: string,
-  field: 'min' | 'max' | 'baseTemp' | 'baseMoisture',
-  value: number
-): void {
+/**
+ * Set every biome's share at once (the menu passes shares that already sum to ~1). Normalises, then
+ * lays the biomes out as contiguous [0,1] bands in elevation order — so a share of 0 yields no tiles
+ * of that biome and a share of 1 yields only that biome. Takes effect on the next `regenWorld`.
+ */
+export function applyBiomeShares(shares: Record<string, number>): void {
+  const total = DENSITY_ORDER.reduce((s, id) => s + Math.max(0, shares[id] ?? 0), 0);
+  let cursor = 0;
+  DENSITY_ORDER.forEach((id, i) => {
+    if (!BIOMES[id]) return;
+    const w = total > 0 ? Math.max(0, shares[id] ?? 0) / total : 1 / DENSITY_ORDER.length;
+    const start = i === 0 ? 0 : cursor;
+    cursor += w;
+    const end = i === DENSITY_ORDER.length - 1 ? 1 : cursor;
+    BIOMES[id].densityRange = [start, end];
+  });
+}
+
+/** Live-edit a biome's climate field; takes effect on the next `regenWorld`. */
+export function setBiomeField(id: string, field: 'baseTemp' | 'baseMoisture', value: number): void {
   const d = BIOMES[id];
   if (!d) return;
-  if (field === 'min') d.densityRange = [value, d.densityRange[1]];
-  else if (field === 'max') d.densityRange = [d.densityRange[0], value];
-  else if (field === 'baseTemp') d.baseTemp = value;
+  if (field === 'baseTemp') d.baseTemp = value;
   else d.baseMoisture = value;
 }
 
