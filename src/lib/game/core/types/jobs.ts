@@ -95,11 +95,13 @@ export interface JobDef {
   id: string;
   /** Human label for UI/debug. */
   label: string;
-  /** Static labor work-category id (see `Work.ts`). Omit when `workCategorySource` is set. */
+  /** Static labor work-category id (see `Work.ts`). Omit when `workCategorySource` is `designation`;
+   *  for `recipe-output` it is still used as the non-food fallback category. */
   workCategory?: string;
   /** Dynamic work-category resolution. `designation`: read it off the harvested resource's
-   *  interaction (designation-specific). */
-  workCategorySource?: 'designation';
+   *  interaction (designation-specific). `recipe-output`: a craft job producing a `food` output maps
+   *  to `cooking` (so the Cooking labor slider drives it), otherwise it falls back to `workCategory`. */
+  workCategorySource?: 'designation' | 'recipe-output';
   /** Optional claim restriction enforced in `getAvailableJobs`. `harvestTool`/`craftTool`: ADR-009
    *  per-pawn tool gating (carry a qualifying tool, auto-grab otherwise); `refuelAllowlist`: the
    *  building's `allowedRefuelPawnIds`. */

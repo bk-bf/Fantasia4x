@@ -120,6 +120,10 @@ export const COMMANDS: Record<string, Cmd> = {
       pw.id === p.pawnId ? { ...pw, combatStance: p.stance as never } : pw
     )
   }),
+  setPawnRestPolicy: (s, p: { pawnId: string; policy: string }) => ({
+    ...s,
+    pawns: s.pawns.map((pw) => (pw.id === p.pawnId ? { ...pw, restPolicy: p.policy as never } : pw))
+  }),
   setPawnLaborLevel: (s, p: { pawnId: string; workId: string; level: 0 | 1 | 2 | 3 | 4 }) => {
     const a = { ...s.workAssignments };
     const cur = a[p.pawnId] ?? { pawnId: p.pawnId, workPriorities: {}, laborSettings: {} };
@@ -484,7 +488,10 @@ export const COMMANDS: Record<string, Cmd> = {
 
   /** DEBUG: turn research gating off/on. When on, research-locked recipes & buildings show in the
    *  Crafting/Building tabs and can be queued/built without their prerequisite research. */
-  setResearchGateOff: (s, p: { off: boolean }) => ({ ...s, _devResearchGateOff: p.off || undefined }),
+  setResearchGateOff: (s, p: { off: boolean }) => ({
+    ...s,
+    _devResearchGateOff: p.off || undefined
+  }),
 
   /** Instantly place a complete building on a tile (no cost, no construction work). */
   devSpawnBuildingAt: (s, p: { buildingId: string; x: number; y: number }) => {

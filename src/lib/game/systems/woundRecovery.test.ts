@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { combatService } from './Combat';
 import { healWounds, healLimbs } from './PawnStateMachine';
 import { needsRecovery } from './pawn/pawnHelpers';
+import { selectIdleNeed } from './pawn/needSelection';
 import {
   tendPatient,
   generate as generateCaretake,
@@ -62,7 +63,15 @@ const state = (pawns: Pawn[], over: Partial<GameState> = {}): GameState =>
   ({ turn: 0, pawns, mobs: [], worldMap: [], ...over }) as unknown as GameState;
 
 const cut = (dmg: number, part = 'chest'): Injury =>
-  ({ bodyPart: part, type: 'cut', severity: 'minor', damage: dmg, bleeding: 0, painContribution: 0, infected: false }) as Injury;
+  ({
+    bodyPart: part,
+    type: 'cut',
+    severity: 'minor',
+    damage: dmg,
+    bleeding: 0,
+    painContribution: 0,
+    infected: false
+  }) as Injury;
 
 const woundDamage = (p: Pawn, part: string): number =>
   p.limbs!.flatMap((l) => l.parts ?? []).find((q) => q.id === part)?.injuries[0]?.damage ?? 0;
@@ -70,7 +79,8 @@ const woundDamage = (p: Pawn, part: string): number =>
 describe('wound recovery & bleeding', () => {
   it('a resting pawn heals far faster than an active one (activity gate)', () => {
     // Minor wound (10 on the 80-HP chest = frac 0.125) so the severity stall doesn't apply.
-    const seed = () => combatService.applyInjury('p1', { ...cut(10), bodyPart: 'chest' }, state([makePawn()]));
+    const seed = () =>
+      combatService.applyInjury('p1', { ...cut(10), bodyPart: 'chest' }, state([makePawn()]));
     let resting = seed().pawns[0];
     let active = seed().pawns[0];
     active = { ...active, currentState: 'Idle' } as Pawn;
@@ -85,7 +95,11 @@ describe('wound recovery & bleeding', () => {
 
   it('an untended serious wound stalls (needs dressing) but a tended one mends', () => {
     // 50 on the 80-HP chest = frac 0.625 → serious. Rest both; only dressing closes it.
-    let untended = combatService.applyInjury('p1', { ...cut(50), bodyPart: 'chest' }, state([makePawn()])).pawns[0];
+    let untended = combatService.applyInjury(
+      'p1',
+      { ...cut(50), bodyPart: 'chest' },
+      state([makePawn()])
+    ).pawns[0];
     const tendedPawn = { ...untended };
     // Mark the wound tended at high quality.
     tendedPawn.limbs = tendedPawn.limbs!.map((l) => ({
@@ -107,10 +121,16 @@ describe('wound recovery & bleeding', () => {
 
   it('dressing quality is much lower in the open than on a bed', () => {
     const patient = makePawn();
-    const base = combatService.applyInjury('p1', { ...cut(40), bodyPart: 'chest' }, state([patient]));
+    const base = combatService.applyInjury(
+      'p1',
+      { ...cut(40), bodyPart: 'chest' },
+      state([patient])
+    );
     const onBed = state(base.pawns, {
       stockpile: {},
-      buildings: [{ id: 'b', type: 'hay_bed', x: 5, y: 5, status: 'complete', progress: 1 }] as never
+      buildings: [
+        { id: 'b', type: 'hay_bed', x: 5, y: 5, status: 'complete', progress: 1 }
+      ] as never
     });
     const inOpen = state(base.pawns, { stockpile: {} });
 
@@ -136,18 +156,46 @@ describe('wound recovery & bleeding', () => {
     expect(job!.targetX).toBe(5);
     // Completing the job (a claimed medic dresses the wound) stamps a treatment on the patient.
     rng.reseed(3);
-    gs = { ...gs, buildings: [{ id: 'b', type: 'hay_bed', x: 5, y: 5, status: 'complete', progress: 1 }] as never };
+    gs = {
+      ...gs,
+      buildings: [
+        { id: 'b', type: 'hay_bed', x: 5, y: 5, status: 'complete', progress: 1 }
+      ] as never
+    };
     const after = completeCaretake({ ...job!, claimedBy: 'p1' }, gs);
-    const wound = after.pawns[0].limbs!.flatMap((l) => l.parts ?? []).find((p) => p.id === 'chest')!.injuries[0];
+    const wound = after.pawns[0].limbs!.flatMap((l) => l.parts ?? []).find((p) => p.id === 'chest')!
+      .injuries[0];
     expect(wound.treatedAt).toBeDefined();
   });
 
   it('a minor scratch does not force recovery, but a serious wound does', () => {
-    const minor = combatService.applyInjury('p1', { ...cut(6), bodyPart: 'leftHand' }, state([makePawn()])).pawns[0];
-    const serious = combatService.applyInjury('p1', { ...cut(50), bodyPart: 'chest' }, state([makePawn()])).pawns[0];
+    const minor = combatService.applyInjury(
+      'p1',
+      { ...cut(6), bodyPart: 'leftHand' },
+      state([makePawn()])
+    ).pawns[0];
+    const serious = combatService.applyInjury(
+      'p1',
+      { ...cut(50), bodyPart: 'chest' },
+      state([makePawn()])
+    ).pawns[0];
     expect(needsRecovery(serious)).toBe(true);
     // A tiny non-serious, barely-bleeding scratch shouldn't pull a pawn off work.
     expect(needsRecovery(minor)).toBe(false);
+  });
+
+  it('restPolicy gates the wound-recovery rest drive', () => {
+    const wounded = (policy: 'never' | 'always') =>
+      combatService.applyInjury(
+        'p1',
+        { ...cut(50), bodyPart: 'chest' },
+        state([makePawn({ restPolicy: policy })])
+      ).pawns[0];
+    const never = wounded('never');
+    const always = wounded('always');
+    // 'never' → no auto-rest (accepts the slow active heal); 'always' → lies down to recover.
+    expect(selectIdleNeed(never, state([never]))).toBeNull();
+    expect(selectIdleNeed(always, state([always]))?.kind).toBe('sleep');
   });
 
   it('a wounded creature heals its wounds off over time (no tending)', () => {
@@ -167,10 +215,16 @@ describe('wound recovery & bleeding', () => {
   });
 
   it('a fully-healed part drops out of the body model (UI auto-hide)', () => {
-    let pawn = combatService.applyInjury('p1', { ...cut(8), bodyPart: 'chest' }, state([makePawn()])).pawns[0];
+    let pawn = combatService.applyInjury(
+      'p1',
+      { ...cut(8), bodyPart: 'chest' },
+      state([makePawn()])
+    ).pawns[0];
     expect(buildHealthModel(pawn).limbs.length).toBeGreaterThan(0);
     for (let i = 0; i < 4000 && (pawn.injuries?.length ?? 0) > 0; i++) pawn = healWounds(pawn);
     // healed to full → snapped to maxHp → the torso limb no longer shows.
-    expect(buildHealthModel(pawn).limbs.find((l) => l.label.toLowerCase().includes('torso'))).toBeUndefined();
+    expect(
+      buildHealthModel(pawn).limbs.find((l) => l.label.toLowerCase().includes('torso'))
+    ).toBeUndefined();
   });
 });

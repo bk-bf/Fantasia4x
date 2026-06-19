@@ -57,4 +57,15 @@ describe('job registry (jobs.jsonc ↔ JobService)', () => {
     expect(wk('eat')).toBe('eat');
     expect(wk('sleep')).toBe('sleep');
   });
+
+  it('routes a food-producing craft job to the cooking category (recipe-output source)', () => {
+    const job = { type: 'craft', targetX: 0, targetY: 0, craftQueueId: 'q1' };
+    // A craft order whose output is a `food` item is a cooking job; any other output stays `crafting`.
+    const cookGs = { craftingQueue: [{ id: 'q1', item: { id: 'wild_berries' } }] } as never;
+    const craftGs = { craftingQueue: [{ id: 'q1', item: { id: 'stone_axe' } }] } as never;
+    expect(jobService.getJobWorkCategory(job, cookGs)).toBe('cooking');
+    expect(jobService.getJobWorkCategory(job, craftGs)).toBe('crafting');
+    // No gs / unknown order → static fallback.
+    expect(jobService.getJobWorkCategory(job)).toBe('crafting');
+  });
 });

@@ -46,6 +46,15 @@
     </div>
   {/each}
 
+  {#each $worldEffects.restingOverlays as overlay (overlay.id)}
+    <div
+      class="rest-float"
+      style="transform: translate({overlay.left}px, {overlay.top}px) translateX(-50%);"
+    >
+      <span class="rest-cross">✚</span>
+    </div>
+  {/each}
+
   {#each $worldEffects.progressOverlays as overlay (overlay.id)}
     <div
       class="pawn-progress-float"
@@ -254,6 +263,38 @@
     100% {
       opacity: 0;
       transform: translateY(-20px) scale(0.85);
+    }
+  }
+
+  /* ── Recovery (wounded, lying down) — a pulsing red ✚, distinct from the blue Zzz of plain sleep ── */
+
+  .rest-float {
+    position: absolute;
+    left: 0;
+    top: 0;
+    pointer-events: none;
+    /* centering + positioning via inline style transform: translate(X,Y) translateX(-50%) */
+  }
+
+  .rest-cross {
+    color: #ff4d4d;
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
+    font-weight: bold;
+    text-shadow: 0 0 5px #a00;
+    animation: rest-pulse 1.4s ease-in-out infinite;
+    will-change: transform, opacity;
+  }
+
+  @keyframes rest-pulse {
+    0%,
+    100% {
+      opacity: 0.55;
+      transform: translateY(0) scale(0.9);
+    }
+    50% {
+      opacity: 1;
+      transform: translateY(-3px) scale(1.15);
     }
   }
 

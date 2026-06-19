@@ -18,6 +18,7 @@ import {
   ROUTE_TO_DRINK_THIRST,
   ROUTE_TO_WASH_HYGIENE,
   needsRecovery,
+  findNearestRestBuilding,
   transitionTo,
   tryRouteToWaterNeed,
   distToNearestFoodSource,
@@ -38,6 +39,20 @@ export type NeedChoice =
   | { kind: 'water'; need: 'drink' | 'wash'; routedState: GameState }
   | null;
 
+/**
+ * The wound-recovery rest decision, gated by the pawn's `restPolicy` toggle (PawnRestPolicy UI):
+ *  - 'never'   → never auto-rests (accept the slow active heal rate).
+ *  - 'shelter' → only rests when a bed/roofed shelter is reachable; else keeps working.
+ *  - 'always'  → rests freely (handleTired falls back to the bare ground).
+ * Reuses the sleep→rest pipeline; returns null when the pawn shouldn't recovery-rest right now.
+ */
+function recoveryChoice(pawn: Pawn, gameState: GameState): NeedChoice {
+  const policy = pawn.restPolicy ?? 'always';
+  if (policy === 'never' || !needsRecovery(pawn)) return null;
+  if (policy === 'shelter' && !findNearestRestBuilding(pawn, gameState)) return null;
+  return { kind: 'sleep' };
+}
+
 /** Raw-threshold need decision for an IDLE pawn (no active job). Priority: hunger → thirst →
  *  hygiene → fatigue (thirst before hygiene; dehydration is lethal). */
 export function selectIdleNeed(pawn: Pawn, gameState: GameState): NeedChoice {
@@ -51,12 +66,10 @@ export function selectIdleNeed(pawn: Pawn, gameState: GameState): NeedChoice {
     const routed = tryRouteToWaterNeed(pawn, gameState, 'drink');
     if (routed) return { kind: 'water', need: 'drink', routedState: routed };
   }
-  // Wound recovery: a meaningfully wounded pawn lies down to heal (reuses the sleep→rest pipeline:
-  // it routes to the nearest bed/shelter, else lies down in place). Above hygiene/fatigue, below the
-  // lethal hunger/thirst needs — and handleSleeping holds the rest until the wounds clear.
-  if (needsRecovery(pawn)) {
-    return { kind: 'sleep' };
-  }
+  // Wound recovery (restPolicy-gated): a meaningfully wounded pawn lies down to heal. Above
+  // hygiene/fatigue, below the lethal hunger/thirst needs — handleSleeping holds it until wounds clear.
+  const recover = recoveryChoice(pawn, gameState);
+  if (recover) return recover;
   if ((pawn.needs?.hygiene ?? 0) >= ROUTE_TO_WASH_HYGIENE) {
     const routed = tryRouteToWaterNeed(pawn, gameState, 'wash');
     if (routed) return { kind: 'water', need: 'wash', routedState: routed };
@@ -115,15 +128,16 @@ export function selectInterruptNeed(
     }
   }
 
-  // Wound recovery interrupts unconditionally (not distance-weighted) — a real wound means stop and
-  // rest NOW; the job returns to the pool. Below lethal hunger/thirst, above fatigue.
-  if (needsRecovery(pawn)) {
+  // Wound recovery interrupts (restPolicy-gated) — a real wound means stop and rest NOW; the job
+  // returns to the pool. Below lethal hunger/thirst, above fatigue. 'never'/unreachable-shelter skip.
+  const recover = recoveryChoice(pawn, gameState);
+  if (recover) {
     gameLogger.log(
       gameState.turn,
       'NEED-CHECK',
       () => `[${label}] ${pawn.name} wounded → INTERRUPT→REST`
     );
-    return { kind: 'sleep' };
+    return recover;
   }
 
   const fatigue = pawn.needs?.fatigue ?? 0;

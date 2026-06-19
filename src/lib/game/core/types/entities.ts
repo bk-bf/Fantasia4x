@@ -259,6 +259,16 @@ export interface Pawn {
    */
   combatStance?: 'aggressive' | 'defensive' | 'flee';
 
+  /**
+   * How readily this pawn breaks off work to lie down and recover from wounds (the wound-recovery
+   * drive — see `needsRecovery`):
+   *  - 'never'   — never auto-rests; keeps working and accepts the slow active heal rate (emergencies).
+   *  - 'shelter' — only rests if a bed/roofed shelter is reachable; otherwise keeps working.
+   *  - 'always'  — (default) rests freely, lying on the bare ground if no bed/shelter is reachable.
+   * Independent of normal fatigue sleep, which is unaffected by this setting.
+   */
+  restPolicy?: 'never' | 'shelter' | 'always';
+
   /** Mob id this pawn is actively hunting (work-driven, set when it picks up a
    *  `markedForHunt` target). Chased + attacked while currentState === 'Hunting'. */
   huntTargetId?: string;

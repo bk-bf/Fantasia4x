@@ -60,6 +60,7 @@
   } from '$lib/game/services/fuelRules.js';
   import { getEquipmentSlot } from '$lib/game/core/PawnEquipment.js';
   import { getRangedWeapon } from '$lib/game/systems/rangedCombat.js';
+  import { needsRecovery } from '$lib/game/systems/pawn/pawnHelpers';
   import { getCreatureById } from '$lib/game/core/Creatures.js';
   import { TICKS_PER_SECOND } from '$lib/game/core/time.js';
   import { simTarget } from '$lib/game/systems/MovementSystem.js';
@@ -193,6 +194,7 @@
   // changed (every frame during camera follow), scaling with sleeping-pawn count and
   // tanking FPS at night when everyone was asleep.
   let _sleepOverlayKey = '';
+  let _restOverlayKey = '';
   let _progressOverlayKey = '';
   let _campfireOverlayKey = '';
   let _particleOverlayKey = '';
@@ -1061,15 +1063,20 @@
       const cellY = Math.round(rp.y);
       const isSelected = pawn.id === selectedPawnId;
       const isSleeping = pawn.currentState === 'Sleeping';
+      // A Sleeping pawn with real wounds is RECOVERING (red), not just napping (blue) — short-circuit
+      // keeps the wound scan to sleeping pawns only.
+      const isResting = isSleeping && needsRecovery(pawn as never);
       const isDrafted = pawn.drafted;
       const isCriticallyHungry = (pawn.needs?.hunger ?? 0) >= 85;
       const baseColor = isDrafted
         ? { r: 1.0, g: 0.15, b: 0.15 }
-        : isSleeping
-          ? { r: 0.35, g: 0.45, b: 1.0 }
-          : isCriticallyHungry
-            ? { r: 1.0, g: 0.45, b: 0.05 }
-            : { r: 1, g: 1, b: 1 };
+        : isResting
+          ? { r: 0.95, g: 0.3, b: 0.3 }
+          : isSleeping
+            ? { r: 0.35, g: 0.45, b: 1.0 }
+            : isCriticallyHungry
+              ? { r: 1.0, g: 0.45, b: 0.05 }
+              : { r: 1, g: 1, b: 1 };
 
       const pLunge = lungeOffset(pawn.id, nowMs);
       pawnOverlayGrid.setTile(cellX, cellY, {
@@ -1105,30 +1112,40 @@
     const tW = tileWidth;
     const tH = tileHeight;
 
-    const newSleep = [
-      ...pawns
-        .filter((p) => p.position && p.currentState === 'Sleeping')
-        .map((p) => ({
-          id: p.id,
-          left: (p.position!.x - viewX + 0.5) * tW,
-          top: (p.position!.y - viewY) * tH - 18
-        }))
-        .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= W),
-      ...mobs
-        .filter((m) => m.state === 'Sleeping')
-        .map((m) => ({
-          id: m.id,
-          left: (m.x - viewX + 0.5) * tW,
-          top: (m.y - viewY) * tH - 18
-        }))
-        .filter((o) => o.left >= 0 && o.top >= 0 && o.left <= W)
-    ];
+    // Split sleeping pawns: those with real wounds are RECOVERING (red ✚), the rest just nap (Zzz).
+    const overlayOf = (id: string, x: number, y: number) => ({
+      id,
+      left: (x - viewX + 0.5) * tW,
+      top: (y - viewY) * tH - 18
+    });
+    const onScreen = (o: { left: number; top: number }) => o.left >= 0 && o.top >= 0 && o.left <= W;
+    const newSleep = [];
+    const newResting = [];
+    for (const p of pawns) {
+      if (!p.position || p.currentState !== 'Sleeping') continue;
+      const o = overlayOf(p.id, p.position.x, p.position.y);
+      if (!onScreen(o)) continue;
+      if (needsRecovery(p as never)) newResting.push(o);
+      else newSleep.push(o);
+    }
+    for (const m of mobs) {
+      if (m.state !== 'Sleeping') continue;
+      const o = overlayOf(m.id, m.x, m.y);
+      if (onScreen(o)) newSleep.push(o);
+    }
     const sleepKey = newSleep
       .map((o) => `${o.id}:${Math.round(o.left)},${Math.round(o.top)}`)
       .join('|');
     if (sleepKey !== _sleepOverlayKey) {
       _sleepOverlayKey = sleepKey;
       worldEffects.setSleepingOverlays(newSleep);
+    }
+    const restKey = newResting
+      .map((o) => `${o.id}:${Math.round(o.left)},${Math.round(o.top)}`)
+      .join('|');
+    if (restKey !== _restOverlayKey) {
+      _restOverlayKey = restKey;
+      worldEffects.setRestingOverlays(newResting);
     }
 
     const newProgress = [
@@ -1479,7 +1496,12 @@
             const wx = +key.slice(0, ci);
             const wy = +key.slice(ci + 1);
             if (!onScreen(wx, wy)) continue;
-            ctx.fillRect((wx - viewX) * tileWidth, (wy - viewY) * tileHeight, tileWidth, tileHeight);
+            ctx.fillRect(
+              (wx - viewX) * tileWidth,
+              (wy - viewY) * tileHeight,
+              tileWidth,
+              tileHeight
+            );
           }
           // Outline ONLY the region's outer edge — an edge is drawn on a side only where the neighbour
           // tile isn't part of this same zone. Adjacency uses the full set (incl. off-screen tiles) so
@@ -2067,9 +2089,7 @@
       if (!ok || !renderer.isReady()) throw new Error('Renderer init failed');
 
       const grid =
-        worldMap.length > 0
-          ? buildGameGrid(worldMap, buildings)
-          : generatePlaceholderGrid();
+        worldMap.length > 0 ? buildGameGrid(worldMap, buildings) : generatePlaceholderGrid();
       renderer.setGrid(grid);
       renderer.setViewTileOffset(viewX, viewY);
       // Phase A2: bake ONLY the static (flicker-free) additive point light into the

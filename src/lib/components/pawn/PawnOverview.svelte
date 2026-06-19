@@ -11,6 +11,7 @@
   import { pawnService } from '$lib/game/services/PawnService';
   import { sizeFromHeight } from '$lib/game/core/Race';
   import PawnStance from './PawnStance.svelte';
+  import PawnRestPolicy from './PawnRestPolicy.svelte';
 
   export let pawn: Pawn;
   export let gameState: GameState;
@@ -58,6 +59,7 @@
     >
   </div>
   <PawnStance {pawn} />
+  <PawnRestPolicy {pawn} />
   <div class="row">
     <span class="lbl">WORK</span><span class="val">{taskSummary.workAssignment}</span>
   </div>
