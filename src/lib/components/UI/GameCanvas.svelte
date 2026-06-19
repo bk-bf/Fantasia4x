@@ -47,6 +47,7 @@
     type CombatTextEvent
   } from '$lib/stores/combatFeedback.js';
   import { attackLunges, LUNGE_TTL_MS, type AttackLungeEvent } from '$lib/stores/attackLunges.js';
+  import { projectiles, type ProjectileEvent } from '$lib/stores/projectiles.js';
   import { renderFps } from '$lib/stores/perfStats.js';
   import { buildingService } from '$lib/game/services/BuildingService.js';
   import { resolveCharSpans, BIOMES, SUBTERRAINS } from '$lib/game/core/Terrains.js';
@@ -84,6 +85,7 @@
     PROGRESS_BAR_STATES
   } from '$lib/components/UI/gameCanvas/selectionCard';
   import { overlayDroppedItems, buildingsVisualSig } from '$lib/components/UI/gameCanvas/overlay';
+  import type { ItemPillView } from '$lib/components/UI/ItemPills.svelte';
   import itemsData from '$lib/game/database/items.jsonc';
 
   const ITEMS_DATABASE = itemsData as unknown as Item[];
@@ -202,6 +204,7 @@
   let _healthOverlayKey = '';
   let _draftOverlayKey = '';
   let _floatTextKey = '';
+  let _projOverlayKey = '';
 
   // Live world-space combat-text events (damage/miss/dodge…). Converted to screen
   // coordinates each frame in updateWorldEffectOverlays so they track the camera.
@@ -214,6 +217,13 @@
   let attackLungeList: AttackLungeEvent[] = [];
   const unsubAttackLunges = attackLunges.subscribe((list) => {
     attackLungeList = list;
+  });
+
+  // In-flight ranged projectiles: lerped to a screen position every frame in
+  // updateWorldEffectOverlays so they fly shooter→target and track the camera.
+  let projectileList: ProjectileEvent[] = [];
+  const unsubProjectiles = projectiles.subscribe((list) => {
+    projectileList = list;
   });
 
   // Peak thrust distance, in tiles — how far "into" the target tile the attacker reaches.
@@ -625,20 +635,28 @@
     lines.push(
       `${selectedResourceTile.resourceId.replace(/_/g, ' ')} — ×${selectedResourceAmount} nodes`
     );
+    // Harvestable items become stylised, item-coloured pills (hover → item card). Suppressed while
+    // a designation is already queued — the status line covers that. Dedupe by itemId across
+    // interactions, widening the quantity range to cover every interaction that yields it.
+    const pillMap = new Map<string, { min: number; max: number }>();
     if (selectedResourceDesignation) {
       lines.push(`⊢ ${selectedResourceDesignation}…`);
     } else {
       for (const iact of activeInteractions) {
-        if (iact.yields.length > 0) {
-          lines.push(
-            `${iact.action}: ${iact.yields
-              .filter((y) => y.max > 0)
-              .map((y) => `${y.min}–${y.max}×${y.itemId.replace(/_/g, ' ')}`)
-              .join(' ')}`
-          );
+        for (const y of iact.yields) {
+          if (y.max <= 0) continue;
+          const prev = pillMap.get(y.itemId);
+          pillMap.set(y.itemId, {
+            min: Math.min(prev?.min ?? y.min, y.min),
+            max: Math.max(prev?.max ?? y.max, y.max)
+          });
         }
       }
     }
+    const itemPills: ItemPillView[] = [...pillMap].map(([itemId, { min, max }]) => ({
+      itemId,
+      qty: min === max ? `×${max}` : `${min}–${max}`
+    }));
     const btns: EntityButton[] = [];
     if (selectedResourceDesignation) {
       btns.push({ label: 'CANCEL ALL', onClick: cancelResourceDesignation });
@@ -667,6 +685,7 @@
       selected: true,
       dismissable: true,
       lines,
+      itemPills,
       buttons: btns
     } satisfies SelectedEntityModel;
   })();
@@ -722,6 +741,10 @@
     return {
       name: `★ ${displayName}`,
       status: `×${d.quantity}`,
+      // Same item-card hover (description / recipes / lifespans) as the resource-yield pills, so a
+      // dropped item and a resource's yields read identically. The live FRESH/COND bars below stay —
+      // they show this instance's current state, which the static pill hover can't.
+      itemPills: [{ itemId: d.resourceId }],
       bars,
       note: d.stored ? 'stored' : 'dropped item — awaiting hauler'
     } satisfies SelectedEntityModel;
@@ -1288,6 +1311,33 @@
     if (floatKey !== _floatTextKey) {
       _floatTextKey = floatKey;
       worldEffects.setFloatingTextOverlays(newFloats);
+    }
+
+    // Ranged projectiles: lerp each in-flight shot shooter→target by elapsed/duration, convert the
+    // interpolated world point to screen so it flies and tracks the camera. progress ≥1 = arrived
+    // (the layer then shows an impact puff for the brief tail window).
+    const newProjectiles = projectileList
+      .map((e) => {
+        const progress = (now - e.spawnTime) / e.durationMs;
+        const tc = Math.min(1, progress);
+        const wx = e.fromX + (e.toX - e.fromX) * tc;
+        const wy = e.fromY + (e.toY - e.fromY) * tc;
+        return {
+          id: e.id,
+          left: (wx - viewX + 0.5) * tW,
+          top: (wy - viewY + 0.5) * tH,
+          angle: (Math.atan2(e.toY - e.fromY, e.toX - e.fromX) * 180) / Math.PI,
+          effect: e.effect,
+          progress
+        };
+      })
+      .filter((o) => o.left >= -tW && o.top >= -tH && o.left <= W + tW && o.top <= H + tH);
+    const projKey = newProjectiles
+      .map((o) => `${o.id}:${Math.round(o.left)},${Math.round(o.top)}:${o.progress >= 1 ? 1 : 0}`)
+      .join('|');
+    if (projKey !== _projOverlayKey) {
+      _projOverlayKey = projKey;
+      worldEffects.setProjectileOverlays(newProjectiles);
     }
   }
 
@@ -1970,6 +2020,7 @@
     unsubUI();
     unsubCombatFeedback();
     unsubAttackLunges();
+    unsubProjectiles();
     rendererReady.set(false); // a remount must re-init WebGL before the game is shown again
     if (browser) {
       cancelAnimationFrame(animationId);

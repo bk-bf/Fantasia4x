@@ -1,6 +1,7 @@
 <script lang="ts">
   import { gameState, currentRace } from '$lib/stores/gameState';
   import BuildCard from '$lib/components/UI/BuildCard.svelte';
+  import ItemPills, { type ItemPillView } from '$lib/components/UI/ItemPills.svelte';
   import FilterTabs from '$lib/components/UI/FilterTabs.svelte';
   import SearchBar from '$lib/components/UI/SearchBar.svelte';
   import { persisted, persist } from '$lib/stores/uiPersist';
@@ -321,51 +322,33 @@
             onAction={() => startCrafting(item, entry.selectedIngredients)}
           >
             {#if isCarcass}
-              {#each item.yields as output, ci}
-                {@const outputDef = itemService.getItemById(output.item)}
-                {@const minScaled = Math.max(1, Math.round((output.min * intactness) / 100))}
-                {@const maxScaled = Math.max(1, Math.round((output.max * intactness) / 100))}
-                {#if ci > 0}<span class="cost-sep">·</span>{/if}
-                <span class="cost-item">
-                  {outputDef?.name ?? output.item}
-                  <span class="cost-qty">×{minScaled}-{maxScaled}</span>
-                </span>
-              {/each}
+              {@const yieldPills = (item.yields ?? []).map((output) => ({
+                itemId: output.item,
+                qty: `×${Math.max(1, Math.round((output.min * intactness) / 100))}-${Math.max(
+                  1,
+                  Math.round((output.max * intactness) / 100)
+                )}`
+              })) satisfies ItemPillView[]}
+              <ItemPills pills={yieldPills} />
             {:else}
-              {#each Object.entries(baseCost) as [id, n], ci}
-                {@const have = getItemAmount(id)}
-                {#if ci > 0}<span class="cost-sep">·</span>{/if}
-                <span class="cost-item">
-                  {id.replace(/_/g, ' ')}
-                  <span
-                    class="cost-qty"
-                    class:pos-text={have >= (n as number)}
-                    class:neg-text={have < (n as number)}>×{n}</span
-                  >
-                  <span
-                    class="cost-have"
-                    class:pos-text={have >= (n as number)}
-                    class:neg-text={have < (n as number)}>({have})</span
-                  >
-                </span>
-              {/each}
+              {@const costPills = Object.entries(baseCost).map(([id, n]) => {
+                const have = getItemAmount(id);
+                return { itemId: id, qty: `×${n}`, sub: `(${have})`, dim: have < (n as number) };
+              }) satisfies ItemPillView[]}
+              {#if costPills.length > 0}<ItemPills pills={costPills} />{/if}
               {#if dynNeed}
-                {#if Object.keys(baseCost).length > 0}<span class="cost-sep">·</span>{/if}
                 <span class="cost-item neg-text"
                   >any {dynNeed} <span class="cost-qty">×1</span></span
                 >
-              {:else if Object.keys(baseCost).length === 0}
+              {:else if costPills.length === 0}
                 <span class="muted-text">free</span>
               {/if}
               {#if primaryQtyOf(item.id) > 1 || byproductsOf(item.id).length > 0}
-                <span class="cost-sep">→</span>
-                <span class="cost-item">×{primaryQtyOf(item.id)}</span>
-                {#each byproductsOf(item.id) as [bid, bq]}
-                  <span class="cost-sep">+</span>
-                  <span class="cost-item">
-                    {bid.replace(/_/g, ' ')} <span class="cost-qty">×{bq}</span>
-                  </span>
-                {/each}
+                {@const outPills = [
+                  { itemId: item.id, qty: `×${primaryQtyOf(item.id)}` },
+                  ...byproductsOf(item.id).map(([bid, bq]) => ({ itemId: bid, qty: `×${bq}` }))
+                ] satisfies ItemPillView[]}
+                <div class="cost-out"><span class="cost-arrow">→</span><ItemPills pills={outPills} /></div>
               {/if}
             {/if}
           </BuildCard>
@@ -469,12 +452,6 @@
     cursor: pointer;
   }
 
-  .cost-sep {
-    color: var(--text-dim);
-    opacity: 0.4;
-    margin: 0 1px;
-  }
-
   .cost-item {
     display: inline-flex;
     gap: 2px;
@@ -486,7 +463,15 @@
     color: var(--accent);
   }
 
-  .cost-have {
+  /* Recipe outputs row (→ pills) sits below the ingredient pills. */
+  .cost-out {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    margin-top: 2px;
+  }
+  .cost-arrow {
+    color: var(--text-dim);
     opacity: 0.6;
   }
 
@@ -496,11 +481,6 @@
 
   .neg-text {
     color: var(--neg);
-  }
-
-  .pos-text {
-    color: var(--pos);
-    opacity: 1;
   }
 
   .muted-row {

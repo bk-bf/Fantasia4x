@@ -1,5 +1,6 @@
 <script lang="ts" module>
   import type { ConditionView } from '$lib/utils/conditionInfo';
+  import type { ItemPillView } from './ItemPills.svelte';
 
   export interface EntityStat {
     label: string;
@@ -42,6 +43,8 @@
     stats?: EntityStat[];
     /** Active conditions (persistent + transient) rendered as icon chips with a hover panel. */
     conditionViews?: ConditionView[];
+    /** Item-coloured pills (e.g. a resource's harvest yields) with a hover item-card panel. */
+    itemPills?: ItemPillView[];
     /** Block-character meter bars (Food, Blood, …). */
     bars?: EntityBar[];
     /** Activity / job line. `idle` greys it out. */
@@ -113,6 +116,7 @@
 <script lang="ts">
   import StatBar from './StatBar.svelte';
   import ConditionChips from '../pawn/ConditionChips.svelte';
+  import ItemPills from './ItemPills.svelte';
   import HealthPanel from './gameCanvas/HealthPanel.svelte';
   import { healthToggle } from './gameCanvas/healthToggle.svelte';
 
@@ -193,6 +197,10 @@
 
     {#if model.conditionViews && model.conditionViews.length > 0}
       <ConditionChips views={model.conditionViews} showHeader={false} iconPx={12} />
+    {/if}
+
+    {#if model.itemPills && model.itemPills.length > 0}
+      <ItemPills pills={model.itemPills} />
     {/if}
 
     {#if model.bars && model.bars.length > 0}

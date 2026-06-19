@@ -8,6 +8,7 @@
   import CurrentTask from '../UI/CurrentTask.svelte';
   import ZonePanel from '../UI/ZonePanel.svelte';
   import BuildCard from '../UI/BuildCard.svelte';
+  import ItemPills, { type ItemPillView } from '../UI/ItemPills.svelte';
   import FilterTabs from '../UI/FilterTabs.svelte';
   import SearchBar from '../UI/SearchBar.svelte';
   import { persisted, persist } from '$lib/stores/uiPersist';
@@ -129,13 +130,6 @@
     }
     return getItemAmount(id);
   };
-
-  // `category:stone` is an engine cost key, not an item id — render it as "any stone".
-  function formatCostLabel(id: string): string {
-    return id.startsWith('category:')
-      ? `any ${id.slice('category:'.length)}`
-      : id.replace(/_/g, ' ');
-  }
 
   // Player's material pick per building def for `category:` cost slots: buildingId → costKey → itemId.
   // Eventually these picks will drive durability/beauty; for now they just choose which stock is spent.
@@ -308,32 +302,33 @@
             {#if Object.keys(building.buildingCost).length === 0}
               <span class="muted-text">free</span>
             {:else}
-              {#each Object.entries(building.buildingCost) as [id, n], ci}
+              <!-- Concrete item costs render as solid item-coloured pills (hover → item card).
+                   `category:` slots stay as material-picker selects below them. -->
+              {@const costPills = Object.entries(building.buildingCost)
+                .filter(([id]) => !id.startsWith('category:'))
+                .map(([id, n]) => {
+                  const have = getCostHave(id);
+                  return { itemId: id, qty: `×${n}`, sub: `(${have})`, dim: have < (n as number) };
+                }) satisfies ItemPillView[]}
+              {#if costPills.length > 0}<ItemPills pills={costPills} />{/if}
+              {#each Object.entries(building.buildingCost).filter( ([id]) => id.startsWith('category:') ) as [id, n]}
                 {@const have = getCostHave(id)}
-                {#if ci > 0}<span class="cost-sep">·</span>{/if}
-                {#if id.startsWith('category:')}
-                  <!-- svelte-ignore a11y_no_onchange -->
-                  <span class="cost-item" class:neg-text={have < (n as number)}>
-                    <select
-                      class="mat-select"
-                      value={selectedMaterials[building.id]?.[id] ?? ''}
-                      on:change={(e) => setMaterial(building.id, id, e.currentTarget.value)}
-                      title="choose {id.slice('category:'.length)} to spend"
-                    >
-                      <option value="">any {id.slice('category:'.length)}</option>
-                      {#each categoryItemsFor(id) as opt}
-                        <option value={opt.id}>{opt.name} ({getItemAmount(opt.id)})</option>
-                      {/each}
-                    </select>
-                    <span class="cost-qty">×{n}</span>
-                    <span class="cost-have" class:neg-text={have < (n as number)}>({have})</span>
-                  </span>
-                {:else}
-                  <span class="cost-item" class:neg-text={have < (n as number)}>
-                    {formatCostLabel(id)} <span class="cost-qty">×{n}</span>
-                    <span class="cost-have" class:neg-text={have < (n as number)}>({have})</span>
-                  </span>
-                {/if}
+                <!-- svelte-ignore a11y_no_onchange -->
+                <span class="cost-item cost-cat" class:neg-text={have < (n as number)}>
+                  <select
+                    class="mat-select"
+                    value={selectedMaterials[building.id]?.[id] ?? ''}
+                    on:change={(e) => setMaterial(building.id, id, e.currentTarget.value)}
+                    title="choose {id.slice('category:'.length)} to spend"
+                  >
+                    <option value="">any {id.slice('category:'.length)}</option>
+                    {#each categoryItemsFor(id) as opt}
+                      <option value={opt.id}>{opt.name} ({getItemAmount(opt.id)})</option>
+                    {/each}
+                  </select>
+                  <span class="cost-qty">×{n}</span>
+                  <span class="cost-have" class:neg-text={have < (n as number)}>({have})</span>
+                </span>
               {/each}
             {/if}
           </BuildCard>
@@ -446,16 +441,14 @@
     cursor: pointer;
   }
 
-  .cost-sep {
-    color: var(--text-dim);
-    opacity: 0.4;
-    margin: 0 1px;
-  }
-
   .cost-item {
     display: inline-flex;
     gap: 2px;
     align-items: center;
+  }
+  /* Category material-picker rows sit just under the concrete-cost pills. */
+  .cost-cat {
+    margin-top: 2px;
   }
 
   .cost-qty {
