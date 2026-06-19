@@ -36,7 +36,7 @@ function state(stock: Record<string, number>, buildings: { type: string }[] = []
       status: 'complete',
       progress: 1
     })),
-    completedResearch: ['copper_smelting'] // smelting is research-gated; isolate the mold variable here
+    completedResearch: []
   } as unknown as GameState;
 }
 

@@ -275,8 +275,7 @@
     "inputAlternatives": [ {"chalcopyrite": 2}, {"azurite": 4} ],
     "outputs"          : {"copper_bar": 1},
     "workAmount"       : 8,
-    "toolTierRequired" : 0,
-    "researchRequired" : "copper_smelting"
+    "toolTierRequired" : 0
   },
   {
     "id"              : "make_tin_bar",
@@ -285,18 +284,16 @@
     "inputs"          : {"cassiterite": 3},
     "outputs"         : {"tin_bar": 1},
     "workAmount"      : 8,
-    "toolTierRequired": 0,
-    "researchRequired": "tin_smelting"
+    "toolTierRequired": 0
   },
   {
     "id"              : "make_bronze_bar",
     "passive"          : true,
-    "station"         : "stone_forge",
+    "station"         : "casting_hearth",
     "inputs"          : {"copper_bar": 3, "tin_bar": 1},
     "outputs"         : {"bronze_bar": 1},
     "workAmount"      : 10,
-    "toolTierRequired": 1,
-    "researchRequired": "bronze_working"
+    "toolTierRequired": 1
   },
   {
     "id"               : "make_iron_bar",
@@ -306,8 +303,7 @@
     "inputAlternatives": [ {"magnetite": 3, "limestone": 1}, {"limonite": 5, "limestone": 1} ],
     "outputs"          : {"iron_bar": 1},
     "workAmount"       : 14,
-    "toolTierRequired" : 1,
-    "researchRequired" : "iron_smelting"
+    "toolTierRequired" : 1
   },
   {
     "id"              : "make_lead_bar",
@@ -339,13 +335,12 @@
   },
   {
     "id"              : "make_steel_bar",
-    "station"         : "bloomery",
+    "station"         : "finery_forge",
     "passive"          : true,
     "inputs"          : {"iron_bar": 2, "coal": 1, "limestone": 1},
     "outputs"         : {"steel_bar": 1},
     "workAmount"      : 20,
-    "toolTierRequired": 2,
-    "researchRequired": "steel_making"
+    "toolTierRequired": 2
   },
   {
     "id"               : "make_ash",
@@ -547,8 +542,8 @@
   },
   {
     "id"              : "make_tile_mold",
-    "station"         : "stone_forge",
-    "inputs"          : {"bronze_bar": 1},
+    "station"         : "casting_hearth",
+    "inputs"          : {"bronze_bar": 1, "clay_mold": 1},
     "outputs"         : {"tile_mold": 1},
     "workAmount"      : 6,
     "toolTierRequired": 1
@@ -1007,7 +1002,7 @@
   // ── Phase B: Tier 1 weapon recipes ───────────────────────────────────────
   {
     "id": "make_bronze_punch_dagger",
-    "station": "stone_forge",
+    "station": "casting_hearth",
     "inputs": {
       "copper_bar": 1,
       "clay_mold": 1,
@@ -1023,7 +1018,7 @@
   },
   {
     "id": "make_leaf_blade_spear",
-    "station": "stone_forge",
+    "station": "casting_hearth",
     "inputs": {
       "bronze_bar": 1,
       "clay_mold": 1,
@@ -1056,7 +1051,7 @@
   },
   {
     "id": "make_cast_bronze_hatchet",
-    "station": "stone_forge",
+    "station": "casting_hearth",
     "inputs": {
       "bronze_bar": 1,
       "clay_mold": 1,
@@ -1161,10 +1156,9 @@
   // ── Phase B: Tier 2 weapon recipes ───────────────────────────────────────
   {
     "id": "make_short_seax",
-    "station": "anvil",
+    "station": "grindstone",
     "inputs": {
       "iron_bar": 1,
-      "clay_mold": 1,
       "cordage": 1
     },
     "outputs": {
@@ -1187,10 +1181,9 @@
   },
   {
     "id": "make_spatha",
-    "station": "anvil",
+    "station": "grindstone",
     "inputs": {
       "iron_bar": 2,
-      "clay_mold": 1,
       "cordage": 1
     },
     "outputs": {
@@ -1228,10 +1221,9 @@
   },
   {
     "id": "make_bearded_axe",
-    "station": "anvil",
+    "station": "grindstone",
     "inputs": {
       "iron_bar": 2,
-      "clay_mold": 1,
       "cordage": 1
     },
     "outputs": {
@@ -1260,10 +1252,9 @@
   },
   {
     "id": "make_framea",
-    "station": "anvil",
+    "station": "grindstone",
     "inputs": {
       "iron_bar": 1,
-      "clay_mold": 1,
       "cordage": 1
     },
     "outputs": {
@@ -1309,7 +1300,6 @@
     "station": "anvil",
     "inputs": {
       "iron_bar": 1,
-      "clay_mold": 1,
       "cordage": 1
     },
     "outputs": {
@@ -1324,7 +1314,6 @@
     "station": "anvil",
     "inputs": {
       "iron_bar": 2,
-      "clay_mold": 1,
       "oak_plank": 1,
       "cordage": 1
     },
@@ -1337,8 +1326,8 @@
   },
   {
     "id": "make_iron_greatsword",
-    "station": "anvil",
-    "inputs": { "iron_bar": 2, "clay_mold": 1, "cordage": 1 },
+    "station": "grindstone",
+    "inputs": { "iron_bar": 2, "cordage": 1 },
     "outputs": { "iron_greatsword": 1 },
     "workAmount": 14,
     "toolTierRequired": 2,
@@ -1346,8 +1335,8 @@
   },
   {
     "id": "make_steel_longsword",
-    "station": "anvil",
-    "inputs": { "steel_bar": 1, "clay_mold": 1, "cordage": 1 },
+    "station": "grindstone",
+    "inputs": { "steel_bar": 1, "cordage": 1 },
     "outputs": { "steel_longsword": 1 },
     "workAmount": 14,
     "toolTierRequired": 2,
@@ -1355,8 +1344,8 @@
   },
   {
     "id": "make_steel_greatsword",
-    "station": "anvil",
-    "inputs": { "steel_bar": 2, "clay_mold": 1, "cordage": 1 },
+    "station": "grindstone",
+    "inputs": { "steel_bar": 2, "cordage": 1 },
     "outputs": { "steel_greatsword": 1 },
     "workAmount": 18,
     "toolTierRequired": 2,
@@ -1364,7 +1353,7 @@
   },
   {
     "id": "make_steel_pike",
-    "station": "anvil",
+    "station": "grindstone",
     "inputs": { "steel_bar": 1, "oak_plank": 1, "cordage": 1 },
     "outputs": { "steel_pike": 1 },
     "workAmount": 13,
@@ -1374,7 +1363,7 @@
   {
     "id": "make_steel_mace",
     "station": "anvil",
-    "inputs": { "steel_bar": 1, "clay_mold": 1, "cordage": 1 },
+    "inputs": { "steel_bar": 1, "cordage": 1 },
     "outputs": { "steel_mace": 1 },
     "workAmount": 13,
     "toolTierRequired": 2,
@@ -1383,7 +1372,7 @@
   {
     "id": "make_steel_warhammer",
     "station": "anvil",
-    "inputs": { "steel_bar": 2, "clay_mold": 1, "oak_plank": 1, "cordage": 1 },
+    "inputs": { "steel_bar": 2, "oak_plank": 1, "cordage": 1 },
     "outputs": { "steel_warhammer": 1 },
     "workAmount": 17,
     "toolTierRequired": 2,
@@ -1391,8 +1380,8 @@
   },
   {
     "id": "make_steel_cleaver",
-    "station": "anvil",
-    "inputs": { "steel_bar": 2, "clay_mold": 1, "cordage": 1 },
+    "station": "grindstone",
+    "inputs": { "steel_bar": 2, "cordage": 1 },
     "outputs": { "steel_cleaver": 1 },
     "workAmount": 15,
     "toolTierRequired": 2,
@@ -1400,8 +1389,8 @@
   },
   {
     "id": "make_steel_greatcleaver",
-    "station": "anvil",
-    "inputs": { "steel_bar": 3, "clay_mold": 1, "cordage": 1 },
+    "station": "grindstone",
+    "inputs": { "steel_bar": 3, "cordage": 1 },
     "outputs": { "steel_greatcleaver": 1 },
     "workAmount": 20,
     "toolTierRequired": 2,
@@ -1410,7 +1399,7 @@
   {
     "id": "make_steel_flail",
     "station": "anvil",
-    "inputs": { "steel_bar": 1, "iron_bar": 1, "clay_mold": 1, "cordage": 1 },
+    "inputs": { "steel_bar": 1, "iron_bar": 1, "cordage": 1 },
     "outputs": { "steel_flail": 1 },
     "workAmount": 14,
     "toolTierRequired": 2,
@@ -1418,8 +1407,8 @@
   },
   {
     "id": "make_iron_rondel",
-    "station": "anvil",
-    "inputs": { "iron_bar": 1, "clay_mold": 1, "cordage": 1 },
+    "station": "grindstone",
+    "inputs": { "iron_bar": 1, "cordage": 1 },
     "outputs": { "iron_rondel": 1 },
     "workAmount": 7,
     "toolTierRequired": 2,
@@ -1427,8 +1416,8 @@
   },
   {
     "id": "make_steel_stiletto",
-    "station": "anvil",
-    "inputs": { "steel_bar": 1, "clay_mold": 1, "cordage": 1 },
+    "station": "grindstone",
+    "inputs": { "steel_bar": 1, "cordage": 1 },
     "outputs": { "steel_stiletto": 1 },
     "workAmount": 9,
     "toolTierRequired": 2,
@@ -1436,8 +1425,8 @@
   },
   {
     "id": "make_iron_estoc",
-    "station": "anvil",
-    "inputs": { "iron_bar": 1, "clay_mold": 1, "cordage": 1 },
+    "station": "grindstone",
+    "inputs": { "iron_bar": 1, "cordage": 1 },
     "outputs": { "iron_estoc": 1 },
     "workAmount": 12,
     "toolTierRequired": 2,
@@ -1445,8 +1434,8 @@
   },
   {
     "id": "make_steel_rapier",
-    "station": "anvil",
-    "inputs": { "steel_bar": 1, "clay_mold": 1, "cordage": 1 },
+    "station": "grindstone",
+    "inputs": { "steel_bar": 1, "cordage": 1 },
     "outputs": { "steel_rapier": 1 },
     "workAmount": 15,
     "toolTierRequired": 2,
@@ -1527,7 +1516,6 @@
     "inputs": {
       "oak_plank": 2,
       "iron_bar": 1,
-      "clay_mold": 1,
       "sinew": 1,
       "cordage": 1
     },
@@ -1580,7 +1568,7 @@
   },
   {
     "id": "make_iron_arrow",
-    "station": "stone_forge",
+    "station": "anvil",
     "inputs": {
       "branch": 1,
       "iron_bar": 1,
@@ -1649,7 +1637,7 @@
   },
   {
     "id": "make_cast_sling_bullet",
-    "station": "stone_forge",
+    "station": "casting_hearth",
     "inputs": {
       "copper_bar": 1,
       "clay_mold": 1
@@ -1662,7 +1650,7 @@
   },
   {
     "id": "make_broadhead_arrow",
-    "station": "stone_forge",
+    "station": "anvil",
     "inputs": {
       "branch": 1,
       "iron_bar": 1,
@@ -1677,7 +1665,7 @@
   },
   {
     "id": "make_barbed_arrow",
-    "station": "stone_forge",
+    "station": "anvil",
     "inputs": {
       "branch": 1,
       "iron_bar": 1,
@@ -1735,7 +1723,7 @@
   },
   {
     "id": "make_stiffened_war_quiver",
-    "station": "stone_forge",
+    "station": "anvil",
     "inputs": {
       "heavy_leather": 1,
       "iron_bar": 1,
@@ -1783,7 +1771,6 @@
     "station": "anvil",
     "inputs": {
       "iron_bar": 1,
-      "clay_mold": 1,
       "cordage": 1
     },
     "outputs": {
@@ -1957,7 +1944,7 @@
   },
   {
     "id": "make_cast_bronze_skullcap",
-    "station": "stone_forge",
+    "station": "casting_hearth",
     "inputs": {
       "bronze_bar": 1,
       "clay_mold": 1
@@ -2035,8 +2022,7 @@
     "id": "make_iron_nasal_helm",
     "station": "anvil",
     "inputs": {
-      "iron_bar": 2,
-      "clay_mold": 1
+      "iron_bar": 2
     },
     "outputs": {
       "iron_nasal_helm": 1
@@ -2102,8 +2088,7 @@
     "id": "make_iron_gauntlets",
     "station": "anvil",
     "inputs": {
-      "iron_bar": 2,
-      "clay_mold": 1
+      "iron_bar": 2
     },
     "outputs": {
       "iron_gauntlets": 1
@@ -2149,8 +2134,7 @@
     "id": "make_iron_gorget",
     "station": "anvil",
     "inputs": {
-      "iron_bar": 1,
-      "clay_mold": 1
+      "iron_bar": 1
     },
     "outputs": {
       "iron_gorget": 1
