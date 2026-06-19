@@ -89,7 +89,11 @@ function combatStats(entity: Pawn | Mob): CombatStat[] {
   const dodge = s('dodge') * (encStage?.modifiers.dodge ?? 1);
   const armor = bestArmorDefense(entity);
   const out: CombatStat[] = [
-    { label: 'Hit', value: `×${s('hit_chance').toFixed(2)}`, title: 'melee accuracy (× sight × manipulation)' },
+    {
+      label: 'Hit',
+      value: `×${s('hit_chance').toFixed(2)}`,
+      title: 'melee accuracy (× sight × manipulation)'
+    },
     {
       label: 'Dodge',
       value: `×${dodge.toFixed(2)}`,
@@ -97,8 +101,17 @@ function combatStats(entity: Pawn | Mob): CombatStat[] {
         ? `evasion, including −${Math.round((1 - (encStage.modifiers.dodge ?? 1)) * 100)}% from being ${encStage.label}`
         : 'evasion multiplier (× moving; lower when injured)'
     },
-    { label: 'Crit', value: `${Math.round(s('crit_chance') * 100)}%`, title: 'base crit chance (weapons add their own)' },
-    { label: 'Armor', value: `${armor}`, title: 'best armour (worn, or a creature’s natural hide) — % of a hit it turns before armour-pen' }
+    {
+      label: 'Crit',
+      value: `${Math.round(s('crit_chance') * 100)}%`,
+      title: 'base crit chance (weapons add their own)'
+    },
+    {
+      label: 'Armor',
+      value: `${armor}`,
+      title:
+        'best armour (worn, or a creature’s natural hide) — % of a hit it turns before armour-pen'
+    }
   ];
   if (encCond) {
     // Reconstruct the load ratio from severity (sev = (ratio−0.8)/0.6) for a readable %.
@@ -106,17 +119,34 @@ function combatStats(entity: Pawn | Mob): CombatStat[] {
     out.push({
       label: 'Load',
       value: `${Math.round(ratio * 100)}% · ${encStage?.label ?? ''}`.trim(),
-      title: 'carried weight (worn armour + pack) ÷ carry capacity — past ~100% encumbers: slower, easier to hit, worse aim. STR + bags raise the limit.'
+      title:
+        'carried weight (worn armour + pack) ÷ carry capacity — past ~100% encumbers: slower, easier to hit, worse aim. STR + bags raise the limit.'
     });
   }
   // Ranged potential (PER = precision, DEX = speed, STR = draw power) — shown for every pawn so a
   // build reads at a glance whether they'd make an archer (PER), a crossbowman (DEX), etc.
   out.push(
-    { label: 'Aim', value: `×${s('aim_accuracy').toFixed(2)}`, title: 'ranged accuracy — PER (precision)' },
-    { label: 'Fire', value: `×${s('aim_speed').toFixed(2)}`, title: 'ranged fire-rate — DEX (speed)' },
-    { label: 'Reach', value: `×${s('aim_range').toFixed(2)}`, title: 'ranged reach — PER, capped by vision' },
+    {
+      label: 'Aim',
+      value: `×${s('aim_accuracy').toFixed(2)}`,
+      title: 'ranged accuracy — PER (precision)'
+    },
+    {
+      label: 'Fire',
+      value: `×${s('aim_speed').toFixed(2)}`,
+      title: 'ranged fire-rate — DEX (speed)'
+    },
+    {
+      label: 'Reach',
+      value: `×${s('aim_range').toFixed(2)}`,
+      title: 'ranged reach — PER, capped by vision'
+    },
     { label: 'Reload', value: `×${s('reload_speed').toFixed(2)}`, title: 'crossbow reload — DEX' },
-    { label: 'Shot', value: `×${s('ranged_damage').toFixed(2)}`, title: 'bow/throw damage — STR (draw/throw power)' }
+    {
+      label: 'Shot',
+      value: `×${s('ranged_damage').toFixed(2)}`,
+      title: 'bow/throw damage — STR (draw/throw power)'
+    }
   );
   return out;
 }
@@ -160,11 +190,13 @@ export function buildHealthModel(entity: Pawn | Mob): HealthModel {
     });
   }
 
+  const bleedRate = (entity.limbs ?? []).reduce((s, l) => s + (l.bleedRate ?? 0), 0);
   return {
     blood:
       entity.bloodVolume != null && entity.maxBloodVolume != null
         ? { current: entity.bloodVolume, max: entity.maxBloodVolume }
         : undefined,
+    bleedRate: bleedRate > 0 ? bleedRate : undefined,
     pain: entity.pain,
     // SEASONS_WEATHER: tracked cold/heat exposure meters (pawns) — surfaced as % next to Blood.
     coldExposure: entity.needs?.coldExposure,

@@ -101,6 +101,8 @@
   export interface HealthModel {
     /** Whole-body blood pool. */
     blood?: { current: number; max: number };
+    /** Total active bleed across all limbs, in blood points per real second (0 if not bleeding). */
+    bleedRate?: number;
     /** Whole-body pain 0–100. */
     pain?: number;
     /** SEASONS_WEATHER tracked exposure meters 0–100 (cold/heat); shown as % next to Blood. */

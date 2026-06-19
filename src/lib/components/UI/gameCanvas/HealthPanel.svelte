@@ -8,8 +8,17 @@
 <script lang="ts">
   import type { HealthModel } from '$lib/components/UI/SelectedEntityCard.svelte';
   import { healthPctColor, bloodColor, painColor } from './healthColors';
+  import { TURNS_PER_DAY } from '$lib/game/services/EnvironmentService';
 
   let { health, open = false }: { health: HealthModel | undefined; open?: boolean } = $props();
+
+  // bleedRate is blood/REAL-second; 1 in-game day = TURNS_PER_DAY real seconds → 24 in-game hours.
+  // So in-game hours to bleed out = (blood ÷ bleedRate) × 24 / TURNS_PER_DAY.
+  const HOURS_PER_BLOODSEC = 24 / TURNS_PER_DAY;
+  function bleedOutLabel(blood: number, bleedRate: number): string {
+    const h = (blood / bleedRate) * HOURS_PER_BLOODSEC;
+    return h >= 10 ? `(~${Math.round(h)}h to 0)` : `(~${h.toFixed(1)}h to 0)`;
+  }
 
   const damaged = $derived(
     !!health &&
@@ -38,6 +47,16 @@
             (health.blood.current / health.blood.max) * 100
           )}%)</span
         >
+        {#if health.bleedRate}
+          <span
+            class="hp-bleed-eta"
+            title="estimated in-game time until blood reaches 0 at the current bleed rate"
+            >▼ {health.bleedRate.toFixed(1)}/s · {bleedOutLabel(
+              health.blood.current,
+              health.bleedRate
+            )}</span
+          >
+        {/if}
       </div>
     {/if}
     {#if (health.coldExposure ?? 0) > 0}
@@ -192,6 +211,10 @@
   }
   .hp-bleed {
     color: #ee8844;
+  }
+  .hp-bleed-eta {
+    color: #ee5544;
+    white-space: nowrap;
   }
   .hp-part {
     padding-left: 10px;
