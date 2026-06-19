@@ -239,8 +239,12 @@ export class ItemServiceImpl implements ItemService {
     // Check building
     if (!this.hasRequiredBuilding(itemId, gameState)) return false;
 
-    // Check research
-    if (recipe.researchRequired && !gameState.completedResearch.includes(recipe.researchRequired)) {
+    // Check research (DEBUG: `_devResearchGateOff` turns this gate off — see gamestate.ts)
+    if (
+      !gameState._devResearchGateOff &&
+      recipe.researchRequired &&
+      !gameState.completedResearch.includes(recipe.researchRequired)
+    ) {
       return false;
     }
 

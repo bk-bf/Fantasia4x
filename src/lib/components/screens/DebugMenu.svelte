@@ -134,6 +134,19 @@
   </section>
 
   <section>
+    <h4>Gating <span class="hint">(dev)</span></h4>
+    <label class="check-row">
+      <input
+        type="checkbox"
+        checked={!!$gameState._devResearchGateOff}
+        onchange={(e) =>
+          cmd('setResearchGateOff', { off: (e.target as HTMLInputElement).checked })}
+      />
+      Research gate off <span class="hint">(show + allow unresearched recipes & buildings)</span>
+    </label>
+  </section>
+
+  <section>
     <h4>Snow cover <span class="hint">(× tile wetness)</span></h4>
     <div class="row">
       <input
@@ -233,6 +246,15 @@
   .row {
     display: flex;
     gap: 4px;
+  }
+  .check-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+  }
+  .check-row input {
+    width: auto;
   }
   select,
   input {

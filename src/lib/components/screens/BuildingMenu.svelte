@@ -26,6 +26,7 @@
     'FIRE & COOKING',
     'WORKSHOPS',
     'SMELTING & FORGE',
+    'ARCANE',
     'FOOD & HIDES',
     'TRAPS & WATER',
     'BEDS & SHELTER',
@@ -54,6 +55,7 @@
     if (e.sleepQuality || e.fatigueRecovery || b.category === 'shelter') return 'BEDS & SHELTER';
     if (e.comfort || b.isStorage || b.category === 'furniture') return 'FURNITURE & STORAGE';
     if (b.category === 'knowledge') return 'KNOWLEDGE';
+    if (e.arcane) return 'ARCANE';
     if (e.craftingEnabled) return 'WORKSHOPS';
     return 'OTHER';
   }
@@ -79,8 +81,12 @@
   $: campfires = buildings.filter((b) => b.type === 'campfire' && b.status === 'complete');
 
   // Only show unlocked buildings — locked buildings are hidden entirely
+  // DEBUG `_devResearchGateOff`: show research-locked buildings too (toggle in the DEBUG tab).
   $: unlockedDefs = ALL_BUILDING_DEFS.filter(
-    (b) => !b.researchRequired || completedResearch.includes(b.researchRequired as string)
+    (b) =>
+      $gameState?._devResearchGateOff ||
+      !b.researchRequired ||
+      completedResearch.includes(b.researchRequired as string)
   );
 
   // Grouped unlocked buildings — one pass via classify(), ordered by SECTION_ORDER,

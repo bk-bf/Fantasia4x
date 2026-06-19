@@ -41,6 +41,10 @@ export interface GameState {
    *  light/tint from this fixed time-of-day instead of the live turn — lets the debug menu hold the
    *  world at day/night to test weather effects. Visual only; the sim turn keeps advancing. */
   _debugTimeOfDay?: number;
+  /** Debug override: when true, RESEARCH gating is OFF — research-locked recipes & buildings appear in
+   *  the Crafting/Building tabs AND can be queued/built without the prerequisite research (station,
+   *  tools, materials still apply). Toggled from the DEBUG tab; rides gameState so the worker sees it. */
+  _devResearchGateOff?: boolean;
   /** Average effective map temperature (°C, baked tile avg + weather delta), computed worker-side
    *  for the HUD readout. A scalar — tile `temperature` itself stays worker-only (PERF-2). */
   avgTemperature?: number;

@@ -57,7 +57,12 @@
         // Include items with a producing recipe (authored or synthesised)
         const recipe = recipeOf(item.id);
         if (!recipe) return false;
-        if (recipe.researchRequired && !completedResearch.includes(recipe.researchRequired))
+        // DEBUG `_devResearchGateOff`: show research-locked recipes too (toggle in the DEBUG tab).
+        if (
+          !$gameState._devResearchGateOff &&
+          recipe.researchRequired &&
+          !completedResearch.includes(recipe.researchRequired)
+        )
           return false;
         if (recipe.populationRequired && currentPopulation < recipe.populationRequired)
           return false;
@@ -77,6 +82,7 @@
     'LEATHER',
     'TOOLS',
     'WEAPONS',
+    'ARCANE',
     'GOODS',
     'MEDICINE'
   ];
@@ -99,6 +105,10 @@
     // (salted/dried) share category 'meat' but *consume* meat via a dynamicRecipe.
     const consumesMeat = !!recipeOf(item.id)?.dynamicRecipe;
     if (item.isCarcass || (c === 'meat' && !consumesMeat)) return 'BUTCHERING';
+    // §M magic line — attuned gems, jewelry (rings/amulets/crowns) and arcane staves group together,
+    // ahead of the type checks so an arcane staff lands here, not under WEAPONS.
+    if (c === 'jewelry' || c === 'gem' || c === 'magic_gem' || item.weaponProperties?.arcane)
+      return 'ARCANE';
     if (t === 'tool') return 'TOOLS';
     if (t === 'weapon') return 'WEAPONS';
     // Cooking = everything else edible/drinkable, incl. preserved meat.

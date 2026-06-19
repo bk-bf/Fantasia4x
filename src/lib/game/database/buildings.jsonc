@@ -853,7 +853,7 @@
     "populationRequired": 1,
     "researchRequired"  : "arcane_lapidary",
     "upkeepCost"        : {},
-    "effects"           : {"craftingEnabled": true, "tier": 1},
+    "effects"           : {"craftingEnabled": true, "tier": 1, "arcane": 1},
     "storageCapacity"   : {},
     "buildingState"     : {"isUnique": false, "maxCount": 2}
   },
@@ -872,7 +872,7 @@
     "populationRequired": 1,
     "researchRequired"  : "arcane_lapidary",
     "upkeepCost"        : {},
-    "effects"           : {"craftingEnabled": true, "tier": 1},
+    "effects"           : {"craftingEnabled": true, "tier": 1, "arcane": 1},
     "storageCapacity"   : {},
     "buildingState"     : {"isUnique": false, "maxCount": 2}
   },
@@ -894,7 +894,7 @@
     "populationRequired": 1,
     "researchRequired"  : "attunement",
     "upkeepCost"        : {},
-    "effects"           : {"craftingEnabled": true, "tier": 2, "warmth": 0.4},
+    "effects"           : {"craftingEnabled": true, "tier": 2, "warmth": 0.4, "arcane": 1},
     "storageCapacity"   : {},
     "buildingState"     : {"isUnique": false, "maxCount": 1}
   }

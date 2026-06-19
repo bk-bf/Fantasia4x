@@ -228,6 +228,8 @@ export class BuildingServiceImpl implements BuildingService {
   }
 
   hasRequiredResearch(buildingId: string, gameState: GameState): boolean {
+    // DEBUG: `_devResearchGateOff` turns research gating off (see gamestate.ts).
+    if (gameState._devResearchGateOff) return true;
     const building = this.getBuildingById(buildingId);
     if (!building?.researchRequired) return true;
 
