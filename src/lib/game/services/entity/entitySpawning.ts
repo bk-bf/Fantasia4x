@@ -9,6 +9,7 @@ import { rng } from '../../core/rng';
 import { findNearbyWalkable } from './entityHelpers';
 import { isSpawnableTile } from '../../core/Terrains';
 import { resourceObjectService } from '../ResourceObjectService';
+import { markTileDirty } from '../../core/tileDeltas';
 import {
   SPAWN_CHECK_INTERVAL,
   BASE_SPAWN_CHANCE,
@@ -19,7 +20,11 @@ import {
   MAX_HOSTILE,
   MAX_NEUTRAL,
   targetEntityCount,
-  populationCaps
+  populationCaps,
+  LAIR_TICK_INTERVAL,
+  LAIR_REPOP_CHANCE,
+  LAIR_GROW_CHANCE,
+  maxLairCount
 } from './entityConstants';
 
 let idCounter = 0;
@@ -92,21 +97,18 @@ export function seedInitialEntities(state: GameState, packsOverride?: number): G
   return { ...state, mobs: [...(state.mobs ?? []), ...seeded, ...lairMobs] };
 }
 
-/**
- * Seed one bound pack at every lair tile (resources.jsonc `lair: true`). Each pack is anchored to its
- * lair (stable `lairId`, `lairX/Y`, `lairRange` from the creature def) and stays leashed there — see
- * the territory checks in entityAI.stepHostile. A mob NEVER adopts another lair, so packs can't drift
- * onto a neighbour's lair and reclaim/extend it.
- */
-function seedLairs(state: GameState): Mob[] {
-  const lairIds = new Set(
+/** Set of resource ids flagged `lair: true`. */
+function lairResourceIds(): Set<string> {
+  return new Set(
     resourceObjectService
       .getAll()
       .filter((r) => r.lair)
       .map((r) => r.id)
   );
-  if (lairIds.size === 0) return [];
-  // Day creatures bound to each lair id (nightOnly excluded — they spawn via the periodic spawner).
+}
+
+/** Day creatures bound to each lair id (nightOnly excluded — they spawn via the periodic spawner). */
+function creaturesByLair(lairIds: Set<string>): Map<string, CreatureDefinition[]> {
   const byLair = new Map<string, CreatureDefinition[]>();
   for (const c of CREATURES) {
     if (c.lair && lairIds.has(c.lair) && !c.nightOnly) {
@@ -115,7 +117,53 @@ function seedLairs(state: GameState): Mob[] {
       else byLair.set(c.lair, [c]);
     }
   }
+  return byLair;
+}
 
+/** Spawn one bound pack of `def` anchored at (lairX,lairY) with the given lairId. The first mob sits
+ *  on the lair tile, the rest spread to adjacent spawnable land. Every member is leashed to the lair. */
+function spawnPackAt(
+  state: GameState,
+  def: CreatureDefinition,
+  lairX: number,
+  lairY: number,
+  lairId: string
+): Mob[] {
+  const map = state.worldMap;
+  const range = def.lairRange ?? 40;
+  const [packMin, packMax] = def.pack;
+  const packSize = packMin + Math.floor(rng.random() * (packMax - packMin + 1));
+  const out: Mob[] = [];
+  for (let i = 0; i < packSize; i++) {
+    let tx = lairX;
+    let ty = lairY;
+    if (i > 0) {
+      const cand = findNearbyWalkable(state, lairX, lairY);
+      if (cand && isSpawnableTile(map[cand.y]?.[cand.x])) {
+        tx = cand.x;
+        ty = cand.y;
+      }
+    }
+    const mob = makeMob(def, tx, ty, state.turn);
+    mob.lairId = lairId;
+    mob.lairX = lairX;
+    mob.lairY = lairY;
+    mob.lairRange = range;
+    out.push(mob);
+  }
+  return out;
+}
+
+/**
+ * Seed one bound pack at every lair tile (resources.jsonc `lair: true`). Each pack is anchored to its
+ * lair (stable `lairId`, `lairX/Y`, `lairRange` from the creature def) and stays leashed there — see
+ * the territory checks in entityAI.stepHostile. A mob NEVER adopts another lair, so packs can't drift
+ * onto a neighbour's lair and reclaim/extend it.
+ */
+function seedLairs(state: GameState): Mob[] {
+  const lairIds = lairResourceIds();
+  if (lairIds.size === 0) return [];
+  const byLair = creaturesByLair(lairIds);
   const map = state.worldMap;
   const h = map.length;
   const w = map[0]?.length ?? 0;
@@ -135,30 +183,114 @@ function seedLairs(state: GameState): Mob[] {
       const candidates = byLair.get(lairResId);
       if (!candidates || candidates.length === 0) continue;
       const def = candidates[Math.floor(rng.random() * candidates.length)];
-      const lairId = `lair-${lairResId}-${x}-${y}`;
-      const range = def.lairRange ?? 40;
-      const [packMin, packMax] = def.pack;
-      const packSize = packMin + Math.floor(rng.random() * (packMax - packMin + 1));
-      for (let i = 0; i < packSize; i++) {
-        let tx = x;
-        let ty = y;
-        if (i > 0) {
-          const cand = findNearbyWalkable(state, x, y);
-          if (cand && isSpawnableTile(map[cand.y]?.[cand.x])) {
-            tx = cand.x;
-            ty = cand.y;
-          }
-        }
-        const mob = makeMob(def, tx, ty, state.turn);
-        mob.lairId = lairId;
-        mob.lairX = x;
-        mob.lairY = y;
-        mob.lairRange = range;
-        seeded.push(mob);
-      }
+      seeded.push(...spawnPackAt(state, def, x, y, `lair-${lairResId}-${x}-${y}`));
     }
   }
   return seeded;
+}
+
+/**
+ * Lair lifecycle, ticked once per in-game day (LAIR_TICK_INTERVAL). Two slow, RNG-paced behaviours:
+ *  • REPOPULATE — an emptied (pack fully wiped) but UN-destroyed lair re-occupies after ~weeks.
+ *  • GROW — while below the world cap (maxLairCount), a new lair grows on a random eligible grass/bush
+ *    tile after ~weeks; never on the same tile as before. Destroying a lair tile stops both for it.
+ */
+export function tickLairs(state: GameState): GameState {
+  if (state.turn % LAIR_TICK_INTERVAL !== 0) return state;
+  const lairIds = lairResourceIds();
+  if (lairIds.size === 0) return state;
+  const map = state.worldMap;
+  const h = map.length;
+  const w = map[0]?.length ?? 0;
+  if (w === 0) return state;
+
+  // Daily full-map scan for live lair tiles (resource amount > 0) — amortised, cheap per-tick.
+  const lairTiles: { x: number; y: number; resId: string; lairId: string }[] = [];
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const res = map[y][x].resources;
+      if (!res) continue;
+      for (const k of Object.keys(res)) {
+        if (lairIds.has(k) && (res[k] ?? 0) > 0) {
+          lairTiles.push({ x, y, resId: k, lairId: `lair-${k}-${x}-${y}` });
+          break;
+        }
+      }
+    }
+  }
+
+  // Alive bound-mob count per lairId.
+  const aliveByLair = new Map<string, number>();
+  for (const m of state.mobs ?? []) {
+    if (m.lairId && m.isAlive !== false && m.state !== 'Corpse') {
+      aliveByLair.set(m.lairId, (aliveByLair.get(m.lairId) ?? 0) + 1);
+    }
+  }
+
+  const byLair = creaturesByLair(lairIds);
+  const newMobs: Mob[] = [];
+
+  // Repopulate emptied lairs.
+  for (const lt of lairTiles) {
+    if ((aliveByLair.get(lt.lairId) ?? 0) > 0) continue;
+    if (rng.random() >= LAIR_REPOP_CHANCE) continue;
+    const cands = byLair.get(lt.resId);
+    if (!cands || cands.length === 0) continue;
+    const def = cands[Math.floor(rng.random() * cands.length)];
+    newMobs.push(...spawnPackAt(state, def, lt.x, lt.y, lt.lairId));
+  }
+
+  // Grow a new lair toward the world cap.
+  if (lairTiles.length < maxLairCount(w, h) && rng.random() < LAIR_GROW_CHANCE) {
+    const placed = tryPlaceNewLair(state);
+    if (placed) {
+      const cands = byLair.get(placed.resId);
+      if (cands && cands.length > 0) {
+        const def = cands[Math.floor(rng.random() * cands.length)];
+        newMobs.push(
+          ...spawnPackAt(
+            state,
+            def,
+            placed.x,
+            placed.y,
+            `lair-${placed.resId}-${placed.x}-${placed.y}`
+          )
+        );
+      }
+    }
+  }
+
+  if (newMobs.length === 0) return state; // worldMap mutations (if any) shipped via markTileDirty
+  return { ...state, mobs: [...(state.mobs ?? []), ...newMobs] };
+}
+
+/** Try to place ONE new lair on a random eligible grass/bush tile (a lair def's own spawn subterrains).
+ *  Mutates the tile's resources IN PLACE + ships a tile delta (mirrors harvest.ts). Returns the placed
+ *  tile, or null if no clean spot was found in a bounded number of tries. */
+function tryPlaceNewLair(state: GameState): { x: number; y: number; resId: string } | null {
+  const lairDefs = resourceObjectService.getAll().filter((r) => r.lair);
+  if (lairDefs.length === 0) return null;
+  const def = lairDefs[Math.floor(rng.random() * lairDefs.length)];
+  const subs = Object.keys(def.spawn?.subterrains ?? {});
+  if (subs.length === 0) return null;
+  const map = state.worldMap;
+  const h = map.length;
+  const w = map[0]?.length ?? 0;
+  for (let attempt = 0; attempt < 60; attempt++) {
+    const x = EDGE_BUFFER + Math.floor(rng.random() * (w - 2 * EDGE_BUFFER));
+    const y = EDGE_BUFFER + Math.floor(rng.random() * (h - 2 * EDGE_BUFFER));
+    const tile = map[y]?.[x];
+    if (!tile) continue;
+    if (!subs.includes(tile.subType)) continue;
+    if (!isSpawnableTile(tile)) continue;
+    const res = tile.resources;
+    // Keep it clean: don't grow onto a tile already carrying a resource (incl. another lair).
+    if (res && Object.keys(res).some((k) => (res[k] ?? 0) > 0)) continue;
+    tile.resources = { ...(tile.resources ?? {}), [def.id]: 1 };
+    markTileDirty(y, x, tile); // lairs are walkable, so no walkability patch needed
+    return { x, y, resId: def.id };
+  }
+  return null;
 }
 
 /**

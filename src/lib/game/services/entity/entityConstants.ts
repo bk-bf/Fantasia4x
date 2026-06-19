@@ -32,6 +32,20 @@ export function targetEntityCount(width: number, height: number): number {
   return Math.max(MIN_TARGET_ENTITIES, Math.min(MAX_TARGET_ENTITIES, raw));
 }
 
+// ── Lair lifecycle (ENTITIES_SPAWNING territory) ───────────────────────────────
+/** Lair maintenance (repopulate emptied lairs, grow new ones) runs once per in-game day — a full-map
+ *  lair scan amortised over the day is cheap. */
+export const LAIR_TICK_INTERVAL = ticksFromSeconds(300);
+/** Per-daily-check chance an EMPTIED (pack wiped) but un-destroyed lair re-occupies. ~12 days mean. */
+export const LAIR_REPOP_CHANCE = 0.08;
+/** Per-daily-check chance a NEW lair grows on an eligible grass/bush tile (toward the world cap). */
+export const LAIR_GROW_CHANCE = 0.06;
+/** World lair ceiling, area-scaled (~1 per 6000 tiles). Growth tops up toward this after lairs are
+ *  destroyed — never beyond it; so the map's danger density self-heals to its intended level. */
+export function maxLairCount(width: number, height: number): number {
+  return Math.max(3, Math.min(60, Math.round((width * height) / 6000)));
+}
+
 /**
  * Population ceilings for a map of this size. `total` bounds the whole wild population; the per-class
  * caps are loose guards (hostiles kept the minority) — with the roster cycled evenly during seeding,

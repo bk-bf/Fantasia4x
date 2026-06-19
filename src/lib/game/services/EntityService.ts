@@ -23,6 +23,12 @@ class EntityServiceImpl {
     return spawning.seedInitialEntities(state, packs);
   }
 
+  /** Lair lifecycle (territory): daily-paced repopulation of emptied lairs + capped growth of new
+   *  ones on grass/bush tiles. No-op except once per in-game day. */
+  tickLairs(state: GameState): GameState {
+    return spawning.tickLairs(state);
+  }
+
   /** DF-style periodic spawner — biome-weighted, night-boosted, capped. */
   spawnEntities(state: GameState): GameState {
     return spawning.spawnEntities(state);

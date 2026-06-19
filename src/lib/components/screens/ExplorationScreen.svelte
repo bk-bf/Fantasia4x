@@ -42,7 +42,9 @@
             id,
             name: def?.displayName ?? id.replace(/_/g, ' '),
             color: def?.fg ? rgb(def.fg) : 'var(--text-dim)',
-            type: def?.interaction?.workCategory ?? '—',
+            // Lairs read as "lair" (not their harvest workCategory "foraging") — clearer, and lets
+            // the search term "lair" find every den/nest/warren even though their names don't contain it.
+            type: def?.lair ? 'lair' : (def?.interaction?.workCategory ?? '—'),
             amount,
             x: t.x,
             y: t.y

@@ -606,8 +606,9 @@
       btns.push({ label: 'CANCEL ALL', onClick: cancelResourceDesignation });
     } else {
       for (const iact of activeInteractions) {
-        const label =
-          iact.designationType === 'woodcut'
+        const label = selectedResourceDef.lair
+          ? 'DESTROY'
+          : iact.designationType === 'woodcut'
             ? 'CUT'
             : iact.designationType === 'forage'
               ? 'FORAGE'
