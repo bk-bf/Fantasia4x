@@ -526,9 +526,14 @@ class CombatServiceImpl implements CombatService {
     // Knockdown/stun: blunt hits roll chance from damage vs constitution, PLUS the weapon's flat
     // `stunChance` (maces/hammers stun regardless of damage type). Reduced by knockdown_resistance.
     const defCon = defender.stats.constitution ?? 10;
-    const stunResist = clamp(pawnStatService.evaluateStat('knockdown_resistance', defender), 0.1, 2);
+    const stunResist = clamp(
+      pawnStatService.evaluateStat('knockdown_resistance', defender),
+      0.1,
+      2
+    );
     const knockChance = clamp(
-      ((damageType === 'blunt' ? (final - defCon / 4) * bluntMod : 0) + stunChance * 100) / stunResist,
+      ((damageType === 'blunt' ? (final - defCon / 4) * bluntMod : 0) + stunChance * 100) /
+        stunResist,
       0,
       100
     );
@@ -822,18 +827,100 @@ class CombatServiceImpl implements CombatService {
         result.weaponId
       );
     }
+    // On-hit status effect: venom/bleed/screech/tongue natural weapons roll to inflict a timed
+    // transient condition (mitigated by the defender's resistance stat). Applied to the post-injury
+    // state so it stacks onto the same target update.
+    const afterEffect = this.applyOnHitEffect(next, target.id, isTargetMob, result.weaponId, pos);
+
     // Every landed blow chips condition: the attacker's weapon + the defender's struck armour.
     const armorLoss = this.computeArmorDamage(attacker, result.damageType, !!override);
     return {
-      state: this.applyGearWear(next, attacker, target, armorLoss),
+      state: this.applyGearWear(afterEffect, attacker, target, armorLoss),
       staminaCost: result.staminaCost
     };
+  }
+
+  /**
+   * Roll a landed weapon's `onHitEffect` against the defender and, on success, apply the named
+   * condition as a timed transient (conditionTimers — same machinery as knockdown, so it surfaces in
+   * transientConditions and decrements/clears on its own). The trigger chance is reduced by the
+   * defender's `resist` stat (stats.jsonc); an optional `bloodDrain` also bleeds bloodVolume, feeding
+   * the blood_loss condition. No-op when the weapon has no effect or the target is already down.
+   */
+  private applyOnHitEffect(
+    state: GameState,
+    targetId: string,
+    isMob: boolean,
+    weaponId: string | undefined,
+    pos: { x: number; y: number }
+  ): GameState {
+    if (!weaponId) return state;
+    const eff = itemService.getItemById(weaponId)?.onHitEffect;
+    if (!eff) return state;
+    const target = isMob
+      ? state.mobs?.find((m) => m.id === targetId)
+      : state.pawns.find((p) => p.id === targetId);
+    if (!target || target.isAlive === false) return state;
+    if (isMob && (target as Mob).state === 'Corpse') return state;
+
+    // Resistance → trigger reduction. `resist` names a 0-baseline `*_resistance` stat (poison/
+    // piercing/mental/blunt), which evaluates to ~0 at the baseline stat and rises with it — used
+    // directly as the fraction by which the trigger chance is cut.
+    let resistFrac = 0;
+    if (eff.resist) {
+      resistFrac = clamp(pawnStatService.evaluateStat(eff.resist, target), 0, 0.9);
+    }
+    const chance = clamp(eff.chance * (1 - resistFrac), 0, 1);
+    if (rng.random() >= chance) return state;
+
+    const timers = { ...(target.conditionTimers ?? {}) };
+    timers[eff.condition] = Math.max(timers[eff.condition] ?? 0, eff.durationTurns);
+    const transientConditions = (target.transientConditions ?? []).includes(eff.condition)
+      ? target.transientConditions!
+      : [...(target.transientConditions ?? []), eff.condition];
+
+    // Optional blood drain (proboscis/feeding) → reduce bloodVolume and re-derive blood_loss.
+    let conditions = target.conditions;
+    let bloodVolume = target.bloodVolume;
+    if (eff.bloodDrain && eff.bloodDrain > 0) {
+      const maxBV = target.maxBloodVolume ?? 100;
+      bloodVolume = Math.max(0, (target.bloodVolume ?? maxBV) - eff.bloodDrain * (1 - resistFrac));
+      conditions = upsertCondition(
+        target.conditions ?? [],
+        'blood_loss',
+        clamp(1 - bloodVolume / maxBV, 0, 1)
+      );
+    }
+
+    const updated = {
+      ...target,
+      conditionTimers: timers,
+      transientConditions,
+      conditions,
+      bloodVolume
+    };
+    const floatKind: CombatTextKind =
+      eff.condition === 'disoriented' || eff.condition === 'ensnared' ? 'knockdown' : 'bleed';
+    this.emitFloat(pos.x, pos.y, floatKind, eff.condition);
+
+    return isMob
+      ? { ...state, mobs: state.mobs!.map((m) => (m.id === targetId ? (updated as Mob) : m)) }
+      : { ...state, pawns: state.pawns.map((p) => (p.id === targetId ? (updated as Pawn) : p)) };
   }
 
   /** The worn-armour slot with the highest `defense` (the piece that takes a blow — mirrors
    *  partArmorReduction's best-of selection). Null if the pawn wears no armour. */
   private bestArmorSlot(pawn: Pawn): string | null {
-    const slots = ['bodyOuter', 'bodyMid', 'bodyBase', 'headOuter', 'headBase', 'gloves', 'boots', 'gorget'];
+    const slots = [
+      'bodyOuter',
+      'bodyMid',
+      'bodyBase',
+      'headOuter',
+      'headBase',
+      'gloves',
+      'boots',
+      'gorget'
+    ];
     const eq = pawn.equipment as Record<string, ItemInstance | undefined>;
     let best: string | null = null;
     let bestDef = 0;
@@ -869,18 +956,20 @@ class CombatServiceImpl implements CombatService {
     // The attacker's weapon wears from use (its own durability/hit); the defender's struck armour
     // takes `armorLoss` condition — driven by the WEAPON's armorDamage × the attacker's armor_damage
     // stat (computed by the caller), so a hammer caves plate fast and a cleaver barely scratches it.
-    const weaponInst =
-      'equipment' in attacker ? attacker.equipment?.mainHand : undefined;
+    const weaponInst = 'equipment' in attacker ? attacker.equipment?.mainHand : undefined;
     const weaponLoss = weaponInst
       ? (itemService.getItemById(weaponInst.itemId)?.durabilityLossPerCombatHit ?? 0)
       : 0;
-    const armorSlot = armorLoss > 0 && 'equipment' in defender ? this.bestArmorSlot(defender as Pawn) : null;
+    const armorSlot =
+      armorLoss > 0 && 'equipment' in defender ? this.bestArmorSlot(defender as Pawn) : null;
     if (weaponLoss <= 0 && !armorSlot) return state;
     return {
       ...state,
       pawns: state.pawns.map((p) => {
-        if (weaponLoss > 0 && p.id === attacker.id) return this.decrEquipDurability(p, 'mainHand', weaponLoss);
-        if (armorSlot && p.id === defender.id) return this.decrEquipDurability(p, armorSlot, armorLoss);
+        if (weaponLoss > 0 && p.id === attacker.id)
+          return this.decrEquipDurability(p, 'mainHand', weaponLoss);
+        if (armorSlot && p.id === defender.id)
+          return this.decrEquipDurability(p, armorSlot, armorLoss);
         return p;
       })
     };
@@ -896,7 +985,11 @@ class CombatServiceImpl implements CombatService {
 
   /** Armour condition this swing strips: weapon.armorDamage (or the by-type default) × the attacker's
    *  STR-driven `armor_damage` stat. A ranged shot pierces rather than wrecks → much less. */
-  private computeArmorDamage(attacker: Pawn | Mob, damageType: DamageType, isRanged: boolean): number {
+  private computeArmorDamage(
+    attacker: Pawn | Mob,
+    damageType: DamageType,
+    isRanged: boolean
+  ): number {
     const stat = pawnStatService.evaluateStat('armor_damage', attacker);
     const byType = CombatServiceImpl.DEFAULT_ARMOR_DAMAGE[damageType] ?? 2;
     if (isRanged) return byType * 0.4 * stat; // arrows/bolts pierce, they don't cave armour

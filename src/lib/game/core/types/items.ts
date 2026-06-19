@@ -321,6 +321,22 @@ export interface Item {
   };
 
   /**
+   * On-hit status effect (venom/screech/tongue/blood-drain natural weapons). When a swing with this
+   * weapon LANDS, roll `chance` (reduced by the defender's `resist` stat) to inflict `condition` as a
+   * timed transient (via conditionTimers, like knockdown) for `durationTurns`. `resist` names a
+   * 0-baseline `*_resistance` stat in stats.jsonc (poison/piercing/mental/blunt) whose value is the
+   * fraction by which the trigger chance is cut. `bloodDrain` (optional) also bleeds the victim's
+   * bloodVolume on a successful trigger, feeding the blood_loss condition.
+   */
+  onHitEffect?: {
+    condition: string;
+    chance: number; // 0–1 base trigger chance on a landed hit
+    durationTurns: number; // condition-timer turns (same unit as KNOCKDOWN_TURNS)
+    resist?: string; // stat id mitigating the chance (e.g. "poison_resistance")
+    bloodDrain?: number; // blood volume drained on trigger (proboscis/feeding bites)
+  };
+
+  /**
    * RANGED-COMBAT: tags an item as ammunition. Any ammo feeds any ranged weapon sharing its
    * `ammoCategory` (better ammo = better result — the dynamic-material philosophy). Ammo is a
    * bulk consumable in pawn inventory, not an ItemInstance.

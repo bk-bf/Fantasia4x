@@ -679,6 +679,14 @@
   // bones together, instead of the old one-product-per-carcass recipes (which each consumed a whole
   // carcass for just the meat OR the hide OR the bones). The separate hide/pelt/bone butcher recipes
   // were removed — those outputs now ride the single meat recipe per carcass.
+  //
+  // TODO (expansion roster — DF/DCSS/D&D creatures): the new carcasses added in items.jsonc
+  // (aurochs, woolly_mammoth, hippogriff, hoarfowl, quillback, worg, jackal, owlbear, sabretooth,
+  // mire_crocodile, marsh_viper, stirge, grimeling, giant_olm, thornwood_spider, kobold_skulker,
+  // gnoll_marauder, orc_reaver, harpy, bullywug) have NO butchery recipe yet — deliberately, to
+  // avoid a flood of new meat/hide/bone item types in this pass. They can be hunted + decay but not
+  // processed. Wire per-carcass yields (likely reusing existing meat/hide/bone items at first, then
+  // adding distinctive products like ivory, mammoth_wool, venom, chitin, feathers) when scoped.
   {
     "id"              : "make_wolf_meat",
     "station"         : "butcher_spot",

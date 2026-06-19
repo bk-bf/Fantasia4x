@@ -42,7 +42,9 @@ export function populationCaps(
   height: number
 ): { total: number; hostile: number; neutral: number } {
   const total = targetEntityCount(width, height);
-  return { total, hostile: Math.ceil(total * 0.6), neutral: total };
+  // Hostiles (entityClass 'mob' — goblins, gnolls, orcs, raiders…) capped to ~1/4 of the population
+  // so the wilds stay survivable; the rest is prey/neutral wildlife. Tunable.
+  return { total, hostile: Math.ceil(total * 0.25), neutral: total };
 }
 export const CORPSE_DECAY_TICKS = ticksFromSeconds(200); // corpse persists ~200s then vanishes
 

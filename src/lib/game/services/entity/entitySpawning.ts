@@ -159,6 +159,17 @@ export function pickSpawnCreature(isNight: boolean): CreatureDefinition | undefi
   return pool[Math.floor(rng.random() * pool.length)];
 }
 
+/** Any mountain tile within Chebyshev radius `r` of (x, y)? Used to keep mountain-edge grazers near
+ *  the peaks they belong to (mountains themselves aren't spawnable). */
+function isNearMountain(map: GameState['worldMap'], x: number, y: number, r: number): boolean {
+  for (let dy = -r; dy <= r; dy++) {
+    for (let dx = -r; dx <= r; dx++) {
+      if (map[y + dy]?.[x + dx]?.terrainType === 'mountain') return true;
+    }
+  }
+  return false;
+}
+
 export function findSpawnTile(
   state: GameState,
   def: CreatureDefinition
@@ -174,10 +185,22 @@ export function findSpawnTile(
     const x = EDGE_BUFFER + Math.floor(rng.random() * (w - 2 * EDGE_BUFFER));
     const y = EDGE_BUFFER + Math.floor(rng.random() * (h - 2 * EDGE_BUFFER));
     const tile = map[y]?.[x];
-    // Hard rule: creatures only spawn on walkable forest/plains/swamp land — never water/mountain.
-    if (!isSpawnableTile(tile)) continue;
+    if (!tile) continue;
+    if (def.spawnsInMountain) {
+      // Mountain dwellers (incorporeal wraiths): any mountain tile, even non-walkable rock.
+      if (tile.terrainType !== 'mountain') continue;
+    } else {
+      // Hard rule: creatures only spawn on walkable forest/plains/swamp land — never water/mountain.
+      if (!isSpawnableTile(tile)) continue;
+      // Mountain-edge grazers: must also be within range of a mountain tile.
+      if (
+        def.maxMountainDistance !== undefined &&
+        !isNearMountain(map, x, y, def.maxMountainDistance)
+      )
+        continue;
+    }
 
-    const weight = def.biomeWeights[tile!.terrainType] ?? 0;
+    const weight = def.biomeWeights[tile.terrainType] ?? 0;
     if (weight <= 0) continue;
     // Probabilistic accept by biome weight (max weight 1.2 → clamp).
     if (rng.random() > Math.min(1, weight)) continue;

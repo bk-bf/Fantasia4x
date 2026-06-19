@@ -141,6 +141,15 @@ export interface CreatureDefinition {
   lootTable: CreatureLootEntry[];
   /** Natural melee attacks — ids of `natural_weapon` items in items.jsonc. */
   naturalWeapons: string[];
+  /** Spawn-gate overrides (ENTITIES_SPAWNING). The default gate restricts spawns to walkable
+   *  forest/plains/swamp land (isSpawnableTile). These let specific creatures bend that:
+   *  - `spawnsInMountain`: spawn on ANY mountain tile, even non-walkable rock — for incorporeal
+   *    dwellers (shadow wraith) that don't eat, so being walled in is acceptable.
+   *  - `maxMountainDistance`: still spawn on normal spawnable land, but only within this many tiles
+   *    of a mountain tile — for mountain-edge grazers (mountain goat) that would otherwise be filtered
+   *    out entirely now that mountains aren't spawnable. */
+  spawnsInMountain?: boolean;
+  maxMountainDistance?: number;
 }
 
 type RawCreature = Record<string, unknown>;
@@ -204,7 +213,9 @@ function toDefinition(raw: RawCreature): CreatureDefinition {
     carcassItemId: (raw.carcassItemId as string) ?? undefined,
     biomeWeights: (raw.biomeWeights as Record<string, number>) ?? {},
     lootTable: (raw.lootTable as CreatureLootEntry[]) ?? [],
-    naturalWeapons: (raw.naturalWeapons as string[]) ?? []
+    naturalWeapons: (raw.naturalWeapons as string[]) ?? [],
+    spawnsInMountain: (raw.spawnsInMountain as boolean | undefined) ?? undefined,
+    maxMountainDistance: (raw.maxMountainDistance as number | undefined) ?? undefined
   };
 }
 

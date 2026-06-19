@@ -434,6 +434,48 @@
         "charSpans"  : [ {"sheet": "font", "id": 31} ],
         "modifiers"  : {"workEfficiency": 0.6}
     },
+    // ── On-hit combat effects (inflicted by creature natural weapons) ─────────
+    // Timed transient debuffs applied when a venom/feeding/screech/tongue natural weapon lands (see
+    // the weapon's `onHitEffect` in items.jsonc). Stored via conditionTimers like knockdown, so they
+    // appear in transientConditions, decrement each tick, and auto-clear. Their trigger chance is
+    // reduced by the named resistance stat in stats.jsonc (noted per condition). modifiers are
+    // multipliers, consumed by the same work/move/dodge/fatigue pipeline as every transient.
+    {
+        "duration"   : "transient",
+        "id"         : "envenomed",
+        "name"       : "Envenomed",
+        "description": "Venom courses through the blood — nauseous, weak, and tiring fast until it passes. Onset chance is reduced by poison resistance (CON × blood filtration).",
+        "color"      : "#7CB342",
+        "charSpans"  : [ {"sheet": "font", "id": 21} ],
+        "modifiers"  : {"workEfficiency": 0.7, "moveSpeed": 0.8, "fatigueRate": 1.3}
+    },
+    {
+        "duration"   : "transient",
+        "id"         : "bloodletting",
+        "name"       : "Bleeding Out",
+        "description": "A feeding wound that won't clot — light-headed and slow as blood seeps away. Onset chance is reduced by piercing resistance (CON); a successful bite also drains blood directly (→ blood loss).",
+        "color"      : "#C62828",
+        "charSpans"  : [ {"sheet": "font", "id": 3} ],
+        "modifiers"  : {"moveSpeed": 0.8, "workEfficiency": 0.85, "dodge": 0.85}
+    },
+    {
+        "duration"   : "transient",
+        "id"         : "disoriented",
+        "name"       : "Disoriented",
+        "description": "Reeling from a piercing screech — senses scrambled, slow to act and easy to hit. Onset chance is reduced by mental resistance (INT).",
+        "color"      : "#AB47BC",
+        "charSpans"  : [ {"sheet": "font", "id": 19} ],
+        "modifiers"  : {"workEfficiency": 0.7, "dodge": 0.7, "moveSpeed": 0.9}
+    },
+    {
+        "duration"   : "transient",
+        "id"         : "ensnared",
+        "name"       : "Ensnared",
+        "description": "Caught fast by a sticky tongue — rooted in place and wide open until torn free. Onset chance is reduced by blunt resistance (CON/STR — wrenching free).",
+        "color"      : "#8D6E63",
+        "charSpans"  : [ {"sheet": "font", "id": 15} ],
+        "modifiers"  : {"moveSpeed": 0.0, "dodge": 0.6}
+    },
     // ── Magical buffs ("magical": true) — PRODUCTION-CHAIN-II §M ──────────────
     // Passive buffs granted by worn attuned gear (and, later, by MAGIC-SKILLS spells/skill nodes
     // through the SAME pipeline). Pushed into transientConditions by syncTransientConditions while
