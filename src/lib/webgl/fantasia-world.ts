@@ -46,22 +46,20 @@ export function buildGameGrid(
 ): GameGrid {
   const grid = new GameGrid();
 
-  // Interior-mountain hiding: a SOLID tile (a mountain_wall / cliff_wall / ore — i.e. impassable rock
-  // you'd have to mine through) whose whole 8-neighbourhood is also solid is buried and can never be
-  // seen, so it renders as a blank tile in the dirt-bg colour (melting into the map background). A
-  // solid tile with ANY non-solid neighbour (cave, open land, water, or already-mined floor) is an
-  // exposed face and stays drawn — so a mountain shows exactly its one-tile silhouette, and the walls
-  // lining caves stay visible (the earlier bug: caves were wrongly counted as "mountain").
-  //   • Solid = a rocky/cliff/mineral_deposit tile that still carries its wall/ore resource. Mining a
-  //     wall clears the resource → the tile becomes non-solid → its neighbours re-expose on the next
-  //     terrain rebuild (the dig reveals inward, DF-style). Caves are open floor → never solid.
-  //   • Map-edge (out-of-bounds) neighbours count as solid, so a massif running off the map still
-  //     hides its buried interior.
+  // Interior-mountain hiding (flood-fill). "Solid" = a rocky/cliff/mineral_deposit tile still carrying
+  // its wall/ore resource — impassable rock you'd have to mine through. We flood the EXTERIOR (every
+  // non-solid tile reachable from the map border through non-solid, 4-connected, tiles); solid rock
+  // blocks the flood. A tile then renders blank dirt-bg (hidden) unless it's reachable from outside:
+  //   • a non-solid tile must itself BE exterior — so an open pocket fully walled inside a massif (a
+  //     plains "oasis", or a smaller feature swallowed by a larger mountain) is NOT visible, instead
+  //     of poking through as a revealed oasis;
+  //   • a solid tile must touch the exterior on an 8-neighbour — the one-tile silhouette of the massif.
+  // Mining a wall clears its resource → it becomes non-solid → the flood reaches further in on the next
+  // terrain rebuild (the dig reveals inward, DF-style). Map edge (out-of-bounds) counts as exterior.
   const SOLID_SUBTYPES = new Set(['rocky', 'cliff', 'mineral_deposit']);
   const DIRT_BG = (SUBTERRAINS['dirt']?.bg ?? [0.08, 0.06, 0.03]) as [number, number, number];
   const mh = worldMap.length;
   const mw = worldMap[0]?.length ?? 0;
-  // Precompute the solid mask once (avoids re-scanning resources for every neighbour lookup).
   const solid: boolean[][] = worldMap.map((row) =>
     row.map(
       (t) =>
@@ -70,15 +68,40 @@ export function buildGameGrid(
         Object.values(t.resources).some((a) => a > 0)
     )
   );
-  const isBuried = (x: number, y: number): boolean => {
-    if (!solid[y][x]) return false;
+
+  // BFS the exterior from the border through non-solid tiles (4-connected so walls seal diagonally).
+  const exterior: boolean[][] = worldMap.map((row) => row.map(() => false));
+  const queue: number[] = [];
+  const flood = (x: number, y: number) => {
+    if (x < 0 || y < 0 || x >= mw || y >= mh) return;
+    if (exterior[y][x] || solid[y][x]) return;
+    exterior[y][x] = true;
+    queue.push(y * mw + x);
+  };
+  for (let x = 0; x < mw; x++) {
+    flood(x, 0);
+    flood(x, mh - 1);
+  }
+  for (let y = 0; y < mh; y++) {
+    flood(0, y);
+    flood(mw - 1, y);
+  }
+  for (let qi = 0; qi < queue.length; qi++) {
+    const cx = queue[qi] % mw;
+    const cy = (queue[qi] / mw) | 0;
+    flood(cx + 1, cy);
+    flood(cx - 1, cy);
+    flood(cx, cy + 1);
+    flood(cx, cy - 1);
+  }
+  const extAt = (x: number, y: number): boolean =>
+    x < 0 || y < 0 || x >= mw || y >= mh || exterior[y][x];
+  const hidden = (x: number, y: number): boolean => {
+    if (!solid[y][x]) return !exterior[y][x]; // enclosed open pocket → hidden
     for (let dy = -1; dy <= 1; dy++) {
       for (let dx = -1; dx <= 1; dx++) {
         if (dx === 0 && dy === 0) continue;
-        const nx = x + dx;
-        const ny = y + dy;
-        if (nx < 0 || ny < 0 || nx >= mw || ny >= mh) continue; // OOB counts as solid
-        if (!solid[ny][nx]) return false; // an exposed (non-solid) face → keep this tile drawn
+        if (extAt(x + dx, y + dy)) return false; // wall facing the outside → visible rim
       }
     }
     return true;
@@ -86,8 +109,8 @@ export function buildGameGrid(
 
   for (const row of worldMap) {
     for (const tile of row) {
-      // Buried interior rock → blank dirt-coloured tile (only the mountain's outer rim stays drawn).
-      if (isBuried(tile.x, tile.y)) {
+      // Hidden interior (buried rock or an enclosed pocket) → blank dirt-coloured tile.
+      if (hidden(tile.x, tile.y)) {
         grid.setTile(tile.x, tile.y, {
           char: ' ',
           foreground: { r: DIRT_BG[0], g: DIRT_BG[1], b: DIRT_BG[2] },
