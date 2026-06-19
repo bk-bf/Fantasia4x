@@ -552,5 +552,25 @@
         "color"      : "#C9D4E0",
         "charSpans"  : [ {"sheet": "font", "id": 2} ],
         "modifiers"  : {"moveSpeed": 1.08, "fatigueRate": 0.92}
+    },
+    {
+        "duration"   : "transient",
+        "magical"    : true,
+        "id"         : "grace",
+        "name"       : "Grace",
+        "description": "Attuned regalia lends preternatural poise — far harder to land a blow on. The magical answer to a plate cuirass: dodge instead of armour.",
+        "color"      : "#B0E0D0",
+        "charSpans"  : [ {"sheet": "font", "id": 2} ],
+        "modifiers"  : {"dodge": 1.18}
+    },
+    {
+        "duration"   : "transient",
+        "magical"    : true,
+        "id"         : "fortitude",
+        "name"       : "Fortitude",
+        "description": "Attuned regalia steels the body against hardship — it tires and hungers far more slowly.",
+        "color"      : "#C8A85A",
+        "charSpans"  : [ {"sheet": "font", "id": 2} ],
+        "modifiers"  : {"fatigueRate": 0.82, "hungerRate": 0.90}
     }
 ]

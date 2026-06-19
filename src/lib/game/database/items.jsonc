@@ -5613,6 +5613,76 @@
   },
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // §M REGALIA — combo & head jewelry (the "magic boosts vs metal armour" loadout fork). All set with
+  // ATTUNED gems at the lapidary (gate: attunement) and grant transient buff conditions while worn.
+  //   • CROWNS/CIRCLETS/DIADEMS sit in `headOuter` — the HELMET slot — so a buff crown means NO helm
+  //     (the explicit head-armour trade). Token defense only.
+  //   • TORCS/PENDANTS use the `amulet` (neck-jewelry) slot; COMBO RINGS use `ring`.
+  //   • Combo pieces list TWO conditions (two attuned gems): one slot, two buffs — strong but costly.
+  // `grace` (dodge) / `fortitude` (endurance) are the defensive buffs — magic as an alternative to armour.
+  // ── Crowns / circlets / diadems (headOuter; competes with helmets) ──
+  {
+    "id": "scholars_circlet", "charSpans": [ {"sheet": "items", "id": 33} ], "name": "Scholar's Circlet",
+    "type": "armor", "category": "jewelry", "grantsConditions": ["insight"],
+    "armorProperties": {"defense": 1, "armorType": "light", "slot": "headOuter", "equipmentSlot": "headOuter", "movementPenalty": 0},
+    "description": "A slender silver circlet set with an attuned sapphire. Grants Insight while worn — but a circlet is no helm, so the head goes unarmoured.",
+    "color": "#5AA0E8", "amount": 0, "weightKg": 0.3, "volumeL": 0.2, "maxDurability": 200, "deteriorationRate": 0.002
+  },
+  {
+    "id": "champions_crown", "charSpans": [ {"sheet": "items", "id": 33} ], "name": "Champion's Crown",
+    "type": "armor", "category": "jewelry", "grantsConditions": ["might", "quickness"],
+    "armorProperties": {"defense": 2, "armorType": "light", "slot": "headOuter", "equipmentSlot": "headOuter", "movementPenalty": 0},
+    "description": "A gold war-crown set with an attuned ruby and topaz. Grants both Might and Quickness — a warrior's regalia worn in place of a helm.",
+    "color": "#FF7755", "amount": 0, "weightKg": 0.5, "volumeL": 0.3, "maxDurability": 220, "deteriorationRate": 0.002
+  },
+  {
+    "id": "sovereign_crown", "charSpans": [ {"sheet": "items", "id": 33} ], "name": "Sovereign's Crown",
+    "type": "armor", "category": "jewelry", "grantsConditions": ["charm", "keen_senses"],
+    "armorProperties": {"defense": 2, "armorType": "light", "slot": "headOuter", "equipmentSlot": "headOuter", "movementPenalty": 0},
+    "description": "A high gold crown set with an attuned citrine and amethyst. Grants Charm and Keen Senses — the regalia of a ruler, not a soldier.",
+    "color": "#E8B84B", "amount": 0, "weightKg": 0.6, "volumeL": 0.35, "maxDurability": 220, "deteriorationRate": 0.002
+  },
+  {
+    "id": "wardens_circlet", "charSpans": [ {"sheet": "items", "id": 33} ], "name": "Warden's Circlet",
+    "type": "armor", "category": "jewelry", "grantsConditions": ["grace", "fortitude"],
+    "armorProperties": {"defense": 2, "armorType": "light", "slot": "headOuter", "equipmentSlot": "headOuter", "movementPenalty": 0},
+    "description": "A gold circlet set with an attuned emerald and moonstone. Grants Grace and Fortitude — magic poise and endurance standing in for a steel helm.",
+    "color": "#7FD0B0", "amount": 0, "weightKg": 0.4, "volumeL": 0.3, "maxDurability": 220, "deteriorationRate": 0.002
+  },
+  // ── Necklaces / torcs / pendants (amulet slot) ──
+  {
+    "id": "gold_torc", "charSpans": [ {"sheet": "items", "id": 33} ], "name": "Gold Torc",
+    "type": "armor", "category": "jewelry", "grantsConditions": ["fortitude"],
+    "armorProperties": {"defense": 0, "armorValue": 0, "equipmentSlot": "amulet"},
+    "description": "A heavy twisted-gold torc seated with an attuned emerald. Grants Fortitude while worn (neck slot).",
+    "color": "#D4AF37", "amount": 0, "weightKg": 0.4, "volumeL": 0.15, "maxDurability": 220, "deteriorationRate": 0.002
+  },
+  {
+    "id": "champions_torc", "charSpans": [ {"sheet": "items", "id": 33} ], "name": "Champion's Torc",
+    "type": "armor", "category": "jewelry", "grantsConditions": ["might", "vigor"],
+    "armorProperties": {"defense": 0, "armorValue": 0, "equipmentSlot": "amulet"},
+    "description": "A gold torc set with an attuned ruby and emerald. Grants Might and Vigor — the front-line fighter's neck-piece.",
+    "color": "#E0604A", "amount": 0, "weightKg": 0.3, "volumeL": 0.12, "maxDurability": 200, "deteriorationRate": 0.002
+  },
+  {
+    "id": "wayfarers_pendant", "charSpans": [ {"sheet": "items", "id": 33} ], "name": "Wayfarer's Pendant",
+    "type": "armor", "category": "jewelry", "grantsConditions": ["quickness", "moonlit"],
+    "armorProperties": {"defense": 0, "armorValue": 0, "equipmentSlot": "amulet"},
+    "description": "A silver pendant set with an attuned topaz and moonstone. Grants Quickness and Moonlit — the scout's and traveller's charm.",
+    "color": "#BFD0DE", "amount": 0, "weightKg": 0.2, "volumeL": 0.1, "maxDurability": 200, "deteriorationRate": 0.002
+  },
+  {
+    "id": "sages_pendant", "charSpans": [ {"sheet": "items", "id": 33} ], "name": "Sage's Pendant",
+    "type": "armor", "category": "jewelry", "grantsConditions": ["insight", "charm"],
+    "armorProperties": {"defense": 0, "armorValue": 0, "equipmentSlot": "amulet"},
+    "description": "A gold pendant set with an attuned sapphire and citrine. Grants Insight and Charm — the counsellor's and crafter's piece.",
+    "color": "#7AA8D8", "amount": 0, "weightKg": 0.25, "volumeL": 0.12, "maxDurability": 200, "deteriorationRate": 0.002
+  },
+  // (Rings stay SINGLE-buff — the 7 elemental `<gem>_ring`s above. Two ring slots (`ring`/`ring2`) mean
+  //  you wear two of them, so the weaker single buffs go on rings; the two-buff combos are amulet/crown
+  //  only. No combo rings by design.)
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // §M ARCANE STAVES — INT-scaled (`arcane`) CHANNELED (`channeled`) ranged elemental weapons. They
   // fire on the ranged circuit (aim_accuracy/aim_speed/aim_range) but draw NO ammo: each shot pays
   // `staminaCost` as MANA (winded = out of mana) and the staff stays in hand. Element = the socketed

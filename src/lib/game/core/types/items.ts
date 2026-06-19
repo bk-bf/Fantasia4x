@@ -51,6 +51,7 @@ export interface PawnEquipment {
   boots?: ItemInstance;
   gorget?: ItemInstance;
   ring?: ItemInstance;
+  ring2?: ItemInstance; // §M second ring slot — two rings can be worn at once (occupancy-resolved on equip)
   amulet?: ItemInstance; // §M neck slot for attuned amulets (distinct from the `gorget` neck armour)
   belt?: ItemInstance;
   back?: ItemInstance;
@@ -76,6 +77,7 @@ export type EquipmentSlot =
   | 'boots'
   | 'gorget'
   | 'ring'
+  | 'ring2'
   | 'amulet'
   | 'belt'
   | 'back';

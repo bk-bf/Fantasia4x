@@ -35,7 +35,7 @@ import {
   aggregateFromDrops,
   absorbDropIfOnStockpileTile
 } from '../core/GameState';
-import { equipItem, unequipItem, useConsumable, getEquipmentSlot } from '../core/PawnEquipment';
+import { equipItem, unequipItem, useConsumable, resolveEquipSlot } from '../core/PawnEquipment';
 import { pickUpFromTile } from '../systems/pawn/pawnHauling';
 import { designationService } from '../services/DesignationService';
 import { buildingService } from '../services/BuildingService';
@@ -363,11 +363,12 @@ export const COMMANDS: Record<string, Cmd> = {
     if (!drop) return s;
     const item = itemService.getItemById(drop.resourceId);
     if (!item) return s;
-    const slot = getEquipmentSlot(item);
-    if (!slot) return s;
     const pawnIdx = s.pawns.findIndex((pw) => pw.id === p.pawnId);
     if (pawnIdx < 0) return s;
     const pawn = s.pawns[pawnIdx];
+    // Occupancy-aware: a 2nd ring goes to the free `ring2` slot instead of swapping the first.
+    const slot = resolveEquipSlot(pawn, item);
+    if (!slot) return s;
     const instance: ItemInstance = drop.instance ?? {
       instanceId: `${item.id}-${p.pawnId}-${Date.now()}`,
       itemId: item.id,

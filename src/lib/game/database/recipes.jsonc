@@ -2214,6 +2214,23 @@
   { "id": "make_moonstone_amulet", "station": "lapidary_bench", "inputs": {"attuned_moonstone": 2, "silver_bar": 2}, "outputs": {"moonstone_amulet": 1}, "workAmount": 14, "toolTierRequired": 1, "researchRequired": "attunement" },
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // §M REGALIA — crowns/circlets (headOuter, vs helmets), torcs/pendants (amulet) & combo rings (ring).
+  // All set with ATTUNED gems at the lapidary; combos take two gems → two buff conditions.
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 4a) Crowns / circlets / diadems (headOuter — competes with a helmet)
+  { "id": "make_scholars_circlet", "station": "lapidary_bench", "inputs": {"attuned_sapphire": 1, "silver_bar": 1},                       "outputs": {"scholars_circlet": 1}, "workAmount": 16, "toolTierRequired": 1, "researchRequired": "attunement" },
+  { "id": "make_champions_crown",  "station": "lapidary_bench", "inputs": {"attuned_ruby": 1, "attuned_topaz": 1, "gold_bar": 2},          "outputs": {"champions_crown": 1},  "workAmount": 22, "toolTierRequired": 1, "researchRequired": "attunement" },
+  { "id": "make_sovereign_crown",  "station": "lapidary_bench", "inputs": {"attuned_citrine": 1, "attuned_amethyst": 1, "gold_bar": 2},     "outputs": {"sovereign_crown": 1},  "workAmount": 22, "toolTierRequired": 1, "researchRequired": "attunement" },
+  { "id": "make_wardens_circlet",  "station": "lapidary_bench", "inputs": {"attuned_emerald": 1, "attuned_moonstone": 1, "gold_bar": 1},    "outputs": {"wardens_circlet": 1},  "workAmount": 20, "toolTierRequired": 1, "researchRequired": "attunement" },
+  // 4b) Necklaces / torcs / pendants (amulet)
+  { "id": "make_gold_torc",        "station": "lapidary_bench", "inputs": {"attuned_emerald": 1, "gold_bar": 2},                           "outputs": {"gold_torc": 1},        "workAmount": 16, "toolTierRequired": 1, "researchRequired": "attunement" },
+  { "id": "make_champions_torc",   "station": "lapidary_bench", "inputs": {"attuned_ruby": 1, "attuned_emerald": 1, "gold_bar": 1},        "outputs": {"champions_torc": 1},   "workAmount": 18, "toolTierRequired": 1, "researchRequired": "attunement" },
+  { "id": "make_wayfarers_pendant","station": "lapidary_bench", "inputs": {"attuned_topaz": 1, "attuned_moonstone": 1, "silver_bar": 1},   "outputs": {"wayfarers_pendant": 1},"workAmount": 18, "toolTierRequired": 1, "researchRequired": "attunement" },
+  { "id": "make_sages_pendant",    "station": "lapidary_bench", "inputs": {"attuned_sapphire": 1, "attuned_citrine": 1, "gold_bar": 1},    "outputs": {"sages_pendant": 1},    "workAmount": 18, "toolTierRequired": 1, "researchRequired": "attunement" },
+  // (No combo rings — rings stay single-buff (the 7 `make_<gem>_ring`s above); two ring slots let a
+  //  pawn wear two, so weaker single buffs go on rings while combos are amulet/crown only.)
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // §M ARCANE STAVES — INT-scaled channeled elemental ranged weapons. Two tiers mirror iron→steel:
   //   T1 — Runecarver's Bench: magic-wood stave + a CUT crystal      (gate: arcane_lapidary)
   //   T2 — Attunement Altar:   magic-wood stave + an ATTUNED crystal + gold (gate: attunement)

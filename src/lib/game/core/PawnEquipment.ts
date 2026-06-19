@@ -102,6 +102,22 @@ export function getEquipmentSlot(item: Item): EquipmentSlot | null {
   }
 }
 
+/** Slots that come as a PAIR: equipping an item whose canonical slot is the key fills the partner
+ *  slot when the canonical one is already occupied and the partner is free (so a pawn wears two
+ *  rings). Only rings pair today. */
+const PAIRED_SLOTS: Partial<Record<EquipmentSlot, EquipmentSlot>> = { ring: 'ring2' };
+
+/** The actual slot this item should occupy on THIS pawn — like `getEquipmentSlot`, but for a paired
+ *  slot (rings) it returns the free partner when the primary is taken, so a second ring goes to
+ *  `ring2` instead of swapping out the first. Falls back to the primary (swap) when both are full. */
+export function resolveEquipSlot(pawn: Pawn, item: Item): EquipmentSlot | null {
+  const base = getEquipmentSlot(item);
+  if (!base) return null;
+  const partner = PAIRED_SLOTS[base];
+  if (partner && pawn.equipment?.[base] && !pawn.equipment?.[partner]) return partner;
+  return base;
+}
+
 export function canEquipItem(_pawn: Pawn, itemId: string): boolean {
   const item = itemService.getItemById(itemId);
   if (!item) return false;
@@ -137,7 +153,7 @@ export function equipItem(pawn: Pawn, itemId: string): Pawn {
   const item = itemService.getItemById(itemId);
   if (!item || !canEquipItem(pawn, itemId)) return pawn;
 
-  const slot = getEquipmentSlot(item);
+  const slot = resolveEquipSlot(pawn, item);
   if (!slot) return pawn;
 
   let updatedPawn = { ...pawn };

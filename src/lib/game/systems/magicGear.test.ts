@@ -1,6 +1,7 @@
 // PRODUCTION-CHAIN-II §M — passive magical buffs via conditions (the MAGIC-SKILLS foundation).
 import { describe, it, expect } from 'vitest';
 import { syncTransientConditions } from './PawnStateMachine';
+import { equipItem } from '../core/PawnEquipment';
 import { combatService } from './Combat';
 import { itemService } from '../services/ItemService';
 import { recipeService } from '../services/RecipeService';
@@ -52,10 +53,20 @@ describe('§M passive buff: worn gear → magical condition', () => {
 });
 
 describe('§M magical conditions', () => {
-  it('defines the 7 buff conditions, all transient + magical with real modifier keys', () => {
+  it('defines the buff conditions, all transient + magical with real modifier keys', () => {
     const ids = MAGICAL_CONDS.map((c) => c.id).sort();
     expect(ids).toEqual(
-      ['charm', 'insight', 'keen_senses', 'might', 'moonlit', 'quickness', 'vigor'].sort()
+      [
+        'charm',
+        'fortitude',
+        'grace',
+        'insight',
+        'keen_senses',
+        'might',
+        'moonlit',
+        'quickness',
+        'vigor'
+      ].sort()
     );
     const CONSUMED = new Set(['workEfficiency', 'moveSpeed', 'fatigueRate', 'hungerRate', 'dodge']);
     for (const c of MAGICAL_CONDS) {
@@ -173,6 +184,60 @@ describe('§M arcane staves', () => {
       const r = recipeService.getRecipeForItem(id)!;
       for (const ref of [...Object.keys(r.inputs), ...Object.keys(r.outputs)])
         expect(itemService.getItemById(ref), `recipe ${id} ref ${ref}`).toBeDefined();
+    }
+  });
+});
+
+// §M regalia — combo & head jewelry (the magic-vs-armour loadout fork).
+const REGALIA: Record<string, { slot: string; conds: string[] }> = {
+  scholars_circlet: { slot: 'headOuter', conds: ['insight'] },
+  champions_crown: { slot: 'headOuter', conds: ['might', 'quickness'] },
+  sovereign_crown: { slot: 'headOuter', conds: ['charm', 'keen_senses'] },
+  wardens_circlet: { slot: 'headOuter', conds: ['grace', 'fortitude'] },
+  gold_torc: { slot: 'amulet', conds: ['fortitude'] },
+  champions_torc: { slot: 'amulet', conds: ['might', 'vigor'] },
+  wayfarers_pendant: { slot: 'amulet', conds: ['quickness', 'moonlit'] },
+  sages_pendant: { slot: 'amulet', conds: ['insight', 'charm'] }
+};
+
+describe('§M regalia (combo & head jewelry)', () => {
+  it('each piece is armour in its declared slot, grants only real magical conditions, and is craftable', () => {
+    const magicalIds = new Set(MAGICAL_CONDS.map((c) => c.id));
+    for (const [id, spec] of Object.entries(REGALIA)) {
+      const def = itemService.getItemById(id);
+      expect(def, id).toBeDefined();
+      expect(def!.type, id).toBe('armor');
+      expect(def!.armorProperties?.equipmentSlot, id).toBe(spec.slot);
+      expect(def!.grantsConditions, id).toEqual(spec.conds);
+      for (const c of def!.grantsConditions!) expect(magicalIds.has(c), `${id}→${c}`).toBe(true);
+      const r = recipeService.getRecipeForItem(id);
+      expect(r, id).toBeDefined();
+      expect(r!.station).toBe('lapidary_bench');
+      for (const ref of [...Object.keys(r!.inputs), ...Object.keys(r!.outputs)])
+        expect(itemService.getItemById(ref), `recipe ${id} ref ${ref}`).toBeDefined();
+    }
+  });
+
+  it('two single-buff rings fill both ring slots and stack their buffs (no swap)', () => {
+    let pawn = { id: 'r', equipment: {}, transientConditions: [] } as unknown as Pawn;
+    pawn = equipItem(pawn, 'ruby_ring'); // → ring
+    pawn = equipItem(pawn, 'sapphire_ring'); // → ring2 (first ring stays put)
+    expect(pawn.equipment.ring?.itemId).toBe('ruby_ring');
+    expect(pawn.equipment.ring2?.itemId).toBe('sapphire_ring');
+    const synced = syncTransientConditions(pawn);
+    expect(synced.transientConditions).toContain('might'); // ruby
+    expect(synced.transientConditions).toContain('insight'); // sapphire
+  });
+
+  it('crowns occupy the helmet slot (headOuter) — a buff crown means no helm', () => {
+    for (const [id, spec] of Object.entries(REGALIA)) {
+      if (spec.slot !== 'headOuter') continue;
+      const synced = syncTransientConditions({
+        id: 'royal',
+        equipment: { headOuter: { instanceId: 'i', itemId: id, durability: 200 } },
+        transientConditions: []
+      } as unknown as Pawn);
+      for (const c of spec.conds) expect(synced.transientConditions, id).toContain(c);
     }
   });
 });

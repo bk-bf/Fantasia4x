@@ -31,7 +31,9 @@
     { slot: 'belt', label: 'Belt' },
     { slot: 'boots', label: 'Feet' },
     { slot: 'back', label: 'Back' },
-    { slot: 'ring', label: 'Ring' }
+    { slot: 'amulet', label: 'Amulet' },
+    { slot: 'ring', label: 'Ring' },
+    { slot: 'ring2', label: 'Ring' }
   ];
 
   function inst(slot: EquipmentSlot) {
@@ -87,7 +89,8 @@
       'mainHand  bodyOuter offHand'
       'mainHand  bodyMid   offHand'
       'gloves    bodyBase  belt'
-      'boots     back      ring';
+      'boots     back      amulet'
+      'ring      ring2     .';
     gap: 4px;
     padding: 8px;
   }
