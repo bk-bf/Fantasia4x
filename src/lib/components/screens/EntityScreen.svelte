@@ -5,6 +5,7 @@
   import type { Mob, LimbState } from '$lib/game/core/types';
   import FollowButton from '../UI/FollowButton.svelte';
   import SearchBar from '../UI/SearchBar.svelte';
+  import { persisted, persist } from '$lib/stores/uiPersist';
 
   let mobs = $derived(($gameState.mobs ?? []).filter((m) => m.state !== 'Corpse'));
   let corpses = $derived(($gameState.mobs ?? []).filter((m) => m.state === 'Corpse'));
@@ -30,8 +31,10 @@
   let neutralCount = $derived(mobs.filter((m) => m.entityClass === 'animal').length);
 
   // Expansion is controlled ONLY by the ▸ caret (toggleExpand). Selecting / camera-focusing a mob
-  // (row click, or selecting it on the map) must NOT auto-expand its health panel.
-  let expandedId = $state<string | null>(null);
+  // (row click, or selecting it on the map) must NOT auto-expand its health panel. Persisted so the
+  // expanded row survives toggling the tab.
+  let expandedId = $state<string | null>(persisted('entities.expanded', null));
+  $effect(() => persist('entities.expanded', expandedId));
 
   function rgb(c: [number, number, number]): string {
     return `rgb(${Math.round(c[0] * 255)}, ${Math.round(c[1] * 255)}, ${Math.round(c[2] * 255)})`;

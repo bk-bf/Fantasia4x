@@ -9,11 +9,14 @@
   import { discoveredRaces, raceRelations, gameState } from '$lib/stores/gameState';
   import type { Race, RaceRelation, Pawn } from '$lib/game/core/types';
   import RaceDetail from './race/RaceDetail.svelte';
+  import { persisted, persist } from '$lib/stores/uiPersist';
 
   let races: Race[] = [];
   let relations: RaceRelation[] = [];
   let pawns: Pawn[] = [];
-  let selectedId: string | null = null;
+  // Restored across tab toggles; the guard below falls back to a valid race if it's gone.
+  let selectedId: string | null = persisted('race.selected', null);
+  $: persist('race.selected', selectedId);
 
   const unsubRaces = discoveredRaces.subscribe((v) => {
     races = v;

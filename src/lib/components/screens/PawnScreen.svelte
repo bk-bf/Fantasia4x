@@ -23,6 +23,7 @@
   // Game state and UI imports
   import { gameState } from '$lib/stores/gameState';
   import { uiState } from '$lib/stores/uiState';
+  import { persisted, persist } from '$lib/stores/uiPersist';
 
   // Type imports
   import type { Pawn } from '$lib/game/core/types';
@@ -53,7 +54,9 @@
   // `activeTab` — if it were declared later it would be in its temporal dead zone
   // and navigating in with a tab set (e.g. the GEAR button) would throw.
   type PawnTab = 'status' | 'attributes' | 'gear';
-  let activeTab: PawnTab = 'status';
+  // Restored across tab toggles; an explicit pawnScreenTab nav (e.g. the GEAR button) still overrides.
+  let activeTab: PawnTab = persisted<PawnTab>('pawn.tab', 'status');
+  $: persist('pawn.tab', activeTab);
 
   const TABS: { id: PawnTab; label: string }[] = [
     { id: 'status', label: 'STATUS' },

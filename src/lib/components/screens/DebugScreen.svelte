@@ -7,9 +7,11 @@
 <script lang="ts">
   import DebugMenu from './DebugMenu.svelte';
   import DebugLogScreen from './DebugLogScreen.svelte';
+  import { persisted, persist } from '$lib/stores/uiPersist';
 
   type DebugTab = 'menu' | 'log';
-  let activeTab = $state<DebugTab>('menu');
+  let activeTab = $state<DebugTab>(persisted<DebugTab>('debug.tab', 'menu'));
+  $effect(() => persist('debug.tab', activeTab));
   const TABS: { id: DebugTab; label: string }[] = [
     { id: 'menu', label: 'MENU' },
     { id: 'log', label: 'LOG' }

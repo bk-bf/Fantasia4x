@@ -10,6 +10,7 @@
   import BuildCard from '../UI/BuildCard.svelte';
   import FilterTabs from '../UI/FilterTabs.svelte';
   import SearchBar from '../UI/SearchBar.svelte';
+  import { persisted, persist } from '$lib/stores/uiPersist';
   import type { PlacedBuilding } from '$lib/game/core/types';
   import type { Building } from '$lib/game/core/types';
 
@@ -88,8 +89,9 @@
     defs: unlockedDefs.filter((b) => classify(b) === label)
   })).filter((s) => s.defs.length > 0);
 
-  // Which tab is active ('ZONES' or a category; default to the first category).
-  let selectedSection = '';
+  // Which tab is active ('ZONES' or a category). Restored across tab toggles; the guard falls back to
+  // the first category if the remembered section no longer exists.
+  let selectedSection = persisted('building.section', '');
   $: if (
     selectedSection !== 'ZONES' &&
     sections.length &&
@@ -97,6 +99,7 @@
   ) {
     selectedSection = sections[0].label;
   }
+  $: persist('building.section', selectedSection);
   $: activeSection = sections.find((s) => s.label === selectedSection) ?? sections[0];
 
   // Live search across every section (bypasses tabs/ZONES while a query is present).

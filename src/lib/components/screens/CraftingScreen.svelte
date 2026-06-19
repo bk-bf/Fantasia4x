@@ -3,6 +3,7 @@
   import BuildCard from '$lib/components/UI/BuildCard.svelte';
   import FilterTabs from '$lib/components/UI/FilterTabs.svelte';
   import SearchBar from '$lib/components/UI/SearchBar.svelte';
+  import { persisted, persist } from '$lib/stores/uiPersist';
   import { uiState } from '$lib/stores/uiState';
   import ITEMS_DATABASE from '$lib/game/database/items.jsonc';
   import { itemService } from '$lib/game/services/ItemService';
@@ -173,10 +174,13 @@
     entries: craftEntries.filter((e) => e.category === cat)
   })).filter((c) => c.entries.length > 0);
 
-  let selectedCat = '';
+  // Restored across tab toggles (persist helper); the guard below falls back to the first category if
+  // the remembered one no longer exists (e.g. research changed the available list).
+  let selectedCat = persisted('crafting.cat', '');
   $: if (craftCategories.length && !craftCategories.some((c) => c.id === selectedCat)) {
     selectedCat = craftCategories[0].id;
   }
+  $: persist('crafting.cat', selectedCat);
   $: activeCat = craftCategories.find((c) => c.id === selectedCat) ?? craftCategories[0];
 
   // Live search. When the query is non-empty it spans every category (tabs are bypassed);
