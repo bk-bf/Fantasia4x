@@ -121,17 +121,19 @@ export interface BiomeConfigEntry {
 }
 
 // Snapshot of the on-disk defaults, captured once at load, so the menu's "reset" restores them.
-const DEFAULT_BIOME_CONFIG: Record<string, { densityRange: [number, number]; baseTemp: number; baseMoisture: number }> =
-  Object.fromEntries(
-    Object.entries(BIOMES).map(([id, d]) => [
-      id,
-      {
-        densityRange: [d.densityRange[0], d.densityRange[1]] as [number, number],
-        baseTemp: d.baseTemp ?? 0,
-        baseMoisture: d.baseMoisture ?? 0
-      }
-    ])
-  );
+const DEFAULT_BIOME_CONFIG: Record<
+  string,
+  { densityRange: [number, number]; baseTemp: number; baseMoisture: number }
+> = Object.fromEntries(
+  Object.entries(BIOMES).map(([id, d]) => [
+    id,
+    {
+      densityRange: [d.densityRange[0], d.densityRange[1]] as [number, number],
+      baseTemp: d.baseTemp ?? 0,
+      baseMoisture: d.baseMoisture ?? 0
+    }
+  ])
+);
 
 // Biomes ordered low→high along the elevation axis (by default range start). Density bands are laid
 // out contiguously in THIS order, so editing shares only changes widths, never the ordering.

@@ -34,7 +34,8 @@
     const othersTotal = others.reduce((s, b) => s + b.share, 0);
     const remaining = 1 - newShare;
     const next: Record<string, number> = { [id]: newShare };
-    if (othersTotal > 1e-6) for (const b of others) next[b.id] = (b.share / othersTotal) * remaining;
+    if (othersTotal > 1e-6)
+      for (const b of others) next[b.id] = (b.share / othersTotal) * remaining;
     else for (const b of others) next[b.id] = remaining / others.length;
     applyBiomeShares(next);
     biomes = getBiomeConfig();
