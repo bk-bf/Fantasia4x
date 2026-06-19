@@ -1,12 +1,14 @@
 <script lang="ts">
-  // Custom Map popup — live-tune world generation and regenerate as you drag.
-  //  • SIZE toggles (S/M/L/XL) pick the world dimensions for the next regen.
+  // Custom Map popup — tune world generation, then GENERATE on demand.
+  //  • SIZE toggles (S/M/L/XL) pick the world dimensions for the next generate.
   //  • Each biome has ONE "share" slider (0 = none, 100 = only it). Moving one rebalances the
   //    UNLOCKED others proportionally so the shares always partition the elevation axis. A 🔒 per row
   //    pins that slider so it's left untouched when you tweak another.
   //  • WATER is decoupled from biomes (its own field) — one slider for global water coverage.
+  // Nothing regenerates until you press GENERATE: tweaking sliders / editing the seed only stages
+  // settings, so you can copy the current seed or fiddle freely without the map being rewritten, and
+  // closing the popup leaves the existing world untouched.
   import { get } from 'svelte/store';
-  import { onDestroy } from 'svelte';
   import { gameState } from '$lib/stores/gameState';
   import {
     getBiomeConfig,
@@ -34,20 +36,11 @@
   ];
   let size = $state<number>(gameState.getMapSize().w);
 
-  // Debounce: regenerating the world on every drag tick would thrash, so coalesce to ~120ms.
-  // While the popup is open every regen runs in PREVIEW mode — pawns + creatures are stripped off
-  // the map so they don't glitch on freshly-shuffled mountain/water tiles. onDestroy does the final
-  // real regen that re-places them on valid land.
-  let regenTimer: ReturnType<typeof setTimeout> | undefined;
-  function scheduleRegen() {
-    clearTimeout(regenTimer);
-    regenTimer = setTimeout(() => gameState.regenWorld(seed, false, 500, true), 120);
+  // The only thing that actually rewrites the world. Real (non-preview) regen so pawns + creatures
+  // are re-placed on valid forest/plains/swamp land — the popup can stay open to tweak & regenerate.
+  function generate() {
+    gameState.regenWorld(seed);
   }
-
-  onDestroy(() => {
-    clearTimeout(regenTimer);
-    gameState.regenWorld(seed); // restore pawns + creatures on valid forest/plains/swamp land
-  });
 
   function toggleLock(id: string) {
     const n = new Set(locked);
@@ -79,25 +72,21 @@
     }
     applyBiomeShares(next);
     biomes = getBiomeConfig();
-    scheduleRegen();
   }
 
   function setWater(pct: number) {
     water = pct;
     setWaterLevel(pct / 100);
-    scheduleRegen();
   }
 
   function climate(id: string, field: 'baseTemp' | 'baseMoisture', e: Event) {
     setBiomeField(id, field, Number((e.currentTarget as HTMLInputElement).value));
     biomes = getBiomeConfig();
-    scheduleRegen();
   }
 
   function setSize(dim: number) {
     size = dim;
     gameState.setMapSize(dim, dim);
-    gameState.regenWorld(seed, false, 500, true);
   }
 
   function reset() {
@@ -105,11 +94,9 @@
     biomes = getBiomeConfig();
     water = Math.round(getWaterLevel() * 100);
     locked = new Set();
-    scheduleRegen();
   }
   function rollSeed() {
     seed = Date.now() >>> 0 || 1;
-    gameState.regenWorld(seed, false, 500, true);
   }
 </script>
 
@@ -135,17 +122,21 @@
         value={seed}
         onchange={(e) => {
           seed = Number((e.currentTarget as HTMLInputElement).value) >>> 0 || 1;
-          gameState.regenWorld(seed, false, 500, true);
         }}
       /></label
     >
-    <button class="cm-btn" onclick={rollSeed} title="new random seed">⟳</button>
+    <button class="cm-btn" onclick={rollSeed} title="stage a new random seed (press GENERATE to apply)"
+      >⟳</button
+    >
     <button class="cm-btn" onclick={reset} title="restore terrains.jsonc defaults">reset</button>
-    <button class="cm-btn close" onclick={onClose} title="close">✕</button>
+    <button class="cm-btn generate" onclick={generate} title="regenerate the world with these settings"
+      >GENERATE</button
+    >
+    <button class="cm-btn close" onclick={onClose} title="close (keeps current map)">✕</button>
   </div>
   <div class="cm-note">
     Biome share — 0 removes it, 100 fills the map; unlocked ones rebalance. 🔒 pins a slider. Water
-    is independent of biome.
+    is independent of biome. Settings only apply when you press <strong>GENERATE</strong>.
   </div>
 
   <div class="cm-grid">
@@ -289,6 +280,16 @@
     color: #fff;
     border-color: var(--accent-hi);
     background: var(--tab-active);
+  }
+  .cm-btn.generate {
+    color: #fff;
+    border-color: var(--accent-hi);
+    background: var(--tab-active);
+    letter-spacing: 0.06em;
+    font-weight: bold;
+  }
+  .cm-btn.generate:hover {
+    border-color: var(--accent-hi);
   }
   .cm-btn.close {
     color: var(--neg);
