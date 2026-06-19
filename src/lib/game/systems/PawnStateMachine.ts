@@ -23,7 +23,7 @@ import type {
   DroppedItem,
   DeadPawnRecord
 } from '../core/types';
-import { recomputeWound } from './Combat';
+import { recomputeWound, recomputeWoundInPlace } from './Combat';
 import { HEALING_CONFIG, CARE_CONFIG, woundById, isTended } from '../core/Wounds';
 import conditionsData from '../database/conditions.jsonc';
 import { itemService } from '../services/ItemService';
@@ -608,7 +608,8 @@ export function healLimbs(
       }
       // Snap to full when the last wound clears — otherwise the part lingers fractionally under max
       // and the HEALTH panel keeps showing a "healed" part forever.
-      const health = newWounds.length === 0 ? part.maxHp : Math.min(part.maxHp, part.health + healed);
+      const health =
+        newWounds.length === 0 ? part.maxHp : Math.min(part.maxHp, part.health + healed);
       return { ...part, health, injuries: newWounds };
     });
     const totalBleed = newParts.reduce(
@@ -623,6 +624,70 @@ export function healLimbs(
     return { ...limb, parts: newParts, health: rolledHealth, bleedRate: totalBleed };
   });
   return changed ? newLimbs : limbs;
+}
+
+/**
+ * In-place sibling of {@link healLimbs}: mend wounds by MUTATING the limb/part/wound objects rather
+ * than rebuilding the tree, returning whether anything changed. The per-tick mob heal
+ * (`entityLifecycle.stepHunger`) runs this across hundreds of wounded mobs, where healLimbs' immutable
+ * rebuild was the 440-mob allocation cliff (ENGINE-PERFORMANCE — it re-immutabled the de-immutabled M3
+ * mob phase). Behaviour mirrors healLimbs exactly (same heal formula, same drop/snap-to-full rules).
+ * The caller owns invalidating the limbs-identity capacity cache on a `true` return — a shallow
+ * `limbs.slice()` ref bump — since the deep objects change without the array ref changing.
+ */
+export function healLimbsInPlace(
+  limbs: LimbState[],
+  baseHeal: number,
+  turn: number,
+  untendedSeriousStalls: boolean
+): boolean {
+  if (baseHeal <= 0) return false;
+  let changed = false;
+  for (const limb of limbs) {
+    const parts = limb.parts;
+    if (!parts || !parts.some((p) => p.injuries.length > 0)) continue;
+    for (const part of parts) {
+      if (part.injuries.length === 0 || part.isMissing) continue;
+      let healed = 0;
+      let write = 0;
+      const inj = part.injuries;
+      for (let read = 0; read < inj.length; read++) {
+        const w = inj[read];
+        const tended = isTended(w, turn);
+        const tendBoost = tended
+          ? 1 + CARE_CONFIG.treatedHealMultiplier * (w.treatmentQuality ?? 0)
+          : untendedSeriousStalls && w.severity !== 'minor'
+            ? UNTENDED_SERIOUS_HEAL_MUL
+            : 1;
+        const heal = (baseHeal / (woundById(w.type)?.healDifficulty ?? 1)) * tendBoost;
+        const newDamage = w.damage - heal;
+        if (newDamage <= 0.05) {
+          healed += w.damage; // fully mended — drop the wound (don't compact it back in)
+          continue;
+        }
+        healed += heal;
+        recomputeWoundInPlace(w, newDamage, turn);
+        inj[write++] = w; // compact the survivors toward the front
+      }
+      if (write !== inj.length) inj.length = write; // truncate the dropped wounds
+      // Snap to full when the last wound clears (mirrors healLimbs' UI auto-hide rule).
+      part.health = inj.length === 0 ? part.maxHp : Math.min(part.maxHp, part.health + healed);
+    }
+    // Roll the limb's bleed + health summary up from the mutated parts (mirrors healLimbs).
+    let totalBleed = 0;
+    let partMaxTotal = 0;
+    let partHealthTotal = 0;
+    for (const p of parts) {
+      for (const w of p.injuries) totalBleed += w.bleeding;
+      partMaxTotal += p.maxHp;
+      partHealthTotal += p.health;
+    }
+    limb.health =
+      partMaxTotal > 0 ? Math.round((partHealthTotal / partMaxTotal) * 100) : limb.health;
+    limb.bleedRate = totalBleed;
+    changed = true;
+  }
+  return changed;
 }
 
 export function healWounds(pawn: Pawn, turn = 0): Pawn {

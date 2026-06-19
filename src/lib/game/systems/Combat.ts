@@ -184,6 +184,29 @@ export function recomputeWound(
   };
 }
 
+/**
+ * In-place variant of {@link recomputeWound}: recompute a wound's derived fields (severity, bleed,
+ * pain) from a new `accumDamage` by MUTATING the existing Injury rather than allocating a fresh one.
+ * Used by the hot per-tick mob heal (`entityLifecycle.stepHunger`), where a fresh object per wounded
+ * mob per tick was the allocation cliff that GC-thrashed TPS during sustained predation (it had
+ * re-immutabled the de-immutabled M3 mob phase — ENGINE-PERFORMANCE). `infected`/`treatedAt`/
+ * `treatmentQuality`/`inflictedAt` already live on `w` and are preserved; logic mirrors recomputeWound.
+ */
+export function recomputeWoundInPlace(w: Injury, accumDamage: number, turn?: number): void {
+  const partDef = PART_DEF_MAP[w.bodyPart];
+  const wd = woundById(w.type);
+  const maxHp = partDef?.maxHp ?? 1;
+  const frac = maxHp > 0 ? Math.min(accumDamage / maxHp, 1) : 0;
+  w.severity = severityFromFrac(frac);
+  w.damage = accumDamage;
+  w.bleeding = partDef
+    ? Math.round(partDef.bleedRatio * BLEED_CONSTANT * (wd?.bleedMod ?? 0) * frac * 100) / 100
+    : 0;
+  w.painContribution =
+    Math.round(accumDamage * (wd?.painPerDamage ?? 0.5) * (partDef?.isVital ? 2 : 1) * 10) / 10;
+  if (w.inflictedAt == null) w.inflictedAt = turn;
+}
+
 interface AttackProfile {
   str: number;
   dex: number;
@@ -444,9 +467,7 @@ function partArmorReduction(defender: Pawn | Mob, partId: BodyPartId, armorPen: 
   if (bestDef <= 0) return 0;
   // Torso/head get full armour benefit; limbs only partial
   const base =
-    def.parentLimb === 'torso' || def.parentLimb === 'head'
-      ? bestDef / 100
-      : (bestDef / 100) * 0.3;
+    def.parentLimb === 'torso' || def.parentLimb === 'head' ? bestDef / 100 : (bestDef / 100) * 0.3;
   return clamp(base * (1 - armorPen), 0, 0.9);
 }
 
@@ -1475,9 +1496,7 @@ class CombatServiceImpl implements CombatService {
       // A draft order can FORCE melee: a ranged pawn told to "Target (melee)" skips the shot path,
       // closes (via _processDraftOrders' stopDist=1) and swings in contact instead.
       const forceMelee =
-        !!pawn.drafted &&
-        pawn.draftTarget?.type === 'attack' &&
-        pawn.draftTarget.mode === 'melee';
+        !!pawn.drafted && pawn.draftTarget?.type === 'attack' && pawn.draftTarget.mode === 'melee';
       const rangedAuto = !!rw && !forceMelee; // a ranged pawn engaging at range (not opt-in melee)
 
       // Out of ammo + auto-ranged: warn (floating, throttled) and HOLD. It does NOT auto-close or
