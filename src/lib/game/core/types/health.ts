@@ -66,7 +66,10 @@ export type LimbId = 'head' | 'torso' | 'left_arm' | 'right_arm' | 'left_leg' | 
 
 export const CRITICAL_LIMBS: LimbId[] = ['head', 'torso'];
 
-export type DamageType = 'cutting' | 'piercing' | 'blunt';
+// Physical types (cutting/piercing/blunt) + ELEMENTAL types (§M arcane staves). Each elemental type
+// is mitigated by its existing `*_resistance` stat in stats.jsonc (fire→fire_resistance,
+// frost→cold_resistance, lightning→lightning_resistance) and by per-creature `resistances`.
+export type DamageType = 'cutting' | 'piercing' | 'blunt' | 'fire' | 'frost' | 'lightning';
 
 export type BodyPartId =
   // ── Head region ──────────────────────────────────────────────────────────

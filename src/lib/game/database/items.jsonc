@@ -5610,5 +5610,95 @@
     "armorProperties": {"defense": 0, "armorValue": 0, "equipmentSlot": "amulet"},
     "description": "A silver amulet set with a large attuned moonstone. Grants Moonlit while worn (neck slot).",
     "color": "#C9D4E0", "amount": 0, "weightKg": 0.15, "volumeL": 0.08, "maxDurability": 200, "deteriorationRate": 0.002
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // §M ARCANE STAVES — INT-scaled (`arcane`) CHANNELED (`channeled`) ranged elemental weapons. They
+  // fire on the ranged circuit (aim_accuracy/aim_speed/aim_range) but draw NO ammo: each shot pays
+  // `staminaCost` as MANA (winded = out of mana) and the staff stays in hand. Element = the socketed
+  // crystal (damageType fire/frost/lightning → fire/cold/lightning resistance); wood = the shaft.
+  // Two tiers per element mirror iron→steel: T1 (Runecarver's Bench, cut crystal) → T2 (Attunement
+  // Altar, attuned crystal + gold; also grants the attuned gem's passive buff while wielded). §Q quality
+  // is stamped (type:weapon) and auto-scales the shot via scaleWeaponQuality.
+  // ── FIRE (ruby + emberwood) → burn ──
+  {
+    "id": "ember_staff", "charSpans": [ {"sheet": "items", "id": 198} ], "name": "Ember Staff",
+    "type": "weapon", "category": "combat", "affinity": "fire", "researchRequired": "arcane_lapidary",
+    "description": "An emberwood staff tipped with a cut ruby. Looses a gout of flame — its power rides the wielder's wits, not their arm. Drinks stamina with every cast.",
+    "color": "#B5481E", "amount": 0, "weightKg": 1.3, "volumeL": 2.5, "tier": 1,
+    "maxDurability": 150, "durabilityLossPerCombatHit": 2,
+    "weaponProperties": {
+      "damage": 9, "attackSpeed": 0.9, "range": 7, "damMin": 6, "damMax": 12, "reach": 1,
+      "damageType": "fire", "projectile": "fireball", "armorPenetration": 0.1,
+      "staminaCost": 6, "twoHanded": true, "strScaled": true, "arcane": true, "channeled": true
+    },
+    "aimBonuses": { "accuracy": 2 }
+  },
+  {
+    "id": "pyre_staff", "charSpans": [ {"sheet": "items", "id": 198} ], "name": "Pyre Staff",
+    "type": "weapon", "category": "combat", "affinity": "fire", "grantsConditions": ["might"], "researchRequired": "attunement",
+    "description": "An emberwood staff bound at the Attunement Altar with an attuned ruby and gold. The flame comes hotter, farther and cheaper — and its heat lends the bearer strength while held.",
+    "color": "#FF5722", "amount": 0, "weightKg": 1.3, "volumeL": 2.5, "tier": 2,
+    "maxDurability": 180, "durabilityLossPerCombatHit": 1,
+    "weaponProperties": {
+      "damage": 14, "attackSpeed": 1.0, "range": 9, "damMin": 10, "damMax": 18, "reach": 1,
+      "damageType": "fire", "projectile": "fireball", "armorPenetration": 0.2,
+      "staminaCost": 5, "twoHanded": true, "strScaled": true, "arcane": true, "channeled": true
+    },
+    "aimBonuses": { "accuracy": 4, "range": 2 }
+  },
+  // ── FROST (sapphire + moonwood) → frostbite ──
+  {
+    "id": "frost_staff", "charSpans": [ {"sheet": "items", "id": 198} ], "name": "Frost Staff",
+    "type": "weapon", "category": "combat", "affinity": "lunar", "researchRequired": "arcane_lapidary",
+    "description": "A moonwood staff seated with a cut sapphire. Hurls a lance of biting cold — slower to bite than flame, but it slips past armour.",
+    "color": "#4A90D8", "amount": 0, "weightKg": 1.2, "volumeL": 2.5, "tier": 1,
+    "maxDurability": 140, "durabilityLossPerCombatHit": 2,
+    "weaponProperties": {
+      "damage": 8, "attackSpeed": 0.9, "range": 7, "damMin": 5, "damMax": 11, "reach": 1,
+      "damageType": "frost", "projectile": "frostbolt", "armorPenetration": 0.2,
+      "staminaCost": 6, "twoHanded": true, "strScaled": true, "arcane": true, "channeled": true
+    },
+    "aimBonuses": { "accuracy": 2, "range": 1 }
+  },
+  {
+    "id": "rime_staff", "charSpans": [ {"sheet": "items", "id": 198} ], "name": "Rime Staff",
+    "type": "weapon", "category": "combat", "affinity": "lunar", "grantsConditions": ["insight"], "researchRequired": "attunement",
+    "description": "A moonwood staff bound with an attuned sapphire and gold. Its cold reaches farther and pierces deeper — and it sharpens the bearer's mind while held.",
+    "color": "#8FD6FF", "amount": 0, "weightKg": 1.2, "volumeL": 2.5, "tier": 2,
+    "maxDurability": 170, "durabilityLossPerCombatHit": 1,
+    "weaponProperties": {
+      "damage": 13, "attackSpeed": 1.0, "range": 9, "damMin": 9, "damMax": 16, "reach": 1,
+      "damageType": "frost", "projectile": "frostbolt", "armorPenetration": 0.3,
+      "staminaCost": 5, "twoHanded": true, "strScaled": true, "arcane": true, "channeled": true
+    },
+    "aimBonuses": { "accuracy": 4, "range": 2 }
+  },
+  // ── STORM/LIGHTNING (topaz + heartwood) → scorch ──
+  {
+    "id": "spark_staff", "charSpans": [ {"sheet": "items", "id": 198} ], "name": "Spark Staff",
+    "type": "weapon", "category": "combat", "affinity": "arcane", "researchRequired": "arcane_lapidary",
+    "description": "A heartwood staff crowned with a cut topaz. Snaps a bolt of lightning that all but ignores armour — but it is the hungriest of the staves for stamina.",
+    "color": "#E0B83A", "amount": 0, "weightKg": 1.3, "volumeL": 2.5, "tier": 1,
+    "maxDurability": 150, "durabilityLossPerCombatHit": 2,
+    "weaponProperties": {
+      "damage": 7, "attackSpeed": 1.0, "range": 8, "damMin": 4, "damMax": 10, "reach": 1,
+      "damageType": "lightning", "projectile": "spark", "armorPenetration": 0.4,
+      "staminaCost": 7, "twoHanded": true, "strScaled": true, "arcane": true, "channeled": true
+    },
+    "aimBonuses": { "accuracy": 3, "range": 1 }
+  },
+  {
+    "id": "tempest_staff", "charSpans": [ {"sheet": "items", "id": 198} ], "name": "Tempest Staff",
+    "type": "weapon", "category": "combat", "affinity": "arcane", "grantsConditions": ["quickness"], "researchRequired": "attunement",
+    "description": "A heartwood staff bound with an attuned topaz and gold. Its bolt strikes farther and harder through any plate — and quickens the bearer's hand while held.",
+    "color": "#FFE45E", "amount": 0, "weightKg": 1.3, "volumeL": 2.5, "tier": 2,
+    "maxDurability": 180, "durabilityLossPerCombatHit": 1,
+    "weaponProperties": {
+      "damage": 12, "attackSpeed": 1.1, "range": 10, "damMin": 8, "damMax": 15, "reach": 1,
+      "damageType": "lightning", "projectile": "spark", "armorPenetration": 0.5,
+      "staminaCost": 6, "twoHanded": true, "strScaled": true, "arcane": true, "channeled": true
+    },
+    "aimBonuses": { "accuracy": 5, "range": 3 }
   }
 ]

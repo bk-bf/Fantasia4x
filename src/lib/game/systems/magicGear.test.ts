@@ -1,10 +1,11 @@
 // PRODUCTION-CHAIN-II §M — passive magical buffs via conditions (the MAGIC-SKILLS foundation).
 import { describe, it, expect } from 'vitest';
 import { syncTransientConditions } from './PawnStateMachine';
+import { combatService } from './Combat';
 import { itemService } from '../services/ItemService';
 import { recipeService } from '../services/RecipeService';
 import conditionsData from '../database/conditions.jsonc';
-import type { Pawn } from '../core/types';
+import type { GameState, Mob, Pawn } from '../core/types';
 
 const MAGICAL_CONDS = (
   conditionsData as Array<{
@@ -118,5 +119,138 @@ describe('§M item & recipe integrity', () => {
       check(`${m}_ring`, 'lapidary_bench');
       check(`${m}_amulet`, 'lapidary_bench');
     }
+  });
+});
+
+// §M arcane staves — INT-scaled channeled elemental ranged weapons over two workbench tiers.
+const T1_STAVES = ['ember_staff', 'frost_staff', 'spark_staff'] as const;
+const T2_STAVES = ['pyre_staff', 'rime_staff', 'tempest_staff'] as const;
+const STAFF_ELEMENT: Record<string, string> = {
+  ember_staff: 'fire',
+  pyre_staff: 'fire',
+  frost_staff: 'frost',
+  rime_staff: 'frost',
+  spark_staff: 'lightning',
+  tempest_staff: 'lightning'
+};
+
+describe('§M arcane staves', () => {
+  it('every staff is an arcane + channeled ranged weapon with an elemental damage type', () => {
+    for (const id of [...T1_STAVES, ...T2_STAVES]) {
+      const def = itemService.getItemById(id);
+      expect(def, id).toBeDefined();
+      expect(def!.type).toBe('weapon');
+      const wp = def!.weaponProperties!;
+      expect(wp.arcane, id).toBe(true);
+      expect(wp.channeled, id).toBe(true);
+      expect(wp.twoHanded, id).toBe(true);
+      expect(wp.range, id).toBeGreaterThan(1); // ranged
+      expect(wp.ammoCategory, id).toBeUndefined(); // channels mana, not ammo
+      expect(wp.staminaCost, id).toBeGreaterThan(0); // mana per cast
+      expect(STAFF_ELEMENT[id]).toBe(wp.damageType);
+    }
+  });
+
+  it('T2 staves grant the attuned gem’s passive buff while wielded', () => {
+    for (const id of T2_STAVES) {
+      const def = itemService.getItemById(id)!;
+      expect(def.grantsConditions?.length, id).toBeGreaterThan(0);
+    }
+    // wielding a Pyre Staff in the main hand grants Might (gear-grant scan covers held weapons)
+    const synced = syncTransientConditions({
+      id: 'mage',
+      equipment: { mainHand: { instanceId: 'i', itemId: 'pyre_staff', durability: 180 } },
+      transientConditions: []
+    } as unknown as Pawn);
+    expect(synced.transientConditions).toContain('might');
+  });
+
+  it('staff recipes are wired to the two arcane benches with real inputs', () => {
+    const station = (id: string) => recipeService.getRecipeForItem(id)?.station;
+    for (const id of T1_STAVES) expect(station(id), id).toBe('runecarver_bench');
+    for (const id of T2_STAVES) expect(station(id), id).toBe('attunement_altar');
+    for (const id of [...T1_STAVES, ...T2_STAVES]) {
+      const r = recipeService.getRecipeForItem(id)!;
+      for (const ref of [...Object.keys(r.inputs), ...Object.keys(r.outputs)])
+        expect(itemService.getItemById(ref), `recipe ${id} ref ${ref}`).toBeDefined();
+    }
+  });
+});
+
+// ── Combat wiring: INT-scaled arcane damage + elemental resistance over resolveHit ──
+const baseStats = {
+  strength: 10,
+  dexterity: 10,
+  constitution: 10,
+  intelligence: 10,
+  perception: 10,
+  charisma: 10
+};
+const limbs = () =>
+  ['head', 'torso', 'left_arm', 'right_arm', 'left_leg', 'right_leg'].map((id) => ({
+    id,
+    health: 100,
+    bleedRate: 0,
+    parts: []
+  }));
+
+function staffMage(staff: string, st: Partial<typeof baseStats>): Pawn {
+  return {
+    id: 'mage',
+    isAlive: true,
+    stats: { ...baseStats, ...st },
+    racialTraits: [],
+    equipment: { mainHand: { instanceId: 'i', itemId: staff, durability: 150 } },
+    limbs: limbs(),
+    conditions: [],
+    transientConditions: [],
+    pain: 0,
+    stamina: 50,
+    maxStamina: 50
+  } as unknown as Pawn;
+}
+function mob(creatureId: string, st: Partial<typeof baseStats>): Mob {
+  return {
+    id: creatureId,
+    creatureId,
+    entityClass: 'animal',
+    isAlive: true,
+    stats: { ...baseStats, dexterity: 2, ...st }, // low dodge → hits land
+    racialTraits: [],
+    limbs: limbs(),
+    conditions: [],
+    pain: 0
+  } as unknown as Mob;
+}
+const empty = {} as GameState;
+function avgHit(atk: Pawn, def: Mob): number {
+  let total = 0;
+  let hits = 0;
+  for (let i = 0; i < 800; i++) {
+    const r = combatService.resolveHit(atk, def, empty);
+    if (r.hit) {
+      total += r.damage;
+      hits++;
+    }
+  }
+  return hits ? total / hits : 0;
+}
+
+describe('§M arcane staff damage rides INT', () => {
+  it('a high-INT mage out-damages a low-INT one with the same staff (like rapier→PER)', () => {
+    const goblin = mob('goblin', {});
+    const smart = avgHit(staffMage('ember_staff', { intelligence: 20 }), goblin);
+    const dull = avgHit(staffMage('ember_staff', { intelligence: 4 }), goblin);
+    expect(smart).toBeGreaterThan(dull * 1.4);
+  });
+});
+
+describe('§M elemental resistance mitigates staff damage', () => {
+  it('a frost-resistant creature takes far less frost-staff damage than a frost-vulnerable one', () => {
+    const mage = staffMage('frost_staff', { intelligence: 16 });
+    // mammoth: explicit frost 0.5 + high-CON base; viper: frost -0.3 (vulnerable) → clamps to 0 resist.
+    const onMammoth = avgHit(mage, mob('woolly_mammoth', { constitution: 24 }));
+    const onViper = avgHit(mage, mob('marsh_viper', { constitution: 5 }));
+    expect(onMammoth).toBeLessThan(onViper * 0.7);
   });
 });

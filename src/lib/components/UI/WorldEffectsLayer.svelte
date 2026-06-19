@@ -450,6 +450,33 @@
   .fx-spear {
     --proj-color: #cdbf9a;
   }
+  /* §M arcane staff bolts — elemental colours; brighter heads/trails than mundane shot. */
+  .fx-fireball {
+    --proj-color: #ff7a2a;
+  }
+  .fx-frostbolt {
+    --proj-color: #8fd6ff;
+  }
+  .fx-spark {
+    --proj-color: #ffe45e;
+  }
+  .fx-fireball .proj-head,
+  .fx-frostbolt .proj-head,
+  .fx-spark .proj-head {
+    width: 5px;
+    height: 5px;
+    left: -2.5px;
+    top: -2.5px;
+    box-shadow: 0 0 6px var(--proj-color);
+  }
+  .fx-fireball .proj-trail,
+  .fx-frostbolt .proj-trail,
+  .fx-spark .proj-trail {
+    width: 14px;
+    height: 3px;
+    top: -1.5px;
+    opacity: 0.9;
+  }
   .fx-stone .proj-trail {
     width: 9px;
     opacity: 0.5;

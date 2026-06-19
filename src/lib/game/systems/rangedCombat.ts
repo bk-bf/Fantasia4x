@@ -69,6 +69,9 @@ export interface RangedWeapon {
   slot: 'mainHand' | 'offHand';
   /** Visual particle style for the flight (thrown weapon's own; launchers override from the ammo). */
   projectile?: string;
+  /** §M CHANNELED staff: ammo-less like a thrown weapon, but pays `staminaCost` as mana and is NOT
+   *  self-consumed (stays in hand) — so the no-ammo firing branch must keep it equipped. */
+  channeled?: boolean;
 }
 
 /** The equipped ranged weapon for a pawn — main-hand first (bow/crossbow/sling), then off-hand
@@ -91,7 +94,8 @@ export function getRangedWeapon(attacker: Pawn | Mob): RangedWeapon | null {
         ammoCategory: wp!.ammoCategory,
         quality: inst.quality,
         slot,
-        projectile: wp!.projectile
+        projectile: wp!.projectile,
+        channeled: wp!.channeled
       };
     }
   }

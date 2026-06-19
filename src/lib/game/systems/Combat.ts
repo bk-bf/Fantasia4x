@@ -195,6 +195,8 @@ interface AttackProfile {
   critMod: number;
   /** Finesse weapon (rapier): melee damage scales with PERCEPTION, not STRENGTH. */
   finesse: boolean;
+  /** §M Arcane weapon (elemental staff): damage scales with INTELLIGENCE, not STRENGTH. */
+  arcane: boolean;
 }
 
 /**
@@ -250,7 +252,8 @@ function profileFromWeapon(
     weaponId,
     staminaCost: wp.staminaCost ?? ATTACK_STAMINA_COST,
     critMod: wp.critMod ?? 0,
-    finesse: wp.finesse ?? false
+    finesse: wp.finesse ?? false,
+    arcane: wp.arcane ?? false
   };
 }
 
@@ -343,7 +346,8 @@ function attackerProfile(attacker: Pawn | Mob): AttackProfile {
     weaponId: 'strike',
     staminaCost: ATTACK_STAMINA_COST,
     critMod: 0,
-    finesse: false
+    finesse: false,
+    arcane: false
   };
 }
 
@@ -357,11 +361,21 @@ function physicalResistance(defender: Pawn | Mob, damageType: DamageType): numbe
   const dex = defender.stats.dexterity;
   const str = defender.stats.strength;
 
-  // Base from stats (matches cutting/piercing/blunt_resistance ability formulas)
+  // Base from stats — mirrors the *_resistance ability formulas in stats.jsonc (cutting=DEX, piercing/
+  // blunt=CON(+STR); §M elemental: fire/frost=CON, lightning=DEX — same axes the resistance stats use).
   let res = 0;
   if (damageType === 'cutting') res += (dex - 10) * 0.01;
   if (damageType === 'piercing') res += (con - 10) * 0.008;
   if (damageType === 'blunt') res += (con - 10) * 0.008 + (str - 10) * 0.004;
+  if (damageType === 'fire') res += (con - 10) * 0.01;
+  if (damageType === 'frost') res += (con - 10) * 0.01;
+  if (damageType === 'lightning') res += (dex - 10) * 0.01;
+
+  // §M per-creature resistances/vulnerabilities (creatures.jsonc) — thematic on top of the stat base
+  // (negative = vulnerable). Mobs/animals only; pawns have none (they use racial traits below).
+  if ('creatureId' in defender) {
+    res += getCreatureById(defender.creatureId)?.resistances?.[damageType] ?? 0;
+  }
 
   // Racial trait bonuses
   const traits = 'racialTraits' in defender ? (defender.racialTraits ?? []) : [];
@@ -370,6 +384,8 @@ function physicalResistance(defender: Pawn | Mob, damageType: DamageType): numbe
     if (damageType === 'cutting') res += trait.effects.cutting_resistance ?? 0;
     if (damageType === 'piercing') res += trait.effects.piercing_resistance ?? 0;
     if (damageType === 'blunt') res += trait.effects.blunt_resistance ?? 0;
+    if (damageType === 'fire') res += trait.effects.fireResistance ?? 0;
+    if (damageType === 'frost') res += trait.effects.coldResistance ?? 0;
   }
 
   return clamp(res, 0, 0.9);
@@ -457,7 +473,8 @@ class CombatServiceImpl implements CombatService {
       weaponId,
       staminaCost,
       critMod,
-      finesse
+      finesse,
+      arcane
     } = override ? override.profile : attackerProfile(attacker);
     // Evasion uses the `dodge` stat (DEX − weight, × moving) rather than raw dexterity, so injury,
     // load, and the winded penalty (× 0.5) all lower it. ×20 keeps baseline parity with the old
@@ -504,9 +521,14 @@ class CombatServiceImpl implements CombatService {
     // Damage: baseDamage × str / STAT_SCALE, then armour + resistance reduce it,
     // then the crit multiplier. STAT_SCALE=10 matches the real stat range (5–22).
     // Ranged weapons with strScaled:false (crossbow/sling) bypass STR scaling — mechanical advantage.
-    // Power stat for the damage roll: STR normally, but a FINESSE weapon (rapier) scales with PER —
-    // a precise thrust finds the vital, no brute force needed. Ranged (strScaled:false) bypasses both.
-    const powerStat = finesse ? (attacker.stats.perception ?? 10) : str;
+    // Power stat for the damage roll: STR normally, but a FINESSE weapon (rapier) scales with PER and an
+    // ARCANE weapon (§M elemental staff) with INT — a precise thrust / a focused mind finds the vital, no
+    // brute force needed. Ranged (strScaled:false) bypasses both.
+    const powerStat = arcane
+      ? (attacker.stats.intelligence ?? 10)
+      : finesse
+        ? (attacker.stats.perception ?? 10)
+        : str;
     const raw =
       override && !override.strScaled ? baseDamage : (baseDamage * powerStat) / STAT_SCALE;
     const armorRed = partArmorReduction(defender, partId, armorPen);
@@ -1171,7 +1193,7 @@ class CombatServiceImpl implements CombatService {
           quantity: 1
         });
       }
-    } else {
+    } else if (!rw.channeled) {
       // Thrown self-consume (RANGED-COMBAT spec): the spear/stone leaves the hand and lands on the
       // target tile as a recoverable drop; the slot empties so the pawn falls back to melee/closing
       // until it re-arms. The drop rides the same collected-once recovery array as spent ammo.
@@ -1184,6 +1206,8 @@ class CombatServiceImpl implements CombatService {
         quantity: 1
       });
     }
+    // §M channeled staff: no ammo and NOT self-consumed — it stays in hand. Its mana is the
+    // `staminaCost` already drained by performAttack (winded = out of mana), so nothing to spend here.
     return atk;
   }
 

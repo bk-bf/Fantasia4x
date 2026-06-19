@@ -71,6 +71,22 @@
       "bleedMod"      : 0.0,
       "painPerDamage" : 1.1,
       "healDifficulty": 2.0
+    },
+    {
+      "id"            : "frostbite",
+      "name"          : "Frostbite",
+      "fromDamageType": "frost",
+      "bleedMod"      : 0.0,
+      "painPerDamage" : 0.9,
+      "healDifficulty": 1.8
+    },
+    {
+      "id"            : "scorch",
+      "name"          : "Scorch",
+      "fromDamageType": "lightning",
+      "bleedMod"      : 0.0,
+      "painPerDamage" : 1.0,
+      "healDifficulty": 1.5
     }
   ]
 }

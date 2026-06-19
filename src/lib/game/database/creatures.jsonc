@@ -121,7 +121,9 @@
         // inside a peak is fine — it never starves. spawnsInMountain bypasses the spawnable-land gate.
         "spawnsInMountain": true,
         "biomeWeights"    : {"mountain": 1.0},
-        "naturalWeapons"  : ["spectral_strike"]
+        "naturalWeapons"  : ["spectral_strike"],
+        // Incorporeal cold-thing: shrugs off frost & lightning, but living flame sears it.
+        "resistances"     : {"fire": -0.35, "frost": 0.6, "lightning": 0.4}
     },
     // ── Neutral ─────────────────────────────────────────────────────────
     {
@@ -312,7 +314,9 @@
         "tameResistance"    : 0.85,
         "biomeWeights"      : {"plains": 1.0, "forest": 0.3},
         "carcassItemId"     : "woolly_mammoth_carcass",
-        "naturalWeapons"    : ["tusk", "slam"]
+        "naturalWeapons"    : ["tusk", "slam"],
+        // Cold-steppe beast under a thick woolly hide — endures frost, but the pelt catches fire.
+        "resistances"       : {"frost": 0.5, "fire": -0.2}
     },
     {
         "id"            : "hippogriff",
@@ -355,7 +359,9 @@
         "produces"      : {"itemId": "egg", "qty": 1, "intervalSeconds": 220},
         "biomeWeights"  : {"plains": 1.0, "swamp": 0.4},
         "carcassItemId" : "hoarfowl_carcass",
-        "naturalWeapons": ["peck", "kick"]
+        "naturalWeapons": ["peck", "kick"],
+        // Frost-feathered fowl — its name is its nature: resists cold, fears flame.
+        "resistances"   : {"frost": 0.4, "fire": -0.15}
     },
     {
         "id"            : "quillback",
@@ -475,7 +481,9 @@
         "biomeWeights"  : {"swamp": 1.0},
         "lair"          : "swamp_nest", "lairRange": 24, "hungerRate": 0.3, "foodOverflow": 0.4,
         "carcassItemId" : "mire_crocodile_carcass",
-        "naturalWeapons": ["bite", "slam"]
+        "naturalWeapons": ["bite", "slam"],
+        // Cold-blooded swamp reptile — sluggish in cold (frost-vulnerable), shrugs off heat.
+        "resistances"   : {"frost": -0.3, "fire": 0.15}
     },
     {
         "id"            : "marsh_viper",
@@ -495,7 +503,9 @@
         "biomeWeights"  : {"swamp": 1.0, "plains": 0.4},
         "lair"          : "swamp_nest", "lairRange": 30, "hungerRate": 0.3, "foodOverflow": 0.4,
         "carcassItemId" : "marsh_viper_carcass",
-        "naturalWeapons": ["venom_bite"]
+        "naturalWeapons": ["venom_bite"],
+        // Cold-blooded reptile — torpid in cold (vulnerable to frost), handles heat well.
+        "resistances"   : {"frost": -0.3, "fire": 0.15}
     },
     // ── Swamp & monstrous (low-intelligence threats) ─────────────────────────────
     {
@@ -552,7 +562,9 @@
         "pack"          : [1, 2],
         "biomeWeights"  : {"swamp": 1.0},
         "carcassItemId" : "giant_olm_carcass",
-        "naturalWeapons": ["bite"]
+        "naturalWeapons": ["bite"],
+        // Pale cave amphibian of cold underground pools — used to the chill, unused to fire.
+        "resistances"   : {"frost": 0.3, "fire": -0.25}
     },
     {
         "id"            : "thornwood_spider",

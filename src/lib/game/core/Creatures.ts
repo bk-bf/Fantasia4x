@@ -1,5 +1,6 @@
 import creaturesData from '../database/creatures.jsonc';
 import { resolveCharSpans, type CharSpan } from './Terrains';
+import type { DamageType } from './types/health';
 
 /**
  * Creatures.ts — Entity (mob + animal) definitions loaded from the DB.
@@ -141,6 +142,14 @@ export interface CreatureDefinition {
   lootTable: CreatureLootEntry[];
   /** Natural melee attacks — ids of `natural_weapon` items in items.jsonc. */
   naturalWeapons: string[];
+  /**
+   * §M elemental (and physical) damage resistances/vulnerabilities, keyed by DamageType. Each value
+   * is added on top of the stat-derived resistance in Combat.physicalResistance (positive = resists,
+   * NEGATIVE = vulnerable). Thematic per creature (a frost-adapted beast resists `frost` but takes more
+   * `fire`); omitted = the creature relies purely on its CON/DEX-derived baseline. Final resist is
+   * still clamped 0–0.9, so a vulnerability can pull a creature's resistance down to 0 but not below.
+   */
+  resistances?: Partial<Record<DamageType, number>>;
   /** Spawn-gate overrides (ENTITIES_SPAWNING). The default gate restricts spawns to walkable
    *  forest/plains/swamp land (isSpawnableTile). These let specific creatures bend that:
    *  - `spawnsInMountain`: spawn on ANY mountain tile, even non-walkable rock — for incorporeal
@@ -229,6 +238,7 @@ function toDefinition(raw: RawCreature): CreatureDefinition {
     biomeWeights: (raw.biomeWeights as Record<string, number>) ?? {},
     lootTable: (raw.lootTable as CreatureLootEntry[]) ?? [],
     naturalWeapons: (raw.naturalWeapons as string[]) ?? [],
+    resistances: (raw.resistances as Partial<Record<DamageType, number>> | undefined) ?? undefined,
     spawnsInMountain: (raw.spawnsInMountain as boolean | undefined) ?? undefined,
     maxMountainDistance: (raw.maxMountainDistance as number | undefined) ?? undefined,
     lair: (raw.lair as string | undefined) ?? undefined,

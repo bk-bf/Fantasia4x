@@ -2211,5 +2211,18 @@
   { "id": "make_topaz_amulet",     "station": "lapidary_bench", "inputs": {"attuned_topaz": 2, "gold_bar": 2},     "outputs": {"topaz_amulet": 1},     "workAmount": 14, "toolTierRequired": 1, "researchRequired": "attunement" },
   { "id": "make_amethyst_amulet",  "station": "lapidary_bench", "inputs": {"attuned_amethyst": 2, "gold_bar": 2},  "outputs": {"amethyst_amulet": 1},  "workAmount": 14, "toolTierRequired": 1, "researchRequired": "attunement" },
   { "id": "make_citrine_amulet",   "station": "lapidary_bench", "inputs": {"attuned_citrine": 2, "gold_bar": 2},   "outputs": {"citrine_amulet": 1},   "workAmount": 14, "toolTierRequired": 1, "researchRequired": "attunement" },
-  { "id": "make_moonstone_amulet", "station": "lapidary_bench", "inputs": {"attuned_moonstone": 2, "silver_bar": 2}, "outputs": {"moonstone_amulet": 1}, "workAmount": 14, "toolTierRequired": 1, "researchRequired": "attunement" }
+  { "id": "make_moonstone_amulet", "station": "lapidary_bench", "inputs": {"attuned_moonstone": 2, "silver_bar": 2}, "outputs": {"moonstone_amulet": 1}, "workAmount": 14, "toolTierRequired": 1, "researchRequired": "attunement" },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // §M ARCANE STAVES — INT-scaled channeled elemental ranged weapons. Two tiers mirror iron→steel:
+  //   T1 — Runecarver's Bench: magic-wood stave + a CUT crystal      (gate: arcane_lapidary)
+  //   T2 — Attunement Altar:   magic-wood stave + an ATTUNED crystal + gold (gate: attunement)
+  // Element = crystal (ruby→fire, sapphire→frost, topaz→lightning); T2 also grants the gem's buff.
+  // ═══════════════════════════════════════════════════════════════════════════
+  { "id": "make_ember_staff",   "station": "runecarver_bench", "inputs": {"emberwood_log": 1, "cut_ruby": 1, "cordage": 1},     "outputs": {"ember_staff": 1},   "workAmount": 16, "toolTierRequired": 1, "researchRequired": "arcane_lapidary" },
+  { "id": "make_frost_staff",   "station": "runecarver_bench", "inputs": {"moonwood_log": 1, "cut_sapphire": 1, "cordage": 1},  "outputs": {"frost_staff": 1},   "workAmount": 16, "toolTierRequired": 1, "researchRequired": "arcane_lapidary" },
+  { "id": "make_spark_staff",   "station": "runecarver_bench", "inputs": {"heartwood_log": 1, "cut_topaz": 1, "cordage": 1},    "outputs": {"spark_staff": 1},   "workAmount": 16, "toolTierRequired": 1, "researchRequired": "arcane_lapidary" },
+  { "id": "make_pyre_staff",    "station": "attunement_altar", "inputs": {"emberwood_log": 1, "attuned_ruby": 1, "gold_bar": 1},     "outputs": {"pyre_staff": 1},    "workAmount": 24, "toolTierRequired": 2, "researchRequired": "attunement" },
+  { "id": "make_rime_staff",    "station": "attunement_altar", "inputs": {"moonwood_log": 1, "attuned_sapphire": 1, "gold_bar": 1},  "outputs": {"rime_staff": 1},    "workAmount": 24, "toolTierRequired": 2, "researchRequired": "attunement" },
+  { "id": "make_tempest_staff", "station": "attunement_altar", "inputs": {"heartwood_log": 1, "attuned_topaz": 1, "gold_bar": 1},    "outputs": {"tempest_staff": 1}, "workAmount": 24, "toolTierRequired": 2, "researchRequired": "attunement" }
 ]
