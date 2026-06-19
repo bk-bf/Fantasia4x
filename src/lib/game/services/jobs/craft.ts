@@ -9,7 +9,7 @@ import { gatedConsole as console } from '../../core/log';
 import { itemService } from '../ItemService';
 import { recipeService } from '../RecipeService';
 import { pawnStatService } from '../PawnStatService';
-import { rollCraftQuality } from '../../core/itemQuality';
+import { rollCraftQuality, qualityMultiplier } from '../../core/itemQuality';
 import {
   absorbDropIfOnStockpileTile,
   reserveForOrder,
@@ -103,14 +103,19 @@ export function complete(job: Job, gs: GameState): GameState {
   if (!job.craftQueueId) return gs;
   const entry = (gs.craftingQueue ?? []).find((e) => e.id === job.craftQueueId);
   if (!entry) return gs;
-  // §Q (R8): roll the output's quality tier from the working pawn's `crafting_quality` work-axis
-  // (stats.jsonc) — DEX/INT skill plus the sight/manipulation/consciousness capacities, so a wounded
-  // or in-the-dark crafter produces worse work through the existing model. Passive furnace production
-  // has no working pawn (handled by completeCraftOrder's undefined default → Standard).
+  // §Q (R8): roll the output's quality tier from the working pawn's quality work-axis (stats.jsonc) —
+  // skill stat plus the sight/manipulation/consciousness capacities, so a wounded or in-the-dark
+  // worker produces worse work through the existing model. Passive furnace production has no working
+  // pawn (handled by completeCraftOrder's undefined default → Standard).
+  // §F (cooked-meal quality): a FOOD recipe rolls from the cook's `cooking_quality` instead of
+  // `crafting_quality`, and the tier scales the meal's nutrition YIELD in completeCraftOrder — a
+  // skilled cook stretches the same ingredients into more nourishing portions.
   let quality: ItemQuality | undefined;
   const pawn = job.claimedBy ? gs.pawns.find((p) => p.id === job.claimedBy) : undefined;
   if (pawn) {
-    const axis = pawnStatService.getWorkModifiers(pawn, 'crafting').quality ?? 1;
+    const isCooking = itemService.getItemById(entry.item.id)?.category === 'food';
+    const axis =
+      pawnStatService.getWorkModifiers(pawn, isCooking ? 'cooking' : 'crafting').quality ?? 1;
     quality = rollCraftQuality(axis, () => rng.random());
   }
   let state = completeCraftOrder(entry, gs, quality);
@@ -146,7 +151,17 @@ export function completeCraftOrder(
 
   const outputs: Record<string, number> = {};
   for (const [outId, outQty] of Object.entries(recipeOutputs)) {
-    outputs[outId] = (outputs[outId] ?? 0) + outQty * quantity;
+    let qty = outQty * quantity;
+    // §F cooked-meal quality: FOOD outputs are scaled by the rolled quality tier (cooking_quality →
+    // 0.8×–1.8× via qualityMultiplier) — bulk food carries no per-unit identity, so meal quality
+    // lands as nourishment YIELD at cook time rather than a per-stack tier. The fractional remainder
+    // is an rng "carry" so even single-portion meals benefit on average (not just batches).
+    if (quality !== undefined && itemService.getItemById(outId)?.category === 'food') {
+      const scaled = qty * qualityMultiplier(quality);
+      const whole = Math.floor(scaled);
+      qty = Math.max(1, whole + (rng.random() < scaled - whole ? 1 : 0));
+    }
+    outputs[outId] = (outputs[outId] ?? 0) + qty;
   }
 
   // ADR-016: destroy the inputs staged on the station (the reserved drops carried here), then

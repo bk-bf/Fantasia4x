@@ -24,6 +24,14 @@ const AIM_ACC_STAT_POINTS = 50;
 const ACC_FALLOFF_PER_TILE = 2.5;
 /** LINEAR aim-time falloff: each tile of range lengthens the aim interval by this fraction. */
 const AIM_TIME_PER_TILE = 0.08;
+/**
+ * Floor on a shot's cadence, in ticks — the fastest a ranged weapon can loose, regardless of how
+ * high `aim_speed` (DEX, coefficient 0.04 > attack_speed's 0.03) + draw gear push `aimFactor`.
+ * MIRRORS melee's `MIN_ATTACK_INTERVAL_TICKS` (72 = 1.2 s @ 60 TPS) so a built archer fires at ~the
+ * same top rate as a duelist instead of approaching tick-rate. (Duplicated, not imported, to avoid a
+ * rangedCombat → Combat cycle.)
+ */
+const MIN_SHOT_INTERVAL_TICKS = 72;
 /** Aim-speed penalty for drawing arrows/bolts from a pack (no ready quiver) — a fumbling nock. */
 const DRAW_FUMBLE_PENALTY = -0.2;
 
@@ -253,7 +261,8 @@ export function aimIntervalTicks(
   const aimFactor = Math.max(0.4, aimSpeedStat) * Math.max(0.2, 1 + equipSpeedBonus);
   const aimTime = (baseInterval * (1 + dist * AIM_TIME_PER_TILE)) / aimFactor;
   const spanTime = (baseInterval * Math.max(0, reload - 1)) / Math.max(0.4, reloadSpeedStat);
-  return Math.max(1, Math.round(aimTime + spanTime));
+  // Floor at the melee minimum so a high-DEX / aim-geared archer can't out-cycle the melee cap.
+  return Math.max(MIN_SHOT_INTERVAL_TICKS, Math.round(aimTime + spanTime));
 }
 
 /**

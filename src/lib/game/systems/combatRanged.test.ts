@@ -164,6 +164,17 @@ describe('rangedCombat helpers', () => {
     expect(aimIntervalTicks(90, 3, 4, 1.0, 0, 1.0)).toBeGreaterThan(aimIntervalTicks(90, 1, 4, 1.0, 0, 1.0)); // crossbow span
   });
 
+  it('shot cadence is floored at the melee cap (72) and averages near melee — never tick-rate', () => {
+    // A high-DEX, aim-geared archer at close range would collapse to ~27 ticks without the floor.
+    expect(aimIntervalTicks(75, 1, 2, 1.8, 0.8, 1.0)).toBe(72);
+    // A typical combat archer (DEX ~15) lands near melee's ~104-tick interval, not tens of ticks.
+    const typical = aimIntervalTicks(104, 1, 4, 1.2, 0, 1.2);
+    expect(typical).toBeGreaterThanOrEqual(72);
+    expect(typical).toBeLessThan(160);
+    // A crossbow's windlass keeps it well slower than the floor (no accidental clamp).
+    expect(aimIntervalTicks(104, 3, 4, 1.2, 0, 1.0)).toBeGreaterThan(200);
+  });
+
   it('reload_speed (DEX) shortens only a crossbow span — bows ignore it (the build fork)', () => {
     // reload 3 = crossbow: a defter loader (higher reload_speed) spans faster.
     expect(aimIntervalTicks(90, 3, 4, 1.0, 0, 1.4)).toBeLessThan(aimIntervalTicks(90, 3, 4, 1.0, 0, 0.8));
