@@ -254,6 +254,29 @@ describe('ranged combat (headless tickCombat)', () => {
     expect(state.pawns[0].inventory.items.flint_arrow).toBeLessThan(20); // ammo consumed
   });
 
+  it('auto-engage: a DRAFTED ranged pawn with ammo looses arrows at its target', () => {
+    const archer = makeArcher({
+      drafted: true,
+      currentState: 'Idle',
+      draftTarget: { type: 'attack', targetType: 'mob', targetId: 'g1' } // no mode → auto-ranged
+    } as unknown as Partial<Pawn>);
+    let state = makeState([archer], [makeGoblin()]);
+    for (let t = 0; t < 400; t++) state = combatService.tickCombat({ ...state, turn: t }, 16);
+    expect(state.pawns[0].inventory.items.flint_arrow).toBeLessThan(20);
+  });
+
+  it('force-melee: a DRAFTED ranged pawn told to melee does NOT loose arrows at range', () => {
+    const archer = makeArcher({
+      drafted: true,
+      currentState: 'Idle',
+      draftTarget: { type: 'attack', targetType: 'mob', targetId: 'g1', mode: 'melee' }
+    } as unknown as Partial<Pawn>);
+    let state = makeState([archer], [makeGoblin()]); // goblin 3 tiles away (out of melee reach)
+    for (let t = 0; t < 400; t++) state = combatService.tickCombat({ ...state, turn: t }, 16);
+    // It refuses to shoot (force-melee) and can't reach (movement is the engine's job) → ammo intact.
+    expect(state.pawns[0].inventory.items.flint_arrow).toBe(20);
+  });
+
   it('an archer with no ammo cannot wound a mob at range', () => {
     const archer = makeArcher({
       inventory: {
@@ -422,13 +445,16 @@ describe('ranged combat (headless tickCombat)', () => {
     expect(getRangedWeapon(hybrid)?.itemId).toBe('throwing_spear');
     expect(hasMeleeMainHand(hybrid)).toBe(true);
 
-    // Mob 3 tiles away → thrown (piercing); thrown weapons need no ammo stack.
+    // Mob 3 tiles away (spear range 4) → it throws; thrown weapons need no ammo stack. Thrown
+    // self-consume: the spear leaves the off-hand on the throw and lands as a recoverable drop.
     let state = makeState([hybrid], [makeGoblin()]);
-    let pierced = false;
-    for (let t = 0; t < 2000 && !pierced; t++) {
+    let threw = false;
+    for (let t = 0; t < 2000 && !threw; t++) {
       state = combatService.tickCombat({ ...state, turn: t }, 16);
-      if ((state.mobs![0].injuries ?? []).some((w) => w.type === 'puncture')) pierced = true;
+      if (!state.pawns[0].equipment?.offHand) threw = true; // spear left the hand
     }
-    expect(pierced).toBe(true);
+    expect(threw).toBe(true);
+    // the thrown spear dropped (recoverable) rather than vanishing
+    expect((state.droppedItems ?? []).some((d) => d.resourceId === 'throwing_spear')).toBe(true);
   });
 });

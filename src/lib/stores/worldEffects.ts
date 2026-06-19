@@ -31,6 +31,17 @@ export interface ParticleOverlay {
   effect: string; // 'smoke' | …
 }
 
+/** A ranged projectile in flight: its head's current screen position (lerped shooter→target each
+ *  frame by GameCanvas), travel `angle` for orienting the glyph/trail, and `progress` (≥1 = impact). */
+export interface ProjectileOverlay {
+  id: string;
+  left: number;
+  top: number;
+  angle: number; // degrees, travel direction
+  effect: string; // 'arrow' | 'bolt' | 'stone' | 'spear'
+  progress: number; // 0–1 flight; ≥1 → render the impact puff
+}
+
 export interface HealthOverlay {
   id: string;
   left: number;
@@ -57,6 +68,7 @@ export interface WorldEffectsState {
   progressOverlays: ProgressOverlay[];
   campfireOverlays: CampfireOverlay[];
   particleOverlays: ParticleOverlay[];
+  projectileOverlays: ProjectileOverlay[];
   healthOverlays: HealthOverlay[];
   draftTargetOverlays: DraftTargetOverlay[];
   floatingTextOverlays: FloatingTextOverlay[];
@@ -71,6 +83,7 @@ function createWorldEffectsStore() {
     progressOverlays: [],
     campfireOverlays: [],
     particleOverlays: [],
+    projectileOverlays: [],
     healthOverlays: [],
     draftTargetOverlays: [],
     floatingTextOverlays: []
@@ -89,6 +102,9 @@ function createWorldEffectsStore() {
     },
     setParticleOverlays(overlays: ParticleOverlay[]) {
       update((s) => ({ ...s, particleOverlays: overlays }));
+    },
+    setProjectileOverlays(overlays: ProjectileOverlay[]) {
+      update((s) => ({ ...s, projectileOverlays: overlays }));
     },
     setHealthOverlays(overlays: HealthOverlay[]) {
       update((s) => ({ ...s, healthOverlays: overlays }));

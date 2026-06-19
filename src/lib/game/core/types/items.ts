@@ -315,6 +315,9 @@ export interface Item {
      * ARE the projectile and keep their own `damage`).
      */
     drawPower?: number;
+    /** Visual: particle style for a THROWN weapon's flight ("spear"|"stone"). Launchers take theirs
+     *  from the ammo instead; omitted = a sensible default by category. Purely cosmetic. */
+    projectile?: string;
     // ── Natural-weapon additions (innate attacks rolled per swing) ───────
     weight?: number; // relative roll frequency among an entity's natural weapons (default 1)
     staminaCost?: number; // stamina drained by this attack (default ATTACK_STAMINA_COST)
@@ -349,6 +352,7 @@ export interface Item {
     accuracyBonus?: number; // flat add to the hit roll (default 0)
     armorPen?: number; // added to the weapon's armorPenetration (default 0)
     recoverable?: number; // 0–1 chance to recover the spent projectile as a DroppedItem after a shot (default 0)
+    projectile?: string; // visual: particle style of the flying shot ("arrow"|"bolt"|"stone"); omitted = default by ammoCategory. Cosmetic only.
   };
 
   /**

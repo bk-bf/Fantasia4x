@@ -116,6 +116,23 @@
     {/if}
   {/each}
 
+  <!-- ── Ranged projectiles — a travelling particle streak + an impact puff on arrival ───── -->
+  {#each $worldEffects.projectileOverlays as o (o.id)}
+    {#if o.progress < 1}
+      <div
+        class="projectile fx-{o.effect}"
+        style="transform: translate({o.left}px, {o.top}px) rotate({o.angle}deg);"
+      >
+        <span class="proj-trail"></span>
+        <span class="proj-head"></span>
+      </div>
+    {:else}
+      <div class="proj-impact-wrap" style="transform: translate({o.left}px, {o.top}px);">
+        <div class="proj-impact fx-{o.effect}"></div>
+      </div>
+    {/if}
+  {/each}
+
   {#each $worldEffects.healthOverlays as overlay (overlay.id)}
     <div
       class="health-bar-float"
@@ -387,6 +404,100 @@
     pointer-events: none;
     width: 0;
     height: 0;
+  }
+
+  /* ── Ranged projectiles — the inline transform places + rotates so local +x is travel dir. ─── */
+  .projectile {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+    will-change: transform;
+  }
+  /* Trail: a soft streak fading from the tail (transparent) up to the head (colour), behind origin. */
+  .proj-trail {
+    position: absolute;
+    left: 0;
+    top: -1px;
+    height: 2px;
+    width: 16px;
+    transform: translateX(-100%);
+    border-radius: 1px;
+    background: linear-gradient(to right, transparent, var(--proj-color, #d8d4c8));
+    opacity: 0.85;
+  }
+  .proj-head {
+    position: absolute;
+    left: -1.5px;
+    top: -1.5px;
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: var(--proj-color, #f0ead8);
+    box-shadow: 0 0 3px var(--proj-color, #d8d4c8);
+  }
+  .fx-arrow {
+    --proj-color: #d9d4c4;
+  }
+  .fx-bolt {
+    --proj-color: #c8ccd4;
+  }
+  .fx-stone {
+    --proj-color: #b6a98c;
+  }
+  .fx-spear {
+    --proj-color: #cdbf9a;
+  }
+  .fx-stone .proj-trail {
+    width: 9px;
+    opacity: 0.5;
+  }
+  .fx-stone .proj-head {
+    width: 4px;
+    height: 4px;
+    left: -2px;
+    top: -2px;
+  }
+  .fx-spear .proj-trail {
+    width: 22px;
+    height: 3px;
+    top: -1.5px;
+  }
+  .fx-bolt .proj-trail {
+    width: 18px;
+  }
+  /* Impact: a quick radial puff that expands and fades once on arrival. The wrapper carries the
+   *  inline translate so the inner element's scale animation doesn't clobber the position. */
+  .proj-impact-wrap {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+  }
+  .proj-impact {
+    position: absolute;
+    left: -4px;
+    top: -4px;
+    width: 8px;
+    height: 8px;
+    pointer-events: none;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--proj-color, #d8d4c8) 0%, transparent 70%);
+    animation: proj-impact 180ms ease-out forwards;
+  }
+  @keyframes proj-impact {
+    from {
+      transform: scale(0.5);
+      opacity: 0.9;
+    }
+    to {
+      transform: scale(1.9);
+      opacity: 0;
+    }
   }
 
   /* ── flies (wolf den — carrion buzz): tiny dark specks jittering over the den ── */

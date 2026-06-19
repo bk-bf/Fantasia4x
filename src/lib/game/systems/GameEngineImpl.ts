@@ -26,6 +26,7 @@ import { wasmPathfinderService } from '../services/WasmPathfinderService';
 import { resourceObjectService } from '../services/ResourceObjectService';
 import { entityService } from '../services/EntityService';
 import { combatService } from './Combat';
+import { getRangedWeapon, effectiveRangedRange, hasViableAmmo } from './rangedCombat';
 import { TICKS_PER_SECOND, ticksFromSeconds, perTick } from '../core/time';
 import {
   buildPathfindingGridsWithBlocked,
@@ -547,8 +548,14 @@ export class GameEngineImpl implements GameEngine {
         if (tx < 0 || ty < 0) continue;
         const dx = Math.abs(pawn.position.x - tx);
         const dy = Math.abs(pawn.position.y - ty);
-        if (dx <= 1 && dy <= 1) {
-          // Adjacent — stop moving and let combat tick handle the attack
+        // Stop distance: a ranged pawn told to fire (not force-melee) with viable ammo HOLDS at
+        // weapon range and shoots; otherwise it closes to melee adjacency (1). Re-evaluated each
+        // tick, so it re-closes if the target walks out of range.
+        const rw = getRangedWeapon(pawn);
+        const useRanged = !!rw && target.mode !== 'melee' && hasViableAmmo(pawn, rw);
+        const stopDist = useRanged ? Math.max(1, Math.floor(effectiveRangedRange(pawn, rw!))) : 1;
+        if (Math.max(dx, dy) <= stopDist) {
+          // In position (in weapon range / adjacent) — stop moving, let the combat tick attack.
           if (pawn.isMoving) {
             gs = pawnService.assignPath(pawn.id, [], gs);
           }

@@ -18,6 +18,7 @@ import { itemService } from '../services/ItemService';
 import {
   getRangedWeapon,
   pickAmmo,
+  hasViableAmmo,
   effectiveRangedRange,
   rangedAccuracyMod,
   aimIntervalTicks,
@@ -267,6 +268,14 @@ const SHIELD_DODGE_MULT = 1.25;
 // "accurate vs. brutish weapon" axis barely moved hit chance. ×2 makes it bite without re-touching every
 // weapon. Ranged uses `hitMod` (rangedAccuracyMod), not this term, so launchers are unaffected.
 const MELEE_ACCURACY_WEIGHT = 2;
+/** Default projectile particle style per ammo bucket when the ammo item doesn't author its own. */
+const PROJECTILE_BY_CATEGORY: Record<string, string> = {
+  arrow: 'arrow',
+  bolt: 'bolt',
+  sling_stone: 'stone'
+};
+/** Min ticks between repeated "No ammo" floats for the same pawn — avoids per-tick spam. */
+const NOAMMO_NOTIFY_COOLDOWN = 90;
 // Encumbrance is no longer a combat-local hook: worn-armour + pack load drives the staged `encumbered`
 // CONDITION (PawnStateMachine.tickConditions → driveEncumbrance), whose dodge/hitChance/fatigue
 // modifiers flow through conditionDodgeMult / conditionHitMult below — one unified model.
@@ -1126,6 +1135,19 @@ class CombatServiceImpl implements CombatService {
     const override = this.buildRangedOverride(pawn, rw, ammo, dist, cover);
     const atk = this.performAttack(pawn, target, state, turn, override);
 
+    // Cosmetic: animate the shot flying shooter → target (the hit already resolved hitscan above).
+    if (pawn.position) {
+      simLog.pushProjectile({
+        fromX: pawn.position.x,
+        fromY: pawn.position.y,
+        toX: tpos.x,
+        toY: tpos.y,
+        effect: ammo
+          ? (ammo.props.projectile ?? PROJECTILE_BY_CATEGORY[rw.ammoCategory ?? ''] ?? 'arrow')
+          : (rw.projectile ?? 'spear')
+      });
+    }
+
     if (ammo) {
       const have = pawn.inventory?.items?.[ammo.itemId] ?? 0;
       const newQty = Math.max(0, have - 1);
@@ -1149,8 +1171,53 @@ class CombatServiceImpl implements CombatService {
           quantity: 1
         });
       }
+    } else {
+      // Thrown self-consume (RANGED-COMBAT spec): the spear/stone leaves the hand and lands on the
+      // target tile as a recoverable drop; the slot empties so the pawn falls back to melee/closing
+      // until it re-arms. The drop rides the same collected-once recovery array as spent ammo.
+      atk.state = this.clearEquipSlot(atk.state, pawn.id, rw.slot);
+      recovered.push({
+        id: `thrown-${rw.itemId}-${turn}-${tpos.x}-${tpos.y}-${Math.floor(rng.random() * 1e6)}`,
+        resourceId: rw.itemId,
+        x: tpos.x,
+        y: tpos.y,
+        quantity: 1
+      });
     }
     return atk;
+  }
+
+  /** Per-pawn last-turn a "No ammo" float was shown (throttle so it doesn't fire every tick). */
+  private _noAmmoNotified = new Map<string, number>();
+
+  /** Floating "No ammo" over a ranged pawn that wants to fire but has none — reuses the combat-text
+   *  overlay channel, throttled per pawn. */
+  private notifyNoAmmo(pawn: Pawn, turn: number): void {
+    if (!pawn.position) return;
+    const last = this._noAmmoNotified.get(pawn.id) ?? -Infinity;
+    if (turn - last < NOAMMO_NOTIFY_COOLDOWN) return;
+    this._noAmmoNotified.set(pawn.id, turn);
+    simLog.pushCombatText({
+      worldX: pawn.position.x,
+      worldY: pawn.position.y,
+      text: 'No ammo',
+      kind: 'miss'
+    });
+  }
+
+  /** Remove the item in `slot` from a pawn's equipment (immutable, mirrors decrEquipDurability). Used
+   *  for thrown-weapon self-consume — the weapon physically left the hand. */
+  private clearEquipSlot(state: GameState, pawnId: string, slot: string): GameState {
+    return {
+      ...state,
+      pawns: state.pawns.map((p) => {
+        if (p.id !== pawnId || !(p.equipment as Record<string, ItemInstance | undefined>)?.[slot])
+          return p;
+        const eq = { ...p.equipment } as Record<string, ItemInstance | undefined>;
+        delete eq[slot];
+        return { ...p, equipment: eq };
+      })
+    };
   }
 
   /** True while an entity is knocked down OR collapsed and cannot swing this tick. */
@@ -1360,8 +1427,21 @@ class CombatServiceImpl implements CombatService {
       );
       const curStamina = pawn.stamina ?? pawn.maxStamina ?? 50;
 
+      // A draft order can FORCE melee: a ranged pawn told to "Target (melee)" skips the shot path,
+      // closes (via _processDraftOrders' stopDist=1) and swings in contact instead.
+      const forceMelee =
+        !!pawn.drafted &&
+        pawn.draftTarget?.type === 'attack' &&
+        pawn.draftTarget.mode === 'melee';
+
       // ── Ranged: fire at a target beyond melee but within range + sight + ammo (on cadence). ──
-      if (rw && tdist > 1) {
+      if (rw && tdist > 1 && !forceMelee) {
+        if (!hasViableAmmo(pawn, rw)) {
+          // Auto-ranged but the quiver's empty — warn the player (floating, throttled) and let the
+          // movement layer close to melee. Reuses the combat-text overlay channel.
+          this.notifyNoAmmo(pawn, state.turn);
+          continue;
+        }
         const shot = this.tryRangedShot(
           pawn,
           target,

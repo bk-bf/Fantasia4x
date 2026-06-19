@@ -57,6 +57,10 @@ export interface RangedWeapon {
   ammoCategory?: string;
   /** §Q craft-quality tier of the equipped instance — scales the shot's damage/accuracy/pen. */
   quality?: ItemQuality;
+  /** Which hand holds it — a thrown weapon's slot is cleared when it leaves the hand (self-consume). */
+  slot: 'mainHand' | 'offHand';
+  /** Visual particle style for the flight (thrown weapon's own; launchers override from the ammo). */
+  projectile?: string;
 }
 
 /** The equipped ranged weapon for a pawn — main-hand first (bow/crossbow/sling), then off-hand
@@ -77,7 +81,9 @@ export function getRangedWeapon(attacker: Pawn | Mob): RangedWeapon | null {
         reload: wp!.reload ?? 0,
         strScaled: wp!.strScaled ?? true,
         ammoCategory: wp!.ammoCategory,
-        quality: inst.quality
+        quality: inst.quality,
+        slot,
+        projectile: wp!.projectile
       };
     }
   }
@@ -166,6 +172,12 @@ export function pickAmmo(pawn: Pawn, category: string): AmmoPick | null {
     }
   }
   return best;
+}
+
+/** Can this pawn actually fire `rw` right now? A thrown weapon (no ammoCategory) IS its own ammo, so
+ *  it's always loaded; a launcher needs a matching ammo stack in inventory. */
+export function hasViableAmmo(pawn: Pawn, rw: RangedWeapon): boolean {
+  return !rw.ammoCategory || pickAmmo(pawn, rw.ammoCategory) !== null;
 }
 
 /** Chebyshev (king-move) tile distance — the metric combat already uses for adjacency. */

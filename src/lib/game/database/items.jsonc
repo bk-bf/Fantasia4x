@@ -4297,6 +4297,8 @@
       "damage"          : 3,
       "attackSpeed"     : 1.0,
       "range"           : 3,
+
+      "range"           : 3,"projectile": "stone",
       "damMin"          : 2,
       "damMax"          : 5,
       "reach"           : 0,
@@ -4360,6 +4362,8 @@
       "damage"          : 8,
       "attackSpeed"     : 0.9,
       "range"           : 4,
+
+      "range"           : 4,"projectile": "spear",
       "damMin"          : 6,
       "damMax"          : 11,
       "reach"           : 0,
@@ -4423,6 +4427,8 @@
     "maxDurability": 1,
     "ammoProperties": {
       "ammoCategory" : "sling_stone",
+
+      "ammoCategory" : "sling_stone","projectile": "stone",
       "damage"       : 5,
       "damageType"   : "blunt",
       "recoverable"  : 0.3
@@ -4444,6 +4450,8 @@
     "maxDurability": 1,
     "ammoProperties": {
       "ammoCategory" : "sling_stone",
+
+      "ammoCategory" : "sling_stone","projectile": "stone",
       "damage"       : 9,
       "damageType"   : "blunt",
       "armorPen"     : 0.10,
@@ -4467,6 +4475,8 @@
     "maxDurability": 10,
     "ammoProperties": {
       "ammoCategory" : "arrow",
+
+      "ammoCategory" : "arrow","projectile": "arrow",
       "damage"       : 5,
       "damageType"   : "piercing",
       "armorPen"     : 0.05,
@@ -4489,6 +4499,8 @@
     "maxDurability": 8,
     "ammoProperties": {
       "ammoCategory" : "arrow",
+
+      "ammoCategory" : "arrow","projectile": "arrow",
       "damage"       : 5,
       "damageType"   : "piercing",
       "armorPen"     : 0.10,
@@ -4511,6 +4523,8 @@
     "maxDurability": 14,
     "ammoProperties": {
       "ammoCategory" : "arrow",
+
+      "ammoCategory" : "arrow","projectile": "arrow",
       "damage"       : 8,
       "damageType"   : "cutting",
       "armorPen"     : 0.0,
@@ -4533,6 +4547,8 @@
     "maxDurability": 20,
     "ammoProperties": {
       "ammoCategory" : "arrow",
+
+      "ammoCategory" : "arrow","projectile": "arrow",
       "damage"       : 6,
       "damageType"   : "piercing",
       "armorPen"     : 0.30,
@@ -4555,6 +4571,8 @@
     "maxDurability": 16,
     "ammoProperties": {
       "ammoCategory" : "arrow",
+
+      "ammoCategory" : "arrow","projectile": "arrow",
       "damage"       : 7,
       "damageType"   : "piercing",
       "armorPen"     : 0.12,
@@ -4577,6 +4595,8 @@
     "maxDurability": 20,
     "ammoProperties": {
       "ammoCategory" : "bolt",
+
+      "ammoCategory" : "bolt","projectile": "bolt",
       "damage"       : 8,
       "damageType"   : "piercing",
       "armorPen"     : 0.25,
@@ -4601,6 +4621,8 @@
     "researchRequired": "iron_working",
     "ammoProperties": {
       "ammoCategory" : "bolt",
+
+      "ammoCategory" : "bolt","projectile": "bolt",
       "damage"       : 9,
       "damageType"   : "piercing",
       "armorPen"     : 0.45,

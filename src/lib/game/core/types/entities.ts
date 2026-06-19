@@ -271,7 +271,14 @@ export interface Pawn {
    *  stockpile and back until the loose stack on that tile is cleared (multi-trip), then clears. */
   draftTarget?:
     | { type: 'move'; x: number; y: number }
-    | { type: 'attack'; targetId: string; targetType: 'pawn' | 'mob' }
+    | {
+        type: 'attack';
+        targetId: string;
+        targetType: 'pawn' | 'mob';
+        /** How to engage: 'melee' forces a ranged pawn to close and swing; 'ranged'/undefined =
+         *  auto (shoot from range if it has a ranged weapon + viable ammo, else close to melee). */
+        mode?: 'ranged' | 'melee';
+      }
     | { type: 'haul'; x: number; y: number };
 
   // Phase 4/5: State machine primary state

@@ -41,6 +41,16 @@ export interface CombatLungeRequest {
   dirY: number;
 }
 
+/** A ranged projectile to animate from shooter tile → target tile (visual only; the hit is already
+ *  resolved hitscan). `effect` selects the particle style (from the ammo/weapon `projectile` field). */
+export interface CombatProjectileRequest {
+  fromX: number;
+  fromY: number;
+  toX: number;
+  toY: number;
+  effect: string; // 'arrow' | 'bolt' | 'stone' | 'spear'
+}
+
 export interface SimLogSink {
   /** Append a raw chronicle entry; returns the generated entry id. */
   logActivity(entry: Omit<ActivityLogEntry, 'id' | 'timestamp'>): string;
@@ -73,6 +83,8 @@ export interface SimLogSink {
   pushCombatText(req: CombatTextRequest): void;
   /** Push an attacker-glyph lunge for the renderer (visual only). */
   pushAttackLunge(req: CombatLungeRequest): void;
+  /** Push a ranged projectile to animate shooter→target (visual only). */
+  pushProjectile(req: CombatProjectileRequest): void;
 
   // ----- entities (services/EntityService) -----
   logEntityDeath(
@@ -93,6 +105,7 @@ const noopSink: SimLogSink = {
   logCombatKill: () => {},
   pushCombatText: () => {},
   pushAttackLunge: () => {},
+  pushProjectile: () => {},
   logEntityDeath: () => {}
 };
 

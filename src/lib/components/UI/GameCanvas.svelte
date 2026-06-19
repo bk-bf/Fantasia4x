@@ -59,6 +59,7 @@
     planRefuel
   } from '$lib/game/services/fuelRules.js';
   import { getEquipmentSlot } from '$lib/game/core/PawnEquipment.js';
+  import { getRangedWeapon } from '$lib/game/systems/rangedCombat.js';
   import { getCreatureById } from '$lib/game/core/Creatures.js';
   import { TICKS_PER_SECOND } from '$lib/game/core/time.js';
   import { simTarget } from '$lib/game/systems/MovementSystem.js';
@@ -2794,19 +2795,42 @@
 
     // ── Draft mode: right-click issues orders ────────────────────────────────
     if (selectedPawn?.drafted) {
-      const targetMob = mobs.find(
-        (m) => m.x === hoverTileX && m.y === hoverTileY && m.isAlive !== false
-      );
-      if (targetMob) {
-        // Attack mob
+      // Issue an attack order; `mode` forces melee/ranged (undefined = auto).
+      const issueAttack = (
+        targetId: string,
+        targetType: 'pawn' | 'mob',
+        mode?: 'ranged' | 'melee'
+      ) =>
         gameState.command({
           type: 'setPawnDraftTarget',
           payload: {
             pawnId: selectedPawn.id,
-            target: { type: 'attack', targetId: targetMob.id, targetType: 'mob' }
+            target: { type: 'attack', targetId, targetType, mode }
           },
           save: true
         });
+      // A pawn holding a ranged weapon gets a ranged/melee choice; a melee-only pawn just attacks.
+      const canShoot = !!getRangedWeapon(selectedPawn as never);
+      const offerAttack = (targetId: string, targetType: 'pawn' | 'mob') => {
+        if (!canShoot) {
+          issueAttack(targetId, targetType);
+          return;
+        }
+        equipMenu = {
+          x: e.clientX,
+          y: e.clientY,
+          entries: [
+            { label: 'Target (ranged)', run: () => issueAttack(targetId, targetType, 'ranged') },
+            { label: 'Target (melee)', run: () => issueAttack(targetId, targetType, 'melee') }
+          ]
+        };
+      };
+
+      const targetMob = mobs.find(
+        (m) => m.x === hoverTileX && m.y === hoverTileY && m.isAlive !== false
+      );
+      if (targetMob) {
+        offerAttack(targetMob.id, 'mob');
         return;
       }
       const targetPawn = pawns.find(
@@ -2817,15 +2841,7 @@
           p.isAlive !== false
       );
       if (targetPawn) {
-        // Attack pawn
-        gameState.command({
-          type: 'setPawnDraftTarget',
-          payload: {
-            pawnId: selectedPawn.id,
-            target: { type: 'attack', targetId: targetPawn.id, targetType: 'pawn' }
-          },
-          save: true
-        });
+        offerAttack(targetPawn.id, 'pawn');
         return;
       }
       const pawnId = selectedPawn.id;
