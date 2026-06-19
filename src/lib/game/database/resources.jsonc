@@ -39,7 +39,7 @@
   {
     "id": "heartwood_grove", "displayName": "Heartwood Tree", "subterrain": "tree", "walkable": false,
     "charSpans": [ {"sheet": "plants", "from": 0, "to": 71} ], "fg": [0.48, 0.29, 0.42], "bg": [0.08, 0.05, 0.07], "color": "#7A4B6B",
-    "glow": {"color": [0.62, 0.40, 0.72], "radius": 2.5, "intensity": 0.45, "flicker": false},
+    "glow": {"color": [0.80, 0.46, 0.94], "radius": 2.6, "intensity": 0.52, "flicker": false},
     "spawn": {"subterrains": {"deep_grass": 0.0014, "grass": 0.0006, "dirt": 0.0003}},
     "nodeAmountRange": [2, 4], "designationTypes": ["woodcut", "forage"],
     "interaction": {
@@ -71,7 +71,7 @@
   {
     "id": "ironwood_grove", "displayName": "Ironwood Tree", "subterrain": "tree", "walkable": false,
     "charSpans": [ {"sheet": "plants", "from": 0, "to": 71} ], "fg": [0.23, 0.2, 0.18], "bg": [0.05, 0.04, 0.03], "color": "#3A332E",
-    "glow": {"color": [0.50, 0.62, 0.42], "radius": 2.5, "intensity": 0.40, "flicker": false},
+    "glow": {"color": [0.56, 0.88, 0.50], "radius": 2.6, "intensity": 0.52, "flicker": false},
     "spawn": {"subterrains": {"deep_grass": 0.0014, "dirt": 0.0005, "rocky": 0.0008}},
     "nodeAmountRange": [2, 4], "designationTypes": ["woodcut", "forage"],
     "interaction": {
@@ -958,7 +958,7 @@
     "fg"              : [0.86, 0.52, 0.33],
     "bg"              : [0.1, 0.06, 0.03],
     "color"           : "#DB8554",
-    "spawn"           : { "subterrains": {"moss": 0.014, "mud": 0.012, "deep_grass": 0.01, "dirt": 0.005} },
+    "spawn"           : { "subterrains": {"tree": 0.03, "deep_grass": 0.024, "moss": 0.016, "mud": 0.012, "dirt": 0.005} },
     "nodeAmountRange" : [2, 5],
     "designationTypes": ["harvest"],
     "interaction"     : {
@@ -1016,7 +1016,7 @@
     "bg"              : [0.06, 0.06, 0.05],
     "color"           : "#8C454F",
     "spawn"           : {
-      "subterrains": {"bush": 0.22, "deep_grass": 0.09, "grass": 0.06, "moss": 0.04, "scrubland": 0.03}
+      "subterrains": {"bush": 0.12, "deep_grass": 0.04, "grass": 0.03, "moss": 0.02, "scrubland": 0.015}
     },
     "nodeAmountRange" : [3, 7],
     "designationTypes": ["harvest"],
@@ -1042,7 +1042,7 @@
     "fg"              : [0.82, 0.68, 0.12],
     "bg"              : [0.1, 0.08, 0.02],
     "color"           : "#D1AD1F",
-    "spawn"           : { "subterrains": {"savanna": 0.012, "tall_grass": 0.008, "grass": 0.004, "dirt": 0.002} },
+    "spawn"           : { "subterrains": {"savanna": 0.022, "tall_grass": 0.016, "grass": 0.008, "dirt": 0.002} },
     "nodeAmountRange" : [3, 7],
     "designationTypes": ["harvest"],
     "interaction"     : {
@@ -1067,7 +1067,7 @@
     "fg"              : [0.75, 0.6, 0.14],
     "bg"              : [0.09, 0.07, 0.02],
     "color"           : "#BF9924",
-    "spawn"           : { "subterrains": {"tall_grass": 0.009, "grass": 0.005, "riverbank": 0.003, "moss": 0.002} },
+    "spawn"           : { "subterrains": {"tall_grass": 0.016, "grass": 0.009, "riverbank": 0.003, "moss": 0.002} },
     "nodeAmountRange" : [2, 5],
     "designationTypes": ["harvest"],
     "interaction"     : {
