@@ -51,7 +51,6 @@
   import { buildingService } from '$lib/game/services/BuildingService.js';
   import { resolveCharSpans, BIOMES, SUBTERRAINS } from '$lib/game/core/Terrains.js';
   import { resourceObjectService } from '$lib/game/services/ResourceObjectService.js';
-  import { GasField, GAS_EFFECTS, type GasType } from '$lib/components/UI/gameCanvas/gasField';
   import { itemService } from '$lib/game/services/ItemService.js';
   import {
     getRefuelRequirements,
@@ -118,11 +117,6 @@
 
   let canvas: HTMLCanvasElement;
   let designCanvas: HTMLCanvasElement;
-  let gasCanvas: HTMLCanvasElement;
-  // Brogue/Qud-style gas-diffusion overlay for lair smoke/miasma/bloodmist (gasField.ts). Stepped +
-  // drawn from the render loop; emits from on-screen lair tiles. Cosmetic, renderer-only.
-  const gasField = new GasField();
-  let _gasStepAccum = 0; // ms accumulator → fixed-rate diffusion step
   // HUD sprite icons + their shared-cache painting live in gameCanvas/{hudSpriteIcon,spriteSheets}.
   // Current day/night ambient, mirrored from the WebGL renderer so the Canvas2D
   // designation overlay can be darkened/tinted to match the lit scene beneath it.
@@ -1166,9 +1160,6 @@
           if ((res[rid] ?? 0) <= 0) continue;
           const eff = resourceObjectService.getById(rid)?.particleEffect;
           if (!eff) continue;
-          // Gas effects (smoke/miasma/bloodmist) are simulated + drawn by the gas field, not as CSS
-          // particles — only the discrete-object effects (flies, feathers) become CSS overlays here.
-          if (GAS_EFFECTS.has(eff)) break;
           newParticles.push({
             id: `${tx},${ty}`,
             left: (tx - viewX + 0.5) * tW,
@@ -1297,59 +1288,6 @@
       _floatTextKey = floatKey;
       worldEffects.setFloatingTextOverlays(newFloats);
     }
-  }
-
-  /**
-   * Brogue/Qud-style gas overlay: emit from on-screen lair gas-tiles + run one diffusion step at a
-   * fixed cadence, then paint the field onto the gas canvas every frame. Called from the render loop.
-   */
-  const GAS_STEP_MS = 85;
-  function tickGas(dtMs: number) {
-    if (!gasCanvas || !container || worldMap.length === 0) return;
-    const W = container.clientWidth;
-    const H = container.clientHeight;
-    const mapW = worldMap[0]?.length ?? 0;
-    const mapH = worldMap.length;
-    gasField.setWidth(mapW);
-
-    _gasStepAccum += dtMs;
-    if (_gasStepAccum >= GAS_STEP_MS) {
-      _gasStepAccum = 0;
-      // Emit from visible lair tiles whose particleEffect is a gas.
-      const gx0 = Math.max(0, Math.floor(viewX));
-      const gy0 = Math.max(0, Math.floor(viewY));
-      const gx1 = Math.min(mapW - 1, Math.ceil(viewX + W / tileWidth));
-      const gy1 = Math.min(mapH - 1, Math.ceil(viewY + H / tileHeight));
-      for (let ty = gy0; ty <= gy1; ty++) {
-        const row = worldMap[ty];
-        if (!row) continue;
-        for (let tx = gx0; tx <= gx1; tx++) {
-          const rs = row[tx]?.resources;
-          if (!rs) continue;
-          for (const rid in rs) {
-            if ((rs[rid] ?? 0) <= 0) continue;
-            const eff = resourceObjectService.getById(rid)?.particleEffect;
-            if (eff && GAS_EFFECTS.has(eff)) gasField.emit(eff as GasType, tx, ty);
-            if (eff) break;
-          }
-        }
-      }
-      gasField.step(mapH);
-    }
-
-    // Paint the field every frame (cheap — a few hundred cells at most).
-    const dpr = window.devicePixelRatio || 1;
-    const bw = Math.round(W * dpr);
-    const bh = Math.round(H * dpr);
-    if (gasCanvas.width !== bw || gasCanvas.height !== bh) {
-      gasCanvas.width = bw;
-      gasCanvas.height = bh;
-    }
-    const ctx = gasCanvas.getContext('2d');
-    if (!ctx) return;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, W, H);
-    gasField.draw(ctx, viewX, viewY, tileWidth, tileHeight, W, H);
   }
 
   // Rebuilding the full base grid + bumping the terrain version is expensive at
@@ -2091,7 +2029,6 @@
       updateCameraFollow(dt);
       updateCameraFollowMob(dt);
       updateWorldEffectOverlays();
-      tickGas(dt * 1000);
       // Coalesced sim-driven terrain rebuild: at most once per TERRAIN_REBUILD_MIN_MS instead
       // of the full 38k-tile rebuild every frame that resource regrowth/harvest would force.
       if (_terrainDirty && now - _lastTerrainBuild >= TERRAIN_REBUILD_MIN_MS) {
@@ -2845,7 +2782,6 @@
   on:contextmenu={handleContextMenu}
 >
   <canvas bind:this={canvas}></canvas>
-  <canvas bind:this={gasCanvas} class="gas-layer"></canvas>
   <canvas bind:this={designCanvas} class="desig-layer"></canvas>
 
   {#if errorMsg}
@@ -3215,19 +3151,6 @@
     pointer-events: none;
     z-index: 1;
     image-rendering: pixelated;
-  }
-  /* Gas-diffusion overlay (lair smoke/miasma/bloodmist). Sits over the terrain but under the
-     designation/zone overlay. The CSS blur softens the blocky cellular tiles into rolling cloud
-     (GPU-composited — far cheaper than per-cell canvas blur). */
-  .gas-layer {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    z-index: 1;
-    filter: blur(3px);
   }
   canvas {
     display: block;

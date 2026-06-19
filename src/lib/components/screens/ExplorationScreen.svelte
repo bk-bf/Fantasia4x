@@ -6,68 +6,22 @@
   // Scale: a forested map has tens of thousands of nodes, so this does two things to stay cheap:
   //   1. Virtualised rendering — only the rows inside the scroll viewport become DOM (a windowed
   //      slice over a tall spacer), so the full 20k+ list scrolls smoothly without 20k DOM nodes.
-  //   2. Throttled rebuild — the O(map) scan runs at most once every REFRESH_TURNS turns (cached in
-  //      `rows`), not every tick. And because the tab only mounts while open, the scan/effect don't
-  //      run at all when you're not looking at it — it unloads itself.
-  import { gameState } from '$lib/stores/gameState';
+  //   2. Background-cached rows — the O(map) scan lives in the `discoveredResources` store, which
+  //      rebuilds lazily in idle time on a turn-bucket dirty flag (warmed from game start in
+  //      +page.svelte). Opening the tab just reads the ready cache instead of scanning on mount, so
+  //      there's no click-to-open delay. `ensureDiscoveredResources()` is a first-open safety net.
+  import { onMount } from 'svelte';
   import { uiState } from '$lib/stores/uiState';
-  import { resourceObjectService } from '$lib/game/services/ResourceObjectService';
+  import {
+    discoveredResources,
+    ensureDiscoveredResources,
+    type ResourceRow
+  } from '$lib/stores/discoveredResources';
   import SearchBar from '../UI/SearchBar.svelte';
 
-  interface ResourceRow {
-    id: string;
-    name: string;
-    color: string;
-    type: string; // work category (woodcutting / mining / foraging …)
-    amount: number;
-    x: number;
-    y: number;
-  }
+  onMount(ensureDiscoveredResources);
 
-  function rgb(c: [number, number, number]): string {
-    return `rgb(${Math.round(c[0] * 255)}, ${Math.round(c[1] * 255)}, ${Math.round(c[2] * 255)})`;
-  }
-
-  // One row per resource present on each discovered tile, sorted by name then position.
-  function buildRows(): ResourceRow[] {
-    const out: ResourceRow[] = [];
-    for (const line of $gameState.worldMap ?? []) {
-      for (const t of line) {
-        if (!t.discovered || !t.resources) continue;
-        for (const id in t.resources) {
-          const amount = t.resources[id];
-          if (amount <= 0) continue;
-          const def = resourceObjectService.getById(id);
-          out.push({
-            id,
-            name: def?.displayName ?? id.replace(/_/g, ' '),
-            color: def?.fg ? rgb(def.fg) : 'var(--text-dim)',
-            // Lairs read as "lair" (not their harvest workCategory "foraging") — clearer, and lets
-            // the search term "lair" find every den/nest/warren even though their names don't contain it.
-            type: def?.lair ? 'lair' : (def?.interaction?.workCategory ?? '—'),
-            amount,
-            x: t.x,
-            y: t.y
-          });
-        }
-      }
-    }
-    out.sort((a, b) => a.name.localeCompare(b.name) || a.x - b.x || a.y - b.y);
-    return out;
-  }
-
-  // Cached scan. The effect re-runs on every $gameState change but bails in O(1) unless the turn has
-  // advanced into a new REFRESH_TURNS bucket — so the heavy scan happens ~once per 15 turns while the
-  // tab is open, and never while it's closed (the component is destroyed).
-  const REFRESH_TURNS = 15;
-  let rows = $state<ResourceRow[]>([]);
-  let lastBucket = -1;
-  $effect(() => {
-    const bucket = Math.floor(($gameState.turn ?? 0) / REFRESH_TURNS);
-    if (bucket === lastBucket) return;
-    lastBucket = bucket;
-    rows = buildRows();
-  });
+  let rows = $derived($discoveredResources);
 
   let typeCount = $derived(new Set(rows.map((r) => r.id)).size);
   // Total node count per resource type — shown (uniformly) on every row of that type, instead of the

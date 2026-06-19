@@ -24,8 +24,11 @@ interface UIState {
   activeZoneInstanceId: string | null;
   /** Screen to return to after zone painting or blueprint placement ends. */
   _screenBeforeDesignation: Screen | null;
-  /** Request the map to pan (and zoom) to a specific tile. Cleared after handling. */
-  mapFocusRequest: { x: number; y: number } | null;
+  /** Request the map to pan (and zoom) to a specific tile. Cleared after handling. `selectTile`
+   *  means "also select whatever is on that tile" (click-here semantics — used by EXPLORE jumps and
+   *  Chronicle event locations). Callers that select a specific entity by id themselves (Pawn/Entity
+   *  tabs) pass false so the camera only pans and their id-selection isn't overridden by a tile-pick. */
+  mapFocusRequest: { x: number; y: number; selectTile: boolean } | null;
   /** Currently selected pawn id — shared between Pawn Tab and the map canvas. */
   selectedPawnId: string | null;
   /** Currently selected mob id — shared between Entity Tab and the map canvas. */
@@ -112,14 +115,27 @@ function createUIState() {
         _screenBeforeDesignation: null
       })),
 
-    focusMapOn: (x: number, y: number) =>
-      update((state) => ({ ...state, mapFocusRequest: { x, y } })),
+    focusMapOn: (x: number, y: number, selectTile = true) =>
+      update((state) => ({ ...state, mapFocusRequest: { x, y, selectTile } })),
 
     clearMapFocus: () => update((state) => ({ ...state, mapFocusRequest: null })),
 
-    selectPawn: (id: string | null) => update((state) => ({ ...state, selectedPawnId: id })),
+    // Pawn and mob selection are mutually exclusive — selecting one clears the other at the source
+    // of truth, so every consumer (map canvas, Pawn/Entity tabs) sees a single live selection no
+    // matter which one triggered it.
+    selectPawn: (id: string | null) =>
+      update((state) => ({
+        ...state,
+        selectedPawnId: id,
+        selectedMobId: id ? null : state.selectedMobId
+      })),
 
-    selectMob: (id: string | null) => update((state) => ({ ...state, selectedMobId: id })),
+    selectMob: (id: string | null) =>
+      update((state) => ({
+        ...state,
+        selectedMobId: id,
+        selectedPawnId: id ? null : state.selectedPawnId
+      })),
 
     setFollowPawn: (id: string | null) =>
       update((state) => ({ ...state, cameraFollowPawnId: id, cameraFollowMobId: null })),

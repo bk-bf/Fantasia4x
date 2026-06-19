@@ -21,6 +21,9 @@
   import { autohideScroll } from '$lib/actions/autohideScroll';
   import { uiState } from '$lib/stores/uiState';
   import { gameState, storeReady, bootReveal, isGameOver } from '$lib/stores/gameState';
+  // Side-effect import: starts the EXPLORE tab's background resource-ledger cache from game start, so
+  // opening the tab reads a ready list instead of scanning the whole map on the click path.
+  import '$lib/stores/discoveredResources';
   import { gameCoordinator } from '$lib/game/systems/GameCoordinator';
   import {
     environmentService,

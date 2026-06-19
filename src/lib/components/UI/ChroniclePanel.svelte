@@ -60,13 +60,16 @@
     if (entry.type === 'combat' && entry.combatBreakdown && entry.combatBreakdown.length > 0) {
       expandedId = expandedId === entry.id ? null : entry.id;
     }
-    // Focus map on the event location
+    // Focus map on the event location. If the entry names an entity we select it by id below, so pan
+    // only (selectTile=false) to avoid the tile-pick overriding that id; otherwise let the jump
+    // select-by-tile (click-here semantics) so the location still gets a highlight.
+    const willSelectEntity = !!(entry.entityIds && entry.entityIds.length > 0);
     if (entry.focusX !== undefined && entry.focusY !== undefined) {
-      uiState.focusMapOn(entry.focusX, entry.focusY);
+      uiState.focusMapOn(entry.focusX, entry.focusY, !willSelectEntity);
     }
     // Select first entity involved
-    if (entry.entityIds && entry.entityIds.length > 0) {
-      const firstId = entry.entityIds[0];
+    if (willSelectEntity) {
+      const firstId = entry.entityIds![0];
       // Heuristic: pawn IDs usually don't start with 'mob-'
       if (firstId.startsWith('mob-')) {
         uiState.selectMob(firstId);
