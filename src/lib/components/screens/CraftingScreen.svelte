@@ -81,8 +81,11 @@
     'METAL',
     'LEATHER',
     'TOOLS',
+    'PACKS',
     'WEAPONS',
-    'ARCANE',
+    'ARMOR',
+    'MAGIC WEAPONS',
+    'MAGIC GEAR',
     'GOODS',
     'MEDICINE'
   ];
@@ -105,12 +108,19 @@
     // (salted/dried) share category 'meat' but *consume* meat via a dynamicRecipe.
     const consumesMeat = !!recipeOf(item.id)?.dynamicRecipe;
     if (item.isCarcass || (c === 'meat' && !consumesMeat)) return 'BUTCHERING';
-    // §M magic line — attuned gems, jewelry (rings/amulets/crowns) and arcane staves group together,
-    // ahead of the type checks so an arcane staff lands here, not under WEAPONS.
-    if (c === 'jewelry' || c === 'gem' || c === 'magic_gem' || item.weaponProperties?.arcane)
-      return 'ARCANE';
+    // §M magic, split in two (checked before the type/material fallbacks):
+    //   • arcane staves → MAGIC WEAPONS (caught before WEAPONS);
+    //   • jewelry (rings/amulets/crowns) + cut/attuned gems → MAGIC GEAR.
+    if (item.weaponProperties?.arcane) return 'MAGIC WEAPONS';
+    if (c === 'jewelry' || c === 'gem' || c === 'magic_gem' || item.grantsConditions?.length)
+      return 'MAGIC GEAR';
+    // Worn carry containers (packs, quivers, pouches, tool rolls) are type:tool but belong with gear,
+    // not hand tools — split them out by their inventory bonus before the tool check.
+    if (item.inventoryBonus) return 'PACKS';
     if (t === 'tool') return 'TOOLS';
     if (t === 'weapon') return 'WEAPONS';
+    // Worn protection (helmets, shields, body/limb armour, cloaks) — its own group, not GOODS/LEATHER.
+    if (t === 'armor') return 'ARMOR';
     // Cooking = everything else edible/drinkable, incl. preserved meat.
     if (t === 'food' || ['food', 'cooking', 'drink', 'meat'].includes(c)) return 'COOKING';
     return CAT_GROUP[c] ?? 'GOODS';
