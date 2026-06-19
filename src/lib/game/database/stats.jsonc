@@ -51,7 +51,7 @@
         "description": "resistance to stagger (× consciousness; dazed = easier to knock down)"
     },
     {
-        "id"         : "aggro_range",
+        "id"         : "vision_range",
         "category"   : "combat",
         "primaryStat": "perception",
         "formula"    : "(1.0 + (PER − 10) × 0.05) × sight",

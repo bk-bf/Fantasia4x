@@ -14,7 +14,7 @@ import { getCreatureById } from './Creatures';
 const VISION_LIGHT_FLOOR = 0.35;
 
 /** Base sight range in tiles from perception — the SAME formula for pawns and mobs (unifies the old
- *  pawn `aggro_range` path and the per-creature `def.stats.visionRange`; matches the latter exactly,
+ *  pawn `vision_range` path and the per-creature `def.stats.visionRange`; matches the latter exactly,
  *  so entity daytime vision is unchanged). */
 export function baseVisionRange(perception: number): number {
   return Math.round(2 + perception * 0.65);

@@ -876,6 +876,7 @@
     "fg"              : [0.63, 0.38, 0.82],
     "bg"              : [0.08, 0.05, 0.1],
     "color"           : "#A060D0",
+    "glow"            : {"color": [0.66, 0.42, 0.84], "radius": 1.8, "intensity": 0.08, "flicker": false},
     "spawn"           : {
       // Intentionally sparse — these are high-value arcane nodes. Matches the other crystal nodes
       // (cave/rocky/cliff) so the seven minerals spawn at comparable rates.
@@ -1011,9 +1012,9 @@
     "subterrain"      : "bush",
     "walkable"        : true,
     "charSpans"       : [ {"sheet": "plants", "id": 41} ],
-    "fg"              : [0.75, 0.18, 0.22],
-    "bg"              : [0.07, 0.05, 0.06],
-    "color"           : "#BF2E38",
+    "fg"              : [0.55, 0.27, 0.31],
+    "bg"              : [0.06, 0.06, 0.05],
+    "color"           : "#8C454F",
     "spawn"           : {
       "subterrains": {"bush": 0.22, "deep_grass": 0.09, "grass": 0.06, "moss": 0.04, "scrubland": 0.03}
     },
@@ -1631,6 +1632,7 @@
   {
     "id": "ruby_node", "displayName": "Ruby Crystals", "subterrain": "crystal_formation", "walkable": false,
     "charSpans": [ {"sheet": "tiles", "from": 48, "to": 55} ], "fg": [0.78, 0.12, 0.23], "bg": [0.1, 0.04, 0.05], "color": "#C81E3A",
+    "glow": {"color": [0.85, 0.22, 0.32], "radius": 1.8, "intensity": 0.08, "flicker": false},
     "spawn": {"subterrains": {"cave": 0.0025, "rocky": 0.0025, "cliff": 0.002}},
     "nodeAmountRange": [1, 3], "designationTypes": ["harvest"],
     "interaction": {
@@ -1644,6 +1646,7 @@
   {
     "id": "sapphire_node", "displayName": "Sapphire Crystals", "subterrain": "crystal_formation", "walkable": false,
     "charSpans": [ {"sheet": "tiles", "from": 48, "to": 55} ], "fg": [0.12, 0.31, 0.78], "bg": [0.04, 0.05, 0.1], "color": "#1E4FC8",
+    "glow": {"color": [0.25, 0.42, 0.85], "radius": 1.8, "intensity": 0.08, "flicker": false},
     "spawn": {"subterrains": {"cave": 0.0025, "rocky": 0.0025, "cliff": 0.002}},
     "nodeAmountRange": [1, 3], "designationTypes": ["harvest"],
     "interaction": {
@@ -1657,6 +1660,7 @@
   {
     "id": "emerald_node", "displayName": "Emerald Crystals", "subterrain": "crystal_formation", "walkable": false,
     "charSpans": [ {"sheet": "tiles", "from": 48, "to": 55} ], "fg": [0.12, 0.66, 0.35], "bg": [0.04, 0.09, 0.05], "color": "#1EA85A",
+    "glow": {"color": [0.25, 0.78, 0.46], "radius": 1.8, "intensity": 0.08, "flicker": false},
     "spawn": {"subterrains": {"cave": 0.0025, "rocky": 0.0025, "cliff": 0.002}},
     "nodeAmountRange": [1, 3], "designationTypes": ["harvest"],
     "interaction": {
@@ -1670,6 +1674,7 @@
   {
     "id": "topaz_node", "displayName": "Topaz Crystals", "subterrain": "crystal_formation", "walkable": false,
     "charSpans": [ {"sheet": "tiles", "from": 48, "to": 55} ], "fg": [0.78, 0.64, 0.12], "bg": [0.1, 0.08, 0.04], "color": "#C8A41E",
+    "glow": {"color": [0.86, 0.72, 0.25], "radius": 1.8, "intensity": 0.08, "flicker": false},
     "spawn": {"subterrains": {"cave": 0.0025, "rocky": 0.0025, "cliff": 0.002}},
     "nodeAmountRange": [1, 3], "designationTypes": ["harvest"],
     "interaction": {
@@ -1683,6 +1688,7 @@
   {
     "id": "citrine_node", "displayName": "Citrine Crystals", "subterrain": "crystal_formation", "walkable": false,
     "charSpans": [ {"sheet": "tiles", "from": 48, "to": 55} ], "fg": [0.78, 0.58, 0.12], "bg": [0.1, 0.07, 0.04], "color": "#C8941E",
+    "glow": {"color": [0.86, 0.66, 0.25], "radius": 1.8, "intensity": 0.08, "flicker": false},
     "spawn": {"subterrains": {"cave": 0.0025, "rocky": 0.0025, "cliff": 0.002}},
     "nodeAmountRange": [1, 3], "designationTypes": ["harvest"],
     "interaction": {
@@ -1696,6 +1702,7 @@
   {
     "id": "moonstone_node", "displayName": "Moonstone Crystals", "subterrain": "crystal_formation", "walkable": false,
     "charSpans": [ {"sheet": "tiles", "from": 48, "to": 55} ], "fg": [0.66, 0.71, 0.78], "bg": [0.08, 0.09, 0.1], "color": "#A8B4C0",
+    "glow": {"color": [0.76, 0.81, 0.88], "radius": 1.8, "intensity": 0.08, "flicker": false},
     "spawn": {"subterrains": {"cave": 0.0025, "rocky": 0.0025, "cliff": 0.002}},
     "nodeAmountRange": [1, 3], "designationTypes": ["harvest"],
     "interaction": {
