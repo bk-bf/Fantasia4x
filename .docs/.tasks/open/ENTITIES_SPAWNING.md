@@ -2,7 +2,7 @@
 
 # ENTITY SPAWNING (Mobs, Animals, Taming & Husbandry)
 
-> **Related:** [ROADMAP](ROADMAP.md) · [COMBAT-SYSTEM](../archive/COMBAT-SYSTEM-2026-06-11.md) (archived) · [PRODUCTION-CHAIN-EXPANSION](../archive/PRODUCTION-CHAIN-EXPANSION-2026-06-12.md) (archived) · [PRODUCTION-CHAIN-II](PRODUCTION-CHAIN-II.md) (§L logistics) · [SOCIAL-LAYER](SOCIAL-LAYER.md) · [SEASONS_WEATHER](../archive/SEASONS_WEATHER-2026-06-17.md) (archived) · [game/DESIGN](../../game/DESIGN.md) · [game/ARCHITECTURE](../../game/ARCHITECTURE.md)
+> **Related:** [ROADMAP](ROADMAP.md) · [COMBAT-SYSTEM](../archive/COMBAT-SYSTEM-2026-06-11.md) (archived) · [PRODUCTION-CHAIN-EXPANSION](../archive/PRODUCTION-CHAIN-EXPANSION-2026-06-12.md) (archived) · [PRODUCTION-CHAIN-II](PRODUCTION-CHAIN-II.md) (§L logistics) · [PRODUCTION-CHAIN-III](PRODUCTION-CHAIN-III.md) (§E carcass yields, beast hides, wool/leather split) · [SOCIAL-LAYER](SOCIAL-LAYER.md) · [SEASONS_WEATHER](../archive/SEASONS_WEATHER-2026-06-17.md) (archived) · [game/DESIGN](../../game/DESIGN.md) · [game/ARCHITECTURE](../../game/ARCHITECTURE.md)
 
 ## Status
 

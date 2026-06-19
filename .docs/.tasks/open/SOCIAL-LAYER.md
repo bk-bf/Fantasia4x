@@ -2,7 +2,7 @@
 
 # PAWN SOCIAL LAYER & MOOD DEPTH
 
-> **Related:** [ROADMAP](ROADMAP.md) · [COMBAT-SYSTEM](../archive/COMBAT-SYSTEM-2026-06-11.md) · [RACE-SYSTEM](RACE-SYSTEM.md) · [game/DESIGN](../../game/DESIGN.md) · [LIVING-WORLD](LIVING-WORLD.md)
+> **Related:** [ROADMAP](ROADMAP.md) · [COMBAT-SYSTEM](../archive/COMBAT-SYSTEM-2026-06-11.md) · [RACE-SYSTEM](RACE-SYSTEM.md) · [PRODUCTION-CHAIN-III](PRODUCTION-CHAIN-III.md) (§F armour / royalty outfits) · [PRODUCTION-CHAIN-II](PRODUCTION-CHAIN-II.md) (§M magic regalia) · [game/DESIGN](../../game/DESIGN.md) · [LIVING-WORLD](LIVING-WORLD.md)
 
 ## Status
 
@@ -161,8 +161,46 @@ New `socialService` singleton:
 
 ---
 
+## Prestige & Regalia (equipment-driven status)
+
+> Added 2026-06-20. Drives the "impressive gear" axis [PRODUCTION-CHAIN-III §F](PRODUCTION-CHAIN-III.md)
+> hooks into. Prestige is a **social/mood** property, so it lives here, not in the production spec.
+
+Every equippable item gains a **`prestige`** value (how impressive it makes the wearer look). A pawn's
+total prestige = sum of worn-item prestige (× quality / Famed / material). Prestige is the deliberate
+**counterpart to the encumbrance trade-off**: heavy combat plate protects but rarely impresses; a
+**royal/leader outfit** impresses but barely protects — the *same* fork shape as the helmet-vs-magic-
+diadem choice already shipped in [PRODUCTION-CHAIN-II §M](PRODUCTION-CHAIN-II.md) (a buff crown costs
+your helmet slot).
+
+### What prestige does (mood/social effects)
+
+| Effect | Detail |
+| ------ | ------ |
+| **Wearer mood** | a well-appointed pawn gets a small standing mood modifier ("finely equipped"); a ragged one a penalty — feeds the mood-modifier list above |
+| **Leadership / social weight** | high-prestige pawns get a bonus in social events (argument/bonding/mentorship rolls) and, later, as colony **leader/diplomat** (trade, faction parley) |
+| **Race/faction reaction** | prestige reads into [RACE-SYSTEM](RACE-SYSTEM.md) disposition — a bedecked envoy fares better with `wary` races |
+
+### Royalty / leader outfits
+
+A line of **prestige-first equipment** (crown-cloak, ceremonial plate, regal robes, circlet-of-office)
+that occupies armour slots but trades defence/encumbrance for **high `prestige`**. Some royal pieces
+double as the §M magic-regalia slots (a `sovereign_crown` is *both* a buff crown and a prestige piece) —
+so dressing a leader is a real loadout choice, not free stat-stacking. Items defined in
+[PRODUCTION-CHAIN-III §F](PRODUCTION-CHAIN-III.md); their **effect** (mood + social) resolves here.
+
+### Implementation hook
+
+- [ ] `prestige` field on `Item.armorProperties` (set in PRODUCTION-CHAIN-III item data).
+- [ ] `SocialService.getPrestige(pawn)` — sum worn prestige × quality/Famed/material multiplier.
+- [ ] Standing mood modifier from prestige band (ragged → finely-equipped); feed the mood-modifier list.
+- [ ] Prestige term in social-event rolls + (later) leader/diplomat selection and faction reaction.
+
+---
+
 ## Open Questions
 
 - [ ] Romantic relationships? (Celestia had this; deferred to Phase 2)
+- [ ] Prestige: flat per-item field vs derived (material + quality + enchants)? (capture both; lean flat field tuned by data)
 - [ ] Social manipulation / charisma checks in events? (Phase 2)
 - [ ] Do traits conflict with each other? (yes — generation prevents Stoic + Empathetic)

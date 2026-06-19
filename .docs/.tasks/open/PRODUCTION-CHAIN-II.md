@@ -2,7 +2,7 @@
 
 # PRODUCTION CHAIN II — Quality, Magic, Logistics & Farming
 
-> **Related:** [ROADMAP](ROADMAP.md) · [ENTITIES_SPAWNING](ENTITIES_SPAWNING.md) (logistics + husbandry) · [MAGIC-SKILLS](MAGIC-SKILLS.md) (foci materials) · [RESEARCH-ENHANCEMENT](RESEARCH-ENHANCEMENT.md) (gating) · [RANGED-COMBAT](RANGED-COMBAT.md) · archived: [PRODUCTION-CHAIN-EXPANSION](../archive/PRODUCTION-CHAIN-EXPANSION-2026-06-12.md) (Pass I) · [EQUIPMENT-EXPANSION](../archive/EQUIPMENT-EXPANSION.md) (materialBonuses) · [SEASONS_WEATHER](../archive/SEASONS_WEATHER-2026-06-17.md) (growing seasons) · [game/DESIGN](../../game/DESIGN.md)
+> **Related:** [ROADMAP](ROADMAP.md) · [PRODUCTION-CHAIN-III](PRODUCTION-CHAIN-III.md) (medieval depth, magic ages, armour, famed items — the follow-on pass) · [ENTITIES_SPAWNING](ENTITIES_SPAWNING.md) (logistics + husbandry) · [MAGIC-SKILLS](MAGIC-SKILLS.md) (foci materials) · [RESEARCH-ENHANCEMENT](RESEARCH-ENHANCEMENT.md) (gating) · [RANGED-COMBAT](RANGED-COMBAT.md) · archived: [PRODUCTION-CHAIN-EXPANSION](../archive/PRODUCTION-CHAIN-EXPANSION-2026-06-12.md) (Pass I) · [EQUIPMENT-EXPANSION](../archive/EQUIPMENT-EXPANSION.md) (materialBonuses) · [SEASONS_WEATHER](../archive/SEASONS_WEATHER-2026-06-17.md) (growing seasons) · [game/DESIGN](../../game/DESIGN.md)
 
 ## Status
 
