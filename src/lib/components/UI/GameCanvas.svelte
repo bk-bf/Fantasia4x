@@ -193,6 +193,12 @@
   let _progressOverlayKey = '';
   let _campfireOverlayKey = '';
   let _particleOverlayKey = '';
+  // Lair particle-effect tiles, CACHED. Scanning the visible tile-rect every frame is O(map) when
+  // zoomed out (the whole map is "visible") — a serious per-frame tax. Lairs change only on
+  // regen/grow/destroy, so we scan the full map rarely (worldMap swap + a slow timer) and just
+  // project this small list each frame.
+  let _lairTiles: { x: number; y: number; effect: string }[] = [];
+  let _lairScanAt = 0;
   let _healthOverlayKey = '';
   let _draftOverlayKey = '';
   let _floatTextKey = '';
@@ -796,7 +802,14 @@
   // Includes ONLY fields buildGameGrid draws (position, type, status, deconstruct,
   // paused). Deliberately excludes fuel/lit so a burning campfire's per-tick fuel
   // countdown does not force a full terrain rebuild every frame.
+  let _lastWorldMapRef: unknown = null;
   const unsubState = gameState.subscribe((s) => {
+    // World regen swaps the worldMap reference → force an immediate lair-tile rescan next frame
+    // (in-place tile mutations keep the same ref and are caught by the ~4s timer instead).
+    if (s.worldMap !== _lastWorldMapRef) {
+      _lastWorldMapRef = s.worldMap;
+      _lairScanAt = 0;
+    }
     worldMap = s.worldMap ?? [];
     pawns = s.pawns ?? [];
     buildings = s.buildings ?? [];
@@ -1142,33 +1155,14 @@
       worldEffects.setCampfireOverlays(newCampfire);
     }
 
-    // Ambient per-tile particle effects (e.g. a goblin/orc warren's smoke). Scan ONLY the visible
-    // tile rect (bounded ~viewport size) for resources whose def declares a `particleEffect` — never
-    // the whole map. One emitter per affected tile, on-screen only.
+    // Lair particle effects: project the CACHED lair tiles (not a per-frame map scan) to screen,
+    // keeping only the on-screen ones. O(#lairs) — a handful — regardless of zoom.
     const newParticles: { id: string; left: number; top: number; effect: string }[] = [];
-    const px0 = Math.max(0, Math.floor(viewX));
-    const py0 = Math.max(0, Math.floor(viewY));
-    const px1 = Math.min((worldMap[0]?.length ?? 0) - 1, Math.ceil(viewX + W / tW));
-    const py1 = Math.min(worldMap.length - 1, Math.ceil(viewY + H / tH));
-    for (let ty = py0; ty <= py1; ty++) {
-      const trow = worldMap[ty];
-      if (!trow) continue;
-      for (let tx = px0; tx <= px1; tx++) {
-        const res = trow[tx]?.resources;
-        if (!res) continue;
-        for (const rid in res) {
-          if ((res[rid] ?? 0) <= 0) continue;
-          const eff = resourceObjectService.getById(rid)?.particleEffect;
-          if (!eff) continue;
-          newParticles.push({
-            id: `${tx},${ty}`,
-            left: (tx - viewX + 0.5) * tW,
-            top: (ty - viewY + 0.5) * tH, // tile CENTER — effects anchor here and rise/fall around it
-            effect: eff
-          });
-          break; // one emitter per tile
-        }
-      }
+    for (const lt of _lairTiles) {
+      const left = (lt.x - viewX + 0.5) * tW;
+      const top = (lt.y - viewY + 0.5) * tH; // tile CENTER — effects anchor + rise/fall around it
+      if (left < 0 || top < 0 || left > W || top > H) continue;
+      newParticles.push({ id: `${lt.x},${lt.y}`, left, top, effect: lt.effect });
     }
     const particleKey = newParticles
       .map((o) => `${o.id}:${Math.round(o.left)},${Math.round(o.top)}:${o.effect}`)
@@ -1288,6 +1282,30 @@
       _floatTextKey = floatKey;
       worldEffects.setFloatingTextOverlays(newFloats);
     }
+  }
+
+  /** Full-map scan for tiles carrying a resource with a `particleEffect` → cached in `_lairTiles`.
+   *  Cheap despite scanning the whole map (most tiles skip on the `!resources` guard); run rarely
+   *  (worldMap swap + a ~4s timer) so newly-grown / destroyed lairs are picked up without per-frame cost. */
+  function rebuildLairTiles() {
+    const out: { x: number; y: number; effect: string }[] = [];
+    for (let y = 0; y < worldMap.length; y++) {
+      const row = worldMap[y];
+      if (!row) continue;
+      for (let x = 0; x < row.length; x++) {
+        const res = row[x]?.resources;
+        if (!res) continue;
+        for (const rid in res) {
+          if ((res[rid] ?? 0) <= 0) continue;
+          const eff = resourceObjectService.getById(rid)?.particleEffect;
+          if (eff) {
+            out.push({ x, y, effect: eff });
+            break;
+          }
+        }
+      }
+    }
+    _lairTiles = out;
   }
 
   // Rebuilding the full base grid + bumping the terrain version is expensive at
@@ -2028,6 +2046,12 @@
       updateHoverEntity();
       updateCameraFollow(dt);
       updateCameraFollowMob(dt);
+      // Refresh the lair-tile cache occasionally (catches grown/destroyed lairs); projection is
+      // per-frame in updateWorldEffectOverlays but the full-map scan is throttled to ~4s.
+      if (now - _lairScanAt > 4000) {
+        _lairScanAt = now;
+        rebuildLairTiles();
+      }
       updateWorldEffectOverlays();
       // Coalesced sim-driven terrain rebuild: at most once per TERRAIN_REBUILD_MIN_MS instead
       // of the full 38k-tile rebuild every frame that resource regrowth/harvest would force.

@@ -1,9 +1,34 @@
 <!-- WorldEffectsLayer: sits above tiles (z-index 5) but below popup panels (z-index 10).
      All in-world animations and fullscreen shader overlays are docked here.
-     To add a new effect: extend WorldEffectsState in worldEffects.ts and render it below. -->
+
+     ── VISUAL-EFFECT HIERARCHY (three tiers, lowest → highest) ─────────────────────────────────
+       1. GLOW / LIGHTING  — LightingService.collectResourceEmitters bakes per-tile point lights
+          into the WebGL tile-light field (terrain SHADING, not an overlay). Use for: a thing that
+          should LIGHT its surroundings (campfire, lava, glowing grove). Onboard: add a `glow` block
+          to the resource/building def — no render code.
+       2. WEATHER          — WeatherCanvas: one pooled fullscreen 2D-canvas particle field, zoom-
+          reactive (subscribes cameraTileSize → scales count/size). Use for: GLOBAL atmosphere
+          (rain, snow, dust). Onboard: extend the weather data + WeatherCanvas draw modes.
+       3. WORLD EFFECTS    — THIS layer: per-entity / per-tile CSS overlays positioned in screen
+          space by GameCanvas.updateWorldEffectOverlays (which owns viewX/tileWidth). Use for:
+          a LOCAL animation pinned to one tile/entity (Zzz, progress bar, health bar, combat float,
+          lair smoke/flies/fog). Onboard a new effect — reuse these existing circuits:
+            a) add an overlay type + setter to worldEffects.ts (the store);
+            b) populate it in GameCanvas.updateWorldEffectOverlays (project tile→screen px there);
+            c) render + animate it below (CSS keyframes).
+          Lair particle effects additionally read `fxScale` (cameraTileSize / BASE_TILE) so they
+          shrink/grow WITH the map zoom — never giant blobs when zoomed out. -->
 <script lang="ts">
   import { worldEffects } from '$lib/stores/worldEffects';
+  import { cameraTileSize } from '$lib/stores/cameraView';
+  import { gameState } from '$lib/stores/gameState';
+  import { environmentService, getAmbientLight } from '$lib/game/services/EnvironmentService';
   import WeatherCanvas from './WeatherCanvas.svelte';
+
+  // Lair effects are authored at this reference tile size (px); fxScale tracks the live zoom so a
+  // "3-tile-wide" plume stays 3 tiles at any zoom instead of a fixed pixel size (the weather canvas
+  // scales the same way). Clamped so it never vanishes or becomes absurd at the zoom extremes.
+  const BASE_TILE = 20;
 </script>
 
 <div class="world-effects-layer">
@@ -45,7 +70,12 @@
 
   <!-- Ambient per-tile particle effects — grim lair "tells". -->
   {#each $worldEffects.particleOverlays as overlay (overlay.id)}
-    {@const xf = `transform: translate(${overlay.left}px, ${overlay.top}px) translateX(-50%);`}
+    {@const fxScale = Math.max(0.35, Math.min(1.8, $cameraTileSize / BASE_TILE))}
+    <!-- Dim with the day/night cycle so these read as PARTICLES, not light sources — they must not
+         glow in the dark (that's what the separate `glow` lighting tier is for). Floor 0.32 keeps a
+         hint visible at deep night, matching how the terrain stays faintly lit. -->
+    {@const amb = Math.max(0.32, getAmbientLight(environmentService.ambientTurn($gameState)))}
+    {@const xf = `transform: translate(${overlay.left}px, ${overlay.top}px) translateX(-50%) scale(${fxScale}); filter: brightness(${amb});`}
     {#if overlay.effect === 'smoke'}
       <div class="lair-fx lair-smoke" style={xf}>
         <span class="puff p1">▒</span>
@@ -55,6 +85,16 @@
         <span class="puff p5">▒</span>
         <span class="puff p6">░</span>
       </div>
+    {:else if overlay.effect === 'bloodmist'}
+      <div class="lair-fx lair-bloodmist" style={xf}>
+        <span class="fog blood-a"></span>
+        <span class="fog blood-b"></span>
+      </div>
+    {:else if overlay.effect === 'miasma'}
+      <div class="lair-fx lair-miasma" style={xf}>
+        <span class="fog miasma-a"></span>
+        <span class="fog miasma-b"></span>
+      </div>
     {:else if overlay.effect === 'flies'}
       <div class="lair-fx lair-flies" style={xf}>
         <span class="fly f1">·</span>
@@ -63,23 +103,6 @@
         <span class="fly f4">·</span>
         <span class="fly f5">·</span>
         <span class="fly f6">·</span>
-      </div>
-    {:else if overlay.effect === 'bloodmist'}
-      <div class="lair-fx lair-bloodmist" style={xf}>
-        <span class="bmote b1">o</span>
-        <span class="bmote b2">°</span>
-        <span class="bmote b3">O</span>
-        <span class="bmote b4">°</span>
-        <span class="bmote b5">o</span>
-      </div>
-    {:else if overlay.effect === 'miasma'}
-      <div class="lair-fx lair-miasma" style={xf}>
-        <span class="bubble m1">O</span>
-        <span class="bubble m2">o</span>
-        <span class="bubble m3">°</span>
-        <span class="bubble m4">O</span>
-        <span class="bubble m5">o</span>
-        <span class="bubble m6">°</span>
       </div>
     {:else if overlay.effect === 'feathers'}
       <div class="lair-fx lair-feathers" style={xf}>
@@ -289,7 +312,7 @@
     }
   }
 
-  /* Subtle lair smoke — a few faint grey puffs that drift up and dissipate slowly. */
+  /* Lair smoke — soft blurred shade-block haze that drifts up and dissipates. */
   .lair-smoke {
     position: absolute;
     left: 0;
@@ -301,13 +324,12 @@
   .puff {
     position: absolute;
     font-family: 'Courier New', monospace;
-    font-size: 16px;
-    color: #9b958b;
+    font-size: 17px;
+    color: #4f4b45;
     opacity: 0;
-    /* Heavy blur dissolves the block glyph into a soft haze — reads as smoke, not a letter. */
     filter: blur(3px);
-    text-shadow: 0 0 5px #8a847a;
-    animation: smoke-rise 4.2s ease-out infinite;
+    text-shadow: 0 0 6px #3a3833;
+    animation: smoke-rise 4.4s ease-out infinite;
     will-change: transform, opacity;
   }
   .puff.p1 {
@@ -334,26 +356,25 @@
     animation-delay: 3.5s;
     left: 5px;
   }
-  /* Gentle, organic rise: drifts up while widening and thinning, with a slow sideways curl. */
   @keyframes smoke-rise {
     0% {
       opacity: 0;
       transform: translateY(2px) translateX(0) scale(0.7);
     }
     15% {
-      opacity: 0.55;
+      opacity: 0.72;
     }
     45% {
-      opacity: 0.4;
-      transform: translateY(-30px) translateX(6px) scale(1.6);
+      opacity: 0.55;
+      transform: translateY(-44px) translateX(7px) scale(1.7);
     }
     75% {
-      opacity: 0.2;
-      transform: translateY(-58px) translateX(2px) scale(2.4);
+      opacity: 0.3;
+      transform: translateY(-86px) translateX(3px) scale(2.7);
     }
     100% {
       opacity: 0;
-      transform: translateY(-84px) translateX(10px) scale(3.2);
+      transform: translateY(-124px) translateX(12px) scale(3.6);
     }
   }
 
@@ -500,104 +521,91 @@
     }
   }
 
-  /* ── bloodmist (predator den — kill ground): faint dark-crimson motes rising + fading ── */
-  .bmote {
+  /* Soft volumetric fog blob — a blurred radial-gradient cloud (bloodmist / miasma). Centered on
+     the tile (negative left/top = half its own size), large enough to spill into neighbours; two
+     layers (a/b) drift against each other so the fog churns rather than pulsing uniformly. */
+  .fog {
     position: absolute;
-    font-family: 'Courier New', monospace;
-    font-size: 18px;
-    color: #8c2e28;
-    opacity: 0;
-    animation: bloodmist-rise 3s ease-out infinite;
+    border-radius: 50%;
+    pointer-events: none;
     will-change: transform, opacity;
   }
-  .bmote.b1 {
-    animation-delay: 0s;
-    left: -6px;
+  .lair-bloodmist .fog {
+    background: radial-gradient(
+      circle,
+      rgba(165, 40, 32, 0.6) 0%,
+      rgba(120, 30, 26, 0.4) 38%,
+      rgba(80, 22, 20, 0.16) 62%,
+      rgba(60, 18, 16, 0) 80%
+    );
+    filter: blur(7px);
   }
-  .bmote.b2 {
-    animation-delay: 0.7s;
-    left: 6px;
+  /* ~2-3 tile radius (at BASE_TILE 20): a broad seething pool of blood-haze around the den. */
+  .blood-a {
+    width: 124px;
+    height: 92px;
+    left: -62px;
+    top: -46px;
+    animation: blood-seethe 6s ease-in-out infinite;
   }
-  .bmote.b3 {
-    animation-delay: 1.4s;
-    left: -10px;
+  .blood-b {
+    width: 88px;
+    height: 70px;
+    left: -44px;
+    top: -52px;
+    animation: blood-seethe 8s ease-in-out infinite reverse;
+    animation-delay: -2.4s;
   }
-  .bmote.b4 {
-    animation-delay: 2.1s;
-    left: 2px;
-  }
-  .bmote.b5 {
-    animation-delay: 2.8s;
-    left: 9px;
-  }
-  @keyframes bloodmist-rise {
+  @keyframes blood-seethe {
     0% {
-      opacity: 0;
-      transform: translateY(4px) translateX(0) scale(0.9);
+      opacity: 0.42;
+      transform: translate(0, 0) scale(0.96);
     }
-    25% {
-      opacity: 0.7;
-    }
-    60% {
-      opacity: 0.5;
-      transform: translateY(-34px) translateX(-10px) scale(1.8);
+    50% {
+      opacity: 0.72;
+      transform: translate(-6px, -4px) scale(1.14);
     }
     100% {
-      opacity: 0;
-      transform: translateY(-62px) translateX(-18px) scale(2.6);
+      opacity: 0.42;
+      transform: translate(5px, 2px) scale(0.96);
     }
   }
-
-  /* ── miasma (swamp nest — fetid gas): sickly green bubbles wobbling slowly upward ── */
-  .bubble {
-    position: absolute;
-    font-family: 'Courier New', monospace;
-    font-size: 19px;
-    color: #6e9450;
-    opacity: 0;
-    animation: miasma-rise 4s ease-in-out infinite;
-    will-change: transform, opacity;
+  .lair-miasma .fog {
+    background: radial-gradient(
+      circle,
+      rgba(120, 158, 84, 0.5) 0%,
+      rgba(92, 126, 64, 0.3) 45%,
+      rgba(64, 96, 48, 0) 74%
+    );
+    filter: blur(6px);
   }
-  .bubble.m1 {
-    animation-delay: 0s;
-    left: -8px;
+  .miasma-a {
+    width: 60px;
+    height: 44px;
+    left: -30px;
+    top: -22px;
+    animation: miasma-churn 6.5s ease-in-out infinite;
   }
-  .bubble.m2 {
-    animation-delay: 0.8s;
-    left: 8px;
+  .miasma-b {
+    width: 44px;
+    height: 34px;
+    left: -22px;
+    top: -28px;
+    animation: miasma-churn 8.5s ease-in-out infinite reverse;
+    animation-delay: -3s;
   }
-  .bubble.m3 {
-    animation-delay: 1.5s;
-    left: -3px;
-  }
-  .bubble.m4 {
-    animation-delay: 2.2s;
-    left: 12px;
-  }
-  .bubble.m5 {
-    animation-delay: 2.9s;
-    left: -12px;
-  }
-  .bubble.m6 {
-    animation-delay: 3.5s;
-    left: 4px;
-  }
-  @keyframes miasma-rise {
+  @keyframes miasma-churn {
     0% {
-      opacity: 0;
-      transform: translateY(4px) translateX(0) scale(0.7);
+      opacity: 0.4;
+      transform: translate(0, 0) scale(0.95);
     }
-    25% {
-      opacity: 0.78;
-      transform: translateX(-8px);
-    }
-    60% {
-      opacity: 0.55;
-      transform: translateY(-34px) translateX(8px) scale(1.9);
+    50% {
+      opacity: 0.68;
+      transform: translate(7px, -6px) scale(1.18);
     }
     100% {
-      opacity: 0;
-      transform: translateY(-66px) translateX(-6px) scale(2.7);
+      opacity: 0.4;
+      transform: translate(-5px, 2px) scale(0.95);
     }
   }
 
