@@ -43,16 +43,51 @@
     </div>
   {/each}
 
-  <!-- Ambient per-tile particle effects (lair smoke, …). -->
+  <!-- Ambient per-tile particle effects — grim lair "tells". -->
   {#each $worldEffects.particleOverlays as overlay (overlay.id)}
+    {@const xf = `transform: translate(${overlay.left}px, ${overlay.top}px) translateX(-50%);`}
     {#if overlay.effect === 'smoke'}
-      <div
-        class="lair-smoke"
-        style="transform: translate({overlay.left}px, {overlay.top}px) translateX(-50%);"
-      >
-        <span class="puff p1">°</span>
-        <span class="puff p2">·</span>
-        <span class="puff p3">°</span>
+      <div class="lair-fx lair-smoke" style={xf}>
+        <span class="puff p1">▒</span>
+        <span class="puff p2">░</span>
+        <span class="puff p3">▒</span>
+        <span class="puff p4">░</span>
+        <span class="puff p5">▒</span>
+        <span class="puff p6">░</span>
+      </div>
+    {:else if overlay.effect === 'flies'}
+      <div class="lair-fx lair-flies" style={xf}>
+        <span class="fly f1">·</span>
+        <span class="fly f2">·</span>
+        <span class="fly f3">·</span>
+        <span class="fly f4">·</span>
+        <span class="fly f5">·</span>
+        <span class="fly f6">·</span>
+      </div>
+    {:else if overlay.effect === 'bloodmist'}
+      <div class="lair-fx lair-bloodmist" style={xf}>
+        <span class="bmote b1">o</span>
+        <span class="bmote b2">°</span>
+        <span class="bmote b3">O</span>
+        <span class="bmote b4">°</span>
+        <span class="bmote b5">o</span>
+      </div>
+    {:else if overlay.effect === 'miasma'}
+      <div class="lair-fx lair-miasma" style={xf}>
+        <span class="bubble m1">O</span>
+        <span class="bubble m2">o</span>
+        <span class="bubble m3">°</span>
+        <span class="bubble m4">O</span>
+        <span class="bubble m5">o</span>
+        <span class="bubble m6">°</span>
+      </div>
+    {:else if overlay.effect === 'feathers'}
+      <div class="lair-fx lair-feathers" style={xf}>
+        <span class="feather fe1">'</span>
+        <span class="feather fe2">`</span>
+        <span class="feather fe3">'</span>
+        <span class="feather fe4">,</span>
+        <span class="feather fe5">`</span>
       </div>
     {/if}
   {/each}
@@ -266,39 +301,354 @@
   .puff {
     position: absolute;
     font-family: 'Courier New', monospace;
-    font-size: 11px;
-    color: #9a958c;
+    font-size: 16px;
+    color: #9b958b;
     opacity: 0;
-    animation: smoke-rise 3.4s ease-out infinite;
+    /* Heavy blur dissolves the block glyph into a soft haze — reads as smoke, not a letter. */
+    filter: blur(3px);
+    text-shadow: 0 0 5px #8a847a;
+    animation: smoke-rise 4.2s ease-out infinite;
     will-change: transform, opacity;
   }
   .puff.p1 {
     animation-delay: 0s;
-    left: -2px;
+    left: -3px;
   }
   .puff.p2 {
-    animation-delay: 1.15s;
-    left: 2px;
+    animation-delay: 0.7s;
+    left: 4px;
   }
   .puff.p3 {
-    animation-delay: 2.3s;
-    left: 0;
+    animation-delay: 1.4s;
+    left: -6px;
   }
+  .puff.p4 {
+    animation-delay: 2.1s;
+    left: 2px;
+  }
+  .puff.p5 {
+    animation-delay: 2.8s;
+    left: -1px;
+  }
+  .puff.p6 {
+    animation-delay: 3.5s;
+    left: 5px;
+  }
+  /* Gentle, organic rise: drifts up while widening and thinning, with a slow sideways curl. */
   @keyframes smoke-rise {
     0% {
       opacity: 0;
-      transform: translateY(0) translateX(0) scale(0.7);
+      transform: translateY(2px) translateX(0) scale(0.7);
     }
-    25% {
-      opacity: 0.32;
+    15% {
+      opacity: 0.55;
     }
-    60% {
-      opacity: 0.22;
-      transform: translateY(-20px) translateX(4px) scale(1.15);
+    45% {
+      opacity: 0.4;
+      transform: translateY(-30px) translateX(6px) scale(1.6);
+    }
+    75% {
+      opacity: 0.2;
+      transform: translateY(-58px) translateX(2px) scale(2.4);
     }
     100% {
       opacity: 0;
-      transform: translateY(-38px) translateX(8px) scale(1.6);
+      transform: translateY(-84px) translateX(10px) scale(3.2);
+    }
+  }
+
+  /* Shared positioning for every lair particle effect (placed via inline transform). */
+  .lair-fx {
+    position: absolute;
+    left: 0;
+    top: 0;
+    pointer-events: none;
+    width: 0;
+    height: 0;
+  }
+
+  /* ── flies (wolf den — carrion buzz): tiny dark specks jittering over the den ── */
+  .fly {
+    position: absolute;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    font-weight: bold;
+    color: #14110e;
+    opacity: 0.85;
+    will-change: transform;
+  }
+  /* Each fly has its OWN erratic path + speed (no shared keyframe), so the swarm darts chaotically
+     instead of tracing one synchronised criss-cross. Paths stay within ~±10px of the den. */
+  .fly.f1 {
+    animation: fly1 0.62s linear infinite;
+  }
+  .fly.f2 {
+    animation: fly2 0.74s linear infinite;
+  }
+  .fly.f3 {
+    animation: fly3 0.53s linear infinite;
+  }
+  .fly.f4 {
+    animation: fly4 0.81s linear infinite;
+  }
+  .fly.f5 {
+    animation: fly5 0.67s linear infinite;
+  }
+  .fly.f6 {
+    animation: fly6 0.58s linear infinite;
+  }
+  @keyframes fly1 {
+    0% {
+      transform: translate(-8px, -3px);
+    }
+    30% {
+      transform: translate(4px, -9px);
+    }
+    55% {
+      transform: translate(9px, 2px);
+    }
+    80% {
+      transform: translate(-2px, 6px);
+    }
+    100% {
+      transform: translate(-8px, -3px);
+    }
+  }
+  @keyframes fly2 {
+    0% {
+      transform: translate(6px, 4px);
+    }
+    28% {
+      transform: translate(-5px, 8px);
+    }
+    52% {
+      transform: translate(-9px, -2px);
+    }
+    78% {
+      transform: translate(3px, -7px);
+    }
+    100% {
+      transform: translate(6px, 4px);
+    }
+  }
+  @keyframes fly3 {
+    0% {
+      transform: translate(0, -7px);
+    }
+    33% {
+      transform: translate(7px, -1px);
+    }
+    60% {
+      transform: translate(2px, 7px);
+    }
+    82% {
+      transform: translate(-7px, 3px);
+    }
+    100% {
+      transform: translate(0, -7px);
+    }
+  }
+  @keyframes fly4 {
+    0% {
+      transform: translate(-6px, 5px);
+    }
+    26% {
+      transform: translate(8px, 3px);
+    }
+    54% {
+      transform: translate(5px, -6px);
+    }
+    80% {
+      transform: translate(-9px, -4px);
+    }
+    100% {
+      transform: translate(-6px, 5px);
+    }
+  }
+  @keyframes fly5 {
+    0% {
+      transform: translate(3px, -5px);
+    }
+    30% {
+      transform: translate(-8px, -6px);
+    }
+    58% {
+      transform: translate(-4px, 6px);
+    }
+    84% {
+      transform: translate(8px, 5px);
+    }
+    100% {
+      transform: translate(3px, -5px);
+    }
+  }
+  @keyframes fly6 {
+    0% {
+      transform: translate(-9px, 1px);
+    }
+    32% {
+      transform: translate(-1px, -8px);
+    }
+    56% {
+      transform: translate(9px, -3px);
+    }
+    80% {
+      transform: translate(4px, 8px);
+    }
+    100% {
+      transform: translate(-9px, 1px);
+    }
+  }
+
+  /* ── bloodmist (predator den — kill ground): faint dark-crimson motes rising + fading ── */
+  .bmote {
+    position: absolute;
+    font-family: 'Courier New', monospace;
+    font-size: 18px;
+    color: #8c2e28;
+    opacity: 0;
+    animation: bloodmist-rise 3s ease-out infinite;
+    will-change: transform, opacity;
+  }
+  .bmote.b1 {
+    animation-delay: 0s;
+    left: -6px;
+  }
+  .bmote.b2 {
+    animation-delay: 0.7s;
+    left: 6px;
+  }
+  .bmote.b3 {
+    animation-delay: 1.4s;
+    left: -10px;
+  }
+  .bmote.b4 {
+    animation-delay: 2.1s;
+    left: 2px;
+  }
+  .bmote.b5 {
+    animation-delay: 2.8s;
+    left: 9px;
+  }
+  @keyframes bloodmist-rise {
+    0% {
+      opacity: 0;
+      transform: translateY(4px) translateX(0) scale(0.9);
+    }
+    25% {
+      opacity: 0.7;
+    }
+    60% {
+      opacity: 0.5;
+      transform: translateY(-34px) translateX(-10px) scale(1.8);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(-62px) translateX(-18px) scale(2.6);
+    }
+  }
+
+  /* ── miasma (swamp nest — fetid gas): sickly green bubbles wobbling slowly upward ── */
+  .bubble {
+    position: absolute;
+    font-family: 'Courier New', monospace;
+    font-size: 19px;
+    color: #6e9450;
+    opacity: 0;
+    animation: miasma-rise 4s ease-in-out infinite;
+    will-change: transform, opacity;
+  }
+  .bubble.m1 {
+    animation-delay: 0s;
+    left: -8px;
+  }
+  .bubble.m2 {
+    animation-delay: 0.8s;
+    left: 8px;
+  }
+  .bubble.m3 {
+    animation-delay: 1.5s;
+    left: -3px;
+  }
+  .bubble.m4 {
+    animation-delay: 2.2s;
+    left: 12px;
+  }
+  .bubble.m5 {
+    animation-delay: 2.9s;
+    left: -12px;
+  }
+  .bubble.m6 {
+    animation-delay: 3.5s;
+    left: 4px;
+  }
+  @keyframes miasma-rise {
+    0% {
+      opacity: 0;
+      transform: translateY(4px) translateX(0) scale(0.7);
+    }
+    25% {
+      opacity: 0.78;
+      transform: translateX(-8px);
+    }
+    60% {
+      opacity: 0.55;
+      transform: translateY(-34px) translateX(8px) scale(1.9);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(-66px) translateX(-6px) scale(2.7);
+    }
+  }
+
+  /* ── feathers (harpy roost): pale shed feathers drifting DOWN, swaying ── */
+  .feather {
+    position: absolute;
+    font-family: 'Courier New', monospace;
+    font-size: 17px;
+    font-weight: bold;
+    color: #c4bcb2;
+    opacity: 0;
+    animation: feather-fall 4s ease-in-out infinite;
+    will-change: transform, opacity;
+  }
+  .feather.fe1 {
+    animation-delay: 0s;
+    left: -12px;
+  }
+  .feather.fe2 {
+    animation-delay: 0.9s;
+    left: 8px;
+  }
+  .feather.fe3 {
+    animation-delay: 1.7s;
+    left: -4px;
+  }
+  .feather.fe4 {
+    animation-delay: 2.5s;
+    left: 13px;
+  }
+  .feather.fe5 {
+    animation-delay: 3.3s;
+    left: -8px;
+  }
+  @keyframes feather-fall {
+    0% {
+      opacity: 0;
+      transform: translateY(-34px) translateX(0) rotate(-18deg);
+    }
+    20% {
+      opacity: 0.75;
+    }
+    50% {
+      transform: translateY(-6px) translateX(16px) rotate(20deg);
+    }
+    80% {
+      opacity: 0.5;
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(26px) translateX(-10px) rotate(-14deg);
     }
   }
 

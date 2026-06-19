@@ -1136,7 +1136,7 @@
           newParticles.push({
             id: `${tx},${ty}`,
             left: (tx - viewX + 0.5) * tW,
-            top: (ty - viewY + 0.35) * tH,
+            top: (ty - viewY + 0.5) * tH, // tile CENTER — effects anchor here and rise/fall around it
             effect: eff
           });
           break; // one emitter per tile
