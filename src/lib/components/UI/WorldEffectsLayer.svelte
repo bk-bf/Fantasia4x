@@ -72,9 +72,10 @@
   {#each $worldEffects.particleOverlays as overlay (overlay.id)}
     {@const fxScale = Math.max(0.35, Math.min(1.8, $cameraTileSize / BASE_TILE))}
     <!-- Dim with the day/night cycle so these read as PARTICLES, not light sources — they must not
-         glow in the dark (that's what the separate `glow` lighting tier is for). Floor 0.32 keeps a
-         hint visible at deep night, matching how the terrain stays faintly lit. -->
-    {@const amb = Math.max(0.32, getAmbientLight(environmentService.ambientTurn($gameState)))}
+         glow in the dark (that's the separate `glow` lighting tier's job). Use the ambient light
+         DIRECTLY (no extra floor): getAmbientLight already bottoms at 0.15 — the SAME value the WebGL
+         terrain dims to at night — so the effect tracks the world instead of sitting brighter than it. -->
+    {@const amb = getAmbientLight(environmentService.ambientTurn($gameState))}
     {@const xf = `transform: translate(${overlay.left}px, ${overlay.top}px) translateX(-50%) scale(${fxScale}); filter: brightness(${amb});`}
     {#if overlay.effect === 'smoke'}
       <div class="lair-fx lair-smoke" style={xf}>
