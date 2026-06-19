@@ -38,7 +38,9 @@
   }
 
   function focus(m: Mob) {
-    uiState.focusMapOn(m.x, m.y);
+    // Pan only (selectTile=false) — we select this specific mob by id, which the map canvas mirrors;
+    // a tile-pick could grab a different entity sharing the tile.
+    uiState.focusMapOn(m.x, m.y, false);
     uiState.selectMob(m.id);
   }
 

@@ -51,6 +51,7 @@
   import { buildingService } from '$lib/game/services/BuildingService.js';
   import { resolveCharSpans, BIOMES, SUBTERRAINS } from '$lib/game/core/Terrains.js';
   import { resourceObjectService } from '$lib/game/services/ResourceObjectService.js';
+  import { GasField, GAS_EFFECTS, type GasType } from '$lib/components/UI/gameCanvas/gasField';
   import { itemService } from '$lib/game/services/ItemService.js';
   import {
     getRefuelRequirements,
@@ -117,6 +118,11 @@
 
   let canvas: HTMLCanvasElement;
   let designCanvas: HTMLCanvasElement;
+  let gasCanvas: HTMLCanvasElement;
+  // Brogue/Qud-style gas-diffusion overlay for lair smoke/miasma/bloodmist (gasField.ts). Stepped +
+  // drawn from the render loop; emits from on-screen lair tiles. Cosmetic, renderer-only.
+  const gasField = new GasField();
+  let _gasStepAccum = 0; // ms accumulator → fixed-rate diffusion step
   // HUD sprite icons + their shared-cache painting live in gameCanvas/{hudSpriteIcon,spriteSheets}.
   // Current day/night ambient, mirrored from the WebGL renderer so the Canvas2D
   // designation overlay can be darkened/tinted to match the lit scene beneath it.
@@ -300,6 +306,7 @@
   // Selected mob/animal (click-locked, like selectedPawnId)
   let selectedMobId: string | null = null;
   const unsubUI = uiState.subscribe((s) => {
+    const prevBlueprintBuildingId = blueprintBuildingId;
     designationMode = s.designationActive;
     blueprintBuildingId = s.blueprintBuildingId ?? null;
     blueprintMaterials = s.blueprintMaterials ?? null;
@@ -307,19 +314,41 @@
     activeZoneInstanceId = s.activeZoneInstanceId ?? null;
     if (!s.designationActive) zoneEraseMode = false;
     if (s.designationType) designationTypeActive = s.designationType as DesignationType;
-    // Sync selected pawn from Pawn Tab (only when it differs to avoid clobbering map clicks)
+    // Sync selection from the Pawn/Entity tabs (id-based) into the canvas's selection state. Mirrors
+    // selectTileAt's mutual exclusion: selecting a pawn/mob via a tab clears the canvas-only
+    // selections (building / resource tile) too, so a tab pick produces the same single clean
+    // selection a map click does — one shared selection model, two ways in (tile vs id).
     if (s.selectedPawnId !== selectedPawnId) {
       selectedPawnId = s.selectedPawnId;
+      if (s.selectedPawnId) {
+        selectedBuildingId = null;
+        selectedResourceTile = null;
+        highlightedResourceTiles = new Set();
+      }
     }
-    // Sync selected mob from Entity Tab (only when it differs)
     if (s.selectedMobId !== selectedMobId) {
       selectedMobId = s.selectedMobId;
+      if (s.selectedMobId) {
+        selectedBuildingId = null;
+        selectedResourceTile = null;
+        highlightedResourceTiles = new Set();
+      }
     }
     cameraFollowPawnId = s.cameraFollowPawnId ?? null;
     cameraFollowMobId = s.cameraFollowMobId ?? null;
-    redrawOverlay();
+    // A uiState change only needs the heavy terrain-grid rebuild when the blueprint placement ghost
+    // (the one transient still baked into the WebGL grid) appears or disappears. Everything else a
+    // uiState change carries — selection, camera follow, designation mode, map focus — is painted on
+    // the lightweight 2D overlay, so a full buildGameGrid here would be wasted work (this was the
+    // dominant cause of camera/info-panel lag when jumping around a large map).
+    if (blueprintBuildingId !== prevBlueprintBuildingId) redrawOverlay();
+    else drawDesignations();
     if (s.mapFocusRequest && ready && renderer?.isReady()) {
-      const { x, y } = s.mapFocusRequest;
+      const { x, y, selectTile } = s.mapFocusRequest;
+      // Clear the request BEFORE selecting: selectTileAt() writes back to uiState (selectPawn/
+      // selectMob), which re-enters this subscriber synchronously — clearing first makes that
+      // re-entrant pass skip this block instead of looping on the same focus.
+      uiState.clearMapFocus();
       // Focus snaps to a comfortable zoom, not the manual-zoom ceiling (MAX_TILE_W), which is
       // closer than you'd want auto-applied.
       const targetZoom = Math.min(MAX_TILE_W, 24);
@@ -328,14 +357,18 @@
       renderer.setTileSize(tileWidth, tileHeight);
       const visW = (container?.clientWidth ?? 800) / tileWidth;
       const visH = (container?.clientHeight ?? 600) / tileHeight;
-      // Place the pawn at ~25% from the top so the HUD card at the bottom doesn't overlap it.
+      // Place the target at ~25% from the top so the HUD card at the bottom doesn't overlap it.
       setView(Math.round(x - visW / 2), Math.round(y - visH * 0.25));
-      // Highlight the focused tile (yellow) so the jump target is actually visible — without this,
-      // jumping to a single resource (e.g. a lair) just pans the camera with no indication of which
-      // tile to look at.
-      highlightedResourceTiles = new Set([`${x},${y}`]);
-      redrawOverlay();
-      uiState.clearMapFocus();
+      // selectTile = "click-here" jumps (EXPLORE resource, Chronicle event location): select whatever
+      // is on the tile exactly as a manual click would — same highlight + info HUD, one shared circuit
+      // (selectTileAt). When the tile is empty, fall back to a transient yellow highlight so the jump
+      // still has a visible anchor. selectTile = false: a Pawn/Entity-tab jump that selects its
+      // specific entity by id itself — here we only pan, so the tile-pick can't override that id.
+      if (selectTile && !selectTileAt(x, y)) {
+        highlightedResourceTiles = new Set([`${x},${y}`]);
+      }
+      // No terrain rebuild — the focus jump only moves the camera + selection (2D overlay).
+      drawDesignations();
     }
   });
 
@@ -1133,6 +1166,9 @@
           if ((res[rid] ?? 0) <= 0) continue;
           const eff = resourceObjectService.getById(rid)?.particleEffect;
           if (!eff) continue;
+          // Gas effects (smoke/miasma/bloodmist) are simulated + drawn by the gas field, not as CSS
+          // particles — only the discrete-object effects (flies, feathers) become CSS overlays here.
+          if (GAS_EFFECTS.has(eff)) break;
           newParticles.push({
             id: `${tx},${ty}`,
             left: (tx - viewX + 0.5) * tW,
@@ -1263,6 +1299,59 @@
     }
   }
 
+  /**
+   * Brogue/Qud-style gas overlay: emit from on-screen lair gas-tiles + run one diffusion step at a
+   * fixed cadence, then paint the field onto the gas canvas every frame. Called from the render loop.
+   */
+  const GAS_STEP_MS = 85;
+  function tickGas(dtMs: number) {
+    if (!gasCanvas || !container || worldMap.length === 0) return;
+    const W = container.clientWidth;
+    const H = container.clientHeight;
+    const mapW = worldMap[0]?.length ?? 0;
+    const mapH = worldMap.length;
+    gasField.setWidth(mapW);
+
+    _gasStepAccum += dtMs;
+    if (_gasStepAccum >= GAS_STEP_MS) {
+      _gasStepAccum = 0;
+      // Emit from visible lair tiles whose particleEffect is a gas.
+      const gx0 = Math.max(0, Math.floor(viewX));
+      const gy0 = Math.max(0, Math.floor(viewY));
+      const gx1 = Math.min(mapW - 1, Math.ceil(viewX + W / tileWidth));
+      const gy1 = Math.min(mapH - 1, Math.ceil(viewY + H / tileHeight));
+      for (let ty = gy0; ty <= gy1; ty++) {
+        const row = worldMap[ty];
+        if (!row) continue;
+        for (let tx = gx0; tx <= gx1; tx++) {
+          const rs = row[tx]?.resources;
+          if (!rs) continue;
+          for (const rid in rs) {
+            if ((rs[rid] ?? 0) <= 0) continue;
+            const eff = resourceObjectService.getById(rid)?.particleEffect;
+            if (eff && GAS_EFFECTS.has(eff)) gasField.emit(eff as GasType, tx, ty);
+            if (eff) break;
+          }
+        }
+      }
+      gasField.step(mapH);
+    }
+
+    // Paint the field every frame (cheap — a few hundred cells at most).
+    const dpr = window.devicePixelRatio || 1;
+    const bw = Math.round(W * dpr);
+    const bh = Math.round(H * dpr);
+    if (gasCanvas.width !== bw || gasCanvas.height !== bh) {
+      gasCanvas.width = bw;
+      gasCanvas.height = bh;
+    }
+    const ctx = gasCanvas.getContext('2d');
+    if (!ctx) return;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    gasField.draw(ctx, viewX, viewY, tileWidth, tileHeight, W, H);
+  }
+
   // Rebuilding the full base grid + bumping the terrain version is expensive at
   // zoom-out (tens of thousands of tiles). Mousemove-driven previews (zone paint,
   // selection drag, blueprint drag) can fire many times per frame, so coalesce
@@ -1291,34 +1380,10 @@
       computeHiddenZoneTiles()
     );
 
-    // (Live zone drag-paint preview is drawn on the 2D overlay in
-    // drawDesignations(), not here, to avoid rebuilding the terrain buffer.)
-
-    // Selection drag preview (Shift+drag in progress)
-    if (selDragActive) {
-      _overlayRect(
-        grid,
-        selAnchorX,
-        selAnchorY,
-        selEndX,
-        selEndY,
-        { r: 0.9, g: 0.9, b: 1.0 },
-        { rMul: 0.5, rAdd: 0.0, gMul: 0.5, gAdd: 0.0, bMul: 0.5, bAdd: 0.3 }
-      );
-    }
-
-    // Committed selection highlight
-    if (selRect) {
-      _overlayRect(
-        grid,
-        selRect.x1,
-        selRect.y1,
-        selRect.x2,
-        selRect.y2,
-        { r: 0.8, g: 0.9, b: 1.0 },
-        { rMul: 0.6, rAdd: 0.0, gMul: 0.6, gAdd: 0.05, bMul: 0.6, bAdd: 0.2 }
-      );
-    }
+    // (Live zone drag-paint preview, the Shift+drag selection rectangle, the committed selection
+    // rectangle and the selected-resource highlight are all drawn on the lightweight 2D overlay in
+    // drawDesignations(), not here, to avoid rebuilding the heavy terrain buffer on every
+    // selection/camera change.)
 
     // Blueprint placement preview
     if (blueprintBuildingId) {
@@ -1329,24 +1394,6 @@
         }
       } else if (hoverTileX >= 0 && hoverTileY >= 0) {
         _blueprintPreviewTile(grid, hoverTileX, hoverTileY);
-      }
-    }
-
-    // Selected resource tile highlight (yellow)
-    if (selectedResourceTile) {
-      const { x, y } = selectedResourceTile;
-      const t = grid.getTile(x, y);
-      if (t) {
-        grid.setTile(x, y, {
-          char: t.char,
-          foreground: { r: 1.0, g: 0.9, b: 0.1 },
-          background: {
-            r: t.background.r * 0.4 + 0.14,
-            g: t.background.g * 0.4 + 0.1,
-            b: t.background.b * 0.4
-          },
-          position: { x, y }
-        });
       }
     }
 
@@ -1466,6 +1513,46 @@
         ctx.fillRect(sx, sy, tileWidth, tileHeight);
       }
       ctx.restore();
+    }
+
+    // Selected resource tile (single-click): a yellow box around the tile. Drawn here on the 2D
+    // overlay rather than recolouring the WebGL glyph so a tile click never rebuilds the terrain
+    // buffer (the dominant cause of click/info-panel lag on big maps).
+    if (selectedResourceTile) {
+      const sx = (selectedResourceTile.x - viewX) * tileWidth;
+      const sy = (selectedResourceTile.y - viewY) * tileHeight;
+      ctx.save();
+      ctx.fillStyle = 'rgba(255, 220, 40, 0.22)';
+      ctx.fillRect(sx, sy, tileWidth, tileHeight);
+      ctx.strokeStyle = 'rgba(255, 220, 40, 0.95)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(sx + 0.5, sy + 0.5, tileWidth - 1, tileHeight - 1);
+      ctx.restore();
+    }
+
+    // Selection rectangle — both the live Shift+drag preview and the committed rect. Drawn on the
+    // 2D overlay (was a WebGL grid tint) so dragging/holding a selection never rebuilds terrain.
+    {
+      const sel = selDragActive
+        ? { x1: selAnchorX, y1: selAnchorY, x2: selEndX, y2: selEndY }
+        : selRect;
+      if (sel) {
+        const minX = Math.min(sel.x1, sel.x2);
+        const minY = Math.min(sel.y1, sel.y2);
+        const maxX = Math.max(sel.x1, sel.x2);
+        const maxY = Math.max(sel.y1, sel.y2);
+        const sx = (minX - viewX) * tileWidth;
+        const sy = (minY - viewY) * tileHeight;
+        const rw = (maxX - minX + 1) * tileWidth;
+        const rh = (maxY - minY + 1) * tileHeight;
+        ctx.save();
+        ctx.fillStyle = 'rgba(150, 190, 255, 0.22)';
+        ctx.fillRect(sx, sy, rw, rh);
+        ctx.strokeStyle = 'rgba(180, 210, 255, 0.95)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(sx + 0.5, sy + 0.5, rw - 1, rh - 1);
+        ctx.restore();
+      }
     }
 
     // Item stack counts: a subtle count badge in each item tile's bottom-right corner, drawn only
@@ -1685,35 +1772,65 @@
       position: { x: tx, y: ty }
     });
   }
-  function _overlayRect(
-    grid: GameGrid,
-    x1: number,
-    y1: number,
-    x2: number,
-    y2: number,
-    fg: { r: number; g: number; b: number },
-    bg: { rMul: number; rAdd: number; gMul: number; gAdd: number; bMul: number; bAdd: number }
-  ) {
-    const minX = Math.min(x1, x2),
-      maxX = Math.max(x1, x2);
-    const minY = Math.min(y1, y2),
-      maxY = Math.max(y1, y2);
-    for (let y = minY; y <= maxY; y++) {
-      for (let x = minX; x <= maxX; x++) {
-        const t = grid.getTile(x, y);
-        if (!t) continue;
-        grid.setTile(x, y, {
-          char: t.char,
-          foreground: fg,
-          background: {
-            r: t.background.r * bg.rMul + bg.rAdd,
-            g: t.background.g * bg.gMul + bg.gAdd,
-            b: t.background.b * bg.bMul + bg.bAdd
-          },
-          position: { x, y }
-        });
-      }
+
+  // Pick whatever is on (x,y) and select it — building > pawn > mob > resource, in that priority.
+  // Shared by manual map clicks (handleTileClick) and camera jumps (focusMapOn from the EXPLORE/PAWN/
+  // ENTITY tabs) so a jumped-to tile gets the *same* selection + highlight + info HUD as a click,
+  // instead of a separate yellow-flash highlight. Returns true if something was selected; false if
+  // the tile is empty (the caller decides what an empty tile means — deselect, or a drafted move).
+  function selectTileAt(x: number, y: number): boolean {
+    const clickedBuilding = buildings.find((b) => b.x === x && b.y === y);
+    if (clickedBuilding) {
+      selectedBuildingId = clickedBuilding.id;
+      selectedPawnId = null;
+      selectedMobId = null;
+      selectedResourceTile = null;
+      highlightedResourceTiles = new Set();
+      showShelterAssign = false;
+      uiState.selectPawn(null);
+      uiState.selectMob(null);
+      return true;
     }
+
+    const clickedPawn = findPawnAtTile(x, y);
+    if (clickedPawn) {
+      selectedPawnId = clickedPawn.id;
+      selectedBuildingId = null;
+      selectedMobId = null;
+      selectedResourceTile = null;
+      highlightedResourceTiles = new Set();
+      uiState.selectPawn(clickedPawn.id);
+      uiState.selectMob(null);
+      return true;
+    }
+
+    const clickedMob = findMobAtTile(x, y);
+    if (clickedMob) {
+      selectedMobId = clickedMob.id;
+      selectedPawnId = null;
+      selectedBuildingId = null;
+      selectedResourceTile = null;
+      highlightedResourceTiles = new Set();
+      uiState.selectPawn(null);
+      uiState.selectMob(clickedMob.id);
+      return true;
+    }
+
+    const tileData = worldMap[y]?.[x];
+    const tileResources = Object.entries(tileData?.resources ?? {}).filter(([, v]) => v > 0);
+    if (tileResources.length > 0) {
+      const [resourceId] = tileResources[0];
+      selectedResourceTile = { x, y, resourceId };
+      selectedPawnId = null;
+      selectedBuildingId = null;
+      selectedMobId = null;
+      highlightedResourceTiles = new Set();
+      uiState.selectPawn(null);
+      uiState.selectMob(null);
+      return true;
+    }
+
+    return false;
   }
 
   async function handleTileClick() {
@@ -1761,59 +1878,9 @@
       return;
     }
 
-    // Click on any building at this tile → select it, deselect pawn
-    const clickedBuilding = buildings.find((b) => b.x === hoverTileX && b.y === hoverTileY);
-    if (clickedBuilding) {
-      selectedBuildingId = clickedBuilding.id;
-      selectedPawnId = null;
-      selectedMobId = null;
-      showShelterAssign = false;
-      uiState.selectPawn(null);
-      uiState.selectMob(null);
-      redrawOverlay();
-      return;
-    }
-
-    // Click on a pawn → select it, deselect building
-    const clickedPawn = findPawnAtTile(hoverTileX, hoverTileY);
-    if (clickedPawn) {
-      selectedPawnId = clickedPawn.id;
-      selectedBuildingId = null;
-      selectedMobId = null;
-      selectedResourceTile = null;
-      highlightedResourceTiles = new Set();
-      uiState.selectPawn(clickedPawn.id);
-      uiState.selectMob(null);
-      redrawOverlay();
-      return;
-    }
-
-    // Click on a live mob/animal → select it, deselect everything else
-    const clickedMob = findMobAtTile(hoverTileX, hoverTileY);
-    if (clickedMob) {
-      selectedMobId = clickedMob.id;
-      selectedPawnId = null;
-      selectedBuildingId = null;
-      selectedResourceTile = null;
-      highlightedResourceTiles = new Set();
-      uiState.selectPawn(null);
-      uiState.selectMob(clickedMob.id);
-      redrawOverlay();
-      return;
-    }
-
-    // Click on a tile with resources → show info HUD
-    const clickedTileData = worldMap[hoverTileY]?.[hoverTileX];
-    const tileResources = Object.entries(clickedTileData?.resources ?? {}).filter(([, v]) => v > 0);
-    if (tileResources.length > 0) {
-      const [resourceId] = tileResources[0];
-      selectedResourceTile = { x: hoverTileX, y: hoverTileY, resourceId };
-      selectedPawnId = null;
-      selectedBuildingId = null;
-      selectedMobId = null;
-      uiState.selectPawn(null);
-      uiState.selectMob(null);
-      redrawOverlay();
+    // Building > pawn > mob > resource — shared with camera jumps (see selectTileAt).
+    if (selectTileAt(hoverTileX, hoverTileY)) {
+      drawDesignations();
       return;
     }
 
@@ -1835,14 +1902,14 @@
           },
           save: true
         });
-        redrawOverlay();
+        drawDesignations();
         return;
       }
     }
 
     selectedPawnId = null;
     uiState.selectPawn(null);
-    redrawOverlay();
+    drawDesignations();
   }
 
   onMount(async () => {
@@ -2024,6 +2091,7 @@
       updateCameraFollow(dt);
       updateCameraFollowMob(dt);
       updateWorldEffectOverlays();
+      tickGas(dt * 1000);
       // Coalesced sim-driven terrain rebuild: at most once per TERRAIN_REBUILD_MIN_MS instead
       // of the full 38k-tile rebuild every frame that resource regrowth/harvest would force.
       if (_terrainDirty && now - _lastTerrainBuild >= TERRAIN_REBUILD_MIN_MS) {
@@ -2114,13 +2182,13 @@
         if (selectedResourceTile) {
           selectedResourceTile = null;
           highlightedResourceTiles = new Set();
-          redrawOverlay();
+          drawDesignations();
           break;
         }
         if (selectedMobId) {
           selectedMobId = null;
           uiState.selectMob(null);
-          redrawOverlay();
+          drawDesignations();
           break;
         }
         if (selectedBuildingId) {
@@ -2143,7 +2211,7 @@
         uiState.selectPawn(null);
         uiState.setFollowPawn(null);
         uiState.setFollowMob(null);
-        redrawOverlay();
+        drawDesignations();
         break;
       case 'x':
       case 'X':
@@ -2238,7 +2306,7 @@
       selEndY = hoverTileY;
       // Clear previous committed rect while dragging
       selRect = null;
-      redrawOverlay();
+      drawDesignations();
       return;
     }
     dragging = true;
@@ -2297,7 +2365,8 @@
     if (selDragActive) {
       selEndX = hoverTileX;
       selEndY = hoverTileY;
-      redrawOverlay();
+      // Cheap 2D-overlay redraw only — the terrain buffer stays untouched.
+      drawDesignations();
       return;
     }
     if (blueprintBuildingId) {
@@ -2376,7 +2445,7 @@
       // Commit selection
       selDragActive = false;
       selRect = { x1: selAnchorX, y1: selAnchorY, x2: selEndX, y2: selEndY };
-      redrawOverlay();
+      drawDesignations();
       return;
     }
     if (dragDistance < 3) {
@@ -2535,7 +2604,7 @@
     highlightedResourceTiles = newHighlighted;
     similarDragActive = false;
     similarDragMode = false;
-    redrawOverlay();
+    drawDesignations();
   }
 
   let showShelterAssign = false;
@@ -2576,7 +2645,7 @@
     if (selDragActive) {
       selDragActive = false;
       selRect = { x1: selAnchorX, y1: selAnchorY, x2: selEndX, y2: selEndY };
-      redrawOverlay();
+      drawDesignations();
     }
     hoverTileX = -1;
     hoverTileY = -1;
@@ -2776,6 +2845,7 @@
   on:contextmenu={handleContextMenu}
 >
   <canvas bind:this={canvas}></canvas>
+  <canvas bind:this={gasCanvas} class="gas-layer"></canvas>
   <canvas bind:this={designCanvas} class="desig-layer"></canvas>
 
   {#if errorMsg}
@@ -3145,6 +3215,19 @@
     pointer-events: none;
     z-index: 1;
     image-rendering: pixelated;
+  }
+  /* Gas-diffusion overlay (lair smoke/miasma/bloodmist). Sits over the terrain but under the
+     designation/zone overlay. The CSS blur softens the blocky cellular tiles into rolling cloud
+     (GPU-composited — far cheaper than per-cell canvas blur). */
+  .gas-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+    filter: blur(3px);
   }
   canvas {
     display: block;

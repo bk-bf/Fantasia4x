@@ -115,7 +115,9 @@
     selectedPawnId = pawn.id;
     uiState.selectPawn(pawn.id);
     if (pawn.position) {
-      uiState.focusMapOn(pawn.position.x, pawn.position.y);
+      // Pan only (selectTile=false) — selectPawn above already selects this pawn by id and the map
+      // canvas mirrors it; a tile-pick could grab a building/mob sharing the pawn's tile.
+      uiState.focusMapOn(pawn.position.x, pawn.position.y, false);
     }
   }
 </script>
