@@ -1433,15 +1433,18 @@ class CombatServiceImpl implements CombatService {
         !!pawn.drafted &&
         pawn.draftTarget?.type === 'attack' &&
         pawn.draftTarget.mode === 'melee';
+      const rangedAuto = !!rw && !forceMelee; // a ranged pawn engaging at range (not opt-in melee)
 
-      // ── Ranged: fire at a target beyond melee but within range + sight + ammo (on cadence). ──
-      if (rw && tdist > 1 && !forceMelee) {
-        if (!hasViableAmmo(pawn, rw)) {
-          // Auto-ranged but the quiver's empty — warn the player (floating, throttled) and let the
-          // movement layer close to melee. Reuses the combat-text overlay channel.
-          this.notifyNoAmmo(pawn, state.turn);
-          continue;
-        }
+      // Out of ammo + auto-ranged: warn (floating, throttled) and HOLD. It does NOT auto-close or
+      // auto-swing in melee — engaging in melee is always opt-in ("Target (melee)"), so a fragile
+      // shooter isn't dragged into a fight it can't win. Catches both at-range and in-contact.
+      if (rangedAuto && !hasViableAmmo(pawn, rw)) {
+        this.notifyNoAmmo(pawn, state.turn);
+        continue;
+      }
+
+      // ── Ranged: fire at a target beyond melee but within range (on cadence; ammo present). ──
+      if (rangedAuto && tdist > 1) {
         const shot = this.tryRangedShot(
           pawn,
           target,

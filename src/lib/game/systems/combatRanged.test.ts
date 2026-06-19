@@ -293,6 +293,24 @@ describe('ranged combat (headless tickCombat)', () => {
     expect(state.mobs![0].injuries?.length ?? 0).toBe(0);
   });
 
+  it('an OUT-OF-AMMO ranged pawn in contact does NOT auto-melee (engaging is opt-in)', () => {
+    // Empty quiver + goblin adjacent (5,6): unlike a stocked bow (which bow-butts), the out-of-ammo
+    // shooter holds and warns rather than auto-swinging the stave — it stays safe until told to melee.
+    const archer = makeArcher({
+      inventory: {
+        items: {},
+        instances: [],
+        weightKg: 0,
+        maxWeightKg: 50,
+        volumeL: 0,
+        maxVolumeL: 50
+      }
+    } as Partial<Pawn>);
+    let state = makeState([archer], [makeGoblin({ y: 6 })]);
+    for (let t = 0; t < 2000; t++) state = combatService.tickCombat({ ...state, turn: t }, 16);
+    expect(state.mobs![0].injuries?.length ?? 0).toBe(0);
+  });
+
   it('recovers spent arrows onto the target tile (haulable drops)', () => {
     let state = makeState([makeArcher()], [makeGoblin()]);
     for (let t = 0; t < 4000; t++) state = combatService.tickCombat({ ...state, turn: t }, 16);
