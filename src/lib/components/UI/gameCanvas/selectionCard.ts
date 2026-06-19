@@ -5,7 +5,7 @@
 import { uiState } from '$lib/stores/uiState.js';
 import { gameState } from '$lib/stores/gameState.js';
 import { resourceObjectService } from '$lib/game/services/ResourceObjectService.js';
-import { type CreatureDefinition } from '$lib/game/core/Creatures.js';
+import { type CreatureDefinition, getCreatureById } from '$lib/game/core/Creatures.js';
 import type { Pawn, Mob, LimbId, Injury } from '$lib/game/core/types.js';
 import { getActiveConditionViews } from '$lib/utils/conditionInfo.js';
 import { pawnService } from '$lib/game/services/PawnService.js';
@@ -57,16 +57,23 @@ export function moveSpeedStat(entity: Pawn | Mob): EntityStat {
  * 1.0); crit is a probability shown as a percent. All three are evaluated against the live body, so
  * injuries (lower manipulation/moving/consciousness) visibly drop them next to the wounds causing it.
  */
-/** Best worn-armour `defense` (the % of a hit it can turn before armour-pen). 0 if unarmoured. */
+/** Best armour `defense` protecting the body (the % of a hit it turns before armour-pen): the strongest
+ *  worn layer (pawns) OR the creature's natural hide/scale/chitin (mobs) — whichever is higher, matching
+ *  what Combat.partArmorReduction actually applies. 0 if bare. */
 function bestArmorDefense(entity: Pawn | Mob): number {
-  const eq = 'equipment' in entity ? entity.equipment : undefined;
-  if (!eq) return 0;
   let best = 0;
-  for (const slot in eq) {
-    const inst = (eq as Record<string, { itemId: string } | undefined>)[slot];
-    if (!inst) continue;
-    const def = itemService.getItemById(inst.itemId)?.armorProperties?.defense ?? 0;
-    if (def > best) best = def;
+  const eq = 'equipment' in entity ? entity.equipment : undefined;
+  if (eq) {
+    for (const slot in eq) {
+      const inst = (eq as Record<string, { itemId: string } | undefined>)[slot];
+      if (!inst) continue;
+      const def = itemService.getItemById(inst.itemId)?.armorProperties?.defense ?? 0;
+      if (def > best) best = def;
+    }
+  }
+  if ('creatureId' in entity) {
+    const natural = getCreatureById(entity.creatureId)?.naturalArmor ?? 0;
+    if (natural > best) best = natural;
   }
   return best;
 }
@@ -91,7 +98,7 @@ function combatStats(entity: Pawn | Mob): CombatStat[] {
         : 'evasion multiplier (× moving; lower when injured)'
     },
     { label: 'Crit', value: `${Math.round(s('crit_chance') * 100)}%`, title: 'base crit chance (weapons add their own)' },
-    { label: 'Armor', value: `${armor}`, title: 'best worn armour — % of a hit it turns (before armour-pen)' }
+    { label: 'Armor', value: `${armor}`, title: 'best armour (worn, or a creature’s natural hide) — % of a hit it turns before armour-pen' }
   ];
   if (encCond) {
     // Reconstruct the load ratio from severity (sev = (ratio−0.8)/0.6) for a readable %.
