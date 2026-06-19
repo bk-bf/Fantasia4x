@@ -32,6 +32,7 @@
     return m;
   });
 
+  // SearchBar persists this text across tab toggles via its cacheKey (see SearchBar.svelte).
   let query = $state('');
   let term = $derived(query.trim().toLowerCase());
   // Match the display name, the work-type, AND the internal id — so searching e.g. "grove" finds the
@@ -69,7 +70,7 @@
   <div class="screen-hdr">
     | DISCOVERED RESOURCES &nbsp;<span class="dim">{typeCount} types · {rows.length} nodes</span>
     <div class="hdr-tools">
-      <SearchBar bind:value={query} placeholder="search resources…" />
+      <SearchBar bind:value={query} placeholder="search resources…" cacheKey="explore" />
       <button class="hdr-btn" onclick={() => uiState.setScreen('main')}>BACK</button>
     </div>
   </div>

@@ -99,7 +99,7 @@
       >{hostileCount} hostile · {neutralCount} neutral · {corpses.length} corpses</span
     >
     <div class="hdr-tools">
-      <SearchBar bind:value={query} placeholder="search entities…" />
+      <SearchBar bind:value={query} placeholder="search entities…" cacheKey="entities" />
       <button class="hdr-btn" onclick={() => uiState.setScreen('main')}>BACK</button>
     </div>
   </div>

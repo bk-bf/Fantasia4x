@@ -9,6 +9,7 @@
   import ZonePanel from '../UI/ZonePanel.svelte';
   import BuildCard from '../UI/BuildCard.svelte';
   import FilterTabs from '../UI/FilterTabs.svelte';
+  import SearchBar from '../UI/SearchBar.svelte';
   import type { PlacedBuilding } from '$lib/game/core/types';
   import type { Building } from '$lib/game/core/types';
 
@@ -272,20 +273,12 @@
           onSelect={(id) => (selectedSection = id)}
         />
       </div>
-      <div class="filter-search">
-        <input
-          type="text"
-          placeholder="search buildings…"
-          bind:value={searchQuery}
-          spellcheck="false"
-          autocomplete="off"
-        />
-        {#if searchQuery}
-          <button class="search-clear" title="clear search" on:click={() => (searchQuery = '')}
-            >×</button
-          >
-        {/if}
-      </div>
+      <SearchBar
+        variant="inline"
+        placeholder="search buildings…"
+        bind:value={searchQuery}
+        cacheKey="building"
+      />
     </div>
     {#if selectedSection === 'ZONES' && !searchTerm}
       <ZonePanel />
@@ -421,41 +414,6 @@
   }
   .filter-bar-tabs :global(.filter-tabs) {
     border-bottom: none;
-  }
-  .filter-search {
-    flex: 0 0 auto;
-    display: flex;
-    align-items: center;
-    position: relative;
-    border-left: 1px solid var(--border);
-  }
-  .filter-search input {
-    background: var(--bg-panel);
-    border: none;
-    color: var(--text);
-    font-family: 'Courier New', monospace;
-    font-size: 10px;
-    letter-spacing: 0.04em;
-    padding: 4px 18px 4px 8px;
-    width: 150px;
-    outline: none;
-  }
-  .filter-search input::placeholder {
-    color: var(--text-muted);
-  }
-  .search-clear {
-    position: absolute;
-    right: 4px;
-    background: none;
-    border: none;
-    color: var(--text-dim);
-    font-size: 13px;
-    line-height: 1;
-    padding: 0 2px;
-    cursor: pointer;
-  }
-  .search-clear:hover {
-    color: var(--accent-hi);
   }
   .muted-row {
     padding: 4px 10px;

@@ -2,6 +2,7 @@
   import { gameState, currentRace } from '$lib/stores/gameState';
   import BuildCard from '$lib/components/UI/BuildCard.svelte';
   import FilterTabs from '$lib/components/UI/FilterTabs.svelte';
+  import SearchBar from '$lib/components/UI/SearchBar.svelte';
   import { uiState } from '$lib/stores/uiState';
   import ITEMS_DATABASE from '$lib/game/database/items.jsonc';
   import { itemService } from '$lib/game/services/ItemService';
@@ -239,20 +240,12 @@
           onSelect={(id) => (selectedCat = id)}
         />
       </div>
-      <div class="filter-search">
-        <input
-          type="text"
-          placeholder="search recipes…"
-          bind:value={searchQuery}
-          spellcheck="false"
-          autocomplete="off"
-        />
-        {#if searchQuery}
-          <button class="search-clear" title="clear search" on:click={() => (searchQuery = '')}
-            >×</button
-          >
-        {/if}
-      </div>
+      <SearchBar
+        variant="inline"
+        placeholder="search recipes…"
+        bind:value={searchQuery}
+        cacheKey="crafting"
+      />
     </div>
     {#if displayedEntries.length > 0}
       <div class="card-grid">
@@ -438,44 +431,6 @@
   /* FilterTabs renders its own bottom border; the wrapper owns it here. */
   .filter-bar-tabs :global(.filter-tabs) {
     border-bottom: none;
-  }
-  .filter-search {
-    flex: 0 0 auto;
-    display: flex;
-    align-items: center;
-    position: relative;
-    border-left: 1px solid var(--border);
-  }
-  .filter-search input {
-    background: var(--bg-panel);
-    border: none;
-    color: var(--text);
-    font-family: 'Courier New', monospace;
-    font-size: 10px;
-    letter-spacing: 0.04em;
-    padding: 4px 18px 4px 8px;
-    width: 150px;
-    outline: none;
-  }
-  .filter-search input::placeholder {
-    color: var(--text-muted);
-  }
-  .filter-search input:focus {
-    background: var(--bg-active, var(--bg-panel));
-  }
-  .search-clear {
-    position: absolute;
-    right: 4px;
-    background: none;
-    border: none;
-    color: var(--text-dim);
-    font-size: 13px;
-    line-height: 1;
-    padding: 0 2px;
-    cursor: pointer;
-  }
-  .search-clear:hover {
-    color: var(--accent-hi);
   }
   .crafting-screen {
     height: 100%;
