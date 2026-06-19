@@ -7,6 +7,7 @@ import { calcMaxStamina } from '../../entities/Pawns';
 import { createDefaultBodyParts } from '../../systems/Combat';
 import { rng } from '../../core/rng';
 import { findNearbyWalkable } from './entityHelpers';
+import { isSpawnableTile } from '../../core/Terrains';
 import {
   SPAWN_CHECK_INTERVAL,
   BASE_SPAWN_CHANCE,
@@ -48,7 +49,13 @@ export function seedInitialEntities(state: GameState, packs = 10): GameState {
     const [packMin, packMax] = def.pack;
     const packSize = packMin + Math.floor(rng.random() * (packMax - packMin + 1));
     for (let i = 0; i < packSize; i++) {
-      const tile = i === 0 ? origin : (findNearbyWalkable(state, origin.x, origin.y) ?? origin);
+      // Pack-mates spread to an adjacent tile only if it's also spawnable, else stack on origin —
+      // never spill onto water/mountain.
+      let tile = origin;
+      if (i > 0) {
+        const cand = findNearbyWalkable(state, origin.x, origin.y);
+        if (cand && isSpawnableTile(state.worldMap[cand.y]?.[cand.x])) tile = cand;
+      }
       seeded.push(makeMob(def, tile.x, tile.y, state.turn));
       if (def.entityClass === 'mob') hostile++;
       else neutral++;
@@ -109,7 +116,13 @@ export function spawnEntities(state: GameState): GameState {
   const packSize = packMin + Math.floor(rng.random() * (packMax - packMin + 1));
   const newMobs: Mob[] = [];
   for (let i = 0; i < packSize; i++) {
-    const tile = i === 0 ? origin : (findNearbyWalkable(state, origin.x, origin.y) ?? origin);
+    // Pack-mates spread to an adjacent tile, but only if it's also spawnable — otherwise they stack
+    // on the (already-validated) origin rather than spilling onto water/mountain.
+    let tile = origin;
+    if (i > 0) {
+      const cand = findNearbyWalkable(state, origin.x, origin.y);
+      if (cand && isSpawnableTile(state.worldMap[cand.y]?.[cand.x])) tile = cand;
+    }
     newMobs.push(makeMob(def, tile.x, tile.y, state.turn));
   }
 
@@ -137,9 +150,10 @@ export function findSpawnTile(
     const x = EDGE_BUFFER + Math.floor(rng.random() * (w - 2 * EDGE_BUFFER));
     const y = EDGE_BUFFER + Math.floor(rng.random() * (h - 2 * EDGE_BUFFER));
     const tile = map[y]?.[x];
-    if (!tile || !tile.walkable) continue;
+    // Hard rule: creatures only spawn on walkable forest/plains/swamp land — never water/mountain.
+    if (!isSpawnableTile(tile)) continue;
 
-    const weight = def.biomeWeights[tile.terrainType] ?? 0;
+    const weight = def.biomeWeights[tile!.terrainType] ?? 0;
     if (weight <= 0) continue;
     // Probabilistic accept by biome weight (max weight 1.2 → clamp).
     if (rng.random() > Math.min(1, weight)) continue;

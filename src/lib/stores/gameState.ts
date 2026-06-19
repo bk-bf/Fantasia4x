@@ -37,6 +37,7 @@ import { TICKS_PER_SECOND, ticksFromSeconds } from '$lib/game/core/time';
 import { clearTileDeltas } from '$lib/game/core/tileDeltas';
 import { rng, freshSeed } from '$lib/game/core/rng';
 import { resetUnreachableJobs } from '$lib/game/systems/PawnStateMachine';
+import { isSpawnableTile } from '$lib/game/core/Terrains';
 
 // ===== CONFIGURATION =====
 /** Real-time duration of one simulation tick at 1× speed (ms). */
@@ -385,7 +386,7 @@ function findNearestWalkable(
         const y = cy + dy;
         if (x < 0 || y < 0 || x >= mapW || y >= mapH) continue;
         const tile = worldMap[y]?.[x];
-        if (!tile?.walkable) continue;
+        if (!isSpawnableTile(tile)) continue;
         const key = `${x},${y}`;
         if (occupied.has(key)) continue;
         return { x, y };
@@ -525,16 +526,62 @@ function loadStateIntoWorker(state: GameState) {
   }
 }
 
-function regenWorld(seed?: number, dev = false, itemQty = 500) {
+// Runtime world dimensions — toggled by the Custom Map menu (small→huge). regenWorld reads these so a
+// size change takes effect on the next regeneration. Default matches the legacy 240×160 baseline.
+let currentMapSize = { w: 240, h: 160 };
+function setMapSize(w: number, h: number) {
+  currentMapSize = { w: Math.max(8, w | 0), h: Math.max(8, h | 0) };
+}
+function getMapSize() {
+  return currentMapSize;
+}
+
+/**
+ * Regenerate the world from `seed` at the current map size.
+ * `preview` (Custom Map menu, popup open): strip ALL pawns + mobs OFF the map — clear pawn positions
+ * and seed no creatures — so nothing glitches on freshly-shuffled mountain/water tiles while sliders
+ * move. A normal (non-preview) regen, e.g. when the popup closes, re-places pawns on valid
+ * forest/plains/swamp land and re-seeds creatures.
+ */
+function regenWorld(seed?: number, dev = false, itemQty = 500, preview = false) {
   const s = (seed !== undefined ? seed : freshSeed()) >>> 0 || 1;
   // P0-2/D7: regenerating the world starts a fresh deterministic run — persist the seed,
   // reseed the sim RNG, and clear stale module-level unreachable-job memory.
   rng.reseed(s);
   resetUnreachableJobs();
-  const newWorld = generateWorld(240, 160, s);
+  const newWorld = generateWorld(currentMapSize.w, currentMapSize.h, s);
   resourceGeneratorService.generateResources(newWorld, s);
   const base = get(gameState) as GameState;
+
+  if (preview) {
+    const next: GameState = {
+      ...base,
+      seed: s,
+      worldMap: newWorld,
+      mobs: [],
+      pawns: base.pawns.map((p) => ({
+        ...p,
+        position: undefined,
+        path: [],
+        pathIndex: 0,
+        isMoving: false,
+        hasReachedDestination: false
+      }))
+    };
+    loadStateIntoWorker(next);
+    return;
+  }
+
   let next: GameState = { ...base, seed: s, worldMap: newWorld, mobs: [] };
+  // Old pawn positions are stale against the new map (could now be inside a mountain or water) — drop
+  // them and re-place every pawn on valid spawnable land near the map centre.
+  next = {
+    ...next,
+    pawns: spawnPawnsOnMap(
+      next.pawns.map((p) => ({ ...p, position: undefined })),
+      newWorld
+    )
+  };
   // Keep the race pool/relations intact across a world regen (idempotent if already present).
   next = ensureRacePool(next);
   if (dev) next = applyDevWorld(next, itemQty);
@@ -964,7 +1011,9 @@ export const gameState = {
   consumeGlobalItem,
   resetGame,
   wipeAndReload,
-  regenWorld
+  regenWorld,
+  setMapSize,
+  getMapSize
 };
 
 // Export the updateWithSave function directly for GameEngine
@@ -1010,7 +1059,8 @@ export const currentStockpile = derived(gameState, ($gameState) => {
   const drops = $gameState.droppedItems ?? [];
   const namedStored = drops.filter((d) => d.stored && (d.quantity ?? 0) > 0 && d.name != null);
   const namedCount: Record<string, number> = {};
-  for (const d of namedStored) namedCount[d.resourceId] = (namedCount[d.resourceId] ?? 0) + d.quantity;
+  for (const d of namedStored)
+    namedCount[d.resourceId] = (namedCount[d.resourceId] ?? 0) + d.quantity;
 
   const rows = Object.entries($gameState.stockpile ?? {})
     .map(([id, amount]) => [id, amount - (namedCount[id] ?? 0)] as const)
@@ -1022,7 +1072,13 @@ export const currentStockpile = derived(gameState, ($gameState) => {
 
   for (const d of namedStored) {
     const def = itemService.getItemById(d.resourceId);
-    rows.push({ id: d.id, name: d.name!, amount: d.quantity, color: def?.color, emoji: def?.emoji });
+    rows.push({
+      id: d.id,
+      name: d.name!,
+      amount: d.quantity,
+      color: def?.color,
+      emoji: def?.emoji
+    });
   }
 
   return rows.sort((a, b) => a.name.localeCompare(b.name));

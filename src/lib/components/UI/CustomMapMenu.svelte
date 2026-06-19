@@ -1,16 +1,20 @@
 <script lang="ts">
-  // Custom Map popup — live-tune biome generation and regenerate the world as you drag.
-  // Each biome has ONE "share" slider (0 = none of that terrain, 100 = only it). Moving one
-  // rebalances the others proportionally so the shares always partition the elevation axis — no
-  // raw min/max bands to juggle. `applyBiomeShares` rewrites BIOMES' contiguous density ranges,
-  // which `pickBiome` reads on the next `regenWorld`.
+  // Custom Map popup — live-tune world generation and regenerate as you drag.
+  //  • SIZE toggles (S/M/L/XL) pick the world dimensions for the next regen.
+  //  • Each biome has ONE "share" slider (0 = none, 100 = only it). Moving one rebalances the
+  //    UNLOCKED others proportionally so the shares always partition the elevation axis. A 🔒 per row
+  //    pins that slider so it's left untouched when you tweak another.
+  //  • WATER is decoupled from biomes (its own field) — one slider for global water coverage.
   import { get } from 'svelte/store';
+  import { onDestroy } from 'svelte';
   import { gameState } from '$lib/stores/gameState';
   import {
     getBiomeConfig,
     applyBiomeShares,
     setBiomeField,
     resetBiomeConfig,
+    getWaterLevel,
+    setWaterLevel,
     type BiomeConfigEntry
   } from '$lib/game/core/Terrains';
 
@@ -18,27 +22,69 @@
 
   let biomes = $state<BiomeConfigEntry[]>(getBiomeConfig());
   let seed = $state<number>((get(gameState)?.seed ?? Date.now()) >>> 0);
+  let locked = $state<Set<string>>(new Set());
+  let water = $state<number>(Math.round(getWaterLevel() * 100));
 
-  // Debounce: regenerating the 240×160 world on every drag tick would thrash, so coalesce to ~120ms.
+  // Map-size presets (square). Default world is 240×160 — none highlighted until you pick one.
+  const SIZES = [
+    { label: 'S', dim: 250 },
+    { label: 'M', dim: 500 },
+    { label: 'L', dim: 750 },
+    { label: 'XL', dim: 1000 }
+  ];
+  let size = $state<number>(gameState.getMapSize().w);
+
+  // Debounce: regenerating the world on every drag tick would thrash, so coalesce to ~120ms.
+  // While the popup is open every regen runs in PREVIEW mode — pawns + creatures are stripped off
+  // the map so they don't glitch on freshly-shuffled mountain/water tiles. onDestroy does the final
+  // real regen that re-places them on valid land.
   let regenTimer: ReturnType<typeof setTimeout> | undefined;
   function scheduleRegen() {
     clearTimeout(regenTimer);
-    regenTimer = setTimeout(() => gameState.regenWorld(seed), 120);
+    regenTimer = setTimeout(() => gameState.regenWorld(seed, false, 500, true), 120);
   }
 
-  // Set one biome's share to `pct`% and spread the remaining (100−pct)% across the others in
-  // proportion to their current shares — so the sliders counterbalance and always sum to 100%.
+  onDestroy(() => {
+    clearTimeout(regenTimer);
+    gameState.regenWorld(seed); // restore pawns + creatures on valid forest/plains/swamp land
+  });
+
+  function toggleLock(id: string) {
+    const n = new Set(locked);
+    if (n.has(id)) n.delete(id);
+    else n.add(id);
+    locked = n;
+  }
+
+  // Set one biome's share to `pct`%, then spread the remaining across the UNLOCKED others in
+  // proportion to their current shares. Locked biomes keep their share, so a pinned slider never
+  // drifts when you adjust a different one.
   function setShare(id: string, pct: number) {
-    const newShare = Math.max(0, Math.min(1, pct / 100));
-    const others = biomes.filter((b) => b.id !== id);
-    const othersTotal = others.reduce((s, b) => s + b.share, 0);
-    const remaining = 1 - newShare;
+    const lockedOthers = biomes.filter((b) => b.id !== id && locked.has(b.id));
+    const freeOthers = biomes.filter((b) => b.id !== id && !locked.has(b.id));
+    const lockedTotal = lockedOthers.reduce((s, b) => s + b.share, 0);
+    // Can't claim more than the locked sliders leave free.
+    const newShare = Math.max(0, Math.min(pct / 100, 1 - lockedTotal));
+    const freeTotal = freeOthers.reduce((s, b) => s + b.share, 0);
+    const remaining = Math.max(0, 1 - lockedTotal - newShare);
     const next: Record<string, number> = { [id]: newShare };
-    if (othersTotal > 1e-6)
-      for (const b of others) next[b.id] = (b.share / othersTotal) * remaining;
-    else for (const b of others) next[b.id] = remaining / others.length;
+    for (const b of lockedOthers) next[b.id] = b.share;
+    if (freeOthers.length === 0) {
+      // Nothing free to absorb the change — fold the remainder back into the edited slider.
+      next[id] = newShare + remaining;
+    } else if (freeTotal > 1e-6) {
+      for (const b of freeOthers) next[b.id] = (b.share / freeTotal) * remaining;
+    } else {
+      for (const b of freeOthers) next[b.id] = remaining / freeOthers.length;
+    }
     applyBiomeShares(next);
     biomes = getBiomeConfig();
+    scheduleRegen();
+  }
+
+  function setWater(pct: number) {
+    water = pct;
+    setWaterLevel(pct / 100);
     scheduleRegen();
   }
 
@@ -47,20 +93,40 @@
     biomes = getBiomeConfig();
     scheduleRegen();
   }
+
+  function setSize(dim: number) {
+    size = dim;
+    gameState.setMapSize(dim, dim);
+    gameState.regenWorld(seed, false, 500, true);
+  }
+
   function reset() {
     resetBiomeConfig();
     biomes = getBiomeConfig();
+    water = Math.round(getWaterLevel() * 100);
+    locked = new Set();
     scheduleRegen();
   }
   function rollSeed() {
     seed = Date.now() >>> 0 || 1;
-    gameState.regenWorld(seed);
+    gameState.regenWorld(seed, false, 500, true);
   }
 </script>
 
 <div class="custom-map">
   <div class="cm-hdr">
     | CUSTOM MAP
+    <span class="size-group">
+      <span class="size-lbl">size</span>
+      {#each SIZES as s (s.dim)}
+        <button
+          class="cm-btn"
+          class:active={size === s.dim}
+          onclick={() => setSize(s.dim)}
+          title={`${s.dim}×${s.dim}`}>{s.label}</button
+        >
+      {/each}
+    </span>
     <label class="seed"
       >seed
       <input
@@ -69,7 +135,7 @@
         value={seed}
         onchange={(e) => {
           seed = Number((e.currentTarget as HTMLInputElement).value) >>> 0 || 1;
-          gameState.regenWorld(seed);
+          gameState.regenWorld(seed, false, 500, true);
         }}
       /></label
     >
@@ -78,15 +144,23 @@
     <button class="cm-btn close" onclick={onClose} title="close">✕</button>
   </div>
   <div class="cm-note">
-    Each biome's share of the world — 0 removes it, 100 fills the map; the rest rebalance to match.
+    Biome share — 0 removes it, 100 fills the map; unlocked ones rebalance. 🔒 pins a slider. Water
+    is independent of biome.
   </div>
 
   <div class="cm-grid">
+    <span class="col-h"></span>
     <span class="col-h">BIOME</span>
     <span class="col-h">SHARE %</span>
     <span class="col-h">TEMP °C</span>
     <span class="col-h">MOISTURE</span>
     {#each biomes as b (b.id)}
+      <button
+        class="lock"
+        class:on={locked.has(b.id)}
+        onclick={() => toggleLock(b.id)}
+        title={locked.has(b.id) ? 'unlock' : 'lock share'}>{locked.has(b.id) ? '🔒' : '🔓'}</button
+      >
       <span class="bname">{b.displayName}</span>
       <label class="cell">
         <input
@@ -94,6 +168,7 @@
           min="0"
           max="100"
           step="1"
+          disabled={locked.has(b.id)}
           value={Math.round(b.share * 100)}
           oninput={(e) => setShare(b.id, Number((e.currentTarget as HTMLInputElement).value))}
         />
@@ -122,13 +197,28 @@
         <span class="val">{b.baseMoisture}</span>
       </label>
     {/each}
+    <!-- Water row: a single decoupled slider, independent of the biome bands above. -->
+    <span class="col-h water-sep"></span>
+    <span class="bname water-name">Water</span>
+    <label class="cell">
+      <input
+        type="range"
+        min="0"
+        max="80"
+        step="1"
+        value={water}
+        oninput={(e) => setWater(Number((e.currentTarget as HTMLInputElement).value))}
+      />
+      <span class="val">{water}</span>
+    </label>
+    <span class="cell muted">lakes & seas in any lowland</span>
   </div>
 </div>
 
 <style>
   .custom-map {
     position: fixed;
-    bottom: 10px;
+    bottom: 40px; /* clear the 30px bottom nav bar + a small gap */
     left: 50%;
     transform: translateX(-50%);
     z-index: 1200; /* above the WebGL canvas overlays (which reach z-index 999) */
@@ -152,6 +242,17 @@
     letter-spacing: 0.08em;
     padding-bottom: 4px;
     border-bottom: 1px solid var(--border);
+  }
+  .size-group {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    margin-left: 14px;
+  }
+  .size-lbl {
+    color: var(--text-muted);
+    letter-spacing: 0;
+    font-size: 10px;
   }
   .seed {
     margin-left: auto;
@@ -184,6 +285,11 @@
     color: var(--text);
     border-color: var(--border-hi);
   }
+  .cm-btn.active {
+    color: #fff;
+    border-color: var(--accent-hi);
+    background: var(--tab-active);
+  }
   .cm-btn.close {
     color: var(--neg);
   }
@@ -194,7 +300,7 @@
   }
   .cm-grid {
     display: grid;
-    grid-template-columns: 90px 1fr 1fr 1fr;
+    grid-template-columns: 18px 90px 1fr 1fr 1fr;
     gap: 5px 16px;
     align-items: center;
   }
@@ -204,6 +310,18 @@
     letter-spacing: 0.04em;
     border-bottom: 1px solid var(--border);
     padding-bottom: 2px;
+  }
+  .lock {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 11px;
+    padding: 0;
+    line-height: 1;
+    opacity: 0.55;
+  }
+  .lock.on {
+    opacity: 1;
   }
   .bname {
     color: var(--text);
@@ -219,11 +337,27 @@
     min-width: 0;
     accent-color: var(--accent-hi);
   }
+  .cell input:disabled {
+    opacity: 0.4;
+  }
   .val {
     width: 30px;
     text-align: right;
     color: var(--text-dim);
     font-variant-numeric: tabular-nums;
+    font-size: 10px;
+  }
+  .water-sep {
+    border-top: 1px solid var(--border);
+    margin-top: 4px;
+    padding-top: 0;
+    border-bottom: none;
+  }
+  .water-name {
+    color: #61cce8;
+  }
+  .muted {
+    color: var(--text-muted);
     font-size: 10px;
   }
 </style>

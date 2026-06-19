@@ -1,6 +1,7 @@
 import terrainsData from '../database/terrains.jsonc';
 import subterrainsData from '../database/subterrains.jsonc';
 import { CP437_TO_UNICODE } from './cp437.js';
+import type { WorldTile } from './types';
 
 /**
  * Terrains.ts — Biome and subterrain definitions
@@ -181,7 +182,22 @@ export function setBiomeField(id: string, field: 'baseTemp' | 'baseMoisture', va
   else d.baseMoisture = value;
 }
 
-/** Restore the on-disk terrains.jsonc defaults. */
+// ── Runtime water level (Custom Map menu) ───────────────────────────────────────
+// Water is decoupled from biomes (it used to be a swamp/river-only subterrain, so it pooled almost
+// entirely in swamps). WorldGenerator now places it from a dedicated low-frequency water field
+// wherever that field falls below this threshold AND the tile isn't a mountain peak — so lakes form
+// in any lowland biome. The menu exposes it as a single 0–100 "water" slider. 0 = no water.
+const DEFAULT_WATER_LEVEL = 0.22;
+let waterLevel = DEFAULT_WATER_LEVEL;
+/** Fraction (0–1) of the water-noise field below which a non-mountain tile becomes water. */
+export function getWaterLevel(): number {
+  return waterLevel;
+}
+export function setWaterLevel(v: number): void {
+  waterLevel = Math.max(0, Math.min(1, v));
+}
+
+/** Restore the on-disk terrains.jsonc defaults (biome bands + water level). */
 export function resetBiomeConfig(): void {
   for (const [id, def] of Object.entries(DEFAULT_BIOME_CONFIG)) {
     const d = BIOMES[id];
@@ -190,6 +206,7 @@ export function resetBiomeConfig(): void {
     d.baseTemp = def.baseTemp;
     d.baseMoisture = def.baseMoisture;
   }
+  waterLevel = DEFAULT_WATER_LEVEL;
 }
 
 // ── Subterrains ───────────────────────────────────────────────────────────────
@@ -234,6 +251,20 @@ export function pickSubterrain(biomeName: string, detailNoise: number): string {
     }
   }
   return 'dirt'; // fallback
+}
+
+// Biomes where colonists and creatures may spawn. Mountains and water are excluded. NOTE: because
+// water is now decoupled from biome (a "plains" tile can carry a water subType — see getWaterLevel),
+// we must reject both non-spawnable biomes AND water subtypes, not just `walkable`.
+const SPAWNABLE_BIOMES = new Set(['forest', 'plains', 'swamp']);
+const WATER_SUBTYPES = new Set(['water', 'shallow_water', 'rapids']);
+
+/** True only for walkable forest/plains/swamp land — the single gate for pawn AND creature spawning. */
+export function isSpawnableTile(tile: WorldTile | undefined | null): boolean {
+  if (!tile || !tile.walkable) return false;
+  if (!SPAWNABLE_BIOMES.has(tile.terrainType)) return false;
+  if (WATER_SUBTYPES.has(tile.subType)) return false;
+  return true;
 }
 
 /**

@@ -6,7 +6,8 @@ import {
   SUBTERRAIN_FALLBACK,
   pickBiome,
   pickSubterrain,
-  pickChar
+  pickChar,
+  getWaterLevel
 } from '../core/Terrains';
 import { resourceGeneratorService } from '../services/ResourceGeneratorService';
 
@@ -22,6 +23,10 @@ const TERRAIN_GAIN = 0.6;
 // warp displaces whole regions slowly, giving organic, smoothly-meandering mountain shapes.
 const WARP_FREQUENCY = 0.01;
 const WARP_AMOUNT = 35; // tiles of max displacement — bigger, sweeping meanders
+// Decoupled water (see Terrains.getWaterLevel): a dedicated low-frequency field, warped like the
+// elevation, pools coherent lakes/seas in any lowland biome instead of confining water to the
+// swamp/river density bands. Lower frequency = larger, fewer water bodies.
+const WATER_FREQUENCY = 0.012;
 
 /** Simple seeded PRNG (xorshift32) — returns values in [0, 1). */
 function makeRng(seed: number) {
@@ -108,6 +113,9 @@ export function generateWorld(width: number, height: number, seed = Date.now()):
   // Two independent noise instances — same API as simplex-noise v4
   const terrainNoise = createNoise2D(makeRng(seed));
   const detailNoise = createNoise2D(makeRng(detailSeed));
+  // Third independent field drives decoupled water placement (biome-agnostic lakes/seas).
+  const waterNoise = createNoise2D(makeRng((seed * 7919) >>> 0));
+  const waterLevel = getWaterLevel();
 
   const world: WorldTile[][] = [];
 
@@ -127,7 +135,14 @@ export function generateWorld(width: number, height: number, seed = Date.now()):
 
       const biomeName = pickBiome(density) ?? 'plains';
       // Base ground-cover only; object placement is handled later in ResourceGeneratorService
-      const subTypeName = pickSubterrain(biomeName, detail);
+      let subTypeName = pickSubterrain(biomeName, detail);
+      // Decoupled water: where the dedicated water field dips below the level, override to water,
+      // regardless of biome. Mountain peaks are excluded so alpine tiles stay solid (and the
+      // interior-mountain silhouette hide-logic doesn't punch "lakes" into the rock).
+      if (waterLevel > 0 && biomeName !== 'mountain') {
+        const wv = (waterNoise((x + wx) * WATER_FREQUENCY, (y + wy) * WATER_FREQUENCY) + 1) / 2;
+        if (wv < waterLevel) subTypeName = wv < waterLevel * 0.55 ? 'water' : 'shallow_water';
+      }
       const sub = SUBTERRAINS[subTypeName] ?? SUBTERRAIN_FALLBACK;
 
       // Walkability and movement cost come entirely from the subterrain definition
