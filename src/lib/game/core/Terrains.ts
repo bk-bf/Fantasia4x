@@ -51,6 +51,8 @@ const B = (n: number): string => String.fromCodePoint(0xe400 + n);
 const I = (n: number): string => String.fromCodePoint(0xe500 + n);
 /** workshops.bmp index → PUA Unicode char (U+E600 + n) */
 const W = (n: number): string => String.fromCodePoint(0xe600 + n);
+/** crops.bmp index → PUA Unicode char (U+E700 + n) */
+const CROP = (n: number): string => String.fromCodePoint(0xe700 + n);
 /** creatures.bmp index → PUA Unicode char (U+E800 + n) */
 const CR = (n: number): string => String.fromCodePoint(0xe800 + n);
 /** races.bmp index → PUA Unicode char (U+E900 + n) */
@@ -58,7 +60,16 @@ const RA = (n: number): string => String.fromCodePoint(0xe900 + n);
 
 // ── CharSpan resolver ─────────────────────────────────────────────────────────
 export interface CharSpan {
-  sheet?: 'tiles' | 'plants' | 'map' | 'buildings' | 'items' | 'workshops' | 'creatures' | 'races';
+  sheet?:
+    | 'tiles'
+    | 'plants'
+    | 'map'
+    | 'buildings'
+    | 'items'
+    | 'workshops'
+    | 'crops'
+    | 'creatures'
+    | 'races';
   from?: number;
   to?: number;
   id?: number;
@@ -66,6 +77,8 @@ export interface CharSpan {
 }
 
 type SheetFn = (n: number) => string;
+// Every sheet loaded into the atlas (loadBitlandsAtlas) must appear here, or a charSpans referencing
+// it resolves to `undefined(id)` and throws at module load — crashing the whole app (a 500 in dev).
 const SHEET_FN: Record<string, SheetFn> = {
   tiles: T,
   plants: P,
@@ -73,6 +86,7 @@ const SHEET_FN: Record<string, SheetFn> = {
   buildings: B,
   items: I,
   workshops: W,
+  crops: CROP,
   creatures: CR,
   races: RA
 };
@@ -81,6 +95,13 @@ export function resolveCharSpans(spans: CharSpan[]): string[] {
   return spans.flatMap((span) => {
     if (span.literal !== undefined) return [span.literal];
     const fn = SHEET_FN[span.sheet ?? 'plants'];
+    // Fail-soft: an unknown sheet name (typo, or a sheet not registered above) renders a visible
+    // fallback glyph instead of throwing at import and 500-ing the whole game — a bad charSpans edit
+    // should never crash the app, just look wrong on that one tile.
+    if (!fn) {
+      console.warn(`resolveCharSpans: unknown sheet "${span.sheet}" — using fallback glyph`);
+      return ['?'];
+    }
     if (span.id !== undefined) return [fn(span.id)];
     return Array.from({ length: span.to! - span.from! + 1 }, (_, i) => fn(span.from! + i));
   });

@@ -22,6 +22,15 @@ export interface CampfireOverlay {
   top: number;
 }
 
+/** Ambient per-tile particle effect (e.g. a lair's smoke). `effect` selects the animation in
+ *  WorldEffectsLayer; position is screen-space like every other overlay. */
+export interface ParticleOverlay {
+  id: string;
+  left: number;
+  top: number;
+  effect: string; // 'smoke' | …
+}
+
 export interface HealthOverlay {
   id: string;
   left: number;
@@ -47,6 +56,7 @@ export interface WorldEffectsState {
   sleepingOverlays: SleepingOverlay[];
   progressOverlays: ProgressOverlay[];
   campfireOverlays: CampfireOverlay[];
+  particleOverlays: ParticleOverlay[];
   healthOverlays: HealthOverlay[];
   draftTargetOverlays: DraftTargetOverlay[];
   floatingTextOverlays: FloatingTextOverlay[];
@@ -60,6 +70,7 @@ function createWorldEffectsStore() {
     sleepingOverlays: [],
     progressOverlays: [],
     campfireOverlays: [],
+    particleOverlays: [],
     healthOverlays: [],
     draftTargetOverlays: [],
     floatingTextOverlays: []
@@ -75,6 +86,9 @@ function createWorldEffectsStore() {
     },
     setCampfireOverlays(overlays: CampfireOverlay[]) {
       update((s) => ({ ...s, campfireOverlays: overlays }));
+    },
+    setParticleOverlays(overlays: ParticleOverlay[]) {
+      update((s) => ({ ...s, particleOverlays: overlays }));
     },
     setHealthOverlays(overlays: HealthOverlay[]) {
       update((s) => ({ ...s, healthOverlays: overlays }));

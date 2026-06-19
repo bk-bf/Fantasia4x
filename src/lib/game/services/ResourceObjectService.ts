@@ -90,6 +90,11 @@ export interface ResourceObjectDef {
    * Not harvestable (designationTypes: []) — a landmark to learn and avoid (or clear).
    */
   lair?: boolean;
+  /**
+   * Ambient particle effect rendered over the tile (WorldEffectsLayer). Effect name, e.g. "smoke"
+   * (a goblin/orc warren's campfire). Visual only — purely cosmetic flavour for a tile.
+   */
+  particleEffect?: string;
   /** Primary interaction (backward-compat; also used when `interactions` is absent). */
   interaction: ResourceInteractionDef;
   /**

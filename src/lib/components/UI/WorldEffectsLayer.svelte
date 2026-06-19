@@ -43,6 +43,20 @@
     </div>
   {/each}
 
+  <!-- Ambient per-tile particle effects (lair smoke, …). -->
+  {#each $worldEffects.particleOverlays as overlay (overlay.id)}
+    {#if overlay.effect === 'smoke'}
+      <div
+        class="lair-smoke"
+        style="transform: translate({overlay.left}px, {overlay.top}px) translateX(-50%);"
+      >
+        <span class="puff p1">°</span>
+        <span class="puff p2">·</span>
+        <span class="puff p3">°</span>
+      </div>
+    {/if}
+  {/each}
+
   {#each $worldEffects.healthOverlays as overlay (overlay.id)}
     <div
       class="health-bar-float"
@@ -237,6 +251,54 @@
     100% {
       opacity: 0;
       transform: translateY(-36px) scale(0.4);
+    }
+  }
+
+  /* Subtle lair smoke — a few faint grey puffs that drift up and dissipate slowly. */
+  .lair-smoke {
+    position: absolute;
+    left: 0;
+    top: 0;
+    pointer-events: none;
+    width: 0;
+    height: 0;
+  }
+  .puff {
+    position: absolute;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    color: #9a958c;
+    opacity: 0;
+    animation: smoke-rise 3.4s ease-out infinite;
+    will-change: transform, opacity;
+  }
+  .puff.p1 {
+    animation-delay: 0s;
+    left: -2px;
+  }
+  .puff.p2 {
+    animation-delay: 1.15s;
+    left: 2px;
+  }
+  .puff.p3 {
+    animation-delay: 2.3s;
+    left: 0;
+  }
+  @keyframes smoke-rise {
+    0% {
+      opacity: 0;
+      transform: translateY(0) translateX(0) scale(0.7);
+    }
+    25% {
+      opacity: 0.32;
+    }
+    60% {
+      opacity: 0.22;
+      transform: translateY(-20px) translateX(4px) scale(1.15);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(-38px) translateX(8px) scale(1.6);
     }
   }
 
