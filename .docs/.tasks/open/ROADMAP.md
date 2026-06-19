@@ -32,7 +32,7 @@ All critical architectural debt resolved. Core survival loop is functional.
 | **Survival consequences** (starvation death, collapse, injuries, health) | [x]    | archived: `SURVIVAL-HEALTH-2026-05-30.md`                                                |
 | Production chains (primitives → Maker's Bench, then full expansion)      | [x]    | archived: `PRODUCTION-CHAINS-2026-05-28.md` + `PRODUCTION-CHAIN-EXPANSION-2026-06-12.md` |
 | Healthcare jobs                                                          | [x]    | delivered as caretaking/healing in `COMBAT-SYSTEM` (archived)                            |
-| Cooking as a dedicated job                                               | [ ]    | Hearth/Kitchen/Drying-Rack buildings exist; standalone cooking job unclaimed             |
+| Cooking as a dedicated job                                               | [x] 2026-06-20 | Food-producing craft jobs now route to the `cooking` labor category (dynamic `recipe-output` source in `jobs.jsonc`/`JobService`) so the Cooking work-tab slider drives them and `cooking_speed`/`cooking_quality` (§F) apply. `jobRegistry.test.ts` guards the mapping. |
 
 ---
 
