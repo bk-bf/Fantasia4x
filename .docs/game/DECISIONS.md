@@ -79,9 +79,16 @@ the worker→main snapshot crosses the boundary via `postMessage` (structured-cl
 reassembles entities onto a fresh per-id mirror (slim merge / full-resync — ADR-021 W2b), so the
 renderer/UI only ever see copies, never the worker's live mutable objects (no cross-thread aliasing);
 (3) the few in-tick before/after-diff spots capture an explicit copy. **Corollary the W2b snapshot
-relies on:** because hot fields mutate *in place* (no ref change), the snapshot can't detect changes
-by ref — so it sends a fixed slim projection every flush + periodic full resync, rather than a
-per-field ref-diff (ENGINE-PERFORMANCE §B). **Scope of the exception:** only the per-tick sim hot loops, behind the worker. The
+relies on:** hot scalars (position/needs/state/pain/blood) mutate *in place* and ship in a fixed
+slim projection **every flush** (no diff needed — they change constantly). The heavy **cold** fields
+(limbs/injuries/conditions/conditionTimers/inventory/equipment/skills/stats) instead ship via
+**per-field ref-diff**: the worker re-sends a cold field only the flush its object ref changes, so an
+idle entity costs nothing and the main-thread mirror is always current (detail panels are live +
+instant on open). This requires cold fields to take a **new ref on change** — combat + the
+command/`GameStateManager` path already do (immutable); the two in-place spots
+(`tickConditions`/`stepHunger` conditions, and wound clotting's `limbs`) slice-on-change. This
+**replaced** the original staggered full-resync round-robin (`RESYNC_EVERY`), which left the
+selected-entity panels ≤2s stale — pill/health lagging the sim (ENGINE-PERFORMANCE §B). **Scope of the exception:** only the per-tick sim hot loops, behind the worker. The
 **command/structural path stays immutable through `GameStateManager`** (it's not hot, and immutability
 keeps it traceable). The undo/time-travel consequence above is therefore **forfeited for live entity
 state** (never used). **Do not "restore" immutability in the hot loops** — it reinstates the 12.5×
