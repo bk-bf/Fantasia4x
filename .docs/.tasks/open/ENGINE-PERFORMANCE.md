@@ -1,4 +1,4 @@
-<!-- LOC cap: 780 (created: 2026-06-14, rewritten 2026-06-14 post-profiling; worker shipped 2026-06-14; Rust-SoA pivot 2026-06-14 then ABORTED after R1 2026-06-15 → mutable-in-place JS; M1–M3 + throttle landed 2026-06-15, de-immutabling plateaued; 2026-06-15 custom profiler RETIRED → Firefox Profiler + pq; capacity/formula caches + the WORKER→MAIN SNAPSHOT (W2/W2b) broke the plateau → 80–100 TPS @4×; then de-immutabled pawn-patch spreads + paused warmup screen → 200+ TPS @4× after ~5s, GOAL CRUSHED 2026-06-15; then JS-allocation capture (§C) verified the de-immutable win + drove the harvest-time worldMap-delta fix; 2026-06-15 Electron chosen over Tauri (A/B), and the Electron renderer trace opened §D — renderer-side hitches D1–D3; 2026-06-16 §D extended: prealloc + designation-decouple + RESYNC 8→32 + worldMapDelta-slim landed, and the BIG one — three `worldMap.map()` full-rebuilds (harvest completion / mob forage / building footprint) found via the `[TRIG]` probe and de-immutabled in place → `worldMapRef=0`; sectional throttle TRIED+REVERTED; then the ENTITY BASELINE got its surgical cut after all (D8) — `[SNAP-PAWN]` field-audit + drop-never-read-fields projection (`entityProjection.ts`), slim pawn 766→~535B / pawns 152k→109k, the path≈900B premise was STALE; next non-entity lever = `droppedItems` deltas) -->
+<!-- LOC cap: 870 (created: 2026-06-14, rewritten 2026-06-14 post-profiling; worker shipped 2026-06-14; Rust-SoA pivot 2026-06-14 then ABORTED after R1 2026-06-15 → mutable-in-place JS; M1–M3 + throttle landed 2026-06-15, de-immutabling plateaued; 2026-06-15 custom profiler RETIRED → Firefox Profiler + pq; capacity/formula caches + the WORKER→MAIN SNAPSHOT (W2/W2b) broke the plateau → 80–100 TPS @4×; then de-immutabled pawn-patch spreads + paused warmup screen → 200+ TPS @4× after ~5s, GOAL CRUSHED 2026-06-15; then JS-allocation capture (§C) verified the de-immutable win + drove the harvest-time worldMap-delta fix; 2026-06-15 Electron chosen over Tauri (A/B), and the Electron renderer trace opened §D — renderer-side hitches D1–D3; 2026-06-16 §D extended: prealloc + designation-decouple + RESYNC 8→32 + worldMapDelta-slim landed, and the BIG one — three `worldMap.map()` full-rebuilds (harvest completion / mob forage / building footprint) found via the `[TRIG]` probe and de-immutabled in place → `worldMapRef=0`; sectional throttle TRIED+REVERTED; then the ENTITY BASELINE got its surgical cut after all (D8) — `[SNAP-PAWN]` field-audit + drop-never-read-fields projection (`entityProjection.ts`), slim pawn 766→~535B / pawns 152k→109k, the path≈900B premise was STALE; next non-entity lever = `droppedItems` deltas; 2026-06-20 §F — `droppedItems` per-id `EntitySync` + `_carcassCondition` summary + throttled spoilage + chronicle-batch + combat per-hit in-place (COW), the LAST done after a self-inflicted unconditional-per-tick-clone regression caught in `perf.log`) -->
 
 # ENGINE PERFORMANCE & SCALING
 
@@ -23,6 +23,25 @@ Profiling-driven performance work, measured on the heavy `--profiler` sandbox (1
 
 ## 0 · Status
 
+- **🩸 COMBAT + ITEM SNAPSHOT FIXES (§F, 2026-06-20) — engagement-wave FPS dips fixed; one self-inflicted
+  regression caught + fixed.** A 5-pawn/420-mob playtest dipped (worker TPS *and* FPS) during mass mob-vs-mob
+  engagement waves (`perf.log` dips lined up with `combat.log` waves) and during carcass accumulation. Landed,
+  in order: (1) **`droppedItems` per-id `EntitySync`** (was shipped WHOLE every flush and grew unbounded with
+  kills — the D8-flagged lever); (2) **`_carcassCondition` summary** computed worker-side so the per-unit
+  `unitConditions` arrays never cross the boundary and the sidebar/crafting panels stop re-scanning all drops
+  each flush; (3) **throttled spoilage** (`stepItemDecay` every 60 ticks, not every tick — it re-referenced the
+  whole `droppedItems`+`stockpile` every tick); (4) **chronicle batch** (`batchLogReplay` — a combat flood
+  replayed dozens of `simlog` events in one synchronous burst, each re-running every `activityLog` derived view
+  + panel; now one notify per batch); (5) **combat per-hit array rebuild → in-place** — `_applyInjuryToEntity`/
+  `applyOnHitEffect` rebuilt the WHOLE 420-mob array (`state.mobs.map()`) on every injury, several times per
+  landed hit; a wave did dozens of full-array rebuilds/tick (this is M4, which §6 had DROPPED at 140 mobs —
+  re-opened for the 420-mob case). **The regression-on-the-fix:** the first combat cut cloned the mobs+pawns
+  arrays UNCONDITIONALLY every tick (even at peace) → reintroduced the very per-tick-alloc tax this spec is
+  about + churned the `pawnById` array-ref memo → new single-tick GC stalls in `perf.log`. Fixed with
+  **copy-on-write** (clone an array only on the first hit that writes it; peace ticks allocate nothing). Guarded
+  by `combatSim.test.ts` (a `tickCombat`-doesn't-mutate-its-input test, so the fresh-corpse index-diff stays
+  valid). **Lesson (the reason for the AGENTS.md cross-check rule): I caused a perf regression while fixing a
+  perf bug — every hot-path/snapshot edit must be cross-checked against THIS spec + `perf.log` re-read after.**
 - **🧱 CHUNKED TERRAIN (§E, 2026-06-20) — FPS regression from the 500×500 default map, FIXED + validated in-game.** Commit
   `b2a1031` changed the default map 240×160 → 500×500 (**38k → 250k tiles, 6.5×**). TPS was unaffected
   (the sim is per-*entity*: a 5-pawn/420-mob playtest) but **FPS clapped** — the renderer drew the WHOLE
@@ -159,9 +178,12 @@ entity fields in place instead of rebuilding objects every tick.
 - [~] **Auto-defend throttle (RimWorld-style staggered AI)** — non-combat pawns re-scan for threats
   every 6 ticks (offset by `debugId`), not 60 Hz; in-combat pawns scan every tick. `findCombatThreat`
   180 → ~80/tick. **Near-non-win on TPS** (the cached scan was cheap) — kept (harmless, right model).
-- [—] **M4 — `combat` → mutable: DROPPED.** Combat-active cost is *compute* (attack resolution,
-  wounds, A*), not allocation; de-immutabling buys ~1 ms for the `preCombatState`/`handleFreshCombatCorpses`
-  before/after-diff rewrite risk. Not worth it. (Re-open only if a profiler pass says otherwise.)
+- [x] **M4 — `combat` → mutable: RE-OPENED + LANDED at the 420-mob scale (§F, 2026-06-20).** Dropped at
+  140 mobs (compute, not alloc) — but a 5-pawn/**420-mob** mob-vs-mob wave made the per-hit `state.mobs.map()`
+  full-array rebuild (several per landed hit, dozens of hits/tick) the dominant cost. Now in-place via
+  copy-on-write working clones (`spliceEntity`); the `preCombatState`/`handleFreshCombatCorpses` before/after
+  diff is preserved (the COW clone keeps the input intact; index-aligned). The residual per-hit
+  `computeCapacities` recompute (compute, cache-miss on the fresh `{...entity}`) is still open — separate lever.
 - [x] **M5 — diagnostics gated.** Worker `[PROF]`/`[SIM-TPS]` now opt-in via `?simprof`
   (`USE_SIM_PROFILE`), default OFF (no per-tick perf.log spam). `GameStateManager` audit: no further
   hot allocators found worth converting.
@@ -487,9 +509,12 @@ attempt truncated `path` off the stale number and saved ~nothing — *measure th
 **Now the biggest growing cost is NOT entities — it's `droppedItems`.** The `[SNAP]` probe shows it shipped whole
 every flush and **climbing unbounded with harvest (16k → 31k+ in one session)**; this is the D6 worldMap problem
 for items. Next lever:
-- [ ] **`droppedItems` deltas** — ship only added/removed/changed items (id-keyed mirror like the per-entity sync),
-  not the whole array every flush. The `state` payload also spikes to ~120k whenever `workAssignments` (~46k) +
-  `jobs` (~40–52k) ride along (the D7-reverted territory) — a separate, later lever.
+- [x] **`droppedItems` deltas — DONE (§F, 2026-06-20).** Now rides its own per-id `EntitySync` (`drops`), so only
+  stacks whose object ref changed ship each flush; reconstructed by the bridge (`applyDropSync`). The per-unit
+  carcass `unitConditions` arrays are kept off the panels' read path via a worker-computed `_carcassCondition`
+  summary, and spoilage is throttled (60 ticks) so the array ref stops churning every tick. See §F.
+- [ ] **`state` payload `workAssignments` (~46k) + `jobs` (~40–52k)** spike to ~120k when they ride along (the
+  D7-reverted territory) — a separate, later lever.
 
 **Lesson of §D, reaffirmed:** every win came from a *correlated/field-level* capture (`[TRIG]`, `[SNAP]`,
 `[SNAP-PAWN]`); both blind/assumed moves regressed or no-op'd (D7's throttle; the path-only first cut off the
@@ -552,6 +577,58 @@ re-clones now copying 250k tiles** — same root cause leaking across the bounda
   Event-rate, not per-frame, so it's the secondary cost — but at 750×750+ it'll want per-chunk dirtying
   (the worker already ships `worldMapDelta`s; plumb changed-chunk ids to invalidate just those chunks
   instead of bumping the global `gridVersion`).
+
+---
+
+## §F · COMBAT + ITEM SNAPSHOT FIXES — engagement-wave dips, and a regression-on-the-fix (2026-06-20)
+
+**Surface:** a 5-pawn/**420-mob** playtest. Two distinct dip families in `.debug/perf.log`, correlated with the
+other logs (the spec's method — measure the boundary, not just the sim):
+- **Carcass/item growth** — `droppedItems` shipped WHOLE every flush and grew unbounded as kills piled up
+  (D8 had flagged this), and the per-unit carcass `unitConditions` arrays both bloated the clone and made the
+  sidebar/crafting panels re-scan every drop each flush.
+- **Engagement waves** — `perf.log` TPS dips lined up tick-for-tick with `combat.log` mob-vs-mob waves.
+
+### What landed (in order)
+
+- [x] **`droppedItems` per-id `EntitySync` (`drops`).** Added to `SECTIONAL_SKIP`; the worker ships only stacks
+  whose object ref changed (`syncDrops`, whole-object ref-diff), the bridge rebuilds via `applyDropSync`
+  (replace, not merge — drops carry the full object). Unchanged piles cost nothing/flush.
+- [x] **`_carcassCondition` summary.** `carcassConditionByType(drops)` (pure, `core/carcassCondition.ts`) is
+  computed WORKER-SIDE only when the `droppedItems` ref changes, shipped as a small `Record<id,number>`; the
+  panels read `$gameState._carcassCondition` instead of re-scanning all drops × 2 components each flush. The
+  per-unit arrays still ship inside the drop (the autosave persists the projected state — stripping them would
+  silently lose carcass spoilage across save/load; `requestSave` is never called).
+- [x] **Throttled spoilage.** `stepItemDecay(state, elapsedTicks)` runs every `DECAY_INTERVAL_TICKS = 60`
+  (erosion scaled by the elapsed ticks) instead of every tick — it re-referenced the whole `droppedItems` +
+  `stockpile` every tick. Mirrors the existing `DETERIORATION_INTERVAL_TICKS` pattern.
+- [x] **Chronicle batch (`batchLogReplay`).** A combat flood replayed dozens of `simlog` events in one
+  synchronous burst; each `activityLog` mutation re-ran ALL derived views (the `allLogEntries` O(n log n) sort
+  over ≤2400 entries, the per-type filters) + every subscribed panel. `activityLog` is now a batchable store;
+  the bridge wraps the replay loop so the whole batch fires ONE notification.
+- [x] **M4 combat per-hit rebuild → in-place (copy-on-write).** `_applyInjuryToEntity`/`applyOnHitEffect`
+  rebuilt the entire 420-mob array (`state.mobs.map()`) on every injury — several per landed hit, dozens of
+  hits/tick under a wave. Now `tickCombat` runs `_combatWorking` mode and `spliceEntity` writes the changed
+  entity into its array SLOT in place. New entity OBJECTS are still created (cold-field refs stay fresh for the
+  snapshot diff; the index-aligned `handleFreshCombatCorpses` still sees old-vs-new), only the array isn't
+  rebuilt per hit. Public `applyInjury*` stay immutable for the tests.
+
+### The regression-on-the-fix (the reason for the cross-check rule)
+
+- [x] The FIRST combat cut cloned the mobs + pawns arrays **unconditionally at the top of every `tickCombat`**,
+  even at peace — reintroducing the per-tick allocation tax THIS spec is about (★ DONE / R1's 12.5×) and
+  churning the `pawnById` array-ref memo (rebuilt every tick). `perf.log` showed new single-tick GC stalls.
+  **Fixed with copy-on-write:** `next = state` (no clone); `spliceEntity` clones an array only on the FIRST hit
+  that writes it, then writes slots in place. A peace tick writes nothing → clones nothing → zero allocation.
+  Guarded by a `tickCombat`-doesn't-mutate-its-input test (`combatSim.test.ts`). **Lesson:** I caused a perf
+  regression *while fixing a perf bug* — hence the AGENTS.md rule to cross-check this spec + re-read `perf.log`
+  on every hot-path/snapshot edit.
+
+### Still open (combat)
+
+- [ ] **Per-hit `computeCapacities` recompute.** `_applyInjuryToEntity` calls it with a fresh `{...entity,
+  limbs, injuries}` → cache-miss every hit → full capacity recompute. Compute, not allocation (won't show in an
+  alloc capture) — likely still a slice of the wave cost. Wants a worker-thread capture before touching it.
 
 ---
 
@@ -677,7 +754,7 @@ These were the main-thread band-aids. The worker cutover (§4) made both obsolet
 | **Rust-SoA simulation core (full port)** | **Rejected (R1, §9)** | Only ~1.2–1.4× over *mutable* JS — not worth a two-language rewrite. Spike parked (§A) for a possible partial port at far larger scale. |
 | **JS-SoA core (typed arrays, no Rust)** | **Rejected (R1)** | SoA showed *no* win over mutable OOP in JS at 500 entities (index math costs more than it saves until cache-bound). The lever is immutable→mutable, not layout. |
 | Throttle `findCombatThreat`/auto-defend | **Kept, ~non-win** | 180 → ~80 calls/tick but TPS unchanged — the scan uses a cached hostile subset (cheap). Harmless + the right model (RimWorld staggering), so kept; not the lever. |
-| **M4 — de-immutable `combat`** | **Dropped** | Combat-active cost is *compute* (attack resolution, wounds, A*), not allocation. ~1 ms for the `preCombatState`/`handleFreshCombatCorpses` before/after-diff rewrite risk — not worth it. |
+| **M4 — de-immutable `combat`** | **Dropped at 140 mobs → RE-OPENED + LANDED at 420 (§F)** | Compute-bound with light combat; but a 420-mob mob-vs-mob wave made the per-hit `state.mobs.map()` rebuild dominant. Landed via copy-on-write working clones (`spliceEntity`), corpse-diff preserved. |
 | **TS uniform-grid for `nearest*`** | **Reverted (§B)** | At ~290 entities, building a grid (Map+buckets+closures) every tick cost ~8.8% vs ~5.7% for the linear scans + GC churn. Grids win only in the thousands; JIT-inlined linear scan wins here. |
 | **`(pawns,mobs)`-memoized `blockedTiles`** | **Reverted (§B)** | `processMovement` rebuilds `pawns` every patch → near-zero cache hit rate; bookkeeping cost more than the plain scan (1.0 → ~2.1%). |
 | Switch wrapper (Electron/Tauri) **for perf** | **Rejected** | Single-thread JS either way; decide wrapper on distribution grounds later. |
