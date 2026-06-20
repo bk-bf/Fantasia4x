@@ -82,14 +82,16 @@
   }
 
   // GENERATE (commit): a real regen that places pawns on valid forest/plains/swamp land and seeds
-  // creatures, then adopts the result as the new baseline so closing afterwards keeps it.
-  function generate() {
+  // creatures, then adopts the result as the new baseline and auto-closes the popup. dirty is cleared
+  // first so the onDestroy revert is a no-op — the committed map stays.
+  async function generate() {
     clearTimeout(previewTimer);
-    runRegen(() => {
+    await runRegen(() => {
       gameState.regenWorld(seed);
       baseline = get(gameState);
       dirty = false;
     });
+    onClose();
   }
 
   // Revert on unmount, whichever way the popup closes — the ✕ button, the CUSTOM MAP toolbar toggle,
