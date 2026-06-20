@@ -59,6 +59,12 @@ const TRANSIENT_CONDITIONS_DB = (
  *  second). Tuned so a SERIOUS wound bleeds out over several in-game HOURS — long enough that the
  *  periodic clot rolls + a caretaker dressing are a real race, not an instant death. */
 const BLEED_CONSTANT = 32;
+/** Effective bleedMod of a DESTROYED (severed / blown-off) part's open stump, regardless of how it was
+ *  removed. Blunt crush wounds don't bleed (bleedMod 0) — their payoff is raw damage that craters limbs —
+ *  but once a limb is actually blown off, the stump GUSHES. Set higher than any wound bleedMod (cut 1.0)
+ *  so a ripped-off limb is the worst bleed in the game; still scaled by the clot/dressing factor so it
+ *  can be stopped. A cut that severs already bleeds hard, so this is really the path for crush kills. */
+const SEVERED_STUMP_BLEED_MOD = 2.5;
 /** How many successful clot rolls a wound needs before it fully stops bleeding, by severity. Each stage
  *  cuts the bleed proportionally (serious at 1/2 clots → half bleed). */
 function clotsNeeded(severity: Injury['severity']): number {
@@ -204,9 +210,18 @@ export function recomputeWound(
     type,
     severity,
     damage: accumDamage,
+    // A destroyed part bleeds from the open stump regardless of wound type (crush bleedMod 0 still
+    // gushes once the limb is off); otherwise the wound's own bleedMod governs.
     bleeding: partDef
       ? Math.round(
-          partDef.bleedRatio * BLEED_CONSTANT * (wd?.bleedMod ?? 0) * frac * remaining * 100
+          partDef.bleedRatio *
+            BLEED_CONSTANT *
+            (severity === 'destroyed'
+              ? Math.max(wd?.bleedMod ?? 0, SEVERED_STUMP_BLEED_MOD)
+              : (wd?.bleedMod ?? 0)) *
+            frac *
+            remaining *
+            100
         ) / 100
       : 0,
     painContribution:
@@ -238,10 +253,13 @@ export function recomputeWoundInPlace(w: Injury, accumDamage: number, turn?: num
   w.severity = severityFromFrac(frac);
   w.damage = accumDamage;
   const remaining = clotRemaining(w);
+  // Destroyed part → open-stump gush regardless of wound type (mirrors recomputeWound).
+  const effBleedMod =
+    w.severity === 'destroyed'
+      ? Math.max(wd?.bleedMod ?? 0, SEVERED_STUMP_BLEED_MOD)
+      : (wd?.bleedMod ?? 0);
   w.bleeding = partDef
-    ? Math.round(
-        partDef.bleedRatio * BLEED_CONSTANT * (wd?.bleedMod ?? 0) * frac * remaining * 100
-      ) / 100
+    ? Math.round(partDef.bleedRatio * BLEED_CONSTANT * effBleedMod * frac * remaining * 100) / 100
     : 0;
   w.painContribution =
     Math.round(accumDamage * (wd?.painPerDamage ?? 0.5) * (partDef?.isVital ? 2 : 1) * 10) / 10;
@@ -348,7 +366,7 @@ function profileFromWeapon(
   return {
     str,
     dex,
-    baseDamage: wp.baseDamage ?? wp.damage,
+    baseDamage: wp.damage,
     accuracy: wp.accuracy ?? 0,
     damageType: dtype,
     bluntMod: wp.bluntMod ?? (dtype === 'blunt' ? 1.0 : 0),
@@ -667,7 +685,8 @@ class CombatServiceImpl implements CombatService {
       type: woundDef.id as Injury['type'],
       severity: severityFromFrac(hpMissing),
       damage: final,
-      bleeding: woundDef.bleedMod > 0 && hpMissing > 0 ? 1 : 0,
+      // Bleed cue: an open-wound type (cut/puncture) OR any hit that blows the part off (stump gush).
+      bleeding: (woundDef.bleedMod > 0 || hpMissing >= 1.0) && hpMissing > 0 ? 1 : 0,
       painContribution: 0,
       infected: false
     };

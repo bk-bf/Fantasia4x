@@ -102,7 +102,6 @@ describe('stat scaling (consume side)', () => {
   it('scaleWeaponQuality scales damage/accuracy/crit/pen, leaves intrinsic fields', () => {
     const wp = {
       damage: 10,
-      baseDamage: 8,
       damMin: 6,
       damMax: 12,
       accuracy: 5,
@@ -113,7 +112,7 @@ describe('stat scaling (consume side)', () => {
       reach: 1
     };
     const fine = scaleWeaponQuality(wp, 2); // ×1.15
-    expect(fine.baseDamage).toBeCloseTo(8 * 1.15);
+    expect(fine.damage).toBeCloseTo(10 * 1.15);
     expect(fine.damMax).toBeCloseTo(12 * 1.15);
     expect(fine.accuracy).toBeCloseTo(5 * 1.15);
     expect(fine.critMod).toBeCloseTo(0.1 * 1.15);
@@ -139,8 +138,8 @@ describe('stat scaling (consume side)', () => {
   });
 
   it('Crude weapon is weaker than Standard', () => {
-    const wp = { damage: 10, baseDamage: 10, attackSpeed: 1, range: 0 };
-    expect(scaleWeaponQuality(wp, 0).baseDamage).toBeLessThan(10);
+    const wp = { damage: 10, attackSpeed: 1, range: 0 };
+    expect(scaleWeaponQuality(wp, 0).damage).toBeLessThan(10);
   });
 });
 

@@ -287,12 +287,11 @@ export interface Item {
 
   // Item-specific properties
   weaponProperties?: {
-    damage: number; // legacy flat damage; kept for backward compat
+    damage: number; // canonical base damage (before STR scaling); the one field the combat formula reads
     attackSpeed: number;
     range: number;
     // ── COMBAT-SYSTEM additions ──────────────────────────────────────────
     damageType?: DamageType; // cutting | piercing | blunt
-    baseDamage?: number; // base damage before str scaling
     damMin?: number; // minimum damage roll (EQUIPMENT-EXPANSION)
     damMax?: number; // maximum damage roll (EQUIPMENT-EXPANSION)
     reach?: number; // melee reach in tiles (1 = adjacent, 2 = pole-arm)

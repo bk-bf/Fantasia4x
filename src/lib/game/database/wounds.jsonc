@@ -64,9 +64,10 @@
       "id"            : "crush",
       "name"          : "Crush",
       "fromDamageType": "blunt",
-      // Blunt trauma now draws SOME blood (contusion / internal bleeding) so a bare-fist or club fight
-      // actually bleeds a foe down over time instead of only chipping part HP — far below a cut (1.0).
-      "bleedMod"      : 0.25,
+      // Blunt trauma does NOT open an external bleed — a crush wound is pure pain + tissue damage. Its
+      // payoff is RAW DAMAGE: heavy bludgeons crater part HP and blow limbs clean off in a few blows.
+      // A severed/blown-off limb DOES gush (the open stump) — see SEVERED_STUMP_BLEED_MOD in Combat.
+      "bleedMod"      : 0.0,
       "painPerDamage" : 0.9,
       "healDifficulty": 1.4
     },

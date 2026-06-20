@@ -19,7 +19,6 @@ type ArmorProps = NonNullable<Item['armorProperties']>;
 // reload, ammo, stamina cost etc. are intrinsic to the design and are NOT scaled.
 const WEAPON_QUALITY_FIELDS = [
   'damage',
-  'baseDamage',
   'damMin',
   'damMax',
   'accuracy',

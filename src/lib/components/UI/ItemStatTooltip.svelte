@@ -96,9 +96,7 @@
     const ap = item.armorProperties;
     if (wp) {
       const dmg =
-        wp.damMin != null && wp.damMax != null
-          ? `${wp.damMin}–${wp.damMax}`
-          : `${wp.damage ?? wp.baseDamage ?? 0}`;
+        wp.damMin != null && wp.damMax != null ? `${wp.damMin}–${wp.damMax}` : `${wp.damage ?? 0}`;
       return `${dmg} dmg`;
     }
     if (ap) return `${ap.armorValue ?? ap.defense ?? 0} def`;
