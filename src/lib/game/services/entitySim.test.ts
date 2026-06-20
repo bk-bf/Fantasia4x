@@ -160,6 +160,40 @@ describe('creature conditions affect creatures (parity with pawns)', () => {
     state = entityService.stepHunger(state);
     expect(state.mobs![0].transientConditions ?? []).not.toContain('tired');
   });
+
+  // Weather exposure — creatures feel windchill + wet too, but with hardier thresholds than pawns.
+  const weatherState = (mobs: Mob[], wetMoisture: number, wind?: number): GameState => {
+    const world = smallWorld();
+    (world[5][5] as any).moisture = wetMoisture; // the goblin stands at (5,5)
+    return {
+      turn: 0, // turn 0 % MOB_WEATHER_INTERVAL === 0 → the exposure pass runs
+      mobs,
+      pawns: [],
+      worldMap: world,
+      weather: wind !== undefined ? ({ type: 'windy', wind, windDir: 0 } as any) : undefined,
+      stockpile: {},
+      droppedItems: [],
+      buildings: []
+    } as unknown as GameState;
+  };
+
+  it('a creature on a soaked tile reads as `wet` (hardier threshold than a pawn)', () => {
+    let state = weatherState([makeGoblin()], 90); // 90 ≥ MOB_WET_THRESHOLD (75)
+    state = entityService.stepHunger(state);
+    expect(state.mobs![0].transientConditions ?? []).toContain('wet');
+  });
+
+  it('…but stays dry on damp-not-soaked ground (below the creature threshold)', () => {
+    let state = weatherState([makeGoblin()], 60); // a pawn would track toward wet; a creature shrugs it
+    state = entityService.stepHunger(state);
+    expect(state.mobs![0].transientConditions ?? []).not.toContain('wet');
+  });
+
+  it('a strong wind windchills a creature (persistent condition driven from the felt wind)', () => {
+    let state = weatherState([makeGoblin()], 0, 0.8); // 0.8 ≫ MOB_WIND_ONSET (0.45)
+    state = entityService.stepHunger(state);
+    expect((state.mobs![0].conditions ?? []).some((c) => c.id === 'windchilled')).toBe(true);
+  });
 });
 
 describe('hard tile occupancy (advanceMobMovement)', () => {

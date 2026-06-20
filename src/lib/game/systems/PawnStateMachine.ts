@@ -936,6 +936,11 @@ class PawnStateMachineImpl {
           ...afterConditions,
           currentState: PAWN_STATE.COLLAPSED,
           activeJob: undefined,
+          // Going down RELEASES the draft: an unconscious pawn can't be commanded, so drop the drafted
+          // flag + any attack/move order. Otherwise the draft-path loop kept crawling it toward its
+          // target at a fraction of a tile/s — a downed pawn dragging itself in to "attack" a wolf.
+          drafted: false,
+          draftTarget: undefined,
           path: [],
           isMoving: false,
           hasReachedDestination: false,

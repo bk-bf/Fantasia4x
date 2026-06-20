@@ -495,6 +495,9 @@ export class GameEngineImpl implements GameEngine {
     const blocked = occupancyService.blockedTiles(gs);
     for (const pawn of gs.pawns) {
       if (pawn.isAlive === false || !pawn.drafted || !pawn.draftTarget || !pawn.position) continue;
+      // A collapsed (unconscious) pawn can't be marched anywhere — never path it toward a draft target
+      // (it's un-drafted on collapse anyway; this guards the transition tick so it never crawls).
+      if (pawn.currentState === 'Collapsed') continue;
       const target = pawn.draftTarget;
       if (target.type === 'move') {
         if (pawn.position.x === target.x && pawn.position.y === target.y) {
