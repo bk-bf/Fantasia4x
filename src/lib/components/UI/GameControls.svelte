@@ -256,14 +256,6 @@
     padding: 0 5px;
     white-space: nowrap;
   }
-  .bi::before {
-    content: '[';
-    color: var(--text-muted);
-  }
-  .bi::after {
-    content: ']';
-    color: var(--text-muted);
-  }
   .bi.title {
     color: var(--accent-hi);
     font-weight: bold;
