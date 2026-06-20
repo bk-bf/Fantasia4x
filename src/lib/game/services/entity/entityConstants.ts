@@ -90,6 +90,19 @@ export const BASE_FATIGUE_PER_SECOND = 0.32;
 export const STARVATION_COLLAPSE_SEVERITY = 0.65;
 /** Hunger threshold at which an entity transitions to a feeding state. */
 export const HUNGER_EAT_THRESHOLD = 50;
+
+/**
+ * Whether a mob FINISHES OFF a downed (Collapsed) pawn instead of leaving it be. Only a hungry
+ * carnivore/predator does — it's a meal. Everything else disengages and wanders off (a downed pawn is
+ * no threat). Shared by the entity FSM (whether to keep engaging a collapsed pawn) and Combat (whether
+ * to land the killing blow), so the two never disagree and strand a mob frozen beside the body.
+ */
+export function willFinishOffDowned(
+  hunger: number,
+  def: { predator?: boolean; diet?: string }
+): boolean {
+  return hunger >= HUNGER_EAT_THRESHOLD && (def.predator === true || def.diet === 'carnivore');
+}
 /** Hunger threshold at which a feeding entity considers itself sated. */
 export const HUNGER_SATED_THRESHOLD = 10;
 /** Tile radius searched for edible grass resources. */

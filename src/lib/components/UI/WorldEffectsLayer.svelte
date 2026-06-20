@@ -29,6 +29,11 @@
   // "3-tile-wide" plume stays 3 tiles at any zoom instead of a fixed pixel size (the weather canvas
   // scales the same way). Clamped so it never vanishes or becomes absurd at the zoom extremes.
   const BASE_TILE = 20;
+
+  // Per-entity text floats (Zzz / ✚ / ↓) are authored at BASE_TILE px; without scaling they stay a fixed
+  // pixel size while the tiles shrink on zoom-out, so a sleeping colony tiles the whole screen with Zzz.
+  // Track the live zoom so a float stays ~1 tile tall at any zoom (shrinks out, grows in), clamped.
+  $: floatScale = Math.max(0.25, Math.min(1.5, $cameraTileSize / BASE_TILE));
 </script>
 
 <div class="world-effects-layer">
@@ -37,7 +42,7 @@
   {#each $worldEffects.sleepingOverlays as overlay (overlay.id)}
     <div
       class="zzz-float"
-      style="transform: translate({overlay.left}px, {overlay.top}px) translateX(-50%);"
+      style="transform: translate({overlay.left}px, {overlay.top}px) translateX(-50%) scale({floatScale});"
     >
       <span class="zzz-z" style="animation-delay:0s">Z</span><span
         class="zzz-z"
@@ -49,18 +54,22 @@
   {#each $worldEffects.restingOverlays as overlay (overlay.id)}
     <div
       class="rest-float"
-      style="transform: translate({overlay.left}px, {overlay.top}px) translateX(-50%);"
+      style="transform: translate({overlay.left}px, {overlay.top}px) translateX(-50%) scale({floatScale});"
     >
       <span class="rest-cross">✚</span>
     </div>
   {/each}
 
+  <!-- Collapsed/downed: same rising stagger as the Zzz of sleep, but red ↓ arrows (an emergency tell). -->
   {#each $worldEffects.collapsedOverlays as overlay (overlay.id)}
     <div
       class="collapse-float"
-      style="transform: translate({overlay.left}px, {overlay.top}px) translateX(-50%);"
+      style="transform: translate({overlay.left}px, {overlay.top}px) translateX(-50%) scale({floatScale});"
     >
-      <span class="collapse-arrow">↓</span>
+      <span class="collapse-arrow" style="animation-delay:0s">↓</span><span
+        class="collapse-arrow"
+        style="animation-delay:0.7s">↓</span
+      ><span class="collapse-arrow" style="animation-delay:1.4s">↓</span>
     </div>
   {/each}
 
@@ -309,37 +318,29 @@
     }
   }
 
-  /* ── Collapsed (downed: pain / blood loss / starvation) — a quiet red ↓ that bobs DOWN, calmer than
-     the rising Zzz so a fainted pawn reads as an emergency without shouting like sleep does. ── */
+  /* ── Collapsed (downed: pain / blood loss / starvation) — the SAME rising stagger as the Zzz of sleep,
+     but red ↓ arrows: a fainted pawn reads as an emergency yet animates like the sleep tell it replaces. ── */
 
   .collapse-float {
     position: absolute;
     left: 0;
     top: 0;
     pointer-events: none;
-    /* centering + positioning via inline style transform: translate(X,Y) translateX(-50%) */
+    display: flex;
+    gap: 1px;
+    /* centering + positioning via inline style transform: translate(X,Y) translateX(-50%) scale(...) */
   }
 
   .collapse-arrow {
     color: #e23b3b;
     font-family: 'Courier New', monospace;
-    font-size: 10px;
+    font-size: 8px;
     font-weight: bold;
+    opacity: 0;
+    /* Reuse the Zzz rise (opacity + translateY + scale) — colour/glyph are the only difference. */
+    animation: zzz-rise 2.1s ease-out infinite;
     text-shadow: 0 0 4px #800;
-    animation: collapse-bob 1.8s ease-in-out infinite;
     will-change: transform, opacity;
-  }
-
-  @keyframes collapse-bob {
-    0%,
-    100% {
-      opacity: 0.35;
-      transform: translateY(-2px);
-    }
-    50% {
-      opacity: 0.85;
-      transform: translateY(1px);
-    }
   }
 
   /* ── Campfire fire animation ─────────────────────────────────────────────────── */

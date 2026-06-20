@@ -34,6 +34,7 @@ import {
   conditionStatMultipliers
 } from '../core/needs';
 import { getCreatureById } from '../core/Creatures';
+import { willFinishOffDowned } from '../services/entity/entityConstants';
 import { woundForDamageType, woundById, severityFromFrac, recomputeWound } from '../core/Wounds';
 import { scaleWeaponQuality, scaleArmorQuality } from '../core/itemQuality';
 import { pawnStatService } from '../services/PawnStatService';
@@ -1516,13 +1517,16 @@ class CombatServiceImpl implements CombatService {
         target = mobs.find((m) => m.id === mob.huntTargetId && m.isAlive !== false);
       }
       if (!target) {
-        // Skip collapsed pawns — a downed pawn is no longer a target, so the
-        // mob disengages rather than beating an unconscious body (spec: a
-        // collapsed pawn is carried off or bleeds out, not auto-finished).
+        // Skip collapsed pawns by default — a downed pawn is no longer a target, so the mob disengages
+        // rather than beating an unconscious body (spec: a collapsed pawn is carried off or bleeds out).
+        // EXCEPTION: a hungry predator finishes it off (willFinishOffDowned) — the same predicate the FSM
+        // uses to decide whether to keep engaging, so the two never disagree (one holds, the other skips).
+        const mobDef = getCreatureById(mob.creatureId);
+        const finisher = mobDef ? willFinishOffDowned(mob.needs?.hunger ?? 0, mobDef) : false;
         target = state.pawns.find(
           (p) =>
             p.isAlive !== false &&
-            p.currentState !== 'Collapsed' &&
+            (finisher || p.currentState !== 'Collapsed') &&
             p.position &&
             Math.abs(mob.x - p.position.x) <= 1 &&
             Math.abs(mob.y - p.position.y) <= 1

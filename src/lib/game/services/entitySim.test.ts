@@ -260,6 +260,36 @@ describe('prey reacts to a pawn hunter (same circuits as predator-prey)', () => 
     state = entityService.stepEntities({ ...state, turn: 1 });
     expect(state.mobs![0].state).toBe('Fleeing');
   });
+
+  // ── Downed pawns: disengage unless a hungry predator finishes them off ──────
+  it('a mob leaves a COLLAPSED pawn alone — never freezes beating the unconscious body', () => {
+    // A territorial boar attacks an adjacent hunter (see the test above) — but if that pawn is DOWNED,
+    // it must disengage and wander, not lock in Alerted/Attacking over the body (the reported freeze).
+    let state = stateWith([makeAnimal('boar')], [makeHunter({ currentState: 'Collapsed' })]);
+    let everAttacked = false;
+    for (let t = 0; t < 25; t++) {
+      state = { ...state, turn: t };
+      state = entityService.stepEntities(state);
+      if (state.mobs![0].state === 'Attacking') everAttacked = true;
+    }
+    expect(everAttacked).toBe(false);
+  });
+
+  it('a HUNGRY predator DOES finish off an adjacent collapsed pawn', () => {
+    // Hungry wolf (carnivore predator) already engaged beside a downed pawn → it presses the attack.
+    const wolf = makeAnimal('wolf', {
+      state: 'Alerted',
+      needs: { hunger: 85, fatigue: 0, sleep: 0, lastSleep: 0, lastMeal: 0 }
+    });
+    let state = stateWith([wolf], [makeHunter({ currentState: 'Collapsed' })]);
+    let engaged = false;
+    for (let t = 0; t < 10 && !engaged; t++) {
+      state = { ...state, turn: t };
+      state = entityService.stepEntities(state);
+      if (state.mobs![0].state === 'Attacking') engaged = true;
+    }
+    expect(engaged).toBe(true);
+  });
 });
 
 describe('feeding states do not oscillate (hostile FSM + unreachable forage)', () => {

@@ -32,6 +32,7 @@ import {
   FLEE_HEALTH_FRACTION,
   HUNGER_SATED_THRESHOLD,
   HUNGER_EAT_THRESHOLD,
+  willFinishOffDowned,
   FORAGE_RADIUS,
   SLEEP_FATIGUE_THRESHOLD,
   SLEEP_MAX_HUNGER,
@@ -305,6 +306,30 @@ function chebDist(ax: number, ay: number, bx: number, by: number): number {
   return Math.max(Math.abs(ax - bx), Math.abs(ay - by));
 }
 
+/** Nearest pawn POSITION this mob may actually engage: skips downed (Collapsed) pawns UNLESS `finisher`
+ *  (a hungry predator that finishes them off). Manhattan, mirroring nearestPawn. Null when nothing is
+ *  engageable — the signal for an Alerted/Attacking mob to disengage and wander instead of freezing over
+ *  an unconscious body. */
+function nearestEngageablePos(
+  mob: Mob,
+  pawns: Pawn[],
+  finisher: boolean
+): { x: number; y: number } | null {
+  let best: { x: number; y: number } | null = null;
+  let bd = Infinity;
+  for (let i = 0; i < pawns.length; i++) {
+    const p = pawns[i];
+    if (p.isAlive === false || !p.position) continue;
+    if (!finisher && p.currentState === 'Collapsed') continue;
+    const d = Math.abs(p.position.x - mob.x) + Math.abs(p.position.y - mob.y);
+    if (d < bd) {
+      bd = d;
+      best = p.position;
+    }
+  }
+  return best;
+}
+
 export function stepHostile(
   mob: Mob,
   def: CreatureDefinition,
@@ -523,15 +548,21 @@ export function stepHostile(
       // scrum, and froze in Alerted right beside a pawn it never attacked (the #3065 freeze). Mirror the
       // combat tick's target filter (skip Collapsed — a downed pawn isn't finished off). The FSM only
       // holds state; combatService owns damage + the one-per-engagement Chronicle line.
+      // A downed (Collapsed) pawn is engageable ONLY to a hungry finisher; everyone else ignores it and
+      // disengages below — that's the fix for mobs freezing in Alerted right beside an unconscious body.
+      const finisher = willFinishOffDowned(mob.needs.hunger ?? 0, def);
       const adjPawn = state.pawns.some(
         (p) =>
           p.isAlive !== false &&
-          p.currentState !== 'Collapsed' &&
+          (finisher || p.currentState !== 'Collapsed') &&
           p.position &&
           adjacent(mob, p.position)
       );
       if (adjPawn) return { ...mob, state: 'Attacking', stateSince: turn };
-      if (!nearest || dist(mob, nearest.pos) > visionRange * 1.5) {
+      // Re-target the nearest ENGAGEABLE pawn (the global `nearest` may be a downed body we ignore). No
+      // engageable target in range → wander off rather than hover over the collapsed pawn.
+      const engage = nearestEngageablePos(mob, state.pawns, finisher);
+      if (!engage || dist(mob, engage) > visionRange * 1.5) {
         return { ...mob, state: 'Wander', stateSince: turn };
       }
       // Surround, don't stack: route to a DISTINCT free tile adjacent to the pawn via the shared
@@ -539,10 +570,10 @@ export function stepHostile(
       // tile. moveToward homes every pursuer on the pawn's exact tile from one heading, and
       // stepDirectional's anti-jitter `break` forbids the lateral move to peel around — so the 3rd+
       // mob in a pack froze directly behind the leaders instead of flanking.
-      const decision = approachForMelee(mob, nearest.pos, state, turn);
+      const decision = approachForMelee(mob, engage, state, turn);
       if (decision.kind === 'hold') return mob; // following a committed approach route
       // Fully boxed in (no walkable flank) — fall back to the greedy step so the mob still presses.
-      if (decision.kind === 'unreachable') return moveToward(mob, nearest.pos, state);
+      if (decision.kind === 'unreachable') return moveToward(mob, engage, state);
       return { ...mob, path: decision.path, pathIndex: 0 }; // nextCellCostLeft preserved (see helper)
     }
     case 'Attacking': {
@@ -559,10 +590,13 @@ export function stepHostile(
         // Prey broke contact — resume the hunt against IT (not the nearest pawn).
         return { ...mob, state: 'Hunting', stateSince: turn };
       }
-      // Pawn engagement (or the prey just died / vanished): fall back to pawn-based logic.
-      if (!nearest || !adjacent(mob, nearest.pos)) {
-        return { ...mob, state: 'Alerted', stateSince: turn };
-      }
+      // Pawn engagement (or the prey just died / vanished): fall back to pawn-based logic, skipping
+      // downed pawns unless we're a hungry finisher. No engageable pawn (e.g. our target just collapsed
+      // and we won't finish it) → leave the body and wander; out of reach → re-close via Alerted.
+      const atkFinisher = willFinishOffDowned(mob.needs.hunger ?? 0, def);
+      const engage = nearestEngageablePos(mob, state.pawns, atkFinisher);
+      if (!engage) return { ...mob, state: 'Wander', stateSince: turn };
+      if (!adjacent(mob, engage)) return { ...mob, state: 'Alerted', stateSince: turn };
       return mob;
     }
     case 'Fleeing': {
