@@ -110,7 +110,7 @@ export interface BodyPartState {
   maxHp: number;
   isMissing: boolean;
   /** Bone is broken (fracture damage ≥ boneHp): the limb is crippled — manipulation (arm) / moving
-   *  (leg) gutted + a broken_arm/leg condition crushing STR/DEX — but NOT severed. Clears as it heals. */
+   *  (leg) gutted + the graded `fractured` condition crushing STR/DEX — but NOT severed. Clears as it heals. */
   boneBroken?: boolean;
   injuries: Injury[];
 }

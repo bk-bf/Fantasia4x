@@ -122,7 +122,7 @@ const BLOOD_FAINT_ONSET = 0.2;
 const BLOOD_FAINT_FLOOR = 0.55;
 
 // A broken bone guts the limb's physical capacity (manipulation for an arm, moving for a leg) to this
-// fraction — heavy, but a notch above losing the limb. The broken_arm/leg CONDITION layers the STR/DEX
+// fraction — heavy, but a notch above losing the limb. The graded `fractured` CONDITION layers the STR/DEX
 // crush on top (different axis), so the two together make a fracture genuinely crippling.
 const BROKEN_BONE_FUNCTION_MULT = 0.4;
 

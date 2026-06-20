@@ -108,7 +108,7 @@ const TRANSIENT_CONDITIONS_DB = (
 /** Bone-fracture roll on a hit to a boned part. Blunt cracks bone FAR more readily (× the weapon's
  *  bluntMod) — that's a bludgeon's signature; a cut/thrust only fractures on a deep blow. The chance
  *  scales with how hard the hit lands vs the part's boneHp, capped so it's never a sure thing. A broken
- *  bone cripples the limb (manipulation/moving + a broken_arm/leg condition) without severing it. */
+ *  bone cripples the limb (manipulation/moving + the graded `fractured` condition) without severing it. */
 const FRACTURE_BLUNT_BASE = 0.6;
 const FRACTURE_OTHER_BASE = 0.12;
 const FRACTURE_BLUNT_CAP = 0.85;

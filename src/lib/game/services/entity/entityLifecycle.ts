@@ -230,7 +230,7 @@ export function stepHunger(state: GameState): GameState {
     }
 
     // ── Shock ──────────────────────────────────────────────────────────────────
-    // Broken-bone conditions (broken_arm/leg) synced from the limb tree — crushes the mob's STR/DEX on
+    // Graded `fractured` condition synced from the limb tree — crushes the mob's STR/DEX on
     // top of the manipulation/moving capacity hit, same as pawns; cleared as the bones knit.
     if (limbs) syncFractureConditions(conditions, limbs);
 
