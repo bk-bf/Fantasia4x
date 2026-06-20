@@ -62,6 +62,9 @@ export interface CombatTurnEntry {
   /** Wound this swing inflicted: kind (cut | fracture | puncture | crush | burn) + severity. */
   woundType?: string;
   woundSeverity?: 'minor' | 'serious' | 'critical' | 'destroyed';
+  /** This swing was the killing blow — the kill is folded into the engagement breakdown
+   *  rather than a standalone entry, so the fatal swing is flagged to stand out. */
+  fatal?: boolean;
 }
 
 export interface ActivityLogEntry {

@@ -698,7 +698,9 @@ class CombatServiceImpl implements CombatService {
       damageType,
       weaponId,
       staminaCost,
-      partRemainingHp: newHealth,
+      // Round for display only: per-tick fractional healing leaves part HP at e.g. 41.00001…, which
+      // leaked into the combat chronicle as "41.00001616999995/70". Sim math keeps the raw value.
+      partRemainingHp: Math.round(newHealth),
       partMaxHp: partDef.maxHp
     };
   }

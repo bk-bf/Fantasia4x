@@ -33,19 +33,40 @@ describe('engagement-scoped combat logging', () => {
     expect(entries[0].action).toBe('Goblin #2 engaged Wren');
   });
 
-  it('a kill finalizes the entry with a "killed" summary', () => {
+  it('folds the kill into the engagement entry (no standalone "killed" row)', () => {
     for (let t = 0; t < 5; t++) {
       logCombatSwing('mob-g2', 'Goblin #2', 'pawn-wren', 'Wren', t, 5, 5, swing(t, true, 4));
     }
     logCombatKill('mob-g2', 'Goblin #2', 'pawn-wren', 'Wren', 4, 5, 5, 'claws');
     const entries = combatEntries();
-    // Session entry + standalone kill entry
-    expect(entries).toHaveLength(2);
-    const sessionEntry = entries.find((e) => e.action.includes('engaged'));
-    const killEntry = entries.find((e) => e.action.includes('killed'));
-    expect(sessionEntry?.result).toContain('killed');
-    expect(killEntry?.severity).toBe('critical');
-    expect(killEntry?.result).toContain('claws');
+    // One folded entry — the kill is not a separate line.
+    expect(entries).toHaveLength(1);
+    const sessionEntry = entries[0];
+    expect(sessionEntry.action).toBe('Goblin #2 engaged Wren');
+    expect(sessionEntry.result).toContain('killed');
+    expect(sessionEntry.severity).toBe('critical');
+    // The killing swing is flagged in the nested breakdown, and only that one.
+    const fatal = sessionEntry.combatBreakdown?.filter((b) => b.fatal) ?? [];
+    expect(fatal).toHaveLength(1);
+    expect(sessionEntry.combatBreakdown?.[sessionEntry.combatBreakdown.length - 1].fatal).toBe(true);
+  });
+
+  it('a kill bumps the engagement to the newest slot of the chronicle', () => {
+    // An unrelated entry logged first; the engagement resolves afterwards.
+    logCombatSwing('mob-g2', 'Goblin #2', 'pawn-wren', 'Wren', 0, 5, 5, swing(0, true, 3));
+    logCombatSwing('mob-z', 'Wolf', 'pawn-q', 'Quill', 1, 9, 9, {
+      turn: 1,
+      attackerName: 'Wolf',
+      defenderName: 'Quill',
+      hit: true,
+      damage: 2
+    });
+    // Goblin/Wren engagement (older entry) resolves in a kill → it should jump to the end
+    // (= top of the newest-first chronicle view).
+    logCombatKill('mob-g2', 'Goblin #2', 'pawn-wren', 'Wren', 5, 5, 5, 'claws');
+    const log = get(activityLog);
+    expect(log[log.length - 1].action).toBe('Goblin #2 engaged Wren');
+    expect(log[log.length - 1].turn).toBe(5); // restamped to the concluding turn
   });
 
   it('re-engaging after a long lull opens a new entry (engagement boundary)', () => {
@@ -91,13 +112,23 @@ describe('engagement-scoped combat logging', () => {
     // Two goblins both fighting Wren — same brawl (joined via Wren).
     logCombatSwing('mob-g1', 'Goblin #1', 'pawn-wren', 'Wren', 0, 5, 5, swing(0, true, 3));
     logCombatSwing('mob-g2', 'Goblin #2', 'pawn-wren', 'Wren', 1, 5, 5, swing(1, true, 3));
-    // Wren downs Goblin #1; Goblin #2 is still up, so the engagement entry lives on.
+    // Wren lands the killing blow on Goblin #1 (swing logged first, as in real combat),
+    // then it's reported as a kill. Goblin #2 is still up, so the engagement entry lives on.
+    logCombatSwing('pawn-wren', 'Wren', 'mob-g1', 'Goblin #1', 2, 5, 5, {
+      turn: 2,
+      attackerName: 'Wren',
+      defenderName: 'Goblin #1',
+      hit: true,
+      damage: 5
+    });
     logCombatKill('pawn-wren', 'Wren', 'mob-g1', 'Goblin #1', 2, 5, 5, 'spear');
     logCombatSwing('mob-g2', 'Goblin #2', 'pawn-wren', 'Wren', 3, 5, 5, swing(3, true, 2));
     const engaged = combatEntries().filter((e) => e.action.includes('engaged'));
-    const killed = combatEntries().filter((e) => e.action.includes('killed'));
+    // No standalone "killed" row — the kill is folded into the one engagement entry.
+    expect(combatEntries().every((e) => !e.action.includes('killed'))).toBe(true);
     expect(engaged).toHaveLength(1);
-    expect(killed).toHaveLength(1);
-    expect(engaged[0].combatBreakdown?.length).toBe(3);
+    expect(engaged[0].combatBreakdown?.length).toBe(4);
+    // The blow that downed Goblin #1 is flagged fatal in the breakdown.
+    expect(engaged[0].combatBreakdown?.filter((b) => b.fatal)).toHaveLength(1);
   });
 });

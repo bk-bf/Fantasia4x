@@ -322,25 +322,41 @@ function sessionSummary(s: CombatSession): {
  * Rewrite the session's Chronicle entry in place (immutably → reactivity fires).
  * Called once per resolved swing — cheap because swings are gated by attack cadence
  * (~every 30 ticks per attacker), not emitted every sim tick.
+ *
+ * `bump` (set on a kill) lifts the entry to the newest slot of the log and restamps
+ * its turn/timestamp to the concluding moment, so the freshly-resolved engagement
+ * jumps to the top of the chronicle instead of staying buried where it began.
  */
-function flushSession(s: CombatSession) {
+function flushSession(s: CombatSession, bump = false) {
   const { result, severity } = sessionSummary(s);
   const breakdownCopy = [...s.breakdown];
   const ids = [...s.participants];
-  activityLog.update((log) =>
-    log.map((e) =>
-      e.id === s.entryId
-        ? { ...e, result, severity, combatBreakdown: breakdownCopy, entityIds: ids }
-        : e
-    )
-  );
+  activityLog.update((log) => {
+    const idx = log.findIndex((e) => e.id === s.entryId);
+    if (idx === -1) return log;
+    const updated: ActivityLogEntry = {
+      ...log[idx],
+      result,
+      severity,
+      combatBreakdown: breakdownCopy,
+      entityIds: ids
+    };
+    if (!bump) {
+      const next = log.slice();
+      next[idx] = updated;
+      return next;
+    }
+    updated.turn = s.lastActivityTurn;
+    updated.timestamp = new Date();
+    return [...log.slice(0, idx), ...log.slice(idx + 1), updated];
+  });
 }
 
 /** Close a session: mark it done, flush once, and drop all its bookkeeping. */
-function closeSession(s: CombatSession) {
+function closeSession(s: CombatSession, bump = false) {
   if (!s.closed) {
     s.closed = true;
-    flushSession(s);
+    flushSession(s, bump);
   }
   combatSessions.delete(s.entryId);
   for (const pid of s.participants) {
@@ -448,12 +464,26 @@ export function logCombatSwing(
   flushSession(session);
 }
 
+/** Flag the killing swing inside the session breakdown so the fatal blow stands out
+ *  in the nested sub-log. The killing hit was just pushed by `logCombatSwing`, so the
+ *  most recent landed swing against the slain combatant is the one. */
+function markFatalBlow(s: CombatSession, defenderName: string, weapon?: string) {
+  for (let i = s.breakdown.length - 1; i >= 0; i--) {
+    const sw = s.breakdown[i];
+    if (sw.hit && sw.defenderName === defenderName) {
+      sw.fatal = true;
+      if (weapon && !sw.weapon) sw.weapon = weapon;
+      return;
+    }
+  }
+}
+
 /**
- * Mark the slain combatant out of the brawl and flag the engagement as having a
- * kill, then emit a standalone kill entry that stands out in the chronicle
- * (severity=critical, its own line). The engagement entry itself stays open so
- * the surviving fighters keep accreting onto it — it only closes once the brawl
- * has emptied out (≤1 combatant left).
+ * Fold a kill into its engagement entry: flag the killing swing in the breakdown,
+ * mark the slain combatant out of the brawl, and bump the (now `· killed`) engagement
+ * line to the TOP of the chronicle — no standalone "killed" row. The engagement entry
+ * itself stays open so surviving fighters keep accreting onto it; it only closes once
+ * the brawl has emptied out (≤1 combatant left).
  */
 export function logCombatKill(
   attackerId: string,
@@ -466,31 +496,39 @@ export function logCombatKill(
   weapon?: string
 ) {
   const session = findActiveSession(turn, attackerId, defenderId);
-  if (session) {
-    session.killed = true;
-    session.lastActivityTurn = turn;
-    // The slain combatant is done fighting — drop them from the live brawl.
-    session.participants.delete(defenderId);
-    if (sessionByParticipant.get(defenderId) === session.entryId) {
-      sessionByParticipant.delete(defenderId);
-    }
-    if (session.participants.size <= 1) closeSession(session);
-    else flushSession(session);
+
+  // Fallback: a kill with no tracked engagement (shouldn't happen via Combat.ts, which
+  // always logs the killing swing first) — emit a standalone entry so it isn't lost.
+  if (!session) {
+    const weaponStr = weapon ? ` with ${weapon}` : '';
+    logActivity({
+      turn,
+      type: 'combat',
+      actor: attackerId,
+      action: `${attackerName} killed ${defenderName}`,
+      target: defenderId,
+      result: `Final blow${weaponStr}`,
+      severity: 'critical',
+      entityIds: [attackerId, defenderId],
+      focusX,
+      focusY
+    });
+    return;
   }
 
-  const weaponStr = weapon ? ` with ${weapon}` : '';
-  logActivity({
-    turn,
-    type: 'combat',
-    actor: attackerId,
-    action: `${attackerName} killed ${defenderName}`,
-    target: defenderId,
-    result: `Final blow${weaponStr}`,
-    severity: 'critical',
-    entityIds: [attackerId, defenderId],
-    focusX,
-    focusY
-  });
+  session.killed = true;
+  session.lastActivityTurn = turn;
+  markFatalBlow(session, defenderName, weapon);
+
+  // The slain combatant is done fighting — drop them from the live brawl.
+  session.participants.delete(defenderId);
+  if (sessionByParticipant.get(defenderId) === session.entryId) {
+    sessionByParticipant.delete(defenderId);
+  }
+
+  // Bump the folded engagement line to the top of the chronicle either way.
+  if (session.participants.size <= 1) closeSession(session, true);
+  else flushSession(session, true);
 }
 
 /** Logs an entity death with its cause (starvation, blood loss, combat, …). */

@@ -11,12 +11,13 @@
 
 <div class="breakdown">
   {#each ordered as { t, n }}
-    <div class="line t-{n.tier}" class:crit={t.crit} class:miss={!t.hit}>
+    <div class="line t-{n.tier}" class:crit={t.crit} class:miss={!t.hit} class:fatal={t.fatal}>
       <div class="head">
         <span class="turn">T{t.turn}</span>
         <span class="who atk">{n.attacker}</span>
         <span class="verb t-{n.tier}">{n.verb}</span>
         <span class="who">{n.target}</span>
+        {#if t.fatal}<span class="tag kill">KILL</span>{/if}
         {#if n.dodged}<span class="dodge">— dodged</span>{/if}
       </div>
       {#if t.hit}
@@ -68,6 +69,12 @@
   }
   .line.miss {
     opacity: 0.55;
+  }
+  /* The killing blow — brightest accent + a faint glow so it reads as the climax. */
+  .line.fatal {
+    border-left-color: #ff2a1a;
+    background: rgba(255, 42, 26, 0.12);
+    box-shadow: inset 2px 0 0 #ff2a1a;
   }
 
   .head {
@@ -147,6 +154,11 @@
     letter-spacing: 0.04em;
     padding: 0 3px;
     border-radius: 2px;
+  }
+  .tag.kill {
+    color: #fff;
+    background: #ff2a1a;
+    letter-spacing: 0.08em;
   }
   .tag.knock {
     color: #1a1208;
