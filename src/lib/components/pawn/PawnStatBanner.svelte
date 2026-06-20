@@ -1,5 +1,7 @@
-<!-- PawnStatBanner.svelte — the six base-stat chips (STR DEX CON INT PER CHA).
-     Shared between the Status tab (PawnOverview) and the Attributes tab (PawnAttributes). -->
+<!-- PawnStatBanner.svelte — the six base-stat chips (STR DEX CON INT PER CHA), showing the
+     condition-adjusted (effective) value with a signed delta. The single source of truth for the
+     stat grid: rendered by the Attributes tab (PawnAttributes) and the Status tab (via PawnStatsBar,
+     which adds the name header), plus anywhere else the core attributes are shown. -->
 <script lang="ts">
   import type { Pawn } from '$lib/game/core/types';
   import { conditionStatMultipliers } from '$lib/game/core/needs';
