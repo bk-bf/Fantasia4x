@@ -53,13 +53,21 @@ const CLEAR: WeatherState = { type: 'clear', intensity: 0, turnsRemaining: 999 }
 describe('pawn wetness (SEASONS_WEATHER)', () => {
   beforeEach(() => rebuildThermalField([])); // no fires/roofs unless a test sets them
 
-  it('soaks over time when standing on a wet (>50%) tile in the rain — not instant', () => {
-    const out = run(state(pawn(0), tile('swamp'), HEAVY_RAIN), 1);
+  it('soaks over time when standing on a wet (>50%, <100%) tile in the rain — not instant', () => {
+    // plains (baseMoisture 30) + heavy_rain (+35) = 65% wet → above the >50% soak threshold but
+    // below 100%, so it fills gradually (~1 in-game hour) rather than instantly.
+    const out = run(state(pawn(0), tile('plains'), HEAVY_RAIN), 1);
     expect(out.pawns[0].needs.wetness!).toBeGreaterThan(0); // started rising
     expect(out.pawns[0].needs.wetness!).toBeLessThan(5); // but only a little after one tick
-    // Soaking is gradual by design (~200s of rain to fully soak); ~100s crosses the "wet" threshold.
-    const soaked = run(state(pawn(0), tile('swamp'), HEAVY_RAIN), 8000);
+    // A >50% tile fills the meter in ~1 in-game hour (12.5s); a couple of hours of rain is well soaked.
+    const soaked = run(state(pawn(0), tile('plains'), HEAVY_RAIN), 8000);
     expect(soaked.pawns[0].needs.wetness!).toBeGreaterThan(50);
+  });
+
+  it('a fully-wet (100%) tile soaks the pawn instantly', () => {
+    // swamp (baseMoisture 80) + heavy_rain (+35) clamps to 100% wet → full meter in a single tick.
+    const out = run(state(pawn(0), tile('swamp'), HEAVY_RAIN), 1);
+    expect(out.pawns[0].needs.wetness!).toBe(100);
   });
 
   it('a dry tile (clear weather, low-moisture biome) does NOT soak', () => {

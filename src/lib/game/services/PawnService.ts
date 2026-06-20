@@ -25,7 +25,8 @@ import {
   thermalAt,
   effectiveTemperature,
   isRoofedTile,
-  tileWetness
+  tileWetness,
+  TURNS_PER_DAY
 } from './EnvironmentService';
 // Gated console shim — see core/log.ts. Silences per-tick log/debug/warn unless
 // gameDebug(true); console.error still surfaces.
@@ -131,14 +132,18 @@ const HEAT_HUNGER_PER_DEG = 0.02;
 const NIGHT_LIGHT_THRESHOLD = 0.3; // ambient below this counts as "night" for the fatigue bump
 const NIGHT_FATIGUE_MUL = 1.1;
 
-// SEASONS_WEATHER — pawn wetness meter (0-100). Soaks slowly on wet tiles (rain raises tile wetness),
-// dries faster when warm and/or sheltered. Not instant: a pawn must linger on wet ground / in rain.
+// SEASONS_WEATHER — pawn wetness meter (0-100). Soaks fast on wet tiles (rain raises tile wetness):
+// a >50% tile fills the meter in ~1 in-game hour, a >80% tile in ~30 in-game minutes, and a fully-wet
+// (100%) tile soaks instantly. Dries over 1–5 in-game hours depending on warmth + shelter.
+const HOUR_SECONDS = TURNS_PER_DAY / 24; // in-game seconds per hour (300/24 = 12.5)
 const WET_TILE_THRESHOLD = 50; // tile wetness % above which a pawn starts to soak
-const WET_GAIN_PER_SEC = 0.5; // at a fully-wet (100%) tile → ~200s (0→100); scaled by how wet the tile is
-const WET_DRY_PER_SEC = 0.45; // base drying when off wet ground
-const WET_DRY_TEMP_REF = 10; // °C above which warmth speeds drying
-const WET_DRY_TEMP_K = 0.05; // per-°C drying speedup (30°C → +1.0× → 2× base)
-const WET_DRY_SHELTER_MUL = 1.5; // under a roof, drying is 1.5× faster
+const WET_HEAVY_THRESHOLD = 80; // above this the meter fills twice as fast (full in ~½ hour)
+const WET_SOAK_HOURS = 1; // >50% tile → full meter (0→100) in ~1 in-game hour
+const WET_SOAK_HOURS_HEAVY = 0.5; // >80% tile → full in ~30 in-game minutes
+const WET_DRY_HOURS_MAX = 5; // cold + exposed → full dry (100→0) takes ~5 in-game hours
+const WET_DRY_HOURS_MIN = 1; // warm + sheltered → ~1 in-game hour
+const WET_DRY_WARM_REF = 25; // °C at which warmth contributes its full drying speedup
+const WET_DRY_SHELTER_SPEED = 0.4; // a roof contributes this much (0–1) toward fastest drying
 
 /**
  * PawnService Implementation - Focused on pawn behavior and needs only
@@ -454,19 +459,30 @@ export class PawnServiceImpl implements PawnService {
       const thirst = Math.min(100, (needs.thirst ?? 0) + THIRST_INCREASE_PER_SECOND * dt);
       const hygiene = Math.min(100, (needs.hygiene ?? 0) + HYGIENE_INCREASE_PER_SECOND * dt);
 
-      // SEASONS_WEATHER wetness: soak slowly on wet (>50%) tiles (roofs keep tiles dry — tileWetness
-      // already cuts the rain contribution under cover); otherwise dry off, faster when warm/sheltered.
+      // SEASONS_WEATHER wetness: soak fast on wet (>50%) tiles (roofs keep tiles dry — tileWetness
+      // already cuts the rain contribution under cover); a fully-wet tile is instant. Off wet ground
+      // the meter dries over 1–5 in-game hours, faster when warm and/or sheltered.
       const wet0 = needs.wetness ?? 0;
       let wetness = wet0;
       const tileWet = tile ? tileWetness(tile.terrainType, gameState.weather, thermal) : 0;
-      if (tileWet > WET_TILE_THRESHOLD) {
-        const soak = (tileWet - WET_TILE_THRESHOLD) / (100 - WET_TILE_THRESHOLD); // 0–1 by how wet
-        wetness = Math.min(100, wetness + WET_GAIN_PER_SEC * soak * dt);
+      if (tileWet >= 100) {
+        // Fully-wet tile (torrential rain / standing water): instantly soaked.
+        wetness = 100;
+      } else if (tileWet > WET_TILE_THRESHOLD) {
+        const soakHours = tileWet >= WET_HEAVY_THRESHOLD ? WET_SOAK_HOURS_HEAVY : WET_SOAK_HOURS;
+        const gainPerSec = 100 / (soakHours * HOUR_SECONDS);
+        wetness = Math.min(100, wetness + gainPerSec * dt);
       } else if (wetness > 0) {
-        const dryFactor =
-          (1 + Math.max(0, temp - WET_DRY_TEMP_REF) * WET_DRY_TEMP_K) *
-          (thermal?.roofed ? WET_DRY_SHELTER_MUL : 1);
-        wetness = Math.max(0, wetness - WET_DRY_PER_SEC * dryFactor * dt);
+        // Warmth (up to WET_DRY_WARM_REF) and a roof each push drying toward the 1-hour floor;
+        // cold + exposed leaves the full 5-hour dry time.
+        const warmth = Math.max(0, Math.min(1, temp / WET_DRY_WARM_REF));
+        const drySpeed = Math.min(
+          1,
+          warmth * (1 - WET_DRY_SHELTER_SPEED) + (thermal?.roofed ? WET_DRY_SHELTER_SPEED : 0)
+        );
+        const dryHours = WET_DRY_HOURS_MAX - (WET_DRY_HOURS_MAX - WET_DRY_HOURS_MIN) * drySpeed;
+        const dryPerSec = 100 / (dryHours * HOUR_SECONDS);
+        wetness = Math.max(0, wetness - dryPerSec * dt);
       }
 
       const prevHealth = pawn.state.health ?? 100;
