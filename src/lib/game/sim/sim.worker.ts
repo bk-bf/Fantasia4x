@@ -242,10 +242,25 @@ function syncEntities<T extends { id: string }>(
     // the main thread reads (path/needs/activeJob) — on a fresh slim object, or a shallow clone of the
     // full entity so the canonical state is never mutated (projectSentEntity rebuilds nested objects).
     const resync = i % RESYNC_EVERY === resyncPhase;
-    const o: Record<string, unknown> =
-      prevIds.has(e.id) && !resync
-        ? (slimEntity(e, cold) as Record<string, unknown>)
-        : { ...(e as Record<string, unknown>) };
+    let o: Record<string, unknown>;
+    if (prevIds.has(e.id) && !resync) {
+      o = slimEntity(e, cold) as Record<string, unknown>;
+      // A WOUNDED entity ships its health trees (limbs/injuries) LIVE every flush, instead of waiting
+      // ≤RESYNC_EVERY flushes (~2s) on the cold round-robin. `pain`/`blood` already flow hot, so a stale
+      // limb tree showed fresh pain beside a "no damage" body panel right after a hit. Only wounded
+      // entities pay, and only for these two fields — the bulky cold trees (inventory/equipment/skills/
+      // stats) stay on the rotation. (Cleared automatically once it heals: injuries empties, pain → 0.)
+      const er = e as Record<string, unknown>;
+      if (
+        ((er.injuries as unknown[] | undefined)?.length ?? 0) > 0 ||
+        ((er.pain as number) ?? 0) > 0
+      ) {
+        o.limbs = er.limbs;
+        o.injuries = er.injuries;
+      }
+    } else {
+      o = { ...(e as Record<string, unknown>) };
+    }
     projectSentEntity(o);
     upserts[i] = o as Partial<T> & { id: string };
   }
