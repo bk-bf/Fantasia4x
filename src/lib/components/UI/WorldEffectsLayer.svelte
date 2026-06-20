@@ -30,9 +30,10 @@
   // scales the same way). Clamped so it never vanishes or becomes absurd at the zoom extremes.
   const BASE_TILE = 20;
 
-  // Per-entity text floats (Zzz / ✚ / ↓) are authored at BASE_TILE px; without scaling they stay a fixed
-  // pixel size while the tiles shrink on zoom-out, so a sleeping colony tiles the whole screen with Zzz.
-  // Track the live zoom so a float stays ~1 tile tall at any zoom (shrinks out, grows in), clamped.
+  // Per-entity floats (Zzz / ✚ / ↓, craft progress bars, campfire sparks) are authored at BASE_TILE px;
+  // without scaling they stay a fixed pixel size while the tiles shrink on zoom-out, so a busy colony
+  // tiles the whole screen with overlays. Track the live zoom so each stays ~1 tile across at any zoom
+  // (shrinks out, grows in), clamped. (Lair PARTICLE effects compute their own fxScale separately.)
   $: floatScale = Math.max(0.25, Math.min(1.5, $cameraTileSize / BASE_TILE));
 </script>
 
@@ -76,7 +77,7 @@
   {#each $worldEffects.progressOverlays as overlay (overlay.id)}
     <div
       class="pawn-progress-float"
-      style="transform: translate({overlay.left}px, {overlay.top}px) translateX(-50%);"
+      style="transform: translate({overlay.left}px, {overlay.top}px) translateX(-50%) scale({floatScale});"
     >
       <div class="pawn-progress-fill" style="width:{overlay.progress * 100}%"></div>
     </div>
@@ -85,7 +86,7 @@
   {#each $worldEffects.campfireOverlays as overlay (overlay.id)}
     <div
       class="fire-sparks"
-      style="transform: translate({overlay.left}px, {overlay.top}px) translateX(-50%);"
+      style="transform: translate({overlay.left}px, {overlay.top}px) translateX(-50%) scale({floatScale});"
     >
       <span class="spark s1">·</span>
       <span class="spark s2">*</span>
