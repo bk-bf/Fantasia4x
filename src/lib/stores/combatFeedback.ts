@@ -21,6 +21,9 @@ export interface CombatTextEvent {
   worldY: number;
   text: string;
   kind: CombatTextKind;
+  /** Extra vertical pixel offset on top of the tile→screen position (stacks a secondary cue
+   *  below its sibling damage number rather than overlapping it). */
+  dy?: number;
   /** Wall-clock spawn time (Date.now); drives the rise/fade animation lifetime. */
   spawnTime: number;
 }

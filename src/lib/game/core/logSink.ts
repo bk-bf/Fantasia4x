@@ -31,6 +31,10 @@ export interface CombatTextRequest {
   worldY: number;
   text: string;
   kind: CombatTextKind;
+  /** Extra vertical pixel offset applied on top of the tile→screen position. Lets a secondary
+   *  cue (a bleed/knockdown label) stack BELOW the damage number that shares the same tile and
+   *  spawn instant, instead of rising on top of it and hiding the number. */
+  dy?: number;
 }
 
 /** A visual lunge request: nudge the attacker's glyph toward the struck tile and back. */

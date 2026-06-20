@@ -1316,7 +1316,7 @@
       .map((e) => ({
         id: e.id,
         left: (e.worldX - viewX + 0.5) * tW,
-        top: (e.worldY - viewY) * tH - 14,
+        top: (e.worldY - viewY) * tH - 14 + (e.dy ?? 0),
         text: e.text,
         kind: e.kind
       }))
@@ -2000,28 +2000,13 @@
       return;
     }
 
-    // Click on empty tile → if drafted pawn selected, move there; else deselect all
+    // Click on empty tile → deselect all. Drafted-pawn move orders are right-click only
+    // (see handleContextMenu's draft branch).
     selectedBuildingId = null;
     selectedResourceTile = null;
     selectedMobId = null;
     highlightedResourceTiles = new Set();
     uiState.selectMob(null);
-
-    if (selectedPawn?.drafted && worldMap.length > 0) {
-      const targetTile = worldMap[hoverTileY]?.[hoverTileX];
-      if (targetTile?.walkable) {
-        gameState.command({
-          type: 'setPawnDraftTarget',
-          payload: {
-            pawnId: selectedPawn.id,
-            target: { type: 'move', x: hoverTileX, y: hoverTileY }
-          },
-          save: true
-        });
-        drawDesignations();
-        return;
-      }
-    }
 
     selectedPawnId = null;
     uiState.selectPawn(null);

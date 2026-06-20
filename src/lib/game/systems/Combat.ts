@@ -887,9 +887,9 @@ class CombatServiceImpl implements CombatService {
     return { x: e.position?.x ?? -1, y: e.position?.y ?? -1 };
   }
 
-  private emitFloat(x: number, y: number, kind: CombatTextKind, text: string): void {
+  private emitFloat(x: number, y: number, kind: CombatTextKind, text: string, dy?: number): void {
     if (x < 0 || y < 0) return;
-    simLog.pushCombatText({ worldX: x, worldY: y, text, kind });
+    simLog.pushCombatText({ worldX: x, worldY: y, text, kind, dy });
   }
 
   /**
@@ -950,8 +950,10 @@ class CombatServiceImpl implements CombatService {
       critFloater ? 'crit' : 'damage',
       result.crit ? `-${result.injury.damage}!` : `-${result.injury.damage}`
     );
-    if (result.knockdown) this.emitFloat(pos.x, pos.y, 'knockdown', 'DOWN!');
-    else if (result.injury.bleeding > 0) this.emitFloat(pos.x, pos.y, 'bleed', 'bleed');
+    // Secondary cue (knockdown / bleed) shares the struck tile + spawn instant with the damage
+    // number above, so push it DOWN ~13px to stack below the number instead of obscuring it.
+    if (result.knockdown) this.emitFloat(pos.x, pos.y, 'knockdown', 'DOWN!', 13);
+    else if (result.injury.bleeding > 0) this.emitFloat(pos.x, pos.y, 'bleed', 'bleed', 13);
 
     simLog.logCombatSwing(attacker.id, attackerName, target.id, targetName, turn, pos.x, pos.y, {
       turn,
@@ -1061,7 +1063,9 @@ class CombatServiceImpl implements CombatService {
     };
     const floatKind: CombatTextKind =
       eff.condition === 'disoriented' || eff.condition === 'ensnared' ? 'knockdown' : 'bleed';
-    this.emitFloat(pos.x, pos.y, floatKind, eff.condition);
+    // Third tier (below the damage number AND any bleed/knockdown cue from the same hit) so a
+    // weapon's on-hit condition label doesn't pile onto either of them.
+    this.emitFloat(pos.x, pos.y, floatKind, eff.condition, 26);
 
     return isMob
       ? { ...state, mobs: state.mobs!.map((m) => (m.id === targetId ? (updated as Mob) : m)) }
