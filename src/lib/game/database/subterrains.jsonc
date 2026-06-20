@@ -50,7 +50,7 @@
     "fg"          : [0.39, 0.30, 0.19],
     "bg"          : [0.08, 0.06, 0.03],
     "color"       : "#61502E",
-    "biomes"      : { "forest": [0.25, null] }
+    "biomes"      : { "forest": [0.25, 0.97] }
   },
   {
     "id"          : "tall_grass",   // soil tier 2 (50%) — Loam; the tall_grass_patch resource paints the green
@@ -64,8 +64,9 @@
     "biomes"      : { "plains": [0.25, 0.7] }
   },
   {
-    // soil tier 4 (100%) — Terra Preta, the terraform-earned peak (F3). No `biomes` key → never spawns
-    // naturally; only placed by the Soil-Works build. The richest soil — capped at mid brown (darkest shade).
+    // soil tier 4 (100%) — Terra Preta, the richest soil. Spawns naturally but VERY rare (a thin sliver
+    // at the top of the forest noise, carved from deep_grass: [0.97, null] ≈ 1.5% of forest tiles); also
+    // the terraform-earned peak (F3, Soil-Works build). Capped at mid brown (darkest shade).
     "id"          : "terra_preta",
     "displayName" : "Terra Preta",
     "walkable"    : true,
@@ -73,7 +74,8 @@
     "charSpans"   : [ {"sheet": "tiles", "from": 64, "to": 71} ],
     "fg"          : [0.36, 0.27, 0.17],
     "bg"          : [0.08, 0.06, 0.03],
-    "color"       : "#574325"
+    "color"       : "#574325",
+    "biomes"      : { "forest": [0.97, null] }
   },
   {
     "id"          : "savanna",
