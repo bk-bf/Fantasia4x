@@ -1,4 +1,4 @@
-<!-- LOC cap: 500 (created: 2026-06-18) -->
+<!-- LOC cap: 650 (created: 2026-06-18; raised 2026-06-20 — §F grew into the soil/terrain + farming layer) -->
 
 # PRODUCTION CHAIN II — Quality, Magic, Logistics & Farming
 
@@ -6,7 +6,7 @@
 
 ## Status
 
-**[~] In progress** — **§Q (Item Quality) DONE (2026-06-18)** closing R8, **§M (Magical Resources & Gear) DONE (2026-06-18)** as the MAGIC-SKILLS passive foundation, and **§L (Bulk Logistics) pawn-pushed carts DONE (2026-06-20)** (roads + draft animals deferred); **§F not started.**
+**[~] In progress** — **§Q (Item Quality) DONE (2026-06-18)** closing R8, **§M (Magical Resources & Gear) DONE (2026-06-18)** as the MAGIC-SKILLS passive foundation, and **§L (Bulk Logistics) pawn-pushed carts DONE (2026-06-20)** (roads + draft animals deferred); **§F (Farming) spec reworked 2026-06-20** into a soil/terrain + farming layer (dirt fertility from grass subterrain · dig/reposition soil · terraform via compost · growing zones + crops + wetness gating), **not yet implemented.**
 This is the **second** production/items/buildings/resources pass on top
 of the completed [Pass I](../archive/PRODUCTION-CHAIN-EXPANSION-2026-06-12.md) (forage → fire →
 tools → metal → leather). Pass I delivered the *mundane foundation*; Pass II adds the four
@@ -21,7 +21,7 @@ One combined spec, four chapters. They are largely independent and can ship in a
 | **§Q — Item Quality Prefixes**       | quality tiers stamp bonus stats onto crafted items      | completes the blocked **R8**; rides EQUIPMENT `materialBonuses` |
 | **§M — Magical Resources & Gear**    | ancient woods (multi-species) + crystals (normal→trade / infused→enchant) → attuned gear granting passive **magical conditions** | **MAGIC-SKILLS Phase 0** — the passive foundation its active layer builds on |
 | **§L — Bulk Logistics**              | wheelbarrows, handcarts, draft-animal carts, roads      | animal carts need ENTITIES C–D (husbandry)   |
-| **§F — Farming, Food & Drink**       | crops, seeds, fertilizer, brewing, meal variety         | benefits SEASONS (growing seasons) + ENTITIES D (manure/dairy) |
+| **§F — Farming, Food & Drink**       | **soil fertility (dig/terraform)** → growing zones → crops (wetness/fertilizer-gated) → cooking/brewing | reads grass-subterrain + wetness worldgen already produces; benefits SEASONS + ENTITIES D (manure/dairy) |
 
 ---
 
@@ -62,6 +62,15 @@ intermediate goods, quality spread, fermentation timers, draft animals).
   `grantsConditions?: string[]`. No `statBonuses`/`grantsTraits`/`ModifierSystem` reader work.
 - **Work categories exist**: `planting` (tools `digging_stick`/`stone_hoe`/`iron_hoe`),
   `cooking`, `alchemy`, `hauling`. **No crop/seed/fertilizer/brewing data exists** — §F adds it.
+- **The ground already carries §F's fertility + wetness signals** — world-gen picks a grass-density
+  **subterrain** per tile by detail noise (`subterrains.jsonc`: `dirt`/`grass`/`tall_grass`/`deep_grass`,
+  `pickSubterrain`), stored in `tile.subType`; `tile.moisture` (0–100, distance-to-water + weather) is
+  wetness (`EnvironmentService`, SEASONS_WEATHER). §F derives soil fertility from `subType` and growth
+  speed from `tile.soil × moisture × fertilizer` — **no new noise**. **Designations** are a
+  `DesignationType` union + `gameState.designations` map → jobs (`DesignationService` + `jobs/*.ts`);
+  **zones** are `FilterableZoneType` + `ZoneInstance` + `zoneTiles`; **builds write persistent tile
+  fields** on complete & restore on deconstruct (`BuildingService`, the `walkable`/movementCost path) —
+  §F's `dig`, `grow` zone, and Soil-Works terraform reuse those three mechanisms wholesale.
 - **Per-stack instance data** already works: `DroppedItem` carries per-stack `durability`/
   `deterioration` (tools are qty-1 stacks). §Q/§M add per-stack `quality` the same way.
 - **Recipe registry** (`recipes.jsonc` + `RecipeService`) and **per-tile storage** are the
@@ -353,59 +362,130 @@ noted in ENTITIES_SPAWNING; fold it in here if cheap, else leave as its open que
 
 ## §F — Farming, Food & Drink
 
-**Goal:** turn food from "hunt/forage" into a planned, seasonal, **variety-driven** chain that
-feeds cooking, brewing, and husbandry. `planting` work category + hoe tools already exist.
+**Goal:** turn food from "hunt/forage" into a planned, **soil-and-water-driven** chain — a real
+*terrain* layer (soil fertility you can dig, move, and improve) feeding **growing zones → crops →
+cooking/brewing**. `planting` work category + hoe tools (`digging_stick`/`stone_hoe`/`iron_hoe`)
+already exist. Drives from NOTES.md (split dirt by fertility · dig/reposition soil · terraform via
+compost · growing zones + seeds + wetness).
 
-### Farm plots
+> **Spine of this rework:** the ground already carries the fertility signal we need. World-gen picks
+> a **grass-density subterrain** per tile by detail noise (`subterrains.jsonc`: `dirt` < `grass` <
+> `tall_grass` < `deep_grass`), stored in `tile.subType`; `tile.moisture` (0–100, distance-to-water +
+> weather, SEASONS_WEATHER) is wetness. §F reads **soil fertility from the grass subterrain** and
+> **growth speed from soil × wetness × fertilizer** — no new noise field, reusing what worldgen and
+> the wetness model already produce.
 
-A `farm_plot` designation: a pawn tills soil with a hoe → tilled tiles accept seeds. Crops grow
-over in-game time and **only during growing seasons** (ties to [SEASONS_WEATHER](../archive/SEASONS_WEATHER-2026-06-17.md):
-frost kills/halts immature crops; growth speed tracks temperature/season). Harvest yields food
-**+ replacement seeds** (so farming is self-sustaining once started).
+### F1 — Soil fertility (dirt becomes a typed, mutable terrain layer)
 
-### Crops (Phase 1)
+Per NOTES.md, fertility is keyed to the grass cover the noise already placed. We **materialize** it
+into a persistent `tile.soil` level (0–3) seeded at worldgen from `subType`, so dig/terraform can
+mutate it independently of the visual grass:
 
-| Crop          | seed            | Grows → harvest                         | Chain                                            |
-| ------------- | --------------- | --------------------------------------- | ------------------------------------------------ |
-| Wheat / Barley| `grain_seed`    | grain                                   | grain → (quern) flour → (oven) bread; barley → malt → **ale** |
-| Cabbage/Turnip/Onion | `veg_seed` | vegetables                            | cooking ingredient; meal variety                 |
-| Beans/Peas    | `legume_seed`   | legumes                                 | protein; stores well                             |
-| Flax / Hemp   | `fibre_seed`    | plant stalks → retted fibre             | cross-links cordage/cloth (Pass I)               |
-| Berries/Orchard fruit | `fruit_seed`/sapling | fruit                       | cooking; **wine/cider**; preserves               |
-| Culinary herbs| `herb_seed`     | herbs                                   | meal flavour (mood) + medicine (caretaking)      |
+| `subType` (grass density) | `tile.soil` | Soil name      | Dig yields (soil item) | Role                         |
+| ------------------------- | ----------- | -------------- | ---------------------- | ---------------------------- |
+| `dirt` / `savanna` / bare | 0 infertile | Infertile Dirt | `dirt` (filler only)   | nothing grows but hardy crops |
+| `grass`                   | 1 poor      | Poor Soil      | `poor_soil`            | low-tier crops, slow         |
+| `tall_grass`              | 2 loam      | Loam           | `loam`                 | mid-tier crops               |
+| `deep_grass`              | 3 terra preta | Terra Preta  | `terra_preta`          | high-tier crops; fastest     |
 
-Seeds are first obtained by **foraging** (wild grain/berries → seed) so farming bootstraps from
-the existing forage loop.
+`tile.soil` is the **single source of truth** for fertility (dig lowers it, terraform raises it);
+`subType` stays the visual. New typed **soil items** (`dirt`/`poor_soil`/`loam`/`terra_preta`,
+`category: "soil"`, `bulk`-heavy) in `items.jsonc` — the "different types of dirt" you can carry,
+build with, and process.
 
-### Fertilizer
+### F2 — Dig designation (extract & reposition soil)
 
-| Fertilizer | Source                                   | Effect                       |
-| ---------- | ---------------------------------------- | ---------------------------- |
-| `compost`  | food scraps + `ash` + time (Compost Bin) | +crop yield/growth           |
-| `manure`   | husbandry animals (**ENTITIES D**)       | stronger; ties pastures→fields |
+A new `dig` `DesignationType` (mark like `harvest`/`mine`) generates a **dig job** (`digging` work +
+hoe/spade tool). Completing it **harvests the soil tile, not just the grass**: yields the tile's
+**grass resource** (the existing `grass_patch`/`tall_grass_patch`/`deep_grass_patch` drop) **plus**
+the **soil item** for its `tile.soil` level — then drops `tile.soil` to 0 and `subType` to `dirt`
+(you stripped the topsoil). This is the "dig up fertile soil and move it" loop.
 
-Compost ships now (uses Pass I `ash`); manure is a bonus once husbandry lands. Compost Bin is a
-new passive building (like the charcoal pit).
+### F3 — Terraforming (build dirt types like buildings)
 
-### Milling, baking, brewing
+A **Soil Works** family in the **build tab** — one buildable "tile improvement" per soil level
+(`lay_poor_soil`/`lay_loam`/`lay_terra_preta`), placed and built exactly like a passable building.
+On completion it **raises `tile.soil`** to that level (and repaints `subType`), consuming the
+matching **soil item** (+ **compost** for loam→terra-preta, the gating material). Mirrors the
+deferred §L road model: a build that writes a persistent tile field on complete, restores on
+deconstruct. So you dig terra preta from a deep-grass tile and **re-lay it** on your farm.
 
-| Station        | id              | Makes                                            |
-| -------------- | --------------- | ------------------------------------------------ |
-| Quern / Millstone | `quern`      | grain → flour                                    |
-| Oven           | `oven`          | flour (+ water) → bread; pies; roasts            |
-| Brewery / Vat  | `fermenter`     | malt → **ale**; fruit → **wine/cider**; honey → **mead** |
+### F4 — Growing zones + planting
 
-Brewing is a **fermentation timer** (passive, multi-day) — barley → malt → mash → ale. Alcohol
-is a **mood/recreation** item: drinking gives a mood lift + a light `intoxicated` condition
-(short-lived). (Deeper recreation/joy needs → SOCIAL-LAYER; here alcohol is just a mood good.)
+A `grow` `FilterableZoneType` (paint a zone, like `harvest`/`stockpile`); its filter picks the
+**crop/seed**. Pawns running the existing **`planting`** job sow the zone's seed onto eligible
+tiles (`tile.soil` ≥ the crop's `minSoil`), spawning the crop as a **resource object** on the tile
+at `growthLevel: 0`. Re-uses the zone + designation + `planting` plumbing wholesale — the new job is
+a `plant` handler in `jobs.jsonc` (`workCategory: "planting"`).
 
-### Meal variety & immersion (the payoff)
+### F5 — Growth level on organic resources (drives yield)
 
-Cooking combines crops + meat/dairy/eggs → varied **meals** with nutrition **and** mood. Add a
-**meal-variety** signal: eating the same dish repeatedly decays its mood bonus; a varied diet
-restores it — so farming/cooking breadth *matters* beyond raw calories. §Q quality applies to
-cooked meals (a Masterwork cook → tastier, higher-mood food). Dairy/eggs from
-[ENTITIES_SPAWNING Phase D](ENTITIES_SPAWNING.md) drop straight into these recipes.
+Add **`growthLevel` (0–`maxGrowth`)** to organic resource nodes (crops first, then wild plants/trees
+can opt in). **Yield scales with `growthLevel`** (an immature crop gives little; mature gives full +
+seeds). Each tick a planted crop advances `growthLevel` by a **rate**:
+
+```
+rate = base × soilFactor(tile.soil) × wetnessFactor(tile.moisture) × fertilizerFactor × seasonFactor
+```
+
+- **soil** — terra preta fastest, infertile ~nil; below `minSoil` the crop won't advance (stunted).
+- **wetness** — a comfort band around the crop's `idealMoisture`; too dry/too wet slows it.
+- **fertilizer** — `compost` (or later `manure`) applied to the zone speeds growth and is a **hard
+  gate** for high-tier crops (they need fertile soil **and** fertilizer **and** wetness).
+- **season** — frost halts/kills immature crops; growth tracks temperature (SEASONS_WEATHER hook).
+
+Harvest a mature crop → food **+ replacement seeds** (self-sustaining once started).
+
+### F6 — Crops (Phase 1) — defined in `resources.jsonc`
+
+| Crop          | seed         | `minSoil` | gate                 | Chain                                            |
+| ------------- | ------------ | --------- | -------------------- | ------------------------------------------------ |
+| Wheat / Barley| `grain_seed` | 1 poor    | —                    | grain → (quern) flour → (oven) bread; barley → malt → **ale** |
+| Cabbage/Turnip/Onion | `veg_seed` | 1 poor | —                  | cooking ingredient; meal variety                 |
+| Beans/Peas    | `legume_seed`| 1 poor    | —                    | protein; stores well; (fixes soil — later)       |
+| Flax / Hemp   | `fibre_seed` | 2 loam    | wetness              | plant stalks → retted fibre (cordage/cloth, Pass I) |
+| Berries/Orchard fruit | `fruit_seed` | 2 loam | —               | fruit → **wine/cider**; preserves                |
+| Culinary herbs| `herb_seed`  | 2 loam    | wetness              | meal flavour (mood) + medicine (caretaking)      |
+| Prize crops (e.g. pumpkin/grapevine) | `prize_seed` | 3 terra preta | **compost + wetness** | high-value cooking/brewing; the fertilizer payoff |
+
+Seeds first come from **foraging** wild grain/berries (→ seed), so farming bootstraps from the
+existing forage loop.
+
+### F7 — Fertilizer workstations (the gating material)
+
+| Station       | id            | Makes                                                  |
+| ------------- | ------------- | ------------------------------------------------------ |
+| Compost Bin   | `compost_bin` | rotten items (`rotten_food`/`rotten_hide`/…) + `hay` + `ash` → **`compost`** (passive timer) |
+| (later) Manure| —             | husbandry animals (**ENTITIES D**) → `manure` (stronger) |
+
+`compost` is the **core gating material**: required to terraform **terra preta** (F3) and to grow
+**high-tier crops** (F5/F6). It closes a loop — rot/scraps + hay + ash become the input to your best
+soil. Compost Bin is a new **passive** building (like the charcoal pit).
+
+### F8 — Milling, baking, brewing (the food chain)
+
+| Station        | id          | Makes                                                    |
+| -------------- | ----------- | ------------------------------------------------------- |
+| Quern          | `quern`     | grain → flour                                            |
+| Oven           | `oven`      | flour (+ water) → bread; pies; roasts                    |
+| Fermenter      | `fermenter` | malt → **ale**; fruit → **wine/cider**; honey → **mead** |
+
+Brewing is a **passive fermentation timer** (barley → malt → mash → ale). Alcohol is a **mood good**:
+a mood lift + a short `intoxicated` condition. (Deeper joy needs → SOCIAL-LAYER.)
+
+### F9 — Info panel (make the new layers legible)
+
+The tile/resource inspector must surface the new state (reuse `StatBar`/`SelectedEntityCard`, no
+ad-hoc UI): **soil fertility** (level + name), **wetness %**, and for a growing crop its
+**`growthLevel`/maturity** (and what's gating it — "stunted: needs loam", "slow: too dry"). This is
+how the player reads why a field is or isn't growing.
+
+### F10 — Meal variety & immersion (the payoff)
+
+Cooking combines crops + meat/dairy/eggs → varied **meals** with nutrition **and** mood; a
+**meal-variety** signal decays a repeated dish's mood bonus and a varied diet restores it. §Q quality
+applies to cooked meals (Masterwork cook → higher-mood food). Dairy/eggs from
+[ENTITIES_SPAWNING Phase D](ENTITIES_SPAWNING.md) drop straight in.
 
 ---
 
@@ -442,12 +522,38 @@ services); new ADR if a non-obvious choice is locked.
 
 ### §F — Farming, Food & Drink
 
-- [ ] `resources.jsonc`/`items.jsonc`: wild seed forageables; crop seeds; crop products; flour/bread/malt/ale/wine/mead/compost.
-- [ ] `farm_plot` till-and-sow designation; crop growth tick (season-gated — SEASONS hook; frost halt/kill).
-- [ ] `buildings.jsonc`: Compost Bin (passive), Quern, Oven, Fermenter.
-- [ ] `recipes.jsonc`: milling, baking, fermentation (passive timer), compost.
-- [ ] Meal-variety mood signal (recent-meal memory → mood delta); alcohol mood lift + `intoxicated` condition (`conditions.jsonc`).
-- [ ] Manure path stub behind ENTITIES D; dairy/egg recipes stubbed for when husbandry lands.
+Phased so each phase is independently shippable + testable (`pnpm check`/`pnpm test` green each).
+**P1–P3 are the soil/terrain foundation** the crops sit on; **P4–P6 are the farming loop**; **P7 the
+food chain**. New ADR for the `tile.soil` mutable-terrain field (non-obvious: derived from worldgen
+noise but then player-mutable).
+
+**P1 — Soil fertility layer (F1)**
+- [ ] `core/types/world.ts`: `tile.soil?: 0–3` (persisted). `WorldGenerator` seeds it from `subType` (dirt/savanna→0, grass→1, tall_grass→2, deep_grass→3). Helper `soilLevelForSubtype()` in `core/Terrains.ts`.
+- [ ] `items.jsonc`: typed soil items `dirt`/`poor_soil`/`loam`/`terra_preta` (`category: "soil"`, heavy). `resources.jsonc`: confirm `grass_patch`/`tall_grass_patch`/`deep_grass_patch` drops exist for the dig yield.
+- [ ] Info panel (F9): tile inspector shows soil level + name + wetness %.
+
+**P2 — Dig designation (F2)**
+- [ ] `DesignationType += 'dig'`; `jobs.jsonc` `dig` JobDef (`workCategory: "digging"`, hoe/spade gate) + `Job['type']` union + `JobService` generate/complete handler.
+- [ ] Dig completion yields the tile's grass-resource drop **+** the soil item for `tile.soil`, then sets `tile.soil = 0` / `subType = 'dirt'`. Test: dig a deep_grass tile → `deep_grass_patch` + `terra_preta`, tile now infertile.
+
+**P3 — Terraforming / Soil Works (F3)**
+- [ ] `buildings.jsonc`: `lay_poor_soil`/`lay_loam`/`lay_terra_preta` (passable "tile improvement" builds); recipes consume the soil item (+ `compost` for loam→terra preta).
+- [ ] `BuildingService`: on complete write `tile.soil` (+ `subType`); restore on deconstruct (mirror the `walkable` flag handling). Test: build `lay_terra_preta` on a dirt tile → `tile.soil = 3`.
+
+**P4 — Growing zones + planting (F4)**
+- [ ] `FilterableZoneType += 'grow'` (filter = crop/seed); zone paint + `zoneTiles` wiring.
+- [ ] `jobs.jsonc` `plant` JobDef (`workCategory: "planting"`); generate plant jobs for empty eligible tiles in a grow zone (`tile.soil ≥ crop.minSoil`); completion spawns the crop resource at `growthLevel: 0`.
+
+**P5 — Growth-level + crop tick (F5/F6)**
+- [ ] `resources.jsonc`: `growthLevel`/`maxGrowth` on organic nodes; crops (grain/veg/legume/fibre/fruit/herb/prize) with `minSoil`, `idealMoisture`, `needsFertilizer`, yields scaled by `growthLevel`.
+- [ ] Growth tick (in the turn order's exploration/completions phase): advance `growthLevel` by `base × soil × wetness × fertilizer × season`; stunt below `minSoil`; frost halt/kill (SEASONS hook). Harvest yields food + `*_seed`. Info panel shows maturity + gate reason (F9).
+
+**P6 — Fertilizer (F7)**
+- [ ] `buildings.jsonc`: `compost_bin` (passive); `recipes.jsonc`: rotten items + `hay` + `ash` → `compost` (passive timer). Apply-fertilizer to a grow zone (consumes `compost`) → `fertilizerFactor` + unlocks terra-preta crops. Manure path stubbed behind ENTITIES D.
+
+**P7 — Food chain + meals (F8/F10)**
+- [ ] `items.jsonc`: crop products, flour/bread/malt/ale/wine/mead. `buildings.jsonc`: Quern, Oven, Fermenter. `recipes.jsonc`: milling, baking, fermentation (passive timer).
+- [ ] Meal-variety mood signal (recent-meal memory → mood delta); alcohol mood lift + `intoxicated` condition (`conditions.jsonc`). Dairy/egg recipes stubbed for ENTITIES D.
 
 ### §M — Magical Resources & Gear (MAGIC-SKILLS Phase 0 — passive foundation) ✅ DONE 2026-06-18 (`pnpm check`/`pnpm test` green, 9 new tests)
 
@@ -485,6 +591,10 @@ services); new ADR if a non-obvious choice is locked.
 - [ ] **Amulet vs ring slot:** dedicated `amulet` slot (chosen) vs treating amulets as a second `ring` — confirm.
 - [ ] **Bulk tag:** which resources are "bulk-only" (ore/log/hay/stone/block) vs personal-carriable, and where the tag lives (item field vs category).
 - [ ] **Road model:** build-tile road (chosen) vs derived "trampled path" from repeated pawn traffic.
-- [ ] **Crop persistence/save:** tilled tiles + growing crops serialise with the world (assume yes).
+- [ ] **Crop persistence/save:** `tile.soil` + growing crops serialise with the world (assume yes — `tile.soil` is a persisted WorldTile field like `snow`/`walkable`).
 - [ ] **Alcohol depth:** mood-good only now vs a recreation/joy need — defer the need to SOCIAL-LAYER?
 - [ ] **Spoilage of produce:** crops/bread/ale reuse Pass I `decaySeconds` + storage; confirm no new decay model needed.
+- [ ] **§F soil source of truth:** `tile.soil` (0–3) materialized at worldgen from `subType` and then player-mutable (chosen) vs deriving fertility from `subType` live (can't represent dug/terraformed tiles). Confirm the materialized field + its new ADR.
+- [ ] **§F dig vs clear:** does `dig` subsume the existing `clear` designation (strip grass) or stay a separate "extract soil" order? (Lean: separate — `clear` just removes cover, `dig` extracts the soil item + lowers fertility.)
+- [ ] **§F fertilizer application:** is `compost` applied per grow-zone (a zone toggle that consumes stock) or built into the soil via terraform only? (Lean: both — terraform bakes it into terra preta; a zone toggle speeds an active field.)
+- [ ] **§F growth tick cost:** crops advance on a throttled pass (every N ticks), not per-tick, to stay off the hot path — confirm cadence.
