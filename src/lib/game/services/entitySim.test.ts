@@ -311,7 +311,7 @@ describe('feeding states do not oscillate (hostile FSM + unreachable forage)', (
     const wolf = makeWolf({
       state: 'Attacking',
       huntTargetId: 'prey',
-      needs: { hunger: 80, fatigue: 0 }
+      needs: { hunger: 80, fatigue: 0, sleep: 0, lastSleep: 0, lastMeal: 0 }
     });
     const prey = makePrey({ state: 'Attacking', huntTargetId: 'wolf' }); // mutual melee (5,5)/(5,6)
     let state = makeState([wolf, prey]);
@@ -325,7 +325,7 @@ describe('feeding states do not oscillate (hostile FSM + unreachable forage)', (
     const wolf = makeWolf({
       state: 'Attacking',
       huntTargetId: 'prey',
-      needs: { hunger: 80, fatigue: 0 }
+      needs: { hunger: 80, fatigue: 0, sleep: 0, lastSleep: 0, lastMeal: 0 }
     });
     const prey = makePrey({ x: 5, y: 9 }); // two+ tiles away — out of melee
     let state = makeState([wolf, prey]);
