@@ -32,15 +32,15 @@
       "rightKidney" : {"size": 15, "bleedRatio": 0.02, "hitWeight": 0, "isPaired": true, "containedIn": "abdomen"},
       "spine"       : {"size": 40, "bleedRatio": 0.04, "hitWeight": 0, "containedIn": "chest"},
       // ── Common head + torso outer parts ──────────────────────────────────────────────────────────
-      "skull"       : {"size": 45, "bleedRatio": 0.04, "hitWeight": 13, "bone": true, "critical": true},
-      "jaw"         : {"size": 25, "bleedRatio": 0.02, "hitWeight": 2, "bone": true},
+      "skull"       : {"size": 45, "bleedRatio": 0.04, "hitWeight": 13, "bone": true, "critical": true, "weapons": ["headbutt", "antler"]},
+      "jaw"         : {"size": 25, "bleedRatio": 0.02, "hitWeight": 2, "bone": true, "weapons": ["bite", "tusk", "tongue", "screech"]},
       "nose"        : {"size": 15, "bleedRatio": 0.01, "hitWeight": 0.4},
-      "snout"       : {"size": 20, "bleedRatio": 0.02, "hitWeight": 3, "bone": true},
+      "snout"       : {"size": 20, "bleedRatio": 0.02, "hitWeight": 3, "bone": true, "weapons": ["tusk", "bite"]},
       "leftEye"     : {"size": 10, "bleedRatio": 0.01, "hitWeight": 0.2, "isPaired": true},
       "rightEye"    : {"size": 10, "bleedRatio": 0.01, "hitWeight": 0.2, "isPaired": true},
       "leftEar"     : {"size": 10, "bleedRatio": 0.005, "hitWeight": 0.2, "isPaired": true},
       "rightEar"    : {"size": 10, "bleedRatio": 0.005, "hitWeight": 0.2, "isPaired": true},
-      "chest"       : {"size": 80, "bleedRatio": 0.12, "hitWeight": 32, "bone": true},
+      "chest"       : {"size": 80, "bleedRatio": 0.12, "hitWeight": 32, "bone": true, "weapons": ["charge", "slam"]},
       "abdomen"     : {"size": 70, "bleedRatio": 0.1, "hitWeight": 24}
     }
   },
@@ -50,7 +50,7 @@
         "leftShoulder"     : {"size": 40, "bleedRatio": 0.03, "hitWeight": 1, "isPaired": true, "bone": true},
         "leftUpperArm"     : {"size": 45, "bleedRatio": 0.05, "hitWeight": 2, "isPaired": true, "bone": true},
         "leftForearm"      : {"size": 35, "bleedRatio": 0.04, "hitWeight": 1.5, "isPaired": true, "bone": true},
-        "leftHand"         : {"size": 30, "bleedRatio": 0.05, "hitWeight": 1, "isPaired": true, "bone": true},
+        "leftHand"         : {"size": 30, "bleedRatio": 0.05, "hitWeight": 1, "isPaired": true, "bone": true, "weapons": ["fists", "claw"]},
         "leftThumb"        : {"size": 10, "bleedRatio": 0.005, "hitWeight": 0.1, "isPaired": true, "containedIn": "leftHand"},
         "leftIndexFinger"  : {"size": 8, "bleedRatio": 0.003, "hitWeight": 0.1, "isPaired": true, "containedIn": "leftHand"},
         "leftMiddleFinger" : {"size": 8, "bleedRatio": 0.003, "hitWeight": 0.1, "isPaired": true, "containedIn": "leftHand"},
@@ -59,7 +59,7 @@
         "rightShoulder"    : {"size": 40, "bleedRatio": 0.03, "hitWeight": 1, "isPaired": true, "bone": true},
         "rightUpperArm"    : {"size": 45, "bleedRatio": 0.05, "hitWeight": 2, "isPaired": true, "bone": true},
         "rightForearm"     : {"size": 35, "bleedRatio": 0.04, "hitWeight": 1.5, "isPaired": true, "bone": true},
-        "rightHand"        : {"size": 30, "bleedRatio": 0.05, "hitWeight": 1, "isPaired": true, "bone": true},
+        "rightHand"        : {"size": 30, "bleedRatio": 0.05, "hitWeight": 1, "isPaired": true, "bone": true, "weapons": ["fists", "claw"]},
         "rightThumb"       : {"size": 10, "bleedRatio": 0.005, "hitWeight": 0.1, "isPaired": true, "containedIn": "rightHand"},
         "rightIndexFinger" : {"size": 8, "bleedRatio": 0.003, "hitWeight": 0.1, "isPaired": true, "containedIn": "rightHand"},
         "rightMiddleFinger": {"size": 8, "bleedRatio": 0.003, "hitWeight": 0.1, "isPaired": true, "containedIn": "rightHand"},
@@ -68,7 +68,7 @@
         "leftHip"          : {"size": 50, "bleedRatio": 0.04, "hitWeight": 1.5, "isPaired": true, "bone": true},
         "leftUpperLeg"     : {"size": 60, "bleedRatio": 0.08, "hitWeight": 6, "isPaired": true, "bone": true},
         "leftLowerLeg"     : {"size": 50, "bleedRatio": 0.06, "hitWeight": 4.5, "isPaired": true, "bone": true},
-        "leftFoot"         : {"size": 30, "bleedRatio": 0.04, "hitWeight": 1.5, "isPaired": true, "bone": true},
+        "leftFoot"         : {"size": 30, "bleedRatio": 0.04, "hitWeight": 1.5, "isPaired": true, "bone": true, "weapons": ["kick"]},
         "leftBigToe"       : {"size": 8, "bleedRatio": 0.003, "hitWeight": 0.1, "isPaired": true, "containedIn": "leftFoot"},
         "leftSecondToe"    : {"size": 6, "bleedRatio": 0.002, "hitWeight": 0.1, "isPaired": true, "containedIn": "leftFoot"},
         "leftMiddleToe"    : {"size": 6, "bleedRatio": 0.002, "hitWeight": 0.1, "isPaired": true, "containedIn": "leftFoot"},
@@ -77,7 +77,7 @@
         "rightHip"         : {"size": 50, "bleedRatio": 0.04, "hitWeight": 1.5, "isPaired": true, "bone": true},
         "rightUpperLeg"    : {"size": 60, "bleedRatio": 0.08, "hitWeight": 6, "isPaired": true, "bone": true},
         "rightLowerLeg"    : {"size": 50, "bleedRatio": 0.06, "hitWeight": 4.5, "isPaired": true, "bone": true},
-        "rightFoot"        : {"size": 30, "bleedRatio": 0.04, "hitWeight": 1.5, "isPaired": true, "bone": true},
+        "rightFoot"        : {"size": 30, "bleedRatio": 0.04, "hitWeight": 1.5, "isPaired": true, "bone": true, "weapons": ["kick"]},
         "rightBigToe"      : {"size": 8, "bleedRatio": 0.003, "hitWeight": 0.1, "isPaired": true, "containedIn": "rightFoot"},
         "rightSecondToe"   : {"size": 6, "bleedRatio": 0.002, "hitWeight": 0.1, "isPaired": true, "containedIn": "rightFoot"},
         "rightMiddleToe"   : {"size": 6, "bleedRatio": 0.002, "hitWeight": 0.1, "isPaired": true, "containedIn": "rightFoot"},
@@ -99,20 +99,20 @@
         "frontLeftShoulder" : {"size": 40, "bleedRatio": 0.03, "hitWeight": 2, "isPaired": true, "bone": true},
         "frontLeftUpperLeg" : {"size": 45, "bleedRatio": 0.05, "hitWeight": 3, "isPaired": true, "bone": true},
         "frontLeftLowerLeg" : {"size": 38, "bleedRatio": 0.04, "hitWeight": 2.5, "isPaired": true, "bone": true},
-        "frontLeftPaw"      : {"size": 22, "bleedRatio": 0.03, "hitWeight": 1, "isPaired": true, "bone": true},
+        "frontLeftPaw"      : {"size": 22, "bleedRatio": 0.03, "hitWeight": 1, "isPaired": true, "bone": true, "weapons": ["claw", "slam"]},
         "frontRightShoulder": {"size": 40, "bleedRatio": 0.03, "hitWeight": 2, "isPaired": true, "bone": true},
         "frontRightUpperLeg": {"size": 45, "bleedRatio": 0.05, "hitWeight": 3, "isPaired": true, "bone": true},
         "frontRightLowerLeg": {"size": 38, "bleedRatio": 0.04, "hitWeight": 2.5, "isPaired": true, "bone": true},
-        "frontRightPaw"     : {"size": 22, "bleedRatio": 0.03, "hitWeight": 1, "isPaired": true, "bone": true},
+        "frontRightPaw"     : {"size": 22, "bleedRatio": 0.03, "hitWeight": 1, "isPaired": true, "bone": true, "weapons": ["claw", "slam"]},
         "hindLeftHaunch"    : {"size": 55, "bleedRatio": 0.05, "hitWeight": 4, "isPaired": true, "bone": true},
         "hindLeftUpperLeg"  : {"size": 48, "bleedRatio": 0.05, "hitWeight": 3, "isPaired": true, "bone": true},
         "hindLeftLowerLeg"  : {"size": 40, "bleedRatio": 0.04, "hitWeight": 2.5, "isPaired": true, "bone": true},
-        "hindLeftPaw"       : {"size": 22, "bleedRatio": 0.03, "hitWeight": 1, "isPaired": true, "bone": true},
+        "hindLeftPaw"       : {"size": 22, "bleedRatio": 0.03, "hitWeight": 1, "isPaired": true, "bone": true, "weapons": ["kick"]},
         "hindRightHaunch"   : {"size": 55, "bleedRatio": 0.05, "hitWeight": 4, "isPaired": true, "bone": true},
         "hindRightUpperLeg" : {"size": 48, "bleedRatio": 0.05, "hitWeight": 3, "isPaired": true, "bone": true},
         "hindRightLowerLeg" : {"size": 40, "bleedRatio": 0.04, "hitWeight": 2.5, "isPaired": true, "bone": true},
-        "hindRightPaw"      : {"size": 22, "bleedRatio": 0.03, "hitWeight": 1, "isPaired": true, "bone": true},
-        "tail"              : {"size": 30, "bleedRatio": 0.03, "hitWeight": 1.5, "bone": true}
+        "hindRightPaw"      : {"size": 22, "bleedRatio": 0.03, "hitWeight": 1, "isPaired": true, "bone": true, "weapons": ["kick"]},
+        "tail"              : {"size": 30, "bleedRatio": 0.03, "hitWeight": 1.5, "bone": true, "weapons": ["slam"]}
       },
       "limbs": {
         "head": ["skull", "jaw", "snout", "leftEye", "rightEye", "leftEar", "rightEar", "brain"],
@@ -127,10 +127,10 @@
     "quadruped_hooved": {
       "// note": "Ungulates (deer, elk, goat, aurochs, boar) — the quadruped frame with HOOVES instead of paws.",
       "parts": {
-        "frontLeftHoof"  : {"size": 20, "bleedRatio": 0.025, "hitWeight": 1, "isPaired": true, "bone": true},
-        "frontRightHoof" : {"size": 20, "bleedRatio": 0.025, "hitWeight": 1, "isPaired": true, "bone": true},
-        "hindLeftHoof"   : {"size": 22, "bleedRatio": 0.03, "hitWeight": 1.2, "isPaired": true, "bone": true},
-        "hindRightHoof"  : {"size": 22, "bleedRatio": 0.03, "hitWeight": 1.2, "isPaired": true, "bone": true}
+        "frontLeftHoof"  : {"size": 20, "bleedRatio": 0.025, "hitWeight": 1, "isPaired": true, "bone": true, "weapons": ["slam"]},
+        "frontRightHoof" : {"size": 20, "bleedRatio": 0.025, "hitWeight": 1, "isPaired": true, "bone": true, "weapons": ["slam"]},
+        "hindLeftHoof"   : {"size": 22, "bleedRatio": 0.03, "hitWeight": 1.2, "isPaired": true, "bone": true, "weapons": ["kick"]},
+        "hindRightHoof"  : {"size": 22, "bleedRatio": 0.03, "hitWeight": 1.2, "isPaired": true, "bone": true, "weapons": ["kick"]}
       },
       "limbs": {
         "head": ["skull", "jaw", "snout", "leftEye", "rightEye", "leftEar", "rightEar", "brain"],
@@ -145,11 +145,11 @@
     "amphibian": {
       "// note": "Croc/frog-kin (crocodile, bullywug, olm) — quadruped frame with a wide MAW + WEBBED feet, no external ears.",
       "parts": {
-        "maw"               : {"size": 28, "bleedRatio": 0.02, "hitWeight": 3, "bone": true},
-        "frontLeftWebFoot"  : {"size": 20, "bleedRatio": 0.025, "hitWeight": 1, "isPaired": true, "bone": true},
-        "frontRightWebFoot" : {"size": 20, "bleedRatio": 0.025, "hitWeight": 1, "isPaired": true, "bone": true},
-        "hindLeftWebFoot"   : {"size": 22, "bleedRatio": 0.03, "hitWeight": 1.2, "isPaired": true, "bone": true},
-        "hindRightWebFoot"  : {"size": 22, "bleedRatio": 0.03, "hitWeight": 1.2, "isPaired": true, "bone": true}
+        "maw"               : {"size": 28, "bleedRatio": 0.02, "hitWeight": 3, "bone": true, "weapons": ["bite", "tusk", "tongue", "venom_bite"]},
+        "frontLeftWebFoot"  : {"size": 20, "bleedRatio": 0.025, "hitWeight": 1, "isPaired": true, "bone": true, "weapons": ["claw", "slam"]},
+        "frontRightWebFoot" : {"size": 20, "bleedRatio": 0.025, "hitWeight": 1, "isPaired": true, "bone": true, "weapons": ["claw", "slam"]},
+        "hindLeftWebFoot"   : {"size": 22, "bleedRatio": 0.03, "hitWeight": 1.2, "isPaired": true, "bone": true, "weapons": ["kick"]},
+        "hindRightWebFoot"  : {"size": 22, "bleedRatio": 0.03, "hitWeight": 1.2, "isPaired": true, "bone": true, "weapons": ["kick"]}
       },
       "limbs": {
         "head": ["skull", "maw", "snout", "leftEye", "rightEye", "brain"],
@@ -163,17 +163,17 @@
     },
     "avian": {
       "parts": {
-        "beak"          : {"size": 18, "bleedRatio": 0.02, "hitWeight": 3, "bone": true},
+        "beak"          : {"size": 18, "bleedRatio": 0.02, "hitWeight": 3, "bone": true, "weapons": ["peck", "bite", "proboscis"]},
         "leftWingBone"  : {"size": 35, "bleedRatio": 0.04, "hitWeight": 3, "isPaired": true, "bone": true},
         "leftWingtip"   : {"size": 20, "bleedRatio": 0.02, "hitWeight": 1.5, "isPaired": true, "bone": true, "containedIn": "leftWingBone"},
         "rightWingBone" : {"size": 35, "bleedRatio": 0.04, "hitWeight": 3, "isPaired": true, "bone": true},
         "rightWingtip"  : {"size": 20, "bleedRatio": 0.02, "hitWeight": 1.5, "isPaired": true, "bone": true, "containedIn": "rightWingBone"},
         "leftThigh"     : {"size": 35, "bleedRatio": 0.04, "hitWeight": 2.5, "isPaired": true, "bone": true},
         "leftShank"     : {"size": 28, "bleedRatio": 0.03, "hitWeight": 2, "isPaired": true, "bone": true},
-        "leftTalon"     : {"size": 18, "bleedRatio": 0.02, "hitWeight": 1, "isPaired": true, "bone": true},
+        "leftTalon"     : {"size": 18, "bleedRatio": 0.02, "hitWeight": 1, "isPaired": true, "bone": true, "weapons": ["claw", "kick"]},
         "rightThigh"    : {"size": 35, "bleedRatio": 0.04, "hitWeight": 2.5, "isPaired": true, "bone": true},
         "rightShank"    : {"size": 28, "bleedRatio": 0.03, "hitWeight": 2, "isPaired": true, "bone": true},
-        "rightTalon"    : {"size": 18, "bleedRatio": 0.02, "hitWeight": 1, "isPaired": true, "bone": true},
+        "rightTalon"    : {"size": 18, "bleedRatio": 0.02, "hitWeight": 1, "isPaired": true, "bone": true, "weapons": ["claw", "kick"]},
         "tailFeathers"  : {"size": 18, "bleedRatio": 0.02, "hitWeight": 1}
       },
       "limbs": {
@@ -188,7 +188,7 @@
     },
     "serpentine": {
       "parts": {
-        "fangs"    : {"size": 14, "bleedRatio": 0.01, "hitWeight": 2, "bone": true},
+        "fangs"    : {"size": 14, "bleedRatio": 0.01, "hitWeight": 2, "bone": true, "weapons": ["venom_bite", "bite"]},
         "foreBody" : {"size": 70, "bleedRatio": 0.12, "hitWeight": 20, "bone": true},
         "midBody"  : {"size": 65, "bleedRatio": 0.1, "hitWeight": 18, "bone": true},
         "hindBody" : {"size": 55, "bleedRatio": 0.07, "hitWeight": 12, "bone": true}
@@ -203,7 +203,7 @@
       "parts": {
         "cephalothorax" : {"size": 55, "bleedRatio": 0.1, "hitWeight": 22, "bone": true},
         "opisthosoma"   : {"size": 60, "bleedRatio": 0.1, "hitWeight": 22},
-        "chelicerae"    : {"size": 16, "bleedRatio": 0.02, "hitWeight": 2, "bone": true},
+        "chelicerae"    : {"size": 16, "bleedRatio": 0.02, "hitWeight": 2, "bone": true, "weapons": ["venom_bite", "bite"]},
         "legFrontLeftA" : {"size": 16, "bleedRatio": 0.015, "hitWeight": 1.2, "isPaired": true, "bone": true},
         "legFrontLeftB" : {"size": 16, "bleedRatio": 0.015, "hitWeight": 1.2, "isPaired": true, "bone": true},
         "legFrontRightA": {"size": 16, "bleedRatio": 0.015, "hitWeight": 1.2, "isPaired": true, "bone": true},
@@ -225,8 +225,8 @@
     "winged_humanoid": {
       "// note": "Harpy-kin — humanoid head/torso/legs (reused) with feathered, clawed WINGS for arms.",
       "parts": {
-        "leftWingClaw"  : {"size": 22, "bleedRatio": 0.02, "hitWeight": 1, "isPaired": true, "bone": true, "containedIn": "leftWingBone"},
-        "rightWingClaw" : {"size": 22, "bleedRatio": 0.02, "hitWeight": 1, "isPaired": true, "bone": true, "containedIn": "rightWingBone"}
+        "leftWingClaw"  : {"size": 22, "bleedRatio": 0.02, "hitWeight": 1, "isPaired": true, "bone": true, "containedIn": "leftWingBone", "weapons": ["claw"]},
+        "rightWingClaw" : {"size": 22, "bleedRatio": 0.02, "hitWeight": 1, "isPaired": true, "bone": true, "containedIn": "rightWingBone", "weapons": ["claw"]}
       },
       "limbs": {
         "head": ["skull", "jaw", "nose", "leftEye", "rightEye", "leftEar", "rightEar", "brain"],
@@ -241,8 +241,8 @@
       "// note": "Incorporeal / ooze (wraith, grimeling) — a core essence + outer mass, no skeleton.",
       "parts": {
         "essence"   : {"size": 40, "bleedRatio": 0.0, "hitWeight": 0, "isVital": true, "critical": true, "containedIn": "core"},
-        "core"      : {"size": 50, "bleedRatio": 0.0, "hitWeight": 20},
-        "outerMass" : {"size": 80, "bleedRatio": 0.0, "hitWeight": 40}
+        "core"      : {"size": 50, "bleedRatio": 0.0, "hitWeight": 20, "weapons": ["spectral_strike"]},
+        "outerMass" : {"size": 80, "bleedRatio": 0.0, "hitWeight": 40, "weapons": ["spectral_strike"]}
       },
       "limbs": {
         "core": ["core", "essence"],

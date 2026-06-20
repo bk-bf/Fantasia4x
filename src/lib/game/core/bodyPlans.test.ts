@@ -3,6 +3,8 @@ import {
   createBodyPlanLimbs,
   rollBodyPart,
   parentLimbOf,
+  enabledNaturalWeapons,
+  BOUND_NATURAL_WEAPONS,
   PART_DEF_MAP,
   DEFAULT_PLAN
 } from './BodyParts';
@@ -115,5 +117,51 @@ describe('body plans', () => {
   it('skull stays a critical, bone-bearing part across the rebuild', () => {
     expect(PART_DEF_MAP['skull']!.isCritical).toBe(true);
     expect(PART_DEF_MAP['skull']!.boneHp).toBeGreaterThan(0);
+  });
+
+  describe('natural-weapon part binding', () => {
+    const markMissing = (limbs: ReturnType<typeof createBodyPlanLimbs>, ids: string[]) => {
+      for (const l of limbs) for (const p of l.parts!) if (ids.includes(p.id)) p.isMissing = true;
+      return limbs;
+    };
+
+    it('weapons are bound to parts (jaw→bite, hands→fists/claw, hooves→kick)', () => {
+      expect(PART_DEF_MAP['jaw']!.weapons).toContain('bite');
+      expect(PART_DEF_MAP['leftHand']!.weapons).toEqual(expect.arrayContaining(['fists', 'claw']));
+      expect(PART_DEF_MAP['hindLeftHoof']!.weapons).toContain('kick');
+      expect(BOUND_NATURAL_WEAPONS.has('bite')).toBe(true);
+      expect(BOUND_NATURAL_WEAPONS.has('claw')).toBe(true);
+    });
+
+    it('a healthy humanoid enables fists (hands), kick (feet) and headbutt (skull)', () => {
+      const w = enabledNaturalWeapons(createBodyPlanLimbs('humanoid', 1));
+      expect(w.has('fists')).toBe(true);
+      expect(w.has('kick')).toBe(true);
+      expect(w.has('headbutt')).toBe(true);
+    });
+
+    it('losing both hands drops fists but keeps kick; losing the feet too leaves no bound weapon', () => {
+      const noHands = markMissing(createBodyPlanLimbs('humanoid', 1), ['leftHand', 'rightHand']);
+      const wh = enabledNaturalWeapons(noHands);
+      expect(wh.has('fists')).toBe(false);
+      expect(wh.has('kick')).toBe(true);
+
+      const crippled = markMissing(noHands, ['leftFoot', 'rightFoot', 'skull']);
+      const wc = enabledNaturalWeapons(crippled);
+      expect(wc.has('fists')).toBe(false);
+      expect(wc.has('kick')).toBe(false); // → attacker falls back to thrash
+    });
+
+    it("a quadruped that loses its mouth can't bite but still claws with a surviving paw", () => {
+      // bite comes from the whole mouth (jaw + snout); destroy both to lose it.
+      const limbs = markMissing(createBodyPlanLimbs('quadruped', 1), [
+        'jaw',
+        'snout',
+        'frontLeftPaw'
+      ]);
+      const w = enabledNaturalWeapons(limbs);
+      expect(w.has('bite')).toBe(false); // mouth gone
+      expect(w.has('claw')).toBe(true); // the OTHER front paw still claws
+    });
   });
 });

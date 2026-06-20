@@ -51,6 +51,8 @@ import {
   createDefaultBodyParts,
   createBodyPlanLimbs,
   parentLimbOf,
+  enabledNaturalWeapons,
+  BOUND_NATURAL_WEAPONS,
   CORE_LIMB_IDS,
   DEFAULT_PLAN,
   BONE_FRACTION
@@ -67,6 +69,27 @@ function limbOfPart(entity: Pawn | Mob, partId: BodyPartId): LimbState | undefin
 function planOf(entity: Pawn | Mob): string {
   if ('creatureId' in entity) return getCreatureById(entity.creatureId)?.limbMap ?? DEFAULT_PLAN;
   return DEFAULT_PLAN;
+}
+
+/** Is the entity's anatomy actually modelled (limbs carry parts)? Sparse test fixtures use empty parts;
+ *  for those we skip part-gating so they behave as before. */
+function hasModelledAnatomy(entity: Pawn | Mob): boolean {
+  return (entity.limbs ?? []).some((l) => (l.parts?.length ?? 0) > 0);
+}
+
+/** Can this entity still hold a hand weapon? True unless it HAS hand parts and they're all gone — so a
+ *  pawn who loses both hands drops to natural attacks, while un-modelled fixtures stay able. */
+function hasUsableHand(entity: Pawn | Mob): boolean {
+  let sawHand = false;
+  for (const limb of entity.limbs ?? []) {
+    for (const p of limb.parts ?? []) {
+      if (p.id === 'leftHand' || p.id === 'rightHand') {
+        sawHand = true;
+        if (!p.isMissing && !limb.isMissing) return true;
+      }
+    }
+  }
+  return !sawHand; // no modelled hands → don't block; modelled-but-all-gone → can't wield
 }
 
 // conditions.jsonc holds persistent and transient conditions; combat only needs the
@@ -482,8 +505,9 @@ function attackerProfile(attacker: Pawn | Mob): AttackProfile {
   const str = attacker.stats.strength * sm.strength;
   const dex = attacker.stats.dexterity * sm.dexterity;
 
-  // Equipped weapon (pawns; future-proofed for armed mobs).
-  if ('equipment' in attacker && attacker.equipment?.mainHand) {
+  // Equipped weapon (pawns; future-proofed for armed mobs) — but only if a hand can still hold it.
+  // Lose both hands and the weapon drops; you fall through to natural attacks / the thrash fallback.
+  if ('equipment' in attacker && attacker.equipment?.mainHand && hasUsableHand(attacker)) {
     const mh = attacker.equipment.mainHand;
     const item = itemService.getItemById(mh.itemId);
     if (item?.weaponProperties) {
@@ -505,8 +529,15 @@ function attackerProfile(attacker: Pawn | Mob): AttackProfile {
     const wp = itemService.getItemById(id)?.weaponProperties;
     if (wp) candidates.push({ id, wp });
   }
-  if (candidates.length > 0) {
-    const chosen = pickWeightedWeapon(candidates);
+  // Part-gating: a natural weapon is usable only while a surviving part enables it (a jaw to bite, a paw
+  // to claw…). Unbound weapons stay always-available. Skipped for un-modelled fixtures (empty parts).
+  let usable = candidates;
+  if (candidates.length > 0 && hasModelledAnatomy(attacker)) {
+    const enabled = enabledNaturalWeapons(attacker.limbs);
+    usable = candidates.filter((c) => enabled.has(c.id) || !BOUND_NATURAL_WEAPONS.has(c.id));
+  }
+  if (usable.length > 0) {
+    const chosen = pickWeightedWeapon(usable);
     const p = profileFromWeapon(str, dex, chosen.wp, chosen.id);
     // A big beast hits proportionally harder: scale natural-weapon base damage by the creature's
     // `bodyScale`, SOFTENED so a mammoth (scale 3.5) maims (≈2.25×) without one-shotting a limb —
@@ -518,7 +549,9 @@ function attackerProfile(attacker: Pawn | Mob): AttackProfile {
     return p;
   }
 
-  // Unarmed fallback (body-slam) — entity with no weapon and no natural-weapon items.
+  // Thrash fallback (desperate body-blow) — no usable weapon left: every natural weapon's part is gone
+  // (a jawless, clawless, legless wreck) or a disarmed pawn with no hands. Weak blunt, but the fight
+  // still resolves rather than stalling on a creature that can't act.
   return {
     str,
     dex,
@@ -528,7 +561,7 @@ function attackerProfile(attacker: Pawn | Mob): AttackProfile {
     bluntMod: 1.0,
     stunChance: 0,
     armorPen: 0,
-    weaponId: 'strike',
+    weaponId: 'thrash',
     staminaCost: ATTACK_STAMINA_COST,
     critMod: 0,
     finesse: false,

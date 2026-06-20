@@ -21,6 +21,9 @@ export interface BodyPartDef {
   boneHp?: number;
   /** Destroying this part is instant death regardless of limb-aggregate HP (a caved-in skull). */
   isCritical?: boolean;
+  /** Natural-weapon ids this part can wield (jaw → bite, paw → claw, hoof → kick…). A creature can use
+   *  one of its `naturalWeapons` ONLY while it still has a non-missing part that enables it. */
+  weapons?: string[];
 }
 
 interface CatalogPart {
@@ -32,6 +35,7 @@ interface CatalogPart {
   containedIn?: string;
   bone?: boolean;
   critical?: boolean;
+  weapons?: string[];
 }
 interface PlanBlock {
   parts?: Record<string, CatalogPart>;
@@ -73,8 +77,31 @@ for (const [id, p] of Object.entries(ALL_PARTS)) {
     isPaired: p.isPaired ?? false,
     isVital: p.isVital ?? false,
     boneHp: p.bone ? Math.round(p.size * BONE_FRACTION) : undefined,
-    isCritical: p.critical ?? undefined
+    isCritical: p.critical ?? undefined,
+    weapons: p.weapons
   };
+}
+
+// Every natural-weapon id that is bound to SOME body part. A weapon NOT in this set is "unbound" and
+// stays always-available (back-compat / abstract attacks); a bound weapon needs a surviving enabling part.
+export const BOUND_NATURAL_WEAPONS = new Set<string>();
+for (const def of Object.values(PART_DEF_MAP)) {
+  for (const w of def?.weapons ?? []) BOUND_NATURAL_WEAPONS.add(w);
+}
+
+/** Natural-weapon ids currently usable given a limb tree: the union of `weapons` over every non-missing
+ *  part (a destroyed jaw can't bite; one surviving front paw still claws). Unbound weapons aren't listed
+ *  here — callers treat them as always-available via BOUND_NATURAL_WEAPONS. */
+export function enabledNaturalWeapons(limbs: LimbState[] | undefined): Set<string> {
+  const out = new Set<string>();
+  for (const limb of limbs ?? []) {
+    if (limb.isMissing) continue;
+    for (const part of limb.parts ?? []) {
+      if (part.isMissing) continue;
+      for (const w of PART_DEF_MAP[part.id]?.weapons ?? []) out.add(w);
+    }
+  }
+  return out;
 }
 
 // Each plan's limb layout (id → part ids), pulled out of its co-located block.
