@@ -30,10 +30,11 @@ export interface EntityNeeds {
  * stages. The persistent counterpart is {@link ConditionDef} (`"duration": "persistent"`).
  */
 export interface TransientConditionDef {
-  /** Discriminant against {@link ConditionDef} — always `"transient"` for this shape. */
-  duration: 'transient';
   id: string;
   name: string;
+  /** Discriminant against {@link ConditionDef}: `true` for a transient condition. Persistent
+   *  conditions omit it (treated as `false`). A plain bool — no string parsing. */
+  transient: true;
   description: string;
   color: string;
   /** Sprite-sheet glyph for the condition icon (same shape as Item/Building.charSpans). */
@@ -51,13 +52,7 @@ export interface TransientConditionDef {
    *  first tick it appears on an entity — surfaced by Combat (timer/combat-driven ids) or
    *  syncTransientConditions (sync-derived ids). Opt-in: unflagged conditions never float. */
   floater?: boolean;
-  modifiers: {
-    hungerRate?: number; // multiplier on hunger accrual (0 = paused, 0.33 = ⅓ rate)
-    fatigueRate?: number; // multiplier on fatigue accrual
-    workEfficiency?: number; // multiplier on work output
-    moveSpeed?: number; // multiplier on movement steps per turn
-    dodge?: number; // multiplier on combat evasion (winded → easier to hit)
-  };
+  modifiers: ConditionModifiers;
 }
 
 /** An active progressive health condition on a pawn. */
@@ -181,19 +176,35 @@ export interface LimbState {
 }
 
 /** A single severity stage within a ConditionDef. */
+/**
+ * Multipliers a condition stage (or transient condition) applies while active. The BASE-STAT keys
+ * (strength…intelligence) scale the raw attribute everywhere it's read — combat damage/hit, dodge,
+ * carry, every work formula — so a severe condition genuinely cripples the body, not just "work
+ * output". The legacy throughput keys (workEfficiency/moveSpeed/…) stack ON TOP for flavour. All are
+ * multipliers, 1.0 = no change; <1 = penalty, >1 = boost (magical buffs).
+ */
+export interface ConditionModifiers {
+  strength?: number;
+  dexterity?: number;
+  constitution?: number;
+  perception?: number;
+  intelligence?: number;
+  workEfficiency?: number; // multiplier on work output (on top of the stat hit)
+  moveSpeed?: number; // multiplier on movement
+  hungerRate?: number; // multiplier on hunger accrual rate
+  fatigueRate?: number; // multiplier on fatigue accrual rate
+  dodge?: number; // extra multiplier on the defender's evasion (most evasion now flows via DEX)
+  hitChance?: number; // extra multiplier on the attacker's to-hit (most accuracy now flows via DEX)
+  /** Index signature so the UI can iterate modifiers generically (effectLines); all values are multipliers. */
+  [key: string]: number | undefined;
+}
+
 export interface ConditionStage {
   label: string;
   minSeverity: number;
   color: string;
   lifeThreatening?: boolean;
-  modifiers: {
-    workEfficiency?: number; // multiplier on work output
-    moveSpeed?: number; // multiplier on movement
-    hungerRate?: number; // multiplier on hunger accrual rate
-    fatigueRate?: number; // multiplier on fatigue accrual rate
-    dodge?: number; // multiplier on the defender's evasion in combat (encumbered → easier to hit)
-    hitChance?: number; // multiplier on the attacker's to-hit in combat (encumbered → hits worse)
-  };
+  modifiers: ConditionModifiers;
 }
 
 /**
@@ -226,10 +237,11 @@ export interface ConditionDriver {
  * {@link ConditionStage}s; can be lethal. The transient counterpart is {@link TransientConditionDef}.
  */
 export interface ConditionDef {
-  /** Discriminant against {@link TransientConditionDef} — always `"persistent"` for this shape. */
-  duration: 'persistent';
   id: string;
   name: string;
+  /** Discriminant against {@link TransientConditionDef}: persistent conditions omit `transient`
+   *  (or set it false). The bool replaces the old `duration` string. */
+  transient?: false;
   description: string;
   /** Sprite-sheet glyph for the condition icon (same shape as Item/Building.charSpans). Tinted by
    *  the active stage colour in the UI. Optional — falls back to a coloured glyph if absent. */
@@ -238,6 +250,10 @@ export interface ConditionDef {
   stages: ConditionStage[];
   /** Optional: a need that drives this condition's severity up/down (conditions.jsonc). */
   driver?: ConditionDriver;
+  /** When true, pop a floating label ("Name (stage)", in the active stage's colour) the tick the
+   *  condition first appears or graduates to a new stage. Opt-in, mirroring the transient flag;
+   *  surfaced pawn-side by syncTransientConditions (mobs don't run that sync). */
+  floater?: boolean;
 }
 
 /** Record appended to gameState.deadPawns when a pawn dies. */

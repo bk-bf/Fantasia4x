@@ -3,7 +3,13 @@
 import type { GameState, Mob, MobState, DroppedItem } from '../../core/types';
 import { getCreatureById } from '../../core/Creatures';
 import { SECONDS_PER_TICK, perTick } from '../../core/time';
-import { conditionNeedMultipliers, driveNeedConditions } from '../../core/needs';
+import {
+  conditionNeedMultipliers,
+  driveNeedConditions,
+  applyShock,
+  snapshotConditionStages,
+  emitPersistentConditionFloaters
+} from '../../core/needs';
 import { absorbDropIfOnStockpileTile } from '../../core/GameState';
 import { pawnStatService } from '../PawnStatService';
 import { simLog } from '../../core/logSink';
@@ -112,6 +118,8 @@ export function stepHunger(state: GameState): GameState {
 
     // Sync blood_loss condition severity (mirrors pawn tickConditions).
     let conditions = [...(mob.conditions ?? [])];
+    // Pre-tick stages of flagged persistent conditions (e.g. shock) — to float a label on change.
+    const prevStages = snapshotConditionStages(conditions);
     const bloodSeverity = Math.round((1 - bloodVolume / maxBV) * 1000) / 1000;
     const bloodLossIdx = conditions.findIndex((c) => c.id === 'blood_loss');
     if (bloodSeverity > 0) {
@@ -214,10 +222,17 @@ export function stepHunger(state: GameState): GameState {
       }
     }
 
+    // ── Shock ──────────────────────────────────────────────────────────────────
+    // Severe pain (combat injuries) sends a mob into shock too — SAME rule as pawns (applyShock).
+    // mob.pain is kept current by combat (_applyInjuryToEntity) and the heal block above.
+    applyShock(conditions, mob.pain ?? 0);
+
     mob.needs.hunger = newHunger;
     mob.needs.fatigue = newFatigue;
     mob.bloodVolume = bloodVolume;
     mob.conditions = conditions;
+    // Float a label for any flagged persistent condition (shock) that onset / changed stage this tick.
+    emitPersistentConditionFloaters(prevStages, conditions, mob.x, mob.y);
     changed = true;
   }
 

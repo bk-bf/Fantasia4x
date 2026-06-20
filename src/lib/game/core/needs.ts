@@ -5,37 +5,103 @@
  * consistently to any living entity (pawn or mob) that carries PawnCondition[].
  */
 
-import type { EntityCondition, ConditionDef, ConditionStage, TransientConditionDef } from './types';
+import type {
+  EntityCondition,
+  ConditionDef,
+  ConditionStage,
+  ConditionModifiers,
+  TransientConditionDef
+} from './types';
 import conditionsData from '../database/conditions.jsonc';
 import { perTick } from './time';
+import { simLog } from './logSink';
 
 const CONDITIONS_DB = conditionsData as unknown as ConditionDef[];
 /** Raw mixed list (persistent + transient shapes) for id-keyed lookups across both kinds. */
 const ALL_CONDITION_DEFS = conditionsData as unknown as Array<ConditionDef | TransientConditionDef>;
 
 /**
- * If a condition `id` is opted-in to floating text (`"floater": true` in conditions.jsonc), return
- * its display name + colour for a floater; otherwise undefined. Used by the combat + state-machine
- * emit sites to pop a label the first tick the condition latches (or, for persistent conditions,
- * graduates to a new stage).
- *
- * Two id shapes: a transient id is bare (`"winded"`) and carries a top-level `color`; a persistent
- * condition surfaces in `transientConditions` stage-suffixed (`"shock:moderate"`), so split on `:`,
- * resolve the base def, and use the matching stage's colour + a "Name (stage)" label.
+ * If a (bare) transient/combat condition `id` is opted-in to floating text (`"floater": true` in
+ * conditions.jsonc), return its display name + colour; otherwise undefined. For transient ids only
+ * (`"winded"`, `"knockdown"`, …) — persistent conditions float via {@link emitPersistentConditionFloaters}
+ * at their application site, keyed on the stage they reach, so they're not handled here.
  */
 export function getConditionFloater(id: string): { name: string; color: string } | undefined {
-  const sep = id.indexOf(':');
-  if (sep !== -1) {
-    const baseId = id.slice(0, sep);
-    const stageLabel = id.slice(sep + 1);
-    const def = ALL_CONDITION_DEFS.find((d) => d.id === baseId);
-    if (!def || !(def as ConditionDef).floater || !(def as ConditionDef).stages) return undefined;
-    const stage = (def as ConditionDef).stages.find((s) => s.label === stageLabel);
-    return { name: `${def.name} (${stageLabel})`, color: stage?.color ?? '#dddddd' };
-  }
   const def = ALL_CONDITION_DEFS.find((d) => d.id === id);
   if (!def || !(def as TransientConditionDef).floater) return undefined;
   return { name: def.name, color: (def as TransientConditionDef).color ?? '#dddddd' };
+}
+
+/** Pain (0–100) at/above which the `shock` condition onsets; severity scales to 1 at pain 100. */
+export const SHOCK_PAIN_ONSET = 40;
+
+/**
+ * Set the `shock` condition's severity DIRECTLY from current pain (reflected like blood_loss — tracks
+ * pain now, clears as it subsides; not accumulating). Mutates `conditions` in place. Shared by pawns
+ * (PawnStateMachine.tickConditions) and mobs (entityLifecycle.stepHunger) so a heavy beating sends any
+ * living entity into shock by the SAME rule. Non-lethal here — pain/blood loss already drive
+ * consciousness → collapse → death; shock just layers its work/move penalty on top.
+ */
+export function applyShock(conditions: EntityCondition[], pain: number): void {
+  const severity = Math.min(
+    0.99,
+    Math.max(0, (pain - SHOCK_PAIN_ONSET) / (100 - SHOCK_PAIN_ONSET))
+  );
+  const idx = conditions.findIndex((c) => c.id === 'shock');
+  if (severity > 0) {
+    if (idx === -1) conditions.push({ id: 'shock', severity });
+    else conditions[idx] = { ...conditions[idx], severity };
+  } else if (idx !== -1) {
+    conditions.splice(idx, 1);
+  }
+}
+
+/**
+ * Snapshot the current stage label of every FLAGGED persistent condition on an entity, keyed by id
+ * (e.g. `shock → "moderate"`). Taken BEFORE a tick mutates `conditions` so
+ * {@link emitPersistentConditionFloaters} can tell which conditions newly appeared or changed stage.
+ * Returns undefined when nothing flagged is present — the common case allocates nothing (hot path).
+ */
+export function snapshotConditionStages(
+  conditions: EntityCondition[]
+): Map<string, string> | undefined {
+  let snap: Map<string, string> | undefined;
+  for (const c of conditions) {
+    const def = CONDITIONS_DB.find((d) => d.id === c.id);
+    if (!def?.floater) continue;
+    const stage = getConditionCurrentStage(c);
+    if (stage) (snap ??= new Map()).set(c.id, stage.label);
+  }
+  return snap;
+}
+
+/**
+ * Pop a floating label ("Name (stage)", in the stage colour) for each FLAGGED persistent condition
+ * that newly appeared OR graduated to a different stage since `prevStages` (from
+ * {@link snapshotConditionStages}). Shared by pawns + mobs so shock/infection/thermia surface
+ * identically for every living entity (mobs don't run the transient-condition sync). Re-derives stage
+ * downgrades too (recovery), which is the desired "status changed" cue.
+ */
+export function emitPersistentConditionFloaters(
+  prevStages: Map<string, string> | undefined,
+  next: EntityCondition[],
+  x: number,
+  y: number
+): void {
+  if (x < 0 || y < 0) return;
+  for (const c of next) {
+    const def = CONDITIONS_DB.find((d) => d.id === c.id);
+    if (!def?.floater) continue;
+    const stage = getConditionCurrentStage(c);
+    if (!stage || prevStages?.get(c.id) === stage.label) continue;
+    simLog.pushCombatText({
+      worldX: x,
+      worldY: y,
+      text: `${def.name} (${stage.label})`,
+      kind: 'condition',
+      color: stage.color
+    });
+  }
 }
 
 /** Return the active ConditionStage for a given condition at its current severity. */
@@ -223,4 +289,63 @@ export function conditionNeedMultipliers(conditions: EntityCondition[]): {
     }
   }
   return { hungerRate, fatigueRate };
+}
+
+// ── Condition → base-stat penalties ────────────────────────────────────────────────────────────
+const TRANSIENT_BY_ID = new Map<string, TransientConditionDef>(
+  (
+    ALL_CONDITION_DEFS.filter(
+      (d) => (d as TransientConditionDef).transient === true
+    ) as TransientConditionDef[]
+  ).map((d) => [d.id, d])
+);
+
+export interface StatMultipliers {
+  strength: number;
+  dexterity: number;
+  constitution: number;
+  perception: number;
+  intelligence: number;
+}
+/** Shared identity result returned for the common (no-condition) case — never mutated. */
+const NO_STAT_MULT: StatMultipliers = Object.freeze({
+  strength: 1,
+  dexterity: 1,
+  constitution: 1,
+  perception: 1,
+  intelligence: 1
+});
+
+/**
+ * Aggregate the base-stat multipliers (STR/DEX/CON/PER/INT) an entity's active conditions impose —
+ * persistent stages (by current severity) × transient conditions. These scale the RAW attributes
+ * wherever they're read (combat damage/hit/dodge, carry, every work formula), so a severe condition
+ * genuinely cripples the body. Identity (all 1) when nothing is active — early-out so healthy entities
+ * pay nothing on this hot path.
+ */
+export function conditionStatMultipliers(entity: {
+  conditions?: EntityCondition[];
+  transientConditions?: string[];
+}): StatMultipliers {
+  const conds = entity.conditions;
+  const tconds = entity.transientConditions;
+  if ((!conds || conds.length === 0) && (!tconds || tconds.length === 0)) return NO_STAT_MULT;
+  const out: StatMultipliers = {
+    strength: 1,
+    dexterity: 1,
+    constitution: 1,
+    perception: 1,
+    intelligence: 1
+  };
+  const apply = (m?: ConditionModifiers) => {
+    if (!m) return;
+    if (m.strength != null) out.strength *= m.strength;
+    if (m.dexterity != null) out.dexterity *= m.dexterity;
+    if (m.constitution != null) out.constitution *= m.constitution;
+    if (m.perception != null) out.perception *= m.perception;
+    if (m.intelligence != null) out.intelligence *= m.intelligence;
+  };
+  for (const c of conds ?? []) apply(getConditionCurrentStage(c)?.modifiers);
+  for (const id of tconds ?? []) apply(TRANSIENT_BY_ID.get(id)?.modifiers);
+  return out;
 }

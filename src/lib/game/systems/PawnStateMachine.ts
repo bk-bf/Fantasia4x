@@ -42,7 +42,10 @@ import {
   driveTemperatureConditions,
   driveEncumbrance,
   comfortRange,
-  getConditionFloater
+  getConditionFloater,
+  applyShock,
+  snapshotConditionStages,
+  emitPersistentConditionFloaters
 } from '../core/needs';
 import {
   weatherEffects,
@@ -119,8 +122,6 @@ const WET_SOAKED = 95;
 const WET_CHILL_TEMP = 12; // only when the effective temperature is below this (°C)
 const WET_CHILL_CHANCE_PER_SEC = 0.04;
 const WET_CHILL_SEVERITY = 0.04;
-/** Pain (0–100) at/above which the `shock` condition starts; severity scales linearly to 1 at pain 100. */
-const SHOCK_PAIN_ONSET = 40;
 
 /** Consciousness (0–1) below which a pawn collapses (matches Combat.COLLAPSE_CONSCIOUSNESS).
  *  Folds in pain + blood loss + organ damage, so downing has one unified cause. */
@@ -322,6 +323,9 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
   // was a top allocator for healthy pawns that never change, §C). conditions is a cold snapshot field
   // (resync, ADR-021 W2b), so in-place mutation is safe. Initialised once per pawn if absent.
   const conditions = (pawn.conditions ??= []);
+  // Stage of each flagged persistent condition BEFORE this tick's updates — so we can float a label
+  // when one onsets or changes stage (shock/infection/thermia). Allocates nothing when none present.
+  const prevStages = snapshotConditionStages(conditions);
   const maxBloodVolume = pawn.maxBloodVolume ?? 100;
   let bloodVolume = pawn.bloodVolume ?? maxBloodVolume;
   const limbs = pawn.limbs ?? [];
@@ -555,21 +559,8 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
   }
 
   // ── Shock ──────────────────────────────────────────────────────────────────
-  // Severe pain sends the body into shock. Reflected (not accumulating) like blood_loss — severity
-  // tracks current pain and clears as it subsides. Non-lethal here: the underlying pain/blood loss
-  // already drives consciousness → collapse → death, so shock just layers its work/move penalty on top.
-  const pain = pawn.pain ?? 0;
-  const shockSeverity = Math.min(
-    0.99,
-    Math.max(0, (pain - SHOCK_PAIN_ONSET) / (100 - SHOCK_PAIN_ONSET))
-  );
-  const shockIdx = conditions.findIndex((c) => c.id === 'shock');
-  if (shockSeverity > 0) {
-    if (shockIdx === -1) conditions.push({ id: 'shock', severity: shockSeverity });
-    else conditions[shockIdx] = { ...conditions[shockIdx], severity: shockSeverity };
-  } else if (shockIdx !== -1) {
-    conditions.splice(shockIdx, 1);
-  }
+  // Severe pain sends the body into shock — shared rule for pawns + mobs (applyShock).
+  applyShock(conditions, pawn.pain ?? 0);
 
   // ── Persist updated condition/blood state ──────────────────────────────────
   // ADR-002 amendment (hot per-tick, behind the worker): the common (non-lethal) path mutates the
@@ -581,6 +572,13 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
   pawn.conditions = conditions;
   pawn.bloodVolume = bloodVolume;
   pawn.limbs = limbs;
+  // Float a label for any flagged persistent condition that onset / changed stage this tick.
+  emitPersistentConditionFloaters(
+    prevStages,
+    conditions,
+    pawn.position?.x ?? -1,
+    pawn.position?.y ?? -1
+  );
   return gameState;
 }
 
@@ -835,14 +833,15 @@ export function syncTransientConditions(pawn: Pawn): Pawn {
   const current = pawn.transientConditions ?? [];
   if (ids.length === current.length && ids.every((e, i) => e === current[i])) return pawn;
 
-  // Floating-text cue for a flagged condition the first tick it latches. Only SYNC-derived ids
-  // fire here (e.g. tired) — timer-based/combat ids (knockdown, winded, on-hit effects) are floated
-  // by Combat at their application site, so skip anything in conditionTimers to avoid a double label.
+  // Floating-text cue for a flagged condition the first tick it latches. Only SYNC-derived transient
+  // ids fire here (e.g. tired). Skipped: timer-based/combat ids (knockdown, winded, on-hit effects),
+  // floated by Combat at their application site; and persistent stage labels (contain ':'), floated by
+  // tickConditions via emitPersistentConditionFloaters — either would double-label otherwise.
   // Guarded by the equality early-return above: this loop only runs on a tick where the set changed.
   const timers = pawn.conditionTimers ?? {};
   if (pawn.position) {
     for (const id of ids) {
-      if (current.includes(id) || (timers[id] ?? 0) > 0) continue;
+      if (current.includes(id) || id.includes(':') || (timers[id] ?? 0) > 0) continue;
       const f = getConditionFloater(id);
       if (f)
         simLog.pushCombatText({
