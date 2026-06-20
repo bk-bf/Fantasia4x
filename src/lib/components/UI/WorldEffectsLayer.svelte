@@ -55,6 +55,15 @@
     </div>
   {/each}
 
+  {#each $worldEffects.collapsedOverlays as overlay (overlay.id)}
+    <div
+      class="collapse-float"
+      style="transform: translate({overlay.left}px, {overlay.top}px) translateX(-50%);"
+    >
+      <span class="collapse-arrow">↓</span>
+    </div>
+  {/each}
+
   {#each $worldEffects.progressOverlays as overlay (overlay.id)}
     <div
       class="pawn-progress-float"
@@ -297,6 +306,39 @@
     50% {
       opacity: 1;
       transform: translateY(-3px) scale(1.15);
+    }
+  }
+
+  /* ── Collapsed (downed: pain / blood loss / starvation) — a quiet red ↓ that bobs DOWN, calmer than
+     the rising Zzz so a fainted pawn reads as an emergency without shouting like sleep does. ── */
+
+  .collapse-float {
+    position: absolute;
+    left: 0;
+    top: 0;
+    pointer-events: none;
+    /* centering + positioning via inline style transform: translate(X,Y) translateX(-50%) */
+  }
+
+  .collapse-arrow {
+    color: #e23b3b;
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
+    font-weight: bold;
+    text-shadow: 0 0 4px #800;
+    animation: collapse-bob 1.8s ease-in-out infinite;
+    will-change: transform, opacity;
+  }
+
+  @keyframes collapse-bob {
+    0%,
+    100% {
+      opacity: 0.35;
+      transform: translateY(-2px);
+    }
+    50% {
+      opacity: 0.85;
+      transform: translateY(1px);
     }
   }
 

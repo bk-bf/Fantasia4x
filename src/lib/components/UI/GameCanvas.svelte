@@ -195,6 +195,7 @@
   // tanking FPS at night when everyone was asleep.
   let _sleepOverlayKey = '';
   let _restOverlayKey = '';
+  let _collapsedOverlayKey = '';
   let _progressOverlayKey = '';
   let _campfireOverlayKey = '';
   let _particleOverlayKey = '';
@@ -1063,20 +1064,25 @@
       const cellY = Math.round(rp.y);
       const isSelected = pawn.id === selectedPawnId;
       const isSleeping = pawn.currentState === 'Sleeping';
+      // Collapsed = downed from pain / blood loss / starvation — lies on the ground like sleep, but it's
+      // an emergency, marked by the red ↓ overlay rather than the calm blue Zzz.
+      const isCollapsed = pawn.currentState === 'Collapsed';
       // A Sleeping pawn with real wounds is RECOVERING (red), not just napping (blue) — short-circuit
       // keeps the wound scan to sleeping pawns only.
       const isResting = isSleeping && needsRecovery(pawn as never);
       const isDrafted = pawn.drafted;
       const isCriticallyHungry = (pawn.needs?.hunger ?? 0) >= 85;
-      const baseColor = isDrafted
-        ? { r: 1.0, g: 0.15, b: 0.15 }
-        : isResting
-          ? { r: 0.95, g: 0.3, b: 0.3 }
-          : isSleeping
-            ? { r: 0.35, g: 0.45, b: 1.0 }
-            : isCriticallyHungry
-              ? { r: 1.0, g: 0.45, b: 0.05 }
-              : { r: 1, g: 1, b: 1 };
+      const baseColor = isCollapsed
+        ? { r: 0.85, g: 0.12, b: 0.12 }
+        : isDrafted
+          ? { r: 1.0, g: 0.15, b: 0.15 }
+          : isResting
+            ? { r: 0.95, g: 0.3, b: 0.3 }
+            : isSleeping
+              ? { r: 0.35, g: 0.45, b: 1.0 }
+              : isCriticallyHungry
+                ? { r: 1.0, g: 0.45, b: 0.05 }
+                : { r: 1, g: 1, b: 1 };
 
       const pLunge = lungeOffset(pawn.id, nowMs);
       pawnOverlayGrid.setTile(cellX, cellY, {
@@ -1088,7 +1094,8 @@
           x: (rp.x - cellX) * BASE_TILE_PX + pLunge.x,
           y: (rp.y - cellY) * BASE_TILE_PX + pLunge.y
         },
-        rotation: isSleeping ? 90 : undefined
+        // Both sleep and collapse lay the pawn on its side.
+        rotation: isSleeping || isCollapsed ? 90 : undefined
       });
     }
 
@@ -1121,8 +1128,15 @@
     const onScreen = (o: { left: number; top: number }) => o.left >= 0 && o.top >= 0 && o.left <= W;
     const newSleep = [];
     const newResting = [];
+    const newCollapsed = [];
     for (const p of pawns) {
-      if (!p.position || p.currentState !== 'Sleeping') continue;
+      if (!p.position) continue;
+      if (p.currentState === 'Collapsed') {
+        const o = overlayOf(p.id, p.position.x, p.position.y);
+        if (onScreen(o)) newCollapsed.push(o);
+        continue;
+      }
+      if (p.currentState !== 'Sleeping') continue;
       const o = overlayOf(p.id, p.position.x, p.position.y);
       if (!onScreen(o)) continue;
       if (needsRecovery(p as never)) newResting.push(o);
@@ -1146,6 +1160,13 @@
     if (restKey !== _restOverlayKey) {
       _restOverlayKey = restKey;
       worldEffects.setRestingOverlays(newResting);
+    }
+    const collapsedKey = newCollapsed
+      .map((o) => `${o.id}:${Math.round(o.left)},${Math.round(o.top)}`)
+      .join('|');
+    if (collapsedKey !== _collapsedOverlayKey) {
+      _collapsedOverlayKey = collapsedKey;
+      worldEffects.setCollapsedOverlays(newCollapsed);
     }
 
     const newProgress = [

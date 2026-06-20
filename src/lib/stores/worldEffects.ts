@@ -69,6 +69,8 @@ export interface WorldEffectsState {
   sleepingOverlays: SleepingOverlay[];
   /** Wounded pawns lying down to RECOVER (distinct red ✚ marker, vs the blue Zzz of plain sleep). */
   restingOverlays: SleepingOverlay[];
+  /** Collapsed/downed pawns (pain/blood-loss/hunger) — a subtle red ↓ marker, vs the blue Zzz of sleep. */
+  collapsedOverlays: SleepingOverlay[];
   progressOverlays: ProgressOverlay[];
   campfireOverlays: CampfireOverlay[];
   particleOverlays: ParticleOverlay[];
@@ -85,6 +87,7 @@ function createWorldEffectsStore() {
   const { subscribe, update } = writable<WorldEffectsState>({
     sleepingOverlays: [],
     restingOverlays: [],
+    collapsedOverlays: [],
     progressOverlays: [],
     campfireOverlays: [],
     particleOverlays: [],
@@ -101,6 +104,9 @@ function createWorldEffectsStore() {
     },
     setRestingOverlays(overlays: SleepingOverlay[]) {
       update((s) => ({ ...s, restingOverlays: overlays }));
+    },
+    setCollapsedOverlays(overlays: SleepingOverlay[]) {
+      update((s) => ({ ...s, collapsedOverlays: overlays }));
     },
     setProgressOverlays(overlays: ProgressOverlay[]) {
       update((s) => ({ ...s, progressOverlays: overlays }));
