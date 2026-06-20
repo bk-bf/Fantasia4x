@@ -4,6 +4,7 @@ import { writable } from 'svelte/store';
 
 const COLLAPSED_RES_CATS_KEY = 'fx.resourcePanel.collapsedCategories';
 const HIDE_EMPTY_RES_CATS_KEY = 'fx.resourcePanel.hideEmptyCategories';
+const HIDE_SIDEBARS_KEY = 'fx.layout.hideSidebars';
 
 function loadStringList(key: string): string[] {
   if (typeof localStorage === 'undefined') return [];
@@ -78,3 +79,10 @@ function createPersistedBool(key: string, fallback: boolean) {
 }
 
 export const hideEmptyResourceCategories = createPersistedBool(HIDE_EMPTY_RES_CATS_KEY, true);
+
+/**
+ * "Cinematic" layout toggle: when on, the resource + chronicle sidebars go transparent and out of
+ * flow (floating over the map), so the bottom nav and overlay panel reflow to fill the full viewport
+ * width. Off by default; persisted across sessions. Driven from the top-bar settings menu.
+ */
+export const hideSidebars = createPersistedBool(HIDE_SIDEBARS_KEY, false);

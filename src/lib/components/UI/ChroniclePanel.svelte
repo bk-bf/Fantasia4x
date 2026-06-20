@@ -1,6 +1,7 @@
 <script lang="ts">
   import { recentActivity, clearActivityLog } from '$lib/stores/Log';
   import { uiState } from '$lib/stores/uiState';
+  import { hideSidebars } from '$lib/stores/uiPrefs';
   import type { ActivityLogEntry } from '$lib/game/core/Events';
   import CombatBreakdown from './CombatBreakdown.svelte';
   import HoverTip from './HoverTip.svelte';
@@ -100,7 +101,7 @@
   }
 </script>
 
-<aside class="panel">
+<aside class="panel" class:transparent={$hideSidebars}>
   <div class="section-hdr">
     <span>| CHRONICLE</span>
     <button
@@ -172,6 +173,47 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
+  }
+
+  /* "Hide sidebars" mode (top-bar settings): float fully transparently over the map — no backdrop,
+     so the viewport stays unobstructed. Warm ambient-tinted text, crispened by a thin 1px black
+     outline and popped by a heavy dark drop shadow under the glyphs. Click-through (pointer-events:
+     none) so map clicks and condition/yield hover tooltips beneath it work. Mirrors ResourceSidebar. */
+  .panel.transparent {
+    background: transparent;
+    pointer-events: none;
+    text-shadow:
+      1px 0 0 #000,
+      -1px 0 0 #000,
+      0 1px 0 #000,
+      0 -1px 0 #000,
+      0 0 12px rgba(0, 0, 0, 0.95),
+      0 0 20px rgba(0, 0, 0, 0.9),
+      0 2px 4px rgba(0, 0, 0, 1),
+      0 4px 6px rgba(0, 0, 0, 1),
+      0 6px 10px rgba(0, 0, 0, 1),
+      0 8px 16px rgba(0, 0, 0, 0.95),
+      0 10px 24px rgba(0, 0, 0, 0.9);
+  }
+  .panel.transparent .section-hdr {
+    background: transparent;
+    border-bottom: none;
+  }
+  .panel.transparent .entry {
+    border-bottom: none;
+    /* A resting highlight behind every line — the same warm hover tint at ~1/3 strength, but faded
+       to transparent at the left/right edges so it's a soft band, not a hard box. */
+    background: linear-gradient(
+      to right,
+      transparent,
+      color-mix(in srgb, var(--bg-hover) 33%, transparent) 10%,
+      color-mix(in srgb, var(--bg-hover) 33%, transparent) 90%,
+      transparent
+    );
+  }
+  /* Hover still brightens to the full hover intensity (wins on specificity over the resting band). */
+  .panel.transparent .entry:hover {
+    background: var(--bg-hover);
   }
 
   .section-hdr {

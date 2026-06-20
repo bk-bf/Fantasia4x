@@ -9,6 +9,7 @@
     savedStateReady
   } from '$lib/stores/gameState';
   import { uiState } from '$lib/stores/uiState';
+  import SettingsMenu from '$lib/components/UI/SettingsMenu.svelte';
   import { renderFps } from '$lib/stores/perfStats';
   import { wasmPathfinderService } from '$lib/game/services/WasmPathfinderService';
   import {
@@ -113,15 +114,6 @@
   $: windLabel =
     windVal >= 0.2 ? `${windWord} windy ${windDirLabel($currentWeather?.windDir)}` : '';
 
-  // Dev timesaver: drop 500 of every item into the current stockpile (no regen/wipe).
-  const DEV_ITEM_QTY = 500;
-  function spawnAllItems() {
-    gameState.devSpawnAllItems(DEV_ITEM_QTY);
-  }
-  function clearAllItems() {
-    gameState.devClearAllItems();
-  }
-
   const unsubPaused = gameState.isPaused.subscribe((v) => (isPaused = v));
   const unsubSpeed = gameState.gameSpeed.subscribe((v) => (gameSpeed = v));
   const unsubTurn = currentTurn.subscribe((v) => (currentTurnValue = v));
@@ -181,12 +173,6 @@
     unsubUI();
     unsubFps();
   });
-
-  function wipeSave() {
-    if (confirm('Delete save and restart?')) {
-      gameState.wipeAndReload();
-    }
-  }
 </script>
 
 <svelte:head>
@@ -237,20 +223,6 @@
     >
       ⚙ CUSTOM MAP
     </button>
-    <button
-      class="ctrl-btn"
-      on:click={spawnAllItems}
-      title="Dev: drop 500× of every item as physical piles on the ground around the colony (haul to use)"
-    >
-      + ITEMS
-    </button>
-    <button
-      class="ctrl-btn"
-      on:click={clearAllItems}
-      title="Dev: destroy ALL physical items (every drop + carried inventory)"
-    >
-      − ITEMS
-    </button>
   {/if}
   <button class="ctrl-btn" class:is-paused={isPaused} on:click={gameState.togglePause}>
     {isPaused ? '▶ RESUME' : '⏸ PAUSE'}
@@ -262,7 +234,7 @@
       >
     {/each}
   </div>
-  <button class="ctrl-btn danger" on:click={wipeSave}>WIPE</button>
+  <SettingsMenu />
 </div>
 
 <style>
@@ -374,14 +346,6 @@
   .ctrl-btn.is-paused {
     border-color: var(--accent-hi);
     color: var(--accent-hi);
-  }
-  .ctrl-btn.danger {
-    border-color: var(--neg);
-    color: var(--neg);
-  }
-  .ctrl-btn.danger:hover {
-    background: var(--neg);
-    color: #fff;
   }
 
   .speed-wrap {

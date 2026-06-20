@@ -20,6 +20,7 @@
   import GameOverScreen from '$lib/components/UI/GameOverScreen.svelte';
   import { autohideScroll } from '$lib/actions/autohideScroll';
   import { uiState } from '$lib/stores/uiState';
+  import { hideSidebars } from '$lib/stores/uiPrefs';
   import { gameState, storeReady, bootReveal, isGameOver } from '$lib/stores/gameState';
   // Side-effect import: starts the EXPLORE tab's background resource-ledger cache from game start, so
   // opening the tab reads a ready list instead of scanning the whole map on the click path.
@@ -40,6 +41,7 @@
   // fog drains the colour most (`panelSaturation` in weather.jsonc) for a bleak, washed-out feel.
   $: ambient = environmentService.getAmbient(environmentService.ambientTurn($gameState));
   $: panelTint = ambient.panelTint;
+
   $: panelSaturation = bleakSaturation(
     effectivePanelSaturation(environmentService.effectiveSeason($gameState), $gameState.weather),
     ambient.light
@@ -168,7 +170,7 @@
       <GameControls />
     </div>
 
-    <div class="game-body">
+    <div class="game-body" class:sidebars-hidden={$hideSidebars}>
       <aside class="left-panel">
         <ResourceSidebar />
       </aside>
@@ -279,6 +281,10 @@
 
   .game-header {
     flex-shrink: 0;
+    /* Stack above the game body so the settings dropdown (which overflows the 26px header) paints
+       over the WebGL canvas instead of behind it. */
+    position: relative;
+    z-index: 50;
   }
 
   .game-body {
@@ -286,6 +292,8 @@
     display: flex;
     overflow: hidden;
     min-height: 0;
+    /* Positioning context for the sidebars when they float (see .sidebars-hidden). */
+    position: relative;
   }
 
   .left-panel {
@@ -397,5 +405,39 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
+  }
+
+  /* "Hide sidebars" view toggle (top-bar settings → uiPrefs.hideSidebars).
+     The sidebars stay mounted but go transparent and out of flow — floating over the map at their
+     original edges — so .main-content (and with it the bottom nav + overlay panel) reflows to fill
+     the full viewport width, and the overlay panel left-aligns to the viewport edge.
+
+     Stacking/geometry: z-index 6 keeps them above the map/world-effects but below the overlay info
+     panel (z-index 10, hoisted out of the static .main-content), which can cover them. They stop at
+     `bottom: 30px` — the bottom-nav height — so they never overlap the nav, keeping the edge tabs
+     (PAWNS far-left, DEBUG far-right) clickable.
+
+     Legibility: keep the ambient tint so the text holds the same warm day/night/weather hue as the
+     map, but lift brightness so the orange pops against the colourful scene at all hours. The crisp
+     white outline + drop shadow that make it readable live in the panel components. */
+  .sidebars-hidden .left-panel,
+  .sidebars-hidden .right-panel {
+    position: absolute;
+    top: 0;
+    bottom: 30px;
+    z-index: 6;
+    border: none;
+    background: transparent;
+    filter: url(#ambient-tint) brightness(1.3);
+    /* Click-through: this floating aside is the box that actually occupies the map's left/right
+       strips, so it (not just the inner panel) must let clicks + hover reach the tiles and the
+       condition/yield tooltips beneath. Display-only in this mode. */
+    pointer-events: none;
+  }
+  .sidebars-hidden .left-panel {
+    left: 0;
+  }
+  .sidebars-hidden .right-panel {
+    right: 0;
   }
 </style>
