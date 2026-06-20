@@ -13,15 +13,14 @@ import conditionsData from '../database/conditions.jsonc';
 import itemsData from '../database/items.jsonc';
 import { WORK_CATEGORIES } from '../core/Work';
 import { qualityMultiplier } from '../core/itemQuality';
+import { conditionStatMultipliers } from '../core/needs';
 
 // conditions.jsonc holds both persistent conditions (severity/stages) and transient ones
 // (re-derived each tick); split them by the `duration` discriminant — see the file header.
 const ALL_CONDITION_DEFS = conditionsData as unknown as Array<ConditionDef | TransientConditionDef>;
-const CONDITIONS_DB = ALL_CONDITION_DEFS.filter(
-  (d): d is ConditionDef => d.duration === 'persistent'
-);
+const CONDITIONS_DB = ALL_CONDITION_DEFS.filter((d): d is ConditionDef => d.transient !== true);
 const TRANSIENT_CONDITIONS_DB = ALL_CONDITION_DEFS.filter(
-  (d): d is TransientConditionDef => d.duration === 'transient'
+  (d): d is TransientConditionDef => d.transient === true
 );
 const ITEMS_DB = itemsData as unknown as Item[];
 
@@ -156,12 +155,15 @@ function evaluateFormula(
   // partial entities (some mobs / minimal test fixtures may lack a full stat block).
   const s = p.stats;
   const tr = p.physicalTraits;
+  // Active conditions scale the RAW attributes here, so every stat formula (combat, work, capacities-
+  // adjacent) sees a crippled body — a severe shock/hypothermia genuinely guts STR/DEX, not just work.
+  const sm = conditionStatMultipliers(p);
   const v = fn(
-    s?.strength ?? 10,
-    s?.dexterity ?? 10,
-    s?.constitution ?? 10,
-    s?.perception ?? 10,
-    s?.intelligence ?? 10,
+    (s?.strength ?? 10) * sm.strength,
+    (s?.dexterity ?? 10) * sm.dexterity,
+    (s?.constitution ?? 10) * sm.constitution,
+    (s?.perception ?? 10) * sm.perception,
+    (s?.intelligence ?? 10) * sm.intelligence,
     s?.charisma ?? 10,
     tr?.weight ?? 70,
     tr?.height ?? 170,

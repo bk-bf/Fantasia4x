@@ -34,19 +34,21 @@ export function getConditionFloater(id: string): { name: string; color: string }
 
 /** Pain (0–100) at/above which the `shock` condition onsets; severity scales to 1 at pain 100. */
 export const SHOCK_PAIN_ONSET = 40;
+/** Fraction of blood lost (0–1) at which shock starts climbing from the blood side. */
+export const SHOCK_BLOOD_ONSET = 0.35;
 
 /**
- * Set the `shock` condition's severity DIRECTLY from current pain (reflected like blood_loss — tracks
- * pain now, clears as it subsides; not accumulating). Mutates `conditions` in place. Shared by pawns
- * (PawnStateMachine.tickConditions) and mobs (entityLifecycle.stepHunger) so a heavy beating sends any
- * living entity into shock by the SAME rule. Non-lethal here — pain/blood loss already drive
- * consciousness → collapse → death; shock just layers its work/move penalty on top.
+ * Set the `shock` condition's severity DIRECTLY from current pain OR blood loss — whichever is worse
+ * (reflected, tracks the live values; not accumulating). This is the SINGLE low-blood/high-pain
+ * indicator now that the redundant `blood_loss` condition is gone: a body bled past `SHOCK_BLOOD_ONSET`
+ * goes into shock just as one in severe pain does. Mutates `conditions` in place. Shared by pawns
+ * (PawnStateMachine.tickConditions) and mobs (entityLifecycle.stepHunger). Non-lethal here — pain/blood
+ * loss already drive consciousness → collapse → death; shock layers its stat/work penalty on top.
  */
-export function applyShock(conditions: EntityCondition[], pain: number): void {
-  const severity = Math.min(
-    0.99,
-    Math.max(0, (pain - SHOCK_PAIN_ONSET) / (100 - SHOCK_PAIN_ONSET))
-  );
+export function applyShock(conditions: EntityCondition[], pain: number, bloodLossFrac = 0): void {
+  const painSev = (pain - SHOCK_PAIN_ONSET) / (100 - SHOCK_PAIN_ONSET);
+  const bloodSev = (bloodLossFrac - SHOCK_BLOOD_ONSET) / (1 - SHOCK_BLOOD_ONSET);
+  const severity = Math.min(0.99, Math.max(0, painSev, bloodSev));
   const idx = conditions.findIndex((c) => c.id === 'shock');
   if (severity > 0) {
     if (idx === -1) conditions.push({ id: 'shock', severity });
