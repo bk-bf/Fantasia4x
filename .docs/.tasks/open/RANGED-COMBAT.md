@@ -337,15 +337,15 @@ orders of magnitude under the fog-of-war field. Conflating the two is what made 
 
 **Design (the "seethrough: false" idea, refined):**
 
-- [x] **`blocksSight` flag.** A tile blocks sight if it holds a **wall** — `blocksSight: true` added to
-  the wall family in `buildings.jsonc` (branch/wicker/daub/mud_brick; the `BuildingDef`/`WorldTile` types
-  carry the field). Doors, windows, roofs, furniture, **campfires** do NOT block (the building flag is
-  independent of `walkable`, so a non-walkable furnace stays see-through). **Resources** carry the same
-  EXPLICIT `blocksSight` override (`ResourceObjectDef` / resources.jsonc) — `mountain_wall`/`cliff_wall`
-  pin it `true`; when omitted a node falls back to the natural-terrain rule `terrainBlocksSight(walkable,
-  subType)` = non-walkable & not water (so the `cliff` subterrain + every other non-walkable node — trees,
-  ore, stone_outcrop — still block by default until individually tuned). Full-canopy trees as a *deliberate*
-  flag left open (deferred).
+- [x] **`blocksSight` flag — fully data-driven, no heuristic.** A tile blocks sight only if a building,
+  resource, or subterrain on it declares `blocksSight: true` (the `terrainBlocksSight` non-walkable-&-not-
+  water inference was **removed** — the user wants the flag to be the single source of truth). Carried on
+  all three def types + `WorldTile`: **buildings** — the wall family in `buildings.jsonc`
+  (branch/wicker/daub/mud_brick; doors/windows/roofs/**campfires**/furnaces stay see-through, independent
+  of `walkable`); **resources** — `mountain_wall`/`cliff_wall` + all solid rock/ore/gem nodes
+  (stone_outcrop, the ore veins, the gem nodes) in `resources.jsonc`, **trees/bushes/groves deliberately
+  left unset** so a forest doesn't block (a *deliberate* tree-occluder flag is the future tuning); **subterrains**
+  — the `cliff` in `subterrains.jsonc` (bare cliff faces).
 - [x] **Baked onto the tile** the way `walkable` is — set wherever `walkable` is written: worldgen
   (`WorldGenerator`), resource placement/regrowth/harvest-restore, wall build/remove
   (`applyBuildingFootprint`), and dev spawns. The line reads ONE field per cell (`map[y][x].blocksSight`)

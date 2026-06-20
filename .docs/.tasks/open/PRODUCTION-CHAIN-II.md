@@ -545,10 +545,10 @@ driven model — no `tile.soil` field, no new growth tick** (reuses `tile.resour
 **P4–P6 = farming loop**; **P7 = food chain**. ADR for "dirt/crops as resource versions + regrowth-as-
 growth" (the non-obvious reuse decision).
 
-**P1 — Dirt fertility versions + soil items (F1)**
-- [ ] `items.jsonc`: soil items `dirt`/`poor_soil`/`loam`/`terra_preta` (`category: "soil"`, heavy).
-- [ ] `core/Terrains.ts`: `soilTierForTile(tile) → 0–3` from `subType` (dirt/savanna→0, grass→1, tall_grass→2, deep_grass→3) — the single fertility read (no stored field).
-- [ ] Info panel (F9): tile inspector shows soil tier + name + wetness % (`tile.moisture`).
+**P1 — Dirt fertility versions + soil items (F1) ✅ DONE 2026-06-20** (`check`/`test` green, 510; 3 new)
+- [x] `items.jsonc`: soil items `dirt`/`poor_soil`/`loam`/`terra_preta` + `compost` (`category: "soil"`, heavy, non-rotting).
+- [x] `core/Terrains.ts`: `soilTierForTile(tile) → 0–3` from `subType` (dirt/savanna→0, grass→1, tall_grass→2, deep_grass→3) — the single fertility read (no stored field) + `SOIL_TIER_NAME`/`SOIL_ITEM_BY_TIER`/`SUBTYPE_BY_SOIL_TIER` maps. (Also restored `terrainBlocksSight`, which a prior Terrains.ts edit had dropped.)
+- [x] Info panel (F9): tile HUD shows `soil <name>` (tier-coloured) next to wetness. `core/soilFertility.test.ts`.
 
 **P2 — Dig = cut interaction (F2)**
 - [ ] `DesignationType += 'dig'`; add a `dig` interaction (`harvestDepletes: true`) to `grass_patch`/`tall_grass_patch`/`deep_grass_patch` (+ a bare `dirt` resource) yielding the normal harvest drops **+ the tier's soil item**; `resourceObjectService.getByDesignation` + `HARVEST_DTYPES` include `dig`. Reuses `jobs/harvest.ts` (no new handler). Test: dig deep_grass → hay + fiber + `terra_preta`, node depletes to dirt.
