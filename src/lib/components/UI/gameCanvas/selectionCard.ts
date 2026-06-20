@@ -421,17 +421,16 @@ export function buildMobCard(
       warn: curST < mob.maxStamina * 0.25
     });
   }
+  // STR/DEX are EFFECTIVE (raw × active-condition multipliers via coreStats), so a fractured/shocked/
+  // starving creature shows the crippled body combat actually uses — not the raw creatures.jsonc stat.
+  const effStats = coreStats(mob);
   return {
     name: def.name + entityDebugLabel(mob),
     status: mob.state,
     selected,
     dismissable: selected,
     // No flat "HP" stat: the body model (limbs/blood/pain) is the real health — see the HEALTH popup.
-    stats: [
-      { label: 'STR', value: mob.stats.strength },
-      { label: 'DEX', value: mob.stats.dexterity },
-      moveSpeedStat(mob)
-    ],
+    stats: [effStats[0], effStats[1], moveSpeedStat(mob)],
     conditionViews: getActiveConditionViews(mob),
     bars,
     note: `${def.entityClass === 'mob' ? '⚔ hostile' : '◆ neutral'} · ${def.behaviour}${
