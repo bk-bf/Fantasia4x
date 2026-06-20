@@ -1,4 +1,4 @@
-<!-- LOC cap: 360 (created: 2026-06-12) -->
+<!-- LOC cap: 410 (created: 2026-06-12) -->
 
 # RANGED COMBAT & AMMUNITION
 
@@ -15,7 +15,8 @@ closes to range; spent ammo recovers as `DroppedItem`s.
 **LoS scope reduced (user decision):** "line of sight" is a **`distance ≤ visionRange` stat check**
 (`pawnVisionRange`, base perception formula — a scalar comparison, ADR-008/Rust untouched), **not** the
 `blocksSight` WASM raycast (ADR-019, still parked in [ENGINE-PERFORMANCE §5](ENGINE-PERFORMANCE.md)).
-The real occluder raycast can replace `withinSight` later without changing callers.
+The chosen occlusion upgrade (a cheap per-shot `blocksSight` line-walk, **not** the WASM raycast) is
+recorded in **Part VII** — it drops into the `withinSight` seam without changing callers.
 
 **Deferred (not in this cut):** aim `warmup` (data field added, behaviour optional/unwired);
 thrown-weapon self-consume (throwing_stone/spear fire without consuming for now); dynamic wood/metal
@@ -291,7 +292,6 @@ decision so it isn't re-litigated:
   ≤~2 s stale — fine for a warning; promote a scalar into `entityProjection.ts` only if a live readout
   is wanted.
 
----
 
 ## Part VI — Performance compliance (ENGINE-PERFORMANCE)
 
@@ -316,7 +316,44 @@ feature doesn't re-introduce a known regression (each maps to a finding there):
 - [x] **§VI-5 — touched no worldMap tiles.** Drops go to `droppedItems`; the cover check is a read-only
   neighbour-tile scan. No `worldMap.map()` / tile writes anywhere in the ranged path.
 
----
+
+## Part VII — Line-of-sight: the chosen occluder model (decided 2026-06-20)
+
+**Status: design DECIDED, not yet built.** Shipped LoS is still the reduced scalar
+`withinSight(dist, visionRange) = dist ≤ visionRange` (Phase C / §C-8). This chapter records the agreed
+occlusion upgrade so it isn't re-litigated, and **supersedes the original §I "Line-of-sight" plan**
+(route through the WASM visibility service) — for COMBAT LoS we won't.
+
+**Verdict: combat LoS does NOT need the parked WASM `blocksSight` raycast (ADR-019).** That raycast is
+for **fog-of-war** — every tile's visibility across the whole map, recomputed every N ticks (which is
+why it's parked, [ENGINE-PERFORMANCE §5](ENGINE-PERFORMANCE.md)). Combat LoS is a different scale: ONE
+straight line, ONE shooter→target pair, only when a ranged attacker actually fires (cadence-gated,
+rare), bounded by weapon range (~5–10 tiles). A JS Bresenham over ≤10 cells per shot is negligible —
+orders of magnitude under the fog-of-war field. Conflating the two is what made it look heavy.
+
+**Design (the "seethrough: false" idea, refined):**
+
+- [ ] **`blocksSight` flag.** A tile blocks sight if it holds a **wall** — add `blocksSight: true` to
+  the wall family in `buildings.jsonc` (branch/wicker/daub/mud_brick + future stone). Doors, windows,
+  roofs, furniture, **campfires** do NOT block (a bare `walkable === false` check is too broad — a
+  campfire is non-walkable but see-through). Natural **rock/mountain** terrain blocks inherently
+  (optionally full-canopy trees).
+- [ ] **Bake it onto the tile** the way `walkable` already is (set on wall build/remove, from terrain at
+  worldgen), so the line reads ONE field per cell (`map[y][x].blocksSight`) — no per-cell building lookup.
+- [ ] **`hasLineOfSight(map, ax, ay, bx, by)`** = a bounded Bresenham; any intermediate `blocksSight`
+  cell → blocked. The gate becomes `dist ≤ visionRange && hasLineOfSight(...)` — vision is BOTH
+  range-capped AND wall-blocked. Drops into the existing `withinSight` seam with no caller changes.
+
+**Bonuses:** the sampled line **un-blocks friendly-fire** (an ally on it = an optional roll — see the
+closeout); and the `blocksSight` tile flag is the **same occluder substrate** fog-of-war would later
+reuse, so it's not throwaway.
+
+**ADR-008 / perf:** a single bounded combat LoS line reading a tile flag is **combat-local**, not a
+heavy spatial-service query (A* / nearest-entity / fog-of-war field) — keep `hasLineOfSight` a small
+pure helper behind the existing seam; no Rust/WASM. Per-shot, read-only, ≤10 cells, cadence-gated →
+within §VI's budget (no tile writes, no entities). The WASM raycast earns its keep only if/when
+fog-of-war wants the full-map field, over this same flag.
+
 
 ## Resolved — spec closeout (2026-06-20)
 
@@ -333,11 +370,11 @@ ranged mechanic itself. Each is resolved below; **none gate completion** — the
   `quiver.capacity` field (reserved for this rejected gate) is **removed**. The DF "marksdwarf
   bolt-assignment" haul-loop is **unneeded**: ammo is a normal haulable inventory item, so the existing
   job/haul system already restocks it — no bespoke loop.
-- [x] **Friendly-fire on the LoS line → blocked on the real raycast LoS; reopens with it.** We shipped
-  the **reduced LoS** (scalar `distance ≤ visionRange`, no sampled line — Phase C), so there are no LoS
-  cells to roll over. Friendly-fire is a downstream *option* of the parked `blocksSight` raycast
-  (ADR-019, [ENGINE-PERFORMANCE §5](ENGINE-PERFORMANCE.md)), not a ranged-combat gap. Hitscan resolution
-  means it was always an optional post-hoc roll, never core (see §I "Resolution model").
+- [x] **Friendly-fire on the LoS line → unblocked by Part VII's cheap LoS (a cheap follow-on).** We
+  shipped the **reduced LoS** (scalar `distance ≤ visionRange`, no sampled line — Phase C), so there are
+  currently no LoS cells to roll over. **Part VII** (below) supersedes the old "needs the WASM raycast"
+  framing: once the cheap `blocksSight` Bresenham lands, friendly-fire is just an optional roll over its
+  sampled cells. Hitscan resolution means it was always an optional post-hoc roll, never core (§I).
 - [x] **Mob ranged attackers (archer goblins) → routed to [ENTITIES_SPAWNING](ENTITIES_SPAWNING.md).**
   Phase B landed, so `tickCombat` already resolves a ranged mob; this is now a **pure data add** (a
   creature with a ranged equipped weapon / `naturalWeapon` + an ammo pool) and belongs in the
@@ -353,3 +390,5 @@ ranged mechanic itself. Each is resolved below; **none gate completion** — the
 
 **→ Spec COMPLETE — ready to archive.** Remaining `[~]` checkboxes above (reload-as-multiplier,
 reduced-LoS, deferred low-ammo badge) are shipped-with-a-documented-reduction, not open work.
+
+---
