@@ -455,16 +455,16 @@
   .job-progress {
     margin-top: 1px;
   }
+  /* Selected (on-click) card: same background + body-text colour as the hover card, so the shared
+     #ambient-tint weather filter (fog desaturation) hits both identically — a high-chroma gold body
+     washed out far more visibly than the muted hover palette, making the selected panel look
+     "fogged stronger". The selection cue is now just the gold border + brighter name (thin/small
+     areas, negligible fog delta). */
   .tile-hud--selected {
     border-color: #f0c060;
-    background: rgba(20, 14, 4, 0.96);
-    color: #e8c870;
   }
   .tile-hud--selected .pawn-name {
     color: #ffe890;
-  }
-  .tile-hud--selected .pawn-state {
-    color: #c0a040;
   }
   .pawn-idle {
     color: #887040;
