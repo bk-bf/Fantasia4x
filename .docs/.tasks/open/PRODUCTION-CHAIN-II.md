@@ -585,16 +585,17 @@ noise but then player-mutable).
 
 ## Open Questions
 
-- [ ] **Quality floor:** does Crude (tier 0) appear for a competent colony, or is tier 1 the practical floor (Crude only on injured/dark/rushed crafts)?
-- [ ] **Batch quality:** when a recipe outputs a stack > 1 (food batches), is quality per-stack-uniform or per-unit? (Per-batch uniform is simpler; per-unit is finer but fragments stacks.)
-- [ ] **Magic gating:** is the "Arcane Lapidary" gate a full RESEARCH-ENHANCEMENT node, or a standalone research now and folded into the lore-tier tree later?
-- [ ] **Amulet vs ring slot:** dedicated `amulet` slot (chosen) vs treating amulets as a second `ring` — confirm.
-- [ ] **Bulk tag:** which resources are "bulk-only" (ore/log/hay/stone/block) vs personal-carriable, and where the tag lives (item field vs category).
-- [ ] **Road model:** build-tile road (chosen) vs derived "trampled path" from repeated pawn traffic.
-- [ ] **Crop persistence/save:** `tile.soil` + growing crops serialise with the world (assume yes — `tile.soil` is a persisted WorldTile field like `snow`/`walkable`).
-- [ ] **Alcohol depth:** mood-good only now vs a recreation/joy need — defer the need to SOCIAL-LAYER?
+- [ ] **Quality floor:** does Crude (tier 0) appear for a competent colony, or is tier 1 the practical floor (Crude only on injured/dark/rushed crafts)? // possible to roll on every craft, greatly increased bad skill (which injured transfers into), low sight (which also lowers crafting), rushed is not an existing mechanic
+- [ ] **Batch quality:** when a recipe outputs a stack > 1 (food batches), is quality per-stack-uniform or per-unit? (Per-batch uniform is simpler; per-unit is finer but fragments stacks.) // per stack is fine
+- [ ] **Magic gating:** is the "Arcane Lapidary" gate a full RESEARCH-ENHANCEMENT node, or a standalone research now and folded into the lore-tier tree later? // research as a gate is deferred, everything will be gated behind research eventually, but its just one data bool in the recipe.jsonc, not necessary to make a big thing out of it now
+- [ ] **Amulet vs ring slot:** dedicated `amulet` slot (chosen) vs treating amulets as a second `ring` — confirm. // dedicated amulet slot that conflicts with specialised neck gear
+- [ ] **Bulk tag:** which resources are "bulk-only" (ore/log/hay/stone/block) vs personal-carriable, and where the tag lives (item field vs category).no bulk modeling, its deprecated for per pawn/entity carry capacity
+- [ ] **Road model:** build-tile road (chosen) vs derived "trampled path" from repeated pawn traffic. both can be implemented eventually, often traversed paths can over time become "packed dirt", which has a slightly lower movement cost the dirt, building cobble/brick roads will then completely remove any movement cost unlocking fast movement, but this system is not a priority at all, only an possible idea, deferred
+- [ ] **Crop persistence/save:** `tile.soil` + growing crops serialise with the world (assume yes — `tile.soil` is a persisted WorldTile field like `snow`/`walkable`). there should be no "tile.soil", instead growth is tied to the specific resource tile, breaking dirt into several versions ensures the relevant ones grow something others dont, seeds just mutate what grows on the dirt tile and the growing zone instructs pawns where to put the seeds 
+- [ ] **Alcohol depth:** mood-good only now vs a recreation/joy need — defer the need to SOCIAL-LAYER? mood only
 - [ ] **Spoilage of produce:** crops/bread/ale reuse Pass I `decaySeconds` + storage; confirm no new decay model needed.
-- [ ] **§F soil source of truth:** `tile.soil` (0–3) materialized at worldgen from `subType` and then player-mutable (chosen) vs deriving fertility from `subType` live (can't represent dug/terraformed tiles). Confirm the materialized field + its new ADR.
-- [ ] **§F dig vs clear:** does `dig` subsume the existing `clear` designation (strip grass) or stay a separate "extract soil" order? (Lean: separate — `clear` just removes cover, `dig` extracts the soil item + lowers fertility.)
-- [ ] **§F fertilizer application:** is `compost` applied per grow-zone (a zone toggle that consumes stock) or built into the soil via terraform only? (Lean: both — terraform bakes it into terra preta; a zone toggle speeds an active field.)
+- [ ] **§F soil source of truth:** `tile.soil` (0–3) materialized at worldgen from `subType` and then player-mutable (chosen) vs deriving fertility from `subType` live (can't represent dug/terraformed tiles).  Confirm the materialized field + its new ADR. i am unsure we need a tile.soil clarify how this compares to my model
+- [ ] **§F dig vs clear:** does `dig` subsume the existing `clear` designation (strip grass) or stay a separate "extract soil" order? (Lean: separate — `clear` just removes cover, `dig` extracts the soil item + lowers fertility.) // its the same model that we use for trees, they can be harvested or cut, cutting returns everything that harvesting does + extra yield, dig should function the same
+- [ ] **§F fertilizer application:** is `compost` applied per grow-zone (a zone toggle that consumes stock) or built into the soil via terraform only? (Lean: both — terraform bakes it into terra preta; a zone toggle speeds an active field.) compost is needed, as a material to build better soil, placing different types of soil should work via the building menu 
 - [ ] **§F growth tick cost:** crops advance on a throttled pass (every N ticks), not per-tick, to stay off the hot path — confirm cadence.
+they should just use the regrowth mechanic for trees and bushes already implemented 

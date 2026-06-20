@@ -12,11 +12,11 @@
 ammo spend, reload cadence, STR-scaling gate, cover, bow-butt) and the pawn FSM stands-and-fires /
 closes to range; spent ammo recovers as `DroppedItem`s.
 
-**LoS scope reduced (user decision):** "line of sight" is a **`distance ≤ visionRange` stat check**
-(`pawnVisionRange`, base perception formula — a scalar comparison, ADR-008/Rust untouched), **not** the
-`blocksSight` WASM raycast (ADR-019, still parked in [ENGINE-PERFORMANCE §5](ENGINE-PERFORMANCE.md)).
-The chosen occlusion upgrade (a cheap per-shot `blocksSight` line-walk, **not** the WASM raycast) is
-recorded in **Part VII** — it drops into the `withinSight` seam without changing callers.
+**LoS (user decision, occlusion shipped 2026-06-21):** "line of sight" is a **`distance ≤ visionRange`
+stat check** (`pawnVisionRange`, base perception formula — a scalar comparison, ADR-008/Rust untouched)
+**AND** a cheap per-shot `blocksSight` Bresenham line-walk (**Part VII** — built, NOT the WASM raycast
+ADR-019, still parked in [ENGINE-PERFORMANCE §5](ENGINE-PERFORMANCE.md)). A wall or natural rock on the
+line blocks the shot; it dropped into the `withinSight`/`tryRangedShot` seam without changing callers.
 
 **Deferred (not in this cut):** aim `warmup` (data field added, behaviour optional/unwired);
 thrown-weapon self-consume (throwing_stone/spear fire without consuming for now); dynamic wood/metal
@@ -277,9 +277,10 @@ decision so it isn't re-litigated:
 
 ### Phase C — Line-of-sight & recovery
 
-- [~] 8. **LoS reduced to `withinSight(dist, pawnVisionRange)`** (user decision) — a scalar
-  `distance ≤ visionRange` check, no WASM raycast (ADR-008 untouched). Cover = a cheap read-only
-  neighbour-tile scan (`rangedCoverPenalty`, 0.20 if the target hugs a non-walkable tile).
+- [x] 8. **LoS = `withinSight(dist, pawnVisionRange)` scalar cap + Part VII `hasLineOfSight` occluder
+  line** (user decision) — a `distance ≤ visionRange` check plus a per-shot `blocksSight` Bresenham, no
+  WASM raycast (ADR-008 untouched). Cover = a cheap read-only neighbour-tile scan (`rangedCoverPenalty`,
+  0.20 if the target hugs a non-walkable tile).
 - [x] 9. Per-shot ammo recovery roll → `DroppedItem` on the target tile, **collected and appended once**
   per tick (§VI-3, bounded by shots/tick). Thrown-weapon self-consume deferred.
 
@@ -303,10 +304,10 @@ feature doesn't re-introduce a known regression (each maps to a finding there):
   the `RangedOverride` is built once per shot (cadence-gated), not per attacker per tick; ammo spend +
   recovery are coalesced into a Map/array applied once in the final merge — no `{...pawn}`/pawns-array
   rebuild at peace (gated on `pawnAmmoUpdates.size`).
-- [~] **§VI-2 — LoS through the WASM spatial service, amortised — MOOTED by the reduced-LoS cut.** No
-  WASM raycast and no per-tick ray walk exist: LoS is a single `distance ≤ visionRange` scalar compare
-  (`withinSight`). When the real `blocksSight` raycast (ADR-019) lands, route it through the amortised
-  spatial service then (cache per pair / stagger off `debugId`) — this checkbox re-opens with it.
+- [x] **§VI-2 — LoS stays combat-local, no WASM raycast.** Part VII shipped a per-shot `blocksSight`
+  Bresenham (`hasLineOfSight`, ≤ weapon-range cells, cadence-gated, read-only over a baked tile flag) —
+  NOT routed through the WASM spatial service, by design (ADR-008 untouched). The amortised WASM raycast
+  (ADR-019) earns its keep only if/when fog-of-war wants the full-map field, over this same flag.
 - [x] **§VI-3 — `droppedItems` stays bounded.** Met: recovery rolls per shot but the drops are collected
   in one array and appended **once** at tick end (bounded by shots/tick), not spliced per-shot. Benefits
   automatically once `droppedItems` deltas (D8) land.
@@ -319,10 +320,13 @@ feature doesn't re-introduce a known regression (each maps to a finding there):
 
 ## Part VII — Line-of-sight: the chosen occluder model (decided 2026-06-20)
 
-**Status: design DECIDED, not yet built.** Shipped LoS is still the reduced scalar
-`withinSight(dist, visionRange) = dist ≤ visionRange` (Phase C / §C-8). This chapter records the agreed
-occlusion upgrade so it isn't re-litigated, and **supersedes the original §I "Line-of-sight" plan**
-(route through the WASM visibility service) — for COMBAT LoS we won't.
+**Status: IMPLEMENTED 2026-06-21** (`pnpm check` clean bar the 1 pre-existing `bulkLogistics.test.ts`
+cast error; full suite 507 green incl. 6 new `hasLineOfSight` cases in `combatRanged.test.ts`). LoS is
+now the reduced scalar `withinSight` cap **AND** a per-shot `blocksSight` Bresenham line
+(`hasLineOfSight`, [rangedCombat.ts](../../../src/lib/game/systems/rangedCombat.ts)) gated into
+`tryRangedShot` — a wall or natural rock on the line makes the shooter close instead. This chapter
+records the agreed occlusion model, and **supersedes the original §I "Line-of-sight" plan** (route
+through the WASM visibility service) — for COMBAT LoS we don't.
 
 **Verdict: combat LoS does NOT need the parked WASM `blocksSight` raycast (ADR-019).** That raycast is
 for **fog-of-war** — every tile's visibility across the whole map, recomputed every N ticks (which is
@@ -333,16 +337,20 @@ orders of magnitude under the fog-of-war field. Conflating the two is what made 
 
 **Design (the "seethrough: false" idea, refined):**
 
-- [ ] **`blocksSight` flag.** A tile blocks sight if it holds a **wall** — add `blocksSight: true` to
-  the wall family in `buildings.jsonc` (branch/wicker/daub/mud_brick + future stone). Doors, windows,
-  roofs, furniture, **campfires** do NOT block (a bare `walkable === false` check is too broad — a
-  campfire is non-walkable but see-through). Natural **rock/mountain** terrain blocks inherently
-  (optionally full-canopy trees).
-- [ ] **Bake it onto the tile** the way `walkable` already is (set on wall build/remove, from terrain at
-  worldgen), so the line reads ONE field per cell (`map[y][x].blocksSight`) — no per-cell building lookup.
-- [ ] **`hasLineOfSight(map, ax, ay, bx, by)`** = a bounded Bresenham; any intermediate `blocksSight`
-  cell → blocked. The gate becomes `dist ≤ visionRange && hasLineOfSight(...)` — vision is BOTH
-  range-capped AND wall-blocked. Drops into the existing `withinSight` seam with no caller changes.
+- [x] **`blocksSight` flag.** A tile blocks sight if it holds a **wall** — `blocksSight: true` added to
+  the wall family in `buildings.jsonc` (branch/wicker/daub/mud_brick; the `BuildingDef`/`WorldTile` types
+  carry the field). Doors, windows, roofs, furniture, **campfires** do NOT block (the building flag is
+  independent of `walkable`, so a non-walkable furnace stays see-through). Natural **rock/mountain**
+  terrain blocks inherently via `terrainBlocksSight(walkable, subType)` = non-walkable & not water
+  (cliff subterrain + mountain_wall/cliff_wall resources). Full-canopy trees left out (still optional).
+- [x] **Baked onto the tile** the way `walkable` is — set wherever `walkable` is written: worldgen
+  (`WorldGenerator`), resource placement/regrowth/harvest-restore, wall build/remove
+  (`applyBuildingFootprint`), and dev spawns. The line reads ONE field per cell (`map[y][x].blocksSight`)
+  — no per-cell building lookup.
+- [x] **`hasLineOfSight(map, ax, ay, bx, by)`** = a bounded Bresenham; any intermediate `blocksSight`
+  cell → blocked (the two endpoints never block — shooter cover / target hugging a wall). The gate is
+  now `dist ≤ effectiveRangedRange (vision-capped) && hasLineOfSight(...)` in `tryRangedShot` — vision
+  is BOTH range-capped AND wall-blocked. Dropped into the existing seam with no caller changes.
 
 **Bonuses:** the sampled line **un-blocks friendly-fire** (an ally on it = an optional roll — see the
 closeout); and the `blocksSight` tile flag is the **same occluder substrate** fog-of-war would later
