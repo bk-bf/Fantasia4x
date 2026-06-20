@@ -10,7 +10,8 @@ import type {
   ConditionDef,
   ConditionStage,
   ConditionModifiers,
-  TransientConditionDef
+  TransientConditionDef,
+  LimbState
 } from './types';
 import conditionsData from '../database/conditions.jsonc';
 import { perTick } from './time';
@@ -364,4 +365,21 @@ export function conditionStatMultipliers(entity: {
   for (const c of conds ?? []) apply(getConditionCurrentStage(c)?.modifiers);
   for (const id of tconds ?? []) apply(TRANSIENT_BY_ID.get(id)?.modifiers);
   return out;
+}
+
+/** Sync the broken_arm / broken_leg persistent conditions from the limb tree: present (severity 1) when
+ *  any still-attached part of that limb type has a broken bone, removed once the bones knit. Mutates the
+ *  conditions array in place (matching the surrounding tick style). */
+export function syncFractureConditions(conditions: EntityCondition[], limbs: LimbState[]): void {
+  const broken = (ids: string[]) =>
+    limbs.some(
+      (l) => ids.includes(l.id) && (l.parts ?? []).some((p) => p.boneBroken && !p.isMissing)
+    );
+  const upsert = (id: string, present: boolean) => {
+    const idx = conditions.findIndex((c) => c.id === id);
+    if (present && idx < 0) conditions.push({ id, severity: 1 });
+    else if (!present && idx >= 0) conditions.splice(idx, 1);
+  };
+  upsert('broken_arm', broken(['left_arm', 'right_arm']));
+  upsert('broken_leg', broken(['left_leg', 'right_leg']));
 }

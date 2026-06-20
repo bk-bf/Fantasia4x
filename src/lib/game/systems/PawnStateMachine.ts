@@ -25,14 +25,15 @@ import type {
   DeadPawnRecord
 } from '../core/types';
 import {
-  recomputeWound,
-  recomputeWoundInPlace,
+  HEALING_CONFIG,
+  CARE_CONFIG,
+  isTended,
+  healLimbs,
   rollWoundClotting,
   CLOT_ROLL_INTERVAL,
   BASE_CLOT_CHANCE
-} from './Combat';
-import { HEALING_CONFIG, CARE_CONFIG, woundById, isTended } from '../core/Wounds';
-import { PART_DEF_MAP, BONE_FRACTION } from '../core/BodyParts';
+} from '../core/Wounds';
+import { PART_DEF_MAP } from '../core/BodyParts';
 import conditionsData from '../database/conditions.jsonc';
 import { itemService } from '../services/ItemService';
 import { pawnStatService } from '../services/PawnStatService';
@@ -48,7 +49,8 @@ import {
   applyShock,
   snapshotConditionStages,
   emitPersistentConditionFloaters,
-  conditionsSig
+  conditionsSig,
+  syncFractureConditions
 } from '../core/needs';
 import {
   weatherEffects,
@@ -139,9 +141,6 @@ const RECOVER_CONSCIOUSNESS = 0.45;
 const ACTIVE_HEAL_MUL = 0.1;
 /** A roofed/sheltered rest closes wounds faster than lying in the open (stacks onto the sleeping mult). */
 const SHELTER_HEAL_MUL = 1.6;
-/** An UNTENDED serious+ wound barely mends on its own — it needs dressing (the caretake job). Minor
- *  wounds still self-close at rest, so "only minor wounds can be risked left untreated". */
-const UNTENDED_SERIOUS_HEAL_MUL = 0.15;
 
 // ===== CONDITION CONSTANTS (SURVIVAL-HEALTH spec) =====
 const CONDITIONS_DB = conditionsData as unknown as ConditionDef[];
@@ -594,142 +593,6 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
   return gameState;
 }
 
-/**
- * Mend the per-part wounds on a limb tree by `baseHeal` HP/tick/wound, returning a fresh limb array
- * (or the same ref if nothing changed). Shared by pawns (`healWounds`) and mobs (entityLifecycle's
- * natural heal-off) so both use one mend formula. `untendedSeriousStalls` gates the severity rule:
- * for pawns an untended serious+ wound barely mends (needs dressing); mobs pass false (animals can't
- * dress wounds, so theirs all close slowly over time). A part with no wounds left is SNAPPED back to
- * full HP so the body model stops listing a fractionally-under-max "healed" part (UI auto-hide).
- */
-export function healLimbs(
-  limbs: LimbState[],
-  baseHeal: number,
-  turn: number,
-  untendedSeriousStalls: boolean
-): LimbState[] {
-  if (baseHeal <= 0) return limbs;
-  let changed = false;
-  const newLimbs = limbs.map((limb) => {
-    const parts = limb.parts;
-    if (!parts || !parts.some((p) => p.injuries.length > 0)) return limb;
-    const newParts = parts.map((part) => {
-      if (part.injuries.length === 0 || part.isMissing) return part;
-      let healed = 0;
-      const newWounds: Injury[] = [];
-      for (const w of part.injuries) {
-        const tended = isTended(w, turn);
-        // A tended wound knits faster (scaled by tend quality); an UNTENDED serious+ wound barely
-        // mends — it must be dressed, while minor wounds self-close.
-        const tendBoost = tended
-          ? 1 + CARE_CONFIG.treatedHealMultiplier * (w.treatmentQuality ?? 0)
-          : untendedSeriousStalls && w.severity !== 'minor'
-            ? UNTENDED_SERIOUS_HEAL_MUL
-            : 1;
-        const heal = (baseHeal / (woundById(w.type)?.healDifficulty ?? 1)) * tendBoost;
-        const newDamage = w.damage - heal;
-        if (newDamage <= 0.05) {
-          healed += w.damage; // fully mended — drop the wound
-          continue;
-        }
-        healed += heal;
-        newWounds.push(recomputeWound(part.id, w.type, newDamage, w, turn, part.maxHp));
-      }
-      // Snap to full when the last wound clears — otherwise the part lingers fractionally under max
-      // and the HEALTH panel keeps showing a "healed" part forever.
-      const health =
-        newWounds.length === 0 ? part.maxHp : Math.min(part.maxHp, part.health + healed);
-      // Un-break the bone once the fracture has knit below boneHp (weeks later). boneHp scales with the
-      // part's actual (bodyScale) maxHp; the catalog flag just says whether the part has a skeleton.
-      const hasBone = PART_DEF_MAP[part.id]?.boneHp != null;
-      const fractureW = newWounds.find((w) => woundById(w.type)?.structural);
-      const boneBroken =
-        hasBone && fractureW != null && fractureW.damage >= BONE_FRACTION * part.maxHp;
-      return { ...part, health, injuries: newWounds, boneBroken };
-    });
-    const totalBleed = newParts.reduce(
-      (s, p) => s + p.injuries.reduce((ps, w) => ps + w.bleeding, 0),
-      0
-    );
-    const partMaxTotal = newParts.reduce((s, p) => s + p.maxHp, 0);
-    const partHealthTotal = newParts.reduce((s, p) => s + p.health, 0);
-    const rolledHealth =
-      partMaxTotal > 0 ? Math.round((partHealthTotal / partMaxTotal) * 100) : limb.health;
-    changed = true;
-    return { ...limb, parts: newParts, health: rolledHealth, bleedRate: totalBleed };
-  });
-  return changed ? newLimbs : limbs;
-}
-
-/**
- * In-place sibling of {@link healLimbs}: mend wounds by MUTATING the limb/part/wound objects rather
- * than rebuilding the tree, returning whether anything changed. The per-tick mob heal
- * (`entityLifecycle.stepHunger`) runs this across hundreds of wounded mobs, where healLimbs' immutable
- * rebuild was the 440-mob allocation cliff (ENGINE-PERFORMANCE — it re-immutabled the de-immutabled M3
- * mob phase). Behaviour mirrors healLimbs exactly (same heal formula, same drop/snap-to-full rules).
- * The caller owns invalidating the limbs-identity capacity cache on a `true` return — a shallow
- * `limbs.slice()` ref bump — since the deep objects change without the array ref changing.
- */
-export function healLimbsInPlace(
-  limbs: LimbState[],
-  baseHeal: number,
-  turn: number,
-  untendedSeriousStalls: boolean
-): boolean {
-  if (baseHeal <= 0) return false;
-  let changed = false;
-  for (const limb of limbs) {
-    const parts = limb.parts;
-    if (!parts || !parts.some((p) => p.injuries.length > 0)) continue;
-    for (const part of parts) {
-      if (part.injuries.length === 0 || part.isMissing) continue;
-      let healed = 0;
-      let write = 0;
-      const inj = part.injuries;
-      for (let read = 0; read < inj.length; read++) {
-        const w = inj[read];
-        const tended = isTended(w, turn);
-        const tendBoost = tended
-          ? 1 + CARE_CONFIG.treatedHealMultiplier * (w.treatmentQuality ?? 0)
-          : untendedSeriousStalls && w.severity !== 'minor'
-            ? UNTENDED_SERIOUS_HEAL_MUL
-            : 1;
-        const heal = (baseHeal / (woundById(w.type)?.healDifficulty ?? 1)) * tendBoost;
-        const newDamage = w.damage - heal;
-        if (newDamage <= 0.05) {
-          healed += w.damage; // fully mended — drop the wound (don't compact it back in)
-          continue;
-        }
-        healed += heal;
-        recomputeWoundInPlace(w, newDamage, turn, part.maxHp);
-        inj[write++] = w; // compact the survivors toward the front
-      }
-      if (write !== inj.length) inj.length = write; // truncate the dropped wounds
-      // Snap to full when the last wound clears (mirrors healLimbs' UI auto-hide rule).
-      part.health = inj.length === 0 ? part.maxHp : Math.min(part.maxHp, part.health + healed);
-      // Un-break the bone once the fracture has knit below boneHp (scaled to the part's maxHp).
-      const hasBone = PART_DEF_MAP[part.id]?.boneHp != null;
-      const fractureW = inj.find((w) => woundById(w.type)?.structural);
-      part.boneBroken =
-        hasBone && fractureW != null && fractureW.damage >= BONE_FRACTION * part.maxHp;
-    }
-    // Roll the limb's bleed + health summary up from the mutated parts (mirrors healLimbs).
-    let totalBleed = 0;
-    let partMaxTotal = 0;
-    let partHealthTotal = 0;
-    for (const p of parts) {
-      for (const w of p.injuries) totalBleed += w.bleeding;
-      partMaxTotal += p.maxHp;
-      partHealthTotal += p.health;
-    }
-    limb.health =
-      partMaxTotal > 0 ? Math.round((partHealthTotal / partMaxTotal) * 100) : limb.health;
-    limb.bleedRate = totalBleed;
-    changed = true;
-  }
-  return changed;
-}
-
 export function healWounds(pawn: Pawn, turn = 0): Pawn {
   const limbs = pawn.limbs;
   const hasWounds = limbs?.some((l) => (l.parts ?? []).some((p) => p.injuries.length > 0));
@@ -771,23 +634,6 @@ export function healWounds(pawn: Pawn, turn = 0): Pawn {
     pain: Math.max(0, Math.min(100, Math.round(painTotal))),
     injuries: newInjuries
   };
-}
-
-/** Sync the broken_arm / broken_leg persistent conditions from the limb tree: present (severity 1) when
- *  any still-attached part of that limb type has a broken bone, removed once the bones knit. Mutates the
- *  conditions array in place (matching the surrounding tickConditions style). */
-export function syncFractureConditions(conditions: EntityCondition[], limbs: LimbState[]): void {
-  const broken = (ids: string[]) =>
-    limbs.some(
-      (l) => ids.includes(l.id) && (l.parts ?? []).some((p) => p.boneBroken && !p.isMissing)
-    );
-  const upsert = (id: string, present: boolean) => {
-    const idx = conditions.findIndex((c) => c.id === id);
-    if (present && idx < 0) conditions.push({ id, severity: 1 });
-    else if (!present && idx >= 0) conditions.splice(idx, 1);
-  };
-  upsert('broken_arm', broken(['left_arm', 'right_arm']));
-  upsert('broken_leg', broken(['left_leg', 'right_leg']));
 }
 
 // ===== COMBAT STATE (COMBAT-SYSTEM) =====

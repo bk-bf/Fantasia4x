@@ -1,7 +1,7 @@
 // Caretake job handler (ADR-017) — wound-dressing as a proper colony job. A pawn with the
 // `caretaking` labor walks to a RESTING wounded patient (Sleeping/Collapsed — holding still) and
 // dresses its untended wounds, stamping a treatment quality that drives faster healing + infection
-// suppression (see core/Wounds.isTended, PawnStateMachine.healLimbs). Replaces the old passive
+// suppression (see core/Wounds.isTended, core/Wounds.healLimbs). Replaces the old passive
 // teleport-tend: an untended wound now bleeds on until a medic physically reaches the patient.
 //
 // Dressing quality is SHELTER-GATED: a field dressing in the open is nearly worthless; a roofed

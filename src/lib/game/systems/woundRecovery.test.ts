@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { combatService } from './Combat';
-import { healWounds, healLimbs } from './PawnStateMachine';
-import { rollWoundClotting } from './Combat';
+import { healWounds } from './PawnStateMachine';
+import { rollWoundClotting, healLimbs } from '../core/Wounds';
 import { needsRecovery } from './pawn/pawnHelpers';
 import { selectIdleNeed } from './pawn/needSelection';
 import {

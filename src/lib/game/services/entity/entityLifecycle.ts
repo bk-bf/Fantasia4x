@@ -9,18 +9,19 @@ import {
   applyShock,
   snapshotConditionStages,
   emitPersistentConditionFloaters,
-  conditionsSig
+  conditionsSig,
+  syncFractureConditions
 } from '../../core/needs';
 import { absorbDropIfOnStockpileTile } from '../../core/GameState';
 import { pawnStatService } from '../PawnStatService';
 import { simLog } from '../../core/logSink';
-import { healLimbsInPlace, syncFractureConditions } from '../../systems/PawnStateMachine';
 import { PART_DEF_MAP } from '../../core/BodyParts';
 import {
+  healLimbsInPlace,
   rollWoundClotting,
   MOB_CLOT_ROLL_INTERVAL,
   MOB_BASE_CLOT_CHANCE
-} from '../../systems/Combat';
+} from '../../core/Wounds';
 import { entityName } from './entityHelpers';
 import {
   BASE_HUNGER_PER_SECOND,

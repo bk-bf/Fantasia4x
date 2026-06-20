@@ -34,7 +34,7 @@ import {
   conditionStatMultipliers
 } from '../core/needs';
 import { getCreatureById } from '../core/Creatures';
-import { woundForDamageType, woundById, severityFromFrac } from '../core/Wounds';
+import { woundForDamageType, woundById, severityFromFrac, recomputeWound } from '../core/Wounds';
 import { scaleWeaponQuality, scaleArmorQuality } from '../core/itemQuality';
 import { pawnStatService } from '../services/PawnStatService';
 import { calcMaxStamina } from '../entities/Pawns';
@@ -102,16 +102,8 @@ const TRANSIENT_CONDITIONS_DB = (
 ).filter((d): d is TransientConditionDef => d.transient === true);
 
 // ── Tuning constants ─────────────────────────────────────────────────────────
-/** Scales per-part bleed (bleeding = bleedRatio × this × bleedMod × wound-frac × clot-remaining, per
- *  second). Tuned so a SERIOUS wound bleeds out over several in-game HOURS — long enough that the
- *  periodic clot rolls + a caretaker dressing are a real race, not an instant death. */
-const BLEED_CONSTANT = 32;
-/** Effective bleedMod of a DESTROYED (severed / blown-off) part's open stump, regardless of how it was
- *  removed. Blunt crush wounds don't bleed (bleedMod 0) — their payoff is raw damage that craters limbs —
- *  but once a limb is actually blown off, the stump GUSHES. Set higher than any wound bleedMod (cut 1.0)
- *  so a ripped-off limb is the worst bleed in the game; still scaled by the clot/dressing factor so it
- *  can be stopped. A cut that severs already bleeds hard, so this is really the path for crush kills. */
-const SEVERED_STUMP_BLEED_MOD = 2.5;
+// (Bleed/clot constants + the wound-derivation/clotting fns moved to core/Wounds.ts so the per-tick
+//  services can drive them without a services→systems hop — ADR-008.)
 /** Bone-fracture roll on a hit to a boned part. Blunt cracks bone FAR more readily (× the weapon's
  *  bluntMod) — that's a bludgeon's signature; a cut/thrust only fractures on a deep blow. The chance
  *  scales with how hard the hit lands vs the part's boneHp, capped so it's never a sure thing. A broken
@@ -120,29 +112,6 @@ const FRACTURE_BLUNT_BASE = 0.6;
 const FRACTURE_OTHER_BASE = 0.12;
 const FRACTURE_BLUNT_CAP = 0.85;
 const FRACTURE_OTHER_CAP = 0.3;
-/** How many successful clot rolls a wound needs before it fully stops bleeding, by severity. Each stage
- *  cuts the bleed proportionally (serious at 1/2 clots → half bleed). */
-function clotsNeeded(severity: Injury['severity']): number {
-  return severity === 'minor' ? 1 : severity === 'serious' ? 2 : 3; // critical / destroyed → 3
-}
-/** Fraction of the base bleed still flowing given clot progress: 1.0 fresh → 0 once fully clotted OR
- *  dressed. A DRESSED wound (treatedAt set) stops bleeding immediately — caretaking is the reliable stop. */
-function clotRemaining(w: Pick<Injury, 'severity' | 'clotProgress' | 'treatedAt'>): number {
-  if (w.treatedAt != null) return 0;
-  const need = clotsNeeded(w.severity);
-  return Math.max(0, (need - (w.clotProgress ?? 0)) / need);
-}
-/** Ticks between clot rolls (~3 in-game hours: TURNS_PER_DAY 300 / 24 × 3 × 60 tps = 2250). Deliberately
- *  sparse so a wound doesn't clot the instant it's made — bleeding stays a treat-or-die threat that only
- *  OCCASIONALLY resolves itself, leaving room for a caretaker to make it (or not). */
-export const CLOT_ROLL_INTERVAL = 2250;
-/** Base per-roll clot chance at `blood_clotting` 1.0 (CON 10); the stat scales it. */
-export const BASE_CLOT_CHANCE = 0.4;
-/** Creatures CAN'T be wound-dressed, so their bodies clot far more readily than a pawn's: they roll
- *  HOURLY (~750 ticks, vs the pawn's 3-hourly) at a much higher base chance, so a beast that breaks off
- *  a fight reliably self-stabilises within ~an in-game hour instead of bleeding out from a scratch. */
-export const MOB_CLOT_ROLL_INTERVAL = 750;
-export const MOB_BASE_CLOT_CHANCE = 0.7;
 /** Stats are on a ~5–22 scale; this divisor keeps damage in a sensible range. */
 const STAT_SCALE = 10;
 /** How strongly a creature's `bodyScale` boosts its natural-weapon damage (softened, see attackerProfile):
@@ -238,132 +207,8 @@ function clamp(v: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, v));
 }
 
-/**
- * Derive a wound's severity, bleed rate and pain from its accumulated damage on a
- * part. Shared by damage application (Combat) and healing (PawnStateMachine) so both
- * the build-up and the recovery use one formula. Bleed/pain scale with the wound's
- * total damage as a fraction of the part's max HP; vital parts hurt twice as much.
- */
-export function recomputeWound(
-  bodyPart: BodyPartId,
-  type: Injury['type'],
-  accumDamage: number,
-  prev?: Pick<
-    Injury,
-    'infected' | 'treatedAt' | 'treatmentQuality' | 'inflictedAt' | 'clotProgress'
-  >,
-  turn?: number,
-  maxHpOverride?: number
-): Injury {
-  const partDef = PART_DEF_MAP[bodyPart];
-  const wd = woundById(type);
-  // Per-creature SCALED maxHp when the caller has it (bodyScale × default); else the catalog default.
-  const maxHp = maxHpOverride ?? partDef?.maxHp ?? 1;
-  const frac = maxHp > 0 ? Math.min(accumDamage / maxHp, 1) : 0;
-  const severity = severityFromFrac(frac);
-  const clotProgress = prev?.clotProgress ?? 0;
-  // Bleed = base × clot-remaining: a fresh wound bleeds full, then tapers as it clots (rolled
-  // separately) and stops once dressed or fully clotted — decoupled from the (now weeks-slow) tissue heal.
-  const remaining = clotRemaining({ severity, clotProgress, treatedAt: prev?.treatedAt });
-  return {
-    bodyPart,
-    type,
-    severity,
-    damage: accumDamage,
-    // A destroyed part bleeds from the open stump regardless of wound type (crush bleedMod 0 still
-    // gushes once the limb is off); otherwise the wound's own bleedMod governs.
-    bleeding: partDef
-      ? Math.round(
-          partDef.bleedRatio *
-            BLEED_CONSTANT *
-            (severity === 'destroyed'
-              ? Math.max(wd?.bleedMod ?? 0, SEVERED_STUMP_BLEED_MOD)
-              : (wd?.bleedMod ?? 0)) *
-            frac *
-            remaining *
-            100
-        ) / 100
-      : 0,
-    painContribution:
-      Math.round(accumDamage * (wd?.painPerDamage ?? 0.5) * (partDef?.isVital ? 2 : 1) * 10) / 10,
-    infected: prev?.infected ?? false,
-    // Carry the active dressing across recomputes — otherwise a wound reverts to "untended" the first
-    // heal tick (treatmentQuality lost) and stalls (severity rule), undoing the medic's work.
-    treatedAt: prev?.treatedAt,
-    treatmentQuality: prev?.treatmentQuality,
-    clotProgress,
-    // Age clock for the infection incubation gate: keep the original time as same-type hits stack.
-    inflictedAt: prev?.inflictedAt ?? turn
-  };
-}
-
-/**
- * In-place variant of {@link recomputeWound}: recompute a wound's derived fields (severity, bleed,
- * pain) from a new `accumDamage` by MUTATING the existing Injury rather than allocating a fresh one.
- * Used by the hot per-tick mob heal (`entityLifecycle.stepHunger`), where a fresh object per wounded
- * mob per tick was the allocation cliff that GC-thrashed TPS during sustained predation (it had
- * re-immutabled the de-immutabled M3 mob phase — ENGINE-PERFORMANCE). `infected`/`treatedAt`/
- * `treatmentQuality`/`inflictedAt` already live on `w` and are preserved; logic mirrors recomputeWound.
- */
-export function recomputeWoundInPlace(
-  w: Injury,
-  accumDamage: number,
-  turn?: number,
-  maxHpOverride?: number
-): void {
-  const partDef = PART_DEF_MAP[w.bodyPart];
-  const wd = woundById(w.type);
-  const maxHp = maxHpOverride ?? partDef?.maxHp ?? 1;
-  const frac = maxHp > 0 ? Math.min(accumDamage / maxHp, 1) : 0;
-  w.severity = severityFromFrac(frac);
-  w.damage = accumDamage;
-  const remaining = clotRemaining(w);
-  // Destroyed part → open-stump gush regardless of wound type (mirrors recomputeWound).
-  const effBleedMod =
-    w.severity === 'destroyed'
-      ? Math.max(wd?.bleedMod ?? 0, SEVERED_STUMP_BLEED_MOD)
-      : (wd?.bleedMod ?? 0);
-  w.bleeding = partDef
-    ? Math.round(partDef.bleedRatio * BLEED_CONSTANT * effBleedMod * frac * remaining * 100) / 100
-    : 0;
-  w.painContribution =
-    Math.round(accumDamage * (wd?.painPerDamage ?? 0.5) * (partDef?.isVital ? 2 : 1) * 10) / 10;
-  if (w.inflictedAt == null) w.inflictedAt = turn;
-}
-
-/**
- * Roll clotting for every bleeding, untended wound on an entity — called ~every CLOT_ROLL_INTERVAL
- * ticks (~3 in-game hours) from the pawn/mob tick. Each such wound gets ONE chance at `clotChance` to
- * advance a clot stage; a wound needs `clotsNeeded(severity)` stages to fully stop (each stage cuts the
- * bleed proportionally). This is the "lucky natural stop" — sparse and uncertain, so a wounded entity
- * still mostly needs a caretaker's dressing before it bleeds out. Mutates limbs in place; returns true
- * if any wound's bleed changed (so the caller can recompute the limb bleedRate + refresh the ref).
- */
-export function rollWoundClotting(limbs: LimbState[], clotChance: number, turn: number): boolean {
-  let changed = false;
-  for (const limb of limbs) {
-    let limbChanged = false;
-    for (const part of limb.parts ?? []) {
-      for (const w of part.injuries) {
-        if (w.bleeding <= 0 || w.treatedAt != null) continue; // already dry or dressed
-        if ((w.clotProgress ?? 0) >= clotsNeeded(w.severity)) continue; // fully clotted
-        if (rng.random() < clotChance) {
-          w.clotProgress = (w.clotProgress ?? 0) + 1;
-          recomputeWoundInPlace(w, w.damage, turn); // re-derive bleed from the new clot stage
-          limbChanged = true;
-        }
-      }
-    }
-    if (limbChanged) {
-      limb.bleedRate = (limb.parts ?? []).reduce(
-        (s, p) => s + p.injuries.reduce((ps, x) => ps + x.bleeding, 0),
-        0
-      );
-      changed = true;
-    }
-  }
-  return changed;
-}
+// recomputeWound / recomputeWoundInPlace / rollWoundClotting moved to core/Wounds.ts (ADR-008 layering);
+// Combat imports recomputeWound below for damage application.
 
 interface AttackProfile {
   str: number;

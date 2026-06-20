@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { PART_DEF_MAP } from '../core/BodyParts';
 import { woundById } from '../core/Wounds';
 import { pawnStatService } from '../services/PawnStatService';
-import { syncFractureConditions } from './PawnStateMachine';
+import { syncFractureConditions } from '../core/needs';
 import type { EntityCondition, LimbState, Pawn } from '../core/types';
 
 /**

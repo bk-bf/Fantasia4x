@@ -204,8 +204,6 @@ function calculateCapacityValue(
 ): number {
   const limbs = pawn.limbs ?? [];
   const limb = (id: string) => limbs.find((l) => l.id === id);
-  const limbH = (id: string) => limb(id)?.health ?? 100;
-  const limbMissing = (id: string) => limb(id)?.isMissing ?? false;
   // A limb counts as bone-broken if any of its (still-attached) parts has a broken bone.
   const limbBoneBroken = (id: string) =>
     (limb(id)?.parts ?? []).some((p) => p.boneBroken && !p.isMissing);
