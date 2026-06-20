@@ -8,7 +8,11 @@ import type {
   ItemQuality
 } from '../core/types';
 import { qualityPrefix } from '../core/itemQuality';
-import { decayAll, normalizeConditions, averageCondition } from '../core/carcassCondition';
+import {
+  decayAll,
+  normalizeConditions,
+  carcassConditionByType as computeCarcassConditionByType
+} from '../core/carcassCondition';
 import {
   consumeFromStockpiles,
   addToStockpileZone,
@@ -151,7 +155,10 @@ export interface ItemService {
   getCurrentCarryLoad(pawn: Pawn, state: GameState): { weightKg: number; volumeL: number };
 
   // Decay
-  stepItemDecay(gameState: GameState): GameState;
+  /** Spoil perishables. `elapsedTicks` = ticks since the last call (the caller throttles this to run
+   *  every N ticks, not every tick — spoilage clocks are days-long, so per-tick re-referencing of the
+   *  whole `droppedItems` array is waste that churns the snapshot diff). */
+  stepItemDecay(gameState: GameState, elapsedTicks?: number): GameState;
   /** Average carcass CONDITION (0–100) per carcass item type across stored stacks — the readout the
    *  sidebar/butchery panel show (replaces the old `carcassIntactness` map). No stock → 100 (fresh). */
   carcassConditionByType(gameState: GameState): Record<string, number>;
@@ -543,7 +550,7 @@ export class ItemServiceImpl implements ItemService {
    * −10%, clay urn −20%, wooden chest −30%; best one wins). Deeper preservation (cold/freezing) is
    * owned by the temperature system (Living World), not containers.
    */
-  stepItemDecay(gameState: GameState): GameState {
+  stepItemDecay(gameState: GameState, elapsedTicks = 1): GameState {
     const drops = gameState.droppedItems;
     if (!drops || drops.length === 0) return gameState;
 
@@ -576,7 +583,7 @@ export class ItemServiceImpl implements ItemService {
       // are stripped → `decaysTo`. This is distinct from CONSUMPTION, which only touches the top unit.
       if (d.unitConditions) {
         const conds = normalizeConditions(d.unitConditions, d.quantity);
-        const erosion = (100 * SECONDS_PER_TICK * mult) / def.decaySeconds;
+        const erosion = (100 * SECONDS_PER_TICK * elapsedTicks * mult) / def.decaySeconds;
         const { conditions, removed } = decayAll(conds, erosion);
         for (let r = 0; r < removed; r++) {
           if (def.decaysTo) {
@@ -589,7 +596,7 @@ export class ItemServiceImpl implements ItemService {
         continue;
       }
 
-      let acc = (d.decayAcc ?? 0) + SECONDS_PER_TICK * mult;
+      let acc = (d.decayAcc ?? 0) + SECONDS_PER_TICK * elapsedTicks * mult;
       let qty = d.quantity;
       while (acc >= def.decaySeconds && qty > 0) {
         acc -= def.decaySeconds;
@@ -627,14 +634,7 @@ export class ItemServiceImpl implements ItemService {
   }
 
   carcassConditionByType(gameState: GameState): Record<string, number> {
-    const byType: Record<string, (number[] | undefined)[]> = {};
-    for (const d of gameState.droppedItems ?? []) {
-      if (!d.unitConditions || (d.quantity ?? 0) <= 0) continue;
-      (byType[d.resourceId] ??= []).push(d.unitConditions);
-    }
-    const out: Record<string, number> = {};
-    for (const [id, arrs] of Object.entries(byType)) out[id] = averageCondition(arrs);
-    return out;
+    return computeCarcassConditionByType(gameState.droppedItems);
   }
 
   /**

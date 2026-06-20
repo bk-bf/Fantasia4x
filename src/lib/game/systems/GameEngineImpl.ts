@@ -68,6 +68,12 @@ const UI_PUSH_MS = 1000 / 15;
 /** Item-deterioration runs every N ticks (not every tick): durability lifespans are days/weeks, so
  *  weathering all loose items every tick is wasted work + array churn. 600 ticks ≈ 0.8 in-game hour. */
 const DETERIORATION_INTERVAL_TICKS = 600;
+/** Spoilage (`stepItemDecay`) runs every N ticks for the same reason: a decay clock is days-long, but
+ *  per-tick it re-references the whole `droppedItems` (+ `stockpile`) array — which, because the array
+ *  isn't in the snapshot ref-diff's skip set, ships + structured-clones across the worker→render
+ *  boundary EVERY flush (the carcass-FPS regression). 60 ticks ≈ 1 s: invisible for spoilage, but cuts
+ *  the ref-churn (and thus the cross-boundary clone) ~60×. Erosion is scaled by the elapsed ticks. */
+const DECAY_INTERVAL_TICKS = 60;
 /** Job-board reconcile cadence (ADR-022). `generateJobs` rebuilds the board from current world
  *  sources — a self-healing, emission-derived pass — but that's wasted at 60 Hz when designations/
  *  buildings/drops change far slower. Running it every 6 ticks caps job-appearance latency at ≤6
@@ -156,7 +162,10 @@ export class GameEngineImpl implements GameEngine {
         this.gameState = pawnService.processAutoWash(this.gameState!);
       });
       t('itemDecay', () => {
-        this.gameState = itemService.stepItemDecay(this.gameState!);
+        // Throttled (see DECAY_INTERVAL_TICKS): spoil that many ticks' worth in one pass instead of
+        // re-referencing the whole droppedItems array every tick (which churns the snapshot diff).
+        if (this.gameState!.turn % DECAY_INTERVAL_TICKS === 0)
+          this.gameState = itemService.stepItemDecay(this.gameState!, DECAY_INTERVAL_TICKS);
       });
       t('itemDeterioration', () => {
         // Throttled (see DETERIORATION_INTERVAL_TICKS): apply that many ticks of wear in one pass

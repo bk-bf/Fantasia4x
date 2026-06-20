@@ -267,12 +267,19 @@ describe('prey reacts to a pawn hunter (same circuits as predator-prey)', () => 
     // it must disengage and wander, not lock in Alerted/Attacking over the body (the reported freeze).
     let state = stateWith([makeAnimal('boar')], [makeHunter({ currentState: 'Collapsed' })]);
     let everAttacked = false;
+    let everAlerted = false;
     for (let t = 0; t < 25; t++) {
       state = { ...state, turn: t };
       state = entityService.stepEntities(state);
-      if (state.mobs![0].state === 'Attacking') everAttacked = true;
+      const s = state.mobs![0].state;
+      if (s === 'Attacking') everAttacked = true;
+      if (s === 'Alerted') everAlerted = true;
     }
     expect(everAttacked).toBe(false);
+    // Must not ping-pong into Alerted either — a downed pawn is invisible to a non-finisher's threat
+    // detection, so the mob just keeps wandering rather than oscillating Wander↔Alerted over the body.
+    expect(everAlerted).toBe(false);
+    expect(state.mobs![0].state).toBe('Wander');
   });
 
   it('a HUNGRY predator DOES finish off an adjacent collapsed pawn', () => {

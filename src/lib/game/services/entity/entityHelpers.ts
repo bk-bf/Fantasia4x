@@ -583,16 +583,20 @@ export function isWalkable(state: GameState, x: number, y: number): boolean {
 
 export function nearestPawn(
   mob: Mob,
-  pawns: Pawn[]
+  pawns: Pawn[],
+  skipDowned = false
 ): { pawn: Pawn; pos: { x: number; y: number } } | null {
   // Hot path: called once per mob per tick (O(mobs × pawns) aggregate) — the #1 dip-correlated
   // spatial cost (ENGINE-PERFORMANCE §C). Indexed loop (no `for…of` iterator allocation — the
   // self-hosted `next` churn) + build the result object ONCE at the end (not per improvement).
+  // `skipDowned`: ignore Collapsed pawns so a mob that won't finish them off doesn't even SEE them as a
+  // threat — it keeps wandering instead of ping-ponging Wander↔Alerted over an unconscious body.
   let best: Pawn | null = null;
   let bestDist = Infinity;
   const mx = mob.x;
   const my = mob.y;
   for (let i = 0; i < pawns.length; i++) {
+    if (skipDowned && pawns[i].currentState === 'Collapsed') continue;
     const pos = pawns[i].position!;
     const d = Math.abs(pos.x - mx) + Math.abs(pos.y - my);
     if (d < bestDist) {

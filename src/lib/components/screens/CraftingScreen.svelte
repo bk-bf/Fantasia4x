@@ -45,9 +45,9 @@
   // gameState.item is a legacy no-op array (addToItemArray is a stub) and must not be used.
   $: itemMap = $gameState?.stockpile ?? {};
 
-  // Per-carcass-type average condition (0–100), derived from the stored stacks' per-unit conditions —
-  // replaces the old gameState.carcassIntactness map. Drives the badge + yield-pill scaling below.
-  $: carcassConditions = $gameState ? itemService.carcassConditionByType($gameState) : {};
+  // Per-carcass-type average condition (0–100) — drives the badge + yield-pill scaling below. Computed
+  // worker-side and shipped on the snapshot (`_carcassCondition`); no per-unit arrays cross the boundary.
+  $: carcassConditions = $gameState?._carcassCondition ?? {};
 
   $: getItemAmount = (itemId: string): number => itemMap[itemId] || 0;
 

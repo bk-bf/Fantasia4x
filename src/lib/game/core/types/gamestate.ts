@@ -102,6 +102,10 @@ export interface GameState {
   >;
   /** Phase 7: items dropped on the ground after harvesting, awaiting haulers */
   droppedItems?: DroppedItem[];
+  /** Per-carcass-type average condition (0–100), computed worker-side and shipped in the snapshot so
+   *  the panels never need the per-unit `unitConditions` arrays (stripped from the projected
+   *  `droppedItems`). Projection-only — not persisted; see `core/carcassCondition.ts`. */
+  _carcassCondition?: Record<string, number>;
   /** Dead pawn records for colony history (SURVIVAL-HEALTH spec). */
   deadPawns?: DeadPawnRecord[];
   /** ENTITIES_SPAWNING Phase A: live hostile mobs + neutral animals on the map. */

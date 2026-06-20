@@ -7,6 +7,8 @@
 //   • CONSUMPTION (a scavenging animal, or a butcher run) eats the TOP unit only        → consumeTop
 //   • ENVIRONMENT (spoilage / weather) rots the whole pile, so it erodes EVERY unit       → decayAll
 
+import type { DroppedItem } from './types/jobs';
+
 /** A fully-intact unit. */
 export const FRESH_CONDITION = 100;
 
@@ -76,4 +78,19 @@ export function averageCondition(arrays: (number[] | undefined)[]): number {
     }
   }
   return n === 0 ? FRESH_CONDITION : sum / n;
+}
+
+/** Per-`resourceId` average condition (0–100) across all carcass stacks' per-unit arrays — the small
+ *  summary the sidebar/butchery panels read. Computed WORKER-SIDE and shipped as `_carcassCondition`
+ *  so the per-unit `unitConditions` arrays never have to cross the snapshot boundary (they're stripped
+ *  from the projected `droppedItems`). Empty stocks → omitted (reader defaults to FRESH). */
+export function carcassConditionByType(drops: DroppedItem[] | undefined): Record<string, number> {
+  const byType: Record<string, (number[] | undefined)[]> = {};
+  for (const d of drops ?? []) {
+    if (!d.unitConditions || (d.quantity ?? 0) <= 0) continue;
+    (byType[d.resourceId] ??= []).push(d.unitConditions);
+  }
+  const out: Record<string, number> = {};
+  for (const [id, arrs] of Object.entries(byType)) out[id] = averageCondition(arrs);
+  return out;
 }

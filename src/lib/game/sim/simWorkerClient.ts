@@ -11,7 +11,7 @@
 import { isClientRuntime } from '../core/runtime';
 import { realSimLogSink } from '../../stores/simLogBridge';
 import type { SimLogEvent, EntitySync } from './simProtocol';
-import type { GameState, Pawn, Mob, WorldTile } from '../core/types';
+import type { GameState, Pawn, Mob, WorldTile, DroppedItem } from '../core/types';
 
 /**
  * Apply a per-entity sync (W2b) onto a per-id mirror, returning the reconstructed array in order.
@@ -32,6 +32,22 @@ function applyEntitySync<T extends { id: string }>(
     const prev = mirror.get(u.id);
     mirror.set(u.id, prev ? ({ ...prev, ...u } as T) : (u as T));
   }
+  for (const id of sync.removed) mirror.delete(id);
+  return sync.order.map((id) => mirror.get(id)!);
+}
+
+/**
+ * Like applyEntitySync but REPLACES each upsert wholesale instead of merging. Drops are sent as the
+ * complete slim object (no hot/cold split) whenever their ref changes, so merging would leave a stale
+ * value for any field the new object dropped — replace is both correct and cheaper.
+ */
+function applyDropSync(mirror: Map<string, DroppedItem>, sync: EntitySync<DroppedItem>): DroppedItem[] {
+  if ('full' in sync) {
+    mirror.clear();
+    for (const e of sync.full) mirror.set(e.id, e);
+    return sync.full;
+  }
+  for (const u of sync.upserts) mirror.set(u.id, u as DroppedItem);
   for (const id of sync.removed) mirror.delete(id);
   return sync.order.map((id) => mirror.get(id)!);
 }
@@ -85,6 +101,8 @@ class SimWorkerBridge {
    *  here so cold fields persist between resyncs. Reset on init to match the worker's id baselines. */
   private pawnMirror = new Map<string, Pawn>();
   private mobMirror = new Map<string, Mob>();
+  /** Per-id mirror of dropped items, rebuilt from the `drops` per-id sync (W2b-style). */
+  private dropMirror = new Map<string, DroppedItem>();
   /** Store hook: full state projection per snapshot. `flush` = update held value AND notify+save
    *  (~15Hz); between flushes only the held value is refreshed (per-tick positions for the renderer). */
   onState: ((s: GameState, flush: boolean) => void) | null = null;
@@ -103,6 +121,7 @@ class SimWorkerBridge {
     this.lastState = {}; // matches the worker resetting its sectional-diff baseline on init
     this.pawnMirror.clear();
     this.mobMirror.clear();
+    this.dropMirror.clear();
     this.w?.postMessage({ kind: 'init', state, seed });
   }
   command(cmd: unknown): void {
@@ -123,6 +142,7 @@ class SimWorkerBridge {
     state?: GameState;
     pawns?: EntitySync<Pawn>;
     mobs?: EntitySync<Mob>;
+    drops?: EntitySync<DroppedItem>;
     worldMap?: GameState['worldMap'];
     worldMapDelta?: Array<{ y: number; x: number; tile: Partial<WorldTile> }>;
     flush?: boolean;
@@ -149,8 +169,11 @@ class SimWorkerBridge {
         ? applyEntitySync(this.pawnMirror, m.pawns)
         : (this.lastState.pawns ?? []);
       const mobs = m.mobs ? applyEntitySync(this.mobMirror, m.mobs) : (this.lastState.mobs ?? []);
+      const droppedItems = m.drops
+        ? applyDropSync(this.dropMirror, m.drops)
+        : (this.lastState.droppedItems ?? []);
       this.onState?.(
-        { ...this.lastState, pawns, mobs, worldMap: this.worldMap } as GameState,
+        { ...this.lastState, pawns, mobs, droppedItems, worldMap: this.worldMap } as GameState,
         m.flush ?? true
       );
     } else if (m.kind === 'simlog') {

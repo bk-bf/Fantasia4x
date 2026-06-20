@@ -22,7 +22,8 @@ import { applySimCommand } from './commands';
 import { projectSentEntity } from './entityProjection';
 import type { SimLogEvent, EntitySync } from './simProtocol';
 import { drainTileDeltas, clearTileDeltas } from '../core/tileDeltas';
-import type { GameState, Pawn, Mob, WorldTile } from '../core/types';
+import { carcassConditionByType } from '../core/carcassCondition';
+import type { GameState, Pawn, Mob, WorldTile, DroppedItem } from '../core/types';
 
 const TICK_MS = 1000 / TICKS_PER_SECOND;
 // W5 — batch governed by a WALL-CLOCK budget, not a tick count (a fixed step cap locks the worker
@@ -128,7 +129,46 @@ function installForwardingLogSink() {
  * pawns/mobs/worldMap are handled by dedicated paths and excluded here.
  */
 let lastSent: Record<string, unknown> = {};
-const SECTIONAL_SKIP = new Set(['pawns', 'mobs', 'worldMap']);
+const SECTIONAL_SKIP = new Set(['pawns', 'mobs', 'worldMap', 'droppedItems']);
+
+// ── Dropped-item sync ──────────────────────────────────────────────────────────────────────────
+// Like pawns/mobs, droppedItems rides its own per-id channel — but with WHOLE-OBJECT ref-diff (drops
+// are recreated immutably only when they change), so an unchanging pile ships NOTHING. The projection
+// also STRIPS `unitConditions`: the per-unit carcass arrays grow unbounded as kills accumulate and the
+// main thread never needs them (the panels read the `_carcassCondition` summary). `lastDropRefs` holds
+// each id's last-SENT object ref; a mismatch (or new id) re-ships the slim drop.
+const lastDropRefs = new Map<string, DroppedItem>();
+let lastDropIds = new Set<string>();
+// Last droppedItems array ref we computed `_carcassCondition` from — recompute only on a real change.
+let lastDropsArrRef: DroppedItem[] | undefined = undefined;
+
+/** Project a drop for the snapshot: every field EXCEPT the per-unit `unitConditions` array. */
+function slimDrop(d: DroppedItem): Partial<DroppedItem> & { id: string } {
+  const { unitConditions: _omit, ...rest } = d;
+  return rest;
+}
+
+/** Per-id ref-diff sync for drops: only stacks whose object ref changed since last flush ship (as a
+ *  slim drop); `order` re-establishes array order; `removed` reaps picked-up/rotted ids. */
+function syncDrops(arr: readonly DroppedItem[]): EntitySync<DroppedItem> {
+  const upserts: Array<Partial<DroppedItem> & { id: string }> = [];
+  const order: string[] = new Array(arr.length);
+  const cur = new Set<string>();
+  for (let i = 0; i < arr.length; i++) {
+    const d = arr[i];
+    order[i] = d.id;
+    cur.add(d.id);
+    if (lastDropRefs.get(d.id) !== d) {
+      lastDropRefs.set(d.id, d);
+      upserts.push(slimDrop(d));
+    }
+  }
+  const removed: string[] = [];
+  for (const id of lastDropIds) if (!cur.has(id)) removed.push(id);
+  for (const id of removed) lastDropRefs.delete(id);
+  lastDropIds = cur;
+  return { upserts, removed, order };
+}
 
 // ── W2b per-entity sync ───────────────────────────────────────────────────────────────────────
 // Heavy/static fields dropped from the per-flush SLIM projection and only re-sent on a periodic
@@ -329,6 +369,15 @@ function publish(state: GameState, flush: boolean) {
   delta._terrainRev = terrainRev; // always present; renderer's terrain-rebuild trigger
   delta._designationRev = designationRev; // renderer's cheap 2D designation-overlay redraw trigger
 
+  // Drops ride their own per-id channel (slim, no per-unit arrays). Recompute the small per-type
+  // carcass-condition summary only when the droppedItems array ref actually changed (throttled decay /
+  // pickup / kill) — most flushes ship neither a drop upsert nor a fresh summary.
+  const drops = syncDrops(state.droppedItems ?? []);
+  if (state.droppedItems !== lastDropsArrRef) {
+    lastDropsArrRef = state.droppedItems;
+    delta._carcassCondition = carcassConditionByType(state.droppedItems);
+  }
+
   flushSeq++;
   const pawns = syncEntities(state.pawns, lastPawnIds, PAWN_COLD, lastPawnCold);
   const mobs = syncEntities(state.mobs ?? [], lastMobIds, MOB_COLD, lastMobCold);
@@ -384,6 +433,7 @@ function publish(state: GameState, flush: boolean) {
     state: delta,
     pawns,
     mobs,
+    drops,
     worldMap: worldMapChanged ? state.worldMap : undefined,
     // Slim each changed tile to the render/movement fields (§D) — the heavy part of the harvest-time
     // post/onmessage cost was cloning full WorldTiles for every changed tile.
@@ -473,6 +523,9 @@ self.onmessage = async (e: MessageEvent) => {
       lastMobIds = new Set();
       lastPawnCold.clear(); // drop cold-ref baselines so the first publish re-ships every cold field
       lastMobCold.clear();
+      lastDropRefs.clear(); // drop the per-id drop baseline so the first publish re-ships every stack
+      lastDropIds = new Set();
+      lastDropsArrRef = undefined; // force a fresh _carcassCondition on the first publish
       lastBatch = performance.now();
       if (!loop) loop = setInterval(batch, 16);
       post({ kind: 'ready' });

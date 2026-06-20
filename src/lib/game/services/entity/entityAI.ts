@@ -239,7 +239,11 @@ export function stepOne(
     return { ...mob, state: 'Wander', stateSince: turn };
   }
 
-  const nearest = nearestPawn(mob, pawns);
+  // A downed (Collapsed) pawn is a threat/target ONLY to a hungry finisher (a predator that eats it);
+  // for everyone else it's invisible to threat detection, so they never alert on it (and so never
+  // oscillate Wander↔Alerted beside the body) — they just keep wandering off. Finishers still see + engage.
+  const finisher = willFinishOffDowned(mob.needs.hunger ?? 0, def);
+  const nearest = nearestPawn(mob, pawns, !finisher);
   // §G shared vision: perception-based range scaled by this tile's light + the mob's night_vision,
   // computed ONCE here and threaded into the FSM (so darkness shortens detection without recomputing
   // the light per check). Daytime with nightVision 0 ≈ the old def.stats.visionRange.
