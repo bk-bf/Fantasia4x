@@ -55,7 +55,7 @@ const TRANSIENT_CONDITIONS_DB = (
 /** Scales per-part bleed (bleeding = bleedRatio × this × bleedMod × wound-frac × clot-remaining, per
  *  second). Tuned so a SERIOUS wound bleeds out over several in-game HOURS — long enough that the
  *  periodic clot rolls + a caretaker dressing are a real race, not an instant death. */
-const BLEED_CONSTANT = 20;
+const BLEED_CONSTANT = 32;
 /** How many successful clot rolls a wound needs before it fully stops bleeding, by severity. Each stage
  *  cuts the bleed proportionally (serious at 1/2 clots → half bleed). */
 function clotsNeeded(severity: Injury['severity']): number {

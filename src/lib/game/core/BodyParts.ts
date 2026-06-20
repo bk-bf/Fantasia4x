@@ -22,7 +22,7 @@ export const BODY_PART_DEFS: BodyPartDef[] = [
     parentLimb: 'head',
     maxHp: 45,
     bleedRatio: 0.04,
-    hitWeight: 8,
+    hitWeight: 13,
     isPaired: false,
     isVital: false
   },
@@ -31,7 +31,7 @@ export const BODY_PART_DEFS: BodyPartDef[] = [
     parentLimb: 'head',
     maxHp: 25,
     bleedRatio: 0.02,
-    hitWeight: 4,
+    hitWeight: 2,
     isPaired: false,
     isVital: false
   },
@@ -40,7 +40,7 @@ export const BODY_PART_DEFS: BodyPartDef[] = [
     parentLimb: 'head',
     maxHp: 15,
     bleedRatio: 0.01,
-    hitWeight: 2,
+    hitWeight: 0.4,
     isPaired: false,
     isVital: false
   },
@@ -49,7 +49,7 @@ export const BODY_PART_DEFS: BodyPartDef[] = [
     parentLimb: 'head',
     maxHp: 10,
     bleedRatio: 0.01,
-    hitWeight: 1,
+    hitWeight: 0.2,
     isPaired: true,
     isVital: false
   },
@@ -58,7 +58,7 @@ export const BODY_PART_DEFS: BodyPartDef[] = [
     parentLimb: 'head',
     maxHp: 10,
     bleedRatio: 0.01,
-    hitWeight: 1,
+    hitWeight: 0.2,
     isPaired: true,
     isVital: false
   },
@@ -67,7 +67,7 @@ export const BODY_PART_DEFS: BodyPartDef[] = [
     parentLimb: 'head',
     maxHp: 10,
     bleedRatio: 0.005,
-    hitWeight: 1,
+    hitWeight: 0.2,
     isPaired: true,
     isVital: false
   },
@@ -76,7 +76,7 @@ export const BODY_PART_DEFS: BodyPartDef[] = [
     parentLimb: 'head',
     maxHp: 10,
     bleedRatio: 0.005,
-    hitWeight: 1,
+    hitWeight: 0.2,
     isPaired: true,
     isVital: false
   },
@@ -96,7 +96,7 @@ export const BODY_PART_DEFS: BodyPartDef[] = [
     parentLimb: 'torso',
     maxHp: 80,
     bleedRatio: 0.12,
-    hitWeight: 25,
+    hitWeight: 32,
     isPaired: false,
     isVital: false
   },
@@ -105,7 +105,7 @@ export const BODY_PART_DEFS: BodyPartDef[] = [
     parentLimb: 'torso',
     maxHp: 70,
     bleedRatio: 0.1,
-    hitWeight: 20,
+    hitWeight: 24,
     isPaired: false,
     isVital: false
   },
@@ -195,7 +195,7 @@ export const BODY_PART_DEFS: BodyPartDef[] = [
     parentLimb: 'left_arm',
     maxHp: 40,
     bleedRatio: 0.03,
-    hitWeight: 3,
+    hitWeight: 1,
     isPaired: true,
     isVital: false
   },
@@ -204,7 +204,7 @@ export const BODY_PART_DEFS: BodyPartDef[] = [
     parentLimb: 'left_arm',
     maxHp: 45,
     bleedRatio: 0.05,
-    hitWeight: 6,
+    hitWeight: 2,
     isPaired: true,
     isVital: false
   },
@@ -213,7 +213,7 @@ export const BODY_PART_DEFS: BodyPartDef[] = [
     parentLimb: 'left_arm',
     maxHp: 35,
     bleedRatio: 0.04,
-    hitWeight: 5,
+    hitWeight: 1.5,
     isPaired: true,
     isVital: false
   },
@@ -222,7 +222,7 @@ export const BODY_PART_DEFS: BodyPartDef[] = [
     parentLimb: 'left_arm',
     maxHp: 30,
     bleedRatio: 0.05,
-    hitWeight: 3,
+    hitWeight: 1,
     isPaired: true,
     isVital: false
   },
@@ -231,7 +231,7 @@ export const BODY_PART_DEFS: BodyPartDef[] = [
     parentLimb: 'left_arm',
     maxHp: 10,
     bleedRatio: 0.005,
-    hitWeight: 1,
+    hitWeight: 0.1,
     containedIn: 'leftHand',
     isPaired: true,
     isVital: false
@@ -241,7 +241,7 @@ export const BODY_PART_DEFS: BodyPartDef[] = [
     parentLimb: 'left_arm',
     maxHp: 8,
     bleedRatio: 0.003,
-    hitWeight: 1,
+    hitWeight: 0.1,
     containedIn: 'leftHand',
     isPaired: true,
     isVital: false
@@ -251,7 +251,7 @@ export const BODY_PART_DEFS: BodyPartDef[] = [
     parentLimb: 'left_arm',
     maxHp: 8,
     bleedRatio: 0.003,
-    hitWeight: 1,
+    hitWeight: 0.1,
     containedIn: 'leftHand',
     isPaired: true,
     isVital: false
@@ -261,7 +261,7 @@ export const BODY_PART_DEFS: BodyPartDef[] = [
     parentLimb: 'left_arm',
     maxHp: 8,
     bleedRatio: 0.003,
-    hitWeight: 1,
+    hitWeight: 0.1,
     containedIn: 'leftHand',
     isPaired: true,
     isVital: false
@@ -271,7 +271,7 @@ export const BODY_PART_DEFS: BodyPartDef[] = [
     parentLimb: 'left_arm',
     maxHp: 8,
     bleedRatio: 0.003,
-    hitWeight: 1,
+    hitWeight: 0.1,
     containedIn: 'leftHand',
     isPaired: true,
     isVital: false
@@ -282,7 +282,7 @@ export const BODY_PART_DEFS: BodyPartDef[] = [
     parentLimb: 'right_arm',
     maxHp: 40,
     bleedRatio: 0.03,
-    hitWeight: 3,
+    hitWeight: 1,
     isPaired: true,
     isVital: false
   },
@@ -291,7 +291,7 @@ export const BODY_PART_DEFS: BodyPartDef[] = [
     parentLimb: 'right_arm',
     maxHp: 45,
     bleedRatio: 0.05,
-    hitWeight: 6,
+    hitWeight: 2,
     isPaired: true,
     isVital: false
   },
@@ -300,7 +300,7 @@ export const BODY_PART_DEFS: BodyPartDef[] = [
     parentLimb: 'right_arm',
     maxHp: 35,
     bleedRatio: 0.04,
-    hitWeight: 5,
+    hitWeight: 1.5,
     isPaired: true,
     isVital: false
   },
@@ -309,7 +309,7 @@ export const BODY_PART_DEFS: BodyPartDef[] = [
     parentLimb: 'right_arm',
     maxHp: 30,
     bleedRatio: 0.05,
-    hitWeight: 3,
+    hitWeight: 1,
     isPaired: true,
     isVital: false
   },
@@ -318,7 +318,7 @@ export const BODY_PART_DEFS: BodyPartDef[] = [
     parentLimb: 'right_arm',
     maxHp: 10,
     bleedRatio: 0.005,
-    hitWeight: 1,
+    hitWeight: 0.1,
     containedIn: 'rightHand',
     isPaired: true,
     isVital: false
@@ -328,7 +328,7 @@ export const BODY_PART_DEFS: BodyPartDef[] = [
     parentLimb: 'right_arm',
     maxHp: 8,
     bleedRatio: 0.003,
-    hitWeight: 1,
+    hitWeight: 0.1,
     containedIn: 'rightHand',
     isPaired: true,
     isVital: false
@@ -338,7 +338,7 @@ export const BODY_PART_DEFS: BodyPartDef[] = [
     parentLimb: 'right_arm',
     maxHp: 8,
     bleedRatio: 0.003,
-    hitWeight: 1,
+    hitWeight: 0.1,
     containedIn: 'rightHand',
     isPaired: true,
     isVital: false
@@ -348,7 +348,7 @@ export const BODY_PART_DEFS: BodyPartDef[] = [
     parentLimb: 'right_arm',
     maxHp: 8,
     bleedRatio: 0.003,
-    hitWeight: 1,
+    hitWeight: 0.1,
     containedIn: 'rightHand',
     isPaired: true,
     isVital: false
@@ -358,7 +358,7 @@ export const BODY_PART_DEFS: BodyPartDef[] = [
     parentLimb: 'right_arm',
     maxHp: 8,
     bleedRatio: 0.003,
-    hitWeight: 1,
+    hitWeight: 0.1,
     containedIn: 'rightHand',
     isPaired: true,
     isVital: false
@@ -369,7 +369,7 @@ export const BODY_PART_DEFS: BodyPartDef[] = [
     parentLimb: 'left_leg',
     maxHp: 50,
     bleedRatio: 0.04,
-    hitWeight: 3,
+    hitWeight: 1.5,
     isPaired: true,
     isVital: false
   },
@@ -378,7 +378,7 @@ export const BODY_PART_DEFS: BodyPartDef[] = [
     parentLimb: 'left_leg',
     maxHp: 60,
     bleedRatio: 0.08,
-    hitWeight: 8,
+    hitWeight: 6,
     isPaired: true,
     isVital: false
   },
@@ -387,7 +387,7 @@ export const BODY_PART_DEFS: BodyPartDef[] = [
     parentLimb: 'left_leg',
     maxHp: 50,
     bleedRatio: 0.06,
-    hitWeight: 6,
+    hitWeight: 4.5,
     isPaired: true,
     isVital: false
   },
@@ -396,7 +396,7 @@ export const BODY_PART_DEFS: BodyPartDef[] = [
     parentLimb: 'left_leg',
     maxHp: 30,
     bleedRatio: 0.04,
-    hitWeight: 3,
+    hitWeight: 1.5,
     isPaired: true,
     isVital: false
   },
@@ -405,7 +405,7 @@ export const BODY_PART_DEFS: BodyPartDef[] = [
     parentLimb: 'left_leg',
     maxHp: 8,
     bleedRatio: 0.003,
-    hitWeight: 0.5,
+    hitWeight: 0.1,
     containedIn: 'leftFoot',
     isPaired: true,
     isVital: false
@@ -415,7 +415,7 @@ export const BODY_PART_DEFS: BodyPartDef[] = [
     parentLimb: 'left_leg',
     maxHp: 6,
     bleedRatio: 0.002,
-    hitWeight: 0.5,
+    hitWeight: 0.1,
     containedIn: 'leftFoot',
     isPaired: true,
     isVital: false
@@ -425,7 +425,7 @@ export const BODY_PART_DEFS: BodyPartDef[] = [
     parentLimb: 'left_leg',
     maxHp: 6,
     bleedRatio: 0.002,
-    hitWeight: 0.5,
+    hitWeight: 0.1,
     containedIn: 'leftFoot',
     isPaired: true,
     isVital: false
@@ -435,7 +435,7 @@ export const BODY_PART_DEFS: BodyPartDef[] = [
     parentLimb: 'left_leg',
     maxHp: 6,
     bleedRatio: 0.002,
-    hitWeight: 0.5,
+    hitWeight: 0.1,
     containedIn: 'leftFoot',
     isPaired: true,
     isVital: false
@@ -445,7 +445,7 @@ export const BODY_PART_DEFS: BodyPartDef[] = [
     parentLimb: 'left_leg',
     maxHp: 6,
     bleedRatio: 0.002,
-    hitWeight: 0.5,
+    hitWeight: 0.1,
     containedIn: 'leftFoot',
     isPaired: true,
     isVital: false
@@ -456,7 +456,7 @@ export const BODY_PART_DEFS: BodyPartDef[] = [
     parentLimb: 'right_leg',
     maxHp: 50,
     bleedRatio: 0.04,
-    hitWeight: 3,
+    hitWeight: 1.5,
     isPaired: true,
     isVital: false
   },
@@ -465,7 +465,7 @@ export const BODY_PART_DEFS: BodyPartDef[] = [
     parentLimb: 'right_leg',
     maxHp: 60,
     bleedRatio: 0.08,
-    hitWeight: 8,
+    hitWeight: 6,
     isPaired: true,
     isVital: false
   },
@@ -474,7 +474,7 @@ export const BODY_PART_DEFS: BodyPartDef[] = [
     parentLimb: 'right_leg',
     maxHp: 50,
     bleedRatio: 0.06,
-    hitWeight: 6,
+    hitWeight: 4.5,
     isPaired: true,
     isVital: false
   },
@@ -483,7 +483,7 @@ export const BODY_PART_DEFS: BodyPartDef[] = [
     parentLimb: 'right_leg',
     maxHp: 30,
     bleedRatio: 0.04,
-    hitWeight: 3,
+    hitWeight: 1.5,
     isPaired: true,
     isVital: false
   },
@@ -492,7 +492,7 @@ export const BODY_PART_DEFS: BodyPartDef[] = [
     parentLimb: 'right_leg',
     maxHp: 8,
     bleedRatio: 0.003,
-    hitWeight: 0.5,
+    hitWeight: 0.1,
     containedIn: 'rightFoot',
     isPaired: true,
     isVital: false
@@ -502,7 +502,7 @@ export const BODY_PART_DEFS: BodyPartDef[] = [
     parentLimb: 'right_leg',
     maxHp: 6,
     bleedRatio: 0.002,
-    hitWeight: 0.5,
+    hitWeight: 0.1,
     containedIn: 'rightFoot',
     isPaired: true,
     isVital: false
@@ -512,7 +512,7 @@ export const BODY_PART_DEFS: BodyPartDef[] = [
     parentLimb: 'right_leg',
     maxHp: 6,
     bleedRatio: 0.002,
-    hitWeight: 0.5,
+    hitWeight: 0.1,
     containedIn: 'rightFoot',
     isPaired: true,
     isVital: false
@@ -522,7 +522,7 @@ export const BODY_PART_DEFS: BodyPartDef[] = [
     parentLimb: 'right_leg',
     maxHp: 6,
     bleedRatio: 0.002,
-    hitWeight: 0.5,
+    hitWeight: 0.1,
     containedIn: 'rightFoot',
     isPaired: true,
     isVital: false
@@ -532,7 +532,7 @@ export const BODY_PART_DEFS: BodyPartDef[] = [
     parentLimb: 'right_leg',
     maxHp: 6,
     bleedRatio: 0.002,
-    hitWeight: 0.5,
+    hitWeight: 0.1,
     containedIn: 'rightFoot',
     isPaired: true,
     isVital: false

@@ -2893,11 +2893,11 @@
     "weightKg"         : 0,
     "volumeL"          : 0,
     "weaponProperties" : {
-      "damage"     : 2,
+      "damage"     : 3,
       "attackSpeed": 1,
       "range"      : 1,
       "damageType" : "blunt",
-      "baseDamage" : 2,
+      "baseDamage" : 3,
       "bluntMod"   : 0.4,
       "weight"     : 4,
       "staminaCost": 1
@@ -2918,11 +2918,11 @@
     "weightKg"         : 0,
     "volumeL"          : 0,
     "weaponProperties" : {
-      "damage"     : 3,
+      "damage"     : 5,
       "attackSpeed": 1,
       "range"      : 1,
       "damageType" : "blunt",
-      "baseDamage" : 3,
+      "baseDamage" : 5,
       "bluntMod"   : 0.9,
       "weight"     : 1,
       "staminaCost": 3,
@@ -2944,15 +2944,15 @@
     "weightKg"         : 0,
     "volumeL"          : 0,
     "weaponProperties" : {
-      "damage"     : 3,
+      "damage"     : 11,
       "attackSpeed": 1,
       "range"      : 1,
       "damageType" : "piercing",
-      "baseDamage" : 3,
+      "baseDamage" : 11,
       "weight"     : 3,
       "staminaCost": 3,
-      "armorPenetration": 0.1,
-      "critMod"    : 0.06
+      "armorPenetration": 0.15,
+      "critMod"    : 0.12
     }
   },
   {
@@ -2970,15 +2970,15 @@
     "weightKg"         : 0,
     "volumeL"          : 0,
     "weaponProperties" : {
-      "damage"     : 3,
+      "damage"     : 10,
       "attackSpeed": 1,
       "range"      : 1,
       "damageType" : "cutting",
-      "baseDamage" : 3,
+      "baseDamage" : 10,
       "weight"     : 2,
       "staminaCost": 2,
-      "armorPenetration": 0.1,
-      "critMod"    : 0.02
+      "armorPenetration": 0.2,
+      "critMod"    : 0.12
     }
   },
   {
@@ -2996,15 +2996,15 @@
     "weightKg"         : 0,
     "volumeL"          : 0,
     "weaponProperties" : {
-      "damage"     : 5,
+      "damage"     : 13,
       "attackSpeed": 1,
       "range"      : 1,
       "damageType" : "blunt",
-      "baseDamage" : 5,
+      "baseDamage" : 13,
       "bluntMod"   : 1.2,
       "weight"     : 1,
       "staminaCost": 4,
-      "armorPenetration": 0.05
+      "armorPenetration": 0.12
     }
   },
   {
@@ -3022,15 +3022,15 @@
     "weightKg"         : 0,
     "volumeL"          : 0,
     "weaponProperties" : {
-      "damage"     : 5,
+      "damage"     : 13,
       "attackSpeed": 1,
       "range"      : 1,
       "damageType" : "piercing",
-      "baseDamage" : 5,
+      "baseDamage" : 13,
       "weight"     : 2,
       "staminaCost": 3,
-      "armorPenetration": 0.15,
-      "critMod"    : 0.04
+      "armorPenetration": 0.25,
+      "critMod"    : 0.08
     }
   },
   {
@@ -3048,15 +3048,15 @@
     "weightKg"         : 0,
     "volumeL"          : 0,
     "weaponProperties" : {
-      "damage"     : 4,
+      "damage"     : 12,
       "attackSpeed": 1,
       "range"      : 1,
       "damageType" : "blunt",
-      "baseDamage" : 4,
+      "baseDamage" : 12,
       "bluntMod"   : 1.5,
       "weight"     : 1,
       "staminaCost": 4,
-      "armorPenetration": 0.08
+      "armorPenetration": 0.15
     }
   },
   {
@@ -3074,14 +3074,14 @@
     "weightKg"         : 0,
     "volumeL"          : 0,
     "weaponProperties" : {
-      "damage"     : 4,
+      "damage"     : 11,
       "attackSpeed": 1,
       "range"      : 1,
       "damageType" : "piercing",
-      "baseDamage" : 4,
+      "baseDamage" : 11,
       "weight"     : 2,
       "staminaCost": 3,
-      "armorPenetration": 0.12
+      "armorPenetration": 0.2
     }
   },
   {
@@ -3099,11 +3099,11 @@
     "weightKg"         : 0,
     "volumeL"          : 0,
     "weaponProperties" : {
-      "damage"     : 3,
+      "damage"     : 6,
       "attackSpeed": 1,
       "range"      : 1,
       "damageType" : "blunt",
-      "baseDamage" : 3,
+      "baseDamage" : 6,
       "bluntMod"   : 1.0,
       "weight"     : 1,
       "staminaCost": 3
@@ -3124,11 +3124,11 @@
     "weightKg"         : 0,
     "volumeL"          : 0,
     "weaponProperties" : {
-      "damage"     : 1,
+      "damage"     : 4,
       "attackSpeed": 1,
       "range"      : 1,
       "damageType" : "piercing",
-      "baseDamage" : 1,
+      "baseDamage" : 4,
       "weight"     : 1,
       "staminaCost": 1
     }
@@ -3148,11 +3148,11 @@
     "weightKg"         : 0,
     "volumeL"          : 0,
     "weaponProperties" : {
-      "damage"     : 5,
+      "damage"     : 11,
       "attackSpeed": 1,
       "range"      : 1,
       "damageType" : "blunt",
-      "baseDamage" : 5,
+      "baseDamage" : 11,
       "bluntMod"   : 1.1,
       "weight"     : 1,
       "staminaCost": 2,
@@ -3174,14 +3174,14 @@
     "weightKg"         : 0,
     "volumeL"          : 0,
     "weaponProperties" : {
-      "damage"     : 3,
+      "damage"     : 9,
       "attackSpeed": 1,
       "range"      : 1,
       "damageType" : "piercing",
-      "baseDamage" : 3,
+      "baseDamage" : 9,
       "weight"     : 3,
       "staminaCost": 3,
-      "armorPenetration": 0.1,
+      "armorPenetration": 0.15,
       "critMod"    : 0.08
     },
     "onHitEffect"      : { "condition": "envenomed", "chance": 0.5, "durationTurns": 30, "resist": "poison_resistance" }
@@ -3201,11 +3201,11 @@
     "weightKg"         : 0,
     "volumeL"          : 0,
     "weaponProperties" : {
-      "damage"     : 2,
+      "damage"     : 4,
       "attackSpeed": 1,
       "range"      : 1,
       "damageType" : "piercing",
-      "baseDamage" : 2,
+      "baseDamage" : 4,
       "weight"     : 3,
       "staminaCost": 2,
       "critMod"    : 0.03
