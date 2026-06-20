@@ -29,4 +29,11 @@ export interface WeatherState {
    * type's own `windStrength`. Optional for back-compat; defaults applied in EnvironmentService.
    */
   wind?: number;
+  /**
+   * Ambient wind DIRECTION as an 8-way compass index (0=N, 1=NE, 2=E … 7=NW), the way the wind
+   * BLOWS TOWARD. Drifts slowly on day boundaries (occasional ±1 rotation) alongside `wind`. Gameplay
+   * uses it to cast a downwind shelter shadow behind impassable tiles (walls/mountains) so the lee
+   * side is calm. Optional for back-compat; defaults applied in EnvironmentService.
+   */
+  windDir?: number;
 }

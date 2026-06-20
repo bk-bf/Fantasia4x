@@ -375,7 +375,8 @@ export function makeWeather(type: string): WeatherState {
     type: def.id,
     intensity: def.intensity,
     turnsRemaining: Number.MAX_SAFE_INTEGER,
-    wind: def.windStrength ?? DEFAULT_WIND
+    wind: def.windStrength ?? DEFAULT_WIND,
+    windDir: DEFAULT_WIND_DIR
   };
 }
 
@@ -403,6 +404,17 @@ export function weatherOverlayKind(type?: string): WeatherOverlayKind {
 export function weatherWindStrength(type?: string): number {
   const def = weatherDef(type);
   return def.windStrength ?? (def.heavy ? 0.6 : 0.2);
+}
+
+/**
+ * Effective AMBIENT wind 0–1 for a weather state — the single source of truth shared by the visual
+ * overlay slant (WeatherCanvas) and gameplay (windchill). The stronger of the weather type's inherent
+ * `windStrength` and the live drifting `wind` scalar, so a debug gale feels windy immediately even
+ * before the ambient walk catches up. This is the OPEN-FIELD value; shelter (roof/lee) is applied on
+ * top by `effectiveWindAt`.
+ */
+export function ambientWind(weather?: WeatherState): number {
+  return Math.max(0, Math.min(1, Math.max(weatherWindStrength(weather?.type), weather?.wind ?? 0)));
 }
 
 /** Environmental sight multiplier 0–1 for a weather id (1 = clear; fog/storm shorten detection). */
@@ -764,9 +776,7 @@ export function accumulateSnow(
         next = Math.min(
           100,
           prev +
-            SNOW_ACCRUAL_PER_HOUR *
-              snowWetFactor(tileWetness(tile.moisture ?? 0, weather)) *
-              hours
+            SNOW_ACCRUAL_PER_HOUR * snowWetFactor(tileWetness(tile.moisture ?? 0, weather)) * hours
         );
       } else if (temp >= 0 && prev > 0) {
         next = Math.max(0, prev - SNOW_MELT_PER_HOUR * hours);
@@ -787,6 +797,79 @@ const DEFAULT_WIND = 0.3;
 const WIND_DRIFT = 0.18;
 /** How hard ambient wind boosts a `windScaled` transition branch: weight × (1 + wind × this). */
 const WIND_TRANSITION_BOOST = 2.5;
+
+// ── Wind direction (8-way compass) — drives the downwind shelter shadow ───────
+/** Starting/fallback wind direction (index into WIND_DIRS) when a WeatherState carries none. */
+const DEFAULT_WIND_DIR = 0;
+/** Per-day chance the wind backs/veers one step (±1 of the 8 compass points). */
+const WIND_DIR_TURN_CHANCE = 0.4;
+/** Unit (dx, dy) the wind BLOWS TOWARD for each 8-way index, and its label. y+ is south. */
+const WIND_DIRS: ReadonlyArray<{ dx: number; dy: number; label: string }> = [
+  { dx: 0, dy: -1, label: 'N' },
+  { dx: 1, dy: -1, label: 'NE' },
+  { dx: 1, dy: 0, label: 'E' },
+  { dx: 1, dy: 1, label: 'SE' },
+  { dx: 0, dy: 1, label: 'S' },
+  { dx: -1, dy: 1, label: 'SW' },
+  { dx: -1, dy: 0, label: 'W' },
+  { dx: -1, dy: -1, label: 'NW' }
+];
+/** How many tiles downwind a wall/mountain shelters; nearer the wall = calmer. */
+const WIND_SHADOW_LEN = 4;
+
+/** The (dx, dy) the wind blows toward for an 8-way direction index (wraps; tolerates undefined). */
+export function windVector(dir?: number): { dx: number; dy: number } {
+  const d = WIND_DIRS[(((dir ?? DEFAULT_WIND_DIR) % 8) + 8) % 8];
+  return { dx: d.dx, dy: d.dy };
+}
+/** Compass label (N/NE/E…) for an 8-way wind direction index. */
+export function windDirLabel(dir?: number): string {
+  return WIND_DIRS[(((dir ?? DEFAULT_WIND_DIR) % 8) + 8) % 8].label;
+}
+
+/**
+ * Shelter 0–1 a tile gets from sitting in the lee of an impassable tile (mountain/cliff/built wall —
+ * `worldMap[y][x].walkable === false`). Ray-marches UPWIND (opposite the wind vector) up to
+ * `WIND_SHADOW_LEN` tiles: the nearest blocker gives `1 − (i−1)/WIND_SHADOW_LEN` — full shelter
+ * directly behind it (i=1), fading to open wind further downwind. O(WIND_SHADOW_LEN); pawns are few,
+ * so this is cheap enough to call per pawn per tick without a precomputed field. 0 in the open / upwind.
+ */
+export function windShelterAt(
+  x: number,
+  y: number,
+  windDir: number | undefined,
+  worldMap: WorldTile[][],
+  maxTiles = WIND_SHADOW_LEN
+): number {
+  const { dx, dy } = windVector(windDir);
+  for (let i = 1; i <= maxTiles; i++) {
+    const tx = x - dx * i;
+    const ty = y - dy * i;
+    const tile = worldMap[ty]?.[tx];
+    if (!tile) break; // off the map upwind → treat as open
+    if (tile.walkable === false) return 1 - (i - 1) / maxTiles;
+  }
+  return 0;
+}
+
+/**
+ * Effective wind 0–1 a pawn actually feels at a tile = open-field `ambientWind`, cut by a roof's
+ * `weatherProtection` (a roof keeps the weather — wind included — out) and by the downwind shelter of
+ * a wall/mountain (`windShelterAt`). Drives the `windchilled` condition and amplifies cold exposure.
+ */
+export function effectiveWindAt(
+  x: number,
+  y: number,
+  weather: WeatherState | undefined,
+  thermal: ThermalSample,
+  worldMap: WorldTile[][]
+): number {
+  const open = ambientWind(weather);
+  if (open <= 0) return 0;
+  const roofed = open * (1 - thermal.weatherProtection);
+  if (roofed <= 0) return 0;
+  return roofed * (1 - windShelterAt(x, y, weather?.windDir, worldMap));
+}
 
 /**
  * Data-driven connected-chain transition (weather.jsonc `transitions`). Unlike a first-match chain,
@@ -839,9 +922,12 @@ export function advanceWeatherForDay(
     0,
     Math.min(1, (weather.wind ?? DEFAULT_WIND) + (rng.random() * 2 - 1) * WIND_DRIFT)
   );
+  // Direction backs/veers one of the 8 compass points on a chance roll (its own slow walk).
+  let windDir = weather.windDir ?? DEFAULT_WIND_DIR;
+  if (rng.chance(WIND_DIR_TURN_CHANCE)) windDir = (windDir + (rng.chance(0.5) ? 1 : 7)) % 8;
   const remaining = weather.turnsRemaining - TICKS_PER_DAY;
   if (remaining > 0) {
-    return { ...weather, wind, turnsRemaining: remaining };
+    return { ...weather, wind, windDir, turnsRemaining: remaining };
   }
   const type = rollWeatherType(weather.type, season, wind, rng);
   const def = weatherDef(type);
@@ -850,7 +936,8 @@ export function advanceWeatherForDay(
     type,
     intensity: def.intensity,
     turnsRemaining: rng.int(minDur, maxDur),
-    wind
+    wind,
+    windDir
   };
 }
 

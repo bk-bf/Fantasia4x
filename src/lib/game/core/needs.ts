@@ -258,6 +258,30 @@ export function driveEncumbrance(conditions: EntityCondition[], loadRatio: numbe
     conditions[idx] = { ...conditions[idx], severity: sev };
 }
 
+/** Effective wind below which a pawn feels no windchill; wind at/above which it's maxed (extreme). */
+export const WIND_ONSET = 0.2;
+export const WIND_FULL = 1.0;
+
+/**
+ * Set the `windchilled` condition's severity DIRECTLY from the tile's effective wind 0–1 (after roof
+ * + lee shelter — see EnvironmentService.effectiveWindAt). Like `driveEncumbrance` this is
+ * INSTANTANEOUS, not accrued: a pawn is windblown *now* by what's blowing on it, so severity snaps to
+ * the wind each tick. severity 0 at/below `WIND_ONSET`, 1 at `WIND_FULL`; the five stages
+ * (slightly→extremely windy) live in conditions.jsonc. Mutates `conditions` in place (ADR-002 hot
+ * path: nothing allocated while it's calm + the condition absent).
+ */
+export function driveWindchill(conditions: EntityCondition[], effWind: number): void {
+  const sev = Math.min(1, Math.max(0, (effWind - WIND_ONSET) / (WIND_FULL - WIND_ONSET)));
+  const idx = conditions.findIndex((c) => c.id === 'windchilled');
+  if (sev <= 0) {
+    if (idx !== -1) conditions.splice(idx, 1);
+    return;
+  }
+  if (idx === -1) conditions.push({ id: 'windchilled', severity: sev });
+  else if (Math.abs(conditions[idx].severity - sev) > 1e-3)
+    conditions[idx] = { ...conditions[idx], severity: sev };
+}
+
 // ── Temperature comfort (SEASONS_WEATHER Subsystem 3) ──────────────────────────
 /** Default comfortable temperature band in conceptual °C; traits widen/shift it. */
 export const COMFORT_MIN_DEFAULT = 5;

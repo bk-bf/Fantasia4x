@@ -18,7 +18,7 @@
     weatherOverlayKind,
     weatherFallSpeed,
     weatherDensity,
-    weatherWindStrength,
+    ambientWind,
     weatherParticleColor,
     environmentService,
     getAmbientLight,
@@ -364,7 +364,7 @@
     // inherent windStrength combined with the live ambient `wind` (so plain rain on a windy day leans).
     const next: Mode = weatherOverlayKind(wx?.type);
     intensity = Math.max(0.2, Math.min(1, wx?.intensity ?? 0));
-    windStrength = Math.max(0, Math.min(1, Math.max(weatherWindStrength(wx?.type), wx?.wind ?? 0)));
+    windStrength = ambientWind(wx ?? undefined);
     fallSpeed = weatherFallSpeed(wx?.type);
     density = weatherDensity(wx?.type);
     particleColor = weatherParticleColor(wx?.type) ?? particleColor;

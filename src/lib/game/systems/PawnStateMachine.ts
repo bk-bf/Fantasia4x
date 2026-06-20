@@ -44,6 +44,7 @@ import {
   driveNeedConditions,
   driveTemperatureConditions,
   driveEncumbrance,
+  driveWindchill,
   comfortRange,
   getConditionFloater,
   applyShock,
@@ -58,7 +59,8 @@ import {
   heatExposure,
   thermalAt,
   isRoofedTile,
-  effectiveTemperature
+  effectiveTemperature,
+  effectiveWindAt
 } from '../services/EnvironmentService';
 import { equippedTemperatureResistance } from '../core/PawnEquipment';
 import { calcBloodRegenRate } from '../entities/Pawns';
@@ -122,6 +124,7 @@ function approachExposure(current: number, target: number, recoveryMul: number):
 // heat far less. Scaled by how soaked the pawn is (wetness/100).
 const WET_COLD_EXTRA = 0.8; // at 100% wet, cold exposure ×1.8 ("greatly lower cold resistance")
 const WET_HEAT_REDUCT = 0.6; // at 100% wet, heat exposure ×0.4 ("greatly raise fire resistance")
+const WIND_COLD_EXTRA = 0.6; // in a full gale (effWind 1), cold exposure ×1.6 — windchill bites harder
 // Fully soaked + cool → a per-second chance to catch a chill (seeds hypothermia) — the rain consequence.
 const WET_SOAKED = 95;
 const WET_CHILL_TEMP = 12; // only when the effective temperature is below this (°C)
@@ -359,6 +362,9 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
   // Effective temperature at the pawn = cached tile temperature + live weather delta (same value the
   // need-rate path uses). Cold/heat exposure past the comfort range drives the conditions, reduced by
   // the pawn's cold_resistance / fire_resistance stats — which were previously defined but unused.
+  // Effective wind felt at the pawn (after roof + lee shelter); reused below for cold amplification
+  // and to drive the staged `windchilled` condition. 0 when the pawn is off-map.
+  let windLevel = 0;
   {
     const pos = pawn.position;
     const tile = pos ? gameState.worldMap[pos.y]?.[pos.x] : undefined;
@@ -369,6 +375,8 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
     );
     if (tile || hasTempCondition || hasExposure) {
       const thermal = pos ? thermalAt(pos.x, pos.y) : undefined;
+      if (pos && thermal)
+        windLevel = effectiveWindAt(pos.x, pos.y, gameState.weather, thermal, gameState.worldMap);
       const weatherDelta = weatherEffects(gameState.weather).tempDelta;
       const base = tile?.temperature ?? 15;
       const temp = thermal
@@ -398,6 +406,9 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
         coldTarget *= 1 + WET_COLD_EXTRA * f;
         heatTarget *= 1 - WET_HEAT_REDUCT * f;
       }
+      // Windchill: a stiff wind makes cold bite far harder (it doesn't add heat — wind in the heat is
+      // relief, already folded into the summer-windy tempDelta).
+      if (windLevel > 0 && coldTarget > 0) coldTarget *= 1 + WIND_COLD_EXTRA * windLevel;
       // A pawn under a roof recovers from temperature conditions faster ("sheltered").
       const recoveryMul = pos && isRoofedTile(pos.x, pos.y) ? SHELTER_RECOVERY_MUL : 1;
       // Advance the TRACKED meters toward the targets (memory: builds up / drains over time), then
@@ -438,6 +449,12 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
       }
     }
   }
+
+  // ── Windchill ← effective wind ───────────────────────────────────────────
+  // Stage the `windchilled` condition (slightly→extremely windy) DIRECTLY from the wind felt this
+  // tick — instantaneous like encumbrance, not accrued. The lee of a wall/mountain or a roof already
+  // cut `windLevel` in effectiveWindAt, so a sheltered pawn drops to nothing on its own.
+  driveWindchill(conditions, windLevel);
 
   // ── Encumbrance ← carry load ─────────────────────────────────────────────
   // Unified load model: worn armour + pack weight vs the STR-scaled capacity (bags raise it). Drives

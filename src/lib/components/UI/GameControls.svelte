@@ -13,7 +13,9 @@
   import { wasmPathfinderService } from '$lib/game/services/WasmPathfinderService';
   import {
     SEASON_LABELS,
-    weatherLabel as getWeatherLabel
+    weatherLabel as getWeatherLabel,
+    ambientWind,
+    windDirLabel
   } from '$lib/game/services/EnvironmentService';
   import { TICKS_PER_SECOND } from '$lib/game/core/time';
   import { onMount, onDestroy } from 'svelte';
@@ -103,6 +105,13 @@
   // ===== SEASON & WEATHER READOUT (SEASONS_WEATHER) — labels are data-driven (seasons/weather.jsonc) =====
   $: weatherLabel = getWeatherLabel($currentWeather?.type);
   $: tempLabel = $currentAvgTemperature !== undefined ? `${$currentAvgTemperature}°C` : '';
+  // Open-field wind degree + compass direction. The five degrees mirror the `windchilled` stages; a
+  // pawn's actual windchill is cut by roofs and the lee of walls (per-tile), but this is the ambient.
+  const WIND_WORDS = ['', 'slightly', 'somewhat', 'fairly', 'very', 'extremely'];
+  $: windVal = ambientWind($currentWeather ?? undefined);
+  $: windWord = WIND_WORDS[Math.min(5, Math.floor(Math.max(0, windVal - 0.2) / 0.16) + 1)] ?? '';
+  $: windLabel =
+    windVal >= 0.2 ? `${windWord} windy ${windDirLabel($currentWeather?.windDir)}` : '';
 
   // Dev timesaver: drop 500 of every item into the current stockpile (no regen/wipe).
   const DEV_ITEM_QTY = 500;
@@ -204,8 +213,10 @@
     >{gameDate.dayStr}/{gameDate.monthStr}/{gameDate.yearStr} {gameDate.hourStr}:00</span
   >
   <span class="bi phase" title="Time of day">{dayPhase}</span>
-  <span class="bi season" title="Season · average map temperature · weather"
-    >{SEASON_LABELS[$currentSeason] ?? $currentSeason}{tempLabel ? ` ${tempLabel}` : ''} · {weatherLabel}</span
+  <span class="bi season" title="Season · average map temperature · weather · wind"
+    >{SEASON_LABELS[$currentSeason] ?? $currentSeason}{tempLabel ? ` ${tempLabel}` : ''} · {weatherLabel}{windLabel
+      ? ` · ${windLabel}`
+      : ''}</span
   >
   <span class="bi turn" title="Turn {currentTurnValue}">T{currentTurnValue}</span>
   <span

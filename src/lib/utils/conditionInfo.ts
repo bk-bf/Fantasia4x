@@ -118,6 +118,8 @@ function persistentSources(entity: Pawn | Mob, def: ConditionDef): string[] {
     }
     case 'shock':
       return [`Pain ${Math.round(entity.pain ?? 0)}/100`];
+    case 'windchilled':
+      return ['Out in the wind — sheltered by a roof or the lee of a wall/mountain'];
     default:
       return [];
   }
