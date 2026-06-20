@@ -14,7 +14,8 @@ import {
 import { absorbDropIfOnStockpileTile } from '../../core/GameState';
 import { pawnStatService } from '../PawnStatService';
 import { simLog } from '../../core/logSink';
-import { healLimbsInPlace } from '../../systems/PawnStateMachine';
+import { healLimbsInPlace, syncFractureConditions } from '../../systems/PawnStateMachine';
+import { PART_DEF_MAP } from '../../core/BodyParts';
 import {
   rollWoundClotting,
   MOB_CLOT_ROLL_INTERVAL,
@@ -173,7 +174,13 @@ export function stepHunger(state: GameState): GameState {
     let diedFromLimb = false;
     if (limbs) {
       for (const limb of limbs) {
-        if (limb.health <= 0 && (limb.id === 'head' || limb.id === 'torso')) {
+        // A caved-in skull (destroyed critical PART) kills outright, even if the head aggregate survives.
+        const fatalPart =
+          limb.id === 'head' &&
+          (limb.parts ?? []).some(
+            (p) => (p.isMissing || p.health <= 0) && PART_DEF_MAP[p.id]?.isCritical
+          );
+        if (fatalPart || (limb.health <= 0 && (limb.id === 'head' || limb.id === 'torso'))) {
           simLog.logEntityDeath(mob.id, entityName(mob), 'critical_limb', turn, mob.x, mob.y);
           mob.state = 'Corpse';
           mob.isAlive = false;
@@ -222,6 +229,10 @@ export function stepHunger(state: GameState): GameState {
     }
 
     // ── Shock ──────────────────────────────────────────────────────────────────
+    // Broken-bone conditions (broken_arm/leg) synced from the limb tree — crushes the mob's STR/DEX on
+    // top of the manipulation/moving capacity hit, same as pawns; cleared as the bones knit.
+    if (limbs) syncFractureConditions(conditions, limbs);
+
     // Severe pain OR heavy blood loss sends a mob into shock — SAME rule as pawns (applyShock); this
     // subsumes the old blood_loss condition. mob.pain is kept current by combat + the heal block above.
     applyShock(conditions, mob.pain ?? 0, 1 - bloodVolume / maxBV);

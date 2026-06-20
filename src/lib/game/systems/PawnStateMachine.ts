@@ -20,6 +20,7 @@ import type {
   ConditionStage,
   Injury,
   LimbState,
+  EntityCondition,
   DroppedItem,
   DeadPawnRecord
 } from '../core/types';
@@ -31,6 +32,7 @@ import {
   BASE_CLOT_CHANCE
 } from './Combat';
 import { HEALING_CONFIG, CARE_CONFIG, woundById, isTended } from '../core/Wounds';
+import { PART_DEF_MAP } from '../core/BodyParts';
 import conditionsData from '../database/conditions.jsonc';
 import { itemService } from '../services/ItemService';
 import { pawnStatService } from '../services/PawnStatService';
@@ -540,9 +542,16 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
     return killPawn(updatedGs.pawns.find((p) => p.id === pawn.id)!, 'infection', updatedGs);
   }
 
-  // ── Critical Limb Destruction ─────────────────────────────────────────────
+  // ── Critical Limb / Part Destruction ──────────────────────────────────────
   for (const limb of limbs) {
-    if (limb.health <= 0 && (limb.id === 'head' || limb.id === 'torso')) {
+    // A destroyed critical PART (a caved-in skull) is instant death even if the head aggregate still
+    // has HP — checked before the limb-aggregate rule so a crushed skull kills outright.
+    const fatalPart =
+      limb.id === 'head' &&
+      (limb.parts ?? []).some(
+        (part) => (part.isMissing || part.health <= 0) && PART_DEF_MAP[part.id]?.isCritical
+      );
+    if (fatalPart || (limb.health <= 0 && (limb.id === 'head' || limb.id === 'torso'))) {
       const updatedGs = {
         ...gameState,
         pawns: gameState.pawns.map((p) =>
@@ -552,6 +561,11 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
       return killPawn(updatedGs.pawns.find((p) => p.id === pawn.id)!, 'critical_limb', updatedGs);
     }
   }
+
+  // ── Broken-bone conditions ────────────────────────────────────────────────
+  // A broken arm/leg bone (boneBroken part) drives a persistent condition that crushes STR/DEX on top
+  // of the manipulation/moving capacity hit — synced from the limbs each tick, cleared as bones knit.
+  syncFractureConditions(conditions, limbs);
 
   // ── Shock ──────────────────────────────────────────────────────────────────
   // Severe pain OR heavy blood loss sends the body into shock — shared rule for pawns + mobs
@@ -625,7 +639,11 @@ export function healLimbs(
       // and the HEALTH panel keeps showing a "healed" part forever.
       const health =
         newWounds.length === 0 ? part.maxHp : Math.min(part.maxHp, part.health + healed);
-      return { ...part, health, injuries: newWounds };
+      // Un-break the bone once the fracture has knit below boneHp (weeks later).
+      const boneHp = PART_DEF_MAP[part.id]?.boneHp;
+      const fractureW = newWounds.find((w) => woundById(w.type)?.structural);
+      const boneBroken = fractureW != null && boneHp != null && fractureW.damage >= boneHp;
+      return { ...part, health, injuries: newWounds, boneBroken };
     });
     const totalBleed = newParts.reduce(
       (s, p) => s + p.injuries.reduce((ps, w) => ps + w.bleeding, 0),
@@ -687,6 +705,10 @@ export function healLimbsInPlace(
       if (write !== inj.length) inj.length = write; // truncate the dropped wounds
       // Snap to full when the last wound clears (mirrors healLimbs' UI auto-hide rule).
       part.health = inj.length === 0 ? part.maxHp : Math.min(part.maxHp, part.health + healed);
+      // Un-break the bone once the fracture has knit below boneHp (mirrors healLimbs).
+      const boneHp = PART_DEF_MAP[part.id]?.boneHp;
+      const fractureW = inj.find((w) => woundById(w.type)?.structural);
+      part.boneBroken = fractureW != null && boneHp != null && fractureW.damage >= boneHp;
     }
     // Roll the limb's bleed + health summary up from the mutated parts (mirrors healLimbs).
     let totalBleed = 0;
@@ -746,6 +768,23 @@ export function healWounds(pawn: Pawn, turn = 0): Pawn {
     pain: Math.max(0, Math.min(100, Math.round(painTotal))),
     injuries: newInjuries
   };
+}
+
+/** Sync the broken_arm / broken_leg persistent conditions from the limb tree: present (severity 1) when
+ *  any still-attached part of that limb type has a broken bone, removed once the bones knit. Mutates the
+ *  conditions array in place (matching the surrounding tickConditions style). */
+export function syncFractureConditions(conditions: EntityCondition[], limbs: LimbState[]): void {
+  const broken = (ids: string[]) =>
+    limbs.some(
+      (l) => ids.includes(l.id) && (l.parts ?? []).some((p) => p.boneBroken && !p.isMissing)
+    );
+  const upsert = (id: string, present: boolean) => {
+    const idx = conditions.findIndex((c) => c.id === id);
+    if (present && idx < 0) conditions.push({ id, severity: 1 });
+    else if (!present && idx >= 0) conditions.splice(idx, 1);
+  };
+  upsert('broken_arm', broken(['left_arm', 'right_arm']));
+  upsert('broken_leg', broken(['left_leg', 'right_leg']));
 }
 
 // ===== COMBAT STATE (COMBAT-SYSTEM) =====

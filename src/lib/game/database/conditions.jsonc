@@ -49,6 +49,34 @@
         ]
     },
     {
+        "id": "broken_arm",
+        "name": "Broken Arm",
+        "description": "A fractured arm bone. The hand is near useless and every motion drives pain — strength and dexterity collapse and work crawls. The limb's physical function is gutted on its own; this is the STR/DEX toll on top. Knits over WEEKS of rest; until then the arm is crippled, but still attached.",
+        "lethalSeverity": 99,
+        "stages": [
+            {
+                "label"      : "broken",
+                "minSeverity": 0.0,
+                "color"      : "#C04030",
+                "modifiers"  : {"strength": 0.65, "dexterity": 0.6, "workEfficiency": 0.75}
+            }
+        ]
+    },
+    {
+        "id": "broken_leg",
+        "name": "Broken Leg",
+        "description": "A fractured leg bone. Bearing weight is agony — gait is reduced to a hobble and the whole body fights to stay upright, sapping strength and dexterity. Movement is gutted on its own; this is the STR/DEX toll on top. Knits over WEEKS of rest; until then the leg is crippled, but still attached.",
+        "lethalSeverity": 99,
+        "stages": [
+            {
+                "label"      : "broken",
+                "minSeverity": 0.0,
+                "color"      : "#C04030",
+                "modifiers"  : {"strength": 0.8, "dexterity": 0.7, "workEfficiency": 0.85}
+            }
+        ]
+    },
+    {
         "id": "dehydration",
         "name": "Dehydration",
         "charSpans": [ {"sheet": "font", "id": 247} ],

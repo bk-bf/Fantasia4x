@@ -21,8 +21,15 @@
 // number flattens two axes. DPS = expected damage/sec to an unarmored pawn; effHP = how much
 // damage it soaks before going down. Profiles: bruiser (hits hard AND tanky) · glass-cannon
 // (high DPS, low effHP — burst it down or take big hits) · tank (durable, low DPS — slow grind,
-// low danger) · skirmisher (balanced mid) · harmless (chaff). DPS/effHP are computed SNAPSHOTS:
-// re-derive them (scripts/… or the combat formulas) if weapon/stat/bodyScale tuning changes.
+// low danger) · skirmisher (balanced mid) · harmless (chaff).
+//
+// ⚙ CONTROL — these numbers are COMPUTED SNAPSHOTS. After ANY balance tweak that touches combat
+// (natural-weapon damage in items.jsonc, a creature's stats/bodyScale/naturalArmor here, or a
+// constant in Combat.ts), re-derive them with `scripts/threat-model.mjs`:
+//     pnpm threat         → print the recomputed ranking table
+//     pnpm threat:check   → assert every threatLevel + inline annotation still matches (CI-able)
+// The script reads this file + items.jsonc directly, so it's the source of truth; update the
+// `threatLevel` and the inline `// DPS x | effHP y | profile` on any entry it flags as drifted.
 [
     // ── Hostiles ────────────────────────────────────────────────────────────
     {
@@ -451,7 +458,7 @@
     {
         "id"            : "worg",
         "name"          : "Worg",
-        "threatLevel"   : 9,    // DPS 12.7 | effHP 74 | skirmisher
+        "threatLevel"   : 9,    // DPS 12.6 | effHP 74 | skirmisher
         "entityClass"   : "animal",
         "charSpans"     : [ {"sheet": "creatures", "id": 114} ],
         "fg"            : [0.35, 0.33, 0.4],

@@ -72,6 +72,19 @@
       "healDifficulty": 1.4
     },
     {
+      // Bone fracture — a SECONDARY wound from heavy (esp. blunt) trauma, tracked apart from the soft-
+      // tissue crush/cut. `structural: true` means destroying it BREAKS the bone (cripples the limb) but
+      // does NOT sever the limb. No external bleed, brutal pain, and it knits over WEEKS (healDifficulty
+      // 4×). fromDamageType "none" → never auto-mapped from a hit; Combat applies it on a fracture roll.
+      "id"            : "fracture",
+      "name"          : "Fracture",
+      "fromDamageType": "none",
+      "bleedMod"      : 0.0,
+      "painPerDamage" : 1.2,
+      "healDifficulty": 4.0,
+      "structural"    : true
+    },
+    {
       "id"            : "burn",
       "name"          : "Burn",
       "fromDamageType": "fire",

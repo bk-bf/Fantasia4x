@@ -65,6 +65,14 @@ const BLEED_CONSTANT = 32;
  *  so a ripped-off limb is the worst bleed in the game; still scaled by the clot/dressing factor so it
  *  can be stopped. A cut that severs already bleeds hard, so this is really the path for crush kills. */
 const SEVERED_STUMP_BLEED_MOD = 2.5;
+/** Bone-fracture roll on a hit to a boned part. Blunt cracks bone FAR more readily (× the weapon's
+ *  bluntMod) — that's a bludgeon's signature; a cut/thrust only fractures on a deep blow. The chance
+ *  scales with how hard the hit lands vs the part's boneHp, capped so it's never a sure thing. A broken
+ *  bone cripples the limb (manipulation/moving + a broken_arm/leg condition) without severing it. */
+const FRACTURE_BLUNT_BASE = 0.6;
+const FRACTURE_OTHER_BASE = 0.12;
+const FRACTURE_BLUNT_CAP = 0.85;
+const FRACTURE_OTHER_CAP = 0.3;
 /** How many successful clot rolls a wound needs before it fully stops bleeding, by severity. Each stage
  *  cuts the bleed proportionally (serious at 1/2 clots → half bleed). */
 function clotsNeeded(severity: Injury['severity']): number {
@@ -156,6 +164,9 @@ export interface HitResult {
   staminaCost: number;
   partRemainingHp?: number;
   partMaxHp?: number;
+  /** Secondary BONE wound this swing also inflicted (a fracture roll succeeded) — applied alongside the
+   *  soft-tissue injury. Cripples the limb if it breaks the bone; does not sever. */
+  fractureInjury?: Injury | null;
 }
 
 export interface CombatService {
@@ -707,11 +718,36 @@ class CombatServiceImpl implements CombatService {
     );
     const knockdown = knockChance > 0 && rng.random() * 100 < knockChance;
 
+    // Fracture roll: heavy trauma cracks the bone beneath the soft-tissue wound. Tracked as a SEPARATE
+    // `fracture` wound; enough accumulated fracture damage BREAKS the bone (cripples the limb without
+    // severing it — see _applyInjuryToEntity / boneBroken). Only parts with a skeleton (boneHp) can break.
+    let fractureInjury: Injury | null = null;
+    if (partDef.boneHp != null && hpMissing > 0) {
+      const isBlunt = damageType === 'blunt';
+      const fractureChance = clamp(
+        (isBlunt ? FRACTURE_BLUNT_BASE * bluntMod : FRACTURE_OTHER_BASE) * (final / partDef.boneHp),
+        0,
+        isBlunt ? FRACTURE_BLUNT_CAP : FRACTURE_OTHER_CAP
+      );
+      if (rng.random() < fractureChance) {
+        fractureInjury = {
+          bodyPart: partId,
+          type: 'fracture',
+          severity: severityFromFrac(final / partDef.maxHp),
+          damage: final,
+          bleeding: 0,
+          painContribution: 0,
+          infected: false
+        };
+      }
+    }
+
     return {
       hit: true,
       bodyPart: partId,
       damage: final,
       injury,
+      fractureInjury,
       knockdown,
       crit,
       damageType,
@@ -751,7 +787,10 @@ class CombatServiceImpl implements CombatService {
               injuries: []
             };
 
-      const newHp = Math.max(0, prev.health - injury.damage);
+      // A structural (fracture) wound tracks BONE damage — it does NOT chip soft-tissue HP (the crush
+      // from the same blow already did); it only breaks the bone. Non-structural wounds reduce HP.
+      const isStructural = woundById(injury.type)?.structural === true;
+      const newHp = isStructural ? prev.health : Math.max(0, prev.health - injury.damage);
 
       // Stack: one wound per type per part. Same-type hits accumulate damage and
       // escalate severity (5 crushes → one severe crush) instead of piling up.
@@ -767,7 +806,10 @@ class CombatServiceImpl implements CombatService {
       const updatedPart: BodyPartState = {
         ...prev,
         health: newHp,
-        isMissing: prev.isMissing || merged.severity === 'destroyed',
+        // Soft-tissue destruction SEVERS the part; structural (fracture) destruction BREAKS the bone.
+        isMissing: prev.isMissing || (merged.severity === 'destroyed' && !isStructural),
+        boneBroken:
+          prev.boneBroken || (isStructural && partDef.boneHp != null && accum >= partDef.boneHp),
         injuries: woundList
       };
       const newParts =
@@ -962,9 +1004,17 @@ class CombatServiceImpl implements CombatService {
     }
     if (!result.injury) return { state, staminaCost: result.staminaCost };
 
-    const next = isTargetMob
+    let next = isTargetMob
       ? this.applyInjuryToMob(target.id, result.injury, state, result.knockdown)
       : this.applyInjury(target.id, result.injury, state, result.knockdown);
+
+    // A fracture from the same blow lands as a second (bone) wound — no extra knockdown.
+    if (result.fractureInjury) {
+      next = isTargetMob
+        ? this.applyInjuryToMob(target.id, result.fractureInjury, next, false)
+        : this.applyInjury(target.id, result.fractureInjury, next, false);
+      this.emitFloat(pos.x, pos.y, 'crit', 'Fractured!', 26);
+    }
 
     // Floating text: damage number — a rolled crit OR a part-wrecking hit reads as
     // 'crit'; plus a secondary knockdown / bleed cue.

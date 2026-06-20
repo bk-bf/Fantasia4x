@@ -13,6 +13,11 @@ export interface BodyPartDef {
   containedIn?: BodyPartId;
   isPaired: boolean;
   isVital: boolean;
+  /** Bone "HP" for this part — fracture damage at/above this BREAKS the bone (cripples the limb without
+   *  severing it). Undefined → no skeletal structure to fracture (eyes, organs, soft abdomen, digits). */
+  boneHp?: number;
+  /** Destroying this part is instant death regardless of limb-aggregate HP (a caved-in skull). */
+  isCritical?: boolean;
 }
 
 export const BODY_PART_DEFS: BodyPartDef[] = [
@@ -538,6 +543,38 @@ export const BODY_PART_DEFS: BodyPartDef[] = [
     isVital: false
   }
 ];
+
+// Skeletal parts that can FRACTURE (a broken bone cripples the limb). boneHp = a fraction of the part's
+// maxHp, so a bone breaks well before the whole part is destroyed. Soft parts (eyes, ears, nose, organs,
+// abdomen, fingers, toes) carry no bone and never fracture. Injected here to avoid hand-editing 19 rows.
+const BONED_PART_IDS = new Set<BodyPartId>([
+  'skull',
+  'jaw',
+  'chest',
+  'leftShoulder',
+  'leftUpperArm',
+  'leftForearm',
+  'leftHand',
+  'rightShoulder',
+  'rightUpperArm',
+  'rightForearm',
+  'rightHand',
+  'leftHip',
+  'leftUpperLeg',
+  'leftLowerLeg',
+  'leftFoot',
+  'rightHip',
+  'rightUpperLeg',
+  'rightLowerLeg',
+  'rightFoot'
+]);
+const BONE_FRACTION = 0.55;
+// Parts whose destruction is instant death regardless of limb-aggregate HP.
+const CRITICAL_PART_IDS = new Set<BodyPartId>(['skull']);
+for (const d of BODY_PART_DEFS) {
+  if (BONED_PART_IDS.has(d.id)) d.boneHp = Math.round(d.maxHp * BONE_FRACTION);
+  if (CRITICAL_PART_IDS.has(d.id)) d.isCritical = true;
+}
 
 export const PART_DEF_MAP: Partial<Record<BodyPartId, BodyPartDef>> = Object.fromEntries(
   BODY_PART_DEFS.map((d) => [d.id, d])

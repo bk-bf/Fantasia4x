@@ -15,6 +15,9 @@ export interface WoundDef {
   painPerDamage: number;
   /** Multiplier on heal time — higher mends slower. */
   healDifficulty: number;
+  /** Bone/structural wound (fracture): destroying it BREAKS the limb (cripples function) rather than
+   *  SEVERING it. Excluded from the isMissing trigger; drives the boneBroken flag instead. */
+  structural?: boolean;
 }
 
 export interface HealingConfig {

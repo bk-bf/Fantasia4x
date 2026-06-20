@@ -121,6 +121,11 @@ const FORMULA_VAR_RE = new RegExp('\\b(?:' + FORMULA_VARS.join('|') + ')\\b', 'g
 const BLOOD_FAINT_ONSET = 0.2;
 const BLOOD_FAINT_FLOOR = 0.55;
 
+// A broken bone guts the limb's physical capacity (manipulation for an arm, moving for a leg) to this
+// fraction — heavy, but a notch above losing the limb. The broken_arm/leg CONDITION layers the STR/DEX
+// crush on top (different axis), so the two together make a fracture genuinely crippling.
+const BROKEN_BONE_FUNCTION_MULT = 0.4;
+
 // Compile each unique formula ONCE into a real function (vars → number), cached by formula string.
 // Formulas come from a fixed stats.jsonc set, so this turns the per-call regex+compile+parse into a
 // one-time cost + a plain function call. Invalid/unknown-token formulas cache as null → 1.0.
@@ -201,6 +206,9 @@ function calculateCapacityValue(
   const limb = (id: string) => limbs.find((l) => l.id === id);
   const limbH = (id: string) => limb(id)?.health ?? 100;
   const limbMissing = (id: string) => limb(id)?.isMissing ?? false;
+  // A limb counts as bone-broken if any of its (still-attached) parts has a broken bone.
+  const limbBoneBroken = (id: string) =>
+    (limb(id)?.parts ?? []).some((p) => p.boneBroken && !p.isMissing);
 
   // Organ lookup: find a specific BodyPartState inside a limb's parts[]
   const organ = (limbId: string, organId: string): BodyPartState | undefined =>
@@ -272,8 +280,14 @@ function calculateCapacityValue(
       break;
     }
     case 'manipulation': {
-      const left = limbMissing('left_arm') ? 0.0 : limbH('left_arm') / 100;
-      const right = limbMissing('right_arm') ? 0.0 : limbH('right_arm') / 100;
+      // A broken arm bone cripples the hand's use even with the soft tissue intact (× BROKEN_BONE mult).
+      const left = limbMissing('left_arm')
+        ? 0.0
+        : (limbH('left_arm') / 100) * (limbBoneBroken('left_arm') ? BROKEN_BONE_FUNCTION_MULT : 1);
+      const right = limbMissing('right_arm')
+        ? 0.0
+        : (limbH('right_arm') / 100) *
+          (limbBoneBroken('right_arm') ? BROKEN_BONE_FUNCTION_MULT : 1);
       const minArm = Math.min(left, right);
       const avgArm = (left + right) / 2;
       value = minArm * 0.3 + avgArm * 0.7;
@@ -289,8 +303,14 @@ function calculateCapacityValue(
       break;
     }
     case 'moving': {
-      const left = limbMissing('left_leg') ? 0.0 : limbH('left_leg') / 100;
-      const right = limbMissing('right_leg') ? 0.0 : limbH('right_leg') / 100;
+      // A broken leg bone cripples gait even with the soft tissue intact (× BROKEN_BONE mult).
+      const left = limbMissing('left_leg')
+        ? 0.0
+        : (limbH('left_leg') / 100) * (limbBoneBroken('left_leg') ? BROKEN_BONE_FUNCTION_MULT : 1);
+      const right = limbMissing('right_leg')
+        ? 0.0
+        : (limbH('right_leg') / 100) *
+          (limbBoneBroken('right_leg') ? BROKEN_BONE_FUNCTION_MULT : 1);
       const minLeg = Math.min(left, right);
       const avgLeg = (left + right) / 2;
       value = minLeg * 0.5 + avgLeg * 0.5;
