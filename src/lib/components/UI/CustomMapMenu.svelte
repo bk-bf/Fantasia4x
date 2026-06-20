@@ -27,7 +27,7 @@
   let locked = $state<Set<string>>(new Set());
   let water = $state<number>(Math.round(getWaterLevel() * 100));
 
-  // Map-size presets (square). Default world is 240×160 — none highlighted until you pick one.
+  // Map-size presets (square). Defaults to M (500×500) — see currentMapSize in gameState.
   const SIZES = [
     { label: 'S', dim: 250 },
     { label: 'M', dim: 500 },
@@ -95,8 +95,12 @@
     water = Math.round(getWaterLevel() * 100);
     locked = new Set();
   }
+  // Reroll = "give me a new random map", so unlike the sliders (which stage until GENERATE) it
+  // regenerates immediately — there's nothing to preview-copy about a seed you didn't choose, and
+  // staging it would just show the old map until you press GENERATE.
   function rollSeed() {
     seed = Date.now() >>> 0 || 1;
+    generate();
   }
 </script>
 
@@ -125,7 +129,7 @@
         }}
       /></label
     >
-    <button class="cm-btn" onclick={rollSeed} title="stage a new random seed (press GENERATE to apply)"
+    <button class="cm-btn" onclick={rollSeed} title="roll a new random seed and regenerate now"
       >⟳</button
     >
     <button class="cm-btn" onclick={reset} title="restore terrains.jsonc defaults">reset</button>

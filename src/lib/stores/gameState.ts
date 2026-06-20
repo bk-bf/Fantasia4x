@@ -527,8 +527,9 @@ function loadStateIntoWorker(state: GameState) {
 }
 
 // Runtime world dimensions — toggled by the Custom Map menu (small→huge). regenWorld reads these so a
-// size change takes effect on the next regeneration. Default matches the legacy 240×160 baseline.
-let currentMapSize = { w: 240, h: 160 };
+// size change takes effect on the next regeneration. Default is the M preset (500×500) so the Custom
+// Map size toggle opens pre-selected on Medium and GENERATE matches that highlight.
+let currentMapSize = { w: 500, h: 500 };
 function setMapSize(w: number, h: number) {
   currentMapSize = { w: Math.max(8, w | 0), h: Math.max(8, h | 0) };
 }
