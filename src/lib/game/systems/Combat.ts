@@ -508,17 +508,24 @@ function currentPartHealth(defender: Pawn | Mob, partId: BodyPartId, defMaxHp: n
 
 // ── Implementation ────────────────────────────────────────────────────────────
 class CombatServiceImpl implements CombatService {
-  /** True only for the duration of `tickCombat`, where `next` holds PRIVATE clones of the pawns/mobs
-   *  arrays. While set, the per-hit entity appliers overwrite the changed entity's array SLOT in place
-   *  (O(1), no allocation) instead of rebuilding the whole array — a 420-mob wave was doing dozens of
-   *  full-array `.map()` rebuilds per tick (the engagement-wave alloc tax, ADR-002 hot-phase amendment).
-   *  Outside combat (public `applyInjury*`, called immutably by tests) it stays false → immutable rebuild. */
+  /** True only for the duration of `tickCombat`. While set, the per-hit entity appliers write the
+   *  changed entity into its array SLOT in place instead of rebuilding the whole array via `.map()` —
+   *  a 420-mob wave was doing dozens of full-array rebuilds per tick (the engagement-wave alloc tax,
+   *  ADR-002 hot-phase amendment). Outside combat (public `applyInjury*`, called immutably by tests)
+   *  it stays false → immutable rebuild. */
   private _combatWorking = false;
+  /** COPY-ON-WRITE flags: whether `next.mobs`/`next.pawns` have been cloned into a PRIVATE array this
+   *  tick yet. The arrays are cloned LAZILY on the first hit that writes to them (not upfront) so a
+   *  peace tick — the overwhelmingly common case — allocates nothing (cloning both 420-mob + pawns
+   *  arrays every tick regardless of combat was itself a perf regression). Reset each `tickCombat`. */
+  private _mobsOwned = false;
+  private _pawnsOwned = false;
 
-  /** Write `updated` back into its array. In combat-working mode the array is a private clone, so
-   *  overwrite the slot IN PLACE; otherwise rebuild immutably. Either way `updated` is a NEW object, so
-   *  cold-field refs stay fresh for the snapshot diff AND the index-aligned fresh-corpse diff
-   *  (`handleFreshCombatCorpses`) still sees the old object in `preCombatState` vs the new one here. */
+  /** Write `updated` back into its array. In combat-working mode: clone the target array ONCE on first
+   *  write (copy-on-write — the caller threads the returned state forward), then overwrite the slot in
+   *  place; outside combat, rebuild immutably. Either way `updated` is a NEW object, so cold-field refs
+   *  stay fresh for the snapshot diff AND the index-aligned fresh-corpse diff (`handleFreshCombatCorpses`)
+   *  still sees the old object in `preCombatState` vs the new one here. */
   private spliceEntity<T extends Pawn | Mob>(
     state: GameState,
     id: string,
@@ -526,10 +533,25 @@ class CombatServiceImpl implements CombatService {
     isMob: boolean
   ): GameState {
     if (this._combatWorking) {
-      const arr = (isMob ? state.mobs : state.pawns) as (Pawn | Mob)[] | undefined;
-      if (arr) {
-        const idx = arr.findIndex((e) => e.id === id);
-        if (idx >= 0) arr[idx] = updated;
+      if (isMob) {
+        if (!state.mobs) return state;
+        let mobs = state.mobs;
+        if (!this._mobsOwned) {
+          mobs = mobs.slice();
+          state = { ...state, mobs };
+          this._mobsOwned = true;
+        }
+        const idx = mobs.findIndex((e) => e.id === id);
+        if (idx >= 0) mobs[idx] = updated as Mob;
+      } else {
+        let pawns = state.pawns;
+        if (!this._pawnsOwned) {
+          pawns = pawns.slice();
+          state = { ...state, pawns };
+          this._pawnsOwned = true;
+        }
+        const idx = pawns.findIndex((e) => e.id === id);
+        if (idx >= 0) pawns[idx] = updated as Pawn;
       }
       return state;
     }
@@ -1506,6 +1528,8 @@ class CombatServiceImpl implements CombatService {
 
   tickCombat(state: GameState, _dtMs: number): GameState {
     this._combatWorking = true;
+    this._mobsOwned = false;
+    this._pawnsOwned = false;
     try {
       return this._tickCombat(state);
     } finally {
@@ -1514,15 +1538,12 @@ class CombatServiceImpl implements CombatService {
   }
 
   private _tickCombat(state: GameState): GameState {
-    // PRIVATE working clones: the per-hit appliers overwrite array SLOTS in place (see `spliceEntity`),
-    // so `next` must hold its OWN arrays — the caller's `state` (GameEngineImpl's `preCombatState`) is
-    // diffed against the result to spawn carcasses (`handleFreshCombatCorpses`), so it must stay intact.
-    // Cloned ONCE here (O(n)) replaces the old per-hit O(n) array rebuilds (dozens/tick under a wave).
-    let next: GameState = {
-      ...state,
-      mobs: state.mobs ? state.mobs.slice() : state.mobs,
-      pawns: state.pawns.slice()
-    };
+    // `next` starts as the caller's state; the per-hit appliers clone the pawns/mobs arrays COPY-ON-
+    // WRITE on the first write (see `spliceEntity`) and write slots in place thereafter. A peace tick
+    // never writes → never clones → zero allocation. The clone (when it happens) means combat never
+    // mutates the caller's `state` (GameEngineImpl's `preCombatState`), which is index-diffed against
+    // the result to spawn carcasses (`handleFreshCombatCorpses`).
+    let next: GameState = state;
     // Track stamina mutations for attacking entities (id → new stamina value).
     const mobStaminaUpdates = new Map<string, number>();
     const pawnStaminaUpdates = new Map<string, number>();
