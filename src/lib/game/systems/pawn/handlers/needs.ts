@@ -7,7 +7,7 @@ import { gameLogger } from '../../../dev/gameLogger';
 import { perTick } from '../../../core/time';
 import { consumeFromStockpiles } from '../../../core/GameState';
 import { PAWN_STATE, type PawnStateName } from '../pawnStates';
-import { isAdjacent, selectFoodForMeal, consumeMeal } from '../pawnQueries';
+import { isAdjacent, selectFoodForMeal, consumeMeal, hasAvailableFood } from '../pawnQueries';
 import {
   findNearestStorageBuilding,
   tryAssignPath,
@@ -59,7 +59,8 @@ export function handleDrinking(pawn: Pawn, gameState: GameState): GameState {
     gameLogger.log(
       state.turn,
       'NEED-CHECK',
-      () => `${pawn.name} starts drinking thirst=${(pawn.needs?.thirst ?? 0).toFixed(1)} at ${fmtPos(pawn)}`
+      () =>
+        `${pawn.name} starts drinking thirst=${(pawn.needs?.thirst ?? 0).toFixed(1)} at ${fmtPos(pawn)}`
     );
   if (done)
     gameLogger.log(
@@ -101,7 +102,8 @@ export function handleWashing(pawn: Pawn, gameState: GameState): GameState {
     gameLogger.log(
       gameState.turn,
       'NEED-CHECK',
-      () => `${pawn.name} starts washing hygiene=${(pawn.needs?.hygiene ?? 0).toFixed(1)} at ${fmtPos(pawn)}`
+      () =>
+        `${pawn.name} starts washing hygiene=${(pawn.needs?.hygiene ?? 0).toFixed(1)} at ${fmtPos(pawn)}`
     );
   if (done)
     gameLogger.log(
@@ -379,11 +381,14 @@ export function handleSleeping(pawn: Pawn, gameState: GameState): GameState {
       : SLEEP_WAKE_THRESHOLD_FED;
   // A wounded pawn keeps resting even at zero fatigue — it stays down until its wounds clear (wounds
   // only mend at full rate while resting), unless hunger forces it up to eat first or its restPolicy
-  // is 'never' (then it wakes and goes back to work, accepting the slow active heal rate).
+  // is 'never' (then it wakes and goes back to work, accepting the slow active heal rate). Hunger only
+  // wakes it when there's actually food to GO eat — with an empty stockpile, getting up is pointless
+  // (and ping-pongs Idle↔Sleeping against recoveryChoice), so it stays down and heals. MUST mirror
+  // recoveryChoice's gate (same hunger && hasAvailableFood condition).
   const recovering =
     (pawn.restPolicy ?? 'always') !== 'never' &&
-    (pawn.needs?.hunger ?? 0) < HUNGER_THRESHOLD &&
-    needsRecovery(pawn);
+    needsRecovery(pawn) &&
+    ((pawn.needs?.hunger ?? 0) < HUNGER_THRESHOLD || !hasAvailableFood(gameState));
   const shouldWake = newFatigue <= wakeThreshold && !recovering;
 
   const updatedNeeds = {
