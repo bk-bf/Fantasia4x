@@ -176,6 +176,20 @@ describe('combat sim (headless tickCombat)', () => {
     expect(crits).toBeGreaterThan(0);
   });
 
+  it('melee lands a sane ~60% at parity (no more ~80% dodge whiff-slog)', () => {
+    // Evenly-matched DEX-10 combatants. The old formula (DEX×3 − dodge×20, no base) gave ~10% here,
+    // so fights never resolved; the rebased formula centres parity near 60%.
+    const attacker = makePawn({ id: 'atk', stats: { ...stats, dexterity: 10 } });
+    const defender = makePawn({ id: 'def', stats: { ...stats, dexterity: 10 } });
+    const empty = makeState([], []);
+    let hits = 0;
+    for (let i = 0; i < 1000; i++)
+      if (combatService.resolveHit(attacker, defender, empty).hit) hits++;
+    const rate = hits / 1000;
+    expect(rate).toBeGreaterThan(0.4);
+    expect(rate).toBeLessThan(0.8);
+  });
+
   it('a Hunting pawn attacks its marked quarry even though the prey is neutral', () => {
     // A huntable deer is NOT a "hostile" (the Fighting/auto-engage path would ignore it),
     // so this proves the work-driven hunt path: a pawn in Hunting with huntTargetId set
@@ -336,9 +350,7 @@ describe('wound system (stacking + healing)', () => {
     state = combatService.applyInjury('p1', { ...crush(20), bodyPart: 'chest' }, state);
     state = {
       ...state,
-      buildings: [
-        { id: 'bed1', type: 'hay_bed', x: 5, y: 5, status: 'complete', progress: 1 }
-      ],
+      buildings: [{ id: 'bed1', type: 'hay_bed', x: 5, y: 5, status: 'complete', progress: 1 }],
       stockpile: { chewed_poultice: 1 },
       stockpileZones: [
         {
@@ -373,13 +385,14 @@ describe('wound system (stacking + healing)', () => {
   });
 
   it('wounds heal over time, restoring HP and lowering pain to zero', () => {
-    // Resting (Sleeping) so wounds mend at full rate — an active pawn barely knits (heal gate).
+    // Tissue heal is weeks-slow now, so use a tiny wound — over a long rest it still fully clears and
+    // pain returns to 0 (the point of the test). Resting (Sleeping) → full-rate mend.
     let state = makeState([makePawn({ currentState: 'Sleeping' })], []);
-    state = combatService.applyInjury('p1', { ...crush(20), bodyPart: 'chest' }, state);
+    state = combatService.applyInjury('p1', { ...crush(1), bodyPart: 'chest' }, state);
     let pawn = state.pawns[0];
     expect(pawn.pain ?? 0).toBeGreaterThan(0);
     expect((pawn.injuries ?? []).length).toBe(1);
-    for (let i = 0; i < 8000 && (pawn.injuries?.length ?? 0) > 0; i++) pawn = healWounds(pawn);
+    for (let i = 0; i < 200000 && (pawn.injuries?.length ?? 0) > 0; i++) pawn = healWounds(pawn);
     expect(pawn.injuries ?? []).toHaveLength(0);
     expect(pawn.pain).toBe(0);
   });

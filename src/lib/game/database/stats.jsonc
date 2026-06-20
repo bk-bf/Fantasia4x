@@ -174,6 +174,13 @@
         "description": "blood recovery (× blood_filtration)"
     },
     {
+        "id"         : "blood_clotting",
+        "category"   : "physical",
+        "primaryStat": "constitution",
+        "formula"    : "(1.0 + (CON − 10) × 0.05) × blood_filtration",
+        "description": "clotting ability — scales the per-roll chance a bleeding wound stops on its own (a lucky natural clot rolled ~every 3 in-game hours; × blood_filtration). A wound needs as many successful clots as its severity (minor 1, serious 2, critical+ 3); each cuts the bleed proportionally. A higher-CON pawn is likelier to clot before bleeding out — but dressing the wound (caretaking) is the reliable stop. Mirrors heal_rate as the recovery-axis counterpart."
+    },
+    {
         "id": "hunger_rate",
         "category": "physical",
         "primaryStat": "constitution",

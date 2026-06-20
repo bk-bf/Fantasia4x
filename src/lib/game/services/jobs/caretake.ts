@@ -27,8 +27,7 @@ const OFF_SHELTER_TEND_MUL = 0.3;
 function needsTending(patient: Pawn, turn: number): boolean {
   if (patient.isAlive === false || !patient.position) return false;
   const resting =
-    patient.currentState === PAWN_STATE.SLEEPING ||
-    patient.currentState === PAWN_STATE.COLLAPSED;
+    patient.currentState === PAWN_STATE.SLEEPING || patient.currentState === PAWN_STATE.COLLAPSED;
   if (!resting) return false;
   return (patient.limbs ?? []).some((l) =>
     (l.parts ?? []).some((p) =>
@@ -52,10 +51,10 @@ function bestMedicine(gs: GameState): { id: string; quality: number } | null {
  *  adds its `treatmentBonus` (best surface to dress on, roof or not); a bare roofed tile is viable
  *  (×1); open ground is a heavy penalty (a field dressing barely helps). */
 function shelterTendFactor(gs: GameState, x: number, y: number): number {
-  const here = (gs.buildings ?? []).find(
-    (b) => b.x === x && b.y === y && b.status === 'complete'
-  );
-  const bonus = here ? (buildingService.getBuildingById(here.type)?.effects?.treatmentBonus ?? 0) : 0;
+  const here = (gs.buildings ?? []).find((b) => b.x === x && b.y === y && b.status === 'complete');
+  const bonus = here
+    ? (buildingService.getBuildingById(here.type)?.effects?.treatmentBonus ?? 0)
+    : 0;
   if (bonus > 0) return 1 + bonus; // on a bed / medical surface — viable regardless of roof
   if (isRoofedTile(x, y)) return 1; // under a roof — viable
   return OFF_SHELTER_TEND_MUL; // out in the open
@@ -88,19 +87,25 @@ export function tendPatient(patient: Pawn, medic: Pawn, gs: GameState): GameStat
   const newLimbs = limbs.map((limb) => {
     const parts = limb.parts;
     if (!parts || !parts.some((p) => p.injuries.length > 0)) return limb;
-    return {
-      ...limb,
-      parts: parts.map((part) =>
-        part.injuries.length === 0
-          ? part
-          : {
-              ...part,
-              injuries: part.injuries.map((w) =>
-                isTended(w, turn) ? w : { ...w, treatedAt: turn, treatmentQuality: quality }
-              )
-            }
-      )
-    };
+    const newParts = parts.map((part) =>
+      part.injuries.length === 0
+        ? part
+        : {
+            ...part,
+            injuries: part.injuries.map((w) =>
+              // Dressing a wound STOPS its bleeding immediately (the reliable answer vs the lucky clot
+              // roll) and stamps the tend for faster healing.
+              isTended(w, turn)
+                ? w
+                : { ...w, treatedAt: turn, treatmentQuality: quality, bleeding: 0 }
+            )
+          }
+    );
+    const bleedRate = newParts.reduce(
+      (s, p) => s + p.injuries.reduce((ps, x) => ps + x.bleeding, 0),
+      0
+    );
+    return { ...limb, parts: newParts, bleedRate };
   });
   let next: GameState = {
     ...gs,

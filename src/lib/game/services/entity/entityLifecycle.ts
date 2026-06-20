@@ -8,6 +8,7 @@ import { absorbDropIfOnStockpileTile } from '../../core/GameState';
 import { pawnStatService } from '../PawnStatService';
 import { simLog } from '../../core/logSink';
 import { healLimbsInPlace } from '../../systems/PawnStateMachine';
+import { rollWoundClotting, CLOT_ROLL_INTERVAL, BASE_CLOT_CHANCE } from '../../systems/Combat';
 import { entityName } from './entityHelpers';
 import {
   BASE_HUNGER_PER_SECOND,
@@ -17,9 +18,10 @@ import {
   CORPSE_DECAY_TICKS
 } from './entityConstants';
 
-/** Per-tick natural wound mend for creatures (no rest gate, no tending) — slow, so a serious wound
- *  takes in-game DAYS to close, but a beast that breaks off a fight recovers instead of bleeding out. */
-const MOB_WOUND_HEAL_PER_TICK = 0.02;
+/** Per-tick natural wound mend for creatures (no rest gate, no tending). Tuned so a beast recovers a
+ *  limb from ~half HP to full in ~1 in-game week — hardy wild healing, much faster per-HP than a pawn's
+ *  (a pawn's lingering wounds need care), but still days-to-weeks, not the old "heals off in a minute". */
+const MOB_WOUND_HEAL_PER_TICK = 0.00024;
 /** Run the mob wound-mend once every N ticks (applying N× the per-tick rate) instead of every tick.
  *  Healing 0.02/tick is "days to close" anyway, so a periodic pass is gameplay-equivalent, and it cuts
  *  the heal work (+ the cache-invalidating ref bump) ~N× across a large wounded-mob population. Paired
@@ -79,10 +81,19 @@ export function stepHunger(state: GameState): GameState {
       ? Math.max(0, mob.needs.fatigue - SLEEP_RECOVERY_PER_SECOND * SECONDS_PER_TICK)
       : Math.min(100, mob.needs.fatigue + fatigueDelta);
 
-    // ── Blood loss ──────────────────────────────────────────────────────────────────
-    // Read limbs by reference (never mutated here) — copying it each tick would needlessly churn the
-    // array AND break the limbs-identity capacity cache (PawnStatService) for every mob.
+    // ── Clotting ──────────────────────────────────────────────────────────────────
+    // Same lucky-roll model as pawns: ~every 3 in-game hours a bleeding wound rolls (vs blood_clotting)
+    // for a chance to clot a stage. Mutates the limb objects in place (M3 — no per-tick alloc).
     const limbs = mob.limbs;
+    if (limbs && turn % CLOT_ROLL_INTERVAL === 0) {
+      const clotChance = Math.min(
+        0.95,
+        Math.max(0, BASE_CLOT_CHANCE * pawnStatService.evaluateStat('blood_clotting', mob))
+      );
+      rollWoundClotting(limbs, clotChance, turn);
+    }
+
+    // ── Blood loss ──────────────────────────────────────────────────────────────────
     const totalBleedRate = (limbs ?? []).reduce((sum, l) => sum + (l.bleedRate ?? 0), 0);
     const maxBV = mob.maxBloodVolume ?? 100;
     let bloodVolume = mob.bloodVolume ?? maxBV;
@@ -174,7 +185,15 @@ export function stepHunger(state: GameState): GameState {
     // GC-thrashed TPS off a cliff (it had re-immutabled the de-immutabled M3 mob phase — ENGINE-PERF).
     // healLimbsInPlace mends the live limb objects (no deep alloc); the ref is only bumped (shallow
     // slice) when something actually healed, to invalidate the limbs-identity capacity cache.
-    if (limbs && turn % MOB_HEAL_INTERVAL === 0) {
+    // No mending while in combat — a fighting/threatened mob doesn't knit wounds (mirrors the pawn
+    // rule: healWounds is skipped while inMelee). Otherwise a tanky creature out-regenerates the chip
+    // damage of a drawn-out fight and is effectively unkillable (the "mammoth insta-heals" report).
+    const inCombat =
+      mob.state === 'Attacking' ||
+      mob.state === 'Alerted' ||
+      mob.state === 'Hunting' ||
+      mob.state === 'Fleeing';
+    if (limbs && !inCombat && turn % MOB_HEAL_INTERVAL === 0) {
       const healed = healLimbsInPlace(
         limbs,
         MOB_WOUND_HEAL_PER_TICK * MOB_HEAL_INTERVAL,

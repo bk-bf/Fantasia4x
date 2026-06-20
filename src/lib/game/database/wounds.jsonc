@@ -15,7 +15,11 @@
 //   fed, content pawn recovers far faster than a starving, miserable one.
 {
   "healing": {
-    "baseHealPerTick"   :  0.02,
+    // Tissue heal is SLOW (weeks): a −3/4 wound on a pawn resting on bare ground takes ~3 in-game
+    // weeks to fully close. The sleeping/shelter/well-fed/good-mood multipliers and a caretaker's
+    // dressing (treatedHealMultiplier) stack on top, so attentive care cuts that to a few days — but
+    // a neglected wound lingers for weeks. (Bleeding is decoupled — it clots over hours, see Combat.)
+    "baseHealPerTick"   :  0.0000035,
     "sleepingMultiplier":  2.5 ,
     "wellFedHunger"     : 40   ,
     "wellFedMultiplier" :  1.4 ,

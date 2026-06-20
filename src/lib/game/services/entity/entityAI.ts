@@ -495,13 +495,22 @@ export function stepHostile(
       return wanderStep(mob, def, state);
     }
     case 'Alerted': {
+      // Engage if ANY live, non-collapsed pawn is adjacent — not just the Manhattan-`nearest`.
+      // nearestPawn ranks by Manhattan distance while adjacency is Chebyshev, so a DIAGONALLY-adjacent
+      // target was passed over while the mob chased a non-adjacent "nearest", got body-blocked in the
+      // scrum, and froze in Alerted right beside a pawn it never attacked (the #3065 freeze). Mirror the
+      // combat tick's target filter (skip Collapsed — a downed pawn isn't finished off). The FSM only
+      // holds state; combatService owns damage + the one-per-engagement Chronicle line.
+      const adjPawn = state.pawns.some(
+        (p) =>
+          p.isAlive !== false &&
+          p.currentState !== 'Collapsed' &&
+          p.position &&
+          adjacent(mob, p.position)
+      );
+      if (adjPawn) return { ...mob, state: 'Attacking', stateSince: turn };
       if (!nearest || dist(mob, nearest.pos) > visionRange * 1.5) {
         return { ...mob, state: 'Wander', stateSince: turn };
-      }
-      if (adjacent(mob, nearest.pos)) {
-        // Engagement logging is owned by combatService (one Chronicle entry per
-        // engagement, opened on the first resolved swing) — the FSM only holds state.
-        return { ...mob, state: 'Attacking', stateSince: turn };
       }
       return moveToward(mob, nearest.pos, state);
     }

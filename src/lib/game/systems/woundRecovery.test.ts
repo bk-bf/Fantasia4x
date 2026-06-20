@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { combatService } from './Combat';
 import { healWounds, healLimbs } from './PawnStateMachine';
+import { rollWoundClotting } from './Combat';
 import { needsRecovery } from './pawn/pawnHelpers';
 import { selectIdleNeed } from './pawn/needSelection';
 import {
@@ -214,6 +215,66 @@ describe('wound recovery & bleeding', () => {
     expect(bleedAfter).toBeLessThan(bleedBefore + 1e-9); // bleed tapered, never grew
   });
 
+  it('a mob does NOT heal its wounds while in combat (no mid-fight insta-regen)', () => {
+    const mob = { ...makeMob(getCreatureById('wolf')!, 5, 5, 0), state: 'Attacking' as const };
+    let gs = state([], { mobs: [mob] });
+    gs = combatService.applyInjuryToMob(mob.id, { ...cut(20), bodyPart: 'chest' }, gs);
+    const before = woundDamage(gs.mobs![0] as unknown as Pawn, 'chest');
+    for (let i = 0; i < 300; i++) {
+      gs = { ...gs, turn: i };
+      gs = stepHunger(gs);
+    }
+    // Attacking → the heal pass is skipped, so the chip wound persists (an out-regenerating tanky
+    // creature was the "mammoth insta-heals" stalemate).
+    expect(woundDamage(gs.mobs![0] as unknown as Pawn, 'chest')).toBe(before);
+  });
+
+  const totalBleed = (p: Pawn): number =>
+    (p.limbs ?? []).reduce((s, l) => s + (l.bleedRate ?? 0), 0);
+
+  it('a successful clot roll stops a minor wound (1 stage); a serious wound needs 2', () => {
+    // Minor wound → 1 clot stage fully stops the bleed.
+    const minor = combatService.applyInjury(
+      'p1',
+      { ...cut(5), bodyPart: 'leftHand' },
+      state([makePawn()])
+    ).pawns[0];
+    expect(totalBleed(minor)).toBeGreaterThan(0);
+    rollWoundClotting(minor.limbs!, 1.0, 1); // forced success
+    expect(totalBleed(minor)).toBe(0);
+
+    // Serious wound → first stage only halves the bleed; it takes a second to fully clot.
+    const serious = combatService.applyInjury(
+      'p1',
+      { ...cut(50), bodyPart: 'chest' },
+      state([makePawn()])
+    ).pawns[0];
+    const full = totalBleed(serious);
+    rollWoundClotting(serious.limbs!, 1.0, 1);
+    const half = totalBleed(serious);
+    expect(half).toBeGreaterThan(0);
+    expect(half).toBeLessThan(full);
+    rollWoundClotting(serious.limbs!, 1.0, 2);
+    expect(totalBleed(serious)).toBe(0);
+  });
+
+  it('dressing a wound stops its bleeding immediately', () => {
+    const patient = makePawn();
+    let gs = combatService.applyInjury(
+      'p1',
+      { ...cut(40), bodyPart: 'chest' },
+      state([patient], {
+        buildings: [
+          { id: 'b', type: 'hay_bed', x: 5, y: 5, status: 'complete', progress: 1 }
+        ] as never
+      })
+    );
+    expect(totalBleed(gs.pawns[0])).toBeGreaterThan(0);
+    rng.reseed(1);
+    gs = tendPatient(gs.pawns[0], gs.pawns[0], gs);
+    expect(totalBleed(gs.pawns[0])).toBe(0); // dressing is the reliable stop
+  });
+
   it('a fully-healed part drops out of the body model (UI auto-hide)', () => {
     let pawn = combatService.applyInjury(
       'p1',
@@ -221,8 +282,9 @@ describe('wound recovery & bleeding', () => {
       state([makePawn()])
     ).pawns[0];
     expect(buildHealthModel(pawn).limbs.length).toBeGreaterThan(0);
-    for (let i = 0; i < 4000 && (pawn.injuries?.length ?? 0) > 0; i++) pawn = healWounds(pawn);
-    // healed to full → snapped to maxHp → the torso limb no longer shows.
+    // Drive the wound to full closure directly (tissue heal is weeks-slow now; this isolates the
+    // snap-to-full + auto-hide logic from the balance rate). Big baseHeal → wound cleared, part snaps to max.
+    pawn = { ...pawn, limbs: healLimbs(pawn.limbs!, 50, 1, false) };
     expect(
       buildHealthModel(pawn).limbs.find((l) => l.label.toLowerCase().includes('torso'))
     ).toBeUndefined();

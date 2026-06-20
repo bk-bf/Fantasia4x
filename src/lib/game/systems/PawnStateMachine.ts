@@ -23,7 +23,13 @@ import type {
   DroppedItem,
   DeadPawnRecord
 } from '../core/types';
-import { recomputeWound, recomputeWoundInPlace } from './Combat';
+import {
+  recomputeWound,
+  recomputeWoundInPlace,
+  rollWoundClotting,
+  CLOT_ROLL_INTERVAL,
+  BASE_CLOT_CHANCE
+} from './Combat';
 import { HEALING_CONFIG, CARE_CONFIG, woundById, isTended } from '../core/Wounds';
 import conditionsData from '../database/conditions.jsonc';
 import { itemService } from '../services/ItemService';
@@ -430,6 +436,18 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
     const cap = itemService.getCarryCapacityBreakdown(pawn).weight.total;
     const load = itemService.getCurrentCarryLoad(pawn, gameState).weightKg;
     driveEncumbrance(conditions, cap > 0 ? load / cap : 0);
+  }
+
+  // ── Clotting ────────────────────────────────────────────────────────────────
+  // ~Every 3 in-game hours, each bleeding/untended wound rolls (against blood_clotting) for a chance
+  // to advance a clot stage — a lucky natural stop that occasionally saves a pawn before it bleeds out,
+  // but sparse/uncertain enough that wound care stays the reliable answer. Mutates limbs in place.
+  if (gameState.turn % CLOT_ROLL_INTERVAL === 0 && limbs.length > 0) {
+    const clotChance = Math.min(
+      0.95,
+      Math.max(0, BASE_CLOT_CHANCE * pawnStatService.evaluateStat('blood_clotting', pawn))
+    );
+    rollWoundClotting(limbs, clotChance, gameState.turn);
   }
 
   // ── Blood Loss ────────────────────────────────────────────────────────────

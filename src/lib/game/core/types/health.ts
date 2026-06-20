@@ -150,6 +150,11 @@ export interface Injury {
   inflictedAt?: number;
   /** Quality 0–1 of the most recent tend; scales heal speed, treatment duration, infection resistance. */
   treatmentQuality?: number;
+  /** Number of successful CLOT rolls so far. A bleeding wound stops only once this reaches the stages
+   *  its severity needs (minor 1 / serious 2 / critical+ 3); each stage cuts the bleed proportionally.
+   *  Rolled ~every 3 in-game hours against `blood_clotting` — a lucky natural stop. Dressing (treatedAt)
+   *  short-circuits this to 0 bleed immediately. See Combat.rollWoundClotting / recomputeWound. */
+  clotProgress?: number;
 }
 
 /** State of a single fine body part (organ, bone, sub-limb). */

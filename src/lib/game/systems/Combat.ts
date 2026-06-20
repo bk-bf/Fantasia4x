@@ -52,9 +52,28 @@ const TRANSIENT_CONDITIONS_DB = (
 ).filter((d): d is TransientConditionDef => d.duration === 'transient');
 
 // ── Tuning constants ─────────────────────────────────────────────────────────
-/** Scales per-part bleed (bleeding = bleedRatio × this × bleedMod × wound-frac, per second). Raised so
- *  an open wound visibly drains blood and forces a treat-or-collapse decision rather than a token trickle. */
-const BLEED_CONSTANT = 52;
+/** Scales per-part bleed (bleeding = bleedRatio × this × bleedMod × wound-frac × clot-remaining, per
+ *  second). Tuned so a SERIOUS wound bleeds out over several in-game HOURS — long enough that the
+ *  periodic clot rolls + a caretaker dressing are a real race, not an instant death. */
+const BLEED_CONSTANT = 20;
+/** How many successful clot rolls a wound needs before it fully stops bleeding, by severity. Each stage
+ *  cuts the bleed proportionally (serious at 1/2 clots → half bleed). */
+function clotsNeeded(severity: Injury['severity']): number {
+  return severity === 'minor' ? 1 : severity === 'serious' ? 2 : 3; // critical / destroyed → 3
+}
+/** Fraction of the base bleed still flowing given clot progress: 1.0 fresh → 0 once fully clotted OR
+ *  dressed. A DRESSED wound (treatedAt set) stops bleeding immediately — caretaking is the reliable stop. */
+function clotRemaining(w: Pick<Injury, 'severity' | 'clotProgress' | 'treatedAt'>): number {
+  if (w.treatedAt != null) return 0;
+  const need = clotsNeeded(w.severity);
+  return Math.max(0, (need - (w.clotProgress ?? 0)) / need);
+}
+/** Ticks between clot rolls (~3 in-game hours: TURNS_PER_DAY 300 / 24 × 3 × 60 tps = 2250). Deliberately
+ *  sparse so a wound doesn't clot the instant it's made — bleeding stays a treat-or-die threat that only
+ *  OCCASIONALLY resolves itself, leaving room for a caretaker to make it (or not). */
+export const CLOT_ROLL_INTERVAL = 2250;
+/** Base per-roll clot chance at `blood_clotting` 1.0 (CON 10); the stat scales it. */
+export const BASE_CLOT_CHANCE = 0.4;
 /** Stats are on a ~5–22 scale; this divisor keeps damage in a sensible range. */
 const STAT_SCALE = 10;
 /** How strongly a creature's `bodyScale` boosts its natural-weapon damage (softened, see attackerProfile):
@@ -157,20 +176,30 @@ export function recomputeWound(
   bodyPart: BodyPartId,
   type: Injury['type'],
   accumDamage: number,
-  prev?: Pick<Injury, 'infected' | 'treatedAt' | 'treatmentQuality' | 'inflictedAt'>,
+  prev?: Pick<
+    Injury,
+    'infected' | 'treatedAt' | 'treatmentQuality' | 'inflictedAt' | 'clotProgress'
+  >,
   turn?: number
 ): Injury {
   const partDef = PART_DEF_MAP[bodyPart];
   const wd = woundById(type);
   const maxHp = partDef?.maxHp ?? 1;
   const frac = maxHp > 0 ? Math.min(accumDamage / maxHp, 1) : 0;
+  const severity = severityFromFrac(frac);
+  const clotProgress = prev?.clotProgress ?? 0;
+  // Bleed = base × clot-remaining: a fresh wound bleeds full, then tapers as it clots (rolled
+  // separately) and stops once dressed or fully clotted — decoupled from the (now weeks-slow) tissue heal.
+  const remaining = clotRemaining({ severity, clotProgress, treatedAt: prev?.treatedAt });
   return {
     bodyPart,
     type,
-    severity: severityFromFrac(frac),
+    severity,
     damage: accumDamage,
     bleeding: partDef
-      ? Math.round(partDef.bleedRatio * BLEED_CONSTANT * (wd?.bleedMod ?? 0) * frac * 100) / 100
+      ? Math.round(
+          partDef.bleedRatio * BLEED_CONSTANT * (wd?.bleedMod ?? 0) * frac * remaining * 100
+        ) / 100
       : 0,
     painContribution:
       Math.round(accumDamage * (wd?.painPerDamage ?? 0.5) * (partDef?.isVital ? 2 : 1) * 10) / 10,
@@ -179,6 +208,7 @@ export function recomputeWound(
     // heal tick (treatmentQuality lost) and stalls (severity rule), undoing the medic's work.
     treatedAt: prev?.treatedAt,
     treatmentQuality: prev?.treatmentQuality,
+    clotProgress,
     // Age clock for the infection incubation gate: keep the original time as same-type hits stack.
     inflictedAt: prev?.inflictedAt ?? turn
   };
@@ -199,12 +229,49 @@ export function recomputeWoundInPlace(w: Injury, accumDamage: number, turn?: num
   const frac = maxHp > 0 ? Math.min(accumDamage / maxHp, 1) : 0;
   w.severity = severityFromFrac(frac);
   w.damage = accumDamage;
+  const remaining = clotRemaining(w);
   w.bleeding = partDef
-    ? Math.round(partDef.bleedRatio * BLEED_CONSTANT * (wd?.bleedMod ?? 0) * frac * 100) / 100
+    ? Math.round(
+        partDef.bleedRatio * BLEED_CONSTANT * (wd?.bleedMod ?? 0) * frac * remaining * 100
+      ) / 100
     : 0;
   w.painContribution =
     Math.round(accumDamage * (wd?.painPerDamage ?? 0.5) * (partDef?.isVital ? 2 : 1) * 10) / 10;
   if (w.inflictedAt == null) w.inflictedAt = turn;
+}
+
+/**
+ * Roll clotting for every bleeding, untended wound on an entity — called ~every CLOT_ROLL_INTERVAL
+ * ticks (~3 in-game hours) from the pawn/mob tick. Each such wound gets ONE chance at `clotChance` to
+ * advance a clot stage; a wound needs `clotsNeeded(severity)` stages to fully stop (each stage cuts the
+ * bleed proportionally). This is the "lucky natural stop" — sparse and uncertain, so a wounded entity
+ * still mostly needs a caretaker's dressing before it bleeds out. Mutates limbs in place; returns true
+ * if any wound's bleed changed (so the caller can recompute the limb bleedRate + refresh the ref).
+ */
+export function rollWoundClotting(limbs: LimbState[], clotChance: number, turn: number): boolean {
+  let changed = false;
+  for (const limb of limbs) {
+    let limbChanged = false;
+    for (const part of limb.parts ?? []) {
+      for (const w of part.injuries) {
+        if (w.bleeding <= 0 || w.treatedAt != null) continue; // already dry or dressed
+        if ((w.clotProgress ?? 0) >= clotsNeeded(w.severity)) continue; // fully clotted
+        if (rng.random() < clotChance) {
+          w.clotProgress = (w.clotProgress ?? 0) + 1;
+          recomputeWoundInPlace(w, w.damage, turn); // re-derive bleed from the new clot stage
+          limbChanged = true;
+        }
+      }
+    }
+    if (limbChanged) {
+      limb.bleedRate = (limb.parts ?? []).reduce(
+        (s, p) => s + p.injuries.reduce((ps, x) => ps + x.bleeding, 0),
+        0
+      );
+      changed = true;
+    }
+  }
+  return changed;
 }
 
 interface AttackProfile {
@@ -301,6 +368,17 @@ const SHIELD_DODGE_MULT = 1.25;
 // "accurate vs. brutish weapon" axis barely moved hit chance. ×2 makes it bite without re-touching every
 // weapon. Ranged uses `hitMod` (rangedAccuracyMod), not this term, so launchers are unaffected.
 const MELEE_ACCURACY_WEIGHT = 2;
+/**
+ * Melee hit chance = BASE + DEX edge − dodge edge (+ weapon accuracy / hitMod), × condition. The old
+ * formula had NO base term (`DEX×3 − dodge×20`), so at parity (DEX 10 vs dodge 1.0) it gave just ~10%
+ * — melee was a ~80%-whiff slog where no fight ever resolved (confirmed in the combat chronicle). These
+ * recentre it on a sane baseline: ~60% at parity, with DEX and dodge as meaningful ± edges around it.
+ */
+const BASE_MELEE_HIT = 60;
+/** Hit-chance points per point of attacker DEX above 10 (a deft fighter lands more). */
+const DEX_HIT_WEIGHT = 2;
+/** Hit-chance points removed per +1.0 of defender `dodge` above the 1.0 baseline (a nimble target evades). */
+const DODGE_HIT_WEIGHT = 50;
 /** Default projectile particle style per ammo bucket when the ammo item doesn't author its own. */
 const PROJECTILE_BY_CATEGORY: Record<string, string> = {
   arrow: 'arrow',
@@ -526,13 +604,17 @@ class CombatServiceImpl implements CombatService {
       this.conditionDodgeMult(defender) * // injuries, winded, AND encumbrance (heavy load = easier to hit)
       (getGrip(defender) === 'shield' ? SHIELD_DODGE_MULT : 1); // BB: a shield raises evasion, not a block
 
-    // The attacker's encumbrance spoils their aim too (encumbered → hitChance modifier < 1).
-    const hitChance = clamp(
-      (dex * 3 + accuracy * MELEE_ACCURACY_WEIGHT + (override?.hitMod ?? 0) - defDodge * 20) *
-        this.conditionHitMult(attacker),
-      5,
-      95
-    );
+    // MELEE gets the sane base (BASE_MELEE_HIT ± DEX/dodge edges). RANGED keeps its OWN calibrated
+    // curve — its `hitMod` IS rangedAccuracyMod (aim_accuracy + distance + cover), layered on the
+    // original DEX/dodge terms; don't double-buff it with the melee base. The attacker's encumbrance
+    // spoils aim either way (conditionHitMult < 1 when encumbered/winded).
+    const toHit = override
+      ? dex * 3 + accuracy * MELEE_ACCURACY_WEIGHT + (override.hitMod ?? 0) - defDodge * 20
+      : BASE_MELEE_HIT +
+        (dex - 10) * DEX_HIT_WEIGHT +
+        accuracy * MELEE_ACCURACY_WEIGHT -
+        (defDodge - 1.0) * DODGE_HIT_WEIGHT;
+    const hitChance = clamp(toHit * this.conditionHitMult(attacker), 5, 95);
     if (rng.random() * 100 > hitChance) {
       return {
         hit: false,
