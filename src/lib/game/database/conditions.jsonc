@@ -26,13 +26,25 @@
                 "label"      : "encumbered",
                 "minSeverity": 0.33,
                 "color"      : "#D08040",
-                "modifiers"  : {"dexterity": 0.7, "strength": 0.9, "moveSpeed": 0.85, "workEfficiency": 0.85, "fatigueRate": 1.3}
+                "modifiers"  : {
+                    "dexterity"     : 0.7 ,
+                    "strength"      : 0.9 ,
+                    "moveSpeed"     : 0.85,
+                    "workEfficiency": 0.85,
+                    "fatigueRate"   : 1.3
+                }
             },
             {
                 "label"      : "overloaded",
                 "minSeverity": 0.83,
                 "color"      : "#C04030",
-                "modifiers"  : {"dexterity": 0.45, "strength": 0.75, "moveSpeed": 0.6, "workEfficiency": 0.6, "fatigueRate": 1.6}
+                "modifiers"  : {
+                    "dexterity"     : 0.45,
+                    "strength"      : 0.75,
+                    "moveSpeed"     : 0.6 ,
+                    "workEfficiency": 0.6 ,
+                    "fatigueRate"   : 1.6
+                }
             }
         ]
     },
@@ -61,21 +73,39 @@
                 "label"      : "parched",
                 "minSeverity": 0.25,
                 "color"      : "#29B6F6",
-                "modifiers"  : {"strength": 0.75, "dexterity": 0.85, "constitution": 0.85, "workEfficiency": 0.65, "fatigueRate": 1.3}
+                "modifiers"  : {
+                    "strength"      : 0.75,
+                    "dexterity"     : 0.85,
+                    "constitution"  : 0.85,
+                    "workEfficiency": 0.65,
+                    "fatigueRate"   : 1.3
+                }
             },
             {
                 "label"          : "failing",
                 "minSeverity"    : 0.5,
                 "color"          : "#0288D1",
                 "lifeThreatening": true,
-                "modifiers"      : {"strength": 0.5, "dexterity": 0.6, "constitution": 0.6, "workEfficiency": 0.4, "fatigueRate": 1.5}
+                "modifiers"      : {
+                    "strength"      : 0.5,
+                    "dexterity"     : 0.6,
+                    "constitution"  : 0.6,
+                    "workEfficiency": 0.4,
+                    "fatigueRate"   : 1.5
+                }
             },
             {
                 "label"          : "collapsing",
                 "minSeverity"    : 0.8,
                 "color"          : "#01579B",
                 "lifeThreatening": true,
-                "modifiers"      : {"strength": 0.25, "dexterity": 0.3, "constitution": 0.4, "workEfficiency": 0.1, "fatigueRate": 1.8}
+                "modifiers"      : {
+                    "strength"      : 0.25,
+                    "dexterity"     : 0.3 ,
+                    "constitution"  : 0.4 ,
+                    "workEfficiency": 0.1 ,
+                    "fatigueRate"   : 1.8
+                }
             }
         ]
     },
@@ -111,27 +141,51 @@
                 "label"      : "moderate",
                 "minSeverity": 0.35,
                 "color"      : "#e65100",
-                "modifiers"  : {"strength": 0.65, "constitution": 0.8, "dexterity": 0.9, "workEfficiency": 0.6, "hungerRate": 1.2}
+                "modifiers"  : {
+                    "strength"      : 0.65,
+                    "constitution"  : 0.8 ,
+                    "dexterity"     : 0.9 ,
+                    "workEfficiency": 0.6 ,
+                    "hungerRate"    : 1.2
+                }
             },
             {
                 "label"      : "serious",
                 "minSeverity": 0.5,
                 "color"      : "#bf360c",
-                "modifiers"  : {"strength": 0.5, "constitution": 0.7, "dexterity": 0.8, "workEfficiency": 0.5, "hungerRate": 1.3}
+                "modifiers"  : {
+                    "strength"      : 0.5,
+                    "constitution"  : 0.7,
+                    "dexterity"     : 0.8,
+                    "workEfficiency": 0.5,
+                    "hungerRate"    : 1.3
+                }
             },
             {
                 "label"          : "severe",
                 "minSeverity"    : 0.65,
                 "color"          : "#b71c1c",
                 "lifeThreatening": true,
-                "modifiers"      : {"strength": 0.35, "constitution": 0.55, "dexterity": 0.6, "workEfficiency": 0.35, "hungerRate": 1.4}
+                "modifiers"      : {
+                    "strength"      : 0.35,
+                    "constitution"  : 0.55,
+                    "dexterity"     : 0.6 ,
+                    "workEfficiency": 0.35,
+                    "hungerRate"    : 1.4
+                }
             },
             {
                 "label"          : "extreme",
                 "minSeverity"    : 0.8,
                 "color"          : "#c62828",
                 "lifeThreatening": true,
-                "modifiers"      : {"strength": 0.2, "constitution": 0.4, "dexterity": 0.4, "workEfficiency": 0.2, "hungerRate": 1.5}
+                "modifiers"      : {
+                    "strength"      : 0.2,
+                    "constitution"  : 0.4,
+                    "dexterity"     : 0.4,
+                    "workEfficiency": 0.2,
+                    "hungerRate"    : 1.5
+                }
             },
             {
                 "label"          : "fatal",
@@ -143,18 +197,18 @@
         ]
     },
     {
-        "id"            : "infection",
-        "name"          : "Infection",
-        "charSpans"     : [ {"sheet": "font", "id": 21} ],
-        "description"   : "A wound has gone septic — fever wracks the body, draining its strength and clouding the mind. Untreated, it spreads and kills.",
+        "id": "infection",
+        "name": "Infection",
+        "charSpans": [ {"sheet": "font", "id": 21} ],
+        "description": "A wound has gone septic — fever wracks the body, draining its strength and clouding the mind. Untreated, it spreads and kills.",
         "lethalSeverity": 1.0,
-        "floater"       : true,
-        "stages"        : [
+        "floater": true,
+        "stages": [
             {
-                "label": "mild",
+                "label"      : "mild",
                 "minSeverity": 0.0,
-                "color": "#f9a825",
-                "modifiers": {"constitution": 0.9, "workEfficiency": 0.85}
+                "color"      : "#f9a825",
+                "modifiers"  : {"constitution": 0.9, "workEfficiency": 0.85}
             },
             {
                 "label"      : "moderate",
@@ -166,57 +220,105 @@
                 "label"      : "serious",
                 "minSeverity": 0.5,
                 "color"      : "#e65100",
-                "modifiers"  : {"constitution": 0.6, "strength": 0.65, "dexterity": 0.75, "intelligence": 0.8, "workEfficiency": 0.5, "moveSpeed": 0.8, "hungerRate": 1.25}
+                "modifiers"  : {
+                    "constitution"  : 0.6 ,
+                    "strength"      : 0.65,
+                    "dexterity"     : 0.75,
+                    "intelligence"  : 0.8 ,
+                    "workEfficiency": 0.5 ,
+                    "moveSpeed"     : 0.8 ,
+                    "hungerRate"    : 1.25
+                }
             },
             {
                 "label"          : "severe",
                 "minSeverity"    : 0.75,
                 "color"          : "#bf360c",
                 "lifeThreatening": true,
-                "modifiers"      : {"constitution": 0.4, "strength": 0.45, "dexterity": 0.5, "intelligence": 0.6, "workEfficiency": 0.25, "moveSpeed": 0.5, "hungerRate": 1.5}
+                "modifiers"      : {
+                    "constitution"  : 0.4 ,
+                    "strength"      : 0.45,
+                    "dexterity"     : 0.5 ,
+                    "intelligence"  : 0.6 ,
+                    "workEfficiency": 0.25,
+                    "moveSpeed"     : 0.5 ,
+                    "hungerRate"    : 1.5
+                }
             },
             {
                 "label"          : "fatal",
                 "minSeverity"    : 0.9,
                 "color"          : "#ff1744",
                 "lifeThreatening": true,
-                "modifiers"      : {"constitution": 0.2, "strength": 0.2, "dexterity": 0.2, "workEfficiency": 0.0, "moveSpeed": 0.0}
+                "modifiers"      : {
+                    "constitution"  : 0.2,
+                    "strength"      : 0.2,
+                    "dexterity"     : 0.2,
+                    "workEfficiency": 0.0,
+                    "moveSpeed"     : 0.0
+                }
             }
         ]
     },
     {
-        "id"            : "shock",
-        "name"          : "Shock",
-        "charSpans"     : [ {"sheet": "font", "id": 19} ],
-        "description"   : "Severe pain OR heavy blood loss has sent the body into shock — the single low-blood/high-pain crisis (the old blood-loss track folds into this). The fighter goes cold, clumsy and blind: strength, dexterity and perception crash, so they barely hit, barely dodge and barely hurt anything.",
+        "id": "shock",
+        "name": "Shock",
+        "charSpans": [ {"sheet": "font", "id": 19} ],
+        "description": "Severe pain OR heavy blood loss has sent the body into shock — the single low-blood/high-pain crisis. The fighter goes cold, clumsy and blind: strength, dexterity and perception crash, so they barely hit, barely dodge and barely hurt anything.",
         "lethalSeverity": 1.0,
-        "floater"       : true,
-        "stages"        : [
+        "floater": true,
+        "stages": [
             {
                 "label"      : "mild",
                 "minSeverity": 0.0,
                 "color"      : "#b0bec5",
-                "modifiers"  : {"strength": 0.8, "dexterity": 0.8, "perception": 0.85, "workEfficiency": 0.8, "moveSpeed": 0.85}
+                "modifiers"  : {
+                    "strength"      : 0.8 ,
+                    "dexterity"     : 0.8 ,
+                    "perception"    : 0.85,
+                    "workEfficiency": 0.8 ,
+                    "moveSpeed"     : 0.85
+                }
             },
             {
                 "label"      : "moderate",
                 "minSeverity": 0.3,
                 "color"      : "#90a4ae",
-                "modifiers"  : {"strength": 0.55, "dexterity": 0.5, "perception": 0.6, "workEfficiency": 0.5, "moveSpeed": 0.65}
+                "modifiers"  : {
+                    "strength"      : 0.55,
+                    "dexterity"     : 0.5 ,
+                    "perception"    : 0.6 ,
+                    "workEfficiency": 0.5 ,
+                    "moveSpeed"     : 0.65
+                }
             },
             {
                 "label"          : "severe",
                 "minSeverity"    : 0.6,
                 "color"          : "#607d8b",
                 "lifeThreatening": true,
-                "modifiers"      : {"strength": 0.3, "dexterity": 0.25, "perception": 0.35, "constitution": 0.6, "workEfficiency": 0.2, "moveSpeed": 0.35}
+                "modifiers"      : {
+                    "strength"      : 0.3 ,
+                    "dexterity"     : 0.25,
+                    "perception"    : 0.35,
+                    "constitution"  : 0.6 ,
+                    "workEfficiency": 0.2 ,
+                    "moveSpeed"     : 0.35
+                }
             },
             {
                 "label"          : "critical",
                 "minSeverity"    : 0.85,
                 "color"          : "#455a64",
                 "lifeThreatening": true,
-                "modifiers"      : {"strength": 0.15, "dexterity": 0.1, "perception": 0.2, "constitution": 0.4, "workEfficiency": 0.0, "moveSpeed": 0.0}
+                "modifiers"      : {
+                    "strength"      : 0.15,
+                    "dexterity"     : 0.1 ,
+                    "perception"    : 0.2 ,
+                    "constitution"  : 0.4 ,
+                    "workEfficiency": 0.0 ,
+                    "moveSpeed"     : 0.0
+                }
             }
         ]
     },
@@ -246,21 +348,41 @@
                 "label"      : "chilled",
                 "minSeverity": 0.25,
                 "color"      : "#4FC3F7",
-                "modifiers"  : {"dexterity": 0.6, "strength": 0.8, "workEfficiency": 0.7, "moveSpeed": 0.8, "fatigueRate": 1.3}
+                "modifiers"  : {
+                    "dexterity"     : 0.6,
+                    "strength"      : 0.8,
+                    "workEfficiency": 0.7,
+                    "moveSpeed"     : 0.8,
+                    "fatigueRate"   : 1.3
+                }
             },
             {
                 "label"          : "frostbitten",
                 "minSeverity"    : 0.5,
                 "color"          : "#29B6F6",
                 "lifeThreatening": true,
-                "modifiers"      : {"dexterity": 0.35, "strength": 0.6, "constitution": 0.8, "workEfficiency": 0.45, "moveSpeed": 0.55, "fatigueRate": 1.5}
+                "modifiers"      : {
+                    "dexterity"     : 0.35,
+                    "strength"      : 0.6 ,
+                    "constitution"  : 0.8 ,
+                    "workEfficiency": 0.45,
+                    "moveSpeed"     : 0.55,
+                    "fatigueRate"   : 1.5
+                }
             },
             {
                 "label"          : "freezing",
                 "minSeverity"    : 0.8,
                 "color"          : "#0277BD",
                 "lifeThreatening": true,
-                "modifiers"      : {"dexterity": 0.2, "strength": 0.4, "constitution": 0.6, "workEfficiency": 0.2, "moveSpeed": 0.3, "fatigueRate": 1.7}
+                "modifiers"      : {
+                    "dexterity"     : 0.2,
+                    "strength"      : 0.4,
+                    "constitution"  : 0.6,
+                    "workEfficiency": 0.2,
+                    "moveSpeed"     : 0.3,
+                    "fatigueRate"   : 1.7
+                }
             }
         ]
     },
@@ -281,30 +403,50 @@
         },
         "stages": [
             {
-                "label": "overheating",
+                "label"      : "overheating",
                 "minSeverity": 0.0,
-                "color": "#FFCC80",
-                "modifiers": {"strength": 0.9, "workEfficiency": 0.85}
+                "color"      : "#FFCC80",
+                "modifiers"  : {"strength": 0.9, "workEfficiency": 0.85}
             },
             {
                 "label"      : "heat exhaustion",
                 "minSeverity": 0.3,
                 "color"      : "#FFA726",
-                "modifiers"  : {"strength": 0.7, "dexterity": 0.85, "constitution": 0.85, "workEfficiency": 0.65, "moveSpeed": 0.8, "hungerRate": 1.2}
+                "modifiers"  : {
+                    "strength"      : 0.7 ,
+                    "dexterity"     : 0.85,
+                    "constitution"  : 0.85,
+                    "workEfficiency": 0.65,
+                    "moveSpeed"     : 0.8 ,
+                    "hungerRate"    : 1.2
+                }
             },
             {
                 "label"          : "heat stroke",
                 "minSeverity"    : 0.6,
                 "color"          : "#FB8C00",
                 "lifeThreatening": true,
-                "modifiers"      : {"strength": 0.45, "dexterity": 0.55, "constitution": 0.6, "workEfficiency": 0.4, "moveSpeed": 0.55, "hungerRate": 1.3}
+                "modifiers"      : {
+                    "strength"      : 0.45,
+                    "dexterity"     : 0.55,
+                    "constitution"  : 0.6 ,
+                    "workEfficiency": 0.4 ,
+                    "moveSpeed"     : 0.55,
+                    "hungerRate"    : 1.3
+                }
             },
             {
                 "label"          : "collapse",
                 "minSeverity"    : 0.85,
                 "color"          : "#E65100",
                 "lifeThreatening": true,
-                "modifiers"      : {"strength": 0.25, "dexterity": 0.3, "constitution": 0.4, "workEfficiency": 0.15, "moveSpeed": 0.3}
+                "modifiers"      : {
+                    "strength"      : 0.25,
+                    "dexterity"     : 0.3 ,
+                    "constitution"  : 0.4 ,
+                    "workEfficiency": 0.15,
+                    "moveSpeed"     : 0.3
+                }
             }
         ]
     },
@@ -314,24 +456,24 @@
     // they appear/clear on their own when their cause does. `transient: true` is the bool discriminant
     // vs the persistent conditions above (which omit it). modifiers are multipliers.
     {
-        "id"         : "knockdown",
-        "name"       : "Knocked Down",
-        "transient"  : true,
+        "id": "knockdown",
+        "name": "Knocked Down",
+        "transient": true,
         "description": "Prone from a heavy blunt blow — sprawled and helpless. Loses the next attack and is wide open to anyone standing over it; recovers after a couple of turns.",
-        "color"      : "#ff5722",
-        "floater"    : true,
-        "charSpans"  : [ {"sheet": "font", "id": 15} ],
-        "modifiers"  : {"dexterity": 0.2, "strength": 0.5, "moveSpeed": 0.0, "workEfficiency": 0.0}
+        "color": "#ff5722",
+        "floater": true,
+        "charSpans": [ {"sheet": "font", "id": 15} ],
+        "modifiers": {"dexterity": 0.2, "strength": 0.5, "moveSpeed": 0.0, "workEfficiency": 0.0}
     },
     {
-        "id"         : "collapse",
-        "name"       : "Collapsed",
-        "transient"  : true,
+        "id": "collapse",
+        "name": "Collapsed",
+        "transient": true,
         "description": "Overwhelmed by pain — incapacitated and out of the fight, a body on the ground. Recovers only as the pain subsides.",
-        "color"      : "#b71c1c",
-        "floater"    : true,
-        "charSpans"  : [ {"sheet": "font", "id": 19} ],
-        "modifiers"  : {"dexterity": 0.1, "strength": 0.3, "moveSpeed": 0.0, "workEfficiency": 0.0}
+        "color": "#b71c1c",
+        "floater": true,
+        "charSpans": [ {"sheet": "font", "id": 19} ],
+        "modifiers": {"dexterity": 0.1, "strength": 0.3, "moveSpeed": 0.0, "workEfficiency": 0.0}
     },
     {
         "id"         : "eating",
@@ -352,14 +494,14 @@
         "modifiers"  : {"hungerRate": 0.33, "fatigueRate": 0.0}
     },
     {
-        "id"         : "tired",
-        "name"       : "Exhausted",
-        "transient"  : true,
+        "id": "tired",
+        "name": "Exhausted",
+        "transient": true,
         "description": "Severe fatigue — heavy-limbed and slow-witted. Strength, dexterity and perception sag along with work and movement.",
-        "color"      : "#ff7043",
-        "floater"    : true,
-        "charSpans"  : [ {"sheet": "items", "id": 25} ],
-        "modifiers"  : {"strength": 0.7, "dexterity": 0.7, "perception": 0.8, "workEfficiency": 0.5, "moveSpeed": 0.5}
+        "color": "#ff7043",
+        "floater": true,
+        "charSpans": [ {"sheet": "items", "id": 25} ],
+        "modifiers": {"strength": 0.7, "dexterity": 0.7, "perception": 0.8, "workEfficiency": 0.5, "moveSpeed": 0.5}
     },
     {
         "id": "winded",
@@ -448,7 +590,14 @@
         "color": "#7CB342",
         "floater": true,
         "charSpans": [ {"sheet": "font", "id": 21} ],
-        "modifiers": {"strength": 0.6, "dexterity": 0.6, "constitution": 0.7, "workEfficiency": 0.7, "moveSpeed": 0.8, "fatigueRate": 1.3}
+        "modifiers": {
+            "strength"      : 0.6,
+            "dexterity"     : 0.6,
+            "constitution"  : 0.7,
+            "workEfficiency": 0.7,
+            "moveSpeed"     : 0.8,
+            "fatigueRate"   : 1.3
+        }
     },
     {
         "id": "bloodletting",
@@ -517,14 +666,14 @@
         "modifiers"  : {"constitution": 1.12, "fatigueRate": 0.85}
     },
     {
-        "id"         : "quickness",
-        "name"       : "Quickness",
-        "transient"  : true,
-        "magical"    : true,
+        "id": "quickness",
+        "name": "Quickness",
+        "transient": true,
+        "magical": true,
         "description": "An attuned topaz quickens the limbs — faster on foot, harder to land a blow on, and quicker to strike.",
-        "color"      : "#E0B83A",
-        "charSpans"  : [ {"sheet": "font", "id": 2} ],
-        "modifiers"  : {"dexterity": 1.15, "moveSpeed": 1.12}
+        "color": "#E0B83A",
+        "charSpans": [ {"sheet": "font", "id": 2} ],
+        "modifiers": {"dexterity": 1.15, "moveSpeed": 1.12}
     },
     {
         "id"         : "keen_senses",
@@ -567,13 +716,13 @@
         "modifiers": {"dexterity": 1.15, "moveSpeed": 1.06}
     },
     {
-        "id"         : "fortitude",
-        "name"       : "Fortitude",
-        "transient"  : true,
-        "magical"    : true,
+        "id": "fortitude",
+        "name": "Fortitude",
+        "transient": true,
+        "magical": true,
         "description": "Attuned regalia steels the body against hardship — hardier, and tires and hungers far more slowly.",
-        "color"      : "#C8A85A",
-        "charSpans"  : [ {"sheet": "font", "id": 2} ],
-        "modifiers"  : {"constitution": 1.12, "fatigueRate": 0.82, "hungerRate": 0.90}
+        "color": "#C8A85A",
+        "charSpans": [ {"sheet": "font", "id": 2} ],
+        "modifiers": {"constitution": 1.12, "fatigueRate": 0.82, "hungerRate": 0.90}
     }
 ]

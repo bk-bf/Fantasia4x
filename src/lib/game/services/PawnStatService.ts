@@ -371,6 +371,9 @@ function traitWorkMult(
 // raises cold_resistance, which PawnStateMachine reads to slow HYPOTHERMIA onset. No new
 // condition machinery: it reuses the existing resistance→onset wiring.
 const RESISTANCE_TRAIT_KEY: Record<string, keyof RacialTrait['effects']> = {
+  cutting_resistance: 'cutting_resistance',
+  piercing_resistance: 'piercing_resistance',
+  blunt_resistance: 'blunt_resistance',
   cold_resistance: 'coldResistance',
   fire_resistance: 'fireResistance',
   poison_resistance: 'poisonResistance',

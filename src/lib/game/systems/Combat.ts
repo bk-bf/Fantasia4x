@@ -484,39 +484,33 @@ function attackerProfile(attacker: Pawn | Mob): AttackProfile {
  * Sources: racial trait general damageReduction + type-specific resistance + base stat contribution.
  * Clamped 0–0.90 (can never fully negate damage from this layer alone).
  */
+// Damage type → the resistance stat shown in the attributes tab. ONE source of truth: combat soaks
+// exactly the value the player sees (no hidden inline copy that could drift). `evaluateStat` folds the
+// stat formula + racial-trait resistance bonus; any condition that saps the underlying stat flows
+// through automatically (and matches the tab).
+const DAMAGE_RESISTANCE_STAT: Record<DamageType, string> = {
+  cutting: 'cutting_resistance',
+  piercing: 'piercing_resistance',
+  blunt: 'blunt_resistance',
+  fire: 'fire_resistance',
+  frost: 'cold_resistance',
+  lightning: 'lightning_resistance'
+};
+
 function physicalResistance(defender: Pawn | Mob, damageType: DamageType): number {
-  // Conditions sap the defender's resistance stats too — a shocked/frostbitten body soaks less, so it
-  // takes more damage (combat conditions cut both ways).
-  const sm = conditionStatMultipliers(defender);
-  const con = defender.stats.constitution * sm.constitution;
-  const dex = defender.stats.dexterity * sm.dexterity;
-  const str = defender.stats.strength * sm.strength;
+  // Base = the attributes-tab resistance stat (formula + racial-trait bonus), not a duplicated formula.
+  let res = pawnStatService.evaluateStat(DAMAGE_RESISTANCE_STAT[damageType], defender);
 
-  // Base from stats — mirrors the *_resistance ability formulas in stats.jsonc (cutting=DEX, piercing/
-  // blunt=CON(+STR); §M elemental: fire/frost=CON, lightning=DEX — same axes the resistance stats use).
-  let res = 0;
-  if (damageType === 'cutting') res += (dex - 10) * 0.01;
-  if (damageType === 'piercing') res += (con - 10) * 0.008;
-  if (damageType === 'blunt') res += (con - 10) * 0.008 + (str - 10) * 0.004;
-  if (damageType === 'fire') res += (con - 10) * 0.01;
-  if (damageType === 'frost') res += (con - 10) * 0.01;
-  if (damageType === 'lightning') res += (dex - 10) * 0.01;
-
-  // §M per-creature resistances/vulnerabilities (creatures.jsonc) — thematic on top of the stat base
-  // (negative = vulnerable). Mobs/animals only; pawns have none (they use racial traits below).
+  // §M per-creature resistances/vulnerabilities (creatures.jsonc) — thematic on top (negative =
+  // vulnerable). Mobs/animals only; not a pawn stat, so it lives here rather than in the stat engine.
   if ('creatureId' in defender) {
     res += getCreatureById(defender.creatureId)?.resistances?.[damageType] ?? 0;
   }
 
-  // Racial trait bonuses
+  // General, type-agnostic damage reduction trait (type-SPECIFIC resistances are already in the stat).
   const traits = 'racialTraits' in defender ? (defender.racialTraits ?? []) : [];
   for (const trait of traits) {
     res += trait.effects.damageReduction ?? 0;
-    if (damageType === 'cutting') res += trait.effects.cutting_resistance ?? 0;
-    if (damageType === 'piercing') res += trait.effects.piercing_resistance ?? 0;
-    if (damageType === 'blunt') res += trait.effects.blunt_resistance ?? 0;
-    if (damageType === 'fire') res += trait.effects.fireResistance ?? 0;
-    if (damageType === 'frost') res += trait.effects.coldResistance ?? 0;
   }
 
   return clamp(res, 0, 0.9);
