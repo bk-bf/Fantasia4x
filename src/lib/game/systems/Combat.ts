@@ -74,6 +74,11 @@ function clotRemaining(w: Pick<Injury, 'severity' | 'clotProgress' | 'treatedAt'
 export const CLOT_ROLL_INTERVAL = 2250;
 /** Base per-roll clot chance at `blood_clotting` 1.0 (CON 10); the stat scales it. */
 export const BASE_CLOT_CHANCE = 0.4;
+/** Creatures CAN'T be wound-dressed, so their bodies clot far more readily than a pawn's: they roll
+ *  HOURLY (~750 ticks, vs the pawn's 3-hourly) at a much higher base chance, so a beast that breaks off
+ *  a fight reliably self-stabilises within ~an in-game hour instead of bleeding out from a scratch. */
+export const MOB_CLOT_ROLL_INTERVAL = 750;
+export const MOB_BASE_CLOT_CHANCE = 0.7;
 /** Stats are on a ~5–22 scale; this divisor keeps damage in a sensible range. */
 const STAT_SCALE = 10;
 /** How strongly a creature's `bodyScale` boosts its natural-weapon damage (softened, see attackerProfile):

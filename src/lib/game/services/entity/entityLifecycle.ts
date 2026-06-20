@@ -8,7 +8,11 @@ import { absorbDropIfOnStockpileTile } from '../../core/GameState';
 import { pawnStatService } from '../PawnStatService';
 import { simLog } from '../../core/logSink';
 import { healLimbsInPlace } from '../../systems/PawnStateMachine';
-import { rollWoundClotting, CLOT_ROLL_INTERVAL, BASE_CLOT_CHANCE } from '../../systems/Combat';
+import {
+  rollWoundClotting,
+  MOB_CLOT_ROLL_INTERVAL,
+  MOB_BASE_CLOT_CHANCE
+} from '../../systems/Combat';
 import { entityName } from './entityHelpers';
 import {
   BASE_HUNGER_PER_SECOND,
@@ -82,13 +86,14 @@ export function stepHunger(state: GameState): GameState {
       : Math.min(100, mob.needs.fatigue + fatigueDelta);
 
     // ── Clotting ──────────────────────────────────────────────────────────────────
-    // Same lucky-roll model as pawns: ~every 3 in-game hours a bleeding wound rolls (vs blood_clotting)
-    // for a chance to clot a stage. Mutates the limb objects in place (M3 — no per-tick alloc).
+    // Same lucky-roll model as pawns, but BUFFED: creatures can't be dressed, so they roll HOURLY at a
+    // higher base chance (MOB_* constants) and reliably self-stabilise within ~an in-game hour after a
+    // fight. Mutates the limb objects in place (M3 — no per-tick alloc).
     const limbs = mob.limbs;
-    if (limbs && turn % CLOT_ROLL_INTERVAL === 0) {
+    if (limbs && turn % MOB_CLOT_ROLL_INTERVAL === 0) {
       const clotChance = Math.min(
         0.95,
-        Math.max(0, BASE_CLOT_CHANCE * pawnStatService.evaluateStat('blood_clotting', mob))
+        Math.max(0, MOB_BASE_CLOT_CHANCE * pawnStatService.evaluateStat('blood_clotting', mob))
       );
       rollWoundClotting(limbs, clotChance, turn);
     }
