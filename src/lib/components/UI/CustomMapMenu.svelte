@@ -1,14 +1,19 @@
 <script lang="ts">
-  // Custom Map popup — tune world generation, then GENERATE on demand.
-  //  • SIZE toggles (S/M/L/XL) pick the world dimensions for the next generate.
+  // Custom Map popup — preview the terrain, then GENERATE to commit.
+  //  • SIZE toggles (S/M/L/XL) pick the world dimensions.
   //  • Each biome has ONE "share" slider (0 = none, 100 = only it). Moving one rebalances the
   //    UNLOCKED others proportionally so the shares always partition the elevation axis. A 🔒 per row
   //    pins that slider so it's left untouched when you tweak another.
   //  • WATER is decoupled from biomes (its own field) — one slider for global water coverage.
-  // Nothing regenerates until you press GENERATE: tweaking sliders / editing the seed only stages
-  // settings, so you can copy the current seed or fiddle freely without the map being rewritten, and
-  // closing the popup leaves the existing world untouched.
+  // Two distinct actions, deliberately NOT the same thing:
+  //  • Rolling the seed / tweaking sliders shows a live PREVIEW of the terrain only — pawns are
+  //    stripped off the map and no creatures are seeded, so nothing glitches on shuffled tiles.
+  //  • GENERATE commits: it locks the previewed terrain in and ONLY THEN places pawns on valid land
+  //    and seeds creatures. That generated map becomes the new baseline.
+  //  • CLOSE (✕) discards the preview and reverts to the baseline (the map as it was when the popup
+  //    opened, or the last GENERATE) — it does NOT keep the preview.
   import { get } from 'svelte/store';
+  import { onDestroy } from 'svelte';
   import { gameState } from '$lib/stores/gameState';
   import {
     getBiomeConfig,
@@ -36,11 +41,64 @@
   ];
   let size = $state<number>(gameState.getMapSize().w);
 
-  // The only thing that actually rewrites the world. Real (non-preview) regen so pawns + creatures
-  // are re-placed on valid forest/plains/swamp land — the popup can stay open to tweak & regenerate.
-  function generate() {
-    gameState.regenWorld(seed);
+  // Shown while the (synchronous, main-thread-blocking) worldgen runs so the user isn't staring at a
+  // frozen UI with no feedback — see runRegen().
+  let generating = $state(false);
+
+  // The map state as it was when the popup opened (or after the last GENERATE). CLOSE reverts to this,
+  // discarding any preview. Captured by reference: regenWorld builds a NEW state, so this stays valid.
+  let baseline = get(gameState);
+  // True once a preview has rewritten the live world — so CLOSE only needs to revert when there's
+  // actually something to discard (a no-op open/close doesn't re-init the worker).
+  let dirty = false;
+  let previewTimer: ReturnType<typeof setTimeout> | undefined;
+
+  // Run any (re)generation behind the GENERATING overlay. regenWorld is synchronous and freezes the
+  // main thread for a beat (a Medium/Large world is 100k+ tiles), so we flip the overlay on and YIELD
+  // two frames first — that guarantees the browser paints it before the blocking work starts. The bar
+  // is a transform-based CSS animation (compositor-driven), so it keeps sliding even while frozen.
+  async function runRegen(fn: () => void) {
+    if (generating) return;
+    generating = true;
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    try {
+      fn();
+    } finally {
+      generating = false;
+    }
   }
+
+  // PREVIEW (terrain only): pawns stripped off the map, no creatures — so you can shape biomes/water
+  // without entities glitching on freshly-shuffled tiles. Debounced so dragging a slider doesn't thrash.
+  function previewNow() {
+    return runRegen(() => {
+      gameState.regenWorld(seed, false, 500, true);
+      dirty = true;
+    });
+  }
+  function schedulePreview() {
+    clearTimeout(previewTimer);
+    previewTimer = setTimeout(previewNow, 140);
+  }
+
+  // GENERATE (commit): a real regen that places pawns on valid forest/plains/swamp land and seeds
+  // creatures, then adopts the result as the new baseline so closing afterwards keeps it.
+  function generate() {
+    clearTimeout(previewTimer);
+    runRegen(() => {
+      gameState.regenWorld(seed);
+      baseline = get(gameState);
+      dirty = false;
+    });
+  }
+
+  // Revert on unmount, whichever way the popup closes — the ✕ button, the CUSTOM MAP toolbar toggle,
+  // or navigation. If a preview rewrote the live world (pawns stripped, no creatures) and the player
+  // never pressed GENERATE, restore the baseline so we never leave a half-built map behind.
+  onDestroy(() => {
+    clearTimeout(previewTimer);
+    if (dirty) gameState.restoreWorld(baseline);
+  });
 
   function toggleLock(id: string) {
     const n = new Set(locked);
@@ -72,21 +130,25 @@
     }
     applyBiomeShares(next);
     biomes = getBiomeConfig();
+    schedulePreview();
   }
 
   function setWater(pct: number) {
     water = pct;
     setWaterLevel(pct / 100);
+    schedulePreview();
   }
 
   function climate(id: string, field: 'baseTemp' | 'baseMoisture', e: Event) {
     setBiomeField(id, field, Number((e.currentTarget as HTMLInputElement).value));
     biomes = getBiomeConfig();
+    schedulePreview();
   }
 
   function setSize(dim: number) {
     size = dim;
     gameState.setMapSize(dim, dim);
+    previewNow();
   }
 
   function reset() {
@@ -94,13 +156,11 @@
     biomes = getBiomeConfig();
     water = Math.round(getWaterLevel() * 100);
     locked = new Set();
+    previewNow();
   }
-  // Reroll = "give me a new random map", so unlike the sliders (which stage until GENERATE) it
-  // regenerates immediately — there's nothing to preview-copy about a seed you didn't choose, and
-  // staging it would just show the old map until you press GENERATE.
   function rollSeed() {
     seed = Date.now() >>> 0 || 1;
-    generate();
+    previewNow();
   }
 </script>
 
@@ -126,21 +186,24 @@
         value={seed}
         onchange={(e) => {
           seed = Number((e.currentTarget as HTMLInputElement).value) >>> 0 || 1;
+          previewNow();
         }}
       /></label
     >
-    <button class="cm-btn" onclick={rollSeed} title="roll a new random seed and regenerate now"
-      >⟳</button
-    >
+    <button class="cm-btn" onclick={rollSeed} title="roll a new random seed and preview it">⟳</button>
     <button class="cm-btn" onclick={reset} title="restore terrains.jsonc defaults">reset</button>
-    <button class="cm-btn generate" onclick={generate} title="regenerate the world with these settings"
-      >GENERATE</button
+    <button
+      class="cm-btn generate"
+      onclick={generate}
+      title="lock this terrain in and populate it with pawns & creatures">GENERATE</button
     >
-    <button class="cm-btn close" onclick={onClose} title="close (keeps current map)">✕</button>
+    <button class="cm-btn close" onclick={onClose} title="discard preview, revert to the previous map"
+      >✕</button
+    >
   </div>
   <div class="cm-note">
-    Biome share — 0 removes it, 100 fills the map; unlocked ones rebalance. 🔒 pins a slider. Water
-    is independent of biome. Settings only apply when you press <strong>GENERATE</strong>.
+    Roll / tweak sliders to <strong>preview</strong> the terrain. <strong>GENERATE</strong> locks it in
+    and places pawns &amp; creatures; <strong>✕</strong> discards the preview and reverts.
   </div>
 
   <div class="cm-grid">
@@ -209,6 +272,18 @@
     <span class="cell muted">lakes & seas in any lowland</span>
   </div>
 </div>
+
+<!-- Worldgen feedback: regenWorld blocks the main thread, so this overlay is painted first (generate()
+     yields two frames) and the bar is a transform animation that survives the freeze. -->
+{#if generating}
+  <div class="gen-overlay" role="status" aria-live="polite">
+    <div class="gen-box">
+      <div class="gen-title">GENERATING WORLD…</div>
+      <div class="gen-bar"><div class="gen-fill"></div></div>
+      <div class="gen-sub">{size}×{size} tiles — placing terrain, resources &amp; pawns</div>
+    </div>
+  </div>
+{/if}
 
 <style>
   .custom-map {
@@ -362,6 +437,65 @@
     color: #61cce8;
   }
   .muted {
+    color: var(--text-muted);
+    font-size: 10px;
+  }
+
+  /* Worldgen feedback overlay — covers the whole screen above the popup (z 1200) while regenWorld
+     blocks the main thread. The bar animates on `transform` so the compositor keeps it moving even
+     while the main thread is frozen mid-generation. */
+  .gen-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1300;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.6);
+    font-family: 'Courier New', monospace;
+  }
+  .gen-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 22px 32px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-hi);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7);
+  }
+  .gen-title {
+    color: var(--accent-hi);
+    letter-spacing: 0.12em;
+    font-size: 13px;
+    font-weight: bold;
+  }
+  .gen-bar {
+    position: relative;
+    width: 260px;
+    height: 6px;
+    overflow: hidden;
+    background: var(--bg);
+    border: 1px solid var(--border);
+  }
+  .gen-fill {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 35%;
+    background: var(--accent-hi);
+    animation: gen-slide 1s linear infinite;
+  }
+  @keyframes gen-slide {
+    from {
+      transform: translateX(-110%);
+    }
+    to {
+      transform: translateX(390%);
+    }
+  }
+  .gen-sub {
     color: var(--text-muted);
     font-size: 10px;
   }

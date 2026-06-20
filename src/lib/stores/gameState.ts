@@ -590,6 +590,17 @@ function regenWorld(seed?: number, dev = false, itemQty = 500, preview = false) 
   loadStateIntoWorker(next);
 }
 
+/**
+ * Revert the live world to a snapshot (the Custom Map popup's CLOSE-without-GENERATE). Re-adopts the
+ * prior full state into the store + sim worker, so any preview terrain shaped in the popup is
+ * discarded and the worldMap/pawns/mobs/seed are exactly as they were before the popup opened. Safe
+ * because regenWorld's preview path builds a NEW state object (never mutates the snapshot in place).
+ */
+function restoreWorld(snapshot: GameState) {
+  rng.reseed(snapshot.seed);
+  loadStateIntoWorker(snapshot);
+}
+
 // ===== ITEM MANAGEMENT =====
 // ADR-021 W3: routed through the serializable command registry (`commands.ts`) instead of an inline
 // closure, so the same logic can run in the sim worker after cutover. dispatchCommand on the main
@@ -1013,6 +1024,7 @@ export const gameState = {
   resetGame,
   wipeAndReload,
   regenWorld,
+  restoreWorld,
   setMapSize,
   getMapSize
 };
