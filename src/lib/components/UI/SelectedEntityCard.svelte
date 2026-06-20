@@ -77,6 +77,7 @@
     label: string; // "skull"
     health: number; // current HP
     maxHp: number;
+    missing?: boolean; // severed/destroyed — or taken when its container was severed (containment cascade)
     wounds: HealthWound[];
   }
 

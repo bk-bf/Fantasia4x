@@ -172,6 +172,7 @@ export function buildHealthModel(entity: Pawn | Mob): HealthModel {
         label: prettyPart(part.id),
         health: part.health,
         maxHp: part.maxHp,
+        missing: part.isMissing,
         wounds: part.injuries.map((inj) => ({
           text: `${inj.type} (${inj.severity})${inj.infected ? ' · infected' : ''}`,
           warn: woundWarn(inj)

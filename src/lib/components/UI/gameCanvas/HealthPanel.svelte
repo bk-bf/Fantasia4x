@@ -105,16 +105,20 @@
             {/if}
           </div>
           {#each limb.parts as part (part.label)}
-            <div class="hp-part" class:hp-gone={part.health <= 0}>
+            <div class="hp-part" class:hp-gone={part.health <= 0 || part.missing}>
               <span class="hp-part-name">{part.label}</span>
               <span
                 class="hp-part-hp"
-                style="color:{healthPctColor((part.health / part.maxHp) * 100)}"
-                >{Math.round(part.health)}/{Math.round(part.maxHp)}</span
+                style="color:{healthPctColor((part.health / part.maxHp) * 100, {
+                  missing: part.missing
+                })}">{Math.round(part.health)}/{Math.round(part.maxHp)}</span
               >
               {#each part.wounds as w (w.text)}
                 <span class="hp-wound" class:hp-warn={w.warn}>· {w.text}</span>
               {/each}
+              {#if part.missing && part.wounds.length === 0}
+                <span class="hp-wound">· gone</span>
+              {/if}
             </div>
           {/each}
         </div>

@@ -3,6 +3,7 @@ import { combatService } from './Combat';
 import { healWounds } from './PawnStateMachine';
 import { tendPatient } from '../services/jobs/caretake';
 import { CREATURES } from '../core/Creatures';
+import { createBodyPlanLimbs } from '../core/BodyParts';
 import { itemService } from '../services/ItemService';
 import { recipeService } from '../services/RecipeService';
 import type { GameState, Injury, Mob, Pawn } from '../core/types';
@@ -372,6 +373,43 @@ describe('wound system (stacking + healing)', () => {
     expect(wound.treatedAt).toBeDefined();
     // …and the dose was consumed.
     expect(after.stockpile.chewed_poultice ?? 0).toBe(0);
+  });
+
+  // ── Containment cascade: a severed container takes the parts nested inside it ──
+  const sever = (bodyPart: string): Injury => ({
+    bodyPart,
+    type: 'cut',
+    severity: 'minor', // recomputed up to 'destroyed' once damage ≥ the part's maxHp
+    damage: 999,
+    bleeding: 0,
+    painContribution: 0,
+    infected: false
+  });
+  const torsoPart = (pawn: Pawn, id: string) =>
+    pawn.limbs!.find((l) => l.id === 'torso')!.parts!.find((p) => p.id === id)!;
+
+  it('severing the abdomen takes the organs it contains — and the pawn lingers (cascade only)', () => {
+    let state = makeState([makePawn({ limbs: createBodyPlanLimbs('humanoid', 1) })], []);
+    state = combatService.applyInjury('p1', sever('abdomen'), state);
+    const pawn = state.pawns[0];
+    expect(torsoPart(pawn, 'abdomen').isMissing).toBe(true);
+    for (const organ of ['liver', 'stomach', 'leftKidney', 'rightKidney']) {
+      expect(torsoPart(pawn, organ).isMissing).toBe(true);
+      expect(torsoPart(pawn, organ).health).toBe(0);
+    }
+    // No VITAL organ lives in the abdomen, so it is not instant death — the pawn is gutted but alive.
+    expect(pawn.isAlive).not.toBe(false);
+    // Sibling organs in a DIFFERENT container (the chest) are untouched.
+    expect(torsoPart(pawn, 'heart').isMissing).toBe(false);
+  });
+
+  it('caving in the chest cascades to heart+lungs and is lethal', () => {
+    let state = makeState([makePawn({ limbs: createBodyPlanLimbs('humanoid', 1) })], []);
+    state = combatService.applyInjury('p1', sever('chest'), state);
+    const pawn = state.pawns[0];
+    expect(torsoPart(pawn, 'heart').isMissing).toBe(true);
+    expect(torsoPart(pawn, 'leftLung').isMissing).toBe(true);
+    expect(pawn.isAlive).toBe(false);
   });
 
   it('the poultice recipe and medicine items are well-formed', () => {

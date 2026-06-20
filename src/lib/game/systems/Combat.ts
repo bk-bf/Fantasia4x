@@ -52,6 +52,7 @@ import {
   createBodyPlanLimbs,
   parentLimbOf,
   enabledNaturalWeapons,
+  cascadeSeveredContents,
   BOUND_NATURAL_WEAPONS,
   DEFAULT_PLAN,
   BONE_FRACTION
@@ -689,6 +690,9 @@ class CombatServiceImpl implements CombatService {
       limbOfPart(entity, injury.bodyPart)?.id ?? parentLimbOf(planOf(entity), injury.bodyPart);
 
     // ── Update limb tree: merge this hit into the part's same-type wound ──────
+    // A severed container takes its contents (cascadeSeveredContents); set if that cascade claims a
+    // vital organ (e.g. a gutted chest → heart/lungs), which is lethal regardless of the hit part.
+    let cascadeLostVital = false;
     const limbs: LimbState[] = (entity.limbs ?? []).map((limb) => {
       if (limb.id !== targetLimbId) return limb;
 
@@ -734,10 +738,20 @@ class CombatServiceImpl implements CombatService {
           (isStructural && partDef.boneHp != null && accum >= BONE_FRACTION * maxHp),
         injuries: woundList
       };
-      const newParts =
+      const mergedParts =
         idx >= 0
           ? existing.map((p, i) => (i === idx ? updatedPart : p))
           : [...existing, updatedPart];
+
+      // Containment cascade: if this hit just SEVERED the part (soft-tissue destruction → isMissing),
+      // everything nested inside it is gone too — a gutted abdomen takes liver/stomach/kidneys, a
+      // caved-in chest takes heart/lungs/spine. Only on the severing hit (prev wasn't already missing).
+      const justSevered = updatedPart.isMissing && !prev.isMissing;
+      const cascade = justSevered
+        ? cascadeSeveredContents(mergedParts, updatedPart.id)
+        : { parts: mergedParts, lostVital: false };
+      if (cascade.lostVital) cascadeLostVital = true;
+      const newParts = cascade.parts;
 
       // Bleed rate = sum of all current part-wound bleed (falls as wounds heal),
       // and the root-limb health is the mass-weighted health of its parts.
@@ -802,10 +816,11 @@ class CombatServiceImpl implements CombatService {
       transientConditions
     };
 
-    // Resolution: a destroyed vital part is instant death. Otherwise a collapse
-    // takes the entity out of the fight — a mob is defeated (no capture system yet),
-    // a pawn goes down (the state machine drives the Collapsed state + recovery).
-    if (partDef.isVital && injury.severity === 'destroyed') {
+    // Resolution: a destroyed vital part is instant death — whether hit directly, or taken when its
+    // container was severed (cascadeLostVital, e.g. a gutted chest). Otherwise a collapse takes the
+    // entity out of the fight — a mob is defeated (no capture system yet), a pawn goes down (the state
+    // machine drives the Collapsed state + recovery).
+    if ((partDef.isVital && injury.severity === 'destroyed') || cascadeLostVital) {
       if (entityType === 'pawn') {
         (updated as Pawn).isAlive = false;
         (updated as Pawn).currentState = 'Dead';

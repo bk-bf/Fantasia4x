@@ -49,6 +49,12 @@ export type NeedChoice =
 function recoveryChoice(pawn: Pawn, gameState: GameState): NeedChoice {
   const policy = pawn.restPolicy ?? 'always';
   if (policy === 'never' || !needsRecovery(pawn)) return null;
+  // Hunger takes precedence over recovery-rest — and this MUST mirror handleSleeping's recovery-hold,
+  // which only keeps a wounded pawn down while `hunger < HUNGER_THRESHOLD` (it wakes it to eat past
+  // that). Without the matching gate, a starving wounded pawn with no reachable food ping-pongs
+  // Idle↔Sleeping forever (recoveryChoice sends it to rest, handleSleeping immediately wakes it for
+  // hunger). Starvation is the more urgent threat, so the pawn drops the rest drive until it's fed.
+  if ((pawn.needs?.hunger ?? 0) >= HUNGER_THRESHOLD) return null;
   if (policy === 'shelter' && !findNearestRestBuilding(pawn, gameState)) return null;
   return { kind: 'sleep' };
 }

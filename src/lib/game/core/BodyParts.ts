@@ -95,6 +95,45 @@ for (const def of Object.values(PART_DEF_MAP)) {
   for (const w of def?.weapons ?? []) BOUND_NATURAL_WEAPONS.add(w);
 }
 
+/** Transitive closure of parts nested inside `parentId` (its organs/sub-parts, and theirs).
+ *  Derived from the static `containedIn` topology — e.g. abdomen → {liver, stomach, kidneys}. */
+export function containedParts(parentId: BodyPartId): Set<BodyPartId> {
+  const out = new Set<BodyPartId>();
+  const allIds = Object.keys(PART_DEF_MAP) as BodyPartId[];
+  const stack: BodyPartId[] = [parentId];
+  while (stack.length) {
+    const cur = stack.pop()!;
+    for (const id of allIds) {
+      if (PART_DEF_MAP[id]?.containedIn === cur && !out.has(id)) {
+        out.add(id);
+        stack.push(id);
+      }
+    }
+  }
+  return out;
+}
+
+/** When a container part is severed, its contents go with it: destroy every part nested inside
+ *  `severedId` (set health 0 + isMissing). Returns the new parts array and whether the cascade took a
+ *  VITAL organ (heart/lung/brain) — i.e. a gut-out of the chest that the caller must treat as lethal.
+ *  Pure: returns the original array unchanged when nothing is contained / already gone. */
+export function cascadeSeveredContents(
+  parts: BodyPartState[],
+  severedId: BodyPartId
+): { parts: BodyPartState[]; lostVital: boolean } {
+  const contained = containedParts(severedId);
+  if (contained.size === 0) return { parts, lostVital: false };
+  let lostVital = false;
+  let changed = false;
+  const next = parts.map((p) => {
+    if (!contained.has(p.id) || p.isMissing) return p;
+    changed = true;
+    if (PART_DEF_MAP[p.id]?.isVital) lostVital = true;
+    return { ...p, health: 0, isMissing: true };
+  });
+  return changed ? { parts: next, lostVital } : { parts, lostVital: false };
+}
+
 /** Natural-weapon ids currently usable given a limb tree: the union of `weapons` over every non-missing
  *  part (a destroyed jaw can't bite; one surviving front paw still claws). Unbound weapons aren't listed
  *  here — callers treat them as always-available via BOUND_NATURAL_WEAPONS. */
