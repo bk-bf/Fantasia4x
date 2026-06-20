@@ -209,6 +209,23 @@ function calculateCapacityValue(
   // A limb counts as bone-broken if any of its (still-attached) parts has a broken bone.
   const limbBoneBroken = (id: string) =>
     (limb(id)?.parts ?? []).some((p) => p.boneBroken && !p.isMissing);
+  // Aggregate a locomotor/manipulator capacity over EVERY limb matching `pred` (e.g. all "leg" limbs —
+  // works for a humanoid's 2 legs, a quadruped's 4, a bird's 2). Folds in missing limbs (0), soft-tissue
+  // health, and a broken-bone cripple. Returns 1.0 when the body plan has no such limb (a snake has no
+  // legs, a beast no hands) so the entity isn't penalised for anatomy it never had. minWeight blends the
+  // weakest limb (bottleneck) with the average.
+  const limbCapacity = (pred: (id: string) => boolean, minWeight: number): number => {
+    const ls = limbs.filter((l) => pred(l.id));
+    if (ls.length === 0) return 1.0;
+    const vals = ls.map((l) =>
+      l.isMissing
+        ? 0
+        : (Math.min(100, l.health) / 100) * (limbBoneBroken(l.id) ? BROKEN_BONE_FUNCTION_MULT : 1)
+    );
+    const min = Math.min(...vals);
+    const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+    return min * minWeight + avg * (1 - minWeight);
+  };
 
   // Organ lookup: find a specific BodyPartState inside a limb's parts[]
   const organ = (limbId: string, organId: string): BodyPartState | undefined =>
@@ -280,17 +297,9 @@ function calculateCapacityValue(
       break;
     }
     case 'manipulation': {
-      // A broken arm bone cripples the hand's use even with the soft tissue intact (× BROKEN_BONE mult).
-      const left = limbMissing('left_arm')
-        ? 0.0
-        : (limbH('left_arm') / 100) * (limbBoneBroken('left_arm') ? BROKEN_BONE_FUNCTION_MULT : 1);
-      const right = limbMissing('right_arm')
-        ? 0.0
-        : (limbH('right_arm') / 100) *
-          (limbBoneBroken('right_arm') ? BROKEN_BONE_FUNCTION_MULT : 1);
-      const minArm = Math.min(left, right);
-      const avgArm = (left + right) / 2;
-      value = minArm * 0.3 + avgArm * 0.7;
+      // Hands/arms across the body plan (humanoid arms; beasts have none → 1.0). A broken arm bone
+      // cripples the hand's use even with the soft tissue intact.
+      value = limbCapacity((id) => /arm/i.test(id), 0.3);
       break;
     }
     case 'sight': {
@@ -303,17 +312,9 @@ function calculateCapacityValue(
       break;
     }
     case 'moving': {
-      // A broken leg bone cripples gait even with the soft tissue intact (× BROKEN_BONE mult).
-      const left = limbMissing('left_leg')
-        ? 0.0
-        : (limbH('left_leg') / 100) * (limbBoneBroken('left_leg') ? BROKEN_BONE_FUNCTION_MULT : 1);
-      const right = limbMissing('right_leg')
-        ? 0.0
-        : (limbH('right_leg') / 100) *
-          (limbBoneBroken('right_leg') ? BROKEN_BONE_FUNCTION_MULT : 1);
-      const minLeg = Math.min(left, right);
-      const avgLeg = (left + right) / 2;
-      value = minLeg * 0.5 + avgLeg * 0.5;
+      // Legs across the body plan (humanoid 2, quadruped 4, bird 2; a legless serpent → 1.0). A broken
+      // leg bone cripples gait even with the soft tissue intact.
+      value = limbCapacity((id) => /leg/i.test(id), 0.5);
       break;
     }
     case 'blood_pumping': {

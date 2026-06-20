@@ -58,7 +58,8 @@
         "hungerRate"    : 0.5,
         "foodOverflow"  : 0.3,
         "carcassItemId" : "wolf_carcass",
-        "naturalWeapons": ["bite", "claw"]
+        "naturalWeapons": ["bite", "claw"],
+        "limbMap"        : "quadruped"
     },
     {
         "id": "bear",  // add anchor to beehives for bears, so they hang around and protect beehives from pawns
@@ -88,7 +89,8 @@
         "hungerRate": 0.3,
         "foodOverflow": 0.4,
         "carcassItemId": "bear_carcass",
-        "naturalWeapons": ["claw", "slam"]
+        "naturalWeapons": ["claw", "slam"],
+        "limbMap"        : "quadruped"
     },
     {
         "id"            : "goblin",
@@ -116,7 +118,8 @@
         "hungerRate"    : 0.6,
         "foodOverflow"  : 0.25,
         "carcassItemId" : "goblin_carcass",
-        "naturalWeapons": ["fists", "kick"]
+        "naturalWeapons": ["fists", "kick"],
+        "limbMap"        : "humanoid"
     },
     {
         "id"            : "giant_rat",
@@ -137,7 +140,8 @@
         "pack"          : [1, 4],
         "biomeWeights"  : {"plains": 1.0, "swamp": 0.8, "forest": 0.6},
         "carcassItemId" : "giant_rat_carcass",
-        "naturalWeapons": ["bite"]
+        "naturalWeapons": ["bite"],
+        "limbMap"        : "quadruped"
     },
     {
         "id"              : "shadow_wraith",
@@ -165,6 +169,7 @@
         "spawnsInMountain": true,
         "biomeWeights"    : {"mountain": 1.0},
         "naturalWeapons"  : ["spectral_strike"],
+        "limbMap"        : "amorphous",
         // Incorporeal cold-thing: shrugs off frost & lightning, but living flame sears it.
         "resistances"     : {"fire": -0.35, "frost": 0.6, "lightning": 0.4}
     },
@@ -190,7 +195,8 @@
         "pack"          : [3, 8],
         "biomeWeights"  : {"forest": 1.0, "plains": 1.0},
         "carcassItemId" : "deer_carcass",
-        "naturalWeapons": ["kick"]
+        "naturalWeapons": ["kick"],
+        "limbMap"        : "quadruped_hooved"
     },
     {
         "id"            : "rabbit",
@@ -211,7 +217,8 @@
         "pack"          : [1, 5],
         "biomeWeights"  : {"plains": 1.0, "forest": 0.8, "mountain": 0.4},
         "carcassItemId" : "rabbit_carcass",
-        "naturalWeapons": ["bite"]
+        "naturalWeapons": ["bite"],
+        "limbMap"        : "quadruped"
     },
     {
         "id"                : "boar",
@@ -238,7 +245,8 @@
         "mountable"         : false,
         "biomeWeights"      : {"forest": 1.0, "swamp": 0.6},
         "carcassItemId"     : "boar_carcass",
-        "naturalWeapons"    : ["tusk", "charge"]
+        "naturalWeapons"    : ["tusk", "charge"],
+        "limbMap"        : "quadruped_hooved"
     },
     {
         "id"            : "elk",
@@ -264,7 +272,8 @@
         "mountable"     : true,
         "biomeWeights"  : {"forest": 0.8, "mountain": 0.6},
         "carcassItemId" : "elk_carcass",
-        "naturalWeapons": ["kick", "antler"]
+        "naturalWeapons": ["kick", "antler"],
+        "limbMap"        : "quadruped_hooved"
     },
     {
         "id": "mountain_goat",
@@ -292,7 +301,8 @@
         "biomeWeights": {"plains": 0.8, "forest": 0.8, "swamp": 0.4},
         "maxMountainDistance": 6,
         "carcassItemId": "mountain_goat_carcass",
-        "naturalWeapons": ["headbutt"]
+        "naturalWeapons": ["headbutt"],
+        "limbMap"        : "quadruped_hooved"
     },
     {
         "id"            : "wild_chicken",
@@ -317,7 +327,8 @@
         "produces"      : {"itemId": "egg", "qty": 1, "intervalSeconds": 200},
         "biomeWeights"  : {"plains": 1.0},
         "carcassItemId" : "wild_chicken_carcass",
-        "naturalWeapons": ["peck"]
+        "naturalWeapons": ["peck"],
+        "limbMap"        : "avian"
     },
     // ── EXPANSION ROSTER (DF / DCSS / D&D inspired) ──────────────────────────────
     // Natural weapons reuse the existing natural_weapon items where they fit; only `venom_bite` is
@@ -350,7 +361,8 @@
         "produces"          : {"itemId": "milk", "qty": 3, "intervalSeconds": 300},
         "biomeWeights"      : {"plains": 1.0, "forest": 0.5},
         "carcassItemId"     : "aurochs_carcass",
-        "naturalWeapons"    : ["tusk", "charge"]
+        "naturalWeapons"    : ["tusk", "charge"],
+        "limbMap"        : "quadruped_hooved"
     },
     {
         "id"                : "woolly_mammoth",
@@ -376,6 +388,7 @@
         "biomeWeights"      : {"plains": 1.0, "forest": 0.3},
         "carcassItemId"     : "woolly_mammoth_carcass",
         "naturalWeapons"    : ["tusk", "slam"],
+        "limbMap"        : "quadruped",
         // Cold-steppe beast under a thick woolly hide — endures frost, but the pelt catches fire.
         "resistances"       : {"frost": 0.5, "fire": -0.2}
     },
@@ -406,7 +419,8 @@
         "hungerRate"    : 0.5,
         "foodOverflow"  : 0.3,
         "carcassItemId" : "hippogriff_carcass",
-        "naturalWeapons": ["claw", "peck", "kick"]
+        "naturalWeapons": ["claw", "peck", "kick"],
+        "limbMap"        : "avian"
     },
     {
         "id"            : "hoarfowl",
@@ -429,6 +443,7 @@
         "biomeWeights"  : {"plains": 1.0, "swamp": 0.4},
         "carcassItemId" : "hoarfowl_carcass",
         "naturalWeapons": ["peck", "kick"],
+        "limbMap"        : "avian",
         // Frost-feathered fowl — its name is its nature: resists cold, fears flame.
         "resistances"   : {"frost": 0.4, "fire": -0.15}
     },
@@ -452,7 +467,8 @@
         "pack"          : [1, 3],
         "biomeWeights"  : {"forest": 0.9, "swamp": 0.6},
         "carcassItemId" : "quillback_carcass",
-        "naturalWeapons": ["bite"]
+        "naturalWeapons": ["bite"],
+        "limbMap"        : "quadruped"
     },
     // ── Predators (neutral/aggressive) ───────────────────────────────────────────
     {
@@ -479,7 +495,8 @@
         "hungerRate"    : 0.5,
         "foodOverflow"  : 0.3,
         "carcassItemId" : "worg_carcass",
-        "naturalWeapons": ["bite", "claw"]
+        "naturalWeapons": ["bite", "claw"],
+        "limbMap"        : "quadruped"
     },
     {
         "id"            : "jackal",
@@ -505,7 +522,8 @@
         "hungerRate"    : 0.5,
         "foodOverflow"  : 0.35,
         "carcassItemId" : "jackal_carcass",
-        "naturalWeapons": ["bite", "claw"]
+        "naturalWeapons": ["bite", "claw"],
+        "limbMap"        : "quadruped"
     },
     {
         "id"            : "owlbear",
@@ -532,7 +550,8 @@
         "hungerRate"    : 0.3,
         "foodOverflow"  : 0.45,
         "carcassItemId" : "owlbear_carcass",
-        "naturalWeapons": ["claw", "bite", "slam"]
+        "naturalWeapons": ["claw", "bite", "slam"],
+        "limbMap"        : "quadruped"
     },
     {
         "id"            : "sabretooth",
@@ -558,7 +577,8 @@
         "hungerRate"    : 0.35,
         "foodOverflow"  : 0.4,
         "carcassItemId" : "sabretooth_carcass",
-        "naturalWeapons": ["bite", "claw"]
+        "naturalWeapons": ["bite", "claw"],
+        "limbMap"        : "quadruped"
     },
     {
         "id"            : "mire_crocodile",
@@ -584,6 +604,7 @@
         "foodOverflow"  : 0.4,
         "carcassItemId" : "mire_crocodile_carcass",
         "naturalWeapons": ["bite", "slam"],
+        "limbMap"        : "amphibian",
         // Cold-blooded swamp reptile — sluggish in cold (frost-vulnerable), shrugs off heat.
         "resistances"   : {"frost": -0.3, "fire": 0.15}
     },
@@ -610,6 +631,7 @@
         "foodOverflow"  : 0.4,
         "carcassItemId" : "marsh_viper_carcass",
         "naturalWeapons": ["venom_bite"],
+        "limbMap"        : "serpentine",
         // Cold-blooded reptile — torpid in cold (vulnerable to frost), handles heat well.
         "resistances"   : {"frost": -0.3, "fire": 0.15}
     },
@@ -635,7 +657,8 @@
         "hungerRate"    : 0.3,
         "foodOverflow"  : 0.4,
         "carcassItemId" : "stirge_carcass",
-        "naturalWeapons": ["proboscis"]
+        "naturalWeapons": ["proboscis"],
+        "limbMap"        : "avian"
     },
     {
         "id"            : "grimeling",
@@ -658,7 +681,8 @@
         "lair"          : "swamp_nest",
         "lairRange"     : 28,
         "carcassItemId" : "grimeling_carcass",
-        "naturalWeapons": ["claw"]
+        "naturalWeapons": ["claw"],
+        "limbMap"        : "amorphous"
     },
     {
         "id"            : "giant_olm",
@@ -678,6 +702,7 @@
         "biomeWeights"  : {"swamp": 1.0},
         "carcassItemId" : "giant_olm_carcass",
         "naturalWeapons": ["bite"],
+        "limbMap"        : "amphibian",
         // Pale cave amphibian of cold underground pools — used to the chill, unused to fire.
         "resistances"   : {"frost": 0.3, "fire": -0.25}
     },
@@ -705,7 +730,8 @@
         "hungerRate"    : 0.3,
         "foodOverflow"  : 0.4,
         "carcassItemId" : "thornwood_spider_carcass",
-        "naturalWeapons": ["venom_bite"]
+        "naturalWeapons": ["venom_bite"],
+        "limbMap"        : "arachnid"
     },
     // ── Intelligent raiders (entityClass "mob" — drive aggression) ───────────────
     {
@@ -730,7 +756,8 @@
         "hungerRate"    : 0.6,
         "foodOverflow"  : 0.3,
         "carcassItemId" : "kobold_skulker_carcass",
-        "naturalWeapons": ["fists", "bite"]
+        "naturalWeapons": ["fists", "bite"],
+        "limbMap"        : "humanoid"
     },
     {
         "id"            : "gnoll_marauder",
@@ -755,7 +782,8 @@
         "hungerRate"    : 0.6,
         "foodOverflow"  : 0.3,
         "carcassItemId" : "gnoll_marauder_carcass",
-        "naturalWeapons": ["claw", "bite"]
+        "naturalWeapons": ["claw", "bite"],
+        "limbMap"        : "humanoid"
     },
     {
         "id"            : "orc_reaver",
@@ -780,7 +808,8 @@
         "hungerRate"    : 0.6,
         "foodOverflow"  : 0.25,
         "carcassItemId" : "orc_reaver_carcass",
-        "naturalWeapons": ["fists", "slam"]
+        "naturalWeapons": ["fists", "slam"],
+        "limbMap"        : "humanoid"
     },
     {
         "id"            : "harpy",
@@ -805,7 +834,8 @@
         "hungerRate"    : 0.7,
         "foodOverflow"  : 0.3,
         "carcassItemId" : "harpy_carcass",
-        "naturalWeapons": ["claw", "peck", "screech"]
+        "naturalWeapons": ["claw", "peck", "screech"],
+        "limbMap"        : "winged_humanoid"
     },
     {
         "id"            : "bullywug",
@@ -829,6 +859,7 @@
         "hungerRate"    : 0.4,
         "foodOverflow"  : 0.3,
         "carcassItemId" : "bullywug_carcass",
-        "naturalWeapons": ["fists", "bite", "tongue"]
+        "naturalWeapons": ["fists", "bite", "tongue"],
+        "limbMap"        : "amphibian"
     }
 ]

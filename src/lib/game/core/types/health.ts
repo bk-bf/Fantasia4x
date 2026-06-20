@@ -61,7 +61,11 @@ export interface EntityCondition {
   severity: number; // 0.0–1.0; reaches lethalSeverity → pawn dies
 }
 
-export type LimbId = 'head' | 'torso' | 'left_arm' | 'right_arm' | 'left_leg' | 'right_leg';
+// Limb + body-part ids are DATA-DRIVEN (body plans in limbmap.jsonc — humanoid arms/legs, quadruped
+// paws + tail, avian wings, serpentine body, arachnid legs, …), so these are open `string` aliases
+// rather than closed unions. The humanoid set (head/torso/left_arm/…; skull/chest/leftHand/…) is the
+// canonical baseline; other plans introduce their own ids (frontLeftPaw, leftWingBone, foreBody, …).
+export type LimbId = string;
 
 export const CRITICAL_LIMBS: LimbId[] = ['head', 'torso'];
 
@@ -70,67 +74,9 @@ export const CRITICAL_LIMBS: LimbId[] = ['head', 'torso'];
 // frost→cold_resistance, lightning→lightning_resistance) and by per-creature `resistances`.
 export type DamageType = 'cutting' | 'piercing' | 'blunt' | 'fire' | 'frost' | 'lightning';
 
-export type BodyPartId =
-  // ── Head region ──────────────────────────────────────────────────────────
-  | 'skull'
-  | 'jaw'
-  | 'nose'
-  | 'leftEye'
-  | 'rightEye'
-  | 'leftEar'
-  | 'rightEar'
-  | 'brain'
-  // ── Torso ────────────────────────────────────────────────────────────────
-  | 'chest'
-  | 'abdomen'
-  | 'heart'
-  | 'leftLung'
-  | 'rightLung'
-  | 'liver'
-  | 'stomach'
-  | 'leftKidney'
-  | 'rightKidney'
-  | 'spine'
-  // ── Left arm ─────────────────────────────────────────────────────────────
-  | 'leftShoulder'
-  | 'leftUpperArm'
-  | 'leftForearm'
-  | 'leftHand'
-  | 'leftThumb'
-  | 'leftIndexFinger'
-  | 'leftMiddleFinger'
-  | 'leftRingFinger'
-  | 'leftLittleFinger'
-  // ── Right arm ────────────────────────────────────────────────────────────
-  | 'rightShoulder'
-  | 'rightUpperArm'
-  | 'rightForearm'
-  | 'rightHand'
-  | 'rightThumb'
-  | 'rightIndexFinger'
-  | 'rightMiddleFinger'
-  | 'rightRingFinger'
-  | 'rightLittleFinger'
-  // ── Left leg ─────────────────────────────────────────────────────────────
-  | 'leftHip'
-  | 'leftUpperLeg'
-  | 'leftLowerLeg'
-  | 'leftFoot'
-  | 'leftBigToe'
-  | 'leftSecondToe'
-  | 'leftMiddleToe'
-  | 'leftFourthToe'
-  | 'leftLittleToe'
-  // ── Right leg ────────────────────────────────────────────────────────────
-  | 'rightHip'
-  | 'rightUpperLeg'
-  | 'rightLowerLeg'
-  | 'rightFoot'
-  | 'rightBigToe'
-  | 'rightSecondToe'
-  | 'rightMiddleToe'
-  | 'rightFourthToe'
-  | 'rightLittleToe';
+/** A body-part id from limbmap.jsonc's catalog — open `string` (data-driven across body plans;
+ *  humanoid skull/chest/leftHand…, quadruped frontLeftPaw/tail, avian leftWingBone, …). */
+export type BodyPartId = string;
 
 export interface Injury {
   bodyPart: BodyPartId;

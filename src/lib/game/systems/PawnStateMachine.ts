@@ -32,7 +32,7 @@ import {
   BASE_CLOT_CHANCE
 } from './Combat';
 import { HEALING_CONFIG, CARE_CONFIG, woundById, isTended } from '../core/Wounds';
-import { PART_DEF_MAP } from '../core/BodyParts';
+import { PART_DEF_MAP, BONE_FRACTION } from '../core/BodyParts';
 import conditionsData from '../database/conditions.jsonc';
 import { itemService } from '../services/ItemService';
 import { pawnStatService } from '../services/PawnStatService';
@@ -633,16 +633,18 @@ export function healLimbs(
           continue;
         }
         healed += heal;
-        newWounds.push(recomputeWound(part.id, w.type, newDamage, w, turn));
+        newWounds.push(recomputeWound(part.id, w.type, newDamage, w, turn, part.maxHp));
       }
       // Snap to full when the last wound clears — otherwise the part lingers fractionally under max
       // and the HEALTH panel keeps showing a "healed" part forever.
       const health =
         newWounds.length === 0 ? part.maxHp : Math.min(part.maxHp, part.health + healed);
-      // Un-break the bone once the fracture has knit below boneHp (weeks later).
-      const boneHp = PART_DEF_MAP[part.id]?.boneHp;
+      // Un-break the bone once the fracture has knit below boneHp (weeks later). boneHp scales with the
+      // part's actual (bodyScale) maxHp; the catalog flag just says whether the part has a skeleton.
+      const hasBone = PART_DEF_MAP[part.id]?.boneHp != null;
       const fractureW = newWounds.find((w) => woundById(w.type)?.structural);
-      const boneBroken = fractureW != null && boneHp != null && fractureW.damage >= boneHp;
+      const boneBroken =
+        hasBone && fractureW != null && fractureW.damage >= BONE_FRACTION * part.maxHp;
       return { ...part, health, injuries: newWounds, boneBroken };
     });
     const totalBleed = newParts.reduce(
@@ -699,16 +701,17 @@ export function healLimbsInPlace(
           continue;
         }
         healed += heal;
-        recomputeWoundInPlace(w, newDamage, turn);
+        recomputeWoundInPlace(w, newDamage, turn, part.maxHp);
         inj[write++] = w; // compact the survivors toward the front
       }
       if (write !== inj.length) inj.length = write; // truncate the dropped wounds
       // Snap to full when the last wound clears (mirrors healLimbs' UI auto-hide rule).
       part.health = inj.length === 0 ? part.maxHp : Math.min(part.maxHp, part.health + healed);
-      // Un-break the bone once the fracture has knit below boneHp (mirrors healLimbs).
-      const boneHp = PART_DEF_MAP[part.id]?.boneHp;
+      // Un-break the bone once the fracture has knit below boneHp (scaled to the part's maxHp).
+      const hasBone = PART_DEF_MAP[part.id]?.boneHp != null;
       const fractureW = inj.find((w) => woundById(w.type)?.structural);
-      part.boneBroken = fractureW != null && boneHp != null && fractureW.damage >= boneHp;
+      part.boneBroken =
+        hasBone && fractureW != null && fractureW.damage >= BONE_FRACTION * part.maxHp;
     }
     // Roll the limb's bleed + health summary up from the mutated parts (mirrors healLimbs).
     let totalBleed = 0;

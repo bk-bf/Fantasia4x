@@ -45,8 +45,29 @@ import { rng } from '../core/rng';
 import { perTick } from '../core/time';
 // P-4: the body-part anatomy table + selection helpers moved to core/BodyParts. Re-export the two
 // symbols external code imported from Combat (PawnHealth, EntityService, Pawns) so they're unchanged.
-import { PART_DEF_MAP, rollBodyPart, createDefaultBodyParts } from '../core/BodyParts';
-export { PART_DEF_MAP, createDefaultBodyParts };
+import {
+  PART_DEF_MAP,
+  rollBodyPart,
+  createDefaultBodyParts,
+  createBodyPlanLimbs,
+  parentLimbOf,
+  CORE_LIMB_IDS,
+  DEFAULT_PLAN,
+  BONE_FRACTION
+} from '../core/BodyParts';
+export { PART_DEF_MAP, createDefaultBodyParts, createBodyPlanLimbs };
+
+/** The limb (in this entity's OWN tree) that holds a given part — replaces the old global parentLimb,
+ *  which can't exist now that a part's parent limb varies by body plan (heart ⊂ torso vs ⊂ body). */
+function limbOfPart(entity: Pawn | Mob, partId: BodyPartId): LimbState | undefined {
+  return (entity.limbs ?? []).find((l) => (l.parts ?? []).some((p) => p.id === partId));
+}
+
+/** The body plan of a defender (creatures carry `limbMap`; pawns are humanoid). */
+function planOf(entity: Pawn | Mob): string {
+  if ('creatureId' in entity) return getCreatureById(entity.creatureId)?.limbMap ?? DEFAULT_PLAN;
+  return DEFAULT_PLAN;
+}
 
 // conditions.jsonc holds persistent and transient conditions; combat only needs the
 // transient ones (winded → dodge) — pick them out by the `duration` discriminant.
@@ -205,11 +226,13 @@ export function recomputeWound(
     Injury,
     'infected' | 'treatedAt' | 'treatmentQuality' | 'inflictedAt' | 'clotProgress'
   >,
-  turn?: number
+  turn?: number,
+  maxHpOverride?: number
 ): Injury {
   const partDef = PART_DEF_MAP[bodyPart];
   const wd = woundById(type);
-  const maxHp = partDef?.maxHp ?? 1;
+  // Per-creature SCALED maxHp when the caller has it (bodyScale × default); else the catalog default.
+  const maxHp = maxHpOverride ?? partDef?.maxHp ?? 1;
   const frac = maxHp > 0 ? Math.min(accumDamage / maxHp, 1) : 0;
   const severity = severityFromFrac(frac);
   const clotProgress = prev?.clotProgress ?? 0;
@@ -256,10 +279,15 @@ export function recomputeWound(
  * re-immutabled the de-immutabled M3 mob phase — ENGINE-PERFORMANCE). `infected`/`treatedAt`/
  * `treatmentQuality`/`inflictedAt` already live on `w` and are preserved; logic mirrors recomputeWound.
  */
-export function recomputeWoundInPlace(w: Injury, accumDamage: number, turn?: number): void {
+export function recomputeWoundInPlace(
+  w: Injury,
+  accumDamage: number,
+  turn?: number,
+  maxHpOverride?: number
+): void {
   const partDef = PART_DEF_MAP[w.bodyPart];
   const wd = woundById(w.type);
-  const maxHp = partDef?.maxHp ?? 1;
+  const maxHp = maxHpOverride ?? partDef?.maxHp ?? 1;
   const frac = maxHp > 0 ? Math.min(accumDamage / maxHp, 1) : 0;
   w.severity = severityFromFrac(frac);
   w.damage = accumDamage;
@@ -581,18 +609,15 @@ function partArmorReduction(defender: Pawn | Mob, partId: BodyPartId, armorPen: 
     if (natural > bestDef) bestDef = natural;
   }
   if (bestDef <= 0) return 0;
-  // Torso/head get full armour benefit; limbs only partial
-  const base =
-    def.parentLimb === 'torso' || def.parentLimb === 'head' ? bestDef / 100 : (bestDef / 100) * 0.3;
+  // Core (head/torso/body) get full armour benefit; peripheral limbs only partial.
+  const rootLimb = limbOfPart(defender, partId);
+  const base = CORE_LIMB_IDS.has(rootLimb?.id ?? '') ? bestDef / 100 : (bestDef / 100) * 0.3;
   return clamp(base * (1 - armorPen), 0, 0.9);
 }
 
 function currentPartHealth(defender: Pawn | Mob, partId: BodyPartId, defMaxHp: number): number {
   if (!('limbs' in defender) || !defender.limbs) return defMaxHp;
-  const def = PART_DEF_MAP[partId];
-  if (!def) return defMaxHp;
-  const root = defender.limbs.find((l) => l.id === def.parentLimb);
-  const partState = root?.parts?.find((p) => p.id === partId);
+  const partState = limbOfPart(defender, partId)?.parts?.find((p) => p.id === partId);
   return partState?.health ?? defMaxHp;
 }
 
@@ -652,8 +677,12 @@ class CombatServiceImpl implements CombatService {
       };
     }
 
-    const partId = rollBodyPart();
+    // Roll a hit location from the DEFENDER's own body plan (a wolf rolls paws/tail, not fingers).
+    const partId = rollBodyPart(planOf(defender));
     const partDef = PART_DEF_MAP[partId]!;
+    // The defender's part may be bodyScale-scaled; severity/fracture use its ACTUAL maxHp.
+    const partMaxHp =
+      limbOfPart(defender, partId)?.parts?.find((p) => p.id === partId)?.maxHp ?? partDef.maxHp;
 
     // Crit: base crit_chance stat (DEX/PER + capacities) plus this weapon's critMod.
     // A crit multiplies the post-mitigation damage — so a high-crit build with a
@@ -683,9 +712,9 @@ class CombatServiceImpl implements CombatService {
     const mitigated = raw * (1 - armorRed) * (1 - physRes);
     const final = Math.max(1, Math.round(mitigated * (crit ? CRIT_MULTIPLIER : 1)));
 
-    const prevHealth = currentPartHealth(defender, partId, partDef.maxHp);
+    const prevHealth = currentPartHealth(defender, partId, partMaxHp);
     const newHealth = Math.max(0, prevHealth - final);
-    const hpMissing = (partDef.maxHp - newHealth) / partDef.maxHp;
+    const hpMissing = (partMaxHp - newHealth) / partMaxHp;
 
     // This-hit wound increment. The damage type picks the wound (cut/puncture/crush/
     // burn); accumulation, final severity, bleed rate and pain are computed when the
@@ -724,8 +753,9 @@ class CombatServiceImpl implements CombatService {
     let fractureInjury: Injury | null = null;
     if (partDef.boneHp != null && hpMissing > 0) {
       const isBlunt = damageType === 'blunt';
+      const boneHp = BONE_FRACTION * partMaxHp; // scaled to this creature's actual part size
       const fractureChance = clamp(
-        (isBlunt ? FRACTURE_BLUNT_BASE * bluntMod : FRACTURE_OTHER_BASE) * (final / partDef.boneHp),
+        (isBlunt ? FRACTURE_BLUNT_BASE * bluntMod : FRACTURE_OTHER_BASE) * (final / boneHp),
         0,
         isBlunt ? FRACTURE_BLUNT_CAP : FRACTURE_OTHER_CAP
       );
@@ -733,7 +763,7 @@ class CombatServiceImpl implements CombatService {
         fractureInjury = {
           bodyPart: partId,
           type: 'fracture',
-          severity: severityFromFrac(final / partDef.maxHp),
+          severity: severityFromFrac(final / partMaxHp),
           damage: final,
           bleeding: 0,
           painContribution: 0,
@@ -770,9 +800,14 @@ class CombatServiceImpl implements CombatService {
     const partDef = PART_DEF_MAP[injury.bodyPart];
     if (!partDef) return state;
 
+    // The limb that holds this part — found in the entity's OWN tree (plan-agnostic), falling back to
+    // the plan's structural mapping so a part absent from a sparse tree (test fixtures) is still created.
+    const targetLimbId =
+      limbOfPart(entity, injury.bodyPart)?.id ?? parentLimbOf(planOf(entity), injury.bodyPart);
+
     // ── Update limb tree: merge this hit into the part's same-type wound ──────
     const limbs: LimbState[] = (entity.limbs ?? []).map((limb) => {
-      if (limb.id !== partDef.parentLimb) return limb;
+      if (limb.id !== targetLimbId) return limb;
 
       const existing: BodyPartState[] = limb.parts ?? [];
       const idx = existing.findIndex((p) => p.id === injury.bodyPart);
@@ -786,6 +821,9 @@ class CombatServiceImpl implements CombatService {
               isMissing: false,
               injuries: []
             };
+      // The part's ACTUAL (bodyScale-scaled) maxHp — set at spawn — drives severity, accum cap, and the
+      // bone-break threshold, NOT the default-scale catalog value.
+      const maxHp = prev.maxHp || partDef.maxHp;
 
       // A structural (fracture) wound tracks BONE damage — it does NOT chip soft-tissue HP (the crush
       // from the same blow already did); it only breaks the bone. Non-structural wounds reduce HP.
@@ -796,8 +834,8 @@ class CombatServiceImpl implements CombatService {
       // escalate severity (5 crushes → one severe crush) instead of piling up.
       const wIdx = prev.injuries.findIndex((w) => w.type === injury.type);
       const prevW = wIdx >= 0 ? prev.injuries[wIdx] : undefined;
-      const accum = Math.min((prevW?.damage ?? 0) + injury.damage, partDef.maxHp);
-      const merged = recomputeWound(injury.bodyPart, injury.type, accum, prevW, state.turn);
+      const accum = Math.min((prevW?.damage ?? 0) + injury.damage, maxHp);
+      const merged = recomputeWound(injury.bodyPart, injury.type, accum, prevW, state.turn, maxHp);
       const woundList =
         wIdx >= 0
           ? prev.injuries.map((w, i) => (i === wIdx ? merged : w))
@@ -809,7 +847,8 @@ class CombatServiceImpl implements CombatService {
         // Soft-tissue destruction SEVERS the part; structural (fracture) destruction BREAKS the bone.
         isMissing: prev.isMissing || (merged.severity === 'destroyed' && !isStructural),
         boneBroken:
-          prev.boneBroken || (isStructural && partDef.boneHp != null && accum >= partDef.boneHp),
+          prev.boneBroken ||
+          (isStructural && partDef.boneHp != null && accum >= BONE_FRACTION * maxHp),
         injuries: woundList
       };
       const newParts =

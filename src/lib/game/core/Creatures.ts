@@ -167,6 +167,11 @@ export interface CreatureDefinition {
    * single anatomy); durability comes from the larger blood pool + naturalArmor instead. Omitted = 1.0.
    */
   bodyScale?: number;
+  /** Body plan from limbmap.jsonc (humanoid | quadruped | avian | serpentine | arachnid |
+   *  winged_humanoid | amorphous) — picks the creature's anatomy so a wolf carries paws + a tail
+   *  instead of a humanoid's fingers/toes. Omitted = "humanoid". Drives ONLY structure + hit locations;
+   *  per-limb HP = bodyScale × the plan's default sizes, and the blood pool stays health × bodyScale. */
+  limbMap?: string;
   /** Spawn-gate overrides (ENTITIES_SPAWNING). The default gate restricts spawns to walkable
    *  forest/plains/swamp land (isSpawnableTile). These let specific creatures bend that:
    *  - `spawnsInMountain`: spawn on ANY mountain tile, even non-walkable rock — for incorporeal
@@ -258,6 +263,7 @@ function toDefinition(raw: RawCreature): CreatureDefinition {
     resistances: (raw.resistances as Partial<Record<DamageType, number>> | undefined) ?? undefined,
     naturalArmor: (raw.naturalArmor as number | undefined) ?? undefined,
     bodyScale: (raw.bodyScale as number | undefined) ?? undefined,
+    limbMap: (raw.limbMap as string | undefined) ?? undefined,
     spawnsInMountain: (raw.spawnsInMountain as boolean | undefined) ?? undefined,
     maxMountainDistance: (raw.maxMountainDistance as number | undefined) ?? undefined,
     lair: (raw.lair as string | undefined) ?? undefined,

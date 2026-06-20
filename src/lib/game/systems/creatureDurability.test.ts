@@ -145,15 +145,16 @@ describe('big-creature durability (naturalArmor + bodyScale)', () => {
     expect(mammothDmg).toBeGreaterThan(wolfDmg * 1.3);
   });
 
-  it('blunt wounds now bleed (contusion) — fists draw some blood over a fight', () => {
+  it('blunt wounds do NOT bleed (crush is contusion-free) — only a severed stump gushes', () => {
     const fists = makeArmedPawn(undefined, { strength: 20 }); // unarmed → blunt fists/kick
     const target = makeCreature('giant_rat');
     rng.reseed(11);
-    let anyBleed = false;
-    for (let i = 0; i < 200 && !anyBleed; i++) {
+    // Blunt's payoff is raw damage + fractures, not blood: a non-destroying crush never opens a bleed.
+    for (let i = 0; i < 200; i++) {
       const r = combatService.resolveHit(fists, target, emptyState);
-      if (r.hit && r.damageType === 'blunt' && (r.injury?.bleeding ?? 0) > 0) anyBleed = true;
+      if (r.hit && r.damageType === 'blunt' && r.injury && r.injury.severity !== 'destroyed') {
+        expect(r.injury.bleeding).toBe(0);
+      }
     }
-    expect(anyBleed).toBe(true);
   });
 });

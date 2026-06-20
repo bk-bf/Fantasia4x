@@ -4,7 +4,8 @@ import type { GameState, Mob, MobState, EntityStats, EntityNeeds } from '../../c
 import { CREATURES, type CreatureDefinition } from '../../core/Creatures';
 import { getAmbientLight } from '../EnvironmentService';
 import { calcMaxStamina } from '../../entities/Pawns';
-import { createDefaultBodyParts } from '../../systems/Combat';
+import { createBodyPlanLimbs } from '../../systems/Combat';
+import { DEFAULT_PLAN } from '../../core/BodyParts';
 import { rng } from '../../core/rng';
 import { findNearbyWalkable } from './entityHelpers';
 import { isSpawnableTile } from '../../core/Terrains';
@@ -474,50 +475,9 @@ export function makeMob(def: CreatureDefinition, x: number, y: number, turn: num
     skills: {},
     stamina: calcMaxStamina(stats),
     maxStamina: calcMaxStamina(stats),
-    limbs: [
-      {
-        id: 'head',
-        health: 100,
-        isMissing: false,
-        bleedRate: 0,
-        parts: createDefaultBodyParts('head')
-      },
-      {
-        id: 'torso',
-        health: 100,
-        isMissing: false,
-        bleedRate: 0,
-        parts: createDefaultBodyParts('torso')
-      },
-      {
-        id: 'left_arm',
-        health: 100,
-        isMissing: false,
-        bleedRate: 0,
-        parts: createDefaultBodyParts('left_arm')
-      },
-      {
-        id: 'right_arm',
-        health: 100,
-        isMissing: false,
-        bleedRate: 0,
-        parts: createDefaultBodyParts('right_arm')
-      },
-      {
-        id: 'left_leg',
-        health: 100,
-        isMissing: false,
-        bleedRate: 0,
-        parts: createDefaultBodyParts('left_leg')
-      },
-      {
-        id: 'right_leg',
-        health: 100,
-        isMissing: false,
-        bleedRate: 0,
-        parts: createDefaultBodyParts('right_leg')
-      }
-    ],
+    // Anatomy from the creature's body plan (limbmap.jsonc — wolves get paws + a tail, not fingers),
+    // with each part's HP scaled by bodyScale (bigger beast = bigger, tougher limbs).
+    limbs: createBodyPlanLimbs(def.limbMap ?? DEFAULT_PLAN, bodyScale),
     // ── Combat & stat parity with Pawn ───────────────────────────────────────────
     // CreatureDefinition has no explicit size; derive a size class from strength
     // (bear str 22 → large, wolf 12 → medium, rabbit 1 → small).

@@ -9,7 +9,8 @@ import type {
 } from '../core/types';
 import { createPawnInventory, createPawnEquipment } from '../core/PawnEquipment';
 import { modifierSystem } from '../systems/ModifierSystem';
-import { createDefaultBodyParts } from '../systems/Combat';
+import { createBodyPlanLimbs } from '../systems/Combat';
+import { DEFAULT_PLAN } from '../core/BodyParts';
 import { rng } from '../core/rng';
 
 // Module-level counter for sequential debug IDs across all generated pawns.
@@ -77,50 +78,8 @@ export function buildPawnFromRace(race: Race, index: number): Pawn {
     // Combat — stamina
     stamina: maxStamina,
     maxStamina,
-    limbs: [
-      {
-        id: 'head',
-        health: 100,
-        isMissing: false,
-        bleedRate: 0,
-        parts: createDefaultBodyParts('head')
-      },
-      {
-        id: 'torso',
-        health: 100,
-        isMissing: false,
-        bleedRate: 0,
-        parts: createDefaultBodyParts('torso')
-      },
-      {
-        id: 'left_arm',
-        health: 100,
-        isMissing: false,
-        bleedRate: 0,
-        parts: createDefaultBodyParts('left_arm')
-      },
-      {
-        id: 'right_arm',
-        health: 100,
-        isMissing: false,
-        bleedRate: 0,
-        parts: createDefaultBodyParts('right_arm')
-      },
-      {
-        id: 'left_leg',
-        health: 100,
-        isMissing: false,
-        bleedRate: 0,
-        parts: createDefaultBodyParts('left_leg')
-      },
-      {
-        id: 'right_leg',
-        health: 100,
-        isMissing: false,
-        bleedRate: 0,
-        parts: createDefaultBodyParts('right_leg')
-      }
-    ]
+    // Pawns are the humanoid body plan (limbmap.jsonc) at bodyScale 1.0.
+    limbs: createBodyPlanLimbs(DEFAULT_PLAN, 1)
   };
 
   return pawn;
