@@ -1,4 +1,4 @@
-import { writable, derived } from 'svelte/store';
+import { writable, derived, type Writable } from 'svelte/store';
 import { browser } from '$app/environment';
 import type { ActivityLogEntry, CombatTurnEntry } from '$lib/game/core/Events';
 import type { LogEventInput } from '$lib/game/core/logSink';
@@ -10,7 +10,70 @@ import {
   scheduleSaveDebugLog
 } from './saveManager';
 
-export const activityLog = writable<ActivityLogEntry[]>([]);
+/**
+ * A writable that can COALESCE notifications. A combat flood replays dozens of swing/kill events in
+ * one synchronous burst (the worker batches `simlog` and the bridge replays them in a tight loop);
+ * each one mutated this store, and every mutation re-ran ALL derived chronicle views (the
+ * `allLogEntries` O(n log n) sort over ≤2400 entries, the per-type filters) plus every subscribed
+ * panel — N× per frame, which is the engagement-start FPS dip. Wrapping the replay in
+ * `beginBatch()`/`endBatch()` defers subscriber notification to a SINGLE fire at the end, so the
+ * derived recompute + re-render happens once per batch. Outside a batch it behaves like a plain
+ * writable (each set/update notifies immediately — the test path + non-combat callers are unchanged).
+ */
+interface BatchableStore<T> extends Writable<T> {
+  beginBatch(): void;
+  endBatch(): void;
+}
+function batchable<T>(initial: T): BatchableStore<T> {
+  let value = initial;
+  const subs = new Set<(v: T) => void>();
+  let depth = 0;
+  let dirty = false;
+  const fire = () => {
+    for (const s of subs) s(value);
+  };
+  const notify = () => {
+    if (depth > 0) dirty = true;
+    else fire();
+  };
+  return {
+    subscribe(run: (v: T) => void) {
+      subs.add(run);
+      run(value);
+      return () => subs.delete(run);
+    },
+    set(v: T) {
+      value = v;
+      notify();
+    },
+    update(fn: (v: T) => T) {
+      value = fn(value);
+      notify();
+    },
+    beginBatch() {
+      depth++;
+    },
+    endBatch() {
+      if (depth > 0 && --depth === 0 && dirty) {
+        dirty = false;
+        fire();
+      }
+    }
+  };
+}
+
+export const activityLog = batchable<ActivityLogEntry[]>([]);
+
+/** Run `fn` with chronicle notifications coalesced into a single fire afterwards (see `batchable`).
+ *  Used to wrap the per-batch `simlog` replay so a combat flood re-renders the chronicle ONCE. */
+export function batchLogReplay(fn: () => void): void {
+  activityLog.beginBatch();
+  try {
+    fn();
+  } finally {
+    activityLog.endBatch();
+  }
+}
 
 // The chronicle lives in this in-memory store (not in GameState), so it would be
 // lost whenever the browser reloads/discards the tab. Restore it from IndexedDB on

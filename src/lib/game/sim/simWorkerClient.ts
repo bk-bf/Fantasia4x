@@ -10,6 +10,7 @@
  */
 import { isClientRuntime } from '../core/runtime';
 import { realSimLogSink } from '../../stores/simLogBridge';
+import { batchLogReplay } from '../../stores/Log';
 import type { SimLogEvent, EntitySync } from './simProtocol';
 import type { GameState, Pawn, Mob, WorldTile, DroppedItem } from '../core/types';
 
@@ -180,9 +181,14 @@ class SimWorkerBridge {
         m.flush ?? true
       );
     } else if (m.kind === 'simlog') {
-      // Replay the worker's buffered chronicle/combat-text calls against the real (DOM) sink.
+      // Replay the worker's buffered chronicle/combat-text calls against the real (DOM) sink. Wrap the
+      // whole batch so the chronicle store fires ONE notification for the lot (a combat flood otherwise
+      // re-ran every derived view + panel per event — the engagement-start FPS dip).
       const sink = realSimLogSink as unknown as Record<string, (...a: unknown[]) => unknown>;
-      for (const ev of m.events ?? []) sink[ev.m]?.(...ev.a);
+      const events = m.events ?? [];
+      batchLogReplay(() => {
+        for (const ev of events) sink[ev.m]?.(...ev.a);
+      });
     } else if (m.kind === 'fullState' && m.state) {
       this.worldMap = m.state.worldMap;
       this.onFullState?.(m.state);
