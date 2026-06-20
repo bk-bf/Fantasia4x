@@ -221,9 +221,7 @@
               on:click={() => toggle(tab.key)}
               {disabled}
               title={disabled ? 'Requires a knowledge building' : tab.fkey}
-            >
-              {tab.label}
-            </button>
+            >{tab.label}</button>
           {/each}
         </nav>
       </main>
