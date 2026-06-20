@@ -884,3 +884,40 @@ species toughness distinct (the plan can't, being shared); a future per-creature
 layer on top if the scalar feels coarse. `damage`/`baseDamage` weapon fields were consolidated to
 one canonical `damage`. Guarded by `bodyPlans.test.ts` + `fractures.test.ts`. Not graph-checkable —
 a data/runtime decision, not a call-edge invariant.
+
+### ADR-025 [GAME]: Graded Wind via `windchilled` + Per-Pawn Upwind Wind-Shadow
+
+**Status:** Accepted (2026-06-20).
+
+**Context.** Wind was flavour: weather types carried a static `windStrength` and a drifting ambient
+`wind` scalar that only slanted the visual overlay and biased storm transitions. It had no gameplay
+bite on a pawn and no direction, so it could neither expose nor shelter. We wanted five graded degrees
+(slightly→extremely windy) driving a real condition, plus walls/mountains casting a downwind "immune
+zone".
+
+**Decision.**
+
+- **`windchilled` is a staged condition driven DIRECTLY** (instantaneous, like `encumbered`'s
+  `driveEncumbrance`, not an accrued exposure meter): `driveWindchill(conditions, effWind)` snaps
+  severity to the tile's felt wind each tick. Five stages in `conditions.jsonc`; a nuisance-only
+  debuff (DEX/move/work, fatigue ↑) with no `lifeThreatening` stage — danger comes only via the cold
+  it amplifies.
+- **Windchill couples to cold** — felt wind multiplies cold exposure in `PawnStateMachine`
+  (`WIND_COLD_EXTRA`), the same hook wetness uses, so wind genuinely hastens hypothermia. It never
+  adds heat (summer wind is relief, already in the type's `tempDelta`).
+- **Wind gets an 8-way direction** (`WeatherState.windDir`) that drifts on day boundaries alongside
+  the ambient-wind walk; ships free in the existing whole-object weather snapshot section.
+- **Wind-shadow is computed PER-PAWN by ray-marching upwind**, not as a precomputed tile field.
+  `windShelterAt` walks `WIND_SHADOW_LEN` (~4) tiles upwind from the pawn; the nearest impassable
+  tile (`walkable === false` — mountain/cliff/built wall) gives `1 − (i−1)/len` shelter (full directly
+  leeward, fading out). `effectiveWindAt` = `ambientWind` × (1 − roof weatherProtection) × (1 − lee
+  shelter).
+- **`ambientWind(weather)`** = `max(weatherWindStrength, wind)` is the single source of truth shared by
+  the WeatherCanvas slant and gameplay.
+
+**Why per-pawn, not a field.** A precomputed wind-shelter field would be O(impassable tiles) over a
+500×500 map dense with mountain walls — large and rebuilt whenever wind direction changes (daily).
+Only pawns experience windchill and pawns are few (dozens), so an O(`WIND_SHADOW_LEN`) ray-march per
+pawn per tick is far cheaper and needs no invalidation. The thermal field stays precomputed (keyed on
+buildings, not the whole terrain). Guarded by `windchill.test.ts`. Not graph-checkable — a
+data/runtime decision, not a call-edge invariant.

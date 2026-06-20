@@ -117,6 +117,27 @@ Both `Working` and `MovingToResource` re-evaluate the formula every turn so mid-
 
 See ADR-010 in [DECISIONS](DECISIONS.md) for the full design rationale and numeric examples.
 
+### Weather & Environmental Exposure (SEASONS_WEATHER)
+
+Weather is data-driven (`database/weather.jsonc`) and drives per-pawn pressure through the conditions
+system. Three environmental loads act on a pawn standing on a tile:
+
+- **Temperature** → `hypothermia` / `heat_stroke`. Effective temp = baked tile temp + live weather
+  delta, shielded by roof insulation/weatherProtection + nearby fire warmth. Cold/heat past the
+  pawn's comfort band feeds a tracked exposure meter (lags up/down) reduced by `cold_resistance` /
+  `fire_resistance`; the meter drives the staged conditions.
+- **Wetness** → `wet`, and amplifies cold (a soaked pawn chills far faster; can catch a chill at 100%).
+- **Wind → `windchilled`** (graded). Wind has a **strength** (`ambientWind` = the stronger of the
+  weather type's `windStrength` and the drifting `wind` scalar) and an 8-way **direction** (`windDir`,
+  drifts day to day). The wind a pawn actually feels (`effectiveWindAt`) is the open-field strength cut
+  by a roof's weatherProtection and by the **lee of an impassable tile** — a mountain/cliff/built wall
+  (`tile.walkable === false`) casts a downwind shelter shadow (`windShelterAt` ray-marches upwind a few
+  tiles; full shelter directly behind the wall, fading out). That felt wind drives `windchilled`
+  **directly** (instantaneous like encumbrance, not accrued) across five degrees — **slightly →
+  somewhat → fairly → very → extremely windy** — a nuisance debuff (DEX/move/work, fatigue ↑, never
+  lethal on its own) that **also amplifies cold exposure** when it's cold (real windchill, like
+  wetness). Rotating wind moves the sheltered side of a wall.
+
 ## Work System
 
 **Single source of truth (ADR-015):** every work category's effectiveness is computed by `pawnStatService.getWorkModifiers(pawn, work, light)`, driven entirely by formulas in `database/stats.jsonc`. It returns up to three axes:
