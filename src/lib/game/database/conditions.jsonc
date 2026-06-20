@@ -13,9 +13,36 @@
         "description": "Carrying more than the body comfortably bears — worn armour plus pack weight against a strength-scaled limit. Slows movement, spoils evasion and aim, and tires the body faster. Overload is allowed, at a price: strength and bags (belt/back) raise the limit, armour eats most of it. Severity = load ÷ capacity (driven directly, not over time).",
         "lethalSeverity": 99,
         "stages": [
-            { "label": "burdened",   "minSeverity": 0.0,  "color": "#C8A064", "modifiers": {"moveSpeed": 0.95, "dodge": 0.9, "fatigueRate": 1.1} },
-            { "label": "encumbered", "minSeverity": 0.33, "color": "#D08040", "modifiers": {"moveSpeed": 0.85, "dodge": 0.75, "hitChance": 0.9, "workEfficiency": 0.9, "fatigueRate": 1.25} },
-            { "label": "overloaded", "minSeverity": 0.83, "color": "#C04030", "modifiers": {"moveSpeed": 0.7, "dodge": 0.5, "hitChance": 0.8, "workEfficiency": 0.75, "fatigueRate": 1.5} }
+            {
+                "label"      : "burdened",
+                "minSeverity": 0.0,
+                "color"      : "#C8A064",
+                "modifiers"  : {"moveSpeed": 0.95, "dodge": 0.9, "fatigueRate": 1.1}
+            },
+            {
+                "label"      : "encumbered",
+                "minSeverity": 0.33,
+                "color"      : "#D08040",
+                "modifiers"  : {
+                    "moveSpeed"     : 0.85,
+                    "dodge"         : 0.75,
+                    "hitChance"     : 0.9 ,
+                    "workEfficiency": 0.9 ,
+                    "fatigueRate"   : 1.25
+                }
+            },
+            {
+                "label"      : "overloaded",
+                "minSeverity": 0.83,
+                "color"      : "#C04030",
+                "modifiers"  : {
+                    "moveSpeed"     : 0.7 ,
+                    "dodge"         : 0.5 ,
+                    "hitChance"     : 0.8 ,
+                    "workEfficiency": 0.75,
+                    "fatigueRate"   : 1.5
+                }
+            }
         ]
     },
     {
@@ -34,7 +61,12 @@
             "recovery"    : 0.0008
         },
         "stages": [
-            { "label": "thirsty", "minSeverity": 0.0, "color": "#4FC3F7", "modifiers": {"workEfficiency": 0.8, "moveSpeed": 0.9} },
+            {
+                "label"      : "thirsty",
+                "minSeverity": 0.0,
+                "color"      : "#4FC3F7",
+                "modifiers"  : {"workEfficiency": 0.8, "moveSpeed": 0.9}
+            },
             {
                 "label"      : "parched",
                 "minSeverity": 0.25,
@@ -73,7 +105,12 @@
             "recovery"    : 0.0003
         },
         "stages": [
-            { "label": "hungry", "minSeverity": 0.0, "color": "#f57c00", "modifiers": {"workEfficiency": 0.75, "moveSpeed": 0.75} },
+            {
+                "label"      : "hungry",
+                "minSeverity": 0.0,
+                "color"      : "#f57c00",
+                "modifiers"  : {"workEfficiency": 0.75, "moveSpeed": 0.75}
+            },
             {
                 "label"      : "minor",
                 "minSeverity": 0.2,
@@ -381,6 +418,7 @@
         "name": "Wet",
         "description": "Soaked through from rain or wet ground. Chilled and sluggish — cold bites far harder (and heat far less). Dries off in the warmth or under a roof.",
         "color": "#4FA3D1",
+        "floater": true,
         "charSpans": [ {"sheet": "font", "id": 247} ],
         "modifiers": {"moveSpeed": 0.9, "workEfficiency": 0.95}
     },
@@ -399,6 +437,7 @@
         "name"       : "Filthy",
         "description": "Caked in grime. Demoralising and unhealthy — slows work and sours mood (disease risk later).",
         "color"      : "#8d6e63",
+        "floater"    : true,
         "charSpans"  : [ {"sheet": "font", "id": 177} ],
         "modifiers"  : {"workEfficiency": 0.85}
     },
@@ -445,44 +484,44 @@
     // reduced by the named resistance stat in stats.jsonc (noted per condition). modifiers are
     // multipliers, consumed by the same work/move/dodge/fatigue pipeline as every transient.
     {
-        "duration"   : "transient",
-        "id"         : "envenomed",
-        "name"       : "Envenomed",
+        "duration": "transient",
+        "id": "envenomed",
+        "name": "Envenomed",
         "description": "Venom courses through the blood — nauseous, weak, and tiring fast until it passes. Onset chance is reduced by poison resistance (CON × blood filtration).",
-        "color"      : "#7CB342",
-        "floater"    : true,
-        "charSpans"  : [ {"sheet": "font", "id": 21} ],
-        "modifiers"  : {"workEfficiency": 0.7, "moveSpeed": 0.8, "fatigueRate": 1.3}
+        "color": "#7CB342",
+        "floater": true,
+        "charSpans": [ {"sheet": "font", "id": 21} ],
+        "modifiers": {"workEfficiency": 0.7, "moveSpeed": 0.8, "fatigueRate": 1.3}
     },
     {
-        "duration"   : "transient",
-        "id"         : "bloodletting",
-        "name"       : "Bleeding Out",
+        "duration": "transient",
+        "id": "bloodletting",
+        "name": "Bleeding Out",
         "description": "A feeding wound that won't clot — light-headed and slow as blood seeps away. Onset chance is reduced by piercing resistance (CON); a successful bite also drains blood directly (→ blood loss).",
-        "color"      : "#C62828",
-        "floater"    : true,
-        "charSpans"  : [ {"sheet": "font", "id": 3} ],
-        "modifiers"  : {"moveSpeed": 0.8, "workEfficiency": 0.85, "dodge": 0.85}
+        "color": "#C62828",
+        "floater": true,
+        "charSpans": [ {"sheet": "font", "id": 3} ],
+        "modifiers": {"moveSpeed": 0.8, "workEfficiency": 0.85, "dodge": 0.85}
     },
     {
-        "duration"   : "transient",
-        "id"         : "disoriented",
-        "name"       : "Disoriented",
+        "duration": "transient",
+        "id": "disoriented",
+        "name": "Disoriented",
         "description": "Reeling from a piercing screech — senses scrambled, slow to act and easy to hit. Onset chance is reduced by mental resistance (INT).",
-        "color"      : "#AB47BC",
-        "floater"    : true,
-        "charSpans"  : [ {"sheet": "font", "id": 19} ],
-        "modifiers"  : {"workEfficiency": 0.7, "dodge": 0.7, "moveSpeed": 0.9}
+        "color": "#AB47BC",
+        "floater": true,
+        "charSpans": [ {"sheet": "font", "id": 19} ],
+        "modifiers": {"workEfficiency": 0.7, "dodge": 0.7, "moveSpeed": 0.9}
     },
     {
-        "duration"   : "transient",
-        "id"         : "ensnared",
-        "name"       : "Ensnared",
+        "duration": "transient",
+        "id": "ensnared",
+        "name": "Ensnared",
         "description": "Caught fast by a sticky tongue — rooted in place and wide open until torn free. Onset chance is reduced by blunt resistance (CON/STR — wrenching free).",
-        "color"      : "#8D6E63",
-        "floater"    : true,
-        "charSpans"  : [ {"sheet": "font", "id": 15} ],
-        "modifiers"  : {"moveSpeed": 0.0, "dodge": 0.6}
+        "color": "#8D6E63",
+        "floater": true,
+        "charSpans": [ {"sheet": "font", "id": 15} ],
+        "modifiers": {"moveSpeed": 0.0, "dodge": 0.6}
     },
     // ── Magical buffs ("magical": true) — PRODUCTION-CHAIN-II §M ──────────────
     // Passive buffs granted by worn attuned gear (and, later, by MAGIC-SKILLS spells/skill nodes
@@ -562,14 +601,14 @@
         "modifiers"  : {"moveSpeed": 1.08, "fatigueRate": 0.92}
     },
     {
-        "duration"   : "transient",
-        "magical"    : true,
-        "id"         : "grace",
-        "name"       : "Grace",
+        "duration": "transient",
+        "magical": true,
+        "id": "grace",
+        "name": "Grace",
         "description": "Attuned regalia lends preternatural poise — far harder to land a blow on. The magical answer to a plate cuirass: dodge instead of armour.",
-        "color"      : "#B0E0D0",
-        "charSpans"  : [ {"sheet": "font", "id": 2} ],
-        "modifiers"  : {"dodge": 1.18}
+        "color": "#B0E0D0",
+        "charSpans": [ {"sheet": "font", "id": 2} ],
+        "modifiers": {"dodge": 1.18}
     },
     {
         "duration"   : "transient",
