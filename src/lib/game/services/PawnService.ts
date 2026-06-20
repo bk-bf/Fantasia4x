@@ -13,6 +13,7 @@ import { consumeFromStockpiles } from '../core/GameState';
 import { pawnById } from '../core/pawnIndex';
 import { calculatePawnStats, categorizeStats, getStatDescription } from '../entities/Pawns';
 import { pawnStatService } from './PawnStatService';
+import { itemService } from './ItemService';
 import { WORK_CATEGORIES } from '../core/Work';
 import { TICKS_PER_SECOND, SECONDS_PER_TICK, perTick } from '../core/time';
 import { stepBody } from '../systems/MovementSystem';
@@ -896,9 +897,41 @@ export class PawnServiceImpl implements PawnService {
     if (Math.abs(conditionFactor - 1) > 0.001)
       sources.push(`conditions ×${conditionFactor.toFixed(2)}`);
 
+    // Encumbrance: PACK cargo drags the pawn — empty ≈ ×1.0, at carry capacity ≈ ×0.6. This is what
+    // makes overloading cost something (PRODUCTION-CHAIN-II §L): a wheelbarrow/handcart RAISES the
+    // carry budget (inventoryBonus), so a pawn hauls far more, but stuffing it toward the new ceiling
+    // slows the push proportionally. General — a sack-laden pawn without a cart slows too. Worn gear is
+    // NOT counted here (the body-weight `weightFactor` already covers armour); only the pack does. Hot
+    // path: skipped entirely for the common unladen pawn, and computed inline (no getCurrentCarryLoad).
+    let loadFactor = 1;
+    const inv = (entity as Pawn).inventory;
+    const itemEntries = inv?.items ? Object.entries(inv.items) : [];
+    const instances = inv?.instances ?? [];
+    if (itemEntries.length > 0 || instances.length > 0) {
+      const budget = itemService.getCarryBudget(entity as Pawn, {} as GameState);
+      let lw = 0;
+      let lv = 0;
+      for (const [id, qty] of itemEntries) {
+        if (qty <= 0) continue;
+        const d = itemService.getItemById(id);
+        lw += (d?.weightKg ?? 0.1) * qty;
+        lv += (d?.volumeL ?? 0.2) * qty;
+      }
+      for (const it of instances) {
+        const d = itemService.getItemById(it.itemId);
+        lw += d?.weightKg ?? 0.5;
+        lv += d?.volumeL ?? 0.5;
+      }
+      const fw = budget.maxWeightKg > 0 ? lw / budget.maxWeightKg : 0;
+      const fv = budget.maxVolumeL > 0 ? lv / budget.maxVolumeL : 0;
+      const loadFrac = clamp(Math.max(fw, fv), 0, 1);
+      loadFactor = clamp(1 - loadFrac * 0.4, 0.6, 1);
+      if (loadFactor < 0.999) sources.push(`load ×${loadFactor.toFixed(2)}`);
+    }
+
     const tilesPerSecond = Math.max(
       0.05,
-      base * dexFactor * weightFactor * legFactor * needsFactor * conditionFactor
+      base * dexFactor * weightFactor * legFactor * needsFactor * conditionFactor * loadFactor
     );
     return { tilesPerSecond, sources };
   }

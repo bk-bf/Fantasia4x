@@ -423,10 +423,11 @@ export class ItemServiceImpl implements ItemService {
       total: 0
     };
 
-    // Belt + back containers add inventoryBonus on top.
+    // Any equipped item with an inventoryBonus raises the budget — belt/back pouches and baskets, and
+    // (§L) a wheelbarrow/handcart held in hand. Only containers and carts carry the field, so scanning
+    // every slot is safe and means a cart grants capacity from the mainHand slot it occupies.
     const gearSources: CarryCapacityBreakdown['gearSources'] = [];
-    for (const slot of ['belt', 'back'] as const) {
-      const inst = pawn.equipment?.[slot];
+    for (const inst of Object.values(pawn.equipment ?? {})) {
       if (!inst) continue;
       const def = this.getItemById(inst.itemId);
       if (def?.inventoryBonus) {

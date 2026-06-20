@@ -4640,7 +4640,7 @@
       "defense"       : 0,
       "equipmentSlot" : "back"
     },
-    "quiver": { "ammoCategory": "arrow", "capacity": 25, "drawSpeed": 0.15 }
+    "quiver": { "ammoCategory": "arrow", "drawSpeed": 0.15 }
   },
   {
     "id": "leather_back_quiver",
@@ -4662,7 +4662,7 @@
       "defense"       : 0,
       "equipmentSlot" : "back"
     },
-    "quiver": { "ammoCategory": "arrow", "capacity": 45, "drawSpeed": 0.25 }
+    "quiver": { "ammoCategory": "arrow", "drawSpeed": 0.25 }
   },
   {
     "id": "stiffened_war_quiver",
@@ -4684,7 +4684,7 @@
       "defense"       : 1,
       "equipmentSlot" : "back"
     },
-    "quiver": { "ammoCategory": "arrow", "capacity": 65, "drawSpeed": 0.32 }
+    "quiver": { "ammoCategory": "arrow", "drawSpeed": 0.32 }
   },
   {
     "id": "leather_bolt_case",
@@ -4706,7 +4706,7 @@
       "defense"       : 0,
       "equipmentSlot" : "belt"
     },
-    "quiver": { "ammoCategory": "bolt", "capacity": 25, "drawSpeed": 0.25 }
+    "quiver": { "ammoCategory": "bolt", "drawSpeed": 0.25 }
   },
   {
     "id": "banded_bolt_quiver",
@@ -4728,7 +4728,7 @@
       "defense"       : 1,
       "equipmentSlot" : "belt"
     },
-    "quiver": { "ammoCategory": "bolt", "capacity": 40, "drawSpeed": 0.30 }
+    "quiver": { "ammoCategory": "bolt", "drawSpeed": 0.30 }
   },
   {
     "id": "iron_boss_shield",
@@ -5762,5 +5762,62 @@
       "staminaCost": 6, "twoHanded": true, "strScaled": true, "arcane": true, "channeled": true
     },
     "aimBonuses": { "accuracy": 5, "range": 3 }
+  },
+
+  // ── PRODUCTION-CHAIN-II §L — Bulk Logistics ──────────────────────────────────────────────
+  // `wheel` is the crafted intermediate. wheelbarrow/handcart are two-handed `tool`s: equipping one
+  // fills the hands (mainHand) — so the pawn can't wield a weapon (Combat falls back to unarmed) —
+  // and grants a big `inventoryBonus`, raising the SAME carry budget belts/baskets use (no separate
+  // bulk pool). Self-weight is low: the wheels bear the load, the pusher just steers. Overloading
+  // still costs move-speed via the load→encumbrance term in PawnService.getMoveSpeed.
+  {
+    "id": "wheel",
+    "charSpans": [ {"sheet": "items", "id": 33} ],
+    "name": "Cart Wheel",
+    "type": "material",
+    "category": "crafting",
+    "description": "A spoked wooden wheel banded with an iron rim. The heart of every barrow and cart.",
+    "color": "#8A6A3A",
+    "amount": 0,
+    "weightKg": 4,
+    "volumeL": 6,
+    "maxDurability": 200,
+    "deteriorationRate": 0.01
+  },
+  {
+    "id": "wheelbarrow",
+    "charSpans": [ {"sheet": "items", "id": 26} ],
+    "name": "Wheelbarrow",
+    "type": "tool",
+    "category": "hauling",
+    "description": "A single-wheeled barrow. Pushed two-handed — no room for a weapon — but carries far more than a pawn's own back. Wants cleared ground.",
+    "color": "#A07840",
+    "amount": 0,
+    "weightKg": 3,
+    "volumeL": 30,
+    "tier": 1,
+    "durability": 220,
+    "maxDurability": 220,
+    "durabilityLossPerAction": 1,
+    "deteriorationRate": 0.01,
+    "inventoryBonus": { "weightKg": 60, "volumeL": 90 }
+  },
+  {
+    "id": "handcart",
+    "charSpans": [ {"sheet": "items", "id": 26} ],
+    "name": "Handcart",
+    "type": "tool",
+    "category": "hauling",
+    "description": "A two-wheeled handcart. The first real hauler — a big carry budget, but the heavier it's loaded the slower the pawn pushing it. Both hands on the shafts: no fighting.",
+    "color": "#8A6030",
+    "amount": 0,
+    "weightKg": 5,
+    "volumeL": 60,
+    "tier": 2,
+    "durability": 300,
+    "maxDurability": 300,
+    "durabilityLossPerAction": 1,
+    "deteriorationRate": 0.008,
+    "inventoryBonus": { "weightKg": 160, "volumeL": 240 }
   }
 ]

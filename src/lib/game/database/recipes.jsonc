@@ -2241,5 +2241,13 @@
   { "id": "make_spark_staff",   "station": "runecarver_bench", "inputs": {"heartwood_log": 1, "cut_topaz": 1, "cordage": 1},    "outputs": {"spark_staff": 1},   "workAmount": 16, "toolTierRequired": 1, "researchRequired": "arcane_lapidary" },
   { "id": "make_pyre_staff",    "station": "attunement_altar", "inputs": {"emberwood_log": 1, "attuned_ruby": 1, "gold_bar": 1},     "outputs": {"pyre_staff": 1},    "workAmount": 24, "toolTierRequired": 2, "researchRequired": "attunement" },
   { "id": "make_rime_staff",    "station": "attunement_altar", "inputs": {"moonwood_log": 1, "attuned_sapphire": 1, "gold_bar": 1},  "outputs": {"rime_staff": 1},    "workAmount": 24, "toolTierRequired": 2, "researchRequired": "attunement" },
-  { "id": "make_tempest_staff", "station": "attunement_altar", "inputs": {"heartwood_log": 1, "attuned_topaz": 1, "gold_bar": 1},    "outputs": {"tempest_staff": 1}, "workAmount": 24, "toolTierRequired": 2, "researchRequired": "attunement" }
+  { "id": "make_tempest_staff", "station": "attunement_altar", "inputs": {"heartwood_log": 1, "attuned_topaz": 1, "gold_bar": 1},    "outputs": {"tempest_staff": 1}, "workAmount": 24, "toolTierRequired": 2, "researchRequired": "attunement" },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PRODUCTION-CHAIN-II §L — Bulk Logistics: wheel sub-chain + pawn-pushed carts
+  // ═══════════════════════════════════════════════════════════════════════════
+  // The wheel forges its iron rim at the anvil (iron_working); the carts assemble at the sawtable.
+  { "id": "make_wheel",       "station": "anvil",    "inputs": {"pine_plank": 2, "iron_bar": 1},               "outputs": {"wheel": 1},       "workAmount": 60,  "toolTierRequired": 1, "researchRequired": "iron_working" },
+  { "id": "make_wheelbarrow", "station": "sawtable", "inputs": {"pine_plank": 4, "wheel": 1, "iron_nail": 6},  "outputs": {"wheelbarrow": 1}, "workAmount": 120, "toolTierRequired": 1, "researchRequired": "iron_working" },
+  { "id": "make_handcart",    "station": "sawtable", "inputs": {"pine_plank": 8, "wheel": 2, "cordage": 4},    "outputs": {"handcart": 1},    "workAmount": 200, "toolTierRequired": 1, "researchRequired": "iron_working" }
 ]

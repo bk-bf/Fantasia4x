@@ -255,7 +255,10 @@ export interface Item {
   // Weight & volume for inventory capacity system
   weightKg?: number;
   volumeL?: number;
-  /** Bonus carry capacity granted when equipped in belt/back slot. */
+  /**
+   * Bonus carry capacity granted while equipped (belt/back pouches, and PRODUCTION-CHAIN-II §L
+   * wheelbarrow/handcart held in hand). Raises the pawn's normal weight/volume carry budget.
+   */
   inventoryBonus?: { weightKg: number; volumeL: number };
   /** Durability lost per combat hit when this item is equipped. */
   durabilityLossPerCombatHit?: number;
@@ -359,15 +362,15 @@ export interface Item {
   };
 
   /**
-   * RANGED-COMBAT: a carry container that holds AMMUNITION (its mechanical role + the eventual
-   * capacity gate for the haul loop). The slot it occupies (`armorProperties.equipmentSlot`) drives the
-   * loadout trade-off: a BACK quiver holds long arrows but blocks a backpack (bows lose general carry);
-   * a BELT quiver holds short bolts and leaves the back free for a backpack (crossbowmen keep carry).
-   * Carry capacity itself rides the normal `inventoryBonus` (belt/back) channel.
+   * RANGED-COMBAT: a worn item that speeds drawing AMMUNITION (a faster nock), NOT an ammo container —
+   * ammo rides normal inventory by design (ADR/closeout: a quiver-only capacity gate was rejected as
+   * unrealistic; arrows carry in a pack fine). The slot it occupies (`armorProperties.equipmentSlot`)
+   * still drives a realistic loadout trade-off: a BACK quiver blocks a backpack (bows lose general
+   * carry); a BELT quiver leaves the back free (crossbowmen keep carry). Carry rides the normal
+   * `inventoryBonus` (belt/back) channel.
    */
   quiver?: {
     ammoCategory: string; // which ammo bucket this quiver speeds ("arrow" | "bolt")
-    capacity: number; // how many rounds it holds (the future haul/ammo-capacity gate)
     /**
      * Fast-draw bonus folded into the `aim_speed` cadence (NOT a new stat) when this quiver's
      * `ammoCategory` matches the equipped weapon — nocking from a ready quiver beats fumbling a shaft
