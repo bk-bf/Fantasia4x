@@ -206,11 +206,10 @@
      No backdrop — the whole point is an unobstructed viewport. The text keeps its warm (ambient-
      tinted, brightness-lifted) hue, crispened by a thin 1px black outline and popped against the
      colourful map by a heavy dark drop shadow concentrated underneath the glyphs. Drop the title
-     fill + separators. The panel is click-through (pointer-events: none) so map clicks and the
-     condition/yield hover tooltips beneath it still work; it's display-only in this mode. */
+     fill + separators. The aside box is click-through (set in +page) so empty gaps pass to the map;
+     the content rows below re-enable pointer-events so they stay hoverable. */
   .sidebar.transparent {
     background: transparent;
-    pointer-events: none;
     text-shadow:
       1px 0 0 #000,
       -1px 0 0 #000,
@@ -233,6 +232,14 @@
   }
   .sidebar.transparent .cat-hdr {
     border-bottom: none;
+  }
+  /* Re-enable pointer events on the actual content rows so they stay hoverable/clickable over the
+     click-through aside; the empty gaps still pass clicks + hover through to the map. */
+  .sidebar.transparent .row,
+  .sidebar.transparent .res-row,
+  .sidebar.transparent .cat-hdr,
+  .sidebar.transparent .hdr-btn {
+    pointer-events: auto;
   }
   /* Resting highlight behind every kingdom + resource line — the warm hover tint at ~1/3 strength,
      faded to transparent at the left/right edges so it's a soft band, not a hard box. Hover still

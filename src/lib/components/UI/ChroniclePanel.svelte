@@ -177,11 +177,11 @@
 
   /* "Hide sidebars" mode (top-bar settings): float fully transparently over the map — no backdrop,
      so the viewport stays unobstructed. Warm ambient-tinted text, crispened by a thin 1px black
-     outline and popped by a heavy dark drop shadow under the glyphs. Click-through (pointer-events:
-     none) so map clicks and condition/yield hover tooltips beneath it work. Mirrors ResourceSidebar. */
+     outline and popped by a heavy dark drop shadow under the glyphs. The aside box is click-through
+     (set in +page); the entries below re-enable pointer-events so they stay hoverable (HoverTip).
+     Mirrors ResourceSidebar. */
   .panel.transparent {
     background: transparent;
-    pointer-events: none;
     text-shadow:
       1px 0 0 #000,
       -1px 0 0 #000,
@@ -201,6 +201,9 @@
   }
   .panel.transparent .entry {
     border-bottom: none;
+    /* Re-enable pointer events on entries so they stay hoverable (HoverTip) / clickable over the
+       click-through aside; the empty gaps below still pass through to the map. */
+    pointer-events: auto;
     /* A resting highlight behind every line — the same warm hover tint at ~1/3 strength, but faded
        to transparent at the left/right edges so it's a soft band, not a hard box. */
     background: linear-gradient(
@@ -214,6 +217,9 @@
   /* Hover still brightens to the full hover intensity (wins on specificity over the resting band). */
   .panel.transparent .entry:hover {
     background: var(--bg-hover);
+  }
+  .panel.transparent .clear-btn {
+    pointer-events: auto;
   }
 
   .section-hdr {

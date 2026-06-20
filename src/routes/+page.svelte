@@ -222,7 +222,7 @@
               {disabled}
               title={disabled ? 'Requires a knowledge building' : tab.fkey}
             >
-              {#if isActive}<span class="active-mark">■</span>{/if}{tab.label}
+              {tab.label}
             </button>
           {/each}
         </nav>
@@ -358,7 +358,6 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 3px;
     padding: 0 14px;
     background: transparent;
     border: none;
@@ -391,12 +390,6 @@
     cursor: not-allowed;
   }
 
-  .active-mark {
-    font-size: 7px;
-    color: var(--accent-hi);
-    opacity: 0.9;
-    margin-right: 2px;
-  }
 
   .right-panel {
     flex-shrink: 0;
@@ -429,9 +422,10 @@
     border: none;
     background: transparent;
     filter: url(#ambient-tint) brightness(1.3);
-    /* Click-through: this floating aside is the box that actually occupies the map's left/right
-       strips, so it (not just the inner panel) must let clicks + hover reach the tiles and the
-       condition/yield tooltips beneath. Display-only in this mode. */
+    /* The floating aside box itself is click-through so its empty regions let clicks + hover reach
+       the tiles + condition/yield tooltips beneath. The actual content rows/entries re-enable
+       pointer-events (in the panel components) so they stay hoverable. The font sits above the map
+       (z 6); the info panel (overlay z 10 / hover cards z 998) and the bottom nav stay above it. */
     pointer-events: none;
   }
   .sidebars-hidden .left-panel {
