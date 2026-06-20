@@ -106,7 +106,7 @@ A new flat optional field on `Item` links a weapon to its ammo category:
 
 ```typescript
 // weaponProperties additions
-ammoCategory? : string;   // e.g. "arrow" | "bolt" | "sling_stone"; omitted = no ammo needed (thrown weapons self-consume)
+ammoCategory? : string;   // e.g. "arrow" | "bolt" | "sling_stone"; OMITTED = no ammo (thrown weapons self-consume; magic staves are STAMINA-gated → MAGIC-SKILLS)
 ```
 
 Ammo items carry a category tag so any matching ammo feeds any weapon of that category
@@ -129,9 +129,11 @@ spent projectile, roll `recoverable` → spawn it as a `DroppedItem` on the targ
 
 ### Where ammo lives
 
-Ammo is drawn from the pawn's **inventory** (weight/volume counted, per
-EQUIPMENT-EXPANSION). A `quiver`/`bolt_case` could later be a `belt`-slot carry container
-that boosts ammo capacity — deferred; ammo just rides normal inventory for now.
+Ammo is drawn from the pawn's **inventory** (weight/volume counted, per EQUIPMENT-EXPANSION) — and
+stays there **by design**. A quiver/`bolt_case` is a worn item that sells **draw SPEED** (`quiver.drawSpeed`
+→ `aim_speed`, §IV), NOT ammo storage: a quiver-only capacity gate was **rejected** as an unrealistic
+game-ism (arrows carry in a pack fine). The back-vs-belt quiver slot is still a real loadout trade-off
+(a back quiver blocks a backpack), but it caps no ammo.
 
 ---
 
@@ -239,7 +241,7 @@ decision so it isn't re-litigated:
 | **Wild/forced-miss shots hit something else** — RimWorld misses keep flying; DF bolts ricochet | **Adapted (deferred).** No live projectile to deflect → friendly-fire becomes an *optional* roll along the sampled LoS line (Open Questions), off by default. |
 | **Range-banded accuracy** — RimWorld weapons author 4 accuracy values (touch/short/medium/long) | **Considered.** We ship a single continuous `distancePenalty` curve (§I) for now; per-weapon bands are the data-driven upgrade if weapons need stronger individual "personality". |
 | **Aim warmup before fire** — RimWorld warmup → fire → cooldown | **Dropped.** Superseded by the unified `aim_speed` cadence + linear distance (§IV) — no separate warmup scalar or `attackCooldown` channel. |
-| **Ammo is hauled items + quiver assignment** — DF marksdwarf bolt logistics | **Adapted.** Ammo is bulk-consumable from inventory now (§II); the `quiver`/hauling supply-loop is the deferred DF-style layer (Open Questions) — fits the existing job/haul system. |
+| **Ammo is hauled items + quiver assignment** — DF marksdwarf bolt logistics | **Adapted + partly rejected.** Ammo is a bulk inventory item (§II) the normal job/haul system already restocks — no bespoke marksdwarf loop. A quiver-only *capacity gate* was **rejected** as unrealistic; the quiver sells draw-SPEED only (§IV). |
 | **Directional / fractional cover** — RimWorld per-cell cover sampled near the target | **Simplified.** Binary 0.20 adjacency penalty (§I); RimWorld's directional model is the richer later version once positioning matters. |
 | **Marksdwarf switches to melee in contact** — DF; RimWorld pawns melee when adjacent | **Borrowed.** The bow-butt fallback (§IV). |
 | **Staggered threat AI; mutate live entities at 60 Hz, consumers read copies** — DF/RimWorld tick model | **Already in place** — ENGINE-PERFORMANCE's auto-defend throttle + the worker snapshot (§VI-1/2). Ranged AI re-uses it, doesn't add a 60 Hz scan. |
@@ -316,16 +318,38 @@ feature doesn't re-introduce a known regression (each maps to a finding there):
 
 ---
 
-## Open Questions
+## Resolved — spec closeout (2026-06-20)
 
-- [ ] Dedicated `quiver` (belt-slot ammo container, +ammo volume) + the DF-style **ammo
-  haul/assignment** supply-loop — deferred; ammo rides normal inventory for now.
-- [ ] Friendly-fire on the LoS line (ally between shooter and target) — deferred; assume
-  shooters pick clear lines. *(This is RimWorld's emergent wild-shot, but since we hitscan
-  rather than spawn a projectile, it'd be an explicit roll over the sampled LoS cells, not a
-  deflected entity — see "Resolution model", §I.)*
-- [ ] Mob ranged attackers (archer goblins) — data-only once Phase B lands; creatures get a
-  ranged `naturalWeapon`/equipped bow + an ammo pool. Tracked, not in initial scope.
-- [ ] Moving-shot accuracy penalty (fire-on-the-move vs. braced) — deferred; needs the
-  positioning layer to distinguish, which we don't model yet.
-- [ ] Enchanted/elemental ammo and `staff` bolts → [MAGIC-SKILLS](MAGIC-SKILLS.md).
+All five "open questions" were deliberate **deferrals routed to their proper owner**, not gaps in the
+ranged mechanic itself. Each is resolved below; **none gate completion** — the ranged-combat mechanic
+(weapons, ammo, aim cadence, distance/cover, reduced-LoS, recovery, bow-butt, log feedback) is done.
+
+- [x] **Quiver as an ammo container/capacity gate → REJECTED (design); only its draw-speed buff
+  stands.** Restricting ammo to a quiver is an arbitrary, unrealistic game-ism — arrows ride a backpack
+  fine — so **ammo stays in normal inventory, permanently** (weight/volume counted). The quiver's
+  legitimate role, a faster nock (`quiver.drawSpeed` → `aim_speed` cadence) vs the no-quiver
+  pack-fumble penalty, is shipped (§IV), as is the realistic loadout trade-off (a BACK quiver occupies
+  the back slot, blocking a backpack — slot occupancy, not an ammo cap). The vestigial
+  `quiver.capacity` field (reserved for this rejected gate) is **removed**. The DF "marksdwarf
+  bolt-assignment" haul-loop is **unneeded**: ammo is a normal haulable inventory item, so the existing
+  job/haul system already restocks it — no bespoke loop.
+- [x] **Friendly-fire on the LoS line → blocked on the real raycast LoS; reopens with it.** We shipped
+  the **reduced LoS** (scalar `distance ≤ visionRange`, no sampled line — Phase C), so there are no LoS
+  cells to roll over. Friendly-fire is a downstream *option* of the parked `blocksSight` raycast
+  (ADR-019, [ENGINE-PERFORMANCE §5](ENGINE-PERFORMANCE.md)), not a ranged-combat gap. Hitscan resolution
+  means it was always an optional post-hoc roll, never core (see §I "Resolution model").
+- [x] **Mob ranged attackers (archer goblins) → routed to [ENTITIES_SPAWNING](ENTITIES_SPAWNING.md).**
+  Phase B landed, so `tickCombat` already resolves a ranged mob; this is now a **pure data add** (a
+  creature with a ranged equipped weapon / `naturalWeapon` + an ammo pool) and belongs in the
+  creature-roster spec, not the mechanic spec.
+- [x] **Moving-shot accuracy penalty → deferred (low priority; may revisit).** Distinguishing braced
+  vs fire-on-the-move needs a positioning/stance layer the game doesn't currently model (Goal #4: no
+  positioning rewrite). Not rejected — parked until a stance/positioning layer exists, then reconsider.
+- [x] **Magic ranged weapons (`staff` bolts) → owned by [MAGIC-SKILLS](MAGIC-SKILLS.md); STAMINA-gated,
+  NOT ammo.** A staff carries **no ammo** (`ammoCategory` omitted) — it fires on **stamina** (the
+  existing per-shot `staminaCost` + winded gate already caps overuse), so the no-ammo ranged path covers
+  the mechanic today. Magic-specific damage types and a future **"magic-drained" overuse-debuff
+  condition** (excessive casting → stat/work penalty) belong to MAGIC-SKILLS, tracked there.
+
+**→ Spec COMPLETE — ready to archive.** Remaining `[~]` checkboxes above (reload-as-multiplier,
+reduced-LoS, deferred low-ammo badge) are shipped-with-a-documented-reduction, not open work.
