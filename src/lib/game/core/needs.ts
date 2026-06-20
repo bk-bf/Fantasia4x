@@ -16,10 +16,23 @@ const ALL_CONDITION_DEFS = conditionsData as unknown as Array<ConditionDef | Tra
 /**
  * If a condition `id` is opted-in to floating text (`"floater": true` in conditions.jsonc), return
  * its display name + colour for a floater; otherwise undefined. Used by the combat + state-machine
- * emit sites to pop a label the first tick the condition latches. Transient ids carry a top-level
- * `color`; persistent ids (not currently flagged) fall back to a neutral grey.
+ * emit sites to pop a label the first tick the condition latches (or, for persistent conditions,
+ * graduates to a new stage).
+ *
+ * Two id shapes: a transient id is bare (`"winded"`) and carries a top-level `color`; a persistent
+ * condition surfaces in `transientConditions` stage-suffixed (`"shock:moderate"`), so split on `:`,
+ * resolve the base def, and use the matching stage's colour + a "Name (stage)" label.
  */
 export function getConditionFloater(id: string): { name: string; color: string } | undefined {
+  const sep = id.indexOf(':');
+  if (sep !== -1) {
+    const baseId = id.slice(0, sep);
+    const stageLabel = id.slice(sep + 1);
+    const def = ALL_CONDITION_DEFS.find((d) => d.id === baseId);
+    if (!def || !(def as ConditionDef).floater || !(def as ConditionDef).stages) return undefined;
+    const stage = (def as ConditionDef).stages.find((s) => s.label === stageLabel);
+    return { name: `${def.name} (${stageLabel})`, color: stage?.color ?? '#dddddd' };
+  }
   const def = ALL_CONDITION_DEFS.find((d) => d.id === id);
   if (!def || !(def as TransientConditionDef).floater) return undefined;
   return { name: def.name, color: (def as TransientConditionDef).color ?? '#dddddd' };

@@ -198,6 +198,7 @@
         "charSpans"     : [ {"sheet": "font", "id": 21} ],
         "description"   : "A wound has become infected. Untreated infections spread, doubling pain and bleeding.",
         "lethalSeverity": 1.0,
+        "floater"       : true,
         "stages"        : [
             { "label": "mild", "minSeverity": 0.0, "color": "#f9a825", "modifiers": {"workEfficiency": 0.9} },
             {
@@ -235,6 +236,7 @@
         "charSpans"     : [ {"sheet": "font", "id": 19} ],
         "description"   : "Severe pain or blood loss has sent the body into shock. The pawn is barely functional.",
         "lethalSeverity": 1.0,
+        "floater"       : true,
         "stages"        : [
             {
                 "label"      : "mild",
@@ -271,6 +273,7 @@
         "charSpans": [ {"sheet": "font", "id": 42} ],
         "description": "Prolonged exposure to cold below the pawn's comfort range. Slows work and movement and tires the body; lethal if the pawn never warms up. Cold resistance (CON) slows onset; shelter, fire, and warmer seasons drive it back.",
         "lethalSeverity": 1.0,
+        "floater": true,
         "driver": {
             "source"      : "cold",
             "onset"       : 45,
@@ -315,6 +318,7 @@
         "charSpans": [ {"sheet": "font", "id": 15} ],
         "description": "Prolonged exposure to heat above the pawn's comfort range. Saps work and movement and drives up appetite/thirst; lethal if the pawn never cools down. Fire resistance (CON) slows onset; shade, water, and cooler seasons drive it back.",
         "lethalSeverity": 1.0,
+        "floater": true,
         "driver": {
             "source"      : "heat",
             "onset"       : 45,
