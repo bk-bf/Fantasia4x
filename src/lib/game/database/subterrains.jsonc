@@ -28,7 +28,7 @@
     "fg"          : [0.52, 0.42, 0.28],
     "bg"          : [0.09, 0.07, 0.04],
     "color"       : "#857049",
-    "biomes"      : { "forest": [null, -0.3], "plains": [null, -0.15] }
+    "biomes"      : { "forest": [null, -0.3], "plains": [null, -0.4] }
   },
   {
     "id"          : "grass",        // soil tier 1 (25%) — Poor Soil; the grass_patch resource paints the green on top
@@ -39,7 +39,7 @@
     "fg"          : [0.47, 0.37, 0.24],
     "bg"          : [0.08, 0.06, 0.03],
     "color"       : "#79643F",
-    "biomes"      : { "forest": [-0.3, 0.18], "plains": [-0.15, 0.18] }
+    "biomes"      : { "forest": [-0.3, 0.18], "plains": [-0.4, 0.18] }
   },
   {
     "id"          : "deep_grass",   // soil tier 3 (75%) — Rich Soil; the deep_grass_patch resource paints the green
