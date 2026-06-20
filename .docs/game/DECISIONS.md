@@ -875,8 +875,10 @@ blunt-as-trauma, fractures) needed the anatomy to actually vary per creature.
   replacing the flat core/peripheral hardcode — so weak spots are data-driven and a destroyed part
   takes its armour with it.
 - **Fractures + critical parts** — a `fracture` wound (structural, no bleed, weeks to heal)
-  breaks a bone without severing; `boneBroken` cripples the limb (manipulation/moving ×0.4) and
-  raises a `broken_arm`/`broken_leg` condition. A part flagged `critical` (skull) is instant death.
+  breaks a bone without severing; `boneBroken` cripples the limb's capacity (manipulation/moving ×0.4)
+  and drives a single GRADED `fractured` condition (severity = the worst bone's damage ÷ its break
+  threshold, hairline→cracked→shattered, maxing when a bone reaches 0 — a fracture never *loses* the
+  limb). A part flagged `critical` (skull) is instant death.
 
 **Consequences.** Data, not code, defines anatomy/weapons/armour — new creatures pick a plan and
 set scalars (`naturalArmor` magnitude, `naturalWeapons` list). The single `naturalArmor` keeps

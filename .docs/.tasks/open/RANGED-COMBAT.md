@@ -106,7 +106,7 @@ A new flat optional field on `Item` links a weapon to its ammo category:
 
 ```typescript
 // weaponProperties additions
-ammoCategory? : string;   // e.g. "arrow" | "bolt" | "sling_stone"; OMITTED = no ammo (thrown weapons self-consume; magic staves are STAMINA-gated → MAGIC-SKILLS)
+ammoCategory? : string;   // e.g. "arrow" | "bolt" | "sling_stone"; omitted = no ammo needed (thrown weapons self-consume)
 ```
 
 Ammo items carry a category tag so any matching ammo feeds any weapon of that category

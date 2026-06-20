@@ -34,6 +34,8 @@ Core data (src/lib/game/core/)         ← types, static databases, GameStateMan
 
 **New core data needs a stable id**: entries added to `Items.ts`, `Buildings.ts`, `Research.ts`, or `Work.ts` need a stable `kebab-case` string `id`. Unlock conditions reference `researchId` strings from `Research.ts`; costs reference resource `id` strings from `types.ts`.
 
+**Never leak ids in the UI**: data ids — `Items/Buildings/Research` `kebab-case` ids, `limbmap.jsonc` limb/part keys (`front_right_leg`, `frontRightUpperLeg`, `tail`…), job types, etc. — are BACKEND REFERENCE ONLY. A panel/screen must render a human label, never the raw `id`. Use the def's `name`/`label` field; for anatomy route through `src/lib/utils/bodyLabels.ts` (`limbLabel`/`partLabel`) — the single chokepoint so a new body plan can't leak snake_case/camelCase ids into the health panels. Don't hand-roll `id.replace(...)` humanizers at the callsite (they drift — `.replace('_',' ')` only catches the first underscore).
+
 **Colony jobs are data-driven** (ADR-017): job types live in `database/jobs.jsonc` (a `JobDef` each — work-category, label, claim-gating), with behaviour bound by `id` in `JobService`'s `handlers` registry. First decide which you actually need:
 
 - **A new way to make/process an item** (cooking, butchering, drying, smelting…) is almost always **just a recipe** in `recipes.jsonc` at a station — *not* a new job type. It's already a `craft` job. Add the recipe (+ station building, + `Work.ts` category if new); no code.
