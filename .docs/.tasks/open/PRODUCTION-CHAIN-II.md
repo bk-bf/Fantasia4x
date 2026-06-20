@@ -381,21 +381,22 @@ compost · growing zones + seeds + wetness).
 
 ### F1 — Dirt becomes fertility resource versions (NOTES.md "split dirt by fertility")
 
-No `tile.soil` field. Fertility is a property of the **dirt/grass resource version** on the tile,
-which world-gen places by the grass-density subterrain (the noise we already have). Helper
-`soilTierForTile(tile)` derives a 0–3 tier from `subType`/the resource on it (the single read every
-gate uses — no stored field):
+No `tile.soil` field. Fertility is a **0–100% value depicted like wetness** (`fertility 75%`), derived
+from the grass-density subterrain the world-gen noise already places. `soilFertilityPct(tile)` is the
+value (5 steps); `soilTierForTile(tile)` its 0–4 bucket (= pct/25) — the single reads every gate uses:
 
-| `subType` (grass density) | tier | Soil name      | Dig (cut) extra yield | Grows                          |
-| ------------------------- | ---- | -------------- | --------------------- | ------------------------------ |
-| `dirt` / `savanna` / bare | 0 infertile | Infertile Dirt | `dirt`         | nothing (until terraformed)    |
-| `grass`                   | 1 poor      | Poor Soil      | `poor_soil`    | hardy crops (grain/veg/legume) |
-| `tall_grass`              | 2 loam      | Loam           | `loam`         | + fibre/fruit/herb             |
-| `deep_grass`              | 3 terra preta | Terra Preta  | `terra_preta`  | + prize crops                  |
+| `subType` (grass density) | fertility | tier | Soil name      | Dig (cut) extra yield | Grows                          |
+| ------------------------- | --------- | ---- | -------------- | --------------------- | ------------------------------ |
+| `dirt` / `savanna` / bare | 0%        | 0 | Infertile Dirt | `dirt`         | nothing (until terraformed)    |
+| `grass`                   | 25%       | 1 | Poor Soil      | `poor_soil`    | hardy crops (grain/veg/legume) |
+| `tall_grass`              | 50%       | 2 | Loam           | `loam`         | + fibre/fruit/herb             |
+| `deep_grass`              | 75%       | 3 | Rich Soil      | `rich_soil`    | + most crops                   |
+| `terra_preta` (terraform) | 100%      | 4 | Terra Preta    | `terra_preta`  | + prize crops; fastest         |
 
-New **soil items** (`dirt`/`poor_soil`/`loam`/`terra_preta`, `category: "soil"`, heavy) in
-`items.jsonc` — the "different dirt types" you dig up, haul, and build with. (Carry is the per-pawn
-weight/volume budget from §L; no `bulk` tag — that model was dropped.)
+Natural ground tops out at deep-grass (75%); **terra preta (100%) is terraform-earned** (F3, compost-
+gated). New **soil items** (`dirt`/`poor_soil`/`loam`/`rich_soil`/`terra_preta`, `category: "soil"`,
+heavy) in `items.jsonc` — the "different dirt types" you dig up, haul, and build with. (Carry is the
+per-pawn weight/volume budget from §L; no `bulk` tag — that model was dropped.)
 
 ### F2 — Dig = the harvest-vs-cut interaction (same model as trees)
 
@@ -545,10 +546,10 @@ driven model — no `tile.soil` field, no new growth tick** (reuses `tile.resour
 **P4–P6 = farming loop**; **P7 = food chain**. ADR for "dirt/crops as resource versions + regrowth-as-
 growth" (the non-obvious reuse decision).
 
-**P1 — Dirt fertility versions + soil items (F1) ✅ DONE 2026-06-20** (`check`/`test` green, 510; 3 new)
-- [x] `items.jsonc`: soil items `dirt`/`poor_soil`/`loam`/`terra_preta` + `compost` (`category: "soil"`, heavy, non-rotting).
-- [x] `core/Terrains.ts`: `soilTierForTile(tile) → 0–3` from `subType` (dirt/savanna→0, grass→1, tall_grass→2, deep_grass→3) — the single fertility read (no stored field) + `SOIL_TIER_NAME`/`SOIL_ITEM_BY_TIER`/`SUBTYPE_BY_SOIL_TIER` maps. (Also restored `terrainBlocksSight`, which a prior Terrains.ts edit had dropped.)
-- [x] Info panel (F9): tile HUD shows `soil <name>` (tier-coloured) next to wetness. `core/soilFertility.test.ts`.
+**P1 — Dirt fertility versions + soil items (F1) ✅ DONE 2026-06-20** (`check`/`test` green; 4 soil tests)
+- [x] `items.jsonc`: soil items `dirt`/`poor_soil`/`loam`/`rich_soil`/`terra_preta` + `compost` (`category: "soil"`, heavy, non-rotting).
+- [x] `core/Terrains.ts`: **`soilFertilityPct(tile) → 0/25/50/75/100`** (depicted like wetness) from `subType`, + `soilTierForTile` 0–4 bucket + `SOIL_TIER_NAME`/`SOIL_ITEM_BY_TIER`/`SUBTYPE_BY_SOIL_TIER`. Derived, no stored field. (Also restored `terrainBlocksSight`, which a prior Terrains.ts edit had dropped.)
+- [x] Info panel (F9): tile HUD shows **`fertility X%`** (tier-coloured, name in tooltip) next to wetness — replacing the soil-name readout. `core/soilFertility.test.ts`.
 
 **P2 — Dig = cut interaction (F2)**
 - [ ] `DesignationType += 'dig'`; add a `dig` interaction (`harvestDepletes: true`) to `grass_patch`/`tall_grass_patch`/`deep_grass_patch` (+ a bare `dirt` resource) yielding the normal harvest drops **+ the tier's soil item**; `resourceObjectService.getByDesignation` + `HARVEST_DTYPES` include `dig`. Reuses `jobs/harvest.ts` (no new handler). Test: dig deep_grass → hay + fiber + `terra_preta`, node depletes to dirt.
