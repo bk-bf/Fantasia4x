@@ -47,6 +47,7 @@
     { "adr": "ADR-020", "checkable": false, "reason": "Sim scaling strategy (algorithms->WASM->worker, defer multicore) — a sequencing/runtime decision, not a structural invariant." },
     { "adr": "ADR-021", "checkable": false, "reason": "Sim/render decouple (soft-body pathfinding, terrain cache, MAX_STEPS cap, sim->Worker) — runtime/perf behaviour, not a call-edge invariant." },
     { "adr": "ADR-022", "checkable": false, "reason": "Throttled job-board reconcile (6-tick cadence, not event-driven) — a runtime cadence/perf decision, not a structural call-edge invariant." },
-    { "adr": "ADR-023", "checkable": false, "reason": "Procedural race pool + pawn raceId (racePool canonical, race = home alias; mixed colonies; trait-resistance condition hook; raceRelations stub) — a data-model + runtime decision, not a structural call-edge invariant. Generator drift is guarded by Race.test.ts." }
+    { "adr": "ADR-023", "checkable": false, "reason": "Procedural race pool + pawn raceId (racePool canonical, race = home alias; mixed colonies; trait-resistance condition hook; raceRelations stub) — a data-model + runtime decision, not a structural call-edge invariant. Generator drift is guarded by Race.test.ts." },
+    { "adr": "ADR-024", "checkable": false, "reason": "Data-driven body plans (limbmap.jsonc) + part-bound natural weapons & armour + bodyScale-scaled limb HP + fractures — a data-schema + runtime decision, not a structural call-edge invariant. Drift is guarded by bodyPlans.test.ts + fractures.test.ts." }
   ]
 }

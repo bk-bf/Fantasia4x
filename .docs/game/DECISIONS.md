@@ -390,7 +390,7 @@ Combat is RimWorld-inspired (legible body-part HP + a capacity system already dr
 ### ADR-013 [GAME]: Deferred Combat Depth — Tissue Layers, Nerves & Arteries
 
 - **Date**: 2026-06-11
-- **Status**: Deferred (tracked)
+- **Status**: Deferred (tracked) — **partially superseded by ADR-024** (the reserved `fracture` bone/flesh split was built 2026-06-20; full tissue-layer/nerve/artery sim stays deferred)
 
 #### Context
 
@@ -838,3 +838,49 @@ The dead trait effect fields were pruned (only `nightVision` was genuinely consu
 kept). New core data (`race-lore.jsonc`, trait `id`/`flavorLine`) follows ADR-006 (definitions,
 not logic). Drift on the generator is guarded by `Race.test.ts`. Not graph-checkable — a
 data/runtime decision, not a call-edge invariant.
+
+---
+
+### ADR-024 [GAME]: Data-Driven Body Plans + Part-Bound Natural Weapons & Armour
+
+**Status:** Accepted (2026-06-20) — partially supersedes ADR-013 (the reserved `fracture` split is now built).
+
+**Context.** Every entity shared ONE hardcoded humanoid anatomy table, so a wolf carried
+"middle ring finger"s and combat rolled humanoid hit locations on beasts. `bodyScale` only
+inflated the blood pool (limb HP was a fixed table); natural weapons fired at full effectiveness
+regardless of dismemberment; natural armour was a single flat number with a hardcoded
+"core = full, limb = ×0.3" split. A combat-depth pass (collapse-from-blood, brutal conditions,
+blunt-as-trauma, fractures) needed the anatomy to actually vary per creature.
+
+**Decision.**
+
+- **Anatomy is data** — `database/limbmap.jsonc` holds a `shared.parts` catalog + co-located
+  per-plan blocks (`parts` + `limbs`), merged into one global `PART_DEF_MAP` at load. Seven body
+  plans (humanoid · quadruped · quadruped_hooved · amphibian · avian · serpentine · arachnid ·
+  winged_humanoid · amorphous); a creature picks one via `limbMap` (default `humanoid`), pawns are
+  humanoid. `core/BodyParts.ts` builds per-plan hit-roll tables; `rollBodyPart(plan)` and the
+  capacity model (`moving`/`manipulation` aggregate the plan's leg/arm limbs) are plan-aware.
+  `LimbId`/`BodyPartId` are loosened to `string` (data-driven ids). Parent-limb is resolved from
+  the entity's own tree, not a global field (a part's parent limb varies by plan).
+- **`bodyScale` scales limb HP** — per-part `maxHp = round(default size × bodyScale)` at spawn
+  (combat severity/fracture/heal read the part's SCALED maxHp, threaded through
+  `recomputeWound`). The map stores only default sizes; the blood pool stays `health × bodyScale`.
+- **Natural weapons bind to parts** — each part lists the `weapons` it can wield (jaw→bite,
+  paw→claw…), gated by the creature's `naturalWeapons` list. A weapon is usable only while a
+  surviving part enables it; losing every weapon-part falls back to a weak blunt `thrash`; a pawn
+  who loses both hands drops its equipped weapon.
+- **Natural armour binds to parts** — same shape: the plan sets the **distribution** (`armor`
+  share per part: armoured trunk/carapace ~1.0, soft belly ~0.5, exposed eyes ~0.1); the
+  creature's `naturalArmor` scalar sets the **magnitude**. Part reduction = `naturalArmor × share`,
+  replacing the flat core/peripheral hardcode — so weak spots are data-driven and a destroyed part
+  takes its armour with it.
+- **Fractures + critical parts** — a `fracture` wound (structural, no bleed, weeks to heal)
+  breaks a bone without severing; `boneBroken` cripples the limb (manipulation/moving ×0.4) and
+  raises a `broken_arm`/`broken_leg` condition. A part flagged `critical` (skull) is instant death.
+
+**Consequences.** Data, not code, defines anatomy/weapons/armour — new creatures pick a plan and
+set scalars (`naturalArmor` magnitude, `naturalWeapons` list). The single `naturalArmor` keeps
+species toughness distinct (the plan can't, being shared); a future per-creature part override can
+layer on top if the scalar feels coarse. `damage`/`baseDamage` weapon fields were consolidated to
+one canonical `damage`. Guarded by `bodyPlans.test.ts` + `fractures.test.ts`. Not graph-checkable —
+a data/runtime decision, not a call-edge invariant.

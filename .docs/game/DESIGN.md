@@ -154,6 +154,18 @@ Real-time, tile-based melee resolved by `combatService.tickCombat` each tick —
 - **Healing & caretaking** — wounds mend over time but not mid-fight; the best available medic tends untended wounds, treatment quality from `medical_skill` + medicine item.
 - **Permadeath** — a slain entity drops a carcass/corpse; injuries feed back into the needs/health system.
 
+### Anatomy & wound depth (2026-06-20, ADR-024)
+
+A combat-depth pass built on the per-part model — see ADR-024; it partially un-defers ADR-013 (the `fracture` bone/flesh split is now real):
+
+- **Data-driven body plans** — anatomy lives in `database/limbmap.jsonc`, not a single hardcoded humanoid table. Seven plans (humanoid · quadruped · quadruped_hooved · amphibian · avian · serpentine · arachnid · winged_humanoid · amorphous) give each creature category a fitting body (a wolf has paws + a tail, not fingers/toes). A creature picks one via `limbMap` in `creatures.jsonc` (default humanoid); `rollBodyPart` and the capacity model (`moving`/`manipulation` read the plan's legs/arms) are per-plan. Per-limb HP = **`bodyScale × default size`** (the map sets structure + default sizes only; the blood pool stays `health × bodyScale`).
+- **Hypovolemic collapse** — blood loss drives `consciousness` down (faint ≈45% lost), so a bleeding pawn **collapses on the field** (a rescue window for caretaking) instead of fighting at full until dropping dead at 0.
+- **Conditions crush core stats** — shock/winded/envenomed/hypothermia… multiply STR/DEX/CON/PER/INT through the whole stat engine *and* the raw combat reads, so a wounded fighter genuinely hits softer, aims worse, soaks less. Shown live in the attributes tooltip (current, not base, stats).
+- **Innate resistances** — cutting/piercing/blunt/elemental resistances are no longer dimmed by being dazed; combat reads the same value the attributes tab shows (one source of truth).
+- **Blunt = trauma, not blood** — crush wounds don't bleed; their payoff is raw damage that **craters limbs and blows them off** (a severed stump then gushes). Bludgeons hit much harder.
+- **Bone fractures & broken limbs** — heavy/blunt hits can break the bone (a separate `fracture` wound) without severing the limb: it's crippled (gutted manipulation/moving + a `broken_arm`/`broken_leg` condition crushing STR/DEX), heals over weeks. A **destroyed skull = instant death**.
+- **Dismemberment matters** — natural weapons are **bound to parts** (jaw→bite, paw→claw, hoof→kick…): lose the part, lose the attack. A creature stripped of every weapon-part reverts to a weak `thrash`; a pawn who loses both hands drops its weapon. Natural **armour is per-part** too — the plan sets the *shape* (armoured trunk, soft belly, exposed eyes) via an `armor` share, the creature's `naturalArmor` sets the *magnitude* (wolf 8 vs bear 32), so a bear's chest soaks 32% while its belly is the weak spot.
+
 ### Hunting (work-driven)
 
 A player marks a huntable animal (`markedForHunt`); a pawn whose hunting labour comes up chases it and **resolves the kill through the same combat system** — `handleHunting` flips the quarry into the shared prey "fight-back" state, so a boar gores the hunter and a cornered deer kicks back exactly like predator-vs-prey (reuses the `EntityService` hunt circuits + `combatService`, not a parallel code path). The kill drops a carcass → butchery → meat. Hunting is **fearless** (no auto-flee) — a colonist death is a normal consequence of picking too big a target.
