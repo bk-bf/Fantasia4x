@@ -137,6 +137,12 @@ export const SLEEP_FATIGUE_THRESHOLD = 60;
  * cross-layer import; a mob below the SLEEP threshold normally sleeps it off, but one kept awake (in a
  * fight) past this is visibly + mechanically exhausted. */
 export const TIRED_FATIGUE_THRESHOLD = 72;
+/** Weather exposure for creatures is HARDIER than pawns (fur/hide/instinct) and runs on a slow cadence
+ *  (cost: there can be 100+ mobs). `windchilled` only bites a creature in stronger wind than a pawn
+ *  (onset 0.45 vs 0.2); `wet` needs a genuinely soaked tile (75% vs the pawn's accrued 50). */
+export const MOB_WEATHER_INTERVAL = 120; // ticks (~2 in-game s) between creature weather-exposure passes
+export const MOB_WIND_ONSET = 0.45; // effective wind a creature shrugs off before feeling windchill
+export const MOB_WET_THRESHOLD = 75; // tile wetness (0–100) at/above which a creature reads as `wet`
 /** Natural wake-up fatigue level — mirrors shouldPawnSleep: wake at 0 when fed, 30 when hunger ≥ 70. */
 export function sleepWakeThreshold(hunger: number): number {
   return hunger >= 70 ? 30 : 0;

@@ -717,6 +717,25 @@ export function tileWetness(
 }
 
 /**
+ * Wild-creature weather exposure at a tile: effective wind (0–1) and wetness (0–100), computed with NO
+ * shelter (wild mobs don't take cover under roofs — lee-of-terrain wind shelter from `worldMap` still
+ * applies). Lets the creature tick drive `windchilled`/`wet` without building a ThermalSample or tracking
+ * accrued meters the way pawns do. `baseMoisture` is the tile's baked moisture.
+ */
+export function creatureExposureAt(
+  x: number,
+  y: number,
+  weather: WeatherState | undefined,
+  worldMap: WorldTile[][],
+  baseMoisture: number
+): { wind: number; wetness: number } {
+  return {
+    wind: effectiveWindAt(x, y, weather, NO_THERMAL, worldMap),
+    wetness: tileWetness(baseMoisture, weather, NO_THERMAL)
+  };
+}
+
+/**
  * Effective temperature (°C) at a tile for display — mirrors what the need-rate hot path computes:
  * baked tile temperature (biome base + season offset) + the live weather delta, then shelter
  * (roof insulation + weather protection) + nearby fire warmth. Computed on demand from `terrainType`

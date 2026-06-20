@@ -10,8 +10,10 @@ import {
   snapshotConditionStages,
   emitPersistentConditionFloaters,
   conditionsSig,
-  syncFractureConditions
+  syncFractureConditions,
+  driveWindchill
 } from '../../core/needs';
+import { creatureExposureAt } from '../EnvironmentService';
 import { absorbDropIfOnStockpileTile } from '../../core/GameState';
 import { pawnStatService } from '../PawnStatService';
 import { simLog } from '../../core/logSink';
@@ -29,7 +31,10 @@ import {
   SLEEP_HUNGER_RATE,
   SLEEP_RECOVERY_PER_SECOND,
   CORPSE_DECAY_TICKS,
-  TIRED_FATIGUE_THRESHOLD
+  TIRED_FATIGUE_THRESHOLD,
+  MOB_WEATHER_INTERVAL,
+  MOB_WIND_ONSET,
+  MOB_WET_THRESHOLD
 } from './entityConstants';
 
 /** Per-tick natural wound mend for creatures (no rest gate, no tending). Tuned so a beast recovers a
@@ -248,6 +253,29 @@ export function stepHunger(state: GameState): GameState {
       const tc = (mob.transientConditions ?? []).filter((id) => id !== 'tired');
       if (wantTired) tc.push('tired');
       mob.transientConditions = tc;
+    }
+
+    // ── Weather exposure (windchilled / wet) ─────────────────────────────────────
+    // Creatures feel the wind and the wet too, but HARDIER than pawns (higher thresholds) and on a slow
+    // cadence (100+ mobs → don't recompute wind shelter every tick). `windchilled` is the persistent
+    // condition (snapped from the felt wind, like the pawn); `wet` the transient (soaked tile). No
+    // shelter model — wild mobs are exposed. effectiveWindAt early-outs to 0 when it isn't windy.
+    if (turn % MOB_WEATHER_INTERVAL === 0) {
+      const tile = state.worldMap[mob.y]?.[mob.x];
+      const { wind, wetness } = creatureExposureAt(
+        mob.x,
+        mob.y,
+        state.weather,
+        state.worldMap,
+        tile?.moisture ?? 0
+      );
+      driveWindchill(conditions, wind, MOB_WIND_ONSET);
+      const wantWet = wetness >= MOB_WET_THRESHOLD;
+      if (wantWet !== (mob.transientConditions ?? []).includes('wet')) {
+        const tc = (mob.transientConditions ?? []).filter((id) => id !== 'wet');
+        if (wantWet) tc.push('wet');
+        mob.transientConditions = tc;
+      }
     }
 
     mob.needs.hunger = newHunger;

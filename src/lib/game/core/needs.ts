@@ -272,8 +272,13 @@ export const WIND_FULL = 1.0;
  * (slightly→extremely windy) live in conditions.jsonc. Mutates `conditions` in place (ADR-002 hot
  * path: nothing allocated while it's calm + the condition absent).
  */
-export function driveWindchill(conditions: EntityCondition[], effWind: number): void {
-  const sev = Math.min(1, Math.max(0, (effWind - WIND_ONSET) / (WIND_FULL - WIND_ONSET)));
+export function driveWindchill(
+  conditions: EntityCondition[],
+  effWind: number,
+  onset = WIND_ONSET,
+  full = WIND_FULL
+): void {
+  const sev = Math.min(1, Math.max(0, (effWind - onset) / (full - onset)));
   const idx = conditions.findIndex((c) => c.id === 'windchilled');
   if (sev <= 0) {
     if (idx !== -1) conditions.splice(idx, 1);
