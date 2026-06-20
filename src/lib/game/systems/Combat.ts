@@ -508,6 +508,36 @@ function currentPartHealth(defender: Pawn | Mob, partId: BodyPartId, defMaxHp: n
 
 // ── Implementation ────────────────────────────────────────────────────────────
 class CombatServiceImpl implements CombatService {
+  /** True only for the duration of `tickCombat`, where `next` holds PRIVATE clones of the pawns/mobs
+   *  arrays. While set, the per-hit entity appliers overwrite the changed entity's array SLOT in place
+   *  (O(1), no allocation) instead of rebuilding the whole array — a 420-mob wave was doing dozens of
+   *  full-array `.map()` rebuilds per tick (the engagement-wave alloc tax, ADR-002 hot-phase amendment).
+   *  Outside combat (public `applyInjury*`, called immutably by tests) it stays false → immutable rebuild. */
+  private _combatWorking = false;
+
+  /** Write `updated` back into its array. In combat-working mode the array is a private clone, so
+   *  overwrite the slot IN PLACE; otherwise rebuild immutably. Either way `updated` is a NEW object, so
+   *  cold-field refs stay fresh for the snapshot diff AND the index-aligned fresh-corpse diff
+   *  (`handleFreshCombatCorpses`) still sees the old object in `preCombatState` vs the new one here. */
+  private spliceEntity<T extends Pawn | Mob>(
+    state: GameState,
+    id: string,
+    updated: T,
+    isMob: boolean
+  ): GameState {
+    if (this._combatWorking) {
+      const arr = (isMob ? state.mobs : state.pawns) as (Pawn | Mob)[] | undefined;
+      if (arr) {
+        const idx = arr.findIndex((e) => e.id === id);
+        if (idx >= 0) arr[idx] = updated;
+      }
+      return state;
+    }
+    return isMob
+      ? { ...state, mobs: state.mobs!.map((m) => (m.id === id ? (updated as Mob) : m)) }
+      : { ...state, pawns: state.pawns.map((p) => (p.id === id ? (updated as Pawn) : p)) };
+  }
+
   resolveHit(
     attacker: Pawn | Mob,
     defender: Pawn | Mob,
@@ -838,17 +868,7 @@ class CombatServiceImpl implements CombatService {
       (updated as Mob).intactness = 1.0;
     }
 
-    if (entityType === 'pawn') {
-      return {
-        ...state,
-        pawns: state.pawns.map((p) => (p.id === entity.id ? (updated as Pawn) : p))
-      };
-    } else {
-      return {
-        ...state,
-        mobs: state.mobs!.map((m) => (m.id === entity.id ? (updated as Mob) : m))
-      };
-    }
+    return this.spliceEntity(state, entity.id, updated, entityType === 'mob');
   }
 
   applyInjury(pawnId: string, injury: Injury, state: GameState, knockdown = false): GameState {
@@ -1078,9 +1098,7 @@ class CombatServiceImpl implements CombatService {
     // from the same hit) so a weapon's on-hit label doesn't pile onto either of them.
     this.emitConditionFloat(pos.x, pos.y, eff.condition, 39);
 
-    return isMob
-      ? { ...state, mobs: state.mobs!.map((m) => (m.id === targetId ? (updated as Mob) : m)) }
-      : { ...state, pawns: state.pawns.map((p) => (p.id === targetId ? (updated as Pawn) : p)) };
+    return this.spliceEntity(state, targetId, updated as Pawn | Mob, isMob);
   }
 
   /** The worn-armour slot with the highest `defense` (the piece that takes a blow — mirrors
@@ -1487,7 +1505,24 @@ class CombatServiceImpl implements CombatService {
   }
 
   tickCombat(state: GameState, _dtMs: number): GameState {
-    let next = state;
+    this._combatWorking = true;
+    try {
+      return this._tickCombat(state);
+    } finally {
+      this._combatWorking = false;
+    }
+  }
+
+  private _tickCombat(state: GameState): GameState {
+    // PRIVATE working clones: the per-hit appliers overwrite array SLOTS in place (see `spliceEntity`),
+    // so `next` must hold its OWN arrays — the caller's `state` (GameEngineImpl's `preCombatState`) is
+    // diffed against the result to spawn carcasses (`handleFreshCombatCorpses`), so it must stay intact.
+    // Cloned ONCE here (O(n)) replaces the old per-hit O(n) array rebuilds (dozens/tick under a wave).
+    let next: GameState = {
+      ...state,
+      mobs: state.mobs ? state.mobs.slice() : state.mobs,
+      pawns: state.pawns.slice()
+    };
     // Track stamina mutations for attacking entities (id → new stamina value).
     const mobStaminaUpdates = new Map<string, number>();
     const pawnStaminaUpdates = new Map<string, number>();

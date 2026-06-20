@@ -130,6 +130,34 @@ describe('combat sim (headless tickCombat)', () => {
     expect(maxPain).toBeGreaterThan(30); // …with pain a real driver of the downing
   });
 
+  it('tickCombat leaves its INPUT state arrays/objects intact (fresh-corpse diff stays valid)', () => {
+    // Perf: tickCombat clones the pawns/mobs arrays once and writes updated entities into the clone's
+    // slots in place (no per-hit full-array rebuild). GameEngineImpl diffs preCombatState vs the result
+    // by index to spawn carcasses (handleFreshCombatCorpses) — that ONLY works if tickCombat never
+    // writes through to its input. Drive a pawn beating a passive goblin to death and assert that, on
+    // the killing tick, the input mob object/array is untouched while the result carries the corpse.
+    let state = makeState([makePawn()], [makeGoblin({ state: 'Wander' })]);
+    let validatedKill = false;
+    for (let t = 0; t < 12000 && !validatedKill; t++) {
+      const input = { ...state, turn: t };
+      const inputMobs = input.mobs!;
+      const inputMob = inputMobs[0];
+      const aliveBefore = inputMob.isAlive !== false && inputMob.state !== 'Corpse';
+      const result = combatService.tickCombat(input, 16);
+      const resultMob = result.mobs![0];
+      if (aliveBefore && (resultMob.isAlive === false || resultMob.state === 'Corpse')) {
+        // Killing tick: the result diverged, but the input snapshot must be byte-for-byte unchanged.
+        expect(result.mobs).not.toBe(inputMobs); // arrays diverged (clone, not in-place on input)
+        expect(input.mobs![0]).toBe(inputMob); // same input object ref…
+        expect(inputMob.isAlive).not.toBe(false); // …still alive in the input
+        expect(inputMob.state).not.toBe('Corpse');
+        validatedKill = true;
+      }
+      state = result;
+    }
+    expect(validatedKill).toBe(true);
+  });
+
   it('an Attacking mob damages the adjacent pawn', () => {
     // Accurate mob vs low-dodge pawn so hits land reliably regardless of rng sequence.
     const target = makePawn({ currentState: 'Idle', stats: { ...stats, dexterity: 3 } });
