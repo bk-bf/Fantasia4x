@@ -115,6 +115,12 @@ const FORMULA_VARS = [
 ] as const;
 const FORMULA_VAR_RE = new RegExp('\\b(?:' + FORMULA_VARS.join('|') + ')\\b', 'g');
 
+// Hypovolemic-shock band for consciousness: fraction of blood lost at which fainting onsets
+// (below = compensated, no effect) and at which the pawn is fully out cold. A healthy pawn
+// crosses the ~0.3 downing threshold near ~45% loss, leaving a bleed-out/rescue window.
+const BLOOD_FAINT_ONSET = 0.2;
+const BLOOD_FAINT_FLOOR = 0.55;
+
 // Compile each unique formula ONCE into a real function (vars → number), cached by formula string.
 // Formulas come from a fixed stats.jsonc set, so this turns the per-call regex+compile+parse into a
 // one-time cost + a plain function call. Invalid/unknown-token formulas cache as null → 1.0.
@@ -242,12 +248,23 @@ function calculateCapacityValue(
       const baseCon = brain * 0.5 + heart * 0.15 + avgLung * 0.1 + 0.1;
       const sightCap = capacities.sight ?? 1;
       const hearingCap = capacities.hearing ?? 1;
-      // Pain drives consciousness down (RimWorld pain-shock): ~80 pain → ~0.3
-      // consciousness, which is the colony's downing threshold. Organ/blood damage
-      // lowers baseCon on top, so a wounded pawn faints at lower pain.
+      // Pain drives consciousness down (pain-shock): ~80 pain → ~0.3 consciousness,
+      // which is the colony's downing threshold. Missing/damaged organs lower baseCon
+      // on top, so a wounded pawn faints at lower pain.
       const effectivePain = Math.max(0, painValue - 0.1);
       const painMult = Math.max(0.05, 1 - effectivePain);
-      value = (baseCon + sightCap * 0.1 + hearingCap * 0.05) * painMult;
+      // Hypovolemic shock: blood loss faints a pawn BEFORE exsanguination, so a bleeding
+      // wound shows the collapse → bleed-out-or-rescue arc instead of dropping dead at 0.
+      // <20% loss is compensated (no effect); consciousness hits the ~0.3 downing point
+      // near ~45% loss and bottoms out (out cold) by ~55%. Stacks with pain.
+      const maxBlood = pawn.maxBloodVolume ?? 100;
+      const bloodLoss = Math.max(0, 1 - (pawn.bloodVolume ?? maxBlood) / maxBlood);
+      const bloodSeverity = Math.min(
+        1,
+        Math.max(0, (bloodLoss - BLOOD_FAINT_ONSET) / (BLOOD_FAINT_FLOOR - BLOOD_FAINT_ONSET))
+      );
+      const bloodMult = 1 - bloodSeverity;
+      value = (baseCon + sightCap * 0.1 + hearingCap * 0.05) * painMult * bloodMult;
       break;
     }
     case 'pain': {

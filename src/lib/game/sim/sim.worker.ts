@@ -155,15 +155,15 @@ const MOB_COLD = new Set<string>([
   'conditions',
   'conditionTimers'
 ]);
-// Cold-field (limbs/inventory/skills/injuries/…) resync cadence. Each flush refreshes a rotating
-// 1/RESYNC_EVERY slice of entities FULL (§D2 — staggered), so over RESYNC_EVERY flushes every entity
-// is refreshed → cold fields stay ≤ RESYNC_EVERY flushes stale, while the live scalars
-// (position/needs/state/pain/blood) flow every flush in the slim projection. The [SNAP] probe showed
-// this resync slice was ~131k/flush (the ~19 full pawns) — the single biggest snapshot payload AND
-// GC source (full entity trees deserialized + discarded every flush). The cold trees only feed the
-// selected-pawn detail panel, which tolerates ~2s staleness, so the cadence is raised 8→32 to cut
-// that bandwidth ~4× (≈2.1s stale @15Hz). (§D — entity-sync is the harvest/haul cliff, not the jobs.)
-const RESYNC_EVERY = 32;
+// Cold-field sync = per-field REF-DIFF (replaces the old staggered RESYNC_EVERY round-robin, which
+// left the selected-pawn detail panels ≤2s stale — pill/health/gear lagging the sim). Each cold
+// field is re-sent ONLY the flush its object ref changes; healthy entities ship nothing, so the
+// mirror is always current and panels are instant on open (no on-open/subscription dance needed).
+// Hinges on cold fields taking a NEW ref when they change: combat + the command path already do;
+// the two in-place spots (pawn tickConditions, mob stepHunger) slice-on-change. `lastColdRefs` holds
+// each entity's last-SENT ref per cold field; a mismatch (or a newly-seen id) re-ships that field.
+const lastPawnCold = new Map<string, Record<string, unknown>>();
+const lastMobCold = new Map<string, Record<string, unknown>>();
 // TEMP §D: log the snapshot payload size breakdown (~every 2s) to find which field dominates the
 // structured-clone. Set false / remove once the heavy field is identified.
 const SNAP_SIZE_LOG = true;
@@ -218,17 +218,19 @@ function slimTile(tile: WorldTile): Partial<WorldTile> {
 }
 
 /**
- * Build the per-entity sync for one array (§D2 — staggered resync). Every flush sends a slim upsert
- * for known ids (fresh hot fields), a FULL entity for any newly-seen id (so the mirror is never
- * missing cold fields), AND a FULL entity for this flush's round-robin slice (`i % RESYNC_EVERY ===
- * resyncPhase`) so cold fields are refreshed across RESYNC_EVERY flushes without ever shipping every
- * entity's cold trees in one message. Plus `removed`/`order`.
+ * Build the per-entity sync for one array via per-field REF-DIFF. Every upsert carries the slim hot
+ * projection (position/needs/state/combat scalars — always fresh) PLUS any cold field whose object
+ * ref differs from what was last sent for that entity (`lastCold`). A newly-seen id ships ALL cold
+ * fields (baseline so the mirror is never missing one). Cold fields that didn't change ship nothing,
+ * so an idle/healthy entity costs only its hot scalars — and the moment a cold field DOES change
+ * (combat/heal/command, or the slice-on-change in tickConditions/stepHunger flips the ref) it's
+ * re-sent that same flush. Plus `removed`/`order`; `projectSentEntity` trims the sent hot fields.
  */
 function syncEntities<T extends { id: string }>(
   arr: readonly T[],
   prevIds: Set<string>,
   cold: Set<string>,
-  resyncPhase: number
+  lastCold: Map<string, Record<string, unknown>>
 ): EntitySync<T> {
   const upserts: Array<Partial<T> & { id: string }> = new Array(arr.length);
   const order: string[] = new Array(arr.length);
@@ -237,35 +239,28 @@ function syncEntities<T extends { id: string }>(
     const e = arr[i];
     order[i] = e.id;
     cur.add(e.id);
-    // FULL if newly-seen OR in this flush's resync slice; otherwise slim (cold fields persist on the
-    // main-thread mirror between refreshes). Either way we project the SENT object down to the fields
-    // the main thread reads (path/needs/activeJob) — on a fresh slim object, or a shallow clone of the
-    // full entity so the canonical state is never mutated (projectSentEntity rebuilds nested objects).
-    const resync = i % RESYNC_EVERY === resyncPhase;
-    let o: Record<string, unknown>;
-    if (prevIds.has(e.id) && !resync) {
-      o = slimEntity(e, cold) as Record<string, unknown>;
-      // A WOUNDED entity ships its health trees (limbs/injuries) LIVE every flush, instead of waiting
-      // ≤RESYNC_EVERY flushes (~2s) on the cold round-robin. `pain`/`blood` already flow hot, so a stale
-      // limb tree showed fresh pain beside a "no damage" body panel right after a hit. Only wounded
-      // entities pay, and only for these two fields — the bulky cold trees (inventory/equipment/skills/
-      // stats) stay on the rotation. (Cleared automatically once it heals: injuries empties, pain → 0.)
-      const er = e as Record<string, unknown>;
-      if (
-        ((er.injuries as unknown[] | undefined)?.length ?? 0) > 0 ||
-        ((er.pain as number) ?? 0) > 0
-      ) {
-        o.limbs = er.limbs;
-        o.injuries = er.injuries;
+    const er = e as Record<string, unknown>;
+    const seen = prevIds.has(e.id);
+    let refs = lastCold.get(e.id);
+    if (!refs) lastCold.set(e.id, (refs = {}));
+    // Slim hot projection, then add each cold field whose ref changed (all of them on first sight).
+    const o = slimEntity(e, cold) as Record<string, unknown>;
+    for (const k of cold) {
+      const v = er[k];
+      if (!seen || v !== refs[k]) {
+        o[k] = v;
+        refs[k] = v;
       }
-    } else {
-      o = { ...(e as Record<string, unknown>) };
     }
     projectSentEntity(o);
     upserts[i] = o as Partial<T> & { id: string };
   }
   const removed: string[] = [];
-  for (const id of prevIds) if (!cur.has(id)) removed.push(id);
+  for (const id of prevIds)
+    if (!cur.has(id)) {
+      removed.push(id);
+      lastCold.delete(id);
+    }
   prevIds.clear();
   for (const id of cur) prevIds.add(id);
   return { upserts, removed, order };
@@ -334,10 +329,9 @@ function publish(state: GameState, flush: boolean) {
   delta._terrainRev = terrainRev; // always present; renderer's terrain-rebuild trigger
   delta._designationRev = designationRev; // renderer's cheap 2D designation-overlay redraw trigger
 
-  const resyncPhase = flushSeq % RESYNC_EVERY;
   flushSeq++;
-  const pawns = syncEntities(state.pawns, lastPawnIds, PAWN_COLD, resyncPhase);
-  const mobs = syncEntities(state.mobs ?? [], lastMobIds, MOB_COLD, resyncPhase);
+  const pawns = syncEntities(state.pawns, lastPawnIds, PAWN_COLD, lastPawnCold);
+  const mobs = syncEntities(state.mobs ?? [], lastMobIds, MOB_COLD, lastMobCold);
   const wmDelta = tileDeltas
     ? tileDeltas.map((d) => ({ y: d.y, x: d.x, tile: slimTile(d.tile) }))
     : undefined;
@@ -477,6 +471,8 @@ self.onmessage = async (e: MessageEvent) => {
       flushSeq = 0; // first publish sends every entity full (empty id baseline → all "newly-seen")
       lastPawnIds = new Set();
       lastMobIds = new Set();
+      lastPawnCold.clear(); // drop cold-ref baselines so the first publish re-ships every cold field
+      lastMobCold.clear();
       lastBatch = performance.now();
       if (!loop) loop = setInterval(batch, 16);
       post({ kind: 'ready' });

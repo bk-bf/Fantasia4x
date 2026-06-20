@@ -8,7 +8,8 @@ import {
   driveNeedConditions,
   applyShock,
   snapshotConditionStages,
-  emitPersistentConditionFloaters
+  emitPersistentConditionFloaters,
+  conditionsSig
 } from '../../core/needs';
 import { absorbDropIfOnStockpileTile } from '../../core/GameState';
 import { pawnStatService } from '../PawnStatService';
@@ -101,7 +102,9 @@ export function stepHunger(state: GameState): GameState {
         0.95,
         Math.max(0, MOB_BASE_CLOT_CHANCE * pawnStatService.evaluateStat('blood_clotting', mob))
       );
-      rollWoundClotting(limbs, clotChance, turn);
+      // Clotting mutates limb objects in place → bump mob.limbs ref so the worker re-ships the
+      // updated bleed/clot state to the body panel (ref-diff cold sync).
+      if (rollWoundClotting(limbs, clotChance, turn)) mob.limbs = limbs.slice();
     }
 
     // ── Blood loss ──────────────────────────────────────────────────────────────────
@@ -117,9 +120,13 @@ export function stepHunger(state: GameState): GameState {
     }
 
     // (The redundant `blood_loss` condition is gone — low blood now drives `shock` directly, below.)
-    const conditions = [...(mob.conditions ?? [])];
+    // Operate on the LIVE conditions array (no per-tick copy); we flip mob.conditions to a new ref
+    // only when the in-place mutations below change it, so the worker's cold-field ref-diff re-ships
+    // it to the UI only on change (not every tick).
+    const conditions = (mob.conditions ??= []);
     // Pre-tick stages of flagged persistent conditions (e.g. shock) — to float a label on change.
     const prevStages = snapshotConditionStages(conditions);
+    const condSigBefore = conditionsSig(conditions);
 
     // ── Need-driven conditions (malnutrition ← hunger) — the SAME data-driven model as pawns ──
     // Malnutrition onsets at hunger 87 and accrues slowly (conditions.jsonc), so a starving mob keeps
@@ -222,7 +229,9 @@ export function stepHunger(state: GameState): GameState {
     mob.needs.hunger = newHunger;
     mob.needs.fatigue = newFatigue;
     mob.bloodVolume = bloodVolume;
-    mob.conditions = conditions;
+    // Flip to a NEW conditions ref only when this tick changed it (worker ref-diff → live pill);
+    // `conditions` IS mob.conditions, so an unchanged tick leaves the ref untouched and ships nothing.
+    if (conditionsSig(conditions) !== condSigBefore) mob.conditions = conditions.slice();
     // Float a label for any flagged persistent condition (shock) that onset / changed stage this tick.
     emitPersistentConditionFloaters(prevStages, conditions, mob.x, mob.y);
     changed = true;

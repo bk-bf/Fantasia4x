@@ -45,7 +45,8 @@ import {
   getConditionFloater,
   applyShock,
   snapshotConditionStages,
-  emitPersistentConditionFloaters
+  emitPersistentConditionFloaters,
+  conditionsSig
 } from '../core/needs';
 import {
   weatherEffects,
@@ -326,6 +327,10 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
   // Stage of each flagged persistent condition BEFORE this tick's updates — so we can float a label
   // when one onsets or changes stage (shock/infection/thermia). Allocates nothing when none present.
   const prevStages = snapshotConditionStages(conditions);
+  // Content signature BEFORE the in-place mutations below — so we can flip `pawn.conditions` to a new
+  // array ref ONLY when something actually changed, which is what the worker's cold-field ref-diff
+  // keys on to push the updated pills/health to the UI live (no churn on unchanged ticks). '' = empty.
+  const condSigBefore = conditionsSig(conditions);
   const maxBloodVolume = pawn.maxBloodVolume ?? 100;
   let bloodVolume = pawn.bloodVolume ?? maxBloodVolume;
   const limbs = pawn.limbs ?? [];
@@ -447,12 +452,13 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
   // ~Every 3 in-game hours, each bleeding/untended wound rolls (against blood_clotting) for a chance
   // to advance a clot stage — a lucky natural stop that occasionally saves a pawn before it bleeds out,
   // but sparse/uncertain enough that wound care stays the reliable answer. Mutates limbs in place.
+  let limbsDirty = false; // clotting mutates limb objects in place → bump the limbs ref on change
   if (gameState.turn % CLOT_ROLL_INTERVAL === 0 && limbs.length > 0) {
     const clotChance = Math.min(
       0.95,
       Math.max(0, BASE_CLOT_CHANCE * pawnStatService.evaluateStat('blood_clotting', pawn))
     );
-    rollWoundClotting(limbs, clotChance, gameState.turn);
+    limbsDirty = rollWoundClotting(limbs, clotChance, gameState.turn);
   }
 
   // ── Blood Loss ────────────────────────────────────────────────────────────
@@ -559,9 +565,11 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
   // object the caller fetched from gameState.pawns. (The lethal branches above stay immutable: rare,
   // and they hand a patched state to killPawn.) conditions/limbs are cold snapshot fields → resync;
   // bloodVolume is hot → every flush (ADR-021 W2b).
-  pawn.conditions = conditions;
+  // Flip to a NEW conditions ref only when the in-place mutations changed something (worker ref-diff
+  // → live pill/health update); unchanged ticks keep the ref so nothing re-ships.
+  pawn.conditions = conditionsSig(conditions) !== condSigBefore ? conditions.slice() : conditions;
   pawn.bloodVolume = bloodVolume;
-  pawn.limbs = limbs;
+  pawn.limbs = limbsDirty ? limbs.slice() : limbs;
   // Float a label for any flagged persistent condition that onset / changed stage this tick.
   emitPersistentConditionFloaters(
     prevStages,

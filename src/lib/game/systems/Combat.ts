@@ -6,7 +6,6 @@ import type {
   Injury,
   LimbState,
   BodyPartState,
-  EntityCondition,
   BodyPartId,
   DamageType,
   LimbId,
@@ -574,21 +573,6 @@ function currentPartHealth(defender: Pawn | Mob, partId: BodyPartId, defMaxHp: n
   return partState?.health ?? defMaxHp;
 }
 
-function upsertCondition(
-  conditions: EntityCondition[],
-  id: string,
-  severity: number
-): EntityCondition[] {
-  const i = conditions.findIndex((c) => c.id === id);
-  const clamped = clamp(severity, 0, 1);
-  if (i >= 0) {
-    const next = [...conditions];
-    next[i] = { ...next[i], severity: clamped };
-    return next;
-  }
-  return [...conditions, { id, severity: clamped }];
-}
-
 // ── Implementation ────────────────────────────────────────────────────────────
 class CombatServiceImpl implements CombatService {
   resolveHit(
@@ -804,10 +788,8 @@ class CombatServiceImpl implements CombatService {
     }
     const newPain = clamp(Math.round(painTotal), 0, 100);
 
-    // blood_loss severity derived from current bloodVolume
-    const maxBV = entity.maxBloodVolume ?? 100;
-    const bloodLossSev = clamp(1 - (entity.bloodVolume ?? maxBV) / maxBV, 0, 1);
-    const newConditions = upsertCondition(entity.conditions ?? [], 'blood_loss', bloodLossSev);
+    // (Blood loss no longer writes a `blood_loss` condition — it folds into `shock`, derived from
+    // pain OR blood-loss fraction in tickConditions/stepHunger. Combat leaves `conditions` untouched.)
 
     // Transient conditions. Knockdown = a short blunt stagger (this swing rolled one).
     // Collapse = loss of consciousness (pain + blood loss + organ damage, via the
@@ -838,8 +820,7 @@ class CombatServiceImpl implements CombatService {
       injuries: newInjuries,
       pain: newPain,
       conditionTimers: durations,
-      transientConditions,
-      conditions: newConditions
+      transientConditions
     };
 
     // Resolution: a destroyed vital part is instant death. Otherwise a collapse
@@ -1075,24 +1056,18 @@ class CombatServiceImpl implements CombatService {
       ? target.transientConditions!
       : [...(target.transientConditions ?? []), eff.condition];
 
-    // Optional blood drain (proboscis/feeding) → reduce bloodVolume and re-derive blood_loss.
-    let conditions = target.conditions;
+    // Optional blood drain (proboscis/feeding) → reduce bloodVolume; the low blood now drives `shock`
+    // in tickConditions/stepHunger (the old `blood_loss` condition is gone), so no condition write here.
     let bloodVolume = target.bloodVolume;
     if (eff.bloodDrain && eff.bloodDrain > 0) {
       const maxBV = target.maxBloodVolume ?? 100;
       bloodVolume = Math.max(0, (target.bloodVolume ?? maxBV) - eff.bloodDrain * (1 - resistFrac));
-      conditions = upsertCondition(
-        target.conditions ?? [],
-        'blood_loss',
-        clamp(1 - bloodVolume / maxBV, 0, 1)
-      );
     }
 
     const updated = {
       ...target,
       conditionTimers: timers,
       transientConditions,
-      conditions,
       bloodVolume
     };
     // The on-hit condition (envenomed / bloodletting / disoriented / ensnared) just triggered →

@@ -32,6 +32,20 @@ export function getConditionFloater(id: string): { name: string; color: string }
   return { name: def.name, color: (def as TransientConditionDef).color ?? '#dddddd' };
 }
 
+/**
+ * Cheap content signature of a condition list (id+severity per entry, in order) — for detecting
+ * whether a tick's in-place mutations actually changed anything, so the caller can give `conditions`
+ * a NEW array ref ONLY on change. That ref flip is what the worker's per-field ref-diff keys on to
+ * re-ship the (cold) conditions to the UI; an unchanged tick keeps the ref and ships nothing. Empty
+ * list → '' with no allocation, so healthy entities (the common case) pay nothing.
+ */
+export function conditionsSig(conds: EntityCondition[]): string {
+  if (conds.length === 0) return '';
+  let s = '';
+  for (let i = 0; i < conds.length; i++) s += conds[i].id + ':' + conds[i].severity + ';';
+  return s;
+}
+
 /** Pain (0–100) at/above which the `shock` condition onsets; severity scales to 1 at pain 100. */
 export const SHOCK_PAIN_ONSET = 40;
 /** Fraction of blood lost (0–1) at which shock starts climbing from the blood side. */

@@ -397,6 +397,48 @@ export function bestApproachTile(
   return best;
 }
 
+/** Outcome of {@link approachForMelee}; the caller maps each case onto its own state fields. */
+export type ApproachDecision =
+  | { kind: 'hold' } // committed to a live route — keep following it, no change
+  | { kind: 'repath'; path: { x: number; y: number }[] } // fresh A* route to a flank of the target
+  | { kind: 'unreachable' }; // no walkable tile adjacent to the target — caller decides the fallback
+
+/**
+ * SHARED "close to melee range" approach for BOTH pursuit paths — mob-vs-pawn (the Alerted FSM
+ * state) and mob-vs-prey (stepHunting). They were two hand-rolled copies of the same algorithm, and
+ * the divergence is exactly what let a "surround" fix land on one and not the other (the 3rd-mob
+ * stacks-behind bug). One source of truth now: path to a DISTINCT unoccupied neighbour of the target
+ * (bestApproachTile, which excludes tiles held by mobs already engaged), so a pack fans out and
+ * surrounds instead of all homing on the target's own tile from one heading. Re-path only when the
+ * route is exhausted or the target drifted off the path's end tile, throttled to every 10 ticks
+ * (the cadence guards against main-thread stalls when many pursuers chase at once).
+ *
+ * Returns a DECISION, not a mob, because the tails differ: the hunter gives up + cools down on an
+ * unreachable target, while the Alerted mob presses greedily; both carry their own id/state fields.
+ * On 'repath' the caller MUST spread the existing mob and set only `path`/`pathIndex` (NOT
+ * `nextCellCostLeft`): the re-path fires mid-tile-crossing, and resetting the cost-left would snap
+ * the renderer's sub-tile interpolation back to tile-centre (the "yoyo"). Carrying it over continues
+ * the crossing toward the fresh route's first step (a neighbour of the same tile).
+ */
+export function approachForMelee(
+  mob: Mob,
+  targetPos: { x: number; y: number },
+  state: GameState,
+  turn: number
+): ApproachDecision {
+  const pathEnd = mob.path && mob.path.length > 0 ? mob.path[mob.path.length - 1] : null;
+  const pathExhausted = !mob.path?.length || (mob.pathIndex ?? 0) >= mob.path.length;
+  const targetMoved =
+    !pathEnd ||
+    Math.max(Math.abs(pathEnd.x - targetPos.x), Math.abs(pathEnd.y - targetPos.y)) > 1.5;
+  const repathDue = pathExhausted || (targetMoved && (turn - mob.stateSince) % 10 === 0);
+  if (!repathDue) return { kind: 'hold' };
+  const approachTile = bestApproachTile(state, mob, targetPos, mob.id) ?? targetPos;
+  const path = pathTo(state, mob.x, mob.y, approachTile.x, approachTile.y, mob.id);
+  if (!path.length) return { kind: 'unreachable' };
+  return { kind: 'repath', path };
+}
+
 export function stepDirectional(
   mob: Mob,
   ref: { x: number; y: number },

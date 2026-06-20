@@ -120,8 +120,8 @@
         "id": "heal_rate",
         "category": "physical",
         "primaryStat": "constitution",
-        "formula": "(1.0 + (CON − 10) × 0.05) × blood_filtration × consciousness",
-        "description": "wound recovery speed multiplier (× blood_filtration × consciousness); boosted further by rest, food, and mood"
+        "formula": "(1.0 + (CON − 10) × 0.05) × blood_filtration",
+        "description": "wound recovery speed multiplier (× blood_filtration — kidneys drive recovery; NOT × consciousness: an unconscious body still knits, often harder). Boosted further by rest, food, and mood"
     },
     {
         "id": "medical_skill",
@@ -217,70 +217,72 @@
         "description"     : "maximum carry volume in litres — a fixed fraction of body mass (frame bulk)"
     },
     // ── Resistance ────────────────────────────────────────────────────────────────
-    // Resistances are multiplied by consciousness (dazed = weaker) and
-    // blood_filtration (for biological resistances: poison, disease).
+    // Physical & elemental resistances are INNATE — pure stat formulas, NOT dimmed by a
+    // transient daze (groggy flesh isn't more cuttable). Two exceptions fold a capacity:
+    // knockdown & mental resistance × consciousness (a dazed balance/mind gives out), and
+    // poison/disease × blood_filtration (kidneys/liver clear toxins — organ-based, not a daze).
     {
         "id"         : "cutting_resistance",
         "category"   : "resistance",
         "primaryStat": "dexterity",
-        "formula"    : "(0.0 + (DEX − 10) × 0.01) × consciousness",
-        "description": "cutting damage reduction (× consciousness)"
+        "formula"    : "(0.0 + (DEX − 10) × 0.01)",
+        "description": "cutting damage reduction — innate (stat-only, not dimmed by a daze)"
     },
     {
         "id"         : "piercing_resistance",
         "category"   : "resistance",
         "primaryStat": "constitution",
-        "formula"    : "(0.0 + (CON − 10) × 0.008) × consciousness",
-        "description": "piercing damage reduction (× consciousness)"
+        "formula"    : "(0.0 + (CON − 10) × 0.008)",
+        "description": "piercing damage reduction — innate (stat-only, not dimmed by a daze)"
     },
     {
         "id"         : "blunt_resistance",
         "category"   : "resistance",
         "primaryStat": "constitution",
-        "formula"    : "(0.0 + (CON − 10) × 0.008 + (STR − 10) × 0.004) × consciousness",
-        "description": "blunt damage reduction (× consciousness)"
+        "formula"    : "(0.0 + (CON − 10) × 0.008 + (STR − 10) × 0.004)",
+        "description": "blunt damage reduction — innate (stat-only, not dimmed by a daze)"
     },
     {
         "id": "fire_resistance",
         "category": "resistance",
         "primaryStat": "constitution",
-        "formula": "(0.0 + (CON − 10) × 0.01) × consciousness",
-        "description": "fire damage reduction (× consciousness); also slows HEAT-STROKE onset from hot weather/temperature (SEASONS_WEATHER) — reduces heat exposure before the condition driver"
+        "formula": "(0.0 + (CON − 10) × 0.01)",
+        "description": "fire damage reduction — innate (stat-only); also slows HEAT-STROKE onset from hot weather/temperature (SEASONS_WEATHER) — reduces heat exposure before the condition driver"
     },
     {
         "id": "cold_resistance",
         "category": "resistance",
         "primaryStat": "constitution",
-        "formula": "(0.0 + (CON − 10) × 0.01) × consciousness",
-        "description": "cold damage reduction (× consciousness); also slows HYPOTHERMIA onset from cold weather/temperature (SEASONS_WEATHER) — reduces cold exposure before the condition driver"
+        "formula": "(0.0 + (CON − 10) × 0.01)",
+        "description": "cold damage reduction — innate (stat-only); also slows HYPOTHERMIA onset from cold weather/temperature (SEASONS_WEATHER) — reduces cold exposure before the condition driver"
     },
     {
         "id"         : "lightning_resistance",
         "category"   : "resistance",
         "primaryStat": "dexterity",
-        "formula"    : "(0.0 + (DEX − 10) × 0.01) × consciousness",
-        "description": "lightning damage reduction (× consciousness)"
+        "formula"    : "(0.0 + (DEX − 10) × 0.01)",
+        "description": "lightning damage reduction — innate (stat-only, not dimmed by a daze)"
     },
     {
         "id"         : "shadow_resistance",
         "category"   : "resistance",
         "primaryStat": "intelligence",
-        "formula"    : "(0.0 + (INT − 10) × 0.01) × consciousness",
-        "description": "shadow damage reduction (× consciousness)"
+        "formula"    : "(0.0 + (INT − 10) × 0.01)",
+        "description": "shadow damage reduction — innate (stat-only, not dimmed by a daze)"
     },
     {
         "id"         : "poison_resistance",
         "category"   : "resistance",
         "primaryStat": "constitution",
-        "formula"    : "(0.0 + (CON − 10) × 0.015) × consciousness × blood_filtration",
-        "description": "toxin mitigation (× consciousness × blood_filtration)"
+        "formula"    : "(0.0 + (CON − 10) × 0.015) × blood_filtration",
+        "description": "toxin mitigation (× blood_filtration — kidneys/liver clear toxins; not dimmed by a daze)"
     },
     {
         "id"         : "disease_resistance",
         "category"   : "resistance",
         "primaryStat": "constitution",
-        "formula"    : "(0.0 + (CON − 10) × 0.01) × consciousness × blood_filtration",
-        "description": "disease resistance (× consciousness × blood_filtration)"
+        "formula"    : "(0.0 + (CON − 10) × 0.01) × blood_filtration",
+        "description": "disease resistance (× blood_filtration — organ-based immune clearance; not dimmed by a daze)"
     },
     {
         "id"         : "mental_resistance",

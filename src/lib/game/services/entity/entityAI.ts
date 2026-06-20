@@ -21,8 +21,7 @@ import {
   findNearestFoodTile,
   findReachableFoodTile,
   huntAttacker,
-  bestApproachTile,
-  pathTo,
+  approachForMelee,
   edibleResourceOnTile
 } from './entityHelpers';
 import {
@@ -512,7 +511,16 @@ export function stepHostile(
       if (!nearest || dist(mob, nearest.pos) > visionRange * 1.5) {
         return { ...mob, state: 'Wander', stateSince: turn };
       }
-      return moveToward(mob, nearest.pos, state);
+      // Surround, don't stack: route to a DISTINCT free tile adjacent to the pawn via the shared
+      // approachForMelee (same algorithm stepHunting uses), NOT a greedy step onto the pawn's own
+      // tile. moveToward homes every pursuer on the pawn's exact tile from one heading, and
+      // stepDirectional's anti-jitter `break` forbids the lateral move to peel around — so the 3rd+
+      // mob in a pack froze directly behind the leaders instead of flanking.
+      const decision = approachForMelee(mob, nearest.pos, state, turn);
+      if (decision.kind === 'hold') return mob; // following a committed approach route
+      // Fully boxed in (no walkable flank) — fall back to the greedy step so the mob still presses.
+      if (decision.kind === 'unreachable') return moveToward(mob, nearest.pos, state);
+      return { ...mob, path: decision.path, pathIndex: 0 }; // nextCellCostLeft preserved (see helper)
     }
     case 'Attacking': {
       // COMBAT-SYSTEM owns damage resolution. combatService.tickCombat() (called from
@@ -1055,48 +1063,31 @@ export function stepHunting(
     };
   }
 
-  // Pursue prey via A*. Re-path when our route is exhausted or the prey has
-  // drifted away from the path's end tile; otherwise keep following the route.
-  // Throttle re-pathing to every 10 ticks to prevent main-thread stalls when
-  // many hunters chase fleeing prey simultaneously.
-  const pathEnd = mob.path && mob.path.length > 0 ? mob.path[mob.path.length - 1] : null;
-  const pathExhausted = !mob.path?.length || (mob.pathIndex ?? 0) >= mob.path.length;
-  const preyMoved =
-    !pathEnd || Math.max(Math.abs(pathEnd.x - preyPos.x), Math.abs(pathEnd.y - preyPos.y)) > 1.5;
-  const repathDue = pathExhausted || (preyMoved && (turn - mob.stateSince) % 10 === 0);
-  if (repathDue) {
-    // Path to an unoccupied tile adjacent to the prey so the wolf arrives in
-    // attack range without needing to land on the prey's own tile.
-    const approachTile = bestApproachTile(state, mob, preyPos, mob.id) ?? preyPos;
-    const newPath = pathTo(state, mob.x, mob.y, approachTile.x, approachTile.y, mob.id);
-    if (!newPath.length) {
-      gameLogger.log(
-        turn,
-        'ENTITY-FEED',
-        `HUNT-UNREACHABLE ${mob.id} @(${mob.x},${mob.y}) prey ${prey.id}@(${preyPos.x},${preyPos.y})`
-      );
-      // Set cooldown and transition to Wander.
-      const cooldownUntil = turn + ticksFromSeconds(HUNT_COOLDOWN_SECONDS);
-      const restState: MobState = def.behaviour === 'passive' ? 'Grazing' : 'Wander';
-      return {
-        ...wanderStep(mob, def, state),
-        huntTargetId: undefined,
-        huntCooldownUntil: cooldownUntil,
-        state: restState,
-        stateSince: turn
-      };
-    }
+  // Pursue prey via the SHARED approachForMelee (same logic the Alerted FSM uses against pawns):
+  // route to an unoccupied tile adjacent to the prey so the hunter arrives in attack range without
+  // landing on the prey's own tile, re-pathing only when the route is exhausted / the prey drifts
+  // off the path end, throttled to every 10 ticks. nextCellCostLeft is preserved on repath (see the
+  // helper's note) — resetting it mid-crossing produces the hunt "yoyo".
+  const decision = approachForMelee(mob, preyPos, state, turn);
+  if (decision.kind === 'unreachable') {
+    gameLogger.log(
+      turn,
+      'ENTITY-FEED',
+      `HUNT-UNREACHABLE ${mob.id} @(${mob.x},${mob.y}) prey ${prey.id}@(${preyPos.x},${preyPos.y})`
+    );
+    // Set cooldown and transition to Wander.
+    const cooldownUntil = turn + ticksFromSeconds(HUNT_COOLDOWN_SECONDS);
+    const restState: MobState = def.behaviour === 'passive' ? 'Grazing' : 'Wander';
     return {
-      ...mob,
-      huntTargetId: prey.id,
-      path: newPath,
-      pathIndex: 0
-      // nextCellCostLeft is deliberately NOT reset. The hunt re-paths every 10 ticks while the
-      // prey flees, but a tile crossing takes ~20 ticks — so a reset lands mid-crossing and snaps
-      // the renderer's sub-tile interp (simTarget reads nextCellCostLeft) back to tile-centre 6×/s,
-      // producing the hunt "yoyo". Carrying it over continues the crossing toward the fresh path's
-      // first step (a neighbour of the same tile), exactly like pawn assignPath / flee stepDirectional.
+      ...wanderStep(mob, def, state),
+      huntTargetId: undefined,
+      huntCooldownUntil: cooldownUntil,
+      state: restState,
+      stateSince: turn
     };
   }
-  return { ...mob, huntTargetId: prey.id };
+  if (decision.kind === 'repath') {
+    return { ...mob, huntTargetId: prey.id, path: decision.path, pathIndex: 0 };
+  }
+  return { ...mob, huntTargetId: prey.id }; // 'hold' — keep following the committed route
 }
