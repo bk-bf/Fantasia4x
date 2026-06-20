@@ -59,6 +59,16 @@ export interface GridRenderStats {
   renderTime: number;
 }
 
+/** One CHUNK_SIZE² slice of the static terrain layer — its own GPU buffer, built lazily on demand. */
+interface TerrainChunk {
+  vao: WebGLVertexArrayObject | null; // null until the chunk first has tiles to draw
+  vbo: WebGLBuffer | null;
+  count: number; // uploaded vertex count (0 = empty/off-map chunk, skip the draw)
+  builtVersion: number; // cacheVersion the data was baked for (rebuild on mismatch)
+  builtLight: number; // lightVersion baked into a_light (rebuild on emitter-set change)
+  lastFrame: number; // last frame this chunk was visible (for eviction)
+}
+
 /**
  * High-performance grid renderer with viewport culling
  */
@@ -75,26 +85,20 @@ export class GridRenderer {
   private gridVBO: WebGLBuffer | null = null;
   private currentVertexCount: number = 0;
 
-  // Dedicated TERRAIN VAO/VBO. The terrain layer is static (changes only on cacheVersion bump),
-  // so it gets its OWN buffer and is uploaded ONLY when its vertex data reference changes — not
-  // every frame. Previously terrain shared gridVBO with the overlay, which clobbered it each
-  // frame and forced a full ~21MB re-upload of the 38k-tile buffer every frame (~90ms).
-  private terrainVAO: WebGLVertexArrayObject | null = null;
-  private terrainVBO: WebGLBuffer | null = null;
-  private terrainUploaded: Float32Array | null = null; // last data uploaded to terrainVBO
-  private terrainVertexCount: number = 0;
-
-  // Cached vertex buffer for the static terrain layer (see GridRenderOptions.cacheVersion).
-  private terrainCache: {
-    version: number;
-    viewX: number;
-    viewY: number;
-    tileW: number;
-    tileH: number;
-    lightVersion: number;
-    count: number;
-    data: Float32Array;
-  } | null = null;
+  // CHUNKED TERRAIN (ENGINE-PERFORMANCE §E). The terrain layer used to be ONE giant VBO holding
+  // every tile, built + uploaded + drawn in full. That was fine at 38k tiles but the default map
+  // grew to 500×500 = 250k tiles (~138MB buffer, 1.5M verts drawn EVERY frame, O(map) rebuilds).
+  // Now the map is sliced into CHUNK_SIZE² tiles, each with its OWN VAO/VBO, built lazily and drawn
+  // only when it overlaps the viewport (+ a one-chunk margin ring). Off-screen chunks are neither
+  // built, uploaded, nor drawn — render cost becomes O(visible tiles), independent of map size — and
+  // a content change (cacheVersion bump) rebuilds only the visible chunks, not the whole map. Chunks
+  // not drawn for a while are evicted to bound GPU memory while panning.
+  private static readonly CHUNK_SIZE = 32;
+  private static readonly CHUNK_MARGIN = 1; // extra chunk ring around the viewport (pre-build)
+  private static readonly CHUNK_EVICT_FRAMES = 240; // ~4s un-drawn → free GL resources
+  private static readonly CHUNK_SWEEP_EVERY = 120; // run the eviction sweep this often (frames)
+  private terrainChunks: Map<string, TerrainChunk> = new Map();
+  private terrainFrame = 0; // monotonic frame counter for chunk LRU eviction
 
   // Render statistics
   private stats: GridRenderStats = {
@@ -131,6 +135,22 @@ export class GridRenderer {
   renderGrid(grid: GameGrid, options: GridRenderOptions): GridRenderStats {
     const startTime = performance.now();
 
+    // The STATIC TERRAIN layer (callers pass `cacheVersion`) takes the chunked,
+    // viewport-culled path (§E) — render cost scales with the visible tiles, not
+    // the whole map. The DYNAMIC overlays (no cacheVersion: sparse pawn/item/mob
+    // grids) keep the full-render + per-frame upload path below — they hold only a
+    // handful of cells, so `renderAllTiles` returning every tile is already cheap.
+    if (options.cacheVersion !== undefined) {
+      const drawnTiles = this.renderTerrainChunked(grid, options);
+      this.stats = {
+        tilesRendered: drawnTiles,
+        tilesCulled: 0,
+        batchCount: drawnTiles > 0 ? 1 : 0,
+        renderTime: performance.now() - startTime
+      };
+      return { ...this.stats };
+    }
+
     // Create viewport for culling
     const viewport: Viewport = {
       x: Math.floor(options.viewportX),
@@ -146,22 +166,9 @@ export class GridRenderer {
       ? grid.getAllTiles()
       : grid.getVisibleTiles(viewport);
 
-    if (this.debug) {
-      console.log(
-        `🎯 Rendering ${visibleTiles.length} visible tiles in viewport ${viewport.width}x${viewport.height}`
-      );
-    }
-
-    // Render tiles in batches. The cached terrain layer (cacheVersion set) draws from its own
-    // persistent VBO and only re-uploads when its data reference changes; the dynamic overlay
-    // (no cacheVersion) re-uploads every frame as before.
     if (visibleTiles.length > 0) {
-      const vertexData = this.getVertexData(grid, visibleTiles, options);
-      if (options.cacheVersion !== undefined) {
-        this.uploadAndDrawTerrain(vertexData);
-      } else {
-        this.uploadAndDraw(vertexData);
-      }
+      const vertexData = this.generateBatchVertexData(visibleTiles, options);
+      this.uploadAndDraw(vertexData);
     } else {
       this.currentVertexCount = 0;
     }
@@ -179,53 +186,114 @@ export class GridRenderer {
   }
 
   /**
-   * Resolve the vertex buffer for this draw, reusing the terrain cache when
-   * possible. Only callers that pass `cacheVersion` (the static terrain layer)
-   * are cached; per-frame layers like the pawn overlay always regenerate.
+   * Render the static terrain layer as viewport-culled chunks (§E). Only chunks overlapping the
+   * viewport (+ a one-chunk margin) are built/uploaded/drawn; each is rebuilt only when the grid
+   * content (`cacheVersion`) or emitter set (`lightVersion`) changes. Returns the tile count drawn.
+   *
+   * Geometry stays camera-independent — a tile's vertices use its WORLD position and pan/zoom are
+   * shader uniforms — so a chunk's buffer is valid across pans and only the VISIBLE SET changes as
+   * you scroll, never the geometry.
    */
-  private getVertexData(
-    grid: GameGrid,
-    tiles: TileData[],
-    options: GridRenderOptions
-  ): Float32Array {
-    if (options.cacheVersion === undefined) {
-      return this.generateBatchVertexData(tiles, options);
-    }
-
-    // Geometry is now camera-independent (pan/zoom applied via shader uniforms,
-    // ambient + flicker via uniforms), so the terrain buffer only needs rebuilding
-    // when:
-    //   - the grid content changes (cacheVersion bump),
-    //   - the zoom (tile pixel size) changes, or
-    //   - the EMITTER SET changes (a campfire is lit/extinguished/moved). The baked
-    //     a_light is flicker-free and static per emitter set, so flicker animation
-    //     no longer forces a rebuild — it's a per-fragment shader uniform now.
+  private renderTerrainChunked(grid: GameGrid, options: GridRenderOptions): number {
+    const CS = GridRenderer.CHUNK_SIZE;
+    const m = GridRenderer.CHUNK_MARGIN;
+    const cacheVersion = options.cacheVersion ?? 0;
     const lightVersion = options.lightVersion ?? 0;
+    const frame = ++this.terrainFrame;
 
-    const c = this.terrainCache;
-    if (
-      c &&
-      c.version === options.cacheVersion &&
-      c.tileW === options.tileWidth &&
-      c.tileH === options.tileHeight &&
-      c.lightVersion === lightVersion &&
-      c.count === tiles.length
-    ) {
-      return c.data;
+    // Visible tile range → chunk range (with a margin ring so panning doesn't pop).
+    const minTX = Math.floor(options.viewportX);
+    const minTY = Math.floor(options.viewportY);
+    const minCX = Math.floor(minTX / CS) - m;
+    const minCY = Math.floor(minTY / CS) - m;
+    const maxCX = Math.floor((minTX + options.viewportWidth) / CS) + m;
+    const maxCY = Math.floor((minTY + options.viewportHeight) / CS) + m;
+
+    if (!this.shaderManager.useProgram('tileRenderer')) {
+      console.error('❌ Failed to use tile renderer shader');
+      return 0;
     }
 
-    const data = this.generateBatchVertexData(tiles, options);
-    this.terrainCache = {
-      version: options.cacheVersion,
-      viewX: 0,
-      viewY: 0,
-      tileW: options.tileWidth,
-      tileH: options.tileHeight,
-      lightVersion,
-      count: tiles.length,
-      data
-    };
-    return data;
+    let drawnVerts = 0;
+    for (let cy = minCY; cy <= maxCY; cy++) {
+      for (let cx = minCX; cx <= maxCX; cx++) {
+        drawnVerts += this.drawTerrainChunk(grid, options, cx, cy, cacheVersion, lightVersion, frame);
+      }
+    }
+
+    if (frame % GridRenderer.CHUNK_SWEEP_EVERY === 0) this.evictStaleChunks(frame);
+    this.currentVertexCount = drawnVerts;
+    return drawnVerts / 6;
+  }
+
+  /**
+   * Build (if stale) and draw one terrain chunk; returns the vertex count drawn. A chunk is rebuilt
+   * only when its `cacheVersion`/`lightVersion` no longer match the requested ones — between bumps
+   * it just binds its VAO and draws the buffer already on the GPU (no re-upload). Off-map chunks
+   * cache `count = 0` so they aren't re-scanned every frame.
+   */
+  private drawTerrainChunk(
+    grid: GameGrid,
+    options: GridRenderOptions,
+    cx: number,
+    cy: number,
+    version: number,
+    lightVersion: number,
+    frame: number
+  ): number {
+    const gl = this.gl;
+    const CS = GridRenderer.CHUNK_SIZE;
+    const key = `${cx}:${cy}`;
+    let chunk = this.terrainChunks.get(key);
+
+    if (!chunk || chunk.builtVersion !== version || chunk.builtLight !== lightVersion) {
+      const tiles = grid.getTilesInRegion(cx * CS, cy * CS, CS, CS);
+      if (!chunk) {
+        chunk = { vao: null, vbo: null, count: 0, builtVersion: version, builtLight: lightVersion, lastFrame: frame };
+        this.terrainChunks.set(key, chunk);
+      }
+      if (tiles.length === 0) {
+        chunk.count = 0; // off-map / empty — keep the entry so we don't rescan until the next bump
+      } else {
+        const data = this.generateBatchVertexData(tiles, options);
+        if (!chunk.vao || !chunk.vbo) {
+          chunk.vao = gl.createVertexArray();
+          chunk.vbo = gl.createBuffer();
+          if (!chunk.vao || !chunk.vbo) {
+            console.error('❌ Failed to create terrain chunk VAO/VBO');
+            return 0;
+          }
+          this.setupGridAttribs(chunk.vao, chunk.vbo);
+        }
+        gl.bindBuffer(gl.ARRAY_BUFFER, chunk.vbo);
+        gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+        chunk.count = data.length / 23; // 23 floats per vertex
+      }
+      chunk.builtVersion = version;
+      chunk.builtLight = lightVersion;
+    }
+
+    chunk.lastFrame = frame;
+    if (chunk.count > 0 && chunk.vao) {
+      gl.bindVertexArray(chunk.vao);
+      gl.drawArrays(gl.TRIANGLES, 0, chunk.count);
+      gl.bindVertexArray(null);
+      return chunk.count;
+    }
+    return 0;
+  }
+
+  /** Free the GL resources of any terrain chunk not drawn within CHUNK_EVICT_FRAMES (bounds memory while panning). */
+  private evictStaleChunks(frame: number): void {
+    const gl = this.gl;
+    const maxAge = GridRenderer.CHUNK_EVICT_FRAMES;
+    for (const [key, chunk] of this.terrainChunks) {
+      if (frame - chunk.lastFrame > maxAge) {
+        if (chunk.vbo) gl.deleteBuffer(chunk.vbo);
+        if (chunk.vao) gl.deleteVertexArray(chunk.vao);
+        this.terrainChunks.delete(key);
+      }
+    }
   }
 
   /**
@@ -262,41 +330,6 @@ export class GridRenderer {
 
     if (this.debug) {
       checkWebGLError(gl, 'grid batch rendering');
-    }
-  }
-
-  /**
-   * Draw the static terrain layer from its dedicated VBO. Re-uploads ONLY when `vertexData` is a
-   * different array than last time (i.e. the terrain cache was rebuilt) — otherwise it just binds
-   * and draws the buffer already on the GPU, skipping the ~21MB/frame upload that dominated
-   * renderCPU. `vertexData` is the terrainCache's stable reference, so identity == unchanged.
-   */
-  private uploadAndDrawTerrain(vertexData: Float32Array): void {
-    if (!this.terrainVAO || !this.terrainVBO) {
-      console.error('❌ Terrain rendering resources not initialized');
-      return;
-    }
-    if (vertexData.length === 0) return;
-    const gl = this.gl;
-
-    if (vertexData !== this.terrainUploaded) {
-      gl.bindBuffer(gl.ARRAY_BUFFER, this.terrainVBO);
-      gl.bufferData(gl.ARRAY_BUFFER, vertexData, gl.STATIC_DRAW);
-      this.terrainUploaded = vertexData;
-      this.terrainVertexCount = vertexData.length / 23; // 23 components per vertex
-    }
-
-    if (!this.shaderManager.useProgram('tileRenderer')) {
-      console.error('❌ Failed to use tile renderer shader');
-      return;
-    }
-    gl.bindVertexArray(this.terrainVAO);
-    gl.drawArrays(gl.TRIANGLES, 0, this.terrainVertexCount);
-    gl.bindVertexArray(null);
-
-    this.currentVertexCount = this.terrainVertexCount;
-    if (this.debug) {
-      checkWebGLError(gl, 'terrain batch rendering');
     }
   }
 
@@ -610,18 +643,12 @@ export class GridRenderer {
   private initializeGridRendering(): void {
     const gl = this.gl;
 
-    // Overlay (dynamic) pair.
+    // Overlay (dynamic) pair. The static terrain layer no longer shares a buffer here — it owns a
+    // grid of per-chunk VAO/VBOs created lazily in drawTerrainChunk (§E).
     this.gridVAO = gl.createVertexArray();
     this.gridVBO = gl.createBuffer();
     if (!this.gridVAO || !this.gridVBO) throw new Error('Failed to create grid VAO/VBO');
     this.setupGridAttribs(this.gridVAO, this.gridVBO);
-
-    // Terrain (static) pair — same attribute layout, separate buffer so the overlay can't
-    // clobber it (which used to force a full re-upload every frame).
-    this.terrainVAO = gl.createVertexArray();
-    this.terrainVBO = gl.createBuffer();
-    if (!this.terrainVAO || !this.terrainVBO) throw new Error('Failed to create terrain VAO/VBO');
-    this.setupGridAttribs(this.terrainVAO, this.terrainVBO);
 
     if (this.debug) {
       console.log('✅ Grid rendering resources initialized');
@@ -688,15 +715,11 @@ export class GridRenderer {
       this.gridVAO = null;
     }
 
-    if (this.terrainVBO) {
-      gl.deleteBuffer(this.terrainVBO);
-      this.terrainVBO = null;
+    for (const chunk of this.terrainChunks.values()) {
+      if (chunk.vbo) gl.deleteBuffer(chunk.vbo);
+      if (chunk.vao) gl.deleteVertexArray(chunk.vao);
     }
-    if (this.terrainVAO) {
-      gl.deleteVertexArray(this.terrainVAO);
-      this.terrainVAO = null;
-    }
-    this.terrainUploaded = null;
+    this.terrainChunks.clear();
 
     if (this.debug) {
       console.log('🧹 Grid renderer disposed');

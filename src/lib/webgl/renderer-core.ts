@@ -388,8 +388,9 @@ export class WebGLRendererCore {
 
     const lightTime = performance.now() / 1000;
 
-    // Terrain pass — opaque, fills every cell background. Rendered as the full
-    // static map so panning never changes the tile set (cache stays valid).
+    // Terrain pass — opaque, fills every cell background. Rendered as viewport-culled CHUNKS (§E):
+    // geometry is camera-independent (world-space verts + u_viewOffset/u_zoom), so only the chunks
+    // overlapping the viewport are built/drawn and panning just changes which chunks are visible.
     this.shaderManager.setUniform('tileRenderer', 'u_glyphOnly', 0);
     const tTerrain = performance.now();
     const gridStats = this.gridRenderer.renderGrid(this.gameGrid, {
@@ -402,7 +403,6 @@ export class WebGLRendererCore {
       viewportHeight: viewportTilesH,
       lightSampler: this.lightSampler ?? undefined,
       lightTime,
-      renderAllTiles: true,
       pointLightActive: this.dynamicLight,
       lightVersion: this.lightVersion,
       litBounds: this.lightBounds,
