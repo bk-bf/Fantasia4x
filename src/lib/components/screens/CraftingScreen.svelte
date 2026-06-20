@@ -45,6 +45,10 @@
   // gameState.item is a legacy no-op array (addToItemArray is a stub) and must not be used.
   $: itemMap = $gameState?.stockpile ?? {};
 
+  // Per-carcass-type average condition (0–100), derived from the stored stacks' per-unit conditions —
+  // replaces the old gameState.carcassIntactness map. Drives the badge + yield-pill scaling below.
+  $: carcassConditions = $gameState ? itemService.carcassConditionByType($gameState) : {};
+
   $: getItemAmount = (itemId: string): number => itemMap[itemId] || 0;
 
   // All unlocked recipes — split by workshop in template.
@@ -291,7 +295,7 @@
           {@const craftable = isCarcass
             ? $gameState !== null && itemService.canCraftItem(item.id, $gameState)
             : stationReady && affordable}
-          {@const intactness = $gameState?.carcassIntactness?.[item.id] ?? 100}
+          {@const intactness = carcassConditions[item.id] ?? 100}
           {@const pct = Math.round(intactness)}
           {@const dynNeed =
             isPlaceholder && recipe?.dynamicRecipe

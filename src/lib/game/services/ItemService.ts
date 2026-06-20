@@ -8,6 +8,7 @@ import type {
   ItemQuality
 } from '../core/types';
 import { qualityPrefix } from '../core/itemQuality';
+import { decayAll, normalizeConditions, averageCondition } from '../core/carcassCondition';
 import {
   consumeFromStockpiles,
   addToStockpileZone,
@@ -151,6 +152,9 @@ export interface ItemService {
 
   // Decay
   stepItemDecay(gameState: GameState): GameState;
+  /** Average carcass CONDITION (0–100) per carcass item type across stored stacks — the readout the
+   *  sidebar/butchery panel show (replaces the old `carcassIntactness` map). No stock → 100 (fresh). */
+  carcassConditionByType(gameState: GameState): Record<string, number>;
   /** Weather loose items. `elapsedTicks` = ticks since the last call (the caller throttles this to
    *  run every N ticks, not every tick — durability lifespans are days/weeks, so per-tick is waste). */
   stepItemDeterioration(gameState: GameState, elapsedTicks?: number): GameState;
@@ -565,6 +569,26 @@ export class ItemServiceImpl implements ItemService {
         continue;
       }
       const mult = d.stored ? 1 - (tilePreserve.get(`${d.x},${d.y}`) ?? 0) : 1;
+      changed = true;
+
+      // Carcasses (per-unit `unitConditions`): the environment rots the WHOLE pile, so erode EVERY
+      // unit's condition this tick (a unit fully erodes over the def's decaySeconds). Units that reach 0
+      // are stripped → `decaysTo`. This is distinct from CONSUMPTION, which only touches the top unit.
+      if (d.unitConditions) {
+        const conds = normalizeConditions(d.unitConditions, d.quantity);
+        const erosion = (100 * SECONDS_PER_TICK * mult) / def.decaySeconds;
+        const { conditions, removed } = decayAll(conds, erosion);
+        for (let r = 0; r < removed; r++) {
+          if (def.decaysTo) {
+            rotted.push({ resourceId: def.decaysTo, x: d.x, y: d.y, stored: d.stored, qty: 1 });
+          }
+        }
+        if (conditions.length > 0)
+          next.push({ ...d, quantity: conditions.length, unitConditions: conditions });
+        // length 0 → whole pile rotted away; drop it
+        continue;
+      }
+
       let acc = (d.decayAcc ?? 0) + SECONDS_PER_TICK * mult;
       let qty = d.quantity;
       while (acc >= def.decaySeconds && qty > 0) {
@@ -574,7 +598,6 @@ export class ItemServiceImpl implements ItemService {
           rotted.push({ resourceId: def.decaysTo, x: d.x, y: d.y, stored: d.stored, qty: 1 });
         }
       }
-      changed = true;
       if (qty > 0) next.push({ ...d, quantity: qty, decayAcc: acc });
       // qty 0 → stack fully rotted away; drop it
     }
@@ -601,6 +624,17 @@ export class ItemServiceImpl implements ItemService {
     }
 
     return { ...gameState, droppedItems: next, stockpile: aggregateFromDrops(next) };
+  }
+
+  carcassConditionByType(gameState: GameState): Record<string, number> {
+    const byType: Record<string, (number[] | undefined)[]> = {};
+    for (const d of gameState.droppedItems ?? []) {
+      if (!d.unitConditions || (d.quantity ?? 0) <= 0) continue;
+      (byType[d.resourceId] ??= []).push(d.unitConditions);
+    }
+    const out: Record<string, number> = {};
+    for (const [id, arrs] of Object.entries(byType)) out[id] = averageCondition(arrs);
+    return out;
   }
 
   /**

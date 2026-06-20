@@ -265,7 +265,17 @@ export function dropCarcass(state: GameState, mob: Mob): GameState {
   const carcassId = def?.carcassItemId;
   if (!carcassId) return state; // no carcass for this creature (e.g. shadow_wraith)
   const id = `carcass-${mob.id}-${state.turn}`;
-  const drop: DroppedItem = { id, resourceId: carcassId, x: mob.x, y: mob.y, quantity: 1 };
+  // Fold the corpse's remaining mass (mob.intactness, eaten down by scavengers) onto the carcass as its
+  // starting CONDITION — a half-stripped corpse drops a half-condition carcass (less butchery yield).
+  const condition = Math.round(Math.max(0, Math.min(1, mob.intactness ?? 1)) * 100);
+  const drop: DroppedItem = {
+    id,
+    resourceId: carcassId,
+    x: mob.x,
+    y: mob.y,
+    quantity: 1,
+    unitConditions: [condition]
+  };
   let next: GameState = { ...state, droppedItems: [...(state.droppedItems ?? []), drop] };
   next = absorbDropIfOnStockpileTile(next, id);
   return next;

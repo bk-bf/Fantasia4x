@@ -10,7 +10,9 @@
   const race = $derived($currentRace);
   // POPULATION reflects the live pawn count (race.population is stale).
   const population = $derived($gameState?.pawns?.length ?? 0);
-  const carcassIntactness = $derived($gameState?.carcassIntactness ?? {});
+  // Per-carcass-type average condition (0–100) from the stored stacks' per-unit conditions — the INTACT
+  // bar's source (replaces the old gameState.carcassIntactness map).
+  const carcassIntactness = $derived($gameState ? itemService.carcassConditionByType($gameState) : {});
 
   // ── Recent +/- deltas (fade out after 2.5s) ────────────────────────────────
   let itemChanges = $state<Record<string, number>>({});

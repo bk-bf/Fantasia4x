@@ -9,6 +9,7 @@ import { calcMaxStamina } from '../../entities/Pawns';
 import { gameLogger } from '../../dev/gameLogger';
 import { rng } from '../../core/rng';
 import { markTileDirty } from '../../core/tileDeltas';
+import { consumeTop } from '../../core/carcassCondition';
 import {
   nearestPawn,
   dist,
@@ -145,6 +146,28 @@ export function stepEntities(state: GameState): GameState {
   }
 
   let finalState = changed ? { ...state, mobs: next } : state;
+
+  // A scavenger that ate a corpse also erodes the matching ON-GROUND carcass item's TOP unit (the
+  // carcass drop id encodes the mob id). Consumption touches only the top unit — environmental rot
+  // (stepItemDecay) is what erodes the whole stack. Once hauled into the colony the carcass is merged
+  // and no longer id-matches, so this only bites the loose carcass a wild scavenger could reach.
+  if (pendingMeatConsumption.size > 0 && finalState.droppedItems?.length) {
+    let touched = false;
+    const drops = finalState.droppedItems
+      .map((d) => {
+        if (!d.unitConditions?.length) return d;
+        for (const [mobId, consumed] of pendingMeatConsumption) {
+          if (d.id.startsWith(`carcass-${mobId}-`)) {
+            const { conditions, removed } = consumeTop(d.unitConditions, consumed * 100);
+            touched = true;
+            return { ...d, quantity: Math.max(0, d.quantity - removed), unitConditions: conditions };
+          }
+        }
+        return d;
+      })
+      .filter((d) => !(d.unitConditions && (d.quantity ?? 0) <= 0));
+    if (touched) finalState = { ...finalState, droppedItems: drops };
+  }
 
   // Apply foraging tile depletions IN PLACE + mark them dirty (§D — ADR-002 amendment, like §C
   // regrowth / harvest completion). The old code rebuilt the ENTIRE 38k-tile worldMap via `.map()`

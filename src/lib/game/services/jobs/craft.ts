@@ -149,9 +149,27 @@ export function completeCraftOrder(
   const recipe = recipeService.getRecipeForItem(itemId);
   const recipeOutputs: Record<string, number> = recipe ? recipe.outputs : { [itemId]: 1 };
 
+  // Butchery: the consumed carcass's CONDITION (its top unit — see core/carcassCondition.ts) scales the
+  // meat/pelt yield, so a half-eaten or spoiled carcass gives less. Read it off the reserved carcass
+  // input staged for this order (destroyed below); 1.0 for ordinary crafts with no carcass input.
+  const carcassInput = (gs.droppedItems ?? []).find(
+    (d) =>
+      d.reservedFor === entry.id &&
+      d.unitConditions?.length &&
+      itemService.getItemById(d.resourceId)?.isCarcass
+  );
+  const conditionMult = carcassInput ? (carcassInput.unitConditions![0] ?? 100) / 100 : 1;
+
   const outputs: Record<string, number> = {};
   for (const [outId, outQty] of Object.entries(recipeOutputs)) {
     let qty = outQty * quantity;
+    // Carcass condition scales the yield (floor + rng "carry" so a low-condition carcass still has a
+    // proportional chance at each unit rather than always rounding down to nothing).
+    if (conditionMult < 1) {
+      const scaled = qty * conditionMult;
+      const whole = Math.floor(scaled);
+      qty = whole + (rng.random() < scaled - whole ? 1 : 0);
+    }
     // §F cooked-meal quality: FOOD outputs are scaled by the rolled quality tier (cooking_quality →
     // 0.8×–1.8× via qualityMultiplier) — bulk food carries no per-unit identity, so meal quality
     // lands as nourishment YIELD at cook time rather than a per-stack tier. The fractional remainder

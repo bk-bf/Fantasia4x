@@ -27,6 +27,13 @@ export interface DroppedItem {
   drying?: number;
   /** §C per-stack spoilage clock (seconds, scaled by storage). At the def's decaySeconds, one unit rots. */
   decayAcc?: number;
+  /**
+   * Per-unit carcass CONDITION (0–100), one entry per unit in `quantity`; index 0 = the "top" unit
+   * (next consumed / butchered). Replaces the old `gameState.carcassIntactness` per-type map — folds a
+   * carcass's remaining mass onto the stack itself. Animal/butchery consumption erodes the top unit
+   * only; environmental spoilage erodes every unit. See `core/carcassCondition.ts`. Carcasses only.
+   */
+  unitConditions?: number[];
   /** Present for tracked items (weapons, armour, tools with maxDurability). */
   instance?: ItemInstance;
   /**

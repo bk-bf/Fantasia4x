@@ -108,8 +108,6 @@ export interface GameState {
   mobs?: Mob[];
   /** ENTITIES_SPAWNING Phase C: animals tamed and bound to a pawn. */
   tamedAnimals?: TamedAnimal[];
-  /** Intactness (0–100) for each carcass item type currently in the stockpile. */
-  carcassIntactness?: Record<string, number>;
   /** Accumulated decay-seconds per item type in the stockpile (for stepItemDecay). */
   stockpileDecaySeconds?: Record<string, number>;
   /**

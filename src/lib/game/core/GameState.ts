@@ -9,6 +9,7 @@ import type {
   DroppedItem
 } from './types';
 import { rng } from './rng';
+import { mergeConditions } from './carcassCondition';
 import buildingsData from '../database/buildings.jsonc';
 
 const BUILDING_DEFS = buildingsData as unknown as Building[];
@@ -434,9 +435,28 @@ export function absorbDropIfOnStockpileTile(state: GameState, dropId: string): G
 
   let newDropped: DroppedItem[];
   if (existingIdx >= 0) {
-    // Merge: increase existing stored pile, remove the new unstored drop.
+    // Merge: increase existing stored pile, remove the new unstored drop. Carcasses concat their
+    // per-unit conditions so each unit keeps its own condition across the merge (no averaging).
+    const existing = (state.droppedItems ?? [])[existingIdx];
+    const mergedConditions =
+      existing.unitConditions || drop.unitConditions
+        ? mergeConditions(
+            existing.unitConditions,
+            existing.quantity,
+            drop.unitConditions,
+            drop.quantity
+          )
+        : undefined;
     newDropped = (state.droppedItems ?? [])
-      .map((d, i) => (i === existingIdx ? { ...d, quantity: d.quantity + drop.quantity } : d))
+      .map((d, i) =>
+        i === existingIdx
+          ? {
+              ...d,
+              quantity: d.quantity + drop.quantity,
+              ...(mergedConditions ? { unitConditions: mergedConditions } : {})
+            }
+          : d
+      )
       .filter((d) => d.id !== dropId);
   } else {
     // Mark the drop as stored in-place.
