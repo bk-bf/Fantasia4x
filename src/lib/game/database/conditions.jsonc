@@ -323,6 +323,7 @@
         "name"       : "Knocked Down",
         "description": "Prone from a heavy blunt blow. Loses the next attack; recovers after a couple of turns.",
         "color"      : "#ff5722",
+        "floater"    : true,
         "charSpans"  : [ {"sheet": "font", "id": 15} ],
         "modifiers"  : {"moveSpeed": 0.0, "workEfficiency": 0.0}
     },
@@ -332,6 +333,7 @@
         "name"       : "Collapsed",
         "description": "Overwhelmed by pain — incapacitated and out of the fight. Recovers only as the pain subsides.",
         "color"      : "#b71c1c",
+        "floater"    : true,
         "charSpans"  : [ {"sheet": "font", "id": 19} ],
         "modifiers"  : {"moveSpeed": 0.0, "workEfficiency": 0.0}
     },
@@ -359,6 +361,7 @@
         "name"       : "Exhausted",
         "description": "Severe fatigue. Work efficiency and movement speed are reduced.",
         "color"      : "#ff7043",
+        "floater"    : true,
         "charSpans"  : [ {"sheet": "items", "id": 25} ],
         "modifiers"  : {"workEfficiency": 0.5, "moveSpeed": 0.5}
     },
@@ -368,6 +371,7 @@
         "name": "Winded",
         "description": "Out of breath — stamina spent. Can't attack and can barely move; easier to hit until stamina recovers to full.",
         "color": "#9575cd",
+        "floater": true,
         "charSpans": [ {"sheet": "font", "id": 126} ],
         "modifiers": {"moveSpeed": 0.3, "dodge": 0.5}
     },
@@ -446,6 +450,7 @@
         "name"       : "Envenomed",
         "description": "Venom courses through the blood — nauseous, weak, and tiring fast until it passes. Onset chance is reduced by poison resistance (CON × blood filtration).",
         "color"      : "#7CB342",
+        "floater"    : true,
         "charSpans"  : [ {"sheet": "font", "id": 21} ],
         "modifiers"  : {"workEfficiency": 0.7, "moveSpeed": 0.8, "fatigueRate": 1.3}
     },
@@ -455,6 +460,7 @@
         "name"       : "Bleeding Out",
         "description": "A feeding wound that won't clot — light-headed and slow as blood seeps away. Onset chance is reduced by piercing resistance (CON); a successful bite also drains blood directly (→ blood loss).",
         "color"      : "#C62828",
+        "floater"    : true,
         "charSpans"  : [ {"sheet": "font", "id": 3} ],
         "modifiers"  : {"moveSpeed": 0.8, "workEfficiency": 0.85, "dodge": 0.85}
     },
@@ -464,6 +470,7 @@
         "name"       : "Disoriented",
         "description": "Reeling from a piercing screech — senses scrambled, slow to act and easy to hit. Onset chance is reduced by mental resistance (INT).",
         "color"      : "#AB47BC",
+        "floater"    : true,
         "charSpans"  : [ {"sheet": "font", "id": 19} ],
         "modifiers"  : {"workEfficiency": 0.7, "dodge": 0.7, "moveSpeed": 0.9}
     },
@@ -473,6 +480,7 @@
         "name"       : "Ensnared",
         "description": "Caught fast by a sticky tongue — rooted in place and wide open until torn free. Onset chance is reduced by blunt resistance (CON/STR — wrenching free).",
         "color"      : "#8D6E63",
+        "floater"    : true,
         "charSpans"  : [ {"sheet": "font", "id": 15} ],
         "modifiers"  : {"moveSpeed": 0.0, "dodge": 0.6}
     },

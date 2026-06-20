@@ -181,7 +181,9 @@
   {#each $worldEffects.floatingTextOverlays as overlay (overlay.id)}
     <div
       class="combat-float {overlay.kind}"
-      style="transform: translate({overlay.left}px, {overlay.top}px) translateX(-50%);"
+      style="transform: translate({overlay.left}px, {overlay.top}px) translateX(-50%);{overlay.color
+        ? ` color:${overlay.color};`
+        : ''}"
     >
       {overlay.text}
     </div>
@@ -928,5 +930,12 @@
   .combat-float.knockdown {
     color: #ffcc44;
     font-size: 10px;
+  }
+  /* Data-driven condition labels (winded, envenomed, …): colour set inline from conditions.jsonc;
+     slightly smaller + italic so they read as a status cue, distinct from the damage number. */
+  .combat-float.condition {
+    color: #cccccc;
+    font-size: 10px;
+    font-style: italic;
   }
 </style>

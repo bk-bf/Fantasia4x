@@ -41,7 +41,8 @@ import {
   driveNeedConditions,
   driveTemperatureConditions,
   driveEncumbrance,
-  comfortRange
+  comfortRange,
+  getConditionFloater
 } from '../core/needs';
 import {
   weatherEffects,
@@ -833,6 +834,26 @@ export function syncTransientConditions(pawn: Pawn): Pawn {
 
   const current = pawn.transientConditions ?? [];
   if (ids.length === current.length && ids.every((e, i) => e === current[i])) return pawn;
+
+  // Floating-text cue for a flagged condition the first tick it latches. Only SYNC-derived ids
+  // fire here (e.g. tired) — timer-based/combat ids (knockdown, winded, on-hit effects) are floated
+  // by Combat at their application site, so skip anything in conditionTimers to avoid a double label.
+  // Guarded by the equality early-return above: this loop only runs on a tick where the set changed.
+  const timers = pawn.conditionTimers ?? {};
+  if (pawn.position) {
+    for (const id of ids) {
+      if (current.includes(id) || (timers[id] ?? 0) > 0) continue;
+      const f = getConditionFloater(id);
+      if (f)
+        simLog.pushCombatText({
+          worldX: pawn.position.x,
+          worldY: pawn.position.y,
+          text: f.name,
+          kind: 'condition',
+          color: f.color
+        });
+    }
+  }
   return { ...pawn, transientConditions: ids };
 }
 

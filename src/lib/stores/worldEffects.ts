@@ -60,7 +60,9 @@ export interface FloatingTextOverlay {
   left: number;
   top: number;
   text: string;
-  kind: 'damage' | 'crit' | 'miss' | 'dodge' | 'bleed' | 'knockdown';
+  kind: 'damage' | 'crit' | 'miss' | 'dodge' | 'bleed' | 'knockdown' | 'condition';
+  /** Explicit colour for data-driven `kind: 'condition'` labels (else the per-kind CSS colour). */
+  color?: string;
 }
 
 export interface WorldEffectsState {

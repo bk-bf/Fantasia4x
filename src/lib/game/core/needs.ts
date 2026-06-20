@@ -5,11 +5,25 @@
  * consistently to any living entity (pawn or mob) that carries PawnCondition[].
  */
 
-import type { EntityCondition, ConditionDef, ConditionStage } from './types';
+import type { EntityCondition, ConditionDef, ConditionStage, TransientConditionDef } from './types';
 import conditionsData from '../database/conditions.jsonc';
 import { perTick } from './time';
 
 const CONDITIONS_DB = conditionsData as unknown as ConditionDef[];
+/** Raw mixed list (persistent + transient shapes) for id-keyed lookups across both kinds. */
+const ALL_CONDITION_DEFS = conditionsData as unknown as Array<ConditionDef | TransientConditionDef>;
+
+/**
+ * If a condition `id` is opted-in to floating text (`"floater": true` in conditions.jsonc), return
+ * its display name + colour for a floater; otherwise undefined. Used by the combat + state-machine
+ * emit sites to pop a label the first tick the condition latches. Transient ids carry a top-level
+ * `color`; persistent ids (not currently flagged) fall back to a neutral grey.
+ */
+export function getConditionFloater(id: string): { name: string; color: string } | undefined {
+  const def = ALL_CONDITION_DEFS.find((d) => d.id === id);
+  if (!def || !(def as TransientConditionDef).floater) return undefined;
+  return { name: def.name, color: (def as TransientConditionDef).color ?? '#dddddd' };
+}
 
 /** Return the active ConditionStage for a given condition at its current severity. */
 export function getConditionCurrentStage(condition: EntityCondition): ConditionStage | undefined {

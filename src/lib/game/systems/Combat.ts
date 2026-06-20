@@ -29,7 +29,7 @@ import {
   type AmmoPick,
   type MeleeGrip
 } from './rangedCombat';
-import { getConditionCurrentStage } from '../core/needs';
+import { getConditionCurrentStage, getConditionFloater } from '../core/needs';
 import { getCreatureById } from '../core/Creatures';
 import { woundForDamageType, woundById, severityFromFrac } from '../core/Wounds';
 import { scaleWeaponQuality, scaleArmorQuality } from '../core/itemQuality';
@@ -811,9 +811,14 @@ class CombatServiceImpl implements CombatService {
     if (knockdown) durations.knockdown = Math.max(durations.knockdown ?? 0, KNOCKDOWN_TURNS);
     if (collapsed) durations.collapse = Math.max(durations.collapse ?? 0, KNOCKDOWN_TURNS);
     const transientConditions = [...(entity.transientConditions ?? [])];
+    const cpos = this.entityPos(entity);
+    let condTier = 1; // stack each new condition label below the damage number (tier × ~13px)
     for (const id of ['knockdown', 'collapse']) {
-      if ((durations[id] ?? 0) > 0 && !transientConditions.includes(id))
+      if ((durations[id] ?? 0) > 0 && !transientConditions.includes(id)) {
         transientConditions.push(id);
+        // Newly latched this hit → pop its floater (below the damage number performAttack emits).
+        this.emitConditionFloat(cpos.x, cpos.y, id, 13 * condTier++);
+      }
     }
 
     const updated = {
@@ -892,6 +897,22 @@ class CombatServiceImpl implements CombatService {
     simLog.pushCombatText({ worldX: x, worldY: y, text, kind, dy });
   }
 
+  /** Pop a data-driven condition label (name + colour from conditions.jsonc) the tick a flagged
+   *  condition latches. No-op for unflagged conditions, so callers can fire it unconditionally. */
+  private emitConditionFloat(x: number, y: number, id: string, dy?: number): void {
+    if (x < 0 || y < 0) return;
+    const f = getConditionFloater(id);
+    if (!f) return;
+    simLog.pushCombatText({
+      worldX: x,
+      worldY: y,
+      text: f.name,
+      kind: 'condition',
+      color: f.color,
+      dy
+    });
+  }
+
   /**
    * Resolve one swing from attacker → target: roll, apply injury, surface floating
    * text + engagement log, and report a kill. Returns the updated state plus the
@@ -950,10 +971,12 @@ class CombatServiceImpl implements CombatService {
       critFloater ? 'crit' : 'damage',
       result.crit ? `-${result.injury.damage}!` : `-${result.injury.damage}`
     );
-    // Secondary cue (knockdown / bleed) shares the struck tile + spawn instant with the damage
-    // number above, so push it DOWN ~13px to stack below the number instead of obscuring it.
-    if (result.knockdown) this.emitFloat(pos.x, pos.y, 'knockdown', 'DOWN!', 13);
-    else if (result.injury.bleeding > 0) this.emitFloat(pos.x, pos.y, 'bleed', 'bleed', 13);
+    // Secondary bleed cue shares the struck tile + spawn instant with the damage number above, so
+    // push it DOWN ~13px to stack below it. Knockdown/collapse now surface as data-driven condition
+    // floaters from _applyInjuryToEntity (same tier), so suppress the bleed cue when knocked down to
+    // avoid two labels colliding on the same row.
+    if (!result.knockdown && result.injury.bleeding > 0)
+      this.emitFloat(pos.x, pos.y, 'bleed', 'bleed', 13);
 
     simLog.logCombatSwing(attacker.id, attackerName, target.id, targetName, turn, pos.x, pos.y, {
       turn,
@@ -1061,11 +1084,10 @@ class CombatServiceImpl implements CombatService {
       conditions,
       bloodVolume
     };
-    const floatKind: CombatTextKind =
-      eff.condition === 'disoriented' || eff.condition === 'ensnared' ? 'knockdown' : 'bleed';
-    // Third tier (below the damage number AND any bleed/knockdown cue from the same hit) so a
-    // weapon's on-hit condition label doesn't pile onto either of them.
-    this.emitFloat(pos.x, pos.y, floatKind, eff.condition, 26);
+    // The on-hit condition (envenomed / bloodletting / disoriented / ensnared) just triggered →
+    // pop its data-driven floater. Third tier (below the damage number AND any bleed/knockdown cue
+    // from the same hit) so a weapon's on-hit label doesn't pile onto either of them.
+    this.emitConditionFloat(pos.x, pos.y, eff.condition, 39);
 
     return isMob
       ? { ...state, mobs: state.mobs!.map((m) => (m.id === targetId ? (updated as Mob) : m)) }
@@ -1460,8 +1482,13 @@ class CombatServiceImpl implements CombatService {
     let transientConditions = e.transientConditions ?? [];
     if (winded) {
       durations.winded = 2; // refresh so the per-tick duration decrement never expires the latch
-      if (!transientConditions.includes(WINDED))
+      if (!transientConditions.includes(WINDED)) {
         transientConditions = [...transientConditions, WINDED];
+        // Rising edge (just ran out of breath) → pop the floater. No damage number accompanies it
+        // (separate from a swing), so it sits at the entity's own row (dy 0).
+        const wpos = this.entityPos(e);
+        this.emitConditionFloat(wpos.x, wpos.y, WINDED);
+      }
     } else {
       delete durations.winded;
       if (transientConditions.includes(WINDED))

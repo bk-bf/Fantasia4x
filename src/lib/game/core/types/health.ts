@@ -47,6 +47,10 @@ export interface TransientConditionDef {
    * a future dispel/anti-magic hook; the modifiers apply exactly like any other transient condition.
    */
   magical?: boolean;
+  /** When true, the condition pops a floating combat-text label (its `name`, in its `color`) the
+   *  first tick it appears on an entity — surfaced by Combat (timer/combat-driven ids) or
+   *  syncTransientConditions (sync-derived ids). Opt-in: unflagged conditions never float. */
+  floater?: boolean;
   modifiers: {
     hungerRate?: number; // multiplier on hunger accrual (0 = paused, 0.33 = ⅓ rate)
     fatigueRate?: number; // multiplier on fatigue accrual

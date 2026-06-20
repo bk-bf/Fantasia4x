@@ -21,6 +21,8 @@ export interface CombatTextEvent {
   worldY: number;
   text: string;
   kind: CombatTextKind;
+  /** Explicit CSS colour for data-driven `kind: 'condition'` labels (overrides the per-kind class). */
+  color?: string;
   /** Extra vertical pixel offset on top of the tile→screen position (stacks a secondary cue
    *  below its sibling damage number rather than overlapping it). */
   dy?: number;

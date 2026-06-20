@@ -23,7 +23,15 @@ export interface LogEventInput {
  */
 
 /** Kind of floating combat label — mirrors the renderer's combat-feedback channel. */
-export type CombatTextKind = 'damage' | 'crit' | 'miss' | 'dodge' | 'bleed' | 'knockdown';
+export type CombatTextKind =
+  | 'damage'
+  | 'crit'
+  | 'miss'
+  | 'dodge'
+  | 'bleed'
+  | 'knockdown'
+  // A data-driven condition-onset label (name from conditions.jsonc); colour comes via `color`.
+  | 'condition';
 
 /** A world-space floating-text request (tile coordinates, never pixels). */
 export interface CombatTextRequest {
@@ -31,6 +39,9 @@ export interface CombatTextRequest {
   worldY: number;
   text: string;
   kind: CombatTextKind;
+  /** Explicit CSS colour (used by `kind: 'condition'`, whose colour is data-driven from
+   *  conditions.jsonc rather than a fixed per-kind CSS class). Ignored by the fixed combat kinds. */
+  color?: string;
   /** Extra vertical pixel offset applied on top of the tile→screen position. Lets a secondary
    *  cue (a bleed/knockdown label) stack BELOW the damage number that shares the same tile and
    *  spawn instant, instead of rising on top of it and hiding the number. */

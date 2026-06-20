@@ -1318,7 +1318,8 @@
         left: (e.worldX - viewX + 0.5) * tW,
         top: (e.worldY - viewY) * tH - 14 + (e.dy ?? 0),
         text: e.text,
-        kind: e.kind
+        kind: e.kind,
+        color: e.color
       }))
       .filter((o) => o.left >= -tW && o.top >= -tH && o.left <= W + tW && o.top <= H + tH);
     // Key on id + rounded position: the set changes whenever an event spawns,
