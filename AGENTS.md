@@ -138,6 +138,25 @@ needed.
 
 ## Performance Profiling & Debugging
 
+**⚠️ Cross-check `.docs/.tasks/open/ENGINE-PERFORMANCE.md` BEFORE changing any per-tick sim hot path,
+the worker→main snapshot boundary (`sim.worker.ts` / `simWorkerClient.ts`), or the render/store flow —
+and re-check `.debug/perf.log` AFTER.** Perf regressions have recurred *multiple times* from optimising
+one thing while reintroducing a cost the spec already documents. Treat the spec as a pre-flight
+checklist, not background reading. The recurring traps it covers:
+
+- **No new per-tick allocation on the PEACE path** (the common case). The immutable spread/`.map()`
+  style is a ~12.5× tick tax (ADR-002 amendment — hot phases mutate in place / copy-on-write). Clone
+  lazily on first write, never unconditionally every tick.
+- **Don't churn an array ref every tick** — ref-keyed memos (`pawnById`, terrain `_terrainRev`) silently
+  invalidate and rebuild.
+- **Keep the snapshot slim** — never add a field/array that ships every flush or grows unbounded
+  (`droppedItems`, per-unit arrays); ship a small summary or per-id deltas (`EntitySync`), strip
+  never-read fields (`entityProjection.ts`).
+- **Measure the boundary, not just the sim** — `perf.log` is worker TPS only; an FPS dip with healthy
+  TPS is render-side. Correlate dips with `combat.log`/`system.log` before *and* after a change.
+
+When you land a perf-relevant change, update the spec (see "When to Update" / Doc Sync).
+
 Diagnose runtime cost (per-tick sim hot path — see
 `.docs/.tasks/open/ENGINE-PERFORMANCE.md`).
 
