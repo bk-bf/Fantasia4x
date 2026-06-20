@@ -105,7 +105,7 @@
             {/if}
           </div>
           {#each limb.parts as part (part.label)}
-            <div class="hp-part">
+            <div class="hp-part" class:hp-gone={part.health <= 0}>
               <span class="hp-part-name">{part.label}</span>
               <span
                 class="hp-part-hp"
@@ -233,5 +233,14 @@
   }
   .hp-warn {
     color: #ee8844;
+  }
+  /* A destroyed sub-part (0 HP) is gone — grey the whole row so it reads as lost, not active. */
+  .hp-gone,
+  .hp-gone .hp-part-name,
+  .hp-gone .hp-part-hp,
+  .hp-gone .hp-wound,
+  .hp-gone .hp-warn {
+    color: var(--text-dim);
+    opacity: 0.55;
   }
 </style>
