@@ -14,6 +14,8 @@ import type {
   LimbState
 } from './types';
 import conditionsData from '../database/conditions.jsonc';
+import { PART_DEF_MAP, BONE_FRACTION } from './BodyParts';
+import { woundById } from './Wounds';
 import { perTick } from './time';
 import { simLog } from './logSink';
 
@@ -391,19 +393,31 @@ export function conditionStatMultipliers(entity: {
   return out;
 }
 
-/** Sync the broken_arm / broken_leg persistent conditions from the limb tree: present (severity 1) when
- *  any still-attached part of that limb type has a broken bone, removed once the bones knit. Mutates the
- *  conditions array in place (matching the surrounding tick style). */
+/** Sync the graded `fractured` condition from the limb tree. Severity = the WORST bone-damage fraction
+ *  across all still-attached bone parts: a fracture wound's accumulated damage ÷ that part's break
+ *  threshold (BONE_FRACTION × the part's SCALED maxHp). 0 → no condition; → 1.0 once a bone is fully
+ *  broken ("bone HP at 0" = max debuff). A broken bone never severs the limb (Combat excludes structural
+ *  wounds from isMissing); the per-limb manipulation/moving cripple rides the boneBroken flag separately.
+ *  Mutates the conditions array in place (matching the surrounding tick style). */
 export function syncFractureConditions(conditions: EntityCondition[], limbs: LimbState[]): void {
-  const broken = (ids: string[]) =>
-    limbs.some(
-      (l) => ids.includes(l.id) && (l.parts ?? []).some((p) => p.boneBroken && !p.isMissing)
-    );
-  const upsert = (id: string, present: boolean) => {
-    const idx = conditions.findIndex((c) => c.id === id);
-    if (present && idx < 0) conditions.push({ id, severity: 1 });
-    else if (!present && idx >= 0) conditions.splice(idx, 1);
-  };
-  upsert('broken_arm', broken(['left_arm', 'right_arm']));
-  upsert('broken_leg', broken(['left_leg', 'right_leg']));
+  let worst = 0;
+  for (const l of limbs) {
+    if (l.isMissing) continue;
+    for (const p of l.parts ?? []) {
+      if (p.isMissing) continue;
+      if (PART_DEF_MAP[p.id]?.boneHp == null) continue; // part has no skeleton → can't fracture
+      const frac = p.injuries.find((w) => woundById(w.type)?.structural);
+      if (!frac) continue;
+      const breakAt = BONE_FRACTION * p.maxHp; // scaled break threshold ("bone HP")
+      const sev = breakAt > 0 ? Math.min(1, frac.damage / breakAt) : 0;
+      if (sev > worst) worst = sev;
+    }
+  }
+  const idx = conditions.findIndex((c) => c.id === 'fractured');
+  if (worst > 0) {
+    if (idx >= 0) conditions[idx] = { ...conditions[idx], severity: worst };
+    else conditions.push({ id: 'fractured', severity: worst });
+  } else if (idx >= 0) {
+    conditions.splice(idx, 1);
+  }
 }

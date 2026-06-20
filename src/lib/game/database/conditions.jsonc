@@ -103,30 +103,28 @@
         ]
     },
     {
-        "id": "broken_arm",
-        "name": "Broken Arm",
-        "description": "A fractured arm bone. The hand is near useless and every motion drives pain — strength and dexterity collapse and work crawls. The limb's physical function is gutted on its own; this is the STR/DEX toll on top. Knits over WEEKS of rest; until then the arm is crippled, but still attached.",
+        "id": "fractured",
+        "name": "Fractured Bone",
+        "description": "A cracked or shattered bone — graded by how far the break has gone. Severity tracks the worst fracture on the body: a hairline crack nags, but a fully shattered bone (bone HP driven to 0) is agony that collapses strength and dexterity and crawls all work. The struck limb's own function — manipulation for an arm, movement for a leg — is gutted on top via the body model. The limb is NOT lost: bone mends over WEEKS of rest (dressing + a caretaker speed it).",
         "lethalSeverity": 99,
         "stages": [
             {
-                "label"      : "broken",
+                "label"      : "hairline",
                 "minSeverity": 0.0,
-                "color"      : "#C04030",
-                "modifiers"  : {"strength": 0.65, "dexterity": 0.6, "workEfficiency": 0.75}
-            }
-        ]
-    },
-    {
-        "id": "broken_leg",
-        "name": "Broken Leg",
-        "description": "A fractured leg bone. Bearing weight is agony — gait is reduced to a hobble and the whole body fights to stay upright, sapping strength and dexterity. Movement is gutted on its own; this is the STR/DEX toll on top. Knits over WEEKS of rest; until then the leg is crippled, but still attached.",
-        "lethalSeverity": 99,
-        "stages": [
+                "color"      : "#D8B048",
+                "modifiers"  : {"strength": 0.9, "dexterity": 0.88, "workEfficiency": 0.9}
+            },
             {
-                "label"      : "broken",
-                "minSeverity": 0.0,
+                "label"      : "cracked",
+                "minSeverity": 0.4,
+                "color"      : "#C8743A",
+                "modifiers"  : {"strength": 0.75, "dexterity": 0.7, "workEfficiency": 0.8}
+            },
+            {
+                "label"      : "shattered",
+                "minSeverity": 0.75,
                 "color"      : "#C04030",
-                "modifiers"  : {"strength": 0.8, "dexterity": 0.7, "workEfficiency": 0.85}
+                "modifiers"  : {"strength": 0.55, "dexterity": 0.5, "workEfficiency": 0.65}
             }
         ]
     },
