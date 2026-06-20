@@ -6,7 +6,7 @@
   import { pawnStatService } from '$lib/game/services/PawnStatService';
   import { itemService } from '$lib/game/services/ItemService';
   import { getActiveConditionViews } from '$lib/utils/conditionInfo';
-  import { conditionNeedMultipliers } from '$lib/game/core/needs';
+  import { conditionNeedMultipliers, conditionStatMultipliers } from '$lib/game/core/needs';
   import PawnStatBanner from './PawnStatBanner.svelte';
 
   export let pawn: Pawn;
@@ -39,6 +39,10 @@
   // Persistent-condition hunger/fatigue rate multipliers (malnutrition, dehydration, hypothermia…),
   // the same product the sim applies to the *_rate accrual — surfaced on the hunger_rate/fatigue_rate stats.
   $: condNeed = conditionNeedMultipliers(pawn.conditions ?? []);
+  // Core-stat multipliers from active conditions (shock/winded/… crush STR/DEX/CON/PER/INT) — the
+  // SAME factors evaluateFormula folds into every formula. The tooltip breakdown lists the CURRENT
+  // (crushed) stat the result was actually computed from, not the pawn's pristine base value.
+  $: condStatMult = conditionStatMultipliers(pawn);
   function conditionMult(id: string): number {
     if (WORK_SPEED_IDS.has(id)) return condWorkMult;
     if (id === 'movement_speed') return condMoveMult;
@@ -179,12 +183,17 @@
     const add = (name: string, value: number | string) => {
       if (new RegExp(`\\b${name}\\b`).test(s.formula)) vars.push({ name, value: String(value) });
     };
+    // Show the CURRENT core stat (base × active-condition multiplier) — the value the formula was
+    // actually evaluated with — so a crushed STR under shock reads "STR = 5", reconciling with the
+    // result. Charisma isn't touched by conditions. Core stats display as rounded ints (no floats).
     const st = pawn.stats;
-    add('STR', st.strength);
-    add('DEX', st.dexterity);
-    add('CON', st.constitution);
-    add('PER', st.perception);
-    add('INT', st.intelligence);
+    const sm = condStatMult;
+    const eff = (base: number, mult: number) => (mult === 1 ? base : Math.round(base * mult));
+    add('STR', eff(st.strength, sm.strength));
+    add('DEX', eff(st.dexterity, sm.dexterity));
+    add('CON', eff(st.constitution, sm.constitution));
+    add('PER', eff(st.perception, sm.perception));
+    add('INT', eff(st.intelligence, sm.intelligence));
     add('CHA', st.charisma);
     add('weight', pawn.physicalTraits?.weight ?? 70);
     add('height', pawn.physicalTraits?.height ?? 170);
@@ -285,7 +294,16 @@
   // so a pawn switch wouldn't re-run the grid cells (stale stats). buildRows takes those reactive
   // values as args purely so Svelte tracks them as dependencies and recomputes the whole table on any
   // change; the body reads them via closure. Without this, switching pawn left the previous stats.
-  $: catRows = buildRows(pawn, capacities, carry, condWorkMult, condMoveMult, condNeed, relevant);
+  $: catRows = buildRows(
+    pawn,
+    capacities,
+    carry,
+    condWorkMult,
+    condMoveMult,
+    condNeed,
+    condStatMult,
+    relevant
+  );
 
   function buildRows(..._deps: unknown[]) {
     return grouped.map((g) => ({
