@@ -28,7 +28,8 @@ import {
   BASE_FATIGUE_PER_SECOND,
   SLEEP_HUNGER_RATE,
   SLEEP_RECOVERY_PER_SECOND,
-  CORPSE_DECAY_TICKS
+  CORPSE_DECAY_TICKS,
+  TIRED_FATIGUE_THRESHOLD
 } from './entityConstants';
 
 /** Per-tick natural wound mend for creatures (no rest gate, no tending). Tuned so a beast recovers a
@@ -237,6 +238,17 @@ export function stepHunger(state: GameState): GameState {
     // Severe pain OR heavy blood loss sends a mob into shock — SAME rule as pawns (applyShock); this
     // subsumes the old blood_loss condition. mob.pain is kept current by combat + the heal block above.
     applyShock(conditions, mob.pain ?? 0, 1 - bloodVolume / maxBV);
+
+    // `tired` (Exhausted) transient — high fatigue crushes a creature's STR/DEX exactly as it does a
+    // pawn's (the pawn derives it in syncTransientConditions, which mobs don't run). Re-derived each
+    // tick; reconcile ONLY 'tired' so the combat-managed timer transients (knockdown/winded/on-hit
+    // venom…) on mob.transientConditions are left untouched.
+    const wantTired = !sleepingNow && newFatigue >= TIRED_FATIGUE_THRESHOLD;
+    if (wantTired !== (mob.transientConditions ?? []).includes('tired')) {
+      const tc = (mob.transientConditions ?? []).filter((id) => id !== 'tired');
+      if (wantTired) tc.push('tired');
+      mob.transientConditions = tc;
+    }
 
     mob.needs.hunger = newHunger;
     mob.needs.fatigue = newFatigue;

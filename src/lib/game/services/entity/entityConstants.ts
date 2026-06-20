@@ -132,6 +132,11 @@ export const HUNT_GIVE_UP_SECONDS = 25;
 /** Fatigue level at which mobs enter sleep — set lower than pawn (60 vs 72) so animals
  * sleep more naturally and spend a realistic fraction of time resting. */
 export const SLEEP_FATIGUE_THRESHOLD = 60;
+/** Fatigue level at which an awake creature reads as Exhausted (the `tired` transient — crushes STR/DEX
+ * like a pawn). Mirrors the pawn FATIGUE_THRESHOLD (72, in systems/pawn) so the two agree without a
+ * cross-layer import; a mob below the SLEEP threshold normally sleeps it off, but one kept awake (in a
+ * fight) past this is visibly + mechanically exhausted. */
+export const TIRED_FATIGUE_THRESHOLD = 72;
 /** Natural wake-up fatigue level — mirrors shouldPawnSleep: wake at 0 when fed, 30 when hunger ≥ 70. */
 export function sleepWakeThreshold(hunger: number): number {
   return hunger >= 70 ? 30 : 0;
