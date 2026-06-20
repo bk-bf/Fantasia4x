@@ -3,7 +3,14 @@
 // exposure, or the specific wounds) and a summary of the modifiers it applies. Pure read-only
 // derivation over the pawn + conditions.jsonc; consumed by ConditionChips.svelte.
 
-import type { Pawn, Mob, ConditionDef, TransientConditionDef, Injury } from '$lib/game/core/types';
+import type {
+  Pawn,
+  Mob,
+  ConditionDef,
+  TransientConditionDef,
+  ConditionModifiers,
+  Injury
+} from '$lib/game/core/types';
 import conditionsData from '$lib/game/database/conditions.jsonc';
 
 type CharSpan = { sheet?: string; id?: number; from?: number; to?: number; literal?: string };
@@ -26,26 +33,33 @@ export interface ConditionView {
   lifeThreatening?: boolean;
   /** "Where the pawn got it from" — driving need/exposure or the contributing wounds. */
   sources: string[];
-  /** Readable summary of the modifiers this condition applies (e.g. "Work −25%"). */
+  /** Readable summary of the modifiers this condition applies (e.g. "STR −30%  ·  Work −25%"). */
   effects: string[];
   /** Raw active modifiers (active stage for persistent, def for transient) — multipliers keyed by
-   *  workEfficiency / moveSpeed / hungerRate / fatigueRate / dodge. For numeric consumers (e.g. the
-   *  work-tab speed breakdown). */
-  modifiers: Record<string, number>;
+   *  base stat (strength/…) plus workEfficiency / moveSpeed / hungerRate / fatigueRate / dodge /
+   *  hitChance. For numeric consumers (e.g. the work-tab speed breakdown). */
+  modifiers: ConditionModifiers;
 }
 
-const MOD_LABEL: Record<string, string> = {
+// Base-stat penalties first (the headline "stat loss"), then the throughput/combat multipliers.
+const MOD_LABEL: Partial<Record<keyof ConditionModifiers, string>> = {
+  strength: 'STR',
+  dexterity: 'DEX',
+  constitution: 'CON',
+  perception: 'PER',
+  intelligence: 'INT',
   workEfficiency: 'Work',
   moveSpeed: 'Move',
+  dodge: 'Dodge',
+  hitChance: 'Aim',
   hungerRate: 'Hunger rate',
-  fatigueRate: 'Fatigue rate',
-  dodge: 'Dodge'
+  fatigueRate: 'Fatigue rate'
 };
 
-function effectLines(mods: Record<string, number | undefined>): string[] {
+function effectLines(mods: ConditionModifiers): string[] {
   const out: string[] = [];
   for (const [key, label] of Object.entries(MOD_LABEL)) {
-    const v = mods[key];
+    const v = mods[key as keyof ConditionModifiers];
     if (v == null || v === 1) continue;
     const d = Math.round((v - 1) * 100);
     out.push(`${label} ${d > 0 ? '+' : '−'}${Math.abs(d)}%`);
@@ -164,7 +178,7 @@ export function getActiveConditionViews(entity: Pawn | Mob): ConditionView[] {
       lifeThreatening: stage?.lifeThreatening,
       sources: persistentSources(entity, def),
       effects: effectLines(stage?.modifiers ?? {}),
-      modifiers: (stage?.modifiers ?? {}) as Record<string, number>
+      modifiers: stage?.modifiers ?? {}
     });
   }
 
@@ -180,7 +194,7 @@ export function getActiveConditionViews(entity: Pawn | Mob): ConditionView[] {
       kind: 'transient',
       sources: transientSources(entity, id),
       effects: effectLines(def.modifiers),
-      modifiers: def.modifiers as Record<string, number>
+      modifiers: def.modifiers
     });
   }
 

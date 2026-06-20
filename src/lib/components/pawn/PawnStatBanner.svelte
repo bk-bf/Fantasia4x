@@ -2,23 +2,41 @@
      Shared between the Status tab (PawnOverview) and the Attributes tab (PawnAttributes). -->
 <script lang="ts">
   import type { Pawn } from '$lib/game/core/types';
+  import { conditionStatMultipliers } from '$lib/game/core/needs';
   export let pawn: Pawn;
 
+  // Active conditions (shock, malnutrition, hypothermia…) scale the RAW attributes. Show the
+  // EFFECTIVE value so the banner matches the crippled body the sim actually uses, with a signed
+  // delta + a tooltip naming the base × multiplier — that's the "stat loss" surfaced on the pawn tab.
+  $: sm = conditionStatMultipliers(pawn);
   $: cells = [
-    ['STR', pawn.stats.strength],
-    ['DEX', pawn.stats.dexterity],
-    ['CON', pawn.stats.constitution],
-    ['INT', pawn.stats.intelligence],
-    ['PER', pawn.stats.perception],
-    ['CHA', pawn.stats.charisma]
+    ['STR', pawn.stats.strength, sm.strength],
+    ['DEX', pawn.stats.dexterity, sm.dexterity],
+    ['CON', pawn.stats.constitution, sm.constitution],
+    ['INT', pawn.stats.intelligence, sm.intelligence],
+    ['PER', pawn.stats.perception, sm.perception],
+    ['CHA', pawn.stats.charisma, 1]
   ] as const;
+
+  const eff = (base: number, mult: number) => Math.round(base * mult);
+  const pct = (mult: number) => `${mult < 1 ? '−' : '+'}${Math.abs(Math.round((mult - 1) * 100))}%`;
 </script>
 
 <div class="stats-grid">
-  {#each cells as [lbl, val]}
-    <div class="stat-cell">
+  {#each cells as [lbl, base, mult]}
+    <div
+      class="stat-cell"
+      title={mult !== 1
+        ? `${lbl} ${base} × ${mult.toFixed(2)} (conditions) = ${eff(base, mult)}`
+        : ''}
+    >
       <span class="stat-lbl">{lbl}</span>
-      <span class="stat-val">{val}</span>
+      <span class="stat-val" class:penalized={mult < 1} class:boosted={mult > 1}>
+        {eff(base, mult)}
+      </span>
+      {#if mult !== 1}
+        <span class="stat-delta" class:neg={mult < 1}>{pct(mult)}</span>
+      {/if}
     </div>
   {/each}
 </div>
@@ -47,5 +65,19 @@
     color: var(--accent-hi);
     font-size: 12px;
     font-weight: 600;
+  }
+  .stat-val.penalized {
+    color: var(--neg, #ff5252);
+  }
+  .stat-val.boosted {
+    color: var(--pos, #4caf50);
+  }
+  .stat-delta {
+    font-size: 8px;
+    line-height: 1;
+    color: var(--pos, #4caf50);
+  }
+  .stat-delta.neg {
+    color: var(--neg, #ff5252);
   }
 </style>
