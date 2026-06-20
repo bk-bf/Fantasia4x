@@ -1521,10 +1521,15 @@ class CombatServiceImpl implements CombatService {
         );
       }
       if (!target) {
+        // Retaliate ONLY against a mob that is actually attacking US (its huntTargetId points back at
+        // this mob) — never swing at a same-faction ally merely because it's adjacent. Without this an
+        // Attacking mob whose pawn target stepped out of reach clubbed whatever neighbour was nearest
+        // (the harpies-fighting-each-other bug). Allies don't target us, so they're never hit.
         target = mobs.find(
           (m) =>
             m.id !== mob.id &&
             m.isAlive !== false &&
+            m.huntTargetId === mob.id &&
             Math.abs(mob.x - m.x) <= 1 &&
             Math.abs(mob.y - m.y) <= 1
         );

@@ -143,6 +143,10 @@ export function findNearestPrey(mob: Mob, allMobs: Mob[], allowLivePrey: boolean
   // Pre-filtered prey subset (corpses with intactness>0 + live non-tamed huntables), once per tick.
   for (const candidate of mobThreatSubsets(allMobs).prey) {
     if (candidate.id === mob.id) continue;
+    // Never hunt a LIVE conspecific — a predator doesn't stalk its own kind (the harpies/wolves-
+    // fight-each-other bug: same-species mobs locked into mutual Attacking). Same creatureId = ally;
+    // cross-species predation is still allowed, and scavenging ANY corpse (incl. same species) stays.
+    if (candidate.state !== 'Corpse' && candidate.creatureId === mob.creatureId) continue;
     const raw = Math.abs(candidate.x - mob.x) + Math.abs(candidate.y - mob.y);
     if (candidate.state === 'Corpse') {
       // Corpses weighted as 50% closer — free food with no danger.
