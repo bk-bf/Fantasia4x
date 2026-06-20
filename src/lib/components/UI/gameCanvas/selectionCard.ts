@@ -6,7 +6,8 @@ import { uiState } from '$lib/stores/uiState.js';
 import { gameState } from '$lib/stores/gameState.js';
 import { resourceObjectService } from '$lib/game/services/ResourceObjectService.js';
 import { type CreatureDefinition, getCreatureById } from '$lib/game/core/Creatures.js';
-import type { Pawn, Mob, LimbId, Injury } from '$lib/game/core/types.js';
+import type { Pawn, Mob, Injury } from '$lib/game/core/types.js';
+import { limbLabel, partLabel } from '$lib/utils/bodyLabels';
 import { getActiveConditionViews } from '$lib/utils/conditionInfo.js';
 import { pawnService } from '$lib/game/services/PawnService.js';
 import { pawnStatService } from '$lib/game/services/PawnStatService.js';
@@ -23,21 +24,6 @@ import type {
   HealthWound,
   CombatStat
 } from '$lib/components/UI/SelectedEntityCard.svelte';
-
-/** Short limb labels for the HEALTH view. */
-const LIMB_LABEL: Record<LimbId, string> = {
-  head: 'Head',
-  torso: 'Torso',
-  left_arm: 'L.Arm',
-  right_arm: 'R.Arm',
-  left_leg: 'L.Leg',
-  right_leg: 'R.Leg'
-};
-
-/** "leftUpperArm" → "left upper arm" for per-part labels. */
-function prettyPart(id: string): string {
-  return id.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toLowerCase());
-}
 
 /** A wound is highlighted when it's serious enough to matter or has gone septic. */
 function woundWarn(inj: Injury): boolean {
@@ -189,7 +175,7 @@ export function buildHealthModel(entity: Pawn | Mob): HealthModel {
       const hurt = part.isMissing || part.health < part.maxHp - 0.5 || part.injuries.length > 0;
       if (!hurt) continue;
       parts.push({
-        label: prettyPart(part.id),
+        label: partLabel(part.id),
         health: part.health,
         maxHp: part.maxHp,
         missing: part.isMissing,
@@ -203,7 +189,7 @@ export function buildHealthModel(entity: Pawn | Mob): HealthModel {
       limb.isMissing || Math.round(limb.health) < 100 || limb.bleedRate > 0 || parts.length > 0;
     if (!damaged) continue;
     limbs.push({
-      label: LIMB_LABEL[limb.id] ?? limb.id,
+      label: limbLabel(limb.id),
       health: limb.health,
       missing: limb.isMissing,
       bleedRate: limb.bleedRate,

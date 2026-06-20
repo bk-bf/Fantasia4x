@@ -5,6 +5,7 @@
   import type { Mob, LimbState } from '$lib/game/core/types';
   import FollowButton from '../UI/FollowButton.svelte';
   import SearchBar from '../UI/SearchBar.svelte';
+  import { limbLabel, partLabel } from '$lib/utils/bodyLabels';
   import { persisted, persist } from '$lib/stores/uiPersist';
 
   let mobs = $derived(($gameState.mobs ?? []).filter((m) => m.state !== 'Corpse'));
@@ -173,7 +174,7 @@
                 <div class="expand-limbs">
                   {#each m.limbs as limb}
                     <div class="expand-limb">
-                      <span class="expand-limb-name">{limb.id.replace('_', ' ')}</span>
+                      <span class="expand-limb-name">{limbLabel(limb.id)}</span>
                       <span class="expand-limb-hp" style="color:{limbColor(limb.health)}">
                         {limb.isMissing ? 'MISSING' : `${Math.round(limb.health)}%`}
                       </span>
@@ -190,12 +191,7 @@
                               part.health < part.maxHp ||
                               part.injuries.length > 0}
                           >
-                            <span
-                              >{part.id
-                                .replace(/([A-Z])/g, ' $1')
-                                .toLowerCase()
-                                .trim()}</span
-                            >
+                            <span>{partLabel(part.id)}</span>
                             <span
                               style="color:{part.isMissing
                                 ? 'var(--neg)'

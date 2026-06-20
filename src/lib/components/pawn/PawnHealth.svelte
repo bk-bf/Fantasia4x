@@ -1,7 +1,8 @@
 <!-- PawnHealth.svelte — limb tree with nested sub-parts + 3-state reveal cycle -->
 <script lang="ts">
-  import type { Pawn, LimbState, LimbId, BodyPartState, BodyPartId } from '$lib/game/core/types';
+  import type { Pawn, LimbState, LimbId, BodyPartState } from '$lib/game/core/types';
   import { PART_DEF_MAP, createDefaultBodyParts } from '$lib/game/systems/Combat';
+  import { partLabel } from '$lib/utils/bodyLabels';
   import {
     healthPctColor,
     bloodColor as bloodColorShared,
@@ -86,12 +87,7 @@
   const bloodColor = bloodColorShared;
   const painColor = painColorShared;
 
-  function partName(id: BodyPartId): string {
-    return id
-      .replace(/([A-Z])/g, ' $1')
-      .toLowerCase()
-      .trim();
-  }
+  const partName = partLabel;
 
   function partHealthColor(part: BodyPartState): string {
     return healthPctColor((part.health / part.maxHp) * 100, {
