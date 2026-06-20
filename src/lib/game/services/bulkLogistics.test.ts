@@ -66,7 +66,10 @@ describe('§L overloading is not free — load drags move-speed', () => {
     const empty = makePawn({ equipment: HANDCART });
     // Stuff the (cart-raised) budget toward its ceiling.
     const cap = itemService.clampPickupQuantity(empty, 'granite', 9999, state);
-    const loaded = makePawn({ equipment: HANDCART, inventory: { items: { granite: cap }, instances: [] } as Pawn['inventory'] });
+    const loaded = makePawn({
+      equipment: HANDCART,
+      inventory: { items: { granite: cap }, instances: [] } as unknown as Pawn['inventory']
+    });
 
     const emptySpeed = pawnService.getMoveSpeed(empty).tilesPerSecond;
     const loadedSpeed = pawnService.getMoveSpeed(loaded).tilesPerSecond;

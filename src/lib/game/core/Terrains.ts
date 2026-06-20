@@ -280,30 +280,40 @@ export function pickSubterrain(biomeName: string, detailNoise: number): string {
 }
 
 // ── PRODUCTION-CHAIN-II §F: soil fertility ─────────────────────────────────────────────────────
-// Fertility is NOT a stored tile field — it lives in the grass-density subterrain the world-gen noise
-// already places (NOTES.md: bare dirt → infertile, grass → poor, tall_grass → loam, deep_grass →
-// terra preta). `soilTierForTile` is the single read every farming gate uses (plant eligibility,
-// growth-speed, dig yield). Dig (F2) strips a tile to `dirt` (tier 0); terraform (F3) sets `subType`
-// to a fertile version to raise it.
-export type SoilTier = 0 | 1 | 2 | 3;
+// Fertility is a 0–100% value per tile, depicted like wetness (`fertility 75%`). It is NOT a stored
+// field — it's derived from the grass-density subterrain the world-gen noise already places (NOTES.md:
+// bare dirt → 0%, grass → 25%, tall_grass → 50%, deep_grass → 75%; terra preta is the terraform-earned
+// 100% peak). Quantised to 5 steps (0/25/50/75/100). `soilFertilityPct` is the value, `soilTierForTile`
+// its 0–4 bucket (= pct/25) — the single reads every farming gate uses (plant eligibility, growth
+// speed, dig yield). Dig (F2) strips a tile to `dirt` (0%); terraform (F3) sets `subType` to raise it.
+export type SoilTier = 0 | 1 | 2 | 3 | 4;
 
-const SOIL_TIER_BY_SUBTYPE: Record<string, SoilTier> = {
-  grass: 1,
-  tall_grass: 2,
-  deep_grass: 3
+const FERTILITY_PCT_BY_SUBTYPE: Record<string, number> = {
+  dirt: 0,
+  savanna: 0,
+  grass: 25,
+  tall_grass: 50,
+  deep_grass: 75,
+  terra_preta: 100
 };
 
-/** Fertility tier (0 infertile … 3 terra preta) for a tile, derived from its grass-density subType. */
+/** Soil fertility 0–100% for a tile (5 steps), derived from its grass-density subType — like wetness. */
+export function soilFertilityPct(tile: { subType: string } | undefined | null): number {
+  return tile ? (FERTILITY_PCT_BY_SUBTYPE[tile.subType] ?? 0) : 0;
+}
+
+/** Fertility bucket 0–4 (= pct/25) for discrete gates (plant eligibility, dig yield, terraform target). */
 export function soilTierForTile(tile: { subType: string } | undefined | null): SoilTier {
-  return tile ? (SOIL_TIER_BY_SUBTYPE[tile.subType] ?? 0) : 0;
+  return (soilFertilityPct(tile) / 25) as SoilTier;
 }
 
 /** Human label for a soil tier (info panel — never leak the raw id). */
 export const SOIL_TIER_NAME: Record<SoilTier, string> = {
-  0: 'Infertile Dirt',
+  0: 'Barren Dirt',
   1: 'Poor Soil',
   2: 'Loam',
-  3: 'Terra Preta'
+  3: 'Rich Soil',
+  4: 'Terra Preta'
 };
 
 /** Soil ITEM id a tile of this tier yields when dug (F2) / consumed to terraform up to it (F3). */
@@ -311,7 +321,8 @@ export const SOIL_ITEM_BY_TIER: Record<SoilTier, string> = {
   0: 'dirt',
   1: 'poor_soil',
   2: 'loam',
-  3: 'terra_preta'
+  3: 'rich_soil',
+  4: 'terra_preta'
 };
 
 /** The fertile `subType` a placed soil item produces — the inverse of SOIL_ITEM_BY_TIER (F3 terraform). */
@@ -319,7 +330,8 @@ export const SUBTYPE_BY_SOIL_TIER: Record<SoilTier, string> = {
   0: 'dirt',
   1: 'grass',
   2: 'tall_grass',
-  3: 'deep_grass'
+  3: 'deep_grass',
+  4: 'terra_preta'
 };
 
 // Biomes where colonists and creatures may spawn. Mountains and water are excluded. NOTE: because

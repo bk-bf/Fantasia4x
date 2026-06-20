@@ -5819,5 +5819,88 @@
     "durabilityLossPerAction": 1,
     "deteriorationRate": 0.008,
     "inventoryBonus": { "weightKg": 160, "volumeL": 240 }
+  },
+
+  // ── PRODUCTION-CHAIN-II §F — Soil & fertilizer ───────────────────────────────────────────────
+  // The "different types of dirt" (NOTES.md): dug from fertile tiles (F2), hauled, and consumed by
+  // the Soil-Works builds (F3) to raise an infertile tile's fertility. `compost` (F7) is the gating
+  // amendment that turns loam into terra preta. Heavy materials; soil doesn't rot.
+  {
+    "id": "dirt",
+    "charSpans": [ {"sheet": "items", "id": 33} ],
+    "name": "Barren Dirt",
+    "type": "material",
+    "category": "soil",
+    "description": "A clod of plain, infertile earth. Filler — nothing much grows in it without improvement.",
+    "color": "#754C17",
+    "amount": 0,
+    "weightKg": 3,
+    "volumeL": 2,
+    "deteriorationRate": 0
+  },
+  {
+    "id": "poor_soil",
+    "charSpans": [ {"sheet": "items", "id": 33} ],
+    "name": "Poor Soil",
+    "type": "material",
+    "category": "soil",
+    "description": "Thin topsoil with a little life in it. Grows hardy crops, slowly.",
+    "color": "#6E5223",
+    "amount": 0,
+    "weightKg": 3,
+    "volumeL": 2,
+    "deteriorationRate": 0
+  },
+  {
+    "id": "loam",
+    "charSpans": [ {"sheet": "items", "id": 33} ],
+    "name": "Loam",
+    "type": "material",
+    "category": "soil",
+    "description": "Rich, crumbly soil. Good tilth — most crops thrive in it.",
+    "color": "#5A4326",
+    "amount": 0,
+    "weightKg": 3,
+    "volumeL": 2,
+    "deteriorationRate": 0
+  },
+  {
+    "id": "rich_soil",
+    "charSpans": [ {"sheet": "items", "id": 33} ],
+    "name": "Rich Soil",
+    "type": "material",
+    "category": "soil",
+    "description": "Dark, humus-laden earth from a deep-grass stand. Most crops flourish in it.",
+    "color": "#473420",
+    "amount": 0,
+    "weightKg": 3,
+    "volumeL": 2,
+    "deteriorationRate": 0
+  },
+  {
+    "id": "terra_preta",
+    "charSpans": [ {"sheet": "items", "id": 33} ],
+    "name": "Terra Preta",
+    "type": "material",
+    "category": "soil",
+    "description": "Black, charcoal-dark earth — the most fertile soil there is. Even prize crops flourish.",
+    "color": "#2B2118",
+    "amount": 0,
+    "weightKg": 4,
+    "volumeL": 2,
+    "deteriorationRate": 0
+  },
+  {
+    "id": "compost",
+    "charSpans": [ {"sheet": "items", "id": 118} ],
+    "name": "Compost",
+    "type": "material",
+    "category": "soil",
+    "description": "Rotted scraps, hay, and ash broken down into dark, nutrient-rich humus. The key to the best soil.",
+    "color": "#403228",
+    "amount": 0,
+    "weightKg": 2,
+    "volumeL": 2,
+    "deteriorationRate": 0.01
   }
 ]

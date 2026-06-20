@@ -50,7 +50,14 @@
   import { projectiles, type ProjectileEvent } from '$lib/stores/projectiles.js';
   import { renderFps } from '$lib/stores/perfStats.js';
   import { buildingService } from '$lib/game/services/BuildingService.js';
-  import { resolveCharSpans, BIOMES, SUBTERRAINS } from '$lib/game/core/Terrains.js';
+  import {
+    resolveCharSpans,
+    BIOMES,
+    SUBTERRAINS,
+    soilFertilityPct,
+    soilTierForTile,
+    SOIL_TIER_NAME
+  } from '$lib/game/core/Terrains.js';
   import { resourceObjectService } from '$lib/game/services/ResourceObjectService.js';
   import { itemService } from '$lib/game/services/ItemService.js';
   import {
@@ -3161,6 +3168,8 @@
     {@const windy =
       Math.max(weatherWindStrength($currentWeather?.type), $currentWeather?.wind ?? 0) >= 0.4}
     {@const tileSnow = Math.round(hoverTile.snow ?? 0)}
+    {@const soilTier = soilTierForTile(hoverTile)}
+    {@const soilPct = soilFertilityPct(hoverTile)}
     <div class="tile-hud">
       <span class="tile-coord">({hoverTile.x},{hoverTile.y})</span><span class="tile-layers"
         >{BIOMES[hoverTile.terrainType]?.displayName ?? hoverTile.terrainType},{SUBTERRAINS[
@@ -3202,6 +3211,19 @@
         >
         <span style="color:{tileWet >= 60 ? '#3a9ed0' : tileWet >= 30 ? '#6aa0a0' : '#a08a5a'}"
           >wet {Math.round(tileWet)}%</span
+        >
+        <span
+          style="color:{soilTier >= 4
+            ? '#6fae3a'
+            : soilTier === 3
+              ? '#86ac3a'
+              : soilTier === 2
+                ? '#9aac3a'
+                : soilTier === 1
+                  ? '#a89a4a'
+                  : '#8a7a5a'}"
+          title="soil fertility ({SOIL_TIER_NAME[soilTier]}) — drives what crops grow here and how fast"
+          >fertility {soilPct}%</span
         >
         {#if tileSnow > 0}<span style="color:#cdd6e0">snow {tileSnow}%</span>{/if}
         {#if windy}<span style="color:#8fc8a0">windy</span>{/if}

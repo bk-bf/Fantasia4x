@@ -6,7 +6,7 @@ import type { DesignationType, GameState, Job } from '../../core/types';
 import { gatedConsole as console } from '../../core/log';
 import { resourceObjectService } from '../ResourceObjectService';
 import { itemService } from '../ItemService';
-import { SUBTERRAINS, SUBTERRAIN_FALLBACK, terrainBlocksSight } from '../../core/Terrains';
+import { SUBTERRAINS, SUBTERRAIN_FALLBACK } from '../../core/Terrains';
 import { markTileDirty } from '../../core/tileDeltas';
 import { patchPathfindingWalkable } from '../PathfinderService';
 import { absorbDropIfOnStockpileTile } from '../../core/GameState';
@@ -133,8 +133,9 @@ export function complete(job: Job, gs: GameState): GameState {
     // Resource removed permanently — restore tile walkability to base subterrain.
     const baseSub = SUBTERRAINS[col.subType] ?? SUBTERRAIN_FALLBACK;
     col.walkable = baseSub.walkable;
-    // Mining out a rock wall re-opens the line of sight too (Part VII).
-    col.blocksSight = terrainBlocksSight(baseSub.walkable, col.subType);
+    // Mining out a rock node restores the BASE subterrain's sight flag (Part VII): a rocky tile re-opens,
+    // a bare cliff stays opaque — same data-driven flag, just the terrain layer.
+    col.blocksSight = baseSub.blocksSight ?? false;
     col.movementCost = baseSub.movementCost;
     // Keep the memoized A* grid in sync — the worldMap ref is unchanged, so the pathfinding cache
     // would otherwise keep treating the now-cleared tile as a blocking node (pawns route around it).

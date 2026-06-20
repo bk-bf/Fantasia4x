@@ -11,55 +11,69 @@
 //   biomes       — per-biome detail-noise range [min, max] that maps to this subterrain
 //                  (null = unbounded on that side; absent = not used in biome assignment)
 [
+  // ── PRODUCTION-CHAIN-II §F: SOIL LADDER ──────────────────────────────────────────────────────
+  // The grass-density subterrains the world-gen noise places ARE the soil-fertility ladder (NOTES.md):
+  // the SUBTERRAIN is the dirt/soil underneath (its own shade of brown, darker = richer), and the
+  // GRASS lives only as a resource object on top (grass_patch/tall_grass_patch/deep_grass_patch). So a
+  // tile reads "Plains, Loam, Tall Grass" — soil + the plant growing on it — not "Tall Grass, Tall
+  // Grass". The ids stay (`grass`/`tall_grass`/`deep_grass`, referenced by resource spawn tables +
+  // `soilFertilityPct`), but they now NAME the soil. Fertility: barren 0 · poor 25 · loam 50 · rich 75
+  // · terra preta 100 (terraform-only). See core/Terrains.ts soilFertilityPct.
   {
     "id"          : "dirt",
-    "displayName" : "Dirt",
+    "displayName" : "Barren Dirt",
     "walkable"    : true,
     "movementCost": 1.2,
     "charSpans"   : [ {"sheet": "tiles", "from": 64, "to": 71} ],
-    "fg"          : [0.46, 0.3, 0.09],
-    "bg"          : [0.08, 0.06, 0.03],
-    "color"       : "#754C17",
+    "fg"          : [0.52, 0.42, 0.28],
+    "bg"          : [0.09, 0.07, 0.04],
+    "color"       : "#857049",
     "biomes"      : { "forest": [null, -0.3], "plains": [null, -0.15] }
   },
   {
-    "id"          : "grass",
-    "displayName" : "Grass",
+    "id"          : "grass",        // soil tier 1 (25%) — Poor Soil; the grass_patch resource paints the green on top
+    "displayName" : "Poor Soil",
     "walkable"    : true,
     "movementCost": 1,
-    "charSpans"   : [
-      {"sheet": "tiles", "from": 64, "to": 71}
-    ],  // uses dirt tile to simulate absence of resource object
-    "fg"          : [0.46, 0.3, 0.09],
+    "charSpans"   : [ {"sheet": "tiles", "from": 64, "to": 71} ],
+    "fg"          : [0.47, 0.37, 0.24],
     "bg"          : [0.08, 0.06, 0.03],
-    "color"       : "#85AD21",
+    "color"       : "#79643F",
     "biomes"      : { "forest": [-0.3, 0.18], "plains": [-0.15, 0.18] }
   },
   {
-    "id"          : "deep_grass",
-    "displayName" : "Deep Grass",
+    "id"          : "deep_grass",   // soil tier 3 (75%) — Rich Soil; the deep_grass_patch resource paints the green
+    "displayName" : "Rich Soil",
     "walkable"    : true,
     "movementCost": 1.5,
-    "charSpans"   : [
-      {"sheet": "tiles", "from": 64, "to": 71}
-    ],  // uses dirt tile to simulate absence of resource object
-    "fg"          : [0.46, 0.3, 0.09],
-    "bg"          : [0.07, 0.05, 0.02],
-    "color"       : "#3D6B0F",
+    "charSpans"   : [ {"sheet": "tiles", "from": 64, "to": 71} ],
+    "fg"          : [0.39, 0.30, 0.19],
+    "bg"          : [0.08, 0.06, 0.03],
+    "color"       : "#61502E",
     "biomes"      : { "forest": [0.25, null] }
   },
   {
-    "id"          : "tall_grass",
-    "displayName" : "Tall Grass",
+    "id"          : "tall_grass",   // soil tier 2 (50%) — Loam; the tall_grass_patch resource paints the green
+    "displayName" : "Loam",
     "walkable"    : true,
     "movementCost": 1.3,
-    "charSpans"   : [
-      {"sheet": "tiles", "from": 64, "to": 71}
-    ],  // uses dirt tile to simulate absence of resource object
-    "fg"          : [0.46, 0.3, 0.09],
+    "charSpans"   : [ {"sheet": "tiles", "from": 64, "to": 71} ],
+    "fg"          : [0.43, 0.33, 0.21],
     "bg"          : [0.08, 0.06, 0.03],
-    "color"       : "#4D7A12",
+    "color"       : "#6D5836",
     "biomes"      : { "plains": [0.25, 0.7] }
+  },
+  {
+    // soil tier 4 (100%) — Terra Preta, the terraform-earned peak (F3). No `biomes` key → never spawns
+    // naturally; only placed by the Soil-Works build. The richest soil — capped at mid brown (darkest shade).
+    "id"          : "terra_preta",
+    "displayName" : "Terra Preta",
+    "walkable"    : true,
+    "movementCost": 1.2,
+    "charSpans"   : [ {"sheet": "tiles", "from": 64, "to": 71} ],
+    "fg"          : [0.36, 0.27, 0.17],
+    "bg"          : [0.08, 0.06, 0.03],
+    "color"       : "#574325"
   },
   {
     "id"          : "savanna",
