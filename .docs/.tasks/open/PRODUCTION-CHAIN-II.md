@@ -6,7 +6,7 @@
 
 ## Status
 
-**[~] In progress** — **§Q (Item Quality) DONE (2026-06-18)** closing R8, and **§M (Magical Resources & Gear) DONE (2026-06-18)** as the MAGIC-SKILLS passive foundation; **§L / §F not started.**
+**[~] In progress** — **§Q (Item Quality) DONE (2026-06-18)** closing R8, **§M (Magical Resources & Gear) DONE (2026-06-18)** as the MAGIC-SKILLS passive foundation, and **§L (Bulk Logistics) pawn-pushed carts DONE (2026-06-20)** (roads + draft animals deferred); **§F not started.**
 This is the **second** production/items/buildings/resources pass on top
 of the completed [Pass I](../archive/PRODUCTION-CHAIN-EXPANSION-2026-06-12.md) (forage → fire →
 tools → metal → leather). Pass I delivered the *mundane foundation*; Pass II adds the four
@@ -301,12 +301,22 @@ grove a reason to seek out.
 
 ---
 
-## §L — Bulk Logistics (wheelbarrows, carts, roads)
+## §L — Bulk Logistics (wheelbarrows, carts, roads) — **pawn-pushed carts DONE 2026-06-20**
 
 **Goal:** implement the **personal-carry vs bulk-logistics split** parked in
-[ENTITIES_SPAWNING → Hauling & Logistics Progression](ENTITIES_SPAWNING.md). Personal carry
-(worn packs) stays hard-capped low; **bulk goods (ore, logs, hay, stone) move only via the
-logistics layer.** This chapter builds that layer.
+[ENTITIES_SPAWNING → Hauling & Logistics Progression](ENTITIES_SPAWNING.md). Personal carry stays
+low; carts let a pawn haul far more. This chapter builds that layer.
+
+> **Shipped model (user call — simpler than the first draft below):** a cart is **not** a separate
+> "bulk budget" with `bulk`-tagged resources. It is a **two-handed `tool`**: equipping a
+> `wheelbarrow`/`handcart` (a) fills the **mainHand**, so the pawn can't wield a weapon — Combat falls
+> back to unarmed (you can't fight while pushing a cart) — and (b) grants a big **`inventoryBonus`**
+> that raises the **same** weight/volume carry budget belts/baskets already use (reusing
+> `getCarryCapacityBreakdown` + `clampPickupQuantity`, no new pool, no resource tagging). **Overloading
+> isn't free:** a new **load→encumbrance** term in `PawnService.getMoveSpeed` slows a pawn by its pack
+> fraction (empty ≈ ×1.0, at capacity ≈ ×0.6) — general (a sack-laden pawn without a cart slows too),
+> and the cart just raises the ceiling. Carts are **manually equipped** (assigned like gear), not
+> auto-fetched. Roads + draft animals remain deferred (below).
 
 ### Rungs (this chapter)
 
@@ -455,13 +465,15 @@ services); new ADR if a non-obvious choice is locked.
 - [x] **Regalia expansion — DONE 2026-06-19.** Combo & head jewelry giving the player a real "magic boosts vs metal armour" loadout fork, with a **power gradient by slot**. **4 crowns/circlets** (`scholars_circlet`/`champions_crown`/`sovereign_crown`/`wardens_circlet`) sit in the **`headOuter` (helmet) slot** — a buff crown means forgoing a helm (token defense only), the explicit head-armour trade. **4 torcs/pendants** (amulet slot) — these and the crowns are the **two-buff combos** (two attuned gems → two conditions; strong, costly). **Rings stay SINGLE-buff** (the existing 7 elemental `<gem>_ring`s) and there are now **two ring slots** (`ring`/`ring2`, occupancy-resolved in `resolveEquipSlot` so a 2nd ring fills `ring2` instead of swapping) — so a full jewelry loadout is **1 crown + 1 amulet + 2 rings**, and the weaker single buffs are *distributed onto the rings* by design (no combo rings). Two new transient magical buffs are the *defensive* magic answer to armour: **`grace`** (dodge ×1.18) and **`fortitude`** (fatigue ×0.82 + hunger ×0.90). All craft at the `lapidary_bench` (gate `attunement`). The `EquipmentDoll` gained the missing `amulet` slot + the 2nd ring. 3 new magicGear tests (17 total).
 - [x] **Tests + gates:** `magicGear.test.ts` extended (14 total) — staves are arcane/channeled/ranged with the right element, T2 grants the gem buff while wielded, recipes wire to the two benches, **INT scales staff damage** (high-INT >> low-INT, like rapier→PER), and **frost resistance mitigates** (frost-resistant mammoth takes far less than frost-vulnerable viper). `pnpm test` green (427); `pnpm check` clean for this work (only the 2 pre-existing unrelated `entitySim.test.ts` errors remain).
 
-### §L — Bulk Logistics
+### §L — Bulk Logistics — **pawn-pushed carts DONE 2026-06-20** (`pnpm check`/`pnpm test` green, 475; 5 new)
 
-- [ ] `wheel` intermediate; `wheelbarrow` + `handcart` items; assign-to-hauler flow.
-- [ ] Separate **bulk-carry budget** on the hauling job; **bulk-tagged** resources restricted to it (enforce the personal-vs-bulk spine rule).
-- [ ] Loaded movement penalty + off-road penalty; roads (`dirt_path`/`gravel_road`/`cobble_road`) reduce it.
-- [ ] Pack-animal + draft-cart rungs **behind ENTITIES C–D** (draft stock); harness/panniers items.
-- [ ] (Optional) backpack encumbrance fork in `ModifierSystem` (else defer to ENTITIES open question).
+- [x] `wheel` intermediate (`make_wheel`: planks + iron rim, anvil/iron_working) + `wheelbarrow`/`handcart` recipes; carts are two-handed `tool`s (mainHand) with an `inventoryBonus` — equipped like gear.
+- [x] **Carts expand the existing carry budget** (not a separate pool): `getCarryCapacityBreakdown` now sums `inventoryBonus` from **every** equipped slot (so a cart counts from mainHand), and `clampPickupQuantity` rides that raised budget unchanged. No `bulk` resource tag — the first-draft "separate bulk-carry budget" was dropped as over-engineered (user call).
+- [x] **Melee break:** a cart fills the mainHand and has no `weaponProperties`, so `Combat.attackerProfile` falls back to unarmed — you can't fight while pushing a cart (free, no new combat wiring).
+- [x] **Loaded movement penalty:** general **load→encumbrance** factor in `PawnService.getMoveSpeed` (pack fraction → ×1.0…×0.6); skipped for unladen pawns (hot-path guard), worn gear excluded (body-weight `weightFactor` already covers armour).
+- [ ] **Deferred — roads** (`dirt_path`/`gravel_road`/`cobble_road` lowering tile `movementCost`); off-road-specific penalty. (Encumbrance already makes a full cart slow; roads would offset it.)
+- [ ] **Deferred — pack-animal + draft-cart rungs** behind ENTITIES C–D (draft stock); harness/panniers items.
+- [ ] (Optional) backpack encumbrance fork in `ModifierSystem` — **subsumed** by the general load→encumbrance term above for the move-speed half; the light-vs-heavy *carry-mode* fork stays an ENTITIES open question.
 
 ---
 
