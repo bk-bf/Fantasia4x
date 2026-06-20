@@ -12,7 +12,8 @@ import {
   drawSpeedModifier,
   sumAimBonuses,
   hasMeleeMainHand,
-  getGrip
+  getGrip,
+  hasLineOfSight
 } from './rangedCombat';
 import { getEquipmentSlot } from '../core/PawnEquipment';
 import { itemService } from '../services/ItemService';
@@ -145,7 +146,9 @@ describe('rangedCombat helpers', () => {
 
   it('vision range follows perception (not the evaluateStat 1.0 fallback)', () => {
     expect(pawnVisionRange(makeArcher())).toBe(10);
-    expect(pawnVisionRange(makeArcher({ stats: { ...stats, perception: 20 } } as Partial<Pawn>))).toBe(15);
+    expect(
+      pawnVisionRange(makeArcher({ stats: { ...stats, perception: 20 } } as Partial<Pawn>))
+    ).toBe(15);
   });
 
   it('accuracy falls off LINEARLY with distance and rewards the aim stat', () => {
@@ -159,9 +162,15 @@ describe('rangedCombat helpers', () => {
   });
 
   it('aim interval lengthens with distance and shortens with aim_speed', () => {
-    expect(aimIntervalTicks(90, 1, 8, 1.0, 0, 1.0)).toBeGreaterThan(aimIntervalTicks(90, 1, 2, 1.0, 0, 1.0));
-    expect(aimIntervalTicks(90, 1, 4, 1.5, 0, 1.0)).toBeLessThan(aimIntervalTicks(90, 1, 4, 1.0, 0, 1.0));
-    expect(aimIntervalTicks(90, 3, 4, 1.0, 0, 1.0)).toBeGreaterThan(aimIntervalTicks(90, 1, 4, 1.0, 0, 1.0)); // crossbow span
+    expect(aimIntervalTicks(90, 1, 8, 1.0, 0, 1.0)).toBeGreaterThan(
+      aimIntervalTicks(90, 1, 2, 1.0, 0, 1.0)
+    );
+    expect(aimIntervalTicks(90, 1, 4, 1.5, 0, 1.0)).toBeLessThan(
+      aimIntervalTicks(90, 1, 4, 1.0, 0, 1.0)
+    );
+    expect(aimIntervalTicks(90, 3, 4, 1.0, 0, 1.0)).toBeGreaterThan(
+      aimIntervalTicks(90, 1, 4, 1.0, 0, 1.0)
+    ); // crossbow span
   });
 
   it('shot cadence is floored at the melee cap (72) and averages near melee — never tick-rate', () => {
@@ -177,11 +186,15 @@ describe('rangedCombat helpers', () => {
 
   it('reload_speed (DEX) shortens only a crossbow span — bows ignore it (the build fork)', () => {
     // reload 3 = crossbow: a defter loader (higher reload_speed) spans faster.
-    expect(aimIntervalTicks(90, 3, 4, 1.0, 0, 1.4)).toBeLessThan(aimIntervalTicks(90, 3, 4, 1.0, 0, 0.8));
+    expect(aimIntervalTicks(90, 3, 4, 1.0, 0, 1.4)).toBeLessThan(
+      aimIntervalTicks(90, 3, 4, 1.0, 0, 0.8)
+    );
     // reload 1 = bow: no span step, so reload_speed makes no difference.
     expect(aimIntervalTicks(90, 1, 4, 1.0, 0, 1.4)).toBe(aimIntervalTicks(90, 1, 4, 1.0, 0, 0.8));
     // aim_speed (DEX) still governs the AIM portion regardless.
-    expect(aimIntervalTicks(90, 3, 4, 1.5, 0, 1.0)).toBeLessThan(aimIntervalTicks(90, 3, 4, 1.0, 0, 1.0));
+    expect(aimIntervalTicks(90, 3, 4, 1.5, 0, 1.0)).toBeLessThan(
+      aimIntervalTicks(90, 3, 4, 1.0, 0, 1.0)
+    );
   });
 
   it('effective range scales weapon range by PER (aim_range), capped by vision', () => {
@@ -208,7 +221,9 @@ describe('rangedCombat helpers', () => {
   });
 
   it('routes thrown weapons to the OFF hand and bows to the main hand (one-handed hybrid)', () => {
-    expect(isThrownWeaponProps(itemService.getItemById('throwing_spear')?.weaponProperties)).toBe(true);
+    expect(isThrownWeaponProps(itemService.getItemById('throwing_spear')?.weaponProperties)).toBe(
+      true
+    );
     expect(getEquipmentSlot(itemService.getItemById('throwing_spear')!)).toBe('offHand');
     expect(getEquipmentSlot(itemService.getItemById('self_bow')!)).toBe('mainHand');
   });
@@ -242,7 +257,9 @@ describe('rangedCombat helpers', () => {
     const packed = makeArcher({
       equipment: { mainHand: { itemId: 'self_bow' }, back: { itemId: 'wicker_frame' } }
     } as unknown as Partial<Pawn>);
-    const bare = makeArcher({ equipment: { mainHand: { itemId: 'self_bow' } } } as unknown as Partial<Pawn>);
+    const bare = makeArcher({
+      equipment: { mainHand: { itemId: 'self_bow' } }
+    } as unknown as Partial<Pawn>);
 
     expect(drawSpeedModifier(quivered, 'arrow')).toBeCloseTo(0.25, 5); // ready quiver → fast
     expect(drawSpeedModifier(packed, 'arrow')).toBeLessThan(0); // arrows stowed in a pack → fumble
@@ -485,5 +502,43 @@ describe('ranged combat (headless tickCombat)', () => {
     expect(threw).toBe(true);
     // the thrown spear dropped (recoverable) rather than vanishing
     expect((state.droppedItems ?? []).some((d) => d.resourceId === 'throwing_spear')).toBe(true);
+  });
+});
+
+describe('Part VII — line-of-sight occlusion', () => {
+  // Build a w×h grid; cells in `walls` (as "x,y") carry the baked `blocksSight` flag.
+  const grid = (w: number, h: number, walls: string[] = []) => {
+    const set = new Set(walls);
+    return Array.from({ length: h }, (_, y) =>
+      Array.from({ length: w }, (_, x) => ({ blocksSight: set.has(`${x},${y}`) }))
+    );
+  };
+
+  it('clear horizontal line has LoS', () => {
+    expect(hasLineOfSight(grid(6, 1), 0, 0, 5, 0)).toBe(true);
+  });
+
+  it('a wall on the line blocks LoS', () => {
+    expect(hasLineOfSight(grid(6, 1, ['3,0']), 0, 0, 5, 0)).toBe(false);
+  });
+
+  it('an occluder ON either endpoint does NOT block (shooter cover / target hugging a wall)', () => {
+    // wall on the target tile
+    expect(hasLineOfSight(grid(6, 1, ['5,0']), 0, 0, 5, 0)).toBe(true);
+    // wall on the shooter tile
+    expect(hasLineOfSight(grid(6, 1, ['0,0']), 0, 0, 5, 0)).toBe(true);
+  });
+
+  it('walks diagonals — clear vs blocked', () => {
+    expect(hasLineOfSight(grid(5, 5), 0, 0, 4, 4)).toBe(true);
+    expect(hasLineOfSight(grid(5, 5, ['2,2']), 0, 0, 4, 4)).toBe(false);
+  });
+
+  it('same tile is trivially in sight (no infinite walk)', () => {
+    expect(hasLineOfSight(grid(3, 3), 1, 1, 1, 1)).toBe(true);
+  });
+
+  it('a wall just off the line does not block', () => {
+    expect(hasLineOfSight(grid(6, 3, ['3,1']), 0, 0, 5, 0)).toBe(true);
   });
 });

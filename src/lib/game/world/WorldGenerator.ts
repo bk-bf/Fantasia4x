@@ -7,7 +7,8 @@ import {
   pickBiome,
   pickSubterrain,
   pickChar,
-  getWaterLevel
+  getWaterLevel,
+  terrainBlocksSight
 } from '../core/Terrains';
 import { resourceGeneratorService } from '../services/ResourceGeneratorService';
 import { biomeBaseMoisture, baseMoistureFromWater } from '../services/EnvironmentService';
@@ -173,6 +174,7 @@ export function generateWorld(width: number, height: number, seed = Date.now()):
         temperature: 0,
         movementCost,
         walkable,
+        blocksSight: terrainBlocksSight(walkable, subTypeName),
         resources: {},
         territoryOwner: '',
         gCost: 0,
@@ -203,10 +205,7 @@ const MOISTURE_NOISE_SPREAD = 8; // ± wetness points
  * biome baseline. If a map has no water, every tile falls back to its biome baseMoisture. Runs once at
  * world-gen; the runtime only reads the baked value (+ live weather).
  */
-function assignMoisture(
-  world: WorldTile[][],
-  detailNoise: (x: number, y: number) => number
-): void {
+function assignMoisture(world: WorldTile[][], detailNoise: (x: number, y: number) => number): void {
   const h = world.length;
   const w = h > 0 ? world[0].length : 0;
   if (w === 0) return;

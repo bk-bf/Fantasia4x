@@ -479,6 +479,10 @@ export class BuildingServiceImpl implements BuildingService {
     // the worldMap ref → full re-clone + terrain rebuild). Event-rate (build/deconstruct), but the
     // pattern is the same. Return a fresh top-level state ref (worldMap ref stays stable → ships a delta).
     tile.walkable = nextWalkable;
+    // RANGED-COMBAT Part VII: a wall also occludes line-of-sight; a furnace/fire (also non-walkable)
+    // does not, so this tracks `def.blocksSight`, not `walkable`. Walls sit on walkable terrain, whose
+    // baked `blocksSight` is false, so clearing on deconstruct (blocking=false) restores correctly.
+    tile.blocksSight = blocking && def.blocksSight === true;
     // Keep the memoized A* grid in sync — the worldMap ref is unchanged, so the pathfinding
     // cache (keyed on worldMap identity) would otherwise stay stale and route pawns onto the wall.
     patchPathfindingWalkable(x, y, nextWalkable);

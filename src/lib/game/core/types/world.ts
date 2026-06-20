@@ -15,6 +15,10 @@ export interface WorldTile {
   temperature: number;
   movementCost: number;
   walkable: boolean;
+  /** Combat line-of-sight occluder (RANGED-COMBAT Part VII). Baked alongside `walkable`: true on a
+   *  wall building's tile and on natural rock (cliff / mountain_wall / cliff_wall), false on water and
+   *  see-through non-walkables (campfire, furnace). `hasLineOfSight` reads this one flag per cell. */
+  blocksSight?: boolean;
   resources: Record<string, number>;
   /** resourceId → turn number when that resource finishes regrowing (persistent resources). */
   resourceCooldowns?: Record<string, number>;

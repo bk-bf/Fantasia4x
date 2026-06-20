@@ -280,6 +280,16 @@ export function pickSubterrain(biomeName: string, detailNoise: number): string {
 const SPAWNABLE_BIOMES = new Set(['forest', 'plains', 'swamp']);
 const WATER_SUBTYPES = new Set(['water', 'shallow_water', 'rapids']);
 
+/**
+ * Whether NATURAL terrain at a tile blocks combat line-of-sight (RANGED-COMBAT Part VII). Solid rock —
+ * a `cliff` subterrain or a `mountain_wall`/`cliff_wall` resource — is non-walkable AND opaque; water is
+ * non-walkable but see-through. So: non-walkable and not a water subtype. Buildings set `blocksSight`
+ * explicitly from their def (walls block, campfires/furnaces don't) and do NOT use this rule.
+ */
+export function terrainBlocksSight(walkable: boolean, subType: string): boolean {
+  return !walkable && !WATER_SUBTYPES.has(subType);
+}
+
 /** True only for walkable forest/plains/swamp land — the single gate for pawn AND creature spawning. */
 export function isSpawnableTile(tile: WorldTile | undefined | null): boolean {
   if (!tile || !tile.walkable) return false;

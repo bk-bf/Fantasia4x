@@ -7,7 +7,7 @@
 import type { WorldTile } from '../core/types';
 import type { ResourceObjectDef } from './ResourceObjectService';
 import { resourceObjectService } from './ResourceObjectService';
-import { SUBTERRAINS, SUBTERRAIN_FALLBACK, pickChar } from '../core/Terrains';
+import { SUBTERRAINS, SUBTERRAIN_FALLBACK, pickChar, terrainBlocksSight } from '../core/Terrains';
 
 /**
  * Subterrains whose resources form CLUSTERS rather than per-tile scatter: each connected blob of
@@ -160,6 +160,8 @@ class ResourceGeneratorServiceImpl {
     const resourceSub = SUBTERRAINS[def.subterrain] ?? SUBTERRAIN_FALLBACK;
     tile.ascii = pickChar(resourceSub, tile.x, tile.y);
     tile.walkable = def.walkable ?? resourceSub.walkable;
+    // Bake combat LoS (Part VII): a non-walkable rock node (mountain_wall/cliff_wall) blocks sight.
+    tile.blocksSight = terrainBlocksSight(tile.walkable, tile.subType);
     tile.movementCost = resourceSub.movementCost;
   }
 

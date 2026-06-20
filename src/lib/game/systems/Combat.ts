@@ -19,6 +19,7 @@ import {
   pickAmmo,
   hasViableAmmo,
   effectiveRangedRange,
+  hasLineOfSight,
   rangedAccuracyMod,
   aimIntervalTicks,
   drawSpeedModifier,
@@ -1308,8 +1309,18 @@ class CombatServiceImpl implements CombatService {
     ammoUpdates: Map<string, { itemId: string; newQty: number }>,
     recovered: DroppedItem[]
   ): { state: GameState; staminaCost: number } | null {
-    // Effective range = STR-scaled weapon reach + gear, capped by vision — subsumes the sight check.
+    // Effective range = STR-scaled weapon reach + gear, capped by vision — subsumes the range/sight cap.
     if (dist > effectiveRangedRange(pawn, rw)) return null; // out of range/sight — close (FSM)
+
+    // Part VII occlusion: a wall / natural rock on the shooter→target line blocks the shot. Cheap
+    // bounded Bresenham over the baked `blocksSight` tile flag — null here makes the FSM close to
+    // break the line of fire (no WASM raycast; ADR-008 untouched).
+    if (
+      pawn.position &&
+      !hasLineOfSight(state.worldMap, pawn.position.x, pawn.position.y, tpos.x, tpos.y)
+    ) {
+      return null;
+    }
 
     // Ammo: weapons with an ammoCategory need a matching stack; self-thrown weapons (no category)
     // fire freely for now (true self-consume is deferred — see the spec's Open Questions).

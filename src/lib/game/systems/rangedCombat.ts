@@ -9,9 +9,10 @@
  * here — equipment never reaches the stat engine (`getEffectiveStats` is dead), so it can't go via
  * `evaluateStat`.
  *
- * Scope cut (per the user): "line of sight" is a `distance ≤ visionRange` scalar check — NOT
- * spatial-WASM occlusion (ADR-008 untouched). The real `blocksSight` raycast (ADR-019) can replace
- * `withinSight` later without changing callers.
+ * Line of sight (Part VII): a `distance ≤ visionRange` scalar (`withinSight`) AND a cheap per-shot
+ * `blocksSight` Bresenham line (`hasLineOfSight`) — a wall / natural rock on the line blocks the shot.
+ * This is combat-local (one line, one shooter→target pair, cadence-gated), NOT the parked WASM
+ * fog-of-war raycast (ADR-019 / ADR-008 untouched), which earns its keep only for the full-map field.
  */
 import type { Pawn, Mob, Item, ItemInstance, ItemQuality } from '../core/types';
 import { itemService } from '../services/ItemService';
@@ -201,6 +202,47 @@ export function tileDistance(ax: number, ay: number, bx: number, by: number): nu
 /** Reduced line-of-sight: the target is "in sight" if within the attacker's vision range. */
 export function withinSight(dist: number, visionRange: number): boolean {
   return dist <= visionRange;
+}
+
+/** Minimal shape `hasLineOfSight` reads — the `blocksSight` tile flag baked alongside `walkable`. */
+type SightCell = { blocksSight?: boolean } | undefined;
+
+/**
+ * Combat line-of-sight (Part VII occluder model): a bounded Bresenham walk from shooter (ax,ay) to
+ * target (bx,by). If any INTERMEDIATE cell carries the baked `blocksSight` flag (a wall / natural rock
+ * — set the way `walkable` is, so this reads ONE field per cell, no per-cell building lookup) the shot
+ * is blocked. The two endpoints are never tested: a shooter may fire from behind their own cover and a
+ * target hugging a wall is still hittable. Per-shot, read-only, ≤ weapon-range cells, cadence-gated —
+ * combat-local, NOT the parked WASM fog-of-war raycast (ADR-019). Drops into the `withinSight` seam.
+ */
+export function hasLineOfSight(
+  map: SightCell[][],
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number
+): boolean {
+  if (ax === bx && ay === by) return true;
+  const dx = Math.abs(bx - ax);
+  const dy = Math.abs(by - ay);
+  const sx = ax < bx ? 1 : -1;
+  const sy = ay < by ? 1 : -1;
+  let err = dx - dy;
+  let x = ax;
+  let y = ay;
+  for (;;) {
+    const e2 = 2 * err;
+    if (e2 > -dy) {
+      err -= dy;
+      x += sx;
+    }
+    if (e2 < dx) {
+      err += dx;
+      y += sy;
+    }
+    if (x === bx && y === by) return true; // reached the target tile (endpoint never blocks)
+    if (map[y]?.[x]?.blocksSight) return false; // an intermediate occluder breaks the line
+  }
 }
 
 /**

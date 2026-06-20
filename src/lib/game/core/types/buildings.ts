@@ -117,6 +117,11 @@ export interface Building {
    *  (worldMap.walkable is persisted, so it survives save/load). */
   walkable?: boolean;
 
+  /** Whether a COMPLETED building blocks combat line-of-sight (RANGED-COMBAT Part VII). Set true ONLY
+   *  for walls — a campfire/furnace/window is non-walkable but see-through, so this is independent of
+   *  `walkable`. Baked onto the tile's `blocksSight` flag on completion, cleared on deconstruct. */
+  blocksSight?: boolean;
+
   // Construction requirements
   buildingCost: Record<string, number>; // Renamed from 'cost' to match item system
   workAmount: number;
