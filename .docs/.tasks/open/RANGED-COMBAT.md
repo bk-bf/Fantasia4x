@@ -340,9 +340,12 @@ orders of magnitude under the fog-of-war field. Conflating the two is what made 
 - [x] **`blocksSight` flag.** A tile blocks sight if it holds a **wall** — `blocksSight: true` added to
   the wall family in `buildings.jsonc` (branch/wicker/daub/mud_brick; the `BuildingDef`/`WorldTile` types
   carry the field). Doors, windows, roofs, furniture, **campfires** do NOT block (the building flag is
-  independent of `walkable`, so a non-walkable furnace stays see-through). Natural **rock/mountain**
-  terrain blocks inherently via `terrainBlocksSight(walkable, subType)` = non-walkable & not water
-  (cliff subterrain + mountain_wall/cliff_wall resources). Full-canopy trees left out (still optional).
+  independent of `walkable`, so a non-walkable furnace stays see-through). **Resources** carry the same
+  EXPLICIT `blocksSight` override (`ResourceObjectDef` / resources.jsonc) — `mountain_wall`/`cliff_wall`
+  pin it `true`; when omitted a node falls back to the natural-terrain rule `terrainBlocksSight(walkable,
+  subType)` = non-walkable & not water (so the `cliff` subterrain + every other non-walkable node — trees,
+  ore, stone_outcrop — still block by default until individually tuned). Full-canopy trees as a *deliberate*
+  flag left open (deferred).
 - [x] **Baked onto the tile** the way `walkable` is — set wherever `walkable` is written: worldgen
   (`WorldGenerator`), resource placement/regrowth/harvest-restore, wall build/remove
   (`applyBuildingFootprint`), and dev spawns. The line reads ONE field per cell (`map[y][x].blocksSight`)

@@ -368,85 +368,101 @@ cooking/brewing**. `planting` work category + hoe tools (`digging_stick`/`stone_
 already exist. Drives from NOTES.md (split dirt by fertility · dig/reposition soil · terraform via
 compost · growing zones + seeds + wetness).
 
-> **Spine of this rework:** the ground already carries the fertility signal we need. World-gen picks
-> a **grass-density subterrain** per tile by detail noise (`subterrains.jsonc`: `dirt` < `grass` <
-> `tall_grass` < `deep_grass`), stored in `tile.subType`; `tile.moisture` (0–100, distance-to-water +
-> weather, SEASONS_WEATHER) is wetness. §F reads **soil fertility from the grass subterrain** and
-> **growth speed from soil × wetness × fertilizer** — no new noise field, reusing what worldgen and
-> the wetness model already produce.
+> **Spine of this rework (user model — no `tile.soil` field):** everything is **resource objects on
+> tiles**, reusing the systems that already drive trees/grass/bushes — `tile.resources` (what's on a
+> tile), `interactions[]` (the harvest-vs-cut split), `tile.resourceCooldowns` + `processResourceRegrowth`
+> (regrowth = growth), `designations`, and `FilterableZoneType` zones. **Dirt is broken into fertility
+> versions** (resource objects); which one a tile gets is driven by the **grass-density subterrain** the
+> world-gen noise already places (`dirt` < `grass` < `tall_grass` < `deep_grass`, in `tile.subType`).
+> **Seeds mutate what grows on a dirt tile** (plant → swap the tile's resource to a crop); the crop
+> **grows via the existing regrowth cooldown**, its *speed* scaled by fertility × wetness (`tile.moisture`)
+> × fertilizer × season. **No new `tile.soil` field, no new growth tick** — fertility lives in the
+> resource/subterrain on the tile, growth in the regrowth timer.
 
-### F1 — Soil fertility (dirt becomes a typed, mutable terrain layer)
+### F1 — Dirt becomes fertility resource versions (NOTES.md "split dirt by fertility")
 
-Per NOTES.md, fertility is keyed to the grass cover the noise already placed. We **materialize** it
-into a persistent `tile.soil` level (0–3) seeded at worldgen from `subType`, so dig/terraform can
-mutate it independently of the visual grass:
+No `tile.soil` field. Fertility is a property of the **dirt/grass resource version** on the tile,
+which world-gen places by the grass-density subterrain (the noise we already have). Helper
+`soilTierForTile(tile)` derives a 0–3 tier from `subType`/the resource on it (the single read every
+gate uses — no stored field):
 
-| `subType` (grass density) | `tile.soil` | Soil name      | Dig yields (soil item) | Role                         |
-| ------------------------- | ----------- | -------------- | ---------------------- | ---------------------------- |
-| `dirt` / `savanna` / bare | 0 infertile | Infertile Dirt | `dirt` (filler only)   | nothing grows but hardy crops |
-| `grass`                   | 1 poor      | Poor Soil      | `poor_soil`            | low-tier crops, slow         |
-| `tall_grass`              | 2 loam      | Loam           | `loam`                 | mid-tier crops               |
-| `deep_grass`              | 3 terra preta | Terra Preta  | `terra_preta`          | high-tier crops; fastest     |
+| `subType` (grass density) | tier | Soil name      | Dig (cut) extra yield | Grows                          |
+| ------------------------- | ---- | -------------- | --------------------- | ------------------------------ |
+| `dirt` / `savanna` / bare | 0 infertile | Infertile Dirt | `dirt`         | nothing (until terraformed)    |
+| `grass`                   | 1 poor      | Poor Soil      | `poor_soil`    | hardy crops (grain/veg/legume) |
+| `tall_grass`              | 2 loam      | Loam           | `loam`         | + fibre/fruit/herb             |
+| `deep_grass`              | 3 terra preta | Terra Preta  | `terra_preta`  | + prize crops                  |
 
-`tile.soil` is the **single source of truth** for fertility (dig lowers it, terraform raises it);
-`subType` stays the visual. New typed **soil items** (`dirt`/`poor_soil`/`loam`/`terra_preta`,
-`category: "soil"`, `bulk`-heavy) in `items.jsonc` — the "different types of dirt" you can carry,
-build with, and process.
+New **soil items** (`dirt`/`poor_soil`/`loam`/`terra_preta`, `category: "soil"`, heavy) in
+`items.jsonc` — the "different dirt types" you dig up, haul, and build with. (Carry is the per-pawn
+weight/volume budget from §L; no `bulk` tag — that model was dropped.)
 
-### F2 — Dig designation (extract & reposition soil)
+### F2 — Dig = the harvest-vs-cut interaction (same model as trees)
 
-A new `dig` `DesignationType` (mark like `harvest`/`mine`) generates a **dig job** (`digging` work +
-hoe/spade tool). Completing it **harvests the soil tile, not just the grass**: yields the tile's
-**grass resource** (the existing `grass_patch`/`tall_grass_patch`/`deep_grass_patch` drop) **plus**
-the **soil item** for its `tile.soil` level — then drops `tile.soil` to 0 and `subType` to `dirt`
-(you stripped the topsoil). This is the "dig up fertile soil and move it" loop.
+Per the user: dig is to a soil/grass tile what **`woodcut` is to a tree** — the existing
+`interactions[]` split. Add a `dig` `DesignationType` and a **`dig` interaction** to the grass
+patches (`grass_patch`/`tall_grass_patch`/`deep_grass_patch`) and a bare-`dirt` resource: `dig`
+returns **everything the normal `harvest` does (hay/fiber) + the soil item** for its tier (the
+"extra yield"), and **depletes** the node (`harvestDepletes: true`), leaving bare `dirt`. So digging
+a deep-grass tile gives hay + fiber + **`terra_preta`**, and you re-lay that soil elsewhere (F3).
+Reuses `jobs/harvest.ts` wholesale — `dig` is just another harvest designation + interaction.
 
-### F3 — Terraforming (build dirt types like buildings)
+### F3 — Terraforming = the build menu (compost gates the good soil)
 
-A **Soil Works** family in the **build tab** — one buildable "tile improvement" per soil level
-(`lay_poor_soil`/`lay_loam`/`lay_terra_preta`), placed and built exactly like a passable building.
-On completion it **raises `tile.soil`** to that level (and repaints `subType`), consuming the
-matching **soil item** (+ **compost** for loam→terra-preta, the gating material). Mirrors the
-deferred §L road model: a build that writes a persistent tile field on complete, restores on
-deconstruct. So you dig terra preta from a deep-grass tile and **re-lay it** on your farm.
+Per the user: "placing different types of soil should work via the building menu." A **Soil Works**
+family in the **build tab** (`lay_poor_soil`/`lay_loam`/`lay_terra_preta`) builds like a passable
+building; on completion it **places the matching fertile resource + sets `subType`** (e.g. deep_grass
+→ a terra-preta-bearing tile) so the tile becomes plantable, consuming the **soil item** (+ **compost**
+for loam→terra preta — the gating material). Restores base on deconstruct. Mirrors how a build already
+writes a persistent tile field (the `walkable`/movementCost path). This is how a dug-out (infertile)
+tile is improved back up, and how you concentrate terra preta onto a farm.
 
-### F4 — Growing zones + planting
+### F4 — Growing zones + the `plant` job ("seeds mutate what grows on the dirt tile")
 
-A `grow` `FilterableZoneType` (paint a zone, like `harvest`/`stockpile`); its filter picks the
-**crop/seed**. Pawns running the existing **`planting`** job sow the zone's seed onto eligible
-tiles (`tile.soil` ≥ the crop's `minSoil`), spawning the crop as a **resource object** on the tile
-at `growthLevel: 0`. Re-uses the zone + designation + `planting` plumbing wholesale — the new job is
-a `plant` handler in `jobs.jsonc` (`workCategory: "planting"`).
+A `grow` `FilterableZoneType` (paint like `harvest`/`stockpile`; filter = the seed/crop). A new
+**`plant`** JobDef (`workCategory: "planting"`) is generated for eligible tiles in a grow zone — a
+tile whose `soilTierForTile` ≥ the crop's `minSoil` and that has no crop yet. On completion the pawn
+**sows the seed → swaps the tile's resource to the crop** (`tile.resources[crop] = 1`, immature)
+and starts its growth cooldown (F5). Reuses the zone + designation + `planting` plumbing; consumes
+one seed from stock.
 
-### F5 — Growth level on organic resources (drives yield)
+### F5 — Growth = the existing regrowth mechanic (no new tick)
 
-Add **`growthLevel` (0–`maxGrowth`)** to organic resource nodes (crops first, then wild plants/trees
-can opt in). **Yield scales with `growthLevel`** (an immature crop gives little; mature gives full +
-seeds). Each tick a planted crop advances `growthLevel` by a **rate**:
+Per the user: crops "just use the regrowth mechanic for trees and bushes already implemented." A
+planted crop is a **persistent resource** that starts **cooling down** (= growing); when its
+`resourceCooldowns` entry expires, `GameEngineImpl.processResourceRegrowth` refills `tile.resources`
+→ the crop is **mature/harvestable**. No per-tick growth loop is added. **Growth *speed* = the
+regrowth duration**, and we extend the existing duration scaler (today `seasonRegrowthMultiplier`)
+into:
 
 ```
-rate = base × soilFactor(tile.soil) × wetnessFactor(tile.moisture) × fertilizerFactor × seasonFactor
+effectiveRegrowth = baseRegrowthTurns / (fertilityFactor × wetnessFactor × fertilizerFactor × seasonFactor)
 ```
 
-- **soil** — terra preta fastest, infertile ~nil; below `minSoil` the crop won't advance (stunted).
-- **wetness** — a comfort band around the crop's `idealMoisture`; too dry/too wet slows it.
-- **fertilizer** — `compost` (or later `manure`) applied to the zone speeds growth and is a **hard
-  gate** for high-tier crops (they need fertile soil **and** fertilizer **and** wetness).
-- **season** — frost halts/kills immature crops; growth tracks temperature (SEASONS_WEATHER hook).
+- **fertility** — `soilTierForTile` (terra preta fastest); below `minSoil` the seed can't be planted at all (F4).
+- **wetness** — a comfort band around the crop's `idealMoisture` (`tile.moisture`); too dry/too wet slows it.
+- **fertilizer** — `compost` baked into terra preta (F3) is the **hard gate** for prize crops; speeds others.
+- **season** — frost halts/kills immature crops (SEASONS_WEATHER hook, already in the scaler).
 
-Harvest a mature crop → food **+ replacement seeds** (self-sustaining once started).
+Harvest a mature crop → food **+ replacement seed** (self-sustaining). Perennials (berries/herbs)
+persist and regrow; annuals (grain/veg) deplete to bare dirt (`harvestDepletes`) — you replant.
+The info panel (F9) shows growth as the **cooldown progress %** (the "growth level" the request
+asked for, read from the regrowth timer rather than a new field).
 
-### F6 — Crops (Phase 1) — defined in `resources.jsonc`
+### F6 — Crops (Phase 1) — resource objects in `resources.jsonc`
 
-| Crop          | seed         | `minSoil` | gate                 | Chain                                            |
-| ------------- | ------------ | --------- | -------------------- | ------------------------------------------------ |
-| Wheat / Barley| `grain_seed` | 1 poor    | —                    | grain → (quern) flour → (oven) bread; barley → malt → **ale** |
-| Cabbage/Turnip/Onion | `veg_seed` | 1 poor | —                  | cooking ingredient; meal variety                 |
-| Beans/Peas    | `legume_seed`| 1 poor    | —                    | protein; stores well; (fixes soil — later)       |
-| Flax / Hemp   | `fibre_seed` | 2 loam    | wetness              | plant stalks → retted fibre (cordage/cloth, Pass I) |
-| Berries/Orchard fruit | `fruit_seed` | 2 loam | —               | fruit → **wine/cider**; preserves                |
-| Culinary herbs| `herb_seed`  | 2 loam    | wetness              | meal flavour (mood) + medicine (caretaking)      |
-| Prize crops (e.g. pumpkin/grapevine) | `prize_seed` | 3 terra preta | **compost + wetness** | high-value cooking/brewing; the fertilizer payoff |
+Each crop is a resource object (like a berry bush) with a `plant` interaction (sow) + a `harvest`
+interaction (reap), `minSoil`, `idealMoisture`, and yields = food + `*_seed`:
+
+| Crop          | seed         | `minSoil` | grows on            | Chain                                            |
+| ------------- | ------------ | --------- | ------------------- | ------------------------------------------------ |
+| Wheat / Barley| `grain_seed` | 1 poor    | grass+              | grain → (quern) flour → (oven) bread; barley → malt → **ale** |
+| Cabbage/Turnip/Onion | `veg_seed` | 1 poor | grass+            | cooking ingredient; meal variety                 |
+| Beans/Peas    | `legume_seed`| 1 poor    | grass+              | protein; stores well                             |
+| Flax / Hemp   | `fibre_seed` | 2 loam    | tall_grass+         | plant stalks → retted fibre (cordage/cloth, Pass I) |
+| Berries/Orchard fruit | `fruit_seed` | 2 loam | tall_grass+    | fruit → **wine/cider**; preserves (perennial)    |
+| Culinary herbs| `herb_seed`  | 2 loam    | tall_grass+         | meal flavour (mood) + medicine (perennial)       |
+| Prize crops (pumpkin/grapevine) | `prize_seed` | 3 terra preta | **terra preta only** | high-value cooking/brewing; the compost payoff |
 
 Seeds first come from **foraging** wild grain/berries (→ seed), so farming bootstraps from the
 existing forage loop.
@@ -476,9 +492,10 @@ a mood lift + a short `intoxicated` condition. (Deeper joy needs → SOCIAL-LAYE
 ### F9 — Info panel (make the new layers legible)
 
 The tile/resource inspector must surface the new state (reuse `StatBar`/`SelectedEntityCard`, no
-ad-hoc UI): **soil fertility** (level + name), **wetness %**, and for a growing crop its
-**`growthLevel`/maturity** (and what's gating it — "stunted: needs loam", "slow: too dry"). This is
-how the player reads why a field is or isn't growing.
+ad-hoc UI): **soil fertility** (the `soilTierForTile` level + name), **wetness %** (`tile.moisture`),
+and for a growing crop its **maturity %** (from the regrowth cooldown progress) + what's gating its
+speed ("slow: too dry", "needs loam to plant"). This is how the player reads why a field is or isn't
+growing.
 
 ### F10 — Meal variety & immersion (the payoff)
 
@@ -522,34 +539,34 @@ services); new ADR if a non-obvious choice is locked.
 
 ### §F — Farming, Food & Drink
 
-Phased so each phase is independently shippable + testable (`pnpm check`/`pnpm test` green each).
-**P1–P3 are the soil/terrain foundation** the crops sit on; **P4–P6 are the farming loop**; **P7 the
-food chain**. New ADR for the `tile.soil` mutable-terrain field (non-obvious: derived from worldgen
-noise but then player-mutable).
+Phased so each is independently shippable + testable (`pnpm check`/`pnpm test` green each). **Resource-
+driven model — no `tile.soil` field, no new growth tick** (reuses `tile.resources`, `interactions[]`,
+`resourceCooldowns`/`processResourceRegrowth`, designations, zones). **P1–P3 = soil/terrain foundation**;
+**P4–P6 = farming loop**; **P7 = food chain**. ADR for "dirt/crops as resource versions + regrowth-as-
+growth" (the non-obvious reuse decision).
 
-**P1 — Soil fertility layer (F1)**
-- [ ] `core/types/world.ts`: `tile.soil?: 0–3` (persisted). `WorldGenerator` seeds it from `subType` (dirt/savanna→0, grass→1, tall_grass→2, deep_grass→3). Helper `soilLevelForSubtype()` in `core/Terrains.ts`.
-- [ ] `items.jsonc`: typed soil items `dirt`/`poor_soil`/`loam`/`terra_preta` (`category: "soil"`, heavy). `resources.jsonc`: confirm `grass_patch`/`tall_grass_patch`/`deep_grass_patch` drops exist for the dig yield.
-- [ ] Info panel (F9): tile inspector shows soil level + name + wetness %.
+**P1 — Dirt fertility versions + soil items (F1)**
+- [ ] `items.jsonc`: soil items `dirt`/`poor_soil`/`loam`/`terra_preta` (`category: "soil"`, heavy).
+- [ ] `core/Terrains.ts`: `soilTierForTile(tile) → 0–3` from `subType` (dirt/savanna→0, grass→1, tall_grass→2, deep_grass→3) — the single fertility read (no stored field).
+- [ ] Info panel (F9): tile inspector shows soil tier + name + wetness % (`tile.moisture`).
 
-**P2 — Dig designation (F2)**
-- [ ] `DesignationType += 'dig'`; `jobs.jsonc` `dig` JobDef (`workCategory: "digging"`, hoe/spade gate) + `Job['type']` union + `JobService` generate/complete handler.
-- [ ] Dig completion yields the tile's grass-resource drop **+** the soil item for `tile.soil`, then sets `tile.soil = 0` / `subType = 'dirt'`. Test: dig a deep_grass tile → `deep_grass_patch` + `terra_preta`, tile now infertile.
+**P2 — Dig = cut interaction (F2)**
+- [ ] `DesignationType += 'dig'`; add a `dig` interaction (`harvestDepletes: true`) to `grass_patch`/`tall_grass_patch`/`deep_grass_patch` (+ a bare `dirt` resource) yielding the normal harvest drops **+ the tier's soil item**; `resourceObjectService.getByDesignation` + `HARVEST_DTYPES` include `dig`. Reuses `jobs/harvest.ts` (no new handler). Test: dig deep_grass → hay + fiber + `terra_preta`, node depletes to dirt.
 
-**P3 — Terraforming / Soil Works (F3)**
-- [ ] `buildings.jsonc`: `lay_poor_soil`/`lay_loam`/`lay_terra_preta` (passable "tile improvement" builds); recipes consume the soil item (+ `compost` for loam→terra preta).
-- [ ] `BuildingService`: on complete write `tile.soil` (+ `subType`); restore on deconstruct (mirror the `walkable` flag handling). Test: build `lay_terra_preta` on a dirt tile → `tile.soil = 3`.
+**P3 — Terraforming / Soil Works build menu (F3)**
+- [ ] `buildings.jsonc`: `lay_poor_soil`/`lay_loam`/`lay_terra_preta` (passable tile-improvement builds); recipes consume the soil item (+ `compost` for loam→terra preta).
+- [ ] `BuildingService`: on complete place the fertile resource + set `subType`; restore on deconstruct (mirror the `walkable`/movementCost tile-write). Test: build `lay_terra_preta` on a dirt tile → `soilTierForTile` = 3.
 
-**P4 — Growing zones + planting (F4)**
-- [ ] `FilterableZoneType += 'grow'` (filter = crop/seed); zone paint + `zoneTiles` wiring.
-- [ ] `jobs.jsonc` `plant` JobDef (`workCategory: "planting"`); generate plant jobs for empty eligible tiles in a grow zone (`tile.soil ≥ crop.minSoil`); completion spawns the crop resource at `growthLevel: 0`.
+**P4 — Grow zone + `plant` job (F4)**
+- [ ] `FilterableZoneType += 'grow'` (filter = seed/crop); zone paint + `zoneTiles` wiring.
+- [ ] `jobs.jsonc` `plant` JobDef (`workCategory: "planting"`) + `Job['type']` + JobService handler; generate for eligible empty tiles in a grow zone (`soilTierForTile ≥ crop.minSoil`); completion consumes a seed + sets `tile.resources[crop]=1` (immature) and starts its growth cooldown.
 
-**P5 — Growth-level + crop tick (F5/F6)**
-- [ ] `resources.jsonc`: `growthLevel`/`maxGrowth` on organic nodes; crops (grain/veg/legume/fibre/fruit/herb/prize) with `minSoil`, `idealMoisture`, `needsFertilizer`, yields scaled by `growthLevel`.
-- [ ] Growth tick (in the turn order's exploration/completions phase): advance `growthLevel` by `base × soil × wetness × fertilizer × season`; stunt below `minSoil`; frost halt/kill (SEASONS hook). Harvest yields food + `*_seed`. Info panel shows maturity + gate reason (F9).
+**P5 — Growth via regrowth + crops (F5/F6)**
+- [ ] `resources.jsonc`: crop resource objects (grain/veg/legume/fibre/fruit/herb/prize) with `plant`+`harvest` interactions, `minSoil`, `idealMoisture`, `baseRegrowthTurns`, yields = food + `*_seed`; wild grain/berry → seed forage.
+- [ ] Extend the regrowth-duration scaler (where `seasonRegrowthMultiplier` is applied in `jobs/harvest.ts` / on plant) by `fertility × wetness × fertilizer`; stunt-gate at `minSoil`; frost halt (SEASONS). Info panel shows maturity % from the cooldown (F9). **No new per-tick loop.**
 
 **P6 — Fertilizer (F7)**
-- [ ] `buildings.jsonc`: `compost_bin` (passive); `recipes.jsonc`: rotten items + `hay` + `ash` → `compost` (passive timer). Apply-fertilizer to a grow zone (consumes `compost`) → `fertilizerFactor` + unlocks terra-preta crops. Manure path stubbed behind ENTITIES D.
+- [ ] `buildings.jsonc`: `compost_bin` (passive); `recipes.jsonc`: rotten items + `hay` + `ash` → `compost` (passive timer). `compost` is a **build material** for `lay_terra_preta` (P3) — the gate for prize crops. Manure path stubbed behind ENTITIES D.
 
 **P7 — Food chain + meals (F8/F10)**
 - [ ] `items.jsonc`: crop products, flour/bread/malt/ale/wine/mead. `buildings.jsonc`: Quern, Oven, Fermenter. `recipes.jsonc`: milling, baking, fermentation (passive timer).
@@ -594,8 +611,7 @@ noise but then player-mutable).
 - [ ] **Crop persistence/save:** `tile.soil` + growing crops serialise with the world (assume yes — `tile.soil` is a persisted WorldTile field like `snow`/`walkable`). there should be no "tile.soil", instead growth is tied to the specific resource tile, breaking dirt into several versions ensures the relevant ones grow something others dont, seeds just mutate what grows on the dirt tile and the growing zone instructs pawns where to put the seeds 
 - [ ] **Alcohol depth:** mood-good only now vs a recreation/joy need — defer the need to SOCIAL-LAYER? mood only
 - [ ] **Spoilage of produce:** crops/bread/ale reuse Pass I `decaySeconds` + storage; confirm no new decay model needed.
-- [ ] **§F soil source of truth:** `tile.soil` (0–3) materialized at worldgen from `subType` and then player-mutable (chosen) vs deriving fertility from `subType` live (can't represent dug/terraformed tiles).  Confirm the materialized field + its new ADR. i am unsure we need a tile.soil clarify how this compares to my model
-- [ ] **§F dig vs clear:** does `dig` subsume the existing `clear` designation (strip grass) or stay a separate "extract soil" order? (Lean: separate — `clear` just removes cover, `dig` extracts the soil item + lowers fertility.) // its the same model that we use for trees, they can be harvested or cut, cutting returns everything that harvesting does + extra yield, dig should function the same
-- [ ] **§F fertilizer application:** is `compost` applied per grow-zone (a zone toggle that consumes stock) or built into the soil via terraform only? (Lean: both — terraform bakes it into terra preta; a zone toggle speeds an active field.) compost is needed, as a material to build better soil, placing different types of soil should work via the building menu 
-- [ ] **§F growth tick cost:** crops advance on a throttled pass (every N ticks), not per-tick, to stay off the hot path — confirm cadence.
-they should just use the regrowth mechanic for trees and bushes already implemented 
+- [x] **§F soil source of truth → RESOLVED (user):** **no `tile.soil` field.** Fertility lives in the **dirt/grass resource version** on the tile (driven by the grass-density subterrain noise), read via `soilTierForTile`. → F1.
+- [x] **§F dig vs clear → RESOLVED (user):** `dig` is the **same harvest-vs-cut model as trees** — a `dig` interaction that returns the normal harvest + extra (the soil item) and depletes the node. → F2.
+- [x] **§F fertilizer → RESOLVED (user):** `compost` is a **build material** for better soil; placing soil types goes through the **building menu** (Soil Works). → F3/F7.
+- [x] **§F growth → RESOLVED (user):** crops **reuse the existing tree/bush regrowth mechanic** (`resourceCooldowns` + `processResourceRegrowth`) — growth = the cooldown, speed = its duration scaled by fertility × wetness × fertilizer × season. No new tick. → F5.
