@@ -7,8 +7,7 @@ import {
   pickBiome,
   pickSubterrain,
   pickChar,
-  getWaterLevel,
-  terrainBlocksSight
+  getWaterLevel
 } from '../core/Terrains';
 import { resourceGeneratorService } from '../services/ResourceGeneratorService';
 import { biomeBaseMoisture, baseMoistureFromWater } from '../services/EnvironmentService';
@@ -174,7 +173,7 @@ export function generateWorld(width: number, height: number, seed = Date.now()):
         temperature: 0,
         movementCost,
         walkable,
-        blocksSight: terrainBlocksSight(walkable, subTypeName),
+        blocksSight: sub.blocksSight ?? false,
         resources: {},
         territoryOwner: '',
         gCost: 0,

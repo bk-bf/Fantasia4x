@@ -7,7 +7,7 @@
 import type { WorldTile } from '../core/types';
 import type { ResourceObjectDef } from './ResourceObjectService';
 import { resourceObjectService } from './ResourceObjectService';
-import { SUBTERRAINS, SUBTERRAIN_FALLBACK, pickChar, terrainBlocksSight } from '../core/Terrains';
+import { SUBTERRAINS, SUBTERRAIN_FALLBACK, pickChar } from '../core/Terrains';
 
 /**
  * Subterrains whose resources form CLUSTERS rather than per-tile scatter: each connected blob of
@@ -160,9 +160,9 @@ class ResourceGeneratorServiceImpl {
     const resourceSub = SUBTERRAINS[def.subterrain] ?? SUBTERRAIN_FALLBACK;
     tile.ascii = pickChar(resourceSub, tile.x, tile.y);
     tile.walkable = def.walkable ?? resourceSub.walkable;
-    // Bake combat LoS (Part VII): the resource's explicit `blocksSight` wins (mountain_wall/cliff_wall
-    // = true), else fall back to the natural-terrain rule (non-walkable & not water).
-    tile.blocksSight = def.blocksSight ?? terrainBlocksSight(tile.walkable, tile.subType);
+    // Bake combat LoS (Part VII): purely data-driven, mirroring `walkable` — the resource's own
+    // `blocksSight` flag (rock / ore / gem nodes set it true; trees/bushes don't), else its subterrain's.
+    tile.blocksSight = def.blocksSight ?? resourceSub.blocksSight ?? false;
     tile.movementCost = resourceSub.movementCost;
   }
 

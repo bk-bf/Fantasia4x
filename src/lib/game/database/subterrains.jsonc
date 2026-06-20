@@ -279,6 +279,7 @@
     "id"          : "cliff",
     "displayName" : "Cliff",
     "walkable"    : false,
+    "blocksSight" : true,
     "movementCost": 0,
     "charSpans"   : [ {"literal": " "} ],  // transparent — visual comes from cliff_wall resource
     "fg"          : [0.5, 0.42, 0.27],

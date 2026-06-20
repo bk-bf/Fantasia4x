@@ -58,10 +58,10 @@ export interface ResourceObjectDef {
    */
   walkable?: boolean;
   /**
-   * Whether this resource blocks combat line-of-sight (RANGED-COMBAT Part VII) — like a wall's
-   * `blocksSight` in buildings.jsonc. EXPLICIT override: when present it wins; when omitted the tile
-   * falls back to the natural-terrain rule (`terrainBlocksSight` = non-walkable & not water). Set it
-   * to pin intent (e.g. `mountain_wall`/`cliff_wall` = true) or to opt a non-walkable node OUT (false).
+   * Whether this resource blocks combat line-of-sight (RANGED-COMBAT Part VII) — fully data-driven,
+   * exactly like a wall's `blocksSight` in buildings.jsonc. Set true on solid rock/ore/gem nodes;
+   * trees and bushes leave it unset (they don't block). When omitted the tile keeps its subterrain's
+   * flag (a bare `cliff` blocks; `rocky` ground doesn't).
    */
   blocksSight?: boolean;
   /** Resolved char array (from charSpans in JSON). */

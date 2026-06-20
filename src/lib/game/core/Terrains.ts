@@ -20,6 +20,10 @@ export interface BiomeDef {
 export interface SubterrainDef {
   displayName: string;
   walkable: boolean;
+  /** Blocks combat line-of-sight (RANGED-COMBAT Part VII). Data-driven, like a building/resource's
+   *  `blocksSight`: true only for opaque terrain (a `cliff`). Water is non-walkable but see-through, so
+   *  it stays unset. Baked onto `tile.blocksSight` at worldgen. */
+  blocksSight?: boolean;
   movementCost: number;
   fg: [number, number, number];
   bg: [number, number, number];
@@ -239,6 +243,7 @@ export const SUBTERRAINS: Record<string, SubterrainDef> = Object.fromEntries(
     {
       displayName: sub.displayName as string,
       walkable: sub.walkable as boolean,
+      blocksSight: sub.blocksSight as boolean | undefined,
       movementCost: sub.movementCost as number,
       fg: sub.fg as [number, number, number],
       bg: sub.bg as [number, number, number],
@@ -274,21 +279,54 @@ export function pickSubterrain(biomeName: string, detailNoise: number): string {
   return 'dirt'; // fallback
 }
 
+// ── PRODUCTION-CHAIN-II §F: soil fertility ─────────────────────────────────────────────────────
+// Fertility is NOT a stored tile field — it lives in the grass-density subterrain the world-gen noise
+// already places (NOTES.md: bare dirt → infertile, grass → poor, tall_grass → loam, deep_grass →
+// terra preta). `soilTierForTile` is the single read every farming gate uses (plant eligibility,
+// growth-speed, dig yield). Dig (F2) strips a tile to `dirt` (tier 0); terraform (F3) sets `subType`
+// to a fertile version to raise it.
+export type SoilTier = 0 | 1 | 2 | 3;
+
+const SOIL_TIER_BY_SUBTYPE: Record<string, SoilTier> = {
+  grass: 1,
+  tall_grass: 2,
+  deep_grass: 3
+};
+
+/** Fertility tier (0 infertile … 3 terra preta) for a tile, derived from its grass-density subType. */
+export function soilTierForTile(tile: { subType: string } | undefined | null): SoilTier {
+  return tile ? (SOIL_TIER_BY_SUBTYPE[tile.subType] ?? 0) : 0;
+}
+
+/** Human label for a soil tier (info panel — never leak the raw id). */
+export const SOIL_TIER_NAME: Record<SoilTier, string> = {
+  0: 'Infertile Dirt',
+  1: 'Poor Soil',
+  2: 'Loam',
+  3: 'Terra Preta'
+};
+
+/** Soil ITEM id a tile of this tier yields when dug (F2) / consumed to terraform up to it (F3). */
+export const SOIL_ITEM_BY_TIER: Record<SoilTier, string> = {
+  0: 'dirt',
+  1: 'poor_soil',
+  2: 'loam',
+  3: 'terra_preta'
+};
+
+/** The fertile `subType` a placed soil item produces — the inverse of SOIL_ITEM_BY_TIER (F3 terraform). */
+export const SUBTYPE_BY_SOIL_TIER: Record<SoilTier, string> = {
+  0: 'dirt',
+  1: 'grass',
+  2: 'tall_grass',
+  3: 'deep_grass'
+};
+
 // Biomes where colonists and creatures may spawn. Mountains and water are excluded. NOTE: because
 // water is now decoupled from biome (a "plains" tile can carry a water subType — see getWaterLevel),
 // we must reject both non-spawnable biomes AND water subtypes, not just `walkable`.
 const SPAWNABLE_BIOMES = new Set(['forest', 'plains', 'swamp']);
 const WATER_SUBTYPES = new Set(['water', 'shallow_water', 'rapids']);
-
-/**
- * Whether NATURAL terrain at a tile blocks combat line-of-sight (RANGED-COMBAT Part VII). Solid rock —
- * a `cliff` subterrain or a `mountain_wall`/`cliff_wall` resource — is non-walkable AND opaque; water is
- * non-walkable but see-through. So: non-walkable and not a water subtype. Buildings set `blocksSight`
- * explicitly from their def (walls block, campfires/furnaces don't) and do NOT use this rule.
- */
-export function terrainBlocksSight(walkable: boolean, subType: string): boolean {
-  return !walkable && !WATER_SUBTYPES.has(subType);
-}
 
 /** True only for walkable forest/plains/swamp land — the single gate for pawn AND creature spawning. */
 export function isSpawnableTile(tile: WorldTile | undefined | null): boolean {

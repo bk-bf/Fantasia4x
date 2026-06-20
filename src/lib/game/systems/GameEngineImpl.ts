@@ -17,7 +17,6 @@ import { pawnService } from '../services/PawnService';
 import { buildingService } from '../services/BuildingService';
 import { researchService } from '../services/ResearchService';
 import { WORK_CATEGORIES } from '../core/Work';
-import { terrainBlocksSight } from '../core/Terrains';
 import buildingsData from '../database/buildings.jsonc';
 
 import { pawnStateMachineService, reapDeadPawns } from './PawnStateMachine';
@@ -417,7 +416,7 @@ export class GameEngineImpl implements GameEngine {
               // Restore blocking for non-walkable resources that have fully regrown.
               if (def?.walkable === false) {
                 tile.walkable = false;
-                tile.blocksSight = def.blocksSight ?? terrainBlocksSight(false, tile.subType); // re-close LoS (Part VII)
+                tile.blocksSight = def.blocksSight ?? false; // re-close LoS for a regrown rock node (Part VII)
                 patchPathfindingWalkable(tile.x, tile.y, false); // keep memoized A* grid in sync (worldMap ref unchanged)
               }
               gatedConsole.log(
@@ -435,7 +434,7 @@ export class GameEngineImpl implements GameEngine {
             // Restore blocking for non-walkable resources that have regrown.
             if (def?.walkable === false) {
               tile.walkable = false;
-              tile.blocksSight = def.blocksSight ?? terrainBlocksSight(false, tile.subType); // re-close LoS (Part VII)
+              tile.blocksSight = def.blocksSight ?? false; // re-close LoS for a regrown rock node (Part VII)
               patchPathfindingWalkable(tile.x, tile.y, false); // keep memoized A* grid in sync (worldMap ref unchanged)
             }
             gatedConsole.log(`[Regrowth] ${key} at (${tile.x},${tile.y}) regrew ×${restored}`);
