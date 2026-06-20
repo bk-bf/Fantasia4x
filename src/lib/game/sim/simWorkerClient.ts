@@ -41,7 +41,10 @@ function applyEntitySync<T extends { id: string }>(
  * complete slim object (no hot/cold split) whenever their ref changes, so merging would leave a stale
  * value for any field the new object dropped — replace is both correct and cheaper.
  */
-function applyDropSync(mirror: Map<string, DroppedItem>, sync: EntitySync<DroppedItem>): DroppedItem[] {
+function applyDropSync(
+  mirror: Map<string, DroppedItem>,
+  sync: EntitySync<DroppedItem>
+): DroppedItem[] {
   if ('full' in sync) {
     mirror.clear();
     for (const e of sync.full) mirror.set(e.id, e);

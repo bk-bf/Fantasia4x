@@ -133,25 +133,23 @@ const SECTIONAL_SKIP = new Set(['pawns', 'mobs', 'worldMap', 'droppedItems']);
 
 // ── Dropped-item sync ──────────────────────────────────────────────────────────────────────────
 // Like pawns/mobs, droppedItems rides its own per-id channel — but with WHOLE-OBJECT ref-diff (drops
-// are recreated immutably only when they change), so an unchanging pile ships NOTHING. The projection
-// also STRIPS `unitConditions`: the per-unit carcass arrays grow unbounded as kills accumulate and the
-// main thread never needs them (the panels read the `_carcassCondition` summary). `lastDropRefs` holds
-// each id's last-SENT object ref; a mismatch (or new id) re-ships the slim drop.
+// are recreated immutably only when they change), so an unchanging pile ships NOTHING per flush. This
+// is what kills the carcass-FPS cost: previously the whole array (with its growing per-unit
+// `unitConditions`) was re-referenced every tick by stepItemDecay and re-cloned across the boundary
+// EVERY flush; now only the stacks that actually changed ship, and the throttled decay (DECAY_INTERVAL
+// _TICKS) makes that rare. The drop is sent WHOLE (incl. `unitConditions`) because the autosave
+// persists this projected state — stripping it would silently lose carcass spoilage across save/load;
+// the panels avoid re-scanning it by reading the `_carcassCondition` summary instead. `lastDropRefs`
+// holds each id's last-SENT object ref; a mismatch (or new id) re-ships that stack.
 const lastDropRefs = new Map<string, DroppedItem>();
 let lastDropIds = new Set<string>();
 // Last droppedItems array ref we computed `_carcassCondition` from — recompute only on a real change.
 let lastDropsArrRef: DroppedItem[] | undefined = undefined;
 
-/** Project a drop for the snapshot: every field EXCEPT the per-unit `unitConditions` array. */
-function slimDrop(d: DroppedItem): Partial<DroppedItem> & { id: string } {
-  const { unitConditions: _omit, ...rest } = d;
-  return rest;
-}
-
-/** Per-id ref-diff sync for drops: only stacks whose object ref changed since last flush ship (as a
- *  slim drop); `order` re-establishes array order; `removed` reaps picked-up/rotted ids. */
+/** Per-id ref-diff sync for drops: only stacks whose object ref changed since last flush ship; `order`
+ *  re-establishes array order; `removed` reaps picked-up/rotted ids. */
 function syncDrops(arr: readonly DroppedItem[]): EntitySync<DroppedItem> {
-  const upserts: Array<Partial<DroppedItem> & { id: string }> = [];
+  const upserts: DroppedItem[] = [];
   const order: string[] = new Array(arr.length);
   const cur = new Set<string>();
   for (let i = 0; i < arr.length; i++) {
@@ -160,7 +158,7 @@ function syncDrops(arr: readonly DroppedItem[]): EntitySync<DroppedItem> {
     cur.add(d.id);
     if (lastDropRefs.get(d.id) !== d) {
       lastDropRefs.set(d.id, d);
-      upserts.push(slimDrop(d));
+      upserts.push(d);
     }
   }
   const removed: string[] = [];

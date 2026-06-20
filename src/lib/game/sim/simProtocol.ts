@@ -70,9 +70,10 @@ export type WorkerToMain =
       pawns: EntitySync<Pawn>;
       mobs: EntitySync<Mob>;
       // Dropped items ride their own per-id sync (like pawns/mobs) so only stacks whose object ref
-      // changed ship each flush — and the projection STRIPS `unitConditions` (the per-unit carcass
-      // arrays grow unbounded as kills pile up; the panels read the small `_carcassCondition` summary
-      // inside `state` instead). Reconstructed into `droppedItems` by the bridge.
+      // changed ship each flush — instead of re-cloning the whole array (with its growing per-unit
+      // carcass `unitConditions`) every flush. Drops are sent WHOLE (the autosave persists this
+      // projection), so the panels read the small `_carcassCondition` summary inside `state` rather
+      // than re-scanning the arrays. Reconstructed into `droppedItems` by the bridge.
       drops?: EntitySync<DroppedItem>;
       worldMap?: GameState['worldMap'];
       // Changed-tile deltas (ADR-021 §4c): sent INSTEAD of the full worldMap when only a few tiles
