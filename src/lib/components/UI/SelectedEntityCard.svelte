@@ -192,8 +192,10 @@
     {#if model.stats && model.stats.length > 0}
       <div class="pawn-row">
         {#each model.stats as stat (stat.label)}
-          <span class="pawn-stat-label">{stat.label}</span>
-          <span class="pawn-stat-val" class:pawn-warn={stat.warn}>{stat.value}</span>
+          <span class="pawn-stat">
+            <span class="pawn-stat-label">{stat.label}</span>
+            <span class="pawn-stat-val" class:pawn-warn={stat.warn}>{stat.value}</span>
+          </span>
         {/each}
       </div>
     {/if}
@@ -416,16 +418,22 @@
   /* ── Stats / bars ─────────────────────────────────────────────── */
   .pawn-row {
     display: flex;
-    gap: 6px;
+    flex-wrap: wrap;
+    gap: 2px 8px;
     align-items: baseline;
     font-size: 9px;
+  }
+  /* Keep each label+value glued together so a wrap never splits "STR" from its number. */
+  .pawn-stat {
+    display: inline-flex;
+    gap: 3px;
+    align-items: baseline;
   }
   .pawn-stat-label {
     color: #7a6030;
   }
   .pawn-stat-val {
     color: #c08040;
-    min-width: 18px;
   }
   .pawn-warn {
     color: #ee8844 !important;

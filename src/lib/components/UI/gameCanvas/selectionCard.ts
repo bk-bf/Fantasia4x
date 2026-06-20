@@ -11,7 +11,7 @@ import { getActiveConditionViews } from '$lib/utils/conditionInfo.js';
 import { pawnService } from '$lib/game/services/PawnService.js';
 import { pawnStatService } from '$lib/game/services/PawnStatService.js';
 import { itemService } from '$lib/game/services/ItemService.js';
-import { getConditionCurrentStage } from '$lib/game/core/needs.js';
+import { getConditionCurrentStage, conditionStatMultipliers } from '$lib/game/core/needs.js';
 import type {
   SelectedEntityModel,
   EntityBar,
@@ -50,6 +50,26 @@ export function moveSpeedStat(entity: Pawn | Mob): EntityStat {
     label: 'MOVE',
     value: `${pawnService.getMoveSpeed(entity).tilesPerSecond.toFixed(1)}/s`
   };
+}
+
+/** The six core attributes as compact stat readouts, in the canonical PawnStatBanner order. Values are
+ *  EFFECTIVE (raw × active-condition multipliers) so they match the crippled body the sim uses — a stat
+ *  the conditions have dragged below its raw value shows the warn colour. */
+export function coreStats(entity: Pawn | Mob): EntityStat[] {
+  const sm = conditionStatMultipliers(entity);
+  const cell = (label: string, raw: number, mult: number): EntityStat => {
+    const eff = Math.round(raw * mult);
+    return { label, value: eff, warn: eff < raw };
+  };
+  const s = entity.stats;
+  return [
+    cell('STR', s.strength, sm.strength),
+    cell('DEX', s.dexterity, sm.dexterity),
+    cell('CON', s.constitution, sm.constitution),
+    cell('INT', s.intelligence, sm.intelligence),
+    cell('PER', s.perception, sm.perception),
+    cell('CHA', s.charisma, 1)
+  ];
 }
 
 /**
@@ -307,8 +327,8 @@ export function buildPawnCard(
     color: '#4FA3D1'
   });
   // No flat "HP" stat: the body model (limbs/blood/pain) is the real health — see the HEALTH popup.
-  // Mood moves to the header (right of the name); MOVE shows current movement speed.
-  const stats: EntityStat[] = [moveSpeedStat(pawn)];
+  // Mood moves to the header (right of the name); core attributes then MOVE (current movement speed).
+  const stats: EntityStat[] = [...coreStats(pawn), moveSpeedStat(pawn)];
   return {
     name: pawn.name + entityDebugLabel(pawn),
     status: pawnStateLabel(pawn),
