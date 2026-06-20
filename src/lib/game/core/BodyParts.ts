@@ -24,6 +24,10 @@ export interface BodyPartDef {
   /** Natural-weapon ids this part can wield (jaw → bite, paw → claw, hoof → kick…). A creature can use
    *  one of its `naturalWeapons` ONLY while it still has a non-missing part that enables it. */
   weapons?: string[];
+  /** Natural-armour SHARE for this part (0–1+): how much of the creature's `naturalArmor` magnitude
+   *  protects it. The plan sets the DISTRIBUTION (armoured back/carapace ~1.0, soft belly ~0.5, exposed
+   *  eyes ~0.1); the creature sets the strength. A destroyed part takes its armour with it. */
+  armor?: number;
 }
 
 interface CatalogPart {
@@ -36,6 +40,7 @@ interface CatalogPart {
   bone?: boolean;
   critical?: boolean;
   weapons?: string[];
+  armor?: number;
 }
 interface PlanBlock {
   parts?: Record<string, CatalogPart>;
@@ -78,7 +83,8 @@ for (const [id, p] of Object.entries(ALL_PARTS)) {
     isVital: p.isVital ?? false,
     boneHp: p.bone ? Math.round(p.size * BONE_FRACTION) : undefined,
     isCritical: p.critical ?? undefined,
-    weapons: p.weapons
+    weapons: p.weapons,
+    armor: p.armor
   };
 }
 

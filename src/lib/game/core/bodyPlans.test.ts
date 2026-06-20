@@ -152,6 +152,19 @@ describe('body plans', () => {
       expect(wc.has('kick')).toBe(false); // → attacker falls back to thrash
     });
 
+    it('natural armour is distributed per part (armoured trunk, soft belly, exposed eyes); every rollable part has a share', () => {
+      const chest = PART_DEF_MAP['chest']!.armor!;
+      const belly = PART_DEF_MAP['abdomen']!.armor!;
+      const eye = PART_DEF_MAP['leftEye']!.armor!;
+      expect(chest).toBeGreaterThan(belly); // soft belly is a weak spot
+      expect(belly).toBeGreaterThan(eye); // eyes barely armoured
+      expect(PART_DEF_MAP['cephalothorax']!.armor).toBe(1.0); // chitin carapace
+      // Every part that can be ROLLED as a hit location carries an armour share (no gaps).
+      for (const def of Object.values(PART_DEF_MAP)) {
+        if (def && def.hitWeight > 0) expect(typeof def.armor).toBe('number');
+      }
+    });
+
     it("a quadruped that loses its mouth can't bite but still claws with a surviving paw", () => {
       // bite comes from the whole mouth (jaw + snout); destroy both to lose it.
       const limbs = markMissing(createBodyPlanLimbs('quadruped', 1), [

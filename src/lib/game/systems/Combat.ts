@@ -53,10 +53,13 @@ import {
   parentLimbOf,
   enabledNaturalWeapons,
   BOUND_NATURAL_WEAPONS,
-  CORE_LIMB_IDS,
   DEFAULT_PLAN,
   BONE_FRACTION
 } from '../core/BodyParts';
+
+/** Armour share for a body part with no explicit `armor` in limbmap (shouldn't happen for rollable
+ *  parts, which all carry one). Mid value so an unannotated part is neither bare nor fully plated. */
+const DEFAULT_ARMOR_SHARE = 0.5;
 export { PART_DEF_MAP, createDefaultBodyParts, createBodyPlanLimbs };
 
 /** The limb (in this entity's OWN tree) that holds a given part — replaces the old global parentLimb,
@@ -634,17 +637,19 @@ function partArmorReduction(defender: Pawn | Mob, partId: BodyPartId, armorPen: 
       if (candidate.defense > bestDef) bestDef = candidate.defense;
     }
   }
-  // Creature natural armour (hide/scale/chitin) — a flat defence layer that behaves exactly like worn
-  // armour, so a 0-armorPen attack (bare fists, raking claws) barely scratches a thick-hided beast
-  // while an armour-piercing bodkin/pick still bites. The keystone of big-beast durability.
+  // Creature natural armour (hide/scale/chitin) — the `naturalArmor` MAGNITUDE, distributed across the
+  // body by each part's `armor` SHARE (limbmap): a thick-hided back soaks fully, a soft belly barely.
+  // Behaves like worn armour, so a 0-armorPen attack (bare fists, raking claws) barely scratches a
+  // thick-hided beast while an armour-piercing bodkin/pick still bites. The keystone of big-beast durability.
   if ('creatureId' in defender) {
     const natural = getCreatureById(defender.creatureId)?.naturalArmor ?? 0;
     if (natural > bestDef) bestDef = natural;
   }
   if (bestDef <= 0) return 0;
-  // Core (head/torso/body) get full armour benefit; peripheral limbs only partial.
-  const rootLimb = limbOfPart(defender, partId);
-  const base = CORE_LIMB_IDS.has(rootLimb?.id ?? '') ? bestDef / 100 : (bestDef / 100) * 0.3;
+  // Per-part armour SHARE (limbmap) is the distribution — replaces the old flat core/peripheral split.
+  // A destroyed part is gone, so its armour goes with it automatically (it can't be rolled as the target).
+  const share = def.armor ?? DEFAULT_ARMOR_SHARE;
+  const base = (bestDef / 100) * share;
   return clamp(base * (1 - armorPen), 0, 0.9);
 }
 
