@@ -116,18 +116,10 @@ export function stepHunger(state: GameState): GameState {
       bloodVolume = Math.min(maxBV, bloodVolume + perTick(0.05));
     }
 
-    // Sync blood_loss condition severity (mirrors pawn tickConditions).
-    let conditions = [...(mob.conditions ?? [])];
+    // (The redundant `blood_loss` condition is gone — low blood now drives `shock` directly, below.)
+    const conditions = [...(mob.conditions ?? [])];
     // Pre-tick stages of flagged persistent conditions (e.g. shock) — to float a label on change.
     const prevStages = snapshotConditionStages(conditions);
-    const bloodSeverity = Math.round((1 - bloodVolume / maxBV) * 1000) / 1000;
-    const bloodLossIdx = conditions.findIndex((c) => c.id === 'blood_loss');
-    if (bloodSeverity > 0) {
-      if (bloodLossIdx === -1) conditions.push({ id: 'blood_loss', severity: bloodSeverity });
-      else conditions[bloodLossIdx] = { ...conditions[bloodLossIdx], severity: bloodSeverity };
-    } else if (bloodLossIdx !== -1) {
-      conditions.splice(bloodLossIdx, 1);
-    }
 
     // ── Need-driven conditions (malnutrition ← hunger) — the SAME data-driven model as pawns ──
     // Malnutrition onsets at hunger 87 and accrues slowly (conditions.jsonc), so a starving mob keeps
@@ -223,9 +215,9 @@ export function stepHunger(state: GameState): GameState {
     }
 
     // ── Shock ──────────────────────────────────────────────────────────────────
-    // Severe pain (combat injuries) sends a mob into shock too — SAME rule as pawns (applyShock).
-    // mob.pain is kept current by combat (_applyInjuryToEntity) and the heal block above.
-    applyShock(conditions, mob.pain ?? 0);
+    // Severe pain OR heavy blood loss sends a mob into shock — SAME rule as pawns (applyShock); this
+    // subsumes the old blood_loss condition. mob.pain is kept current by combat + the heal block above.
+    applyShock(conditions, mob.pain ?? 0, 1 - bloodVolume / maxBV);
 
     mob.needs.hunger = newHunger;
     mob.needs.fatigue = newFatigue;

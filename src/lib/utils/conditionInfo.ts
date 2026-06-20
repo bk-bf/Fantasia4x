@@ -9,8 +9,8 @@ import conditionsData from '$lib/game/database/conditions.jsonc';
 type CharSpan = { sheet?: string; id?: number; from?: number; to?: number; literal?: string };
 
 const ALL = conditionsData as unknown as Array<ConditionDef | TransientConditionDef>;
-const PERSISTENT = ALL.filter((d): d is ConditionDef => d.duration === 'persistent');
-const TRANSIENT = ALL.filter((d): d is TransientConditionDef => d.duration === 'transient');
+const PERSISTENT = ALL.filter((d): d is ConditionDef => d.transient !== true);
+const TRANSIENT = ALL.filter((d): d is TransientConditionDef => d.transient === true);
 
 export interface ConditionView {
   id: string;
@@ -164,7 +164,7 @@ export function getActiveConditionViews(entity: Pawn | Mob): ConditionView[] {
       lifeThreatening: stage?.lifeThreatening,
       sources: persistentSources(entity, def),
       effects: effectLines(stage?.modifiers ?? {}),
-      modifiers: stage?.modifiers ?? {}
+      modifiers: (stage?.modifiers ?? {}) as Record<string, number>
     });
   }
 

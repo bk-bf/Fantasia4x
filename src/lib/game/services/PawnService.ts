@@ -36,7 +36,7 @@ import { gatedConsole as console } from '../core/log';
 // references the transient ones — pick them out by the `duration` discriminant.
 const TRANSIENT_CONDITIONS_DB = (
   conditionsData as unknown as Array<ConditionDef | TransientConditionDef>
-).filter((d): d is TransientConditionDef => d.duration === 'transient');
+).filter((d): d is TransientConditionDef => d.transient === true);
 
 /** Resolve active effect definitions from a pawn's transientConditions id list. */
 function getActiveTransientConditions(entity: Pawn | Mob): TransientConditionDef[] {

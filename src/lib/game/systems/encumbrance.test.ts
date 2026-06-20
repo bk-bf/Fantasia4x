@@ -35,16 +35,22 @@ describe('driveEncumbrance (load → staged condition)', () => {
     expect(sev(light)).toBeLessThan(sev(mid));
     expect(sev(mid)).toBeLessThan(sev(heavy));
 
-    expect(getConditionCurrentStage(light.find((x) => x.id === 'encumbered')!)?.label).toBe('burdened');
-    expect(getConditionCurrentStage(heavy.find((x) => x.id === 'encumbered')!)?.label).toBe('overloaded');
+    expect(getConditionCurrentStage(light.find((x) => x.id === 'encumbered')!)?.label).toBe(
+      'burdened'
+    );
+    expect(getConditionCurrentStage(heavy.find((x) => x.id === 'encumbered')!)?.label).toBe(
+      'overloaded'
+    );
   });
 
-  it('the overloaded stage cuts dodge and aim (combat modifiers exist)', () => {
+  it('the overloaded stage cuts combat (DEX → dodge + aim) and movement', () => {
     const c: EntityCondition[] = [];
     driveEncumbrance(c, 1.5);
     const stage = getConditionCurrentStage(c.find((x) => x.id === 'encumbered')!);
-    expect(stage!.modifiers.dodge).toBeLessThan(1); // easier to hit
-    expect(stage!.modifiers.hitChance).toBeLessThan(1); // worse aim
+    // Evasion + aim now flow through the DEX penalty (the stat the dodge/hit formulas read), plus a
+    // STR hit; movement is its own modifier.
+    expect(stage!.modifiers.dexterity).toBeLessThan(1); // easier to hit + worse aim
+    expect(stage!.modifiers.strength).toBeLessThan(1); // weaker under the load
     expect(stage!.modifiers.moveSpeed).toBeLessThan(1); // slower
   });
 });
@@ -53,9 +59,23 @@ describe('carry capacity: worn armour adds VOLUME (pockets) but fills WEIGHT', (
   const makePawn = (over: Partial<Pawn> = {}): Pawn =>
     ({
       id: 'p',
-      stats: { strength: 10, dexterity: 10, constitution: 10, perception: 10, intelligence: 10, charisma: 10 },
+      stats: {
+        strength: 10,
+        dexterity: 10,
+        constitution: 10,
+        perception: 10,
+        intelligence: 10,
+        charisma: 10
+      },
       physicalTraits: { weight: 70, height: 170 },
-      inventory: { items: {}, instances: [], weightKg: 0, maxWeightKg: 0, volumeL: 0, maxVolumeL: 0 },
+      inventory: {
+        items: {},
+        instances: [],
+        weightKg: 0,
+        maxWeightKg: 0,
+        volumeL: 0,
+        maxVolumeL: 0
+      },
       equipment: {},
       ...(over as object)
     }) as unknown as Pawn;

@@ -11,7 +11,7 @@ import type { GameState, Mob, Pawn } from '../core/types';
 const MAGICAL_CONDS = (
   conditionsData as Array<{
     id: string;
-    duration: string;
+    transient?: boolean;
     magical?: boolean;
     modifiers: Record<string, number>;
   }>
@@ -68,9 +68,20 @@ describe('§M magical conditions', () => {
         'vigor'
       ].sort()
     );
-    const CONSUMED = new Set(['workEfficiency', 'moveSpeed', 'fatigueRate', 'hungerRate', 'dodge']);
+    const CONSUMED = new Set([
+      'strength',
+      'dexterity',
+      'constitution',
+      'perception',
+      'intelligence',
+      'workEfficiency',
+      'moveSpeed',
+      'fatigueRate',
+      'hungerRate',
+      'dodge'
+    ]);
     for (const c of MAGICAL_CONDS) {
-      expect(c.duration).toBe('transient');
+      expect(c.transient).toBe(true);
       const keys = Object.keys(c.modifiers);
       expect(keys.length).toBeGreaterThan(0);
       // every modifier key is one the engine actually consumes, and is an actual buff (not 1.0)

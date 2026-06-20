@@ -462,18 +462,7 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
     bloodVolume = Math.max(0, bloodVolume - perTick(totalBleedRate));
   }
 
-  // Sync blood_loss condition severity = 1 - (bloodVolume / maxBloodVolume)
-  const bloodSeverity = 1 - bloodVolume / maxBloodVolume;
-  const bloodLossIdx = conditions.findIndex((c) => c.id === 'blood_loss');
-  if (bloodSeverity > 0) {
-    if (bloodLossIdx === -1) {
-      conditions.push({ id: 'blood_loss', severity: bloodSeverity });
-    } else {
-      conditions[bloodLossIdx] = { ...conditions[bloodLossIdx], severity: bloodSeverity };
-    }
-  } else if (bloodLossIdx !== -1) {
-    conditions.splice(bloodLossIdx, 1);
-  }
+  // (The redundant `blood_loss` condition is gone — low blood now drives `shock` directly, below.)
 
   // Regen blood when not bleeding — rate driven by blood_regeneration ability (CON-scaled)
   if (totalBleedRate === 0 && bloodVolume < maxBloodVolume) {
@@ -559,8 +548,9 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
   }
 
   // ── Shock ──────────────────────────────────────────────────────────────────
-  // Severe pain sends the body into shock — shared rule for pawns + mobs (applyShock).
-  applyShock(conditions, pawn.pain ?? 0);
+  // Severe pain OR heavy blood loss sends the body into shock — shared rule for pawns + mobs
+  // (applyShock). This subsumes the old `blood_loss` condition: the worse of pain/blood drives it.
+  applyShock(conditions, pawn.pain ?? 0, 1 - bloodVolume / maxBloodVolume);
 
   // ── Persist updated condition/blood state ──────────────────────────────────
   // ADR-002 amendment (hot per-tick, behind the worker): the common (non-lethal) path mutates the

@@ -29,7 +29,11 @@ import {
   type AmmoPick,
   type MeleeGrip
 } from './rangedCombat';
-import { getConditionCurrentStage, getConditionFloater } from '../core/needs';
+import {
+  getConditionCurrentStage,
+  getConditionFloater,
+  conditionStatMultipliers
+} from '../core/needs';
 import { getCreatureById } from '../core/Creatures';
 import { woundForDamageType, woundById, severityFromFrac } from '../core/Wounds';
 import { scaleWeaponQuality, scaleArmorQuality } from '../core/itemQuality';
@@ -49,7 +53,7 @@ export { PART_DEF_MAP, createDefaultBodyParts };
 // transient ones (winded → dodge) — pick them out by the `duration` discriminant.
 const TRANSIENT_CONDITIONS_DB = (
   conditionsData as unknown as Array<ConditionDef | TransientConditionDef>
-).filter((d): d is TransientConditionDef => d.duration === 'transient');
+).filter((d): d is TransientConditionDef => d.transient === true);
 
 // ── Tuning constants ─────────────────────────────────────────────────────────
 /** Scales per-part bleed (bleeding = bleedRatio × this × bleedMod × wound-frac × clot-remaining, per
@@ -415,8 +419,12 @@ function applyMeleeGrip(p: AttackProfile, grip: MeleeGrip): AttackProfile {
  *  pawn's bare hands/feet); finally an unarmed fallback. Both gear paths resolve
  *  through the same ItemService lookup. */
 function attackerProfile(attacker: Pawn | Mob): AttackProfile {
-  const str = attacker.stats.strength;
-  const dex = attacker.stats.dexterity;
+  // Conditions cripple the attacker's raw STR/DEX here (damage scales with STR, the to-hit with DEX),
+  // so a shocked/frostbitten/envenomed fighter genuinely hits softer and misses more — not just "works
+  // slower". Dodge/crit/attack-speed already flow through evaluateStat, which applies the same penalty.
+  const sm = conditionStatMultipliers(attacker);
+  const str = attacker.stats.strength * sm.strength;
+  const dex = attacker.stats.dexterity * sm.dexterity;
 
   // Equipped weapon (pawns; future-proofed for armed mobs).
   if ('equipment' in attacker && attacker.equipment?.mainHand) {
@@ -478,9 +486,12 @@ function attackerProfile(attacker: Pawn | Mob): AttackProfile {
  * Clamped 0–0.90 (can never fully negate damage from this layer alone).
  */
 function physicalResistance(defender: Pawn | Mob, damageType: DamageType): number {
-  const con = defender.stats.constitution;
-  const dex = defender.stats.dexterity;
-  const str = defender.stats.strength;
+  // Conditions sap the defender's resistance stats too — a shocked/frostbitten body soaks less, so it
+  // takes more damage (combat conditions cut both ways).
+  const sm = conditionStatMultipliers(defender);
+  const con = defender.stats.constitution * sm.constitution;
+  const dex = defender.stats.dexterity * sm.dexterity;
+  const str = defender.stats.strength * sm.strength;
 
   // Base from stats — mirrors the *_resistance ability formulas in stats.jsonc (cutting=DEX, piercing/
   // blunt=CON(+STR); §M elemental: fire/frost=CON, lightning=DEX — same axes the resistance stats use).
