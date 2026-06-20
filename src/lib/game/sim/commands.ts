@@ -523,7 +523,7 @@ export const COMMANDS: Record<string, Cmd> = {
     tile.resources = { ...tile.resources, [p.resourceId]: max };
     const walkable = def.walkable ?? true;
     tile.walkable = walkable;
-    tile.blocksSight = terrainBlocksSight(walkable, tile.subType);
+    tile.blocksSight = def.blocksSight ?? terrainBlocksSight(walkable, tile.subType);
     patchPathfindingWalkable(p.x, p.y, walkable);
     markTileDirty(p.y, p.x, tile);
     return { ...s };
@@ -547,7 +547,7 @@ export const COMMANDS: Record<string, Cmd> = {
       resources[id] = def?.nodeAmountRange?.[1] ?? 3;
       if (def?.walkable === false) {
         tile.walkable = false;
-        tile.blocksSight = terrainBlocksSight(false, tile.subType);
+        tile.blocksSight = def.blocksSight ?? terrainBlocksSight(false, tile.subType);
         patchPathfindingWalkable(p.x, p.y, false);
       }
     }

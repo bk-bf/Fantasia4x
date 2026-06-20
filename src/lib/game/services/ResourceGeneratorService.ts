@@ -160,8 +160,9 @@ class ResourceGeneratorServiceImpl {
     const resourceSub = SUBTERRAINS[def.subterrain] ?? SUBTERRAIN_FALLBACK;
     tile.ascii = pickChar(resourceSub, tile.x, tile.y);
     tile.walkable = def.walkable ?? resourceSub.walkable;
-    // Bake combat LoS (Part VII): a non-walkable rock node (mountain_wall/cliff_wall) blocks sight.
-    tile.blocksSight = terrainBlocksSight(tile.walkable, tile.subType);
+    // Bake combat LoS (Part VII): the resource's explicit `blocksSight` wins (mountain_wall/cliff_wall
+    // = true), else fall back to the natural-terrain rule (non-walkable & not water).
+    tile.blocksSight = def.blocksSight ?? terrainBlocksSight(tile.walkable, tile.subType);
     tile.movementCost = resourceSub.movementCost;
   }
 

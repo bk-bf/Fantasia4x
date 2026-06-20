@@ -57,6 +57,13 @@ export interface ResourceObjectDef {
    * Defaults to true when absent.
    */
   walkable?: boolean;
+  /**
+   * Whether this resource blocks combat line-of-sight (RANGED-COMBAT Part VII) — like a wall's
+   * `blocksSight` in buildings.jsonc. EXPLICIT override: when present it wins; when omitted the tile
+   * falls back to the natural-terrain rule (`terrainBlocksSight` = non-walkable & not water). Set it
+   * to pin intent (e.g. `mountain_wall`/`cliff_wall` = true) or to opt a non-walkable node OUT (false).
+   */
+  blocksSight?: boolean;
   /** Resolved char array (from charSpans in JSON). */
   chars: string[];
   fg: [number, number, number];
