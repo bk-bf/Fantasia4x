@@ -23,7 +23,7 @@ Profiling-driven performance work, measured on the heavy `--profiler` sandbox (1
 
 ## 0 · Status
 
-- **🧱 CHUNKED TERRAIN (§E, 2026-06-20) — FPS regression from the 500×500 default map, fixed.** Commit
+- **🧱 CHUNKED TERRAIN (§E, 2026-06-20) — FPS regression from the 500×500 default map, FIXED + validated in-game.** Commit
   `b2a1031` changed the default map 240×160 → 500×500 (**38k → 250k tiles, 6.5×**). TPS was unaffected
   (the sim is per-*entity*: a 5-pawn/420-mob playtest) but **FPS clapped** — the renderer drew the WHOLE
   map as one static VBO (`renderAllTiles:true`): a ~138MB buffer, **1.5M verts drawn every frame**, and
@@ -33,7 +33,9 @@ Profiling-driven performance work, measured on the heavy `--profiler` sandbox (1
   chunks; un-drawn chunks are evicted to bound GPU memory. Render cost is now **O(visible tiles),
   independent of map size**. Geometry stays camera-independent (world-space verts + pan/zoom uniforms),
   so panning only changes which chunks draw. `grid-renderer.ts` + `renderer-core.ts`; `pnpm check` clean
-  (pre-existing `bulkLogistics.test.ts` cast error aside), 486 tests green. See §E.
+  (pre-existing `bulkLogistics.test.ts` cast error aside), 486 tests green. **Live playtest confirmed:**
+  the pre-fix sustained collapse (~30s at 14–50 TPS, bottoming at `tps=1`) is gone — post-fix `perf.log`
+  holds a flat **60–61 TPS** over a ~90s stretch with only isolated single-tick GC blips. See §E.
 - **🪶 ENTITY BASELINE CUT (D8, 2026-06-16) — the snapshot projection got its surgical cut after all.**
   The `[SNAP-PAWN]` field probe (measured, not assumed) showed the per-flush slim pawn was ~766B dominated by
   `needs` (150) + `activeJob` (117) + `jobQueue` (168 *when populated*) + `state` (77) — **`path` was only 35B**,
@@ -534,8 +536,14 @@ re-clones now copying 250k tiles** — same root cause leaking across the bounda
   SET changes as you scroll, never the geometry. The dynamic overlays (sparse pawn/item/mob grids, no
   `cacheVersion`) keep the unchanged full-render path — they hold a handful of cells.
 
-**Verify:** trace a 500×500 playtest — per-frame `drawArrays` vert count should track the viewport, not
-250k; terrain rebuilds should touch only visible chunks. `pnpm check`/`pnpm test` green.
+- [x] **Validated in a live 500×500 playtest (2026-06-20).** User confirmed "FPS is back". `perf.log`
+  cross-check: the **sustained pre-fix collapse is gone** — pre-fix the run sat at **14–50 TPS for ~30s,
+  bottoming at `tps=1`** (T067xx–T081xx) from the 250k rebuild/clone storm; post-fix a **~90s steady
+  stretch (T085xx–T141xx) holds a flat 60–61 TPS** with only **4 isolated single-tick GC/event blips** in
+  the whole window and **zero WebGL/chunk errors** in `system.log`. The renderer's main-thread contention
+  was also dragging the worker bridge, so flattening it flattened the residual *TPS* dips too — not just
+  FPS. `pnpm check`/`pnpm test` green (486 tests). *(`perf.log` logs TPS only; FPS is the user's eyes —
+  but the flat-TPS recovery + no sustained dips corroborates it.)*
 
 ### Follow-ups (not needed for the FPS fix)
 
