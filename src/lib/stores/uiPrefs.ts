@@ -83,6 +83,7 @@ export const hideEmptyResourceCategories = createPersistedBool(HIDE_EMPTY_RES_CA
 /**
  * "Cinematic" layout toggle: when on, the resource + chronicle sidebars go transparent and out of
  * flow (floating over the map), so the bottom nav and overlay panel reflow to fill the full viewport
- * width. Off by default; persisted across sessions. Driven from the top-bar settings menu.
+ * width. ON by default; persisted across sessions (toggling it off sticks). Driven from the top-bar
+ * settings menu.
  */
-export const hideSidebars = createPersistedBool(HIDE_SIDEBARS_KEY, false);
+export const hideSidebars = createPersistedBool(HIDE_SIDEBARS_KEY, true);
