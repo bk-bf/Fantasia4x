@@ -1,10 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { pawnService } from './PawnService';
-import { rebuildThermalField } from './EnvironmentService';
+import { rebuildThermalField, biomeBaseMoisture } from './EnvironmentService';
 import type { GameState, Pawn, WorldTile, WeatherState, PlacedBuilding } from '../core/types';
 
 // SEASONS_WEATHER — pawn wetness meter: soaks over time on wet (>50%) tiles (rain raises tile
-// wetness), dries off when warm/sheltered. Roofs keep the tile under them dry.
+// wetness), dries off when warm/sheltered. Roofs keep the tile under them dry. Base tile wetness is
+// baked into `tile.moisture` at world-gen (distance-to-water falloff); here we seed it from the biome
+// baseline so far-from-water tiles read their terrain floor.
 
 function tile(terrainType: string, temperature = 15): WorldTile {
   return {
@@ -16,7 +18,7 @@ function tile(terrainType: string, temperature = 15): WorldTile {
     terrainType,
     subType: 'dirt',
     density: 0.4,
-    moisture: 0,
+    moisture: biomeBaseMoisture(terrainType),
     temperature,
     movementCost: 1,
     walkable: true,

@@ -45,7 +45,7 @@ import { researchService } from '../services/ResearchService';
 import { devSpawnLooseItems, devDestroyAllItems } from '../dev/devWorld';
 import { generatePawns } from '../entities/Pawns';
 import { devSpawnMobs } from '../services/entity/entitySpawning';
-import { makeWeather, tileWetnessAt } from '../services/EnvironmentService';
+import { makeWeather, tileWetness } from '../services/EnvironmentService';
 import { resourceObjectService } from '../services/ResourceObjectService';
 import { patchPathfindingWalkable } from '../services/PathfinderService';
 import { markTileDirty } from '../core/tileDeltas';
@@ -559,7 +559,7 @@ export const COMMANDS: Record<string, Cmd> = {
     const v = Math.max(0, Math.min(100, p.value ?? 0));
     for (const row of s.worldMap) {
       for (const tile of row) {
-        const wet = tileWetnessAt(tile.x, tile.y, tile.terrainType, s.weather);
+        const wet = tileWetness(tile.moisture ?? 0, s.weather);
         const factor = 0.4 + (Math.max(0, Math.min(100, wet)) / 100) * 1.4;
         const next = v <= 0 ? 0 : Math.max(0, Math.min(100, Math.round(v * factor)));
         if (next === (tile.snow ?? 0)) continue;

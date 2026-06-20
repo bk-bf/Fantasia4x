@@ -10,6 +10,7 @@ import {
   getWaterLevel
 } from '../core/Terrains';
 import { resourceGeneratorService } from '../services/ResourceGeneratorService';
+import { biomeBaseMoisture, baseMoistureFromWater } from '../services/EnvironmentService';
 
 // Noise constants ported from Celestia noise_generator.gd
 const TERRAIN_FREQUENCY = 0.005;
@@ -182,8 +183,73 @@ export function generateWorld(width: number, height: number, seed = Date.now()):
     }
   }
 
+  // Phase 5a: distribute base tile wetness outward from water (spider-web falloff).
+  assignMoisture(world, detailNoise);
+
   // Phase 5b: populate tile-level resource amounts
   resourceGeneratorService.generateResources(world, seed);
 
   return world;
+}
+
+// Organic ± jitter on the baked moisture so the damp bands aren't perfectly smooth contours.
+const MOISTURE_NOISE_FREQUENCY = 0.06;
+const MOISTURE_NOISE_SPREAD = 8; // ± wetness points
+
+/**
+ * Bake base tile wetness (`tile.moisture`, 0–100%) from each tile's distance to the nearest water.
+ * A two-pass chamfer distance transform gives every tile its distance (in tiles) to water in O(n×2);
+ * `baseMoistureFromWater` then turns that into wetness — high beside water, thinning inland to the
+ * biome baseline. If a map has no water, every tile falls back to its biome baseMoisture. Runs once at
+ * world-gen; the runtime only reads the baked value (+ live weather).
+ */
+function assignMoisture(
+  world: WorldTile[][],
+  detailNoise: (x: number, y: number) => number
+): void {
+  const h = world.length;
+  const w = h > 0 ? world[0].length : 0;
+  if (w === 0) return;
+  const INF = 1e9;
+  const ORTHO = 1; // orthogonal step distance
+  const DIAG = Math.SQRT2; // diagonal step distance
+  const dist = new Float64Array(w * h);
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++) dist[y * w + x] = world[y][x].type === 'water' ? 0 : INF;
+
+  // Forward pass (top-left → bottom-right): relax each cell from its already-finalised NW neighbours.
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = y * w + x;
+      let d = dist[i];
+      if (x > 0) d = Math.min(d, dist[i - 1] + ORTHO);
+      if (y > 0) d = Math.min(d, dist[i - w] + ORTHO);
+      if (x > 0 && y > 0) d = Math.min(d, dist[i - w - 1] + DIAG);
+      if (x < w - 1 && y > 0) d = Math.min(d, dist[i - w + 1] + DIAG);
+      dist[i] = d;
+    }
+  }
+  // Backward pass (bottom-right → top-left): relax from SE neighbours to complete the transform.
+  for (let y = h - 1; y >= 0; y--) {
+    for (let x = w - 1; x >= 0; x--) {
+      const i = y * w + x;
+      let d = dist[i];
+      if (x < w - 1) d = Math.min(d, dist[i + 1] + ORTHO);
+      if (y < h - 1) d = Math.min(d, dist[i + w] + ORTHO);
+      if (x < w - 1 && y < h - 1) d = Math.min(d, dist[i + w + 1] + DIAG);
+      if (x > 0 && y < h - 1) d = Math.min(d, dist[i + w - 1] + DIAG);
+      dist[i] = d;
+    }
+  }
+
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const tile = world[y][x];
+      const base = baseMoistureFromWater(biomeBaseMoisture(tile.terrainType), dist[y * w + x]);
+      const jitter =
+        detailNoise(x * MOISTURE_NOISE_FREQUENCY, y * MOISTURE_NOISE_FREQUENCY) *
+        MOISTURE_NOISE_SPREAD;
+      tile.moisture = Math.max(0, Math.min(100, Math.round(base + jitter)));
+    }
+  }
 }

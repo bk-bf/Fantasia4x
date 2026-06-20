@@ -464,7 +464,7 @@ export class PawnServiceImpl implements PawnService {
       // the meter dries over 1–5 in-game hours, faster when warm and/or sheltered.
       const wet0 = needs.wetness ?? 0;
       let wetness = wet0;
-      const tileWet = tile ? tileWetness(tile.terrainType, gameState.weather, thermal) : 0;
+      const tileWet = tile ? tileWetness(tile.moisture ?? 0, gameState.weather, thermal) : 0;
       if (tileWet >= 100) {
         // Fully-wet tile (torrential rain / standing water): instantly soaked.
         wetness = 100;

@@ -33,7 +33,7 @@
     environmentService,
     computeTileLightLevel,
     tileTemperature,
-    tileWetnessAt,
+    tileWetness,
     computeThermalAt,
     weatherWindStrength
   } from '$lib/game/services/EnvironmentService.js';
@@ -3150,13 +3150,7 @@
       $currentWeather,
       tileThermal
     )}
-    {@const tileWet = tileWetnessAt(
-      hoverTile.x,
-      hoverTile.y,
-      hoverTile.terrainType,
-      $currentWeather,
-      tileThermal
-    )}
+    {@const tileWet = tileWetness(hoverTile.moisture ?? 0, $currentWeather, tileThermal)}
     {@const windy =
       Math.max(weatherWindStrength($currentWeather?.type), $currentWeather?.wind ?? 0) >= 0.4}
     {@const tileSnow = Math.round(hoverTile.snow ?? 0)}

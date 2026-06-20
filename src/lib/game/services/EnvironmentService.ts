@@ -675,69 +675,33 @@ function weatherMoistureBonus(weather?: WeatherState): number {
   return weatherDef(weather?.type).moistureBonus;
 }
 
-// Per-tile wetness variation (SEASONS_WEATHER). The biome baseMoisture is a single constant per
-// biome, so without this every tile of a biome reads the SAME wetness → snow cover bands hard at a
-// few discrete levels. A smooth value-noise field (deterministic, low-frequency) adds a gradual
-// ±WETNESS_NOISE_SPREAD offset that changes slowly across neighbours, so wetness — and the snow that
-// scales off it — varies organically tile to tile.
-const WETNESS_NOISE_SCALE = 7; // tiles per noise cell — bigger = smoother, broader patches
-const WETNESS_NOISE_SPREAD = 22; // ± wetness points the noise can shift a tile
+// Base tile wetness is distributed by DISTANCE TO WATER (SEASONS_WEATHER): tiles touching water are
+// near-saturated and the damp thins out with distance like it would spread from a shoreline, bottoming
+// out at the biome's own baseline far inland. The per-tile distance field is computed once at world-gen
+// (WorldGenerator.assignMoisture, a chamfer distance transform) and baked into `tile.moisture`; the two
+// functions below are just the falloff CURVE and the weather add-on, kept here with the rest of the
+// wetness model so the worldgen pass and the runtime read it from one place.
+const WATER_EDGE_MOISTURE = 95; // base wetness % of a tile right beside water
+const MOISTURE_FALLOFF_TILES = 9; // distance (tiles) over which water's influence falls to ~37% (1/e)
 
-function hashUnit(ix: number, iy: number): number {
-  let h = (Math.imul(ix, 374761393) + Math.imul(iy, 668265263)) | 0;
-  h = Math.imul(h ^ (h >>> 13), 1274126177);
-  return ((h ^ (h >>> 16)) >>> 0) / 4294967295; // 0..1
+/** Base wetness (0–100%) for a tile from its biome baseline and distance (in tiles) to the nearest
+ *  water. Water saturates adjacent ground (≈WATER_EDGE_MOISTURE) and decays exponentially with
+ *  distance — the "spider-web thinning" — never dropping below the biome's own baseMoisture floor. */
+export function baseMoistureFromWater(biomeMoisture: number, distanceToWater: number): number {
+  const fromWater = WATER_EDGE_MOISTURE * Math.exp(-distanceToWater / MOISTURE_FALLOFF_TILES);
+  return Math.max(0, Math.min(100, Math.max(biomeMoisture, fromWater)));
 }
 
-/** Smooth value noise in [0,1] (bilinear lerp of a hashed lattice, smoothstep-eased). */
-function smoothNoise(x: number, y: number, scale: number): number {
-  const fx = x / scale;
-  const fy = y / scale;
-  const ix = Math.floor(fx);
-  const iy = Math.floor(fy);
-  const tx = fx - ix;
-  const ty = fy - iy;
-  const sx = tx * tx * (3 - 2 * tx);
-  const sy = ty * ty * (3 - 2 * ty);
-  const n00 = hashUnit(ix, iy);
-  const n10 = hashUnit(ix + 1, iy);
-  const n01 = hashUnit(ix, iy + 1);
-  const n11 = hashUnit(ix + 1, iy + 1);
-  const a = n00 + (n10 - n00) * sx;
-  const b = n01 + (n11 - n01) * sx;
-  return a + (b - a) * sy;
-}
-
-/** Smooth per-tile wetness offset in [-SPREAD, +SPREAD], gradual between neighbours. */
-function wetnessNoise(x: number, y: number): number {
-  return (smoothNoise(x, y, WETNESS_NOISE_SCALE) - 0.5) * 2 * WETNESS_NOISE_SPREAD;
-}
-
-/** Display wetness (0–100%) for a tile = biome baseline + current weather contribution. */
+/** Display/sim wetness (0–100%) for a tile = its baked base moisture (distance-to-water falloff) plus
+ *  the current weather contribution. Pass the tile's `moisture` so this stays a pure scalar function;
+ *  the weather (rain) contribution is kept out under a roof. */
 export function tileWetness(
-  terrainType: string,
+  baseMoisture: number,
   weather?: WeatherState,
   thermal: ThermalSample = NO_THERMAL
 ): number {
-  // Biome base wetness stays; the weather (rain) contribution is kept out under a roof.
   const fromWeather = weatherMoistureBonus(weather) * (1 - thermal.weatherProtection);
-  return Math.max(0, Math.min(100, biomeBaseMoisture(terrainType) + fromWeather));
-}
-
-/** Per-tile wetness (0–100%) — `tileWetness` plus a smooth spatial-noise offset so adjacent tiles
- *  vary gradually instead of all reading the biome constant. Use this where a tile's (x,y) is known
- *  (snow accumulation, the tile HUD) so cover/readout change organically across the map. */
-export function tileWetnessAt(
-  x: number,
-  y: number,
-  terrainType: string,
-  weather?: WeatherState,
-  thermal: ThermalSample = NO_THERMAL
-): number {
-  return Math.max(
-    0,
-    Math.min(100, tileWetness(terrainType, weather, thermal) + wetnessNoise(x, y))
-  );
+  return Math.max(0, Math.min(100, baseMoisture + fromWeather));
 }
 
 /**
@@ -801,7 +765,7 @@ export function accumulateSnow(
           100,
           prev +
             SNOW_ACCRUAL_PER_HOUR *
-              snowWetFactor(tileWetnessAt(tile.x, tile.y, tile.terrainType, weather)) *
+              snowWetFactor(tileWetness(tile.moisture ?? 0, weather)) *
               hours
         );
       } else if (temp >= 0 && prev > 0) {

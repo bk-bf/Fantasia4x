@@ -16,6 +16,7 @@ import {
   getEnvironmentTint,
   tileTemperature,
   tileWetness,
+  biomeBaseMoisture,
   coldExposure,
   heatExposure,
   effectiveTemperature,
@@ -306,19 +307,26 @@ describe('EnvironmentService — per-tile display fields (HUD)', () => {
   });
 
   it('tileWetness is 0–100 and rises with rain', () => {
-    const dry = tileWetness('plains', { type: 'clear', intensity: 0, turnsRemaining: 0 });
-    const wet = tileWetness('plains', { type: 'heavy_rain', intensity: 0.75, turnsRemaining: 0 });
+    const plains = biomeBaseMoisture('plains');
+    const dry = tileWetness(plains, { type: 'clear', intensity: 0, turnsRemaining: 0 });
+    const wet = tileWetness(plains, { type: 'heavy_rain', intensity: 0.75, turnsRemaining: 0 });
     expect(wet).toBeGreaterThan(dry);
     expect(
-      tileWetness('river', { type: 'heavy_rain', intensity: 1, turnsRemaining: 0 })
+      tileWetness(biomeBaseMoisture('river'), { type: 'heavy_rain', intensity: 1, turnsRemaining: 0 })
     ).toBeLessThanOrEqual(100);
     expect(
-      tileWetness('mountain', { type: 'heat_wave', intensity: 1, turnsRemaining: 0 })
+      tileWetness(biomeBaseMoisture('mountain'), {
+        type: 'heat_wave',
+        intensity: 1,
+        turnsRemaining: 0
+      })
     ).toBeGreaterThanOrEqual(0);
   });
 
   it('wetter biomes read wetter than drier ones', () => {
-    expect(tileWetness('river', undefined)).toBeGreaterThan(tileWetness('mountain', undefined));
+    expect(tileWetness(biomeBaseMoisture('river'), undefined)).toBeGreaterThan(
+      tileWetness(biomeBaseMoisture('mountain'), undefined)
+    );
   });
 });
 
@@ -432,7 +440,9 @@ describe('Thermal model — fire warmth, roof shelter, effective temperature', (
       tileTemperature('plains', 'winter', rain, NO_THERMAL)
     );
     // …and drier (rain kept out).
-    expect(tileWetness('plains', rain, roof)).toBeLessThan(tileWetness('plains', rain, NO_THERMAL));
+    expect(tileWetness(biomeBaseMoisture('plains'), rain, roof)).toBeLessThan(
+      tileWetness(biomeBaseMoisture('plains'), rain, NO_THERMAL)
+    );
   });
 });
 
