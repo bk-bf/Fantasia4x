@@ -166,7 +166,8 @@ export interface AmmoPick {
 /**
  * The best available ammo in the pawn's inventory matching `category`, or null. "Best" = highest
  * damageBonus + armorPen (cheap heuristic — better ammo wins, the dynamic-material philosophy).
- * Ammo rides normal inventory for now (the quiver/haul logistics loop is deferred — see the spec).
+ * Ammo rides normal inventory BY DESIGN — a quiver-only capacity gate was rejected as unrealistic
+ * (a quiver sells draw SPEED, not storage); normal hauling already restocks ammo. See the spec closeout.
  */
 export function pickAmmo(pawn: Pawn, category: string): AmmoPick | null {
   const items = pawn.inventory?.items;
