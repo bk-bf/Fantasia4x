@@ -1,4 +1,4 @@
-<!-- LOC cap: 730 (created: 2026-06-14, rewritten 2026-06-14 post-profiling; worker shipped 2026-06-14; Rust-SoA pivot 2026-06-14 then ABORTED after R1 2026-06-15 → mutable-in-place JS; M1–M3 + throttle landed 2026-06-15, de-immutabling plateaued; 2026-06-15 custom profiler RETIRED → Firefox Profiler + pq; capacity/formula caches + the WORKER→MAIN SNAPSHOT (W2/W2b) broke the plateau → 80–100 TPS @4×; then de-immutabled pawn-patch spreads + paused warmup screen → 200+ TPS @4× after ~5s, GOAL CRUSHED 2026-06-15; then JS-allocation capture (§C) verified the de-immutable win + drove the harvest-time worldMap-delta fix; 2026-06-15 Electron chosen over Tauri (A/B), and the Electron renderer trace opened §D — renderer-side hitches D1–D3; 2026-06-16 §D extended: prealloc + designation-decouple + RESYNC 8→32 + worldMapDelta-slim landed, and the BIG one — three `worldMap.map()` full-rebuilds (harvest completion / mob forage / building footprint) found via the `[TRIG]` probe and de-immutabled in place → `worldMapRef=0`; sectional throttle TRIED+REVERTED; then the ENTITY BASELINE got its surgical cut after all (D8) — `[SNAP-PAWN]` field-audit + drop-never-read-fields projection (`entityProjection.ts`), slim pawn 766→~535B / pawns 152k→109k, the path≈900B premise was STALE; next non-entity lever = `droppedItems` deltas) -->
+<!-- LOC cap: 780 (created: 2026-06-14, rewritten 2026-06-14 post-profiling; worker shipped 2026-06-14; Rust-SoA pivot 2026-06-14 then ABORTED after R1 2026-06-15 → mutable-in-place JS; M1–M3 + throttle landed 2026-06-15, de-immutabling plateaued; 2026-06-15 custom profiler RETIRED → Firefox Profiler + pq; capacity/formula caches + the WORKER→MAIN SNAPSHOT (W2/W2b) broke the plateau → 80–100 TPS @4×; then de-immutabled pawn-patch spreads + paused warmup screen → 200+ TPS @4× after ~5s, GOAL CRUSHED 2026-06-15; then JS-allocation capture (§C) verified the de-immutable win + drove the harvest-time worldMap-delta fix; 2026-06-15 Electron chosen over Tauri (A/B), and the Electron renderer trace opened §D — renderer-side hitches D1–D3; 2026-06-16 §D extended: prealloc + designation-decouple + RESYNC 8→32 + worldMapDelta-slim landed, and the BIG one — three `worldMap.map()` full-rebuilds (harvest completion / mob forage / building footprint) found via the `[TRIG]` probe and de-immutabled in place → `worldMapRef=0`; sectional throttle TRIED+REVERTED; then the ENTITY BASELINE got its surgical cut after all (D8) — `[SNAP-PAWN]` field-audit + drop-never-read-fields projection (`entityProjection.ts`), slim pawn 766→~535B / pawns 152k→109k, the path≈900B premise was STALE; next non-entity lever = `droppedItems` deltas) -->
 
 # ENGINE PERFORMANCE & SCALING
 
@@ -23,6 +23,17 @@ Profiling-driven performance work, measured on the heavy `--profiler` sandbox (1
 
 ## 0 · Status
 
+- **🧱 CHUNKED TERRAIN (§E, 2026-06-20) — FPS regression from the 500×500 default map, fixed.** Commit
+  `b2a1031` changed the default map 240×160 → 500×500 (**38k → 250k tiles, 6.5×**). TPS was unaffected
+  (the sim is per-*entity*: a 5-pawn/420-mob playtest) but **FPS clapped** — the renderer drew the WHOLE
+  map as one static VBO (`renderAllTiles:true`): a ~138MB buffer, **1.5M verts drawn every frame**, and
+  O(map) rebuilds/uploads on every terrain change — every §D cliff reopened at 6.5×. Fix: the terrain
+  layer is now sliced into **32² chunks, each its own VAO/VBO, built lazily and drawn only when it
+  overlaps the viewport (+1-chunk margin)**; a content/`lightVersion` bump rebuilds only the visible
+  chunks; un-drawn chunks are evicted to bound GPU memory. Render cost is now **O(visible tiles),
+  independent of map size**. Geometry stays camera-independent (world-space verts + pan/zoom uniforms),
+  so panning only changes which chunks draw. `grid-renderer.ts` + `renderer-core.ts`; `pnpm check` clean
+  (pre-existing `bulkLogistics.test.ts` cast error aside), 486 tests green. See §E.
 - **🪶 ENTITY BASELINE CUT (D8, 2026-06-16) — the snapshot projection got its surgical cut after all.**
   The `[SNAP-PAWN]` field probe (measured, not assumed) showed the per-flush slim pawn was ~766B dominated by
   `needs` (150) + `activeJob` (117) + `jobQueue` (168 *when populated*) + `state` (77) — **`path` was only 35B**,
@@ -481,6 +492,58 @@ for items. Next lever:
 **Lesson of §D, reaffirmed:** every win came from a *correlated/field-level* capture (`[TRIG]`, `[SNAP]`,
 `[SNAP-PAWN]`); both blind/assumed moves regressed or no-op'd (D7's throttle; the path-only first cut off the
 stale ~900B figure).
+
+---
+
+## §E · CHUNKED TERRAIN — render cost decoupled from map size (2026-06-20)
+
+**New surface, same root cause as §C/§D6 — but on the GPU side and triggered by a content change, not a
+profiler dig.** Commit `b2a1031` made 500×500 the default map (`currentMapSize` in `gameState.ts`):
+**38,400 → 250,000 tiles**. The whole §D renderer arc was measured against the 38k map; multiplying tiles
+by 6.5 reopened every cliff. **TPS held** (the sim is per-entity — the failing playtest was 5 pawns / 420
+mobs, and regrowth/foraging touch only local tiles, so tile count barely moves the worker) which is exactly
+why it read as "FPS clapped, TPS fine".
+
+### Why it clapped FPS
+
+The terrain layer rendered with **`renderAllTiles: true`** — one static VBO holding *every* tile, drawn in
+full each frame. At 250k tiles that is:
+- a **~138MB** `Float32Array` (138 floats/tile) held twice (CPU cache + GPU `STATIC_DRAW`),
+- **`drawArrays` over ~1.5M vertices every frame** though only ~1–2k tiles are on screen,
+- a **full O(250k) rebuild + 138MB re-upload** on any `cacheVersion` bump (worldMap/buildings/zones change)
+  — the §D1′ prealloc only shrank this constant factor, it stayed O(map).
+
+The matching worker symptom (the rare `tps=1/6` blips in `perf.log`) is event-rate **full worldMap
+re-clones now copying 250k tiles** — same root cause leaking across the boundary.
+
+### Fix — viewport-culled 32² chunks (option C)
+
+- [x] **Per-chunk VAO/VBO, lazy + viewport-culled** (`grid-renderer.ts`). The terrain pass (callers that
+  set `cacheVersion`) is sliced into `CHUNK_SIZE = 32`² chunks via a `Map<"cx:cy", TerrainChunk>`. Each
+  frame only chunks overlapping the viewport + a 1-chunk margin are visited; a chunk is (re)built —
+  `getTilesInRegion` → `generateBatchVertexData` → upload to its own VBO — **only when its `builtVersion`/
+  `builtLight` no longer match**, otherwise it just binds its VAO and draws the buffer already resident.
+  Off-map chunks cache `count = 0` so they aren't re-scanned. **Render is now O(visible tiles)**: the
+  every-frame draw drops from 1.5M verts to ~the screenful, and a content bump rebuilds only the visible
+  chunks, not the map.
+- [x] **LRU eviction** — chunks not drawn within `CHUNK_EVICT_FRAMES` (~4s) free their GL resources
+  (swept every `CHUNK_SWEEP_EVERY` frames), so panning a 500×500 map doesn't accumulate all 244 chunks'
+  buffers; the resident set tracks the visited area.
+- [x] **Geometry stays camera-independent.** Vertices use WORLD positions; `u_viewOffset`/`u_zoom` apply
+  pan+zoom in the shader (unchanged from §D), so a chunk's buffer is valid across pans — only the visible
+  SET changes as you scroll, never the geometry. The dynamic overlays (sparse pawn/item/mob grids, no
+  `cacheVersion`) keep the unchanged full-render path — they hold a handful of cells.
+
+**Verify:** trace a 500×500 playtest — per-frame `drawArrays` vert count should track the viewport, not
+250k; terrain rebuilds should touch only visible chunks. `pnpm check`/`pnpm test` green.
+
+### Follow-ups (not needed for the FPS fix)
+
+- [ ] **`buildGameGrid` is still O(map).** `redrawOverlayNow` floods + `setTile`s all 250k tiles into a
+  fresh `GameGrid` on each terrain-change event (the interior-mountain flood-fill is inherently global).
+  Event-rate, not per-frame, so it's the secondary cost — but at 750×750+ it'll want per-chunk dirtying
+  (the worker already ships `worldMapDelta`s; plumb changed-chunk ids to invalidate just those chunks
+  instead of bumping the global `gridVersion`).
 
 ---
 

@@ -24,6 +24,9 @@ and never touches the terrain renderer (PERF-5 honoured).
   `foggy_rain` (rain + fog veil composited). Zoom-scaled density; leaves shrink + densify zoomed out.
 - **Wind mechanic**: `windStrength`/`sightMul`/`particleColor` per type; **windchill via `tempDelta`**
   (cold-season wind feeds hypothermia, summer wind cools); a wind-only **`gale`** extreme event.
+  *(Superseded 2026-06-20 by the graded `windchilled` condition + directional wall wind-shadows —
+  see the 2026-06-20 block above / ADR-025. The flat `tempDelta` windchill remains as the baseline;
+  felt wind now amplifies cold on top.)*
 - **Sight**: `weatherSightMul` folds into the shared `effectiveVisionRange` (pawns + mobs) — fog/storm/
   blizzard shorten detection.
 - **Fatigue → stamina** coupling (Combat): anything raising fatigue (weather `fatigueMul`, conditions)
@@ -37,7 +40,34 @@ and never touches the terrain renderer (PERF-5 honoured).
 - **Debug menu** (`DebugScreen` MENU|LOG tabs): spawn items/pawns/entities, set weather/season/
   time-of-day, snow slider, and map click-brushes (regrow / spawn building / spawn resource).
 - **Tile HUD**: temp / wet (int) / snow% / windy / roofed; building info card shows fuel refuel needs.
+  *(2026-06-20: the topbar readout now shows the graded wind degree + compass direction.)*
 - **Tests/gates:** `environment.test.ts` (40 tests); `check` 0 errors, `test` 329 passed, lint clean.
+
+**Shipped 2026-06-20 (wind rework — graded windchill + wall wind-shadows, ADR-025):**
+
+The original wind (above) was effectively binary on a tile — a static `windStrength` + drifting
+`wind` scalar that only slanted the overlay and biased transitions, plus windchill folded flatly into
+each type's `tempDelta`. This pass turns wind into a graded, *directional* environmental load:
+
+- **Five degrees → staged `windchilled` condition** (`conditions.jsonc`): **slightly → somewhat →
+  fairly → very → extremely windy**, an escalating nuisance debuff (DEX/move/work, fatigue ↑, never
+  lethal). Severity is set **directly** each tick from the felt wind (`driveWindchill` in `needs.ts`,
+  instantaneous like `driveEncumbrance` — not an accrued exposure meter).
+- **Windchill cold coupling**: felt wind multiplies cold exposure in `PawnStateMachine` (`WIND_COLD_EXTRA`,
+  the same hook wetness uses) so wind genuinely hastens hypothermia; never adds heat (summer wind stays
+  relief via `tempDelta`).
+- **8-way wind direction** (`WeatherState.windDir`) drifts day-to-day alongside the ambient-wind walk;
+  ships free in the existing whole-object weather snapshot section (PERF-4 unaffected).
+- **Wall/mountain wind-shadows ("immune zones")**: an impassable tile (`walkable === false`) casts a
+  downwind shelter shadow. Computed **per-pawn** by ray-marching upwind ~4 tiles (`windShelterAt`) —
+  full shelter directly leeward, fading out — chosen over a precomputed field to stay cheap on 500×500
+  maps dense with mountain walls (ADR-025). `effectiveWindAt` = `ambientWind` × (1 − roof
+  weatherProtection) × (1 − lee shelter); `ambientWind` is the new shared source of truth (gameplay +
+  WeatherCanvas slant).
+- **HUD**: the topbar readout now appends the wind degree + compass direction (e.g. `· fairly windy NE`).
+- **Tests/gates:** `windchill.test.ts` (stage thresholds, leeward falloff + direction flip, roof
+  reduction, direction drift); `check` 0 new errors, `test` 486 passed, lint clean. Docs: DESIGN.md
+  (Weather & Environmental Exposure), ADR-025 + codegraph onboarding.
 
 **Shipped 2026-06-16 (earlier pass):**
 
