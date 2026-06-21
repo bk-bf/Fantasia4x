@@ -113,7 +113,14 @@
     <div class="card-cost"><slot /></div>
     {#if quantities && onQuantity}
       <div class="card-actions">
-        <span class="card-action-lbl card-action-lbl--{variant}">{actionLabel}</span>
+        <button
+          class="card-action card-action--{variant}"
+          disabled={!actionEnabled}
+          title="craft 1"
+          on:click={onAction}
+        >
+          {actionLabel}
+        </button>
         {#each quantities as q}
           <button
             class="card-action card-action--{variant}"
@@ -250,24 +257,6 @@
     align-items: center;
     gap: 4px;
     flex-wrap: wrap;
-  }
-  .card-action-lbl {
-    font-size: 9px;
-    letter-spacing: 0.05em;
-    color: var(--text-dim);
-    margin-right: 1px;
-  }
-  .card-action-lbl--ok {
-    color: var(--accent-hi);
-  }
-  .card-action-lbl--pending {
-    color: var(--text-dim);
-  }
-  .card-action-lbl--missing {
-    color: var(--neg, #d05050);
-  }
-  .card-action-lbl--blocked {
-    color: var(--text-muted, #777);
   }
   .card-action {
     margin-top: 2px;
