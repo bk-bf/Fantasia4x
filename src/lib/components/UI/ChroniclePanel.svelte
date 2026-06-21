@@ -99,6 +99,15 @@
   function onEntryLeave() {
     hoverEntry = null;
   }
+
+  // Scrollbar only visible while actively scrolling (mirrors ResourceSidebar's .res-area).
+  let scrolling = false;
+  let scrollTimer: ReturnType<typeof setTimeout>;
+  function onScroll() {
+    scrolling = true;
+    clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(() => (scrolling = false), 700);
+  }
 </script>
 
 <aside class="panel" class:transparent={$hideSidebars}>
@@ -113,7 +122,7 @@
     >
   </div>
 
-  <div class="log-list">
+  <div class="log-list" class:scrolling on:scroll={onScroll}>
     {#if $recentActivity.length > 0}
       {#each $recentActivity as entry (entry.id)}
         <div
@@ -265,6 +274,26 @@
     flex: 1;
     overflow-y: auto;
     padding: 2px 0;
+    /* Reserve the scrollbar gutter so rows never reflow when the (auto-hiding) bar appears. */
+    scrollbar-gutter: stable;
+    /* Firefox: scrollbar hidden until actively scrolling. */
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+    transition: scrollbar-color 0.3s ease;
+  }
+  .log-list.scrolling {
+    scrollbar-color: var(--border) transparent;
+  }
+  /* WebKit: thumb only paints while scrolling. */
+  .log-list::-webkit-scrollbar {
+    width: 8px;
+  }
+  .log-list::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 4px;
+  }
+  .log-list.scrolling::-webkit-scrollbar-thumb {
+    background: var(--border);
   }
 
   .entry {
