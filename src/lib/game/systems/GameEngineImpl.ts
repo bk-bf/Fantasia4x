@@ -482,19 +482,34 @@ export class GameEngineImpl implements GameEngine {
       if (!tile || !growth) continue;
 
       for (const id in growth) {
-        if (growth[id] >= 100) continue;
+        if (growth[id] >= 100) continue; // mature crops wait to be reaped; frost only kills the immature
         const def = resourceObjectService.getById(id);
         const c = def?.crop;
         if (!c) continue;
 
-        // Needs gate — growth advances only when EVERY requirement holds (else it stalls this tick).
-        if (soilTierForTile(tile) < c.minSoil) continue;
-        const m = tile.moisture ?? 0;
-        if (m < c.minMoisture || m > c.maxMoisture) continue;
         const thermal = computeThermalAt(x, y, gs.buildings);
-        if (c.needsLight && thermal.roofed) continue; // crops need open sky
         const temp = tileTemperature(tile.terrainType, gs.season, gs.weather, thermal);
-        if (temp < c.minTemp || temp > c.maxTemp) continue;
+        const m = tile.moisture ?? 0;
+        // DEATH conditions (the soil can no longer carry the crop): exhausted fertility, frost/snow,
+        // cold/heat out of the crop's window, or drought/flood. A dead crop is set to 1% — NOT 0% — so
+        // it never reads as a harvested cycle (no soil wear) and the whole map can't churn itself barren.
+        const dead =
+          soilTierForTile(tile) < c.minSoil ||
+          (tile.snow ?? 0) > 0 ||
+          temp < c.minTemp ||
+          temp > c.maxTemp ||
+          m < c.minMoisture ||
+          m > c.maxMoisture;
+        if (dead) {
+          if (growth[id] !== 1) {
+            growth[id] = 1;
+            if ((tile.resources[id] ?? 0) > 0) tile.resources[id] = 0;
+            markTileDirty(y, x, tile);
+          }
+          continue;
+        }
+        // Light is a non-lethal STALL: a roofed (sunless) crop survives but doesn't grow.
+        if (c.needsLight && thermal.roofed) continue;
 
         // Advance toward 100% at the base rate (season-scaled). In place — no per-tick allocation.
         const totalTicks = Math.max(1, ticksFromSeconds(c.growthTurns) / rate);

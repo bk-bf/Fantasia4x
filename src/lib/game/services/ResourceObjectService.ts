@@ -137,6 +137,13 @@ export interface ResourceObjectDef {
     maxTemp: number;
     needsLight: boolean; // requires open sky (an unroofed tile)
     growthTurns: number; // base turns 0→100% under good conditions
+    /**
+     * Fertility points (of 25 per soil tier) this crop draws from the soil per HARVESTED cycle. The
+     * tile accumulates it in `tile.fertilityWear`; at 25 the soil drops one tier (terra preta → rich →
+     * loam → poor → barren dirt). Higher-tier crops cost more (deplete faster). Only harvested crops
+     * deplete — a crop that DIES (frost/drought/poor soil/grazing) is reset to 1% and never charges.
+     */
+    fertilityCost: number;
   };
 }
 

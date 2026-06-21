@@ -4,6 +4,7 @@ import { buildingService } from './BuildingService';
 import { resourceObjectService } from './ResourceObjectService';
 import { complete as constructComplete } from './jobs/construct';
 import { complete as plantComplete } from './jobs/plant';
+import { complete as harvestComplete } from './jobs/harvest';
 import { isGrowableResource } from './ResourceObjectService';
 import { SUBTERRAINS, soilFertilityPct } from '../core/Terrains';
 import type { GameState, Job } from '../core/types';
@@ -184,5 +185,57 @@ describe('§F resource growth/maturity', () => {
   it('a tree forage knocks growth back to 80% (just branches), not 0%', () => {
     const forage = resourceObjectService.getInteractionByDesignationType('pine_tree', 'forage')!;
     expect(forage.harvestGrowthReset).toBe(80);
+  });
+});
+
+describe('§F soil exhaustion from farming', () => {
+  it('every crop declares a fertility cost; prize crops draw the most', () => {
+    for (const id of ['crop_wheat', 'crop_cabbage', 'crop_beans', 'crop_flax', 'crop_berries', 'crop_herbs']) {
+      expect(resourceObjectService.getById(id)!.crop!.fertilityCost).toBeGreaterThan(0);
+    }
+    expect(resourceObjectService.getById('crop_pumpkin')!.crop!.fertilityCost).toBeGreaterThan(
+      resourceObjectService.getById('crop_wheat')!.crop!.fertilityCost
+    );
+  });
+
+  it('repeatedly harvesting a crop degrades the soil one tier (terra preta → rich soil)', () => {
+    const tile = {
+      x: 0,
+      y: 0,
+      subType: 'terra_preta',
+      terrainType: 'plains',
+      walkable: true,
+      movementCost: 1.2,
+      moisture: 60,
+      resources: { crop_pumpkin: 1 },
+      growth: { crop_pumpkin: 100 }
+    };
+    let gs = {
+      worldMap: [[tile]],
+      designations: {},
+      droppedItems: [],
+      pawns: [],
+      stockpile: {},
+      season: 'summer',
+      turn: 1
+    } as unknown as GameState;
+
+    const reap = () => {
+      const t = gs.worldMap[0][0];
+      t.resources = { crop_pumpkin: 1 };
+      t.growth = { crop_pumpkin: 100 };
+      gs = harvestComplete(
+        { id: 'h', type: 'harvest', resourceId: 'crop_pumpkin', targetX: 0, targetY: 0, claimedBy: null } as unknown as Job,
+        gs
+      );
+    };
+
+    reap(); // wear 8
+    reap(); // 16
+    reap(); // 24 — still terra preta
+    expect(gs.worldMap[0][0].subType).toBe('terra_preta');
+    reap(); // 32 ≥ 25 → drop a tier
+    expect(gs.worldMap[0][0].subType).toBe('deep_grass'); // worn down to rich soil
+    expect(soilFertilityPct(gs.worldMap[0][0])).toBe(75);
   });
 });

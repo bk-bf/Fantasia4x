@@ -6,7 +6,12 @@ import type { DesignationType, GameState, Job } from '../../core/types';
 import { gatedConsole as console } from '../../core/log';
 import { resourceObjectService } from '../ResourceObjectService';
 import { itemService } from '../ItemService';
-import { SUBTERRAINS, SUBTERRAIN_FALLBACK } from '../../core/Terrains';
+import {
+  SUBTERRAINS,
+  SUBTERRAIN_FALLBACK,
+  soilTierForTile,
+  SUBTYPE_BY_SOIL_TIER
+} from '../../core/Terrains';
 import { markTileDirty } from '../../core/tileDeltas';
 import { patchPathfindingWalkable } from '../PathfinderService';
 import { absorbDropIfOnStockpileTile } from '../../core/GameState';
@@ -184,6 +189,30 @@ export function complete(job: Job, gs: GameState): GameState {
       }
       col.resourceCooldowns = newCooldowns;
     }
+  }
+
+  // §F soil exhaustion: a HARVESTED crop draws fertility from the soil (crop.fertilityCost of 25 per
+  // tier). When the tile's accumulated wear fills a tier it degrades one step down the soil ladder
+  // (terra preta → rich → loam → poor → barren dirt) — over-farming a plot eventually exhausts it,
+  // and higher-tier crops draw faster. Only HARVESTED crops charge this (a crop that died is reset to
+  // 1% and never reaches here); wild plants never wear soil.
+  if (def?.crop) {
+    const TIER_SIZE = 25;
+    let wear = (col.fertilityWear ?? 0) + def.crop.fertilityCost;
+    while (wear >= TIER_SIZE) {
+      const tier = soilTierForTile(col);
+      if (tier <= 0) {
+        wear = 0; // already barren — nothing left to exhaust
+        break;
+      }
+      col.subType = SUBTYPE_BY_SOIL_TIER[(tier - 1) as 0 | 1 | 2 | 3];
+      wear -= TIER_SIZE;
+    }
+    col.fertilityWear = wear;
+    // subType may have dropped a tier → refresh the tile's physics from the new (barer) subterrain.
+    const sub = SUBTERRAINS[col.subType] ?? SUBTERRAIN_FALLBACK;
+    col.walkable = sub.walkable;
+    col.movementCost = sub.movementCost;
   }
   markTileDirty(job.targetY, job.targetX, col);
 

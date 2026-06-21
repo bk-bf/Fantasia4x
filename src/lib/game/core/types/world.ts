@@ -30,6 +30,13 @@ export interface WorldTile {
    * harvest yield, and is shown as `growth XX%` in the tile inspector.
    */
   growth?: Record<string, number>;
+  /**
+   * PRODUCTION-CHAIN-II §F — accumulated fertility drawn by HARVESTED crops at the current soil tier
+   * (0–25). Each harvested crop adds its `crop.fertilityCost`; at 25 the tile's soil drops one tier
+   * (terra preta → rich → loam → poor → barren `dirt`) and the wear carries the remainder. Only
+   * cultivated, reaped crops wear soil — wild plants and crops that died never charge it.
+   */
+  fertilityWear?: number;
   /** Accumulated snow cover 0–100 (SEASONS_WEATHER). Builds while it's snowing AND temp < 0°C,
    *  faster on wetter tiles; melts above 0°C. Whitens the terrain/resource layer in buildGameGrid.
    *  Ships to the renderer in the slim worldMapDelta (it is a visible per-tile field). */
