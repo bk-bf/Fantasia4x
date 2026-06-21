@@ -526,7 +526,7 @@
         "id": "knockdown",
         "name": "Knocked Down",
         "transient": true,
-        "description": "Prone from a heavy blunt blow — sprawled and helpless. Loses the next attack and is wide open to anyone standing over it; recovers after a couple of turns.",
+        "description": "Prone from a heavy blunt blow — sprawled and helpless. Loses the next attack and is wide open to anyone standing over it; recovers after a couple of minutes.",
         "color": "#ff5722",
         "floater": true,
         "charSpans": [ {"sheet": "font", "id": 15} ],
