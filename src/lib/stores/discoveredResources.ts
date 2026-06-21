@@ -8,6 +8,7 @@
 // path. Kept warm from game start by being imported in +page.svelte (see refreshDiscoveredResources).
 import { writable, get } from 'svelte/store';
 import { gameState } from './gameState';
+import { uiState } from './uiState';
 import { resourceObjectService } from '$lib/game/services/ResourceObjectService';
 import type { WorldTile } from '$lib/game/core/types';
 
@@ -73,9 +74,16 @@ function rebuildNow() {
   discoveredResources.set(buildRows(s.worldMap ?? []));
 }
 
+// ENGINE-PERFORMANCE-II §R3: only maintain the ledger while the EXPLORE tab is OPEN. The scan is
+// O(map) (562k tiles at 750²) and was running every 15 turns *regardless* of whether anyone was
+// looking — ~33% of the render thread in the trace, pure waste 99% of the time (the tab is usually
+// closed). Closed ⇒ no rebuilds; opening the tab rebuilds once if stale, then keeps it fresh.
+let exploreOpen = false;
+
 // Marked dirty when the turn advances into a new bucket; the scan itself is deferred to idle time so
 // it never blocks a frame or the sim. Coalesced via `scheduled` so a burst of turns books one rebuild.
 function maybeScheduleRebuild(turn: number) {
+  if (!exploreOpen) return; // §R3: don't scan the map for a tab nobody's looking at.
   const bucket = Math.floor(turn / REFRESH_TURNS);
   if (bucket === builtBucket || scheduled) return;
   scheduled = true;
@@ -85,10 +93,20 @@ function maybeScheduleRebuild(turn: number) {
   });
 }
 
-// Self-maintaining subscription: fires immediately with the current state (warming the cache shortly
-// after load) and on every subsequent turn advance. Lives for the app's lifetime — there is one
-// gameState, and the cache is cheap to hold.
+// Self-maintaining subscription: maintains the cache while the EXPLORE tab is open, and on every turn
+// advance (gated above). Lives for the app's lifetime — there is one gameState.
 gameState.subscribe((s) => maybeScheduleRebuild(s.turn ?? 0));
+
+// Rebuild on the EXPLORE tab opening (if the cache is stale), so the first frame of the tab is fresh
+// without paying the scan continuously while it's closed.
+uiState.subscribe((s) => {
+  const open = s.currentScreen === 'exploration';
+  if (open && !exploreOpen) {
+    const bucket = Math.floor((get(gameState).turn ?? 0) / REFRESH_TURNS);
+    if (bucket !== builtBucket) rebuildNow();
+  }
+  exploreOpen = open;
+});
 
 /** Force a synchronous rebuild *only if the cache has never been built* — the EXPLORE tab calls this
  *  on mount as a safety net so a first open before the idle warm-up still shows data (subsequent opens
