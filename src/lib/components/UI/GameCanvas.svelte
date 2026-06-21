@@ -176,7 +176,6 @@
   // selection/designation, regen, resize, pause toggle). So a static map is drawn once then costs
   // nothing. Unfrozen (running + zoomed in) draws every frame exactly as before — normal play unchanged.
   let _renderDirty = true;
-  let isPausedNow = false;
   const FREEZE_TILE_PX = 4; // below this on-screen tile size, entity motion is imperceptible → freeze
   const markRenderDirty = () => {
     _renderDirty = true;
@@ -2187,18 +2186,10 @@
     markRenderDirty();
   });
 
-  // Track pause state for the render-on-demand freeze, and repaint once on any pause toggle (so
-  // pausing settles the final frame and unpausing immediately resumes live drawing).
-  const unsubPaused = gameState.isPaused.subscribe((p) => {
-    isPausedNow = p;
-    markRenderDirty();
-  });
-
   onDestroy(() => {
     unsubState();
     unsubUI();
     unsubWorldGen();
-    unsubPaused();
     unsubCombatFeedback();
     unsubAttackLunges();
     unsubProjectiles();
@@ -2351,7 +2342,14 @@
       // from the render loop (rather than a competing setInterval) prevents the timer starvation
       // that throttled a <1 ms/tick sim to ~20 TPS while rendering. (No-op under ?simworker.)
       gameState.stepSimulation(dt * 1000);
-      updatePawnOverlay(dt);
+      if (customMapPreview) {
+        // Map-generation mode is a terrain-only static viewer — never draw entities/items (the fresh
+        // New Game map still HAS them in state until GENERATE; we just don't render them here).
+        pawnOverlayGrid.clear();
+        itemOverlayGrid.clear();
+      } else {
+        updatePawnOverlay(dt);
+      }
       // While a follow camera is panning, the cursor stays put but the world slides under it — so
       // the hovered tile (world coords, only refreshed on mousemove) goes stale within a frame and
       // the hover card flickers off the followed entity. Re-derive it from the live cursor pixel +
@@ -2378,12 +2376,13 @@
         _lastTerrainBuild = now;
         redrawOverlayNow();
       }
-      // Render-on-demand: when the scene is FROZEN (paused, or zoomed out past FREEZE_TILE_PX where
-      // entity motion is sub-pixel) skip the GL draw unless something visible changed. The WebGL
-      // canvas retains its last frame, so a static map just stays on screen at ~0 render cost.
-      // Unfrozen (running + zoomed in) draws every frame as before. The 2D overlay (selection/zones)
-      // is its own canvas and updates independently, so interactions stay responsive either way.
-      const frozen = isPausedNow || tileWidth < FREEZE_TILE_PX;
+      // Render-on-demand: when the scene is FROZEN skip the GL draw unless something visible changed.
+      // The WebGL canvas retains its last frame, so a static map just stays on screen at ~0 render
+      // cost. FROZEN = map-generation mode (a static terrain viewer) OR zoomed out past FREEZE_TILE_PX
+      // (entity motion sub-pixel). NB: we do NOT freeze on a bare in-game pause — paused-but-zoomed-in
+      // still wants its animation layers (weather/status/glow) live (see §E.1 followup: cache the
+      // heavy map+entity layers while keeping the light animated layers redrawing).
+      const frozen = customMapPreview || tileWidth < FREEZE_TILE_PX;
       if (_renderDirty || !frozen) {
         renderer.setItemOverlayGrid(itemOverlayGrid);
         renderer.setOverlayGrid(pawnOverlayGrid);

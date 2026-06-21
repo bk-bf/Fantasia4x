@@ -223,7 +223,13 @@
 {#if $appPhase === 'game' && $storeReady}
   <div class="game-container" class:map-locked={customMapOpen}>
     <div class="game-header">
-      <GameControls />
+      {#if customMapOpen}
+        <!-- Map-generation mode: a stripped, static terrain viewer. No game HUD (time / season /
+             weather / speed / pause / TPS·FPS) — none of that is meant to be computing yet. -->
+        <div class="mapgen-header">MAP GENERATION</div>
+      {:else}
+        <GameControls />
+      {/if}
     </div>
 
     <div class="game-body" class:sidebars-hidden={$hideSidebars}>
@@ -236,8 +242,11 @@
         <div class="map-area">
           <MainScreen />
 
-          <!-- World effects layer: above tiles (z-index 5), below popup panels (z-index 10) -->
-          <WorldEffectsLayer />
+          <!-- World effects layer: above tiles (z-index 5), below popup panels (z-index 10).
+               Hidden in map-generation mode — the preview is a static terrain image, no weather. -->
+          {#if !customMapOpen}
+            <WorldEffectsLayer />
+          {/if}
 
           <!-- Overlay panel: slides up from bottom, covers 50% of map -->
           {#if currentScreen !== 'main'}
@@ -382,12 +391,27 @@
     overflow: hidden;
   }
 
-  /* Custom Map popup is up (New Game / world shaping): remove the bottom nav entirely so it can't be
-     used behind the popup. Pan + zoom on the map stay LIVE so the player can inspect the terrain
-     being shaped; only hover tooltips and click-selection are suppressed — that's handled inside
-     GameCanvas (it reads uiState.customMapOpen), so the canvas keeps its own drag/wheel handlers. */
-  .map-locked .bottom-nav {
+  /* Map-generation mode (Custom Map popup up): a stripped static terrain viewer. Remove the bottom
+     nav AND both sidebars (Kingdom/Resources + Chronicle) — none of that applies while shaping a map.
+     The map area reflows to fill the freed space. Pan + zoom stay LIVE (GameCanvas keeps its
+     drag/wheel handlers); only hover tooltips + click-selection are suppressed (inside GameCanvas). */
+  .map-locked .bottom-nav,
+  .map-locked .left-panel,
+  .map-locked .right-panel {
     display: none;
+  }
+
+  /* Minimal header shown in place of the game HUD during map generation. */
+  .mapgen-header {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    padding-left: 12px;
+    color: var(--accent-hi);
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
   }
 
   /* Overlay panel: bottom 50% of the map area, semi-transparent so map shows above */
