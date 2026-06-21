@@ -16,6 +16,7 @@
     SEASON_LABELS,
     weatherLabel as getWeatherLabel,
     ambientWind,
+    windDegreeWord,
     windDirLabel
   } from '$lib/game/services/EnvironmentService';
   import { TICKS_PER_SECOND } from '$lib/game/core/time';
@@ -108,11 +109,9 @@
   $: tempLabel = $currentAvgTemperature !== undefined ? `${$currentAvgTemperature}°C` : '';
   // Open-field wind degree + compass direction. The five degrees mirror the `windchilled` stages; a
   // pawn's actual windchill is cut by roofs and the lee of walls (per-tile), but this is the ambient.
-  const WIND_WORDS = ['', 'slightly', 'somewhat', 'fairly', 'very', 'extremely'];
   $: windVal = ambientWind($currentWeather ?? undefined);
-  $: windWord = WIND_WORDS[Math.min(5, Math.floor(Math.max(0, windVal - 0.2) / 0.16) + 1)] ?? '';
-  $: windLabel =
-    windVal >= 0.2 ? `${windWord} windy ${windDirLabel($currentWeather?.windDir)}` : '';
+  $: windWord = windDegreeWord(windVal);
+  $: windLabel = windWord ? `${windWord} windy ${windDirLabel($currentWeather?.windDir)}` : '';
 
   const unsubPaused = gameState.isPaused.subscribe((v) => (isPaused = v));
   const unsubSpeed = gameState.gameSpeed.subscribe((v) => (gameSpeed = v));

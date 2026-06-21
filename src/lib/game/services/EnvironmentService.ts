@@ -417,6 +417,19 @@ export function ambientWind(weather?: WeatherState): number {
   return Math.max(0, Math.min(1, Math.max(weatherWindStrength(weather?.type), weather?.wind ?? 0)));
 }
 
+/** Below this wind the world reads "calm" — no degree word in the weather readout or the tile HUD. This
+ *  is a DISPLAY threshold (when wind is worth mentioning), distinct from and lower than needs' WIND_ONSET
+ *  (when wind actually chills a pawn): the world can read "slightly windy" while a pawn there is unbothered. */
+export const WIND_DISPLAY_ONSET = 0.2;
+/** Five wind degrees (slightly→extremely) — shared by the weather readout and the tile HUD so both agree. */
+export const WIND_DEGREE_WORDS = ['slightly', 'somewhat', 'fairly', 'very', 'extremely'] as const;
+/** Wind 0–1 → degree word (slightly…extremely), or '' when below the display onset (calm). 0.16-wide
+ *  bands from the onset; used for both the open-field ambient readout and a tile's effective-wind line. */
+export function windDegreeWord(wind: number): string {
+  if (wind < WIND_DISPLAY_ONSET) return '';
+  return WIND_DEGREE_WORDS[Math.min(4, Math.floor((wind - WIND_DISPLAY_ONSET) / 0.16))];
+}
+
 /** Environmental sight multiplier 0–1 for a weather id (1 = clear; fog/storm shorten detection). */
 export function weatherSightMul(type?: string): number {
   return weatherDef(type).sightMul ?? 1;

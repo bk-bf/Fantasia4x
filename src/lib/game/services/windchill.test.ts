@@ -122,9 +122,13 @@ describe('effectiveWindAt — ambient cut by roof + lee', () => {
 });
 
 describe('driveWindchill — effective wind → staged condition (direct, not accrued)', () => {
-  it('adds nothing below onset, onsets past ~0.2, clears when calm again', () => {
+  it('adds nothing below onset, onsets past ~0.36, clears when calm again', () => {
     const c: EntityCondition[] = [];
     driveWindchill(c, 0.1);
+    expect(c.find((x) => x.id === 'windchilled')).toBeUndefined();
+
+    // A merely "slightly windy" world (≈ the calm baseline ambient wind) no longer chills.
+    driveWindchill(c, 0.3);
     expect(c.find((x) => x.id === 'windchilled')).toBeUndefined();
 
     driveWindchill(c, 0.7);
@@ -139,7 +143,7 @@ describe('driveWindchill — effective wind → staged condition (direct, not ac
   it('graduates slightly → extremely windy as the wind rises', () => {
     const slight: EntityCondition[] = [];
     const extreme: EntityCondition[] = [];
-    driveWindchill(slight, 0.25);
+    driveWindchill(slight, 0.45);
     driveWindchill(extreme, 1.0);
     const sev = (c: EntityCondition[]) => c.find((x) => x.id === 'windchilled')!.severity;
     expect(sev(slight)).toBeLessThan(sev(extreme));

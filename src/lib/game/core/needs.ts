@@ -260,8 +260,11 @@ export function driveEncumbrance(conditions: EntityCondition[], loadRatio: numbe
     conditions[idx] = { ...conditions[idx], severity: sev };
 }
 
-/** Effective wind below which a pawn feels no windchill; wind at/above which it's maxed (extreme). */
-export const WIND_ONSET = 0.2;
+/** Effective wind below which a pawn feels no windchill; wind at/above which it's maxed (extreme).
+ *  Onset sits at the "somewhat windy" degree (see EnvironmentService.windDegreeWord) so a merely
+ *  "slightly windy" world — the calm baseline ambient wind drifts around here — never chills a pawn;
+ *  windchill only bites once the wind picks up past slight. */
+export const WIND_ONSET = 0.36;
 export const WIND_FULL = 1.0;
 
 /**
