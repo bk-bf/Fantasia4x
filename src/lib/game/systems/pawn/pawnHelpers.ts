@@ -36,6 +36,10 @@ export const HUNGER_THRESHOLD = 70; // Seek food at 70% (= Rimworld 30% saturati
 
 export const FATIGUE_THRESHOLD = 72; // Seek rest after ~225 turns ≈ 0.75 days (28% rest = 72% fatigue)
 
+// Hygiene (0–100, 100 = filthy) at/above which the `filthy` condition shows. Only the fully-grimy end
+// of the bar — a pawn isn't "Filthy" while merely a bit unwashed; the hygiene need bar is the gradient.
+export const FILTHY_THRESHOLD = 100;
+
 // ===== WOUND RECOVERY =====
 /** Pain (0–100) at/above which a wounded pawn breaks off to rest and recover. */
 export const RECOVER_PAIN_THRESHOLD = 12;

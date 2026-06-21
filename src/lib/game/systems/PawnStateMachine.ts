@@ -72,7 +72,7 @@ import { pawnById } from '../core/pawnIndex';
 // `pawn/pawnHelpers.ts`, the stateless queries in `pawn/pawnQueries.ts`, and the state enum in
 // `pawn/pawnStates.ts`. What remains here is the health/lifecycle block + the per-pawn dispatcher.
 import { PAWN_STATE, type PawnStateName } from './pawn/pawnStates';
-import { findCombatThreat, HUNGER_THRESHOLD, FATIGUE_THRESHOLD } from './pawn/pawnHelpers';
+import { findCombatThreat, FATIGUE_THRESHOLD, FILTHY_THRESHOLD } from './pawn/pawnHelpers';
 import {
   handleIdle,
   handleMovingToResource,
@@ -125,9 +125,10 @@ function approachExposure(current: number, target: number, recoveryMul: number):
 const WET_COLD_EXTRA = 0.8; // at 100% wet, cold exposure ×1.8 ("greatly lower cold resistance")
 const WET_HEAT_REDUCT = 0.6; // at 100% wet, heat exposure ×0.4 ("greatly raise fire resistance")
 const WIND_COLD_EXTRA = 0.6; // in a full gale (effWind 1), cold exposure ×1.6 — windchill bites harder
-// Fully soaked + cool → a per-second chance to catch a chill (seeds hypothermia) — the rain consequence.
+// Fully soaked while genuinely cold → a per-second chance to catch a chill (accelerates hypothermia) —
+// the rain consequence. Gated on real cold exposure (cold > 0), never on a flat temp, so it can't seed
+// hypothermia while the cold-exposure meter is 0 (see the wet-chill block in tickConditions).
 const WET_SOAKED = 95;
-const WET_CHILL_TEMP = 12; // only when the effective temperature is below this (°C)
 const WET_CHILL_CHANCE_PER_SEC = 0.04;
 const WET_CHILL_SEVERITY = 0.04;
 
@@ -432,13 +433,13 @@ function tickConditions(pawn: Pawn, gameState: GameState): GameState {
           }
         );
       }
-      // Fully soaked in cool air → a chance to catch a chill (kickstarts hypothermia even when the
-      // ambient cold alone wouldn't) — the headline "rain consequence" at 100% wetness.
-      if (
-        wetness >= WET_SOAKED &&
-        temp < WET_CHILL_TEMP &&
-        rng.chance(perTick(WET_CHILL_CHANCE_PER_SEC))
-      ) {
+      // Fully soaked while ACTUALLY cold (tracked cold exposure > 0, i.e. below the comfort floor) →
+      // a chance to catch a chill that accelerates hypothermia — the "rain consequence" at 100% wetness.
+      // Gated on `cold > 0` (not a flat temp threshold) so it can NEVER seed hypothermia while the
+      // cold-exposure meter reads 0: a soaked pawn in merely cool-but-comfortable air (5–12°C, where
+      // coldExposure is 0) no longer shows phantom "shivering" hypothermia. "Wet makes cold worse" is
+      // still modelled by WET_COLD_EXTRA amplifying real cold exposure above.
+      if (wetness >= WET_SOAKED && cold > 0 && rng.chance(perTick(WET_CHILL_CHANCE_PER_SEC))) {
         const idx = conditions.findIndex((c) => c.id === 'hypothermia');
         if (idx === -1) conditions.push({ id: 'hypothermia', severity: WET_CHILL_SEVERITY });
         else
@@ -694,7 +695,7 @@ export function syncTransientConditions(pawn: Pawn): Pawn {
   // they fold into the malnutrition/dehydration conditions, which now onset at the same need=70
   // threshold and escalate; the HUNGER/THIRST need bars are the live indicator.)
   if (!isSleeping && (pawn.needs?.fatigue ?? 0) >= FATIGUE_THRESHOLD) ids.push('tired');
-  if ((pawn.needs?.hygiene ?? 0) >= HUNGER_THRESHOLD) ids.push('filthy');
+  if ((pawn.needs?.hygiene ?? 0) >= FILTHY_THRESHOLD) ids.push('filthy');
 
   // Timer-based transient conditions (knockdown, etc.)
   for (const [id, remaining] of Object.entries(pawn.conditionTimers ?? {})) {
