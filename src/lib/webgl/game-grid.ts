@@ -51,7 +51,8 @@ export class GameGrid {
   private listeners: ((event: GridUpdateEvent) => void)[] = [];
 
   constructor() {
-    console.log('🎯 GameGrid initialized with sparse storage');
+    // (no per-construction logging — buildGameGrid news a GameGrid on every terrain rebuild, so this
+    // fired several times/sec and spammed the console during play.)
   }
 
   /**

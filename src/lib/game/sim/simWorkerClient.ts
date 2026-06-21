@@ -20,40 +20,47 @@ import type { GameState, Pawn, Mob, WorldTile, DroppedItem } from '../core/types
  * fields persist between resyncs), full upserts (newly-seen ids) replace, and `removed` ids are
  * reaped. Each merge makes a NEW object so downstream reactivity still fires.
  */
-function applyEntitySync<T extends { id: string }>(
+// Update the per-id mirror from a delta — upserts MERGED (pawns/mobs: hot+cold split) or REPLACED
+// wholesale (`replace`=drops, sent as a complete slim object), removed deleted, `full` resets it.
+// Split out from the array rebuild so a PAUSED client can keep the mirror in sync CHEAPLY (no array,
+// no render) — a per-id EntitySync cannot skip frames (a later frame's `order` references ids whose
+// upsert rode an earlier frame, so dropping a frame strands them → `mirror.get` undefined → crash).
+function updateEntityMirror<T extends { id: string }>(
   mirror: Map<string, T>,
-  sync: EntitySync<T>
-): T[] {
+  sync: EntitySync<T>,
+  replace = false
+): void {
   if ('full' in sync) {
     mirror.clear();
     for (const e of sync.full) mirror.set(e.id, e);
-    return sync.full;
+    return;
   }
   for (const u of sync.upserts) {
-    const prev = mirror.get(u.id);
-    mirror.set(u.id, prev ? ({ ...prev, ...u } as T) : (u as T));
+    if (replace) {
+      mirror.set(u.id, u as T);
+    } else {
+      const prev = mirror.get(u.id);
+      mirror.set(u.id, prev ? ({ ...prev, ...u } as T) : (u as T));
+    }
   }
   for (const id of sync.removed) mirror.delete(id);
-  return sync.order.map((id) => mirror.get(id)!);
 }
 
-/**
- * Like applyEntitySync but REPLACES each upsert wholesale instead of merging. Drops are sent as the
- * complete slim object (no hot/cold split) whenever their ref changes, so merging would leave a stale
- * value for any field the new object dropped — replace is both correct and cheaper.
- */
+// Reconstruct the ordered array after updating the mirror. `.filter` is defensive: a healthy delta
+// keeps `order ⊆ mirror`, but a stranded id must never crash a downstream `.filter(d => d.stored)`.
+function applyEntitySync<T extends { id: string }>(mirror: Map<string, T>, sync: EntitySync<T>): T[] {
+  updateEntityMirror(mirror, sync, false);
+  if ('full' in sync) return sync.full;
+  return sync.order.map((id) => mirror.get(id)).filter((e): e is T => e !== undefined);
+}
+
 function applyDropSync(
   mirror: Map<string, DroppedItem>,
   sync: EntitySync<DroppedItem>
 ): DroppedItem[] {
-  if ('full' in sync) {
-    mirror.clear();
-    for (const e of sync.full) mirror.set(e.id, e);
-    return sync.full;
-  }
-  for (const u of sync.upserts) mirror.set(u.id, u as DroppedItem);
-  for (const id of sync.removed) mirror.delete(id);
-  return sync.order.map((id) => mirror.get(id)!);
+  updateEntityMirror(mirror, sync, true);
+  if ('full' in sync) return sync.full;
+  return sync.order.map((id) => mirror.get(id)).filter((e): e is DroppedItem => e !== undefined);
 }
 
 export function verifyWasmInWorker(): void {
@@ -164,9 +171,8 @@ class SimWorkerBridge {
     events?: SimLogEvent[];
   }): void {
     if (m.kind === 'snapshot') {
-      // While paused, drop in-flight TICK snapshots (the renderer race). Commit snapshots — command
-      // results and the worker's pause hand-off frame — always apply so paused actions still show.
-      if (this.paused && !m.commit) return;
+      // Apply worldMap + lastState + per-id mirrors on EVERY frame so the delta protocol stays
+      // consistent (frames can't be skipped — see updateEntityMirror).
       if (m.worldMap) {
         this.worldMap = m.worldMap;
       } else if (m.worldMapDelta) {
@@ -182,6 +188,19 @@ class SimWorkerBridge {
       // their refs (no re-clone). pawns/mobs are reconstructed from their per-entity mirrors and
       // worldMap from its own cache. A new top-level object each flush keeps the store reactive.
       this.lastState = { ...this.lastState, ...(m.state as object) };
+
+      // While paused, keep the per-id mirrors CURRENT (so the delta protocol stays valid) but skip the
+      // O(entities) array rebuild + render notify — this freezes the renderer the instant the user
+      // pauses without it being raced by in-flight tick frames. Commit frames (command results + the
+      // pause hand-off) fall through and render. (Replaces the old "drop the whole frame", which
+      // stranded per-id upserts → undefined holes → the currentStockpile `d.stored` crash.)
+      if (this.paused && !m.commit) {
+        if (m.pawns) updateEntityMirror(this.pawnMirror, m.pawns, false);
+        if (m.mobs) updateEntityMirror(this.mobMirror, m.mobs, false);
+        if (m.drops) updateEntityMirror(this.dropMirror, m.drops, true);
+        return;
+      }
+
       const pawns = m.pawns
         ? applyEntitySync(this.pawnMirror, m.pawns)
         : (this.lastState.pawns ?? []);
