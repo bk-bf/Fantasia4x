@@ -5902,5 +5902,100 @@
     "weightKg": 2,
     "volumeL": 2,
     "deteriorationRate": 0.01
+  },
+
+  // ── PRODUCTION-CHAIN-II §F — Crop seeds ──────────────────────────────────────────────────────
+  // Sown in a grow zone (the `plant` job) to grow the matching crop; first obtained by foraging wild
+  // crops (each wild plant now drops a few seeds). Light, slow-spoiling.
+  {
+    "id": "grain_seed",
+    "charSpans": [ {"sheet": "items", "id": 118} ],
+    "name": "Grain Seed",
+    "type": "material",
+    "category": "seed",
+    "description": "A handful of cereal seed — wheat or barley. Sow it on tilled soil to grow grain.",
+    "color": "#C9A94E",
+    "amount": 0,
+    "weightKg": 0.05,
+    "volumeL": 0.05,
+    "deteriorationRate": 0.004
+  },
+  {
+    "id": "veg_seed",
+    "charSpans": [ {"sheet": "items", "id": 118} ],
+    "name": "Vegetable Seed",
+    "type": "material",
+    "category": "seed",
+    "description": "Mixed vegetable seed — cabbage, turnip, onion. Sow for a cooking staple.",
+    "color": "#7FA64E",
+    "amount": 0,
+    "weightKg": 0.05,
+    "volumeL": 0.05,
+    "deteriorationRate": 0.004
+  },
+  {
+    "id": "legume_seed",
+    "charSpans": [ {"sheet": "items", "id": 118} ],
+    "name": "Legume Seed",
+    "type": "material",
+    "category": "seed",
+    "description": "Bean and pea seed. Hardy, protein-rich, and stores well.",
+    "color": "#A8924E",
+    "amount": 0,
+    "weightKg": 0.05,
+    "volumeL": 0.05,
+    "deteriorationRate": 0.004
+  },
+  {
+    "id": "fibre_seed",
+    "charSpans": [ {"sheet": "items", "id": 118} ],
+    "name": "Fibre Seed",
+    "type": "material",
+    "category": "seed",
+    "description": "Flax and hemp seed. Grows fibrous stalks for cordage and cloth — wants damp, decent soil.",
+    "color": "#9EAE6A",
+    "amount": 0,
+    "weightKg": 0.05,
+    "volumeL": 0.05,
+    "deteriorationRate": 0.004
+  },
+  {
+    "id": "fruit_seed",
+    "charSpans": [ {"sheet": "items", "id": 118} ],
+    "name": "Fruit Seed",
+    "type": "material",
+    "category": "seed",
+    "description": "Berry and orchard pips. Grows fruit for cooking, preserves, wine and cider.",
+    "color": "#B0584E",
+    "amount": 0,
+    "weightKg": 0.05,
+    "volumeL": 0.05,
+    "deteriorationRate": 0.004
+  },
+  {
+    "id": "herb_seed",
+    "charSpans": [ {"sheet": "items", "id": 118} ],
+    "name": "Herb Seed",
+    "type": "material",
+    "category": "seed",
+    "description": "Culinary and medicinal herb seed. Grows flavour for meals and simples for the sick.",
+    "color": "#6FA66A",
+    "amount": 0,
+    "weightKg": 0.05,
+    "volumeL": 0.05,
+    "deteriorationRate": 0.004
+  },
+  {
+    "id": "prize_seed",
+    "charSpans": [ {"sheet": "items", "id": 118} ],
+    "name": "Prize Seed",
+    "type": "material",
+    "category": "seed",
+    "description": "Seed for a demanding prize crop — pumpkin, grapevine. Only flourishes in terra preta.",
+    "color": "#C77A3A",
+    "amount": 0,
+    "weightKg": 0.05,
+    "volumeL": 0.05,
+    "deteriorationRate": 0.004
   }
 ]

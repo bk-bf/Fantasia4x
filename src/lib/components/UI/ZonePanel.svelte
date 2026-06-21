@@ -49,6 +49,15 @@
       desc: 'Dirty pawns come here to wash',
       color: '#80d8c0',
       tinted: true
+    },
+    {
+      type: 'grow',
+      label: 'GROW',
+      charSpans: [{ literal: '"' }],
+      desc: 'Farmers sow the chosen seed on fertile soil in this zone',
+      color: '#6fae3a',
+      filterable: true,
+      tinted: true
     }
   ];
 

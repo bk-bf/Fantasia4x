@@ -2249,5 +2249,25 @@
   // The wheel forges its iron rim at the anvil (iron_working); the carts assemble at the sawtable.
   { "id": "make_wheel",       "station": "anvil",    "inputs": {"pine_plank": 2, "iron_bar": 1},               "outputs": {"wheel": 1},       "workAmount": 60,  "toolTierRequired": 1, "researchRequired": "iron_working" },
   { "id": "make_wheelbarrow", "station": "sawtable", "inputs": {"pine_plank": 4, "wheel": 1, "iron_nail": 6},  "outputs": {"wheelbarrow": 1}, "workAmount": 120, "toolTierRequired": 1, "researchRequired": "iron_working" },
-  { "id": "make_handcart",    "station": "sawtable", "inputs": {"pine_plank": 8, "wheel": 2, "cordage": 4},    "outputs": {"handcart": 1},    "workAmount": 200, "toolTierRequired": 1, "researchRequired": "iron_working" }
+  { "id": "make_handcart",    "station": "sawtable", "inputs": {"pine_plank": 8, "wheel": 2, "cordage": 4},    "outputs": {"handcart": 1},    "workAmount": 200, "toolTierRequired": 1, "researchRequired": "iron_working" },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PRODUCTION-CHAIN-II §F — Compost (passive): rot + hay → compost, the soil-gating amendment
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Passive bin (no pawn job — ADR-016): pawns haul the inputs, the bin rots them down over ~days.
+  // Any spoiled organic matter works (inputAlternatives), always with hay as the carbon bulk.
+  {
+    "id"               : "make_compost",
+    "station"          : "compost_bin",
+    "passive"          : true,
+    "inputs"           : {"rotten_food": 3, "hay": 5},
+    "inputAlternatives": [
+      {"rotten_meat": 3, "hay": 5},
+      {"rotten_carcass": 1, "hay": 5},
+      {"rotten_hide": 2, "hay": 5}
+    ],
+    "outputs"          : {"compost": 2},
+    "workAmount"       : 48,
+    "toolTierRequired" : 0
+  }
 ]

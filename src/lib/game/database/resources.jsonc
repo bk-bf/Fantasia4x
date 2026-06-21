@@ -1063,7 +1063,8 @@
       "workAmount"     : 9,
       "toolRequirement": null,
       "yields"         : [
-        {"itemId": "wild_sage", "min": 1, "max": 3, "skillId": "foraging", "skillMultiplier": 0.15}
+        {"itemId": "wild_sage", "min": 1, "max": 3, "skillId": "foraging", "skillMultiplier": 0.15},
+        {"itemId": "herb_seed", "min": 0, "max": 1, "skillId": "foraging", "skillMultiplier": 0.05}
       ],
       "persistent"     : true,
       "regrowthTurns"  : 1200 // ~4 days at 300 turns/day
@@ -1203,7 +1204,8 @@
       "workAmount"     : 6,
       "toolRequirement": null,
       "yields"         : [
-        {"itemId": "wild_sage", "min": 1, "max": 3, "skillId": "foraging", "skillMultiplier": 0.15}
+        {"itemId": "wild_sage", "min": 1, "max": 3, "skillId": "foraging", "skillMultiplier": 0.15},
+        {"itemId": "herb_seed", "min": 0, "max": 1, "skillId": "foraging", "skillMultiplier": 0.05}
       ],
       "persistent"     : true,
       "regrowthTurns"  : 120 // ~5 days
@@ -1262,7 +1264,8 @@
       "workAmount"     : 6,
       "toolRequirement": null,
       "yields"         : [
-        {"itemId": "wild_berries", "min": 25, "max": 40, "skillId": "foraging", "skillMultiplier": 0.2}
+        {"itemId": "wild_berries", "min": 25, "max": 40, "skillId": "foraging", "skillMultiplier": 0.2},
+        {"itemId": "fruit_seed",   "min": 1,  "max": 3,  "skillId": "foraging", "skillMultiplier": 0.05}
       ],
       "persistent"     : true,
       "regrowthTurns"  : 2400 // ~8 days at 300 turns/day
@@ -1287,7 +1290,8 @@
       "workAmount"     : 6,
       "toolRequirement": null,
       "yields"         : [
-        {"itemId": "wild_oats", "min": 2, "max": 4, "skillId": "foraging", "skillMultiplier": 0.15}
+        {"itemId": "wild_oats", "min": 2, "max": 4, "skillId": "foraging", "skillMultiplier": 0.15},
+        {"itemId": "grain_seed", "min": 1, "max": 2, "skillId": "foraging", "skillMultiplier": 0.05}
       ],
       "persistent"     : true,
       "regrowthTurns"  : 3000 // ~10 days at 300 turns/day
@@ -1313,6 +1317,7 @@
       "toolRequirement": null,
       "yields"         : [
         {"itemId": "wild_oats",   "min": 1, "max": 3, "skillId": "foraging", "skillMultiplier": 0.15},
+        {"itemId": "grain_seed",  "min": 1, "max": 2, "skillId": "foraging", "skillMultiplier": 0.05},
         {"itemId": "plant_fiber", "min": 1, "max": 2, "skillId": "foraging", "skillMultiplier": 0.05}
       ],
       "persistent"     : true,

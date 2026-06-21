@@ -8,6 +8,9 @@ import { gatedConsole as console } from '../../core/log';
 import { buildingService } from '../BuildingService';
 import { pawnStatService } from '../PawnStatService';
 import { buildingSupplied } from './staging';
+import { SUBTERRAINS, SUBTERRAIN_FALLBACK, terrainBlocksSight } from '../../core/Terrains';
+import { markTileDirty } from '../../core/tileDeltas';
+import { patchPathfindingWalkable } from '../PathfinderService';
 
 export function generate(jobs: Job[], gs: GameState): Job[] {
   // Remove construct jobs for buildings that no longer exist or are complete
@@ -54,6 +57,32 @@ export function complete(job: Job, gs: GameState): GameState {
 
   const building = (gs.buildings ?? []).find((b) => b.id === job.buildingId);
   if (!building) return gs;
+
+  // PRODUCTION-CHAIN-II §F (Soil Works): a terraform build is one-shot — it rewrites the tile's soil
+  // (subType) and then removes ITSELF (it's the act of laying soil, not a standing structure). Reuses
+  // the in-place tile-write + delta path that harvest.ts uses for the base-subterrain restore.
+  const def = buildingService.getBuildingById(building.type);
+  if (def?.terraformSubType) {
+    const sub = SUBTERRAINS[def.terraformSubType] ?? SUBTERRAIN_FALLBACK;
+    const tile = gs.worldMap[building.y]?.[building.x];
+    if (tile) {
+      tile.subType = def.terraformSubType;
+      tile.walkable = sub.walkable;
+      tile.movementCost = sub.movementCost;
+      tile.blocksSight = terrainBlocksSight(sub.walkable, def.terraformSubType);
+      patchPathfindingWalkable(tile.x, tile.y, sub.walkable);
+      markTileDirty(building.y, building.x, tile);
+    }
+    console.log(
+      `[JobService] Terraform complete: ${building.type} at (${building.x},${building.y}) → subType ${def.terraformSubType}`
+    );
+    // Remove the build (consumed) + its staged materials; the soil change IS the product.
+    return {
+      ...gs,
+      buildings: (gs.buildings ?? []).filter((b) => b.id !== building.id),
+      droppedItems: (gs.droppedItems ?? []).filter((d) => d.reservedFor !== building.id)
+    };
+  }
 
   // Wire stats.jsonc construction quality into building durability
   const pawn = gs.pawns.find((p) => p.id === job.claimedBy);

@@ -788,6 +788,11 @@
     },
     drink: { label: 'DRINK ZONE', color: '#4fc3f7', desc: 'Thirsty pawns come here to drink' },
     wash: { label: 'WASH ZONE', color: '#80d8c0', desc: 'Dirty pawns come here to wash' },
+    grow: {
+      label: 'GROW ZONE',
+      color: '#6fae3a',
+      desc: 'Farmers sow the chosen seed on fertile soil here'
+    },
     harvest: { label: 'HARVEST', color: '#4ccc44', desc: 'Single-tile harvest designation' },
     mine: { label: 'MINE', color: '#cc8833', desc: 'Single-tile mining designation' },
     construct: { label: 'CONSTRUCT', color: '#44aacc', desc: 'Construction site' }

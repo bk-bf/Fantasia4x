@@ -12,12 +12,15 @@ export type DesignationType =
   | 'stockpile'
   // ── PRODUCTION-CHAIN-EXPANSION §D: water/hygiene zones ──
   | 'drink'
-  | 'wash';
+  | 'wash'
+  // ── PRODUCTION-CHAIN-II §F: growing zone — pawns sow the zone's seed onto eligible soil ──
+  | 'grow';
 
 /** Zone types that support item-category filtering. */
 // Paintable zone-instance types. 'harvest'/'stockpile' carry an item filter; 'drink'/'wash' are
-// pure location designations (no filter) that pawns route to for thirst/hygiene.
-export type FilterableZoneType = 'harvest' | 'stockpile' | 'drink' | 'wash';
+// pure location designations (no filter) that pawns route to for thirst/hygiene; 'grow' carries a
+// seed filter (which crop to plant).
+export type FilterableZoneType = 'harvest' | 'stockpile' | 'drink' | 'wash' | 'grow';
 
 /**
  * DF-style category filter for a zone type.
@@ -263,6 +266,10 @@ export interface Building {
   tileCapacityBonus?: number; // refactor Stage 2: extra item capacity this building grants to its tile (§F storage)
   minFuelHeat?: number; // station won't operate below this fuel heat rating (§2)
   passive?: boolean; // ADR-016: a furnace that transforms loaded inputs over time with no pawn job
+  /** PRODUCTION-CHAIN-II §F (Soil Works): a one-shot terraform build. On completion it rewrites the
+   *  tile's `subType` to this subterrain (raising soil fertility) and then removes itself — "replace
+   *  the dirt". Handled in jobs/construct.complete. */
+  terraformSubType?: string;
   fluxPerBatch?: number; // limestone flux consumed per smelt batch (bloomery, §5)
   moldRequired?: string; // clay/metal mold consumed/worn per cast (§5/§G)
   fuelRequirements?: {
