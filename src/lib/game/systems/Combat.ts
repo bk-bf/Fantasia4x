@@ -55,6 +55,7 @@ import {
   parentLimbOf,
   enabledNaturalWeapons,
   cascadeSeveredContents,
+  skeletonPartOf,
   BOUND_NATURAL_WEAPONS,
   DEFAULT_PLAN,
   BONE_FRACTION
@@ -686,10 +687,13 @@ class CombatServiceImpl implements CombatService {
     const knockdown = knockChance > 0 && rng.random() * 100 < knockChance;
 
     // Fracture roll: heavy trauma cracks the bone beneath the soft-tissue wound. Tracked as a SEPARATE
-    // `fracture` wound; enough accumulated fracture damage BREAKS the bone (cripples the limb without
-    // severing it — see _applyInjuryToEntity / boneBroken). Only parts with a skeleton (boneHp) can break.
+    // `fracture` wound on the SKELETON: for a flesh wall over a distinct bone (chest) the fracture lands on
+    // the bone it wraps (ribcage); for a bone-bearing limb (forearm) it lands on the part itself. Enough
+    // accumulated fracture damage BREAKS the bone (cripples the limb without severing it — see
+    // _applyInjuryToEntity / boneBroken). A part with no skeleton (soft abdomen, eyes, organs) can't break.
     let fractureInjury: Injury | null = null;
-    if (partDef.boneHp != null && hpMissing > 0) {
+    const boneTargetId = skeletonPartOf(partId);
+    if (boneTargetId != null && hpMissing > 0) {
       const isBlunt = damageType === 'blunt';
       const boneHp = BONE_FRACTION * partMaxHp; // scaled to this creature's actual part size
       const fractureChance = clamp(
@@ -699,7 +703,7 @@ class CombatServiceImpl implements CombatService {
       );
       if (rng.random() < fractureChance) {
         fractureInjury = {
-          bodyPart: partId,
+          bodyPart: boneTargetId,
           type: 'fracture',
           severity: severityFromFrac(final / partMaxHp),
           damage: final,

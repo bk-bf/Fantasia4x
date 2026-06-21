@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { PART_DEF_MAP } from '../core/BodyParts';
+import { PART_DEF_MAP, skeletonPartOf } from '../core/BodyParts';
 import { woundById } from '../core/Wounds';
 import { pawnStatService } from '../services/PawnStatService';
 import { syncFractureConditions } from '../core/needs';
@@ -13,11 +13,34 @@ import type { EntityCondition, LimbState, Pawn } from '../core/types';
  */
 describe('fracture anatomy + wound data', () => {
   it('skeletal parts carry boneHp (a fraction of maxHp); soft parts do not', () => {
-    const forearm = PART_DEF_MAP['leftForearm']!;
-    expect(forearm.boneHp).toBeGreaterThan(0);
-    expect(forearm.boneHp!).toBeLessThan(forearm.maxHp); // bone breaks before the whole part is destroyed
+    // The forearm is now a SOFT segment wrapping leftForearmBone — the bone carries the boneHp.
+    const forearmBone = PART_DEF_MAP['leftForearmBone']!;
+    expect(forearmBone.boneHp).toBeGreaterThan(0);
+    expect(forearmBone.boneHp!).toBeLessThan(forearmBone.maxHp); // bone breaks before the part is destroyed
+    expect(PART_DEF_MAP['leftForearm']!.boneHp).toBeUndefined(); // the flesh segment itself is not bone
     expect(PART_DEF_MAP['leftEye']!.boneHp).toBeUndefined(); // eyes have no bone
     expect(PART_DEF_MAP['heart']!.boneHp).toBeUndefined(); // organs have no bone
+  });
+
+  it('the chest is a SOFT wall (no bone); the ribcage beneath it is the skeleton', () => {
+    // The chest wraps organs and takes soft-tissue wounds, but it is NOT bone — it can't fracture.
+    expect(PART_DEF_MAP['chest']!.boneHp).toBeUndefined();
+    expect(PART_DEF_MAP['chest']!.skeleton).toBeUndefined();
+    // The ribcage is a distinct internal skeleton: fracture-only (never struck directly) and bone-bearing.
+    const ribcage = PART_DEF_MAP['ribcage']!;
+    expect(ribcage.skeleton).toBe(true);
+    expect(ribcage.boneHp).toBeGreaterThan(0);
+    expect(ribcage.hitWeight).toBe(0); // internal — never rolled as a direct hit, so no cut/puncture/crush
+    expect(ribcage.containedIn).toBe('chest'); // severed with the chest
+  });
+
+  it('a hit FRACTURES the skeleton: the flesh segment routes its fracture to the bone it wraps', () => {
+    expect(skeletonPartOf('chest')).toBe('ribcage'); // torso wall → ribcage
+    expect(skeletonPartOf('leftForearm')).toBe('leftForearmBone'); // arm flesh → forearm bone
+    expect(skeletonPartOf('leftFoot')).toBe('leftFootBone'); // foot flesh → foot bone
+    expect(skeletonPartOf('abdomen')).toBeUndefined(); // soft, boneless → can't fracture
+    expect(skeletonPartOf('leftEye')).toBeUndefined();
+    expect(skeletonPartOf('leftForearmBone')).toBe('leftForearmBone'); // a bone targets itself
   });
 
   it('the skull is a CRITICAL part (its destruction is instant death)', () => {
@@ -54,8 +77,8 @@ describe('broken bone effects', () => {
           bleedRate: 0,
           parts: [
             {
-              id: 'leftForearm',
-              health: 100,
+              id: 'leftForearmBone',
+              health: 35,
               maxHp: 35,
               isMissing: false,
               boneBroken: broken,
@@ -75,7 +98,7 @@ describe('broken bone effects', () => {
 
   it('syncFractureConditions drives a GRADED `fractured` condition from bone damage, clearing on heal', () => {
     const conditions: EntityCondition[] = [];
-    // leftForearm maxHp 35 → break threshold = 0.55×35 ≈ 19.25; a 25-damage fracture is fully broken.
+    // leftForearmBone maxHp 35 → break threshold = 0.55×35 ≈ 19.25; a 25-damage fracture is fully broken.
     const limbs = [
       {
         id: 'left_arm',
@@ -83,13 +106,13 @@ describe('broken bone effects', () => {
         bleedRate: 0,
         parts: [
           {
-            id: 'leftForearm',
-            health: 100,
+            id: 'leftForearmBone',
+            health: 35,
             maxHp: 35,
             isMissing: false,
             injuries: [
               {
-                bodyPart: 'leftForearm',
+                bodyPart: 'leftForearmBone',
                 type: 'fracture',
                 severity: 'serious',
                 damage: 25,

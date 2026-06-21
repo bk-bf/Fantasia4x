@@ -19,6 +19,10 @@ export interface BodyPartDef {
   /** Default-scale bone HP (BONE_FRACTION × maxHp). Presence = "this part has a skeleton" (can fracture);
    *  the runtime BREAK threshold uses BONE_FRACTION × the part's SCALED maxHp, not this default. */
   boneHp?: number;
+  /** This part IS bone (a distinct skeletal element like the ribcage, not a bone-bearing flesh limb): it
+   *  is internal (hitWeight 0 → never struck directly) and takes ONLY fractures. A hit on the flesh part
+   *  that CONTAINS it routes its fracture roll here — see `skeletonPartOf` + Combat. Implies a boneHp. */
+  skeleton?: boolean;
   /** Destroying this part is instant death regardless of limb-aggregate HP (a caved-in skull). */
   isCritical?: boolean;
   /** Natural-weapon ids this part can wield (jaw → bite, paw → claw, hoof → kick…). A creature can use
@@ -38,6 +42,7 @@ interface CatalogPart {
   isPaired?: boolean;
   containedIn?: string;
   bone?: boolean;
+  skeleton?: boolean;
   critical?: boolean;
   weapons?: string[];
   armor?: number;
@@ -81,7 +86,9 @@ for (const [id, p] of Object.entries(ALL_PARTS)) {
     containedIn: p.containedIn as BodyPartId | undefined,
     isPaired: p.isPaired ?? false,
     isVital: p.isVital ?? false,
-    boneHp: p.bone ? Math.round(p.size * BONE_FRACTION) : undefined,
+    // A bone-bearing flesh limb (`bone`) OR a distinct skeletal element (`skeleton`) carries a boneHp.
+    boneHp: p.bone || p.skeleton ? Math.round(p.size * BONE_FRACTION) : undefined,
+    skeleton: p.skeleton ?? undefined,
     isCritical: p.critical ?? undefined,
     weapons: p.weapons,
     armor: p.armor
@@ -93,6 +100,20 @@ for (const [id, p] of Object.entries(ALL_PARTS)) {
 export const BOUND_NATURAL_WEAPONS = new Set<string>();
 for (const def of Object.values(PART_DEF_MAP)) {
   for (const w of def?.weapons ?? []) BOUND_NATURAL_WEAPONS.add(w);
+}
+
+// Flesh part id → the distinct skeletal part it WRAPS (a `skeleton` part's `containedIn`). A hit on the
+// flesh part routes its fracture roll to this bone (e.g. chest → ribcage).
+const SKELETON_OF: Partial<Record<BodyPartId, BodyPartId>> = {};
+for (const def of Object.values(PART_DEF_MAP)) {
+  if (def?.skeleton && def.containedIn) SKELETON_OF[def.containedIn] = def.id;
+}
+
+/** Which part a hit on `partId` should FRACTURE: the distinct skeletal element it wraps (chest → ribcage),
+ *  else the part itself when it's a bone-bearing limb (forearm → forearm), else undefined (no skeleton →
+ *  can't fracture: eyes, soft abdomen, organs). Single source of truth for Combat's fracture targeting. */
+export function skeletonPartOf(partId: BodyPartId): BodyPartId | undefined {
+  return SKELETON_OF[partId] ?? (PART_DEF_MAP[partId]?.boneHp != null ? partId : undefined);
 }
 
 /** Transitive closure of parts nested inside `parentId` (its organs/sub-parts, and theirs).

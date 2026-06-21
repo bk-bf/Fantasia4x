@@ -12,10 +12,18 @@
 //
 //   Part fields: size (default HP at bodyScale 1.0 — per-creature maxHp = round(size×bodyScale), set at
 //   spawn; the map never stores final HP and does NOT drive the blood pool), bleedRatio, hitWeight
-//   (0 = internal organ, never rolled), isVital, isPaired, containedIn, bone (can fracture), critical
+//   (0 = internal organ/skeleton, never rolled), isVital, isPaired, containedIn, bone (a bone-bearing
+//   flesh part — DEPRECATED for limbs in favour of the flesh+`skeleton` split below), critical
 //   (destroying it = instant death). The core organs (brain/heart/lungs) must exist on every plan so the
 //   capacity model (consciousness/breathing/blood) resolves; the `moving` capacity reads "leg" limbs,
 //   `manipulation` reads "arm" limbs.
+//
+//   SKELETON model: a limb SEGMENT is a soft-tissue part (hitWeight > 0; takes cut/puncture/crush) that
+//   WRAPS a `skeleton: true` bone part (hitWeight 0 → never struck directly; takes ONLY fractures). The
+//   bone is `containedIn` its flesh segment; a hit on the flesh routes its fracture roll to the bone
+//   beneath (see Combat `skeletonPartOf`). Breaking the bone cripples the limb without severing it; a
+//   severed flesh segment takes its bone with it. The chest→ribcage pair is the same idea for the torso.
+//   (Head/jaw/snout and the avian wing bones stay `bone: true` — they ARE the bone, no soft wrapper.)
 //
 // Add `limbMap: "<plan>"` to a creature in creatures.jsonc; pawns default to "humanoid".
 {
@@ -40,44 +48,68 @@
       "rightEye"    : {"size": 10, "bleedRatio": 0.01, "hitWeight": 0.2, "isPaired": true, "armor": 0.1},
       "leftEar"     : {"size": 10, "bleedRatio": 0.005, "hitWeight": 0.2, "isPaired": true, "armor": 0.2},
       "rightEar"    : {"size": 10, "bleedRatio": 0.005, "hitWeight": 0.2, "isPaired": true, "armor": 0.2},
-      "chest"       : {"size": 80, "bleedRatio": 0.12, "hitWeight": 32, "bone": true, "weapons": ["charge", "slam"], "armor": 1},
-      "abdomen"     : {"size": 70, "bleedRatio": 0.1, "hitWeight": 24, "armor": 0.5}
+      // The chest is the SOFT outer wall of the thorax (pecs/skin) wrapping the ribcage — it takes
+      // cut/puncture/crush like any flesh, but it is NOT bone, so it never fractures. The skeleton beneath
+      // it is the `ribcage` (below): heavy blows crack THAT, not the wall. (See Combat's fracture routing.)
+      "chest"       : {"size": 80, "bleedRatio": 0.12, "hitWeight": 32, "weapons": ["charge", "slam"], "armor": 1},
+      "abdomen"     : {"size": 70, "bleedRatio": 0.1, "hitWeight": 24, "armor": 0.5},
+      // The ribcage — the thorax SKELETON. Internal (hitWeight 0 → never struck directly), `skeleton: true`
+      // so it can ONLY take fractures (no cut/puncture/crush). A heavy hit to the `chest` routes its fracture
+      // roll here; size matches the chest so the break threshold is unchanged. Severed with the chest.
+      "ribcage"     : {"size": 80, "bleedRatio": 0.0, "hitWeight": 0, "skeleton": true, "containedIn": "chest"}
     }
   },
   "plans": {
     "humanoid": {
+      "// note": "Each limb SEGMENT is soft tissue (cut/puncture/crush) wrapping a `*Bone` skeleton (hitWeight 0, fracture-only) — a hit on the flesh routes its fracture to the bone within. Same model as chest→ribcage.",
       "parts": {
-        "leftShoulder"     : {"size": 40, "bleedRatio": 0.03, "hitWeight": 1, "isPaired": true, "bone": true, "armor": 0.7},
-        "leftUpperArm"     : {"size": 45, "bleedRatio": 0.05, "hitWeight": 2, "isPaired": true, "bone": true, "armor": 0.6},
-        "leftForearm"      : {"size": 35, "bleedRatio": 0.04, "hitWeight": 1.5, "isPaired": true, "bone": true, "armor": 0.5},
-        "leftHand"         : {"size": 30, "bleedRatio": 0.05, "hitWeight": 1, "isPaired": true, "bone": true, "weapons": ["fists", "claw"], "armor": 0.4},
+        "leftShoulder"     : {"size": 40, "bleedRatio": 0.03, "hitWeight": 1, "isPaired": true, "armor": 0.7},
+        "leftShoulderBone" : {"size": 40, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "leftShoulder"},
+        "leftUpperArm"     : {"size": 45, "bleedRatio": 0.05, "hitWeight": 2, "isPaired": true, "armor": 0.6},
+        "leftUpperArmBone" : {"size": 45, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "leftUpperArm"},
+        "leftForearm"      : {"size": 35, "bleedRatio": 0.04, "hitWeight": 1.5, "isPaired": true, "armor": 0.5},
+        "leftForearmBone"  : {"size": 35, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "leftForearm"},
+        "leftHand"         : {"size": 30, "bleedRatio": 0.05, "hitWeight": 1, "isPaired": true, "weapons": ["fists", "claw"], "armor": 0.4},
+        "leftHandBone"     : {"size": 30, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "leftHand"},
         "leftThumb"        : {"size": 10, "bleedRatio": 0.005, "hitWeight": 0.1, "isPaired": true, "containedIn": "leftHand", "armor": 0.5},
         "leftIndexFinger"  : {"size": 8, "bleedRatio": 0.003, "hitWeight": 0.1, "isPaired": true, "containedIn": "leftHand", "armor": 0.2},
         "leftMiddleFinger" : {"size": 8, "bleedRatio": 0.003, "hitWeight": 0.1, "isPaired": true, "containedIn": "leftHand", "armor": 0.2},
         "leftRingFinger"   : {"size": 8, "bleedRatio": 0.003, "hitWeight": 0.1, "isPaired": true, "containedIn": "leftHand", "armor": 0.2},
         "leftLittleFinger" : {"size": 8, "bleedRatio": 0.003, "hitWeight": 0.1, "isPaired": true, "containedIn": "leftHand", "armor": 0.2},
-        "rightShoulder"    : {"size": 40, "bleedRatio": 0.03, "hitWeight": 1, "isPaired": true, "bone": true, "armor": 0.7},
-        "rightUpperArm"    : {"size": 45, "bleedRatio": 0.05, "hitWeight": 2, "isPaired": true, "bone": true, "armor": 0.6},
-        "rightForearm"     : {"size": 35, "bleedRatio": 0.04, "hitWeight": 1.5, "isPaired": true, "bone": true, "armor": 0.5},
-        "rightHand"        : {"size": 30, "bleedRatio": 0.05, "hitWeight": 1, "isPaired": true, "bone": true, "weapons": ["fists", "claw"], "armor": 0.4},
+        "rightShoulder"    : {"size": 40, "bleedRatio": 0.03, "hitWeight": 1, "isPaired": true, "armor": 0.7},
+        "rightShoulderBone": {"size": 40, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "rightShoulder"},
+        "rightUpperArm"    : {"size": 45, "bleedRatio": 0.05, "hitWeight": 2, "isPaired": true, "armor": 0.6},
+        "rightUpperArmBone": {"size": 45, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "rightUpperArm"},
+        "rightForearm"     : {"size": 35, "bleedRatio": 0.04, "hitWeight": 1.5, "isPaired": true, "armor": 0.5},
+        "rightForearmBone" : {"size": 35, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "rightForearm"},
+        "rightHand"        : {"size": 30, "bleedRatio": 0.05, "hitWeight": 1, "isPaired": true, "weapons": ["fists", "claw"], "armor": 0.4},
+        "rightHandBone"    : {"size": 30, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "rightHand"},
         "rightThumb"       : {"size": 10, "bleedRatio": 0.005, "hitWeight": 0.1, "isPaired": true, "containedIn": "rightHand", "armor": 0.5},
         "rightIndexFinger" : {"size": 8, "bleedRatio": 0.003, "hitWeight": 0.1, "isPaired": true, "containedIn": "rightHand", "armor": 0.2},
         "rightMiddleFinger": {"size": 8, "bleedRatio": 0.003, "hitWeight": 0.1, "isPaired": true, "containedIn": "rightHand", "armor": 0.2},
         "rightRingFinger"  : {"size": 8, "bleedRatio": 0.003, "hitWeight": 0.1, "isPaired": true, "containedIn": "rightHand", "armor": 0.2},
         "rightLittleFinger": {"size": 8, "bleedRatio": 0.003, "hitWeight": 0.1, "isPaired": true, "containedIn": "rightHand", "armor": 0.2},
-        "leftHip"          : {"size": 50, "bleedRatio": 0.04, "hitWeight": 1.5, "isPaired": true, "bone": true, "armor": 0.7},
-        "leftUpperLeg"     : {"size": 60, "bleedRatio": 0.08, "hitWeight": 6, "isPaired": true, "bone": true, "armor": 0.6},
-        "leftLowerLeg"     : {"size": 50, "bleedRatio": 0.06, "hitWeight": 4.5, "isPaired": true, "bone": true, "armor": 0.5},
-        "leftFoot"         : {"size": 30, "bleedRatio": 0.04, "hitWeight": 1.5, "isPaired": true, "bone": true, "weapons": ["kick"], "armor": 0.4},
+        "leftHip"          : {"size": 50, "bleedRatio": 0.04, "hitWeight": 1.5, "isPaired": true, "armor": 0.7},
+        "leftHipBone"      : {"size": 50, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "leftHip"},
+        "leftUpperLeg"     : {"size": 60, "bleedRatio": 0.08, "hitWeight": 6, "isPaired": true, "armor": 0.6},
+        "leftUpperLegBone" : {"size": 60, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "leftUpperLeg"},
+        "leftLowerLeg"     : {"size": 50, "bleedRatio": 0.06, "hitWeight": 4.5, "isPaired": true, "armor": 0.5},
+        "leftLowerLegBone" : {"size": 50, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "leftLowerLeg"},
+        "leftFoot"         : {"size": 30, "bleedRatio": 0.04, "hitWeight": 1.5, "isPaired": true, "weapons": ["kick"], "armor": 0.4},
+        "leftFootBone"     : {"size": 30, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "leftFoot"},
         "leftBigToe"       : {"size": 8, "bleedRatio": 0.003, "hitWeight": 0.1, "isPaired": true, "containedIn": "leftFoot", "armor": 0.2},
         "leftSecondToe"    : {"size": 6, "bleedRatio": 0.002, "hitWeight": 0.1, "isPaired": true, "containedIn": "leftFoot", "armor": 0.2},
         "leftMiddleToe"    : {"size": 6, "bleedRatio": 0.002, "hitWeight": 0.1, "isPaired": true, "containedIn": "leftFoot", "armor": 0.2},
         "leftFourthToe"    : {"size": 6, "bleedRatio": 0.002, "hitWeight": 0.1, "isPaired": true, "containedIn": "leftFoot", "armor": 0.2},
         "leftLittleToe"    : {"size": 6, "bleedRatio": 0.002, "hitWeight": 0.1, "isPaired": true, "containedIn": "leftFoot", "armor": 0.2},
-        "rightHip"         : {"size": 50, "bleedRatio": 0.04, "hitWeight": 1.5, "isPaired": true, "bone": true, "armor": 0.7},
-        "rightUpperLeg"    : {"size": 60, "bleedRatio": 0.08, "hitWeight": 6, "isPaired": true, "bone": true, "armor": 0.6},
-        "rightLowerLeg"    : {"size": 50, "bleedRatio": 0.06, "hitWeight": 4.5, "isPaired": true, "bone": true, "armor": 0.5},
-        "rightFoot"        : {"size": 30, "bleedRatio": 0.04, "hitWeight": 1.5, "isPaired": true, "bone": true, "weapons": ["kick"], "armor": 0.4},
+        "rightHip"         : {"size": 50, "bleedRatio": 0.04, "hitWeight": 1.5, "isPaired": true, "armor": 0.7},
+        "rightHipBone"     : {"size": 50, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "rightHip"},
+        "rightUpperLeg"    : {"size": 60, "bleedRatio": 0.08, "hitWeight": 6, "isPaired": true, "armor": 0.6},
+        "rightUpperLegBone": {"size": 60, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "rightUpperLeg"},
+        "rightLowerLeg"    : {"size": 50, "bleedRatio": 0.06, "hitWeight": 4.5, "isPaired": true, "armor": 0.5},
+        "rightLowerLegBone": {"size": 50, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "rightLowerLeg"},
+        "rightFoot"        : {"size": 30, "bleedRatio": 0.04, "hitWeight": 1.5, "isPaired": true, "weapons": ["kick"], "armor": 0.4},
+        "rightFootBone"    : {"size": 30, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "rightFoot"},
         "rightBigToe"      : {"size": 8, "bleedRatio": 0.003, "hitWeight": 0.1, "isPaired": true, "containedIn": "rightFoot", "armor": 0.2},
         "rightSecondToe"   : {"size": 6, "bleedRatio": 0.002, "hitWeight": 0.1, "isPaired": true, "containedIn": "rightFoot", "armor": 0.2},
         "rightMiddleToe"   : {"size": 6, "bleedRatio": 0.002, "hitWeight": 0.1, "isPaired": true, "containedIn": "rightFoot", "armor": 0.2},
@@ -86,103 +118,134 @@
       },
       "limbs": {
         "head": ["skull", "jaw", "nose", "leftEye", "rightEye", "leftEar", "rightEar", "brain"],
-        "torso": ["chest", "abdomen", "heart", "leftLung", "rightLung", "liver", "stomach", "leftKidney", "rightKidney", "spine"],
-        "left_arm": ["leftShoulder", "leftUpperArm", "leftForearm", "leftHand", "leftThumb", "leftIndexFinger", "leftMiddleFinger", "leftRingFinger", "leftLittleFinger"],
-        "right_arm": ["rightShoulder", "rightUpperArm", "rightForearm", "rightHand", "rightThumb", "rightIndexFinger", "rightMiddleFinger", "rightRingFinger", "rightLittleFinger"],
-        "left_leg": ["leftHip", "leftUpperLeg", "leftLowerLeg", "leftFoot", "leftBigToe", "leftSecondToe", "leftMiddleToe", "leftFourthToe", "leftLittleToe"],
-        "right_leg": ["rightHip", "rightUpperLeg", "rightLowerLeg", "rightFoot", "rightBigToe", "rightSecondToe", "rightMiddleToe", "rightFourthToe", "rightLittleToe"]
+        "torso": ["chest", "ribcage", "abdomen", "heart", "leftLung", "rightLung", "liver", "stomach", "leftKidney", "rightKidney", "spine"],
+        "left_arm": ["leftShoulder", "leftShoulderBone", "leftUpperArm", "leftUpperArmBone", "leftForearm", "leftForearmBone", "leftHand", "leftHandBone", "leftThumb", "leftIndexFinger", "leftMiddleFinger", "leftRingFinger", "leftLittleFinger"],
+        "right_arm": ["rightShoulder", "rightShoulderBone", "rightUpperArm", "rightUpperArmBone", "rightForearm", "rightForearmBone", "rightHand", "rightHandBone", "rightThumb", "rightIndexFinger", "rightMiddleFinger", "rightRingFinger", "rightLittleFinger"],
+        "left_leg": ["leftHip", "leftHipBone", "leftUpperLeg", "leftUpperLegBone", "leftLowerLeg", "leftLowerLegBone", "leftFoot", "leftFootBone", "leftBigToe", "leftSecondToe", "leftMiddleToe", "leftFourthToe", "leftLittleToe"],
+        "right_leg": ["rightHip", "rightHipBone", "rightUpperLeg", "rightUpperLegBone", "rightLowerLeg", "rightLowerLegBone", "rightFoot", "rightFootBone", "rightBigToe", "rightSecondToe", "rightMiddleToe", "rightFourthToe", "rightLittleToe"]
       }
     },
     "quadruped": {
-      "// note": "Clawed/padded quadrupeds (wolf, bear, cat, rat…). Leg SEGMENTS + tail here are reused by quadruped_hooved and amphibian (which swap the feet).",
+      "// note": "Clawed/padded quadrupeds (wolf, bear, cat, rat…). Leg SEGMENTS (flesh + `*Bone` skeleton) + tail here are reused by quadruped_hooved and amphibian (which swap the feet).",
       "parts": {
-        "frontLeftShoulder" : {"size": 40, "bleedRatio": 0.03, "hitWeight": 2, "isPaired": true, "bone": true, "armor": 0.7},
-        "frontLeftUpperLeg" : {"size": 45, "bleedRatio": 0.05, "hitWeight": 3, "isPaired": true, "bone": true, "armor": 0.6},
-        "frontLeftLowerLeg" : {"size": 38, "bleedRatio": 0.04, "hitWeight": 2.5, "isPaired": true, "bone": true, "armor": 0.5},
-        "frontLeftPaw"      : {"size": 22, "bleedRatio": 0.03, "hitWeight": 1, "isPaired": true, "bone": true, "weapons": ["claw", "slam"], "armor": 0.4},
-        "frontRightShoulder": {"size": 40, "bleedRatio": 0.03, "hitWeight": 2, "isPaired": true, "bone": true, "armor": 0.7},
-        "frontRightUpperLeg": {"size": 45, "bleedRatio": 0.05, "hitWeight": 3, "isPaired": true, "bone": true, "armor": 0.6},
-        "frontRightLowerLeg": {"size": 38, "bleedRatio": 0.04, "hitWeight": 2.5, "isPaired": true, "bone": true, "armor": 0.5},
-        "frontRightPaw"     : {"size": 22, "bleedRatio": 0.03, "hitWeight": 1, "isPaired": true, "bone": true, "weapons": ["claw", "slam"], "armor": 0.4},
-        "hindLeftHaunch"    : {"size": 55, "bleedRatio": 0.05, "hitWeight": 4, "isPaired": true, "bone": true, "armor": 0.7},
-        "hindLeftUpperLeg"  : {"size": 48, "bleedRatio": 0.05, "hitWeight": 3, "isPaired": true, "bone": true, "armor": 0.6},
-        "hindLeftLowerLeg"  : {"size": 40, "bleedRatio": 0.04, "hitWeight": 2.5, "isPaired": true, "bone": true, "armor": 0.5},
-        "hindLeftPaw"       : {"size": 22, "bleedRatio": 0.03, "hitWeight": 1, "isPaired": true, "bone": true, "weapons": ["kick"], "armor": 0.4},
-        "hindRightHaunch"   : {"size": 55, "bleedRatio": 0.05, "hitWeight": 4, "isPaired": true, "bone": true, "armor": 0.7},
-        "hindRightUpperLeg" : {"size": 48, "bleedRatio": 0.05, "hitWeight": 3, "isPaired": true, "bone": true, "armor": 0.6},
-        "hindRightLowerLeg" : {"size": 40, "bleedRatio": 0.04, "hitWeight": 2.5, "isPaired": true, "bone": true, "armor": 0.5},
-        "hindRightPaw"      : {"size": 22, "bleedRatio": 0.03, "hitWeight": 1, "isPaired": true, "bone": true, "weapons": ["kick"], "armor": 0.4},
-        "tail"              : {"size": 30, "bleedRatio": 0.03, "hitWeight": 1.5, "bone": true, "weapons": ["slam"], "armor": 0.5}
+        "frontLeftShoulder"     : {"size": 40, "bleedRatio": 0.03, "hitWeight": 2, "isPaired": true, "armor": 0.7},
+        "frontLeftShoulderBone" : {"size": 40, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "frontLeftShoulder"},
+        "frontLeftUpperLeg"     : {"size": 45, "bleedRatio": 0.05, "hitWeight": 3, "isPaired": true, "armor": 0.6},
+        "frontLeftUpperLegBone" : {"size": 45, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "frontLeftUpperLeg"},
+        "frontLeftLowerLeg"     : {"size": 38, "bleedRatio": 0.04, "hitWeight": 2.5, "isPaired": true, "armor": 0.5},
+        "frontLeftLowerLegBone" : {"size": 38, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "frontLeftLowerLeg"},
+        "frontLeftPaw"          : {"size": 22, "bleedRatio": 0.03, "hitWeight": 1, "isPaired": true, "weapons": ["claw", "slam"], "armor": 0.4},
+        "frontLeftPawBone"      : {"size": 22, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "frontLeftPaw"},
+        "frontRightShoulder"    : {"size": 40, "bleedRatio": 0.03, "hitWeight": 2, "isPaired": true, "armor": 0.7},
+        "frontRightShoulderBone": {"size": 40, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "frontRightShoulder"},
+        "frontRightUpperLeg"    : {"size": 45, "bleedRatio": 0.05, "hitWeight": 3, "isPaired": true, "armor": 0.6},
+        "frontRightUpperLegBone": {"size": 45, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "frontRightUpperLeg"},
+        "frontRightLowerLeg"    : {"size": 38, "bleedRatio": 0.04, "hitWeight": 2.5, "isPaired": true, "armor": 0.5},
+        "frontRightLowerLegBone": {"size": 38, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "frontRightLowerLeg"},
+        "frontRightPaw"         : {"size": 22, "bleedRatio": 0.03, "hitWeight": 1, "isPaired": true, "weapons": ["claw", "slam"], "armor": 0.4},
+        "frontRightPawBone"     : {"size": 22, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "frontRightPaw"},
+        "hindLeftHaunch"        : {"size": 55, "bleedRatio": 0.05, "hitWeight": 4, "isPaired": true, "armor": 0.7},
+        "hindLeftHaunchBone"    : {"size": 55, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "hindLeftHaunch"},
+        "hindLeftUpperLeg"      : {"size": 48, "bleedRatio": 0.05, "hitWeight": 3, "isPaired": true, "armor": 0.6},
+        "hindLeftUpperLegBone"  : {"size": 48, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "hindLeftUpperLeg"},
+        "hindLeftLowerLeg"      : {"size": 40, "bleedRatio": 0.04, "hitWeight": 2.5, "isPaired": true, "armor": 0.5},
+        "hindLeftLowerLegBone"  : {"size": 40, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "hindLeftLowerLeg"},
+        "hindLeftPaw"           : {"size": 22, "bleedRatio": 0.03, "hitWeight": 1, "isPaired": true, "weapons": ["kick"], "armor": 0.4},
+        "hindLeftPawBone"       : {"size": 22, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "hindLeftPaw"},
+        "hindRightHaunch"       : {"size": 55, "bleedRatio": 0.05, "hitWeight": 4, "isPaired": true, "armor": 0.7},
+        "hindRightHaunchBone"   : {"size": 55, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "hindRightHaunch"},
+        "hindRightUpperLeg"     : {"size": 48, "bleedRatio": 0.05, "hitWeight": 3, "isPaired": true, "armor": 0.6},
+        "hindRightUpperLegBone" : {"size": 48, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "hindRightUpperLeg"},
+        "hindRightLowerLeg"     : {"size": 40, "bleedRatio": 0.04, "hitWeight": 2.5, "isPaired": true, "armor": 0.5},
+        "hindRightLowerLegBone" : {"size": 40, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "hindRightLowerLeg"},
+        "hindRightPaw"          : {"size": 22, "bleedRatio": 0.03, "hitWeight": 1, "isPaired": true, "weapons": ["kick"], "armor": 0.4},
+        "hindRightPawBone"      : {"size": 22, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "hindRightPaw"},
+        "tail"                  : {"size": 30, "bleedRatio": 0.03, "hitWeight": 1.5, "bone": true, "weapons": ["slam"], "armor": 0.5}
       },
       "limbs": {
         "head": ["skull", "jaw", "snout", "leftEye", "rightEye", "leftEar", "rightEar", "brain"],
-        "torso": ["chest", "abdomen", "heart", "leftLung", "rightLung", "liver", "stomach", "leftKidney", "rightKidney", "spine"],
-        "front_left_leg": ["frontLeftShoulder", "frontLeftUpperLeg", "frontLeftLowerLeg", "frontLeftPaw"],
-        "front_right_leg": ["frontRightShoulder", "frontRightUpperLeg", "frontRightLowerLeg", "frontRightPaw"],
-        "hind_left_leg": ["hindLeftHaunch", "hindLeftUpperLeg", "hindLeftLowerLeg", "hindLeftPaw"],
-        "hind_right_leg": ["hindRightHaunch", "hindRightUpperLeg", "hindRightLowerLeg", "hindRightPaw"],
+        "torso": ["chest", "ribcage", "abdomen", "heart", "leftLung", "rightLung", "liver", "stomach", "leftKidney", "rightKidney", "spine"],
+        "front_left_leg": ["frontLeftShoulder", "frontLeftShoulderBone", "frontLeftUpperLeg", "frontLeftUpperLegBone", "frontLeftLowerLeg", "frontLeftLowerLegBone", "frontLeftPaw", "frontLeftPawBone"],
+        "front_right_leg": ["frontRightShoulder", "frontRightShoulderBone", "frontRightUpperLeg", "frontRightUpperLegBone", "frontRightLowerLeg", "frontRightLowerLegBone", "frontRightPaw", "frontRightPawBone"],
+        "hind_left_leg": ["hindLeftHaunch", "hindLeftHaunchBone", "hindLeftUpperLeg", "hindLeftUpperLegBone", "hindLeftLowerLeg", "hindLeftLowerLegBone", "hindLeftPaw", "hindLeftPawBone"],
+        "hind_right_leg": ["hindRightHaunch", "hindRightHaunchBone", "hindRightUpperLeg", "hindRightUpperLegBone", "hindRightLowerLeg", "hindRightLowerLegBone", "hindRightPaw", "hindRightPawBone"],
         "tail": ["tail"]
       }
     },
     "quadruped_hooved": {
       "// note": "Ungulates (deer, elk, goat, aurochs, boar) — the quadruped frame with HOOVES instead of paws.",
       "parts": {
-        "frontLeftHoof"  : {"size": 20, "bleedRatio": 0.025, "hitWeight": 1, "isPaired": true, "bone": true, "weapons": ["slam"], "armor": 0.6},
-        "frontRightHoof" : {"size": 20, "bleedRatio": 0.025, "hitWeight": 1, "isPaired": true, "bone": true, "weapons": ["slam"], "armor": 0.6},
-        "hindLeftHoof"   : {"size": 22, "bleedRatio": 0.03, "hitWeight": 1.2, "isPaired": true, "bone": true, "weapons": ["kick"], "armor": 0.6},
-        "hindRightHoof"  : {"size": 22, "bleedRatio": 0.03, "hitWeight": 1.2, "isPaired": true, "bone": true, "weapons": ["kick"], "armor": 0.6}
+        "frontLeftHoof"      : {"size": 20, "bleedRatio": 0.025, "hitWeight": 1, "isPaired": true, "weapons": ["slam"], "armor": 0.6},
+        "frontLeftHoofBone"  : {"size": 20, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "frontLeftHoof"},
+        "frontRightHoof"     : {"size": 20, "bleedRatio": 0.025, "hitWeight": 1, "isPaired": true, "weapons": ["slam"], "armor": 0.6},
+        "frontRightHoofBone" : {"size": 20, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "frontRightHoof"},
+        "hindLeftHoof"       : {"size": 22, "bleedRatio": 0.03, "hitWeight": 1.2, "isPaired": true, "weapons": ["kick"], "armor": 0.6},
+        "hindLeftHoofBone"   : {"size": 22, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "hindLeftHoof"},
+        "hindRightHoof"      : {"size": 22, "bleedRatio": 0.03, "hitWeight": 1.2, "isPaired": true, "weapons": ["kick"], "armor": 0.6},
+        "hindRightHoofBone"  : {"size": 22, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "hindRightHoof"}
       },
       "limbs": {
         "head": ["skull", "jaw", "snout", "leftEye", "rightEye", "leftEar", "rightEar", "brain"],
-        "torso": ["chest", "abdomen", "heart", "leftLung", "rightLung", "liver", "stomach", "leftKidney", "rightKidney", "spine"],
-        "front_left_leg": ["frontLeftShoulder", "frontLeftUpperLeg", "frontLeftLowerLeg", "frontLeftHoof"],
-        "front_right_leg": ["frontRightShoulder", "frontRightUpperLeg", "frontRightLowerLeg", "frontRightHoof"],
-        "hind_left_leg": ["hindLeftHaunch", "hindLeftUpperLeg", "hindLeftLowerLeg", "hindLeftHoof"],
-        "hind_right_leg": ["hindRightHaunch", "hindRightUpperLeg", "hindRightLowerLeg", "hindRightHoof"],
+        "torso": ["chest", "ribcage", "abdomen", "heart", "leftLung", "rightLung", "liver", "stomach", "leftKidney", "rightKidney", "spine"],
+        "front_left_leg": ["frontLeftShoulder", "frontLeftShoulderBone", "frontLeftUpperLeg", "frontLeftUpperLegBone", "frontLeftLowerLeg", "frontLeftLowerLegBone", "frontLeftHoof", "frontLeftHoofBone"],
+        "front_right_leg": ["frontRightShoulder", "frontRightShoulderBone", "frontRightUpperLeg", "frontRightUpperLegBone", "frontRightLowerLeg", "frontRightLowerLegBone", "frontRightHoof", "frontRightHoofBone"],
+        "hind_left_leg": ["hindLeftHaunch", "hindLeftHaunchBone", "hindLeftUpperLeg", "hindLeftUpperLegBone", "hindLeftLowerLeg", "hindLeftLowerLegBone", "hindLeftHoof", "hindLeftHoofBone"],
+        "hind_right_leg": ["hindRightHaunch", "hindRightHaunchBone", "hindRightUpperLeg", "hindRightUpperLegBone", "hindRightLowerLeg", "hindRightLowerLegBone", "hindRightHoof", "hindRightHoofBone"],
         "tail": ["tail"]
       }
     },
     "amphibian": {
       "// note": "Croc/frog-kin (crocodile, bullywug, olm) — quadruped frame with a wide MAW + WEBBED feet, no external ears.",
       "parts": {
-        "maw"               : {"size": 28, "bleedRatio": 0.02, "hitWeight": 3, "bone": true, "weapons": ["bite", "tusk", "tongue", "venom_bite"], "armor": 0.6},
-        "frontLeftWebFoot"  : {"size": 20, "bleedRatio": 0.025, "hitWeight": 1, "isPaired": true, "bone": true, "weapons": ["claw", "slam"], "armor": 0.4},
-        "frontRightWebFoot" : {"size": 20, "bleedRatio": 0.025, "hitWeight": 1, "isPaired": true, "bone": true, "weapons": ["claw", "slam"], "armor": 0.4},
-        "hindLeftWebFoot"   : {"size": 22, "bleedRatio": 0.03, "hitWeight": 1.2, "isPaired": true, "bone": true, "weapons": ["kick"], "armor": 0.4},
-        "hindRightWebFoot"  : {"size": 22, "bleedRatio": 0.03, "hitWeight": 1.2, "isPaired": true, "bone": true, "weapons": ["kick"], "armor": 0.4}
+        "maw"                   : {"size": 28, "bleedRatio": 0.02, "hitWeight": 3, "bone": true, "weapons": ["bite", "tusk", "tongue", "venom_bite"], "armor": 0.6},
+        "frontLeftWebFoot"      : {"size": 20, "bleedRatio": 0.025, "hitWeight": 1, "isPaired": true, "weapons": ["claw", "slam"], "armor": 0.4},
+        "frontLeftWebFootBone"  : {"size": 20, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "frontLeftWebFoot"},
+        "frontRightWebFoot"     : {"size": 20, "bleedRatio": 0.025, "hitWeight": 1, "isPaired": true, "weapons": ["claw", "slam"], "armor": 0.4},
+        "frontRightWebFootBone" : {"size": 20, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "frontRightWebFoot"},
+        "hindLeftWebFoot"       : {"size": 22, "bleedRatio": 0.03, "hitWeight": 1.2, "isPaired": true, "weapons": ["kick"], "armor": 0.4},
+        "hindLeftWebFootBone"   : {"size": 22, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "hindLeftWebFoot"},
+        "hindRightWebFoot"      : {"size": 22, "bleedRatio": 0.03, "hitWeight": 1.2, "isPaired": true, "weapons": ["kick"], "armor": 0.4},
+        "hindRightWebFootBone"  : {"size": 22, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "hindRightWebFoot"}
       },
       "limbs": {
         "head": ["skull", "maw", "snout", "leftEye", "rightEye", "brain"],
-        "torso": ["chest", "abdomen", "heart", "leftLung", "rightLung", "liver", "stomach", "leftKidney", "rightKidney", "spine"],
-        "front_left_leg": ["frontLeftShoulder", "frontLeftUpperLeg", "frontLeftLowerLeg", "frontLeftWebFoot"],
-        "front_right_leg": ["frontRightShoulder", "frontRightUpperLeg", "frontRightLowerLeg", "frontRightWebFoot"],
-        "hind_left_leg": ["hindLeftHaunch", "hindLeftUpperLeg", "hindLeftLowerLeg", "hindLeftWebFoot"],
-        "hind_right_leg": ["hindRightHaunch", "hindRightUpperLeg", "hindRightLowerLeg", "hindRightWebFoot"],
+        "torso": ["chest", "ribcage", "abdomen", "heart", "leftLung", "rightLung", "liver", "stomach", "leftKidney", "rightKidney", "spine"],
+        "front_left_leg": ["frontLeftShoulder", "frontLeftShoulderBone", "frontLeftUpperLeg", "frontLeftUpperLegBone", "frontLeftLowerLeg", "frontLeftLowerLegBone", "frontLeftWebFoot", "frontLeftWebFootBone"],
+        "front_right_leg": ["frontRightShoulder", "frontRightShoulderBone", "frontRightUpperLeg", "frontRightUpperLegBone", "frontRightLowerLeg", "frontRightLowerLegBone", "frontRightWebFoot", "frontRightWebFootBone"],
+        "hind_left_leg": ["hindLeftHaunch", "hindLeftHaunchBone", "hindLeftUpperLeg", "hindLeftUpperLegBone", "hindLeftLowerLeg", "hindLeftLowerLegBone", "hindLeftWebFoot", "hindLeftWebFootBone"],
+        "hind_right_leg": ["hindRightHaunch", "hindRightHaunchBone", "hindRightUpperLeg", "hindRightUpperLegBone", "hindRightLowerLeg", "hindRightLowerLegBone", "hindRightWebFoot", "hindRightWebFootBone"],
         "tail": ["tail"]
       }
     },
     "avian": {
+      "// note": "Birds/bats — the wing BONES (leftWingBone/leftWingtip) stay `bone: true` (they ARE the bone, no soft wrapper); the LEG segments are flesh + `*Bone` skeleton like other plans.",
       "parts": {
         "beak"          : {"size": 18, "bleedRatio": 0.02, "hitWeight": 3, "bone": true, "weapons": ["peck", "bite", "proboscis"], "armor": 0.6},
         "leftWingBone"  : {"size": 35, "bleedRatio": 0.04, "hitWeight": 3, "isPaired": true, "bone": true, "armor": 0.4},
         "leftWingtip"   : {"size": 20, "bleedRatio": 0.02, "hitWeight": 1.5, "isPaired": true, "bone": true, "containedIn": "leftWingBone", "armor": 0.3},
         "rightWingBone" : {"size": 35, "bleedRatio": 0.04, "hitWeight": 3, "isPaired": true, "bone": true, "armor": 0.4},
         "rightWingtip"  : {"size": 20, "bleedRatio": 0.02, "hitWeight": 1.5, "isPaired": true, "bone": true, "containedIn": "rightWingBone", "armor": 0.3},
-        "leftThigh"     : {"size": 35, "bleedRatio": 0.04, "hitWeight": 2.5, "isPaired": true, "bone": true, "armor": 0.6},
-        "leftShank"     : {"size": 28, "bleedRatio": 0.03, "hitWeight": 2, "isPaired": true, "bone": true, "armor": 0.5},
-        "leftTalon"     : {"size": 18, "bleedRatio": 0.02, "hitWeight": 1, "isPaired": true, "bone": true, "weapons": ["claw", "kick"], "armor": 0.4},
-        "rightThigh"    : {"size": 35, "bleedRatio": 0.04, "hitWeight": 2.5, "isPaired": true, "bone": true, "armor": 0.6},
-        "rightShank"    : {"size": 28, "bleedRatio": 0.03, "hitWeight": 2, "isPaired": true, "bone": true, "armor": 0.5},
-        "rightTalon"    : {"size": 18, "bleedRatio": 0.02, "hitWeight": 1, "isPaired": true, "bone": true, "weapons": ["claw", "kick"], "armor": 0.4},
+        "leftThigh"     : {"size": 35, "bleedRatio": 0.04, "hitWeight": 2.5, "isPaired": true, "armor": 0.6},
+        "leftThighBone" : {"size": 35, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "leftThigh"},
+        "leftShank"     : {"size": 28, "bleedRatio": 0.03, "hitWeight": 2, "isPaired": true, "armor": 0.5},
+        "leftShankBone" : {"size": 28, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "leftShank"},
+        "leftTalon"     : {"size": 18, "bleedRatio": 0.02, "hitWeight": 1, "isPaired": true, "weapons": ["claw", "kick"], "armor": 0.4},
+        "leftTalonBone" : {"size": 18, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "leftTalon"},
+        "rightThigh"    : {"size": 35, "bleedRatio": 0.04, "hitWeight": 2.5, "isPaired": true, "armor": 0.6},
+        "rightThighBone": {"size": 35, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "rightThigh"},
+        "rightShank"    : {"size": 28, "bleedRatio": 0.03, "hitWeight": 2, "isPaired": true, "armor": 0.5},
+        "rightShankBone": {"size": 28, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "rightShank"},
+        "rightTalon"    : {"size": 18, "bleedRatio": 0.02, "hitWeight": 1, "isPaired": true, "weapons": ["claw", "kick"], "armor": 0.4},
+        "rightTalonBone": {"size": 18, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "rightTalon"},
         "tailFeathers"  : {"size": 18, "bleedRatio": 0.02, "hitWeight": 1, "armor": 0.5}
       },
       "limbs": {
         "head": ["skull", "beak", "leftEye", "rightEye", "leftEar", "rightEar", "brain"],
-        "torso": ["chest", "abdomen", "heart", "leftLung", "rightLung", "liver", "stomach", "leftKidney", "rightKidney", "spine"],
+        "torso": ["chest", "ribcage", "abdomen", "heart", "leftLung", "rightLung", "liver", "stomach", "leftKidney", "rightKidney", "spine"],
         "left_wing": ["leftWingBone", "leftWingtip"],
         "right_wing": ["rightWingBone", "rightWingtip"],
-        "left_leg": ["leftThigh", "leftShank", "leftTalon"],
-        "right_leg": ["rightThigh", "rightShank", "rightTalon"],
+        "left_leg": ["leftThigh", "leftThighBone", "leftShank", "leftShankBone", "leftTalon", "leftTalonBone"],
+        "right_leg": ["rightThigh", "rightThighBone", "rightShank", "rightShankBone", "rightTalon", "rightTalonBone"],
         "tail": ["tailFeathers"]
       }
     },
@@ -201,40 +264,48 @@
     },
     "arachnid": {
       "parts": {
-        "cephalothorax" : {"size": 55, "bleedRatio": 0.1, "hitWeight": 22, "bone": true, "armor": 1},
-        "opisthosoma"   : {"size": 60, "bleedRatio": 0.1, "hitWeight": 22, "armor": 0.7},
-        "chelicerae"    : {"size": 16, "bleedRatio": 0.02, "hitWeight": 2, "bone": true, "weapons": ["venom_bite", "bite"], "armor": 0.5},
-        "legFrontLeftA" : {"size": 16, "bleedRatio": 0.015, "hitWeight": 1.2, "isPaired": true, "bone": true, "armor": 0.5},
-        "legFrontLeftB" : {"size": 16, "bleedRatio": 0.015, "hitWeight": 1.2, "isPaired": true, "bone": true, "armor": 0.5},
-        "legFrontRightA": {"size": 16, "bleedRatio": 0.015, "hitWeight": 1.2, "isPaired": true, "bone": true, "armor": 0.5},
-        "legFrontRightB": {"size": 16, "bleedRatio": 0.015, "hitWeight": 1.2, "isPaired": true, "bone": true, "armor": 0.5},
-        "legHindLeftA"  : {"size": 16, "bleedRatio": 0.015, "hitWeight": 1.2, "isPaired": true, "bone": true, "armor": 0.5},
-        "legHindLeftB"  : {"size": 16, "bleedRatio": 0.015, "hitWeight": 1.2, "isPaired": true, "bone": true, "armor": 0.5},
-        "legHindRightA" : {"size": 16, "bleedRatio": 0.015, "hitWeight": 1.2, "isPaired": true, "bone": true, "armor": 0.5},
-        "legHindRightB" : {"size": 16, "bleedRatio": 0.015, "hitWeight": 1.2, "isPaired": true, "bone": true, "armor": 0.5}
+        "cephalothorax"     : {"size": 55, "bleedRatio": 0.1, "hitWeight": 22, "bone": true, "armor": 1},
+        "opisthosoma"       : {"size": 60, "bleedRatio": 0.1, "hitWeight": 22, "armor": 0.7},
+        "chelicerae"        : {"size": 16, "bleedRatio": 0.02, "hitWeight": 2, "bone": true, "weapons": ["venom_bite", "bite"], "armor": 0.5},
+        "legFrontLeftA"     : {"size": 16, "bleedRatio": 0.015, "hitWeight": 1.2, "isPaired": true, "armor": 0.5},
+        "legFrontLeftABone" : {"size": 16, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "legFrontLeftA"},
+        "legFrontLeftB"     : {"size": 16, "bleedRatio": 0.015, "hitWeight": 1.2, "isPaired": true, "armor": 0.5},
+        "legFrontLeftBBone" : {"size": 16, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "legFrontLeftB"},
+        "legFrontRightA"    : {"size": 16, "bleedRatio": 0.015, "hitWeight": 1.2, "isPaired": true, "armor": 0.5},
+        "legFrontRightABone": {"size": 16, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "legFrontRightA"},
+        "legFrontRightB"    : {"size": 16, "bleedRatio": 0.015, "hitWeight": 1.2, "isPaired": true, "armor": 0.5},
+        "legFrontRightBBone": {"size": 16, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "legFrontRightB"},
+        "legHindLeftA"      : {"size": 16, "bleedRatio": 0.015, "hitWeight": 1.2, "isPaired": true, "armor": 0.5},
+        "legHindLeftABone"  : {"size": 16, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "legHindLeftA"},
+        "legHindLeftB"      : {"size": 16, "bleedRatio": 0.015, "hitWeight": 1.2, "isPaired": true, "armor": 0.5},
+        "legHindLeftBBone"  : {"size": 16, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "legHindLeftB"},
+        "legHindRightA"     : {"size": 16, "bleedRatio": 0.015, "hitWeight": 1.2, "isPaired": true, "armor": 0.5},
+        "legHindRightABone" : {"size": 16, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "legHindRightA"},
+        "legHindRightB"     : {"size": 16, "bleedRatio": 0.015, "hitWeight": 1.2, "isPaired": true, "armor": 0.5},
+        "legHindRightBBone" : {"size": 16, "bleedRatio": 0.0, "hitWeight": 0, "isPaired": true, "skeleton": true, "containedIn": "legHindRightB"}
       },
       "limbs": {
         "head": ["cephalothorax", "chelicerae", "leftEye", "rightEye", "brain"],
         "torso": ["opisthosoma", "heart", "leftLung", "rightLung"],
-        "front_left_leg": ["legFrontLeftA", "legFrontLeftB"],
-        "front_right_leg": ["legFrontRightA", "legFrontRightB"],
-        "hind_left_leg": ["legHindLeftA", "legHindLeftB"],
-        "hind_right_leg": ["legHindRightA", "legHindRightB"]
+        "front_left_leg": ["legFrontLeftA", "legFrontLeftABone", "legFrontLeftB", "legFrontLeftBBone"],
+        "front_right_leg": ["legFrontRightA", "legFrontRightABone", "legFrontRightB", "legFrontRightBBone"],
+        "hind_left_leg": ["legHindLeftA", "legHindLeftABone", "legHindLeftB", "legHindLeftBBone"],
+        "hind_right_leg": ["legHindRightA", "legHindRightABone", "legHindRightB", "legHindRightBBone"]
       }
     },
     "winged_humanoid": {
-      "// note": "Harpy-kin — humanoid head/torso/legs (reused) with feathered, clawed WINGS for arms.",
+      "// note": "Harpy-kin — humanoid head/torso (reused) with feathered, clawed WINGS for arms and avian LEGS (reused, flesh + bone).",
       "parts": {
         "leftWingClaw"  : {"size": 22, "bleedRatio": 0.02, "hitWeight": 1, "isPaired": true, "bone": true, "containedIn": "leftWingBone", "weapons": ["claw"], "armor": 0.4},
         "rightWingClaw" : {"size": 22, "bleedRatio": 0.02, "hitWeight": 1, "isPaired": true, "bone": true, "containedIn": "rightWingBone", "weapons": ["claw"], "armor": 0.4}
       },
       "limbs": {
         "head": ["skull", "jaw", "nose", "leftEye", "rightEye", "leftEar", "rightEar", "brain"],
-        "torso": ["chest", "abdomen", "heart", "leftLung", "rightLung", "liver", "stomach", "leftKidney", "rightKidney", "spine"],
+        "torso": ["chest", "ribcage", "abdomen", "heart", "leftLung", "rightLung", "liver", "stomach", "leftKidney", "rightKidney", "spine"],
         "left_wing": ["leftWingBone", "leftWingClaw", "leftWingtip"],
         "right_wing": ["rightWingBone", "rightWingClaw", "rightWingtip"],
-        "left_leg": ["leftThigh", "leftShank", "leftTalon"],
-        "right_leg": ["rightThigh", "rightShank", "rightTalon"]
+        "left_leg": ["leftThigh", "leftThighBone", "leftShank", "leftShankBone", "leftTalon", "leftTalonBone"],
+        "right_leg": ["rightThigh", "rightThighBone", "rightShank", "rightShankBone", "rightTalon", "rightTalonBone"]
       }
     },
     "amorphous": {
