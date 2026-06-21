@@ -20,6 +20,7 @@ import {
   MIN_PAWN_DISTANCE,
   MAX_HOSTILE,
   MAX_NEUTRAL,
+  HUNGER_EAT_THRESHOLD,
   targetEntityCount,
   populationCaps,
   LAIR_TICK_INTERVAL,
@@ -458,9 +459,15 @@ export function makeMob(def: CreatureDefinition, x: number, y: number, turn: num
     intelligence: def.behaviour === 'passive' ? 4 : 8,
     charisma: 5
   };
+  // ENGINE-PERFORMANCE-II §S5: STAGGER initial hunger across mobs. Spawning every mob at hunger 0 made
+  // them all cross HUNGER_EAT_THRESHOLD on the SAME tick → a synchronized hunt→combat wave that collapsed
+  // TPS (the engagement-wave spike). A uniform spread over [0, threshold) desyncs the first hunt: each
+  // mob reaches the threshold at a different time, so hunts (and thus combat) smear across the fill
+  // window instead of firing all at once. Deterministic (seeded rng). Fatigue gets a smaller spread so
+  // sleep/wake cycles desync too.
   const needs: EntityNeeds = {
-    hunger: 0,
-    fatigue: 0,
+    hunger: rng.random() * HUNGER_EAT_THRESHOLD,
+    fatigue: rng.random() * 20,
     sleep: 0,
     lastSleep: turn,
     lastMeal: turn

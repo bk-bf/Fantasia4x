@@ -53,9 +53,37 @@ import {
   WILD_FORAGE_RESOURCE_IDS
 } from './entityConstants';
 
+// ENGINE-PERFORMANCE-II §S5: cap how many mobs may be in an ACTIVE live-prey hunt at once, so a
+// synchronized hunger wave can't dump hundreds of simultaneous engagements onto one tick (the combat
+// spike that collapsed TPS and starved the pause message). New OFFENSIVE hunts (a hungry mob choosing
+// live prey) are gated by a per-tick slot budget = cap − (mobs already Hunting/Attacking); when it's
+// exhausted, the would-be hunter stays put and retries next tick, so hunts smear across ticks instead
+// of all firing at once. Corpse-scavenging (no combat) and resuming an EXISTING fight are never gated.
+// Cap scales with population (with a floor) so the ecosystem still predates healthily — it bounds the
+// worst case, not normal play.
+let _huntSlots = 0;
+function takeHuntSlot(): boolean {
+  if (_huntSlots <= 0) return false;
+  _huntSlots--;
+  return true;
+}
+// When the hunt budget is full, a denied hunter backs off for a JITTERED interval before re-scanning
+// for prey — so (a) it doesn't re-run the O(prey) `findNearestPrey` EVERY tick (that's the O(N²) we're
+// avoiding), and (b) the denied hunters don't all retry on the SAME tick and re-form the wave. Random
+// spread is the important bit; the floor just guarantees it's never per-tick. Tunable.
+const HUNT_BUSY_BACKOFF_MIN_S = 4;
+const HUNT_BUSY_BACKOFF_JITTER_S = 16;
+
 export function stepEntities(state: GameState): GameState {
   const mobs = state.mobs;
   if (!mobs || mobs.length === 0) return state;
+
+  // §S5: refill the per-tick hunt budget. Count mobs ALREADY engaged so the cap is on the concurrent
+  // total, not just new starts. O(mobs) once/tick — cheap.
+  let activeHunts = 0;
+  for (const m of mobs) if (m.state === 'Hunting' || m.state === 'Attacking') activeHunts++;
+  const MAX_CONCURRENT_HUNTS = Math.max(40, Math.floor(mobs.length * 0.15));
+  _huntSlots = Math.max(0, MAX_CONCURRENT_HUNTS - activeHunts);
 
   const livePawns = state.pawns.filter((p) => p.position && p.isAlive !== false);
   // Accumulates entity-vs-entity damage dealt this tick (hunting mini-combat).
@@ -510,6 +538,17 @@ export function stepHostile(
       if (!canScavengeOrHunt || !huntCooldownExpired) return null;
       const prey = findNearestPrey(mob, allMobs, canHunt);
       if (!prey) return null;
+      // §S5: a LIVE-prey hunt is combat — gate it on the concurrent-hunt budget so a hunger wave
+      // doesn't engage hundreds at once. Corpse-scavenging (prey is a Corpse) is cheap, never gated.
+      if (prey.state !== 'Corpse' && !takeHuntSlot())
+        // Budget full → back off with a JITTERED cooldown (keeps state) instead of re-running the
+        // O(prey) findNearestPrey every tick, and so the denied hunters don't all retry on one tick.
+        return {
+          ...mob,
+          huntCooldownUntil:
+            turn +
+            ticksFromSeconds(HUNT_BUSY_BACKOFF_MIN_S + rng.random() * HUNT_BUSY_BACKOFF_JITTER_S)
+        };
       return { ...mob, state: 'Hunting', stateSince: turn, path: [] };
     };
 
@@ -749,7 +788,9 @@ export function stepAnimal(
       const forageCooldownExpired = !mob.forageCooldownUntil || turn >= mob.forageCooldownUntil;
       if (canForage && forageCooldownExpired)
         return { ...mob, state: 'Foraging', stateSince: turn, path: [] };
-      if (canScavengeOrHunt && huntCooldownExpired)
+      // §S5: gate a LIVE-prey hunter on the concurrent-hunt budget (combat); a pure scavenger
+      // (corpse-only, no canHuntLive) is cheap and never gated.
+      if (canScavengeOrHunt && huntCooldownExpired && (!canHuntLive || takeHuntSlot()))
         return { ...mob, state: 'Hunting', stateSince: turn, path: [] };
     }
 
