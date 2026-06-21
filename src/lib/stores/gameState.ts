@@ -583,17 +583,16 @@ function regenWorld(seed?: number, dev = false, itemQty = 500, preview = false) 
   }
 
   let next: GameState = { ...base, seed: s, worldMap: newWorld, mobs: [] };
-  // Old pawn positions are stale against the new map (could now be inside a mountain or water) — drop
-  // them and re-place every pawn on valid spawnable land near the map centre.
-  next = {
-    ...next,
-    pawns: spawnPawnsOnMap(
-      next.pawns.map((p) => ({ ...p, position: undefined })),
-      newWorld
-    )
-  };
   // Keep the race pool/relations intact across a world regen (idempotent if already present).
   next = ensureRacePool(next);
+  // A GENERATE is a fresh deterministic run (see seed reseed above), so ROLL A NEW COLONY rather than
+  // carrying the previous pawns over from the store — the old code re-placed `base.pawns` (same pawns,
+  // new positions), so every regenerate produced the same colonists. Draw fresh pawns from the pool
+  // (same colony size), spawn them on valid land, and re-derive work assignments for the new ids.
+  const colonySize = base.pawns.length || 5;
+  next = { ...next, pawns: spawnPawnsOnMap(generateColonyPawns(next.racePool, colonySize), newWorld) };
+  next = markColonyRacesDiscovered(next);
+  next = workService.ensureDefaultWorkAssignments(next);
   if (dev) next = applyDevWorld(next, itemQty);
   next = entityService.seedInitialEntities(next);
   loadStateIntoWorker(next);
