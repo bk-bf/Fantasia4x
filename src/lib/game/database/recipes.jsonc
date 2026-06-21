@@ -2707,7 +2707,7 @@
   // purpose: resin is a gate material, so the tap draws pitch from conifer bark/logs over time.
   {
     "id": "tap_resin", "station": "resin_tap", "passive": true,
-    "inputs": {"bark": 2}, "inputAlternatives": [ {"pine_log": 1}, {"emberwood_log": 1} ],
+    "inputs": {"bark": 2}, "inputAlternatives": [ {"pine_log": 1} ],
     "outputs": {"resin": 2}, "workAmount": 60, "toolTierRequired": 1
   }
 ]
