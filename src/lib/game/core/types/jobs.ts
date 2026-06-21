@@ -72,7 +72,8 @@ export interface Job {
     | 'sleep'
     | 'light'
     | 'refuel'
-    | 'deconstruct';
+    | 'deconstruct'
+    | 'plant'; // PRODUCTION-CHAIN-II §F: sow a crop on a grow-zone tile
   targetX: number;
   targetY: number;
   /** caretake: id of the wounded pawn being tended (the job targets that pawn's tile). */

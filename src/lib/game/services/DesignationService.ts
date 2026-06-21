@@ -24,7 +24,7 @@ import { absorbDropIfOnStockpileTile } from '../core/GameState';
  * also carries a `harvest`/`woodcut` order. (`drink`/`wash` are water-only and never overlap a
  * land action, so they stay in `designations` as simple location markers.)
  */
-const STANDING_ZONE_TYPES = new Set<DesignationType>(['stockpile']);
+const STANDING_ZONE_TYPES = new Set<DesignationType>(['stockpile', 'grow']);
 
 export function isStandingZoneType(type: DesignationType): boolean {
   return STANDING_ZONE_TYPES.has(type);

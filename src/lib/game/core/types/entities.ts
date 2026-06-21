@@ -308,7 +308,7 @@ export interface Pawn {
   // Job payload for active state machine job
   activeJob?: {
     /** Phase 5: 'harvest'|'construct'|'craft'|'haul'|'fetch' use work-point jobs; 'need' for eat/sleep */
-    type: 'harvest' | 'construct' | 'craft' | 'haul' | 'fetch' | 'need' | 'deconstruct';
+    type: 'harvest' | 'construct' | 'craft' | 'haul' | 'fetch' | 'need' | 'deconstruct' | 'plant';
     /** Phase 5a: id of the Job in gameState.jobs[] (null for need-type jobs) */
     jobId?: string;
     targetX: number;

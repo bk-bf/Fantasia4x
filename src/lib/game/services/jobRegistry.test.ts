@@ -17,7 +17,7 @@ describe('job registry (jobs.jsonc ↔ JobService)', () => {
     expect(new Set(defs.map((d) => d.id))).toEqual(new Set(jobService.jobTypeIds()));
   });
 
-  it('declares exactly the eight colony pool job types', () => {
+  it('declares exactly the nine colony pool job types', () => {
     expect(new Set(defs.map((d) => d.id))).toEqual(
       new Set([
         'harvest',
@@ -27,7 +27,8 @@ describe('job registry (jobs.jsonc ↔ JobService)', () => {
         'fetch',
         'craft',
         'caretake',
-        'refuel'
+        'refuel',
+        'plant'
       ])
     );
   });

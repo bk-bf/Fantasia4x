@@ -9,6 +9,8 @@ export type DesignationType =
   | 'mine'
   | 'haul'
   | 'clear'
+  // ── PRODUCTION-CHAIN-II §F: dig — strip a fertile tile for its soil (the harvest-vs-cut twin) ──
+  | 'dig'
   | 'stockpile'
   // ── PRODUCTION-CHAIN-EXPANSION §D: water/hygiene zones ──
   | 'drink'

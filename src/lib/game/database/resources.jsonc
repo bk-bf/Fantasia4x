@@ -1661,7 +1661,7 @@
     "color"           : "#94B82E",
     "spawn"           : { "subterrains": {"grass": 0.92, "dirt": 0.008, "savanna": 0.01} },
     "nodeAmountRange" : [3, 7],
-    "designationTypes": ["harvest"],
+    "designationTypes": ["harvest", "dig"],
     "interaction"     : {
       "action"         : "cut",
       "workCategory"   : "foraging",
@@ -1673,7 +1673,39 @@
       ],
       "persistent"     : true,
       "regrowthTurns"  : 600 // ~2 days at 300 turns/day
-    }
+    },
+    "interactions"    : [
+      {
+        "designationType": "harvest",
+        "action"         : "cut",
+        "workCategory"   : "foraging",
+        "workAmount"     : 3,
+        "toolRequirement": null,
+        "yields"         : [
+          {"itemId": "hay",         "min": 2, "max": 5, "skillId": "foraging", "skillMultiplier": 0.15},
+          {"itemId": "plant_fiber", "min": 2, "max": 5, "skillId": "foraging", "skillMultiplier": 0.15}
+        ],
+        "persistent"     : true,
+        "regrowthTurns"  : 600
+      },
+      {
+        // §F dig: strip the sod for its soil. Returns the cut yield + the tier's soil (poor) + subsoil
+        // dirt, then leaves bare dirt (subType → dirt, fertility 0). The harvest-vs-cut twin.
+        "designationType": "dig",
+        "action"         : "dig",
+        "workCategory"   : "digging",
+        "workAmount"     : 10,
+        "toolRequirement": null,
+        "yields"         : [
+          {"itemId": "hay",       "min": 1, "max": 2, "skillId": "digging", "skillMultiplier": 0.1},
+          {"itemId": "poor_soil", "min": 1, "max": 2, "skillId": "digging", "skillMultiplier": 0.1},
+          {"itemId": "dirt",      "min": 1, "max": 2, "skillId": "digging", "skillMultiplier": 0.1}
+        ],
+        "persistent"     : false,
+        "harvestDepletes": true,
+        "harvestSubType" : "dirt"
+      }
+    ]
   },
   // Taller grass stand — same harvest profile as grass_patch, matches tall_grass subterrain.
   {
@@ -1688,7 +1720,7 @@
     "color"           : "#4D7A12",
     "spawn"           : { "subterrains": {"tall_grass": 0.93} },
     "nodeAmountRange" : [3, 7],
-    "designationTypes": ["harvest"],
+    "designationTypes": ["harvest", "dig"],
     "interaction"     : {
       "action"         : "cut",
       "workCategory"   : "foraging",
@@ -1700,7 +1732,38 @@
       ],
       "persistent"     : true,
       "regrowthTurns"  : 700
-    }
+    },
+    "interactions"    : [
+      {
+        "designationType": "harvest",
+        "action"         : "cut",
+        "workCategory"   : "foraging",
+        "workAmount"     : 6,
+        "toolRequirement": null,
+        "yields"         : [
+          {"itemId": "hay",         "min": 10, "max": 15, "skillId": "foraging", "skillMultiplier": 0.15},
+          {"itemId": "plant_fiber", "min":  5, "max": 10, "skillId": "foraging", "skillMultiplier": 0.15}
+        ],
+        "persistent"     : true,
+        "regrowthTurns"  : 700
+      },
+      {
+        // §F dig → loam (50%) + subsoil dirt; strips to bare dirt.
+        "designationType": "dig",
+        "action"         : "dig",
+        "workCategory"   : "digging",
+        "workAmount"     : 14,
+        "toolRequirement": null,
+        "yields"         : [
+          {"itemId": "hay",  "min": 2, "max": 4, "skillId": "digging", "skillMultiplier": 0.1},
+          {"itemId": "loam", "min": 1, "max": 2, "skillId": "digging", "skillMultiplier": 0.1},
+          {"itemId": "dirt", "min": 1, "max": 2, "skillId": "digging", "skillMultiplier": 0.1}
+        ],
+        "persistent"     : false,
+        "harvestDepletes": true,
+        "harvestSubType" : "dirt"
+      }
+    ]
   },
   // Dense grass stand — matches deep_grass subterrain, slightly higher yield.
   {
@@ -1715,7 +1778,7 @@
     "color"           : "#3D6B0F",
     "spawn"           : { "subterrains": {"deep_grass": 0.92} },
     "nodeAmountRange" : [4, 8],
-    "designationTypes": ["harvest"],
+    "designationTypes": ["harvest", "dig"],
     "interaction"     : {
       "action"         : "cut",
       "workCategory"   : "foraging",
@@ -1727,7 +1790,38 @@
       ],
       "persistent"     : true,
       "regrowthTurns"  : 800
-    }
+    },
+    "interactions"    : [
+      {
+        "designationType": "harvest",
+        "action"         : "cut",
+        "workCategory"   : "foraging",
+        "workAmount"     : 6,
+        "toolRequirement": null,
+        "yields"         : [
+          {"itemId": "hay",         "min": 5, "max": 10, "skillId": "foraging", "skillMultiplier": 0.15},
+          {"itemId": "plant_fiber", "min": 5, "max": 15, "skillId": "foraging", "skillMultiplier": 0.15}
+        ],
+        "persistent"     : true,
+        "regrowthTurns"  : 800
+      },
+      {
+        // §F dig → rich soil (75%) + subsoil dirt; strips to bare dirt. The best soil you can dig.
+        "designationType": "dig",
+        "action"         : "dig",
+        "workCategory"   : "digging",
+        "workAmount"     : 16,
+        "toolRequirement": null,
+        "yields"         : [
+          {"itemId": "hay",       "min": 2, "max": 5, "skillId": "digging", "skillMultiplier": 0.1},
+          {"itemId": "rich_soil", "min": 1, "max": 2, "skillId": "digging", "skillMultiplier": 0.1},
+          {"itemId": "dirt",      "min": 1, "max": 3, "skillId": "digging", "skillMultiplier": 0.1}
+        ],
+        "persistent"     : false,
+        "harvestDepletes": true,
+        "harvestSubType" : "dirt"
+      }
+    ]
   },
   // Savanna — dry plains identity (was baked into the savanna subterrain); gather it
   // for sand and dry grass, leaving bare dirt behind.
@@ -2031,6 +2125,120 @@
         {"itemId": "moonstone",         "min": 1, "max": 2, "skillId": "mining", "skillMultiplier": 0.1 },
         {"itemId": "infused_moonstone", "min": 0, "max": 1, "skillId": "mining", "skillMultiplier": 0.05}
       ]
+    }
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PRODUCTION-CHAIN-II §F — CULTIVATED CROPS (sown by the `plant` job in a grow zone)
+  // ═══════════════════════════════════════════════════════════════════════════
+  // These never spawn naturally (empty `spawn.subterrains`). The plant job places one on a grow-zone
+  // tile when the zone's seed matches `crop.seedItem` and the tile's soil tier ≥ `crop.minSoil`; it
+  // then grows via the regrowth cooldown (`crop.growthTurns`, scaled by fertility × wetness at plant
+  // time) until mature + harvestable. Reaping (harvest) routes to the `planting` labour. Annuals
+  // deplete on harvest (replant); berries/herbs are perennial (persistent → regrow).
+  {
+    "id": "crop_wheat", "displayName": "Wheat", "subterrain": "grass", "walkable": true,
+    "charSpans": [ {"sheet": "crops", "id": 0} ], "fg": [0.82, 0.68, 0.2], "bg": [0.08, 0.06, 0.03],
+    "color": "#D1AD33", "spawn": { "subterrains": {} }, "nodeAmountRange": [1, 1],
+    "crop": {"seedItem": "grain_seed", "minSoil": 1, "idealMoisture": 40, "growthTurns": 2000},
+    "designationTypes": ["harvest"],
+    "interaction": {
+      "action": "reap", "workCategory": "planting", "workAmount": 8, "toolRequirement": null,
+      "yields": [
+        {"itemId": "grain",      "min": 3, "max": 6, "skillId": "planting", "skillMultiplier": 0.2},
+        {"itemId": "grain_seed", "min": 1, "max": 2, "skillId": "planting", "skillMultiplier": 0.1}
+      ],
+      "harvestDepletes": true
+    }
+  },
+  {
+    "id": "crop_cabbage", "displayName": "Vegetable Bed", "subterrain": "grass", "walkable": true,
+    "charSpans": [ {"sheet": "crops", "id": 1} ], "fg": [0.5, 0.7, 0.3], "bg": [0.08, 0.06, 0.03],
+    "color": "#7FB04E", "spawn": { "subterrains": {} }, "nodeAmountRange": [1, 1],
+    "crop": {"seedItem": "veg_seed", "minSoil": 1, "idealMoisture": 50, "growthTurns": 1500},
+    "designationTypes": ["harvest"],
+    "interaction": {
+      "action": "reap", "workCategory": "planting", "workAmount": 8, "toolRequirement": null,
+      "yields": [
+        {"itemId": "vegetables", "min": 3, "max": 6, "skillId": "planting", "skillMultiplier": 0.2},
+        {"itemId": "veg_seed",   "min": 1, "max": 2, "skillId": "planting", "skillMultiplier": 0.1}
+      ],
+      "harvestDepletes": true
+    }
+  },
+  {
+    "id": "crop_beans", "displayName": "Bean Rows", "subterrain": "grass", "walkable": true,
+    "charSpans": [ {"sheet": "crops", "id": 2} ], "fg": [0.55, 0.6, 0.3], "bg": [0.08, 0.06, 0.03],
+    "color": "#A8924E", "spawn": { "subterrains": {} }, "nodeAmountRange": [1, 1],
+    "crop": {"seedItem": "legume_seed", "minSoil": 1, "idealMoisture": 40, "growthTurns": 2200},
+    "designationTypes": ["harvest"],
+    "interaction": {
+      "action": "reap", "workCategory": "planting", "workAmount": 8, "toolRequirement": null,
+      "yields": [
+        {"itemId": "legumes",     "min": 3, "max": 5, "skillId": "planting", "skillMultiplier": 0.2},
+        {"itemId": "legume_seed", "min": 1, "max": 2, "skillId": "planting", "skillMultiplier": 0.1}
+      ],
+      "harvestDepletes": true
+    }
+  },
+  {
+    "id": "crop_flax", "displayName": "Flax Field", "subterrain": "tall_grass", "walkable": true,
+    "charSpans": [ {"sheet": "crops", "id": 3} ], "fg": [0.62, 0.7, 0.4], "bg": [0.08, 0.06, 0.03],
+    "color": "#9EAE6A", "spawn": { "subterrains": {} }, "nodeAmountRange": [1, 1],
+    "crop": {"seedItem": "fibre_seed", "minSoil": 2, "idealMoisture": 65, "growthTurns": 2400},
+    "designationTypes": ["harvest"],
+    "interaction": {
+      "action": "reap", "workCategory": "planting", "workAmount": 10, "toolRequirement": null,
+      "yields": [
+        {"itemId": "flax_fiber", "min": 3, "max": 6, "skillId": "planting", "skillMultiplier": 0.2},
+        {"itemId": "fibre_seed", "min": 1, "max": 2, "skillId": "planting", "skillMultiplier": 0.1}
+      ],
+      "harvestDepletes": true
+    }
+  },
+  {
+    "id": "crop_berries", "displayName": "Berry Patch", "subterrain": "tall_grass", "walkable": true,
+    "charSpans": [ {"sheet": "crops", "id": 4} ], "fg": [0.7, 0.35, 0.35], "bg": [0.08, 0.06, 0.03],
+    "color": "#B0584E", "spawn": { "subterrains": {} }, "nodeAmountRange": [1, 1],
+    "crop": {"seedItem": "fruit_seed", "minSoil": 2, "idealMoisture": 50, "growthTurns": 3000},
+    "designationTypes": ["harvest"],
+    "interaction": {
+      "action": "reap", "workCategory": "planting", "workAmount": 8, "toolRequirement": null,
+      "yields": [
+        {"itemId": "fruit",      "min": 4, "max": 8, "skillId": "planting", "skillMultiplier": 0.2},
+        {"itemId": "fruit_seed", "min": 1, "max": 2, "skillId": "planting", "skillMultiplier": 0.1}
+      ],
+      "persistent": true, "regrowthTurns": 1800
+    }
+  },
+  {
+    "id": "crop_herbs", "displayName": "Herb Garden", "subterrain": "tall_grass", "walkable": true,
+    "charSpans": [ {"sheet": "crops", "id": 5} ], "fg": [0.5, 0.7, 0.45], "bg": [0.08, 0.06, 0.03],
+    "color": "#6FA66A", "spawn": { "subterrains": {} }, "nodeAmountRange": [1, 1],
+    "crop": {"seedItem": "herb_seed", "minSoil": 2, "idealMoisture": 55, "growthTurns": 1800},
+    "designationTypes": ["harvest"],
+    "interaction": {
+      "action": "reap", "workCategory": "planting", "workAmount": 6, "toolRequirement": null,
+      "yields": [
+        {"itemId": "culinary_herbs", "min": 2, "max": 4, "skillId": "planting", "skillMultiplier": 0.2},
+        {"itemId": "herb_seed",      "min": 1, "max": 2, "skillId": "planting", "skillMultiplier": 0.1}
+      ],
+      "persistent": true, "regrowthTurns": 1500
+    }
+  },
+  {
+    "id": "crop_pumpkin", "displayName": "Pumpkin Patch", "subterrain": "terra_preta", "walkable": true,
+    "charSpans": [ {"sheet": "crops", "id": 6} ], "fg": [0.82, 0.47, 0.18], "bg": [0.08, 0.06, 0.03],
+    "color": "#D2772A", "spawn": { "subterrains": {} }, "nodeAmountRange": [1, 1],
+    "crop": {"seedItem": "prize_seed", "minSoil": 4, "idealMoisture": 60, "growthTurns": 3600},
+    "designationTypes": ["harvest"],
+    "interaction": {
+      "action": "reap", "workCategory": "planting", "workAmount": 12, "toolRequirement": null,
+      "yields": [
+        {"itemId": "pumpkin",    "min": 2, "max": 4, "skillId": "planting", "skillMultiplier": 0.2},
+        {"itemId": "prize_seed", "min": 1, "max": 2, "skillId": "planting", "skillMultiplier": 0.1}
+      ],
+      "harvestDepletes": true
     }
   }
 ]

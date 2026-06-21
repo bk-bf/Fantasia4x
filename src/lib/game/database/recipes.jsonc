@@ -2269,5 +2269,16 @@
     "outputs"          : {"compost": 2},
     "workAmount"       : 48,
     "toolTierRequired" : 0
+  },
+  // Post-processing step (HSK depth): raw compost is concentrated + aged into potent fertiliser. 3:1 —
+  // fertiliser is the expensive amendment the complex soils (loam→terra preta) are built from.
+  {
+    "id"              : "make_fertiliser",
+    "station"         : "compost_bin",
+    "passive"         : true,
+    "inputs"          : {"compost": 3},
+    "outputs"         : {"fertiliser": 1},
+    "workAmount"      : 60,
+    "toolTierRequired": 0
   }
 ]

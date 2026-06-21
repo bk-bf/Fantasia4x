@@ -3,6 +3,7 @@ import { itemService } from './ItemService';
 import { buildingService } from './BuildingService';
 import { resourceObjectService } from './ResourceObjectService';
 import { complete as constructComplete } from './jobs/construct';
+import { complete as plantComplete } from './jobs/plant';
 import { SUBTERRAINS, soilFertilityPct } from '../core/Terrains';
 import type { GameState, Job } from '../core/types';
 
@@ -102,5 +103,64 @@ describe('§F Soil-Works terraform builds', () => {
     expect(next.worldMap[1][1].subType).toBe('deep_grass'); // rich soil
     expect(soilFertilityPct(next.worldMap[1][1])).toBe(75);
     expect((next.buildings ?? []).find((b) => b.id === 'b1')).toBeUndefined(); // build consumed
+  });
+});
+
+describe('§F dig = the harvest-vs-cut twin', () => {
+  it('grass patches expose a dig interaction that yields soil + dirt and strips to bare dirt', () => {
+    const cases: Record<string, string> = {
+      grass_patch: 'poor_soil',
+      tall_grass_patch: 'loam',
+      deep_grass_patch: 'rich_soil'
+    };
+    for (const [id, soilItem] of Object.entries(cases)) {
+      const def = resourceObjectService.getById(id)!;
+      expect(def.designationTypes).toContain('dig');
+      const dig = resourceObjectService.getInteractionByDesignationType(id, 'dig')!;
+      expect(dig.harvestDepletes).toBe(true);
+      expect(dig.harvestSubType).toBe('dirt');
+      const yieldIds = dig.yields.map((y) => y.itemId);
+      expect(yieldIds).toContain(soilItem);
+      expect(yieldIds).toContain('dirt');
+    }
+  });
+});
+
+describe('§F crops + planting', () => {
+  it('crops are resource objects with a crop spec and seed/food yields', () => {
+    const wheat = resourceObjectService.getById('crop_wheat')!;
+    expect(wheat.crop?.seedItem).toBe('grain_seed');
+    expect(wheat.crop?.minSoil).toBe(1);
+    const y = resourceObjectService.calculateYield('crop_wheat', undefined, undefined, 'harvest');
+    expect(y).toHaveProperty('grain');
+    expect(y).toHaveProperty('grain_seed');
+    // prize crop needs terra preta (tier 4)
+    expect(resourceObjectService.getById('crop_pumpkin')!.crop?.minSoil).toBe(4);
+  });
+
+  it('plant completion places an immature crop with a growth cooldown', () => {
+    const tile = {
+      x: 2,
+      y: 0,
+      subType: 'tall_grass', // loam, 50% — wheat (minSoil 1) plants fine
+      terrainType: 'plains',
+      walkable: true,
+      moisture: 40,
+      resources: {}
+    };
+    const gs = {
+      worldMap: [[{ ...tile, x: 0 }, { ...tile, x: 1 }, tile]],
+      stockpile: { grain_seed: 3 },
+      season: 'summer',
+      turn: 100,
+      pawns: []
+    } as unknown as GameState;
+
+    const job = { id: 'p', type: 'plant', resourceId: 'crop_wheat', targetX: 2, targetY: 0 } as unknown as Job;
+    const next = plantComplete(job, gs);
+
+    const t = next.worldMap[0][2];
+    expect(t.resources.crop_wheat).toBe(0); // immature — count 0 until the cooldown matures it
+    expect(t.resourceCooldowns?.crop_wheat).toBeGreaterThan(100); // growing toward maturity
   });
 });

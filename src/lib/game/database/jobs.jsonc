@@ -18,5 +18,6 @@
   {"id": "fetch", "label": "Fetch", "workCategory": "hauling", "lightAffected": false},
   {"id": "craft", "label": "Craft", "workCategory": "crafting", "workCategorySource": "recipe-output", "claimGate": "craftTool"},
   {"id": "caretake", "label": "Tend", "workCategory": "caretaking"},
-  {"id": "refuel", "label": "Refuel", "workCategory": "construction", "claimGate": "refuelAllowlist", "lightAffected": false}
+  {"id": "refuel", "label": "Refuel", "workCategory": "construction", "claimGate": "refuelAllowlist", "lightAffected": false},
+  {"id": "plant", "label": "Plant", "workCategory": "planting"}
 ]

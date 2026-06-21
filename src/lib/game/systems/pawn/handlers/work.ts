@@ -186,7 +186,7 @@ export function handleIdle(pawn: Pawn, gameState: GameState): GameState {
   }
 
   const activeJob = {
-    type: job.type as 'harvest' | 'construct' | 'craft' | 'haul' | 'fetch',
+    type: job.type as 'harvest' | 'construct' | 'craft' | 'haul' | 'fetch' | 'plant',
     jobId: job.id,
     targetX: destX,
     targetY: destY,

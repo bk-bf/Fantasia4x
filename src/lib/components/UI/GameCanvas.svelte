@@ -681,7 +681,9 @@
               ? 'FORAGE'
               : iact.designationType === 'mine'
                 ? 'MINE'
-                : 'HARVEST';
+                : iact.designationType === 'dig'
+                  ? 'DIG'
+                  : 'HARVEST';
         btns.push({ label, onClick: () => designateResource(iact.designationType) });
       }
     }
@@ -1850,6 +1852,9 @@
       } else if (dtype === 'forage') {
         sheet = tilesSheet;
         spriteId = 241;
+      } else if (dtype === 'dig') {
+        sheet = itemsSheet;
+        spriteId = 207; // §F dig — shovel marker
       } else if (dtype === 'harvest') {
         const tile = worldMap[wy]?.[wx];
         const resourceId = tile?.resources

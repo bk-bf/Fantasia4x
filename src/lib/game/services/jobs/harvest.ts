@@ -130,6 +130,11 @@ export function complete(job: Job, gs: GameState): GameState {
   const col = gs.worldMap[job.targetY][job.targetX];
   col.resources = { ...col.resources, [job.resourceId!]: 0 };
   if (!shouldPersist) {
+    // §F dig: a `dig` interaction strips the tile to bare dirt (subType → harvestSubType) after
+    // yielding its soil — fertility drops to 0 (the topsoil is now in the colony's stock).
+    if (interaction?.harvestSubType && SUBTERRAINS[interaction.harvestSubType]) {
+      col.subType = interaction.harvestSubType;
+    }
     // Resource removed permanently — restore tile walkability to base subterrain.
     const baseSub = SUBTERRAINS[col.subType] ?? SUBTERRAIN_FALLBACK;
     col.walkable = baseSub.walkable;

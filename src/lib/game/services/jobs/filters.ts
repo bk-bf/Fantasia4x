@@ -8,7 +8,7 @@ import { resourceObjectService } from '../ResourceObjectService';
 const ITEMS_DATABASE = itemsData as unknown as Item[];
 
 /** Designation types that produce harvest-category jobs. */
-export const HARVEST_DTYPES: DesignationType[] = ['harvest', 'woodcut', 'forage'];
+export const HARVEST_DTYPES: DesignationType[] = ['harvest', 'woodcut', 'forage', 'dig'];
 
 /** Whether a tile resource is eligible for the given harvest-style designation. */
 export function resourceMatchesDesignation(

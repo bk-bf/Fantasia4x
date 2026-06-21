@@ -29,6 +29,7 @@ import * as fetch from './jobs/fetch';
 import * as craft from './jobs/craft';
 import * as caretake from './jobs/caretake';
 import * as refuel from './jobs/refuel';
+import * as plant from './jobs/plant';
 import { isOrderSupplied as stagingIsOrderSupplied } from './jobs/staging';
 
 // ===== JOB REGISTRY (data-driven, jobs.jsonc) =====
@@ -47,7 +48,8 @@ type JobPoolType =
   | 'fetch'
   | 'craft'
   | 'caretake'
-  | 'refuel';
+  | 'refuel'
+  | 'plant';
 // Compile-time guard: every JobPoolType must be a real Job['type'] member (fails to build otherwise).
 type _AssertPoolSubset = JobPoolType extends Job['type'] ? true : never;
 const _assertPoolSubset: _AssertPoolSubset = true;
@@ -94,7 +96,8 @@ class JobServiceImpl {
     fetch: { generate: fetch.generate, complete: fetch.complete },
     craft: { generate: craft.generate, complete: craft.complete },
     caretake: { generate: caretake.generate, complete: caretake.complete },
-    refuel: { generate: refuel.generate, complete: refuel.complete }
+    refuel: { generate: refuel.generate, complete: refuel.complete },
+    plant: { generate: plant.generate, complete: plant.complete }
   };
 
   // ------------------------------------------------------------------ //

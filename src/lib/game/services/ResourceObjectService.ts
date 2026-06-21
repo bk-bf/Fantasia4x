@@ -45,6 +45,12 @@ export interface ResourceInteractionDef {
   harvestDepletes?: boolean;
   /** Turns to wait before items regrow (requires persistent: true). */
   regrowthTurns?: number;
+  /**
+   * PRODUCTION-CHAIN-II §F (dig): when this interaction depletes the node, also rewrite the tile's
+   * `subType` to this subterrain. Digging a grass patch strips it to bare `dirt` (fertility → 0) after
+   * yielding its soil. Only meaningful with `harvestDepletes: true`. Handled in jobs/harvest.complete.
+   */
+  harvestSubType?: string;
 }
 
 export interface ResourceObjectDef {
@@ -110,6 +116,18 @@ export interface ResourceObjectDef {
    * triggers it. Resources without this field use `interaction` for all designations.
    */
   interactions?: ResourceInteractionDef[];
+  /**
+   * PRODUCTION-CHAIN-II §F — this resource is a sown CROP (not naturally spawned; `spawn.subterrains`
+   * is empty). The `plant` job (jobs/plant.ts) places it on a grow-zone tile when the zone's seed
+   * matches `seedItem` and the tile's soil tier ≥ `minSoil`. It then grows via the regrowth cooldown:
+   * `growthTurns` (scaled by fertility × wetness at plant time) until it matures and becomes harvestable.
+   */
+  crop?: {
+    seedItem: string;
+    minSoil: number; // 0–4 soil tier required to plant (soilTierForTile)
+    idealMoisture: number; // 0–100 wetness the crop likes (growth slows away from it)
+    growthTurns: number; // base ticks to mature; scaled by fertility × wetness
+  };
 }
 
 const WORK_STAT_FALLBACK: Record<string, keyof Pawn['stats']> = {
@@ -139,7 +157,7 @@ class ResourceObjectServiceImpl {
   }
 
   getByDesignation(type: DesignationType): ResourceObjectDef[] {
-    const HARVEST_TYPES: DesignationType[] = ['harvest', 'woodcut', 'forage'];
+    const HARVEST_TYPES: DesignationType[] = ['harvest', 'woodcut', 'forage', 'dig'];
     if (!HARVEST_TYPES.includes(type)) return [];
     return this.defs.filter((d) => d.designationTypes.includes(type));
   }

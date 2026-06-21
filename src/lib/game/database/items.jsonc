@@ -5896,12 +5896,25 @@
     "name": "Compost",
     "type": "material",
     "category": "soil",
-    "description": "Rotted scraps, hay, and ash broken down into dark, nutrient-rich humus. The key to the best soil.",
+    "description": "Rotted scraps and hay broken down into dark, nutrient-rich humus. Raw compost — refine it into fertiliser to build proper soil.",
     "color": "#403228",
     "amount": 0,
     "weightKg": 2,
     "volumeL": 2,
     "deteriorationRate": 0.01
+  },
+  {
+    "id": "fertiliser",
+    "charSpans": [ {"sheet": "items", "id": 118} ],
+    "name": "Fertiliser",
+    "type": "material",
+    "category": "soil",
+    "description": "Compost concentrated and aged into a potent soil amendment. Worked into earth with clay and dirt, it builds loam, rich soil, even terra preta.",
+    "color": "#34281C",
+    "amount": 0,
+    "weightKg": 1,
+    "volumeL": 1,
+    "deteriorationRate": 0.005
   },
 
   // ── PRODUCTION-CHAIN-II §F — Crop seeds ──────────────────────────────────────────────────────
@@ -5997,5 +6010,43 @@
     "weightKg": 0.05,
     "volumeL": 0.05,
     "deteriorationRate": 0.004
+  },
+
+  // ── PRODUCTION-CHAIN-II §F — Cultivated crop products (the harvest of a grown crop) ──────────
+  {
+    "id": "grain", "charSpans": [ {"sheet": "items", "id": 113} ], "name": "Grain", "type": "food",
+    "category": "food", "description": "Cultivated cereal grain — wheat or barley. Milled to flour or malted for ale.",
+    "color": "#D9B24A", "amount": 0, "weightKg": 0.2, "volumeL": 0.4, "nutrition": 42,
+    "maxDurability": 80, "deteriorationRate": 0.05
+  },
+  {
+    "id": "vegetables", "charSpans": [ {"sheet": "items", "id": 113} ], "name": "Vegetables", "type": "food",
+    "category": "food", "description": "Cabbage, turnip and onion from the garden. A cooking staple.",
+    "color": "#7FB04E", "amount": 0, "weightKg": 0.3, "volumeL": 0.5, "nutrition": 34,
+    "maxDurability": 50, "deteriorationRate": 0.08
+  },
+  {
+    "id": "legumes", "charSpans": [ {"sheet": "items", "id": 113} ], "name": "Legumes", "type": "food",
+    "category": "food", "description": "Beans and peas. Protein-rich and they store well.",
+    "color": "#A8924E", "amount": 0, "weightKg": 0.2, "volumeL": 0.3, "nutrition": 46,
+    "maxDurability": 120, "deteriorationRate": 0.03
+  },
+  {
+    "id": "fruit", "charSpans": [ {"sheet": "items", "id": 113} ], "name": "Fruit", "type": "food",
+    "category": "food", "description": "Orchard and vine fruit. Eaten fresh, preserved, or pressed for wine and cider.",
+    "color": "#C0584E", "amount": 0, "weightKg": 0.2, "volumeL": 0.3, "nutrition": 30,
+    "maxDurability": 40, "deteriorationRate": 0.1
+  },
+  {
+    "id": "culinary_herbs", "charSpans": [ {"sheet": "items", "id": 113} ], "name": "Culinary Herbs", "type": "food",
+    "category": "food", "description": "Cultivated kitchen herbs. Flavour for meals and simples for the sick.",
+    "color": "#6FA66A", "amount": 0, "weightKg": 0.05, "volumeL": 0.2, "nutrition": 8,
+    "maxDurability": 60, "deteriorationRate": 0.07
+  },
+  {
+    "id": "pumpkin", "charSpans": [ {"sheet": "items", "id": 113} ], "name": "Pumpkin", "type": "food",
+    "category": "food", "description": "A fat prize gourd grown only in terra preta. Hearty cooking, and a grower's pride.",
+    "color": "#D2772A", "amount": 0, "weightKg": 3, "volumeL": 4, "nutrition": 120,
+    "maxDurability": 120, "deteriorationRate": 0.03
   }
 ]
