@@ -30,7 +30,7 @@ import { calculatePawnStats } from '$lib/game/entities/Pawns';
 import { generateWorld } from '$lib/game/world/WorldGenerator';
 import { resourceGeneratorService } from '$lib/game/services/ResourceGeneratorService';
 import { entityService } from '$lib/game/services/EntityService';
-import { loadSave, scheduleSave, deleteSave } from './saveManager';
+import { loadSave, scheduleSave, deleteSave, saveGameNow } from './saveManager';
 import { clearActivityLog } from './Log';
 import { applyDevWorld } from '$lib/game/dev/devWorld';
 import { TICKS_PER_SECOND, ticksFromSeconds } from '$lib/game/core/time';
@@ -735,14 +735,14 @@ export const loadingStatus = writable('Initializing…');
  */
 export type AppPhase = 'menu' | 'game';
 
-// The main menu is a player-facing affordance. DEV launches boot straight into the game (the old,
-// pre-menu behaviour) so iteration isn't taxed by a menu click: --debug (VITE_DEBUG_MODE), --log
-// (VITE_DEBUG_LOG), and --profiler (VITE_PROFILER) all SKIP the menu. A clean/player launch (none of
-// those flags) opens at the menu. Use `./launch.sh --electron --play` to playtest the menu flow.
+// The main menu is a player-facing affordance. Only `--debug` (VITE_DEBUG_MODE) SKIPS it — that's the
+// dev-iteration launch, where a menu click is just friction. Every other launch (clean, `--log`, and
+// `--play`) opens at the menu, so `./launch.sh --electron --play` exercises the real menu flow.
+// `--profiler` (VITE_PROFILER) is the sole technical exception: its loader branch returns early with
+// its own auto-boot sandbox and never goes through `startGame`, so it must bypass the menu too.
 const MENU_ENABLED =
   browser &&
   import.meta.env.VITE_DEBUG_MODE !== 'true' &&
-  import.meta.env.VITE_DEBUG_LOG !== 'true' &&
   import.meta.env.VITE_PROFILER !== 'true';
 
 export const appPhase = writable<AppPhase>(MENU_ENABLED ? 'menu' : 'game');
@@ -773,6 +773,15 @@ function startGame(mode: 'new' | 'load') {
   _bootMode = mode;
   appPhase.set('game');
   _resolveBootGate();
+}
+
+/**
+ * Flush the current game state to disk immediately (pause menu "Save Game" / exit). The sim already
+ * auto-saves debounced every tick; this guarantees an eager write the player can rely on. Resolves
+ * when the IndexedDB write completes.
+ */
+function saveGame(): Promise<void> {
+  return saveGameNow(get(gameState) as GameState);
 }
 
 /** How long the loading overlay lingers after the renderer is up before the reveal — lets the worker
@@ -1080,6 +1089,8 @@ export const gameState = {
   wipeAndReload,
   /** Leave the main menu and boot the game ('new' = fresh colony, 'load' = resume save). */
   startGame,
+  /** Pause menu: flush the current state to disk immediately (resolves on write). */
+  saveGame,
   regenWorld,
   restoreWorld,
   setMapSize,

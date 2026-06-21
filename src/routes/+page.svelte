@@ -19,6 +19,8 @@
   import LoadingScreen from '$lib/components/UI/LoadingScreen.svelte';
   import GameOverScreen from '$lib/components/UI/GameOverScreen.svelte';
   import MainMenu from '$lib/components/UI/MainMenu.svelte';
+  import PauseMenu from '$lib/components/UI/PauseMenu.svelte';
+  import { get } from 'svelte/store';
   import { autohideScroll } from '$lib/actions/autohideScroll';
   import { uiState } from '$lib/stores/uiState';
   import { hideSidebars, debugMode } from '$lib/stores/uiPrefs';
@@ -117,6 +119,21 @@
     uiState.toggleScreen(key as any);
   }
 
+  // ===== PAUSE / ESCAPE MENU =====
+  let pauseMenuOpen = false;
+  let wasPausedBeforeMenu = false;
+
+  function openPauseMenu() {
+    // Pause while the menu is up; restore the player's prior pause state on resume.
+    wasPausedBeforeMenu = get(gameState.isPaused);
+    if (!wasPausedBeforeMenu) gameState.pauseGame();
+    pauseMenuOpen = true;
+  }
+  function closePauseMenu() {
+    pauseMenuOpen = false;
+    if (!wasPausedBeforeMenu) gameState.unpauseGame();
+  }
+
   // ===== APP HARDENING (browser + Electron) =====
   // Suppress the browser-chrome behaviours that leak into a game window: the right-click context
   // menu, accidental file drag-drop navigation, and ctrl/⌘+wheel pinch-zoom. Text selection itself
@@ -135,18 +152,31 @@
     // Ignore ALL keyboard input while the loading overlay is up — otherwise Space would toggle pause
     // (unpausing the game behind the overlay), defeating the paused-warmup reveal hack.
     if (!$bootReveal) return;
+    // While the pause menu is up, swallow everything but ESC (which resumes) so Space/F-keys can't
+    // act on the game behind it.
+    if (pauseMenuOpen) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        closePauseMenu();
+      }
+      return;
+    }
     if (e.code === 'Space') {
       e.preventDefault();
       gameState.togglePause();
       return;
     }
     if (e.key === 'Escape') {
+      // First ESC cancels the active in-world action / closes an open panel; ESC on the bare map
+      // opens the pause menu.
       if ($uiState.blueprintBuildingId) {
         uiState.deactivateBlueprint();
       } else if ($uiState.designationActive) {
         uiState.deactivateDesignation(); // restores _screenBeforeDesignation (e.g. 'building')
-      } else {
+      } else if (currentScreen !== 'main') {
         uiState.setScreen('main');
+      } else {
+        openPauseMenu();
       }
       return;
     }
@@ -269,6 +299,10 @@
      overlay (no separate "Initializing renderer…" screen). The overlay is dropped by `bootReveal`,
      which fires a paused warmup beat AFTER the renderer is up — hiding the worker-boot/WebGL-init GC.
      Keyboard input is gated on the same flag (handleKeydown) so Space can't unpause behind it. -->
+{#if $appPhase === 'game' && pauseMenuOpen}
+  <PauseMenu onResume={closePauseMenu} />
+{/if}
+
 {#if $appPhase === 'game' && !$bootReveal}
   <LoadingScreen />
 {/if}

@@ -228,6 +228,22 @@ export function scheduleSave(state: GameState): void {
   }, DEBOUNCE_MS);
 }
 
+/**
+ * Persist the game state IMMEDIATELY, cancelling any pending debounced write. Used by the pause
+ * menu's "Save Game" (and exit-to-menu/quit) so the player gets a guaranteed flush on demand rather
+ * than waiting for the next debounce tick. Same strip+write as scheduleSave, just eager.
+ */
+export function saveGameNow(state: GameState): Promise<void> {
+  if (!browser) return Promise.resolve();
+  if (_saveTimer !== null) {
+    clearTimeout(_saveTimer);
+    _saveTimer = null;
+  }
+  return idbPut(SAVE_KEY, stripState(state)).catch((err) => {
+    console.warn('[SaveManager] IndexedDB write failed:', err);
+  });
+}
+
 // ── activity-log (chronicle) persistence ─────────────────────────────────────
 
 /** Load the persisted chronicle. Returns [] if none exists. */

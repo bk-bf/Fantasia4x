@@ -53,9 +53,10 @@ cleanup() {
 trap cleanup INT TERM
 
 launch() {
-  # `extra` is the dev.sh flag set. Defaults to --debug (the normal launch.sh experience); the
-  # profiler branch passes "--profiler" instead, so a profiling run is CLEAN (no --debug/verbose).
-  local dir="$1" label="$2" extra="${3:---debug}"
+  # `extra` is the dev.sh flag set. Defaults to --debug (the normal launch.sh experience) ONLY when
+  # $3 is UNSET; an explicit empty "" is honoured as a CLEAN run (the `--play` player launch) — hence
+  # `-` not `:-`, so "" doesn't collapse back to --debug. The profiler branch passes "--profiler".
+  local dir="$1" label="$2" extra="${3---debug}"
   local port=5173
   [[ -f "$dir/.devport" ]] && port=$(< "$dir/.devport")
   # A Ctrl-Z'd previous launch leaves a suspended server holding the port:
