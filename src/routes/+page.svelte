@@ -382,13 +382,10 @@
     overflow: hidden;
   }
 
-  /* Custom Map popup is up (New Game / world shaping): lock the world behind it. The canvas mouse
-     handlers are element-level, so pointer-events:none on the map area stops hover tooltips AND
-     click-selection from firing; the bottom nav is dimmed + made non-interactive. The popup itself
-     is a fixed-position sibling at the container root, so it's unaffected. */
-  .map-locked .map-area {
-    pointer-events: none;
-  }
+  /* Custom Map popup is up (New Game / world shaping): remove the bottom nav entirely so it can't be
+     used behind the popup. Pan + zoom on the map stay LIVE so the player can inspect the terrain
+     being shaped; only hover tooltips and click-selection are suppressed — that's handled inside
+     GameCanvas (it reads uiState.customMapOpen), so the canvas keeps its own drag/wheel handlers. */
   .map-locked .bottom-nav {
     display: none;
   }

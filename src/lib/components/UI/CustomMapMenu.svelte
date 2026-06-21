@@ -53,16 +53,30 @@
   let dirty = false;
   let previewTimer: ReturnType<typeof setTimeout> | undefined;
 
+  // Yield `n` animation frames, so the browser gets to paint between steps.
+  function nextFrames(n: number): Promise<void> {
+    return new Promise((resolve) => {
+      let i = 0;
+      const step = () => (++i >= n ? resolve() : requestAnimationFrame(step));
+      requestAnimationFrame(step);
+    });
+  }
+
   // Run any (re)generation behind the GENERATING overlay. regenWorld is synchronous and freezes the
   // main thread for a beat (a Medium/Large world is 100k+ tiles), so we flip the overlay on and YIELD
   // two frames first — that guarantees the browser paints it before the blocking work starts. The bar
   // is a transform-based CSS animation (compositor-driven), so it keeps sliding even while frozen.
+  // CRUCIALLY: regenWorld only swaps the world STATE — GameCanvas then rebuilds + repaints the terrain
+  // (and refits the camera on a size change) REACTIVELY over the next frames. So we hold the overlay a
+  // few more frames AFTER fn() too, hiding that resize/redraw — the player only ever sees the finished
+  // map, never the jarring mid-redraw.
   async function runRegen(fn: () => void) {
     if (generating) return;
     generating = true;
-    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    await nextFrames(2);
     try {
       fn();
+      await nextFrames(4);
     } finally {
       generating = false;
     }

@@ -329,8 +329,12 @@
   let selectedBuildingId: string | null = null;
   // Selected mob/animal (click-locked, like selectedPawnId)
   let selectedMobId: string | null = null;
+  // Custom Map popup open: the player is shaping/previewing terrain, so suppress hover tooltips and
+  // click-selection (the info HUD), while keeping pan + zoom live so they can inspect the map.
+  let customMapPreview = false;
   const unsubUI = uiState.subscribe((s) => {
     const prevBlueprintBuildingId = blueprintBuildingId;
+    customMapPreview = s.customMapOpen ?? false;
     designationMode = s.designationActive;
     blueprintBuildingId = s.blueprintBuildingId ?? null;
     blueprintMaterials = s.blueprintMaterials ?? null;
@@ -2681,10 +2685,11 @@
       drawDesignations();
       return;
     }
-    if (dragDistance < 3) {
+    if (dragDistance < 3 && !customMapPreview) {
       // Recompute hover tile from current viewX/viewY — the follow camera may
       // have shifted the view since the last mousemove, making the stored tile stale.
       // (Floor the combined coord — viewX/viewY are fractional under smooth follow.)
+      // Suppressed while the Custom Map popup is open — clicks shouldn't select during world shaping.
       hoverTileX = Math.floor(lastCursorCx / tileWidth + viewX);
       hoverTileY = Math.floor(lastCursorCy / tileHeight + viewY);
       handleTileClick();
@@ -3240,6 +3245,9 @@
       <button class="mark-btn" on:click={clearMark}>CLEAR</button>
     </div>
   {/if}
+  <!-- Info HUD (selection + hover cards + tile tooltip). Entirely suppressed while the Custom Map
+       popup is open — the player is shaping terrain, not inspecting entities. -->
+  {#if !customMapPreview}
   {#if selectedPawnCard}
     <!-- Selected pawn card — locked to this pawn regardless of mouse hover -->
     <SelectedEntityCard model={selectedPawnCard} />
@@ -3428,6 +3436,7 @@
         {#if tileThermal.roofed}<span style="color:#7e9fbf">roofed</span>{/if}
       </div>
     </div>
+  {/if}
   {/if}
 
   {#if equipMenu}
