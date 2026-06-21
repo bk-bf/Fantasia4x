@@ -540,15 +540,15 @@ export function stepHostile(
       if (!prey) return null;
       // §S5: a LIVE-prey hunt is combat — gate it on the concurrent-hunt budget so a hunger wave
       // doesn't engage hundreds at once. Corpse-scavenging (prey is a Corpse) is cheap, never gated.
-      if (prey.state !== 'Corpse' && !takeHuntSlot())
-        // Budget full → back off with a JITTERED cooldown (keeps state) instead of re-running the
-        // O(prey) findNearestPrey every tick, and so the denied hunters don't all retry on one tick.
-        return {
-          ...mob,
-          huntCooldownUntil:
-            turn +
-            ticksFromSeconds(HUNT_BUSY_BACKOFF_MIN_S + rng.random() * HUNT_BUSY_BACKOFF_JITTER_S)
-        };
+      if (prey.state !== 'Corpse' && !takeHuntSlot()) {
+        // Budget full → stamp a JITTERED backoff IN PLACE (ADR-002; it's a scalar cold field) so we
+        // don't re-run the O(prey) findNearestPrey every tick and so denied hunters don't all retry on
+        // one tick — then return null so the mob STILL WANDERS this tick (the cooldown carries through
+        // the wander's `{...mob}` spread). Returning a non-Hunting mob here FROZE denied hunters.
+        mob.huntCooldownUntil =
+          turn + ticksFromSeconds(HUNT_BUSY_BACKOFF_MIN_S + rng.random() * HUNT_BUSY_BACKOFF_JITTER_S);
+        return null;
+      }
       return { ...mob, state: 'Hunting', stateSince: turn, path: [] };
     };
 
