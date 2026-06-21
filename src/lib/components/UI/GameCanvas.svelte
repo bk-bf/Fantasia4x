@@ -3341,6 +3341,16 @@
             >{/if}
         </div>
       {/if}
+      {#if hoverResources[0]?.[0] && hoverTile.growth?.[hoverResources[0][0]] !== undefined}
+        {@const gpct = Math.round(hoverTile.growth[hoverResources[0][0]])}
+        <div
+          class="tile-move"
+          style="color:{gpct >= 100 ? '#6fae3a' : gpct >= 50 ? '#9aac3a' : '#c89a3a'}"
+          title="resource maturity — scales harvest yield; crops grow only with enough fertility, warmth, water and light"
+        >
+          growth {gpct}%
+        </div>
+      {/if}
       {#if hoverZoneType && ZONE_META[hoverZoneType]}
         <div class="tile-zone" style="color:{ZONE_META[hoverZoneType].color}">
           {ZONE_META[hoverZoneType].label} — {ZONE_META[hoverZoneType].desc}

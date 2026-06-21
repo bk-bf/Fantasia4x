@@ -10,11 +10,9 @@ import { gatedConsole as console } from '../../core/log';
 import { zoneTileKeys } from '../DesignationService';
 import { resourceObjectService, type ResourceObjectDef } from '../ResourceObjectService';
 import { itemService } from '../ItemService';
-import { soilFertilityPct, soilTierForTile } from '../../core/Terrains';
+import { soilTierForTile } from '../../core/Terrains';
 import { itemMatchesFilter } from './filters';
 import { markTileDirty } from '../../core/tileDeltas';
-import { ticksFromSeconds } from '../../core/time';
-import { seasonRegrowthMultiplier } from '../EnvironmentService';
 import { rng } from '../../core/rng';
 
 /** Fixed sowing work (the crop's own workAmount is the REAP cost, not the plant cost). */
@@ -109,25 +107,16 @@ export function complete(job: Job, gs: GameState): GameState {
 
   const seed = def.crop.seedItem;
   if ((gs.stockpile?.[seed] ?? 0) <= 0) return gs; // seed gone — abort, job re-evaluates next tick
-  let state = itemService.consumeItems({ [seed]: 1 }, gs);
+  const state = itemService.consumeItems({ [seed]: 1 }, gs);
 
-  // Growth speed = base growthTurns / (fertility × wetness), then season-scaled like any regrowth.
-  const fertFactor = 0.5 + soilFertilityPct(tile) / 100; // ~0.75 (poor) … 1.5 (terra preta)
-  const moisture = tile.moisture ?? 0;
-  const wetFactor = Math.max(0.4, Math.min(1, 1 - Math.abs(moisture - def.crop.idealMoisture) / 100));
-  const scaledTurns = def.crop.growthTurns / (fertFactor * wetFactor);
-  const rate = seasonRegrowthMultiplier(state.season);
-  const matureAt = state.turn + Math.max(1, Math.round(ticksFromSeconds(scaledTurns) / rate));
-
-  // Place the crop IMMATURE (count 0) + start its growth cooldown — it matures (count → nodeAmount)
-  // when processResourceRegrowth fires. In-place tile mutation + delta (ADR-002 amendment).
+  // Place the crop IMMATURE: count 0, growth 0%. It climbs toward 100% via processCropGrowth — but
+  // ONLY while the tile keeps meeting the crop's needs (fertility/temp/wetness/light). When it reaches
+  // 100% the growth pass sets count → nodeAmount (harvestable). In-place tile mutation + delta.
   const col = state.worldMap[job.targetY][job.targetX];
   col.resources = { ...col.resources, [job.resourceId]: 0 };
-  col.resourceCooldowns = { ...(col.resourceCooldowns ?? {}), [job.resourceId]: matureAt };
+  col.growth = { ...(col.growth ?? {}), [job.resourceId]: 0 };
   markTileDirty(job.targetY, job.targetX, col);
 
-  console.log(
-    `[JobService] Planted ${job.resourceId} at (${job.targetX},${job.targetY}) — matures in ~${Math.round(scaledTurns)} turns`
-  );
+  console.log(`[JobService] Planted ${job.resourceId} at (${job.targetX},${job.targetY}) — sown at 0%`);
   return state;
 }

@@ -47,8 +47,13 @@ import {
   TURNS_PER_DAY,
   WEATHER_LABELS,
   SEASON_LABELS,
-  weatherChronicleSeverity
+  weatherChronicleSeverity,
+  seasonRegrowthMultiplier,
+  computeThermalAt,
+  tileTemperature
 } from '../services/EnvironmentService';
+import { zoneTileKeys } from '../services/DesignationService';
+import { soilTierForTile } from '../core/Terrains';
 import { markTileDirty } from '../core/tileDeltas';
 import { simLog } from '../core/logSink';
 
@@ -198,6 +203,7 @@ export class GameEngineImpl implements GameEngine {
       t('passiveProd', () => this.processPassiveProduction());
       t('pawns', () => this.processPawns());
       t('resourceRegrowth', () => this.processResourceRegrowth());
+      t('cropGrowth', () => this.processCropGrowth());
       t('entityStep', () => {
         this.gameState = entityService.spawnEntities(this.gameState!);
         this.gameState = entityService.tickLairs(this.gameState!);
@@ -413,6 +419,7 @@ export class GameEngineImpl implements GameEngine {
               const [minAmt, maxAmt] = def?.nodeAmountRange ?? [1, 3];
               const newResourceCount = minAmt + Math.floor(rng.random() * (maxAmt - minAmt + 1));
               tile.resources[resourceId] = newResourceCount;
+              if (tile.growth) tile.growth[resourceId] = 100; // §F: fully regrown ⇒ 100% maturity
               // Restore blocking for non-walkable resources that have fully regrown.
               if (def?.walkable === false) {
                 tile.walkable = false;
@@ -431,6 +438,7 @@ export class GameEngineImpl implements GameEngine {
 
             delete cooldowns[key];
             tile.resources[key] = restored;
+            if (tile.growth) tile.growth[key] = 100; // §F: fully regrown ⇒ 100% maturity
             // Restore blocking for non-walkable resources that have regrown.
             if (def?.walkable === false) {
               tile.walkable = false;
@@ -448,6 +456,57 @@ export class GameEngineImpl implements GameEngine {
 
     // worldMap mutated in place (ref unchanged) → the snapshot publisher ships the marked tiles as a
     // delta and bumps _terrainRev. No `this.gameState` reassignment, no full-map re-clone.
+  }
+
+  /**
+   * PRODUCTION-CHAIN-II §F — advance sown crops toward maturity. Iterates ONLY grow-zone tiles
+   * (farm-bounded, not the whole map) and grows each immature crop ONLY while its tile meets ALL of
+   * the crop's needs (fertility / wetness / temperature / light — tracked per crop in resources.jsonc).
+   * Conditions unmet ⇒ growth stalls. At 100% the crop becomes harvestable (count → nodeAmount). Wild
+   * plants don't use this — their growth is event-based (world-gen roll + harvest reset + timed regrow).
+   * In-place tile mutation + delta (ADR-002 amendment), like processResourceRegrowth.
+   */
+  private processCropGrowth(): void {
+    if (!this.gameState) return;
+    const gs = this.gameState;
+    const growTiles = zoneTileKeys(gs, 'grow');
+    if (growTiles.length === 0) return;
+    const rate = seasonRegrowthMultiplier(gs.season);
+
+    for (const key of growTiles) {
+      const ci = key.indexOf(',');
+      const x = +key.slice(0, ci);
+      const y = +key.slice(ci + 1);
+      const tile = gs.worldMap[y]?.[x];
+      const growth = tile?.growth;
+      if (!tile || !growth) continue;
+
+      for (const id in growth) {
+        if (growth[id] >= 100) continue;
+        const def = resourceObjectService.getById(id);
+        const c = def?.crop;
+        if (!c) continue;
+
+        // Needs gate — growth advances only when EVERY requirement holds (else it stalls this tick).
+        if (soilTierForTile(tile) < c.minSoil) continue;
+        const m = tile.moisture ?? 0;
+        if (m < c.minMoisture || m > c.maxMoisture) continue;
+        const thermal = computeThermalAt(x, y, gs.buildings);
+        if (c.needsLight && thermal.roofed) continue; // crops need open sky
+        const temp = tileTemperature(tile.terrainType, gs.season, gs.weather, thermal);
+        if (temp < c.minTemp || temp > c.maxTemp) continue;
+
+        // Advance toward 100% at the base rate (season-scaled). In place — no per-tick allocation.
+        const totalTicks = Math.max(1, ticksFromSeconds(c.growthTurns) / rate);
+        const next = Math.min(100, growth[id] + 100 / totalTicks);
+        growth[id] = next;
+        if (next >= 100 && (tile.resources[id] ?? 0) <= 0) {
+          const [mn, mx] = def!.nodeAmountRange ?? [1, 1];
+          tile.resources[id] = mn + Math.floor(rng.random() * (mx - mn + 1)); // matured → harvestable
+        }
+        markTileDirty(y, x, tile);
+      }
+    }
   }
 
   private debugLogPawns(): void {

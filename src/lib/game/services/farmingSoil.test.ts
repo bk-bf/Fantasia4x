@@ -4,6 +4,7 @@ import { buildingService } from './BuildingService';
 import { resourceObjectService } from './ResourceObjectService';
 import { complete as constructComplete } from './jobs/construct';
 import { complete as plantComplete } from './jobs/plant';
+import { isGrowableResource } from './ResourceObjectService';
 import { SUBTERRAINS, soilFertilityPct } from '../core/Terrains';
 import type { GameState, Job } from '../core/types';
 
@@ -160,7 +161,28 @@ describe('§F crops + planting', () => {
     const next = plantComplete(job, gs);
 
     const t = next.worldMap[0][2];
-    expect(t.resources.crop_wheat).toBe(0); // immature — count 0 until the cooldown matures it
-    expect(t.resourceCooldowns?.crop_wheat).toBeGreaterThan(100); // growing toward maturity
+    expect(t.resources.crop_wheat).toBe(0); // immature — count 0 until growth reaches 100%
+    expect(t.growth?.crop_wheat).toBe(0); // sown at 0%, climbs via processCropGrowth under good conditions
+  });
+});
+
+describe('§F resource growth/maturity', () => {
+  it('plants are growable (roll maturity), minerals are not', () => {
+    expect(isGrowableResource(resourceObjectService.getById('grass_patch')!)).toBe(true);
+    expect(isGrowableResource(resourceObjectService.getById('crop_wheat')!)).toBe(true);
+    expect(isGrowableResource(resourceObjectService.getById('pine_tree')!)).toBe(true);
+    expect(isGrowableResource(resourceObjectService.getById('hematite')!)).toBe(false);
+  });
+
+  it('growth scales harvest yield — an ungrown node yields nothing, a full one yields normally', () => {
+    const none = resourceObjectService.calculateYield('grass_patch', undefined, undefined, 'harvest', 0);
+    expect(Object.keys(none).length).toBe(0); // 0% growth → no harvest
+    const full = resourceObjectService.calculateYield('grass_patch', undefined, undefined, 'harvest', 100);
+    expect(full).toHaveProperty('hay');
+  });
+
+  it('a tree forage knocks growth back to 80% (just branches), not 0%', () => {
+    const forage = resourceObjectService.getInteractionByDesignationType('pine_tree', 'forage')!;
+    expect(forage.harvestGrowthReset).toBe(80);
   });
 });

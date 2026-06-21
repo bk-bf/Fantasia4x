@@ -113,11 +113,15 @@ export function complete(job: Job, gs: GameState): GameState {
   }
 
   const pawn = gs.pawns.find((p) => p.id === job.claimedBy);
+  // §F: an under-grown node yields proportionally less (growth 50–100% on wild plants, 100% on a
+  // matured crop). Read before the tile is mutated below.
+  const growthPct = tile.growth?.[job.resourceId] ?? 100;
   const yields = resourceObjectService.calculateYield(
     job.resourceId,
     pawn,
     availableItemIds,
-    designationType
+    designationType,
+    growthPct
   );
   const yieldEntries = Object.entries(yields);
 
@@ -145,26 +149,41 @@ export function complete(job: Job, gs: GameState): GameState {
     // Keep the memoized A* grid in sync — the worldMap ref is unchanged, so the pathfinding cache
     // would otherwise keep treating the now-cleared tile as a blocking node (pawns route around it).
     patchPathfindingWalkable(col.x, col.y, baseSub.walkable);
-  } else {
-    const newCooldowns = { ...(col.resourceCooldowns ?? {}) };
-    // SEASONS_WEATHER Subsystem 2: scale regrowth duration by the season rate (spring fast, winter
-    // slow). Higher rate ⇒ cooldown divided ⇒ shorter wait.
-    const regrowthRate = seasonRegrowthMultiplier(gs.season);
-    const cooldownTicks = (turns: number) =>
-      gs.turn + Math.round(ticksFromSeconds(turns) / regrowthRate);
-    const yieldHasPerItemCooldowns = interaction!.yields.some((y) => y.regrowthTurns !== undefined);
-    if (yieldHasPerItemCooldowns) {
-      // Per-yield compound keys: "resourceId:itemId" → turn
-      for (const y of interaction!.yields) {
-        if (y.regrowthTurns && (availableItemIds?.has(y.itemId) ?? true)) {
-          newCooldowns[`${job.resourceId!}:${y.itemId}`] = cooldownTicks(y.regrowthTurns);
-        }
-      }
-    } else if (interaction?.regrowthTurns) {
-      // Simple whole-resource cooldown
-      newCooldowns[job.resourceId!] = cooldownTicks(interaction.regrowthTurns);
+    // §F: a dug/cut node is gone — drop its growth entry too.
+    if (col.growth && job.resourceId! in col.growth) {
+      const g = { ...col.growth };
+      delete g[job.resourceId!];
+      col.growth = g;
     }
-    col.resourceCooldowns = newCooldowns;
+  } else {
+    // §F: harvesting RESETS the node's growth — to 0% by default, or the interaction's
+    // `harvestGrowthReset` (a tree's branch-forage leaves it ~80%). Yield was already scaled above.
+    col.growth = { ...(col.growth ?? {}), [job.resourceId!]: interaction?.harvestGrowthReset ?? 0 };
+    // CROPS re-mature via the conditional growth pass (processCropGrowth), NOT a flat cooldown — so a
+    // perennial crop only regrows while its tile still meets fertility/temp/wetness/light. Wild plants
+    // keep the timed-cooldown regrowth.
+    const def = resourceObjectService.getById(job.resourceId!);
+    if (!def?.crop) {
+      const newCooldowns = { ...(col.resourceCooldowns ?? {}) };
+      // SEASONS_WEATHER Subsystem 2: scale regrowth duration by the season rate (spring fast, winter
+      // slow). Higher rate ⇒ cooldown divided ⇒ shorter wait.
+      const regrowthRate = seasonRegrowthMultiplier(gs.season);
+      const cooldownTicks = (turns: number) =>
+        gs.turn + Math.round(ticksFromSeconds(turns) / regrowthRate);
+      const yieldHasPerItemCooldowns = interaction!.yields.some((y) => y.regrowthTurns !== undefined);
+      if (yieldHasPerItemCooldowns) {
+        // Per-yield compound keys: "resourceId:itemId" → turn
+        for (const y of interaction!.yields) {
+          if (y.regrowthTurns && (availableItemIds?.has(y.itemId) ?? true)) {
+            newCooldowns[`${job.resourceId!}:${y.itemId}`] = cooldownTicks(y.regrowthTurns);
+          }
+        }
+      } else if (interaction?.regrowthTurns) {
+        // Simple whole-resource cooldown
+        newCooldowns[job.resourceId!] = cooldownTicks(interaction.regrowthTurns);
+      }
+      col.resourceCooldowns = newCooldowns;
+    }
   }
   markTileDirty(job.targetY, job.targetX, col);
 

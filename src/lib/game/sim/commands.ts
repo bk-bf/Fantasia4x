@@ -114,6 +114,43 @@ export const COMMANDS: Record<string, Cmd> = {
         : pw
     )
   }),
+  /** MARK multi-select: draft every listed (living) pawn at once, clearing any current job. */
+  draftPawns: (s, p: { ids: string[] }) => ({
+    ...s,
+    pawns: s.pawns.map((pw) =>
+      p.ids.includes(pw.id) && pw.isAlive !== false
+        ? {
+            ...pw,
+            drafted: true,
+            draftTarget: undefined,
+            activeJob: undefined,
+            currentState: 'Idle' as never
+          }
+        : pw
+    )
+  }),
+  /** MARK multi-move: spread the listed drafted pawns onto distinct walkable tiles around (x,y) so
+   *  they don't all path to (and fight over) one cell. Each pawn claims the nearest free tile via a
+   *  spiral from the target, the centre tile going to the first pawn. */
+  movePawnsFormation: (s, p: { ids: string[]; x: number; y: number }) => {
+    const claimed = new Set<string>();
+    const targets = new Map<string, { x: number; y: number }>();
+    for (const id of p.ids) {
+      const tile = nearestFreeTile(s.worldMap, p.x, p.y, claimed);
+      if (!tile) break; // map exhausted — leave the rest where they are
+      claimed.add(`${tile.x},${tile.y}`);
+      targets.set(id, tile);
+    }
+    return {
+      ...s,
+      pawns: s.pawns.map((pw) => {
+        const t = targets.get(pw.id);
+        return t && pw.drafted
+          ? { ...pw, draftTarget: { type: 'move', x: t.x, y: t.y } as never }
+          : pw;
+      })
+    };
+  },
   setPawnStance: (s, p: { pawnId: string; stance: string }) => ({
     ...s,
     pawns: s.pawns.map((pw) =>

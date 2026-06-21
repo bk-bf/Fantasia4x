@@ -51,6 +51,11 @@ export interface ResourceInteractionDef {
    * yielding its soil. Only meaningful with `harvestDepletes: true`. Handled in jobs/harvest.complete.
    */
   harvestSubType?: string;
+  /**
+   * PRODUCTION-CHAIN-II §F: the growth% a node is reset to after THIS harvest (default 0). A tree's
+   * branch-forage sets 80 — it only knocks the canopy back a little, vs a full cut/reap that strips it.
+   */
+  harvestGrowthReset?: number;
 }
 
 export interface ResourceObjectDef {
@@ -124,10 +129,23 @@ export interface ResourceObjectDef {
    */
   crop?: {
     seedItem: string;
-    minSoil: number; // 0–4 soil tier required to plant (soilTierForTile)
-    idealMoisture: number; // 0–100 wetness the crop likes (growth slows away from it)
-    growthTurns: number; // base ticks to mature; scaled by fertility × wetness
+    /** What the crop NEEDS to grow (tracked here per the design): growth only advances while ALL hold. */
+    minSoil: number; // 0–4 soil fertility tier required (soilTierForTile) — also the plant-eligibility gate
+    minMoisture: number; // 0–100 wetness window (tile.moisture)
+    maxMoisture: number;
+    minTemp: number; // °C window (seasonal tileTemperature)
+    maxTemp: number;
+    needsLight: boolean; // requires open sky (an unroofed tile)
+    growthTurns: number; // base turns 0→100% under good conditions
   };
+}
+
+/** A resource whose nodes have a maturity (wild plants regrow; crops are sown): rolls a world-gen
+ *  growth 50–100% and scales yield by it. Minerals/static nodes don't grow (growth stays 100%). */
+export function isGrowableResource(def: ResourceObjectDef): boolean {
+  if (def.crop) return true;
+  const ints = def.interactions ?? [def.interaction];
+  return ints.some((i) => i.persistent === true || i.regrowthTurns !== undefined);
 }
 
 const WORK_STAT_FALLBACK: Record<string, keyof Pawn['stats']> = {
@@ -195,7 +213,9 @@ class ResourceObjectServiceImpl {
     resourceId: string,
     pawn?: Pawn,
     availableItemIds?: Set<string>,
-    dtype?: DesignationType
+    dtype?: DesignationType,
+    /** §F: node maturity 0–100 (tile.growth) — scales the harvest down on under-grown nodes. */
+    growthPct: number = 100
   ): Record<string, number> {
     const def = this.getById(resourceId);
     if (!def) return { [resourceId]: 1 };
@@ -210,6 +230,8 @@ class ResourceObjectServiceImpl {
     const statYieldMult = pawn
       ? (pawnStatService.getWorkModifiers(pawn, interaction.workCategory).yield ?? 1)
       : 1;
+    // §F: an under-grown node (low growth%) yields proportionally less — but never zero on a real harvest.
+    const growthMult = Math.max(0, Math.min(1, growthPct / 100));
     for (const y of interaction.yields) {
       if (availableItemIds && !availableItemIds.has(y.itemId)) continue;
       const roll = this.randomInt(y.min, y.max);
@@ -217,7 +239,7 @@ class ResourceObjectServiceImpl {
       const multiplier = Math.max(1, 1 + skill * y.skillMultiplier);
       // Yield multiplier produces a float (e.g. roll 3 × 1.2 = 3.6) — round UP so a bonus
       // never silently rounds away.
-      const amount = Math.max(0, Math.ceil(roll * multiplier * statYieldMult));
+      const amount = Math.max(0, Math.ceil(roll * multiplier * statYieldMult * growthMult));
       // YIELD-DBG: per-item harvest breakdown (config the build sees + every multiplier). A kept
       // debug tool — gated behind gameDebug() so it's off by default but toggleable when probing
       // yields (grep YIELD-DBG .debug/pawns.log). See dev-memory: yield-dbg-debug-tool.

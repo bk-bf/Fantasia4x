@@ -244,6 +244,7 @@ const TILE_RENDER_FIELDS = [
   'walkable',
   'resources',
   'resourceCooldowns',
+  'growth',
   'snow'
 ] as const;
 function slimTile(tile: WorldTile): Partial<WorldTile> {

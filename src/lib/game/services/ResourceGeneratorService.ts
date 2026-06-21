@@ -6,7 +6,7 @@
 
 import type { WorldTile } from '../core/types';
 import type { ResourceObjectDef } from './ResourceObjectService';
-import { resourceObjectService } from './ResourceObjectService';
+import { resourceObjectService, isGrowableResource } from './ResourceObjectService';
 import { SUBTERRAINS, SUBTERRAIN_FALLBACK, pickChar } from '../core/Terrains';
 
 /**
@@ -155,6 +155,11 @@ class ResourceGeneratorServiceImpl {
     rng: (min: number, max: number) => number
   ): void {
     tile.resources[def.id] = rng(def.nodeAmountRange[0], def.nodeAmountRange[1]);
+    // §F: growable plants spawn at a RANDOM 50–100% maturity (never below 50% — keeps the map's yields
+    // healthy) so the world isn't uniformly full-grown; growth scales harvest yield + shows in the panel.
+    if (isGrowableResource(def)) {
+      (tile.growth ??= {})[def.id] = rng(50, 100);
+    }
     // walkable comes directly from the resource; movementCost falls back to the objectSubType
     // subterrain so slow-but-passable resources still apply cost.
     const resourceSub = SUBTERRAINS[def.subterrain] ?? SUBTERRAIN_FALLBACK;
