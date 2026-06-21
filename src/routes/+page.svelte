@@ -309,9 +309,10 @@
   <LoadingScreen />
 {/if}
 
-<!-- Permadeath: once the colony is wiped (empty roster), the run is over. Gated on bootReveal so a
-     mid-boot transient empty state can't flash it before the loaded roster is applied. -->
-{#if $bootReveal && $isGameOver}
+<!-- Permadeath: once the colony is wiped (empty roster), the run is over. Gated on the game phase +
+     bootReveal so the empty PRE-game roster on the main menu (and any mid-boot transient empty state)
+     can't flash it before a real colony exists. -->
+{#if $appPhase === 'game' && $bootReveal && $isGameOver}
   <GameOverScreen />
 {/if}
 

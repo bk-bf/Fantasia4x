@@ -812,9 +812,18 @@ if (browser) {
 
   // Safety net: if the renderer never reports ready (e.g. WebGL unavailable — the error lives behind
   // the overlay), force the reveal after a generous timeout so the overlay can't strand the user.
-  const fallback = setTimeout(() => bootReveal.set(true), 15000);
+  // ARM IT ONLY ONCE THE GAME ACTUALLY STARTS BOOTING (appPhase → 'game'). Otherwise sitting on the
+  // main menu would, after 15s, flip bootReveal=true — which both fires the GAME OVER overlay on the
+  // empty pre-game roster and skips the loading spinner on the next New/Load. (Dev/profiler launches
+  // start at appPhase='game', so this still arms immediately for them.)
+  let fallback: ReturnType<typeof setTimeout> | undefined;
+  appPhase.subscribe((phase) => {
+    if (phase === 'game' && fallback === undefined) {
+      fallback = setTimeout(() => bootReveal.set(true), 15000);
+    }
+  });
   bootReveal.subscribe((revealed) => {
-    if (revealed) clearTimeout(fallback);
+    if (revealed && fallback) clearTimeout(fallback);
   });
 }
 
