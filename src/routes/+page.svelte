@@ -288,8 +288,10 @@
     </div>
 
     <!-- Custom Map popup — rendered at the container root (NOT inside the filtered .game-header) so
-         its position:fixed escapes that stacking trap and floats above the WebGL canvas. -->
-    {#if customMapOpen}
+         its position:fixed escapes that stacking trap and floats above the WebGL canvas. Gated on
+         `bootReveal` so the New Game → Custom Map open doesn't paint over the loading overlay during
+         the storeReady→reveal warmup window (the popup is fixed-position and would float above it). -->
+    {#if customMapOpen && $bootReveal}
       <CustomMapMenu onClose={() => uiState.setCustomMap(false)} />
     {/if}
   </div>
