@@ -128,6 +128,10 @@
   function computeFitTileSize(canvasW: number, canvasH: number): number {
     const mapW = worldMap.length > 0 ? worldMap[0].length : MAP_W;
     const mapH = worldMap.length > 0 ? worldMap.length : MAP_H;
+    // COVER fit (Math.max): the zoom-out floor FILLS the canvas — the map's binding axis (width, for a
+    // square map on a wide screen) maps edge-to-edge so no empty out-of-map area ("aether") ever shows.
+    // The other axis overflows the viewport, so you can pan along it; the bound axis is pinned (no pan
+    // needed there). CONTAIN (Math.min) was tried but left letterbox bars, which the user dislikes.
     return Math.max(canvasW / mapW, canvasH / mapH);
   }
 
