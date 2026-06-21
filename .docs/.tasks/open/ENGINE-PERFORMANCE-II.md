@@ -64,6 +64,15 @@ CPU profiler chunks for **per-thread per-function self-time** (`/tmp/parsetrace.
   in CSS coords (sizes / density / fall-speed preserved exactly) but rasterizes into a buffer with
   **~0.36× the fillrate** (CSS-upscaled — weather is soft, no visible loss). Zoom-out particle ramp
   softened (2.2× → 1.6×). `check`/`test` green (552). **Pending fresh-trace validation.**
+  - **Follow-up (2026-06-21): zoom-range-driven scaling, fillrate-bounded.** The hardcoded `MIN_TILE`/
+    `MAX_TILE` (6/40) didn't match the real per-map zoom span (a 750² map's zoom-out floor `fitTileSize`
+    is ~1px), so weather flat-lined past 6px tiles on M/L maps. Now `WeatherCanvas` reads the live
+    `cameraZoomRange` (`{min: fitTileSize, max: MAX_TILE_W}`, published by GameCanvas) and scales against
+    it: `sizeMul` (~0.3×–1.3×) **shrinks** every particle as you zoom out and the ramp is now `densityMul`
+    up to 2.4×. **Net cost stays bounded** because the 1600 count cap became fillrate-aware
+    (`1600 / sizeMul`, clamped to 2400): more particles only when each is proportionally smaller, so
+    total `count × size` ≤ the old worst case (constant for rain-streak length, lower for snow/dust area).
+    `check`/`test` green (552).
 - [ ] **R4 — `updateWorldEffectOverlays` is per-frame O(1650 mobs)** with `.map/.filter` allocation chains
   (4.6%). Viewport-cull to on-screen mobs first; reuse buffers; throttle. (Also gate on the render-on-
   demand freeze where possible.)
@@ -90,10 +99,38 @@ CPU profiler chunks for **per-thread per-function self-time** (`/tmp/parsetrace.
   (cached) base grid per pathfind, and A* runs for many mobs. Levers: **incremental occupancy** (don't
   rebuild the blocked overlay from scratch), **throttle/stagger** path recomputes (not every mob every
   tick), **cap A* calls/tick**, and reuse paths until invalidated.
-- [ ] **S4 — Snapshot scales with mob count** (`slimEntity`/`syncEntities`). Already slimmed in Pass I §D8/
-  §F; at 1650 mobs revisit per-id `EntitySync` deltas + a hard floor on per-mob bytes. Lower priority
-  than S1/S2.
-- [ ] **S5 — Entity LOD (design lever, likely required for 60 TPS @1650).** Simulate **distant / off-
+- [~] **S4 — snapshot at scale (2026-06-21, partial).** After S1 the worker→main snapshot is the biggest
+  remaining cost (~12.5% worker + ~14% render in the 3rd trace) — all 958 mobs ship their HOT projection
+  every flush. A main-thread read-audit shows the renderer reads only `x/y/id/state/isAlive/eatProgress/
+  health/maxHealth/creatureId/path` per-frame off a mob; the rest is worker-AI- or selected-card-only.
+  **Demoted 10 rarely-changing mob scalars to `MOB_COLD`** (`stateSince`, `targetPawnId`, `diedAt`,
+  `huntTargetId`, `hunt/forageCooldownUntil`, `blockedTicks`, `pain`, `blood/maxBloodVolume`) so they
+  ship **only on change** (per-field ref-diff; the card reads the mirror's last value via the
+  `{...prev,...u}` merge). Idle mobs now cost only their hot scalars. `check`/`test` green (552). **Pending
+  fresh-trace validation. Remaining S4 lever:** skip mobs whose HOT projection is unchanged (idle/not-
+  moving) — needs a hot-field diff, more involved.
+- [x] **`syncFractureConditions` gated (2026-06-21).** It scanned every mob's limbs/parts every tick
+  (6.2% of the worker) even for uninjured mobs. Now skipped unless `pain > 0` or a `fractured` condition
+  exists (a fracture is a painful structural wound, so a healthy mob has nothing to sync; the condition
+  check still clears it the tick a bone knits). `fractures.test.ts` (8) green.
+- [~] **`findNearestPrey`/`nearestPawn` (deferred).** `nearestPawn` is O(mobs × 5 pawns) — already cheap.
+  `findNearestPrey` has corpse-weighting (×0.5) + **per-species conspecific exclusion**, so it doesn't map
+  to a single `nearest_each`; it'd need per-species indices. Not worth it vs S3/S5.
+- [~] **S5a — stagger the hunger/hunt wave (2026-06-21).** Root cause of the combat-stress collapse: every
+  mob spawned at `hunger: 0` (`entitySpawning.ts`), so they all crossed `HUNGER_EAT_THRESHOLD` on the SAME
+  tick → hundreds of simultaneous hunt→combat engagements (a thundering herd) that spiked the worker and
+  starved even the pause message (the "pause doesn't pause under load" report). Fixes: (1) **randomise
+  spawn hunger** uniform over `[0, threshold)` (+ small fatigue spread) so first-hunts smear across the
+  fill window; (2) **concurrent-hunt cap** — a per-tick slot budget (`max(40, 0.15 × mobs)` − mobs already
+  Hunting/Attacking) gates new OFFENSIVE live-prey hunts; corpse-scavenging + resuming an existing fight
+  are never gated. (3) **jittered busy-backoff** — when the budget denies a hunt, the mob is stamped with
+  a randomised `huntCooldownUntil` (`[4s, 20s]`) so it does NOT re-run the O(prey) `findNearestPrey` every
+  tick (that retry was itself O(denied × prey) — back toward O(N²)), AND the denied hunters don't all
+  retry on the same tick and re-form the wave. Deterministic (seeded). `entitySim.test.ts` (20) green and
+  **8.9s → 1.7s**. **Pending live validation** (cap fraction + backoff are tunable). NB: the "pause
+  failing" was the main thread locked by the combat-wave snapshot-apply, not a pause bug — bounding the
+  wave restores responsiveness.
+- [ ] **S5b — Entity LOD (still open for the highest counts).** Simulate **distant / off-
   screen / inactive** mobs at a reduced cadence (every N ticks) or with a cheaper FSM; full rate only
   near the colony / in active chunks. Also re-examine the lair spawn model — is 1650 concurrent mobs
   intended, or runaway spawning? Caps + LOD make the headline number achievable where pure micro-opt
