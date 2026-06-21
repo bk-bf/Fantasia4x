@@ -313,6 +313,10 @@
     position: static;
     bottom: auto;
     left: auto;
+    /* Embedded cards (building, stockpile zone) pair the info box with a button column the parent row
+       lays out. Stretch both to a shared height so the box's bottom border lines up with the button
+       column's bottom even when the buttons are taller than the card's content (the short zone card). */
+    align-items: stretch;
   }
   .tile-hud {
     background: rgba(28, 16, 6, 0.92);
