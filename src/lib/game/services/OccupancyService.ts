@@ -26,11 +26,31 @@ import type { GameState } from '../core/types';
 export interface OccupancyService {
   /** Set of "x,y" keys for every body except `excludeId`. */
   blockedTiles(state: GameState, excludeId?: string): Set<string>;
+  /** ALL-bodies occupancy (no self-exclusion), MEMOISED on the (mobs, pawns) array refs so every mob
+   *  pathing in one FSM tick shares ONE set instead of rebuilding it per request. Self-exclusion is
+   *  dropped deliberately: callers (mob A*) only use it as a SOFT cost penalty, and a penalty on the
+   *  mover's own start tile is irrelevant to A* (start g=0). Stable within a tick (state.mobs/pawns
+   *  refs don't change mid-FSM); rebuilt when either ref flips. */
+  blockedTilesShared(state: GameState): Set<string>;
   /** True if (x, y) holds a body other than `excludeId`. */
   isBlocked(state: GameState, x: number, y: number, excludeId?: string): boolean;
 }
 
 class OccupancyServiceImpl implements OccupancyService {
+  private _sharedMobs: unknown = null;
+  private _sharedPawns: unknown = null;
+  private _sharedSet: Set<string> | null = null;
+
+  blockedTilesShared(state: GameState): Set<string> {
+    if (this._sharedMobs === state.mobs && this._sharedPawns === state.pawns && this._sharedSet)
+      return this._sharedSet;
+    const s = this.blockedTiles(state);
+    this._sharedMobs = state.mobs;
+    this._sharedPawns = state.pawns;
+    this._sharedSet = s;
+    return s;
+  }
+
   blockedTiles(state: GameState, excludeId?: string): Set<string> {
     const occupied = new Set<string>();
     for (const p of state.pawns) {

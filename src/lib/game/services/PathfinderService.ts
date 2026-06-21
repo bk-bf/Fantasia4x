@@ -149,3 +149,39 @@ export function buildPathfindingGridsSoftBlocked(
   }
   return { walkable, costs, width, height };
 }
+
+// Per-tick shared soft-blocked grid (mob hot path). Every mob pathing in one FSM tick sees IDENTICAL
+// occupancy, so the O(map) cost-array clone + penalty pass is built ONCE and reused — keyed on the
+// (worldMap, blocked) refs, both stable through a tick (blocked = the per-tick-cached occupancy set;
+// worldMap only flips on a tile mutation). Without this, a busy combat tick rebuilt the full 562k-tile
+// cost array PER path request — measured 35% of the worker once many mobs re-path (deadlock re-route /
+// un-frozen hunters). Unlike `buildPathfindingGridsSoftBlocked`, there is NO per-call start/goal
+// exemption (it can't be applied to a shared array): the start tile's own penalty is irrelevant to A*
+// (start g=0), and mob melee goals are unoccupied adjacent tiles, so neither exemption mattered.
+let _sbWorld: WorldTile[][] | null = null;
+let _sbBlocked: Set<string> | null = null;
+let _sbResult: PathfindingGrids | null = null;
+
+export function buildSharedSoftBlockedGrid(
+  worldMap: WorldTile[][],
+  blocked: Set<string>
+): PathfindingGrids {
+  const base = buildPathfindingGrids(worldMap);
+  if (blocked.size === 0) return base;
+  if (_sbWorld === worldMap && _sbBlocked === blocked && _sbResult) return _sbResult;
+  const { width, height, walkable } = base;
+  const costs = base.costs.slice();
+  for (const key of blocked) {
+    const c = key.indexOf(',');
+    const x = +key.slice(0, c);
+    const y = +key.slice(c + 1);
+    if (x >= 0 && x < width && y >= 0 && y < height) {
+      const idx = y * width + x;
+      if (walkable[idx]) costs[idx] += BODY_SOFT_PENALTY;
+    }
+  }
+  _sbWorld = worldMap;
+  _sbBlocked = blocked;
+  _sbResult = { walkable, costs, width, height };
+  return _sbResult;
+}

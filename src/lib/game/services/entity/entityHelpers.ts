@@ -8,7 +8,7 @@ import { SECONDS_PER_TICK } from '../../core/time';
 import { stepBody, seedMidCrossClaims } from '../../systems/MovementSystem';
 import { resourceObjectService } from '../ResourceObjectService';
 import { wasmPathfinderService } from '../WasmPathfinderService';
-import { buildPathfindingGridsSoftBlocked } from '../PathfinderService';
+import { buildSharedSoftBlockedGrid } from '../PathfinderService';
 import { occupancyService } from '../OccupancyService';
 import { rng } from '../../core/rng';
 import {
@@ -671,19 +671,16 @@ export function pathTo(
   selfId?: string
 ): { x: number; y: number }[] {
   if (!wasmPathfinderService.isReady()) return [];
-  // Entities are solid: every pawn/mob body (except the mover itself) is a wall,
-  // so paths route AROUND other entities and never plan through an occupied tile.
-  // The movement engine additionally blocks entry into a tile that becomes
-  // occupied after this path was computed.
-  const blocked = occupancyService.blockedTiles(state, selfId);
-  const { walkable, costs, width, height } = buildPathfindingGridsSoftBlocked(
-    state.worldMap,
-    blocked,
-    sx,
-    sy,
-    ex,
-    ey
-  );
+  // Entities are SOFT obstacles: each body adds a routing-cost penalty so paths prefer to route AROUND
+  // others, but never become impassable (the movement engine enforces no-stacking by holding at an
+  // occupied tile). PERF: use the per-tick SHARED occupancy + grid (built once, reused by every mob
+  // pathing this tick) instead of rebuilding the full-map cost array per request — that per-request
+  // O(map) clone was 35% of the worker in a busy combat tick. `selfId` is intentionally not excluded:
+  // the penalty only matters as routing cost, and a penalty on the mover's own start tile is moot (A*
+  // start g=0). This drops the start/goal exemption too (see buildSharedSoftBlockedGrid).
+  void selfId;
+  const blocked = occupancyService.blockedTilesShared(state);
+  const { walkable, costs, width, height } = buildSharedSoftBlockedGrid(state.worldMap, blocked);
   return wasmPathfinderService.findPath(walkable, costs, width, height, sx, sy, ex, ey);
 }
 
